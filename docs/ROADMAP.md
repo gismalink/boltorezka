@@ -46,12 +46,12 @@
 
 - [x] Зафиксировать каноничный HTTP contract doc (`docs/API_CONTRACT_V1.md`).
 - [x] Зафиксировать каноничный WS contract doc (`docs/WS_CONTRACT_V1.md`).
-- [ ] Добавить/финализировать OpenAPI v1 spec artifact.
-- [ ] Синхронизировать CI smoke matrix/checklist с утверждёнными контрактами.
+- [x] Добавить/финализировать OpenAPI v1 spec artifact (`docs/OPENAPI_V1.yaml`).
+- [x] Синхронизировать CI smoke matrix/checklist с утверждёнными контрактами (`docs/SMOKE_CI_MATRIX.md`).
 
 ### Exit criteria
 
-- [ ] Документированный API/WS контракт v1 + smoke/CI matrix sync.
+- [x] Документированный API/WS контракт v1 + smoke/CI matrix sync.
 
 ---
 
@@ -161,7 +161,7 @@
   - [x] `deploy:test:smoke`
   - [x] extended realtime relay smoke (`SMOKE_CALL_SIGNAL=1`, 2 ws-ticket)
 3. [x] Закрыть docs-gap для React как default UI runbook.
-4. [ ] Финализировать OpenAPI/WS schema milestone (осталось: OpenAPI artifact + CI matrix sync).
+4. [x] Финализировать OpenAPI/WS schema milestone.
 5. [ ] Подготовить pre-prod decision пакет (evidence + rollback owner/plan).
 6. [ ] Вернуться к `prod` только после достижения MVP-like readiness.
 

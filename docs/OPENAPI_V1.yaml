@@ -1,0 +1,500 @@
+openapi: 3.0.3
+info:
+  title: Boltorezka API
+  version: 1.0.0
+  description: >-
+    Canonical HTTP contract for Boltorezka v1.
+    This spec tracks currently implemented endpoints.
+servers:
+  - url: https://test.boltorezka.gismalink.art
+    description: Test
+  - url: https://boltorezka.gismalink.art
+    description: Production
+  - url: http://localhost:8080
+    description: Local
+
+tags:
+  - name: health
+  - name: auth
+  - name: rooms
+  - name: admin
+  - name: telemetry
+
+paths:
+  /health:
+    get:
+      tags: [health]
+      summary: Service health
+      responses:
+        '200':
+          description: Health payload
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [ok, degraded]
+                  checks:
+                    type: object
+                    properties:
+                      api: { type: string }
+                      db: { type: string }
+                      redis: { type: string }
+                  ts:
+                    type: string
+                    format: date-time
+
+  /v1/auth/mode:
+    get:
+      tags: [auth]
+      summary: Current auth mode
+      responses:
+        '200':
+          description: Auth mode
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  mode:
+                    type: string
+                    enum: [sso]
+                  ssoBaseUrl:
+                    type: string
+
+  /v1/auth/sso/start:
+    get:
+      tags: [auth]
+      summary: Start SSO flow
+      parameters:
+        - in: query
+          name: provider
+          schema:
+            type: string
+            enum: [google, yandex]
+        - in: query
+          name: returnUrl
+          schema:
+            type: string
+      responses:
+        '302':
+          description: Redirect to central auth
+        '400':
+          $ref: '#/components/responses/ValidationError'
+
+  /v1/auth/sso/logout:
+    get:
+      tags: [auth]
+      summary: Start SSO logout flow
+      parameters:
+        - in: query
+          name: returnUrl
+          schema:
+            type: string
+      responses:
+        '302':
+          description: Redirect to central auth logout
+
+  /v1/auth/sso/session:
+    get:
+      tags: [auth]
+      summary: Exchange central SSO cookie session for local JWT
+      responses:
+        '200':
+          description: SSO exchange result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  authenticated:
+                    type: boolean
+                  token:
+                    type: string
+                    nullable: true
+                  user:
+                    $ref: '#/components/schemas/User'
+                    nullable: true
+        '503':
+          $ref: '#/components/responses/SsoUnavailable'
+
+  /v1/auth/register:
+    post:
+      tags: [auth]
+      summary: Local registration (disabled)
+      responses:
+        '410':
+          $ref: '#/components/responses/SsoOnly'
+
+  /v1/auth/login:
+    post:
+      tags: [auth]
+      summary: Local login (disabled)
+      responses:
+        '410':
+          $ref: '#/components/responses/SsoOnly'
+
+  /v1/auth/me:
+    get:
+      tags: [auth]
+      summary: Current local user
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: User or null
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/User'
+                    nullable: true
+
+  /v1/auth/ws-ticket:
+    get:
+      tags: [auth]
+      summary: Issue short-lived ticket for websocket handshake
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: WS ticket
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ticket:
+                    type: string
+                  expiresInSec:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /v1/rooms:
+    get:
+      tags: [rooms]
+      summary: List rooms visible to current user
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Rooms list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  rooms:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/RoomListItem'
+    post:
+      tags: [rooms]
+      summary: Create room (admin/super_admin)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [slug, title]
+              properties:
+                slug:
+                  type: string
+                title:
+                  type: string
+                is_public:
+                  type: boolean
+      responses:
+        '201':
+          description: Room created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  room:
+                    $ref: '#/components/schemas/Room'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /v1/rooms/{slug}/messages:
+    get:
+      tags: [rooms]
+      summary: Get room message history
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+      responses:
+        '200':
+          description: Messages in room
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  room:
+                    $ref: '#/components/schemas/Room'
+                  messages:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/RoomMessage'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/RoomNotFound'
+
+  /v1/admin/users:
+    get:
+      tags: [admin]
+      summary: List users (admin/super_admin)
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Users list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  users:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /v1/admin/users/{userId}/promote:
+    post:
+      tags: [admin]
+      summary: Promote user to admin (super_admin only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                role:
+                  type: string
+                  enum: [admin]
+      responses:
+        '200':
+          description: User after role update
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/UserNotFound'
+
+  /v1/telemetry/web:
+    post:
+      tags: [telemetry]
+      summary: Send web telemetry event
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [event]
+              properties:
+                event:
+                  type: string
+                level:
+                  type: string
+                meta:
+                  type: object
+                  additionalProperties: true
+      responses:
+        '200':
+          description: Accepted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /v1/telemetry/summary:
+    get:
+      tags: [telemetry]
+      summary: Daily telemetry summary (admin/super_admin)
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Daily summary
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  day:
+                    type: string
+                  metrics:
+                    type: object
+                    additionalProperties:
+                      type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    User:
+      type: object
+      properties:
+        id: { type: string }
+        email: { type: string }
+        name: { type: string }
+        role:
+          type: string
+          enum: [user, admin, super_admin]
+        created_at:
+          type: string
+          format: date-time
+
+    Room:
+      type: object
+      properties:
+        id: { type: string }
+        slug: { type: string }
+        title: { type: string }
+        is_public: { type: boolean }
+        created_at:
+          type: string
+          format: date-time
+
+    RoomListItem:
+      allOf:
+        - $ref: '#/components/schemas/Room'
+        - type: object
+          properties:
+            is_member:
+              type: boolean
+
+    RoomMessage:
+      type: object
+      properties:
+        id: { type: string }
+        room_id: { type: string }
+        user_id: { type: string }
+        text: { type: string }
+        user_name: { type: string }
+        created_at:
+          type: string
+          format: date-time
+
+    ErrorResponse:
+      type: object
+      properties:
+        error: { type: string }
+        message: { type: string }
+
+  responses:
+    ValidationError:
+      description: Validation error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Forbidden:
+      description: Forbidden
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Conflict:
+      description: Conflict
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    RoomNotFound:
+      description: Room not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    UserNotFound:
+      description: User not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    SsoOnly:
+      description: SSO-only mode
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    SsoUnavailable:
+      description: Central SSO unavailable
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'

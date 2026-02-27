@@ -54,6 +54,8 @@
 - Добавлены каноничные контрактные документы:
   - `docs/API_CONTRACT_V1.md`
   - `docs/WS_CONTRACT_V1.md`
+- Добавлен OpenAPI artifact v1: `docs/OPENAPI_V1.yaml`.
+- Добавлена матрица smoke/CI gate: `docs/SMOKE_CI_MATRIX.md`.
 
 ### Key commits
 
