@@ -14,12 +14,19 @@
 export const CALL_SIGNAL_EVENT_TYPES = ["call.offer", "call.answer", "call.ice"];
 export const CALL_TERMINAL_EVENT_TYPES = ["call.reject", "call.hangup"];
 
+type ParsedIncomingEnvelope = {
+  type: string;
+  requestId?: string;
+  idempotencyKey?: string;
+  payload?: Record<string, unknown>;
+};
+
 /**
  * @param {unknown} value
  * @returns {value is CallSignalEventType}
  */
 export function isCallSignalEventType(value) {
-  return typeof value === "string" && CALL_SIGNAL_EVENT_TYPES.includes(/** @type {CallSignalEventType} */ (value));
+  return typeof value === "string" && CALL_SIGNAL_EVENT_TYPES.includes(value);
 }
 
 /**
@@ -27,7 +34,7 @@ export function isCallSignalEventType(value) {
  * @returns {value is CallTerminalEventType}
  */
 export function isCallTerminalEventType(value) {
-  return typeof value === "string" && CALL_TERMINAL_EVENT_TYPES.includes(/** @type {CallTerminalEventType} */ (value));
+  return typeof value === "string" && CALL_TERMINAL_EVENT_TYPES.includes(value);
 }
 
 /**
@@ -64,8 +71,7 @@ export function parseWsIncomingEnvelope(raw) {
     return null;
   }
 
-  /** @type {WsIncomingEnvelope} */
-  const envelope = { type };
+  const envelope: ParsedIncomingEnvelope = { type };
 
   if (typeof parsed.requestId === "string") {
     envelope.requestId = parsed.requestId;
