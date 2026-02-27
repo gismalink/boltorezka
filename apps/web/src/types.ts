@@ -42,3 +42,14 @@ export type WsOutgoing = {
   idempotencyKey?: string;
   payload?: Record<string, unknown>;
 };
+
+export type TelemetrySummary = {
+  day: string;
+  metrics: {
+    nack_sent: number;
+    ack_sent: number;
+    chat_sent: number;
+    chat_idempotency_hit: number;
+    telemetry_web_event: number;
+  };
+};

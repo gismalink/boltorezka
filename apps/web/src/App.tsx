@@ -1,7 +1,7 @@
-import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "./api";
 import { trackClientEvent } from "./telemetry";
-import type { Message, Room, User, WsIncoming, WsOutgoing } from "./types";
+import type { Message, Room, TelemetrySummary, User, WsIncoming, WsOutgoing } from "./types";
 
 const RECONNECT_DELAYS_MS = [1000, 2000, 4000, 8000, 12000];
 const ACK_TIMEOUT_MS = 6000;
@@ -29,6 +29,7 @@ export function App() {
   const [chatText, setChatText] = useState("");
   const [presence, setPresence] = useState<string[]>([]);
   const [eventLog, setEventLog] = useState<string[]>([]);
+  const [telemetrySummary, setTelemetrySummary] = useState<TelemetrySummary | null>(null);
   const [wsState, setWsState] = useState<"disconnected" | "connecting" | "connected">(
     "disconnected"
   );
@@ -42,6 +43,7 @@ export function App() {
 
   const canCreateRooms = user?.role === "admin" || user?.role === "super_admin";
   const canPromote = user?.role === "super_admin";
+  const canViewTelemetry = canPromote || canCreateRooms;
 
   const pushLog = (text: string) => {
     setEventLog((prev) => [`${new Date().toLocaleTimeString()} ${text}`, ...prev].slice(0, 30));
@@ -154,6 +156,19 @@ export function App() {
     return requestId;
   };
 
+  const loadTelemetrySummary = useCallback(async () => {
+    if (!token || !canViewTelemetry) {
+      return;
+    }
+
+    try {
+      const summary = await api.telemetrySummary(token);
+      setTelemetrySummary(summary);
+    } catch (error) {
+      pushLog(`telemetry summary failed: ${(error as Error).message}`);
+    }
+  }, [token, canViewTelemetry]);
+
   useEffect(() => {
     api.authMode()
       .then((res) => setAuthMode(res.mode))
@@ -166,6 +181,7 @@ export function App() {
       setRooms([]);
       setMessages([]);
       setAdminUsers([]);
+      setTelemetrySummary(null);
       pendingRequestsRef.current.clear();
       clearAllAckTimers();
       return;
@@ -420,6 +436,23 @@ export function App() {
       .catch((error) => pushLog(`admin users failed: ${error.message}`));
   }, [token, canPromote]);
 
+  useEffect(() => {
+    if (!token || !canViewTelemetry) {
+      setTelemetrySummary(null);
+      return;
+    }
+
+    void loadTelemetrySummary();
+  }, [token, canViewTelemetry, loadTelemetrySummary]);
+
+  useEffect(() => {
+    if (wsState !== "connected") {
+      return;
+    }
+
+    void loadTelemetrySummary();
+  }, [wsState, loadTelemetrySummary]);
+
   const beginSso = (provider: "google" | "yandex") => {
     const returnUrl = window.location.href;
     window.location.href = `/v1/auth/sso/start?provider=${provider}&returnUrl=${encodeURIComponent(returnUrl)}`;
@@ -491,6 +524,7 @@ export function App() {
     ]);
 
     setChatText("");
+    void loadTelemetrySummary();
   };
 
   const joinRoom = (slug: string) => {
@@ -609,6 +643,21 @@ export function App() {
                   </li>
                 ))}
               </ul>
+            </section>
+          ) : null}
+
+          {canViewTelemetry ? (
+            <section className="card compact">
+              <h2>Telemetry</h2>
+              <p className="muted">day: {telemetrySummary?.day || "-"}</p>
+              <div className="stack">
+                <div>ack_sent: {telemetrySummary?.metrics.ack_sent ?? 0}</div>
+                <div>nack_sent: {telemetrySummary?.metrics.nack_sent ?? 0}</div>
+                <div>chat_sent: {telemetrySummary?.metrics.chat_sent ?? 0}</div>
+                <div>chat_idempotency_hit: {telemetrySummary?.metrics.chat_idempotency_hit ?? 0}</div>
+                <div>telemetry_web_event: {telemetrySummary?.metrics.telemetry_web_event ?? 0}</div>
+              </div>
+              <button onClick={() => void loadTelemetrySummary()}>Refresh metrics</button>
             </section>
           ) : null}
 

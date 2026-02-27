@@ -1,4 +1,4 @@
-import type { AuthModeResponse, Message, Room, User } from "./types";
+import type { AuthModeResponse, Message, Room, TelemetrySummary, User } from "./types";
 
 async function fetchJson<T>(path: string, token?: string, init: RequestInit = {}) {
   const headers: Record<string, string> = {
@@ -33,6 +33,7 @@ export const api = {
     fetchJson<{ room: Room }>("/v1/rooms", token, { method: "POST", body: JSON.stringify(input) }),
   roomMessages: (token: string, slug: string) =>
     fetchJson<{ room: Room; messages: Message[] }>(`/v1/rooms/${encodeURIComponent(slug)}/messages?limit=50`, token),
+  telemetrySummary: (token: string) => fetchJson<TelemetrySummary>("/v1/telemetry/summary", token),
   adminUsers: (token: string) => fetchJson<{ users: User[] }>("/v1/admin/users", token),
   promoteUser: (token: string, userId: string) =>
     fetchJson<{ user: User }>(`/v1/admin/users/${encodeURIComponent(userId)}/promote`, token, {

@@ -134,6 +134,7 @@ API endpoints для SSO:
 - `GET /v1/auth/sso/logout?returnUrl=<url>`
 - `GET /v1/auth/me` (с локальным bearer JWT, выданным после `sso/session`)
 - `GET /v1/auth/ws-ticket` (одноразовый short-lived ticket для WS handshake)
+- `GET /v1/telemetry/summary` (admin/super_admin, current-day counters)
 
 RBAC endpoints:
 

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { loadCurrentUser, requireAuth, requireRole } from "../middleware/auth.js";
 
 const telemetrySchema = z.object({
   event: z.string().trim().min(1).max(120),
@@ -76,4 +77,31 @@ export async function telemetryRoutes(fastify) {
 
     return { ok: true };
   });
+
+  fastify.get(
+    "/v1/telemetry/summary",
+    {
+      preHandler: [requireAuth, loadCurrentUser, requireRole(["admin", "super_admin"])]
+    },
+    async () => {
+      const day = new Date().toISOString().slice(0, 10);
+      const values = await fastify.redis.hGetAll(`ws:metrics:${day}`);
+
+      const toNumber = (value) => {
+        const parsed = Number(value);
+        return Number.isFinite(parsed) ? parsed : 0;
+      };
+
+      return {
+        day,
+        metrics: {
+          nack_sent: toNumber(values.nack_sent),
+          ack_sent: toNumber(values.ack_sent),
+          chat_sent: toNumber(values.chat_sent),
+          chat_idempotency_hit: toNumber(values.chat_idempotency_hit),
+          telemetry_web_event: toNumber(values.telemetry_web_event)
+        }
+      };
+    }
+  );
 }

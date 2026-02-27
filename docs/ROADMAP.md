@@ -13,6 +13,7 @@
 - ✅ Smoke automation: добавлен `smoke:realtime` и флаги `SMOKE_API/SMOKE_SSO/SMOKE_REALTIME` в едином `npm run check`.
 - ✅ Test rollout automation: добавлен one-command `deploy:test:smoke` (deploy + post-deploy smoke + metrics snapshot).
 - ✅ Error resilience: добавлен React `ErrorBoundary` с безопасным fallback/reload UX.
+- ✅ Admin observability baseline: `/v1/telemetry/summary` + React telemetry card.
 - 🔄 Начат этап реализации React web app (`apps/web`).
 
 ## Automation plan (next blocks)
