@@ -1,5 +1,10 @@
 import { db } from "../db.js";
-import { isCallSignalEventType } from "../ws-protocol.js";
+import {
+  getCallSignal,
+  getPayloadString,
+  isCallSignalEventType,
+  parseWsIncomingEnvelope
+} from "../ws-protocol.js";
 
 function sendJson(socket, payload) {
   if (socket.readyState === socket.OPEN) {
@@ -288,10 +293,20 @@ export async function realtimeRoutes(fastify) {
 
         connection.on("message", async (raw) => {
           try {
-            const message = JSON.parse(raw.toString());
+            const message = parseWsIncomingEnvelope(raw);
+            if (!message) {
+              sendJson(connection, {
+                type: "error",
+                payload: { code: "ValidationError", message: "Invalid ws envelope" }
+              });
+              void incrementMetric("nack_sent");
+              return;
+            }
+
             const state = socketState.get(connection);
-            const requestId = normalizeRequestId(message?.requestId);
-            const eventType = String(message?.type || "unknown");
+            const requestId = normalizeRequestId(message.requestId);
+            const eventType = message.type;
+            const payload = message.payload;
 
             if (!state) {
               return;
@@ -310,7 +325,7 @@ export async function realtimeRoutes(fastify) {
             }
 
             if (message.type === "room.join") {
-              const roomSlug = message.payload?.roomSlug;
+              const roomSlug = getPayloadString(payload, "roomSlug", 80);
 
               if (!roomSlug) {
                 sendNack(
@@ -406,7 +421,7 @@ export async function realtimeRoutes(fastify) {
                 return;
               }
 
-              const text = message.payload?.text?.trim();
+              const text = getPayloadString(payload, "text", 20000);
 
               if (!text) {
                 sendNack(
@@ -420,7 +435,7 @@ export async function realtimeRoutes(fastify) {
                 return;
               }
 
-              const idempotencyKey = normalizeRequestId(message?.idempotencyKey) || requestId;
+              const idempotencyKey = normalizeRequestId(message.idempotencyKey) || requestId;
 
               if (idempotencyKey) {
                 const idemRedisKey = `ws:idempotency:${state.userId}:${idempotencyKey}`;
@@ -503,8 +518,8 @@ export async function realtimeRoutes(fastify) {
                 return;
               }
 
-              const signal = message.payload?.signal;
-              if (!signal || typeof signal !== "object" || Array.isArray(signal)) {
+              const signal = getCallSignal(payload);
+              if (!signal) {
                 sendNack(
                   connection,
                   requestId,
@@ -529,7 +544,7 @@ export async function realtimeRoutes(fastify) {
                 return;
               }
 
-              const targetUserId = normalizeRequestId(message.payload?.targetUserId) || null;
+              const targetUserId = normalizeRequestId(getPayloadString(payload, "targetUserId", 128)) || null;
 
               const relayPayload = {
                 fromUserId: state.userId,
@@ -605,8 +620,8 @@ export async function realtimeRoutes(fastify) {
                 return;
               }
 
-              const targetUserId = normalizeRequestId(message.payload?.targetUserId) || null;
-              const reason = String(message.payload?.reason || "").trim().slice(0, 128) || null;
+              const targetUserId = normalizeRequestId(getPayloadString(payload, "targetUserId", 128)) || null;
+              const reason = getPayloadString(payload, "reason", 128) || null;
 
               const relayPayload = {
                 fromUserId: state.userId,
@@ -682,8 +697,8 @@ export async function realtimeRoutes(fastify) {
                 return;
               }
 
-              const targetUserId = normalizeRequestId(message.payload?.targetUserId) || null;
-              const reason = String(message.payload?.reason || "").trim().slice(0, 128) || null;
+              const targetUserId = normalizeRequestId(getPayloadString(payload, "targetUserId", 128)) || null;
+              const reason = getPayloadString(payload, "reason", 128) || null;
 
               const relayPayload = {
                 fromUserId: state.userId,
