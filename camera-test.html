@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Camera Test</title>
+    <style>
+        .video-container {
+            margin: 20px;
+            padding: 10px;
+            border: 1px solid #ccc;
+        }
+        video {
+            width: 640px;
+            height: 480px;
+            background: #000;
+        }
+        .controls {
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="video-container">
+        <video id="localVideo" autoplay playsinline></video>
+        <div class="controls">
+            <button onclick="startCamera()">Включить камеру</button>
+            <button onclick="stopCamera()">Выключить камеру</button>
+            <button onclick="takeSnapshot()">Сделать снимок</button>
+        </div>
+        <div id="snapshot"></div>
+    </div>
+
+    <script>
+        let stream = null;
+
+        async function startCamera() {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: {
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 },
+                        frameRate: { ideal: 30 }
+                    }
+                });
+                
+                const videoElement = document.getElementById('localVideo');
+                videoElement.srcObject = stream;
+                console.log('Камера запущена:', stream.getVideoTracks()[0].getSettings());
+                
+            } catch (error) {
+                console.error('Ошибка при запуске камеры:', error);
+            }
+        }
+
+        function stopCamera() {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                const videoElement = document.getElementById('localVideo');
+                videoElement.srcObject = null;
+                stream = null;
+            }
+        }
+
+        function takeSnapshot() {
+            if (!stream) return;
+
+            const videoElement = document.getElementById('localVideo');
+            const canvas = document.createElement('canvas');
+            canvas.width = videoElement.videoWidth;
+            canvas.height = videoElement.videoHeight;
+
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(videoElement, 0, 0);
+
+            const snapshotDiv = document.getElementById('snapshot');
+            const img = document.createElement('img');
+            img.src = canvas.toDataURL('image/jpeg');
+            img.style.width = '320px';
+            
+            snapshotDiv.innerHTML = '';
+            snapshotDiv.appendChild(img);
+        }
+    </script>
+</body>
+</html> 

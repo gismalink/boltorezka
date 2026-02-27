@@ -1,0 +1,545 @@
+/* Глобальные стили */
+* {
+    box-sizing: border-box;
+}
+
+html, body {
+    font-family: Arial, sans-serif;
+    height: 100%;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+}
+body {
+    display: flex;
+    flex-direction: column;
+}
+
+h1 {
+    margin: 0;  
+    font-size: 32px;
+    line-height: 100%;
+}
+
+/* Основная структура приложения */
+
+#app {
+    flex-grow: 1;
+    margin: 0;
+}
+
+.app-title {
+    text-align: center;
+    font-size: 2em;
+    margin: 0;
+    padding: 0;
+    margin-bottom: 20px;
+}
+
+.app-wrapper {
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+    gap: 20px;
+    height: 100%;
+}
+
+.leftcolumn {
+    width: 500px;
+
+}
+
+.middlecolumn {
+    flex-grow: 1;
+    height: 100%;
+    background-color: #f1f1f1;
+    border-radius: 20px;
+    padding: 13px;
+    overflow-y: auto;
+}
+
+.rightcolumn {
+    width: 300px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Комнаты */
+.rooms-container {
+    margin: 0;
+    padding-bottom: 40px;
+    text-align: center;
+    overflow-y: auto;
+}
+
+.room {
+    position: relative;
+    border: 2px solid #f3f3f3;
+    margin: 10px 0;
+    padding: 7px;
+    border-radius: 15px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background-color: #f0f0f0;
+}
+
+.room.active {
+    border-color: #4CAF50;
+    background-color: #eff4ee;
+}
+
+.room-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.room-header h2 {
+    margin: 0;
+    flex-grow: 1;
+}
+
+.room-exit-button {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    background: none;
+    border: none;
+    color: #ff4444;
+    font-size: 1em;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.room-exit-button:hover {
+    color: #ff0000;
+}
+
+/* Кнопки и элементы управления */
+.button {
+    padding: 10px;
+    margin: 5px;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.3s;
+    width: 50px;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.button i {
+    font-size: 1.5em;
+}
+
+.button-inactive {
+    background-color: #808080;
+    color: white;
+}
+
+.button-active {
+    background-color: #4CAF50;
+    color: white;
+}
+
+.button:hover {
+    transform: scale(1.05);
+}
+
+.controls {
+    display: flex;
+    flex-direction: row;
+    gap: 16px;
+    margin: 0px;
+}
+
+/* Устройства и селекторы */
+.device-selector {
+    display: flex;
+    align-items: flex-start;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 8px;
+    border-radius: 8px;
+    background-color: #f5f5f5;
+    flex: 1;
+}
+
+.device-selector select {
+    padding: 8px;
+    border-radius: 12px;
+    border: 1px solid #ccc;
+    width: 100%;
+}
+
+.device-selector label {
+    min-width: 100px;
+}
+
+.user-device-status {
+    display: inline-block;
+    margin-left: 5px;
+    font-size: 0.8em;
+}
+
+.device-disabled {
+    color: red;
+}
+
+/* Управление громкостью */
+.volume-controls {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    flex-direction: column;
+}
+
+.volume-meter {
+    width: 100%;
+    height: 8px;
+    background: #ddd;
+    border-radius: 4px;
+    position: relative;
+    overflow: hidden;
+}
+
+.volume-meter-fill {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    background-color: #4CAF50;
+    transition: width 0.1s ease;
+    border-radius: 4px;
+}
+
+.volume-slider {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+}
+
+.volume-slider input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 8px;
+    padding: 0 5px;
+}
+
+.volume-slider input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    background: #4CAF50;
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+.volume-slider label {
+    min-width: 60px;
+    font-size: 14px;
+}
+
+.volume-slider span {
+    width: 45px;
+    text-align: right;
+}
+
+/* Участники и индикаторы */
+.participant {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px 10px;
+    margin: 5px 0;
+    background-color: rgba(255, 255, 255, 0.7);
+    border-radius: 8px;
+}
+
+.participant-name {
+    font-weight: 500;
+}
+
+.participant-indicators {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.device-indicator {
+    color: #4CAF50;
+    transition: color 0.3s ease;
+}
+
+.device-indicator.inactive {
+    color: #ff4444;
+}
+
+.speaking-indicator {
+    color: #4CAF50;
+    animation: pulse 1.5s infinite;
+}
+
+/* Видео компоненты */
+.video-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.video-card {
+    position: relative;
+    aspect-ratio: 16/9;
+    background: #2c3e50;
+    border-radius: 10px;
+    overflow: hidden;
+    max-width: 250px;
+}
+
+.video-card.speaking {
+    border: 2px solid #4CAF50;
+}
+
+.video-card video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.video-element {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.video-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 3em;
+    color: white;
+}
+
+.video-info {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 10px;
+    background: rgba(0,0,0,0.5);
+    color: white;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* Чат */
+.chat-container {
+    height: 100%;
+    background-color: #fff;
+    border-radius: 13px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    height: 500px;
+}
+
+.chat-messages {
+    padding: 15px;
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    background: #f5f7fa;
+}
+
+.message {
+    padding: 8px 12px;
+    border-radius: 18px;
+    max-width: 80%;
+    word-break: break-word;
+    position: relative;
+    margin: 4px 0;
+    animation: messageAppear 0.2s ease-out;
+}
+
+.message-time {
+    font-size: 9px;
+    color: #dbe2ff;
+}
+
+.message:not(.own-message) {
+    background-color: #ffffff;
+    align-self: flex-start;
+    border-bottom-left-radius: 4px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+.message.own-message {
+    background-color: #0084ff;
+    color: white;
+    align-self: flex-end;
+    border-bottom-right-radius: 4px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+.message-username {
+    font-size: 14px;
+    font-weight: bold;
+    color: #2c3e50;
+    margin-right: 5px;
+}
+
+.chat-input {
+    padding: 15px;
+    background: #ffffff;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-top: 1px solid #e6e6e6;
+}
+
+.chat-input input {
+    flex: 1;
+    padding: 10px 15px;
+    border: 1px solid #e6e6e6;
+    border-radius: 20px;
+    background: #f0f2f5;
+    font-size: 14px;
+}
+
+.chat-input input:focus {
+    outline: none;
+    background: #e8eaed;
+    border-color: #0084ff;
+}
+
+.chat-input button {
+    padding: 8px 16px;
+    background-color: #0084ff;
+    color: white;
+    border: none;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.chat-input button:hover {
+    background-color: #0073e6;
+}
+
+.chat-input button:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+}
+
+/* Анимации */
+@keyframes pulse {
+    0% { opacity: 0.6; }
+    50% { opacity: 1; }
+    100% { opacity: 0.6; }
+}
+
+@keyframes messageAppear {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Скроллбар */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+.message.own-message .message-username {
+    color: #ffffff;
+}
+
+/* TURN сервер */
+
+.turn-status {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    cursor: help;
+}
+
+.turn-status i {
+    font-size: 24px;
+    transition: color 0.3s ease;
+}
+
+.turn-status i.active {
+    color: #4CAF50;
+}
+
+.turn-status i.inactive {
+    color: #f44336;
+}
+
+.turn-status i.blinking {
+    animation: blink 1s infinite;
+}
+
+/* ICE состояние */ 
+.ice-status {
+    position: absolute;
+    top: 15px;
+    right: 50px;
+    cursor: pointer;
+    padding: 5px;
+}
+
+.ice-status i {
+    font-size: 24px;
+    transition: color 0.3s ease;
+}
+
+.ice-status i.active {
+    color: #4CAF50;
+}
+
+.ice-status i.warning {
+    color: #FFC107;
+}
+
+.ice-status i.inactive {
+    color: #F44336;
+}
+
+@keyframes blink {
+    0% { opacity: 1; }
+    50% { opacity: 0.3; }
+    100% { opacity: 1; }
+}
+
+

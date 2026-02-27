@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>TURN/STUN Test</title>
+</head>
+<body>
+    <h2>Проверка TURN/STUN серверов</h2>
+    <button onclick="startTest()">Начать проверку</button>
+    <pre id="output"></pre>
+
+    <script>
+        async function startTest() {
+            const config = {
+                iceServers: [
+                    { urls: 'stun:stun.l.google.com:19302' },
+                    { 
+                        urls: [
+                            'turn:gismalink.art:3478?transport=tcp',
+                            'turns:gismalink.art:5349?transport=tcp'
+                        ],
+                        username: 'boltorezka',
+                        credential: 'Blt@Turn2024#Secure',
+                        credentialType: 'password'
+                    }
+                ],
+                iceCandidatePoolSize: 0,
+                iceTransportPolicy: 'all'
+            };
+
+            const pc = new RTCPeerConnection(config);
+            let candidatesFound = {
+                host: 0,
+                srflx: 0,
+                relay: 0
+            };
+
+            pc.onicecandidate = (event) => {
+                if (event.candidate) {
+                    const candidate = event.candidate;
+                    if (candidate.type) {
+                        candidatesFound[candidate.type]++;
+                    }
+                    
+                    log('ICE кандидат:', {
+                        type: candidate.type,
+                        protocol: candidate.protocol,
+                        address: candidate.address,
+                        port: candidate.port
+                    });
+                }
+            };
+
+            pc.onicegatheringstatechange = () => {
+                log('ICE состояние:', pc.iceGatheringState);
+                if (pc.iceGatheringState === 'complete') {
+                    log('Итоги проверки:', candidatesFound);
+                    setTimeout(() => {
+                        pc.close();
+                    }, 1000);
+                }
+            };
+
+            const dc = pc.createDataChannel('test');
+            const offer = await pc.createOffer();
+            await pc.setLocalDescription(offer);
+        }
+
+        function log(...args) {
+            const output = document.getElementById('output');
+            output.textContent += args.map(arg => 
+                typeof arg === 'object' ? JSON.stringify(arg, null, 2) : arg
+            ).join(' ') + '\n';
+        }
+    </script>
+</body>
+</html>

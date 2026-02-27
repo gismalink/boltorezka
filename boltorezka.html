@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Boltorezka</title>
+    <!-- <link rel="stylesheet" href="/styles.css"> -->
+    <link rel="stylesheet" href="./styles.css">
+    
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+    <script src="/site/js/header.js" defer></script>
+    <script src="/site/js/loginReturnUrl.js" defer></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body>
+    <header>
+        <div id="auth-info-container"></div>        
+    </header>
+    <h1 class="app-title">Boltorezka</h1>
+    <div id="app">        
+        <div class="app-wrapper">
+            <div class="turn-status" 
+                 :title="'STUN/TURN Servers: ' + 
+                         (turnServerActive ? 
+                         `STUN: ${iceStats?.srflx || 0}, TURN: ${iceStats?.relay || 0}` : 
+                         'Checking...')"
+                 @click="checkTurnServer">
+                <i class="fas fa-server" :class="{ 'active': turnServerActive, 'inactive': !turnServerActive }"></i>
+            </div>
+            <div class="ice-status" 
+                 :title="'ICE Connection Status: ' + iceConnectionState"
+                 @click="checkIceState">
+                <i class="fas fa-snowflake" :class="{ 
+                    'active': iceConnectionState === 'connected',
+                    'warning': iceConnectionState === 'checking',
+                    'inactive': iceConnectionState === 'disconnected' || iceConnectionState === 'failed'
+                }"></i>
+            </div>
+            <div class="leftcolumn">
+                <div class="rooms-container">
+                    <div v-for="(users, roomName) in rooms" 
+                        :key="roomName" 
+                        class="room"
+                        :class="{ active: currentRoom === roomName }"
+                        @click="handleRoomClick(roomName)">
+                        <div class="room-header">
+                            <h2>{{ roomName }} ({{ users.length }})</h2>
+                            <button v-show="currentRoom === roomName" 
+                                    @click="handleExitClick($event, roomName)" 
+                                    class="room-exit-button">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <ul>
+                            <li v-for="user in users" 
+                                :key="user.ip" 
+                                class="participant">
+                                <span class="participant-name">{{ user.username }}</span>
+                                <div class="participant-indicators">
+                                    <span v-if="user.speaking" class="speaking-indicator">
+                                        <i class="fas fa-volume-up"></i>
+                                    </span>
+                                    <span class="device-indicator" :class="{ 'inactive': !user.mic }">
+                                        <i class="fas fa-microphone" :class="{ 'fa-microphone-slash': !user.mic }"></i>
+                                    </span>
+                                    <span class="device-indicator" :class="{ 'inactive': !user.headphones }">
+                                        <i class="fas fa-headphones"></i>
+                                    </span>
+                                    <span class="device-indicator" :class="{ 'inactive': !user.video }">
+                                        <i class="fas fa-video" :class="{ 'fa-video-slash': !user.video }"></i>
+                                    </span>
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="controls">
+                    <div class="device-selector">
+                        <button 
+                            :class="['button', microphone ? 'button-active' : 'button-inactive']"
+                            @click="toggleMicrophone">
+                            <i class="fas fa-microphone" :class="{ 'fa-microphone-slash': !microphone }"></i>
+                        </button>
+                        <select 
+                            id="microphone-select" 
+                            v-model="selectedMicrophone"
+                            @change="changeMicrophone">
+                            <option value="">select microphone</option>
+                            <option 
+                                v-for="device in devices.inputs" 
+                                :key="device.deviceId" 
+                                :value="device.deviceId">
+                                {{ device.label }}
+                            </option>
+                        </select>
+                        
+                        <div v-if="microphone" class="volume-controls">
+                            <div class="volume-slider">
+                                <label for="volume-control">Sens:</label>
+                                <input 
+                                    type="range" 
+                                    id="volume-control" 
+                                    v-model="microphoneVolume" 
+                                    @input="updateMicrophoneVolume"
+                                    min="0" 
+                                    max="100" 
+                                    step="1"
+                                    orient="vertical">
+                                <span>{{ microphoneVolume }}%</span>
+                            </div>
+                            
+                            <div class="volume-meter">
+                                <div 
+                                    class="volume-meter-fill" 
+                                    :style="{ 
+                                        width: currentVolume + '%',
+                                        backgroundColor: volumeColor 
+                                    }">
+                                </div>
+                            </div>
+                        </div>                        
+                    </div>
+                    <div class="device-selector">
+                        <button 
+                            :class="['button', audioOutput ? 'button-active' : 'button-inactive']"
+                            @click="toggleSound">
+                            <i class="fas fa-headphones"></i>
+                        </button>
+                        <select 
+                            id="speaker-select" 
+                            v-model="selectedSpeaker"
+                            @change="changeSpeaker">
+                            <option value="">select speaker</option>
+                            <option 
+                                v-for="device in devices.outputs" 
+                                :key="device.deviceId" 
+                                :value="device.deviceId">
+                                {{ device.label }}
+                            </option>
+                        </select>
+                        
+                        <div v-if="audioOutput" class="volume-controls">
+                            <div class="volume-slider">
+                                <label for="output-volume-control">Vol:</label>
+                                <input 
+                                    type="range" 
+                                    id="output-volume-control" 
+                                    v-model="outputVolume" 
+                                    @input="updateOutputVolume"
+                                    min="0" 
+                                    max="100" 
+                                    step="1">
+                                <span>{{ outputVolume }}%</span>
+                            </div>
+                        </div>
+                    </div>
+                <div class="device-selector">
+                    <button 
+                        :class="['button', videoEnabled ? 'button-active' : 'button-inactive']"
+                        @click="toggleVideo">
+                        <i class="fas fa-video" :class="{ 'fa-video-slash': !videoEnabled }"></i>
+                    </button>
+                    <select 
+                        id="camera-select" 
+                        v-model="selectedCamera"
+                        @change="handleCameraChange">
+                        <option value="">select camera</option>
+                        <option 
+                            v-for="device in videoDevices" 
+                            :key="device.deviceId" 
+                            :value="device.deviceId">
+                            {{ device.label }}
+                        </option>
+                    </select>
+
+                    <div class="video-settings" v-if="videoEnabled">
+                        <div class="setting-group">
+                            <label>Качество видео:</label>
+                            <select v-model="videoQuality" @change="updateVideoQuality">
+                                <option value="low">Низкое</option>
+                                <option value="medium">Среднее</option>
+                                <option value="high">Высокое</option>
+                            </select>
+                        </div>
+
+                        <div class="setting-group">
+                            <label>Ориентация камеры:</label>
+                            <select v-model="facingMode" @change="updateFacingMode">
+                                <option value="user">Фронтальная</option>
+                                <option value="environment">Основная</option>
+                            </select>
+                        </div>
+
+                        <div class="setting-group">
+                            <label>Частота кадров:</label>
+                            <select v-model="frameRate" @change="updateFrameRate">
+                                <option value="15">15 fps</option>
+                                <option value="30">30 fps</option>
+                                <option value="60">60 fps</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                </div>
+            </div>
+            <div class="middlecolumn" v-if="currentRoom !== null">
+                <div class="video-grid">
+                    <div v-for="user in rooms[currentRoom]" 
+                         :key="user.ip" 
+                         class="video-card"
+                         :class="{ 'speaking': user.speaking }"
+                         @mounted="logStreamState(user)">
+                        
+                        <video v-if="showVideo(user)"
+                            :ref="'video-' + user.ip"
+                            autoplay
+                            playsinline
+                            :muted="user.ip === 'local'"
+                            :srcObject="getVideoStream(user)"
+                            @loadedmetadata="logVideoMetadata($event, user.ip)"
+                            @error="logVideoError($event, user.ip)"
+                            :key="user.ip + '-video'"
+                            class="video-element">
+                        </video>
+                        <div v-else class="video-placeholder">
+                            <span class="user-initial">{{ user.username[0].toUpperCase() }}</span>
+                            <small>{{ getStreamDebugInfo(user) }}</small>
+                        </div>
+                        
+                        <div class="video-info">
+                            <span class="username">{{ user.username }}</span>
+                            <div class="controls">
+                                <i class="fas fa-microphone" 
+                                   :class="{ 'fa-microphone-slash': !user.mic }">
+                                </i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="rightcolumn" v-if="currentRoom !== null">
+                <div class="chat-container">
+                    <div class="chat-messages" ref="chatMessages">
+                        <div v-for="(msg, index) in messages" 
+                             :key="index" 
+                             class="message"
+                             :class="{ 
+                                 'own-message': chatManager.isOwnMessage(msg),
+                                 'system-message': msg.username === 'System'
+                             }">
+                             <div class="message-content">
+                                 <div class="message-header">
+                                     <span class="message-username">{{ msg.username }}</span>
+                                     <span class="message-time">{{ new Date(msg.timestamp).toLocaleTimeString() }}</span>
+                                 </div>
+                                 <div class="message-text">{{ msg.message }}</div>
+                             </div>
+                        </div>
+                    </div>
+                    
+                    <div class="chat-input">
+                        <input :value="chatManager.getNewMessage()"
+                               @input="chatManager.handleInput($event)"
+                               @keyup.enter="sendMessage" 
+                               placeholder="Введите сообщение..."
+                               type="text">
+                        <button @click="sendMessage" class="send-button">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="boltorezkaApp.js" type="module"></script>
+</body>
+</html>
