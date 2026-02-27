@@ -6,6 +6,7 @@ import type { Message, Room, TelemetrySummary, User, WsIncoming, WsOutgoing } fr
 const RECONNECT_DELAYS_MS = [1000, 2000, 4000, 8000, 12000];
 const ACK_TIMEOUT_MS = 6000;
 const MAX_CHAT_RETRIES = 3;
+type CallStatus = "idle" | "ringing" | "connecting" | "active";
 
 type PendingRequest = {
   eventType: string;
@@ -29,6 +30,8 @@ export function App() {
   const [chatText, setChatText] = useState("");
   const [callTargetUserId, setCallTargetUserId] = useState("");
   const [callSignalJson, setCallSignalJson] = useState('{"type":"offer","sdp":""}');
+  const [callStatus, setCallStatus] = useState<CallStatus>("idle");
+  const [lastCallPeer, setLastCallPeer] = useState("");
   const [callEventLog, setCallEventLog] = useState<string[]>([]);
   const [presence, setPresence] = useState<string[]>([]);
   const [eventLog, setEventLog] = useState<string[]>([]);
@@ -410,7 +413,22 @@ export function App() {
             ) {
               const fromUserName = String(message.payload?.fromUserName || message.payload?.fromUserId || "unknown");
               const hasSignal = Boolean(message.payload?.signal && typeof message.payload.signal === "object");
+              setLastCallPeer(fromUserName);
+              if (message.type === "call.offer") {
+                setCallStatus("ringing");
+              }
+              if (message.type === "call.answer") {
+                setCallStatus("active");
+              }
               pushCallLog(`${message.type} from ${fromUserName} (${hasSignal ? "signal" : "no-signal"})`);
+            }
+
+            if (message.type === "call.hangup") {
+              const fromUserName = String(message.payload?.fromUserName || message.payload?.fromUserId || "unknown");
+              const reason = String(message.payload?.reason || "").trim();
+              setLastCallPeer(fromUserName);
+              setCallStatus("idle");
+              pushCallLog(`call.hangup from ${fromUserName}${reason ? ` (${reason})` : ""}`);
             }
 
             if (message.type === "room.joined") {
@@ -571,6 +589,31 @@ export function App() {
     }
 
     pushCallLog(`${eventType} sent${targetUserId ? ` -> ${targetUserId}` : " -> room"}`);
+    setLastCallPeer(targetUserId || "room");
+    if (eventType === "call.offer") {
+      setCallStatus("connecting");
+    }
+    if (eventType === "call.answer") {
+      setCallStatus("active");
+    }
+  };
+
+  const sendCallHangup = () => {
+    const targetUserId = callTargetUserId.trim();
+    const payload: Record<string, unknown> = { reason: "manual" };
+    if (targetUserId) {
+      payload.targetUserId = targetUserId;
+    }
+
+    const requestId = sendWsEvent("call.hangup", payload, { maxRetries: 1 });
+    if (!requestId) {
+      pushCallLog("call.hangup skipped: socket unavailable");
+      return;
+    }
+
+    setCallStatus("idle");
+    setLastCallPeer(targetUserId || "room");
+    pushCallLog(`call.hangup sent${targetUserId ? ` -> ${targetUserId}` : " -> room"}`);
   };
 
   const joinRoom = (slug: string) => {
@@ -675,6 +718,7 @@ export function App() {
 
             <div className="stack signaling-panel">
               <h2>Call signaling (MVP)</h2>
+              <p className="muted">call status: {callStatus}{lastCallPeer ? ` (${lastCallPeer})` : ""}</p>
               <input
                 value={callTargetUserId}
                 onChange={(e) => setCallTargetUserId(e.target.value)}
@@ -690,6 +734,7 @@ export function App() {
                 <button type="button" onClick={() => sendCallSignal("call.offer")}>Send offer</button>
                 <button type="button" onClick={() => sendCallSignal("call.answer")}>Send answer</button>
                 <button type="button" onClick={() => sendCallSignal("call.ice")}>Send ICE</button>
+                <button type="button" className="secondary" onClick={sendCallHangup}>Send hangup</button>
               </div>
               <div className="log call-log">
                 {callEventLog.map((line, index) => (

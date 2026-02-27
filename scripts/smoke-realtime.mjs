@@ -205,6 +205,7 @@ function waitForEvent(events, predicate, label) {
   }
 
   let callSignalRelayed = false;
+  let callHangupRelayed = false;
   if (smokeCallSignal) {
     if (!secondTicket) {
       throw new Error("[smoke:realtime] second ticket is required for call signaling smoke");
@@ -287,6 +288,40 @@ function waitForEvent(events, predicate, label) {
     }
 
     callSignalRelayed = true;
+
+    const hangupRequestId = `call-hangup-${Date.now()}`;
+    ws.send(
+      JSON.stringify({
+        type: "call.hangup",
+        requestId: hangupRequestId,
+        payload: {
+          targetUserId: secondUserId,
+          reason: "smoke-hangup"
+        }
+      })
+    );
+
+    const hangupAck = await waitForEvent(
+      events,
+      (item) => item?.type === "ack" && item?.payload?.requestId === hangupRequestId,
+      "ack for call.hangup"
+    );
+
+    const relayedHangup = await waitForEvent(
+      secondEvents,
+      (item) => item?.type === "call.hangup" && item?.payload?.reason === "smoke-hangup",
+      "relayed call.hangup"
+    );
+
+    if (Number(hangupAck?.payload?.relayedTo || 0) < 1) {
+      throw new Error("[smoke:realtime] expected call.hangup relayedTo >= 1");
+    }
+
+    if (String(relayedHangup?.payload?.targetUserId || "") !== secondUserId) {
+      throw new Error("[smoke:realtime] relayed call.hangup targetUserId mismatch");
+    }
+
+    callHangupRelayed = true;
   }
 
   ws.close();
@@ -303,7 +338,8 @@ function waitForEvent(events, predicate, label) {
         nackCode: nack?.payload?.code ?? null,
         firstMessageId: firstAck?.payload?.messageId ?? null,
         duplicateIdempotencyKey: duplicateAck?.payload?.idempotencyKey ?? null,
-        callSignalRelayed
+        callSignalRelayed,
+        callHangupRelayed
       },
       null,
       2
