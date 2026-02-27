@@ -265,6 +265,30 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
     return { ok: true, relayedCount };
   };
 
+  const sendNoActiveRoomNack = (
+    socket: WebSocket,
+    requestId: string | null,
+    eventType: string
+  ) => {
+    sendNack(socket, requestId, eventType, "NoActiveRoom", "Join a room first");
+    void incrementMetric("nack_sent");
+  };
+
+  const sendTargetNotInRoomNack = (
+    socket: WebSocket,
+    requestId: string | null,
+    eventType: string
+  ) => {
+    sendNack(
+      socket,
+      requestId,
+      eventType,
+      "TargetNotInRoom",
+      "Target user is offline or not in this room"
+    );
+    void incrementMetric("nack_sent");
+  };
+
   fastify.get(
     "/v1/realtime/ws",
     {
@@ -443,14 +467,7 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
 
               case "chat.send": {
                 if (!state.roomId) {
-                  sendNack(
-                    connection,
-                    requestId,
-                    eventType,
-                    "NoActiveRoom",
-                    "Join a room first"
-                  );
-                  void incrementMetric("nack_sent");
+                  sendNoActiveRoomNack(connection, requestId, eventType);
                   return;
                 }
 
@@ -536,14 +553,7 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
               case "call.answer":
               case "call.ice": {
               if (!state.roomId) {
-                sendNack(
-                  connection,
-                  requestId,
-                  eventType,
-                  "NoActiveRoom",
-                  "Join a room first"
-                );
-                void incrementMetric("nack_sent");
+                sendNoActiveRoomNack(connection, requestId, eventType);
                 return;
               }
 
@@ -586,14 +596,7 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
 
               const relayOutcome = relayToTargetOrRoom(connection, state.roomId, targetUserId, relayEnvelope);
               if (!relayOutcome.ok) {
-                sendNack(
-                  connection,
-                  requestId,
-                  eventType,
-                  "TargetNotInRoom",
-                  "Target user is offline or not in this room"
-                );
-                void incrementMetric("nack_sent");
+                sendTargetNotInRoomNack(connection, requestId, eventType);
                 return;
               }
 
@@ -609,14 +612,7 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
               case "call.hangup":
               case "call.reject": {
               if (!state.roomId) {
-                sendNack(
-                  connection,
-                  requestId,
-                  eventType,
-                  "NoActiveRoom",
-                  "Join a room first"
-                );
-                void incrementMetric("nack_sent");
+                sendNoActiveRoomNack(connection, requestId, eventType);
                 return;
               }
 
@@ -634,14 +630,7 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
 
               const relayOutcome = relayToTargetOrRoom(connection, state.roomId, targetUserId, relayEnvelope);
               if (!relayOutcome.ok) {
-                sendNack(
-                  connection,
-                  requestId,
-                  eventType,
-                  "TargetNotInRoom",
-                  "Target user is offline or not in this room"
-                );
-                void incrementMetric("nack_sent");
+                sendTargetNotInRoomNack(connection, requestId, eventType);
                 return;
               }
 
