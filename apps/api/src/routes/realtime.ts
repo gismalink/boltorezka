@@ -299,6 +299,20 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
     void incrementMetric("nack_sent");
   };
 
+  const sendInvalidEnvelopeError = (socket: WebSocket) => {
+    sendJson(socket, buildErrorEnvelope("ValidationError", "Invalid ws envelope"));
+    void incrementMetric("nack_sent");
+  };
+
+  const sendUnknownEventNack = (
+    socket: WebSocket,
+    requestId: string | null,
+    eventType: string
+  ) => {
+    sendNack(socket, requestId, eventType, "UnknownEvent", "Unsupported event type");
+    void incrementMetric("nack_sent");
+  };
+
   const sendAckWithMetrics = (
     socket: WebSocket,
     requestId: string | null,
@@ -380,8 +394,7 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
           try {
             const message = parseWsIncomingEnvelope(raw);
             if (!message) {
-              sendJson(connection, buildErrorEnvelope("ValidationError", "Invalid ws envelope"));
-              void incrementMetric("nack_sent");
+              sendInvalidEnvelopeError(connection);
               return;
             }
 
@@ -396,8 +409,7 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
             }
 
             if (!knownMessage) {
-              sendNack(connection, requestId, eventType, "UnknownEvent", "Unsupported event type");
-              void incrementMetric("nack_sent");
+              sendUnknownEventNack(connection, requestId, eventType);
               return;
             }
 
