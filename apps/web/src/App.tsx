@@ -2,6 +2,8 @@ import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "./api";
 import type { Message, Room, User, WsIncoming } from "./types";
 
+const RECONNECT_DELAYS_MS = [1000, 2000, 4000, 8000, 12000];
+
 function wsBase() {
   const protocol = window.location.protocol === "https:" ? "wss" : "ws";
   return `${protocol}://${window.location.host}`;
@@ -17,10 +19,14 @@ export function App() {
   const [chatText, setChatText] = useState("");
   const [presence, setPresence] = useState<string[]>([]);
   const [eventLog, setEventLog] = useState<string[]>([]);
+  const [wsState, setWsState] = useState<"disconnected" | "connecting" | "connected">(
+    "disconnected"
+  );
   const [adminUsers, setAdminUsers] = useState<User[]>([]);
   const [newRoomSlug, setNewRoomSlug] = useState("");
   const [newRoomTitle, setNewRoomTitle] = useState("");
   const wsRef = useRef<WebSocket | null>(null);
+  const reconnectAttemptRef = useRef(0);
 
   const canCreateRooms = user?.role === "admin" || user?.role === "super_admin";
   const canPromote = user?.role === "super_admin";
@@ -62,61 +68,120 @@ export function App() {
     if (!token) {
       wsRef.current?.close();
       wsRef.current = null;
+      reconnectAttemptRef.current = 0;
+      setWsState("disconnected");
       return;
     }
 
     let isDisposed = false;
     let ws: WebSocket | null = null;
+    let pingInterval: ReturnType<typeof setInterval> | null = null;
+    let reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
 
-    api.wsTicket(token)
-      .then(({ ticket }) => {
+    const clearTimers = () => {
+      if (pingInterval) {
+        clearInterval(pingInterval);
+        pingInterval = null;
+      }
+      if (reconnectTimeout) {
+        clearTimeout(reconnectTimeout);
+        reconnectTimeout = null;
+      }
+    };
+
+    const scheduleReconnect = () => {
+      if (isDisposed) {
+        return;
+      }
+
+      const index = Math.min(reconnectAttemptRef.current, RECONNECT_DELAYS_MS.length - 1);
+      const delay = RECONNECT_DELAYS_MS[index];
+      reconnectAttemptRef.current += 1;
+      setWsState("connecting");
+      pushLog(`ws reconnect in ${Math.round(delay / 1000)}s`);
+
+      reconnectTimeout = setTimeout(() => {
         if (isDisposed) {
           return;
         }
+        connect();
+      }, delay);
+    };
 
-        ws = new WebSocket(`${wsBase()}/v1/realtime/ws?ticket=${encodeURIComponent(ticket)}`);
-        wsRef.current = ws;
+    const connect = () => {
+      setWsState("connecting");
 
-        ws.onopen = () => {
-          pushLog("ws connected");
-          ws?.send(JSON.stringify({ type: "room.join", payload: { roomSlug } }));
-        };
+      api.wsTicket(token)
+        .then(({ ticket }) => {
+          if (isDisposed) {
+            return;
+          }
 
-        ws.onclose = () => pushLog("ws disconnected");
-        ws.onerror = () => pushLog("ws error");
+          ws = new WebSocket(`${wsBase()}/v1/realtime/ws?ticket=${encodeURIComponent(ticket)}`);
+          wsRef.current = ws;
 
-        ws.onmessage = (event) => {
-          const message = JSON.parse(event.data) as WsIncoming;
-          if (message.type === "chat.message" && message.payload) {
-            setMessages((prev) => [
-              ...prev,
-              {
-                id: message.payload.id || crypto.randomUUID(),
-                room_id: message.payload.roomId || "",
-                user_id: message.payload.userId,
-                text: message.payload.text,
-                created_at: message.payload.createdAt || new Date().toISOString(),
-                user_name: message.payload.userName || "unknown"
+          ws.onopen = () => {
+            reconnectAttemptRef.current = 0;
+            setWsState("connected");
+            pushLog("ws connected");
+            ws?.send(JSON.stringify({ type: "room.join", payload: { roomSlug } }));
+
+            pingInterval = setInterval(() => {
+              if (!ws || ws.readyState !== WebSocket.OPEN) {
+                return;
               }
-            ]);
-          }
-          if (message.type === "room.joined") {
-            setRoomSlug(message.payload.roomSlug);
-          }
-          if (message.type === "room.presence") {
-            const users = (message.payload?.users || []).map(
-              (item: { userName: string; userId: string }) => `${item.userName} (${item.userId.slice(0, 8)})`
-            );
-            setPresence(users);
-          }
-        };
-      })
-      .catch((error) => {
-        pushLog(`ws ticket failed: ${(error as Error).message}`);
-      });
+              ws.send(JSON.stringify({ type: "ping" }));
+            }, 15000);
+          };
+
+          ws.onclose = () => {
+            setWsState("disconnected");
+            pushLog("ws disconnected");
+            clearTimers();
+            scheduleReconnect();
+          };
+
+          ws.onerror = () => {
+            pushLog("ws error");
+          };
+
+          ws.onmessage = (event) => {
+            const message = JSON.parse(event.data) as WsIncoming;
+            if (message.type === "chat.message" && message.payload) {
+              setMessages((prev) => [
+                ...prev,
+                {
+                  id: message.payload.id || crypto.randomUUID(),
+                  room_id: message.payload.roomId || "",
+                  user_id: message.payload.userId,
+                  text: message.payload.text,
+                  created_at: message.payload.createdAt || new Date().toISOString(),
+                  user_name: message.payload.userName || "unknown"
+                }
+              ]);
+            }
+            if (message.type === "room.joined") {
+              setRoomSlug(message.payload.roomSlug);
+            }
+            if (message.type === "room.presence") {
+              const users = (message.payload?.users || []).map(
+                (item: { userName: string; userId: string }) =>
+                  `${item.userName} (${item.userId.slice(0, 8)})`
+              );
+              setPresence(users);
+            }
+          };
+        })
+        .catch((error) => {
+          pushLog(`ws ticket failed: ${(error as Error).message}`);
+          scheduleReconnect();
+        });
+    };
+    connect();
 
     return () => {
       isDisposed = true;
+      clearTimers();
       ws?.close();
     };
   }, [token]);
@@ -236,6 +301,7 @@ export function App() {
         <aside className="leftcolumn">
           <section className="card compact">
             <p className="muted">auth mode: {authMode}</p>
+            <p className="muted">ws: {wsState}</p>
             <div className="row">
               <button onClick={() => beginSso("google")}>Google</button>
               <button className="secondary" onClick={() => beginSso("yandex")}>Yandex</button>

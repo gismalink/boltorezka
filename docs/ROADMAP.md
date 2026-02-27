@@ -8,6 +8,7 @@
 - ✅ Scope первой итерации: MVP parity (SSO, rooms, chat, presence, RBAC admin page).
 - ✅ Legacy WS compatibility: не делаем, только новый протокол.
 - ✅ Room policy: сохраняем текущую (`admin/super_admin` создают комнаты).
+- ✅ Realtime hardening (web): внедрены heartbeat (`ping/pong`) и reconnect backoff в React клиенте.
 - 🔄 Начат этап реализации React web app (`apps/web`).
 
 ## Phase 0 — Discovery & ADR (Week 1)
