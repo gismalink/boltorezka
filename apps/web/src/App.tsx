@@ -1,5 +1,6 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "./api";
+import { trackClientEvent } from "./telemetry";
 import type { Message, Room, User, WsIncoming, WsOutgoing } from "./types";
 
 const RECONNECT_DELAYS_MS = [1000, 2000, 4000, 8000, 12000];
@@ -94,6 +95,11 @@ export function App() {
         clearAckTimer(requestId);
         if (pending.eventType === "chat.send") {
           markMessageDelivery(requestId, "failed");
+          trackClientEvent(
+            "chat.request.failed.retries_exhausted",
+            { requestId, eventType: pending.eventType, retries: pending.retries },
+            token
+          );
         }
         pushLog(`ws request failed after retries: ${pending.eventType}`);
         return;
@@ -239,6 +245,7 @@ export function App() {
             reconnectAttemptRef.current = 0;
             setWsState("connected");
             pushLog("ws connected");
+            trackClientEvent("ws.connected", { roomSlug }, token);
 
             for (const [requestId, pending] of pendingRequestsRef.current.entries()) {
               ws?.send(JSON.stringify(pending.envelope));
@@ -268,6 +275,7 @@ export function App() {
 
           ws.onerror = () => {
             pushLog("ws error");
+            trackClientEvent("ws.error", {}, token);
           };
 
           ws.onmessage = (event) => {
@@ -293,6 +301,16 @@ export function App() {
               const eventType = String(message.payload?.eventType || "").trim();
               const code = String(message.payload?.code || "UnknownError");
               const nackMessage = String(message.payload?.message || "Request failed");
+              trackClientEvent(
+                "ws.nack.received",
+                {
+                  requestId,
+                  eventType,
+                  code,
+                  message: nackMessage
+                },
+                token
+              );
               if (requestId) {
                 pendingRequestsRef.current.delete(requestId);
                 clearAckTimer(requestId);
@@ -417,6 +435,7 @@ export function App() {
       setToken(res.token);
       setUser(res.user);
       pushLog("sso session established");
+      trackClientEvent("auth.sso.complete.success", { userId: res.user?.id || null }, res.token);
     } catch (error) {
       pushLog(`sso failed: ${(error as Error).message}`);
     }

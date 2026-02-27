@@ -40,9 +40,24 @@ else
   SMOKE_STATUS="fail"
 fi
 
+SMOKE_SUMMARY_FILE="$REPO_DIR/.deploy/last-smoke-summary.env"
+SMOKE_SUMMARY_TEXT=""
+if [[ -f "$SMOKE_SUMMARY_FILE" ]]; then
+  source "$SMOKE_SUMMARY_FILE"
+fi
+
+FINAL_NOTES="$DEPLOY_NOTES"
+if [[ -n "${SMOKE_SUMMARY_TEXT:-}" ]]; then
+  if [[ -n "$FINAL_NOTES" ]]; then
+    FINAL_NOTES="$FINAL_NOTES; $SMOKE_SUMMARY_TEXT"
+  else
+    FINAL_NOTES="$SMOKE_SUMMARY_TEXT"
+  fi
+fi
+
 TIMESTAMP_UTC="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 SHA="$(git -C "$REPO_DIR" rev-parse --short HEAD 2>/dev/null || echo n/a)"
-ESCAPED_NOTES="${DEPLOY_NOTES//$'\t'/ }"
+ESCAPED_NOTES="${FINAL_NOTES//$'\t'/ }"
 
 printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
   "$TIMESTAMP_UTC" \
@@ -55,8 +70,8 @@ printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
 
 if [[ -x "$EDGE_RELEASE_LOG_SCRIPT" ]]; then
   EDGE_NOTES="boltorezka ref=$GIT_REF sha=$SHA"
-  if [[ -n "$DEPLOY_NOTES" ]]; then
-    EDGE_NOTES="$EDGE_NOTES; $DEPLOY_NOTES"
+  if [[ -n "$FINAL_NOTES" ]]; then
+    EDGE_NOTES="$EDGE_NOTES; $FINAL_NOTES"
   fi
   bash "$EDGE_RELEASE_LOG_SCRIPT" rollout test "$SMOKE_STATUS" "$EDGE_NOTES" || true
 fi

@@ -37,6 +37,15 @@ async function fetchJson(path, options = {}) {
   if (token) {
     const authHeaders = { Authorization: `Bearer ${token}` };
 
+    const { response: telemetryResponse } = await fetchJson('/v1/telemetry/web', {
+      method: 'POST',
+      headers: { ...authHeaders, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ event: 'smoke.api.telemetry', meta: { source: 'smoke-api' } }),
+    });
+    if (!telemetryResponse.ok) {
+      throw new Error(`[smoke] /v1/telemetry/web failed: ${telemetryResponse.status}`);
+    }
+
     const { response: roomsResponse } = await fetchJson('/v1/rooms', { headers: authHeaders });
     if (!roomsResponse.ok) {
       throw new Error(`[smoke] /v1/rooms failed: ${roomsResponse.status}`);

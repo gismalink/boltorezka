@@ -15,6 +15,14 @@
 - ✅ Error resilience: добавлен React `ErrorBoundary` с безопасным fallback/reload UX.
 - 🔄 Начат этап реализации React web app (`apps/web`).
 
+## Automation plan (next blocks)
+
+- [x] One-command test rollout + smoke (`deploy:test:smoke`)
+- [x] Auto release-log entries for test rollout result
+- [x] Post-deploy smoke summary artifact (`.deploy/last-smoke-summary.env`)
+- [ ] CI runner for `SMOKE_API+SMOKE_SSO+SMOKE_REALTIME`
+- [ ] Auto rollback trigger policy on smoke fail
+
 ## Phase 0 — Discovery & ADR (Week 1)
 
 ### Цели

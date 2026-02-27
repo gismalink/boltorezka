@@ -117,6 +117,9 @@ Rollback выполняется только штатным release-script с з
 - локально в `./.deploy/release-log.tsv`,
 - и дополнительно в `~/srv/edge/RELEASE_LOG.md` (если доступен `~/srv/edge/scripts/auth-cutover-release-log.sh`).
 
+Дополнительно post-deploy smoke сохраняет артефакт `./.deploy/last-smoke-summary.env` с итогом и realtime delta-метриками.
+`deploy:test:smoke` автоматически подхватывает `SMOKE_SUMMARY_TEXT` из этого артефакта и добавляет его в notes обеих release-log записей.
+
 ## 8) Security reminders
 
 - Не выводить секреты в логи.
