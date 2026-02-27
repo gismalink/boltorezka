@@ -65,6 +65,15 @@
 - Добавлен server event `room.left` с подтверждением выхода из комнаты.
 - Обновлён WS контракт (`docs/WS_CONTRACT_V1.md`) и roadmap статус Phase 2.
 
+## 2026-02-28 — Realtime MVP increment: message history pagination
+
+### Delivered
+
+- `/v1/rooms/:slug/messages` переведён на cursor pagination (`beforeCreatedAt` + `beforeId`).
+- Ответ endpoint дополнен `pagination.hasMore` и `pagination.nextCursor`.
+- Обновлены `docs/API_CONTRACT_V1.md` и `docs/OPENAPI_V1.yaml`.
+- Обновлён `scripts/smoke-api.mjs` с проверкой pagination contract и second-page smoke path.
+
 ### Key commits
 
 - `3fa3817` docs: add merge and release pipeline reminder checklist

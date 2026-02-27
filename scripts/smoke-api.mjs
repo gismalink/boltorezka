@@ -69,11 +69,33 @@ async function fetchJson(path, options = {}) {
       throw new Error(`[smoke] /v1/rooms failed: ${roomsResponse.status}`);
     }
 
-    const { response: historyResponse } = await fetchJson('/v1/rooms/general/messages?limit=10', {
+    const { response: historyResponse, payload: historyPayload } = await fetchJson('/v1/rooms/general/messages?limit=10', {
       headers: authHeaders,
     });
     if (!historyResponse.ok) {
       throw new Error(`[smoke] /v1/rooms/general/messages failed: ${historyResponse.status}`);
+    }
+
+    if (!historyPayload || typeof historyPayload !== 'object') {
+      throw new Error('[smoke] /v1/rooms/general/messages invalid payload');
+    }
+
+    if (!historyPayload.pagination || typeof historyPayload.pagination.hasMore !== 'boolean') {
+      throw new Error('[smoke] /v1/rooms/general/messages missing pagination contract');
+    }
+
+    const nextCursor = historyPayload.pagination.nextCursor;
+    if (nextCursor) {
+      const beforeCreatedAt = encodeURIComponent(String(nextCursor.beforeCreatedAt || ''));
+      const beforeId = encodeURIComponent(String(nextCursor.beforeId || ''));
+      const { response: historyPage2Response } = await fetchJson(
+        `/v1/rooms/general/messages?limit=5&beforeCreatedAt=${beforeCreatedAt}&beforeId=${beforeId}`,
+        { headers: authHeaders }
+      );
+
+      if (!historyPage2Response.ok) {
+        throw new Error(`[smoke] paginated /v1/rooms/general/messages failed: ${historyPage2Response.status}`);
+      }
     }
   } else {
     console.log('[smoke] SMOKE_BEARER_TOKEN is not set -> protected endpoints skipped');

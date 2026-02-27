@@ -93,7 +93,10 @@ export async function roomsRoutes(fastify: FastifyInstance) {
     }
   );
 
-  fastify.get<{ Params: { slug: string }; Querystring: { limit?: string | number } }>(
+  fastify.get<{
+    Params: { slug: string };
+    Querystring: { limit?: string | number; beforeCreatedAt?: string; beforeId?: string };
+  }>(
     "/v1/rooms/:slug/messages",
     {
       preHandler: [requireAuth]
@@ -102,6 +105,31 @@ export async function roomsRoutes(fastify: FastifyInstance) {
       const userId = String(request.user?.sub || "").trim();
       const slug = String(request.params.slug || "").trim();
       const limit = Math.min(100, Math.max(1, Number(request.query.limit || 50)));
+      const beforeCreatedAtRaw = String(request.query.beforeCreatedAt || "").trim();
+      const beforeIdRaw = String(request.query.beforeId || "").trim();
+
+      let beforeCreatedAt: string | null = null;
+      let beforeId: string | null = null;
+
+      if (beforeCreatedAtRaw || beforeIdRaw) {
+        if (!beforeCreatedAtRaw || !beforeIdRaw) {
+          return reply.code(400).send({
+            error: "ValidationError",
+            message: "beforeCreatedAt and beforeId must be provided together"
+          });
+        }
+
+        const beforeDate = new Date(beforeCreatedAtRaw);
+        if (Number.isNaN(beforeDate.getTime())) {
+          return reply.code(400).send({
+            error: "ValidationError",
+            message: "beforeCreatedAt must be a valid ISO datetime"
+          });
+        }
+
+        beforeCreatedAt = beforeDate.toISOString();
+        beforeId = beforeIdRaw;
+      }
 
       const roomResult = await db.query<RoomRow>(
         "SELECT id, slug, title, is_public FROM rooms WHERE slug = $1",
@@ -131,25 +159,55 @@ export async function roomsRoutes(fastify: FastifyInstance) {
         }
       }
 
-      const messagesResult = await db.query<RoomMessageRow>(
-        `SELECT
-           m.id,
-           m.room_id,
-           m.user_id,
-           m.body AS text,
-           m.created_at,
-           u.name AS user_name
-         FROM messages m
-         JOIN users u ON u.id = m.user_id
-         WHERE m.room_id = $1
-         ORDER BY m.created_at DESC
-         LIMIT $2`,
-        [room.id, limit]
-      );
+      const messagesResult = beforeCreatedAt && beforeId
+        ? await db.query<RoomMessageRow>(
+            `SELECT
+               m.id,
+               m.room_id,
+               m.user_id,
+               m.body AS text,
+               m.created_at,
+               u.name AS user_name
+             FROM messages m
+             JOIN users u ON u.id = m.user_id
+             WHERE m.room_id = $1
+               AND (m.created_at, m.id) < ($2::timestamptz, $3)
+             ORDER BY m.created_at DESC, m.id DESC
+             LIMIT $4`,
+            [room.id, beforeCreatedAt, beforeId, limit + 1]
+          )
+        : await db.query<RoomMessageRow>(
+            `SELECT
+               m.id,
+               m.room_id,
+               m.user_id,
+               m.body AS text,
+               m.created_at,
+               u.name AS user_name
+             FROM messages m
+             JOIN users u ON u.id = m.user_id
+             WHERE m.room_id = $1
+             ORDER BY m.created_at DESC, m.id DESC
+             LIMIT $2`,
+            [room.id, limit + 1]
+          );
+
+      const hasMore = messagesResult.rows.length > limit;
+      const pageDesc = hasMore ? messagesResult.rows.slice(0, limit) : messagesResult.rows;
+      const oldestInPage = pageDesc[pageDesc.length - 1] || null;
 
       const response: RoomMessagesResponse = {
         room,
-        messages: messagesResult.rows.reverse()
+        messages: pageDesc.reverse(),
+        pagination: {
+          hasMore,
+          nextCursor: hasMore && oldestInPage
+            ? {
+                beforeCreatedAt: oldestInPage.created_at,
+                beforeId: oldestInPage.id
+              }
+            : null
+        }
       };
       return response;
     }

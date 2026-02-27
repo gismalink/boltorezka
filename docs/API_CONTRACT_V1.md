@@ -83,12 +83,20 @@
 - 409 `Conflict` (slug exists)
 - 401/403 for authz/authn violations
 
-### GET /v1/rooms/:slug/messages?limit=1..100
+### GET /v1/rooms/:slug/messages?limit=1..100&beforeCreatedAt=<iso>&beforeId=<id>
 
 - Auth: Bearer JWT
+- Cursor pagination:
+  - initial page: only `limit`
+  - next page: pass both `beforeCreatedAt` + `beforeId` from previous `pagination.nextCursor`
+  - `beforeCreatedAt` and `beforeId` must be provided together
 - 200:
   - `room`: `{ id, slug, title, is_public }`
   - `messages[]`: `{ id, room_id, user_id, text, created_at, user_name }`
+  - `pagination`:
+    - `hasMore`: boolean
+    - `nextCursor`: `{ beforeCreatedAt, beforeId } | null`
+- 400 `ValidationError` for invalid cursor params
 - 404 `RoomNotFound`
 - 403 `Forbidden` (private room without membership)
 

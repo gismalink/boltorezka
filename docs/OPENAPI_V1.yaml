@@ -249,6 +249,15 @@ paths:
             type: integer
             minimum: 1
             maximum: 100
+        - in: query
+          name: beforeCreatedAt
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: beforeId
+          schema:
+            type: string
       responses:
         '200':
           description: Messages in room
@@ -263,6 +272,22 @@ paths:
                     type: array
                     items:
                       $ref: '#/components/schemas/RoomMessage'
+                  pagination:
+                    type: object
+                    properties:
+                      hasMore:
+                        type: boolean
+                      nextCursor:
+                        type: object
+                        nullable: true
+                        properties:
+                          beforeCreatedAt:
+                            type: string
+                            format: date-time
+                          beforeId:
+                            type: string
+        '400':
+          $ref: '#/components/responses/ValidationError'
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':

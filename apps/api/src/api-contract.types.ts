@@ -37,6 +37,13 @@ export type RoomCreateResponse = {
 export type RoomMessagesResponse = {
   room: RoomRow;
   messages: RoomMessageRow[];
+  pagination: {
+    hasMore: boolean;
+    nextCursor: {
+      beforeCreatedAt: string;
+      beforeId: string;
+    } | null;
+  };
 };
 
 export type AdminUsersResponse = {
