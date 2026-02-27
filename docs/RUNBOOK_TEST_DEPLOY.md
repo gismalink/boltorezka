@@ -113,6 +113,10 @@ Rollback выполняется только штатным release-script с з
 - decision (go/rollback),
 - owner.
 
+При запуске `deploy:test:smoke` запись создаётся автоматически:
+- локально в `./.deploy/release-log.tsv`,
+- и дополнительно в `~/srv/edge/RELEASE_LOG.md` (если доступен `~/srv/edge/scripts/auth-cutover-release-log.sh`).
+
 ## 8) Security reminders
 
 - Не выводить секреты в логи.

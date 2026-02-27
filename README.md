@@ -49,6 +49,7 @@ Legacy-файлы перенесены в `legacy/poc/`.
 - `npm run deploy:test` — deploy test from git ref (`scripts/examples/deploy-test-from-ref.sh`)
 - `npm run smoke:test:postdeploy` — серверный post-deploy smoke (`health + mode + smoke:sso + smoke:realtime + ws metrics`) (`scripts/examples/postdeploy-smoke-test.sh`)
 - `TEST_REF=origin/<branch> npm run deploy:test:smoke` — one-command test rollout + post-deploy smoke (`scripts/examples/deploy-test-and-smoke.sh`)
+- `DEPLOY_NOTES='notes' TEST_REF=origin/<branch> npm run deploy:test:smoke` — тот же one-command flow + автоматическая запись release-log (`.deploy/release-log.tsv`, и в `~/srv/edge/RELEASE_LOG.md` если доступен edge release-log script)
 - `npm run deploy:prod` — deploy prod from git ref (`scripts/examples/deploy-prod-from-ref.sh`)
 
 Перед server deploy обязательно:
