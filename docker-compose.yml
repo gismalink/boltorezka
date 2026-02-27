@@ -33,6 +33,8 @@ services:
   api:
     build:
       context: ./apps/api
+      additional_contexts:
+        web: ./apps/web
     container_name: boltorezka-api
     restart: unless-stopped
     env_file:

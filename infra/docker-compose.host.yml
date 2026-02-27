@@ -5,6 +5,8 @@ services:
     build:
       context: ../apps/api
       dockerfile: Dockerfile
+      additional_contexts:
+        web: ../apps/web
     image: boltorezka-api:test
     container_name: boltorezka-api-test
     restart: unless-stopped
@@ -67,6 +69,8 @@ services:
     build:
       context: ../apps/api
       dockerfile: Dockerfile
+      additional_contexts:
+        web: ../apps/web
     image: boltorezka-api:prod
     container_name: boltorezka-api-prod
     restart: unless-stopped
