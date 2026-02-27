@@ -34,6 +34,7 @@ Legacy-файлы перенесены в `legacy/poc/`.
 - Архитектура: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 - План переписывания: [docs/ROADMAP.md](docs/ROADMAP.md)
 - Тестовый деплой (GitOps): [docs/RUNBOOK_TEST_DEPLOY.md](docs/RUNBOOK_TEST_DEPLOY.md)
+- Быстрый rollout в test (5 команд): [docs/RUNBOOK_TEST_ROLLOUT_QUICKSTART.md](docs/RUNBOOK_TEST_ROLLOUT_QUICKSTART.md)
 
 ## Платформы
 
