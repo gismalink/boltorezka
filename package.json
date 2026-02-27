@@ -4,6 +4,7 @@
   "version": "0.2.0",
   "scripts": {
     "check": "bash ./scripts/verify-all.sh",
+    "check:api-types": "npm --prefix apps/api run typecheck",
     "web:install": "npm --prefix apps/web install",
     "web:dev": "npm --prefix apps/web run dev",
     "web:build": "npm --prefix apps/web run build",

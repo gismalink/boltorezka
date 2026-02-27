@@ -41,6 +41,7 @@ Legacy-файлы перенесены в `legacy/poc/`.
 ## Process scripts (Projo-aligned)
 
 - `npm run check` — локальный verify pipeline (`scripts/verify-all.sh`)
+- `npm run check:api-types` — baseline backend typecheck (`apps/api/tsconfig.json`, `allowJs+checkJs`)
 - `SMOKE_API=1 npm run check` — verify + API smoke (`scripts/smoke-api.mjs`)
 - `SMOKE_API_URL=https://test.boltorezka.gismalink.art npm run smoke:sso` — SSO redirect/mode smoke (`scripts/smoke-sso-redirect.mjs`)
 - `SMOKE_API_URL=https://test.boltorezka.gismalink.art SMOKE_BEARER_TOKEN=<jwt> npm run smoke:realtime` — WS protocol smoke (`nack/ack/idempotency`) через `ws-ticket` (`scripts/smoke-realtime.mjs`)

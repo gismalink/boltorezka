@@ -1,4 +1,5 @@
 import { db } from "../db.js";
+import { isCallSignalEventType } from "../ws-protocol.js";
 
 function sendJson(socket, payload) {
   if (socket.readyState === socket.OPEN) {
@@ -489,11 +490,7 @@ export async function realtimeRoutes(fastify) {
               return;
             }
 
-            if (
-              message.type === "call.offer" ||
-              message.type === "call.answer" ||
-              message.type === "call.ice"
-            ) {
+            if (isCallSignalEventType(message.type)) {
               if (!state.roomId) {
                 sendNack(
                   connection,
