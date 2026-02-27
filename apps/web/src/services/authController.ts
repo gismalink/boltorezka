@@ -20,11 +20,13 @@ export class AuthController {
     window.location.href = `/v1/auth/sso/start?provider=${provider}&returnUrl=${encodeURIComponent(returnUrl)}`;
   }
 
-  async completeSso() {
+  async completeSso(options: { silent?: boolean } = {}) {
     try {
       const res = await api.ssoSession();
       if (!res.authenticated || !res.token) {
-        this.options.pushLog("sso not authenticated yet");
+        if (!options.silent) {
+          this.options.pushLog("sso not authenticated yet");
+        }
         return;
       }
 

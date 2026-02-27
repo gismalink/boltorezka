@@ -46,6 +46,7 @@ export function App() {
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const realtimeClientRef = useRef<RealtimeClient | null>(null);
   const roomSlugRef = useRef(roomSlug);
+  const autoSsoAttemptedRef = useRef(false);
   const authMenuRef = useRef<HTMLDivElement | null>(null);
   const profileMenuRef = useRef<HTMLDivElement | null>(null);
 
@@ -151,6 +152,15 @@ export function App() {
       .then((res) => setAuthMode(res.mode))
       .catch(() => setAuthMode("sso"));
   }, []);
+
+  useEffect(() => {
+    if (token || authMode !== "sso" || autoSsoAttemptedRef.current) {
+      return;
+    }
+
+    autoSsoAttemptedRef.current = true;
+    void authController.completeSso({ silent: true });
+  }, [token, authMode, authController]);
 
   useEffect(() => {
     if (!token) {
