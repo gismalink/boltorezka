@@ -1,8 +1,13 @@
 import { db } from "../db.js";
 import {
   buildAckEnvelope,
+  buildChatMessageEnvelope,
   buildErrorEnvelope,
   buildNackEnvelope,
+  buildPresenceJoinedEnvelope,
+  buildPresenceLeftEnvelope,
+  buildRoomJoinedEnvelope,
+  buildRoomPresenceEnvelope,
   buildServerReadyEnvelope,
   getCallSignal,
   getPayloadString,
@@ -313,14 +318,7 @@ export async function realtimeRoutes(fastify) {
                 detachRoomSocket(state.roomId, connection);
                 broadcastRoom(
                   state.roomId,
-                  {
-                    type: "presence.left",
-                    payload: {
-                      userId: state.userId,
-                      userName: state.userName,
-                      roomSlug: state.roomSlug
-                    }
-                  },
+                  buildPresenceLeftEnvelope(state.userId, state.userName, state.roomSlug, 0),
                   connection
                 );
               }
@@ -329,14 +327,14 @@ export async function realtimeRoutes(fastify) {
               state.roomSlug = joinResult.room.slug;
               attachRoomSocket(joinResult.room.id, connection);
 
-              sendJson(connection, {
-                type: "room.joined",
-                payload: {
-                  roomId: joinResult.room.id,
-                  roomSlug: joinResult.room.slug,
-                  roomTitle: joinResult.room.title
-                }
-              });
+              sendJson(
+                connection,
+                buildRoomJoinedEnvelope(
+                  joinResult.room.id,
+                  joinResult.room.slug,
+                  joinResult.room.title
+                )
+              );
 
               sendAck(connection, requestId, eventType, {
                 roomId: joinResult.room.id,
@@ -344,26 +342,23 @@ export async function realtimeRoutes(fastify) {
               });
               void incrementMetric("ack_sent");
 
-              sendJson(connection, {
-                type: "room.presence",
-                payload: {
-                  roomId: joinResult.room.id,
-                  roomSlug: joinResult.room.slug,
-                  users: getRoomPresence(joinResult.room.id)
-                }
-              });
+              sendJson(
+                connection,
+                buildRoomPresenceEnvelope(
+                  joinResult.room.id,
+                  joinResult.room.slug,
+                  getRoomPresence(joinResult.room.id)
+                )
+              );
 
               broadcastRoom(
                 joinResult.room.id,
-                {
-                  type: "presence.joined",
-                  payload: {
-                    userId: state.userId,
-                    userName: state.userName,
-                    roomSlug: joinResult.room.slug,
-                    presenceCount: getRoomPresence(joinResult.room.id).length
-                  }
-                },
+                buildPresenceJoinedEnvelope(
+                  state.userId,
+                  state.userName,
+                  joinResult.room.slug,
+                  getRoomPresence(joinResult.room.id).length
+                ),
                 connection
               );
 
@@ -406,10 +401,7 @@ export async function realtimeRoutes(fastify) {
                 if (cachedPayloadRaw) {
                   try {
                     const cachedPayload = JSON.parse(cachedPayloadRaw);
-                    sendJson(connection, {
-                      type: "chat.message",
-                      payload: cachedPayload
-                    });
+                    sendJson(connection, buildChatMessageEnvelope(cachedPayload));
                   } catch {
                     await fastify.redis.del(idemRedisKey);
                   }
@@ -452,10 +444,7 @@ export async function realtimeRoutes(fastify) {
                 );
               }
 
-              broadcastRoom(state.roomId, {
-                type: "chat.message",
-                payload: chatPayload
-              });
+              broadcastRoom(state.roomId, buildChatMessageEnvelope(chatPayload));
 
               sendAck(connection, requestId, eventType, {
                 messageId: chatMessage.id,
@@ -741,15 +730,15 @@ export async function realtimeRoutes(fastify) {
 
           if (state.roomId) {
             detachRoomSocket(state.roomId, connection);
-            broadcastRoom(state.roomId, {
-              type: "presence.left",
-              payload: {
-                userId: state.userId,
-                userName: state.userName,
-                roomSlug: state.roomSlug,
-                presenceCount: getRoomPresence(state.roomId).length
-              }
-            });
+            broadcastRoom(
+              state.roomId,
+              buildPresenceLeftEnvelope(
+                state.userId,
+                state.userName,
+                state.roomSlug,
+                getRoomPresence(state.roomId).length
+              )
+            );
           }
 
           const userSockets = socketsByUserId.get(state.userId);

@@ -3,6 +3,7 @@
 /** @typedef {CallSignalEventType | CallTerminalEventType} CallEventType */
 /** @typedef {{ type: string, requestId?: string, idempotencyKey?: string, payload?: Record<string, unknown> }} WsIncomingEnvelope */
 /** @typedef {{ type: string, payload: Record<string, unknown> }} WsOutgoingEnvelope */
+/** @typedef {{ userId: string, userName: string }} PresenceUser */
 
 export const CALL_SIGNAL_EVENT_TYPES = ["call.offer", "call.answer", "call.ice"];
 export const CALL_TERMINAL_EVENT_TYPES = ["call.reject", "call.hangup"];
@@ -177,5 +178,70 @@ export function buildServerReadyEnvelope(userId, userName) {
       userName,
       connectedAt: new Date().toISOString()
     }
+  };
+}
+
+/**
+ * @param {string} roomId
+ * @param {string} roomSlug
+ * @param {string} roomTitle
+ * @returns {WsOutgoingEnvelope}
+ */
+export function buildRoomJoinedEnvelope(roomId, roomSlug, roomTitle) {
+  return {
+    type: "room.joined",
+    payload: { roomId, roomSlug, roomTitle }
+  };
+}
+
+/**
+ * @param {string} roomId
+ * @param {string} roomSlug
+ * @param {PresenceUser[]} users
+ * @returns {WsOutgoingEnvelope}
+ */
+export function buildRoomPresenceEnvelope(roomId, roomSlug, users) {
+  return {
+    type: "room.presence",
+    payload: { roomId, roomSlug, users }
+  };
+}
+
+/**
+ * @param {string} userId
+ * @param {string} userName
+ * @param {string} roomSlug
+ * @param {number} presenceCount
+ * @returns {WsOutgoingEnvelope}
+ */
+export function buildPresenceJoinedEnvelope(userId, userName, roomSlug, presenceCount) {
+  return {
+    type: "presence.joined",
+    payload: { userId, userName, roomSlug, presenceCount }
+  };
+}
+
+/**
+ * @param {string} userId
+ * @param {string} userName
+ * @param {string | null} roomSlug
+ * @param {number} presenceCount
+ * @returns {WsOutgoingEnvelope}
+ */
+export function buildPresenceLeftEnvelope(userId, userName, roomSlug, presenceCount) {
+  return {
+    type: "presence.left",
+    payload: { userId, userName, roomSlug, presenceCount }
+  };
+}
+
+/**
+ * @param {Record<string, unknown>} payload
+ * @returns {WsOutgoingEnvelope}
+ */
+export function buildChatMessageEnvelope(payload) {
+  return {
+    type: "chat.message",
+    payload
   };
 }
