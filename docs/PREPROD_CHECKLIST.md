@@ -18,7 +18,10 @@
    - Complete SSO Session,
    - room join,
    - message send/receive в двух вкладках.
-5. RBAC smoke пройден:
+5. Extended realtime relay smoke пройден:
+   - `SMOKE_CALL_SIGNAL=1` сценарий с двумя `ws-ticket`,
+   - подтверждены relay `call.offer/call.reject/call.hangup`.
+6. RBAC smoke пройден:
    - `super_admin` может промоутить пользователя в `admin`,
    - обычный `user` не может создавать комнату,
    - `admin` может создавать комнату.

@@ -29,12 +29,12 @@
 
 ## 3) Компоненты backend
 
-- `api-gateway` (опционально, если нужен отдельный edge слой)
-- `boltorezka-api`
-- `boltorezka-realtime`
+- `boltorezka-api` (единый сервис: HTTP API + WebSocket signaling/presence/chat/call relay)
 - `postgres`
 - `redis`
 - `coturn` (отдельный сервис, credentials только через env/secret manager)
+
+Текущая production-shaped реализация использует единый runtime API сервис; выделение отдельного realtime сервиса рассматривается как будущая эволюция только при необходимости масштабирования.
 
 ## 4) Domain model (минимум)
 

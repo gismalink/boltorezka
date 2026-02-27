@@ -26,25 +26,21 @@
 
 - `ssh mac-mini 'cd ~/srv/edge && ./scripts/server-quick-check.sh'`
 
-2) Подтянуть и запустить rollout в test (через release-command):
-
-- `ssh mac-mini 'cd ~/srv/edge && ./scripts/release-command.sh rollout --env test --service boltorezka --branch main'`
-
-3) GitOps deploy (ff-only pull + post-deploy):
-
-- `ssh mac-mini 'cd ~/srv/edge && ./scripts/gitops-deploy.sh --env test --service boltorezka --branch main'`
-
-Альтернатива (если деплой идёт из repo boltorezka на сервере):
+2) Деплой в test из нужного git ref (основной путь для Boltorezka):
 
 - `ssh mac-mini 'cd ~/srv/boltorezka && TEST_REF=origin/main ALLOW_TEST_FROM_MAIN=1 npm run deploy:test'`
 
-4) Smoke script для test:
+3) One-command deploy + post-deploy smoke (рекомендуется):
 
-- `ssh mac-mini 'cd ~/srv/edge && ./scripts/test-smoke.sh --local test'`
+- `ssh mac-mini 'cd ~/srv/boltorezka && TEST_REF=origin/main ALLOW_TEST_FROM_MAIN=1 npm run deploy:test:smoke'`
+
+4) При необходимости повторить post-deploy smoke отдельно:
+
+- `ssh mac-mini 'cd ~/srv/boltorezka && npm run smoke:test:postdeploy'`
 
 5) Логи сервиса после rollout:
 
-- `ssh mac-mini 'cd ~/srv/edge && docker compose ps && docker compose logs --tail=120 boltorezka-api-test'`
+- `ssh mac-mini 'cd ~/srv/boltorezka && docker compose -f infra/docker-compose.host.yml --env-file infra/.env.host ps && docker compose -f infra/docker-compose.host.yml --env-file infra/.env.host logs --tail=120 boltorezka-api-test'`
 
 ### One-command альтернатива (deploy + smoke)
 
@@ -101,7 +97,8 @@
 
 Rollback команда:
 
-- `ssh mac-mini 'cd ~/srv/edge && ./scripts/release-command.sh rollback --env test --service boltorezka'`
+- `ssh mac-mini 'cd ~/srv/boltorezka && TEST_REF=<previous_sha_or_ref> npm run deploy:test'`
+- или с автополитикой rollback: `ssh mac-mini 'cd ~/srv/boltorezka && AUTO_ROLLBACK_ON_FAIL=1 AUTO_ROLLBACK_SMOKE=1 TEST_REF=origin/main ALLOW_TEST_FROM_MAIN=1 npm run deploy:test:smoke'`
 
 ## Audit notes (обязательно)
 

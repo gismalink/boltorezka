@@ -2,7 +2,7 @@
 
 ## Горизонт: 12 недель
 
-## React migration status (2026-02-27)
+## React migration status (2026-02-28)
 
 - ✅ Решение принято: web-клиент переносим на React.
 - ✅ Scope первой итерации: MVP parity (SSO, rooms, chat, presence, RBAC admin page).
@@ -27,6 +27,9 @@
 - ✅ WS contract typing expanded: добавлены payload type aliases (chat/room/presence/pong) в `ws-protocol.types.ts`.
 - ✅ DB contract typing step: добавлен `apps/api/src/db.types.ts`, ключевые `rows[0]/rows` в routes и middleware аннотированы через JSDoc types.
 - ✅ API DTO typing step: добавлен `apps/api/src/api-contract.types.ts`, response DTO для `auth/rooms/admin` подключены через JSDoc.
+- ✅ API runtime migration: backend runtime файлы переведены с `.js` на `.ts` (config/db/redis/index/routes/middleware/ws protocol).
+- ✅ Strict TS hardening: включены строгие проверки, устранены runtime `any` и промежуточный request-context слой.
+- ✅ Realtime handler hardening: known-event switch-dispatch + дедуп relay-веток + централизованные ack/nack helper-пути.
 - 🔄 Начат этап реализации React web app (`apps/web`).
 
 ## Automation plan (next blocks)
@@ -253,3 +256,19 @@ Policy flags: `AUTO_ROLLBACK_ON_FAIL=1`, `AUTO_ROLLBACK_SMOKE=1`.
 - Call setup success rate
 - ICE failure rate
 - Crash-free sessions (web/iOS/macOS)
+
+## Ближайший execution plan (следующие шаги)
+
+1. Merge `feature/call-hangup-lifecycle` в `main` после review.
+2. Выполнить post-merge verify в `test` от `origin/main`:
+  - `deploy:test:smoke`
+  - extended realtime relay smoke (`SMOKE_CALL_SIGNAL=1`, 2 ws-ticket).
+3. Закрыть docs-gap для React как default UI runbook:
+  - обновить шаги smoke для `apps/web` как primary path,
+  - зафиксировать deprecation-plan для legacy `apps/api/public`.
+4. Закрыть OpenAPI/WS schema milestone:
+  - финализировать v1 HTTP/WS contract docs,
+  - синхронизировать checklist и CI smoke matrix.
+5. Подготовить pre-prod decision пакет:
+  - зафиксировать итоговые test evidence,
+  - подтвердить rollback-plan и владельца релиза.
