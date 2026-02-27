@@ -6,6 +6,7 @@ import {
   buildChatMessageEnvelope,
   buildErrorEnvelope,
   buildNackEnvelope,
+  buildPongEnvelope,
   buildPresenceJoinedEnvelope,
   buildPresenceLeftEnvelope,
   buildRoomJoinedEnvelope,
@@ -282,12 +283,7 @@ export async function realtimeRoutes(fastify) {
             }
 
             if (message.type === "ping") {
-              sendJson(connection, {
-                type: "pong",
-                payload: {
-                  ts: Date.now()
-                }
-              });
+              sendJson(connection, buildPongEnvelope());
               sendAck(connection, requestId, eventType);
               void incrementMetric("ack_sent");
               return;

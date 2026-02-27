@@ -247,6 +247,18 @@ export function buildChatMessageEnvelope(payload) {
 }
 
 /**
+ * @returns {WsOutgoingEnvelope}
+ */
+export function buildPongEnvelope() {
+  return {
+    type: "pong",
+    payload: {
+      ts: Date.now()
+    }
+  };
+}
+
+/**
  * @param {string} fromUserId
  * @param {string} fromUserName
  * @param {string} roomId
