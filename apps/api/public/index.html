@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Boltorezka v2 MVP</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <main class="app">
+      <section class="card">
+        <h1>Boltorezka v2 MVP</h1>
+        <p class="muted">Auth + Rooms + Realtime Chat</p>
+      </section>
+
+      <section class="card grid-2">
+        <div>
+          <h2>Register</h2>
+          <form id="register-form">
+            <input id="register-name" placeholder="Name" required />
+            <input id="register-email" type="email" placeholder="Email" required />
+            <input id="register-password" type="password" placeholder="Password (min 8)" required />
+            <button type="submit">Create account</button>
+          </form>
+        </div>
+
+        <div>
+          <h2>Login</h2>
+          <form id="login-form">
+            <input id="login-email" type="email" placeholder="Email" required />
+            <input id="login-password" type="password" placeholder="Password" required />
+            <button type="submit">Login</button>
+          </form>
+          <button id="logout-btn" class="secondary">Logout</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Session</h2>
+        <pre id="session-box">No active session</pre>
+      </section>
+
+      <section class="card grid-2">
+        <div>
+          <h2>Rooms</h2>
+          <form id="create-room-form" class="inline-form">
+            <input id="room-slug" placeholder="slug (e.g. squad-chat)" />
+            <input id="room-title" placeholder="title" />
+            <button type="submit">Create</button>
+          </form>
+          <ul id="rooms-list"></ul>
+        </div>
+
+        <div>
+          <h2>Realtime Chat</h2>
+          <div class="inline-form">
+            <input id="join-room-slug" placeholder="room slug" />
+            <button id="join-room-btn">Join room</button>
+          </div>
+          <div class="inline-form">
+            <input id="chat-input" placeholder="Type message" />
+            <button id="send-chat-btn">Send</button>
+          </div>
+          <pre id="ws-status">WS: disconnected</pre>
+          <div id="chat-log" class="chat-log"></div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Event Log</h2>
+        <div id="event-log" class="event-log"></div>
+      </section>
+    </main>
+
+    <script src="/app.js" type="module"></script>
+  </body>
+</html>

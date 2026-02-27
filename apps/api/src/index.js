@@ -2,6 +2,9 @@ import Fastify from "fastify";
 import cors from "@fastify/cors";
 import jwt from "@fastify/jwt";
 import websocket from "@fastify/websocket";
+import fastifyStatic from "@fastify/static";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { config } from "./config.js";
 import { connectRedis, redis } from "./redis.js";
 import { db } from "./db.js";
@@ -9,6 +12,8 @@ import { healthRoutes } from "./routes/health.js";
 import { authRoutes } from "./routes/auth.js";
 import { roomsRoutes } from "./routes/rooms.js";
 import { realtimeRoutes } from "./routes/realtime.js";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const app = Fastify({
   logger: true
@@ -24,6 +29,11 @@ await app.register(jwt, {
 });
 
 await app.register(websocket);
+
+await app.register(fastifyStatic, {
+  root: path.join(__dirname, "../public"),
+  prefix: "/"
+});
 
 app.decorate("jwtExpiresIn", config.jwtExpiresIn);
 app.decorate("redis", redis);

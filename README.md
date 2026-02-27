@@ -61,6 +61,7 @@ Legacy-файлы перенесены в `legacy/poc/`.
 - JWT auth endpoints (`register`, `login`, `me`)
 - Rooms endpoints (`list`, `create`)
 - Health endpoint с проверкой DB/Redis
+- Web MVP UI на `http://localhost:8080/` (auth + rooms + realtime chat)
 
 ### Локальный старт
 
