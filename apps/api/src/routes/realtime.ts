@@ -313,6 +313,16 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
     void incrementMetric("nack_sent");
   };
 
+  const sendJoinDeniedNack = (
+    socket: WebSocket,
+    requestId: string | null,
+    eventType: string,
+    reason: "RoomNotFound" | "Forbidden"
+  ) => {
+    sendNack(socket, requestId, eventType, reason, "Cannot join room");
+    void incrementMetric("nack_sent");
+  };
+
   const sendAckWithMetrics = (
     socket: WebSocket,
     requestId: string | null,
@@ -431,14 +441,7 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
                 const joinResult = await canJoinRoom(roomSlug, state.userId);
 
                 if (!joinResult.ok) {
-                  sendNack(
-                    connection,
-                    requestId,
-                    eventType,
-                    joinResult.reason || "Forbidden",
-                    "Cannot join room"
-                  );
-                  void incrementMetric("nack_sent");
+                  sendJoinDeniedNack(connection, requestId, eventType, joinResult.reason);
                   return;
                 }
 
