@@ -12,19 +12,6 @@ import type {
   WsOutgoingEnvelope
 } from "./ws-protocol.types.ts";
 
-/** @typedef {import("./ws-protocol.types.ts").CallSignalEventType} CallSignalEventType */
-/** @typedef {import("./ws-protocol.types.ts").CallTerminalEventType} CallTerminalEventType */
-/** @typedef {import("./ws-protocol.types.ts").CallEventType} CallEventType */
-/** @typedef {import("./ws-protocol.types.ts").WsIncomingEnvelope} WsIncomingEnvelope */
-/** @typedef {import("./ws-protocol.types.ts").WsOutgoingEnvelope} WsOutgoingEnvelope */
-/** @typedef {import("./ws-protocol.types.ts").PresenceUser} PresenceUser */
-/** @typedef {import("./ws-protocol.types.ts").PongPayload} PongPayload */
-/** @typedef {import("./ws-protocol.types.ts").ChatMessagePayload} ChatMessagePayload */
-/** @typedef {import("./ws-protocol.types.ts").RoomJoinedPayload} RoomJoinedPayload */
-/** @typedef {import("./ws-protocol.types.ts").RoomPresencePayload} RoomPresencePayload */
-/** @typedef {import("./ws-protocol.types.ts").PresenceJoinedPayload} PresenceJoinedPayload */
-/** @typedef {import("./ws-protocol.types.ts").PresenceLeftPayload} PresenceLeftPayload */
-
 export const CALL_SIGNAL_EVENT_TYPES = ["call.offer", "call.answer", "call.ice"];
 export const CALL_TERMINAL_EVENT_TYPES = ["call.reject", "call.hangup"];
 

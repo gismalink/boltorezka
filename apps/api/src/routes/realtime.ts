@@ -1,6 +1,7 @@
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import type { RawData, WebSocket } from "ws";
 import { db } from "../db.js";
+import type { InsertedMessageRow, RoomRow } from "../db.types.ts";
 import {
   buildAckEnvelope,
   buildCallSignalRelayEnvelope,
@@ -19,9 +20,6 @@ import {
   isCallSignalEventType,
   parseWsIncomingEnvelope
 } from "../ws-protocol.js";
-/** @typedef {import("../db.types.ts").RoomRow} RoomRow */
-/** @typedef {import("../db.types.ts").InsertedMessageRow} InsertedMessageRow */
-
 type SocketState = {
   userId: string;
   userName: string;
@@ -35,6 +33,10 @@ type WsTicketClaims = {
   name?: string;
   email?: string;
 };
+
+type CanJoinRoomResult =
+  | { ok: true; room: RoomRow }
+  | { ok: false; reason: "RoomNotFound" | "Forbidden" };
 
 function sendJson(socket: WebSocket, payload: unknown): void {
   if (socket.readyState === socket.OPEN) {
@@ -183,8 +185,8 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
     return result;
   };
 
-  const canJoinRoom = async (roomSlug: string, userId: string) => {
-    const room = await db.query(
+  const canJoinRoom = async (roomSlug: string, userId: string): Promise<CanJoinRoomResult> => {
+    const room = await db.query<RoomRow>(
       "SELECT id, slug, title, is_public FROM rooms WHERE slug = $1",
       [roomSlug]
     );
@@ -193,7 +195,7 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
       return { ok: false, reason: "RoomNotFound" };
     }
 
-    const selectedRoom = /** @type {RoomRow} */ (room.rows[0]);
+    const selectedRoom = room.rows[0];
 
     if (!selectedRoom.is_public) {
       const membership = await db.query(
@@ -438,14 +440,14 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
                 }
               }
 
-              const inserted = await db.query(
+              const inserted = await db.query<InsertedMessageRow>(
                 `INSERT INTO messages (room_id, user_id, body)
                  VALUES ($1, $2, $3)
                  RETURNING id, room_id, user_id, body, created_at`,
                 [state.roomId, state.userId, text]
               );
 
-              const chatMessage = /** @type {InsertedMessageRow} */ (inserted.rows[0]);
+              const chatMessage = inserted.rows[0];
 
               const chatPayload = {
                 id: chatMessage.id,

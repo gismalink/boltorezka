@@ -4,7 +4,6 @@ import { db } from "../db.js";
 import { loadCurrentUser, requireAuth, requireRole } from "../middleware/auth.js";
 import type { RoomListRow, RoomMessageRow, RoomRow } from "../db.types.ts";
 import type { RoomCreateResponse, RoomMessagesResponse, RoomsListResponse } from "../api-contract.types.ts";
-import type { AuthenticatedRequestContext, RoomMessagesRequestContext } from "../request-context.types.ts";
 
 const createRoomSchema = z.object({
   slug: z
@@ -23,9 +22,8 @@ export async function roomsRoutes(fastify: FastifyInstance) {
       preHandler: [requireAuth]
     },
     async (request: FastifyRequest) => {
-      const authRequest = request as FastifyRequest & AuthenticatedRequestContext;
-      const userId = String(authRequest.user?.sub || "").trim();
-      const result = await db.query(
+      const userId = String(request.user?.sub || "").trim();
+      const result = await db.query<RoomListRow>(
         `SELECT
            r.id,
            r.slug,
@@ -41,19 +39,17 @@ export async function roomsRoutes(fastify: FastifyInstance) {
         [userId]
       );
 
-      return /** @type {RoomsListResponse} */ ({
-        rooms: /** @type {RoomListRow[]} */ (result.rows)
-      });
+      const response: RoomsListResponse = { rooms: result.rows };
+      return response;
     }
   );
 
-  fastify.post(
+  fastify.post<{ Body: { slug: string; title: string; is_public?: boolean } }>(
     "/v1/rooms",
     {
       preHandler: [requireAuth, loadCurrentUser, requireRole(["admin", "super_admin"])]
     },
-    async (request: FastifyRequest, reply: FastifyReply) => {
-      const authRequest = request as FastifyRequest & AuthenticatedRequestContext;
+    async (request, reply) => {
       const parsed = createRoomSchema.safeParse(request.body);
 
       if (!parsed.success) {
@@ -74,16 +70,16 @@ export async function roomsRoutes(fastify: FastifyInstance) {
         });
       }
 
-      const createdBy = String(authRequest.user?.sub || "").trim();
+      const createdBy = String(request.user?.sub || "").trim();
 
-      const created = await db.query(
+      const created = await db.query<RoomRow>(
         `INSERT INTO rooms (slug, title, is_public, created_by)
          VALUES ($1, $2, $3, $4)
          RETURNING id, slug, title, is_public, created_at`,
         [slug, title, is_public, createdBy]
       );
 
-      const room = /** @type {RoomRow} */ (created.rows[0]);
+      const room = created.rows[0];
 
       await db.query(
         `INSERT INTO room_members (room_id, user_id, role)
@@ -92,22 +88,22 @@ export async function roomsRoutes(fastify: FastifyInstance) {
         [room.id, createdBy]
       );
 
-      return reply.code(201).send(/** @type {RoomCreateResponse} */ ({ room }));
+      const response: RoomCreateResponse = { room };
+      return reply.code(201).send(response);
     }
   );
 
-  fastify.get(
+  fastify.get<{ Params: { slug: string }; Querystring: { limit?: string | number } }>(
     "/v1/rooms/:slug/messages",
     {
       preHandler: [requireAuth]
     },
-    async (request: FastifyRequest, reply: FastifyReply) => {
-      const roomRequest = request as FastifyRequest & RoomMessagesRequestContext;
-      const userId = String(roomRequest.user?.sub || "").trim();
-      const slug = String(roomRequest.params?.slug || "").trim();
-      const limit = Math.min(100, Math.max(1, Number(roomRequest.query?.limit || 50)));
+    async (request, reply) => {
+      const userId = String(request.user?.sub || "").trim();
+      const slug = String(request.params.slug || "").trim();
+      const limit = Math.min(100, Math.max(1, Number(request.query.limit || 50)));
 
-      const roomResult = await db.query(
+      const roomResult = await db.query<RoomRow>(
         "SELECT id, slug, title, is_public FROM rooms WHERE slug = $1",
         [slug]
       );
@@ -119,7 +115,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
         });
       }
 
-      const room = /** @type {RoomRow} */ (roomResult.rows[0]);
+      const room = roomResult.rows[0];
 
       if (!room.is_public) {
         const membership = await db.query(
@@ -135,7 +131,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
         }
       }
 
-      const messagesResult = await db.query(
+      const messagesResult = await db.query<RoomMessageRow>(
         `SELECT
            m.id,
            m.room_id,
@@ -151,10 +147,11 @@ export async function roomsRoutes(fastify: FastifyInstance) {
         [room.id, limit]
       );
 
-      return /** @type {RoomMessagesResponse} */ ({
+      const response: RoomMessagesResponse = {
         room,
-        messages: /** @type {RoomMessageRow[]} */ (messagesResult.rows).reverse()
-      });
+        messages: messagesResult.rows.reverse()
+      };
+      return response;
     }
   );
 }

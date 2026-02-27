@@ -4,7 +4,6 @@ import { db } from "../db.js";
 import { loadCurrentUser, requireAuth, requireRole } from "../middleware/auth.js";
 import type { UserRow } from "../db.types.ts";
 import type { AdminUsersResponse, PromoteUserResponse } from "../api-contract.types.ts";
-import type { PromoteRequestContext } from "../request-context.types.ts";
 
 const promoteSchema = z.object({
   role: z.literal("admin").default("admin")
@@ -17,26 +16,24 @@ export async function adminRoutes(fastify: FastifyInstance) {
       preHandler: [requireAuth, loadCurrentUser, requireRole(["super_admin", "admin"])]
     },
     async () => {
-      const result = await db.query(
+      const result = await db.query<UserRow>(
         `SELECT id, email, name, role, created_at
          FROM users
          ORDER BY created_at ASC`
       );
 
-      return /** @type {AdminUsersResponse} */ ({
-        users: /** @type {UserRow[]} */ (result.rows)
-      });
+      const response: AdminUsersResponse = { users: result.rows };
+      return response;
     }
   );
 
-  fastify.post(
+  fastify.post<{ Params: { userId: string }; Body: { role?: "admin" } }>(
     "/v1/admin/users/:userId/promote",
     {
       preHandler: [requireAuth, loadCurrentUser, requireRole(["super_admin"])]
     },
-    async (request: FastifyRequest, reply: FastifyReply) => {
-      const promoteRequest = request as FastifyRequest & PromoteRequestContext;
-      const parsed = promoteSchema.safeParse(promoteRequest.body || {});
+    async (request, reply) => {
+      const parsed = promoteSchema.safeParse(request.body || {});
 
       if (!parsed.success) {
         return reply.code(400).send({
@@ -45,7 +42,7 @@ export async function adminRoutes(fastify: FastifyInstance) {
         });
       }
 
-      const userId = String(promoteRequest.params?.userId || "").trim();
+      const userId = String(request.params.userId || "").trim();
       if (!userId) {
         return reply.code(400).send({
           error: "ValidationError",
@@ -53,7 +50,7 @@ export async function adminRoutes(fastify: FastifyInstance) {
         });
       }
 
-      const targetResult = await db.query(
+      const targetResult = await db.query<UserRow>(
         "SELECT id, email, name, role, created_at FROM users WHERE id = $1",
         [userId]
       );
@@ -65,13 +62,14 @@ export async function adminRoutes(fastify: FastifyInstance) {
         });
       }
 
-      const targetUser = /** @type {UserRow} */ (targetResult.rows[0]);
+      const targetUser = targetResult.rows[0];
 
       if (targetUser.role === "super_admin") {
-        return reply.code(200).send(/** @type {PromoteUserResponse} */ ({ user: targetUser }));
+        const response: PromoteUserResponse = { user: targetUser };
+        return reply.code(200).send(response);
       }
 
-      const updated = await db.query(
+      const updated = await db.query<UserRow>(
         `UPDATE users
          SET role = 'admin'
          WHERE id = $1
@@ -79,9 +77,8 @@ export async function adminRoutes(fastify: FastifyInstance) {
         [userId]
       );
 
-      return /** @type {PromoteUserResponse} */ ({
-        user: /** @type {UserRow} */ (updated.rows[0])
-      });
+      const response: PromoteUserResponse = { user: updated.rows[0] };
+      return response;
     }
   );
 }
