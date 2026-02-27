@@ -49,12 +49,8 @@ export async function telemetryRoutes(fastify: FastifyInstance) {
 
     if (token) {
       try {
-        const payload = await fastify.jwt.verify(token);
-        const subject =
-          payload && typeof payload === "object" && "sub" in payload
-            ? (payload as { sub?: unknown }).sub
-            : undefined;
-        userId = typeof subject === "string" ? subject : null;
+        const payload = await fastify.jwt.verify<{ sub?: string }>(token);
+        userId = typeof payload.sub === "string" ? payload.sub : null;
       } catch {
         return reply.code(401).send({
           error: "Unauthorized",
