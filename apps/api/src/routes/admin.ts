@@ -1,16 +1,16 @@
+import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
 import { db } from "../db.js";
 import { loadCurrentUser, requireAuth, requireRole } from "../middleware/auth.js";
-/** @typedef {import("../db.types.ts").UserRow} UserRow */
-/** @typedef {import("../api-contract.types.ts").AdminUsersResponse} AdminUsersResponse */
-/** @typedef {import("../api-contract.types.ts").PromoteUserResponse} PromoteUserResponse */
-/** @typedef {import("../request-context.types.ts").PromoteRequestContext} PromoteRequestContext */
+import type { UserRow } from "../db.types.ts";
+import type { AdminUsersResponse, PromoteUserResponse } from "../api-contract.types.ts";
+import type { PromoteRequestContext } from "../request-context.types.ts";
 
 const promoteSchema = z.object({
   role: z.literal("admin").default("admin")
 });
 
-export async function adminRoutes(fastify: any) {
+export async function adminRoutes(fastify: FastifyInstance) {
   fastify.get(
     "/v1/admin/users",
     {
@@ -34,9 +34,8 @@ export async function adminRoutes(fastify: any) {
     {
       preHandler: [requireAuth, loadCurrentUser, requireRole(["super_admin"])]
     },
-    async (request: any, reply: any) => {
-      /** @type {PromoteRequestContext} */
-      const promoteRequest = request;
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const promoteRequest = request as FastifyRequest & PromoteRequestContext;
       const parsed = promoteSchema.safeParse(promoteRequest.body || {});
 
       if (!parsed.success) {
@@ -46,7 +45,7 @@ export async function adminRoutes(fastify: any) {
         });
       }
 
-      const userId = String(promoteRequest.params.userId || "").trim();
+      const userId = String(promoteRequest.params?.userId || "").trim();
       if (!userId) {
         return reply.code(400).send({
           error: "ValidationError",

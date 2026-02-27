@@ -1,7 +1,8 @@
+import type { FastifyInstance } from "fastify";
 import { dbHealthcheck } from "../db.js";
 import { redisHealthcheck } from "../redis.js";
 
-export async function healthRoutes(fastify: any) {
+export async function healthRoutes(fastify: FastifyInstance) {
   fastify.get("/health", async () => {
     const checks = {
       api: "ok",

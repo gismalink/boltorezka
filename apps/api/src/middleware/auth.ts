@@ -1,8 +1,9 @@
+import type { FastifyReply, FastifyRequest } from "fastify";
 import { db } from "../db.js";
 /** @typedef {import("../db.types.ts").UserRow} UserRow */
 /** @typedef {import("../request-context.types.ts").AuthenticatedRequestContext} AuthenticatedRequestContext */
 
-export async function requireAuth(request: any, reply: any) {
+export async function requireAuth(request: FastifyRequest, reply: FastifyReply) {
   try {
     await request.jwtVerify();
   } catch {
@@ -13,7 +14,7 @@ export async function requireAuth(request: any, reply: any) {
   }
 }
 
-export async function loadCurrentUser(request: any, reply: any) {
+export async function loadCurrentUser(request: FastifyRequest, reply: FastifyReply) {
   /** @type {AuthenticatedRequestContext} */
   const authRequest = request;
   const userId = authRequest.user?.sub;
@@ -43,7 +44,7 @@ export async function loadCurrentUser(request: any, reply: any) {
 export function requireRole(roles: string[] | string) {
   const allowedRoles = Array.isArray(roles) ? roles : [roles];
 
-  return async function roleGuard(request: any, reply: any) {
+  return async function roleGuard(request: FastifyRequest, reply: FastifyReply) {
     /** @type {AuthenticatedRequestContext} */
     const authRequest = request;
     const role = authRequest.currentUser?.role || "user";

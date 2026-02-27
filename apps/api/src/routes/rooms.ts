@@ -1,14 +1,10 @@
+import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
 import { db } from "../db.js";
 import { loadCurrentUser, requireAuth, requireRole } from "../middleware/auth.js";
-/** @typedef {import("../db.types.ts").RoomListRow} RoomListRow */
-/** @typedef {import("../db.types.ts").RoomRow} RoomRow */
-/** @typedef {import("../db.types.ts").RoomMessageRow} RoomMessageRow */
-/** @typedef {import("../api-contract.types.ts").RoomsListResponse} RoomsListResponse */
-/** @typedef {import("../api-contract.types.ts").RoomCreateResponse} RoomCreateResponse */
-/** @typedef {import("../api-contract.types.ts").RoomMessagesResponse} RoomMessagesResponse */
-/** @typedef {import("../request-context.types.ts").AuthenticatedRequestContext} AuthenticatedRequestContext */
-/** @typedef {import("../request-context.types.ts").RoomMessagesRequestContext} RoomMessagesRequestContext */
+import type { RoomListRow, RoomMessageRow, RoomRow } from "../db.types.ts";
+import type { RoomCreateResponse, RoomMessagesResponse, RoomsListResponse } from "../api-contract.types.ts";
+import type { AuthenticatedRequestContext, RoomMessagesRequestContext } from "../request-context.types.ts";
 
 const createRoomSchema = z.object({
   slug: z
@@ -20,15 +16,14 @@ const createRoomSchema = z.object({
   is_public: z.boolean().default(true)
 });
 
-export async function roomsRoutes(fastify: any) {
+export async function roomsRoutes(fastify: FastifyInstance) {
   fastify.get(
     "/v1/rooms",
     {
       preHandler: [requireAuth]
     },
-    async (request: any) => {
-      /** @type {AuthenticatedRequestContext} */
-      const authRequest = request;
+    async (request: FastifyRequest) => {
+      const authRequest = request as FastifyRequest & AuthenticatedRequestContext;
       const userId = String(authRequest.user?.sub || "").trim();
       const result = await db.query(
         `SELECT
@@ -57,9 +52,8 @@ export async function roomsRoutes(fastify: any) {
     {
       preHandler: [requireAuth, loadCurrentUser, requireRole(["admin", "super_admin"])]
     },
-    async (request: any, reply: any) => {
-      /** @type {AuthenticatedRequestContext} */
-      const authRequest = request;
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const authRequest = request as FastifyRequest & AuthenticatedRequestContext;
       const parsed = createRoomSchema.safeParse(request.body);
 
       if (!parsed.success) {
@@ -107,9 +101,8 @@ export async function roomsRoutes(fastify: any) {
     {
       preHandler: [requireAuth]
     },
-    async (request: any, reply: any) => {
-      /** @type {RoomMessagesRequestContext} */
-      const roomRequest = request;
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const roomRequest = request as FastifyRequest & RoomMessagesRequestContext;
       const userId = String(roomRequest.user?.sub || "").trim();
       const slug = String(roomRequest.params?.slug || "").trim();
       const limit = Math.min(100, Math.max(1, Number(roomRequest.query?.limit || 50)));

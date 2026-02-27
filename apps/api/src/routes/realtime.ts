@@ -1,3 +1,5 @@
+import type { FastifyInstance, FastifyRequest } from "fastify";
+import type { RawData, WebSocket } from "ws";
 import { db } from "../db.js";
 import {
   buildAckEnvelope,
@@ -20,7 +22,21 @@ import {
 /** @typedef {import("../db.types.ts").RoomRow} RoomRow */
 /** @typedef {import("../db.types.ts").InsertedMessageRow} InsertedMessageRow */
 
-function sendJson(socket: any, payload: unknown): void {
+type SocketState = {
+  userId: string;
+  userName: string;
+  roomId: string | null;
+  roomSlug: string | null;
+};
+
+type WsTicketClaims = {
+  userId?: string;
+  userName?: string;
+  name?: string;
+  email?: string;
+};
+
+function sendJson(socket: WebSocket, payload: unknown): void {
   if (socket.readyState === socket.OPEN) {
     socket.send(JSON.stringify(payload));
   }
@@ -39,7 +55,7 @@ function normalizeRequestId(value: unknown): string | null {
   return trimmed.slice(0, 128);
 }
 
-function sendAck(socket: any, requestId: string | null, eventType: string, meta: Record<string, unknown> = {}) {
+function sendAck(socket: WebSocket, requestId: string | null, eventType: string, meta: Record<string, unknown> = {}) {
   if (!requestId) {
     return;
   }
@@ -47,7 +63,7 @@ function sendAck(socket: any, requestId: string | null, eventType: string, meta:
   sendJson(socket, buildAckEnvelope(requestId, eventType, meta));
 }
 
-function sendNack(socket: any, requestId: string | null, eventType: string, code: string, message: string) {
+function sendNack(socket: WebSocket, requestId: string | null, eventType: string, code: string, message: string) {
   if (!requestId) {
     sendJson(socket, buildErrorEnvelope(code, message));
     return;
@@ -64,10 +80,10 @@ function safeJsonSize(value: unknown): number {
   }
 }
 
-export async function realtimeRoutes(fastify: any) {
-  const socketsByUserId = new Map<string, Set<any>>();
-  const socketsByRoomId = new Map<string, Set<any>>();
-  const socketState = new WeakMap<any, { userId: string; userName: string; roomId: string | null; roomSlug: string | null }>();
+export async function realtimeRoutes(fastify: FastifyInstance) {
+  const socketsByUserId = new Map<string, Set<WebSocket>>();
+  const socketsByRoomId = new Map<string, Set<WebSocket>>();
+  const socketState = new WeakMap<WebSocket, SocketState>();
 
   const incrementMetric = async (name: string) => {
     try {
@@ -78,13 +94,13 @@ export async function realtimeRoutes(fastify: any) {
     }
   };
 
-  const attachUserSocket = (userId: string, socket: any) => {
+  const attachUserSocket = (userId: string, socket: WebSocket) => {
     const userSockets = socketsByUserId.get(userId) || new Set();
     userSockets.add(socket);
     socketsByUserId.set(userId, userSockets);
   };
 
-  const detachUserSocket = (userId: string, socket: any) => {
+  const detachUserSocket = (userId: string, socket: WebSocket) => {
     const userSockets = socketsByUserId.get(userId);
     if (!userSockets) {
       return;
@@ -95,13 +111,13 @@ export async function realtimeRoutes(fastify: any) {
     }
   };
 
-  const attachRoomSocket = (roomId: string, socket: any) => {
+  const attachRoomSocket = (roomId: string, socket: WebSocket) => {
     const roomSockets = socketsByRoomId.get(roomId) || new Set();
     roomSockets.add(socket);
     socketsByRoomId.set(roomId, roomSockets);
   };
 
-  const detachRoomSocket = (roomId: string, socket: any) => {
+  const detachRoomSocket = (roomId: string, socket: WebSocket) => {
     const roomSockets = socketsByRoomId.get(roomId);
     if (!roomSockets) {
       return;
@@ -112,7 +128,7 @@ export async function realtimeRoutes(fastify: any) {
     }
   };
 
-  const broadcastRoom = (roomId: string, payload: unknown, excludedSocket: any = null) => {
+  const broadcastRoom = (roomId: string, payload: unknown, excludedSocket: WebSocket | null = null) => {
     const roomSockets = socketsByRoomId.get(roomId);
     if (!roomSockets) {
       return;
@@ -208,7 +224,7 @@ export async function realtimeRoutes(fastify: any) {
     {
       websocket: true
     },
-    async (connection: any, request: any) => {
+    async (connection: WebSocket, request: FastifyRequest) => {
       try {
         const url = new URL(request.url, "http://localhost");
         const ticket = url.searchParams.get("ticket");
@@ -230,7 +246,7 @@ export async function realtimeRoutes(fastify: any) {
 
         await fastify.redis.del(ticketKey);
 
-        let claims: any;
+        let claims: WsTicketClaims;
         try {
           claims = JSON.parse(ticketPayload);
         } catch {
@@ -266,7 +282,7 @@ export async function realtimeRoutes(fastify: any) {
 
         sendJson(connection, buildServerReadyEnvelope(userId, userName));
 
-        connection.on("message", async (raw: unknown) => {
+        connection.on("message", async (raw: RawData) => {
           try {
             const message = parseWsIncomingEnvelope(raw);
             if (!message) {

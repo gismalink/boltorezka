@@ -1,22 +1,18 @@
+import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
 import { randomUUID } from "node:crypto";
 import { db } from "../db.js";
 import { requireAuth } from "../middleware/auth.js";
 import { config } from "../config.js";
-/** @typedef {import("../db.types.ts").UserRow} UserRow */
-/** @typedef {import("../db.types.ts").UserCompactRow} UserCompactRow */
-/** @typedef {import("../api-contract.types.ts").AuthModeResponse} AuthModeResponse */
-/** @typedef {import("../api-contract.types.ts").SsoSessionResponse} SsoSessionResponse */
-/** @typedef {import("../api-contract.types.ts").WsTicketResponse} WsTicketResponse */
-/** @typedef {import("../api-contract.types.ts").MeResponse} MeResponse */
-/** @typedef {import("../request-context.types.ts").AuthenticatedRequestContext} AuthenticatedRequestContext */
-/** @typedef {import("../request-context.types.ts").AuthStartRequestContext} AuthStartRequestContext */
+import type { UserCompactRow, UserRow } from "../db.types.ts";
+import type { AuthModeResponse, MeResponse, SsoSessionResponse, WsTicketResponse } from "../api-contract.types.ts";
+import type { AuthenticatedRequestContext, AuthStartRequestContext } from "../request-context.types.ts";
 
 const ssoProviderSchema = z.enum(["google", "yandex"]);
 
 const safeHostSet = new Set(config.allowedReturnHosts);
 
-function resolveSafeReturnUrl(value: unknown, request: any): string {
+function resolveSafeReturnUrl(value: unknown, request: FastifyRequest): string {
   if (!value || typeof value !== "string") {
     return "/";
   }
@@ -42,7 +38,7 @@ function resolveSafeReturnUrl(value: unknown, request: any): string {
   return "/";
 }
 
-async function proxyAuthGetJson(request: any, path: string) {
+async function proxyAuthGetJson(request: FastifyRequest, path: string) {
   const url = `${config.authSsoBaseUrl}${path}`;
 
   const response = await fetch(url, {
@@ -81,7 +77,7 @@ async function proxyAuthGetJson(request: any, path: string) {
   };
 }
 
-async function upsertSsoUser(profile: any) {
+async function upsertSsoUser(profile: Record<string, unknown> | null | undefined) {
   const normalizedEmail = String(profile?.email || "")
     .trim()
     .toLowerCase();
@@ -125,7 +121,7 @@ async function upsertSsoUser(profile: any) {
   return /** @type {UserRow} */ (created.rows[0]);
 }
 
-export async function authRoutes(fastify: any) {
+export async function authRoutes(fastify: FastifyInstance) {
   fastify.get("/v1/auth/mode", async () => {
     return /** @type {AuthModeResponse} */ ({
       mode: config.authMode,
@@ -133,9 +129,8 @@ export async function authRoutes(fastify: any) {
     });
   });
 
-  fastify.get("/v1/auth/sso/start", async (request: any, reply: any) => {
-    /** @type {AuthStartRequestContext} */
-    const authRequest = request;
+  fastify.get("/v1/auth/sso/start", async (request: FastifyRequest, reply: FastifyReply) => {
+    const authRequest = request as FastifyRequest & AuthStartRequestContext;
     const providerRaw = String(authRequest.query?.provider || "google").toLowerCase();
     const parsedProvider = ssoProviderSchema.safeParse(providerRaw);
 
@@ -151,15 +146,14 @@ export async function authRoutes(fastify: any) {
     return reply.redirect(redirectUrl, 302);
   });
 
-  fastify.get("/v1/auth/sso/logout", async (request: any, reply: any) => {
-    /** @type {AuthStartRequestContext} */
-    const authRequest = request;
+  fastify.get("/v1/auth/sso/logout", async (request: FastifyRequest, reply: FastifyReply) => {
+    const authRequest = request as FastifyRequest & AuthStartRequestContext;
     const returnUrl = resolveSafeReturnUrl(String(authRequest.query?.returnUrl || "/"), request);
     const redirectUrl = `${config.authSsoBaseUrl}/auth/logout?returnUrl=${encodeURIComponent(returnUrl)}`;
     return reply.redirect(redirectUrl, 302);
   });
 
-  fastify.get("/v1/auth/sso/session", async (request: any, reply: any) => {
+  fastify.get("/v1/auth/sso/session", async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const ssoTokenResult = await proxyAuthGetJson(request, "/auth/get-token");
 
@@ -213,14 +207,14 @@ export async function authRoutes(fastify: any) {
     }
   });
 
-  fastify.post("/v1/auth/register", async (_request: any, reply: any) => {
+  fastify.post("/v1/auth/register", async (_request: FastifyRequest, reply: FastifyReply) => {
     return reply.code(410).send({
       error: "SsoOnly",
       message: "Local registration is disabled. Use SSO login."
     });
   });
 
-  fastify.post("/v1/auth/login", async (_request: any, reply: any) => {
+  fastify.post("/v1/auth/login", async (_request: FastifyRequest, reply: FastifyReply) => {
     return reply.code(410).send({
       error: "SsoOnly",
       message: "Local login is disabled. Use SSO login."
@@ -232,9 +226,8 @@ export async function authRoutes(fastify: any) {
     {
       preHandler: [requireAuth]
     },
-    async (request: any, reply: any) => {
-      /** @type {AuthenticatedRequestContext} */
-      const authRequest = request;
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const authRequest = request as FastifyRequest & AuthenticatedRequestContext;
       const userId = String(authRequest.user?.sub || "").trim();
       if (!userId) {
         return reply.code(401).send({
@@ -283,9 +276,8 @@ export async function authRoutes(fastify: any) {
     {
       preHandler: [requireAuth]
     },
-    async (request: any) => {
-      /** @type {AuthenticatedRequestContext} */
-      const authRequest = request;
+    async (request: FastifyRequest) => {
+      const authRequest = request as FastifyRequest & AuthenticatedRequestContext;
       const userId = String(authRequest.user?.sub || "").trim();
       const result = await db.query(
         "SELECT id, email, name, role, created_at FROM users WHERE id = $1",
