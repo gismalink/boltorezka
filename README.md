@@ -168,6 +168,7 @@ WS envelope (MVP hardening):
 - client -> server: `type`, `requestId`, `payload`, optional `idempotencyKey`
 - server -> client: `ack` / `nack` с `requestId` и `eventType`
 - для `chat.send` используется dedup по `idempotencyKey`
+- signaling baseline: `call.offer`, `call.answer`, `call.ice` (relay в пределах room, optional `targetUserId`)
 
 ### Минимальный smoke realtime (WebSocket)
 

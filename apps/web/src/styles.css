@@ -63,7 +63,8 @@ body {
 }
 
 button,
-input {
+input,
+textarea {
   border-radius: 6px;
   border: 1px solid #30363d;
   background: #21262d;
@@ -71,9 +72,15 @@ input {
   padding: 8px;
 }
 
-input {
+input,
+textarea {
   width: 100%;
   box-sizing: border-box;
+}
+
+textarea {
+  resize: vertical;
+  min-height: 84px;
 }
 
 button {
@@ -173,6 +180,14 @@ pre {
 
 .admin-row {
   justify-content: space-between;
+}
+
+.signaling-panel {
+  margin-top: 8px;
+}
+
+.call-log {
+  max-height: 180px;
 }
 
 @media (max-width: 1200px) {

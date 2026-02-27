@@ -139,6 +139,26 @@ export async function realtimeRoutes(fastify) {
     return users;
   };
 
+  const getUserRoomSockets = (userId, roomId) => {
+    const userSockets = socketsByUserId.get(userId);
+    if (!userSockets) {
+      return [];
+    }
+
+    const result = [];
+    for (const socket of userSockets) {
+      const state = socketState.get(socket);
+      if (!state) {
+        continue;
+      }
+      if (state.roomId === roomId) {
+        result.push(socket);
+      }
+    }
+
+    return result;
+  };
+
   const canJoinRoom = async (roomSlug, userId) => {
     const room = await db.query(
       "SELECT id, slug, title, is_public FROM rooms WHERE slug = $1",
@@ -458,6 +478,100 @@ export async function realtimeRoutes(fastify) {
               void incrementMetric("ack_sent");
               void incrementMetric("chat_sent");
 
+              return;
+            }
+
+            if (
+              message.type === "call.offer" ||
+              message.type === "call.answer" ||
+              message.type === "call.ice"
+            ) {
+              if (!state.roomId) {
+                sendNack(
+                  connection,
+                  requestId,
+                  eventType,
+                  "NoActiveRoom",
+                  "Join a room first"
+                );
+                void incrementMetric("nack_sent");
+                return;
+              }
+
+              const signal = message.payload?.signal;
+              if (!signal || typeof signal !== "object" || Array.isArray(signal)) {
+                sendNack(
+                  connection,
+                  requestId,
+                  eventType,
+                  "ValidationError",
+                  "payload.signal object is required"
+                );
+                void incrementMetric("nack_sent");
+                return;
+              }
+
+              const rawTargetUserId = String(message.payload?.targetUserId || "").trim();
+              const targetUserId = rawTargetUserId || null;
+
+              const relayPayload = {
+                fromUserId: state.userId,
+                fromUserName: state.userName,
+                roomId: state.roomId,
+                roomSlug: state.roomSlug,
+                targetUserId,
+                signal,
+                ts: new Date().toISOString()
+              };
+
+              let relayedCount = 0;
+
+              if (targetUserId) {
+                const targetSockets = getUserRoomSockets(targetUserId, state.roomId);
+                for (const targetSocket of targetSockets) {
+                  if (targetSocket === connection) {
+                    continue;
+                  }
+
+                  sendJson(targetSocket, {
+                    type: message.type,
+                    payload: relayPayload
+                  });
+                  relayedCount += 1;
+                }
+
+                if (relayedCount === 0) {
+                  sendNack(
+                    connection,
+                    requestId,
+                    eventType,
+                    "TargetNotInRoom",
+                    "Target user is offline or not in this room"
+                  );
+                  void incrementMetric("nack_sent");
+                  return;
+                }
+              } else {
+                const roomSockets = socketsByRoomId.get(state.roomId) || new Set();
+                for (const roomSocket of roomSockets) {
+                  if (roomSocket === connection) {
+                    continue;
+                  }
+
+                  sendJson(roomSocket, {
+                    type: message.type,
+                    payload: relayPayload
+                  });
+                  relayedCount += 1;
+                }
+              }
+
+              sendAck(connection, requestId, eventType, {
+                relayedTo: relayedCount,
+                targetUserId
+              });
+              void incrementMetric("ack_sent");
+              void incrementMetric("call_signal_sent");
               return;
             }
 

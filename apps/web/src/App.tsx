@@ -27,6 +27,9 @@ export function App() {
   const [roomSlug, setRoomSlug] = useState("general");
   const [messages, setMessages] = useState<Message[]>([]);
   const [chatText, setChatText] = useState("");
+  const [callTargetUserId, setCallTargetUserId] = useState("");
+  const [callSignalJson, setCallSignalJson] = useState('{"type":"offer","sdp":""}');
+  const [callEventLog, setCallEventLog] = useState<string[]>([]);
   const [presence, setPresence] = useState<string[]>([]);
   const [eventLog, setEventLog] = useState<string[]>([]);
   const [telemetrySummary, setTelemetrySummary] = useState<TelemetrySummary | null>(null);
@@ -47,6 +50,10 @@ export function App() {
 
   const pushLog = (text: string) => {
     setEventLog((prev) => [`${new Date().toLocaleTimeString()} ${text}`, ...prev].slice(0, 30));
+  };
+
+  const pushCallLog = (text: string) => {
+    setCallEventLog((prev) => [`${new Date().toLocaleTimeString()} ${text}`, ...prev].slice(0, 30));
   };
 
   const markMessageDelivery = (
@@ -395,6 +402,17 @@ export function App() {
                 ]);
               }
             }
+
+            if (
+              message.type === "call.offer" ||
+              message.type === "call.answer" ||
+              message.type === "call.ice"
+            ) {
+              const fromUserName = String(message.payload?.fromUserName || message.payload?.fromUserId || "unknown");
+              const hasSignal = Boolean(message.payload?.signal && typeof message.payload.signal === "object");
+              pushCallLog(`${message.type} from ${fromUserName} (${hasSignal ? "signal" : "no-signal"})`);
+            }
+
             if (message.type === "room.joined") {
               setRoomSlug(message.payload.roomSlug);
             }
@@ -527,6 +545,34 @@ export function App() {
     void loadTelemetrySummary();
   };
 
+  const sendCallSignal = (eventType: "call.offer" | "call.answer" | "call.ice") => {
+    let signal: Record<string, unknown>;
+    try {
+      const parsed = JSON.parse(callSignalJson || "{}");
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+        throw new Error("signal must be a JSON object");
+      }
+      signal = parsed as Record<string, unknown>;
+    } catch (error) {
+      pushCallLog(`invalid signal json: ${(error as Error).message}`);
+      return;
+    }
+
+    const payload: Record<string, unknown> = { signal };
+    const targetUserId = callTargetUserId.trim();
+    if (targetUserId) {
+      payload.targetUserId = targetUserId;
+    }
+
+    const requestId = sendWsEvent(eventType, payload, { maxRetries: 1 });
+    if (!requestId) {
+      pushCallLog(`${eventType} skipped: socket unavailable`);
+      return;
+    }
+
+    pushCallLog(`${eventType} sent${targetUserId ? ` -> ${targetUserId}` : " -> room"}`);
+  };
+
   const joinRoom = (slug: string) => {
     setRoomSlug(slug);
     sendWsEvent("room.join", { roomSlug: slug }, { maxRetries: 1 });
@@ -626,6 +672,31 @@ export function App() {
               <input value={chatText} onChange={(e) => setChatText(e.target.value)} placeholder="Type message" />
               <button type="submit">Send</button>
             </form>
+
+            <div className="stack signaling-panel">
+              <h2>Call signaling (MVP)</h2>
+              <input
+                value={callTargetUserId}
+                onChange={(e) => setCallTargetUserId(e.target.value)}
+                placeholder="targetUserId (optional, empty = broadcast to room)"
+              />
+              <textarea
+                value={callSignalJson}
+                onChange={(e) => setCallSignalJson(e.target.value)}
+                rows={4}
+                placeholder='{"type":"offer","sdp":"..."}'
+              />
+              <div className="row">
+                <button type="button" onClick={() => sendCallSignal("call.offer")}>Send offer</button>
+                <button type="button" onClick={() => sendCallSignal("call.answer")}>Send answer</button>
+                <button type="button" onClick={() => sendCallSignal("call.ice")}>Send ICE</button>
+              </div>
+              <div className="log call-log">
+                {callEventLog.map((line, index) => (
+                  <div key={`${line}-${index}`}>{line}</div>
+                ))}
+              </div>
+            </div>
           </section>
         </section>
 
