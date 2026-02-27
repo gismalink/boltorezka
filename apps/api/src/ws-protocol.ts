@@ -1,3 +1,17 @@
+import type {
+  CallSignalEventType,
+  CallTerminalEventType,
+  PresenceUser,
+  PongPayload,
+  ChatMessagePayload,
+  RoomJoinedPayload,
+  RoomPresencePayload,
+  PresenceJoinedPayload,
+  PresenceLeftPayload,
+  WsIncomingEnvelope,
+  WsOutgoingEnvelope
+} from "./ws-protocol.types.ts";
+
 /** @typedef {import("./ws-protocol.types.ts").CallSignalEventType} CallSignalEventType */
 /** @typedef {import("./ws-protocol.types.ts").CallTerminalEventType} CallTerminalEventType */
 /** @typedef {import("./ws-protocol.types.ts").CallEventType} CallEventType */
@@ -25,7 +39,7 @@ type ParsedIncomingEnvelope = {
  * @param {unknown} value
  * @returns {value is CallSignalEventType}
  */
-export function isCallSignalEventType(value) {
+export function isCallSignalEventType(value: unknown): value is CallSignalEventType {
   return typeof value === "string" && CALL_SIGNAL_EVENT_TYPES.includes(value);
 }
 
@@ -33,7 +47,7 @@ export function isCallSignalEventType(value) {
  * @param {unknown} value
  * @returns {value is CallTerminalEventType}
  */
-export function isCallTerminalEventType(value) {
+export function isCallTerminalEventType(value: unknown): value is CallTerminalEventType {
   return typeof value === "string" && CALL_TERMINAL_EVENT_TYPES.includes(value);
 }
 
@@ -41,7 +55,7 @@ export function isCallTerminalEventType(value) {
  * @param {unknown} value
  * @returns {value is Record<string, unknown>}
  */
-export function isObjectRecord(value) {
+export function isObjectRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value && typeof value === "object" && !Array.isArray(value));
 }
 
@@ -49,7 +63,7 @@ export function isObjectRecord(value) {
  * @param {unknown} raw
  * @returns {WsIncomingEnvelope | null}
  */
-export function parseWsIncomingEnvelope(raw) {
+export function parseWsIncomingEnvelope(raw: unknown): WsIncomingEnvelope | null {
   const text = typeof raw === "string" ? raw : Buffer.isBuffer(raw) ? raw.toString("utf8") : "";
   if (!text) {
     return null;
@@ -92,7 +106,7 @@ export function parseWsIncomingEnvelope(raw) {
  * @param {number} maxLength
  * @returns {string | null}
  */
-export function getPayloadString(payload, key, maxLength = 1024) {
+export function getPayloadString(payload: Record<string, unknown> | undefined, key: string, maxLength = 1024): string | null {
   if (!payload) {
     return null;
   }
@@ -114,7 +128,7 @@ export function getPayloadString(payload, key, maxLength = 1024) {
  * @param {Record<string, unknown> | undefined} payload
  * @returns {Record<string, unknown> | null}
  */
-export function getCallSignal(payload) {
+export function getCallSignal(payload: Record<string, unknown> | undefined): Record<string, unknown> | null {
   if (!payload) {
     return null;
   }
@@ -133,7 +147,7 @@ export function getCallSignal(payload) {
  * @param {Record<string, unknown>} [meta]
  * @returns {WsOutgoingEnvelope}
  */
-export function buildAckEnvelope(requestId, eventType, meta = {}) {
+export function buildAckEnvelope(requestId: string, eventType: string, meta: Record<string, unknown> = {}): WsOutgoingEnvelope {
   return {
     type: "ack",
     payload: {
@@ -152,7 +166,7 @@ export function buildAckEnvelope(requestId, eventType, meta = {}) {
  * @param {string} message
  * @returns {WsOutgoingEnvelope}
  */
-export function buildNackEnvelope(requestId, eventType, code, message) {
+export function buildNackEnvelope(requestId: string, eventType: string, code: string, message: string): WsOutgoingEnvelope {
   return {
     type: "nack",
     payload: {
@@ -170,7 +184,7 @@ export function buildNackEnvelope(requestId, eventType, code, message) {
  * @param {string} message
  * @returns {WsOutgoingEnvelope}
  */
-export function buildErrorEnvelope(code, message) {
+export function buildErrorEnvelope(code: string, message: string): WsOutgoingEnvelope {
   return {
     type: "error",
     payload: { code, message }
@@ -182,7 +196,7 @@ export function buildErrorEnvelope(code, message) {
  * @param {string} userName
  * @returns {WsOutgoingEnvelope}
  */
-export function buildServerReadyEnvelope(userId, userName) {
+export function buildServerReadyEnvelope(userId: string, userName: string): WsOutgoingEnvelope {
   return {
     type: "server.ready",
     payload: {
@@ -199,7 +213,7 @@ export function buildServerReadyEnvelope(userId, userName) {
  * @param {string} roomTitle
  * @returns {{ type: "room.joined", payload: RoomJoinedPayload }}
  */
-export function buildRoomJoinedEnvelope(roomId, roomSlug, roomTitle) {
+export function buildRoomJoinedEnvelope(roomId: string, roomSlug: string, roomTitle: string): { type: "room.joined"; payload: RoomJoinedPayload } {
   return {
     type: "room.joined",
     payload: { roomId, roomSlug, roomTitle }
@@ -212,7 +226,7 @@ export function buildRoomJoinedEnvelope(roomId, roomSlug, roomTitle) {
  * @param {PresenceUser[]} users
  * @returns {{ type: "room.presence", payload: RoomPresencePayload }}
  */
-export function buildRoomPresenceEnvelope(roomId, roomSlug, users) {
+export function buildRoomPresenceEnvelope(roomId: string, roomSlug: string, users: PresenceUser[]): { type: "room.presence"; payload: RoomPresencePayload } {
   return {
     type: "room.presence",
     payload: { roomId, roomSlug, users }
@@ -226,7 +240,7 @@ export function buildRoomPresenceEnvelope(roomId, roomSlug, users) {
  * @param {number} presenceCount
  * @returns {{ type: "presence.joined", payload: PresenceJoinedPayload }}
  */
-export function buildPresenceJoinedEnvelope(userId, userName, roomSlug, presenceCount) {
+export function buildPresenceJoinedEnvelope(userId: string, userName: string, roomSlug: string, presenceCount: number): { type: "presence.joined"; payload: PresenceJoinedPayload } {
   return {
     type: "presence.joined",
     payload: { userId, userName, roomSlug, presenceCount }
@@ -240,7 +254,7 @@ export function buildPresenceJoinedEnvelope(userId, userName, roomSlug, presence
  * @param {number} presenceCount
  * @returns {{ type: "presence.left", payload: PresenceLeftPayload }}
  */
-export function buildPresenceLeftEnvelope(userId, userName, roomSlug, presenceCount) {
+export function buildPresenceLeftEnvelope(userId: string, userName: string, roomSlug: string | null, presenceCount: number): { type: "presence.left"; payload: PresenceLeftPayload } {
   return {
     type: "presence.left",
     payload: { userId, userName, roomSlug, presenceCount }
@@ -251,7 +265,7 @@ export function buildPresenceLeftEnvelope(userId, userName, roomSlug, presenceCo
  * @param {ChatMessagePayload} payload
  * @returns {{ type: "chat.message", payload: ChatMessagePayload }}
  */
-export function buildChatMessageEnvelope(payload) {
+export function buildChatMessageEnvelope(payload: ChatMessagePayload): { type: "chat.message"; payload: ChatMessagePayload } {
   return {
     type: "chat.message",
     payload
@@ -261,7 +275,7 @@ export function buildChatMessageEnvelope(payload) {
 /**
  * @returns {{ type: "pong", payload: PongPayload }}
  */
-export function buildPongEnvelope() {
+export function buildPongEnvelope(): { type: "pong"; payload: PongPayload } {
   return {
     type: "pong",
     payload: {
@@ -278,7 +292,13 @@ export function buildPongEnvelope() {
  * @param {string | null} targetUserId
  * @returns {{ fromUserId: string, fromUserName: string, roomId: string, roomSlug: string | null, targetUserId: string | null, ts: string }}
  */
-function buildCallRelayBasePayload(fromUserId, fromUserName, roomId, roomSlug, targetUserId) {
+function buildCallRelayBasePayload(
+  fromUserId: string,
+  fromUserName: string,
+  roomId: string,
+  roomSlug: string | null,
+  targetUserId: string | null
+): { fromUserId: string; fromUserName: string; roomId: string; roomSlug: string | null; targetUserId: string | null; ts: string } {
   return {
     fromUserId,
     fromUserName,
@@ -300,14 +320,14 @@ function buildCallRelayBasePayload(fromUserId, fromUserName, roomId, roomSlug, t
  * @returns {WsOutgoingEnvelope}
  */
 export function buildCallSignalRelayEnvelope(
-  eventType,
-  fromUserId,
-  fromUserName,
-  roomId,
-  roomSlug,
-  targetUserId,
-  signal
-) {
+  eventType: CallSignalEventType,
+  fromUserId: string,
+  fromUserName: string,
+  roomId: string,
+  roomSlug: string | null,
+  targetUserId: string | null,
+  signal: Record<string, unknown>
+): WsOutgoingEnvelope {
   return {
     type: eventType,
     payload: {
@@ -328,14 +348,14 @@ export function buildCallSignalRelayEnvelope(
  * @returns {WsOutgoingEnvelope}
  */
 export function buildCallTerminalRelayEnvelope(
-  eventType,
-  fromUserId,
-  fromUserName,
-  roomId,
-  roomSlug,
-  targetUserId,
-  reason
-) {
+  eventType: CallTerminalEventType,
+  fromUserId: string,
+  fromUserName: string,
+  roomId: string,
+  roomSlug: string | null,
+  targetUserId: string | null,
+  reason: string | null
+): WsOutgoingEnvelope {
   return {
     type: eventType,
     payload: {

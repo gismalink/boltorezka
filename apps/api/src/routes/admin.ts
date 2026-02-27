@@ -10,7 +10,7 @@ const promoteSchema = z.object({
   role: z.literal("admin").default("admin")
 });
 
-export async function adminRoutes(fastify) {
+export async function adminRoutes(fastify: any) {
   fastify.get(
     "/v1/admin/users",
     {
@@ -34,7 +34,7 @@ export async function adminRoutes(fastify) {
     {
       preHandler: [requireAuth, loadCurrentUser, requireRole(["super_admin"])]
     },
-    async (request, reply) => {
+    async (request: any, reply: any) => {
       /** @type {PromoteRequestContext} */
       const promoteRequest = request;
       const parsed = promoteSchema.safeParse(promoteRequest.body || {});

@@ -20,13 +20,13 @@ const createRoomSchema = z.object({
   is_public: z.boolean().default(true)
 });
 
-export async function roomsRoutes(fastify) {
+export async function roomsRoutes(fastify: any) {
   fastify.get(
     "/v1/rooms",
     {
       preHandler: [requireAuth]
     },
-    async (request) => {
+    async (request: any) => {
       /** @type {AuthenticatedRequestContext} */
       const authRequest = request;
       const userId = String(authRequest.user?.sub || "").trim();
@@ -57,7 +57,7 @@ export async function roomsRoutes(fastify) {
     {
       preHandler: [requireAuth, loadCurrentUser, requireRole(["admin", "super_admin"])]
     },
-    async (request, reply) => {
+    async (request: any, reply: any) => {
       /** @type {AuthenticatedRequestContext} */
       const authRequest = request;
       const parsed = createRoomSchema.safeParse(request.body);
@@ -73,7 +73,7 @@ export async function roomsRoutes(fastify) {
 
       const existing = await db.query("SELECT id FROM rooms WHERE slug = $1", [slug]);
 
-      if (existing.rowCount > 0) {
+      if ((existing.rowCount || 0) > 0) {
         return reply.code(409).send({
           error: "Conflict",
           message: "Room slug already exists"
@@ -107,7 +107,7 @@ export async function roomsRoutes(fastify) {
     {
       preHandler: [requireAuth]
     },
-    async (request, reply) => {
+    async (request: any, reply: any) => {
       /** @type {RoomMessagesRequestContext} */
       const roomRequest = request;
       const userId = String(roomRequest.user?.sub || "").trim();

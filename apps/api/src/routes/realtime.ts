@@ -20,13 +20,13 @@ import {
 /** @typedef {import("../db.types.ts").RoomRow} RoomRow */
 /** @typedef {import("../db.types.ts").InsertedMessageRow} InsertedMessageRow */
 
-function sendJson(socket, payload) {
+function sendJson(socket: any, payload: unknown): void {
   if (socket.readyState === socket.OPEN) {
     socket.send(JSON.stringify(payload));
   }
 }
 
-function normalizeRequestId(value) {
+function normalizeRequestId(value: unknown): string | null {
   if (typeof value !== "string") {
     return null;
   }
@@ -39,7 +39,7 @@ function normalizeRequestId(value) {
   return trimmed.slice(0, 128);
 }
 
-function sendAck(socket, requestId, eventType, meta = {}) {
+function sendAck(socket: any, requestId: string | null, eventType: string, meta: Record<string, unknown> = {}) {
   if (!requestId) {
     return;
   }
@@ -47,7 +47,7 @@ function sendAck(socket, requestId, eventType, meta = {}) {
   sendJson(socket, buildAckEnvelope(requestId, eventType, meta));
 }
 
-function sendNack(socket, requestId, eventType, code, message) {
+function sendNack(socket: any, requestId: string | null, eventType: string, code: string, message: string) {
   if (!requestId) {
     sendJson(socket, buildErrorEnvelope(code, message));
     return;
@@ -56,7 +56,7 @@ function sendNack(socket, requestId, eventType, code, message) {
   sendJson(socket, buildNackEnvelope(requestId, eventType, code, message));
 }
 
-function safeJsonSize(value) {
+function safeJsonSize(value: unknown): number {
   try {
     return JSON.stringify(value).length;
   } catch {
@@ -64,12 +64,12 @@ function safeJsonSize(value) {
   }
 }
 
-export async function realtimeRoutes(fastify) {
-  const socketsByUserId = new Map();
-  const socketsByRoomId = new Map();
-  const socketState = new WeakMap();
+export async function realtimeRoutes(fastify: any) {
+  const socketsByUserId = new Map<string, Set<any>>();
+  const socketsByRoomId = new Map<string, Set<any>>();
+  const socketState = new WeakMap<any, { userId: string; userName: string; roomId: string | null; roomSlug: string | null }>();
 
-  const incrementMetric = async (name) => {
+  const incrementMetric = async (name: string) => {
     try {
       const day = new Date().toISOString().slice(0, 10);
       await fastify.redis.hIncrBy(`ws:metrics:${day}`, name, 1);
@@ -78,13 +78,13 @@ export async function realtimeRoutes(fastify) {
     }
   };
 
-  const attachUserSocket = (userId, socket) => {
+  const attachUserSocket = (userId: string, socket: any) => {
     const userSockets = socketsByUserId.get(userId) || new Set();
     userSockets.add(socket);
     socketsByUserId.set(userId, userSockets);
   };
 
-  const detachUserSocket = (userId, socket) => {
+  const detachUserSocket = (userId: string, socket: any) => {
     const userSockets = socketsByUserId.get(userId);
     if (!userSockets) {
       return;
@@ -95,13 +95,13 @@ export async function realtimeRoutes(fastify) {
     }
   };
 
-  const attachRoomSocket = (roomId, socket) => {
+  const attachRoomSocket = (roomId: string, socket: any) => {
     const roomSockets = socketsByRoomId.get(roomId) || new Set();
     roomSockets.add(socket);
     socketsByRoomId.set(roomId, roomSockets);
   };
 
-  const detachRoomSocket = (roomId, socket) => {
+  const detachRoomSocket = (roomId: string, socket: any) => {
     const roomSockets = socketsByRoomId.get(roomId);
     if (!roomSockets) {
       return;
@@ -112,7 +112,7 @@ export async function realtimeRoutes(fastify) {
     }
   };
 
-  const broadcastRoom = (roomId, payload, excludedSocket = null) => {
+  const broadcastRoom = (roomId: string, payload: unknown, excludedSocket: any = null) => {
     const roomSockets = socketsByRoomId.get(roomId);
     if (!roomSockets) {
       return;
@@ -125,7 +125,7 @@ export async function realtimeRoutes(fastify) {
     }
   };
 
-  const getRoomPresence = (roomId) => {
+  const getRoomPresence = (roomId: string) => {
     const roomSockets = socketsByRoomId.get(roomId);
     if (!roomSockets) {
       return [];
@@ -147,7 +147,7 @@ export async function realtimeRoutes(fastify) {
     return users;
   };
 
-  const getUserRoomSockets = (userId, roomId) => {
+  const getUserRoomSockets = (userId: string, roomId: string) => {
     const userSockets = socketsByUserId.get(userId);
     if (!userSockets) {
       return [];
@@ -167,7 +167,7 @@ export async function realtimeRoutes(fastify) {
     return result;
   };
 
-  const canJoinRoom = async (roomSlug, userId) => {
+  const canJoinRoom = async (roomSlug: string, userId: string) => {
     const room = await db.query(
       "SELECT id, slug, title, is_public FROM rooms WHERE slug = $1",
       [roomSlug]
@@ -208,7 +208,7 @@ export async function realtimeRoutes(fastify) {
     {
       websocket: true
     },
-    async (connection, request) => {
+    async (connection: any, request: any) => {
       try {
         const url = new URL(request.url, "http://localhost");
         const ticket = url.searchParams.get("ticket");
@@ -230,7 +230,7 @@ export async function realtimeRoutes(fastify) {
 
         await fastify.redis.del(ticketKey);
 
-        let claims;
+        let claims: any;
         try {
           claims = JSON.parse(ticketPayload);
         } catch {
@@ -266,7 +266,7 @@ export async function realtimeRoutes(fastify) {
 
         sendJson(connection, buildServerReadyEnvelope(userId, userName));
 
-        connection.on("message", async (raw) => {
+        connection.on("message", async (raw: unknown) => {
           try {
             const message = parseWsIncomingEnvelope(raw);
             if (!message) {
@@ -309,7 +309,13 @@ export async function realtimeRoutes(fastify) {
               const joinResult = await canJoinRoom(roomSlug, state.userId);
 
               if (!joinResult.ok) {
-                sendNack(connection, requestId, eventType, joinResult.reason, "Cannot join room");
+                sendNack(
+                  connection,
+                  requestId,
+                  eventType,
+                  joinResult.reason || "Forbidden",
+                  "Cannot join room"
+                );
                 void incrementMetric("nack_sent");
                 return;
               }

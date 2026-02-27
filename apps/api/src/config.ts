@@ -1,3 +1,5 @@
+import type { AppConfig, AuthMode } from "./config.types.ts";
+
 /** @typedef {import("./config.types.ts").AppConfig} AppConfig */
 /** @typedef {import("./config.types.ts").AuthMode} AuthMode */
 
@@ -13,7 +15,7 @@ for (const key of requiredKeys) {
  * @param {unknown} value
  * @returns {string[]}
  */
-const parseCsv = (value) =>
+const parseCsv = (value: unknown): string[] =>
   String(value || "")
     .split(",")
     .map((item) => item.trim().toLowerCase())
@@ -25,9 +27,9 @@ const authMode = (process.env.AUTH_MODE || "sso").toLowerCase() === "local" ? "l
 /** @type {AppConfig} */
 export const config = {
   port: Number(process.env.PORT || 8080),
-  databaseUrl: process.env.DATABASE_URL,
-  redisUrl: process.env.REDIS_URL,
-  jwtSecret: process.env.JWT_SECRET,
+  databaseUrl: String(process.env.DATABASE_URL),
+  redisUrl: String(process.env.REDIS_URL),
+  jwtSecret: String(process.env.JWT_SECRET),
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || "7d",
   corsOrigin: process.env.CORS_ORIGIN || "*",
   authMode,

@@ -1,7 +1,7 @@
 import { dbHealthcheck } from "../db.js";
 import { redisHealthcheck } from "../redis.js";
 
-export async function healthRoutes(fastify) {
+export async function healthRoutes(fastify: any) {
   fastify.get("/health", async () => {
     const checks = {
       api: "ok",

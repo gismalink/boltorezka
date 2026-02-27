@@ -2,7 +2,7 @@ import { db } from "../db.js";
 /** @typedef {import("../db.types.ts").UserRow} UserRow */
 /** @typedef {import("../request-context.types.ts").AuthenticatedRequestContext} AuthenticatedRequestContext */
 
-export async function requireAuth(request, reply) {
+export async function requireAuth(request: any, reply: any) {
   try {
     await request.jwtVerify();
   } catch {
@@ -13,7 +13,7 @@ export async function requireAuth(request, reply) {
   }
 }
 
-export async function loadCurrentUser(request, reply) {
+export async function loadCurrentUser(request: any, reply: any) {
   /** @type {AuthenticatedRequestContext} */
   const authRequest = request;
   const userId = authRequest.user?.sub;
@@ -40,10 +40,10 @@ export async function loadCurrentUser(request, reply) {
   authRequest.currentUser = /** @type {UserRow} */ (result.rows[0]);
 }
 
-export function requireRole(roles) {
+export function requireRole(roles: string[] | string) {
   const allowedRoles = Array.isArray(roles) ? roles : [roles];
 
-  return async function roleGuard(request, reply) {
+  return async function roleGuard(request: any, reply: any) {
     /** @type {AuthenticatedRequestContext} */
     const authRequest = request;
     const role = authRequest.currentUser?.role || "user";
