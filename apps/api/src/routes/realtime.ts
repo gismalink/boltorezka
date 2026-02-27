@@ -299,6 +299,20 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
     void incrementMetric("nack_sent");
   };
 
+  const sendAckWithMetrics = (
+    socket: WebSocket,
+    requestId: string | null,
+    eventType: string,
+    meta: Record<string, unknown> = {},
+    additionalMetrics: string[] = []
+  ) => {
+    sendAck(socket, requestId, eventType, meta);
+    void incrementMetric("ack_sent");
+    for (const metricName of additionalMetrics) {
+      void incrementMetric(metricName);
+    }
+  };
+
   fastify.get(
     "/v1/realtime/ws",
     {
@@ -390,8 +404,7 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
             switch (knownMessage.type) {
               case "ping": {
                 sendJson(connection, buildPongEnvelope());
-                sendAck(connection, requestId, eventType);
-                void incrementMetric("ack_sent");
+                sendAckWithMetrics(connection, requestId, eventType);
                 return;
               }
 
@@ -439,11 +452,15 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
                   )
                 );
 
-                sendAck(connection, requestId, eventType, {
-                  roomId: joinResult.room.id,
-                  roomSlug: joinResult.room.slug
-                });
-                void incrementMetric("ack_sent");
+                sendAckWithMetrics(
+                  connection,
+                  requestId,
+                  eventType,
+                  {
+                    roomId: joinResult.room.id,
+                    roomSlug: joinResult.room.slug
+                  }
+                );
 
                 sendJson(
                   connection,
@@ -495,12 +512,16 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
                       await fastify.redis.del(idemRedisKey);
                     }
 
-                    sendAck(connection, requestId, eventType, {
-                      duplicate: true,
-                      idempotencyKey
-                    });
-                    void incrementMetric("ack_sent");
-                    void incrementMetric("chat_idempotency_hit");
+                    sendAckWithMetrics(
+                      connection,
+                      requestId,
+                      eventType,
+                      {
+                        duplicate: true,
+                        idempotencyKey
+                      },
+                      ["chat_idempotency_hit"]
+                    );
                     return;
                   }
                 }
@@ -535,12 +556,16 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
 
                 broadcastRoom(state.roomId, buildChatMessageEnvelope(chatPayload));
 
-                sendAck(connection, requestId, eventType, {
-                  messageId: chatMessage.id,
-                  idempotencyKey: idempotencyKey || null
-                });
-                void incrementMetric("ack_sent");
-                void incrementMetric("chat_sent");
+                sendAckWithMetrics(
+                  connection,
+                  requestId,
+                  eventType,
+                  {
+                    messageId: chatMessage.id,
+                    idempotencyKey: idempotencyKey || null
+                  },
+                  ["chat_sent"]
+                );
 
                 return;
               }
@@ -582,12 +607,16 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
                 return;
               }
 
-              sendAck(connection, requestId, eventType, {
-                relayedTo: relayOutcome.relayedCount,
-                targetUserId
-              });
-              void incrementMetric("ack_sent");
-              void incrementMetric("call_signal_sent");
+              sendAckWithMetrics(
+                connection,
+                requestId,
+                eventType,
+                {
+                  relayedTo: relayOutcome.relayedCount,
+                  targetUserId
+                },
+                ["call_signal_sent"]
+              );
               return;
               }
 
@@ -616,16 +645,16 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
                 return;
               }
 
-              sendAck(connection, requestId, eventType, {
-                relayedTo: relayOutcome.relayedCount,
-                targetUserId
-              });
-              void incrementMetric("ack_sent");
-              if (knownMessage.type === "call.hangup") {
-                void incrementMetric("call_hangup_sent");
-              } else {
-                void incrementMetric("call_reject_sent");
-              }
+              sendAckWithMetrics(
+                connection,
+                requestId,
+                eventType,
+                {
+                  relayedTo: relayOutcome.relayedCount,
+                  targetUserId
+                },
+                [knownMessage.type === "call.hangup" ? "call_hangup_sent" : "call_reject_sent"]
+              );
               return;
               }
             }
