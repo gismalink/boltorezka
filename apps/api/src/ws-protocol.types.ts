@@ -19,6 +19,47 @@ export type PresenceUser = {
   userName: string;
 };
 
+export type PongPayload = {
+  ts: number;
+};
+
+export type ChatMessagePayload = {
+  id: string;
+  roomId: string;
+  roomSlug: string | null;
+  userId: string;
+  userName: string;
+  text: string;
+  createdAt: string;
+  senderRequestId: string | null;
+};
+
+export type RoomJoinedPayload = {
+  roomId: string;
+  roomSlug: string;
+  roomTitle: string;
+};
+
+export type RoomPresencePayload = {
+  roomId: string;
+  roomSlug: string;
+  users: PresenceUser[];
+};
+
+export type PresenceJoinedPayload = {
+  userId: string;
+  userName: string;
+  roomSlug: string;
+  presenceCount: number;
+};
+
+export type PresenceLeftPayload = {
+  userId: string;
+  userName: string;
+  roomSlug: string | null;
+  presenceCount: number;
+};
+
 export type CallRelayBasePayload = {
   fromUserId: string;
   fromUserName: string;

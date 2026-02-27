@@ -4,6 +4,12 @@
 /** @typedef {import("./ws-protocol.types.ts").WsIncomingEnvelope} WsIncomingEnvelope */
 /** @typedef {import("./ws-protocol.types.ts").WsOutgoingEnvelope} WsOutgoingEnvelope */
 /** @typedef {import("./ws-protocol.types.ts").PresenceUser} PresenceUser */
+/** @typedef {import("./ws-protocol.types.ts").PongPayload} PongPayload */
+/** @typedef {import("./ws-protocol.types.ts").ChatMessagePayload} ChatMessagePayload */
+/** @typedef {import("./ws-protocol.types.ts").RoomJoinedPayload} RoomJoinedPayload */
+/** @typedef {import("./ws-protocol.types.ts").RoomPresencePayload} RoomPresencePayload */
+/** @typedef {import("./ws-protocol.types.ts").PresenceJoinedPayload} PresenceJoinedPayload */
+/** @typedef {import("./ws-protocol.types.ts").PresenceLeftPayload} PresenceLeftPayload */
 
 export const CALL_SIGNAL_EVENT_TYPES = ["call.offer", "call.answer", "call.ice"];
 export const CALL_TERMINAL_EVENT_TYPES = ["call.reject", "call.hangup"];
@@ -185,7 +191,7 @@ export function buildServerReadyEnvelope(userId, userName) {
  * @param {string} roomId
  * @param {string} roomSlug
  * @param {string} roomTitle
- * @returns {WsOutgoingEnvelope}
+ * @returns {{ type: "room.joined", payload: RoomJoinedPayload }}
  */
 export function buildRoomJoinedEnvelope(roomId, roomSlug, roomTitle) {
   return {
@@ -198,7 +204,7 @@ export function buildRoomJoinedEnvelope(roomId, roomSlug, roomTitle) {
  * @param {string} roomId
  * @param {string} roomSlug
  * @param {PresenceUser[]} users
- * @returns {WsOutgoingEnvelope}
+ * @returns {{ type: "room.presence", payload: RoomPresencePayload }}
  */
 export function buildRoomPresenceEnvelope(roomId, roomSlug, users) {
   return {
@@ -212,7 +218,7 @@ export function buildRoomPresenceEnvelope(roomId, roomSlug, users) {
  * @param {string} userName
  * @param {string} roomSlug
  * @param {number} presenceCount
- * @returns {WsOutgoingEnvelope}
+ * @returns {{ type: "presence.joined", payload: PresenceJoinedPayload }}
  */
 export function buildPresenceJoinedEnvelope(userId, userName, roomSlug, presenceCount) {
   return {
@@ -226,7 +232,7 @@ export function buildPresenceJoinedEnvelope(userId, userName, roomSlug, presence
  * @param {string} userName
  * @param {string | null} roomSlug
  * @param {number} presenceCount
- * @returns {WsOutgoingEnvelope}
+ * @returns {{ type: "presence.left", payload: PresenceLeftPayload }}
  */
 export function buildPresenceLeftEnvelope(userId, userName, roomSlug, presenceCount) {
   return {
@@ -236,8 +242,8 @@ export function buildPresenceLeftEnvelope(userId, userName, roomSlug, presenceCo
 }
 
 /**
- * @param {Record<string, unknown>} payload
- * @returns {WsOutgoingEnvelope}
+ * @param {ChatMessagePayload} payload
+ * @returns {{ type: "chat.message", payload: ChatMessagePayload }}
  */
 export function buildChatMessageEnvelope(payload) {
   return {
@@ -247,7 +253,7 @@ export function buildChatMessageEnvelope(payload) {
 }
 
 /**
- * @returns {WsOutgoingEnvelope}
+ * @returns {{ type: "pong", payload: PongPayload }}
  */
 export function buildPongEnvelope() {
   return {
