@@ -3,6 +3,8 @@ import WS from "ws";
 const baseUrl = (process.env.SMOKE_API_URL ?? "http://localhost:8080").replace(/\/+$/, "");
 const bearerToken = process.env.SMOKE_BEARER_TOKEN ?? "";
 const preissuedTicket = process.env.SMOKE_WS_TICKET ?? "";
+const preissuedTicketSecond = process.env.SMOKE_WS_TICKET_SECOND ?? "";
+const smokeCallSignal = process.env.SMOKE_CALL_SIGNAL === "1";
 const roomSlug = process.env.SMOKE_ROOM_SLUG ?? "general";
 const timeoutMs = Number(process.env.SMOKE_TIMEOUT_MS ?? 10000);
 
@@ -14,6 +16,11 @@ if (!isHttp) {
 
 if (!preissuedTicket && !bearerToken) {
   console.error("[smoke:realtime] set SMOKE_BEARER_TOKEN or SMOKE_WS_TICKET");
+  process.exit(1);
+}
+
+if (smokeCallSignal && !bearerToken && !preissuedTicketSecond) {
+  console.error("[smoke:realtime] SMOKE_CALL_SIGNAL=1 requires SMOKE_BEARER_TOKEN or SMOKE_WS_TICKET_SECOND");
   process.exit(1);
 }
 
@@ -56,6 +63,29 @@ async function resolveTicket() {
   return payload.ticket;
 }
 
+async function resolveSecondTicket() {
+  if (preissuedTicketSecond) {
+    return preissuedTicketSecond;
+  }
+
+  if (!bearerToken) {
+    return null;
+  }
+
+  const { response, payload } = await fetchJson("/v1/auth/ws-ticket", {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${bearerToken}`
+    }
+  });
+
+  if (!response.ok || !payload?.ticket) {
+    throw new Error(`[smoke:realtime] second /v1/auth/ws-ticket failed: ${response.status}`);
+  }
+
+  return payload.ticket;
+}
+
 function waitForEvent(events, predicate, label) {
   const started = Date.now();
 
@@ -78,6 +108,7 @@ function waitForEvent(events, predicate, label) {
 
 (async () => {
   const ticket = await resolveTicket();
+  const secondTicket = smokeCallSignal ? await resolveSecondTicket() : null;
   const wsUrl = toWsUrl(baseUrl);
   wsUrl.pathname = "/v1/realtime/ws";
   wsUrl.search = "";
@@ -85,6 +116,8 @@ function waitForEvent(events, predicate, label) {
 
   const ws = new WS(wsUrl.toString());
   const events = [];
+  let wsSecond = null;
+  const secondEvents = [];
 
   ws.on("message", (raw) => {
     try {
@@ -171,7 +204,95 @@ function waitForEvent(events, predicate, label) {
     throw new Error("[smoke:realtime] expected duplicate=true in duplicate ack");
   }
 
+  let callSignalRelayed = false;
+  if (smokeCallSignal) {
+    if (!secondTicket) {
+      throw new Error("[smoke:realtime] second ticket is required for call signaling smoke");
+    }
+
+    const wsSecondUrl = toWsUrl(baseUrl);
+    wsSecondUrl.pathname = "/v1/realtime/ws";
+    wsSecondUrl.search = "";
+    wsSecondUrl.searchParams.set("ticket", secondTicket);
+    wsSecond = new WS(wsSecondUrl.toString());
+
+    wsSecond.on("message", (raw) => {
+      try {
+        const value = typeof raw === "string" ? raw : raw.toString("utf8");
+        secondEvents.push(JSON.parse(value));
+      } catch {
+        return;
+      }
+    });
+
+    await new Promise((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error("[smoke:realtime] second websocket open timeout")), timeoutMs);
+
+      wsSecond.once("open", () => {
+        clearTimeout(timer);
+        resolve();
+      });
+
+      wsSecond.once("error", (error) => {
+        clearTimeout(timer);
+        reject(error);
+      });
+    });
+
+    const secondReady = await waitForEvent(secondEvents, (item) => item?.type === "server.ready", "server.ready for second websocket");
+    const secondUserId = String(secondReady?.payload?.userId || "").trim();
+    if (!secondUserId) {
+      throw new Error("[smoke:realtime] second websocket user id is missing");
+    }
+
+    const secondJoinRequest = `join2-${Date.now()}`;
+    wsSecond.send(JSON.stringify({ type: "room.join", requestId: secondJoinRequest, payload: { roomSlug } }));
+    await waitForEvent(
+      secondEvents,
+      (item) => item?.type === "ack" && item?.payload?.requestId === secondJoinRequest,
+      "ack for second room.join"
+    );
+
+    const callRequestId = `call-offer-${Date.now()}`;
+    const signalPayload = { type: "offer", sdp: "smoke-offer-sdp" };
+    ws.send(
+      JSON.stringify({
+        type: "call.offer",
+        requestId: callRequestId,
+        payload: {
+          targetUserId: secondUserId,
+          signal: signalPayload
+        }
+      })
+    );
+
+    const callAck = await waitForEvent(
+      events,
+      (item) => item?.type === "ack" && item?.payload?.requestId === callRequestId,
+      "ack for call.offer"
+    );
+
+    const relayedOffer = await waitForEvent(
+      secondEvents,
+      (item) => item?.type === "call.offer" && item?.payload?.signal?.type === "offer",
+      "relayed call.offer"
+    );
+
+    if (Number(callAck?.payload?.relayedTo || 0) < 1) {
+      throw new Error("[smoke:realtime] expected call.offer relayedTo >= 1");
+    }
+
+    if (String(relayedOffer?.payload?.targetUserId || "") !== secondUserId) {
+      throw new Error("[smoke:realtime] relayed call.offer targetUserId mismatch");
+    }
+
+    callSignalRelayed = true;
+  }
+
   ws.close();
+  if (wsSecond) {
+    wsSecond.close();
+  }
 
   console.log(
     JSON.stringify(
@@ -181,7 +302,8 @@ function waitForEvent(events, predicate, label) {
         roomSlug,
         nackCode: nack?.payload?.code ?? null,
         firstMessageId: firstAck?.payload?.messageId ?? null,
-        duplicateIdempotencyKey: duplicateAck?.payload?.idempotencyKey ?? null
+        duplicateIdempotencyKey: duplicateAck?.payload?.idempotencyKey ?? null,
+        callSignalRelayed
       },
       null,
       2

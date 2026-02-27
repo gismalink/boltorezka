@@ -56,6 +56,14 @@ function sendNack(socket, requestId, eventType, code, message) {
   });
 }
 
+function safeJsonSize(value) {
+  try {
+    return JSON.stringify(value).length;
+  } catch {
+    return Number.POSITIVE_INFINITY;
+  }
+}
+
 export async function realtimeRoutes(fastify) {
   const socketsByUserId = new Map();
   const socketsByRoomId = new Map();
@@ -511,8 +519,20 @@ export async function realtimeRoutes(fastify) {
                 return;
               }
 
-              const rawTargetUserId = String(message.payload?.targetUserId || "").trim();
-              const targetUserId = rawTargetUserId || null;
+              const signalSize = safeJsonSize(signal);
+              if (!Number.isFinite(signalSize) || signalSize < 2 || signalSize > 12000) {
+                sendNack(
+                  connection,
+                  requestId,
+                  eventType,
+                  "ValidationError",
+                  "payload.signal size must be between 2 and 12000 bytes"
+                );
+                void incrementMetric("nack_sent");
+                return;
+              }
+
+              const targetUserId = normalizeRequestId(message.payload?.targetUserId) || null;
 
               const relayPayload = {
                 fromUserId: state.userId,

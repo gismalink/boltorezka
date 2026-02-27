@@ -44,6 +44,7 @@ Legacy-файлы перенесены в `legacy/poc/`.
 - `SMOKE_API=1 npm run check` — verify + API smoke (`scripts/smoke-api.mjs`)
 - `SMOKE_API_URL=https://test.boltorezka.gismalink.art npm run smoke:sso` — SSO redirect/mode smoke (`scripts/smoke-sso-redirect.mjs`)
 - `SMOKE_API_URL=https://test.boltorezka.gismalink.art SMOKE_BEARER_TOKEN=<jwt> npm run smoke:realtime` — WS protocol smoke (`nack/ack/idempotency`) через `ws-ticket` (`scripts/smoke-realtime.mjs`)
+- `SMOKE_CALL_SIGNAL=1 SMOKE_API_URL=https://test.boltorezka.gismalink.art SMOKE_BEARER_TOKEN=<jwt> npm run smoke:realtime` — расширенный WS smoke + relay проверки `call.offer` (второй ws-ticket создаётся автоматически)
 - `SMOKE_API_URL=https://test.boltorezka.gismalink.art SMOKE_API=1 SMOKE_SSO=1 npm run check` — единый verify + API + SSO smoke
 - `SMOKE_API_URL=https://test.boltorezka.gismalink.art SMOKE_API=1 SMOKE_SSO=1 SMOKE_REALTIME=1 SMOKE_WS_TICKET=<ticket> npm run check` — полный verify + API + SSO + realtime smoke
 - `npm run deploy:test` — deploy test from git ref (`scripts/examples/deploy-test-from-ref.sh`)

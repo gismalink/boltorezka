@@ -15,6 +15,7 @@
 - ✅ Error resilience: добавлен React `ErrorBoundary` с безопасным fallback/reload UX.
 - ✅ Admin observability baseline: `/v1/telemetry/summary` + React telemetry card.
 - ✅ Voice signaling baseline: WS события `call.offer/call.answer/call.ice` + минимальный React manual signaling panel.
+- ✅ Signaling hardening: серверная валидация размера `payload.signal` + расширенный `smoke:realtime` для relay `call.offer` между двумя WS-клиентами.
 - 🔄 Начат этап реализации React web app (`apps/web`).
 
 ## Automation plan (next blocks)
