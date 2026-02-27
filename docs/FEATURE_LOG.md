@@ -102,3 +102,9 @@
 ### Validation
 
 - Web build: `npm run web:build` — PASS.
+- Commit: `abbcfc2` (`main`).
+- Test rollout/smoke: `TEST_REF=origin/main ALLOW_TEST_FROM_MAIN=1 npm run deploy:test:smoke` — PASS.
+- Extended realtime relay smoke (`SMOKE_CALL_SIGNAL=1` + 2 ws-ticket) — PASS:
+  - `callSignalRelayed=true`
+  - `callRejectRelayed=true`
+  - `callHangupRelayed=true`
