@@ -22,6 +22,7 @@
 - ✅ WS payload typing step: `chat.message`, `room.joined`, `room.presence`, `presence.joined/left` вынесены в protocol builders.
 - ✅ WS call payload typing step: relay envelopes для `call.offer/answer/ice/reject/hangup` собираются централизованно в protocol builders.
 - ✅ WS control-frame typing step: `pong` вынесен в централизованный protocol builder.
+- ✅ API TS incremental step: добавлен первый TS-модуль `apps/api/src/ws-protocol.types.ts`, подключённый через JSDoc type imports.
 - 🔄 Начат этап реализации React web app (`apps/web`).
 
 ## Automation plan (next blocks)

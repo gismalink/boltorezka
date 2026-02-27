@@ -1,9 +1,9 @@
-/** @typedef {"call.offer" | "call.answer" | "call.ice"} CallSignalEventType */
-/** @typedef {"call.reject" | "call.hangup"} CallTerminalEventType */
-/** @typedef {CallSignalEventType | CallTerminalEventType} CallEventType */
-/** @typedef {{ type: string, requestId?: string, idempotencyKey?: string, payload?: Record<string, unknown> }} WsIncomingEnvelope */
-/** @typedef {{ type: string, payload: Record<string, unknown> }} WsOutgoingEnvelope */
-/** @typedef {{ userId: string, userName: string }} PresenceUser */
+/** @typedef {import("./ws-protocol.types.ts").CallSignalEventType} CallSignalEventType */
+/** @typedef {import("./ws-protocol.types.ts").CallTerminalEventType} CallTerminalEventType */
+/** @typedef {import("./ws-protocol.types.ts").CallEventType} CallEventType */
+/** @typedef {import("./ws-protocol.types.ts").WsIncomingEnvelope} WsIncomingEnvelope */
+/** @typedef {import("./ws-protocol.types.ts").WsOutgoingEnvelope} WsOutgoingEnvelope */
+/** @typedef {import("./ws-protocol.types.ts").PresenceUser} PresenceUser */
 
 export const CALL_SIGNAL_EVENT_TYPES = ["call.offer", "call.answer", "call.ice"];
 export const CALL_TERMINAL_EVENT_TYPES = ["call.reject", "call.hangup"];
