@@ -8,7 +8,6 @@ const state = {
   canCreateRooms: false
 };
 
-const sessionBox = document.querySelector("#session-box");
 const eventLog = document.querySelector("#event-log");
 const roomsList = document.querySelector("#rooms-list");
 const wsStatus = document.querySelector("#ws-status");
@@ -17,6 +16,12 @@ const authModeBox = document.querySelector("#auth-mode-box");
 const roomStateBox = document.querySelector("#room-state-box");
 const presenceBox = document.querySelector("#presence-box");
 const createRoomForm = document.querySelector("#create-room-form");
+const authLoginButton = document.querySelector("#auth-login-btn");
+const profileBlock = document.querySelector("#profile-block");
+const headerUserName = document.querySelector("#header-user-name");
+const profileToggleButton = document.querySelector("#profile-toggle-btn");
+const profilePopup = document.querySelector("#profile-popup");
+const profileLogoutButton = document.querySelector("#profile-logout-btn");
 
 function resolveDefaultSsoBase() {
   const host = window.location.hostname;
@@ -51,27 +56,22 @@ function setPresence(users) {
 
 function updateSessionView() {
   if (!state.token) {
-    sessionBox.textContent = "No active session";
     state.canCreateRooms = false;
     createRoomForm.style.display = "none";
+    authLoginButton.classList.remove("hidden");
+    profileBlock.classList.add("hidden");
+    profilePopup.classList.add("hidden");
+    headerUserName.textContent = "";
     return;
   }
 
   const role = state.user?.role || "user";
+  const displayName = state.user?.name || state.user?.email || "User";
   state.canCreateRooms = role === "admin" || role === "super_admin";
   createRoomForm.style.display = state.canCreateRooms ? "flex" : "none";
-
-  sessionBox.textContent = JSON.stringify(
-    {
-      token: `${state.token.slice(0, 16)}...`,
-      user: state.user,
-      permissions: {
-        canCreateRooms: state.canCreateRooms
-      }
-    },
-    null,
-    2
-  );
+  authLoginButton.classList.add("hidden");
+  profileBlock.classList.remove("hidden");
+  headerUserName.textContent = displayName;
 }
 
 async function apiFetch(path, options = {}) {
@@ -306,19 +306,15 @@ async function connectWs() {
   };
 }
 
-document.querySelector("#sso-google-btn").addEventListener("click", () => {
+authLoginButton.addEventListener("click", () => {
   beginSso("google");
-});
-
-document.querySelector("#sso-yandex-btn").addEventListener("click", () => {
-  beginSso("yandex");
 });
 
 document.querySelector("#sso-complete-btn").addEventListener("click", async () => {
   await completeSsoSession();
 });
 
-document.querySelector("#logout-btn").addEventListener("click", () => {
+profileLogoutButton.addEventListener("click", () => {
   const returnUrl = window.location.href;
   const logoutUrl = `/v1/auth/sso/logout?returnUrl=${encodeURIComponent(returnUrl)}`;
   localStorage.removeItem("boltorezka_token");
@@ -334,8 +330,20 @@ document.querySelector("#logout-btn").addEventListener("click", () => {
   setRoomState("room: none");
   setPresence([]);
   updateSessionView();
+  profilePopup.classList.add("hidden");
   logEvent("logout -> sso redirect");
   window.location.href = logoutUrl;
+});
+
+profileToggleButton.addEventListener("click", () => {
+  profilePopup.classList.toggle("hidden");
+});
+
+window.addEventListener("mousedown", (event) => {
+  const target = event.target;
+  if (!profileBlock.contains(target)) {
+    profilePopup.classList.add("hidden");
+  }
 });
 
 document.querySelector("#create-room-form").addEventListener("submit", async (event) => {
@@ -406,7 +414,7 @@ document.querySelector("#send-chat-btn").addEventListener("click", () => {
   } else {
     const established = await completeSsoSession();
     if (!established) {
-      logEvent("click 'Login via Google/Yandex', then 'Complete SSO Session'");
+      logEvent("click 'Авторизоваться', then 'Complete SSO Session'");
     }
   }
 })();

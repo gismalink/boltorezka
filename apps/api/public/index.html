@@ -8,30 +8,33 @@
   </head>
   <body>
     <main class="app">
-      <section class="card">
-        <h1>Boltorezka v2 MVP</h1>
-        <p class="muted">Auth + Rooms + Realtime Chat</p>
-      </section>
+      <header class="app-header card">
+        <div>
+          <h1>Boltorezka v2 MVP</h1>
+          <p class="muted">Auth + Rooms + Realtime Chat</p>
+        </div>
+        <div id="header-auth" class="header-auth">
+          <button id="auth-login-btn" type="button">Авторизоваться</button>
+
+          <div id="profile-block" class="profile-block hidden">
+            <span id="header-user-name" class="header-user-name"></span>
+            <button id="profile-toggle-btn" type="button" class="secondary profile-toggle">👤</button>
+            <div id="profile-popup" class="profile-popup hidden">
+              <button id="profile-logout-btn" type="button">Logout</button>
+            </div>
+          </div>
+        </div>
+      </header>
 
       <section class="card grid-2">
         <div>
-          <h2>SSO Login</h2>
-          <p class="muted">Local register/login are disabled. Use central SSO.</p>
-          <div class="inline-form">
-            <button id="sso-google-btn" type="button">Login via Google</button>
-            <button id="sso-yandex-btn" type="button" class="secondary">Login via Yandex</button>
-          </div>
+          <h2>SSO</h2>
+          <p class="muted">После возврата из SSO нажмите Complete.</p>
           <div class="inline-form">
             <button id="sso-complete-btn" type="button">Complete SSO Session</button>
-            <button id="logout-btn" type="button" class="secondary">Logout</button>
           </div>
           <pre id="auth-mode-box">auth mode: loading</pre>
         </div>
-      </section>
-
-      <section class="card">
-        <h2>Session</h2>
-        <pre id="session-box">No active session</pre>
       </section>
 
       <section class="card grid-2">

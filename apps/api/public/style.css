@@ -18,6 +18,50 @@ body {
   gap: 16px;
 }
 
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.header-auth {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.profile-block {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+}
+
+.header-user-name {
+  color: #ecf0ff;
+  font-weight: 600;
+}
+
+.profile-toggle {
+  min-width: 42px;
+}
+
+.profile-popup {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  background: #121936;
+  border: 1px solid #2a355f;
+  border-radius: 8px;
+  padding: 8px;
+  z-index: 10;
+}
+
+.hidden {
+  display: none !important;
+}
+
 .card {
   border: 1px solid #2a355f;
   border-radius: 14px;
