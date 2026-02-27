@@ -46,6 +46,18 @@
 
 - `ssh mac-mini 'cd ~/srv/edge && docker compose ps && docker compose logs --tail=120 boltorezka-api-test'`
 
+### One-command альтернатива (deploy + smoke)
+
+Если deploy выполняется из `~/srv/boltorezka`, можно использовать единый запуск:
+
+- `ssh mac-mini 'cd ~/srv/boltorezka && TEST_REF=origin/main ALLOW_TEST_FROM_MAIN=1 npm run deploy:test:smoke'`
+
+Скрипт выполняет:
+
+1. `deploy:test` (recreate `boltorezka-api-test`),
+2. `postdeploy` smoke (`/health`, `/v1/auth/mode`, `smoke:sso`, `smoke:realtime`),
+3. snapshot realtime метрик из Redis (`ws:metrics:<date>`).
+
 > Если у тебя в compose/скриптах другое имя сервиса — замени `boltorezka-api-test` на фактическое.
 
 ## 5 URL/check проверок

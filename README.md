@@ -47,6 +47,8 @@ Legacy-файлы перенесены в `legacy/poc/`.
 - `SMOKE_API_URL=https://test.boltorezka.gismalink.art SMOKE_API=1 SMOKE_SSO=1 npm run check` — единый verify + API + SSO smoke
 - `SMOKE_API_URL=https://test.boltorezka.gismalink.art SMOKE_API=1 SMOKE_SSO=1 SMOKE_REALTIME=1 SMOKE_WS_TICKET=<ticket> npm run check` — полный verify + API + SSO + realtime smoke
 - `npm run deploy:test` — deploy test from git ref (`scripts/examples/deploy-test-from-ref.sh`)
+- `npm run smoke:test:postdeploy` — серверный post-deploy smoke (`health + mode + smoke:sso + smoke:realtime + ws metrics`) (`scripts/examples/postdeploy-smoke-test.sh`)
+- `TEST_REF=origin/<branch> npm run deploy:test:smoke` — one-command test rollout + post-deploy smoke (`scripts/examples/deploy-test-and-smoke.sh`)
 - `npm run deploy:prod` — deploy prod from git ref (`scripts/examples/deploy-prod-from-ref.sh`)
 
 Перед server deploy обязательно:
