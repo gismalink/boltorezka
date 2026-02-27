@@ -1,32 +1,21 @@
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "./api";
+import { AuthController } from "./services/authController";
+import { CallSignalingController, type CallSignalEventType, type CallStatus } from "./services/callSignalingController";
+import { ChatController } from "./services/chatController";
+import { RealtimeClient } from "./services/realtimeClient";
+import { RoomAdminController } from "./services/roomAdminController";
+import { WsMessageController } from "./services/wsMessageController";
 import { trackClientEvent } from "./telemetry";
 import type {
   Message,
   MessagesCursor,
   Room,
   TelemetrySummary,
-  User,
-  WsIncoming,
-  WsOutgoing
+  User
 } from "./types";
 
-const RECONNECT_DELAYS_MS = [1000, 2000, 4000, 8000, 12000];
-const ACK_TIMEOUT_MS = 6000;
 const MAX_CHAT_RETRIES = 3;
-type CallStatus = "idle" | "ringing" | "connecting" | "active";
-
-type PendingRequest = {
-  eventType: string;
-  envelope: WsOutgoing;
-  retries: number;
-  maxRetries: number;
-};
-
-function wsBase() {
-  const protocol = window.location.protocol === "https:" ? "wss" : "ws";
-  return `${protocol}://${window.location.host}`;
-}
 
 export function App() {
   const [token, setToken] = useState(localStorage.getItem("boltorezka_token") || "");
@@ -53,10 +42,10 @@ export function App() {
   const [adminUsers, setAdminUsers] = useState<User[]>([]);
   const [newRoomSlug, setNewRoomSlug] = useState("");
   const [newRoomTitle, setNewRoomTitle] = useState("");
-  const wsRef = useRef<WebSocket | null>(null);
-  const reconnectAttemptRef = useRef(0);
-  const pendingRequestsRef = useRef(new Map<string, PendingRequest>());
-  const ackTimersRef = useRef(new Map<string, ReturnType<typeof setTimeout>>());
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const realtimeClientRef = useRef<RealtimeClient | null>(null);
+  const roomSlugRef = useRef(roomSlug);
+  const profileMenuRef = useRef<HTMLDivElement | null>(null);
 
   const canCreateRooms = user?.role === "admin" || user?.role === "super_admin";
   const canPromote = user?.role === "super_admin";
@@ -82,100 +71,51 @@ export function App() {
     );
   };
 
-  const clearAckTimer = (requestId: string) => {
-    const timer = ackTimersRef.current.get(requestId);
-    if (!timer) {
-      return;
-    }
-    clearTimeout(timer);
-    ackTimersRef.current.delete(requestId);
-  };
-
-  const clearAllAckTimers = () => {
-    for (const timer of ackTimersRef.current.values()) {
-      clearTimeout(timer);
-    }
-    ackTimersRef.current.clear();
-  };
-
-  const armAckTimeout = (requestId: string) => {
-    clearAckTimer(requestId);
-
-    const timer = setTimeout(() => {
-      const pending = pendingRequestsRef.current.get(requestId);
-      if (!pending) {
-        return;
-      }
-
-      const socket = wsRef.current;
-      if (!socket || socket.readyState !== WebSocket.OPEN) {
-        armAckTimeout(requestId);
-        return;
-      }
-
-      if (pending.retries >= pending.maxRetries) {
-        pendingRequestsRef.current.delete(requestId);
-        clearAckTimer(requestId);
-        if (pending.eventType === "chat.send") {
-          markMessageDelivery(requestId, "failed");
-          trackClientEvent(
-            "chat.request.failed.retries_exhausted",
-            { requestId, eventType: pending.eventType, retries: pending.retries },
-            token
-          );
-        }
-        pushLog(`ws request failed after retries: ${pending.eventType}`);
-        return;
-      }
-
-      pending.retries += 1;
-      socket.send(JSON.stringify(pending.envelope));
-      if (pending.eventType === "chat.send") {
-        markMessageDelivery(requestId, "sending");
-      }
-      pushLog(`ws retry ${pending.eventType} #${pending.retries}`);
-      armAckTimeout(requestId);
-    }, ACK_TIMEOUT_MS);
-
-    ackTimersRef.current.set(requestId, timer);
-  };
-
-  const sendWsEvent = (
+  const sendWsEvent = useCallback((
     eventType: string,
     payload: Record<string, unknown>,
     options: { withIdempotency?: boolean; trackAck?: boolean; maxRetries?: number } = {}
   ) => {
-    const socket = wsRef.current;
-    if (!socket || socket.readyState !== WebSocket.OPEN) {
-      pushLog(`ws send skipped: ${eventType} (socket is not open)`);
-      return null;
-    }
+    return realtimeClientRef.current?.sendEvent(eventType, payload, options) ?? null;
+  }, []);
 
-    const requestId = crypto.randomUUID();
-    const envelope: WsOutgoing = {
-      type: eventType,
-      requestId,
-      payload
-    };
+  const callSignalingController = useMemo(
+    () =>
+      new CallSignalingController({
+        sendWsEvent,
+        setCallStatus,
+        setLastCallPeer,
+        pushCallLog
+      }),
+    [sendWsEvent]
+  );
 
-    if (options.withIdempotency) {
-      envelope.idempotencyKey = requestId;
-    }
+  const authController = useMemo(
+    () =>
+      new AuthController({
+        pushLog,
+        setToken,
+        setUser
+      }),
+    []
+  );
 
-    const trackAck = options.trackAck !== false;
-    if (trackAck) {
-      pendingRequestsRef.current.set(requestId, {
-        eventType,
-        envelope,
-        retries: 0,
-        maxRetries: options.maxRetries ?? 0
-      });
-      armAckTimeout(requestId);
-    }
-
-    socket.send(JSON.stringify(envelope));
-    return requestId;
-  };
+  const roomAdminController = useMemo(
+    () =>
+      new RoomAdminController({
+        pushLog,
+        setRoomSlug,
+        setMessages,
+        setMessagesHasMore,
+        setMessagesNextCursor,
+        sendRoomJoinEvent: (slug) => {
+          void sendWsEvent("room.join", { roomSlug: slug }, { maxRetries: 1 });
+        },
+        setRooms,
+        setAdminUsers
+      }),
+    [sendWsEvent]
+  );
 
   const loadTelemetrySummary = useCallback(async () => {
     if (!token || !canViewTelemetry) {
@@ -189,6 +129,20 @@ export function App() {
       pushLog(`telemetry summary failed: ${(error as Error).message}`);
     }
   }, [token, canViewTelemetry]);
+
+  const chatController = useMemo(
+    () =>
+      new ChatController({
+        pushLog,
+        setMessages,
+        setMessagesHasMore,
+        setMessagesNextCursor,
+        setLoadingOlderMessages,
+        sendWsEvent,
+        loadTelemetrySummary
+      }),
+    [sendWsEvent, loadTelemetrySummary]
+  );
 
   useEffect(() => {
     api.authMode()
@@ -206,8 +160,8 @@ export function App() {
       setLoadingOlderMessages(false);
       setAdminUsers([]);
       setTelemetrySummary(null);
-      pendingRequestsRef.current.clear();
-      clearAllAckTimers();
+      realtimeClientRef.current?.dispose();
+      realtimeClientRef.current = null;
       return;
     }
 
@@ -226,296 +180,96 @@ export function App() {
   }, [token]);
 
   useEffect(() => {
+    roomSlugRef.current = roomSlug;
+    realtimeClientRef.current?.setRoomSlug(roomSlug);
+  }, [roomSlug]);
+
+  useEffect(() => {
     if (!token) {
-      wsRef.current?.close();
-      wsRef.current = null;
-      reconnectAttemptRef.current = 0;
       setWsState("disconnected");
       return;
     }
 
-    let isDisposed = false;
-    let ws: WebSocket | null = null;
-    let pingInterval: ReturnType<typeof setInterval> | null = null;
-    let reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
-
-    const clearTimers = () => {
-      if (pingInterval) {
-        clearInterval(pingInterval);
-        pingInterval = null;
+    const messageController = new WsMessageController({
+      clearPendingRequest: (requestId) => realtimeClientRef.current?.clearPendingRequest(requestId),
+      markMessageDelivery,
+      setMessages,
+      setLastCallPeer,
+      setCallStatus,
+      pushLog,
+      pushCallLog,
+      setRoomSlug,
+      setPresence,
+      trackNack: ({ requestId, eventType, code, message }) => {
+        trackClientEvent(
+          "ws.nack.received",
+          {
+            requestId,
+            eventType,
+            code,
+            message
+          },
+          token
+        );
       }
-      if (reconnectTimeout) {
-        clearTimeout(reconnectTimeout);
-        reconnectTimeout = null;
-      }
-    };
+    });
 
-    const scheduleReconnect = () => {
-      if (isDisposed) {
-        return;
-      }
-
-      const index = Math.min(reconnectAttemptRef.current, RECONNECT_DELAYS_MS.length - 1);
-      const delay = RECONNECT_DELAYS_MS[index];
-      reconnectAttemptRef.current += 1;
-      setWsState("connecting");
-      pushLog(`ws reconnect in ${Math.round(delay / 1000)}s`);
-
-      reconnectTimeout = setTimeout(() => {
-        if (isDisposed) {
-          return;
+    const client = new RealtimeClient({
+      getTicket: async (authToken) => {
+        const response = await api.wsTicket(authToken);
+        return response.ticket;
+      },
+      onWsStateChange: setWsState,
+      onLog: (message) => {
+        pushLog(message);
+        if (message === "ws error") {
+          trackClientEvent("ws.error", {}, token);
         }
-        connect();
-      }, delay);
-    };
+      },
+      onMessage: (message) => messageController.handle(message),
+      onConnected: () => {
+        trackClientEvent("ws.connected", { roomSlug: roomSlugRef.current }, token);
+      },
+      onRequestResent: (requestId, eventType) => {
+        if (eventType === "chat.send") {
+          markMessageDelivery(requestId, "sending");
+        }
+      },
+      onRequestFailed: (requestId, eventType, retries) => {
+        if (eventType === "chat.send") {
+          markMessageDelivery(requestId, "failed");
+          trackClientEvent(
+            "chat.request.failed.retries_exhausted",
+            { requestId, eventType, retries },
+            token
+          );
+        }
+      }
+    });
 
-    const connect = () => {
-      setWsState("connecting");
-
-      api.wsTicket(token)
-        .then(({ ticket }) => {
-          if (isDisposed) {
-            return;
-          }
-
-          ws = new WebSocket(`${wsBase()}/v1/realtime/ws?ticket=${encodeURIComponent(ticket)}`);
-          wsRef.current = ws;
-
-          ws.onopen = () => {
-            reconnectAttemptRef.current = 0;
-            setWsState("connected");
-            pushLog("ws connected");
-            trackClientEvent("ws.connected", { roomSlug }, token);
-
-            for (const [requestId, pending] of pendingRequestsRef.current.entries()) {
-              ws?.send(JSON.stringify(pending.envelope));
-              if (pending.eventType === "chat.send") {
-                markMessageDelivery(requestId, "sending");
-              }
-              armAckTimeout(requestId);
-            }
-
-            sendWsEvent("room.join", { roomSlug }, { maxRetries: 1 });
-
-            pingInterval = setInterval(() => {
-              if (!ws || ws.readyState !== WebSocket.OPEN) {
-                return;
-              }
-              sendWsEvent("ping", {}, { trackAck: false });
-            }, 15000);
-          };
-
-          ws.onclose = () => {
-            setWsState("disconnected");
-            pushLog("ws disconnected");
-            clearAllAckTimers();
-            clearTimers();
-            scheduleReconnect();
-          };
-
-          ws.onerror = () => {
-            pushLog("ws error");
-            trackClientEvent("ws.error", {}, token);
-          };
-
-          ws.onmessage = (event) => {
-            const message = JSON.parse(event.data) as WsIncoming;
-
-            if (message.type === "ack") {
-              const requestId = String(message.payload?.requestId || "").trim();
-              const eventType = String(message.payload?.eventType || "").trim();
-              if (requestId) {
-                pendingRequestsRef.current.delete(requestId);
-                clearAckTimer(requestId);
-                if (eventType === "chat.send") {
-                  markMessageDelivery(requestId, "delivered", {
-                    id: message.payload?.messageId || requestId
-                  });
-                }
-              }
-              return;
-            }
-
-            if (message.type === "nack") {
-              const requestId = String(message.payload?.requestId || "").trim();
-              const eventType = String(message.payload?.eventType || "").trim();
-              const code = String(message.payload?.code || "UnknownError");
-              const nackMessage = String(message.payload?.message || "Request failed");
-              trackClientEvent(
-                "ws.nack.received",
-                {
-                  requestId,
-                  eventType,
-                  code,
-                  message: nackMessage
-                },
-                token
-              );
-              if (requestId) {
-                pendingRequestsRef.current.delete(requestId);
-                clearAckTimer(requestId);
-                if (eventType === "chat.send") {
-                  markMessageDelivery(requestId, "failed");
-                }
-              }
-              pushLog(`nack ${eventType}: ${code} ${nackMessage}`);
-              return;
-            }
-
-            if (message.type === "chat.message" && message.payload) {
-              const senderRequestId =
-                typeof message.payload.senderRequestId === "string"
-                  ? message.payload.senderRequestId
-                  : undefined;
-
-              if (senderRequestId) {
-                pendingRequestsRef.current.delete(senderRequestId);
-                clearAckTimer(senderRequestId);
-                let replaced = false;
-                setMessages((prev) => {
-                  const next = prev.map((item) => {
-                    if (item.clientRequestId !== senderRequestId) {
-                      return item;
-                    }
-                    replaced = true;
-                    return {
-                      ...item,
-                      id: message.payload.id || item.id,
-                      room_id: message.payload.roomId || item.room_id,
-                      user_id: message.payload.userId || item.user_id,
-                      text: message.payload.text || item.text,
-                      created_at: message.payload.createdAt || item.created_at,
-                      user_name: message.payload.userName || item.user_name,
-                      deliveryStatus: "delivered" as const
-                    };
-                  });
-
-                  if (!replaced) {
-                    next.push({
-                      id: message.payload.id || crypto.randomUUID(),
-                      room_id: message.payload.roomId || "",
-                      user_id: message.payload.userId,
-                      text: message.payload.text,
-                      created_at: message.payload.createdAt || new Date().toISOString(),
-                      user_name: message.payload.userName || "unknown",
-                      deliveryStatus: "delivered" as const
-                    });
-                  }
-
-                  return next;
-                });
-              } else {
-                setMessages((prev) => [
-                  ...prev,
-                  {
-                    id: message.payload.id || crypto.randomUUID(),
-                    room_id: message.payload.roomId || "",
-                    user_id: message.payload.userId,
-                    text: message.payload.text,
-                    created_at: message.payload.createdAt || new Date().toISOString(),
-                    user_name: message.payload.userName || "unknown",
-                    deliveryStatus: "delivered" as const
-                  }
-                ]);
-              }
-            }
-
-            if (
-              message.type === "call.offer" ||
-              message.type === "call.answer" ||
-              message.type === "call.ice"
-            ) {
-              const fromUserName = String(message.payload?.fromUserName || message.payload?.fromUserId || "unknown");
-              const hasSignal = Boolean(message.payload?.signal && typeof message.payload.signal === "object");
-              setLastCallPeer(fromUserName);
-              if (message.type === "call.offer") {
-                setCallStatus("ringing");
-              }
-              if (message.type === "call.answer") {
-                setCallStatus("active");
-              }
-              pushCallLog(`${message.type} from ${fromUserName} (${hasSignal ? "signal" : "no-signal"})`);
-            }
-
-            if (message.type === "call.reject") {
-              const fromUserName = String(message.payload?.fromUserName || message.payload?.fromUserId || "unknown");
-              const reason = String(message.payload?.reason || "").trim();
-              setLastCallPeer(fromUserName);
-              setCallStatus("idle");
-              pushCallLog(`call.reject from ${fromUserName}${reason ? ` (${reason})` : ""}`);
-            }
-
-            if (message.type === "call.hangup") {
-              const fromUserName = String(message.payload?.fromUserName || message.payload?.fromUserId || "unknown");
-              const reason = String(message.payload?.reason || "").trim();
-              setLastCallPeer(fromUserName);
-              setCallStatus("idle");
-              pushCallLog(`call.hangup from ${fromUserName}${reason ? ` (${reason})` : ""}`);
-            }
-
-            if (message.type === "room.joined") {
-              setRoomSlug(message.payload.roomSlug);
-            }
-            if (message.type === "room.presence") {
-              const users = (message.payload?.users || []).map(
-                (item: { userName: string; userId: string }) =>
-                  `${item.userName} (${item.userId.slice(0, 8)})`
-              );
-              setPresence(users);
-            }
-          };
-        })
-        .catch((error) => {
-          pushLog(`ws ticket failed: ${(error as Error).message}`);
-          scheduleReconnect();
-        });
-    };
-    connect();
+    realtimeClientRef.current = client;
+    client.setRoomSlug(roomSlugRef.current);
+    client.connect(token);
 
     return () => {
-      isDisposed = true;
-      clearAllAckTimers();
-      clearTimers();
-      ws?.close();
+      client.dispose();
+      if (realtimeClientRef.current === client) {
+        realtimeClientRef.current = null;
+      }
     };
   }, [token]);
 
   useEffect(() => {
     if (!token || !roomSlug) return;
-    api.roomMessages(token, roomSlug, { limit: 50 })
-      .then((res) => {
-        setMessages(res.messages);
-        setMessagesHasMore(Boolean(res.pagination?.hasMore));
-        setMessagesNextCursor(res.pagination?.nextCursor ?? null);
-      })
-      .catch((error) => pushLog(`history failed: ${error.message}`));
-  }, [token, roomSlug]);
+    void chatController.loadRecentMessages(token, roomSlug);
+  }, [token, roomSlug, chatController]);
 
   const loadOlderMessages = async () => {
     if (!token || !roomSlug || !messagesNextCursor || loadingOlderMessages) {
       return;
     }
 
-    setLoadingOlderMessages(true);
-    try {
-      const res = await api.roomMessages(token, roomSlug, {
-        limit: 50,
-        cursor: messagesNextCursor
-      });
-
-      setMessages((prev) => {
-        const existingIds = new Set(prev.map((item) => item.id));
-        const olderPage = res.messages.filter((item) => !existingIds.has(item.id));
-        return [...olderPage, ...prev];
-      });
-
-      setMessagesHasMore(Boolean(res.pagination?.hasMore));
-      setMessagesNextCursor(res.pagination?.nextCursor ?? null);
-    } catch (error) {
-      pushLog(`load older failed: ${(error as Error).message}`);
-    } finally {
-      setLoadingOlderMessages(false);
-    }
+    await chatController.loadOlderMessages(token, roomSlug, messagesNextCursor, loadingOlderMessages);
   };
 
   useEffect(() => {
@@ -542,190 +296,101 @@ export function App() {
     void loadTelemetrySummary();
   }, [wsState, loadTelemetrySummary]);
 
-  const beginSso = (provider: "google" | "yandex") => {
-    const returnUrl = window.location.href;
-    window.location.href = `/v1/auth/sso/start?provider=${provider}&returnUrl=${encodeURIComponent(returnUrl)}`;
-  };
-
-  const completeSso = async () => {
-    try {
-      const res = await api.ssoSession();
-      if (!res.authenticated || !res.token) {
-        pushLog("sso not authenticated yet");
-        return;
-      }
-      setToken(res.token);
-      setUser(res.user);
-      pushLog("sso session established");
-      trackClientEvent("auth.sso.complete.success", { userId: res.user?.id || null }, res.token);
-    } catch (error) {
-      pushLog(`sso failed: ${(error as Error).message}`);
+  useEffect(() => {
+    if (!profileMenuOpen) {
+      return;
     }
-  };
 
+    const onClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node | null;
+      if (!target || !profileMenuRef.current?.contains(target)) {
+        setProfileMenuOpen(false);
+      }
+    };
+
+    window.addEventListener("mousedown", onClickOutside);
+    return () => window.removeEventListener("mousedown", onClickOutside);
+  }, [profileMenuOpen]);
+
+  const beginSso = (provider: "google" | "yandex") => authController.beginSso(provider);
+  const completeSso = async () => {
+    await authController.completeSso();
+  };
   const logout = () => {
-    localStorage.removeItem("boltorezka_token");
-    setToken("");
-    setUser(null);
-    window.location.href = `/v1/auth/sso/logout?returnUrl=${encodeURIComponent(window.location.href)}`;
+    setProfileMenuOpen(false);
+    authController.logout();
   };
 
   const createRoom = async (event: FormEvent) => {
     event.preventDefault();
     if (!token || !canCreateRooms) return;
 
-    try {
-      const slug = newRoomSlug.trim();
-      const title = newRoomTitle.trim();
-      await api.createRoom(token, { slug, title, is_public: true });
+    const created = await roomAdminController.createRoom(token, newRoomSlug, newRoomTitle);
+    if (created) {
       setNewRoomSlug("");
       setNewRoomTitle("");
-      const res = await api.rooms(token);
-      setRooms(res.rooms);
-      pushLog(`room created: ${slug}`);
-    } catch (error) {
-      pushLog(`create room failed: ${(error as Error).message}`);
     }
   };
 
   const sendMessage = (event: FormEvent) => {
     event.preventDefault();
-    if (!chatText.trim()) return;
 
-    const text = chatText.trim();
-    const requestId = sendWsEvent("chat.send", { text }, { withIdempotency: true, maxRetries: MAX_CHAT_RETRIES });
-    if (!requestId) {
-      return;
+    const result = chatController.sendMessage(chatText, user, MAX_CHAT_RETRIES);
+    if (result.sent) {
+      setChatText("");
     }
-
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: requestId,
-        room_id: "",
-        user_id: user?.id || "",
-        text,
-        created_at: new Date().toISOString(),
-        user_name: user?.name || "me",
-        clientRequestId: requestId,
-        deliveryStatus: "sending" as const
-      }
-    ]);
-
-    setChatText("");
-    void loadTelemetrySummary();
   };
 
   const sendCallSignal = (eventType: "call.offer" | "call.answer" | "call.ice") => {
-    let signal: Record<string, unknown>;
-    try {
-      const parsed = JSON.parse(callSignalJson || "{}");
-      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-        throw new Error("signal must be a JSON object");
-      }
-      signal = parsed as Record<string, unknown>;
-    } catch (error) {
-      pushCallLog(`invalid signal json: ${(error as Error).message}`);
-      return;
-    }
-
-    const payload: Record<string, unknown> = { signal };
-    const targetUserId = callTargetUserId.trim();
-    if (targetUserId) {
-      payload.targetUserId = targetUserId;
-    }
-
-    const requestId = sendWsEvent(eventType, payload, { maxRetries: 1 });
-    if (!requestId) {
-      pushCallLog(`${eventType} skipped: socket unavailable`);
-      return;
-    }
-
-    pushCallLog(`${eventType} sent${targetUserId ? ` -> ${targetUserId}` : " -> room"}`);
-    setLastCallPeer(targetUserId || "room");
-    if (eventType === "call.offer") {
-      setCallStatus("connecting");
-    }
-    if (eventType === "call.answer") {
-      setCallStatus("active");
-    }
+    callSignalingController.sendSignal(eventType as CallSignalEventType, callSignalJson, callTargetUserId);
   };
 
   const sendCallReject = () => {
-    const targetUserId = callTargetUserId.trim();
-    const payload: Record<string, unknown> = { reason: "busy" };
-    if (targetUserId) {
-      payload.targetUserId = targetUserId;
-    }
-
-    const requestId = sendWsEvent("call.reject", payload, { maxRetries: 1 });
-    if (!requestId) {
-      pushCallLog("call.reject skipped: socket unavailable");
-      return;
-    }
-
-    setCallStatus("idle");
-    setLastCallPeer(targetUserId || "room");
-    pushCallLog(`call.reject sent${targetUserId ? ` -> ${targetUserId}` : " -> room"}`);
+    callSignalingController.sendReject(callTargetUserId);
   };
 
   const sendCallHangup = () => {
-    const targetUserId = callTargetUserId.trim();
-    const payload: Record<string, unknown> = { reason: "manual" };
-    if (targetUserId) {
-      payload.targetUserId = targetUserId;
-    }
-
-    const requestId = sendWsEvent("call.hangup", payload, { maxRetries: 1 });
-    if (!requestId) {
-      pushCallLog("call.hangup skipped: socket unavailable");
-      return;
-    }
-
-    setCallStatus("idle");
-    setLastCallPeer(targetUserId || "room");
-    pushCallLog(`call.hangup sent${targetUserId ? ` -> ${targetUserId}` : " -> room"}`);
+    callSignalingController.sendHangup(callTargetUserId);
   };
 
   const joinRoom = (slug: string) => {
-    setRoomSlug(slug);
-    setMessages([]);
-    setMessagesHasMore(false);
-    setMessagesNextCursor(null);
-    sendWsEvent("room.join", { roomSlug: slug }, { maxRetries: 1 });
+    roomAdminController.joinRoom(slug);
   };
 
   const promote = async (userId: string) => {
     if (!token || !canPromote) return;
-    try {
-      await api.promoteUser(token, userId);
-      const res = await api.adminUsers(token);
-      setAdminUsers(res.users);
-      pushLog("user promoted to admin");
-    } catch (error) {
-      pushLog(`promote failed: ${(error as Error).message}`);
-    }
+    await roomAdminController.promote(token, userId);
   };
-
-  const sessionText = useMemo(() => {
-    if (!token) return "No active session";
-    return JSON.stringify(
-      {
-        token: `${token.slice(0, 16)}...`,
-        user,
-        permissions: {
-          canCreateRooms,
-          canPromote
-        }
-      },
-      null,
-      2
-    );
-  }, [token, user, canCreateRooms, canPromote]);
 
   return (
     <main className="app legacy-layout">
-      <h1 className="app-title">Boltorezka</h1>
+      <header className="app-header">
+        <h1 className="app-title">Boltorezka</h1>
+        <div className="header-actions">
+          {user ? (
+            <>
+              <span className="user-chip">{user.name}</span>
+              <div className="profile-menu" ref={profileMenuRef}>
+                <button
+                  type="button"
+                  className="secondary profile-icon"
+                  onClick={() => setProfileMenuOpen((value) => !value)}
+                  aria-label="Profile menu"
+                >
+                  👤
+                </button>
+                {profileMenuOpen ? (
+                  <div className="profile-popup">
+                    <button type="button" onClick={logout}>Logout</button>
+                  </div>
+                ) : null}
+              </div>
+            </>
+          ) : (
+            <button type="button" onClick={() => beginSso("google")}>Авторизоваться</button>
+          )}
+        </div>
+      </header>
 
       <div className="workspace">
         <aside className="leftcolumn">
@@ -733,16 +398,8 @@ export function App() {
             <p className="muted">auth mode: {authMode}</p>
             <p className="muted">ws: {wsState}</p>
             <div className="row">
-              <button onClick={() => beginSso("google")}>Google</button>
-              <button className="secondary" onClick={() => beginSso("yandex")}>Yandex</button>
               <button onClick={completeSso}>Complete</button>
-              <button className="secondary" onClick={logout}>Logout</button>
             </div>
-          </section>
-
-          <section className="card compact">
-            <h2>Session</h2>
-            <pre>{sessionText}</pre>
           </section>
 
           <section className="card compact">
