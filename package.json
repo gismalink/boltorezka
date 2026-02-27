@@ -10,10 +10,10 @@
     "smoke:api": "node ./scripts/smoke-api.mjs",
     "smoke:sso": "node ./scripts/smoke-sso-redirect.mjs",
     "smoke:realtime": "node ./scripts/smoke-realtime.mjs",
-    "smoke:test:postdeploy": "bash ./scripts/examples/postdeploy-smoke-test.sh \"${REPO_DIR:-$HOME/boltorezka}\"",
-    "deploy:test": "bash ./scripts/examples/deploy-test-from-ref.sh \"${TEST_REF:?set TEST_REF=origin/feature/<name>}\" \"${REPO_DIR:-$HOME/boltorezka}\"",
-    "deploy:test:smoke": "bash ./scripts/examples/deploy-test-and-smoke.sh \"${TEST_REF:?set TEST_REF=origin/feature/<name>}\" \"${REPO_DIR:-$HOME/boltorezka}\"",
-    "deploy:prod": "bash ./scripts/examples/deploy-prod-from-ref.sh \"${PROD_REF:-origin/main}\" \"${REPO_DIR:-$HOME/boltorezka}\""
+    "smoke:test:postdeploy": "bash ./scripts/examples/postdeploy-smoke-test.sh \"${REPO_DIR:-$PWD}\"",
+    "deploy:test": "bash ./scripts/examples/deploy-test-from-ref.sh \"${TEST_REF:?set TEST_REF=origin/feature/<name>}\" \"${REPO_DIR:-$PWD}\"",
+    "deploy:test:smoke": "bash ./scripts/examples/deploy-test-and-smoke.sh \"${TEST_REF:?set TEST_REF=origin/feature/<name>}\" \"${REPO_DIR:-$PWD}\"",
+    "deploy:prod": "bash ./scripts/examples/deploy-prod-from-ref.sh \"${PROD_REF:-origin/main}\" \"${REPO_DIR:-$PWD}\""
   },
   "dependencies": {
     "ws": "^8.18.3"
