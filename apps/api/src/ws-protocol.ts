@@ -5,6 +5,7 @@ import type {
   PongPayload,
   ChatMessagePayload,
   RoomJoinedPayload,
+  RoomLeftPayload,
   RoomPresencePayload,
   PresenceJoinedPayload,
   PresenceLeftPayload,
@@ -95,6 +96,7 @@ export function asKnownWsIncomingEnvelope(
   switch (envelope.type) {
     case "ping":
     case "room.join":
+    case "room.leave":
     case "chat.send":
       return {
         type: envelope.type,
@@ -233,6 +235,18 @@ export function buildRoomJoinedEnvelope(roomId: string, roomSlug: string, roomTi
   return {
     type: "room.joined",
     payload: { roomId, roomSlug, roomTitle }
+  };
+}
+
+/**
+ * @param {string} roomId
+ * @param {string} roomSlug
+ * @returns {{ type: "room.left", payload: RoomLeftPayload }}
+ */
+export function buildRoomLeftEnvelope(roomId: string, roomSlug: string): { type: "room.left"; payload: RoomLeftPayload } {
+  return {
+    type: "room.left",
+    payload: { roomId, roomSlug }
   };
 }
 

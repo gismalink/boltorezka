@@ -63,7 +63,7 @@
 
 ### Задачи
 
-- [ ] Добавить явный `room.leave` в protocol flow.
+- [x] Добавить явный `room.leave` в protocol flow.
 - [ ] Доделать message history + pagination.
 - [ ] Поддерживать стабильный smoke для reconnect и idempotency сценариев.
 

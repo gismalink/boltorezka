@@ -14,6 +14,7 @@ import {
   buildPresenceJoinedEnvelope,
   buildPresenceLeftEnvelope,
   buildRoomJoinedEnvelope,
+  buildRoomLeftEnvelope,
   buildRoomPresenceEnvelope,
   buildServerReadyEnvelope,
   getCallSignal,
@@ -493,6 +494,39 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
                     state.userName,
                     joinResult.room.slug,
                     getRoomPresence(joinResult.room.id).length
+                  ),
+                  connection
+                );
+
+                return;
+              }
+
+              case "room.leave": {
+                if (!state.roomId || !state.roomSlug) {
+                  sendNoActiveRoomNack(connection, requestId, eventType);
+                  return;
+                }
+
+                const previousRoomId = state.roomId;
+                const previousRoomSlug = state.roomSlug;
+
+                detachRoomSocket(previousRoomId, connection);
+                state.roomId = null;
+                state.roomSlug = null;
+
+                sendJson(connection, buildRoomLeftEnvelope(previousRoomId, previousRoomSlug));
+                sendAckWithMetrics(connection, requestId, eventType, {
+                  roomId: previousRoomId,
+                  roomSlug: previousRoomSlug
+                });
+
+                broadcastRoom(
+                  previousRoomId,
+                  buildPresenceLeftEnvelope(
+                    state.userId,
+                    state.userName,
+                    previousRoomSlug,
+                    getRoomPresence(previousRoomId).length
                   ),
                   connection
                 );

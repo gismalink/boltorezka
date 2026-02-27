@@ -25,6 +25,13 @@ export type WsIncomingRoomJoinEnvelope = {
   payload?: WsIncomingPayload;
 };
 
+export type WsIncomingRoomLeaveEnvelope = {
+  type: "room.leave";
+  requestId?: string;
+  idempotencyKey?: string;
+  payload?: WsIncomingPayload;
+};
+
 export type WsIncomingChatSendEnvelope = {
   type: "chat.send";
   requestId?: string;
@@ -49,6 +56,7 @@ export type WsIncomingCallTerminalEnvelope = {
 export type WsIncomingKnownEnvelope =
   | WsIncomingPingEnvelope
   | WsIncomingRoomJoinEnvelope
+  | WsIncomingRoomLeaveEnvelope
   | WsIncomingChatSendEnvelope
   | WsIncomingCallSignalEnvelope
   | WsIncomingCallTerminalEnvelope;
@@ -92,6 +100,11 @@ export type RoomPresencePayload = {
   roomId: string;
   roomSlug: string;
   users: PresenceUser[];
+};
+
+export type RoomLeftPayload = {
+  roomId: string;
+  roomSlug: string;
 };
 
 export type PresenceJoinedPayload = {

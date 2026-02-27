@@ -57,6 +57,14 @@
 - Добавлен OpenAPI artifact v1: `docs/OPENAPI_V1.yaml`.
 - Добавлена матрица smoke/CI gate: `docs/SMOKE_CI_MATRIX.md`.
 
+## 2026-02-28 — Realtime MVP increment: room.leave
+
+### Delivered
+
+- Добавлена поддержка client event `room.leave` в realtime handler.
+- Добавлен server event `room.left` с подтверждением выхода из комнаты.
+- Обновлён WS контракт (`docs/WS_CONTRACT_V1.md`) и roadmap статус Phase 2.
+
 ### Key commits
 
 - `3fa3817` docs: add merge and release pipeline reminder checklist

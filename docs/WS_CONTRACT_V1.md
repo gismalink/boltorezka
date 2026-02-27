@@ -36,6 +36,7 @@ Server -> client envelope types:
 - `error`
 - `pong`
 - `room.joined`
+- `room.left`
 - `room.presence`
 - `presence.joined`
 - `presence.left`
@@ -150,6 +151,24 @@ Outputs:
 - `room.presence`
 - broadcast `presence.joined` to other sockets in room
 
+### room.leave
+
+Input payload:
+
+```json
+{}
+```
+
+Rules:
+
+- requires active room
+
+Outputs:
+
+- `room.left`
+- `ack`
+- broadcast `presence.left` to other sockets in previous room
+
 ### chat.send
 
 Input payload:
@@ -221,6 +240,15 @@ Outputs:
   "roomId": "string",
   "roomSlug": "string",
   "roomTitle": "string"
+}
+```
+
+### room.left
+
+```json
+{
+  "roomId": "string",
+  "roomSlug": "string"
 }
 ```
 
