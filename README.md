@@ -79,6 +79,23 @@ Legacy-файлы перенесены в `legacy/poc/`.
 - Rooms endpoints (`list`, `create`)
 - Health endpoint с проверкой DB/Redis
 - Web MVP UI на `http://localhost:8080/` (auth + rooms + realtime chat)
+- React Web MVP (in progress) в `apps/web`
+
+### React web (новый UI)
+
+1. Установить зависимости:
+
+   - `npm run web:install`
+
+2. Запустить dev-сервер:
+
+   - `npm run web:dev`
+
+3. Открыть UI:
+
+   - `http://localhost:5173`
+
+React UI использует тот же API (`/v1/*`) и SSO flow, что и текущий backend MVP.
 
 ### Локальный старт
 

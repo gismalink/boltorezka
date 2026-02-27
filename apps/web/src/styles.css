@@ -1,0 +1,79 @@
+:root {
+  color-scheme: dark;
+  font-family: Inter, system-ui, -apple-system, sans-serif;
+  background: #0d1117;
+  color: #e6edf3;
+}
+
+body {
+  margin: 0;
+}
+
+.app {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 20px;
+  display: grid;
+  gap: 12px;
+}
+
+.card {
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+button,
+input {
+  border-radius: 6px;
+  border: 1px solid #30363d;
+  background: #21262d;
+  color: #e6edf3;
+  padding: 8px;
+}
+
+button {
+  cursor: pointer;
+}
+
+button.secondary {
+  background: #161b22;
+}
+
+pre {
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: #0d1117;
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid #30363d;
+}
+
+.log {
+  max-height: 220px;
+  overflow: auto;
+  background: #0d1117;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  padding: 8px;
+  display: grid;
+  gap: 6px;
+}
+
+.muted {
+  color: #8b949e;
+}

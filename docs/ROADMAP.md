@@ -2,6 +2,14 @@
 
 ## Горизонт: 12 недель
 
+## React migration status (2026-02-27)
+
+- ✅ Решение принято: web-клиент переносим на React.
+- ✅ Scope первой итерации: MVP parity (SSO, rooms, chat, presence, RBAC admin page).
+- ✅ Legacy WS compatibility: не делаем, только новый протокол.
+- ✅ Room policy: сохраняем текущую (`admin/super_admin` создают комнаты).
+- 🔄 Начат этап реализации React web app (`apps/web`).
+
 ## Phase 0 — Discovery & ADR (Week 1)
 
 ### Цели
@@ -120,6 +128,12 @@
 ### Задачи
 
 - Модульная структура web app.
+- Перенос текущего web MVP из vanilla JS в React (`apps/web`) с сохранением API-контрактов.
+- Реализовать React-экраны/секции:
+  - SSO session,
+  - rooms lobby,
+  - room chat + presence,
+  - admin users/promote для `super_admin`.
 - Error boundaries + retry UX.
 - Телеметрия на клиенте.
 - E2E smoke сценарии:
@@ -131,6 +145,14 @@
 ### Exit criteria
 
 - Web MVP готов к ограниченному beta.
+
+### React migration breakdown (детализация)
+
+1. Создать `apps/web` (React + Vite + TypeScript).
+2. Добавить transport-слой для HTTP/WS и синхронизировать с backend endpoints.
+3. Перенести MVP UX (SSO/rooms/chat/presence/admin).
+4. Обновить runbook/checklist под React UI как default.
+5. После стабилизации выключить legacy `apps/api/public` как primary UI.
 
 ---
 
