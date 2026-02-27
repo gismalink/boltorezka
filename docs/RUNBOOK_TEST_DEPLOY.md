@@ -110,3 +110,21 @@ Rollback выполняется только штатным release-script с з
 - Не выводить секреты в логи.
 - Не хранить TURN credentials в репозитории.
 - Любые ключи/токены только через секрет-хранилище/серверные env.
+
+## 9) Latest test evidence (2026-02-27)
+
+- Deploy target: `test`, SHA `5c4831c`.
+- SSO smoke: `SMOKE_API_URL=https://test.boltorezka.gismalink.art npm run smoke:sso` -> `ok`.
+- HTTP smoke:
+   - `/health` -> `{"status":"ok","checks":{"api":"ok","db":"ok","redis":"ok"}}`
+   - `/v1/auth/mode` -> `{"mode":"sso"}`
+- Realtime protocol smoke (ws-ticket path):
+   - `chat.send` до `room.join` -> `nack` с `code=NoActiveRoom`.
+   - `room.join` -> `ack`.
+   - первый `chat.send` (`idempotencyKey=<key>`) -> `ack` + `chat.message`.
+   - повторный `chat.send` с тем же `idempotencyKey` -> `ack` с `duplicate=true`.
+- Redis metrics snapshot после realtime smoke (`ws:metrics:<UTC-date>`):
+   - `nack_sent=1`
+   - `ack_sent=3`
+   - `chat_sent=1`
+   - `chat_idempotency_hit=1`
