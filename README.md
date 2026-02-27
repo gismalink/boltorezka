@@ -49,3 +49,48 @@ Boltorezka — отдельный репозиторий для realtime-при�
 - [ ] Описать OpenAPI + WS event schema (версионирование с `v1`).
 - [ ] Создать feature-ветку для backend foundation.
 - [ ] Поднять test окружение и прогнать первый smoke.
+
+## Что уже можно запустить
+
+В репозитории добавлен baseline v2:
+
+- Docker Compose c сервисами `api + postgres + redis`
+- Базовая схема БД и seed комнаты `general`
+- JWT auth endpoints (`register`, `login`, `me`)
+- Rooms endpoints (`list`, `create`)
+- Health endpoint с проверкой DB/Redis
+
+### Локальный старт
+
+1. Скопировать env:
+
+    - `cp .env.example .env`
+
+2. Поднять сервисы:
+
+    - `docker compose up --build -d`
+
+3. Проверить здоровье:
+
+    - `curl http://localhost:8080/health`
+
+### Минимальный smoke auth
+
+- Register:
+
+   - `curl -X POST http://localhost:8080/v1/auth/register -H 'content-type: application/json' -d '{"email":"demo@boltorezka.local","password":"password123","name":"Demo User"}'`
+
+- Login:
+
+   - `curl -X POST http://localhost:8080/v1/auth/login -H 'content-type: application/json' -d '{"email":"demo@boltorezka.local","password":"password123"}'`
+
+- Me (с bearer token):
+
+   - `curl http://localhost:8080/v1/auth/me -H 'authorization: Bearer <token>'`
+
+## Domain readiness
+
+- `test.boltorezka` — тестовый контур
+- `boltorezka` — продовый контур
+
+Реальный rollout в эти домены выполнять только по GitOps runbook и с правилом test-first.

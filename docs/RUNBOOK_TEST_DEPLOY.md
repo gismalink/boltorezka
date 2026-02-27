@@ -43,6 +43,16 @@
    - text message send/receive,
    - voice connect/disconnect.
 
+### Domain checks
+
+- Для `test`:
+   - `curl -I https://test.boltorezka/health`
+   - `curl https://test.boltorezka/health`
+
+- Для `prod` (только после отдельного подтверждения):
+   - `curl -I https://boltorezka/health`
+   - `curl https://boltorezka/health`
+
 ## 5) Rollback criteria
 
 Rollback обязателен, если:
