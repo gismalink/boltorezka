@@ -43,6 +43,14 @@
 2. Запись commit SHA и smoke-результата.
 3. План rollback (команда + ответственный).
 
+## 4.1) Merge + post-merge guardrails
+
+1. Merge только из `feature/*` в `main` после успешного PR-review.
+2. После merge повторить `test` проверку уже от `origin/main` (`deploy:test:smoke`).
+3. Дополнительно прогнать extended realtime relay smoke (`SMOKE_CALL_SIGNAL=1`, 2 ws-ticket).
+4. В `prod` идти только после явного подтверждения владельца релиза.
+5. В `prod` выкатывать только `main` (никогда не feature-ветку).
+
 ## 5) Prod verification (после явного разрешения)
 
 1. `curl -I https://boltorezka.gismalink.art/health` -> `200`.
