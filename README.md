@@ -36,6 +36,8 @@ Legacy-файлы перенесены в `legacy/poc/`.
 - Архитектура: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 - План переписывания (plan-only): [docs/ROADMAP.md](docs/ROADMAP.md)
 - Лог реализованных фич и evidence: [docs/FEATURE_LOG.md](docs/FEATURE_LOG.md)
+- HTTP контракт v1: [docs/API_CONTRACT_V1.md](docs/API_CONTRACT_V1.md)
+- WS контракт v1: [docs/WS_CONTRACT_V1.md](docs/WS_CONTRACT_V1.md)
 - Тестовый деплой (GitOps): [docs/RUNBOOK_TEST_DEPLOY.md](docs/RUNBOOK_TEST_DEPLOY.md)
 - Быстрый rollout в test (5 команд): [docs/RUNBOOK_TEST_ROLLOUT_QUICKSTART.md](docs/RUNBOOK_TEST_ROLLOUT_QUICKSTART.md)
 - Pre-prod checklist: [docs/PREPROD_CHECKLIST.md](docs/PREPROD_CHECKLIST.md)

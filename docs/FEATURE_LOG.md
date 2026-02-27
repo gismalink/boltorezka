@@ -51,6 +51,9 @@
 - Quickstart/runbook обновлены на актуальный Boltorezka test deploy flow.
 - ROADMAP отделён от feature history (теперь только plan).
 - Зафиксировано правило: `prod` откладывается до MVP-like readiness.
+- Добавлены каноничные контрактные документы:
+  - `docs/API_CONTRACT_V1.md`
+  - `docs/WS_CONTRACT_V1.md`
 
 ### Key commits
 
