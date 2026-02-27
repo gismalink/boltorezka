@@ -1,12 +1,14 @@
 import Fastify from "fastify";
 import cors from "@fastify/cors";
 import jwt from "@fastify/jwt";
+import websocket from "@fastify/websocket";
 import { config } from "./config.js";
 import { connectRedis, redis } from "./redis.js";
 import { db } from "./db.js";
 import { healthRoutes } from "./routes/health.js";
 import { authRoutes } from "./routes/auth.js";
 import { roomsRoutes } from "./routes/rooms.js";
+import { realtimeRoutes } from "./routes/realtime.js";
 
 const app = Fastify({
   logger: true
@@ -21,11 +23,15 @@ await app.register(jwt, {
   secret: config.jwtSecret
 });
 
+await app.register(websocket);
+
 app.decorate("jwtExpiresIn", config.jwtExpiresIn);
+app.decorate("redis", redis);
 
 await app.register(healthRoutes);
 await app.register(authRoutes);
 await app.register(roomsRoutes);
+await app.register(realtimeRoutes);
 
 const shutdown = async () => {
   app.log.info("Graceful shutdown started");

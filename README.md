@@ -8,6 +8,8 @@ Boltorezka — отдельный репозиторий для realtime-при�
 - Текущее содержимое (`boltorezka.html`, `mdl/*`, `webSocketHandler.js`) рассматривается как legacy POC.
 - Разработка новой версии ведётся по roadmap и runbook этого репозитория.
 
+Legacy-файлы перенесены в `legacy/poc/`.
+
 ## Принципы разработки
 
 1. **Test-first deployment**
@@ -87,6 +89,18 @@ Boltorezka — отдельный репозиторий для realtime-при�
 - Me (с bearer token):
 
    - `curl http://localhost:8080/v1/auth/me -H 'authorization: Bearer <token>'`
+
+### Минимальный smoke realtime (WebSocket)
+
+1. Получить JWT токен через login/register.
+2. Открыть WS:
+
+   - `wscat -c "ws://localhost:8080/v1/realtime/ws?token=<token>"`
+
+3. Внутри соединения отправить:
+
+   - `{"type":"room.join","payload":{"roomSlug":"general"}}`
+   - `{"type":"chat.send","payload":{"text":"hello from ws"}}`
 
 ## Domain readiness
 
