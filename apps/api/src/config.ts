@@ -1,3 +1,5 @@
+import type { AppConfig, AuthMode } from "./config.types.ts";
+
 const requiredKeys = ["DATABASE_URL", "REDIS_URL", "JWT_SECRET"];
 
 for (const key of requiredKeys) {
@@ -6,20 +8,26 @@ for (const key of requiredKeys) {
   }
 }
 
-const parseCsv = (value) =>
+/**
+ * @param {unknown} value
+ * @returns {string[]}
+ */
+const parseCsv = (value: unknown): string[] =>
   String(value || "")
     .split(",")
     .map((item) => item.trim().toLowerCase())
     .filter(Boolean);
 
+const authMode = (process.env.AUTH_MODE || "sso").toLowerCase() === "local" ? "local" : "sso";
+
 export const config = {
   port: Number(process.env.PORT || 8080),
-  databaseUrl: process.env.DATABASE_URL,
-  redisUrl: process.env.REDIS_URL,
-  jwtSecret: process.env.JWT_SECRET,
+  databaseUrl: String(process.env.DATABASE_URL),
+  redisUrl: String(process.env.REDIS_URL),
+  jwtSecret: String(process.env.JWT_SECRET),
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || "7d",
   corsOrigin: process.env.CORS_ORIGIN || "*",
-  authMode: (process.env.AUTH_MODE || "sso").toLowerCase(),
+  authMode,
   authSsoBaseUrl: (process.env.AUTH_SSO_BASE_URL || "http://localhost:3000").replace(
     /\/+$/,
     ""

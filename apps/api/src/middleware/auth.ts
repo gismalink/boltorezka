@@ -1,6 +1,8 @@
+import type { FastifyReply, FastifyRequest } from "fastify";
 import { db } from "../db.js";
+import type { UserRow } from "../db.types.ts";
 
-export async function requireAuth(request, reply) {
+export async function requireAuth(request: FastifyRequest, reply: FastifyReply) {
   try {
     await request.jwtVerify();
   } catch {
@@ -11,7 +13,7 @@ export async function requireAuth(request, reply) {
   }
 }
 
-export async function loadCurrentUser(request, reply) {
+export async function loadCurrentUser(request: FastifyRequest, reply: FastifyReply) {
   const userId = request.user?.sub;
 
   if (!userId) {
@@ -21,7 +23,7 @@ export async function loadCurrentUser(request, reply) {
     });
   }
 
-  const result = await db.query(
+  const result = await db.query<UserRow>(
     "SELECT id, email, name, role, created_at FROM users WHERE id = $1",
     [userId]
   );
@@ -36,10 +38,10 @@ export async function loadCurrentUser(request, reply) {
   request.currentUser = result.rows[0];
 }
 
-export function requireRole(roles) {
+export function requireRole(roles: string[] | string) {
   const allowedRoles = Array.isArray(roles) ? roles : [roles];
 
-  return async function roleGuard(request, reply) {
+  return async function roleGuard(request: FastifyRequest, reply: FastifyReply) {
     const role = request.currentUser?.role || "user";
 
     if (!allowedRoles.includes(role)) {

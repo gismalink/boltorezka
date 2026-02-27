@@ -135,9 +135,9 @@ Rollback выполняется только штатным release-script с з
 - Repo variable: `TEST_SMOKE_API_URL` (optional; default test domain).
 - Repo secret: `TEST_SMOKE_BEARER_TOKEN` (must belong to `admin`/`super_admin`, because CI validates `GET /v1/telemetry/summary`).
 
-## 10) Latest test evidence (2026-02-27)
+## 10) Latest test evidence (2026-02-28)
 
-- Deploy target: `test`, SHA `5c4831c`.
+- Deploy target: `test`, SHA `729dadf`.
 - SSO smoke: `SMOKE_API_URL=https://test.boltorezka.gismalink.art npm run smoke:sso` -> `ok`.
 - HTTP smoke:
    - `/health` -> `{"status":"ok","checks":{"api":"ok","db":"ok","redis":"ok"}}`
@@ -148,7 +148,14 @@ Rollback выполняется только штатным release-script с з
    - первый `chat.send` (`idempotencyKey=<key>`) -> `ack` + `chat.message`.
    - повторный `chat.send` с тем же `idempotencyKey` -> `ack` с `duplicate=true`.
 - Redis metrics snapshot после realtime smoke (`ws:metrics:<UTC-date>`):
-   - `nack_sent=1`
-   - `ack_sent=3`
-   - `chat_sent=1`
-   - `chat_idempotency_hit=1`
+   - `nack_sent: 71 -> 72`
+   - `ack_sent: 330 -> 333`
+   - `chat_sent: 70 -> 71`
+   - `chat_idempotency_hit: 70 -> 71`
+   - `call_signal_sent: 27`
+   - `call_hangup_sent: 26`
+   - `call_reject_sent: 25`
+- Extended realtime relay smoke (`SMOKE_CALL_SIGNAL=1`, 2 ws-ticket):
+   - `callSignalRelayed=true`
+   - `callRejectRelayed=true`
+   - `callHangupRelayed=true`

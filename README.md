@@ -7,6 +7,8 @@ Boltorezka — отдельный репозиторий для realtime-при�
 - Репозиторий выделен из `GismalinkArt`.
 - Текущее содержимое (`boltorezka.html`, `mdl/*`, `webSocketHandler.js`) рассматривается как legacy POC.
 - Разработка новой версии ведётся по roadmap и runbook этого репозитория.
+- Backend runtime API переведён на TypeScript (`.ts`) со строгой типизацией и typed WS protocol слоем.
+- Realtime handler для `call.*` и `chat/presence` приведён к switch-dispatch + централизованным ack/nack helper-путям.
 
 Legacy-файлы перенесены в `legacy/poc/`.
 
@@ -32,7 +34,8 @@ Legacy-файлы перенесены в `legacy/poc/`.
 ## Документация
 
 - Архитектура: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
-- План переписывания: [docs/ROADMAP.md](docs/ROADMAP.md)
+- План переписывания (plan-only): [docs/ROADMAP.md](docs/ROADMAP.md)
+- Лог реализованных фич и evidence: [docs/FEATURE_LOG.md](docs/FEATURE_LOG.md)
 - Тестовый деплой (GitOps): [docs/RUNBOOK_TEST_DEPLOY.md](docs/RUNBOOK_TEST_DEPLOY.md)
 - Быстрый rollout в test (5 команд): [docs/RUNBOOK_TEST_ROLLOUT_QUICKSTART.md](docs/RUNBOOK_TEST_ROLLOUT_QUICKSTART.md)
 - Pre-prod checklist: [docs/PREPROD_CHECKLIST.md](docs/PREPROD_CHECKLIST.md)
@@ -41,10 +44,16 @@ Legacy-файлы перенесены в `legacy/poc/`.
 ## Process scripts (Projo-aligned)
 
 - `npm run check` — локальный verify pipeline (`scripts/verify-all.sh`)
+- `npm run check:api-types` — baseline backend typecheck (`apps/api/tsconfig.json`, `allowJs+checkJs`)
+- Первый TS-модуль API: `apps/api/src/ws-protocol.types.ts` (type-only контракт для WS protocol слоя)
+- TS type-only config контракт: `apps/api/src/config.types.ts` + runtime `apps/api/src/config.ts`
+- TS type-only DB контракт: `apps/api/src/db.types.ts` + JSDoc typing ключевых query rows в routes/middleware
+- TS type-only API DTO контракт: `apps/api/src/api-contract.types.ts` + JSDoc typing response shapes в `auth/rooms/admin`
+- WS protocol helper module: `apps/api/src/ws-protocol.ts` (typed incoming parser/guards + outgoing envelope builders, включая chat/room/presence/call relay/pong)
 - `SMOKE_API=1 npm run check` — verify + API smoke (`scripts/smoke-api.mjs`)
 - `SMOKE_API_URL=https://test.boltorezka.gismalink.art npm run smoke:sso` — SSO redirect/mode smoke (`scripts/smoke-sso-redirect.mjs`)
 - `SMOKE_API_URL=https://test.boltorezka.gismalink.art SMOKE_BEARER_TOKEN=<jwt> npm run smoke:realtime` — WS protocol smoke (`nack/ack/idempotency`) через `ws-ticket` (`scripts/smoke-realtime.mjs`)
-- `SMOKE_CALL_SIGNAL=1 SMOKE_API_URL=https://test.boltorezka.gismalink.art SMOKE_BEARER_TOKEN=<jwt> npm run smoke:realtime` — расширенный WS smoke + relay проверки `call.offer` (второй ws-ticket создаётся автоматически)
+- `SMOKE_CALL_SIGNAL=1 SMOKE_API_URL=https://test.boltorezka.gismalink.art SMOKE_BEARER_TOKEN=<jwt> npm run smoke:realtime` — расширенный WS smoke + relay проверки `call.offer`, `call.reject` и `call.hangup` (второй ws-ticket создаётся автоматически)
 - `SMOKE_API_URL=https://test.boltorezka.gismalink.art SMOKE_API=1 SMOKE_SSO=1 npm run check` — единый verify + API + SSO smoke
 - `SMOKE_API_URL=https://test.boltorezka.gismalink.art SMOKE_API=1 SMOKE_SSO=1 SMOKE_REALTIME=1 SMOKE_WS_TICKET=<ticket> npm run check` — полный verify + API + SSO + realtime smoke
 - `npm run deploy:test` — deploy test from git ref (`scripts/examples/deploy-test-from-ref.sh`)
@@ -79,8 +88,8 @@ Legacy-файлы перенесены в `legacy/poc/`.
 
 - [ ] Утвердить ADR по signaling/media topology.
 - [ ] Описать OpenAPI + WS event schema (версионирование с `v1`).
-- [ ] Создать feature-ветку для backend foundation.
-- [ ] Поднять test окружение и прогнать первый smoke.
+- [ ] Закрыть PR с итоговым TS/realtime hardening в `main`.
+- [ ] Повторить `deploy:test:smoke` уже от `origin/main` и зафиксировать release notes.
 
 ## Что уже можно запустить
 
@@ -169,14 +178,14 @@ WS envelope (MVP hardening):
 - client -> server: `type`, `requestId`, `payload`, optional `idempotencyKey`
 - server -> client: `ack` / `nack` с `requestId` и `eventType`
 - для `chat.send` используется dedup по `idempotencyKey`
-- signaling baseline: `call.offer`, `call.answer`, `call.ice` (relay в пределах room, optional `targetUserId`)
+- signaling baseline: `call.offer`, `call.answer`, `call.ice`, `call.reject`, `call.hangup` (relay в пределах room, optional `targetUserId`)
 
 ### Минимальный smoke realtime (WebSocket)
 
-1. Получить JWT токен через login/register.
+1. Получить `ws-ticket` через `GET /v1/auth/ws-ticket` (или использовать smoke script, который создаёт ticket автоматически).
 2. Открыть WS:
 
-   - `wscat -c "ws://localhost:8080/v1/realtime/ws?token=<token>"`
+   - `wscat -c "ws://localhost:8080/v1/realtime/ws?ticket=<ticket>"`
 
 3. Внутри соединения отправить:
 

@@ -42,6 +42,16 @@
 3. Проверить, что local auth не включился обратно (`/v1/auth/register` и `/v1/auth/login` -> `SsoOnly`).
 4. Сделать понятный коммит.
 
+## 5) Merge + release pipeline (чтобы не забыть)
+
+1. Открыть PR `feature/* -> main` с пометкой: test rollout + standard/extended smoke passed.
+2. Перед merge убедиться, что scope PR не разросся вне текущей задачи.
+3. После merge повторить короткую проверку в `test` уже от `main`:
+   - `TEST_REF=origin/main npm run deploy:test:smoke`
+   - extended realtime relay smoke (`SMOKE_CALL_SIGNAL=1`, 2 ws-ticket).
+4. В `prod` идти только по явному подтверждению владельца релиза и только из `main`.
+5. После `prod` повторить post-deploy smoke + extended relay smoke и зафиксировать запись в release log.
+
 ## Частые пропуски
 
 1. Изменили API payload, но не синхронизировали web client.

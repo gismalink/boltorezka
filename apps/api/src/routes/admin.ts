@@ -1,31 +1,33 @@
+import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { db } from "../db.js";
 import { loadCurrentUser, requireAuth, requireRole } from "../middleware/auth.js";
+import type { UserRow } from "../db.types.ts";
+import type { AdminUsersResponse, PromoteUserResponse } from "../api-contract.types.ts";
 
 const promoteSchema = z.object({
   role: z.literal("admin").default("admin")
 });
 
-export async function adminRoutes(fastify) {
+export async function adminRoutes(fastify: FastifyInstance) {
   fastify.get(
     "/v1/admin/users",
     {
       preHandler: [requireAuth, loadCurrentUser, requireRole(["super_admin", "admin"])]
     },
     async () => {
-      const result = await db.query(
+      const result = await db.query<UserRow>(
         `SELECT id, email, name, role, created_at
          FROM users
          ORDER BY created_at ASC`
       );
 
-      return {
-        users: result.rows
-      };
+      const response: AdminUsersResponse = { users: result.rows };
+      return response;
     }
   );
 
-  fastify.post(
+  fastify.post<{ Params: { userId: string }; Body: { role?: "admin" } }>(
     "/v1/admin/users/:userId/promote",
     {
       preHandler: [requireAuth, loadCurrentUser, requireRole(["super_admin"])]
@@ -48,7 +50,7 @@ export async function adminRoutes(fastify) {
         });
       }
 
-      const targetResult = await db.query(
+      const targetResult = await db.query<UserRow>(
         "SELECT id, email, name, role, created_at FROM users WHERE id = $1",
         [userId]
       );
@@ -63,10 +65,11 @@ export async function adminRoutes(fastify) {
       const targetUser = targetResult.rows[0];
 
       if (targetUser.role === "super_admin") {
-        return reply.code(200).send({ user: targetUser });
+        const response: PromoteUserResponse = { user: targetUser };
+        return reply.code(200).send(response);
       }
 
-      const updated = await db.query(
+      const updated = await db.query<UserRow>(
         `UPDATE users
          SET role = 'admin'
          WHERE id = $1
@@ -74,9 +77,8 @@ export async function adminRoutes(fastify) {
         [userId]
       );
 
-      return {
-        user: updated.rows[0]
-      };
+      const response: PromoteUserResponse = { user: updated.rows[0] };
+      return response;
     }
   );
 }

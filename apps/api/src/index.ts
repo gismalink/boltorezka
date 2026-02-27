@@ -68,7 +68,7 @@ try {
     port: config.port
   });
   app.log.info(`Boltorezka API listening on port ${config.port}`);
-} catch (error) {
+} catch (error: unknown) {
   app.log.error(error);
   process.exit(1);
 }

@@ -1,6 +1,9 @@
+import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { db } from "../db.js";
 import { loadCurrentUser, requireAuth, requireRole } from "../middleware/auth.js";
+import type { RoomListRow, RoomMessageRow, RoomRow } from "../db.types.ts";
+import type { RoomCreateResponse, RoomMessagesResponse, RoomsListResponse } from "../api-contract.types.ts";
 
 const createRoomSchema = z.object({
   slug: z
@@ -12,15 +15,15 @@ const createRoomSchema = z.object({
   is_public: z.boolean().default(true)
 });
 
-export async function roomsRoutes(fastify) {
+export async function roomsRoutes(fastify: FastifyInstance) {
   fastify.get(
     "/v1/rooms",
     {
       preHandler: [requireAuth]
     },
     async (request) => {
-      const userId = request.user.sub;
-      const result = await db.query(
+      const userId = String(request.user?.sub || "").trim();
+      const result = await db.query<RoomListRow>(
         `SELECT
            r.id,
            r.slug,
@@ -36,13 +39,12 @@ export async function roomsRoutes(fastify) {
         [userId]
       );
 
-      return {
-        rooms: result.rows
-      };
+      const response: RoomsListResponse = { rooms: result.rows };
+      return response;
     }
   );
 
-  fastify.post(
+  fastify.post<{ Body: { slug: string; title: string; is_public?: boolean } }>(
     "/v1/rooms",
     {
       preHandler: [requireAuth, loadCurrentUser, requireRole(["admin", "super_admin"])]
@@ -61,16 +63,16 @@ export async function roomsRoutes(fastify) {
 
       const existing = await db.query("SELECT id FROM rooms WHERE slug = $1", [slug]);
 
-      if (existing.rowCount > 0) {
+      if ((existing.rowCount || 0) > 0) {
         return reply.code(409).send({
           error: "Conflict",
           message: "Room slug already exists"
         });
       }
 
-      const createdBy = request.user.sub;
+      const createdBy = String(request.user?.sub || "").trim();
 
-      const created = await db.query(
+      const created = await db.query<RoomRow>(
         `INSERT INTO rooms (slug, title, is_public, created_by)
          VALUES ($1, $2, $3, $4)
          RETURNING id, slug, title, is_public, created_at`,
@@ -86,21 +88,22 @@ export async function roomsRoutes(fastify) {
         [room.id, createdBy]
       );
 
-      return reply.code(201).send({ room });
+      const response: RoomCreateResponse = { room };
+      return reply.code(201).send(response);
     }
   );
 
-  fastify.get(
+  fastify.get<{ Params: { slug: string }; Querystring: { limit?: string | number } }>(
     "/v1/rooms/:slug/messages",
     {
       preHandler: [requireAuth]
     },
     async (request, reply) => {
-      const userId = request.user.sub;
+      const userId = String(request.user?.sub || "").trim();
       const slug = String(request.params.slug || "").trim();
-      const limit = Math.min(100, Math.max(1, Number(request.query?.limit || 50)));
+      const limit = Math.min(100, Math.max(1, Number(request.query.limit || 50)));
 
-      const roomResult = await db.query(
+      const roomResult = await db.query<RoomRow>(
         "SELECT id, slug, title, is_public FROM rooms WHERE slug = $1",
         [slug]
       );
@@ -128,7 +131,7 @@ export async function roomsRoutes(fastify) {
         }
       }
 
-      const messagesResult = await db.query(
+      const messagesResult = await db.query<RoomMessageRow>(
         `SELECT
            m.id,
            m.room_id,
@@ -144,10 +147,11 @@ export async function roomsRoutes(fastify) {
         [room.id, limit]
       );
 
-      return {
+      const response: RoomMessagesResponse = {
         room,
         messages: messagesResult.rows.reverse()
       };
+      return response;
     }
   );
 }

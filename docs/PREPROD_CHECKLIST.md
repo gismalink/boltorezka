@@ -18,7 +18,10 @@
    - Complete SSO Session,
    - room join,
    - message send/receive в двух вкладках.
-5. RBAC smoke пройден:
+5. Extended realtime relay smoke пройден:
+   - `SMOKE_CALL_SIGNAL=1` сценарий с двумя `ws-ticket`,
+   - подтверждены relay `call.offer/call.reject/call.hangup`.
+6. RBAC smoke пройден:
    - `super_admin` может промоутить пользователя в `admin`,
    - обычный `user` не может создавать комнату,
    - `admin` может создавать комнату.
@@ -42,6 +45,14 @@
 1. Явное подтверждение владельца релиза.
 2. Запись commit SHA и smoke-результата.
 3. План rollback (команда + ответственный).
+
+## 4.1) Merge + post-merge guardrails
+
+1. Merge только из `feature/*` в `main` после успешного PR-review.
+2. После merge повторить `test` проверку уже от `origin/main` (`deploy:test:smoke`).
+3. Дополнительно прогнать extended realtime relay smoke (`SMOKE_CALL_SIGNAL=1`, 2 ws-ticket).
+4. В `prod` идти только после явного подтверждения владельца релиза.
+5. В `prod` выкатывать только `main` (никогда не feature-ветку).
 
 ## 5) Prod verification (после явного разрешения)
 

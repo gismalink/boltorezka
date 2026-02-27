@@ -1,3 +1,4 @@
+import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
 import { loadCurrentUser, requireAuth, requireRole } from "../middleware/auth.js";
 
@@ -7,7 +8,7 @@ const telemetrySchema = z.object({
   meta: z.record(z.unknown()).optional()
 });
 
-function resolveBearerToken(authHeader) {
+function resolveBearerToken(authHeader: unknown): string | null {
   if (!authHeader) {
     return null;
   }
@@ -25,8 +26,8 @@ function resolveBearerToken(authHeader) {
   return match[1].trim() || "__invalid__";
 }
 
-export async function telemetryRoutes(fastify) {
-  fastify.post("/v1/telemetry/web", async (request, reply) => {
+export async function telemetryRoutes(fastify: FastifyInstance) {
+  fastify.post("/v1/telemetry/web", async (request: FastifyRequest, reply: FastifyReply) => {
     const parsed = telemetrySchema.safeParse(request.body);
 
     if (!parsed.success) {
@@ -48,8 +49,8 @@ export async function telemetryRoutes(fastify) {
 
     if (token) {
       try {
-        const payload = await fastify.jwt.verify(token);
-        userId = typeof payload?.sub === "string" ? payload.sub : null;
+        const payload = await fastify.jwt.verify<{ sub?: string }>(token);
+        userId = typeof payload.sub === "string" ? payload.sub : null;
       } catch {
         return reply.code(401).send({
           error: "Unauthorized",
@@ -87,7 +88,7 @@ export async function telemetryRoutes(fastify) {
       const day = new Date().toISOString().slice(0, 10);
       const values = await fastify.redis.hGetAll(`ws:metrics:${day}`);
 
-      const toNumber = (value) => {
+      const toNumber = (value: unknown): number => {
         const parsed = Number(value);
         return Number.isFinite(parsed) ? parsed : 0;
       };
