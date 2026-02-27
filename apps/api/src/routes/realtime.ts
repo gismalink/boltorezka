@@ -38,6 +38,11 @@ type CanJoinRoomResult =
   | { ok: true; room: RoomRow }
   | { ok: false; reason: "RoomNotFound" | "Forbidden" };
 
+type RelayOutcome = {
+  ok: boolean;
+  relayedCount: number;
+};
+
 function sendJson(socket: WebSocket, payload: unknown): void {
   if (socket.readyState === socket.OPEN) {
     socket.send(JSON.stringify(payload));
@@ -219,6 +224,45 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
       ok: true,
       room: selectedRoom
     };
+  };
+
+  const relayToTargetOrRoom = (
+    senderSocket: WebSocket,
+    roomId: string,
+    targetUserId: string | null,
+    relayEnvelope: unknown
+  ): RelayOutcome => {
+    let relayedCount = 0;
+
+    if (targetUserId) {
+      const targetSockets = getUserRoomSockets(targetUserId, roomId);
+      for (const targetSocket of targetSockets) {
+        if (targetSocket === senderSocket) {
+          continue;
+        }
+
+        sendJson(targetSocket, relayEnvelope);
+        relayedCount += 1;
+      }
+
+      if (relayedCount === 0) {
+        return { ok: false, relayedCount };
+      }
+
+      return { ok: true, relayedCount };
+    }
+
+    const roomSockets = socketsByRoomId.get(roomId) || new Set();
+    for (const roomSocket of roomSockets) {
+      if (roomSocket === senderSocket) {
+        continue;
+      }
+
+      sendJson(roomSocket, relayEnvelope);
+      relayedCount += 1;
+    }
+
+    return { ok: true, relayedCount };
   };
 
   fastify.get(
@@ -540,44 +584,21 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
                 signal
               );
 
-              let relayedCount = 0;
-
-              if (targetUserId) {
-                const targetSockets = getUserRoomSockets(targetUserId, state.roomId);
-                for (const targetSocket of targetSockets) {
-                  if (targetSocket === connection) {
-                    continue;
-                  }
-
-                  sendJson(targetSocket, relayEnvelope);
-                  relayedCount += 1;
-                }
-
-                if (relayedCount === 0) {
-                  sendNack(
-                    connection,
-                    requestId,
-                    eventType,
-                    "TargetNotInRoom",
-                    "Target user is offline or not in this room"
-                  );
-                  void incrementMetric("nack_sent");
-                  return;
-                }
-              } else {
-                const roomSockets = socketsByRoomId.get(state.roomId) || new Set();
-                for (const roomSocket of roomSockets) {
-                  if (roomSocket === connection) {
-                    continue;
-                  }
-
-                  sendJson(roomSocket, relayEnvelope);
-                  relayedCount += 1;
-                }
+              const relayOutcome = relayToTargetOrRoom(connection, state.roomId, targetUserId, relayEnvelope);
+              if (!relayOutcome.ok) {
+                sendNack(
+                  connection,
+                  requestId,
+                  eventType,
+                  "TargetNotInRoom",
+                  "Target user is offline or not in this room"
+                );
+                void incrementMetric("nack_sent");
+                return;
               }
 
               sendAck(connection, requestId, eventType, {
-                relayedTo: relayedCount,
+                relayedTo: relayOutcome.relayedCount,
                 targetUserId
               });
               void incrementMetric("ack_sent");
@@ -610,44 +631,21 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
                 reason
               );
 
-              let relayedCount = 0;
-
-              if (targetUserId) {
-                const targetSockets = getUserRoomSockets(targetUserId, state.roomId);
-                for (const targetSocket of targetSockets) {
-                  if (targetSocket === connection) {
-                    continue;
-                  }
-
-                  sendJson(targetSocket, relayEnvelope);
-                  relayedCount += 1;
-                }
-
-                if (relayedCount === 0) {
-                  sendNack(
-                    connection,
-                    requestId,
-                    eventType,
-                    "TargetNotInRoom",
-                    "Target user is offline or not in this room"
-                  );
-                  void incrementMetric("nack_sent");
-                  return;
-                }
-              } else {
-                const roomSockets = socketsByRoomId.get(state.roomId) || new Set();
-                for (const roomSocket of roomSockets) {
-                  if (roomSocket === connection) {
-                    continue;
-                  }
-
-                  sendJson(roomSocket, relayEnvelope);
-                  relayedCount += 1;
-                }
+              const relayOutcome = relayToTargetOrRoom(connection, state.roomId, targetUserId, relayEnvelope);
+              if (!relayOutcome.ok) {
+                sendNack(
+                  connection,
+                  requestId,
+                  eventType,
+                  "TargetNotInRoom",
+                  "Target user is offline or not in this room"
+                );
+                void incrementMetric("nack_sent");
+                return;
               }
 
               sendAck(connection, requestId, eventType, {
-                relayedTo: relayedCount,
+                relayedTo: relayOutcome.relayedCount,
                 targetUserId
               });
               void incrementMetric("ack_sent");
@@ -680,44 +678,21 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
                 reason
               );
 
-              let relayedCount = 0;
-
-              if (targetUserId) {
-                const targetSockets = getUserRoomSockets(targetUserId, state.roomId);
-                for (const targetSocket of targetSockets) {
-                  if (targetSocket === connection) {
-                    continue;
-                  }
-
-                  sendJson(targetSocket, relayEnvelope);
-                  relayedCount += 1;
-                }
-
-                if (relayedCount === 0) {
-                  sendNack(
-                    connection,
-                    requestId,
-                    eventType,
-                    "TargetNotInRoom",
-                    "Target user is offline or not in this room"
-                  );
-                  void incrementMetric("nack_sent");
-                  return;
-                }
-              } else {
-                const roomSockets = socketsByRoomId.get(state.roomId) || new Set();
-                for (const roomSocket of roomSockets) {
-                  if (roomSocket === connection) {
-                    continue;
-                  }
-
-                  sendJson(roomSocket, relayEnvelope);
-                  relayedCount += 1;
-                }
+              const relayOutcome = relayToTargetOrRoom(connection, state.roomId, targetUserId, relayEnvelope);
+              if (!relayOutcome.ok) {
+                sendNack(
+                  connection,
+                  requestId,
+                  eventType,
+                  "TargetNotInRoom",
+                  "Target user is offline or not in this room"
+                );
+                void incrementMetric("nack_sent");
+                return;
               }
 
               sendAck(connection, requestId, eventType, {
-                relayedTo: relayedCount,
+                relayedTo: relayOutcome.relayedCount,
                 targetUserId
               });
               void incrementMetric("ack_sent");
