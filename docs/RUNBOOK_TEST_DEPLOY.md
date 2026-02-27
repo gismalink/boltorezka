@@ -42,6 +42,10 @@
    - room join,
    - text message send/receive,
    - voice connect/disconnect.
+7. Realtime envelope smoke:
+   - `chat.send` получает `ack` с `requestId`,
+   - при ошибках приходит `nack` с `code/message`,
+   - повторная отправка с тем же `idempotencyKey` не создаёт дубль сообщения.
 
 ### SSO-specific smoke
 
@@ -53,7 +57,8 @@
    - `Complete SSO Session` создаёт локальную JWT-сессию,
    - доступен список комнат,
    - вход в `general` работает,
-   - сообщения видны в обеих вкладках в realtime.
+   - сообщения видны в обеих вкладках в realtime,
+   - статус доставки сообщения меняется `sending -> delivered`.
 
 ### Domain checks
 

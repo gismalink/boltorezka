@@ -3,6 +3,15 @@ import { api } from "./api";
 import type { Message, Room, User, WsIncoming, WsOutgoing } from "./types";
 
 const RECONNECT_DELAYS_MS = [1000, 2000, 4000, 8000, 12000];
+const ACK_TIMEOUT_MS = 6000;
+const MAX_CHAT_RETRIES = 3;
+
+type PendingRequest = {
+  eventType: string;
+  envelope: WsOutgoing;
+  retries: number;
+  maxRetries: number;
+};
 
 function wsBase() {
   const protocol = window.location.protocol === "https:" ? "wss" : "ws";
@@ -27,7 +36,8 @@ export function App() {
   const [newRoomTitle, setNewRoomTitle] = useState("");
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectAttemptRef = useRef(0);
-  const pendingRequestsRef = useRef(new Map<string, { eventType: string }>());
+  const pendingRequestsRef = useRef(new Map<string, PendingRequest>());
+  const ackTimersRef = useRef(new Map<string, ReturnType<typeof setTimeout>>());
 
   const canCreateRooms = user?.role === "admin" || user?.role === "super_admin";
   const canPromote = user?.role === "super_admin";
@@ -48,10 +58,63 @@ export function App() {
     );
   };
 
+  const clearAckTimer = (requestId: string) => {
+    const timer = ackTimersRef.current.get(requestId);
+    if (!timer) {
+      return;
+    }
+    clearTimeout(timer);
+    ackTimersRef.current.delete(requestId);
+  };
+
+  const clearAllAckTimers = () => {
+    for (const timer of ackTimersRef.current.values()) {
+      clearTimeout(timer);
+    }
+    ackTimersRef.current.clear();
+  };
+
+  const armAckTimeout = (requestId: string) => {
+    clearAckTimer(requestId);
+
+    const timer = setTimeout(() => {
+      const pending = pendingRequestsRef.current.get(requestId);
+      if (!pending) {
+        return;
+      }
+
+      const socket = wsRef.current;
+      if (!socket || socket.readyState !== WebSocket.OPEN) {
+        armAckTimeout(requestId);
+        return;
+      }
+
+      if (pending.retries >= pending.maxRetries) {
+        pendingRequestsRef.current.delete(requestId);
+        clearAckTimer(requestId);
+        if (pending.eventType === "chat.send") {
+          markMessageDelivery(requestId, "failed");
+        }
+        pushLog(`ws request failed after retries: ${pending.eventType}`);
+        return;
+      }
+
+      pending.retries += 1;
+      socket.send(JSON.stringify(pending.envelope));
+      if (pending.eventType === "chat.send") {
+        markMessageDelivery(requestId, "sending");
+      }
+      pushLog(`ws retry ${pending.eventType} #${pending.retries}`);
+      armAckTimeout(requestId);
+    }, ACK_TIMEOUT_MS);
+
+    ackTimersRef.current.set(requestId, timer);
+  };
+
   const sendWsEvent = (
     eventType: string,
     payload: Record<string, unknown>,
-    options: { withIdempotency?: boolean } = {}
+    options: { withIdempotency?: boolean; trackAck?: boolean; maxRetries?: number } = {}
   ) => {
     const socket = wsRef.current;
     if (!socket || socket.readyState !== WebSocket.OPEN) {
@@ -70,7 +133,17 @@ export function App() {
       envelope.idempotencyKey = requestId;
     }
 
-    pendingRequestsRef.current.set(requestId, { eventType });
+    const trackAck = options.trackAck !== false;
+    if (trackAck) {
+      pendingRequestsRef.current.set(requestId, {
+        eventType,
+        envelope,
+        retries: 0,
+        maxRetries: options.maxRetries ?? 0
+      });
+      armAckTimeout(requestId);
+    }
+
     socket.send(JSON.stringify(envelope));
     return requestId;
   };
@@ -88,6 +161,7 @@ export function App() {
       setMessages([]);
       setAdminUsers([]);
       pendingRequestsRef.current.clear();
+      clearAllAckTimers();
       return;
     }
 
@@ -165,24 +239,29 @@ export function App() {
             reconnectAttemptRef.current = 0;
             setWsState("connected");
             pushLog("ws connected");
-            sendWsEvent("room.join", { roomSlug });
+
+            for (const [requestId, pending] of pendingRequestsRef.current.entries()) {
+              ws?.send(JSON.stringify(pending.envelope));
+              if (pending.eventType === "chat.send") {
+                markMessageDelivery(requestId, "sending");
+              }
+              armAckTimeout(requestId);
+            }
+
+            sendWsEvent("room.join", { roomSlug }, { maxRetries: 1 });
 
             pingInterval = setInterval(() => {
               if (!ws || ws.readyState !== WebSocket.OPEN) {
                 return;
               }
-              sendWsEvent("ping", {});
+              sendWsEvent("ping", {}, { trackAck: false });
             }, 15000);
           };
 
           ws.onclose = () => {
             setWsState("disconnected");
             pushLog("ws disconnected");
-            const pendingIds = Array.from(pendingRequestsRef.current.keys());
-            for (const requestId of pendingIds) {
-              markMessageDelivery(requestId, "failed");
-            }
-            pendingRequestsRef.current.clear();
+            clearAllAckTimers();
             clearTimers();
             scheduleReconnect();
           };
@@ -199,6 +278,7 @@ export function App() {
               const eventType = String(message.payload?.eventType || "").trim();
               if (requestId) {
                 pendingRequestsRef.current.delete(requestId);
+                clearAckTimer(requestId);
                 if (eventType === "chat.send") {
                   markMessageDelivery(requestId, "delivered", {
                     id: message.payload?.messageId || requestId
@@ -215,6 +295,7 @@ export function App() {
               const nackMessage = String(message.payload?.message || "Request failed");
               if (requestId) {
                 pendingRequestsRef.current.delete(requestId);
+                clearAckTimer(requestId);
                 if (eventType === "chat.send") {
                   markMessageDelivery(requestId, "failed");
                 }
@@ -231,6 +312,7 @@ export function App() {
 
               if (senderRequestId) {
                 pendingRequestsRef.current.delete(senderRequestId);
+                clearAckTimer(senderRequestId);
                 let replaced = false;
                 setMessages((prev) => {
                   const next = prev.map((item) => {
@@ -300,6 +382,7 @@ export function App() {
 
     return () => {
       isDisposed = true;
+      clearAllAckTimers();
       clearTimers();
       ws?.close();
     };
@@ -369,7 +452,7 @@ export function App() {
     if (!chatText.trim()) return;
 
     const text = chatText.trim();
-    const requestId = sendWsEvent("chat.send", { text }, { withIdempotency: true });
+    const requestId = sendWsEvent("chat.send", { text }, { withIdempotency: true, maxRetries: MAX_CHAT_RETRIES });
     if (!requestId) {
       return;
     }
@@ -393,7 +476,7 @@ export function App() {
 
   const joinRoom = (slug: string) => {
     setRoomSlug(slug);
-    sendWsEvent("room.join", { roomSlug: slug });
+    sendWsEvent("room.join", { roomSlug: slug }, { maxRetries: 1 });
   };
 
   const promote = async (userId: string) => {

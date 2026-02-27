@@ -61,6 +61,15 @@ export async function realtimeRoutes(fastify) {
   const socketsByRoomId = new Map();
   const socketState = new WeakMap();
 
+  const incrementMetric = async (name) => {
+    try {
+      const day = new Date().toISOString().slice(0, 10);
+      await fastify.redis.hIncrBy(`ws:metrics:${day}`, name, 1);
+    } catch {
+      return;
+    }
+  };
+
   const attachUserSocket = (userId, socket) => {
     const userSockets = socketsByUserId.get(userId) || new Set();
     userSockets.add(socket);
@@ -267,6 +276,7 @@ export async function realtimeRoutes(fastify) {
                 }
               });
               sendAck(connection, requestId, eventType);
+              void incrementMetric("ack_sent");
               return;
             }
 
@@ -281,6 +291,7 @@ export async function realtimeRoutes(fastify) {
                   "ValidationError",
                   "roomSlug is required"
                 );
+                void incrementMetric("nack_sent");
                 return;
               }
 
@@ -288,6 +299,7 @@ export async function realtimeRoutes(fastify) {
 
               if (!joinResult.ok) {
                 sendNack(connection, requestId, eventType, joinResult.reason, "Cannot join room");
+                void incrementMetric("nack_sent");
                 return;
               }
 
@@ -324,6 +336,7 @@ export async function realtimeRoutes(fastify) {
                 roomId: joinResult.room.id,
                 roomSlug: joinResult.room.slug
               });
+              void incrementMetric("ack_sent");
 
               sendJson(connection, {
                 type: "room.presence",
@@ -360,6 +373,7 @@ export async function realtimeRoutes(fastify) {
                   "NoActiveRoom",
                   "Join a room first"
                 );
+                void incrementMetric("nack_sent");
                 return;
               }
 
@@ -373,6 +387,7 @@ export async function realtimeRoutes(fastify) {
                   "ValidationError",
                   "Message text is required"
                 );
+                void incrementMetric("nack_sent");
                 return;
               }
 
@@ -397,6 +412,8 @@ export async function realtimeRoutes(fastify) {
                     duplicate: true,
                     idempotencyKey
                   });
+                  void incrementMetric("ack_sent");
+                  void incrementMetric("chat_idempotency_hit");
                   return;
                 }
               }
@@ -438,11 +455,14 @@ export async function realtimeRoutes(fastify) {
                 messageId: chatMessage.id,
                 idempotencyKey: idempotencyKey || null
               });
+              void incrementMetric("ack_sent");
+              void incrementMetric("chat_sent");
 
               return;
             }
 
             sendNack(connection, requestId, eventType, "UnknownEvent", "Unsupported event type");
+            void incrementMetric("nack_sent");
           } catch (error) {
             fastify.log.error(error, "ws message handling failed");
             sendJson(connection, {
