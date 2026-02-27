@@ -2,6 +2,7 @@
 /** @typedef {"call.reject" | "call.hangup"} CallTerminalEventType */
 /** @typedef {CallSignalEventType | CallTerminalEventType} CallEventType */
 /** @typedef {{ type: string, requestId?: string, idempotencyKey?: string, payload?: Record<string, unknown> }} WsIncomingEnvelope */
+/** @typedef {{ type: string, payload: Record<string, unknown> }} WsOutgoingEnvelope */
 
 export const CALL_SIGNAL_EVENT_TYPES = ["call.offer", "call.answer", "call.ice"];
 export const CALL_TERMINAL_EVENT_TYPES = ["call.reject", "call.hangup"];
@@ -111,4 +112,70 @@ export function getCallSignal(payload) {
   }
 
   return signal;
+}
+
+/**
+ * @param {string} requestId
+ * @param {string} eventType
+ * @param {Record<string, unknown>} [meta]
+ * @returns {WsOutgoingEnvelope}
+ */
+export function buildAckEnvelope(requestId, eventType, meta = {}) {
+  return {
+    type: "ack",
+    payload: {
+      requestId,
+      eventType,
+      ts: Date.now(),
+      ...meta
+    }
+  };
+}
+
+/**
+ * @param {string} requestId
+ * @param {string} eventType
+ * @param {string} code
+ * @param {string} message
+ * @returns {WsOutgoingEnvelope}
+ */
+export function buildNackEnvelope(requestId, eventType, code, message) {
+  return {
+    type: "nack",
+    payload: {
+      requestId,
+      eventType,
+      code,
+      message,
+      ts: Date.now()
+    }
+  };
+}
+
+/**
+ * @param {string} code
+ * @param {string} message
+ * @returns {WsOutgoingEnvelope}
+ */
+export function buildErrorEnvelope(code, message) {
+  return {
+    type: "error",
+    payload: { code, message }
+  };
+}
+
+/**
+ * @param {string} userId
+ * @param {string} userName
+ * @returns {WsOutgoingEnvelope}
+ */
+export function buildServerReadyEnvelope(userId, userName) {
+  return {
+    type: "server.ready",
+    payload: {
+      userId,
+      userName,
+      connectedAt: new Date().toISOString()
+    }
+  };
 }

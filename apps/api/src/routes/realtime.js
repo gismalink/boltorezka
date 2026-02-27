@@ -1,5 +1,9 @@
 import { db } from "../db.js";
 import {
+  buildAckEnvelope,
+  buildErrorEnvelope,
+  buildNackEnvelope,
+  buildServerReadyEnvelope,
   getCallSignal,
   getPayloadString,
   isCallSignalEventType,
@@ -30,36 +34,16 @@ function sendAck(socket, requestId, eventType, meta = {}) {
     return;
   }
 
-  sendJson(socket, {
-    type: "ack",
-    payload: {
-      requestId,
-      eventType,
-      ts: Date.now(),
-      ...meta
-    }
-  });
+  sendJson(socket, buildAckEnvelope(requestId, eventType, meta));
 }
 
 function sendNack(socket, requestId, eventType, code, message) {
   if (!requestId) {
-    sendJson(socket, {
-      type: "error",
-      payload: { code, message }
-    });
+    sendJson(socket, buildErrorEnvelope(code, message));
     return;
   }
 
-  sendJson(socket, {
-    type: "nack",
-    payload: {
-      requestId,
-      eventType,
-      code,
-      message,
-      ts: Date.now()
-    }
-  });
+  sendJson(socket, buildNackEnvelope(requestId, eventType, code, message));
 }
 
 function safeJsonSize(value) {
@@ -220,10 +204,7 @@ export async function realtimeRoutes(fastify) {
         const ticket = url.searchParams.get("ticket");
 
         if (!ticket) {
-          sendJson(connection, {
-            type: "error",
-            payload: { code: "MissingTicket", message: "ticket query param is required" }
-          });
+          sendJson(connection, buildErrorEnvelope("MissingTicket", "ticket query param is required"));
           connection.close(4001, "Missing ticket");
           return;
         }
@@ -232,10 +213,7 @@ export async function realtimeRoutes(fastify) {
         const ticketPayload = await fastify.redis.get(ticketKey);
 
         if (!ticketPayload) {
-          sendJson(connection, {
-            type: "error",
-            payload: { code: "InvalidTicket", message: "WebSocket ticket is invalid or expired" }
-          });
+          sendJson(connection, buildErrorEnvelope("InvalidTicket", "WebSocket ticket is invalid or expired"));
           connection.close(4002, "Invalid ticket");
           return;
         }
@@ -246,10 +224,7 @@ export async function realtimeRoutes(fastify) {
         try {
           claims = JSON.parse(ticketPayload);
         } catch {
-          sendJson(connection, {
-            type: "error",
-            payload: { code: "InvalidTicket", message: "Ticket payload is corrupted" }
-          });
+          sendJson(connection, buildErrorEnvelope("InvalidTicket", "Ticket payload is corrupted"));
           connection.close(4003, "Invalid ticket");
           return;
         }
@@ -257,10 +232,7 @@ export async function realtimeRoutes(fastify) {
         const userId = claims.userId;
 
         if (!userId) {
-          sendJson(connection, {
-            type: "error",
-            payload: { code: "InvalidTicket", message: "Ticket subject is missing" }
-          });
+          sendJson(connection, buildErrorEnvelope("InvalidTicket", "Ticket subject is missing"));
           connection.close(4004, "Invalid ticket");
           return;
         }
@@ -282,23 +254,13 @@ export async function realtimeRoutes(fastify) {
         });
         await fastify.redis.expire(`presence:user:${userId}`, 120);
 
-        sendJson(connection, {
-          type: "server.ready",
-          payload: {
-            userId,
-            userName,
-            connectedAt: new Date().toISOString()
-          }
-        });
+        sendJson(connection, buildServerReadyEnvelope(userId, userName));
 
         connection.on("message", async (raw) => {
           try {
             const message = parseWsIncomingEnvelope(raw);
             if (!message) {
-              sendJson(connection, {
-                type: "error",
-                payload: { code: "ValidationError", message: "Invalid ws envelope" }
-              });
+              sendJson(connection, buildErrorEnvelope("ValidationError", "Invalid ws envelope"));
               void incrementMetric("nack_sent");
               return;
             }
@@ -765,10 +727,7 @@ export async function realtimeRoutes(fastify) {
             void incrementMetric("nack_sent");
           } catch (error) {
             fastify.log.error(error, "ws message handling failed");
-            sendJson(connection, {
-              type: "error",
-              payload: { code: "ServerError", message: "Failed to process event" }
-            });
+            sendJson(connection, buildErrorEnvelope("ServerError", "Failed to process event"));
           }
         });
 

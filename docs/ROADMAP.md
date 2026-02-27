@@ -18,6 +18,7 @@
 - ✅ Signaling hardening: серверная валидация размера `payload.signal` + расширенный `smoke:realtime` для relay `call.offer`, `call.reject` и `call.hangup` между двумя WS-клиентами.
 - ✅ Backend TS baseline: добавлен `apps/api/tsconfig.json` (`allowJs+checkJs`) и команда `npm run check:api-types`.
 - ✅ WS protocol typing step: единый parser/guards для incoming envelope и payload string/signal полей в realtime handler.
+- ✅ WS response typing step: `ack/nack/error/server.ready` собираются централизованными protocol builders.
 - 🔄 Начат этап реализации React web app (`apps/web`).
 
 ## Automation plan (next blocks)
