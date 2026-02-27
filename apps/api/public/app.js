@@ -13,6 +13,8 @@ const roomsList = document.querySelector("#rooms-list");
 const wsStatus = document.querySelector("#ws-status");
 const chatLog = document.querySelector("#chat-log");
 const authModeBox = document.querySelector("#auth-mode-box");
+const roomStateBox = document.querySelector("#room-state-box");
+const presenceBox = document.querySelector("#presence-box");
 
 function resolveDefaultSsoBase() {
   const host = window.location.hostname;
@@ -34,6 +36,15 @@ function logChat(message) {
   const line = `[${new Date().toLocaleTimeString()}] ${message}`;
   chatLog.textContent = `${chatLog.textContent}\n${line}`.trim();
   chatLog.scrollTop = chatLog.scrollHeight;
+}
+
+function setRoomState(text) {
+  roomStateBox.textContent = text;
+}
+
+function setPresence(users) {
+  const compact = users.map((user) => `${user.userName} (${user.userId.slice(0, 8)})`);
+  presenceBox.textContent = `presence: ${JSON.stringify(compact)}`;
 }
 
 function updateSessionView() {
@@ -155,7 +166,12 @@ async function loadRooms() {
 
     for (const room of data.rooms) {
       const li = document.createElement("li");
-      li.textContent = `${room.slug} — ${room.title}`;
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "secondary";
+      button.textContent = `${room.slug} — ${room.title}${room.is_member ? " • member" : ""}`;
+      button.addEventListener("click", () => joinRoom(room.slug));
+      li.appendChild(button);
       roomsList.appendChild(li);
     }
 
@@ -165,6 +181,47 @@ async function loadRooms() {
   } catch (error) {
     logEvent(`rooms load failed: ${error.message}`);
   }
+}
+
+async function loadRoomHistory(roomSlug) {
+  if (!state.token || !roomSlug) {
+    return;
+  }
+
+  try {
+    const data = await apiFetch(
+      `/v1/rooms/${encodeURIComponent(roomSlug)}/messages?limit=50`
+    );
+
+    chatLog.textContent = "";
+    for (const message of data.messages) {
+      const userName = message.user_name || message.userName || "unknown";
+      logChat(`${userName}: ${message.text}`);
+    }
+  } catch (error) {
+    logEvent(`history failed: ${error.message}`);
+  }
+}
+
+function joinRoom(slug) {
+  if (!slug) {
+    logEvent("join room: room slug is required");
+    return;
+  }
+
+  document.querySelector("#join-room-slug").value = slug;
+
+  if (!state.ws || state.ws.readyState !== WebSocket.OPEN) {
+    logEvent("join room: ws is not connected");
+    return;
+  }
+
+  state.ws.send(
+    JSON.stringify({
+      type: "room.join",
+      payload: { roomSlug: slug }
+    })
+  );
 }
 
 function connectWs() {
@@ -208,6 +265,20 @@ function connectWs() {
     if (message.type === "room.joined") {
       state.currentRoomSlug = message.payload.roomSlug;
       document.querySelector("#join-room-slug").value = message.payload.roomSlug;
+      setRoomState(
+        `room: ${message.payload.roomSlug} (${message.payload.roomTitle || "untitled"})`
+      );
+      loadRoomHistory(message.payload.roomSlug);
+    }
+
+    if (message.type === "room.presence") {
+      setPresence(message.payload.users || []);
+    }
+
+    if (message.type === "presence.joined" || message.type === "presence.left") {
+      logEvent(
+        `${message.type}: ${message.payload.userName} (count=${message.payload.presenceCount ?? "?"})`
+      );
     }
   };
 }
@@ -237,6 +308,8 @@ document.querySelector("#logout-btn").addEventListener("click", () => {
   }
   roomsList.innerHTML = "<li>Login first</li>";
   chatLog.textContent = "";
+  setRoomState("room: none");
+  setPresence([]);
   updateSessionView();
   logEvent("logout -> sso redirect");
   window.location.href = logoutUrl;
@@ -268,23 +341,7 @@ document.querySelector("#create-room-form").addEventListener("submit", async (ev
 
 document.querySelector("#join-room-btn").addEventListener("click", () => {
   const slug = document.querySelector("#join-room-slug").value.trim();
-
-  if (!slug) {
-    logEvent("join room: room slug is required");
-    return;
-  }
-
-  if (!state.ws || state.ws.readyState !== WebSocket.OPEN) {
-    logEvent("join room: ws is not connected");
-    return;
-  }
-
-  state.ws.send(
-    JSON.stringify({
-      type: "room.join",
-      payload: { roomSlug: slug }
-    })
-  );
+  joinRoom(slug);
 });
 
 document.querySelector("#send-chat-btn").addEventListener("click", () => {
@@ -310,6 +367,8 @@ document.querySelector("#send-chat-btn").addEventListener("click", () => {
 });
 
 (async function bootstrap() {
+  setRoomState("room: none");
+  setPresence([]);
   await loadAuthMode();
   await refreshMe();
   await loadRooms();

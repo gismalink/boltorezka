@@ -18,11 +18,22 @@ export async function roomsRoutes(fastify) {
     {
       preHandler: [requireAuth]
     },
-    async () => {
+    async (request) => {
+      const userId = request.user.sub;
       const result = await db.query(
-        `SELECT id, slug, title, is_public, created_at
-         FROM rooms
+        `SELECT
+           r.id,
+           r.slug,
+           r.title,
+           r.is_public,
+           r.created_at,
+           EXISTS(
+             SELECT 1 FROM room_members rm
+             WHERE rm.room_id = r.id AND rm.user_id = $1
+           ) AS is_member
+         FROM rooms r
          ORDER BY created_at ASC`
+        [userId]
       );
 
       return {
@@ -76,6 +87,67 @@ export async function roomsRoutes(fastify) {
       );
 
       return reply.code(201).send({ room });
+    }
+  );
+
+  fastify.get(
+    "/v1/rooms/:slug/messages",
+    {
+      preHandler: [requireAuth]
+    },
+    async (request, reply) => {
+      const userId = request.user.sub;
+      const slug = String(request.params.slug || "").trim();
+      const limit = Math.min(100, Math.max(1, Number(request.query?.limit || 50)));
+
+      const roomResult = await db.query(
+        "SELECT id, slug, title, is_public FROM rooms WHERE slug = $1",
+        [slug]
+      );
+
+      if (roomResult.rowCount === 0) {
+        return reply.code(404).send({
+          error: "RoomNotFound",
+          message: "Room does not exist"
+        });
+      }
+
+      const room = roomResult.rows[0];
+
+      if (!room.is_public) {
+        const membership = await db.query(
+          "SELECT 1 FROM room_members WHERE room_id = $1 AND user_id = $2",
+          [room.id, userId]
+        );
+
+        if (membership.rowCount === 0) {
+          return reply.code(403).send({
+            error: "Forbidden",
+            message: "You cannot access this room"
+          });
+        }
+      }
+
+      const messagesResult = await db.query(
+        `SELECT
+           m.id,
+           m.room_id,
+           m.user_id,
+           m.body AS text,
+           m.created_at,
+           u.name AS user_name
+         FROM messages m
+         JOIN users u ON u.id = m.user_id
+         WHERE m.room_id = $1
+         ORDER BY m.created_at DESC
+         LIMIT $2`,
+        [room.id, limit]
+      );
+
+      return {
+        room,
+        messages: messagesResult.rows.reverse()
+      };
     }
   );
 }

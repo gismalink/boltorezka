@@ -58,6 +58,28 @@ export async function realtimeRoutes(fastify) {
     }
   };
 
+  const getRoomPresence = (roomId) => {
+    const roomSockets = socketsByRoomId.get(roomId);
+    if (!roomSockets) {
+      return [];
+    }
+
+    const seen = new Set();
+    const users = [];
+
+    for (const socket of roomSockets) {
+      const state = socketState.get(socket);
+      if (!state || seen.has(state.userId)) {
+        continue;
+      }
+
+      seen.add(state.userId);
+      users.push({ userId: state.userId, userName: state.userName });
+    }
+
+    return users;
+  };
+
   const canJoinRoom = async (roomSlug, userId) => {
     const room = await db.query(
       "SELECT id, slug, title, is_public FROM rooms WHERE slug = $1",
@@ -220,6 +242,15 @@ export async function realtimeRoutes(fastify) {
                 }
               });
 
+              sendJson(connection, {
+                type: "room.presence",
+                payload: {
+                  roomId: joinResult.room.id,
+                  roomSlug: joinResult.room.slug,
+                  users: getRoomPresence(joinResult.room.id)
+                }
+              });
+
               broadcastRoom(
                 joinResult.room.id,
                 {
@@ -227,7 +258,8 @@ export async function realtimeRoutes(fastify) {
                   payload: {
                     userId: state.userId,
                     userName: state.userName,
-                    roomSlug: joinResult.room.slug
+                    roomSlug: joinResult.room.slug,
+                    presenceCount: getRoomPresence(joinResult.room.id).length
                   }
                 },
                 connection
@@ -269,6 +301,7 @@ export async function realtimeRoutes(fastify) {
                 payload: {
                   id: chatMessage.id,
                   roomId: chatMessage.room_id,
+                  roomSlug: state.roomSlug,
                   userId: chatMessage.user_id,
                   userName: state.userName,
                   text: chatMessage.body,
@@ -307,7 +340,8 @@ export async function realtimeRoutes(fastify) {
               payload: {
                 userId: state.userId,
                 userName: state.userName,
-                roomSlug: state.roomSlug
+                roomSlug: state.roomSlug,
+                presenceCount: getRoomPresence(state.roomId).length
               }
             });
           }

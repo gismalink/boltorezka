@@ -93,6 +93,17 @@ API endpoints для SSO:
 - `GET /v1/auth/sso/logout?returnUrl=<url>`
 - `GET /v1/auth/me` (с локальным bearer JWT, выданным после `sso/session`)
 
+### Минимальный smoke rooms + chat
+
+1. После SSO-сессии в UI нажать на комнату в списке (`general` по умолчанию).
+2. Убедиться, что подгрузилась история сообщений.
+3. Отправить сообщение в блоке `Realtime Chat`.
+4. Открыть вторую вкладку и повторно войти через SSO — сообщения и presence должны обновляться в реальном времени.
+
+HTTP endpoint для истории:
+
+- `GET /v1/rooms/:slug/messages?limit=50`
+
 ### Минимальный smoke realtime (WebSocket)
 
 1. Получить JWT токен через login/register.
@@ -109,5 +120,17 @@ API endpoints для SSO:
 
 - `test.boltorezka` — тестовый контур
 - `boltorezka` — продовый контур
+
+Для `test` окружения обязательно:
+
+- `AUTH_MODE=sso`
+- `AUTH_SSO_BASE_URL=https://test.auth.gismalink.art`
+- `ALLOWED_RETURN_HOSTS` включает `test.boltorezka`
+
+Для `prod` окружения:
+
+- `AUTH_MODE=sso`
+- `AUTH_SSO_BASE_URL=https://auth.gismalink.art`
+- `ALLOWED_RETURN_HOSTS` включает `boltorezka`
 
 Реальный rollout в эти домены выполнять только по GitOps runbook и с правилом test-first.

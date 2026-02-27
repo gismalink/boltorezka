@@ -43,6 +43,17 @@
    - text message send/receive,
    - voice connect/disconnect.
 
+### SSO-specific smoke
+
+1. `GET /v1/auth/mode` возвращает `mode=sso`.
+2. `POST /v1/auth/register` и `POST /v1/auth/login` возвращают `410 SsoOnly`.
+3. `GET /v1/auth/sso/start?provider=google&returnUrl=https://test.boltorezka/` даёт redirect на `test.auth.gismalink.art`.
+4. После SSO login в UI:
+   - `Complete SSO Session` создаёт локальную JWT-сессию,
+   - доступен список комнат,
+   - вход в `general` работает,
+   - сообщения видны в обеих вкладках в realtime.
+
 ### Domain checks
 
 - Для `test`:
