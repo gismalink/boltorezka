@@ -289,6 +289,16 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
     void incrementMetric("nack_sent");
   };
 
+  const sendValidationNack = (
+    socket: WebSocket,
+    requestId: string | null,
+    eventType: string,
+    message: string
+  ) => {
+    sendNack(socket, requestId, eventType, "ValidationError", message);
+    void incrementMetric("nack_sent");
+  };
+
   fastify.get(
     "/v1/realtime/ws",
     {
@@ -389,14 +399,7 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
                 const roomSlug = getPayloadString(payload, "roomSlug", 80);
 
                 if (!roomSlug) {
-                  sendNack(
-                    connection,
-                    requestId,
-                    eventType,
-                    "ValidationError",
-                    "roomSlug is required"
-                  );
-                  void incrementMetric("nack_sent");
+                  sendValidationNack(connection, requestId, eventType, "roomSlug is required");
                   return;
                 }
 
@@ -474,14 +477,7 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
                 const text = getPayloadString(payload, "text", 20000);
 
                 if (!text) {
-                  sendNack(
-                    connection,
-                    requestId,
-                    eventType,
-                    "ValidationError",
-                    "Message text is required"
-                  );
-                  void incrementMetric("nack_sent");
+                  sendValidationNack(connection, requestId, eventType, "Message text is required");
                   return;
                 }
 
@@ -559,27 +555,13 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
 
               const signal = getCallSignal(payload);
               if (!signal) {
-                sendNack(
-                  connection,
-                  requestId,
-                  eventType,
-                  "ValidationError",
-                  "payload.signal object is required"
-                );
-                void incrementMetric("nack_sent");
+                sendValidationNack(connection, requestId, eventType, "payload.signal object is required");
                 return;
               }
 
               const signalSize = safeJsonSize(signal);
               if (!Number.isFinite(signalSize) || signalSize < 2 || signalSize > 12000) {
-                sendNack(
-                  connection,
-                  requestId,
-                  eventType,
-                  "ValidationError",
-                  "payload.signal size must be between 2 and 12000 bytes"
-                );
-                void incrementMetric("nack_sent");
+                sendValidationNack(connection, requestId, eventType, "payload.signal size must be between 2 and 12000 bytes");
                 return;
               }
 
