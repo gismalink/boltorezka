@@ -10,24 +10,44 @@ body {
 }
 
 .app {
-  max-width: 1080px;
+  max-width: 1400px;
   margin: 0 auto;
-  padding: 20px;
+  padding: 16px;
   display: grid;
-  gap: 12px;
+  gap: 10px;
+}
+
+.app-title {
+  margin: 0;
+  font-size: 28px;
+}
+
+.workspace {
+  display: grid;
+  grid-template-columns: 320px 1fr 320px;
+  gap: 10px;
+  min-height: calc(100vh - 100px);
+}
+
+.leftcolumn,
+.middlecolumn,
+.rightcolumn {
+  display: grid;
+  gap: 10px;
+  align-content: start;
 }
 
 .card {
   background: #161b22;
   border: 1px solid #30363d;
   border-radius: 8px;
-  padding: 12px;
+  padding: 10px;
 }
 
-.split {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
+.compact h2,
+.middle-card h2 {
+  margin-top: 0;
+  margin-bottom: 8px;
 }
 
 .row {
@@ -37,6 +57,11 @@ body {
   flex-wrap: wrap;
 }
 
+.stack {
+  display: grid;
+  gap: 8px;
+}
+
 button,
 input {
   border-radius: 6px;
@@ -44,6 +69,11 @@ input {
   background: #21262d;
   color: #e6edf3;
   padding: 8px;
+}
+
+input {
+  width: 100%;
+  box-sizing: border-box;
 }
 
 button {
@@ -64,7 +94,7 @@ pre {
 }
 
 .log {
-  max-height: 220px;
+  max-height: 320px;
   overflow: auto;
   background: #0d1117;
   border: 1px solid #30363d;
@@ -76,4 +106,74 @@ pre {
 
 .muted {
   color: #8b949e;
+}
+
+.rooms-list,
+.admin-list {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 0;
+  display: grid;
+  gap: 8px;
+}
+
+.room-btn {
+  width: 100%;
+  text-align: left;
+}
+
+.middle-card {
+  height: 100%;
+  display: grid;
+  gap: 8px;
+  align-content: start;
+}
+
+.presence-box {
+  margin: 0;
+}
+
+.chat-log {
+  min-height: 360px;
+  max-height: 60vh;
+  overflow: auto;
+  background: #0d1117;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  padding: 8px;
+  display: grid;
+  gap: 6px;
+}
+
+.chat-line {
+  line-height: 1.4;
+}
+
+.chat-user {
+  color: #7ee787;
+}
+
+.admin-row {
+  justify-content: space-between;
+}
+
+@media (max-width: 1200px) {
+  .workspace {
+    grid-template-columns: 280px 1fr;
+  }
+
+  .rightcolumn {
+    grid-column: 1 / -1;
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 900px) {
+  .workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .rightcolumn {
+    grid-template-columns: 1fr;
+  }
 }

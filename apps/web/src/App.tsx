@@ -229,89 +229,95 @@ export function App() {
   }, [token, user, canCreateRooms, canPromote]);
 
   return (
-    <main className="app">
-      <section className="card">
-        <h1>Boltorezka Web (React)</h1>
-        <p className="muted">auth mode: {authMode}</p>
-      </section>
+    <main className="app legacy-layout">
+      <h1 className="app-title">Boltorezka</h1>
 
-      <section className="card">
-        <div className="row">
-          <button onClick={() => beginSso("google")}>Login via Google</button>
-          <button className="secondary" onClick={() => beginSso("yandex")}>Login via Yandex</button>
-          <button onClick={completeSso}>Complete SSO Session</button>
-          <button className="secondary" onClick={logout}>Logout</button>
-        </div>
-      </section>
+      <div className="workspace">
+        <aside className="leftcolumn">
+          <section className="card compact">
+            <p className="muted">auth mode: {authMode}</p>
+            <div className="row">
+              <button onClick={() => beginSso("google")}>Google</button>
+              <button className="secondary" onClick={() => beginSso("yandex")}>Yandex</button>
+              <button onClick={completeSso}>Complete</button>
+              <button className="secondary" onClick={logout}>Logout</button>
+            </div>
+          </section>
 
-      <section className="card">
-        <h2>Session</h2>
-        <pre>{sessionText}</pre>
-      </section>
+          <section className="card compact">
+            <h2>Session</h2>
+            <pre>{sessionText}</pre>
+          </section>
 
-      <section className="card split">
-        <div>
-          <h2>Rooms</h2>
-          {canCreateRooms ? (
-            <form className="row" onSubmit={createRoom}>
-              <input value={newRoomSlug} onChange={(e) => setNewRoomSlug(e.target.value)} placeholder="slug" />
-              <input value={newRoomTitle} onChange={(e) => setNewRoomTitle(e.target.value)} placeholder="title" />
-              <button type="submit">Create</button>
+          <section className="card compact">
+            <h2>Rooms</h2>
+            {canCreateRooms ? (
+              <form className="stack" onSubmit={createRoom}>
+                <input value={newRoomSlug} onChange={(e) => setNewRoomSlug(e.target.value)} placeholder="slug" />
+                <input value={newRoomTitle} onChange={(e) => setNewRoomTitle(e.target.value)} placeholder="title" />
+                <button type="submit">Create room</button>
+              </form>
+            ) : (
+              <p className="muted">Only admin/super_admin can create rooms.</p>
+            )}
+
+            <ul className="rooms-list">
+              {rooms.map((room) => (
+                <li key={room.id}>
+                  <button className="secondary room-btn" onClick={() => joinRoom(room.slug)}>
+                    {room.slug} — {room.title}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </section>
+        </aside>
+
+        <section className="middlecolumn">
+          <section className="card middle-card">
+            <h2>Chat ({roomSlug})</h2>
+            <pre className="presence-box">presence: {JSON.stringify(presence)}</pre>
+            <div className="chat-log">
+              {messages.map((message) => (
+                <div key={message.id} className="chat-line">
+                  <span className="chat-user">{message.user_name}:</span> {message.text}
+                </div>
+              ))}
+            </div>
+            <form className="row" onSubmit={sendMessage}>
+              <input value={chatText} onChange={(e) => setChatText(e.target.value)} placeholder="Type message" />
+              <button type="submit">Send</button>
             </form>
-          ) : (
-            <p className="muted">Only admin/super_admin can create rooms.</p>
-          )}
-
-          <ul>
-            {rooms.map((room) => (
-              <li key={room.id}>
-                <button className="secondary" onClick={() => joinRoom(room.slug)}>
-                  {room.slug} — {room.title}
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        <div>
-          <h2>Chat ({roomSlug})</h2>
-          <form className="row" onSubmit={sendMessage}>
-            <input value={chatText} onChange={(e) => setChatText(e.target.value)} placeholder="Type message" />
-            <button type="submit">Send</button>
-          </form>
-          <pre>presence: {JSON.stringify(presence)}</pre>
-          <div className="log">
-            {messages.map((message) => (
-              <div key={message.id}>{message.user_name}: {message.text}</div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {canPromote ? (
-        <section className="card">
-          <h2>Admin Users</h2>
-          <ul>
-            {adminUsers.map((item) => (
-              <li key={item.id} className="row">
-                <span>{item.email} ({item.role})</span>
-                {item.role === "user" ? (
-                  <button onClick={() => promote(item.id)}>Promote to admin</button>
-                ) : null}
-              </li>
-            ))}
-          </ul>
+          </section>
         </section>
-      ) : null}
 
-      <section className="card">
-        <h2>Event Log</h2>
-        <div className="log">
-          {eventLog.map((line, index) => (
-            <div key={`${line}-${index}`}>{line}</div>
-          ))}
-        </div>
-      </section>
+        <aside className="rightcolumn">
+          {canPromote ? (
+            <section className="card compact">
+              <h2>Admin Users</h2>
+              <ul className="admin-list">
+                {adminUsers.map((item) => (
+                  <li key={item.id} className="row admin-row">
+                    <span>{item.email} ({item.role})</span>
+                    {item.role === "user" ? (
+                      <button onClick={() => promote(item.id)}>Promote</button>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
+
+          <section className="card compact">
+            <h2>Event Log</h2>
+            <div className="log">
+              {eventLog.map((line, index) => (
+                <div key={`${line}-${index}`}>{line}</div>
+              ))}
+            </div>
+          </section>
+        </aside>
+      </div>
     </main>
   );
 }
