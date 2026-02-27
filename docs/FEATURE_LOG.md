@@ -50,6 +50,7 @@
 - Merge/release guardrails добавлены в workflow/preprod checklist.
 - Quickstart/runbook обновлены на актуальный Boltorezka test deploy flow.
 - ROADMAP отделён от feature history (теперь только plan).
+- Зафиксировано правило: `prod` откладывается до MVP-like readiness.
 
 ### Key commits
 

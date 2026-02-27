@@ -6,6 +6,7 @@
 ## Delivery rules (обязательно)
 
 - Deploy first to `test`.
+- `prod` отложен до состояния, близкого к MVP (MVP-like readiness gate).
 - В `prod` только после:
   - merge в `main`,
   - smoke на `test`,
@@ -161,6 +162,7 @@
 3. [x] Закрыть docs-gap для React как default UI runbook.
 4. [ ] Финализировать OpenAPI/WS schema milestone.
 5. [ ] Подготовить pre-prod decision пакет (evidence + rollback owner/plan).
+6. [ ] Вернуться к `prod` только после достижения MVP-like readiness.
 
 ## KPI MVP
 
