@@ -72,6 +72,12 @@ if [[ "$AUTO_TICKET" == "1" ]]; then
 fi
 
 DAY="$(date -u +%F)"
+
+if [[ ! -d "node_modules/ws" ]]; then
+  echo "[postdeploy-smoke] install npm dependencies (ws missing)"
+  npm install --no-audit --no-fund
+fi
+
 echo "[postdeploy-smoke] realtime metrics before"
 compose exec -T "$REDIS_SERVICE" redis-cli HGETALL "ws:metrics:$DAY" | cat
 
