@@ -27,6 +27,7 @@ export const api = {
   authMode: () => fetchJson<AuthModeResponse>("/v1/auth/mode"),
   ssoSession: () => fetchJson<{ authenticated: boolean; token: string | null; user: User | null }>("/v1/auth/sso/session"),
   me: (token: string) => fetchJson<{ user: User | null }>("/v1/auth/me", token),
+  wsTicket: (token: string) => fetchJson<{ ticket: string; expiresInSec: number }>("/v1/auth/ws-ticket", token),
   rooms: (token: string) => fetchJson<{ rooms: Room[] }>("/v1/rooms", token),
   createRoom: (token: string, input: { slug: string; title: string; is_public: boolean }) =>
     fetchJson<{ room: Room }>("/v1/rooms", token, { method: "POST", body: JSON.stringify(input) }),

@@ -65,44 +65,60 @@ export function App() {
       return;
     }
 
-    const ws = new WebSocket(`${wsBase()}/v1/realtime/ws?token=${encodeURIComponent(token)}`);
-    wsRef.current = ws;
+    let isDisposed = false;
+    let ws: WebSocket | null = null;
 
-    ws.onopen = () => {
-      pushLog("ws connected");
-      ws.send(JSON.stringify({ type: "room.join", payload: { roomSlug } }));
-    };
+    api.wsTicket(token)
+      .then(({ ticket }) => {
+        if (isDisposed) {
+          return;
+        }
 
-    ws.onclose = () => pushLog("ws disconnected");
-    ws.onerror = () => pushLog("ws error");
+        ws = new WebSocket(`${wsBase()}/v1/realtime/ws?ticket=${encodeURIComponent(ticket)}`);
+        wsRef.current = ws;
 
-    ws.onmessage = (event) => {
-      const message = JSON.parse(event.data) as WsIncoming;
-      if (message.type === "chat.message" && message.payload) {
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: message.payload.id || crypto.randomUUID(),
-            room_id: message.payload.roomId || "",
-            user_id: message.payload.userId,
-            text: message.payload.text,
-            created_at: message.payload.createdAt || new Date().toISOString(),
-            user_name: message.payload.userName || "unknown"
+        ws.onopen = () => {
+          pushLog("ws connected");
+          ws?.send(JSON.stringify({ type: "room.join", payload: { roomSlug } }));
+        };
+
+        ws.onclose = () => pushLog("ws disconnected");
+        ws.onerror = () => pushLog("ws error");
+
+        ws.onmessage = (event) => {
+          const message = JSON.parse(event.data) as WsIncoming;
+          if (message.type === "chat.message" && message.payload) {
+            setMessages((prev) => [
+              ...prev,
+              {
+                id: message.payload.id || crypto.randomUUID(),
+                room_id: message.payload.roomId || "",
+                user_id: message.payload.userId,
+                text: message.payload.text,
+                created_at: message.payload.createdAt || new Date().toISOString(),
+                user_name: message.payload.userName || "unknown"
+              }
+            ]);
           }
-        ]);
-      }
-      if (message.type === "room.joined") {
-        setRoomSlug(message.payload.roomSlug);
-      }
-      if (message.type === "room.presence") {
-        const users = (message.payload?.users || []).map(
-          (item: { userName: string; userId: string }) => `${item.userName} (${item.userId.slice(0, 8)})`
-        );
-        setPresence(users);
-      }
-    };
+          if (message.type === "room.joined") {
+            setRoomSlug(message.payload.roomSlug);
+          }
+          if (message.type === "room.presence") {
+            const users = (message.payload?.users || []).map(
+              (item: { userName: string; userId: string }) => `${item.userName} (${item.userId.slice(0, 8)})`
+            );
+            setPresence(users);
+          }
+        };
+      })
+      .catch((error) => {
+        pushLog(`ws ticket failed: ${(error as Error).message}`);
+      });
 
-    return () => ws.close();
+    return () => {
+      isDisposed = true;
+      ws?.close();
+    };
   }, [token]);
 
   useEffect(() => {

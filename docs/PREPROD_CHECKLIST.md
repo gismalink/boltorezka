@@ -33,6 +33,7 @@
    - test содержит `test.boltorezka.gismalink.art`
    - prod содержит `boltorezka.gismalink.art`
 4. Edge ingress содержит маршруты для test/prod Boltorezka.
+6. Realtime WebSocket использует short-lived `ws-ticket` (не bearer token в query).
 
 ## 4) Release decision gate
 

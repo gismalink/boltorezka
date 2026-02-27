@@ -156,7 +156,7 @@ async function completeSsoSession() {
 
     updateSessionView();
     await loadRooms();
-    connectWs();
+    await connectWs();
     logEvent("sso session established");
     return true;
   } catch (error) {
@@ -235,7 +235,7 @@ function joinRoom(slug) {
   );
 }
 
-function connectWs() {
+async function connectWs() {
   if (!state.token) {
     logEvent("cannot connect ws without token");
     return;
@@ -245,8 +245,20 @@ function connectWs() {
     state.ws.close();
   }
 
+  let wsTicket;
+  try {
+    const ticketResponse = await apiFetch("/v1/auth/ws-ticket", {
+      method: "GET",
+      headers: {}
+    });
+    wsTicket = ticketResponse.ticket;
+  } catch (error) {
+    logEvent(`ws ticket failed: ${error.message}`);
+    return;
+  }
+
   const protocol = window.location.protocol === "https:" ? "wss" : "ws";
-  const wsUrl = `${protocol}://${window.location.host}/v1/realtime/ws?token=${encodeURIComponent(state.token)}`;
+  const wsUrl = `${protocol}://${window.location.host}/v1/realtime/ws?ticket=${encodeURIComponent(wsTicket)}`;
 
   state.ws = new WebSocket(wsUrl);
 
@@ -390,7 +402,7 @@ document.querySelector("#send-chat-btn").addEventListener("click", () => {
   await refreshMe();
   await loadRooms();
   if (state.token) {
-    connectWs();
+    await connectWs();
   } else {
     const established = await completeSsoSession();
     if (!established) {

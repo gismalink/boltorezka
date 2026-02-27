@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { randomUUID } from "node:crypto";
 import { db } from "../db.js";
 import { requireAuth } from "../middleware/auth.js";
 import { config } from "../config.js";
@@ -213,6 +214,55 @@ export async function authRoutes(fastify) {
       message: "Local login is disabled. Use SSO login."
     });
   });
+
+  fastify.get(
+    "/v1/auth/ws-ticket",
+    {
+      preHandler: [requireAuth]
+    },
+    async (request, reply) => {
+      const userId = String(request.user?.sub || "").trim();
+      if (!userId) {
+        return reply.code(401).send({
+          error: "Unauthorized",
+          message: "Valid bearer token is required"
+        });
+      }
+
+      const userResult = await db.query(
+        "SELECT id, email, name, role FROM users WHERE id = $1",
+        [userId]
+      );
+
+      if (userResult.rowCount === 0) {
+        return reply.code(401).send({
+          error: "Unauthorized",
+          message: "User does not exist"
+        });
+      }
+
+      const user = userResult.rows[0];
+      const ticket = randomUUID();
+      const expiresInSec = 45;
+
+      await fastify.redis.setEx(
+        `ws:ticket:${ticket}`,
+        expiresInSec,
+        JSON.stringify({
+          userId: user.id,
+          userName: user.name || user.email || "unknown",
+          email: user.email,
+          role: user.role || "user",
+          issuedAt: new Date().toISOString()
+        })
+      );
+
+      return {
+        ticket,
+        expiresInSec
+      };
+    }
+  );
 
   fastify.get(
     "/v1/auth/me",

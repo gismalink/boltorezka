@@ -124,30 +124,55 @@ export async function realtimeRoutes(fastify) {
     async (connection, request) => {
       try {
         const url = new URL(request.url, "http://localhost");
-        const token = url.searchParams.get("token");
+        const ticket = url.searchParams.get("ticket");
 
-        if (!token) {
+        if (!ticket) {
           sendJson(connection, {
             type: "error",
-            payload: { code: "MissingToken", message: "token query param is required" }
+            payload: { code: "MissingTicket", message: "ticket query param is required" }
           });
-          connection.close(4001, "Missing token");
+          connection.close(4001, "Missing ticket");
           return;
         }
 
-        const claims = await fastify.jwt.verify(token);
-        const userId = claims.sub;
+        const ticketKey = `ws:ticket:${ticket}`;
+        const ticketPayload = await fastify.redis.get(ticketKey);
+
+        if (!ticketPayload) {
+          sendJson(connection, {
+            type: "error",
+            payload: { code: "InvalidTicket", message: "WebSocket ticket is invalid or expired" }
+          });
+          connection.close(4002, "Invalid ticket");
+          return;
+        }
+
+        await fastify.redis.del(ticketKey);
+
+        let claims;
+        try {
+          claims = JSON.parse(ticketPayload);
+        } catch {
+          sendJson(connection, {
+            type: "error",
+            payload: { code: "InvalidTicket", message: "Ticket payload is corrupted" }
+          });
+          connection.close(4003, "Invalid ticket");
+          return;
+        }
+
+        const userId = claims.userId;
 
         if (!userId) {
           sendJson(connection, {
             type: "error",
-            payload: { code: "InvalidToken", message: "Token subject is missing" }
+            payload: { code: "InvalidTicket", message: "Ticket subject is missing" }
           });
-          connection.close(4002, "Invalid token");
+          connection.close(4004, "Invalid ticket");
           return;
         }
 
-        const userName = claims.name || claims.email || "unknown";
+        const userName = claims.userName || claims.name || claims.email || "unknown";
 
         socketState.set(connection, {
           userId,
