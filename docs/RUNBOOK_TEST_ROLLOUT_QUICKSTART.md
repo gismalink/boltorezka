@@ -80,6 +80,7 @@
 5) UI smoke:
 
 - открыть `https://test.boltorezka.gismalink.art/`
+- убедиться, что загружается React UI (default path)
 - войти через SSO
 - нажать `Complete SSO Session`
 - войти в `general`

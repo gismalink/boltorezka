@@ -63,6 +63,7 @@ One-command для Boltorezka (deploy + post-deploy smoke):
 3. Автопроверка: `SMOKE_API_URL=https://test.boltorezka.gismalink.art npm run smoke:sso`.
 4. `GET /v1/auth/sso/start?provider=google&returnUrl=https://test.boltorezka.gismalink.art/` даёт redirect на `test.auth.gismalink.art`.
 5. После SSO login в UI:
+   - использовать React UI как default path,
    - `Complete SSO Session` создаёт локальную JWT-сессию,
    - доступен список комнат,
    - вход в `general` работает,

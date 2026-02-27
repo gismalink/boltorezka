@@ -88,8 +88,9 @@ Legacy-файлы перенесены в `legacy/poc/`.
 
 - [ ] Утвердить ADR по signaling/media topology.
 - [ ] Описать OpenAPI + WS event schema (версионирование с `v1`).
-- [ ] Закрыть PR с итоговым TS/realtime hardening в `main`.
-- [ ] Повторить `deploy:test:smoke` уже от `origin/main` и зафиксировать release notes.
+- [x] Закрыть PR с итоговым TS/realtime hardening в `main`.
+- [x] Повторить `deploy:test:smoke` уже от `origin/main` и зафиксировать release notes.
+- [ ] Обновить runbook/checklist для React UI как default smoke path.
 
 ## Что уже можно запустить
 
@@ -102,9 +103,9 @@ Legacy-файлы перенесены в `legacy/poc/`.
 - Rooms endpoints (`list`, `create`)
 - Health endpoint с проверкой DB/Redis
 - Web MVP UI на `http://localhost:8080/` (auth + rooms + realtime chat)
-- React Web MVP (in progress) в `apps/web`
+- React Web UI в `apps/web` (default path для smoke и ручной проверки)
 
-### React web (новый UI)
+### React web (default UI path)
 
 1. Установить зависимости:
 

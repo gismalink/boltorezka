@@ -154,11 +154,11 @@
 
 ## Execution plan (ближайшие действия)
 
-1. [ ] Merge `feature/call-hangup-lifecycle` в `main` после review.
-2. [ ] Выполнить post-merge verify в `test` от `origin/main`:
-   - [ ] `deploy:test:smoke`
-   - [ ] extended realtime relay smoke (`SMOKE_CALL_SIGNAL=1`, 2 ws-ticket)
-3. [ ] Закрыть docs-gap для React как default UI runbook.
+1. [x] Merge `feature/call-hangup-lifecycle` в `main` после review.
+2. [x] Выполнить post-merge verify в `test` от `origin/main`:
+  - [x] `deploy:test:smoke`
+  - [x] extended realtime relay smoke (`SMOKE_CALL_SIGNAL=1`, 2 ws-ticket)
+3. [x] Закрыть docs-gap для React как default UI runbook.
 4. [ ] Финализировать OpenAPI/WS schema milestone.
 5. [ ] Подготовить pre-prod decision пакет (evidence + rollback owner/plan).
 
