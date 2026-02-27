@@ -35,12 +35,14 @@ Legacy-файлы перенесены в `legacy/poc/`.
 - План переписывания: [docs/ROADMAP.md](docs/ROADMAP.md)
 - Тестовый деплой (GitOps): [docs/RUNBOOK_TEST_DEPLOY.md](docs/RUNBOOK_TEST_DEPLOY.md)
 - Быстрый rollout в test (5 команд): [docs/RUNBOOK_TEST_ROLLOUT_QUICKSTART.md](docs/RUNBOOK_TEST_ROLLOUT_QUICKSTART.md)
+- Pre-prod checklist: [docs/PREPROD_CHECKLIST.md](docs/PREPROD_CHECKLIST.md)
 - Workflow checklist (Projo-aligned): [docs/workflow-checklist.md](docs/workflow-checklist.md)
 
 ## Process scripts (Projo-aligned)
 
 - `npm run check` — локальный verify pipeline (`scripts/verify-all.sh`)
 - `SMOKE_API=1 npm run check` — verify + API smoke (`scripts/smoke-api.mjs`)
+- `SMOKE_API_URL=https://test.boltorezka.gismalink.art npm run smoke:sso` — SSO redirect/mode smoke (`scripts/smoke-sso-redirect.mjs`)
 - `npm run deploy:test` — deploy test from git ref (`scripts/examples/deploy-test-from-ref.sh`)
 - `npm run deploy:prod` — deploy prod from git ref (`scripts/examples/deploy-prod-from-ref.sh`)
 

@@ -47,8 +47,9 @@
 
 1. `GET /v1/auth/mode` возвращает `mode=sso`.
 2. `POST /v1/auth/register` и `POST /v1/auth/login` возвращают `410 SsoOnly`.
-3. `GET /v1/auth/sso/start?provider=google&returnUrl=https://test.boltorezka.gismalink.art/` даёт redirect на `test.auth.gismalink.art`.
-4. После SSO login в UI:
+3. Автопроверка: `SMOKE_API_URL=https://test.boltorezka.gismalink.art npm run smoke:sso`.
+4. `GET /v1/auth/sso/start?provider=google&returnUrl=https://test.boltorezka.gismalink.art/` даёт redirect на `test.auth.gismalink.art`.
+5. После SSO login в UI:
    - `Complete SSO Session` создаёт локальную JWT-сессию,
    - доступен список комнат,
    - вход в `general` работает,
@@ -85,6 +86,8 @@ Rollback выполняется только штатным release-script с з
 - получено явное подтверждение на prod rollout.
 
 Никогда не деплоить `prod` напрямую из feature-ветки.
+
+Перед запросом на prod rollout пройди [PREPROD_CHECKLIST.md](PREPROD_CHECKLIST.md).
 
 ## 7) Audit trail
 

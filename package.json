@@ -5,6 +5,7 @@
   "scripts": {
     "check": "bash ./scripts/verify-all.sh",
     "smoke:api": "node ./scripts/smoke-api.mjs",
+    "smoke:sso": "node ./scripts/smoke-sso-redirect.mjs",
     "deploy:test": "bash ./scripts/examples/deploy-test-from-ref.sh \"${TEST_REF:?set TEST_REF=origin/feature/<name>}\" \"${REPO_DIR:-$HOME/boltorezka}\"",
     "deploy:prod": "bash ./scripts/examples/deploy-prod-from-ref.sh \"${PROD_REF:-origin/main}\" \"${REPO_DIR:-$HOME/boltorezka}\""
   }
