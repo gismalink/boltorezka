@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "./api";
-import type { Message, Room, User, WsIncoming } from "./types";
+import type { Message, Room, User, WsIncoming, WsOutgoing } from "./types";
 
 const RECONNECT_DELAYS_MS = [1000, 2000, 4000, 8000, 12000];
 
@@ -27,12 +27,52 @@ export function App() {
   const [newRoomTitle, setNewRoomTitle] = useState("");
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectAttemptRef = useRef(0);
+  const pendingRequestsRef = useRef(new Map<string, { eventType: string }>());
 
   const canCreateRooms = user?.role === "admin" || user?.role === "super_admin";
   const canPromote = user?.role === "super_admin";
 
   const pushLog = (text: string) => {
     setEventLog((prev) => [`${new Date().toLocaleTimeString()} ${text}`, ...prev].slice(0, 30));
+  };
+
+  const markMessageDelivery = (
+    requestId: string,
+    status: "sending" | "delivered" | "failed",
+    patch: Partial<Message> = {}
+  ) => {
+    setMessages((prev) =>
+      prev.map((item) =>
+        item.clientRequestId === requestId ? { ...item, deliveryStatus: status, ...patch } : item
+      )
+    );
+  };
+
+  const sendWsEvent = (
+    eventType: string,
+    payload: Record<string, unknown>,
+    options: { withIdempotency?: boolean } = {}
+  ) => {
+    const socket = wsRef.current;
+    if (!socket || socket.readyState !== WebSocket.OPEN) {
+      pushLog(`ws send skipped: ${eventType} (socket is not open)`);
+      return null;
+    }
+
+    const requestId = crypto.randomUUID();
+    const envelope: WsOutgoing = {
+      type: eventType,
+      requestId,
+      payload
+    };
+
+    if (options.withIdempotency) {
+      envelope.idempotencyKey = requestId;
+    }
+
+    pendingRequestsRef.current.set(requestId, { eventType });
+    socket.send(JSON.stringify(envelope));
+    return requestId;
   };
 
   useEffect(() => {
@@ -47,6 +87,7 @@ export function App() {
       setRooms([]);
       setMessages([]);
       setAdminUsers([]);
+      pendingRequestsRef.current.clear();
       return;
     }
 
@@ -124,19 +165,24 @@ export function App() {
             reconnectAttemptRef.current = 0;
             setWsState("connected");
             pushLog("ws connected");
-            ws?.send(JSON.stringify({ type: "room.join", payload: { roomSlug } }));
+            sendWsEvent("room.join", { roomSlug });
 
             pingInterval = setInterval(() => {
               if (!ws || ws.readyState !== WebSocket.OPEN) {
                 return;
               }
-              ws.send(JSON.stringify({ type: "ping" }));
+              sendWsEvent("ping", {});
             }, 15000);
           };
 
           ws.onclose = () => {
             setWsState("disconnected");
             pushLog("ws disconnected");
+            const pendingIds = Array.from(pendingRequestsRef.current.keys());
+            for (const requestId of pendingIds) {
+              markMessageDelivery(requestId, "failed");
+            }
+            pendingRequestsRef.current.clear();
             clearTimers();
             scheduleReconnect();
           };
@@ -147,18 +193,91 @@ export function App() {
 
           ws.onmessage = (event) => {
             const message = JSON.parse(event.data) as WsIncoming;
-            if (message.type === "chat.message" && message.payload) {
-              setMessages((prev) => [
-                ...prev,
-                {
-                  id: message.payload.id || crypto.randomUUID(),
-                  room_id: message.payload.roomId || "",
-                  user_id: message.payload.userId,
-                  text: message.payload.text,
-                  created_at: message.payload.createdAt || new Date().toISOString(),
-                  user_name: message.payload.userName || "unknown"
+
+            if (message.type === "ack") {
+              const requestId = String(message.payload?.requestId || "").trim();
+              const eventType = String(message.payload?.eventType || "").trim();
+              if (requestId) {
+                pendingRequestsRef.current.delete(requestId);
+                if (eventType === "chat.send") {
+                  markMessageDelivery(requestId, "delivered", {
+                    id: message.payload?.messageId || requestId
+                  });
                 }
-              ]);
+              }
+              return;
+            }
+
+            if (message.type === "nack") {
+              const requestId = String(message.payload?.requestId || "").trim();
+              const eventType = String(message.payload?.eventType || "").trim();
+              const code = String(message.payload?.code || "UnknownError");
+              const nackMessage = String(message.payload?.message || "Request failed");
+              if (requestId) {
+                pendingRequestsRef.current.delete(requestId);
+                if (eventType === "chat.send") {
+                  markMessageDelivery(requestId, "failed");
+                }
+              }
+              pushLog(`nack ${eventType}: ${code} ${nackMessage}`);
+              return;
+            }
+
+            if (message.type === "chat.message" && message.payload) {
+              const senderRequestId =
+                typeof message.payload.senderRequestId === "string"
+                  ? message.payload.senderRequestId
+                  : undefined;
+
+              if (senderRequestId) {
+                pendingRequestsRef.current.delete(senderRequestId);
+                let replaced = false;
+                setMessages((prev) => {
+                  const next = prev.map((item) => {
+                    if (item.clientRequestId !== senderRequestId) {
+                      return item;
+                    }
+                    replaced = true;
+                    return {
+                      ...item,
+                      id: message.payload.id || item.id,
+                      room_id: message.payload.roomId || item.room_id,
+                      user_id: message.payload.userId || item.user_id,
+                      text: message.payload.text || item.text,
+                      created_at: message.payload.createdAt || item.created_at,
+                      user_name: message.payload.userName || item.user_name,
+                      deliveryStatus: "delivered" as const
+                    };
+                  });
+
+                  if (!replaced) {
+                    next.push({
+                      id: message.payload.id || crypto.randomUUID(),
+                      room_id: message.payload.roomId || "",
+                      user_id: message.payload.userId,
+                      text: message.payload.text,
+                      created_at: message.payload.createdAt || new Date().toISOString(),
+                      user_name: message.payload.userName || "unknown",
+                      deliveryStatus: "delivered" as const
+                    });
+                  }
+
+                  return next;
+                });
+              } else {
+                setMessages((prev) => [
+                  ...prev,
+                  {
+                    id: message.payload.id || crypto.randomUUID(),
+                    room_id: message.payload.roomId || "",
+                    user_id: message.payload.userId,
+                    text: message.payload.text,
+                    created_at: message.payload.createdAt || new Date().toISOString(),
+                    user_name: message.payload.userName || "unknown",
+                    deliveryStatus: "delivered" as const
+                  }
+                ]);
+              }
             }
             if (message.type === "room.joined") {
               setRoomSlug(message.payload.roomSlug);
@@ -247,22 +366,34 @@ export function App() {
 
   const sendMessage = (event: FormEvent) => {
     event.preventDefault();
-    if (!chatText.trim() || !wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
+    if (!chatText.trim()) return;
 
-    wsRef.current.send(
-      JSON.stringify({
-        type: "chat.send",
-        payload: { text: chatText.trim() }
-      })
-    );
+    const text = chatText.trim();
+    const requestId = sendWsEvent("chat.send", { text }, { withIdempotency: true });
+    if (!requestId) {
+      return;
+    }
+
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: requestId,
+        room_id: "",
+        user_id: user?.id || "",
+        text,
+        created_at: new Date().toISOString(),
+        user_name: user?.name || "me",
+        clientRequestId: requestId,
+        deliveryStatus: "sending" as const
+      }
+    ]);
+
     setChatText("");
   };
 
   const joinRoom = (slug: string) => {
     setRoomSlug(slug);
-    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify({ type: "room.join", payload: { roomSlug: slug } }));
-    }
+    sendWsEvent("room.join", { roomSlug: slug });
   };
 
   const promote = async (userId: string) => {
@@ -347,6 +478,11 @@ export function App() {
               {messages.map((message) => (
                 <div key={message.id} className="chat-line">
                   <span className="chat-user">{message.user_name}:</span> {message.text}
+                  {message.deliveryStatus ? (
+                    <span className={`delivery delivery-${message.deliveryStatus}`}>
+                      {message.deliveryStatus}
+                    </span>
+                  ) : null}
                 </div>
               ))}
             </div>

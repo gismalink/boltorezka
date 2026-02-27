@@ -6,6 +6,56 @@ function sendJson(socket, payload) {
   }
 }
 
+function normalizeRequestId(value) {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  return trimmed.slice(0, 128);
+}
+
+function sendAck(socket, requestId, eventType, meta = {}) {
+  if (!requestId) {
+    return;
+  }
+
+  sendJson(socket, {
+    type: "ack",
+    payload: {
+      requestId,
+      eventType,
+      ts: Date.now(),
+      ...meta
+    }
+  });
+}
+
+function sendNack(socket, requestId, eventType, code, message) {
+  if (!requestId) {
+    sendJson(socket, {
+      type: "error",
+      payload: { code, message }
+    });
+    return;
+  }
+
+  sendJson(socket, {
+    type: "nack",
+    payload: {
+      requestId,
+      eventType,
+      code,
+      message,
+      ts: Date.now()
+    }
+  });
+}
+
 export async function realtimeRoutes(fastify) {
   const socketsByUserId = new Map();
   const socketsByRoomId = new Map();
@@ -202,6 +252,8 @@ export async function realtimeRoutes(fastify) {
           try {
             const message = JSON.parse(raw.toString());
             const state = socketState.get(connection);
+            const requestId = normalizeRequestId(message?.requestId);
+            const eventType = String(message?.type || "unknown");
 
             if (!state) {
               return;
@@ -214,6 +266,7 @@ export async function realtimeRoutes(fastify) {
                   ts: Date.now()
                 }
               });
+              sendAck(connection, requestId, eventType);
               return;
             }
 
@@ -221,20 +274,20 @@ export async function realtimeRoutes(fastify) {
               const roomSlug = message.payload?.roomSlug;
 
               if (!roomSlug) {
-                sendJson(connection, {
-                  type: "error",
-                  payload: { code: "ValidationError", message: "roomSlug is required" }
-                });
+                sendNack(
+                  connection,
+                  requestId,
+                  eventType,
+                  "ValidationError",
+                  "roomSlug is required"
+                );
                 return;
               }
 
               const joinResult = await canJoinRoom(roomSlug, state.userId);
 
               if (!joinResult.ok) {
-                sendJson(connection, {
-                  type: "error",
-                  payload: { code: joinResult.reason, message: "Cannot join room" }
-                });
+                sendNack(connection, requestId, eventType, joinResult.reason, "Cannot join room");
                 return;
               }
 
@@ -267,6 +320,11 @@ export async function realtimeRoutes(fastify) {
                 }
               });
 
+              sendAck(connection, requestId, eventType, {
+                roomId: joinResult.room.id,
+                roomSlug: joinResult.room.slug
+              });
+
               sendJson(connection, {
                 type: "room.presence",
                 payload: {
@@ -295,21 +353,52 @@ export async function realtimeRoutes(fastify) {
 
             if (message.type === "chat.send") {
               if (!state.roomId) {
-                sendJson(connection, {
-                  type: "error",
-                  payload: { code: "NoActiveRoom", message: "Join a room first" }
-                });
+                sendNack(
+                  connection,
+                  requestId,
+                  eventType,
+                  "NoActiveRoom",
+                  "Join a room first"
+                );
                 return;
               }
 
               const text = message.payload?.text?.trim();
 
               if (!text) {
-                sendJson(connection, {
-                  type: "error",
-                  payload: { code: "ValidationError", message: "Message text is required" }
-                });
+                sendNack(
+                  connection,
+                  requestId,
+                  eventType,
+                  "ValidationError",
+                  "Message text is required"
+                );
                 return;
+              }
+
+              const idempotencyKey = normalizeRequestId(message?.idempotencyKey) || requestId;
+
+              if (idempotencyKey) {
+                const idemRedisKey = `ws:idempotency:${state.userId}:${idempotencyKey}`;
+                const cachedPayloadRaw = await fastify.redis.get(idemRedisKey);
+
+                if (cachedPayloadRaw) {
+                  try {
+                    const cachedPayload = JSON.parse(cachedPayloadRaw);
+                    sendJson(connection, {
+                      type: "chat.message",
+                      payload: cachedPayload
+                    });
+                  } catch {
+                    await fastify.redis.del(idemRedisKey);
+                  }
+
+                  sendAck(connection, requestId, eventType, {
+                    duplicate: true,
+                    idempotencyKey
+                  });
+                  return;
+                }
               }
 
               const inserted = await db.query(
@@ -321,26 +410,39 @@ export async function realtimeRoutes(fastify) {
 
               const chatMessage = inserted.rows[0];
 
+              const chatPayload = {
+                id: chatMessage.id,
+                roomId: chatMessage.room_id,
+                roomSlug: state.roomSlug,
+                userId: chatMessage.user_id,
+                userName: state.userName,
+                text: chatMessage.body,
+                createdAt: chatMessage.created_at,
+                senderRequestId: requestId || null
+              };
+
+              if (idempotencyKey) {
+                await fastify.redis.setEx(
+                  `ws:idempotency:${state.userId}:${idempotencyKey}`,
+                  120,
+                  JSON.stringify(chatPayload)
+                );
+              }
+
               broadcastRoom(state.roomId, {
                 type: "chat.message",
-                payload: {
-                  id: chatMessage.id,
-                  roomId: chatMessage.room_id,
-                  roomSlug: state.roomSlug,
-                  userId: chatMessage.user_id,
-                  userName: state.userName,
-                  text: chatMessage.body,
-                  createdAt: chatMessage.created_at
-                }
+                payload: chatPayload
+              });
+
+              sendAck(connection, requestId, eventType, {
+                messageId: chatMessage.id,
+                idempotencyKey: idempotencyKey || null
               });
 
               return;
             }
 
-            sendJson(connection, {
-              type: "error",
-              payload: { code: "UnknownEvent", message: "Unsupported event type" }
-            });
+            sendNack(connection, requestId, eventType, "UnknownEvent", "Unsupported event type");
           } catch (error) {
             fastify.log.error(error, "ws message handling failed");
             sendJson(connection, {

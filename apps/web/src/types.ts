@@ -27,9 +27,18 @@ export type Message = {
   text: string;
   created_at: string;
   user_name: string;
+  clientRequestId?: string;
+  deliveryStatus?: "sending" | "delivered" | "failed";
 };
 
 export type WsIncoming = {
   type: string;
   payload?: any;
+};
+
+export type WsOutgoing = {
+  type: string;
+  requestId: string;
+  idempotencyKey?: string;
+  payload?: Record<string, unknown>;
 };

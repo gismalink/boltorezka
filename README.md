@@ -149,6 +149,12 @@ HTTP endpoint для истории:
 
 - `GET /v1/rooms/:slug/messages?limit=50`
 
+WS envelope (MVP hardening):
+
+- client -> server: `type`, `requestId`, `payload`, optional `idempotencyKey`
+- server -> client: `ack` / `nack` с `requestId` и `eventType`
+- для `chat.send` используется dedup по `idempotencyKey`
+
 ### Минимальный smoke realtime (WebSocket)
 
 1. Получить JWT токен через login/register.
