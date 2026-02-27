@@ -15,7 +15,9 @@
 
 1. Базовая проверка: `npm run check`.
 2. С API smoke: `SMOKE_API=1 npm run check`.
-3. Ручной smoke критического сценария:
+3. С API+SSO smoke: `SMOKE_API=1 SMOKE_SSO=1 SMOKE_API_URL=https://test.boltorezka.gismalink.art npm run check`.
+4. С полным realtime smoke: `SMOKE_API=1 SMOKE_SSO=1 SMOKE_REALTIME=1 SMOKE_API_URL=https://test.boltorezka.gismalink.art SMOKE_WS_TICKET=<ticket> npm run check`.
+5. Ручной smoke критического сценария:
    - SSO login (Google/Yandex) -> `Complete SSO Session` -> room join -> message send/receive.
 
 Правило итераций:

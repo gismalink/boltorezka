@@ -10,6 +10,8 @@
 - ✅ Room policy: сохраняем текущую (`admin/super_admin` создают комнаты).
 - ✅ Realtime hardening (web): внедрены heartbeat (`ping/pong`) и reconnect backoff в React клиенте.
 - ✅ Realtime protocol hardening: внедрены WS `ack/nack` envelope и `idempotencyKey` для `chat.send`.
+- ✅ Smoke automation: добавлен `smoke:realtime` и флаги `SMOKE_API/SMOKE_SSO/SMOKE_REALTIME` в едином `npm run check`.
+- ✅ Error resilience: добавлен React `ErrorBoundary` с безопасным fallback/reload UX.
 - 🔄 Начат этап реализации React web app (`apps/web`).
 
 ## Phase 0 — Discovery & ADR (Week 1)
