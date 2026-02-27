@@ -58,7 +58,7 @@ Legacy-файлы перенесены в `legacy/poc/`.
 
 - Docker Compose c сервисами `api + postgres + redis`
 - Базовая схема БД и seed комнаты `general`
-- JWT auth endpoints (`register`, `login`, `me`)
+- SSO-only auth flow (Google/Yandex via central auth) + local JWT session exchange
 - Rooms endpoints (`list`, `create`)
 - Health endpoint с проверкой DB/Redis
 - Web MVP UI на `http://localhost:8080/` (auth + rooms + realtime chat)
@@ -77,19 +77,21 @@ Legacy-файлы перенесены в `legacy/poc/`.
 
     - `curl http://localhost:8080/health`
 
-### Минимальный smoke auth
+4. Для локального SSO по умолчанию используется `AUTH_SSO_BASE_URL=http://localhost:3000`.
+   Для test/prod окружений переопредели на `https://test.auth.gismalink.art` / `https://auth.gismalink.art`.
 
-- Register:
+### Минимальный smoke auth (SSO)
 
-   - `curl -X POST http://localhost:8080/v1/auth/register -H 'content-type: application/json' -d '{"email":"demo@boltorezka.local","password":"password123","name":"Demo User"}'`
+1. Открыть UI: `http://localhost:8080/`
+2. Нажать `Login via Google` или `Login via Yandex`.
+3. После возврата нажать `Complete SSO Session`.
 
-- Login:
+API endpoints для SSO:
 
-   - `curl -X POST http://localhost:8080/v1/auth/login -H 'content-type: application/json' -d '{"email":"demo@boltorezka.local","password":"password123"}'`
-
-- Me (с bearer token):
-
-   - `curl http://localhost:8080/v1/auth/me -H 'authorization: Bearer <token>'`
+- `GET /v1/auth/sso/start?provider=google|yandex&returnUrl=<url>`
+- `GET /v1/auth/sso/session`
+- `GET /v1/auth/sso/logout?returnUrl=<url>`
+- `GET /v1/auth/me` (с локальным bearer JWT, выданным после `sso/session`)
 
 ### Минимальный smoke realtime (WebSocket)
 

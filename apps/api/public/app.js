@@ -2,7 +2,9 @@ const state = {
   token: localStorage.getItem("boltorezka_token") || "",
   user: null,
   ws: null,
-  currentRoomSlug: null
+  currentRoomSlug: null,
+  authMode: "unknown",
+  ssoBaseUrl: ""
 };
 
 const sessionBox = document.querySelector("#session-box");
@@ -10,6 +12,18 @@ const eventLog = document.querySelector("#event-log");
 const roomsList = document.querySelector("#rooms-list");
 const wsStatus = document.querySelector("#ws-status");
 const chatLog = document.querySelector("#chat-log");
+const authModeBox = document.querySelector("#auth-mode-box");
+
+function resolveDefaultSsoBase() {
+  const host = window.location.hostname;
+  const isLocal = host === "localhost" || host === "127.0.0.1";
+  if (isLocal) {
+    return "http://localhost:3000";
+  }
+  return host.startsWith("test.")
+    ? "https://test.auth.gismalink.art"
+    : "https://auth.gismalink.art";
+}
 
 function logEvent(message) {
   const line = `[${new Date().toLocaleTimeString()}] ${message}`;
@@ -81,6 +95,54 @@ async function refreshMe() {
   updateSessionView();
 }
 
+async function loadAuthMode() {
+  try {
+    const data = await apiFetch("/v1/auth/mode", {
+      headers: {}
+    });
+    state.authMode = data.mode || "sso";
+    state.ssoBaseUrl = data.ssoBaseUrl || resolveDefaultSsoBase();
+  } catch {
+    state.authMode = "sso";
+    state.ssoBaseUrl = resolveDefaultSsoBase();
+  }
+
+  authModeBox.textContent = `auth mode: ${state.authMode} | sso: ${state.ssoBaseUrl}`;
+}
+
+function beginSso(provider) {
+  const returnUrl = window.location.href;
+  const startPath = `/v1/auth/sso/start?provider=${encodeURIComponent(provider)}&returnUrl=${encodeURIComponent(returnUrl)}`;
+  window.location.href = startPath;
+}
+
+async function completeSsoSession() {
+  try {
+    const data = await apiFetch("/v1/auth/sso/session", {
+      method: "GET",
+      headers: {}
+    });
+
+    if (!data.authenticated || !data.token) {
+      logEvent("sso session not authenticated yet");
+      return false;
+    }
+
+    state.token = data.token;
+    state.user = data.user;
+    localStorage.setItem("boltorezka_token", state.token);
+
+    updateSessionView();
+    await loadRooms();
+    connectWs();
+    logEvent("sso session established");
+    return true;
+  } catch (error) {
+    logEvent(`sso session failed: ${error.message}`);
+    return false;
+  }
+}
+
 async function loadRooms() {
   if (!state.token) {
     roomsList.innerHTML = "<li>Login first</li>";
@@ -150,58 +212,21 @@ function connectWs() {
   };
 }
 
-document.querySelector("#register-form").addEventListener("submit", async (event) => {
-  event.preventDefault();
-
-  const name = document.querySelector("#register-name").value.trim();
-  const email = document.querySelector("#register-email").value.trim();
-  const password = document.querySelector("#register-password").value;
-
-  try {
-    const data = await apiFetch("/v1/auth/register", {
-      method: "POST",
-      body: JSON.stringify({ name, email, password })
-    });
-
-    state.token = data.token;
-    localStorage.setItem("boltorezka_token", state.token);
-    state.user = data.user;
-
-    updateSessionView();
-    await loadRooms();
-    connectWs();
-    logEvent("register success");
-  } catch (error) {
-    logEvent(`register failed: ${error.message}`);
-  }
+document.querySelector("#sso-google-btn").addEventListener("click", () => {
+  beginSso("google");
 });
 
-document.querySelector("#login-form").addEventListener("submit", async (event) => {
-  event.preventDefault();
+document.querySelector("#sso-yandex-btn").addEventListener("click", () => {
+  beginSso("yandex");
+});
 
-  const email = document.querySelector("#login-email").value.trim();
-  const password = document.querySelector("#login-password").value;
-
-  try {
-    const data = await apiFetch("/v1/auth/login", {
-      method: "POST",
-      body: JSON.stringify({ email, password })
-    });
-
-    state.token = data.token;
-    localStorage.setItem("boltorezka_token", state.token);
-    state.user = data.user;
-
-    updateSessionView();
-    await loadRooms();
-    connectWs();
-    logEvent("login success");
-  } catch (error) {
-    logEvent(`login failed: ${error.message}`);
-  }
+document.querySelector("#sso-complete-btn").addEventListener("click", async () => {
+  await completeSsoSession();
 });
 
 document.querySelector("#logout-btn").addEventListener("click", () => {
+  const returnUrl = window.location.href;
+  const logoutUrl = `/v1/auth/sso/logout?returnUrl=${encodeURIComponent(returnUrl)}`;
   localStorage.removeItem("boltorezka_token");
   state.token = "";
   state.user = null;
@@ -213,7 +238,8 @@ document.querySelector("#logout-btn").addEventListener("click", () => {
   roomsList.innerHTML = "<li>Login first</li>";
   chatLog.textContent = "";
   updateSessionView();
-  logEvent("logout");
+  logEvent("logout -> sso redirect");
+  window.location.href = logoutUrl;
 });
 
 document.querySelector("#create-room-form").addEventListener("submit", async (event) => {
@@ -284,9 +310,15 @@ document.querySelector("#send-chat-btn").addEventListener("click", () => {
 });
 
 (async function bootstrap() {
+  await loadAuthMode();
   await refreshMe();
   await loadRooms();
   if (state.token) {
     connectWs();
+  } else {
+    const established = await completeSsoSession();
+    if (!established) {
+      logEvent("click 'Login via Google/Yandex', then 'Complete SSO Session'");
+    }
   }
 })();

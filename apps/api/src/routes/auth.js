@@ -1,125 +1,211 @@
-import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { db } from "../db.js";
 import { requireAuth } from "../middleware/auth.js";
+import { config } from "../config.js";
 
-const registerSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(8),
-  name: z.string().min(2).max(120)
-});
+const ssoProviderSchema = z.enum(["google", "yandex"]);
 
-const loginSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(8)
-});
+const safeHostSet = new Set(config.allowedReturnHosts);
 
-export async function authRoutes(fastify) {
-  fastify.post("/v1/auth/register", async (request, reply) => {
-    const parsed = registerSchema.safeParse(request.body);
+function resolveSafeReturnUrl(value, request) {
+  if (!value || typeof value !== "string") {
+    return "/";
+  }
 
-    if (!parsed.success) {
-      return reply.code(400).send({
-        error: "ValidationError",
-        issues: parsed.error.flatten()
-      });
+  if (value.startsWith("/")) {
+    return value;
+  }
+
+  try {
+    const parsed = new URL(value);
+    const host = parsed.hostname.toLowerCase();
+    const requestHost = String(request.headers.host || "")
+      .split(":")[0]
+      .toLowerCase();
+
+    if (host === requestHost || safeHostSet.has(host)) {
+      return parsed.toString();
     }
+  } catch {
+    return "/";
+  }
 
-    const { email, password, name } = parsed.data;
-    const normalizedEmail = email.toLowerCase();
+  return "/";
+}
 
-    const existingUser = await db.query("SELECT id FROM users WHERE email = $1", [
-      normalizedEmail
-    ]);
+async function proxyAuthGetJson(request, path) {
+  const url = `${config.authSsoBaseUrl}${path}`;
 
-    if (existingUser.rowCount > 0) {
-      return reply.code(409).send({
-        error: "Conflict",
-        message: "Email already in use"
-      });
-    }
-
-    const passwordHash = await bcrypt.hash(password, 12);
-
-    const result = await db.query(
-      `INSERT INTO users (email, password_hash, name)
-       VALUES ($1, $2, $3)
-       RETURNING id, email, name, created_at`,
-      [normalizedEmail, passwordHash, name]
-    );
-
-    const user = result.rows[0];
-
-    const token = await reply.jwtSign(
-      {
-        sub: user.id,
-        email: user.email,
-        name: user.name
-      },
-      {
-        expiresIn: fastify.jwtExpiresIn
-      }
-    );
-
-    return reply.code(201).send({ user, token });
+  const response = await fetch(url, {
+    method: "GET",
+    headers: {
+      cookie: request.headers.cookie || "",
+      accept: "application/json",
+      "user-agent": String(request.headers["user-agent"] || "")
+    },
+    redirect: "manual"
   });
 
-  fastify.post("/v1/auth/login", async (request, reply) => {
-    const parsed = loginSchema.safeParse(request.body);
+  const contentType = response.headers.get("content-type") || "";
+  const bodyText = await response.text();
 
-    if (!parsed.success) {
+  if (contentType.includes("application/json")) {
+    try {
+      return {
+        ok: response.ok,
+        status: response.status,
+        data: JSON.parse(bodyText)
+      };
+    } catch {
+      return {
+        ok: false,
+        status: response.status,
+        data: { error: "InvalidJsonFromSso" }
+      };
+    }
+  }
+
+  return {
+    ok: false,
+    status: response.status,
+    data: { error: bodyText || "UnexpectedSsoResponse" }
+  };
+}
+
+async function upsertSsoUser(profile) {
+  const normalizedEmail = String(profile?.email || "")
+    .trim()
+    .toLowerCase();
+
+  if (!normalizedEmail) {
+    throw new Error("SSO profile does not contain email");
+  }
+
+  const displayName =
+    String(profile?.username || "").trim() || normalizedEmail.split("@")[0] || "SSO User";
+
+  const existing = await db.query(
+    "SELECT id, email, name, created_at FROM users WHERE email = $1",
+    [normalizedEmail]
+  );
+
+  if (existing.rowCount > 0) {
+    const updated = await db.query(
+      `UPDATE users
+       SET name = $2
+       WHERE email = $1
+       RETURNING id, email, name, created_at`,
+      [normalizedEmail, displayName]
+    );
+
+    return updated.rows[0];
+  }
+
+  const created = await db.query(
+    `INSERT INTO users (email, password_hash, name)
+     VALUES ($1, $2, $3)
+     RETURNING id, email, name, created_at`,
+    [normalizedEmail, "__sso_only__", displayName]
+  );
+
+  return created.rows[0];
+}
+
+export async function authRoutes(fastify) {
+  fastify.get("/v1/auth/mode", async () => {
+    return {
+      mode: config.authMode,
+      ssoBaseUrl: config.authSsoBaseUrl
+    };
+  });
+
+  fastify.get("/v1/auth/sso/start", async (request, reply) => {
+    const providerRaw = String(request.query?.provider || "google").toLowerCase();
+    const parsedProvider = ssoProviderSchema.safeParse(providerRaw);
+
+    if (!parsedProvider.success) {
       return reply.code(400).send({
         error: "ValidationError",
-        issues: parsed.error.flatten()
+        message: "provider must be google or yandex"
       });
     }
 
-    const { email, password } = parsed.data;
-    const normalizedEmail = email.toLowerCase();
+    const returnUrl = resolveSafeReturnUrl(String(request.query?.returnUrl || "/"), request);
+    const redirectUrl = `${config.authSsoBaseUrl}/auth/${parsedProvider.data}?returnUrl=${encodeURIComponent(returnUrl)}`;
+    return reply.redirect(redirectUrl, 302);
+  });
 
-    const result = await db.query(
-      "SELECT id, email, name, password_hash, created_at FROM users WHERE email = $1",
-      [normalizedEmail]
-    );
+  fastify.get("/v1/auth/sso/logout", async (request, reply) => {
+    const returnUrl = resolveSafeReturnUrl(String(request.query?.returnUrl || "/"), request);
+    const redirectUrl = `${config.authSsoBaseUrl}/auth/logout?returnUrl=${encodeURIComponent(returnUrl)}`;
+    return reply.redirect(redirectUrl, 302);
+  });
 
-    const user = result.rows[0];
+  fastify.get("/v1/auth/sso/session", async (request, reply) => {
+    try {
+      const ssoTokenResult = await proxyAuthGetJson(request, "/auth/get-token");
 
-    if (!user) {
-      return reply.code(401).send({
-        error: "Unauthorized",
-        message: "Invalid email or password"
-      });
-    }
-
-    const isPasswordValid = await bcrypt.compare(password, user.password_hash);
-
-    if (!isPasswordValid) {
-      return reply.code(401).send({
-        error: "Unauthorized",
-        message: "Invalid email or password"
-      });
-    }
-
-    const token = await reply.jwtSign(
-      {
-        sub: user.id,
-        email: user.email,
-        name: user.name
-      },
-      {
-        expiresIn: fastify.jwtExpiresIn
+      if (!ssoTokenResult.ok || !ssoTokenResult.data?.authenticated) {
+        return {
+          authenticated: false,
+          user: null,
+          token: null
+        };
       }
-    );
 
-    return {
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        created_at: user.created_at
-      },
-      token
-    };
+      const currentUserResult = await proxyAuthGetJson(request, "/auth/current-user");
+      const ssoUser = currentUserResult.data?.user || {
+        email: ssoTokenResult.data?.email,
+        username: ssoTokenResult.data?.username
+      };
+
+      const localUser = await upsertSsoUser(ssoUser);
+
+      const token = await reply.jwtSign(
+        {
+          sub: localUser.id,
+          email: localUser.email,
+          name: localUser.name,
+          authMode: "sso"
+        },
+        {
+          expiresIn: fastify.jwtExpiresIn
+        }
+      );
+
+      return {
+        authenticated: true,
+        user: localUser,
+        token,
+        sso: {
+          id: ssoUser.id || null,
+          email: ssoUser.email || null,
+          username: ssoUser.username || null,
+          role: ssoUser.role || ssoTokenResult.data?.role || "user"
+        }
+      };
+    } catch (error) {
+      fastify.log.error(error, "sso session exchange failed");
+      return reply.code(503).send({
+        authenticated: false,
+        error: "SsoUnavailable",
+        message: "Central SSO is temporarily unavailable"
+      });
+    }
+  });
+
+  fastify.post("/v1/auth/register", async (_request, reply) => {
+    return reply.code(410).send({
+      error: "SsoOnly",
+      message: "Local registration is disabled. Use SSO login."
+    });
+  });
+
+  fastify.post("/v1/auth/login", async (_request, reply) => {
+    return reply.code(410).send({
+      error: "SsoOnly",
+      message: "Local login is disabled. Use SSO login."
+    });
   });
 
   fastify.get(
