@@ -31,6 +31,7 @@
 One-command для Boltorezka (deploy + post-deploy smoke):
 
 - `ssh mac-mini 'cd ~/srv/boltorezka && TEST_REF=origin/<feature-branch> npm run deploy:test:smoke'`
+- `ssh mac-mini 'cd ~/srv/boltorezka && AUTO_ROLLBACK_ON_FAIL=1 AUTO_ROLLBACK_SMOKE=1 TEST_REF=origin/<branch> npm run deploy:test:smoke'`
 
 Для исключения при деплое из `main` (только по явному решению):
 
@@ -89,6 +90,8 @@ Rollback обязателен, если:
 - потеря/дублирование сообщений выше допустимого порога.
 
 Rollback выполняется только штатным release-script с записью в release log.
+
+При включённых флагах rollback policy (`AUTO_ROLLBACK_ON_FAIL=1`, опционально `AUTO_ROLLBACK_SMOKE=1`) команда `deploy:test:smoke` может автоматически запустить rollback после smoke fail.
 
 ## 6) Promotion to prod
 

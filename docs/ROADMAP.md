@@ -20,8 +20,10 @@
 - [x] One-command test rollout + smoke (`deploy:test:smoke`)
 - [x] Auto release-log entries for test rollout result
 - [x] Post-deploy smoke summary artifact (`.deploy/last-smoke-summary.env`)
-- [ ] CI runner for `SMOKE_API+SMOKE_SSO+SMOKE_REALTIME`
-- [ ] Auto rollback trigger policy on smoke fail
+- [x] CI runner for `SMOKE_API+SMOKE_SSO+SMOKE_REALTIME`
+- [x] Auto rollback trigger policy on smoke fail
+
+Policy flags: `AUTO_ROLLBACK_ON_FAIL=1`, `AUTO_ROLLBACK_SMOKE=1`.
 
 ## Phase 0 — Discovery & ADR (Week 1)
 

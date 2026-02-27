@@ -1,0 +1,33 @@
+name: test-smoke
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '20 3 * * *'
+
+concurrency:
+  group: test-smoke-workflow
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run test smoke
+        env:
+          SMOKE_API_URL: ${{ vars.TEST_SMOKE_API_URL || 'https://test.boltorezka.gismalink.art' }}
+          SMOKE_BEARER_TOKEN: ${{ secrets.TEST_SMOKE_BEARER_TOKEN }}
+        run: SMOKE_API=1 SMOKE_SSO=1 SMOKE_REALTIME=1 npm run check
