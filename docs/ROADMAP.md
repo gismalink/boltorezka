@@ -26,6 +26,7 @@
 - ✅ API TS incremental step: добавлен `apps/api/src/config.types.ts` и типизирован `config.js` через JSDoc type imports.
 - ✅ WS contract typing expanded: добавлены payload type aliases (chat/room/presence/pong) в `ws-protocol.types.ts`.
 - ✅ DB contract typing step: добавлен `apps/api/src/db.types.ts`, ключевые `rows[0]/rows` в routes и middleware аннотированы через JSDoc types.
+- ✅ API DTO typing step: добавлен `apps/api/src/api-contract.types.ts`, response DTO для `auth/rooms/admin` подключены через JSDoc.
 - 🔄 Начат этап реализации React web app (`apps/web`).
 
 ## Automation plan (next blocks)

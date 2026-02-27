@@ -4,6 +4,9 @@ import { loadCurrentUser, requireAuth, requireRole } from "../middleware/auth.js
 /** @typedef {import("../db.types.ts").RoomListRow} RoomListRow */
 /** @typedef {import("../db.types.ts").RoomRow} RoomRow */
 /** @typedef {import("../db.types.ts").RoomMessageRow} RoomMessageRow */
+/** @typedef {import("../api-contract.types.ts").RoomsListResponse} RoomsListResponse */
+/** @typedef {import("../api-contract.types.ts").RoomCreateResponse} RoomCreateResponse */
+/** @typedef {import("../api-contract.types.ts").RoomMessagesResponse} RoomMessagesResponse */
 
 const createRoomSchema = z.object({
   slug: z
@@ -39,9 +42,9 @@ export async function roomsRoutes(fastify) {
         [userId]
       );
 
-      return {
+      return /** @type {RoomsListResponse} */ ({
         rooms: /** @type {RoomListRow[]} */ (result.rows)
-      };
+      });
     }
   );
 
@@ -89,7 +92,7 @@ export async function roomsRoutes(fastify) {
         [room.id, createdBy]
       );
 
-      return reply.code(201).send({ room });
+      return reply.code(201).send(/** @type {RoomCreateResponse} */ ({ room }));
     }
   );
 
@@ -147,10 +150,10 @@ export async function roomsRoutes(fastify) {
         [room.id, limit]
       );
 
-      return {
+      return /** @type {RoomMessagesResponse} */ ({
         room,
         messages: /** @type {RoomMessageRow[]} */ (messagesResult.rows).reverse()
-      };
+      });
     }
   );
 }

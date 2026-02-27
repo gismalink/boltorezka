@@ -5,6 +5,10 @@ import { requireAuth } from "../middleware/auth.js";
 import { config } from "../config.js";
 /** @typedef {import("../db.types.ts").UserRow} UserRow */
 /** @typedef {import("../db.types.ts").UserCompactRow} UserCompactRow */
+/** @typedef {import("../api-contract.types.ts").AuthModeResponse} AuthModeResponse */
+/** @typedef {import("../api-contract.types.ts").SsoSessionResponse} SsoSessionResponse */
+/** @typedef {import("../api-contract.types.ts").WsTicketResponse} WsTicketResponse */
+/** @typedef {import("../api-contract.types.ts").MeResponse} MeResponse */
 
 const ssoProviderSchema = z.enum(["google", "yandex"]);
 
@@ -121,10 +125,10 @@ async function upsertSsoUser(profile) {
 
 export async function authRoutes(fastify) {
   fastify.get("/v1/auth/mode", async () => {
-    return {
+    return /** @type {AuthModeResponse} */ ({
       mode: config.authMode,
       ssoBaseUrl: config.authSsoBaseUrl
-    };
+    });
   });
 
   fastify.get("/v1/auth/sso/start", async (request, reply) => {
@@ -154,11 +158,11 @@ export async function authRoutes(fastify) {
       const ssoTokenResult = await proxyAuthGetJson(request, "/auth/get-token");
 
       if (!ssoTokenResult.ok || !ssoTokenResult.data?.authenticated) {
-        return {
+        return /** @type {SsoSessionResponse} */ ({
           authenticated: false,
           user: null,
           token: null
-        };
+        });
       }
 
       const currentUserResult = await proxyAuthGetJson(request, "/auth/current-user");
@@ -182,7 +186,7 @@ export async function authRoutes(fastify) {
         }
       );
 
-      return {
+      return /** @type {SsoSessionResponse} */ ({
         authenticated: true,
         user: localUser,
         token,
@@ -192,7 +196,7 @@ export async function authRoutes(fastify) {
           username: ssoUser.username || null,
           role: localUser.role || ssoUser.role || ssoTokenResult.data?.role || "user"
         }
-      };
+      });
     } catch (error) {
       fastify.log.error(error, "sso session exchange failed");
       return reply.code(503).send({
@@ -259,10 +263,10 @@ export async function authRoutes(fastify) {
         })
       );
 
-      return {
+      return /** @type {WsTicketResponse} */ ({
         ticket,
         expiresInSec
-      };
+      });
     }
   );
 
@@ -279,14 +283,14 @@ export async function authRoutes(fastify) {
       );
 
       if (result.rowCount === 0) {
-        return {
+        return /** @type {MeResponse} */ ({
           user: null
-        };
+        });
       }
 
-      return {
+      return /** @type {MeResponse} */ ({
         user: /** @type {UserRow} */ (result.rows[0])
-      };
+      });
     }
   );
 }

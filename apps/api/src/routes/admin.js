@@ -2,6 +2,8 @@ import { z } from "zod";
 import { db } from "../db.js";
 import { loadCurrentUser, requireAuth, requireRole } from "../middleware/auth.js";
 /** @typedef {import("../db.types.ts").UserRow} UserRow */
+/** @typedef {import("../api-contract.types.ts").AdminUsersResponse} AdminUsersResponse */
+/** @typedef {import("../api-contract.types.ts").PromoteUserResponse} PromoteUserResponse */
 
 const promoteSchema = z.object({
   role: z.literal("admin").default("admin")
@@ -20,9 +22,9 @@ export async function adminRoutes(fastify) {
          ORDER BY created_at ASC`
       );
 
-      return {
+      return /** @type {AdminUsersResponse} */ ({
         users: /** @type {UserRow[]} */ (result.rows)
-      };
+      });
     }
   );
 
@@ -64,7 +66,7 @@ export async function adminRoutes(fastify) {
       const targetUser = /** @type {UserRow} */ (targetResult.rows[0]);
 
       if (targetUser.role === "super_admin") {
-        return reply.code(200).send({ user: targetUser });
+        return reply.code(200).send(/** @type {PromoteUserResponse} */ ({ user: targetUser }));
       }
 
       const updated = await db.query(
@@ -75,9 +77,9 @@ export async function adminRoutes(fastify) {
         [userId]
       );
 
-      return {
+      return /** @type {PromoteUserResponse} */ ({
         user: /** @type {UserRow} */ (updated.rows[0])
-      };
+      });
     }
   );
 }
