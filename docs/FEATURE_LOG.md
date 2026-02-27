@@ -76,6 +76,16 @@
 
 ### Key commits
 
+- `30d49a4` feat(api): add cursor pagination for room message history
 - `3fa3817` docs: add merge and release pipeline reminder checklist
 - `c68378a` docs: add merge and post-merge guardrails to preprod checklist
 - `7ba3a90` docs: synchronize architecture, runbooks, and next-step plan
+
+### Operational evidence
+
+- Local checks: `npm run check:api-types && npm run check` — PASS.
+- Test rollout/smoke: `TEST_REF=origin/main ALLOW_TEST_FROM_MAIN=1 npm run deploy:test:smoke` — PASS.
+- Extended realtime relay smoke (`SMOKE_CALL_SIGNAL=1` + 2 ws-ticket) — PASS:
+  - `callSignalRelayed=true`
+  - `callRejectRelayed=true`
+  - `callHangupRelayed=true`
