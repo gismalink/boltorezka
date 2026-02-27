@@ -9,6 +9,7 @@ import type {
   PresenceJoinedPayload,
   PresenceLeftPayload,
   WsIncomingEnvelope,
+  WsIncomingKnownEnvelope,
   WsIncomingPayload,
   WsOutgoingEnvelope
 } from "./ws-protocol.types.ts";
@@ -86,6 +87,22 @@ export function parseWsIncomingEnvelope(raw: unknown): WsIncomingEnvelope | null
   }
 
   return envelope;
+}
+
+export function asKnownWsIncomingEnvelope(
+  envelope: WsIncomingEnvelope
+): WsIncomingKnownEnvelope | null {
+  if (
+    envelope.type === "ping" ||
+    envelope.type === "room.join" ||
+    envelope.type === "chat.send" ||
+    isCallSignalEventType(envelope.type) ||
+    isCallTerminalEventType(envelope.type)
+  ) {
+    return envelope as WsIncomingKnownEnvelope;
+  }
+
+  return null;
 }
 
 /**

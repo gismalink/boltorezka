@@ -3,6 +3,7 @@ import type { RawData, WebSocket } from "ws";
 import { db } from "../db.js";
 import type { InsertedMessageRow, RoomRow } from "../db.types.ts";
 import {
+  asKnownWsIncomingEnvelope,
   buildAckEnvelope,
   buildCallSignalRelayEnvelope,
   buildCallTerminalRelayEnvelope,
@@ -17,7 +18,6 @@ import {
   buildServerReadyEnvelope,
   getCallSignal,
   getPayloadString,
-  isCallSignalEventType,
   parseWsIncomingEnvelope
 } from "../ws-protocol.js";
 type SocketState = {
@@ -297,190 +297,200 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
             const requestId = normalizeRequestId(message.requestId);
             const eventType = message.type;
             const payload = message.payload;
+            const knownMessage = asKnownWsIncomingEnvelope(message);
 
             if (!state) {
               return;
             }
 
-            if (message.type === "ping") {
-              sendJson(connection, buildPongEnvelope());
-              sendAck(connection, requestId, eventType);
-              void incrementMetric("ack_sent");
+            if (!knownMessage) {
+              sendNack(connection, requestId, eventType, "UnknownEvent", "Unsupported event type");
+              void incrementMetric("nack_sent");
               return;
             }
 
-            if (message.type === "room.join") {
-              const roomSlug = getPayloadString(payload, "roomSlug", 80);
-
-              if (!roomSlug) {
-                sendNack(
-                  connection,
-                  requestId,
-                  eventType,
-                  "ValidationError",
-                  "roomSlug is required"
-                );
-                void incrementMetric("nack_sent");
+            switch (knownMessage.type) {
+              case "ping": {
+                sendJson(connection, buildPongEnvelope());
+                sendAck(connection, requestId, eventType);
+                void incrementMetric("ack_sent");
                 return;
               }
 
-              const joinResult = await canJoinRoom(roomSlug, state.userId);
+              case "room.join": {
+                const roomSlug = getPayloadString(payload, "roomSlug", 80);
 
-              if (!joinResult.ok) {
-                sendNack(
-                  connection,
-                  requestId,
-                  eventType,
-                  joinResult.reason || "Forbidden",
-                  "Cannot join room"
-                );
-                void incrementMetric("nack_sent");
-                return;
-              }
-
-              if (state.roomId) {
-                detachRoomSocket(state.roomId, connection);
-                broadcastRoom(
-                  state.roomId,
-                  buildPresenceLeftEnvelope(state.userId, state.userName, state.roomSlug, 0),
-                  connection
-                );
-              }
-
-              state.roomId = joinResult.room.id;
-              state.roomSlug = joinResult.room.slug;
-              attachRoomSocket(joinResult.room.id, connection);
-
-              sendJson(
-                connection,
-                buildRoomJoinedEnvelope(
-                  joinResult.room.id,
-                  joinResult.room.slug,
-                  joinResult.room.title
-                )
-              );
-
-              sendAck(connection, requestId, eventType, {
-                roomId: joinResult.room.id,
-                roomSlug: joinResult.room.slug
-              });
-              void incrementMetric("ack_sent");
-
-              sendJson(
-                connection,
-                buildRoomPresenceEnvelope(
-                  joinResult.room.id,
-                  joinResult.room.slug,
-                  getRoomPresence(joinResult.room.id)
-                )
-              );
-
-              broadcastRoom(
-                joinResult.room.id,
-                buildPresenceJoinedEnvelope(
-                  state.userId,
-                  state.userName,
-                  joinResult.room.slug,
-                  getRoomPresence(joinResult.room.id).length
-                ),
-                connection
-              );
-
-              return;
-            }
-
-            if (message.type === "chat.send") {
-              if (!state.roomId) {
-                sendNack(
-                  connection,
-                  requestId,
-                  eventType,
-                  "NoActiveRoom",
-                  "Join a room first"
-                );
-                void incrementMetric("nack_sent");
-                return;
-              }
-
-              const text = getPayloadString(payload, "text", 20000);
-
-              if (!text) {
-                sendNack(
-                  connection,
-                  requestId,
-                  eventType,
-                  "ValidationError",
-                  "Message text is required"
-                );
-                void incrementMetric("nack_sent");
-                return;
-              }
-
-              const idempotencyKey = normalizeRequestId(message.idempotencyKey) || requestId;
-
-              if (idempotencyKey) {
-                const idemRedisKey = `ws:idempotency:${state.userId}:${idempotencyKey}`;
-                const cachedPayloadRaw = await fastify.redis.get(idemRedisKey);
-
-                if (cachedPayloadRaw) {
-                  try {
-                    const cachedPayload = JSON.parse(cachedPayloadRaw);
-                    sendJson(connection, buildChatMessageEnvelope(cachedPayload));
-                  } catch {
-                    await fastify.redis.del(idemRedisKey);
-                  }
-
-                  sendAck(connection, requestId, eventType, {
-                    duplicate: true,
-                    idempotencyKey
-                  });
-                  void incrementMetric("ack_sent");
-                  void incrementMetric("chat_idempotency_hit");
+                if (!roomSlug) {
+                  sendNack(
+                    connection,
+                    requestId,
+                    eventType,
+                    "ValidationError",
+                    "roomSlug is required"
+                  );
+                  void incrementMetric("nack_sent");
                   return;
                 }
-              }
 
-              const inserted = await db.query<InsertedMessageRow>(
-                `INSERT INTO messages (room_id, user_id, body)
-                 VALUES ($1, $2, $3)
-                 RETURNING id, room_id, user_id, body, created_at`,
-                [state.roomId, state.userId, text]
-              );
+                const joinResult = await canJoinRoom(roomSlug, state.userId);
 
-              const chatMessage = inserted.rows[0];
+                if (!joinResult.ok) {
+                  sendNack(
+                    connection,
+                    requestId,
+                    eventType,
+                    joinResult.reason || "Forbidden",
+                    "Cannot join room"
+                  );
+                  void incrementMetric("nack_sent");
+                  return;
+                }
 
-              const chatPayload = {
-                id: chatMessage.id,
-                roomId: chatMessage.room_id,
-                roomSlug: state.roomSlug,
-                userId: chatMessage.user_id,
-                userName: state.userName,
-                text: chatMessage.body,
-                createdAt: chatMessage.created_at,
-                senderRequestId: requestId || null
-              };
+                if (state.roomId) {
+                  detachRoomSocket(state.roomId, connection);
+                  broadcastRoom(
+                    state.roomId,
+                    buildPresenceLeftEnvelope(state.userId, state.userName, state.roomSlug, 0),
+                    connection
+                  );
+                }
 
-              if (idempotencyKey) {
-                await fastify.redis.setEx(
-                  `ws:idempotency:${state.userId}:${idempotencyKey}`,
-                  120,
-                  JSON.stringify(chatPayload)
+                state.roomId = joinResult.room.id;
+                state.roomSlug = joinResult.room.slug;
+                attachRoomSocket(joinResult.room.id, connection);
+
+                sendJson(
+                  connection,
+                  buildRoomJoinedEnvelope(
+                    joinResult.room.id,
+                    joinResult.room.slug,
+                    joinResult.room.title
+                  )
                 );
+
+                sendAck(connection, requestId, eventType, {
+                  roomId: joinResult.room.id,
+                  roomSlug: joinResult.room.slug
+                });
+                void incrementMetric("ack_sent");
+
+                sendJson(
+                  connection,
+                  buildRoomPresenceEnvelope(
+                    joinResult.room.id,
+                    joinResult.room.slug,
+                    getRoomPresence(joinResult.room.id)
+                  )
+                );
+
+                broadcastRoom(
+                  joinResult.room.id,
+                  buildPresenceJoinedEnvelope(
+                    state.userId,
+                    state.userName,
+                    joinResult.room.slug,
+                    getRoomPresence(joinResult.room.id).length
+                  ),
+                  connection
+                );
+
+                return;
               }
 
-              broadcastRoom(state.roomId, buildChatMessageEnvelope(chatPayload));
+              case "chat.send": {
+                if (!state.roomId) {
+                  sendNack(
+                    connection,
+                    requestId,
+                    eventType,
+                    "NoActiveRoom",
+                    "Join a room first"
+                  );
+                  void incrementMetric("nack_sent");
+                  return;
+                }
 
-              sendAck(connection, requestId, eventType, {
-                messageId: chatMessage.id,
-                idempotencyKey: idempotencyKey || null
-              });
-              void incrementMetric("ack_sent");
-              void incrementMetric("chat_sent");
+                const text = getPayloadString(payload, "text", 20000);
 
-              return;
-            }
+                if (!text) {
+                  sendNack(
+                    connection,
+                    requestId,
+                    eventType,
+                    "ValidationError",
+                    "Message text is required"
+                  );
+                  void incrementMetric("nack_sent");
+                  return;
+                }
 
-            if (isCallSignalEventType(message.type)) {
+                const idempotencyKey = normalizeRequestId(knownMessage.idempotencyKey) || requestId;
+
+                if (idempotencyKey) {
+                  const idemRedisKey = `ws:idempotency:${state.userId}:${idempotencyKey}`;
+                  const cachedPayloadRaw = await fastify.redis.get(idemRedisKey);
+
+                  if (cachedPayloadRaw) {
+                    try {
+                      const cachedPayload = JSON.parse(cachedPayloadRaw);
+                      sendJson(connection, buildChatMessageEnvelope(cachedPayload));
+                    } catch {
+                      await fastify.redis.del(idemRedisKey);
+                    }
+
+                    sendAck(connection, requestId, eventType, {
+                      duplicate: true,
+                      idempotencyKey
+                    });
+                    void incrementMetric("ack_sent");
+                    void incrementMetric("chat_idempotency_hit");
+                    return;
+                  }
+                }
+
+                const inserted = await db.query<InsertedMessageRow>(
+                  `INSERT INTO messages (room_id, user_id, body)
+                   VALUES ($1, $2, $3)
+                   RETURNING id, room_id, user_id, body, created_at`,
+                  [state.roomId, state.userId, text]
+                );
+
+                const chatMessage = inserted.rows[0];
+
+                const chatPayload = {
+                  id: chatMessage.id,
+                  roomId: chatMessage.room_id,
+                  roomSlug: state.roomSlug,
+                  userId: chatMessage.user_id,
+                  userName: state.userName,
+                  text: chatMessage.body,
+                  createdAt: chatMessage.created_at,
+                  senderRequestId: requestId || null
+                };
+
+                if (idempotencyKey) {
+                  await fastify.redis.setEx(
+                    `ws:idempotency:${state.userId}:${idempotencyKey}`,
+                    120,
+                    JSON.stringify(chatPayload)
+                  );
+                }
+
+                broadcastRoom(state.roomId, buildChatMessageEnvelope(chatPayload));
+
+                sendAck(connection, requestId, eventType, {
+                  messageId: chatMessage.id,
+                  idempotencyKey: idempotencyKey || null
+                });
+                void incrementMetric("ack_sent");
+                void incrementMetric("chat_sent");
+
+                return;
+              }
+
+              case "call.offer":
+              case "call.answer":
+              case "call.ice": {
               if (!state.roomId) {
                 sendNack(
                   connection,
@@ -521,7 +531,7 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
 
               const targetUserId = normalizeRequestId(getPayloadString(payload, "targetUserId", 128)) || null;
               const relayEnvelope = buildCallSignalRelayEnvelope(
-                message.type,
+                knownMessage.type,
                 state.userId,
                 state.userName,
                 state.roomId,
@@ -573,9 +583,9 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
               void incrementMetric("ack_sent");
               void incrementMetric("call_signal_sent");
               return;
-            }
+              }
 
-            if (message.type === "call.hangup") {
+              case "call.hangup": {
               if (!state.roomId) {
                 sendNack(
                   connection,
@@ -643,9 +653,9 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
               void incrementMetric("ack_sent");
               void incrementMetric("call_hangup_sent");
               return;
-            }
+              }
 
-            if (message.type === "call.reject") {
+              case "call.reject": {
               if (!state.roomId) {
                 sendNack(
                   connection,
@@ -713,10 +723,8 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
               void incrementMetric("ack_sent");
               void incrementMetric("call_reject_sent");
               return;
+              }
             }
-
-            sendNack(connection, requestId, eventType, "UnknownEvent", "Unsupported event type");
-            void incrementMetric("nack_sent");
           } catch (error) {
             fastify.log.error(error, "ws message handling failed");
             sendJson(connection, buildErrorEnvelope("ServerError", "Failed to process event"));
