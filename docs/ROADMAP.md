@@ -11,6 +11,7 @@
 - ✅ Realtime hardening (web): внедрены heartbeat (`ping/pong`) и reconnect backoff в React клиенте.
 - ✅ Realtime protocol hardening: внедрены WS `ack/nack` envelope и `idempotencyKey` для `chat.send`.
 - ✅ Smoke automation: добавлен `smoke:realtime` и флаги `SMOKE_API/SMOKE_SSO/SMOKE_REALTIME` в едином `npm run check`.
+- ✅ Test rollout automation: добавлен one-command `deploy:test:smoke` (deploy + post-deploy smoke + metrics snapshot).
 - ✅ Error resilience: добавлен React `ErrorBoundary` с безопасным fallback/reload UX.
 - 🔄 Начат этап реализации React web app (`apps/web`).
 

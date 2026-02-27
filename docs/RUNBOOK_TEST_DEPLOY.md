@@ -28,6 +28,14 @@
 
 - `ssh <server> 'cd ~/srv/edge && ./scripts/release-command.sh rollout --env test --service <service> --branch <feature-branch>'`
 
+One-command для Boltorezka (deploy + post-deploy smoke):
+
+- `ssh mac-mini 'cd ~/srv/boltorezka && TEST_REF=origin/<feature-branch> npm run deploy:test:smoke'`
+
+Для исключения при деплое из `main` (только по явному решению):
+
+- `ssh mac-mini 'cd ~/srv/boltorezka && TEST_REF=origin/main ALLOW_TEST_FROM_MAIN=1 npm run deploy:test:smoke'`
+
 > Используй фактические параметры скрипта из канонических server docs.
 
 ## 4) Post-deploy smoke checklist
