@@ -31,6 +31,20 @@ export type Message = {
   deliveryStatus?: "sending" | "delivered" | "failed";
 };
 
+export type MessagesCursor = {
+  beforeCreatedAt: string;
+  beforeId: string;
+};
+
+export type RoomMessagesResponse = {
+  room: Room;
+  messages: Message[];
+  pagination: {
+    hasMore: boolean;
+    nextCursor: MessagesCursor | null;
+  };
+};
+
 export type WsIncoming = {
   type: string;
   payload?: any;

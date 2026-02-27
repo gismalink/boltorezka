@@ -89,3 +89,16 @@
   - `callSignalRelayed=true`
   - `callRejectRelayed=true`
   - `callHangupRelayed=true`
+
+## 2026-02-28 — Web UI MVP increment: history pagination control
+
+### Delivered
+
+- React chat UI (`apps/web`) подключён к cursor pagination history endpoint.
+- Добавлена кнопка `Load older messages` в chat panel.
+- Реализованы клиентские состояния `hasMore/nextCursor/loadingOlder`.
+- При подгрузке старых страниц выполняется prepend + dedupe по `message.id`.
+
+### Validation
+
+- Web build: `npm run web:build` — PASS.

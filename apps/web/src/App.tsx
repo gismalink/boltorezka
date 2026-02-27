@@ -1,7 +1,15 @@
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "./api";
 import { trackClientEvent } from "./telemetry";
-import type { Message, Room, TelemetrySummary, User, WsIncoming, WsOutgoing } from "./types";
+import type {
+  Message,
+  MessagesCursor,
+  Room,
+  TelemetrySummary,
+  User,
+  WsIncoming,
+  WsOutgoing
+} from "./types";
 
 const RECONNECT_DELAYS_MS = [1000, 2000, 4000, 8000, 12000];
 const ACK_TIMEOUT_MS = 6000;
@@ -27,6 +35,9 @@ export function App() {
   const [rooms, setRooms] = useState<Room[]>([]);
   const [roomSlug, setRoomSlug] = useState("general");
   const [messages, setMessages] = useState<Message[]>([]);
+  const [messagesHasMore, setMessagesHasMore] = useState(false);
+  const [messagesNextCursor, setMessagesNextCursor] = useState<MessagesCursor | null>(null);
+  const [loadingOlderMessages, setLoadingOlderMessages] = useState(false);
   const [chatText, setChatText] = useState("");
   const [callTargetUserId, setCallTargetUserId] = useState("");
   const [callSignalJson, setCallSignalJson] = useState('{"type":"offer","sdp":""}');
@@ -190,6 +201,9 @@ export function App() {
       setUser(null);
       setRooms([]);
       setMessages([]);
+      setMessagesHasMore(false);
+      setMessagesNextCursor(null);
+      setLoadingOlderMessages(false);
       setAdminUsers([]);
       setTelemetrySummary(null);
       pendingRequestsRef.current.clear();
@@ -468,10 +482,41 @@ export function App() {
 
   useEffect(() => {
     if (!token || !roomSlug) return;
-    api.roomMessages(token, roomSlug)
-      .then((res) => setMessages(res.messages))
+    api.roomMessages(token, roomSlug, { limit: 50 })
+      .then((res) => {
+        setMessages(res.messages);
+        setMessagesHasMore(Boolean(res.pagination?.hasMore));
+        setMessagesNextCursor(res.pagination?.nextCursor ?? null);
+      })
       .catch((error) => pushLog(`history failed: ${error.message}`));
   }, [token, roomSlug]);
+
+  const loadOlderMessages = async () => {
+    if (!token || !roomSlug || !messagesNextCursor || loadingOlderMessages) {
+      return;
+    }
+
+    setLoadingOlderMessages(true);
+    try {
+      const res = await api.roomMessages(token, roomSlug, {
+        limit: 50,
+        cursor: messagesNextCursor
+      });
+
+      setMessages((prev) => {
+        const existingIds = new Set(prev.map((item) => item.id));
+        const olderPage = res.messages.filter((item) => !existingIds.has(item.id));
+        return [...olderPage, ...prev];
+      });
+
+      setMessagesHasMore(Boolean(res.pagination?.hasMore));
+      setMessagesNextCursor(res.pagination?.nextCursor ?? null);
+    } catch (error) {
+      pushLog(`load older failed: ${(error as Error).message}`);
+    } finally {
+      setLoadingOlderMessages(false);
+    }
+  };
 
   useEffect(() => {
     if (!token || !canPromote) return;
@@ -644,6 +689,9 @@ export function App() {
 
   const joinRoom = (slug: string) => {
     setRoomSlug(slug);
+    setMessages([]);
+    setMessagesHasMore(false);
+    setMessagesNextCursor(null);
     sendWsEvent("room.join", { roomSlug: slug }, { maxRetries: 1 });
   };
 
@@ -725,6 +773,19 @@ export function App() {
           <section className="card middle-card">
             <h2>Chat ({roomSlug})</h2>
             <pre className="presence-box">presence: {JSON.stringify(presence)}</pre>
+            <div className="row">
+              <button
+                type="button"
+                className="secondary"
+                onClick={() => void loadOlderMessages()}
+                disabled={!messagesHasMore || loadingOlderMessages}
+              >
+                {loadingOlderMessages ? "Loading..." : "Load older messages"}
+              </button>
+              {!messagesHasMore && messages.length > 0 ? (
+                <span className="muted">History fully loaded</span>
+              ) : null}
+            </div>
             <div className="chat-log">
               {messages.map((message) => (
                 <div key={message.id} className="chat-line">

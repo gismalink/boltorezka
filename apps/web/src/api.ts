@@ -1,4 +1,11 @@
-import type { AuthModeResponse, Message, Room, TelemetrySummary, User } from "./types";
+import type {
+  AuthModeResponse,
+  MessagesCursor,
+  Room,
+  RoomMessagesResponse,
+  TelemetrySummary,
+  User
+} from "./types";
 
 async function fetchJson<T>(path: string, token?: string, init: RequestInit = {}) {
   const headers: Record<string, string> = {
@@ -31,8 +38,24 @@ export const api = {
   rooms: (token: string) => fetchJson<{ rooms: Room[] }>("/v1/rooms", token),
   createRoom: (token: string, input: { slug: string; title: string; is_public: boolean }) =>
     fetchJson<{ room: Room }>("/v1/rooms", token, { method: "POST", body: JSON.stringify(input) }),
-  roomMessages: (token: string, slug: string) =>
-    fetchJson<{ room: Room; messages: Message[] }>(`/v1/rooms/${encodeURIComponent(slug)}/messages?limit=50`, token),
+  roomMessages: (
+    token: string,
+    slug: string,
+    options: { limit?: number; cursor?: MessagesCursor | null } = {}
+  ) => {
+    const params = new URLSearchParams();
+    params.set("limit", String(options.limit ?? 50));
+
+    if (options.cursor?.beforeCreatedAt && options.cursor?.beforeId) {
+      params.set("beforeCreatedAt", options.cursor.beforeCreatedAt);
+      params.set("beforeId", options.cursor.beforeId);
+    }
+
+    return fetchJson<RoomMessagesResponse>(
+      `/v1/rooms/${encodeURIComponent(slug)}/messages?${params.toString()}`,
+      token
+    );
+  },
   telemetrySummary: (token: string) => fetchJson<TelemetrySummary>("/v1/telemetry/summary", token),
   adminUsers: (token: string) => fetchJson<{ users: User[] }>("/v1/admin/users", token),
   promoteUser: (token: string, userId: string) =>
