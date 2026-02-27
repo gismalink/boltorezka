@@ -41,7 +41,14 @@ mkdir -p "$TMP_DOCKER_CONFIG/cli-plugins"
 if [[ -d "$HOME/.docker/cli-plugins" ]]; then
   cp -R "$HOME/.docker/cli-plugins/." "$TMP_DOCKER_CONFIG/cli-plugins/"
 fi
-printf '{}' >"$TMP_DOCKER_CONFIG/config.json"
+cat >"$TMP_DOCKER_CONFIG/config.json" <<'JSON'
+{
+  "auths": {
+    "https://index.docker.io/v1/": {}
+  },
+  "credsStore": ""
+}
+JSON
 
 DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" build boltorezka-api-prod
 
