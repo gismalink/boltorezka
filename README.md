@@ -44,6 +44,7 @@ Legacy-файлы перенесены в `legacy/poc/`.
 - `npm run check:api-types` — baseline backend typecheck (`apps/api/tsconfig.json`, `allowJs+checkJs`)
 - Первый TS-модуль API: `apps/api/src/ws-protocol.types.ts` (type-only контракт для WS protocol слоя)
 - TS type-only config контракт: `apps/api/src/config.types.ts` + JSDoc typing в `apps/api/src/config.js`
+- TS type-only DB контракт: `apps/api/src/db.types.ts` + JSDoc typing ключевых query rows в routes/middleware
 - WS protocol helper module: `apps/api/src/ws-protocol.js` (typed incoming parser/guards + outgoing envelope builders, включая chat/room/presence/call relay/pong)
 - `SMOKE_API=1 npm run check` — verify + API smoke (`scripts/smoke-api.mjs`)
 - `SMOKE_API_URL=https://test.boltorezka.gismalink.art npm run smoke:sso` — SSO redirect/mode smoke (`scripts/smoke-sso-redirect.mjs`)

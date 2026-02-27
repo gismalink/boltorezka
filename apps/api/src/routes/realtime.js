@@ -17,6 +17,8 @@ import {
   isCallSignalEventType,
   parseWsIncomingEnvelope
 } from "../ws-protocol.js";
+/** @typedef {import("../db.types.ts").RoomRow} RoomRow */
+/** @typedef {import("../db.types.ts").InsertedMessageRow} InsertedMessageRow */
 
 function sendJson(socket, payload) {
   if (socket.readyState === socket.OPEN) {
@@ -175,7 +177,7 @@ export async function realtimeRoutes(fastify) {
       return { ok: false, reason: "RoomNotFound" };
     }
 
-    const selectedRoom = room.rows[0];
+    const selectedRoom = /** @type {RoomRow} */ (room.rows[0]);
 
     if (!selectedRoom.is_public) {
       const membership = await db.query(
@@ -421,7 +423,7 @@ export async function realtimeRoutes(fastify) {
                 [state.roomId, state.userId, text]
               );
 
-              const chatMessage = inserted.rows[0];
+              const chatMessage = /** @type {InsertedMessageRow} */ (inserted.rows[0]);
 
               const chatPayload = {
                 id: chatMessage.id,

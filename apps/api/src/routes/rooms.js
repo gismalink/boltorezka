@@ -1,6 +1,9 @@
 import { z } from "zod";
 import { db } from "../db.js";
 import { loadCurrentUser, requireAuth, requireRole } from "../middleware/auth.js";
+/** @typedef {import("../db.types.ts").RoomListRow} RoomListRow */
+/** @typedef {import("../db.types.ts").RoomRow} RoomRow */
+/** @typedef {import("../db.types.ts").RoomMessageRow} RoomMessageRow */
 
 const createRoomSchema = z.object({
   slug: z
@@ -37,7 +40,7 @@ export async function roomsRoutes(fastify) {
       );
 
       return {
-        rooms: result.rows
+        rooms: /** @type {RoomListRow[]} */ (result.rows)
       };
     }
   );
@@ -77,7 +80,7 @@ export async function roomsRoutes(fastify) {
         [slug, title, is_public, createdBy]
       );
 
-      const room = created.rows[0];
+      const room = /** @type {RoomRow} */ (created.rows[0]);
 
       await db.query(
         `INSERT INTO room_members (room_id, user_id, role)
@@ -112,7 +115,7 @@ export async function roomsRoutes(fastify) {
         });
       }
 
-      const room = roomResult.rows[0];
+      const room = /** @type {RoomRow} */ (roomResult.rows[0]);
 
       if (!room.is_public) {
         const membership = await db.query(
@@ -146,7 +149,7 @@ export async function roomsRoutes(fastify) {
 
       return {
         room,
-        messages: messagesResult.rows.reverse()
+        messages: /** @type {RoomMessageRow[]} */ (messagesResult.rows).reverse()
       };
     }
   );

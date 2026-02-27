@@ -3,6 +3,8 @@ import { randomUUID } from "node:crypto";
 import { db } from "../db.js";
 import { requireAuth } from "../middleware/auth.js";
 import { config } from "../config.js";
+/** @typedef {import("../db.types.ts").UserRow} UserRow */
+/** @typedef {import("../db.types.ts").UserCompactRow} UserCompactRow */
 
 const ssoProviderSchema = z.enum(["google", "yandex"]);
 
@@ -102,7 +104,7 @@ async function upsertSsoUser(profile) {
       [normalizedEmail, displayName, isSuperAdmin]
     );
 
-    return updated.rows[0];
+    return /** @type {UserRow} */ (updated.rows[0]);
   }
 
   const newRole = isSuperAdmin ? "super_admin" : "user";
@@ -114,7 +116,7 @@ async function upsertSsoUser(profile) {
     [normalizedEmail, "__sso_only__", displayName, newRole]
   );
 
-  return created.rows[0];
+  return /** @type {UserRow} */ (created.rows[0]);
 }
 
 export async function authRoutes(fastify) {
@@ -241,7 +243,7 @@ export async function authRoutes(fastify) {
         });
       }
 
-      const user = userResult.rows[0];
+      const user = /** @type {UserCompactRow} */ (userResult.rows[0]);
       const ticket = randomUUID();
       const expiresInSec = 45;
 
@@ -283,7 +285,7 @@ export async function authRoutes(fastify) {
       }
 
       return {
-        user: result.rows[0]
+        user: /** @type {UserRow} */ (result.rows[0])
       };
     }
   );

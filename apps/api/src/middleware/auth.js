@@ -1,4 +1,5 @@
 import { db } from "../db.js";
+/** @typedef {import("../db.types.ts").UserRow} UserRow */
 
 export async function requireAuth(request, reply) {
   try {
@@ -33,7 +34,7 @@ export async function loadCurrentUser(request, reply) {
     });
   }
 
-  request.currentUser = result.rows[0];
+  request.currentUser = /** @type {UserRow} */ (result.rows[0]);
 }
 
 export function requireRole(roles) {

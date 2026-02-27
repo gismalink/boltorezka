@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { db } from "../db.js";
 import { loadCurrentUser, requireAuth, requireRole } from "../middleware/auth.js";
+/** @typedef {import("../db.types.ts").UserRow} UserRow */
 
 const promoteSchema = z.object({
   role: z.literal("admin").default("admin")
@@ -20,7 +21,7 @@ export async function adminRoutes(fastify) {
       );
 
       return {
-        users: result.rows
+        users: /** @type {UserRow[]} */ (result.rows)
       };
     }
   );
@@ -60,7 +61,7 @@ export async function adminRoutes(fastify) {
         });
       }
 
-      const targetUser = targetResult.rows[0];
+      const targetUser = /** @type {UserRow} */ (targetResult.rows[0]);
 
       if (targetUser.role === "super_admin") {
         return reply.code(200).send({ user: targetUser });
@@ -75,7 +76,7 @@ export async function adminRoutes(fastify) {
       );
 
       return {
-        user: updated.rows[0]
+        user: /** @type {UserRow} */ (updated.rows[0])
       };
     }
   );
