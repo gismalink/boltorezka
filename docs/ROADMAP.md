@@ -37,28 +37,28 @@ Policy flags: `AUTO_ROLLBACK_ON_FAIL=1`, `AUTO_ROLLBACK_SMOKE=1`.
 
 ### Цели
 
-- Зафиксировать продуктовые требования MVP.
-- Зафиксировать технические решения в ADR.
+- [x] Зафиксировать продуктовые требования MVP.
+- [ ] Зафиксировать технические решения в ADR.
 
 ### Задачи
 
-- Определить scope MVP:
-  - text chat,
-  - room presence,
-  - voice call,
-  - basic video.
-- Утвердить ограничения MVP:
-  - max participants per room,
-  - retention policy,
-  - supported platforms.
-- Написать ADR:
-  - signaling протокол,
-  - media topology (P2P now / SFU later),
-  - auth/session strategy.
+- [x] Определить scope MVP.
+  - [x] text chat
+  - [x] room presence
+  - [x] voice call (signaling baseline)
+  - [ ] basic video
+- [ ] Утвердить ограничения MVP.
+  - [ ] max participants per room
+  - [ ] retention policy
+  - [ ] supported platforms
+- [ ] Написать ADR.
+  - [ ] signaling протокол
+  - [ ] media topology (P2P now / SFU later)
+  - [ ] auth/session strategy
 
 ### Exit criteria
 
-- Подписанные ADR и технические границы MVP.
+- [ ] Подписанные ADR и технические границы MVP.
 
 ---
 
@@ -66,36 +66,36 @@ Policy flags: `AUTO_ROLLBACK_ON_FAIL=1`, `AUTO_ROLLBACK_SMOKE=1`.
 
 ### Цели
 
-- Поднять стабильный API и базовую модель данных.
+- [x] Поднять стабильный API и базовую модель данных.
 
 ### Задачи
 
-- Подготовить `feature/boltorezka-core`.
-- Реализовать:
-  - auth/session integration,
-  - users,
-  - rooms,
-  - membership.
-- Реализовать базовый RBAC для MVP:
-  - роли `user`, `admin`, `super_admin`,
-  - фиксированный super-admin по email `gismalink@gmail.com`,
-  - promote `user -> admin` только от super-admin,
-  - room creation только для `admin` и `super_admin`.
-- Завести миграции БД и seed для test окружения.
-- Добавить OpenAPI v1.
+- [ ] Подготовить `feature/boltorezka-core`.
+- [x] Реализовать backend foundation.
+  - [x] auth/session integration
+  - [x] users
+  - [x] rooms
+  - [x] membership
+- [x] Реализовать базовый RBAC для MVP.
+  - [x] роли `user`, `admin`, `super_admin`
+  - [x] фиксированный super-admin по email `gismalink@gmail.com`
+  - [x] promote `user -> admin` только от super-admin
+  - [x] room creation только для `admin` и `super_admin`
+- [x] Завести миграции БД и seed для test окружения.
+- [ ] Добавить OpenAPI v1.
 
 ### Exit criteria
 
-- CRUD по users/rooms/members работает.
-- RBAC-проверки работают на критичных действиях (promotion, room creation).
-- Документированный API контракт v1.
+- [x] CRUD по users/rooms/members работает.
+- [x] RBAC-проверки работают на критичных действиях (promotion, room creation).
+- [ ] Документированный API контракт v1.
 
 ### RBAC MVP API scope (детализация)
 
-- `GET /v1/auth/me` возвращает роль пользователя.
-- `GET /v1/admin/users` доступен `admin` и `super_admin`.
-- `POST /v1/admin/users/:userId/promote` доступен только `super_admin`.
-- `POST /v1/rooms` доступен только `admin` и `super_admin`.
+- [x] `GET /v1/auth/me` возвращает роль пользователя.
+- [x] `GET /v1/admin/users` доступен `admin` и `super_admin`.
+- [x] `POST /v1/admin/users/:userId/promote` доступен только `super_admin`.
+- [x] `POST /v1/rooms` доступен только `admin` и `super_admin`.
 
 ---
 
@@ -103,21 +103,22 @@ Policy flags: `AUTO_ROLLBACK_ON_FAIL=1`, `AUTO_ROLLBACK_SMOKE=1`.
 
 ### Цели
 
-- Получить production-shaped realtime слой для chat/presence.
+- [x] Получить production-shaped realtime слой для chat/presence.
 
 ### Задачи
 
-- WS gateway с heartbeat/reconnect semantics.
-- Протокол событий:
-  - `presence.update`,
-  - `room.join`, `room.leave`,
-  - `message.send`, `message.new`.
-- Добавить ack/nack и idempotency key.
-- Message history + pagination.
+- [x] WS gateway с heartbeat/reconnect semantics.
+- [x] Протокол событий (MVP variant) внедрён.
+  - [x] `room.join`
+  - [x] presence events (`presence.joined`, `presence.left`, `room.presence`)
+  - [x] message events (`chat.send`, `chat.message`)
+  - [ ] явный `room.leave`
+- [x] Добавить ack/nack и idempotency key.
+- [ ] Message history + pagination.
 
 ### Exit criteria
 
-- Стабильный чат при reconnect и повторных отправках.
+- [x] Стабильный чат при reconnect и повторных отправках.
 
 ---
 
@@ -125,20 +126,24 @@ Policy flags: `AUTO_ROLLBACK_ON_FAIL=1`, `AUTO_ROLLBACK_SMOKE=1`.
 
 ### Цели
 
-- Надёжный voice path и базовый video path для малых комнат.
+- [ ] Надёжный voice path и базовый video path для малых комнат.
 
 ### Задачи
 
-- Реализовать signaling events:
-  - `call.offer`, `call.answer`, `call.ice`, `call.reject`, `call.hangup`.
-- Интеграция coturn через env/secret.
-- Ограничение размера комнаты для p2p.
-- Graceful degradation при плохой сети.
+- [x] Реализовать signaling events.
+  - [x] `call.offer`
+  - [x] `call.answer`
+  - [x] `call.ice`
+  - [x] `call.reject`
+  - [x] `call.hangup`
+- [ ] Интеграция coturn через env/secret.
+- [ ] Ограничение размера комнаты для p2p.
+- [ ] Graceful degradation при плохой сети.
 
 ### Exit criteria
 
-- Call setup success в test среде стабилен.
-- Нет хардкод-секретов в коде.
+- [x] Call setup success в test среде стабилен (signaling lifecycle smoke).
+- [x] Нет хардкод-секретов в коде.
 
 ---
 
@@ -146,36 +151,36 @@ Policy flags: `AUTO_ROLLBACK_ON_FAIL=1`, `AUTO_ROLLBACK_SMOKE=1`.
 
 ### Цели
 
-- Довести web-клиент до эксплуатационного MVP.
+- [ ] Довести web-клиент до эксплуатационного MVP.
 
 ### Задачи
 
-- Модульная структура web app.
-- Перенос текущего web MVP из vanilla JS в React (`apps/web`) с сохранением API-контрактов.
-- Реализовать React-экраны/секции:
-  - SSO session,
-  - rooms lobby,
-  - room chat + presence,
-  - admin users/promote для `super_admin`.
-- Error boundaries + retry UX.
-- Телеметрия на клиенте.
-- E2E smoke сценарии:
-  - login,
-  - join room,
-  - send/receive message,
-  - voice connect/disconnect.
+- [x] Модульная структура web app.
+- [ ] Перенос текущего web MVP из vanilla JS в React (`apps/web`) с сохранением API-контрактов.
+- [x] Реализовать React-экраны/секции.
+  - [x] SSO session
+  - [x] rooms lobby
+  - [x] room chat + presence
+  - [x] admin users/promote для `super_admin`
+- [x] Error boundaries + retry UX.
+- [x] Телеметрия на клиенте.
+- [ ] E2E smoke сценарии.
+  - [ ] login
+  - [ ] join room
+  - [ ] send/receive message
+  - [ ] voice connect/disconnect
 
 ### Exit criteria
 
-- Web MVP готов к ограниченному beta.
+- [ ] Web MVP готов к ограниченному beta.
 
 ### React migration breakdown (детализация)
 
-1. Создать `apps/web` (React + Vite + TypeScript).
-2. Добавить transport-слой для HTTP/WS и синхронизировать с backend endpoints.
-3. Перенести MVP UX (SSO/rooms/chat/presence/admin).
-4. Обновить runbook/checklist под React UI как default.
-5. После стабилизации выключить legacy `apps/api/public` как primary UI.
+1. [x] Создать `apps/web` (React + Vite + TypeScript).
+2. [x] Добавить transport-слой для HTTP/WS и синхронизировать с backend endpoints.
+3. [x] Перенести MVP UX (SSO/rooms/chat/presence/admin).
+4. [ ] Обновить runbook/checklist под React UI как default.
+5. [ ] После стабилизации выключить legacy `apps/api/public` как primary UI.
 
 ---
 
@@ -183,22 +188,22 @@ Policy flags: `AUTO_ROLLBACK_ON_FAIL=1`, `AUTO_ROLLBACK_SMOKE=1`.
 
 ### Цели
 
-- Запустить нативные клиенты с shared core.
+- [ ] Запустить нативные клиенты с shared core.
 
 ### Задачи
 
-- Создать общий Swift package (network/realtime/call/models).
-- Реализовать экраны:
-  - auth,
-  - rooms list,
-  - chat,
-  - voice room.
-- macOS desktop клиент с parity MVP.
-- iOS lifecycle обработка (audio interruptions, app background transitions).
+- [ ] Создать общий Swift package (network/realtime/call/models).
+- [ ] Реализовать экраны.
+  - [ ] auth
+  - [ ] rooms list
+  - [ ] chat
+  - [ ] voice room
+- [ ] macOS desktop клиент с parity MVP.
+- [ ] iOS lifecycle обработка (audio interruptions, app background transitions).
 
 ### Exit criteria
 
-- iOS/macOS internal builds проходят сценарии MVP.
+- [ ] iOS/macOS internal builds проходят сценарии MVP.
 
 ---
 
@@ -206,22 +211,22 @@ Policy flags: `AUTO_ROLLBACK_ON_FAIL=1`, `AUTO_ROLLBACK_SMOKE=1`.
 
 ### Цели
 
-- Стабилизировать систему перед расширением аудитории.
+- [ ] Стабилизировать систему перед расширением аудитории.
 
 ### Задачи
 
-- Нагрузочные тесты signaling и presence.
-- Тесты отказов/reconnect.
-- Security review (authz, rate limits, abuse prevention).
-- Финальные runbook:
-  - deploy,
-  - smoke,
-  - rollback,
-  - incident response.
+- [ ] Нагрузочные тесты signaling и presence.
+- [ ] Тесты отказов/reconnect.
+- [ ] Security review (authz, rate limits, abuse prevention).
+- [ ] Финальные runbook.
+  - [ ] deploy
+  - [ ] smoke
+  - [ ] rollback
+  - [ ] incident response
 
 ### Exit criteria
 
-- Готовность к controlled production rollout.
+- [ ] Готовность к controlled production rollout.
 
 ---
 
