@@ -1,0 +1,136 @@
+name: boltorezka
+
+services:
+  boltorezka-api-test:
+    build:
+      context: ../apps/api
+      dockerfile: Dockerfile
+    image: boltorezka-api:test
+    container_name: boltorezka-api-test
+    restart: unless-stopped
+    environment:
+      PORT: 8080
+      DATABASE_URL: postgresql://${TEST_POSTGRES_USER}:${TEST_POSTGRES_PASSWORD}@boltorezka-db-test:5432/${TEST_POSTGRES_DB}
+      REDIS_URL: redis://boltorezka-redis-test:6379
+      JWT_SECRET: ${TEST_JWT_SECRET}
+      JWT_EXPIRES_IN: ${TEST_JWT_EXPIRES_IN:-7d}
+      CORS_ORIGIN: ${TEST_CORS_ORIGIN:-https://test.boltorezka}
+      AUTH_MODE: sso
+      AUTH_SSO_BASE_URL: ${TEST_AUTH_SSO_BASE_URL:-https://test.auth.gismalink.art}
+      ALLOWED_RETURN_HOSTS: ${TEST_ALLOWED_RETURN_HOSTS:-test.boltorezka}
+    depends_on:
+      boltorezka-db-test:
+        condition: service_healthy
+      boltorezka-redis-test:
+        condition: service_healthy
+    networks:
+      - edge_public
+      - data_test
+
+  boltorezka-db-test:
+    image: postgres:16
+    container_name: boltorezka-db-test
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${TEST_POSTGRES_DB}
+      POSTGRES_USER: ${TEST_POSTGRES_USER}
+      POSTGRES_PASSWORD: ${TEST_POSTGRES_PASSWORD}
+    volumes:
+      - postgres_test_data:/var/lib/postgresql/data
+      - ../infra/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${TEST_POSTGRES_USER} -d ${TEST_POSTGRES_DB}"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - data_test
+
+  boltorezka-redis-test:
+    image: redis:7-alpine
+    container_name: boltorezka-redis-test
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    networks:
+      - data_test
+
+  boltorezka-api-prod:
+    build:
+      context: ../apps/api
+      dockerfile: Dockerfile
+    image: boltorezka-api:prod
+    container_name: boltorezka-api-prod
+    restart: unless-stopped
+    environment:
+      PORT: 8080
+      DATABASE_URL: postgresql://${PROD_POSTGRES_USER}:${PROD_POSTGRES_PASSWORD}@boltorezka-db-prod:5432/${PROD_POSTGRES_DB}
+      REDIS_URL: redis://boltorezka-redis-prod:6379
+      JWT_SECRET: ${PROD_JWT_SECRET}
+      JWT_EXPIRES_IN: ${PROD_JWT_EXPIRES_IN:-7d}
+      CORS_ORIGIN: ${PROD_CORS_ORIGIN:-https://boltorezka}
+      AUTH_MODE: sso
+      AUTH_SSO_BASE_URL: ${PROD_AUTH_SSO_BASE_URL:-https://auth.gismalink.art}
+      ALLOWED_RETURN_HOSTS: ${PROD_ALLOWED_RETURN_HOSTS:-boltorezka}
+    depends_on:
+      boltorezka-db-prod:
+        condition: service_healthy
+      boltorezka-redis-prod:
+        condition: service_healthy
+    networks:
+      - edge_public
+      - data_prod
+
+  boltorezka-db-prod:
+    image: postgres:16
+    container_name: boltorezka-db-prod
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${PROD_POSTGRES_DB}
+      POSTGRES_USER: ${PROD_POSTGRES_USER}
+      POSTGRES_PASSWORD: ${PROD_POSTGRES_PASSWORD}
+    volumes:
+      - postgres_prod_data:/var/lib/postgresql/data
+      - ../infra/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${PROD_POSTGRES_USER} -d ${PROD_POSTGRES_DB}"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - data_prod
+
+  boltorezka-redis-prod:
+    image: redis:7-alpine
+    container_name: boltorezka-redis-prod
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    networks:
+      - data_prod
+
+networks:
+  edge_public:
+    external: true
+  data_test:
+    driver: bridge
+  data_prod:
+    driver: bridge
+
+volumes:
+  postgres_test_data:
+  postgres_prod_data:

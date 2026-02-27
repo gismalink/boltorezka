@@ -16,6 +16,9 @@
   - `AUTH_SSO_BASE_URL=https://test.auth.gismalink.art`
   - `ALLOWED_RETURN_HOSTS` содержит `test.boltorezka`
 - DNS `test.boltorezka` уже указывает на edge.
+- В репозитории на сервере есть:
+  - `infra/docker-compose.host.yml`
+  - `infra/.env.host` (создан из `infra/.env.host.example`)
 
 ## 5 команд rollout (test)
 
@@ -30,6 +33,10 @@
 3) GitOps deploy (ff-only pull + post-deploy):
 
 - `ssh mac-mini 'cd ~/srv/edge && ./scripts/gitops-deploy.sh --env test --service boltorezka --branch main'`
+
+Альтернатива (если деплой идёт из repo boltorezka на сервере):
+
+- `ssh mac-mini 'cd ~/srv/boltorezka && TEST_REF=origin/main ALLOW_TEST_FROM_MAIN=1 npm run deploy:test'`
 
 4) Smoke script для test:
 

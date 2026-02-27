@@ -44,6 +44,11 @@ Legacy-файлы перенесены в `legacy/poc/`.
 - `npm run deploy:test` — deploy test from git ref (`scripts/examples/deploy-test-from-ref.sh`)
 - `npm run deploy:prod` — deploy prod from git ref (`scripts/examples/deploy-prod-from-ref.sh`)
 
+Перед server deploy обязательно:
+
+- скопировать `infra/.env.host.example` -> `infra/.env.host`
+- заполнить секреты и SSO/env значения для test/prod
+
 ## Платформы
 
 Цель v2:
