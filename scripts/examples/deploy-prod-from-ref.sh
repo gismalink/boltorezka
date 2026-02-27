@@ -34,9 +34,18 @@ if [[ ! -f "$ENV_FILE" ]]; then
 fi
 
 echo "[deploy-prod] recreate prod services"
-docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" build boltorezka-api-prod
+TMP_DOCKER_CONFIG="$(mktemp -d)"
+trap 'rm -rf "$TMP_DOCKER_CONFIG"' EXIT
 
-docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d --force-recreate boltorezka-api-prod
+mkdir -p "$TMP_DOCKER_CONFIG/cli-plugins"
+if [[ -d "$HOME/.docker/cli-plugins" ]]; then
+  cp -R "$HOME/.docker/cli-plugins/." "$TMP_DOCKER_CONFIG/cli-plugins/"
+fi
+printf '{}' >"$TMP_DOCKER_CONFIG/config.json"
+
+DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" build boltorezka-api-prod
+
+DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d --force-recreate boltorezka-api-prod
 
 echo "[deploy-prod] wait api health"
 for i in {1..180}; do
