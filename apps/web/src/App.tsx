@@ -42,9 +42,11 @@ export function App() {
   const [adminUsers, setAdminUsers] = useState<User[]>([]);
   const [newRoomSlug, setNewRoomSlug] = useState("");
   const [newRoomTitle, setNewRoomTitle] = useState("");
+  const [authMenuOpen, setAuthMenuOpen] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const realtimeClientRef = useRef<RealtimeClient | null>(null);
   const roomSlugRef = useRef(roomSlug);
+  const authMenuRef = useRef<HTMLDivElement | null>(null);
   const profileMenuRef = useRef<HTMLDivElement | null>(null);
 
   const canCreateRooms = user?.role === "admin" || user?.role === "super_admin";
@@ -297,22 +299,28 @@ export function App() {
   }, [wsState, loadTelemetrySummary]);
 
   useEffect(() => {
-    if (!profileMenuOpen) {
+    if (!profileMenuOpen && !authMenuOpen) {
       return;
     }
 
     const onClickOutside = (event: MouseEvent) => {
       const target = event.target as Node | null;
-      if (!target || !profileMenuRef.current?.contains(target)) {
+      const insideProfile = Boolean(target && profileMenuRef.current?.contains(target));
+      const insideAuth = Boolean(target && authMenuRef.current?.contains(target));
+      if (!insideProfile && !insideAuth) {
         setProfileMenuOpen(false);
+        setAuthMenuOpen(false);
       }
     };
 
     window.addEventListener("mousedown", onClickOutside);
     return () => window.removeEventListener("mousedown", onClickOutside);
-  }, [profileMenuOpen]);
+  }, [profileMenuOpen, authMenuOpen]);
 
-  const beginSso = (provider: "google" | "yandex") => authController.beginSso(provider);
+  const beginSso = (provider: "google" | "yandex") => {
+    setAuthMenuOpen(false);
+    authController.beginSso(provider);
+  };
   const completeSso = async () => {
     await authController.completeSso();
   };
@@ -387,7 +395,23 @@ export function App() {
               </div>
             </>
           ) : (
-            <button type="button" onClick={() => beginSso("google")}>Авторизоваться</button>
+            <div className="auth-menu" ref={authMenuRef}>
+              <button type="button" onClick={() => setAuthMenuOpen((value) => !value)}>
+                Авторизоваться
+              </button>
+              {authMenuOpen ? (
+                <div className="auth-popup">
+                  <button type="button" className="provider-btn" onClick={() => beginSso("google")}> 
+                    <span className="provider-icon provider-google">G</span>
+                    Google
+                  </button>
+                  <button type="button" className="provider-btn" onClick={() => beginSso("yandex")}>
+                    <span className="provider-icon provider-yandex">Я</span>
+                    Yandex
+                  </button>
+                </div>
+              ) : null}
+            </div>
           )}
         </div>
       </header>
