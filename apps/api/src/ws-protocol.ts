@@ -9,6 +9,7 @@ import type {
   PresenceJoinedPayload,
   PresenceLeftPayload,
   WsIncomingEnvelope,
+  WsIncomingPayload,
   WsOutgoingEnvelope
 } from "./ws-protocol.types.ts";
 
@@ -19,7 +20,7 @@ type ParsedIncomingEnvelope = {
   type: string;
   requestId?: string;
   idempotencyKey?: string;
-  payload?: Record<string, unknown>;
+  payload?: WsIncomingPayload;
 };
 
 /**

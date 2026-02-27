@@ -2,12 +2,60 @@ export type CallSignalEventType = "call.offer" | "call.answer" | "call.ice";
 export type CallTerminalEventType = "call.reject" | "call.hangup";
 export type CallEventType = CallSignalEventType | CallTerminalEventType;
 
-export type WsIncomingEnvelope = {
+export type WsIncomingPayload = Record<string, unknown>;
+
+export type WsIncomingBaseEnvelope = {
   type: string;
   requestId?: string;
   idempotencyKey?: string;
-  payload?: Record<string, unknown>;
+  payload?: WsIncomingPayload;
 };
+
+export type WsIncomingPingEnvelope = {
+  type: "ping";
+  requestId?: string;
+  idempotencyKey?: string;
+  payload?: WsIncomingPayload;
+};
+
+export type WsIncomingRoomJoinEnvelope = {
+  type: "room.join";
+  requestId?: string;
+  idempotencyKey?: string;
+  payload?: WsIncomingPayload;
+};
+
+export type WsIncomingChatSendEnvelope = {
+  type: "chat.send";
+  requestId?: string;
+  idempotencyKey?: string;
+  payload?: WsIncomingPayload;
+};
+
+export type WsIncomingCallSignalEnvelope = {
+  type: CallSignalEventType;
+  requestId?: string;
+  idempotencyKey?: string;
+  payload?: WsIncomingPayload;
+};
+
+export type WsIncomingCallTerminalEnvelope = {
+  type: CallTerminalEventType;
+  requestId?: string;
+  idempotencyKey?: string;
+  payload?: WsIncomingPayload;
+};
+
+export type WsIncomingKnownEnvelope =
+  | WsIncomingPingEnvelope
+  | WsIncomingRoomJoinEnvelope
+  | WsIncomingChatSendEnvelope
+  | WsIncomingCallSignalEnvelope
+  | WsIncomingCallTerminalEnvelope;
+
+export type WsIncomingUnknownEnvelope = WsIncomingBaseEnvelope;
+
+export type WsIncomingEnvelope = WsIncomingKnownEnvelope | WsIncomingUnknownEnvelope;
 
 export type WsOutgoingEnvelope = {
   type: string;
