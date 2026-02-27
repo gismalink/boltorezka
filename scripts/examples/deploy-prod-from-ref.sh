@@ -11,6 +11,7 @@ GIT_REF="$1"
 REPO_DIR="${2:-$HOME/boltorezka}"
 COMPOSE_FILE="infra/docker-compose.host.yml"
 ENV_FILE="infra/.env.host"
+HEALTHCHECK_URL="${PROD_HEALTHCHECK_URL:-https://boltorezka.gismalink.art/health}"
 
 cd "$REPO_DIR"
 
@@ -56,7 +57,7 @@ DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file 
 
 echo "[deploy-prod] wait api health"
 for i in {1..180}; do
-  if curl -fsS https://boltorezka/health >/dev/null; then
+  if curl -fsS "$HEALTHCHECK_URL" >/dev/null; then
     echo "[deploy-prod] api health ok"
     break
   fi

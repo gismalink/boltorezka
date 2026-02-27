@@ -47,7 +47,7 @@
 
 1. `GET /v1/auth/mode` возвращает `mode=sso`.
 2. `POST /v1/auth/register` и `POST /v1/auth/login` возвращают `410 SsoOnly`.
-3. `GET /v1/auth/sso/start?provider=google&returnUrl=https://test.boltorezka/` даёт redirect на `test.auth.gismalink.art`.
+3. `GET /v1/auth/sso/start?provider=google&returnUrl=https://test.boltorezka.gismalink.art/` даёт redirect на `test.auth.gismalink.art`.
 4. После SSO login в UI:
    - `Complete SSO Session` создаёт локальную JWT-сессию,
    - доступен список комнат,
@@ -57,12 +57,12 @@
 ### Domain checks
 
 - Для `test`:
-   - `curl -I https://test.boltorezka/health`
-   - `curl https://test.boltorezka/health`
+   - `curl -I https://test.boltorezka.gismalink.art/health`
+   - `curl https://test.boltorezka.gismalink.art/health`
 
 - Для `prod` (только после отдельного подтверждения):
-   - `curl -I https://boltorezka/health`
-   - `curl https://boltorezka/health`
+   - `curl -I https://boltorezka.gismalink.art/health`
+   - `curl https://boltorezka.gismalink.art/health`
 
 ## 5) Rollback criteria
 

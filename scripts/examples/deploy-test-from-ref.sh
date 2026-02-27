@@ -11,6 +11,7 @@ GIT_REF="$1"
 REPO_DIR="${2:-$HOME/boltorezka}"
 COMPOSE_FILE="infra/docker-compose.host.yml"
 ENV_FILE="infra/.env.host"
+HEALTHCHECK_URL="${TEST_HEALTHCHECK_URL:-https://test.boltorezka.gismalink.art/health}"
 
 if [[ "$GIT_REF" =~ ^(origin/main|main|origin/master|master)$ ]] && [[ "${ALLOW_TEST_FROM_MAIN:-0}" != "1" ]]; then
   echo "[deploy-test] blocked by policy: test deploy should use feature branch ref"
@@ -62,7 +63,7 @@ DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file 
 
 echo "[deploy-test] wait api health"
 for i in {1..180}; do
-  if curl -fsS https://test.boltorezka/health >/dev/null; then
+  if curl -fsS "$HEALTHCHECK_URL" >/dev/null; then
     echo "[deploy-test] api health ok"
     break
   fi

@@ -132,19 +132,19 @@ HTTP endpoint для истории:
 
 ## Domain readiness
 
-- `test.boltorezka` — тестовый контур
-- `boltorezka` — продовый контур
+- `test.boltorezka.gismalink.art` — тестовый контур
+- `boltorezka.gismalink.art` — продовый контур
 
 Для `test` окружения обязательно:
 
 - `AUTH_MODE=sso`
 - `AUTH_SSO_BASE_URL=https://test.auth.gismalink.art`
-- `ALLOWED_RETURN_HOSTS` включает `test.boltorezka`
+- `ALLOWED_RETURN_HOSTS` включает `test.boltorezka.gismalink.art`
 
 Для `prod` окружения:
 
 - `AUTH_MODE=sso`
 - `AUTH_SSO_BASE_URL=https://auth.gismalink.art`
-- `ALLOWED_RETURN_HOSTS` включает `boltorezka`
+- `ALLOWED_RETURN_HOSTS` включает `boltorezka.gismalink.art`
 
 Реальный rollout в эти домены выполнять только по GitOps runbook и с правилом test-first.

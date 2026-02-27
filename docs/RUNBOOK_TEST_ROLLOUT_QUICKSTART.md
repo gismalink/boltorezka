@@ -14,8 +14,8 @@
 - На сервере настроены env для Boltorezka test:
   - `AUTH_MODE=sso`
   - `AUTH_SSO_BASE_URL=https://test.auth.gismalink.art`
-  - `ALLOWED_RETURN_HOSTS` содержит `test.boltorezka`
-- DNS `test.boltorezka` уже указывает на edge.
+  - `ALLOWED_RETURN_HOSTS` содержит `test.boltorezka.gismalink.art`
+- DNS `test.boltorezka.gismalink.art` уже указывает на edge.
 - В репозитории на сервере есть:
   - `infra/docker-compose.host.yml`
   - `infra/.env.host` (создан из `infra/.env.host.example`)
@@ -52,26 +52,26 @@
 
 1) Health endpoint:
 
-- `curl -i https://test.boltorezka/health`
+- `curl -i https://test.boltorezka.gismalink.art/health`
 
 2) Auth mode:
 
-- `curl -s https://test.boltorezka/v1/auth/mode`
+- `curl -s https://test.boltorezka.gismalink.art/v1/auth/mode`
 - ожидание: `mode=sso`
 
 3) Local auth disabled:
 
-- `curl -s -X POST https://test.boltorezka/v1/auth/register -H 'content-type: application/json' -d '{"email":"x@example.com","password":"password123","name":"X"}'`
+- `curl -s -X POST https://test.boltorezka.gismalink.art/v1/auth/register -H 'content-type: application/json' -d '{"email":"x@example.com","password":"password123","name":"X"}'`
 - ожидание: `410` / `SsoOnly`
 
 4) SSO redirect endpoint:
 
-- `curl -i 'https://test.boltorezka/v1/auth/sso/start?provider=google&returnUrl=https://test.boltorezka/'`
+- `curl -i 'https://test.boltorezka.gismalink.art/v1/auth/sso/start?provider=google&returnUrl=https://test.boltorezka.gismalink.art/'`
 - ожидание: `302` на `test.auth.gismalink.art`
 
 5) UI smoke:
 
-- открыть `https://test.boltorezka/`
+- открыть `https://test.boltorezka.gismalink.art/`
 - войти через SSO
 - нажать `Complete SSO Session`
 - войти в `general`
