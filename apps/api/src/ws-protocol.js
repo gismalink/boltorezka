@@ -245,3 +245,78 @@ export function buildChatMessageEnvelope(payload) {
     payload
   };
 }
+
+/**
+ * @param {string} fromUserId
+ * @param {string} fromUserName
+ * @param {string} roomId
+ * @param {string | null} roomSlug
+ * @param {string | null} targetUserId
+ * @returns {{ fromUserId: string, fromUserName: string, roomId: string, roomSlug: string | null, targetUserId: string | null, ts: string }}
+ */
+function buildCallRelayBasePayload(fromUserId, fromUserName, roomId, roomSlug, targetUserId) {
+  return {
+    fromUserId,
+    fromUserName,
+    roomId,
+    roomSlug,
+    targetUserId,
+    ts: new Date().toISOString()
+  };
+}
+
+/**
+ * @param {CallSignalEventType} eventType
+ * @param {string} fromUserId
+ * @param {string} fromUserName
+ * @param {string} roomId
+ * @param {string | null} roomSlug
+ * @param {string | null} targetUserId
+ * @param {Record<string, unknown>} signal
+ * @returns {WsOutgoingEnvelope}
+ */
+export function buildCallSignalRelayEnvelope(
+  eventType,
+  fromUserId,
+  fromUserName,
+  roomId,
+  roomSlug,
+  targetUserId,
+  signal
+) {
+  return {
+    type: eventType,
+    payload: {
+      ...buildCallRelayBasePayload(fromUserId, fromUserName, roomId, roomSlug, targetUserId),
+      signal
+    }
+  };
+}
+
+/**
+ * @param {CallTerminalEventType} eventType
+ * @param {string} fromUserId
+ * @param {string} fromUserName
+ * @param {string} roomId
+ * @param {string | null} roomSlug
+ * @param {string | null} targetUserId
+ * @param {string | null} reason
+ * @returns {WsOutgoingEnvelope}
+ */
+export function buildCallTerminalRelayEnvelope(
+  eventType,
+  fromUserId,
+  fromUserName,
+  roomId,
+  roomSlug,
+  targetUserId,
+  reason
+) {
+  return {
+    type: eventType,
+    payload: {
+      ...buildCallRelayBasePayload(fromUserId, fromUserName, roomId, roomSlug, targetUserId),
+      reason
+    }
+  };
+}

@@ -1,6 +1,8 @@
 import { db } from "../db.js";
 import {
   buildAckEnvelope,
+  buildCallSignalRelayEnvelope,
+  buildCallTerminalRelayEnvelope,
   buildChatMessageEnvelope,
   buildErrorEnvelope,
   buildNackEnvelope,
@@ -496,16 +498,15 @@ export async function realtimeRoutes(fastify) {
               }
 
               const targetUserId = normalizeRequestId(getPayloadString(payload, "targetUserId", 128)) || null;
-
-              const relayPayload = {
-                fromUserId: state.userId,
-                fromUserName: state.userName,
-                roomId: state.roomId,
-                roomSlug: state.roomSlug,
+              const relayEnvelope = buildCallSignalRelayEnvelope(
+                message.type,
+                state.userId,
+                state.userName,
+                state.roomId,
+                state.roomSlug,
                 targetUserId,
-                signal,
-                ts: new Date().toISOString()
-              };
+                signal
+              );
 
               let relayedCount = 0;
 
@@ -516,10 +517,7 @@ export async function realtimeRoutes(fastify) {
                     continue;
                   }
 
-                  sendJson(targetSocket, {
-                    type: message.type,
-                    payload: relayPayload
-                  });
+                  sendJson(targetSocket, relayEnvelope);
                   relayedCount += 1;
                 }
 
@@ -541,10 +539,7 @@ export async function realtimeRoutes(fastify) {
                     continue;
                   }
 
-                  sendJson(roomSocket, {
-                    type: message.type,
-                    payload: relayPayload
-                  });
+                  sendJson(roomSocket, relayEnvelope);
                   relayedCount += 1;
                 }
               }
@@ -573,16 +568,15 @@ export async function realtimeRoutes(fastify) {
 
               const targetUserId = normalizeRequestId(getPayloadString(payload, "targetUserId", 128)) || null;
               const reason = getPayloadString(payload, "reason", 128) || null;
-
-              const relayPayload = {
-                fromUserId: state.userId,
-                fromUserName: state.userName,
-                roomId: state.roomId,
-                roomSlug: state.roomSlug,
+              const relayEnvelope = buildCallTerminalRelayEnvelope(
+                "call.hangup",
+                state.userId,
+                state.userName,
+                state.roomId,
+                state.roomSlug,
                 targetUserId,
-                reason,
-                ts: new Date().toISOString()
-              };
+                reason
+              );
 
               let relayedCount = 0;
 
@@ -593,10 +587,7 @@ export async function realtimeRoutes(fastify) {
                     continue;
                   }
 
-                  sendJson(targetSocket, {
-                    type: "call.hangup",
-                    payload: relayPayload
-                  });
+                  sendJson(targetSocket, relayEnvelope);
                   relayedCount += 1;
                 }
 
@@ -618,10 +609,7 @@ export async function realtimeRoutes(fastify) {
                     continue;
                   }
 
-                  sendJson(roomSocket, {
-                    type: "call.hangup",
-                    payload: relayPayload
-                  });
+                  sendJson(roomSocket, relayEnvelope);
                   relayedCount += 1;
                 }
               }
@@ -650,16 +638,15 @@ export async function realtimeRoutes(fastify) {
 
               const targetUserId = normalizeRequestId(getPayloadString(payload, "targetUserId", 128)) || null;
               const reason = getPayloadString(payload, "reason", 128) || null;
-
-              const relayPayload = {
-                fromUserId: state.userId,
-                fromUserName: state.userName,
-                roomId: state.roomId,
-                roomSlug: state.roomSlug,
+              const relayEnvelope = buildCallTerminalRelayEnvelope(
+                "call.reject",
+                state.userId,
+                state.userName,
+                state.roomId,
+                state.roomSlug,
                 targetUserId,
-                reason,
-                ts: new Date().toISOString()
-              };
+                reason
+              );
 
               let relayedCount = 0;
 
@@ -670,10 +657,7 @@ export async function realtimeRoutes(fastify) {
                     continue;
                   }
 
-                  sendJson(targetSocket, {
-                    type: "call.reject",
-                    payload: relayPayload
-                  });
+                  sendJson(targetSocket, relayEnvelope);
                   relayedCount += 1;
                 }
 
@@ -695,10 +679,7 @@ export async function realtimeRoutes(fastify) {
                     continue;
                   }
 
-                  sendJson(roomSocket, {
-                    type: "call.reject",
-                    payload: relayPayload
-                  });
+                  sendJson(roomSocket, relayEnvelope);
                   relayedCount += 1;
                 }
               }

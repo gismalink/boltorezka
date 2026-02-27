@@ -20,6 +20,7 @@
 - ✅ WS protocol typing step: единый parser/guards для incoming envelope и payload string/signal полей в realtime handler.
 - ✅ WS response typing step: `ack/nack/error/server.ready` собираются централизованными protocol builders.
 - ✅ WS payload typing step: `chat.message`, `room.joined`, `room.presence`, `presence.joined/left` вынесены в protocol builders.
+- ✅ WS call payload typing step: relay envelopes для `call.offer/answer/ice/reject/hangup` собираются централизованно в protocol builders.
 - 🔄 Начат этап реализации React web app (`apps/web`).
 
 ## Automation plan (next blocks)
