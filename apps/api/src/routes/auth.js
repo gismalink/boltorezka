@@ -9,6 +9,8 @@ import { config } from "../config.js";
 /** @typedef {import("../api-contract.types.ts").SsoSessionResponse} SsoSessionResponse */
 /** @typedef {import("../api-contract.types.ts").WsTicketResponse} WsTicketResponse */
 /** @typedef {import("../api-contract.types.ts").MeResponse} MeResponse */
+/** @typedef {import("../request-context.types.ts").AuthenticatedRequestContext} AuthenticatedRequestContext */
+/** @typedef {import("../request-context.types.ts").AuthStartRequestContext} AuthStartRequestContext */
 
 const ssoProviderSchema = z.enum(["google", "yandex"]);
 
@@ -132,7 +134,9 @@ export async function authRoutes(fastify) {
   });
 
   fastify.get("/v1/auth/sso/start", async (request, reply) => {
-    const providerRaw = String(request.query?.provider || "google").toLowerCase();
+    /** @type {AuthStartRequestContext} */
+    const authRequest = request;
+    const providerRaw = String(authRequest.query?.provider || "google").toLowerCase();
     const parsedProvider = ssoProviderSchema.safeParse(providerRaw);
 
     if (!parsedProvider.success) {
@@ -142,13 +146,15 @@ export async function authRoutes(fastify) {
       });
     }
 
-    const returnUrl = resolveSafeReturnUrl(String(request.query?.returnUrl || "/"), request);
+    const returnUrl = resolveSafeReturnUrl(String(authRequest.query?.returnUrl || "/"), request);
     const redirectUrl = `${config.authSsoBaseUrl}/auth/${parsedProvider.data}?returnUrl=${encodeURIComponent(returnUrl)}`;
     return reply.redirect(redirectUrl, 302);
   });
 
   fastify.get("/v1/auth/sso/logout", async (request, reply) => {
-    const returnUrl = resolveSafeReturnUrl(String(request.query?.returnUrl || "/"), request);
+    /** @type {AuthStartRequestContext} */
+    const authRequest = request;
+    const returnUrl = resolveSafeReturnUrl(String(authRequest.query?.returnUrl || "/"), request);
     const redirectUrl = `${config.authSsoBaseUrl}/auth/logout?returnUrl=${encodeURIComponent(returnUrl)}`;
     return reply.redirect(redirectUrl, 302);
   });
@@ -227,7 +233,9 @@ export async function authRoutes(fastify) {
       preHandler: [requireAuth]
     },
     async (request, reply) => {
-      const userId = String(request.user?.sub || "").trim();
+      /** @type {AuthenticatedRequestContext} */
+      const authRequest = request;
+      const userId = String(authRequest.user?.sub || "").trim();
       if (!userId) {
         return reply.code(401).send({
           error: "Unauthorized",
@@ -276,7 +284,9 @@ export async function authRoutes(fastify) {
       preHandler: [requireAuth]
     },
     async (request) => {
-      const userId = request.user.sub;
+      /** @type {AuthenticatedRequestContext} */
+      const authRequest = request;
+      const userId = String(authRequest.user?.sub || "").trim();
       const result = await db.query(
         "SELECT id, email, name, role, created_at FROM users WHERE id = $1",
         [userId]

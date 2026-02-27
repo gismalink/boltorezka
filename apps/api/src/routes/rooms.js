@@ -7,6 +7,8 @@ import { loadCurrentUser, requireAuth, requireRole } from "../middleware/auth.js
 /** @typedef {import("../api-contract.types.ts").RoomsListResponse} RoomsListResponse */
 /** @typedef {import("../api-contract.types.ts").RoomCreateResponse} RoomCreateResponse */
 /** @typedef {import("../api-contract.types.ts").RoomMessagesResponse} RoomMessagesResponse */
+/** @typedef {import("../request-context.types.ts").AuthenticatedRequestContext} AuthenticatedRequestContext */
+/** @typedef {import("../request-context.types.ts").RoomMessagesRequestContext} RoomMessagesRequestContext */
 
 const createRoomSchema = z.object({
   slug: z
@@ -25,7 +27,9 @@ export async function roomsRoutes(fastify) {
       preHandler: [requireAuth]
     },
     async (request) => {
-      const userId = request.user.sub;
+      /** @type {AuthenticatedRequestContext} */
+      const authRequest = request;
+      const userId = String(authRequest.user?.sub || "").trim();
       const result = await db.query(
         `SELECT
            r.id,
@@ -54,6 +58,8 @@ export async function roomsRoutes(fastify) {
       preHandler: [requireAuth, loadCurrentUser, requireRole(["admin", "super_admin"])]
     },
     async (request, reply) => {
+      /** @type {AuthenticatedRequestContext} */
+      const authRequest = request;
       const parsed = createRoomSchema.safeParse(request.body);
 
       if (!parsed.success) {
@@ -74,7 +80,7 @@ export async function roomsRoutes(fastify) {
         });
       }
 
-      const createdBy = request.user.sub;
+      const createdBy = String(authRequest.user?.sub || "").trim();
 
       const created = await db.query(
         `INSERT INTO rooms (slug, title, is_public, created_by)
@@ -102,9 +108,11 @@ export async function roomsRoutes(fastify) {
       preHandler: [requireAuth]
     },
     async (request, reply) => {
-      const userId = request.user.sub;
-      const slug = String(request.params.slug || "").trim();
-      const limit = Math.min(100, Math.max(1, Number(request.query?.limit || 50)));
+      /** @type {RoomMessagesRequestContext} */
+      const roomRequest = request;
+      const userId = String(roomRequest.user?.sub || "").trim();
+      const slug = String(roomRequest.params?.slug || "").trim();
+      const limit = Math.min(100, Math.max(1, Number(roomRequest.query?.limit || 50)));
 
       const roomResult = await db.query(
         "SELECT id, slug, title, is_public FROM rooms WHERE slug = $1",

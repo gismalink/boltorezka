@@ -4,6 +4,7 @@ import { loadCurrentUser, requireAuth, requireRole } from "../middleware/auth.js
 /** @typedef {import("../db.types.ts").UserRow} UserRow */
 /** @typedef {import("../api-contract.types.ts").AdminUsersResponse} AdminUsersResponse */
 /** @typedef {import("../api-contract.types.ts").PromoteUserResponse} PromoteUserResponse */
+/** @typedef {import("../request-context.types.ts").PromoteRequestContext} PromoteRequestContext */
 
 const promoteSchema = z.object({
   role: z.literal("admin").default("admin")
@@ -34,7 +35,9 @@ export async function adminRoutes(fastify) {
       preHandler: [requireAuth, loadCurrentUser, requireRole(["super_admin"])]
     },
     async (request, reply) => {
-      const parsed = promoteSchema.safeParse(request.body || {});
+      /** @type {PromoteRequestContext} */
+      const promoteRequest = request;
+      const parsed = promoteSchema.safeParse(promoteRequest.body || {});
 
       if (!parsed.success) {
         return reply.code(400).send({
@@ -43,7 +46,7 @@ export async function adminRoutes(fastify) {
         });
       }
 
-      const userId = String(request.params.userId || "").trim();
+      const userId = String(promoteRequest.params.userId || "").trim();
       if (!userId) {
         return reply.code(400).send({
           error: "ValidationError",

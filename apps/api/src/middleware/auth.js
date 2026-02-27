@@ -1,5 +1,6 @@
 import { db } from "../db.js";
 /** @typedef {import("../db.types.ts").UserRow} UserRow */
+/** @typedef {import("../request-context.types.ts").AuthenticatedRequestContext} AuthenticatedRequestContext */
 
 export async function requireAuth(request, reply) {
   try {
@@ -13,7 +14,9 @@ export async function requireAuth(request, reply) {
 }
 
 export async function loadCurrentUser(request, reply) {
-  const userId = request.user?.sub;
+  /** @type {AuthenticatedRequestContext} */
+  const authRequest = request;
+  const userId = authRequest.user?.sub;
 
   if (!userId) {
     return reply.code(401).send({
@@ -34,14 +37,16 @@ export async function loadCurrentUser(request, reply) {
     });
   }
 
-  request.currentUser = /** @type {UserRow} */ (result.rows[0]);
+  authRequest.currentUser = /** @type {UserRow} */ (result.rows[0]);
 }
 
 export function requireRole(roles) {
   const allowedRoles = Array.isArray(roles) ? roles : [roles];
 
   return async function roleGuard(request, reply) {
-    const role = request.currentUser?.role || "user";
+    /** @type {AuthenticatedRequestContext} */
+    const authRequest = request;
+    const role = authRequest.currentUser?.role || "user";
 
     if (!allowedRoles.includes(role)) {
       return reply.code(403).send({
