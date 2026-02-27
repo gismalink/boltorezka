@@ -129,7 +129,13 @@ Rollback выполняется только штатным release-script с з
 - Не хранить TURN credentials в репозитории.
 - Любые ключи/токены только через секрет-хранилище/серверные env.
 
-## 9) Latest test evidence (2026-02-27)
+## 9) CI smoke prerequisites
+
+- Workflow: `.github/workflows/test-smoke.yml`.
+- Repo variable: `TEST_SMOKE_API_URL` (optional; default test domain).
+- Repo secret: `TEST_SMOKE_BEARER_TOKEN` (must belong to `admin`/`super_admin`, because CI validates `GET /v1/telemetry/summary`).
+
+## 10) Latest test evidence (2026-02-27)
 
 - Deploy target: `test`, SHA `5c4831c`.
 - SSO smoke: `SMOKE_API_URL=https://test.boltorezka.gismalink.art npm run smoke:sso` -> `ok`.

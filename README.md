@@ -53,6 +53,12 @@ Legacy-файлы перенесены в `legacy/poc/`.
 - `DEPLOY_NOTES='notes' TEST_REF=origin/<branch> npm run deploy:test:smoke` — тот же one-command flow + автоматическая запись release-log (`.deploy/release-log.tsv`, и в `~/srv/edge/RELEASE_LOG.md` если доступен edge release-log script)
 - `npm run deploy:prod` — deploy prod from git ref (`scripts/examples/deploy-prod-from-ref.sh`)
 
+### CI smoke (GitHub Actions)
+
+- Workflow: `.github/workflows/test-smoke.yml` (daily + manual dispatch).
+- Required repository variable: `TEST_SMOKE_API_URL` (optional, default `https://test.boltorezka.gismalink.art`).
+- Required repository secret: `TEST_SMOKE_BEARER_TOKEN` (должен быть `admin`/`super_admin`, т.к. smoke проверяет `GET /v1/telemetry/summary`).
+
 Перед server deploy обязательно:
 
 - скопировать `infra/.env.host.example` -> `infra/.env.host`

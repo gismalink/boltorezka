@@ -30,4 +30,5 @@ jobs:
         env:
           SMOKE_API_URL: ${{ vars.TEST_SMOKE_API_URL || 'https://test.boltorezka.gismalink.art' }}
           SMOKE_BEARER_TOKEN: ${{ secrets.TEST_SMOKE_BEARER_TOKEN }}
+          SMOKE_TELEMETRY_SUMMARY: '1'
         run: SMOKE_API=1 SMOKE_SSO=1 SMOKE_REALTIME=1 npm run check

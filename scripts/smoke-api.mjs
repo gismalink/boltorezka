@@ -1,5 +1,6 @@
 const baseUrl = (process.env.SMOKE_API_URL ?? 'http://localhost:8080').replace(/\/+$/, '');
 const token = process.env.SMOKE_BEARER_TOKEN ?? '';
+const checkTelemetrySummary = process.env.SMOKE_TELEMETRY_SUMMARY !== '0';
 
 async function fetchJson(path, options = {}) {
   const response = await fetch(`${baseUrl}${path}`, options);
@@ -44,6 +45,23 @@ async function fetchJson(path, options = {}) {
     });
     if (!telemetryResponse.ok) {
       throw new Error(`[smoke] /v1/telemetry/web failed: ${telemetryResponse.status}`);
+    }
+
+    if (checkTelemetrySummary) {
+      const { response: summaryResponse, payload: summaryPayload } = await fetchJson('/v1/telemetry/summary', {
+        method: 'GET',
+        headers: authHeaders,
+      });
+
+      if (!summaryResponse.ok) {
+        throw new Error(`[smoke] /v1/telemetry/summary failed: ${summaryResponse.status}`);
+      }
+
+      const metrics = summaryPayload?.metrics || {};
+      const telemetryMetric = Number(metrics.telemetry_web_event || 0);
+      if (!Number.isFinite(telemetryMetric) || telemetryMetric < 1) {
+        throw new Error('[smoke] telemetry summary metric telemetry_web_event is invalid');
+      }
     }
 
     const { response: roomsResponse } = await fetchJson('/v1/rooms', { headers: authHeaders });
