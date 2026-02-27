@@ -92,17 +92,28 @@ export function parseWsIncomingEnvelope(raw: unknown): WsIncomingEnvelope | null
 export function asKnownWsIncomingEnvelope(
   envelope: WsIncomingEnvelope
 ): WsIncomingKnownEnvelope | null {
-  if (
-    envelope.type === "ping" ||
-    envelope.type === "room.join" ||
-    envelope.type === "chat.send" ||
-    isCallSignalEventType(envelope.type) ||
-    isCallTerminalEventType(envelope.type)
-  ) {
-    return envelope as WsIncomingKnownEnvelope;
-  }
+  switch (envelope.type) {
+    case "ping":
+    case "room.join":
+    case "chat.send":
+      return {
+        type: envelope.type,
+        requestId: envelope.requestId,
+        idempotencyKey: envelope.idempotencyKey,
+        payload: envelope.payload
+      };
+    default:
+      if (isCallSignalEventType(envelope.type) || isCallTerminalEventType(envelope.type)) {
+        return {
+          type: envelope.type,
+          requestId: envelope.requestId,
+          idempotencyKey: envelope.idempotencyKey,
+          payload: envelope.payload
+        };
+      }
 
-  return null;
+      return null;
+  }
 }
 
 /**

@@ -606,53 +606,7 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
               return;
               }
 
-              case "call.hangup": {
-              if (!state.roomId) {
-                sendNack(
-                  connection,
-                  requestId,
-                  eventType,
-                  "NoActiveRoom",
-                  "Join a room first"
-                );
-                void incrementMetric("nack_sent");
-                return;
-              }
-
-              const targetUserId = normalizeRequestId(getPayloadString(payload, "targetUserId", 128)) || null;
-              const reason = getPayloadString(payload, "reason", 128) || null;
-              const relayEnvelope = buildCallTerminalRelayEnvelope(
-                "call.hangup",
-                state.userId,
-                state.userName,
-                state.roomId,
-                state.roomSlug,
-                targetUserId,
-                reason
-              );
-
-              const relayOutcome = relayToTargetOrRoom(connection, state.roomId, targetUserId, relayEnvelope);
-              if (!relayOutcome.ok) {
-                sendNack(
-                  connection,
-                  requestId,
-                  eventType,
-                  "TargetNotInRoom",
-                  "Target user is offline or not in this room"
-                );
-                void incrementMetric("nack_sent");
-                return;
-              }
-
-              sendAck(connection, requestId, eventType, {
-                relayedTo: relayOutcome.relayedCount,
-                targetUserId
-              });
-              void incrementMetric("ack_sent");
-              void incrementMetric("call_hangup_sent");
-              return;
-              }
-
+              case "call.hangup":
               case "call.reject": {
               if (!state.roomId) {
                 sendNack(
@@ -669,7 +623,7 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
               const targetUserId = normalizeRequestId(getPayloadString(payload, "targetUserId", 128)) || null;
               const reason = getPayloadString(payload, "reason", 128) || null;
               const relayEnvelope = buildCallTerminalRelayEnvelope(
-                "call.reject",
+                knownMessage.type,
                 state.userId,
                 state.userName,
                 state.roomId,
@@ -696,7 +650,11 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
                 targetUserId
               });
               void incrementMetric("ack_sent");
-              void incrementMetric("call_reject_sent");
+              if (knownMessage.type === "call.hangup") {
+                void incrementMetric("call_hangup_sent");
+              } else {
+                void incrementMetric("call_reject_sent");
+              }
               return;
               }
             }
