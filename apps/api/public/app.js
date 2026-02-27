@@ -4,7 +4,8 @@ const state = {
   ws: null,
   currentRoomSlug: null,
   authMode: "unknown",
-  ssoBaseUrl: ""
+  ssoBaseUrl: "",
+  canCreateRooms: false
 };
 
 const sessionBox = document.querySelector("#session-box");
@@ -15,6 +16,7 @@ const chatLog = document.querySelector("#chat-log");
 const authModeBox = document.querySelector("#auth-mode-box");
 const roomStateBox = document.querySelector("#room-state-box");
 const presenceBox = document.querySelector("#presence-box");
+const createRoomForm = document.querySelector("#create-room-form");
 
 function resolveDefaultSsoBase() {
   const host = window.location.hostname;
@@ -50,13 +52,22 @@ function setPresence(users) {
 function updateSessionView() {
   if (!state.token) {
     sessionBox.textContent = "No active session";
+    state.canCreateRooms = false;
+    createRoomForm.style.display = "none";
     return;
   }
+
+  const role = state.user?.role || "user";
+  state.canCreateRooms = role === "admin" || role === "super_admin";
+  createRoomForm.style.display = state.canCreateRooms ? "flex" : "none";
 
   sessionBox.textContent = JSON.stringify(
     {
       token: `${state.token.slice(0, 16)}...`,
-      user: state.user
+      user: state.user,
+      permissions: {
+        canCreateRooms: state.canCreateRooms
+      }
     },
     null,
     2
@@ -318,6 +329,11 @@ document.querySelector("#logout-btn").addEventListener("click", () => {
 document.querySelector("#create-room-form").addEventListener("submit", async (event) => {
   event.preventDefault();
 
+  if (!state.canCreateRooms) {
+    logEvent("room create denied: admin or super_admin role is required");
+    return;
+  }
+
   const slug = document.querySelector("#room-slug").value.trim();
   const title = document.querySelector("#room-title").value.trim();
 
@@ -369,6 +385,7 @@ document.querySelector("#send-chat-btn").addEventListener("click", () => {
 (async function bootstrap() {
   setRoomState("room: none");
   setPresence([]);
+  createRoomForm.style.display = "none";
   await loadAuthMode();
   await refreshMe();
   await loadRooms();

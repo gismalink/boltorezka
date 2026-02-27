@@ -44,6 +44,7 @@ services:
       JWT_SECRET: ${JWT_SECRET:-change-this-in-test-and-prod}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173}
+      SUPER_ADMIN_EMAIL: ${SUPER_ADMIN_EMAIL:-gismalink@gmail.com}
     depends_on:
       postgres:
         condition: service_healthy

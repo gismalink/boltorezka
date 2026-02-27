@@ -83,29 +83,34 @@ async function upsertSsoUser(profile) {
 
   const displayName =
     String(profile?.username || "").trim() || normalizedEmail.split("@")[0] || "SSO User";
+  const isSuperAdmin = normalizedEmail === config.superAdminEmail;
 
   const existing = await db.query(
-    "SELECT id, email, name, created_at FROM users WHERE email = $1",
+    "SELECT id, email, name, role, created_at FROM users WHERE email = $1",
     [normalizedEmail]
   );
 
   if (existing.rowCount > 0) {
     const updated = await db.query(
       `UPDATE users
-       SET name = $2
+       SET
+         name = $2,
+         role = CASE WHEN $3 THEN 'super_admin' ELSE role END
        WHERE email = $1
-       RETURNING id, email, name, created_at`,
-      [normalizedEmail, displayName]
+       RETURNING id, email, name, role, created_at`,
+      [normalizedEmail, displayName, isSuperAdmin]
     );
 
     return updated.rows[0];
   }
 
+  const newRole = isSuperAdmin ? "super_admin" : "user";
+
   const created = await db.query(
-    `INSERT INTO users (email, password_hash, name)
-     VALUES ($1, $2, $3)
-     RETURNING id, email, name, created_at`,
-    [normalizedEmail, "__sso_only__", displayName]
+    `INSERT INTO users (email, password_hash, name, role)
+     VALUES ($1, $2, $3, $4)
+     RETURNING id, email, name, role, created_at`,
+    [normalizedEmail, "__sso_only__", displayName, newRole]
   );
 
   return created.rows[0];
@@ -166,6 +171,7 @@ export async function authRoutes(fastify) {
           sub: localUser.id,
           email: localUser.email,
           name: localUser.name,
+          role: localUser.role,
           authMode: "sso"
         },
         {
@@ -181,7 +187,7 @@ export async function authRoutes(fastify) {
           id: ssoUser.id || null,
           email: ssoUser.email || null,
           username: ssoUser.username || null,
-          role: ssoUser.role || ssoTokenResult.data?.role || "user"
+          role: localUser.role || ssoUser.role || ssoTokenResult.data?.role || "user"
         }
       };
     } catch (error) {
@@ -216,7 +222,7 @@ export async function authRoutes(fastify) {
     async (request) => {
       const userId = request.user.sub;
       const result = await db.query(
-        "SELECT id, email, name, created_at FROM users WHERE id = $1",
+        "SELECT id, email, name, role, created_at FROM users WHERE id = $1",
         [userId]
       );
 

@@ -18,6 +18,7 @@ services:
       AUTH_MODE: sso
       AUTH_SSO_BASE_URL: ${TEST_AUTH_SSO_BASE_URL:-https://test.auth.gismalink.art}
       ALLOWED_RETURN_HOSTS: ${TEST_ALLOWED_RETURN_HOSTS:-test.boltorezka.gismalink.art}
+      SUPER_ADMIN_EMAIL: ${TEST_SUPER_ADMIN_EMAIL:-gismalink@gmail.com}
     depends_on:
       boltorezka-db-test:
         condition: service_healthy
@@ -79,6 +80,7 @@ services:
       AUTH_MODE: sso
       AUTH_SSO_BASE_URL: ${PROD_AUTH_SSO_BASE_URL:-https://auth.gismalink.art}
       ALLOWED_RETURN_HOSTS: ${PROD_ALLOWED_RETURN_HOSTS:-boltorezka.gismalink.art}
+      SUPER_ADMIN_EMAIL: ${PROD_SUPER_ADMIN_EMAIL:-gismalink@gmail.com}
     depends_on:
       boltorezka-db-prod:
         condition: service_healthy

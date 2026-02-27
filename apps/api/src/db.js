@@ -11,3 +11,7 @@ export const db = new Pool({
 export async function dbHealthcheck() {
   await db.query("SELECT 1");
 }
+
+export async function ensureSchema() {
+  await db.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT 'user'");
+}

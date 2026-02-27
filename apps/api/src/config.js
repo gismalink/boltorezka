@@ -24,5 +24,8 @@ export const config = {
     /\/+$/,
     ""
   ),
-  allowedReturnHosts: parseCsv(process.env.ALLOWED_RETURN_HOSTS)
+  allowedReturnHosts: parseCsv(process.env.ALLOWED_RETURN_HOSTS),
+  superAdminEmail: String(process.env.SUPER_ADMIN_EMAIL || "gismalink@gmail.com")
+    .trim()
+    .toLowerCase()
 };

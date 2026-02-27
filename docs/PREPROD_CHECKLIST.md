@@ -18,6 +18,10 @@
    - Complete SSO Session,
    - room join,
    - message send/receive в двух вкладках.
+5. RBAC smoke пройден:
+   - `super_admin` может промоутить пользователя в `admin`,
+   - обычный `user` не может создавать комнату,
+   - `admin` может создавать комнату.
 
 ## 3) Runtime и конфигурация
 

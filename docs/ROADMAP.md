@@ -45,13 +45,26 @@
   - users,
   - rooms,
   - membership.
+- Реализовать базовый RBAC для MVP:
+  - роли `user`, `admin`, `super_admin`,
+  - фиксированный super-admin по email `gismalink@gmail.com`,
+  - promote `user -> admin` только от super-admin,
+  - room creation только для `admin` и `super_admin`.
 - Завести миграции БД и seed для test окружения.
 - Добавить OpenAPI v1.
 
 ### Exit criteria
 
 - CRUD по users/rooms/members работает.
+- RBAC-проверки работают на критичных действиях (promotion, room creation).
 - Документированный API контракт v1.
+
+### RBAC MVP API scope (детализация)
+
+- `GET /v1/auth/me` возвращает роль пользователя.
+- `GET /v1/admin/users` доступен `admin` и `super_admin`.
+- `POST /v1/admin/users/:userId/promote` доступен только `super_admin`.
+- `POST /v1/rooms` доступен только `admin` и `super_admin`.
 
 ---
 

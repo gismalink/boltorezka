@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { db } from "../db.js";
-import { requireAuth } from "../middleware/auth.js";
+import { loadCurrentUser, requireAuth, requireRole } from "../middleware/auth.js";
 
 const createRoomSchema = z.object({
   slug: z
@@ -32,7 +32,7 @@ export async function roomsRoutes(fastify) {
              WHERE rm.room_id = r.id AND rm.user_id = $1
            ) AS is_member
          FROM rooms r
-         ORDER BY created_at ASC`
+         ORDER BY created_at ASC`,
         [userId]
       );
 
@@ -45,7 +45,7 @@ export async function roomsRoutes(fastify) {
   fastify.post(
     "/v1/rooms",
     {
-      preHandler: [requireAuth]
+      preHandler: [requireAuth, loadCurrentUser, requireRole(["admin", "super_admin"])]
     },
     async (request, reply) => {
       const parsed = createRoomSchema.safeParse(request.body);

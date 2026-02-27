@@ -7,9 +7,10 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { config } from "./config.js";
 import { connectRedis, redis } from "./redis.js";
-import { db } from "./db.js";
+import { db, ensureSchema } from "./db.js";
 import { healthRoutes } from "./routes/health.js";
 import { authRoutes } from "./routes/auth.js";
+import { adminRoutes } from "./routes/admin.js";
 import { roomsRoutes } from "./routes/rooms.js";
 import { realtimeRoutes } from "./routes/realtime.js";
 
@@ -40,6 +41,7 @@ app.decorate("redis", redis);
 
 await app.register(healthRoutes);
 await app.register(authRoutes);
+await app.register(adminRoutes);
 await app.register(roomsRoutes);
 await app.register(realtimeRoutes);
 
@@ -57,6 +59,7 @@ process.on("SIGINT", shutdown);
 process.on("SIGTERM", shutdown);
 
 try {
+  await ensureSchema();
   await connectRedis();
   await app.listen({
     host: "0.0.0.0",

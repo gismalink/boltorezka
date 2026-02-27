@@ -75,6 +75,7 @@ Legacy-файлы перенесены в `legacy/poc/`.
 - Docker Compose c сервисами `api + postgres + redis`
 - Базовая схема БД и seed комнаты `general`
 - SSO-only auth flow (Google/Yandex via central auth) + local JWT session exchange
+- MVP RBAC: `user/admin/super_admin` (super-admin по `SUPER_ADMIN_EMAIL`)
 - Rooms endpoints (`list`, `create`)
 - Health endpoint с проверкой DB/Redis
 - Web MVP UI на `http://localhost:8080/` (auth + rooms + realtime chat)
@@ -108,6 +109,16 @@ API endpoints для SSO:
 - `GET /v1/auth/sso/session`
 - `GET /v1/auth/sso/logout?returnUrl=<url>`
 - `GET /v1/auth/me` (с локальным bearer JWT, выданным после `sso/session`)
+
+RBAC endpoints:
+
+- `GET /v1/admin/users` (admin/super_admin)
+- `POST /v1/admin/users/:userId/promote` (super_admin only)
+
+MVP RBAC правило:
+
+- Только `super_admin` может промоутить пользователей в `admin`.
+- Только `admin` и `super_admin` могут создавать комнаты.
 
 ### Минимальный smoke rooms + chat
 
