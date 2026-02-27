@@ -44,7 +44,7 @@ Legacy-файлы перенесены в `legacy/poc/`.
 - `SMOKE_API=1 npm run check` — verify + API smoke (`scripts/smoke-api.mjs`)
 - `SMOKE_API_URL=https://test.boltorezka.gismalink.art npm run smoke:sso` — SSO redirect/mode smoke (`scripts/smoke-sso-redirect.mjs`)
 - `SMOKE_API_URL=https://test.boltorezka.gismalink.art SMOKE_BEARER_TOKEN=<jwt> npm run smoke:realtime` — WS protocol smoke (`nack/ack/idempotency`) через `ws-ticket` (`scripts/smoke-realtime.mjs`)
-- `SMOKE_CALL_SIGNAL=1 SMOKE_API_URL=https://test.boltorezka.gismalink.art SMOKE_BEARER_TOKEN=<jwt> npm run smoke:realtime` — расширенный WS smoke + relay проверки `call.offer` и `call.hangup` (второй ws-ticket создаётся автоматически)
+- `SMOKE_CALL_SIGNAL=1 SMOKE_API_URL=https://test.boltorezka.gismalink.art SMOKE_BEARER_TOKEN=<jwt> npm run smoke:realtime` — расширенный WS smoke + relay проверки `call.offer`, `call.reject` и `call.hangup` (второй ws-ticket создаётся автоматически)
 - `SMOKE_API_URL=https://test.boltorezka.gismalink.art SMOKE_API=1 SMOKE_SSO=1 npm run check` — единый verify + API + SSO smoke
 - `SMOKE_API_URL=https://test.boltorezka.gismalink.art SMOKE_API=1 SMOKE_SSO=1 SMOKE_REALTIME=1 SMOKE_WS_TICKET=<ticket> npm run check` — полный verify + API + SSO + realtime smoke
 - `npm run deploy:test` — deploy test from git ref (`scripts/examples/deploy-test-from-ref.sh`)
@@ -169,7 +169,7 @@ WS envelope (MVP hardening):
 - client -> server: `type`, `requestId`, `payload`, optional `idempotencyKey`
 - server -> client: `ack` / `nack` с `requestId` и `eventType`
 - для `chat.send` используется dedup по `idempotencyKey`
-- signaling baseline: `call.offer`, `call.answer`, `call.ice`, `call.hangup` (relay в пределах room, optional `targetUserId`)
+- signaling baseline: `call.offer`, `call.answer`, `call.ice`, `call.reject`, `call.hangup` (relay в пределах room, optional `targetUserId`)
 
 ### Минимальный smoke realtime (WebSocket)
 

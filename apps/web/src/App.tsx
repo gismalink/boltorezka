@@ -423,6 +423,14 @@ export function App() {
               pushCallLog(`${message.type} from ${fromUserName} (${hasSignal ? "signal" : "no-signal"})`);
             }
 
+            if (message.type === "call.reject") {
+              const fromUserName = String(message.payload?.fromUserName || message.payload?.fromUserId || "unknown");
+              const reason = String(message.payload?.reason || "").trim();
+              setLastCallPeer(fromUserName);
+              setCallStatus("idle");
+              pushCallLog(`call.reject from ${fromUserName}${reason ? ` (${reason})` : ""}`);
+            }
+
             if (message.type === "call.hangup") {
               const fromUserName = String(message.payload?.fromUserName || message.payload?.fromUserId || "unknown");
               const reason = String(message.payload?.reason || "").trim();
@@ -598,6 +606,24 @@ export function App() {
     }
   };
 
+  const sendCallReject = () => {
+    const targetUserId = callTargetUserId.trim();
+    const payload: Record<string, unknown> = { reason: "busy" };
+    if (targetUserId) {
+      payload.targetUserId = targetUserId;
+    }
+
+    const requestId = sendWsEvent("call.reject", payload, { maxRetries: 1 });
+    if (!requestId) {
+      pushCallLog("call.reject skipped: socket unavailable");
+      return;
+    }
+
+    setCallStatus("idle");
+    setLastCallPeer(targetUserId || "room");
+    pushCallLog(`call.reject sent${targetUserId ? ` -> ${targetUserId}` : " -> room"}`);
+  };
+
   const sendCallHangup = () => {
     const targetUserId = callTargetUserId.trim();
     const payload: Record<string, unknown> = { reason: "manual" };
@@ -734,6 +760,7 @@ export function App() {
                 <button type="button" onClick={() => sendCallSignal("call.offer")}>Send offer</button>
                 <button type="button" onClick={() => sendCallSignal("call.answer")}>Send answer</button>
                 <button type="button" onClick={() => sendCallSignal("call.ice")}>Send ICE</button>
+                <button type="button" className="secondary" onClick={sendCallReject}>Send reject</button>
                 <button type="button" className="secondary" onClick={sendCallHangup}>Send hangup</button>
               </div>
               <div className="log call-log">

@@ -672,6 +672,83 @@ export async function realtimeRoutes(fastify) {
               return;
             }
 
+            if (message.type === "call.reject") {
+              if (!state.roomId) {
+                sendNack(
+                  connection,
+                  requestId,
+                  eventType,
+                  "NoActiveRoom",
+                  "Join a room first"
+                );
+                void incrementMetric("nack_sent");
+                return;
+              }
+
+              const targetUserId = normalizeRequestId(message.payload?.targetUserId) || null;
+              const reason = String(message.payload?.reason || "").trim().slice(0, 128) || null;
+
+              const relayPayload = {
+                fromUserId: state.userId,
+                fromUserName: state.userName,
+                roomId: state.roomId,
+                roomSlug: state.roomSlug,
+                targetUserId,
+                reason,
+                ts: new Date().toISOString()
+              };
+
+              let relayedCount = 0;
+
+              if (targetUserId) {
+                const targetSockets = getUserRoomSockets(targetUserId, state.roomId);
+                for (const targetSocket of targetSockets) {
+                  if (targetSocket === connection) {
+                    continue;
+                  }
+
+                  sendJson(targetSocket, {
+                    type: "call.reject",
+                    payload: relayPayload
+                  });
+                  relayedCount += 1;
+                }
+
+                if (relayedCount === 0) {
+                  sendNack(
+                    connection,
+                    requestId,
+                    eventType,
+                    "TargetNotInRoom",
+                    "Target user is offline or not in this room"
+                  );
+                  void incrementMetric("nack_sent");
+                  return;
+                }
+              } else {
+                const roomSockets = socketsByRoomId.get(state.roomId) || new Set();
+                for (const roomSocket of roomSockets) {
+                  if (roomSocket === connection) {
+                    continue;
+                  }
+
+                  sendJson(roomSocket, {
+                    type: "call.reject",
+                    payload: relayPayload
+                  });
+                  relayedCount += 1;
+                }
+              }
+
+              sendAck(connection, requestId, eventType, {
+                relayedTo: relayedCount,
+                targetUserId
+              });
+              void incrementMetric("ack_sent");
+              void incrementMetric("call_reject_sent");
+              return;
+            }
+
             sendNack(connection, requestId, eventType, "UnknownEvent", "Unsupported event type");
             void incrementMetric("nack_sent");
           } catch (error) {

@@ -142,6 +142,12 @@ function waitForEvent(events, predicate, label) {
     });
   });
 
+  const firstReady = await waitForEvent(events, (item) => item?.type === "server.ready", "server.ready for first websocket");
+  const firstUserId = String(firstReady?.payload?.userId || "").trim();
+  if (!firstUserId) {
+    throw new Error("[smoke:realtime] first websocket user id is missing");
+  }
+
   const requestNack = `nack-${Date.now()}`;
   ws.send(JSON.stringify({ type: "chat.send", requestId: requestNack, payload: { text: "smoke pre-join nack" } }));
 
@@ -205,6 +211,7 @@ function waitForEvent(events, predicate, label) {
   }
 
   let callSignalRelayed = false;
+  let callRejectRelayed = false;
   let callHangupRelayed = false;
   if (smokeCallSignal) {
     if (!secondTicket) {
@@ -289,6 +296,40 @@ function waitForEvent(events, predicate, label) {
 
     callSignalRelayed = true;
 
+    const rejectRequestId = `call-reject-${Date.now()}`;
+    wsSecond.send(
+      JSON.stringify({
+        type: "call.reject",
+        requestId: rejectRequestId,
+        payload: {
+          targetUserId: firstUserId,
+          reason: "smoke-reject"
+        }
+      })
+    );
+
+    const rejectAck = await waitForEvent(
+      secondEvents,
+      (item) => item?.type === "ack" && item?.payload?.requestId === rejectRequestId,
+      "ack for call.reject"
+    );
+
+    const relayedReject = await waitForEvent(
+      events,
+      (item) => item?.type === "call.reject" && item?.payload?.reason === "smoke-reject",
+      "relayed call.reject"
+    );
+
+    if (Number(rejectAck?.payload?.relayedTo || 0) < 1) {
+      throw new Error("[smoke:realtime] expected call.reject relayedTo >= 1");
+    }
+
+    if (String(relayedReject?.payload?.targetUserId || "") !== firstUserId) {
+      throw new Error("[smoke:realtime] relayed call.reject targetUserId mismatch");
+    }
+
+    callRejectRelayed = true;
+
     const hangupRequestId = `call-hangup-${Date.now()}`;
     ws.send(
       JSON.stringify({
@@ -339,6 +380,7 @@ function waitForEvent(events, predicate, label) {
         firstMessageId: firstAck?.payload?.messageId ?? null,
         duplicateIdempotencyKey: duplicateAck?.payload?.idempotencyKey ?? null,
         callSignalRelayed,
+        callRejectRelayed,
         callHangupRelayed
       },
       null,
