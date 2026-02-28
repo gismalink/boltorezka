@@ -22,3 +22,4 @@ coverage/
 # Local runtime artifacts
 .tmp/
 .cache/
+.deploy/
