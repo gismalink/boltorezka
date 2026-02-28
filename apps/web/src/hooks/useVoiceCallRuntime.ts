@@ -939,7 +939,6 @@ export function useVoiceCallRuntime({
 
     const toDisconnect = Array.from(peersRef.current.keys()).filter((userId) => !targetsById.has(userId));
     toDisconnect.forEach((userId) => {
-      sendWsEvent("call.hangup", { targetUserId: userId, reason: "left_room" }, { maxRetries: 1 });
       closePeer(userId, `peer left room: ${userId}`);
     });
 
@@ -981,9 +980,18 @@ export function useVoiceCallRuntime({
   }, [pushCallLog, setCallStatus, syncRoomTargets, sendWsEvent, micMuted, audioMuted]);
 
   const disconnectRoom = useCallback(() => {
+    const activeTargetIds = new Set(
+      roomVoiceTargetsRef.current
+        .map((member) => String(member.userId || "").trim())
+        .filter((userId) => userId.length > 0)
+    );
+
     const peerIds = Array.from(peersRef.current.keys());
     peerIds.forEach((userId) => {
-      sendWsEvent("call.hangup", { targetUserId: userId, reason: "manual" }, { maxRetries: 1 });
+      if (activeTargetIds.has(userId)) {
+        const requestId = sendWsEvent("call.hangup", { targetUserId: userId, reason: "manual" }, { maxRetries: 1 });
+        rememberRequestTarget(requestId, "call.hangup", userId);
+      }
       closePeer(userId);
     });
 
@@ -998,7 +1006,7 @@ export function useVoiceCallRuntime({
     setLastCallPeer("");
     setCallStatus("idle");
     pushCallLog("voice room disconnected");
-  }, [sendWsEvent, closePeer, releaseLocalStream, setLastCallPeer, setCallStatus, pushCallLog]);
+  }, [sendWsEvent, closePeer, releaseLocalStream, setLastCallPeer, setCallStatus, pushCallLog, rememberRequestTarget]);
 
   const handleIncomingSignal = useCallback(async (
     eventType: "call.offer" | "call.answer" | "call.ice",

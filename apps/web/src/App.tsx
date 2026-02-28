@@ -535,6 +535,8 @@ export function App() {
 
   useEffect(() => {
     if (wsState !== "connected") {
+      setRoomsPresenceBySlug({});
+      setRoomsPresenceDetailsBySlug({});
       return;
     }
 
