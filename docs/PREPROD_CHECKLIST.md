@@ -44,7 +44,7 @@ Decision package (обязательно к заполнению перед `pro
 
 Перед `prod` должно быть:
 
-0. Продуктовый gate: подтверждена готовность "похоже на MVP" (MVP-like readiness).
+0. Продуктовый gate: подтверждена готовность "похоже на MVP" (MVP-like readiness) по `docs/PREPROD_DECISION_PACKAGE.md` (раздел `MVP-like readiness gate`).
 1. Явное подтверждение владельца релиза.
 2. Запись commit SHA и smoke-результата.
 3. План rollback (команда + ответственный).

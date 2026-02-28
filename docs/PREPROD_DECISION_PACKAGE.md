@@ -117,3 +117,54 @@
 - Rollback ref: `<known-good-sha>`
 - Decision: `GO | NO-GO`
 - Timestamp UTC: `<yyyy-mm-ddThh:mm:ssZ>`
+
+## 8) MVP-like readiness gate (required before prod)
+
+Этот раздел определяет, когда пункт roadmap “вернуться к `prod`” считается выполненным.
+
+### 8.1 Mandatory GO criteria
+
+Для статуса **GO** одновременно должны быть выполнены все пункты:
+
+1. **Branch discipline**
+  - rollout target = `origin/main@<sha>`;
+  - feature branch не используется для `prod`.
+2. **Test reliability**
+  - свежий `deploy:test:smoke` — PASS;
+  - `smoke:sso` — PASS;
+  - `smoke:realtime` — PASS;
+  - `reconnectOk=true`.
+3. **Web e2e MVP coverage**
+  - `npm run smoke:web:e2e` проходит с актуальным test URL и валидными smoke credentials.
+4. **Realtime call relay coverage**
+  - extended relay сценарий (`SMOKE_CALL_SIGNAL=1`) подтверждает relay-path (`call.offer/call.reject/call.hangup`).
+5. **Operational readiness**
+  - назначены `Release Owner` и `Rollback Owner`;
+  - зафиксирован rollback ref (`<known-good-sha>`);
+  - доступ к runbook/script path подтверждён.
+6. **Audit trail readiness**
+  - подготовлены release notes;
+  - release/rollback команды и ожидаемые артефакты (`.deploy/release-log.tsv`, edge release log) известны заранее.
+
+### 8.2 Automatic NO-GO conditions
+
+Если выполняется хотя бы одно условие — решение только **NO-GO**:
+
+- любой smoke/e2e gate падает,
+- нет явного owner sign-off,
+- rollback target не определён до старта rollout,
+- target ref не `origin/main`.
+
+### 8.3 Pre-prod gate record (fill before prod)
+
+- Target main SHA: `<sha>`
+- Last test deploy SHA: `<sha>`
+- smoke:sso: `PASS | FAIL`
+- smoke:realtime: `PASS | FAIL`
+- reconnectOk: `true | false`
+- smoke:web:e2e: `PASS | FAIL`
+- call relay scenario: `PASS | FAIL`
+- Release Owner: `<name>`
+- Rollback Owner: `<name>`
+- Rollback ref: `<known-good-sha>`
+- Final decision: `GO | NO-GO`

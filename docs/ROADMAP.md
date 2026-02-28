@@ -180,6 +180,8 @@
 4. [x] Финализировать OpenAPI/WS schema milestone.
 5. [x] Подготовить pre-prod decision пакет (evidence + rollback owner/plan).
 6. [ ] Вернуться к `prod` только после достижения MVP-like readiness.
+  - [x] Формализован MVP-like readiness gate в `docs/PREPROD_DECISION_PACKAGE.md`.
+  - [ ] Получен explicit `GO` и выполнен rollout из `origin/main`.
 
 ## KPI MVP
 
