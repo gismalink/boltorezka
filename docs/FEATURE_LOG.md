@@ -3,6 +3,28 @@
 Этот документ хранит зафиксированные изменения, выполненные шаги и операционные evidence.
 План и open items находятся в `docs/ROADMAP.md`.
 
+## 2026-02-28 — Overlay confirm UX polish + channel members in sidebar list
+
+### Delivered
+
+- Confirm popup для `Delete/Clear` теперь закрывается:
+  - по `Esc`,
+  - по клику на затемнённый фон (backdrop).
+- В списке каналов начато отображение участников активного канала (под строкой канала, как в Discord-style примере):
+  - аватар-инициал,
+  - имя,
+  - иконки voice-статуса.
+
+### Validation
+
+- `npm run check:api-types` — PASS.
+- `npm --prefix apps/web run build` — PASS.
+
+### Operational evidence (test)
+
+- Deploy target: `test`, branch `feature/web-header-profile-menu`.
+- Smoke: `smoke:sso` / `smoke:realtime` — PASS (после деплоя изменений).
+
 ## 2026-02-28 — Confirm actions moved to separate overlay popup
 
 ### Delivered

@@ -50,6 +50,7 @@ export type RoomsPanelProps = {
   canCreateRooms: boolean;
   roomsTree: RoomsTreeResponse | null;
   roomSlug: string;
+  activeRoomMembers: string[];
   uncategorizedRooms: Room[];
   newCategorySlug: string;
   newCategoryTitle: string;

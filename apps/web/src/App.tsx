@@ -766,6 +766,7 @@ export function App() {
             canCreateRooms={canCreateRooms}
             roomsTree={roomsTree}
             roomSlug={roomSlug}
+            activeRoomMembers={roomPeople}
             uncategorizedRooms={uncategorizedRooms}
             newCategorySlug={newCategorySlug}
             newCategoryTitle={newCategoryTitle}

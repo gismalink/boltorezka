@@ -19,6 +19,7 @@ export function RoomsPanel({
   canCreateRooms,
   roomsTree,
   roomSlug,
+  activeRoomMembers,
   uncategorizedRooms,
   newCategorySlug,
   newCategoryTitle,
@@ -98,6 +99,21 @@ export function RoomsPanel({
     onDeleteChannel(confirmPopup.room);
     setConfirmPopup(null);
   };
+
+  useEffect(() => {
+    if (!confirmPopup) {
+      return;
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setConfirmPopup(null);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [confirmPopup]);
 
   const renderRoomRow = (room: Room) => (
     <div className="channel-row">
@@ -179,6 +195,21 @@ export function RoomsPanel({
             </div>
           </PopupPortal>
         </div>
+      ) : null}
+
+      {roomSlug === room.slug && activeRoomMembers.length > 0 ? (
+        <ul className="channel-members-list">
+          {activeRoomMembers.map((member) => (
+            <li key={`${room.id}-${member}`} className="channel-member-item">
+              <span className="channel-member-avatar">{(member || "U").charAt(0).toUpperCase()}</span>
+              <span className="channel-member-name">{member}</span>
+              <span className="channel-member-icons" aria-hidden="true">
+                <i className="bi bi-mic-mute" />
+                <i className="bi bi-volume-mute" />
+              </span>
+            </li>
+          ))}
+        </ul>
       ) : null}
     </div>
   );
@@ -347,7 +378,14 @@ export function RoomsPanel({
       </section>
 
       {confirmPopup ? (
-        <div className="settings-confirm-overlay" onMouseDown={(event) => event.stopPropagation()}>
+        <div
+          className="settings-confirm-overlay"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              setConfirmPopup(null);
+            }
+          }}
+        >
           <div className="card compact settings-confirm-modal">
             <h3 className="subheading settings-confirm-title">Confirm action</h3>
             <p className="muted settings-confirm-text">

@@ -106,6 +106,51 @@
   align-items: center;
 }
 
+.channel-members-list {
+  grid-column: 1 / -1;
+  list-style: none;
+  margin: 0;
+  padding: var(--space-xxs) 0 0 var(--space-lg);
+  display: grid;
+  gap: var(--space-xs);
+}
+
+.channel-member-item {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.channel-member-avatar {
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: var(--border-strong) solid var(--pixel-border);
+  background: var(--pixel-panel-2);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+}
+
+.channel-member-name {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--pixel-muted);
+  font-size: var(--font-size-sm);
+}
+
+.channel-member-icons {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  color: var(--pixel-muted);
+  font-size: var(--font-size-sm);
+}
+
 .channel-action-btn {
   opacity: 0;
   pointer-events: none;
