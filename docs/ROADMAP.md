@@ -3,6 +3,28 @@
 Этот документ хранит только план и открытые задачи.
 Фактически реализованные изменения и evidence ведутся отдельно в `docs/FEATURE_LOG.md`.
 
+## Current status (single-pane, 2026-02-28)
+
+- Release gate: **NO-GO** для `prod` (до заполнения owner/sign-off и explicit approval).
+- `prod` path: только `origin/main@<sha>` после успешного `test` smoke.
+- Latest verified test deploy: `origin/feature/web-header-profile-menu` @ `c52890d`.
+- Smoke snapshot:
+  - `smoke:sso` — PASS
+  - `smoke:realtime` — PASS
+  - `reconnectOk=true`
+  - `smoke:web:e2e` — PASS
+  - `SMOKE_CALL_SIGNAL=1` relay — PASS
+- Open items to reach `GO`:
+  1. Заполнить `Release Owner` и `Rollback Owner`.
+  2. Зафиксировать rollback ref (`known-good main SHA`).
+  3. Подтвердить target ref `origin/main@<sha>`.
+  4. Получить explicit `GO` перед `prod` rollout.
+
+Навигация:
+- План и open tasks: этот документ.
+- Реализованные изменения/evidence: `docs/FEATURE_LOG.md`.
+- Детальная pre-prod форма: `docs/PREPROD_DECISION_PACKAGE.md`.
+
 ## Delivery rules (обязательно) (дубль из правил агента)
 
 - Deploy first to `test`.
