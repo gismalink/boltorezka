@@ -3,6 +3,23 @@
 Этот документ хранит зафиксированные изменения, выполненные шаги и операционные evidence.
 План и open items находятся в `docs/ROADMAP.md`.
 
+## 2026-02-28 — Realtime smoke stabilization: protect default `general` room
+
+### Delivered
+
+- Найдена причина падения `smoke:realtime`: `room.join` получал `RoomNotFound` для `general`.
+- Добавлена backend-защита: `DELETE /v1/rooms/:roomId` теперь блокирует удаление default-комнаты `general` (`409 DefaultRoomProtected`).
+- В `test` БД восстановлена отсутствующая комната `general`.
+
+### Validation
+
+- `npm run check:api-types` — PASS.
+- `npm --prefix apps/web run build` — PASS.
+
+### Operational evidence (test)
+
+- После восстановления `general` и деплоя защиты выполняется повторный `postdeploy` smoke.
+
 ## 2026-02-28 — Overlay confirm UX polish + channel members in sidebar list
 
 ### Delivered
