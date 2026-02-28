@@ -2,6 +2,8 @@
 
 Чеклист перед запросом на rollout в `prod`.
 
+Decision package (обязательно к заполнению перед `prod`): [PREPROD_DECISION_PACKAGE.md](PREPROD_DECISION_PACKAGE.md)
+
 ## 1) Branch и Git
 
 1. Feature-ветка смержена в `main`.

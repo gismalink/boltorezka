@@ -178,7 +178,7 @@
   - [x] extended realtime relay smoke (`SMOKE_CALL_SIGNAL=1`, 2 ws-ticket)
 3. [x] Закрыть docs-gap для React как default UI runbook.
 4. [x] Финализировать OpenAPI/WS schema milestone.
-5. [ ] Подготовить pre-prod decision пакет (evidence + rollback owner/plan).
+5. [x] Подготовить pre-prod decision пакет (evidence + rollback owner/plan).
 6. [ ] Вернуться к `prod` только после достижения MVP-like readiness.
 
 ## KPI MVP
