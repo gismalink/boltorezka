@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import type { MediaDevicesState } from "../components";
 
 type DeviceOption = { id: string; label: string };
@@ -32,6 +32,27 @@ export function useMediaDevicePreferences({
   setSelectedInputId,
   setSelectedOutputId
 }: UseMediaDevicePreferencesArgs) {
+  const permissionPromptTriedRef = useRef(false);
+
+  const requestMicPermission = useCallback(async () => {
+    if (!navigator.mediaDevices?.getUserMedia) {
+      return false;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+      stream.getTracks().forEach((track) => track.stop());
+      return true;
+    } catch (error) {
+      const errorName = (error as { name?: string })?.name || "";
+      if (errorName === "NotAllowedError" || errorName === "SecurityError") {
+        setMediaDevicesState("denied");
+        setMediaDevicesHint(t("settings.mediaDenied"));
+      }
+      return false;
+    }
+  }, [setMediaDevicesState, setMediaDevicesHint, t]);
+
   const loadDevices = useCallback(async () => {
     if (!navigator.mediaDevices?.enumerateDevices) {
       setMediaDevicesState("unsupported");
@@ -66,7 +87,44 @@ export function useMediaDevicePreferences({
       setInputDevices(inputs);
       setOutputDevices(outputs);
 
-      if (inputs.length === 0 && outputs.length === 0) {
+      const hasNoAudioDevices = inputs.length === 0 && outputs.length === 0;
+      if (hasNoAudioDevices && !permissionPromptTriedRef.current) {
+        permissionPromptTriedRef.current = true;
+        const permissionGranted = await requestMicPermission();
+        if (permissionGranted) {
+          const devicesAfterPermission = await enumerateWithRetry();
+          const refreshedInputs = devicesAfterPermission
+            .filter((item) => item.kind === "audioinput")
+            .map((item, index) => ({
+              id: item.deviceId || `input-${index}`,
+              label: item.label || `${t("settings.microphone")} ${index + 1}`
+            }));
+          const refreshedOutputs = devicesAfterPermission
+            .filter((item) => item.kind === "audiooutput")
+            .map((item, index) => ({
+              id: item.deviceId || `output-${index}`,
+              label: item.label || `${t("settings.outputDevice")} ${index + 1}`
+            }));
+
+          setInputDevices(refreshedInputs.length > 0 ? refreshedInputs : [{ id: FALLBACK_DEVICE_ID, label: t("device.systemDefault") }]);
+          setOutputDevices(refreshedOutputs.length > 0 ? refreshedOutputs : [{ id: FALLBACK_DEVICE_ID, label: t("device.systemDefault") }]);
+
+          if (refreshedInputs.length > 0 && !refreshedInputs.some((item) => item.id === selectedInputId)) {
+            setSelectedInputId(refreshedInputs[0].id);
+          }
+          if (refreshedOutputs.length > 0 && !refreshedOutputs.some((item) => item.id === selectedOutputId)) {
+            setSelectedOutputId(refreshedOutputs[0].id);
+          }
+
+          setMediaDevicesState("ready");
+          setMediaDevicesHint("");
+          return;
+        }
+      }
+
+      if (hasNoAudioDevices) {
+        setInputDevices([{ id: FALLBACK_DEVICE_ID, label: t("device.systemDefault") }]);
+        setOutputDevices([{ id: FALLBACK_DEVICE_ID, label: t("device.systemDefault") }]);
         setMediaDevicesState("error");
         setMediaDevicesHint(t("settings.devicesNotFound"));
       } else {
@@ -108,7 +166,8 @@ export function useMediaDevicePreferences({
     setMediaDevicesState,
     setMediaDevicesHint,
     setSelectedInputId,
-    setSelectedOutputId
+    setSelectedOutputId,
+    requestMicPermission
   ]);
 
   useEffect(() => {

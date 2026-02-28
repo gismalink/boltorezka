@@ -1,4 +1,4 @@
-import { useCallback, useEffect, type Dispatch, type MutableRefObject, type RefObject, type SetStateAction } from "react";
+import { useCallback, useEffect, useRef, type Dispatch, type MutableRefObject, type RefObject, type SetStateAction } from "react";
 import { api } from "../api";
 import { trackClientEvent } from "../telemetry";
 import type { Message, MessagesCursor, PresenceMember } from "../domain";
@@ -68,6 +68,17 @@ export function useRealtimeChatLifecycle({
   onCallSignal,
   onCallTerminal
 }: UseRealtimeChatLifecycleArgs) {
+  const onCallSignalRef = useRef(onCallSignal);
+  const onCallTerminalRef = useRef(onCallTerminal);
+
+  useEffect(() => {
+    onCallSignalRef.current = onCallSignal;
+  }, [onCallSignal]);
+
+  useEffect(() => {
+    onCallTerminalRef.current = onCallTerminal;
+  }, [onCallTerminal]);
+
   useEffect(() => {
     roomSlugRef.current = roomSlug;
     realtimeClientRef.current?.setRoomSlug(roomSlug);
@@ -103,8 +114,8 @@ export function useRealtimeChatLifecycle({
           token
         );
       },
-      onCallSignal,
-      onCallTerminal
+      onCallSignal: (...args) => onCallSignalRef.current?.(...args),
+      onCallTerminal: (...args) => onCallTerminalRef.current?.(...args)
     });
 
     const client = new RealtimeClient({
@@ -150,7 +161,7 @@ export function useRealtimeChatLifecycle({
         realtimeClientRef.current = null;
       }
     };
-  }, [token, onCallSignal, onCallTerminal]);
+  }, [token]);
 
   useEffect(() => {
     if (!token || !roomSlug) return;
