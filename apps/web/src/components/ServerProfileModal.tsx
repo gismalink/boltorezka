@@ -19,8 +19,6 @@ type ServerProfileModalProps = {
   onSetServerMenuTab: (value: ServerMenuTab) => void;
   onPromote: (userId: string) => void;
   onRefreshTelemetry: () => void;
-  onConnectVoiceRoom: () => void;
-  onDisconnectVoiceRoom: () => void;
 };
 
 export function ServerProfileModal({
@@ -39,9 +37,7 @@ export function ServerProfileModal({
   onClose,
   onSetServerMenuTab,
   onPromote,
-  onRefreshTelemetry,
-  onConnectVoiceRoom,
-  onDisconnectVoiceRoom
+  onRefreshTelemetry
 }: ServerProfileModalProps) {
   if (!open) {
     return null;
@@ -157,11 +153,9 @@ export function ServerProfileModal({
             <section className="stack signaling-panel">
               <h3>{t("call.title")}</h3>
               <p className="muted">{t("call.status")}: {callStatus}{lastCallPeer ? ` (${lastCallPeer})` : ""}</p>
-              <div className="row">
-                <button type="button" onClick={roomVoiceConnected ? onDisconnectVoiceRoom : onConnectVoiceRoom}>
-                  {roomVoiceConnected ? t("call.disconnectRoom") : t("call.connectRoom")}
-                </button>
-              </div>
+              <p className="muted">
+                {roomVoiceConnected ? t("call.autoConnected") : t("call.autoWaiting")}
+              </p>
               <div className="log call-log">
                 {callEventLog.map((line, index) => (
                   <div key={`${line}-${index}`}>{line}</div>

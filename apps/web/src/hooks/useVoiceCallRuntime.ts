@@ -499,13 +499,13 @@ export function useVoiceCallRuntime({
     pushCallLog("voice room connect requested");
 
     if (roomVoiceTargetsRef.current.length === 0) {
-      pushToast(t("call.noTargets"));
+      pushCallLog("voice room waiting for participants");
       setCallStatus("idle");
       return;
     }
 
     await syncRoomTargets();
-  }, [pushCallLog, pushToast, t, setCallStatus, syncRoomTargets]);
+  }, [pushCallLog, setCallStatus, syncRoomTargets]);
 
   const disconnectRoom = useCallback(() => {
     const peerIds = Array.from(peersRef.current.keys());

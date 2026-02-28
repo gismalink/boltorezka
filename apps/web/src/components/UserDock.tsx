@@ -60,8 +60,7 @@ export function UserDock({
   onSetMicVolume,
   onSetOutputVolume,
   onToggleMicTest,
-  onDisconnectCall,
-  onConnectVoiceRoom
+  onDisconnectCall
 }: UserDockProps) {
   const inputDeviceRowRef = useRef<HTMLButtonElement>(null);
   const inputProfileRowRef = useRef<HTMLButtonElement>(null);
@@ -107,11 +106,6 @@ export function UserDock({
               </button>
               <button type="button" className="secondary" data-tooltip={t("rtc.activities")}>
                 <i className="bi bi-lightning-charge" aria-hidden="true" />
-              </button>
-            </div>
-            <div className="rtc-call-controls">
-              <button type="button" onClick={roomVoiceConnected ? onDisconnectCall : onConnectVoiceRoom}>
-                {roomVoiceConnected ? t("call.disconnectRoom") : t("call.connectRoom")}
               </button>
             </div>
           </section>

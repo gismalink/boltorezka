@@ -465,10 +465,6 @@ export function App() {
     }
   };
 
-  const connectVoiceRoom = () => {
-    void connectRoom();
-  };
-
   const joinRoom = (slug: string) => {
     roomAdminController.joinRoom(slug);
   };
@@ -548,6 +544,34 @@ export function App() {
       : t("settings.custom");
 
   const currentRoomSupportsRtc = currentRoom ? currentRoom.kind !== "text" : false;
+
+  useEffect(() => {
+    if (!currentRoomSupportsRtc) {
+      if (roomVoiceConnected) {
+        disconnectRoom();
+      }
+      return;
+    }
+
+    const hasOtherParticipants = currentRoomVoiceTargets.length > 0;
+
+    if (hasOtherParticipants) {
+      if (!roomVoiceConnected) {
+        void connectRoom();
+      }
+      return;
+    }
+
+    if (roomVoiceConnected) {
+      disconnectRoom();
+    }
+  }, [
+    currentRoomSupportsRtc,
+    currentRoomVoiceTargets.length,
+    roomVoiceConnected,
+    connectRoom,
+    disconnectRoom
+  ]);
 
   useServerMenuAccessGuard({
     serverMenuTab,
@@ -701,7 +725,6 @@ export function App() {
               onSetOutputVolume={setOutputVolume}
               onToggleMicTest={() => setMicTestRunning((value) => !value)}
               onDisconnectCall={disconnectRoom}
-              onConnectVoiceRoom={connectVoiceRoom}
             />
           ) : null}
         </aside>
@@ -742,8 +765,6 @@ export function App() {
         onSetServerMenuTab={setServerMenuTab}
         onPromote={(userId) => void promote(userId)}
         onRefreshTelemetry={() => void loadTelemetrySummary()}
-        onConnectVoiceRoom={connectVoiceRoom}
-        onDisconnectVoiceRoom={disconnectRoom}
       />
 
       <ToastStack toasts={toasts} />

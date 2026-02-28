@@ -67,7 +67,6 @@ export type UserDockProps = {
   onSetOutputVolume: (value: number) => void;
   onToggleMicTest: () => void;
   onDisconnectCall: () => void;
-  onConnectVoiceRoom: () => void;
 };
 
 export type RoomsPanelProps = {
