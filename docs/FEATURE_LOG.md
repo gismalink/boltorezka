@@ -3,6 +3,24 @@
 Этот документ хранит зафиксированные изменения, выполненные шаги и операционные evidence.
 План и open items находятся в `docs/ROADMAP.md`.
 
+## 2026-02-28 — Test DB seed: screenshot-like chat structure
+
+### Delivered
+
+- Добавлен идемпотентный SQL-сид для структуры категорий/чатов: `scripts/examples/seed-chatset.sql`.
+- Сид применён в `test` БД на сервере (`boltorezka-db-test`) через `docker compose exec ... psql`.
+- Созданы категории и каналы по присланному макету (текстовый канал + блоки `СТАТУС`, `КОМНАТЫ`, `ЗАПОВЕДНИК`, `Kontrollräume`).
+
+### Validation
+
+- Проверочная выборка в test БД вернула ожидаемые категории/каналы в заданном порядке (`22 rows`, включая уже существующие старые категории).
+
+### Operational evidence (test)
+
+- Seed file: `scripts/examples/seed-chatset.sql`.
+- Command pattern: `cat /tmp/boltorezka_seed_chatset.sql | docker compose ... exec -T boltorezka-db-test psql ...`.
+- Result: `INSERT 0 5` (categories), `INSERT 0 20` (rooms), `COMMIT`.
+
 ## 2026-02-28 — Headings font update: Jersey 25
 
 ### Delivered
