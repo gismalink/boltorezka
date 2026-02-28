@@ -116,6 +116,23 @@ export function RoomsPanel({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [confirmPopup]);
 
+  const dedupeMemberNames = (names: string[]) => {
+    const byKey = new Map<string, string>();
+    names.forEach((nameRaw) => {
+      const normalized = String(nameRaw || "").trim();
+      if (!normalized) {
+        return;
+      }
+
+      const key = normalized.toLocaleLowerCase();
+      if (!byKey.has(key)) {
+        byKey.set(key, normalized);
+      }
+    });
+
+    return Array.from(byKey.values());
+  };
+
   const renderRoomRow = (room: Room) => (
     <div className="channel-row">
       <button
@@ -200,8 +217,8 @@ export function RoomsPanel({
 
       {(() => {
         const roomMembers = roomSlug === room.slug
-          ? Array.from(new Set([...(room.member_names || []), ...activeRoomMembers]))
-          : (room.member_names || []);
+          ? dedupeMemberNames([...(room.member_names || []), ...activeRoomMembers])
+          : dedupeMemberNames(room.member_names || []);
 
         if (roomMembers.length === 0) {
           return null;
