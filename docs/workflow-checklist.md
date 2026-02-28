@@ -52,9 +52,25 @@
 4. В `prod` идти только по явному подтверждению владельца релиза и только из `main`.
 5. После `prod` повторить post-deploy smoke + extended relay smoke и зафиксировать запись в release log.
 
+Обязательные gate-ссылки:
+
+- `docs/PREPROD_DECISION_PACKAGE.md` — единый GO/NO-GO пакет и owner sign-off форма.
+- `docs/PREPROD_CHECKLIST.md` — контрольный список перед `prod`.
+
 ## Частые пропуски
 
 1. Изменили API payload, но не синхронизировали web client.
 2. Забыли проверить `AUTH_MODE=sso` и `AUTH_SSO_BASE_URL` для test.
 3. Обновили README без обновления runbook.
 4. Проверили только `/health`, но не сделали room/chat smoke.
+
+## Текущий статус gate (snapshot, 2026-02-28)
+
+- Текущий статус: **NO-GO** до explicit owner approval для `prod`.
+- Последний подтверждённый test deploy SHA: `c52890d` (`origin/feature/web-header-profile-menu`).
+- Минимум для `GO`:
+   1. rollout target только `origin/main@<sha>`;
+   2. `deploy:test:smoke` PASS (`smoke:sso`, `smoke:realtime`, `reconnectOk=true`);
+   3. `npm run smoke:web:e2e` PASS;
+   4. extended relay (`SMOKE_CALL_SIGNAL=1`) PASS;
+   5. заполнены `Release Owner` + `Rollback Owner` + rollback ref.
