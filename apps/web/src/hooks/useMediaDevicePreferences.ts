@@ -17,6 +17,8 @@ type UseMediaDevicePreferencesArgs = {
   setSelectedOutputId: (value: string) => void;
 };
 
+const FALLBACK_DEVICE_ID = "default";
+
 export function useMediaDevicePreferences({
   t,
   selectedInputId,
@@ -37,8 +39,17 @@ export function useMediaDevicePreferences({
       return;
     }
 
+    const enumerateWithRetry = async () => {
+      try {
+        return await navigator.mediaDevices.enumerateDevices();
+      } catch {
+        await new Promise((resolve) => window.setTimeout(resolve, 350));
+        return navigator.mediaDevices.enumerateDevices();
+      }
+    };
+
     try {
-      const devices = await navigator.mediaDevices.enumerateDevices();
+      const devices = await enumerateWithRetry();
       const inputs = devices
         .filter((item) => item.kind === "audioinput")
         .map((item, index) => ({
@@ -77,7 +88,15 @@ export function useMediaDevicePreferences({
         return;
       }
 
-      setMediaDevicesState("error");
+      setInputDevices([{ id: FALLBACK_DEVICE_ID, label: t("device.systemDefault") }]);
+      setOutputDevices([{ id: FALLBACK_DEVICE_ID, label: t("device.systemDefault") }]);
+      if (selectedInputId !== FALLBACK_DEVICE_ID) {
+        setSelectedInputId(FALLBACK_DEVICE_ID);
+      }
+      if (selectedOutputId !== FALLBACK_DEVICE_ID) {
+        setSelectedOutputId(FALLBACK_DEVICE_ID);
+      }
+      setMediaDevicesState("ready");
       setMediaDevicesHint(t("settings.devicesLoadFailed"));
     }
   }, [
