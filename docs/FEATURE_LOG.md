@@ -48,6 +48,8 @@
 - В `scripts/examples/postdeploy-smoke-test.sh` добавлена server-side генерация `SMOKE_BEARER_TOKEN` (HS256 JWT) на базе `JWT_SECRET` + smoke user из test DB.
 - Благодаря этому `smoke:api` в postdeploy больше не зависит от ручной передачи bearer и может выполнять protected API блоки (включая hierarchy smoke).
 - Логика auto-ticket для realtime сохранена; user meta переиспользуется для ticket payload.
+- Исправлен порядок шагов: bearer формируется до запуска `smoke:api`.
+- Добавлены fallback-источники секрета: `TEST_JWT_SECRET` и `JWT_SECRET` из env api-контейнера.
 
 ### Validation
 

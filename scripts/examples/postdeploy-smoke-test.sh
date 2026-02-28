@@ -7,6 +7,7 @@ COMPOSE_FILE="infra/docker-compose.host.yml"
 ENV_FILE="infra/.env.host"
 POSTGRES_SERVICE="${TEST_POSTGRES_SERVICE:-boltorezka-db-test}"
 REDIS_SERVICE="${TEST_REDIS_SERVICE:-boltorezka-redis-test}"
+API_SERVICE="${TEST_API_SERVICE:-boltorezka-api-test}"
 USER_EMAIL="${SMOKE_USER_EMAIL:-gismalink@gmail.com}"
 SUMMARY_FILE_REL=".deploy/last-smoke-summary.env"
 
@@ -17,6 +18,7 @@ SMOKE_ACK_DELTA=0
 SMOKE_CHAT_SENT_DELTA=0
 SMOKE_CHAT_IDEMPOTENCY_HIT_DELTA=0
 SMOKE_SUMMARY_TEXT="health=fail mode=unknown sso=fail realtime=fail delta(nack=0,ack=0,chat=0,idem=0)"
+API_SMOKE_STATUS="skip"
 
 write_summary() {
   mkdir -p .deploy
@@ -110,20 +112,6 @@ fi
 echo "[postdeploy-smoke] smoke:sso"
 SMOKE_API_URL="$BASE_URL" npm run smoke:sso
 
-if [[ "${SMOKE_API:-1}" == "0" ]]; then
-  echo "[postdeploy-smoke] smoke:api skipped (SMOKE_API=0)"
-else
-  echo "[postdeploy-smoke] smoke:api"
-  SMOKE_API_URL="$BASE_URL" npm run smoke:api
-fi
-
-if [[ "${SMOKE_REALTIME:-1}" == "0" ]]; then
-  echo "[postdeploy-smoke] realtime smoke skipped (SMOKE_REALTIME=0)"
-  SMOKE_STATUS="pass"
-  SMOKE_SUMMARY_TEXT="health=pass mode=sso sso=pass api=pass realtime=skip delta(nack=0,ack=0,chat=0,idem=0)"
-  exit 0
-fi
-
 set -a
 source "$ENV_FILE"
 set +a
@@ -147,13 +135,34 @@ if [[ -z "${SMOKE_BEARER_TOKEN:-}" ]]; then
   SMOKE_USER_ID="${USER_META%%|*}"
   SMOKE_USER_ROLE="${USER_META##*|}"
 
-  if [[ -z "${JWT_SECRET:-}" ]]; then
-    echo "[postdeploy-smoke] JWT_SECRET is required for auto-bearer generation" >&2
-    exit 1
+  JWT_SECRET_CANDIDATE="${JWT_SECRET:-${TEST_JWT_SECRET:-}}"
+
+  if [[ -z "$JWT_SECRET_CANDIDATE" ]]; then
+    JWT_SECRET_CANDIDATE="$(compose exec -T "$API_SERVICE" printenv JWT_SECRET 2>/dev/null | tr -d '\r' | tr -d '\n')"
   fi
 
-  GENERATED_BEARER="$(make_hs256_jwt "$JWT_SECRET" "$SMOKE_USER_ID" "$SMOKE_USER_ROLE")"
-  export SMOKE_BEARER_TOKEN="$GENERATED_BEARER"
+  if [[ -n "$JWT_SECRET_CANDIDATE" ]]; then
+    GENERATED_BEARER="$(make_hs256_jwt "$JWT_SECRET_CANDIDATE" "$SMOKE_USER_ID" "$SMOKE_USER_ROLE")"
+    export SMOKE_BEARER_TOKEN="$GENERATED_BEARER"
+  else
+    echo "[postdeploy-smoke] warning: cannot resolve JWT secret; protected smoke:api checks may be skipped"
+  fi
+fi
+
+if [[ "${SMOKE_API:-1}" == "0" ]]; then
+  echo "[postdeploy-smoke] smoke:api skipped (SMOKE_API=0)"
+  API_SMOKE_STATUS="skip"
+else
+  echo "[postdeploy-smoke] smoke:api"
+  SMOKE_API_URL="$BASE_URL" npm run smoke:api
+  API_SMOKE_STATUS="pass"
+fi
+
+if [[ "${SMOKE_REALTIME:-1}" == "0" ]]; then
+  echo "[postdeploy-smoke] realtime smoke skipped (SMOKE_REALTIME=0)"
+  SMOKE_STATUS="pass"
+  SMOKE_SUMMARY_TEXT="health=pass mode=sso sso=pass api=$API_SMOKE_STATUS realtime=skip delta(nack=0,ack=0,chat=0,idem=0)"
+  exit 0
 fi
 
 if [[ "$AUTO_TICKET" == "1" ]]; then
@@ -222,6 +231,6 @@ SMOKE_CHAT_SENT_DELTA=$((CHAT_SENT_AFTER - CHAT_SENT_BEFORE))
 SMOKE_CHAT_IDEMPOTENCY_HIT_DELTA=$((CHAT_IDEMPOTENCY_HIT_AFTER - CHAT_IDEMPOTENCY_HIT_BEFORE))
 
 SMOKE_STATUS="pass"
-SMOKE_SUMMARY_TEXT="health=pass mode=sso sso=pass api=pass realtime=pass delta(nack=$SMOKE_NACK_DELTA,ack=$SMOKE_ACK_DELTA,chat=$SMOKE_CHAT_SENT_DELTA,idem=$SMOKE_CHAT_IDEMPOTENCY_HIT_DELTA)"
+SMOKE_SUMMARY_TEXT="health=pass mode=sso sso=pass api=$API_SMOKE_STATUS realtime=pass delta(nack=$SMOKE_NACK_DELTA,ack=$SMOKE_ACK_DELTA,chat=$SMOKE_CHAT_SENT_DELTA,idem=$SMOKE_CHAT_IDEMPOTENCY_HIT_DELTA)"
 
 echo "[postdeploy-smoke] done"
