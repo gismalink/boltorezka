@@ -35,81 +35,16 @@
   - явного подтверждения.
 - GitOps only, без ручных правок на сервере.
 
-## Phase 0 — Discovery & ADR
+## Focus now (операционный фокус)
 
-### Цели
+1. Закрыть remaining web MVP задачи (Phase 4).
+2. Дойти до формального `GO` по pre-prod gate.
+3. Выполнить controlled rollout в `prod` только из `origin/main`.
 
-- [ ] Зафиксировать технические решения в ADR.
+## Completed milestones (свернуто)
 
-### Задачи
-
-- [ ] Утвердить ограничения MVP.
-  - [ ] max participants per room
-  - [ ] retention policy
-  - [ ] supported platforms
-- [ ] Написать ADR.
-  - [ ] signaling протокол
-  - [ ] media topology (P2P now / SFU later)
-  - [ ] auth/session strategy
-
-### Exit criteria
-
-- [ ] Подписанные ADR и технические границы MVP.
-
----
-
-## Phase 1 — Backend Contract & Data
-
-### Цели
-
-- [ ] Закрыть контрактную часть backend на уровне документации и схем.
-
-### Задачи
-
-- [x] Зафиксировать каноничный HTTP contract doc (`docs/API_CONTRACT_V1.md`).
-- [x] Зафиксировать каноничный WS contract doc (`docs/WS_CONTRACT_V1.md`).
-- [x] Добавить/финализировать OpenAPI v1 spec artifact (`docs/OPENAPI_V1.yaml`).
-- [x] Синхронизировать CI smoke matrix/checklist с утверждёнными контрактами (`docs/SMOKE_CI_MATRIX.md`).
-
-### Exit criteria
-
-- [x] Документированный API/WS контракт v1 + smoke/CI matrix sync.
-
----
-
-## Phase 2 — Realtime Core Completion
-
-### Цели
-
-- [ ] Закрыть оставшиеся элементы realtime MVP.
-
-### Задачи
-
-- [x] Добавить явный `room.leave` в protocol flow.
-- [x] Доделать message history + pagination.
-- [x] Поддерживать стабильный smoke для reconnect и idempotency сценариев.
-
-### Exit criteria
-
-- [x] Полный realtime MVP сценарий покрыт тестовыми и smoke-проверками.
-
----
-
-## Phase 3 — Voice / WebRTC MVP
-
-### Цели
-
-- [ ] Подготовить production-ready voice path.
-
-### Задачи
-
-- [ ] Интеграция coturn через env/secret.
-- [ ] Ограничение размера комнаты для p2p.
-- [ ] Graceful degradation при плохой сети.
-
-### Exit criteria
-
-- [ ] Voice сценарий стабилен в test для целевой нагрузки MVP.
+- Phase 1 — Backend Contract & Data: **DONE**.
+- Phase 2 — Realtime Core Completion: **DONE**.
 
 ---
 
@@ -154,44 +89,29 @@
 
 ---
 
-## Phase 5 — iOS & macOS
+## Backlog (свернуто, не блокирует текущий rollout gate)
 
-### Цели
+### Phase 0 — Discovery & ADR
 
-- [ ] Запустить нативные клиенты с shared core.
+- [ ] Утвердить MVP-границы (participants, retention, platforms).
+- [ ] Зафиксировать ADR (signaling, media topology, auth/session).
 
-### Задачи
+### Phase 3 — Voice / WebRTC MVP
 
-- [ ] Создать общий Swift package (network/realtime/call/models).
-- [ ] Реализовать экраны:
-  - [ ] auth
-  - [ ] rooms list
-  - [ ] chat
-  - [ ] voice room
-- [ ] iOS lifecycle обработка (audio interruptions, app background transitions).
+- [ ] Coturn integration через env/secret.
+- [ ] Ограничения размера room для p2p.
+- [ ] Graceful degradation при плохой сети.
 
-### Exit criteria
+### Phase 5 — iOS & macOS
 
-- [ ] iOS/macOS internal builds проходят сценарии MVP.
+- [ ] Shared Swift package + базовые MVP-экраны.
+- [ ] Lifecycle обработка audio interruptions/background.
 
----
+### Phase 6 — Hardening & Release Readiness
 
-## Phase 6 — Hardening & Release Readiness
-
-### Цели
-
-- [ ] Стабилизировать систему перед расширением аудитории.
-
-### Задачи
-
-- [ ] Нагрузочные тесты signaling и presence.
-- [ ] Тесты отказов/reconnect.
+- [ ] Нагрузочные и reconnect/failure тесты.
 - [ ] Security review (authz, rate limits, abuse prevention).
 - [ ] Финальные runbook: deploy/smoke/rollback/incident response.
-
-### Exit criteria
-
-- [ ] Готовность к controlled production rollout.
 
 ---
 
