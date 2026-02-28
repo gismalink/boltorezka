@@ -8,41 +8,41 @@
 .rooms-scroll {
   min-height: 0;
   overflow-y: auto;
-  padding-right: 2px;
+  padding-right: var(--space-xxs);
 }
 
 .rooms-list,
 .admin-list {
   list-style: none;
   padding: 0;
-  margin: 8px 0 0;
+  margin: var(--space-md) 0 0;
   display: grid;
-  gap: 8px;
+  gap: var(--space-md);
 }
 
 .subheading {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   text-transform: uppercase;
   color: var(--pixel-muted);
   letter-spacing: 0.04em;
 }
 
 .category-block {
-  margin-top: 10px;
+  margin-top: var(--space-lg);
 }
 
 .category-title-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 6px;
+  gap: var(--space-sm);
 }
 
 .category-actions {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-xs);
 }
 
 .category-settings-anchor {
@@ -51,16 +51,16 @@
 
 .category-settings-popup {
   right: 0;
-  top: calc(100% + 4px);
+  top: calc(100% + var(--offset-menu));
   z-index: 30;
 }
 
 .category-title {
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   text-transform: uppercase;
   color: var(--pixel-muted);
   letter-spacing: 0.04em;
-  margin-bottom: 6px;
+  margin-bottom: var(--space-sm);
 }
 
 .room-btn {
@@ -68,7 +68,7 @@
   text-align: left;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-md);
 }
 
 .room-btn-active {
@@ -85,7 +85,7 @@
   position: relative;
   display: grid;
   grid-template-columns: 1fr auto;
-  gap: 6px;
+  gap: var(--space-sm);
   align-items: center;
 }
 
@@ -108,7 +108,7 @@
 
 .channel-settings-popup {
   right: 0;
-  top: calc(100% + 4px);
+  top: calc(100% + var(--offset-menu));
   z-index: 30;
 }
 
@@ -117,7 +117,7 @@
   min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-md);
 }
 
 .presence-box {
@@ -130,11 +130,11 @@
   max-height: none;
   overflow: auto;
   background: var(--pixel-panel-2);
-  border: 2px solid var(--pixel-border);
+  border: var(--border-strong) solid var(--pixel-border);
   border-radius: 0;
-  padding: 8px;
+  padding: var(--space-md);
   display: grid;
-  gap: 6px;
+  gap: var(--space-sm);
   box-shadow:
     inset 0 0 0 1px #0e1938,
     3px 3px 0 var(--pixel-hard-shadow);
@@ -149,8 +149,8 @@
 }
 
 .delivery {
-  margin-left: 8px;
-  font-size: 12px;
+  margin-left: var(--space-md);
+  font-size: var(--font-size-sm);
   color: var(--pixel-muted);
 }
 

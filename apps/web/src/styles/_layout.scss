@@ -1,9 +1,9 @@
 .app {
   max-width: 1400px;
   margin: 0 auto;
-  padding: 16px;
+  padding: var(--space-2xl);
   display: grid;
-  gap: 10px;
+  gap: var(--space-lg);
 }
 
 .app-title {
@@ -20,13 +20,13 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--space-xl);
 }
 
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-md);
 }
 
 .user-chip {
@@ -37,7 +37,7 @@
 .workspace {
   display: grid;
   grid-template-columns: 320px 1fr 320px;
-  gap: 10px;
+  gap: var(--space-lg);
   min-height: calc(100vh - 100px);
   height: calc(100vh - 100px);
   align-items: stretch;
@@ -48,7 +48,7 @@
 .rightcolumn {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--space-lg);
 }
 
 .leftcolumn {
@@ -62,9 +62,9 @@
 
 .card {
   background: var(--pixel-panel);
-  border: 2px solid var(--pixel-border);
+  border: var(--border-strong) solid var(--pixel-border);
   border-radius: 0;
-  padding: 10px;
+  padding: var(--space-lg);
   box-shadow:
     0 0 0 2px var(--pixel-bg),
     4px 4px 0 var(--pixel-hard-shadow),
@@ -74,36 +74,36 @@
 .compact h2,
 .middle-card h2 {
   margin-top: 0;
-  margin-bottom: 8px;
+  margin-bottom: var(--space-md);
 }
 
 .section-heading-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--space-md);
 }
 
 .row-actions {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-sm);
 }
 
 .row {
   display: flex;
-  gap: 8px;
+  gap: var(--space-md);
   align-items: center;
   flex-wrap: wrap;
 }
 
 .stack {
   display: grid;
-  gap: 8px;
+  gap: var(--space-md);
 }
 
 .compact-hint {
-  margin: 6px 0 0;
+  margin: var(--space-sm) 0 0;
 }
 
 .admin-row {
