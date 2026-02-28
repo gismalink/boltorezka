@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { CallStatus } from "../services";
 import type { PresenceMember } from "../domain";
+import {
+  decrementVoiceCounter,
+  incrementVoiceCounter,
+  logVoiceDiagnostics
+} from "../utils/voiceDiagnostics";
 
 type WsSender = (
   eventType: string,
@@ -224,6 +229,8 @@ export function useVoiceCallRuntime({
 
     window.clearTimeout(peer.reconnectTimer);
     peer.reconnectTimer = null;
+    decrementVoiceCounter("runtimeReconnectTimers");
+    logVoiceDiagnostics("runtime reconnect timer cleared", { targetUserId });
   }, []);
 
   const releaseLocalStream = useCallback(() => {
@@ -233,6 +240,8 @@ export function useVoiceCallRuntime({
 
     localStreamRef.current.getTracks().forEach((track) => track.stop());
     localStreamRef.current = null;
+    decrementVoiceCounter("runtimeLocalStreams");
+    logVoiceDiagnostics("runtime local stream released");
   }, []);
 
   const closePeer = useCallback((targetUserId: string, reason?: string) => {
@@ -250,6 +259,9 @@ export function useVoiceCallRuntime({
     peer.audioElement.srcObject = null;
     peer.audioElement.remove();
     peersRef.current.delete(targetUserId);
+    decrementVoiceCounter("runtimePeers");
+    decrementVoiceCounter("runtimeAudioElements");
+    logVoiceDiagnostics("runtime peer closed", { targetUserId, label: peer.label });
 
     if (reason) {
       pushCallLog(reason);
@@ -295,8 +307,12 @@ export function useVoiceCallRuntime({
     });
 
     localStreamRef.current = stream;
+    incrementVoiceCounter("runtimeLocalStreams");
+    logVoiceDiagnostics("runtime local stream acquired", {
+      selectedInputId: selectedInputId || "default"
+    });
     return stream;
-  }, [getAudioConstraints, micMuted, t, pushToastThrottled]);
+  }, [getAudioConstraints, micMuted, t, pushToastThrottled, selectedInputId]);
 
   const attachLocalTracks = useCallback(async (connection: RTCPeerConnection) => {
     const stream = await ensureLocalStream();
@@ -341,6 +357,7 @@ export function useVoiceCallRuntime({
       const current = peersRef.current.get(targetUserId);
       if (current) {
         current.reconnectTimer = null;
+        decrementVoiceCounter("runtimeReconnectTimers");
       }
 
       try {
@@ -350,6 +367,13 @@ export function useVoiceCallRuntime({
         pushCallLog(`reconnect attempt failed: ${(error as Error).message}`);
       }
     }, delay);
+    incrementVoiceCounter("runtimeReconnectTimers");
+    logVoiceDiagnostics("runtime reconnect timer scheduled", {
+      targetUserId,
+      trigger,
+      delay,
+      attempt
+    });
   }, [closePeer, pushCallLog, updateCallStatus]);
 
   const ensurePeerConnection = useCallback((targetUserId: string, targetLabel: string) => {
@@ -376,6 +400,12 @@ export function useVoiceCallRuntime({
       reconnectTimer: null as number | null
     };
     peersRef.current.set(targetUserId, peerContext);
+    incrementVoiceCounter("runtimePeers");
+    incrementVoiceCounter("runtimeAudioElements");
+    logVoiceDiagnostics("runtime peer created", {
+      targetUserId,
+      targetLabel
+    });
 
     connection.onicecandidate = (event) => {
       if (!event.candidate) {
@@ -707,6 +737,9 @@ export function useVoiceCallRuntime({
         localStreamRef.current?.getTracks().forEach((track) => track.stop());
         localStreamRef.current = nextStream;
         pushCallLog("input device switched for active call");
+        logVoiceDiagnostics("runtime input track replaced", {
+          selectedInputId: selectedInputId || "default"
+        });
       } catch (error) {
         if (!cancelled) {
           pushToastThrottled("devices-load-failed", t("settings.devicesLoadFailed"));
@@ -721,6 +754,13 @@ export function useVoiceCallRuntime({
       cancelled = true;
     };
   }, [selectedInputId, getAudioConstraints, micMuted, t, pushToastThrottled, pushCallLog]);
+
+  useEffect(() => {
+    logVoiceDiagnostics("runtime mount", { roomSlug });
+    return () => {
+      logVoiceDiagnostics("runtime unmount", { roomSlug });
+    };
+  }, [roomSlug]);
 
   useEffect(() => {
     return () => {

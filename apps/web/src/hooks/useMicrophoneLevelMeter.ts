@@ -1,4 +1,9 @@
 import { useEffect, useRef } from "react";
+import {
+  decrementVoiceCounter,
+  incrementVoiceCounter,
+  logVoiceDiagnostics
+} from "../utils/voiceDiagnostics";
 
 type UseMicrophoneLevelMeterArgs = {
   running: boolean;
@@ -39,6 +44,11 @@ export function useMicrophoneLevelMeter({
       return;
     }
 
+    incrementVoiceCounter("meterSessions");
+    logVoiceDiagnostics("meter session started", {
+      selectedInputId: selectedInputId || "default"
+    });
+
     if (!navigator.mediaDevices?.getUserMedia) {
       setLevel(0);
       pushToastThrottled("browser-unsupported", t("settings.browserUnsupported"));
@@ -60,11 +70,13 @@ export function useMicrophoneLevelMeter({
       if (stream) {
         stream.getTracks().forEach((track) => track.stop());
         stream = null;
+        decrementVoiceCounter("meterStreams");
       }
 
       if (audioContext) {
         void audioContext.close();
         audioContext = null;
+        decrementVoiceCounter("meterAudioContexts");
       }
 
       setLevel(0);
@@ -90,6 +102,9 @@ export function useMicrophoneLevelMeter({
         };
 
         stream = await getStream();
+        if (stream) {
+          incrementVoiceCounter("meterStreams");
+        }
 
         if (disposed || !stream) {
           stop();
@@ -102,6 +117,7 @@ export function useMicrophoneLevelMeter({
         }
 
         audioContext = new Context();
+        incrementVoiceCounter("meterAudioContexts");
         const source = audioContext.createMediaStreamSource(stream);
         const analyser = audioContext.createAnalyser();
         analyser.fftSize = 512;
@@ -148,6 +164,13 @@ export function useMicrophoneLevelMeter({
             denied ? t("settings.mediaDenied") : t("settings.devicesLoadFailed")
           );
         }
+
+        logVoiceDiagnostics("meter start failed", {
+          errorName: String(errorName || "unknown"),
+          denied,
+          transient,
+          selectedInputId: selectedInputId || "default"
+        });
       }
     };
 
@@ -156,6 +179,10 @@ export function useMicrophoneLevelMeter({
     return () => {
       disposed = true;
       stop();
+      decrementVoiceCounter("meterSessions");
+      logVoiceDiagnostics("meter session stopped", {
+        selectedInputId: selectedInputId || "default"
+      });
     };
   }, [running, selectedInputId, t, pushToast, setLevel]);
 }
