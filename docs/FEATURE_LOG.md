@@ -3,6 +3,39 @@
 Этот документ хранит зафиксированные изменения, выполненные шаги и операционные evidence.
 План и open items находятся в `docs/ROADMAP.md`.
 
+## 2026-02-28 — Channel row UX update: Bootstrap Icons + settings popup + stronger active state
+
+### Delivered
+
+- Emoji в action controls заменены на Bootstrap Icons (free icon set).
+- Добавлен popup настроек канала (admin/super_admin):
+  - rename title,
+  - mode switch (`text` / `text_voice` / `text_voice_video`),
+  - category reassignment,
+  - move up/down в пределах текущей категории.
+- Backend endpoints для popup settings:
+  - `PATCH /v1/rooms/:roomId`
+  - `POST /v1/rooms/:roomId/move`
+- В sidebar channel row active-state сделан заметнее:
+  - яркий фон,
+  - accent-граница,
+  - более явный контраст текста.
+
+### Validation
+
+- `npm run check:api-types` — PASS.
+- `npm run web:build` — PASS.
+- `npm run check` — PASS.
+
+### Operational evidence (test)
+
+- Deploy target: `test`, branch `feature/web-header-profile-menu`, SHA `00bce89`.
+- Command: `ssh mac-mini 'cd ~/srv/boltorezka && TEST_REF=origin/feature/web-header-profile-menu npm run deploy:test:smoke'`.
+- Smoke result:
+  - `smoke:sso` — PASS,
+  - `smoke:realtime` — PASS,
+  - `reconnectOk=true`, `reconnectSkipped=false`.
+
 ## 2026-02-28 — Channel modes update: text / text+voice / text+voice+video
 
 ### Delivered
