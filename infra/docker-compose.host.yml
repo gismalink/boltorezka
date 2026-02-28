@@ -1,6 +1,35 @@
 name: boltorezka
 
 services:
+  boltorezka-turn:
+    image: coturn/coturn:4.6.3
+    container_name: boltorezka-turn
+    restart: unless-stopped
+    command:
+      - turnserver
+      - --no-cli
+      - --simple-log
+      - --listening-port=3478
+      - --tls-listening-port=5349
+      - --fingerprint
+      - --lt-cred-mech
+      - --realm=${TURN_REALM:-gismalink.art}
+      - --user=${TURN_USERNAME}:${TURN_PASSWORD}
+      - --cert=/caddy-data/caddy/certificates/acme-v02.api.letsencrypt.org-directory/${TURN_CERT_DOMAIN:-gismalink.art}/${TURN_CERT_DOMAIN:-gismalink.art}.crt
+      - --pkey=/caddy-data/caddy/certificates/acme-v02.api.letsencrypt.org-directory/${TURN_CERT_DOMAIN:-gismalink.art}/${TURN_CERT_DOMAIN:-gismalink.art}.key
+      - --min-port=${TURN_MIN_PORT:-49152}
+      - --max-port=${TURN_MAX_PORT:-65535}
+      - --verbose
+    ports:
+      - "3478:3478/udp"
+      - "3478:3478/tcp"
+      - "5349:5349/tcp"
+      - "${TURN_MIN_PORT:-49152}-${TURN_MAX_PORT:-65535}:${TURN_MIN_PORT:-49152}-${TURN_MAX_PORT:-65535}/udp"
+    volumes:
+      - ingress_caddy_data:/caddy-data:ro
+    networks:
+      - edge_public
+
   boltorezka-api-test:
     build:
       context: ../apps/api
@@ -28,6 +57,8 @@ services:
       ALLOWED_RETURN_HOSTS: ${TEST_ALLOWED_RETURN_HOSTS:-test.boltorezka.gismalink.art}
       SUPER_ADMIN_EMAIL: ${TEST_SUPER_ADMIN_EMAIL:-gismalink@gmail.com}
     depends_on:
+      boltorezka-turn:
+        condition: service_started
       boltorezka-db-test:
         condition: service_healthy
       boltorezka-redis-test:
@@ -98,6 +129,8 @@ services:
       ALLOWED_RETURN_HOSTS: ${PROD_ALLOWED_RETURN_HOSTS:-boltorezka.gismalink.art}
       SUPER_ADMIN_EMAIL: ${PROD_SUPER_ADMIN_EMAIL:-gismalink@gmail.com}
     depends_on:
+      boltorezka-turn:
+        condition: service_started
       boltorezka-db-prod:
         condition: service_healthy
       boltorezka-redis-prod:
@@ -152,3 +185,6 @@ networks:
 volumes:
   postgres_test_data:
   postgres_prod_data:
+  ingress_caddy_data:
+    external: true
+    name: ingress_caddy_data
