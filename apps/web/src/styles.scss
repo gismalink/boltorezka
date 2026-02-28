@@ -111,9 +111,9 @@ body {
 .leftcolumn,
 .middlecolumn,
 .rightcolumn {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 10px;
-  align-content: start;
 }
 
 .card {
@@ -395,6 +395,102 @@ pre {
 
 .call-log {
   max-height: 180px;
+}
+
+.user-dock {
+  margin-top: auto;
+  display: grid;
+  gap: 8px;
+  position: sticky;
+  bottom: 0;
+  z-index: 20;
+}
+
+.rtc-connection-card {
+  border-color: #3b3f49;
+  background: #1b1f27;
+}
+
+.rtc-title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.rtc-title {
+  color: #f7b500;
+  font-weight: 700;
+}
+
+.rtc-subtitle {
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+.rtc-top-actions {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.rtc-actions-grid {
+  margin-top: 8px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+
+.user-panel-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.user-panel-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.user-avatar-badge {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #30363d;
+  color: #e6edf3;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.user-meta {
+  min-width: 0;
+}
+
+.user-name-line {
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.user-status-line {
+  font-size: 12px;
+}
+
+.user-panel-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.icon-btn-danger {
+  background: #5b2024 !important;
+  border-color: #a13b42 !important;
 }
 
 .tooltip-portal {

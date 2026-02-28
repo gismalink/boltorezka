@@ -64,6 +64,8 @@ export function App() {
   const [editingRoomTitle, setEditingRoomTitle] = useState("");
   const [editingRoomKind, setEditingRoomKind] = useState<RoomKind>("text");
   const [editingRoomCategoryId, setEditingRoomCategoryId] = useState<string>("none");
+  const [micMuted, setMicMuted] = useState(false);
+  const [audioMuted, setAudioMuted] = useState(false);
   const [authMenuOpen, setAuthMenuOpen] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const realtimeClientRef = useRef<RealtimeClient | null>(null);
@@ -511,6 +513,22 @@ export function App() {
     return rooms.filter((room) => !categorizedRoomIds.has(room.id));
   }, [roomsTree, rooms, categorizedRoomIds]);
 
+  const allRooms = useMemo(() => {
+    if (roomsTree) {
+      const fromCategories = roomsTree.categories.flatMap((category) => category.channels);
+      return [...fromCategories, ...roomsTree.uncategorized];
+    }
+
+    return rooms;
+  }, [roomsTree, rooms]);
+
+  const currentRoom = useMemo(
+    () => allRooms.find((room) => room.slug === roomSlug) || null,
+    [allRooms, roomSlug]
+  );
+
+  const currentRoomSupportsRtc = currentRoom ? currentRoom.kind !== "text" : false;
+
   return (
     <main className="app legacy-layout">
       <header className="app-header">
@@ -815,6 +833,74 @@ export function App() {
               </div>
             ) : null}
           </section>
+
+          {user ? (
+            <div className="user-dock">
+              {currentRoomSupportsRtc ? (
+                <section className="card compact rtc-connection-card">
+                  <div className="rtc-title-row">
+                    <div>
+                      <div className="rtc-title">Подключение к RTC</div>
+                      <div className="muted rtc-subtitle">{currentRoom?.title}</div>
+                    </div>
+                    <div className="rtc-top-actions">
+                      <button type="button" className="secondary icon-btn tiny" data-tooltip="Mute connection">
+                        <i className="bi bi-soundwave" aria-hidden="true" />
+                      </button>
+                      <button type="button" className="secondary icon-btn tiny" data-tooltip="Disconnect">
+                        <i className="bi bi-telephone-x" aria-hidden="true" />
+                      </button>
+                    </div>
+                  </div>
+                  <div className="rtc-actions-grid">
+                    <button type="button" className="secondary" data-tooltip="Noise reduction">
+                      <i className="bi bi-sliders" aria-hidden="true" />
+                    </button>
+                    <button type="button" className="secondary" data-tooltip="Screen share">
+                      <i className="bi bi-display" aria-hidden="true" />
+                    </button>
+                    <button type="button" className="secondary" data-tooltip="Effects">
+                      <i className="bi bi-stars" aria-hidden="true" />
+                    </button>
+                    <button type="button" className="secondary" data-tooltip="Activities">
+                      <i className="bi bi-lightning-charge" aria-hidden="true" />
+                    </button>
+                  </div>
+                </section>
+              ) : null}
+
+              <section className="card compact user-panel-card">
+                <div className="user-panel-main">
+                  <div className="user-avatar-badge">{(user.name || "U").charAt(0).toUpperCase()}</div>
+                  <div className="user-meta">
+                    <div className="user-name-line">{user.name}</div>
+                    <div className="muted user-status-line">{currentRoomSupportsRtc ? "В голосовом чате" : "В сети"}</div>
+                  </div>
+                </div>
+                <div className="user-panel-actions">
+                  <button
+                    type="button"
+                    className={`secondary icon-btn ${micMuted ? "icon-btn-danger" : ""}`}
+                    data-tooltip={micMuted ? "Включить микрофон" : "Выключить микрофон"}
+                    onClick={() => setMicMuted((value) => !value)}
+                  >
+                    <i className={`bi ${micMuted ? "bi-mic-mute-fill" : "bi-mic-fill"}`} aria-hidden="true" />
+                  </button>
+                  <button
+                    type="button"
+                    className={`secondary icon-btn ${audioMuted ? "icon-btn-danger" : ""}`}
+                    data-tooltip={audioMuted ? "Включить звук" : "Отключить звук"}
+                    onClick={() => setAudioMuted((value) => !value)}
+                  >
+                    <i className={`bi ${audioMuted ? "bi-volume-mute-fill" : "bi-headphones"}`} aria-hidden="true" />
+                  </button>
+                  <button type="button" className="secondary icon-btn" data-tooltip="Настройки пользователя">
+                    <i className="bi bi-gear" aria-hidden="true" />
+                  </button>
+                </div>
+              </section>
+            </div>
+          ) : null}
         </aside>
 
         <section className="middlecolumn">
