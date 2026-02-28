@@ -7,6 +7,12 @@ services:
       dockerfile: Dockerfile
       additional_contexts:
         web: ../apps/web
+      args:
+        VITE_RTC_ICE_SERVERS_JSON: ${TEST_VITE_RTC_ICE_SERVERS_JSON:-}
+        VITE_RTC_ICE_TRANSPORT_POLICY: ${TEST_VITE_RTC_ICE_TRANSPORT_POLICY:-all}
+        VITE_RTC_RECONNECT_MAX_ATTEMPTS: ${TEST_VITE_RTC_RECONNECT_MAX_ATTEMPTS:-3}
+        VITE_RTC_RECONNECT_BASE_DELAY_MS: ${TEST_VITE_RTC_RECONNECT_BASE_DELAY_MS:-1000}
+        VITE_RTC_RECONNECT_MAX_DELAY_MS: ${TEST_VITE_RTC_RECONNECT_MAX_DELAY_MS:-8000}
     image: boltorezka-api:test
     container_name: boltorezka-api-test
     restart: unless-stopped
@@ -71,6 +77,12 @@ services:
       dockerfile: Dockerfile
       additional_contexts:
         web: ../apps/web
+      args:
+        VITE_RTC_ICE_SERVERS_JSON: ${PROD_VITE_RTC_ICE_SERVERS_JSON:-}
+        VITE_RTC_ICE_TRANSPORT_POLICY: ${PROD_VITE_RTC_ICE_TRANSPORT_POLICY:-all}
+        VITE_RTC_RECONNECT_MAX_ATTEMPTS: ${PROD_VITE_RTC_RECONNECT_MAX_ATTEMPTS:-3}
+        VITE_RTC_RECONNECT_BASE_DELAY_MS: ${PROD_VITE_RTC_RECONNECT_BASE_DELAY_MS:-1000}
+        VITE_RTC_RECONNECT_MAX_DELAY_MS: ${PROD_VITE_RTC_RECONNECT_MAX_DELAY_MS:-8000}
     image: boltorezka-api:prod
     container_name: boltorezka-api-prod
     restart: unless-stopped
