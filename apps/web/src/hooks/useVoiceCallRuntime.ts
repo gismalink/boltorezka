@@ -183,9 +183,11 @@ export function useVoiceCallRuntime({
     hasRemoteSpeakingSignal: boolean;
     speakingLastAboveAt: number;
     speakingAudioContext: AudioContext | null;
+    speakingSource: MediaStreamAudioSourceNode | null;
     speakingAnimationFrameId: number;
     speakingAnalyser: AnalyserNode | null;
     speakingData: Uint8Array<ArrayBuffer> | null;
+    speakingGain: GainNode | null;
     statsTimer: number | null;
     lastInboundBytes: number;
     lastOutboundBytes: number;
@@ -285,7 +287,8 @@ export function useVoiceCallRuntime({
   }, [selectedInputId]);
 
   const applyRemoteAudioOutput = useCallback(async (element: HTMLAudioElement) => {
-    element.muted = audioMuted;
+    const route = String(element.dataset.audioRoute || "element");
+    element.muted = route === "context" ? true : audioMuted;
     element.volume = Math.max(0, Math.min(1, outputVolume / 100));
 
     const sinkId = selectedOutputId && selectedOutputId !== "default" ? selectedOutputId : "";
@@ -309,6 +312,10 @@ export function useVoiceCallRuntime({
           pushCallLog(`audio output fallback failed: ${(fallbackError as Error).message}`);
         }
       }
+    }
+
+    if (route === "context") {
+      return;
     }
 
     if (!element.paused || audioMuted || !element.srcObject) {
@@ -525,6 +532,8 @@ export function useVoiceCallRuntime({
       void peer.speakingAudioContext.close();
       peer.speakingAudioContext = null;
     }
+    peer.speakingSource = null;
+    peer.speakingGain = null;
     peer.speakingAnalyser = null;
     peer.speakingData = null;
     peer.connection.close();
@@ -680,6 +689,7 @@ export function useVoiceCallRuntime({
     remoteAudioElement.style.pointerEvents = "none";
     remoteAudioElement.style.left = "-9999px";
     remoteAudioElement.style.top = "-9999px";
+    remoteAudioElement.dataset.audioRoute = "element";
     document.body.appendChild(remoteAudioElement);
 
     const connection = new RTCPeerConnection(RTC_CONFIG);
@@ -694,9 +704,11 @@ export function useVoiceCallRuntime({
       hasRemoteSpeakingSignal: false,
       speakingLastAboveAt: 0,
       speakingAudioContext: null as AudioContext | null,
+      speakingSource: null as MediaStreamAudioSourceNode | null,
       speakingAnimationFrameId: 0,
       speakingAnalyser: null as AnalyserNode | null,
       speakingData: null as Uint8Array<ArrayBuffer> | null,
+      speakingGain: null as GainNode | null,
       statsTimer: null as number | null,
       lastInboundBytes: 0,
       lastOutboundBytes: 0,
@@ -798,14 +810,27 @@ export function useVoiceCallRuntime({
           if (Context) {
             const speakingAudioContext = new Context();
             const speakingAnalyser = speakingAudioContext.createAnalyser();
+            const speakingGain = speakingAudioContext.createGain();
             speakingAnalyser.fftSize = 512;
             speakingAnalyser.smoothingTimeConstant = 0.8;
             const source = speakingAudioContext.createMediaStreamSource(stream);
             source.connect(speakingAnalyser);
+            source.connect(speakingGain);
+            speakingGain.connect(speakingAudioContext.destination);
+            speakingGain.gain.value = audioMuted ? 0 : Math.max(0, Math.min(1, outputVolume / 100));
+
+            void speakingAudioContext.resume().catch(() => {
+              pushCallLog(`audio context resume deferred <- ${targetLabel || targetUserId}`);
+            });
+            remoteAudioElement.dataset.audioRoute = "context";
+            remoteAudioElement.muted = true;
+            pushCallLog(`audio route fallback: context <- ${targetLabel || targetUserId}`);
 
             peer.speakingAudioContext = speakingAudioContext;
+            peer.speakingSource = source;
             peer.speakingAnalyser = speakingAnalyser;
             peer.speakingData = new Uint8Array(new ArrayBuffer(speakingAnalyser.fftSize));
+            peer.speakingGain = speakingGain;
 
             const tickSpeaking = () => {
               const current = peersRef.current.get(targetUserId);
@@ -1210,6 +1235,20 @@ export function useVoiceCallRuntime({
       void applyRemoteAudioOutput(peer.audioElement);
     });
   }, [applyRemoteAudioOutput]);
+
+  useEffect(() => {
+    const gainValue = audioMuted ? 0 : Math.max(0, Math.min(1, outputVolume / 100));
+    peersRef.current.forEach((peer) => {
+      if (peer.speakingGain) {
+        peer.speakingGain.gain.value = gainValue;
+      }
+      if (!audioMuted && peer.speakingAudioContext?.state === "suspended") {
+        void peer.speakingAudioContext.resume().catch(() => {
+          return;
+        });
+      }
+    });
+  }, [audioMuted, outputVolume]);
 
   useEffect(() => {
     const handleUserGesture = () => {
