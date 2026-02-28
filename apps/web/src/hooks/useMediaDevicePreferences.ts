@@ -204,8 +204,20 @@ export function useMediaDevicePreferences({
   }, [loadDevices]);
 
   return {
-    refreshDevices: () => {
+    refreshDevices: (forcePrompt = false) => {
+      if (forcePrompt) {
+        void requestMicPermission().finally(() => {
+          void loadDevices();
+        });
+        return;
+      }
+
       void loadDevices();
+    },
+    requestMediaAccess: () => {
+      void requestMicPermission().finally(() => {
+        void loadDevices();
+      });
     }
   };
 }

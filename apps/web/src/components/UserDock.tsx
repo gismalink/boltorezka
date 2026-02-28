@@ -56,6 +56,7 @@ export function UserDock({
   onSetSelectedOutputId,
   onSetSelectedInputProfile,
   onRefreshDevices,
+  onRequestMediaAccess,
   onSetMicVolume,
   onSetOutputVolume,
   onToggleMicTest,
@@ -455,6 +456,9 @@ export function UserDock({
                   </div>
 
                   <div className="row">
+                    <button type="button" className="secondary" onClick={onRequestMediaAccess}>
+                      {t("settings.requestMediaAccess")}
+                    </button>
                     <button type="button" className="secondary" onClick={onRefreshDevices}>
                       {t("settings.refreshDevices")}
                     </button>

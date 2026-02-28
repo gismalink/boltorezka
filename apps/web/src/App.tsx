@@ -395,7 +395,7 @@ export function App() {
     void loadTelemetrySummary();
   }, [wsState, loadTelemetrySummary]);
 
-  const { refreshDevices } = useMediaDevicePreferences({
+  const { refreshDevices, requestMediaAccess } = useMediaDevicePreferences({
     t,
     selectedInputId,
     selectedOutputId,
@@ -695,7 +695,8 @@ export function App() {
               onSetSelectedInputId={setSelectedInputId}
               onSetSelectedOutputId={setSelectedOutputId}
               onSetSelectedInputProfile={setSelectedInputProfile}
-              onRefreshDevices={refreshDevices}
+              onRefreshDevices={() => refreshDevices(true)}
+              onRequestMediaAccess={requestMediaAccess}
               onSetMicVolume={setMicVolume}
               onSetOutputVolume={setOutputVolume}
               onToggleMicTest={() => setMicTestRunning((value) => !value)}

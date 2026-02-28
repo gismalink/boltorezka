@@ -59,12 +59,24 @@ export function useMicrophoneLevelMeter({
 
     const start = async () => {
       try {
-        stream = await navigator.mediaDevices.getUserMedia({
-          audio:
-            selectedInputId && selectedInputId !== "default"
-              ? { deviceId: { exact: selectedInputId } }
-              : true
-        });
+        const getStream = async () => {
+          if (selectedInputId && selectedInputId !== "default") {
+            try {
+              return await navigator.mediaDevices.getUserMedia({
+                audio: { deviceId: { exact: selectedInputId } }
+              });
+            } catch (error) {
+              const errorName = (error as { name?: string; message?: string })?.name || "";
+              if (errorName !== "NotFoundError" && errorName !== "OverconstrainedError") {
+                throw error;
+              }
+            }
+          }
+
+          return navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        };
+
+        stream = await getStream();
 
         if (disposed || !stream) {
           stop();
