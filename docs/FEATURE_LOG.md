@@ -3,6 +3,32 @@
 Этот документ хранит зафиксированные изменения, выполненные шаги и операционные evidence.
 План и open items находятся в `docs/ROADMAP.md`.
 
+## 2026-02-28 — User panel revisit: bottom user dock + RTC connection card
+
+### Delivered
+
+- Добавлен нижний user dock в левой колонке:
+  - avatar badge,
+  - user name + presence line,
+  - quick controls (mic/audio/settings) на Bootstrap Icons.
+- Для каналов с RTC-capability добавлен компактный блок `Подключение к RTC` над user dock.
+- В channel row сохранён только icon-сигнал типа (без текстового дубля).
+
+### Validation
+
+- `npm run web:build` — PASS.
+- `npm run check:api-types` — PASS.
+- `npm run check` — PASS.
+
+### Operational evidence (test)
+
+- Deploy target: `test`, branch `feature/web-header-profile-menu`, SHA `6fa7ba1`.
+- Command: `ssh mac-mini 'cd ~/srv/boltorezka && TEST_REF=origin/feature/web-header-profile-menu npm run deploy:test:smoke'`.
+- Smoke result:
+  - `smoke:sso` — PASS,
+  - `smoke:realtime` — PASS,
+  - `reconnectOk=true`, `reconnectSkipped=false`.
+
 ## 2026-02-28 — Category settings popup + channel row cleanup
 
 ### Delivered
