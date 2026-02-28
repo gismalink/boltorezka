@@ -6,13 +6,58 @@
 }
 
 @media (max-width: 900px) {
+  .app {
+    padding: var(--space-lg);
+    padding-bottom: calc(var(--space-3xl) + 56px);
+  }
+
   .workspace {
     grid-template-columns: 1fr;
     height: 100%;
   }
 
+  .workspace-mobile {
+    align-content: start;
+  }
+
   .leftcolumn {
     overflow: visible;
+  }
+
+  .mobile-profile-column {
+    gap: var(--space-md);
+  }
+
+  .mobile-tabbar {
+    position: fixed;
+    left: var(--space-lg);
+    right: var(--space-lg);
+    bottom: var(--space-lg);
+    z-index: 70;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-sm);
+    padding: var(--space-sm);
+    border: var(--border-strong) solid var(--pixel-border);
+    background: var(--pixel-panel);
+    box-shadow:
+      0 0 0 2px var(--pixel-bg),
+      3px 3px 0 var(--pixel-hard-shadow);
+  }
+
+  .mobile-tab-btn {
+    display: grid;
+    justify-items: center;
+    align-items: center;
+    gap: var(--space-xxs);
+    min-height: 42px;
+    padding: var(--space-xs);
+    font-size: var(--font-size-xs);
+  }
+
+  .mobile-tab-btn-active {
+    border-color: var(--pixel-neon-cyan);
+    box-shadow: inset 0 0 0 1px var(--pixel-neon-cyan);
   }
 
   .rooms-card,

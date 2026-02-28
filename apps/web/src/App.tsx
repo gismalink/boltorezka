@@ -47,6 +47,7 @@ const TOAST_AUTO_DISMISS_MS = 4500;
 const TOAST_ID_RANDOM_RANGE = 10000;
 
 type ServerMenuTab = "users" | "events" | "telemetry" | "call";
+type MobileTab = "channels" | "chat" | "profile";
 
 export function App() {
   const [token, setToken] = useState(localStorage.getItem("boltorezka_token") || "");
@@ -111,6 +112,8 @@ export function App() {
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [appMenuOpen, setAppMenuOpen] = useState(false);
   const [serverMenuTab, setServerMenuTab] = useState<ServerMenuTab>("events");
+  const [isMobileViewport, setIsMobileViewport] = useState(false);
+  const [mobileTab, setMobileTab] = useState<MobileTab>("chat");
   const realtimeClientRef = useRef<RealtimeClient | null>(null);
   const roomSlugRef = useRef(roomSlug);
   const lastRoomSlugForScrollRef = useRef(roomSlug);
@@ -305,6 +308,24 @@ export function App() {
   }, [lang]);
 
   useEffect(() => {
+    const mediaQuery = window.matchMedia("(max-width: 900px)");
+    const apply = (matches: boolean) => {
+      setIsMobileViewport(matches);
+      if (!matches) {
+        setMobileTab("chat");
+      }
+    };
+
+    apply(mediaQuery.matches);
+
+    const handler = (event: MediaQueryListEvent) => apply(event.matches);
+    mediaQuery.addEventListener("change", handler);
+    return () => {
+      mediaQuery.removeEventListener("change", handler);
+    };
+  }, []);
+
+  useEffect(() => {
     setProfileNameDraft(user?.name || "");
     setProfileStatusText("");
   }, [user]);
@@ -459,6 +480,9 @@ export function App() {
 
   const joinRoom = (slug: string) => {
     roomAdminController.joinRoom(slug);
+    if (isMobileViewport) {
+      setMobileTab("chat");
+    }
   };
 
   const promote = async (userId: string) => {
@@ -572,6 +596,75 @@ export function App() {
     setServerMenuTab
   });
 
+  const userDockNode = user ? (
+    <UserDock
+      t={t}
+      user={user}
+      currentRoomSupportsRtc={currentRoomSupportsRtc}
+      currentRoomTitle={currentRoom?.title || ""}
+      callStatus={callStatus}
+      lastCallPeer={lastCallPeer}
+      roomVoiceConnected={roomVoiceConnected}
+      micMuted={micMuted}
+      audioMuted={audioMuted}
+      audioOutputMenuOpen={audioOutputMenuOpen}
+      voiceSettingsOpen={voiceSettingsOpen}
+      userSettingsOpen={userSettingsOpen}
+      userSettingsTab={userSettingsTab}
+      voiceSettingsPanel={voiceSettingsPanel}
+      profileNameDraft={profileNameDraft}
+      profileEmail={user.email}
+      profileSaving={profileSaving}
+      profileStatusText={profileStatusText}
+      selectedLang={lang}
+      languageOptions={LANGUAGE_OPTIONS}
+      inputOptions={inputOptions}
+      outputOptions={outputOptions}
+      selectedInputId={selectedInputId}
+      selectedOutputId={selectedOutputId}
+      selectedInputProfile={selectedInputProfile}
+      inputProfileLabel={inputProfileLabel}
+      currentInputLabel={currentInputLabel}
+      micVolume={micVolume}
+      outputVolume={outputVolume}
+      micTestLevel={micTestLevel}
+      mediaDevicesState={mediaDevicesState}
+      mediaDevicesHint={mediaDevicesHint}
+      audioOutputAnchorRef={audioOutputAnchorRef}
+      voiceSettingsAnchorRef={voiceSettingsAnchorRef}
+      userSettingsRef={userSettingsRef}
+      onToggleMic={() => setMicMuted((value) => !value)}
+      onToggleAudio={() => setAudioMuted((value) => !value)}
+      onToggleVoiceSettings={() => {
+        setAudioOutputMenuOpen(false);
+        setVoiceSettingsPanel(null);
+        setVoiceSettingsOpen((value) => !value);
+      }}
+      onToggleAudioOutput={() => {
+        setVoiceSettingsOpen(false);
+        setVoiceSettingsPanel(null);
+        setAudioOutputMenuOpen((value) => !value);
+      }}
+      onOpenUserSettings={openUserSettings}
+      onSetVoiceSettingsOpen={setVoiceSettingsOpen}
+      onSetAudioOutputMenuOpen={setAudioOutputMenuOpen}
+      onSetVoiceSettingsPanel={setVoiceSettingsPanel}
+      onSetUserSettingsOpen={setUserSettingsOpen}
+      onSetUserSettingsTab={setUserSettingsTab}
+      onSetProfileNameDraft={setProfileNameDraft}
+      onSetSelectedLang={setLang}
+      onSaveProfile={saveMyProfile}
+      onSetSelectedInputId={setSelectedInputId}
+      onSetSelectedOutputId={setSelectedOutputId}
+      onSetSelectedInputProfile={setSelectedInputProfile}
+      onRefreshDevices={() => refreshDevices(true)}
+      onRequestMediaAccess={requestMediaAccess}
+      onSetMicVolume={setMicVolume}
+      onSetOutputVolume={setOutputVolume}
+      onDisconnectCall={disconnectRoom}
+    />
+  ) : null;
+
   return (
     <main className="app legacy-layout">
       <AppHeader
@@ -591,152 +684,124 @@ export function App() {
       />
       <TooltipPortal />
 
-      <div className="workspace">
-        <aside className="leftcolumn">
-          <RoomsPanel
-            t={t}
-            canCreateRooms={canCreateRooms}
-            roomsTree={roomsTree}
-            roomSlug={roomSlug}
-            currentUserId={user?.id || ""}
-            currentUserName={user?.name || ""}
-            liveRoomMembersBySlug={roomsPresenceBySlug}
-            liveRoomMemberDetailsBySlug={roomsPresenceDetailsBySlug}
-            voiceActiveUserIdsInCurrentRoom={voiceActiveUserIdsInCurrentRoom}
-            collapsedCategoryIds={collapsedCategoryIds}
-            uncategorizedRooms={uncategorizedRooms}
-            newCategorySlug={newCategorySlug}
-            newCategoryTitle={newCategoryTitle}
-            categoryPopupOpen={categoryPopupOpen}
-            newRoomSlug={newRoomSlug}
-            newRoomTitle={newRoomTitle}
-            newRoomKind={newRoomKind}
-            newRoomCategoryId={newRoomCategoryId}
-            channelPopupOpen={channelPopupOpen}
-            categorySettingsPopupOpenId={categorySettingsPopupOpenId}
-            editingCategoryTitle={editingCategoryTitle}
-            channelSettingsPopupOpenId={channelSettingsPopupOpenId}
-            editingRoomTitle={editingRoomTitle}
-            editingRoomKind={editingRoomKind}
-            editingRoomCategoryId={editingRoomCategoryId}
-            categoryPopupRef={categoryPopupRef}
-            channelPopupRef={channelPopupRef}
-            onSetCategoryPopupOpen={setCategoryPopupOpen}
-            onSetChannelPopupOpen={setChannelPopupOpen}
-            onSetNewCategorySlug={setNewCategorySlug}
-            onSetNewCategoryTitle={setNewCategoryTitle}
-            onSetNewRoomSlug={setNewRoomSlug}
-            onSetNewRoomTitle={setNewRoomTitle}
-            onSetNewRoomKind={setNewRoomKind}
-            onSetNewRoomCategoryId={setNewRoomCategoryId}
-            onSetEditingCategoryTitle={setEditingCategoryTitle}
-            onSetEditingRoomTitle={setEditingRoomTitle}
-            onSetEditingRoomKind={setEditingRoomKind}
-            onSetEditingRoomCategoryId={setEditingRoomCategoryId}
-            onCreateCategory={createCategory}
-            onCreateRoom={createRoom}
-            onOpenCreateChannelPopup={openCreateChannelPopup}
-            onOpenCategorySettingsPopup={openCategorySettingsPopup}
-            onOpenChannelSettingsPopup={openChannelSettingsPopup}
-            onSaveCategorySettings={saveCategorySettings}
-            onMoveCategory={(direction) => void moveCategory(direction)}
-            onDeleteCategory={() => void deleteCategory()}
-            onSaveChannelSettings={saveChannelSettings}
-            onMoveChannel={(direction) => void moveChannel(direction)}
-            onClearChannelMessages={(room) => void clearChannelMessages(room)}
-            onDeleteChannel={(room) => void deleteChannel(room)}
-            onToggleCategoryCollapsed={toggleCategoryCollapsed}
-            onJoinRoom={joinRoom}
-          />
-
-          {user ? (
-            <UserDock
+      <div className={`workspace ${isMobileViewport ? "workspace-mobile" : ""}`}>
+        {(!isMobileViewport || mobileTab === "channels") ? (
+          <aside className="leftcolumn">
+            <RoomsPanel
               t={t}
-              user={user}
-              currentRoomSupportsRtc={currentRoomSupportsRtc}
-              currentRoomTitle={currentRoom?.title || ""}
-              callStatus={callStatus}
-              lastCallPeer={lastCallPeer}
-              roomVoiceConnected={roomVoiceConnected}
-              micMuted={micMuted}
-              audioMuted={audioMuted}
-              audioOutputMenuOpen={audioOutputMenuOpen}
-              voiceSettingsOpen={voiceSettingsOpen}
-              userSettingsOpen={userSettingsOpen}
-              userSettingsTab={userSettingsTab}
-              voiceSettingsPanel={voiceSettingsPanel}
-              profileNameDraft={profileNameDraft}
-              profileEmail={user.email}
-              profileSaving={profileSaving}
-              profileStatusText={profileStatusText}
-              selectedLang={lang}
-              languageOptions={LANGUAGE_OPTIONS}
-              inputOptions={inputOptions}
-              outputOptions={outputOptions}
-              selectedInputId={selectedInputId}
-              selectedOutputId={selectedOutputId}
-              selectedInputProfile={selectedInputProfile}
-              inputProfileLabel={inputProfileLabel}
-              currentInputLabel={currentInputLabel}
-              micVolume={micVolume}
-              outputVolume={outputVolume}
-              micTestLevel={micTestLevel}
-              mediaDevicesState={mediaDevicesState}
-              mediaDevicesHint={mediaDevicesHint}
-              audioOutputAnchorRef={audioOutputAnchorRef}
-              voiceSettingsAnchorRef={voiceSettingsAnchorRef}
-              userSettingsRef={userSettingsRef}
-              onToggleMic={() => setMicMuted((value) => !value)}
-              onToggleAudio={() => setAudioMuted((value) => !value)}
-              onToggleVoiceSettings={() => {
-                setAudioOutputMenuOpen(false);
-                setVoiceSettingsPanel(null);
-                setVoiceSettingsOpen((value) => !value);
-              }}
-              onToggleAudioOutput={() => {
-                setVoiceSettingsOpen(false);
-                setVoiceSettingsPanel(null);
-                setAudioOutputMenuOpen((value) => !value);
-              }}
-              onOpenUserSettings={openUserSettings}
-              onSetVoiceSettingsOpen={setVoiceSettingsOpen}
-              onSetAudioOutputMenuOpen={setAudioOutputMenuOpen}
-              onSetVoiceSettingsPanel={setVoiceSettingsPanel}
-              onSetUserSettingsOpen={setUserSettingsOpen}
-              onSetUserSettingsTab={setUserSettingsTab}
-              onSetProfileNameDraft={setProfileNameDraft}
-              onSetSelectedLang={setLang}
-              onSaveProfile={saveMyProfile}
-              onSetSelectedInputId={setSelectedInputId}
-              onSetSelectedOutputId={setSelectedOutputId}
-              onSetSelectedInputProfile={setSelectedInputProfile}
-              onRefreshDevices={() => refreshDevices(true)}
-              onRequestMediaAccess={requestMediaAccess}
-              onSetMicVolume={setMicVolume}
-              onSetOutputVolume={setOutputVolume}
-              onDisconnectCall={disconnectRoom}
+              canCreateRooms={canCreateRooms}
+              roomsTree={roomsTree}
+              roomSlug={roomSlug}
+              currentUserId={user?.id || ""}
+              currentUserName={user?.name || ""}
+              liveRoomMembersBySlug={roomsPresenceBySlug}
+              liveRoomMemberDetailsBySlug={roomsPresenceDetailsBySlug}
+              voiceActiveUserIdsInCurrentRoom={voiceActiveUserIdsInCurrentRoom}
+              collapsedCategoryIds={collapsedCategoryIds}
+              uncategorizedRooms={uncategorizedRooms}
+              newCategorySlug={newCategorySlug}
+              newCategoryTitle={newCategoryTitle}
+              categoryPopupOpen={categoryPopupOpen}
+              newRoomSlug={newRoomSlug}
+              newRoomTitle={newRoomTitle}
+              newRoomKind={newRoomKind}
+              newRoomCategoryId={newRoomCategoryId}
+              channelPopupOpen={channelPopupOpen}
+              categorySettingsPopupOpenId={categorySettingsPopupOpenId}
+              editingCategoryTitle={editingCategoryTitle}
+              channelSettingsPopupOpenId={channelSettingsPopupOpenId}
+              editingRoomTitle={editingRoomTitle}
+              editingRoomKind={editingRoomKind}
+              editingRoomCategoryId={editingRoomCategoryId}
+              categoryPopupRef={categoryPopupRef}
+              channelPopupRef={channelPopupRef}
+              onSetCategoryPopupOpen={setCategoryPopupOpen}
+              onSetChannelPopupOpen={setChannelPopupOpen}
+              onSetNewCategorySlug={setNewCategorySlug}
+              onSetNewCategoryTitle={setNewCategoryTitle}
+              onSetNewRoomSlug={setNewRoomSlug}
+              onSetNewRoomTitle={setNewRoomTitle}
+              onSetNewRoomKind={setNewRoomKind}
+              onSetNewRoomCategoryId={setNewRoomCategoryId}
+              onSetEditingCategoryTitle={setEditingCategoryTitle}
+              onSetEditingRoomTitle={setEditingRoomTitle}
+              onSetEditingRoomKind={setEditingRoomKind}
+              onSetEditingRoomCategoryId={setEditingRoomCategoryId}
+              onCreateCategory={createCategory}
+              onCreateRoom={createRoom}
+              onOpenCreateChannelPopup={openCreateChannelPopup}
+              onOpenCategorySettingsPopup={openCategorySettingsPopup}
+              onOpenChannelSettingsPopup={openChannelSettingsPopup}
+              onSaveCategorySettings={saveCategorySettings}
+              onMoveCategory={(direction) => void moveCategory(direction)}
+              onDeleteCategory={() => void deleteCategory()}
+              onSaveChannelSettings={saveChannelSettings}
+              onMoveChannel={(direction) => void moveChannel(direction)}
+              onClearChannelMessages={(room) => void clearChannelMessages(room)}
+              onDeleteChannel={(room) => void deleteChannel(room)}
+              onToggleCategoryCollapsed={toggleCategoryCollapsed}
+              onJoinRoom={joinRoom}
             />
-          ) : null}
-        </aside>
 
-        <section className="middlecolumn">
-          <ChatPanel
-            t={t}
-            locale={locale}
-            roomSlug={roomSlug}
-            messages={messages}
-            currentUserId={user?.id || null}
-            messagesHasMore={messagesHasMore}
-            loadingOlderMessages={loadingOlderMessages}
-            chatText={chatText}
-            chatLogRef={chatLogRef}
-            onLoadOlderMessages={() => void loadOlderMessages()}
-            onSetChatText={setChatText}
-            onSendMessage={sendMessage}
-          />
-        </section>
+            {!isMobileViewport ? userDockNode : null}
+          </aside>
+        ) : null}
 
+        {(!isMobileViewport || mobileTab === "chat") ? (
+          <section className="middlecolumn">
+            <ChatPanel
+              t={t}
+              locale={locale}
+              roomSlug={roomSlug}
+              messages={messages}
+              currentUserId={user?.id || null}
+              messagesHasMore={messagesHasMore}
+              loadingOlderMessages={loadingOlderMessages}
+              chatText={chatText}
+              chatLogRef={chatLogRef}
+              onLoadOlderMessages={() => void loadOlderMessages()}
+              onSetChatText={setChatText}
+              onSendMessage={sendMessage}
+            />
+          </section>
+        ) : null}
+
+        {isMobileViewport && user && mobileTab === "profile" ? (
+          <aside className="leftcolumn mobile-profile-column">
+            {userDockNode}
+          </aside>
+        ) : null}
       </div>
+
+      {isMobileViewport ? (
+        <nav className="mobile-tabbar" aria-label={t("mobile.tabsAria") }>
+          <button
+            type="button"
+            className={`secondary mobile-tab-btn ${mobileTab === "channels" ? "mobile-tab-btn-active" : ""}`}
+            onClick={() => setMobileTab("channels")}
+          >
+            <i className="bi bi-hash" aria-hidden="true" />
+            <span>{t("mobile.tabChannels")}</span>
+          </button>
+          <button
+            type="button"
+            className={`secondary mobile-tab-btn ${mobileTab === "chat" ? "mobile-tab-btn-active" : ""}`}
+            onClick={() => setMobileTab("chat")}
+          >
+            <i className="bi bi-chat-dots" aria-hidden="true" />
+            <span>{t("mobile.tabChat")}</span>
+          </button>
+          <button
+            type="button"
+            className={`secondary mobile-tab-btn ${mobileTab === "profile" ? "mobile-tab-btn-active" : ""}`}
+            onClick={() => setMobileTab("profile")}
+            disabled={!user}
+          >
+            <i className="bi bi-person" aria-hidden="true" />
+            <span>{t("mobile.tabProfile")}</span>
+          </button>
+        </nav>
+      ) : null}
 
       <ServerProfileModal
         open={appMenuOpen}
