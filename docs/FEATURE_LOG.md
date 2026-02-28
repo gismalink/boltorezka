@@ -3,6 +3,28 @@
 Этот документ хранит зафиксированные изменения, выполненные шаги и операционные evidence.
 План и open items находятся в `docs/ROADMAP.md`.
 
+## 2026-02-28 — Smoke API: hierarchy create/navigation scenario
+
+### Delivered
+
+- Расширен `scripts/smoke-api.mjs` проверкой иерархии каналов:
+  - create category (`POST /v1/room-categories`),
+  - create channel в созданной категории (`POST /v1/rooms`),
+  - verify через `GET /v1/rooms/tree`,
+  - обязательный cleanup (`DELETE /v1/rooms/:roomId` и `DELETE /v1/room-categories/:categoryId`).
+- Добавлен env-toggle `SMOKE_ROOM_HIERARCHY` (по умолчанию включён, отключается через `SMOKE_ROOM_HIERARCHY=0`).
+- Синхронизированы docs:
+  - `docs/ROADMAP.md` (checkbox hierarchy smoke/e2e отмечен выполненным),
+  - `docs/SMOKE_CI_MATRIX.md` (contract coverage дополнен hierarchy smoke блоком).
+
+### Validation
+
+- `node --check scripts/smoke-api.mjs` — PASS.
+
+### Operational evidence (test)
+
+- Выполняется в standard API smoke path (`SMOKE_API=1 npm run check`) при наличии `SMOKE_BEARER_TOKEN`.
+
 ## 2026-02-28 — Realtime presence + channel UX/chat style stabilization
 
 ### Delivered

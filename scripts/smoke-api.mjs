@@ -1,6 +1,12 @@
 const baseUrl = (process.env.SMOKE_API_URL ?? 'http://localhost:8080').replace(/\/+$/, '');
 const token = process.env.SMOKE_BEARER_TOKEN ?? '';
 const checkTelemetrySummary = process.env.SMOKE_TELEMETRY_SUMMARY !== '0';
+const checkRoomHierarchy = process.env.SMOKE_ROOM_HIERARCHY !== '0';
+
+function makeSmokeSlug(prefix) {
+  const suffix = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+  return `${prefix}-${suffix}`.slice(0, 48);
+}
 
 async function fetchJson(path, options = {}) {
   const response = await fetch(`${baseUrl}${path}`, options);
@@ -37,6 +43,8 @@ async function fetchJson(path, options = {}) {
 
   if (token) {
     const authHeaders = { Authorization: `Bearer ${token}` };
+    let createdRoomId = '';
+    let createdCategoryId = '';
 
     const { response: telemetryResponse } = await fetchJson('/v1/telemetry/web', {
       method: 'POST',
@@ -67,6 +75,85 @@ async function fetchJson(path, options = {}) {
     const { response: roomsResponse } = await fetchJson('/v1/rooms', { headers: authHeaders });
     if (!roomsResponse.ok) {
       throw new Error(`[smoke] /v1/rooms failed: ${roomsResponse.status}`);
+    }
+
+    if (checkRoomHierarchy) {
+      const categorySlug = makeSmokeSlug('smoke-cat');
+      const roomSlug = makeSmokeSlug('smoke-room');
+
+      const { response: categoryCreateResponse, payload: categoryCreatePayload } = await fetchJson('/v1/room-categories', {
+        method: 'POST',
+        headers: { ...authHeaders, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slug: categorySlug, title: 'Smoke Category' }),
+      });
+
+      if (categoryCreateResponse.status !== 201 || !categoryCreatePayload?.category?.id) {
+        throw new Error(`[smoke] /v1/room-categories create failed: ${categoryCreateResponse.status}`);
+      }
+
+      createdCategoryId = String(categoryCreatePayload.category.id);
+
+      try {
+        const { response: roomCreateResponse, payload: roomCreatePayload } = await fetchJson('/v1/rooms', {
+          method: 'POST',
+          headers: { ...authHeaders, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            slug: roomSlug,
+            title: 'Smoke Room',
+            is_public: true,
+            kind: 'text',
+            category_id: createdCategoryId,
+          }),
+        });
+
+        if (roomCreateResponse.status !== 201 || !roomCreatePayload?.room?.id) {
+          throw new Error(`[smoke] /v1/rooms create in category failed: ${roomCreateResponse.status}`);
+        }
+
+        createdRoomId = String(roomCreatePayload.room.id);
+
+        const { response: treeResponse, payload: treePayload } = await fetchJson('/v1/rooms/tree', { headers: authHeaders });
+        if (!treeResponse.ok) {
+          throw new Error(`[smoke] /v1/rooms/tree failed: ${treeResponse.status}`);
+        }
+
+        const categories = Array.isArray(treePayload?.categories) ? treePayload.categories : [];
+        const createdCategory = categories.find((item) => item?.id === createdCategoryId);
+        if (!createdCategory) {
+          throw new Error('[smoke] /v1/rooms/tree missing created category');
+        }
+
+        const channels = Array.isArray(createdCategory.channels) ? createdCategory.channels : [];
+        const createdRoom = channels.find((item) => item?.id === createdRoomId && item?.slug === roomSlug);
+        if (!createdRoom) {
+          throw new Error('[smoke] /v1/rooms/tree missing created room in created category');
+        }
+      } finally {
+        if (createdRoomId) {
+          const { response: roomDeleteResponse } = await fetchJson(`/v1/rooms/${encodeURIComponent(createdRoomId)}`, {
+            method: 'DELETE',
+            headers: authHeaders,
+          });
+
+          if (!roomDeleteResponse.ok) {
+            throw new Error(`[smoke] cleanup room delete failed: ${roomDeleteResponse.status}`);
+          }
+        }
+
+        if (createdCategoryId) {
+          const { response: categoryDeleteResponse } = await fetchJson(
+            `/v1/room-categories/${encodeURIComponent(createdCategoryId)}`,
+            {
+              method: 'DELETE',
+              headers: authHeaders,
+            }
+          );
+
+          if (!categoryDeleteResponse.ok) {
+            throw new Error(`[smoke] cleanup category delete failed: ${categoryDeleteResponse.status}`);
+          }
+        }
+      }
     }
 
     const { response: historyResponse, payload: historyPayload } = await fetchJson('/v1/rooms/general/messages?limit=10', {

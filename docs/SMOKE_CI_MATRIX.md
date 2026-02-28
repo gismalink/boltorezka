@@ -42,6 +42,7 @@ Current CI command:
 | `chat.send` ack/nack/idempotency | `npm run smoke:realtime` |
 | `call.offer/reject/hangup` relay | extended realtime smoke (`SMOKE_CALL_SIGNAL=1`) |
 | `GET /v1/telemetry/summary` | CI (`SMOKE_TELEMETRY_SUMMARY=1`) |
+| `POST /v1/room-categories` + `POST /v1/rooms` + `GET /v1/rooms/tree` | API smoke (`SMOKE_API=1`, hierarchy block with cleanup) |
 
 ## 5) Gate policy summary
 

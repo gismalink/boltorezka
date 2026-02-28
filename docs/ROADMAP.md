@@ -80,7 +80,7 @@
     - [x] join voice
     - [x] open text
     - [ ] reorder (MVP через explicit order API)
-  - [ ] Добавить smoke/e2e сценарий на создание и навигацию по иерархии.
+  - [x] Добавить smoke/e2e сценарий на создание и навигацию по иерархии.
 
 ### Exit criteria
 
