@@ -32,6 +32,9 @@ type WsMessageControllerOptions = {
     eventType: "call.reject" | "call.hangup",
     payload: { fromUserId?: string; fromUserName?: string; reason?: string | null }
   ) => void;
+  onCallMicState?: (
+    payload: { fromUserId?: string; fromUserName?: string; muted?: boolean }
+  ) => void;
 };
 
 export class WsMessageController {
@@ -187,6 +190,19 @@ export class WsMessageController {
         fromUserId: String(message.payload?.fromUserId || "").trim() || undefined,
         fromUserName: String(message.payload?.fromUserName || "").trim() || undefined,
         reason: reason || null
+      });
+    }
+
+    if (message.type === "call.mic_state") {
+      const fromUserName = String(message.payload?.fromUserName || message.payload?.fromUserId || "unknown");
+      const mutedRaw = message.payload?.muted;
+      if (typeof mutedRaw === "boolean") {
+        this.options.pushCallLog(`call.mic_state from ${fromUserName}: ${mutedRaw ? "muted" : "unmuted"}`);
+      }
+      this.options.onCallMicState?.({
+        fromUserId: String(message.payload?.fromUserId || message.payload?.userId || "").trim() || undefined,
+        fromUserName: String(message.payload?.fromUserName || message.payload?.userName || "").trim() || undefined,
+        muted: typeof mutedRaw === "boolean" ? mutedRaw : undefined
       });
     }
 

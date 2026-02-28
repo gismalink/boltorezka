@@ -1,4 +1,5 @@
 import type {
+  CallMicStateEventType,
   CallSignalEventType,
   CallTerminalEventType,
   PresenceUser,
@@ -17,6 +18,7 @@ import type {
 
 export const CALL_SIGNAL_EVENT_TYPES = ["call.offer", "call.answer", "call.ice"];
 export const CALL_TERMINAL_EVENT_TYPES = ["call.reject", "call.hangup"];
+export const CALL_MIC_STATE_EVENT_TYPES = ["call.mic_state"];
 
 type ParsedIncomingEnvelope = {
   type: string;
@@ -39,6 +41,10 @@ export function isCallSignalEventType(value: unknown): value is CallSignalEventT
  */
 export function isCallTerminalEventType(value: unknown): value is CallTerminalEventType {
   return typeof value === "string" && CALL_TERMINAL_EVENT_TYPES.includes(value);
+}
+
+export function isCallMicStateEventType(value: unknown): value is CallMicStateEventType {
+  return typeof value === "string" && CALL_MIC_STATE_EVENT_TYPES.includes(value);
 }
 
 /**
@@ -105,7 +111,7 @@ export function asKnownWsIncomingEnvelope(
         payload: envelope.payload
       };
     default:
-      if (isCallSignalEventType(envelope.type) || isCallTerminalEventType(envelope.type)) {
+      if (isCallSignalEventType(envelope.type) || isCallTerminalEventType(envelope.type) || isCallMicStateEventType(envelope.type)) {
         return {
           type: envelope.type,
           requestId: envelope.requestId,
@@ -400,6 +406,24 @@ export function buildCallTerminalRelayEnvelope(
     payload: {
       ...buildCallRelayBasePayload(fromUserId, fromUserName, roomId, roomSlug, targetUserId),
       reason
+    }
+  };
+}
+
+export function buildCallMicStateRelayEnvelope(
+  eventType: CallMicStateEventType,
+  fromUserId: string,
+  fromUserName: string,
+  roomId: string,
+  roomSlug: string | null,
+  targetUserId: string | null,
+  muted: boolean
+): WsOutgoingEnvelope {
+  return {
+    type: eventType,
+    payload: {
+      ...buildCallRelayBasePayload(fromUserId, fromUserName, roomId, roomSlug, targetUserId),
+      muted
     }
   };
 }

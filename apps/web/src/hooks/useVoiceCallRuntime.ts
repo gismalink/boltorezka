@@ -25,6 +25,12 @@ type CallTerminalPayload = {
   reason?: string | null;
 };
 
+type CallMicStatePayload = {
+  fromUserId?: string;
+  fromUserName?: string;
+  muted?: boolean;
+};
+
 type UseVoiceCallRuntimeArgs = {
   localUserId: string;
   roomSlug: string;
@@ -119,6 +125,9 @@ const RTC_RECONNECT_MAX_DELAY_MS = Math.max(
   readPositiveIntFromEnv("VITE_RTC_RECONNECT_MAX_DELAY_MS", 8000)
 );
 const ERROR_TOAST_THROTTLE_MS = 12000;
+const REMOTE_SPEAKING_ON_THRESHOLD = 0.055;
+const REMOTE_SPEAKING_OFF_THRESHOLD = 0.025;
+const REMOTE_SPEAKING_HOLD_MS = 450;
 
 const RTC_CONFIG: RTCConfiguration = {
   iceServers: RTC_ICE_SERVERS,
@@ -143,6 +152,8 @@ export function useVoiceCallRuntime({
 }: UseVoiceCallRuntimeArgs) {
   const [roomVoiceConnected, setRoomVoiceConnected] = useState(false);
   const [connectedPeerUserIds, setConnectedPeerUserIds] = useState<string[]>([]);
+  const [remoteMutedPeerUserIds, setRemoteMutedPeerUserIds] = useState<string[]>([]);
+  const [remoteSpeakingPeerUserIds, setRemoteSpeakingPeerUserIds] = useState<string[]>([]);
   const roomVoiceConnectedRef = useRef(false);
   const roomVoiceTargetsRef = useRef<PresenceMember[]>(roomVoiceTargets);
   const peersRef = useRef<Map<string, {
@@ -150,6 +161,13 @@ export function useVoiceCallRuntime({
     audioElement: HTMLAudioElement;
     label: string;
     hasRemoteTrack: boolean;
+    isRemoteMicMuted: boolean;
+    isRemoteSpeaking: boolean;
+    speakingLastAboveAt: number;
+    speakingAudioContext: AudioContext | null;
+    speakingAnimationFrameId: number;
+    speakingAnalyser: AnalyserNode | null;
+    speakingData: Uint8Array<ArrayBuffer> | null;
     reconnectAttempts: number;
     reconnectTimer: number | null;
   }>>(new Map());
@@ -170,6 +188,23 @@ export function useVoiceCallRuntime({
     lastToastRef.current = { key, at: now };
     pushToast(message);
   }, [pushToast]);
+
+  const syncPeerVoiceState = useCallback(() => {
+    const mutedIds: string[] = [];
+    const speakingIds: string[] = [];
+
+    for (const [userId, peer] of peersRef.current.entries()) {
+      if (peer.isRemoteMicMuted) {
+        mutedIds.push(userId);
+      }
+      if (peer.isRemoteSpeaking) {
+        speakingIds.push(userId);
+      }
+    }
+
+    setRemoteMutedPeerUserIds(mutedIds);
+    setRemoteSpeakingPeerUserIds(speakingIds);
+  }, []);
 
   const shouldInitiateOffer = useCallback((targetUserId: string) => {
     const local = String(localUserId || "").trim();
@@ -269,6 +304,16 @@ export function useVoiceCallRuntime({
     peer.connection.onicecandidate = null;
     peer.connection.onconnectionstatechange = null;
     peer.connection.ontrack = null;
+    if (peer.speakingAnimationFrameId) {
+      cancelAnimationFrame(peer.speakingAnimationFrameId);
+      peer.speakingAnimationFrameId = 0;
+    }
+    if (peer.speakingAudioContext) {
+      void peer.speakingAudioContext.close();
+      peer.speakingAudioContext = null;
+    }
+    peer.speakingAnalyser = null;
+    peer.speakingData = null;
     peer.connection.close();
     peer.audioElement.pause();
     peer.audioElement.srcObject = null;
@@ -277,13 +322,14 @@ export function useVoiceCallRuntime({
     decrementVoiceCounter("runtimePeers");
     decrementVoiceCounter("runtimeAudioElements");
     logVoiceDiagnostics("runtime peer closed", { targetUserId, label: peer.label });
+    syncPeerVoiceState();
 
     if (reason) {
       pushCallLog(reason);
     }
 
     updateCallStatus();
-  }, [clearPeerReconnectTimer, pushCallLog, updateCallStatus]);
+  }, [clearPeerReconnectTimer, pushCallLog, updateCallStatus, syncPeerVoiceState]);
 
   const teardownRoom = useCallback((reason?: string) => {
     const peerIds = Array.from(peersRef.current.keys());
@@ -294,6 +340,8 @@ export function useVoiceCallRuntime({
     roomVoiceConnectedRef.current = false;
     setRoomVoiceConnected(false);
     setConnectedPeerUserIds([]);
+    setRemoteMutedPeerUserIds([]);
+    setRemoteSpeakingPeerUserIds([]);
     setLastCallPeer("");
     setCallStatus("idle");
 
@@ -417,6 +465,13 @@ export function useVoiceCallRuntime({
       audioElement: remoteAudioElement,
       label: targetLabel,
       hasRemoteTrack: false,
+      isRemoteMicMuted: false,
+      isRemoteSpeaking: false,
+      speakingLastAboveAt: 0,
+      speakingAudioContext: null as AudioContext | null,
+      speakingAnimationFrameId: 0,
+      speakingAnalyser: null as AnalyserNode | null,
+      speakingData: null as Uint8Array<ArrayBuffer> | null,
       reconnectAttempts: 0,
       reconnectTimer: null as number | null
     };
@@ -484,6 +539,57 @@ export function useVoiceCallRuntime({
       const peer = peersRef.current.get(targetUserId);
       if (peer) {
         peer.hasRemoteTrack = true;
+
+        if (!peer.speakingAudioContext) {
+          const Context = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+          if (Context) {
+            const speakingAudioContext = new Context();
+            const speakingAnalyser = speakingAudioContext.createAnalyser();
+            speakingAnalyser.fftSize = 512;
+            speakingAnalyser.smoothingTimeConstant = 0.8;
+            const source = speakingAudioContext.createMediaStreamSource(stream);
+            source.connect(speakingAnalyser);
+
+            peer.speakingAudioContext = speakingAudioContext;
+            peer.speakingAnalyser = speakingAnalyser;
+            peer.speakingData = new Uint8Array(new ArrayBuffer(speakingAnalyser.fftSize));
+
+            const tickSpeaking = () => {
+              const current = peersRef.current.get(targetUserId);
+              if (!current || !current.speakingAnalyser || !current.speakingData) {
+                return;
+              }
+
+              current.speakingAnalyser.getByteTimeDomainData(current.speakingData);
+              let sum = 0;
+              for (let index = 0; index < current.speakingData.length; index += 1) {
+                const normalized = (current.speakingData[index] - 128) / 128;
+                sum += normalized * normalized;
+              }
+
+              const rms = Math.sqrt(sum / current.speakingData.length);
+              const now = Date.now();
+
+              if (rms >= REMOTE_SPEAKING_ON_THRESHOLD) {
+                current.speakingLastAboveAt = now;
+                if (!current.isRemoteMicMuted && !current.isRemoteSpeaking) {
+                  current.isRemoteSpeaking = true;
+                  syncPeerVoiceState();
+                }
+              } else if (
+                current.isRemoteSpeaking
+                && (current.isRemoteMicMuted || (rms <= REMOTE_SPEAKING_OFF_THRESHOLD && now - current.speakingLastAboveAt > REMOTE_SPEAKING_HOLD_MS))
+              ) {
+                current.isRemoteSpeaking = false;
+                syncPeerVoiceState();
+              }
+
+              current.speakingAnimationFrameId = requestAnimationFrame(tickSpeaking);
+            };
+
+            peer.speakingAnimationFrameId = requestAnimationFrame(tickSpeaking);
+          }
+        }
       }
       void applyRemoteAudioOutput(remoteAudioElement);
       updateCallStatus();
@@ -507,7 +613,7 @@ export function useVoiceCallRuntime({
 
     void applyRemoteAudioOutput(remoteAudioElement);
     return connection;
-  }, [sendWsEvent, applyRemoteAudioOutput, clearPeerReconnectTimer, closePeer, scheduleReconnect, updateCallStatus]);
+  }, [sendWsEvent, applyRemoteAudioOutput, clearPeerReconnectTimer, closePeer, scheduleReconnect, updateCallStatus, syncPeerVoiceState]);
 
   ensurePeerConnectionRef.current = ensurePeerConnection;
 
@@ -598,6 +704,7 @@ export function useVoiceCallRuntime({
     roomVoiceConnectedRef.current = true;
     setRoomVoiceConnected(true);
     pushCallLog("voice room connect requested");
+    sendWsEvent("call.mic_state", { muted: micMuted }, { maxRetries: 1 });
 
     if (roomVoiceTargetsRef.current.length === 0) {
       pushCallLog("voice room waiting for participants");
@@ -606,7 +713,7 @@ export function useVoiceCallRuntime({
     }
 
     await syncRoomTargets();
-  }, [pushCallLog, setCallStatus, syncRoomTargets]);
+  }, [pushCallLog, setCallStatus, syncRoomTargets, sendWsEvent, micMuted]);
 
   const disconnectRoom = useCallback(() => {
     const peerIds = Array.from(peersRef.current.keys());
@@ -619,6 +726,8 @@ export function useVoiceCallRuntime({
     roomVoiceConnectedRef.current = false;
     setRoomVoiceConnected(false);
     setConnectedPeerUserIds([]);
+    setRemoteMutedPeerUserIds([]);
+    setRemoteSpeakingPeerUserIds([]);
     setLastCallPeer("");
     setCallStatus("idle");
     pushCallLog("voice room disconnected");
@@ -743,6 +852,24 @@ export function useVoiceCallRuntime({
     updateCallStatus();
   }, [closePeer, updateCallStatus]);
 
+  const handleIncomingMicState = useCallback((payload: CallMicStatePayload) => {
+    const fromUserId = String(payload.fromUserId || "").trim();
+    if (!fromUserId || typeof payload.muted !== "boolean") {
+      return;
+    }
+
+    const peer = peersRef.current.get(fromUserId);
+    if (!peer) {
+      return;
+    }
+
+    peer.isRemoteMicMuted = payload.muted;
+    if (payload.muted) {
+      peer.isRemoteSpeaking = false;
+    }
+    syncPeerVoiceState();
+  }, [syncPeerVoiceState]);
+
   useEffect(() => {
     if (!localStreamRef.current) {
       return;
@@ -843,15 +970,26 @@ export function useVoiceCallRuntime({
   }, [roomVoiceTargets, syncRoomTargets]);
 
   useEffect(() => {
+    if (!roomVoiceConnectedRef.current) {
+      return;
+    }
+
+    sendWsEvent("call.mic_state", { muted: micMuted }, { maxRetries: 1 });
+  }, [micMuted, sendWsEvent]);
+
+  useEffect(() => {
     teardownRoom();
   }, [roomSlug, teardownRoom]);
 
   return {
     roomVoiceConnected,
     connectedPeerUserIds,
+    remoteMutedPeerUserIds,
+    remoteSpeakingPeerUserIds,
     connectRoom,
     disconnectRoom,
     handleIncomingSignal,
-    handleIncomingTerminal
+    handleIncomingTerminal,
+    handleIncomingMicState
   };
 }

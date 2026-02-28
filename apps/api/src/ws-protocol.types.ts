@@ -1,6 +1,7 @@
 export type CallSignalEventType = "call.offer" | "call.answer" | "call.ice";
 export type CallTerminalEventType = "call.reject" | "call.hangup";
-export type CallEventType = CallSignalEventType | CallTerminalEventType;
+export type CallMicStateEventType = "call.mic_state";
+export type CallEventType = CallSignalEventType | CallTerminalEventType | CallMicStateEventType;
 
 export type WsIncomingPayload = Record<string, unknown>;
 
@@ -53,13 +54,21 @@ export type WsIncomingCallTerminalEnvelope = {
   payload?: WsIncomingPayload;
 };
 
+export type WsIncomingCallMicStateEnvelope = {
+  type: CallMicStateEventType;
+  requestId?: string;
+  idempotencyKey?: string;
+  payload?: WsIncomingPayload;
+};
+
 export type WsIncomingKnownEnvelope =
   | WsIncomingPingEnvelope
   | WsIncomingRoomJoinEnvelope
   | WsIncomingRoomLeaveEnvelope
   | WsIncomingChatSendEnvelope
   | WsIncomingCallSignalEnvelope
-  | WsIncomingCallTerminalEnvelope;
+  | WsIncomingCallTerminalEnvelope
+  | WsIncomingCallMicStateEnvelope;
 
 export type WsIncomingUnknownEnvelope = WsIncomingBaseEnvelope;
 
@@ -136,4 +145,8 @@ export type CallSignalRelayPayload = CallRelayBasePayload & {
 
 export type CallTerminalRelayPayload = CallRelayBasePayload & {
   reason: string | null;
+};
+
+export type CallMicStateRelayPayload = CallRelayBasePayload & {
+  muted: boolean;
 };

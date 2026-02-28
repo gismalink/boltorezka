@@ -76,7 +76,7 @@ export type RoomsPanelProps = {
   currentUserName: string;
   liveRoomMembersBySlug: Record<string, string[]>;
   liveRoomMemberDetailsBySlug: Record<string, PresenceMember[]>;
-  voiceActiveUserIdsInCurrentRoom: string[];
+  voiceMicStateByUserIdInCurrentRoom: Record<string, "muted" | "silent" | "speaking">;
   collapsedCategoryIds: string[];
   uncategorizedRooms: Room[];
   newCategorySlug: string;

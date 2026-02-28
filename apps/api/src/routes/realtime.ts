@@ -6,6 +6,7 @@ import {
   buildRoomsPresenceEnvelope,
   asKnownWsIncomingEnvelope,
   buildAckEnvelope,
+  buildCallMicStateRelayEnvelope,
   buildCallSignalRelayEnvelope,
   buildCallTerminalRelayEnvelope,
   buildChatMessageEnvelope,
@@ -814,6 +815,48 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
                   targetUserId
                 },
                 [knownMessage.type === "call.hangup" ? "call_hangup_sent" : "call_reject_sent"]
+              );
+              return;
+              }
+
+              case "call.mic_state": {
+              if (!state.roomId) {
+                sendNoActiveRoomNack(connection, requestId, eventType);
+                return;
+              }
+
+              const mutedRaw = payload?.muted;
+              if (typeof mutedRaw !== "boolean") {
+                sendValidationNack(connection, requestId, eventType, "payload.muted boolean is required");
+                return;
+              }
+
+              const targetUserId = normalizeRequestId(getPayloadString(payload, "targetUserId", 128)) || null;
+              const relayEnvelope = buildCallMicStateRelayEnvelope(
+                knownMessage.type,
+                state.userId,
+                state.userName,
+                state.roomId,
+                state.roomSlug,
+                targetUserId,
+                mutedRaw
+              );
+
+              const relayOutcome = relayToTargetOrRoom(connection, state.roomId, targetUserId, relayEnvelope);
+              if (!relayOutcome.ok) {
+                sendTargetNotInRoomNack(connection, requestId, eventType);
+                return;
+              }
+
+              sendAckWithMetrics(
+                connection,
+                requestId,
+                eventType,
+                {
+                  relayedTo: relayOutcome.relayedCount,
+                  targetUserId,
+                  muted: mutedRaw
+                }
               );
               return;
               }

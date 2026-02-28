@@ -24,7 +24,7 @@ export function RoomsPanel({
   currentUserName,
   liveRoomMembersBySlug,
   liveRoomMemberDetailsBySlug,
-  voiceActiveUserIdsInCurrentRoom,
+  voiceMicStateByUserIdInCurrentRoom,
   collapsedCategoryIds,
   uncategorizedRooms,
   newCategorySlug,
@@ -141,8 +141,6 @@ export function RoomsPanel({
 
   const normalizedCurrentUserName = String(currentUserName || "").trim().toLocaleLowerCase();
   const normalizedCurrentUserId = String(currentUserId || "").trim();
-  const voiceActiveUserIdsSet = new Set(voiceActiveUserIdsInCurrentRoom.map((userId) => String(userId || "").trim()).filter(Boolean));
-
   const mapRoomMembers = (slug: string) => {
     const details = liveRoomMemberDetailsBySlug[slug] || [];
     if (details.length > 0) {
@@ -268,7 +266,20 @@ export function RoomsPanel({
               const isCurrentUser = normalizedCurrentUserId
                 ? member.userId && member.userId === normalizedCurrentUserId
                 : normalizedCurrentUserName && normalizedMemberName === normalizedCurrentUserName;
-              const isVoiceActive = roomHasVoiceState && member.userId ? voiceActiveUserIdsSet.has(member.userId) : false;
+              const micState = roomHasVoiceState && member.userId
+                ? (voiceMicStateByUserIdInCurrentRoom[member.userId] || "muted")
+                : "muted";
+              const isVoiceActive = micState === "speaking";
+              const micIconClass = micState === "muted"
+                ? "bi-mic-mute"
+                : micState === "speaking"
+                  ? "bi-mic-fill"
+                  : "bi-mic";
+              const audioIconClass = micState === "muted"
+                ? "bi-volume-mute"
+                : micState === "speaking"
+                  ? "bi-volume-up"
+                  : "bi-volume-down";
 
               return (
             <li
@@ -278,8 +289,8 @@ export function RoomsPanel({
               <span className="channel-member-avatar">{(member.userName || "U").charAt(0).toUpperCase()}</span>
               <span className="channel-member-name">{member.userName}</span>
               <span className="channel-member-icons" aria-hidden="true">
-                <i className={`bi ${isVoiceActive ? "bi-mic-fill" : "bi-mic-mute"}`} />
-                <i className={`bi ${isVoiceActive ? "bi-volume-up" : "bi-volume-mute"}`} />
+                <i className={`bi ${micIconClass}`} />
+                <i className={`bi ${audioIconClass}`} />
               </span>
             </li>
               );

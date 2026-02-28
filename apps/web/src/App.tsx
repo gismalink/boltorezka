@@ -237,10 +237,13 @@ export function App() {
   const {
     roomVoiceConnected,
     connectedPeerUserIds,
+    remoteMutedPeerUserIds,
+    remoteSpeakingPeerUserIds,
     connectRoom,
     disconnectRoom,
     handleIncomingSignal,
-    handleIncomingTerminal
+    handleIncomingTerminal,
+    handleIncomingMicState
   } = useVoiceCallRuntime({
     localUserId: user?.id || "",
     roomSlug,
@@ -258,13 +261,37 @@ export function App() {
     setLastCallPeer
   });
 
-  const voiceActiveUserIdsInCurrentRoom = useMemo(() => {
-    const ids = new Set(connectedPeerUserIds);
+  const voiceMicStateByUserIdInCurrentRoom = useMemo(() => {
+    const statusByUserId: Record<string, "muted" | "silent" | "speaking"> = {};
+
+    connectedPeerUserIds.forEach((userId) => {
+      const normalized = String(userId || "").trim();
+      if (normalized) {
+        statusByUserId[normalized] = "silent";
+      }
+    });
+
+    remoteSpeakingPeerUserIds.forEach((userId) => {
+      const normalized = String(userId || "").trim();
+      if (normalized) {
+        statusByUserId[normalized] = "speaking";
+      }
+    });
+
+    remoteMutedPeerUserIds.forEach((userId) => {
+      const normalized = String(userId || "").trim();
+      if (normalized) {
+        statusByUserId[normalized] = "muted";
+      }
+    });
+
     if (roomVoiceConnected && user?.id) {
-      ids.add(user.id);
+      const localSpeaking = !micMuted && micTestLevel >= 0.055;
+      statusByUserId[user.id] = micMuted ? "muted" : localSpeaking ? "speaking" : "silent";
     }
-    return Array.from(ids);
-  }, [connectedPeerUserIds, roomVoiceConnected, user?.id]);
+
+    return statusByUserId;
+  }, [connectedPeerUserIds, remoteSpeakingPeerUserIds, remoteMutedPeerUserIds, roomVoiceConnected, user?.id, micMuted, micTestLevel]);
 
   const authController = useMemo(
     () =>
@@ -433,7 +460,8 @@ export function App() {
     pushToast,
     markMessageDelivery,
     onCallSignal: handleIncomingSignal,
-    onCallTerminal: handleIncomingTerminal
+    onCallTerminal: handleIncomingTerminal,
+    onCallMicState: handleIncomingMicState
   });
 
   useEffect(() => {
@@ -778,7 +806,7 @@ export function App() {
               currentUserName={user?.name || ""}
               liveRoomMembersBySlug={roomsPresenceBySlug}
               liveRoomMemberDetailsBySlug={roomsPresenceDetailsBySlug}
-              voiceActiveUserIdsInCurrentRoom={voiceActiveUserIdsInCurrentRoom}
+              voiceMicStateByUserIdInCurrentRoom={voiceMicStateByUserIdInCurrentRoom}
               collapsedCategoryIds={collapsedCategoryIds}
               uncategorizedRooms={uncategorizedRooms}
               newCategorySlug={newCategorySlug}
