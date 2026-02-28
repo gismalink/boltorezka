@@ -97,6 +97,7 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
   const socketsByRoomId = new Map<string, Set<WebSocket>>();
   const socketState = new WeakMap<WebSocket, SocketState>();
   const EMAIL_SESSION_TTL_SEC = 120;
+  const processInstanceId = randomUUID();
 
   const sessionLockKey = (email: string) => `ws:session:email:${email}`;
 
@@ -227,11 +228,28 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
     }
 
     const key = sessionLockKey(normalizedEmail);
-    const acquired = await fastify.redis.set(key, sessionId, {
+    const lockOwner = `${processInstanceId}:${sessionId}`;
+    const acquired = await fastify.redis.set(key, lockOwner, {
       EX: EMAIL_SESSION_TTL_SEC,
       NX: true
     });
-    return acquired === "OK";
+
+    if (acquired === "OK") {
+      return true;
+    }
+
+    const current = await fastify.redis.get(key);
+    if (!current) {
+      return false;
+    }
+
+    const [ownerInstanceId] = current.split(":");
+    if (ownerInstanceId && ownerInstanceId !== processInstanceId) {
+      await fastify.redis.set(key, lockOwner, { EX: EMAIL_SESSION_TTL_SEC });
+      return true;
+    }
+
+    return false;
   };
 
   const refreshEmailSession = async (email: string, sessionId: string) => {
@@ -242,7 +260,7 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
 
     const key = sessionLockKey(normalizedEmail);
     const current = await fastify.redis.get(key);
-    if (current !== sessionId) {
+    if (current !== `${processInstanceId}:${sessionId}`) {
       return;
     }
 
@@ -257,7 +275,7 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
 
     const key = sessionLockKey(normalizedEmail);
     const current = await fastify.redis.get(key);
-    if (current === sessionId) {
+    if (current === `${processInstanceId}:${sessionId}`) {
       await fastify.redis.del(key);
     }
   };
