@@ -2,8 +2,20 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { db } from "../db.js";
 import { loadCurrentUser, requireAuth, requireRole } from "../middleware/auth.js";
-import type { RoomListRow, RoomMessageRow, RoomRow } from "../db.types.ts";
-import type { RoomCreateResponse, RoomMessagesResponse, RoomsListResponse } from "../api-contract.types.ts";
+import type { RoomCategoryRow, RoomListRow, RoomMessageRow, RoomRow } from "../db.types.ts";
+import type {
+  RoomCategoryCreateResponse,
+  RoomCreateResponse,
+  RoomMessagesResponse,
+  RoomsListResponse,
+  RoomsTreeResponse
+} from "../api-contract.types.ts";
+
+type RoomListDbRow = RoomListRow & {
+  category_id: string | null;
+  kind: "text" | "voice";
+  position: number;
+};
 
 const createRoomSchema = z.object({
   slug: z
@@ -12,22 +24,44 @@ const createRoomSchema = z.object({
     .max(48)
     .regex(/^[a-z0-9-]+$/),
   title: z.string().min(3).max(120),
-  is_public: z.boolean().default(true)
+  is_public: z.boolean().default(true),
+  kind: z.enum(["text", "voice"]).default("text"),
+  category_id: z.string().uuid().nullable().optional().default(null),
+  position: z.number().int().min(0).optional()
+});
+
+const createCategorySchema = z.object({
+  slug: z
+    .string()
+    .min(3)
+    .max(48)
+    .regex(/^[a-z0-9-]+$/),
+  title: z.string().min(2).max(120),
+  position: z.number().int().min(0).optional()
 });
 
 export async function roomsRoutes(fastify: FastifyInstance) {
   fastify.get(
-    "/v1/rooms",
+    "/v1/rooms/tree",
     {
       preHandler: [requireAuth]
     },
     async (request) => {
       const userId = String(request.user?.sub || "").trim();
-      const result = await db.query<RoomListRow>(
+      const categoriesResult = await db.query<RoomCategoryRow>(
+        `SELECT id, slug, title, position, created_at
+         FROM room_categories
+         ORDER BY position ASC, created_at ASC`
+      );
+
+      const channelsResult = await db.query<RoomListDbRow>(
         `SELECT
            r.id,
            r.slug,
            r.title,
+           r.kind,
+           r.category_id,
+           r.position,
            r.is_public,
            r.created_at,
            EXISTS(
@@ -35,7 +69,59 @@ export async function roomsRoutes(fastify: FastifyInstance) {
              WHERE rm.room_id = r.id AND rm.user_id = $1
            ) AS is_member
          FROM rooms r
-         ORDER BY created_at ASC`,
+         ORDER BY r.category_id NULLS FIRST, r.position ASC, r.created_at ASC`,
+        [userId]
+      );
+
+      const byCategory = new Map<string, RoomListDbRow[]>();
+      const uncategorized: RoomListDbRow[] = [];
+
+      channelsResult.rows.forEach((channel) => {
+        if (!channel.category_id) {
+          uncategorized.push(channel);
+          return;
+        }
+
+        const list = byCategory.get(channel.category_id) || [];
+        list.push(channel);
+        byCategory.set(channel.category_id, list);
+      });
+
+      const response: RoomsTreeResponse = {
+        categories: categoriesResult.rows.map((category) => ({
+          ...category,
+          channels: byCategory.get(category.id) || []
+        })),
+        uncategorized
+      };
+
+      return response;
+    }
+  );
+
+  fastify.get(
+    "/v1/rooms",
+    {
+      preHandler: [requireAuth]
+    },
+    async (request) => {
+      const userId = String(request.user?.sub || "").trim();
+      const result = await db.query<RoomListDbRow>(
+        `SELECT
+           r.id,
+           r.slug,
+           r.title,
+           r.kind,
+           r.category_id,
+           r.position,
+           r.is_public,
+           r.created_at,
+           EXISTS(
+             SELECT 1 FROM room_members rm
+             WHERE rm.room_id = r.id AND rm.user_id = $1
+           ) AS is_member
+         FROM rooms r
+         ORDER BY category_id NULLS FIRST, position ASC, created_at ASC`,
         [userId]
       );
 
@@ -44,7 +130,64 @@ export async function roomsRoutes(fastify: FastifyInstance) {
     }
   );
 
-  fastify.post<{ Body: { slug: string; title: string; is_public?: boolean } }>(
+  fastify.post<{ Body: { slug: string; title: string; position?: number } }>(
+    "/v1/room-categories",
+    {
+      preHandler: [requireAuth, loadCurrentUser, requireRole(["admin", "super_admin"])]
+    },
+    async (request, reply) => {
+      const parsed = createCategorySchema.safeParse(request.body);
+
+      if (!parsed.success) {
+        return reply.code(400).send({
+          error: "ValidationError",
+          issues: parsed.error.flatten()
+        });
+      }
+
+      const { slug, title } = parsed.data;
+      const createdBy = String(request.user?.sub || "").trim();
+      const existing = await db.query("SELECT id FROM room_categories WHERE slug = $1", [slug]);
+
+      if ((existing.rowCount || 0) > 0) {
+        return reply.code(409).send({
+          error: "Conflict",
+          message: "Category slug already exists"
+        });
+      }
+
+      const position = typeof parsed.data.position === "number"
+        ? parsed.data.position
+        : Number(
+            (
+              await db.query<{ next_position: number }>(
+                "SELECT COALESCE(MAX(position), -1) + 1 AS next_position FROM room_categories"
+              )
+            ).rows[0]?.next_position || 0
+          );
+
+      const created = await db.query<RoomCategoryRow>(
+        `INSERT INTO room_categories (slug, title, position, created_by)
+         VALUES ($1, $2, $3, $4)
+         RETURNING id, slug, title, position, created_at`,
+        [slug, title, position, createdBy]
+      );
+
+      const response: RoomCategoryCreateResponse = { category: created.rows[0] };
+      return reply.code(201).send(response);
+    }
+  );
+
+  fastify.post<{
+    Body: {
+      slug: string;
+      title: string;
+      is_public?: boolean;
+      kind?: "text" | "voice";
+      category_id?: string | null;
+      position?: number;
+    }
+  }>(
     "/v1/rooms",
     {
       preHandler: [requireAuth, loadCurrentUser, requireRole(["admin", "super_admin"])]
@@ -59,7 +202,17 @@ export async function roomsRoutes(fastify: FastifyInstance) {
         });
       }
 
-      const { slug, title, is_public } = parsed.data;
+      const { slug, title, is_public, kind, category_id } = parsed.data;
+
+      if (category_id) {
+        const category = await db.query("SELECT id FROM room_categories WHERE id = $1", [category_id]);
+        if ((category.rowCount || 0) === 0) {
+          return reply.code(400).send({
+            error: "ValidationError",
+            message: "category_id does not exist"
+          });
+        }
+      }
 
       const existing = await db.query("SELECT id FROM rooms WHERE slug = $1", [slug]);
 
@@ -71,12 +224,24 @@ export async function roomsRoutes(fastify: FastifyInstance) {
       }
 
       const createdBy = String(request.user?.sub || "").trim();
+      const position = typeof parsed.data.position === "number"
+        ? parsed.data.position
+        : Number(
+            (
+              await db.query<{ next_position: number }>(
+                `SELECT COALESCE(MAX(position), -1) + 1 AS next_position
+                 FROM rooms
+                 WHERE category_id IS NOT DISTINCT FROM $1`,
+                [category_id]
+              )
+            ).rows[0]?.next_position || 0
+          );
 
       const created = await db.query<RoomRow>(
-        `INSERT INTO rooms (slug, title, is_public, created_by)
-         VALUES ($1, $2, $3, $4)
-         RETURNING id, slug, title, is_public, created_at`,
-        [slug, title, is_public, createdBy]
+        `INSERT INTO rooms (slug, title, kind, category_id, position, is_public, created_by)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)
+         RETURNING id, slug, title, kind, category_id, position, is_public, created_at`,
+        [slug, title, kind, category_id, position, is_public, createdBy]
       );
 
       const room = created.rows[0];
@@ -132,7 +297,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
       }
 
       const roomResult = await db.query<RoomRow>(
-        "SELECT id, slug, title, is_public FROM rooms WHERE slug = $1",
+        "SELECT id, slug, title, kind, category_id, position, is_public FROM rooms WHERE slug = $1",
         [slug]
       );
 

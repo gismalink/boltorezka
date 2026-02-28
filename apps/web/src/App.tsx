@@ -11,6 +11,8 @@ import type {
   Message,
   MessagesCursor,
   Room,
+  RoomKind,
+  RoomsTreeResponse,
   TelemetrySummary,
   User
 } from "./types";
@@ -22,6 +24,7 @@ export function App() {
   const [user, setUser] = useState<User | null>(null);
   const [authMode, setAuthMode] = useState("loading");
   const [rooms, setRooms] = useState<Room[]>([]);
+  const [roomsTree, setRoomsTree] = useState<RoomsTreeResponse | null>(null);
   const [roomSlug, setRoomSlug] = useState("general");
   const [messages, setMessages] = useState<Message[]>([]);
   const [messagesHasMore, setMessagesHasMore] = useState(false);
@@ -42,6 +45,10 @@ export function App() {
   const [adminUsers, setAdminUsers] = useState<User[]>([]);
   const [newRoomSlug, setNewRoomSlug] = useState("");
   const [newRoomTitle, setNewRoomTitle] = useState("");
+  const [newRoomKind, setNewRoomKind] = useState<RoomKind>("text");
+  const [newRoomCategoryId, setNewRoomCategoryId] = useState<string>("none");
+  const [newCategorySlug, setNewCategorySlug] = useState("");
+  const [newCategoryTitle, setNewCategoryTitle] = useState("");
   const [authMenuOpen, setAuthMenuOpen] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const realtimeClientRef = useRef<RealtimeClient | null>(null);
@@ -115,6 +122,7 @@ export function App() {
           void sendWsEvent("room.join", { roomSlug: slug }, { maxRetries: 1 });
         },
         setRooms,
+        setRoomsTree,
         setAdminUsers
       }),
     [sendWsEvent]
@@ -166,6 +174,7 @@ export function App() {
     if (!token) {
       setUser(null);
       setRooms([]);
+      setRoomsTree(null);
       setMessages([]);
       setMessagesHasMore(false);
       setMessagesNextCursor(null);
@@ -189,6 +198,8 @@ export function App() {
     api.rooms(token)
       .then((res) => setRooms(res.rooms))
       .catch((error) => pushLog(`rooms failed: ${error.message}`));
+
+    void roomAdminController.loadRoomTree(token);
   }, [token]);
 
   useEffect(() => {
@@ -343,10 +354,24 @@ export function App() {
     event.preventDefault();
     if (!token || !canCreateRooms) return;
 
-    const created = await roomAdminController.createRoom(token, newRoomSlug, newRoomTitle);
+    const created = await roomAdminController.createRoom(token, newRoomSlug, newRoomTitle, {
+      kind: newRoomKind,
+      categoryId: newRoomCategoryId === "none" ? null : newRoomCategoryId
+    });
     if (created) {
       setNewRoomSlug("");
       setNewRoomTitle("");
+    }
+  };
+
+  const createCategory = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!token || !canCreateRooms) return;
+
+    const created = await roomAdminController.createCategory(token, newCategorySlug, newCategoryTitle);
+    if (created) {
+      setNewCategorySlug("");
+      setNewCategoryTitle("");
     }
   };
 
@@ -379,6 +404,22 @@ export function App() {
     if (!token || !canPromote) return;
     await roomAdminController.promote(token, userId);
   };
+
+  const categorizedRoomIds = useMemo(() => {
+    const ids = new Set<string>();
+    roomsTree?.categories.forEach((category) => {
+      category.channels.forEach((channel) => ids.add(channel.id));
+    });
+    return ids;
+  }, [roomsTree]);
+
+  const uncategorizedRooms = useMemo(() => {
+    if (roomsTree) {
+      return roomsTree.uncategorized;
+    }
+
+    return rooms.filter((room) => !categorizedRoomIds.has(room.id));
+  }, [roomsTree, rooms, categorizedRoomIds]);
 
   return (
     <main className="app legacy-layout">
@@ -439,24 +480,66 @@ export function App() {
           <section className="card compact">
             <h2>Rooms</h2>
             {canCreateRooms ? (
-              <form className="stack" onSubmit={createRoom}>
-                <input value={newRoomSlug} onChange={(e) => setNewRoomSlug(e.target.value)} placeholder="slug" />
-                <input value={newRoomTitle} onChange={(e) => setNewRoomTitle(e.target.value)} placeholder="title" />
-                <button type="submit">Create room</button>
-              </form>
+              <div className="stack">
+                <form className="stack" onSubmit={createCategory}>
+                  <h3 className="subheading">Create category</h3>
+                  <input value={newCategorySlug} onChange={(e) => setNewCategorySlug(e.target.value)} placeholder="category slug" />
+                  <input value={newCategoryTitle} onChange={(e) => setNewCategoryTitle(e.target.value)} placeholder="category title" />
+                  <button type="submit">+ Category</button>
+                </form>
+
+                <form className="stack" onSubmit={createRoom}>
+                  <h3 className="subheading">Create channel</h3>
+                  <input value={newRoomSlug} onChange={(e) => setNewRoomSlug(e.target.value)} placeholder="channel slug" />
+                  <input value={newRoomTitle} onChange={(e) => setNewRoomTitle(e.target.value)} placeholder="channel title" />
+                  <div className="row">
+                    <select value={newRoomKind} onChange={(e) => setNewRoomKind(e.target.value as RoomKind)}>
+                      <option value="text">text</option>
+                      <option value="voice">voice</option>
+                    </select>
+                    <select value={newRoomCategoryId} onChange={(e) => setNewRoomCategoryId(e.target.value)}>
+                      <option value="none">No category</option>
+                      {(roomsTree?.categories || []).map((category) => (
+                        <option key={category.id} value={category.id}>{category.title}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <button type="submit">+ Channel</button>
+                </form>
+              </div>
             ) : (
               <p className="muted">Only admin/super_admin can create rooms.</p>
             )}
 
-            <ul className="rooms-list">
-              {rooms.map((room) => (
-                <li key={room.id}>
-                  <button className="secondary room-btn" onClick={() => joinRoom(room.slug)}>
-                    {room.slug} — {room.title}
-                  </button>
-                </li>
-              ))}
-            </ul>
+            {(roomsTree?.categories || []).map((category) => (
+              <div key={category.id} className="category-block">
+                <div className="category-title">{category.title}</div>
+                <ul className="rooms-list">
+                  {category.channels.map((room) => (
+                    <li key={room.id}>
+                      <button className="secondary room-btn" onClick={() => joinRoom(room.slug)}>
+                        {room.kind === "voice" ? "🔊" : "#"} {room.title}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+
+            {uncategorizedRooms.length > 0 ? (
+              <div className="category-block">
+                <div className="category-title">Uncategorized</div>
+                <ul className="rooms-list">
+                  {uncategorizedRooms.map((room) => (
+                    <li key={room.id}>
+                      <button className="secondary room-btn" onClick={() => joinRoom(room.slug)}>
+                        {room.kind === "voice" ? "🔊" : "#"} {room.title}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
           </section>
         </aside>
 

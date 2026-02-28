@@ -15,10 +15,23 @@ export type UserCompactRow = {
   role: UserRole;
 };
 
+export type RoomKind = "text" | "voice";
+
+export type RoomCategoryRow = {
+  id: string;
+  slug: string;
+  title: string;
+  position: number;
+  created_at: string;
+};
+
 export type RoomRow = {
   id: string;
   slug: string;
   title: string;
+  kind: RoomKind;
+  category_id: string | null;
+  position: number;
   is_public: boolean;
   created_at?: string;
 };

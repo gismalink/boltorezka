@@ -3,6 +3,29 @@
 Этот документ хранит зафиксированные изменения, выполненные шаги и операционные evidence.
 План и open items находятся в `docs/ROADMAP.md`.
 
+## 2026-02-28 — Discord-like channel structure foundation (Phase A/B MVP)
+
+### Delivered
+
+- Backend schema evolution:
+  - `room_categories` table,
+  - `rooms.kind` (`text`/`voice`),
+  - `rooms.category_id`, `rooms.position`.
+- New API endpoints:
+  - `GET /v1/rooms/tree` (categories + channels + uncategorized),
+  - `POST /v1/room-categories` (admin/super_admin).
+- `POST /v1/rooms` расширен полями `kind`, `category_id`, `position`.
+- Web admin flow:
+  - create category,
+  - create channel (`text`/`voice`) с привязкой к категории,
+  - sidebar tree grouping по категориям с иконками типа канала.
+
+### Validation
+
+- `npm run check:api-types` — PASS.
+- `npm run web:build` — PASS.
+- `npm run check` — PASS.
+
 ## 2026-02-28 — Realtime smoke hardening: reconnect + idempotency
 
 ### Delivered
@@ -17,6 +40,16 @@
 ### Roadmap impact
 
 - Закрыт пункт Phase 2: стабильный smoke для reconnect/idempotency.
+
+### Operational evidence (test)
+
+- Deploy target: `test`, branch `feature/web-header-profile-menu`, SHA `0e99f24`.
+- Command: `ssh mac-mini 'cd ~/srv/boltorezka && TEST_REF=origin/feature/web-header-profile-menu npm run deploy:test:smoke'`.
+- Realtime smoke output:
+  - `ok=true`
+  - `reconnectOk=true`
+  - `reconnectSkipped=false`
+- Причина финального фикс-коммита: postdeploy smoke теперь автогенерирует второй ws-ticket (`SMOKE_WS_TICKET_RECONNECT`) для reconnect path без ручного bearer-token.
 
 ## 2026-02-28 — Realtime TS hardening batch
 

@@ -1,8 +1,11 @@
 import type {
   AuthModeResponse,
   MessagesCursor,
+  RoomCategory,
   Room,
+  RoomKind,
   RoomMessagesResponse,
+  RoomsTreeResponse,
   TelemetrySummary,
   User
 } from "./types";
@@ -36,7 +39,16 @@ export const api = {
   me: (token: string) => fetchJson<{ user: User | null }>("/v1/auth/me", token),
   wsTicket: (token: string) => fetchJson<{ ticket: string; expiresInSec: number }>("/v1/auth/ws-ticket", token),
   rooms: (token: string) => fetchJson<{ rooms: Room[] }>("/v1/rooms", token),
-  createRoom: (token: string, input: { slug: string; title: string; is_public: boolean }) =>
+  roomTree: (token: string) => fetchJson<RoomsTreeResponse>("/v1/rooms/tree", token),
+  createCategory: (token: string, input: { slug: string; title: string; position?: number }) =>
+    fetchJson<{ category: RoomCategory }>("/v1/room-categories", token, {
+      method: "POST",
+      body: JSON.stringify(input)
+    }),
+  createRoom: (
+    token: string,
+    input: { slug: string; title: string; is_public: boolean; kind?: RoomKind; category_id?: string | null }
+  ) =>
     fetchJson<{ room: Room }>("/v1/rooms", token, { method: "POST", body: JSON.stringify(input) }),
   roomMessages: (
     token: string,

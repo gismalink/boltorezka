@@ -1,4 +1,4 @@
-import type { RoomListRow, RoomMessageRow, RoomRow, UserRow } from "./db.types.ts";
+import type { RoomCategoryRow, RoomListRow, RoomMessageRow, RoomRow, UserRow } from "./db.types.ts";
 
 export type AuthModeResponse = {
   mode: string;
@@ -32,6 +32,19 @@ export type RoomsListResponse = {
 
 export type RoomCreateResponse = {
   room: RoomRow;
+};
+
+export type RoomCategoryCreateResponse = {
+  category: RoomCategoryRow;
+};
+
+export type RoomCategoryTreeItem = RoomCategoryRow & {
+  channels: RoomListRow[];
+};
+
+export type RoomsTreeResponse = {
+  categories: RoomCategoryTreeItem[];
+  uncategorized: RoomListRow[];
 };
 
 export type RoomMessagesResponse = {

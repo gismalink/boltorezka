@@ -11,13 +11,31 @@ export type User = {
   created_at: string;
 };
 
+export type RoomKind = "text" | "voice";
+
+export type RoomCategory = {
+  id: string;
+  slug: string;
+  title: string;
+  position: number;
+  created_at: string;
+};
+
 export type Room = {
   id: string;
   slug: string;
   title: string;
+  kind: RoomKind;
+  category_id: string | null;
+  position: number;
   is_public: boolean;
   created_at: string;
   is_member?: boolean;
+};
+
+export type RoomsTreeResponse = {
+  categories: Array<RoomCategory & { channels: Room[] }>;
+  uncategorized: Room[];
 };
 
 export type Message = {

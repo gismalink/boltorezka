@@ -140,6 +140,7 @@ body {
 
 button,
 input,
+select,
 textarea {
   border-radius: 6px;
   border: 1px solid #30363d;
@@ -149,6 +150,7 @@ textarea {
 }
 
 input,
+select,
 textarea {
   width: 100%;
   box-sizing: border-box;
@@ -198,6 +200,26 @@ pre {
   margin: 8px 0 0;
   display: grid;
   gap: 8px;
+}
+
+.subheading {
+  margin: 0;
+  font-size: 12px;
+  text-transform: uppercase;
+  color: #8b949e;
+  letter-spacing: 0.04em;
+}
+
+.category-block {
+  margin-top: 10px;
+}
+
+.category-title {
+  font-size: 12px;
+  text-transform: uppercase;
+  color: #8b949e;
+  letter-spacing: 0.04em;
+  margin-bottom: 6px;
 }
 
 .room-btn {
