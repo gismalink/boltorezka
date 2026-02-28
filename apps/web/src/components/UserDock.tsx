@@ -1,3 +1,4 @@
+import { useRef } from "react";
 import type { UserDockProps } from "./types";
 import { PopupPortal } from "./PopupPortal";
 
@@ -39,6 +40,8 @@ export function UserDock({
   onSetMicVolume,
   onSetOutputVolume
 }: UserDockProps) {
+  const inputDeviceRowRef = useRef<HTMLButtonElement>(null);
+  const inputProfileRowRef = useRef<HTMLButtonElement>(null);
   const mediaDevicesUnavailable = mediaDevicesState !== "ready";
   const mediaDevicesWarningText = mediaDevicesHint || "Нет доступа к аудио-устройствам.";
 
@@ -115,6 +118,7 @@ export function UserDock({
                 <div>
                   <div className="voice-menu-items">
                     <button
+                      ref={inputDeviceRowRef}
                       type="button"
                       className={`secondary voice-menu-row ${voiceSettingsPanel === "input_device" ? "voice-menu-row-active" : ""}`}
                       disabled={mediaDevicesUnavailable}
@@ -127,6 +131,7 @@ export function UserDock({
                       <i className="bi bi-chevron-right" aria-hidden="true" />
                     </button>
                     <button
+                      ref={inputProfileRowRef}
                       type="button"
                       className={`secondary voice-menu-row ${voiceSettingsPanel === "input_profile" ? "voice-menu-row-active" : ""}`}
                       onClick={() => onSetVoiceSettingsPanel(voiceSettingsPanel === "input_profile" ? null : "input_profile")}
@@ -174,8 +179,14 @@ export function UserDock({
                     <i className="bi bi-gear" aria-hidden="true" />
                   </button>
 
-                  {voiceSettingsPanel === "input_device" ? (
-                    <div className="floating-popup settings-popup voice-submenu-popup">
+                  <PopupPortal
+                    open={voiceSettingsPanel === "input_device"}
+                    anchorRef={inputDeviceRowRef}
+                    className="settings-popup voice-submenu-popup"
+                    placement="right-start"
+                    offset={8}
+                  >
+                    <div>
                       <div className="device-list">
                         {inputOptions.map((device) => (
                           <button
@@ -195,10 +206,16 @@ export function UserDock({
                         <button type="button" className="secondary device-item">Показать больше...</button>
                       </div>
                     </div>
-                  ) : null}
+                  </PopupPortal>
 
-                  {voiceSettingsPanel === "input_profile" ? (
-                    <div className="floating-popup settings-popup voice-submenu-popup">
+                  <PopupPortal
+                    open={voiceSettingsPanel === "input_profile"}
+                    anchorRef={inputProfileRowRef}
+                    className="settings-popup voice-submenu-popup"
+                    placement="right-start"
+                    offset={8}
+                  >
+                    <div>
                       <div className="device-list">
                         <button
                           type="button"
@@ -235,7 +252,7 @@ export function UserDock({
                         </button>
                       </div>
                     </div>
-                  ) : null}
+                  </PopupPortal>
                 </div>
               </PopupPortal>
             </div>

@@ -2,12 +2,14 @@ import { ReactNode, useEffect, useLayoutEffect, useMemo, useRef, useState } from
 import { createPortal } from "react-dom";
 
 type PopupPlacement = "bottom-end" | "bottom-start" | "top-end" | "top-start";
+type SidePopupPlacement = "right-start" | "right-end" | "left-start" | "left-end";
+type AnyPopupPlacement = PopupPlacement | SidePopupPlacement;
 
 type PopupPortalProps = {
   open: boolean;
   anchorRef: { current: HTMLElement | null };
   className?: string;
-  placement?: PopupPlacement;
+  placement?: AnyPopupPlacement;
   offset?: number;
   children: ReactNode;
 };
@@ -57,35 +59,58 @@ export function PopupPortal({
     const anchorRect = anchor.getBoundingClientRect();
     const popupRect = popup.getBoundingClientRect();
 
-    let vertical: "top" | "bottom" = placement.startsWith("top") ? "top" : "bottom";
+    const isSidePlacement = placement.startsWith("left") || placement.startsWith("right");
+    let vertical: "top" | "bottom" = placement.includes("top") ? "top" : "bottom";
     let horizontal: "start" | "end" = placement.endsWith("start") ? "start" : "end";
+    let side: "left" | "right" = placement.startsWith("left") ? "left" : "right";
 
     const hasRoomBelow = anchorRect.bottom + offset + popupRect.height <= window.innerHeight - VIEWPORT_MARGIN;
     const hasRoomAbove = anchorRect.top - offset - popupRect.height >= VIEWPORT_MARGIN;
+    const hasRoomRight = anchorRect.right + offset + popupRect.width <= window.innerWidth - VIEWPORT_MARGIN;
+    const hasRoomLeft = anchorRect.left - offset - popupRect.width >= VIEWPORT_MARGIN;
 
-    if (vertical === "bottom" && !hasRoomBelow && hasRoomAbove) {
-      vertical = "top";
-    } else if (vertical === "top" && !hasRoomAbove && hasRoomBelow) {
-      vertical = "bottom";
-    }
+    let top = 0;
+    let left = 0;
 
-    let top = vertical === "bottom"
-      ? anchorRect.bottom + offset
-      : anchorRect.top - offset - popupRect.height;
+    if (isSidePlacement) {
+      if (side === "right" && !hasRoomRight && hasRoomLeft) {
+        side = "left";
+      } else if (side === "left" && !hasRoomLeft && hasRoomRight) {
+        side = "right";
+      }
 
-    let left = horizontal === "start"
-      ? anchorRect.left
-      : anchorRect.right - popupRect.width;
+      left = side === "right"
+        ? anchorRect.right + offset
+        : anchorRect.left - offset - popupRect.width;
 
-    const overflowsRight = left + popupRect.width > window.innerWidth - VIEWPORT_MARGIN;
-    const overflowsLeft = left < VIEWPORT_MARGIN;
+      top = horizontal === "start"
+        ? anchorRect.top
+        : anchorRect.bottom - popupRect.height;
+    } else {
+      if (vertical === "bottom" && !hasRoomBelow && hasRoomAbove) {
+        vertical = "top";
+      } else if (vertical === "top" && !hasRoomAbove && hasRoomBelow) {
+        vertical = "bottom";
+      }
 
-    if (horizontal === "start" && overflowsRight) {
-      horizontal = "end";
-      left = anchorRect.right - popupRect.width;
-    } else if (horizontal === "end" && overflowsLeft) {
-      horizontal = "start";
-      left = anchorRect.left;
+      top = vertical === "bottom"
+        ? anchorRect.bottom + offset
+        : anchorRect.top - offset - popupRect.height;
+
+      left = horizontal === "start"
+        ? anchorRect.left
+        : anchorRect.right - popupRect.width;
+
+      const overflowsRight = left + popupRect.width > window.innerWidth - VIEWPORT_MARGIN;
+      const overflowsLeft = left < VIEWPORT_MARGIN;
+
+      if (horizontal === "start" && overflowsRight) {
+        horizontal = "end";
+        left = anchorRect.right - popupRect.width;
+      } else if (horizontal === "end" && overflowsLeft) {
+        horizontal = "start";
+        left = anchorRect.left;
+      }
     }
 
     left = clamp(left, VIEWPORT_MARGIN, window.innerWidth - VIEWPORT_MARGIN - popupRect.width);
