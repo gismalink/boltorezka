@@ -7,6 +7,7 @@ const preissuedTicketSecond = process.env.SMOKE_WS_TICKET_SECOND ?? "";
 const preissuedTicketReconnect = process.env.SMOKE_WS_TICKET_RECONNECT ?? "";
 const smokeCallSignal = process.env.SMOKE_CALL_SIGNAL === "1";
 const smokeReconnect = process.env.SMOKE_RECONNECT === "1";
+const canRunReconnect = Boolean(preissuedTicketReconnect || bearerToken);
 const roomSlug = process.env.SMOKE_ROOM_SLUG ?? "general";
 const timeoutMs = Number(process.env.SMOKE_TIMEOUT_MS ?? 10000);
 
@@ -239,6 +240,7 @@ function waitForEvent(events, predicate, label) {
   let callRejectRelayed = false;
   let callHangupRelayed = false;
   let reconnectOk = false;
+  let reconnectSkipped = false;
   if (smokeCallSignal) {
     if (!secondTicket) {
       throw new Error("[smoke:realtime] second ticket is required for call signaling smoke");
@@ -391,7 +393,7 @@ function waitForEvent(events, predicate, label) {
     callHangupRelayed = true;
   }
 
-  if (smokeReconnect) {
+  if (smokeReconnect && canRunReconnect) {
     ws.close();
 
     const reconnectTicket = await resolveReconnectTicket();
@@ -455,6 +457,9 @@ function waitForEvent(events, predicate, label) {
 
     reconnectOk = true;
     wsReconnect.close();
+  } else if (smokeReconnect && !canRunReconnect) {
+    reconnectSkipped = true;
+    console.warn("[smoke:realtime] reconnect scenario skipped: set SMOKE_BEARER_TOKEN or SMOKE_WS_TICKET_RECONNECT");
   }
 
   ws.close();
@@ -472,6 +477,7 @@ function waitForEvent(events, predicate, label) {
         firstMessageId: firstAck?.payload?.messageId ?? null,
         duplicateIdempotencyKey: duplicateAck?.payload?.idempotencyKey ?? null,
         reconnectOk,
+        reconnectSkipped,
         callSignalRelayed,
         callRejectRelayed,
         callHangupRelayed
