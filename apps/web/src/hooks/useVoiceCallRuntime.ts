@@ -26,6 +26,7 @@ type CallTerminalPayload = {
 };
 
 type UseVoiceCallRuntimeArgs = {
+  localUserId: string;
   roomSlug: string;
   roomVoiceTargets: PresenceMember[];
   selectedInputId: string;
@@ -125,6 +126,7 @@ const RTC_CONFIG: RTCConfiguration = {
 };
 
 export function useVoiceCallRuntime({
+  localUserId,
   roomSlug,
   roomVoiceTargets,
   selectedInputId,
@@ -167,6 +169,18 @@ export function useVoiceCallRuntime({
     lastToastRef.current = { key, at: now };
     pushToast(message);
   }, [pushToast]);
+
+  const shouldInitiateOffer = useCallback((targetUserId: string) => {
+    const local = String(localUserId || "").trim();
+    const target = String(targetUserId || "").trim();
+    if (!target) {
+      return false;
+    }
+    if (!local) {
+      return true;
+    }
+    return local.localeCompare(target) < 0;
+  }, [localUserId]);
 
   const getAudioConstraints = useCallback((): MediaTrackConstraints | boolean => {
     return selectedInputId && selectedInputId !== "default"
@@ -329,6 +343,11 @@ export function useVoiceCallRuntime({
       return;
     }
 
+    if (!shouldInitiateOffer(targetUserId)) {
+      closePeer(targetUserId, `rtc ${trigger}, waiting remote re-offer`);
+      return;
+    }
+
     const peer = peersRef.current.get(targetUserId);
     if (!peer) {
       return;
@@ -374,7 +393,7 @@ export function useVoiceCallRuntime({
       delay,
       attempt
     });
-  }, [closePeer, pushCallLog, updateCallStatus]);
+  }, [closePeer, pushCallLog, updateCallStatus, shouldInitiateOffer]);
 
   const ensurePeerConnection = useCallback((targetUserId: string, targetLabel: string) => {
     const existing = peersRef.current.get(targetUserId);
@@ -531,12 +550,16 @@ export function useVoiceCallRuntime({
     for (const [userId, userName] of targetsById) {
       const exists = peersRef.current.has(userId);
       if (!exists) {
-        await startOffer(userId, userName);
+        if (shouldInitiateOffer(userId)) {
+          await startOffer(userId, userName);
+        } else {
+          pushCallLog(`voice room awaiting offer <- ${userName}`);
+        }
       }
     }
 
     updateCallStatus();
-  }, [sendWsEvent, closePeer, startOffer, updateCallStatus]);
+  }, [sendWsEvent, closePeer, startOffer, updateCallStatus, shouldInitiateOffer, pushCallLog]);
 
   const connectRoom = useCallback(async () => {
     roomVoiceConnectedRef.current = true;

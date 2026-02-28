@@ -242,6 +242,7 @@ export function App() {
     handleIncomingSignal,
     handleIncomingTerminal
   } = useVoiceCallRuntime({
+    localUserId: user?.id || "",
     roomSlug,
     roomVoiceTargets: currentRoomVoiceTargets,
     selectedInputId,
