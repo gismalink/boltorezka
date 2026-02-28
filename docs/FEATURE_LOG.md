@@ -3,6 +3,29 @@
 Этот документ хранит зафиксированные изменения, выполненные шаги и операционные evidence.
 План и open items находятся в `docs/ROADMAP.md`.
 
+## 2026-02-28 — Layout fixes: user dock ellipsis + viewport clamp + right-column scroll
+
+### Delivered
+
+- Исправлено обрезание имени пользователя в нижнем dock: длинные имена теперь корректно режутся с `...`.
+- Ограничена высота приложения экраном (`viewport`), чтобы контент не расталкивал страницу по высоте.
+- Правая колонка получила собственный вертикальный скролл.
+- В форме чата кнопка `Send` выровнена в один ряд с input.
+
+### Validation
+
+- `npm --prefix apps/web run build` — PASS.
+- `npm run check:api-types` — PASS.
+
+### Operational evidence (test)
+
+- Deploy target: `test`, branch `feature/web-header-profile-menu`, SHA `76a2501`.
+- Command: `ssh mac-mini 'cd ~/srv/boltorezka && TEST_REF=origin/feature/web-header-profile-menu npm run deploy:test:smoke'`.
+- Smoke result:
+  - `smoke:sso` — PASS,
+  - `smoke:realtime` — PASS,
+  - `reconnectOk=true`, `reconnectSkipped=false`.
+
 ## 2026-02-28 — Voice submenu smart side placement (portal)
 
 ### Delivered
