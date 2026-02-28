@@ -19,6 +19,8 @@ export function UserDock({
   currentInputLabel,
   micVolume,
   outputVolume,
+  mediaDevicesState,
+  mediaDevicesHint,
   audioOutputAnchorRef,
   voiceSettingsAnchorRef,
   voicePreferencesRef,
@@ -36,6 +38,9 @@ export function UserDock({
   onSetMicVolume,
   onSetOutputVolume
 }: UserDockProps) {
+  const mediaDevicesUnavailable = mediaDevicesState !== "ready";
+  const mediaDevicesWarningText = mediaDevicesHint || "Нет доступа к аудио-устройствам.";
+
   return (
     <>
       <div className="user-dock">
@@ -106,6 +111,7 @@ export function UserDock({
                     <button
                       type="button"
                       className={`secondary voice-menu-row ${voiceSettingsPanel === "input_device" ? "voice-menu-row-active" : ""}`}
+                      disabled={mediaDevicesUnavailable}
                       onClick={() => onSetVoiceSettingsPanel(voiceSettingsPanel === "input_device" ? null : "input_device")}
                     >
                       <span className="voice-menu-text">
@@ -126,6 +132,10 @@ export function UserDock({
                       <i className="bi bi-chevron-right" aria-hidden="true" />
                     </button>
                   </div>
+
+                  {mediaDevicesUnavailable ? (
+                    <p className="muted media-devices-warning">{mediaDevicesWarningText}</p>
+                  ) : null}
 
                   <label className="slider-label">
                     Громкость микрофона
@@ -166,6 +176,7 @@ export function UserDock({
                             key={device.id}
                             type="button"
                             className={`secondary device-item radio-item ${selectedInputId === device.id ? "device-item-active" : ""}`}
+                            disabled={mediaDevicesUnavailable}
                             onClick={() => {
                               onSetSelectedInputId(device.id);
                               onSetVoiceSettingsPanel(null);
@@ -251,12 +262,16 @@ export function UserDock({
                         key={device.id}
                         type="button"
                         className={`secondary device-item ${selectedOutputId === device.id ? "device-item-active" : ""}`}
+                        disabled={mediaDevicesUnavailable}
                         onClick={() => onSetSelectedOutputId(device.id)}
                       >
                         {device.label}
                       </button>
                     ))}
                   </div>
+                  {mediaDevicesUnavailable ? (
+                    <p className="muted media-devices-warning">{mediaDevicesWarningText}</p>
+                  ) : null}
                   <label className="slider-label">
                     Громкость звука
                     <input
@@ -303,7 +318,7 @@ export function UserDock({
             <div className="voice-preferences-grid">
               <label className="stack">
                 <span className="subheading">Микрофон</span>
-                <select value={selectedInputId} onChange={(event) => onSetSelectedInputId(event.target.value)}>
+                <select value={selectedInputId} disabled={mediaDevicesUnavailable} onChange={(event) => onSetSelectedInputId(event.target.value)}>
                   {inputOptions.map((device) => (
                     <option key={device.id} value={device.id}>{device.label}</option>
                   ))}
@@ -311,13 +326,17 @@ export function UserDock({
               </label>
               <label className="stack">
                 <span className="subheading">Динамик</span>
-                <select value={selectedOutputId} onChange={(event) => onSetSelectedOutputId(event.target.value)}>
+                <select value={selectedOutputId} disabled={mediaDevicesUnavailable} onChange={(event) => onSetSelectedOutputId(event.target.value)}>
                   {outputOptions.map((device) => (
                     <option key={device.id} value={device.id}>{device.label}</option>
                   ))}
                 </select>
               </label>
             </div>
+
+            {mediaDevicesUnavailable ? (
+              <p className="muted media-devices-warning">{mediaDevicesWarningText}</p>
+            ) : null}
 
             <div className="voice-preferences-grid">
               <label className="slider-label">

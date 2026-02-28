@@ -9,7 +9,7 @@ import { TooltipPortal } from "./TooltipPortal";
 import { WsMessageController } from "./services/wsMessageController";
 import { RoomsPanel } from "./components/RoomsPanel";
 import { UserDock } from "./components/UserDock";
-import type { InputProfile, VoiceSettingsPanel } from "./components/types";
+import type { InputProfile, MediaDevicesState, VoiceSettingsPanel } from "./components/types";
 import { trackClientEvent } from "./telemetry";
 import type {
   Message,
@@ -68,10 +68,12 @@ export function App() {
   const [voicePreferencesOpen, setVoicePreferencesOpen] = useState(false);
   const [inputDevices, setInputDevices] = useState<Array<{ id: string; label: string }>>([]);
   const [outputDevices, setOutputDevices] = useState<Array<{ id: string; label: string }>>([]);
-  const [selectedInputId, setSelectedInputId] = useState<string>("default");
-  const [selectedOutputId, setSelectedOutputId] = useState<string>("default");
+  const [selectedInputId, setSelectedInputId] = useState<string>(() => localStorage.getItem("boltorezka_selected_input_id") || "default");
+  const [selectedOutputId, setSelectedOutputId] = useState<string>(() => localStorage.getItem("boltorezka_selected_output_id") || "default");
   const [selectedInputProfile, setSelectedInputProfile] = useState<InputProfile>("custom");
   const [voiceSettingsPanel, setVoiceSettingsPanel] = useState<VoiceSettingsPanel>(null);
+  const [mediaDevicesState, setMediaDevicesState] = useState<MediaDevicesState>("ready");
+  const [mediaDevicesHint, setMediaDevicesHint] = useState("");
   const [micVolume, setMicVolume] = useState<number>(() => Number(localStorage.getItem("boltorezka_mic_volume") || 75));
   const [outputVolume, setOutputVolume] = useState<number>(() => Number(localStorage.getItem("boltorezka_output_volume") || 70));
   const [authMenuOpen, setAuthMenuOpen] = useState(false);
@@ -379,8 +381,18 @@ export function App() {
   }, [outputVolume]);
 
   useEffect(() => {
+    localStorage.setItem("boltorezka_selected_input_id", selectedInputId);
+  }, [selectedInputId]);
+
+  useEffect(() => {
+    localStorage.setItem("boltorezka_selected_output_id", selectedOutputId);
+  }, [selectedOutputId]);
+
+  useEffect(() => {
     const loadDevices = async () => {
       if (!navigator.mediaDevices?.enumerateDevices) {
+        setMediaDevicesState("unsupported");
+        setMediaDevicesHint("Ваш браузер не поддерживает выбор аудио-устройств.");
         return;
       }
 
@@ -402,13 +414,30 @@ export function App() {
         setInputDevices(inputs);
         setOutputDevices(outputs);
 
+        if (inputs.length === 0 && outputs.length === 0) {
+          setMediaDevicesState("error");
+          setMediaDevicesHint("Аудио-устройства не обнаружены.");
+        } else {
+          setMediaDevicesState("ready");
+          setMediaDevicesHint("");
+        }
+
         if (inputs.length > 0 && !inputs.some((item) => item.id === selectedInputId)) {
           setSelectedInputId(inputs[0].id);
         }
         if (outputs.length > 0 && !outputs.some((item) => item.id === selectedOutputId)) {
           setSelectedOutputId(outputs[0].id);
         }
-      } catch {
+      } catch (error) {
+        const errorName = (error as { name?: string })?.name || "";
+        if (errorName === "NotAllowedError" || errorName === "SecurityError") {
+          setMediaDevicesState("denied");
+          setMediaDevicesHint("Доступ к микрофону/аудио запрещён в браузере.");
+          return;
+        }
+
+        setMediaDevicesState("error");
+        setMediaDevicesHint("Не удалось получить список аудио-устройств.");
         return;
       }
     };
@@ -733,6 +762,8 @@ export function App() {
               currentInputLabel={currentInputLabel}
               micVolume={micVolume}
               outputVolume={outputVolume}
+              mediaDevicesState={mediaDevicesState}
+              mediaDevicesHint={mediaDevicesHint}
               audioOutputAnchorRef={audioOutputAnchorRef}
               voiceSettingsAnchorRef={voiceSettingsAnchorRef}
               voicePreferencesRef={voicePreferencesRef}

@@ -5,6 +5,7 @@ export type InputProfile = "noise_reduction" | "studio" | "custom";
 export type VoiceSettingsPanel = "input_device" | "input_profile" | null;
 
 export type DeviceOption = { id: string; label: string };
+export type MediaDevicesState = "ready" | "unsupported" | "denied" | "error";
 
 export type UserDockProps = {
   user: User;
@@ -25,6 +26,8 @@ export type UserDockProps = {
   currentInputLabel: string;
   micVolume: number;
   outputVolume: number;
+  mediaDevicesState: MediaDevicesState;
+  mediaDevicesHint: string;
   audioOutputAnchorRef: RefObject<HTMLDivElement>;
   voiceSettingsAnchorRef: RefObject<HTMLDivElement>;
   voicePreferencesRef: RefObject<HTMLDivElement>;
