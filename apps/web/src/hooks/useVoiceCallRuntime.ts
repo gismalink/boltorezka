@@ -131,6 +131,8 @@ const ERROR_TOAST_THROTTLE_MS = 12000;
 const REMOTE_SPEAKING_ON_THRESHOLD = 0.055;
 const REMOTE_SPEAKING_OFF_THRESHOLD = 0.025;
 const REMOTE_SPEAKING_HOLD_MS = 450;
+const RTC_STATS_POLL_MS = 2500;
+const RTC_INBOUND_STALL_TICKS = 3;
 
 const RTC_CONFIG: RTCConfiguration = {
   iceServers: RTC_ICE_SERVERS,
@@ -176,6 +178,10 @@ export function useVoiceCallRuntime({
     speakingAnimationFrameId: number;
     speakingAnalyser: AnalyserNode | null;
     speakingData: Uint8Array<ArrayBuffer> | null;
+    statsTimer: number | null;
+    lastInboundBytes: number;
+    inboundStalledTicks: number;
+    inboundStalled: boolean;
     reconnectAttempts: number;
     reconnectTimer: number | null;
   }>>(new Map());
@@ -348,6 +354,86 @@ export function useVoiceCallRuntime({
     logVoiceDiagnostics("runtime reconnect timer cleared", { targetUserId });
   }, []);
 
+  const clearPeerStatsTimer = useCallback((targetUserId: string) => {
+    const peer = peersRef.current.get(targetUserId);
+    if (!peer || peer.statsTimer === null) {
+      return;
+    }
+
+    window.clearInterval(peer.statsTimer);
+    peer.statsTimer = null;
+  }, []);
+
+  const startPeerStatsMonitor = useCallback((targetUserId: string, targetLabel: string) => {
+    const peer = peersRef.current.get(targetUserId);
+    if (!peer || peer.statsTimer !== null) {
+      return;
+    }
+
+    peer.statsTimer = window.setInterval(() => {
+      const current = peersRef.current.get(targetUserId);
+      if (!current) {
+        return;
+      }
+
+      const state = current.connection.connectionState;
+      if (state !== "connected" && !current.hasRemoteTrack) {
+        return;
+      }
+
+      void current.connection.getStats()
+        .then((report) => {
+          let inboundBytes = 0;
+          report.forEach((item) => {
+            if (item.type !== "inbound-rtp") {
+              return;
+            }
+
+            const mediaType = (item as RTCInboundRtpStreamStats & { mediaType?: string }).mediaType;
+            const kind = (item as RTCInboundRtpStreamStats & { kind?: string }).kind;
+            const isAudio = mediaType === "audio" || kind === "audio";
+            if (!isAudio) {
+              return;
+            }
+
+            inboundBytes += Number((item as RTCInboundRtpStreamStats).bytesReceived || 0);
+          });
+
+          const delta = inboundBytes - current.lastInboundBytes;
+          current.lastInboundBytes = inboundBytes;
+
+          if (delta > 0) {
+            if (current.inboundStalled) {
+              current.inboundStalled = false;
+              current.inboundStalledTicks = 0;
+              pushCallLog(`remote inbound audio resumed <- ${targetLabel || targetUserId}`);
+            }
+
+            if (!audioMuted && current.audioElement.paused && current.audioElement.srcObject) {
+              void applyRemoteAudioOutput(current.audioElement);
+              void current.audioElement.play()
+                .then(() => {
+                  pushCallLog(`remote audio resumed (stats-flow) <- ${targetLabel || targetUserId}`);
+                })
+                .catch((error) => {
+                  pushCallLog(`remote audio resume failed (stats-flow, ${targetLabel || targetUserId}): ${(error as Error).message}`);
+                });
+            }
+            return;
+          }
+
+          current.inboundStalledTicks += 1;
+          if (!current.inboundStalled && current.inboundStalledTicks >= RTC_INBOUND_STALL_TICKS) {
+            current.inboundStalled = true;
+            pushCallLog(`remote inbound audio stalled <- ${targetLabel || targetUserId}`);
+          }
+        })
+        .catch((error) => {
+          pushCallLog(`rtc stats failed (${targetLabel || targetUserId}): ${(error as Error).message}`);
+        });
+    }, RTC_STATS_POLL_MS);
+  }, [audioMuted, applyRemoteAudioOutput, pushCallLog]);
+
   const releaseLocalStream = useCallback(() => {
     if (!localStreamRef.current) {
       return;
@@ -366,6 +452,7 @@ export function useVoiceCallRuntime({
     }
 
     clearPeerReconnectTimer(targetUserId);
+    clearPeerStatsTimer(targetUserId);
     peer.connection.onicecandidate = null;
     peer.connection.onconnectionstatechange = null;
     peer.connection.ontrack = null;
@@ -394,7 +481,7 @@ export function useVoiceCallRuntime({
     }
 
     updateCallStatus();
-  }, [clearPeerReconnectTimer, pushCallLog, updateCallStatus, syncPeerVoiceState]);
+  }, [clearPeerReconnectTimer, clearPeerStatsTimer, pushCallLog, updateCallStatus, syncPeerVoiceState]);
 
   const teardownRoom = useCallback((reason?: string) => {
     const peerIds = Array.from(peersRef.current.keys());
@@ -547,6 +634,10 @@ export function useVoiceCallRuntime({
       speakingAnimationFrameId: 0,
       speakingAnalyser: null as AnalyserNode | null,
       speakingData: null as Uint8Array<ArrayBuffer> | null,
+      statsTimer: null as number | null,
+      lastInboundBytes: 0,
+      inboundStalledTicks: 0,
+      inboundStalled: false,
       reconnectAttempts: 0,
       reconnectTimer: null as number | null
     };
@@ -587,6 +678,7 @@ export function useVoiceCallRuntime({
           clearPeerReconnectTimer(targetUserId);
           peer.reconnectAttempts = 0;
         }
+        startPeerStatsMonitor(targetUserId, targetLabel);
         updateCallStatus();
         retryRemoteAudioPlayback("rtc-connected");
       } else if (state === "failed" || state === "disconnected") {
@@ -629,6 +721,7 @@ export function useVoiceCallRuntime({
       const peer = peersRef.current.get(targetUserId);
       if (peer) {
         peer.hasRemoteTrack = true;
+        startPeerStatsMonitor(targetUserId, targetLabel);
 
         if (!peer.speakingAudioContext) {
           const Context = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
@@ -709,7 +802,7 @@ export function useVoiceCallRuntime({
 
     void applyRemoteAudioOutput(remoteAudioElement);
     return connection;
-  }, [sendWsEvent, applyRemoteAudioOutput, clearPeerReconnectTimer, closePeer, scheduleReconnect, updateCallStatus, syncPeerVoiceState]);
+  }, [sendWsEvent, applyRemoteAudioOutput, clearPeerReconnectTimer, closePeer, scheduleReconnect, updateCallStatus, syncPeerVoiceState, retryRemoteAudioPlayback, startPeerStatsMonitor]);
 
   ensurePeerConnectionRef.current = ensurePeerConnection;
 
