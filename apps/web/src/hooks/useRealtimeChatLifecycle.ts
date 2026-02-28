@@ -41,7 +41,7 @@ type UseRealtimeChatLifecycleArgs = {
     payload: { fromUserId?: string; fromUserName?: string; reason?: string | null }
   ) => void;
   onCallMicState?: (
-    payload: { fromUserId?: string; fromUserName?: string; muted?: boolean }
+    payload: { fromUserId?: string; fromUserName?: string; muted?: boolean; speaking?: boolean; audioMuted?: boolean }
   ) => void;
 };
 

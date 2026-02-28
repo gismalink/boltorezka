@@ -830,6 +830,10 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
                 sendValidationNack(connection, requestId, eventType, "payload.muted boolean is required");
                 return;
               }
+              const speakingRaw = payload?.speaking;
+              const audioMutedRaw = payload?.audioMuted;
+              const speaking = typeof speakingRaw === "boolean" ? speakingRaw : undefined;
+              const audioMuted = typeof audioMutedRaw === "boolean" ? audioMutedRaw : undefined;
 
               const targetUserId = normalizeRequestId(getPayloadString(payload, "targetUserId", 128)) || null;
               const relayEnvelope = buildCallMicStateRelayEnvelope(
@@ -839,7 +843,7 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
                 state.roomId,
                 state.roomSlug,
                 targetUserId,
-                mutedRaw
+                { muted: mutedRaw, speaking, audioMuted }
               );
 
               const relayOutcome = relayToTargetOrRoom(connection, state.roomId, targetUserId, relayEnvelope);
@@ -855,7 +859,9 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
                 {
                   relayedTo: relayOutcome.relayedCount,
                   targetUserId,
-                  muted: mutedRaw
+                  muted: mutedRaw,
+                  speaking: speaking ?? null,
+                  audioMuted: audioMuted ?? null
                 }
               );
               return;

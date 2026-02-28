@@ -29,6 +29,8 @@ type CallMicStatePayload = {
   fromUserId?: string;
   fromUserName?: string;
   muted?: boolean;
+  speaking?: boolean;
+  audioMuted?: boolean;
 };
 
 type UseVoiceCallRuntimeArgs = {
@@ -38,6 +40,7 @@ type UseVoiceCallRuntimeArgs = {
   selectedInputId: string;
   selectedOutputId: string;
   micMuted: boolean;
+  micTestLevel: number;
   audioMuted: boolean;
   outputVolume: number;
   t: (key: string) => string;
@@ -141,6 +144,7 @@ export function useVoiceCallRuntime({
   selectedInputId,
   selectedOutputId,
   micMuted,
+  micTestLevel,
   audioMuted,
   outputVolume,
   t,
@@ -154,6 +158,7 @@ export function useVoiceCallRuntime({
   const [connectedPeerUserIds, setConnectedPeerUserIds] = useState<string[]>([]);
   const [remoteMutedPeerUserIds, setRemoteMutedPeerUserIds] = useState<string[]>([]);
   const [remoteSpeakingPeerUserIds, setRemoteSpeakingPeerUserIds] = useState<string[]>([]);
+  const [remoteAudioMutedPeerUserIds, setRemoteAudioMutedPeerUserIds] = useState<string[]>([]);
   const roomVoiceConnectedRef = useRef(false);
   const roomVoiceTargetsRef = useRef<PresenceMember[]>(roomVoiceTargets);
   const peersRef = useRef<Map<string, {
@@ -163,6 +168,8 @@ export function useVoiceCallRuntime({
     hasRemoteTrack: boolean;
     isRemoteMicMuted: boolean;
     isRemoteSpeaking: boolean;
+    isRemoteAudioMuted: boolean;
+    hasRemoteSpeakingSignal: boolean;
     speakingLastAboveAt: number;
     speakingAudioContext: AudioContext | null;
     speakingAnimationFrameId: number;
@@ -175,6 +182,9 @@ export function useVoiceCallRuntime({
   const ensurePeerConnectionRef = useRef<((targetUserId: string, targetLabel: string) => RTCPeerConnection) | null>(null);
   const startOfferRef = useRef<((targetUserId: string, targetLabel: string) => Promise<void>) | null>(null);
   const lastToastRef = useRef<{ key: string; at: number }>({ key: "", at: 0 });
+  const localSpeakingRef = useRef(false);
+  const localSpeakingLastAboveAtRef = useRef(0);
+  const lastSentMicStateRef = useRef<{ muted: boolean; speaking: boolean; audioMuted: boolean } | null>(null);
 
   const pushToastThrottled = useCallback((key: string, message: string) => {
     const now = Date.now();
@@ -192,6 +202,7 @@ export function useVoiceCallRuntime({
   const syncPeerVoiceState = useCallback(() => {
     const mutedIds: string[] = [];
     const speakingIds: string[] = [];
+    const audioMutedIds: string[] = [];
 
     for (const [userId, peer] of peersRef.current.entries()) {
       if (peer.isRemoteMicMuted) {
@@ -200,10 +211,14 @@ export function useVoiceCallRuntime({
       if (peer.isRemoteSpeaking) {
         speakingIds.push(userId);
       }
+      if (peer.isRemoteAudioMuted) {
+        audioMutedIds.push(userId);
+      }
     }
 
     setRemoteMutedPeerUserIds(mutedIds);
     setRemoteSpeakingPeerUserIds(speakingIds);
+    setRemoteAudioMutedPeerUserIds(audioMutedIds);
   }, []);
 
   const shouldInitiateOffer = useCallback((targetUserId: string) => {
@@ -342,6 +357,7 @@ export function useVoiceCallRuntime({
     setConnectedPeerUserIds([]);
     setRemoteMutedPeerUserIds([]);
     setRemoteSpeakingPeerUserIds([]);
+    setRemoteAudioMutedPeerUserIds([]);
     setLastCallPeer("");
     setCallStatus("idle");
 
@@ -456,7 +472,13 @@ export function useVoiceCallRuntime({
     const remoteAudioElement = document.createElement("audio");
     remoteAudioElement.autoplay = true;
     remoteAudioElement.setAttribute("playsinline", "true");
-    remoteAudioElement.style.display = "none";
+    remoteAudioElement.style.position = "fixed";
+    remoteAudioElement.style.width = "1px";
+    remoteAudioElement.style.height = "1px";
+    remoteAudioElement.style.opacity = "0";
+    remoteAudioElement.style.pointerEvents = "none";
+    remoteAudioElement.style.left = "-9999px";
+    remoteAudioElement.style.top = "-9999px";
     document.body.appendChild(remoteAudioElement);
 
     const connection = new RTCPeerConnection(RTC_CONFIG);
@@ -467,6 +489,8 @@ export function useVoiceCallRuntime({
       hasRemoteTrack: false,
       isRemoteMicMuted: false,
       isRemoteSpeaking: false,
+      isRemoteAudioMuted: false,
+      hasRemoteSpeakingSignal: false,
       speakingLastAboveAt: 0,
       speakingAudioContext: null as AudioContext | null,
       speakingAnimationFrameId: 0,
@@ -569,6 +593,11 @@ export function useVoiceCallRuntime({
 
               const rms = Math.sqrt(sum / current.speakingData.length);
               const now = Date.now();
+
+              if (current.hasRemoteSpeakingSignal) {
+                current.speakingAnimationFrameId = requestAnimationFrame(tickSpeaking);
+                return;
+              }
 
               if (rms >= REMOTE_SPEAKING_ON_THRESHOLD) {
                 current.speakingLastAboveAt = now;
@@ -704,7 +733,11 @@ export function useVoiceCallRuntime({
     roomVoiceConnectedRef.current = true;
     setRoomVoiceConnected(true);
     pushCallLog("voice room connect requested");
-    sendWsEvent("call.mic_state", { muted: micMuted }, { maxRetries: 1 });
+    sendWsEvent("call.mic_state", {
+      muted: micMuted,
+      speaking: !micMuted && localSpeakingRef.current,
+      audioMuted
+    }, { maxRetries: 1 });
 
     if (roomVoiceTargetsRef.current.length === 0) {
       pushCallLog("voice room waiting for participants");
@@ -713,7 +746,7 @@ export function useVoiceCallRuntime({
     }
 
     await syncRoomTargets();
-  }, [pushCallLog, setCallStatus, syncRoomTargets, sendWsEvent, micMuted]);
+  }, [pushCallLog, setCallStatus, syncRoomTargets, sendWsEvent, micMuted, audioMuted]);
 
   const disconnectRoom = useCallback(() => {
     const peerIds = Array.from(peersRef.current.keys());
@@ -728,6 +761,7 @@ export function useVoiceCallRuntime({
     setConnectedPeerUserIds([]);
     setRemoteMutedPeerUserIds([]);
     setRemoteSpeakingPeerUserIds([]);
+    setRemoteAudioMutedPeerUserIds([]);
     setLastCallPeer("");
     setCallStatus("idle");
     pushCallLog("voice room disconnected");
@@ -854,7 +888,7 @@ export function useVoiceCallRuntime({
 
   const handleIncomingMicState = useCallback((payload: CallMicStatePayload) => {
     const fromUserId = String(payload.fromUserId || "").trim();
-    if (!fromUserId || typeof payload.muted !== "boolean") {
+    if (!fromUserId) {
       return;
     }
 
@@ -863,8 +897,20 @@ export function useVoiceCallRuntime({
       return;
     }
 
-    peer.isRemoteMicMuted = payload.muted;
-    if (payload.muted) {
+    if (typeof payload.muted === "boolean") {
+      peer.isRemoteMicMuted = payload.muted;
+    }
+
+    if (typeof payload.audioMuted === "boolean") {
+      peer.isRemoteAudioMuted = payload.audioMuted;
+    }
+
+    if (typeof payload.speaking === "boolean") {
+      peer.hasRemoteSpeakingSignal = true;
+      peer.isRemoteSpeaking = !peer.isRemoteMicMuted && payload.speaking;
+    }
+
+    if (peer.isRemoteMicMuted) {
       peer.isRemoteSpeaking = false;
     }
     syncPeerVoiceState();
@@ -970,12 +1016,41 @@ export function useVoiceCallRuntime({
   }, [roomVoiceTargets, syncRoomTargets]);
 
   useEffect(() => {
+    const now = Date.now();
+
+    if (!micMuted && micTestLevel >= REMOTE_SPEAKING_ON_THRESHOLD) {
+      localSpeakingRef.current = true;
+      localSpeakingLastAboveAtRef.current = now;
+    } else if (
+      localSpeakingRef.current
+      && (micMuted || (micTestLevel <= REMOTE_SPEAKING_OFF_THRESHOLD && now - localSpeakingLastAboveAtRef.current > REMOTE_SPEAKING_HOLD_MS))
+    ) {
+      localSpeakingRef.current = false;
+    }
+
     if (!roomVoiceConnectedRef.current) {
       return;
     }
 
-    sendWsEvent("call.mic_state", { muted: micMuted }, { maxRetries: 1 });
-  }, [micMuted, sendWsEvent]);
+    const nextPayload = {
+      muted: micMuted,
+      speaking: !micMuted && localSpeakingRef.current,
+      audioMuted
+    };
+
+    const lastPayload = lastSentMicStateRef.current;
+    const changed = !lastPayload
+      || lastPayload.muted !== nextPayload.muted
+      || lastPayload.speaking !== nextPayload.speaking
+      || lastPayload.audioMuted !== nextPayload.audioMuted;
+
+    if (!changed) {
+      return;
+    }
+
+    lastSentMicStateRef.current = nextPayload;
+    sendWsEvent("call.mic_state", nextPayload, { maxRetries: 1 });
+  }, [micMuted, micTestLevel, audioMuted, sendWsEvent]);
 
   useEffect(() => {
     teardownRoom();
@@ -986,6 +1061,7 @@ export function useVoiceCallRuntime({
     connectedPeerUserIds,
     remoteMutedPeerUserIds,
     remoteSpeakingPeerUserIds,
+    remoteAudioMutedPeerUserIds,
     connectRoom,
     disconnectRoom,
     handleIncomingSignal,

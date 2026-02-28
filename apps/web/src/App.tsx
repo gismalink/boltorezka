@@ -239,6 +239,7 @@ export function App() {
     connectedPeerUserIds,
     remoteMutedPeerUserIds,
     remoteSpeakingPeerUserIds,
+    remoteAudioMutedPeerUserIds,
     connectRoom,
     disconnectRoom,
     handleIncomingSignal,
@@ -251,6 +252,7 @@ export function App() {
     selectedInputId,
     selectedOutputId,
     micMuted,
+    micTestLevel,
     audioMuted,
     outputVolume,
     t,
@@ -292,6 +294,30 @@ export function App() {
 
     return statusByUserId;
   }, [connectedPeerUserIds, remoteSpeakingPeerUserIds, remoteMutedPeerUserIds, roomVoiceConnected, user?.id, micMuted, micTestLevel]);
+
+  const voiceAudioOutputMutedByUserIdInCurrentRoom = useMemo(() => {
+    const statusByUserId: Record<string, boolean> = {};
+
+    connectedPeerUserIds.forEach((userId) => {
+      const normalized = String(userId || "").trim();
+      if (normalized) {
+        statusByUserId[normalized] = false;
+      }
+    });
+
+    remoteAudioMutedPeerUserIds.forEach((userId) => {
+      const normalized = String(userId || "").trim();
+      if (normalized) {
+        statusByUserId[normalized] = true;
+      }
+    });
+
+    if (roomVoiceConnected && user?.id) {
+      statusByUserId[user.id] = audioMuted;
+    }
+
+    return statusByUserId;
+  }, [connectedPeerUserIds, remoteAudioMutedPeerUserIds, roomVoiceConnected, user?.id, audioMuted]);
 
   const authController = useMemo(
     () =>
@@ -807,6 +833,7 @@ export function App() {
               liveRoomMembersBySlug={roomsPresenceBySlug}
               liveRoomMemberDetailsBySlug={roomsPresenceDetailsBySlug}
               voiceMicStateByUserIdInCurrentRoom={voiceMicStateByUserIdInCurrentRoom}
+              voiceAudioOutputMutedByUserIdInCurrentRoom={voiceAudioOutputMutedByUserIdInCurrentRoom}
               collapsedCategoryIds={collapsedCategoryIds}
               uncategorizedRooms={uncategorizedRooms}
               newCategorySlug={newCategorySlug}

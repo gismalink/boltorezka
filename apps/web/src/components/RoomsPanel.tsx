@@ -25,6 +25,7 @@ export function RoomsPanel({
   liveRoomMembersBySlug,
   liveRoomMemberDetailsBySlug,
   voiceMicStateByUserIdInCurrentRoom,
+  voiceAudioOutputMutedByUserIdInCurrentRoom,
   collapsedCategoryIds,
   uncategorizedRooms,
   newCategorySlug,
@@ -270,16 +271,15 @@ export function RoomsPanel({
                 ? (voiceMicStateByUserIdInCurrentRoom[member.userId] || "muted")
                 : "muted";
               const isVoiceActive = micState === "speaking";
+              const isAudioOutputMuted = roomHasVoiceState && member.userId
+                ? Boolean(voiceAudioOutputMutedByUserIdInCurrentRoom[member.userId])
+                : false;
               const micIconClass = micState === "muted"
                 ? "bi-mic-mute"
                 : micState === "speaking"
                   ? "bi-mic-fill"
                   : "bi-mic";
-              const audioIconClass = micState === "muted"
-                ? "bi-volume-mute"
-                : micState === "speaking"
-                  ? "bi-volume-up"
-                  : "bi-volume-down";
+              const audioIconClass = isAudioOutputMuted ? "bi-headset-vr" : "bi-headphones";
 
               return (
             <li

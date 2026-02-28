@@ -149,4 +149,6 @@ export type CallTerminalRelayPayload = CallRelayBasePayload & {
 
 export type CallMicStateRelayPayload = CallRelayBasePayload & {
   muted: boolean;
+  speaking?: boolean;
+  audioMuted?: boolean;
 };

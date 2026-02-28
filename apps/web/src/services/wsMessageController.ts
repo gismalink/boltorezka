@@ -33,7 +33,7 @@ type WsMessageControllerOptions = {
     payload: { fromUserId?: string; fromUserName?: string; reason?: string | null }
   ) => void;
   onCallMicState?: (
-    payload: { fromUserId?: string; fromUserName?: string; muted?: boolean }
+    payload: { fromUserId?: string; fromUserName?: string; muted?: boolean; speaking?: boolean; audioMuted?: boolean }
   ) => void;
 };
 
@@ -196,13 +196,17 @@ export class WsMessageController {
     if (message.type === "call.mic_state") {
       const fromUserName = String(message.payload?.fromUserName || message.payload?.fromUserId || "unknown");
       const mutedRaw = message.payload?.muted;
+      const speakingRaw = message.payload?.speaking;
+      const audioMutedRaw = message.payload?.audioMuted;
       if (typeof mutedRaw === "boolean") {
         this.options.pushCallLog(`call.mic_state from ${fromUserName}: ${mutedRaw ? "muted" : "unmuted"}`);
       }
       this.options.onCallMicState?.({
         fromUserId: String(message.payload?.fromUserId || message.payload?.userId || "").trim() || undefined,
         fromUserName: String(message.payload?.fromUserName || message.payload?.userName || "").trim() || undefined,
-        muted: typeof mutedRaw === "boolean" ? mutedRaw : undefined
+        muted: typeof mutedRaw === "boolean" ? mutedRaw : undefined,
+        speaking: typeof speakingRaw === "boolean" ? speakingRaw : undefined,
+        audioMuted: typeof audioMutedRaw === "boolean" ? audioMutedRaw : undefined
       });
     }
 

@@ -417,13 +417,15 @@ export function buildCallMicStateRelayEnvelope(
   roomId: string,
   roomSlug: string | null,
   targetUserId: string | null,
-  muted: boolean
+  payload: { muted: boolean; speaking?: boolean; audioMuted?: boolean }
 ): WsOutgoingEnvelope {
   return {
     type: eventType,
     payload: {
       ...buildCallRelayBasePayload(fromUserId, fromUserName, roomId, roomSlug, targetUserId),
-      muted
+      muted: payload.muted,
+      speaking: payload.speaking,
+      audioMuted: payload.audioMuted
     }
   };
 }
