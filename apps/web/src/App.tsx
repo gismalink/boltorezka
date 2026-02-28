@@ -245,7 +245,8 @@ export function App() {
     disconnectRoom,
     handleIncomingSignal,
     handleIncomingTerminal,
-    handleIncomingMicState
+    handleIncomingMicState,
+    handleCallNack
   } = useVoiceCallRuntime({
     localUserId: user?.id || "",
     roomSlug,
@@ -512,7 +513,8 @@ export function App() {
     markMessageDelivery,
     onCallSignal: handleIncomingSignal,
     onCallTerminal: handleIncomingTerminal,
-    onCallMicState: handleIncomingMicState
+    onCallMicState: handleIncomingMicState,
+    onCallNack: handleCallNack
   });
 
   useEffect(() => {

@@ -33,6 +33,13 @@ type CallMicStatePayload = {
   audioMuted?: boolean;
 };
 
+type CallNackPayload = {
+  requestId: string;
+  eventType: string;
+  code: string;
+  message: string;
+};
+
 type UseVoiceCallRuntimeArgs = {
   localUserId: string;
   roomSlug: string;
@@ -133,6 +140,7 @@ const REMOTE_SPEAKING_OFF_THRESHOLD = 0.025;
 const REMOTE_SPEAKING_HOLD_MS = 450;
 const RTC_STATS_POLL_MS = 2500;
 const RTC_INBOUND_STALL_TICKS = 3;
+const TARGET_NOT_IN_ROOM_BLOCK_MS = 10000;
 
 const RTC_CONFIG: RTCConfiguration = {
   iceServers: RTC_ICE_SERVERS,
@@ -190,6 +198,8 @@ export function useVoiceCallRuntime({
   const localStreamRef = useRef<MediaStream | null>(null);
   const ensurePeerConnectionRef = useRef<((targetUserId: string, targetLabel: string) => RTCPeerConnection) | null>(null);
   const startOfferRef = useRef<((targetUserId: string, targetLabel: string) => Promise<void>) | null>(null);
+  const requestTargetByIdRef = useRef<Map<string, { targetUserId: string; eventType: string }>>(new Map());
+  const blockedTargetUntilRef = useRef<Map<string, number>>(new Map());
   const lastToastRef = useRef<{ key: string; at: number }>({ key: "", at: 0 });
   const localSpeakingRef = useRef(false);
   const localSpeakingLastAboveAtRef = useRef(0);
@@ -241,6 +251,28 @@ export function useVoiceCallRuntime({
     }
     return local.localeCompare(target) < 0;
   }, [localUserId]);
+
+  const isTargetTemporarilyBlocked = useCallback((targetUserId: string) => {
+    const until = blockedTargetUntilRef.current.get(targetUserId) || 0;
+    if (until <= Date.now()) {
+      blockedTargetUntilRef.current.delete(targetUserId);
+      return false;
+    }
+    return true;
+  }, []);
+
+  const rememberRequestTarget = useCallback((requestId: string | null, eventType: string, targetUserId: string) => {
+    const normalizedRequestId = String(requestId || "").trim();
+    const normalizedTarget = String(targetUserId || "").trim();
+    if (!normalizedRequestId || !normalizedTarget) {
+      return;
+    }
+
+    requestTargetByIdRef.current.set(normalizedRequestId, {
+      targetUserId: normalizedTarget,
+      eventType
+    });
+  }, []);
 
   const getAudioConstraints = useCallback((): MediaTrackConstraints | boolean => {
     return selectedInputId && selectedInputId !== "default"
@@ -518,6 +550,8 @@ export function useVoiceCallRuntime({
     setRemoteMutedPeerUserIds([]);
     setRemoteSpeakingPeerUserIds([]);
     setRemoteAudioMutedPeerUserIds([]);
+    requestTargetByIdRef.current.clear();
+    blockedTargetUntilRef.current.clear();
     setLastCallPeer("");
     setCallStatus("idle");
 
@@ -678,7 +712,11 @@ export function useVoiceCallRuntime({
         return;
       }
 
-      sendWsEvent(
+      if (isTargetTemporarilyBlocked(targetUserId)) {
+        return;
+      }
+
+      const requestId = sendWsEvent(
         "call.ice",
         {
           targetUserId,
@@ -686,6 +724,7 @@ export function useVoiceCallRuntime({
         },
         { maxRetries: 1 }
       );
+      rememberRequestTarget(requestId, "call.ice", targetUserId);
     };
 
     connection.onconnectionstatechange = () => {
@@ -826,13 +865,17 @@ export function useVoiceCallRuntime({
 
     void applyRemoteAudioOutput(remoteAudioElement);
     return connection;
-  }, [sendWsEvent, applyRemoteAudioOutput, clearPeerReconnectTimer, closePeer, scheduleReconnect, updateCallStatus, syncPeerVoiceState, retryRemoteAudioPlayback, startPeerStatsMonitor]);
+  }, [sendWsEvent, applyRemoteAudioOutput, clearPeerReconnectTimer, closePeer, scheduleReconnect, updateCallStatus, syncPeerVoiceState, retryRemoteAudioPlayback, startPeerStatsMonitor, rememberRequestTarget, isTargetTemporarilyBlocked]);
 
   ensurePeerConnectionRef.current = ensurePeerConnection;
 
   const startOffer = useCallback(async (targetUserId: string, targetLabel: string) => {
     const normalizedTarget = targetUserId.trim();
     if (!normalizedTarget || !roomVoiceConnectedRef.current) {
+      return;
+    }
+
+    if (isTargetTemporarilyBlocked(normalizedTarget)) {
       return;
     }
 
@@ -855,6 +898,7 @@ export function useVoiceCallRuntime({
         },
         { maxRetries: 1 }
       );
+      rememberRequestTarget(requestId, "call.offer", normalizedTarget);
 
       if (!requestId) {
         pushCallLog("call.offer skipped: socket unavailable");
@@ -874,7 +918,7 @@ export function useVoiceCallRuntime({
       pushCallLog(`call.offer failed (${targetLabel || normalizedTarget}): ${(error as Error).message}`);
       closePeer(normalizedTarget);
     }
-  }, [roomVoiceConnectedRef, ensurePeerConnection, attachLocalTracks, sendWsEvent, setLastCallPeer, updateCallStatus, pushCallLog, t, pushToastThrottled, closePeer]);
+  }, [roomVoiceConnectedRef, ensurePeerConnection, attachLocalTracks, sendWsEvent, setLastCallPeer, updateCallStatus, pushCallLog, t, pushToastThrottled, closePeer, rememberRequestTarget, isTargetTemporarilyBlocked]);
 
   startOfferRef.current = startOffer;
 
@@ -900,6 +944,10 @@ export function useVoiceCallRuntime({
     });
 
     for (const [userId, userName] of targetsById) {
+      if (isTargetTemporarilyBlocked(userId)) {
+        continue;
+      }
+
       const exists = peersRef.current.has(userId);
       if (!exists) {
         if (shouldInitiateOffer(userId)) {
@@ -911,7 +959,7 @@ export function useVoiceCallRuntime({
     }
 
     updateCallStatus();
-  }, [sendWsEvent, closePeer, startOffer, updateCallStatus, shouldInitiateOffer, pushCallLog]);
+  }, [sendWsEvent, closePeer, startOffer, updateCallStatus, shouldInitiateOffer, pushCallLog, isTargetTemporarilyBlocked]);
 
   const connectRoom = useCallback(async () => {
     roomVoiceConnectedRef.current = true;
@@ -1101,6 +1149,27 @@ export function useVoiceCallRuntime({
     syncPeerVoiceState();
   }, [syncPeerVoiceState]);
 
+  const handleCallNack = useCallback((payload: CallNackPayload) => {
+    const requestId = String(payload.requestId || "").trim();
+    const code = String(payload.code || "").trim();
+    const eventType = String(payload.eventType || "").trim();
+    if (!requestId || !eventType.startsWith("call.")) {
+      return;
+    }
+
+    const mapped = requestTargetByIdRef.current.get(requestId);
+    if (mapped) {
+      requestTargetByIdRef.current.delete(requestId);
+    }
+
+    if (!mapped || code !== "TargetNotInRoom") {
+      return;
+    }
+
+    blockedTargetUntilRef.current.set(mapped.targetUserId, Date.now() + TARGET_NOT_IN_ROOM_BLOCK_MS);
+    closePeer(mapped.targetUserId, `nack ${mapped.eventType}: ${code}`);
+  }, [closePeer]);
+
   useEffect(() => {
     if (!localStreamRef.current) {
       return;
@@ -1268,6 +1337,7 @@ export function useVoiceCallRuntime({
     disconnectRoom,
     handleIncomingSignal,
     handleIncomingTerminal,
-    handleIncomingMicState
+    handleIncomingMicState,
+    handleCallNack
   };
 }

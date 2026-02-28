@@ -43,6 +43,9 @@ type UseRealtimeChatLifecycleArgs = {
   onCallMicState?: (
     payload: { fromUserId?: string; fromUserName?: string; muted?: boolean; speaking?: boolean; audioMuted?: boolean }
   ) => void;
+  onCallNack?: (
+    payload: { requestId: string; eventType: string; code: string; message: string }
+  ) => void;
 };
 
 export function useRealtimeChatLifecycle({
@@ -70,11 +73,13 @@ export function useRealtimeChatLifecycle({
   markMessageDelivery,
   onCallSignal,
   onCallTerminal,
-  onCallMicState
+  onCallMicState,
+  onCallNack
 }: UseRealtimeChatLifecycleArgs) {
   const onCallSignalRef = useRef(onCallSignal);
   const onCallTerminalRef = useRef(onCallTerminal);
   const onCallMicStateRef = useRef(onCallMicState);
+  const onCallNackRef = useRef(onCallNack);
 
   useEffect(() => {
     onCallSignalRef.current = onCallSignal;
@@ -87,6 +92,10 @@ export function useRealtimeChatLifecycle({
   useEffect(() => {
     onCallMicStateRef.current = onCallMicState;
   }, [onCallMicState]);
+
+  useEffect(() => {
+    onCallNackRef.current = onCallNack;
+  }, [onCallNack]);
 
   useEffect(() => {
     roomSlugRef.current = roomSlug;
@@ -125,7 +134,8 @@ export function useRealtimeChatLifecycle({
       },
       onCallSignal: (...args) => onCallSignalRef.current?.(...args),
       onCallTerminal: (...args) => onCallTerminalRef.current?.(...args),
-      onCallMicState: (...args) => onCallMicStateRef.current?.(...args)
+      onCallMicState: (...args) => onCallMicStateRef.current?.(...args),
+      onCallNack: (...args) => onCallNackRef.current?.(...args)
     });
 
     const client = new RealtimeClient({

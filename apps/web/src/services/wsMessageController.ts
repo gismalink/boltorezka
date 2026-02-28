@@ -24,6 +24,7 @@ type WsMessageControllerOptions = {
     code: string;
     message: string;
   }) => void;
+  onCallNack?: (payload: { requestId: string; eventType: string; code: string; message: string }) => void;
   onCallSignal?: (
     eventType: "call.offer" | "call.answer" | "call.ice",
     payload: { fromUserId?: string; fromUserName?: string; signal?: Record<string, unknown> }
@@ -80,6 +81,10 @@ export class WsMessageController {
       }
 
       this.options.pushLog(`nack ${eventType}: ${code} ${nackMessage}`);
+      if (eventType.startsWith("call.")) {
+        this.options.pushCallLog(`nack ${eventType}: ${code} ${nackMessage}`);
+        this.options.onCallNack?.({ requestId, eventType, code, message: nackMessage });
+      }
       return;
     }
 
