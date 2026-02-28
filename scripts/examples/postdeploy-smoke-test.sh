@@ -90,10 +90,17 @@ fi
 echo "[postdeploy-smoke] smoke:sso"
 SMOKE_API_URL="$BASE_URL" npm run smoke:sso
 
+if [[ "${SMOKE_API:-1}" == "0" ]]; then
+  echo "[postdeploy-smoke] smoke:api skipped (SMOKE_API=0)"
+else
+  echo "[postdeploy-smoke] smoke:api"
+  SMOKE_API_URL="$BASE_URL" npm run smoke:api
+fi
+
 if [[ "${SMOKE_REALTIME:-1}" == "0" ]]; then
   echo "[postdeploy-smoke] realtime smoke skipped (SMOKE_REALTIME=0)"
   SMOKE_STATUS="pass"
-  SMOKE_SUMMARY_TEXT="health=pass mode=sso sso=pass realtime=skip delta(nack=0,ack=0,chat=0,idem=0)"
+  SMOKE_SUMMARY_TEXT="health=pass mode=sso sso=pass api=pass realtime=skip delta(nack=0,ack=0,chat=0,idem=0)"
   exit 0
 fi
 
@@ -157,6 +164,6 @@ SMOKE_CHAT_SENT_DELTA=$((CHAT_SENT_AFTER - CHAT_SENT_BEFORE))
 SMOKE_CHAT_IDEMPOTENCY_HIT_DELTA=$((CHAT_IDEMPOTENCY_HIT_AFTER - CHAT_IDEMPOTENCY_HIT_BEFORE))
 
 SMOKE_STATUS="pass"
-SMOKE_SUMMARY_TEXT="health=pass mode=sso sso=pass realtime=pass delta(nack=$SMOKE_NACK_DELTA,ack=$SMOKE_ACK_DELTA,chat=$SMOKE_CHAT_SENT_DELTA,idem=$SMOKE_CHAT_IDEMPOTENCY_HIT_DELTA)"
+SMOKE_SUMMARY_TEXT="health=pass mode=sso sso=pass api=pass realtime=pass delta(nack=$SMOKE_NACK_DELTA,ack=$SMOKE_ACK_DELTA,chat=$SMOKE_CHAT_SENT_DELTA,idem=$SMOKE_CHAT_IDEMPOTENCY_HIT_DELTA)"
 
 echo "[postdeploy-smoke] done"

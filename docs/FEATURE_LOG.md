@@ -25,6 +25,22 @@
 
 - Выполняется в standard API smoke path (`SMOKE_API=1 npm run check`) при наличии `SMOKE_BEARER_TOKEN`.
 
+## 2026-02-28 — Postdeploy smoke: include API smoke stage
+
+### Delivered
+
+- В `scripts/examples/postdeploy-smoke-test.sh` добавлен запуск `npm run smoke:api` сразу после `smoke:sso`.
+- Новая последовательность для `deploy:test:smoke`: `smoke:sso` -> `smoke:api` -> `smoke:realtime`.
+- Добавлен toggle `SMOKE_API=0` для явного пропуска API stage (по умолчанию stage включён).
+
+### Validation
+
+- `bash -n scripts/examples/postdeploy-smoke-test.sh` — PASS.
+
+### Operational evidence (test)
+
+- Входит в стандартный `deploy:test:smoke` postdeploy pipeline.
+
 ## 2026-02-28 — Realtime presence + channel UX/chat style stabilization
 
 ### Delivered
