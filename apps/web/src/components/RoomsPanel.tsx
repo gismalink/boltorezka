@@ -26,6 +26,7 @@ export function RoomsPanel({
   liveRoomMemberDetailsBySlug,
   voiceMicStateByUserIdInCurrentRoom,
   voiceAudioOutputMutedByUserIdInCurrentRoom,
+  voiceRtcStateByUserIdInCurrentRoom,
   collapsedCategoryIds,
   uncategorizedRooms,
   newCategorySlug,
@@ -274,12 +275,20 @@ export function RoomsPanel({
               const isAudioOutputMuted = roomHasVoiceState && member.userId
                 ? Boolean(voiceAudioOutputMutedByUserIdInCurrentRoom[member.userId])
                 : false;
+              const rtcState = roomHasVoiceState && member.userId
+                ? (voiceRtcStateByUserIdInCurrentRoom[member.userId] || "disconnected")
+                : "disconnected";
               const micIconClass = micState === "muted"
                 ? "bi-mic-mute"
                 : micState === "speaking"
                   ? "bi-mic-fill"
                   : "bi-mic";
               const audioIconClass = isAudioOutputMuted ? "bi-headset-vr" : "bi-headphones";
+              const rtcStateLabel = rtcState === "connected"
+                ? t("rtc.connected")
+                : rtcState === "connecting"
+                  ? t("rtc.connecting")
+                  : "";
 
               return (
             <li
@@ -288,6 +297,9 @@ export function RoomsPanel({
             >
               <span className="channel-member-avatar">{(member.userName || "U").charAt(0).toUpperCase()}</span>
               <span className="channel-member-name">{member.userName}</span>
+              {rtcState !== "disconnected" ? (
+                <span className={`channel-member-rtc channel-member-rtc-${rtcState}`}>{rtcStateLabel}</span>
+              ) : null}
               <span className="channel-member-icons" aria-hidden="true">
                 <i className={`bi ${micIconClass}`} />
                 <i className={`bi ${audioIconClass}`} />

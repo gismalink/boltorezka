@@ -156,6 +156,7 @@ export function useVoiceCallRuntime({
 }: UseVoiceCallRuntimeArgs) {
   const [roomVoiceConnected, setRoomVoiceConnected] = useState(false);
   const [connectedPeerUserIds, setConnectedPeerUserIds] = useState<string[]>([]);
+  const [connectingPeerUserIds, setConnectingPeerUserIds] = useState<string[]>([]);
   const [remoteMutedPeerUserIds, setRemoteMutedPeerUserIds] = useState<string[]>([]);
   const [remoteSpeakingPeerUserIds, setRemoteSpeakingPeerUserIds] = useState<string[]>([]);
   const [remoteAudioMutedPeerUserIds, setRemoteAudioMutedPeerUserIds] = useState<string[]>([]);
@@ -272,7 +273,18 @@ export function useVoiceCallRuntime({
     const connectedUserIds = Array.from(peersRef.current.entries())
       .filter(([, peer]) => peer.connection.connectionState === "connected" || peer.hasRemoteTrack)
       .map(([userId]) => userId);
+    const connectingUserIds = Array.from(peersRef.current.entries())
+      .filter(([, peer]) => {
+        if (peer.connection.connectionState === "connected" || peer.hasRemoteTrack) {
+          return false;
+        }
+
+        const state = peer.connection.connectionState;
+        return state === "new" || state === "connecting";
+      })
+      .map(([userId]) => userId);
     setConnectedPeerUserIds(connectedUserIds);
+    setConnectingPeerUserIds(connectingUserIds);
 
     const anyConnected = peers.some((peer) => peer.connection.connectionState === "connected" || peer.hasRemoteTrack);
     if (anyConnected) {
@@ -361,6 +373,7 @@ export function useVoiceCallRuntime({
     roomVoiceConnectedRef.current = false;
     setRoomVoiceConnected(false);
     setConnectedPeerUserIds([]);
+    setConnectingPeerUserIds([]);
     setRemoteMutedPeerUserIds([]);
     setRemoteSpeakingPeerUserIds([]);
     setRemoteAudioMutedPeerUserIds([]);
@@ -765,6 +778,7 @@ export function useVoiceCallRuntime({
     roomVoiceConnectedRef.current = false;
     setRoomVoiceConnected(false);
     setConnectedPeerUserIds([]);
+    setConnectingPeerUserIds([]);
     setRemoteMutedPeerUserIds([]);
     setRemoteSpeakingPeerUserIds([]);
     setRemoteAudioMutedPeerUserIds([]);
@@ -1065,6 +1079,7 @@ export function useVoiceCallRuntime({
   return {
     roomVoiceConnected,
     connectedPeerUserIds,
+    connectingPeerUserIds,
     remoteMutedPeerUserIds,
     remoteSpeakingPeerUserIds,
     remoteAudioMutedPeerUserIds,

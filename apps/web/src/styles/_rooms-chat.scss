@@ -146,7 +146,7 @@
 
 .channel-member-item {
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: auto 1fr auto auto;
   align-items: center;
   gap: 6px;
   min-height: 22px;
@@ -180,6 +180,28 @@
   gap: 4px;
   color: var(--pixel-muted);
   font-size: calc(var(--font-size-sm) - 0.12rem);
+}
+
+.channel-member-rtc {
+  display: inline-flex;
+  align-items: center;
+  min-height: 16px;
+  padding: 0 6px;
+  border: var(--border-thin) solid color-mix(in srgb, var(--pixel-muted) 62%, transparent 38%);
+  background: color-mix(in srgb, var(--pixel-panel-2) 82%, transparent 18%);
+  color: var(--pixel-muted);
+  font-size: calc(var(--font-size-sm) - 0.18rem);
+  line-height: 1;
+}
+
+.channel-member-rtc-connecting {
+  border-color: color-mix(in srgb, var(--pixel-neon-amber) 60%, transparent 40%);
+  color: color-mix(in srgb, var(--pixel-neon-amber) 84%, var(--pixel-text) 16%);
+}
+
+.channel-member-rtc-connected {
+  border-color: color-mix(in srgb, var(--pixel-neon-cyan) 56%, transparent 44%);
+  color: color-mix(in srgb, var(--pixel-neon-cyan) 80%, var(--pixel-text) 20%);
 }
 
 .channel-member-item-current .channel-member-name,
