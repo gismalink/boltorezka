@@ -3,6 +3,32 @@
 Этот документ хранит зафиксированные изменения, выполненные шаги и операционные evidence.
 План и open items находятся в `docs/ROADMAP.md`.
 
+## 2026-02-28 — Popup layer system (portal-based)
+
+### Delivered
+
+- Added reusable popup portal layer component:
+  - `apps/web/src/components/PopupPortal.tsx`.
+- Migrated main UI popups to dedicated layer rendered under `document.body`:
+  - auth/profile menu popups,
+  - rooms create/category/channel settings popups,
+  - user dock voice/input/output popups.
+- Added viewport-aware popup positioning with auto flip (vertical/horizontal).
+- Updated outside-click handling so popup-layer content is treated as "inside" interaction.
+
+### Validation
+
+- `npm run web:build` — PASS.
+
+### Operational evidence (test)
+
+- Deploy target: `test`, branch `feature/web-header-profile-menu`, SHA `c653a87`.
+- Command: `ssh mac-mini 'cd ~/srv/boltorezka && TEST_REF=origin/feature/web-header-profile-menu npm run deploy:test:smoke'`.
+- Smoke result:
+  - `smoke:sso` — PASS,
+  - `smoke:realtime` — PASS,
+  - `reconnectOk=true`, `reconnectSkipped=false`.
+
 ## 2026-02-28 — Chat layout stabilization + media device persistence/fallback
 
 ### Delivered
