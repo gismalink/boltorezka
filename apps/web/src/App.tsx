@@ -798,6 +798,17 @@ export function App() {
   }, [roomsPresenceBySlug, roomSlug, user?.name]);
 
   const normalizedCurrentUserName = String(user?.name || "").trim().toLocaleLowerCase();
+  const formatMessageTime = (value: string) => {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return "";
+    }
+
+    return date.toLocaleTimeString(locale, {
+      hour: "2-digit",
+      minute: "2-digit"
+    });
+  };
 
   return (
     <main className="app legacy-layout">
@@ -980,16 +991,42 @@ export function App() {
               ) : null}
             </div>
             <div className="chat-log" ref={chatLogRef}>
-              {messages.map((message) => (
-                <div key={message.id} className="chat-line">
-                  <span className="chat-user">{message.user_name}:</span> {message.text}
-                  {message.deliveryStatus ? (
-                    <span className={`delivery delivery-${message.deliveryStatus}`}>
-                      {message.deliveryStatus}
-                    </span>
-                  ) : null}
-                </div>
-              ))}
+              {messages.map((message) => {
+                const isOwn = user?.id === message.user_id;
+                const deliveryGlyph = message.deliveryStatus === "sending"
+                  ? "•"
+                  : message.deliveryStatus === "delivered"
+                    ? "✓✓"
+                    : message.deliveryStatus === "failed"
+                      ? "!"
+                      : "";
+
+                return (
+                  <article key={message.id} className={`chat-message ${isOwn ? "chat-message-own" : ""}`}>
+                    {!isOwn ? (
+                      <div className="chat-avatar" aria-hidden="true">
+                        {(message.user_name || "U").charAt(0).toUpperCase()}
+                      </div>
+                    ) : null}
+
+                    <div className="chat-bubble-wrap">
+                      <div className="chat-bubble">
+                        <div className="chat-meta">
+                          <span className="chat-author">{message.user_name}</span>
+                          <span className="chat-time">{formatMessageTime(message.created_at)}</span>
+                        </div>
+                        <p className="chat-text">{message.text}</p>
+                      </div>
+
+                      {isOwn && message.deliveryStatus ? (
+                        <span className={`delivery delivery-${message.deliveryStatus}`}>
+                          {deliveryGlyph}
+                        </span>
+                      ) : null}
+                    </div>
+                  </article>
+                );
+              })}
             </div>
             <form className="chat-compose" onSubmit={sendMessage}>
               <input value={chatText} onChange={(e) => setChatText(e.target.value)} placeholder={t("chat.typePlaceholder")} />
