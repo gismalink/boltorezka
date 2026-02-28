@@ -27,6 +27,7 @@ type SocketState = {
   userId: string;
   userName: string;
   email: string | null;
+  enforceSingleSession: boolean;
   sessionId: string;
   roomId: string | null;
   roomSlug: string | null;
@@ -440,6 +441,8 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
       try {
         const url = new URL(request.url, "http://localhost");
         const ticket = url.searchParams.get("ticket");
+        const clientType = String(url.searchParams.get("client") || "").trim().toLowerCase();
+        const shouldEnforceSingleSession = clientType === "web";
 
         if (!ticket) {
           sendJson(connection, buildErrorEnvelope("MissingTicket", "ticket query param is required"));
@@ -479,7 +482,7 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
         const userEmail = String(claims.email || "").trim().toLowerCase() || null;
         const sessionId = randomUUID();
 
-        if (userEmail) {
+        if (userEmail && shouldEnforceSingleSession) {
           const previousSocket = activeSocketByEmail.get(userEmail);
           if (previousSocket && previousSocket !== connection && previousSocket.readyState === previousSocket.OPEN) {
             sendJson(previousSocket, buildErrorEnvelope("SingleSessionReplaced", "Session moved to another window or app"));
@@ -494,6 +497,7 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
           userId,
           userName,
           email: userEmail,
+          enforceSingleSession: shouldEnforceSingleSession,
           sessionId,
           roomId: null,
           roomSlug: null
@@ -528,7 +532,7 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
               return;
             }
 
-            if (state.email) {
+            if (state.email && state.enforceSingleSession) {
               await refreshEmailSession(state.email, state.sessionId);
             }
 
@@ -853,7 +857,7 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
             broadcastAllRoomsPresence();
           }
 
-          if (state.email) {
+          if (state.email && state.enforceSingleSession) {
             const activeSocket = activeSocketByEmail.get(state.email);
             if (activeSocket === connection) {
               activeSocketByEmail.delete(state.email);

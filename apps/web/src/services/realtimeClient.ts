@@ -112,7 +112,7 @@ export class RealtimeClient {
           return;
         }
 
-        this.ws = new WebSocket(`${wsBase()}/v1/realtime/ws?ticket=${encodeURIComponent(ticket)}`);
+        this.ws = new WebSocket(`${wsBase()}/v1/realtime/ws?ticket=${encodeURIComponent(ticket)}&client=web`);
 
         this.ws.onopen = () => {
           this.reconnectAttempt = 0;
