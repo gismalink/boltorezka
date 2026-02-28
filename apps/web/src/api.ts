@@ -55,6 +55,10 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ direction })
     }),
+  deleteCategory: (token: string, categoryId: string) =>
+    fetchJson<{ ok: true; categoryId: string }>(`/v1/room-categories/${encodeURIComponent(categoryId)}`, token, {
+      method: "DELETE"
+    }),
   createRoom: (
     token: string,
     input: { slug: string; title: string; is_public: boolean; kind?: RoomKind; category_id?: string | null }
@@ -73,6 +77,10 @@ export const api = {
     fetchJson<{ room: Room }>(`/v1/rooms/${encodeURIComponent(roomId)}/move`, token, {
       method: "POST",
       body: JSON.stringify({ direction })
+    }),
+  deleteRoom: (token: string, roomId: string) =>
+    fetchJson<{ ok: true; roomId: string }>(`/v1/rooms/${encodeURIComponent(roomId)}`, token, {
+      method: "DELETE"
     }),
   roomMessages: (
     token: string,

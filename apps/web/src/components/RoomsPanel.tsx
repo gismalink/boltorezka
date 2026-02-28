@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Room, RoomKind } from "../types";
 import { PopupPortal } from "./PopupPortal";
 import type { RoomsPanelProps } from "./types";
@@ -49,12 +49,28 @@ export function RoomsPanel({
   onOpenChannelSettingsPopup,
   onSaveCategorySettings,
   onMoveCategory,
+  onDeleteCategory,
   onSaveChannelSettings,
   onMoveChannel,
+  onDeleteChannel,
   onJoinRoom
 }: RoomsPanelProps) {
   const categorySettingsAnchorRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const channelSettingsAnchorRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const [confirmDeleteCategoryId, setConfirmDeleteCategoryId] = useState<string | null>(null);
+  const [confirmDeleteChannelId, setConfirmDeleteChannelId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (channelSettingsPopupOpenId !== confirmDeleteChannelId) {
+      setConfirmDeleteChannelId(null);
+    }
+  }, [channelSettingsPopupOpenId, confirmDeleteChannelId]);
+
+  useEffect(() => {
+    if (categorySettingsPopupOpenId !== confirmDeleteCategoryId) {
+      setConfirmDeleteCategoryId(null);
+    }
+  }, [categorySettingsPopupOpenId, confirmDeleteCategoryId]);
 
   const renderRoomRow = (room: Room) => (
     <div className="channel-row">
@@ -113,6 +129,33 @@ export function RoomsPanel({
                   </button>
                 </div>
                 <button type="submit" className="icon-action"><i className="bi bi-check2" aria-hidden="true" /> Save</button>
+                <button
+                  type="button"
+                  className="secondary delete-action-btn"
+                  onClick={() => setConfirmDeleteChannelId((current) => (current === room.id ? null : room.id))}
+                >
+                  <i className="bi bi-trash3" aria-hidden="true" /> Delete channel
+                </button>
+                {confirmDeleteChannelId === room.id ? (
+                  <div className="delete-confirm-box">
+                    <p className="muted delete-confirm-text">Delete channel?</p>
+                    <div className="row delete-confirm-actions">
+                      <button type="button" className="secondary" onClick={() => setConfirmDeleteChannelId(null)}>
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        className="delete-confirm-btn"
+                        onClick={() => {
+                          setConfirmDeleteChannelId(null);
+                          onDeleteChannel(room);
+                        }}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
               </form>
             </div>
           </PopupPortal>
@@ -248,6 +291,33 @@ export function RoomsPanel({
                             </button>
                           </div>
                           <button type="submit" className="icon-action"><i className="bi bi-check2" aria-hidden="true" /> Save</button>
+                          <button
+                            type="button"
+                            className="secondary delete-action-btn"
+                            onClick={() => setConfirmDeleteCategoryId((current) => (current === category.id ? null : category.id))}
+                          >
+                            <i className="bi bi-trash3" aria-hidden="true" /> Delete category
+                          </button>
+                          {confirmDeleteCategoryId === category.id ? (
+                            <div className="delete-confirm-box">
+                              <p className="muted delete-confirm-text">Delete category?</p>
+                              <div className="row delete-confirm-actions">
+                                <button type="button" className="secondary" onClick={() => setConfirmDeleteCategoryId(null)}>
+                                  Cancel
+                                </button>
+                                <button
+                                  type="button"
+                                  className="delete-confirm-btn"
+                                  onClick={() => {
+                                    setConfirmDeleteCategoryId(null);
+                                    onDeleteCategory();
+                                  }}
+                                >
+                                  Delete
+                                </button>
+                              </div>
+                            </div>
+                          ) : null}
                         </form>
                       </div>
                     </PopupPortal>

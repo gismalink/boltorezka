@@ -325,6 +325,40 @@ export async function roomsRoutes(fastify: FastifyInstance) {
     }
   );
 
+  fastify.delete<{
+    Params: { categoryId: string };
+  }>(
+    "/v1/room-categories/:categoryId",
+    {
+      preHandler: [requireAuth, loadCurrentUser, requireRole(["admin", "super_admin"])]
+    },
+    async (request, reply) => {
+      const categoryId = String(request.params.categoryId || "").trim();
+      if (!categoryId) {
+        return reply.code(400).send({
+          error: "ValidationError",
+          message: "categoryId is required"
+        });
+      }
+
+      const deleted = await db.query(
+        `DELETE FROM room_categories
+         WHERE id = $1
+         RETURNING id`,
+        [categoryId]
+      );
+
+      if ((deleted.rowCount || 0) === 0) {
+        return reply.code(404).send({
+          error: "CategoryNotFound",
+          message: "Category does not exist"
+        });
+      }
+
+      return { ok: true, categoryId };
+    }
+  );
+
   fastify.post<{
     Body: {
       slug: string;
@@ -550,6 +584,40 @@ export async function roomsRoutes(fastify: FastifyInstance) {
       );
 
       return { room: updated.rows[0] };
+    }
+  );
+
+  fastify.delete<{
+    Params: { roomId: string };
+  }>(
+    "/v1/rooms/:roomId",
+    {
+      preHandler: [requireAuth, loadCurrentUser, requireRole(["admin", "super_admin"])]
+    },
+    async (request, reply) => {
+      const roomId = String(request.params.roomId || "").trim();
+      if (!roomId) {
+        return reply.code(400).send({
+          error: "ValidationError",
+          message: "roomId is required"
+        });
+      }
+
+      const deleted = await db.query(
+        `DELETE FROM rooms
+         WHERE id = $1
+         RETURNING id`,
+        [roomId]
+      );
+
+      if ((deleted.rowCount || 0) === 0) {
+        return reply.code(404).send({
+          error: "RoomNotFound",
+          message: "Room does not exist"
+        });
+      }
+
+      return { ok: true, roomId };
     }
   );
 

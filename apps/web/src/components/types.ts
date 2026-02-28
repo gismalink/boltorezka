@@ -86,7 +86,9 @@ export type RoomsPanelProps = {
   onOpenChannelSettingsPopup: (room: Room) => void;
   onSaveCategorySettings: (event: FormEvent) => void;
   onMoveCategory: (direction: "up" | "down") => void;
+  onDeleteCategory: () => void;
   onSaveChannelSettings: (event: FormEvent) => void;
   onMoveChannel: (direction: "up" | "down") => void;
+  onDeleteChannel: (room: Room) => void;
   onJoinRoom: (slug: string) => void;
 };

@@ -67,6 +67,20 @@ export class RoomAdminController {
     }
   }
 
+  async deleteCategory(token: string, categoryId: string) {
+    try {
+      await api.deleteCategory(token, categoryId);
+      const res = await api.rooms(token);
+      this.options.setRooms(res.rooms);
+      await this.loadRoomTree(token);
+      this.options.pushLog("category deleted");
+      return true;
+    } catch (error) {
+      this.options.pushLog(`delete category failed: ${(error as Error).message}`);
+      return false;
+    }
+  }
+
   async createRoom(
     token: string,
     slugInput: string,
@@ -125,6 +139,20 @@ export class RoomAdminController {
       return true;
     } catch (error) {
       this.options.pushLog(`move channel failed: ${(error as Error).message}`);
+      return false;
+    }
+  }
+
+  async deleteRoom(token: string, roomId: string) {
+    try {
+      await api.deleteRoom(token, roomId);
+      const res = await api.rooms(token);
+      this.options.setRooms(res.rooms);
+      await this.loadRoomTree(token);
+      this.options.pushLog("channel deleted");
+      return true;
+    } catch (error) {
+      this.options.pushLog(`delete channel failed: ${(error as Error).message}`);
       return false;
     }
   }

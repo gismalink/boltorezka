@@ -554,6 +554,17 @@ export function App() {
     await roomAdminController.moveCategory(token, categorySettingsPopupOpenId, direction);
   };
 
+  const deleteCategory = async () => {
+    if (!token || !categorySettingsPopupOpenId) {
+      return;
+    }
+
+    const deleted = await roomAdminController.deleteCategory(token, categorySettingsPopupOpenId);
+    if (deleted) {
+      setCategorySettingsPopupOpenId(null);
+    }
+  };
+
   const saveChannelSettings = async (event: FormEvent) => {
     event.preventDefault();
     if (!token || !channelSettingsPopupOpenId) {
@@ -577,6 +588,29 @@ export function App() {
     }
 
     await roomAdminController.moveRoom(token, channelSettingsPopupOpenId, direction);
+  };
+
+  const deleteChannel = async (room: Room) => {
+    if (!token || !channelSettingsPopupOpenId) {
+      return;
+    }
+
+    const deleted = await roomAdminController.deleteRoom(token, channelSettingsPopupOpenId);
+    if (!deleted) {
+      return;
+    }
+
+    if (room.slug === roomSlug) {
+      const fallbackRoom = allRooms.find((item) => item.id !== room.id && item.slug === "general")
+        || allRooms.find((item) => item.id !== room.id)
+        || null;
+
+      if (fallbackRoom) {
+        joinRoom(fallbackRoom.slug);
+      }
+    }
+
+    setChannelSettingsPopupOpenId(null);
   };
 
   const sendMessage = (event: FormEvent) => {
@@ -739,8 +773,10 @@ export function App() {
             onOpenChannelSettingsPopup={openChannelSettingsPopup}
             onSaveCategorySettings={saveCategorySettings}
             onMoveCategory={(direction) => void moveCategory(direction)}
+            onDeleteCategory={() => void deleteCategory()}
             onSaveChannelSettings={saveChannelSettings}
             onMoveChannel={(direction) => void moveChannel(direction)}
+            onDeleteChannel={(room) => void deleteChannel(room)}
             onJoinRoom={joinRoom}
           />
 
