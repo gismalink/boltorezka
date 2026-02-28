@@ -112,6 +112,7 @@ const RTC_RECONNECT_MAX_DELAY_MS = Math.max(
   RTC_RECONNECT_BASE_DELAY_MS,
   readPositiveIntFromEnv("VITE_RTC_RECONNECT_MAX_DELAY_MS", 8000)
 );
+const ERROR_TOAST_THROTTLE_MS = 12000;
 
 const RTC_CONFIG: RTCConfiguration = {
   iceServers: RTC_ICE_SERVERS,
@@ -147,6 +148,20 @@ export function useVoiceCallRuntime({
   const localStreamRef = useRef<MediaStream | null>(null);
   const ensurePeerConnectionRef = useRef<((targetUserId: string, targetLabel: string) => RTCPeerConnection) | null>(null);
   const startOfferRef = useRef<((targetUserId: string, targetLabel: string) => Promise<void>) | null>(null);
+  const lastToastRef = useRef<{ key: string; at: number }>({ key: "", at: 0 });
+
+  const pushToastThrottled = useCallback((key: string, message: string) => {
+    const now = Date.now();
+    const isSameError = lastToastRef.current.key === key;
+    const isInThrottleWindow = now - lastToastRef.current.at < ERROR_TOAST_THROTTLE_MS;
+
+    if (isSameError && isInThrottleWindow) {
+      return;
+    }
+
+    lastToastRef.current = { key, at: now };
+    pushToast(message);
+  }, [pushToast]);
 
   const getAudioConstraints = useCallback((): MediaTrackConstraints | boolean => {
     return selectedInputId && selectedInputId !== "default"
@@ -266,7 +281,7 @@ export function useVoiceCallRuntime({
     }
 
     if (!navigator.mediaDevices?.getUserMedia) {
-      pushToast(t("settings.browserUnsupported"));
+      pushToastThrottled("browser-unsupported", t("settings.browserUnsupported"));
       throw new Error("MediaDevicesUnsupported");
     }
 
@@ -281,7 +296,7 @@ export function useVoiceCallRuntime({
 
     localStreamRef.current = stream;
     return stream;
-  }, [getAudioConstraints, micMuted, t, pushToast]);
+  }, [getAudioConstraints, micMuted, t, pushToastThrottled]);
 
   const attachLocalTracks = useCallback(async (connection: RTCPeerConnection) => {
     const stream = await ensureLocalStream();
@@ -451,14 +466,14 @@ export function useVoiceCallRuntime({
     } catch (error) {
       const errorName = (error as { name?: string })?.name || "";
       if (errorName === "NotAllowedError" || errorName === "SecurityError") {
-        pushToast(t("settings.mediaDenied"));
+        pushToastThrottled("media-denied", t("settings.mediaDenied"));
       } else {
-        pushToast(t("settings.devicesLoadFailed"));
+        pushToastThrottled("devices-load-failed", t("settings.devicesLoadFailed"));
       }
       pushCallLog(`call.offer failed (${targetLabel || normalizedTarget}): ${(error as Error).message}`);
       closePeer(normalizedTarget);
     }
-  }, [roomVoiceConnectedRef, ensurePeerConnection, attachLocalTracks, sendWsEvent, setLastCallPeer, updateCallStatus, pushCallLog, t, pushToast, closePeer]);
+  }, [roomVoiceConnectedRef, ensurePeerConnection, attachLocalTracks, sendWsEvent, setLastCallPeer, updateCallStatus, pushCallLog, t, pushToastThrottled, closePeer]);
 
   startOfferRef.current = startOffer;
 
@@ -694,7 +709,7 @@ export function useVoiceCallRuntime({
         pushCallLog("input device switched for active call");
       } catch (error) {
         if (!cancelled) {
-          pushToast(t("settings.devicesLoadFailed"));
+          pushToastThrottled("devices-load-failed", t("settings.devicesLoadFailed"));
           pushCallLog(`input device switch failed: ${(error as Error).message}`);
         }
       }
@@ -705,7 +720,7 @@ export function useVoiceCallRuntime({
     return () => {
       cancelled = true;
     };
-  }, [selectedInputId, getAudioConstraints, micMuted, t, pushToast, pushCallLog]);
+  }, [selectedInputId, getAudioConstraints, micMuted, t, pushToastThrottled, pushCallLog]);
 
   useEffect(() => {
     return () => {
