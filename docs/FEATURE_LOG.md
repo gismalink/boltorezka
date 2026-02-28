@@ -414,3 +414,23 @@
   - `callSignalRelayed=true`
   - `callRejectRelayed=true`
   - `callHangupRelayed=true`
+
+## 2026-02-28 — Web UI 8-bit theme baseline
+
+### Delivered
+
+- Глобальная 8-bit стилизация React UI в `apps/web/src/styles.scss`:
+  - ретро-палитра и pixel-like typography,
+  - квадратные рамки/тени для карточек, контролов, попапов и тултипов,
+  - единый стиль для chat/log/pre, RTC cards и voice settings панелей,
+  - визуальная консистентность для delivery/active/device состояний.
+
+### Validation
+
+- Local check: `npm run web:build` — PASS.
+- Commit: `13d9b64` (`feature/web-header-profile-menu`).
+- Test rollout/smoke: `ssh mac-mini 'cd ~/srv/boltorezka && TEST_REF=origin/feature/web-header-profile-menu npm run deploy:test:smoke'` — PASS.
+- Smoke result:
+  - `smoke:sso` — PASS,
+  - `smoke:realtime` — PASS,
+  - `reconnectOk=true`.
