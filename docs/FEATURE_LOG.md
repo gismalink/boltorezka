@@ -3,6 +3,33 @@
 Этот документ хранит зафиксированные изменения, выполненные шаги и операционные evidence.
 План и open items находятся в `docs/ROADMAP.md`.
 
+## 2026-02-28 — Category settings popup + channel row cleanup
+
+### Delivered
+
+- Добавлен popup настроек категории:
+  - rename category title,
+  - move category up/down.
+- Backend endpoints для category settings:
+  - `PATCH /v1/room-categories/:categoryId`
+  - `POST /v1/room-categories/:categoryId/move`
+- В channel row убран текстовый дубль типа канала — теперь тип считывается только из иконки.
+
+### Validation
+
+- `npm run check:api-types` — PASS.
+- `npm run web:build` — PASS.
+- `npm run check` — PASS.
+
+### Operational evidence (test)
+
+- Deploy target: `test`, branch `feature/web-header-profile-menu`, SHA `a4551df`.
+- Command: `ssh mac-mini 'cd ~/srv/boltorezka && TEST_REF=origin/feature/web-header-profile-menu npm run deploy:test:smoke'`.
+- Smoke result:
+  - `smoke:sso` — PASS,
+  - `smoke:realtime` — PASS,
+  - `reconnectOk=true`, `reconnectSkipped=false`.
+
 ## 2026-02-28 — Channel row UX update: Bootstrap Icons + settings popup + stronger active state
 
 ### Delivered
