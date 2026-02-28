@@ -253,7 +253,8 @@
 
 .voice-preferences-modal {
   width: min(760px, 100%);
-  max-height: min(88vh, 900px);
+  height: 80vh;
+  max-height: 80vh;
   overflow: auto;
   padding: calc(var(--space-2xl) + var(--space-xxs));
   display: grid;
@@ -278,6 +279,13 @@
   display: grid;
   align-content: start;
   gap: var(--space-xl);
+  min-height: 0;
+  overflow: auto;
+  padding-right: var(--space-xxs);
+}
+
+.server-profile-modal {
+  width: min(1100px, 100%);
 }
 
 .user-settings-tab-btn {
