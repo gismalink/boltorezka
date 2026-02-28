@@ -47,6 +47,7 @@ const TOAST_AUTO_DISMISS_MS = 4500;
 const TOAST_ID_RANDOM_RANGE = 10000;
 const TOAST_DUPLICATE_THROTTLE_MS = 12000;
 const TOAST_MAX_VISIBLE = 4;
+const AUTO_ROOM_DISCONNECT_GRACE_MS = 8000;
 
 type ServerMenuTab = "users" | "events" | "telemetry" | "call";
 type MobileTab = "channels" | "chat" | "profile";
@@ -131,6 +132,7 @@ export function App() {
   const userSettingsRef = useRef<HTMLDivElement>(null);
   const toastTimeoutsRef = useRef<Map<number, number>>(new Map());
   const toastLastShownAtRef = useRef<Map<string, number>>(new Map());
+  const autoRoomDisconnectTimerRef = useRef<number | null>(null);
 
   const canCreateRooms = user?.role === "admin" || user?.role === "super_admin";
   const canPromote = user?.role === "super_admin";
@@ -605,6 +607,10 @@ export function App() {
 
   useEffect(() => {
     if (!currentRoomSupportsRtc) {
+      if (autoRoomDisconnectTimerRef.current !== null) {
+        window.clearTimeout(autoRoomDisconnectTimerRef.current);
+        autoRoomDisconnectTimerRef.current = null;
+      }
       if (roomVoiceConnected) {
         disconnectRoom();
       }
@@ -614,15 +620,39 @@ export function App() {
     const hasOtherParticipants = currentRoomVoiceTargets.length > 0;
 
     if (hasOtherParticipants) {
+      if (autoRoomDisconnectTimerRef.current !== null) {
+        window.clearTimeout(autoRoomDisconnectTimerRef.current);
+        autoRoomDisconnectTimerRef.current = null;
+      }
       if (!roomVoiceConnected) {
         void connectRoom();
       }
       return;
     }
 
-    if (roomVoiceConnected) {
-      disconnectRoom();
+    if (!roomVoiceConnected) {
+      if (autoRoomDisconnectTimerRef.current !== null) {
+        window.clearTimeout(autoRoomDisconnectTimerRef.current);
+        autoRoomDisconnectTimerRef.current = null;
+      }
+      return;
     }
+
+    if (autoRoomDisconnectTimerRef.current !== null) {
+      return;
+    }
+
+    autoRoomDisconnectTimerRef.current = window.setTimeout(() => {
+      autoRoomDisconnectTimerRef.current = null;
+      disconnectRoom();
+    }, AUTO_ROOM_DISCONNECT_GRACE_MS);
+
+    return () => {
+      if (autoRoomDisconnectTimerRef.current !== null) {
+        window.clearTimeout(autoRoomDisconnectTimerRef.current);
+        autoRoomDisconnectTimerRef.current = null;
+      }
+    };
   }, [
     currentRoomSupportsRtc,
     currentRoomVoiceTargets.length,
@@ -637,6 +667,15 @@ export function App() {
     canViewTelemetry,
     setServerMenuTab
   });
+
+  useEffect(() => {
+    return () => {
+      if (autoRoomDisconnectTimerRef.current !== null) {
+        window.clearTimeout(autoRoomDisconnectTimerRef.current);
+        autoRoomDisconnectTimerRef.current = null;
+      }
+    };
+  }, []);
 
   const userDockNode = user ? (
     <UserDock
