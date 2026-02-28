@@ -68,10 +68,13 @@ export function App() {
   const [audioMuted, setAudioMuted] = useState(false);
   const [audioOutputMenuOpen, setAudioOutputMenuOpen] = useState(false);
   const [voiceSettingsOpen, setVoiceSettingsOpen] = useState(false);
+  const [voicePreferencesOpen, setVoicePreferencesOpen] = useState(false);
   const [inputDevices, setInputDevices] = useState<Array<{ id: string; label: string }>>([]);
   const [outputDevices, setOutputDevices] = useState<Array<{ id: string; label: string }>>([]);
   const [selectedInputId, setSelectedInputId] = useState<string>("default");
   const [selectedOutputId, setSelectedOutputId] = useState<string>("default");
+  const [selectedInputProfile, setSelectedInputProfile] = useState<"noise_reduction" | "studio" | "custom">("custom");
+  const [voiceSettingsPanel, setVoiceSettingsPanel] = useState<"input_device" | "input_profile" | null>(null);
   const [micVolume, setMicVolume] = useState<number>(() => Number(localStorage.getItem("boltorezka_mic_volume") || 75));
   const [outputVolume, setOutputVolume] = useState<number>(() => Number(localStorage.getItem("boltorezka_output_volume") || 70));
   const [authMenuOpen, setAuthMenuOpen] = useState(false);
@@ -85,6 +88,7 @@ export function App() {
   const channelPopupRef = useRef<HTMLDivElement | null>(null);
   const audioOutputAnchorRef = useRef<HTMLDivElement | null>(null);
   const voiceSettingsAnchorRef = useRef<HTMLDivElement | null>(null);
+  const voicePreferencesRef = useRef<HTMLDivElement | null>(null);
 
   const canCreateRooms = user?.role === "admin" || user?.role === "super_admin";
   const canPromote = user?.role === "super_admin";
@@ -395,7 +399,7 @@ export function App() {
   }, [selectedInputId, selectedOutputId]);
 
   useEffect(() => {
-    if (!profileMenuOpen && !authMenuOpen && !categoryPopupOpen && !channelPopupOpen && !channelSettingsPopupOpenId && !categorySettingsPopupOpenId && !audioOutputMenuOpen && !voiceSettingsOpen) {
+    if (!profileMenuOpen && !authMenuOpen && !categoryPopupOpen && !channelPopupOpen && !channelSettingsPopupOpenId && !categorySettingsPopupOpenId && !audioOutputMenuOpen && !voiceSettingsOpen && !voicePreferencesOpen) {
       return;
     }
 
@@ -409,8 +413,9 @@ export function App() {
       const insideCategorySettings = Boolean(target && target instanceof HTMLElement && target.closest(".category-settings-anchor"));
       const insideOutputSettings = Boolean(target && audioOutputAnchorRef.current?.contains(target));
       const insideVoiceSettings = Boolean(target && voiceSettingsAnchorRef.current?.contains(target));
+      const insideVoicePreferences = Boolean(target && voicePreferencesRef.current?.contains(target));
 
-      if (!insideProfile && !insideAuth && !insideCategoryPopup && !insideChannelPopup && !insideChannelSettings && !insideCategorySettings && !insideOutputSettings && !insideVoiceSettings) {
+      if (!insideProfile && !insideAuth && !insideCategoryPopup && !insideChannelPopup && !insideChannelSettings && !insideCategorySettings && !insideOutputSettings && !insideVoiceSettings && !insideVoicePreferences) {
         setProfileMenuOpen(false);
         setAuthMenuOpen(false);
         setCategoryPopupOpen(false);
@@ -419,12 +424,13 @@ export function App() {
         setCategorySettingsPopupOpenId(null);
         setAudioOutputMenuOpen(false);
         setVoiceSettingsOpen(false);
+        setVoicePreferencesOpen(false);
       }
     };
 
     window.addEventListener("mousedown", onClickOutside);
     return () => window.removeEventListener("mousedown", onClickOutside);
-  }, [profileMenuOpen, authMenuOpen, categoryPopupOpen, channelPopupOpen, channelSettingsPopupOpenId, categorySettingsPopupOpenId, audioOutputMenuOpen, voiceSettingsOpen]);
+  }, [profileMenuOpen, authMenuOpen, categoryPopupOpen, channelPopupOpen, channelSettingsPopupOpenId, categorySettingsPopupOpenId, audioOutputMenuOpen, voiceSettingsOpen, voicePreferencesOpen]);
 
   const beginSso = (provider: "google" | "yandex") => {
     setAuthMenuOpen(false);
@@ -587,6 +593,14 @@ export function App() {
     [allRooms, roomSlug]
   );
 
+  const inputOptions = inputDevices.length > 0 ? inputDevices : [{ id: "default", label: "System default" }];
+  const currentInputLabel = inputOptions.find((device) => device.id === selectedInputId)?.label ?? inputOptions[0]?.label ?? "System default";
+  const inputProfileLabel = selectedInputProfile === "noise_reduction"
+    ? "Изоляция голоса"
+    : selectedInputProfile === "studio"
+      ? "Студия"
+      : "Пользовательский";
+
   const currentRoomSupportsRtc = currentRoom ? currentRoom.kind !== "text" : false;
 
   return (
@@ -646,7 +660,7 @@ export function App() {
             </div>
           </section>
 
-          <section className="card compact">
+          <section className="card compact rooms-card">
             <div className="section-heading-row">
               <h2>Rooms</h2>
               {canCreateRooms ? (
@@ -721,177 +735,178 @@ export function App() {
             ) : (
               <p className="muted">Only admin/super_admin can create rooms.</p>
             )}
-
-            {(roomsTree?.categories || []).map((category) => (
-              <div key={category.id} className="category-block">
-                <div className="category-title-row">
-                  <div className="category-title">{category.title}</div>
-                  {canCreateRooms ? (
-                    <div className="category-actions">
-                      <button
-                        type="button"
-                        className="secondary icon-btn tiny"
-                        aria-label="Create channel in category"
-                        data-tooltip="Create channel in category"
-                        onClick={() => openCreateChannelPopup(category.id)}
-                      >
-                        <i className="bi bi-plus-lg" aria-hidden="true" />
-                      </button>
-                      <div className="category-settings-anchor">
+            <div className="rooms-scroll">
+              {(roomsTree?.categories || []).map((category) => (
+                <div key={category.id} className="category-block">
+                  <div className="category-title-row">
+                    <div className="category-title">{category.title}</div>
+                    {canCreateRooms ? (
+                      <div className="category-actions">
                         <button
                           type="button"
                           className="secondary icon-btn tiny"
-                          aria-label="Configure category"
-                          data-tooltip="Configure category"
-                          onClick={() => openCategorySettingsPopup(category.id, category.title)}
+                          aria-label="Create channel in category"
+                          data-tooltip="Create channel in category"
+                          onClick={() => openCreateChannelPopup(category.id)}
                         >
-                          <i className="bi bi-gear" aria-hidden="true" />
+                          <i className="bi bi-plus-lg" aria-hidden="true" />
                         </button>
-                        {categorySettingsPopupOpenId === category.id ? (
-                          <div className="floating-popup settings-popup category-settings-popup">
-                            <form className="stack" onSubmit={saveCategorySettings}>
-                              <h3 className="subheading">Category settings</h3>
-                              <input value={editingCategoryTitle} onChange={(e) => setEditingCategoryTitle(e.target.value)} placeholder="category title" />
-                              <div className="row">
-                                <button type="button" className="secondary" onClick={() => void moveCategory("up")}>
-                                  <i className="bi bi-arrow-up" aria-hidden="true" /> Up
-                                </button>
-                                <button type="button" className="secondary" onClick={() => void moveCategory("down")}>
-                                  <i className="bi bi-arrow-down" aria-hidden="true" /> Down
-                                </button>
-                              </div>
-                              <button type="submit" className="icon-action"><i className="bi bi-check2" aria-hidden="true" /> Save</button>
-                            </form>
-                          </div>
-                        ) : null}
+                        <div className="category-settings-anchor">
+                          <button
+                            type="button"
+                            className="secondary icon-btn tiny"
+                            aria-label="Configure category"
+                            data-tooltip="Configure category"
+                            onClick={() => openCategorySettingsPopup(category.id, category.title)}
+                          >
+                            <i className="bi bi-gear" aria-hidden="true" />
+                          </button>
+                          {categorySettingsPopupOpenId === category.id ? (
+                            <div className="floating-popup settings-popup category-settings-popup">
+                              <form className="stack" onSubmit={saveCategorySettings}>
+                                <h3 className="subheading">Category settings</h3>
+                                <input value={editingCategoryTitle} onChange={(e) => setEditingCategoryTitle(e.target.value)} placeholder="category title" />
+                                <div className="row">
+                                  <button type="button" className="secondary" onClick={() => void moveCategory("up")}>
+                                    <i className="bi bi-arrow-up" aria-hidden="true" /> Up
+                                  </button>
+                                  <button type="button" className="secondary" onClick={() => void moveCategory("down")}>
+                                    <i className="bi bi-arrow-down" aria-hidden="true" /> Down
+                                  </button>
+                                </div>
+                                <button type="submit" className="icon-action"><i className="bi bi-check2" aria-hidden="true" /> Save</button>
+                              </form>
+                            </div>
+                          ) : null}
+                        </div>
                       </div>
-                    </div>
-                  ) : null}
+                    ) : null}
+                  </div>
+                  <ul className="rooms-list">
+                    {category.channels.map((room) => (
+                      <li key={room.id}>
+                        <div className="channel-row">
+                          <button
+                            className={`secondary room-btn ${roomSlug === room.slug ? "room-btn-active" : ""}`}
+                            onClick={() => joinRoom(room.slug)}
+                          >
+                            <i className={`bi ${ROOM_KIND_ICON_CLASS[room.kind]}`} aria-hidden="true" />
+                            <span>{room.title}</span>
+                          </button>
+                          {canCreateRooms ? (
+                            <div className="channel-settings-anchor">
+                              <button
+                                type="button"
+                                className="secondary icon-btn tiny channel-action-btn"
+                                data-tooltip="Configure channel"
+                                aria-label="Configure channel"
+                                onClick={() => openChannelSettingsPopup(room)}
+                              >
+                                <i className="bi bi-gear" aria-hidden="true" />
+                              </button>
+                              {channelSettingsPopupOpenId === room.id ? (
+                                <div className="floating-popup settings-popup channel-settings-popup">
+                                  <form className="stack" onSubmit={saveChannelSettings}>
+                                    <h3 className="subheading">Channel settings</h3>
+                                    <input value={editingRoomTitle} onChange={(e) => setEditingRoomTitle(e.target.value)} placeholder="channel title" />
+                                    <div className="row">
+                                      <select value={editingRoomKind} onChange={(e) => setEditingRoomKind(e.target.value as RoomKind)}>
+                                        <option value="text">Text</option>
+                                        <option value="text_voice">Text + Voice</option>
+                                        <option value="text_voice_video">Text + Voice + Video</option>
+                                      </select>
+                                      <select value={editingRoomCategoryId} onChange={(e) => setEditingRoomCategoryId(e.target.value)}>
+                                        <option value="none">No category</option>
+                                        {(roomsTree?.categories || []).map((category) => (
+                                          <option key={category.id} value={category.id}>{category.title}</option>
+                                        ))}
+                                      </select>
+                                    </div>
+                                    <div className="row">
+                                      <button type="button" className="secondary" onClick={() => void moveChannel("up")}> 
+                                        <i className="bi bi-arrow-up" aria-hidden="true" /> Up
+                                      </button>
+                                      <button type="button" className="secondary" onClick={() => void moveChannel("down")}> 
+                                        <i className="bi bi-arrow-down" aria-hidden="true" /> Down
+                                      </button>
+                                    </div>
+                                    <button type="submit" className="icon-action"><i className="bi bi-check2" aria-hidden="true" /> Save</button>
+                                  </form>
+                                </div>
+                              ) : null}
+                            </div>
+                          ) : null}
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
-                <ul className="rooms-list">
-                  {category.channels.map((room) => (
-                    <li key={room.id}>
-                      <div className="channel-row">
-                        <button
-                          className={`secondary room-btn ${roomSlug === room.slug ? "room-btn-active" : ""}`}
-                          onClick={() => joinRoom(room.slug)}
-                        >
-                          <i className={`bi ${ROOM_KIND_ICON_CLASS[room.kind]}`} aria-hidden="true" />
-                          <span>{room.title}</span>
-                        </button>
-                        {canCreateRooms ? (
-                          <div className="channel-settings-anchor">
-                            <button
-                              type="button"
-                              className="secondary icon-btn tiny channel-action-btn"
-                              data-tooltip="Configure channel"
-                              aria-label="Configure channel"
-                              onClick={() => openChannelSettingsPopup(room)}
-                            >
-                              <i className="bi bi-gear" aria-hidden="true" />
-                            </button>
-                            {channelSettingsPopupOpenId === room.id ? (
-                              <div className="floating-popup settings-popup channel-settings-popup">
-                                <form className="stack" onSubmit={saveChannelSettings}>
-                                  <h3 className="subheading">Channel settings</h3>
-                                  <input value={editingRoomTitle} onChange={(e) => setEditingRoomTitle(e.target.value)} placeholder="channel title" />
-                                  <div className="row">
-                                    <select value={editingRoomKind} onChange={(e) => setEditingRoomKind(e.target.value as RoomKind)}>
-                                      <option value="text">Text</option>
-                                      <option value="text_voice">Text + Voice</option>
-                                      <option value="text_voice_video">Text + Voice + Video</option>
-                                    </select>
-                                    <select value={editingRoomCategoryId} onChange={(e) => setEditingRoomCategoryId(e.target.value)}>
-                                      <option value="none">No category</option>
-                                      {(roomsTree?.categories || []).map((category) => (
-                                        <option key={category.id} value={category.id}>{category.title}</option>
-                                      ))}
-                                    </select>
-                                  </div>
-                                  <div className="row">
-                                    <button type="button" className="secondary" onClick={() => void moveChannel("up")}> 
-                                      <i className="bi bi-arrow-up" aria-hidden="true" /> Up
-                                    </button>
-                                    <button type="button" className="secondary" onClick={() => void moveChannel("down")}> 
-                                      <i className="bi bi-arrow-down" aria-hidden="true" /> Down
-                                    </button>
-                                  </div>
-                                  <button type="submit" className="icon-action"><i className="bi bi-check2" aria-hidden="true" /> Save</button>
-                                </form>
-                              </div>
-                            ) : null}
-                          </div>
-                        ) : null}
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
+              ))}
 
-            {uncategorizedRooms.length > 0 ? (
-              <div className="category-block">
-                <div className="category-title">Uncategorized</div>
-                <ul className="rooms-list">
-                  {uncategorizedRooms.map((room) => (
-                    <li key={room.id}>
-                      <div className="channel-row">
-                        <button
-                          className={`secondary room-btn ${roomSlug === room.slug ? "room-btn-active" : ""}`}
-                          onClick={() => joinRoom(room.slug)}
-                        >
-                          <i className={`bi ${ROOM_KIND_ICON_CLASS[room.kind]}`} aria-hidden="true" />
-                          <span>{room.title}</span>
-                        </button>
-                        {canCreateRooms ? (
-                          <div className="channel-settings-anchor">
-                            <button
-                              type="button"
-                              className="secondary icon-btn tiny channel-action-btn"
-                              data-tooltip="Configure channel"
-                              aria-label="Configure channel"
-                              onClick={() => openChannelSettingsPopup(room)}
-                            >
-                              <i className="bi bi-gear" aria-hidden="true" />
-                            </button>
-                            {channelSettingsPopupOpenId === room.id ? (
-                              <div className="floating-popup settings-popup channel-settings-popup">
-                                <form className="stack" onSubmit={saveChannelSettings}>
-                                  <h3 className="subheading">Channel settings</h3>
-                                  <input value={editingRoomTitle} onChange={(e) => setEditingRoomTitle(e.target.value)} placeholder="channel title" />
-                                  <div className="row">
-                                    <select value={editingRoomKind} onChange={(e) => setEditingRoomKind(e.target.value as RoomKind)}>
-                                      <option value="text">Text</option>
-                                      <option value="text_voice">Text + Voice</option>
-                                      <option value="text_voice_video">Text + Voice + Video</option>
-                                    </select>
-                                    <select value={editingRoomCategoryId} onChange={(e) => setEditingRoomCategoryId(e.target.value)}>
-                                      <option value="none">No category</option>
-                                      {(roomsTree?.categories || []).map((category) => (
-                                        <option key={category.id} value={category.id}>{category.title}</option>
-                                      ))}
-                                    </select>
-                                  </div>
-                                  <div className="row">
-                                    <button type="button" className="secondary" onClick={() => void moveChannel("up")}> 
-                                      <i className="bi bi-arrow-up" aria-hidden="true" /> Up
-                                    </button>
-                                    <button type="button" className="secondary" onClick={() => void moveChannel("down")}> 
-                                      <i className="bi bi-arrow-down" aria-hidden="true" /> Down
-                                    </button>
-                                  </div>
-                                  <button type="submit" className="icon-action"><i className="bi bi-check2" aria-hidden="true" /> Save</button>
-                                </form>
-                              </div>
-                            ) : null}
-                          </div>
-                        ) : null}
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ) : null}
+              {uncategorizedRooms.length > 0 ? (
+                <div className="category-block">
+                  <div className="category-title">Uncategorized</div>
+                  <ul className="rooms-list">
+                    {uncategorizedRooms.map((room) => (
+                      <li key={room.id}>
+                        <div className="channel-row">
+                          <button
+                            className={`secondary room-btn ${roomSlug === room.slug ? "room-btn-active" : ""}`}
+                            onClick={() => joinRoom(room.slug)}
+                          >
+                            <i className={`bi ${ROOM_KIND_ICON_CLASS[room.kind]}`} aria-hidden="true" />
+                            <span>{room.title}</span>
+                          </button>
+                          {canCreateRooms ? (
+                            <div className="channel-settings-anchor">
+                              <button
+                                type="button"
+                                className="secondary icon-btn tiny channel-action-btn"
+                                data-tooltip="Configure channel"
+                                aria-label="Configure channel"
+                                onClick={() => openChannelSettingsPopup(room)}
+                              >
+                                <i className="bi bi-gear" aria-hidden="true" />
+                              </button>
+                              {channelSettingsPopupOpenId === room.id ? (
+                                <div className="floating-popup settings-popup channel-settings-popup">
+                                  <form className="stack" onSubmit={saveChannelSettings}>
+                                    <h3 className="subheading">Channel settings</h3>
+                                    <input value={editingRoomTitle} onChange={(e) => setEditingRoomTitle(e.target.value)} placeholder="channel title" />
+                                    <div className="row">
+                                      <select value={editingRoomKind} onChange={(e) => setEditingRoomKind(e.target.value as RoomKind)}>
+                                        <option value="text">Text</option>
+                                        <option value="text_voice">Text + Voice</option>
+                                        <option value="text_voice_video">Text + Voice + Video</option>
+                                      </select>
+                                      <select value={editingRoomCategoryId} onChange={(e) => setEditingRoomCategoryId(e.target.value)}>
+                                        <option value="none">No category</option>
+                                        {(roomsTree?.categories || []).map((category) => (
+                                          <option key={category.id} value={category.id}>{category.title}</option>
+                                        ))}
+                                      </select>
+                                    </div>
+                                    <div className="row">
+                                      <button type="button" className="secondary" onClick={() => void moveChannel("up")}> 
+                                        <i className="bi bi-arrow-up" aria-hidden="true" /> Up
+                                      </button>
+                                      <button type="button" className="secondary" onClick={() => void moveChannel("down")}> 
+                                        <i className="bi bi-arrow-down" aria-hidden="true" /> Down
+                                      </button>
+                                    </div>
+                                    <button type="submit" className="icon-action"><i className="bi bi-check2" aria-hidden="true" /> Save</button>
+                                  </form>
+                                </div>
+                              ) : null}
+                            </div>
+                          ) : null}
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+            </div>
           </section>
 
           {user ? (
@@ -938,19 +953,157 @@ export function App() {
                   </div>
                 </div>
                 <div className="user-panel-actions">
-                  <button
-                    type="button"
-                    className={`secondary icon-btn ${micMuted ? "icon-btn-danger" : ""}`}
-                    data-tooltip={micMuted ? "Включить микрофон" : "Выключить микрофон"}
-                    onClick={() => setMicMuted((value) => !value)}
-                  >
-                    <i className={`bi ${micMuted ? "bi-mic-mute-fill" : "bi-mic-fill"}`} aria-hidden="true" />
-                  </button>
-                  <div className="audio-output-anchor" ref={audioOutputAnchorRef}>
-                    <div className="audio-output-group">
+                  <div className="voice-settings-anchor" ref={voiceSettingsAnchorRef}>
+                    <div className="audio-output-group split-control-group">
                       <button
                         type="button"
-                        className={`secondary icon-btn ${audioMuted ? "icon-btn-danger" : ""}`}
+                        className={`secondary icon-btn split-main-btn ${micMuted ? "icon-btn-danger" : ""}`}
+                        data-tooltip={micMuted ? "Включить микрофон" : "Выключить микрофон"}
+                        onClick={() => setMicMuted((value) => !value)}
+                      >
+                        <i className={`bi ${micMuted ? "bi-mic-mute-fill" : "bi-mic-fill"}`} aria-hidden="true" />
+                      </button>
+                      <button
+                        type="button"
+                        className="secondary icon-btn split-caret-btn"
+                        data-tooltip="Настройки ввода"
+                        onClick={() => {
+                          setAudioOutputMenuOpen(false);
+                          setVoiceSettingsPanel(null);
+                          setVoiceSettingsOpen((value) => !value);
+                        }}
+                      >
+                        <i className="bi bi-chevron-down" aria-hidden="true" />
+                      </button>
+                    </div>
+                    {voiceSettingsOpen ? (
+                      <div className="floating-popup settings-popup voice-settings-popup">
+                        <div className="voice-menu-items">
+                          <button
+                            type="button"
+                            className={`secondary voice-menu-row ${voiceSettingsPanel === "input_device" ? "voice-menu-row-active" : ""}`}
+                            onClick={() => setVoiceSettingsPanel((value) => value === "input_device" ? null : "input_device")}
+                          >
+                            <span className="voice-menu-text">
+                              <span className="voice-menu-title">Устройство ввода</span>
+                              <span className="voice-menu-subtitle">{currentInputLabel}</span>
+                            </span>
+                            <i className="bi bi-chevron-right" aria-hidden="true" />
+                          </button>
+                          <button
+                            type="button"
+                            className={`secondary voice-menu-row ${voiceSettingsPanel === "input_profile" ? "voice-menu-row-active" : ""}`}
+                            onClick={() => setVoiceSettingsPanel((value) => value === "input_profile" ? null : "input_profile")}
+                          >
+                            <span className="voice-menu-text">
+                              <span className="voice-menu-title">Профиль ввода</span>
+                              <span className="voice-menu-subtitle">{inputProfileLabel}</span>
+                            </span>
+                            <i className="bi bi-chevron-right" aria-hidden="true" />
+                          </button>
+                        </div>
+
+                        <label className="slider-label">
+                          Громкость микрофона
+                          <input
+                            type="range"
+                            min={0}
+                            max={100}
+                            value={micVolume}
+                            onChange={(event) => setMicVolume(Number(event.target.value))}
+                          />
+                        </label>
+
+                        <div className="voice-level-bars" aria-hidden="true">
+                          {Array.from({ length: 20 }).map((_, index) => (
+                            <span key={`bar-${index}`} className="voice-level-bar" />
+                          ))}
+                        </div>
+
+                        <button
+                          type="button"
+                          className="secondary voice-footer-row"
+                          onClick={() => {
+                            setVoiceSettingsOpen(false);
+                            setAudioOutputMenuOpen(false);
+                            setVoiceSettingsPanel(null);
+                            setVoicePreferencesOpen(true);
+                          }}
+                        >
+                          <span>Настройки голоса</span>
+                          <i className="bi bi-gear" aria-hidden="true" />
+                        </button>
+
+                        {voiceSettingsPanel === "input_device" ? (
+                          <div className="floating-popup settings-popup voice-submenu-popup">
+                            <div className="device-list">
+                              {inputOptions.map((device) => (
+                                <button
+                                  key={device.id}
+                                  type="button"
+                                  className={`secondary device-item radio-item ${selectedInputId === device.id ? "device-item-active" : ""}`}
+                                  onClick={() => {
+                                    setSelectedInputId(device.id);
+                                    setVoiceSettingsPanel(null);
+                                  }}
+                                >
+                                  <span>{device.label}</span>
+                                  <i className={`bi ${selectedInputId === device.id ? "bi-record-circle-fill" : "bi-circle"}`} aria-hidden="true" />
+                                </button>
+                              ))}
+                              <button type="button" className="secondary device-item">Показать больше...</button>
+                            </div>
+                          </div>
+                        ) : null}
+
+                        {voiceSettingsPanel === "input_profile" ? (
+                          <div className="floating-popup settings-popup voice-submenu-popup">
+                            <div className="device-list">
+                              <button
+                                type="button"
+                                className={`secondary device-item radio-item ${selectedInputProfile === "noise_reduction" ? "device-item-active" : ""}`}
+                                onClick={() => {
+                                  setSelectedInputProfile("noise_reduction");
+                                  setVoiceSettingsPanel(null);
+                                }}
+                              >
+                                <span>Изоляция голоса</span>
+                                <i className={`bi ${selectedInputProfile === "noise_reduction" ? "bi-record-circle-fill" : "bi-circle"}`} aria-hidden="true" />
+                              </button>
+                              <button
+                                type="button"
+                                className={`secondary device-item radio-item ${selectedInputProfile === "studio" ? "device-item-active" : ""}`}
+                                onClick={() => {
+                                  setSelectedInputProfile("studio");
+                                  setVoiceSettingsPanel(null);
+                                }}
+                              >
+                                <span>Студия</span>
+                                <i className={`bi ${selectedInputProfile === "studio" ? "bi-record-circle-fill" : "bi-circle"}`} aria-hidden="true" />
+                              </button>
+                              <button
+                                type="button"
+                                className={`secondary device-item radio-item ${selectedInputProfile === "custom" ? "device-item-active" : ""}`}
+                                onClick={() => {
+                                  setSelectedInputProfile("custom");
+                                  setVoiceSettingsPanel(null);
+                                }}
+                              >
+                                <span>Пользовательский</span>
+                                <i className={`bi ${selectedInputProfile === "custom" ? "bi-record-circle-fill" : "bi-circle"}`} aria-hidden="true" />
+                              </button>
+                            </div>
+                          </div>
+                        ) : null}
+                      </div>
+                    ) : null}
+                  </div>
+
+                  <div className="audio-output-anchor" ref={audioOutputAnchorRef}>
+                    <div className="audio-output-group split-control-group">
+                      <button
+                        type="button"
+                        className={`secondary icon-btn split-main-btn ${audioMuted ? "icon-btn-danger" : ""}`}
                         data-tooltip={audioMuted ? "Включить звук" : "Отключить звук"}
                         onClick={() => setAudioMuted((value) => !value)}
                       >
@@ -958,9 +1111,13 @@ export function App() {
                       </button>
                       <button
                         type="button"
-                        className="secondary icon-btn tiny split-toggle"
+                        className="secondary icon-btn split-caret-btn"
                         data-tooltip="Устройство вывода"
-                        onClick={() => setAudioOutputMenuOpen((value) => !value)}
+                        onClick={() => {
+                          setVoiceSettingsOpen(false);
+                          setVoiceSettingsPanel(null);
+                          setAudioOutputMenuOpen((value) => !value);
+                        }}
                       >
                         <i className="bi bi-chevron-down" aria-hidden="true" />
                       </button>
@@ -990,44 +1147,19 @@ export function App() {
                             onChange={(event) => setOutputVolume(Number(event.target.value))}
                           />
                         </label>
-                      </div>
-                    ) : null}
-                  </div>
-
-                  <div className="voice-settings-anchor" ref={voiceSettingsAnchorRef}>
-                    <button
-                      type="button"
-                      className="secondary icon-btn"
-                      data-tooltip="Настройки голоса"
-                      onClick={() => setVoiceSettingsOpen((value) => !value)}
-                    >
-                      <i className="bi bi-gear" aria-hidden="true" />
-                    </button>
-                    {voiceSettingsOpen ? (
-                      <div className="floating-popup settings-popup voice-settings-popup">
-                        <div className="subheading">Устройство ввода</div>
-                        <div className="device-list">
-                          {(inputDevices.length > 0 ? inputDevices : [{ id: "default", label: "System default" }]).map((device) => (
-                            <button
-                              key={device.id}
-                              type="button"
-                              className={`secondary device-item ${selectedInputId === device.id ? "device-item-active" : ""}`}
-                              onClick={() => setSelectedInputId(device.id)}
-                            >
-                              {device.label}
-                            </button>
-                          ))}
-                        </div>
-                        <label className="slider-label">
-                          Громкость микрофона
-                          <input
-                            type="range"
-                            min={0}
-                            max={100}
-                            value={micVolume}
-                            onChange={(event) => setMicVolume(Number(event.target.value))}
-                          />
-                        </label>
+                        <button
+                          type="button"
+                          className="secondary voice-footer-row"
+                          onClick={() => {
+                            setAudioOutputMenuOpen(false);
+                            setVoiceSettingsOpen(false);
+                            setVoiceSettingsPanel(null);
+                            setVoicePreferencesOpen(true);
+                          }}
+                        >
+                          <span>Настройки голоса</span>
+                          <i className="bi bi-gear" aria-hidden="true" />
+                        </button>
                       </div>
                     ) : null}
                   </div>
@@ -1143,6 +1275,103 @@ export function App() {
           </section>
         </aside>
       </div>
+
+      {user && voicePreferencesOpen ? (
+        <div className="voice-preferences-overlay">
+          <section className="card voice-preferences-modal" ref={voicePreferencesRef}>
+            <div className="voice-preferences-head">
+              <div>
+                <div className="voice-preferences-kicker">Настройки пользователя</div>
+                <h2>Голос и видео</h2>
+              </div>
+              <button type="button" className="secondary icon-btn" onClick={() => setVoicePreferencesOpen(false)} aria-label="Close voice settings">
+                <i className="bi bi-x-lg" aria-hidden="true" />
+              </button>
+            </div>
+
+            <div className="voice-preferences-grid">
+              <label className="stack">
+                <span className="subheading">Микрофон</span>
+                <select value={selectedInputId} onChange={(event) => setSelectedInputId(event.target.value)}>
+                  {inputOptions.map((device) => (
+                    <option key={device.id} value={device.id}>{device.label}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="stack">
+                <span className="subheading">Динамик</span>
+                <select value={selectedOutputId} onChange={(event) => setSelectedOutputId(event.target.value)}>
+                  {(outputDevices.length > 0 ? outputDevices : [{ id: "default", label: "System default" }]).map((device) => (
+                    <option key={device.id} value={device.id}>{device.label}</option>
+                  ))}
+                </select>
+              </label>
+            </div>
+
+            <div className="voice-preferences-grid">
+              <label className="slider-label">
+                Громкость микрофона
+                <input
+                  type="range"
+                  min={0}
+                  max={100}
+                  value={micVolume}
+                  onChange={(event) => setMicVolume(Number(event.target.value))}
+                />
+              </label>
+              <label className="slider-label">
+                Громкость динамика
+                <input
+                  type="range"
+                  min={0}
+                  max={100}
+                  value={outputVolume}
+                  onChange={(event) => setOutputVolume(Number(event.target.value))}
+                />
+              </label>
+            </div>
+
+            <div className="voice-test-row">
+              <button type="button">Проверка микрофона</button>
+              <div className="voice-level-bars" aria-hidden="true">
+                {Array.from({ length: 42 }).map((_, index) => (
+                  <span key={`modal-bar-${index}`} className="voice-level-bar" />
+                ))}
+              </div>
+            </div>
+
+            <div className="voice-divider" />
+
+            <div className="stack">
+              <h3 className="subheading">Профиль ввода</h3>
+              <button
+                type="button"
+                className={`secondary device-item radio-item ${selectedInputProfile === "noise_reduction" ? "device-item-active" : ""}`}
+                onClick={() => setSelectedInputProfile("noise_reduction")}
+              >
+                <span>Изоляция голоса</span>
+                <i className={`bi ${selectedInputProfile === "noise_reduction" ? "bi-record-circle-fill" : "bi-circle"}`} aria-hidden="true" />
+              </button>
+              <button
+                type="button"
+                className={`secondary device-item radio-item ${selectedInputProfile === "studio" ? "device-item-active" : ""}`}
+                onClick={() => setSelectedInputProfile("studio")}
+              >
+                <span>Студия</span>
+                <i className={`bi ${selectedInputProfile === "studio" ? "bi-record-circle-fill" : "bi-circle"}`} aria-hidden="true" />
+              </button>
+              <button
+                type="button"
+                className={`secondary device-item radio-item ${selectedInputProfile === "custom" ? "device-item-active" : ""}`}
+                onClick={() => setSelectedInputProfile("custom")}
+              >
+                <span>Пользовательский</span>
+                <i className={`bi ${selectedInputProfile === "custom" ? "bi-record-circle-fill" : "bi-circle"}`} aria-hidden="true" />
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
     </main>
   );
 }

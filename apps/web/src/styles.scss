@@ -106,6 +106,8 @@ body {
   grid-template-columns: 320px 1fr 320px;
   gap: 10px;
   min-height: calc(100vh - 100px);
+  height: calc(100vh - 100px);
+  align-items: stretch;
 }
 
 .leftcolumn,
@@ -114,6 +116,11 @@ body {
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+.leftcolumn {
+  min-height: 0;
+  overflow: hidden;
 }
 
 .card {
@@ -127,6 +134,19 @@ body {
 .middle-card h2 {
   margin-top: 0;
   margin-bottom: 8px;
+}
+
+.rooms-card {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.rooms-scroll {
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 2px;
 }
 
 .section-heading-row {
@@ -398,11 +418,11 @@ pre {
 }
 
 .user-dock {
-  margin-top: auto;
+  margin-top: 0;
   display: grid;
   gap: 8px;
-  position: sticky;
-  bottom: 0;
+  margin-top: auto;
+  position: relative;
   z-index: 20;
 }
 
@@ -496,24 +516,89 @@ pre {
 .audio-output-group {
   display: inline-flex;
   align-items: center;
-  gap: 2px;
+  gap: 0;
 }
 
-.split-toggle {
+.split-control-group {
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.split-control-group .icon-btn {
+  border: 0;
+  border-radius: 0;
+}
+
+.split-main-btn {
+  width: 34px;
+}
+
+.split-caret-btn {
   width: 22px;
   height: 34px;
+  border-left: 1px solid #30363d !important;
+  font-size: 11px;
 }
 
 .voice-mini-popup,
 .voice-settings-popup {
   right: 0;
-  top: calc(100% + 6px);
+  top: auto;
+  bottom: calc(100% + 6px);
   z-index: 40;
   min-width: 230px;
 }
 
 .voice-settings-popup {
   min-width: 260px;
+  padding: 10px;
+}
+
+.voice-menu-items {
+  display: grid;
+  gap: 6px;
+}
+
+.voice-menu-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+  padding: 10px 10px;
+}
+
+.voice-menu-row-active {
+  background: #2b2f3a;
+  border-color: #3a3f4d;
+}
+
+.voice-menu-text {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.voice-menu-title {
+  font-weight: 600;
+}
+
+.voice-menu-subtitle {
+  color: #8b949e;
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.voice-submenu-popup {
+  left: calc(100% + 8px);
+  right: auto;
+  top: 0;
+  bottom: auto;
+  min-width: 240px;
 }
 
 .device-list {
@@ -525,6 +610,95 @@ pre {
 .device-item {
   justify-content: flex-start;
   text-align: left;
+}
+
+.radio-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.voice-level-bars {
+  margin-top: 8px;
+  display: grid;
+  grid-template-columns: repeat(20, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.voice-level-bar {
+  display: block;
+  height: 18px;
+  border-radius: 3px;
+  background: #3a3f52;
+}
+
+.voice-footer-row {
+  margin-top: 12px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  text-align: left;
+}
+
+.voice-preferences-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.voice-preferences-modal {
+  width: min(760px, 100%);
+  max-height: min(88vh, 900px);
+  overflow: auto;
+  padding: 18px;
+  display: grid;
+  gap: 16px;
+}
+
+.voice-preferences-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.voice-preferences-head h2 {
+  margin: 2px 0 0;
+}
+
+.voice-preferences-kicker {
+  font-size: 12px;
+  color: #8b949e;
+}
+
+.voice-preferences-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.voice-test-row {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 12px;
+  align-items: center;
+}
+
+.voice-test-row .voice-level-bars {
+  margin-top: 0;
+}
+
+.voice-divider {
+  height: 1px;
+  background: #30363d;
 }
 
 .device-item-active {
@@ -584,6 +758,7 @@ pre {
 @media (max-width: 1200px) {
   .workspace {
     grid-template-columns: 280px 1fr;
+    height: auto;
   }
 
   .rightcolumn {
@@ -595,9 +770,24 @@ pre {
 @media (max-width: 900px) {
   .workspace {
     grid-template-columns: 1fr;
+    height: auto;
   }
 
   .rightcolumn {
+    grid-template-columns: 1fr;
+  }
+
+  .leftcolumn {
+    overflow: visible;
+  }
+
+  .rooms-card,
+  .rooms-scroll {
+    min-height: auto;
+  }
+
+  .voice-preferences-grid,
+  .voice-test-row {
     grid-template-columns: 1fr;
   }
 }
