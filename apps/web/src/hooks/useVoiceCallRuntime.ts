@@ -266,7 +266,39 @@ export function useVoiceCallRuntime({
         }
       }
     }
+
+    if (!element.paused || audioMuted || !element.srcObject) {
+      return;
+    }
+
+    try {
+      await element.play();
+    } catch (error) {
+      pushCallLog(`audio play retry failed: ${(error as Error).message}`);
+    }
   }, [audioMuted, outputVolume, selectedOutputId, pushCallLog]);
+
+  const retryRemoteAudioPlayback = useCallback((reason: string) => {
+    if (audioMuted) {
+      return;
+    }
+
+    peersRef.current.forEach((peer, userId) => {
+      const element = peer.audioElement;
+      if (!element.srcObject || !element.paused) {
+        return;
+      }
+
+      void applyRemoteAudioOutput(element);
+      void element.play()
+        .then(() => {
+          pushCallLog(`remote audio resumed (${reason}) <- ${peer.label || userId}`);
+        })
+        .catch((error) => {
+          pushCallLog(`remote audio resume failed (${reason}, ${peer.label || userId}): ${(error as Error).message}`);
+        });
+    });
+  }, [audioMuted, applyRemoteAudioOutput, pushCallLog]);
 
   const updateCallStatus = useCallback(() => {
     const peers = Array.from(peersRef.current.values());
@@ -556,6 +588,7 @@ export function useVoiceCallRuntime({
           peer.reconnectAttempts = 0;
         }
         updateCallStatus();
+        retryRemoteAudioPlayback("rtc-connected");
       } else if (state === "failed" || state === "disconnected") {
         scheduleReconnect(targetUserId, state);
       } else if (state === "closed") {
@@ -567,9 +600,23 @@ export function useVoiceCallRuntime({
 
     connection.ontrack = (event) => {
       const [stream] = event.streams;
+      const [track] = event.track ? [event.track] : [];
       if (!stream) {
         pushCallLog(`remote track missing stream <- ${targetLabel || targetUserId}`);
         return;
+      }
+
+      if (track) {
+        track.onmute = () => {
+          pushCallLog(`remote track muted <- ${targetLabel || targetUserId}`);
+        };
+        track.onunmute = () => {
+          pushCallLog(`remote track unmuted <- ${targetLabel || targetUserId}`);
+          retryRemoteAudioPlayback("track-unmuted");
+        };
+        track.onended = () => {
+          pushCallLog(`remote track ended <- ${targetLabel || targetUserId}`);
+        };
       }
 
       pushCallLog(`remote track attached <- ${targetLabel || targetUserId}`);
@@ -656,6 +703,7 @@ export function useVoiceCallRuntime({
             targetLabel,
             message: (error as Error).message
           });
+          retryRemoteAudioPlayback("ontrack-failed");
         });
     };
 
@@ -951,6 +999,22 @@ export function useVoiceCallRuntime({
       void applyRemoteAudioOutput(peer.audioElement);
     });
   }, [applyRemoteAudioOutput]);
+
+  useEffect(() => {
+    const handleUserGesture = () => {
+      retryRemoteAudioPlayback("user-gesture");
+    };
+
+    window.addEventListener("pointerdown", handleUserGesture, { passive: true });
+    window.addEventListener("touchstart", handleUserGesture, { passive: true });
+    window.addEventListener("keydown", handleUserGesture);
+
+    return () => {
+      window.removeEventListener("pointerdown", handleUserGesture);
+      window.removeEventListener("touchstart", handleUserGesture);
+      window.removeEventListener("keydown", handleUserGesture);
+    };
+  }, [retryRemoteAudioPlayback]);
 
   useEffect(() => {
     const connections = Array.from(peersRef.current.values()).map((item) => item.connection);
