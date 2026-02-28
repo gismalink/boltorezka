@@ -5,6 +5,7 @@ import { CallSignalingController, type CallSignalEventType, type CallStatus } fr
 import { ChatController } from "./services/chatController";
 import { RealtimeClient } from "./services/realtimeClient";
 import { RoomAdminController } from "./services/roomAdminController";
+import { TooltipPortal } from "./TooltipPortal";
 import { WsMessageController } from "./services/wsMessageController";
 import { trackClientEvent } from "./telemetry";
 import type {
@@ -49,6 +50,8 @@ export function App() {
   const [newRoomCategoryId, setNewRoomCategoryId] = useState<string>("none");
   const [newCategorySlug, setNewCategorySlug] = useState("");
   const [newCategoryTitle, setNewCategoryTitle] = useState("");
+  const [categoryPopupOpen, setCategoryPopupOpen] = useState(false);
+  const [channelPopupOpen, setChannelPopupOpen] = useState(false);
   const [authMenuOpen, setAuthMenuOpen] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const realtimeClientRef = useRef<RealtimeClient | null>(null);
@@ -56,6 +59,8 @@ export function App() {
   const autoSsoAttemptedRef = useRef(false);
   const authMenuRef = useRef<HTMLDivElement | null>(null);
   const profileMenuRef = useRef<HTMLDivElement | null>(null);
+  const categoryPopupRef = useRef<HTMLDivElement | null>(null);
+  const channelPopupRef = useRef<HTMLDivElement | null>(null);
 
   const canCreateRooms = user?.role === "admin" || user?.role === "super_admin";
   const canPromote = user?.role === "super_admin";
@@ -320,7 +325,7 @@ export function App() {
   }, [wsState, loadTelemetrySummary]);
 
   useEffect(() => {
-    if (!profileMenuOpen && !authMenuOpen) {
+    if (!profileMenuOpen && !authMenuOpen && !categoryPopupOpen && !channelPopupOpen) {
       return;
     }
 
@@ -328,15 +333,20 @@ export function App() {
       const target = event.target as Node | null;
       const insideProfile = Boolean(target && profileMenuRef.current?.contains(target));
       const insideAuth = Boolean(target && authMenuRef.current?.contains(target));
-      if (!insideProfile && !insideAuth) {
+      const insideCategoryPopup = Boolean(target && categoryPopupRef.current?.contains(target));
+      const insideChannelPopup = Boolean(target && channelPopupRef.current?.contains(target));
+
+      if (!insideProfile && !insideAuth && !insideCategoryPopup && !insideChannelPopup) {
         setProfileMenuOpen(false);
         setAuthMenuOpen(false);
+        setCategoryPopupOpen(false);
+        setChannelPopupOpen(false);
       }
     };
 
     window.addEventListener("mousedown", onClickOutside);
     return () => window.removeEventListener("mousedown", onClickOutside);
-  }, [profileMenuOpen, authMenuOpen]);
+  }, [profileMenuOpen, authMenuOpen, categoryPopupOpen, channelPopupOpen]);
 
   const beginSso = (provider: "google" | "yandex") => {
     setAuthMenuOpen(false);
@@ -361,6 +371,7 @@ export function App() {
     if (created) {
       setNewRoomSlug("");
       setNewRoomTitle("");
+      setChannelPopupOpen(false);
     }
   };
 
@@ -372,7 +383,13 @@ export function App() {
     if (created) {
       setNewCategorySlug("");
       setNewCategoryTitle("");
+      setCategoryPopupOpen(false);
     }
+  };
+
+  const openCreateChannelPopup = (categoryId: string | null = null) => {
+    setNewRoomCategoryId(categoryId || "none");
+    setChannelPopupOpen(true);
   };
 
   const sendMessage = (event: FormEvent) => {
@@ -466,6 +483,7 @@ export function App() {
           )}
         </div>
       </header>
+      <TooltipPortal />
 
       <div className="workspace">
         <aside className="leftcolumn">
@@ -478,42 +496,96 @@ export function App() {
           </section>
 
           <section className="card compact">
-            <h2>Rooms</h2>
-            {canCreateRooms ? (
-              <div className="stack">
-                <form className="stack" onSubmit={createCategory}>
-                  <h3 className="subheading">Create category</h3>
-                  <input value={newCategorySlug} onChange={(e) => setNewCategorySlug(e.target.value)} placeholder="category slug" />
-                  <input value={newCategoryTitle} onChange={(e) => setNewCategoryTitle(e.target.value)} placeholder="category title" />
-                  <button type="submit">+ Category</button>
-                </form>
-
-                <form className="stack" onSubmit={createRoom}>
-                  <h3 className="subheading">Create channel</h3>
-                  <input value={newRoomSlug} onChange={(e) => setNewRoomSlug(e.target.value)} placeholder="channel slug" />
-                  <input value={newRoomTitle} onChange={(e) => setNewRoomTitle(e.target.value)} placeholder="channel title" />
-                  <div className="row">
-                    <select value={newRoomKind} onChange={(e) => setNewRoomKind(e.target.value as RoomKind)}>
-                      <option value="text">text</option>
-                      <option value="voice">voice</option>
-                    </select>
-                    <select value={newRoomCategoryId} onChange={(e) => setNewRoomCategoryId(e.target.value)}>
-                      <option value="none">No category</option>
-                      {(roomsTree?.categories || []).map((category) => (
-                        <option key={category.id} value={category.id}>{category.title}</option>
-                      ))}
-                    </select>
+            <div className="section-heading-row">
+              <h2>Rooms</h2>
+              {canCreateRooms ? (
+                <div className="row-actions">
+                  <div className="popup-anchor" ref={categoryPopupRef}>
+                    <button
+                      type="button"
+                      className="secondary icon-btn"
+                      aria-label="Create category"
+                      data-tooltip="Create category"
+                      onClick={() => {
+                        setChannelPopupOpen(false);
+                        setCategoryPopupOpen((value) => !value);
+                      }}
+                    >
+                      🗂️
+                    </button>
+                    {categoryPopupOpen ? (
+                      <div className="floating-popup settings-popup">
+                        <form className="stack" onSubmit={createCategory}>
+                          <h3 className="subheading">Create category</h3>
+                          <input value={newCategorySlug} onChange={(e) => setNewCategorySlug(e.target.value)} placeholder="category slug" />
+                          <input value={newCategoryTitle} onChange={(e) => setNewCategoryTitle(e.target.value)} placeholder="category title" />
+                          <button type="submit" className="icon-action">✅ Save</button>
+                        </form>
+                      </div>
+                    ) : null}
                   </div>
-                  <button type="submit">+ Channel</button>
-                </form>
-              </div>
+
+                  <div className="popup-anchor" ref={channelPopupRef}>
+                    <button
+                      type="button"
+                      className="secondary icon-btn"
+                      aria-label="Create channel"
+                      data-tooltip="Create channel"
+                      onClick={() => {
+                        setCategoryPopupOpen(false);
+                        setChannelPopupOpen((value) => !value);
+                      }}
+                    >
+                      ➕
+                    </button>
+                    {channelPopupOpen ? (
+                      <div className="floating-popup settings-popup">
+                        <form className="stack" onSubmit={createRoom}>
+                          <h3 className="subheading">Create channel</h3>
+                          <input value={newRoomSlug} onChange={(e) => setNewRoomSlug(e.target.value)} placeholder="channel slug" />
+                          <input value={newRoomTitle} onChange={(e) => setNewRoomTitle(e.target.value)} placeholder="channel title" />
+                          <div className="row">
+                            <select value={newRoomKind} onChange={(e) => setNewRoomKind(e.target.value as RoomKind)}>
+                              <option value="text">text</option>
+                              <option value="voice">voice</option>
+                            </select>
+                            <select value={newRoomCategoryId} onChange={(e) => setNewRoomCategoryId(e.target.value)}>
+                              <option value="none">No category</option>
+                              {(roomsTree?.categories || []).map((category) => (
+                                <option key={category.id} value={category.id}>{category.title}</option>
+                              ))}
+                            </select>
+                          </div>
+                          <button type="submit" className="icon-action">✅ Save</button>
+                        </form>
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+            {canCreateRooms ? (
+              <p className="muted compact-hint">Use icon buttons to create categories/channels.</p>
             ) : (
               <p className="muted">Only admin/super_admin can create rooms.</p>
             )}
 
             {(roomsTree?.categories || []).map((category) => (
               <div key={category.id} className="category-block">
-                <div className="category-title">{category.title}</div>
+                <div className="category-title-row">
+                  <div className="category-title">{category.title}</div>
+                  {canCreateRooms ? (
+                    <button
+                      type="button"
+                      className="secondary icon-btn tiny"
+                      aria-label="Create channel in category"
+                      data-tooltip="Create channel in category"
+                      onClick={() => openCreateChannelPopup(category.id)}
+                    >
+                      ➕
+                    </button>
+                  ) : null}
+                </div>
                 <ul className="rooms-list">
                   {category.channels.map((room) => (
                     <li key={room.id}>

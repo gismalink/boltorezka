@@ -40,11 +40,9 @@ body {
   font-weight: 600;
 }
 
-.profile-menu {
-  position: relative;
-}
-
-.auth-menu {
+.profile-menu,
+.auth-menu,
+.popup-anchor {
   position: relative;
 }
 
@@ -53,7 +51,8 @@ body {
 }
 
 .profile-popup,
-.auth-popup {
+.auth-popup,
+.floating-popup {
   position: absolute;
   top: calc(100% + 6px);
   right: 0;
@@ -68,6 +67,10 @@ body {
   display: grid;
   gap: 6px;
   min-width: 180px;
+}
+
+.settings-popup {
+  min-width: 260px;
 }
 
 .provider-btn {
@@ -126,6 +129,19 @@ body {
   margin-bottom: 8px;
 }
 
+.section-heading-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.row-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .row {
   display: flex;
   gap: 8px;
@@ -169,6 +185,26 @@ button.secondary {
   background: #161b22;
 }
 
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  font-size: 15px;
+}
+
+.icon-btn.tiny {
+  width: 24px;
+  height: 24px;
+  font-size: 12px;
+}
+
+.icon-action {
+  width: 100%;
+}
+
 pre {
   white-space: pre-wrap;
   word-break: break-word;
@@ -193,6 +229,10 @@ pre {
   color: #8b949e;
 }
 
+.compact-hint {
+  margin: 6px 0 0;
+}
+
 .rooms-list,
 .admin-list {
   list-style: none;
@@ -212,6 +252,13 @@ pre {
 
 .category-block {
   margin-top: 10px;
+}
+
+.category-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
 }
 
 .category-title {
@@ -286,6 +333,38 @@ pre {
 
 .call-log {
   max-height: 180px;
+}
+
+.tooltip-portal {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+}
+
+.tooltip-bubble {
+  position: fixed;
+  transform: translate(-50%, 4px);
+  background: #111a23;
+  color: #e6edf3;
+  border-radius: 8px;
+  border: 1px solid #30363d;
+  padding: 0.24rem 0.38rem;
+  font-size: 0.68rem;
+  line-height: 1.2;
+  max-width: min(260px, 80vw);
+  white-space: normal;
+  text-align: center;
+  overflow-wrap: break-word;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.tooltip-bubble[data-visible='true'] {
+  opacity: 1;
+  visibility: visible;
+  transform: translate(-50%, 0);
 }
 
 @media (max-width: 1200px) {
