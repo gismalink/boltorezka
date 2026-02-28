@@ -205,6 +205,28 @@
   max-height: 180px;
 }
 
+.clear-action-btn {
+  margin-top: var(--space-sm);
+  width: 100%;
+  justify-content: center;
+}
+
+.clear-confirm-box {
+  margin-top: var(--space-sm);
+  padding: var(--space-sm);
+  border: var(--border-strong) solid var(--pixel-accent);
+  background: #1b243f;
+  box-shadow: inset 0 0 0 1px var(--pixel-hard-shadow);
+  display: grid;
+  gap: var(--space-sm);
+}
+
+.clear-confirm-btn {
+  border-color: var(--pixel-accent);
+  background: #24325a;
+  color: #e8f3ff;
+}
+
 .delete-action-btn {
   margin-top: var(--space-sm);
   width: 100%;

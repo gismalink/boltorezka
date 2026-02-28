@@ -660,6 +660,52 @@ export async function roomsRoutes(fastify: FastifyInstance) {
     }
   );
 
+  fastify.delete<{
+    Params: { roomId: string };
+  }>(
+    "/v1/rooms/:roomId/messages",
+    {
+      preHandler: [requireAuth, loadCurrentUser, requireRole(["admin", "super_admin"])]
+    },
+    async (request, reply) => {
+      const roomId = String(request.params.roomId || "").trim();
+      if (!roomId) {
+        return reply.code(400).send({
+          error: "ValidationError",
+          message: "roomId is required"
+        });
+      }
+
+      const roomExists = await db.query<{ exists: boolean }>(
+        "SELECT EXISTS(SELECT 1 FROM rooms WHERE id = $1) AS exists",
+        [roomId]
+      );
+
+      if (!roomExists.rows[0]?.exists) {
+        return reply.code(404).send({
+          error: "RoomNotFound",
+          message: "Room does not exist"
+        });
+      }
+
+      const deleted = await db.query<{ deleted_count: number }>(
+        `WITH deleted AS (
+           DELETE FROM messages
+           WHERE room_id = $1
+           RETURNING 1
+         )
+         SELECT COUNT(*)::int AS deleted_count FROM deleted`,
+        [roomId]
+      );
+
+      return {
+        ok: true,
+        roomId,
+        deletedCount: deleted.rows[0]?.deleted_count || 0
+      };
+    }
+  );
+
   fastify.get<{
     Params: { slug: string };
     Querystring: { limit?: string | number; beforeCreatedAt?: string; beforeId?: string };

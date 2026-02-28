@@ -3,6 +3,25 @@
 Этот документ хранит зафиксированные изменения, выполненные шаги и операционные evidence.
 План и open items находятся в `docs/ROADMAP.md`.
 
+## 2026-02-28 — Admin action: clear chat messages in any room
+
+### Delivered
+
+- Добавлено админ-право очистки содержимого любого чата:
+  - `DELETE /v1/rooms/:roomId/messages` (только `admin` / `super_admin`).
+- В popup настроек канала добавлена кнопка `Clear chat` с inline-подтверждением (в том же popup).
+- Для текущего открытого чата после успешной очистки UI сразу очищает список сообщений и сбрасывает пагинацию.
+
+### Validation
+
+- `npm run check:api-types` — PASS.
+- `npm --prefix apps/web run build` — PASS.
+
+### Operational evidence (test)
+
+- Deploy target: `test`, branch `feature/web-header-profile-menu`.
+- Smoke: `smoke:sso` / `smoke:realtime` — PASS (после деплоя изменений).
+
 ## 2026-02-28 — Category delete safeguard + room people list + sidebar hover polish
 
 ### Delivered

@@ -157,6 +157,17 @@ export class RoomAdminController {
     }
   }
 
+  async clearRoomMessages(token: string, roomId: string) {
+    try {
+      const result = await api.clearRoomMessages(token, roomId);
+      this.options.pushLog(`channel chat cleared (${result.deletedCount})`);
+      return true;
+    } catch (error) {
+      this.options.pushLog(`clear channel chat failed: ${(error as Error).message}`);
+      return false;
+    }
+  }
+
   joinRoom(slug: string) {
     this.options.setRoomSlug(slug);
     this.options.setMessages(() => []);

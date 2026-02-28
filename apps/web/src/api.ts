@@ -82,6 +82,10 @@ export const api = {
     fetchJson<{ ok: true; roomId: string }>(`/v1/rooms/${encodeURIComponent(roomId)}`, token, {
       method: "DELETE"
     }),
+  clearRoomMessages: (token: string, roomId: string) =>
+    fetchJson<{ ok: true; roomId: string; deletedCount: number }>(`/v1/rooms/${encodeURIComponent(roomId)}/messages`, token, {
+      method: "DELETE"
+    }),
   roomMessages: (
     token: string,
     slug: string,

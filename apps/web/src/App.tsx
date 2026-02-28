@@ -613,6 +613,23 @@ export function App() {
     setChannelSettingsPopupOpenId(null);
   };
 
+  const clearChannelMessages = async (room: Room) => {
+    if (!token || !channelSettingsPopupOpenId) {
+      return;
+    }
+
+    const cleared = await roomAdminController.clearRoomMessages(token, channelSettingsPopupOpenId);
+    if (!cleared) {
+      return;
+    }
+
+    if (room.slug === roomSlug) {
+      setMessages([]);
+      setMessagesHasMore(false);
+      setMessagesNextCursor(null);
+    }
+  };
+
   const sendMessage = (event: FormEvent) => {
     event.preventDefault();
 
@@ -788,6 +805,7 @@ export function App() {
             onDeleteCategory={() => void deleteCategory()}
             onSaveChannelSettings={saveChannelSettings}
             onMoveChannel={(direction) => void moveChannel(direction)}
+            onClearChannelMessages={(room) => void clearChannelMessages(room)}
             onDeleteChannel={(room) => void deleteChannel(room)}
             onJoinRoom={joinRoom}
           />

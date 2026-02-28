@@ -52,6 +52,7 @@ export function RoomsPanel({
   onDeleteCategory,
   onSaveChannelSettings,
   onMoveChannel,
+  onClearChannelMessages,
   onDeleteChannel,
   onJoinRoom
 }: RoomsPanelProps) {
@@ -59,12 +60,19 @@ export function RoomsPanel({
   const channelSettingsAnchorRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const [confirmDeleteCategoryId, setConfirmDeleteCategoryId] = useState<string | null>(null);
   const [confirmDeleteChannelId, setConfirmDeleteChannelId] = useState<string | null>(null);
+  const [confirmClearChannelId, setConfirmClearChannelId] = useState<string | null>(null);
 
   useEffect(() => {
     if (channelSettingsPopupOpenId !== confirmDeleteChannelId) {
       setConfirmDeleteChannelId(null);
     }
   }, [channelSettingsPopupOpenId, confirmDeleteChannelId]);
+
+  useEffect(() => {
+    if (channelSettingsPopupOpenId !== confirmClearChannelId) {
+      setConfirmClearChannelId(null);
+    }
+  }, [channelSettingsPopupOpenId, confirmClearChannelId]);
 
   useEffect(() => {
     if (categorySettingsPopupOpenId !== confirmDeleteCategoryId) {
@@ -134,6 +142,33 @@ export function RoomsPanel({
                   </button>
                 </div>
                 <button type="submit" className="icon-action"><i className="bi bi-check2" aria-hidden="true" /> Save</button>
+                <button
+                  type="button"
+                  className="secondary clear-action-btn"
+                  onClick={() => setConfirmClearChannelId((current) => (current === room.id ? null : room.id))}
+                >
+                  <i className="bi bi-eraser" aria-hidden="true" /> Clear chat
+                </button>
+                {confirmClearChannelId === room.id ? (
+                  <div className="clear-confirm-box">
+                    <p className="muted delete-confirm-text">Clear all messages in this chat?</p>
+                    <div className="row delete-confirm-actions">
+                      <button type="button" className="secondary" onClick={() => setConfirmClearChannelId(null)}>
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        className="clear-confirm-btn"
+                        onClick={() => {
+                          setConfirmClearChannelId(null);
+                          onClearChannelMessages(room);
+                        }}
+                      >
+                        Clear
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
                 <button
                   type="button"
                   className="secondary delete-action-btn"
