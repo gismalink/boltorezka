@@ -434,3 +434,4 @@
   - `smoke:sso` — PASS,
   - `smoke:realtime` — PASS,
   - `reconnectOk=true`.
+- Refinement pass: `2305326` (`feature/web-header-profile-menu`) + повторный `deploy:test:smoke` — PASS.
