@@ -26,6 +26,15 @@
 - `npm run web:build` — PASS.
 - `npm run check` — PASS.
 
+### Operational evidence (test)
+
+- Deploy target: `test`, branch `feature/web-header-profile-menu`, SHA `c7bb6c8`.
+- Command: `ssh mac-mini 'cd ~/srv/boltorezka && TEST_REF=origin/feature/web-header-profile-menu npm run deploy:test:smoke'`.
+- Smoke result:
+  - `smoke:sso` — PASS,
+  - `smoke:realtime` — PASS,
+  - `reconnectOk=true`, `reconnectSkipped=false`.
+
 ## 2026-02-28 — Realtime smoke hardening: reconnect + idempotency
 
 ### Delivered
