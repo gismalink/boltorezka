@@ -21,6 +21,9 @@ async function fetchJson(path, options = {}) {
 }
 
 (async () => {
+  const protectedChecks = Boolean(token);
+  let hierarchyChecks = false;
+
   const { response: healthResponse } = await fetchJson('/health');
   if (!healthResponse.ok) {
     throw new Error(`[smoke] /health failed: ${healthResponse.status}`);
@@ -154,6 +157,8 @@ async function fetchJson(path, options = {}) {
           }
         }
       }
+
+      hierarchyChecks = true;
     }
 
     const { response: historyResponse, payload: historyPayload } = await fetchJson('/v1/rooms/general/messages?limit=10', {
@@ -188,7 +193,9 @@ async function fetchJson(path, options = {}) {
     console.log('[smoke] SMOKE_BEARER_TOKEN is not set -> protected endpoints skipped');
   }
 
-  console.log(`[smoke] api ok (${baseUrl})`);
+  console.log(
+    `[smoke] api ok (${baseUrl}) protectedChecks=${protectedChecks} hierarchyChecks=${hierarchyChecks}`
+  );
 })().catch((error) => {
   console.error(error instanceof Error ? error.message : String(error));
   process.exit(1);
