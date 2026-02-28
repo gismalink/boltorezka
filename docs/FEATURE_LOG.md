@@ -3,6 +3,23 @@
 Этот документ хранит зафиксированные изменения, выполненные шаги и операционные evidence.
 План и open items находятся в `docs/ROADMAP.md`.
 
+## 2026-02-28 — Remove non-admin create-rooms hint text
+
+### Delivered
+
+- Removed the non-admin helper text under Rooms header (`Only admin/super_admin can create rooms.`).
+- Kept admin-only compact hint unchanged.
+
+### Validation
+
+- `npm run check:api-types` — PASS.
+- `npm --prefix apps/web run build` — PASS.
+
+### Operational evidence (test)
+
+- Deploy target: `test`, branch `feature/web-header-profile-menu`.
+- Smoke: `smoke:sso` / `smoke:realtime` — PASS (after deployment).
+
 ## 2026-02-28 — Channel members in all channels + delete flow fix
 
 ### Delivered

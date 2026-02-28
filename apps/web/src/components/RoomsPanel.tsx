@@ -298,9 +298,7 @@ export function RoomsPanel({
       </div>
       {canCreateRooms ? (
         <p className="muted compact-hint">Use icon buttons to create categories/channels.</p>
-      ) : (
-        <p className="muted">Only admin/super_admin can create rooms.</p>
-      )}
+      ) : null}
 
       <div className="rooms-scroll">
         {(roomsTree?.categories || []).map((category) => (
