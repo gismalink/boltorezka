@@ -3,6 +3,33 @@
 Этот документ хранит зафиксированные изменения, выполненные шаги и операционные evidence.
 План и open items находятся в `docs/ROADMAP.md`.
 
+## 2026-02-28 — User panel voice UX: output device dropdown + voice settings popup
+
+### Delivered
+
+- В user dock добавлен popup выбора output device (headset control).
+- Добавлен voice settings popup:
+  - input/output device selectors,
+  - input sensitivity slider,
+  - output volume slider,
+  - persisted local values для volume/sensitivity.
+- Добавлено закрытие popup-элементов по click-outside для более предсказуемого UX.
+
+### Validation
+
+- `npm run web:build` — PASS.
+- `npm run check:api-types` — PASS.
+- `npm run check` — PASS.
+
+### Operational evidence (test)
+
+- Deploy target: `test`, branch `feature/web-header-profile-menu`, SHA `a8f4ce4`.
+- Command: `ssh mac-mini 'cd ~/srv/boltorezka && TEST_REF=origin/feature/web-header-profile-menu npm run deploy:test:smoke'`.
+- Smoke result:
+  - `smoke:sso` — PASS,
+  - `smoke:realtime` — PASS,
+  - `reconnectOk=true`, `reconnectSkipped=false`.
+
 ## 2026-02-28 — User panel revisit: bottom user dock + RTC connection card
 
 ### Delivered
