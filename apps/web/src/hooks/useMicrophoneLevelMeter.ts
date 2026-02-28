@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 type UseMicrophoneLevelMeterArgs = {
   running: boolean;
@@ -9,6 +9,7 @@ type UseMicrophoneLevelMeterArgs = {
 };
 
 const LEVEL_MULTIPLIER = 3.2;
+const ERROR_TOAST_THROTTLE_MS = 12000;
 
 export function useMicrophoneLevelMeter({
   running,
@@ -17,6 +18,21 @@ export function useMicrophoneLevelMeter({
   pushToast,
   setLevel
 }: UseMicrophoneLevelMeterArgs) {
+  const lastToastRef = useRef<{ key: string; at: number }>({ key: "", at: 0 });
+
+  const pushToastThrottled = (key: string, message: string) => {
+    const now = Date.now();
+    const isSameError = lastToastRef.current.key === key;
+    const isInThrottleWindow = now - lastToastRef.current.at < ERROR_TOAST_THROTTLE_MS;
+
+    if (isSameError && isInThrottleWindow) {
+      return;
+    }
+
+    lastToastRef.current = { key, at: now };
+    pushToast(message);
+  };
+
   useEffect(() => {
     if (!running) {
       setLevel(0);
@@ -25,7 +41,7 @@ export function useMicrophoneLevelMeter({
 
     if (!navigator.mediaDevices?.getUserMedia) {
       setLevel(0);
-      pushToast(t("settings.browserUnsupported"));
+      pushToastThrottled("browser-unsupported", t("settings.browserUnsupported"));
       return;
     }
 
@@ -123,9 +139,15 @@ export function useMicrophoneLevelMeter({
 
         const errorName = (error as { name?: string; message?: string })?.name || (error as { message?: string })?.message || "";
         const denied = errorName === "NotAllowedError" || errorName === "SecurityError";
+        const transient = errorName === "NotReadableError" || errorName === "AbortError";
 
         setLevel(0);
-        pushToast(denied ? t("settings.mediaDenied") : t("settings.devicesLoadFailed"));
+        if (!transient) {
+          pushToastThrottled(
+            denied ? "media-denied" : "devices-load-failed",
+            denied ? t("settings.mediaDenied") : t("settings.devicesLoadFailed")
+          );
+        }
       }
     };
 
