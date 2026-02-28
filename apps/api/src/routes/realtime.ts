@@ -95,6 +95,7 @@ function safeJsonSize(value: unknown): number {
 export async function realtimeRoutes(fastify: FastifyInstance) {
   const socketsByUserId = new Map<string, Set<WebSocket>>();
   const socketsByRoomId = new Map<string, Set<WebSocket>>();
+  const activeSocketByEmail = new Map<string, WebSocket>();
   const socketState = new WeakMap<WebSocket, SocketState>();
   const EMAIL_SESSION_TTL_SEC = 120;
   const processInstanceId = randomUUID();
@@ -229,27 +230,10 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
 
     const key = sessionLockKey(normalizedEmail);
     const lockOwner = `${processInstanceId}:${sessionId}`;
-    const acquired = await fastify.redis.set(key, lockOwner, {
-      EX: EMAIL_SESSION_TTL_SEC,
-      NX: true
+    await fastify.redis.set(key, lockOwner, {
+      EX: EMAIL_SESSION_TTL_SEC
     });
-
-    if (acquired === "OK") {
-      return true;
-    }
-
-    const current = await fastify.redis.get(key);
-    if (!current) {
-      return false;
-    }
-
-    const [ownerInstanceId] = current.split(":");
-    if (ownerInstanceId && ownerInstanceId !== processInstanceId) {
-      await fastify.redis.set(key, lockOwner, { EX: EMAIL_SESSION_TTL_SEC });
-      return true;
-    }
-
-    return false;
+    return true;
   };
 
   const refreshEmailSession = async (email: string, sessionId: string) => {
@@ -496,12 +480,14 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
         const sessionId = randomUUID();
 
         if (userEmail) {
-          const acquired = await tryAcquireEmailSession(userEmail, sessionId);
-          if (!acquired) {
-            sendJson(connection, buildErrorEnvelope("SingleSessionActive", "This account is already active in another window or app"));
-            connection.close(4009, "Single session limit");
-            return;
+          const previousSocket = activeSocketByEmail.get(userEmail);
+          if (previousSocket && previousSocket !== connection && previousSocket.readyState === previousSocket.OPEN) {
+            sendJson(previousSocket, buildErrorEnvelope("SingleSessionReplaced", "Session moved to another window or app"));
+            previousSocket.close(4010, "Session replaced");
           }
+
+          await tryAcquireEmailSession(userEmail, sessionId);
+          activeSocketByEmail.set(userEmail, connection);
         }
 
         socketState.set(connection, {
@@ -868,6 +854,10 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
           }
 
           if (state.email) {
+            const activeSocket = activeSocketByEmail.get(state.email);
+            if (activeSocket === connection) {
+              activeSocketByEmail.delete(state.email);
+            }
             await releaseEmailSession(state.email, state.sessionId);
           }
 
