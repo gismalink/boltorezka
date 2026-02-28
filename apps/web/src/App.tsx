@@ -66,6 +66,14 @@ export function App() {
   const [editingRoomCategoryId, setEditingRoomCategoryId] = useState<string>("none");
   const [micMuted, setMicMuted] = useState(false);
   const [audioMuted, setAudioMuted] = useState(false);
+  const [audioOutputMenuOpen, setAudioOutputMenuOpen] = useState(false);
+  const [voiceSettingsOpen, setVoiceSettingsOpen] = useState(false);
+  const [inputDevices, setInputDevices] = useState<Array<{ id: string; label: string }>>([]);
+  const [outputDevices, setOutputDevices] = useState<Array<{ id: string; label: string }>>([]);
+  const [selectedInputId, setSelectedInputId] = useState<string>("default");
+  const [selectedOutputId, setSelectedOutputId] = useState<string>("default");
+  const [micVolume, setMicVolume] = useState<number>(() => Number(localStorage.getItem("boltorezka_mic_volume") || 75));
+  const [outputVolume, setOutputVolume] = useState<number>(() => Number(localStorage.getItem("boltorezka_output_volume") || 70));
   const [authMenuOpen, setAuthMenuOpen] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const realtimeClientRef = useRef<RealtimeClient | null>(null);
@@ -75,6 +83,8 @@ export function App() {
   const profileMenuRef = useRef<HTMLDivElement | null>(null);
   const categoryPopupRef = useRef<HTMLDivElement | null>(null);
   const channelPopupRef = useRef<HTMLDivElement | null>(null);
+  const audioOutputAnchorRef = useRef<HTMLDivElement | null>(null);
+  const voiceSettingsAnchorRef = useRef<HTMLDivElement | null>(null);
 
   const canCreateRooms = user?.role === "admin" || user?.role === "super_admin";
   const canPromote = user?.role === "super_admin";
@@ -339,7 +349,53 @@ export function App() {
   }, [wsState, loadTelemetrySummary]);
 
   useEffect(() => {
-    if (!profileMenuOpen && !authMenuOpen && !categoryPopupOpen && !channelPopupOpen && !channelSettingsPopupOpenId && !categorySettingsPopupOpenId) {
+    localStorage.setItem("boltorezka_mic_volume", String(micVolume));
+  }, [micVolume]);
+
+  useEffect(() => {
+    localStorage.setItem("boltorezka_output_volume", String(outputVolume));
+  }, [outputVolume]);
+
+  useEffect(() => {
+    const loadDevices = async () => {
+      if (!navigator.mediaDevices?.enumerateDevices) {
+        return;
+      }
+
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const inputs = devices
+          .filter((item) => item.kind === "audioinput")
+          .map((item, index) => ({
+            id: item.deviceId || `input-${index}`,
+            label: item.label || `Microphone ${index + 1}`
+          }));
+        const outputs = devices
+          .filter((item) => item.kind === "audiooutput")
+          .map((item, index) => ({
+            id: item.deviceId || `output-${index}`,
+            label: item.label || `Output ${index + 1}`
+          }));
+
+        setInputDevices(inputs);
+        setOutputDevices(outputs);
+
+        if (inputs.length > 0 && !inputs.some((item) => item.id === selectedInputId)) {
+          setSelectedInputId(inputs[0].id);
+        }
+        if (outputs.length > 0 && !outputs.some((item) => item.id === selectedOutputId)) {
+          setSelectedOutputId(outputs[0].id);
+        }
+      } catch {
+        return;
+      }
+    };
+
+    void loadDevices();
+  }, [selectedInputId, selectedOutputId]);
+
+  useEffect(() => {
+    if (!profileMenuOpen && !authMenuOpen && !categoryPopupOpen && !channelPopupOpen && !channelSettingsPopupOpenId && !categorySettingsPopupOpenId && !audioOutputMenuOpen && !voiceSettingsOpen) {
       return;
     }
 
@@ -351,20 +407,24 @@ export function App() {
       const insideChannelPopup = Boolean(target && channelPopupRef.current?.contains(target));
       const insideChannelSettings = Boolean(target && target instanceof HTMLElement && target.closest(".channel-settings-anchor"));
       const insideCategorySettings = Boolean(target && target instanceof HTMLElement && target.closest(".category-settings-anchor"));
+      const insideOutputSettings = Boolean(target && audioOutputAnchorRef.current?.contains(target));
+      const insideVoiceSettings = Boolean(target && voiceSettingsAnchorRef.current?.contains(target));
 
-      if (!insideProfile && !insideAuth && !insideCategoryPopup && !insideChannelPopup && !insideChannelSettings && !insideCategorySettings) {
+      if (!insideProfile && !insideAuth && !insideCategoryPopup && !insideChannelPopup && !insideChannelSettings && !insideCategorySettings && !insideOutputSettings && !insideVoiceSettings) {
         setProfileMenuOpen(false);
         setAuthMenuOpen(false);
         setCategoryPopupOpen(false);
         setChannelPopupOpen(false);
         setChannelSettingsPopupOpenId(null);
         setCategorySettingsPopupOpenId(null);
+        setAudioOutputMenuOpen(false);
+        setVoiceSettingsOpen(false);
       }
     };
 
     window.addEventListener("mousedown", onClickOutside);
     return () => window.removeEventListener("mousedown", onClickOutside);
-  }, [profileMenuOpen, authMenuOpen, categoryPopupOpen, channelPopupOpen, channelSettingsPopupOpenId, categorySettingsPopupOpenId]);
+  }, [profileMenuOpen, authMenuOpen, categoryPopupOpen, channelPopupOpen, channelSettingsPopupOpenId, categorySettingsPopupOpenId, audioOutputMenuOpen, voiceSettingsOpen]);
 
   const beginSso = (provider: "google" | "yandex") => {
     setAuthMenuOpen(false);
@@ -886,17 +946,91 @@ export function App() {
                   >
                     <i className={`bi ${micMuted ? "bi-mic-mute-fill" : "bi-mic-fill"}`} aria-hidden="true" />
                   </button>
-                  <button
-                    type="button"
-                    className={`secondary icon-btn ${audioMuted ? "icon-btn-danger" : ""}`}
-                    data-tooltip={audioMuted ? "Включить звук" : "Отключить звук"}
-                    onClick={() => setAudioMuted((value) => !value)}
-                  >
-                    <i className={`bi ${audioMuted ? "bi-volume-mute-fill" : "bi-headphones"}`} aria-hidden="true" />
-                  </button>
-                  <button type="button" className="secondary icon-btn" data-tooltip="Настройки пользователя">
-                    <i className="bi bi-gear" aria-hidden="true" />
-                  </button>
+                  <div className="audio-output-anchor" ref={audioOutputAnchorRef}>
+                    <div className="audio-output-group">
+                      <button
+                        type="button"
+                        className={`secondary icon-btn ${audioMuted ? "icon-btn-danger" : ""}`}
+                        data-tooltip={audioMuted ? "Включить звук" : "Отключить звук"}
+                        onClick={() => setAudioMuted((value) => !value)}
+                      >
+                        <i className={`bi ${audioMuted ? "bi-volume-mute-fill" : "bi-headphones"}`} aria-hidden="true" />
+                      </button>
+                      <button
+                        type="button"
+                        className="secondary icon-btn tiny split-toggle"
+                        data-tooltip="Устройство вывода"
+                        onClick={() => setAudioOutputMenuOpen((value) => !value)}
+                      >
+                        <i className="bi bi-chevron-down" aria-hidden="true" />
+                      </button>
+                    </div>
+                    {audioOutputMenuOpen ? (
+                      <div className="floating-popup settings-popup voice-mini-popup">
+                        <div className="subheading">Устройство вывода</div>
+                        <div className="device-list">
+                          {(outputDevices.length > 0 ? outputDevices : [{ id: "default", label: "System default" }]).map((device) => (
+                            <button
+                              key={device.id}
+                              type="button"
+                              className={`secondary device-item ${selectedOutputId === device.id ? "device-item-active" : ""}`}
+                              onClick={() => setSelectedOutputId(device.id)}
+                            >
+                              {device.label}
+                            </button>
+                          ))}
+                        </div>
+                        <label className="slider-label">
+                          Громкость звука
+                          <input
+                            type="range"
+                            min={0}
+                            max={100}
+                            value={outputVolume}
+                            onChange={(event) => setOutputVolume(Number(event.target.value))}
+                          />
+                        </label>
+                      </div>
+                    ) : null}
+                  </div>
+
+                  <div className="voice-settings-anchor" ref={voiceSettingsAnchorRef}>
+                    <button
+                      type="button"
+                      className="secondary icon-btn"
+                      data-tooltip="Настройки голоса"
+                      onClick={() => setVoiceSettingsOpen((value) => !value)}
+                    >
+                      <i className="bi bi-gear" aria-hidden="true" />
+                    </button>
+                    {voiceSettingsOpen ? (
+                      <div className="floating-popup settings-popup voice-settings-popup">
+                        <div className="subheading">Устройство ввода</div>
+                        <div className="device-list">
+                          {(inputDevices.length > 0 ? inputDevices : [{ id: "default", label: "System default" }]).map((device) => (
+                            <button
+                              key={device.id}
+                              type="button"
+                              className={`secondary device-item ${selectedInputId === device.id ? "device-item-active" : ""}`}
+                              onClick={() => setSelectedInputId(device.id)}
+                            >
+                              {device.label}
+                            </button>
+                          ))}
+                        </div>
+                        <label className="slider-label">
+                          Громкость микрофона
+                          <input
+                            type="range"
+                            min={0}
+                            max={100}
+                            value={micVolume}
+                            onChange={(event) => setMicVolume(Number(event.target.value))}
+                          />
+                        </label>
+                      </div>
+                    ) : null}
+                  </div>
                 </div>
               </section>
             </div>
