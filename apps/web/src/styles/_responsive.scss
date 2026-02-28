@@ -3,21 +3,12 @@
     grid-template-columns: 280px 1fr;
     height: 100%;
   }
-
-  .rightcolumn {
-    grid-column: 1 / -1;
-    grid-template-columns: 1fr 1fr;
-  }
 }
 
 @media (max-width: 900px) {
   .workspace {
     grid-template-columns: 1fr;
     height: 100%;
-  }
-
-  .rightcolumn {
-    grid-template-columns: 1fr;
   }
 
   .leftcolumn {

@@ -15,6 +15,12 @@ export const LANGUAGE_OPTIONS: Array<{ value: Lang; label: string }> = [
 const TEXT_BASE: Record<Lang, Record<string, string>> = {
   ru: {
     "app.title": "Boltorezka",
+    "server.menuAria": "Меню сервера",
+    "server.title": "Профиль сервера",
+    "server.tabUsers": "Управление пользователями",
+    "server.tabEvents": "Лог",
+    "server.tabTelemetry": "Телеметрия",
+    "server.tabCall": "Сигналинг",
     "auth.login": "Авторизоваться",
     "auth.logout": "Выйти",
     "auth.google": "Google",
@@ -128,6 +134,12 @@ const TEXT_BASE: Record<Lang, Record<string, string>> = {
   },
   en: {
     "app.title": "Boltorezka",
+    "server.menuAria": "Server menu",
+    "server.title": "Server profile",
+    "server.tabUsers": "User management",
+    "server.tabEvents": "Log",
+    "server.tabTelemetry": "Telemetry",
+    "server.tabCall": "Signaling",
     "auth.login": "Sign in",
     "auth.logout": "Logout",
     "auth.google": "Google",

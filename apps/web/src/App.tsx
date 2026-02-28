@@ -28,6 +28,8 @@ const MAX_CHAT_RETRIES = 3;
 const TOAST_AUTO_DISMISS_MS = 4500;
 const TOAST_ID_RANDOM_RANGE = 10000;
 
+type ServerMenuTab = "users" | "events" | "telemetry" | "call";
+
 export function App() {
   const [token, setToken] = useState(localStorage.getItem("boltorezka_token") || "");
   const [user, setUser] = useState<User | null>(null);
@@ -89,6 +91,8 @@ export function App() {
   const [outputVolume, setOutputVolume] = useState<number>(() => Number(localStorage.getItem("boltorezka_output_volume") || 70));
   const [authMenuOpen, setAuthMenuOpen] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const [appMenuOpen, setAppMenuOpen] = useState(false);
+  const [serverMenuTab, setServerMenuTab] = useState<ServerMenuTab>("events");
   const realtimeClientRef = useRef<RealtimeClient | null>(null);
   const roomSlugRef = useRef(roomSlug);
   const lastRoomSlugForScrollRef = useRef(roomSlug);
@@ -97,6 +101,7 @@ export function App() {
   const autoSsoAttemptedRef = useRef(false);
   const authMenuRef = useRef<HTMLDivElement>(null);
   const profileMenuRef = useRef<HTMLDivElement>(null);
+  const appMenuRef = useRef<HTMLDivElement>(null);
   const categoryPopupRef = useRef<HTMLDivElement>(null);
   const channelPopupRef = useRef<HTMLDivElement>(null);
   const audioOutputAnchorRef = useRef<HTMLDivElement>(null);
@@ -784,20 +789,18 @@ export function App() {
       : t("settings.custom");
 
   const currentRoomSupportsRtc = currentRoom ? currentRoom.kind !== "text" : false;
-  const roomPeople = useMemo(() => {
-    const unique = Array.from(new Set(roomsPresenceBySlug[roomSlug] || []));
-    if (unique.length > 0) {
-      return unique;
+
+  useEffect(() => {
+    if (serverMenuTab === "users" && !canPromote) {
+      setServerMenuTab("events");
+      return;
     }
 
-    if (user?.name) {
-      return [user.name];
+    if (serverMenuTab === "telemetry" && !canViewTelemetry) {
+      setServerMenuTab("events");
     }
+  }, [serverMenuTab, canPromote, canViewTelemetry]);
 
-    return [];
-  }, [roomsPresenceBySlug, roomSlug, user?.name]);
-
-  const normalizedCurrentUserName = String(user?.name || "").trim().toLocaleLowerCase();
   const formatMessageTime = (value: string) => {
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) {
@@ -864,7 +867,137 @@ export function App() {
   return (
     <main className="app legacy-layout">
       <header className="app-header">
-        <h1 className="app-title">{t("app.title")}</h1>
+        <div className="header-brand">
+          <h1 className="app-title">{t("app.title")}</h1>
+          <div className="app-menu" ref={appMenuRef}>
+            <button
+              type="button"
+              className="secondary app-menu-btn"
+              onClick={() => setAppMenuOpen((value) => !value)}
+              aria-label={t("server.menuAria")}
+            >
+              B
+            </button>
+            <PopupPortal
+              open={appMenuOpen}
+              anchorRef={appMenuRef}
+              className="server-menu-popup"
+              placement="bottom-start"
+            >
+              <div className="server-menu-shell">
+                <h2>{t("server.title")}</h2>
+                <div className="server-menu-tabs">
+                  {canPromote ? (
+                    <button
+                      type="button"
+                      className={`secondary server-menu-tab ${serverMenuTab === "users" ? "server-menu-tab-active" : ""}`}
+                      onClick={() => setServerMenuTab("users")}
+                    >
+                      {t("server.tabUsers")}
+                    </button>
+                  ) : null}
+                  <button
+                    type="button"
+                    className={`secondary server-menu-tab ${serverMenuTab === "events" ? "server-menu-tab-active" : ""}`}
+                    onClick={() => setServerMenuTab("events")}
+                  >
+                    {t("server.tabEvents")}
+                  </button>
+                  {canViewTelemetry ? (
+                    <button
+                      type="button"
+                      className={`secondary server-menu-tab ${serverMenuTab === "telemetry" ? "server-menu-tab-active" : ""}`}
+                      onClick={() => setServerMenuTab("telemetry")}
+                    >
+                      {t("server.tabTelemetry")}
+                    </button>
+                  ) : null}
+                  <button
+                    type="button"
+                    className={`secondary server-menu-tab ${serverMenuTab === "call" ? "server-menu-tab-active" : ""}`}
+                    onClick={() => setServerMenuTab("call")}
+                  >
+                    {t("server.tabCall")}
+                  </button>
+                </div>
+
+                <div className="server-menu-content">
+                  {serverMenuTab === "users" && canPromote ? (
+                    <section className="stack">
+                      <h3>{t("admin.title")}</h3>
+                      <ul className="admin-list">
+                        {adminUsers.map((item) => (
+                          <li key={item.id} className="row admin-row">
+                            <span>{item.email} ({item.role})</span>
+                            {item.role === "user" ? (
+                              <button onClick={() => promote(item.id)}>{t("admin.promote")}</button>
+                            ) : null}
+                          </li>
+                        ))}
+                      </ul>
+                    </section>
+                  ) : null}
+
+                  {serverMenuTab === "events" ? (
+                    <section className="stack">
+                      <h3>{t("events.title")}</h3>
+                      <div className="log">
+                        {eventLog.map((line, index) => (
+                          <div key={`${line}-${index}`}>{line}</div>
+                        ))}
+                      </div>
+                    </section>
+                  ) : null}
+
+                  {serverMenuTab === "telemetry" && canViewTelemetry ? (
+                    <section className="stack">
+                      <h3>{t("telemetry.title")}</h3>
+                      <p className="muted">{t("telemetry.day")}: {telemetrySummary?.day || "-"}</p>
+                      <div className="stack">
+                        <div>ack_sent: {telemetrySummary?.metrics.ack_sent ?? 0}</div>
+                        <div>nack_sent: {telemetrySummary?.metrics.nack_sent ?? 0}</div>
+                        <div>chat_sent: {telemetrySummary?.metrics.chat_sent ?? 0}</div>
+                        <div>chat_idempotency_hit: {telemetrySummary?.metrics.chat_idempotency_hit ?? 0}</div>
+                        <div>telemetry_web_event: {telemetrySummary?.metrics.telemetry_web_event ?? 0}</div>
+                      </div>
+                      <button onClick={() => void loadTelemetrySummary()}>{t("telemetry.refresh")}</button>
+                    </section>
+                  ) : null}
+
+                  {serverMenuTab === "call" ? (
+                    <section className="stack signaling-panel">
+                      <h3>{t("call.title")}</h3>
+                      <p className="muted">{t("call.status")}: {callStatus}{lastCallPeer ? ` (${lastCallPeer})` : ""}</p>
+                      <input
+                        value={callTargetUserId}
+                        onChange={(e) => setCallTargetUserId(e.target.value)}
+                        placeholder={t("call.targetPlaceholder")}
+                      />
+                      <textarea
+                        value={callSignalJson}
+                        onChange={(e) => setCallSignalJson(e.target.value)}
+                        rows={4}
+                        placeholder={t("call.payloadPlaceholder")}
+                      />
+                      <div className="row">
+                        <button type="button" onClick={() => sendCallSignal("call.offer")}>{t("call.offer")}</button>
+                        <button type="button" onClick={() => sendCallSignal("call.answer")}>{t("call.answer")}</button>
+                        <button type="button" onClick={() => sendCallSignal("call.ice")}>{t("call.ice")}</button>
+                        <button type="button" className="secondary" onClick={sendCallReject}>{t("call.reject")}</button>
+                        <button type="button" className="secondary" onClick={sendCallHangup}>{t("call.hangup")}</button>
+                      </div>
+                      <div className="log call-log">
+                        {callEventLog.map((line, index) => (
+                          <div key={`${line}-${index}`}>{line}</div>
+                        ))}
+                      </div>
+                    </section>
+                  ) : null}
+                </div>
+              </div>
+            </PopupPortal>
+          </div>
+        </div>
         <div className="header-actions">
           {user ? (
             <>
@@ -1087,77 +1220,6 @@ export function App() {
           </section>
         </section>
 
-        <aside className="rightcolumn">
-          {canPromote ? (
-            <section className="card compact">
-              <h2>{t("admin.title")}</h2>
-              <ul className="admin-list">
-                {adminUsers.map((item) => (
-                  <li key={item.id} className="row admin-row">
-                    <span>{item.email} ({item.role})</span>
-                    {item.role === "user" ? (
-                      <button onClick={() => promote(item.id)}>{t("admin.promote")}</button>
-                    ) : null}
-                  </li>
-                ))}
-              </ul>
-            </section>
-          ) : null}
-
-          {canViewTelemetry ? (
-            <section className="card compact">
-              <h2>{t("telemetry.title")}</h2>
-              <p className="muted">{t("telemetry.day")}: {telemetrySummary?.day || "-"}</p>
-              <div className="stack">
-                <div>ack_sent: {telemetrySummary?.metrics.ack_sent ?? 0}</div>
-                <div>nack_sent: {telemetrySummary?.metrics.nack_sent ?? 0}</div>
-                <div>chat_sent: {telemetrySummary?.metrics.chat_sent ?? 0}</div>
-                <div>chat_idempotency_hit: {telemetrySummary?.metrics.chat_idempotency_hit ?? 0}</div>
-                <div>telemetry_web_event: {telemetrySummary?.metrics.telemetry_web_event ?? 0}</div>
-              </div>
-              <button onClick={() => void loadTelemetrySummary()}>{t("telemetry.refresh")}</button>
-            </section>
-          ) : null}
-
-          <section className="card compact">
-            <h2>{t("events.title")}</h2>
-            <div className="log">
-              {eventLog.map((line, index) => (
-                <div key={`${line}-${index}`}>{line}</div>
-              ))}
-            </div>
-          </section>
-
-          <section className="card compact">
-            <div className="stack signaling-panel">
-              <h2>{t("call.title")}</h2>
-              <p className="muted">{t("call.status")}: {callStatus}{lastCallPeer ? ` (${lastCallPeer})` : ""}</p>
-              <input
-                value={callTargetUserId}
-                onChange={(e) => setCallTargetUserId(e.target.value)}
-                placeholder={t("call.targetPlaceholder")}
-              />
-              <textarea
-                value={callSignalJson}
-                onChange={(e) => setCallSignalJson(e.target.value)}
-                rows={4}
-                placeholder={t("call.payloadPlaceholder")}
-              />
-              <div className="row">
-                <button type="button" onClick={() => sendCallSignal("call.offer")}>{t("call.offer")}</button>
-                <button type="button" onClick={() => sendCallSignal("call.answer")}>{t("call.answer")}</button>
-                <button type="button" onClick={() => sendCallSignal("call.ice")}>{t("call.ice")}</button>
-                <button type="button" className="secondary" onClick={sendCallReject}>{t("call.reject")}</button>
-                <button type="button" className="secondary" onClick={sendCallHangup}>{t("call.hangup")}</button>
-              </div>
-              <div className="log call-log">
-                {callEventLog.map((line, index) => (
-                  <div key={`${line}-${index}`}>{line}</div>
-                ))}
-              </div>
-            </div>
-          </section>
-        </aside>
       </div>
 
       <ToastStack toasts={toasts} />
