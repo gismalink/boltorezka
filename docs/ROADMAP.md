@@ -107,18 +107,18 @@
   - [ ] voice connect/disconnect
 - [ ] Подготовить deprecation-план для legacy `apps/api/public`.
 - [ ] Реализовать карточку пользователя (web, Discord-like footer):
-  - [ ] Отдельный UI-блок с avatar/name/username и индикатором статуса.
-  - [ ] Кнопки quick controls: mute/unmute, deafen/undeafen, user settings.
-  - [ ] Попап «Устройство ввода» + выбор микрофона + ползунок громкости микрофона.
-  - [ ] Попап «Устройство вывода» + выбор аудио-устройства + ползунок громкости звука.
+  - [x] Отдельный UI-блок с avatar/name/username и индикатором статуса.
+  - [x] Кнопки quick controls: mute/unmute, deafen/undeafen, user settings.
+  - [x] Попап «Устройство ввода» + выбор микрофона + ползунок громкости микрофона.
+  - [x] Попап «Устройство вывода» + выбор аудио-устройства + ползунок громкости звука.
   - [ ] Persist выбранных устройств/громкости в localStorage и восстановление при reload.
   - [ ] Fallback-поведение при отказе в media permissions (понятный UI state без крэшей).
 - [ ] Реализовать Discord-like структуру каналов (категории + текст/голос):
   - [ ] Добавить category layer в data model (порядок, сворачивание, управление видимостью).
-  - [ ] Разделить channels по типу: `text` и `voice` (в едином tree endpoint).
+  - [x] Разделить channels по типу: `text` и `voice` (в едином tree endpoint).
   - [ ] Добавить API для CRUD/ordering: category/channel create, rename, move, archive.
-  - [ ] Добавить права управления структурой (admin/super_admin) + policy checks.
-  - [ ] Web sidebar UX как в Discord: grouped sections, active highlight, quick create (`+`).
+  - [x] Добавить права управления структурой (admin/super_admin) + policy checks.
+  - [x] Web sidebar UX как в Discord: grouped sections, active highlight, quick create (`+`).
   - [ ] Поддержать действия по контексту: join voice, open text, reorder (MVP через explicit order API).
   - [ ] Добавить smoke/e2e сценарий на создание и навигацию по иерархии.
 
