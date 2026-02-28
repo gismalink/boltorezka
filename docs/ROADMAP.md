@@ -101,10 +101,10 @@
 
 - [ ] Обновить runbook/checklist под React UI как default path.
 - [ ] E2E smoke сценарии:
-  - [ ] login
-  - [ ] join room
-  - [ ] send/receive message
-  - [ ] voice connect/disconnect
+  - [x] login
+  - [x] join room
+  - [x] send/receive message
+  - [x] voice connect/disconnect
 - [ ] Подготовить deprecation-план для legacy `apps/api/public`.
 - [ ] Реализовать карточку пользователя (web, Discord-like footer):
   - [x] Отдельный UI-блок с avatar/name/username и индикатором статуса.

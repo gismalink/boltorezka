@@ -36,4 +36,11 @@ else
   echo "[verify] smoke realtime skipped (set SMOKE_REALTIME=1 to enable)"
 fi
 
+if [[ "${SMOKE_WEB_E2E:-0}" == "1" ]]; then
+  echo "[verify] smoke web e2e"
+  bash ./scripts/smoke-web-e2e.sh
+else
+  echo "[verify] smoke web e2e skipped (set SMOKE_WEB_E2E=1 to enable)"
+fi
+
 echo "[verify] done"
