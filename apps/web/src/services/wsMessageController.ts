@@ -15,7 +15,7 @@ type WsMessageControllerOptions = {
   pushLog: (text: string) => void;
   pushCallLog: (text: string) => void;
   setRoomSlug: (slug: string) => void;
-  setPresence: (users: string[]) => void;
+  setRoomsPresenceBySlug: Dispatch<SetStateAction<Record<string, string[]>>>;
   trackNack: (data: {
     requestId: string;
     eventType: string;
@@ -167,11 +167,47 @@ export class WsMessageController {
     }
 
     if (message.type === "room.presence") {
-      const users = (message.payload?.users || []).map(
-        (item: { userName: string; userId: string }) =>
-          `${item.userName} (${item.userId.slice(0, 8)})`
-      );
-      this.options.setPresence(users);
+      const roomSlug = String(message.payload?.roomSlug || "").trim();
+      const users = Array.isArray(message.payload?.users)
+        ? message.payload.users
+            .map((item: { userName?: string }) => String(item?.userName || "").trim())
+            .filter(Boolean)
+        : [];
+
+      if (roomSlug) {
+        this.options.setRoomsPresenceBySlug((prev) => ({
+          ...prev,
+          [roomSlug]: users
+        }));
+      }
+    }
+
+    if (message.type === "rooms.presence") {
+      const rooms = Array.isArray(message.payload?.rooms) ? message.payload.rooms : [];
+      const next: Record<string, string[]> = {};
+
+      rooms.forEach((room: { roomSlug?: string; users?: Array<{ userName?: string }> }) => {
+        const roomSlug = String(room?.roomSlug || "").trim();
+        if (!roomSlug) {
+          return;
+        }
+
+        const users = Array.isArray(room?.users)
+          ? room.users
+              .map((item) => String(item?.userName || "").trim())
+              .filter(Boolean)
+          : [];
+
+        next[roomSlug] = users;
+      });
+
+      this.options.setRoomsPresenceBySlug(next);
+    }
+
+    if (message.type === "error") {
+      const code = String(message.payload?.code || "ServerError");
+      const errorMessage = String(message.payload?.message || "Unexpected websocket error");
+      this.options.pushLog(`ws error ${code}: ${errorMessage}`);
     }
   }
 }

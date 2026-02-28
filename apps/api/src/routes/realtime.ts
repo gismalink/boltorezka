@@ -3,6 +3,7 @@ import type { RawData, WebSocket } from "ws";
 import { db } from "../db.js";
 import type { InsertedMessageRow, RoomRow } from "../db.types.ts";
 import {
+  buildRoomsPresenceEnvelope,
   asKnownWsIncomingEnvelope,
   buildAckEnvelope,
   buildCallSignalRelayEnvelope,
@@ -21,9 +22,12 @@ import {
   getPayloadString,
   parseWsIncomingEnvelope
 } from "../ws-protocol.js";
+import { randomUUID } from "node:crypto";
 type SocketState = {
   userId: string;
   userName: string;
+  email: string | null;
+  sessionId: string;
   roomId: string | null;
   roomSlug: string | null;
 };
@@ -92,6 +96,9 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
   const socketsByUserId = new Map<string, Set<WebSocket>>();
   const socketsByRoomId = new Map<string, Set<WebSocket>>();
   const socketState = new WeakMap<WebSocket, SocketState>();
+  const EMAIL_SESSION_TTL_SEC = 120;
+
+  const sessionLockKey = (email: string) => `ws:session:email:${email}`;
 
   const incrementMetric = async (name: string) => {
     try {
@@ -169,6 +176,90 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
     }
 
     return users;
+  };
+
+  const getAllRoomsPresence = () => {
+    const result: Array<{ roomId: string; roomSlug: string; users: Array<{ userId: string; userName: string }> }> = [];
+
+    for (const [roomId, roomSockets] of socketsByRoomId.entries()) {
+      let roomSlug: string | null = null;
+      for (const socket of roomSockets) {
+        const state = socketState.get(socket);
+        if (state?.roomSlug) {
+          roomSlug = state.roomSlug;
+          break;
+        }
+      }
+
+      if (!roomSlug) {
+        continue;
+      }
+
+      result.push({
+        roomId,
+        roomSlug,
+        users: getRoomPresence(roomId)
+      });
+    }
+
+    return result;
+  };
+
+  const broadcastAllRoomsPresence = () => {
+    const envelope = buildRoomsPresenceEnvelope(getAllRoomsPresence());
+    const seen = new Set<WebSocket>();
+
+    for (const userSockets of socketsByUserId.values()) {
+      for (const socket of userSockets) {
+        if (seen.has(socket)) {
+          continue;
+        }
+        seen.add(socket);
+        sendJson(socket, envelope);
+      }
+    }
+  };
+
+  const tryAcquireEmailSession = async (email: string, sessionId: string) => {
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail) {
+      return true;
+    }
+
+    const key = sessionLockKey(normalizedEmail);
+    const acquired = await fastify.redis.set(key, sessionId, {
+      EX: EMAIL_SESSION_TTL_SEC,
+      NX: true
+    });
+    return acquired === "OK";
+  };
+
+  const refreshEmailSession = async (email: string, sessionId: string) => {
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail) {
+      return;
+    }
+
+    const key = sessionLockKey(normalizedEmail);
+    const current = await fastify.redis.get(key);
+    if (current !== sessionId) {
+      return;
+    }
+
+    await fastify.redis.expire(key, EMAIL_SESSION_TTL_SEC);
+  };
+
+  const releaseEmailSession = async (email: string, sessionId: string) => {
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail) {
+      return;
+    }
+
+    const key = sessionLockKey(normalizedEmail);
+    const current = await fastify.redis.get(key);
+    if (current === sessionId) {
+      await fastify.redis.del(key);
+    }
   };
 
   const getUserRoomSockets = (userId: string, roomId: string) => {
@@ -383,10 +474,23 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
         }
 
         const userName = claims.userName || claims.name || claims.email || "unknown";
+        const userEmail = String(claims.email || "").trim().toLowerCase() || null;
+        const sessionId = randomUUID();
+
+        if (userEmail) {
+          const acquired = await tryAcquireEmailSession(userEmail, sessionId);
+          if (!acquired) {
+            sendJson(connection, buildErrorEnvelope("SingleSessionActive", "This account is already active in another window or app"));
+            connection.close(4009, "Single session limit");
+            return;
+          }
+        }
 
         socketState.set(connection, {
           userId,
           userName,
+          email: userEmail,
+          sessionId,
           roomId: null,
           roomSlug: null
         });
@@ -400,6 +504,7 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
         await fastify.redis.expire(`presence:user:${userId}`, 120);
 
         sendJson(connection, buildServerReadyEnvelope(userId, userName));
+        sendJson(connection, buildRoomsPresenceEnvelope(getAllRoomsPresence()));
 
         connection.on("message", async (raw: RawData) => {
           try {
@@ -417,6 +522,10 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
 
             if (!state) {
               return;
+            }
+
+            if (state.email) {
+              await refreshEmailSession(state.email, state.sessionId);
             }
 
             if (!knownMessage) {
@@ -453,6 +562,7 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
                     buildPresenceLeftEnvelope(state.userId, state.userName, state.roomSlug, 0),
                     connection
                   );
+                  broadcastAllRoomsPresence();
                 }
 
                 state.roomId = joinResult.room.id;
@@ -498,6 +608,8 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
                   connection
                 );
 
+                broadcastAllRoomsPresence();
+
                 return;
               }
 
@@ -530,6 +642,8 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
                   ),
                   connection
                 );
+
+                broadcastAllRoomsPresence();
 
                 return;
               }
@@ -732,6 +846,11 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
                 getRoomPresence(state.roomId).length
               )
             );
+            broadcastAllRoomsPresence();
+          }
+
+          if (state.email) {
+            await releaseEmailSession(state.email, state.sessionId);
           }
 
           const userSockets = socketsByUserId.get(state.userId);

@@ -42,7 +42,7 @@ export function App() {
   const [callStatus, setCallStatus] = useState<CallStatus>("idle");
   const [lastCallPeer, setLastCallPeer] = useState("");
   const [callEventLog, setCallEventLog] = useState<string[]>([]);
-  const [presence, setPresence] = useState<string[]>([]);
+  const [roomsPresenceBySlug, setRoomsPresenceBySlug] = useState<Record<string, string[]>>({});
   const [eventLog, setEventLog] = useState<string[]>([]);
   const [telemetrySummary, setTelemetrySummary] = useState<TelemetrySummary | null>(null);
   const [wsState, setWsState] = useState<"disconnected" | "connecting" | "connected">(
@@ -237,6 +237,7 @@ export function App() {
       setMessagesNextCursor(null);
       setLoadingOlderMessages(false);
       setAdminUsers([]);
+      setRoomsPresenceBySlug({});
       setTelemetrySummary(null);
       realtimeClientRef.current?.dispose();
       realtimeClientRef.current = null;
@@ -279,7 +280,7 @@ export function App() {
       pushLog,
       pushCallLog,
       setRoomSlug,
-      setPresence,
+      setRoomsPresenceBySlug,
       trackNack: ({ requestId, eventType, code, message }) => {
         trackClientEvent(
           "ws.nack.received",
@@ -759,7 +760,7 @@ export function App() {
 
   const currentRoomSupportsRtc = currentRoom ? currentRoom.kind !== "text" : false;
   const roomPeople = useMemo(() => {
-    const unique = Array.from(new Set(presence));
+    const unique = Array.from(new Set(roomsPresenceBySlug[roomSlug] || []));
     if (unique.length > 0) {
       return unique;
     }
@@ -769,7 +770,7 @@ export function App() {
     }
 
     return [];
-  }, [presence, user?.name]);
+  }, [roomsPresenceBySlug, roomSlug, user?.name]);
 
   return (
     <main className="app legacy-layout">
@@ -826,7 +827,7 @@ export function App() {
             canCreateRooms={canCreateRooms}
             roomsTree={roomsTree}
             roomSlug={roomSlug}
-            activeRoomMembers={roomPeople}
+            liveRoomMembersBySlug={roomsPresenceBySlug}
             uncategorizedRooms={uncategorizedRooms}
             newCategorySlug={newCategorySlug}
             newCategoryTitle={newCategoryTitle}

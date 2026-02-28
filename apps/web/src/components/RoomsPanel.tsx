@@ -20,7 +20,7 @@ export function RoomsPanel({
   canCreateRooms,
   roomsTree,
   roomSlug,
-  activeRoomMembers,
+  liveRoomMembersBySlug,
   uncategorizedRooms,
   newCategorySlug,
   newCategoryTitle,
@@ -216,9 +216,7 @@ export function RoomsPanel({
       ) : null}
 
       {(() => {
-        const roomMembers = roomSlug === room.slug
-          ? dedupeMemberNames([...(room.member_names || []), ...activeRoomMembers])
-          : dedupeMemberNames(room.member_names || []);
+        const roomMembers = dedupeMemberNames(liveRoomMembersBySlug[room.slug] || []);
 
         if (roomMembers.length === 0) {
           return null;

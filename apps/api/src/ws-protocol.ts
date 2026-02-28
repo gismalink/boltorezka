@@ -263,6 +263,15 @@ export function buildRoomPresenceEnvelope(roomId: string, roomSlug: string, user
   };
 }
 
+export function buildRoomsPresenceEnvelope(
+  rooms: Array<{ roomId: string; roomSlug: string; users: PresenceUser[] }>
+): { type: "rooms.presence"; payload: { rooms: Array<{ roomId: string; roomSlug: string; users: PresenceUser[] }> } } {
+  return {
+    type: "rooms.presence",
+    payload: { rooms }
+  };
+}
+
 /**
  * @param {string} userId
  * @param {string} userName
