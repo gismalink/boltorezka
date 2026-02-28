@@ -1,0 +1,36 @@
+@media (max-width: 1200px) {
+  .workspace {
+    grid-template-columns: 280px 1fr;
+    height: auto;
+  }
+
+  .rightcolumn {
+    grid-column: 1 / -1;
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 900px) {
+  .workspace {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+
+  .rightcolumn {
+    grid-template-columns: 1fr;
+  }
+
+  .leftcolumn {
+    overflow: visible;
+  }
+
+  .rooms-card,
+  .rooms-scroll {
+    min-height: auto;
+  }
+
+  .voice-preferences-grid,
+  .voice-test-row {
+    grid-template-columns: 1fr;
+  }
+}
