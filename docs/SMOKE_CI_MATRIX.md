@@ -16,7 +16,7 @@
 | Stage | Command | Required |
 |---|---|---|
 | Deploy + postdeploy smoke | `TEST_REF=origin/<branch_or_main> npm run deploy:test:smoke` | Yes |
-| API contract smoke in postdeploy | included in `deploy:test:smoke` (`smoke:sso` + `smoke:api` + `smoke:realtime`) | Yes |
+| API contract smoke in postdeploy | included in `deploy:test:smoke` (`smoke:sso` + `smoke:api` + `smoke:realtime`), bearer auto-generated server-side from test env (`JWT_SECRET` + smoke user) | Yes |
 | Auto rollback policy (optional) | `AUTO_ROLLBACK_ON_FAIL=1 AUTO_ROLLBACK_SMOKE=1 TEST_REF=origin/<ref> npm run deploy:test:smoke` | Optional |
 | Extended relay smoke | `SMOKE_CALL_SIGNAL=1` flow with 2 ws-ticket | Yes |
 

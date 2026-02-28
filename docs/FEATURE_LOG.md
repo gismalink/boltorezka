@@ -41,6 +41,22 @@
 
 - Входит в стандартный `deploy:test:smoke` postdeploy pipeline.
 
+## 2026-02-28 — Postdeploy smoke: auto-bearer for protected API checks
+
+### Delivered
+
+- В `scripts/examples/postdeploy-smoke-test.sh` добавлена server-side генерация `SMOKE_BEARER_TOKEN` (HS256 JWT) на базе `JWT_SECRET` + smoke user из test DB.
+- Благодаря этому `smoke:api` в postdeploy больше не зависит от ручной передачи bearer и может выполнять protected API блоки (включая hierarchy smoke).
+- Логика auto-ticket для realtime сохранена; user meta переиспользуется для ticket payload.
+
+### Validation
+
+- `bash -n scripts/examples/postdeploy-smoke-test.sh` — PASS.
+
+### Operational evidence (test)
+
+- Верифицируется через стандартный `TEST_REF=origin/<branch> npm run deploy:test:smoke`.
+
 ## 2026-02-28 — Realtime presence + channel UX/chat style stabilization
 
 ### Delivered

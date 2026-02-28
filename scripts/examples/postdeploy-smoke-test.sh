@@ -56,6 +56,26 @@ compose() {
   docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" "$@"
 }
 
+base64url() {
+  openssl base64 -A | tr '+/' '-_' | tr -d '='
+}
+
+make_hs256_jwt() {
+  local secret="$1"
+  local sub="$2"
+  local role="$3"
+  local now exp header payload unsigned signature
+
+  now="$(date +%s)"
+  exp="$((now + 3600))"
+  header='{"alg":"HS256","typ":"JWT"}'
+  payload="{\"sub\":\"$sub\",\"role\":\"$role\",\"iat\":$now,\"exp\":$exp}"
+
+  unsigned="$(printf '%s' "$header" | base64url).$(printf '%s' "$payload" | base64url)"
+  signature="$(printf '%s' "$unsigned" | openssl dgst -sha256 -hmac "$secret" -binary | base64url)"
+  printf '%s.%s' "$unsigned" "$signature"
+}
+
 metric_from_hgetall() {
   local raw="$1"
   local key="$2"
@@ -108,13 +128,51 @@ set -a
 source "$ENV_FILE"
 set +a
 
+SMOKE_USER_ID=""
+SMOKE_USER_ROLE=""
+
+if [[ -z "${SMOKE_BEARER_TOKEN:-}" ]]; then
+  if [[ -z "${TEST_POSTGRES_USER:-}" || -z "${TEST_POSTGRES_DB:-}" ]]; then
+    echo "[postdeploy-smoke] TEST_POSTGRES_USER/TEST_POSTGRES_DB are required for auto-bearer" >&2
+    exit 1
+  fi
+
+  USER_META="$(compose exec -T "$POSTGRES_SERVICE" psql -U "$TEST_POSTGRES_USER" -d "$TEST_POSTGRES_DB" -tAc "select id::text || '|' || coalesce(role,'user') from users where email='${USER_EMAIL}' limit 1;")"
+
+  if [[ -z "$USER_META" ]]; then
+    echo "[postdeploy-smoke] cannot resolve smoke user for auto-bearer email=$USER_EMAIL" >&2
+    exit 1
+  fi
+
+  SMOKE_USER_ID="${USER_META%%|*}"
+  SMOKE_USER_ROLE="${USER_META##*|}"
+
+  if [[ -z "${JWT_SECRET:-}" ]]; then
+    echo "[postdeploy-smoke] JWT_SECRET is required for auto-bearer generation" >&2
+    exit 1
+  fi
+
+  GENERATED_BEARER="$(make_hs256_jwt "$JWT_SECRET" "$SMOKE_USER_ID" "$SMOKE_USER_ROLE")"
+  export SMOKE_BEARER_TOKEN="$GENERATED_BEARER"
+fi
+
 if [[ "$AUTO_TICKET" == "1" ]]; then
   if [[ -z "${TEST_POSTGRES_USER:-}" || -z "${TEST_POSTGRES_DB:-}" ]]; then
     echo "[postdeploy-smoke] TEST_POSTGRES_USER/TEST_POSTGRES_DB are required for auto-ticket" >&2
     exit 1
   fi
 
-  PAYLOAD="$(compose exec -T "$POSTGRES_SERVICE" psql -U "$TEST_POSTGRES_USER" -d "$TEST_POSTGRES_DB" -tAc "select json_build_object('userId', id::text, 'userName', coalesce(name,email,'unknown'), 'email', email, 'role', coalesce(role,'user'), 'issuedAt', now()::text)::text from users where email='${USER_EMAIL}' limit 1;")"
+  if [[ -z "$SMOKE_USER_ID" || -z "$SMOKE_USER_ROLE" ]]; then
+    USER_META="$(compose exec -T "$POSTGRES_SERVICE" psql -U "$TEST_POSTGRES_USER" -d "$TEST_POSTGRES_DB" -tAc "select id::text || '|' || coalesce(role,'user') from users where email='${USER_EMAIL}' limit 1;")"
+    if [[ -z "$USER_META" ]]; then
+      echo "[postdeploy-smoke] cannot resolve smoke user for auto-ticket email=$USER_EMAIL" >&2
+      exit 1
+    fi
+    SMOKE_USER_ID="${USER_META%%|*}"
+    SMOKE_USER_ROLE="${USER_META##*|}"
+  fi
+
+  PAYLOAD="$(compose exec -T "$POSTGRES_SERVICE" psql -U "$TEST_POSTGRES_USER" -d "$TEST_POSTGRES_DB" -tAc "select json_build_object('userId', id::text, 'userName', coalesce(name,email,'unknown'), 'email', email, 'role', coalesce(role,'user'), 'issuedAt', now()::text)::text from users where id='${SMOKE_USER_ID}' limit 1;")"
 
   if [[ -z "$PAYLOAD" ]]; then
     echo "[postdeploy-smoke] cannot resolve smoke user payload for email=$USER_EMAIL" >&2
