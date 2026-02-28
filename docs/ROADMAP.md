@@ -181,6 +181,7 @@
 5. [x] Подготовить pre-prod decision пакет (evidence + rollback owner/plan).
 6. [ ] Вернуться к `prod` только после достижения MVP-like readiness.
   - [x] Формализован MVP-like readiness gate в `docs/PREPROD_DECISION_PACKAGE.md`.
+  - [x] Подготовлен текущий draft gate-record (статус `NO-GO` до закрытия pending-проверок).
   - [ ] Получен explicit `GO` и выполнен rollout из `origin/main`.
 
 ## KPI MVP

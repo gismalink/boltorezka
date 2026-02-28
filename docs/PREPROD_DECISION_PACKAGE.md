@@ -168,3 +168,17 @@
 - Rollback Owner: `<name>`
 - Rollback ref: `<known-good-sha>`
 - Final decision: `GO | NO-GO`
+
+### 8.4 Current draft gate record (2026-02-28)
+
+- Target main SHA: `de48a78` (`origin/main`)
+- Last test deploy SHA: `49abe56` (`origin/feature/web-header-profile-menu`)
+- smoke:sso: `PASS`
+- smoke:realtime: `PASS`
+- reconnectOk: `true`
+- smoke:web:e2e: `PENDING` (перед prod требуется повторный запуск в полном режиме)
+- call relay scenario (`SMOKE_CALL_SIGNAL=1`): `PENDING` (в последнем postdeploy smoke не запускался)
+- Release Owner: `<name>`
+- Rollback Owner: `<name>`
+- Rollback ref: `<known-good-main-sha>`
+- Final decision: `NO-GO` (до закрытия `PENDING` пунктов и owner sign-off)
