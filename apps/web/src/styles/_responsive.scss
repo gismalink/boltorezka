@@ -1,7 +1,7 @@
 @media (max-width: 1200px) {
   .workspace {
     grid-template-columns: 280px 1fr;
-    height: auto;
+    height: 100%;
   }
 
   .rightcolumn {
@@ -13,7 +13,7 @@
 @media (max-width: 900px) {
   .workspace {
     grid-template-columns: 1fr;
-    height: auto;
+    height: 100%;
   }
 
   .rightcolumn {

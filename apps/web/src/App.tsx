@@ -823,7 +823,7 @@ export function App() {
                 </div>
               ))}
             </div>
-            <form className="row" onSubmit={sendMessage}>
+            <form className="chat-compose" onSubmit={sendMessage}>
               <input value={chatText} onChange={(e) => setChatText(e.target.value)} placeholder="Type message" />
               <button type="submit">Send</button>
             </form>

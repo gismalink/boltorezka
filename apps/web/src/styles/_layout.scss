@@ -3,7 +3,12 @@
   margin: 0 auto;
   padding: var(--space-2xl);
   display: grid;
+  grid-template-rows: auto 1fr;
   gap: var(--space-lg);
+  height: 100vh;
+  max-height: 100vh;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .app-title {
@@ -38,8 +43,8 @@
   display: grid;
   grid-template-columns: 320px 1fr 320px;
   gap: var(--space-lg);
-  min-height: calc(100vh - 100px);
-  height: calc(100vh - 100px);
+  min-height: 0;
+  height: 100%;
   align-items: stretch;
 }
 
@@ -58,6 +63,12 @@
 
 .middlecolumn {
   min-height: 0;
+}
+
+.rightcolumn {
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: var(--space-xxs);
 }
 
 .card {
@@ -100,6 +111,22 @@
 .stack {
   display: grid;
   gap: var(--space-md);
+}
+
+.chat-compose {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  flex-wrap: nowrap;
+}
+
+.chat-compose input {
+  flex: 1;
+  min-width: 0;
+}
+
+.chat-compose button {
+  flex-shrink: 0;
 }
 
 .compact-hint {

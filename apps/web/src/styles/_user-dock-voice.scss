@@ -47,6 +47,7 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-md);
+  min-width: 0;
 }
 
 .user-panel-main {
@@ -54,6 +55,7 @@
   align-items: center;
   gap: var(--space-md);
   min-width: 0;
+  flex: 1;
 }
 
 .user-avatar-badge {
@@ -72,6 +74,7 @@
 
 .user-meta {
   min-width: 0;
+  flex: 1;
 }
 
 .user-name-line {
@@ -89,6 +92,7 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-xs);
+  flex-shrink: 0;
 }
 
 .audio-output-anchor,
