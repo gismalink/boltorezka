@@ -797,6 +797,8 @@ export function App() {
     return [];
   }, [roomsPresenceBySlug, roomSlug, user?.name]);
 
+  const normalizedCurrentUserName = String(user?.name || "").trim().toLocaleLowerCase();
+
   return (
     <main className="app legacy-layout">
       <header className="app-header">
@@ -852,6 +854,7 @@ export function App() {
             canCreateRooms={canCreateRooms}
             roomsTree={roomsTree}
             roomSlug={roomSlug}
+            currentUserName={user?.name || ""}
             liveRoomMembersBySlug={roomsPresenceBySlug}
             uncategorizedRooms={uncategorizedRooms}
             newCategorySlug={newCategorySlug}
@@ -1002,7 +1005,10 @@ export function App() {
             {roomPeople.length > 0 ? (
               <ul className="room-people-list">
                 {roomPeople.map((item) => (
-                  <li key={item} className="room-people-item">
+                  <li
+                    key={item}
+                    className={`room-people-item ${normalizedCurrentUserName && item.trim().toLocaleLowerCase() === normalizedCurrentUserName ? "room-people-item-current" : ""}`}
+                  >
                     <i className="bi bi-person-fill" aria-hidden="true" />
                     <span>{item}</span>
                   </li>

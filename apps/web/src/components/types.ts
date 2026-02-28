@@ -65,6 +65,7 @@ export type RoomsPanelProps = {
   canCreateRooms: boolean;
   roomsTree: RoomsTreeResponse | null;
   roomSlug: string;
+  currentUserName: string;
   liveRoomMembersBySlug: Record<string, string[]>;
   uncategorizedRooms: Room[];
   newCategorySlug: string;

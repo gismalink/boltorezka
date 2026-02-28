@@ -20,6 +20,7 @@ export function RoomsPanel({
   canCreateRooms,
   roomsTree,
   roomSlug,
+  currentUserName,
   liveRoomMembersBySlug,
   uncategorizedRooms,
   newCategorySlug,
@@ -133,6 +134,8 @@ export function RoomsPanel({
     return Array.from(byKey.values());
   };
 
+  const normalizedCurrentUserName = String(currentUserName || "").trim().toLocaleLowerCase();
+
   const renderRoomRow = (room: Room) => (
     <div className="channel-row">
       <button
@@ -225,7 +228,10 @@ export function RoomsPanel({
         return (
         <ul className="channel-members-list">
           {roomMembers.map((member) => (
-            <li key={`${room.id}-${member}`} className="channel-member-item">
+            <li
+              key={`${room.id}-${member}`}
+              className={`channel-member-item ${normalizedCurrentUserName && member.trim().toLocaleLowerCase() === normalizedCurrentUserName ? "channel-member-item-current" : ""}`}
+            >
               <span className="channel-member-avatar">{(member || "U").charAt(0).toUpperCase()}</span>
               <span className="channel-member-name">{member}</span>
               <span className="channel-member-icons" aria-hidden="true">
