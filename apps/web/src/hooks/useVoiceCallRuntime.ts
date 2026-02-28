@@ -197,7 +197,11 @@ export function useVoiceCallRuntime({
   }>>(new Map());
   const localStreamRef = useRef<MediaStream | null>(null);
   const ensurePeerConnectionRef = useRef<((targetUserId: string, targetLabel: string) => RTCPeerConnection) | null>(null);
-  const startOfferRef = useRef<((targetUserId: string, targetLabel: string) => Promise<void>) | null>(null);
+  const startOfferRef = useRef<((
+    targetUserId: string,
+    targetLabel: string,
+    options?: { iceRestart?: boolean; reason?: string }
+  ) => Promise<void>) | null>(null);
   const requestTargetByIdRef = useRef<Map<string, { targetUserId: string; eventType: string }>>(new Map());
   const blockedTargetUntilRef = useRef<Map<string, number>>(new Map());
   const lastToastRef = useRef<{ key: string; at: number }>({ key: "", at: 0 });
@@ -478,7 +482,10 @@ export function useVoiceCallRuntime({
             if (shouldInitiateOffer(targetUserId) && current.stallRecoveryAttempts < 2 && current.connection.connectionState === "connected") {
               current.stallRecoveryAttempts += 1;
               pushCallLog(`rtc stall recovery offer -> ${targetLabel || targetUserId}`);
-              void startOfferRef.current?.(targetUserId, targetLabel || targetUserId);
+              void startOfferRef.current?.(targetUserId, targetLabel || targetUserId, {
+                iceRestart: true,
+                reason: "inbound-stalled"
+              });
             }
           }
         })
@@ -869,7 +876,11 @@ export function useVoiceCallRuntime({
 
   ensurePeerConnectionRef.current = ensurePeerConnection;
 
-  const startOffer = useCallback(async (targetUserId: string, targetLabel: string) => {
+  const startOffer = useCallback(async (
+    targetUserId: string,
+    targetLabel: string,
+    options?: { iceRestart?: boolean; reason?: string }
+  ) => {
     const normalizedTarget = targetUserId.trim();
     if (!normalizedTarget || !roomVoiceConnectedRef.current) {
       return;
@@ -882,7 +893,10 @@ export function useVoiceCallRuntime({
     try {
       const connection = ensurePeerConnection(normalizedTarget, targetLabel);
       await attachLocalTracks(connection);
-      const offer = await connection.createOffer({ offerToReceiveAudio: true });
+      const offer = await connection.createOffer({
+        offerToReceiveAudio: true,
+        iceRestart: Boolean(options?.iceRestart)
+      });
       await connection.setLocalDescription(offer);
 
       const signal: RTCSessionDescriptionInit = {
@@ -907,6 +921,9 @@ export function useVoiceCallRuntime({
 
       setLastCallPeer(targetLabel || normalizedTarget);
       updateCallStatus();
+      if (options?.iceRestart) {
+        pushCallLog(`call.offer ice-restart -> ${targetLabel || normalizedTarget}${options.reason ? ` (${options.reason})` : ""}`);
+      }
       pushCallLog(`call.offer sent -> ${targetLabel || normalizedTarget}`);
     } catch (error) {
       const errorName = (error as { name?: string })?.name || "";
