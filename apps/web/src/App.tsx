@@ -1000,25 +1000,6 @@ export function App() {
         </section>
 
         <aside className="rightcolumn">
-          <section className="card compact">
-            <h2>{t("people.title")}</h2>
-            {roomPeople.length > 0 ? (
-              <ul className="room-people-list">
-                {roomPeople.map((item) => (
-                  <li
-                    key={item}
-                    className={`room-people-item ${normalizedCurrentUserName && item.trim().toLocaleLowerCase() === normalizedCurrentUserName ? "room-people-item-current" : ""}`}
-                  >
-                    <i className="bi bi-person-fill" aria-hidden="true" />
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="muted">{t("people.none")}</p>
-            )}
-          </section>
-
           {canPromote ? (
             <section className="card compact">
               <h2>{t("admin.title")}</h2>
