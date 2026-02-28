@@ -197,9 +197,18 @@ export function RoomsPanel({
         </div>
       ) : null}
 
-      {roomSlug === room.slug && activeRoomMembers.length > 0 ? (
+      {(() => {
+        const roomMembers = roomSlug === room.slug
+          ? Array.from(new Set([...(room.member_names || []), ...activeRoomMembers]))
+          : (room.member_names || []);
+
+        if (roomMembers.length === 0) {
+          return null;
+        }
+
+        return (
         <ul className="channel-members-list">
-          {activeRoomMembers.map((member) => (
+          {roomMembers.map((member) => (
             <li key={`${room.id}-${member}`} className="channel-member-item">
               <span className="channel-member-avatar">{(member || "U").charAt(0).toUpperCase()}</span>
               <span className="channel-member-name">{member}</span>
@@ -210,7 +219,8 @@ export function RoomsPanel({
             </li>
           ))}
         </ul>
-      ) : null}
+        );
+      })()}
     </div>
   );
 
@@ -379,14 +389,14 @@ export function RoomsPanel({
 
       {confirmPopup ? (
         <div
-          className="settings-confirm-overlay"
+          className="settings-confirm-overlay popup-layer-content"
           onMouseDown={(event) => {
             if (event.target === event.currentTarget) {
               setConfirmPopup(null);
             }
           }}
         >
-          <div className="card compact settings-confirm-modal">
+          <div className="card compact settings-confirm-modal popup-layer-content">
             <h3 className="subheading settings-confirm-title">Confirm action</h3>
             <p className="muted settings-confirm-text">
               {confirmPopup.kind === "clear-channel"

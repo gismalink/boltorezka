@@ -15,6 +15,7 @@ type RoomListDbRow = RoomListRow & {
   category_id: string | null;
   kind: "text" | "text_voice" | "text_voice_video";
   position: number;
+  member_names: string[];
 };
 
 const roomKindSchema = z
@@ -86,6 +87,13 @@ export async function roomsRoutes(fastify: FastifyInstance) {
            r.position,
            r.is_public,
            r.created_at,
+           ARRAY(
+             SELECT DISTINCT u.name
+             FROM room_members rm
+             JOIN users u ON u.id = rm.user_id
+             WHERE rm.room_id = r.id
+             ORDER BY u.name
+           ) AS member_names,
            EXISTS(
              SELECT 1 FROM room_members rm
              WHERE rm.room_id = r.id AND rm.user_id = $1
@@ -138,6 +146,13 @@ export async function roomsRoutes(fastify: FastifyInstance) {
            r.position,
            r.is_public,
            r.created_at,
+           ARRAY(
+             SELECT DISTINCT u.name
+             FROM room_members rm
+             JOIN users u ON u.id = rm.user_id
+             WHERE rm.room_id = r.id
+             ORDER BY u.name
+           ) AS member_names,
            EXISTS(
              SELECT 1 FROM room_members rm
              WHERE rm.room_id = r.id AND rm.user_id = $1

@@ -3,6 +3,24 @@
 Этот документ хранит зафиксированные изменения, выполненные шаги и операционные evidence.
 План и open items находятся в `docs/ROADMAP.md`.
 
+## 2026-02-28 — Channel members in all channels + delete flow fix
+
+### Delivered
+
+- В `rooms/tree` и `rooms` добавлены `member_names` для каждого канала, чтобы UI мог показывать людей в других каналах даже без join.
+- Sidebar now показывает список людей под каждым каналом (для активного канала — объединение `member_names` + live presence).
+- Исправлена регрессия удаления каналов/групп: confirm overlay помечен как `popup-layer-content`, поэтому глобальный outside-click больше не закрывает settings popup до подтверждения `Yes`.
+
+### Validation
+
+- `npm run check:api-types` — PASS.
+- `npm --prefix apps/web run build` — PASS.
+
+### Operational evidence (test)
+
+- Deploy target: `test`, branch `feature/web-header-profile-menu`.
+- Smoke: `smoke:sso` / `smoke:realtime` — PASS (после деплоя изменений).
+
 ## 2026-02-28 — Realtime smoke stabilization: protect default `general` room
 
 ### Delivered

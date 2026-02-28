@@ -31,6 +31,7 @@ export type Room = {
   is_public: boolean;
   created_at: string;
   is_member?: boolean;
+  member_names?: string[];
 };
 
 export type RoomsTreeResponse = {
