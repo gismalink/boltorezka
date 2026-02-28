@@ -32,7 +32,6 @@ export function UserDock({
   currentInputLabel,
   micVolume,
   outputVolume,
-  micTestRunning,
   micTestLevel,
   mediaDevicesState,
   mediaDevicesHint,
@@ -59,7 +58,6 @@ export function UserDock({
   onRequestMediaAccess,
   onSetMicVolume,
   onSetOutputVolume,
-  onToggleMicTest,
   onDisconnectCall
 }: UserDockProps) {
   const inputDeviceRowRef = useRef<HTMLButtonElement>(null);
@@ -68,8 +66,8 @@ export function UserDock({
   const mediaDevicesWarningText = mediaDevicesHint || t("settings.mediaUnavailable");
   const miniBarCount = 20;
   const modalBarCount = 42;
-  const miniActiveBars = micTestRunning ? Math.min(miniBarCount, Math.round(micTestLevel * miniBarCount)) : 0;
-  const modalActiveBars = micTestRunning ? Math.min(modalBarCount, Math.round(micTestLevel * modalBarCount)) : 0;
+  const miniActiveBars = Math.min(miniBarCount, Math.round(micTestLevel * miniBarCount));
+  const modalActiveBars = Math.min(modalBarCount, Math.round(micTestLevel * modalBarCount));
 
   return (
     <>
@@ -136,6 +134,11 @@ export function UserDock({
                   data-tooltip={micMuted ? t("audio.enableMic") : t("audio.disableMic")}
                   onClick={onToggleMic}
                 >
+                  <span
+                    className="mic-live-fill"
+                    style={{ transform: `scaleY(${Math.max(0.05, micMuted ? 0 : micTestLevel)})` }}
+                    aria-hidden="true"
+                  />
                   <i className={`bi ${micMuted ? "bi-mic-mute-fill" : "bi-mic-fill"}`} aria-hidden="true" />
                 </button>
                 <button
@@ -486,9 +489,7 @@ export function UserDock({
                   </div>
 
                   <div className="voice-test-row">
-                    <button type="button" onClick={onToggleMicTest}>
-                      {micTestRunning ? t("settings.stopMicTest") : t("settings.micTest")}
-                    </button>
+                    <div className="subheading">{t("settings.micTest")}</div>
                     <div className="voice-level-bars" aria-hidden="true">
                       {Array.from({ length: modalBarCount }).map((_, index) => (
                         <span

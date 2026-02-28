@@ -38,7 +38,6 @@ export type UserDockProps = {
   currentInputLabel: string;
   micVolume: number;
   outputVolume: number;
-  micTestRunning: boolean;
   micTestLevel: number;
   mediaDevicesState: MediaDevicesState;
   mediaDevicesHint: string;
@@ -65,7 +64,6 @@ export type UserDockProps = {
   onRequestMediaAccess: () => void;
   onSetMicVolume: (value: number) => void;
   onSetOutputVolume: (value: number) => void;
-  onToggleMicTest: () => void;
   onDisconnectCall: () => void;
 };
 

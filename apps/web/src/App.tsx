@@ -106,7 +106,6 @@ export function App() {
   const [mediaDevicesHint, setMediaDevicesHint] = useState("");
   const [micVolume, setMicVolume] = useState<number>(() => Number(localStorage.getItem("boltorezka_mic_volume") || 75));
   const [outputVolume, setOutputVolume] = useState<number>(() => Number(localStorage.getItem("boltorezka_output_volume") || 70));
-  const [micTestRunning, setMicTestRunning] = useState(false);
   const [micTestLevel, setMicTestLevel] = useState(0);
   const [authMenuOpen, setAuthMenuOpen] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
@@ -410,19 +409,12 @@ export function App() {
   });
 
   useMicrophoneLevelMeter({
-    running: micTestRunning,
+    running: Boolean(user),
     selectedInputId,
     t,
     pushToast,
-    setRunning: setMicTestRunning,
     setLevel: setMicTestLevel
   });
-
-  useEffect(() => {
-    if (!userSettingsOpen || userSettingsTab !== "sound") {
-      setMicTestRunning(false);
-    }
-  }, [userSettingsOpen, userSettingsTab]);
 
   usePopupOutsideClose({
     isAnyPopupOpen: Boolean(
@@ -688,7 +680,6 @@ export function App() {
               currentInputLabel={currentInputLabel}
               micVolume={micVolume}
               outputVolume={outputVolume}
-              micTestRunning={micTestRunning}
               micTestLevel={micTestLevel}
               mediaDevicesState={mediaDevicesState}
               mediaDevicesHint={mediaDevicesHint}
@@ -723,7 +714,6 @@ export function App() {
               onRequestMediaAccess={requestMediaAccess}
               onSetMicVolume={setMicVolume}
               onSetOutputVolume={setOutputVolume}
-              onToggleMicTest={() => setMicTestRunning((value) => !value)}
               onDisconnectCall={disconnectRoom}
             />
           ) : null}

@@ -5,7 +5,6 @@ type UseMicrophoneLevelMeterArgs = {
   selectedInputId: string;
   t: (key: string) => string;
   pushToast: (message: string) => void;
-  setRunning: (value: boolean) => void;
   setLevel: (value: number) => void;
 };
 
@@ -16,7 +15,6 @@ export function useMicrophoneLevelMeter({
   selectedInputId,
   t,
   pushToast,
-  setRunning,
   setLevel
 }: UseMicrophoneLevelMeterArgs) {
   useEffect(() => {
@@ -26,7 +24,6 @@ export function useMicrophoneLevelMeter({
     }
 
     if (!navigator.mediaDevices?.getUserMedia) {
-      setRunning(false);
       setLevel(0);
       pushToast(t("settings.browserUnsupported"));
       return;
@@ -127,7 +124,6 @@ export function useMicrophoneLevelMeter({
         const errorName = (error as { name?: string; message?: string })?.name || (error as { message?: string })?.message || "";
         const denied = errorName === "NotAllowedError" || errorName === "SecurityError";
 
-        setRunning(false);
         setLevel(0);
         pushToast(denied ? t("settings.mediaDenied") : t("settings.devicesLoadFailed"));
       }
@@ -139,5 +135,5 @@ export function useMicrophoneLevelMeter({
       disposed = true;
       stop();
     };
-  }, [running, selectedInputId, t, pushToast, setRunning, setLevel]);
+  }, [running, selectedInputId, t, pushToast, setLevel]);
 }

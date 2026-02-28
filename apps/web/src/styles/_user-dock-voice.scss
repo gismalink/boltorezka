@@ -141,6 +141,22 @@
 
 .split-main-btn {
   width: var(--icon-size-md);
+  position: relative;
+  overflow: hidden;
+}
+
+.split-main-btn .bi {
+  position: relative;
+  z-index: 2;
+}
+
+.mic-live-fill {
+  position: absolute;
+  inset: 0;
+  transform-origin: bottom;
+  background: color-mix(in srgb, var(--pixel-neon-cyan) 45%, transparent 55%);
+  z-index: 1;
+  pointer-events: none;
 }
 
 .split-caret-btn {
@@ -233,13 +249,17 @@
 
 .voice-level-bars {
   margin-top: var(--space-md);
-  display: grid;
-  grid-template-columns: repeat(20, minmax(0, 1fr));
+  display: flex;
+  flex-wrap: nowrap;
+  width: 100%;
+  overflow: hidden;
   gap: var(--space-xs);
 }
 
 .voice-level-bar {
   display: block;
+  flex: 1 1 0;
+  min-width: 0;
   height: 18px;
   border-radius: 0;
   background: #7a2b5f;
