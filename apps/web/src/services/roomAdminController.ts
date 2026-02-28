@@ -1,5 +1,5 @@
 import { api } from "../api";
-import type { Message, MessagesCursor, Room, RoomsTreeResponse, User } from "../types";
+import type { Message, MessagesCursor, Room, RoomKind, RoomsTreeResponse, User } from "../types";
 
 type RoomAdminControllerOptions = {
   pushLog: (text: string) => void;
@@ -47,7 +47,7 @@ export class RoomAdminController {
     token: string,
     slugInput: string,
     titleInput: string,
-    options: { kind: "text" | "voice"; categoryId: string | null }
+    options: { kind: RoomKind; categoryId: string | null }
   ) {
     try {
       const slug = slugInput.trim();

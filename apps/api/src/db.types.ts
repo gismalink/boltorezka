@@ -15,7 +15,7 @@ export type UserCompactRow = {
   role: UserRole;
 };
 
-export type RoomKind = "text" | "voice";
+export type RoomKind = "text" | "text_voice" | "text_voice_video";
 
 export type RoomCategoryRow = {
   id: string;

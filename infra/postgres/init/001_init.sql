@@ -30,6 +30,9 @@ CREATE TABLE IF NOT EXISTS rooms (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+ALTER TABLE rooms DROP CONSTRAINT IF EXISTS rooms_kind_check;
+ALTER TABLE rooms ADD CONSTRAINT rooms_kind_check CHECK (kind IN ('text', 'text_voice', 'text_voice_video'));
+
 CREATE INDEX IF NOT EXISTS idx_rooms_category_position ON rooms(category_id, position);
 
 CREATE TABLE IF NOT EXISTS room_members (

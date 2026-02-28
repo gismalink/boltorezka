@@ -13,7 +13,7 @@ import type {
 
 type RoomListDbRow = RoomListRow & {
   category_id: string | null;
-  kind: "text" | "voice";
+  kind: "text" | "text_voice" | "text_voice_video";
   position: number;
 };
 
@@ -25,7 +25,7 @@ const createRoomSchema = z.object({
     .regex(/^[a-z0-9-]+$/),
   title: z.string().min(3).max(120),
   is_public: z.boolean().default(true),
-  kind: z.enum(["text", "voice"]).default("text"),
+  kind: z.enum(["text", "text_voice", "text_voice_video"]).default("text"),
   category_id: z.string().uuid().nullable().optional().default(null),
   position: z.number().int().min(0).optional()
 });
@@ -183,7 +183,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
       slug: string;
       title: string;
       is_public?: boolean;
-      kind?: "text" | "voice";
+      kind?: "text" | "text_voice" | "text_voice_video";
       category_id?: string | null;
       position?: number;
     }

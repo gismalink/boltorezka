@@ -11,7 +11,7 @@ export type User = {
   created_at: string;
 };
 
-export type RoomKind = "text" | "voice";
+export type RoomKind = "text" | "text_voice" | "text_voice_video";
 
 export type RoomCategory = {
   id: string;

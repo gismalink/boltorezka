@@ -20,6 +20,18 @@ import type {
 
 const MAX_CHAT_RETRIES = 3;
 
+const ROOM_KIND_LABELS: Record<RoomKind, string> = {
+  text: "Text",
+  text_voice: "Text + Voice",
+  text_voice_video: "Text + Voice + Video"
+};
+
+const ROOM_KIND_ICONS: Record<RoomKind, string> = {
+  text: "#",
+  text_voice: "🔊",
+  text_voice_video: "🎥"
+};
+
 export function App() {
   const [token, setToken] = useState(localStorage.getItem("boltorezka_token") || "");
   const [user, setUser] = useState<User | null>(null);
@@ -546,8 +558,9 @@ export function App() {
                           <input value={newRoomTitle} onChange={(e) => setNewRoomTitle(e.target.value)} placeholder="channel title" />
                           <div className="row">
                             <select value={newRoomKind} onChange={(e) => setNewRoomKind(e.target.value as RoomKind)}>
-                              <option value="text">text</option>
-                              <option value="voice">voice</option>
+                              <option value="text">Text</option>
+                              <option value="text_voice">Text + Voice</option>
+                              <option value="text_voice_video">Text + Voice + Video</option>
                             </select>
                             <select value={newRoomCategoryId} onChange={(e) => setNewRoomCategoryId(e.target.value)}>
                               <option value="none">No category</option>
@@ -590,7 +603,8 @@ export function App() {
                   {category.channels.map((room) => (
                     <li key={room.id}>
                       <button className="secondary room-btn" onClick={() => joinRoom(room.slug)}>
-                        {room.kind === "voice" ? "🔊" : "#"} {room.title}
+                        {ROOM_KIND_ICONS[room.kind]} {room.title}
+                        <span className="muted"> · {ROOM_KIND_LABELS[room.kind]}</span>
                       </button>
                     </li>
                   ))}
@@ -605,7 +619,8 @@ export function App() {
                   {uncategorizedRooms.map((room) => (
                     <li key={room.id}>
                       <button className="secondary room-btn" onClick={() => joinRoom(room.slug)}>
-                        {room.kind === "voice" ? "🔊" : "#"} {room.title}
+                        {ROOM_KIND_ICONS[room.kind]} {room.title}
+                        <span className="muted"> · {ROOM_KIND_LABELS[room.kind]}</span>
                       </button>
                     </li>
                   ))}
