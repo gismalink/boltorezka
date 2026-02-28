@@ -1,5 +1,5 @@
 import { api } from "../api";
-import type { Message, MessagesCursor, Room, RoomKind, RoomsTreeResponse, User } from "../types";
+import type { Message, MessagesCursor, Room, RoomKind, RoomsTreeResponse, User } from "../domain";
 
 type RoomAdminControllerOptions = {
   pushLog: (text: string) => void;
@@ -149,7 +149,7 @@ export class RoomAdminController {
       const res = await api.rooms(token);
       this.options.setRooms(res.rooms);
       await this.loadRoomTree(token);
-      this.options.pushLog("channel deleted");
+      this.options.pushLog("channel archived");
       return true;
     } catch (error) {
       this.options.pushLog(`delete channel failed: ${(error as Error).message}`);

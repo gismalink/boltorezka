@@ -99,6 +99,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
              WHERE rm.room_id = r.id AND rm.user_id = $1
            ) AS is_member
          FROM rooms r
+         WHERE r.is_archived = FALSE
          ORDER BY r.category_id NULLS FIRST, r.position ASC, r.created_at ASC`,
         [userId]
       );
@@ -158,6 +159,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
              WHERE rm.room_id = r.id AND rm.user_id = $1
            ) AS is_member
          FROM rooms r
+         WHERE r.is_archived = FALSE
          ORDER BY category_id NULLS FIRST, position ASC, created_at ASC`,
         [userId]
       );
@@ -359,7 +361,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
       const categoryStats = await db.query<{ category_exists: boolean; room_count: number }>(
         `SELECT
            EXISTS(SELECT 1 FROM room_categories WHERE id = $1) AS category_exists,
-           (SELECT COUNT(*)::int FROM rooms WHERE category_id = $1) AS room_count`,
+           (SELECT COUNT(*)::int FROM rooms WHERE category_id = $1 AND is_archived = FALSE) AS room_count`,
         [categoryId]
       );
 
@@ -560,7 +562,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
       const currentResult = await db.query<RoomRow>(
         `SELECT id, slug, title, kind, category_id, position, is_public, created_at
          FROM rooms
-         WHERE id = $1`,
+         WHERE id = $1 AND is_archived = FALSE`,
         [roomId]
       );
 
@@ -576,11 +578,13 @@ export async function roomsRoutes(fastify: FastifyInstance) {
       const neighborQuery = direction === "up"
         ? `SELECT id, position FROM rooms
            WHERE category_id IS NOT DISTINCT FROM $1
+             AND is_archived = FALSE
              AND position < $2
            ORDER BY position DESC
            LIMIT 1`
         : `SELECT id, position FROM rooms
            WHERE category_id IS NOT DISTINCT FROM $1
+             AND is_archived = FALSE
              AND position > $2
            ORDER BY position ASC
            LIMIT 1`;
@@ -636,9 +640,9 @@ export async function roomsRoutes(fastify: FastifyInstance) {
 
       const stats = await db.query<{ total_rooms: number; room_exists: boolean; room_slug: string | null }>(
         `SELECT
-           (SELECT COUNT(*)::int FROM rooms) AS total_rooms,
-           EXISTS(SELECT 1 FROM rooms WHERE id = $1) AS room_exists,
-           (SELECT slug FROM rooms WHERE id = $1 LIMIT 1) AS room_slug`,
+           (SELECT COUNT(*)::int FROM rooms WHERE is_archived = FALSE) AS total_rooms,
+           EXISTS(SELECT 1 FROM rooms WHERE id = $1 AND is_archived = FALSE) AS room_exists,
+           (SELECT slug FROM rooms WHERE id = $1 AND is_archived = FALSE LIMIT 1) AS room_slug`,
         [roomId]
       );
 
@@ -665,21 +669,22 @@ export async function roomsRoutes(fastify: FastifyInstance) {
         });
       }
 
-      const deleted = await db.query(
-        `DELETE FROM rooms
-         WHERE id = $1
+      const archived = await db.query<{ id: string }>(
+        `UPDATE rooms
+         SET is_archived = TRUE
+         WHERE id = $1 AND is_archived = FALSE
          RETURNING id`,
         [roomId]
       );
 
-      if ((deleted.rowCount || 0) === 0) {
+      if ((archived.rowCount || 0) === 0) {
         return reply.code(404).send({
           error: "RoomNotFound",
           message: "Room does not exist"
         });
       }
 
-      return { ok: true, roomId };
+      return { ok: true, roomId, archived: true };
     }
   );
 
@@ -700,7 +705,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
       }
 
       const roomExists = await db.query<{ exists: boolean }>(
-        "SELECT EXISTS(SELECT 1 FROM rooms WHERE id = $1) AS exists",
+        "SELECT EXISTS(SELECT 1 FROM rooms WHERE id = $1 AND is_archived = FALSE) AS exists",
         [roomId]
       );
 
@@ -768,7 +773,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
       }
 
       const roomResult = await db.query<RoomRow>(
-        "SELECT id, slug, title, kind, category_id, position, is_public FROM rooms WHERE slug = $1",
+        "SELECT id, slug, title, kind, category_id, position, is_public FROM rooms WHERE slug = $1 AND is_archived = FALSE",
         [slug]
       );
 

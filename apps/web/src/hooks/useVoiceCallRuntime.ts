@@ -1,0 +1,740 @@
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { CallStatus } from "../services";
+import type { PresenceMember } from "../domain";
+
+type WsSender = (
+  eventType: string,
+  payload: Record<string, unknown>,
+  options?: { withIdempotency?: boolean; trackAck?: boolean; maxRetries?: number }
+) => string | null;
+
+type CallSignalPayload = {
+  fromUserId?: string;
+  fromUserName?: string;
+  signal?: Record<string, unknown>;
+};
+
+type CallTerminalPayload = {
+  fromUserId?: string;
+  fromUserName?: string;
+  reason?: string | null;
+};
+
+type UseVoiceCallRuntimeArgs = {
+  roomSlug: string;
+  roomVoiceTargets: PresenceMember[];
+  selectedInputId: string;
+  selectedOutputId: string;
+  micMuted: boolean;
+  audioMuted: boolean;
+  outputVolume: number;
+  t: (key: string) => string;
+  pushToast: (message: string) => void;
+  pushCallLog: (text: string) => void;
+  sendWsEvent: WsSender;
+  setCallStatus: (status: CallStatus) => void;
+  setLastCallPeer: (peer: string) => void;
+};
+
+const DEFAULT_ICE_SERVERS: RTCIceServer[] = [{ urls: ["stun:stun.l.google.com:19302"] }];
+
+function normalizeIceServer(value: unknown): RTCIceServer | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+
+  const source = value as {
+    urls?: unknown;
+    username?: unknown;
+    credential?: unknown;
+  };
+
+  const urls =
+    typeof source.urls === "string"
+      ? source.urls
+      : Array.isArray(source.urls)
+        ? source.urls.filter((item): item is string => typeof item === "string" && item.trim().length > 0)
+        : null;
+
+  if (!urls || (Array.isArray(urls) && urls.length === 0)) {
+    return null;
+  }
+
+  const server: RTCIceServer = { urls };
+  if (typeof source.username === "string") {
+    server.username = source.username;
+  }
+  if (typeof source.credential === "string") {
+    server.credential = source.credential;
+  }
+
+  return server;
+}
+
+function readIceServersFromEnv(): RTCIceServer[] {
+  const raw = String(import.meta.env.VITE_RTC_ICE_SERVERS_JSON || "").trim();
+  if (!raw) {
+    return DEFAULT_ICE_SERVERS;
+  }
+
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) {
+      return DEFAULT_ICE_SERVERS;
+    }
+
+    const normalized = parsed
+      .map((item) => normalizeIceServer(item))
+      .filter((item): item is RTCIceServer => Boolean(item));
+
+    return normalized.length > 0 ? normalized : DEFAULT_ICE_SERVERS;
+  } catch {
+    return DEFAULT_ICE_SERVERS;
+  }
+}
+
+function readPositiveIntFromEnv(name: string, fallback: number): number {
+  const raw = Number(import.meta.env[name as keyof ImportMetaEnv] || "");
+  if (!Number.isFinite(raw)) {
+    return fallback;
+  }
+  return Math.max(0, Math.floor(raw));
+}
+
+const RTC_ICE_SERVERS = readIceServersFromEnv();
+const RTC_ICE_TRANSPORT_POLICY: RTCIceTransportPolicy =
+  String(import.meta.env.VITE_RTC_ICE_TRANSPORT_POLICY || "").trim().toLowerCase() === "relay"
+    ? "relay"
+    : "all";
+const RTC_RECONNECT_MAX_ATTEMPTS = readPositiveIntFromEnv("VITE_RTC_RECONNECT_MAX_ATTEMPTS", 3);
+const RTC_RECONNECT_BASE_DELAY_MS = Math.max(300, readPositiveIntFromEnv("VITE_RTC_RECONNECT_BASE_DELAY_MS", 1000));
+const RTC_RECONNECT_MAX_DELAY_MS = Math.max(
+  RTC_RECONNECT_BASE_DELAY_MS,
+  readPositiveIntFromEnv("VITE_RTC_RECONNECT_MAX_DELAY_MS", 8000)
+);
+
+const RTC_CONFIG: RTCConfiguration = {
+  iceServers: RTC_ICE_SERVERS,
+  iceTransportPolicy: RTC_ICE_TRANSPORT_POLICY
+};
+
+export function useVoiceCallRuntime({
+  roomSlug,
+  roomVoiceTargets,
+  selectedInputId,
+  selectedOutputId,
+  micMuted,
+  audioMuted,
+  outputVolume,
+  t,
+  pushToast,
+  pushCallLog,
+  sendWsEvent,
+  setCallStatus,
+  setLastCallPeer
+}: UseVoiceCallRuntimeArgs) {
+  const [roomVoiceConnected, setRoomVoiceConnected] = useState(false);
+  const [connectedPeerUserIds, setConnectedPeerUserIds] = useState<string[]>([]);
+  const roomVoiceConnectedRef = useRef(false);
+  const roomVoiceTargetsRef = useRef<PresenceMember[]>(roomVoiceTargets);
+  const peersRef = useRef<Map<string, {
+    connection: RTCPeerConnection;
+    audioElement: HTMLAudioElement;
+    label: string;
+    reconnectAttempts: number;
+    reconnectTimer: number | null;
+  }>>(new Map());
+  const localStreamRef = useRef<MediaStream | null>(null);
+  const ensurePeerConnectionRef = useRef<((targetUserId: string, targetLabel: string) => RTCPeerConnection) | null>(null);
+  const startOfferRef = useRef<((targetUserId: string, targetLabel: string) => Promise<void>) | null>(null);
+
+  const getAudioConstraints = useCallback((): MediaTrackConstraints | boolean => {
+    return selectedInputId && selectedInputId !== "default"
+      ? { deviceId: { exact: selectedInputId } }
+      : true;
+  }, [selectedInputId]);
+
+  const applyRemoteAudioOutput = useCallback(async (element: HTMLAudioElement) => {
+    element.muted = audioMuted;
+    element.volume = Math.max(0, Math.min(1, outputVolume / 100));
+
+    const sinkId = selectedOutputId && selectedOutputId !== "default" ? selectedOutputId : "";
+    const withSink = element as HTMLAudioElement & {
+      setSinkId?: (id: string) => Promise<void>;
+      sinkId?: string;
+    };
+
+    if (typeof withSink.setSinkId === "function") {
+      try {
+        const currentSink = String(withSink.sinkId || "");
+        if (currentSink !== sinkId) {
+          await withSink.setSinkId(sinkId);
+        }
+      } catch (error) {
+        pushCallLog(`audio output switch failed: ${(error as Error).message}`);
+      }
+    }
+  }, [audioMuted, outputVolume, selectedOutputId, pushCallLog]);
+
+  const updateCallStatus = useCallback(() => {
+    const peers = Array.from(peersRef.current.values());
+    const connectedUserIds = Array.from(peersRef.current.entries())
+      .filter(([, peer]) => peer.connection.connectionState === "connected")
+      .map(([userId]) => userId);
+    setConnectedPeerUserIds(connectedUserIds);
+
+    const anyConnected = peers.some((peer) => peer.connection.connectionState === "connected");
+    if (anyConnected) {
+      setCallStatus("active");
+      return;
+    }
+
+    const anyConnecting = peers.some((peer) => {
+      const state = peer.connection.connectionState;
+      return state === "connecting" || state === "new";
+    });
+    if (anyConnecting) {
+      setCallStatus("connecting");
+      return;
+    }
+
+    setCallStatus("idle");
+  }, [setCallStatus]);
+
+  const clearPeerReconnectTimer = useCallback((targetUserId: string) => {
+    const peer = peersRef.current.get(targetUserId);
+    if (!peer || peer.reconnectTimer === null) {
+      return;
+    }
+
+    window.clearTimeout(peer.reconnectTimer);
+    peer.reconnectTimer = null;
+  }, []);
+
+  const releaseLocalStream = useCallback(() => {
+    if (!localStreamRef.current) {
+      return;
+    }
+
+    localStreamRef.current.getTracks().forEach((track) => track.stop());
+    localStreamRef.current = null;
+  }, []);
+
+  const closePeer = useCallback((targetUserId: string, reason?: string) => {
+    const peer = peersRef.current.get(targetUserId);
+    if (!peer) {
+      return;
+    }
+
+    clearPeerReconnectTimer(targetUserId);
+    peer.connection.onicecandidate = null;
+    peer.connection.onconnectionstatechange = null;
+    peer.connection.ontrack = null;
+    peer.connection.close();
+    peer.audioElement.pause();
+    peer.audioElement.srcObject = null;
+    peer.audioElement.remove();
+    peersRef.current.delete(targetUserId);
+
+    if (reason) {
+      pushCallLog(reason);
+    }
+
+    updateCallStatus();
+  }, [clearPeerReconnectTimer, pushCallLog, updateCallStatus]);
+
+  const teardownRoom = useCallback((reason?: string) => {
+    const peerIds = Array.from(peersRef.current.keys());
+    peerIds.forEach((targetUserId) => {
+      closePeer(targetUserId);
+    });
+    releaseLocalStream();
+    roomVoiceConnectedRef.current = false;
+    setRoomVoiceConnected(false);
+    setConnectedPeerUserIds([]);
+    setLastCallPeer("");
+    setCallStatus("idle");
+
+    if (reason) {
+      pushCallLog(reason);
+    }
+  }, [closePeer, releaseLocalStream, setCallStatus, setLastCallPeer, pushCallLog]);
+
+  const ensureLocalStream = useCallback(async () => {
+    if (localStreamRef.current) {
+      return localStreamRef.current;
+    }
+
+    if (!navigator.mediaDevices?.getUserMedia) {
+      pushToast(t("settings.browserUnsupported"));
+      throw new Error("MediaDevicesUnsupported");
+    }
+
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: getAudioConstraints(),
+      video: false
+    });
+
+    stream.getAudioTracks().forEach((track) => {
+      track.enabled = !micMuted;
+    });
+
+    localStreamRef.current = stream;
+    return stream;
+  }, [getAudioConstraints, micMuted, t, pushToast]);
+
+  const attachLocalTracks = useCallback(async (connection: RTCPeerConnection) => {
+    const stream = await ensureLocalStream();
+    const existingTrackIds = new Set(connection.getSenders().map((sender) => sender.track?.id).filter(Boolean));
+    stream.getTracks().forEach((track) => {
+      if (!existingTrackIds.has(track.id)) {
+        connection.addTrack(track, stream);
+      }
+    });
+  }, [ensureLocalStream]);
+
+  const scheduleReconnect = useCallback((targetUserId: string, trigger: string) => {
+    if (!roomVoiceConnectedRef.current) {
+      return;
+    }
+
+    const peer = peersRef.current.get(targetUserId);
+    if (!peer) {
+      return;
+    }
+
+    if (peer.reconnectTimer !== null) {
+      return;
+    }
+
+    if (peer.reconnectAttempts >= RTC_RECONNECT_MAX_ATTEMPTS) {
+      closePeer(targetUserId, `rtc ${trigger}, reconnect exhausted: ${peer.label}`);
+      return;
+    }
+
+    const attempt = peer.reconnectAttempts + 1;
+    peer.reconnectAttempts = attempt;
+    const delay = Math.min(
+      RTC_RECONNECT_MAX_DELAY_MS,
+      RTC_RECONNECT_BASE_DELAY_MS * 2 ** (attempt - 1)
+    );
+
+    updateCallStatus();
+    pushCallLog(`rtc ${trigger}, reconnect ${peer.label} in ${delay}ms (${attempt}/${RTC_RECONNECT_MAX_ATTEMPTS})`);
+
+    peer.reconnectTimer = window.setTimeout(async () => {
+      const current = peersRef.current.get(targetUserId);
+      if (current) {
+        current.reconnectTimer = null;
+      }
+
+      try {
+        const label = peersRef.current.get(targetUserId)?.label || targetUserId;
+        await startOfferRef.current?.(targetUserId, label);
+      } catch (error) {
+        pushCallLog(`reconnect attempt failed: ${(error as Error).message}`);
+      }
+    }, delay);
+  }, [closePeer, pushCallLog, updateCallStatus]);
+
+  const ensurePeerConnection = useCallback((targetUserId: string, targetLabel: string) => {
+    const existing = peersRef.current.get(targetUserId);
+    if (existing) {
+      if (existing.label !== targetLabel) {
+        existing.label = targetLabel;
+      }
+      return existing.connection;
+    }
+
+    const remoteAudioElement = document.createElement("audio");
+    remoteAudioElement.autoplay = true;
+    remoteAudioElement.setAttribute("playsinline", "true");
+    remoteAudioElement.style.display = "none";
+    document.body.appendChild(remoteAudioElement);
+
+    const connection = new RTCPeerConnection(RTC_CONFIG);
+    const peerContext = {
+      connection,
+      audioElement: remoteAudioElement,
+      label: targetLabel,
+      reconnectAttempts: 0,
+      reconnectTimer: null as number | null
+    };
+    peersRef.current.set(targetUserId, peerContext);
+
+    connection.onicecandidate = (event) => {
+      if (!event.candidate) {
+        return;
+      }
+
+      sendWsEvent(
+        "call.ice",
+        {
+          targetUserId,
+          signal: event.candidate.toJSON()
+        },
+        { maxRetries: 1 }
+      );
+    };
+
+    connection.onconnectionstatechange = () => {
+      const state = connection.connectionState;
+      if (state === "connected") {
+        const peer = peersRef.current.get(targetUserId);
+        if (peer) {
+          clearPeerReconnectTimer(targetUserId);
+          peer.reconnectAttempts = 0;
+        }
+        updateCallStatus();
+      } else if (state === "failed" || state === "disconnected") {
+        scheduleReconnect(targetUserId, state);
+      } else if (state === "closed") {
+        closePeer(targetUserId);
+      } else {
+        updateCallStatus();
+      }
+    };
+
+    connection.ontrack = (event) => {
+      const [stream] = event.streams;
+      if (!stream) {
+        return;
+      }
+
+      remoteAudioElement.srcObject = stream;
+      void applyRemoteAudioOutput(remoteAudioElement);
+      void remoteAudioElement.play().catch(() => {
+        return;
+      });
+    };
+
+    void applyRemoteAudioOutput(remoteAudioElement);
+    return connection;
+  }, [sendWsEvent, applyRemoteAudioOutput, clearPeerReconnectTimer, closePeer, scheduleReconnect, updateCallStatus]);
+
+  ensurePeerConnectionRef.current = ensurePeerConnection;
+
+  const startOffer = useCallback(async (targetUserId: string, targetLabel: string) => {
+    const normalizedTarget = targetUserId.trim();
+    if (!normalizedTarget || !roomVoiceConnectedRef.current) {
+      return;
+    }
+
+    try {
+      const connection = ensurePeerConnection(normalizedTarget, targetLabel);
+      await attachLocalTracks(connection);
+      const offer = await connection.createOffer({ offerToReceiveAudio: true });
+      await connection.setLocalDescription(offer);
+
+      const signal: RTCSessionDescriptionInit = {
+        type: offer.type,
+        sdp: offer.sdp || ""
+      };
+
+      const requestId = sendWsEvent(
+        "call.offer",
+        {
+          targetUserId: normalizedTarget,
+          signal
+        },
+        { maxRetries: 1 }
+      );
+
+      if (!requestId) {
+        pushCallLog("call.offer skipped: socket unavailable");
+        return;
+      }
+
+      setLastCallPeer(targetLabel || normalizedTarget);
+      updateCallStatus();
+      pushCallLog(`call.offer sent -> ${targetLabel || normalizedTarget}`);
+    } catch (error) {
+      const errorName = (error as { name?: string })?.name || "";
+      if (errorName === "NotAllowedError" || errorName === "SecurityError") {
+        pushToast(t("settings.mediaDenied"));
+      } else {
+        pushToast(t("settings.devicesLoadFailed"));
+      }
+      pushCallLog(`call.offer failed (${targetLabel || normalizedTarget}): ${(error as Error).message}`);
+      closePeer(normalizedTarget);
+    }
+  }, [roomVoiceConnectedRef, ensurePeerConnection, attachLocalTracks, sendWsEvent, setLastCallPeer, updateCallStatus, pushCallLog, t, pushToast, closePeer]);
+
+  startOfferRef.current = startOffer;
+
+  const syncRoomTargets = useCallback(async () => {
+    if (!roomVoiceConnectedRef.current) {
+      return;
+    }
+
+    const targetsById = new Map(
+      roomVoiceTargetsRef.current
+        .map((member) => ({
+          userId: String(member.userId || "").trim(),
+          userName: String(member.userName || member.userId || "").trim()
+        }))
+        .filter((member) => member.userId)
+        .map((member) => [member.userId, member.userName || member.userId])
+    );
+
+    const toDisconnect = Array.from(peersRef.current.keys()).filter((userId) => !targetsById.has(userId));
+    toDisconnect.forEach((userId) => {
+      sendWsEvent("call.hangup", { targetUserId: userId, reason: "left_room" }, { maxRetries: 1 });
+      closePeer(userId, `peer left room: ${userId}`);
+    });
+
+    for (const [userId, userName] of targetsById) {
+      const exists = peersRef.current.has(userId);
+      if (!exists) {
+        await startOffer(userId, userName);
+      }
+    }
+
+    updateCallStatus();
+  }, [sendWsEvent, closePeer, startOffer, updateCallStatus]);
+
+  const connectRoom = useCallback(async () => {
+    roomVoiceConnectedRef.current = true;
+    setRoomVoiceConnected(true);
+    pushCallLog("voice room connect requested");
+
+    if (roomVoiceTargetsRef.current.length === 0) {
+      pushToast(t("call.noTargets"));
+      setCallStatus("idle");
+      return;
+    }
+
+    await syncRoomTargets();
+  }, [pushCallLog, pushToast, t, setCallStatus, syncRoomTargets]);
+
+  const disconnectRoom = useCallback(() => {
+    const peerIds = Array.from(peersRef.current.keys());
+    peerIds.forEach((userId) => {
+      sendWsEvent("call.hangup", { targetUserId: userId, reason: "manual" }, { maxRetries: 1 });
+      closePeer(userId);
+    });
+
+    releaseLocalStream();
+    roomVoiceConnectedRef.current = false;
+    setRoomVoiceConnected(false);
+    setConnectedPeerUserIds([]);
+    setLastCallPeer("");
+    setCallStatus("idle");
+    pushCallLog("voice room disconnected");
+  }, [sendWsEvent, closePeer, releaseLocalStream, setLastCallPeer, setCallStatus, pushCallLog]);
+
+  const handleIncomingSignal = useCallback(async (
+    eventType: "call.offer" | "call.answer" | "call.ice",
+    payload: CallSignalPayload
+  ) => {
+    const fromUserId = String(payload.fromUserId || "").trim();
+    const fromUserName = String(payload.fromUserName || fromUserId || "unknown").trim();
+    const signal = payload.signal;
+    if (!fromUserId || !signal || typeof signal !== "object") {
+      return;
+    }
+
+    if (eventType === "call.offer") {
+      if (!roomVoiceConnectedRef.current) {
+        sendWsEvent(
+          "call.reject",
+          {
+            targetUserId: fromUserId,
+            reason: "room_voice_disabled"
+          },
+          { maxRetries: 1 }
+        );
+        return;
+      }
+
+      try {
+        const connection = ensurePeerConnection(fromUserId, fromUserName);
+        const peer = peersRef.current.get(fromUserId);
+        if (peer) {
+          clearPeerReconnectTimer(fromUserId);
+          peer.reconnectAttempts = 0;
+        }
+
+        await attachLocalTracks(connection);
+        await connection.setRemoteDescription(new RTCSessionDescription(signal as unknown as RTCSessionDescriptionInit));
+
+        const answer = await connection.createAnswer();
+        await connection.setLocalDescription(answer);
+
+        const answerSignal: RTCSessionDescriptionInit = {
+          type: answer.type,
+          sdp: answer.sdp || ""
+        };
+
+        sendWsEvent(
+          "call.answer",
+          {
+            targetUserId: fromUserId,
+            signal: answerSignal
+          },
+          { maxRetries: 1 }
+        );
+
+        setLastCallPeer(fromUserName);
+        updateCallStatus();
+        pushCallLog(`auto-answer sent -> ${fromUserName}`);
+      } catch (error) {
+        pushCallLog(`call.offer handling failed: ${(error as Error).message}`);
+        closePeer(fromUserId);
+      }
+
+      return;
+    }
+
+    if (eventType === "call.answer") {
+      try {
+        const connection = ensurePeerConnection(fromUserId, fromUserName);
+        const peer = peersRef.current.get(fromUserId);
+        if (peer) {
+          clearPeerReconnectTimer(fromUserId);
+          peer.reconnectAttempts = 0;
+        }
+
+        await connection.setRemoteDescription(new RTCSessionDescription(signal as unknown as RTCSessionDescriptionInit));
+        setLastCallPeer(fromUserName);
+        updateCallStatus();
+        pushCallLog(`call answered by ${fromUserName}`);
+      } catch (error) {
+        pushCallLog(`call.answer handling failed: ${(error as Error).message}`);
+      }
+
+      return;
+    }
+
+    if (eventType === "call.ice") {
+      try {
+        const connection = ensurePeerConnection(fromUserId, fromUserName);
+        const candidate = (signal as { candidate?: RTCIceCandidateInit }).candidate
+          ? (signal as { candidate: RTCIceCandidateInit }).candidate
+          : (signal as RTCIceCandidateInit);
+
+        if (!candidate || typeof candidate.candidate !== "string") {
+          return;
+        }
+
+        await connection.addIceCandidate(new RTCIceCandidate(candidate));
+      } catch (error) {
+        pushCallLog(`call.ice handling failed: ${(error as Error).message}`);
+      }
+    }
+  }, [sendWsEvent, ensurePeerConnection, clearPeerReconnectTimer, attachLocalTracks, setLastCallPeer, updateCallStatus, pushCallLog, closePeer]);
+
+  const handleIncomingTerminal = useCallback((eventType: "call.reject" | "call.hangup", payload: CallTerminalPayload) => {
+    const fromUserId = String(payload.fromUserId || "").trim();
+    const fromUserName = String(payload.fromUserName || fromUserId || "unknown").trim();
+    const reason = String(payload.reason || "").trim();
+    if (fromUserId) {
+      closePeer(fromUserId, `${eventType} from ${fromUserName}${reason ? ` (${reason})` : ""}`);
+      return;
+    }
+
+    updateCallStatus();
+  }, [closePeer, updateCallStatus]);
+
+  useEffect(() => {
+    if (!localStreamRef.current) {
+      return;
+    }
+
+    localStreamRef.current.getAudioTracks().forEach((track) => {
+      track.enabled = !micMuted;
+    });
+  }, [micMuted]);
+
+  useEffect(() => {
+    peersRef.current.forEach((peer) => {
+      void applyRemoteAudioOutput(peer.audioElement);
+    });
+  }, [applyRemoteAudioOutput]);
+
+  useEffect(() => {
+    const connections = Array.from(peersRef.current.values()).map((item) => item.connection);
+    if (connections.length === 0 || !localStreamRef.current) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const replaceAudioTrack = async () => {
+      try {
+        const nextStream = await navigator.mediaDevices.getUserMedia({
+          audio: getAudioConstraints(),
+          video: false
+        });
+
+        if (cancelled) {
+          nextStream.getTracks().forEach((track) => track.stop());
+          return;
+        }
+
+        const nextTrack = nextStream.getAudioTracks()[0];
+        if (!nextTrack) {
+          nextStream.getTracks().forEach((track) => track.stop());
+          return;
+        }
+
+        nextTrack.enabled = !micMuted;
+
+        await Promise.all(
+          connections.map(async (connection) => {
+            const sender = connection.getSenders().find((item) => item.track?.kind === "audio");
+            if (sender) {
+              await sender.replaceTrack(nextTrack);
+            }
+          })
+        );
+
+        localStreamRef.current?.getTracks().forEach((track) => track.stop());
+        localStreamRef.current = nextStream;
+        pushCallLog("input device switched for active call");
+      } catch (error) {
+        if (!cancelled) {
+          pushToast(t("settings.devicesLoadFailed"));
+          pushCallLog(`input device switch failed: ${(error as Error).message}`);
+        }
+      }
+    };
+
+    void replaceAudioTrack();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedInputId, getAudioConstraints, micMuted, t, pushToast, pushCallLog]);
+
+  useEffect(() => {
+    return () => {
+      teardownRoom();
+    };
+  }, [teardownRoom]);
+
+  useEffect(() => {
+    roomVoiceTargetsRef.current = roomVoiceTargets;
+  }, [roomVoiceTargets]);
+
+  useEffect(() => {
+    if (!roomVoiceConnectedRef.current) {
+      return;
+    }
+
+    void syncRoomTargets();
+  }, [roomVoiceTargets, syncRoomTargets]);
+
+  useEffect(() => {
+    teardownRoom();
+  }, [roomSlug, teardownRoom]);
+
+  return {
+    roomVoiceConnected,
+    connectedPeerUserIds,
+    connectRoom,
+    disconnectRoom,
+    handleIncomingSignal,
+    handleIncomingTerminal
+  };
+}

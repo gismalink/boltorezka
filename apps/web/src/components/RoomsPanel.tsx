@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import type { Room, RoomKind } from "../types";
+import type { Room, RoomKind } from "../domain";
 import { PopupPortal } from "./PopupPortal";
 import type { RoomsPanelProps } from "./types";
 
 type ConfirmPopupState =
-  | { kind: "delete-channel"; room: Room }
+  | { kind: "archive-channel"; room: Room }
   | { kind: "clear-channel"; room: Room }
   | { kind: "delete-category" }
   | null;
@@ -20,8 +20,12 @@ export function RoomsPanel({
   canCreateRooms,
   roomsTree,
   roomSlug,
+  currentUserId,
   currentUserName,
   liveRoomMembersBySlug,
+  liveRoomMemberDetailsBySlug,
+  voiceActiveUserIdsInCurrentRoom,
+  collapsedCategoryIds,
   uncategorizedRooms,
   newCategorySlug,
   newCategoryTitle,
@@ -63,6 +67,7 @@ export function RoomsPanel({
   onMoveChannel,
   onClearChannelMessages,
   onDeleteChannel,
+  onToggleCategoryCollapsed,
   onJoinRoom
 }: RoomsPanelProps) {
   const categorySettingsAnchorRefs = useRef<Record<string, HTMLDivElement | null>>({});
@@ -135,6 +140,34 @@ export function RoomsPanel({
   };
 
   const normalizedCurrentUserName = String(currentUserName || "").trim().toLocaleLowerCase();
+  const normalizedCurrentUserId = String(currentUserId || "").trim();
+  const voiceActiveUserIdsSet = new Set(voiceActiveUserIdsInCurrentRoom.map((userId) => String(userId || "").trim()).filter(Boolean));
+
+  const mapRoomMembers = (slug: string) => {
+    const details = liveRoomMemberDetailsBySlug[slug] || [];
+    if (details.length > 0) {
+      const byKey = new Map<string, { userId: string; userName: string }>();
+      details.forEach((member) => {
+        const userId = String(member.userId || "").trim();
+        const userName = String(member.userName || member.userId || "").trim();
+        if (!userName) {
+          return;
+        }
+
+        const key = userId || userName.toLocaleLowerCase();
+        if (!byKey.has(key)) {
+          byKey.set(key, { userId, userName });
+        }
+      });
+
+      return Array.from(byKey.values());
+    }
+
+    return dedupeMemberNames(liveRoomMembersBySlug[slug] || []).map((userName) => ({
+      userId: "",
+      userName
+    }));
+  };
 
   const renderRoomRow = (room: Room) => (
     <div className="channel-row">
@@ -208,9 +241,9 @@ export function RoomsPanel({
                 <button
                   type="button"
                   className="secondary delete-action-btn"
-                  onClick={() => setConfirmPopup({ kind: "delete-channel", room })}
+                  onClick={() => setConfirmPopup({ kind: "archive-channel", room })}
                 >
-                  <i className="bi bi-trash3" aria-hidden="true" /> {t("rooms.deleteChannel")}
+                  <i className="bi bi-archive" aria-hidden="true" /> {t("rooms.archiveChannel")}
                 </button>
               </form>
             </div>
@@ -219,26 +252,38 @@ export function RoomsPanel({
       ) : null}
 
       {(() => {
-        const roomMembers = dedupeMemberNames(liveRoomMembersBySlug[room.slug] || []);
+        const roomMembers = mapRoomMembers(room.slug);
 
         if (roomMembers.length === 0) {
           return null;
         }
 
+        const roomHasVoiceState = room.slug === roomSlug;
+
         return (
         <ul className="channel-members-list">
           {roomMembers.map((member) => (
+            (() => {
+              const normalizedMemberName = member.userName.trim().toLocaleLowerCase();
+              const isCurrentUser = normalizedCurrentUserId
+                ? member.userId && member.userId === normalizedCurrentUserId
+                : normalizedCurrentUserName && normalizedMemberName === normalizedCurrentUserName;
+              const isVoiceActive = roomHasVoiceState && member.userId ? voiceActiveUserIdsSet.has(member.userId) : false;
+
+              return (
             <li
-              key={`${room.id}-${member}`}
-              className={`channel-member-item ${normalizedCurrentUserName && member.trim().toLocaleLowerCase() === normalizedCurrentUserName ? "channel-member-item-current" : ""}`}
+              key={`${room.id}-${member.userId || member.userName}`}
+              className={`channel-member-item ${isCurrentUser ? "channel-member-item-current" : ""} ${isVoiceActive ? "channel-member-item-voice-active" : ""}`}
             >
-              <span className="channel-member-avatar">{(member || "U").charAt(0).toUpperCase()}</span>
-              <span className="channel-member-name">{member}</span>
+              <span className="channel-member-avatar">{(member.userName || "U").charAt(0).toUpperCase()}</span>
+              <span className="channel-member-name">{member.userName}</span>
               <span className="channel-member-icons" aria-hidden="true">
-                <i className="bi bi-mic-mute" />
-                <i className="bi bi-volume-mute" />
+                <i className={`bi ${isVoiceActive ? "bi-mic-fill" : "bi-mic-mute"}`} />
+                <i className={`bi ${isVoiceActive ? "bi-volume-up" : "bi-volume-mute"}`} />
               </span>
             </li>
+              );
+            })()
           ))}
         </ul>
         );
@@ -326,7 +371,15 @@ export function RoomsPanel({
         {(roomsTree?.categories || []).map((category) => (
           <div key={category.id} className="category-block">
             <div className="category-title-row">
-              <div className="category-title">{category.title}</div>
+              <button
+                type="button"
+                className="secondary category-collapse-btn"
+                onClick={() => onToggleCategoryCollapsed(category.id)}
+                aria-label={collapsedCategoryIds.includes(category.id) ? t("rooms.expandCategory") : t("rooms.collapseCategory")}
+              >
+                <i className={`bi ${collapsedCategoryIds.includes(category.id) ? "bi-chevron-right" : "bi-chevron-down"}`} aria-hidden="true" />
+                <span className="category-title">{category.title}</span>
+              </button>
               {canCreateRooms ? (
                 <div className="category-actions">
                   <button
@@ -386,11 +439,13 @@ export function RoomsPanel({
                 </div>
               ) : null}
             </div>
-            <ul className="rooms-list">
-              {category.channels.map((room) => (
-                <li key={room.id}>{renderRoomRow(room)}</li>
-              ))}
-            </ul>
+            {!collapsedCategoryIds.includes(category.id) ? (
+              <ul className="rooms-list">
+                {category.channels.map((room) => (
+                  <li key={room.id}>{renderRoomRow(room)}</li>
+                ))}
+              </ul>
+            ) : null}
           </div>
         ))}
 
@@ -421,8 +476,8 @@ export function RoomsPanel({
             <p className="muted settings-confirm-text">
               {confirmPopup.kind === "clear-channel"
                 ? t("rooms.confirmClear")
-                : confirmPopup.kind === "delete-channel"
-                  ? t("rooms.confirmDeleteChannel")
+                : confirmPopup.kind === "archive-channel"
+                  ? t("rooms.confirmArchiveChannel")
                   : t("rooms.confirmDeleteCategory")}
             </p>
             <div className="row delete-confirm-actions">

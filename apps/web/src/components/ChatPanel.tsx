@@ -1,0 +1,156 @@
+import { FormEvent, ReactNode, RefObject } from "react";
+import type { Message } from "../domain";
+
+type ChatPanelProps = {
+  t: (key: string) => string;
+  locale: string;
+  roomSlug: string;
+  messages: Message[];
+  currentUserId: string | null;
+  messagesHasMore: boolean;
+  loadingOlderMessages: boolean;
+  chatText: string;
+  chatLogRef: RefObject<HTMLDivElement>;
+  onLoadOlderMessages: () => void;
+  onSetChatText: (value: string) => void;
+  onSendMessage: (event: FormEvent) => void;
+};
+
+export function ChatPanel({
+  t,
+  locale,
+  roomSlug,
+  messages,
+  currentUserId,
+  messagesHasMore,
+  loadingOlderMessages,
+  chatText,
+  chatLogRef,
+  onLoadOlderMessages,
+  onSetChatText,
+  onSendMessage
+}: ChatPanelProps) {
+  const formatMessageTime = (value: string) => {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return "";
+    }
+
+    return date.toLocaleTimeString(locale, {
+      hour: "2-digit",
+      minute: "2-digit"
+    });
+  };
+
+  const renderMessageText = (value: string): ReactNode[] => {
+    const text = String(value || "");
+    const urlPattern = /((https?:\/\/|www\.)[^\s<]+)/gi;
+    const nodes: ReactNode[] = [];
+    let cursor = 0;
+    let match: RegExpExecArray | null;
+
+    while ((match = urlPattern.exec(text)) !== null) {
+      const raw = match[0];
+      const start = match.index;
+
+      if (start > cursor) {
+        nodes.push(text.slice(cursor, start));
+      }
+
+      let linkText = raw;
+      let trailing = "";
+      while (/[.,!?;:)\]]$/.test(linkText)) {
+        trailing = linkText.slice(-1) + trailing;
+        linkText = linkText.slice(0, -1);
+      }
+
+      if (linkText.length > 0) {
+        const href = /^https?:\/\//i.test(linkText) ? linkText : `https://${linkText}`;
+        nodes.push(
+          <a
+            key={`link-${start}-${linkText}`}
+            href={href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="chat-link"
+          >
+            {linkText}
+          </a>
+        );
+      }
+
+      if (trailing) {
+        nodes.push(trailing);
+      }
+
+      cursor = start + raw.length;
+    }
+
+    if (cursor < text.length) {
+      nodes.push(text.slice(cursor));
+    }
+
+    return nodes.length > 0 ? nodes : [text];
+  };
+
+  return (
+    <section className="card middle-card">
+      <h2>{t("chat.title")} ({roomSlug})</h2>
+      <div className="row">
+        <button
+          type="button"
+          className="secondary"
+          onClick={onLoadOlderMessages}
+          disabled={!messagesHasMore || loadingOlderMessages}
+        >
+          {loadingOlderMessages ? t("chat.loading") : t("chat.loadOlder")}
+        </button>
+        {!messagesHasMore && messages.length > 0 ? (
+          <span className="muted">{t("chat.historyLoaded")}</span>
+        ) : null}
+      </div>
+      <div className="chat-log" ref={chatLogRef}>
+        {messages.map((message) => {
+          const isOwn = currentUserId === message.user_id;
+          const deliveryGlyph = message.deliveryStatus === "sending"
+            ? "•"
+            : message.deliveryStatus === "delivered"
+              ? "✓✓"
+              : message.deliveryStatus === "failed"
+                ? "!"
+                : "";
+
+          return (
+            <article key={message.id} className={`chat-message ${isOwn ? "chat-message-own" : ""}`}>
+              {!isOwn ? (
+                <div className="chat-avatar" aria-hidden="true">
+                  {(message.user_name || "U").charAt(0).toUpperCase()}
+                </div>
+              ) : null}
+
+              <div className="chat-bubble-wrap">
+                <div className="chat-bubble">
+                  <div className="chat-meta">
+                    <span className="chat-author">{message.user_name}</span>
+                    <span className="chat-time">{formatMessageTime(message.created_at)}</span>
+                  </div>
+                  <p className="chat-text">{renderMessageText(message.text)}</p>
+                </div>
+
+                {isOwn && message.deliveryStatus ? (
+                  <span className={`delivery delivery-${message.deliveryStatus}`}>
+                    {deliveryGlyph}
+                  </span>
+                ) : null}
+              </div>
+            </article>
+          );
+        })}
+      </div>
+      <form className="chat-compose" onSubmit={onSendMessage}>
+        <input value={chatText} onChange={(event) => onSetChatText(event.target.value)} placeholder={t("chat.typePlaceholder")} />
+        <button type="submit">{t("chat.send")}</button>
+      </form>
+    </section>
+  );
+}

@@ -55,6 +55,11 @@ export type MessagesCursor = {
   beforeId: string;
 };
 
+export type PresenceMember = {
+  userId: string;
+  userName: string;
+};
+
 export type RoomMessagesResponse = {
   room: Room;
   messages: Message[];

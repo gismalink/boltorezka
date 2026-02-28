@@ -3,6 +3,31 @@
 Этот документ хранит зафиксированные изменения, выполненные шаги и операционные evidence.
 План и open items находятся в `docs/ROADMAP.md`.
 
+## 2026-02-28 — Rooms: category collapse + channel archive flow
+
+### Delivered
+
+- Добавлено soft-archive поведение для каналов:
+  - `DELETE /v1/rooms/:roomId` теперь архивирует канал (`is_archived=true`) вместо физического удаления,
+  - защита `last room` и `general` сохранена,
+  - архивные каналы исключены из `GET /v1/rooms`, `GET /v1/rooms/tree`, join-check в realtime и `GET /v1/rooms/:slug/messages`.
+- Добавлена DB-схема для архивирования:
+  - `rooms.is_archived BOOLEAN NOT NULL DEFAULT FALSE`,
+  - индекс `idx_rooms_archived`.
+- В web sidebar добавлено сворачивание/разворачивание категорий:
+  - toggle на заголовке категории,
+  - persist состояния в `localStorage` (`boltorezka_collapsed_category_ids`).
+- UI формулировка удаления канала заменена на архивирование (`Archive channel`) в channel settings и confirm popup.
+
+### Validation
+
+- `npm run check:api-types` — PASS.
+- `npm run web:build` — PASS.
+
+### Operational evidence (test)
+
+- Готово к деплою в `test` через стандартный `TEST_REF=origin/<feature> npm run deploy:test:smoke`.
+
 ## 2026-02-28 — Smoke API: hierarchy create/navigation scenario
 
 ### Delivered

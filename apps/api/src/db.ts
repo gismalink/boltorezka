@@ -33,5 +33,7 @@ export async function ensureSchema() {
   );
   await db.query("ALTER TABLE rooms ADD COLUMN IF NOT EXISTS category_id UUID REFERENCES room_categories(id) ON DELETE SET NULL");
   await db.query("ALTER TABLE rooms ADD COLUMN IF NOT EXISTS position INTEGER NOT NULL DEFAULT 0");
+  await db.query("ALTER TABLE rooms ADD COLUMN IF NOT EXISTS is_archived BOOLEAN NOT NULL DEFAULT FALSE");
   await db.query("CREATE INDEX IF NOT EXISTS idx_rooms_category_position ON rooms(category_id, position)");
+  await db.query("CREATE INDEX IF NOT EXISTS idx_rooms_archived ON rooms(is_archived)");
 }

@@ -1,4 +1,4 @@
-import type { WsIncoming, WsOutgoing } from "../types";
+import type { WsIncoming, WsOutgoing } from "../domain";
 
 const RECONNECT_DELAYS_MS = [1000, 2000, 4000, 8000, 12000];
 const ACK_TIMEOUT_MS = 6000;

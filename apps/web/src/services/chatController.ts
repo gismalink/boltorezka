@@ -1,5 +1,5 @@
 import { api } from "../api";
-import type { Message, MessagesCursor, User } from "../types";
+import type { Message, MessagesCursor, User } from "../domain";
 
 type WsSender = (
   eventType: string,

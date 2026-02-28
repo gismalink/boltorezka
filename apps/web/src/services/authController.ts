@@ -1,6 +1,6 @@
 import { api } from "../api";
 import { trackClientEvent } from "../telemetry";
-import type { User } from "../types";
+import type { User } from "../domain";
 
 type AuthControllerOptions = {
   pushLog: (text: string) => void;

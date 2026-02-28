@@ -1,5 +1,5 @@
 import type { Dispatch, SetStateAction } from "react";
-import type { Message, WsIncoming } from "../types";
+import type { Message, PresenceMember, WsIncoming } from "../domain";
 import type { CallStatus } from "./callSignalingController";
 
 type WsMessageControllerOptions = {
@@ -17,12 +17,21 @@ type WsMessageControllerOptions = {
   pushToast: (message: string) => void;
   setRoomSlug: (slug: string) => void;
   setRoomsPresenceBySlug: Dispatch<SetStateAction<Record<string, string[]>>>;
+  setRoomsPresenceDetailsBySlug: Dispatch<SetStateAction<Record<string, PresenceMember[]>>>;
   trackNack: (data: {
     requestId: string;
     eventType: string;
     code: string;
     message: string;
   }) => void;
+  onCallSignal?: (
+    eventType: "call.offer" | "call.answer" | "call.ice",
+    payload: { fromUserId?: string; fromUserName?: string; signal?: Record<string, unknown> }
+  ) => void;
+  onCallTerminal?: (
+    eventType: "call.reject" | "call.hangup",
+    payload: { fromUserId?: string; fromUserName?: string; reason?: string | null }
+  ) => void;
 };
 
 export class WsMessageController {
@@ -145,6 +154,14 @@ export class WsMessageController {
       this.options.pushCallLog(
         `${message.type} from ${fromUserName} (${hasSignal ? "signal" : "no-signal"})`
       );
+      this.options.onCallSignal?.(message.type, {
+        fromUserId: String(message.payload?.fromUserId || "").trim() || undefined,
+        fromUserName: String(message.payload?.fromUserName || "").trim() || undefined,
+        signal:
+          message.payload?.signal && typeof message.payload.signal === "object"
+            ? (message.payload.signal as Record<string, unknown>)
+            : undefined
+      });
     }
 
     if (message.type === "call.reject") {
@@ -153,6 +170,11 @@ export class WsMessageController {
       this.options.setLastCallPeer(fromUserName);
       this.options.setCallStatus("idle");
       this.options.pushCallLog(`call.reject from ${fromUserName}${reason ? ` (${reason})` : ""}`);
+      this.options.onCallTerminal?.("call.reject", {
+        fromUserId: String(message.payload?.fromUserId || "").trim() || undefined,
+        fromUserName: String(message.payload?.fromUserName || "").trim() || undefined,
+        reason: reason || null
+      });
     }
 
     if (message.type === "call.hangup") {
@@ -161,6 +183,11 @@ export class WsMessageController {
       this.options.setLastCallPeer(fromUserName);
       this.options.setCallStatus("idle");
       this.options.pushCallLog(`call.hangup from ${fromUserName}${reason ? ` (${reason})` : ""}`);
+      this.options.onCallTerminal?.("call.hangup", {
+        fromUserId: String(message.payload?.fromUserId || "").trim() || undefined,
+        fromUserName: String(message.payload?.fromUserName || "").trim() || undefined,
+        reason: reason || null
+      });
     }
 
     if (message.type === "room.joined") {
@@ -170,13 +197,24 @@ export class WsMessageController {
     if (message.type === "room.presence") {
       const roomSlug = String(message.payload?.roomSlug || "").trim();
       const users = Array.isArray(message.payload?.users)
-        ? message.payload.users
-            .map((item: { userName?: string }) => String(item?.userName || "").trim())
-            .filter(Boolean)
+        ? (message.payload.users as Array<{ userId?: string; userName?: string }>)
+            .map((item: { userId?: string; userName?: string }) => {
+              const userId = String(item?.userId || "").trim();
+              const userName = String(item?.userName || "").trim();
+              if (!userId || !userName) {
+                return null;
+              }
+              return { userId, userName } satisfies PresenceMember;
+            })
+            .filter((item: PresenceMember | null): item is PresenceMember => Boolean(item))
         : [];
 
       if (roomSlug) {
         this.options.setRoomsPresenceBySlug((prev) => ({
+          ...prev,
+          [roomSlug]: users.map((item: PresenceMember) => item.userName)
+        }));
+        this.options.setRoomsPresenceDetailsBySlug((prev) => ({
           ...prev,
           [roomSlug]: users
         }));
@@ -186,8 +224,9 @@ export class WsMessageController {
     if (message.type === "rooms.presence") {
       const rooms = Array.isArray(message.payload?.rooms) ? message.payload.rooms : [];
       const next: Record<string, string[]> = {};
+      const detailsNext: Record<string, PresenceMember[]> = {};
 
-      rooms.forEach((room: { roomSlug?: string; users?: Array<{ userName?: string }> }) => {
+      rooms.forEach((room: { roomSlug?: string; users?: Array<{ userId?: string; userName?: string }> }) => {
         const roomSlug = String(room?.roomSlug || "").trim();
         if (!roomSlug) {
           return;
@@ -195,14 +234,23 @@ export class WsMessageController {
 
         const users = Array.isArray(room?.users)
           ? room.users
-              .map((item) => String(item?.userName || "").trim())
-              .filter(Boolean)
+              .map((item) => {
+                const userId = String(item?.userId || "").trim();
+                const userName = String(item?.userName || "").trim();
+                if (!userId || !userName) {
+                  return null;
+                }
+                return { userId, userName } satisfies PresenceMember;
+              })
+              .filter((item): item is PresenceMember => Boolean(item))
           : [];
 
-        next[roomSlug] = users;
+        next[roomSlug] = users.map((item) => item.userName);
+        detailsNext[roomSlug] = users;
       });
 
       this.options.setRoomsPresenceBySlug(next);
+      this.options.setRoomsPresenceDetailsBySlug(detailsNext);
     }
 
     if (message.type === "error") {

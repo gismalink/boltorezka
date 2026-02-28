@@ -8,7 +8,27 @@ import type {
   RoomsTreeResponse,
   TelemetrySummary,
   User
-} from "./types";
+} from "./domain";
+
+type ApiErrorPayload = {
+  message?: string;
+  error?: string;
+  [key: string]: unknown;
+};
+
+export class ApiError extends Error {
+  readonly status: number;
+  readonly code: string;
+  readonly payload: ApiErrorPayload;
+
+  constructor(status: number, payload: ApiErrorPayload) {
+    super(String(payload.message || payload.error || `HTTP ${status}`));
+    this.name = "ApiError";
+    this.status = status;
+    this.code = String(payload.error || "HTTP_ERROR");
+    this.payload = payload;
+  }
+}
 
 async function fetchJson<T>(path: string, token?: string, init: RequestInit = {}) {
   const headers: Record<string, string> = {
@@ -27,70 +47,66 @@ async function fetchJson<T>(path: string, token?: string, init: RequestInit = {}
   const payload = await response.json().catch(() => ({}));
 
   if (!response.ok) {
-    throw new Error(payload.message || payload.error || `HTTP ${response.status}`);
+    throw new ApiError(response.status, payload as ApiErrorPayload);
   }
 
   return payload as T;
 }
 
+const endpoints = {
+  authMode: "/v1/auth/mode",
+  ssoSession: "/v1/auth/sso/session",
+  me: "/v1/auth/me",
+  wsTicket: "/v1/auth/ws-ticket",
+  rooms: "/v1/rooms",
+  roomsTree: "/v1/rooms/tree",
+  roomCategories: "/v1/room-categories",
+  telemetrySummary: "/v1/telemetry/summary",
+  adminUsers: "/v1/admin/users"
+} as const;
+
+const withId = (basePath: string, id: string) => `${basePath}/${encodeURIComponent(id)}`;
+const withSuffix = (basePath: string, id: string, suffix: string) => `${withId(basePath, id)}/${suffix}`;
+
+const withJsonBody = (method: "POST" | "PATCH" | "DELETE", body?: unknown): RequestInit => ({
+  method,
+  ...(typeof body === "undefined" ? {} : { body: JSON.stringify(body) })
+});
+
 export const api = {
-  authMode: () => fetchJson<AuthModeResponse>("/v1/auth/mode"),
-  ssoSession: () => fetchJson<{ authenticated: boolean; token: string | null; user: User | null }>("/v1/auth/sso/session"),
-  me: (token: string) => fetchJson<{ user: User | null }>("/v1/auth/me", token),
+  authMode: () => fetchJson<AuthModeResponse>(endpoints.authMode),
+  ssoSession: () => fetchJson<{ authenticated: boolean; token: string | null; user: User | null }>(endpoints.ssoSession),
+  me: (token: string) => fetchJson<{ user: User | null }>(endpoints.me, token),
   updateMe: (token: string, input: { name: string }) =>
-    fetchJson<{ user: User | null }>("/v1/auth/me", token, {
-      method: "PATCH",
-      body: JSON.stringify(input)
-    }),
-  wsTicket: (token: string) => fetchJson<{ ticket: string; expiresInSec: number }>("/v1/auth/ws-ticket", token),
-  rooms: (token: string) => fetchJson<{ rooms: Room[] }>("/v1/rooms", token),
-  roomTree: (token: string) => fetchJson<RoomsTreeResponse>("/v1/rooms/tree", token),
+    fetchJson<{ user: User | null }>(endpoints.me, token, withJsonBody("PATCH", input)),
+  wsTicket: (token: string) => fetchJson<{ ticket: string; expiresInSec: number }>(endpoints.wsTicket, token),
+  rooms: (token: string) => fetchJson<{ rooms: Room[] }>(endpoints.rooms, token),
+  roomTree: (token: string) => fetchJson<RoomsTreeResponse>(endpoints.roomsTree, token),
   createCategory: (token: string, input: { slug: string; title: string; position?: number }) =>
-    fetchJson<{ category: RoomCategory }>("/v1/room-categories", token, {
-      method: "POST",
-      body: JSON.stringify(input)
-    }),
+    fetchJson<{ category: RoomCategory }>(endpoints.roomCategories, token, withJsonBody("POST", input)),
   updateCategory: (token: string, categoryId: string, input: { title: string }) =>
-    fetchJson<{ category: RoomCategory }>(`/v1/room-categories/${encodeURIComponent(categoryId)}`, token, {
-      method: "PATCH",
-      body: JSON.stringify(input)
-    }),
+    fetchJson<{ category: RoomCategory }>(withId(endpoints.roomCategories, categoryId), token, withJsonBody("PATCH", input)),
   moveCategory: (token: string, categoryId: string, direction: "up" | "down") =>
-    fetchJson<{ category: RoomCategory }>(`/v1/room-categories/${encodeURIComponent(categoryId)}/move`, token, {
-      method: "POST",
-      body: JSON.stringify({ direction })
-    }),
+    fetchJson<{ category: RoomCategory }>(withSuffix(endpoints.roomCategories, categoryId, "move"), token, withJsonBody("POST", { direction })),
   deleteCategory: (token: string, categoryId: string) =>
-    fetchJson<{ ok: true; categoryId: string }>(`/v1/room-categories/${encodeURIComponent(categoryId)}`, token, {
-      method: "DELETE"
-    }),
+    fetchJson<{ ok: true; categoryId: string }>(withId(endpoints.roomCategories, categoryId), token, withJsonBody("DELETE")),
   createRoom: (
     token: string,
     input: { slug: string; title: string; is_public: boolean; kind?: RoomKind; category_id?: string | null }
   ) =>
-    fetchJson<{ room: Room }>("/v1/rooms", token, { method: "POST", body: JSON.stringify(input) }),
+    fetchJson<{ room: Room }>(endpoints.rooms, token, withJsonBody("POST", input)),
   updateRoom: (
     token: string,
     roomId: string,
     input: { title: string; kind: RoomKind; category_id: string | null }
   ) =>
-    fetchJson<{ room: Room }>(`/v1/rooms/${encodeURIComponent(roomId)}`, token, {
-      method: "PATCH",
-      body: JSON.stringify(input)
-    }),
+    fetchJson<{ room: Room }>(withId(endpoints.rooms, roomId), token, withJsonBody("PATCH", input)),
   moveRoom: (token: string, roomId: string, direction: "up" | "down") =>
-    fetchJson<{ room: Room }>(`/v1/rooms/${encodeURIComponent(roomId)}/move`, token, {
-      method: "POST",
-      body: JSON.stringify({ direction })
-    }),
+    fetchJson<{ room: Room }>(withSuffix(endpoints.rooms, roomId, "move"), token, withJsonBody("POST", { direction })),
   deleteRoom: (token: string, roomId: string) =>
-    fetchJson<{ ok: true; roomId: string }>(`/v1/rooms/${encodeURIComponent(roomId)}`, token, {
-      method: "DELETE"
-    }),
+    fetchJson<{ ok: true; roomId: string; archived?: boolean }>(withId(endpoints.rooms, roomId), token, withJsonBody("DELETE")),
   clearRoomMessages: (token: string, roomId: string) =>
-    fetchJson<{ ok: true; roomId: string; deletedCount: number }>(`/v1/rooms/${encodeURIComponent(roomId)}/messages`, token, {
-      method: "DELETE"
-    }),
+    fetchJson<{ ok: true; roomId: string; deletedCount: number }>(withSuffix(endpoints.rooms, roomId, "messages"), token, withJsonBody("DELETE")),
   roomMessages: (
     token: string,
     slug: string,
@@ -105,15 +121,12 @@ export const api = {
     }
 
     return fetchJson<RoomMessagesResponse>(
-      `/v1/rooms/${encodeURIComponent(slug)}/messages?${params.toString()}`,
+      `${withSuffix(endpoints.rooms, slug, "messages")}?${params.toString()}`,
       token
     );
   },
-  telemetrySummary: (token: string) => fetchJson<TelemetrySummary>("/v1/telemetry/summary", token),
-  adminUsers: (token: string) => fetchJson<{ users: User[] }>("/v1/admin/users", token),
+  telemetrySummary: (token: string) => fetchJson<TelemetrySummary>(endpoints.telemetrySummary, token),
+  adminUsers: (token: string) => fetchJson<{ users: User[] }>(endpoints.adminUsers, token),
   promoteUser: (token: string, userId: string) =>
-    fetchJson<{ user: User }>(`/v1/admin/users/${encodeURIComponent(userId)}/promote`, token, {
-      method: "POST",
-      body: JSON.stringify({ role: "admin" })
-    })
+    fetchJson<{ user: User }>(withSuffix(endpoints.adminUsers, userId, "promote"), token, withJsonBody("POST", { role: "admin" }))
 };

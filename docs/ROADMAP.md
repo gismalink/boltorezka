@@ -71,15 +71,15 @@
   - [x] Persist выбранных устройств/громкости в localStorage и восстановление при reload.
   - [x] Fallback-поведение при отказе в media permissions (понятный UI state без крэшей).
 - [ ] Реализовать Discord-like структуру каналов (категории + текст/голос):
-  - [ ] Добавить category layer в data model (порядок, сворачивание, управление видимостью).
+  - [x] Добавить category layer в data model (порядок, сворачивание, управление видимостью).
   - [x] Разделить channels по типу: `text` и `voice` (в едином tree endpoint).
-  - [ ] Добавить API для CRUD/ordering: category/channel create, rename, move, archive.
+  - [x] Добавить API для CRUD/ordering: category/channel create, rename, move, archive.
   - [x] Добавить права управления структурой (admin/super_admin) + policy checks.
   - [x] Web sidebar UX как в Discord: grouped sections, active highlight, quick create (`+`).
-  - [ ] Поддержать действия по контексту:
+  - [x] Поддержать действия по контексту:
     - [x] join voice
     - [x] open text
-    - [ ] reorder (MVP через explicit order API)
+    - [x] reorder (MVP через explicit order API)
   - [x] Добавить smoke/e2e сценарий на создание и навигацию по иерархии.
 
 ### Exit criteria
@@ -101,6 +101,15 @@
 - [ ] Coturn integration через env/secret.
 - [ ] Ограничения размера room для p2p.
 - [ ] Graceful degradation при плохой сети.
+
+#### Voice workstream (start 2026-02-28)
+
+- [x] Базовый signaling relay (`offer/answer/ice/reject/hangup`) и call-status в web.
+- [x] Device preferences в web: выбор input/output, профиля, громкости + localStorage restore.
+- [x] Реальный mic test в user settings (live input-level meter + start/stop toggle).
+- [x] Автоматический WebRTC handshake runtime (offer/answer/ice) поверх WS relay.
+- [x] Передача локального audio track в peer connection + mute/deafen синхронизация.
+- [x] Turn/stun policy + reconnect strategy для call session.
 
 ### Phase 5 — iOS & macOS
 

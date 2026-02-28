@@ -1,28 +1,46 @@
-import { FormEvent, ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "./api";
-import { AuthController } from "./services/authController";
-import { CallSignalingController, type CallSignalEventType, type CallStatus } from "./services/callSignalingController";
-import { ChatController } from "./services/chatController";
-import { RealtimeClient } from "./services/realtimeClient";
-import { RoomAdminController } from "./services/roomAdminController";
 import { TooltipPortal } from "./TooltipPortal";
-import { WsMessageController } from "./services/wsMessageController";
-import { RoomsPanel } from "./components/RoomsPanel";
-import { PopupPortal } from "./components/PopupPortal";
-import { ToastStack } from "./components/ToastStack";
-import { UserDock } from "./components/UserDock";
-import type { InputProfile, MediaDevicesState, VoiceSettingsPanel } from "./components/types";
+import {
+  AuthController,
+  ChatController,
+  RealtimeClient,
+  RoomAdminController,
+  WsMessageController
+} from "./services";
+import type { CallStatus } from "./services";
+import {
+  AppHeader,
+  ChatPanel,
+  RoomsPanel,
+  ServerProfileModal,
+  ToastStack,
+  UserDock
+} from "./components";
+import type { InputProfile, MediaDevicesState, VoiceSettingsPanel } from "./components";
+import {
+  useAuthProfileFlow,
+  useCollapsedCategories,
+  useMediaDevicePreferences,
+  useMicrophoneLevelMeter,
+  usePopupOutsideClose,
+  useRealtimeChatLifecycle,
+  useRoomAdminActions,
+  useRoomsDerived,
+  useServerMenuAccessGuard,
+  useVoiceCallRuntime
+} from "./hooks";
 import { detectInitialLang, LANGUAGE_OPTIONS, LOCALE_BY_LANG, TEXT, type Lang } from "./i18n";
-import { trackClientEvent } from "./telemetry";
 import type {
   Message,
   MessagesCursor,
+  PresenceMember,
   Room,
   RoomKind,
   RoomsTreeResponse,
   TelemetrySummary,
   User
-} from "./types";
+} from "./domain";
 
 const MAX_CHAT_RETRIES = 3;
 const TOAST_AUTO_DISMISS_MS = 4500;
@@ -42,13 +60,12 @@ export function App() {
   const [messagesNextCursor, setMessagesNextCursor] = useState<MessagesCursor | null>(null);
   const [loadingOlderMessages, setLoadingOlderMessages] = useState(false);
   const [chatText, setChatText] = useState("");
-  const [callTargetUserId, setCallTargetUserId] = useState("");
-  const [callSignalJson, setCallSignalJson] = useState('{"type":"offer","sdp":""}');
   const [callStatus, setCallStatus] = useState<CallStatus>("idle");
   const [lastCallPeer, setLastCallPeer] = useState("");
   const [callEventLog, setCallEventLog] = useState<string[]>([]);
   const [toasts, setToasts] = useState<Array<{ id: number; message: string }>>([]);
   const [roomsPresenceBySlug, setRoomsPresenceBySlug] = useState<Record<string, string[]>>({});
+  const [roomsPresenceDetailsBySlug, setRoomsPresenceDetailsBySlug] = useState<Record<string, PresenceMember[]>>({});
   const [eventLog, setEventLog] = useState<string[]>([]);
   const [telemetrySummary, setTelemetrySummary] = useState<TelemetrySummary | null>(null);
   const [wsState, setWsState] = useState<"disconnected" | "connecting" | "connected">(
@@ -89,6 +106,8 @@ export function App() {
   const [mediaDevicesHint, setMediaDevicesHint] = useState("");
   const [micVolume, setMicVolume] = useState<number>(() => Number(localStorage.getItem("boltorezka_mic_volume") || 75));
   const [outputVolume, setOutputVolume] = useState<number>(() => Number(localStorage.getItem("boltorezka_output_volume") || 70));
+  const [micTestRunning, setMicTestRunning] = useState(false);
+  const [micTestLevel, setMicTestLevel] = useState(0);
   const [authMenuOpen, setAuthMenuOpen] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [appMenuOpen, setAppMenuOpen] = useState(false);
@@ -115,6 +134,8 @@ export function App() {
     const dict = TEXT[lang];
     return (key: string) => dict[key] || key;
   }, [lang]);
+
+  const { collapsedCategoryIds, toggleCategoryCollapsed } = useCollapsedCategories(roomsTree);
 
   const pushLog = (text: string) => {
     setEventLog((prev) => [`${new Date().toLocaleTimeString(locale)} ${text}`, ...prev].slice(0, 30));
@@ -161,16 +182,42 @@ export function App() {
     return realtimeClientRef.current?.sendEvent(eventType, payload, options) ?? null;
   }, []);
 
-  const callSignalingController = useMemo(
-    () =>
-      new CallSignalingController({
-        sendWsEvent,
-        setCallStatus,
-        setLastCallPeer,
-        pushCallLog
-      }),
-    [sendWsEvent]
-  );
+  const currentRoomVoiceTargets = useMemo(() => {
+    const members = roomsPresenceDetailsBySlug[roomSlug] || [];
+    const me = user?.id || "";
+    return members.filter((member) => member.userId !== me);
+  }, [roomsPresenceDetailsBySlug, roomSlug, user?.id]);
+
+  const {
+    roomVoiceConnected,
+    connectedPeerUserIds,
+    connectRoom,
+    disconnectRoom,
+    handleIncomingSignal,
+    handleIncomingTerminal
+  } = useVoiceCallRuntime({
+    roomSlug,
+    roomVoiceTargets: currentRoomVoiceTargets,
+    selectedInputId,
+    selectedOutputId,
+    micMuted,
+    audioMuted,
+    outputVolume,
+    t,
+    pushToast,
+    pushCallLog,
+    sendWsEvent,
+    setCallStatus,
+    setLastCallPeer
+  });
+
+  const voiceActiveUserIdsInCurrentRoom = useMemo(() => {
+    const ids = new Set(connectedPeerUserIds);
+    if (roomVoiceConnected && user?.id) {
+      ids.add(user.id);
+    }
+    return Array.from(ids);
+  }, [connectedPeerUserIds, roomVoiceConnected, user?.id]);
 
   const authController = useMemo(
     () =>
@@ -227,20 +274,31 @@ export function App() {
     [sendWsEvent, loadTelemetrySummary]
   );
 
-  useEffect(() => {
-    api.authMode()
-      .then((res) => setAuthMode(res.mode))
-      .catch(() => setAuthMode("sso"));
-  }, []);
-
-  useEffect(() => {
-    if (token || authMode !== "sso" || autoSsoAttemptedRef.current) {
-      return;
-    }
-
-    autoSsoAttemptedRef.current = true;
-    void authController.completeSso({ silent: true });
-  }, [token, authMode, authController]);
+  const {
+    beginSso,
+    logout,
+    openUserSettings,
+    saveMyProfile
+  } = useAuthProfileFlow({
+    authController,
+    token,
+    authMode,
+    autoSsoAttemptedRef,
+    profileNameDraft,
+    t,
+    setAuthMode,
+    setAuthMenuOpen,
+    setProfileMenuOpen,
+    setAudioOutputMenuOpen,
+    setVoiceSettingsOpen,
+    setVoiceSettingsPanel,
+    setUserSettingsTab,
+    setUserSettingsOpen,
+    setProfileSaving,
+    setProfileStatusText,
+    setUser,
+    pushToast
+  });
 
   useEffect(() => {
     localStorage.setItem("boltorezka_lang", lang);
@@ -263,6 +321,7 @@ export function App() {
       setLoadingOlderMessages(false);
       setAdminUsers([]);
       setRoomsPresenceBySlug({});
+      setRoomsPresenceDetailsBySlug({});
       setTelemetrySummary(null);
       realtimeClientRef.current?.dispose();
       realtimeClientRef.current = null;
@@ -285,117 +344,32 @@ export function App() {
     void roomAdminController.loadRoomTree(token);
   }, [token]);
 
-  useEffect(() => {
-    roomSlugRef.current = roomSlug;
-    realtimeClientRef.current?.setRoomSlug(roomSlug);
-  }, [roomSlug]);
-
-  useEffect(() => {
-    if (!token) {
-      setWsState("disconnected");
-      return;
-    }
-
-    const messageController = new WsMessageController({
-      clearPendingRequest: (requestId) => realtimeClientRef.current?.clearPendingRequest(requestId),
-      markMessageDelivery,
-      setMessages,
-      setLastCallPeer,
-      setCallStatus,
-      pushLog,
-      pushCallLog,
-      pushToast,
-      setRoomSlug,
-      setRoomsPresenceBySlug,
-      trackNack: ({ requestId, eventType, code, message }) => {
-        trackClientEvent(
-          "ws.nack.received",
-          {
-            requestId,
-            eventType,
-            code,
-            message
-          },
-          token
-        );
-      }
-    });
-
-    const client = new RealtimeClient({
-      getTicket: async (authToken) => {
-        const response = await api.wsTicket(authToken);
-        return response.ticket;
-      },
-      onWsStateChange: setWsState,
-      onLog: (message) => {
-        pushLog(message);
-        if (message === "ws error") {
-          trackClientEvent("ws.error", {}, token);
-        }
-      },
-      onMessage: (message) => messageController.handle(message),
-      onConnected: () => {
-        trackClientEvent("ws.connected", { roomSlug: roomSlugRef.current }, token);
-      },
-      onRequestResent: (requestId, eventType) => {
-        if (eventType === "chat.send") {
-          markMessageDelivery(requestId, "sending");
-        }
-      },
-      onRequestFailed: (requestId, eventType, retries) => {
-        if (eventType === "chat.send") {
-          markMessageDelivery(requestId, "failed");
-          trackClientEvent(
-            "chat.request.failed.retries_exhausted",
-            { requestId, eventType, retries },
-            token
-          );
-        }
-      }
-    });
-
-    realtimeClientRef.current = client;
-    client.setRoomSlug(roomSlugRef.current);
-    client.connect(token);
-
-    return () => {
-      client.dispose();
-      if (realtimeClientRef.current === client) {
-        realtimeClientRef.current = null;
-      }
-    };
-  }, [token]);
-
-  useEffect(() => {
-    if (!token || !roomSlug) return;
-    void chatController.loadRecentMessages(token, roomSlug);
-  }, [token, roomSlug, chatController]);
-
-  useEffect(() => {
-    const chatLogElement = chatLogRef.current;
-    if (!chatLogElement) {
-      return;
-    }
-
-    const latestMessageId = messages.length > 0 ? messages[messages.length - 1].id : null;
-    const roomChanged = lastRoomSlugForScrollRef.current !== roomSlug;
-    const latestMessageChanged = latestMessageId !== lastMessageIdRef.current;
-
-    if (roomChanged || latestMessageChanged) {
-      chatLogElement.scrollTop = chatLogElement.scrollHeight;
-    }
-
-    lastRoomSlugForScrollRef.current = roomSlug;
-    lastMessageIdRef.current = latestMessageId;
-  }, [messages, roomSlug]);
-
-  const loadOlderMessages = async () => {
-    if (!token || !roomSlug || !messagesNextCursor || loadingOlderMessages) {
-      return;
-    }
-
-    await chatController.loadOlderMessages(token, roomSlug, messagesNextCursor, loadingOlderMessages);
-  };
+  const { loadOlderMessages } = useRealtimeChatLifecycle({
+    token,
+    roomSlug,
+    messages,
+    messagesNextCursor,
+    loadingOlderMessages,
+    chatController,
+    chatLogRef,
+    roomSlugRef,
+    realtimeClientRef,
+    lastRoomSlugForScrollRef,
+    lastMessageIdRef,
+    setWsState,
+    setMessages,
+    setLastCallPeer,
+    setCallStatus,
+    setRoomSlug,
+    setRoomsPresenceBySlug,
+    setRoomsPresenceDetailsBySlug,
+    pushLog,
+    pushCallLog,
+    pushToast,
+    markMessageDelivery,
+    onCallSignal: handleIncomingSignal,
+    onCallTerminal: handleIncomingTerminal
+  });
 
   useEffect(() => {
     if (!token || !canPromote) return;
@@ -421,302 +395,66 @@ export function App() {
     void loadTelemetrySummary();
   }, [wsState, loadTelemetrySummary]);
 
-  useEffect(() => {
-    localStorage.setItem("boltorezka_mic_volume", String(micVolume));
-  }, [micVolume]);
+  const { refreshDevices } = useMediaDevicePreferences({
+    t,
+    selectedInputId,
+    selectedOutputId,
+    micVolume,
+    outputVolume,
+    setInputDevices,
+    setOutputDevices,
+    setMediaDevicesState,
+    setMediaDevicesHint,
+    setSelectedInputId,
+    setSelectedOutputId
+  });
+
+  useMicrophoneLevelMeter({
+    running: micTestRunning,
+    selectedInputId,
+    t,
+    pushToast,
+    setRunning: setMicTestRunning,
+    setLevel: setMicTestLevel
+  });
 
   useEffect(() => {
-    localStorage.setItem("boltorezka_output_volume", String(outputVolume));
-  }, [outputVolume]);
-
-  useEffect(() => {
-    localStorage.setItem("boltorezka_selected_input_id", selectedInputId);
-  }, [selectedInputId]);
-
-  useEffect(() => {
-    localStorage.setItem("boltorezka_selected_output_id", selectedOutputId);
-  }, [selectedOutputId]);
-
-  useEffect(() => {
-    const loadDevices = async () => {
-      if (!navigator.mediaDevices?.enumerateDevices) {
-        setMediaDevicesState("unsupported");
-        setMediaDevicesHint(t("settings.browserUnsupported"));
-        return;
-      }
-
-      try {
-        const devices = await navigator.mediaDevices.enumerateDevices();
-        const inputs = devices
-          .filter((item) => item.kind === "audioinput")
-          .map((item, index) => ({
-            id: item.deviceId || `input-${index}`,
-            label: item.label || `${t("settings.microphone")} ${index + 1}`
-          }));
-        const outputs = devices
-          .filter((item) => item.kind === "audiooutput")
-          .map((item, index) => ({
-            id: item.deviceId || `output-${index}`,
-            label: item.label || `${t("settings.outputDevice")} ${index + 1}`
-          }));
-
-        setInputDevices(inputs);
-        setOutputDevices(outputs);
-
-        if (inputs.length === 0 && outputs.length === 0) {
-          setMediaDevicesState("error");
-          setMediaDevicesHint(t("settings.devicesNotFound"));
-        } else {
-          setMediaDevicesState("ready");
-          setMediaDevicesHint("");
-        }
-
-        if (inputs.length > 0 && !inputs.some((item) => item.id === selectedInputId)) {
-          setSelectedInputId(inputs[0].id);
-        }
-        if (outputs.length > 0 && !outputs.some((item) => item.id === selectedOutputId)) {
-          setSelectedOutputId(outputs[0].id);
-        }
-      } catch (error) {
-        const errorName = (error as { name?: string })?.name || "";
-        if (errorName === "NotAllowedError" || errorName === "SecurityError") {
-          setMediaDevicesState("denied");
-          setMediaDevicesHint(t("settings.mediaDenied"));
-          return;
-        }
-
-        setMediaDevicesState("error");
-        setMediaDevicesHint(t("settings.devicesLoadFailed"));
-        return;
-      }
-    };
-
-    void loadDevices();
-  }, [selectedInputId, selectedOutputId, t]);
-
-  useEffect(() => {
-    if (!profileMenuOpen && !authMenuOpen && !categoryPopupOpen && !channelPopupOpen && !channelSettingsPopupOpenId && !categorySettingsPopupOpenId && !audioOutputMenuOpen && !voiceSettingsOpen && !userSettingsOpen) {
-      return;
+    if (!userSettingsOpen || userSettingsTab !== "sound") {
+      setMicTestRunning(false);
     }
+  }, [userSettingsOpen, userSettingsTab]);
 
-    const onClickOutside = (event: MouseEvent) => {
-      const target = event.target as Node | null;
-      const insideProfile = Boolean(target && profileMenuRef.current?.contains(target));
-      const insideAuth = Boolean(target && authMenuRef.current?.contains(target));
-      const insideCategoryPopup = Boolean(target && categoryPopupRef.current?.contains(target));
-      const insideChannelPopup = Boolean(target && channelPopupRef.current?.contains(target));
-      const insideChannelSettings = Boolean(target && target instanceof HTMLElement && target.closest(".channel-settings-anchor"));
-      const insideCategorySettings = Boolean(target && target instanceof HTMLElement && target.closest(".category-settings-anchor"));
-      const insideOutputSettings = Boolean(target && audioOutputAnchorRef.current?.contains(target));
-      const insideVoiceSettings = Boolean(target && voiceSettingsAnchorRef.current?.contains(target));
-      const insideUserSettings = Boolean(target && userSettingsRef.current?.contains(target));
-      const insidePopupLayer = Boolean(target && target instanceof HTMLElement && target.closest(".popup-layer-content"));
-
-      if (!insideProfile && !insideAuth && !insideCategoryPopup && !insideChannelPopup && !insideChannelSettings && !insideCategorySettings && !insideOutputSettings && !insideVoiceSettings && !insideUserSettings && !insidePopupLayer) {
-        setProfileMenuOpen(false);
-        setAuthMenuOpen(false);
-        setCategoryPopupOpen(false);
-        setChannelPopupOpen(false);
-        setChannelSettingsPopupOpenId(null);
-        setCategorySettingsPopupOpenId(null);
-        setAudioOutputMenuOpen(false);
-        setVoiceSettingsOpen(false);
-        setUserSettingsOpen(false);
-      }
-    };
-
-    window.addEventListener("mousedown", onClickOutside);
-    return () => window.removeEventListener("mousedown", onClickOutside);
-  }, [profileMenuOpen, authMenuOpen, categoryPopupOpen, channelPopupOpen, channelSettingsPopupOpenId, categorySettingsPopupOpenId, audioOutputMenuOpen, voiceSettingsOpen, userSettingsOpen]);
-
-  const beginSso = (provider: "google" | "yandex") => {
-    setAuthMenuOpen(false);
-    authController.beginSso(provider);
-  };
-  const logout = () => {
-    setProfileMenuOpen(false);
-    authController.logout();
-  };
-
-  const openUserSettings = (tab: "profile" | "sound") => {
-    setProfileMenuOpen(false);
-    setAudioOutputMenuOpen(false);
-    setVoiceSettingsOpen(false);
-    setVoiceSettingsPanel(null);
-    setUserSettingsTab(tab);
-    setUserSettingsOpen(true);
-  };
-
-  const saveMyProfile = async (event: FormEvent) => {
-    event.preventDefault();
-    if (!token) {
-      return;
-    }
-
-    const trimmedName = profileNameDraft.trim();
-    if (!trimmedName) {
-      setProfileStatusText(t("profile.saveError"));
-      return;
-    }
-
-    setProfileSaving(true);
-    setProfileStatusText("");
-
-    try {
-      const response = await api.updateMe(token, { name: trimmedName });
-      if (response.user) {
-        setUser(response.user);
-      }
-      setProfileStatusText(t("profile.saveSuccess"));
-      pushToast(t("profile.saveSuccess"));
-    } catch (error) {
-      const message = (error as Error).message || t("profile.saveError");
-      setProfileStatusText(message);
-      pushToast(message);
-    } finally {
-      setProfileSaving(false);
-    }
-  };
-
-  const createRoom = async (event: FormEvent) => {
-    event.preventDefault();
-    if (!token || !canCreateRooms) return;
-
-    const created = await roomAdminController.createRoom(token, newRoomSlug, newRoomTitle, {
-      kind: newRoomKind,
-      categoryId: newRoomCategoryId === "none" ? null : newRoomCategoryId
-    });
-    if (created) {
-      setNewRoomSlug("");
-      setNewRoomTitle("");
-      setChannelPopupOpen(false);
-    }
-  };
-
-  const createCategory = async (event: FormEvent) => {
-    event.preventDefault();
-    if (!token || !canCreateRooms) return;
-
-    const created = await roomAdminController.createCategory(token, newCategorySlug, newCategoryTitle);
-    if (created) {
-      setNewCategorySlug("");
-      setNewCategoryTitle("");
+  usePopupOutsideClose({
+    isAnyPopupOpen: Boolean(
+      profileMenuOpen
+      || authMenuOpen
+      || categoryPopupOpen
+      || channelPopupOpen
+      || channelSettingsPopupOpenId
+      || categorySettingsPopupOpenId
+      || audioOutputMenuOpen
+      || voiceSettingsOpen
+      || userSettingsOpen
+    ),
+    profileMenuRef,
+    authMenuRef,
+    categoryPopupRef,
+    channelPopupRef,
+    audioOutputAnchorRef,
+    voiceSettingsAnchorRef,
+    userSettingsRef,
+    onCloseAll: () => {
+      setProfileMenuOpen(false);
+      setAuthMenuOpen(false);
       setCategoryPopupOpen(false);
-    }
-  };
-
-  const openCreateChannelPopup = (categoryId: string | null = null) => {
-    setNewRoomCategoryId(categoryId || "none");
-    setChannelPopupOpen(true);
-  };
-
-  const openChannelSettingsPopup = (room: Room) => {
-    setEditingRoomTitle(room.title);
-    setEditingRoomKind(room.kind);
-    setEditingRoomCategoryId(room.category_id || "none");
-    setChannelSettingsPopupOpenId(room.id);
-  };
-
-  const openCategorySettingsPopup = (categoryId: string, categoryTitle: string) => {
-    setEditingCategoryTitle(categoryTitle);
-    setCategorySettingsPopupOpenId(categoryId);
-  };
-
-  const saveCategorySettings = async (event: FormEvent) => {
-    event.preventDefault();
-    if (!token || !categorySettingsPopupOpenId) {
-      return;
-    }
-
-    const updated = await roomAdminController.updateCategory(token, categorySettingsPopupOpenId, editingCategoryTitle);
-    if (updated) {
-      setCategorySettingsPopupOpenId(null);
-    }
-  };
-
-  const moveCategory = async (direction: "up" | "down") => {
-    if (!token || !categorySettingsPopupOpenId) {
-      return;
-    }
-
-    await roomAdminController.moveCategory(token, categorySettingsPopupOpenId, direction);
-  };
-
-  const deleteCategory = async () => {
-    if (!token || !categorySettingsPopupOpenId) {
-      return;
-    }
-
-    const deleted = await roomAdminController.deleteCategory(token, categorySettingsPopupOpenId);
-    if (deleted) {
-      setCategorySettingsPopupOpenId(null);
-    }
-  };
-
-  const saveChannelSettings = async (event: FormEvent) => {
-    event.preventDefault();
-    if (!token || !channelSettingsPopupOpenId) {
-      return;
-    }
-
-    const updated = await roomAdminController.updateRoom(token, channelSettingsPopupOpenId, {
-      title: editingRoomTitle,
-      kind: editingRoomKind,
-      categoryId: editingRoomCategoryId === "none" ? null : editingRoomCategoryId
-    });
-
-    if (updated) {
+      setChannelPopupOpen(false);
       setChannelSettingsPopupOpenId(null);
+      setCategorySettingsPopupOpenId(null);
+      setAudioOutputMenuOpen(false);
+      setVoiceSettingsOpen(false);
+      setUserSettingsOpen(false);
     }
-  };
-
-  const moveChannel = async (direction: "up" | "down") => {
-    if (!token || !channelSettingsPopupOpenId) {
-      return;
-    }
-
-    await roomAdminController.moveRoom(token, channelSettingsPopupOpenId, direction);
-  };
-
-  const deleteChannel = async (room: Room) => {
-    if (!token || !channelSettingsPopupOpenId) {
-      return;
-    }
-
-    const deleted = await roomAdminController.deleteRoom(token, channelSettingsPopupOpenId);
-    if (!deleted) {
-      return;
-    }
-
-    if (room.slug === roomSlug) {
-      const fallbackRoom = allRooms.find((item) => item.id !== room.id && item.slug === "general")
-        || allRooms.find((item) => item.id !== room.id)
-        || null;
-
-      if (fallbackRoom) {
-        joinRoom(fallbackRoom.slug);
-      }
-    }
-
-    setChannelSettingsPopupOpenId(null);
-  };
-
-  const clearChannelMessages = async (room: Room) => {
-    if (!token || !channelSettingsPopupOpenId) {
-      return;
-    }
-
-    const cleared = await roomAdminController.clearRoomMessages(token, channelSettingsPopupOpenId);
-    if (!cleared) {
-      return;
-    }
-
-    if (room.slug === roomSlug) {
-      setMessages([]);
-      setMessagesHasMore(false);
-      setMessagesNextCursor(null);
-    }
-  };
+  });
 
   const sendMessage = (event: FormEvent) => {
     event.preventDefault();
@@ -727,16 +465,8 @@ export function App() {
     }
   };
 
-  const sendCallSignal = (eventType: "call.offer" | "call.answer" | "call.ice") => {
-    callSignalingController.sendSignal(eventType as CallSignalEventType, callSignalJson, callTargetUserId);
-  };
-
-  const sendCallReject = () => {
-    callSignalingController.sendReject(callTargetUserId);
-  };
-
-  const sendCallHangup = () => {
-    callSignalingController.sendHangup(callTargetUserId);
+  const connectVoiceRoom = () => {
+    void connectRoom();
   };
 
   const joinRoom = (slug: string) => {
@@ -748,35 +478,65 @@ export function App() {
     await roomAdminController.promote(token, userId);
   };
 
-  const categorizedRoomIds = useMemo(() => {
-    const ids = new Set<string>();
-    roomsTree?.categories.forEach((category) => {
-      category.channels.forEach((channel) => ids.add(channel.id));
-    });
-    return ids;
-  }, [roomsTree]);
+  const {
+    uncategorizedRooms,
+    allRooms,
+    currentRoom
+  } = useRoomsDerived({
+    roomsTree,
+    rooms,
+    roomSlug
+  });
 
-  const uncategorizedRooms = useMemo(() => {
-    if (roomsTree) {
-      return roomsTree.uncategorized;
-    }
-
-    return rooms.filter((room) => !categorizedRoomIds.has(room.id));
-  }, [roomsTree, rooms, categorizedRoomIds]);
-
-  const allRooms = useMemo(() => {
-    if (roomsTree) {
-      const fromCategories = roomsTree.categories.flatMap((category) => category.channels);
-      return [...fromCategories, ...roomsTree.uncategorized];
-    }
-
-    return rooms;
-  }, [roomsTree, rooms]);
-
-  const currentRoom = useMemo(
-    () => allRooms.find((room) => room.slug === roomSlug) || null,
-    [allRooms, roomSlug]
-  );
+  const {
+    createRoom,
+    createCategory,
+    openCreateChannelPopup,
+    openChannelSettingsPopup,
+    openCategorySettingsPopup,
+    saveCategorySettings,
+    moveCategory,
+    deleteCategory,
+    saveChannelSettings,
+    moveChannel,
+    deleteChannel,
+    clearChannelMessages
+  } = useRoomAdminActions({
+    token,
+    canCreateRooms,
+    roomSlug,
+    allRooms,
+    roomAdminController,
+    newRoomSlug,
+    newRoomTitle,
+    newRoomKind,
+    newRoomCategoryId,
+    newCategorySlug,
+    newCategoryTitle,
+    editingCategoryTitle,
+    categorySettingsPopupOpenId,
+    editingRoomTitle,
+    editingRoomKind,
+    editingRoomCategoryId,
+    channelSettingsPopupOpenId,
+    setNewRoomSlug,
+    setNewRoomTitle,
+    setChannelPopupOpen,
+    setNewCategorySlug,
+    setNewCategoryTitle,
+    setCategoryPopupOpen,
+    setNewRoomCategoryId,
+    setEditingRoomTitle,
+    setEditingRoomKind,
+    setEditingRoomCategoryId,
+    setChannelSettingsPopupOpenId,
+    setEditingCategoryTitle,
+    setCategorySettingsPopupOpenId,
+    setMessages,
+    setMessagesHasMore,
+    setMessagesNextCursor,
+    joinRoom
+  });
 
   const inputOptions = inputDevices.length > 0 ? inputDevices : [{ id: "default", label: t("device.systemDefault") }];
   const outputOptions = outputDevices.length > 0 ? outputDevices : [{ id: "default", label: t("device.systemDefault") }];
@@ -789,138 +549,30 @@ export function App() {
 
   const currentRoomSupportsRtc = currentRoom ? currentRoom.kind !== "text" : false;
 
-  useEffect(() => {
-    if (serverMenuTab === "users" && !canPromote) {
-      setServerMenuTab("events");
-      return;
-    }
-
-    if (serverMenuTab === "telemetry" && !canViewTelemetry) {
-      setServerMenuTab("events");
-    }
-  }, [serverMenuTab, canPromote, canViewTelemetry]);
-
-  const formatMessageTime = (value: string) => {
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) {
-      return "";
-    }
-
-    return date.toLocaleTimeString(locale, {
-      hour: "2-digit",
-      minute: "2-digit"
-    });
-  };
-
-  const renderMessageText = (value: string): ReactNode[] => {
-    const text = String(value || "");
-    const urlPattern = /((https?:\/\/|www\.)[^\s<]+)/gi;
-    const nodes: ReactNode[] = [];
-    let cursor = 0;
-    let match: RegExpExecArray | null;
-
-    while ((match = urlPattern.exec(text)) !== null) {
-      const raw = match[0];
-      const start = match.index;
-
-      if (start > cursor) {
-        nodes.push(text.slice(cursor, start));
-      }
-
-      let linkText = raw;
-      let trailing = "";
-      while (/[.,!?;:)\]]$/.test(linkText)) {
-        trailing = linkText.slice(-1) + trailing;
-        linkText = linkText.slice(0, -1);
-      }
-
-      if (linkText.length > 0) {
-        const href = /^https?:\/\//i.test(linkText) ? linkText : `https://${linkText}`;
-        nodes.push(
-          <a
-            key={`link-${start}-${linkText}`}
-            href={href}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="chat-link"
-          >
-            {linkText}
-          </a>
-        );
-      }
-
-      if (trailing) {
-        nodes.push(trailing);
-      }
-
-      cursor = start + raw.length;
-    }
-
-    if (cursor < text.length) {
-      nodes.push(text.slice(cursor));
-    }
-
-    return nodes.length > 0 ? nodes : [text];
-  };
+  useServerMenuAccessGuard({
+    serverMenuTab,
+    canPromote,
+    canViewTelemetry,
+    setServerMenuTab
+  });
 
   return (
     <main className="app legacy-layout">
-      <header className="app-header">
-        <div className="header-brand">
-          <h1 className="app-title">{t("app.title")}</h1>
-          <div className="app-menu">
-            <button
-              type="button"
-              className="secondary app-menu-btn"
-              onClick={() => setAppMenuOpen((value) => !value)}
-              aria-label={t("server.menuAria")}
-            >
-              B
-            </button>
-          </div>
-        </div>
-        <div className="header-actions">
-          {user ? (
-            <>
-              <span className="user-chip">{user.name}</span>
-              <div className="profile-menu" ref={profileMenuRef}>
-                <button
-                  type="button"
-                  className="secondary profile-icon"
-                  onClick={() => setProfileMenuOpen((value) => !value)}
-                  aria-label={t("profile.menuAria")}
-                >
-                  <i className="bi bi-person-circle" aria-hidden="true" />
-                </button>
-                <PopupPortal open={profileMenuOpen} anchorRef={profileMenuRef} className="profile-popup" placement="bottom-end">
-                  <div>
-                    <button type="button" className="secondary" onClick={() => openUserSettings("profile")}>{t("profile.openSettings")}</button>
-                    <button type="button" onClick={logout}>{t("auth.logout")}</button>
-                  </div>
-                </PopupPortal>
-              </div>
-            </>
-          ) : (
-            <div className="auth-menu" ref={authMenuRef}>
-              <button type="button" onClick={() => setAuthMenuOpen((value) => !value)}>
-                {t("auth.login")}
-              </button>
-              <PopupPortal open={authMenuOpen} anchorRef={authMenuRef} className="auth-popup" placement="bottom-end">
-                <div>
-                  <button type="button" className="provider-btn" onClick={() => beginSso("google")}> 
-                    <span className="provider-icon provider-google">G</span>
-                    {t("auth.google")}
-                  </button>
-                  <button type="button" className="provider-btn" onClick={() => beginSso("yandex")}>
-                    <span className="provider-icon provider-yandex">Я</span>
-                    {t("auth.yandex")}
-                  </button>
-                </div>
-              </PopupPortal>
-            </div>
-          )}
-        </div>
-      </header>
+      <AppHeader
+        t={t}
+        user={user}
+        appMenuOpen={appMenuOpen}
+        authMenuOpen={authMenuOpen}
+        profileMenuOpen={profileMenuOpen}
+        authMenuRef={authMenuRef}
+        profileMenuRef={profileMenuRef}
+        onToggleAppMenu={() => setAppMenuOpen((value) => !value)}
+        onToggleAuthMenu={() => setAuthMenuOpen((value) => !value)}
+        onToggleProfileMenu={() => setProfileMenuOpen((value) => !value)}
+        onBeginSso={beginSso}
+        onLogout={logout}
+        onOpenUserSettings={() => openUserSettings("profile")}
+      />
       <TooltipPortal />
 
       <div className="workspace">
@@ -930,8 +582,12 @@ export function App() {
             canCreateRooms={canCreateRooms}
             roomsTree={roomsTree}
             roomSlug={roomSlug}
+            currentUserId={user?.id || ""}
             currentUserName={user?.name || ""}
             liveRoomMembersBySlug={roomsPresenceBySlug}
+            liveRoomMemberDetailsBySlug={roomsPresenceDetailsBySlug}
+            voiceActiveUserIdsInCurrentRoom={voiceActiveUserIdsInCurrentRoom}
+            collapsedCategoryIds={collapsedCategoryIds}
             uncategorizedRooms={uncategorizedRooms}
             newCategorySlug={newCategorySlug}
             newCategoryTitle={newCategoryTitle}
@@ -973,6 +629,7 @@ export function App() {
             onMoveChannel={(direction) => void moveChannel(direction)}
             onClearChannelMessages={(room) => void clearChannelMessages(room)}
             onDeleteChannel={(room) => void deleteChannel(room)}
+            onToggleCategoryCollapsed={toggleCategoryCollapsed}
             onJoinRoom={joinRoom}
           />
 
@@ -982,6 +639,9 @@ export function App() {
               user={user}
               currentRoomSupportsRtc={currentRoomSupportsRtc}
               currentRoomTitle={currentRoom?.title || ""}
+              callStatus={callStatus}
+              lastCallPeer={lastCallPeer}
+              roomVoiceConnected={roomVoiceConnected}
               micMuted={micMuted}
               audioMuted={audioMuted}
               audioOutputMenuOpen={audioOutputMenuOpen}
@@ -1004,6 +664,8 @@ export function App() {
               currentInputLabel={currentInputLabel}
               micVolume={micVolume}
               outputVolume={outputVolume}
+              micTestRunning={micTestRunning}
+              micTestLevel={micTestLevel}
               mediaDevicesState={mediaDevicesState}
               mediaDevicesHint={mediaDevicesHint}
               audioOutputAnchorRef={audioOutputAnchorRef}
@@ -1033,215 +695,55 @@ export function App() {
               onSetSelectedInputId={setSelectedInputId}
               onSetSelectedOutputId={setSelectedOutputId}
               onSetSelectedInputProfile={setSelectedInputProfile}
+              onRefreshDevices={refreshDevices}
               onSetMicVolume={setMicVolume}
               onSetOutputVolume={setOutputVolume}
+              onToggleMicTest={() => setMicTestRunning((value) => !value)}
+              onDisconnectCall={disconnectRoom}
+              onConnectVoiceRoom={connectVoiceRoom}
             />
           ) : null}
         </aside>
 
         <section className="middlecolumn">
-          <section className="card middle-card">
-            <h2>{t("chat.title")} ({roomSlug})</h2>
-            <div className="row">
-              <button
-                type="button"
-                className="secondary"
-                onClick={() => void loadOlderMessages()}
-                disabled={!messagesHasMore || loadingOlderMessages}
-              >
-                {loadingOlderMessages ? t("chat.loading") : t("chat.loadOlder")}
-              </button>
-              {!messagesHasMore && messages.length > 0 ? (
-                <span className="muted">{t("chat.historyLoaded")}</span>
-              ) : null}
-            </div>
-            <div className="chat-log" ref={chatLogRef}>
-              {messages.map((message) => {
-                const isOwn = user?.id === message.user_id;
-                const deliveryGlyph = message.deliveryStatus === "sending"
-                  ? "•"
-                  : message.deliveryStatus === "delivered"
-                    ? "✓✓"
-                    : message.deliveryStatus === "failed"
-                      ? "!"
-                      : "";
-
-                return (
-                  <article key={message.id} className={`chat-message ${isOwn ? "chat-message-own" : ""}`}>
-                    {!isOwn ? (
-                      <div className="chat-avatar" aria-hidden="true">
-                        {(message.user_name || "U").charAt(0).toUpperCase()}
-                      </div>
-                    ) : null}
-
-                    <div className="chat-bubble-wrap">
-                      <div className="chat-bubble">
-                        <div className="chat-meta">
-                          <span className="chat-author">{message.user_name}</span>
-                          <span className="chat-time">{formatMessageTime(message.created_at)}</span>
-                        </div>
-                        <p className="chat-text">{renderMessageText(message.text)}</p>
-                      </div>
-
-                      {isOwn && message.deliveryStatus ? (
-                        <span className={`delivery delivery-${message.deliveryStatus}`}>
-                          {deliveryGlyph}
-                        </span>
-                      ) : null}
-                    </div>
-                  </article>
-                );
-              })}
-            </div>
-            <form className="chat-compose" onSubmit={sendMessage}>
-              <input value={chatText} onChange={(e) => setChatText(e.target.value)} placeholder={t("chat.typePlaceholder")} />
-              <button type="submit">{t("chat.send")}</button>
-            </form>
-
-          </section>
+          <ChatPanel
+            t={t}
+            locale={locale}
+            roomSlug={roomSlug}
+            messages={messages}
+            currentUserId={user?.id || null}
+            messagesHasMore={messagesHasMore}
+            loadingOlderMessages={loadingOlderMessages}
+            chatText={chatText}
+            chatLogRef={chatLogRef}
+            onLoadOlderMessages={() => void loadOlderMessages()}
+            onSetChatText={setChatText}
+            onSendMessage={sendMessage}
+          />
         </section>
 
       </div>
 
-      {appMenuOpen ? (
-        <div
-          className="voice-preferences-overlay"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget) {
-              setAppMenuOpen(false);
-            }
-          }}
-        >
-          <section className="card voice-preferences-modal user-settings-modal server-profile-modal">
-            <div className="user-settings-sidebar">
-              <div className="voice-preferences-kicker">{t("server.title")}</div>
-              {canPromote ? (
-                <button
-                  type="button"
-                  className={`secondary user-settings-tab-btn ${serverMenuTab === "users" ? "user-settings-tab-btn-active" : ""}`}
-                  onClick={() => setServerMenuTab("users")}
-                >
-                  {t("server.tabUsers")}
-                </button>
-              ) : null}
-              <button
-                type="button"
-                className={`secondary user-settings-tab-btn ${serverMenuTab === "events" ? "user-settings-tab-btn-active" : ""}`}
-                onClick={() => setServerMenuTab("events")}
-              >
-                {t("server.tabEvents")}
-              </button>
-              {canViewTelemetry ? (
-                <button
-                  type="button"
-                  className={`secondary user-settings-tab-btn ${serverMenuTab === "telemetry" ? "user-settings-tab-btn-active" : ""}`}
-                  onClick={() => setServerMenuTab("telemetry")}
-                >
-                  {t("server.tabTelemetry")}
-                </button>
-              ) : null}
-              <button
-                type="button"
-                className={`secondary user-settings-tab-btn ${serverMenuTab === "call" ? "user-settings-tab-btn-active" : ""}`}
-                onClick={() => setServerMenuTab("call")}
-              >
-                {t("server.tabCall")}
-              </button>
-            </div>
-
-            <div className="user-settings-content">
-              <div className="voice-preferences-head">
-                <h2>
-                  {serverMenuTab === "users" ? t("server.tabUsers") : null}
-                  {serverMenuTab === "events" ? t("server.tabEvents") : null}
-                  {serverMenuTab === "telemetry" ? t("server.tabTelemetry") : null}
-                  {serverMenuTab === "call" ? t("server.tabCall") : null}
-                </h2>
-                <button
-                  type="button"
-                  className="secondary icon-btn"
-                  onClick={() => setAppMenuOpen(false)}
-                  aria-label={t("settings.closeVoiceAria")}
-                >
-                  <i className="bi bi-x-lg" aria-hidden="true" />
-                </button>
-              </div>
-
-              {serverMenuTab === "users" && canPromote ? (
-                <section className="stack">
-                  <h3>{t("admin.title")}</h3>
-                  <ul className="admin-list">
-                    {adminUsers.map((item) => (
-                      <li key={item.id} className="row admin-row">
-                        <span>{item.email} ({item.role})</span>
-                        {item.role === "user" ? (
-                          <button onClick={() => promote(item.id)}>{t("admin.promote")}</button>
-                        ) : null}
-                      </li>
-                    ))}
-                  </ul>
-                </section>
-              ) : null}
-
-              {serverMenuTab === "events" ? (
-                <section className="stack">
-                  <h3>{t("events.title")}</h3>
-                  <div className="log">
-                    {eventLog.map((line, index) => (
-                      <div key={`${line}-${index}`}>{line}</div>
-                    ))}
-                  </div>
-                </section>
-              ) : null}
-
-              {serverMenuTab === "telemetry" && canViewTelemetry ? (
-                <section className="stack">
-                  <h3>{t("telemetry.title")}</h3>
-                  <p className="muted">{t("telemetry.day")}: {telemetrySummary?.day || "-"}</p>
-                  <div className="stack">
-                    <div>ack_sent: {telemetrySummary?.metrics.ack_sent ?? 0}</div>
-                    <div>nack_sent: {telemetrySummary?.metrics.nack_sent ?? 0}</div>
-                    <div>chat_sent: {telemetrySummary?.metrics.chat_sent ?? 0}</div>
-                    <div>chat_idempotency_hit: {telemetrySummary?.metrics.chat_idempotency_hit ?? 0}</div>
-                    <div>telemetry_web_event: {telemetrySummary?.metrics.telemetry_web_event ?? 0}</div>
-                  </div>
-                  <button onClick={() => void loadTelemetrySummary()}>{t("telemetry.refresh")}</button>
-                </section>
-              ) : null}
-
-              {serverMenuTab === "call" ? (
-                <section className="stack signaling-panel">
-                  <h3>{t("call.title")}</h3>
-                  <p className="muted">{t("call.status")}: {callStatus}{lastCallPeer ? ` (${lastCallPeer})` : ""}</p>
-                  <input
-                    value={callTargetUserId}
-                    onChange={(e) => setCallTargetUserId(e.target.value)}
-                    placeholder={t("call.targetPlaceholder")}
-                  />
-                  <textarea
-                    value={callSignalJson}
-                    onChange={(e) => setCallSignalJson(e.target.value)}
-                    rows={4}
-                    placeholder={t("call.payloadPlaceholder")}
-                  />
-                  <div className="row">
-                    <button type="button" onClick={() => sendCallSignal("call.offer")}>{t("call.offer")}</button>
-                    <button type="button" onClick={() => sendCallSignal("call.answer")}>{t("call.answer")}</button>
-                    <button type="button" onClick={() => sendCallSignal("call.ice")}>{t("call.ice")}</button>
-                    <button type="button" className="secondary" onClick={sendCallReject}>{t("call.reject")}</button>
-                    <button type="button" className="secondary" onClick={sendCallHangup}>{t("call.hangup")}</button>
-                  </div>
-                  <div className="log call-log">
-                    {callEventLog.map((line, index) => (
-                      <div key={`${line}-${index}`}>{line}</div>
-                    ))}
-                  </div>
-                </section>
-              ) : null}
-            </div>
-          </section>
-        </div>
-      ) : null}
+      <ServerProfileModal
+        open={appMenuOpen}
+        t={t}
+        canPromote={canPromote}
+        canViewTelemetry={canViewTelemetry}
+        serverMenuTab={serverMenuTab}
+        adminUsers={adminUsers}
+        eventLog={eventLog}
+        telemetrySummary={telemetrySummary}
+        callStatus={callStatus}
+        lastCallPeer={lastCallPeer}
+        roomVoiceConnected={roomVoiceConnected}
+        callEventLog={callEventLog}
+        onClose={() => setAppMenuOpen(false)}
+        onSetServerMenuTab={setServerMenuTab}
+        onPromote={(userId) => void promote(userId)}
+        onRefreshTelemetry={() => void loadTelemetrySummary()}
+        onConnectVoiceRoom={connectVoiceRoom}
+        onDisconnectVoiceRoom={disconnectRoom}
+      />
 
       <ToastStack toasts={toasts} />
 

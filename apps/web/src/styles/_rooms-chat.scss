@@ -39,6 +39,23 @@
   gap: var(--space-sm);
 }
 
+.category-collapse-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  border: 0;
+  box-shadow: none;
+  background: transparent;
+  padding: 0;
+}
+
+.category-collapse-btn:hover,
+.category-collapse-btn:focus-visible,
+.category-collapse-btn:active {
+  transform: none;
+  box-shadow: none;
+}
+
 .category-actions {
   display: inline-flex;
   align-items: center;
@@ -174,6 +191,19 @@
 .channel-member-item-current .channel-member-avatar {
   border-color: var(--pixel-neon-cyan);
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--pixel-neon-cyan) 62%, transparent 38%);
+}
+
+.channel-member-item-voice-active .channel-member-name {
+  color: color-mix(in srgb, var(--pixel-neon-cyan) 82%, var(--pixel-text) 18%);
+}
+
+.channel-member-item-voice-active .channel-member-avatar {
+  border-color: var(--pixel-neon-cyan);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--pixel-neon-cyan) 50%, transparent 50%);
+}
+
+.channel-member-item-voice-active .channel-member-icons {
+  color: var(--pixel-neon-cyan);
 }
 
 .channel-action-btn {

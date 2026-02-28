@@ -7,6 +7,9 @@ export function UserDock({
   user,
   currentRoomSupportsRtc,
   currentRoomTitle,
+  callStatus,
+  lastCallPeer,
+  roomVoiceConnected,
   micMuted,
   audioMuted,
   audioOutputMenuOpen,
@@ -29,6 +32,8 @@ export function UserDock({
   currentInputLabel,
   micVolume,
   outputVolume,
+  micTestRunning,
+  micTestLevel,
   mediaDevicesState,
   mediaDevicesHint,
   audioOutputAnchorRef,
@@ -50,13 +55,21 @@ export function UserDock({
   onSetSelectedInputId,
   onSetSelectedOutputId,
   onSetSelectedInputProfile,
+  onRefreshDevices,
   onSetMicVolume,
-  onSetOutputVolume
+  onSetOutputVolume,
+  onToggleMicTest,
+  onDisconnectCall,
+  onConnectVoiceRoom
 }: UserDockProps) {
   const inputDeviceRowRef = useRef<HTMLButtonElement>(null);
   const inputProfileRowRef = useRef<HTMLButtonElement>(null);
   const mediaDevicesUnavailable = mediaDevicesState !== "ready";
   const mediaDevicesWarningText = mediaDevicesHint || t("settings.mediaUnavailable");
+  const miniBarCount = 20;
+  const modalBarCount = 42;
+  const miniActiveBars = micTestRunning ? Math.min(miniBarCount, Math.round(micTestLevel * miniBarCount)) : 0;
+  const modalActiveBars = micTestRunning ? Math.min(modalBarCount, Math.round(micTestLevel * modalBarCount)) : 0;
 
   return (
     <>
@@ -66,13 +79,17 @@ export function UserDock({
             <div className="rtc-title-row">
               <div>
                 <div className="rtc-title">{t("rtc.connection")}</div>
-                <div className="muted rtc-subtitle">{currentRoomTitle}</div>
+                <div className="muted rtc-subtitle">
+                  {currentRoomTitle}
+                  {lastCallPeer ? ` · ${lastCallPeer}` : ""}
+                </div>
+                <div className="muted rtc-subtitle">{t("call.status")}: {callStatus}</div>
               </div>
               <div className="rtc-top-actions">
-                <button type="button" className="secondary icon-btn tiny" data-tooltip={t("rtc.muteConnection")}>
+                <button type="button" className="secondary icon-btn tiny" data-tooltip={t("rtc.muteConnection")} onClick={onToggleMic}>
                   <i className="bi bi-soundwave" aria-hidden="true" />
                 </button>
-                <button type="button" className="secondary icon-btn tiny" data-tooltip={t("rtc.disconnect")}>
+                <button type="button" className="secondary icon-btn tiny" data-tooltip={t("rtc.disconnect")} onClick={onDisconnectCall}>
                   <i className="bi bi-telephone-x" aria-hidden="true" />
                 </button>
               </div>
@@ -91,26 +108,31 @@ export function UserDock({
                 <i className="bi bi-lightning-charge" aria-hidden="true" />
               </button>
             </div>
+            <div className="rtc-call-controls">
+              <button type="button" onClick={roomVoiceConnected ? onDisconnectCall : onConnectVoiceRoom}>
+                {roomVoiceConnected ? t("call.disconnectRoom") : t("call.connectRoom")}
+              </button>
+            </div>
           </section>
         ) : null}
 
         <section className="card compact user-panel-card">
           <div className="user-panel-main">
-            <div className="user-avatar-badge">{(user.name || "U").charAt(0).toUpperCase()}</div>
+            <button
+              type="button"
+              className="user-avatar-badge user-avatar-button"
+              data-tooltip={t("profile.openSettings")}
+              aria-label={t("profile.openSettings")}
+              onClick={() => onOpenUserSettings("profile")}
+            >
+              {(user.name || "U").charAt(0).toUpperCase()}
+            </button>
             <div className="user-meta">
               <div className="user-name-line">{user.name}</div>
               <div className="muted user-status-line">{currentRoomSupportsRtc ? t("status.voice") : t("status.online")}</div>
             </div>
           </div>
           <div className="user-panel-actions">
-            <button
-              type="button"
-              className="secondary icon-btn"
-              data-tooltip={t("profile.openSettings")}
-              onClick={() => onOpenUserSettings("profile")}
-            >
-              <i className="bi bi-gear" aria-hidden="true" />
-            </button>
             <div className="voice-settings-anchor" ref={voiceSettingsAnchorRef}>
               <div className="audio-output-group split-control-group">
                 <button
@@ -181,8 +203,11 @@ export function UserDock({
                   </label>
 
                   <div className="voice-level-bars" aria-hidden="true">
-                    {Array.from({ length: 20 }).map((_, index) => (
-                      <span key={`bar-${index}`} className="voice-level-bar" />
+                    {Array.from({ length: miniBarCount }).map((_, index) => (
+                      <span
+                        key={`bar-${index}`}
+                        className={`voice-level-bar ${index < miniActiveBars ? "voice-level-bar-active" : ""}`}
+                      />
                     ))}
                   </div>
 
@@ -429,6 +454,12 @@ export function UserDock({
                     </label>
                   </div>
 
+                  <div className="row">
+                    <button type="button" className="secondary" onClick={onRefreshDevices}>
+                      {t("settings.refreshDevices")}
+                    </button>
+                  </div>
+
                   {mediaDevicesUnavailable ? (
                     <p className="muted media-devices-warning">{mediaDevicesWarningText}</p>
                   ) : null}
@@ -457,10 +488,15 @@ export function UserDock({
                   </div>
 
                   <div className="voice-test-row">
-                    <button type="button">{t("settings.micTest")}</button>
+                    <button type="button" onClick={onToggleMicTest}>
+                      {micTestRunning ? t("settings.stopMicTest") : t("settings.micTest")}
+                    </button>
                     <div className="voice-level-bars" aria-hidden="true">
-                      {Array.from({ length: 42 }).map((_, index) => (
-                        <span key={`modal-bar-${index}`} className="voice-level-bar" />
+                      {Array.from({ length: modalBarCount }).map((_, index) => (
+                        <span
+                          key={`modal-bar-${index}`}
+                          className={`voice-level-bar ${index < modalActiveBars ? "voice-level-bar-active" : ""}`}
+                        />
                       ))}
                     </div>
                   </div>

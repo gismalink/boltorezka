@@ -1,6 +1,6 @@
 import type { FormEvent, RefObject } from "react";
 import type { Lang, TranslateFn } from "../i18n";
-import type { Room, RoomKind, RoomsTreeResponse, User } from "../types";
+import type { PresenceMember, Room, RoomKind, RoomsTreeResponse, User } from "../domain";
 
 export type InputProfile = "noise_reduction" | "studio" | "custom";
 export type VoiceSettingsPanel = "input_device" | "input_profile" | null;
@@ -13,6 +13,9 @@ export type UserDockProps = {
   user: User;
   currentRoomSupportsRtc: boolean;
   currentRoomTitle: string;
+  callStatus: "idle" | "ringing" | "connecting" | "active";
+  lastCallPeer: string;
+  roomVoiceConnected: boolean;
   micMuted: boolean;
   audioMuted: boolean;
   audioOutputMenuOpen: boolean;
@@ -35,6 +38,8 @@ export type UserDockProps = {
   currentInputLabel: string;
   micVolume: number;
   outputVolume: number;
+  micTestRunning: boolean;
+  micTestLevel: number;
   mediaDevicesState: MediaDevicesState;
   mediaDevicesHint: string;
   audioOutputAnchorRef: RefObject<HTMLDivElement>;
@@ -56,8 +61,12 @@ export type UserDockProps = {
   onSetSelectedInputId: (value: string) => void;
   onSetSelectedOutputId: (value: string) => void;
   onSetSelectedInputProfile: (value: InputProfile) => void;
+  onRefreshDevices: () => void;
   onSetMicVolume: (value: number) => void;
   onSetOutputVolume: (value: number) => void;
+  onToggleMicTest: () => void;
+  onDisconnectCall: () => void;
+  onConnectVoiceRoom: () => void;
 };
 
 export type RoomsPanelProps = {
@@ -65,8 +74,12 @@ export type RoomsPanelProps = {
   canCreateRooms: boolean;
   roomsTree: RoomsTreeResponse | null;
   roomSlug: string;
+  currentUserId: string;
   currentUserName: string;
   liveRoomMembersBySlug: Record<string, string[]>;
+  liveRoomMemberDetailsBySlug: Record<string, PresenceMember[]>;
+  voiceActiveUserIdsInCurrentRoom: string[];
+  collapsedCategoryIds: string[];
   uncategorizedRooms: Room[];
   newCategorySlug: string;
   newCategoryTitle: string;
@@ -108,5 +121,6 @@ export type RoomsPanelProps = {
   onMoveChannel: (direction: "up" | "down") => void;
   onClearChannelMessages: (room: Room) => void;
   onDeleteChannel: (room: Room) => void;
+  onToggleCategoryCollapsed: (categoryId: string) => void;
   onJoinRoom: (slug: string) => void;
 };
