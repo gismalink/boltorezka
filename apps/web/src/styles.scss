@@ -123,6 +123,10 @@ body {
   overflow: hidden;
 }
 
+.middlecolumn {
+  min-height: 0;
+}
+
 .card {
   background: #161b22;
   border: 1px solid #30363d;
@@ -358,9 +362,10 @@ pre {
 
 .middle-card {
   height: 100%;
-  display: grid;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
   gap: 8px;
-  align-content: start;
 }
 
 .presence-box {
@@ -368,8 +373,9 @@ pre {
 }
 
 .chat-log {
-  min-height: 360px;
-  max-height: 60vh;
+  flex: 1;
+  min-height: 0;
+  max-height: none;
   overflow: auto;
   background: #0d1117;
   border: 1px solid #30363d;
@@ -410,7 +416,7 @@ pre {
 }
 
 .signaling-panel {
-  margin-top: 8px;
+  margin-top: 0;
 }
 
 .call-log {

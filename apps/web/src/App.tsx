@@ -78,6 +78,9 @@ export function App() {
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const realtimeClientRef = useRef<RealtimeClient | null>(null);
   const roomSlugRef = useRef(roomSlug);
+  const lastRoomSlugForScrollRef = useRef(roomSlug);
+  const lastMessageIdRef = useRef<string | null>(null);
+  const chatLogRef = useRef<HTMLDivElement>(null);
   const autoSsoAttemptedRef = useRef(false);
   const authMenuRef = useRef<HTMLDivElement>(null);
   const profileMenuRef = useRef<HTMLDivElement>(null);
@@ -316,6 +319,24 @@ export function App() {
     if (!token || !roomSlug) return;
     void chatController.loadRecentMessages(token, roomSlug);
   }, [token, roomSlug, chatController]);
+
+  useEffect(() => {
+    const chatLogElement = chatLogRef.current;
+    if (!chatLogElement) {
+      return;
+    }
+
+    const latestMessageId = messages.length > 0 ? messages[messages.length - 1].id : null;
+    const roomChanged = lastRoomSlugForScrollRef.current !== roomSlug;
+    const latestMessageChanged = latestMessageId !== lastMessageIdRef.current;
+
+    if (roomChanged || latestMessageChanged) {
+      chatLogElement.scrollTop = chatLogElement.scrollHeight;
+    }
+
+    lastRoomSlugForScrollRef.current = roomSlug;
+    lastMessageIdRef.current = latestMessageId;
+  }, [messages, roomSlug]);
 
   const loadOlderMessages = async () => {
     if (!token || !roomSlug || !messagesNextCursor || loadingOlderMessages) {
@@ -757,7 +778,7 @@ export function App() {
                 <span className="muted">History fully loaded</span>
               ) : null}
             </div>
-            <div className="chat-log">
+            <div className="chat-log" ref={chatLogRef}>
               {messages.map((message) => (
                 <div key={message.id} className="chat-line">
                   <span className="chat-user">{message.user_name}:</span> {message.text}
@@ -774,33 +795,6 @@ export function App() {
               <button type="submit">Send</button>
             </form>
 
-            <div className="stack signaling-panel">
-              <h2>Call signaling (MVP)</h2>
-              <p className="muted">call status: {callStatus}{lastCallPeer ? ` (${lastCallPeer})` : ""}</p>
-              <input
-                value={callTargetUserId}
-                onChange={(e) => setCallTargetUserId(e.target.value)}
-                placeholder="targetUserId (optional, empty = broadcast to room)"
-              />
-              <textarea
-                value={callSignalJson}
-                onChange={(e) => setCallSignalJson(e.target.value)}
-                rows={4}
-                placeholder='{"type":"offer","sdp":"..."}'
-              />
-              <div className="row">
-                <button type="button" onClick={() => sendCallSignal("call.offer")}>Send offer</button>
-                <button type="button" onClick={() => sendCallSignal("call.answer")}>Send answer</button>
-                <button type="button" onClick={() => sendCallSignal("call.ice")}>Send ICE</button>
-                <button type="button" className="secondary" onClick={sendCallReject}>Send reject</button>
-                <button type="button" className="secondary" onClick={sendCallHangup}>Send hangup</button>
-              </div>
-              <div className="log call-log">
-                {callEventLog.map((line, index) => (
-                  <div key={`${line}-${index}`}>{line}</div>
-                ))}
-              </div>
-            </div>
           </section>
         </section>
 
@@ -842,6 +836,36 @@ export function App() {
               {eventLog.map((line, index) => (
                 <div key={`${line}-${index}`}>{line}</div>
               ))}
+            </div>
+          </section>
+
+          <section className="card compact">
+            <div className="stack signaling-panel">
+              <h2>Call signaling (MVP)</h2>
+              <p className="muted">call status: {callStatus}{lastCallPeer ? ` (${lastCallPeer})` : ""}</p>
+              <input
+                value={callTargetUserId}
+                onChange={(e) => setCallTargetUserId(e.target.value)}
+                placeholder="targetUserId (optional, empty = broadcast to room)"
+              />
+              <textarea
+                value={callSignalJson}
+                onChange={(e) => setCallSignalJson(e.target.value)}
+                rows={4}
+                placeholder='{"type":"offer","sdp":"..."}'
+              />
+              <div className="row">
+                <button type="button" onClick={() => sendCallSignal("call.offer")}>Send offer</button>
+                <button type="button" onClick={() => sendCallSignal("call.answer")}>Send answer</button>
+                <button type="button" onClick={() => sendCallSignal("call.ice")}>Send ICE</button>
+                <button type="button" className="secondary" onClick={sendCallReject}>Send reject</button>
+                <button type="button" className="secondary" onClick={sendCallHangup}>Send hangup</button>
+              </div>
+              <div className="log call-log">
+                {callEventLog.map((line, index) => (
+                  <div key={`${line}-${index}`}>{line}</div>
+                ))}
+              </div>
             </div>
           </section>
         </aside>
