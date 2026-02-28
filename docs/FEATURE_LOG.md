@@ -435,3 +435,4 @@
   - `smoke:realtime` — PASS,
   - `reconnectOk=true`.
 - Refinement pass: `2305326` (`feature/web-header-profile-menu`) + повторный `deploy:test:smoke` — PASS.
+- Neon + hard-square shadows pass: `c390fa8` (`feature/web-header-profile-menu`) + повторный `deploy:test:smoke` — PASS (`smoke:sso`, `smoke:realtime`, `reconnectOk=true`).
