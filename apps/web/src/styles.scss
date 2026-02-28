@@ -63,6 +63,12 @@ body {
   z-index: 10;
 }
 
+.popup-layer-content {
+  right: auto !important;
+  bottom: auto !important;
+  z-index: 50;
+}
+
 .auth-popup {
   display: grid;
   gap: 6px;

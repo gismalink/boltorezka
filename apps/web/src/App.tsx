@@ -8,6 +8,7 @@ import { RoomAdminController } from "./services/roomAdminController";
 import { TooltipPortal } from "./TooltipPortal";
 import { WsMessageController } from "./services/wsMessageController";
 import { RoomsPanel } from "./components/RoomsPanel";
+import { PopupPortal } from "./components/PopupPortal";
 import { UserDock } from "./components/UserDock";
 import type { InputProfile, MediaDevicesState, VoiceSettingsPanel } from "./components/types";
 import { trackClientEvent } from "./telemetry";
@@ -461,8 +462,9 @@ export function App() {
       const insideOutputSettings = Boolean(target && audioOutputAnchorRef.current?.contains(target));
       const insideVoiceSettings = Boolean(target && voiceSettingsAnchorRef.current?.contains(target));
       const insideVoicePreferences = Boolean(target && voicePreferencesRef.current?.contains(target));
+      const insidePopupLayer = Boolean(target && target instanceof HTMLElement && target.closest(".popup-layer-content"));
 
-      if (!insideProfile && !insideAuth && !insideCategoryPopup && !insideChannelPopup && !insideChannelSettings && !insideCategorySettings && !insideOutputSettings && !insideVoiceSettings && !insideVoicePreferences) {
+      if (!insideProfile && !insideAuth && !insideCategoryPopup && !insideChannelPopup && !insideChannelSettings && !insideCategorySettings && !insideOutputSettings && !insideVoiceSettings && !insideVoicePreferences && !insidePopupLayer) {
         setProfileMenuOpen(false);
         setAuthMenuOpen(false);
         setCategoryPopupOpen(false);
@@ -665,11 +667,11 @@ export function App() {
                 >
                   <i className="bi bi-person-circle" aria-hidden="true" />
                 </button>
-                {profileMenuOpen ? (
-                  <div className="profile-popup">
+                <PopupPortal open={profileMenuOpen} anchorRef={profileMenuRef} className="profile-popup" placement="bottom-end">
+                  <div>
                     <button type="button" onClick={logout}>Logout</button>
                   </div>
-                ) : null}
+                </PopupPortal>
               </div>
             </>
           ) : (
@@ -677,8 +679,8 @@ export function App() {
               <button type="button" onClick={() => setAuthMenuOpen((value) => !value)}>
                 Авторизоваться
               </button>
-              {authMenuOpen ? (
-                <div className="auth-popup">
+              <PopupPortal open={authMenuOpen} anchorRef={authMenuRef} className="auth-popup" placement="bottom-end">
+                <div>
                   <button type="button" className="provider-btn" onClick={() => beginSso("google")}> 
                     <span className="provider-icon provider-google">G</span>
                     Google
@@ -688,7 +690,7 @@ export function App() {
                     Yandex
                   </button>
                 </div>
-              ) : null}
+              </PopupPortal>
             </div>
           )}
         </div>

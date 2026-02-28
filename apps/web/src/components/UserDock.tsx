@@ -1,4 +1,5 @@
 import type { UserDockProps } from "./types";
+import { PopupPortal } from "./PopupPortal";
 
 export function UserDock({
   user,
@@ -105,8 +106,13 @@ export function UserDock({
                   <i className="bi bi-chevron-down" aria-hidden="true" />
                 </button>
               </div>
-              {voiceSettingsOpen ? (
-                <div className="floating-popup settings-popup voice-settings-popup">
+              <PopupPortal
+                open={voiceSettingsOpen}
+                anchorRef={voiceSettingsAnchorRef}
+                className="settings-popup voice-settings-popup"
+                placement="top-end"
+              >
+                <div>
                   <div className="voice-menu-items">
                     <button
                       type="button"
@@ -231,7 +237,7 @@ export function UserDock({
                     </div>
                   ) : null}
                 </div>
-              ) : null}
+              </PopupPortal>
             </div>
 
             <div className="audio-output-anchor" ref={audioOutputAnchorRef}>
@@ -253,8 +259,13 @@ export function UserDock({
                   <i className="bi bi-chevron-down" aria-hidden="true" />
                 </button>
               </div>
-              {audioOutputMenuOpen ? (
-                <div className="floating-popup settings-popup voice-mini-popup">
+              <PopupPortal
+                open={audioOutputMenuOpen}
+                anchorRef={audioOutputAnchorRef}
+                className="settings-popup voice-mini-popup"
+                placement="top-end"
+              >
+                <div>
                   <div className="subheading">Устройство вывода</div>
                   <div className="device-list">
                     {outputOptions.map((device) => (
@@ -296,7 +307,7 @@ export function UserDock({
                     <i className="bi bi-gear" aria-hidden="true" />
                   </button>
                 </div>
-              ) : null}
+              </PopupPortal>
             </div>
           </div>
         </section>

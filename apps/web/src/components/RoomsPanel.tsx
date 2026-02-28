@@ -1,4 +1,6 @@
+import { useRef } from "react";
 import type { Room, RoomKind } from "../types";
+import { PopupPortal } from "./PopupPortal";
 import type { RoomsPanelProps } from "./types";
 
 const ROOM_KIND_ICON_CLASS: Record<RoomKind, string> = {
@@ -51,6 +53,9 @@ export function RoomsPanel({
   onMoveChannel,
   onJoinRoom
 }: RoomsPanelProps) {
+  const categorySettingsAnchorRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const channelSettingsAnchorRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
   const renderRoomRow = (room: Room) => (
     <div className="channel-row">
       <button
@@ -61,7 +66,12 @@ export function RoomsPanel({
         <span>{room.title}</span>
       </button>
       {canCreateRooms ? (
-        <div className="channel-settings-anchor">
+        <div
+          className="channel-settings-anchor"
+          ref={(node) => {
+            channelSettingsAnchorRefs.current[room.id] = node;
+          }}
+        >
           <button
             type="button"
             className="secondary icon-btn tiny channel-action-btn"
@@ -71,8 +81,13 @@ export function RoomsPanel({
           >
             <i className="bi bi-gear" aria-hidden="true" />
           </button>
-          {channelSettingsPopupOpenId === room.id ? (
-            <div className="floating-popup settings-popup channel-settings-popup">
+          <PopupPortal
+            open={channelSettingsPopupOpenId === room.id}
+            anchorRef={{ current: channelSettingsAnchorRefs.current[room.id] }}
+            className="settings-popup channel-settings-popup"
+            placement="bottom-end"
+          >
+            <div>
               <form className="stack" onSubmit={onSaveChannelSettings}>
                 <h3 className="subheading">Channel settings</h3>
                 <input value={editingRoomTitle} onChange={(event) => onSetEditingRoomTitle(event.target.value)} placeholder="channel title" />
@@ -100,7 +115,7 @@ export function RoomsPanel({
                 <button type="submit" className="icon-action"><i className="bi bi-check2" aria-hidden="true" /> Save</button>
               </form>
             </div>
-          ) : null}
+          </PopupPortal>
         </div>
       ) : null}
     </div>
@@ -125,8 +140,8 @@ export function RoomsPanel({
               >
                 <i className="bi bi-folder-plus" aria-hidden="true" />
               </button>
-              {categoryPopupOpen ? (
-                <div className="floating-popup settings-popup">
+              <PopupPortal open={categoryPopupOpen} anchorRef={categoryPopupRef} className="settings-popup" placement="bottom-end">
+                <div>
                   <form className="stack" onSubmit={onCreateCategory}>
                     <h3 className="subheading">Create category</h3>
                     <input value={newCategorySlug} onChange={(event) => onSetNewCategorySlug(event.target.value)} placeholder="category slug" />
@@ -134,7 +149,7 @@ export function RoomsPanel({
                     <button type="submit" className="icon-action"><i className="bi bi-check2" aria-hidden="true" /> Save</button>
                   </form>
                 </div>
-              ) : null}
+              </PopupPortal>
             </div>
 
             <div className="popup-anchor" ref={channelPopupRef}>
@@ -150,8 +165,8 @@ export function RoomsPanel({
               >
                 <i className="bi bi-plus-lg" aria-hidden="true" />
               </button>
-              {channelPopupOpen ? (
-                <div className="floating-popup settings-popup">
+              <PopupPortal open={channelPopupOpen} anchorRef={channelPopupRef} className="settings-popup" placement="bottom-end">
+                <div>
                   <form className="stack" onSubmit={onCreateRoom}>
                     <h3 className="subheading">Create channel</h3>
                     <input value={newRoomSlug} onChange={(event) => onSetNewRoomSlug(event.target.value)} placeholder="channel slug" />
@@ -172,7 +187,7 @@ export function RoomsPanel({
                     <button type="submit" className="icon-action"><i className="bi bi-check2" aria-hidden="true" /> Save</button>
                   </form>
                 </div>
-              ) : null}
+              </PopupPortal>
             </div>
           </div>
         ) : null}
@@ -199,7 +214,12 @@ export function RoomsPanel({
                   >
                     <i className="bi bi-plus-lg" aria-hidden="true" />
                   </button>
-                  <div className="category-settings-anchor">
+                  <div
+                    className="category-settings-anchor"
+                    ref={(node) => {
+                      categorySettingsAnchorRefs.current[category.id] = node;
+                    }}
+                  >
                     <button
                       type="button"
                       className="secondary icon-btn tiny"
@@ -209,8 +229,13 @@ export function RoomsPanel({
                     >
                       <i className="bi bi-gear" aria-hidden="true" />
                     </button>
-                    {categorySettingsPopupOpenId === category.id ? (
-                      <div className="floating-popup settings-popup category-settings-popup">
+                    <PopupPortal
+                      open={categorySettingsPopupOpenId === category.id}
+                      anchorRef={{ current: categorySettingsAnchorRefs.current[category.id] }}
+                      className="settings-popup category-settings-popup"
+                      placement="bottom-end"
+                    >
+                      <div>
                         <form className="stack" onSubmit={onSaveCategorySettings}>
                           <h3 className="subheading">Category settings</h3>
                           <input value={editingCategoryTitle} onChange={(event) => onSetEditingCategoryTitle(event.target.value)} placeholder="category title" />
@@ -225,7 +250,7 @@ export function RoomsPanel({
                           <button type="submit" className="icon-action"><i className="bi bi-check2" aria-hidden="true" /> Save</button>
                         </form>
                       </div>
-                    ) : null}
+                    </PopupPortal>
                   </div>
                 </div>
               ) : null}
