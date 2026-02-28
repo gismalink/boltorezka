@@ -1,27 +1,32 @@
 :root {
   color-scheme: dark;
   font-family: "Press Start 2P", "VT323", "Courier New", monospace;
-  background: #0a0f1f;
+  background: #080b18;
   color: #d7ecff;
-  --pixel-bg: #0a0f1f;
-  --pixel-panel: #121a33;
-  --pixel-panel-2: #1a2445;
-  --pixel-border: #5cc8ff;
+  --pixel-bg: #080b18;
+  --pixel-panel: #121733;
+  --pixel-panel-2: #18204a;
+  --pixel-border: #47ddff;
   --pixel-text: #d7ecff;
-  --pixel-muted: #7ea4c7;
-  --pixel-accent: #7bff95;
+  --pixel-muted: #8db2d8;
+  --pixel-accent: #79ff9d;
   --pixel-danger: #ff5f7a;
-  --pixel-shadow: #06101e;
+  --pixel-neon-cyan: #00e9ff;
+  --pixel-neon-pink: #ff4fd8;
+  --pixel-neon-gold: #ffd166;
+  --pixel-shadow: #030815;
+  --pixel-hard-shadow: #01040c;
 }
 
 body {
   margin: 0;
   background:
-    linear-gradient(0deg, rgba(16, 26, 52, 0.35), rgba(16, 26, 52, 0.35)),
+    linear-gradient(0deg, rgba(16, 26, 52, 0.25), rgba(16, 26, 52, 0.25)),
+    repeating-linear-gradient(90deg, rgba(0, 233, 255, 0.08) 0, rgba(0, 233, 255, 0.08) 2px, transparent 2px, transparent 16px),
     repeating-linear-gradient(
       0deg,
-      #090f1c 0,
-      #090f1c 2px,
+      #070d1a 0,
+      #070d1a 2px,
       #0a1222 2px,
       #0a1222 4px
     );
@@ -38,7 +43,11 @@ body {
 .app-title {
   margin: 0;
   font-size: 28px;
-  text-shadow: 2px 2px 0 var(--pixel-shadow);
+  color: #eff8ff;
+  text-shadow:
+    2px 2px 0 var(--pixel-hard-shadow),
+    -2px 0 0 var(--pixel-neon-cyan),
+    2px 0 0 var(--pixel-neon-pink);
 }
 
 .app-header {
@@ -80,7 +89,11 @@ body {
   border-radius: 0;
   padding: 8px;
   z-index: 10;
-  box-shadow: 4px 4px 0 var(--pixel-shadow);
+  box-shadow:
+    0 0 0 2px #0a1222,
+    4px 4px 0 var(--pixel-hard-shadow),
+    -2px -2px 0 var(--pixel-neon-cyan),
+    2px -2px 0 var(--pixel-neon-pink);
 }
 
 .popup-layer-content {
@@ -159,7 +172,17 @@ body {
   border: 2px solid var(--pixel-border);
   border-radius: 0;
   padding: 10px;
-  box-shadow: 4px 4px 0 var(--pixel-shadow);
+  box-shadow:
+    0 0 0 2px #0a1222,
+    4px 4px 0 var(--pixel-hard-shadow),
+    -2px -2px 0 var(--pixel-neon-cyan);
+}
+
+h1,
+h2,
+h3 {
+  color: #eaffff;
+  text-shadow: 1px 1px 0 var(--pixel-hard-shadow), -1px 0 0 var(--pixel-neon-cyan);
 }
 
 .compact h2,
@@ -218,6 +241,9 @@ textarea {
   font-family: inherit;
   font-size: 12px;
   line-height: 1.3;
+  box-shadow:
+    inset 0 0 0 1px #0b1430,
+    2px 2px 0 var(--pixel-hard-shadow);
 }
 
 input,
@@ -234,7 +260,10 @@ textarea {
 
 button {
   cursor: pointer;
-  box-shadow: 2px 2px 0 var(--pixel-shadow);
+  box-shadow:
+    0 0 0 1px var(--pixel-neon-cyan),
+    3px 3px 0 var(--pixel-hard-shadow),
+    -1px -1px 0 var(--pixel-neon-pink);
   transition: none;
 }
 
@@ -244,11 +273,21 @@ button.secondary {
 
 button:hover {
   transform: translate(-1px, -1px);
+  border-color: var(--pixel-neon-cyan);
 }
 
 button:active {
   transform: translate(1px, 1px);
-  box-shadow: 1px 1px 0 var(--pixel-shadow);
+  box-shadow: 1px 1px 0 var(--pixel-hard-shadow);
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--pixel-neon-pink);
+  outline-offset: 1px;
+  border-color: var(--pixel-neon-cyan);
 }
 
 .icon-btn {
@@ -366,8 +405,11 @@ pre {
 
 .room-btn-active {
   border-color: var(--pixel-accent);
-  background: #1b2e2a;
-  box-shadow: inset 4px 0 0 var(--pixel-accent), 2px 2px 0 var(--pixel-shadow);
+  background: #193629;
+  box-shadow:
+    inset 4px 0 0 var(--pixel-accent),
+    2px 2px 0 var(--pixel-hard-shadow),
+    -1px -1px 0 var(--pixel-neon-cyan);
   color: var(--pixel-text);
 }
 
@@ -425,6 +467,9 @@ pre {
   padding: 8px;
   display: grid;
   gap: 6px;
+  box-shadow:
+    inset 0 0 0 1px #0e1938,
+    3px 3px 0 var(--pixel-hard-shadow);
 }
 
 .chat-line {
@@ -487,8 +532,9 @@ pre {
 }
 
 .rtc-title {
-  color: #ffd166;
+  color: var(--pixel-neon-gold);
   font-weight: 700;
+  text-shadow: 1px 1px 0 var(--pixel-hard-shadow), -1px 0 0 var(--pixel-neon-pink);
 }
 
 .rtc-subtitle {
@@ -622,6 +668,9 @@ pre {
 .voice-menu-row-active {
   background: #243863;
   border-color: var(--pixel-border);
+  box-shadow:
+    inset 0 0 0 1px var(--pixel-neon-cyan),
+    2px 2px 0 var(--pixel-hard-shadow);
 }
 
 .voice-menu-text {
@@ -700,7 +749,9 @@ pre {
 .voice-preferences-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background:
+    linear-gradient(0deg, rgba(0, 233, 255, 0.08), rgba(255, 79, 216, 0.08)),
+    rgba(0, 0, 0, 0.62);
   z-index: 60;
   display: flex;
   align-items: center;
@@ -758,6 +809,9 @@ pre {
 .device-item-active {
   border-color: var(--pixel-border);
   background: #243863;
+  box-shadow:
+    inset 0 0 0 1px var(--pixel-neon-cyan),
+    2px 2px 0 var(--pixel-hard-shadow);
 }
 
 .slider-label {
@@ -801,7 +855,10 @@ pre {
   opacity: 0;
   visibility: hidden;
   transition: opacity 0.15s ease, transform 0.15s ease;
-  box-shadow: 3px 3px 0 var(--pixel-shadow);
+  box-shadow:
+    0 0 0 1px var(--pixel-neon-cyan),
+    3px 3px 0 var(--pixel-hard-shadow),
+    -1px -1px 0 var(--pixel-neon-pink);
 }
 
 *::-webkit-scrollbar {
@@ -810,7 +867,7 @@ pre {
 }
 
 *::-webkit-scrollbar-thumb {
-  background: #3f79b1;
+  background: #22d8ff;
   border: 2px solid #0a1222;
 }
 
