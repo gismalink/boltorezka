@@ -70,6 +70,41 @@ export class RoomAdminController {
     }
   }
 
+  async updateRoom(
+    token: string,
+    roomId: string,
+    options: { title: string; kind: RoomKind; categoryId: string | null }
+  ) {
+    try {
+      await api.updateRoom(token, roomId, {
+        title: options.title.trim(),
+        kind: options.kind,
+        category_id: options.categoryId
+      });
+
+      const res = await api.rooms(token);
+      this.options.setRooms(res.rooms);
+      await this.loadRoomTree(token);
+      this.options.pushLog("channel updated");
+      return true;
+    } catch (error) {
+      this.options.pushLog(`update channel failed: ${(error as Error).message}`);
+      return false;
+    }
+  }
+
+  async moveRoom(token: string, roomId: string, direction: "up" | "down") {
+    try {
+      await api.moveRoom(token, roomId, direction);
+      await this.loadRoomTree(token);
+      this.options.pushLog(`channel moved ${direction}`);
+      return true;
+    } catch (error) {
+      this.options.pushLog(`move channel failed: ${(error as Error).message}`);
+      return false;
+    }
+  }
+
   joinRoom(slug: string) {
     this.options.setRoomSlug(slug);
     this.options.setMessages(() => []);

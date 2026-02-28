@@ -50,6 +50,20 @@ export const api = {
     input: { slug: string; title: string; is_public: boolean; kind?: RoomKind; category_id?: string | null }
   ) =>
     fetchJson<{ room: Room }>("/v1/rooms", token, { method: "POST", body: JSON.stringify(input) }),
+  updateRoom: (
+    token: string,
+    roomId: string,
+    input: { title: string; kind: RoomKind; category_id: string | null }
+  ) =>
+    fetchJson<{ room: Room }>(`/v1/rooms/${encodeURIComponent(roomId)}`, token, {
+      method: "PATCH",
+      body: JSON.stringify(input)
+    }),
+  moveRoom: (token: string, roomId: string, direction: "up" | "down") =>
+    fetchJson<{ room: Room }>(`/v1/rooms/${encodeURIComponent(roomId)}/move`, token, {
+      method: "POST",
+      body: JSON.stringify({ direction })
+    }),
   roomMessages: (
     token: string,
     slug: string,

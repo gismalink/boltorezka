@@ -17,6 +17,10 @@ type RoomListDbRow = RoomListRow & {
   position: number;
 };
 
+const roomKindSchema = z
+  .enum(["text", "text_voice", "text_voice_video", "voice"])
+  .transform((value) => (value === "voice" ? "text_voice" : value));
+
 const createRoomSchema = z.object({
   slug: z
     .string()
@@ -25,9 +29,19 @@ const createRoomSchema = z.object({
     .regex(/^[a-z0-9-]+$/),
   title: z.string().min(3).max(120),
   is_public: z.boolean().default(true),
-  kind: z.enum(["text", "text_voice", "text_voice_video"]).default("text"),
+  kind: roomKindSchema.default("text"),
   category_id: z.string().uuid().nullable().optional().default(null),
   position: z.number().int().min(0).optional()
+});
+
+const updateRoomSchema = z.object({
+  title: z.string().min(3).max(120),
+  kind: roomKindSchema,
+  category_id: z.string().uuid().nullable()
+});
+
+const moveRoomSchema = z.object({
+  direction: z.enum(["up", "down"])
 });
 
 const createCategorySchema = z.object({
@@ -255,6 +269,154 @@ export async function roomsRoutes(fastify: FastifyInstance) {
 
       const response: RoomCreateResponse = { room };
       return reply.code(201).send(response);
+    }
+  );
+
+  fastify.patch<{
+    Params: { roomId: string };
+    Body: {
+      title: string;
+      kind: "text" | "text_voice" | "text_voice_video" | "voice";
+      category_id: string | null;
+    };
+  }>(
+    "/v1/rooms/:roomId",
+    {
+      preHandler: [requireAuth, loadCurrentUser, requireRole(["admin", "super_admin"])]
+    },
+    async (request, reply) => {
+      const roomId = String(request.params.roomId || "").trim();
+      if (!roomId) {
+        return reply.code(400).send({
+          error: "ValidationError",
+          message: "roomId is required"
+        });
+      }
+
+      const parsed = updateRoomSchema.safeParse(request.body || {});
+      if (!parsed.success) {
+        return reply.code(400).send({
+          error: "ValidationError",
+          issues: parsed.error.flatten()
+        });
+      }
+
+      const { title, kind, category_id } = parsed.data;
+
+      if (category_id) {
+        const category = await db.query("SELECT id FROM room_categories WHERE id = $1", [category_id]);
+        if ((category.rowCount || 0) === 0) {
+          return reply.code(400).send({
+            error: "ValidationError",
+            message: "category_id does not exist"
+          });
+        }
+      }
+
+      const updated = await db.query<RoomRow>(
+        `UPDATE rooms
+         SET title = $2,
+             kind = $3,
+             category_id = $4
+         WHERE id = $1
+         RETURNING id, slug, title, kind, category_id, position, is_public, created_at`,
+        [roomId, title.trim(), kind, category_id]
+      );
+
+      if ((updated.rowCount || 0) === 0) {
+        return reply.code(404).send({
+          error: "RoomNotFound",
+          message: "Room does not exist"
+        });
+      }
+
+      return { room: updated.rows[0] };
+    }
+  );
+
+  fastify.post<{
+    Params: { roomId: string };
+    Body: { direction: "up" | "down" };
+  }>(
+    "/v1/rooms/:roomId/move",
+    {
+      preHandler: [requireAuth, loadCurrentUser, requireRole(["admin", "super_admin"])]
+    },
+    async (request, reply) => {
+      const roomId = String(request.params.roomId || "").trim();
+      if (!roomId) {
+        return reply.code(400).send({
+          error: "ValidationError",
+          message: "roomId is required"
+        });
+      }
+
+      const parsed = moveRoomSchema.safeParse(request.body || {});
+      if (!parsed.success) {
+        return reply.code(400).send({
+          error: "ValidationError",
+          issues: parsed.error.flatten()
+        });
+      }
+
+      const currentResult = await db.query<RoomRow>(
+        `SELECT id, slug, title, kind, category_id, position, is_public, created_at
+         FROM rooms
+         WHERE id = $1`,
+        [roomId]
+      );
+
+      if ((currentResult.rowCount || 0) === 0) {
+        return reply.code(404).send({
+          error: "RoomNotFound",
+          message: "Room does not exist"
+        });
+      }
+
+      const current = currentResult.rows[0];
+      const direction = parsed.data.direction;
+      const neighborQuery = direction === "up"
+        ? `SELECT id, position FROM rooms
+           WHERE category_id IS NOT DISTINCT FROM $1
+             AND position < $2
+           ORDER BY position DESC
+           LIMIT 1`
+        : `SELECT id, position FROM rooms
+           WHERE category_id IS NOT DISTINCT FROM $1
+             AND position > $2
+           ORDER BY position ASC
+           LIMIT 1`;
+
+      const neighborResult = await db.query<{ id: string; position: number }>(neighborQuery, [
+        current.category_id,
+        current.position
+      ]);
+
+      if ((neighborResult.rowCount || 0) === 0) {
+        return { room: current };
+      }
+
+      const neighbor = neighborResult.rows[0];
+
+      await db.query(
+        `UPDATE rooms
+         SET position = CASE
+           WHEN id = $1 THEN $3
+           WHEN id = $2 THEN $4
+           ELSE position
+         END
+         WHERE id IN ($1, $2)`,
+        [current.id, neighbor.id, neighbor.position, current.position]
+      );
+
+      const updated = await db.query<RoomRow>(
+        `SELECT id, slug, title, kind, category_id, position, is_public, created_at
+         FROM rooms
+         WHERE id = $1`,
+        [current.id]
+      );
+
+      return { room: updated.rows[0] };
     }
   );
 

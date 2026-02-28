@@ -195,6 +195,11 @@ button.secondary {
   font-size: 15px;
 }
 
+.icon-btn .bi {
+  font-size: 14px;
+  line-height: 1;
+}
+
 .icon-btn.tiny {
   width: 24px;
   height: 24px;
@@ -272,6 +277,47 @@ pre {
 .room-btn {
   width: 100%;
   text-align: left;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.room-btn-active {
+  border-color: #3fb950;
+  background: #1f2a22;
+  box-shadow: inset 3px 0 0 #3fb950;
+  color: #ffffff;
+}
+
+.channel-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px;
+  align-items: center;
+}
+
+.channel-action-btn {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s ease;
+}
+
+.channel-row:hover .channel-action-btn,
+.channel-row:focus-within .channel-action-btn,
+.room-btn-active + .channel-settings-anchor .channel-action-btn {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.channel-settings-anchor {
+  position: relative;
+}
+
+.channel-settings-popup {
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 30;
 }
 
 .middle-card {

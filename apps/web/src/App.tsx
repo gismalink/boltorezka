@@ -26,10 +26,10 @@ const ROOM_KIND_LABELS: Record<RoomKind, string> = {
   text_voice_video: "Text + Voice + Video"
 };
 
-const ROOM_KIND_ICONS: Record<RoomKind, string> = {
-  text: "#",
-  text_voice: "🔊",
-  text_voice_video: "🎥"
+const ROOM_KIND_ICON_CLASS: Record<RoomKind, string> = {
+  text: "bi-hash",
+  text_voice: "bi-broadcast",
+  text_voice_video: "bi-camera-video"
 };
 
 export function App() {
@@ -64,6 +64,10 @@ export function App() {
   const [newCategoryTitle, setNewCategoryTitle] = useState("");
   const [categoryPopupOpen, setCategoryPopupOpen] = useState(false);
   const [channelPopupOpen, setChannelPopupOpen] = useState(false);
+  const [channelSettingsPopupOpenId, setChannelSettingsPopupOpenId] = useState<string | null>(null);
+  const [editingRoomTitle, setEditingRoomTitle] = useState("");
+  const [editingRoomKind, setEditingRoomKind] = useState<RoomKind>("text");
+  const [editingRoomCategoryId, setEditingRoomCategoryId] = useState<string>("none");
   const [authMenuOpen, setAuthMenuOpen] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const realtimeClientRef = useRef<RealtimeClient | null>(null);
@@ -337,7 +341,7 @@ export function App() {
   }, [wsState, loadTelemetrySummary]);
 
   useEffect(() => {
-    if (!profileMenuOpen && !authMenuOpen && !categoryPopupOpen && !channelPopupOpen) {
+    if (!profileMenuOpen && !authMenuOpen && !categoryPopupOpen && !channelPopupOpen && !channelSettingsPopupOpenId) {
       return;
     }
 
@@ -347,18 +351,20 @@ export function App() {
       const insideAuth = Boolean(target && authMenuRef.current?.contains(target));
       const insideCategoryPopup = Boolean(target && categoryPopupRef.current?.contains(target));
       const insideChannelPopup = Boolean(target && channelPopupRef.current?.contains(target));
+      const insideChannelSettings = Boolean(target && target instanceof HTMLElement && target.closest(".channel-settings-anchor"));
 
-      if (!insideProfile && !insideAuth && !insideCategoryPopup && !insideChannelPopup) {
+      if (!insideProfile && !insideAuth && !insideCategoryPopup && !insideChannelPopup && !insideChannelSettings) {
         setProfileMenuOpen(false);
         setAuthMenuOpen(false);
         setCategoryPopupOpen(false);
         setChannelPopupOpen(false);
+        setChannelSettingsPopupOpenId(null);
       }
     };
 
     window.addEventListener("mousedown", onClickOutside);
     return () => window.removeEventListener("mousedown", onClickOutside);
-  }, [profileMenuOpen, authMenuOpen, categoryPopupOpen, channelPopupOpen]);
+  }, [profileMenuOpen, authMenuOpen, categoryPopupOpen, channelPopupOpen, channelSettingsPopupOpenId]);
 
   const beginSso = (provider: "google" | "yandex") => {
     setAuthMenuOpen(false);
@@ -402,6 +408,38 @@ export function App() {
   const openCreateChannelPopup = (categoryId: string | null = null) => {
     setNewRoomCategoryId(categoryId || "none");
     setChannelPopupOpen(true);
+  };
+
+  const openChannelSettingsPopup = (room: Room) => {
+    setEditingRoomTitle(room.title);
+    setEditingRoomKind(room.kind);
+    setEditingRoomCategoryId(room.category_id || "none");
+    setChannelSettingsPopupOpenId(room.id);
+  };
+
+  const saveChannelSettings = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!token || !channelSettingsPopupOpenId) {
+      return;
+    }
+
+    const updated = await roomAdminController.updateRoom(token, channelSettingsPopupOpenId, {
+      title: editingRoomTitle,
+      kind: editingRoomKind,
+      categoryId: editingRoomCategoryId === "none" ? null : editingRoomCategoryId
+    });
+
+    if (updated) {
+      setChannelSettingsPopupOpenId(null);
+    }
+  };
+
+  const moveChannel = async (direction: "up" | "down") => {
+    if (!token || !channelSettingsPopupOpenId) {
+      return;
+    }
+
+    await roomAdminController.moveRoom(token, channelSettingsPopupOpenId, direction);
   };
 
   const sendMessage = (event: FormEvent) => {
@@ -465,7 +503,7 @@ export function App() {
                   onClick={() => setProfileMenuOpen((value) => !value)}
                   aria-label="Profile menu"
                 >
-                  👤
+                  <i className="bi bi-person-circle" aria-hidden="true" />
                 </button>
                 {profileMenuOpen ? (
                   <div className="profile-popup">
@@ -523,7 +561,7 @@ export function App() {
                         setCategoryPopupOpen((value) => !value);
                       }}
                     >
-                      🗂️
+                      <i className="bi bi-folder-plus" aria-hidden="true" />
                     </button>
                     {categoryPopupOpen ? (
                       <div className="floating-popup settings-popup">
@@ -531,7 +569,7 @@ export function App() {
                           <h3 className="subheading">Create category</h3>
                           <input value={newCategorySlug} onChange={(e) => setNewCategorySlug(e.target.value)} placeholder="category slug" />
                           <input value={newCategoryTitle} onChange={(e) => setNewCategoryTitle(e.target.value)} placeholder="category title" />
-                          <button type="submit" className="icon-action">✅ Save</button>
+                          <button type="submit" className="icon-action"><i className="bi bi-check2" aria-hidden="true" /> Save</button>
                         </form>
                       </div>
                     ) : null}
@@ -548,7 +586,7 @@ export function App() {
                         setChannelPopupOpen((value) => !value);
                       }}
                     >
-                      ➕
+                      <i className="bi bi-plus-lg" aria-hidden="true" />
                     </button>
                     {channelPopupOpen ? (
                       <div className="floating-popup settings-popup">
@@ -569,7 +607,7 @@ export function App() {
                               ))}
                             </select>
                           </div>
-                          <button type="submit" className="icon-action">✅ Save</button>
+                          <button type="submit" className="icon-action"><i className="bi bi-check2" aria-hidden="true" /> Save</button>
                         </form>
                       </div>
                     ) : null}
@@ -595,17 +633,66 @@ export function App() {
                       data-tooltip="Create channel in category"
                       onClick={() => openCreateChannelPopup(category.id)}
                     >
-                      ➕
+                      <i className="bi bi-plus-lg" aria-hidden="true" />
                     </button>
                   ) : null}
                 </div>
                 <ul className="rooms-list">
                   {category.channels.map((room) => (
                     <li key={room.id}>
-                      <button className="secondary room-btn" onClick={() => joinRoom(room.slug)}>
-                        {ROOM_KIND_ICONS[room.kind]} {room.title}
-                        <span className="muted"> · {ROOM_KIND_LABELS[room.kind]}</span>
-                      </button>
+                      <div className="channel-row">
+                        <button
+                          className={`secondary room-btn ${roomSlug === room.slug ? "room-btn-active" : ""}`}
+                          onClick={() => joinRoom(room.slug)}
+                        >
+                          <i className={`bi ${ROOM_KIND_ICON_CLASS[room.kind]}`} aria-hidden="true" />
+                          <span>{room.title}</span>
+                          <span className="muted"> · {ROOM_KIND_LABELS[room.kind]}</span>
+                        </button>
+                        {canCreateRooms ? (
+                          <div className="channel-settings-anchor">
+                            <button
+                              type="button"
+                              className="secondary icon-btn tiny channel-action-btn"
+                              data-tooltip="Configure channel"
+                              aria-label="Configure channel"
+                              onClick={() => openChannelSettingsPopup(room)}
+                            >
+                              <i className="bi bi-gear" aria-hidden="true" />
+                            </button>
+                            {channelSettingsPopupOpenId === room.id ? (
+                              <div className="floating-popup settings-popup channel-settings-popup">
+                                <form className="stack" onSubmit={saveChannelSettings}>
+                                  <h3 className="subheading">Channel settings</h3>
+                                  <input value={editingRoomTitle} onChange={(e) => setEditingRoomTitle(e.target.value)} placeholder="channel title" />
+                                  <div className="row">
+                                    <select value={editingRoomKind} onChange={(e) => setEditingRoomKind(e.target.value as RoomKind)}>
+                                      <option value="text">Text</option>
+                                      <option value="text_voice">Text + Voice</option>
+                                      <option value="text_voice_video">Text + Voice + Video</option>
+                                    </select>
+                                    <select value={editingRoomCategoryId} onChange={(e) => setEditingRoomCategoryId(e.target.value)}>
+                                      <option value="none">No category</option>
+                                      {(roomsTree?.categories || []).map((category) => (
+                                        <option key={category.id} value={category.id}>{category.title}</option>
+                                      ))}
+                                    </select>
+                                  </div>
+                                  <div className="row">
+                                    <button type="button" className="secondary" onClick={() => void moveChannel("up")}> 
+                                      <i className="bi bi-arrow-up" aria-hidden="true" /> Up
+                                    </button>
+                                    <button type="button" className="secondary" onClick={() => void moveChannel("down")}> 
+                                      <i className="bi bi-arrow-down" aria-hidden="true" /> Down
+                                    </button>
+                                  </div>
+                                  <button type="submit" className="icon-action"><i className="bi bi-check2" aria-hidden="true" /> Save</button>
+                                </form>
+                              </div>
+                            ) : null}
+                          </div>
+                        ) : null}
+                      </div>
                     </li>
                   ))}
                 </ul>
@@ -618,10 +705,59 @@ export function App() {
                 <ul className="rooms-list">
                   {uncategorizedRooms.map((room) => (
                     <li key={room.id}>
-                      <button className="secondary room-btn" onClick={() => joinRoom(room.slug)}>
-                        {ROOM_KIND_ICONS[room.kind]} {room.title}
-                        <span className="muted"> · {ROOM_KIND_LABELS[room.kind]}</span>
-                      </button>
+                      <div className="channel-row">
+                        <button
+                          className={`secondary room-btn ${roomSlug === room.slug ? "room-btn-active" : ""}`}
+                          onClick={() => joinRoom(room.slug)}
+                        >
+                          <i className={`bi ${ROOM_KIND_ICON_CLASS[room.kind]}`} aria-hidden="true" />
+                          <span>{room.title}</span>
+                          <span className="muted"> · {ROOM_KIND_LABELS[room.kind]}</span>
+                        </button>
+                        {canCreateRooms ? (
+                          <div className="channel-settings-anchor">
+                            <button
+                              type="button"
+                              className="secondary icon-btn tiny channel-action-btn"
+                              data-tooltip="Configure channel"
+                              aria-label="Configure channel"
+                              onClick={() => openChannelSettingsPopup(room)}
+                            >
+                              <i className="bi bi-gear" aria-hidden="true" />
+                            </button>
+                            {channelSettingsPopupOpenId === room.id ? (
+                              <div className="floating-popup settings-popup channel-settings-popup">
+                                <form className="stack" onSubmit={saveChannelSettings}>
+                                  <h3 className="subheading">Channel settings</h3>
+                                  <input value={editingRoomTitle} onChange={(e) => setEditingRoomTitle(e.target.value)} placeholder="channel title" />
+                                  <div className="row">
+                                    <select value={editingRoomKind} onChange={(e) => setEditingRoomKind(e.target.value as RoomKind)}>
+                                      <option value="text">Text</option>
+                                      <option value="text_voice">Text + Voice</option>
+                                      <option value="text_voice_video">Text + Voice + Video</option>
+                                    </select>
+                                    <select value={editingRoomCategoryId} onChange={(e) => setEditingRoomCategoryId(e.target.value)}>
+                                      <option value="none">No category</option>
+                                      {(roomsTree?.categories || []).map((category) => (
+                                        <option key={category.id} value={category.id}>{category.title}</option>
+                                      ))}
+                                    </select>
+                                  </div>
+                                  <div className="row">
+                                    <button type="button" className="secondary" onClick={() => void moveChannel("up")}> 
+                                      <i className="bi bi-arrow-up" aria-hidden="true" /> Up
+                                    </button>
+                                    <button type="button" className="secondary" onClick={() => void moveChannel("down")}> 
+                                      <i className="bi bi-arrow-down" aria-hidden="true" /> Down
+                                    </button>
+                                  </div>
+                                  <button type="submit" className="icon-action"><i className="bi bi-check2" aria-hidden="true" /> Save</button>
+                                </form>
+                              </div>
+                            ) : null}
+                          </div>
+                        ) : null}
+                      </div>
                     </li>
                   ))}
                 </ul>
