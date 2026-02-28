@@ -3,6 +3,29 @@
 Этот документ хранит зафиксированные изменения, выполненные шаги и операционные evidence.
 План и open items находятся в `docs/ROADMAP.md`.
 
+## 2026-02-28 — Voice submenu smart side placement (portal)
+
+### Delivered
+
+- Extended popup layer placement modes with side anchors:
+  - `right-start` / `right-end`
+  - `left-start` / `left-end`
+- Added automatic horizontal flip for side popups when viewport space is insufficient.
+- Migrated user dock nested voice submenus (`Устройство ввода` / `Профиль ввода`) to portal side-placement.
+
+### Validation
+
+- `npm run web:build` — PASS.
+
+### Operational evidence (test)
+
+- Deploy target: `test`, branch `feature/web-header-profile-menu`, SHA `9dc067c`.
+- Command: `ssh mac-mini 'cd ~/srv/boltorezka && TEST_REF=origin/feature/web-header-profile-menu npm run deploy:test:smoke'`.
+- Smoke result:
+  - `smoke:sso` — PASS,
+  - `smoke:realtime` — PASS,
+  - `reconnectOk=true`, `reconnectSkipped=false`.
+
 ## 2026-02-28 — Popup layer system (portal-based)
 
 ### Delivered
