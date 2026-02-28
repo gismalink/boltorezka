@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Jersey+25&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Jersey+25&family=Noto+Sans+Mono:wght@400;500;700&display=swap");
 
 html,
 body,
@@ -9,6 +9,7 @@ body,
 body {
   margin: 0;
   overflow: hidden;
+  font-family: "Noto Sans Mono", "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
   background:
     radial-gradient(1200px 700px at 50% 40%, rgba(207, 74, 134, 0.11), rgba(0, 0, 0, 0) 60%),
     radial-gradient(900px 600px at 55% 55%, rgba(53, 230, 255, 0.09), rgba(0, 0, 0, 0) 62%),
