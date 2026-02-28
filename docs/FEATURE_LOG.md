@@ -436,3 +436,4 @@
   - `reconnectOk=true`.
 - Refinement pass: `2305326` (`feature/web-header-profile-menu`) + повторный `deploy:test:smoke` — PASS.
 - Neon + hard-square shadows pass: `c390fa8` (`feature/web-header-profile-menu`) + повторный `deploy:test:smoke` — PASS (`smoke:sso`, `smoke:realtime`, `reconnectOk=true`).
+- Gismalink palette alignment pass: `039e574` (`feature/web-header-profile-menu`) с переносом core-цветов из `GismalinkArt/site/css/styles.css` (`#07060a`, `#2d0f27`, `#38002e`, `#cf4a86`, `#35e6ff`, `#e57f12`) + повторный `deploy:test:smoke` — PASS (`smoke:sso`, `smoke:realtime`, `reconnectOk=true`).
