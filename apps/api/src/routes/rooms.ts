@@ -603,6 +603,29 @@ export async function roomsRoutes(fastify: FastifyInstance) {
         });
       }
 
+      const stats = await db.query<{ total_rooms: number; room_exists: boolean }>(
+        `SELECT
+           (SELECT COUNT(*)::int FROM rooms) AS total_rooms,
+           EXISTS(SELECT 1 FROM rooms WHERE id = $1) AS room_exists`,
+        [roomId]
+      );
+
+      const current = stats.rows[0];
+
+      if (!current?.room_exists) {
+        return reply.code(404).send({
+          error: "RoomNotFound",
+          message: "Room does not exist"
+        });
+      }
+
+      if ((current?.total_rooms || 0) <= 1) {
+        return reply.code(409).send({
+          error: "LastRoomProtected",
+          message: "Cannot delete the last remaining room"
+        });
+      }
+
       const deleted = await db.query(
         `DELETE FROM rooms
          WHERE id = $1

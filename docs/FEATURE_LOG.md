@@ -3,6 +3,22 @@
 Этот документ хранит зафиксированные изменения, выполненные шаги и операционные evidence.
 План и open items находятся в `docs/ROADMAP.md`.
 
+## 2026-02-28 — Delete safety: protect last room
+
+### Delivered
+
+- В backend удаление канала теперь защищено от удаления последней оставшейся комнаты.
+- `DELETE /v1/rooms/:roomId` возвращает `409 LastRoomProtected`, если в системе осталась только одна комната.
+
+### Validation
+
+- `npm run check:api-types` — PASS.
+
+### Operational evidence (test)
+
+- Deploy target: `test`, branch `feature/web-header-profile-menu`.
+- Smoke: `smoke:sso` / `smoke:realtime` — PASS (после деплоя изменений).
+
 ## 2026-02-28 — Delete channel/category from gear popup with inline confirm
 
 ### Delivered
