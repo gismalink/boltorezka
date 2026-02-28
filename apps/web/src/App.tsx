@@ -145,13 +145,13 @@ export function App() {
 
   const { collapsedCategoryIds, toggleCategoryCollapsed } = useCollapsedCategories(roomsTree);
 
-  const pushLog = (text: string) => {
+  const pushLog = useCallback((text: string) => {
     setEventLog((prev) => [`${new Date().toLocaleTimeString(locale)} ${text}`, ...prev].slice(0, 30));
-  };
+  }, [locale]);
 
-  const pushCallLog = (text: string) => {
+  const pushCallLog = useCallback((text: string) => {
     setCallEventLog((prev) => [`${new Date().toLocaleTimeString(locale)} ${text}`, ...prev].slice(0, 30));
-  };
+  }, [locale]);
 
   const pushToast = useCallback((message: string) => {
     const normalized = String(message || "").trim();
@@ -272,7 +272,7 @@ export function App() {
         setToken,
         setUser
       }),
-    []
+    [pushLog]
   );
 
   const roomAdminController = useMemo(
@@ -290,7 +290,7 @@ export function App() {
         setRoomsTree,
         setAdminUsers
       }),
-    [sendWsEvent]
+    [pushLog, sendWsEvent]
   );
 
   const loadTelemetrySummary = useCallback(async () => {
@@ -304,7 +304,7 @@ export function App() {
     } catch (error) {
       pushLog(`telemetry summary failed: ${(error as Error).message}`);
     }
-  }, [token, canViewTelemetry]);
+  }, [token, canViewTelemetry, pushLog]);
 
   const chatController = useMemo(
     () =>
@@ -317,7 +317,7 @@ export function App() {
         sendWsEvent,
         loadTelemetrySummary
       }),
-    [sendWsEvent, loadTelemetrySummary]
+    [pushLog, sendWsEvent, loadTelemetrySummary]
   );
 
   const {
