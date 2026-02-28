@@ -180,8 +180,10 @@ export function useVoiceCallRuntime({
     speakingData: Uint8Array<ArrayBuffer> | null;
     statsTimer: number | null;
     lastInboundBytes: number;
+    lastOutboundBytes: number;
     inboundStalledTicks: number;
     inboundStalled: boolean;
+    stallRecoveryAttempts: number;
     reconnectAttempts: number;
     reconnectTimer: number | null;
   }>>(new Map());
@@ -384,28 +386,42 @@ export function useVoiceCallRuntime({
       void current.connection.getStats()
         .then((report) => {
           let inboundBytes = 0;
+          let outboundBytes = 0;
           report.forEach((item) => {
-            if (item.type !== "inbound-rtp") {
+            if (item.type === "inbound-rtp") {
+              const mediaType = (item as RTCInboundRtpStreamStats & { mediaType?: string }).mediaType;
+              const kind = (item as RTCInboundRtpStreamStats & { kind?: string }).kind;
+              const isAudio = mediaType === "audio" || kind === "audio";
+              if (!isAudio) {
+                return;
+              }
+
+              inboundBytes += Number((item as RTCInboundRtpStreamStats).bytesReceived || 0);
               return;
             }
 
-            const mediaType = (item as RTCInboundRtpStreamStats & { mediaType?: string }).mediaType;
-            const kind = (item as RTCInboundRtpStreamStats & { kind?: string }).kind;
-            const isAudio = mediaType === "audio" || kind === "audio";
-            if (!isAudio) {
-              return;
-            }
+            if (item.type === "outbound-rtp") {
+              const mediaType = (item as RTCOutboundRtpStreamStats & { mediaType?: string }).mediaType;
+              const kind = (item as RTCOutboundRtpStreamStats & { kind?: string }).kind;
+              const isAudio = mediaType === "audio" || kind === "audio";
+              if (!isAudio) {
+                return;
+              }
 
-            inboundBytes += Number((item as RTCInboundRtpStreamStats).bytesReceived || 0);
+              outboundBytes += Number((item as RTCOutboundRtpStreamStats).bytesSent || 0);
+            }
           });
 
-          const delta = inboundBytes - current.lastInboundBytes;
+          const inboundDelta = inboundBytes - current.lastInboundBytes;
+          const outboundDelta = outboundBytes - current.lastOutboundBytes;
           current.lastInboundBytes = inboundBytes;
+          current.lastOutboundBytes = outboundBytes;
 
-          if (delta > 0) {
+          if (inboundDelta > 0) {
             if (current.inboundStalled) {
               current.inboundStalled = false;
               current.inboundStalledTicks = 0;
+              current.stallRecoveryAttempts = 0;
               pushCallLog(`remote inbound audio resumed <- ${targetLabel || targetUserId}`);
             }
 
@@ -425,14 +441,20 @@ export function useVoiceCallRuntime({
           current.inboundStalledTicks += 1;
           if (!current.inboundStalled && current.inboundStalledTicks >= RTC_INBOUND_STALL_TICKS) {
             current.inboundStalled = true;
-            pushCallLog(`remote inbound audio stalled <- ${targetLabel || targetUserId}`);
+            pushCallLog(`remote inbound audio stalled <- ${targetLabel || targetUserId} (in:${inboundDelta} out:${outboundDelta})`);
+
+            if (shouldInitiateOffer(targetUserId) && current.stallRecoveryAttempts < 2 && current.connection.connectionState === "connected") {
+              current.stallRecoveryAttempts += 1;
+              pushCallLog(`rtc stall recovery offer -> ${targetLabel || targetUserId}`);
+              void startOfferRef.current?.(targetUserId, targetLabel || targetUserId);
+            }
           }
         })
         .catch((error) => {
           pushCallLog(`rtc stats failed (${targetLabel || targetUserId}): ${(error as Error).message}`);
         });
     }, RTC_STATS_POLL_MS);
-  }, [audioMuted, applyRemoteAudioOutput, pushCallLog]);
+  }, [audioMuted, applyRemoteAudioOutput, pushCallLog, shouldInitiateOffer]);
 
   const releaseLocalStream = useCallback(() => {
     if (!localStreamRef.current) {
@@ -636,8 +658,10 @@ export function useVoiceCallRuntime({
       speakingData: null as Uint8Array<ArrayBuffer> | null,
       statsTimer: null as number | null,
       lastInboundBytes: 0,
+      lastOutboundBytes: 0,
       inboundStalledTicks: 0,
       inboundStalled: false,
+      stallRecoveryAttempts: 0,
       reconnectAttempts: 0,
       reconnectTimer: null as number | null
     };
