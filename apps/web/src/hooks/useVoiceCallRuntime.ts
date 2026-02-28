@@ -257,6 +257,12 @@ export function useVoiceCallRuntime({
         }
       } catch (error) {
         pushCallLog(`audio output switch failed: ${(error as Error).message}`);
+        try {
+          await withSink.setSinkId("");
+          pushCallLog("audio output fallback applied: default sink");
+        } catch (fallbackError) {
+          pushCallLog(`audio output fallback failed: ${(fallbackError as Error).message}`);
+        }
       }
     }
   }, [audioMuted, outputVolume, selectedOutputId, pushCallLog]);
