@@ -1,3 +1,5 @@
+@import url("https://fonts.googleapis.com/css2?family=Jersey+25&display=swap");
+
 html,
 body,
 #root {
@@ -23,6 +25,7 @@ body {
 h1,
 h2,
 h3 {
+  font-family: "Jersey 25", "Press Start 2P", "VT323", Inter, system-ui, sans-serif;
   color: #eaffff;
   text-shadow: 1px 1px 0 var(--pixel-hard-shadow), -1px 0 0 var(--pixel-neon-cyan);
 }
