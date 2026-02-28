@@ -3,6 +3,21 @@
 Этот документ хранит зафиксированные изменения, выполненные шаги и операционные evidence.
 План и open items находятся в `docs/ROADMAP.md`.
 
+## 2026-02-28 — Realtime smoke hardening: reconnect + idempotency
+
+### Delivered
+
+- `scripts/smoke-realtime.mjs` расширен reconnect-сценарием (`SMOKE_RECONNECT=1`):
+  - reconnect websocket после базового ack/idempotency path,
+  - повторный `room.join` после reconnect,
+  - `chat.send` + `ack` проверка после reconnect.
+- В smoke output добавлен флаг `reconnectOk`.
+- `scripts/examples/postdeploy-smoke-test.sh` теперь запускает realtime smoke с `SMOKE_RECONNECT=1`.
+
+### Roadmap impact
+
+- Закрыт пункт Phase 2: стабильный smoke для reconnect/idempotency.
+
 ## 2026-02-28 — Realtime TS hardening batch
 
 ### Scope

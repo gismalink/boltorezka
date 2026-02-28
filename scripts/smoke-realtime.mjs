@@ -4,7 +4,9 @@ const baseUrl = (process.env.SMOKE_API_URL ?? "http://localhost:8080").replace(/
 const bearerToken = process.env.SMOKE_BEARER_TOKEN ?? "";
 const preissuedTicket = process.env.SMOKE_WS_TICKET ?? "";
 const preissuedTicketSecond = process.env.SMOKE_WS_TICKET_SECOND ?? "";
+const preissuedTicketReconnect = process.env.SMOKE_WS_TICKET_RECONNECT ?? "";
 const smokeCallSignal = process.env.SMOKE_CALL_SIGNAL === "1";
+const smokeReconnect = process.env.SMOKE_RECONNECT === "1";
 const roomSlug = process.env.SMOKE_ROOM_SLUG ?? "general";
 const timeoutMs = Number(process.env.SMOKE_TIMEOUT_MS ?? 10000);
 
@@ -81,6 +83,29 @@ async function resolveSecondTicket() {
 
   if (!response.ok || !payload?.ticket) {
     throw new Error(`[smoke:realtime] second /v1/auth/ws-ticket failed: ${response.status}`);
+  }
+
+  return payload.ticket;
+}
+
+async function resolveReconnectTicket() {
+  if (preissuedTicketReconnect) {
+    return preissuedTicketReconnect;
+  }
+
+  if (!bearerToken) {
+    throw new Error("[smoke:realtime] SMOKE_RECONNECT=1 requires SMOKE_BEARER_TOKEN or SMOKE_WS_TICKET_RECONNECT");
+  }
+
+  const { response, payload } = await fetchJson("/v1/auth/ws-ticket", {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${bearerToken}`
+    }
+  });
+
+  if (!response.ok || !payload?.ticket) {
+    throw new Error(`[smoke:realtime] reconnect /v1/auth/ws-ticket failed: ${response.status}`);
   }
 
   return payload.ticket;
@@ -213,6 +238,7 @@ function waitForEvent(events, predicate, label) {
   let callSignalRelayed = false;
   let callRejectRelayed = false;
   let callHangupRelayed = false;
+  let reconnectOk = false;
   if (smokeCallSignal) {
     if (!secondTicket) {
       throw new Error("[smoke:realtime] second ticket is required for call signaling smoke");
@@ -365,6 +391,72 @@ function waitForEvent(events, predicate, label) {
     callHangupRelayed = true;
   }
 
+  if (smokeReconnect) {
+    ws.close();
+
+    const reconnectTicket = await resolveReconnectTicket();
+    const wsReconnectUrl = toWsUrl(baseUrl);
+    wsReconnectUrl.pathname = "/v1/realtime/ws";
+    wsReconnectUrl.search = "";
+    wsReconnectUrl.searchParams.set("ticket", reconnectTicket);
+
+    const reconnectEvents = [];
+    const wsReconnect = new WS(wsReconnectUrl.toString());
+
+    wsReconnect.on("message", (raw) => {
+      try {
+        const value = typeof raw === "string" ? raw : raw.toString("utf8");
+        reconnectEvents.push(JSON.parse(value));
+      } catch {
+        return;
+      }
+    });
+
+    await new Promise((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error("[smoke:realtime] reconnect websocket open timeout")), timeoutMs);
+
+      wsReconnect.once("open", () => {
+        clearTimeout(timer);
+        resolve();
+      });
+
+      wsReconnect.once("error", (error) => {
+        clearTimeout(timer);
+        reject(error);
+      });
+    });
+
+    await waitForEvent(reconnectEvents, (item) => item?.type === "server.ready", "server.ready after reconnect");
+
+    const reconnectJoinRequest = `rejoin-${Date.now()}`;
+    wsReconnect.send(JSON.stringify({ type: "room.join", requestId: reconnectJoinRequest, payload: { roomSlug } }));
+
+    await waitForEvent(
+      reconnectEvents,
+      (item) => item?.type === "ack" && item?.payload?.requestId === reconnectJoinRequest,
+      "ack for room.join after reconnect"
+    );
+
+    const reconnectChatRequest = `chat-reconnect-${Date.now()}`;
+    wsReconnect.send(
+      JSON.stringify({
+        type: "chat.send",
+        requestId: reconnectChatRequest,
+        idempotencyKey: `idem-reconnect-${Date.now()}`,
+        payload: { text: `smoke reconnect ${new Date().toISOString()}` }
+      })
+    );
+
+    await waitForEvent(
+      reconnectEvents,
+      (item) => item?.type === "ack" && item?.payload?.requestId === reconnectChatRequest,
+      "ack for chat.send after reconnect"
+    );
+
+    reconnectOk = true;
+    wsReconnect.close();
+  }
+
   ws.close();
   if (wsSecond) {
     wsSecond.close();
@@ -379,6 +471,7 @@ function waitForEvent(events, predicate, label) {
         nackCode: nack?.payload?.code ?? null,
         firstMessageId: firstAck?.payload?.messageId ?? null,
         duplicateIdempotencyKey: duplicateAck?.payload?.idempotencyKey ?? null,
+        reconnectOk,
         callSignalRelayed,
         callRejectRelayed,
         callHangupRelayed

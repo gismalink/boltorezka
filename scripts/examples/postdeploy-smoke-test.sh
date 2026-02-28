@@ -136,7 +136,7 @@ CHAT_SENT_BEFORE="$(metric_from_hgetall "$METRICS_BEFORE_RAW" "chat_sent")"
 CHAT_IDEMPOTENCY_HIT_BEFORE="$(metric_from_hgetall "$METRICS_BEFORE_RAW" "chat_idempotency_hit")"
 
 echo "[postdeploy-smoke] smoke:realtime"
-SMOKE_API_URL="$BASE_URL" npm run smoke:realtime
+SMOKE_API_URL="$BASE_URL" SMOKE_RECONNECT=1 npm run smoke:realtime
 
 echo "[postdeploy-smoke] realtime metrics after"
 METRICS_AFTER_RAW="$(compose exec -T "$REDIS_SERVICE" redis-cli HGETALL "ws:metrics:$DAY" | cat)"

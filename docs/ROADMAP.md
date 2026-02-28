@@ -65,11 +65,11 @@
 
 - [x] Добавить явный `room.leave` в protocol flow.
 - [x] Доделать message history + pagination.
-- [ ] Поддерживать стабильный smoke для reconnect и idempotency сценариев.
+- [x] Поддерживать стабильный smoke для reconnect и idempotency сценариев.
 
 ### Exit criteria
 
-- [ ] Полный realtime MVP сценарий покрыт тестовыми и smoke-проверками.
+- [x] Полный realtime MVP сценарий покрыт тестовыми и smoke-проверками.
 
 ---
 
