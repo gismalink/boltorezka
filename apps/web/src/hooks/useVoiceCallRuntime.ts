@@ -149,6 +149,7 @@ export function useVoiceCallRuntime({
     connection: RTCPeerConnection;
     audioElement: HTMLAudioElement;
     label: string;
+    hasRemoteTrack: boolean;
     reconnectAttempts: number;
     reconnectTimer: number | null;
   }>>(new Map());
@@ -213,11 +214,11 @@ export function useVoiceCallRuntime({
   const updateCallStatus = useCallback(() => {
     const peers = Array.from(peersRef.current.values());
     const connectedUserIds = Array.from(peersRef.current.entries())
-      .filter(([, peer]) => peer.connection.connectionState === "connected")
+      .filter(([, peer]) => peer.connection.connectionState === "connected" || peer.hasRemoteTrack)
       .map(([userId]) => userId);
     setConnectedPeerUserIds(connectedUserIds);
 
-    const anyConnected = peers.some((peer) => peer.connection.connectionState === "connected");
+    const anyConnected = peers.some((peer) => peer.connection.connectionState === "connected" || peer.hasRemoteTrack);
     if (anyConnected) {
       setCallStatus("active");
       return;
@@ -415,6 +416,7 @@ export function useVoiceCallRuntime({
       connection,
       audioElement: remoteAudioElement,
       label: targetLabel,
+      hasRemoteTrack: false,
       reconnectAttempts: 0,
       reconnectTimer: null as number | null
     };
@@ -479,10 +481,28 @@ export function useVoiceCallRuntime({
         streamId: stream.id
       });
       remoteAudioElement.srcObject = stream;
+      const peer = peersRef.current.get(targetUserId);
+      if (peer) {
+        peer.hasRemoteTrack = true;
+      }
       void applyRemoteAudioOutput(remoteAudioElement);
-      void remoteAudioElement.play().catch((error) => {
-        pushCallLog(`remote audio play failed (${targetLabel || targetUserId}): ${(error as Error).message}`);
-      });
+      updateCallStatus();
+      void remoteAudioElement.play()
+        .then(() => {
+          pushCallLog(`remote audio playing <- ${targetLabel || targetUserId}`);
+          logVoiceDiagnostics("runtime remote audio playing", {
+            targetUserId,
+            targetLabel
+          });
+        })
+        .catch((error) => {
+          pushCallLog(`remote audio play failed (${targetLabel || targetUserId}): ${(error as Error).message}`);
+          logVoiceDiagnostics("runtime remote audio play failed", {
+            targetUserId,
+            targetLabel,
+            message: (error as Error).message
+          });
+        });
     };
 
     void applyRemoteAudioOutput(remoteAudioElement);
