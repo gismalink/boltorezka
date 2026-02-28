@@ -205,6 +205,28 @@
   max-height: 180px;
 }
 
+.settings-confirm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-2xl);
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.settings-confirm-modal {
+  width: min(420px, 100%);
+  display: grid;
+  gap: var(--space-md);
+}
+
+.settings-confirm-title,
+.settings-confirm-text {
+  margin: 0;
+}
+
 .clear-action-btn {
   margin-top: var(--space-sm);
   width: 100%;

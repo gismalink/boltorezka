@@ -3,6 +3,23 @@
 Этот документ хранит зафиксированные изменения, выполненные шаги и операционные evidence.
 План и open items находятся в `docs/ROADMAP.md`.
 
+## 2026-02-28 — Confirm actions moved to separate overlay popup
+
+### Delivered
+
+- Подтверждения `Delete`/`Clear chat` вынесены из inline-блока внутри popup настроек канала/группы в отдельный popup-оверлей поверх интерфейса.
+- Кнопки подтверждения теперь `Yes/No` в отдельном компактном диалоге, чтобы UI не выходил за границы родительского popup.
+
+### Validation
+
+- `npm run check:api-types` — PASS.
+- `npm --prefix apps/web run build` — PASS.
+
+### Operational evidence (test)
+
+- Deploy target: `test`, branch `feature/web-header-profile-menu`.
+- Smoke: `smoke:sso` / `smoke:realtime` — PASS (после деплоя изменений).
+
 ## 2026-02-28 — Admin action: clear chat messages in any room
 
 ### Delivered
