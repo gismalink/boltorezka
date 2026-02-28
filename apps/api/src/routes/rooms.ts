@@ -619,10 +619,11 @@ export async function roomsRoutes(fastify: FastifyInstance) {
         });
       }
 
-      const stats = await db.query<{ total_rooms: number; room_exists: boolean }>(
+      const stats = await db.query<{ total_rooms: number; room_exists: boolean; room_slug: string | null }>(
         `SELECT
            (SELECT COUNT(*)::int FROM rooms) AS total_rooms,
-           EXISTS(SELECT 1 FROM rooms WHERE id = $1) AS room_exists`,
+           EXISTS(SELECT 1 FROM rooms WHERE id = $1) AS room_exists,
+           (SELECT slug FROM rooms WHERE id = $1 LIMIT 1) AS room_slug`,
         [roomId]
       );
 
@@ -639,6 +640,13 @@ export async function roomsRoutes(fastify: FastifyInstance) {
         return reply.code(409).send({
           error: "LastRoomProtected",
           message: "Cannot delete the last remaining room"
+        });
+      }
+
+      if ((current?.room_slug || "") === "general") {
+        return reply.code(409).send({
+          error: "DefaultRoomProtected",
+          message: "Cannot delete default general room"
         });
       }
 
