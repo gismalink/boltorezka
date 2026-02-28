@@ -3,6 +3,31 @@
 Этот документ хранит зафиксированные изменения, выполненные шаги и операционные evidence.
 План и open items находятся в `docs/ROADMAP.md`.
 
+## 2026-02-28 — Delete channel/category from gear popup with inline confirm
+
+### Delivered
+
+- Добавлены backend endpoint’ы удаления для админов:
+  - `DELETE /v1/rooms/:roomId`
+  - `DELETE /v1/room-categories/:categoryId`
+- В `web` добавлены API/controller методы удаления категории и канала с синхронизацией `rooms/tree` после операции.
+- В popups шестерёнки (категория/канал) добавлена кнопка удаления и маленький inline popup подтверждения (`Cancel` / `Delete`) прямо внутри этого же popup.
+- Для удаления активного канала добавлен fallback-переход в другой канал (`general` при наличии).
+
+### Validation
+
+- `npm run check:api-types` — PASS.
+- `npm --prefix apps/web run build` — PASS.
+
+### Operational evidence (test)
+
+- Deploy target: `test`, branch `feature/web-header-profile-menu`, SHA `0432c37`.
+- Command: `ssh mac-mini 'cd ~/srv/boltorezka && TEST_REF=origin/feature/web-header-profile-menu npm run deploy:test:smoke'`.
+- Smoke result:
+  - `smoke:sso` — PASS,
+  - `smoke:realtime` — PASS,
+  - `reconnectOk=true`, `reconnectSkipped=false`.
+
 ## 2026-02-28 — Test DB seed: screenshot-like chat structure
 
 ### Delivered
