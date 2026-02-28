@@ -3,6 +3,26 @@
 Этот документ хранит зафиксированные изменения, выполненные шаги и операционные evidence.
 План и open items находятся в `docs/ROADMAP.md`.
 
+## 2026-02-28 — Headings font update: Jersey 25
+
+### Delivered
+
+- Для заголовков (`h1`, `h2`, `h3`) подключен и применён Google Font `Jersey 25`.
+- Базовые fallback-шрифты сохранены.
+
+### Validation
+
+- `npm --prefix apps/web run build` — PASS.
+
+### Operational evidence (test)
+
+- Deploy target: `test`, branch `feature/web-header-profile-menu`, SHA `c308504`.
+- Command: `ssh mac-mini 'cd ~/srv/boltorezka && TEST_REF=origin/feature/web-header-profile-menu npm run deploy:test:smoke'`.
+- Smoke result:
+  - `smoke:sso` — PASS,
+  - `smoke:realtime` — PASS,
+  - `reconnectOk=true`, `reconnectSkipped=false`.
+
 ## 2026-02-28 — Layout fixes: user dock ellipsis + viewport clamp + right-column scroll
 
 ### Delivered
