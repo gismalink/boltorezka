@@ -22,15 +22,12 @@ import {
   getPayloadString,
   parseWsIncomingEnvelope
 } from "../ws-protocol.js";
-import { randomUUID } from "node:crypto";
 type SocketState = {
   userId: string;
   userName: string;
-  email: string | null;
-  enforceSingleSession: boolean;
-  sessionId: string;
   roomId: string | null;
   roomSlug: string | null;
+  roomKind: "text" | "text_voice" | "text_voice_video" | null;
 };
 
 type WsTicketClaims = {
@@ -96,12 +93,7 @@ function safeJsonSize(value: unknown): number {
 export async function realtimeRoutes(fastify: FastifyInstance) {
   const socketsByUserId = new Map<string, Set<WebSocket>>();
   const socketsByRoomId = new Map<string, Set<WebSocket>>();
-  const activeSocketByEmail = new Map<string, WebSocket>();
   const socketState = new WeakMap<WebSocket, SocketState>();
-  const EMAIL_SESSION_TTL_SEC = 120;
-  const processInstanceId = randomUUID();
-
-  const sessionLockKey = (email: string) => `ws:session:email:${email}`;
 
   const incrementMetric = async (name: string) => {
     try {
@@ -223,48 +215,6 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
     }
   };
 
-  const tryAcquireEmailSession = async (email: string, sessionId: string) => {
-    const normalizedEmail = email.trim().toLowerCase();
-    if (!normalizedEmail) {
-      return true;
-    }
-
-    const key = sessionLockKey(normalizedEmail);
-    const lockOwner = `${processInstanceId}:${sessionId}`;
-    await fastify.redis.set(key, lockOwner, {
-      EX: EMAIL_SESSION_TTL_SEC
-    });
-    return true;
-  };
-
-  const refreshEmailSession = async (email: string, sessionId: string) => {
-    const normalizedEmail = email.trim().toLowerCase();
-    if (!normalizedEmail) {
-      return;
-    }
-
-    const key = sessionLockKey(normalizedEmail);
-    const current = await fastify.redis.get(key);
-    if (current !== `${processInstanceId}:${sessionId}`) {
-      return;
-    }
-
-    await fastify.redis.expire(key, EMAIL_SESSION_TTL_SEC);
-  };
-
-  const releaseEmailSession = async (email: string, sessionId: string) => {
-    const normalizedEmail = email.trim().toLowerCase();
-    if (!normalizedEmail) {
-      return;
-    }
-
-    const key = sessionLockKey(normalizedEmail);
-    const current = await fastify.redis.get(key);
-    if (current === `${processInstanceId}:${sessionId}`) {
-      await fastify.redis.del(key);
-    }
-  };
-
   const getUserRoomSockets = (userId: string, roomId: string) => {
     const userSockets = socketsByUserId.get(userId);
     if (!userSockets) {
@@ -285,9 +235,63 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
     return result;
   };
 
+  const evictUserFromOtherNonTextChannels = (userId: string, keepSocket: WebSocket) => {
+    const userSockets = socketsByUserId.get(userId);
+    if (!userSockets) {
+      return;
+    }
+
+    let didChange = false;
+
+    for (const socket of userSockets) {
+      if (socket === keepSocket) {
+        continue;
+      }
+
+      const state = socketState.get(socket);
+      if (!state || !state.roomId || !state.roomSlug || !state.roomKind || state.roomKind === "text") {
+        continue;
+      }
+
+      const previousRoomId = state.roomId;
+      const previousRoomSlug = state.roomSlug;
+
+      detachRoomSocket(previousRoomId, socket);
+      state.roomId = null;
+      state.roomSlug = null;
+      state.roomKind = null;
+
+      sendJson(socket, buildRoomLeftEnvelope(previousRoomId, previousRoomSlug));
+      sendJson(
+        socket,
+        buildErrorEnvelope(
+          "ChannelSessionMoved",
+          "You were disconnected from this channel because your account joined another channel elsewhere"
+        )
+      );
+
+      broadcastRoom(
+        previousRoomId,
+        buildPresenceLeftEnvelope(
+          state.userId,
+          state.userName,
+          previousRoomSlug,
+          getRoomPresence(previousRoomId).length
+        ),
+        socket
+      );
+
+      didChange = true;
+    }
+
+    if (didChange) {
+      broadcastAllRoomsPresence();
+    }
+  };
+
   const canJoinRoom = async (roomSlug: string, userId: string): Promise<CanJoinRoomResult> => {
     const room = await db.query<RoomRow>(
-      "SELECT id, slug, title, is_public FROM rooms WHERE slug = $1",
+      "SELECT id, slug, title, kind, is_public FROM rooms WHERE slug = $1",
       [roomSlug]
     );
 
@@ -441,8 +445,6 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
       try {
         const url = new URL(request.url, "http://localhost");
         const ticket = url.searchParams.get("ticket");
-        const clientType = String(url.searchParams.get("client") || "").trim().toLowerCase();
-        const shouldEnforceSingleSession = clientType === "web";
 
         if (!ticket) {
           sendJson(connection, buildErrorEnvelope("MissingTicket", "ticket query param is required"));
@@ -479,28 +481,13 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
         }
 
         const userName = claims.userName || claims.name || claims.email || "unknown";
-        const userEmail = String(claims.email || "").trim().toLowerCase() || null;
-        const sessionId = randomUUID();
-
-        if (userEmail && shouldEnforceSingleSession) {
-          const previousSocket = activeSocketByEmail.get(userEmail);
-          if (previousSocket && previousSocket !== connection && previousSocket.readyState === previousSocket.OPEN) {
-            sendJson(previousSocket, buildErrorEnvelope("SingleSessionReplaced", "Session moved to another window or app"));
-            previousSocket.close(4010, "Session replaced");
-          }
-
-          await tryAcquireEmailSession(userEmail, sessionId);
-          activeSocketByEmail.set(userEmail, connection);
-        }
 
         socketState.set(connection, {
           userId,
           userName,
-          email: userEmail,
-          enforceSingleSession: shouldEnforceSingleSession,
-          sessionId,
           roomId: null,
-          roomSlug: null
+          roomSlug: null,
+          roomKind: null
         });
 
         attachUserSocket(userId, connection);
@@ -530,10 +517,6 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
 
             if (!state) {
               return;
-            }
-
-            if (state.email && state.enforceSingleSession) {
-              await refreshEmailSession(state.email, state.sessionId);
             }
 
             if (!knownMessage) {
@@ -573,8 +556,13 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
                   broadcastAllRoomsPresence();
                 }
 
+                if (joinResult.room.kind !== "text") {
+                  evictUserFromOtherNonTextChannels(state.userId, connection);
+                }
+
                 state.roomId = joinResult.room.id;
                 state.roomSlug = joinResult.room.slug;
+                state.roomKind = joinResult.room.kind;
                 attachRoomSocket(joinResult.room.id, connection);
 
                 sendJson(
@@ -633,6 +621,7 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
                 detachRoomSocket(previousRoomId, connection);
                 state.roomId = null;
                 state.roomSlug = null;
+                state.roomKind = null;
 
                 sendJson(connection, buildRoomLeftEnvelope(previousRoomId, previousRoomSlug));
                 sendAckWithMetrics(connection, requestId, eventType, {
@@ -855,14 +844,6 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
               )
             );
             broadcastAllRoomsPresence();
-          }
-
-          if (state.email && state.enforceSingleSession) {
-            const activeSocket = activeSocketByEmail.get(state.email);
-            if (activeSocket === connection) {
-              activeSocketByEmail.delete(state.email);
-            }
-            await releaseEmailSession(state.email, state.sessionId);
           }
 
           const userSockets = socketsByUserId.get(state.userId);
