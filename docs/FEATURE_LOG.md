@@ -3,6 +3,36 @@
 Этот документ хранит зафиксированные изменения, выполненные шаги и операционные evidence.
 План и open items находятся в `docs/ROADMAP.md`.
 
+## 2026-02-28 — Channel modes update: text / text+voice / text+voice+video
+
+### Delivered
+
+- Модель `kind` каналов переведена на 3 режима:
+  - `text`
+  - `text_voice`
+  - `text_voice_video`
+- Добавлена backward compatibility миграция:
+  - существующие `kind='voice'` автоматически нормализуются в `text_voice`.
+- Добавлена/обновлена DB constraint проверка допустимых значений `rooms.kind`.
+- Web UI updated:
+  - popup create-channel использует 3 новых режима,
+  - в channel list режим отображается рядом с названием.
+
+### Validation
+
+- `npm run check:api-types` — PASS.
+- `npm run web:build` — PASS.
+- `npm run check` — PASS.
+
+### Operational evidence (test)
+
+- Deploy target: `test`, branch `feature/web-header-profile-menu`, SHA `8b9b5e7`.
+- Command: `ssh mac-mini 'cd ~/srv/boltorezka && TEST_REF=origin/feature/web-header-profile-menu npm run deploy:test:smoke'`.
+- Smoke result:
+  - `smoke:sso` — PASS,
+  - `smoke:realtime` — PASS,
+  - `reconnectOk=true`, `reconnectSkipped=false`.
+
 ## 2026-02-28 — Sidebar UX compacting: popups + icons + custom tooltip
 
 ### Delivered
