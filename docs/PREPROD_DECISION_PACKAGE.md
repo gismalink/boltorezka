@@ -176,9 +176,9 @@
 - smoke:sso: `PASS`
 - smoke:realtime: `PASS`
 - reconnectOk: `true`
-- smoke:web:e2e: `PENDING` (перед prod требуется повторный запуск в полном режиме)
-- call relay scenario (`SMOKE_CALL_SIGNAL=1`): `PENDING` (в последнем postdeploy smoke не запускался)
+- smoke:web:e2e: `PASS` (server run: `SMOKE_API_URL=https://test.boltorezka.gismalink.art npm run smoke:web:e2e`)
+- call relay scenario (`SMOKE_CALL_SIGNAL=1`): `PASS` (`callSignalRelayed=true`, `callRejectRelayed=true`, `callHangupRelayed=true`)
 - Release Owner: `<name>`
 - Rollback Owner: `<name>`
 - Rollback ref: `<known-good-main-sha>`
-- Final decision: `NO-GO` (до закрытия `PENDING` пунктов и owner sign-off)
+- Final decision: `NO-GO` (до заполнения owner/sign-off полей и explicit prod approval)
