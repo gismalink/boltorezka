@@ -3,6 +3,26 @@
 Этот документ хранит зафиксированные изменения, выполненные шаги и операционные evidence.
 План и open items находятся в `docs/ROADMAP.md`.
 
+## 2026-02-28 — Category delete safeguard + room people list + sidebar hover polish
+
+### Delivered
+
+- Добавлена защита удаления группы (категории):
+  - `DELETE /v1/room-categories/:categoryId` теперь возвращает `409 CategoryNotEmpty`, если в группе есть каналы.
+- Добавлен список людей в текущей комнате в правой колонке (`People in room`) на основе `room.presence`.
+- Для строки группы (`category-title-row`) кнопки `+` и шестерёнка переведены в hover/focus режим (как у каналов).
+- Повторный клик по уже активному каналу отключён (кнопка текущего канала disabled), чтобы чат не очищался повторно.
+
+### Validation
+
+- `npm run check:api-types` — PASS.
+- `npm --prefix apps/web run build` — PASS.
+
+### Operational evidence (test)
+
+- Deploy target: `test`, branch `feature/web-header-profile-menu`.
+- Smoke: `smoke:sso` / `smoke:realtime` — PASS (после деплоя изменений).
+
 ## 2026-02-28 — Delete safety: protect last room
 
 ### Delivered

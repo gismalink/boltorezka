@@ -45,6 +45,19 @@
   gap: var(--space-xs);
 }
 
+.category-action-btn {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s ease;
+}
+
+.category-title-row:hover .category-action-btn,
+.category-title-row:focus-within .category-action-btn,
+.category-settings-popup .category-action-btn {
+  opacity: 1;
+  pointer-events: auto;
+}
+
 .category-settings-anchor {
   position: relative;
 }
@@ -69,6 +82,10 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-md);
+}
+
+.room-btn:disabled {
+  cursor: default;
 }
 
 .room-btn-active {
@@ -122,6 +139,20 @@
 
 .presence-box {
   margin: 0;
+}
+
+.room-people-list {
+  list-style: none;
+  margin: var(--space-md) 0 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-sm);
+}
+
+.room-people-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
 }
 
 .chat-log {

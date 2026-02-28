@@ -76,7 +76,12 @@ export function RoomsPanel({
     <div className="channel-row">
       <button
         className={`secondary room-btn ${roomSlug === room.slug ? "room-btn-active" : ""}`}
-        onClick={() => onJoinRoom(room.slug)}
+        onClick={() => {
+          if (roomSlug !== room.slug) {
+            onJoinRoom(room.slug);
+          }
+        }}
+        disabled={roomSlug === room.slug}
       >
         <i className={`bi ${ROOM_KIND_ICON_CLASS[room.kind]}`} aria-hidden="true" />
         <span>{room.title}</span>
@@ -250,7 +255,7 @@ export function RoomsPanel({
                 <div className="category-actions">
                   <button
                     type="button"
-                    className="secondary icon-btn tiny"
+                    className="secondary icon-btn tiny category-action-btn"
                     aria-label="Create channel in category"
                     data-tooltip="Create channel in category"
                     onClick={() => onOpenCreateChannelPopup(category.id)}
@@ -265,7 +270,7 @@ export function RoomsPanel({
                   >
                     <button
                       type="button"
-                      className="secondary icon-btn tiny"
+                      className="secondary icon-btn tiny category-action-btn"
                       aria-label="Configure category"
                       data-tooltip="Configure category"
                       onClick={() => onOpenCategorySettingsPopup(category.id, category.title)}

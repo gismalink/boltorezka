@@ -683,6 +683,18 @@ export function App() {
       : "Пользовательский";
 
   const currentRoomSupportsRtc = currentRoom ? currentRoom.kind !== "text" : false;
+  const roomPeople = useMemo(() => {
+    const unique = Array.from(new Set(presence));
+    if (unique.length > 0) {
+      return unique;
+    }
+
+    if (user?.name) {
+      return [user.name];
+    }
+
+    return [];
+  }, [presence, user?.name]);
 
   return (
     <main className="app legacy-layout">
@@ -833,7 +845,6 @@ export function App() {
         <section className="middlecolumn">
           <section className="card middle-card">
             <h2>Chat ({roomSlug})</h2>
-            <pre className="presence-box">presence: {JSON.stringify(presence)}</pre>
             <div className="row">
               <button
                 type="button"
@@ -868,6 +879,22 @@ export function App() {
         </section>
 
         <aside className="rightcolumn">
+          <section className="card compact">
+            <h2>People in room</h2>
+            {roomPeople.length > 0 ? (
+              <ul className="room-people-list">
+                {roomPeople.map((item) => (
+                  <li key={item} className="room-people-item">
+                    <i className="bi bi-person-fill" aria-hidden="true" />
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="muted">No users connected.</p>
+            )}
+          </section>
+
           {canPromote ? (
             <section className="card compact">
               <h2>Admin Users</h2>

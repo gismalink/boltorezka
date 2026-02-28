@@ -341,19 +341,35 @@ export async function roomsRoutes(fastify: FastifyInstance) {
         });
       }
 
+      const categoryStats = await db.query<{ category_exists: boolean; room_count: number }>(
+        `SELECT
+           EXISTS(SELECT 1 FROM room_categories WHERE id = $1) AS category_exists,
+           (SELECT COUNT(*)::int FROM rooms WHERE category_id = $1) AS room_count`,
+        [categoryId]
+      );
+
+      const current = categoryStats.rows[0];
+
+      if (!current?.category_exists) {
+        return reply.code(404).send({
+          error: "CategoryNotFound",
+          message: "Category does not exist"
+        });
+      }
+
+      if ((current?.room_count || 0) > 0) {
+        return reply.code(409).send({
+          error: "CategoryNotEmpty",
+          message: "Cannot delete category with channels"
+        });
+      }
+
       const deleted = await db.query(
         `DELETE FROM room_categories
          WHERE id = $1
          RETURNING id`,
         [categoryId]
       );
-
-      if ((deleted.rowCount || 0) === 0) {
-        return reply.code(404).send({
-          error: "CategoryNotFound",
-          message: "Category does not exist"
-        });
-      }
 
       return { ok: true, categoryId };
     }
