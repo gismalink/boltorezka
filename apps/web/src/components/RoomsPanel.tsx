@@ -16,6 +16,7 @@ const ROOM_KIND_ICON_CLASS: Record<RoomKind, string> = {
 };
 
 export function RoomsPanel({
+  t,
   canCreateRooms,
   roomsTree,
   roomSlug,
@@ -139,8 +140,8 @@ export function RoomsPanel({
           <button
             type="button"
             className="secondary icon-btn tiny channel-action-btn"
-            data-tooltip="Configure channel"
-            aria-label="Configure channel"
+            data-tooltip={t("rooms.configChannel")}
+            aria-label={t("rooms.configChannel")}
             onClick={() => onOpenChannelSettingsPopup(room)}
           >
             <i className="bi bi-gear" aria-hidden="true" />
@@ -153,16 +154,16 @@ export function RoomsPanel({
           >
             <div>
               <form className="stack" onSubmit={onSaveChannelSettings}>
-                <h3 className="subheading">Channel settings</h3>
-                <input value={editingRoomTitle} onChange={(event) => onSetEditingRoomTitle(event.target.value)} placeholder="channel title" />
+                <h3 className="subheading">{t("rooms.channelSettings")}</h3>
+                <input value={editingRoomTitle} onChange={(event) => onSetEditingRoomTitle(event.target.value)} placeholder={t("rooms.channelTitle")} />
                 <div className="row">
                   <select value={editingRoomKind} onChange={(event) => onSetEditingRoomKind(event.target.value as RoomKind)}>
-                    <option value="text">Text</option>
-                    <option value="text_voice">Text + Voice</option>
-                    <option value="text_voice_video">Text + Voice + Video</option>
+                    <option value="text">{t("rooms.text")}</option>
+                    <option value="text_voice">{t("rooms.textVoice")}</option>
+                    <option value="text_voice_video">{t("rooms.textVoiceVideo")}</option>
                   </select>
                   <select value={editingRoomCategoryId} onChange={(event) => onSetEditingRoomCategoryId(event.target.value)}>
-                    <option value="none">No category</option>
+                    <option value="none">{t("rooms.noCategory")}</option>
                     {(roomsTree?.categories || []).map((category) => (
                       <option key={category.id} value={category.id}>{category.title}</option>
                     ))}
@@ -170,26 +171,26 @@ export function RoomsPanel({
                 </div>
                 <div className="row">
                   <button type="button" className="secondary" onClick={() => onMoveChannel("up")}>
-                    <i className="bi bi-arrow-up" aria-hidden="true" /> Up
+                    <i className="bi bi-arrow-up" aria-hidden="true" /> {t("rooms.up")}
                   </button>
                   <button type="button" className="secondary" onClick={() => onMoveChannel("down")}>
-                    <i className="bi bi-arrow-down" aria-hidden="true" /> Down
+                    <i className="bi bi-arrow-down" aria-hidden="true" /> {t("rooms.down")}
                   </button>
                 </div>
-                <button type="submit" className="icon-action"><i className="bi bi-check2" aria-hidden="true" /> Save</button>
+                <button type="submit" className="icon-action"><i className="bi bi-check2" aria-hidden="true" /> {t("rooms.save")}</button>
                 <button
                   type="button"
                   className="secondary clear-action-btn"
                   onClick={() => setConfirmPopup({ kind: "clear-channel", room })}
                 >
-                  <i className="bi bi-eraser" aria-hidden="true" /> Clear chat
+                  <i className="bi bi-eraser" aria-hidden="true" /> {t("rooms.clearChat")}
                 </button>
                 <button
                   type="button"
                   className="secondary delete-action-btn"
                   onClick={() => setConfirmPopup({ kind: "delete-channel", room })}
                 >
-                  <i className="bi bi-trash3" aria-hidden="true" /> Delete channel
+                  <i className="bi bi-trash3" aria-hidden="true" /> {t("rooms.deleteChannel")}
                 </button>
               </form>
             </div>
@@ -228,15 +229,15 @@ export function RoomsPanel({
     <>
       <section className="card compact rooms-card">
       <div className="section-heading-row">
-        <h2>Rooms</h2>
+        <h2>{t("rooms.title")}</h2>
         {canCreateRooms ? (
           <div className="row-actions">
             <div className="popup-anchor" ref={categoryPopupRef}>
               <button
                 type="button"
                 className="secondary icon-btn"
-                aria-label="Create category"
-                data-tooltip="Create category"
+                aria-label={t("rooms.createCategory")}
+                data-tooltip={t("rooms.createCategory")}
                 onClick={() => {
                   onSetChannelPopupOpen(false);
                   onSetCategoryPopupOpen(!categoryPopupOpen);
@@ -247,10 +248,10 @@ export function RoomsPanel({
               <PopupPortal open={categoryPopupOpen} anchorRef={categoryPopupRef} className="settings-popup" placement="bottom-end">
                 <div>
                   <form className="stack" onSubmit={onCreateCategory}>
-                    <h3 className="subheading">Create category</h3>
-                    <input value={newCategorySlug} onChange={(event) => onSetNewCategorySlug(event.target.value)} placeholder="category slug" />
-                    <input value={newCategoryTitle} onChange={(event) => onSetNewCategoryTitle(event.target.value)} placeholder="category title" />
-                    <button type="submit" className="icon-action"><i className="bi bi-check2" aria-hidden="true" /> Save</button>
+                    <h3 className="subheading">{t("rooms.createCategoryTitle")}</h3>
+                    <input value={newCategorySlug} onChange={(event) => onSetNewCategorySlug(event.target.value)} placeholder={t("rooms.categorySlug")} />
+                    <input value={newCategoryTitle} onChange={(event) => onSetNewCategoryTitle(event.target.value)} placeholder={t("rooms.categoryTitle")} />
+                    <button type="submit" className="icon-action"><i className="bi bi-check2" aria-hidden="true" /> {t("rooms.save")}</button>
                   </form>
                 </div>
               </PopupPortal>
@@ -260,8 +261,8 @@ export function RoomsPanel({
               <button
                 type="button"
                 className="secondary icon-btn"
-                aria-label="Create channel"
-                data-tooltip="Create channel"
+                aria-label={t("rooms.createChannel")}
+                data-tooltip={t("rooms.createChannel")}
                 onClick={() => {
                   onSetCategoryPopupOpen(false);
                   onSetChannelPopupOpen(!channelPopupOpen);
@@ -272,23 +273,23 @@ export function RoomsPanel({
               <PopupPortal open={channelPopupOpen} anchorRef={channelPopupRef} className="settings-popup" placement="bottom-end">
                 <div>
                   <form className="stack" onSubmit={onCreateRoom}>
-                    <h3 className="subheading">Create channel</h3>
-                    <input value={newRoomSlug} onChange={(event) => onSetNewRoomSlug(event.target.value)} placeholder="channel slug" />
-                    <input value={newRoomTitle} onChange={(event) => onSetNewRoomTitle(event.target.value)} placeholder="channel title" />
+                    <h3 className="subheading">{t("rooms.createChannelTitle")}</h3>
+                    <input value={newRoomSlug} onChange={(event) => onSetNewRoomSlug(event.target.value)} placeholder={t("rooms.channelSlug")} />
+                    <input value={newRoomTitle} onChange={(event) => onSetNewRoomTitle(event.target.value)} placeholder={t("rooms.channelTitle")} />
                     <div className="row">
                       <select value={newRoomKind} onChange={(event) => onSetNewRoomKind(event.target.value as RoomKind)}>
-                        <option value="text">Text</option>
-                        <option value="text_voice">Text + Voice</option>
-                        <option value="text_voice_video">Text + Voice + Video</option>
+                        <option value="text">{t("rooms.text")}</option>
+                        <option value="text_voice">{t("rooms.textVoice")}</option>
+                        <option value="text_voice_video">{t("rooms.textVoiceVideo")}</option>
                       </select>
                       <select value={newRoomCategoryId} onChange={(event) => onSetNewRoomCategoryId(event.target.value)}>
-                        <option value="none">No category</option>
+                        <option value="none">{t("rooms.noCategory")}</option>
                         {(roomsTree?.categories || []).map((category) => (
                           <option key={category.id} value={category.id}>{category.title}</option>
                         ))}
                       </select>
                     </div>
-                    <button type="submit" className="icon-action"><i className="bi bi-check2" aria-hidden="true" /> Save</button>
+                    <button type="submit" className="icon-action"><i className="bi bi-check2" aria-hidden="true" /> {t("rooms.save")}</button>
                   </form>
                 </div>
               </PopupPortal>
@@ -297,7 +298,7 @@ export function RoomsPanel({
         ) : null}
       </div>
       {canCreateRooms ? (
-        <p className="muted compact-hint">Use icon buttons to create categories/channels.</p>
+        <p className="muted compact-hint">{t("rooms.hintAdmin")}</p>
       ) : null}
 
       <div className="rooms-scroll">
@@ -310,8 +311,8 @@ export function RoomsPanel({
                   <button
                     type="button"
                     className="secondary icon-btn tiny category-action-btn"
-                    aria-label="Create channel in category"
-                    data-tooltip="Create channel in category"
+                    aria-label={t("rooms.createChannel")}
+                    data-tooltip={t("rooms.createChannel")}
                     onClick={() => onOpenCreateChannelPopup(category.id)}
                   >
                     <i className="bi bi-plus-lg" aria-hidden="true" />
@@ -325,8 +326,8 @@ export function RoomsPanel({
                     <button
                       type="button"
                       className="secondary icon-btn tiny category-action-btn"
-                      aria-label="Configure category"
-                      data-tooltip="Configure category"
+                      aria-label={t("rooms.configCategory")}
+                      data-tooltip={t("rooms.configCategory")}
                       onClick={() => onOpenCategorySettingsPopup(category.id, category.title)}
                     >
                       <i className="bi bi-gear" aria-hidden="true" />
@@ -339,23 +340,23 @@ export function RoomsPanel({
                     >
                       <div>
                         <form className="stack" onSubmit={onSaveCategorySettings}>
-                          <h3 className="subheading">Category settings</h3>
-                          <input value={editingCategoryTitle} onChange={(event) => onSetEditingCategoryTitle(event.target.value)} placeholder="category title" />
+                          <h3 className="subheading">{t("rooms.categorySettings")}</h3>
+                          <input value={editingCategoryTitle} onChange={(event) => onSetEditingCategoryTitle(event.target.value)} placeholder={t("rooms.categoryTitle")} />
                           <div className="row">
                             <button type="button" className="secondary" onClick={() => onMoveCategory("up")}>
-                              <i className="bi bi-arrow-up" aria-hidden="true" /> Up
+                              <i className="bi bi-arrow-up" aria-hidden="true" /> {t("rooms.up")}
                             </button>
                             <button type="button" className="secondary" onClick={() => onMoveCategory("down")}>
-                              <i className="bi bi-arrow-down" aria-hidden="true" /> Down
+                              <i className="bi bi-arrow-down" aria-hidden="true" /> {t("rooms.down")}
                             </button>
                           </div>
-                          <button type="submit" className="icon-action"><i className="bi bi-check2" aria-hidden="true" /> Save</button>
+                          <button type="submit" className="icon-action"><i className="bi bi-check2" aria-hidden="true" /> {t("rooms.save")}</button>
                           <button
                             type="button"
                             className="secondary delete-action-btn"
                             onClick={() => setConfirmPopup({ kind: "delete-category" })}
                           >
-                            <i className="bi bi-trash3" aria-hidden="true" /> Delete category
+                            <i className="bi bi-trash3" aria-hidden="true" /> {t("rooms.deleteCategory")}
                           </button>
                         </form>
                       </div>
@@ -374,7 +375,7 @@ export function RoomsPanel({
 
         {uncategorizedRooms.length > 0 ? (
           <div className="category-block">
-            <div className="category-title">Uncategorized</div>
+            <div className="category-title">{t("rooms.uncategorized")}</div>
             <ul className="rooms-list">
               {uncategorizedRooms.map((room) => (
                 <li key={room.id}>{renderRoomRow(room)}</li>
@@ -395,24 +396,24 @@ export function RoomsPanel({
           }}
         >
           <div className="card compact settings-confirm-modal popup-layer-content">
-            <h3 className="subheading settings-confirm-title">Confirm action</h3>
+            <h3 className="subheading settings-confirm-title">{t("rooms.confirmTitle")}</h3>
             <p className="muted settings-confirm-text">
               {confirmPopup.kind === "clear-channel"
-                ? "Clear all messages in this chat?"
+                ? t("rooms.confirmClear")
                 : confirmPopup.kind === "delete-channel"
-                  ? "Delete channel?"
-                  : "Delete category?"}
+                  ? t("rooms.confirmDeleteChannel")
+                  : t("rooms.confirmDeleteCategory")}
             </p>
             <div className="row delete-confirm-actions">
               <button type="button" className="secondary" onClick={() => setConfirmPopup(null)}>
-                No
+                {t("common.no")}
               </button>
               <button
                 type="button"
                 className={confirmPopup.kind === "clear-channel" ? "clear-confirm-btn" : "delete-confirm-btn"}
                 onClick={submitConfirmPopup}
               >
-                Yes
+                {t("common.yes")}
               </button>
             </div>
           </div>

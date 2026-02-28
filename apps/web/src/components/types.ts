@@ -1,4 +1,5 @@
 import type { FormEvent, RefObject } from "react";
+import type { Lang, TranslateFn } from "../i18n";
 import type { Room, RoomKind, RoomsTreeResponse, User } from "../types";
 
 export type InputProfile = "noise_reduction" | "studio" | "custom";
@@ -8,6 +9,7 @@ export type DeviceOption = { id: string; label: string };
 export type MediaDevicesState = "ready" | "unsupported" | "denied" | "error";
 
 export type UserDockProps = {
+  t: TranslateFn;
   user: User;
   currentRoomSupportsRtc: boolean;
   currentRoomTitle: string;
@@ -15,8 +17,15 @@ export type UserDockProps = {
   audioMuted: boolean;
   audioOutputMenuOpen: boolean;
   voiceSettingsOpen: boolean;
-  voicePreferencesOpen: boolean;
+  userSettingsOpen: boolean;
+  userSettingsTab: "profile" | "sound";
   voiceSettingsPanel: VoiceSettingsPanel;
+  profileNameDraft: string;
+  profileEmail: string;
+  profileSaving: boolean;
+  profileStatusText: string;
+  selectedLang: Lang;
+  languageOptions: Array<{ value: Lang; label: string }>;
   inputOptions: DeviceOption[];
   outputOptions: DeviceOption[];
   selectedInputId: string;
@@ -30,15 +39,20 @@ export type UserDockProps = {
   mediaDevicesHint: string;
   audioOutputAnchorRef: RefObject<HTMLDivElement>;
   voiceSettingsAnchorRef: RefObject<HTMLDivElement>;
-  voicePreferencesRef: RefObject<HTMLDivElement>;
+  userSettingsRef: RefObject<HTMLDivElement>;
   onToggleMic: () => void;
   onToggleAudio: () => void;
   onToggleVoiceSettings: () => void;
   onToggleAudioOutput: () => void;
+  onOpenUserSettings: (tab: "profile" | "sound") => void;
   onSetVoiceSettingsOpen: (value: boolean) => void;
   onSetAudioOutputMenuOpen: (value: boolean) => void;
   onSetVoiceSettingsPanel: (panel: VoiceSettingsPanel) => void;
-  onSetVoicePreferencesOpen: (value: boolean) => void;
+  onSetUserSettingsOpen: (value: boolean) => void;
+  onSetUserSettingsTab: (value: "profile" | "sound") => void;
+  onSetProfileNameDraft: (value: string) => void;
+  onSetSelectedLang: (value: Lang) => void;
+  onSaveProfile: (event: FormEvent) => void;
   onSetSelectedInputId: (value: string) => void;
   onSetSelectedOutputId: (value: string) => void;
   onSetSelectedInputProfile: (value: InputProfile) => void;
@@ -47,6 +61,7 @@ export type UserDockProps = {
 };
 
 export type RoomsPanelProps = {
+  t: TranslateFn;
   canCreateRooms: boolean;
   roomsTree: RoomsTreeResponse | null;
   roomSlug: string;

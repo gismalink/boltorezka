@@ -11,6 +11,7 @@ import { RoomsPanel } from "./components/RoomsPanel";
 import { PopupPortal } from "./components/PopupPortal";
 import { UserDock } from "./components/UserDock";
 import type { InputProfile, MediaDevicesState, VoiceSettingsPanel } from "./components/types";
+import { detectInitialLang, LANGUAGE_OPTIONS, LOCALE_BY_LANG, TEXT, type Lang } from "./i18n";
 import { trackClientEvent } from "./telemetry";
 import type {
   Message,
@@ -66,7 +67,12 @@ export function App() {
   const [audioMuted, setAudioMuted] = useState(false);
   const [audioOutputMenuOpen, setAudioOutputMenuOpen] = useState(false);
   const [voiceSettingsOpen, setVoiceSettingsOpen] = useState(false);
-  const [voicePreferencesOpen, setVoicePreferencesOpen] = useState(false);
+  const [userSettingsOpen, setUserSettingsOpen] = useState(false);
+  const [userSettingsTab, setUserSettingsTab] = useState<"profile" | "sound">("profile");
+  const [lang, setLang] = useState<Lang>(() => detectInitialLang());
+  const [profileNameDraft, setProfileNameDraft] = useState("");
+  const [profileStatusText, setProfileStatusText] = useState("");
+  const [profileSaving, setProfileSaving] = useState(false);
   const [inputDevices, setInputDevices] = useState<Array<{ id: string; label: string }>>([]);
   const [outputDevices, setOutputDevices] = useState<Array<{ id: string; label: string }>>([]);
   const [selectedInputId, setSelectedInputId] = useState<string>(() => localStorage.getItem("boltorezka_selected_input_id") || "default");
@@ -91,18 +97,23 @@ export function App() {
   const channelPopupRef = useRef<HTMLDivElement>(null);
   const audioOutputAnchorRef = useRef<HTMLDivElement>(null);
   const voiceSettingsAnchorRef = useRef<HTMLDivElement>(null);
-  const voicePreferencesRef = useRef<HTMLDivElement>(null);
+  const userSettingsRef = useRef<HTMLDivElement>(null);
 
   const canCreateRooms = user?.role === "admin" || user?.role === "super_admin";
   const canPromote = user?.role === "super_admin";
   const canViewTelemetry = canPromote || canCreateRooms;
+  const locale = LOCALE_BY_LANG[lang];
+  const t = useMemo(() => {
+    const dict = TEXT[lang];
+    return (key: string) => dict[key] || key;
+  }, [lang]);
 
   const pushLog = (text: string) => {
-    setEventLog((prev) => [`${new Date().toLocaleTimeString()} ${text}`, ...prev].slice(0, 30));
+    setEventLog((prev) => [`${new Date().toLocaleTimeString(locale)} ${text}`, ...prev].slice(0, 30));
   };
 
   const pushCallLog = (text: string) => {
-    setCallEventLog((prev) => [`${new Date().toLocaleTimeString()} ${text}`, ...prev].slice(0, 30));
+    setCallEventLog((prev) => [`${new Date().toLocaleTimeString(locale)} ${text}`, ...prev].slice(0, 30));
   };
 
   const markMessageDelivery = (
@@ -205,6 +216,16 @@ export function App() {
     autoSsoAttemptedRef.current = true;
     void authController.completeSso({ silent: true });
   }, [token, authMode, authController]);
+
+  useEffect(() => {
+    localStorage.setItem("boltorezka_lang", lang);
+    document.documentElement.lang = lang;
+  }, [lang]);
+
+  useEffect(() => {
+    setProfileNameDraft(user?.name || "");
+    setProfileStatusText("");
+  }, [user]);
 
   useEffect(() => {
     if (!token) {
@@ -393,7 +414,7 @@ export function App() {
     const loadDevices = async () => {
       if (!navigator.mediaDevices?.enumerateDevices) {
         setMediaDevicesState("unsupported");
-        setMediaDevicesHint("Ваш браузер не поддерживает выбор аудио-устройств.");
+        setMediaDevicesHint(t("settings.browserUnsupported"));
         return;
       }
 
@@ -403,13 +424,13 @@ export function App() {
           .filter((item) => item.kind === "audioinput")
           .map((item, index) => ({
             id: item.deviceId || `input-${index}`,
-            label: item.label || `Microphone ${index + 1}`
+            label: item.label || `${t("settings.microphone")} ${index + 1}`
           }));
         const outputs = devices
           .filter((item) => item.kind === "audiooutput")
           .map((item, index) => ({
             id: item.deviceId || `output-${index}`,
-            label: item.label || `Output ${index + 1}`
+            label: item.label || `${t("settings.outputDevice")} ${index + 1}`
           }));
 
         setInputDevices(inputs);
@@ -417,7 +438,7 @@ export function App() {
 
         if (inputs.length === 0 && outputs.length === 0) {
           setMediaDevicesState("error");
-          setMediaDevicesHint("Аудио-устройства не обнаружены.");
+          setMediaDevicesHint(t("settings.devicesNotFound"));
         } else {
           setMediaDevicesState("ready");
           setMediaDevicesHint("");
@@ -433,21 +454,21 @@ export function App() {
         const errorName = (error as { name?: string })?.name || "";
         if (errorName === "NotAllowedError" || errorName === "SecurityError") {
           setMediaDevicesState("denied");
-          setMediaDevicesHint("Доступ к микрофону/аудио запрещён в браузере.");
+          setMediaDevicesHint(t("settings.mediaDenied"));
           return;
         }
 
         setMediaDevicesState("error");
-        setMediaDevicesHint("Не удалось получить список аудио-устройств.");
+        setMediaDevicesHint(t("settings.devicesLoadFailed"));
         return;
       }
     };
 
     void loadDevices();
-  }, [selectedInputId, selectedOutputId]);
+  }, [selectedInputId, selectedOutputId, t]);
 
   useEffect(() => {
-    if (!profileMenuOpen && !authMenuOpen && !categoryPopupOpen && !channelPopupOpen && !channelSettingsPopupOpenId && !categorySettingsPopupOpenId && !audioOutputMenuOpen && !voiceSettingsOpen && !voicePreferencesOpen) {
+    if (!profileMenuOpen && !authMenuOpen && !categoryPopupOpen && !channelPopupOpen && !channelSettingsPopupOpenId && !categorySettingsPopupOpenId && !audioOutputMenuOpen && !voiceSettingsOpen && !userSettingsOpen) {
       return;
     }
 
@@ -461,10 +482,10 @@ export function App() {
       const insideCategorySettings = Boolean(target && target instanceof HTMLElement && target.closest(".category-settings-anchor"));
       const insideOutputSettings = Boolean(target && audioOutputAnchorRef.current?.contains(target));
       const insideVoiceSettings = Boolean(target && voiceSettingsAnchorRef.current?.contains(target));
-      const insideVoicePreferences = Boolean(target && voicePreferencesRef.current?.contains(target));
+      const insideUserSettings = Boolean(target && userSettingsRef.current?.contains(target));
       const insidePopupLayer = Boolean(target && target instanceof HTMLElement && target.closest(".popup-layer-content"));
 
-      if (!insideProfile && !insideAuth && !insideCategoryPopup && !insideChannelPopup && !insideChannelSettings && !insideCategorySettings && !insideOutputSettings && !insideVoiceSettings && !insideVoicePreferences && !insidePopupLayer) {
+      if (!insideProfile && !insideAuth && !insideCategoryPopup && !insideChannelPopup && !insideChannelSettings && !insideCategorySettings && !insideOutputSettings && !insideVoiceSettings && !insideUserSettings && !insidePopupLayer) {
         setProfileMenuOpen(false);
         setAuthMenuOpen(false);
         setCategoryPopupOpen(false);
@@ -473,13 +494,13 @@ export function App() {
         setCategorySettingsPopupOpenId(null);
         setAudioOutputMenuOpen(false);
         setVoiceSettingsOpen(false);
-        setVoicePreferencesOpen(false);
+        setUserSettingsOpen(false);
       }
     };
 
     window.addEventListener("mousedown", onClickOutside);
     return () => window.removeEventListener("mousedown", onClickOutside);
-  }, [profileMenuOpen, authMenuOpen, categoryPopupOpen, channelPopupOpen, channelSettingsPopupOpenId, categorySettingsPopupOpenId, audioOutputMenuOpen, voiceSettingsOpen, voicePreferencesOpen]);
+  }, [profileMenuOpen, authMenuOpen, categoryPopupOpen, channelPopupOpen, channelSettingsPopupOpenId, categorySettingsPopupOpenId, audioOutputMenuOpen, voiceSettingsOpen, userSettingsOpen]);
 
   const beginSso = (provider: "google" | "yandex") => {
     setAuthMenuOpen(false);
@@ -488,6 +509,43 @@ export function App() {
   const logout = () => {
     setProfileMenuOpen(false);
     authController.logout();
+  };
+
+  const openUserSettings = (tab: "profile" | "sound") => {
+    setProfileMenuOpen(false);
+    setAudioOutputMenuOpen(false);
+    setVoiceSettingsOpen(false);
+    setVoiceSettingsPanel(null);
+    setUserSettingsTab(tab);
+    setUserSettingsOpen(true);
+  };
+
+  const saveMyProfile = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!token) {
+      return;
+    }
+
+    const trimmedName = profileNameDraft.trim();
+    if (!trimmedName) {
+      setProfileStatusText(t("profile.saveError"));
+      return;
+    }
+
+    setProfileSaving(true);
+    setProfileStatusText("");
+
+    try {
+      const response = await api.updateMe(token, { name: trimmedName });
+      if (response.user) {
+        setUser(response.user);
+      }
+      setProfileStatusText(t("profile.saveSuccess"));
+    } catch (error) {
+      setProfileStatusText((error as Error).message || t("profile.saveError"));
+    } finally {
+      setProfileSaving(false);
+    }
   };
 
   const createRoom = async (event: FormEvent) => {
@@ -690,14 +748,14 @@ export function App() {
     [allRooms, roomSlug]
   );
 
-  const inputOptions = inputDevices.length > 0 ? inputDevices : [{ id: "default", label: "System default" }];
-  const outputOptions = outputDevices.length > 0 ? outputDevices : [{ id: "default", label: "System default" }];
-  const currentInputLabel = inputOptions.find((device) => device.id === selectedInputId)?.label ?? inputOptions[0]?.label ?? "System default";
+  const inputOptions = inputDevices.length > 0 ? inputDevices : [{ id: "default", label: t("device.systemDefault") }];
+  const outputOptions = outputDevices.length > 0 ? outputDevices : [{ id: "default", label: t("device.systemDefault") }];
+  const currentInputLabel = inputOptions.find((device) => device.id === selectedInputId)?.label ?? inputOptions[0]?.label ?? t("device.systemDefault");
   const inputProfileLabel = selectedInputProfile === "noise_reduction"
-    ? "Изоляция голоса"
+    ? t("settings.voiceIsolation")
     : selectedInputProfile === "studio"
-      ? "Студия"
-      : "Пользовательский";
+      ? t("settings.studio")
+      : t("settings.custom");
 
   const currentRoomSupportsRtc = currentRoom ? currentRoom.kind !== "text" : false;
   const roomPeople = useMemo(() => {
@@ -716,7 +774,7 @@ export function App() {
   return (
     <main className="app legacy-layout">
       <header className="app-header">
-        <h1 className="app-title">Boltorezka</h1>
+        <h1 className="app-title">{t("app.title")}</h1>
         <div className="header-actions">
           {user ? (
             <>
@@ -726,13 +784,14 @@ export function App() {
                   type="button"
                   className="secondary profile-icon"
                   onClick={() => setProfileMenuOpen((value) => !value)}
-                  aria-label="Profile menu"
+                  aria-label={t("profile.menuAria")}
                 >
                   <i className="bi bi-person-circle" aria-hidden="true" />
                 </button>
                 <PopupPortal open={profileMenuOpen} anchorRef={profileMenuRef} className="profile-popup" placement="bottom-end">
                   <div>
-                    <button type="button" onClick={logout}>Logout</button>
+                    <button type="button" className="secondary" onClick={() => openUserSettings("profile")}>{t("profile.openSettings")}</button>
+                    <button type="button" onClick={logout}>{t("auth.logout")}</button>
                   </div>
                 </PopupPortal>
               </div>
@@ -740,17 +799,17 @@ export function App() {
           ) : (
             <div className="auth-menu" ref={authMenuRef}>
               <button type="button" onClick={() => setAuthMenuOpen((value) => !value)}>
-                Авторизоваться
+                {t("auth.login")}
               </button>
               <PopupPortal open={authMenuOpen} anchorRef={authMenuRef} className="auth-popup" placement="bottom-end">
                 <div>
                   <button type="button" className="provider-btn" onClick={() => beginSso("google")}> 
                     <span className="provider-icon provider-google">G</span>
-                    Google
+                    {t("auth.google")}
                   </button>
                   <button type="button" className="provider-btn" onClick={() => beginSso("yandex")}>
                     <span className="provider-icon provider-yandex">Я</span>
-                    Yandex
+                    {t("auth.yandex")}
                   </button>
                 </div>
               </PopupPortal>
@@ -763,6 +822,7 @@ export function App() {
       <div className="workspace">
         <aside className="leftcolumn">
           <RoomsPanel
+            t={t}
             canCreateRooms={canCreateRooms}
             roomsTree={roomsTree}
             roomSlug={roomSlug}
@@ -813,6 +873,7 @@ export function App() {
 
           {user ? (
             <UserDock
+              t={t}
               user={user}
               currentRoomSupportsRtc={currentRoomSupportsRtc}
               currentRoomTitle={currentRoom?.title || ""}
@@ -820,8 +881,15 @@ export function App() {
               audioMuted={audioMuted}
               audioOutputMenuOpen={audioOutputMenuOpen}
               voiceSettingsOpen={voiceSettingsOpen}
-              voicePreferencesOpen={voicePreferencesOpen}
+              userSettingsOpen={userSettingsOpen}
+              userSettingsTab={userSettingsTab}
               voiceSettingsPanel={voiceSettingsPanel}
+              profileNameDraft={profileNameDraft}
+              profileEmail={user.email}
+              profileSaving={profileSaving}
+              profileStatusText={profileStatusText}
+              selectedLang={lang}
+              languageOptions={LANGUAGE_OPTIONS}
               inputOptions={inputOptions}
               outputOptions={outputOptions}
               selectedInputId={selectedInputId}
@@ -835,7 +903,7 @@ export function App() {
               mediaDevicesHint={mediaDevicesHint}
               audioOutputAnchorRef={audioOutputAnchorRef}
               voiceSettingsAnchorRef={voiceSettingsAnchorRef}
-              voicePreferencesRef={voicePreferencesRef}
+              userSettingsRef={userSettingsRef}
               onToggleMic={() => setMicMuted((value) => !value)}
               onToggleAudio={() => setAudioMuted((value) => !value)}
               onToggleVoiceSettings={() => {
@@ -848,10 +916,15 @@ export function App() {
                 setVoiceSettingsPanel(null);
                 setAudioOutputMenuOpen((value) => !value);
               }}
+              onOpenUserSettings={openUserSettings}
               onSetVoiceSettingsOpen={setVoiceSettingsOpen}
               onSetAudioOutputMenuOpen={setAudioOutputMenuOpen}
               onSetVoiceSettingsPanel={setVoiceSettingsPanel}
-              onSetVoicePreferencesOpen={setVoicePreferencesOpen}
+              onSetUserSettingsOpen={setUserSettingsOpen}
+              onSetUserSettingsTab={setUserSettingsTab}
+              onSetProfileNameDraft={setProfileNameDraft}
+              onSetSelectedLang={setLang}
+              onSaveProfile={saveMyProfile}
               onSetSelectedInputId={setSelectedInputId}
               onSetSelectedOutputId={setSelectedOutputId}
               onSetSelectedInputProfile={setSelectedInputProfile}
@@ -863,7 +936,7 @@ export function App() {
 
         <section className="middlecolumn">
           <section className="card middle-card">
-            <h2>Chat ({roomSlug})</h2>
+            <h2>{t("chat.title")} ({roomSlug})</h2>
             <div className="row">
               <button
                 type="button"
@@ -871,10 +944,10 @@ export function App() {
                 onClick={() => void loadOlderMessages()}
                 disabled={!messagesHasMore || loadingOlderMessages}
               >
-                {loadingOlderMessages ? "Loading..." : "Load older messages"}
+                {loadingOlderMessages ? t("chat.loading") : t("chat.loadOlder")}
               </button>
               {!messagesHasMore && messages.length > 0 ? (
-                <span className="muted">History fully loaded</span>
+                <span className="muted">{t("chat.historyLoaded")}</span>
               ) : null}
             </div>
             <div className="chat-log" ref={chatLogRef}>
@@ -890,8 +963,8 @@ export function App() {
               ))}
             </div>
             <form className="chat-compose" onSubmit={sendMessage}>
-              <input value={chatText} onChange={(e) => setChatText(e.target.value)} placeholder="Type message" />
-              <button type="submit">Send</button>
+              <input value={chatText} onChange={(e) => setChatText(e.target.value)} placeholder={t("chat.typePlaceholder")} />
+              <button type="submit">{t("chat.send")}</button>
             </form>
 
           </section>
@@ -899,7 +972,7 @@ export function App() {
 
         <aside className="rightcolumn">
           <section className="card compact">
-            <h2>People in room</h2>
+            <h2>{t("people.title")}</h2>
             {roomPeople.length > 0 ? (
               <ul className="room-people-list">
                 {roomPeople.map((item) => (
@@ -910,19 +983,19 @@ export function App() {
                 ))}
               </ul>
             ) : (
-              <p className="muted">No users connected.</p>
+              <p className="muted">{t("people.none")}</p>
             )}
           </section>
 
           {canPromote ? (
             <section className="card compact">
-              <h2>Admin Users</h2>
+              <h2>{t("admin.title")}</h2>
               <ul className="admin-list">
                 {adminUsers.map((item) => (
                   <li key={item.id} className="row admin-row">
                     <span>{item.email} ({item.role})</span>
                     {item.role === "user" ? (
-                      <button onClick={() => promote(item.id)}>Promote</button>
+                      <button onClick={() => promote(item.id)}>{t("admin.promote")}</button>
                     ) : null}
                   </li>
                 ))}
@@ -932,8 +1005,8 @@ export function App() {
 
           {canViewTelemetry ? (
             <section className="card compact">
-              <h2>Telemetry</h2>
-              <p className="muted">day: {telemetrySummary?.day || "-"}</p>
+              <h2>{t("telemetry.title")}</h2>
+              <p className="muted">{t("telemetry.day")}: {telemetrySummary?.day || "-"}</p>
               <div className="stack">
                 <div>ack_sent: {telemetrySummary?.metrics.ack_sent ?? 0}</div>
                 <div>nack_sent: {telemetrySummary?.metrics.nack_sent ?? 0}</div>
@@ -941,12 +1014,12 @@ export function App() {
                 <div>chat_idempotency_hit: {telemetrySummary?.metrics.chat_idempotency_hit ?? 0}</div>
                 <div>telemetry_web_event: {telemetrySummary?.metrics.telemetry_web_event ?? 0}</div>
               </div>
-              <button onClick={() => void loadTelemetrySummary()}>Refresh metrics</button>
+              <button onClick={() => void loadTelemetrySummary()}>{t("telemetry.refresh")}</button>
             </section>
           ) : null}
 
           <section className="card compact">
-            <h2>Event Log</h2>
+            <h2>{t("events.title")}</h2>
             <div className="log">
               {eventLog.map((line, index) => (
                 <div key={`${line}-${index}`}>{line}</div>
@@ -956,25 +1029,25 @@ export function App() {
 
           <section className="card compact">
             <div className="stack signaling-panel">
-              <h2>Call signaling (MVP)</h2>
-              <p className="muted">call status: {callStatus}{lastCallPeer ? ` (${lastCallPeer})` : ""}</p>
+              <h2>{t("call.title")}</h2>
+              <p className="muted">{t("call.status")}: {callStatus}{lastCallPeer ? ` (${lastCallPeer})` : ""}</p>
               <input
                 value={callTargetUserId}
                 onChange={(e) => setCallTargetUserId(e.target.value)}
-                placeholder="targetUserId (optional, empty = broadcast to room)"
+                placeholder={t("call.targetPlaceholder")}
               />
               <textarea
                 value={callSignalJson}
                 onChange={(e) => setCallSignalJson(e.target.value)}
                 rows={4}
-                placeholder='{"type":"offer","sdp":"..."}'
+                placeholder={t("call.payloadPlaceholder")}
               />
               <div className="row">
-                <button type="button" onClick={() => sendCallSignal("call.offer")}>Send offer</button>
-                <button type="button" onClick={() => sendCallSignal("call.answer")}>Send answer</button>
-                <button type="button" onClick={() => sendCallSignal("call.ice")}>Send ICE</button>
-                <button type="button" className="secondary" onClick={sendCallReject}>Send reject</button>
-                <button type="button" className="secondary" onClick={sendCallHangup}>Send hangup</button>
+                <button type="button" onClick={() => sendCallSignal("call.offer")}>{t("call.offer")}</button>
+                <button type="button" onClick={() => sendCallSignal("call.answer")}>{t("call.answer")}</button>
+                <button type="button" onClick={() => sendCallSignal("call.ice")}>{t("call.ice")}</button>
+                <button type="button" className="secondary" onClick={sendCallReject}>{t("call.reject")}</button>
+                <button type="button" className="secondary" onClick={sendCallHangup}>{t("call.hangup")}</button>
               </div>
               <div className="log call-log">
                 {callEventLog.map((line, index) => (

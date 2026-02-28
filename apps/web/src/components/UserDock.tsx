@@ -3,6 +3,7 @@ import type { UserDockProps } from "./types";
 import { PopupPortal } from "./PopupPortal";
 
 export function UserDock({
+  t,
   user,
   currentRoomSupportsRtc,
   currentRoomTitle,
@@ -10,8 +11,15 @@ export function UserDock({
   audioMuted,
   audioOutputMenuOpen,
   voiceSettingsOpen,
-  voicePreferencesOpen,
+  userSettingsOpen,
+  userSettingsTab,
   voiceSettingsPanel,
+  profileNameDraft,
+  profileEmail,
+  profileSaving,
+  profileStatusText,
+  selectedLang,
+  languageOptions,
   inputOptions,
   outputOptions,
   selectedInputId,
@@ -25,15 +33,20 @@ export function UserDock({
   mediaDevicesHint,
   audioOutputAnchorRef,
   voiceSettingsAnchorRef,
-  voicePreferencesRef,
+  userSettingsRef,
   onToggleMic,
   onToggleAudio,
   onToggleVoiceSettings,
   onToggleAudioOutput,
+  onOpenUserSettings,
   onSetVoiceSettingsOpen,
   onSetAudioOutputMenuOpen,
   onSetVoiceSettingsPanel,
-  onSetVoicePreferencesOpen,
+  onSetUserSettingsOpen,
+  onSetUserSettingsTab,
+  onSetProfileNameDraft,
+  onSetSelectedLang,
+  onSaveProfile,
   onSetSelectedInputId,
   onSetSelectedOutputId,
   onSetSelectedInputProfile,
@@ -43,7 +56,7 @@ export function UserDock({
   const inputDeviceRowRef = useRef<HTMLButtonElement>(null);
   const inputProfileRowRef = useRef<HTMLButtonElement>(null);
   const mediaDevicesUnavailable = mediaDevicesState !== "ready";
-  const mediaDevicesWarningText = mediaDevicesHint || "Нет доступа к аудио-устройствам.";
+  const mediaDevicesWarningText = mediaDevicesHint || t("settings.mediaUnavailable");
 
   return (
     <>
@@ -52,29 +65,29 @@ export function UserDock({
           <section className="card compact rtc-connection-card">
             <div className="rtc-title-row">
               <div>
-                <div className="rtc-title">Подключение к RTC</div>
+                <div className="rtc-title">{t("rtc.connection")}</div>
                 <div className="muted rtc-subtitle">{currentRoomTitle}</div>
               </div>
               <div className="rtc-top-actions">
-                <button type="button" className="secondary icon-btn tiny" data-tooltip="Mute connection">
+                <button type="button" className="secondary icon-btn tiny" data-tooltip={t("rtc.muteConnection")}>
                   <i className="bi bi-soundwave" aria-hidden="true" />
                 </button>
-                <button type="button" className="secondary icon-btn tiny" data-tooltip="Disconnect">
+                <button type="button" className="secondary icon-btn tiny" data-tooltip={t("rtc.disconnect")}>
                   <i className="bi bi-telephone-x" aria-hidden="true" />
                 </button>
               </div>
             </div>
             <div className="rtc-actions-grid">
-              <button type="button" className="secondary" data-tooltip="Noise reduction">
+              <button type="button" className="secondary" data-tooltip={t("rtc.noiseReduction")}>
                 <i className="bi bi-sliders" aria-hidden="true" />
               </button>
-              <button type="button" className="secondary" data-tooltip="Screen share">
+              <button type="button" className="secondary" data-tooltip={t("rtc.screenShare")}>
                 <i className="bi bi-display" aria-hidden="true" />
               </button>
-              <button type="button" className="secondary" data-tooltip="Effects">
+              <button type="button" className="secondary" data-tooltip={t("rtc.effects")}>
                 <i className="bi bi-stars" aria-hidden="true" />
               </button>
-              <button type="button" className="secondary" data-tooltip="Activities">
+              <button type="button" className="secondary" data-tooltip={t("rtc.activities")}>
                 <i className="bi bi-lightning-charge" aria-hidden="true" />
               </button>
             </div>
@@ -86,16 +99,24 @@ export function UserDock({
             <div className="user-avatar-badge">{(user.name || "U").charAt(0).toUpperCase()}</div>
             <div className="user-meta">
               <div className="user-name-line">{user.name}</div>
-              <div className="muted user-status-line">{currentRoomSupportsRtc ? "В голосовом чате" : "В сети"}</div>
+              <div className="muted user-status-line">{currentRoomSupportsRtc ? t("status.voice") : t("status.online")}</div>
             </div>
           </div>
           <div className="user-panel-actions">
+            <button
+              type="button"
+              className="secondary icon-btn"
+              data-tooltip={t("profile.openSettings")}
+              onClick={() => onOpenUserSettings("profile")}
+            >
+              <i className="bi bi-gear" aria-hidden="true" />
+            </button>
             <div className="voice-settings-anchor" ref={voiceSettingsAnchorRef}>
               <div className="audio-output-group split-control-group">
                 <button
                   type="button"
                   className={`secondary icon-btn split-main-btn ${micMuted ? "icon-btn-danger" : ""}`}
-                  data-tooltip={micMuted ? "Включить микрофон" : "Выключить микрофон"}
+                  data-tooltip={micMuted ? t("audio.enableMic") : t("audio.disableMic")}
                   onClick={onToggleMic}
                 >
                   <i className={`bi ${micMuted ? "bi-mic-mute-fill" : "bi-mic-fill"}`} aria-hidden="true" />
@@ -103,7 +124,7 @@ export function UserDock({
                 <button
                   type="button"
                   className="secondary icon-btn split-caret-btn"
-                  data-tooltip="Настройки ввода"
+                  data-tooltip={t("settings.audioInputHint")}
                   onClick={onToggleVoiceSettings}
                 >
                   <i className="bi bi-chevron-down" aria-hidden="true" />
@@ -125,7 +146,7 @@ export function UserDock({
                       onClick={() => onSetVoiceSettingsPanel(voiceSettingsPanel === "input_device" ? null : "input_device")}
                     >
                       <span className="voice-menu-text">
-                        <span className="voice-menu-title">Устройство ввода</span>
+                        <span className="voice-menu-title">{t("settings.inputDevice")}</span>
                         <span className="voice-menu-subtitle">{currentInputLabel}</span>
                       </span>
                       <i className="bi bi-chevron-right" aria-hidden="true" />
@@ -137,7 +158,7 @@ export function UserDock({
                       onClick={() => onSetVoiceSettingsPanel(voiceSettingsPanel === "input_profile" ? null : "input_profile")}
                     >
                       <span className="voice-menu-text">
-                        <span className="voice-menu-title">Профиль ввода</span>
+                        <span className="voice-menu-title">{t("settings.inputProfile")}</span>
                         <span className="voice-menu-subtitle">{inputProfileLabel}</span>
                       </span>
                       <i className="bi bi-chevron-right" aria-hidden="true" />
@@ -149,7 +170,7 @@ export function UserDock({
                   ) : null}
 
                   <label className="slider-label">
-                    Громкость микрофона
+                    {t("settings.micVolume")}
                     <input
                       type="range"
                       min={0}
@@ -172,10 +193,10 @@ export function UserDock({
                       onSetVoiceSettingsOpen(false);
                       onSetAudioOutputMenuOpen(false);
                       onSetVoiceSettingsPanel(null);
-                      onSetVoicePreferencesOpen(true);
+                      onOpenUserSettings("sound");
                     }}
                   >
-                    <span>Настройки голоса</span>
+                    <span>{t("settings.voiceSettings")}</span>
                     <i className="bi bi-gear" aria-hidden="true" />
                   </button>
 
@@ -203,7 +224,7 @@ export function UserDock({
                             <i className={`bi ${selectedInputId === device.id ? "bi-record-circle-fill" : "bi-circle"}`} aria-hidden="true" />
                           </button>
                         ))}
-                        <button type="button" className="secondary device-item">Показать больше...</button>
+                        <button type="button" className="secondary device-item">{t("settings.showMore")}</button>
                       </div>
                     </div>
                   </PopupPortal>
@@ -225,7 +246,7 @@ export function UserDock({
                             onSetVoiceSettingsPanel(null);
                           }}
                         >
-                          <span>Изоляция голоса</span>
+                          <span>{t("settings.voiceIsolation")}</span>
                           <i className={`bi ${selectedInputProfile === "noise_reduction" ? "bi-record-circle-fill" : "bi-circle"}`} aria-hidden="true" />
                         </button>
                         <button
@@ -236,7 +257,7 @@ export function UserDock({
                             onSetVoiceSettingsPanel(null);
                           }}
                         >
-                          <span>Студия</span>
+                          <span>{t("settings.studio")}</span>
                           <i className={`bi ${selectedInputProfile === "studio" ? "bi-record-circle-fill" : "bi-circle"}`} aria-hidden="true" />
                         </button>
                         <button
@@ -247,7 +268,7 @@ export function UserDock({
                             onSetVoiceSettingsPanel(null);
                           }}
                         >
-                          <span>Пользовательский</span>
+                          <span>{t("settings.custom")}</span>
                           <i className={`bi ${selectedInputProfile === "custom" ? "bi-record-circle-fill" : "bi-circle"}`} aria-hidden="true" />
                         </button>
                       </div>
@@ -262,7 +283,7 @@ export function UserDock({
                 <button
                   type="button"
                   className={`secondary icon-btn split-main-btn ${audioMuted ? "icon-btn-danger" : ""}`}
-                  data-tooltip={audioMuted ? "Включить звук" : "Отключить звук"}
+                  data-tooltip={audioMuted ? t("audio.enableOutput") : t("audio.disableOutput")}
                   onClick={onToggleAudio}
                 >
                   <i className={`bi ${audioMuted ? "bi-volume-mute-fill" : "bi-headphones"}`} aria-hidden="true" />
@@ -270,7 +291,7 @@ export function UserDock({
                 <button
                   type="button"
                   className="secondary icon-btn split-caret-btn"
-                  data-tooltip="Устройство вывода"
+                  data-tooltip={t("settings.outputHint")}
                   onClick={onToggleAudioOutput}
                 >
                   <i className="bi bi-chevron-down" aria-hidden="true" />
@@ -283,7 +304,7 @@ export function UserDock({
                 placement="top-end"
               >
                 <div>
-                  <div className="subheading">Устройство вывода</div>
+                  <div className="subheading">{t("settings.outputDevice")}</div>
                   <div className="device-list">
                     {outputOptions.map((device) => (
                       <button
@@ -301,7 +322,7 @@ export function UserDock({
                     <p className="muted media-devices-warning">{mediaDevicesWarningText}</p>
                   ) : null}
                   <label className="slider-label">
-                    Громкость звука
+                    {t("settings.soundVolume")}
                     <input
                       type="range"
                       min={0}
@@ -317,10 +338,10 @@ export function UserDock({
                       onSetAudioOutputMenuOpen(false);
                       onSetVoiceSettingsOpen(false);
                       onSetVoiceSettingsPanel(null);
-                      onSetVoicePreferencesOpen(true);
+                      onOpenUserSettings("sound");
                     }}
                   >
-                    <span>Настройки голоса</span>
+                    <span>{t("settings.voiceSettings")}</span>
                     <i className="bi bi-gear" aria-hidden="true" />
                   </button>
                 </div>
@@ -330,102 +351,151 @@ export function UserDock({
         </section>
       </div>
 
-      {voicePreferencesOpen ? (
+      {userSettingsOpen ? (
         <div className="voice-preferences-overlay">
-          <section className="card voice-preferences-modal" ref={voicePreferencesRef}>
-            <div className="voice-preferences-head">
-              <div>
-                <div className="voice-preferences-kicker">Настройки пользователя</div>
-                <h2>Голос и видео</h2>
+          <section className="card voice-preferences-modal user-settings-modal" ref={userSettingsRef}>
+            <div className="user-settings-sidebar">
+              <div className="voice-preferences-kicker">{t("settings.title")}</div>
+              <button
+                type="button"
+                className={`secondary user-settings-tab-btn ${userSettingsTab === "profile" ? "user-settings-tab-btn-active" : ""}`}
+                onClick={() => onSetUserSettingsTab("profile")}
+              >
+                {t("settings.tabProfile")}
+              </button>
+              <button
+                type="button"
+                className={`secondary user-settings-tab-btn ${userSettingsTab === "sound" ? "user-settings-tab-btn-active" : ""}`}
+                onClick={() => onSetUserSettingsTab("sound")}
+              >
+                {t("settings.tabSound")}
+              </button>
+            </div>
+
+            <div className="user-settings-content">
+              <div className="voice-preferences-head">
+                <h2>{userSettingsTab === "profile" ? t("settings.tabProfile") : t("settings.tabSound")}</h2>
+                <button type="button" className="secondary icon-btn" onClick={() => onSetUserSettingsOpen(false)} aria-label={t("settings.closeVoiceAria")}>
+                  <i className="bi bi-x-lg" aria-hidden="true" />
+                </button>
               </div>
-              <button type="button" className="secondary icon-btn" onClick={() => onSetVoicePreferencesOpen(false)} aria-label="Close voice settings">
-                <i className="bi bi-x-lg" aria-hidden="true" />
-              </button>
-            </div>
 
-            <div className="voice-preferences-grid">
-              <label className="stack">
-                <span className="subheading">Микрофон</span>
-                <select value={selectedInputId} disabled={mediaDevicesUnavailable} onChange={(event) => onSetSelectedInputId(event.target.value)}>
-                  {inputOptions.map((device) => (
-                    <option key={device.id} value={device.id}>{device.label}</option>
-                  ))}
-                </select>
-              </label>
-              <label className="stack">
-                <span className="subheading">Динамик</span>
-                <select value={selectedOutputId} disabled={mediaDevicesUnavailable} onChange={(event) => onSetSelectedOutputId(event.target.value)}>
-                  {outputOptions.map((device) => (
-                    <option key={device.id} value={device.id}>{device.label}</option>
-                  ))}
-                </select>
-              </label>
-            </div>
+              {userSettingsTab === "profile" ? (
+                <form className="stack" onSubmit={onSaveProfile}>
+                  <div className="stack">
+                    <h3 className="subheading">{t("settings.profileSection")}</h3>
+                    <label className="stack">
+                      <span className="subheading">{t("settings.displayName")}</span>
+                      <input value={profileNameDraft} onChange={(event) => onSetProfileNameDraft(event.target.value)} />
+                    </label>
+                    <label className="stack">
+                      <span className="subheading">{t("settings.email")}</span>
+                      <input value={profileEmail} readOnly disabled />
+                    </label>
+                    <label className="stack">
+                      <span className="subheading">{t("settings.language")}</span>
+                      <select value={selectedLang} onChange={(event) => onSetSelectedLang(event.target.value as "ru" | "en") }>
+                        {languageOptions.map((option) => (
+                          <option key={option.value} value={option.value}>{option.label}</option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
 
-            {mediaDevicesUnavailable ? (
-              <p className="muted media-devices-warning">{mediaDevicesWarningText}</p>
-            ) : null}
+                  {profileStatusText ? <p className="muted media-devices-warning">{profileStatusText}</p> : null}
 
-            <div className="voice-preferences-grid">
-              <label className="slider-label">
-                Громкость микрофона
-                <input
-                  type="range"
-                  min={0}
-                  max={100}
-                  value={micVolume}
-                  onChange={(event) => onSetMicVolume(Number(event.target.value))}
-                />
-              </label>
-              <label className="slider-label">
-                Громкость динамика
-                <input
-                  type="range"
-                  min={0}
-                  max={100}
-                  value={outputVolume}
-                  onChange={(event) => onSetOutputVolume(Number(event.target.value))}
-                />
-              </label>
-            </div>
+                  <button type="submit" disabled={profileSaving}>
+                    {profileSaving ? t("settings.saving") : t("settings.save")}
+                  </button>
+                </form>
+              ) : (
+                <>
+                  <div className="voice-preferences-grid">
+                    <label className="stack">
+                      <span className="subheading">{t("settings.microphone")}</span>
+                      <select value={selectedInputId} disabled={mediaDevicesUnavailable} onChange={(event) => onSetSelectedInputId(event.target.value)}>
+                        {inputOptions.map((device) => (
+                          <option key={device.id} value={device.id}>{device.label}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="stack">
+                      <span className="subheading">{t("settings.speaker")}</span>
+                      <select value={selectedOutputId} disabled={mediaDevicesUnavailable} onChange={(event) => onSetSelectedOutputId(event.target.value)}>
+                        {outputOptions.map((device) => (
+                          <option key={device.id} value={device.id}>{device.label}</option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
 
-            <div className="voice-test-row">
-              <button type="button">Проверка микрофона</button>
-              <div className="voice-level-bars" aria-hidden="true">
-                {Array.from({ length: 42 }).map((_, index) => (
-                  <span key={`modal-bar-${index}`} className="voice-level-bar" />
-                ))}
-              </div>
-            </div>
+                  {mediaDevicesUnavailable ? (
+                    <p className="muted media-devices-warning">{mediaDevicesWarningText}</p>
+                  ) : null}
 
-            <div className="voice-divider" />
+                  <div className="voice-preferences-grid">
+                    <label className="slider-label">
+                      {t("settings.micVolume")}
+                      <input
+                        type="range"
+                        min={0}
+                        max={100}
+                        value={micVolume}
+                        onChange={(event) => onSetMicVolume(Number(event.target.value))}
+                      />
+                    </label>
+                    <label className="slider-label">
+                      {t("settings.outputVolume")}
+                      <input
+                        type="range"
+                        min={0}
+                        max={100}
+                        value={outputVolume}
+                        onChange={(event) => onSetOutputVolume(Number(event.target.value))}
+                      />
+                    </label>
+                  </div>
 
-            <div className="stack">
-              <h3 className="subheading">Профиль ввода</h3>
-              <button
-                type="button"
-                className={`secondary device-item radio-item ${selectedInputProfile === "noise_reduction" ? "device-item-active" : ""}`}
-                onClick={() => onSetSelectedInputProfile("noise_reduction")}
-              >
-                <span>Изоляция голоса</span>
-                <i className={`bi ${selectedInputProfile === "noise_reduction" ? "bi-record-circle-fill" : "bi-circle"}`} aria-hidden="true" />
-              </button>
-              <button
-                type="button"
-                className={`secondary device-item radio-item ${selectedInputProfile === "studio" ? "device-item-active" : ""}`}
-                onClick={() => onSetSelectedInputProfile("studio")}
-              >
-                <span>Студия</span>
-                <i className={`bi ${selectedInputProfile === "studio" ? "bi-record-circle-fill" : "bi-circle"}`} aria-hidden="true" />
-              </button>
-              <button
-                type="button"
-                className={`secondary device-item radio-item ${selectedInputProfile === "custom" ? "device-item-active" : ""}`}
-                onClick={() => onSetSelectedInputProfile("custom")}
-              >
-                <span>Пользовательский</span>
-                <i className={`bi ${selectedInputProfile === "custom" ? "bi-record-circle-fill" : "bi-circle"}`} aria-hidden="true" />
-              </button>
+                  <div className="voice-test-row">
+                    <button type="button">{t("settings.micTest")}</button>
+                    <div className="voice-level-bars" aria-hidden="true">
+                      {Array.from({ length: 42 }).map((_, index) => (
+                        <span key={`modal-bar-${index}`} className="voice-level-bar" />
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="voice-divider" />
+
+                  <div className="stack">
+                    <h3 className="subheading">{t("settings.inputProfile")}</h3>
+                    <button
+                      type="button"
+                      className={`secondary device-item radio-item ${selectedInputProfile === "noise_reduction" ? "device-item-active" : ""}`}
+                      onClick={() => onSetSelectedInputProfile("noise_reduction")}
+                    >
+                      <span>{t("settings.voiceIsolation")}</span>
+                      <i className={`bi ${selectedInputProfile === "noise_reduction" ? "bi-record-circle-fill" : "bi-circle"}`} aria-hidden="true" />
+                    </button>
+                    <button
+                      type="button"
+                      className={`secondary device-item radio-item ${selectedInputProfile === "studio" ? "device-item-active" : ""}`}
+                      onClick={() => onSetSelectedInputProfile("studio")}
+                    >
+                      <span>{t("settings.studio")}</span>
+                      <i className={`bi ${selectedInputProfile === "studio" ? "bi-record-circle-fill" : "bi-circle"}`} aria-hidden="true" />
+                    </button>
+                    <button
+                      type="button"
+                      className={`secondary device-item radio-item ${selectedInputProfile === "custom" ? "device-item-active" : ""}`}
+                      onClick={() => onSetSelectedInputProfile("custom")}
+                    >
+                      <span>{t("settings.custom")}</span>
+                      <i className={`bi ${selectedInputProfile === "custom" ? "bi-record-circle-fill" : "bi-circle"}`} aria-hidden="true" />
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           </section>
         </div>

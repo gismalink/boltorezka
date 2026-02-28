@@ -8,6 +8,9 @@ import type { UserCompactRow, UserRow } from "../db.types.ts";
 import type { AuthModeResponse, MeResponse, SsoSessionResponse, WsTicketResponse } from "../api-contract.types.ts";
 
 const ssoProviderSchema = z.enum(["google", "yandex"]);
+const updateProfileSchema = z.object({
+  name: z.string().trim().min(1).max(80)
+});
 
 const safeHostSet = new Set(config.allowedReturnHosts);
 
@@ -300,6 +303,46 @@ export async function authRoutes(fastify: FastifyInstance) {
       }
 
       const response: MeResponse = { user: result.rows[0] };
+      return response;
+    }
+  );
+
+  fastify.patch(
+    "/v1/auth/me",
+    {
+      preHandler: [requireAuth]
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const parsed = updateProfileSchema.safeParse(request.body || {});
+      if (!parsed.success) {
+        return reply.code(400).send({
+          error: "ValidationError",
+          message: "name is required"
+        });
+      }
+
+      const userId = String(request.user?.sub || "").trim();
+      if (!userId) {
+        return reply.code(401).send({
+          error: "Unauthorized",
+          message: "Valid bearer token is required"
+        });
+      }
+
+      const updated = await db.query<UserRow>(
+        `UPDATE users
+         SET name = $2
+         WHERE id = $1
+         RETURNING id, email, name, role, created_at`,
+        [userId, parsed.data.name]
+      );
+
+      if (updated.rowCount === 0) {
+        const response: MeResponse = { user: null };
+        return response;
+      }
+
+      const response: MeResponse = { user: updated.rows[0] };
       return response;
     }
   );
