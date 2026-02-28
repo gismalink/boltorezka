@@ -3,6 +3,34 @@
 Этот документ хранит зафиксированные изменения, выполненные шаги и операционные evidence.
 План и open items находятся в `docs/ROADMAP.md`.
 
+## 2026-02-28 — Sidebar UX compacting: popups + icons + custom tooltip
+
+### Delivered
+
+- Room/category create controls перенесены из inline-форм в popup panel (sidebar остаётся компактным).
+- Добавлены icon-first actions в sidebar и category rows (`➕`, `🗂️`) вместо длинных текстовых control-кнопок.
+- Добавлен кастомный tooltip portal (`data-tooltip`) по референсу из `projo`:
+  - `apps/web/src/TooltipPortal.tsx`
+  - интеграция в `apps/web/src/App.tsx`.
+- Web styling migrated to SCSS:
+  - `apps/web/src/styles.scss`
+  - entrypoint импорт обновлён в `apps/web/src/main.tsx`.
+
+### Validation
+
+- `npm run web:build` — PASS.
+- `npm run check:api-types` — PASS.
+- `npm run check` — PASS.
+
+### Operational evidence (test)
+
+- Deploy target: `test`, branch `feature/web-header-profile-menu`, SHA `d55b588`.
+- Command: `ssh mac-mini 'cd ~/srv/boltorezka && TEST_REF=origin/feature/web-header-profile-menu npm run deploy:test:smoke'`.
+- Smoke result:
+  - `smoke:sso` — PASS,
+  - `smoke:realtime` — PASS,
+  - `reconnectOk=true`, `reconnectSkipped=false`.
+
 ## 2026-02-28 — Discord-like channel structure foundation (Phase A/B MVP)
 
 ### Delivered
