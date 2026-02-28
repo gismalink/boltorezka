@@ -111,8 +111,8 @@
   - [x] Кнопки quick controls: mute/unmute, deafen/undeafen, user settings.
   - [x] Попап «Устройство ввода» + выбор микрофона + ползунок громкости микрофона.
   - [x] Попап «Устройство вывода» + выбор аудио-устройства + ползунок громкости звука.
-  - [ ] Persist выбранных устройств/громкости в localStorage и восстановление при reload.
-  - [ ] Fallback-поведение при отказе в media permissions (понятный UI state без крэшей).
+  - [x] Persist выбранных устройств/громкости в localStorage и восстановление при reload.
+  - [x] Fallback-поведение при отказе в media permissions (понятный UI state без крэшей).
 - [ ] Реализовать Discord-like структуру каналов (категории + текст/голос):
   - [ ] Добавить category layer в data model (порядок, сворачивание, управление видимостью).
   - [x] Разделить channels по типу: `text` и `voice` (в едином tree endpoint).

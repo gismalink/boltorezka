@@ -3,6 +3,35 @@
 Этот документ хранит зафиксированные изменения, выполненные шаги и операционные evidence.
 План и open items находятся в `docs/ROADMAP.md`.
 
+## 2026-02-28 — Chat layout stabilization + media device persistence/fallback
+
+### Delivered
+
+- Stabilized chat panel layout:
+  - fixed-height middle chat card,
+  - internal chat scroll only,
+  - auto-scroll to latest message on room change/new message.
+- Moved debug signaling block (`Call signaling (MVP)`) under `Event Log` in right column.
+- Added persistence for selected audio devices:
+  - `boltorezka_selected_input_id`,
+  - `boltorezka_selected_output_id` (restore on reload).
+- Added media-device fallback states in user voice UI:
+  - `unsupported`, `denied`, `error` with clear warning text,
+  - disabled device selectors when devices are unavailable.
+
+### Validation
+
+- `npm run web:build` — PASS.
+
+### Operational evidence (test)
+
+- Deploy target: `test`, branch `feature/web-header-profile-menu`, SHA `6ddd66f`.
+- Command: `ssh mac-mini 'cd ~/srv/boltorezka && TEST_REF=origin/feature/web-header-profile-menu npm run deploy:test:smoke'`.
+- Smoke result:
+  - `smoke:sso` — PASS,
+  - `smoke:realtime` — PASS,
+  - `reconnectOk=true`, `reconnectSkipped=false`.
+
 ## 2026-02-28 — User panel voice UX: output device dropdown + voice settings popup
 
 ### Delivered
