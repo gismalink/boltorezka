@@ -1,114 +1,91 @@
-# Discord-like Channel Tree Plan (Boltorezka)
+# Discord-like Channel Tree Plan (Boltorezka) — актуальная версия
 
-Цель: получить UX и операционные возможности, близкие к Discord sidebar:
-- категории,
-- текстовые каналы,
-- голосовые комнаты,
-- управление структурой через UI и API.
+Цель: поддерживать Discord-like sidebar и админ-управление структурой каналов в рамках текущей архитектуры `rooms + room_categories`, без несовместимых переименований.
 
-## 1) Scope и принципы
+## 1) Правила доставки (обязательно)
 
-- Реализация идёт поэтапно, без «big bang».
-- Сначала `test`, затем merge, только потом возможный `prod` rollout.
-- Минимальные совместимые изменения: существующие `rooms` не ломаем, мигрируем постепенно.
+- Только `test` first: любое изменение сначала в `test` через GitOps.
+- `prod` только после merge в `main`, smoke в `test` и explicit approval.
+- Без ручных правок на сервере (GitOps-only).
+- Минимальные инкременты, без «big bang» миграций.
 
-## 2) Target UX (MVP parity)
+## 2) Текущее состояние (fact-based)
 
-- Левый sidebar со сгруппированными блоками (как на примере):
-  - category header,
-  - список text channels,
-  - список voice channels.
-- Активный канал визуально выделен.
-- Кнопка `+` у категории для создания канала.
-- Кнопка `+` у корня для создания категории.
-- Для voice-канала:
-  - join/leave по клику,
-  - отображение участников.
-- Для text-канала:
-  - open channel,
-  - история + отправка сообщений.
+### 2.1 Уже реализовано
 
-## 3) Data model (phase-safe)
+- Data model и API работают через:
+  - `room_categories`
+  - `rooms` (c `kind`, `category_id`, `position`)
+- Channel tree endpoint:
+  - `GET /v1/rooms/tree`
+- CRUD/ordering (admin/super_admin):
+  - `POST /v1/room-categories`
+  - `PATCH /v1/room-categories/:categoryId`
+  - `POST /v1/room-categories/:categoryId/move`
+  - `DELETE /v1/room-categories/:categoryId` (с защитой `CategoryNotEmpty`)
+  - `POST /v1/rooms`
+  - `PATCH /v1/rooms/:roomId`
+  - `POST /v1/rooms/:roomId/move`
+  - `DELETE /v1/rooms/:roomId` (с защитами `LastRoomProtected`, `DefaultRoomProtected`)
+- Sidebar UX:
+  - grouped sections/categories,
+  - active highlight,
+  - quick create `+`,
+  - settings popups для category/channel,
+  - join voice / open text flow.
+- Smoke coverage:
+  - postdeploy включает `smoke:api` + hierarchy create/verify/cleanup,
+  - realtime smoke стабилен (`reconnect/idempotency`),
+  - web e2e smoke базового сценария выполнен.
 
-## 3.1 Новые сущности
+### 2.2 Принятое текущее именование
 
-- `channel_categories`
-  - `id uuid pk`
-  - `slug text unique`
-  - `title text`
-  - `position int`
-  - `is_collapsed_default boolean`
-  - `created_by uuid`
-  - `created_at timestamptz`
+- Канонично: `rooms` / `room_categories`.
+- Плановые термины `channels` / `channel_categories` считаем устаревшими (не использовать в новых API задачах до отдельного ADR).
 
-- `channels`
-  - `id uuid pk`
-  - `category_id uuid null references channel_categories(id)`
-  - `slug text unique`
-  - `title text`
-  - `kind text check(kind in ('text','voice'))`
-  - `position int`
-  - `is_public boolean`
-  - `is_archived boolean`
-  - `created_by uuid`
-  - `created_at timestamptz`
+## 3) Текущий MVP gap (что осталось)
 
-## 3.2 Совместимость с текущим кодом
+1. `Category layer` как продуктовая фича:
+   - collapse/expand state,
+   - default visibility behavior,
+   - persistence policy (client/server) — зафиксировать явно.
+2. Channel reorder UX:
+   - сейчас есть explicit move API, но UX reorder ограничен;
+   - нужен стабильный пользовательский сценарий reorder в UI (MVP-уровень).
+3. Archive lifecycle:
+   - API/UX для архивирования и фильтрации архивных каналов (если оставляем в MVP).
+4. Hierarchy e2e:
+   - отдельный web e2e smoke на создание/навигацию/проверку порядка после reload.
 
-- На переходный период endpoint `/v1/rooms` возвращает только `text` channels (или адаптерный flat-list).
-- Existing realtime room logic переходит с `roomSlug` на `channelSlug` без изменения wire-contract на первом шаге.
+## 4) Realtime/behavior policy (фиксируем)
 
-## 4) API contract additions
+- `room.join` / `room.leave` остаются каноничным wire-contract.
+- Для non-text каналов действует single-active behavior (last join wins, без logout аккаунта).
+- Sidebar members должны опираться на live presence (`rooms.presence`).
+- Любые новые realtime события структуры (`category.updated`/`channel.updated`) добавлять только при явной потребности; текущий MVP закрыт refresh/tree reload flow.
 
-- `GET /v1/channels/tree`
-  - Возвращает категории и каналы в порядке `position`.
-- `POST /v1/categories`
-- `PATCH /v1/categories/:id`
-- `POST /v1/channels`
-- `PATCH /v1/channels/:id`
-- `POST /v1/channels/reorder`
+## 5) Acceptance criteria для закрытия блока channel tree
 
-Права:
-- read: authenticated users,
-- write/reorder: `admin`/`super_admin`.
+Считаем блок готовым к MVP, когда одновременно выполнено:
 
-## 5) Realtime changes
+1. Category/channel create/edit/move/delete работают стабильно в `test`.
+2. Reorder UX закрыт на уровне MVP (не только API).
+3. Есть e2e/smoke сценарий «create category + create channels + reload + order preserved».
+4. Voice/text contextual actions не регрессируют (`join voice`, `open text`, presence).
+5. Postdeploy smoke остаётся зелёным (SSO/API/Realtime).
 
-- Presence привязывается к `voice` channel.
-- `room.join` / `room.leave` остаются, но semantic alias:
-  - text channel join = subscription,
-  - voice channel join = media + signaling presence.
-- Добавить server event для sidebar актуализации:
-  - `channel.updated`, `category.updated` (MVP можно polling + manual refresh).
+## 6) Исполнительный план (следующие шаги)
 
-## 6) Web implementation plan
+1. Зафиксировать ADR по category collapse/persistence + archive policy.
+2. Доделать reorder UX в web (MVP-safe, без drag-and-drop если не требуется).
+3. Добавить/докрутить web e2e hierarchy smoke.
+4. Обновить contract docs (`API_CONTRACT_V1.md`) под фактический tree/CRUD scope.
+5. Подтвердить статус в `ROADMAP.md` и `FEATURE_LOG.md` после каждого инкремента.
 
-1. Sidebar tree component
-   - `ChannelTreeSidebar.tsx`
-   - `CategorySection.tsx`
-   - `ChannelRow.tsx`
-2. State/controller
-   - `channelTreeController.ts` для load/create/move/rename/archive.
-3. Create menus
-   - `CreateCategoryModal` (или inline row для MVP)
-   - `CreateChannelModal` (тип text/voice)
-4. Integrate with existing chat/call panels
-   - выбор text канала -> chat panel
-   - выбор voice канала -> call panel + presence
+## 7) Связанные каноничные документы
 
-## 7) Smoke & acceptance
-
-Минимальный smoke после деплоя в `test`:
-1. Создать категорию.
-2. Создать в ней text и voice канал.
-3. Убедиться, что tree порядок стабилен после reload.
-4. Зайти в text канал и отправить сообщение.
-5. Зайти в voice канал и проверить presence/leave.
-
-## 8) Rollout strategy
-
-- Phase A: backend schema + read-only tree endpoint.
-- Phase B: web read-only sidebar tree.
-- Phase C: admin create/edit/reorder.
-- Phase D: voice/text behavioral parity + smoke automation.
-- После успешного `test` smoke — только then decision на `prod`.
+- `docs/ROADMAP.md`
+- `docs/FEATURE_LOG.md`
+- `docs/API_CONTRACT_V1.md`
+- `docs/SMOKE_CI_MATRIX.md`
+- `docs/PREPROD_DECISION_PACKAGE.md`

@@ -7,7 +7,7 @@
 
 - Release gate: **NO-GO** для `prod` (до заполнения owner/sign-off и explicit approval).
 - `prod` path: только `origin/main@<sha>` после успешного `test` smoke.
-- Latest verified test deploy: `origin/feature/web-header-profile-menu` @ `c52890d`.
+- Latest verified test deploy: `origin/feature/web-header-profile-menu` @ `57803af`.
 - Smoke snapshot:
   - `smoke:sso` — PASS
   - `smoke:realtime` — PASS
