@@ -9,6 +9,11 @@ type VoiceCounterKey =
 
 type VoiceDiagnosticsCounters = Record<VoiceCounterKey, number>;
 
+type LogState = {
+  at: number;
+  skipped: number;
+};
+
 const counters: VoiceDiagnosticsCounters = {
   runtimePeers: 0,
   runtimeAudioElements: 0,
@@ -20,6 +25,8 @@ const counters: VoiceDiagnosticsCounters = {
 };
 
 let forceEnabled = false;
+const LOG_MIN_INTERVAL_MS = 2000;
+const logStateByLabel = new Map<string, LogState>();
 
 function clampNonNegative(value: number): number {
   if (!Number.isFinite(value)) {
@@ -53,6 +60,7 @@ export function resetVoiceDiagnostics() {
   (Object.keys(counters) as VoiceCounterKey[]).forEach((key) => {
     counters[key] = 0;
   });
+  logStateByLabel.clear();
 }
 
 export function getVoiceDiagnosticsSnapshot(): VoiceDiagnosticsCounters {
@@ -74,13 +82,30 @@ export function logVoiceDiagnostics(label: string, extra?: Record<string, unknow
     return;
   }
 
-  const snapshot = getVoiceDiagnosticsSnapshot();
-  if (extra) {
-    console.info(`[voice-diag] ${label}`, { ...snapshot, ...extra });
+  const now = Date.now();
+  const previous = logStateByLabel.get(label);
+  if (previous && now - previous.at < LOG_MIN_INTERVAL_MS) {
+    previous.skipped += 1;
+    logStateByLabel.set(label, previous);
     return;
   }
 
-  console.info(`[voice-diag] ${label}`, snapshot);
+  const skippedSinceLast = previous?.skipped || 0;
+  logStateByLabel.set(label, { at: now, skipped: 0 });
+
+  const snapshot = getVoiceDiagnosticsSnapshot();
+  const payload = skippedSinceLast > 0
+    ? { ...snapshot, skippedSinceLast, ...(extra || {}) }
+    : extra
+      ? { ...snapshot, ...extra }
+      : snapshot;
+
+  if (extra) {
+    console.info(`[voice-diag] ${label}`, payload);
+    return;
+  }
+
+  console.info(`[voice-diag] ${label}`, payload);
 }
 
 if (typeof window !== "undefined") {
