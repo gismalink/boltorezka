@@ -43,6 +43,30 @@ export class RoomAdminController {
     }
   }
 
+  async updateCategory(token: string, categoryId: string, titleInput: string) {
+    try {
+      await api.updateCategory(token, categoryId, { title: titleInput.trim() });
+      await this.loadRoomTree(token);
+      this.options.pushLog("category updated");
+      return true;
+    } catch (error) {
+      this.options.pushLog(`update category failed: ${(error as Error).message}`);
+      return false;
+    }
+  }
+
+  async moveCategory(token: string, categoryId: string, direction: "up" | "down") {
+    try {
+      await api.moveCategory(token, categoryId, direction);
+      await this.loadRoomTree(token);
+      this.options.pushLog(`category moved ${direction}`);
+      return true;
+    } catch (error) {
+      this.options.pushLog(`move category failed: ${(error as Error).message}`);
+      return false;
+    }
+  }
+
   async createRoom(
     token: string,
     slugInput: string,

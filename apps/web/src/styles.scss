@@ -266,6 +266,22 @@ pre {
   gap: 6px;
 }
 
+.category-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.category-settings-anchor {
+  position: relative;
+}
+
+.category-settings-popup {
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 30;
+}
+
 .category-title {
   font-size: 12px;
   text-transform: uppercase;

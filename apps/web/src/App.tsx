@@ -20,12 +20,6 @@ import type {
 
 const MAX_CHAT_RETRIES = 3;
 
-const ROOM_KIND_LABELS: Record<RoomKind, string> = {
-  text: "Text",
-  text_voice: "Text + Voice",
-  text_voice_video: "Text + Voice + Video"
-};
-
 const ROOM_KIND_ICON_CLASS: Record<RoomKind, string> = {
   text: "bi-hash",
   text_voice: "bi-broadcast",
@@ -64,6 +58,8 @@ export function App() {
   const [newCategoryTitle, setNewCategoryTitle] = useState("");
   const [categoryPopupOpen, setCategoryPopupOpen] = useState(false);
   const [channelPopupOpen, setChannelPopupOpen] = useState(false);
+  const [categorySettingsPopupOpenId, setCategorySettingsPopupOpenId] = useState<string | null>(null);
+  const [editingCategoryTitle, setEditingCategoryTitle] = useState("");
   const [channelSettingsPopupOpenId, setChannelSettingsPopupOpenId] = useState<string | null>(null);
   const [editingRoomTitle, setEditingRoomTitle] = useState("");
   const [editingRoomKind, setEditingRoomKind] = useState<RoomKind>("text");
@@ -341,7 +337,7 @@ export function App() {
   }, [wsState, loadTelemetrySummary]);
 
   useEffect(() => {
-    if (!profileMenuOpen && !authMenuOpen && !categoryPopupOpen && !channelPopupOpen && !channelSettingsPopupOpenId) {
+    if (!profileMenuOpen && !authMenuOpen && !categoryPopupOpen && !channelPopupOpen && !channelSettingsPopupOpenId && !categorySettingsPopupOpenId) {
       return;
     }
 
@@ -352,19 +348,21 @@ export function App() {
       const insideCategoryPopup = Boolean(target && categoryPopupRef.current?.contains(target));
       const insideChannelPopup = Boolean(target && channelPopupRef.current?.contains(target));
       const insideChannelSettings = Boolean(target && target instanceof HTMLElement && target.closest(".channel-settings-anchor"));
+      const insideCategorySettings = Boolean(target && target instanceof HTMLElement && target.closest(".category-settings-anchor"));
 
-      if (!insideProfile && !insideAuth && !insideCategoryPopup && !insideChannelPopup && !insideChannelSettings) {
+      if (!insideProfile && !insideAuth && !insideCategoryPopup && !insideChannelPopup && !insideChannelSettings && !insideCategorySettings) {
         setProfileMenuOpen(false);
         setAuthMenuOpen(false);
         setCategoryPopupOpen(false);
         setChannelPopupOpen(false);
         setChannelSettingsPopupOpenId(null);
+        setCategorySettingsPopupOpenId(null);
       }
     };
 
     window.addEventListener("mousedown", onClickOutside);
     return () => window.removeEventListener("mousedown", onClickOutside);
-  }, [profileMenuOpen, authMenuOpen, categoryPopupOpen, channelPopupOpen, channelSettingsPopupOpenId]);
+  }, [profileMenuOpen, authMenuOpen, categoryPopupOpen, channelPopupOpen, channelSettingsPopupOpenId, categorySettingsPopupOpenId]);
 
   const beginSso = (provider: "google" | "yandex") => {
     setAuthMenuOpen(false);
@@ -415,6 +413,31 @@ export function App() {
     setEditingRoomKind(room.kind);
     setEditingRoomCategoryId(room.category_id || "none");
     setChannelSettingsPopupOpenId(room.id);
+  };
+
+  const openCategorySettingsPopup = (categoryId: string, categoryTitle: string) => {
+    setEditingCategoryTitle(categoryTitle);
+    setCategorySettingsPopupOpenId(categoryId);
+  };
+
+  const saveCategorySettings = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!token || !categorySettingsPopupOpenId) {
+      return;
+    }
+
+    const updated = await roomAdminController.updateCategory(token, categorySettingsPopupOpenId, editingCategoryTitle);
+    if (updated) {
+      setCategorySettingsPopupOpenId(null);
+    }
+  };
+
+  const moveCategory = async (direction: "up" | "down") => {
+    if (!token || !categorySettingsPopupOpenId) {
+      return;
+    }
+
+    await roomAdminController.moveCategory(token, categorySettingsPopupOpenId, direction);
   };
 
   const saveChannelSettings = async (event: FormEvent) => {
@@ -626,15 +649,45 @@ export function App() {
                 <div className="category-title-row">
                   <div className="category-title">{category.title}</div>
                   {canCreateRooms ? (
-                    <button
-                      type="button"
-                      className="secondary icon-btn tiny"
-                      aria-label="Create channel in category"
-                      data-tooltip="Create channel in category"
-                      onClick={() => openCreateChannelPopup(category.id)}
-                    >
-                      <i className="bi bi-plus-lg" aria-hidden="true" />
-                    </button>
+                    <div className="category-actions">
+                      <button
+                        type="button"
+                        className="secondary icon-btn tiny"
+                        aria-label="Create channel in category"
+                        data-tooltip="Create channel in category"
+                        onClick={() => openCreateChannelPopup(category.id)}
+                      >
+                        <i className="bi bi-plus-lg" aria-hidden="true" />
+                      </button>
+                      <div className="category-settings-anchor">
+                        <button
+                          type="button"
+                          className="secondary icon-btn tiny"
+                          aria-label="Configure category"
+                          data-tooltip="Configure category"
+                          onClick={() => openCategorySettingsPopup(category.id, category.title)}
+                        >
+                          <i className="bi bi-gear" aria-hidden="true" />
+                        </button>
+                        {categorySettingsPopupOpenId === category.id ? (
+                          <div className="floating-popup settings-popup category-settings-popup">
+                            <form className="stack" onSubmit={saveCategorySettings}>
+                              <h3 className="subheading">Category settings</h3>
+                              <input value={editingCategoryTitle} onChange={(e) => setEditingCategoryTitle(e.target.value)} placeholder="category title" />
+                              <div className="row">
+                                <button type="button" className="secondary" onClick={() => void moveCategory("up")}>
+                                  <i className="bi bi-arrow-up" aria-hidden="true" /> Up
+                                </button>
+                                <button type="button" className="secondary" onClick={() => void moveCategory("down")}>
+                                  <i className="bi bi-arrow-down" aria-hidden="true" /> Down
+                                </button>
+                              </div>
+                              <button type="submit" className="icon-action"><i className="bi bi-check2" aria-hidden="true" /> Save</button>
+                            </form>
+                          </div>
+                        ) : null}
+                      </div>
+                    </div>
                   ) : null}
                 </div>
                 <ul className="rooms-list">
@@ -647,7 +700,6 @@ export function App() {
                         >
                           <i className={`bi ${ROOM_KIND_ICON_CLASS[room.kind]}`} aria-hidden="true" />
                           <span>{room.title}</span>
-                          <span className="muted"> · {ROOM_KIND_LABELS[room.kind]}</span>
                         </button>
                         {canCreateRooms ? (
                           <div className="channel-settings-anchor">
@@ -712,7 +764,6 @@ export function App() {
                         >
                           <i className={`bi ${ROOM_KIND_ICON_CLASS[room.kind]}`} aria-hidden="true" />
                           <span>{room.title}</span>
-                          <span className="muted"> · {ROOM_KIND_LABELS[room.kind]}</span>
                         </button>
                         {canCreateRooms ? (
                           <div className="channel-settings-anchor">

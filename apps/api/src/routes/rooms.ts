@@ -54,6 +54,14 @@ const createCategorySchema = z.object({
   position: z.number().int().min(0).optional()
 });
 
+const updateCategorySchema = z.object({
+  title: z.string().min(2).max(120)
+});
+
+const moveCategorySchema = z.object({
+  direction: z.enum(["up", "down"])
+});
+
 export async function roomsRoutes(fastify: FastifyInstance) {
   fastify.get(
     "/v1/rooms/tree",
@@ -189,6 +197,131 @@ export async function roomsRoutes(fastify: FastifyInstance) {
 
       const response: RoomCategoryCreateResponse = { category: created.rows[0] };
       return reply.code(201).send(response);
+    }
+  );
+
+  fastify.patch<{
+    Params: { categoryId: string };
+    Body: { title: string };
+  }>(
+    "/v1/room-categories/:categoryId",
+    {
+      preHandler: [requireAuth, loadCurrentUser, requireRole(["admin", "super_admin"])]
+    },
+    async (request, reply) => {
+      const categoryId = String(request.params.categoryId || "").trim();
+      if (!categoryId) {
+        return reply.code(400).send({
+          error: "ValidationError",
+          message: "categoryId is required"
+        });
+      }
+
+      const parsed = updateCategorySchema.safeParse(request.body || {});
+      if (!parsed.success) {
+        return reply.code(400).send({
+          error: "ValidationError",
+          issues: parsed.error.flatten()
+        });
+      }
+
+      const updated = await db.query<RoomCategoryRow>(
+        `UPDATE room_categories
+         SET title = $2
+         WHERE id = $1
+         RETURNING id, slug, title, position, created_at`,
+        [categoryId, parsed.data.title.trim()]
+      );
+
+      if ((updated.rowCount || 0) === 0) {
+        return reply.code(404).send({
+          error: "CategoryNotFound",
+          message: "Category does not exist"
+        });
+      }
+
+      return { category: updated.rows[0] };
+    }
+  );
+
+  fastify.post<{
+    Params: { categoryId: string };
+    Body: { direction: "up" | "down" };
+  }>(
+    "/v1/room-categories/:categoryId/move",
+    {
+      preHandler: [requireAuth, loadCurrentUser, requireRole(["admin", "super_admin"])]
+    },
+    async (request, reply) => {
+      const categoryId = String(request.params.categoryId || "").trim();
+      if (!categoryId) {
+        return reply.code(400).send({
+          error: "ValidationError",
+          message: "categoryId is required"
+        });
+      }
+
+      const parsed = moveCategorySchema.safeParse(request.body || {});
+      if (!parsed.success) {
+        return reply.code(400).send({
+          error: "ValidationError",
+          issues: parsed.error.flatten()
+        });
+      }
+
+      const currentResult = await db.query<RoomCategoryRow>(
+        `SELECT id, slug, title, position, created_at
+         FROM room_categories
+         WHERE id = $1`,
+        [categoryId]
+      );
+
+      if ((currentResult.rowCount || 0) === 0) {
+        return reply.code(404).send({
+          error: "CategoryNotFound",
+          message: "Category does not exist"
+        });
+      }
+
+      const current = currentResult.rows[0];
+      const direction = parsed.data.direction;
+      const neighborQuery = direction === "up"
+        ? `SELECT id, position FROM room_categories
+           WHERE position < $1
+           ORDER BY position DESC
+           LIMIT 1`
+        : `SELECT id, position FROM room_categories
+           WHERE position > $1
+           ORDER BY position ASC
+           LIMIT 1`;
+
+      const neighborResult = await db.query<{ id: string; position: number }>(neighborQuery, [current.position]);
+
+      if ((neighborResult.rowCount || 0) === 0) {
+        return { category: current };
+      }
+
+      const neighbor = neighborResult.rows[0];
+
+      await db.query(
+        `UPDATE room_categories
+         SET position = CASE
+           WHEN id = $1 THEN $3
+           WHEN id = $2 THEN $4
+           ELSE position
+         END
+         WHERE id IN ($1, $2)`,
+        [current.id, neighbor.id, neighbor.position, current.position]
+      );
+
+      const updated = await db.query<RoomCategoryRow>(
+        `SELECT id, slug, title, position, created_at
+         FROM room_categories
+         WHERE id = $1`,
+        [current.id]
+      );
+
+      return { category: updated.rows[0] };
     }
   );
 

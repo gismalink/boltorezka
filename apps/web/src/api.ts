@@ -45,6 +45,16 @@ export const api = {
       method: "POST",
       body: JSON.stringify(input)
     }),
+  updateCategory: (token: string, categoryId: string, input: { title: string }) =>
+    fetchJson<{ category: RoomCategory }>(`/v1/room-categories/${encodeURIComponent(categoryId)}`, token, {
+      method: "PATCH",
+      body: JSON.stringify(input)
+    }),
+  moveCategory: (token: string, categoryId: string, direction: "up" | "down") =>
+    fetchJson<{ category: RoomCategory }>(`/v1/room-categories/${encodeURIComponent(categoryId)}/move`, token, {
+      method: "POST",
+      body: JSON.stringify({ direction })
+    }),
   createRoom: (
     token: string,
     input: { slug: string; title: string; is_public: boolean; kind?: RoomKind; category_id?: string | null }
