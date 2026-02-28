@@ -117,6 +117,10 @@ if [[ "$AUTO_TICKET" == "1" ]]; then
   GENERATED_TICKET="$(uuidgen | tr '[:upper:]' '[:lower:]')"
   compose exec -T "$REDIS_SERVICE" redis-cli SETEX "ws:ticket:$GENERATED_TICKET" 120 "$PAYLOAD" >/dev/null
   export SMOKE_WS_TICKET="$GENERATED_TICKET"
+
+  GENERATED_RECONNECT_TICKET="$(uuidgen | tr '[:upper:]' '[:lower:]')"
+  compose exec -T "$REDIS_SERVICE" redis-cli SETEX "ws:ticket:$GENERATED_RECONNECT_TICKET" 120 "$PAYLOAD" >/dev/null
+  export SMOKE_WS_TICKET_RECONNECT="$GENERATED_RECONNECT_TICKET"
 fi
 
 DAY="$(date -u +%F)"
