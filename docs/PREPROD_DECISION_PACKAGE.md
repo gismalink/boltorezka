@@ -23,7 +23,7 @@
 ### 3.1 Latest verified test rollout
 
 - Branch: `origin/feature/web-header-profile-menu`
-- Verified deploy SHA in test: `49abe56`
+- Verified deploy SHA in test: `c52890d`
 - Command:
   - `ssh mac-mini 'cd ~/srv/boltorezka && TEST_REF=origin/feature/web-header-profile-menu npm run deploy:test:smoke'`
 - Result:
@@ -172,7 +172,7 @@
 ### 8.4 Current draft gate record (2026-02-28)
 
 - Target main SHA: `de48a78` (`origin/main`)
-- Last test deploy SHA: `49abe56` (`origin/feature/web-header-profile-menu`)
+- Last test deploy SHA: `c52890d` (`origin/feature/web-header-profile-menu`)
 - smoke:sso: `PASS`
 - smoke:realtime: `PASS`
 - reconnectOk: `true`

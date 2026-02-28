@@ -99,7 +99,7 @@
 
 ### Задачи
 
-- [ ] Обновить runbook/checklist под React UI как default path.
+- [x] Обновить runbook/checklist под React UI как default path.
 - [ ] E2E smoke сценарии:
   - [x] login
   - [x] join room
@@ -119,7 +119,10 @@
   - [ ] Добавить API для CRUD/ordering: category/channel create, rename, move, archive.
   - [x] Добавить права управления структурой (admin/super_admin) + policy checks.
   - [x] Web sidebar UX как в Discord: grouped sections, active highlight, quick create (`+`).
-  - [ ] Поддержать действия по контексту: join voice, open text, reorder (MVP через explicit order API).
+  - [ ] Поддержать действия по контексту:
+    - [x] join voice
+    - [x] open text
+    - [ ] reorder (MVP через explicit order API)
   - [ ] Добавить smoke/e2e сценарий на создание и навигацию по иерархии.
 
 ### Exit criteria

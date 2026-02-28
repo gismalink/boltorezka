@@ -3,6 +3,43 @@
 Этот документ хранит зафиксированные изменения, выполненные шаги и операционные evidence.
 План и open items находятся в `docs/ROADMAP.md`.
 
+## 2026-02-28 — Realtime presence + channel UX/chat style stabilization
+
+### Delivered
+
+- Переведён источник участников каналов на realtime presence snapshot по всем комнатам:
+  - backend broadcast `rooms.presence` (map `roomSlug -> users[]`),
+  - web sidebar рендерит участников каналов из live presence map.
+- Убрана проблема дубликатов/устаревших участников в channel member list.
+- Введена политика single-active channel для non-text join flow (last join wins без logout):
+  - при новом join в non-text канал предыдущие non-text channel-сессии пользователя освобождаются,
+  - text chat доступ сохраняется.
+- Добавлен стек тостов в web (по паттерну `projo`, но с локальными стилями):
+  - уведомления об ошибках ws,
+  - уведомление о принудительном переносе channel session.
+- Доработан sidebar channels UX:
+  - более компактная подложка channel-row,
+  - подсветка текущего пользователя в member-list,
+  - удалён правый блок `People in room` как избыточный.
+- Typography/chat polish:
+  - body text переведён на `Noto Sans Mono` (heading-шрифт сохранён прежним),
+  - chat message layout перестроен в более структурный формат (avatar/meta/text),
+  - финальная версия — нейтральная подложка сообщения в фирменном стиле (без Telegram bubble).
+
+### Validation
+
+- `npm run -s web:build` — PASS.
+- `npm run check:api-types` — PASS.
+
+### Operational evidence (test)
+
+- Deploy target: `test`, branch `feature/web-header-profile-menu`, SHA `c52890d`.
+- Command: `ssh mac-mini 'cd ~/srv/boltorezka && TEST_REF=origin/feature/web-header-profile-menu npm run deploy:test:smoke'`.
+- Smoke result:
+  - `smoke:sso` — PASS,
+  - `smoke:realtime` — PASS,
+  - `reconnectOk=true`, `reconnectSkipped=false`.
+
 ## 2026-02-28 — Remove non-admin create-rooms hint text
 
 ### Delivered
