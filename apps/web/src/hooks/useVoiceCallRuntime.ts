@@ -443,6 +443,12 @@ export function useVoiceCallRuntime({
 
     connection.onconnectionstatechange = () => {
       const state = connection.connectionState;
+      pushCallLog(`rtc state ${targetLabel || targetUserId}: ${state}`);
+      logVoiceDiagnostics("runtime peer connection state", {
+        targetUserId,
+        targetLabel,
+        state
+      });
       if (state === "connected") {
         const peer = peersRef.current.get(targetUserId);
         if (peer) {
@@ -462,13 +468,20 @@ export function useVoiceCallRuntime({
     connection.ontrack = (event) => {
       const [stream] = event.streams;
       if (!stream) {
+        pushCallLog(`remote track missing stream <- ${targetLabel || targetUserId}`);
         return;
       }
 
+      pushCallLog(`remote track attached <- ${targetLabel || targetUserId}`);
+      logVoiceDiagnostics("runtime remote track attached", {
+        targetUserId,
+        targetLabel,
+        streamId: stream.id
+      });
       remoteAudioElement.srcObject = stream;
       void applyRemoteAudioOutput(remoteAudioElement);
-      void remoteAudioElement.play().catch(() => {
-        return;
+      void remoteAudioElement.play().catch((error) => {
+        pushCallLog(`remote audio play failed (${targetLabel || targetUserId}): ${(error as Error).message}`);
       });
     };
 
@@ -599,6 +612,12 @@ export function useVoiceCallRuntime({
     const fromUserName = String(payload.fromUserName || fromUserId || "unknown").trim();
     const signal = payload.signal;
     if (!fromUserId || !signal || typeof signal !== "object") {
+      pushCallLog(`${eventType} ignored: invalid payload`);
+      logVoiceDiagnostics("runtime signal ignored", {
+        eventType,
+        fromUserId,
+        hasSignalObject: Boolean(signal && typeof signal === "object")
+      });
       return;
     }
 

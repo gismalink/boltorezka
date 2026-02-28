@@ -155,8 +155,8 @@ export class WsMessageController {
         `${message.type} from ${fromUserName} (${hasSignal ? "signal" : "no-signal"})`
       );
       this.options.onCallSignal?.(message.type, {
-        fromUserId: String(message.payload?.fromUserId || "").trim() || undefined,
-        fromUserName: String(message.payload?.fromUserName || "").trim() || undefined,
+        fromUserId: String(message.payload?.fromUserId || message.payload?.userId || "").trim() || undefined,
+        fromUserName: String(message.payload?.fromUserName || message.payload?.userName || "").trim() || undefined,
         signal:
           message.payload?.signal && typeof message.payload.signal === "object"
             ? (message.payload.signal as Record<string, unknown>)

@@ -333,11 +333,12 @@ export function UserDock({
                       <button
                         key={device.id}
                         type="button"
-                        className={`secondary device-item ${selectedOutputId === device.id ? "device-item-active" : ""}`}
+                        className={`secondary device-item radio-item ${selectedOutputId === device.id ? "device-item-active" : ""}`}
                         disabled={mediaDevicesUnavailable}
                         onClick={() => onSetSelectedOutputId(device.id)}
                       >
-                        {device.label}
+                        <span>{device.label}</span>
+                        <i className={`bi ${selectedOutputId === device.id ? "bi-record-circle-fill" : "bi-circle"}`} aria-hidden="true" />
                       </button>
                     ))}
                   </div>
