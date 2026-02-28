@@ -9,6 +9,7 @@ import { TooltipPortal } from "./TooltipPortal";
 import { WsMessageController } from "./services/wsMessageController";
 import { RoomsPanel } from "./components/RoomsPanel";
 import { PopupPortal } from "./components/PopupPortal";
+import { ToastStack } from "./components/ToastStack";
 import { UserDock } from "./components/UserDock";
 import type { InputProfile, MediaDevicesState, VoiceSettingsPanel } from "./components/types";
 import { detectInitialLang, LANGUAGE_OPTIONS, LOCALE_BY_LANG, TEXT, type Lang } from "./i18n";
@@ -24,6 +25,8 @@ import type {
 } from "./types";
 
 const MAX_CHAT_RETRIES = 3;
+const TOAST_AUTO_DISMISS_MS = 4500;
+const TOAST_ID_RANDOM_RANGE = 10000;
 
 export function App() {
   const [token, setToken] = useState(localStorage.getItem("boltorezka_token") || "");
@@ -42,6 +45,7 @@ export function App() {
   const [callStatus, setCallStatus] = useState<CallStatus>("idle");
   const [lastCallPeer, setLastCallPeer] = useState("");
   const [callEventLog, setCallEventLog] = useState<string[]>([]);
+  const [toasts, setToasts] = useState<Array<{ id: number; message: string }>>([]);
   const [roomsPresenceBySlug, setRoomsPresenceBySlug] = useState<Record<string, string[]>>({});
   const [eventLog, setEventLog] = useState<string[]>([]);
   const [telemetrySummary, setTelemetrySummary] = useState<TelemetrySummary | null>(null);
@@ -115,6 +119,23 @@ export function App() {
   const pushCallLog = (text: string) => {
     setCallEventLog((prev) => [`${new Date().toLocaleTimeString(locale)} ${text}`, ...prev].slice(0, 30));
   };
+
+  const pushToast = useCallback((message: string) => {
+    const normalized = String(message || "").trim();
+    if (!normalized) {
+      return;
+    }
+
+    const toast = {
+      id: Date.now() + Math.floor(Math.random() * TOAST_ID_RANDOM_RANGE),
+      message: normalized
+    };
+
+    setToasts((prev) => [...prev, toast]);
+    window.setTimeout(() => {
+      setToasts((prev) => prev.filter((item) => item.id !== toast.id));
+    }, TOAST_AUTO_DISMISS_MS);
+  }, []);
 
   const markMessageDelivery = (
     requestId: string,
@@ -279,6 +300,7 @@ export function App() {
       setCallStatus,
       pushLog,
       pushCallLog,
+      pushToast,
       setRoomSlug,
       setRoomsPresenceBySlug,
       trackNack: ({ requestId, eventType, code, message }) => {
@@ -542,8 +564,11 @@ export function App() {
         setUser(response.user);
       }
       setProfileStatusText(t("profile.saveSuccess"));
+      pushToast(t("profile.saveSuccess"));
     } catch (error) {
-      setProfileStatusText((error as Error).message || t("profile.saveError"));
+      const message = (error as Error).message || t("profile.saveError");
+      setProfileStatusText(message);
+      pushToast(message);
     } finally {
       setProfileSaving(false);
     }
@@ -1059,6 +1084,8 @@ export function App() {
           </section>
         </aside>
       </div>
+
+      <ToastStack toasts={toasts} />
 
     </main>
   );

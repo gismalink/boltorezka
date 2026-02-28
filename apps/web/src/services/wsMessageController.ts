@@ -14,6 +14,7 @@ type WsMessageControllerOptions = {
   setCallStatus: (status: CallStatus) => void;
   pushLog: (text: string) => void;
   pushCallLog: (text: string) => void;
+  pushToast: (message: string) => void;
   setRoomSlug: (slug: string) => void;
   setRoomsPresenceBySlug: Dispatch<SetStateAction<Record<string, string[]>>>;
   trackNack: (data: {
@@ -209,6 +210,9 @@ export class WsMessageController {
       const errorMessage = String(message.payload?.message || "Unexpected websocket error");
       if (code === "ChannelSessionMoved") {
         this.options.setRoomSlug("general");
+        this.options.pushToast(errorMessage);
+      } else {
+        this.options.pushToast(errorMessage);
       }
       this.options.pushLog(`ws error ${code}: ${errorMessage}`);
     }
