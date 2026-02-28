@@ -15,9 +15,9 @@
 .admin-list {
   list-style: none;
   padding: 0;
-  margin: var(--space-sm) 0 0;
+  margin: var(--space-xs) 0 0;
   display: grid;
-  gap: var(--space-sm);
+  gap: var(--space-xxs);
 }
 
 .subheading {
@@ -236,6 +236,7 @@
   padding: var(--space-md);
   display: grid;
   gap: var(--space-sm);
+  align-content: start;
   box-shadow:
     inset 0 0 0 1px #0e1938,
     3px 3px 0 var(--pixel-hard-shadow);
@@ -322,6 +323,18 @@
   line-height: 1.32;
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+.chat-link {
+  color: var(--pixel-neon-cyan);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  word-break: break-all;
+}
+
+.chat-link:hover,
+.chat-link:focus-visible {
+  color: color-mix(in srgb, var(--pixel-neon-cyan) 72%, var(--pixel-text) 28%);
 }
 
 .delivery {

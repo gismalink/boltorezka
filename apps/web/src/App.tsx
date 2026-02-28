@@ -1,4 +1,4 @@
-import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { FormEvent, ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "./api";
 import { AuthController } from "./services/authController";
 import { CallSignalingController, type CallSignalEventType, type CallStatus } from "./services/callSignalingController";
@@ -810,6 +810,57 @@ export function App() {
     });
   };
 
+  const renderMessageText = (value: string): ReactNode[] => {
+    const text = String(value || "");
+    const urlPattern = /((https?:\/\/|www\.)[^\s<]+)/gi;
+    const nodes: ReactNode[] = [];
+    let cursor = 0;
+    let match: RegExpExecArray | null;
+
+    while ((match = urlPattern.exec(text)) !== null) {
+      const raw = match[0];
+      const start = match.index;
+
+      if (start > cursor) {
+        nodes.push(text.slice(cursor, start));
+      }
+
+      let linkText = raw;
+      let trailing = "";
+      while (/[.,!?;:)\]]$/.test(linkText)) {
+        trailing = linkText.slice(-1) + trailing;
+        linkText = linkText.slice(0, -1);
+      }
+
+      if (linkText.length > 0) {
+        const href = /^https?:\/\//i.test(linkText) ? linkText : `https://${linkText}`;
+        nodes.push(
+          <a
+            key={`link-${start}-${linkText}`}
+            href={href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="chat-link"
+          >
+            {linkText}
+          </a>
+        );
+      }
+
+      if (trailing) {
+        nodes.push(trailing);
+      }
+
+      cursor = start + raw.length;
+    }
+
+    if (cursor < text.length) {
+      nodes.push(text.slice(cursor));
+    }
+
+    return nodes.length > 0 ? nodes : [text];
+  };
+
   return (
     <main className="app legacy-layout">
       <header className="app-header">
@@ -1015,7 +1066,7 @@ export function App() {
                           <span className="chat-author">{message.user_name}</span>
                           <span className="chat-time">{formatMessageTime(message.created_at)}</span>
                         </div>
-                        <p className="chat-text">{message.text}</p>
+                        <p className="chat-text">{renderMessageText(message.text)}</p>
                       </div>
 
                       {isOwn && message.deliveryStatus ? (
