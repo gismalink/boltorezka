@@ -17,14 +17,14 @@ services:
       - --user=${TURN_USERNAME}:${TURN_PASSWORD}
       - --cert=/caddy-data/caddy/certificates/acme-v02.api.letsencrypt.org-directory/${TURN_CERT_DOMAIN:-gismalink.art}/${TURN_CERT_DOMAIN:-gismalink.art}.crt
       - --pkey=/caddy-data/caddy/certificates/acme-v02.api.letsencrypt.org-directory/${TURN_CERT_DOMAIN:-gismalink.art}/${TURN_CERT_DOMAIN:-gismalink.art}.key
-      - --min-port=${TURN_MIN_PORT:-49160}
-      - --max-port=${TURN_MAX_PORT:-49260}
+      - --min-port=${TURN_MIN_PORT:-30000}
+      - --max-port=${TURN_MAX_PORT:-30100}
       - --verbose
     ports:
       - "3478:3478/udp"
       - "3478:3478/tcp"
       - "5349:5349/tcp"
-      - "${TURN_MIN_PORT:-49160}-${TURN_MAX_PORT:-49260}:${TURN_MIN_PORT:-49160}-${TURN_MAX_PORT:-49260}/udp"
+      - "${TURN_MIN_PORT:-30000}-${TURN_MAX_PORT:-30100}:${TURN_MIN_PORT:-30000}-${TURN_MAX_PORT:-30100}/udp"
     volumes:
       - ingress_caddy_data:/caddy-data:ro
     networks:
