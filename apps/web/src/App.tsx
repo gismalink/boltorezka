@@ -51,7 +51,7 @@ const TOAST_DUPLICATE_THROTTLE_MS = 12000;
 const TOAST_MAX_VISIBLE = 4;
 
 type ServerMenuTab = "users" | "events" | "telemetry" | "call";
-type MobileTab = "channels" | "chat" | "profile";
+type MobileTab = "channels" | "chat" | "settings";
 
 export function App() {
   const [token, setToken] = useState(localStorage.getItem("boltorezka_token") || "");
@@ -712,6 +712,29 @@ export function App() {
     />
   ) : null;
 
+  const mobileQuickAudioNode = isMobileViewport && mobileTab === "channels" && user ? (
+    <div className="mobile-quick-audio" aria-label={t("settings.soundSection") }>
+      <button
+        type="button"
+        className={`secondary icon-btn ${micMuted ? "icon-btn-danger" : ""}`}
+        data-tooltip={micMuted ? t("audio.enableMic") : t("audio.disableMic")}
+        aria-label={micMuted ? t("audio.enableMic") : t("audio.disableMic")}
+        onClick={() => setMicMuted((value) => !value)}
+      >
+        <i className={`bi ${micMuted ? "bi-mic-mute-fill" : "bi-mic-fill"}`} aria-hidden="true" />
+      </button>
+      <button
+        type="button"
+        className={`secondary icon-btn ${audioMuted ? "icon-btn-danger" : ""}`}
+        data-tooltip={audioMuted ? t("audio.enableOutput") : t("audio.disableOutput")}
+        aria-label={audioMuted ? t("audio.enableOutput") : t("audio.disableOutput")}
+        onClick={() => setAudioMuted((value) => !value)}
+      >
+        <i className={`bi ${audioMuted ? "bi-volume-mute-fill" : "bi-volume-up-fill"}`} aria-hidden="true" />
+      </button>
+    </div>
+  ) : null;
+
   return (
     <main className="app legacy-layout">
       <AppHeader
@@ -815,12 +838,14 @@ export function App() {
           </section>
         ) : null}
 
-        {isMobileViewport && user && mobileTab === "profile" ? (
-          <aside className="leftcolumn mobile-profile-column">
+        {isMobileViewport && user && mobileTab === "settings" ? (
+          <aside className="leftcolumn mobile-settings-column">
             {userDockNode}
           </aside>
         ) : null}
       </div>
+
+      {mobileQuickAudioNode}
 
       {isMobileViewport ? (
         <nav className="mobile-tabbar" aria-label={t("mobile.tabsAria") }>
@@ -842,12 +867,15 @@ export function App() {
           </button>
           <button
             type="button"
-            className={`secondary mobile-tab-btn ${mobileTab === "profile" ? "mobile-tab-btn-active" : ""}`}
-            onClick={() => setMobileTab("profile")}
+            className={`secondary mobile-tab-btn ${mobileTab === "settings" ? "mobile-tab-btn-active" : ""}`}
+            onClick={() => {
+              setMobileTab("settings");
+              openUserSettings("profile");
+            }}
             disabled={!user}
           >
-            <i className="bi bi-person" aria-hidden="true" />
-            <span>{t("mobile.tabProfile")}</span>
+            <i className="bi bi-gear" aria-hidden="true" />
+            <span>{t("mobile.tabSettings")}</span>
           </button>
         </nav>
       ) : null}
