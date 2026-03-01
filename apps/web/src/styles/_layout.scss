@@ -1,14 +1,6 @@
 .app {
-  max-width: 1400px;
   margin: 0 auto;
-  padding: var(--space-2xl);
-  display: grid;
-  grid-template-rows: auto 1fr;
-  gap: var(--space-lg);
-  height: 100vh;
-  max-height: 100vh;
   box-sizing: border-box;
-  overflow: hidden;
 }
 
 .app-title {
@@ -21,58 +13,16 @@
     2px 0 0 var(--pixel-neon-pink);
 }
 
-.app-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-xl);
-}
-
-.header-brand {
-  display: flex;
-  align-items: center;
-  gap: var(--space-md);
-}
-
 .app-menu-btn {
-  min-width: 40px;
-  min-height: 40px;
   padding: 0 var(--space-sm);
-  font-weight: 700;
-}
-
-.header-actions {
-  display: flex;
-  align-items: center;
-  gap: var(--space-md);
-}
-
-.user-chip {
-  color: var(--pixel-text);
-  font-weight: 600;
 }
 
 .workspace {
-  display: grid;
-  grid-template-columns: 320px 1fr;
-  gap: var(--space-lg);
   min-height: 0;
   height: 100%;
-  align-items: stretch;
 }
 
 .leftcolumn,
-.middlecolumn {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-lg);
-}
-
-.leftcolumn {
-  min-height: 0;
-  overflow: hidden;
-}
-
 .middlecolumn {
   min-height: 0;
 }
@@ -94,19 +44,6 @@
   margin-bottom: var(--space-md);
 }
 
-.section-heading-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-md);
-}
-
-.row-actions {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-}
-
 .row {
   display: flex;
   gap: var(--space-md);
@@ -119,20 +56,9 @@
   gap: var(--space-md);
 }
 
-.chat-compose {
-  display: flex;
-  align-items: center;
-  gap: var(--space-md);
-  flex-wrap: nowrap;
-}
-
 .chat-compose input {
   flex: 1;
   min-width: 0;
-}
-
-.chat-compose button {
-  flex-shrink: 0;
 }
 
 .compact-hint {
