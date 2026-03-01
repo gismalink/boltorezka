@@ -140,7 +140,8 @@ const REMOTE_SPEAKING_OFF_THRESHOLD = 0.025;
 const REMOTE_SPEAKING_HOLD_MS = 450;
 const RTC_STATS_POLL_MS = 2500;
 const RTC_INBOUND_STALL_TICKS = 3;
-const TARGET_NOT_IN_ROOM_BLOCK_MS = 10000;
+const TARGET_NOT_IN_ROOM_BLOCK_MS = 1500;
+const TARGET_NOT_IN_ROOM_RESYNC_GRACE_MS = 150;
 
 const RTC_CONFIG: RTCConfiguration = {
   iceServers: RTC_ICE_SERVERS,
@@ -204,8 +205,10 @@ export function useVoiceCallRuntime({
     targetLabel: string,
     options?: { iceRestart?: boolean; reason?: string }
   ) => Promise<void>) | null>(null);
+  const syncRoomTargetsRef = useRef<(() => Promise<void>) | null>(null);
   const requestTargetByIdRef = useRef<Map<string, { targetUserId: string; eventType: string }>>(new Map());
   const blockedTargetUntilRef = useRef<Map<string, number>>(new Map());
+  const roomTargetsResyncTimerRef = useRef<number | null>(null);
   const lastToastRef = useRef<{ key: string; at: number }>({ key: "", at: 0 });
   const localSpeakingRef = useRef(false);
   const localSpeakingLastAboveAtRef = useRef(0);
@@ -279,6 +282,27 @@ export function useVoiceCallRuntime({
       eventType
     });
   }, []);
+
+  const clearRoomTargetsResyncTimer = useCallback(() => {
+    if (roomTargetsResyncTimerRef.current !== null) {
+      window.clearTimeout(roomTargetsResyncTimerRef.current);
+      roomTargetsResyncTimerRef.current = null;
+    }
+  }, []);
+
+  const scheduleRoomTargetsResync = useCallback((delayMs: number) => {
+    clearRoomTargetsResyncTimer();
+    roomTargetsResyncTimerRef.current = window.setTimeout(() => {
+      roomTargetsResyncTimerRef.current = null;
+      if (!roomVoiceConnectedRef.current) {
+        return;
+      }
+      const sync = syncRoomTargetsRef.current;
+      if (sync) {
+        void sync();
+      }
+    }, Math.max(0, delayMs));
+  }, [clearRoomTargetsResyncTimer]);
 
   const getAudioConstraints = useCallback((): MediaTrackConstraints | boolean => {
     return selectedInputId && selectedInputId !== "default"
@@ -568,13 +592,14 @@ export function useVoiceCallRuntime({
     setRemoteAudioMutedPeerUserIds([]);
     requestTargetByIdRef.current.clear();
     blockedTargetUntilRef.current.clear();
+    clearRoomTargetsResyncTimer();
     setLastCallPeer("");
     setCallStatus("idle");
 
     if (reason) {
       pushCallLog(reason);
     }
-  }, [closePeer, releaseLocalStream, setCallStatus, setLastCallPeer, pushCallLog]);
+  }, [closePeer, releaseLocalStream, setCallStatus, setLastCallPeer, pushCallLog, clearRoomTargetsResyncTimer]);
 
   const ensureLocalStream = useCallback(async () => {
     if (localStreamRef.current) {
@@ -1002,6 +1027,8 @@ export function useVoiceCallRuntime({
     updateCallStatus();
   }, [sendWsEvent, closePeer, startOffer, updateCallStatus, shouldInitiateOffer, pushCallLog, isTargetTemporarilyBlocked]);
 
+  syncRoomTargetsRef.current = syncRoomTargets;
+
   const connectRoom = useCallback(async () => {
     roomVoiceConnectedRef.current = true;
     setRoomVoiceConnected(true);
@@ -1045,10 +1072,11 @@ export function useVoiceCallRuntime({
     setRemoteMutedPeerUserIds([]);
     setRemoteSpeakingPeerUserIds([]);
     setRemoteAudioMutedPeerUserIds([]);
+    clearRoomTargetsResyncTimer();
     setLastCallPeer("");
     setCallStatus("idle");
     pushCallLog("voice room disconnected");
-  }, [sendWsEvent, closePeer, releaseLocalStream, setLastCallPeer, setCallStatus, pushCallLog, rememberRequestTarget]);
+  }, [sendWsEvent, closePeer, releaseLocalStream, setLastCallPeer, setCallStatus, pushCallLog, rememberRequestTarget, clearRoomTargetsResyncTimer]);
 
   const handleIncomingSignal = useCallback(async (
     eventType: "call.offer" | "call.answer" | "call.ice",
@@ -1218,7 +1246,8 @@ export function useVoiceCallRuntime({
 
     blockedTargetUntilRef.current.set(mapped.targetUserId, Date.now() + TARGET_NOT_IN_ROOM_BLOCK_MS);
     closePeer(mapped.targetUserId, `nack ${mapped.eventType}: ${code}`);
-  }, [closePeer]);
+    scheduleRoomTargetsResync(TARGET_NOT_IN_ROOM_BLOCK_MS + TARGET_NOT_IN_ROOM_RESYNC_GRACE_MS);
+  }, [closePeer, scheduleRoomTargetsResync]);
 
   useEffect(() => {
     if (!localStreamRef.current) {
