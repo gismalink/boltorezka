@@ -5,6 +5,7 @@ services:
     image: coturn/coturn:4.6.3
     container_name: boltorezka-turn
     restart: unless-stopped
+    user: "0:0"
     command:
       - turnserver
       - --no-cli
