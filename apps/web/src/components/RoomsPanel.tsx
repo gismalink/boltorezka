@@ -209,7 +209,7 @@ export function RoomsPanel({
               <form className="grid gap-4" onSubmit={onSaveChannelSettings}>
                 <h3 className="subheading">{t("rooms.channelSettings")}</h3>
                 <input value={editingRoomTitle} onChange={(event) => onSetEditingRoomTitle(event.target.value)} placeholder={t("rooms.channelTitle")} />
-                <div className="row">
+                <div className="grid gap-3 sm:grid-cols-2">
                   <select value={editingRoomKind} onChange={(event) => onSetEditingRoomKind(event.target.value as RoomKind)}>
                     <option value="text">{t("rooms.text")}</option>
                     <option value="text_voice">{t("rooms.textVoice")}</option>
@@ -222,7 +222,7 @@ export function RoomsPanel({
                     ))}
                   </select>
                 </div>
-                <div className="row">
+                <div className="flex flex-wrap items-center gap-3">
                   <button type="button" className="secondary" onClick={() => onMoveChannel("up")}>
                     <i className="bi bi-arrow-up" aria-hidden="true" /> {t("rooms.up")}
                   </button>
@@ -365,7 +365,7 @@ export function RoomsPanel({
                     <h3 className="subheading">{t("rooms.createChannelTitle")}</h3>
                     <input value={newRoomSlug} onChange={(event) => onSetNewRoomSlug(event.target.value)} placeholder={t("rooms.channelSlug")} />
                     <input value={newRoomTitle} onChange={(event) => onSetNewRoomTitle(event.target.value)} placeholder={t("rooms.channelTitle")} />
-                    <div className="row">
+                    <div className="grid gap-3 sm:grid-cols-2">
                       <select value={newRoomKind} onChange={(event) => onSetNewRoomKind(event.target.value as RoomKind)}>
                         <option value="text">{t("rooms.text")}</option>
                         <option value="text_voice">{t("rooms.textVoice")}</option>
@@ -435,7 +435,7 @@ export function RoomsPanel({
                         <form className="grid gap-4" onSubmit={onSaveCategorySettings}>
                           <h3 className="subheading">{t("rooms.categorySettings")}</h3>
                           <input value={editingCategoryTitle} onChange={(event) => onSetEditingCategoryTitle(event.target.value)} placeholder={t("rooms.categoryTitle")} />
-                          <div className="row">
+                          <div className="flex flex-wrap items-center gap-3">
                             <button type="button" className="secondary" onClick={() => onMoveCategory("up")}>
                               <i className="bi bi-arrow-up" aria-hidden="true" /> {t("rooms.up")}
                             </button>
@@ -499,7 +499,7 @@ export function RoomsPanel({
                   ? t("rooms.confirmArchiveChannel")
                   : t("rooms.confirmDeleteCategory")}
             </p>
-            <div className="row delete-confirm-actions">
+            <div className="delete-confirm-actions flex flex-wrap items-center gap-3">
               <button type="button" className="secondary" onClick={() => setConfirmPopup(null)}>
                 {t("common.no")}
               </button>

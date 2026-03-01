@@ -44,18 +44,6 @@
   margin-bottom: var(--space-md);
 }
 
-.row {
-  display: flex;
-  gap: var(--space-md);
-  align-items: center;
-  flex-wrap: wrap;
-}
-
-.stack {
-  display: grid;
-  gap: var(--space-md);
-}
-
 .chat-compose input {
   flex: 1;
   min-width: 0;

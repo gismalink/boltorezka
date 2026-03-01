@@ -420,15 +420,15 @@ export function UserDock({
                 <form className="grid gap-4" onSubmit={onSaveProfile}>
                   <div className="grid gap-3">
                     <h3 className="subheading">{t("settings.profileSection")}</h3>
-                    <label className="stack">
+                    <label className="grid gap-[var(--space-md)]">
                       <span className="subheading">{t("settings.displayName")}</span>
                       <input value={profileNameDraft} onChange={(event) => onSetProfileNameDraft(event.target.value)} />
                     </label>
-                    <label className="stack">
+                    <label className="grid gap-[var(--space-md)]">
                       <span className="subheading">{t("settings.email")}</span>
                       <input value={profileEmail} readOnly disabled />
                     </label>
-                    <label className="stack">
+                    <label className="grid gap-[var(--space-md)]">
                       <span className="subheading">{t("settings.language")}</span>
                       <select value={selectedLang} onChange={(event) => onSetSelectedLang(event.target.value as "ru" | "en") }>
                         {languageOptions.map((option) => (
@@ -447,7 +447,7 @@ export function UserDock({
               ) : (
                 <>
                   <div className="voice-preferences-grid grid gap-3 md:grid-cols-2">
-                    <label className="stack">
+                    <label className="grid gap-[var(--space-md)]">
                       <span className="subheading">{t("settings.microphone")}</span>
                       <select value={selectedInputId} disabled={mediaDevicesUnavailable} onChange={(event) => onSetSelectedInputId(event.target.value)}>
                         {inputOptions.map((device) => (
@@ -455,7 +455,7 @@ export function UserDock({
                         ))}
                       </select>
                     </label>
-                    <label className="stack">
+                    <label className="grid gap-[var(--space-md)]">
                       <span className="subheading">{t("settings.speaker")}</span>
                       <select value={selectedOutputId} disabled={mediaDevicesUnavailable} onChange={(event) => onSetSelectedOutputId(event.target.value)}>
                         {outputOptions.map((device) => (
