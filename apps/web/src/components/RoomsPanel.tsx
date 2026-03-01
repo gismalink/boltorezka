@@ -170,7 +170,7 @@ export function RoomsPanel({
   };
 
   const renderRoomRow = (room: Room) => (
-    <div className="channel-row">
+    <div className="channel-row relative grid grid-cols-[1fr_auto] items-center gap-2">
       <button
         className={`secondary room-btn ${roomSlug === room.slug ? "room-btn-active" : ""}`}
         onClick={() => {
@@ -261,7 +261,7 @@ export function RoomsPanel({
         const roomHasVoiceState = room.slug === roomSlug;
 
         return (
-        <ul className="channel-members-list">
+        <ul className="channel-members-list col-span-full grid gap-0.5 pl-4 pt-0.5">
           {roomMembers.map((member) => (
             (() => {
               const normalizedMemberName = member.userName.trim().toLocaleLowerCase();
@@ -293,7 +293,7 @@ export function RoomsPanel({
               return (
             <li
               key={`${room.id}-${member.userId || member.userName}`}
-              className={`channel-member-item ${isCurrentUser ? "channel-member-item-current" : ""} ${isVoiceActive ? "channel-member-item-voice-active" : ""}`}
+              className={`channel-member-item grid min-h-[22px] grid-cols-[auto_1fr_auto_auto] items-center gap-1.5 ${isCurrentUser ? "channel-member-item-current" : ""} ${isVoiceActive ? "channel-member-item-voice-active" : ""}`}
             >
               <span className="channel-member-avatar">{(member.userName || "U").charAt(0).toUpperCase()}</span>
               <span className="channel-member-name">{member.userName}</span>
@@ -389,7 +389,7 @@ export function RoomsPanel({
       <div className="rooms-scroll min-h-0 flex-1 overflow-y-auto">
         {(roomsTree?.categories || []).map((category) => (
           <div key={category.id} className="category-block">
-            <div className="category-title-row">
+            <div className="category-title-row flex items-center justify-between gap-2">
               <button
                 type="button"
                 className="secondary category-collapse-btn"
@@ -400,7 +400,7 @@ export function RoomsPanel({
                 <span className="category-title">{category.title}</span>
               </button>
               {canCreateRooms ? (
-                <div className="category-actions">
+                <div className="category-actions inline-flex items-center gap-1">
                   <button
                     type="button"
                     className="secondary icon-btn tiny category-action-btn"
@@ -483,14 +483,14 @@ export function RoomsPanel({
 
       {confirmPopup ? (
         <div
-          className="settings-confirm-overlay popup-layer-content"
+          className="settings-confirm-overlay popup-layer-content fixed inset-0 z-[60] grid place-items-center bg-black/60 p-4"
           onMouseDown={(event) => {
             if (event.target === event.currentTarget) {
               setConfirmPopup(null);
             }
           }}
         >
-          <div className="card compact settings-confirm-modal popup-layer-content">
+          <div className="card compact settings-confirm-modal popup-layer-content w-full max-w-[420px]">
             <h3 className="subheading settings-confirm-title">{t("rooms.confirmTitle")}</h3>
             <p className="muted settings-confirm-text">
               {confirmPopup.kind === "clear-channel"

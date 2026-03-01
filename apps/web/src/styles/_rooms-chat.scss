@@ -28,13 +28,6 @@
   margin-top: var(--space-md);
 }
 
-.category-title-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-sm);
-}
-
 .category-collapse-btn {
   display: inline-flex;
   align-items: center;
@@ -50,12 +43,6 @@
 .category-collapse-btn:active {
   transform: none;
   box-shadow: none;
-}
-
-.category-actions {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-xs);
 }
 
 .category-action-btn {
@@ -123,29 +110,10 @@
   color: var(--pixel-text);
 }
 
-.channel-row {
-  position: relative;
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: var(--space-sm);
-  align-items: center;
-}
-
 .channel-members-list {
-  grid-column: 1 / -1;
   list-style: none;
   margin: 0;
   padding: 2px 0 0 var(--space-md);
-  display: grid;
-  gap: 2px;
-}
-
-.channel-member-item {
-  display: grid;
-  grid-template-columns: auto 1fr auto auto;
-  align-items: center;
-  gap: 6px;
-  min-height: 22px;
 }
 
 .channel-member-avatar {
@@ -402,19 +370,7 @@
   max-height: 180px;
 }
 
-.settings-confirm-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 90;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--space-2xl);
-  background: rgba(0, 0, 0, 0.45);
-}
-
 .settings-confirm-modal {
-  width: min(420px, 100%);
   display: grid;
   gap: var(--space-md);
 }
