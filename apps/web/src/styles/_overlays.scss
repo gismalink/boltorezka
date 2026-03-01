@@ -113,14 +113,9 @@
 }
 
 .tooltip-portal {
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 9999;
 }
 
 .tooltip-bubble {
-  position: fixed;
   transform: translate(-50%, var(--space-xs));
   background: var(--pixel-panel);
   color: var(--pixel-text);
@@ -129,9 +124,7 @@
   padding: 0.24rem 0.38rem;
   font-size: 0.68rem;
   line-height: 1.2;
-  max-width: min(260px, 80vw);
   white-space: normal;
-  text-align: center;
   overflow-wrap: break-word;
   opacity: 0;
   visibility: hidden;
