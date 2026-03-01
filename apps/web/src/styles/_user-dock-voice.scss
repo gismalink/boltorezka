@@ -1,7 +1,3 @@
-.user-dock {
-  margin-top: auto;
-}
-
 .user-dock-inline-hidden {
   display: none;
 }
@@ -29,9 +25,6 @@
 
 .rtc-actions-grid {
   margin-top: var(--space-md);
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: var(--space-sm);
 }
 
 .rtc-call-controls {
@@ -308,22 +301,16 @@
 .user-settings-sidebar {
   border-right: var(--border-strong) solid var(--pixel-border);
   padding-right: var(--space-lg);
-  display: grid;
   align-content: start;
-  gap: var(--space-sm);
   min-width: 0;
 }
 
 .user-settings-tab-group {
-  display: grid;
-  gap: var(--space-sm);
   min-width: 0;
 }
 
 .user-settings-content {
-  display: grid;
   align-content: start;
-  gap: var(--space-xl);
   min-height: 0;
   overflow: auto;
   overflow-x: hidden;
