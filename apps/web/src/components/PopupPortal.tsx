@@ -151,7 +151,7 @@ export function PopupPortal({
   return createPortal(
     <div
       ref={popupRef}
-      className={`floating-popup popup-layer-content ${className}`.trim()}
+      className={`floating-popup popup-layer-content z-50 min-w-[220px] ${className}`.trim()}
       style={{ position: "fixed", left: position.left, top: position.top }}
     >
       {children}

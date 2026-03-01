@@ -208,10 +208,10 @@ export function TooltipPortal() {
   }
 
   return createPortal(
-    <div className="tooltip-portal" aria-hidden={!state.visible}>
+    <div className="tooltip-portal pointer-events-none fixed inset-0 z-[9999]" aria-hidden={!state.visible}>
       <div
         ref={bubbleRef}
-        className="tooltip-bubble"
+        className="tooltip-bubble fixed max-w-[min(260px,80vw)] text-center"
         data-visible={state.visible ? "true" : "false"}
         data-placement={state.placement}
         style={{ left: state.left, top: state.top }}

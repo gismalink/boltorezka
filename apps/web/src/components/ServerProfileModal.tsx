@@ -49,15 +49,15 @@ export function ServerProfileModal({
 
   return (
     <div
-      className="voice-preferences-overlay"
+      className="voice-preferences-overlay fixed inset-0 z-40 grid place-items-center overflow-y-auto p-4"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) {
           onClose();
         }
       }}
     >
-      <section className="card voice-preferences-modal user-settings-modal server-profile-modal">
-        <div className="user-settings-sidebar">
+      <section className="card voice-preferences-modal user-settings-modal server-profile-modal grid w-full max-w-[980px] gap-4 md:grid-cols-[220px_1fr]">
+        <div className="user-settings-sidebar grid gap-2">
           <div className="voice-preferences-kicker">{t("server.title")}</div>
           {canPromote ? (
             <button
@@ -93,8 +93,8 @@ export function ServerProfileModal({
           </button>
         </div>
 
-        <div className="user-settings-content">
-          <div className="voice-preferences-head">
+        <div className="user-settings-content grid min-h-0 gap-4">
+          <div className="voice-preferences-head flex items-center justify-between gap-3">
             <h2>
               {serverMenuTab === "users" ? t("server.tabUsers") : null}
               {serverMenuTab === "events" ? t("server.tabEvents") : null}
@@ -112,16 +112,16 @@ export function ServerProfileModal({
           </div>
 
           {serverMenuTab === "users" && canPromote ? (
-            <section className="stack">
+            <section className="stack grid gap-3">
               <h3>{t("admin.title")}</h3>
-              <ul className="admin-list">
+              <ul className="admin-list grid gap-2">
                 {adminUsers.map((item) => (
-                  <li key={item.id} className="row admin-row">
-                    <span>
+                  <li key={item.id} className="row admin-row flex flex-wrap items-center justify-between gap-2">
+                    <span className="min-w-0 break-words">
                       {item.email} ({item.role})
                       {item.is_banned ? ` · ${t("admin.banned")}` : ""}
                     </span>
-                    <div className="row-actions">
+                    <div className="row-actions flex flex-wrap items-center gap-2">
                       {item.role === "user" ? (
                         <button onClick={() => onPromote(item.id)}>{t("admin.promote")}</button>
                       ) : null}
@@ -143,9 +143,9 @@ export function ServerProfileModal({
           ) : null}
 
           {serverMenuTab === "events" ? (
-            <section className="stack">
+            <section className="stack grid gap-3">
               <h3>{t("events.title")}</h3>
-              <div className="log">
+              <div className="log max-h-[320px] overflow-auto">
                 {eventLog.map((line, index) => (
                   <div key={`${line}-${index}`}>{line}</div>
                 ))}
@@ -154,10 +154,10 @@ export function ServerProfileModal({
           ) : null}
 
           {serverMenuTab === "telemetry" && canViewTelemetry ? (
-            <section className="stack">
+            <section className="stack grid gap-3">
               <h3>{t("telemetry.title")}</h3>
               <p className="muted">{t("telemetry.day")}: {telemetrySummary?.day || "-"}</p>
-              <div className="stack">
+              <div className="stack grid gap-1">
                 <div>ack_sent: {telemetrySummary?.metrics.ack_sent ?? 0}</div>
                 <div>nack_sent: {telemetrySummary?.metrics.nack_sent ?? 0}</div>
                 <div>chat_sent: {telemetrySummary?.metrics.chat_sent ?? 0}</div>
@@ -169,13 +169,13 @@ export function ServerProfileModal({
           ) : null}
 
           {serverMenuTab === "call" ? (
-            <section className="stack signaling-panel">
+            <section className="stack signaling-panel grid gap-3">
               <h3>{t("call.title")}</h3>
               <p className="muted">{t("call.status")}: {callStatus}{lastCallPeer ? ` (${lastCallPeer})` : ""}</p>
               <p className="muted">
                 {roomVoiceConnected ? t("call.autoConnected") : t("call.autoWaiting")}
               </p>
-              <div className="log call-log">
+              <div className="log call-log max-h-[320px] overflow-auto">
                 {callEventLog.map((line, index) => (
                   <div key={`${line}-${index}`}>{line}</div>
                 ))}
