@@ -557,6 +557,16 @@ export function App() {
     await roomAdminController.promote(token, userId);
   };
 
+  const demote = async (userId: string) => {
+    if (!token || !canPromote) return;
+    await roomAdminController.demote(token, userId);
+  };
+
+  const setUserBan = async (userId: string, banned: boolean) => {
+    if (!token || !canPromote) return;
+    await roomAdminController.setBan(token, userId, banned);
+  };
+
   const {
     uncategorizedRooms,
     allRooms,
@@ -957,6 +967,8 @@ export function App() {
         onClose={() => setAppMenuOpen(false)}
         onSetServerMenuTab={setServerMenuTab}
         onPromote={(userId) => void promote(userId)}
+        onDemote={(userId) => void demote(userId)}
+        onSetBan={(userId, banned) => void setUserBan(userId, banned)}
         onRefreshTelemetry={() => void loadTelemetrySummary()}
       />
 
