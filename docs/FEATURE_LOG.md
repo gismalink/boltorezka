@@ -3,6 +3,24 @@
 Этот документ хранит зафиксированные изменения, выполненные шаги и операционные evidence.
 План и open items находятся в `docs/ROADMAP.md`.
 
+## 2026-03-01 — Voice test baseline fixed (relay + TURN TLS/TCP)
+
+### Delivered
+
+- Зафиксирован рабочий baseline для voice в `test`:
+  - `TEST_VITE_RTC_ICE_TRANSPORT_POLICY=relay`
+  - `TEST_VITE_RTC_ICE_SERVERS_JSON=[{"urls":["turns:gismalink.art:5349?transport=tcp"],"username":"<turn-username>","credential":"<turn-password>"}]`
+- Подтверждён рабочий путь медиа через TURN в live-сессии:
+  - API: стабильные `call.offer`/`call.answer`/`call.ice` + `call.mic_state`.
+  - TURN: `ALLOCATE` -> `CREATE_PERMISSION` -> `CHANNEL_BIND`.
+  - TURN `peer usage` ненулевой (идёт реальный медиатрафик).
+
+### Operational evidence (test)
+
+- В окне 120s получены счётчики API: `offer=12`, `answer=12`, `ice=18`, `mic_state=228`.
+- В том же окне TURN показывал ненулевые `peer usage` (`rb/sb`) для пользователя `<turn-username>`.
+- Конфигурация принята как baseline для дальнейших voice-smoke в `test`.
+
 ## 2026-02-28 — Rooms: category collapse + channel archive flow
 
 ### Delivered
