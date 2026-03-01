@@ -417,8 +417,8 @@ export function UserDock({
               </div>
 
               {userSettingsTab === "profile" ? (
-                <form className="stack grid gap-4" onSubmit={onSaveProfile}>
-                  <div className="stack grid gap-3">
+                <form className="grid gap-4" onSubmit={onSaveProfile}>
+                  <div className="grid gap-3">
                     <h3 className="subheading">{t("settings.profileSection")}</h3>
                     <label className="stack">
                       <span className="subheading">{t("settings.displayName")}</span>
@@ -515,7 +515,7 @@ export function UserDock({
 
                   <div className="voice-divider" />
 
-                  <div className="stack grid gap-2">
+                  <div className="grid gap-2">
                     <h3 className="subheading">{t("settings.inputProfile")}</h3>
                     <button
                       type="button"

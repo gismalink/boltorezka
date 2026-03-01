@@ -112,7 +112,7 @@ export function ServerProfileModal({
           </div>
 
           {serverMenuTab === "users" && canPromote ? (
-            <section className="stack grid gap-3">
+            <section className="grid gap-3">
               <h3>{t("admin.title")}</h3>
               <ul className="admin-list grid gap-2">
                 {adminUsers.map((item) => (
@@ -143,7 +143,7 @@ export function ServerProfileModal({
           ) : null}
 
           {serverMenuTab === "events" ? (
-            <section className="stack grid gap-3">
+            <section className="grid gap-3">
               <h3>{t("events.title")}</h3>
               <div className="log max-h-[320px] overflow-auto">
                 {eventLog.map((line, index) => (
@@ -154,10 +154,10 @@ export function ServerProfileModal({
           ) : null}
 
           {serverMenuTab === "telemetry" && canViewTelemetry ? (
-            <section className="stack grid gap-3">
+            <section className="grid gap-3">
               <h3>{t("telemetry.title")}</h3>
               <p className="muted">{t("telemetry.day")}: {telemetrySummary?.day || "-"}</p>
-              <div className="stack grid gap-1">
+              <div className="grid gap-1">
                 <div>ack_sent: {telemetrySummary?.metrics.ack_sent ?? 0}</div>
                 <div>nack_sent: {telemetrySummary?.metrics.nack_sent ?? 0}</div>
                 <div>chat_sent: {telemetrySummary?.metrics.chat_sent ?? 0}</div>
@@ -169,7 +169,7 @@ export function ServerProfileModal({
           ) : null}
 
           {serverMenuTab === "call" ? (
-            <section className="stack signaling-panel grid gap-3">
+            <section className="signaling-panel grid gap-3">
               <h3>{t("call.title")}</h3>
               <p className="muted">{t("call.status")}: {callStatus}{lastCallPeer ? ` (${lastCallPeer})` : ""}</p>
               <p className="muted">
