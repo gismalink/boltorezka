@@ -79,10 +79,10 @@ export function UserDock({
 
   return (
     <>
-      <div className={`user-dock ${inlineSettingsMode ? "user-dock-inline-hidden" : ""}`}>
+      <div className={`user-dock ${inlineSettingsMode ? "user-dock-inline-hidden" : ""} flex min-h-0 flex-col gap-4`}>
         {currentRoomSupportsRtc ? (
-          <section className="card compact rtc-connection-card">
-            <div className="rtc-title-row">
+          <section className="card compact rtc-connection-card flex flex-col gap-3">
+            <div className="rtc-title-row flex items-start justify-between gap-3">
               <div>
                 <div className="rtc-title">{t("rtc.connection")}</div>
                 <div className="muted rtc-subtitle">
@@ -100,7 +100,7 @@ export function UserDock({
                 </button>
               </div>
             </div>
-            <div className="rtc-actions-grid">
+            <div className="rtc-actions-grid grid grid-cols-4 gap-2">
               <button type="button" className="secondary" data-tooltip={t("rtc.noiseReduction")}>
                 <i className="bi bi-sliders" aria-hidden="true" />
               </button>
@@ -117,8 +117,8 @@ export function UserDock({
           </section>
         ) : null}
 
-        <section className="card compact user-panel-card">
-          <div className="user-panel-main">
+        <section className="card compact user-panel-card flex items-center justify-between gap-3">
+          <div className="user-panel-main flex min-w-0 items-center gap-3">
             <button
               type="button"
               className="user-avatar-badge user-avatar-button"
@@ -128,12 +128,12 @@ export function UserDock({
             >
               {(user.name || "U").charAt(0).toUpperCase()}
             </button>
-            <div className="user-meta">
-              <div className="user-name-line">{user.name}</div>
+            <div className="user-meta min-w-0">
+              <div className="user-name-line truncate">{user.name}</div>
               <div className="muted user-status-line">{userStatusLabel}</div>
             </div>
           </div>
-          <div className="user-panel-actions">
+          <div className="user-panel-actions flex items-center gap-2">
             <div className="voice-settings-anchor" ref={voiceSettingsAnchorRef}>
               <div className="audio-output-group split-control-group">
                 <button
@@ -164,8 +164,8 @@ export function UserDock({
                 className="settings-popup voice-settings-popup"
                 placement="top-end"
               >
-                <div>
-                  <div className="voice-menu-items">
+                <div className="grid gap-3">
+                  <div className="voice-menu-items grid gap-2">
                     <button
                       ref={inputDeviceRowRef}
                       type="button"
@@ -208,7 +208,7 @@ export function UserDock({
                     />
                   </label>
 
-                  <div className="voice-level-bars" aria-hidden="true">
+                  <div className="voice-level-bars grid grid-cols-[repeat(20,minmax(0,1fr))] gap-0.5" aria-hidden="true">
                     {Array.from({ length: miniBarCount }).map((_, index) => (
                       <span
                         key={`bar-${index}`}
@@ -334,9 +334,9 @@ export function UserDock({
                 className="settings-popup voice-mini-popup"
                 placement="top-end"
               >
-                <div>
+                <div className="grid gap-3">
                   <div className="subheading">{t("settings.outputDevice")}</div>
-                  <div className="device-list">
+                  <div className="device-list grid gap-1.5">
                     {outputOptions.map((device) => (
                       <button
                         key={device.id}
@@ -384,11 +384,11 @@ export function UserDock({
       </div>
 
       {userSettingsOpen || inlineSettingsMode ? (
-        <div className={`voice-preferences-overlay ${inlineSettingsMode ? "inline-settings-mode" : ""}`}>
-          <section className="card voice-preferences-modal user-settings-modal" ref={userSettingsRef}>
-            <div className="user-settings-sidebar">
+        <div className={`voice-preferences-overlay ${inlineSettingsMode ? "inline-settings-mode" : ""} ${inlineSettingsMode ? "contents" : ""}`}>
+          <section className="card voice-preferences-modal user-settings-modal grid gap-4 md:grid-cols-[220px_1fr]" ref={userSettingsRef}>
+            <div className="user-settings-sidebar grid gap-3">
               <div className="voice-preferences-kicker">{t("settings.title")}</div>
-              <div className="user-settings-tab-group">
+              <div className="user-settings-tab-group grid gap-2">
                 <button
                   type="button"
                   className={`secondary user-settings-tab-btn ${userSettingsTab === "profile" ? "user-settings-tab-btn-active" : ""}`}
@@ -406,8 +406,8 @@ export function UserDock({
               </div>
             </div>
 
-            <div className="user-settings-content">
-              <div className="voice-preferences-head">
+            <div className="user-settings-content grid min-h-0 gap-4">
+              <div className="voice-preferences-head flex items-center justify-between gap-2">
                 <h2>{userSettingsTab === "profile" ? t("settings.tabProfile") : t("settings.tabSound")}</h2>
                 {!inlineSettingsMode ? (
                   <button type="button" className="secondary icon-btn" onClick={() => onSetUserSettingsOpen(false)} aria-label={t("settings.closeVoiceAria")}>
@@ -417,8 +417,8 @@ export function UserDock({
               </div>
 
               {userSettingsTab === "profile" ? (
-                <form className="stack" onSubmit={onSaveProfile}>
-                  <div className="stack">
+                <form className="stack grid gap-4" onSubmit={onSaveProfile}>
+                  <div className="stack grid gap-3">
                     <h3 className="subheading">{t("settings.profileSection")}</h3>
                     <label className="stack">
                       <span className="subheading">{t("settings.displayName")}</span>
@@ -446,7 +446,7 @@ export function UserDock({
                 </form>
               ) : (
                 <>
-                  <div className="voice-preferences-grid">
+                  <div className="voice-preferences-grid grid gap-3 md:grid-cols-2">
                     <label className="stack">
                       <span className="subheading">{t("settings.microphone")}</span>
                       <select value={selectedInputId} disabled={mediaDevicesUnavailable} onChange={(event) => onSetSelectedInputId(event.target.value)}>
@@ -465,7 +465,7 @@ export function UserDock({
                     </label>
                   </div>
 
-                  <div className="row">
+                  <div className="row flex flex-wrap items-center gap-3">
                     <button type="button" className="secondary" onClick={onRequestMediaAccess}>
                       {t("settings.requestMediaAccess")}
                     </button>
@@ -478,7 +478,7 @@ export function UserDock({
                     <p className="muted media-devices-warning">{mediaDevicesWarningText}</p>
                   ) : null}
 
-                  <div className="voice-preferences-grid">
+                  <div className="voice-preferences-grid grid gap-3 md:grid-cols-2">
                     <label className="slider-label">
                       {t("settings.micVolume")}
                       <input
@@ -501,9 +501,9 @@ export function UserDock({
                     </label>
                   </div>
 
-                  <div className="voice-test-row">
+                  <div className="voice-test-row grid gap-2">
                     <div className="subheading">{t("settings.micTest")}</div>
-                    <div className="voice-level-bars" aria-hidden="true">
+                    <div className="voice-level-bars grid grid-cols-12 gap-0.5 md:grid-cols-[repeat(42,minmax(0,1fr))]" aria-hidden="true">
                       {Array.from({ length: modalBarCount }).map((_, index) => (
                         <span
                           key={`modal-bar-${index}`}
@@ -515,7 +515,7 @@ export function UserDock({
 
                   <div className="voice-divider" />
 
-                  <div className="stack">
+                  <div className="stack grid gap-2">
                     <h3 className="subheading">{t("settings.inputProfile")}</h3>
                     <button
                       type="button"
