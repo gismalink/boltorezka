@@ -21,6 +21,19 @@
   - Deploy target SHA: `f875e5750d735413ec360a9318f95df2f88de537`.
   - Postdeploy smoke: `smoke:sso`, `smoke:api`, `smoke:realtime` — PASS.
 
+### Increment (zero-SCSS finish in apps/web)
+
+- Полностью убран SCSS pipeline из `apps/web`:
+  - добавлен единый `apps/web/src/styles.css` (эквивалент прежних partials),
+  - `main.tsx` переключён с `./styles.scss` на `./styles.css`,
+  - удалены `apps/web/src/styles.scss` и все `apps/web/src/styles/*.scss`.
+- Добавлен финальный чек-лист: `docs/status/TAILWIND_ZERO_SCSS_CHECKLIST.md`.
+
+### Validation (zero-SCSS)
+
+- `apps/web -> npm run build` — PASS.
+- Поиск по `apps/web/src`: SCSS-импорты и `.scss`-файлы отсутствуют.
+
 ### Branch
 
 - Work branch: `feature/tailwind-user-dock` (GitOps workflow compliant).
