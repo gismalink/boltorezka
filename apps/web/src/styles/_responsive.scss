@@ -92,41 +92,4 @@
     overflow-y: auto;
   }
 
-  .workspace-mobile .user-panel-card {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 0;
-  }
-
-  .workspace-mobile .user-panel-actions {
-    width: 100%;
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: var(--space-sm);
-  }
-
-  .workspace-mobile .voice-settings-anchor,
-  .workspace-mobile .audio-output-anchor {
-    min-width: 0;
-  }
-
-  .workspace-mobile .audio-output-group.split-control-group {
-    width: 100%;
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 22px;
-  }
-
-  .workspace-mobile .split-main-btn {
-    width: 100%;
-  }
-
-  .voice-preferences-grid,
-  .voice-test-row {
-    grid-template-columns: 1fr;
-  }
-
-  .workspace-mobile .rtc-connection-card,
-  .workspace-mobile .user-panel-main {
-    display: none;
-  }
 }
