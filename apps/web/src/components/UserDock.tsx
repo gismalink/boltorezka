@@ -79,9 +79,9 @@ export function UserDock({
 
   return (
     <>
-      <div className={`user-dock ${inlineSettingsMode ? "user-dock-inline-hidden" : ""} flex min-h-0 flex-col gap-4`}>
+      <div className={`user-dock ${inlineSettingsMode ? "user-dock-inline-hidden" : ""} relative z-20 mt-auto flex min-h-0 flex-col gap-4`}>
         {currentRoomSupportsRtc ? (
-          <section className="card compact rtc-connection-card flex flex-col gap-3">
+          <section className="card compact rtc-connection-card flex flex-col gap-3 max-[900px]:hidden">
             <div className="rtc-title-row flex items-start justify-between gap-3">
               <div>
                 <div className="rtc-title">{t("rtc.connection")}</div>
@@ -117,8 +117,8 @@ export function UserDock({
           </section>
         ) : null}
 
-        <section className="card compact user-panel-card flex items-center justify-between gap-3">
-          <div className="user-panel-main flex min-w-0 items-center gap-3">
+        <section className="card compact user-panel-card flex items-center justify-between gap-3 max-[900px]:grid max-[900px]:grid-cols-1 max-[900px]:gap-0">
+          <div className="user-panel-main flex min-w-0 items-center gap-3 max-[900px]:hidden">
             <button
               type="button"
               className="user-avatar-badge user-avatar-button"
@@ -133,12 +133,12 @@ export function UserDock({
               <div className="muted user-status-line">{userStatusLabel}</div>
             </div>
           </div>
-          <div className="user-panel-actions flex items-center gap-2">
-            <div className="voice-settings-anchor" ref={voiceSettingsAnchorRef}>
-              <div className="audio-output-group split-control-group">
+          <div className="user-panel-actions flex items-center gap-2 max-[900px]:grid max-[900px]:w-full max-[900px]:grid-cols-2">
+            <div className="voice-settings-anchor max-[900px]:min-w-0" ref={voiceSettingsAnchorRef}>
+              <div className="audio-output-group split-control-group max-[900px]:grid max-[900px]:w-full max-[900px]:grid-cols-[minmax(0,1fr)_22px]">
                 <button
                   type="button"
-                  className={`secondary icon-btn split-main-btn ${micMuted ? "icon-btn-danger" : ""}`}
+                  className={`secondary icon-btn split-main-btn max-[900px]:w-full ${micMuted ? "icon-btn-danger" : ""}`}
                   data-tooltip={micMuted ? t("audio.enableMic") : t("audio.disableMic")}
                   onClick={onToggleMic}
                 >
@@ -309,11 +309,11 @@ export function UserDock({
               </PopupPortal>
             </div>
 
-            <div className="audio-output-anchor" ref={audioOutputAnchorRef}>
-              <div className="audio-output-group split-control-group">
+            <div className="audio-output-anchor max-[900px]:min-w-0" ref={audioOutputAnchorRef}>
+              <div className="audio-output-group split-control-group max-[900px]:grid max-[900px]:w-full max-[900px]:grid-cols-[minmax(0,1fr)_22px]">
                 <button
                   type="button"
-                  className={`secondary icon-btn split-main-btn ${audioMuted ? "icon-btn-danger" : ""}`}
+                  className={`secondary icon-btn split-main-btn max-[900px]:w-full ${audioMuted ? "icon-btn-danger" : ""}`}
                   data-tooltip={audioMuted ? t("audio.enableOutput") : t("audio.disableOutput")}
                   onClick={onToggleAudio}
                 >
@@ -385,7 +385,7 @@ export function UserDock({
 
       {userSettingsOpen || inlineSettingsMode ? (
         <div className={`voice-preferences-overlay ${inlineSettingsMode ? "inline-settings-mode" : ""} ${inlineSettingsMode ? "contents" : ""}`}>
-          <section className="card voice-preferences-modal user-settings-modal grid gap-4 md:grid-cols-[220px_1fr]" ref={userSettingsRef}>
+          <section className="card voice-preferences-modal user-settings-modal grid gap-4 max-[900px]:h-full max-[900px]:max-h-none max-[900px]:min-h-0 max-[900px]:overflow-hidden max-[900px]:p-4 md:grid-cols-[220px_1fr]" ref={userSettingsRef}>
             <div className="user-settings-sidebar grid gap-3">
               <div className="voice-preferences-kicker">{t("settings.title")}</div>
               <div className="user-settings-tab-group grid gap-2">
