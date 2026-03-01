@@ -78,18 +78,4 @@
     box-shadow: inset 0 0 0 1px var(--pixel-neon-cyan);
   }
 
-  .workspace-mobile .rooms-card,
-  .workspace-mobile .rooms-scroll {
-    min-height: 0;
-  }
-
-  .workspace-mobile .rooms-card {
-    flex: 1;
-  }
-
-  .workspace-mobile .rooms-scroll {
-    flex: 1;
-    overflow-y: auto;
-  }
-
 }

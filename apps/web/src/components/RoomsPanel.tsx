@@ -316,7 +316,7 @@ export function RoomsPanel({
 
   return (
     <>
-      <section className="card compact rooms-card flex min-h-0 flex-col">
+      <section className="card compact rooms-card flex min-h-0 flex-1 flex-col">
       <div className="section-heading-row mb-3 flex items-center justify-between gap-3">
         <h2>{t("rooms.title")}</h2>
         {canCreateRooms ? (
