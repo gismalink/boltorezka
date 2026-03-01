@@ -44,6 +44,7 @@
   - `f622325` — `web: finalize style dedup for dock, overlays, and chat`
   - `3046a67` — `web: remove remaining mobile room layout style duplicates`
   - `e0a8422` — `web: remove unused legacy style selectors`
+  - `f0bb19f` — `web: remove final unused static style selectors`
 
 ### Next step
 
