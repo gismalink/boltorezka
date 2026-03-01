@@ -206,7 +206,7 @@ export function RoomsPanel({
             placement="bottom-end"
           >
             <div>
-              <form className="stack" onSubmit={onSaveChannelSettings}>
+              <form className="grid gap-4" onSubmit={onSaveChannelSettings}>
                 <h3 className="subheading">{t("rooms.channelSettings")}</h3>
                 <input value={editingRoomTitle} onChange={(event) => onSetEditingRoomTitle(event.target.value)} placeholder={t("rooms.channelTitle")} />
                 <div className="row">
@@ -336,7 +336,7 @@ export function RoomsPanel({
               </button>
               <PopupPortal open={categoryPopupOpen} anchorRef={categoryPopupRef} className="settings-popup" placement="bottom-end">
                 <div>
-                  <form className="stack" onSubmit={onCreateCategory}>
+                  <form className="grid gap-4" onSubmit={onCreateCategory}>
                     <h3 className="subheading">{t("rooms.createCategoryTitle")}</h3>
                     <input value={newCategorySlug} onChange={(event) => onSetNewCategorySlug(event.target.value)} placeholder={t("rooms.categorySlug")} />
                     <input value={newCategoryTitle} onChange={(event) => onSetNewCategoryTitle(event.target.value)} placeholder={t("rooms.categoryTitle")} />
@@ -361,7 +361,7 @@ export function RoomsPanel({
               </button>
               <PopupPortal open={channelPopupOpen} anchorRef={channelPopupRef} className="settings-popup" placement="bottom-end">
                 <div>
-                  <form className="stack" onSubmit={onCreateRoom}>
+                  <form className="grid gap-4" onSubmit={onCreateRoom}>
                     <h3 className="subheading">{t("rooms.createChannelTitle")}</h3>
                     <input value={newRoomSlug} onChange={(event) => onSetNewRoomSlug(event.target.value)} placeholder={t("rooms.channelSlug")} />
                     <input value={newRoomTitle} onChange={(event) => onSetNewRoomTitle(event.target.value)} placeholder={t("rooms.channelTitle")} />
@@ -432,7 +432,7 @@ export function RoomsPanel({
                       placement="bottom-end"
                     >
                       <div>
-                        <form className="stack" onSubmit={onSaveCategorySettings}>
+                        <form className="grid gap-4" onSubmit={onSaveCategorySettings}>
                           <h3 className="subheading">{t("rooms.categorySettings")}</h3>
                           <input value={editingCategoryTitle} onChange={(event) => onSetEditingCategoryTitle(event.target.value)} placeholder={t("rooms.categoryTitle")} />
                           <div className="row">
