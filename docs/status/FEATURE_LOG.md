@@ -37,6 +37,8 @@
   - `e066e78` — `web: remove duplicated user-dock scss layout rules`
   - `04e257d` — `web: remove duplicated overlay and toast scss layout rules`
   - `b47c5a1` — `web: remove duplicated layout scss rules covered by tailwind`
+  - `b2e14d9` — `web: tailwind-migrate rooms internal rows and confirm overlay`
+  - `1ec3dd3` — `web: tailwind-migrate chat message layout and popup positioning`
 
 ### Next step
 
