@@ -29,6 +29,9 @@
 ### Validation
 
 - Повторные `apps/web -> npm run build` в каждом инкременте — PASS.
+- Test deploy from feature branch выполнен: `TEST_REF=origin/feature/tailwind-user-dock npm run deploy:test:smoke` — PASS.
+  - Deploy target SHA: `135b8c078cc7aeec0966c89271d250dfa12d16cd`.
+  - Postdeploy smoke: `smoke:sso`, `smoke:api`, `smoke:realtime` — PASS.
 - Набор коммитов в `feature/tailwind-user-dock`:
   - `92448da` — `web: migrate user dock layout to tailwind utilities`
   - `f96d917` — `web: migrate overlay and modal shells to tailwind utilities`
@@ -45,6 +48,7 @@
   - `3046a67` — `web: remove remaining mobile room layout style duplicates`
   - `e0a8422` — `web: remove unused legacy style selectors`
   - `f0bb19f` — `web: remove final unused static style selectors`
+  - `2d2a78a` — `web: migrate auth provider layout utilities in header`
 
 ### Next step
 
