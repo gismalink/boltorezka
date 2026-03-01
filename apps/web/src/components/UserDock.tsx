@@ -384,11 +384,11 @@ export function UserDock({
       </div>
 
       {userSettingsOpen || inlineSettingsMode ? (
-        <div className={`voice-preferences-overlay ${inlineSettingsMode ? "inline-settings-mode" : ""} ${inlineSettingsMode ? "contents" : ""}`}>
-          <section className="card voice-preferences-modal user-settings-modal grid gap-4 max-[900px]:h-full max-[900px]:max-h-none max-[900px]:min-h-0 max-[900px]:overflow-hidden max-[900px]:p-4 md:grid-cols-[220px_1fr]" ref={userSettingsRef}>
-            <div className="user-settings-sidebar grid gap-3">
+        <div className={`voice-preferences-overlay fixed inset-0 z-[60] flex items-center justify-center p-[var(--space-3xl)] ${inlineSettingsMode ? "inline-settings-mode" : ""} ${inlineSettingsMode ? "contents" : ""}`}>
+          <section className="card voice-preferences-modal user-settings-modal grid w-full max-w-[980px] min-w-0 gap-4 max-[900px]:h-full max-[900px]:max-h-none max-[900px]:min-h-0 max-[900px]:overflow-hidden max-[900px]:p-4 md:grid-cols-[250px_1fr]" ref={userSettingsRef}>
+            <div className="user-settings-sidebar grid min-w-0 content-start gap-3">
               <div className="voice-preferences-kicker">{t("settings.title")}</div>
-              <div className="user-settings-tab-group grid gap-2">
+              <div className="user-settings-tab-group grid min-w-0 gap-2">
                 <button
                   type="button"
                   className={`secondary user-settings-tab-btn ${userSettingsTab === "profile" ? "user-settings-tab-btn-active" : ""}`}
@@ -406,7 +406,7 @@ export function UserDock({
               </div>
             </div>
 
-            <div className="user-settings-content grid min-h-0 gap-4">
+            <div className="user-settings-content grid min-h-0 min-w-0 content-start gap-4 overflow-auto overflow-x-hidden pr-0">
               <div className="voice-preferences-head flex items-center justify-between gap-2">
                 <h2>{userSettingsTab === "profile" ? t("settings.tabProfile") : t("settings.tabSound")}</h2>
                 {!inlineSettingsMode ? (

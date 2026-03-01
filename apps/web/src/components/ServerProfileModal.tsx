@@ -56,8 +56,8 @@ export function ServerProfileModal({
         }
       }}
     >
-      <section className="card voice-preferences-modal user-settings-modal server-profile-modal grid w-full max-w-[980px] gap-4 md:grid-cols-[220px_1fr]">
-        <div className="user-settings-sidebar grid gap-2">
+      <section className="card voice-preferences-modal user-settings-modal server-profile-modal grid w-full max-w-[980px] min-w-0 gap-4 md:grid-cols-[250px_1fr]">
+        <div className="user-settings-sidebar grid min-w-0 content-start gap-2">
           <div className="voice-preferences-kicker">{t("server.title")}</div>
           {canPromote ? (
             <button
@@ -93,7 +93,7 @@ export function ServerProfileModal({
           </button>
         </div>
 
-        <div className="user-settings-content grid min-h-0 gap-4">
+        <div className="user-settings-content grid min-h-0 min-w-0 content-start gap-4 overflow-auto overflow-x-hidden pr-0">
           <div className="voice-preferences-head flex items-center justify-between gap-3">
             <h2>
               {serverMenuTab === "users" ? t("server.tabUsers") : null}
