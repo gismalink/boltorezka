@@ -339,11 +339,15 @@ export function App() {
     });
 
     if (roomVoiceConnected && user?.id && currentRoomVoiceTargets.length > 0) {
-      statusByUserId[user.id] = connectedPeerUserIds.length > 0 ? "connected" : "connecting";
+      if (callStatus === "active") {
+        statusByUserId[user.id] = "connected";
+      } else if (callStatus === "connecting" || callStatus === "ringing") {
+        statusByUserId[user.id] = "connecting";
+      }
     }
 
     return statusByUserId;
-  }, [connectingPeerUserIds, connectedPeerUserIds, roomVoiceConnected, user?.id, currentRoomVoiceTargets.length]);
+  }, [connectingPeerUserIds, connectedPeerUserIds, roomVoiceConnected, user?.id, currentRoomVoiceTargets.length, callStatus]);
 
   const authController = useMemo(
     () =>

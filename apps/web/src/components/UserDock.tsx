@@ -68,6 +68,13 @@ export function UserDock({
   const modalBarCount = 42;
   const miniActiveBars = Math.min(miniBarCount, Math.round(micTestLevel * miniBarCount));
   const modalActiveBars = Math.min(modalBarCount, Math.round(micTestLevel * modalBarCount));
+  const userStatusLabel = !currentRoomSupportsRtc
+    ? t("status.online")
+    : callStatus === "active"
+      ? t("rtc.connected")
+      : roomVoiceConnected || callStatus === "connecting" || callStatus === "ringing"
+        ? t("rtc.connecting")
+        : t("status.online");
 
   return (
     <>
@@ -122,7 +129,7 @@ export function UserDock({
             </button>
             <div className="user-meta">
               <div className="user-name-line">{user.name}</div>
-              <div className="muted user-status-line">{currentRoomSupportsRtc ? t("status.voice") : t("status.online")}</div>
+              <div className="muted user-status-line">{userStatusLabel}</div>
             </div>
           </div>
           <div className="user-panel-actions">
