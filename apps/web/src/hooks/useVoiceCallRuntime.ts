@@ -148,6 +148,24 @@ const RTC_CONFIG: RTCConfiguration = {
   iceTransportPolicy: RTC_ICE_TRANSPORT_POLICY
 };
 
+function parseLocalCandidateMeta(rawCandidate: string): {
+  type: string;
+  transport: string;
+  address: string;
+  port: string;
+} {
+  const typeMatch = rawCandidate.match(/\btyp\s+([a-z0-9]+)/i);
+  const transportMatch = rawCandidate.match(/\b(udp|tcp)\b/i);
+  const addressPortMatch = rawCandidate.match(/candidate:[^\s]+\s+\d+\s+(?:udp|tcp)\s+\d+\s+([^\s]+)\s+(\d+)/i);
+
+  return {
+    type: typeMatch?.[1]?.toLowerCase() || "unknown",
+    transport: transportMatch?.[1]?.toLowerCase() || "unknown",
+    address: addressPortMatch?.[1] || "unknown",
+    port: addressPortMatch?.[2] || "unknown"
+  };
+}
+
 export function useVoiceCallRuntime({
   localUserId,
   roomSlug,
@@ -546,6 +564,9 @@ export function useVoiceCallRuntime({
     clearPeerReconnectTimer(targetUserId);
     clearPeerStatsTimer(targetUserId);
     peer.connection.onicecandidate = null;
+    peer.connection.onicecandidateerror = null;
+    peer.connection.oniceconnectionstatechange = null;
+    peer.connection.onicegatheringstatechange = null;
     peer.connection.onconnectionstatechange = null;
     peer.connection.ontrack = null;
     if (peer.speakingAnimationFrameId) {
@@ -753,8 +774,14 @@ export function useVoiceCallRuntime({
 
     connection.onicecandidate = (event) => {
       if (!event.candidate) {
+        pushCallLog(`rtc ice gathering complete <- ${targetLabel || targetUserId}`);
         return;
       }
+
+      const meta = parseLocalCandidateMeta(event.candidate.candidate);
+      pushCallLog(
+        `call.ice local -> ${targetLabel || targetUserId} typ=${meta.type} transport=${meta.transport} addr=${meta.address}:${meta.port}`
+      );
 
       const requestId = sendWsEvent(
         "call.ice",
@@ -764,7 +791,30 @@ export function useVoiceCallRuntime({
         },
         { maxRetries: 1 }
       );
+
+      if (!requestId) {
+        pushCallLog(`call.ice skipped: socket unavailable (${targetLabel || targetUserId})`);
+      }
+
       rememberRequestTarget(requestId, "call.ice", targetUserId);
+    };
+
+    connection.onicegatheringstatechange = () => {
+      pushCallLog(
+        `rtc ice gathering state ${targetLabel || targetUserId}: ${connection.iceGatheringState}`
+      );
+    };
+
+    connection.oniceconnectionstatechange = () => {
+      pushCallLog(
+        `rtc ice connection state ${targetLabel || targetUserId}: ${connection.iceConnectionState}`
+      );
+    };
+
+    connection.onicecandidateerror = (event: RTCPeerConnectionIceErrorEvent) => {
+      pushCallLog(
+        `rtc ice candidate error ${targetLabel || targetUserId}: code=${event.errorCode || "n/a"} text=${event.errorText || ""} url=${event.url || ""} address=${event.address || ""} port=${event.port || ""}`
+      );
     };
 
     connection.onconnectionstatechange = () => {
