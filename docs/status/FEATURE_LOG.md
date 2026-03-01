@@ -39,6 +39,8 @@
   - `b47c5a1` — `web: remove duplicated layout scss rules covered by tailwind`
   - `b2e14d9` — `web: tailwind-migrate rooms internal rows and confirm overlay`
   - `1ec3dd3` — `web: tailwind-migrate chat message layout and popup positioning`
+  - `2218a5f` — `web: clean empty legacy style blocks and update feature log`
+  - `0fb987e` — `web: remove remaining rooms-chat layout duplicates`
 
 ### Next step
 
