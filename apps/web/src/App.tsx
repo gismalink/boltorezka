@@ -19,6 +19,7 @@ import {
 } from "./components";
 import type { InputProfile, MediaDevicesState, VoiceSettingsPanel } from "./components";
 import {
+  useAutoRoomVoiceConnection,
   useAuthProfileFlow,
   useCollapsedCategories,
   useMediaDevicePreferences,
@@ -28,7 +29,8 @@ import {
   useRoomAdminActions,
   useRoomsDerived,
   useServerMenuAccessGuard,
-  useVoiceCallRuntime
+  useVoiceCallRuntime,
+  useVoiceRoomStateMaps
 } from "./hooks";
 import { detectInitialLang, LANGUAGE_OPTIONS, LOCALE_BY_LANG, TEXT, type Lang } from "./i18n";
 import type {
@@ -47,7 +49,6 @@ const TOAST_AUTO_DISMISS_MS = 4500;
 const TOAST_ID_RANDOM_RANGE = 10000;
 const TOAST_DUPLICATE_THROTTLE_MS = 12000;
 const TOAST_MAX_VISIBLE = 4;
-const AUTO_ROOM_DISCONNECT_GRACE_MS = 8000;
 
 type ServerMenuTab = "users" | "events" | "telemetry" | "call";
 type MobileTab = "channels" | "chat" | "profile";
@@ -132,7 +133,6 @@ export function App() {
   const userSettingsRef = useRef<HTMLDivElement>(null);
   const toastTimeoutsRef = useRef<Map<number, number>>(new Map());
   const toastLastShownAtRef = useRef<Map<string, number>>(new Map());
-  const autoRoomDisconnectTimerRef = useRef<number | null>(null);
 
   const canCreateRooms = user?.role === "admin" || user?.role === "super_admin";
   const canPromote = user?.role === "super_admin";
@@ -265,89 +265,24 @@ export function App() {
     setLastCallPeer
   });
 
-  const voiceMicStateByUserIdInCurrentRoom = useMemo(() => {
-    const statusByUserId: Record<string, "muted" | "silent" | "speaking"> = {};
-
-    connectedPeerUserIds.forEach((userId) => {
-      const normalized = String(userId || "").trim();
-      if (normalized) {
-        statusByUserId[normalized] = "silent";
-      }
-    });
-
-    remoteSpeakingPeerUserIds.forEach((userId) => {
-      const normalized = String(userId || "").trim();
-      if (normalized) {
-        statusByUserId[normalized] = "speaking";
-      }
-    });
-
-    remoteMutedPeerUserIds.forEach((userId) => {
-      const normalized = String(userId || "").trim();
-      if (normalized) {
-        statusByUserId[normalized] = "muted";
-      }
-    });
-
-    if (roomVoiceConnected && user?.id) {
-      const localSpeaking = !micMuted && micTestLevel >= 0.055;
-      statusByUserId[user.id] = micMuted ? "muted" : localSpeaking ? "speaking" : "silent";
-    }
-
-    return statusByUserId;
-  }, [connectedPeerUserIds, remoteSpeakingPeerUserIds, remoteMutedPeerUserIds, roomVoiceConnected, user?.id, micMuted, micTestLevel]);
-
-  const voiceAudioOutputMutedByUserIdInCurrentRoom = useMemo(() => {
-    const statusByUserId: Record<string, boolean> = {};
-
-    connectedPeerUserIds.forEach((userId) => {
-      const normalized = String(userId || "").trim();
-      if (normalized) {
-        statusByUserId[normalized] = false;
-      }
-    });
-
-    remoteAudioMutedPeerUserIds.forEach((userId) => {
-      const normalized = String(userId || "").trim();
-      if (normalized) {
-        statusByUserId[normalized] = true;
-      }
-    });
-
-    if (roomVoiceConnected && user?.id) {
-      statusByUserId[user.id] = audioMuted;
-    }
-
-    return statusByUserId;
-  }, [connectedPeerUserIds, remoteAudioMutedPeerUserIds, roomVoiceConnected, user?.id, audioMuted]);
-
-  const voiceRtcStateByUserIdInCurrentRoom = useMemo(() => {
-    const statusByUserId: Record<string, "disconnected" | "connecting" | "connected"> = {};
-
-    connectingPeerUserIds.forEach((userId) => {
-      const normalized = String(userId || "").trim();
-      if (normalized) {
-        statusByUserId[normalized] = "connecting";
-      }
-    });
-
-    connectedPeerUserIds.forEach((userId) => {
-      const normalized = String(userId || "").trim();
-      if (normalized) {
-        statusByUserId[normalized] = "connected";
-      }
-    });
-
-    if (roomVoiceConnected && user?.id && currentRoomVoiceTargets.length > 0) {
-      if (callStatus === "active") {
-        statusByUserId[user.id] = "connected";
-      } else if (callStatus === "connecting" || callStatus === "ringing") {
-        statusByUserId[user.id] = "connecting";
-      }
-    }
-
-    return statusByUserId;
-  }, [connectingPeerUserIds, connectedPeerUserIds, roomVoiceConnected, user?.id, currentRoomVoiceTargets.length, callStatus]);
+  const {
+    voiceMicStateByUserIdInCurrentRoom,
+    voiceAudioOutputMutedByUserIdInCurrentRoom,
+    voiceRtcStateByUserIdInCurrentRoom
+  } = useVoiceRoomStateMaps({
+    userId: user?.id || "",
+    roomVoiceConnected,
+    micMuted,
+    micTestLevel,
+    audioMuted,
+    callStatus,
+    roomVoiceTargetsCount: currentRoomVoiceTargets.length,
+    connectingPeerUserIds,
+    connectedPeerUserIds,
+    remoteMutedPeerUserIds,
+    remoteSpeakingPeerUserIds,
+    remoteAudioMutedPeerUserIds
+  });
 
   const authController = useMemo(
     () =>
@@ -693,61 +628,13 @@ export function App() {
 
   const currentRoomSupportsRtc = currentRoom ? currentRoom.kind !== "text" : false;
 
-  useEffect(() => {
-    if (!currentRoomSupportsRtc) {
-      if (autoRoomDisconnectTimerRef.current !== null) {
-        window.clearTimeout(autoRoomDisconnectTimerRef.current);
-        autoRoomDisconnectTimerRef.current = null;
-      }
-      if (roomVoiceConnected) {
-        disconnectRoom();
-      }
-      return;
-    }
-
-    const hasOtherParticipants = currentRoomVoiceTargets.length > 0;
-
-    if (hasOtherParticipants) {
-      if (autoRoomDisconnectTimerRef.current !== null) {
-        window.clearTimeout(autoRoomDisconnectTimerRef.current);
-        autoRoomDisconnectTimerRef.current = null;
-      }
-      if (!roomVoiceConnected) {
-        void connectRoom();
-      }
-      return;
-    }
-
-    if (!roomVoiceConnected) {
-      if (autoRoomDisconnectTimerRef.current !== null) {
-        window.clearTimeout(autoRoomDisconnectTimerRef.current);
-        autoRoomDisconnectTimerRef.current = null;
-      }
-      return;
-    }
-
-    if (autoRoomDisconnectTimerRef.current !== null) {
-      return;
-    }
-
-    autoRoomDisconnectTimerRef.current = window.setTimeout(() => {
-      autoRoomDisconnectTimerRef.current = null;
-      disconnectRoom();
-    }, AUTO_ROOM_DISCONNECT_GRACE_MS);
-
-    return () => {
-      if (autoRoomDisconnectTimerRef.current !== null) {
-        window.clearTimeout(autoRoomDisconnectTimerRef.current);
-        autoRoomDisconnectTimerRef.current = null;
-      }
-    };
-  }, [
+  useAutoRoomVoiceConnection({
     currentRoomSupportsRtc,
-    currentRoomVoiceTargets.length,
+    roomVoiceTargetsCount: currentRoomVoiceTargets.length,
     roomVoiceConnected,
     connectRoom,
     disconnectRoom
-  ]);
+  });
 
   useServerMenuAccessGuard({
     serverMenuTab,
@@ -755,15 +642,6 @@ export function App() {
     canViewTelemetry,
     setServerMenuTab
   });
-
-  useEffect(() => {
-    return () => {
-      if (autoRoomDisconnectTimerRef.current !== null) {
-        window.clearTimeout(autoRoomDisconnectTimerRef.current);
-        autoRoomDisconnectTimerRef.current = null;
-      }
-    };
-  }, []);
 
   const userDockNode = user ? (
     <UserDock

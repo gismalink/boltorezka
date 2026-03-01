@@ -1,4 +1,5 @@
 export { useAuthProfileFlow } from "./useAuthProfileFlow";
+export { useAutoRoomVoiceConnection } from "./useAutoRoomVoiceConnection";
 export { useCollapsedCategories } from "./useCollapsedCategories";
 export { useMediaDevicePreferences } from "./useMediaDevicePreferences";
 export { useMicrophoneLevelMeter } from "./useMicrophoneLevelMeter";
@@ -8,3 +9,4 @@ export { useRoomAdminActions } from "./useRoomAdminActions";
 export { useRoomsDerived } from "./useRoomsDerived";
 export { useServerMenuAccessGuard } from "./useServerMenuAccessGuard";
 export { useVoiceCallRuntime } from "./useVoiceCallRuntime";
+export { useVoiceRoomStateMaps } from "./useVoiceRoomStateMaps";
