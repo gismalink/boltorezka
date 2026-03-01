@@ -41,6 +41,7 @@
   - `1ec3dd3` — `web: tailwind-migrate chat message layout and popup positioning`
   - `2218a5f` — `web: clean empty legacy style blocks and update feature log`
   - `0fb987e` — `web: remove remaining rooms-chat layout duplicates`
+  - `f622325` — `web: finalize style dedup for dock, overlays, and chat`
 
 ### Next step
 
