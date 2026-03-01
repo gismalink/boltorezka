@@ -27,17 +27,6 @@
   margin-top: var(--space-md);
 }
 
-.rtc-call-controls {
-  margin-top: var(--space-md);
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: var(--space-sm);
-}
-
-.rtc-call-controls input {
-  min-width: 0;
-}
-
 .user-avatar-badge {
   width: var(--icon-size-md);
   height: var(--icon-size-md);

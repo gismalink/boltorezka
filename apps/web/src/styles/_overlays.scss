@@ -10,8 +10,7 @@
 }
 
 .profile-popup,
-.auth-popup,
-.server-menu-popup {
+.auth-popup {
   position: absolute;
   top: calc(100% + var(--offset-popup));
   right: 0;
@@ -47,45 +46,6 @@
 
 .auth-popup {
   min-width: 180px;
-}
-
-.server-menu-popup {
-  min-width: min(760px, 92vw);
-  max-height: min(74vh, 760px);
-  overflow: hidden;
-}
-
-.server-menu-shell {
-  display: grid;
-  gap: var(--space-md);
-}
-
-.server-menu-shell h2,
-.server-menu-shell h3 {
-  margin: 0;
-}
-
-.server-menu-tabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-sm);
-}
-
-.server-menu-tab {
-  min-height: 34px;
-}
-
-.server-menu-tab-active {
-  border-color: var(--pixel-neon-cyan);
-  box-shadow: 0 0 0 1px var(--pixel-neon-cyan), 2px 2px 0 var(--pixel-hard-shadow);
-}
-
-.server-menu-content {
-  max-height: min(56vh, 560px);
-  overflow: auto;
-  padding-right: var(--space-xxs);
-  display: grid;
-  gap: var(--space-md);
 }
 
 .settings-popup {

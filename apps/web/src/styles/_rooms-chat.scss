@@ -163,8 +163,7 @@
   color: color-mix(in srgb, var(--pixel-neon-cyan) 80%, var(--pixel-text) 20%);
 }
 
-.channel-member-item-current .channel-member-name,
-.room-people-item-current {
+.channel-member-item-current .channel-member-name {
   color: var(--pixel-neon-cyan);
   text-shadow: 1px 0 0 var(--pixel-hard-shadow);
 }
@@ -208,24 +207,6 @@
   right: 0;
   top: calc(100% + var(--offset-menu));
   z-index: 30;
-}
-
-.presence-box {
-  margin: 0;
-}
-
-.room-people-list {
-  list-style: none;
-  margin: var(--space-md) 0 0;
-  padding: 0;
-  display: grid;
-  gap: var(--space-sm);
-}
-
-.room-people-item {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
 }
 
 .chat-log {
