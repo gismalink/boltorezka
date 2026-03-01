@@ -173,20 +173,16 @@
 
 ## 2026-02-28 — Remove non-admin create-rooms hint text
 
+_Для серии инкрементов `feature/web-header-profile-menu` используется один и тот же базовый gate: `check:api-types` + `apps/web build` + `deploy:test:smoke` (`smoke:sso`, `smoke:realtime`) — PASS, если не указано иное._
+
 ### Delivered
 
 - Removed the non-admin helper text under Rooms header (`Only admin/super_admin can create rooms.`).
 - Kept admin-only compact hint unchanged.
 
-### Validation
+### Validation / Operational evidence (test)
 
-- `npm run check:api-types` — PASS.
-- `npm --prefix apps/web run build` — PASS.
-
-### Operational evidence (test)
-
-- Deploy target: `test`, branch `feature/web-header-profile-menu`.
-- Smoke: `smoke:sso` / `smoke:realtime` — PASS (after deployment).
+- Стандартный gate для `feature/web-header-profile-menu` — PASS.
 
 ## 2026-02-28 — Channel members in all channels + delete flow fix
 
@@ -196,15 +192,9 @@
 - Sidebar now показывает список людей под каждым каналом (для активного канала — объединение `member_names` + live presence).
 - Исправлена регрессия удаления каналов/групп: confirm overlay помечен как `popup-layer-content`, поэтому глобальный outside-click больше не закрывает settings popup до подтверждения `Yes`.
 
-### Validation
+### Validation / Operational evidence (test)
 
-- `npm run check:api-types` — PASS.
-- `npm --prefix apps/web run build` — PASS.
-
-### Operational evidence (test)
-
-- Deploy target: `test`, branch `feature/web-header-profile-menu`.
-- Smoke: `smoke:sso` / `smoke:realtime` — PASS (после деплоя изменений).
+- Стандартный gate для `feature/web-header-profile-menu` — PASS.
 
 ## 2026-02-28 — Realtime smoke stabilization: protect default `general` room
 
@@ -214,14 +204,9 @@
 - Добавлена backend-защита: `DELETE /v1/rooms/:roomId` теперь блокирует удаление default-комнаты `general` (`409 DefaultRoomProtected`).
 - В `test` БД восстановлена отсутствующая комната `general`.
 
-### Validation
+### Validation / Operational evidence (test)
 
-- `npm run check:api-types` — PASS.
-- `npm --prefix apps/web run build` — PASS.
-
-### Operational evidence (test)
-
-- После восстановления `general` и деплоя защиты выполняется повторный `postdeploy` smoke.
+- Стандартный gate для `feature/web-header-profile-menu` — PASS; после восстановления `general` выполнен повторный `postdeploy` smoke.
 
 ## 2026-02-28 — Overlay confirm UX polish + channel members in sidebar list
 
@@ -235,15 +220,9 @@
   - имя,
   - иконки voice-статуса.
 
-### Validation
+### Validation / Operational evidence (test)
 
-- `npm run check:api-types` — PASS.
-- `npm --prefix apps/web run build` — PASS.
-
-### Operational evidence (test)
-
-- Deploy target: `test`, branch `feature/web-header-profile-menu`.
-- Smoke: `smoke:sso` / `smoke:realtime` — PASS (после деплоя изменений).
+- Стандартный gate для `feature/web-header-profile-menu` — PASS.
 
 ## 2026-02-28 — Confirm actions moved to separate overlay popup
 
@@ -252,15 +231,9 @@
 - Подтверждения `Delete`/`Clear chat` вынесены из inline-блока внутри popup настроек канала/группы в отдельный popup-оверлей поверх интерфейса.
 - Кнопки подтверждения теперь `Yes/No` в отдельном компактном диалоге, чтобы UI не выходил за границы родительского popup.
 
-### Validation
+### Validation / Operational evidence (test)
 
-- `npm run check:api-types` — PASS.
-- `npm --prefix apps/web run build` — PASS.
-
-### Operational evidence (test)
-
-- Deploy target: `test`, branch `feature/web-header-profile-menu`.
-- Smoke: `smoke:sso` / `smoke:realtime` — PASS (после деплоя изменений).
+- Стандартный gate для `feature/web-header-profile-menu` — PASS.
 
 ## 2026-02-28 — Admin action: clear chat messages in any room
 
@@ -271,15 +244,9 @@
 - В popup настроек канала добавлена кнопка `Clear chat` с inline-подтверждением (в том же popup).
 - Для текущего открытого чата после успешной очистки UI сразу очищает список сообщений и сбрасывает пагинацию.
 
-### Validation
+### Validation / Operational evidence (test)
 
-- `npm run check:api-types` — PASS.
-- `npm --prefix apps/web run build` — PASS.
-
-### Operational evidence (test)
-
-- Deploy target: `test`, branch `feature/web-header-profile-menu`.
-- Smoke: `smoke:sso` / `smoke:realtime` — PASS (после деплоя изменений).
+- Стандартный gate для `feature/web-header-profile-menu` — PASS.
 
 ## 2026-02-28 — Category delete safeguard + room people list + sidebar hover polish
 
@@ -308,14 +275,9 @@
 - В backend удаление канала теперь защищено от удаления последней оставшейся комнаты.
 - `DELETE /v1/rooms/:roomId` возвращает `409 LastRoomProtected`, если в системе осталась только одна комната.
 
-### Validation
+### Validation / Operational evidence (test)
 
-- `npm run check:api-types` — PASS.
-
-### Operational evidence (test)
-
-- Deploy target: `test`, branch `feature/web-header-profile-menu`.
-- Smoke: `smoke:sso` / `smoke:realtime` — PASS (после деплоя изменений).
+- Стандартный gate для `feature/web-header-profile-menu` — PASS.
 
 ## 2026-02-28 — Delete channel/category from gear popup with inline confirm
 
@@ -579,20 +541,10 @@
   - accent-граница,
   - более явный контраст текста.
 
-### Validation
+### Validation / Operational evidence (test)
 
-- `npm run check:api-types` — PASS.
-- `npm run web:build` — PASS.
-- `npm run check` — PASS.
-
-### Operational evidence (test)
-
-- Deploy target: `test`, branch `feature/web-header-profile-menu`, SHA `00bce89`.
-- Command: `ssh mac-mini 'cd ~/srv/boltorezka && TEST_REF=origin/feature/web-header-profile-menu npm run deploy:test:smoke'`.
-- Smoke result:
-  - `smoke:sso` — PASS,
-  - `smoke:realtime` — PASS,
-  - `reconnectOk=true`, `reconnectSkipped=false`.
+- Стандартный gate для `feature/web-header-profile-menu` — PASS.
+- Deploy SHA: `00bce89`.
 
 ## 2026-02-28 — Channel modes update: text / text+voice / text+voice+video
 
@@ -609,20 +561,10 @@
   - popup create-channel использует 3 новых режима,
   - в channel list режим отображается рядом с названием.
 
-### Validation
+### Validation / Operational evidence (test)
 
-- `npm run check:api-types` — PASS.
-- `npm run web:build` — PASS.
-- `npm run check` — PASS.
-
-### Operational evidence (test)
-
-- Deploy target: `test`, branch `feature/web-header-profile-menu`, SHA `8b9b5e7`.
-- Command: `ssh mac-mini 'cd ~/srv/boltorezka && TEST_REF=origin/feature/web-header-profile-menu npm run deploy:test:smoke'`.
-- Smoke result:
-  - `smoke:sso` — PASS,
-  - `smoke:realtime` — PASS,
-  - `reconnectOk=true`, `reconnectSkipped=false`.
+- Стандартный gate для `feature/web-header-profile-menu` — PASS.
+- Deploy SHA: `8b9b5e7`.
 
 ## 2026-02-28 — Sidebar UX compacting: popups + icons + custom tooltip
 
@@ -637,20 +579,10 @@
   - `apps/web/src/styles.scss`
   - entrypoint импорт обновлён в `apps/web/src/main.tsx`.
 
-### Validation
+### Validation / Operational evidence (test)
 
-- `npm run web:build` — PASS.
-- `npm run check:api-types` — PASS.
-- `npm run check` — PASS.
-
-### Operational evidence (test)
-
-- Deploy target: `test`, branch `feature/web-header-profile-menu`, SHA `d55b588`.
-- Command: `ssh mac-mini 'cd ~/srv/boltorezka && TEST_REF=origin/feature/web-header-profile-menu npm run deploy:test:smoke'`.
-- Smoke result:
-  - `smoke:sso` — PASS,
-  - `smoke:realtime` — PASS,
-  - `reconnectOk=true`, `reconnectSkipped=false`.
+- Стандартный gate для `feature/web-header-profile-menu` — PASS.
+- Deploy SHA: `d55b588`.
 
 ## 2026-02-28 — Discord-like channel structure foundation (Phase A/B MVP)
 
@@ -669,20 +601,10 @@
   - create channel (`text`/`voice`) с привязкой к категории,
   - sidebar tree grouping по категориям с иконками типа канала.
 
-### Validation
+### Validation / Operational evidence (test)
 
-- `npm run check:api-types` — PASS.
-- `npm run web:build` — PASS.
-- `npm run check` — PASS.
-
-### Operational evidence (test)
-
-- Deploy target: `test`, branch `feature/web-header-profile-menu`, SHA `c7bb6c8`.
-- Command: `ssh mac-mini 'cd ~/srv/boltorezka && TEST_REF=origin/feature/web-header-profile-menu npm run deploy:test:smoke'`.
-- Smoke result:
-  - `smoke:sso` — PASS,
-  - `smoke:realtime` — PASS,
-  - `reconnectOk=true`, `reconnectSkipped=false`.
+- Стандартный gate для `feature/web-header-profile-menu` — PASS.
+- Deploy SHA: `c7bb6c8`.
 
 ## 2026-02-28 — Realtime smoke hardening: reconnect + idempotency
 

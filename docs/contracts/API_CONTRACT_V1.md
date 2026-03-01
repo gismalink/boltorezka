@@ -102,9 +102,10 @@
 
 ## Admin / RBAC
 
+- Базовая auth-модель для admin endpoint’ов этого раздела: Bearer JWT + role `admin|super_admin` (если не указано иное).
+
 ### GET /v1/admin/users
 
-- Auth: Bearer JWT + role `admin|super_admin`
 - 200:
   - `users[]`: `{ id, email, name, role, created_at }`
 
@@ -133,7 +134,6 @@
 
 ### GET /v1/telemetry/summary
 
-- Auth: Bearer JWT + role `admin|super_admin`
 - 200:
   - `day`
   - `metrics`: `{ nack_sent, ack_sent, chat_sent, chat_idempotency_hit, telemetry_web_event }`

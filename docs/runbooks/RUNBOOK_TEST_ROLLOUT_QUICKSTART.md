@@ -44,9 +44,7 @@
 
 ### One-command альтернатива (deploy + smoke)
 
-Если deploy выполняется из `~/srv/boltorezka`, можно использовать единый запуск:
-
-- `ssh mac-mini 'cd ~/srv/boltorezka && TEST_REF=origin/main ALLOW_TEST_FROM_MAIN=1 npm run deploy:test:smoke'`
+Используй команду из шага 3 (`deploy:test:smoke`) как единый запуск deploy+smoke.
 
 Скрипт выполняет:
 
