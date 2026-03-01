@@ -1,13 +1,13 @@
 # Boltorezka Pre-Prod Decision Package
 
-Дата: 2026-02-28  
+Дата: 2026-03-01  
 Среда подготовки: `test`  
 Релизный поток: `feature/* -> test -> merge -> main -> prod`
 
 ## 1) Decision summary
 
-- Decision status: **NOT READY FOR PROD** (пакет подготовлен, используется как gate-документ).
-- Причина: пакет evidence/rollback собран, но перед `prod` всё равно требуется явное подтверждение владельца релиза и merge-ready состояние по бизнес-критериям MVP.
+- Decision status: **GO EXECUTED** (для MVP-инкремента 2026-03-01).
+- Причина: gates пройдены, выполнен policy-compliant rollout из `origin/main` в `prod` после test validation и explicit approval.
 - Production rollout policy: только из `origin/main` после отдельного explicit approval.
 
 ## 2) Scope of evidence
@@ -22,14 +22,25 @@
 
 ### 3.1 Latest verified test rollout
 
-- Branch: `origin/feature/web-header-profile-menu`
-- Verified deploy SHA in test: `c52890d`
+- Branch: `origin/feature/mobile-earpiece-default`
+- Verified deploy SHA in test: `30e354d`
 - Command:
-  - `ssh mac-mini 'cd ~/srv/boltorezka && TEST_REF=origin/feature/web-header-profile-menu npm run deploy:test:smoke'`
+  - `ssh mac-mini 'cd ~/srv/boltorezka && TEST_REF=origin/feature/mobile-earpiece-default npm run deploy:test:smoke'`
 - Result:
   - `smoke:sso` — PASS
   - `smoke:realtime` — PASS
   - `reconnectOk=true`
+
+### 3.1.1 Latest production rollout (executed)
+
+- Target: `origin/main`
+- Deploy SHA in prod: `36dd4e129b92e7bb0300ff936a8359f6f9be3658`
+- Commands:
+  - `ssh mac-mini 'cd ~/srv/boltorezka && PROD_REF=origin/main npm run deploy:prod'`
+  - post-checks: `curl -I https://boltorezka.gismalink.art/health`, `curl https://boltorezka.gismalink.art/v1/auth/mode`
+- Result:
+  - health: `200`
+  - mode: `sso`
 
 ### 3.2 Web E2E smoke coverage (roadmap block)
 
@@ -41,7 +52,16 @@
   - login redirect (`smoke:sso`),
   - room join + message send/receive (`smoke:realtime`),
   - voice connect/disconnect relay path (`SMOKE_CALL_SIGNAL=1`),
-  - reconnect scenario (`SMOKE_RECONNECT=1`).
+  - reconnect scenario (`SMOKE_RECONNECT=1`),
+  - admin moderation checks (`promote/demote/ban/unban`) в server profile UI.
+
+### 3.4 Voice baseline evidence (canonical)
+
+- Canonical runbook: `docs/VOICE_BASELINE_RUNBOOK.md`
+- Закреплённый baseline:
+  - `VITE_RTC_ICE_TRANSPORT_POLICY=relay`
+  - `VITE_RTC_ICE_SERVERS_JSON` с `turns:gismalink.art:5349?transport=tcp`
+- Важное runtime-условие: отправка offer/answer после ICE gathering (или timeout guard).
 
 ### 3.3 Verify pipeline gate
 
@@ -169,16 +189,16 @@
 - Rollback ref: `<known-good-sha>`
 - Final decision: `GO | NO-GO`
 
-### 8.4 Current draft gate record (2026-02-28)
+### 8.4 Current gate record (2026-03-01)
 
-- Target main SHA: `de48a78` (`origin/main`)
-- Last test deploy SHA: `c52890d` (`origin/feature/web-header-profile-menu`)
+- Target main SHA: `36dd4e1` (`origin/main`)
+- Last test deploy SHA: `30e354d` (`origin/feature/mobile-earpiece-default`)
 - smoke:sso: `PASS`
 - smoke:realtime: `PASS`
 - reconnectOk: `true`
-- smoke:web:e2e: `PASS` (server run: `SMOKE_API_URL=https://test.boltorezka.gismalink.art npm run smoke:web:e2e`)
-- call relay scenario (`SMOKE_CALL_SIGNAL=1`): `PASS` (`callSignalRelayed=true`, `callRejectRelayed=true`, `callHangupRelayed=true`)
+- smoke:web:e2e: `PASS`
+- call relay scenario (`SMOKE_CALL_SIGNAL=1`): `PASS`
 - Release Owner: `<name>`
 - Rollback Owner: `<name>`
 - Rollback ref: `<known-good-main-sha>`
-- Final decision: `NO-GO` (до заполнения owner/sign-off полей и explicit prod approval)
+- Final decision: `GO` (prod rollout выполнен, post-checks pass)

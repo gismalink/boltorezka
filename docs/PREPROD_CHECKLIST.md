@@ -27,6 +27,10 @@ Decision package (обязательно к заполнению перед `pro
    - `super_admin` может промоутить пользователя в `admin`,
    - обычный `user` не может создавать комнату,
    - `admin` может создавать комнату.
+7. Admin moderation smoke пройден:
+   - `super_admin` может `demote` администратора обратно в `user`,
+   - `super_admin` может `ban/unban` пользователя,
+   - banned user не получает `ws-ticket` и не проходит guarded auth paths.
 
 ## 3) Runtime и конфигурация
 
@@ -38,6 +42,9 @@ Decision package (обязательно к заполнению перед `pro
    - test содержит `test.boltorezka.gismalink.art`
    - prod содержит `boltorezka.gismalink.art`
 4. Edge ingress содержит маршруты для test/prod Boltorezka.
+5. Voice baseline соответствует канонике:
+   - `docs/VOICE_BASELINE_RUNBOOK.md`,
+   - приоритетный production-путь: `relay + TURN TLS/TCP`.
 6. Realtime WebSocket использует short-lived `ws-ticket` (не bearer token в query).
 
 ## 4) Release decision gate
@@ -62,4 +69,6 @@ Decision package (обязательно к заполнению перед `pro
 1. `curl -I https://boltorezka.gismalink.art/health` -> `200`.
 2. Проверка SSO redirect на prod домене.
 3. Короткий UI smoke (login -> room -> chat).
-4. Логи без критичных ошибок в первые 10-15 минут.
+4. Короткий voice smoke по канонике (`docs/VOICE_BASELINE_RUNBOOK.md`).
+5. Проверка admin moderation UI (`promote/demote/ban/unban`) на prod.
+6. Логи без критичных ошибок в первые 10-15 минут.

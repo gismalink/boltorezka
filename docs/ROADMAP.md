@@ -3,22 +3,19 @@
 Этот документ хранит только план и открытые задачи.
 Фактически реализованные изменения и evidence ведутся отдельно в `docs/FEATURE_LOG.md`.
 
-## Current status (single-pane, 2026-02-28)
+## Current status (single-pane, 2026-03-01)
 
-- Release gate: **NO-GO** для `prod` (до заполнения owner/sign-off и explicit approval).
-- `prod` path: только `origin/main@<sha>` после успешного `test` smoke.
-- Latest verified test deploy: `origin/feature/web-header-profile-menu` @ `57803af`.
-- Smoke snapshot:
-  - `smoke:sso` — PASS
-  - `smoke:realtime` — PASS
-  - `reconnectOk=true`
-  - `smoke:web:e2e` — PASS
-  - `SMOKE_CALL_SIGNAL=1` relay — PASS
-- Open items to reach `GO`:
-  1. Заполнить `Release Owner` и `Rollback Owner`.
-  2. Зафиксировать rollback ref (`known-good main SHA`).
-  3. Подтвердить target ref `origin/main@<sha>`.
-  4. Получить explicit `GO` перед `prod` rollout.
+- Release gate: **GO executed** для текущего MVP-инкремента.
+- Production rollout выполнен из `origin/main` (policy-compliant):
+  - deploy SHA: `36dd4e129b92e7bb0300ff936a8359f6f9be3658`;
+  - post-deploy smoke: `/health` = `200`, `/v1/auth/mode` = `sso`.
+- Latest test rollout before prod: `origin/feature/mobile-earpiece-default` @ `30e354d`.
+- Критичные блоки закрыты:
+  - voice baseline стабилизирован (`relay + TURN TLS/TCP`),
+  - mobile MVP UI доведён,
+  - admin users: `promote/demote/ban/unban`.
+- Каноника по голосу:
+  - `docs/VOICE_BASELINE_RUNBOOK.md`.
 
 Навигация:
 - План и open tasks: этот документ.
@@ -37,9 +34,9 @@
 
 ## Focus now (операционный фокус)
 
-1. Закрыть remaining web MVP задачи (Phase 4).
-2. Дойти до формального `GO` по pre-prod gate.
-3. Выполнить controlled rollout в `prod` только из `origin/main`.
+1. Выполнить документационную уборку (удалить устаревшие gate-формулировки, синхронизировать runbooks).
+2. Закрепить voice runbook как обязательный reference в pre-prod проверках.
+3. Подготовить следующий MVP-инкремент на `feature/*` с test-first циклом.
 
 ## Completed milestones (свернуто)
 
@@ -133,7 +130,7 @@
 3. [x] Закрыть docs-gap для React как default UI runbook.
 4. [x] Финализировать OpenAPI/WS schema milestone.
 5. [x] Подготовить pre-prod decision пакет (evidence + rollback owner/plan).
-6. [ ] Вернуться к `prod` только после достижения MVP-like readiness.
+6. [x] Вернуться к `prod` только после достижения MVP-like readiness.
   - [x] Формализован MVP-like readiness gate в `docs/PREPROD_DECISION_PACKAGE.md`.
   - [x] Подготовлен текущий draft gate-record (статус `NO-GO` до закрытия pending-проверок).
   - [x] Закрыты pending smoke-проверки (`smoke:web:e2e`, `SMOKE_CALL_SIGNAL=1` relay).
