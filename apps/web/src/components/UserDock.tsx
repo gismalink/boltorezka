@@ -91,7 +91,7 @@ export function UserDock({
                 </div>
                 <div className="muted rtc-subtitle">{t("call.status")}: {callStatus}</div>
               </div>
-              <div className="rtc-top-actions">
+              <div className="rtc-top-actions inline-flex gap-2">
                 <button type="button" className="secondary icon-btn tiny" data-tooltip={t("rtc.muteConnection")} onClick={onToggleMic}>
                   <i className="bi bi-soundwave" aria-hidden="true" />
                 </button>
@@ -128,14 +128,14 @@ export function UserDock({
             >
               {(user.name || "U").charAt(0).toUpperCase()}
             </button>
-            <div className="user-meta min-w-0">
+            <div className="user-meta min-w-0 flex-1">
               <div className="user-name-line truncate">{user.name}</div>
               <div className="muted user-status-line">{userStatusLabel}</div>
             </div>
           </div>
           <div className="user-panel-actions flex items-center gap-2 max-[900px]:grid max-[900px]:w-full max-[900px]:grid-cols-2">
-            <div className="voice-settings-anchor max-[900px]:min-w-0" ref={voiceSettingsAnchorRef}>
-              <div className="audio-output-group split-control-group max-[900px]:grid max-[900px]:w-full max-[900px]:grid-cols-[minmax(0,1fr)_22px]">
+            <div className="voice-settings-anchor relative max-[900px]:min-w-0" ref={voiceSettingsAnchorRef}>
+              <div className="audio-output-group split-control-group inline-flex items-center gap-0 max-[900px]:grid max-[900px]:w-full max-[900px]:grid-cols-[minmax(0,1fr)_22px]">
                 <button
                   type="button"
                   className={`secondary icon-btn split-main-btn max-[900px]:w-full ${micMuted ? "icon-btn-danger" : ""}`}
@@ -309,8 +309,8 @@ export function UserDock({
               </PopupPortal>
             </div>
 
-            <div className="audio-output-anchor max-[900px]:min-w-0" ref={audioOutputAnchorRef}>
-              <div className="audio-output-group split-control-group max-[900px]:grid max-[900px]:w-full max-[900px]:grid-cols-[minmax(0,1fr)_22px]">
+            <div className="audio-output-anchor relative max-[900px]:min-w-0" ref={audioOutputAnchorRef}>
+              <div className="audio-output-group split-control-group inline-flex items-center gap-0 max-[900px]:grid max-[900px]:w-full max-[900px]:grid-cols-[minmax(0,1fr)_22px]">
                 <button
                   type="button"
                   className={`secondary icon-btn split-main-btn max-[900px]:w-full ${audioMuted ? "icon-btn-danger" : ""}`}

@@ -18,11 +18,6 @@
   margin-top: var(--space-xxs);
 }
 
-.rtc-top-actions {
-  display: inline-flex;
-  gap: var(--space-xs);
-}
-
 .rtc-actions-grid {
   margin-top: var(--space-md);
 }
@@ -52,11 +47,6 @@
   box-shadow: inset 0 0 0 1px var(--pixel-neon-cyan);
 }
 
-.user-meta {
-  min-width: 0;
-  flex: 1;
-}
-
 .user-name-line {
   font-weight: 600;
   white-space: nowrap;
@@ -66,17 +56,6 @@
 
 .user-status-line {
   font-size: var(--font-size-sm);
-}
-
-.audio-output-anchor,
-.voice-settings-anchor {
-  position: relative;
-}
-
-.audio-output-group {
-  display: inline-flex;
-  align-items: center;
-  gap: 0;
 }
 
 .split-control-group {
