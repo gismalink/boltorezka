@@ -17,6 +17,9 @@
 ### Validation (increment)
 
 - `apps/web -> npm run build` — PASS (только известный Sass legacy API warning, без build-fail).
+- Test deploy from feature branch выполнен: `TEST_REF=origin/feature/tailwind-user-dock npm run deploy:test:smoke` — PASS.
+  - Deploy target SHA: `f875e5750d735413ec360a9318f95df2f88de537`.
+  - Postdeploy smoke: `smoke:sso`, `smoke:api`, `smoke:realtime` — PASS.
 
 ### Branch
 
