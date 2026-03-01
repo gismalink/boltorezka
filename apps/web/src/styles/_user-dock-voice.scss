@@ -313,14 +313,17 @@
   height: 100%;
   padding: 0;
   overflow: hidden;
+  overflow-x: clip;
 }
 
 .voice-preferences-overlay.inline-settings-mode .voice-preferences-modal {
   width: 100%;
+  max-width: 100%;
   height: 100%;
   max-height: none;
   min-height: 0;
   overflow: hidden;
+  overflow-x: clip;
   padding: var(--space-lg);
   box-sizing: border-box;
 }
@@ -363,6 +366,7 @@
   gap: var(--space-xl);
   min-height: 0;
   overflow: auto;
+  overflow-x: hidden;
   min-width: 0;
   padding-right: 0;
 }
