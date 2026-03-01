@@ -1033,11 +1033,6 @@ export function useVoiceCallRuntime({
     roomVoiceConnectedRef.current = true;
     setRoomVoiceConnected(true);
     pushCallLog("voice room connect requested");
-    sendWsEvent("call.mic_state", {
-      muted: micMuted,
-      speaking: !micMuted && localSpeakingRef.current,
-      audioMuted
-    }, { maxRetries: 1 });
 
     if (roomVoiceTargetsRef.current.length === 0) {
       pushCallLog("voice room waiting for participants");
@@ -1046,7 +1041,7 @@ export function useVoiceCallRuntime({
     }
 
     await syncRoomTargets();
-  }, [pushCallLog, setCallStatus, syncRoomTargets, sendWsEvent, micMuted, audioMuted]);
+  }, [pushCallLog, setCallStatus, syncRoomTargets]);
 
   const disconnectRoom = useCallback(() => {
     const activeTargetIds = new Set(
@@ -1392,6 +1387,10 @@ export function useVoiceCallRuntime({
     }
 
     if (!roomVoiceConnectedRef.current) {
+      return;
+    }
+
+    if (peersRef.current.size === 0) {
       return;
     }
 
