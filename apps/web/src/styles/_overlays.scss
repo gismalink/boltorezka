@@ -5,10 +5,6 @@
   position: relative;
 }
 
-.profile-icon {
-  min-width: 40px;
-}
-
 .profile-popup,
 .auth-popup {
   position: absolute;
@@ -52,21 +48,9 @@
   min-width: 260px;
 }
 
-.provider-btn {
-  display: flex;
-  align-items: center;
-  gap: var(--space-md);
-  justify-content: flex-start;
-}
-
 .provider-icon {
-  width: 20px;
-  height: 20px;
   border-radius: 0;
   border: var(--border-strong) solid var(--pixel-border);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
   font-size: var(--font-size-sm);
   font-weight: 700;
 }

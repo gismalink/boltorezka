@@ -77,12 +77,12 @@ export function AppHeader({
             </button>
             <PopupPortal open={authMenuOpen} anchorRef={authMenuRef} className="auth-popup" placement="bottom-end">
               <div className="grid gap-2">
-                <button type="button" className="provider-btn w-full" onClick={() => onBeginSso("google")}> 
-                  <span className="provider-icon provider-google">G</span>
+                <button type="button" className="provider-btn w-full flex items-center justify-start gap-3" onClick={() => onBeginSso("google")}> 
+                  <span className="provider-icon provider-google inline-flex h-5 w-5 items-center justify-center">G</span>
                   {t("auth.google")}
                 </button>
-                <button type="button" className="provider-btn w-full" onClick={() => onBeginSso("yandex")}>
-                  <span className="provider-icon provider-yandex">Я</span>
+                <button type="button" className="provider-btn w-full flex items-center justify-start gap-3" onClick={() => onBeginSso("yandex")}>
+                  <span className="provider-icon provider-yandex inline-flex h-5 w-5 items-center justify-center">Я</span>
                   {t("auth.yandex")}
                 </button>
               </div>
