@@ -56,13 +56,13 @@ export function ServerProfileModal({
         }
       }}
     >
-      <section className="card voice-preferences-modal user-settings-modal server-profile-modal grid w-full max-w-[980px] min-w-0 gap-4 md:grid-cols-[250px_1fr]">
+      <section className="card voice-preferences-modal user-settings-modal server-profile-modal grid w-full max-w-[980px] min-w-0 gap-4 min-[801px]:grid-cols-[250px_1fr]">
         <div className="user-settings-sidebar grid min-w-0 content-start gap-2">
           <div className="voice-preferences-kicker">{t("server.title")}</div>
           {canPromote ? (
             <button
               type="button"
-              className={`secondary user-settings-tab-btn justify-start text-left max-[920px]:min-w-0 max-[920px]:justify-center ${serverMenuTab === "users" ? "user-settings-tab-btn-active" : ""}`}
+              className={`secondary user-settings-tab-btn justify-start text-left max-[800px]:min-w-0 max-[800px]:justify-center ${serverMenuTab === "users" ? "user-settings-tab-btn-active" : ""}`}
               onClick={() => onSetServerMenuTab("users")}
             >
               {t("server.tabUsers")}
@@ -70,7 +70,7 @@ export function ServerProfileModal({
           ) : null}
           <button
             type="button"
-            className={`secondary user-settings-tab-btn justify-start text-left max-[920px]:min-w-0 max-[920px]:justify-center ${serverMenuTab === "events" ? "user-settings-tab-btn-active" : ""}`}
+            className={`secondary user-settings-tab-btn justify-start text-left max-[800px]:min-w-0 max-[800px]:justify-center ${serverMenuTab === "events" ? "user-settings-tab-btn-active" : ""}`}
             onClick={() => onSetServerMenuTab("events")}
           >
             {t("server.tabEvents")}
@@ -78,7 +78,7 @@ export function ServerProfileModal({
           {canViewTelemetry ? (
             <button
               type="button"
-              className={`secondary user-settings-tab-btn justify-start text-left max-[920px]:min-w-0 max-[920px]:justify-center ${serverMenuTab === "telemetry" ? "user-settings-tab-btn-active" : ""}`}
+              className={`secondary user-settings-tab-btn justify-start text-left max-[800px]:min-w-0 max-[800px]:justify-center ${serverMenuTab === "telemetry" ? "user-settings-tab-btn-active" : ""}`}
               onClick={() => onSetServerMenuTab("telemetry")}
             >
               {t("server.tabTelemetry")}
@@ -86,14 +86,14 @@ export function ServerProfileModal({
           ) : null}
           <button
             type="button"
-            className={`secondary user-settings-tab-btn justify-start text-left max-[920px]:min-w-0 max-[920px]:justify-center ${serverMenuTab === "call" ? "user-settings-tab-btn-active" : ""}`}
+            className={`secondary user-settings-tab-btn justify-start text-left max-[800px]:min-w-0 max-[800px]:justify-center ${serverMenuTab === "call" ? "user-settings-tab-btn-active" : ""}`}
             onClick={() => onSetServerMenuTab("call")}
           >
             {t("server.tabCall")}
           </button>
         </div>
 
-        <div className="user-settings-content grid min-h-0 min-w-0 content-start gap-4 overflow-auto overflow-x-hidden pr-0">
+        <div className="user-settings-content grid min-h-0 min-w-0 content-stretch gap-4 overflow-auto overflow-x-hidden pr-0">
           <div className="voice-preferences-head flex items-center justify-between gap-3">
             <h2 className="mt-[var(--space-xxs)]">
               {serverMenuTab === "users" ? t("server.tabUsers") : null}
@@ -116,23 +116,23 @@ export function ServerProfileModal({
               <h3>{t("admin.title")}</h3>
               <ul className="admin-list grid gap-2">
                 {adminUsers.map((item) => (
-                  <li key={item.id} className="admin-row flex flex-wrap items-center justify-between gap-2">
+                  <li key={item.id} className="admin-row grid min-h-[42px] grid-cols-[minmax(0,1fr)_auto] items-center gap-2 max-[800px]:grid-cols-1">
                     <span className="min-w-0 break-words">
                       {item.email} ({item.role})
                       {item.is_banned ? ` · ${t("admin.banned")}` : ""}
                     </span>
-                    <div className="row-actions flex flex-wrap items-center gap-2">
+                    <div className="row-actions flex flex-wrap items-stretch gap-2">
                       {item.role === "user" ? (
-                        <button onClick={() => onPromote(item.id)}>{t("admin.promote")}</button>
+                        <button className="min-h-[34px]" onClick={() => onPromote(item.id)}>{t("admin.promote")}</button>
                       ) : null}
                       {item.role === "admin" ? (
-                        <button className="secondary" onClick={() => onDemote(item.id)}>{t("admin.demote")}</button>
+                        <button className="secondary min-h-[34px]" onClick={() => onDemote(item.id)}>{t("admin.demote")}</button>
                       ) : null}
                       {item.role !== "super_admin" ? (
                         item.is_banned ? (
-                          <button className="secondary" onClick={() => onSetBan(item.id, false)}>{t("admin.unban")}</button>
+                          <button className="secondary min-h-[34px]" onClick={() => onSetBan(item.id, false)}>{t("admin.unban")}</button>
                         ) : (
-                          <button className="secondary" onClick={() => onSetBan(item.id, true)}>{t("admin.ban")}</button>
+                          <button className="secondary min-h-[34px]" onClick={() => onSetBan(item.id, true)}>{t("admin.ban")}</button>
                         )
                       ) : null}
                     </div>
@@ -143,9 +143,9 @@ export function ServerProfileModal({
           ) : null}
 
           {serverMenuTab === "events" ? (
-            <section className="grid gap-3">
+            <section className="grid min-h-0 flex-1 grid-rows-[auto_minmax(0,1fr)] gap-3">
               <h3>{t("events.title")}</h3>
-              <div className="log max-h-[320px] overflow-auto">
+              <div className="log h-full max-h-none overflow-auto">
                 {eventLog.map((line, index) => (
                   <div key={`${line}-${index}`}>{line}</div>
                 ))}
@@ -169,13 +169,13 @@ export function ServerProfileModal({
           ) : null}
 
           {serverMenuTab === "call" ? (
-            <section className="signaling-panel grid gap-3">
+            <section className="signaling-panel grid min-h-0 flex-1 grid-rows-[auto_auto_auto_minmax(0,1fr)] gap-3">
               <h3>{t("call.title")}</h3>
               <p className="muted">{t("call.status")}: {callStatus}{lastCallPeer ? ` (${lastCallPeer})` : ""}</p>
               <p className="muted">
                 {roomVoiceConnected ? t("call.autoConnected") : t("call.autoWaiting")}
               </p>
-              <div className="log call-log max-h-[320px] overflow-auto">
+              <div className="log call-log h-full max-h-none overflow-auto">
                 {callEventLog.map((line, index) => (
                   <div key={`${line}-${index}`}>{line}</div>
                 ))}

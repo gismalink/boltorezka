@@ -65,6 +65,7 @@ export type UserDockProps = {
   onSetMicVolume: (value: number) => void;
   onSetOutputVolume: (value: number) => void;
   onDisconnectCall: () => void;
+  isMobileViewport: boolean;
   inlineSettingsMode?: boolean;
 };
 

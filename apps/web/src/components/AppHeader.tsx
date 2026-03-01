@@ -34,8 +34,8 @@ export function AppHeader({
   onOpenUserSettings
 }: AppHeaderProps) {
   return (
-    <header className="app-header flex items-center justify-between gap-4 md:gap-6">
-      <div className="header-brand flex items-center gap-3 md:gap-4">
+    <header className="app-header flex items-center justify-between gap-4 min-[801px]:gap-6">
+      <div className="header-brand flex items-center gap-3 min-[801px]:gap-4">
         <div className="app-menu">
           <button
             type="button"
@@ -47,12 +47,12 @@ export function AppHeader({
             B
           </button>
         </div>
-        <h1 className="app-title font-heading text-[22px] leading-none text-pixel-text md:text-[28px]">{t("app.title")}</h1>
+        <h1 className="app-title font-heading text-[22px] leading-none text-pixel-text min-[801px]:text-[28px]">{t("app.title")}</h1>
       </div>
-      <div className="header-actions flex items-center gap-3 md:gap-4">
+      <div className="header-actions flex items-center gap-3 min-[801px]:gap-4">
         {user ? (
           <>
-            <span className="user-chip hidden max-w-[220px] truncate font-semibold text-pixel-text sm:inline">{user.name}</span>
+            <span className="user-chip hidden max-w-[220px] truncate font-semibold text-pixel-text min-[801px]:inline">{user.name}</span>
             <div className="profile-menu" ref={profileMenuRef}>
               <button
                 type="button"

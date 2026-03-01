@@ -94,7 +94,7 @@ export function ChatPanel({
   };
 
   return (
-    <section className="card middle-card flex min-h-0 flex-col">
+    <section className="card middle-card flex min-h-0 flex-1 flex-col overflow-hidden">
       <h2>{t("chat.title")} ({roomSlug})</h2>
       <div className="mb-3 flex flex-wrap items-center gap-3">
         <button

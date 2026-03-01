@@ -34,6 +34,28 @@
 - `apps/web -> npm run build` — PASS.
 - Поиск по `apps/web/src`: SCSS-импорты и `.scss`-файлы отсутствуют.
 
+### Increment (post-migration bugfix pass)
+
+- Исправлен layout regression с высотой чата:
+  - `ChatPanel` теперь растягивается на доступную высоту (`flex-1`, `overflow-hidden`), `chat-log` остаётся внутренним скроллом.
+- Брейкпоинты унифицированы до схемы `mobile/web` на `800px`:
+  - viewport-detector в `App.tsx` переведён на `(max-width: 800px)`,
+  - responsive utility-классы в `App/AppHeader/RoomsPanel/UserDock/ServerProfileModal` синхронизированы на `max-[800px]` и `min-[801px]`.
+- Выравнен `User management` в server modal:
+  - строки admin list переведены на устойчивую grid-раскладку,
+  - action-кнопкам задан единый min-height.
+- Для `Events` и `Call signaling` в server modal убраны узкие окна логов:
+  - секции и log-блоки переведены в `minmax(0,1fr)` + `h-full/max-h-none`.
+- Мобильная адаптация popup-ов устройств:
+  - submenu popup в `UserDock` на мобилке открывается `bottom-start` (вместо side placement),
+  - в CSS добавлены ограничения `max-width/max-height` и mobile-friendly скролл.
+- На мобилке увеличена типографика через tokens override:
+  - `--font-size-xs: 13px`, `--font-size-sm: 14px`.
+
+### Validation (bugfix pass)
+
+- `apps/web -> npm run build` — PASS.
+
 ### Branch
 
 - Work branch: `feature/tailwind-user-dock` (GitOps workflow compliant).

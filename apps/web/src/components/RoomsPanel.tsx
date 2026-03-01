@@ -209,7 +209,7 @@ export function RoomsPanel({
               <form className="grid gap-4" onSubmit={onSaveChannelSettings}>
                 <h3 className="subheading">{t("rooms.channelSettings")}</h3>
                 <input value={editingRoomTitle} onChange={(event) => onSetEditingRoomTitle(event.target.value)} placeholder={t("rooms.channelTitle")} />
-                <div className="grid gap-3 sm:grid-cols-2">
+                <div className="grid gap-3 min-[801px]:grid-cols-2">
                   <select value={editingRoomKind} onChange={(event) => onSetEditingRoomKind(event.target.value as RoomKind)}>
                     <option value="text">{t("rooms.text")}</option>
                     <option value="text_voice">{t("rooms.textVoice")}</option>
@@ -370,7 +370,7 @@ export function RoomsPanel({
                     <h3 className="subheading">{t("rooms.createChannelTitle")}</h3>
                     <input value={newRoomSlug} onChange={(event) => onSetNewRoomSlug(event.target.value)} placeholder={t("rooms.channelSlug")} />
                     <input value={newRoomTitle} onChange={(event) => onSetNewRoomTitle(event.target.value)} placeholder={t("rooms.channelTitle")} />
-                    <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="grid gap-3 min-[801px]:grid-cols-2">
                       <select value={newRoomKind} onChange={(event) => onSetNewRoomKind(event.target.value as RoomKind)}>
                         <option value="text">{t("rooms.text")}</option>
                         <option value="text_voice">{t("rooms.textVoice")}</option>

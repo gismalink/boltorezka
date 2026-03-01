@@ -169,7 +169,8 @@ pre {
 }
 
 .log {
-  max-height: 320px;
+  max-height: none;
+  min-height: 0;
   overflow: auto;
   background: var(--pixel-panel-2);
   border: var(--border-strong) solid var(--pixel-border);
@@ -626,7 +627,7 @@ pre {
 }
 
 .call-log {
-  max-height: 180px;
+  max-height: none;
 }
 
 .settings-confirm-modal {
@@ -956,14 +957,12 @@ pre {
     -1px -1px 0 var(--pixel-neon-pink);
 }
 
-@media (max-width: 1200px) {
-  .workspace {
-    grid-template-columns: 280px 1fr;
-    height: 100%;
+@media (max-width: 800px) {
+  :root {
+    --font-size-xs: 13px;
+    --font-size-sm: 14px;
   }
-}
 
-@media (max-width: 920px) {
   .user-settings-modal {
     grid-template-columns: 1fr;
     grid-template-rows: auto minmax(0, 1fr);
@@ -986,9 +985,7 @@ pre {
     overflow: auto;
     padding-bottom: calc(var(--space-sm) + env(safe-area-inset-bottom));
   }
-}
 
-@media (max-width: 900px) {
   .app {
     padding: var(--space-lg);
     padding-bottom: calc(var(--space-lg) + 56px);
@@ -1059,5 +1056,19 @@ pre {
   .mobile-tab-btn-active {
     border-color: var(--pixel-neon-cyan);
     box-shadow: inset 0 0 0 1px var(--pixel-neon-cyan);
+  }
+
+  .voice-mini-popup,
+  .voice-settings-popup,
+  .voice-submenu-popup {
+    min-width: min(92vw, 360px) !important;
+    max-width: 92vw;
+    max-height: min(70vh, 560px);
+    overflow: auto;
+  }
+
+  .voice-submenu-popup {
+    left: auto !important;
+    right: var(--space-xs) !important;
   }
 }
