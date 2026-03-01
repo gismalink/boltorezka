@@ -91,7 +91,7 @@ export function App() {
   const [editingRoomTitle, setEditingRoomTitle] = useState("");
   const [editingRoomKind, setEditingRoomKind] = useState<RoomKind>("text");
   const [editingRoomCategoryId, setEditingRoomCategoryId] = useState<string>("none");
-  const [micMuted, setMicMuted] = useState(false);
+  const [micMuted, setMicMuted] = useState(true);
   const [audioMuted, setAudioMuted] = useState(false);
   const [audioOutputMenuOpen, setAudioOutputMenuOpen] = useState(false);
   const [voiceSettingsOpen, setVoiceSettingsOpen] = useState(false);
@@ -681,7 +681,15 @@ export function App() {
       voiceSettingsAnchorRef={voiceSettingsAnchorRef}
       userSettingsRef={userSettingsRef}
       onToggleMic={() => setMicMuted((value) => !value)}
-      onToggleAudio={() => setAudioMuted((value) => !value)}
+      onToggleAudio={() => {
+        setAudioMuted((value) => {
+          const nextMuted = !value;
+          if (nextMuted) {
+            setMicMuted(true);
+          }
+          return nextMuted;
+        });
+      }}
       onToggleVoiceSettings={() => {
         setAudioOutputMenuOpen(false);
         setVoiceSettingsPanel(null);
@@ -710,29 +718,6 @@ export function App() {
       onSetOutputVolume={setOutputVolume}
       onDisconnectCall={disconnectRoom}
     />
-  ) : null;
-
-  const mobileQuickAudioNode = isMobileViewport && mobileTab === "channels" && user ? (
-    <div className="mobile-quick-audio" aria-label={t("settings.soundSection") }>
-      <button
-        type="button"
-        className={`secondary icon-btn ${micMuted ? "icon-btn-danger" : ""}`}
-        data-tooltip={micMuted ? t("audio.enableMic") : t("audio.disableMic")}
-        aria-label={micMuted ? t("audio.enableMic") : t("audio.disableMic")}
-        onClick={() => setMicMuted((value) => !value)}
-      >
-        <i className={`bi ${micMuted ? "bi-mic-mute-fill" : "bi-mic-fill"}`} aria-hidden="true" />
-      </button>
-      <button
-        type="button"
-        className={`secondary icon-btn ${audioMuted ? "icon-btn-danger" : ""}`}
-        data-tooltip={audioMuted ? t("audio.enableOutput") : t("audio.disableOutput")}
-        aria-label={audioMuted ? t("audio.enableOutput") : t("audio.disableOutput")}
-        onClick={() => setAudioMuted((value) => !value)}
-      >
-        <i className={`bi ${audioMuted ? "bi-volume-mute-fill" : "bi-volume-up-fill"}`} aria-hidden="true" />
-      </button>
-    </div>
   ) : null;
 
   return (
@@ -815,7 +800,7 @@ export function App() {
               onJoinRoom={joinRoom}
             />
 
-            {!isMobileViewport ? userDockNode : null}
+            {userDockNode}
           </aside>
         ) : null}
 
@@ -844,8 +829,6 @@ export function App() {
           </aside>
         ) : null}
       </div>
-
-      {mobileQuickAudioNode}
 
       {isMobileViewport ? (
         <nav className="mobile-tabbar" aria-label={t("mobile.tabsAria") }>
