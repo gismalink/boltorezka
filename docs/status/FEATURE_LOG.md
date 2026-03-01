@@ -51,6 +51,7 @@
   - `2d2a78a` — `web: migrate auth provider layout utilities in header`
   - `e861a9e` — `web: migrate user dock menu rows and sliders to utilities`
   - `d6db83b` — `web: migrate user dock device list layout to utilities`
+  - `22fb4d8` — `web: migrate user dock control group layout to utilities`
 
 ### Next step
 
