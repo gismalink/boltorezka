@@ -717,6 +717,85 @@ export function App() {
       onSetMicVolume={setMicVolume}
       onSetOutputVolume={setOutputVolume}
       onDisconnectCall={disconnectRoom}
+      inlineSettingsMode={false}
+    />
+  ) : null;
+
+  const userDockInlineSettingsNode = user ? (
+    <UserDock
+      t={t}
+      user={user}
+      currentRoomSupportsRtc={currentRoomSupportsRtc}
+      currentRoomTitle={currentRoom?.title || ""}
+      callStatus={callStatus}
+      lastCallPeer={lastCallPeer}
+      roomVoiceConnected={roomVoiceConnected}
+      micMuted={micMuted}
+      audioMuted={audioMuted}
+      audioOutputMenuOpen={audioOutputMenuOpen}
+      voiceSettingsOpen={voiceSettingsOpen}
+      userSettingsOpen={userSettingsOpen}
+      userSettingsTab={userSettingsTab}
+      voiceSettingsPanel={voiceSettingsPanel}
+      profileNameDraft={profileNameDraft}
+      profileEmail={user.email}
+      profileSaving={profileSaving}
+      profileStatusText={profileStatusText}
+      selectedLang={lang}
+      languageOptions={LANGUAGE_OPTIONS}
+      inputOptions={inputOptions}
+      outputOptions={outputOptions}
+      selectedInputId={selectedInputId}
+      selectedOutputId={selectedOutputId}
+      selectedInputProfile={selectedInputProfile}
+      inputProfileLabel={inputProfileLabel}
+      currentInputLabel={currentInputLabel}
+      micVolume={micVolume}
+      outputVolume={outputVolume}
+      micTestLevel={micTestLevel}
+      mediaDevicesState={mediaDevicesState}
+      mediaDevicesHint={mediaDevicesHint}
+      audioOutputAnchorRef={audioOutputAnchorRef}
+      voiceSettingsAnchorRef={voiceSettingsAnchorRef}
+      userSettingsRef={userSettingsRef}
+      onToggleMic={() => setMicMuted((value) => !value)}
+      onToggleAudio={() => {
+        setAudioMuted((value) => {
+          const nextMuted = !value;
+          if (nextMuted) {
+            setMicMuted(true);
+          }
+          return nextMuted;
+        });
+      }}
+      onToggleVoiceSettings={() => {
+        setAudioOutputMenuOpen(false);
+        setVoiceSettingsPanel(null);
+        setVoiceSettingsOpen((value) => !value);
+      }}
+      onToggleAudioOutput={() => {
+        setVoiceSettingsOpen(false);
+        setVoiceSettingsPanel(null);
+        setAudioOutputMenuOpen((value) => !value);
+      }}
+      onOpenUserSettings={openUserSettings}
+      onSetVoiceSettingsOpen={setVoiceSettingsOpen}
+      onSetAudioOutputMenuOpen={setAudioOutputMenuOpen}
+      onSetVoiceSettingsPanel={setVoiceSettingsPanel}
+      onSetUserSettingsOpen={setUserSettingsOpen}
+      onSetUserSettingsTab={setUserSettingsTab}
+      onSetProfileNameDraft={setProfileNameDraft}
+      onSetSelectedLang={setLang}
+      onSaveProfile={saveMyProfile}
+      onSetSelectedInputId={setSelectedInputId}
+      onSetSelectedOutputId={setSelectedOutputId}
+      onSetSelectedInputProfile={setSelectedInputProfile}
+      onRefreshDevices={() => refreshDevices(true)}
+      onRequestMediaAccess={requestMediaAccess}
+      onSetMicVolume={setMicVolume}
+      onSetOutputVolume={setOutputVolume}
+      onDisconnectCall={disconnectRoom}
+      inlineSettingsMode
     />
   ) : null;
 
@@ -825,7 +904,7 @@ export function App() {
 
         {isMobileViewport && user && mobileTab === "settings" ? (
           <aside className="leftcolumn mobile-settings-column">
-            {userDockNode}
+            {userDockInlineSettingsNode}
           </aside>
         ) : null}
       </div>
@@ -853,7 +932,6 @@ export function App() {
             className={`secondary mobile-tab-btn ${mobileTab === "settings" ? "mobile-tab-btn-active" : ""}`}
             onClick={() => {
               setMobileTab("settings");
-              openUserSettings("profile");
             }}
             disabled={!user}
           >

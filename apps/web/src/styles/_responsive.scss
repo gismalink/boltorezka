@@ -8,7 +8,7 @@
 @media (max-width: 900px) {
   .app {
     padding: var(--space-lg);
-    padding-bottom: calc(var(--space-3xl) + 56px);
+    padding-bottom: calc(var(--space-lg) + 56px);
   }
 
   .workspace {
@@ -32,6 +32,10 @@
   .workspace-mobile .middle-card {
     height: 100%;
     min-height: 0;
+  }
+
+  .mobile-settings-column {
+    gap: 0;
   }
 
   .mobile-tabbar {
@@ -83,7 +87,7 @@
   .workspace-mobile .user-panel-card {
     display: grid;
     grid-template-columns: 1fr;
-    gap: var(--space-sm);
+    gap: 0;
   }
 
   .workspace-mobile .user-panel-actions {
@@ -111,5 +115,10 @@
   .voice-preferences-grid,
   .voice-test-row {
     grid-template-columns: 1fr;
+  }
+
+  .workspace-mobile .rtc-connection-card,
+  .workspace-mobile .user-panel-main {
+    display: none;
   }
 }

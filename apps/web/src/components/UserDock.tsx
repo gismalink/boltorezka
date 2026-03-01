@@ -58,7 +58,8 @@ export function UserDock({
   onRequestMediaAccess,
   onSetMicVolume,
   onSetOutputVolume,
-  onDisconnectCall
+  onDisconnectCall,
+  inlineSettingsMode = false
 }: UserDockProps) {
   const inputDeviceRowRef = useRef<HTMLButtonElement>(null);
   const inputProfileRowRef = useRef<HTMLButtonElement>(null);
@@ -78,7 +79,7 @@ export function UserDock({
 
   return (
     <>
-      <div className="user-dock">
+      <div className={`user-dock ${inlineSettingsMode ? "user-dock-inline-hidden" : ""}`}>
         {currentRoomSupportsRtc ? (
           <section className="card compact rtc-connection-card">
             <div className="rtc-title-row">
@@ -382,8 +383,8 @@ export function UserDock({
         </section>
       </div>
 
-      {userSettingsOpen ? (
-        <div className="voice-preferences-overlay">
+      {userSettingsOpen || inlineSettingsMode ? (
+        <div className={`voice-preferences-overlay ${inlineSettingsMode ? "inline-settings-mode" : ""}`}>
           <section className="card voice-preferences-modal user-settings-modal" ref={userSettingsRef}>
             <div className="user-settings-sidebar">
               <div className="voice-preferences-kicker">{t("settings.title")}</div>
@@ -406,9 +407,11 @@ export function UserDock({
             <div className="user-settings-content">
               <div className="voice-preferences-head">
                 <h2>{userSettingsTab === "profile" ? t("settings.tabProfile") : t("settings.tabSound")}</h2>
-                <button type="button" className="secondary icon-btn" onClick={() => onSetUserSettingsOpen(false)} aria-label={t("settings.closeVoiceAria")}>
-                  <i className="bi bi-x-lg" aria-hidden="true" />
-                </button>
+                {!inlineSettingsMode ? (
+                  <button type="button" className="secondary icon-btn" onClick={() => onSetUserSettingsOpen(false)} aria-label={t("settings.closeVoiceAria")}>
+                    <i className="bi bi-x-lg" aria-hidden="true" />
+                  </button>
+                ) : null}
               </div>
 
               {userSettingsTab === "profile" ? (
