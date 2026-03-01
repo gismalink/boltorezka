@@ -169,11 +169,11 @@ export function UserDock({
                     <button
                       ref={inputDeviceRowRef}
                       type="button"
-                      className={`secondary voice-menu-row ${voiceSettingsPanel === "input_device" ? "voice-menu-row-active" : ""}`}
+                      className={`secondary voice-menu-row flex w-full items-center justify-between gap-3 text-left ${voiceSettingsPanel === "input_device" ? "voice-menu-row-active" : ""}`}
                       disabled={mediaDevicesUnavailable}
                       onClick={() => onSetVoiceSettingsPanel(voiceSettingsPanel === "input_device" ? null : "input_device")}
                     >
-                      <span className="voice-menu-text">
+                      <span className="voice-menu-text grid min-w-0 gap-0.5">
                         <span className="voice-menu-title">{t("settings.inputDevice")}</span>
                         <span className="voice-menu-subtitle">{currentInputLabel}</span>
                       </span>
@@ -182,10 +182,10 @@ export function UserDock({
                     <button
                       ref={inputProfileRowRef}
                       type="button"
-                      className={`secondary voice-menu-row ${voiceSettingsPanel === "input_profile" ? "voice-menu-row-active" : ""}`}
+                      className={`secondary voice-menu-row flex w-full items-center justify-between gap-3 text-left ${voiceSettingsPanel === "input_profile" ? "voice-menu-row-active" : ""}`}
                       onClick={() => onSetVoiceSettingsPanel(voiceSettingsPanel === "input_profile" ? null : "input_profile")}
                     >
-                      <span className="voice-menu-text">
+                      <span className="voice-menu-text grid min-w-0 gap-0.5">
                         <span className="voice-menu-title">{t("settings.inputProfile")}</span>
                         <span className="voice-menu-subtitle">{inputProfileLabel}</span>
                       </span>
@@ -197,7 +197,7 @@ export function UserDock({
                     <p className="muted media-devices-warning">{mediaDevicesWarningText}</p>
                   ) : null}
 
-                  <label className="slider-label">
+                  <label className="slider-label grid gap-2">
                     {t("settings.micVolume")}
                     <input
                       type="range"
@@ -219,7 +219,7 @@ export function UserDock({
 
                   <button
                     type="button"
-                    className="secondary voice-footer-row"
+                    className="secondary voice-footer-row flex w-full items-center justify-between gap-4 text-left"
                     onClick={() => {
                       onSetVoiceSettingsOpen(false);
                       onSetAudioOutputMenuOpen(false);
@@ -353,7 +353,7 @@ export function UserDock({
                   {mediaDevicesUnavailable ? (
                     <p className="muted media-devices-warning">{mediaDevicesWarningText}</p>
                   ) : null}
-                  <label className="slider-label">
+                  <label className="slider-label grid gap-2">
                     {t("settings.soundVolume")}
                     <input
                       type="range"
@@ -365,7 +365,7 @@ export function UserDock({
                   </label>
                   <button
                     type="button"
-                    className="secondary voice-footer-row"
+                    className="secondary voice-footer-row flex w-full items-center justify-between gap-4 text-left"
                     onClick={() => {
                       onSetAudioOutputMenuOpen(false);
                       onSetVoiceSettingsOpen(false);
@@ -479,7 +479,7 @@ export function UserDock({
                   ) : null}
 
                   <div className="voice-preferences-grid grid gap-3 md:grid-cols-2">
-                    <label className="slider-label">
+                    <label className="slider-label grid gap-2">
                       {t("settings.micVolume")}
                       <input
                         type="range"
@@ -489,7 +489,7 @@ export function UserDock({
                         onChange={(event) => onSetMicVolume(Number(event.target.value))}
                       />
                     </label>
-                    <label className="slider-label">
+                    <label className="slider-label grid gap-2">
                       {t("settings.outputVolume")}
                       <input
                         type="range"

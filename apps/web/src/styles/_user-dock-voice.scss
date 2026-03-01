@@ -132,12 +132,6 @@
 }
 
 .voice-menu-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-md);
-  width: 100%;
-  text-align: left;
   padding: var(--space-lg) var(--space-lg);
 }
 
@@ -150,9 +144,6 @@
 }
 
 .voice-menu-text {
-  min-width: 0;
-  display: grid;
-  gap: var(--space-xxs);
 }
 
 .voice-menu-title {
@@ -195,11 +186,6 @@
 
 .voice-level-bars {
   margin-top: var(--space-md);
-  display: flex;
-  flex-wrap: nowrap;
-  width: 100%;
-  overflow: hidden;
-  gap: var(--space-xs);
 }
 
 .voice-level-bar {
@@ -218,12 +204,6 @@
 
 .voice-footer-row {
   margin-top: var(--space-xl);
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-md);
-  text-align: left;
 }
 
 .media-devices-warning {
@@ -397,8 +377,6 @@
 
 .slider-label {
   margin-top: var(--space-lg);
-  display: grid;
-  gap: var(--space-sm);
   font-size: var(--font-size-sm);
   color: var(--pixel-muted);
 }
