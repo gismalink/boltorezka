@@ -3,6 +3,45 @@
 Этот документ хранит зафиксированные изменения, выполненные шаги и операционные evidence.
 План и open items находятся в `docs/status/ROADMAP.md`.
 
+## 2026-03-02 — Tailwind migration (feature branch increment)
+
+### Branch
+
+- Work branch: `feature/tailwind-user-dock` (GitOps workflow compliant).
+
+### Delivered
+
+- В `apps/web` подключён Tailwind foundation (`tailwind.config.cjs`, `postcss.config.cjs`, `src/tailwind.css`).
+- Layout migration на utility-классы (incremental, без big-bang):
+  - `AppHeader`,
+  - `App` workspace shell,
+  - `RoomsPanel` / `ChatPanel`,
+  - `UserDock`,
+  - overlay shell (`PopupPortal`, `TooltipPortal`, `ToastStack`, `ServerProfileModal`).
+- Выполнена чистка дублей SCSS layout-правил, уже покрытых utility-классами:
+  - `_responsive.scss`,
+  - `_user-dock-voice.scss`,
+  - `_overlays.scss`,
+  - `_toasts.scss`,
+  - `_layout.scss`,
+  - `_rooms-chat.scss`.
+
+### Validation
+
+- Повторные `apps/web -> npm run build` в каждом инкременте — PASS.
+- Набор коммитов в `feature/tailwind-user-dock`:
+  - `92448da` — `web: migrate user dock layout to tailwind utilities`
+  - `f96d917` — `web: migrate overlay and modal shells to tailwind utilities`
+  - `dd0316a` — `web: add tailwind responsive utilities for user dock`
+  - `d5da724` — `web: remove responsive scss rules replaced by tailwind`
+  - `e066e78` — `web: remove duplicated user-dock scss layout rules`
+  - `04e257d` — `web: remove duplicated overlay and toast scss layout rules`
+  - `b47c5a1` — `web: remove duplicated layout scss rules covered by tailwind`
+
+### Next step
+
+- PR из `feature/tailwind-user-dock` -> `main`, затем `deploy:test:smoke` от `origin/main` после merge.
+
 ## 2026-03-01 — Prod rollout from main + voice baseline canonicalized
 
 ### Delivered
