@@ -388,20 +388,22 @@ export function UserDock({
           <section className="card voice-preferences-modal user-settings-modal" ref={userSettingsRef}>
             <div className="user-settings-sidebar">
               <div className="voice-preferences-kicker">{t("settings.title")}</div>
-              <button
-                type="button"
-                className={`secondary user-settings-tab-btn ${userSettingsTab === "profile" ? "user-settings-tab-btn-active" : ""}`}
-                onClick={() => onSetUserSettingsTab("profile")}
-              >
-                {t("settings.tabProfile")}
-              </button>
-              <button
-                type="button"
-                className={`secondary user-settings-tab-btn ${userSettingsTab === "sound" ? "user-settings-tab-btn-active" : ""}`}
-                onClick={() => onSetUserSettingsTab("sound")}
-              >
-                {t("settings.tabSound")}
-              </button>
+              <div className="user-settings-tab-group">
+                <button
+                  type="button"
+                  className={`secondary user-settings-tab-btn ${userSettingsTab === "profile" ? "user-settings-tab-btn-active" : ""}`}
+                  onClick={() => onSetUserSettingsTab("profile")}
+                >
+                  {t("settings.tabProfile")}
+                </button>
+                <button
+                  type="button"
+                  className={`secondary user-settings-tab-btn ${userSettingsTab === "sound" ? "user-settings-tab-btn-active" : ""}`}
+                  onClick={() => onSetUserSettingsTab("sound")}
+                >
+                  {t("settings.tabSound")}
+                </button>
+              </div>
             </div>
 
             <div className="user-settings-content">
