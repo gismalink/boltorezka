@@ -465,7 +465,7 @@ export function UserDock({
                     </label>
                   </div>
 
-                  <div className="row flex flex-wrap items-center gap-3">
+                  <div className="flex flex-wrap items-center gap-3">
                     <button type="button" className="secondary" onClick={onRequestMediaAccess}>
                       {t("settings.requestMediaAccess")}
                     </button>

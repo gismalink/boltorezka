@@ -116,7 +116,7 @@ export function ServerProfileModal({
               <h3>{t("admin.title")}</h3>
               <ul className="admin-list grid gap-2">
                 {adminUsers.map((item) => (
-                  <li key={item.id} className="row admin-row flex flex-wrap items-center justify-between gap-2">
+                  <li key={item.id} className="admin-row flex flex-wrap items-center justify-between gap-2">
                     <span className="min-w-0 break-words">
                       {item.email} ({item.role})
                       {item.is_banned ? ` · ${t("admin.banned")}` : ""}
