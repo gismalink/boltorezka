@@ -316,11 +316,11 @@ export function RoomsPanel({
 
   return (
     <>
-      <section className="card compact rooms-card">
-      <div className="section-heading-row">
+      <section className="card compact rooms-card flex min-h-0 flex-col">
+      <div className="section-heading-row mb-3 flex items-center justify-between gap-3">
         <h2>{t("rooms.title")}</h2>
         {canCreateRooms ? (
-          <div className="row-actions">
+          <div className="row-actions flex items-center gap-2">
             <div className="popup-anchor" ref={categoryPopupRef}>
               <button
                 type="button"
@@ -386,7 +386,7 @@ export function RoomsPanel({
           </div>
         ) : null}
       </div>
-      <div className="rooms-scroll">
+      <div className="rooms-scroll min-h-0 flex-1 overflow-y-auto">
         {(roomsTree?.categories || []).map((category) => (
           <div key={category.id} className="category-block">
             <div className="category-title-row">

@@ -810,7 +810,7 @@ export function App() {
   ) : null;
 
   return (
-    <main className="app legacy-layout">
+    <main className="app legacy-layout mx-auto grid h-screen max-h-screen w-full max-w-[1400px] grid-rows-[auto_1fr] gap-4 overflow-hidden p-4 md:gap-6 md:p-8">
       <AppHeader
         t={t}
         user={user}
@@ -828,9 +828,9 @@ export function App() {
       />
       <TooltipPortal />
 
-      <div className={`workspace ${isMobileViewport ? "workspace-mobile" : ""}`}>
+      <div className={`workspace ${isMobileViewport ? "workspace-mobile" : ""} grid h-full min-h-0 items-stretch gap-4 md:grid-cols-[320px_1fr] md:gap-6`}>
         {(!isMobileViewport || mobileTab === "channels") ? (
-          <aside className="leftcolumn">
+          <aside className="leftcolumn flex min-h-0 flex-col gap-4 overflow-hidden md:gap-6">
             <RoomsPanel
               t={t}
               canCreateRooms={canCreateRooms}
@@ -894,7 +894,7 @@ export function App() {
         ) : null}
 
         {(!isMobileViewport || mobileTab === "chat") ? (
-          <section className="middlecolumn">
+          <section className="middlecolumn flex min-h-0 flex-col gap-4 md:gap-6">
             <ChatPanel
               t={t}
               locale={locale}
@@ -913,17 +913,17 @@ export function App() {
         ) : null}
 
         {isMobileViewport && user && mobileTab === "settings" ? (
-          <aside className="leftcolumn mobile-settings-column">
+          <aside className="leftcolumn mobile-settings-column flex min-h-0 flex-col gap-4 overflow-hidden md:gap-6">
             {userDockInlineSettingsNode}
           </aside>
         ) : null}
       </div>
 
       {isMobileViewport ? (
-        <nav className="mobile-tabbar" aria-label={t("mobile.tabsAria") }>
+        <nav className="mobile-tabbar grid grid-cols-3 gap-2" aria-label={t("mobile.tabsAria") }>
           <button
             type="button"
-            className={`secondary mobile-tab-btn ${mobileTab === "channels" ? "mobile-tab-btn-active" : ""}`}
+            className={`secondary mobile-tab-btn inline-flex items-center justify-center gap-2 ${mobileTab === "channels" ? "mobile-tab-btn-active" : ""}`}
             onClick={() => setMobileTab("channels")}
           >
             <i className="bi bi-hash" aria-hidden="true" />
@@ -931,7 +931,7 @@ export function App() {
           </button>
           <button
             type="button"
-            className={`secondary mobile-tab-btn ${mobileTab === "chat" ? "mobile-tab-btn-active" : ""}`}
+            className={`secondary mobile-tab-btn inline-flex items-center justify-center gap-2 ${mobileTab === "chat" ? "mobile-tab-btn-active" : ""}`}
             onClick={() => setMobileTab("chat")}
           >
             <i className="bi bi-chat-dots" aria-hidden="true" />
@@ -939,7 +939,7 @@ export function App() {
           </button>
           <button
             type="button"
-            className={`secondary mobile-tab-btn ${mobileTab === "settings" ? "mobile-tab-btn-active" : ""}`}
+            className={`secondary mobile-tab-btn inline-flex items-center justify-center gap-2 ${mobileTab === "settings" ? "mobile-tab-btn-active" : ""}`}
             onClick={() => {
               setMobileTab("settings");
             }}

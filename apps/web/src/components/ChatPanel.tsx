@@ -94,9 +94,9 @@ export function ChatPanel({
   };
 
   return (
-    <section className="card middle-card">
+    <section className="card middle-card flex min-h-0 flex-col">
       <h2>{t("chat.title")} ({roomSlug})</h2>
-      <div className="row">
+      <div className="row mb-3 flex items-center gap-3">
         <button
           type="button"
           className="secondary"
@@ -109,7 +109,7 @@ export function ChatPanel({
           <span className="muted">{t("chat.historyLoaded")}</span>
         ) : null}
       </div>
-      <div className="chat-log" ref={chatLogRef}>
+      <div className="chat-log min-h-0 flex-1" ref={chatLogRef}>
         {messages.map((message) => {
           const isOwn = currentUserId === message.user_id;
           const deliveryGlyph = message.deliveryStatus === "sending"
@@ -147,7 +147,7 @@ export function ChatPanel({
           );
         })}
       </div>
-      <form className="chat-compose" onSubmit={onSendMessage}>
+      <form className="chat-compose mt-3 flex items-center gap-3" onSubmit={onSendMessage}>
         <input value={chatText} onChange={(event) => onSetChatText(event.target.value)} placeholder={t("chat.typePlaceholder")} />
         <button type="submit">{t("chat.send")}</button>
       </form>
