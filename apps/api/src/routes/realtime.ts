@@ -95,6 +95,21 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
   const socketsByUserId = new Map<string, Set<WebSocket>>();
   const socketsByRoomId = new Map<string, Set<WebSocket>>();
   const socketState = new WeakMap<WebSocket, SocketState>();
+  const wsCallDebugEnabled = process.env.WS_CALL_DEBUG === "1";
+
+  const logCallDebug = (message: string, meta: Record<string, unknown> = {}) => {
+    if (!wsCallDebugEnabled) {
+      return;
+    }
+
+    fastify.log.info(
+      {
+        scope: "ws-call",
+        ...meta
+      },
+      message
+    );
+  };
 
   const incrementMetric = async (name: string) => {
     try {
@@ -735,23 +750,53 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
               case "call.answer":
               case "call.ice": {
               if (!state.roomId) {
+                logCallDebug("call signal rejected: no active room", {
+                  eventType,
+                  userId: state.userId,
+                  requestId
+                });
                 sendNoActiveRoomNack(connection, requestId, eventType);
                 return;
               }
 
               const signal = getCallSignal(payload);
               if (!signal) {
+                logCallDebug("call signal rejected: missing signal payload", {
+                  eventType,
+                  userId: state.userId,
+                  roomId: state.roomId,
+                  roomSlug: state.roomSlug,
+                  requestId
+                });
                 sendValidationNack(connection, requestId, eventType, "payload.signal object is required");
                 return;
               }
 
               const signalSize = safeJsonSize(signal);
               if (!Number.isFinite(signalSize) || signalSize < 2 || signalSize > 12000) {
+                logCallDebug("call signal rejected: invalid signal size", {
+                  eventType,
+                  userId: state.userId,
+                  roomId: state.roomId,
+                  roomSlug: state.roomSlug,
+                  requestId,
+                  signalSize
+                });
                 sendValidationNack(connection, requestId, eventType, "payload.signal size must be between 2 and 12000 bytes");
                 return;
               }
 
               const targetUserId = normalizeRequestId(getPayloadString(payload, "targetUserId", 128)) || null;
+              logCallDebug("call signal received", {
+                eventType,
+                userId: state.userId,
+                roomId: state.roomId,
+                roomSlug: state.roomSlug,
+                requestId,
+                targetUserId,
+                signalType: (signal as { type?: unknown }).type ?? null,
+                signalSize
+              });
               const relayEnvelope = buildCallSignalRelayEnvelope(
                 knownMessage.type,
                 state.userId,
@@ -764,9 +809,28 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
 
               const relayOutcome = relayToTargetOrRoom(connection, state.roomId, targetUserId, relayEnvelope);
               if (!relayOutcome.ok) {
+                logCallDebug("call signal relay failed: target not in room", {
+                  eventType,
+                  userId: state.userId,
+                  roomId: state.roomId,
+                  roomSlug: state.roomSlug,
+                  requestId,
+                  targetUserId,
+                  relayedTo: relayOutcome.relayedCount
+                });
                 sendTargetNotInRoomNack(connection, requestId, eventType);
                 return;
               }
+
+              logCallDebug("call signal relayed", {
+                eventType,
+                userId: state.userId,
+                roomId: state.roomId,
+                roomSlug: state.roomSlug,
+                requestId,
+                targetUserId,
+                relayedTo: relayOutcome.relayedCount
+              });
 
               sendAckWithMetrics(
                 connection,
@@ -784,12 +848,26 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
               case "call.hangup":
               case "call.reject": {
               if (!state.roomId) {
+                logCallDebug("call terminal rejected: no active room", {
+                  eventType,
+                  userId: state.userId,
+                  requestId
+                });
                 sendNoActiveRoomNack(connection, requestId, eventType);
                 return;
               }
 
               const targetUserId = normalizeRequestId(getPayloadString(payload, "targetUserId", 128)) || null;
               const reason = getPayloadString(payload, "reason", 128) || null;
+              logCallDebug("call terminal received", {
+                eventType,
+                userId: state.userId,
+                roomId: state.roomId,
+                roomSlug: state.roomSlug,
+                requestId,
+                targetUserId,
+                reason
+              });
               const relayEnvelope = buildCallTerminalRelayEnvelope(
                 knownMessage.type,
                 state.userId,
@@ -802,9 +880,30 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
 
               const relayOutcome = relayToTargetOrRoom(connection, state.roomId, targetUserId, relayEnvelope);
               if (!relayOutcome.ok) {
+                logCallDebug("call terminal relay failed: target not in room", {
+                  eventType,
+                  userId: state.userId,
+                  roomId: state.roomId,
+                  roomSlug: state.roomSlug,
+                  requestId,
+                  targetUserId,
+                  reason,
+                  relayedTo: relayOutcome.relayedCount
+                });
                 sendTargetNotInRoomNack(connection, requestId, eventType);
                 return;
               }
+
+              logCallDebug("call terminal relayed", {
+                eventType,
+                userId: state.userId,
+                roomId: state.roomId,
+                roomSlug: state.roomSlug,
+                requestId,
+                targetUserId,
+                reason,
+                relayedTo: relayOutcome.relayedCount
+              });
 
               sendAckWithMetrics(
                 connection,
@@ -821,12 +920,24 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
 
               case "call.mic_state": {
               if (!state.roomId) {
+                logCallDebug("call mic_state rejected: no active room", {
+                  eventType,
+                  userId: state.userId,
+                  requestId
+                });
                 sendNoActiveRoomNack(connection, requestId, eventType);
                 return;
               }
 
               const mutedRaw = payload?.muted;
               if (typeof mutedRaw !== "boolean") {
+                logCallDebug("call mic_state rejected: missing muted boolean", {
+                  eventType,
+                  userId: state.userId,
+                  roomId: state.roomId,
+                  roomSlug: state.roomSlug,
+                  requestId
+                });
                 sendValidationNack(connection, requestId, eventType, "payload.muted boolean is required");
                 return;
               }
@@ -836,6 +947,17 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
               const audioMuted = typeof audioMutedRaw === "boolean" ? audioMutedRaw : undefined;
 
               const targetUserId = normalizeRequestId(getPayloadString(payload, "targetUserId", 128)) || null;
+              logCallDebug("call mic_state received", {
+                eventType,
+                userId: state.userId,
+                roomId: state.roomId,
+                roomSlug: state.roomSlug,
+                requestId,
+                targetUserId,
+                muted: mutedRaw,
+                speaking: speaking ?? null,
+                audioMuted: audioMuted ?? null
+              });
               const relayEnvelope = buildCallMicStateRelayEnvelope(
                 knownMessage.type,
                 state.userId,
@@ -848,9 +970,31 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
 
               const relayOutcome = relayToTargetOrRoom(connection, state.roomId, targetUserId, relayEnvelope);
               if (!relayOutcome.ok) {
+                logCallDebug("call mic_state relay failed: target not in room", {
+                  eventType,
+                  userId: state.userId,
+                  roomId: state.roomId,
+                  roomSlug: state.roomSlug,
+                  requestId,
+                  targetUserId,
+                  relayedTo: relayOutcome.relayedCount
+                });
                 sendTargetNotInRoomNack(connection, requestId, eventType);
                 return;
               }
+
+              logCallDebug("call mic_state relayed", {
+                eventType,
+                userId: state.userId,
+                roomId: state.roomId,
+                roomSlug: state.roomSlug,
+                requestId,
+                targetUserId,
+                relayedTo: relayOutcome.relayedCount,
+                muted: mutedRaw,
+                speaking: speaking ?? null,
+                audioMuted: audioMuted ?? null
+              });
 
               sendAckWithMetrics(
                 connection,
