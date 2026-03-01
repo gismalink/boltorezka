@@ -55,6 +55,7 @@
   - `868f0c9` — `web: migrate settings modal shell layout to utilities`
   - `23c317b` — `web: complete user-settings utility migration pass`
   - `52715e6` — `web: remove remaining legacy row class dependencies`
+  - `5d218d5` — `web: remove redundant stack class usages in settings views`
 
 ### Next step
 
