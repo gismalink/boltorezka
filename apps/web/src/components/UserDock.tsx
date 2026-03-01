@@ -239,12 +239,12 @@ export function UserDock({
                     offset={8}
                   >
                     <div>
-                      <div className="device-list">
+                      <div className="device-list mt-4 grid gap-2">
                         {inputOptions.map((device) => (
                           <button
                             key={device.id}
                             type="button"
-                            className={`secondary device-item radio-item ${selectedInputId === device.id ? "device-item-active" : ""}`}
+                            className={`secondary device-item radio-item flex items-center justify-between gap-4 text-left ${selectedInputId === device.id ? "device-item-active" : ""}`}
                             disabled={mediaDevicesUnavailable}
                             onClick={() => {
                               onSetSelectedInputId(device.id);
@@ -255,7 +255,7 @@ export function UserDock({
                             <i className={`bi ${selectedInputId === device.id ? "bi-record-circle-fill" : "bi-circle"}`} aria-hidden="true" />
                           </button>
                         ))}
-                        <button type="button" className="secondary device-item">{t("settings.showMore")}</button>
+                        <button type="button" className="secondary device-item justify-start text-left">{t("settings.showMore")}</button>
                       </div>
                     </div>
                   </PopupPortal>
@@ -268,10 +268,10 @@ export function UserDock({
                     offset={8}
                   >
                     <div>
-                      <div className="device-list">
+                      <div className="device-list mt-4 grid gap-2">
                         <button
                           type="button"
-                          className={`secondary device-item radio-item ${selectedInputProfile === "noise_reduction" ? "device-item-active" : ""}`}
+                          className={`secondary device-item radio-item flex items-center justify-between gap-4 text-left ${selectedInputProfile === "noise_reduction" ? "device-item-active" : ""}`}
                           onClick={() => {
                             onSetSelectedInputProfile("noise_reduction");
                             onSetVoiceSettingsPanel(null);
@@ -282,7 +282,7 @@ export function UserDock({
                         </button>
                         <button
                           type="button"
-                          className={`secondary device-item radio-item ${selectedInputProfile === "studio" ? "device-item-active" : ""}`}
+                          className={`secondary device-item radio-item flex items-center justify-between gap-4 text-left ${selectedInputProfile === "studio" ? "device-item-active" : ""}`}
                           onClick={() => {
                             onSetSelectedInputProfile("studio");
                             onSetVoiceSettingsPanel(null);
@@ -293,7 +293,7 @@ export function UserDock({
                         </button>
                         <button
                           type="button"
-                          className={`secondary device-item radio-item ${selectedInputProfile === "custom" ? "device-item-active" : ""}`}
+                          className={`secondary device-item radio-item flex items-center justify-between gap-4 text-left ${selectedInputProfile === "custom" ? "device-item-active" : ""}`}
                           onClick={() => {
                             onSetSelectedInputProfile("custom");
                             onSetVoiceSettingsPanel(null);
@@ -336,12 +336,12 @@ export function UserDock({
               >
                 <div className="grid gap-3">
                   <div className="subheading">{t("settings.outputDevice")}</div>
-                  <div className="device-list grid gap-1.5">
+                  <div className="device-list mt-4 grid gap-1.5">
                     {outputOptions.map((device) => (
                       <button
                         key={device.id}
                         type="button"
-                        className={`secondary device-item radio-item ${selectedOutputId === device.id ? "device-item-active" : ""}`}
+                        className={`secondary device-item radio-item flex items-center justify-between gap-4 text-left ${selectedOutputId === device.id ? "device-item-active" : ""}`}
                         disabled={mediaDevicesUnavailable}
                         onClick={() => onSetSelectedOutputId(device.id)}
                       >
@@ -519,7 +519,7 @@ export function UserDock({
                     <h3 className="subheading">{t("settings.inputProfile")}</h3>
                     <button
                       type="button"
-                      className={`secondary device-item radio-item ${selectedInputProfile === "noise_reduction" ? "device-item-active" : ""}`}
+                      className={`secondary device-item radio-item flex items-center justify-between gap-4 text-left ${selectedInputProfile === "noise_reduction" ? "device-item-active" : ""}`}
                       onClick={() => onSetSelectedInputProfile("noise_reduction")}
                     >
                       <span>{t("settings.voiceIsolation")}</span>
@@ -527,7 +527,7 @@ export function UserDock({
                     </button>
                     <button
                       type="button"
-                      className={`secondary device-item radio-item ${selectedInputProfile === "studio" ? "device-item-active" : ""}`}
+                      className={`secondary device-item radio-item flex items-center justify-between gap-4 text-left ${selectedInputProfile === "studio" ? "device-item-active" : ""}`}
                       onClick={() => onSetSelectedInputProfile("studio")}
                     >
                       <span>{t("settings.studio")}</span>
@@ -535,7 +535,7 @@ export function UserDock({
                     </button>
                     <button
                       type="button"
-                      className={`secondary device-item radio-item ${selectedInputProfile === "custom" ? "device-item-active" : ""}`}
+                      className={`secondary device-item radio-item flex items-center justify-between gap-4 text-left ${selectedInputProfile === "custom" ? "device-item-active" : ""}`}
                       onClick={() => onSetSelectedInputProfile("custom")}
                     >
                       <span>{t("settings.custom")}</span>

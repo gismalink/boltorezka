@@ -143,9 +143,6 @@
     2px 2px 0 var(--pixel-hard-shadow);
 }
 
-.voice-menu-text {
-}
-
 .voice-menu-title {
   font-weight: 600;
 }
@@ -167,21 +164,12 @@
 }
 
 .device-list {
-  display: grid;
-  gap: var(--space-sm);
-  margin-top: var(--space-md);
 }
 
 .device-item {
-  justify-content: flex-start;
-  text-align: left;
 }
 
 .radio-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-md);
 }
 
 .voice-level-bars {
