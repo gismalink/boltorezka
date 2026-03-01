@@ -56,6 +56,7 @@
   - `23c317b` — `web: complete user-settings utility migration pass`
   - `52715e6` — `web: remove remaining legacy row class dependencies`
   - `5d218d5` — `web: remove redundant stack class usages in settings views`
+  - `9f13dbb` — `web: migrate room popup form stacks to utilities`
 
 ### Next step
 
