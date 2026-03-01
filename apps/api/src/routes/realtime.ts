@@ -91,6 +91,45 @@ function safeJsonSize(value: unknown): number {
   }
 }
 
+function extractIceCandidateMeta(signal: unknown): {
+  iceCandidateType: string | null;
+  iceTransport: string | null;
+  iceTcpType: string | null;
+} {
+  let candidateLine: string | null = null;
+
+  if (signal && typeof signal === "object") {
+    const maybeSignal = signal as { candidate?: unknown };
+
+    if (typeof maybeSignal.candidate === "string") {
+      candidateLine = maybeSignal.candidate;
+    } else if (maybeSignal.candidate && typeof maybeSignal.candidate === "object") {
+      const nestedCandidate = maybeSignal.candidate as { candidate?: unknown };
+      if (typeof nestedCandidate.candidate === "string") {
+        candidateLine = nestedCandidate.candidate;
+      }
+    }
+  }
+
+  if (!candidateLine) {
+    return {
+      iceCandidateType: null,
+      iceTransport: null,
+      iceTcpType: null
+    };
+  }
+
+  const typeMatch = candidateLine.match(/\btyp\s+([a-z0-9]+)/i);
+  const transportMatch = candidateLine.match(/\b(udp|tcp)\b/i);
+  const tcpTypeMatch = candidateLine.match(/\btcptype\s+([a-z0-9]+)/i);
+
+  return {
+    iceCandidateType: typeMatch?.[1]?.toLowerCase() ?? null,
+    iceTransport: transportMatch?.[1]?.toLowerCase() ?? null,
+    iceTcpType: tcpTypeMatch?.[1]?.toLowerCase() ?? null
+  };
+}
+
 export async function realtimeRoutes(fastify: FastifyInstance) {
   const socketsByUserId = new Map<string, Set<WebSocket>>();
   const socketsByRoomId = new Map<string, Set<WebSocket>>();
@@ -787,6 +826,7 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
               }
 
               const targetUserId = normalizeRequestId(getPayloadString(payload, "targetUserId", 128)) || null;
+              const iceMeta = eventType === "call.ice" ? extractIceCandidateMeta(signal) : null;
               logCallDebug("call signal received", {
                 eventType,
                 userId: state.userId,
@@ -795,7 +835,8 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
                 requestId,
                 targetUserId,
                 signalType: (signal as { type?: unknown }).type ?? null,
-                signalSize
+                signalSize,
+                ...(iceMeta ?? {})
               });
               const relayEnvelope = buildCallSignalRelayEnvelope(
                 knownMessage.type,
