@@ -52,6 +52,7 @@
   - `e861a9e` — `web: migrate user dock menu rows and sliders to utilities`
   - `d6db83b` — `web: migrate user dock device list layout to utilities`
   - `22fb4d8` — `web: migrate user dock control group layout to utilities`
+  - `868f0c9` — `web: migrate settings modal shell layout to utilities`
 
 ### Next step
 
