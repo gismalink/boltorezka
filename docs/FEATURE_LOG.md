@@ -3,6 +3,38 @@
 Этот документ хранит зафиксированные изменения, выполненные шаги и операционные evidence.
 План и open items находятся в `docs/ROADMAP.md`.
 
+## 2026-03-01 — Prod rollout from main + voice baseline canonicalized
+
+### Delivered
+
+- Выполнен production rollout из `main` (policy-compliant):
+  - merged `feature/mobile-earpiece-default` -> `main`,
+  - deploy target SHA: `36dd4e129b92e7bb0300ff936a8359f6f9be3658`.
+- В production подтверждены:
+  - mobile MVP UX-поправки (channels/chat/settings mobile layout),
+  - admin user actions: `promote`, `demote`, `ban`, `unban`,
+  - backend enforcement для banned users (`/v1/auth/ws-ticket`, guarded routes).
+- Зафиксирована каноническая документация по рабочему голосовому baseline:
+  - `docs/VOICE_BASELINE_RUNBOOK.md`.
+
+### Validation (prod)
+
+- `docker compose ps`:
+  - `boltorezka-api-prod` — `Up`,
+  - `boltorezka-db-prod` — `Up (healthy)`,
+  - `boltorezka-redis-prod` — `Up (healthy)`.
+- `curl -I https://boltorezka.gismalink.art/health` -> `HTTP/2 200`.
+- `curl https://boltorezka.gismalink.art/health` -> `{"status":"ok","checks":{"api":"ok","db":"ok","redis":"ok"},...}`.
+- `curl https://boltorezka.gismalink.art/v1/auth/mode` -> `{"mode":"sso","ssoBaseUrl":"https://auth.gismalink.art"}`.
+
+### Voice baseline notes
+
+- Рабочий media path закреплён на `relay + TURN TLS/TCP` для устойчивости в мобильных/жёстких сетях.
+- Важный технический фактор: отправка offer/answer после ICE gathering (или timeout guard), чтобы не терять релевантные кандидаты.
+- Операционные признаки “всё ок”:
+  - API `call.offer/call.answer/call.ice/call.mic_state` идут стабильно,
+  - TURN показывает `ALLOCATE -> CREATE_PERMISSION -> CHANNEL_BIND` + ненулевой `peer usage`.
+
 ## 2026-03-01 — Voice test baseline fixed (relay + TURN TLS/TCP)
 
 ### Delivered

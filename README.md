@@ -40,6 +40,7 @@ Legacy-файлы перенесены в `legacy/poc/`.
 - WS контракт v1: [docs/WS_CONTRACT_V1.md](docs/WS_CONTRACT_V1.md)
 - OpenAPI artifact v1: [docs/OPENAPI_V1.yaml](docs/OPENAPI_V1.yaml)
 - Smoke/CI matrix: [docs/SMOKE_CI_MATRIX.md](docs/SMOKE_CI_MATRIX.md)
+- Voice baseline runbook: [docs/VOICE_BASELINE_RUNBOOK.md](docs/VOICE_BASELINE_RUNBOOK.md)
 - Тестовый деплой (GitOps): [docs/RUNBOOK_TEST_DEPLOY.md](docs/RUNBOOK_TEST_DEPLOY.md)
 - Быстрый rollout в test (5 команд): [docs/RUNBOOK_TEST_ROLLOUT_QUICKSTART.md](docs/RUNBOOK_TEST_ROLLOUT_QUICKSTART.md)
 - Pre-prod checklist: [docs/PREPROD_CHECKLIST.md](docs/PREPROD_CHECKLIST.md)
