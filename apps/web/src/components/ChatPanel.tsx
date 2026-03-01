@@ -121,16 +121,19 @@ export function ChatPanel({
                 : "";
 
           return (
-            <article key={message.id} className={`chat-message ${isOwn ? "chat-message-own" : ""}`}>
+            <article
+              key={message.id}
+              className={`chat-message grid items-end gap-2 ${isOwn ? "chat-message-own grid-cols-1 justify-items-end" : "grid-cols-[34px_minmax(0,1fr)]"}`}
+            >
               {!isOwn ? (
-                <div className="chat-avatar" aria-hidden="true">
+                <div className="chat-avatar inline-flex h-[30px] w-[30px] items-center justify-center" aria-hidden="true">
                   {(message.user_name || "U").charAt(0).toUpperCase()}
                 </div>
               ) : null}
 
-              <div className="chat-bubble-wrap">
-                <div className="chat-bubble">
-                  <div className="chat-meta">
+              <div className={`chat-bubble-wrap grid max-w-[min(92%,820px)] gap-0.5 ${isOwn ? "justify-items-end" : "justify-items-start"}`}>
+                <div className="chat-bubble w-fit min-w-[120px]">
+                  <div className="chat-meta flex items-baseline justify-between gap-2">
                     <span className="chat-author">{message.user_name}</span>
                     <span className="chat-time">{formatMessageTime(message.created_at)}</span>
                   </div>
