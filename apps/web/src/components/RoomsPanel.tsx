@@ -289,6 +289,11 @@ export function RoomsPanel({
                 : rtcState === "connecting"
                   ? t("rtc.connecting")
                   : "";
+              const rtcStateClass = rtcState === "connecting"
+                ? "text-[#ffd166]"
+                : rtcState === "connected"
+                  ? "text-[var(--pixel-success)]"
+                  : "";
 
               return (
             <li
@@ -298,7 +303,7 @@ export function RoomsPanel({
               <span className="channel-member-avatar">{(member.userName || "U").charAt(0).toUpperCase()}</span>
               <span className="channel-member-name">{member.userName}</span>
               {rtcState !== "disconnected" ? (
-                <span className={`channel-member-rtc channel-member-rtc-${rtcState}`}>{rtcStateLabel}</span>
+                <span className={`channel-member-rtc ${rtcStateClass}`}>{rtcStateLabel}</span>
               ) : null}
               <span className="channel-member-icons" aria-hidden="true">
                 <i className={`bi ${micIconClass}`} />

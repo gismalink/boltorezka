@@ -112,6 +112,13 @@ export function ChatPanel({
       <div className="chat-log min-h-0 flex-1" ref={chatLogRef}>
         {messages.map((message) => {
           const isOwn = currentUserId === message.user_id;
+          const deliveryClass = message.deliveryStatus === "sending"
+            ? "text-[#ffd166]"
+            : message.deliveryStatus === "delivered"
+              ? "text-[#d4f0ff]"
+              : message.deliveryStatus === "failed"
+                ? "text-[var(--pixel-danger)]"
+                : "";
           const deliveryGlyph = message.deliveryStatus === "sending"
             ? "•"
             : message.deliveryStatus === "delivered"
@@ -141,7 +148,7 @@ export function ChatPanel({
                 </div>
 
                 {isOwn && message.deliveryStatus ? (
-                  <span className={`delivery delivery-${message.deliveryStatus}`}>
+                  <span className={`delivery ${deliveryClass}`}>
                     {deliveryGlyph}
                   </span>
                 ) : null}

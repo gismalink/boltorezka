@@ -153,16 +153,6 @@
   line-height: 1;
 }
 
-.channel-member-rtc-connecting {
-  border-color: color-mix(in srgb, var(--pixel-neon-amber) 60%, transparent 40%);
-  color: color-mix(in srgb, var(--pixel-neon-amber) 84%, var(--pixel-text) 16%);
-}
-
-.channel-member-rtc-connected {
-  border-color: color-mix(in srgb, var(--pixel-neon-cyan) 56%, transparent 44%);
-  color: color-mix(in srgb, var(--pixel-neon-cyan) 80%, var(--pixel-text) 20%);
-}
-
 .channel-member-item-current .channel-member-name {
   color: var(--pixel-neon-cyan);
   text-shadow: 1px 0 0 var(--pixel-hard-shadow);
@@ -286,18 +276,6 @@
   font-size: calc(var(--font-size-sm) - 0.14rem);
   color: var(--pixel-muted);
   padding-right: 2px;
-}
-
-.delivery-sending {
-  color: #ffd166;
-}
-
-.delivery-delivered {
-  color: #d4f0ff;
-}
-
-.delivery-failed {
-  color: var(--pixel-danger);
 }
 
 .signaling-panel {

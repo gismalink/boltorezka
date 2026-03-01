@@ -5,6 +5,19 @@
 
 ## 2026-03-02 — Tailwind migration (feature branch increment)
 
+### Increment (dynamic state modifiers)
+
+- Убраны последние динамические SCSS modifier-hooks в web runtime:
+  - `apps/web/src/components/ChatPanel.tsx`: `delivery-${status}` заменён на явный JSX class-map (`sending`/`delivered`/`failed`).
+  - `apps/web/src/components/RoomsPanel.tsx`: `channel-member-rtc-${state}` заменён на явный JSX class-map (`connecting`/`connected`).
+- Из `apps/web/src/styles/_rooms-chat.scss` удалены больше неиспользуемые селекторы:
+  - `.delivery-sending`, `.delivery-delivered`, `.delivery-failed`
+  - `.channel-member-rtc-connecting`, `.channel-member-rtc-connected`
+
+### Validation (increment)
+
+- `apps/web -> npm run build` — PASS (только известный Sass legacy API warning, без build-fail).
+
 ### Branch
 
 - Work branch: `feature/tailwind-user-dock` (GitOps workflow compliant).
