@@ -42,6 +42,7 @@
   - `2218a5f` — `web: clean empty legacy style blocks and update feature log`
   - `0fb987e` — `web: remove remaining rooms-chat layout duplicates`
   - `f622325` — `web: finalize style dedup for dock, overlays, and chat`
+  - `3046a67` — `web: remove remaining mobile room layout style duplicates`
 
 ### Next step
 
