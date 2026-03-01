@@ -57,6 +57,7 @@
   - `52715e6` — `web: remove remaining legacy row class dependencies`
   - `5d218d5` — `web: remove redundant stack class usages in settings views`
   - `9f13dbb` — `web: migrate room popup form stacks to utilities`
+  - `a573099` — `web: remove global row and stack style utilities`
 
 ### Next step
 
