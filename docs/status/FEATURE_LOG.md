@@ -49,6 +49,7 @@
   - `e0a8422` — `web: remove unused legacy style selectors`
   - `f0bb19f` — `web: remove final unused static style selectors`
   - `2d2a78a` — `web: migrate auth provider layout utilities in header`
+  - `e861a9e` — `web: migrate user dock menu rows and sliders to utilities`
 
 ### Next step
 
