@@ -3,7 +3,6 @@
 }
 
 .rooms-scroll {
-  overflow-y: auto;
   padding-right: var(--space-xxs);
 }
 
@@ -234,7 +233,6 @@
 }
 
 .chat-log {
-  flex: 1;
   max-height: none;
   overflow: auto;
   background: var(--pixel-panel-2);
@@ -258,7 +256,6 @@
 }
 
 .chat-bubble-wrap {
-  max-width: min(92%, 820px);
 }
 
 .chat-bubble {
@@ -266,8 +263,6 @@
   border: var(--border-thin) solid color-mix(in srgb, var(--pixel-border) 58%, transparent 42%);
   border-radius: 0;
   padding: 6px 8px;
-  min-width: 120px;
-  width: fit-content;
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--pixel-hard-shadow) 55%, transparent 45%);
 }
 
