@@ -95,6 +95,8 @@ function extractIceCandidateMeta(signal: unknown): {
   iceCandidateType: string | null;
   iceTransport: string | null;
   iceTcpType: string | null;
+  iceAddress: string | null;
+  icePort: number | null;
 } {
   let candidateLine: string | null = null;
 
@@ -115,18 +117,24 @@ function extractIceCandidateMeta(signal: unknown): {
     return {
       iceCandidateType: null,
       iceTransport: null,
-      iceTcpType: null
+      iceTcpType: null,
+      iceAddress: null,
+      icePort: null
     };
   }
 
   const typeMatch = candidateLine.match(/\btyp\s+([a-z0-9]+)/i);
   const transportMatch = candidateLine.match(/\b(udp|tcp)\b/i);
   const tcpTypeMatch = candidateLine.match(/\btcptype\s+([a-z0-9]+)/i);
+  const addressPortMatch = candidateLine.match(/candidate:[^\s]+\s+\d+\s+(?:udp|tcp)\s+\d+\s+([^\s]+)\s+(\d+)/i);
+  const icePortRaw = addressPortMatch?.[2] ? Number.parseInt(addressPortMatch[2], 10) : null;
 
   return {
     iceCandidateType: typeMatch?.[1]?.toLowerCase() ?? null,
     iceTransport: transportMatch?.[1]?.toLowerCase() ?? null,
-    iceTcpType: tcpTypeMatch?.[1]?.toLowerCase() ?? null
+    iceTcpType: tcpTypeMatch?.[1]?.toLowerCase() ?? null,
+    iceAddress: addressPortMatch?.[1] ?? null,
+    icePort: Number.isFinite(icePortRaw) ? icePortRaw : null
   };
 }
 
