@@ -5,24 +5,16 @@
 
 ## Current status (single-pane, 2026-03-01)
 
-- Release gate: **GO executed** для текущего MVP-инкремента.
-- Production rollout выполнен из `origin/main` (policy-compliant):
-  - deploy SHA: `36dd4e129b92e7bb0300ff936a8359f6f9be3658`;
-  - post-deploy smoke: `/health` = `200`, `/v1/auth/mode` = `sso`.
-- Latest test rollout before prod: `origin/feature/mobile-earpiece-default` @ `30e354d`.
-- Критичные блоки закрыты:
-  - voice baseline стабилизирован (`relay + TURN TLS/TCP`),
-  - mobile MVP UI доведён,
-  - admin users: `promote/demote/ban/unban`.
-- Каноника по голосу:
-  - `docs/runbooks/VOICE_BASELINE_RUNBOOK.md`.
+- Краткий статус и release snapshot: `docs/status/STATUS.md`.
+- Каноника по voice baseline: `docs/runbooks/VOICE_BASELINE_RUNBOOK.md`.
+- Детальный pre-prod gate: `docs/runbooks/PREPROD_DECISION_PACKAGE.md`.
 
 Навигация:
 - План и open tasks: этот документ.
 - Реализованные изменения/evidence: `docs/status/FEATURE_LOG.md`.
 - Детальная pre-prod форма: `docs/runbooks/PREPROD_DECISION_PACKAGE.md`.
 
-## Delivery rules (обязательно) (дубль из правил агента)
+## Delivery rules (обязательно)
 
 - Deploy first to `test`.
 - `prod` отложен до состояния, близкого к MVP (MVP-like readiness gate).
@@ -34,9 +26,9 @@
 
 ## Focus now (операционный фокус)
 
-1. Выполнить документационную уборку (удалить устаревшие gate-формулировки, синхронизировать runbooks).
-2. Закрепить voice runbook как обязательный reference в pre-prod проверках.
-3. Подготовить следующий MVP-инкремент на `feature/*` с test-first циклом.
+1. Следующий MVP-инкремент разрабатывать в `feature/*` с test-first циклом.
+2. Держать runbooks/contracts синхронизированными по итогам каждого релизного шага.
+3. Перед любым `prod` обновлять `PREPROD_DECISION_PACKAGE` и фиксировать owner sign-off.
 
 ## Completed milestones (свернуто)
 
@@ -134,7 +126,7 @@
   - [x] Формализован MVP-like readiness gate в `docs/runbooks/PREPROD_DECISION_PACKAGE.md`.
   - [x] Подготовлен текущий draft gate-record (статус `NO-GO` до закрытия pending-проверок).
   - [x] Закрыты pending smoke-проверки (`smoke:web:e2e`, `SMOKE_CALL_SIGNAL=1` relay).
-  - [ ] Получен explicit `GO` и выполнен rollout из `origin/main`.
+  - [x] Получен explicit `GO` и выполнен rollout из `origin/main`.
 
 ## KPI MVP
 

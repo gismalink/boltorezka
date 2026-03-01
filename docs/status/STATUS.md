@@ -3,9 +3,8 @@
 ## Текущее состояние (2026-03-01)
 
 - Prod rollout выполнен из `origin/main` (policy-compliant), health/mode checks — PASS.
-- Voice baseline стабилизирован и зафиксирован канонически.
-- Mobile MVP UX инкремент доведён и выкатан.
-- Admin users management поддерживает `promote/demote/ban/unban`.
+- Voice baseline зафиксирован канонически (`relay + TURN TLS/TCP`).
+- Mobile MVP UX и admin moderation (`promote/demote/ban/unban`) — в проде.
 
 ## Канонические документы
 
