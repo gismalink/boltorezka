@@ -21,7 +21,7 @@ services:
           --realm=${TURN_REALM:-gismalink.art} \
           --external-ip=${TURN_EXTERNAL_IP:-95.165.154.118}/$$PRIVATE_IP \
           --relay-ip=$$PRIVATE_IP \
-          --user=${TURN_USERNAME}:${TURN_PASSWORD} \
+          --user="${TURN_USERNAME}:${TURN_PASSWORD}" \
           --cert=/caddy-data/caddy/certificates/acme-v02.api.letsencrypt.org-directory/${TURN_CERT_DOMAIN:-gismalink.art}/${TURN_CERT_DOMAIN:-gismalink.art}.crt \
           --pkey=/caddy-data/caddy/certificates/acme-v02.api.letsencrypt.org-directory/${TURN_CERT_DOMAIN:-gismalink.art}/${TURN_CERT_DOMAIN:-gismalink.art}.key \
           --min-port=${TURN_MIN_PORT:-30000} \
