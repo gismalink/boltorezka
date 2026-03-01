@@ -10,7 +10,7 @@ services:
       - sh
       - -ec
       - |
-        PRIVATE_IP="$$(hostname -i | awk '{print $1}')"
+        PRIVATE_IP="$$(hostname -i | cut -d' ' -f1)"
         exec turnserver \
           --no-cli \
           --simple-log \
