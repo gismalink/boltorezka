@@ -324,23 +324,17 @@ _Для серии инкрементов `feature/web-header-profile-menu` ис
 
 ## 2026-02-28 — Headings font update: Jersey 25
 
+_Для визуальных/UX инкрементов ниже используется единый test-flow: `web:build` + `check:api-types` (где применимо) + `deploy:test:smoke` на `feature/web-header-profile-menu`; smoke (`smoke:sso`, `smoke:realtime`) — PASS, если не указано иное._
+
 ### Delivered
 
 - Для заголовков (`h1`, `h2`, `h3`) подключен и применён Google Font `Jersey 25`.
 - Базовые fallback-шрифты сохранены.
 
-### Validation
+### Validation / Operational evidence (test)
 
-- `npm --prefix apps/web run build` — PASS.
-
-### Operational evidence (test)
-
-- Deploy target: `test`, branch `feature/web-header-profile-menu`, SHA `c308504`.
-- Command: `ssh mac-mini 'cd ~/srv/boltorezka && TEST_REF=origin/feature/web-header-profile-menu npm run deploy:test:smoke'`.
-- Smoke result:
-  - `smoke:sso` — PASS,
-  - `smoke:realtime` — PASS,
-  - `reconnectOk=true`, `reconnectSkipped=false`.
+- Стандартный gate для `feature/web-header-profile-menu` — PASS.
+- Deploy SHA: `c308504`.
 
 ## 2026-02-28 — Layout fixes: user dock ellipsis + viewport clamp + right-column scroll
 
@@ -351,19 +345,10 @@ _Для серии инкрементов `feature/web-header-profile-menu` ис
 - Правая колонка получила собственный вертикальный скролл.
 - В форме чата кнопка `Send` выровнена в один ряд с input.
 
-### Validation
+### Validation / Operational evidence (test)
 
-- `npm --prefix apps/web run build` — PASS.
-- `npm run check:api-types` — PASS.
-
-### Operational evidence (test)
-
-- Deploy target: `test`, branch `feature/web-header-profile-menu`, SHA `76a2501`.
-- Command: `ssh mac-mini 'cd ~/srv/boltorezka && TEST_REF=origin/feature/web-header-profile-menu npm run deploy:test:smoke'`.
-- Smoke result:
-  - `smoke:sso` — PASS,
-  - `smoke:realtime` — PASS,
-  - `reconnectOk=true`, `reconnectSkipped=false`.
+- Стандартный gate для `feature/web-header-profile-menu` — PASS.
+- Deploy SHA: `76a2501`.
 
 ## 2026-02-28 — Voice submenu smart side placement (portal)
 
@@ -375,18 +360,10 @@ _Для серии инкрементов `feature/web-header-profile-menu` ис
 - Added automatic horizontal flip for side popups when viewport space is insufficient.
 - Migrated user dock nested voice submenus (`Устройство ввода` / `Профиль ввода`) to portal side-placement.
 
-### Validation
+### Validation / Operational evidence (test)
 
-- `npm run web:build` — PASS.
-
-### Operational evidence (test)
-
-- Deploy target: `test`, branch `feature/web-header-profile-menu`, SHA `9dc067c`.
-- Command: `ssh mac-mini 'cd ~/srv/boltorezka && TEST_REF=origin/feature/web-header-profile-menu npm run deploy:test:smoke'`.
-- Smoke result:
-  - `smoke:sso` — PASS,
-  - `smoke:realtime` — PASS,
-  - `reconnectOk=true`, `reconnectSkipped=false`.
+- Стандартный gate для `feature/web-header-profile-menu` — PASS.
+- Deploy SHA: `9dc067c`.
 
 ## 2026-02-28 — Popup layer system (portal-based)
 
@@ -401,18 +378,10 @@ _Для серии инкрементов `feature/web-header-profile-menu` ис
 - Added viewport-aware popup positioning with auto flip (vertical/horizontal).
 - Updated outside-click handling so popup-layer content is treated as "inside" interaction.
 
-### Validation
+### Validation / Operational evidence (test)
 
-- `npm run web:build` — PASS.
-
-### Operational evidence (test)
-
-- Deploy target: `test`, branch `feature/web-header-profile-menu`, SHA `c653a87`.
-- Command: `ssh mac-mini 'cd ~/srv/boltorezka && TEST_REF=origin/feature/web-header-profile-menu npm run deploy:test:smoke'`.
-- Smoke result:
-  - `smoke:sso` — PASS,
-  - `smoke:realtime` — PASS,
-  - `reconnectOk=true`, `reconnectSkipped=false`.
+- Стандартный gate для `feature/web-header-profile-menu` — PASS.
+- Deploy SHA: `c653a87`.
 
 ## 2026-02-28 — Chat layout stabilization + media device persistence/fallback
 
@@ -430,18 +399,10 @@ _Для серии инкрементов `feature/web-header-profile-menu` ис
   - `unsupported`, `denied`, `error` with clear warning text,
   - disabled device selectors when devices are unavailable.
 
-### Validation
+### Validation / Operational evidence (test)
 
-- `npm run web:build` — PASS.
-
-### Operational evidence (test)
-
-- Deploy target: `test`, branch `feature/web-header-profile-menu`, SHA `6ddd66f`.
-- Command: `ssh mac-mini 'cd ~/srv/boltorezka && TEST_REF=origin/feature/web-header-profile-menu npm run deploy:test:smoke'`.
-- Smoke result:
-  - `smoke:sso` — PASS,
-  - `smoke:realtime` — PASS,
-  - `reconnectOk=true`, `reconnectSkipped=false`.
+- Стандартный gate для `feature/web-header-profile-menu` — PASS.
+- Deploy SHA: `6ddd66f`.
 
 ## 2026-02-28 — User panel voice UX: output device dropdown + voice settings popup
 
@@ -455,20 +416,10 @@ _Для серии инкрементов `feature/web-header-profile-menu` ис
   - persisted local values для volume/sensitivity.
 - Добавлено закрытие popup-элементов по click-outside для более предсказуемого UX.
 
-### Validation
+### Validation / Operational evidence (test)
 
-- `npm run web:build` — PASS.
-- `npm run check:api-types` — PASS.
-- `npm run check` — PASS.
-
-### Operational evidence (test)
-
-- Deploy target: `test`, branch `feature/web-header-profile-menu`, SHA `a8f4ce4`.
-- Command: `ssh mac-mini 'cd ~/srv/boltorezka && TEST_REF=origin/feature/web-header-profile-menu npm run deploy:test:smoke'`.
-- Smoke result:
-  - `smoke:sso` — PASS,
-  - `smoke:realtime` — PASS,
-  - `reconnectOk=true`, `reconnectSkipped=false`.
+- Стандартный gate для `feature/web-header-profile-menu` — PASS.
+- Deploy SHA: `a8f4ce4`.
 
 ## 2026-02-28 — User panel revisit: bottom user dock + RTC connection card
 
@@ -481,20 +432,10 @@ _Для серии инкрементов `feature/web-header-profile-menu` ис
 - Для каналов с RTC-capability добавлен компактный блок `Подключение к RTC` над user dock.
 - В channel row сохранён только icon-сигнал типа (без текстового дубля).
 
-### Validation
+### Validation / Operational evidence (test)
 
-- `npm run web:build` — PASS.
-- `npm run check:api-types` — PASS.
-- `npm run check` — PASS.
-
-### Operational evidence (test)
-
-- Deploy target: `test`, branch `feature/web-header-profile-menu`, SHA `6fa7ba1`.
-- Command: `ssh mac-mini 'cd ~/srv/boltorezka && TEST_REF=origin/feature/web-header-profile-menu npm run deploy:test:smoke'`.
-- Smoke result:
-  - `smoke:sso` — PASS,
-  - `smoke:realtime` — PASS,
-  - `reconnectOk=true`, `reconnectSkipped=false`.
+- Стандартный gate для `feature/web-header-profile-menu` — PASS.
+- Deploy SHA: `6fa7ba1`.
 
 ## 2026-02-28 — Category settings popup + channel row cleanup
 
@@ -508,20 +449,10 @@ _Для серии инкрементов `feature/web-header-profile-menu` ис
   - `POST /v1/room-categories/:categoryId/move`
 - В channel row убран текстовый дубль типа канала — теперь тип считывается только из иконки.
 
-### Validation
+### Validation / Operational evidence (test)
 
-- `npm run check:api-types` — PASS.
-- `npm run web:build` — PASS.
-- `npm run check` — PASS.
-
-### Operational evidence (test)
-
-- Deploy target: `test`, branch `feature/web-header-profile-menu`, SHA `a4551df`.
-- Command: `ssh mac-mini 'cd ~/srv/boltorezka && TEST_REF=origin/feature/web-header-profile-menu npm run deploy:test:smoke'`.
-- Smoke result:
-  - `smoke:sso` — PASS,
-  - `smoke:realtime` — PASS,
-  - `reconnectOk=true`, `reconnectSkipped=false`.
+- Стандартный gate для `feature/web-header-profile-menu` — PASS.
+- Deploy SHA: `a4551df`.
 
 ## 2026-02-28 — Channel row UX update: Bootstrap Icons + settings popup + stronger active state
 
@@ -624,7 +555,7 @@ _Для серии инкрементов `feature/web-header-profile-menu` ис
 ### Operational evidence (test)
 
 - Deploy target: `test`, branch `feature/web-header-profile-menu`, SHA `0e99f24`.
-- Command: `ssh mac-mini 'cd ~/srv/boltorezka && TEST_REF=origin/feature/web-header-profile-menu npm run deploy:test:smoke'`.
+- Deploy command: стандартный `deploy:test:smoke` flow для ветки.
 - Realtime smoke output:
   - `ok=true`
   - `reconnectOk=true`
