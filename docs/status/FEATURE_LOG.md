@@ -55,6 +55,9 @@
 ### Validation (bugfix pass)
 
 - `apps/web -> npm run build` — PASS.
+- Test deploy from feature branch выполнен: `TEST_REF=origin/feature/tailwind-user-dock npm run deploy:test:smoke` — PASS.
+  - Deploy target SHA: `81560670a242fa3f5e417208eefc0aac4d824324`.
+  - Postdeploy smoke: `smoke:sso`, `smoke:api`, `smoke:realtime` — PASS.
 
 ### Branch
 
