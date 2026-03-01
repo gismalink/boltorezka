@@ -138,6 +138,69 @@ function extractIceCandidateMeta(signal: unknown): {
   };
 }
 
+function extractSdpMeta(signal: unknown): {
+  sdpLength: number | null;
+  sdpCandidateLines: number | null;
+  sdpRelayCandidates: number | null;
+  sdpSrflxCandidates: number | null;
+  sdpHostCandidates: number | null;
+  sdpHasRelay: boolean | null;
+  sdpHasTrickleOption: boolean | null;
+} {
+  if (!signal || typeof signal !== "object") {
+    return {
+      sdpLength: null,
+      sdpCandidateLines: null,
+      sdpRelayCandidates: null,
+      sdpSrflxCandidates: null,
+      sdpHostCandidates: null,
+      sdpHasRelay: null,
+      sdpHasTrickleOption: null
+    };
+  }
+
+  const maybeSignal = signal as { sdp?: unknown };
+  if (typeof maybeSignal.sdp !== "string") {
+    return {
+      sdpLength: null,
+      sdpCandidateLines: null,
+      sdpRelayCandidates: null,
+      sdpSrflxCandidates: null,
+      sdpHostCandidates: null,
+      sdpHasRelay: null,
+      sdpHasTrickleOption: null
+    };
+  }
+
+  const sdp = maybeSignal.sdp;
+  const candidateLines = sdp.match(/^a=candidate:.*$/gm) ?? [];
+  let relay = 0;
+  let srflx = 0;
+  let host = 0;
+
+  for (const line of candidateLines) {
+    const typeMatch = line.match(/\btyp\s+([a-z0-9]+)/i);
+    const candidateType = typeMatch?.[1]?.toLowerCase() ?? null;
+    if (candidateType === "relay") {
+      relay += 1;
+    } else if (candidateType === "srflx") {
+      srflx += 1;
+    } else if (candidateType === "host") {
+      host += 1;
+    }
+  }
+
+  return {
+    sdpLength: sdp.length,
+    sdpCandidateLines: candidateLines.length,
+    sdpRelayCandidates: relay,
+    sdpSrflxCandidates: srflx,
+    sdpHostCandidates: host,
+    sdpHasRelay: relay > 0,
+    sdpHasTrickleOption: /a=ice-options:\s*trickle/i.test(sdp)
+  };
+}
+
 export async function realtimeRoutes(fastify: FastifyInstance) {
   const socketsByUserId = new Map<string, Set<WebSocket>>();
   const socketsByRoomId = new Map<string, Set<WebSocket>>();
@@ -835,6 +898,7 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
 
               const targetUserId = normalizeRequestId(getPayloadString(payload, "targetUserId", 128)) || null;
               const iceMeta = eventType === "call.ice" ? extractIceCandidateMeta(signal) : null;
+              const sdpMeta = eventType === "call.offer" || eventType === "call.answer" ? extractSdpMeta(signal) : null;
               logCallDebug("call signal received", {
                 eventType,
                 userId: state.userId,
@@ -844,7 +908,8 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
                 targetUserId,
                 signalType: (signal as { type?: unknown }).type ?? null,
                 signalSize,
-                ...(iceMeta ?? {})
+                ...(iceMeta ?? {}),
+                ...(sdpMeta ?? {})
               });
               const relayEnvelope = buildCallSignalRelayEnvelope(
                 knownMessage.type,

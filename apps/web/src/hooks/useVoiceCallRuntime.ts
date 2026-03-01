@@ -756,10 +756,6 @@ export function useVoiceCallRuntime({
         return;
       }
 
-      if (isTargetTemporarilyBlocked(targetUserId)) {
-        return;
-      }
-
       const requestId = sendWsEvent(
         "call.ice",
         {
@@ -922,7 +918,7 @@ export function useVoiceCallRuntime({
 
     void applyRemoteAudioOutput(remoteAudioElement);
     return connection;
-  }, [sendWsEvent, applyRemoteAudioOutput, clearPeerReconnectTimer, closePeer, scheduleReconnect, updateCallStatus, syncPeerVoiceState, retryRemoteAudioPlayback, startPeerStatsMonitor, rememberRequestTarget, isTargetTemporarilyBlocked]);
+  }, [sendWsEvent, applyRemoteAudioOutput, clearPeerReconnectTimer, closePeer, scheduleReconnect, updateCallStatus, syncPeerVoiceState, retryRemoteAudioPlayback, startPeerStatsMonitor, rememberRequestTarget]);
 
   ensurePeerConnectionRef.current = ensurePeerConnection;
 
@@ -1236,6 +1232,10 @@ export function useVoiceCallRuntime({
     }
 
     if (!mapped || code !== "TargetNotInRoom") {
+      return;
+    }
+
+    if (mapped.eventType !== "call.offer" && mapped.eventType !== "call.answer") {
       return;
     }
 
