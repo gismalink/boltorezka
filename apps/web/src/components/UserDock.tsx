@@ -388,17 +388,17 @@ export function UserDock({
           <section className="card voice-preferences-modal user-settings-modal grid w-full max-w-[980px] min-w-0 gap-4 max-[900px]:h-full max-[900px]:max-h-none max-[900px]:min-h-0 max-[900px]:overflow-hidden max-[900px]:p-4 md:grid-cols-[250px_1fr]" ref={userSettingsRef}>
             <div className="user-settings-sidebar grid min-w-0 content-start gap-3">
               <div className="voice-preferences-kicker">{t("settings.title")}</div>
-              <div className="user-settings-tab-group grid min-w-0 gap-2">
+              <div className="user-settings-tab-group grid min-w-0 gap-2 max-[920px]:grid-cols-2 max-[920px]:gap-2">
                 <button
                   type="button"
-                  className={`secondary user-settings-tab-btn ${userSettingsTab === "profile" ? "user-settings-tab-btn-active" : ""}`}
+                  className={`secondary user-settings-tab-btn justify-start text-left max-[920px]:min-w-0 max-[920px]:justify-center ${userSettingsTab === "profile" ? "user-settings-tab-btn-active" : ""}`}
                   onClick={() => onSetUserSettingsTab("profile")}
                 >
                   {t("settings.tabProfile")}
                 </button>
                 <button
                   type="button"
-                  className={`secondary user-settings-tab-btn ${userSettingsTab === "sound" ? "user-settings-tab-btn-active" : ""}`}
+                  className={`secondary user-settings-tab-btn justify-start text-left max-[920px]:min-w-0 max-[920px]:justify-center ${userSettingsTab === "sound" ? "user-settings-tab-btn-active" : ""}`}
                   onClick={() => onSetUserSettingsTab("sound")}
                 >
                   {t("settings.tabSound")}
@@ -408,7 +408,7 @@ export function UserDock({
 
             <div className="user-settings-content grid min-h-0 min-w-0 content-start gap-4 overflow-auto overflow-x-hidden pr-0">
               <div className="voice-preferences-head flex items-center justify-between gap-2">
-                <h2>{userSettingsTab === "profile" ? t("settings.tabProfile") : t("settings.tabSound")}</h2>
+                <h2 className="mt-[var(--space-xxs)]">{userSettingsTab === "profile" ? t("settings.tabProfile") : t("settings.tabSound")}</h2>
                 {!inlineSettingsMode ? (
                   <button type="button" className="secondary icon-btn" onClick={() => onSetUserSettingsOpen(false)} aria-label={t("settings.closeVoiceAria")}>
                     <i className="bi bi-x-lg" aria-hidden="true" />
@@ -503,7 +503,7 @@ export function UserDock({
 
                   <div className="voice-test-row grid gap-2">
                     <div className="subheading">{t("settings.micTest")}</div>
-                    <div className="voice-level-bars grid grid-cols-12 gap-0.5 md:grid-cols-[repeat(42,minmax(0,1fr))]" aria-hidden="true">
+                    <div className="voice-level-bars mt-0 grid grid-cols-12 gap-0.5 md:grid-cols-[repeat(42,minmax(0,1fr))]" aria-hidden="true">
                       {Array.from({ length: modalBarCount }).map((_, index) => (
                         <span
                           key={`modal-bar-${index}`}

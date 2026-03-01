@@ -62,7 +62,7 @@ export function ServerProfileModal({
           {canPromote ? (
             <button
               type="button"
-              className={`secondary user-settings-tab-btn ${serverMenuTab === "users" ? "user-settings-tab-btn-active" : ""}`}
+              className={`secondary user-settings-tab-btn justify-start text-left max-[920px]:min-w-0 max-[920px]:justify-center ${serverMenuTab === "users" ? "user-settings-tab-btn-active" : ""}`}
               onClick={() => onSetServerMenuTab("users")}
             >
               {t("server.tabUsers")}
@@ -70,7 +70,7 @@ export function ServerProfileModal({
           ) : null}
           <button
             type="button"
-            className={`secondary user-settings-tab-btn ${serverMenuTab === "events" ? "user-settings-tab-btn-active" : ""}`}
+            className={`secondary user-settings-tab-btn justify-start text-left max-[920px]:min-w-0 max-[920px]:justify-center ${serverMenuTab === "events" ? "user-settings-tab-btn-active" : ""}`}
             onClick={() => onSetServerMenuTab("events")}
           >
             {t("server.tabEvents")}
@@ -78,7 +78,7 @@ export function ServerProfileModal({
           {canViewTelemetry ? (
             <button
               type="button"
-              className={`secondary user-settings-tab-btn ${serverMenuTab === "telemetry" ? "user-settings-tab-btn-active" : ""}`}
+              className={`secondary user-settings-tab-btn justify-start text-left max-[920px]:min-w-0 max-[920px]:justify-center ${serverMenuTab === "telemetry" ? "user-settings-tab-btn-active" : ""}`}
               onClick={() => onSetServerMenuTab("telemetry")}
             >
               {t("server.tabTelemetry")}
@@ -86,7 +86,7 @@ export function ServerProfileModal({
           ) : null}
           <button
             type="button"
-            className={`secondary user-settings-tab-btn ${serverMenuTab === "call" ? "user-settings-tab-btn-active" : ""}`}
+            className={`secondary user-settings-tab-btn justify-start text-left max-[920px]:min-w-0 max-[920px]:justify-center ${serverMenuTab === "call" ? "user-settings-tab-btn-active" : ""}`}
             onClick={() => onSetServerMenuTab("call")}
           >
             {t("server.tabCall")}
@@ -95,7 +95,7 @@ export function ServerProfileModal({
 
         <div className="user-settings-content grid min-h-0 min-w-0 content-start gap-4 overflow-auto overflow-x-hidden pr-0">
           <div className="voice-preferences-head flex items-center justify-between gap-3">
-            <h2>
+            <h2 className="mt-[var(--space-xxs)]">
               {serverMenuTab === "users" ? t("server.tabUsers") : null}
               {serverMenuTab === "events" ? t("server.tabEvents") : null}
               {serverMenuTab === "telemetry" ? t("server.tabTelemetry") : null}

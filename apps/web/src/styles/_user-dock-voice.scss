@@ -142,15 +142,6 @@
   min-width: 240px;
 }
 
-.device-list {
-}
-
-.device-item {
-}
-
-.radio-item {
-}
-
 .voice-level-bars {
   margin-top: var(--space-md);
 }
@@ -245,27 +236,14 @@
   width: min(1100px, 100%);
 }
 
-.user-settings-tab-btn {
-  justify-content: flex-start;
-  text-align: left;
-}
-
 .user-settings-tab-btn-active {
   border-color: var(--pixel-neon-cyan);
   box-shadow: 0 0 0 1px var(--pixel-neon-cyan), 2px 2px 0 var(--pixel-hard-shadow);
 }
 
-.voice-preferences-head h2 {
-  margin: var(--space-xxs) 0 0;
-}
-
 .voice-preferences-kicker {
   font-size: var(--font-size-sm);
   color: var(--pixel-muted);
-}
-
-.voice-test-row .voice-level-bars {
-  margin-top: 0;
 }
 
 .voice-divider {
@@ -285,17 +263,6 @@
     border-bottom: var(--border-strong) solid var(--pixel-border);
     padding-right: 0;
     padding-bottom: var(--space-md);
-  }
-
-  .user-settings-tab-group {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: var(--space-sm);
-  }
-
-  .user-settings-tab-btn {
-    min-width: 0;
-    justify-content: center;
   }
 
   .voice-preferences-overlay.inline-settings-mode .voice-preferences-modal {
