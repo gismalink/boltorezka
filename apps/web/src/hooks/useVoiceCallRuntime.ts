@@ -215,6 +215,7 @@ export function useVoiceCallRuntime({
     stallRecoveryAttempts: number;
     reconnectAttempts: number;
     reconnectTimer: number | null;
+    pendingRemoteCandidates: RTCIceCandidateInit[];
   }>>(new Map());
   const localStreamRef = useRef<MediaStream | null>(null);
   const ensurePeerConnectionRef = useRef<((targetUserId: string, targetLabel: string) => RTCPeerConnection) | null>(null);
@@ -716,6 +717,28 @@ export function useVoiceCallRuntime({
     });
   }, [closePeer, pushCallLog, updateCallStatus, shouldInitiateOffer]);
 
+  const flushPendingRemoteCandidates = useCallback(async (targetUserId: string, targetLabel: string) => {
+    const peer = peersRef.current.get(targetUserId);
+    if (!peer) {
+      return;
+    }
+
+    if (!peer.connection.remoteDescription || peer.pendingRemoteCandidates.length === 0) {
+      return;
+    }
+
+    const pending = peer.pendingRemoteCandidates.splice(0, peer.pendingRemoteCandidates.length);
+    for (const candidate of pending) {
+      try {
+        await peer.connection.addIceCandidate(new RTCIceCandidate(candidate));
+      } catch (error) {
+        pushCallLog(`call.ice queued handling failed (${targetLabel || targetUserId}): ${(error as Error).message}`);
+      }
+    }
+
+    pushCallLog(`call.ice queued flushed <- ${targetLabel || targetUserId} (${pending.length})`);
+  }, [pushCallLog]);
+
   const ensurePeerConnection = useCallback((targetUserId: string, targetLabel: string) => {
     const existing = peersRef.current.get(targetUserId);
     if (existing) {
@@ -762,7 +785,8 @@ export function useVoiceCallRuntime({
       inboundStalled: false,
       stallRecoveryAttempts: 0,
       reconnectAttempts: 0,
-      reconnectTimer: null as number | null
+      reconnectTimer: null as number | null,
+      pendingRemoteCandidates: [] as RTCIceCandidateInit[]
     };
     peersRef.current.set(targetUserId, peerContext);
     incrementVoiceCounter("runtimePeers");
@@ -1159,6 +1183,7 @@ export function useVoiceCallRuntime({
 
         await attachLocalTracks(connection);
         await connection.setRemoteDescription(new RTCSessionDescription(signal as unknown as RTCSessionDescriptionInit));
+        await flushPendingRemoteCandidates(fromUserId, fromUserName);
 
         const answer = await connection.createAnswer();
         await connection.setLocalDescription(answer);
@@ -1198,6 +1223,7 @@ export function useVoiceCallRuntime({
         }
 
         await connection.setRemoteDescription(new RTCSessionDescription(signal as unknown as RTCSessionDescriptionInit));
+        await flushPendingRemoteCandidates(fromUserId, fromUserName);
         setLastCallPeer(fromUserName);
         updateCallStatus();
         pushCallLog(`call answered by ${fromUserName}`);
@@ -1211,11 +1237,20 @@ export function useVoiceCallRuntime({
     if (eventType === "call.ice") {
       try {
         const connection = ensurePeerConnection(fromUserId, fromUserName);
+        const peer = peersRef.current.get(fromUserId);
         const candidate = (signal as { candidate?: RTCIceCandidateInit }).candidate
           ? (signal as { candidate: RTCIceCandidateInit }).candidate
           : (signal as RTCIceCandidateInit);
 
         if (!candidate || typeof candidate.candidate !== "string") {
+          return;
+        }
+
+        if (!connection.remoteDescription) {
+          if (peer) {
+            peer.pendingRemoteCandidates.push(candidate);
+            pushCallLog(`call.ice queued <- ${fromUserName} (${peer.pendingRemoteCandidates.length})`);
+          }
           return;
         }
 
