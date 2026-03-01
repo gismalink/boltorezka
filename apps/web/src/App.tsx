@@ -51,7 +51,7 @@ const TOAST_DUPLICATE_THROTTLE_MS = 12000;
 const TOAST_MAX_VISIBLE = 4;
 
 type ServerMenuTab = "users" | "events" | "telemetry" | "call";
-type MobileTab = "channels" | "chat" | "profile";
+type MobileTab = "channels" | "chat" | "settings";
 
 export function App() {
   const [token, setToken] = useState(localStorage.getItem("boltorezka_token") || "");
@@ -91,7 +91,7 @@ export function App() {
   const [editingRoomTitle, setEditingRoomTitle] = useState("");
   const [editingRoomKind, setEditingRoomKind] = useState<RoomKind>("text");
   const [editingRoomCategoryId, setEditingRoomCategoryId] = useState<string>("none");
-  const [micMuted, setMicMuted] = useState(false);
+  const [micMuted, setMicMuted] = useState(true);
   const [audioMuted, setAudioMuted] = useState(false);
   const [audioOutputMenuOpen, setAudioOutputMenuOpen] = useState(false);
   const [voiceSettingsOpen, setVoiceSettingsOpen] = useState(false);
@@ -557,6 +557,16 @@ export function App() {
     await roomAdminController.promote(token, userId);
   };
 
+  const demote = async (userId: string) => {
+    if (!token || !canPromote) return;
+    await roomAdminController.demote(token, userId);
+  };
+
+  const setUserBan = async (userId: string, banned: boolean) => {
+    if (!token || !canPromote) return;
+    await roomAdminController.setBan(token, userId, banned);
+  };
+
   const {
     uncategorizedRooms,
     allRooms,
@@ -681,7 +691,15 @@ export function App() {
       voiceSettingsAnchorRef={voiceSettingsAnchorRef}
       userSettingsRef={userSettingsRef}
       onToggleMic={() => setMicMuted((value) => !value)}
-      onToggleAudio={() => setAudioMuted((value) => !value)}
+      onToggleAudio={() => {
+        setAudioMuted((value) => {
+          const nextMuted = !value;
+          if (nextMuted) {
+            setMicMuted(true);
+          }
+          return nextMuted;
+        });
+      }}
       onToggleVoiceSettings={() => {
         setAudioOutputMenuOpen(false);
         setVoiceSettingsPanel(null);
@@ -709,6 +727,85 @@ export function App() {
       onSetMicVolume={setMicVolume}
       onSetOutputVolume={setOutputVolume}
       onDisconnectCall={disconnectRoom}
+      inlineSettingsMode={false}
+    />
+  ) : null;
+
+  const userDockInlineSettingsNode = user ? (
+    <UserDock
+      t={t}
+      user={user}
+      currentRoomSupportsRtc={currentRoomSupportsRtc}
+      currentRoomTitle={currentRoom?.title || ""}
+      callStatus={callStatus}
+      lastCallPeer={lastCallPeer}
+      roomVoiceConnected={roomVoiceConnected}
+      micMuted={micMuted}
+      audioMuted={audioMuted}
+      audioOutputMenuOpen={audioOutputMenuOpen}
+      voiceSettingsOpen={voiceSettingsOpen}
+      userSettingsOpen={userSettingsOpen}
+      userSettingsTab={userSettingsTab}
+      voiceSettingsPanel={voiceSettingsPanel}
+      profileNameDraft={profileNameDraft}
+      profileEmail={user.email}
+      profileSaving={profileSaving}
+      profileStatusText={profileStatusText}
+      selectedLang={lang}
+      languageOptions={LANGUAGE_OPTIONS}
+      inputOptions={inputOptions}
+      outputOptions={outputOptions}
+      selectedInputId={selectedInputId}
+      selectedOutputId={selectedOutputId}
+      selectedInputProfile={selectedInputProfile}
+      inputProfileLabel={inputProfileLabel}
+      currentInputLabel={currentInputLabel}
+      micVolume={micVolume}
+      outputVolume={outputVolume}
+      micTestLevel={micTestLevel}
+      mediaDevicesState={mediaDevicesState}
+      mediaDevicesHint={mediaDevicesHint}
+      audioOutputAnchorRef={audioOutputAnchorRef}
+      voiceSettingsAnchorRef={voiceSettingsAnchorRef}
+      userSettingsRef={userSettingsRef}
+      onToggleMic={() => setMicMuted((value) => !value)}
+      onToggleAudio={() => {
+        setAudioMuted((value) => {
+          const nextMuted = !value;
+          if (nextMuted) {
+            setMicMuted(true);
+          }
+          return nextMuted;
+        });
+      }}
+      onToggleVoiceSettings={() => {
+        setAudioOutputMenuOpen(false);
+        setVoiceSettingsPanel(null);
+        setVoiceSettingsOpen((value) => !value);
+      }}
+      onToggleAudioOutput={() => {
+        setVoiceSettingsOpen(false);
+        setVoiceSettingsPanel(null);
+        setAudioOutputMenuOpen((value) => !value);
+      }}
+      onOpenUserSettings={openUserSettings}
+      onSetVoiceSettingsOpen={setVoiceSettingsOpen}
+      onSetAudioOutputMenuOpen={setAudioOutputMenuOpen}
+      onSetVoiceSettingsPanel={setVoiceSettingsPanel}
+      onSetUserSettingsOpen={setUserSettingsOpen}
+      onSetUserSettingsTab={setUserSettingsTab}
+      onSetProfileNameDraft={setProfileNameDraft}
+      onSetSelectedLang={setLang}
+      onSaveProfile={saveMyProfile}
+      onSetSelectedInputId={setSelectedInputId}
+      onSetSelectedOutputId={setSelectedOutputId}
+      onSetSelectedInputProfile={setSelectedInputProfile}
+      onRefreshDevices={() => refreshDevices(true)}
+      onRequestMediaAccess={requestMediaAccess}
+      onSetMicVolume={setMicVolume}
+      onSetOutputVolume={setOutputVolume}
+      onDisconnectCall={disconnectRoom}
+      inlineSettingsMode
     />
   ) : null;
 
@@ -792,7 +889,7 @@ export function App() {
               onJoinRoom={joinRoom}
             />
 
-            {!isMobileViewport ? userDockNode : null}
+            {userDockNode}
           </aside>
         ) : null}
 
@@ -815,9 +912,9 @@ export function App() {
           </section>
         ) : null}
 
-        {isMobileViewport && user && mobileTab === "profile" ? (
-          <aside className="leftcolumn mobile-profile-column">
-            {userDockNode}
+        {isMobileViewport && user && mobileTab === "settings" ? (
+          <aside className="leftcolumn mobile-settings-column">
+            {userDockInlineSettingsNode}
           </aside>
         ) : null}
       </div>
@@ -842,12 +939,14 @@ export function App() {
           </button>
           <button
             type="button"
-            className={`secondary mobile-tab-btn ${mobileTab === "profile" ? "mobile-tab-btn-active" : ""}`}
-            onClick={() => setMobileTab("profile")}
+            className={`secondary mobile-tab-btn ${mobileTab === "settings" ? "mobile-tab-btn-active" : ""}`}
+            onClick={() => {
+              setMobileTab("settings");
+            }}
             disabled={!user}
           >
-            <i className="bi bi-person" aria-hidden="true" />
-            <span>{t("mobile.tabProfile")}</span>
+            <i className="bi bi-gear" aria-hidden="true" />
+            <span>{t("mobile.tabSettings")}</span>
           </button>
         </nav>
       ) : null}
@@ -868,6 +967,8 @@ export function App() {
         onClose={() => setAppMenuOpen(false)}
         onSetServerMenuTab={setServerMenuTab}
         onPromote={(userId) => void promote(userId)}
+        onDemote={(userId) => void demote(userId)}
+        onSetBan={(userId, banned) => void setUserBan(userId, banned)}
         onRefreshTelemetry={() => void loadTelemetrySummary()}
       />
 

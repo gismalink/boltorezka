@@ -128,5 +128,11 @@ export const api = {
   telemetrySummary: (token: string) => fetchJson<TelemetrySummary>(endpoints.telemetrySummary, token),
   adminUsers: (token: string) => fetchJson<{ users: User[] }>(endpoints.adminUsers, token),
   promoteUser: (token: string, userId: string) =>
-    fetchJson<{ user: User }>(withSuffix(endpoints.adminUsers, userId, "promote"), token, withJsonBody("POST", { role: "admin" }))
+    fetchJson<{ user: User }>(withSuffix(endpoints.adminUsers, userId, "promote"), token, withJsonBody("POST", { role: "admin" })),
+  demoteUser: (token: string, userId: string) =>
+    fetchJson<{ user: User }>(withSuffix(endpoints.adminUsers, userId, "demote"), token, withJsonBody("POST", { role: "user" })),
+  banUser: (token: string, userId: string) =>
+    fetchJson<{ user: User }>(withSuffix(endpoints.adminUsers, userId, "ban"), token, withJsonBody("POST")),
+  unbanUser: (token: string, userId: string) =>
+    fetchJson<{ user: User }>(withSuffix(endpoints.adminUsers, userId, "unban"), token, withJsonBody("POST"))
 };

@@ -36,7 +36,6 @@ export function AppHeader({
   return (
     <header className="app-header">
       <div className="header-brand">
-        <h1 className="app-title">{t("app.title")}</h1>
         <div className="app-menu">
           <button
             type="button"
@@ -48,6 +47,7 @@ export function AppHeader({
             B
           </button>
         </div>
+        <h1 className="app-title">{t("app.title")}</h1>
       </div>
       <div className="header-actions">
         {user ? (

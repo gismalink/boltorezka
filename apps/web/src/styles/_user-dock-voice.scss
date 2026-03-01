@@ -7,6 +7,10 @@
   z-index: 20;
 }
 
+.user-dock-inline-hidden {
+  display: none;
+}
+
 .rtc-connection-card {
   border-color: var(--pixel-border);
   background: var(--pixel-panel-2);
@@ -298,6 +302,32 @@
   padding: var(--space-3xl);
 }
 
+.voice-preferences-overlay.inline-settings-mode {
+  position: static;
+  inset: auto;
+  background: transparent;
+  z-index: auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+  padding: 0;
+  overflow: hidden;
+  overflow-x: clip;
+}
+
+.voice-preferences-overlay.inline-settings-mode .voice-preferences-modal {
+  width: 100%;
+  max-width: 100%;
+  height: 100%;
+  max-height: none;
+  min-height: 0;
+  overflow: hidden;
+  overflow-x: clip;
+  padding: var(--space-lg);
+  box-sizing: border-box;
+}
+
 .voice-preferences-modal {
   width: min(760px, 100%);
   height: 80vh;
@@ -310,8 +340,9 @@
 
 .user-settings-modal {
   width: min(980px, 100%);
-  grid-template-columns: 250px 1fr;
+  grid-template-columns: 250px minmax(0, 1fr);
   gap: var(--space-2xl);
+  min-width: 0;
 }
 
 .user-settings-sidebar {
@@ -320,6 +351,13 @@
   display: grid;
   align-content: start;
   gap: var(--space-sm);
+  min-width: 0;
+}
+
+.user-settings-tab-group {
+  display: grid;
+  gap: var(--space-sm);
+  min-width: 0;
 }
 
 .user-settings-content {
@@ -328,7 +366,21 @@
   gap: var(--space-xl);
   min-height: 0;
   overflow: auto;
-  padding-right: var(--space-xxs);
+  overflow-x: hidden;
+  min-width: 0;
+  padding-right: 0;
+}
+
+.user-settings-content .stack,
+.user-settings-content .row,
+.user-settings-content label {
+  min-width: 0;
+}
+
+.user-settings-content input,
+.user-settings-content select,
+.user-settings-content button {
+  max-width: 100%;
 }
 
 .server-profile-modal {
@@ -386,6 +438,8 @@
 @media (max-width: 920px) {
   .user-settings-modal {
     grid-template-columns: 1fr;
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: var(--space-md);
   }
 
   .user-settings-sidebar {
@@ -393,6 +447,27 @@
     border-bottom: var(--border-strong) solid var(--pixel-border);
     padding-right: 0;
     padding-bottom: var(--space-md);
+  }
+
+  .user-settings-tab-group {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-sm);
+  }
+
+  .user-settings-tab-btn {
+    min-width: 0;
+    justify-content: center;
+  }
+
+  .voice-preferences-overlay.inline-settings-mode .voice-preferences-modal {
+    padding: var(--space-sm);
+  }
+
+  .voice-preferences-overlay.inline-settings-mode .user-settings-content {
+    min-height: 0;
+    overflow: auto;
+    padding-bottom: calc(var(--space-sm) + env(safe-area-inset-bottom));
   }
 }
 

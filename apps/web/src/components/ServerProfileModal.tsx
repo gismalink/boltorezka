@@ -18,6 +18,8 @@ type ServerProfileModalProps = {
   onClose: () => void;
   onSetServerMenuTab: (value: ServerMenuTab) => void;
   onPromote: (userId: string) => void;
+  onDemote: (userId: string) => void;
+  onSetBan: (userId: string, banned: boolean) => void;
   onRefreshTelemetry: () => void;
 };
 
@@ -37,6 +39,8 @@ export function ServerProfileModal({
   onClose,
   onSetServerMenuTab,
   onPromote,
+  onDemote,
+  onSetBan,
   onRefreshTelemetry
 }: ServerProfileModalProps) {
   if (!open) {
@@ -113,10 +117,25 @@ export function ServerProfileModal({
               <ul className="admin-list">
                 {adminUsers.map((item) => (
                   <li key={item.id} className="row admin-row">
-                    <span>{item.email} ({item.role})</span>
-                    {item.role === "user" ? (
-                      <button onClick={() => onPromote(item.id)}>{t("admin.promote")}</button>
-                    ) : null}
+                    <span>
+                      {item.email} ({item.role})
+                      {item.is_banned ? ` · ${t("admin.banned")}` : ""}
+                    </span>
+                    <div className="row-actions">
+                      {item.role === "user" ? (
+                        <button onClick={() => onPromote(item.id)}>{t("admin.promote")}</button>
+                      ) : null}
+                      {item.role === "admin" ? (
+                        <button className="secondary" onClick={() => onDemote(item.id)}>{t("admin.demote")}</button>
+                      ) : null}
+                      {item.role !== "super_admin" ? (
+                        item.is_banned ? (
+                          <button className="secondary" onClick={() => onSetBan(item.id, false)}>{t("admin.unban")}</button>
+                        ) : (
+                          <button className="secondary" onClick={() => onSetBan(item.id, true)}>{t("admin.ban")}</button>
+                        )
+                      ) : null}
+                    </div>
                   </li>
                 ))}
               </ul>

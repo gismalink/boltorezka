@@ -8,6 +8,7 @@ export type User = {
   email: string;
   name: string;
   role: "user" | "admin" | "super_admin";
+  is_banned: boolean;
   created_at: string;
 };
 

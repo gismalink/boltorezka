@@ -93,7 +93,7 @@ async function upsertSsoUser(profile: Record<string, unknown> | null | undefined
   const isSuperAdmin = normalizedEmail === config.superAdminEmail;
 
   const existing = await db.query<UserRow>(
-    "SELECT id, email, name, role, created_at FROM users WHERE email = $1",
+    "SELECT id, email, name, role, is_banned, created_at FROM users WHERE email = $1",
     [normalizedEmail]
   );
 
@@ -104,7 +104,7 @@ async function upsertSsoUser(profile: Record<string, unknown> | null | undefined
          name = $2,
          role = CASE WHEN $3 THEN 'super_admin' ELSE role END
        WHERE email = $1
-       RETURNING id, email, name, role, created_at`,
+       RETURNING id, email, name, role, is_banned, created_at`,
       [normalizedEmail, displayName, isSuperAdmin]
     );
 
@@ -116,7 +116,7 @@ async function upsertSsoUser(profile: Record<string, unknown> | null | undefined
   const created = await db.query<UserRow>(
     `INSERT INTO users (email, password_hash, name, role)
      VALUES ($1, $2, $3, $4)
-     RETURNING id, email, name, role, created_at`,
+     RETURNING id, email, name, role, is_banned, created_at`,
     [normalizedEmail, "__sso_only__", displayName, newRole]
   );
 
@@ -184,6 +184,14 @@ export async function authRoutes(fastify: FastifyInstance) {
 
       const localUser = await upsertSsoUser(ssoUser);
 
+      if (localUser.is_banned) {
+        return reply.code(403).send({
+          authenticated: false,
+          error: "UserBanned",
+          message: "User is banned"
+        });
+      }
+
       const token = await reply.jwtSign(
         {
           sub: localUser.id,
@@ -248,7 +256,7 @@ export async function authRoutes(fastify: FastifyInstance) {
       }
 
       const userResult = await db.query<UserCompactRow>(
-        "SELECT id, email, name, role FROM users WHERE id = $1",
+        "SELECT id, email, name, role, is_banned FROM users WHERE id = $1",
         [userId]
       );
 
@@ -260,6 +268,12 @@ export async function authRoutes(fastify: FastifyInstance) {
       }
 
       const user = userResult.rows[0];
+      if (user.is_banned) {
+        return reply.code(403).send({
+          error: "UserBanned",
+          message: "User is banned"
+        });
+      }
       const ticket = randomUUID();
       const expiresInSec = 45;
 
@@ -291,7 +305,7 @@ export async function authRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest) => {
       const userId = String(request.user?.sub || "").trim();
       const result = await db.query<UserRow>(
-        "SELECT id, email, name, role, created_at FROM users WHERE id = $1",
+        "SELECT id, email, name, role, is_banned, created_at FROM users WHERE id = $1",
         [userId]
       );
 
@@ -333,7 +347,7 @@ export async function authRoutes(fastify: FastifyInstance) {
         `UPDATE users
          SET name = $2
          WHERE id = $1
-         RETURNING id, email, name, role, created_at`,
+         RETURNING id, email, name, role, is_banned, created_at`,
         [userId, parsed.data.name]
       );
 

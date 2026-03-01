@@ -186,4 +186,30 @@ export class RoomAdminController {
       this.options.pushLog(`promote failed: ${(error as Error).message}`);
     }
   }
+
+  async demote(token: string, userId: string) {
+    try {
+      await api.demoteUser(token, userId);
+      const res = await api.adminUsers(token);
+      this.options.setAdminUsers(res.users);
+      this.options.pushLog("admin demoted to user");
+    } catch (error) {
+      this.options.pushLog(`demote failed: ${(error as Error).message}`);
+    }
+  }
+
+  async setBan(token: string, userId: string, banned: boolean) {
+    try {
+      if (banned) {
+        await api.banUser(token, userId);
+      } else {
+        await api.unbanUser(token, userId);
+      }
+      const res = await api.adminUsers(token);
+      this.options.setAdminUsers(res.users);
+      this.options.pushLog(banned ? "user banned" : "user unbanned");
+    } catch (error) {
+      this.options.pushLog(`${banned ? "ban" : "unban"} failed: ${(error as Error).message}`);
+    }
+  }
 }

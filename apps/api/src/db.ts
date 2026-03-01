@@ -14,6 +14,7 @@ export async function dbHealthcheck() {
 
 export async function ensureSchema() {
   await db.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT 'user'");
+  await db.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_banned BOOLEAN NOT NULL DEFAULT FALSE");
   await db.query(
     `CREATE TABLE IF NOT EXISTS room_categories (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

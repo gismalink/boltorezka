@@ -19,6 +19,42 @@ type UseMediaDevicePreferencesArgs = {
 
 const FALLBACK_DEVICE_ID = "default";
 
+const OUTPUT_PREF_KEY = "boltorezka_selected_output_id";
+
+const EARPICE_OUTPUT_RE = /(earpiece|receiver|handset|phone|при[её]мник|телефон|communications?)/i;
+const SPEAKER_OUTPUT_RE = /(speaker|loud|громк|динамик)/i;
+
+function isMobileChromeBrowser(): boolean {
+  if (typeof navigator === "undefined") {
+    return false;
+  }
+
+  const ua = navigator.userAgent || "";
+  const hasChrome = /Chrome\//i.test(ua) || /CriOS\//i.test(ua);
+  const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(ua);
+  const isEdgeOrOpera = /EdgA\//i.test(ua) || /OPR\//i.test(ua);
+
+  return hasChrome && isMobile && !isEdgeOrOpera;
+}
+
+function pickPreferredMobileOutput(outputs: DeviceOption[]): string | null {
+  if (outputs.length === 0) {
+    return null;
+  }
+
+  const strongMatch = outputs.find((item) => EARPICE_OUTPUT_RE.test(item.label) || EARPICE_OUTPUT_RE.test(item.id));
+  if (strongMatch) {
+    return strongMatch.id;
+  }
+
+  const nonSpeaker = outputs.find((item) => !SPEAKER_OUTPUT_RE.test(item.label));
+  if (nonSpeaker) {
+    return nonSpeaker.id;
+  }
+
+  return null;
+}
+
 export function useMediaDevicePreferences({
   t,
   selectedInputId,
@@ -33,6 +69,7 @@ export function useMediaDevicePreferences({
   setSelectedOutputId
 }: UseMediaDevicePreferencesArgs) {
   const permissionPromptTriedRef = useRef(false);
+  const mobileOutputDefaultAppliedRef = useRef(false);
 
   const requestMicPermission = useCallback(async () => {
     if (!navigator.mediaDevices?.getUserMedia) {
@@ -86,6 +123,18 @@ export function useMediaDevicePreferences({
 
       setInputDevices(inputs);
       setOutputDevices(outputs);
+
+      if (!mobileOutputDefaultAppliedRef.current && isMobileChromeBrowser()) {
+        mobileOutputDefaultAppliedRef.current = true;
+        const hasSavedOutputPreference = localStorage.getItem(OUTPUT_PREF_KEY) !== null;
+        const isUsingDefaultRoute = selectedOutputId === FALLBACK_DEVICE_ID;
+        if (!hasSavedOutputPreference && isUsingDefaultRoute) {
+          const preferredOutputId = pickPreferredMobileOutput(outputs);
+          if (preferredOutputId && preferredOutputId !== selectedOutputId) {
+            setSelectedOutputId(preferredOutputId);
+          }
+        }
+      }
 
       const hasNoAudioDevices = inputs.length === 0 && outputs.length === 0;
       if (hasNoAudioDevices && !permissionPromptTriedRef.current) {
@@ -183,7 +232,7 @@ export function useMediaDevicePreferences({
   }, [selectedInputId]);
 
   useEffect(() => {
-    localStorage.setItem("boltorezka_selected_output_id", selectedOutputId);
+    localStorage.setItem(OUTPUT_PREF_KEY, selectedOutputId);
   }, [selectedOutputId]);
 
   useEffect(() => {

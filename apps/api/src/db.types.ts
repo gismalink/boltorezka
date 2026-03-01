@@ -5,6 +5,7 @@ export type UserRow = {
   email: string;
   name: string;
   role: UserRole;
+  is_banned: boolean;
   created_at: string;
 };
 
@@ -13,6 +14,7 @@ export type UserCompactRow = {
   email: string;
   name: string;
   role: UserRole;
+  is_banned: boolean;
 };
 
 export type RoomKind = "text" | "text_voice" | "text_voice_video";

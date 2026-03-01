@@ -386,10 +386,6 @@ export function RoomsPanel({
           </div>
         ) : null}
       </div>
-      {canCreateRooms ? (
-        <p className="muted compact-hint">{t("rooms.hintAdmin")}</p>
-      ) : null}
-
       <div className="rooms-scroll">
         {(roomsTree?.categories || []).map((category) => (
           <div key={category.id} className="category-block">
