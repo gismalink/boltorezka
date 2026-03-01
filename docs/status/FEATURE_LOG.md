@@ -1,7 +1,7 @@
 # Boltorezka Feature Log
 
 Этот документ хранит зафиксированные изменения, выполненные шаги и операционные evidence.
-План и open items находятся в `docs/ROADMAP.md`.
+План и open items находятся в `docs/status/ROADMAP.md`.
 
 ## 2026-03-01 — Prod rollout from main + voice baseline canonicalized
 
@@ -15,7 +15,7 @@
   - admin user actions: `promote`, `demote`, `ban`, `unban`,
   - backend enforcement для banned users (`/v1/auth/ws-ticket`, guarded routes).
 - Зафиксирована каноническая документация по рабочему голосовому baseline:
-  - `docs/VOICE_BASELINE_RUNBOOK.md`.
+  - `docs/runbooks/VOICE_BASELINE_RUNBOOK.md`.
 
 ### Validation (prod)
 
@@ -89,8 +89,8 @@
   - обязательный cleanup (`DELETE /v1/rooms/:roomId` и `DELETE /v1/room-categories/:categoryId`).
 - Добавлен env-toggle `SMOKE_ROOM_HIERARCHY` (по умолчанию включён, отключается через `SMOKE_ROOM_HIERARCHY=0`).
 - Синхронизированы docs:
-  - `docs/ROADMAP.md` (checkbox hierarchy smoke/e2e отмечен выполненным),
-  - `docs/SMOKE_CI_MATRIX.md` (contract coverage дополнен hierarchy smoke блоком).
+  - `docs/status/ROADMAP.md` (checkbox hierarchy smoke/e2e отмечен выполненным),
+  - `docs/operations/SMOKE_CI_MATRIX.md` (contract coverage дополнен hierarchy smoke блоком).
 
 ### Validation
 
@@ -758,10 +758,10 @@
 - ROADMAP отделён от feature history (теперь только plan).
 - Зафиксировано правило: `prod` откладывается до MVP-like readiness.
 - Добавлены каноничные контрактные документы:
-  - `docs/API_CONTRACT_V1.md`
-  - `docs/WS_CONTRACT_V1.md`
-- Добавлен OpenAPI artifact v1: `docs/OPENAPI_V1.yaml`.
-- Добавлена матрица smoke/CI gate: `docs/SMOKE_CI_MATRIX.md`.
+  - `docs/contracts/API_CONTRACT_V1.md`
+  - `docs/contracts/WS_CONTRACT_V1.md`
+- Добавлен OpenAPI artifact v1: `docs/contracts/OPENAPI_V1.yaml`.
+- Добавлена матрица smoke/CI gate: `docs/operations/SMOKE_CI_MATRIX.md`.
 
 ## 2026-02-28 — Realtime MVP increment: room.leave
 
@@ -769,7 +769,7 @@
 
 - Добавлена поддержка client event `room.leave` в realtime handler.
 - Добавлен server event `room.left` с подтверждением выхода из комнаты.
-- Обновлён WS контракт (`docs/WS_CONTRACT_V1.md`) и roadmap статус Phase 2.
+- Обновлён WS контракт (`docs/contracts/WS_CONTRACT_V1.md`) и roadmap статус Phase 2.
 
 ## 2026-02-28 — Realtime MVP increment: message history pagination
 
@@ -777,7 +777,7 @@
 
 - `/v1/rooms/:slug/messages` переведён на cursor pagination (`beforeCreatedAt` + `beforeId`).
 - Ответ endpoint дополнен `pagination.hasMore` и `pagination.nextCursor`.
-- Обновлены `docs/API_CONTRACT_V1.md` и `docs/OPENAPI_V1.yaml`.
+- Обновлены `docs/contracts/API_CONTRACT_V1.md` и `docs/contracts/OPENAPI_V1.yaml`.
 - Обновлён `scripts/smoke-api.mjs` с проверкой pagination contract и second-page smoke path.
 
 ### Key commits
@@ -842,7 +842,7 @@
 - Roadmap big-block (web e2e smoke): добавлен единый оркестратор `scripts/smoke-web-e2e.sh` (`smoke:sso` + `smoke:realtime` с `SMOKE_CALL_SIGNAL=1`, `SMOKE_RECONNECT=1`), подключён `npm run smoke:web:e2e`, добавлена опциональная verify-gate `SMOKE_WEB_E2E=1` в `scripts/verify-all.sh`; чекбокс Phase 4 для e2e smoke сценариев (`login/join/send/voice connect-disconnect`) переведён в `[x]`.
   - Validation: `bash -n scripts/smoke-web-e2e.sh`, `npm run web:build`, `SMOKE_API_URL=https://test.boltorezka.gismalink.art npm run smoke:sso` — PASS.
   - Test rollout: `ssh mac-mini 'cd ~/srv/boltorezka && TEST_REF=origin/feature/web-header-profile-menu npm run deploy:test:smoke'` (SHA `49abe56`) — PASS (`smoke:sso`, `smoke:realtime`, `reconnectOk=true`).
-- Roadmap big-block (pre-prod decision package): добавлен `docs/PREPROD_DECISION_PACKAGE.md` (decision summary, evidence snapshot, rollback owner model, command-level rollback plan, approval form), в `docs/PREPROD_CHECKLIST.md` добавлена обязательная ссылка на пакет, в `docs/ROADMAP.md` пункт execution plan #5 переведён в `[x]`.
-- Roadmap block continuation (MVP-like readiness gate): в `docs/PREPROD_DECISION_PACKAGE.md` добавлен структурированный gate (`mandatory GO criteria`, `automatic NO-GO`, `pre-prod gate record`), `docs/PREPROD_CHECKLIST.md` синхронизирован ссылкой на этот gate, в `docs/ROADMAP.md` пункт #6 разделён на `gate formalized [x]` и `explicit GO + prod rollout [ ]`.
-- Pre-prod gate draft: в `docs/PREPROD_DECISION_PACKAGE.md` добавлен `Current draft gate record (2026-02-28)` с фактическими статусами (`smoke:sso=PASS`, `smoke:realtime=PASS`, `reconnectOk=true`, `smoke:web:e2e=PENDING`, `call relay=PENDING`) и итогом `NO-GO` до закрытия pending-пунктов + owner sign-off.
+- Roadmap big-block (pre-prod decision package): добавлен `docs/runbooks/PREPROD_DECISION_PACKAGE.md` (decision summary, evidence snapshot, rollback owner model, command-level rollback plan, approval form), в `docs/runbooks/PREPROD_CHECKLIST.md` добавлена обязательная ссылка на пакет, в `docs/status/ROADMAP.md` пункт execution plan #5 переведён в `[x]`.
+- Roadmap block continuation (MVP-like readiness gate): в `docs/runbooks/PREPROD_DECISION_PACKAGE.md` добавлен структурированный gate (`mandatory GO criteria`, `automatic NO-GO`, `pre-prod gate record`), `docs/runbooks/PREPROD_CHECKLIST.md` синхронизирован ссылкой на этот gate, в `docs/status/ROADMAP.md` пункт #6 разделён на `gate formalized [x]` и `explicit GO + prod rollout [ ]`.
+- Pre-prod gate draft: в `docs/runbooks/PREPROD_DECISION_PACKAGE.md` добавлен `Current draft gate record (2026-02-28)` с фактическими статусами (`smoke:sso=PASS`, `smoke:realtime=PASS`, `reconnectOk=true`, `smoke:web:e2e=PENDING`, `call relay=PENDING`) и итогом `NO-GO` до закрытия pending-пунктов + owner sign-off.
 - Pre-prod gate update: `smoke:web:e2e` успешно выполнен на сервере (`SMOKE_API_URL=https://test.boltorezka.gismalink.art npm run smoke:web:e2e`), relay path закрыт (`callSignalRelayed=true`, `callRejectRelayed=true`, `callHangupRelayed=true`); в draft gate-record pending-пункты переведены в `PASS`, итог остаётся `NO-GO` до explicit owner sign-off и prod approval.

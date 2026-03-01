@@ -43,7 +43,7 @@ Decision package (обязательно к заполнению перед `pro
    - prod содержит `boltorezka.gismalink.art`
 4. Edge ingress содержит маршруты для test/prod Boltorezka.
 5. Voice baseline соответствует канонике:
-   - `docs/VOICE_BASELINE_RUNBOOK.md`,
+   - `docs/runbooks/VOICE_BASELINE_RUNBOOK.md`,
    - приоритетный production-путь: `relay + TURN TLS/TCP`.
 6. Realtime WebSocket использует short-lived `ws-ticket` (не bearer token в query).
 
@@ -51,7 +51,7 @@ Decision package (обязательно к заполнению перед `pro
 
 Перед `prod` должно быть:
 
-0. Продуктовый gate: подтверждена готовность "похоже на MVP" (MVP-like readiness) по `docs/PREPROD_DECISION_PACKAGE.md` (раздел `MVP-like readiness gate`).
+0. Продуктовый gate: подтверждена готовность "похоже на MVP" (MVP-like readiness) по `docs/runbooks/PREPROD_DECISION_PACKAGE.md` (раздел `MVP-like readiness gate`).
 1. Явное подтверждение владельца релиза.
 2. Запись commit SHA и smoke-результата.
 3. План rollback (команда + ответственный).
@@ -69,6 +69,6 @@ Decision package (обязательно к заполнению перед `pro
 1. `curl -I https://boltorezka.gismalink.art/health` -> `200`.
 2. Проверка SSO redirect на prod домене.
 3. Короткий UI smoke (login -> room -> chat).
-4. Короткий voice smoke по канонике (`docs/VOICE_BASELINE_RUNBOOK.md`).
+4. Короткий voice smoke по канонике (`docs/runbooks/VOICE_BASELINE_RUNBOOK.md`).
 5. Проверка admin moderation UI (`promote/demote/ban/unban`) на prod.
 6. Логи без критичных ошибок в первые 10-15 минут.

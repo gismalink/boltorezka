@@ -130,5 +130,5 @@
 
 ## 11) Связанные документы
 
-- План и открытые задачи: `docs/ROADMAP.md`
-- История реализованных фич и release evidence: `docs/FEATURE_LOG.md`
+- План и открытые задачи: `docs/status/ROADMAP.md`
+- История реализованных фич и release evidence: `docs/status/FEATURE_LOG.md`

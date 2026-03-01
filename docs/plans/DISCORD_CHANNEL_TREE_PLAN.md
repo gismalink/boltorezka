@@ -84,8 +84,8 @@
 
 ## 7) Связанные каноничные документы
 
-- `docs/ROADMAP.md`
-- `docs/FEATURE_LOG.md`
-- `docs/API_CONTRACT_V1.md`
-- `docs/SMOKE_CI_MATRIX.md`
-- `docs/PREPROD_DECISION_PACKAGE.md`
+- `docs/status/ROADMAP.md`
+- `docs/status/FEATURE_LOG.md`
+- `docs/contracts/API_CONTRACT_V1.md`
+- `docs/operations/SMOKE_CI_MATRIX.md`
+- `docs/runbooks/PREPROD_DECISION_PACKAGE.md`

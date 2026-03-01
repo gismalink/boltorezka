@@ -1,7 +1,7 @@
 # Boltorezka v2 Roadmap (Plan-only)
 
 Этот документ хранит только план и открытые задачи.
-Фактически реализованные изменения и evidence ведутся отдельно в `docs/FEATURE_LOG.md`.
+Фактически реализованные изменения и evidence ведутся отдельно в `docs/status/FEATURE_LOG.md`.
 
 ## Current status (single-pane, 2026-03-01)
 
@@ -15,12 +15,12 @@
   - mobile MVP UI доведён,
   - admin users: `promote/demote/ban/unban`.
 - Каноника по голосу:
-  - `docs/VOICE_BASELINE_RUNBOOK.md`.
+  - `docs/runbooks/VOICE_BASELINE_RUNBOOK.md`.
 
 Навигация:
 - План и open tasks: этот документ.
-- Реализованные изменения/evidence: `docs/FEATURE_LOG.md`.
-- Детальная pre-prod форма: `docs/PREPROD_DECISION_PACKAGE.md`.
+- Реализованные изменения/evidence: `docs/status/FEATURE_LOG.md`.
+- Детальная pre-prod форма: `docs/runbooks/PREPROD_DECISION_PACKAGE.md`.
 
 ## Delivery rules (обязательно) (дубль из правил агента)
 
@@ -131,7 +131,7 @@
 4. [x] Финализировать OpenAPI/WS schema milestone.
 5. [x] Подготовить pre-prod decision пакет (evidence + rollback owner/plan).
 6. [x] Вернуться к `prod` только после достижения MVP-like readiness.
-  - [x] Формализован MVP-like readiness gate в `docs/PREPROD_DECISION_PACKAGE.md`.
+  - [x] Формализован MVP-like readiness gate в `docs/runbooks/PREPROD_DECISION_PACKAGE.md`.
   - [x] Подготовлен текущий draft gate-record (статус `NO-GO` до закрытия pending-проверок).
   - [x] Закрыты pending smoke-проверки (`smoke:web:e2e`, `SMOKE_CALL_SIGNAL=1` relay).
   - [ ] Получен explicit `GO` и выполнен rollout из `origin/main`.

@@ -135,7 +135,7 @@ Rollback выполняется только штатным release-script с з
 - Workflow: `.github/workflows/test-smoke.yml`.
 - Repo variable: `TEST_SMOKE_API_URL` (optional; default test domain).
 - Repo secret: `TEST_SMOKE_BEARER_TOKEN` (must belong to `admin`/`super_admin`, because CI validates `GET /v1/telemetry/summary`).
-- Полная матрица покрытия и gate-правил: `docs/SMOKE_CI_MATRIX.md`.
+- Полная матрица покрытия и gate-правил: `docs/operations/SMOKE_CI_MATRIX.md`.
 
 ## 10) Latest test evidence (2026-02-28)
 

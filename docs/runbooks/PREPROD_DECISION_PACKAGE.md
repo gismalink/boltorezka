@@ -57,7 +57,7 @@
 
 ### 3.4 Voice baseline evidence (canonical)
 
-- Canonical runbook: `docs/VOICE_BASELINE_RUNBOOK.md`
+- Canonical runbook: `docs/runbooks/VOICE_BASELINE_RUNBOOK.md`
 - Закреплённый baseline:
   - `VITE_RTC_ICE_TRANSPORT_POLICY=relay`
   - `VITE_RTC_ICE_SERVERS_JSON` с `turns:gismalink.art:5349?transport=tcp`

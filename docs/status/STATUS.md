@@ -9,7 +9,7 @@
 
 ## Канонические документы
 
-- План и open tasks: `docs/ROADMAP.md`
-- Реализованные изменения/evidence: `docs/FEATURE_LOG.md`
-- Voice baseline runbook: `docs/VOICE_BASELINE_RUNBOOK.md`
-- Pre-prod gate details: `docs/PREPROD_DECISION_PACKAGE.md`
+- План и open tasks: `docs/status/ROADMAP.md`
+- Реализованные изменения/evidence: `docs/status/FEATURE_LOG.md`
+- Voice baseline runbook: `docs/runbooks/VOICE_BASELINE_RUNBOOK.md`
+- Pre-prod gate details: `docs/runbooks/PREPROD_DECISION_PACKAGE.md`

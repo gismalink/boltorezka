@@ -29,10 +29,10 @@
 
 1. Обновить `README.md` как индекс.
 2. Обновить профильные docs:
-   - `docs/ARCHITECTURE.md`
-   - `docs/ROADMAP.md`
-   - `docs/RUNBOOK_TEST_DEPLOY.md`
-   - `docs/RUNBOOK_TEST_ROLLOUT_QUICKSTART.md`
+   - `docs/architecture/ARCHITECTURE.md`
+   - `docs/status/ROADMAP.md`
+   - `docs/runbooks/RUNBOOK_TEST_DEPLOY.md`
+   - `docs/runbooks/RUNBOOK_TEST_ROLLOUT_QUICKSTART.md`
 3. Если меняется release/deploy процесс — обновить runbook в том же PR.
 
 ## 4) Перед завершением
@@ -54,8 +54,8 @@
 
 Обязательные gate-ссылки:
 
-- `docs/PREPROD_DECISION_PACKAGE.md` — единый GO/NO-GO пакет и owner sign-off форма.
-- `docs/PREPROD_CHECKLIST.md` — контрольный список перед `prod`.
+- `docs/runbooks/PREPROD_DECISION_PACKAGE.md` — единый GO/NO-GO пакет и owner sign-off форма.
+- `docs/runbooks/PREPROD_CHECKLIST.md` — контрольный список перед `prod`.
 
 ## Частые пропуски
 
