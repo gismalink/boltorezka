@@ -54,6 +54,7 @@
   - `22fb4d8` — `web: migrate user dock control group layout to utilities`
   - `868f0c9` — `web: migrate settings modal shell layout to utilities`
   - `23c317b` — `web: complete user-settings utility migration pass`
+  - `52715e6` — `web: remove remaining legacy row class dependencies`
 
 ### Next step
 
