@@ -281,7 +281,7 @@ export class WsMessageController {
     if (message.type === "error") {
       const code = String(message.payload?.code || "ServerError");
       const errorMessage = String(message.payload?.message || "Unexpected websocket error");
-      if (code === "ChannelSessionMoved") {
+      if (code === "ChannelSessionMoved" || code === "ChannelKicked") {
         this.options.setRoomSlug("");
         this.options.pushToast(errorMessage);
       } else {

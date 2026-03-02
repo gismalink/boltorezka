@@ -33,6 +33,13 @@ export type WsIncomingRoomLeaveEnvelope = {
   payload?: WsIncomingPayload;
 };
 
+export type WsIncomingRoomKickEnvelope = {
+  type: "room.kick";
+  requestId?: string;
+  idempotencyKey?: string;
+  payload?: WsIncomingPayload;
+};
+
 export type WsIncomingChatSendEnvelope = {
   type: "chat.send";
   requestId?: string;
@@ -65,6 +72,7 @@ export type WsIncomingKnownEnvelope =
   | WsIncomingPingEnvelope
   | WsIncomingRoomJoinEnvelope
   | WsIncomingRoomLeaveEnvelope
+  | WsIncomingRoomKickEnvelope
   | WsIncomingChatSendEnvelope
   | WsIncomingCallSignalEnvelope
   | WsIncomingCallTerminalEnvelope

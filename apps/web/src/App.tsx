@@ -1,4 +1,4 @@
-import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ClipboardEvent, FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "./api";
 import { TooltipPortal } from "./TooltipPortal";
 import {
@@ -29,6 +29,7 @@ import {
   useRoomAdminActions,
   useRoomsDerived,
   useScreenWakeLock,
+  useServerSounds,
   useServerMenuAccessGuard,
   useVoiceCallRuntime,
   useVoiceRoomStateMaps
@@ -52,6 +53,7 @@ const TOAST_AUTO_DISMISS_MS = 4500;
 const TOAST_ID_RANDOM_RANGE = 10000;
 const TOAST_DUPLICATE_THROTTLE_MS = 12000;
 const TOAST_MAX_VISIBLE = 4;
+const MAX_CHAT_IMAGE_DATA_URL_LENGTH = 18000;
 
 type ServerMenuTab = "users" | "events" | "telemetry" | "call" | "sound";
 type MobileTab = "channels" | "chat" | "settings";
@@ -100,7 +102,7 @@ export function App() {
   const [audioOutputMenuOpen, setAudioOutputMenuOpen] = useState(false);
   const [voiceSettingsOpen, setVoiceSettingsOpen] = useState(false);
   const [userSettingsOpen, setUserSettingsOpen] = useState(false);
-  const [userSettingsTab, setUserSettingsTab] = useState<"profile" | "sound">("profile");
+  const [userSettingsTab, setUserSettingsTab] = useState<"profile" | "sound" | "server_sounds">("profile");
   const [lang, setLang] = useState<Lang>(() => detectInitialLang());
   const [profileNameDraft, setProfileNameDraft] = useState("");
   const [profileStatusText, setProfileStatusText] = useState("");
@@ -140,6 +142,11 @@ export function App() {
   const userSettingsRef = useRef<HTMLDivElement>(null);
   const toastTimeoutsRef = useRef<Map<number, number>>(new Map());
   const toastLastShownAtRef = useRef<Map<string, number>>(new Map());
+  const previousWsStateRef = useRef<"disconnected" | "connecting" | "connected">("disconnected");
+  const previousPresenceRoomSlugRef = useRef<string>(roomSlug);
+  const presenceSoundInitializedRef = useRef(false);
+  const previousPresenceIdsRef = useRef<string[]>([]);
+  const previousChatMessageIdRef = useRef<string | null>(null);
 
   const canCreateRooms = user?.role === "admin" || user?.role === "super_admin";
   const canPromote = user?.role === "super_admin";
@@ -152,6 +159,12 @@ export function App() {
   }, [lang]);
 
   const { collapsedCategoryIds, toggleCategoryCollapsed } = useCollapsedCategories(roomsTree);
+  const {
+    settings: serverSoundSettings,
+    setMasterVolume: setServerSoundsMasterVolume,
+    setEventEnabled: setServerSoundEnabled,
+    playServerSound
+  } = useServerSounds();
 
   const pushLog = useCallback((text: string) => {
     setEventLog((prev) => [`${new Date().toLocaleTimeString(locale)} ${text}`, ...prev].slice(0, 30));
@@ -516,6 +529,72 @@ export function App() {
     void loadTelemetrySummary();
   }, [wsState, loadTelemetrySummary]);
 
+  useEffect(() => {
+    const prevState = previousWsStateRef.current;
+    if (prevState === "connected" && wsState === "disconnected") {
+      void playServerSound("server_disconnected");
+    }
+
+    previousWsStateRef.current = wsState;
+  }, [wsState, playServerSound]);
+
+  useEffect(() => {
+    const currentMembers = roomsPresenceDetailsBySlug[roomSlug] || [];
+    const currentIds = currentMembers
+      .map((member) => String(member.userId || "").trim())
+      .filter((userId) => userId.length > 0);
+
+    if (previousPresenceRoomSlugRef.current !== roomSlug) {
+      previousPresenceRoomSlugRef.current = roomSlug;
+      previousPresenceIdsRef.current = currentIds;
+      presenceSoundInitializedRef.current = true;
+      return;
+    }
+
+    if (!presenceSoundInitializedRef.current) {
+      presenceSoundInitializedRef.current = true;
+      previousPresenceIdsRef.current = currentIds;
+      return;
+    }
+
+    const prevIds = previousPresenceIdsRef.current;
+
+    const myId = String(user?.id || "").trim();
+    const prevSet = new Set(prevIds);
+    const nextSet = new Set(currentIds);
+
+    const joined = currentIds.some((id) => id !== myId && !prevSet.has(id));
+    const left = prevIds.some((id) => id !== myId && !nextSet.has(id));
+
+    if (joined) {
+      void playServerSound("member_join");
+    } else if (left) {
+      void playServerSound("member_leave");
+    }
+
+    previousPresenceIdsRef.current = currentIds;
+  }, [roomsPresenceDetailsBySlug, roomSlug, user?.id, playServerSound]);
+
+  useEffect(() => {
+    const latest = messages.length > 0 ? messages[messages.length - 1] : null;
+    if (!latest) {
+      previousChatMessageIdRef.current = null;
+      return;
+    }
+
+    if (!previousChatMessageIdRef.current) {
+      previousChatMessageIdRef.current = latest.id;
+      return;
+    }
+
+    if (previousChatMessageIdRef.current !== latest.id) {
+      if (latest.user_id !== user?.id) {
+        void playServerSound("chat_message");
+      }
+      previousChatMessageIdRef.current = latest.id;
+    }
+  }, [messages, user?.id, playServerSound]);
+
   const { refreshDevices, requestMediaAccess } = useMediaDevicePreferences({
     t,
     selectedInputId,
@@ -582,6 +661,43 @@ export function App() {
     }
   };
 
+  const handleChatPaste = (event: ClipboardEvent<HTMLInputElement>) => {
+    if (!roomSlug) {
+      return;
+    }
+
+    const items = Array.from(event.clipboardData?.items || []);
+    const imageItem = items.find((item) => item.type.startsWith("image/"));
+    if (!imageItem) {
+      return;
+    }
+
+    const file = imageItem.getAsFile();
+    if (!file) {
+      return;
+    }
+
+    event.preventDefault();
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = String(reader.result || "");
+      if (!dataUrl.startsWith("data:image/")) {
+        return;
+      }
+
+      const markdown = `![clipboard-image](${dataUrl})`;
+      if (markdown.length > MAX_CHAT_IMAGE_DATA_URL_LENGTH) {
+        pushToast(t("chat.imageTooLarge"));
+        return;
+      }
+
+      setChatText((prev) => `${prev}${prev ? "\n" : ""}${markdown}`);
+    };
+
+    reader.readAsDataURL(file);
+  };
+
   const joinRoom = (slug: string) => {
     roomAdminController.joinRoom(slug);
     if (isMobileViewport) {
@@ -600,6 +716,28 @@ export function App() {
     setMessages([]);
     setMessagesHasMore(false);
     setMessagesNextCursor(null);
+  };
+
+  const kickRoomMember = (targetRoomSlug: string, targetUserId: string, targetUserName: string) => {
+    if (!targetRoomSlug || !targetUserId || !canCreateRooms) {
+      return;
+    }
+
+    const requestId = sendWsEvent(
+      "room.kick",
+      {
+        roomSlug: targetRoomSlug,
+        targetUserId
+      },
+      { maxRetries: 1 }
+    );
+
+    if (!requestId) {
+      pushToast(t("toast.serverError"));
+      return;
+    }
+
+    pushLog(`kick requested: ${targetUserName || targetUserId} from #${targetRoomSlug}`);
   };
 
   const handleToggleMic = useCallback(() => {
@@ -775,6 +913,8 @@ export function App() {
       currentInputLabel={currentInputLabel}
       micVolume={micVolume}
       outputVolume={outputVolume}
+      serverSoundsMasterVolume={serverSoundSettings.masterVolume}
+      serverSoundsEnabled={serverSoundSettings.enabledByEvent}
       micTestLevel={micTestLevel}
       mediaDevicesState={mediaDevicesState}
       mediaDevicesHint={mediaDevicesHint}
@@ -817,6 +957,9 @@ export function App() {
       onRequestMediaAccess={requestMediaAccess}
       onSetMicVolume={setMicVolume}
       onSetOutputVolume={setOutputVolume}
+      onSetServerSoundsMasterVolume={setServerSoundsMasterVolume}
+      onSetServerSoundEnabled={setServerSoundEnabled}
+      onPreviewServerSound={playServerSound}
       onDisconnectCall={leaveRoom}
       isMobileViewport={isMobileViewport}
       inlineSettingsMode={false}
@@ -854,6 +997,8 @@ export function App() {
       currentInputLabel={currentInputLabel}
       micVolume={micVolume}
       outputVolume={outputVolume}
+      serverSoundsMasterVolume={serverSoundSettings.masterVolume}
+      serverSoundsEnabled={serverSoundSettings.enabledByEvent}
       micTestLevel={micTestLevel}
       mediaDevicesState={mediaDevicesState}
       mediaDevicesHint={mediaDevicesHint}
@@ -896,6 +1041,9 @@ export function App() {
       onRequestMediaAccess={requestMediaAccess}
       onSetMicVolume={setMicVolume}
       onSetOutputVolume={setOutputVolume}
+      onSetServerSoundsMasterVolume={setServerSoundsMasterVolume}
+      onSetServerSoundEnabled={setServerSoundEnabled}
+      onPreviewServerSound={playServerSound}
       onDisconnectCall={leaveRoom}
       isMobileViewport={isMobileViewport}
       inlineSettingsMode
@@ -933,6 +1081,7 @@ export function App() {
             <RoomsPanel
               t={t}
               canCreateRooms={canCreateRooms}
+              canKickMembers={canCreateRooms}
               canManageAudioQuality={canManageAudioQuality}
               roomsTree={roomsTree}
               roomSlug={roomSlug}
@@ -989,6 +1138,7 @@ export function App() {
               onDeleteChannel={(room) => void deleteChannel(room)}
               onToggleCategoryCollapsed={toggleCategoryCollapsed}
               onJoinRoom={joinRoom}
+              onKickRoomMember={kickRoomMember}
             />
 
             {userDockNode}
@@ -1010,6 +1160,7 @@ export function App() {
               chatLogRef={chatLogRef}
               onLoadOlderMessages={() => void loadOlderMessages()}
               onSetChatText={setChatText}
+              onChatPaste={handleChatPaste}
               onSendMessage={sendMessage}
             />
           </section>

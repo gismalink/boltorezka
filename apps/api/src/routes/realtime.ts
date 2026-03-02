@@ -548,6 +548,22 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
     void incrementMetric("nack_sent");
   };
 
+  const sendForbiddenNack = (
+    socket: WebSocket,
+    requestId: string | null,
+    eventType: string,
+    message = "Insufficient permissions"
+  ) => {
+    sendNack(socket, requestId, eventType, "Forbidden", message);
+    void incrementMetric("nack_sent");
+  };
+
+  const isUserModerator = async (userId: string) => {
+    const result = await db.query<{ role: string }>("SELECT role FROM users WHERE id = $1", [userId]);
+    const role = String(result.rows[0]?.role || "").trim();
+    return role === "admin" || role === "super_admin";
+  };
+
   const sendAckWithMetrics = (
     socket: WebSocket,
     requestId: string | null,
@@ -768,6 +784,85 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
 
                 broadcastAllRoomsPresence();
 
+                return;
+              }
+
+              case "room.kick": {
+                const roomSlug = getPayloadString(payload, "roomSlug", 80);
+                const targetUserId = normalizeRequestId(getPayloadString(payload, "targetUserId", 128));
+
+                if (!roomSlug || !targetUserId) {
+                  sendValidationNack(connection, requestId, eventType, "roomSlug and targetUserId are required");
+                  return;
+                }
+
+                if (targetUserId === state.userId) {
+                  sendValidationNack(connection, requestId, eventType, "Cannot kick yourself");
+                  return;
+                }
+
+                const canModerate = await isUserModerator(state.userId);
+                if (!canModerate) {
+                  sendForbiddenNack(connection, requestId, eventType);
+                  return;
+                }
+
+                const roomResult = await db.query<RoomRow>(
+                  "SELECT id, slug, title, kind, is_public FROM rooms WHERE slug = $1 AND is_archived = FALSE",
+                  [roomSlug]
+                );
+
+                if (roomResult.rowCount === 0) {
+                  sendNack(connection, requestId, eventType, "RoomNotFound", "Cannot find room to moderate");
+                  void incrementMetric("nack_sent");
+                  return;
+                }
+
+                const targetRoom = roomResult.rows[0];
+                const targetSockets = getUserRoomSockets(targetUserId, targetRoom.id);
+                if (targetSockets.length === 0) {
+                  sendTargetNotInRoomNack(connection, requestId, eventType);
+                  return;
+                }
+
+                let kickedUserName = "unknown";
+                for (const targetSocket of targetSockets) {
+                  const targetState = socketState.get(targetSocket);
+                  if (!targetState || targetState.roomId !== targetRoom.id || targetState.roomSlug !== targetRoom.slug) {
+                    continue;
+                  }
+
+                  kickedUserName = targetState.userName || kickedUserName;
+                  detachRoomSocket(targetRoom.id, targetSocket);
+                  targetState.roomId = null;
+                  targetState.roomSlug = null;
+                  targetState.roomKind = null;
+
+                  sendJson(targetSocket, buildRoomLeftEnvelope(targetRoom.id, targetRoom.slug));
+                  sendJson(
+                    targetSocket,
+                    buildErrorEnvelope(
+                      "ChannelKicked",
+                      `You were removed from #${targetRoom.slug} by a moderator`
+                    )
+                  );
+                }
+
+                broadcastRoom(
+                  targetRoom.id,
+                  buildPresenceLeftEnvelope(
+                    targetUserId,
+                    kickedUserName,
+                    targetRoom.slug,
+                    getRoomPresence(targetRoom.id).length
+                  )
+                );
+                broadcastAllRoomsPresence();
+
+                sendAckWithMetrics(connection, requestId, eventType, {
+                  roomSlug: targetRoom.slug,
+                  kickedUserId: targetUserId
+                });
                 return;
               }
 

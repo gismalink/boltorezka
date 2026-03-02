@@ -42,6 +42,15 @@
   --offset-menu: 4px;
 }
 
+.chat-inline-image {
+  display: block;
+  max-width: min(320px, 80vw);
+  max-height: 220px;
+  margin-top: 6px;
+  border: var(--border-thin) solid color-mix(in srgb, var(--pixel-border) 68%, transparent 32%);
+  image-rendering: pixelated;
+}
+
 html,
 body,
 #root {
@@ -565,19 +574,45 @@ pre {
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--pixel-neon-cyan) 50%, transparent 50%);
 }
 
-.channel-member-item-voice-active .channel-member-icons {
+.channel-member-item-voice-active .channel-member-mic-icon {
   color: var(--pixel-neon-cyan);
+}
+
+.channel-member-audio-icon {
+  color: var(--pixel-muted);
+}
+
+.channel-member-item-self-muted {
+  opacity: 0.3;
 }
 
 .channel-member-item-current.channel-member-item-voice-active .channel-member-name,
 .channel-member-item-current.channel-member-item-voice-active .channel-member-avatar,
-.channel-member-item-current.channel-member-item-voice-active .channel-member-icons {
+.channel-member-item-current.channel-member-item-voice-active .channel-member-mic-icon {
   color: var(--pixel-neon-gold);
   border-color: var(--pixel-neon-gold);
 }
 
+.voice-sound-checkbox input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+}
+
 .channel-member-item-current.channel-member-item-voice-active .channel-member-avatar {
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--pixel-neon-gold) 56%, transparent 44%);
+}
+
+.channel-member-kick-btn {
+  opacity: 0;
+  pointer-events: none;
+  min-height: 22px;
+  min-width: 22px;
+}
+
+.channel-member-item:hover .channel-member-kick-btn,
+.channel-member-item:focus-within .channel-member-kick-btn {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .channel-action-btn {

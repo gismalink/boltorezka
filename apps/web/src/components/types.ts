@@ -7,6 +7,7 @@ export type VoiceSettingsPanel = "input_device" | "input_profile" | null;
 
 export type DeviceOption = { id: string; label: string };
 export type MediaDevicesState = "ready" | "unsupported" | "denied" | "error";
+export type ServerSoundEvent = "member_join" | "member_leave" | "server_disconnected" | "chat_message";
 
 export type UserDockProps = {
   t: TranslateFn;
@@ -21,7 +22,7 @@ export type UserDockProps = {
   audioOutputMenuOpen: boolean;
   voiceSettingsOpen: boolean;
   userSettingsOpen: boolean;
-  userSettingsTab: "profile" | "sound";
+  userSettingsTab: "profile" | "sound" | "server_sounds";
   voiceSettingsPanel: VoiceSettingsPanel;
   profileNameDraft: string;
   profileEmail: string;
@@ -38,6 +39,8 @@ export type UserDockProps = {
   currentInputLabel: string;
   micVolume: number;
   outputVolume: number;
+  serverSoundsMasterVolume: number;
+  serverSoundsEnabled: Record<ServerSoundEvent, boolean>;
   micTestLevel: number;
   mediaDevicesState: MediaDevicesState;
   mediaDevicesHint: string;
@@ -53,7 +56,7 @@ export type UserDockProps = {
   onSetAudioOutputMenuOpen: (value: boolean) => void;
   onSetVoiceSettingsPanel: (panel: VoiceSettingsPanel) => void;
   onSetUserSettingsOpen: (value: boolean) => void;
-  onSetUserSettingsTab: (value: "profile" | "sound") => void;
+  onSetUserSettingsTab: (value: "profile" | "sound" | "server_sounds") => void;
   onSetProfileNameDraft: (value: string) => void;
   onSetSelectedLang: (value: Lang) => void;
   onSaveProfile: (event: FormEvent) => void;
@@ -64,6 +67,9 @@ export type UserDockProps = {
   onRequestMediaAccess: () => void;
   onSetMicVolume: (value: number) => void;
   onSetOutputVolume: (value: number) => void;
+  onSetServerSoundsMasterVolume: (value: number) => void;
+  onSetServerSoundEnabled: (event: ServerSoundEvent, value: boolean) => void;
+  onPreviewServerSound: (event: ServerSoundEvent) => void;
   onDisconnectCall: () => void;
   isMobileViewport: boolean;
   inlineSettingsMode?: boolean;
@@ -72,6 +78,7 @@ export type UserDockProps = {
 export type RoomsPanelProps = {
   t: TranslateFn;
   canCreateRooms: boolean;
+  canKickMembers: boolean;
   canManageAudioQuality: boolean;
   roomsTree: RoomsTreeResponse | null;
   roomSlug: string;
@@ -128,4 +135,5 @@ export type RoomsPanelProps = {
   onDeleteChannel: (room: Room) => void;
   onToggleCategoryCollapsed: (categoryId: string) => void;
   onJoinRoom: (slug: string) => void;
+  onKickRoomMember: (roomSlug: string, userId: string, userName: string) => void;
 };

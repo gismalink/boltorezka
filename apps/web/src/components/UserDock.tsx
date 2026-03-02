@@ -32,6 +32,8 @@ export function UserDock({
   currentInputLabel,
   micVolume,
   outputVolume,
+  serverSoundsMasterVolume,
+  serverSoundsEnabled,
   micTestLevel,
   mediaDevicesState,
   mediaDevicesHint,
@@ -58,6 +60,9 @@ export function UserDock({
   onRequestMediaAccess,
   onSetMicVolume,
   onSetOutputVolume,
+  onSetServerSoundsMasterVolume,
+  onSetServerSoundEnabled,
+  onPreviewServerSound,
   onDisconnectCall,
   isMobileViewport,
   inlineSettingsMode = false
@@ -404,12 +409,19 @@ export function UserDock({
                 >
                   {t("settings.tabSound")}
                 </button>
+                <button
+                  type="button"
+                  className={`secondary user-settings-tab-btn justify-start text-left max-[800px]:min-w-0 max-[800px]:justify-center ${userSettingsTab === "server_sounds" ? "user-settings-tab-btn-active" : ""}`}
+                  onClick={() => onSetUserSettingsTab("server_sounds")}
+                >
+                  {t("settings.tabServerSounds")}
+                </button>
               </div>
             </div>
 
             <div className="user-settings-content grid min-h-0 min-w-0 content-start gap-4 overflow-auto overflow-x-hidden pr-0">
               <div className="voice-preferences-head flex items-center justify-between gap-2">
-                <h2 className="mt-[var(--space-xxs)]">{userSettingsTab === "profile" ? t("settings.tabProfile") : t("settings.tabSound")}</h2>
+                <h2 className="mt-[var(--space-xxs)]">{userSettingsTab === "profile" ? t("settings.tabProfile") : userSettingsTab === "sound" ? t("settings.tabSound") : t("settings.tabServerSounds")}</h2>
                 {!inlineSettingsMode ? (
                   <button type="button" className="secondary icon-btn" onClick={() => onSetUserSettingsOpen(false)} aria-label={t("settings.closeVoiceAria")}>
                     <i className="bi bi-x-lg" aria-hidden="true" />
@@ -445,7 +457,7 @@ export function UserDock({
                     {profileSaving ? t("settings.saving") : t("settings.save")}
                   </button>
                 </form>
-              ) : (
+              ) : userSettingsTab === "sound" ? (
                 <>
                   <div className="voice-preferences-grid grid gap-3 min-[801px]:grid-cols-2">
                     <label className="grid gap-[var(--space-md)]">
@@ -544,6 +556,68 @@ export function UserDock({
                     </button>
                   </div>
                 </>
+              ) : (
+                <section className="grid gap-4">
+                  <h3 className="subheading">{t("settings.serverSoundsSection")}</h3>
+                  <label className="slider-label grid gap-2">
+                    {t("settings.serverSoundsMasterVolume")}
+                    <input
+                      type="range"
+                      min={0}
+                      max={100}
+                      value={serverSoundsMasterVolume}
+                      onChange={(event) => onSetServerSoundsMasterVolume(Number(event.target.value))}
+                    />
+                  </label>
+
+                  <label className="voice-sound-checkbox flex items-center justify-between gap-3">
+                    <span>{t("settings.serverSoundMemberJoin")}</span>
+                    <div className="inline-flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={serverSoundsEnabled.member_join}
+                        onChange={(event) => onSetServerSoundEnabled("member_join", event.target.checked)}
+                      />
+                      <button type="button" className="secondary icon-btn tiny" onClick={() => onPreviewServerSound("member_join")}>♪</button>
+                    </div>
+                  </label>
+
+                  <label className="voice-sound-checkbox flex items-center justify-between gap-3">
+                    <span>{t("settings.serverSoundMemberLeave")}</span>
+                    <div className="inline-flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={serverSoundsEnabled.member_leave}
+                        onChange={(event) => onSetServerSoundEnabled("member_leave", event.target.checked)}
+                      />
+                      <button type="button" className="secondary icon-btn tiny" onClick={() => onPreviewServerSound("member_leave")}>♪</button>
+                    </div>
+                  </label>
+
+                  <label className="voice-sound-checkbox flex items-center justify-between gap-3">
+                    <span>{t("settings.serverSoundDisconnected")}</span>
+                    <div className="inline-flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={serverSoundsEnabled.server_disconnected}
+                        onChange={(event) => onSetServerSoundEnabled("server_disconnected", event.target.checked)}
+                      />
+                      <button type="button" className="secondary icon-btn tiny" onClick={() => onPreviewServerSound("server_disconnected")}>♪</button>
+                    </div>
+                  </label>
+
+                  <label className="voice-sound-checkbox flex items-center justify-between gap-3">
+                    <span>{t("settings.serverSoundChatMessage")}</span>
+                    <div className="inline-flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={serverSoundsEnabled.chat_message}
+                        onChange={(event) => onSetServerSoundEnabled("chat_message", event.target.checked)}
+                      />
+                      <button type="button" className="secondary icon-btn tiny" onClick={() => onPreviewServerSound("chat_message")}>♪</button>
+                    </div>
+                  </label>
+                </section>
               )}
             </div>
           </section>

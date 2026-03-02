@@ -103,6 +103,7 @@ export function asKnownWsIncomingEnvelope(
     case "ping":
     case "room.join":
     case "room.leave":
+    case "room.kick":
     case "chat.send":
       return {
         type: envelope.type,

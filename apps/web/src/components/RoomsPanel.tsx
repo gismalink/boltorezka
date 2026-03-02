@@ -18,6 +18,7 @@ const ROOM_KIND_ICON_CLASS: Record<RoomKind, string> = {
 export function RoomsPanel({
   t,
   canCreateRooms,
+  canKickMembers,
   canManageAudioQuality,
   roomsTree,
   roomSlug,
@@ -73,7 +74,8 @@ export function RoomsPanel({
   onClearChannelMessages,
   onDeleteChannel,
   onToggleCategoryCollapsed,
-  onJoinRoom
+  onJoinRoom,
+  onKickRoomMember
 }: RoomsPanelProps) {
   const categorySettingsAnchorRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const channelSettingsAnchorRefs = useRef<Record<string, HTMLDivElement | null>>({});
@@ -334,6 +336,7 @@ export function RoomsPanel({
                   ? "bi-mic-fill"
                   : "bi-mic";
               const audioIconClass = isAudioOutputMuted ? "bi-headset-vr" : "bi-headphones";
+              const isFullyMuted = micState === "muted" && isAudioOutputMuted;
               const rtcStateLabel = rtcState === "connected"
                 ? t("rtc.connected")
                 : rtcState === "connecting"
@@ -348,7 +351,7 @@ export function RoomsPanel({
               return (
             <li
               key={`${room.id}-${member.userId || member.userName}`}
-              className={`channel-member-item grid min-h-[22px] grid-cols-[auto_1fr_auto_auto] items-center gap-1.5 ${isCurrentUser ? "channel-member-item-current" : ""} ${isVoiceActive ? "channel-member-item-voice-active" : ""}`}
+              className={`channel-member-item grid min-h-[22px] grid-cols-[auto_1fr_auto_auto_auto] items-center gap-1.5 ${isCurrentUser ? "channel-member-item-current" : ""} ${isVoiceActive ? "channel-member-item-voice-active" : ""} ${isFullyMuted ? "channel-member-item-self-muted" : ""}`}
             >
               <span className="channel-member-avatar">{(member.userName || "U").charAt(0).toUpperCase()}</span>
               <span className="channel-member-name">{member.userName}</span>
@@ -356,9 +359,20 @@ export function RoomsPanel({
                 <span className={`channel-member-rtc ${rtcStateClass}`}>{rtcStateLabel}</span>
               ) : null}
               <span className="channel-member-icons" aria-hidden="true">
-                <i className={`bi ${micIconClass}`} />
-                <i className={`bi ${audioIconClass}`} />
+                <i className={`bi ${micIconClass} channel-member-mic-icon`} />
+                <i className={`bi ${audioIconClass} channel-member-audio-icon`} />
               </span>
+              {canKickMembers && room.slug && member.userId && !isCurrentUser ? (
+                <button
+                  type="button"
+                  className="secondary icon-btn tiny channel-member-kick-btn"
+                  aria-label={t("rooms.kickFromChannel")}
+                  data-tooltip={t("rooms.kickFromChannel")}
+                  onClick={() => onKickRoomMember(room.slug, member.userId, member.userName)}
+                >
+                  <i className="bi bi-person-x" aria-hidden="true" />
+                </button>
+              ) : null}
             </li>
               );
             })()

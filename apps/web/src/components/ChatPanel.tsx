@@ -1,4 +1,4 @@
-import { FormEvent, ReactNode, RefObject } from "react";
+import { ClipboardEvent, FormEvent, ReactNode, RefObject } from "react";
 import type { Message } from "../domain";
 
 type ChatPanelProps = {
@@ -14,6 +14,7 @@ type ChatPanelProps = {
   chatLogRef: RefObject<HTMLDivElement>;
   onLoadOlderMessages: () => void;
   onSetChatText: (value: string) => void;
+  onChatPaste: (event: ClipboardEvent<HTMLInputElement>) => void;
   onSendMessage: (event: FormEvent) => void;
 };
 
@@ -30,6 +31,7 @@ export function ChatPanel({
   chatLogRef,
   onLoadOlderMessages,
   onSetChatText,
+  onChatPaste,
   onSendMessage
 }: ChatPanelProps) {
   const hasActiveRoom = Boolean(roomSlug);
@@ -47,53 +49,92 @@ export function ChatPanel({
 
   const renderMessageText = (value: string): ReactNode[] => {
     const text = String(value || "");
+    const markdownImagePattern = /!\[[^\]]*\]\((data:image\/[a-zA-Z0-9.+-]+;base64,[^)\s]+|https?:\/\/[^)\s]+)\)/g;
     const urlPattern = /((https?:\/\/|www\.)[^\s<]+)/gi;
-    const nodes: ReactNode[] = [];
+    const result: ReactNode[] = [];
+    let imageMatch: RegExpExecArray | null;
     let cursor = 0;
-    let match: RegExpExecArray | null;
+    let keyIndex = 0;
 
-    while ((match = urlPattern.exec(text)) !== null) {
-      const raw = match[0];
-      const start = match.index;
+    const pushTextWithLinks = (chunk: string) => {
+      if (!chunk) {
+        return;
+      }
 
+      let textCursor = 0;
+      let linkMatch: RegExpExecArray | null;
+      urlPattern.lastIndex = 0;
+
+      while ((linkMatch = urlPattern.exec(chunk)) !== null) {
+        const raw = linkMatch[0];
+        const start = linkMatch.index;
+        if (start > textCursor) {
+          result.push(chunk.slice(textCursor, start));
+        }
+
+        let linkText = raw;
+        let trailing = "";
+        while (/[.,!?;:)\]]$/.test(linkText)) {
+          trailing = linkText.slice(-1) + trailing;
+          linkText = linkText.slice(0, -1);
+        }
+
+        if (linkText) {
+          const href = /^https?:\/\//i.test(linkText) ? linkText : `https://${linkText}`;
+          result.push(
+            <a
+              key={`link-${keyIndex}-${start}-${linkText}`}
+              href={href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="chat-link"
+            >
+              {linkText}
+            </a>
+          );
+          keyIndex += 1;
+        }
+
+        if (trailing) {
+          result.push(trailing);
+        }
+
+        textCursor = start + raw.length;
+      }
+
+      if (textCursor < chunk.length) {
+        result.push(chunk.slice(textCursor));
+      }
+    };
+
+    while ((imageMatch = markdownImagePattern.exec(text)) !== null) {
+      const start = imageMatch.index;
       if (start > cursor) {
-        nodes.push(text.slice(cursor, start));
+        pushTextWithLinks(text.slice(cursor, start));
       }
 
-      let linkText = raw;
-      let trailing = "";
-      while (/[.,!?;:)\]]$/.test(linkText)) {
-        trailing = linkText.slice(-1) + trailing;
-        linkText = linkText.slice(0, -1);
-      }
-
-      if (linkText.length > 0) {
-        const href = /^https?:\/\//i.test(linkText) ? linkText : `https://${linkText}`;
-        nodes.push(
-          <a
-            key={`link-${start}-${linkText}`}
-            href={href}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="chat-link"
-          >
-            {linkText}
-          </a>
+      const imageUrl = String(imageMatch[1] || "").trim();
+      if (imageUrl) {
+        result.push(
+          <img
+            key={`img-${keyIndex}-${start}`}
+            src={imageUrl}
+            alt="chat-image"
+            className="chat-inline-image"
+            loading="lazy"
+          />
         );
+        keyIndex += 1;
       }
 
-      if (trailing) {
-        nodes.push(trailing);
-      }
-
-      cursor = start + raw.length;
+      cursor = start + imageMatch[0].length;
     }
 
     if (cursor < text.length) {
-      nodes.push(text.slice(cursor));
+      pushTextWithLinks(text.slice(cursor));
     }
 
-    return nodes.length > 0 ? nodes : [text];
+    return result.length > 0 ? result : [text];
   };
 
   return (
@@ -169,6 +210,7 @@ export function ChatPanel({
         <input
           value={chatText}
           onChange={(event) => onSetChatText(event.target.value)}
+          onPaste={onChatPaste}
           placeholder={hasActiveRoom ? t("chat.typePlaceholder") : t("chat.selectChannelPlaceholder")}
           disabled={!hasActiveRoom}
         />
