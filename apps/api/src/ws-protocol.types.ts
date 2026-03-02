@@ -47,6 +47,20 @@ export type WsIncomingChatSendEnvelope = {
   payload?: WsIncomingPayload;
 };
 
+export type WsIncomingChatEditEnvelope = {
+  type: "chat.edit";
+  requestId?: string;
+  idempotencyKey?: string;
+  payload?: WsIncomingPayload;
+};
+
+export type WsIncomingChatDeleteEnvelope = {
+  type: "chat.delete";
+  requestId?: string;
+  idempotencyKey?: string;
+  payload?: WsIncomingPayload;
+};
+
 export type WsIncomingCallSignalEnvelope = {
   type: CallSignalEventType;
   requestId?: string;
@@ -74,6 +88,8 @@ export type WsIncomingKnownEnvelope =
   | WsIncomingRoomLeaveEnvelope
   | WsIncomingRoomKickEnvelope
   | WsIncomingChatSendEnvelope
+  | WsIncomingChatEditEnvelope
+  | WsIncomingChatDeleteEnvelope
   | WsIncomingCallSignalEnvelope
   | WsIncomingCallTerminalEnvelope
   | WsIncomingCallMicStateEnvelope;
@@ -105,6 +121,23 @@ export type ChatMessagePayload = {
   text: string;
   createdAt: string;
   senderRequestId: string | null;
+};
+
+export type ChatEditedPayload = {
+  id: string;
+  roomId: string;
+  roomSlug: string | null;
+  text: string;
+  editedAt: string;
+  editedByUserId: string;
+};
+
+export type ChatDeletedPayload = {
+  id: string;
+  roomId: string;
+  roomSlug: string | null;
+  deletedByUserId: string;
+  ts: string;
 };
 
 export type RoomJoinedPayload = {

@@ -1,4 +1,4 @@
-import { ClipboardEvent, FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ClipboardEvent, FormEvent, KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "./api";
 import { TooltipPortal } from "./TooltipPortal";
 import {
@@ -54,6 +54,9 @@ const TOAST_ID_RANDOM_RANGE = 10000;
 const TOAST_DUPLICATE_THROTTLE_MS = 12000;
 const TOAST_MAX_VISIBLE = 4;
 const MAX_CHAT_IMAGE_DATA_URL_LENGTH = 18000;
+const MAX_CHAT_IMAGE_MAX_SIDE = 1000;
+const MAX_CHAT_IMAGE_QUALITY = 0.6;
+const MESSAGE_EDIT_DELETE_WINDOW_MS = 10 * 60 * 1000;
 
 type ServerMenuTab = "users" | "events" | "telemetry" | "call" | "sound";
 type MobileTab = "channels" | "chat" | "settings";
@@ -70,6 +73,7 @@ export function App() {
   const [messagesNextCursor, setMessagesNextCursor] = useState<MessagesCursor | null>(null);
   const [loadingOlderMessages, setLoadingOlderMessages] = useState(false);
   const [chatText, setChatText] = useState("");
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [callStatus, setCallStatus] = useState<CallStatus>("idle");
   const [lastCallPeer, setLastCallPeer] = useState("");
   const [callEventLog, setCallEventLog] = useState<string[]>([]);
@@ -414,9 +418,6 @@ export function App() {
     const mediaQuery = window.matchMedia("(max-width: 800px)");
     const apply = (matches: boolean) => {
       setIsMobileViewport(matches);
-      if (!matches) {
-        setMobileTab("chat");
-      }
     };
 
     apply(mediaQuery.matches);
@@ -432,6 +433,10 @@ export function App() {
     setProfileNameDraft(user?.name || "");
     setProfileStatusText("");
   }, [user]);
+
+  useEffect(() => {
+    setEditingMessageId(null);
+  }, [roomSlug]);
 
   useEffect(() => {
     if (!token) {
@@ -649,9 +654,88 @@ export function App() {
     }
   });
 
+  const canManageOwnMessage = useCallback((message: Message) => {
+    if (!user || message.user_id !== user.id) {
+      return false;
+    }
+
+    const createdAtTs = Number(new Date(message.created_at));
+    if (!Number.isFinite(createdAtTs)) {
+      return false;
+    }
+
+    return Date.now() - createdAtTs <= MESSAGE_EDIT_DELETE_WINDOW_MS;
+  }, [user]);
+
+  const compressImageToDataUrl = useCallback((file: File) => {
+    return new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = () => reject(new Error("read_failed"));
+      reader.onload = () => {
+        const source = String(reader.result || "");
+        if (!source.startsWith("data:image/")) {
+          reject(new Error("invalid_image"));
+          return;
+        }
+
+        const image = new Image();
+        image.onerror = () => reject(new Error("decode_failed"));
+        image.onload = () => {
+          const originalWidth = Math.max(1, Math.round(image.naturalWidth || 1));
+          const originalHeight = Math.max(1, Math.round(image.naturalHeight || 1));
+          const maxSide = Math.max(originalWidth, originalHeight);
+          const scale = maxSide > MAX_CHAT_IMAGE_MAX_SIDE ? MAX_CHAT_IMAGE_MAX_SIDE / maxSide : 1;
+          const targetWidth = Math.max(1, Math.round(originalWidth * scale));
+          const targetHeight = Math.max(1, Math.round(originalHeight * scale));
+
+          const canvas = document.createElement("canvas");
+          canvas.width = targetWidth;
+          canvas.height = targetHeight;
+          const context = canvas.getContext("2d");
+          if (!context) {
+            reject(new Error("canvas_failed"));
+            return;
+          }
+
+          context.drawImage(image, 0, 0, targetWidth, targetHeight);
+          const compressed = canvas.toDataURL("image/jpeg", MAX_CHAT_IMAGE_QUALITY);
+          resolve(compressed);
+        };
+        image.src = source;
+      };
+
+      reader.readAsDataURL(file);
+    });
+  }, []);
+
   const sendMessage = (event: FormEvent) => {
     event.preventDefault();
     if (!roomSlug) {
+      return;
+    }
+
+    if (editingMessageId) {
+      const nextText = chatText.trim();
+      if (!nextText) {
+        return;
+      }
+
+      const requestId = sendWsEvent(
+        "chat.edit",
+        {
+          messageId: editingMessageId,
+          text: nextText
+        },
+        { withIdempotency: true, maxRetries: MAX_CHAT_RETRIES }
+      );
+
+      if (!requestId) {
+        pushToast(t("toast.serverError"));
+        return;
+      }
+
+      setChatText("");
+      setEditingMessageId(null);
       return;
     }
 
@@ -678,31 +762,85 @@ export function App() {
     }
 
     event.preventDefault();
+    void (async () => {
+      try {
+        const dataUrl = await compressImageToDataUrl(file);
+        const now = new Date();
+        const hh = String(now.getHours()).padStart(2, "0");
+        const mm = String(now.getMinutes()).padStart(2, "0");
+        const screenshotName = `скриншот-${hh}-${mm}`;
+        const markdown = `![${screenshotName}](${dataUrl})`;
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      const dataUrl = String(reader.result || "");
-      if (!dataUrl.startsWith("data:image/")) {
-        return;
-      }
+        if (markdown.length > MAX_CHAT_IMAGE_DATA_URL_LENGTH) {
+          pushToast(t("chat.imageTooLarge"));
+          return;
+        }
 
-      const markdown = `![clipboard-image](${dataUrl})`;
-      if (markdown.length > MAX_CHAT_IMAGE_DATA_URL_LENGTH) {
+        setChatText((prev) => `${prev}${prev ? "\n" : ""}${markdown}`);
+      } catch {
         pushToast(t("chat.imageTooLarge"));
-        return;
       }
+    })();
+  };
 
-      setChatText((prev) => `${prev}${prev ? "\n" : ""}${markdown}`);
-    };
+  const handleChatInputKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key !== "ArrowUp") {
+      return;
+    }
 
-    reader.readAsDataURL(file);
+    const target = event.currentTarget;
+    const selectionStart = typeof target.selectionStart === "number" ? target.selectionStart : 0;
+    const selectionEnd = typeof target.selectionEnd === "number" ? target.selectionEnd : 0;
+    if (selectionStart !== 0 || selectionEnd !== 0) {
+      return;
+    }
+
+    if (chatText.trim().length > 0) {
+      return;
+    }
+
+    const lastOwn = [...messages]
+      .reverse()
+      .find((message) => message.user_id === user?.id && canManageOwnMessage(message));
+
+    if (!lastOwn) {
+      return;
+    }
+
+    event.preventDefault();
+    setEditingMessageId(lastOwn.id);
+    setChatText(lastOwn.text);
+  };
+
+  const startEditingMessage = (messageId: string) => {
+    const targetMessage = messages.find((item) => item.id === messageId);
+    if (!targetMessage || !canManageOwnMessage(targetMessage)) {
+      return;
+    }
+
+    setEditingMessageId(messageId);
+    setChatText(targetMessage.text);
+  };
+
+  const deleteOwnMessage = (messageId: string) => {
+    const targetMessage = messages.find((item) => item.id === messageId);
+    if (!targetMessage || !canManageOwnMessage(targetMessage)) {
+      return;
+    }
+
+    const requestId = sendWsEvent(
+      "chat.delete",
+      { messageId },
+      { withIdempotency: true, maxRetries: 1 }
+    );
+
+    if (!requestId) {
+      pushToast(t("toast.serverError"));
+    }
   };
 
   const joinRoom = (slug: string) => {
     roomAdminController.joinRoom(slug);
-    if (isMobileViewport) {
-      setMobileTab("chat");
-    }
   };
 
   const leaveRoom = () => {
@@ -1161,7 +1299,15 @@ export function App() {
               onLoadOlderMessages={() => void loadOlderMessages()}
               onSetChatText={setChatText}
               onChatPaste={handleChatPaste}
+              onChatInputKeyDown={handleChatInputKeyDown}
               onSendMessage={sendMessage}
+              editingMessageId={editingMessageId}
+              onCancelEdit={() => {
+                setEditingMessageId(null);
+                setChatText("");
+              }}
+              onEditMessage={startEditingMessage}
+              onDeleteMessage={deleteOwnMessage}
             />
           </section>
         ) : null}

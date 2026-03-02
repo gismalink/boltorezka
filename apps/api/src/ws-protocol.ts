@@ -5,6 +5,8 @@ import type {
   PresenceUser,
   PongPayload,
   ChatMessagePayload,
+  ChatEditedPayload,
+  ChatDeletedPayload,
   RoomJoinedPayload,
   RoomLeftPayload,
   RoomPresencePayload,
@@ -105,6 +107,8 @@ export function asKnownWsIncomingEnvelope(
     case "room.leave":
     case "room.kick":
     case "chat.send":
+    case "chat.edit":
+    case "chat.delete":
       return {
         type: envelope.type,
         requestId: envelope.requestId,
@@ -314,6 +318,20 @@ export function buildPresenceLeftEnvelope(userId: string, userName: string, room
 export function buildChatMessageEnvelope(payload: ChatMessagePayload): { type: "chat.message"; payload: ChatMessagePayload } {
   return {
     type: "chat.message",
+    payload
+  };
+}
+
+export function buildChatEditedEnvelope(payload: ChatEditedPayload): { type: "chat.edited"; payload: ChatEditedPayload } {
+  return {
+    type: "chat.edited",
+    payload
+  };
+}
+
+export function buildChatDeletedEnvelope(payload: ChatDeletedPayload): { type: "chat.deleted"; payload: ChatDeletedPayload } {
+  return {
+    type: "chat.deleted",
     payload
   };
 }

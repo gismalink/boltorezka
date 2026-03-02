@@ -145,6 +145,36 @@ export class WsMessageController {
       }
     }
 
+    if (message.type === "chat.edited" && message.payload) {
+      const messageId = String(message.payload.id || "").trim();
+      if (!messageId) {
+        return;
+      }
+
+      this.options.setMessages((prev) => prev.map((item) => {
+        if (item.id !== messageId) {
+          return item;
+        }
+
+        return {
+          ...item,
+          text: String(message.payload.text || item.text),
+          edited_at: String(message.payload.editedAt || new Date().toISOString())
+        };
+      }));
+      return;
+    }
+
+    if (message.type === "chat.deleted" && message.payload) {
+      const messageId = String(message.payload.id || "").trim();
+      if (!messageId) {
+        return;
+      }
+
+      this.options.setMessages((prev) => prev.filter((item) => item.id !== messageId));
+      return;
+    }
+
     if (
       message.type === "call.offer" ||
       message.type === "call.answer" ||

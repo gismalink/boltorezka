@@ -9,6 +9,8 @@ import {
   buildCallMicStateRelayEnvelope,
   buildCallSignalRelayEnvelope,
   buildCallTerminalRelayEnvelope,
+  buildChatDeletedEnvelope,
+  buildChatEditedEnvelope,
   buildChatMessageEnvelope,
   buildErrorEnvelope,
   buildNackEnvelope,
@@ -948,6 +950,166 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
                   ["chat_sent"]
                 );
 
+                return;
+              }
+
+              case "chat.edit": {
+                if (!state.roomId) {
+                  sendNoActiveRoomNack(connection, requestId, eventType);
+                  return;
+                }
+
+                const messageId = normalizeRequestId(getPayloadString(payload, "messageId", 128));
+                const text = getPayloadString(payload, "text", 20000);
+                if (!messageId || !text) {
+                  sendValidationNack(connection, requestId, eventType, "messageId and text are required");
+                  return;
+                }
+
+                const existingMessage = await db.query<{
+                  id: string;
+                  room_id: string;
+                  user_id: string;
+                  created_at: string;
+                }>(
+                  `SELECT id, room_id, user_id, created_at
+                   FROM messages
+                   WHERE id = $1 AND room_id = $2
+                   LIMIT 1`,
+                  [messageId, state.roomId]
+                );
+
+                if ((existingMessage.rowCount || 0) === 0) {
+                  sendNack(connection, requestId, eventType, "MessageNotFound", "Message not found");
+                  void incrementMetric("nack_sent");
+                  return;
+                }
+
+                const messageRow = existingMessage.rows[0];
+                if (messageRow.user_id !== state.userId) {
+                  sendForbiddenNack(connection, requestId, eventType, "You can edit only your own messages");
+                  return;
+                }
+
+                const createdAtTs = Number(new Date(messageRow.created_at));
+                const withinWindow = Number.isFinite(createdAtTs) && Date.now() - createdAtTs <= 10 * 60 * 1000;
+                if (!withinWindow) {
+                  sendNack(connection, requestId, eventType, "EditWindowExpired", "Message edit window has expired");
+                  void incrementMetric("nack_sent");
+                  return;
+                }
+
+                const updated = await db.query<{
+                  id: string;
+                  room_id: string;
+                  body: string;
+                  updated_at: string;
+                }>(
+                  `UPDATE messages
+                   SET body = $1, updated_at = NOW()
+                   WHERE id = $2 AND room_id = $3
+                   RETURNING id, room_id, body, updated_at`,
+                  [text, messageId, state.roomId]
+                );
+
+                if ((updated.rowCount || 0) === 0) {
+                  sendNack(connection, requestId, eventType, "MessageNotFound", "Message not found");
+                  void incrementMetric("nack_sent");
+                  return;
+                }
+
+                const updatedMessage = updated.rows[0];
+                broadcastRoom(
+                  state.roomId,
+                  buildChatEditedEnvelope({
+                    id: updatedMessage.id,
+                    roomId: updatedMessage.room_id,
+                    roomSlug: state.roomSlug,
+                    text: updatedMessage.body,
+                    editedAt: updatedMessage.updated_at,
+                    editedByUserId: state.userId
+                  })
+                );
+
+                sendAckWithMetrics(connection, requestId, eventType, {
+                  messageId: updatedMessage.id
+                });
+                return;
+              }
+
+              case "chat.delete": {
+                if (!state.roomId) {
+                  sendNoActiveRoomNack(connection, requestId, eventType);
+                  return;
+                }
+
+                const messageId = normalizeRequestId(getPayloadString(payload, "messageId", 128));
+                if (!messageId) {
+                  sendValidationNack(connection, requestId, eventType, "messageId is required");
+                  return;
+                }
+
+                const existingMessage = await db.query<{
+                  id: string;
+                  room_id: string;
+                  user_id: string;
+                  created_at: string;
+                }>(
+                  `SELECT id, room_id, user_id, created_at
+                   FROM messages
+                   WHERE id = $1 AND room_id = $2
+                   LIMIT 1`,
+                  [messageId, state.roomId]
+                );
+
+                if ((existingMessage.rowCount || 0) === 0) {
+                  sendNack(connection, requestId, eventType, "MessageNotFound", "Message not found");
+                  void incrementMetric("nack_sent");
+                  return;
+                }
+
+                const messageRow = existingMessage.rows[0];
+                if (messageRow.user_id !== state.userId) {
+                  sendForbiddenNack(connection, requestId, eventType, "You can delete only your own messages");
+                  return;
+                }
+
+                const createdAtTs = Number(new Date(messageRow.created_at));
+                const withinWindow = Number.isFinite(createdAtTs) && Date.now() - createdAtTs <= 10 * 60 * 1000;
+                if (!withinWindow) {
+                  sendNack(connection, requestId, eventType, "DeleteWindowExpired", "Message delete window has expired");
+                  void incrementMetric("nack_sent");
+                  return;
+                }
+
+                const deleted = await db.query<{ id: string; room_id: string }>(
+                  `DELETE FROM messages
+                   WHERE id = $1 AND room_id = $2
+                   RETURNING id, room_id`,
+                  [messageId, state.roomId]
+                );
+
+                if ((deleted.rowCount || 0) === 0) {
+                  sendNack(connection, requestId, eventType, "MessageNotFound", "Message not found");
+                  void incrementMetric("nack_sent");
+                  return;
+                }
+
+                const deletedMessage = deleted.rows[0];
+                broadcastRoom(
+                  state.roomId,
+                  buildChatDeletedEnvelope({
+                    id: deletedMessage.id,
+                    roomId: deletedMessage.room_id,
+                    roomSlug: state.roomSlug,
+                    deletedByUserId: state.userId,
+                    ts: new Date().toISOString()
+                  })
+                );
+
+                sendAckWithMetrics(connection, requestId, eventType, {
+                  messageId: deletedMessage.id
+                });
                 return;
               }
 

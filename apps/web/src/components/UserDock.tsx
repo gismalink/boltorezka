@@ -139,7 +139,7 @@ export function UserDock({
               <div className="muted user-status-line">{userStatusLabel}</div>
             </div>
           </div>
-          <div className="user-panel-actions flex items-center gap-2 max-[800px]:grid max-[800px]:w-full max-[800px]:grid-cols-2">
+          <div className="user-panel-actions flex items-center gap-2 max-[800px]:grid max-[800px]:w-full max-[800px]:grid-cols-3">
             <div className="voice-settings-anchor relative max-[800px]:min-w-0" ref={voiceSettingsAnchorRef}>
               <div className="audio-output-group split-control-group inline-flex items-center gap-0 max-[800px]:grid max-[800px]:w-full max-[800px]:grid-cols-[minmax(0,1fr)_22px]">
                 <button
@@ -385,6 +385,17 @@ export function UserDock({
                 </div>
               </PopupPortal>
             </div>
+
+            {isMobileViewport ? (
+              <button
+                type="button"
+                className="secondary icon-btn split-main-btn max-[800px]:w-full"
+                data-tooltip={t("mobile.disconnect")}
+                onClick={onDisconnectCall}
+              >
+                <i className="bi bi-telephone-x" aria-hidden="true" />
+              </button>
+            ) : null}
           </div>
         </section>
       </div>

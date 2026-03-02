@@ -1,4 +1,4 @@
-import { ClipboardEvent, FormEvent, ReactNode, RefObject } from "react";
+import { ClipboardEvent, FormEvent, KeyboardEvent, ReactNode, RefObject } from "react";
 import type { Message } from "../domain";
 
 type ChatPanelProps = {
@@ -15,7 +15,12 @@ type ChatPanelProps = {
   onLoadOlderMessages: () => void;
   onSetChatText: (value: string) => void;
   onChatPaste: (event: ClipboardEvent<HTMLInputElement>) => void;
+  onChatInputKeyDown: (event: KeyboardEvent<HTMLInputElement>) => void;
   onSendMessage: (event: FormEvent) => void;
+  editingMessageId: string | null;
+  onCancelEdit: () => void;
+  onEditMessage: (messageId: string) => void;
+  onDeleteMessage: (messageId: string) => void;
 };
 
 export function ChatPanel({
@@ -32,7 +37,12 @@ export function ChatPanel({
   onLoadOlderMessages,
   onSetChatText,
   onChatPaste,
-  onSendMessage
+  onChatInputKeyDown,
+  onSendMessage,
+  editingMessageId,
+  onCancelEdit,
+  onEditMessage,
+  onDeleteMessage
 }: ChatPanelProps) {
   const hasActiveRoom = Boolean(roomSlug);
   const formatMessageTime = (value: string) => {
@@ -161,6 +171,8 @@ export function ChatPanel({
       <div className="chat-log min-h-0 flex-1" ref={chatLogRef}>
         {messages.map((message) => {
           const isOwn = currentUserId === message.user_id;
+          const createdAtTs = Number(new Date(message.created_at));
+          const canManageOwnMessage = isOwn && Number.isFinite(createdAtTs) && (Date.now() - createdAtTs) <= 10 * 60 * 1000;
           const deliveryClass = message.deliveryStatus === "sending"
             ? "text-[#ffd166]"
             : message.deliveryStatus === "delivered"
@@ -194,6 +206,13 @@ export function ChatPanel({
                     <span className="chat-time">{formatMessageTime(message.created_at)}</span>
                   </div>
                   <p className="chat-text">{renderMessageText(message.text)}</p>
+                  {message.edited_at ? <div className="chat-edited-mark">{t("chat.editedMark")}</div> : null}
+                  {canManageOwnMessage ? (
+                    <div className="chat-actions-row flex items-center justify-end gap-2">
+                      <button type="button" className="secondary tiny" onClick={() => onEditMessage(message.id)}>{t("chat.edit")}</button>
+                      <button type="button" className="secondary tiny" onClick={() => onDeleteMessage(message.id)}>{t("chat.delete")}</button>
+                    </div>
+                  ) : null}
                 </div>
 
                 {isOwn && message.deliveryStatus ? (
@@ -206,15 +225,22 @@ export function ChatPanel({
           );
         })}
       </div>
+      {editingMessageId ? (
+        <div className="chat-edit-banner mb-2 flex items-center justify-between gap-3">
+          <span>{t("chat.editingNow")}</span>
+          <button type="button" className="secondary tiny" onClick={onCancelEdit}>{t("chat.cancelEdit")}</button>
+        </div>
+      ) : null}
       <form className="chat-compose mt-3 flex items-center gap-3" onSubmit={onSendMessage}>
         <input
           value={chatText}
           onChange={(event) => onSetChatText(event.target.value)}
           onPaste={onChatPaste}
+          onKeyDown={onChatInputKeyDown}
           placeholder={hasActiveRoom ? t("chat.typePlaceholder") : t("chat.selectChannelPlaceholder")}
           disabled={!hasActiveRoom}
         />
-        <button type="submit" disabled={!hasActiveRoom}>{t("chat.send")}</button>
+        <button type="submit" disabled={!hasActiveRoom}>{editingMessageId ? t("chat.saveEdit") : t("chat.send")}</button>
       </form>
     </section>
   );

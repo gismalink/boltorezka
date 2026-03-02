@@ -841,6 +841,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
                m.user_id,
                m.body AS text,
                m.created_at,
+               m.updated_at AS edited_at,
                u.name AS user_name
              FROM messages m
              JOIN users u ON u.id = m.user_id
@@ -857,6 +858,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
                m.user_id,
                m.body AS text,
                m.created_at,
+               m.updated_at AS edited_at,
                u.name AS user_name
              FROM messages m
              JOIN users u ON u.id = m.user_id

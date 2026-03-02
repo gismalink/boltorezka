@@ -638,6 +638,10 @@ pre {
   z-index: 30;
 }
 
+.channel-settings-popup {
+  max-width: min(92vw, 560px);
+}
+
 .chat-log {
   max-height: none;
   overflow: auto;
@@ -709,6 +713,31 @@ pre {
 .chat-link:hover,
 .chat-link:focus-visible {
   color: color-mix(in srgb, var(--pixel-neon-cyan) 72%, var(--pixel-text) 28%);
+}
+
+.chat-edited-mark {
+  margin-top: 4px;
+  color: var(--pixel-muted);
+  font-size: calc(var(--font-size-sm) - 0.18rem);
+}
+
+.chat-actions-row {
+  margin-top: 6px;
+}
+
+.chat-actions-row .tiny,
+.chat-edit-banner .tiny {
+  padding: 3px 6px;
+  min-height: 26px;
+  font-size: calc(var(--font-size-sm) - 0.18rem);
+}
+
+.chat-edit-banner {
+  border: var(--border-thin) solid color-mix(in srgb, var(--pixel-neon-cyan) 45%, var(--pixel-border) 55%);
+  background: color-mix(in srgb, var(--pixel-panel) 85%, var(--pixel-accent) 15%);
+  padding: 6px 8px;
+  color: var(--pixel-text);
+  font-size: calc(var(--font-size-sm) - 0.04rem);
 }
 
 .delivery {
@@ -1176,10 +1205,13 @@ pre {
 
   .voice-mini-popup,
   .voice-settings-popup,
-  .voice-submenu-popup {
+  .voice-submenu-popup,
+  .channel-settings-popup,
+  .category-settings-popup,
+  .settings-popup {
     min-width: min(92vw, 360px) !important;
     max-width: 92vw;
-    max-height: min(70vh, 560px);
+    max-height: min(70vh, calc(100dvh - var(--mobile-tabbar-reserve) - (var(--space-lg) * 2)));
     overflow: auto;
   }
 

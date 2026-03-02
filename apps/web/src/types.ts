@@ -51,6 +51,7 @@ export type Message = {
   user_id: string;
   text: string;
   created_at: string;
+  edited_at?: string | null;
   user_name: string;
   clientRequestId?: string;
   deliveryStatus?: "sending" | "delivered" | "failed";

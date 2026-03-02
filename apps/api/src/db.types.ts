@@ -49,6 +49,7 @@ export type RoomMessageRow = {
   user_id: string;
   text: string;
   created_at: string;
+  edited_at?: string | null;
   user_name: string;
 };
 
