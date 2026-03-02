@@ -248,7 +248,7 @@ export function App() {
     }
 
     const roomFromTree = (roomsTree?.categories || [])
-      .flatMap((category) => category.rooms)
+      .flatMap((category) => category.channels || [])
       .find((room) => room.slug === roomSlug)
       ?? (roomsTree?.uncategorized || []).find((room) => room.slug === roomSlug)
       ?? null;
