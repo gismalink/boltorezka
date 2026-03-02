@@ -890,3 +890,30 @@ _Для визуальных/UX инкрементов ниже использу
   - `smoke:sso` — PASS.
   - `smoke:api` — PASS.
   - `smoke:realtime` — PASS (`reconnectOk=true`).
+
+## 2026-03-02 — MVP + API load cycle #1 (test)
+
+### Execution
+
+- Baseline snapshot: `ssh mac-mini 'cd ~/srv/edge && ./scripts/server-quick-check.sh'`.
+- Functional gate: `ssh mac-mini 'cd ~/srv/boltorezka && npm run smoke:test:postdeploy'` — PASS (`smoke:sso`, `smoke:api`, `smoke:realtime`, `reconnectOk=true`).
+
+### API load P1 (20 rps, 5 min)
+
+- Endpoint: `GET /health`
+  - command: `npx -y autocannon -R 20 -d 300 -c 20 https://test.boltorezka.gismalink.art/health`
+  - result: avg `146.43 ms`, p50 `106 ms`, p97.5 `642 ms`, p99 `1027 ms`, max `1608 ms`, total `6k` requests.
+- Endpoint: `GET /v1/auth/mode`
+  - command: `npx -y autocannon -R 20 -d 300 -c 20 https://test.boltorezka.gismalink.art/v1/auth/mode`
+  - result: avg `100.54 ms`, p50 `90 ms`, p97.5 `281 ms`, p99 `350 ms`, max `792 ms`, total `6k` requests.
+
+### Post-load health/logs
+
+- API logs check (`--tail=300` + grep `error|fatal|exception|panic`) — no critical matches.
+- No smoke regressions detected after load.
+
+### Outcome
+
+- MVP functional gate: PASS.
+- API load P1 public endpoints: PASS.
+- Next recommended run: P2 mixed load + WS load profile `W1` from `docs/plans/TEST_PLAN_MVP_LOAD_2026-03.md`.

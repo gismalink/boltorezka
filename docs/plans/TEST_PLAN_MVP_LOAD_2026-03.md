@@ -140,3 +140,13 @@ ssh mac-mini 'cd ~/srv/boltorezka && TEST_REF=origin/feature/tailwind-user-dock 
 ssh mac-mini 'cd ~/srv/boltorezka && docker compose -f infra/docker-compose.host.yml --env-file infra/.env.host ps'
 ssh mac-mini 'cd ~/srv/boltorezka && docker compose -f infra/docker-compose.host.yml --env-file infra/.env.host logs --tail=300 boltorezka-api-test'
 ```
+
+## 10) Execution snapshot (2026-03-02, cycle #1)
+
+- Deploy/smoke ref: `origin/feature/tailwind-user-dock` (`50f89b3`) on `test`.
+- Functional smoke: PASS (`smoke:sso`, `smoke:api`, `smoke:realtime`, `reconnectOk=true`).
+- P1 API load executed:
+  - `/health`: avg `146.43 ms`, p99 `1027 ms`, 6k requests.
+  - `/v1/auth/mode`: avg `100.54 ms`, p99 `350 ms`, 6k requests.
+- Post-load API log scan (`error|fatal|exception|panic`): no critical matches.
+- Status: cycle #1 accepted, proceed to P2 + W1 in next iteration.
