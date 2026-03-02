@@ -128,5 +128,4 @@ export type RoomsPanelProps = {
   onDeleteChannel: (room: Room) => void;
   onToggleCategoryCollapsed: (categoryId: string) => void;
   onJoinRoom: (slug: string) => void;
-  onLeaveRoom: () => void;
 };

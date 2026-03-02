@@ -28,6 +28,7 @@ import {
   useRealtimeChatLifecycle,
   useRoomAdminActions,
   useRoomsDerived,
+  useScreenWakeLock,
   useServerMenuAccessGuard,
   useVoiceCallRuntime,
   useVoiceRoomStateMaps
@@ -598,6 +599,16 @@ export function App() {
     setMessagesNextCursor(null);
   };
 
+  const handleToggleMic = useCallback(() => {
+    setMicMuted((value) => {
+      const nextMuted = !value;
+      if (!nextMuted) {
+        setAudioMuted(false);
+      }
+      return nextMuted;
+    });
+  }, []);
+
   const promote = async (userId: string) => {
     if (!token || !canPromote) return;
     await roomAdminController.promote(token, userId);
@@ -728,6 +739,8 @@ export function App() {
     setServerMenuTab
   });
 
+  useScreenWakeLock(Boolean(user));
+
   const userDockNode = user ? (
     <UserDock
       t={t}
@@ -765,7 +778,7 @@ export function App() {
       audioOutputAnchorRef={audioOutputAnchorRef}
       voiceSettingsAnchorRef={voiceSettingsAnchorRef}
       userSettingsRef={userSettingsRef}
-      onToggleMic={() => setMicMuted((value) => !value)}
+      onToggleMic={handleToggleMic}
       onToggleAudio={() => {
         setAudioMuted((value) => {
           const nextMuted = !value;
@@ -801,7 +814,7 @@ export function App() {
       onRequestMediaAccess={requestMediaAccess}
       onSetMicVolume={setMicVolume}
       onSetOutputVolume={setOutputVolume}
-      onDisconnectCall={disconnectRoom}
+      onDisconnectCall={leaveRoom}
       isMobileViewport={isMobileViewport}
       inlineSettingsMode={false}
     />
@@ -844,7 +857,7 @@ export function App() {
       audioOutputAnchorRef={audioOutputAnchorRef}
       voiceSettingsAnchorRef={voiceSettingsAnchorRef}
       userSettingsRef={userSettingsRef}
-      onToggleMic={() => setMicMuted((value) => !value)}
+      onToggleMic={handleToggleMic}
       onToggleAudio={() => {
         setAudioMuted((value) => {
           const nextMuted = !value;
@@ -880,7 +893,7 @@ export function App() {
       onRequestMediaAccess={requestMediaAccess}
       onSetMicVolume={setMicVolume}
       onSetOutputVolume={setOutputVolume}
-      onDisconnectCall={disconnectRoom}
+      onDisconnectCall={leaveRoom}
       isMobileViewport={isMobileViewport}
       inlineSettingsMode
     />
@@ -973,7 +986,6 @@ export function App() {
               onDeleteChannel={(room) => void deleteChannel(room)}
               onToggleCategoryCollapsed={toggleCategoryCollapsed}
               onJoinRoom={joinRoom}
-              onLeaveRoom={leaveRoom}
             />
 
             {userDockNode}

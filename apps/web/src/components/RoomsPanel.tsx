@@ -73,8 +73,7 @@ export function RoomsPanel({
   onClearChannelMessages,
   onDeleteChannel,
   onToggleCategoryCollapsed,
-  onJoinRoom,
-  onLeaveRoom
+  onJoinRoom
 }: RoomsPanelProps) {
   const categorySettingsAnchorRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const channelSettingsAnchorRefs = useRef<Record<string, HTMLDivElement | null>>({});
@@ -368,17 +367,6 @@ export function RoomsPanel({
       <div className="section-heading-row mb-3 flex items-center justify-between gap-3">
         <h2>{t("rooms.title")}</h2>
         <div className="row-actions flex items-center gap-2">
-          {roomSlug ? (
-            <button
-              type="button"
-              className="secondary icon-btn"
-              aria-label={t("rooms.leaveChannel")}
-              data-tooltip={t("rooms.leaveChannel")}
-              onClick={onLeaveRoom}
-            >
-              <i className="bi bi-box-arrow-right" aria-hidden="true" />
-            </button>
-          ) : null}
           {canCreateRooms ? (
             <>
               <div className="popup-anchor" ref={categoryPopupRef}>
