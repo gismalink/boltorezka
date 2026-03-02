@@ -92,13 +92,21 @@
   - `beforeCreatedAt` and `beforeId` must be provided together
 - 200:
   - `room`: `{ id, slug, title, is_public }`
-  - `messages[]`: `{ id, room_id, user_id, text, created_at, user_name }`
+  - `messages[]`: `{ id, room_id, user_id, text, created_at, edited_at|null, user_name }`
   - `pagination`:
     - `hasMore`: boolean
     - `nextCursor`: `{ beforeCreatedAt, beforeId } | null`
 - 400 `ValidationError` for invalid cursor params
 - 404 `RoomNotFound`
 - 403 `Forbidden` (private room without membership)
+
+### DELETE /v1/rooms/:roomId/messages
+
+- Auth: Bearer JWT + role `admin|super_admin`
+- 200:
+  - `{ ok: true, roomId, deletedCount }`
+- 404 `RoomNotFound`
+- 400 `ValidationError`
 
 ## Admin / RBAC
 

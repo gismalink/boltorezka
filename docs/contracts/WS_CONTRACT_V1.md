@@ -41,6 +41,8 @@ Server -> client envelope types:
 - `presence.joined`
 - `presence.left`
 - `chat.message`
+- `chat.edited`
+- `chat.deleted`
 - `call.offer`
 - `call.answer`
 - `call.ice`
@@ -105,6 +107,9 @@ Common `code` values:
 - `TargetNotInRoom`
 - `RoomNotFound`
 - `Forbidden`
+- `MessageNotFound`
+- `EditWindowExpired`
+- `DeleteWindowExpired`
 
 ### error
 
@@ -187,6 +192,46 @@ Outputs:
 - broadcast `chat.message`
 - `ack`
 - duplicate send returns cached `chat.message` + `ack(duplicate=true)`
+
+### chat.edit
+
+Input payload:
+
+```json
+{ "messageId": "uuid", "text": "updated text" }
+```
+
+Rules:
+
+- requires active room
+- only own message can be edited
+- edit window: 10 minutes from `created_at`
+
+Outputs:
+
+- broadcast `chat.edited`
+- `ack`
+- `nack` with `MessageNotFound|Forbidden|EditWindowExpired` on violation
+
+### chat.delete
+
+Input payload:
+
+```json
+{ "messageId": "uuid" }
+```
+
+Rules:
+
+- requires active room
+- only own message can be deleted
+- delete window: 10 minutes from `created_at`
+
+Outputs:
+
+- broadcast `chat.deleted`
+- `ack`
+- `nack` with `MessageNotFound|Forbidden|DeleteWindowExpired` on violation
 
 ### call.offer | call.answer | call.ice
 
@@ -285,6 +330,31 @@ Outputs:
   "text": "string",
   "createdAt": "iso-datetime",
   "senderRequestId": "string|null"
+}
+```
+
+### chat.edited
+
+```json
+{
+  "id": "uuid",
+  "roomId": "string",
+  "roomSlug": "string|null",
+  "text": "string",
+  "editedAt": "iso-datetime",
+  "editedByUserId": "string"
+}
+```
+
+### chat.deleted
+
+```json
+{
+  "id": "uuid",
+  "roomId": "string",
+  "roomSlug": "string|null",
+  "deletedByUserId": "string",
+  "ts": "iso-datetime"
 }
 ```
 

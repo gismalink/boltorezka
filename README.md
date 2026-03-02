@@ -40,6 +40,7 @@ Legacy-файлы перенесены в `legacy/poc/`.
 - WS контракт v1: [docs/contracts/WS_CONTRACT_V1.md](docs/contracts/WS_CONTRACT_V1.md)
 - OpenAPI artifact v1: [docs/contracts/OPENAPI_V1.yaml](docs/contracts/OPENAPI_V1.yaml)
 - Smoke/CI matrix: [docs/operations/SMOKE_CI_MATRIX.md](docs/operations/SMOKE_CI_MATRIX.md)
+- Test plan (MVP + load): [docs/plans/TEST_PLAN_MVP_LOAD_2026-03.md](docs/plans/TEST_PLAN_MVP_LOAD_2026-03.md)
 - Voice baseline runbook: [docs/runbooks/VOICE_BASELINE_RUNBOOK.md](docs/runbooks/VOICE_BASELINE_RUNBOOK.md)
 - Тестовый деплой (GitOps): [docs/runbooks/RUNBOOK_TEST_DEPLOY.md](docs/runbooks/RUNBOOK_TEST_DEPLOY.md)
 - Быстрый rollout в test (5 команд): [docs/runbooks/RUNBOOK_TEST_ROLLOUT_QUICKSTART.md](docs/runbooks/RUNBOOK_TEST_ROLLOUT_QUICKSTART.md)
@@ -95,7 +96,7 @@ Legacy-файлы перенесены в `legacy/poc/`.
 - [ ] Описать OpenAPI + WS event schema (версионирование с `v1`).
 - [x] Закрыть PR с итоговым TS/realtime hardening в `main`.
 - [x] Повторить `deploy:test:smoke` уже от `origin/main` и зафиксировать release notes.
-- [ ] Обновить runbook/checklist для React UI как default smoke path.
+- [x] Обновить runbook/checklist для React UI как default smoke path.
 
 ## Что уже можно запустить
 
@@ -184,6 +185,8 @@ WS envelope (MVP hardening):
 - client -> server: `type`, `requestId`, `payload`, optional `idempotencyKey`
 - server -> client: `ack` / `nack` с `requestId` и `eventType`
 - для `chat.send` используется dedup по `idempotencyKey`
+- edit/delete own message window: `chat.edit`, `chat.delete` (10-minute policy, own messages only)
+- realtime update events: `chat.edited`, `chat.deleted`
 - signaling baseline: `call.offer`, `call.answer`, `call.ice`, `call.reject`, `call.hangup` (relay в пределах room, optional `targetUserId`)
 
 ### Минимальный smoke realtime (WebSocket)

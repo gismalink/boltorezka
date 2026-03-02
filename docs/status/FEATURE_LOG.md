@@ -852,3 +852,41 @@ _Для визуальных/UX инкрементов ниже использу
 - Roadmap block continuation (MVP-like readiness gate): в `docs/runbooks/PREPROD_DECISION_PACKAGE.md` добавлен структурированный gate (`mandatory GO criteria`, `automatic NO-GO`, `pre-prod gate record`), `docs/runbooks/PREPROD_CHECKLIST.md` синхронизирован ссылкой на этот gate, в `docs/status/ROADMAP.md` пункт #6 разделён на `gate formalized [x]` и `explicit GO + prod rollout [ ]`.
 - Pre-prod gate draft: в `docs/runbooks/PREPROD_DECISION_PACKAGE.md` добавлен `Current draft gate record (2026-02-28)` с фактическими статусами (`smoke:sso=PASS`, `smoke:realtime=PASS`, `reconnectOk=true`, `smoke:web:e2e=PENDING`, `call relay=PENDING`) и итогом `NO-GO` до закрытия pending-пунктов + owner sign-off.
 - Pre-prod gate update: `smoke:web:e2e` успешно выполнен на сервере (`SMOKE_API_URL=https://test.boltorezka.gismalink.art npm run smoke:web:e2e`), relay path закрыт (`callSignalRelayed=true`, `callRejectRelayed=true`, `callHangupRelayed=true`); в draft gate-record pending-пункты переведены в `PASS`, итог остаётся `NO-GO` до explicit owner sign-off и prod approval.
+
+## 2026-03-02 — Chat/mobile UX + moderation window updates
+
+### Delivered
+
+- Mobile UX:
+  - selected mobile tab no longer resets on viewport resize;
+  - selecting a room on mobile no longer auto-switches to chat tab;
+  - mobile disconnect control added next to mic/headphones controls.
+- Channel settings popup mobile fit:
+  - popup constrained by mobile viewport and tabbar reserve,
+  - vertical overflow moved to internal scroll.
+- Chat image paste pipeline:
+  - stronger compression (canvas resize + JPEG quality),
+  - pasted image markdown naming switched to `скриншот-<hh>-<mm>`.
+- Message lifecycle:
+  - user can edit/delete own messages within 10 minutes,
+  - ArrowUp in empty input opens edit mode for latest editable own message,
+  - realtime events `chat.edited` / `chat.deleted` added end-to-end.
+
+### Contracts/runtime updates
+
+- WS incoming events: `chat.edit`, `chat.delete`.
+- WS outgoing events: `chat.edited`, `chat.deleted`.
+- Nack codes for policy violations: `MessageNotFound`, `EditWindowExpired`, `DeleteWindowExpired`.
+- DB schema: `messages.updated_at` added (idempotent migration); history endpoint returns `edited_at`.
+
+### Validation
+
+- Local checks:
+  - `npm run check:api-types` — PASS;
+  - `npm run web:build` — PASS.
+- Commit: `50f89b3` (`feature/tailwind-user-dock`).
+- Test rollout/smoke:
+  - `ssh mac-mini 'cd ~/srv/boltorezka && TEST_REF=origin/feature/tailwind-user-dock npm run deploy:test:smoke'` — PASS.
+  - `smoke:sso` — PASS.
+  - `smoke:api` — PASS.
+  - `smoke:realtime` — PASS (`reconnectOk=true`).
