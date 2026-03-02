@@ -23,6 +23,7 @@ type UseAuthProfileFlowArgs = {
   setProfileStatusText: (value: string) => void;
   setUser: (value: User | null) => void;
   pushToast: (message: string) => void;
+  onProfileSaved?: () => void;
 };
 
 export function useAuthProfileFlow({
@@ -43,7 +44,8 @@ export function useAuthProfileFlow({
   setProfileSaving,
   setProfileStatusText,
   setUser,
-  pushToast
+  pushToast,
+  onProfileSaved
 }: UseAuthProfileFlowArgs) {
   useEffect(() => {
     api.authMode()
@@ -99,6 +101,7 @@ export function useAuthProfileFlow({
       if (response.user) {
         setUser(response.user);
       }
+      onProfileSaved?.();
       setProfileStatusText(t("profile.saveSuccess"));
       pushToast(t("profile.saveSuccess"));
     } catch (error) {

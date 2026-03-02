@@ -14,7 +14,7 @@ export type User = {
 
 export type RoomKind = "text" | "text_voice" | "text_voice_video";
 
-export type AudioQuality = "low" | "standard" | "high";
+export type AudioQuality = "retro" | "low" | "standard" | "high";
 
 export type ChannelAudioQualitySetting = "server_default" | AudioQuality;
 

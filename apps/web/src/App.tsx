@@ -124,6 +124,7 @@ export function App() {
   const [mobileTab, setMobileTab] = useState<MobileTab>("chat");
   const [serverAudioQuality, setServerAudioQuality] = useState<AudioQuality>("standard");
   const [serverAudioQualitySaving, setServerAudioQualitySaving] = useState(false);
+  const [realtimeReconnectNonce, setRealtimeReconnectNonce] = useState(0);
   const realtimeClientRef = useRef<RealtimeClient | null>(null);
   const roomSlugRef = useRef(roomSlug);
   const lastRoomSlugForScrollRef = useRef(roomSlug);
@@ -387,7 +388,8 @@ export function App() {
     setProfileSaving,
     setProfileStatusText,
     setUser,
-    pushToast
+    pushToast,
+    onProfileSaved: () => setRealtimeReconnectNonce((value) => value + 1)
   });
 
   useEffect(() => {
@@ -460,6 +462,7 @@ export function App() {
 
   const { loadOlderMessages } = useRealtimeChatLifecycle({
     token,
+    reconnectNonce: realtimeReconnectNonce,
     roomSlug,
     messages,
     messagesNextCursor,

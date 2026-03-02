@@ -239,6 +239,14 @@ export function RoomsPanel({
                       </button>
                       <button
                         type="button"
+                        className={`secondary quality-toggle-btn ${editingRoomAudioQualitySetting === "retro" ? "quality-toggle-btn-active" : ""}`}
+                        onClick={() => onSetEditingRoomAudioQualitySetting("retro" as ChannelAudioQualitySetting)}
+                        aria-pressed={editingRoomAudioQualitySetting === "retro"}
+                      >
+                        {t("server.soundRetro")}
+                      </button>
+                      <button
+                        type="button"
                         className={`secondary quality-toggle-btn ${editingRoomAudioQualitySetting === "low" ? "quality-toggle-btn-active" : ""}`}
                         onClick={() => onSetEditingRoomAudioQualitySetting("low" as ChannelAudioQualitySetting)}
                         aria-pressed={editingRoomAudioQualitySetting === "low"}
@@ -311,8 +319,8 @@ export function RoomsPanel({
                 ? member.userId && member.userId === normalizedCurrentUserId
                 : normalizedCurrentUserName && normalizedMemberName === normalizedCurrentUserName;
               const micState = roomHasVoiceState && member.userId
-                ? (voiceMicStateByUserIdInCurrentRoom[member.userId] || "muted")
-                : "muted";
+                ? (voiceMicStateByUserIdInCurrentRoom[member.userId] || "silent")
+                : "silent";
               const isVoiceActive = micState === "speaking";
               const isAudioOutputMuted = roomHasVoiceState && member.userId
                 ? Boolean(voiceAudioOutputMutedByUserIdInCurrentRoom[member.userId])

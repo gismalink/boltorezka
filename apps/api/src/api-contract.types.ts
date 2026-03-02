@@ -1,6 +1,6 @@
 import type { RoomCategoryRow, RoomListRow, RoomMessageRow, RoomRow, UserRow } from "./db.types.ts";
 
-export type AudioQuality = "low" | "standard" | "high";
+export type AudioQuality = "retro" | "low" | "standard" | "high";
 
 export type AuthModeResponse = {
   mode: string;

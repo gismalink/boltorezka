@@ -13,8 +13,10 @@ const demoteSchema = z.object({
   role: z.literal("user").default("user")
 });
 
+const audioQualitySchema = z.enum(["retro", "low", "standard", "high"]);
+
 const serverAudioQualitySchema = z.object({
-  audioQuality: z.enum(["low", "standard", "high"])
+  audioQuality: audioQualitySchema
 });
 
 async function loadUserById(userId: string) {
@@ -45,7 +47,7 @@ async function loadServerAudioQuality() {
   }
 
   const value = String(result.rows[0]?.audio_quality || "standard").trim();
-  if (value === "low" || value === "high" || value === "standard") {
+  if (value === "retro" || value === "low" || value === "high" || value === "standard") {
     return value;
   }
 
@@ -65,7 +67,7 @@ export async function adminRoutes(fastify: FastifyInstance) {
     }
   );
 
-  fastify.put<{ Body: { audioQuality: "low" | "standard" | "high" } }>(
+  fastify.put<{ Body: { audioQuality: "retro" | "low" | "standard" | "high" } }>(
     "/v1/admin/server/audio-quality",
     {
       preHandler: [requireAuth, loadCurrentUser, requireRole(["super_admin"])]
@@ -93,7 +95,7 @@ export async function adminRoutes(fastify: FastifyInstance) {
 
       const audioQuality = String(updated.rows[0]?.audio_quality || "standard").trim();
       const response: ServerAudioQualityResponse = {
-        audioQuality: audioQuality === "low" || audioQuality === "high" ? audioQuality : "standard"
+        audioQuality: audioQuality === "retro" || audioQuality === "low" || audioQuality === "high" ? audioQuality : "standard"
       };
       return response;
     }

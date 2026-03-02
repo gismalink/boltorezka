@@ -487,6 +487,17 @@ pre {
   color: var(--pixel-text);
 }
 
+.room-btn-active:hover,
+.room-btn-active:focus-visible,
+.room-btn-active:active {
+  transform: none;
+  border-color: var(--pixel-border);
+  background: color-mix(in srgb, var(--pixel-panel) 82%, var(--pixel-neon-cyan) 18%);
+  box-shadow:
+    inset 3px 0 0 var(--pixel-accent),
+    0 0 0 1px color-mix(in srgb, var(--pixel-neon-cyan) 70%, transparent 30%);
+}
+
 .channel-members-list {
   list-style: none;
   margin: 0;
@@ -556,6 +567,17 @@ pre {
 
 .channel-member-item-voice-active .channel-member-icons {
   color: var(--pixel-neon-cyan);
+}
+
+.channel-member-item-current.channel-member-item-voice-active .channel-member-name,
+.channel-member-item-current.channel-member-item-voice-active .channel-member-avatar,
+.channel-member-item-current.channel-member-item-voice-active .channel-member-icons {
+  color: var(--pixel-neon-gold);
+  border-color: var(--pixel-neon-gold);
+}
+
+.channel-member-item-current.channel-member-item-voice-active .channel-member-avatar {
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--pixel-neon-gold) 56%, transparent 44%);
 }
 
 .channel-action-btn {

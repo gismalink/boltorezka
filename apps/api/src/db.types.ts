@@ -60,7 +60,7 @@ export type InsertedMessageRow = {
   created_at: string;
 };
 
-export type AudioQuality = "low" | "standard" | "high";
+export type AudioQuality = "retro" | "low" | "standard" | "high";
 
 export type ServerSettingsRow = {
   id: boolean;

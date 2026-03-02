@@ -39,12 +39,14 @@ import { buildLocalDescriptionAfterIceGathering } from "./voiceCallUtils";
 import { useVoiceRuntimeMediaEffects } from "./useVoiceRuntimeMediaEffects";
 
 const AUDIO_QUALITY_MAX_BITRATE: Record<AudioQuality, number> = {
+  retro: 12000,
   low: 24000,
   standard: 40000,
   high: 64000
 };
 
 const AUDIO_QUALITY_SAMPLE_RATE: Record<AudioQuality, number> = {
+  retro: 12000,
   low: 16000,
   standard: 24000,
   high: 48000
@@ -92,6 +94,7 @@ export function useVoiceCallRuntime({
   const localSpeakingRef = useRef(false);
   const localSpeakingLastAboveAtRef = useRef(0);
   const lastSentMicStateRef = useRef<{ muted: boolean; speaking: boolean; audioMuted: boolean } | null>(null);
+  const remoteMicStateByUserIdRef = useRef<Record<string, { muted: boolean; speaking: boolean; audioMuted: boolean }>>({});
 
   const pushToastThrottled = useCallback((key: string, message: string) => {
     const now = Date.now();
@@ -107,25 +110,50 @@ export function useVoiceCallRuntime({
   }, [pushToast]);
 
   const syncPeerVoiceState = useCallback(() => {
-    const mutedIds: string[] = [];
-    const speakingIds: string[] = [];
-    const audioMutedIds: string[] = [];
+    const mutedIds = new Set<string>();
+    const speakingIds = new Set<string>();
+    const audioMutedIds = new Set<string>();
 
     for (const [userId, peer] of peersRef.current.entries()) {
       if (peer.isRemoteMicMuted) {
-        mutedIds.push(userId);
+        mutedIds.add(userId);
       }
       if (peer.isRemoteSpeaking) {
-        speakingIds.push(userId);
+        speakingIds.add(userId);
       }
       if (peer.isRemoteAudioMuted) {
-        audioMutedIds.push(userId);
+        audioMutedIds.add(userId);
       }
     }
 
-    setRemoteMutedPeerUserIds(mutedIds);
-    setRemoteSpeakingPeerUserIds(speakingIds);
-    setRemoteAudioMutedPeerUserIds(audioMutedIds);
+    Object.entries(remoteMicStateByUserIdRef.current).forEach(([userId, state]) => {
+      const normalized = String(userId || "").trim();
+      if (!normalized) {
+        return;
+      }
+
+      if (state.muted) {
+        mutedIds.add(normalized);
+        speakingIds.delete(normalized);
+      } else {
+        mutedIds.delete(normalized);
+        if (state.speaking) {
+          speakingIds.add(normalized);
+        } else {
+          speakingIds.delete(normalized);
+        }
+      }
+
+      if (state.audioMuted) {
+        audioMutedIds.add(normalized);
+      } else {
+        audioMutedIds.delete(normalized);
+      }
+    });
+
+    setRemoteMutedPeerUserIds(Array.from(mutedIds));
+    setRemoteSpeakingPeerUserIds(Array.from(speakingIds));
+    setRemoteAudioMutedPeerUserIds(Array.from(audioMutedIds));
   }, []);
 
   const shouldInitiateOffer = useCallback((targetUserId: string) => {
@@ -519,6 +547,8 @@ export function useVoiceCallRuntime({
       requestTargetByIdRef.current.clear();
       blockedTargetUntilRef.current.clear();
     }
+    remoteMicStateByUserIdRef.current = {};
+    lastSentMicStateRef.current = null;
     clearRoomTargetsResyncTimer();
     setLastCallPeer("");
     setCallStatus("idle");
@@ -924,6 +954,21 @@ export function useVoiceCallRuntime({
   }, [closePeer, updateCallStatus]);
 
   const handleIncomingMicState = useCallback((payload: CallMicStatePayload) => {
+    const fromUserId = String(payload.fromUserId || "").trim();
+    if (fromUserId) {
+      const previous = remoteMicStateByUserIdRef.current[fromUserId] || {
+        muted: false,
+        speaking: false,
+        audioMuted: false
+      };
+
+      remoteMicStateByUserIdRef.current[fromUserId] = {
+        muted: typeof payload.muted === "boolean" ? payload.muted : previous.muted,
+        speaking: typeof payload.speaking === "boolean" ? payload.speaking : previous.speaking,
+        audioMuted: typeof payload.audioMuted === "boolean" ? payload.audioMuted : previous.audioMuted
+      };
+    }
+
     handleIncomingMicStateEvent({
       payload,
       peersRef,
@@ -997,10 +1042,6 @@ export function useVoiceCallRuntime({
     }
 
     if (!roomVoiceConnectedRef.current) {
-      return;
-    }
-
-    if (peersRef.current.size === 0) {
       return;
     }
 

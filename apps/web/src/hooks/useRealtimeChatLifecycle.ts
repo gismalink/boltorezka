@@ -7,6 +7,7 @@ import type { CallStatus, ChatController } from "../services";
 
 type UseRealtimeChatLifecycleArgs = {
   token: string;
+  reconnectNonce: number;
   roomSlug: string;
   messages: Message[];
   messagesNextCursor: MessagesCursor | null;
@@ -50,6 +51,7 @@ type UseRealtimeChatLifecycleArgs = {
 
 export function useRealtimeChatLifecycle({
   token,
+  reconnectNonce,
   roomSlug,
   messages,
   messagesNextCursor,
@@ -181,7 +183,7 @@ export function useRealtimeChatLifecycle({
         realtimeClientRef.current = null;
       }
     };
-  }, [token]);
+  }, [token, reconnectNonce]);
 
   useEffect(() => {
     if (!token || !roomSlug) return;

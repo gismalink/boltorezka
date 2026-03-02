@@ -210,6 +210,15 @@ export function ServerProfileModal({
                 <div className="quality-toggle-group" role="radiogroup" aria-label={t("server.soundQuality")}>
                   <button
                     type="button"
+                    className={`secondary quality-toggle-btn ${serverAudioQuality === "retro" ? "quality-toggle-btn-active" : ""}`}
+                    onClick={() => onSetServerAudioQuality("retro")}
+                    disabled={!canManageAudioQuality || serverAudioQualitySaving}
+                    aria-pressed={serverAudioQuality === "retro"}
+                  >
+                    {t("server.soundRetro")}
+                  </button>
+                  <button
+                    type="button"
                     className={`secondary quality-toggle-btn ${serverAudioQuality === "low" ? "quality-toggle-btn-active" : ""}`}
                     onClick={() => onSetServerAudioQuality("low")}
                     disabled={!canManageAudioQuality || serverAudioQualitySaving}

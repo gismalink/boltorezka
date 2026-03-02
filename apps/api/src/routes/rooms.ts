@@ -22,6 +22,8 @@ const roomKindSchema = z
   .enum(["text", "text_voice", "text_voice_video", "voice"])
   .transform((value) => (value === "voice" ? "text_voice" : value));
 
+const audioQualitySchema = z.enum(["retro", "low", "standard", "high"]);
+
 const createRoomSchema = z.object({
   slug: z
     .string()
@@ -32,7 +34,7 @@ const createRoomSchema = z.object({
   is_public: z.boolean().default(true),
   kind: roomKindSchema.default("text"),
   category_id: z.string().uuid().nullable().optional().default(null),
-  audio_quality_override: z.enum(["low", "standard", "high"]).nullable().optional(),
+  audio_quality_override: audioQualitySchema.nullable().optional(),
   position: z.number().int().min(0).optional()
 });
 
@@ -40,7 +42,7 @@ const updateRoomSchema = z.object({
   title: z.string().min(3).max(120),
   kind: roomKindSchema,
   category_id: z.string().uuid().nullable(),
-  audio_quality_override: z.enum(["low", "standard", "high"]).nullable().optional()
+  audio_quality_override: audioQualitySchema.nullable().optional()
 });
 
 const moveRoomSchema = z.object({
@@ -403,7 +405,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
       is_public?: boolean;
       kind?: "text" | "text_voice" | "text_voice_video";
       category_id?: string | null;
-      audio_quality_override?: "low" | "standard" | "high" | null;
+      audio_quality_override?: "retro" | "low" | "standard" | "high" | null;
       position?: number;
     }
   }>(
@@ -494,7 +496,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
       title: string;
       kind: "text" | "text_voice" | "text_voice_video" | "voice";
       category_id: string | null;
-      audio_quality_override?: "low" | "standard" | "high" | null;
+      audio_quality_override?: "retro" | "low" | "standard" | "high" | null;
     };
   }>(
     "/v1/rooms/:roomId",
