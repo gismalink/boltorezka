@@ -32,13 +32,15 @@ const createRoomSchema = z.object({
   is_public: z.boolean().default(true),
   kind: roomKindSchema.default("text"),
   category_id: z.string().uuid().nullable().optional().default(null),
+  audio_quality_override: z.enum(["low", "standard", "high"]).nullable().optional(),
   position: z.number().int().min(0).optional()
 });
 
 const updateRoomSchema = z.object({
   title: z.string().min(3).max(120),
   kind: roomKindSchema,
-  category_id: z.string().uuid().nullable()
+  category_id: z.string().uuid().nullable(),
+  audio_quality_override: z.enum(["low", "standard", "high"]).nullable().optional()
 });
 
 const moveRoomSchema = z.object({
@@ -83,6 +85,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
            r.slug,
            r.title,
            r.kind,
+           r.audio_quality_override,
            r.category_id,
            r.position,
            r.is_public,
@@ -143,6 +146,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
            r.slug,
            r.title,
            r.kind,
+           r.audio_quality_override,
            r.category_id,
            r.position,
            r.is_public,
@@ -399,6 +403,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
       is_public?: boolean;
       kind?: "text" | "text_voice" | "text_voice_video";
       category_id?: string | null;
+      audio_quality_override?: "low" | "standard" | "high" | null;
       position?: number;
     }
   }>(
@@ -417,6 +422,17 @@ export async function roomsRoutes(fastify: FastifyInstance) {
       }
 
       const { slug, title, is_public, kind, category_id } = parsed.data;
+      const hasAudioQualityOverride = Object.prototype.hasOwnProperty.call(parsed.data, "audio_quality_override");
+      const isSuperAdmin = request.currentUser?.role === "super_admin";
+      if (hasAudioQualityOverride && !isSuperAdmin) {
+        return reply.code(403).send({
+          error: "Forbidden",
+          message: "Only super_admin can change room audio quality override"
+        });
+      }
+      const audioQualityOverride = hasAudioQualityOverride
+        ? (parsed.data.audio_quality_override ?? null)
+        : null;
 
       if (category_id) {
         const category = await db.query("SELECT id FROM room_categories WHERE id = $1", [category_id]);
@@ -452,10 +468,10 @@ export async function roomsRoutes(fastify: FastifyInstance) {
           );
 
       const created = await db.query<RoomRow>(
-        `INSERT INTO rooms (slug, title, kind, category_id, position, is_public, created_by)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)
-         RETURNING id, slug, title, kind, category_id, position, is_public, created_at`,
-        [slug, title, kind, category_id, position, is_public, createdBy]
+        `INSERT INTO rooms (slug, title, kind, category_id, audio_quality_override, position, is_public, created_by)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+         RETURNING id, slug, title, kind, audio_quality_override, category_id, position, is_public, created_at`,
+        [slug, title, kind, category_id, audioQualityOverride, position, is_public, createdBy]
       );
 
       const room = created.rows[0];
@@ -478,6 +494,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
       title: string;
       kind: "text" | "text_voice" | "text_voice_video" | "voice";
       category_id: string | null;
+      audio_quality_override?: "low" | "standard" | "high" | null;
     };
   }>(
     "/v1/rooms/:roomId",
@@ -502,6 +519,19 @@ export async function roomsRoutes(fastify: FastifyInstance) {
       }
 
       const { title, kind, category_id } = parsed.data;
+      const actorRole = String(request.currentUser?.role || "user").trim();
+      const hasAudioQualityOverride = Object.prototype.hasOwnProperty.call(parsed.data, "audio_quality_override");
+
+      if (hasAudioQualityOverride && actorRole !== "super_admin") {
+        return reply.code(403).send({
+          error: "Forbidden",
+          message: "Only super_admin can update room audio quality override"
+        });
+      }
+
+      const audioQualityOverride = hasAudioQualityOverride
+        ? (parsed.data.audio_quality_override ?? null)
+        : undefined;
 
       if (category_id) {
         const category = await db.query("SELECT id FROM room_categories WHERE id = $1", [category_id]);
@@ -517,10 +547,11 @@ export async function roomsRoutes(fastify: FastifyInstance) {
         `UPDATE rooms
          SET title = $2,
              kind = $3,
-             category_id = $4
+             category_id = $4,
+             audio_quality_override = CASE WHEN $5::boolean THEN $6::text ELSE audio_quality_override END
          WHERE id = $1
-         RETURNING id, slug, title, kind, category_id, position, is_public, created_at`,
-        [roomId, title.trim(), kind, category_id]
+         RETURNING id, slug, title, kind, audio_quality_override, category_id, position, is_public, created_at`,
+        [roomId, title.trim(), kind, category_id, hasAudioQualityOverride, audioQualityOverride]
       );
 
       if ((updated.rowCount || 0) === 0) {
@@ -560,7 +591,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
       }
 
       const currentResult = await db.query<RoomRow>(
-        `SELECT id, slug, title, kind, category_id, position, is_public, created_at
+        `SELECT id, slug, title, kind, audio_quality_override, category_id, position, is_public, created_at
          FROM rooms
          WHERE id = $1 AND is_archived = FALSE`,
         [roomId]
@@ -612,7 +643,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
       );
 
       const updated = await db.query<RoomRow>(
-        `SELECT id, slug, title, kind, category_id, position, is_public, created_at
+        `SELECT id, slug, title, kind, audio_quality_override, category_id, position, is_public, created_at
          FROM rooms
          WHERE id = $1`,
         [current.id]
@@ -773,7 +804,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
       }
 
       const roomResult = await db.query<RoomRow>(
-        "SELECT id, slug, title, kind, category_id, position, is_public FROM rooms WHERE slug = $1 AND is_archived = FALSE",
+        "SELECT id, slug, title, kind, audio_quality_override, category_id, position, is_public FROM rooms WHERE slug = $1 AND is_archived = FALSE",
         [slug]
       );
 

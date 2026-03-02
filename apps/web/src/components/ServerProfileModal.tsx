@@ -1,6 +1,6 @@
-import type { TelemetrySummary, User } from "../domain";
+import type { AudioQuality, TelemetrySummary, User } from "../domain";
 
-type ServerMenuTab = "users" | "events" | "telemetry" | "call";
+type ServerMenuTab = "users" | "events" | "telemetry" | "call" | "sound";
 
 type ServerProfileModalProps = {
   open: boolean;
@@ -15,12 +15,16 @@ type ServerProfileModalProps = {
   lastCallPeer: string;
   roomVoiceConnected: boolean;
   callEventLog: string[];
+  serverAudioQuality: AudioQuality;
+  serverAudioQualitySaving: boolean;
+  canManageAudioQuality: boolean;
   onClose: () => void;
   onSetServerMenuTab: (value: ServerMenuTab) => void;
   onPromote: (userId: string) => void;
   onDemote: (userId: string) => void;
   onSetBan: (userId: string, banned: boolean) => void;
   onRefreshTelemetry: () => void;
+  onSetServerAudioQuality: (value: AudioQuality) => void;
 };
 
 export function ServerProfileModal({
@@ -36,12 +40,16 @@ export function ServerProfileModal({
   lastCallPeer,
   roomVoiceConnected,
   callEventLog,
+  serverAudioQuality,
+  serverAudioQualitySaving,
+  canManageAudioQuality,
   onClose,
   onSetServerMenuTab,
   onPromote,
   onDemote,
   onSetBan,
-  onRefreshTelemetry
+  onRefreshTelemetry,
+  onSetServerAudioQuality
 }: ServerProfileModalProps) {
   if (!open) {
     return null;
@@ -91,6 +99,15 @@ export function ServerProfileModal({
           >
             {t("server.tabCall")}
           </button>
+          {canManageAudioQuality ? (
+            <button
+              type="button"
+              className={`secondary user-settings-tab-btn min-h-[42px] justify-start text-left max-[800px]:min-w-0 max-[800px]:justify-center ${serverMenuTab === "sound" ? "user-settings-tab-btn-active" : ""}`}
+              onClick={() => onSetServerMenuTab("sound")}
+            >
+              {t("server.tabSound")}
+            </button>
+          ) : null}
         </div>
 
         <div className="user-settings-content grid min-h-0 min-w-0 grid-rows-[auto_minmax(0,1fr)] content-start gap-4 overflow-auto overflow-x-hidden pr-0">
@@ -100,6 +117,7 @@ export function ServerProfileModal({
               {serverMenuTab === "events" ? t("server.tabEvents") : null}
               {serverMenuTab === "telemetry" ? t("server.tabTelemetry") : null}
               {serverMenuTab === "call" ? t("server.tabCall") : null}
+              {serverMenuTab === "sound" ? t("server.tabSound") : null}
             </h2>
             <button
               type="button"
@@ -180,6 +198,28 @@ export function ServerProfileModal({
                   <div key={`${line}-${index}`}>{line}</div>
                 ))}
               </div>
+            </section>
+          ) : null}
+
+          {serverMenuTab === "sound" && canManageAudioQuality ? (
+            <section className="grid gap-3">
+              <h3>{t("server.soundTitle")}</h3>
+              <p className="muted">{t("server.soundHint")}</p>
+              <label className="grid gap-2">
+                <span>{t("server.soundQuality")}</span>
+                <select
+                  value={serverAudioQuality}
+                  onChange={(event) => onSetServerAudioQuality(event.target.value as AudioQuality)}
+                  disabled={!canManageAudioQuality || serverAudioQualitySaving}
+                >
+                  <option value="low">{t("server.soundLow")}</option>
+                  <option value="standard">{t("server.soundStandard")}</option>
+                  <option value="high">{t("server.soundHigh")}</option>
+                </select>
+              </label>
+              {!canManageAudioQuality ? (
+                <p className="muted">{t("server.soundReadonly")}</p>
+              ) : null}
             </section>
           ) : null}
         </div>

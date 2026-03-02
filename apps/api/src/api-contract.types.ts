@@ -1,5 +1,7 @@
 import type { RoomCategoryRow, RoomListRow, RoomMessageRow, RoomRow, UserRow } from "./db.types.ts";
 
+export type AudioQuality = "low" | "standard" | "high";
+
 export type AuthModeResponse = {
   mode: string;
   ssoBaseUrl: string;
@@ -65,4 +67,8 @@ export type AdminUsersResponse = {
 
 export type PromoteUserResponse = {
   user: UserRow;
+};
+
+export type ServerAudioQualityResponse = {
+  audioQuality: AudioQuality;
 };

@@ -2,8 +2,8 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { db } from "../db.js";
 import { loadCurrentUser, requireAuth, requireRole } from "../middleware/auth.js";
-import type { UserRow } from "../db.types.ts";
-import type { AdminUsersResponse, PromoteUserResponse } from "../api-contract.types.ts";
+import type { ServerSettingsRow, UserRow } from "../db.types.ts";
+import type { AdminUsersResponse, PromoteUserResponse, ServerAudioQualityResponse } from "../api-contract.types.ts";
 
 const promoteSchema = z.object({
   role: z.literal("admin").default("admin")
@@ -11,6 +11,10 @@ const promoteSchema = z.object({
 
 const demoteSchema = z.object({
   role: z.literal("user").default("user")
+});
+
+const serverAudioQualitySchema = z.object({
+  audioQuality: z.enum(["low", "standard", "high"])
 });
 
 async function loadUserById(userId: string) {
@@ -26,7 +30,75 @@ function validateTargetUserId(userIdRaw: string) {
   return userId;
 }
 
+async function loadServerAudioQuality() {
+  const result = await db.query<ServerSettingsRow>(
+    "SELECT id, audio_quality, updated_at, updated_by FROM server_settings WHERE id = TRUE"
+  );
+
+  if ((result.rowCount || 0) === 0) {
+    await db.query(
+      `INSERT INTO server_settings (id, audio_quality)
+       VALUES (TRUE, 'standard')
+       ON CONFLICT (id) DO NOTHING`
+    );
+    return "standard" as const;
+  }
+
+  const value = String(result.rows[0]?.audio_quality || "standard").trim();
+  if (value === "low" || value === "high" || value === "standard") {
+    return value;
+  }
+
+  return "standard" as const;
+}
+
 export async function adminRoutes(fastify: FastifyInstance) {
+  fastify.get(
+    "/v1/admin/server/audio-quality",
+    {
+      preHandler: [requireAuth]
+    },
+    async () => {
+      const audioQuality = await loadServerAudioQuality();
+      const response: ServerAudioQualityResponse = { audioQuality };
+      return response;
+    }
+  );
+
+  fastify.put<{ Body: { audioQuality: "low" | "standard" | "high" } }>(
+    "/v1/admin/server/audio-quality",
+    {
+      preHandler: [requireAuth, loadCurrentUser, requireRole(["super_admin"])]
+    },
+    async (request, reply) => {
+      const parsed = serverAudioQualitySchema.safeParse(request.body || {});
+      if (!parsed.success) {
+        return reply.code(400).send({
+          error: "ValidationError",
+          issues: parsed.error.flatten()
+        });
+      }
+
+      const actorId = String(request.currentUser?.id || "").trim() || null;
+      const updated = await db.query<ServerSettingsRow>(
+        `INSERT INTO server_settings (id, audio_quality, updated_by, updated_at)
+         VALUES (TRUE, $1, $2, NOW())
+         ON CONFLICT (id) DO UPDATE
+         SET audio_quality = EXCLUDED.audio_quality,
+             updated_by = EXCLUDED.updated_by,
+             updated_at = NOW()
+         RETURNING id, audio_quality, updated_at, updated_by`,
+        [parsed.data.audioQuality, actorId]
+      );
+
+      const audioQuality = String(updated.rows[0]?.audio_quality || "standard").trim();
+      const response: ServerAudioQualityResponse = {
+        audioQuality: audioQuality === "low" || audioQuality === "high" ? audioQuality : "standard"
+      };
+      return response;
+    }
+  );
+
   fastify.get(
     "/v1/admin/users",
     {

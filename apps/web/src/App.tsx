@@ -34,6 +34,8 @@ import {
 } from "./hooks";
 import { detectInitialLang, LANGUAGE_OPTIONS, LOCALE_BY_LANG, TEXT, type Lang } from "./i18n";
 import type {
+  AudioQuality,
+  ChannelAudioQualitySetting,
   Message,
   MessagesCursor,
   PresenceMember,
@@ -50,7 +52,7 @@ const TOAST_ID_RANDOM_RANGE = 10000;
 const TOAST_DUPLICATE_THROTTLE_MS = 12000;
 const TOAST_MAX_VISIBLE = 4;
 
-type ServerMenuTab = "users" | "events" | "telemetry" | "call";
+type ServerMenuTab = "users" | "events" | "telemetry" | "call" | "sound";
 type MobileTab = "channels" | "chat" | "settings";
 
 export function App() {
@@ -91,6 +93,7 @@ export function App() {
   const [editingRoomTitle, setEditingRoomTitle] = useState("");
   const [editingRoomKind, setEditingRoomKind] = useState<RoomKind>("text");
   const [editingRoomCategoryId, setEditingRoomCategoryId] = useState<string>("none");
+  const [editingRoomAudioQualitySetting, setEditingRoomAudioQualitySetting] = useState<ChannelAudioQualitySetting>("server_default");
   const [micMuted, setMicMuted] = useState(true);
   const [audioMuted, setAudioMuted] = useState(false);
   const [audioOutputMenuOpen, setAudioOutputMenuOpen] = useState(false);
@@ -118,6 +121,8 @@ export function App() {
   const [serverMenuTab, setServerMenuTab] = useState<ServerMenuTab>("events");
   const [isMobileViewport, setIsMobileViewport] = useState(false);
   const [mobileTab, setMobileTab] = useState<MobileTab>("chat");
+  const [serverAudioQuality, setServerAudioQuality] = useState<AudioQuality>("standard");
+  const [serverAudioQualitySaving, setServerAudioQualitySaving] = useState(false);
   const realtimeClientRef = useRef<RealtimeClient | null>(null);
   const roomSlugRef = useRef(roomSlug);
   const lastRoomSlugForScrollRef = useRef(roomSlug);
@@ -136,6 +141,7 @@ export function App() {
 
   const canCreateRooms = user?.role === "admin" || user?.role === "super_admin";
   const canPromote = user?.role === "super_admin";
+  const canManageAudioQuality = canPromote;
   const canViewTelemetry = canPromote || canCreateRooms;
   const locale = LOCALE_BY_LANG[lang];
   const t = useMemo(() => {
@@ -234,6 +240,23 @@ export function App() {
     return members.filter((member) => member.userId !== me);
   }, [roomsPresenceDetailsBySlug, roomSlug, user?.id]);
 
+  const currentRoomAudioQualityOverride = useMemo(() => {
+    const roomFromList = rooms.find((room) => room.slug === roomSlug);
+    if (roomFromList) {
+      return roomFromList.audio_quality_override ?? null;
+    }
+
+    const roomFromTree = (roomsTree?.categories || [])
+      .flatMap((category) => category.rooms)
+      .find((room) => room.slug === roomSlug)
+      ?? (roomsTree?.uncategorized || []).find((room) => room.slug === roomSlug)
+      ?? null;
+
+    return roomFromTree?.audio_quality_override ?? null;
+  }, [rooms, roomsTree, roomSlug]);
+
+  const effectiveAudioQuality = currentRoomAudioQualityOverride ?? serverAudioQuality;
+
   const {
     roomVoiceConnected,
     connectedPeerUserIds,
@@ -257,6 +280,7 @@ export function App() {
     micTestLevel,
     audioMuted,
     outputVolume,
+    serverAudioQuality: effectiveAudioQuality,
     t,
     pushToast,
     pushCallLog,
@@ -406,6 +430,8 @@ export function App() {
       setRoomsPresenceBySlug({});
       setRoomsPresenceDetailsBySlug({});
       setTelemetrySummary(null);
+      setServerAudioQuality("standard");
+      setServerAudioQualitySaving(false);
       realtimeClientRef.current?.dispose();
       realtimeClientRef.current = null;
       return;
@@ -423,6 +449,10 @@ export function App() {
     api.rooms(token)
       .then((res) => setRooms(res.rooms))
       .catch((error) => pushLog(`rooms failed: ${error.message}`));
+
+    api.serverAudioQuality(token)
+      .then((res) => setServerAudioQuality(res.audioQuality))
+      .catch((error) => pushLog(`server audio quality failed: ${error.message}`));
 
     void roomAdminController.loadRoomTree(token);
   }, [token]);
@@ -567,6 +597,31 @@ export function App() {
     await roomAdminController.setBan(token, userId, banned);
   };
 
+  const setServerAudioQualityValue = async (value: AudioQuality) => {
+    setServerAudioQuality(value);
+
+    if (!token || !canManageAudioQuality) {
+      return;
+    }
+
+    setServerAudioQualitySaving(true);
+    try {
+      const response = await api.updateServerAudioQuality(token, value);
+      setServerAudioQuality(response.audioQuality);
+      pushLog(`server audio quality updated: ${response.audioQuality}`);
+    } catch (error) {
+      pushLog(`server audio quality update failed: ${(error as Error).message}`);
+      try {
+        const current = await api.serverAudioQuality(token);
+        setServerAudioQuality(current.audioQuality);
+      } catch {
+        setServerAudioQuality("standard");
+      }
+    } finally {
+      setServerAudioQualitySaving(false);
+    }
+  };
+
   const {
     uncategorizedRooms,
     allRooms,
@@ -593,6 +648,7 @@ export function App() {
   } = useRoomAdminActions({
     token,
     canCreateRooms,
+    canManageAudioQuality,
     roomSlug,
     allRooms,
     roomAdminController,
@@ -607,6 +663,7 @@ export function App() {
     editingRoomTitle,
     editingRoomKind,
     editingRoomCategoryId,
+    editingRoomAudioQualitySetting,
     channelSettingsPopupOpenId,
     setNewRoomSlug,
     setNewRoomTitle,
@@ -618,6 +675,7 @@ export function App() {
     setEditingRoomTitle,
     setEditingRoomKind,
     setEditingRoomCategoryId,
+    setEditingRoomAudioQualitySetting,
     setChannelSettingsPopupOpenId,
     setEditingCategoryTitle,
     setCategorySettingsPopupOpenId,
@@ -650,6 +708,7 @@ export function App() {
     serverMenuTab,
     canPromote,
     canViewTelemetry,
+    canManageAudioQuality,
     setServerMenuTab
   });
 
@@ -812,7 +871,7 @@ export function App() {
   ) : null;
 
   return (
-    <main className="app legacy-layout mx-auto grid h-screen max-h-screen w-full max-w-[1400px] grid-rows-[auto_1fr] gap-4 overflow-hidden p-4 min-[801px]:gap-6 min-[801px]:p-8">
+    <main className="app legacy-layout mx-auto grid h-[100dvh] max-h-[100dvh] w-full max-w-[1400px] grid-rows-[auto_1fr] gap-4 overflow-hidden p-4 min-[801px]:gap-6 min-[801px]:p-8">
       <AppHeader
         t={t}
         user={user}
@@ -836,6 +895,7 @@ export function App() {
             <RoomsPanel
               t={t}
               canCreateRooms={canCreateRooms}
+              canManageAudioQuality={canManageAudioQuality}
               roomsTree={roomsTree}
               roomSlug={roomSlug}
               currentUserId={user?.id || ""}
@@ -861,6 +921,7 @@ export function App() {
               editingRoomTitle={editingRoomTitle}
               editingRoomKind={editingRoomKind}
               editingRoomCategoryId={editingRoomCategoryId}
+              editingRoomAudioQualitySetting={editingRoomAudioQualitySetting}
               categoryPopupRef={categoryPopupRef}
               channelPopupRef={channelPopupRef}
               onSetCategoryPopupOpen={setCategoryPopupOpen}
@@ -875,6 +936,7 @@ export function App() {
               onSetEditingRoomTitle={setEditingRoomTitle}
               onSetEditingRoomKind={setEditingRoomKind}
               onSetEditingRoomCategoryId={setEditingRoomCategoryId}
+              onSetEditingRoomAudioQualitySetting={setEditingRoomAudioQualitySetting}
               onCreateCategory={createCategory}
               onCreateRoom={createRoom}
               onOpenCreateChannelPopup={openCreateChannelPopup}
@@ -966,12 +1028,16 @@ export function App() {
         lastCallPeer={lastCallPeer}
         roomVoiceConnected={roomVoiceConnected}
         callEventLog={callEventLog}
+        serverAudioQuality={serverAudioQuality}
+        serverAudioQualitySaving={serverAudioQualitySaving}
+        canManageAudioQuality={canManageAudioQuality}
         onClose={() => setAppMenuOpen(false)}
         onSetServerMenuTab={setServerMenuTab}
         onPromote={(userId) => void promote(userId)}
         onDemote={(userId) => void demote(userId)}
         onSetBan={(userId, banned) => void setUserBan(userId, banned)}
         onRefreshTelemetry={() => void loadTelemetrySummary()}
+        onSetServerAudioQuality={(value) => void setServerAudioQualityValue(value)}
       />
 
       <ToastStack toasts={toasts} />

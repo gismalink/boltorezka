@@ -16,6 +16,21 @@ export async function ensureSchema() {
   await db.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT 'user'");
   await db.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_banned BOOLEAN NOT NULL DEFAULT FALSE");
   await db.query(
+    `CREATE TABLE IF NOT EXISTS server_settings (
+      id BOOLEAN PRIMARY KEY DEFAULT TRUE,
+      audio_quality TEXT NOT NULL DEFAULT 'standard',
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_by UUID REFERENCES users(id) ON DELETE SET NULL,
+      CONSTRAINT server_settings_singleton CHECK (id = TRUE),
+      CONSTRAINT server_settings_audio_quality_check CHECK (audio_quality IN ('low', 'standard', 'high'))
+    )`
+  );
+  await db.query(
+    `INSERT INTO server_settings (id, audio_quality)
+     VALUES (TRUE, 'standard')
+     ON CONFLICT (id) DO NOTHING`
+  );
+  await db.query(
     `CREATE TABLE IF NOT EXISTS room_categories (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       slug TEXT UNIQUE NOT NULL,
@@ -26,6 +41,11 @@ export async function ensureSchema() {
     )`
   );
   await db.query("ALTER TABLE rooms ADD COLUMN IF NOT EXISTS kind TEXT NOT NULL DEFAULT 'text'");
+  await db.query("ALTER TABLE rooms ADD COLUMN IF NOT EXISTS audio_quality_override TEXT");
+  await db.query("ALTER TABLE rooms DROP CONSTRAINT IF EXISTS rooms_audio_quality_override_check");
+  await db.query(
+    "ALTER TABLE rooms ADD CONSTRAINT rooms_audio_quality_override_check CHECK (audio_quality_override IS NULL OR audio_quality_override IN ('low', 'standard', 'high'))"
+  );
   await db.query("UPDATE rooms SET kind = 'text_voice' WHERE kind = 'voice'");
   await db.query("UPDATE rooms SET kind = 'text' WHERE kind NOT IN ('text', 'text_voice', 'text_voice_video')");
   await db.query("ALTER TABLE rooms DROP CONSTRAINT IF EXISTS rooms_kind_check");

@@ -3,6 +3,32 @@
 Этот документ хранит зафиксированные изменения, выполненные шаги и операционные evidence.
 План и open items находятся в `docs/status/ROADMAP.md`.
 
+## 2026-03-01 — Server global audio quality setting (default)
+
+### Increment
+
+- Добавлена серверная глобальная настройка качества звука (default для всего сервера): `low | standard | high`.
+- Backend:
+  - в `apps/api/src/db.ts` добавлена схема `server_settings` (singleton row + check constraint),
+  - в `apps/api/src/routes/admin.ts` добавлены endpoints:
+    - `GET /v1/admin/server/audio-quality` (доступен всем authenticated users),
+    - `PUT /v1/admin/server/audio-quality` (только `admin` / `super_admin`).
+- API контракты и типы:
+  - `apps/api/src/api-contract.types.ts`, `apps/api/src/db.types.ts`,
+  - `apps/web/src/types.ts`, `apps/web/src/api.ts`.
+- Web UI:
+  - в `Server profile` добавлена вкладка `Sound quality` c выбором профиля,
+  - для non-admin режим read-only,
+  - значение загружается на клиенте при авторизации и сохраняется через API.
+- RTC runtime:
+  - `apps/web/src/hooks/useVoiceCallRuntime.ts` теперь применяет профиль качества к `getUserMedia` constraints,
+  - и к `RTCRtpSender.setParameters().encodings[0].maxBitrate` для активных peer connections.
+
+### Validation
+
+- `apps/api -> npm run typecheck` — PASS.
+- `apps/web -> npm run build` — PASS.
+
 ## 2026-03-02 — Tailwind migration (feature branch increment)
 
 ### Increment (dynamic state modifiers)
@@ -57,6 +83,19 @@
 - `apps/web -> npm run build` — PASS.
 - Test deploy from feature branch выполнен: `TEST_REF=origin/feature/tailwind-user-dock npm run deploy:test:smoke` — PASS.
   - Deploy target SHA: `81560670a242fa3f5e417208eefc0aac4d824324`.
+  - Postdeploy smoke: `smoke:sso`, `smoke:api`, `smoke:realtime` — PASS.
+
+### Increment (server profile tabs/header stability)
+
+- В `Server profile` восстановлено стабильное поведение заголовка и вкладок:
+  - tab buttons получили фиксированную минимальную высоту,
+  - контентная колонка возвращена к фиксированной верхней шапке + контентная область через `grid-rows-[auto_minmax(0,1fr)]`.
+
+### Validation (server profile stability)
+
+- `apps/web -> npm run build` — PASS.
+- Test deploy from feature branch выполнен: `TEST_REF=origin/feature/tailwind-user-dock npm run deploy:test:smoke` — PASS.
+  - Deploy target SHA: `fa10b17bae6c39ac3be8387c8c5e57c6fb8078dd`.
   - Postdeploy smoke: `smoke:sso`, `smoke:api`, `smoke:realtime` — PASS.
 
 ### Branch

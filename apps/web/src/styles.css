@@ -201,6 +201,15 @@ pre {
 .app {
   margin: 0 auto;
   box-sizing: border-box;
+  height: 100vh;
+  max-height: 100vh;
+}
+
+@supports (height: 100dvh) {
+  .app {
+    height: 100dvh;
+    max-height: 100dvh;
+  }
 }
 
 .app-title {
@@ -961,6 +970,8 @@ pre {
   :root {
     --font-size-xs: 13px;
     --font-size-sm: 14px;
+    --mobile-tabbar-content-height: 64px;
+    --mobile-tabbar-reserve: calc(var(--mobile-tabbar-content-height) + var(--space-lg) + env(safe-area-inset-bottom));
   }
 
   .user-settings-modal {
@@ -983,12 +994,14 @@ pre {
   .voice-preferences-overlay.inline-settings-mode .user-settings-content {
     min-height: 0;
     overflow: auto;
-    padding-bottom: calc(var(--space-sm) + env(safe-area-inset-bottom));
+    padding-bottom: calc(var(--space-sm) + var(--mobile-tabbar-reserve));
   }
 
   .app {
     padding: var(--space-lg);
-    padding-bottom: calc(var(--space-lg) + 56px);
+    padding-bottom: calc(var(--space-lg) + var(--mobile-tabbar-reserve));
+    height: 100dvh !important;
+    max-height: 100dvh !important;
   }
 
   .workspace {
@@ -1024,13 +1037,14 @@ pre {
   .mobile-settings-column {
     gap: 0;
     overflow-x: hidden;
+    padding-bottom: var(--mobile-tabbar-reserve);
   }
 
   .mobile-tabbar {
     position: fixed;
     left: var(--space-lg);
     right: var(--space-lg);
-    bottom: var(--space-lg);
+    bottom: max(var(--space-lg), env(safe-area-inset-bottom));
     z-index: 70;
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));

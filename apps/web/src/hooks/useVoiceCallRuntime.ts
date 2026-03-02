@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { PresenceMember } from "../domain";
+import type { AudioQuality, PresenceMember } from "../domain";
 import {
   decrementVoiceCounter,
   incrementVoiceCounter,
@@ -38,6 +38,18 @@ import type {
 import { buildLocalDescriptionAfterIceGathering } from "./voiceCallUtils";
 import { useVoiceRuntimeMediaEffects } from "./useVoiceRuntimeMediaEffects";
 
+const AUDIO_QUALITY_MAX_BITRATE: Record<AudioQuality, number> = {
+  low: 24000,
+  standard: 40000,
+  high: 64000
+};
+
+const AUDIO_QUALITY_SAMPLE_RATE: Record<AudioQuality, number> = {
+  low: 16000,
+  standard: 24000,
+  high: 48000
+};
+
 export function useVoiceCallRuntime({
   localUserId,
   roomSlug,
@@ -48,6 +60,7 @@ export function useVoiceCallRuntime({
   micTestLevel,
   audioMuted,
   outputVolume,
+  serverAudioQuality,
   t,
   pushToast,
   pushCallLog,
@@ -170,11 +183,56 @@ export function useVoiceCallRuntime({
     }, Math.max(0, delayMs));
   }, [clearRoomTargetsResyncTimer]);
 
-  const getAudioConstraints = useCallback((): MediaTrackConstraints | boolean => {
-    return selectedInputId && selectedInputId !== "default"
-      ? { deviceId: { exact: selectedInputId } }
-      : true;
-  }, [selectedInputId]);
+  const getAudioConstraints = useCallback((): MediaTrackConstraints => {
+    const sampleRate = AUDIO_QUALITY_SAMPLE_RATE[serverAudioQuality] || AUDIO_QUALITY_SAMPLE_RATE.standard;
+    const base: MediaTrackConstraints = {
+      echoCancellation: true,
+      noiseSuppression: true,
+      autoGainControl: true,
+      sampleRate: { ideal: sampleRate },
+      channelCount: { ideal: serverAudioQuality === "high" ? 2 : 1 }
+    };
+
+    if (selectedInputId && selectedInputId !== "default") {
+      return {
+        ...base,
+        deviceId: { exact: selectedInputId }
+      };
+    }
+
+    return base;
+  }, [selectedInputId, serverAudioQuality]);
+
+  const applyAudioQualityToConnection = useCallback(async (
+    connection: RTCPeerConnection,
+    targetLabel: string
+  ) => {
+    const maxBitrate = AUDIO_QUALITY_MAX_BITRATE[serverAudioQuality] || AUDIO_QUALITY_MAX_BITRATE.standard;
+    const audioSenders = connection
+      .getSenders()
+      .filter((sender) => sender.track?.kind === "audio");
+
+    await Promise.all(
+      audioSenders.map(async (sender) => {
+        try {
+          const params = sender.getParameters();
+          const encodings = Array.isArray(params.encodings) && params.encodings.length > 0
+            ? params.encodings
+            : [{}];
+
+          encodings[0] = {
+            ...encodings[0],
+            maxBitrate
+          };
+
+          params.encodings = encodings;
+          await sender.setParameters(params);
+        } catch (error) {
+          pushCallLog(`audio quality apply skipped (${targetLabel}): ${(error as Error).message}`);
+        }
+      })
+    );
+  }, [serverAudioQuality, pushCallLog]);
 
   const applyRemoteAudioOutput = useCallback(async (element: HTMLAudioElement) => {
     const route = String(element.dataset.audioRoute || "element");
@@ -513,7 +571,8 @@ export function useVoiceCallRuntime({
         connection.addTrack(track, stream);
       }
     });
-  }, [ensureLocalStream]);
+    await applyAudioQualityToConnection(connection, "peer");
+  }, [ensureLocalStream, applyAudioQualityToConnection]);
 
   const scheduleReconnect = useCallback((targetUserId: string, trigger: string) => {
     if (!roomVoiceConnectedRef.current) {
@@ -739,6 +798,13 @@ export function useVoiceCallRuntime({
   }, [roomVoiceConnectedRef, ensurePeerConnection, attachLocalTracks, sendWsEvent, setLastCallPeer, updateCallStatus, pushCallLog, t, pushToastThrottled, closePeer, rememberRequestTarget, isTargetTemporarilyBlocked]);
 
   startOfferRef.current = startOffer;
+
+  useEffect(() => {
+    const peers = Array.from(peersRef.current.entries());
+    peers.forEach(([userId, peer]) => {
+      void applyAudioQualityToConnection(peer.connection, peer.label || userId);
+    });
+  }, [serverAudioQuality, applyAudioQualityToConnection]);
 
   const syncRoomTargets = useCallback(async () => {
     if (!roomVoiceConnectedRef.current) {

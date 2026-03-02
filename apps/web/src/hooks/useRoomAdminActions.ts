@@ -1,10 +1,11 @@
 import { FormEvent, useCallback } from "react";
 import { RoomAdminController } from "../services";
-import type { Message, MessagesCursor, Room, RoomKind } from "../domain";
+import type { ChannelAudioQualitySetting, Message, MessagesCursor, Room, RoomKind } from "../domain";
 
 type UseRoomAdminActionsArgs = {
   token: string;
   canCreateRooms: boolean;
+  canManageAudioQuality: boolean;
   roomSlug: string;
   allRooms: Room[];
   roomAdminController: RoomAdminController;
@@ -19,6 +20,7 @@ type UseRoomAdminActionsArgs = {
   editingRoomTitle: string;
   editingRoomKind: RoomKind;
   editingRoomCategoryId: string;
+  editingRoomAudioQualitySetting: ChannelAudioQualitySetting;
   channelSettingsPopupOpenId: string | null;
   setNewRoomSlug: (value: string) => void;
   setNewRoomTitle: (value: string) => void;
@@ -30,6 +32,7 @@ type UseRoomAdminActionsArgs = {
   setEditingRoomTitle: (value: string) => void;
   setEditingRoomKind: (value: RoomKind) => void;
   setEditingRoomCategoryId: (value: string) => void;
+  setEditingRoomAudioQualitySetting: (value: ChannelAudioQualitySetting) => void;
   setChannelSettingsPopupOpenId: (value: string | null) => void;
   setEditingCategoryTitle: (value: string) => void;
   setCategorySettingsPopupOpenId: (value: string | null) => void;
@@ -42,6 +45,7 @@ type UseRoomAdminActionsArgs = {
 export function useRoomAdminActions({
   token,
   canCreateRooms,
+  canManageAudioQuality,
   roomSlug,
   allRooms,
   roomAdminController,
@@ -56,6 +60,7 @@ export function useRoomAdminActions({
   editingRoomTitle,
   editingRoomKind,
   editingRoomCategoryId,
+  editingRoomAudioQualitySetting,
   channelSettingsPopupOpenId,
   setNewRoomSlug,
   setNewRoomTitle,
@@ -67,6 +72,7 @@ export function useRoomAdminActions({
   setEditingRoomTitle,
   setEditingRoomKind,
   setEditingRoomCategoryId,
+  setEditingRoomAudioQualitySetting,
   setChannelSettingsPopupOpenId,
   setEditingCategoryTitle,
   setCategorySettingsPopupOpenId,
@@ -81,7 +87,10 @@ export function useRoomAdminActions({
 
     const created = await roomAdminController.createRoom(token, newRoomSlug, newRoomTitle, {
       kind: newRoomKind,
-      categoryId: newRoomCategoryId === "none" ? null : newRoomCategoryId
+      categoryId: newRoomCategoryId === "none" ? null : newRoomCategoryId,
+      audioQualityOverride: canManageAudioQuality
+        ? null
+        : undefined
     });
     if (created) {
       setNewRoomSlug("");
@@ -96,6 +105,7 @@ export function useRoomAdminActions({
     newRoomTitle,
     newRoomKind,
     newRoomCategoryId,
+    canManageAudioQuality,
     setNewRoomSlug,
     setNewRoomTitle,
     setChannelPopupOpen
@@ -131,8 +141,15 @@ export function useRoomAdminActions({
     setEditingRoomTitle(room.title);
     setEditingRoomKind(room.kind);
     setEditingRoomCategoryId(room.category_id || "none");
+    setEditingRoomAudioQualitySetting(room.audio_quality_override ?? "server_default");
     setChannelSettingsPopupOpenId(room.id);
-  }, [setEditingRoomTitle, setEditingRoomKind, setEditingRoomCategoryId, setChannelSettingsPopupOpenId]);
+  }, [
+    setEditingRoomTitle,
+    setEditingRoomKind,
+    setEditingRoomCategoryId,
+    setEditingRoomAudioQualitySetting,
+    setChannelSettingsPopupOpenId
+  ]);
 
   const openCategorySettingsPopup = useCallback((categoryId: string, categoryTitle: string) => {
     setEditingCategoryTitle(categoryTitle);
@@ -179,7 +196,10 @@ export function useRoomAdminActions({
     const updated = await roomAdminController.updateRoom(token, channelSettingsPopupOpenId, {
       title: editingRoomTitle,
       kind: editingRoomKind,
-      categoryId: editingRoomCategoryId === "none" ? null : editingRoomCategoryId
+      categoryId: editingRoomCategoryId === "none" ? null : editingRoomCategoryId,
+      audioQualityOverride: canManageAudioQuality
+        ? (editingRoomAudioQualitySetting === "server_default" ? null : editingRoomAudioQualitySetting)
+        : undefined
     });
 
     if (updated) {
@@ -192,6 +212,8 @@ export function useRoomAdminActions({
     editingRoomTitle,
     editingRoomKind,
     editingRoomCategoryId,
+    editingRoomAudioQualitySetting,
+    canManageAudioQuality,
     setChannelSettingsPopupOpenId
   ]);
 

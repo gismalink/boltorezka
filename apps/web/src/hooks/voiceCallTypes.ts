@@ -1,5 +1,5 @@
 import type { MutableRefObject } from "react";
-import type { PresenceMember } from "../domain";
+import type { AudioQuality, PresenceMember } from "../domain";
 import type { CallStatus } from "../services";
 
 export type WsSender = (
@@ -45,6 +45,7 @@ export type UseVoiceCallRuntimeArgs = {
   micTestLevel: number;
   audioMuted: boolean;
   outputVolume: number;
+  serverAudioQuality: AudioQuality;
   t: (key: string) => string;
   pushToast: (message: string) => void;
   pushCallLog: (text: string) => void;

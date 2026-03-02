@@ -1,5 +1,5 @@
 import { api } from "../api";
-import type { Message, MessagesCursor, Room, RoomKind, RoomsTreeResponse, User } from "../domain";
+import type { AudioQuality, Message, MessagesCursor, Room, RoomKind, RoomsTreeResponse, User } from "../domain";
 
 type RoomAdminControllerOptions = {
   pushLog: (text: string) => void;
@@ -85,7 +85,7 @@ export class RoomAdminController {
     token: string,
     slugInput: string,
     titleInput: string,
-    options: { kind: RoomKind; categoryId: string | null }
+    options: { kind: RoomKind; categoryId: string | null; audioQualityOverride?: AudioQuality | null }
   ) {
     try {
       const slug = slugInput.trim();
@@ -95,7 +95,8 @@ export class RoomAdminController {
         title,
         is_public: true,
         kind: options.kind,
-        category_id: options.categoryId
+        category_id: options.categoryId,
+        audio_quality_override: options.audioQualityOverride
       });
       const res = await api.rooms(token);
       this.options.setRooms(res.rooms);
@@ -111,13 +112,19 @@ export class RoomAdminController {
   async updateRoom(
     token: string,
     roomId: string,
-    options: { title: string; kind: RoomKind; categoryId: string | null }
+    options: {
+      title: string;
+      kind: RoomKind;
+      categoryId: string | null;
+      audioQualityOverride?: AudioQuality | null;
+    }
   ) {
     try {
       await api.updateRoom(token, roomId, {
         title: options.title.trim(),
         kind: options.kind,
-        category_id: options.categoryId
+        category_id: options.categoryId,
+        audio_quality_override: options.audioQualityOverride
       });
 
       const res = await api.rooms(token);

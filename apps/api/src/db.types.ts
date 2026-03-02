@@ -32,6 +32,7 @@ export type RoomRow = {
   slug: string;
   title: string;
   kind: RoomKind;
+  audio_quality_override?: AudioQuality | null;
   category_id: string | null;
   position: number;
   is_public: boolean;
@@ -57,4 +58,13 @@ export type InsertedMessageRow = {
   user_id: string;
   body: string;
   created_at: string;
+};
+
+export type AudioQuality = "low" | "standard" | "high";
+
+export type ServerSettingsRow = {
+  id: boolean;
+  audio_quality: AudioQuality;
+  updated_at: string;
+  updated_by: string | null;
 };

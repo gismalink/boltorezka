@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import type { Room, RoomKind } from "../domain";
+import type { ChannelAudioQualitySetting, Room, RoomKind } from "../domain";
 import { PopupPortal } from "./PopupPortal";
 import type { RoomsPanelProps } from "./types";
 
@@ -18,6 +18,7 @@ const ROOM_KIND_ICON_CLASS: Record<RoomKind, string> = {
 export function RoomsPanel({
   t,
   canCreateRooms,
+  canManageAudioQuality,
   roomsTree,
   roomSlug,
   currentUserId,
@@ -43,6 +44,7 @@ export function RoomsPanel({
   editingRoomTitle,
   editingRoomKind,
   editingRoomCategoryId,
+  editingRoomAudioQualitySetting,
   categoryPopupRef,
   channelPopupRef,
   onSetCategoryPopupOpen,
@@ -57,6 +59,7 @@ export function RoomsPanel({
   onSetEditingRoomTitle,
   onSetEditingRoomKind,
   onSetEditingRoomCategoryId,
+  onSetEditingRoomAudioQualitySetting,
   onCreateCategory,
   onCreateRoom,
   onOpenCreateChannelPopup,
@@ -222,6 +225,20 @@ export function RoomsPanel({
                     ))}
                   </select>
                 </div>
+                {canManageAudioQuality ? (
+                  <label className="grid gap-2">
+                    <span>{t("rooms.channelSoundQuality")}</span>
+                    <select
+                      value={editingRoomAudioQualitySetting}
+                      onChange={(event) => onSetEditingRoomAudioQualitySetting(event.target.value as ChannelAudioQualitySetting)}
+                    >
+                      <option value="server_default">{t("rooms.channelSoundServerDefault")}</option>
+                      <option value="low">{t("server.soundLow")}</option>
+                      <option value="standard">{t("server.soundStandard")}</option>
+                      <option value="high">{t("server.soundHigh")}</option>
+                    </select>
+                  </label>
+                ) : null}
                 <div className="flex flex-wrap items-center gap-3">
                   <button type="button" className="secondary" onClick={() => onMoveChannel("up")}>
                     <i className="bi bi-arrow-up" aria-hidden="true" /> {t("rooms.up")}

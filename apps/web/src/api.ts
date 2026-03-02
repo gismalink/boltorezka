@@ -1,4 +1,5 @@
 import type {
+  AudioQuality,
   AuthModeResponse,
   MessagesCursor,
   RoomCategory,
@@ -6,6 +7,7 @@ import type {
   RoomKind,
   RoomMessagesResponse,
   RoomsTreeResponse,
+  ServerAudioQualityResponse,
   TelemetrySummary,
   User
 } from "./domain";
@@ -62,13 +64,14 @@ const endpoints = {
   roomsTree: "/v1/rooms/tree",
   roomCategories: "/v1/room-categories",
   telemetrySummary: "/v1/telemetry/summary",
-  adminUsers: "/v1/admin/users"
+  adminUsers: "/v1/admin/users",
+  adminServerAudioQuality: "/v1/admin/server/audio-quality"
 } as const;
 
 const withId = (basePath: string, id: string) => `${basePath}/${encodeURIComponent(id)}`;
 const withSuffix = (basePath: string, id: string, suffix: string) => `${withId(basePath, id)}/${suffix}`;
 
-const withJsonBody = (method: "POST" | "PATCH" | "DELETE", body?: unknown): RequestInit => ({
+const withJsonBody = (method: "POST" | "PUT" | "PATCH" | "DELETE", body?: unknown): RequestInit => ({
   method,
   ...(typeof body === "undefined" ? {} : { body: JSON.stringify(body) })
 });
@@ -92,13 +95,20 @@ export const api = {
     fetchJson<{ ok: true; categoryId: string }>(withId(endpoints.roomCategories, categoryId), token, withJsonBody("DELETE")),
   createRoom: (
     token: string,
-    input: { slug: string; title: string; is_public: boolean; kind?: RoomKind; category_id?: string | null }
+    input: {
+      slug: string;
+      title: string;
+      is_public: boolean;
+      kind?: RoomKind;
+      category_id?: string | null;
+      audio_quality_override?: AudioQuality | null;
+    }
   ) =>
     fetchJson<{ room: Room }>(endpoints.rooms, token, withJsonBody("POST", input)),
   updateRoom: (
     token: string,
     roomId: string,
-    input: { title: string; kind: RoomKind; category_id: string | null }
+    input: { title: string; kind: RoomKind; category_id: string | null; audio_quality_override?: AudioQuality | null }
   ) =>
     fetchJson<{ room: Room }>(withId(endpoints.rooms, roomId), token, withJsonBody("PATCH", input)),
   moveRoom: (token: string, roomId: string, direction: "up" | "down") =>
@@ -126,6 +136,13 @@ export const api = {
     );
   },
   telemetrySummary: (token: string) => fetchJson<TelemetrySummary>(endpoints.telemetrySummary, token),
+  serverAudioQuality: (token: string) => fetchJson<ServerAudioQualityResponse>(endpoints.adminServerAudioQuality, token),
+  updateServerAudioQuality: (token: string, audioQuality: AudioQuality) =>
+    fetchJson<ServerAudioQualityResponse>(
+      endpoints.adminServerAudioQuality,
+      token,
+      withJsonBody("PUT", { audioQuality })
+    ),
   adminUsers: (token: string) => fetchJson<{ users: User[] }>(endpoints.adminUsers, token),
   promoteUser: (token: string, userId: string) =>
     fetchJson<{ user: User }>(withSuffix(endpoints.adminUsers, userId, "promote"), token, withJsonBody("POST", { role: "admin" })),

@@ -1,6 +1,6 @@
 import type { FormEvent, RefObject } from "react";
 import type { Lang, TranslateFn } from "../i18n";
-import type { PresenceMember, Room, RoomKind, RoomsTreeResponse, User } from "../domain";
+import type { ChannelAudioQualitySetting, PresenceMember, Room, RoomKind, RoomsTreeResponse, User } from "../domain";
 
 export type InputProfile = "noise_reduction" | "studio" | "custom";
 export type VoiceSettingsPanel = "input_device" | "input_profile" | null;
@@ -72,6 +72,7 @@ export type UserDockProps = {
 export type RoomsPanelProps = {
   t: TranslateFn;
   canCreateRooms: boolean;
+  canManageAudioQuality: boolean;
   roomsTree: RoomsTreeResponse | null;
   roomSlug: string;
   currentUserId: string;
@@ -97,6 +98,7 @@ export type RoomsPanelProps = {
   editingRoomTitle: string;
   editingRoomKind: RoomKind;
   editingRoomCategoryId: string;
+  editingRoomAudioQualitySetting: ChannelAudioQualitySetting;
   categoryPopupRef: RefObject<HTMLDivElement>;
   channelPopupRef: RefObject<HTMLDivElement>;
   onSetCategoryPopupOpen: (value: boolean) => void;
@@ -111,6 +113,7 @@ export type RoomsPanelProps = {
   onSetEditingRoomTitle: (value: string) => void;
   onSetEditingRoomKind: (value: RoomKind) => void;
   onSetEditingRoomCategoryId: (value: string) => void;
+  onSetEditingRoomAudioQualitySetting: (value: ChannelAudioQualitySetting) => void;
   onCreateCategory: (event: FormEvent) => void;
   onCreateRoom: (event: FormEvent) => void;
   onOpenCreateChannelPopup: (categoryId?: string | null) => void;

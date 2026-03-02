@@ -14,6 +14,10 @@ export type User = {
 
 export type RoomKind = "text" | "text_voice" | "text_voice_video";
 
+export type AudioQuality = "low" | "standard" | "high";
+
+export type ChannelAudioQualitySetting = "server_default" | AudioQuality;
+
 export type RoomCategory = {
   id: string;
   slug: string;
@@ -27,6 +31,7 @@ export type Room = {
   slug: string;
   title: string;
   kind: RoomKind;
+  audio_quality_override?: AudioQuality | null;
   category_id: string | null;
   position: number;
   is_public: boolean;
@@ -91,4 +96,8 @@ export type TelemetrySummary = {
     chat_idempotency_hit: number;
     telemetry_web_event: number;
   };
+};
+
+export type ServerAudioQualityResponse = {
+  audioQuality: AudioQuality;
 };
