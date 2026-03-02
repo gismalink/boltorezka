@@ -205,18 +205,38 @@ export function ServerProfileModal({
             <section className="grid gap-3">
               <h3>{t("server.soundTitle")}</h3>
               <p className="muted">{t("server.soundHint")}</p>
-              <label className="grid gap-2">
+              <div className="grid gap-2">
                 <span>{t("server.soundQuality")}</span>
-                <select
-                  value={serverAudioQuality}
-                  onChange={(event) => onSetServerAudioQuality(event.target.value as AudioQuality)}
-                  disabled={!canManageAudioQuality || serverAudioQualitySaving}
-                >
-                  <option value="low">{t("server.soundLow")}</option>
-                  <option value="standard">{t("server.soundStandard")}</option>
-                  <option value="high">{t("server.soundHigh")}</option>
-                </select>
-              </label>
+                <div className="quality-toggle-group" role="radiogroup" aria-label={t("server.soundQuality")}>
+                  <button
+                    type="button"
+                    className={`secondary quality-toggle-btn ${serverAudioQuality === "low" ? "quality-toggle-btn-active" : ""}`}
+                    onClick={() => onSetServerAudioQuality("low")}
+                    disabled={!canManageAudioQuality || serverAudioQualitySaving}
+                    aria-pressed={serverAudioQuality === "low"}
+                  >
+                    {t("server.soundLow")}
+                  </button>
+                  <button
+                    type="button"
+                    className={`secondary quality-toggle-btn ${serverAudioQuality === "standard" ? "quality-toggle-btn-active" : ""}`}
+                    onClick={() => onSetServerAudioQuality("standard")}
+                    disabled={!canManageAudioQuality || serverAudioQualitySaving}
+                    aria-pressed={serverAudioQuality === "standard"}
+                  >
+                    {t("server.soundStandard")}
+                  </button>
+                  <button
+                    type="button"
+                    className={`secondary quality-toggle-btn ${serverAudioQuality === "high" ? "quality-toggle-btn-active" : ""}`}
+                    onClick={() => onSetServerAudioQuality("high")}
+                    disabled={!canManageAudioQuality || serverAudioQualitySaving}
+                    aria-pressed={serverAudioQuality === "high"}
+                  >
+                    {t("server.soundHigh")}
+                  </button>
+                </div>
+              </div>
               {!canManageAudioQuality ? (
                 <p className="muted">{t("server.soundReadonly")}</p>
               ) : null}

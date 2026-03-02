@@ -5,6 +5,7 @@ type ChatPanelProps = {
   t: (key: string) => string;
   locale: string;
   roomSlug: string;
+  roomTitle: string;
   messages: Message[];
   currentUserId: string | null;
   messagesHasMore: boolean;
@@ -20,6 +21,7 @@ export function ChatPanel({
   t,
   locale,
   roomSlug,
+  roomTitle,
   messages,
   currentUserId,
   messagesHasMore,
@@ -30,6 +32,7 @@ export function ChatPanel({
   onSetChatText,
   onSendMessage
 }: ChatPanelProps) {
+  const hasActiveRoom = Boolean(roomSlug);
   const formatMessageTime = (value: string) => {
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) {
@@ -95,18 +98,23 @@ export function ChatPanel({
 
   return (
     <section className="card middle-card flex min-h-0 flex-1 flex-col overflow-hidden">
-      <h2>{t("chat.title")} ({roomSlug})</h2>
+      <h2>
+        {t("chat.title")} ({hasActiveRoom ? roomTitle || roomSlug : t("chat.noChannel")})
+      </h2>
       <div className="mb-3 flex flex-wrap items-center gap-3">
         <button
           type="button"
           className="secondary"
           onClick={onLoadOlderMessages}
-          disabled={!messagesHasMore || loadingOlderMessages}
+          disabled={!hasActiveRoom || !messagesHasMore || loadingOlderMessages}
         >
           {loadingOlderMessages ? t("chat.loading") : t("chat.loadOlder")}
         </button>
         {!messagesHasMore && messages.length > 0 ? (
           <span className="muted">{t("chat.historyLoaded")}</span>
+        ) : null}
+        {!hasActiveRoom ? (
+          <span className="muted">{t("chat.noChannelHint")}</span>
         ) : null}
       </div>
       <div className="chat-log min-h-0 flex-1" ref={chatLogRef}>
@@ -158,8 +166,13 @@ export function ChatPanel({
         })}
       </div>
       <form className="chat-compose mt-3 flex items-center gap-3" onSubmit={onSendMessage}>
-        <input value={chatText} onChange={(event) => onSetChatText(event.target.value)} placeholder={t("chat.typePlaceholder")} />
-        <button type="submit">{t("chat.send")}</button>
+        <input
+          value={chatText}
+          onChange={(event) => onSetChatText(event.target.value)}
+          placeholder={hasActiveRoom ? t("chat.typePlaceholder") : t("chat.selectChannelPlaceholder")}
+          disabled={!hasActiveRoom}
+        />
+        <button type="submit" disabled={!hasActiveRoom}>{t("chat.send")}</button>
       </form>
     </section>
   );

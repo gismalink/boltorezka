@@ -73,7 +73,8 @@ export function RoomsPanel({
   onClearChannelMessages,
   onDeleteChannel,
   onToggleCategoryCollapsed,
-  onJoinRoom
+  onJoinRoom,
+  onLeaveRoom
 }: RoomsPanelProps) {
   const categorySettingsAnchorRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const channelSettingsAnchorRefs = useRef<Record<string, HTMLDivElement | null>>({});
@@ -175,7 +176,7 @@ export function RoomsPanel({
   const renderRoomRow = (room: Room) => (
     <div className="channel-row relative grid grid-cols-[1fr_auto] items-center gap-2">
       <button
-        className={`secondary room-btn ${roomSlug === room.slug ? "room-btn-active" : ""}`}
+        className={`secondary room-btn ${roomSlug === room.slug ? "room-btn-active" : "room-btn-interactive"}`}
         onClick={() => {
           if (roomSlug !== room.slug) {
             onJoinRoom(room.slug);
@@ -226,18 +227,43 @@ export function RoomsPanel({
                   </select>
                 </div>
                 {canManageAudioQuality ? (
-                  <label className="grid gap-2">
+                  <div className="grid gap-2">
                     <span>{t("rooms.channelSoundQuality")}</span>
-                    <select
-                      value={editingRoomAudioQualitySetting}
-                      onChange={(event) => onSetEditingRoomAudioQualitySetting(event.target.value as ChannelAudioQualitySetting)}
-                    >
-                      <option value="server_default">{t("rooms.channelSoundServerDefault")}</option>
-                      <option value="low">{t("server.soundLow")}</option>
-                      <option value="standard">{t("server.soundStandard")}</option>
-                      <option value="high">{t("server.soundHigh")}</option>
-                    </select>
-                  </label>
+                    <div className="quality-toggle-group" role="radiogroup" aria-label={t("rooms.channelSoundQuality")}>
+                      <button
+                        type="button"
+                        className={`secondary quality-toggle-btn ${editingRoomAudioQualitySetting === "server_default" ? "quality-toggle-btn-active" : ""}`}
+                        onClick={() => onSetEditingRoomAudioQualitySetting("server_default")}
+                        aria-pressed={editingRoomAudioQualitySetting === "server_default"}
+                      >
+                        {t("rooms.channelSoundServerDefault")}
+                      </button>
+                      <button
+                        type="button"
+                        className={`secondary quality-toggle-btn ${editingRoomAudioQualitySetting === "low" ? "quality-toggle-btn-active" : ""}`}
+                        onClick={() => onSetEditingRoomAudioQualitySetting("low" as ChannelAudioQualitySetting)}
+                        aria-pressed={editingRoomAudioQualitySetting === "low"}
+                      >
+                        {t("server.soundLow")}
+                      </button>
+                      <button
+                        type="button"
+                        className={`secondary quality-toggle-btn ${editingRoomAudioQualitySetting === "standard" ? "quality-toggle-btn-active" : ""}`}
+                        onClick={() => onSetEditingRoomAudioQualitySetting("standard" as ChannelAudioQualitySetting)}
+                        aria-pressed={editingRoomAudioQualitySetting === "standard"}
+                      >
+                        {t("server.soundStandard")}
+                      </button>
+                      <button
+                        type="button"
+                        className={`secondary quality-toggle-btn ${editingRoomAudioQualitySetting === "high" ? "quality-toggle-btn-active" : ""}`}
+                        onClick={() => onSetEditingRoomAudioQualitySetting("high" as ChannelAudioQualitySetting)}
+                        aria-pressed={editingRoomAudioQualitySetting === "high"}
+                      >
+                        {t("server.soundHigh")}
+                      </button>
+                    </div>
+                  </div>
                 ) : null}
                 <div className="flex flex-wrap items-center gap-3">
                   <button type="button" className="secondary" onClick={() => onMoveChannel("up")}>
@@ -341,72 +367,85 @@ export function RoomsPanel({
       <section className="card compact rooms-card flex min-h-0 flex-1 flex-col">
       <div className="section-heading-row mb-3 flex items-center justify-between gap-3">
         <h2>{t("rooms.title")}</h2>
-        {canCreateRooms ? (
-          <div className="row-actions flex items-center gap-2">
-            <div className="popup-anchor" ref={categoryPopupRef}>
-              <button
-                type="button"
-                className="secondary icon-btn"
-                aria-label={t("rooms.createCategory")}
-                data-tooltip={t("rooms.createCategory")}
-                onClick={() => {
-                  onSetChannelPopupOpen(false);
-                  onSetCategoryPopupOpen(!categoryPopupOpen);
-                }}
-              >
-                <i className="bi bi-folder-plus" aria-hidden="true" />
-              </button>
-              <PopupPortal open={categoryPopupOpen} anchorRef={categoryPopupRef} className="settings-popup" placement="bottom-end">
-                <div>
-                  <form className="grid gap-4" onSubmit={onCreateCategory}>
-                    <h3 className="subheading">{t("rooms.createCategoryTitle")}</h3>
-                    <input value={newCategorySlug} onChange={(event) => onSetNewCategorySlug(event.target.value)} placeholder={t("rooms.categorySlug")} />
-                    <input value={newCategoryTitle} onChange={(event) => onSetNewCategoryTitle(event.target.value)} placeholder={t("rooms.categoryTitle")} />
-                    <button type="submit" className="icon-action"><i className="bi bi-check2" aria-hidden="true" /> {t("rooms.save")}</button>
-                  </form>
-                </div>
-              </PopupPortal>
-            </div>
+        <div className="row-actions flex items-center gap-2">
+          {roomSlug ? (
+            <button
+              type="button"
+              className="secondary icon-btn"
+              aria-label={t("rooms.leaveChannel")}
+              data-tooltip={t("rooms.leaveChannel")}
+              onClick={onLeaveRoom}
+            >
+              <i className="bi bi-box-arrow-right" aria-hidden="true" />
+            </button>
+          ) : null}
+          {canCreateRooms ? (
+            <>
+              <div className="popup-anchor" ref={categoryPopupRef}>
+                <button
+                  type="button"
+                  className="secondary icon-btn"
+                  aria-label={t("rooms.createCategory")}
+                  data-tooltip={t("rooms.createCategory")}
+                  onClick={() => {
+                    onSetChannelPopupOpen(false);
+                    onSetCategoryPopupOpen(!categoryPopupOpen);
+                  }}
+                >
+                  <i className="bi bi-folder-plus" aria-hidden="true" />
+                </button>
+                <PopupPortal open={categoryPopupOpen} anchorRef={categoryPopupRef} className="settings-popup" placement="bottom-end">
+                  <div>
+                    <form className="grid gap-4" onSubmit={onCreateCategory}>
+                      <h3 className="subheading">{t("rooms.createCategoryTitle")}</h3>
+                      <input value={newCategorySlug} onChange={(event) => onSetNewCategorySlug(event.target.value)} placeholder={t("rooms.categorySlug")} />
+                      <input value={newCategoryTitle} onChange={(event) => onSetNewCategoryTitle(event.target.value)} placeholder={t("rooms.categoryTitle")} />
+                      <button type="submit" className="icon-action"><i className="bi bi-check2" aria-hidden="true" /> {t("rooms.save")}</button>
+                    </form>
+                  </div>
+                </PopupPortal>
+              </div>
 
-            <div className="popup-anchor" ref={channelPopupRef}>
-              <button
-                type="button"
-                className="secondary icon-btn"
-                aria-label={t("rooms.createChannel")}
-                data-tooltip={t("rooms.createChannel")}
-                onClick={() => {
-                  onSetCategoryPopupOpen(false);
-                  onSetChannelPopupOpen(!channelPopupOpen);
-                }}
-              >
-                <i className="bi bi-plus-lg" aria-hidden="true" />
-              </button>
-              <PopupPortal open={channelPopupOpen} anchorRef={channelPopupRef} className="settings-popup" placement="bottom-end">
-                <div>
-                  <form className="grid gap-4" onSubmit={onCreateRoom}>
-                    <h3 className="subheading">{t("rooms.createChannelTitle")}</h3>
-                    <input value={newRoomSlug} onChange={(event) => onSetNewRoomSlug(event.target.value)} placeholder={t("rooms.channelSlug")} />
-                    <input value={newRoomTitle} onChange={(event) => onSetNewRoomTitle(event.target.value)} placeholder={t("rooms.channelTitle")} />
-                    <div className="grid gap-3 min-[801px]:grid-cols-2">
-                      <select value={newRoomKind} onChange={(event) => onSetNewRoomKind(event.target.value as RoomKind)}>
-                        <option value="text">{t("rooms.text")}</option>
-                        <option value="text_voice">{t("rooms.textVoice")}</option>
-                        <option value="text_voice_video">{t("rooms.textVoiceVideo")}</option>
-                      </select>
-                      <select value={newRoomCategoryId} onChange={(event) => onSetNewRoomCategoryId(event.target.value)}>
-                        <option value="none">{t("rooms.noCategory")}</option>
-                        {(roomsTree?.categories || []).map((category) => (
-                          <option key={category.id} value={category.id}>{category.title}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <button type="submit" className="icon-action"><i className="bi bi-check2" aria-hidden="true" /> {t("rooms.save")}</button>
-                  </form>
-                </div>
-              </PopupPortal>
-            </div>
-          </div>
-        ) : null}
+              <div className="popup-anchor" ref={channelPopupRef}>
+                <button
+                  type="button"
+                  className="secondary icon-btn"
+                  aria-label={t("rooms.createChannel")}
+                  data-tooltip={t("rooms.createChannel")}
+                  onClick={() => {
+                    onSetCategoryPopupOpen(false);
+                    onSetChannelPopupOpen(!channelPopupOpen);
+                  }}
+                >
+                  <i className="bi bi-plus-lg" aria-hidden="true" />
+                </button>
+                <PopupPortal open={channelPopupOpen} anchorRef={channelPopupRef} className="settings-popup" placement="bottom-end">
+                  <div>
+                    <form className="grid gap-4" onSubmit={onCreateRoom}>
+                      <h3 className="subheading">{t("rooms.createChannelTitle")}</h3>
+                      <input value={newRoomSlug} onChange={(event) => onSetNewRoomSlug(event.target.value)} placeholder={t("rooms.channelSlug")} />
+                      <input value={newRoomTitle} onChange={(event) => onSetNewRoomTitle(event.target.value)} placeholder={t("rooms.channelTitle")} />
+                      <div className="grid gap-3 min-[801px]:grid-cols-2">
+                        <select value={newRoomKind} onChange={(event) => onSetNewRoomKind(event.target.value as RoomKind)}>
+                          <option value="text">{t("rooms.text")}</option>
+                          <option value="text_voice">{t("rooms.textVoice")}</option>
+                          <option value="text_voice_video">{t("rooms.textVoiceVideo")}</option>
+                        </select>
+                        <select value={newRoomCategoryId} onChange={(event) => onSetNewRoomCategoryId(event.target.value)}>
+                          <option value="none">{t("rooms.noCategory")}</option>
+                          {(roomsTree?.categories || []).map((category) => (
+                            <option key={category.id} value={category.id}>{category.title}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <button type="submit" className="icon-action"><i className="bi bi-check2" aria-hidden="true" /> {t("rooms.save")}</button>
+                    </form>
+                  </div>
+                </PopupPortal>
+              </div>
+            </>
+          ) : null}
+        </div>
       </div>
       <div className="rooms-scroll min-h-0 flex-1 overflow-y-auto">
         {(roomsTree?.categories || []).map((category) => (

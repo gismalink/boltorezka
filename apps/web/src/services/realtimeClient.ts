@@ -61,7 +61,7 @@ export class RealtimeClient {
 
   setRoomSlug(roomSlug: string) {
     this.activeRoomSlug = roomSlug;
-    if (this.ws?.readyState === WebSocket.OPEN) {
+    if (this.ws?.readyState === WebSocket.OPEN && roomSlug) {
       this.sendEvent("room.join", { roomSlug }, { maxRetries: 1 });
     }
   }
@@ -126,7 +126,9 @@ export class RealtimeClient {
             this.armAckTimeout(requestId);
           }
 
-          this.sendEvent("room.join", { roomSlug: this.activeRoomSlug }, { maxRetries: 1 });
+          if (this.activeRoomSlug) {
+            this.sendEvent("room.join", { roomSlug: this.activeRoomSlug }, { maxRetries: 1 });
+          }
 
           this.pingInterval = setInterval(() => {
             if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {

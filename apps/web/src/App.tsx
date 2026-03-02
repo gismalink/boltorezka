@@ -568,6 +568,9 @@ export function App() {
 
   const sendMessage = (event: FormEvent) => {
     event.preventDefault();
+    if (!roomSlug) {
+      return;
+    }
 
     const result = chatController.sendMessage(chatText, user, MAX_CHAT_RETRIES);
     if (result.sent) {
@@ -580,6 +583,19 @@ export function App() {
     if (isMobileViewport) {
       setMobileTab("chat");
     }
+  };
+
+  const leaveRoom = () => {
+    if (!roomSlug) {
+      return;
+    }
+
+    disconnectRoom();
+    void sendWsEvent("room.leave", {}, { maxRetries: 1 });
+    setRoomSlug("");
+    setMessages([]);
+    setMessagesHasMore(false);
+    setMessagesNextCursor(null);
   };
 
   const promote = async (userId: string) => {
@@ -889,6 +905,12 @@ export function App() {
       />
       <TooltipPortal />
 
+      {mediaDevicesState === "denied" ? (
+        <div className="mic-denied-banner" role="status" aria-live="polite">
+          {t("mic.deniedBanner")}
+        </div>
+      ) : null}
+
       <div className={`workspace ${isMobileViewport ? "workspace-mobile" : ""} grid h-full min-h-0 items-stretch gap-4 min-[801px]:grid-cols-[320px_1fr] min-[801px]:gap-6`}>
         {(!isMobileViewport || mobileTab === "channels") ? (
           <aside className="leftcolumn flex min-h-0 flex-col gap-4 overflow-hidden min-[801px]:gap-6">
@@ -951,6 +973,7 @@ export function App() {
               onDeleteChannel={(room) => void deleteChannel(room)}
               onToggleCategoryCollapsed={toggleCategoryCollapsed}
               onJoinRoom={joinRoom}
+              onLeaveRoom={leaveRoom}
             />
 
             {userDockNode}
@@ -963,6 +986,7 @@ export function App() {
               t={t}
               locale={locale}
               roomSlug={roomSlug}
+              roomTitle={currentRoom?.title || ""}
               messages={messages}
               currentUserId={user?.id || null}
               messagesHasMore={messagesHasMore}
