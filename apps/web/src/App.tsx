@@ -15,7 +15,8 @@ import {
   RoomsPanel,
   ServerProfileModal,
   ToastStack,
-  UserDock
+  UserDock,
+  VideoWindowsOverlay
 } from "./components";
 import type { InputProfile, MediaDevicesState, VoiceSettingsPanel } from "./components";
 import {
@@ -131,6 +132,7 @@ export function App() {
   const [serverAudioQuality, setServerAudioQuality] = useState<AudioQuality>("standard");
   const [serverAudioQualitySaving, setServerAudioQualitySaving] = useState(false);
   const [realtimeReconnectNonce, setRealtimeReconnectNonce] = useState(0);
+  const [videoWindowsVisible, setVideoWindowsVisible] = useState(true);
   const realtimeClientRef = useRef<RealtimeClient | null>(null);
   const roomSlugRef = useRef(roomSlug);
   const lastRoomSlugForScrollRef = useRef(roomSlug);
@@ -275,6 +277,21 @@ export function App() {
   }, [rooms, roomsTree, roomSlug]);
 
   const effectiveAudioQuality = currentRoomAudioQualityOverride ?? serverAudioQuality;
+  const currentRoomKind = useMemo<RoomKind>(() => {
+    const roomFromList = rooms.find((room) => room.slug === roomSlug);
+    if (roomFromList) {
+      return roomFromList.kind;
+    }
+
+    const roomFromTree = (roomsTree?.categories || [])
+      .flatMap((category) => category.channels || [])
+      .find((room) => room.slug === roomSlug)
+      ?? (roomsTree?.uncategorized || []).find((room) => room.slug === roomSlug)
+      ?? null;
+
+    return roomFromTree?.kind || "text";
+  }, [rooms, roomsTree, roomSlug]);
+  const allowVideoStreaming = currentRoomKind === "text_voice_video";
 
   const {
     roomVoiceConnected,
@@ -283,6 +300,8 @@ export function App() {
     remoteMutedPeerUserIds,
     remoteSpeakingPeerUserIds,
     remoteAudioMutedPeerUserIds,
+    localVideoStream,
+    remoteVideoStreamsByUserId,
     connectRoom,
     disconnectRoom,
     handleIncomingSignal,
@@ -292,6 +311,7 @@ export function App() {
   } = useVoiceCallRuntime({
     localUserId: user?.id || "",
     roomSlug,
+    allowVideoStreaming,
     roomVoiceTargets: currentRoomVoiceTargets,
     selectedInputId,
     selectedOutputId,
@@ -307,6 +327,20 @@ export function App() {
     setCallStatus,
     setLastCallPeer
   });
+
+  const remoteVideoLabelsByUserId = useMemo(() => {
+    const labels: Record<string, string> = {};
+    currentRoomVoiceTargets.forEach((member) => {
+      labels[member.userId] = member.userName || member.userId;
+    });
+    return labels;
+  }, [currentRoomVoiceTargets]);
+
+  useEffect(() => {
+    if (!allowVideoStreaming) {
+      setVideoWindowsVisible(true);
+    }
+  }, [allowVideoStreaming]);
 
   const {
     voiceMicStateByUserIdInCurrentRoom,
@@ -1360,6 +1394,9 @@ export function App() {
               onChatInputKeyDown={handleChatInputKeyDown}
               onSendMessage={sendMessage}
               editingMessageId={editingMessageId}
+              showVideoToggle={allowVideoStreaming}
+              videoWindowsVisible={videoWindowsVisible}
+              onToggleVideoWindows={() => setVideoWindowsVisible((prev) => !prev)}
               onCancelEdit={() => {
                 setEditingMessageId(null);
                 setChatText("");
@@ -1369,6 +1406,15 @@ export function App() {
             />
           </section>
         ) : null}
+
+        <VideoWindowsOverlay
+          t={t}
+          localUserLabel={user?.name || t("video.you")}
+          localVideoStream={localVideoStream}
+          remoteVideoStreamsByUserId={remoteVideoStreamsByUserId}
+          remoteLabelsByUserId={remoteVideoLabelsByUserId}
+          visible={allowVideoStreaming && videoWindowsVisible}
+        />
 
         {isMobileViewport && user && mobileTab === "settings" ? (
           <aside className="leftcolumn mobile-settings-column flex min-h-0 flex-col gap-4 overflow-hidden min-[801px]:gap-6">

@@ -51,6 +51,76 @@
   image-rendering: pixelated;
 }
 
+.video-windows-overlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 60;
+}
+
+.video-window {
+  position: fixed;
+  pointer-events: auto;
+  border: var(--border-strong) solid var(--pixel-border);
+  background: var(--pixel-panel);
+  box-shadow:
+    0 0 0 2px var(--pixel-bg),
+    3px 3px 0 var(--pixel-hard-shadow),
+    -1px -1px 0 var(--pixel-neon-cyan);
+  overflow: hidden;
+}
+
+.video-window-header {
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 6px;
+  border-bottom: var(--border-thin) solid color-mix(in srgb, var(--pixel-border) 70%, transparent 30%);
+  background: color-mix(in srgb, var(--pixel-panel-2) 82%, var(--pixel-neon-pink) 18%);
+  cursor: move;
+  user-select: none;
+}
+
+.video-window-label {
+  font-size: 10px;
+  color: var(--pixel-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.video-window-media {
+  width: 100%;
+  height: calc(100% - 20px);
+  display: block;
+  object-fit: cover;
+  image-rendering: pixelated;
+  background: var(--pixel-bg);
+}
+
+.video-window-resize {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 16px;
+  height: 16px;
+  min-width: 16px;
+  padding: 0;
+  border-left: var(--border-thin) solid color-mix(in srgb, var(--pixel-border) 75%, transparent 25%);
+  border-top: var(--border-thin) solid color-mix(in srgb, var(--pixel-border) 75%, transparent 25%);
+  border-right: none;
+  border-bottom: none;
+  background: color-mix(in srgb, var(--pixel-panel-2) 80%, var(--pixel-neon-cyan) 20%);
+  cursor: nwse-resize;
+  box-shadow: none;
+}
+
+.video-window-resize:hover,
+.video-window-resize:active {
+  transform: none;
+}
+
 html,
 body,
 #root {

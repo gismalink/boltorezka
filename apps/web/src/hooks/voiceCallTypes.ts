@@ -38,6 +38,7 @@ export type CallNackPayload = {
 export type UseVoiceCallRuntimeArgs = {
   localUserId: string;
   roomSlug: string;
+  allowVideoStreaming: boolean;
   roomVoiceTargets: PresenceMember[];
   selectedInputId: string;
   selectedOutputId: string;
@@ -57,6 +58,7 @@ export type UseVoiceCallRuntimeArgs = {
 export type VoicePeerContext = {
   connection: RTCPeerConnection;
   audioElement: HTMLAudioElement;
+  remoteStream: MediaStream | null;
   label: string;
   hasRemoteTrack: boolean;
   isRemoteMicMuted: boolean;

@@ -5,4 +5,5 @@ export { RoomsPanel } from "./RoomsPanel";
 export { ServerProfileModal } from "./ServerProfileModal";
 export { ToastStack } from "./ToastStack";
 export { UserDock } from "./UserDock";
+export { VideoWindowsOverlay } from "./VideoWindowsOverlay";
 export type { InputProfile, MediaDevicesState, VoiceSettingsPanel, UserDockProps, RoomsPanelProps } from "./types";

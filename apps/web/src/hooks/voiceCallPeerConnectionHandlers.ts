@@ -23,6 +23,8 @@ type BindVoicePeerConnectionHandlersArgs = {
   closePeer: (targetUserId: string) => void;
   applyRemoteAudioOutput: (element: HTMLAudioElement) => Promise<void>;
   syncPeerVoiceState: () => void;
+  setRemoteVideoStream: (targetUserId: string, stream: MediaStream) => void;
+  clearRemoteVideoStream: (targetUserId: string) => void;
   audioMuted: boolean;
   outputVolume: number;
 };
@@ -43,6 +45,8 @@ export function bindVoicePeerConnectionHandlers({
   closePeer,
   applyRemoteAudioOutput,
   syncPeerVoiceState,
+  setRemoteVideoStream,
+  clearRemoteVideoStream,
   audioMuted,
   outputVolume
 }: BindVoicePeerConnectionHandlersArgs) {
@@ -135,6 +139,9 @@ export function bindVoicePeerConnectionHandlers({
       };
       track.onended = () => {
         pushCallLog(`remote track ended <- ${targetLabel || targetUserId}`);
+        if (track.kind === "video") {
+          clearRemoteVideoStream(targetUserId);
+        }
       };
     }
 
@@ -148,6 +155,11 @@ export function bindVoicePeerConnectionHandlers({
     const peer = peersRef.current.get(targetUserId);
     if (!peer) {
       return;
+    }
+
+    peer.remoteStream = stream;
+    if (stream.getVideoTracks().length > 0) {
+      setRemoteVideoStream(targetUserId, stream);
     }
 
     const remoteAudioElement = peer.audioElement;

@@ -115,8 +115,11 @@ export function useVoiceRuntimeMediaEffects({
           })
         );
 
-        localStreamRef.current?.getTracks().forEach((track) => track.stop());
-        localStreamRef.current = nextStream;
+        const currentStream = localStreamRef.current;
+        const videoTracks = currentStream?.getVideoTracks() || [];
+        currentStream?.getAudioTracks().forEach((track) => track.stop());
+        const mergedStream = new MediaStream([nextTrack, ...videoTracks]);
+        localStreamRef.current = mergedStream;
         pushCallLog("input device switched for active call");
         logVoiceDiagnostics("runtime input track replaced", {
           selectedInputId: selectedInputId || "default"

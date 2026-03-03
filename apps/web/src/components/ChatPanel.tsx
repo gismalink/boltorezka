@@ -18,6 +18,9 @@ type ChatPanelProps = {
   onChatInputKeyDown: (event: KeyboardEvent<HTMLInputElement>) => void;
   onSendMessage: (event: FormEvent) => void;
   editingMessageId: string | null;
+  showVideoToggle: boolean;
+  videoWindowsVisible: boolean;
+  onToggleVideoWindows: () => void;
   onCancelEdit: () => void;
   onEditMessage: (messageId: string) => void;
   onDeleteMessage: (messageId: string) => void;
@@ -40,6 +43,9 @@ export function ChatPanel({
   onChatInputKeyDown,
   onSendMessage,
   editingMessageId,
+  showVideoToggle,
+  videoWindowsVisible,
+  onToggleVideoWindows,
   onCancelEdit,
   onEditMessage,
   onDeleteMessage
@@ -161,6 +167,15 @@ export function ChatPanel({
         >
           {loadingOlderMessages ? t("chat.loading") : t("chat.loadOlder")}
         </button>
+        {showVideoToggle ? (
+          <button
+            type="button"
+            className="secondary ml-auto"
+            onClick={onToggleVideoWindows}
+          >
+            {videoWindowsVisible ? t("chat.hideAllVideos") : t("chat.showAllVideos")}
+          </button>
+        ) : null}
         {!messagesHasMore && messages.length > 0 ? (
           <span className="muted">{t("chat.historyLoaded")}</span>
         ) : null}
