@@ -100,14 +100,20 @@
 }
 
 .video-window-media-pixelfx {
+  --video-pixel-strength: 85;
+  --video-pixel-size: 5px;
   image-rendering: pixelated;
   image-rendering: crisp-edges;
-  filter: contrast(1.45) saturate(0.45) brightness(1.08) hue-rotate(-6deg);
+  filter:
+    contrast(calc(1 + (var(--video-pixel-strength) / 100) * 0.9))
+    saturate(calc(1 - (var(--video-pixel-strength) / 100) * 0.75))
+    brightness(calc(1 + (var(--video-pixel-strength) / 100) * 0.12))
+    hue-rotate(calc((var(--video-pixel-strength) / 100) * -8deg));
   transform: translateZ(0);
   background-image:
     linear-gradient(to right, rgba(0, 0, 0, 0.14) 1px, transparent 1px),
     linear-gradient(to bottom, rgba(0, 0, 0, 0.14) 1px, transparent 1px);
-  background-size: 4px 4px;
+  background-size: var(--video-pixel-size) var(--video-pixel-size);
 }
 
 .video-window-resize {

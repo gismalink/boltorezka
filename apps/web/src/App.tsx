@@ -61,6 +61,7 @@ const MESSAGE_EDIT_DELETE_WINDOW_MS = 10 * 60 * 1000;
 
 type ServerMenuTab = "users" | "events" | "telemetry" | "call" | "sound" | "video";
 type MobileTab = "channels" | "chat" | "settings";
+type ServerVideoResolution = "160x120" | "320x240" | "640x480";
 
 export function App() {
   const [token, setToken] = useState(localStorage.getItem("boltorezka_token") || "");
@@ -134,7 +135,29 @@ export function App() {
   const [mobileTab, setMobileTab] = useState<MobileTab>("chat");
   const [serverAudioQuality, setServerAudioQuality] = useState<AudioQuality>("standard");
   const [serverAudioQualitySaving, setServerAudioQualitySaving] = useState(false);
-  const [serverVideoPixelFxEnabled, setServerVideoPixelFxEnabled] = useState(true);
+  const [serverVideoPixelFxEnabled, setServerVideoPixelFxEnabled] = useState(() => localStorage.getItem("boltorezka_server_video_fx_enabled") !== "0");
+  const [serverVideoResolution, setServerVideoResolution] = useState<ServerVideoResolution>(() => {
+    const value = localStorage.getItem("boltorezka_server_video_resolution");
+    if (value === "160x120" || value === "320x240" || value === "640x480") {
+      return value;
+    }
+    return "320x240";
+  });
+  const [serverVideoFps, setServerVideoFps] = useState<10 | 15 | 24 | 30>(() => {
+    const value = Number(localStorage.getItem("boltorezka_server_video_fps"));
+    if (value === 10 || value === 15 || value === 24 || value === 30) {
+      return value;
+    }
+    return 15;
+  });
+  const [serverVideoPixelFxStrength, setServerVideoPixelFxStrength] = useState(() => {
+    const value = Number(localStorage.getItem("boltorezka_server_video_fx_strength"));
+    return Number.isFinite(value) ? Math.max(0, Math.min(100, value)) : 85;
+  });
+  const [serverVideoPixelFxPixelSize, setServerVideoPixelFxPixelSize] = useState(() => {
+    const value = Number(localStorage.getItem("boltorezka_server_video_fx_pixel_size"));
+    return Number.isFinite(value) ? Math.max(2, Math.min(10, value)) : 5;
+  });
   const [realtimeReconnectNonce, setRealtimeReconnectNonce] = useState(0);
   const [videoWindowsVisible, setVideoWindowsVisible] = useState(true);
   const realtimeClientRef = useRef<RealtimeClient | null>(null);
@@ -322,6 +345,8 @@ export function App() {
     selectedInputId,
     selectedOutputId,
     selectedVideoInputId,
+    serverVideoResolution,
+    serverVideoFps,
     micMuted,
     micTestLevel,
     audioMuted,
@@ -349,6 +374,26 @@ export function App() {
       setVideoWindowsVisible(true);
     }
   }, [allowVideoStreaming]);
+
+  useEffect(() => {
+    localStorage.setItem("boltorezka_server_video_fx_enabled", serverVideoPixelFxEnabled ? "1" : "0");
+  }, [serverVideoPixelFxEnabled]);
+
+  useEffect(() => {
+    localStorage.setItem("boltorezka_server_video_resolution", serverVideoResolution);
+  }, [serverVideoResolution]);
+
+  useEffect(() => {
+    localStorage.setItem("boltorezka_server_video_fps", String(serverVideoFps));
+  }, [serverVideoFps]);
+
+  useEffect(() => {
+    localStorage.setItem("boltorezka_server_video_fx_strength", String(serverVideoPixelFxStrength));
+  }, [serverVideoPixelFxStrength]);
+
+  useEffect(() => {
+    localStorage.setItem("boltorezka_server_video_fx_pixel_size", String(serverVideoPixelFxPixelSize));
+  }, [serverVideoPixelFxPixelSize]);
 
   const {
     voiceMicStateByUserIdInCurrentRoom,
@@ -1457,6 +1502,8 @@ export function App() {
           remoteVideoStreamsByUserId={remoteVideoStreamsByUserId}
           remoteLabelsByUserId={remoteVideoLabelsByUserId}
           pixelFxEnabled={serverVideoPixelFxEnabled}
+          pixelFxStrength={serverVideoPixelFxStrength}
+          pixelFxPixelSize={serverVideoPixelFxPixelSize}
           visible={allowVideoStreaming && videoWindowsVisible}
         />
 
@@ -1516,6 +1563,10 @@ export function App() {
         serverAudioQualitySaving={serverAudioQualitySaving}
         canManageAudioQuality={canManageAudioQuality}
         serverVideoPixelFxEnabled={serverVideoPixelFxEnabled}
+        serverVideoResolution={serverVideoResolution}
+        serverVideoFps={serverVideoFps}
+        serverVideoPixelFxStrength={serverVideoPixelFxStrength}
+        serverVideoPixelFxPixelSize={serverVideoPixelFxPixelSize}
         onClose={() => setAppMenuOpen(false)}
         onSetServerMenuTab={setServerMenuTab}
         onPromote={(userId) => void promote(userId)}
@@ -1524,6 +1575,10 @@ export function App() {
         onRefreshTelemetry={() => void loadTelemetrySummary()}
         onSetServerAudioQuality={(value) => void setServerAudioQualityValue(value)}
         onSetServerVideoPixelFxEnabled={setServerVideoPixelFxEnabled}
+        onSetServerVideoResolution={setServerVideoResolution}
+        onSetServerVideoFps={setServerVideoFps}
+        onSetServerVideoPixelFxStrength={setServerVideoPixelFxStrength}
+        onSetServerVideoPixelFxPixelSize={setServerVideoPixelFxPixelSize}
       />
 
       <ToastStack toasts={toasts} />

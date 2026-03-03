@@ -19,6 +19,10 @@ type ServerProfileModalProps = {
   serverAudioQualitySaving: boolean;
   canManageAudioQuality: boolean;
   serverVideoPixelFxEnabled: boolean;
+  serverVideoResolution: "160x120" | "320x240" | "640x480";
+  serverVideoFps: 10 | 15 | 24 | 30;
+  serverVideoPixelFxStrength: number;
+  serverVideoPixelFxPixelSize: number;
   onClose: () => void;
   onSetServerMenuTab: (value: ServerMenuTab) => void;
   onPromote: (userId: string) => void;
@@ -27,6 +31,10 @@ type ServerProfileModalProps = {
   onRefreshTelemetry: () => void;
   onSetServerAudioQuality: (value: AudioQuality) => void;
   onSetServerVideoPixelFxEnabled: (value: boolean) => void;
+  onSetServerVideoResolution: (value: "160x120" | "320x240" | "640x480") => void;
+  onSetServerVideoFps: (value: 10 | 15 | 24 | 30) => void;
+  onSetServerVideoPixelFxStrength: (value: number) => void;
+  onSetServerVideoPixelFxPixelSize: (value: number) => void;
 };
 
 export function ServerProfileModal({
@@ -46,6 +54,10 @@ export function ServerProfileModal({
   serverAudioQualitySaving,
   canManageAudioQuality,
   serverVideoPixelFxEnabled,
+  serverVideoResolution,
+  serverVideoFps,
+  serverVideoPixelFxStrength,
+  serverVideoPixelFxPixelSize,
   onClose,
   onSetServerMenuTab,
   onPromote,
@@ -53,7 +65,11 @@ export function ServerProfileModal({
   onSetBan,
   onRefreshTelemetry,
   onSetServerAudioQuality,
-  onSetServerVideoPixelFxEnabled
+  onSetServerVideoPixelFxEnabled,
+  onSetServerVideoResolution,
+  onSetServerVideoFps,
+  onSetServerVideoPixelFxStrength,
+  onSetServerVideoPixelFxPixelSize
 }: ServerProfileModalProps) {
   if (!open) {
     return null;
@@ -278,6 +294,77 @@ export function ServerProfileModal({
               >
                 {t("server.videoFxToggle")}: {serverVideoPixelFxEnabled ? t("common.yes") : t("common.no")}
               </button>
+
+              <div className="grid gap-2">
+                <span>{t("server.videoResolution")}</span>
+                <div className="quality-toggle-group" role="radiogroup" aria-label={t("server.videoResolution")}>
+                  <button
+                    type="button"
+                    className={`secondary quality-toggle-btn ${serverVideoResolution === "160x120" ? "quality-toggle-btn-active" : ""}`}
+                    onClick={() => onSetServerVideoResolution("160x120")}
+                    aria-pressed={serverVideoResolution === "160x120"}
+                  >
+                    160x120
+                  </button>
+                  <button
+                    type="button"
+                    className={`secondary quality-toggle-btn ${serverVideoResolution === "320x240" ? "quality-toggle-btn-active" : ""}`}
+                    onClick={() => onSetServerVideoResolution("320x240")}
+                    aria-pressed={serverVideoResolution === "320x240"}
+                  >
+                    320x240
+                  </button>
+                  <button
+                    type="button"
+                    className={`secondary quality-toggle-btn ${serverVideoResolution === "640x480" ? "quality-toggle-btn-active" : ""}`}
+                    onClick={() => onSetServerVideoResolution("640x480")}
+                    aria-pressed={serverVideoResolution === "640x480"}
+                  >
+                    640x480
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid gap-2">
+                <span>{t("server.videoFps")}</span>
+                <div className="quality-toggle-group" role="radiogroup" aria-label={t("server.videoFps")}>
+                  {[10, 15, 24, 30].map((fps) => (
+                    <button
+                      key={fps}
+                      type="button"
+                      className={`secondary quality-toggle-btn ${serverVideoFps === fps ? "quality-toggle-btn-active" : ""}`}
+                      onClick={() => onSetServerVideoFps(fps as 10 | 15 | 24 | 30)}
+                      aria-pressed={serverVideoFps === fps}
+                    >
+                      {fps} FPS
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <label className="slider-label grid gap-2">
+                {t("server.videoFxStrength")}: {serverVideoPixelFxStrength}%
+                <input
+                  type="range"
+                  min={0}
+                  max={100}
+                  step={1}
+                  value={serverVideoPixelFxStrength}
+                  onChange={(event) => onSetServerVideoPixelFxStrength(Number(event.target.value))}
+                />
+              </label>
+
+              <label className="slider-label grid gap-2">
+                {t("server.videoFxPixelSize")}: {serverVideoPixelFxPixelSize}px
+                <input
+                  type="range"
+                  min={2}
+                  max={10}
+                  step={1}
+                  value={serverVideoPixelFxPixelSize}
+                  onChange={(event) => onSetServerVideoPixelFxPixelSize(Number(event.target.value))}
+                />
+              </label>
             </section>
           ) : null}
         </div>

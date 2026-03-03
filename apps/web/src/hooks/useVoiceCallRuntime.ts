@@ -61,6 +61,8 @@ export function useVoiceCallRuntime({
   selectedInputId,
   selectedOutputId,
   selectedVideoInputId,
+  serverVideoResolution,
+  serverVideoFps,
   micMuted,
   micTestLevel,
   audioMuted,
@@ -266,21 +268,23 @@ export function useVoiceCallRuntime({
       return false;
     }
 
+    const [width, height] = serverVideoResolution.split("x").map((item) => Number(item));
+
     if (selectedVideoInputId && selectedVideoInputId !== "default") {
       return {
-        width: { ideal: 640 },
-        height: { ideal: 480 },
-        frameRate: { ideal: 24, max: 30 },
+        width: { ideal: width || 320 },
+        height: { ideal: height || 240 },
+        frameRate: { ideal: serverVideoFps, max: serverVideoFps },
         deviceId: { exact: selectedVideoInputId }
       };
     }
 
     return {
-      width: { ideal: 640 },
-      height: { ideal: 480 },
-      frameRate: { ideal: 24, max: 30 }
+      width: { ideal: width || 320 },
+      height: { ideal: height || 240 },
+      frameRate: { ideal: serverVideoFps, max: serverVideoFps }
     };
-  }, [allowVideoStreaming, videoStreamingEnabled, selectedVideoInputId]);
+  }, [allowVideoStreaming, videoStreamingEnabled, selectedVideoInputId, serverVideoResolution, serverVideoFps]);
 
   const applyAudioQualityToConnection = useCallback(async (
     connection: RTCPeerConnection,
