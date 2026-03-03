@@ -5,6 +5,23 @@ export type OutgoingVideoTrackHandle = {
 
 export type VideoRenderEffectType = "none" | "pixel8" | "ascii";
 
+function normalizeHexColor(value: string | undefined, fallback: string): string {
+  const normalized = String(value || "").trim();
+  if (/^#[0-9a-fA-F]{6}$/.test(normalized)) {
+    return normalized;
+  }
+  return fallback;
+}
+
+function hexToRgb(hex: string) {
+  const clean = hex.replace("#", "");
+  return {
+    r: Number.parseInt(clean.slice(0, 2), 16),
+    g: Number.parseInt(clean.slice(2, 4), 16),
+    b: Number.parseInt(clean.slice(4, 6), 16)
+  };
+}
+
 const BAYER_4X4 = [
   [0, 8, 2, 10],
   [12, 4, 14, 6],
@@ -58,6 +75,7 @@ export function createProcessedVideoTrack(
     gridThickness?: number;
     asciiCellSize?: number;
     asciiContrast?: number;
+    asciiColor?: string;
   }
 ): OutgoingVideoTrackHandle | null {
   if (typeof document === "undefined") {
@@ -99,6 +117,8 @@ export function createProcessedVideoTrack(
   const asciiCellSize = Math.max(4, Math.min(16, Math.round(options.asciiCellSize ?? 8)));
   const asciiContrastFactor = Math.max(0.2, Math.min(2, (options.asciiContrast ?? 120) / 100));
   const asciiChars = " .,:;irsXA253hMHGS#9B&@";
+  const asciiColor = normalizeHexColor(options.asciiColor, "#eaffff");
+  const asciiColorRgb = hexToRgb(asciiColor);
 
   const clamp01 = (value: number) => Math.max(0, Math.min(1, value));
 
@@ -132,8 +152,8 @@ export function createProcessedVideoTrack(
           const charIndex = Math.max(0, Math.min(asciiChars.length - 1, Math.floor((1 - contrasted) * (asciiChars.length - 1))));
           const symbol = asciiChars[charIndex];
 
-          const shade = Math.round(contrasted * 255);
-          outputCtx.fillStyle = `rgb(${shade}, ${shade}, ${shade})`;
+          const shade = Math.max(0.2, contrasted);
+          outputCtx.fillStyle = `rgb(${Math.round(asciiColorRgb.r * shade)}, ${Math.round(asciiColorRgb.g * shade)}, ${Math.round(asciiColorRgb.b * shade)})`;
           outputCtx.fillText(symbol, x, y);
         }
       }

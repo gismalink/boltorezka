@@ -7,6 +7,8 @@ type VideoWindowsOverlayProps = {
   localVideoStream: MediaStream | null;
   remoteVideoStreamsByUserId: Record<string, MediaStream>;
   remoteLabelsByUserId: Record<string, string>;
+  minWidth: number;
+  maxWidth: number;
   visible: boolean;
 };
 
@@ -25,8 +27,6 @@ type TileItem = {
   muted: boolean;
 };
 
-const MIN_WIDTH = 100;
-const MAX_WIDTH = 200;
 const TILE_GAP = 12;
 const VIEWPORT_GUTTER = 12;
 const DEFAULT_Y = 76;
@@ -36,8 +36,8 @@ function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
 }
 
-function defaultLayout(index: number): TileLayout {
-  const width = 140;
+function defaultLayout(index: number, minWidth: number, maxWidth: number): TileLayout {
+  const width = clamp(140, minWidth, maxWidth);
   const height = width / ASPECT_RATIO;
   return {
     x: Math.max(VIEWPORT_GUTTER, window.innerWidth - width - VIEWPORT_GUTTER),
@@ -139,8 +139,13 @@ export function VideoWindowsOverlay({
   localVideoStream,
   remoteVideoStreamsByUserId,
   remoteLabelsByUserId,
+  minWidth,
+  maxWidth,
   visible
 }: VideoWindowsOverlayProps) {
+  const effectiveMinWidth = Math.max(80, Math.min(320, Math.round(minWidth)));
+  const effectiveMaxWidth = Math.max(effectiveMinWidth, Math.min(320, Math.round(maxWidth)));
+
   const items = useMemo<TileItem[]>(() => {
     const next: TileItem[] = [];
 
@@ -183,11 +188,16 @@ export function VideoWindowsOverlay({
     setLayoutsById((prev) => {
       const next: Record<string, TileLayout> = {};
       items.forEach((item, index) => {
-        next[item.id] = prev[item.id] || defaultLayout(index);
+        next[item.id] = prev[item.id]
+          ? {
+            ...prev[item.id],
+            width: clamp(prev[item.id].width, effectiveMinWidth, effectiveMaxWidth)
+          }
+          : defaultLayout(index, effectiveMinWidth, effectiveMaxWidth);
       });
       return next;
     });
-  }, [items]);
+  }, [items, effectiveMinWidth, effectiveMaxWidth]);
 
   useEffect(() => {
     const handlePointerMove = (event: PointerEvent) => {
@@ -221,7 +231,7 @@ export function VideoWindowsOverlay({
         const rawWidth = growsFromLeft
           ? state.startLayout.width - deltaX
           : state.startLayout.width + deltaX;
-        const nextWidth = clamp(rawWidth, MIN_WIDTH, MAX_WIDTH);
+        const nextWidth = clamp(rawWidth, effectiveMinWidth, effectiveMaxWidth);
         const nextHeight = nextWidth / ASPECT_RATIO;
         const widthDelta = state.startLayout.width - nextWidth;
         const heightDelta = state.startLayout.width / ASPECT_RATIO - nextHeight;
@@ -257,7 +267,7 @@ export function VideoWindowsOverlay({
       window.removeEventListener("pointerup", handlePointerUp);
       window.removeEventListener("pointercancel", handlePointerUp);
     };
-  }, []);
+  }, [effectiveMinWidth, effectiveMaxWidth]);
 
   if (!visible || items.length === 0) {
     return null;
@@ -279,7 +289,7 @@ export function VideoWindowsOverlay({
             if (target.closest(".video-window-resize")) {
               return;
             }
-            const layout = layoutsById[id] || defaultLayout(0);
+            const layout = layoutsById[id] || defaultLayout(0, effectiveMinWidth, effectiveMaxWidth);
             dragStateRef.current = {
               id,
               mode: "drag",
@@ -291,7 +301,7 @@ export function VideoWindowsOverlay({
             event.preventDefault();
           }}
           onResizeStart={(id, corner, event) => {
-            const layout = layoutsById[id] || defaultLayout(0);
+            const layout = layoutsById[id] || defaultLayout(0, effectiveMinWidth, effectiveMaxWidth);
             dragStateRef.current = {
               id,
               mode: "resize",

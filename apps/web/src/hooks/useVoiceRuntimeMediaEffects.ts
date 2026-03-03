@@ -20,6 +20,7 @@ type UseVoiceRuntimeMediaEffectsArgs = {
   serverVideoPixelFxGridThickness: number;
   serverVideoAsciiCellSize: number;
   serverVideoAsciiContrast: number;
+  serverVideoAsciiColor: string;
   selectedInputId: string;
   selectedVideoInputId: string;
   micMuted: boolean;
@@ -47,6 +48,7 @@ export function useVoiceRuntimeMediaEffects({
   serverVideoPixelFxGridThickness,
   serverVideoAsciiCellSize,
   serverVideoAsciiContrast,
+  serverVideoAsciiColor,
   selectedInputId,
   selectedVideoInputId,
   micMuted,
@@ -240,7 +242,8 @@ export function useVoiceRuntimeMediaEffects({
           pixelSize: serverVideoPixelFxPixelSize,
           gridThickness: serverVideoPixelFxGridThickness,
           asciiCellSize: serverVideoAsciiCellSize,
-          asciiContrast: serverVideoAsciiContrast
+          asciiContrast: serverVideoAsciiContrast,
+          asciiColor: serverVideoAsciiColor
         })
         : null;
 
@@ -292,6 +295,7 @@ export function useVoiceRuntimeMediaEffects({
     serverVideoPixelFxGridThickness,
     serverVideoAsciiCellSize,
     serverVideoAsciiContrast,
+    serverVideoAsciiColor,
     selectedVideoInputId,
     getVideoConstraints,
     setLocalVideoStream,
@@ -350,7 +354,8 @@ export function useVoiceRuntimeMediaEffects({
             pixelSize: serverVideoPixelFxPixelSize,
             gridThickness: serverVideoPixelFxGridThickness,
             asciiCellSize: serverVideoAsciiCellSize,
-            asciiContrast: serverVideoAsciiContrast
+            asciiContrast: serverVideoAsciiContrast,
+            asciiColor: serverVideoAsciiColor
           })
           : null;
 
@@ -519,6 +524,7 @@ export function useVoiceRuntimeMediaEffects({
     serverVideoPixelFxGridThickness,
     serverVideoAsciiCellSize,
     serverVideoAsciiContrast,
+    serverVideoAsciiColor,
     micMuted,
     getAudioConstraints,
     getVideoConstraints,

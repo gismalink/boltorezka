@@ -179,6 +179,18 @@ export function App() {
     const value = Number(localStorage.getItem("boltorezka_server_video_ascii_contrast"));
     return Number.isFinite(value) ? Math.max(60, Math.min(200, Math.round(value))) : 120;
   });
+  const [serverVideoAsciiColor, setServerVideoAsciiColor] = useState(() => {
+    const value = String(localStorage.getItem("boltorezka_server_video_ascii_color") || "").trim();
+    return /^#[0-9a-fA-F]{6}$/.test(value) ? value : "#eaffff";
+  });
+  const [serverVideoWindowMinWidth, setServerVideoWindowMinWidth] = useState(() => {
+    const value = Number(localStorage.getItem("boltorezka_server_video_window_min_width"));
+    return Number.isFinite(value) ? Math.max(80, Math.min(300, Math.round(value))) : 100;
+  });
+  const [serverVideoWindowMaxWidth, setServerVideoWindowMaxWidth] = useState(() => {
+    const value = Number(localStorage.getItem("boltorezka_server_video_window_max_width"));
+    return Number.isFinite(value) ? Math.max(120, Math.min(320, Math.round(value))) : 320;
+  });
   const [serverVideoPreviewStream, setServerVideoPreviewStream] = useState<MediaStream | null>(null);
   const [realtimeReconnectNonce, setRealtimeReconnectNonce] = useState(0);
   const [videoWindowsVisible, setVideoWindowsVisible] = useState(true);
@@ -377,6 +389,7 @@ export function App() {
     serverVideoPixelFxGridThickness,
     serverVideoAsciiCellSize,
     serverVideoAsciiContrast,
+    serverVideoAsciiColor,
     micMuted,
     micTestLevel,
     audioMuted,
@@ -437,6 +450,18 @@ export function App() {
   useEffect(() => {
     localStorage.setItem("boltorezka_server_video_ascii_contrast", String(serverVideoAsciiContrast));
   }, [serverVideoAsciiContrast]);
+
+  useEffect(() => {
+    localStorage.setItem("boltorezka_server_video_ascii_color", serverVideoAsciiColor);
+  }, [serverVideoAsciiColor]);
+
+  useEffect(() => {
+    localStorage.setItem("boltorezka_server_video_window_min_width", String(serverVideoWindowMinWidth));
+  }, [serverVideoWindowMinWidth]);
+
+  useEffect(() => {
+    localStorage.setItem("boltorezka_server_video_window_max_width", String(serverVideoWindowMaxWidth));
+  }, [serverVideoWindowMaxWidth]);
 
   useEffect(() => {
     const stopServerVideoPreview = () => {
@@ -501,7 +526,8 @@ export function App() {
           pixelSize: serverVideoPixelFxPixelSize,
           gridThickness: serverVideoPixelFxGridThickness,
           asciiCellSize: serverVideoAsciiCellSize,
-          asciiContrast: serverVideoAsciiContrast
+          asciiContrast: serverVideoAsciiContrast,
+          asciiColor: serverVideoAsciiColor
         });
 
         if (!processedHandle) {
@@ -539,7 +565,8 @@ export function App() {
     serverVideoPixelFxPixelSize,
     serverVideoPixelFxGridThickness,
     serverVideoAsciiCellSize,
-    serverVideoAsciiContrast
+    serverVideoAsciiContrast,
+    serverVideoAsciiColor
   ]);
 
   const {
@@ -1648,6 +1675,8 @@ export function App() {
           localVideoStream={localVideoStream}
           remoteVideoStreamsByUserId={remoteVideoStreamsByUserId}
           remoteLabelsByUserId={remoteVideoLabelsByUserId}
+          minWidth={Math.min(serverVideoWindowMinWidth, serverVideoWindowMaxWidth)}
+          maxWidth={Math.max(serverVideoWindowMinWidth, serverVideoWindowMaxWidth)}
           visible={allowVideoStreaming && videoWindowsVisible}
         />
 
@@ -1714,6 +1743,9 @@ export function App() {
         serverVideoPixelFxGridThickness={serverVideoPixelFxGridThickness}
         serverVideoAsciiCellSize={serverVideoAsciiCellSize}
         serverVideoAsciiContrast={serverVideoAsciiContrast}
+        serverVideoAsciiColor={serverVideoAsciiColor}
+        serverVideoWindowMinWidth={Math.min(serverVideoWindowMinWidth, serverVideoWindowMaxWidth)}
+        serverVideoWindowMaxWidth={Math.max(serverVideoWindowMinWidth, serverVideoWindowMaxWidth)}
         serverVideoPreviewStream={serverVideoPreviewStream}
         onClose={() => setAppMenuOpen(false)}
         onSetServerMenuTab={setServerMenuTab}
@@ -1730,6 +1762,17 @@ export function App() {
         onSetServerVideoPixelFxGridThickness={setServerVideoPixelFxGridThickness}
         onSetServerVideoAsciiCellSize={setServerVideoAsciiCellSize}
         onSetServerVideoAsciiContrast={setServerVideoAsciiContrast}
+        onSetServerVideoAsciiColor={setServerVideoAsciiColor}
+        onSetServerVideoWindowMinWidth={(value) => {
+          const nextMin = Math.max(80, Math.min(300, Math.round(value)));
+          setServerVideoWindowMinWidth(nextMin);
+          setServerVideoWindowMaxWidth((prev) => Math.max(Math.max(120, Math.min(320, Math.round(prev))), nextMin));
+        }}
+        onSetServerVideoWindowMaxWidth={(value) => {
+          const nextMax = Math.max(120, Math.min(320, Math.round(value)));
+          setServerVideoWindowMaxWidth(nextMax);
+          setServerVideoWindowMinWidth((prev) => Math.min(Math.max(80, Math.min(300, Math.round(prev))), nextMax));
+        }}
       />
 
       <ToastStack toasts={toasts} />
