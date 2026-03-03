@@ -7,19 +7,23 @@ type UseMediaDevicePreferencesArgs = {
   t: (key: string) => string;
   selectedInputId: string;
   selectedOutputId: string;
+  selectedVideoInputId: string;
   micVolume: number;
   outputVolume: number;
   setInputDevices: (value: DeviceOption[]) => void;
   setOutputDevices: (value: DeviceOption[]) => void;
+  setVideoInputDevices: (value: DeviceOption[]) => void;
   setMediaDevicesState: (value: MediaDevicesState) => void;
   setMediaDevicesHint: (value: string) => void;
   setSelectedInputId: (value: string) => void;
   setSelectedOutputId: (value: string) => void;
+  setSelectedVideoInputId: (value: string) => void;
 };
 
 const FALLBACK_DEVICE_ID = "default";
 
 const OUTPUT_PREF_KEY = "boltorezka_selected_output_id";
+const VIDEO_INPUT_PREF_KEY = "boltorezka_selected_video_input_id";
 
 const EARPICE_OUTPUT_RE = /(earpiece|receiver|handset|phone|при[её]мник|телефон|communications?)/i;
 const SPEAKER_OUTPUT_RE = /(speaker|loud|громк|динамик)/i;
@@ -59,14 +63,17 @@ export function useMediaDevicePreferences({
   t,
   selectedInputId,
   selectedOutputId,
+  selectedVideoInputId,
   micVolume,
   outputVolume,
   setInputDevices,
   setOutputDevices,
+  setVideoInputDevices,
   setMediaDevicesState,
   setMediaDevicesHint,
   setSelectedInputId,
-  setSelectedOutputId
+  setSelectedOutputId,
+  setSelectedVideoInputId
 }: UseMediaDevicePreferencesArgs) {
   const permissionPromptTriedRef = useRef(false);
   const mobileOutputDefaultAppliedRef = useRef(false);
@@ -74,23 +81,30 @@ export function useMediaDevicePreferences({
   const applyDeniedState = useCallback(() => {
     setInputDevices([{ id: FALLBACK_DEVICE_ID, label: t("device.systemDefault") }]);
     setOutputDevices([{ id: FALLBACK_DEVICE_ID, label: t("device.systemDefault") }]);
+    setVideoInputDevices([{ id: FALLBACK_DEVICE_ID, label: t("video.systemCamera") }]);
     if (selectedInputId !== FALLBACK_DEVICE_ID) {
       setSelectedInputId(FALLBACK_DEVICE_ID);
     }
     if (selectedOutputId !== FALLBACK_DEVICE_ID) {
       setSelectedOutputId(FALLBACK_DEVICE_ID);
     }
+    if (selectedVideoInputId !== FALLBACK_DEVICE_ID) {
+      setSelectedVideoInputId(FALLBACK_DEVICE_ID);
+    }
     setMediaDevicesState("denied");
     setMediaDevicesHint(t("settings.mediaDenied"));
   }, [
     selectedInputId,
     selectedOutputId,
+    selectedVideoInputId,
     setInputDevices,
     setOutputDevices,
+    setVideoInputDevices,
     setMediaDevicesState,
     setMediaDevicesHint,
     setSelectedInputId,
     setSelectedOutputId,
+    setSelectedVideoInputId,
     t
   ]);
 
@@ -167,9 +181,16 @@ export function useMediaDevicePreferences({
           id: item.deviceId || `output-${index}`,
           label: item.label || `${t("settings.outputDevice")} ${index + 1}`
         }));
+      const videoInputs = devices
+        .filter((item) => item.kind === "videoinput")
+        .map((item, index) => ({
+          id: item.deviceId || `video-${index}`,
+          label: item.label || `${t("video.cameraDevice")} ${index + 1}`
+        }));
 
       setInputDevices(inputs);
       setOutputDevices(outputs);
+      setVideoInputDevices(videoInputs.length > 0 ? videoInputs : [{ id: FALLBACK_DEVICE_ID, label: t("video.systemCamera") }]);
 
       if (!mobileOutputDefaultAppliedRef.current && isMobileChromeBrowser()) {
         mobileOutputDefaultAppliedRef.current = true;
@@ -205,15 +226,25 @@ export function useMediaDevicePreferences({
               id: item.deviceId || `output-${index}`,
               label: item.label || `${t("settings.outputDevice")} ${index + 1}`
             }));
+          const refreshedVideoInputs = devicesAfterPermission
+            .filter((item) => item.kind === "videoinput")
+            .map((item, index) => ({
+              id: item.deviceId || `video-${index}`,
+              label: item.label || `${t("video.cameraDevice")} ${index + 1}`
+            }));
 
           setInputDevices(refreshedInputs.length > 0 ? refreshedInputs : [{ id: FALLBACK_DEVICE_ID, label: t("device.systemDefault") }]);
           setOutputDevices(refreshedOutputs.length > 0 ? refreshedOutputs : [{ id: FALLBACK_DEVICE_ID, label: t("device.systemDefault") }]);
+          setVideoInputDevices(refreshedVideoInputs.length > 0 ? refreshedVideoInputs : [{ id: FALLBACK_DEVICE_ID, label: t("video.systemCamera") }]);
 
           if (refreshedInputs.length > 0 && !refreshedInputs.some((item) => item.id === selectedInputId)) {
             setSelectedInputId(refreshedInputs[0].id);
           }
           if (refreshedOutputs.length > 0 && !refreshedOutputs.some((item) => item.id === selectedOutputId)) {
             setSelectedOutputId(refreshedOutputs[0].id);
+          }
+          if (refreshedVideoInputs.length > 0 && !refreshedVideoInputs.some((item) => item.id === selectedVideoInputId)) {
+            setSelectedVideoInputId(refreshedVideoInputs[0].id);
           }
 
           setMediaDevicesState("ready");
@@ -238,6 +269,7 @@ export function useMediaDevicePreferences({
       if (hasNoAudioDevices) {
         setInputDevices([{ id: FALLBACK_DEVICE_ID, label: t("device.systemDefault") }]);
         setOutputDevices([{ id: FALLBACK_DEVICE_ID, label: t("device.systemDefault") }]);
+        setVideoInputDevices([{ id: FALLBACK_DEVICE_ID, label: t("video.systemCamera") }]);
         setMediaDevicesState("error");
         setMediaDevicesHint(t("settings.devicesNotFound"));
       } else {
@@ -251,6 +283,9 @@ export function useMediaDevicePreferences({
       if (outputs.length > 0 && !outputs.some((item) => item.id === selectedOutputId)) {
         setSelectedOutputId(outputs[0].id);
       }
+      if (videoInputs.length > 0 && !videoInputs.some((item) => item.id === selectedVideoInputId)) {
+        setSelectedVideoInputId(videoInputs[0].id);
+      }
     } catch (error) {
       const errorName = (error as { name?: string })?.name || "";
       if (errorName === "NotAllowedError" || errorName === "SecurityError") {
@@ -260,11 +295,15 @@ export function useMediaDevicePreferences({
 
       setInputDevices([{ id: FALLBACK_DEVICE_ID, label: t("device.systemDefault") }]);
       setOutputDevices([{ id: FALLBACK_DEVICE_ID, label: t("device.systemDefault") }]);
+      setVideoInputDevices([{ id: FALLBACK_DEVICE_ID, label: t("video.systemCamera") }]);
       if (selectedInputId !== FALLBACK_DEVICE_ID) {
         setSelectedInputId(FALLBACK_DEVICE_ID);
       }
       if (selectedOutputId !== FALLBACK_DEVICE_ID) {
         setSelectedOutputId(FALLBACK_DEVICE_ID);
+      }
+      if (selectedVideoInputId !== FALLBACK_DEVICE_ID) {
+        setSelectedVideoInputId(FALLBACK_DEVICE_ID);
       }
       setMediaDevicesState("error");
       setMediaDevicesHint(t("settings.devicesLoadFailed"));
@@ -272,13 +311,16 @@ export function useMediaDevicePreferences({
   }, [
     selectedInputId,
     selectedOutputId,
+    selectedVideoInputId,
     t,
     setInputDevices,
     setOutputDevices,
+    setVideoInputDevices,
     setMediaDevicesState,
     setMediaDevicesHint,
     setSelectedInputId,
     setSelectedOutputId,
+    setSelectedVideoInputId,
     requestMicPermission,
     getMicrophonePermissionState,
     applyDeniedState
@@ -299,6 +341,10 @@ export function useMediaDevicePreferences({
   useEffect(() => {
     localStorage.setItem(OUTPUT_PREF_KEY, selectedOutputId);
   }, [selectedOutputId]);
+
+  useEffect(() => {
+    localStorage.setItem(VIDEO_INPUT_PREF_KEY, selectedVideoInputId);
+  }, [selectedVideoInputId]);
 
   useEffect(() => {
     void loadDevices();

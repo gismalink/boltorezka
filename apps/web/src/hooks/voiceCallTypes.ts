@@ -39,9 +39,11 @@ export type UseVoiceCallRuntimeArgs = {
   localUserId: string;
   roomSlug: string;
   allowVideoStreaming: boolean;
+  videoStreamingEnabled: boolean;
   roomVoiceTargets: PresenceMember[];
   selectedInputId: string;
   selectedOutputId: string;
+  selectedVideoInputId: string;
   micMuted: boolean;
   micTestLevel: number;
   audioMuted: boolean;

@@ -17,6 +17,8 @@ export type UserDockProps = {
   callStatus: "idle" | "ringing" | "connecting" | "active";
   lastCallPeer: string;
   roomVoiceConnected: boolean;
+  currentRoomSupportsVideo: boolean;
+  cameraEnabled: boolean;
   micMuted: boolean;
   audioMuted: boolean;
   audioOutputMenuOpen: boolean;
@@ -32,8 +34,10 @@ export type UserDockProps = {
   languageOptions: Array<{ value: Lang; label: string }>;
   inputOptions: DeviceOption[];
   outputOptions: DeviceOption[];
+  videoInputOptions: DeviceOption[];
   selectedInputId: string;
   selectedOutputId: string;
+  selectedVideoInputId: string;
   selectedInputProfile: InputProfile;
   inputProfileLabel: string;
   currentInputLabel: string;
@@ -49,6 +53,7 @@ export type UserDockProps = {
   userSettingsRef: RefObject<HTMLDivElement>;
   onToggleMic: () => void;
   onToggleAudio: () => void;
+  onToggleCamera: () => void;
   onToggleVoiceSettings: () => void;
   onToggleAudioOutput: () => void;
   onOpenUserSettings: (tab: "profile" | "sound") => void;
@@ -62,6 +67,7 @@ export type UserDockProps = {
   onSaveProfile: (event: FormEvent) => void;
   onSetSelectedInputId: (value: string) => void;
   onSetSelectedOutputId: (value: string) => void;
+  onSetSelectedVideoInputId: (value: string) => void;
   onSetSelectedInputProfile: (value: InputProfile) => void;
   onRefreshDevices: () => void;
   onRequestMediaAccess: () => void;

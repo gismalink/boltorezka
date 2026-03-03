@@ -1,13 +1,15 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import type { UserDockProps } from "./types";
 import { PopupPortal } from "./PopupPortal";
 
 export function UserDock({
   t,
   currentRoomSupportsRtc,
+  currentRoomSupportsVideo,
   currentRoomTitle,
   callStatus,
   lastCallPeer,
+  cameraEnabled,
   micMuted,
   audioMuted,
   audioOutputMenuOpen,
@@ -23,8 +25,10 @@ export function UserDock({
   languageOptions,
   inputOptions,
   outputOptions,
+  videoInputOptions,
   selectedInputId,
   selectedOutputId,
+  selectedVideoInputId,
   selectedInputProfile,
   inputProfileLabel,
   currentInputLabel,
@@ -40,6 +44,7 @@ export function UserDock({
   userSettingsRef,
   onToggleMic,
   onToggleAudio,
+  onToggleCamera,
   onToggleVoiceSettings,
   onToggleAudioOutput,
   onOpenUserSettings,
@@ -53,6 +58,7 @@ export function UserDock({
   onSaveProfile,
   onSetSelectedInputId,
   onSetSelectedOutputId,
+  onSetSelectedVideoInputId,
   onSetSelectedInputProfile,
   onRefreshDevices,
   onRequestMediaAccess,
@@ -67,6 +73,8 @@ export function UserDock({
 }: UserDockProps) {
   const inputDeviceRowRef = useRef<HTMLButtonElement>(null);
   const inputProfileRowRef = useRef<HTMLButtonElement>(null);
+  const cameraAnchorRef = useRef<HTMLDivElement>(null);
+  const [cameraMenuOpen, setCameraMenuOpen] = useState(false);
   const mediaDevicesUnavailable = mediaDevicesState !== "ready";
   const mediaControlsLocked = mediaDevicesState === "denied";
   const mediaDevicesWarningText = mediaDevicesHint || t("settings.mediaUnavailable");
@@ -370,15 +378,58 @@ export function UserDock({
               </PopupPortal>
             </div>
 
-            <button
-              type="button"
-                className="secondary icon-btn split-main-btn user-panel-main-btn"
-              data-tooltip={t("rtc.cameraSoon")}
-              aria-label={t("rtc.cameraSoon")}
-              disabled
-            >
-              <i className="bi bi-camera-video" aria-hidden="true" />
-            </button>
+            <div className="camera-anchor relative max-[800px]:min-w-0" ref={cameraAnchorRef}>
+              <div className="audio-output-group split-control-group user-panel-split-group inline-flex items-center gap-0">
+                <button
+                  type="button"
+                  className={`secondary icon-btn split-main-btn user-panel-main-btn ${cameraEnabled ? "" : "icon-btn-danger"}`}
+                  data-tooltip={cameraEnabled ? t("video.disableCamera") : t("video.enableCamera")}
+                  disabled={mediaControlsLocked || !currentRoomSupportsVideo}
+                  onClick={onToggleCamera}
+                >
+                  <i className={`bi ${cameraEnabled ? "bi-camera-video-fill" : "bi-camera-video-off-fill"}`} aria-hidden="true" />
+                </button>
+                <button
+                  type="button"
+                  className="secondary icon-btn split-caret-btn"
+                  data-tooltip={t("video.cameraDevice")}
+                  disabled={mediaControlsLocked || !currentRoomSupportsVideo}
+                  onClick={() => setCameraMenuOpen((value) => !value)}
+                >
+                  <i className="bi bi-chevron-down" aria-hidden="true" />
+                </button>
+              </div>
+              <PopupPortal
+                open={cameraMenuOpen}
+                anchorRef={cameraAnchorRef}
+                className="settings-popup voice-mini-popup"
+                placement="top-end"
+              >
+                <div className="grid gap-3">
+                  <div className="subheading">{t("video.cameraDevice")}</div>
+                  <div className="device-list mt-4 grid gap-1.5">
+                    {videoInputOptions.map((device) => (
+                      <button
+                        key={device.id}
+                        type="button"
+                        className={`secondary device-item radio-item flex items-center justify-between gap-4 text-left ${selectedVideoInputId === device.id ? "device-item-active" : ""}`}
+                        disabled={mediaDevicesUnavailable}
+                        onClick={() => {
+                          onSetSelectedVideoInputId(device.id);
+                          setCameraMenuOpen(false);
+                        }}
+                      >
+                        <span>{device.label}</span>
+                        <i className={`bi ${selectedVideoInputId === device.id ? "bi-record-circle-fill" : "bi-circle"}`} aria-hidden="true" />
+                      </button>
+                    ))}
+                  </div>
+                  {mediaDevicesUnavailable ? (
+                    <p className="muted media-devices-warning">{mediaDevicesWarningText}</p>
+                  ) : null}
+                </div>
+              </PopupPortal>
+            </div>
 
             <button
               type="button"

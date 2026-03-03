@@ -114,8 +114,11 @@ export function App() {
   const [profileSaving, setProfileSaving] = useState(false);
   const [inputDevices, setInputDevices] = useState<Array<{ id: string; label: string }>>([]);
   const [outputDevices, setOutputDevices] = useState<Array<{ id: string; label: string }>>([]);
+  const [videoInputDevices, setVideoInputDevices] = useState<Array<{ id: string; label: string }>>([]);
   const [selectedInputId, setSelectedInputId] = useState<string>(() => localStorage.getItem("boltorezka_selected_input_id") || "default");
   const [selectedOutputId, setSelectedOutputId] = useState<string>(() => localStorage.getItem("boltorezka_selected_output_id") || "default");
+  const [selectedVideoInputId, setSelectedVideoInputId] = useState<string>(() => localStorage.getItem("boltorezka_selected_video_input_id") || "default");
+  const [cameraEnabled, setCameraEnabled] = useState(false);
   const [selectedInputProfile, setSelectedInputProfile] = useState<InputProfile>("custom");
   const [voiceSettingsPanel, setVoiceSettingsPanel] = useState<VoiceSettingsPanel>(null);
   const [mediaDevicesState, setMediaDevicesState] = useState<MediaDevicesState>("ready");
@@ -292,6 +295,7 @@ export function App() {
     return roomFromTree?.kind || "text";
   }, [rooms, roomsTree, roomSlug]);
   const allowVideoStreaming = currentRoomKind === "text_voice_video";
+  const currentRoomSupportsVideo = allowVideoStreaming;
 
   const {
     roomVoiceConnected,
@@ -312,9 +316,11 @@ export function App() {
     localUserId: user?.id || "",
     roomSlug,
     allowVideoStreaming,
+    videoStreamingEnabled: cameraEnabled,
     roomVoiceTargets: currentRoomVoiceTargets,
     selectedInputId,
     selectedOutputId,
+    selectedVideoInputId,
     micMuted,
     micTestLevel,
     audioMuted,
@@ -338,6 +344,7 @@ export function App() {
 
   useEffect(() => {
     if (!allowVideoStreaming) {
+      setCameraEnabled(false);
       setVideoWindowsVisible(true);
     }
   }, [allowVideoStreaming]);
@@ -693,14 +700,17 @@ export function App() {
     t,
     selectedInputId,
     selectedOutputId,
+    selectedVideoInputId,
     micVolume,
     outputVolume,
     setInputDevices,
     setOutputDevices,
+    setVideoInputDevices,
     setMediaDevicesState,
     setMediaDevicesHint,
     setSelectedInputId,
-    setSelectedOutputId
+    setSelectedOutputId,
+    setSelectedVideoInputId
   });
 
   useMicrophoneLevelMeter({
@@ -1082,6 +1092,7 @@ export function App() {
 
   const inputOptions = inputDevices.length > 0 ? inputDevices : [{ id: "default", label: t("device.systemDefault") }];
   const outputOptions = outputDevices.length > 0 ? outputDevices : [{ id: "default", label: t("device.systemDefault") }];
+  const videoInputOptions = videoInputDevices.length > 0 ? videoInputDevices : [{ id: "default", label: t("video.systemCamera") }];
   const currentInputLabel = inputOptions.find((device) => device.id === selectedInputId)?.label ?? inputOptions[0]?.label ?? t("device.systemDefault");
   const inputProfileLabel = selectedInputProfile === "noise_reduction"
     ? t("settings.voiceIsolation")
@@ -1095,6 +1106,7 @@ export function App() {
     currentRoomSupportsRtc,
     roomVoiceTargetsCount: currentRoomVoiceTargets.length,
     roomVoiceConnected,
+    keepConnectedWithoutTargets: allowVideoStreaming && cameraEnabled,
     connectRoom,
     disconnectRoom
   });
@@ -1114,10 +1126,12 @@ export function App() {
       t={t}
       user={user}
       currentRoomSupportsRtc={currentRoomSupportsRtc}
+      currentRoomSupportsVideo={currentRoomSupportsVideo}
       currentRoomTitle={currentRoom?.title || ""}
       callStatus={callStatus}
       lastCallPeer={lastCallPeer}
       roomVoiceConnected={roomVoiceConnected}
+      cameraEnabled={cameraEnabled}
       micMuted={micMuted}
       audioMuted={audioMuted}
       audioOutputMenuOpen={audioOutputMenuOpen}
@@ -1133,8 +1147,10 @@ export function App() {
       languageOptions={LANGUAGE_OPTIONS}
       inputOptions={inputOptions}
       outputOptions={outputOptions}
+      videoInputOptions={videoInputOptions}
       selectedInputId={selectedInputId}
       selectedOutputId={selectedOutputId}
+      selectedVideoInputId={selectedVideoInputId}
       selectedInputProfile={selectedInputProfile}
       inputProfileLabel={inputProfileLabel}
       currentInputLabel={currentInputLabel}
@@ -1158,6 +1174,12 @@ export function App() {
           return nextMuted;
         });
       }}
+      onToggleCamera={() => {
+        if (!allowVideoStreaming) {
+          return;
+        }
+        setCameraEnabled((value) => !value);
+      }}
       onToggleVoiceSettings={() => {
         setAudioOutputMenuOpen(false);
         setVoiceSettingsPanel(null);
@@ -1179,6 +1201,7 @@ export function App() {
       onSaveProfile={saveMyProfile}
       onSetSelectedInputId={setSelectedInputId}
       onSetSelectedOutputId={setSelectedOutputId}
+      onSetSelectedVideoInputId={setSelectedVideoInputId}
       onSetSelectedInputProfile={setSelectedInputProfile}
       onRefreshDevices={() => refreshDevices(true)}
       onRequestMediaAccess={requestMediaAccess}
@@ -1198,10 +1221,12 @@ export function App() {
       t={t}
       user={user}
       currentRoomSupportsRtc={currentRoomSupportsRtc}
+      currentRoomSupportsVideo={currentRoomSupportsVideo}
       currentRoomTitle={currentRoom?.title || ""}
       callStatus={callStatus}
       lastCallPeer={lastCallPeer}
       roomVoiceConnected={roomVoiceConnected}
+      cameraEnabled={cameraEnabled}
       micMuted={micMuted}
       audioMuted={audioMuted}
       audioOutputMenuOpen={audioOutputMenuOpen}
@@ -1217,8 +1242,10 @@ export function App() {
       languageOptions={LANGUAGE_OPTIONS}
       inputOptions={inputOptions}
       outputOptions={outputOptions}
+      videoInputOptions={videoInputOptions}
       selectedInputId={selectedInputId}
       selectedOutputId={selectedOutputId}
+      selectedVideoInputId={selectedVideoInputId}
       selectedInputProfile={selectedInputProfile}
       inputProfileLabel={inputProfileLabel}
       currentInputLabel={currentInputLabel}
@@ -1242,6 +1269,12 @@ export function App() {
           return nextMuted;
         });
       }}
+      onToggleCamera={() => {
+        if (!allowVideoStreaming) {
+          return;
+        }
+        setCameraEnabled((value) => !value);
+      }}
       onToggleVoiceSettings={() => {
         setAudioOutputMenuOpen(false);
         setVoiceSettingsPanel(null);
@@ -1263,6 +1296,7 @@ export function App() {
       onSaveProfile={saveMyProfile}
       onSetSelectedInputId={setSelectedInputId}
       onSetSelectedOutputId={setSelectedOutputId}
+      onSetSelectedVideoInputId={setSelectedVideoInputId}
       onSetSelectedInputProfile={setSelectedInputProfile}
       onRefreshDevices={() => refreshDevices(true)}
       onRequestMediaAccess={requestMediaAccess}

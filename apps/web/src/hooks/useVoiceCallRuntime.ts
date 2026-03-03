@@ -56,9 +56,11 @@ export function useVoiceCallRuntime({
   localUserId,
   roomSlug,
   allowVideoStreaming,
+  videoStreamingEnabled,
   roomVoiceTargets,
   selectedInputId,
   selectedOutputId,
+  selectedVideoInputId,
   micMuted,
   micTestLevel,
   audioMuted,
@@ -258,6 +260,27 @@ export function useVoiceCallRuntime({
 
     return base;
   }, [selectedInputId, serverAudioQuality]);
+
+  const getVideoConstraints = useCallback((): MediaTrackConstraints | false => {
+    if (!allowVideoStreaming || !videoStreamingEnabled) {
+      return false;
+    }
+
+    if (selectedVideoInputId && selectedVideoInputId !== "default") {
+      return {
+        width: { ideal: 640 },
+        height: { ideal: 480 },
+        frameRate: { ideal: 24, max: 30 },
+        deviceId: { exact: selectedVideoInputId }
+      };
+    }
+
+    return {
+      width: { ideal: 640 },
+      height: { ideal: 480 },
+      frameRate: { ideal: 24, max: 30 }
+    };
+  }, [allowVideoStreaming, videoStreamingEnabled, selectedVideoInputId]);
 
   const applyAudioQualityToConnection = useCallback(async (
     connection: RTCPeerConnection,
@@ -613,7 +636,7 @@ export function useVoiceCallRuntime({
     try {
       stream = await navigator.mediaDevices.getUserMedia({
         audio: audioConstraints,
-        video: allowVideoStreaming
+        video: getVideoConstraints()
       });
     } catch (error) {
       const errorName = (error as { name?: string })?.name || "";
@@ -630,7 +653,7 @@ export function useVoiceCallRuntime({
 
       stream = await navigator.mediaDevices.getUserMedia({
         audio: fallbackConstraints,
-        video: allowVideoStreaming
+        video: getVideoConstraints()
       });
       pushCallLog("input device fallback applied: default microphone");
     }
@@ -639,7 +662,7 @@ export function useVoiceCallRuntime({
       track.enabled = !micMuted;
     });
 
-    if (allowVideoStreaming) {
+    if (allowVideoStreaming && videoStreamingEnabled) {
       const hasVideoTrack = stream.getVideoTracks().length > 0;
       if (hasVideoTrack) {
         setLocalVideoStream(stream);
@@ -657,7 +680,7 @@ export function useVoiceCallRuntime({
       selectedInputId: selectedInputId || "default"
     });
     return stream;
-  }, [getAudioConstraints, micMuted, t, pushToastThrottled, selectedInputId, allowVideoStreaming, pushCallLog]);
+  }, [getAudioConstraints, getVideoConstraints, micMuted, t, pushToastThrottled, selectedInputId, allowVideoStreaming, videoStreamingEnabled, pushCallLog]);
 
   const attachLocalTracks = useCallback(async (connection: RTCPeerConnection) => {
     const stream = await ensureLocalStream();
@@ -952,13 +975,21 @@ export function useVoiceCallRuntime({
     pushCallLog("voice room connect requested");
 
     if (roomVoiceTargetsRef.current.length === 0) {
+      if (allowVideoStreaming && videoStreamingEnabled) {
+        try {
+          await ensureLocalStream();
+          pushCallLog("voice room local video preview enabled");
+        } catch (error) {
+          pushCallLog(`voice room local preview failed: ${(error as Error).message}`);
+        }
+      }
       pushCallLog("voice room waiting for participants");
       setCallStatus("idle");
       return;
     }
 
     await syncRoomTargets();
-  }, [pushCallLog, setCallStatus, syncRoomTargets]);
+  }, [pushCallLog, setCallStatus, syncRoomTargets, allowVideoStreaming, videoStreamingEnabled, ensureLocalStream]);
 
   const disconnectRoom = useCallback(() => {
     const activeTargetIds = new Set(
@@ -1061,11 +1092,16 @@ export function useVoiceCallRuntime({
   useVoiceRuntimeMediaEffects({
     localStreamRef,
     peersRef,
+    allowVideoStreaming,
+    videoStreamingEnabled,
     selectedInputId,
+    selectedVideoInputId,
     micMuted,
     audioMuted,
     outputVolume,
     getAudioConstraints,
+    getVideoConstraints,
+    setLocalVideoStream,
     applyRemoteAudioOutput,
     retryRemoteAudioPlayback,
     pushCallLog,
@@ -1097,6 +1133,22 @@ export function useVoiceCallRuntime({
 
     void syncRoomTargets();
   }, [roomVoiceTargets, syncRoomTargets]);
+
+  useEffect(() => {
+    if (!roomVoiceConnected) {
+      return;
+    }
+    if (!allowVideoStreaming || !videoStreamingEnabled) {
+      return;
+    }
+    if (localStreamRef.current) {
+      return;
+    }
+
+    void ensureLocalStream().catch((error) => {
+      pushCallLog(`local camera preview failed: ${(error as Error).message}`);
+    });
+  }, [roomVoiceConnected, allowVideoStreaming, videoStreamingEnabled, ensureLocalStream, pushCallLog]);
 
   useEffect(() => {
     const now = Date.now();
