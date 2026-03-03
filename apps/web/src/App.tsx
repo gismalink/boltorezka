@@ -1264,7 +1264,10 @@ export function App() {
 
       {mediaDevicesState === "denied" ? (
         <div className="mic-denied-banner" role="status" aria-live="polite">
-          {t("mic.deniedBanner")}
+          <span>{t("mic.deniedBanner")}</span>
+          <button type="button" className="secondary" onClick={requestMediaAccess}>
+            {t("settings.requestMediaAccess")}
+          </button>
         </div>
       ) : null}
 

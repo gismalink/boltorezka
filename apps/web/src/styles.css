@@ -1087,6 +1087,10 @@ pre {
   left: 50%;
   transform: translateX(-50%);
   z-index: 85;
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  max-width: min(92vw, 760px);
   padding: var(--space-sm) var(--space-lg);
   border: var(--border-strong) solid var(--pixel-danger);
   background: color-mix(in srgb, var(--pixel-panel) 86%, #000 14%);
@@ -1095,6 +1099,10 @@ pre {
   box-shadow:
     0 0 0 1px color-mix(in srgb, var(--pixel-danger) 70%, transparent 30%),
     3px 3px 0 var(--pixel-hard-shadow);
+}
+
+.mic-denied-banner .secondary {
+  white-space: nowrap;
 }
 
 @media (max-width: 800px) {
