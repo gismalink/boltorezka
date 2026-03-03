@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import type { AudioQuality, TelemetrySummary, User } from "../domain";
+import type { ServerVideoEffectType } from "../hooks/voiceCallTypes";
 
 type ServerMenuTab = "users" | "events" | "telemetry" | "call" | "sound" | "video";
 
@@ -19,12 +20,14 @@ type ServerProfileModalProps = {
   serverAudioQuality: AudioQuality;
   serverAudioQualitySaving: boolean;
   canManageAudioQuality: boolean;
-  serverVideoPixelFxEnabled: boolean;
+  serverVideoEffectType: ServerVideoEffectType;
   serverVideoResolution: "160x120" | "320x240" | "640x480";
   serverVideoFps: 10 | 15 | 24 | 30;
   serverVideoPixelFxStrength: number;
   serverVideoPixelFxPixelSize: number;
   serverVideoPixelFxGridThickness: number;
+  serverVideoAsciiCellSize: number;
+  serverVideoAsciiContrast: number;
   serverVideoPreviewStream: MediaStream | null;
   onClose: () => void;
   onSetServerMenuTab: (value: ServerMenuTab) => void;
@@ -33,12 +36,14 @@ type ServerProfileModalProps = {
   onSetBan: (userId: string, banned: boolean) => void;
   onRefreshTelemetry: () => void;
   onSetServerAudioQuality: (value: AudioQuality) => void;
-  onSetServerVideoPixelFxEnabled: (value: boolean) => void;
+  onSetServerVideoEffectType: (value: ServerVideoEffectType) => void;
   onSetServerVideoResolution: (value: "160x120" | "320x240" | "640x480") => void;
   onSetServerVideoFps: (value: 10 | 15 | 24 | 30) => void;
   onSetServerVideoPixelFxStrength: (value: number) => void;
   onSetServerVideoPixelFxPixelSize: (value: number) => void;
   onSetServerVideoPixelFxGridThickness: (value: number) => void;
+  onSetServerVideoAsciiCellSize: (value: number) => void;
+  onSetServerVideoAsciiContrast: (value: number) => void;
 };
 
 export function ServerProfileModal({
@@ -57,12 +62,14 @@ export function ServerProfileModal({
   serverAudioQuality,
   serverAudioQualitySaving,
   canManageAudioQuality,
-  serverVideoPixelFxEnabled,
+  serverVideoEffectType,
   serverVideoResolution,
   serverVideoFps,
   serverVideoPixelFxStrength,
   serverVideoPixelFxPixelSize,
   serverVideoPixelFxGridThickness,
+  serverVideoAsciiCellSize,
+  serverVideoAsciiContrast,
   serverVideoPreviewStream,
   onClose,
   onSetServerMenuTab,
@@ -71,12 +78,14 @@ export function ServerProfileModal({
   onSetBan,
   onRefreshTelemetry,
   onSetServerAudioQuality,
-  onSetServerVideoPixelFxEnabled,
+  onSetServerVideoEffectType,
   onSetServerVideoResolution,
   onSetServerVideoFps,
   onSetServerVideoPixelFxStrength,
   onSetServerVideoPixelFxPixelSize,
-  onSetServerVideoPixelFxGridThickness
+  onSetServerVideoPixelFxGridThickness,
+  onSetServerVideoAsciiCellSize,
+  onSetServerVideoAsciiContrast
 }: ServerProfileModalProps) {
   const previewVideoRef = useRef<HTMLVideoElement>(null);
 
@@ -312,14 +321,32 @@ export function ServerProfileModal({
             <section className="grid gap-3">
               <h3>{t("server.videoTitle")}</h3>
               <p className="muted">{t("server.videoHint")}</p>
-              <button
-                type="button"
-                className={`secondary quality-toggle-btn ${serverVideoPixelFxEnabled ? "quality-toggle-btn-active" : ""}`}
-                onClick={() => onSetServerVideoPixelFxEnabled(!serverVideoPixelFxEnabled)}
-                aria-pressed={serverVideoPixelFxEnabled}
-              >
-                {t("server.videoFxToggle")}: {serverVideoPixelFxEnabled ? t("common.yes") : t("common.no")}
-              </button>
+
+              <div className="grid gap-2">
+                <span>{t("server.videoPreview")}</span>
+                <div className="server-video-preview-frame">
+                  <video
+                    ref={previewVideoRef}
+                    className="server-video-preview-media"
+                    autoPlay
+                    playsInline
+                    muted
+                  />
+                </div>
+                <p className="muted">{t("server.videoPreviewHint")}</p>
+              </div>
+
+              <label className="grid gap-2">
+                <span>{t("server.videoEffectType")}</span>
+                <select
+                  value={serverVideoEffectType}
+                  onChange={(event) => onSetServerVideoEffectType(event.target.value as ServerVideoEffectType)}
+                >
+                  <option value="none">{t("server.videoEffectNone")}</option>
+                  <option value="pixel8">{t("server.videoEffectPixel8")}</option>
+                  <option value="ascii">{t("server.videoEffectAscii")}</option>
+                </select>
+              </label>
 
               <div className="grid gap-2">
                 <span>{t("server.videoResolution")}</span>
@@ -368,55 +395,73 @@ export function ServerProfileModal({
                 </div>
               </div>
 
-              <label className="slider-label grid gap-2">
-                {t("server.videoFxStrength")}: {serverVideoPixelFxStrength}%
-                <input
-                  type="range"
-                  min={0}
-                  max={100}
-                  step={1}
-                  value={serverVideoPixelFxStrength}
-                  onChange={(event) => onSetServerVideoPixelFxStrength(Number(event.target.value))}
-                />
-              </label>
+              {serverVideoEffectType === "pixel8" ? (
+                <>
+                  <label className="slider-label grid gap-2">
+                    {t("server.videoFxStrength")}: {serverVideoPixelFxStrength}%
+                    <input
+                      type="range"
+                      min={0}
+                      max={100}
+                      step={1}
+                      value={serverVideoPixelFxStrength}
+                      onChange={(event) => onSetServerVideoPixelFxStrength(Number(event.target.value))}
+                    />
+                  </label>
 
-              <label className="slider-label grid gap-2">
-                {t("server.videoFxPixelSize")}: {serverVideoPixelFxPixelSize}px
-                <input
-                  type="range"
-                  min={2}
-                  max={10}
-                  step={1}
-                  value={serverVideoPixelFxPixelSize}
-                  onChange={(event) => onSetServerVideoPixelFxPixelSize(Number(event.target.value))}
-                />
-              </label>
+                  <label className="slider-label grid gap-2">
+                    {t("server.videoFxPixelSize")}: {serverVideoPixelFxPixelSize}px
+                    <input
+                      type="range"
+                      min={2}
+                      max={10}
+                      step={1}
+                      value={serverVideoPixelFxPixelSize}
+                      onChange={(event) => onSetServerVideoPixelFxPixelSize(Number(event.target.value))}
+                    />
+                  </label>
 
-              <label className="slider-label grid gap-2">
-                {t("server.videoFxGridThickness")}: {serverVideoPixelFxGridThickness}px
-                <input
-                  type="range"
-                  min={1}
-                  max={4}
-                  step={1}
-                  value={serverVideoPixelFxGridThickness}
-                  onChange={(event) => onSetServerVideoPixelFxGridThickness(Number(event.target.value))}
-                />
-              </label>
+                  <label className="slider-label grid gap-2">
+                    {t("server.videoFxGridThickness")}: {serverVideoPixelFxGridThickness}px
+                    <input
+                      type="range"
+                      min={1}
+                      max={4}
+                      step={1}
+                      value={serverVideoPixelFxGridThickness}
+                      onChange={(event) => onSetServerVideoPixelFxGridThickness(Number(event.target.value))}
+                    />
+                  </label>
+                </>
+              ) : null}
 
-              <div className="grid gap-2">
-                <span>{t("server.videoPreview")}</span>
-                <div className="server-video-preview-frame">
-                  <video
-                    ref={previewVideoRef}
-                    className="server-video-preview-media"
-                    autoPlay
-                    playsInline
-                    muted
-                  />
-                </div>
-                <p className="muted">{t("server.videoPreviewHint")}</p>
-              </div>
+              {serverVideoEffectType === "ascii" ? (
+                <>
+                  <label className="slider-label grid gap-2">
+                    {t("server.videoAsciiCellSize")}: {serverVideoAsciiCellSize}px
+                    <input
+                      type="range"
+                      min={4}
+                      max={16}
+                      step={1}
+                      value={serverVideoAsciiCellSize}
+                      onChange={(event) => onSetServerVideoAsciiCellSize(Number(event.target.value))}
+                    />
+                  </label>
+
+                  <label className="slider-label grid gap-2">
+                    {t("server.videoAsciiContrast")}: {serverVideoAsciiContrast}%
+                    <input
+                      type="range"
+                      min={60}
+                      max={200}
+                      step={5}
+                      value={serverVideoAsciiContrast}
+                      onChange={(event) => onSetServerVideoAsciiContrast(Number(event.target.value))}
+                    />
+                  </label>
+                </>
+              ) : null}
             </section>
           ) : null}
         </div>

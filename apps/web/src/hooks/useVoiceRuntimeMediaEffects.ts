@@ -14,10 +14,12 @@ type UseVoiceRuntimeMediaEffectsArgs = {
   roomVoiceConnected: boolean;
   allowVideoStreaming: boolean;
   videoStreamingEnabled: boolean;
-  serverVideoPixelFxEnabled: boolean;
+  serverVideoEffectType: "none" | "pixel8" | "ascii";
   serverVideoPixelFxStrength: number;
   serverVideoPixelFxPixelSize: number;
   serverVideoPixelFxGridThickness: number;
+  serverVideoAsciiCellSize: number;
+  serverVideoAsciiContrast: number;
   selectedInputId: string;
   selectedVideoInputId: string;
   micMuted: boolean;
@@ -39,10 +41,12 @@ export function useVoiceRuntimeMediaEffects({
   roomVoiceConnected,
   allowVideoStreaming,
   videoStreamingEnabled,
-  serverVideoPixelFxEnabled,
+  serverVideoEffectType,
   serverVideoPixelFxStrength,
   serverVideoPixelFxPixelSize,
   serverVideoPixelFxGridThickness,
+  serverVideoAsciiCellSize,
+  serverVideoAsciiContrast,
   selectedInputId,
   selectedVideoInputId,
   micMuted,
@@ -226,14 +230,17 @@ export function useVoiceRuntimeMediaEffects({
       outgoingVideoProcessorRef.current = null;
 
       const constraints = extractTrackConstraints(getVideoConstraints());
-      const processedVideoHandle = serverVideoPixelFxEnabled
+      const processedVideoHandle = serverVideoEffectType !== "none"
         ? createProcessedVideoTrack(nextRawVideoTrack, {
           width: constraints.width,
           height: constraints.height,
           fps: constraints.fps,
+          effectType: serverVideoEffectType,
           strength: serverVideoPixelFxStrength,
           pixelSize: serverVideoPixelFxPixelSize,
-          gridThickness: serverVideoPixelFxGridThickness
+          gridThickness: serverVideoPixelFxGridThickness,
+          asciiCellSize: serverVideoAsciiCellSize,
+          asciiContrast: serverVideoAsciiContrast
         })
         : null;
 
@@ -279,10 +286,12 @@ export function useVoiceRuntimeMediaEffects({
     peersRef,
     allowVideoStreaming,
     videoStreamingEnabled,
-    serverVideoPixelFxEnabled,
+    serverVideoEffectType,
     serverVideoPixelFxStrength,
     serverVideoPixelFxPixelSize,
     serverVideoPixelFxGridThickness,
+    serverVideoAsciiCellSize,
+    serverVideoAsciiContrast,
     selectedVideoInputId,
     getVideoConstraints,
     setLocalVideoStream,
@@ -331,14 +340,17 @@ export function useVoiceRuntimeMediaEffects({
         outgoingVideoProcessorRef.current = null;
 
         const constraints = extractTrackConstraints(getVideoConstraints());
-        const processedVideoHandle = nextRawVideoTrack && serverVideoPixelFxEnabled
+        const processedVideoHandle = nextRawVideoTrack && serverVideoEffectType !== "none"
           ? createProcessedVideoTrack(nextRawVideoTrack, {
             width: constraints.width,
             height: constraints.height,
             fps: constraints.fps,
+            effectType: serverVideoEffectType,
             strength: serverVideoPixelFxStrength,
             pixelSize: serverVideoPixelFxPixelSize,
-            gridThickness: serverVideoPixelFxGridThickness
+            gridThickness: serverVideoPixelFxGridThickness,
+            asciiCellSize: serverVideoAsciiCellSize,
+            asciiContrast: serverVideoAsciiContrast
           })
           : null;
 
@@ -501,10 +513,12 @@ export function useVoiceRuntimeMediaEffects({
     peersRef,
     allowVideoStreaming,
     videoStreamingEnabled,
-    serverVideoPixelFxEnabled,
+    serverVideoEffectType,
     serverVideoPixelFxStrength,
     serverVideoPixelFxPixelSize,
     serverVideoPixelFxGridThickness,
+    serverVideoAsciiCellSize,
+    serverVideoAsciiContrast,
     micMuted,
     getAudioConstraints,
     getVideoConstraints,

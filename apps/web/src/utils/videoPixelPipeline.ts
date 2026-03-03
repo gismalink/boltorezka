@@ -3,6 +3,8 @@ export type OutgoingVideoTrackHandle = {
   stop: () => void;
 };
 
+export type VideoRenderEffectType = "none" | "pixel8" | "ascii";
+
 const BAYER_4X4 = [
   [0, 8, 2, 10],
   [12, 4, 14, 6],
@@ -50,9 +52,12 @@ export function createProcessedVideoTrack(
     width: number;
     height: number;
     fps: number;
+    effectType?: VideoRenderEffectType;
     strength: number;
     pixelSize: number;
     gridThickness?: number;
+    asciiCellSize?: number;
+    asciiContrast?: number;
   }
 ): OutgoingVideoTrackHandle | null {
   if (typeof document === "undefined") {
@@ -90,9 +95,49 @@ export function createProcessedVideoTrack(
   const quantScale = 255 / (quantLevels - 1);
   const ditherAmount = (clampedStrength / 100) * 0.35;
   const gridThickness = Math.max(0, Math.round(options.gridThickness ?? 1));
+  const effectType = options.effectType || "pixel8";
+  const asciiCellSize = Math.max(4, Math.min(16, Math.round(options.asciiCellSize ?? 8)));
+  const asciiContrastFactor = Math.max(0.2, Math.min(2, (options.asciiContrast ?? 120) / 100));
+  const asciiChars = " .,:;irsXA253hMHGS#9B&@";
+
+  const clamp01 = (value: number) => Math.max(0, Math.min(1, value));
 
   const drawFrame = () => {
     if (sourceVideo.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
+      return;
+    }
+
+    if (effectType === "ascii") {
+      outputCtx.drawImage(sourceVideo, 0, 0, options.width, options.height);
+      const imageData = outputCtx.getImageData(0, 0, options.width, options.height);
+      const { data } = imageData;
+
+      outputCtx.fillStyle = "#000";
+      outputCtx.fillRect(0, 0, options.width, options.height);
+      outputCtx.textBaseline = "top";
+      outputCtx.font = `${asciiCellSize}px monospace`;
+
+      for (let y = 0; y < options.height; y += asciiCellSize) {
+        for (let x = 0; x < options.width; x += asciiCellSize) {
+          const sampleX = Math.min(options.width - 1, x + Math.floor(asciiCellSize / 2));
+          const sampleY = Math.min(options.height - 1, y + Math.floor(asciiCellSize / 2));
+          const index = (sampleY * options.width + sampleX) * 4;
+
+          const r = data[index];
+          const g = data[index + 1];
+          const b = data[index + 2];
+
+          const luminance = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+          const contrasted = clamp01((luminance - 0.5) * asciiContrastFactor + 0.5);
+          const charIndex = Math.max(0, Math.min(asciiChars.length - 1, Math.floor((1 - contrasted) * (asciiChars.length - 1))));
+          const symbol = asciiChars[charIndex];
+
+          const shade = Math.round(contrasted * 255);
+          outputCtx.fillStyle = `rgb(${shade}, ${shade}, ${shade})`;
+          outputCtx.fillText(symbol, x, y);
+        }
+      }
+
       return;
     }
 

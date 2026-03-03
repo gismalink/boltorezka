@@ -35,6 +35,8 @@ export type CallNackPayload = {
   message: string;
 };
 
+export type ServerVideoEffectType = "none" | "pixel8" | "ascii";
+
 export type UseVoiceCallRuntimeArgs = {
   localUserId: string;
   roomSlug: string;
@@ -46,10 +48,12 @@ export type UseVoiceCallRuntimeArgs = {
   selectedVideoInputId: string;
   serverVideoResolution: "160x120" | "320x240" | "640x480";
   serverVideoFps: 10 | 15 | 24 | 30;
-  serverVideoPixelFxEnabled: boolean;
+  serverVideoEffectType: ServerVideoEffectType;
   serverVideoPixelFxStrength: number;
   serverVideoPixelFxPixelSize: number;
   serverVideoPixelFxGridThickness: number;
+  serverVideoAsciiCellSize: number;
+  serverVideoAsciiContrast: number;
   micMuted: boolean;
   micTestLevel: number;
   audioMuted: boolean;
