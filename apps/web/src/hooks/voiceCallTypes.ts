@@ -46,6 +46,9 @@ export type UseVoiceCallRuntimeArgs = {
   selectedVideoInputId: string;
   serverVideoResolution: "160x120" | "320x240" | "640x480";
   serverVideoFps: 10 | 15 | 24 | 30;
+  serverVideoPixelFxEnabled: boolean;
+  serverVideoPixelFxStrength: number;
+  serverVideoPixelFxPixelSize: number;
   micMuted: boolean;
   micTestLevel: number;
   audioMuted: boolean;
