@@ -159,6 +159,10 @@ export function App() {
     const value = Number(localStorage.getItem("boltorezka_server_video_fx_pixel_size"));
     return Number.isFinite(value) ? Math.max(2, Math.min(10, value)) : 5;
   });
+  const [serverVideoPixelFxGridThickness, setServerVideoPixelFxGridThickness] = useState(() => {
+    const value = Number(localStorage.getItem("boltorezka_server_video_fx_grid_thickness"));
+    return Number.isFinite(value) ? Math.max(1, Math.min(4, Math.round(value))) : 1;
+  });
   const [serverVideoPreviewStream, setServerVideoPreviewStream] = useState<MediaStream | null>(null);
   const [realtimeReconnectNonce, setRealtimeReconnectNonce] = useState(0);
   const [videoWindowsVisible, setVideoWindowsVisible] = useState(true);
@@ -354,6 +358,7 @@ export function App() {
     serverVideoPixelFxEnabled,
     serverVideoPixelFxStrength,
     serverVideoPixelFxPixelSize,
+    serverVideoPixelFxGridThickness,
     micMuted,
     micTestLevel,
     audioMuted,
@@ -401,6 +406,10 @@ export function App() {
   useEffect(() => {
     localStorage.setItem("boltorezka_server_video_fx_pixel_size", String(serverVideoPixelFxPixelSize));
   }, [serverVideoPixelFxPixelSize]);
+
+  useEffect(() => {
+    localStorage.setItem("boltorezka_server_video_fx_grid_thickness", String(serverVideoPixelFxGridThickness));
+  }, [serverVideoPixelFxGridThickness]);
 
   useEffect(() => {
     const stopServerVideoPreview = () => {
@@ -461,7 +470,8 @@ export function App() {
           height,
           fps: serverVideoFps,
           strength: serverVideoPixelFxStrength,
-          pixelSize: serverVideoPixelFxPixelSize
+          pixelSize: serverVideoPixelFxPixelSize,
+          gridThickness: serverVideoPixelFxGridThickness
         });
 
         if (!processedHandle) {
@@ -496,7 +506,8 @@ export function App() {
     serverVideoFps,
     serverVideoPixelFxEnabled,
     serverVideoPixelFxStrength,
-    serverVideoPixelFxPixelSize
+    serverVideoPixelFxPixelSize,
+    serverVideoPixelFxGridThickness
   ]);
 
   const {
@@ -1668,6 +1679,7 @@ export function App() {
         serverVideoFps={serverVideoFps}
         serverVideoPixelFxStrength={serverVideoPixelFxStrength}
         serverVideoPixelFxPixelSize={serverVideoPixelFxPixelSize}
+        serverVideoPixelFxGridThickness={serverVideoPixelFxGridThickness}
         serverVideoPreviewStream={serverVideoPreviewStream}
         onClose={() => setAppMenuOpen(false)}
         onSetServerMenuTab={setServerMenuTab}
@@ -1681,6 +1693,7 @@ export function App() {
         onSetServerVideoFps={setServerVideoFps}
         onSetServerVideoPixelFxStrength={setServerVideoPixelFxStrength}
         onSetServerVideoPixelFxPixelSize={setServerVideoPixelFxPixelSize}
+        onSetServerVideoPixelFxGridThickness={setServerVideoPixelFxGridThickness}
       />
 
       <ToastStack toasts={toasts} />

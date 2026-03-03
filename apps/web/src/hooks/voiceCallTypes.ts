@@ -49,6 +49,7 @@ export type UseVoiceCallRuntimeArgs = {
   serverVideoPixelFxEnabled: boolean;
   serverVideoPixelFxStrength: number;
   serverVideoPixelFxPixelSize: number;
+  serverVideoPixelFxGridThickness: number;
   micMuted: boolean;
   micTestLevel: number;
   audioMuted: boolean;

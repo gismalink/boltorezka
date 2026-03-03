@@ -16,6 +16,8 @@ type TileLayout = {
   width: number;
 };
 
+type ResizeCorner = "top-left" | "top-right" | "bottom-left" | "bottom-right";
+
 type TileItem = {
   id: string;
   label: string;
@@ -49,6 +51,7 @@ function VideoTile({
   label,
   stream,
   muted,
+  mirrored,
   layout,
   onDragStart,
   onResizeStart
@@ -57,9 +60,10 @@ function VideoTile({
   label: string;
   stream: MediaStream;
   muted: boolean;
+  mirrored: boolean;
   layout: TileLayout;
   onDragStart: (id: string, event: ReactPointerEvent<HTMLDivElement>) => void;
-  onResizeStart: (id: string, event: ReactPointerEvent<HTMLButtonElement>) => void;
+  onResizeStart: (id: string, corner: ResizeCorner, event: ReactPointerEvent<HTMLButtonElement>) => void;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -83,26 +87,46 @@ function VideoTile({
   return (
     <div
       className="video-window"
+      onPointerDown={(event) => onDragStart(id, event)}
       style={{
         width: `${layout.width}px`,
         height: `${height}px`,
         transform: `translate(${layout.x}px, ${layout.y}px)`
       }}
     >
-      <div className="video-window-header" onPointerDown={(event) => onDragStart(id, event)}>
+      <div className="video-window-header">
         <span className="video-window-label">{label}</span>
       </div>
       <video
         ref={videoRef}
         className="video-window-media"
+        style={mirrored ? { transform: "scaleX(-1)" } : undefined}
         autoPlay
         playsInline
         muted={muted}
       />
       <button
         type="button"
-        className="video-window-resize"
-        onPointerDown={(event) => onResizeStart(id, event)}
+        className="video-window-resize video-window-resize-top-left"
+        onPointerDown={(event) => onResizeStart(id, "top-left", event)}
+        aria-label="Resize video window from top left"
+      />
+      <button
+        type="button"
+        className="video-window-resize video-window-resize-top-right"
+        onPointerDown={(event) => onResizeStart(id, "top-right", event)}
+        aria-label="Resize video window from top right"
+      />
+      <button
+        type="button"
+        className="video-window-resize video-window-resize-bottom-left"
+        onPointerDown={(event) => onResizeStart(id, "bottom-left", event)}
+        aria-label="Resize video window from bottom left"
+      />
+      <button
+        type="button"
+        className="video-window-resize video-window-resize-bottom-right"
+        onPointerDown={(event) => onResizeStart(id, "bottom-right", event)}
         aria-label="Resize video window"
       />
     </div>
@@ -146,6 +170,7 @@ export function VideoWindowsOverlay({
     | {
       id: string;
       mode: "drag" | "resize";
+      corner?: ResizeCorner;
       pointerId: number;
       startX: number;
       startY: number;
@@ -191,16 +216,25 @@ export function VideoWindowsOverlay({
           };
         }
 
-        const nextWidth = clamp(state.startLayout.width + deltaX, MIN_WIDTH, MAX_WIDTH);
+        const growsFromLeft = state.corner === "top-left" || state.corner === "bottom-left";
+        const growsFromTop = state.corner === "top-left" || state.corner === "top-right";
+        const rawWidth = growsFromLeft
+          ? state.startLayout.width - deltaX
+          : state.startLayout.width + deltaX;
+        const nextWidth = clamp(rawWidth, MIN_WIDTH, MAX_WIDTH);
         const nextHeight = nextWidth / ASPECT_RATIO;
+        const widthDelta = state.startLayout.width - nextWidth;
+        const heightDelta = state.startLayout.width / ASPECT_RATIO - nextHeight;
+        const nextXBase = growsFromLeft ? state.startLayout.x + widthDelta : state.startLayout.x;
+        const nextYBase = growsFromTop ? state.startLayout.y + heightDelta : state.startLayout.y;
         const maxX = Math.max(VIEWPORT_GUTTER, window.innerWidth - nextWidth - VIEWPORT_GUTTER);
         const maxY = Math.max(VIEWPORT_GUTTER, window.innerHeight - nextHeight - VIEWPORT_GUTTER);
 
         return {
           ...prev,
           [state.id]: {
-            x: clamp(current.x, VIEWPORT_GUTTER, maxX),
-            y: clamp(current.y, VIEWPORT_GUTTER, maxY),
+            x: clamp(nextXBase, VIEWPORT_GUTTER, maxX),
+            y: clamp(nextYBase, VIEWPORT_GUTTER, maxY),
             width: nextWidth
           }
         };
@@ -238,8 +272,13 @@ export function VideoWindowsOverlay({
           label={item.label}
           stream={item.stream}
           muted
+          mirrored={item.id === "local"}
           layout={layoutsById[item.id] || defaultLayout(0)}
           onDragStart={(id, event) => {
+            const target = event.target as HTMLElement;
+            if (target.closest(".video-window-resize")) {
+              return;
+            }
             const layout = layoutsById[id] || defaultLayout(0);
             dragStateRef.current = {
               id,
@@ -251,11 +290,12 @@ export function VideoWindowsOverlay({
             };
             event.preventDefault();
           }}
-          onResizeStart={(id, event) => {
+          onResizeStart={(id, corner, event) => {
             const layout = layoutsById[id] || defaultLayout(0);
             dragStateRef.current = {
               id,
               mode: "resize",
+              corner,
               pointerId: event.pointerId,
               startX: event.clientX,
               startY: event.clientY,

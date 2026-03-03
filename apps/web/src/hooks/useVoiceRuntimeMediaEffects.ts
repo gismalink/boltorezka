@@ -17,6 +17,7 @@ type UseVoiceRuntimeMediaEffectsArgs = {
   serverVideoPixelFxEnabled: boolean;
   serverVideoPixelFxStrength: number;
   serverVideoPixelFxPixelSize: number;
+  serverVideoPixelFxGridThickness: number;
   selectedInputId: string;
   selectedVideoInputId: string;
   micMuted: boolean;
@@ -41,6 +42,7 @@ export function useVoiceRuntimeMediaEffects({
   serverVideoPixelFxEnabled,
   serverVideoPixelFxStrength,
   serverVideoPixelFxPixelSize,
+  serverVideoPixelFxGridThickness,
   selectedInputId,
   selectedVideoInputId,
   micMuted,
@@ -230,7 +232,8 @@ export function useVoiceRuntimeMediaEffects({
           height: constraints.height,
           fps: constraints.fps,
           strength: serverVideoPixelFxStrength,
-          pixelSize: serverVideoPixelFxPixelSize
+          pixelSize: serverVideoPixelFxPixelSize,
+          gridThickness: serverVideoPixelFxGridThickness
         })
         : null;
 
@@ -279,6 +282,7 @@ export function useVoiceRuntimeMediaEffects({
     serverVideoPixelFxEnabled,
     serverVideoPixelFxStrength,
     serverVideoPixelFxPixelSize,
+    serverVideoPixelFxGridThickness,
     selectedVideoInputId,
     getVideoConstraints,
     setLocalVideoStream,
@@ -333,7 +337,8 @@ export function useVoiceRuntimeMediaEffects({
             height: constraints.height,
             fps: constraints.fps,
             strength: serverVideoPixelFxStrength,
-            pixelSize: serverVideoPixelFxPixelSize
+            pixelSize: serverVideoPixelFxPixelSize,
+            gridThickness: serverVideoPixelFxGridThickness
           })
           : null;
 
@@ -499,6 +504,7 @@ export function useVoiceRuntimeMediaEffects({
     serverVideoPixelFxEnabled,
     serverVideoPixelFxStrength,
     serverVideoPixelFxPixelSize,
+    serverVideoPixelFxGridThickness,
     micMuted,
     getAudioConstraints,
     getVideoConstraints,

@@ -130,25 +130,54 @@
   height: 100%;
   display: block;
   object-fit: cover;
+  transform: scaleX(-1);
   image-rendering: pixelated;
   background: var(--pixel-bg);
 }
 
 .video-window-resize {
   position: absolute;
-  right: 0;
-  bottom: 0;
   width: 16px;
   height: 16px;
   min-width: 16px;
   padding: 0;
-  border-left: var(--border-thin) solid color-mix(in srgb, var(--pixel-border) 75%, transparent 25%);
-  border-top: var(--border-thin) solid color-mix(in srgb, var(--pixel-border) 75%, transparent 25%);
-  border-right: none;
-  border-bottom: none;
+  border: var(--border-thin) solid color-mix(in srgb, var(--pixel-border) 75%, transparent 25%);
   background: color-mix(in srgb, var(--pixel-panel-2) 80%, var(--pixel-neon-cyan) 20%);
-  cursor: nwse-resize;
+  cursor: pointer;
   box-shadow: none;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s ease-in-out;
+}
+
+.video-window:hover .video-window-resize,
+.video-window:focus-within .video-window-resize {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.video-window-resize-top-left {
+  left: 0;
+  top: 0;
+  cursor: nwse-resize;
+}
+
+.video-window-resize-top-right {
+  right: 0;
+  top: 0;
+  cursor: nesw-resize;
+}
+
+.video-window-resize-bottom-left {
+  left: 0;
+  bottom: 0;
+  cursor: nesw-resize;
+}
+
+.video-window-resize-bottom-right {
+  right: 0;
+  bottom: 0;
+  cursor: nwse-resize;
 }
 
 .video-window-resize:hover,

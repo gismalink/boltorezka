@@ -52,6 +52,7 @@ export function createProcessedVideoTrack(
     fps: number;
     strength: number;
     pixelSize: number;
+    gridThickness?: number;
   }
 ): OutgoingVideoTrackHandle | null {
   if (typeof document === "undefined") {
@@ -88,6 +89,7 @@ export function createProcessedVideoTrack(
   const quantLevels = Math.max(2, Math.round(16 - (clampedStrength / 100) * 12));
   const quantScale = 255 / (quantLevels - 1);
   const ditherAmount = (clampedStrength / 100) * 0.35;
+  const gridThickness = Math.max(0, Math.round(options.gridThickness ?? 1));
 
   const drawFrame = () => {
     if (sourceVideo.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
@@ -116,6 +118,24 @@ export function createProcessedVideoTrack(
     }
 
     outputCtx.putImageData(imageData, 0, 0);
+
+    if (gridThickness > 0) {
+      outputCtx.save();
+      outputCtx.globalCompositeOperation = "multiply";
+      outputCtx.fillStyle = "rgba(0, 0, 0, 0.38)";
+
+      for (let gridX = mosaicScale; gridX < options.width; gridX += mosaicScale) {
+        const lineX = Math.max(0, Math.min(options.width - 1, gridX - Math.floor(gridThickness / 2)));
+        outputCtx.fillRect(lineX, 0, gridThickness, options.height);
+      }
+
+      for (let gridY = mosaicScale; gridY < options.height; gridY += mosaicScale) {
+        const lineY = Math.max(0, Math.min(options.height - 1, gridY - Math.floor(gridThickness / 2)));
+        outputCtx.fillRect(0, lineY, options.width, gridThickness);
+      }
+
+      outputCtx.restore();
+    }
   };
 
   const interval = window.setInterval(drawFrame, Math.max(16, Math.round(1000 / options.fps)));

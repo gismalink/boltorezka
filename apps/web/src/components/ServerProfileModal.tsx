@@ -24,6 +24,7 @@ type ServerProfileModalProps = {
   serverVideoFps: 10 | 15 | 24 | 30;
   serverVideoPixelFxStrength: number;
   serverVideoPixelFxPixelSize: number;
+  serverVideoPixelFxGridThickness: number;
   serverVideoPreviewStream: MediaStream | null;
   onClose: () => void;
   onSetServerMenuTab: (value: ServerMenuTab) => void;
@@ -37,6 +38,7 @@ type ServerProfileModalProps = {
   onSetServerVideoFps: (value: 10 | 15 | 24 | 30) => void;
   onSetServerVideoPixelFxStrength: (value: number) => void;
   onSetServerVideoPixelFxPixelSize: (value: number) => void;
+  onSetServerVideoPixelFxGridThickness: (value: number) => void;
 };
 
 export function ServerProfileModal({
@@ -60,6 +62,7 @@ export function ServerProfileModal({
   serverVideoFps,
   serverVideoPixelFxStrength,
   serverVideoPixelFxPixelSize,
+  serverVideoPixelFxGridThickness,
   serverVideoPreviewStream,
   onClose,
   onSetServerMenuTab,
@@ -72,7 +75,8 @@ export function ServerProfileModal({
   onSetServerVideoResolution,
   onSetServerVideoFps,
   onSetServerVideoPixelFxStrength,
-  onSetServerVideoPixelFxPixelSize
+  onSetServerVideoPixelFxPixelSize,
+  onSetServerVideoPixelFxGridThickness
 }: ServerProfileModalProps) {
   const previewVideoRef = useRef<HTMLVideoElement>(null);
 
@@ -385,6 +389,18 @@ export function ServerProfileModal({
                   step={1}
                   value={serverVideoPixelFxPixelSize}
                   onChange={(event) => onSetServerVideoPixelFxPixelSize(Number(event.target.value))}
+                />
+              </label>
+
+              <label className="slider-label grid gap-2">
+                {t("server.videoFxGridThickness")}: {serverVideoPixelFxGridThickness}px
+                <input
+                  type="range"
+                  min={1}
+                  max={4}
+                  step={1}
+                  value={serverVideoPixelFxGridThickness}
+                  onChange={(event) => onSetServerVideoPixelFxGridThickness(Number(event.target.value))}
                 />
               </label>
 
