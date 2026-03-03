@@ -121,7 +121,7 @@
 1. [x] Добавить `smoke:web:e2e` шаг для denied-media UX (persist banner/lock states).
 2. [ ] Выполнить deprecation dry-run в `test` (dual-path readiness + rollback rehearsal).
   - [x] rollback rehearsal (previous SHA -> restore main) validated in `test`.
-  - [x] static delivery contract smoke (split `SMOKE_WEB_BASE_URL` / `SMOKE_API_URL`) added to `smoke:web:e2e`.
+  - [x] static delivery contract smoke (split `SMOKE_WEB_BASE_URL` / `SMOKE_API_URL`) added and validated in `test`.
   - [ ] dual-path readiness validation (separate static delivery path).
 3. [ ] Зафиксировать post-MVP performance gate (API p95 + WS reconnect + call setup success) и пороги GO/NO-GO.
 4. [ ] После закрытия пунктов 1-3 выполнить новый pre-prod package refresh.

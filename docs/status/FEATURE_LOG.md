@@ -18,8 +18,12 @@
 
 ### Validation
 
-- Локально: `npm run smoke:web:static` — PASS.
-- Серверный `smoke:web:e2e` в test — PASS (включая static contract stage).
+- Локально: `SMOKE_API_URL=https://test.boltorezka.gismalink.art npm run smoke:web:static` — PASS.
+- Test deploy/smoke: `TEST_REF=origin/main ALLOW_TEST_FROM_MAIN=1 npm run deploy:test:smoke` — PASS.
+- Серверный web e2e (test): `SMOKE_API_URL=https://test.boltorezka.gismalink.art SMOKE_E2E_CALL_SIGNAL=0 npm run smoke:web:e2e` — PASS.
+  - static delivery contract stage: PASS,
+  - denied-media gate: PASS,
+  - realtime reconnect path: PASS.
 
 ### Status
 
