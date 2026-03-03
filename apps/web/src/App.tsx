@@ -59,7 +59,7 @@ const MAX_CHAT_IMAGE_MAX_SIDE = 1000;
 const MAX_CHAT_IMAGE_QUALITY = 0.6;
 const MESSAGE_EDIT_DELETE_WINDOW_MS = 10 * 60 * 1000;
 
-type ServerMenuTab = "users" | "events" | "telemetry" | "call" | "sound";
+type ServerMenuTab = "users" | "events" | "telemetry" | "call" | "sound" | "video";
 type MobileTab = "channels" | "chat" | "settings";
 
 export function App() {
@@ -107,7 +107,7 @@ export function App() {
   const [audioOutputMenuOpen, setAudioOutputMenuOpen] = useState(false);
   const [voiceSettingsOpen, setVoiceSettingsOpen] = useState(false);
   const [userSettingsOpen, setUserSettingsOpen] = useState(false);
-  const [userSettingsTab, setUserSettingsTab] = useState<"profile" | "sound" | "server_sounds">("profile");
+  const [userSettingsTab, setUserSettingsTab] = useState<"profile" | "sound" | "camera" | "server_sounds">("profile");
   const [lang, setLang] = useState<Lang>(() => detectInitialLang());
   const [profileNameDraft, setProfileNameDraft] = useState("");
   const [profileStatusText, setProfileStatusText] = useState("");
@@ -134,6 +134,7 @@ export function App() {
   const [mobileTab, setMobileTab] = useState<MobileTab>("chat");
   const [serverAudioQuality, setServerAudioQuality] = useState<AudioQuality>("standard");
   const [serverAudioQualitySaving, setServerAudioQualitySaving] = useState(false);
+  const [serverVideoPixelFxEnabled, setServerVideoPixelFxEnabled] = useState(true);
   const [realtimeReconnectNonce, setRealtimeReconnectNonce] = useState(0);
   const [videoWindowsVisible, setVideoWindowsVisible] = useState(true);
   const realtimeClientRef = useRef<RealtimeClient | null>(null);
@@ -1449,6 +1450,7 @@ export function App() {
           localVideoStream={localVideoStream}
           remoteVideoStreamsByUserId={remoteVideoStreamsByUserId}
           remoteLabelsByUserId={remoteVideoLabelsByUserId}
+          pixelFxEnabled={serverVideoPixelFxEnabled}
           visible={allowVideoStreaming && videoWindowsVisible}
         />
 
@@ -1507,6 +1509,7 @@ export function App() {
         serverAudioQuality={serverAudioQuality}
         serverAudioQualitySaving={serverAudioQualitySaving}
         canManageAudioQuality={canManageAudioQuality}
+        serverVideoPixelFxEnabled={serverVideoPixelFxEnabled}
         onClose={() => setAppMenuOpen(false)}
         onSetServerMenuTab={setServerMenuTab}
         onPromote={(userId) => void promote(userId)}
@@ -1514,6 +1517,7 @@ export function App() {
         onSetBan={(userId, banned) => void setUserBan(userId, banned)}
         onRefreshTelemetry={() => void loadTelemetrySummary()}
         onSetServerAudioQuality={(value) => void setServerAudioQualityValue(value)}
+        onSetServerVideoPixelFxEnabled={setServerVideoPixelFxEnabled}
       />
 
       <ToastStack toasts={toasts} />

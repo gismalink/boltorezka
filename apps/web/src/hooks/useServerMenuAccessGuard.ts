@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 
-type ServerMenuTab = "users" | "events" | "telemetry" | "call" | "sound";
+type ServerMenuTab = "users" | "events" | "telemetry" | "call" | "sound" | "video";
 
 type UseServerMenuAccessGuardArgs = {
   serverMenuTab: ServerMenuTab;
@@ -29,6 +29,11 @@ export function useServerMenuAccessGuard({
     }
 
     if (serverMenuTab === "sound" && !canManageAudioQuality) {
+      setServerMenuTab("events");
+      return;
+    }
+
+    if (serverMenuTab === "video" && !canManageAudioQuality) {
       setServerMenuTab("events");
     }
   }, [serverMenuTab, canPromote, canViewTelemetry, canManageAudioQuality, setServerMenuTab]);

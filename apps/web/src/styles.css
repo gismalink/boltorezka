@@ -55,7 +55,7 @@
   position: fixed;
   inset: 0;
   pointer-events: none;
-  z-index: 60;
+  z-index: 35;
 }
 
 .video-window {
@@ -97,6 +97,10 @@
   object-fit: cover;
   image-rendering: pixelated;
   background: var(--pixel-bg);
+}
+
+.video-window-media-pixelfx {
+  filter: contrast(1.15) saturate(0.7) brightness(1.06);
 }
 
 .video-window-resize {
@@ -371,7 +375,7 @@ pre {
   border: var(--border-strong) solid var(--pixel-border);
   border-radius: 0;
   padding: var(--space-md);
-  z-index: 10;
+  z-index: 70;
   box-shadow:
     0 0 0 2px var(--pixel-bg),
     4px 4px 0 var(--pixel-hard-shadow),

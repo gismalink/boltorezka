@@ -1,6 +1,6 @@
 import type { AudioQuality, TelemetrySummary, User } from "../domain";
 
-type ServerMenuTab = "users" | "events" | "telemetry" | "call" | "sound";
+type ServerMenuTab = "users" | "events" | "telemetry" | "call" | "sound" | "video";
 
 type ServerProfileModalProps = {
   open: boolean;
@@ -18,6 +18,7 @@ type ServerProfileModalProps = {
   serverAudioQuality: AudioQuality;
   serverAudioQualitySaving: boolean;
   canManageAudioQuality: boolean;
+  serverVideoPixelFxEnabled: boolean;
   onClose: () => void;
   onSetServerMenuTab: (value: ServerMenuTab) => void;
   onPromote: (userId: string) => void;
@@ -25,6 +26,7 @@ type ServerProfileModalProps = {
   onSetBan: (userId: string, banned: boolean) => void;
   onRefreshTelemetry: () => void;
   onSetServerAudioQuality: (value: AudioQuality) => void;
+  onSetServerVideoPixelFxEnabled: (value: boolean) => void;
 };
 
 export function ServerProfileModal({
@@ -43,13 +45,15 @@ export function ServerProfileModal({
   serverAudioQuality,
   serverAudioQualitySaving,
   canManageAudioQuality,
+  serverVideoPixelFxEnabled,
   onClose,
   onSetServerMenuTab,
   onPromote,
   onDemote,
   onSetBan,
   onRefreshTelemetry,
-  onSetServerAudioQuality
+  onSetServerAudioQuality,
+  onSetServerVideoPixelFxEnabled
 }: ServerProfileModalProps) {
   if (!open) {
     return null;
@@ -108,6 +112,15 @@ export function ServerProfileModal({
               {t("server.tabSound")}
             </button>
           ) : null}
+          {canManageAudioQuality ? (
+            <button
+              type="button"
+              className={`secondary user-settings-tab-btn min-h-[42px] justify-start text-left max-[800px]:min-w-0 max-[800px]:justify-center ${serverMenuTab === "video" ? "user-settings-tab-btn-active" : ""}`}
+              onClick={() => onSetServerMenuTab("video")}
+            >
+              {t("server.tabVideo")}
+            </button>
+          ) : null}
         </div>
 
         <div className="user-settings-content grid min-h-0 min-w-0 grid-rows-[auto_minmax(0,1fr)] content-start gap-4 overflow-auto overflow-x-hidden pr-0">
@@ -118,6 +131,7 @@ export function ServerProfileModal({
               {serverMenuTab === "telemetry" ? t("server.tabTelemetry") : null}
               {serverMenuTab === "call" ? t("server.tabCall") : null}
               {serverMenuTab === "sound" ? t("server.tabSound") : null}
+              {serverMenuTab === "video" ? t("server.tabVideo") : null}
             </h2>
             <button
               type="button"
@@ -249,6 +263,21 @@ export function ServerProfileModal({
               {!canManageAudioQuality ? (
                 <p className="muted">{t("server.soundReadonly")}</p>
               ) : null}
+            </section>
+          ) : null}
+
+          {serverMenuTab === "video" && canManageAudioQuality ? (
+            <section className="grid gap-3">
+              <h3>{t("server.videoTitle")}</h3>
+              <p className="muted">{t("server.videoHint")}</p>
+              <button
+                type="button"
+                className={`secondary quality-toggle-btn ${serverVideoPixelFxEnabled ? "quality-toggle-btn-active" : ""}`}
+                onClick={() => onSetServerVideoPixelFxEnabled(!serverVideoPixelFxEnabled)}
+                aria-pressed={serverVideoPixelFxEnabled}
+              >
+                {t("server.videoFxToggle")}: {serverVideoPixelFxEnabled ? t("common.yes") : t("common.no")}
+              </button>
             </section>
           ) : null}
         </div>

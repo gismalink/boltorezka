@@ -7,6 +7,7 @@ type VideoWindowsOverlayProps = {
   localVideoStream: MediaStream | null;
   remoteVideoStreamsByUserId: Record<string, MediaStream>;
   remoteLabelsByUserId: Record<string, string>;
+  pixelFxEnabled: boolean;
   visible: boolean;
 };
 
@@ -49,6 +50,7 @@ function VideoTile({
   label,
   stream,
   muted,
+  pixelFxEnabled,
   layout,
   onDragStart,
   onResizeStart
@@ -57,6 +59,7 @@ function VideoTile({
   label: string;
   stream: MediaStream;
   muted: boolean;
+  pixelFxEnabled: boolean;
   layout: TileLayout;
   onDragStart: (id: string, event: ReactPointerEvent<HTMLDivElement>) => void;
   onResizeStart: (id: string, event: ReactPointerEvent<HTMLButtonElement>) => void;
@@ -69,8 +72,12 @@ function VideoTile({
       return;
     }
 
-    if (element.srcObject !== stream) {
-      element.srcObject = stream;
+    const videoOnlyStream = new MediaStream(stream.getVideoTracks());
+    if (element.srcObject !== videoOnlyStream) {
+      element.srcObject = videoOnlyStream;
+      void element.play().catch(() => {
+        return;
+      });
     }
   }, [stream]);
 
@@ -90,7 +97,7 @@ function VideoTile({
       </div>
       <video
         ref={videoRef}
-        className="video-window-media"
+        className={`video-window-media ${pixelFxEnabled ? "video-window-media-pixelfx" : ""}`}
         autoPlay
         playsInline
         muted={muted}
@@ -111,6 +118,7 @@ export function VideoWindowsOverlay({
   localVideoStream,
   remoteVideoStreamsByUserId,
   remoteLabelsByUserId,
+  pixelFxEnabled,
   visible
 }: VideoWindowsOverlayProps) {
   const items = useMemo<TileItem[]>(() => {
@@ -233,7 +241,8 @@ export function VideoWindowsOverlay({
           id={item.id}
           label={item.label}
           stream={item.stream}
-          muted={item.muted}
+          muted
+          pixelFxEnabled={pixelFxEnabled}
           layout={layoutsById[item.id] || defaultLayout(0)}
           onDragStart={(id, event) => {
             const layout = layoutsById[id] || defaultLayout(0);

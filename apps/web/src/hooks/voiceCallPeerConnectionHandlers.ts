@@ -124,9 +124,16 @@ export function bindVoicePeerConnectionHandlers({
   connection.ontrack = (event) => {
     const [stream] = event.streams;
     const [track] = event.track ? [event.track] : [];
-    if (!stream) {
-      pushCallLog(`remote track missing stream <- ${targetLabel || targetUserId}`);
+
+    const peer = peersRef.current.get(targetUserId);
+    if (!peer) {
       return;
+    }
+
+    const resolvedStream = stream || peer.remoteStream || new MediaStream();
+
+    if (!stream && track && !resolvedStream.getTracks().some((item) => item.id === track.id)) {
+      resolvedStream.addTrack(track);
     }
 
     if (track) {
@@ -149,21 +156,16 @@ export function bindVoicePeerConnectionHandlers({
     logVoiceDiagnostics("runtime remote track attached", {
       targetUserId,
       targetLabel,
-      streamId: stream.id
+      streamId: resolvedStream.id
     });
 
-    const peer = peersRef.current.get(targetUserId);
-    if (!peer) {
-      return;
-    }
-
-    peer.remoteStream = stream;
-    if (stream.getVideoTracks().length > 0) {
-      setRemoteVideoStream(targetUserId, stream);
+    peer.remoteStream = resolvedStream;
+    if (resolvedStream.getVideoTracks().length > 0) {
+      setRemoteVideoStream(targetUserId, resolvedStream);
     }
 
     const remoteAudioElement = peer.audioElement;
-    remoteAudioElement.srcObject = stream;
+    remoteAudioElement.srcObject = resolvedStream;
     peer.hasRemoteTrack = true;
     startPeerStatsMonitor(targetUserId, targetLabel);
 
@@ -175,7 +177,7 @@ export function bindVoicePeerConnectionHandlers({
         const speakingGain = speakingAudioContext.createGain();
         speakingAnalyser.fftSize = 512;
         speakingAnalyser.smoothingTimeConstant = 0.8;
-        const source = speakingAudioContext.createMediaStreamSource(stream);
+        const source = speakingAudioContext.createMediaStreamSource(resolvedStream);
         source.connect(speakingAnalyser);
         source.connect(speakingGain);
         speakingGain.connect(speakingAudioContext.destination);

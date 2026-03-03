@@ -24,7 +24,7 @@ export type UserDockProps = {
   audioOutputMenuOpen: boolean;
   voiceSettingsOpen: boolean;
   userSettingsOpen: boolean;
-  userSettingsTab: "profile" | "sound" | "server_sounds";
+  userSettingsTab: "profile" | "sound" | "camera" | "server_sounds";
   voiceSettingsPanel: VoiceSettingsPanel;
   profileNameDraft: string;
   profileEmail: string;
@@ -56,12 +56,12 @@ export type UserDockProps = {
   onToggleCamera: () => void;
   onToggleVoiceSettings: () => void;
   onToggleAudioOutput: () => void;
-  onOpenUserSettings: (tab: "profile" | "sound") => void;
+  onOpenUserSettings: (tab: "profile" | "sound" | "camera") => void;
   onSetVoiceSettingsOpen: (value: boolean) => void;
   onSetAudioOutputMenuOpen: (value: boolean) => void;
   onSetVoiceSettingsPanel: (panel: VoiceSettingsPanel) => void;
   onSetUserSettingsOpen: (value: boolean) => void;
-  onSetUserSettingsTab: (value: "profile" | "sound" | "server_sounds") => void;
+  onSetUserSettingsTab: (value: "profile" | "sound" | "camera" | "server_sounds") => void;
   onSetProfileNameDraft: (value: string) => void;
   onSetSelectedLang: (value: Lang) => void;
   onSaveProfile: (event: FormEvent) => void;
