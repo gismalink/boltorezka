@@ -3,6 +3,43 @@
 Этот документ хранит зафиксированные изменения, выполненные шаги и операционные evidence.
 План и open items находятся в `docs/status/ROADMAP.md`.
 
+## 2026-03-03 — Web UX hardening: media permissions + unified control bar
+
+### Delivered
+
+- User dock/media controls приведены к единому блоку для desktop/mobile (порядок: mic -> output -> camera placeholder -> disconnect).
+- Из control bar убраны user-profile/status элементы; блок используется как единый control surface в обоих layout-путях.
+- Добавлена camera placeholder-кнопка (disabled, с явным tooltip) для следующего video-инкремента.
+- При `mediaDevicesState=denied` лочатся media-контролы и sound controls (включая sliders/input profiles), остаётся доступной только кнопка запроса разрешения.
+- Усилен visual state для lock-режима (`not-allowed` + muted/disabled styling), кнопки растянуты равномерно по ширине.
+- Исправлен denied-flow state machine:
+  - `denied` не сбрасывается в `ready` при скрытых labels устройств,
+  - добавлена проверка через Permissions API (`microphone`) с fallback.
+
+### Validation
+
+- `apps/web -> npm run build` — PASS (несколько прогонов на каждом инкременте).
+- Test deploy/smoke от `origin/main` — PASS.
+
+### Key commits
+
+- `1f7f41f` — `feat(web): show top-center media access banner with request button`
+- `9fd212c` — `feat(web): unify media controls and lock on denied permissions`
+- `d61a52a` — `fix(web): persist denied media state and lock sound controls`
+- `8e9b640` — `style(web): stretch media controls and emphasize locked state`
+
+## 2026-03-03 — Type safety fix (realtime audio quality update)
+
+### Delivered
+
+- В `App.tsx` устранён TS-конфликт типов в `setRoomsTree` при обработке `audio.quality.updated`:
+  - `normalizedOverride` явно типизирован как `AudioQuality | null | undefined`.
+
+### Validation
+
+- `apps/web -> npm run build` — PASS.
+- IDE/typecheck ошибка на `setRoomsTree(...)` устранена.
+
 ## 2026-03-01 — Server global audio quality setting (default)
 
 ### Increment

@@ -3,7 +3,7 @@
 Этот документ хранит только план и открытые задачи.
 Фактически реализованные изменения и evidence ведутся отдельно в `docs/status/FEATURE_LOG.md`.
 
-## Current status (single-pane, 2026-03-01)
+## Current status (single-pane, 2026-03-03)
 
 - Краткий статус и release snapshot: `docs/status/STATUS.md`.
 - Каноника по voice baseline: `docs/runbooks/VOICE_BASELINE_RUNBOOK.md`.
@@ -26,9 +26,10 @@
 
 ## Focus now (операционный фокус)
 
-1. Следующий MVP-инкремент разрабатывать в `feature/*` с test-first циклом.
-2. Держать runbooks/contracts синхронизированными по итогам каждого релизного шага.
-3. Перед любым `prod` обновлять `PREPROD_DECISION_PACKAGE` и фиксировать owner sign-off.
+1. Закрыть web MVP polish: стабильный media-permission UX + единый control bar на desktop/mobile.
+2. Добавить e2e smoke на denied-media flow (проверка persistent banner + disabled controls).
+3. Подготовить deprecation-план для legacy `apps/api/public` с cutover/rollback шагами.
+4. Поддерживать test-first release cadence: каждое изменение через `deploy:test:smoke` с фиксированным evidence.
 
 ## Completed milestones (свернуто)
 
@@ -41,7 +42,7 @@
 
 ### Цели
 
-- [ ] Сделать React web основным UI по умолчанию.
+- [x] Сделать React web основным UI по умолчанию.
 
 ### Задачи
 
@@ -51,6 +52,7 @@
   - [x] join room
   - [x] send/receive message
   - [x] voice connect/disconnect
+- [ ] E2E smoke: denied media permissions UX (`banner + lock controls`).
 - [ ] Подготовить deprecation-план для legacy `apps/api/public`.
 - [ ] Реализовать карточку пользователя (web, Discord-like footer):
   - [x] Отдельный UI-блок с avatar/name/username и индикатором статуса.
@@ -73,8 +75,8 @@
 
 ### Exit criteria
 
-- [ ] Web MVP готов к ограниченному beta.
-- [ ] Discord-like channel tree стабилен в `test` и покрыт smoke/e2e.
+- [x] Web MVP готов к ограниченному beta.
+- [x] Discord-like channel tree стабилен в `test` и покрыт smoke/e2e.
 
 ---
 
@@ -115,18 +117,10 @@
 
 ## Execution plan (ближайшие действия)
 
-1. [x] Merge `feature/call-hangup-lifecycle` в `main` после review.
-2. [x] Выполнить post-merge verify в `test` от `origin/main`:
-  - [x] `deploy:test:smoke`
-  - [x] extended realtime relay smoke (`SMOKE_CALL_SIGNAL=1`, 2 ws-ticket)
-3. [x] Закрыть docs-gap для React как default UI runbook.
-4. [x] Финализировать OpenAPI/WS schema milestone.
-5. [x] Подготовить pre-prod decision пакет (evidence + rollback owner/plan).
-6. [x] Вернуться к `prod` только после достижения MVP-like readiness.
-  - [x] Формализован MVP-like readiness gate в `docs/runbooks/PREPROD_DECISION_PACKAGE.md`.
-  - [x] Подготовлен текущий draft gate-record (статус `NO-GO` до закрытия pending-проверок).
-  - [x] Закрыты pending smoke-проверки (`smoke:web:e2e`, `SMOKE_CALL_SIGNAL=1` relay).
-  - [x] Получен explicit `GO` и выполнен rollout из `origin/main`.
+1. [ ] Добавить `smoke:web:e2e` шаг для denied-media UX (persist banner/lock states).
+2. [ ] Подготовить и согласовать deprecation-план legacy static UI (`apps/api/public`).
+3. [ ] Зафиксировать post-MVP performance gate (API p95 + WS reconnect + call setup success) и пороги GO/NO-GO.
+4. [ ] После закрытия пунктов 1-3 выполнить новый pre-prod package refresh.
 
 ## KPI MVP
 

@@ -533,7 +533,7 @@ export function App() {
       }
 
       const rawOverride = payload.audioQualityOverride;
-      const normalizedOverride = rawOverride === null
+      const normalizedOverride: AudioQuality | null | undefined = rawOverride === null
         ? null
         : (rawOverride === "retro" || rawOverride === "low" || rawOverride === "standard" || rawOverride === "high")
           ? rawOverride
