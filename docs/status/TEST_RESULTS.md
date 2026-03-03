@@ -1,0 +1,330 @@
+# Boltorezka Test Results
+
+Отдельный журнал результатов тестов/нагрузки.
+
+## 2026-03-02 — Cycle #1 (MVP gate + API load P1)
+
+- Environment: `test` (`https://test.boltorezka.gismalink.art`)
+- Build ref: `origin/feature/tailwind-user-dock` (`50f89b3`)
+
+### Functional gate
+
+- `server-quick-check`: PASS
+- `npm run smoke:test:postdeploy`: PASS
+  - `smoke:sso`: PASS
+  - `smoke:api`: PASS
+  - `smoke:realtime`: PASS (`reconnectOk=true`)
+
+### API load P1 (20 rps, 5 min)
+
+- `GET /health`
+  - avg: `146.43 ms`
+  - p50: `106 ms`
+  - p97.5: `642 ms`
+  - p99: `1027 ms`
+  - max: `1608 ms`
+  - requests: `6k`
+
+- `GET /v1/auth/mode`
+  - avg: `100.54 ms`
+  - p50: `90 ms`
+  - p97.5: `281 ms`
+  - p99: `350 ms`
+  - max: `792 ms`
+  - requests: `6k`
+
+### Post-load checks
+
+- API logs (`--tail=300`, grep `error|fatal|exception|panic`): no critical matches.
+
+### Decision
+
+- Cycle #1: PASS
+- Next step: run P2 (`60 rps, 10 min`) + W1 (`100 concurrent WS, 10 min`) and capture TURN/api traffic deltas.
+
+## 2026-03-02 — Cycle #2 (P2 + WS capacity probe)
+
+- Environment: `test` (`https://test.boltorezka.gismalink.art`)
+- Build ref: `origin/feature/tailwind-user-dock` (`50f89b3`)
+
+### API load P2 (60 connections, pipelining 10, 10 min)
+
+- `GET /health`
+  - avg: `185.48 ms`
+  - p50: `130 ms`
+  - p97.5: `599 ms`
+  - p99: `758 ms`
+  - max: `9993 ms`
+  - requests: `1,929,350`
+  - errors: `130` (`timeouts`)
+
+### Realtime WS load
+
+- W1 (`100 clients`, `10 min`):
+  - connected: `100/100` (failures `0`)
+  - sent: `8,252`
+  - ack: `4,265`
+  - nack: `4,087`
+  - errors: `99`
+
+- W2 probe (`200 clients`, `5 min`):
+  - connected: `200/200` (failures `0`)
+  - sent: `9,460`
+  - ack: `4,949`
+  - nack: `4,711`
+  - errors: `199`
+
+- Diagnostic rerun (`100 clients`, `2 min`, with code breakdown):
+  - `nackCodes`: `NoActiveRoom=914`
+  - `errorCodes`: `ChannelSessionMoved=99`
+  - note: this probe used one JWT subject for all clients, so nack/error are dominated by session semantics (not socket-connect limit).
+
+### Traffic and TURN observations
+
+- Container net counters (baseline -> post):
+  - `boltorezka-api-test`: `5.33MB / 7.25MB` -> `841MB / 1.11GB`
+  - approx delta: `+835.7MB` recv, `+1.10GB` sent.
+
+- `boltorezka-turn` net counters: `3.4GB / 2.71GB` -> `3.4GB / 2.71GB` (no measurable change).
+- TURN socket sample (`ss -uan`, `ss -tan` inside container): `0 / 0` before, during and after these runs.
+
+### Decision
+
+- P2 API: PASS with low timeout share (`130 / 1,929,350` ~= `0.0067%`).
+- Realtime gateway accepts at least `200` concurrent WS connections in this scenario.
+- Current WS chat load probe is constrained by single-user session behavior; a multi-user token set is required for clean per-user chat throughput ceiling.
+- TURN capacity was not exercised (no media relay allocations in these runs).
+
+## 2026-03-02 — Cycle #3 (clean multi-user WS capacity)
+
+- Environment: `test` (`https://test.boltorezka.gismalink.art`)
+- Build ref: `origin/feature/tailwind-user-dock` (`50f89b3`)
+
+### Setup
+
+- Seeded synthetic test users in `test` DB: `300` (`wsload_...@example.test`).
+- `ws-load` updated to support token pool (`SMOKE_BEARER_TOKENS`) and round-robin assignment per client.
+
+### Realtime WS load (unique users)
+
+- W3 (`100 clients`, `5 min`, unique user tokens):
+  - connected: `100/100` (failures `0`)
+  - sent: `4,320`
+  - ack: `4,420`
+  - nack: `0`
+  - errors: `0`
+  - chatMessages: `211,972`
+
+- W4 (`200 clients`, `5 min`, unique user tokens):
+  - connected: `200/200` (failures `0`)
+  - sent: `10,282`
+  - ack: `10,436`
+  - nack: `0`
+  - errors: `0`
+  - chatMessages: `948,713`
+
+### Traffic and TURN observations (W4 window)
+
+- Container net counters (baseline -> post):
+  - `boltorezka-api-test`: `867MB / 1.26GB` -> `942MB / 2.03GB`
+  - approx delta: `+75MB` recv, `+770MB` sent.
+
+- `boltorezka-turn` net counters: no measurable change.
+- TURN socket sample (`ss -uan`, `ss -tan`): `0 / 0` before and after.
+
+### Decision
+
+- Clean chat/realtime capacity (without single-session collisions) is confirmed at `200` concurrent active WS users on current test stack.
+- TURN relay capacity remains unvalidated by these runs (media relay was not generated).
+
+## 2026-03-03 — Cycle #4 (TURN relay allocation stress, test)
+
+- Environment: `test` (`boltorezka-turn`)
+- TURN config under test: relay UDP/TCP range `30000-30100` (101 ports)
+
+### Method
+
+- Tool: `turnutils_uclient` inside TURN container.
+- Auth: production-like long-term TURN credentials from `infra/.env.host`.
+- Peer mode: external peer `8.8.8.8` (loopback peer is rejected by TURN policy with `403 Forbidden IP`).
+
+### Baseline after TURN restart
+
+- Socket baseline (`/proc/net/*`): `udp_lines=17`, `tcp_lines=17`.
+
+### Stable run (under limit)
+
+- Scenario: `m=20`, `timeout 90`, `-c -e 8.8.8.8`.
+- Result: PASS (run held until timeout, no `508`).
+- Mid-run sockets: `udp_lines=61`, `tcp_lines=17` (delta `+44` UDP sockets vs baseline).
+
+### Over-limit run
+
+- Scenario: `m=50`, same flags, clean restart before run.
+- Result: FAIL as expected with `error 508 (Cannot create socket)` and exit code `255`.
+
+### Decision
+
+- TURN relay capacity is now empirically exercised.
+- Practical ceiling for this test profile is reached between `20` and `50` concurrent TURN clients (with this `uclient` mode allocating ~2+ relay sockets per client).
+- With relay range size `101`, practical planning value is `~45-50` simultaneously relay-active clients for this profile; above that, expect `508` allocation failures.
+- For target `~100 TURN sockets`: current config is consistent with roughly `~50` simultaneously relay-active participants in 1-allocation-per-media-stream pair patterns.
+- Network `docker stats` NetIO for this cycle is not representative (client and TURN ran in same container namespace via localhost path).
+
+## 2026-03-03 — Cycle #5 (TURN range 30000-31000 + large run + parallel telemetry)
+
+- Environment: `test` (`boltorezka-turn`)
+- TURN recreated with expanded range override: `TURN_MIN_PORT=30000`, `TURN_MAX_PORT=31000`.
+- Port publish verification: `30000-31000/tcp` and `30000-31000/udp` are active on host.
+
+### Large TURN run #1
+
+- Scenario: `turnutils_uclient ... -m 300 -c -e 8.8.8.8 -r 3480` with `timeout 180`.
+- Result: PASS (process ended by timeout, no `508`, no `Forbidden`).
+
+### Large TURN run #2 (stress above #1)
+
+- Scenario: `turnutils_uclient ... -m 500 -c -e 8.8.8.8 -r 3480` with `timeout 120`.
+- Result: reached allocation limit (`error 508 (Cannot create socket)` observed).
+
+### Parallel system telemetry (during large runs)
+
+- TURN sockets (`/proc/net`):
+  - baseline after recreate: `udp=17`, `tcp=17`
+  - peak during run: `udp=917`, `tcp=17`
+  - stable elevated plateau observed: `udp≈704`, `tcp=17`
+
+- Container load snapshot (peak observed):
+  - `boltorezka-turn`: CPU up to `18.63%`, RSS up to `63.7MiB`
+  - `boltorezka-api-test`: near baseline (`~0.1-0.3% CPU`, `~92MiB` RSS)
+  - `boltorezka-db-test` / `redis-test`: low/steady background load.
+
+- Notes on network counters:
+  - `docker stats` NetIO for TURN changed minimally in this harness because generator ran in container namespace and traffic path is mostly local.
+
+### Decision
+
+- Expanding relay range from `101` to `1001` ports significantly raised practical TURN headroom.
+- Confirmed safe operating point at least `m=300` for this test profile.
+- `m=500` already hits socket creation failures, so practical planning zone is below this level.
+- For operations planning: start with conservative cap `~300` relay-active clients for this profile and treat `500` as over-limit until finer sweep confirms exact threshold.
+
+## 2026-03-03 — Cycle #6 (combined concurrent load: TURN + WS + API)
+
+- Environment: `test`
+- Scenario (simultaneous):
+  - `200 WS clients`
+  - `200 TURN relay allocations`
+  - `60 rps API`
+
+### TURN media profile (Opus-like target)
+
+- Tool profile: `turnutils_uclient -m 200 -n 10000 -l 100 -z 20 -c -e 8.8.8.8 -r 3480`.
+- Approx payload bitrate per flow: `100 bytes / 20 ms` ~= `40 kbps` (within requested `32-48 kbps` band).
+- Approx aggregate payload target for 200 flows: `~8 Mbps`.
+
+### Component results
+
+- TURN run (`timeout 180`): PASS by timeout (`exit 124` expected), `error 508=0`, `Forbidden=0`.
+- WS run (`200 unique users`, `180s`):
+  - connected: `200/200` (failures `0`)
+  - sent: `19,116`
+  - ack: `19,164`
+  - nack: `0`
+  - errors: `0`
+- API run (`autocannon -R 60 -d 180`):
+  - total requests: `10,693` (`200` only)
+  - avg latency: `106.43 ms`
+  - p50: `82 ms`, p97.5: `402 ms`, p99: `543 ms`
+
+### Parallel telemetry (same window)
+
+- TURN sockets (`/proc/net`):
+  - baseline: `udp=17`, `tcp=17`
+  - during load plateau: `udp=264`, `tcp=64`
+  - post-run before reset: `udp=217`, `tcp=17`
+  - after reset: `udp=17`, `tcp=17`
+
+- Container CPU/RSS peaks observed:
+  - `boltorezka-turn`: CPU up to `0.72%` in sampled window, RSS up to `27.26MiB`
+  - `boltorezka-api-test`: CPU up to `25.56%`, RSS up to `141.1MiB`
+  - `boltorezka-db-test`: CPU up to `4.24%`
+  - `boltorezka-redis-test`: CPU up to `1.99%`
+
+- NetIO deltas (sample window):
+  - `boltorezka-api-test`: from `~1.01GB/2.60GB` to `~1.07GB/3.03GB` (approx `+60MB` rx, `+430MB` tx)
+  - `boltorezka-turn`: minor change (`~260kB/236kB` -> `~278kB/254kB`) due local-generator harness path.
+
+### Decision
+
+- Combined target scenario is sustainable in test under current config.
+- API is the dominant resource consumer in this mixed run; TURN remained low CPU in sampled interval.
+- TURN socket behavior remained stable for `200` allocations with this profile and returned to baseline after restart.
+
+## 2026-03-03 — Cycle #7 (10-minute combined run, same profile)
+
+- Environment: `test`
+- Simultaneous scenario (10 minutes):
+  - `200 WS clients` (`WS_LOAD_DURATION_SEC=600`)
+  - `200 TURN allocations` (`timeout 600`)
+  - `60 rps API` (10 x 60s windows)
+
+### TURN profile (Opus-like target)
+
+- `turnutils_uclient -m 200 -n 10000 -l 100 -z 20 -c -e 8.8.8.8 -r 3480`
+- Target payload bitrate per flow: `~40 kbps` (`100 bytes / 20 ms`), aggregate `~8 Mbps`.
+
+### Results
+
+- TURN (`600s`): PASS by timeout (`exit 124` expected), `error 508=0`, `Forbidden=0`.
+- WS (`600s`):
+  - connected: `200/200` (failures `0`)
+  - sent: `53,190`
+  - ack: `53,362`
+  - nack/errors: `0/0`
+  - chatMessages: `5,082,201`
+- API (`60 rps`, minute windows):
+  - total requests: `35,865`
+  - avg latency mean (10 min): `89.25 ms`
+  - p95 mean (minute-level): `283.9 ms`
+  - p99 mean (minute-level): `364.7 ms`
+  - worst minute: `p95=494 ms`, `p99=620 ms`
+  - errors/timeouts: `0/0`
+
+### CPU p95/p99 (sampled window)
+
+- Sampling source: container monitor every 10s (available samples range `10..60`).
+- `boltorezka-api-test`: avg `4.16%`, p95 `7.21%`, p99 `7.96%`, max `8.31%`.
+- `boltorezka-turn`: avg `0.03%`, p95 `0.05%`, p99 `0.06%`, max `0.06%`.
+- `boltorezka-db-test`: avg `1.50%`, p95 `4.92%`, p99 `5.45%`, max `5.66%`.
+- `boltorezka-redis-test`: avg `1.31%`, p95 `2.56%`, p99 `2.79%`, max `2.85%`.
+
+### NetIO and sockets
+
+- API NetIO grew during run (from baseline `~1.07GB/3.03GB` to monitor-end `~1.46GB/5.49GB`).
+- TURN NetIO in this harness remained low-variance due local path specifics.
+- TURN socket samples in captured monitor window remained at `udp=17`, `tcp=17`.
+
+### Decision
+
+- 10-minute mixed profile is stable at target load (`200 WS + 200 TURN + 60 rps API`).
+- API remains primary resource hotspot; TURN CPU headroom is high for this synthetic profile.
+
+## 2026-03-03 — Operational baseline (derived from cycles #5/#6/#7)
+
+### Recommended operating caps (test baseline)
+
+- Mixed steady profile: `200 WS + 200 TURN allocations + 60 rps API` for at least `10 min`.
+- TURN planning cap for this synthetic profile: use `~300` as conservative upper bound.
+- TURN `m=500` is over-limit in current setup (`error 508` observed), do not use as normal operating target.
+
+### Suggested alert thresholds (initial)
+
+- API latency guardrail for this profile: alert if minute-level `p99 > 700 ms` for `>=3` consecutive minutes.
+- API error guardrail: alert on any non-zero minute `errors/timeouts` during steady `60 rps` run.
+- TURN allocation guardrail: alert on first appearance of `error 508` in TURN logs.
+
+### Notes
+
+- These limits are valid for current `test` stack shape and this harness profile (Opus-like `~40 kbps` payload path).
+- Re-validate caps after infra changes (TURN range, host limits, Docker/Desktop version, API/DB release updates).

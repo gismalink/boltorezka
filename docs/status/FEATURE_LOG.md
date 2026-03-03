@@ -855,65 +855,11 @@ _Для визуальных/UX инкрементов ниже использу
 
 ## 2026-03-02 — Chat/mobile UX + moderation window updates
 
-### Delivered
-
-- Mobile UX:
-  - selected mobile tab no longer resets on viewport resize;
-  - selecting a room on mobile no longer auto-switches to chat tab;
-  - mobile disconnect control added next to mic/headphones controls.
-- Channel settings popup mobile fit:
-  - popup constrained by mobile viewport and tabbar reserve,
-  - vertical overflow moved to internal scroll.
-- Chat image paste pipeline:
-  - stronger compression (canvas resize + JPEG quality),
-  - pasted image markdown naming switched to `скриншот-<hh>-<mm>`.
-- Message lifecycle:
-  - user can edit/delete own messages within 10 minutes,
-  - ArrowUp in empty input opens edit mode for latest editable own message,
-  - realtime events `chat.edited` / `chat.deleted` added end-to-end.
-
-### Contracts/runtime updates
-
-- WS incoming events: `chat.edit`, `chat.delete`.
-- WS outgoing events: `chat.edited`, `chat.deleted`.
-- Nack codes for policy violations: `MessageNotFound`, `EditWindowExpired`, `DeleteWindowExpired`.
-- DB schema: `messages.updated_at` added (idempotent migration); history endpoint returns `edited_at`.
-
-### Validation
-
-- Local checks:
-  - `npm run check:api-types` — PASS;
-  - `npm run web:build` — PASS.
+- Delivered: mobile UX fixes, channel-settings popup fit on mobile, chat image compression/naming, `chat.edit`/`chat.delete` lifecycle + ArrowUp edit.
 - Commit: `50f89b3` (`feature/tailwind-user-dock`).
-- Test rollout/smoke:
-  - `ssh mac-mini 'cd ~/srv/boltorezka && TEST_REF=origin/feature/tailwind-user-dock npm run deploy:test:smoke'` — PASS.
-  - `smoke:sso` — PASS.
-  - `smoke:api` — PASS.
-  - `smoke:realtime` — PASS (`reconnectOk=true`).
+- Test evidence moved to dedicated log: `docs/status/TEST_RESULTS.md`.
 
 ## 2026-03-02 — MVP + API load cycle #1 (test)
 
-### Execution
-
-- Baseline snapshot: `ssh mac-mini 'cd ~/srv/edge && ./scripts/server-quick-check.sh'`.
-- Functional gate: `ssh mac-mini 'cd ~/srv/boltorezka && npm run smoke:test:postdeploy'` — PASS (`smoke:sso`, `smoke:api`, `smoke:realtime`, `reconnectOk=true`).
-
-### API load P1 (20 rps, 5 min)
-
-- Endpoint: `GET /health`
-  - command: `npx -y autocannon -R 20 -d 300 -c 20 https://test.boltorezka.gismalink.art/health`
-  - result: avg `146.43 ms`, p50 `106 ms`, p97.5 `642 ms`, p99 `1027 ms`, max `1608 ms`, total `6k` requests.
-- Endpoint: `GET /v1/auth/mode`
-  - command: `npx -y autocannon -R 20 -d 300 -c 20 https://test.boltorezka.gismalink.art/v1/auth/mode`
-  - result: avg `100.54 ms`, p50 `90 ms`, p97.5 `281 ms`, p99 `350 ms`, max `792 ms`, total `6k` requests.
-
-### Post-load health/logs
-
-- API logs check (`--tail=300` + grep `error|fatal|exception|panic`) — no critical matches.
-- No smoke regressions detected after load.
-
-### Outcome
-
-- MVP functional gate: PASS.
-- API load P1 public endpoints: PASS.
-- Next recommended run: P2 mixed load + WS load profile `W1` from `docs/plans/TEST_PLAN_MVP_LOAD_2026-03.md`.
+- Detailed metrics moved to `docs/status/TEST_RESULTS.md` (entry: 2026-03-02 cycle #1).
+- Follow-up load plan: `docs/plans/TEST_PLAN_MVP_LOAD_2026-03.md`.

@@ -36,6 +36,7 @@ Legacy-файлы перенесены в `legacy/poc/`.
 - Архитектура: [docs/architecture/ARCHITECTURE.md](docs/architecture/ARCHITECTURE.md)
 - План переписывания (plan-only): [docs/status/ROADMAP.md](docs/status/ROADMAP.md)
 - Лог реализованных фич и evidence: [docs/status/FEATURE_LOG.md](docs/status/FEATURE_LOG.md)
+- Отдельный журнал тестов/нагрузки: [docs/status/TEST_RESULTS.md](docs/status/TEST_RESULTS.md)
 - HTTP контракт v1: [docs/contracts/API_CONTRACT_V1.md](docs/contracts/API_CONTRACT_V1.md)
 - WS контракт v1: [docs/contracts/WS_CONTRACT_V1.md](docs/contracts/WS_CONTRACT_V1.md)
 - OpenAPI artifact v1: [docs/contracts/OPENAPI_V1.yaml](docs/contracts/OPENAPI_V1.yaml)
