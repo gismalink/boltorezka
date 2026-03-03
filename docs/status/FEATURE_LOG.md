@@ -3,6 +3,27 @@
 Этот документ хранит зафиксированные изменения, выполненные шаги и операционные evidence.
 План и open items находятся в `docs/status/ROADMAP.md`.
 
+## 2026-03-03 — Legacy `apps/api/public` deprecation plan formalized
+
+### Delivered
+
+- Добавлен канонический runbook-план:
+  - `docs/runbooks/LEGACY_PUBLIC_DEPRECATION_PLAN.md`.
+- План покрывает:
+  - текущее состояние static serving (`fastifyStatic` + image build copy),
+  - phased cutover (`A/B/C/D`),
+  - `GO/NO-GO` критерии,
+  - rollback strategy и ownership.
+- Обновлена навигация:
+  - `docs/README.md`,
+  - root `README.md`.
+- В roadmap deprecation-plan переведён в completed, следующий шаг — `test` dry-run.
+
+### Validation
+
+- Документация синхронизирована с текущей архитектурой (`apps/api/src/index.ts`, `apps/api/Dockerfile`).
+- Внесены только docs-изменения, без runtime-кода.
+
 ## 2026-03-03 — Web denied-media smoke gate added to e2e flow
 
 ### Delivered

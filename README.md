@@ -43,6 +43,7 @@ Legacy-файлы перенесены в `legacy/poc/`.
 - Smoke/CI matrix: [docs/operations/SMOKE_CI_MATRIX.md](docs/operations/SMOKE_CI_MATRIX.md)
 - Test plan (MVP + load): [docs/plans/TEST_PLAN_MVP_LOAD_2026-03.md](docs/plans/TEST_PLAN_MVP_LOAD_2026-03.md)
 - Voice baseline runbook: [docs/runbooks/VOICE_BASELINE_RUNBOOK.md](docs/runbooks/VOICE_BASELINE_RUNBOOK.md)
+- Legacy static deprecation plan: [docs/runbooks/LEGACY_PUBLIC_DEPRECATION_PLAN.md](docs/runbooks/LEGACY_PUBLIC_DEPRECATION_PLAN.md)
 - Тестовый деплой (GitOps): [docs/runbooks/RUNBOOK_TEST_DEPLOY.md](docs/runbooks/RUNBOOK_TEST_DEPLOY.md)
 - Быстрый rollout в test (5 команд): [docs/runbooks/RUNBOOK_TEST_ROLLOUT_QUICKSTART.md](docs/runbooks/RUNBOOK_TEST_ROLLOUT_QUICKSTART.md)
 - Pre-prod checklist: [docs/runbooks/PREPROD_CHECKLIST.md](docs/runbooks/PREPROD_CHECKLIST.md)
