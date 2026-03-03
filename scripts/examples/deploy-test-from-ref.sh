@@ -12,6 +12,7 @@ REPO_DIR="${2:-$HOME/boltorezka}"
 COMPOSE_FILE="infra/docker-compose.host.yml"
 ENV_FILE="infra/.env.host"
 HEALTHCHECK_URL="${TEST_HEALTHCHECK_URL:-https://test.boltorezka.gismalink.art/health}"
+FULL_RECREATE="${FULL_RECREATE:-0}"
 
 if [[ "$GIT_REF" =~ ^(origin/main|main|origin/master|master)$ ]] && [[ "${ALLOW_TEST_FROM_MAIN:-0}" != "1" ]]; then
   echo "[deploy-test] blocked by policy: test deploy should use feature branch ref"
@@ -40,7 +41,7 @@ if [[ ! -f "$ENV_FILE" ]]; then
   exit 1
 fi
 
-echo "[deploy-test] recreate test services"
+echo "[deploy-test] deploy mode: api-only (set FULL_RECREATE=1 for full dependency recreate)"
 TMP_DOCKER_CONFIG="$(mktemp -d)"
 trap 'rm -rf "$TMP_DOCKER_CONFIG"' EXIT
 
@@ -59,7 +60,12 @@ JSON
 
 DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" build boltorezka-api-test
 
-DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d --force-recreate boltorezka-api-test
+if [[ "$FULL_RECREATE" == "1" ]]; then
+  echo "[deploy-test] full recreate enabled"
+  DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d --force-recreate boltorezka-api-test
+else
+  DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d --no-deps --force-recreate boltorezka-api-test
+fi
 
 echo "[deploy-test] wait api health"
 for i in {1..180}; do

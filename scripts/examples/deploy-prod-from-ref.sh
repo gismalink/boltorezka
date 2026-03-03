@@ -12,6 +12,7 @@ REPO_DIR="${2:-$HOME/boltorezka}"
 COMPOSE_FILE="infra/docker-compose.host.yml"
 ENV_FILE="infra/.env.host"
 HEALTHCHECK_URL="${PROD_HEALTHCHECK_URL:-https://boltorezka.gismalink.art/health}"
+FULL_RECREATE="${FULL_RECREATE:-0}"
 
 cd "$REPO_DIR"
 
@@ -34,7 +35,7 @@ if [[ ! -f "$ENV_FILE" ]]; then
   exit 1
 fi
 
-echo "[deploy-prod] recreate prod services"
+echo "[deploy-prod] deploy mode: api-only (set FULL_RECREATE=1 for full dependency recreate)"
 TMP_DOCKER_CONFIG="$(mktemp -d)"
 trap 'rm -rf "$TMP_DOCKER_CONFIG"' EXIT
 
@@ -53,7 +54,12 @@ JSON
 
 DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" build boltorezka-api-prod
 
-DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d --force-recreate boltorezka-api-prod
+if [[ "$FULL_RECREATE" == "1" ]]; then
+  echo "[deploy-prod] full recreate enabled"
+  DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d --force-recreate boltorezka-api-prod
+else
+  DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d --no-deps --force-recreate boltorezka-api-prod
+fi
 
 echo "[deploy-prod] wait api health"
 for i in {1..180}; do
