@@ -3,6 +3,35 @@
 Этот документ хранит зафиксированные изменения, выполненные шаги и операционные evidence.
 План и open items находятся в `docs/status/ROADMAP.md`.
 
+## 2026-03-03 — Legacy public deprecation dry-run (test rollback rehearsal)
+
+### Dry-run scope
+
+- Проверен rollback-путь для deprecation-plan без prod-изменений:
+  1. baseline deploy/smoke в `test` от `origin/main` (`a743f00`) — PASS,
+  2. rollback rehearsal deploy/smoke на предыдущий SHA (`a159e87`) — PASS,
+  3. restore deploy/smoke обратно на `origin/main` (`a743f00`) — PASS.
+
+### Commands (executed)
+
+- `ssh mac-mini 'cd ~/srv/boltorezka && TEST_REF=origin/main ALLOW_TEST_FROM_MAIN=1 npm run deploy:test:smoke'`
+- `ssh mac-mini 'cd ~/srv/boltorezka && TEST_REF=a159e87 npm run deploy:test:smoke'`
+- `ssh mac-mini 'cd ~/srv/boltorezka && TEST_REF=origin/main ALLOW_TEST_FROM_MAIN=1 npm run deploy:test:smoke'`
+
+### Validation
+
+- Во всех трёх прогонах postdeploy smoke прошёл:
+  - `health` — PASS,
+  - `smoke:sso` — PASS,
+  - `smoke:api` — PASS,
+  - `smoke:realtime` — PASS (`reconnectOk=true`).
+- Release log записи автоматически добавлены через deploy pipeline.
+
+### Status
+
+- Rollback rehearsal: **DONE**.
+- Dual-path static readiness (отдельный static delivery path) остаётся **OPEN** и входит в следующий инкремент.
+
 ## 2026-03-03 — Legacy `apps/api/public` deprecation plan formalized
 
 ### Delivered
