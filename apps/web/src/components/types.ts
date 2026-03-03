@@ -71,6 +71,7 @@ export type UserDockProps = {
   onSetSelectedInputProfile: (value: InputProfile) => void;
   onRefreshDevices: () => void;
   onRequestMediaAccess: () => void;
+  onRequestVideoAccess: () => void;
   onSetMicVolume: (value: number) => void;
   onSetOutputVolume: (value: number) => void;
   onSetServerSoundsMasterVolume: (value: number) => void;

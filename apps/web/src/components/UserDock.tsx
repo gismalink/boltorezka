@@ -62,6 +62,7 @@ export function UserDock({
   onSetSelectedInputProfile,
   onRefreshDevices,
   onRequestMediaAccess,
+  onRequestVideoAccess,
   onSetMicVolume,
   onSetOutputVolume,
   onSetServerSoundsMasterVolume,
@@ -394,7 +395,10 @@ export function UserDock({
                   className="secondary icon-btn split-caret-btn"
                   data-tooltip={t("video.cameraDevice")}
                   disabled={mediaControlsLocked || !currentRoomSupportsVideo}
-                  onClick={() => setCameraMenuOpen((value) => !value)}
+                  onClick={() => {
+                    onRequestVideoAccess();
+                    setCameraMenuOpen((value) => !value);
+                  }}
                 >
                   <i className="bi bi-chevron-down" aria-hidden="true" />
                 </button>

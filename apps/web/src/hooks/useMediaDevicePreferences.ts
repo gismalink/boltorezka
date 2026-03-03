@@ -143,6 +143,20 @@ export function useMediaDevicePreferences({
     }
   }, [applyDeniedState]);
 
+  const requestVideoPermission = useCallback(async () => {
+    if (!navigator.mediaDevices?.getUserMedia) {
+      return false;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: true });
+      stream.getTracks().forEach((track) => track.stop());
+      return true;
+    } catch {
+      return false;
+    }
+  }, []);
+
   const loadDevices = useCallback(async () => {
     const permissionState = await getMicrophonePermissionState();
     if (permissionState === "denied") {
@@ -376,6 +390,11 @@ export function useMediaDevicePreferences({
     },
     requestMediaAccess: () => {
       void requestMicPermission().finally(() => {
+        void loadDevices();
+      });
+    },
+    requestVideoAccess: () => {
+      void requestVideoPermission().finally(() => {
         void loadDevices();
       });
     }

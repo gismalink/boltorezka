@@ -696,7 +696,7 @@ export function App() {
     }
   }, [messages, user?.id, playServerSound]);
 
-  const { refreshDevices, requestMediaAccess } = useMediaDevicePreferences({
+  const { refreshDevices, requestMediaAccess, requestVideoAccess } = useMediaDevicePreferences({
     t,
     selectedInputId,
     selectedOutputId,
@@ -1180,6 +1180,7 @@ export function App() {
         }
         setCameraEnabled((value) => !value);
       }}
+      onRequestVideoAccess={requestVideoAccess}
       onToggleVoiceSettings={() => {
         setAudioOutputMenuOpen(false);
         setVoiceSettingsPanel(null);
@@ -1275,6 +1276,7 @@ export function App() {
         }
         setCameraEnabled((value) => !value);
       }}
+      onRequestVideoAccess={requestVideoAccess}
       onToggleVoiceSettings={() => {
         setAudioOutputMenuOpen(false);
         setVoiceSettingsPanel(null);
