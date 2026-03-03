@@ -1096,6 +1096,7 @@ export function useVoiceCallRuntime({
   useVoiceRuntimeMediaEffects({
     localStreamRef,
     peersRef,
+    roomVoiceConnected,
     allowVideoStreaming,
     videoStreamingEnabled,
     selectedInputId,

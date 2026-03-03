@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import type { MutableRefObject } from "react";
 import { logVoiceDiagnostics } from "../utils/voiceDiagnostics";
 import type { VoicePeersRef } from "./voiceCallTypes";
@@ -6,6 +6,7 @@ import type { VoicePeersRef } from "./voiceCallTypes";
 type UseVoiceRuntimeMediaEffectsArgs = {
   localStreamRef: MutableRefObject<MediaStream | null>;
   peersRef: VoicePeersRef;
+  roomVoiceConnected: boolean;
   allowVideoStreaming: boolean;
   videoStreamingEnabled: boolean;
   selectedInputId: string;
@@ -26,6 +27,7 @@ type UseVoiceRuntimeMediaEffectsArgs = {
 export function useVoiceRuntimeMediaEffects({
   localStreamRef,
   peersRef,
+  roomVoiceConnected,
   allowVideoStreaming,
   videoStreamingEnabled,
   selectedInputId,
@@ -42,6 +44,8 @@ export function useVoiceRuntimeMediaEffects({
   pushToastThrottled,
   t
 }: UseVoiceRuntimeMediaEffectsArgs) {
+  const mediaRecoveryInProgressRef = useRef(false);
+
   useEffect(() => {
     if (!localStreamRef.current) {
       return;
@@ -242,5 +246,204 @@ export function useVoiceRuntimeMediaEffects({
     getVideoConstraints,
     setLocalVideoStream,
     pushCallLog
+  ]);
+
+  useEffect(() => {
+    if (!roomVoiceConnected) {
+      return;
+    }
+
+    const WATCHDOG_INTERVAL_MS = 5000;
+    const STALL_TICKS_THRESHOLD = 3;
+    let cancelled = false;
+    const outboundStateBySender = new Map<string, { bytes: number; stalledTicks: number }>();
+
+    const recoverLocalMedia = async (reason: string) => {
+      if (mediaRecoveryInProgressRef.current) {
+        return;
+      }
+
+      mediaRecoveryInProgressRef.current = true;
+
+      try {
+        const recoveredStream = await navigator.mediaDevices.getUserMedia({
+          audio: getAudioConstraints(),
+          video: getVideoConstraints()
+        });
+
+        if (cancelled) {
+          recoveredStream.getTracks().forEach((track) => track.stop());
+          return;
+        }
+
+        const nextAudioTrack = recoveredStream.getAudioTracks()[0] || null;
+        const nextVideoTrack = recoveredStream.getVideoTracks()[0] || null;
+
+        if (!nextAudioTrack) {
+          recoveredStream.getTracks().forEach((track) => track.stop());
+          throw new Error("audio track missing");
+        }
+
+        nextAudioTrack.enabled = !micMuted;
+
+        const mergedTracks: MediaStreamTrack[] = [nextAudioTrack];
+        if (nextVideoTrack && allowVideoStreaming && videoStreamingEnabled) {
+          mergedTracks.push(nextVideoTrack);
+        }
+        const mergedStream = new MediaStream(mergedTracks);
+
+        await Promise.all(
+          Array.from(peersRef.current.values()).map(async ({ connection }) => {
+            const audioSender = connection.getSenders().find((item) => item.track?.kind === "audio");
+            if (audioSender) {
+              await audioSender.replaceTrack(nextAudioTrack);
+            } else {
+              connection.addTrack(nextAudioTrack, mergedStream);
+            }
+
+            const videoSender = connection.getSenders().find((item) => item.track?.kind === "video");
+            if (videoSender) {
+              await videoSender.replaceTrack(nextVideoTrack && videoStreamingEnabled ? nextVideoTrack : null);
+            } else if (nextVideoTrack && allowVideoStreaming && videoStreamingEnabled) {
+              connection.addTrack(nextVideoTrack, mergedStream);
+            }
+          })
+        );
+
+        localStreamRef.current?.getTracks().forEach((track) => track.stop());
+        localStreamRef.current = mergedStream;
+        setLocalVideoStream(nextVideoTrack && allowVideoStreaming && videoStreamingEnabled ? mergedStream : null);
+        outboundStateBySender.clear();
+        pushCallLog(`local media recovered by watchdog (${reason})`);
+      } catch (error) {
+        if (!cancelled) {
+          pushToastThrottled("media-watchdog-recover-failed", t("settings.devicesLoadFailed"));
+          pushCallLog(`local media recovery failed (${reason}): ${(error as Error).message}`);
+        }
+      } finally {
+        mediaRecoveryInProgressRef.current = false;
+      }
+    };
+
+    const checkOutboundFlow = async (): Promise<string | null> => {
+      for (const [peerUserId, peer] of peersRef.current.entries()) {
+        if (peer.connection.connectionState !== "connected") {
+          continue;
+        }
+
+        const senders = peer.connection.getSenders();
+        const kinds: Array<"audio" | "video"> = ["audio", "video"];
+
+        for (const kind of kinds) {
+          if (kind === "video" && (!allowVideoStreaming || !videoStreamingEnabled)) {
+            outboundStateBySender.delete(`${peerUserId}:video`);
+            continue;
+          }
+
+          if (kind === "audio" && micMuted) {
+            outboundStateBySender.delete(`${peerUserId}:audio`);
+            continue;
+          }
+
+          const sender = senders.find((item) => item.track?.kind === kind);
+          if (!sender?.track || sender.track.readyState !== "live") {
+            return `${kind}-sender-missing`;
+          }
+
+          try {
+            const stats = await sender.getStats();
+            let bytesSent = -1;
+            stats.forEach((report) => {
+              if (report.type === "outbound-rtp" && !(report as { isRemote?: boolean }).isRemote) {
+                const bytes = (report as { bytesSent?: number }).bytesSent;
+                if (typeof bytes === "number") {
+                  bytesSent = Math.max(bytesSent, bytes);
+                }
+              }
+            });
+
+            if (bytesSent < 0) {
+              continue;
+            }
+
+            const key = `${peerUserId}:${kind}`;
+            const previous = outboundStateBySender.get(key);
+
+            if (!previous || bytesSent > previous.bytes) {
+              outboundStateBySender.set(key, { bytes: bytesSent, stalledTicks: 0 });
+              continue;
+            }
+
+            const nextStalledTicks = previous.stalledTicks + 1;
+            outboundStateBySender.set(key, {
+              bytes: bytesSent,
+              stalledTicks: nextStalledTicks
+            });
+
+            if (nextStalledTicks >= STALL_TICKS_THRESHOLD) {
+              return `${kind}-outbound-stalled`;
+            }
+          } catch {
+            continue;
+          }
+        }
+      }
+
+      return null;
+    };
+
+    const runWatchdogTick = async () => {
+      if (cancelled) {
+        return;
+      }
+
+      const stream = localStreamRef.current;
+      if (!stream) {
+        return;
+      }
+
+      const audioTrack = stream.getAudioTracks()[0] || null;
+      if (!audioTrack || audioTrack.readyState !== "live") {
+        await recoverLocalMedia("audio-track-ended");
+        return;
+      }
+
+      if (allowVideoStreaming && videoStreamingEnabled) {
+        const videoTrack = stream.getVideoTracks()[0] || null;
+        if (!videoTrack || videoTrack.readyState !== "live") {
+          await recoverLocalMedia("video-track-ended");
+          return;
+        }
+      }
+
+      const outboundIssue = await checkOutboundFlow();
+      if (outboundIssue) {
+        await recoverLocalMedia(outboundIssue);
+      }
+    };
+
+    const timerId = window.setInterval(() => {
+      void runWatchdogTick();
+    }, WATCHDOG_INTERVAL_MS);
+
+    void runWatchdogTick();
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(timerId);
+    };
+  }, [
+    roomVoiceConnected,
+    localStreamRef,
+    peersRef,
+    allowVideoStreaming,
+    videoStreamingEnabled,
+    micMuted,
+    getAudioConstraints,
+    getVideoConstraints,
+    setLocalVideoStream,
+    pushCallLog,
+    pushToastThrottled,
+    t
   ]);
 }
