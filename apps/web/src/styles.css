@@ -100,7 +100,14 @@
 }
 
 .video-window-media-pixelfx {
-  filter: contrast(1.15) saturate(0.7) brightness(1.06);
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  filter: contrast(1.45) saturate(0.45) brightness(1.08) hue-rotate(-6deg);
+  transform: translateZ(0);
+  background-image:
+    linear-gradient(to right, rgba(0, 0, 0, 0.14) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.14) 1px, transparent 1px);
+  background-size: 4px 4px;
 }
 
 .video-window-resize {

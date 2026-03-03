@@ -98,6 +98,8 @@ function VideoTile({
       <video
         ref={videoRef}
         className={`video-window-media ${pixelFxEnabled ? "video-window-media-pixelfx" : ""}`}
+        width={pixelFxEnabled ? 96 : undefined}
+        height={pixelFxEnabled ? 72 : undefined}
         autoPlay
         playsInline
         muted={muted}

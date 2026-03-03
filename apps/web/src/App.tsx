@@ -1179,6 +1179,9 @@ export function App() {
         if (!allowVideoStreaming) {
           return;
         }
+        if (!cameraEnabled) {
+          requestVideoAccess();
+        }
         setCameraEnabled((value) => !value);
       }}
       onRequestVideoAccess={requestVideoAccess}
@@ -1274,6 +1277,9 @@ export function App() {
       onToggleCamera={() => {
         if (!allowVideoStreaming) {
           return;
+        }
+        if (!cameraEnabled) {
+          requestVideoAccess();
         }
         setCameraEnabled((value) => !value);
       }}
