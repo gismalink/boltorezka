@@ -8,7 +8,7 @@ async function fetchText(url, options = {}) {
 }
 
 function extractFirstAssetPath(html) {
-  const match = html.match(/<(?:script|link)[^>]+(?:src|href)=["']([^"']+\/assets\/[^"']+)["']/i);
+  const match = html.match(/<(?:script|link)[^>]+(?:src|href)=["']([^"']*\/assets\/[^"']+)["']/i);
   if (!match) {
     return null;
   }
