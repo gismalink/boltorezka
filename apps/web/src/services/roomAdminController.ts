@@ -1,6 +1,16 @@
 import { api } from "../api";
 import type { AudioQuality, Message, MessagesCursor, Room, RoomKind, RoomsTreeResponse, User } from "../domain";
 
+const normalizeSlugInput = (value: string) => {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_]+/g, "-")
+    .replace(/[^a-z0-9-]/g, "")
+    .replace(/-+/g, "-")
+    .replace(/^-+|-+$/g, "");
+};
+
 type RoomAdminControllerOptions = {
   pushLog: (text: string) => void;
   pushToast?: (text: string) => void;
@@ -32,7 +42,7 @@ export class RoomAdminController {
 
   async createCategory(token: string, slugInput: string, titleInput: string) {
     try {
-      const slug = slugInput.trim();
+      const slug = normalizeSlugInput(slugInput);
       const title = titleInput.trim();
       await api.createCategory(token, { slug, title });
       await this.loadRoomTree(token);
@@ -89,7 +99,7 @@ export class RoomAdminController {
     options: { kind: RoomKind; categoryId: string | null; audioQualityOverride?: AudioQuality | null }
   ) {
     try {
-      const slug = slugInput.trim();
+      const slug = normalizeSlugInput(slugInput);
       const title = titleInput.trim();
       await api.createRoom(token, {
         slug,
