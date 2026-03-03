@@ -27,7 +27,7 @@
 ## Focus now (операционный фокус)
 
 1. Закрыть web MVP polish: стабильный media-permission UX + единый control bar на desktop/mobile.
-2. Добавить e2e smoke на denied-media flow (проверка persistent banner + disabled controls).
+2. Держать denied-media UX под автоматическим smoke-gate (banner + lock controls), затем перейти к browser-level E2E.
 3. Подготовить deprecation-план для legacy `apps/api/public` с cutover/rollback шагами.
 4. Поддерживать test-first release cadence: каждое изменение через `deploy:test:smoke` с фиксированным evidence.
 
@@ -52,7 +52,8 @@
   - [x] join room
   - [x] send/receive message
   - [x] voice connect/disconnect
-- [ ] E2E smoke: denied media permissions UX (`banner + lock controls`).
+- [x] Smoke-gate: denied media permissions UX (`banner + lock controls`).
+- [ ] Browser-level E2E: denied media permissions UX (headless browser path).
 - [ ] Подготовить deprecation-план для legacy `apps/api/public`.
 - [ ] Реализовать карточку пользователя (web, Discord-like footer):
   - [x] Отдельный UI-блок с avatar/name/username и индикатором статуса.
@@ -117,7 +118,7 @@
 
 ## Execution plan (ближайшие действия)
 
-1. [ ] Добавить `smoke:web:e2e` шаг для denied-media UX (persist banner/lock states).
+1. [x] Добавить `smoke:web:e2e` шаг для denied-media UX (persist banner/lock states).
 2. [ ] Подготовить и согласовать deprecation-план legacy static UI (`apps/api/public`).
 3. [ ] Зафиксировать post-MVP performance gate (API p95 + WS reconnect + call setup success) и пороги GO/NO-GO.
 4. [ ] После закрытия пунктов 1-3 выполнить новый pre-prod package refresh.

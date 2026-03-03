@@ -4,6 +4,7 @@ set -euo pipefail
 BASE_URL="${SMOKE_API_URL:-http://localhost:8080}"
 RUN_CALL_SIGNAL="${SMOKE_E2E_CALL_SIGNAL:-1}"
 RUN_RECONNECT="${SMOKE_E2E_RECONNECT:-1}"
+RUN_DENIED_MEDIA="${SMOKE_E2E_DENIED_MEDIA:-1}"
 COMPOSE_FILE="${SMOKE_E2E_COMPOSE_FILE:-infra/docker-compose.host.yml}"
 ENV_FILE="${SMOKE_E2E_ENV_FILE:-infra/.env.host}"
 POSTGRES_SERVICE="${SMOKE_E2E_POSTGRES_SERVICE:-boltorezka-db-test}"
@@ -84,5 +85,12 @@ SMOKE_API_URL="$BASE_URL" \
 SMOKE_CALL_SIGNAL="$RUN_CALL_SIGNAL" \
 SMOKE_RECONNECT="$RUN_RECONNECT" \
 npm run smoke:realtime
+
+if [[ "$RUN_DENIED_MEDIA" == "1" ]]; then
+  echo "[smoke:web-e2e] denied-media ux gate"
+  npm run smoke:web:denied-media
+else
+  echo "[smoke:web-e2e] denied-media ux gate skipped (SMOKE_E2E_DENIED_MEDIA=0)"
+fi
 
 echo "[smoke:web-e2e] done"
