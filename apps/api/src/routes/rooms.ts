@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { db } from "../db.js";
+import { broadcastRealtimeEnvelope } from "../realtime-broadcast.js";
 import { loadCurrentUser, requireAuth, requireRole } from "../middleware/auth.js";
 import type { RoomCategoryRow, RoomListRow, RoomMessageRow, RoomRow } from "../db.types.ts";
 import type {
@@ -563,7 +564,22 @@ export async function roomsRoutes(fastify: FastifyInstance) {
         });
       }
 
-      return { room: updated.rows[0] };
+      const room = updated.rows[0];
+      if (hasAudioQualityOverride) {
+        broadcastRealtimeEnvelope({
+          type: "audio.quality.updated",
+          payload: {
+            scope: "room",
+            roomId: room.id,
+            roomSlug: room.slug,
+            audioQualityOverride: room.audio_quality_override ?? null,
+            updatedAt: new Date().toISOString(),
+            updatedByUserId: String(request.currentUser?.id || "").trim() || null
+          }
+        });
+      }
+
+      return { room };
     }
   );
 

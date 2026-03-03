@@ -506,7 +506,61 @@ export function App() {
     onCallSignal: handleIncomingSignal,
     onCallTerminal: handleIncomingTerminal,
     onCallMicState: handleIncomingMicState,
-    onCallNack: handleCallNack
+    onCallNack: handleCallNack,
+    onAudioQualityUpdated: (payload) => {
+      const scope = String(payload.scope || "").trim();
+
+      if (scope === "server") {
+        const nextAudioQuality = String(payload.audioQuality || "").trim();
+        if (
+          nextAudioQuality === "retro"
+          || nextAudioQuality === "low"
+          || nextAudioQuality === "standard"
+          || nextAudioQuality === "high"
+        ) {
+          setServerAudioQuality(nextAudioQuality);
+        }
+        return;
+      }
+
+      if (scope !== "room") {
+        return;
+      }
+
+      const roomId = String(payload.roomId || "").trim();
+      if (!roomId) {
+        return;
+      }
+
+      const rawOverride = payload.audioQualityOverride;
+      const normalizedOverride = rawOverride === null
+        ? null
+        : (rawOverride === "retro" || rawOverride === "low" || rawOverride === "standard" || rawOverride === "high")
+          ? rawOverride
+          : undefined;
+
+      if (typeof normalizedOverride === "undefined") {
+        return;
+      }
+
+      setRooms((prev) => prev.map((room) => (room.id === roomId ? { ...room, audio_quality_override: normalizedOverride } : room)));
+      setRoomsTree((prev) => {
+        if (!prev) {
+          return prev;
+        }
+
+        const patchRoom = (room: Room) => (room.id === roomId ? { ...room, audio_quality_override: normalizedOverride } : room);
+
+        return {
+          ...prev,
+          categories: (prev.categories || []).map((category) => ({
+            ...category,
+            channels: (category.channels || []).map(patchRoom)
+          })),
+          uncategorized: (prev.uncategorized || []).map(patchRoom)
+        };
+      });
+    }
   });
 
   useEffect(() => {

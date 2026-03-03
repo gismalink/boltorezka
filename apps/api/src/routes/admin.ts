@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { db } from "../db.js";
+import { broadcastRealtimeEnvelope } from "../realtime-broadcast.js";
 import { loadCurrentUser, requireAuth, requireRole } from "../middleware/auth.js";
 import type { ServerSettingsRow, UserRow } from "../db.types.ts";
 import type { AdminUsersResponse, PromoteUserResponse, ServerAudioQualityResponse } from "../api-contract.types.ts";
@@ -97,6 +98,17 @@ export async function adminRoutes(fastify: FastifyInstance) {
       const response: ServerAudioQualityResponse = {
         audioQuality: audioQuality === "retro" || audioQuality === "low" || audioQuality === "high" ? audioQuality : "standard"
       };
+
+      broadcastRealtimeEnvelope({
+        type: "audio.quality.updated",
+        payload: {
+          scope: "server",
+          audioQuality: response.audioQuality,
+          updatedAt: new Date().toISOString(),
+          updatedByUserId: actorId
+        }
+      });
+
       return response;
     }
   );

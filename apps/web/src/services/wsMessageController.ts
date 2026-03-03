@@ -36,6 +36,17 @@ type WsMessageControllerOptions = {
   onCallMicState?: (
     payload: { fromUserId?: string; fromUserName?: string; muted?: boolean; speaking?: boolean; audioMuted?: boolean }
   ) => void;
+  onAudioQualityUpdated?: (
+    payload: {
+      scope?: string;
+      audioQuality?: string;
+      roomId?: string;
+      roomSlug?: string;
+      audioQualityOverride?: string | null;
+      updatedAt?: string;
+      updatedByUserId?: string | null;
+    }
+  ) => void;
 };
 
 export class WsMessageController {
@@ -318,6 +329,27 @@ export class WsMessageController {
         this.options.pushToast(errorMessage);
       }
       this.options.pushLog(`ws error ${code}: ${errorMessage}`);
+    }
+
+    if (message.type === "audio.quality.updated") {
+      this.options.onAudioQualityUpdated?.({
+        scope: typeof message.payload?.scope === "string" ? message.payload.scope : undefined,
+        audioQuality: typeof message.payload?.audioQuality === "string" ? message.payload.audioQuality : undefined,
+        roomId: typeof message.payload?.roomId === "string" ? message.payload.roomId : undefined,
+        roomSlug: typeof message.payload?.roomSlug === "string" ? message.payload.roomSlug : undefined,
+        audioQualityOverride: typeof message.payload?.audioQualityOverride === "string"
+          ? message.payload.audioQualityOverride
+          : message.payload?.audioQualityOverride === null
+            ? null
+            : undefined,
+        updatedAt: typeof message.payload?.updatedAt === "string" ? message.payload.updatedAt : undefined,
+        updatedByUserId: typeof message.payload?.updatedByUserId === "string"
+          ? message.payload.updatedByUserId
+          : message.payload?.updatedByUserId === null
+            ? null
+            : undefined
+      });
+      this.options.pushLog("audio quality policy updated via realtime");
     }
   }
 }

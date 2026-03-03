@@ -1,6 +1,7 @@
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import type { RawData, WebSocket } from "ws";
 import { db } from "../db.js";
+import { registerRealtimeSocket, unregisterRealtimeSocket } from "../realtime-broadcast.js";
 import type { InsertedMessageRow, RoomRow } from "../db.types.ts";
 import {
   buildRoomsPresenceEnvelope,
@@ -635,6 +636,7 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
         });
 
         attachUserSocket(userId, connection);
+        registerRealtimeSocket(connection);
 
         await fastify.redis.hSet(`presence:user:${userId}`, {
           online: "1",
@@ -1390,6 +1392,7 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
 
         connection.on("close", async () => {
           const state = socketState.get(connection);
+          unregisterRealtimeSocket(connection);
           if (!state) {
             return;
           }
