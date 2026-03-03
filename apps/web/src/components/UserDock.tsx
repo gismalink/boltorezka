@@ -115,12 +115,12 @@ export function UserDock({
         ) : null}
 
         <section className="card compact user-panel-card flex items-center justify-between gap-3 max-[800px]:grid max-[800px]:grid-cols-1 max-[800px]:gap-0">
-          <div className="user-panel-actions flex items-center gap-2 max-[800px]:grid max-[800px]:w-full max-[800px]:grid-cols-4">
+          <div className={`user-panel-actions user-panel-actions-grid ${mediaControlsLocked ? "user-panel-actions-locked" : ""}`}>
             <div className="voice-settings-anchor relative max-[800px]:min-w-0" ref={voiceSettingsAnchorRef}>
-              <div className="audio-output-group split-control-group inline-flex items-center gap-0 max-[800px]:grid max-[800px]:w-full max-[800px]:grid-cols-[minmax(0,1fr)_22px]">
+              <div className="audio-output-group split-control-group user-panel-split-group inline-flex items-center gap-0">
                 <button
                   type="button"
-                  className={`secondary icon-btn split-main-btn max-[800px]:w-full ${micMuted ? "icon-btn-danger" : ""}`}
+                  className={`secondary icon-btn split-main-btn user-panel-main-btn ${micMuted ? "icon-btn-danger" : ""}`}
                   data-tooltip={micMuted ? t("audio.enableMic") : t("audio.disableMic")}
                   disabled={mediaControlsLocked}
                   onClick={onToggleMic}
@@ -296,10 +296,10 @@ export function UserDock({
             </div>
 
             <div className="audio-output-anchor relative max-[800px]:min-w-0" ref={audioOutputAnchorRef}>
-              <div className="audio-output-group split-control-group inline-flex items-center gap-0 max-[800px]:grid max-[800px]:w-full max-[800px]:grid-cols-[minmax(0,1fr)_22px]">
+              <div className="audio-output-group split-control-group user-panel-split-group inline-flex items-center gap-0">
                 <button
                   type="button"
-                  className={`secondary icon-btn split-main-btn max-[800px]:w-full ${audioMuted ? "icon-btn-danger" : ""}`}
+                  className={`secondary icon-btn split-main-btn user-panel-main-btn ${audioMuted ? "icon-btn-danger" : ""}`}
                   data-tooltip={audioMuted ? t("audio.enableOutput") : t("audio.disableOutput")}
                   disabled={mediaControlsLocked}
                   onClick={onToggleAudio}
@@ -372,7 +372,7 @@ export function UserDock({
 
             <button
               type="button"
-              className="secondary icon-btn split-main-btn max-[800px]:w-full"
+                className="secondary icon-btn split-main-btn user-panel-main-btn"
               data-tooltip={t("rtc.cameraSoon")}
               aria-label={t("rtc.cameraSoon")}
               disabled
@@ -382,7 +382,7 @@ export function UserDock({
 
             <button
               type="button"
-              className="secondary icon-btn split-main-btn user-panel-disconnect-btn max-[800px]:w-full"
+              className="secondary icon-btn split-main-btn user-panel-main-btn user-panel-disconnect-btn"
               data-tooltip={t("mobile.disconnect")}
               onClick={onDisconnectCall}
             >
