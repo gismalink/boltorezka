@@ -576,10 +576,33 @@ export function useVoiceCallRuntime({
       throw new Error("MediaDevicesUnsupported");
     }
 
-    const stream = await navigator.mediaDevices.getUserMedia({
-      audio: getAudioConstraints(),
-      video: false
-    });
+    const audioConstraints = getAudioConstraints();
+    let stream: MediaStream;
+
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        audio: audioConstraints,
+        video: false
+      });
+    } catch (error) {
+      const errorName = (error as { name?: string })?.name || "";
+      const hasExactDeviceId = typeof audioConstraints === "object"
+        && audioConstraints !== null
+        && Object.prototype.hasOwnProperty.call(audioConstraints, "deviceId");
+
+      if (!hasExactDeviceId || (errorName !== "NotFoundError" && errorName !== "OverconstrainedError")) {
+        throw error;
+      }
+
+      const fallbackConstraints = { ...(audioConstraints as MediaTrackConstraints) };
+      delete (fallbackConstraints as { deviceId?: unknown }).deviceId;
+
+      stream = await navigator.mediaDevices.getUserMedia({
+        audio: fallbackConstraints,
+        video: false
+      });
+      pushCallLog("input device fallback applied: default microphone");
+    }
 
     stream.getAudioTracks().forEach((track) => {
       track.enabled = !micMuted;

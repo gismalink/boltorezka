@@ -108,6 +108,8 @@ export function useMediaDevicePreferences({
 
     try {
       const devices = await enumerateWithRetry();
+      const rawInputs = devices.filter((item) => item.kind === "audioinput");
+      const rawOutputs = devices.filter((item) => item.kind === "audiooutput");
       const inputs = devices
         .filter((item) => item.kind === "audioinput")
         .map((item, index) => ({
@@ -137,7 +139,11 @@ export function useMediaDevicePreferences({
       }
 
       const hasNoAudioDevices = inputs.length === 0 && outputs.length === 0;
-      if (hasNoAudioDevices && !permissionPromptTriedRef.current) {
+      const inputLabelsHidden = rawInputs.length > 0 && rawInputs.every((item) => !String(item.label || "").trim());
+      const outputLabelsHidden = rawOutputs.length > 0 && rawOutputs.every((item) => !String(item.label || "").trim());
+      const shouldRetryAfterPermission = hasNoAudioDevices || inputLabelsHidden || outputLabelsHidden;
+
+      if (shouldRetryAfterPermission && !permissionPromptTriedRef.current) {
         permissionPromptTriedRef.current = true;
         const permissionGranted = await requestMicPermission();
         if (permissionGranted) {
