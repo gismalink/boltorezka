@@ -341,6 +341,7 @@ export function App() {
     () =>
       new RoomAdminController({
         pushLog,
+        pushToast,
         setRoomSlug,
         setMessages,
         setMessagesHasMore,
@@ -352,7 +353,7 @@ export function App() {
         setRoomsTree,
         setAdminUsers
       }),
-    [pushLog, sendWsEvent]
+    [pushLog, pushToast, sendWsEvent]
   );
 
   const loadTelemetrySummary = useCallback(async () => {

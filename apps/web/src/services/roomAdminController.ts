@@ -3,6 +3,7 @@ import type { AudioQuality, Message, MessagesCursor, Room, RoomKind, RoomsTreeRe
 
 type RoomAdminControllerOptions = {
   pushLog: (text: string) => void;
+  pushToast?: (text: string) => void;
   setRoomSlug: (slug: string) => void;
   setMessages: (updater: (prev: Message[]) => Message[]) => void;
   setMessagesHasMore: (value: boolean) => void;
@@ -104,7 +105,9 @@ export class RoomAdminController {
       this.options.pushLog(`room created: ${slug}`);
       return true;
     } catch (error) {
-      this.options.pushLog(`create room failed: ${(error as Error).message}`);
+      const reason = (error as Error).message;
+      this.options.pushLog(`create room failed: ${reason}`);
+      this.options.pushToast?.(`create room failed: ${reason}`);
       return false;
     }
   }

@@ -15,7 +15,54 @@ import type {
 type ApiErrorPayload = {
   message?: string;
   error?: string;
+  issues?: {
+    formErrors?: string[];
+    fieldErrors?: Record<string, string[] | undefined>;
+  };
   [key: string]: unknown;
+};
+
+const firstValidationIssue = (payload: ApiErrorPayload): string | null => {
+  const formErrors = Array.isArray(payload.issues?.formErrors)
+    ? payload.issues?.formErrors
+    : [];
+  const firstFormError = formErrors.find((item) => typeof item === "string" && item.trim().length > 0);
+  if (firstFormError) {
+    return firstFormError;
+  }
+
+  const fieldErrors = payload.issues?.fieldErrors || {};
+  for (const [field, errors] of Object.entries(fieldErrors)) {
+    if (!Array.isArray(errors) || errors.length === 0) {
+      continue;
+    }
+
+    const firstFieldError = errors.find((item) => typeof item === "string" && item.trim().length > 0);
+    if (firstFieldError) {
+      return `${field}: ${firstFieldError}`;
+    }
+  }
+
+  return null;
+};
+
+const resolveApiErrorMessage = (status: number, payload: ApiErrorPayload): string => {
+  const explicitMessage = String(payload.message || "").trim();
+  if (explicitMessage) {
+    return explicitMessage;
+  }
+
+  const validationMessage = firstValidationIssue(payload);
+  if (validationMessage) {
+    return validationMessage;
+  }
+
+  const codeMessage = String(payload.error || "").trim();
+  if (codeMessage) {
+    return codeMessage;
+  }
+
+  return `HTTP ${status}`;
 };
 
 export class ApiError extends Error {
@@ -24,7 +71,7 @@ export class ApiError extends Error {
   readonly payload: ApiErrorPayload;
 
   constructor(status: number, payload: ApiErrorPayload) {
-    super(String(payload.message || payload.error || `HTTP ${status}`));
+    super(resolveApiErrorMessage(status, payload));
     this.name = "ApiError";
     this.status = status;
     this.code = String(payload.error || "HTTP_ERROR");
