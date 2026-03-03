@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import type { AudioQuality, TelemetrySummary, User } from "../domain";
 
 type ServerMenuTab = "users" | "events" | "telemetry" | "call" | "sound" | "video";
@@ -23,6 +24,7 @@ type ServerProfileModalProps = {
   serverVideoFps: 10 | 15 | 24 | 30;
   serverVideoPixelFxStrength: number;
   serverVideoPixelFxPixelSize: number;
+  serverVideoPreviewStream: MediaStream | null;
   onClose: () => void;
   onSetServerMenuTab: (value: ServerMenuTab) => void;
   onPromote: (userId: string) => void;
@@ -58,6 +60,7 @@ export function ServerProfileModal({
   serverVideoFps,
   serverVideoPixelFxStrength,
   serverVideoPixelFxPixelSize,
+  serverVideoPreviewStream,
   onClose,
   onSetServerMenuTab,
   onPromote,
@@ -71,6 +74,25 @@ export function ServerProfileModal({
   onSetServerVideoPixelFxStrength,
   onSetServerVideoPixelFxPixelSize
 }: ServerProfileModalProps) {
+  const previewVideoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    const element = previewVideoRef.current;
+    if (!element) {
+      return;
+    }
+
+    if (!serverVideoPreviewStream) {
+      element.srcObject = null;
+      return;
+    }
+
+    element.srcObject = serverVideoPreviewStream;
+    void element.play().catch(() => {
+      return;
+    });
+  }, [serverVideoPreviewStream]);
+
   if (!open) {
     return null;
   }
@@ -365,6 +387,20 @@ export function ServerProfileModal({
                   onChange={(event) => onSetServerVideoPixelFxPixelSize(Number(event.target.value))}
                 />
               </label>
+
+              <div className="grid gap-2">
+                <span>{t("server.videoPreview")}</span>
+                <div className="server-video-preview-frame">
+                  <video
+                    ref={previewVideoRef}
+                    className="server-video-preview-media"
+                    autoPlay
+                    playsInline
+                    muted
+                  />
+                </div>
+                <p className="muted">{t("server.videoPreviewHint")}</p>
+              </div>
             </section>
           ) : null}
         </div>

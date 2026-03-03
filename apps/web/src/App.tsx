@@ -48,6 +48,7 @@ import type {
   TelemetrySummary,
   User
 } from "./domain";
+import { createProcessedVideoTrack, type OutgoingVideoTrackHandle } from "./utils/videoPixelPipeline";
 
 const MAX_CHAT_RETRIES = 3;
 const TOAST_AUTO_DISMISS_MS = 4500;
@@ -158,6 +159,7 @@ export function App() {
     const value = Number(localStorage.getItem("boltorezka_server_video_fx_pixel_size"));
     return Number.isFinite(value) ? Math.max(2, Math.min(10, value)) : 5;
   });
+  const [serverVideoPreviewStream, setServerVideoPreviewStream] = useState<MediaStream | null>(null);
   const [realtimeReconnectNonce, setRealtimeReconnectNonce] = useState(0);
   const [videoWindowsVisible, setVideoWindowsVisible] = useState(true);
   const realtimeClientRef = useRef<RealtimeClient | null>(null);
@@ -180,6 +182,8 @@ export function App() {
   const presenceSoundInitializedRef = useRef(false);
   const previousPresenceIdsRef = useRef<string[]>([]);
   const previousChatMessageIdRef = useRef<string | null>(null);
+  const serverVideoPreviewHandleRef = useRef<OutgoingVideoTrackHandle | null>(null);
+  const serverVideoPreviewRawTrackRef = useRef<MediaStreamTrack | null>(null);
 
   const canCreateRooms = user?.role === "admin" || user?.role === "super_admin";
   const canPromote = user?.role === "super_admin";
@@ -397,6 +401,103 @@ export function App() {
   useEffect(() => {
     localStorage.setItem("boltorezka_server_video_fx_pixel_size", String(serverVideoPixelFxPixelSize));
   }, [serverVideoPixelFxPixelSize]);
+
+  useEffect(() => {
+    const stopServerVideoPreview = () => {
+      serverVideoPreviewHandleRef.current?.stop();
+      serverVideoPreviewHandleRef.current = null;
+      serverVideoPreviewRawTrackRef.current?.stop();
+      serverVideoPreviewRawTrackRef.current = null;
+      setServerVideoPreviewStream(null);
+    };
+
+    const shouldPreviewVideo = appMenuOpen && serverMenuTab === "video" && canManageAudioQuality;
+    if (!shouldPreviewVideo || !navigator.mediaDevices?.getUserMedia) {
+      stopServerVideoPreview();
+      return;
+    }
+
+    let cancelled = false;
+    stopServerVideoPreview();
+
+    const [widthRaw, heightRaw] = serverVideoResolution.split("x");
+    const width = Math.max(1, Number(widthRaw) || 320);
+    const height = Math.max(1, Number(heightRaw) || 240);
+
+    void (async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: false,
+          video: {
+            width: { ideal: width },
+            height: { ideal: height },
+            frameRate: { ideal: serverVideoFps },
+            ...(selectedVideoInputId && selectedVideoInputId !== "default"
+              ? { deviceId: { exact: selectedVideoInputId } }
+              : {})
+          }
+        });
+        const sourceTrack = stream.getVideoTracks()[0];
+        stream.getAudioTracks().forEach((track) => track.stop());
+
+        if (!sourceTrack) {
+          stream.getTracks().forEach((track) => track.stop());
+          return;
+        }
+
+        if (cancelled) {
+          sourceTrack.stop();
+          return;
+        }
+
+        if (!serverVideoPixelFxEnabled) {
+          serverVideoPreviewRawTrackRef.current = sourceTrack;
+          setServerVideoPreviewStream(new MediaStream([sourceTrack]));
+          return;
+        }
+
+        const processedHandle = createProcessedVideoTrack(sourceTrack, {
+          width,
+          height,
+          fps: serverVideoFps,
+          strength: serverVideoPixelFxStrength,
+          pixelSize: serverVideoPixelFxPixelSize
+        });
+
+        if (!processedHandle) {
+          setServerVideoPreviewStream(null);
+          return;
+        }
+
+        if (cancelled) {
+          processedHandle.stop();
+          return;
+        }
+
+        serverVideoPreviewHandleRef.current = processedHandle;
+        setServerVideoPreviewStream(new MediaStream([processedHandle.track]));
+      } catch {
+        if (!cancelled) {
+          setServerVideoPreviewStream(null);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      stopServerVideoPreview();
+    };
+  }, [
+    appMenuOpen,
+    serverMenuTab,
+    canManageAudioQuality,
+    selectedVideoInputId,
+    serverVideoResolution,
+    serverVideoFps,
+    serverVideoPixelFxEnabled,
+    serverVideoPixelFxStrength,
+    serverVideoPixelFxPixelSize
+  ]);
 
   const {
     voiceMicStateByUserIdInCurrentRoom,
@@ -1504,9 +1605,6 @@ export function App() {
           localVideoStream={localVideoStream}
           remoteVideoStreamsByUserId={remoteVideoStreamsByUserId}
           remoteLabelsByUserId={remoteVideoLabelsByUserId}
-          pixelFxEnabled={serverVideoPixelFxEnabled}
-          pixelFxStrength={serverVideoPixelFxStrength}
-          pixelFxPixelSize={serverVideoPixelFxPixelSize}
           visible={allowVideoStreaming && videoWindowsVisible}
         />
 
@@ -1570,6 +1668,7 @@ export function App() {
         serverVideoFps={serverVideoFps}
         serverVideoPixelFxStrength={serverVideoPixelFxStrength}
         serverVideoPixelFxPixelSize={serverVideoPixelFxPixelSize}
+        serverVideoPreviewStream={serverVideoPreviewStream}
         onClose={() => setAppMenuOpen(false)}
         onSetServerMenuTab={setServerMenuTab}
         onPromote={(userId) => void promote(userId)}
