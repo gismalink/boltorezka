@@ -3,6 +3,32 @@
 Этот документ хранит зафиксированные изменения, выполненные шаги и операционные evidence.
 План и open items находятся в `docs/status/ROADMAP.md`.
 
+## 2026-03-03 — Web denied-media smoke gate added to e2e flow
+
+### Delivered
+
+- Добавлен новый web smoke script: `scripts/smoke-web-denied-media.mjs`.
+- Скрипт валидирует UX-контракт denied media flow:
+  - banner guard в `App.tsx` (`mediaDevicesState === "denied"` + CTA request access),
+  - unified control bar в `UserDock`,
+  - lock-state media controls,
+  - устойчивый denied-state permission flow в `useMediaDevicePreferences`.
+- Новый stage встроен в `scripts/smoke-web-e2e.sh` (toggle: `SMOKE_E2E_DENIED_MEDIA=0|1`, default `1`).
+- Добавлен npm script: `smoke:web:denied-media`.
+- Обновлены docs:
+  - `docs/operations/SMOKE_CI_MATRIX.md` (coverage map),
+  - `docs/status/ROADMAP.md` (execution plan + task status).
+
+### Validation
+
+- `npm run smoke:web:denied-media` — PASS.
+- `bash -n scripts/smoke-web-e2e.sh` — PASS.
+- `TEST_REF=origin/main ALLOW_TEST_FROM_MAIN=1 npm run deploy:test:smoke` — PASS.
+
+### Key commit
+
+- `f82e7b8` — `test(web): add denied-media smoke gate to web e2e`
+
 ## 2026-03-03 — Web UX hardening: media permissions + unified control bar
 
 ### Delivered
