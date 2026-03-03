@@ -890,6 +890,16 @@ pre {
   font-size: 11px;
 }
 
+.user-panel-disconnect-btn {
+  margin-left: var(--space-sm);
+}
+
+@media (max-width: 800px) {
+  .user-panel-disconnect-btn {
+    margin-left: 0;
+  }
+}
+
 .voice-mini-popup,
 .voice-settings-popup {
   right: 0;

@@ -4,12 +4,10 @@ import { PopupPortal } from "./PopupPortal";
 
 export function UserDock({
   t,
-  user,
   currentRoomSupportsRtc,
   currentRoomTitle,
   callStatus,
   lastCallPeer,
-  roomVoiceConnected,
   micMuted,
   audioMuted,
   audioOutputMenuOpen,
@@ -70,19 +68,12 @@ export function UserDock({
   const inputDeviceRowRef = useRef<HTMLButtonElement>(null);
   const inputProfileRowRef = useRef<HTMLButtonElement>(null);
   const mediaDevicesUnavailable = mediaDevicesState !== "ready";
+  const mediaControlsLocked = mediaDevicesState === "denied";
   const mediaDevicesWarningText = mediaDevicesHint || t("settings.mediaUnavailable");
   const miniBarCount = 20;
   const modalBarCount = 42;
   const miniActiveBars = Math.min(miniBarCount, Math.round(micTestLevel * miniBarCount));
   const modalActiveBars = Math.min(modalBarCount, Math.round(micTestLevel * modalBarCount));
-  const userStatusLabel = !currentRoomSupportsRtc
-    ? t("status.online")
-    : callStatus === "active"
-      ? t("rtc.connected")
-      : roomVoiceConnected || callStatus === "connecting" || callStatus === "ringing"
-        ? t("rtc.connecting")
-        : t("status.online");
-
   return (
     <>
       <div className={`user-dock ${inlineSettingsMode ? "user-dock-inline-hidden" : ""} relative z-20 mt-auto flex min-h-0 flex-col gap-4`}>
@@ -124,28 +115,14 @@ export function UserDock({
         ) : null}
 
         <section className="card compact user-panel-card flex items-center justify-between gap-3 max-[800px]:grid max-[800px]:grid-cols-1 max-[800px]:gap-0">
-          <div className="user-panel-main flex min-w-0 items-center gap-3 max-[800px]:hidden">
-            <button
-              type="button"
-              className="user-avatar-badge user-avatar-button"
-              data-tooltip={t("profile.openSettings")}
-              aria-label={t("profile.openSettings")}
-              onClick={() => onOpenUserSettings("profile")}
-            >
-              {(user.name || "U").charAt(0).toUpperCase()}
-            </button>
-            <div className="user-meta min-w-0 flex-1">
-              <div className="user-name-line truncate">{user.name}</div>
-              <div className="muted user-status-line">{userStatusLabel}</div>
-            </div>
-          </div>
-          <div className="user-panel-actions flex items-center gap-2 max-[800px]:grid max-[800px]:w-full max-[800px]:grid-cols-3">
+          <div className="user-panel-actions flex items-center gap-2 max-[800px]:grid max-[800px]:w-full max-[800px]:grid-cols-4">
             <div className="voice-settings-anchor relative max-[800px]:min-w-0" ref={voiceSettingsAnchorRef}>
               <div className="audio-output-group split-control-group inline-flex items-center gap-0 max-[800px]:grid max-[800px]:w-full max-[800px]:grid-cols-[minmax(0,1fr)_22px]">
                 <button
                   type="button"
                   className={`secondary icon-btn split-main-btn max-[800px]:w-full ${micMuted ? "icon-btn-danger" : ""}`}
                   data-tooltip={micMuted ? t("audio.enableMic") : t("audio.disableMic")}
+                  disabled={mediaControlsLocked}
                   onClick={onToggleMic}
                 >
                   <span
@@ -159,6 +136,7 @@ export function UserDock({
                   type="button"
                   className="secondary icon-btn split-caret-btn"
                   data-tooltip={t("settings.audioInputHint")}
+                  disabled={mediaControlsLocked}
                   onClick={onToggleVoiceSettings}
                 >
                   <i className="bi bi-chevron-down" aria-hidden="true" />
@@ -321,6 +299,7 @@ export function UserDock({
                   type="button"
                   className={`secondary icon-btn split-main-btn max-[800px]:w-full ${audioMuted ? "icon-btn-danger" : ""}`}
                   data-tooltip={audioMuted ? t("audio.enableOutput") : t("audio.disableOutput")}
+                  disabled={mediaControlsLocked}
                   onClick={onToggleAudio}
                 >
                   <i className={`bi ${audioMuted ? "bi-volume-mute-fill" : "bi-headphones"}`} aria-hidden="true" />
@@ -329,6 +308,7 @@ export function UserDock({
                   type="button"
                   className="secondary icon-btn split-caret-btn"
                   data-tooltip={t("settings.outputHint")}
+                  disabled={mediaControlsLocked}
                   onClick={onToggleAudioOutput}
                 >
                   <i className="bi bi-chevron-down" aria-hidden="true" />
@@ -386,16 +366,24 @@ export function UserDock({
               </PopupPortal>
             </div>
 
-            {isMobileViewport ? (
-              <button
-                type="button"
-                className="secondary icon-btn split-main-btn max-[800px]:w-full"
-                data-tooltip={t("mobile.disconnect")}
-                onClick={onDisconnectCall}
-              >
-                <i className="bi bi-telephone-x" aria-hidden="true" />
-              </button>
-            ) : null}
+            <button
+              type="button"
+              className="secondary icon-btn split-main-btn max-[800px]:w-full"
+              data-tooltip={t("rtc.cameraSoon")}
+              aria-label={t("rtc.cameraSoon")}
+              disabled
+            >
+              <i className="bi bi-camera-video" aria-hidden="true" />
+            </button>
+
+            <button
+              type="button"
+              className="secondary icon-btn split-main-btn user-panel-disconnect-btn max-[800px]:w-full"
+              data-tooltip={t("mobile.disconnect")}
+              onClick={onDisconnectCall}
+            >
+              <i className="bi bi-telephone-x" aria-hidden="true" />
+            </button>
           </div>
         </section>
       </div>

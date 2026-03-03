@@ -175,6 +175,20 @@ export function useMediaDevicePreferences({
           setMediaDevicesHint("");
           return;
         }
+
+        if (inputLabelsHidden || outputLabelsHidden) {
+          setInputDevices([{ id: FALLBACK_DEVICE_ID, label: t("device.systemDefault") }]);
+          setOutputDevices([{ id: FALLBACK_DEVICE_ID, label: t("device.systemDefault") }]);
+          if (selectedInputId !== FALLBACK_DEVICE_ID) {
+            setSelectedInputId(FALLBACK_DEVICE_ID);
+          }
+          if (selectedOutputId !== FALLBACK_DEVICE_ID) {
+            setSelectedOutputId(FALLBACK_DEVICE_ID);
+          }
+          setMediaDevicesState("denied");
+          setMediaDevicesHint(t("settings.mediaDenied"));
+          return;
+        }
       }
 
       if (hasNoAudioDevices) {
@@ -209,7 +223,7 @@ export function useMediaDevicePreferences({
       if (selectedOutputId !== FALLBACK_DEVICE_ID) {
         setSelectedOutputId(FALLBACK_DEVICE_ID);
       }
-      setMediaDevicesState("ready");
+      setMediaDevicesState("error");
       setMediaDevicesHint(t("settings.devicesLoadFailed"));
     }
   }, [
