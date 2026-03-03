@@ -40,6 +40,7 @@ Current CI command:
 | `GET /health` | API smoke / postdeploy smoke |
 | `GET /v1/auth/mode` + SSO redirect | `npm run smoke:sso` |
 | `GET /v1/auth/ws-ticket` + WS connect | `npm run smoke:realtime` |
+| Web static delivery contract (`web root + assets + api mode`) | `npm run smoke:web:static` (invoked from `smoke:web:e2e`) |
 | `chat.send` ack/nack/idempotency | `npm run smoke:realtime` |
 | `call.offer/reject/hangup` relay | extended realtime smoke (`SMOKE_CALL_SIGNAL=1`) |
 | Denied media UX gate (`banner + lock controls`) | `npm run smoke:web:denied-media` (invoked from `smoke:web:e2e`) |

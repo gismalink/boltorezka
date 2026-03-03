@@ -3,6 +3,29 @@
 Этот документ хранит зафиксированные изменения, выполненные шаги и операционные evidence.
 План и open items находятся в `docs/status/ROADMAP.md`.
 
+## 2026-03-03 — Dual-path readiness prep: static delivery contract smoke
+
+### Delivered
+
+- Добавлен `scripts/smoke-web-static-contract.mjs` для проверки web static delivery контракта:
+  - web root (`/`) доступен и содержит React root marker,
+  - web assets (`/assets/*`) отдаются успешно,
+  - API `/health` и `/v1/auth/mode` проходят на целевом API URL.
+- Добавлен npm script: `smoke:web:static`.
+- Скрипт встроен в `smoke:web:e2e` (toggle: `SMOKE_E2E_STATIC_CONTRACT=0|1`, default `1`).
+- Подготовлена split-конфигурация для будущего dual-path:
+  - `SMOKE_API_URL` и `SMOKE_WEB_BASE_URL` могут указывать на разные host/path.
+
+### Validation
+
+- Локально: `npm run smoke:web:static` — PASS.
+- Серверный `smoke:web:e2e` в test — PASS (включая static contract stage).
+
+### Status
+
+- Dual-path readiness tooling: **DONE**.
+- Реальный separate static delivery path в test/prod: **OPEN** (следующий инфраструктурный инкремент).
+
 ## 2026-03-03 — Legacy public deprecation dry-run (test rollback rehearsal)
 
 ### Dry-run scope

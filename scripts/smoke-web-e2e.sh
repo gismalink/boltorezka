@@ -5,6 +5,7 @@ BASE_URL="${SMOKE_API_URL:-http://localhost:8080}"
 RUN_CALL_SIGNAL="${SMOKE_E2E_CALL_SIGNAL:-1}"
 RUN_RECONNECT="${SMOKE_E2E_RECONNECT:-1}"
 RUN_DENIED_MEDIA="${SMOKE_E2E_DENIED_MEDIA:-1}"
+RUN_STATIC_CONTRACT="${SMOKE_E2E_STATIC_CONTRACT:-1}"
 COMPOSE_FILE="${SMOKE_E2E_COMPOSE_FILE:-infra/docker-compose.host.yml}"
 ENV_FILE="${SMOKE_E2E_ENV_FILE:-infra/.env.host}"
 POSTGRES_SERVICE="${SMOKE_E2E_POSTGRES_SERVICE:-boltorezka-db-test}"
@@ -75,6 +76,13 @@ if [[ "$RUN_CALL_SIGNAL" == "1" ]] && [[ -z "${SMOKE_BEARER_TOKEN:-}" && -z "${S
     echo "[smoke:web-e2e] call-signal scenario requires SMOKE_BEARER_TOKEN or SMOKE_WS_TICKET_SECOND" >&2
     exit 1
   fi
+fi
+
+if [[ "$RUN_STATIC_CONTRACT" == "1" ]]; then
+  echo "[smoke:web-e2e] static delivery contract"
+  SMOKE_API_URL="$BASE_URL" SMOKE_WEB_BASE_URL="${SMOKE_WEB_BASE_URL:-$BASE_URL}" npm run smoke:web:static
+else
+  echo "[smoke:web-e2e] static delivery contract skipped (SMOKE_E2E_STATIC_CONTRACT=0)"
 fi
 
 echo "[smoke:web-e2e] login redirect"
