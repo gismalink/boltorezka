@@ -1243,6 +1243,26 @@ pre {
   color: var(--pixel-muted);
 }
 
+.server-video-sliders {
+  display: grid;
+  gap: var(--space-sm);
+}
+
+@media (min-width: 801px) {
+  .server-video-sliders {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+}
+
+.server-video-sliders .slider-label {
+  margin-top: 0;
+}
+
+.server-video-slider-color {
+  align-self: end;
+}
+
 .slider-label input[type="range"] {
   width: 100%;
 }

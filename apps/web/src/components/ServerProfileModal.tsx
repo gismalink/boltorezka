@@ -407,32 +407,34 @@ export function ServerProfileModal({
                 </div>
               </div>
 
-              <label className="slider-label grid gap-2">
-                {t("server.videoWindowMinWidth")}: {serverVideoWindowMinWidth}px
-                <input
-                  type="range"
-                  min={80}
-                  max={300}
-                  step={1}
-                  value={serverVideoWindowMinWidth}
-                  onChange={(event) => onSetServerVideoWindowMinWidth(Number(event.target.value))}
-                />
-              </label>
+              <div className="server-video-sliders">
+                <label className="slider-label grid gap-2">
+                  {t("server.videoWindowMinWidth")}: {serverVideoWindowMinWidth}px
+                  <input
+                    type="range"
+                    min={80}
+                    max={300}
+                    step={1}
+                    value={serverVideoWindowMinWidth}
+                    onChange={(event) => onSetServerVideoWindowMinWidth(Number(event.target.value))}
+                  />
+                </label>
 
-              <label className="slider-label grid gap-2">
-                {t("server.videoWindowMaxWidth")}: {serverVideoWindowMaxWidth}px
-                <input
-                  type="range"
-                  min={120}
-                  max={320}
-                  step={1}
-                  value={serverVideoWindowMaxWidth}
-                  onChange={(event) => onSetServerVideoWindowMaxWidth(Number(event.target.value))}
-                />
-              </label>
+                <label className="slider-label grid gap-2">
+                  {t("server.videoWindowMaxWidth")}: {serverVideoWindowMaxWidth}px
+                  <input
+                    type="range"
+                    min={120}
+                    max={480}
+                    step={1}
+                    value={serverVideoWindowMaxWidth}
+                    onChange={(event) => onSetServerVideoWindowMaxWidth(Number(event.target.value))}
+                  />
+                </label>
+              </div>
 
               {serverVideoEffectType === "pixel8" ? (
-                <>
+                <div className="server-video-sliders">
                   <label className="slider-label grid gap-2">
                     {t("server.videoFxStrength")}: {serverVideoPixelFxStrength}%
                     <input
@@ -468,11 +470,11 @@ export function ServerProfileModal({
                       onChange={(event) => onSetServerVideoPixelFxGridThickness(Number(event.target.value))}
                     />
                   </label>
-                </>
+                </div>
               ) : null}
 
               {serverVideoEffectType === "ascii" ? (
-                <>
+                <div className="server-video-sliders">
                   <label className="slider-label grid gap-2">
                     {t("server.videoAsciiCellSize")}: {serverVideoAsciiCellSize}px
                     <input
@@ -497,7 +499,7 @@ export function ServerProfileModal({
                     />
                   </label>
 
-                  <label className="grid gap-2">
+                  <label className="grid gap-2 server-video-slider-color">
                     <span>{t("server.videoAsciiColor")}</span>
                     <input
                       type="color"
@@ -505,7 +507,7 @@ export function ServerProfileModal({
                       onChange={(event) => onSetServerVideoAsciiColor(event.target.value)}
                     />
                   </label>
-                </>
+                </div>
               ) : null}
             </section>
           ) : null}

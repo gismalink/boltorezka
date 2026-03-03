@@ -189,7 +189,7 @@ export function App() {
   });
   const [serverVideoWindowMaxWidth, setServerVideoWindowMaxWidth] = useState(() => {
     const value = Number(localStorage.getItem("boltorezka_server_video_window_max_width"));
-    return Number.isFinite(value) ? Math.max(120, Math.min(320, Math.round(value))) : 320;
+    return Number.isFinite(value) ? Math.max(120, Math.min(480, Math.round(value))) : 320;
   });
   const [serverVideoPreviewStream, setServerVideoPreviewStream] = useState<MediaStream | null>(null);
   const [realtimeReconnectNonce, setRealtimeReconnectNonce] = useState(0);
@@ -1766,10 +1766,10 @@ export function App() {
         onSetServerVideoWindowMinWidth={(value) => {
           const nextMin = Math.max(80, Math.min(300, Math.round(value)));
           setServerVideoWindowMinWidth(nextMin);
-          setServerVideoWindowMaxWidth((prev) => Math.max(Math.max(120, Math.min(320, Math.round(prev))), nextMin));
+          setServerVideoWindowMaxWidth((prev) => Math.max(Math.max(120, Math.min(480, Math.round(prev))), nextMin));
         }}
         onSetServerVideoWindowMaxWidth={(value) => {
-          const nextMax = Math.max(120, Math.min(320, Math.round(value)));
+          const nextMax = Math.max(120, Math.min(480, Math.round(value)));
           setServerVideoWindowMaxWidth(nextMax);
           setServerVideoWindowMinWidth((prev) => Math.min(Math.max(80, Math.min(300, Math.round(prev))), nextMax));
         }}

@@ -143,8 +143,8 @@ export function VideoWindowsOverlay({
   maxWidth,
   visible
 }: VideoWindowsOverlayProps) {
-  const effectiveMinWidth = Math.max(80, Math.min(320, Math.round(minWidth)));
-  const effectiveMaxWidth = Math.max(effectiveMinWidth, Math.min(320, Math.round(maxWidth)));
+  const effectiveMinWidth = Math.max(80, Math.min(480, Math.round(minWidth)));
+  const effectiveMaxWidth = Math.max(effectiveMinWidth, Math.min(480, Math.round(maxWidth)));
 
   const items = useMemo<TileItem[]>(() => {
     const next: TileItem[] = [];
