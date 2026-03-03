@@ -71,6 +71,46 @@ export function useMediaDevicePreferences({
   const permissionPromptTriedRef = useRef(false);
   const mobileOutputDefaultAppliedRef = useRef(false);
 
+  const applyDeniedState = useCallback(() => {
+    setInputDevices([{ id: FALLBACK_DEVICE_ID, label: t("device.systemDefault") }]);
+    setOutputDevices([{ id: FALLBACK_DEVICE_ID, label: t("device.systemDefault") }]);
+    if (selectedInputId !== FALLBACK_DEVICE_ID) {
+      setSelectedInputId(FALLBACK_DEVICE_ID);
+    }
+    if (selectedOutputId !== FALLBACK_DEVICE_ID) {
+      setSelectedOutputId(FALLBACK_DEVICE_ID);
+    }
+    setMediaDevicesState("denied");
+    setMediaDevicesHint(t("settings.mediaDenied"));
+  }, [
+    selectedInputId,
+    selectedOutputId,
+    setInputDevices,
+    setOutputDevices,
+    setMediaDevicesState,
+    setMediaDevicesHint,
+    setSelectedInputId,
+    setSelectedOutputId,
+    t
+  ]);
+
+  const getMicrophonePermissionState = useCallback(async (): Promise<PermissionState | null> => {
+    const permissionsApi = (navigator as Navigator & {
+      permissions?: { query: (descriptor: { name: PermissionName }) => Promise<PermissionStatus> };
+    }).permissions;
+
+    if (!permissionsApi?.query) {
+      return null;
+    }
+
+    try {
+      const status = await permissionsApi.query({ name: "microphone" as PermissionName });
+      return status.state;
+    } catch {
+      return null;
+    }
+  }, []);
+
   const requestMicPermission = useCallback(async () => {
     if (!navigator.mediaDevices?.getUserMedia) {
       return false;
@@ -83,14 +123,19 @@ export function useMediaDevicePreferences({
     } catch (error) {
       const errorName = (error as { name?: string })?.name || "";
       if (errorName === "NotAllowedError" || errorName === "SecurityError") {
-        setMediaDevicesState("denied");
-        setMediaDevicesHint(t("settings.mediaDenied"));
+        applyDeniedState();
       }
       return false;
     }
-  }, [setMediaDevicesState, setMediaDevicesHint, t]);
+  }, [applyDeniedState]);
 
   const loadDevices = useCallback(async () => {
+    const permissionState = await getMicrophonePermissionState();
+    if (permissionState === "denied") {
+      applyDeniedState();
+      return;
+    }
+
     if (!navigator.mediaDevices?.enumerateDevices) {
       setMediaDevicesState("unsupported");
       setMediaDevicesHint(t("settings.browserUnsupported"));
@@ -177,16 +222,15 @@ export function useMediaDevicePreferences({
         }
 
         if (inputLabelsHidden || outputLabelsHidden) {
-          setInputDevices([{ id: FALLBACK_DEVICE_ID, label: t("device.systemDefault") }]);
-          setOutputDevices([{ id: FALLBACK_DEVICE_ID, label: t("device.systemDefault") }]);
-          if (selectedInputId !== FALLBACK_DEVICE_ID) {
-            setSelectedInputId(FALLBACK_DEVICE_ID);
-          }
-          if (selectedOutputId !== FALLBACK_DEVICE_ID) {
-            setSelectedOutputId(FALLBACK_DEVICE_ID);
-          }
-          setMediaDevicesState("denied");
-          setMediaDevicesHint(t("settings.mediaDenied"));
+          applyDeniedState();
+          return;
+        }
+      }
+
+      if (permissionPromptTriedRef.current && (inputLabelsHidden || outputLabelsHidden)) {
+        const latestPermissionState = await getMicrophonePermissionState();
+        if (latestPermissionState === "denied" || latestPermissionState === null) {
+          applyDeniedState();
           return;
         }
       }
@@ -210,8 +254,7 @@ export function useMediaDevicePreferences({
     } catch (error) {
       const errorName = (error as { name?: string })?.name || "";
       if (errorName === "NotAllowedError" || errorName === "SecurityError") {
-        setMediaDevicesState("denied");
-        setMediaDevicesHint(t("settings.mediaDenied"));
+        applyDeniedState();
         return;
       }
 
@@ -236,7 +279,9 @@ export function useMediaDevicePreferences({
     setMediaDevicesHint,
     setSelectedInputId,
     setSelectedOutputId,
-    requestMicPermission
+    requestMicPermission,
+    getMicrophonePermissionState,
+    applyDeniedState
   ]);
 
   useEffect(() => {

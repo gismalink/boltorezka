@@ -188,6 +188,7 @@ export function UserDock({
                       min={0}
                       max={100}
                       value={micVolume}
+                      disabled={mediaControlsLocked}
                       onChange={(event) => onSetMicVolume(Number(event.target.value))}
                     />
                   </label>
@@ -204,6 +205,7 @@ export function UserDock({
                   <button
                     type="button"
                     className="secondary voice-footer-row flex w-full items-center justify-between gap-4 text-left"
+                    disabled={mediaControlsLocked}
                     onClick={() => {
                       onSetVoiceSettingsOpen(false);
                       onSetAudioOutputMenuOpen(false);
@@ -346,12 +348,14 @@ export function UserDock({
                       min={0}
                       max={100}
                       value={outputVolume}
+                      disabled={mediaControlsLocked}
                       onChange={(event) => onSetOutputVolume(Number(event.target.value))}
                     />
                   </label>
                   <button
                     type="button"
                     className="secondary voice-footer-row flex w-full items-center justify-between gap-4 text-left"
+                    disabled={mediaControlsLocked}
                     onClick={() => {
                       onSetAudioOutputMenuOpen(false);
                       onSetVoiceSettingsOpen(false);
@@ -498,6 +502,7 @@ export function UserDock({
                         min={0}
                         max={100}
                         value={micVolume}
+                        disabled={mediaControlsLocked}
                         onChange={(event) => onSetMicVolume(Number(event.target.value))}
                       />
                     </label>
@@ -508,6 +513,7 @@ export function UserDock({
                         min={0}
                         max={100}
                         value={outputVolume}
+                        disabled={mediaControlsLocked}
                         onChange={(event) => onSetOutputVolume(Number(event.target.value))}
                       />
                     </label>
@@ -532,6 +538,7 @@ export function UserDock({
                     <button
                       type="button"
                       className={`secondary device-item radio-item flex items-center justify-between gap-4 text-left ${selectedInputProfile === "noise_reduction" ? "device-item-active" : ""}`}
+                      disabled={mediaControlsLocked}
                       onClick={() => onSetSelectedInputProfile("noise_reduction")}
                     >
                       <span>{t("settings.voiceIsolation")}</span>
@@ -540,6 +547,7 @@ export function UserDock({
                     <button
                       type="button"
                       className={`secondary device-item radio-item flex items-center justify-between gap-4 text-left ${selectedInputProfile === "studio" ? "device-item-active" : ""}`}
+                      disabled={mediaControlsLocked}
                       onClick={() => onSetSelectedInputProfile("studio")}
                     >
                       <span>{t("settings.studio")}</span>
@@ -548,6 +556,7 @@ export function UserDock({
                     <button
                       type="button"
                       className={`secondary device-item radio-item flex items-center justify-between gap-4 text-left ${selectedInputProfile === "custom" ? "device-item-active" : ""}`}
+                      disabled={mediaControlsLocked}
                       onClick={() => onSetSelectedInputProfile("custom")}
                     >
                       <span>{t("settings.custom")}</span>
