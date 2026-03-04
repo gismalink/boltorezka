@@ -23,6 +23,7 @@ echo "[deploy-prod] fetch ref: $GIT_REF"
 git fetch --all --tags --prune
 
 RESOLVED_SHA="$(git rev-parse "$GIT_REF")"
+RESOLVED_COMMIT_DATE="$(git show -s --date=format:'%y.%m.%d.%H.%M' --format=%cd "$RESOLVED_SHA")"
 echo "[deploy-prod] resolved sha: $RESOLVED_SHA"
 
 git checkout --detach "$RESOLVED_SHA"
@@ -52,6 +53,7 @@ trap cleanup EXIT
 
 cat >"$TMP_DEPLOY_ENV" <<EOF
 PROD_VITE_APP_VERSION=$RESOLVED_SHA
+PROD_VITE_APP_BUILD_DATE=$RESOLVED_COMMIT_DATE
 PROD_APP_BUILD_SHA=$RESOLVED_SHA
 EOF
 

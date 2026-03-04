@@ -63,6 +63,8 @@ const MAX_CHAT_IMAGE_QUALITY = 0.6;
 const MESSAGE_EDIT_DELETE_WINDOW_MS = 10 * 60 * 1000;
 const VERSION_POLL_INTERVAL_MS = 60000;
 const CLIENT_BUILD_VERSION = String(import.meta.env.VITE_APP_VERSION || "").trim();
+const CLIENT_BUILD_DATE = String(import.meta.env.VITE_APP_BUILD_DATE || "").trim();
+const CLIENT_BUILD_DATE_LABEL = CLIENT_BUILD_DATE ? `v.${CLIENT_BUILD_DATE}` : "";
 
 type ServerMenuTab = "users" | "events" | "telemetry" | "call" | "sound" | "video";
 type MobileTab = "channels" | "chat" | "settings";
@@ -1699,6 +1701,7 @@ export function App() {
       <AppHeader
         t={t}
         user={user}
+        buildDateLabel={CLIENT_BUILD_DATE_LABEL}
         appMenuOpen={appMenuOpen}
         authMenuOpen={authMenuOpen}
         profileMenuOpen={profileMenuOpen}

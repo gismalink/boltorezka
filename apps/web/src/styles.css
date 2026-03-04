@@ -383,6 +383,15 @@ pre {
     2px 0 0 var(--pixel-neon-pink);
 }
 
+.logo-version {
+  margin-top: 4px;
+  font-size: 11px;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  color: var(--pixel-muted);
+  font-family: "Noto Sans Mono", "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
 .app-menu-btn {
   padding: 0 var(--space-sm);
 }

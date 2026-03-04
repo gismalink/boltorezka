@@ -16,6 +16,7 @@ type AppHeaderProps = {
   onBeginSso: (provider: "google" | "yandex") => void;
   onLogout: () => void;
   onOpenUserSettings: () => void;
+  buildDateLabel?: string;
 };
 
 export function AppHeader({
@@ -31,7 +32,8 @@ export function AppHeader({
   onToggleProfileMenu,
   onBeginSso,
   onLogout,
-  onOpenUserSettings
+  onOpenUserSettings,
+  buildDateLabel,
 }: AppHeaderProps) {
   return (
     <header className="app-header flex items-center justify-between gap-4 min-[801px]:gap-6">
@@ -47,7 +49,14 @@ export function AppHeader({
             B
           </button>
         </div>
-        <h1 className="app-title font-heading text-[22px] leading-none text-pixel-text min-[801px]:text-[28px]">{t("app.title")}</h1>
+        <div className="title-block flex min-w-0 flex-col">
+          <h1 className="app-title font-heading text-[22px] leading-none text-pixel-text min-[801px]:text-[28px]">{t("app.title")}</h1>
+          {buildDateLabel ? (
+            <div className="logo-version" aria-label={`Build version ${buildDateLabel}`}>
+              {buildDateLabel}
+            </div>
+          ) : null}
+        </div>
       </div>
       <div className="header-actions flex items-center gap-3 min-[801px]:gap-4">
         {user ? (
