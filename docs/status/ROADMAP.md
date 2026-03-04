@@ -126,6 +126,8 @@
 
 ### Phase 5 — iOS & macOS
 
+- Scope note (Phase 5 kickoff): `docs/plans/PHASE5_IOS_MACOS_SCOPE_NOTE.md`.
+
 - [ ] Shared Swift package + базовые MVP-экраны.
 - [ ] Lifecycle обработка audio interruptions/background.
 
@@ -148,7 +150,7 @@
 3. [x] Зафиксировать post-MVP performance gate (API p95 + WS reconnect + call/video setup success) и пороги GO/NO-GO.
   - [x] Канонический документ: `docs/operations/PERFORMANCE_GATE.md`.
 4. [x] Выполнить новый pre-prod package refresh на основании обновлённых gate-правил.
-5. [ ] Подготовить Phase 5 scope note для iOS/macOS (MVP границы + shared package bootstrap contract).
+5. [x] Подготовить Phase 5 scope note для iOS/macOS (MVP границы + shared package bootstrap contract).
 6. [ ] Выполнить hardening batch для Phase 6: reconnect/failure сценарии + security review checklist с evidence.
 7. [ ] Сформировать финальный runbook bundle (`deploy/smoke/rollback/incident response`) и синхронизировать docs index.
 

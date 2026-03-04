@@ -29,3 +29,4 @@
   - [PHASE0_MVP_ADR](architecture/PHASE0_MVP_ADR.md)
 - `plans/` — scoped design/product plans
   - [DISCORD_CHANNEL_TREE_PLAN](plans/DISCORD_CHANNEL_TREE_PLAN.md)
+  - [PHASE5_IOS_MACOS_SCOPE_NOTE](plans/PHASE5_IOS_MACOS_SCOPE_NOTE.md)
