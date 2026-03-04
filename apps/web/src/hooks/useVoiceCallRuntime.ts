@@ -840,6 +840,8 @@ export function useVoiceCallRuntime({
       stallRecoveryAttempts: 0,
       reconnectAttempts: 0,
       reconnectTimer: null as number | null,
+      offerInFlight: false,
+      lastOfferAt: 0,
       pendingRemoteCandidates: [] as RTCIceCandidateInit[]
     };
     peersRef.current.set(targetUserId, peerContext);
@@ -892,8 +894,36 @@ export function useVoiceCallRuntime({
       return;
     }
 
+    const existingPeer = peersRef.current.get(normalizedTarget);
+    if (existingPeer?.offerInFlight) {
+      return;
+    }
+
+    const now = Date.now();
+    if (existingPeer && now - existingPeer.lastOfferAt < 1200) {
+      return;
+    }
+
+    if (existingPeer && existingPeer.connection.signalingState !== "stable") {
+      pushCallLog(
+        `call.offer skipped: signaling ${existingPeer.connection.signalingState} (${targetLabel || normalizedTarget})`
+      );
+      return;
+    }
+
+    if (existingPeer) {
+      existingPeer.offerInFlight = true;
+    }
+
     try {
       const connection = ensurePeerConnection(normalizedTarget, targetLabel);
+      const peer = peersRef.current.get(normalizedTarget);
+      if (peer && peer.connection.signalingState !== "stable") {
+        pushCallLog(
+          `call.offer skipped: signaling ${peer.connection.signalingState} (${targetLabel || normalizedTarget})`
+        );
+        return;
+      }
       await attachLocalTracks(connection);
       const offer = await connection.createOffer({
         offerToReceiveAudio: true,
@@ -913,7 +943,7 @@ export function useVoiceCallRuntime({
           targetUserId: normalizedTarget,
           signal
         },
-        { maxRetries: 1 }
+        { trackAck: false, maxRetries: 0 }
       );
       rememberRequestTarget(requestId, "call.offer", normalizedTarget);
 
@@ -924,6 +954,10 @@ export function useVoiceCallRuntime({
 
       setLastCallPeer(targetLabel || normalizedTarget);
       updateCallStatus();
+      const activePeer = peersRef.current.get(normalizedTarget);
+      if (activePeer) {
+        activePeer.lastOfferAt = Date.now();
+      }
       if (options?.iceRestart) {
         pushCallLog(`call.offer ice-restart -> ${targetLabel || normalizedTarget}${options.reason ? ` (${options.reason})` : ""}`);
       }
@@ -937,6 +971,11 @@ export function useVoiceCallRuntime({
       }
       pushCallLog(`call.offer failed (${targetLabel || normalizedTarget}): ${(error as Error).message}`);
       closePeer(normalizedTarget);
+    } finally {
+      const activePeer = peersRef.current.get(normalizedTarget);
+      if (activePeer) {
+        activePeer.offerInFlight = false;
+      }
     }
   }, [roomVoiceConnectedRef, ensurePeerConnection, attachLocalTracks, sendWsEvent, setLastCallPeer, updateCallStatus, pushCallLog, t, pushToastThrottled, closePeer, rememberRequestTarget, isTargetTemporarilyBlocked, allowVideoStreaming]);
 

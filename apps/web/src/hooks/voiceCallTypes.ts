@@ -93,6 +93,8 @@ export type VoicePeerContext = {
   stallRecoveryAttempts: number;
   reconnectAttempts: number;
   reconnectTimer: number | null;
+  offerInFlight: boolean;
+  lastOfferAt: number;
   pendingRemoteCandidates: RTCIceCandidateInit[];
 };
 
