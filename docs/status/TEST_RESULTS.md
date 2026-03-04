@@ -2,6 +2,31 @@
 
 Отдельный журнал результатов тестов/нагрузки.
 
+## 2026-03-04 — Cycle #13 (Caddy-only static serving migration)
+
+- Environment: `test` (`https://test.boltorezka.gismalink.art`)
+- Build ref: `origin/feature/video-stream-overlay-chat-toggle` (`7f319e9`)
+- Ingress ref: `edge/main` (`095b504`)
+
+### Functional gate
+
+- `TEST_REF=origin/feature/video-stream-overlay-chat-toggle npm run deploy:test:smoke`: PASS
+  - `smoke:sso`: PASS
+  - `smoke:api`: PASS
+  - `smoke:web:version-cache`: PASS
+  - `smoke:realtime`: PASS (`ok=true`, `reconnectOk=true`)
+
+### Scope covered by this cycle
+
+- Удалён внутренний nginx слой для web static serving,
+- static bundle синхронизируется в edge Caddy static directory,
+- web/API split routing и cache policy валидированы на test.
+
+### Decision
+
+- Cycle #13: PASS.
+- Caddy-only static serving подтверждён в test.
+
 ## 2026-03-04 — Cycle #12 (external static path rollout, decoupled API/web)
 
 - Environment: `test` (`https://test.boltorezka.gismalink.art`)
