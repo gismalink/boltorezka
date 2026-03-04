@@ -73,9 +73,8 @@ function VideoTile({
       return;
     }
 
-    const videoOnlyStream = new MediaStream(stream.getVideoTracks());
-    if (element.srcObject !== videoOnlyStream) {
-      element.srcObject = videoOnlyStream;
+    if (element.srcObject !== stream) {
+      element.srcObject = stream;
       void element.play().catch(() => {
         return;
       });
@@ -281,9 +280,9 @@ export function VideoWindowsOverlay({
           id={item.id}
           label={item.label}
           stream={item.stream}
-          muted
+          muted={item.muted}
           mirrored={item.id === "local"}
-          layout={layoutsById[item.id] || defaultLayout(0)}
+          layout={layoutsById[item.id] || defaultLayout(0, effectiveMinWidth, effectiveMaxWidth)}
           onDragStart={(id, event) => {
             const target = event.target as HTMLElement;
             if (target.closest(".video-window-resize")) {
