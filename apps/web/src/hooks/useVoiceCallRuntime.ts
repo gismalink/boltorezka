@@ -1338,8 +1338,10 @@ export function useVoiceCallRuntime({
         peers: peersRef.current.size
       });
 
+      const isExplicitCameraToggle = reason === "video-enabled-or-updated" || reason === "video-disabled";
+
       for (const [targetUserId, peer] of peersRef.current.entries()) {
-        if (!shouldInitiateOffer(targetUserId)) {
+        if (!isExplicitCameraToggle && !shouldInitiateOffer(targetUserId)) {
           logVoiceDiagnostics("runtime video-sync target skipped", {
             reason,
             targetUserId,
