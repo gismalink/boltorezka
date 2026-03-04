@@ -35,6 +35,7 @@ await app.register(websocket);
 await app.register(fastifyStatic, {
   root: path.join(__dirname, "../public"),
   prefix: "/",
+  cacheControl: false,
   setHeaders: (response, filePath) => {
     const normalizedPath = String(filePath || "").replace(/\\/g, "/");
     const fileName = path.basename(normalizedPath);
