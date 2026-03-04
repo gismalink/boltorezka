@@ -44,7 +44,7 @@
 ### Задачи
 
 - [x] Обновить runbook/checklist под React UI как default path.
-- [ ] E2E smoke сценарии:
+- [x] E2E smoke сценарии:
   - [x] login
   - [x] join room
   - [x] send/receive message
@@ -62,7 +62,7 @@
   - [x] клиентская проверка версии + auto-reload,
   - [x] smoke-проверка cache/version контракта.
 - [x] Подготовить deprecation-план для legacy `apps/api/public`.
-- [ ] Реализовать карточку пользователя (web, Discord-like footer):
+- [x] Реализовать карточку пользователя (web, Discord-like footer):
   - [x] Отдельный UI-блок с avatar/name/username и индикатором статуса.
   - [x] Кнопки quick controls: mute/unmute, deafen/undeafen, user settings.
   - [x] Попап «Устройство ввода» + выбор микрофона + ползунок громкости микрофона.
@@ -73,7 +73,7 @@
   - [x] реакция на `navigator.mediaDevices.devicechange` во время активного звонка,
   - [x] авто-refresh outgoing audio track (включая `selectedInputId=default`),
   - [x] логирование успешного auto-update/failure в call log.
-- [ ] Реализовать Discord-like структуру каналов (категории + текст/голос):
+- [x] Реализовать Discord-like структуру каналов (категории + текст/голос):
   - [x] Добавить category layer в data model (порядок, сворачивание, управление видимостью).
   - [x] Разделить channels по типу: `text` и `voice` (в едином tree endpoint).
   - [x] Добавить API для CRUD/ordering: category/channel create, rename, move, archive.
