@@ -13,6 +13,8 @@ COMPOSE_FILE="infra/docker-compose.host.yml"
 ENV_FILE="infra/.env.host"
 HEALTHCHECK_URL="${TEST_HEALTHCHECK_URL:-https://test.boltorezka.gismalink.art/health}"
 FULL_RECREATE="${FULL_RECREATE:-0}"
+EDGE_REPO_DIR="${EDGE_REPO_DIR:-$HOME/srv/edge}"
+EDGE_STATIC_DIR_TEST="${EDGE_STATIC_DIR_TEST:-$EDGE_REPO_DIR/ingress/static/boltorezka/test}"
 
 if [[ "$GIT_REF" =~ ^(origin/main|main|origin/master|master)$ ]] && [[ "${ALLOW_TEST_FROM_MAIN:-0}" != "1" ]]; then
   echo "[deploy-test] blocked by policy: test deploy should use feature branch ref"
@@ -41,10 +43,18 @@ if [[ ! -f "$ENV_FILE" ]]; then
   exit 1
 fi
 
-echo "[deploy-test] deploy mode: api+web (set FULL_RECREATE=1 for full dependency recreate)"
+echo "[deploy-test] deploy mode: api-only + caddy-static-sync (set FULL_RECREATE=1 for full dependency recreate)"
 TMP_DOCKER_CONFIG="$(mktemp -d)"
 TMP_DEPLOY_ENV="$(mktemp)"
-trap 'rm -rf "$TMP_DOCKER_CONFIG" "$TMP_DEPLOY_ENV"' EXIT
+TMP_WEB_DIST_DIR="$(mktemp -d)"
+WEB_IMAGE_CID=""
+cleanup() {
+  if [[ -n "$WEB_IMAGE_CID" ]]; then
+    docker rm "$WEB_IMAGE_CID" >/dev/null 2>&1 || true
+  fi
+  rm -rf "$TMP_DOCKER_CONFIG" "$TMP_DEPLOY_ENV" "$TMP_WEB_DIST_DIR"
+}
+trap cleanup EXIT
 
 cat >"$TMP_DEPLOY_ENV" <<EOF
 TEST_VITE_APP_VERSION=$RESOLVED_SHA
@@ -64,13 +74,28 @@ cat >"$TMP_DOCKER_CONFIG/config.json" <<'JSON'
 }
 JSON
 
-DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" build boltorezka-api-test boltorezka-web-test
+DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" build boltorezka-api-test
+
+if [[ -d "$EDGE_REPO_DIR/ingress" ]]; then
+  echo "[deploy-test] sync static bundle -> $EDGE_STATIC_DIR_TEST"
+  mkdir -p "$EDGE_STATIC_DIR_TEST"
+
+  WEB_IMAGE_CID="$(docker create boltorezka-api:test)"
+  docker cp "$WEB_IMAGE_CID:/app/public/." "$TMP_WEB_DIST_DIR/"
+  docker rm "$WEB_IMAGE_CID" >/dev/null
+  WEB_IMAGE_CID=""
+
+  find "$EDGE_STATIC_DIR_TEST" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
+  cp -R "$TMP_WEB_DIST_DIR/." "$EDGE_STATIC_DIR_TEST/"
+else
+  echo "[deploy-test] warning: edge repo not found at $EDGE_REPO_DIR; static sync skipped"
+fi
 
 if [[ "$FULL_RECREATE" == "1" ]]; then
   echo "[deploy-test] full recreate enabled"
-  DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" up -d --force-recreate boltorezka-api-test boltorezka-web-test
+  DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" up -d --force-recreate boltorezka-api-test
 else
-  DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" up -d --no-deps --force-recreate boltorezka-api-test boltorezka-web-test
+  DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" up -d --no-deps --force-recreate boltorezka-api-test
 fi
 
 echo "[deploy-test] wait api health"
