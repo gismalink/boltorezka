@@ -69,7 +69,7 @@
 - Unified flow command:
   - `npm run smoke:web:e2e`
 - Actual orchestrator:
-  - `scripts/smoke-web-e2e.sh`
+  - `scripts/smoke/smoke-web-e2e.sh`
 - Coverage included:
   - login redirect (`smoke:sso`),
   - room join + message send/receive (`smoke:realtime`),

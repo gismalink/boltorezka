@@ -13,14 +13,14 @@ fi
 
 if [[ "${SMOKE_API:-0}" == "1" ]]; then
   echo "[verify] smoke api"
-  node ./scripts/smoke-api.mjs
+  node ./scripts/smoke/smoke-api.mjs
 else
   echo "[verify] smoke api skipped (set SMOKE_API=1 to enable)"
 fi
 
 if [[ "${SMOKE_SSO:-0}" == "1" ]]; then
   echo "[verify] smoke sso"
-  node ./scripts/smoke-sso-redirect.mjs
+  node ./scripts/smoke/smoke-sso-redirect.mjs
 else
   echo "[verify] smoke sso skipped (set SMOKE_SSO=1 to enable)"
 fi
@@ -31,14 +31,14 @@ if [[ "${SMOKE_REALTIME:-0}" == "1" ]]; then
     exit 1
   fi
   echo "[verify] smoke realtime"
-  node ./scripts/smoke-realtime.mjs
+  node ./scripts/smoke/smoke-realtime.mjs
 else
   echo "[verify] smoke realtime skipped (set SMOKE_REALTIME=1 to enable)"
 fi
 
 if [[ "${SMOKE_WEB_E2E:-0}" == "1" ]]; then
   echo "[verify] smoke web e2e"
-  bash ./scripts/smoke-web-e2e.sh
+  bash ./scripts/smoke/smoke-web-e2e.sh
 else
   echo "[verify] smoke web e2e skipped (set SMOKE_WEB_E2E=1 to enable)"
 fi

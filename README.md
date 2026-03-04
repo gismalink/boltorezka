@@ -59,9 +59,9 @@ Legacy-файлы перенесены в `legacy/poc/`.
 - TS type-only DB контракт: `apps/api/src/db.types.ts` + JSDoc typing ключевых query rows в routes/middleware
 - TS type-only API DTO контракт: `apps/api/src/api-contract.types.ts` + JSDoc typing response shapes в `auth/rooms/admin`
 - WS protocol helper module: `apps/api/src/ws-protocol.ts` (typed incoming parser/guards + outgoing envelope builders, включая chat/room/presence/call relay/pong)
-- `SMOKE_API=1 npm run check` — verify + API smoke (`scripts/smoke-api.mjs`)
-- `SMOKE_API_URL=https://test.boltorezka.gismalink.art npm run smoke:sso` — SSO redirect/mode smoke (`scripts/smoke-sso-redirect.mjs`)
-- `SMOKE_API_URL=https://test.boltorezka.gismalink.art SMOKE_BEARER_TOKEN=<jwt> npm run smoke:realtime` — WS protocol smoke (`nack/ack/idempotency`) через `ws-ticket` (`scripts/smoke-realtime.mjs`)
+- `SMOKE_API=1 npm run check` — verify + API smoke (`scripts/smoke/smoke-api.mjs`)
+- `SMOKE_API_URL=https://test.boltorezka.gismalink.art npm run smoke:sso` — SSO redirect/mode smoke (`scripts/smoke/smoke-sso-redirect.mjs`)
+- `SMOKE_API_URL=https://test.boltorezka.gismalink.art SMOKE_BEARER_TOKEN=<jwt> npm run smoke:realtime` — WS protocol smoke (`nack/ack/idempotency`) через `ws-ticket` (`scripts/smoke/smoke-realtime.mjs`)
 - `SMOKE_CALL_SIGNAL=1 SMOKE_API_URL=https://test.boltorezka.gismalink.art SMOKE_BEARER_TOKEN=<jwt1> SMOKE_BEARER_TOKEN_SECOND=<jwt2> npm run smoke:realtime` — расширенный WS smoke + relay проверки `call.offer`, `call.reject` и `call.hangup` с гарантированно разными пользователями
 - `npm run smoke:auth:bootstrap` — создать/обновить 2 test users в DB, сгенерировать bearer tokens и сохранить их для переиспользования в `.deploy/smoke-auth.env` (gitignored)
 - `SMOKE_API_URL=https://test.boltorezka.gismalink.art SMOKE_API=1 SMOKE_SSO=1 npm run check` — единый verify + API + SSO smoke

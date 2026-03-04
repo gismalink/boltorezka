@@ -750,6 +750,16 @@ export function App() {
     return Math.max(min, Math.min(max, Math.round(numeric)));
   }, []);
 
+  const normalizeAudioQuality = useCallback((value: unknown): AudioQuality | null | undefined => {
+    if (value === null) {
+      return null;
+    }
+
+    return value === "retro" || value === "low" || value === "standard" || value === "high"
+      ? value
+      : undefined;
+  }, []);
+
   /** Applies video policy updates received from realtime events for non-admin clients. */
   const handleIncomingVideoState = useCallback((payload: {
     roomSlug?: unknown;
@@ -841,6 +851,56 @@ export function App() {
     serverVideoWindowMaxWidth,
     serverVideoWindowMinWidth
   ]);
+
+  /** Syncs audio-quality updates from realtime into top-level room state stores. */
+  const handleAudioQualityUpdated = useCallback((payload: {
+    scope?: unknown;
+    audioQuality?: unknown;
+    roomId?: unknown;
+    audioQualityOverride?: unknown;
+  }) => {
+    const scope = String(payload.scope || "").trim();
+
+    if (scope === "server") {
+      const nextAudioQuality = normalizeAudioQuality(payload.audioQuality);
+      if (nextAudioQuality && nextAudioQuality !== null) {
+        setServerAudioQuality(nextAudioQuality);
+      }
+      return;
+    }
+
+    if (scope !== "room") {
+      return;
+    }
+
+    const roomId = String(payload.roomId || "").trim();
+    if (!roomId) {
+      return;
+    }
+
+    const normalizedOverride = normalizeAudioQuality(payload.audioQualityOverride);
+    if (typeof normalizedOverride === "undefined") {
+      return;
+    }
+
+    setRooms((prev) => prev.map((room) => (room.id === roomId ? { ...room, audio_quality_override: normalizedOverride } : room)));
+    setRoomsTree((prev) => {
+      if (!prev) {
+        return prev;
+      }
+
+      const patchRoom = (room: Room) => (room.id === roomId ? { ...room, audio_quality_override: normalizedOverride } : room);
+
+      return {
+        ...prev,
+        categories: (prev.categories || []).map((category) => ({
+          ...category,
+          channels: (category.channels || []).map(patchRoom)
+        })),
+        uncategorized: (prev.uncategorized || []).map(patchRoom)
+      };
+    });
+  }, [normalizeAudioQuality]);
 
   const {
     beginSso,
@@ -967,60 +1027,7 @@ export function App() {
     onCallMicState: handleIncomingMicState,
     onCallVideoState: handleIncomingVideoState,
     onCallNack: handleCallNack,
-    onAudioQualityUpdated: (payload) => {
-      const scope = String(payload.scope || "").trim();
-
-      if (scope === "server") {
-        const nextAudioQuality = String(payload.audioQuality || "").trim();
-        if (
-          nextAudioQuality === "retro"
-          || nextAudioQuality === "low"
-          || nextAudioQuality === "standard"
-          || nextAudioQuality === "high"
-        ) {
-          setServerAudioQuality(nextAudioQuality);
-        }
-        return;
-      }
-
-      if (scope !== "room") {
-        return;
-      }
-
-      const roomId = String(payload.roomId || "").trim();
-      if (!roomId) {
-        return;
-      }
-
-      const rawOverride = payload.audioQualityOverride;
-      const normalizedOverride: AudioQuality | null | undefined = rawOverride === null
-        ? null
-        : (rawOverride === "retro" || rawOverride === "low" || rawOverride === "standard" || rawOverride === "high")
-          ? rawOverride
-          : undefined;
-
-      if (typeof normalizedOverride === "undefined") {
-        return;
-      }
-
-      setRooms((prev) => prev.map((room) => (room.id === roomId ? { ...room, audio_quality_override: normalizedOverride } : room)));
-      setRoomsTree((prev) => {
-        if (!prev) {
-          return prev;
-        }
-
-        const patchRoom = (room: Room) => (room.id === roomId ? { ...room, audio_quality_override: normalizedOverride } : room);
-
-        return {
-          ...prev,
-          categories: (prev.categories || []).map((category) => ({
-            ...category,
-            channels: (category.channels || []).map(patchRoom)
-          })),
-          uncategorized: (prev.uncategorized || []).map(patchRoom)
-        };
-      });
-    }
+    onAudioQualityUpdated: handleAudioQualityUpdated
   });
 
   useEffect(() => {
