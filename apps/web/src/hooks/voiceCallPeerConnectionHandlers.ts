@@ -51,6 +51,11 @@ export function bindVoicePeerConnectionHandlers({
   outputVolume
 }: BindVoicePeerConnectionHandlersArgs) {
   connection.onicecandidate = (event) => {
+    const peer = peersRef.current.get(targetUserId);
+    if (!peer || peer.connection !== connection || connection.connectionState === "closed") {
+      return;
+    }
+
     if (!event.candidate) {
       pushCallLog(`rtc ice gathering complete <- ${targetLabel || targetUserId}`);
       return;
@@ -131,9 +136,16 @@ export function bindVoicePeerConnectionHandlers({
     }
 
     const resolvedStream = stream || peer.remoteStream || new MediaStream();
+    const hadSameStream = peer.remoteStream === resolvedStream;
+    const knownTrackIdSet = new Set((peer.remoteStream?.getTracks() || []).map((item) => item.id));
+    const isDuplicateTrackEvent = Boolean(track?.id && hadSameStream && knownTrackIdSet.has(track.id));
 
     if (!stream && track && !resolvedStream.getTracks().some((item) => item.id === track.id)) {
       resolvedStream.addTrack(track);
+    }
+
+    if (isDuplicateTrackEvent) {
+      return;
     }
 
     if (track) {
@@ -174,7 +186,9 @@ export function bindVoicePeerConnectionHandlers({
     }
 
     const remoteAudioElement = peer.audioElement;
-    remoteAudioElement.srcObject = resolvedStream;
+    if (remoteAudioElement.srcObject !== resolvedStream) {
+      remoteAudioElement.srcObject = resolvedStream;
+    }
     peer.hasRemoteTrack = true;
     startPeerStatsMonitor(targetUserId, targetLabel);
 

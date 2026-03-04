@@ -45,6 +45,7 @@ export async function handleIncomingSignalEvent({
   roomVoiceConnectedRef,
   peersRef,
   sendWsEvent,
+  rememberRequestTarget,
   ensurePeerConnection,
   clearPeerReconnectTimer,
   attachLocalTracks,
@@ -59,6 +60,7 @@ export async function handleIncomingSignalEvent({
   roomVoiceConnectedRef: MutableRefObject<boolean>;
   peersRef: VoicePeersRef;
   sendWsEvent: WsSender;
+  rememberRequestTarget: (requestId: string | null, eventType: string, targetUserId: string) => void;
   ensurePeerConnection: (targetUserId: string, targetLabel: string) => RTCPeerConnection;
   clearPeerReconnectTimer: (targetUserId: string) => void;
   attachLocalTracks: (connection: RTCPeerConnection) => Promise<void>;
@@ -77,7 +79,7 @@ export async function handleIncomingSignalEvent({
 
   if (eventType === "call.offer") {
     if (!roomVoiceConnectedRef.current) {
-      sendWsEvent(
+      const rejectRequestId = sendWsEvent(
         "call.reject",
         {
           targetUserId: fromUserId,
@@ -85,6 +87,7 @@ export async function handleIncomingSignalEvent({
         },
         { maxRetries: 1 }
       );
+      rememberRequestTarget(rejectRequestId, "call.reject", fromUserId);
       return;
     }
 
@@ -108,7 +111,7 @@ export async function handleIncomingSignalEvent({
         pushCallLog(`rtc ice gathering timeout before answer -> ${fromUserName}`);
       }
 
-      sendWsEvent(
+      const answerRequestId = sendWsEvent(
         "call.answer",
         {
           targetUserId: fromUserId,
@@ -116,6 +119,7 @@ export async function handleIncomingSignalEvent({
         },
         { maxRetries: 1 }
       );
+      rememberRequestTarget(answerRequestId, "call.answer", fromUserId);
 
       setLastCallPeer(fromUserName);
       updateCallStatus();
@@ -268,7 +272,7 @@ export function handleCallNackEvent({
     return;
   }
 
-  if (mapped.eventType !== "call.offer" && mapped.eventType !== "call.answer") {
+  if (!mapped.eventType.startsWith("call.")) {
     return;
   }
 

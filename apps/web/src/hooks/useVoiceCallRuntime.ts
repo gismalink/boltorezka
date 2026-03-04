@@ -1054,6 +1054,7 @@ export function useVoiceCallRuntime({
       roomVoiceConnectedRef,
       peersRef,
       sendWsEvent,
+      rememberRequestTarget,
       ensurePeerConnection,
       clearPeerReconnectTimer,
       attachLocalTracks,
@@ -1063,7 +1064,7 @@ export function useVoiceCallRuntime({
       pushCallLog,
       closePeer
     });
-  }, [sendWsEvent, ensurePeerConnection, clearPeerReconnectTimer, attachLocalTracks, flushPendingRemoteCandidates, setLastCallPeer, updateCallStatus, pushCallLog, closePeer]);
+  }, [sendWsEvent, rememberRequestTarget, ensurePeerConnection, clearPeerReconnectTimer, attachLocalTracks, flushPendingRemoteCandidates, setLastCallPeer, updateCallStatus, pushCallLog, closePeer]);
 
   const handleIncomingTerminal = useCallback((eventType: "call.reject" | "call.hangup", payload: CallTerminalPayload) => {
     handleIncomingTerminalEvent({
