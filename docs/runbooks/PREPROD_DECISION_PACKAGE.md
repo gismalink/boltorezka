@@ -7,7 +7,7 @@
 ## 1) Decision summary
 
 - Decision status: **REFRESHED (NO-GO пока не выполнен новый prod sign-off)**.
-- Причина: пакет обновлён под актуальные gate-правила и свежие test evidence (`Cycle #14`, Caddy-only static serving), но новый explicit prod approval ещё не заполнялся.
+- Причина: пакет обновлён под актуальные gate-правила и свежие test evidence (`Cycle #15`, rollout от `origin/main`), но новый explicit prod approval ещё не заполнялся.
 - Production rollout policy: только из `origin/main` после отдельного explicit approval.
 
 ## 2) Scope of evidence
@@ -22,10 +22,10 @@
 
 ### 3.1 Latest verified test rollout
 
-- Branch: `origin/feature/video-stream-overlay-chat-toggle`
-- Verified deploy SHA in test: `94c8d0e`
+- Branch: `origin/main`
+- Verified deploy SHA in test: `29ad7be`
 - Command:
-  - `ssh mac-mini 'cd ~/srv/boltorezka && TEST_REF=origin/feature/video-stream-overlay-chat-toggle npm run deploy:test:smoke'`
+  - `ssh mac-mini 'cd ~/srv/boltorezka && TEST_REF=origin/main ALLOW_TEST_FROM_MAIN=1 npm run deploy:test:smoke'`
 - Result:
   - `health` — PASS
   - `smoke:sso` — PASS
@@ -221,7 +221,7 @@
 ### 8.4 Current gate record (refresh 2026-03-04)
 
 - Target main SHA: `<to-fill-before-next-prod>`
-- Last test deploy SHA: `94c8d0e` (`origin/feature/video-stream-overlay-chat-toggle`)
+- Last test deploy SHA: `29ad7be` (`origin/main`)
 - smoke:sso: `PASS`
 - smoke:api: `PASS`
 - smoke:realtime: `PASS`

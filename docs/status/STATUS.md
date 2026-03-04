@@ -42,7 +42,7 @@
 	- зафиксирован scope note `docs/plans/PHASE5_IOS_MACOS_SCOPE_NOTE.md` (MVP boundaries + shared Swift package bootstrap contract).
 - Активирован следующий execution workstream:
 	- `docs/runbooks/LEGACY_PUBLIC_DEPRECATION_PLAN.md` как текущий план для оставшегося decommission cleanup (Phase D).
-- Последний test rollout/smoke по feature ветке (`origin/feature/video-stream-overlay-chat-toggle`, SHA `94c8d0e`) — PASS.
+- Последний test rollout/smoke от `origin/main` (SHA `29ad7be`) — PASS.
 - Выполнен refresh pre-prod decision package под актуальные gate-правила и evidence (`docs/runbooks/PREPROD_DECISION_PACKAGE.md`).
 
 ## Канонические документы

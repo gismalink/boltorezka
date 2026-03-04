@@ -2,6 +2,30 @@
 
 Отдельный журнал результатов тестов/нагрузки.
 
+## 2026-03-04 — Cycle #15 (origin/main rollout validation)
+
+- Environment: `test` (`https://test.boltorezka.gismalink.art`)
+- Build ref: `origin/main` (`29ad7be`)
+- Ingress ref: `edge/main` (`095b504`)
+
+### Functional gate
+
+- `TEST_REF=origin/main ALLOW_TEST_FROM_MAIN=1 npm run deploy:test:smoke`: PASS
+  - `smoke:sso`: PASS
+  - `smoke:api`: PASS
+  - `smoke:web:version-cache`: PASS
+  - `smoke:realtime`: PASS (`ok=true`, `reconnectOk=true`)
+
+### Scope covered by this cycle
+
+- Проверен full test rollout уже от `main` после merge feature-пакета,
+- Caddy-only static delivery mode остаётся стабильным на main.
+
+### Decision
+
+- Cycle #15: PASS.
+- `main` готов к следующему pre-prod sign-off этапу (без prod rollout до explicit approval).
+
 ## 2026-03-04 — Cycle #14 (full test deploy after preprod refresh)
 
 - Environment: `test` (`https://test.boltorezka.gismalink.art`)
