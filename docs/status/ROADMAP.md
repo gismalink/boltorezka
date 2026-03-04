@@ -27,6 +27,8 @@
 ## Focus now (операционный фокус)
 
 1. Поддерживать test-first release cadence: каждое изменение через `deploy:test:smoke` с фиксированным evidence.
+2. Перейти к открытому пакету Phase 6: hardening/reconnect-failure/security review + финализация runbooks.
+3. Подготовить handoff-контур для Phase 5 (iOS/macOS) как следующий post-MVP workstream.
 
 ## Completed milestones (свернуто)
 
@@ -146,6 +148,9 @@
 3. [x] Зафиксировать post-MVP performance gate (API p95 + WS reconnect + call/video setup success) и пороги GO/NO-GO.
   - [x] Канонический документ: `docs/operations/PERFORMANCE_GATE.md`.
 4. [x] Выполнить новый pre-prod package refresh на основании обновлённых gate-правил.
+5. [ ] Подготовить Phase 5 scope note для iOS/macOS (MVP границы + shared package bootstrap contract).
+6. [ ] Выполнить hardening batch для Phase 6: reconnect/failure сценарии + security review checklist с evidence.
+7. [ ] Сформировать финальный runbook bundle (`deploy/smoke/rollback/incident response`) и синхронизировать docs index.
 
 ## KPI MVP
 
