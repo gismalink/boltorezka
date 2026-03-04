@@ -7,7 +7,7 @@
 ## 1) Decision summary
 
 - Decision status: **REFRESHED (NO-GO пока не выполнен новый prod sign-off)**.
-- Причина: пакет обновлён под актуальные gate-правила и свежие test evidence (`Cycle #10`), но новый explicit prod approval ещё не заполнялся.
+- Причина: пакет обновлён под актуальные gate-правила и свежие test evidence (`Cycle #13`, Caddy-only static serving), но новый explicit prod approval ещё не заполнялся.
 - Production rollout policy: только из `origin/main` после отдельного explicit approval.
 
 ## 2) Scope of evidence
@@ -23,7 +23,7 @@
 ### 3.1 Latest verified test rollout
 
 - Branch: `origin/feature/video-stream-overlay-chat-toggle`
-- Verified deploy SHA in test: `b931324`
+- Verified deploy SHA in test: `7f319e9`
 - Command:
   - `ssh mac-mini 'cd ~/srv/boltorezka && TEST_REF=origin/feature/video-stream-overlay-chat-toggle npm run deploy:test:smoke'`
 - Result:
@@ -34,7 +34,15 @@
   - `smoke:realtime` — PASS
   - `reconnectOk=true`
 
-### 3.1.1 Additional readiness evidence (2026-03-04)
+### 3.1.1 Static delivery mode (current)
+
+- Current validated mode in test: **Caddy-only static serving**.
+- Runtime model:
+  - API container serves only API/WS/auth (`API_SERVE_STATIC=0`),
+  - web static bundle synced to edge path `~/srv/edge/ingress/static/boltorezka/test`,
+  - edge Caddy serves web static directly and routes API paths to `boltorezka-api-test`.
+
+### 3.1.2 Additional readiness evidence (2026-03-04)
 
 - Version/cache contract:
   - `index.html` served with `no-store/no-cache`.
@@ -45,7 +53,7 @@
 - Performance gate policy formalized:
   - canonical thresholds document: `docs/operations/PERFORMANCE_GATE.md`.
 
-### 3.1.2 Latest production rollout (historical reference)
+### 3.1.3 Latest production rollout (historical reference)
 
 - Target: `origin/main`
 - Deploy SHA in prod: `36dd4e129b92e7bb0300ff936a8359f6f9be3658`
@@ -213,7 +221,7 @@
 ### 8.4 Current gate record (refresh 2026-03-04)
 
 - Target main SHA: `<to-fill-before-next-prod>`
-- Last test deploy SHA: `b931324` (`origin/feature/video-stream-overlay-chat-toggle`)
+- Last test deploy SHA: `7f319e9` (`origin/feature/video-stream-overlay-chat-toggle`)
 - smoke:sso: `PASS`
 - smoke:api: `PASS`
 - smoke:realtime: `PASS`
