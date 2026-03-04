@@ -419,6 +419,7 @@ export function App() {
     handleIncomingSignal,
     handleIncomingTerminal,
     handleIncomingMicState,
+    handleIncomingVideoState: handleIncomingRtcVideoState,
     handleCallNack
   } = useVoiceCallRuntime({
     localUserId: user?.id || "",
@@ -759,7 +760,7 @@ export function App() {
   }, []);
 
   /** Applies video policy updates received from realtime events for non-admin clients. */
-  const handleIncomingVideoState = useCallback((payload: {
+  const handleIncomingVideoPolicyState = useCallback((payload: {
     roomSlug?: unknown;
     settings?: {
       effectType?: unknown;
@@ -849,6 +850,16 @@ export function App() {
     serverVideoWindowMaxWidth,
     serverVideoWindowMinWidth
   ]);
+
+  const handleIncomingVideoState = useCallback((payload: {
+    fromUserId?: string;
+    fromUserName?: string;
+    roomSlug?: string;
+    settings?: Record<string, unknown>;
+  }) => {
+    handleIncomingRtcVideoState(payload);
+    handleIncomingVideoPolicyState(payload);
+  }, [handleIncomingRtcVideoState, handleIncomingVideoPolicyState]);
 
   /** Syncs audio-quality updates from realtime into top-level room state stores. */
   const handleAudioQualityUpdated = useCallback((payload: {

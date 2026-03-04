@@ -28,6 +28,13 @@ export type CallMicStatePayload = {
   audioMuted?: boolean;
 };
 
+export type CallVideoStatePayload = {
+  fromUserId?: string;
+  fromUserName?: string;
+  roomSlug?: string;
+  settings?: Record<string, unknown>;
+};
+
 export type CallNackPayload = {
   requestId: string;
   eventType: string;

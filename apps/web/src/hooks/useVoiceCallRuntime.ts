@@ -32,6 +32,7 @@ import type {
   CallNackPayload,
   CallSignalPayload,
   CallTerminalPayload,
+  CallVideoStatePayload,
   UseVoiceCallRuntimeArgs,
   VoicePeerContext
 } from "./voiceCallTypes";
@@ -53,7 +54,7 @@ const AUDIO_QUALITY_SAMPLE_RATE: Record<AudioQuality, number> = {
 };
 
 const OFFER_MIN_INTERVAL_MS = 10000;
-const OFFER_VIDEO_SYNC_MIN_INTERVAL_MS = 20000;
+const OFFER_VIDEO_SYNC_MIN_INTERVAL_MS = 3000;
 const OFFER_ICE_RESTART_MIN_INTERVAL_MS = 5000;
 const OFFER_TRACE_EVERY_N = 5;
 const OFFER_TRACE_MIN_GAP_MS = 30000;
@@ -134,6 +135,7 @@ export function useVoiceCallRuntime({
   const localSpeakingRef = useRef(false);
   const localSpeakingLastAboveAtRef = useRef(0);
   const lastSentMicStateRef = useRef<{ muted: boolean; speaking: boolean; audioMuted: boolean } | null>(null);
+  const lastSentVideoStateRef = useRef<boolean | null>(null);
   const remoteMicStateByUserIdRef = useRef<Record<string, { muted: boolean; speaking: boolean; audioMuted: boolean }>>({});
 
   const setRemoteVideoStream = useCallback((targetUserId: string, stream: MediaStream) => {
@@ -674,6 +676,7 @@ export function useVoiceCallRuntime({
     }
     remoteMicStateByUserIdRef.current = {};
     lastSentMicStateRef.current = null;
+    lastSentVideoStateRef.current = null;
     clearRoomTargetsResyncTimer();
     setLastCallPeer("");
     setCallStatus("idle");
@@ -1238,6 +1241,34 @@ export function useVoiceCallRuntime({
     });
   }, [syncPeerVoiceState]);
 
+  const handleIncomingVideoState = useCallback((payload: CallVideoStatePayload) => {
+    const fromUserId = String(payload.fromUserId || "").trim();
+    if (!fromUserId || !roomVoiceConnectedRef.current) {
+      return;
+    }
+
+    const settings = payload.settings;
+    const remoteVideoEnabled = typeof settings?.localVideoEnabled === "boolean"
+      ? settings.localVideoEnabled
+      : null;
+    if (remoteVideoEnabled === null) {
+      return;
+    }
+
+    if (!shouldInitiateOffer(fromUserId)) {
+      return;
+    }
+
+    const peer = peersRef.current.get(fromUserId);
+    if (!peer) {
+      return;
+    }
+
+    void startOfferRef.current?.(fromUserId, peer.label || fromUserId, {
+      reason: `video-sync:remote-video-state:${remoteVideoEnabled ? "on" : "off"}`
+    });
+  }, [shouldInitiateOffer]);
+
   const handleCallNack = useCallback((payload: CallNackPayload) => {
     handleCallNackEvent({
       payload,
@@ -1407,6 +1438,24 @@ export function useVoiceCallRuntime({
   }, [micMuted, micTestLevel, audioMuted, sendWsEvent]);
 
   useEffect(() => {
+    if (!roomVoiceConnectedRef.current || !allowVideoStreaming) {
+      return;
+    }
+
+    const localVideoEnabled = Boolean(videoStreamingEnabled);
+    if (lastSentVideoStateRef.current === localVideoEnabled) {
+      return;
+    }
+
+    lastSentVideoStateRef.current = localVideoEnabled;
+    sendWsEvent("call.video_state", {
+      settings: {
+        localVideoEnabled
+      }
+    }, { maxRetries: 1 });
+  }, [roomVoiceConnected, allowVideoStreaming, videoStreamingEnabled, sendWsEvent]);
+
+  useEffect(() => {
     teardownRoom();
   }, [roomSlug, teardownRoom]);
 
@@ -1424,6 +1473,7 @@ export function useVoiceCallRuntime({
     handleIncomingSignal,
     handleIncomingTerminal,
     handleIncomingMicState,
+    handleIncomingVideoState,
     handleCallNack
   };
 }
