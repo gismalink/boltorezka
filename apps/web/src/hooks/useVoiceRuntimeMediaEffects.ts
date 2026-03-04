@@ -66,6 +66,8 @@ export function useVoiceRuntimeMediaEffects({
   t
 }: UseVoiceRuntimeMediaEffectsArgs) {
   const mediaRecoveryInProgressRef = useRef(false);
+  const lastMediaRecoveryAtRef = useRef(0);
+  const lastVideoResyncAtRef = useRef(0);
   const outgoingVideoProcessorRef = useRef<OutgoingVideoTrackHandle | null>(null);
 
   const findSenderByKind = useCallback((
@@ -390,15 +392,26 @@ export function useVoiceRuntimeMediaEffects({
 
     const WATCHDOG_INTERVAL_MS = 5000;
     const STALL_TICKS_THRESHOLD = 3;
+    const MISSING_SENDER_TICKS_THRESHOLD = 2;
+    const RECOVERY_COOLDOWN_MS = 60000;
+    const VIDEO_RESYNC_COOLDOWN_MS = 12000;
     let cancelled = false;
     const outboundStateBySender = new Map<string, { bytes: number; stalledTicks: number }>();
+    const missingSenderStateByKey = new Map<string, number>();
 
     const recoverLocalMedia = async (reason: string) => {
       if (mediaRecoveryInProgressRef.current) {
         return;
       }
 
+      const now = Date.now();
+      const elapsedSinceLastRecovery = now - lastMediaRecoveryAtRef.current;
+      if (elapsedSinceLastRecovery < RECOVERY_COOLDOWN_MS) {
+        return;
+      }
+
       mediaRecoveryInProgressRef.current = true;
+      lastMediaRecoveryAtRef.current = now;
 
       try {
         const recoveredStream = await navigator.mediaDevices.getUserMedia({
@@ -496,18 +509,28 @@ export function useVoiceRuntimeMediaEffects({
         for (const kind of kinds) {
           if (kind === "video" && (!allowVideoStreaming || !videoStreamingEnabled)) {
             outboundStateBySender.delete(`${peerUserId}:video`);
+            missingSenderStateByKey.delete(`${peerUserId}:video`);
             continue;
           }
 
           if (kind === "audio" && micMuted) {
             outboundStateBySender.delete(`${peerUserId}:audio`);
+            missingSenderStateByKey.delete(`${peerUserId}:audio`);
             continue;
           }
 
-          const sender = senders.find((item) => item.track?.kind === kind);
+          const sender = findSenderByKind(peer.connection, kind) || senders.find((item) => item.track?.kind === kind);
+          const missingKey = `${peerUserId}:${kind}`;
           if (!sender?.track || sender.track.readyState !== "live") {
-            return `${kind}-sender-missing`;
+            const missingTicks = (missingSenderStateByKey.get(missingKey) || 0) + 1;
+            missingSenderStateByKey.set(missingKey, missingTicks);
+            if (missingTicks >= MISSING_SENDER_TICKS_THRESHOLD) {
+              return `${kind}-sender-missing`;
+            }
+            continue;
           }
+
+          missingSenderStateByKey.delete(missingKey);
 
           try {
             const stats = await sender.getStats();
@@ -577,6 +600,14 @@ export function useVoiceRuntimeMediaEffects({
 
       const outboundIssue = await checkOutboundFlow();
       if (outboundIssue) {
+        if (outboundIssue === "video-sender-missing") {
+          const now = Date.now();
+          if (now - lastVideoResyncAtRef.current >= VIDEO_RESYNC_COOLDOWN_MS) {
+            lastVideoResyncAtRef.current = now;
+            onVideoTrackSyncNeeded?.("watchdog-video-sender-missing");
+            return;
+          }
+        }
         await recoverLocalMedia(outboundIssue);
       }
     };
