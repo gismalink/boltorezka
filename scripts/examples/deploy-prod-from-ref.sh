@@ -13,6 +13,8 @@ COMPOSE_FILE="infra/docker-compose.host.yml"
 ENV_FILE="infra/.env.host"
 HEALTHCHECK_URL="${PROD_HEALTHCHECK_URL:-https://boltorezka.gismalink.art/health}"
 FULL_RECREATE="${FULL_RECREATE:-0}"
+EDGE_REPO_DIR="${EDGE_REPO_DIR:-$HOME/srv/edge}"
+EDGE_STATIC_DIR_PROD="${EDGE_STATIC_DIR_PROD:-$EDGE_REPO_DIR/ingress/static/boltorezka/prod}"
 
 cd "$REPO_DIR"
 
@@ -35,9 +37,23 @@ if [[ ! -f "$ENV_FILE" ]]; then
   exit 1
 fi
 
-echo "[deploy-prod] deploy mode: api-only (set FULL_RECREATE=1 for full dependency recreate)"
+echo "[deploy-prod] deploy mode: api-only + caddy-static-sync (set FULL_RECREATE=1 for full dependency recreate)"
 TMP_DOCKER_CONFIG="$(mktemp -d)"
-trap 'rm -rf "$TMP_DOCKER_CONFIG"' EXIT
+TMP_DEPLOY_ENV="$(mktemp)"
+TMP_WEB_DIST_DIR="$(mktemp -d)"
+WEB_IMAGE_CID=""
+cleanup() {
+  if [[ -n "$WEB_IMAGE_CID" ]]; then
+    docker rm "$WEB_IMAGE_CID" >/dev/null 2>&1 || true
+  fi
+  rm -rf "$TMP_DOCKER_CONFIG" "$TMP_DEPLOY_ENV" "$TMP_WEB_DIST_DIR"
+}
+trap cleanup EXIT
+
+cat >"$TMP_DEPLOY_ENV" <<EOF
+PROD_VITE_APP_VERSION=$RESOLVED_SHA
+PROD_APP_BUILD_SHA=$RESOLVED_SHA
+EOF
 
 mkdir -p "$TMP_DOCKER_CONFIG/cli-plugins"
 if [[ -d "$HOME/.docker/cli-plugins" ]]; then
@@ -52,13 +68,29 @@ cat >"$TMP_DOCKER_CONFIG/config.json" <<'JSON'
 }
 JSON
 
-DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" build boltorezka-api-prod
+DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" build boltorezka-api-prod
+
+if [[ -d "$EDGE_REPO_DIR/ingress" ]]; then
+  echo "[deploy-prod] sync static bundle -> $EDGE_STATIC_DIR_PROD"
+  mkdir -p "$EDGE_STATIC_DIR_PROD"
+  touch "$EDGE_STATIC_DIR_PROD/.gitkeep"
+
+  WEB_IMAGE_CID="$(docker create boltorezka-api:prod)"
+  docker cp "$WEB_IMAGE_CID:/app/public/." "$TMP_WEB_DIST_DIR/"
+  docker rm "$WEB_IMAGE_CID" >/dev/null
+  WEB_IMAGE_CID=""
+
+  find "$EDGE_STATIC_DIR_PROD" -mindepth 1 -maxdepth 1 ! -name '.gitkeep' -exec rm -rf {} +
+  cp -R "$TMP_WEB_DIST_DIR/." "$EDGE_STATIC_DIR_PROD/"
+else
+  echo "[deploy-prod] warning: edge repo not found at $EDGE_REPO_DIR; static sync skipped"
+fi
 
 if [[ "$FULL_RECREATE" == "1" ]]; then
   echo "[deploy-prod] full recreate enabled"
-  DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d --force-recreate boltorezka-api-prod
+  DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" up -d --force-recreate boltorezka-api-prod
 else
-  DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d --no-deps --force-recreate boltorezka-api-prod
+  DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" up -d --no-deps --force-recreate boltorezka-api-prod
 fi
 
 echo "[deploy-prod] wait api health"

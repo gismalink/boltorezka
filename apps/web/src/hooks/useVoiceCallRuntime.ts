@@ -55,9 +55,21 @@ const AUDIO_QUALITY_SAMPLE_RATE: Record<AudioQuality, number> = {
 export function useVoiceCallRuntime({
   localUserId,
   roomSlug,
+  allowVideoStreaming,
+  videoStreamingEnabled,
   roomVoiceTargets,
   selectedInputId,
   selectedOutputId,
+  selectedVideoInputId,
+  serverVideoResolution,
+  serverVideoFps,
+  serverVideoEffectType,
+  serverVideoPixelFxStrength,
+  serverVideoPixelFxPixelSize,
+  serverVideoPixelFxGridThickness,
+  serverVideoAsciiCellSize,
+  serverVideoAsciiContrast,
+  serverVideoAsciiColor,
   micMuted,
   micTestLevel,
   audioMuted,
@@ -76,6 +88,8 @@ export function useVoiceCallRuntime({
   const [remoteMutedPeerUserIds, setRemoteMutedPeerUserIds] = useState<string[]>([]);
   const [remoteSpeakingPeerUserIds, setRemoteSpeakingPeerUserIds] = useState<string[]>([]);
   const [remoteAudioMutedPeerUserIds, setRemoteAudioMutedPeerUserIds] = useState<string[]>([]);
+  const [localVideoStream, setLocalVideoStream] = useState<MediaStream | null>(null);
+  const [remoteVideoStreamsByUserId, setRemoteVideoStreamsByUserId] = useState<Record<string, MediaStream>>({});
   const roomVoiceConnectedRef = useRef(false);
   const roomVoiceTargetsRef = useRef<PresenceMember[]>(roomVoiceTargets);
   const peersRef = useRef<Map<string, VoicePeerContext>>(new Map());
@@ -95,6 +109,31 @@ export function useVoiceCallRuntime({
   const localSpeakingLastAboveAtRef = useRef(0);
   const lastSentMicStateRef = useRef<{ muted: boolean; speaking: boolean; audioMuted: boolean } | null>(null);
   const remoteMicStateByUserIdRef = useRef<Record<string, { muted: boolean; speaking: boolean; audioMuted: boolean }>>({});
+
+  const setRemoteVideoStream = useCallback((targetUserId: string, stream: MediaStream) => {
+    setRemoteVideoStreamsByUserId((prev) => {
+      if (prev[targetUserId] === stream) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        [targetUserId]: stream
+      };
+    });
+  }, []);
+
+  const clearRemoteVideoStream = useCallback((targetUserId: string) => {
+    setRemoteVideoStreamsByUserId((prev) => {
+      if (!Object.prototype.hasOwnProperty.call(prev, targetUserId)) {
+        return prev;
+      }
+
+      const next = { ...prev };
+      delete next[targetUserId];
+      return next;
+    });
+  }, []);
 
   const pushToastThrottled = useCallback((key: string, message: string) => {
     const now = Date.now();
@@ -230,6 +269,29 @@ export function useVoiceCallRuntime({
 
     return base;
   }, [selectedInputId, serverAudioQuality]);
+
+  const getVideoConstraints = useCallback((): MediaTrackConstraints | false => {
+    if (!allowVideoStreaming || !videoStreamingEnabled) {
+      return false;
+    }
+
+    const [width, height] = serverVideoResolution.split("x").map((item) => Number(item));
+
+    if (selectedVideoInputId && selectedVideoInputId !== "default") {
+      return {
+        width: { ideal: width || 320 },
+        height: { ideal: height || 240 },
+        frameRate: { ideal: serverVideoFps, max: serverVideoFps },
+        deviceId: { exact: selectedVideoInputId }
+      };
+    }
+
+    return {
+      width: { ideal: width || 320 },
+      height: { ideal: height || 240 },
+      frameRate: { ideal: serverVideoFps, max: serverVideoFps }
+    };
+  }, [allowVideoStreaming, videoStreamingEnabled, selectedVideoInputId, serverVideoResolution, serverVideoFps]);
 
   const applyAudioQualityToConnection = useCallback(async (
     connection: RTCPeerConnection,
@@ -485,6 +547,7 @@ export function useVoiceCallRuntime({
 
     localStreamRef.current.getTracks().forEach((track) => track.stop());
     localStreamRef.current = null;
+    setLocalVideoStream(null);
     decrementVoiceCounter("runtimeLocalStreams");
     logVoiceDiagnostics("runtime local stream released");
   }, []);
@@ -520,6 +583,7 @@ export function useVoiceCallRuntime({
     peer.audioElement.srcObject = null;
     peer.audioElement.remove();
     peersRef.current.delete(targetUserId);
+    clearRemoteVideoStream(targetUserId);
     decrementVoiceCounter("runtimePeers");
     decrementVoiceCounter("runtimeAudioElements");
     logVoiceDiagnostics("runtime peer closed", { targetUserId, label: peer.label });
@@ -530,7 +594,7 @@ export function useVoiceCallRuntime({
     }
 
     updateCallStatus();
-  }, [clearPeerReconnectTimer, clearPeerStatsTimer, pushCallLog, updateCallStatus, syncPeerVoiceState]);
+  }, [clearPeerReconnectTimer, clearPeerStatsTimer, pushCallLog, updateCallStatus, syncPeerVoiceState, clearRemoteVideoStream]);
 
   const resetRoomState = useCallback((options?: { clearRequestState?: boolean }) => {
     const shouldClearRequestState = Boolean(options?.clearRequestState);
@@ -543,6 +607,7 @@ export function useVoiceCallRuntime({
     setRemoteMutedPeerUserIds([]);
     setRemoteSpeakingPeerUserIds([]);
     setRemoteAudioMutedPeerUserIds([]);
+    setRemoteVideoStreamsByUserId({});
     if (shouldClearRequestState) {
       requestTargetByIdRef.current.clear();
       blockedTargetUntilRef.current.clear();
@@ -582,7 +647,7 @@ export function useVoiceCallRuntime({
     try {
       stream = await navigator.mediaDevices.getUserMedia({
         audio: audioConstraints,
-        video: false
+        video: getVideoConstraints()
       });
     } catch (error) {
       const errorName = (error as { name?: string })?.name || "";
@@ -599,7 +664,7 @@ export function useVoiceCallRuntime({
 
       stream = await navigator.mediaDevices.getUserMedia({
         audio: fallbackConstraints,
-        video: false
+        video: getVideoConstraints()
       });
       pushCallLog("input device fallback applied: default microphone");
     }
@@ -608,13 +673,25 @@ export function useVoiceCallRuntime({
       track.enabled = !micMuted;
     });
 
+    if (allowVideoStreaming && videoStreamingEnabled) {
+      const hasVideoTrack = stream.getVideoTracks().length > 0;
+      if (hasVideoTrack) {
+        setLocalVideoStream(stream);
+      } else {
+        setLocalVideoStream(null);
+      }
+    } else {
+      stream.getVideoTracks().forEach((track) => track.stop());
+      setLocalVideoStream(null);
+    }
+
     localStreamRef.current = stream;
     incrementVoiceCounter("runtimeLocalStreams");
     logVoiceDiagnostics("runtime local stream acquired", {
       selectedInputId: selectedInputId || "default"
     });
     return stream;
-  }, [getAudioConstraints, micMuted, t, pushToastThrottled, selectedInputId]);
+  }, [getAudioConstraints, getVideoConstraints, micMuted, t, pushToastThrottled, selectedInputId, allowVideoStreaming, videoStreamingEnabled, pushCallLog]);
 
   const attachLocalTracks = useCallback(async (connection: RTCPeerConnection) => {
     const stream = await ensureLocalStream();
@@ -732,6 +809,7 @@ export function useVoiceCallRuntime({
     const peerContext = {
       connection,
       audioElement: remoteAudioElement,
+      remoteStream: null,
       label: targetLabel,
       hasRemoteTrack: false,
       isRemoteMicMuted: false,
@@ -777,6 +855,8 @@ export function useVoiceCallRuntime({
       retryRemoteAudioPlayback,
       scheduleReconnect,
       closePeer,
+      setRemoteVideoStream,
+      clearRemoteVideoStream,
       applyRemoteAudioOutput,
       syncPeerVoiceState,
       audioMuted,
@@ -785,7 +865,7 @@ export function useVoiceCallRuntime({
 
     void applyRemoteAudioOutput(remoteAudioElement);
     return connection;
-  }, [sendWsEvent, applyRemoteAudioOutput, clearPeerReconnectTimer, closePeer, scheduleReconnect, updateCallStatus, syncPeerVoiceState, retryRemoteAudioPlayback, startPeerStatsMonitor, rememberRequestTarget, audioMuted, outputVolume]);
+  }, [sendWsEvent, applyRemoteAudioOutput, clearPeerReconnectTimer, closePeer, scheduleReconnect, updateCallStatus, syncPeerVoiceState, retryRemoteAudioPlayback, startPeerStatsMonitor, rememberRequestTarget, audioMuted, outputVolume, setRemoteVideoStream, clearRemoteVideoStream]);
 
   ensurePeerConnectionRef.current = ensurePeerConnection;
 
@@ -808,6 +888,7 @@ export function useVoiceCallRuntime({
       await attachLocalTracks(connection);
       const offer = await connection.createOffer({
         offerToReceiveAudio: true,
+        offerToReceiveVideo: allowVideoStreaming,
         iceRestart: Boolean(options?.iceRestart)
       });
       await connection.setLocalDescription(offer);
@@ -848,7 +929,7 @@ export function useVoiceCallRuntime({
       pushCallLog(`call.offer failed (${targetLabel || normalizedTarget}): ${(error as Error).message}`);
       closePeer(normalizedTarget);
     }
-  }, [roomVoiceConnectedRef, ensurePeerConnection, attachLocalTracks, sendWsEvent, setLastCallPeer, updateCallStatus, pushCallLog, t, pushToastThrottled, closePeer, rememberRequestTarget, isTargetTemporarilyBlocked]);
+  }, [roomVoiceConnectedRef, ensurePeerConnection, attachLocalTracks, sendWsEvent, setLastCallPeer, updateCallStatus, pushCallLog, t, pushToastThrottled, closePeer, rememberRequestTarget, isTargetTemporarilyBlocked, allowVideoStreaming]);
 
   startOfferRef.current = startOffer;
 
@@ -905,13 +986,21 @@ export function useVoiceCallRuntime({
     pushCallLog("voice room connect requested");
 
     if (roomVoiceTargetsRef.current.length === 0) {
+      if (allowVideoStreaming && videoStreamingEnabled) {
+        try {
+          await ensureLocalStream();
+          pushCallLog("voice room local video preview enabled");
+        } catch (error) {
+          pushCallLog(`voice room local preview failed: ${(error as Error).message}`);
+        }
+      }
       pushCallLog("voice room waiting for participants");
       setCallStatus("idle");
       return;
     }
 
     await syncRoomTargets();
-  }, [pushCallLog, setCallStatus, syncRoomTargets]);
+  }, [pushCallLog, setCallStatus, syncRoomTargets, allowVideoStreaming, videoStreamingEnabled, ensureLocalStream]);
 
   const disconnectRoom = useCallback(() => {
     const activeTargetIds = new Set(
@@ -1014,11 +1103,24 @@ export function useVoiceCallRuntime({
   useVoiceRuntimeMediaEffects({
     localStreamRef,
     peersRef,
+    roomVoiceConnected,
+    allowVideoStreaming,
+    videoStreamingEnabled,
+    serverVideoEffectType,
+    serverVideoPixelFxStrength,
+    serverVideoPixelFxPixelSize,
+    serverVideoPixelFxGridThickness,
+    serverVideoAsciiCellSize,
+    serverVideoAsciiContrast,
+    serverVideoAsciiColor,
     selectedInputId,
+    selectedVideoInputId,
     micMuted,
     audioMuted,
     outputVolume,
     getAudioConstraints,
+    getVideoConstraints,
+    setLocalVideoStream,
     applyRemoteAudioOutput,
     retryRemoteAudioPlayback,
     pushCallLog,
@@ -1050,6 +1152,22 @@ export function useVoiceCallRuntime({
 
     void syncRoomTargets();
   }, [roomVoiceTargets, syncRoomTargets]);
+
+  useEffect(() => {
+    if (!roomVoiceConnected) {
+      return;
+    }
+    if (!allowVideoStreaming || !videoStreamingEnabled) {
+      return;
+    }
+    if (localStreamRef.current) {
+      return;
+    }
+
+    void ensureLocalStream().catch((error) => {
+      pushCallLog(`local camera preview failed: ${(error as Error).message}`);
+    });
+  }, [roomVoiceConnected, allowVideoStreaming, videoStreamingEnabled, ensureLocalStream, pushCallLog]);
 
   useEffect(() => {
     const now = Date.now();
@@ -1099,6 +1217,8 @@ export function useVoiceCallRuntime({
     remoteMutedPeerUserIds,
     remoteSpeakingPeerUserIds,
     remoteAudioMutedPeerUserIds,
+    localVideoStream,
+    remoteVideoStreamsByUserId,
     connectRoom,
     disconnectRoom,
     handleIncomingSignal,

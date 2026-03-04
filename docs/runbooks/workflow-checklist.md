@@ -10,6 +10,10 @@
    - добавить SQL migration в `infra/postgres/init` или отдельный migration-файл,
    - проверить обратную совместимость для `test` rollout,
    - зафиксировать изменение в docs/runbook.
+4. Для web/API совместимости:
+   - не кэшировать `index.html`,
+   - использовать hash-ассеты как immutable,
+   - прокинуть build SHA в frontend и API (`VITE_APP_VERSION` + `APP_BUILD_SHA`).
 
 ## 2) Локальная проверка
 
@@ -19,6 +23,8 @@
 4. С полным realtime smoke: `SMOKE_API=1 SMOKE_SSO=1 SMOKE_REALTIME=1 SMOKE_API_URL=https://test.boltorezka.gismalink.art SMOKE_WS_TICKET=<ticket> npm run check`.
 5. Ручной smoke критического сценария:
    - SSO login (Google/Yandex) -> `Complete SSO Session` -> room join -> message send/receive.
+6. Версионный smoke:
+   - `curl https://test.boltorezka.gismalink.art/version` содержит актуальный `appBuildSha`.
 
 Правило итераций:
 

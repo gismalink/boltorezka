@@ -15,7 +15,8 @@ import {
   RoomsPanel,
   ServerProfileModal,
   ToastStack,
-  UserDock
+  UserDock,
+  VideoWindowsOverlay
 } from "./components";
 import type { InputProfile, MediaDevicesState, VoiceSettingsPanel } from "./components";
 import {
@@ -47,6 +48,8 @@ import type {
   TelemetrySummary,
   User
 } from "./domain";
+import type { ServerVideoEffectType } from "./hooks/voiceCallTypes";
+import { createProcessedVideoTrack, type OutgoingVideoTrackHandle } from "./utils/videoPixelPipeline";
 
 const MAX_CHAT_RETRIES = 3;
 const TOAST_AUTO_DISMISS_MS = 4500;
@@ -57,9 +60,12 @@ const MAX_CHAT_IMAGE_DATA_URL_LENGTH = 18000;
 const MAX_CHAT_IMAGE_MAX_SIDE = 1000;
 const MAX_CHAT_IMAGE_QUALITY = 0.6;
 const MESSAGE_EDIT_DELETE_WINDOW_MS = 10 * 60 * 1000;
+const VERSION_POLL_INTERVAL_MS = 60000;
+const CLIENT_BUILD_VERSION = String(import.meta.env.VITE_APP_VERSION || "").trim();
 
-type ServerMenuTab = "users" | "events" | "telemetry" | "call" | "sound";
+type ServerMenuTab = "users" | "events" | "telemetry" | "call" | "sound" | "video";
 type MobileTab = "channels" | "chat" | "settings";
+type ServerVideoResolution = "160x120" | "320x240" | "640x480";
 
 export function App() {
   const [token, setToken] = useState(localStorage.getItem("boltorezka_token") || "");
@@ -106,15 +112,18 @@ export function App() {
   const [audioOutputMenuOpen, setAudioOutputMenuOpen] = useState(false);
   const [voiceSettingsOpen, setVoiceSettingsOpen] = useState(false);
   const [userSettingsOpen, setUserSettingsOpen] = useState(false);
-  const [userSettingsTab, setUserSettingsTab] = useState<"profile" | "sound" | "server_sounds">("profile");
+  const [userSettingsTab, setUserSettingsTab] = useState<"profile" | "sound" | "camera" | "server_sounds">("profile");
   const [lang, setLang] = useState<Lang>(() => detectInitialLang());
   const [profileNameDraft, setProfileNameDraft] = useState("");
   const [profileStatusText, setProfileStatusText] = useState("");
   const [profileSaving, setProfileSaving] = useState(false);
   const [inputDevices, setInputDevices] = useState<Array<{ id: string; label: string }>>([]);
   const [outputDevices, setOutputDevices] = useState<Array<{ id: string; label: string }>>([]);
+  const [videoInputDevices, setVideoInputDevices] = useState<Array<{ id: string; label: string }>>([]);
   const [selectedInputId, setSelectedInputId] = useState<string>(() => localStorage.getItem("boltorezka_selected_input_id") || "default");
   const [selectedOutputId, setSelectedOutputId] = useState<string>(() => localStorage.getItem("boltorezka_selected_output_id") || "default");
+  const [selectedVideoInputId, setSelectedVideoInputId] = useState<string>(() => localStorage.getItem("boltorezka_selected_video_input_id") || "default");
+  const [cameraEnabled, setCameraEnabled] = useState(false);
   const [selectedInputProfile, setSelectedInputProfile] = useState<InputProfile>("custom");
   const [voiceSettingsPanel, setVoiceSettingsPanel] = useState<VoiceSettingsPanel>(null);
   const [mediaDevicesState, setMediaDevicesState] = useState<MediaDevicesState>("ready");
@@ -130,7 +139,63 @@ export function App() {
   const [mobileTab, setMobileTab] = useState<MobileTab>("chat");
   const [serverAudioQuality, setServerAudioQuality] = useState<AudioQuality>("standard");
   const [serverAudioQualitySaving, setServerAudioQualitySaving] = useState(false);
+  const [serverVideoEffectType, setServerVideoEffectType] = useState<ServerVideoEffectType>(() => {
+    const value = localStorage.getItem("boltorezka_server_video_effect_type");
+    if (value === "none" || value === "pixel8" || value === "ascii") {
+      return value;
+    }
+    const legacyEnabled = localStorage.getItem("boltorezka_server_video_fx_enabled") !== "0";
+    return legacyEnabled ? "pixel8" : "none";
+  });
+  const [serverVideoResolution, setServerVideoResolution] = useState<ServerVideoResolution>(() => {
+    const value = localStorage.getItem("boltorezka_server_video_resolution");
+    if (value === "160x120" || value === "320x240" || value === "640x480") {
+      return value;
+    }
+    return "320x240";
+  });
+  const [serverVideoFps, setServerVideoFps] = useState<10 | 15 | 24 | 30>(() => {
+    const value = Number(localStorage.getItem("boltorezka_server_video_fps"));
+    if (value === 10 || value === 15 || value === 24 || value === 30) {
+      return value;
+    }
+    return 15;
+  });
+  const [serverVideoPixelFxStrength, setServerVideoPixelFxStrength] = useState(() => {
+    const value = Number(localStorage.getItem("boltorezka_server_video_fx_strength"));
+    return Number.isFinite(value) ? Math.max(0, Math.min(100, value)) : 85;
+  });
+  const [serverVideoPixelFxPixelSize, setServerVideoPixelFxPixelSize] = useState(() => {
+    const value = Number(localStorage.getItem("boltorezka_server_video_fx_pixel_size"));
+    return Number.isFinite(value) ? Math.max(2, Math.min(10, value)) : 5;
+  });
+  const [serverVideoPixelFxGridThickness, setServerVideoPixelFxGridThickness] = useState(() => {
+    const value = Number(localStorage.getItem("boltorezka_server_video_fx_grid_thickness"));
+    return Number.isFinite(value) ? Math.max(1, Math.min(4, Math.round(value))) : 1;
+  });
+  const [serverVideoAsciiCellSize, setServerVideoAsciiCellSize] = useState(() => {
+    const value = Number(localStorage.getItem("boltorezka_server_video_ascii_cell_size"));
+    return Number.isFinite(value) ? Math.max(4, Math.min(16, Math.round(value))) : 8;
+  });
+  const [serverVideoAsciiContrast, setServerVideoAsciiContrast] = useState(() => {
+    const value = Number(localStorage.getItem("boltorezka_server_video_ascii_contrast"));
+    return Number.isFinite(value) ? Math.max(60, Math.min(200, Math.round(value))) : 120;
+  });
+  const [serverVideoAsciiColor, setServerVideoAsciiColor] = useState(() => {
+    const value = String(localStorage.getItem("boltorezka_server_video_ascii_color") || "").trim();
+    return /^#[0-9a-fA-F]{6}$/.test(value) ? value : "#eaffff";
+  });
+  const [serverVideoWindowMinWidth, setServerVideoWindowMinWidth] = useState(() => {
+    const value = Number(localStorage.getItem("boltorezka_server_video_window_min_width"));
+    return Number.isFinite(value) ? Math.max(80, Math.min(300, Math.round(value))) : 100;
+  });
+  const [serverVideoWindowMaxWidth, setServerVideoWindowMaxWidth] = useState(() => {
+    const value = Number(localStorage.getItem("boltorezka_server_video_window_max_width"));
+    return Number.isFinite(value) ? Math.max(120, Math.min(480, Math.round(value))) : 320;
+  });
+  const [serverVideoPreviewStream, setServerVideoPreviewStream] = useState<MediaStream | null>(null);
   const [realtimeReconnectNonce, setRealtimeReconnectNonce] = useState(0);
+  const [videoWindowsVisible, setVideoWindowsVisible] = useState(true);
   const realtimeClientRef = useRef<RealtimeClient | null>(null);
   const roomSlugRef = useRef(roomSlug);
   const lastRoomSlugForScrollRef = useRef(roomSlug);
@@ -151,6 +216,8 @@ export function App() {
   const presenceSoundInitializedRef = useRef(false);
   const previousPresenceIdsRef = useRef<string[]>([]);
   const previousChatMessageIdRef = useRef<string | null>(null);
+  const serverVideoPreviewHandleRef = useRef<OutgoingVideoTrackHandle | null>(null);
+  const serverVideoPreviewRawTrackRef = useRef<MediaStreamTrack | null>(null);
 
   const canCreateRooms = user?.role === "admin" || user?.role === "super_admin";
   const canPromote = user?.role === "super_admin";
@@ -233,6 +300,53 @@ export function App() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!CLIENT_BUILD_VERSION) {
+      return;
+    }
+
+    let cancelled = false;
+    let inFlight = false;
+
+    const checkVersion = async () => {
+      if (cancelled || inFlight) {
+        return;
+      }
+
+      inFlight = true;
+      try {
+        const payload = await api.version();
+        const serverBuildVersion = String(payload.appBuildSha || "").trim();
+        if (!cancelled && serverBuildVersion && serverBuildVersion !== CLIENT_BUILD_VERSION) {
+          window.location.reload();
+        }
+      } catch {
+        return;
+      } finally {
+        inFlight = false;
+      }
+    };
+
+    void checkVersion();
+    const intervalId = window.setInterval(() => {
+      void checkVersion();
+    }, VERSION_POLL_INTERVAL_MS);
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        void checkVersion();
+      }
+    };
+
+    document.addEventListener("visibilitychange", onVisibilityChange);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
+  }, []);
+
   const markMessageDelivery = (
     requestId: string,
     status: "sending" | "delivered" | "failed",
@@ -275,6 +389,22 @@ export function App() {
   }, [rooms, roomsTree, roomSlug]);
 
   const effectiveAudioQuality = currentRoomAudioQualityOverride ?? serverAudioQuality;
+  const currentRoomKind = useMemo<RoomKind>(() => {
+    const roomFromList = rooms.find((room) => room.slug === roomSlug);
+    if (roomFromList) {
+      return roomFromList.kind;
+    }
+
+    const roomFromTree = (roomsTree?.categories || [])
+      .flatMap((category) => category.channels || [])
+      .find((room) => room.slug === roomSlug)
+      ?? (roomsTree?.uncategorized || []).find((room) => room.slug === roomSlug)
+      ?? null;
+
+    return roomFromTree?.kind || "text";
+  }, [rooms, roomsTree, roomSlug]);
+  const allowVideoStreaming = currentRoomKind === "text_voice_video";
+  const currentRoomSupportsVideo = allowVideoStreaming;
 
   const {
     roomVoiceConnected,
@@ -283,6 +413,8 @@ export function App() {
     remoteMutedPeerUserIds,
     remoteSpeakingPeerUserIds,
     remoteAudioMutedPeerUserIds,
+    localVideoStream,
+    remoteVideoStreamsByUserId,
     connectRoom,
     disconnectRoom,
     handleIncomingSignal,
@@ -292,9 +424,21 @@ export function App() {
   } = useVoiceCallRuntime({
     localUserId: user?.id || "",
     roomSlug,
+    allowVideoStreaming,
+    videoStreamingEnabled: cameraEnabled,
     roomVoiceTargets: currentRoomVoiceTargets,
     selectedInputId,
     selectedOutputId,
+    selectedVideoInputId,
+    serverVideoResolution,
+    serverVideoFps,
+    serverVideoEffectType,
+    serverVideoPixelFxStrength,
+    serverVideoPixelFxPixelSize,
+    serverVideoPixelFxGridThickness,
+    serverVideoAsciiCellSize,
+    serverVideoAsciiContrast,
+    serverVideoAsciiColor,
     micMuted,
     micTestLevel,
     audioMuted,
@@ -307,6 +451,172 @@ export function App() {
     setCallStatus,
     setLastCallPeer
   });
+
+  const remoteVideoLabelsByUserId = useMemo(() => {
+    const labels: Record<string, string> = {};
+    currentRoomVoiceTargets.forEach((member) => {
+      labels[member.userId] = member.userName || member.userId;
+    });
+    return labels;
+  }, [currentRoomVoiceTargets]);
+
+  useEffect(() => {
+    if (!allowVideoStreaming) {
+      setCameraEnabled(false);
+      setVideoWindowsVisible(true);
+    }
+  }, [allowVideoStreaming]);
+
+  useEffect(() => {
+    localStorage.setItem("boltorezka_server_video_effect_type", serverVideoEffectType);
+    localStorage.setItem("boltorezka_server_video_fx_enabled", serverVideoEffectType === "none" ? "0" : "1");
+  }, [serverVideoEffectType]);
+
+  useEffect(() => {
+    localStorage.setItem("boltorezka_server_video_resolution", serverVideoResolution);
+  }, [serverVideoResolution]);
+
+  useEffect(() => {
+    localStorage.setItem("boltorezka_server_video_fps", String(serverVideoFps));
+  }, [serverVideoFps]);
+
+  useEffect(() => {
+    localStorage.setItem("boltorezka_server_video_fx_strength", String(serverVideoPixelFxStrength));
+  }, [serverVideoPixelFxStrength]);
+
+  useEffect(() => {
+    localStorage.setItem("boltorezka_server_video_fx_pixel_size", String(serverVideoPixelFxPixelSize));
+  }, [serverVideoPixelFxPixelSize]);
+
+  useEffect(() => {
+    localStorage.setItem("boltorezka_server_video_fx_grid_thickness", String(serverVideoPixelFxGridThickness));
+  }, [serverVideoPixelFxGridThickness]);
+
+  useEffect(() => {
+    localStorage.setItem("boltorezka_server_video_ascii_cell_size", String(serverVideoAsciiCellSize));
+  }, [serverVideoAsciiCellSize]);
+
+  useEffect(() => {
+    localStorage.setItem("boltorezka_server_video_ascii_contrast", String(serverVideoAsciiContrast));
+  }, [serverVideoAsciiContrast]);
+
+  useEffect(() => {
+    localStorage.setItem("boltorezka_server_video_ascii_color", serverVideoAsciiColor);
+  }, [serverVideoAsciiColor]);
+
+  useEffect(() => {
+    localStorage.setItem("boltorezka_server_video_window_min_width", String(serverVideoWindowMinWidth));
+  }, [serverVideoWindowMinWidth]);
+
+  useEffect(() => {
+    localStorage.setItem("boltorezka_server_video_window_max_width", String(serverVideoWindowMaxWidth));
+  }, [serverVideoWindowMaxWidth]);
+
+  useEffect(() => {
+    const stopServerVideoPreview = () => {
+      serverVideoPreviewHandleRef.current?.stop();
+      serverVideoPreviewHandleRef.current = null;
+      serverVideoPreviewRawTrackRef.current?.stop();
+      serverVideoPreviewRawTrackRef.current = null;
+      setServerVideoPreviewStream(null);
+    };
+
+    const shouldPreviewVideo = appMenuOpen && serverMenuTab === "video" && canManageAudioQuality;
+    if (!shouldPreviewVideo || !navigator.mediaDevices?.getUserMedia) {
+      stopServerVideoPreview();
+      return;
+    }
+
+    let cancelled = false;
+    stopServerVideoPreview();
+
+    const [widthRaw, heightRaw] = serverVideoResolution.split("x");
+    const width = Math.max(1, Number(widthRaw) || 320);
+    const height = Math.max(1, Number(heightRaw) || 240);
+
+    void (async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: false,
+          video: {
+            width: { ideal: width },
+            height: { ideal: height },
+            frameRate: { ideal: serverVideoFps },
+            ...(selectedVideoInputId && selectedVideoInputId !== "default"
+              ? { deviceId: { exact: selectedVideoInputId } }
+              : {})
+          }
+        });
+        const sourceTrack = stream.getVideoTracks()[0];
+        stream.getAudioTracks().forEach((track) => track.stop());
+
+        if (!sourceTrack) {
+          stream.getTracks().forEach((track) => track.stop());
+          return;
+        }
+
+        if (cancelled) {
+          sourceTrack.stop();
+          return;
+        }
+
+        if (serverVideoEffectType === "none") {
+          serverVideoPreviewRawTrackRef.current = sourceTrack;
+          setServerVideoPreviewStream(new MediaStream([sourceTrack]));
+          return;
+        }
+
+        const processedHandle = createProcessedVideoTrack(sourceTrack, {
+          width,
+          height,
+          fps: serverVideoFps,
+          effectType: serverVideoEffectType,
+          strength: serverVideoPixelFxStrength,
+          pixelSize: serverVideoPixelFxPixelSize,
+          gridThickness: serverVideoPixelFxGridThickness,
+          asciiCellSize: serverVideoAsciiCellSize,
+          asciiContrast: serverVideoAsciiContrast,
+          asciiColor: serverVideoAsciiColor
+        });
+
+        if (!processedHandle) {
+          setServerVideoPreviewStream(null);
+          return;
+        }
+
+        if (cancelled) {
+          processedHandle.stop();
+          return;
+        }
+
+        serverVideoPreviewHandleRef.current = processedHandle;
+        setServerVideoPreviewStream(new MediaStream([processedHandle.track]));
+      } catch {
+        if (!cancelled) {
+          setServerVideoPreviewStream(null);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      stopServerVideoPreview();
+    };
+  }, [
+    appMenuOpen,
+    serverMenuTab,
+    canManageAudioQuality,
+    selectedVideoInputId,
+    serverVideoResolution,
+    serverVideoFps,
+    serverVideoEffectType,
+    serverVideoPixelFxStrength,
+    serverVideoPixelFxPixelSize,
+    serverVideoPixelFxGridThickness,
+    serverVideoAsciiCellSize,
+    serverVideoAsciiContrast,
+    serverVideoAsciiColor
+  ]);
 
   const {
     voiceMicStateByUserIdInCurrentRoom,
@@ -655,18 +965,21 @@ export function App() {
     }
   }, [messages, user?.id, playServerSound]);
 
-  const { refreshDevices, requestMediaAccess } = useMediaDevicePreferences({
+  const { refreshDevices, requestMediaAccess, requestVideoAccess } = useMediaDevicePreferences({
     t,
     selectedInputId,
     selectedOutputId,
+    selectedVideoInputId,
     micVolume,
     outputVolume,
     setInputDevices,
     setOutputDevices,
+    setVideoInputDevices,
     setMediaDevicesState,
     setMediaDevicesHint,
     setSelectedInputId,
-    setSelectedOutputId
+    setSelectedOutputId,
+    setSelectedVideoInputId
   });
 
   useMicrophoneLevelMeter({
@@ -1048,6 +1361,7 @@ export function App() {
 
   const inputOptions = inputDevices.length > 0 ? inputDevices : [{ id: "default", label: t("device.systemDefault") }];
   const outputOptions = outputDevices.length > 0 ? outputDevices : [{ id: "default", label: t("device.systemDefault") }];
+  const videoInputOptions = videoInputDevices.length > 0 ? videoInputDevices : [{ id: "default", label: t("video.systemCamera") }];
   const currentInputLabel = inputOptions.find((device) => device.id === selectedInputId)?.label ?? inputOptions[0]?.label ?? t("device.systemDefault");
   const inputProfileLabel = selectedInputProfile === "noise_reduction"
     ? t("settings.voiceIsolation")
@@ -1061,6 +1375,7 @@ export function App() {
     currentRoomSupportsRtc,
     roomVoiceTargetsCount: currentRoomVoiceTargets.length,
     roomVoiceConnected,
+    keepConnectedWithoutTargets: allowVideoStreaming && cameraEnabled,
     connectRoom,
     disconnectRoom
   });
@@ -1080,10 +1395,12 @@ export function App() {
       t={t}
       user={user}
       currentRoomSupportsRtc={currentRoomSupportsRtc}
+      currentRoomSupportsVideo={currentRoomSupportsVideo}
       currentRoomTitle={currentRoom?.title || ""}
       callStatus={callStatus}
       lastCallPeer={lastCallPeer}
       roomVoiceConnected={roomVoiceConnected}
+      cameraEnabled={cameraEnabled}
       micMuted={micMuted}
       audioMuted={audioMuted}
       audioOutputMenuOpen={audioOutputMenuOpen}
@@ -1099,8 +1416,10 @@ export function App() {
       languageOptions={LANGUAGE_OPTIONS}
       inputOptions={inputOptions}
       outputOptions={outputOptions}
+      videoInputOptions={videoInputOptions}
       selectedInputId={selectedInputId}
       selectedOutputId={selectedOutputId}
+      selectedVideoInputId={selectedVideoInputId}
       selectedInputProfile={selectedInputProfile}
       inputProfileLabel={inputProfileLabel}
       currentInputLabel={currentInputLabel}
@@ -1124,6 +1443,16 @@ export function App() {
           return nextMuted;
         });
       }}
+      onToggleCamera={() => {
+        if (!allowVideoStreaming) {
+          return;
+        }
+        if (!cameraEnabled) {
+          requestVideoAccess();
+        }
+        setCameraEnabled((value) => !value);
+      }}
+      onRequestVideoAccess={requestVideoAccess}
       onToggleVoiceSettings={() => {
         setAudioOutputMenuOpen(false);
         setVoiceSettingsPanel(null);
@@ -1145,6 +1474,7 @@ export function App() {
       onSaveProfile={saveMyProfile}
       onSetSelectedInputId={setSelectedInputId}
       onSetSelectedOutputId={setSelectedOutputId}
+      onSetSelectedVideoInputId={setSelectedVideoInputId}
       onSetSelectedInputProfile={setSelectedInputProfile}
       onRefreshDevices={() => refreshDevices(true)}
       onRequestMediaAccess={requestMediaAccess}
@@ -1164,10 +1494,12 @@ export function App() {
       t={t}
       user={user}
       currentRoomSupportsRtc={currentRoomSupportsRtc}
+      currentRoomSupportsVideo={currentRoomSupportsVideo}
       currentRoomTitle={currentRoom?.title || ""}
       callStatus={callStatus}
       lastCallPeer={lastCallPeer}
       roomVoiceConnected={roomVoiceConnected}
+      cameraEnabled={cameraEnabled}
       micMuted={micMuted}
       audioMuted={audioMuted}
       audioOutputMenuOpen={audioOutputMenuOpen}
@@ -1183,8 +1515,10 @@ export function App() {
       languageOptions={LANGUAGE_OPTIONS}
       inputOptions={inputOptions}
       outputOptions={outputOptions}
+      videoInputOptions={videoInputOptions}
       selectedInputId={selectedInputId}
       selectedOutputId={selectedOutputId}
+      selectedVideoInputId={selectedVideoInputId}
       selectedInputProfile={selectedInputProfile}
       inputProfileLabel={inputProfileLabel}
       currentInputLabel={currentInputLabel}
@@ -1208,6 +1542,16 @@ export function App() {
           return nextMuted;
         });
       }}
+      onToggleCamera={() => {
+        if (!allowVideoStreaming) {
+          return;
+        }
+        if (!cameraEnabled) {
+          requestVideoAccess();
+        }
+        setCameraEnabled((value) => !value);
+      }}
+      onRequestVideoAccess={requestVideoAccess}
       onToggleVoiceSettings={() => {
         setAudioOutputMenuOpen(false);
         setVoiceSettingsPanel(null);
@@ -1229,6 +1573,7 @@ export function App() {
       onSaveProfile={saveMyProfile}
       onSetSelectedInputId={setSelectedInputId}
       onSetSelectedOutputId={setSelectedOutputId}
+      onSetSelectedVideoInputId={setSelectedVideoInputId}
       onSetSelectedInputProfile={setSelectedInputProfile}
       onRefreshDevices={() => refreshDevices(true)}
       onRequestMediaAccess={requestMediaAccess}
@@ -1360,6 +1705,9 @@ export function App() {
               onChatInputKeyDown={handleChatInputKeyDown}
               onSendMessage={sendMessage}
               editingMessageId={editingMessageId}
+              showVideoToggle={allowVideoStreaming}
+              videoWindowsVisible={videoWindowsVisible}
+              onToggleVideoWindows={() => setVideoWindowsVisible((prev) => !prev)}
               onCancelEdit={() => {
                 setEditingMessageId(null);
                 setChatText("");
@@ -1369,6 +1717,17 @@ export function App() {
             />
           </section>
         ) : null}
+
+        <VideoWindowsOverlay
+          t={t}
+          localUserLabel={user?.name || t("video.you")}
+          localVideoStream={localVideoStream}
+          remoteVideoStreamsByUserId={remoteVideoStreamsByUserId}
+          remoteLabelsByUserId={remoteVideoLabelsByUserId}
+          minWidth={Math.min(serverVideoWindowMinWidth, serverVideoWindowMaxWidth)}
+          maxWidth={Math.max(serverVideoWindowMinWidth, serverVideoWindowMaxWidth)}
+          visible={allowVideoStreaming && videoWindowsVisible}
+        />
 
         {isMobileViewport && user && mobileTab === "settings" ? (
           <aside className="leftcolumn mobile-settings-column flex min-h-0 flex-col gap-4 overflow-hidden min-[801px]:gap-6">
@@ -1425,6 +1784,18 @@ export function App() {
         serverAudioQuality={serverAudioQuality}
         serverAudioQualitySaving={serverAudioQualitySaving}
         canManageAudioQuality={canManageAudioQuality}
+        serverVideoEffectType={serverVideoEffectType}
+        serverVideoResolution={serverVideoResolution}
+        serverVideoFps={serverVideoFps}
+        serverVideoPixelFxStrength={serverVideoPixelFxStrength}
+        serverVideoPixelFxPixelSize={serverVideoPixelFxPixelSize}
+        serverVideoPixelFxGridThickness={serverVideoPixelFxGridThickness}
+        serverVideoAsciiCellSize={serverVideoAsciiCellSize}
+        serverVideoAsciiContrast={serverVideoAsciiContrast}
+        serverVideoAsciiColor={serverVideoAsciiColor}
+        serverVideoWindowMinWidth={Math.min(serverVideoWindowMinWidth, serverVideoWindowMaxWidth)}
+        serverVideoWindowMaxWidth={Math.max(serverVideoWindowMinWidth, serverVideoWindowMaxWidth)}
+        serverVideoPreviewStream={serverVideoPreviewStream}
         onClose={() => setAppMenuOpen(false)}
         onSetServerMenuTab={setServerMenuTab}
         onPromote={(userId) => void promote(userId)}
@@ -1432,6 +1803,25 @@ export function App() {
         onSetBan={(userId, banned) => void setUserBan(userId, banned)}
         onRefreshTelemetry={() => void loadTelemetrySummary()}
         onSetServerAudioQuality={(value) => void setServerAudioQualityValue(value)}
+        onSetServerVideoEffectType={setServerVideoEffectType}
+        onSetServerVideoResolution={setServerVideoResolution}
+        onSetServerVideoFps={setServerVideoFps}
+        onSetServerVideoPixelFxStrength={setServerVideoPixelFxStrength}
+        onSetServerVideoPixelFxPixelSize={setServerVideoPixelFxPixelSize}
+        onSetServerVideoPixelFxGridThickness={setServerVideoPixelFxGridThickness}
+        onSetServerVideoAsciiCellSize={setServerVideoAsciiCellSize}
+        onSetServerVideoAsciiContrast={setServerVideoAsciiContrast}
+        onSetServerVideoAsciiColor={setServerVideoAsciiColor}
+        onSetServerVideoWindowMinWidth={(value) => {
+          const nextMin = Math.max(80, Math.min(300, Math.round(value)));
+          setServerVideoWindowMinWidth(nextMin);
+          setServerVideoWindowMaxWidth((prev) => Math.max(Math.max(120, Math.min(480, Math.round(prev))), nextMin));
+        }}
+        onSetServerVideoWindowMaxWidth={(value) => {
+          const nextMax = Math.max(120, Math.min(480, Math.round(value)));
+          setServerVideoWindowMaxWidth(nextMax);
+          setServerVideoWindowMinWidth((prev) => Math.min(Math.max(80, Math.min(300, Math.round(prev))), nextMax));
+        }}
       />
 
       <ToastStack toasts={toasts} />

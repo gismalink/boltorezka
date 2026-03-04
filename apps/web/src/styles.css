@@ -51,6 +51,140 @@
   image-rendering: pixelated;
 }
 
+.video-windows-overlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 35;
+}
+
+.video-window {
+  position: fixed;
+  pointer-events: auto;
+  border: var(--border-strong) solid var(--pixel-border);
+  background: var(--pixel-panel);
+  box-shadow:
+    0 0 0 2px var(--pixel-bg),
+    3px 3px 0 var(--pixel-hard-shadow),
+    -1px -1px 0 var(--pixel-neon-cyan);
+  overflow: hidden;
+}
+
+.video-window-header {
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 6px;
+  border-bottom: var(--border-thin) solid color-mix(in srgb, var(--pixel-border) 70%, transparent 30%);
+  background: color-mix(in srgb, var(--pixel-panel-2) 82%, var(--pixel-neon-pink) 18%);
+  cursor: move;
+  user-select: none;
+}
+
+.video-window-label {
+  font-size: 10px;
+  color: var(--pixel-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.video-window-media {
+  width: 100%;
+  height: calc(100% - 20px);
+  display: block;
+  object-fit: cover;
+  image-rendering: pixelated;
+  background: var(--pixel-bg);
+}
+
+.video-window-media-pixelfx {
+  --video-pixel-strength: 85;
+  --video-pixel-size: 5px;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  filter:
+    contrast(calc(1 + (var(--video-pixel-strength) / 100) * 0.9))
+    saturate(calc(1 - (var(--video-pixel-strength) / 100) * 0.75))
+    brightness(calc(1 + (var(--video-pixel-strength) / 100) * 0.12))
+    hue-rotate(calc((var(--video-pixel-strength) / 100) * -8deg));
+  transform: translateZ(0);
+  background-image:
+    linear-gradient(to right, rgba(0, 0, 0, 0.14) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.14) 1px, transparent 1px);
+  background-size: var(--video-pixel-size) var(--video-pixel-size);
+}
+
+.server-video-preview-frame {
+  width: min(100%, 320px);
+  aspect-ratio: 4 / 3;
+  border: var(--border-strong) solid var(--pixel-border);
+  background: var(--pixel-panel);
+  box-shadow: 0 0 0 2px var(--pixel-bg);
+  overflow: hidden;
+}
+
+.server-video-preview-media {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  transform: scaleX(-1);
+  image-rendering: pixelated;
+  background: var(--pixel-bg);
+}
+
+.video-window-resize {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  min-width: 16px;
+  padding: 0;
+  border: var(--border-thin) solid color-mix(in srgb, var(--pixel-border) 75%, transparent 25%);
+  background: color-mix(in srgb, var(--pixel-panel-2) 80%, var(--pixel-neon-cyan) 20%);
+  cursor: pointer;
+  box-shadow: none;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s ease-in-out;
+}
+
+.video-window:hover .video-window-resize,
+.video-window:focus-within .video-window-resize {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.video-window-resize-top-left {
+  left: 0;
+  top: 0;
+  cursor: nwse-resize;
+}
+
+.video-window-resize-top-right {
+  right: 0;
+  top: 0;
+  cursor: nesw-resize;
+}
+
+.video-window-resize-bottom-left {
+  left: 0;
+  bottom: 0;
+  cursor: nesw-resize;
+}
+
+.video-window-resize-bottom-right {
+  right: 0;
+  bottom: 0;
+  cursor: nwse-resize;
+}
+
+.video-window-resize:hover,
+.video-window-resize:active {
+  transform: none;
+}
+
 html,
 body,
 #root {
@@ -301,7 +435,7 @@ pre {
   border: var(--border-strong) solid var(--pixel-border);
   border-radius: 0;
   padding: var(--space-md);
-  z-index: 10;
+  z-index: 70;
   box-shadow:
     0 0 0 2px var(--pixel-bg),
     4px 4px 0 var(--pixel-hard-shadow),
@@ -1107,6 +1241,26 @@ pre {
   margin-top: var(--space-lg);
   font-size: var(--font-size-sm);
   color: var(--pixel-muted);
+}
+
+.server-video-sliders {
+  display: grid;
+  gap: var(--space-sm);
+}
+
+@media (min-width: 801px) {
+  .server-video-sliders {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+}
+
+.server-video-sliders .slider-label {
+  margin-top: 0;
+}
+
+.server-video-slider-color {
+  align-self: end;
 }
 
 .slider-label input[type="range"] {

@@ -75,6 +75,44 @@ Exit criteria:
 2. Обновить docs/contracts/runbooks.
 3. Зафиксировать release note с итоговым статусом deprecation.
 
+#### Phase D execution update (2026-03-04)
+
+- В API добавлен runtime toggle `API_SERVE_STATIC`:
+   - `1` (default) — static serving из `apps/api/public` включён,
+   - `0` — API не регистрирует static routes (`/` и `/__web/`).
+- В host compose для server контуров установлен decommission-safe default:
+   - `TEST_API_SERVE_STATIC=0`,
+   - `PROD_API_SERVE_STATIC=0`.
+- Локальная backward compatibility сохранена (без env переменной API по умолчанию продолжает раздавать static).
+
+#### Phase D rehearsal evidence (2026-03-04)
+
+- Rehearsal rollout в `test` на SHA `8eeed7b` показал ожидаемый эффект decoupling:
+   - API/SSO/realtime smoke остаются PASS,
+   - web version-cache smoke падает с `index fetch failed: 404` (static route через API отключён).
+- Rollback rehearsal выполнен на SHA `b931324`:
+   - полный `deploy:test:smoke` — PASS.
+
+Вывод:
+- rollback path validated;
+- для финального закрытия deprecation требуется отдельный внешний static delivery path (не через API container) и smoke на этом пути.
+
+#### Phase D finalization evidence (2026-03-04)
+
+- Внешний static delivery path выведен в test через split ingress routing:
+   - API matcher paths (`/v1*`, `/health`, `/version`, `/metrics`) -> `boltorezka-api-test`,
+   - default web paths (и совместимый `/__web/*`) -> `boltorezka-web-test`.
+- В `boltorezka` host compose поднят отдельный web static service и deploy scripts переведены на `api+web` rollout.
+- После принудительного recreate `edge-caddy` выполнен postdeploy smoke:
+   - `smoke:sso` PASS,
+   - `smoke:api` PASS,
+   - `smoke:web:version-cache` PASS,
+   - `smoke:realtime` PASS.
+
+Статус:
+- Legacy deprecation plan (Phase D) для test-контура завершён.
+- Prod rollout остаётся только по отдельному explicit approval.
+
 ## 5) Rollback plan
 
 Rollback trigger:

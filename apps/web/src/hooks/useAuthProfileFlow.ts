@@ -17,7 +17,7 @@ type UseAuthProfileFlowArgs = {
   setAudioOutputMenuOpen: (value: boolean) => void;
   setVoiceSettingsOpen: (value: boolean) => void;
   setVoiceSettingsPanel: (value: VoiceSettingsPanel) => void;
-  setUserSettingsTab: (value: "profile" | "sound" | "server_sounds") => void;
+  setUserSettingsTab: (value: "profile" | "sound" | "camera" | "server_sounds") => void;
   setUserSettingsOpen: (value: boolean) => void;
   setProfileSaving: (value: boolean) => void;
   setProfileStatusText: (value: string) => void;
@@ -72,7 +72,7 @@ export function useAuthProfileFlow({
     authController.logout();
   };
 
-  const openUserSettings = (tab: "profile" | "sound") => {
+  const openUserSettings = (tab: "profile" | "sound" | "camera") => {
     setProfileMenuOpen(false);
     setAudioOutputMenuOpen(false);
     setVoiceSettingsOpen(false);

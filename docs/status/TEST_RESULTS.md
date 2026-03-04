@@ -2,6 +2,179 @@
 
 Отдельный журнал результатов тестов/нагрузки.
 
+## 2026-03-04 — Cycle #14 (full test deploy after preprod refresh)
+
+- Environment: `test` (`https://test.boltorezka.gismalink.art`)
+- Build ref: `origin/feature/video-stream-overlay-chat-toggle` (`94c8d0e`)
+- Ingress ref: `edge/main` (`095b504`)
+
+### Functional gate
+
+- `TEST_REF=origin/feature/video-stream-overlay-chat-toggle npm run deploy:test:smoke`: PASS
+  - `smoke:sso`: PASS
+  - `smoke:api`: PASS
+  - `smoke:web:version-cache`: PASS
+  - `smoke:realtime`: PASS (`ok=true`, `reconnectOk=true`)
+
+### Scope covered by this cycle
+
+- Full test rollout подтверждён на актуальном SHA после обновления pre-prod пакета,
+- Caddy-only static delivery и API split routing остаются стабильными.
+
+### Decision
+
+- Cycle #14: PASS.
+- Test contour ready for next pre-prod sign-off review stage.
+
+## 2026-03-04 — Cycle #13 (Caddy-only static serving migration)
+
+- Environment: `test` (`https://test.boltorezka.gismalink.art`)
+- Build ref: `origin/feature/video-stream-overlay-chat-toggle` (`7f319e9`)
+- Ingress ref: `edge/main` (`095b504`)
+
+### Functional gate
+
+- `TEST_REF=origin/feature/video-stream-overlay-chat-toggle npm run deploy:test:smoke`: PASS
+  - `smoke:sso`: PASS
+  - `smoke:api`: PASS
+  - `smoke:web:version-cache`: PASS
+  - `smoke:realtime`: PASS (`ok=true`, `reconnectOk=true`)
+
+### Scope covered by this cycle
+
+- Удалён внутренний nginx слой для web static serving,
+- static bundle синхронизируется в edge Caddy static directory,
+- web/API split routing и cache policy валидированы на test.
+
+### Decision
+
+- Cycle #13: PASS.
+- Caddy-only static serving подтверждён в test.
+
+## 2026-03-04 — Cycle #12 (external static path rollout, decoupled API/web)
+
+- Environment: `test` (`https://test.boltorezka.gismalink.art`)
+- Build ref: `origin/feature/video-stream-overlay-chat-toggle` (`2906b08`)
+- Ingress ref: `edge/main` (`91db6c8`, split web/api routing)
+
+### Functional gate
+
+- `npm run smoke:test:postdeploy`: PASS
+  - `smoke:sso`: PASS
+  - `smoke:api`: PASS
+  - `smoke:web:version-cache`: PASS
+  - `smoke:realtime`: PASS (`ok=true`, `reconnectOk=true`)
+
+### Scope covered by this cycle
+
+- Test contour switched to external static delivery path (`web-default`),
+- API static serving kept disabled (`API_SERVE_STATIC=0`) without regression in postdeploy gate.
+
+### Decision
+
+- Cycle #12: PASS.
+- Legacy deprecation Phase D finalized for test contour.
+
+## 2026-03-04 — Cycle #11 (browser-level denied-media headless E2E)
+
+- Environment: local web (`http://localhost:5173`)
+- Build ref: `origin/feature/video-stream-overlay-chat-toggle` (working tree)
+
+### Functional gate
+
+- `SMOKE_WEB_BASE_URL=http://localhost:5173 npm run smoke:web:denied-media:browser`: PASS
+  - denied banner visible,
+  - request media access CTA visible.
+
+### Scope covered by this cycle
+
+- Browser-level headless validation of denied-media UX path (runtime DOM, not source-only check).
+
+### Decision
+
+- Cycle #11: PASS.
+- Roadmap пункт `Browser-level E2E: denied media permissions UX` переведён в completed.
+
+## 2026-03-04 — Cycle #10 (audio input devicechange auto-update)
+
+- Environment: `test` (`https://test.boltorezka.gismalink.art`)
+- Build ref: `origin/feature/video-stream-overlay-chat-toggle` (`b931324`)
+
+### Functional gate
+
+- `TEST_REF=origin/feature/video-stream-overlay-chat-toggle npm run deploy:test:smoke`: PASS
+  - `health`: PASS
+  - `smoke:sso`: PASS
+  - `smoke:api`: PASS
+  - `smoke:web:version-cache`: PASS
+  - `smoke:realtime`: PASS (`ok=true`, `reconnectOk=true`)
+
+### Scope covered by this cycle
+
+- Runtime auto-refresh outgoing audio track on system `devicechange` during active call,
+- explicit call-log visibility for auto-update success/failure.
+
+### Decision
+
+- Cycle #10: PASS.
+- Roadmap пункт по system devicechange handling для input device переведён в completed.
+
+## 2026-03-04 — Cycle #9 (version-cache gate + dual-path readiness)
+
+- Environment: `test` (`https://test.boltorezka.gismalink.art`)
+- Build ref: `origin/feature/video-stream-overlay-chat-toggle` (`edb033f`)
+
+### Functional gate
+
+- `TEST_REF=origin/feature/video-stream-overlay-chat-toggle npm run deploy:test:smoke`: PASS
+  - `health`: PASS
+  - `smoke:sso`: PASS
+  - `smoke:api`: PASS
+  - `smoke:web:version-cache`: PASS
+  - `smoke:realtime`: PASS (`ok=true`, `reconnectOk=true`)
+
+### Dual-path validation (separate static path)
+
+- `SMOKE_API_URL=https://test.boltorezka.gismalink.art SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art/__web npm run smoke:web:static` — PASS.
+- `SMOKE_API_URL=https://test.boltorezka.gismalink.art SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art/__web SMOKE_EXPECT_BUILD_SHA=edb033fa61aaeb71df24f78d3055b8c3f1c49f1d npm run smoke:web:version-cache` — PASS.
+
+### Scope covered by this cycle
+
+- build-version compatibility gate (`/version` + client auto-reload),
+- anti-cache policy (`index.html` no-store, hash-assets immutable),
+- separate static delivery path readiness in test (`/__web/`).
+
+### Decision
+
+- Cycle #9: PASS.
+- Roadmap пункт `deprecation dry-run (dual-path readiness + rollback rehearsal)` переведён в completed.
+
+## 2026-03-04 — Cycle #8 (feature video runtime/control increments)
+
+- Environment: `test` (`https://test.boltorezka.gismalink.art`)
+- Build ref: `origin/feature/video-stream-overlay-chat-toggle` (`1c40a14`)
+
+### Functional gate
+
+- `TEST_REF=origin/feature/video-stream-overlay-chat-toggle npm run deploy:test:smoke`: PASS
+  - `health`: PASS
+  - `smoke:sso`: PASS
+  - `smoke:api`: PASS
+  - `smoke:realtime`: PASS (`ok=true`, `reconnectOk=true`)
+
+### Scope covered by this cycle
+
+- sender-side video effects runtime (`none` / `8-bit` / `ASCII`),
+- owner preview and conditional server settings,
+- ASCII controls (cell size, contrast, color),
+- video windows drag/resize UX and server min/max resize bounds,
+- compact server video slider layout.
+
+### Decision
+
+- Cycle #8: PASS.
+- Изменения готовы к дальнейшему test-first циклу и накоплению pre-prod evidence.
+
 ## 2026-03-02 — Cycle #1 (MVP gate + API load P1)
 
 - Environment: `test` (`https://test.boltorezka.gismalink.art`)

@@ -1,13 +1,13 @@
 # Boltorezka Pre-Prod Decision Package
 
-Дата: 2026-03-01  
+Дата: 2026-03-04  
 Среда подготовки: `test`  
 Релизный поток: `feature/* -> test -> merge -> main -> prod`
 
 ## 1) Decision summary
 
-- Decision status: **GO EXECUTED** (для MVP-инкремента 2026-03-01).
-- Причина: gates пройдены, выполнен policy-compliant rollout из `origin/main` в `prod` после test validation и explicit approval.
+- Decision status: **REFRESHED (NO-GO пока не выполнен новый prod sign-off)**.
+- Причина: пакет обновлён под актуальные gate-правила и свежие test evidence (`Cycle #14`, Caddy-only static serving), но новый explicit prod approval ещё не заполнялся.
 - Production rollout policy: только из `origin/main` после отдельного explicit approval.
 
 ## 2) Scope of evidence
@@ -22,16 +22,38 @@
 
 ### 3.1 Latest verified test rollout
 
-- Branch: `origin/feature/mobile-earpiece-default`
-- Verified deploy SHA in test: `30e354d`
+- Branch: `origin/feature/video-stream-overlay-chat-toggle`
+- Verified deploy SHA in test: `94c8d0e`
 - Command:
-  - `ssh mac-mini 'cd ~/srv/boltorezka && TEST_REF=origin/feature/mobile-earpiece-default npm run deploy:test:smoke'`
+  - `ssh mac-mini 'cd ~/srv/boltorezka && TEST_REF=origin/feature/video-stream-overlay-chat-toggle npm run deploy:test:smoke'`
 - Result:
+  - `health` — PASS
   - `smoke:sso` — PASS
+  - `smoke:api` — PASS
+  - `smoke:web:version-cache` — PASS
   - `smoke:realtime` — PASS
   - `reconnectOk=true`
 
-### 3.1.1 Latest production rollout (executed)
+### 3.1.1 Static delivery mode (current)
+
+- Current validated mode in test: **Caddy-only static serving**.
+- Runtime model:
+  - API container serves only API/WS/auth (`API_SERVE_STATIC=0`),
+  - web static bundle synced to edge path `~/srv/edge/ingress/static/boltorezka/test`,
+  - edge Caddy serves web static directly and routes API paths to `boltorezka-api-test`.
+
+### 3.1.2 Additional readiness evidence (2026-03-04)
+
+- Version/cache contract:
+  - `index.html` served with `no-store/no-cache`.
+  - hash-assets served as `immutable`.
+  - `/version.appBuildSha` matches deployed build SHA in test.
+- Runtime media resilience:
+  - active-call auto-refresh outgoing mic track on `navigator.mediaDevices.devicechange` implemented and verified in build/type checks.
+- Performance gate policy formalized:
+  - canonical thresholds document: `docs/operations/PERFORMANCE_GATE.md`.
+
+### 3.1.3 Latest production rollout (historical reference)
 
 - Target: `origin/main`
 - Deploy SHA in prod: `36dd4e129b92e7bb0300ff936a8359f6f9be3658`
@@ -165,6 +187,11 @@
 6. **Audit trail readiness**
   - подготовлены release notes;
   - release/rollback команды и ожидаемые артефакты (`.deploy/release-log.tsv`, edge release log) известны заранее.
+7. **Version/cache compatibility gate**
+  - `smoke:web:version-cache` — PASS;
+  - `appBuildSha` в `/version` соответствует deployed SHA.
+8. **Performance gate compliance**
+  - соблюдены пороги из `docs/operations/PERFORMANCE_GATE.md` (API latency/reliability + realtime stability) для текущего release кандидата.
 
 ### 8.2 Automatic NO-GO conditions
 
@@ -191,14 +218,19 @@
 
 ### 8.4 Current gate record (2026-03-01)
 
-- Target main SHA: `36dd4e1` (`origin/main`)
-- Last test deploy SHA: `30e354d` (`origin/feature/mobile-earpiece-default`)
+### 8.4 Current gate record (refresh 2026-03-04)
+
+- Target main SHA: `<to-fill-before-next-prod>`
+- Last test deploy SHA: `94c8d0e` (`origin/feature/video-stream-overlay-chat-toggle`)
 - smoke:sso: `PASS`
+- smoke:api: `PASS`
 - smoke:realtime: `PASS`
 - reconnectOk: `true`
+- smoke:web:version-cache: `PASS`
 - smoke:web:e2e: `PASS`
 - call relay scenario (`SMOKE_CALL_SIGNAL=1`): `PASS`
-- Release Owner: `<name>`
-- Rollback Owner: `<name>`
-- Rollback ref: `<known-good-main-sha>`
-- Final decision: `GO` (prod rollout выполнен, post-checks pass)
+- Performance gate (`docs/operations/PERFORMANCE_GATE.md`): `READY_FOR_SIGNOFF`
+- Release Owner: `<to-fill-before-next-prod>`
+- Rollback Owner: `<to-fill-before-next-prod>`
+- Rollback ref: `<to-fill-before-next-prod>`
+- Final decision: `NO-GO (pending explicit prod approval and sign-off fields)`

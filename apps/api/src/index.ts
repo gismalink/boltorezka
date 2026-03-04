@@ -32,10 +32,48 @@ await app.register(jwt, {
 
 await app.register(websocket);
 
-await app.register(fastifyStatic, {
-  root: path.join(__dirname, "../public"),
-  prefix: "/"
-});
+const setStaticCacheHeaders = (response: { setHeader: (name: string, value: string) => void }, filePath: string) => {
+  const normalizedPath = String(filePath || "").replace(/\\/g, "/");
+  const fileName = path.basename(normalizedPath);
+
+  if (fileName === "index.html") {
+    response.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0");
+    response.setHeader("Pragma", "no-cache");
+    response.setHeader("Expires", "0");
+    return;
+  }
+
+  const isHashedAsset = normalizedPath.includes("/assets/")
+    && /-[A-Za-z0-9_-]{8,}\./.test(fileName);
+
+  if (isHashedAsset) {
+    response.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+    return;
+  }
+
+  response.setHeader("Cache-Control", "no-cache, max-age=0, must-revalidate");
+};
+
+if (config.apiServeStatic) {
+  await app.register(fastifyStatic, {
+    root: path.join(__dirname, "../public"),
+    prefix: "/",
+    cacheControl: false,
+    setHeaders: setStaticCacheHeaders
+  });
+
+  await app.register(fastifyStatic, {
+    root: path.join(__dirname, "../public"),
+    prefix: "/__web/",
+    decorateReply: false,
+    cacheControl: false,
+    setHeaders: setStaticCacheHeaders
+  });
+
+  app.log.info("Static web serving is enabled (API_SERVE_STATIC=1)");
+} else {
+  app.log.info("Static web serving is disabled (API_SERVE_STATIC=0)");
+}
 
 app.decorate("jwtExpiresIn", config.jwtExpiresIn);
 app.decorate("redis", redis);

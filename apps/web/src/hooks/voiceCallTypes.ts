@@ -35,12 +35,26 @@ export type CallNackPayload = {
   message: string;
 };
 
+export type ServerVideoEffectType = "none" | "pixel8" | "ascii";
+
 export type UseVoiceCallRuntimeArgs = {
   localUserId: string;
   roomSlug: string;
+  allowVideoStreaming: boolean;
+  videoStreamingEnabled: boolean;
   roomVoiceTargets: PresenceMember[];
   selectedInputId: string;
   selectedOutputId: string;
+  selectedVideoInputId: string;
+  serverVideoResolution: "160x120" | "320x240" | "640x480";
+  serverVideoFps: 10 | 15 | 24 | 30;
+  serverVideoEffectType: ServerVideoEffectType;
+  serverVideoPixelFxStrength: number;
+  serverVideoPixelFxPixelSize: number;
+  serverVideoPixelFxGridThickness: number;
+  serverVideoAsciiCellSize: number;
+  serverVideoAsciiContrast: number;
+  serverVideoAsciiColor: string;
   micMuted: boolean;
   micTestLevel: number;
   audioMuted: boolean;
@@ -57,6 +71,7 @@ export type UseVoiceCallRuntimeArgs = {
 export type VoicePeerContext = {
   connection: RTCPeerConnection;
   audioElement: HTMLAudioElement;
+  remoteStream: MediaStream | null;
   label: string;
   hasRemoteTrack: boolean;
   isRemoteMicMuted: boolean;

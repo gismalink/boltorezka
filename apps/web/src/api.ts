@@ -103,6 +103,7 @@ async function fetchJson<T>(path: string, token?: string, init: RequestInit = {}
 }
 
 const endpoints = {
+  version: "/version",
   authMode: "/v1/auth/mode",
   ssoSession: "/v1/auth/sso/session",
   me: "/v1/auth/me",
@@ -124,6 +125,16 @@ const withJsonBody = (method: "POST" | "PUT" | "PATCH" | "DELETE", body?: unknow
 });
 
 export const api = {
+  version: () => fetchJson<{ appVersion: string; appBuildSha: string; ts: string }>(
+    endpoints.version,
+    undefined,
+    {
+      cache: "no-store",
+      headers: {
+        "cache-control": "no-cache"
+      }
+    }
+  ),
   authMode: () => fetchJson<AuthModeResponse>(endpoints.authMode),
   ssoSession: () => fetchJson<{ authenticated: boolean; token: string | null; user: User | null }>(endpoints.ssoSession),
   me: (token: string) => fetchJson<{ user: User | null }>(endpoints.me, token),

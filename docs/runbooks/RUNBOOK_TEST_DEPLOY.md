@@ -33,7 +33,7 @@ One-command для Boltorezka (deploy + post-deploy smoke):
 - `ssh mac-mini 'cd ~/srv/boltorezka && TEST_REF=origin/<feature-branch> npm run deploy:test:smoke'`
 - `ssh mac-mini 'cd ~/srv/boltorezka && AUTO_ROLLBACK_ON_FAIL=1 AUTO_ROLLBACK_SMOKE=1 TEST_REF=origin/<branch> npm run deploy:test:smoke'`
 
-Режим деплоя по умолчанию в скриптах Boltorezka: `api-only` (`docker compose up --no-deps --force-recreate <api-service>`), чтобы не перезапускать shared зависимости (включая TURN) на каждом релизе.
+Режим деплоя по умолчанию в скриптах Boltorezka: `api-only + caddy-static-sync` (`docker compose up --no-deps --force-recreate <api-service>` + синхронизация `dist` в `edge/ingress/static/boltorezka/<env>`), чтобы не перезапускать shared зависимости (включая TURN) на каждом релизе.
 
 Полный recreate зависимостей включать только при необходимости и явно:
 
@@ -52,6 +52,8 @@ One-command для Boltorezka (deploy + post-deploy smoke):
 2. `docker compose ps` без деградации сервисов.
 3. `docker compose logs --tail=120 <service>` без критических ошибок.
 4. HTTP health endpoint отвечает 200.
+4.1. Version endpoint отвечает 200 и содержит актуальный `appBuildSha`:
+   - `curl https://test.boltorezka.gismalink.art/version`
 5. WS handshake успешен.
 6. End-to-end smoke:
    - login,
