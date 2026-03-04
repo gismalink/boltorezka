@@ -96,14 +96,25 @@
 
 ### Phase 0 — Discovery & ADR
 
+Статус: **IN PROGRESS (partial)**.
+
+- Черновые архитектурные решения и baseline уже зафиксированы в канонике (`docs/architecture/ARCHITECTURE.md`, `docs/runbooks/VOICE_BASELINE_RUNBOOK.md`),
+- но формальный пакет Phase 0 (`MVP boundaries + ADR`) отдельными артефактами ещё не утверждён.
+
 - [ ] Утвердить MVP-границы (participants, retention, platforms).
 - [ ] Зафиксировать ADR (signaling, media topology, auth/session).
 
 ### Phase 3 — Voice / WebRTC MVP
 
-- [ ] Coturn integration через env/secret.
+Статус: **PARTIAL**.
+
+- [x] Coturn integration через env/secret.
 - [ ] Ограничения размера room для p2p.
 - [ ] Graceful degradation при плохой сети.
+
+Примечание:
+- Ограничения p2p-room size пока подтверждены операционно (load/relay cycles в `docs/status/TEST_RESULTS.md`), но не оформлены как жёсткий product-limit контракт.
+- Graceful degradation частично покрыт (reconnect strategy и relay baseline), но end-to-end policy для плохой сети ещё не закрыт как отдельный deliverable.
 
 #### Voice workstream (start 2026-02-28)
 
