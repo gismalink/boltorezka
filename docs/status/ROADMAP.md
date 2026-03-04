@@ -7,6 +7,22 @@
 
 - Phase 5 (iOS/macOS kickoff scope): `docs/plans/PHASE5_IOS_MACOS_SCOPE_NOTE.md`.
 
+### Phase 5 — iOS & macOS (open)
+
+- [ ] Shared Swift package + базовые MVP-экраны.
+- [ ] Lifecycle обработка audio interruptions/background.
+
+### Phase 6 — Hardening & Release Readiness (open)
+
+- [ ] Нагрузочные и reconnect/failure тесты.
+- [ ] Security review (authz, rate limits, abuse prevention).
+- [ ] Финальные runbook: deploy/smoke/rollback/incident response.
+
+## Execution plan (open items only)
+
+- [ ] #6 Выполнить hardening batch для Phase 6: reconnect/failure сценарии + security review checklist с evidence.
+- [ ] #7 Сформировать финальный runbook bundle (`deploy/smoke/rollback/incident response`) и синхронизировать docs index.
+
 ## Canonical plans & policies
 
 - Architecture baseline: `docs/architecture/ARCHITECTURE.md`.
