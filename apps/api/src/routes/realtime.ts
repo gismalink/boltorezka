@@ -54,6 +54,8 @@ type RelayOutcome = {
 const CALL_SIGNAL_MIN_BYTES = 2;
 const CALL_SDP_SIGNAL_MAX_BYTES = 600_000;
 const CALL_ICE_SIGNAL_MAX_BYTES = 12_000;
+const CALL_OFFER_MIN_INTERVAL_MS = 5000;
+const CALL_OFFER_RATE_LIMIT_TTL_MS = 60000;
 
 function sendJson(socket: WebSocket, payload: unknown): void {
   if (socket.readyState === socket.OPEN) {
@@ -213,7 +215,31 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
   const socketsByUserId = new Map<string, Set<WebSocket>>();
   const socketsByRoomId = new Map<string, Set<WebSocket>>();
   const socketState = new WeakMap<WebSocket, SocketState>();
+  const lastCallOfferByPair = new Map<string, number>();
   const wsCallDebugEnabled = process.env.WS_CALL_DEBUG === "1";
+
+  const isCallOfferRateLimited = (fromUserId: string, targetUserId: string): boolean => {
+    const now = Date.now();
+    const key = `${fromUserId}->${targetUserId}`;
+    const lastAt = lastCallOfferByPair.get(key) || 0;
+
+    if (lastAt > 0 && now - lastAt < CALL_OFFER_MIN_INTERVAL_MS) {
+      return true;
+    }
+
+    lastCallOfferByPair.set(key, now);
+
+    if (lastCallOfferByPair.size > 4000) {
+      const threshold = now - CALL_OFFER_RATE_LIMIT_TTL_MS;
+      for (const [pairKey, pairLastAt] of lastCallOfferByPair.entries()) {
+        if (pairLastAt < threshold) {
+          lastCallOfferByPair.delete(pairKey);
+        }
+      }
+    }
+
+    return false;
+  };
 
   const logCallDebug = (message: string, meta: Record<string, unknown> = {}) => {
     if (!wsCallDebugEnabled) {
@@ -1165,6 +1191,22 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
               }
 
               const targetUserId = normalizeRequestId(getPayloadString(payload, "targetUserId", 128)) || null;
+              if (eventType === "call.offer" && targetUserId) {
+                if (isCallOfferRateLimited(state.userId, targetUserId)) {
+                  logCallDebug("call signal rejected: offer rate limited", {
+                    eventType,
+                    userId: state.userId,
+                    roomId: state.roomId,
+                    roomSlug: state.roomSlug,
+                    requestId,
+                    targetUserId
+                  });
+                  sendNack(connection, requestId, eventType, "OfferRateLimited", "Too many call offers; retry in a few seconds");
+                  void incrementMetric("nack_sent");
+                  return;
+                }
+              }
+
               const iceMeta = eventType === "call.ice" ? extractIceCandidateMeta(signal) : null;
               const sdpMeta = eventType === "call.offer" || eventType === "call.answer" ? extractSdpMeta(signal) : null;
               logCallDebug("call signal received", {
