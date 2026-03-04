@@ -37,7 +37,13 @@ fi
 
 echo "[deploy-prod] deploy mode: api-only (set FULL_RECREATE=1 for full dependency recreate)"
 TMP_DOCKER_CONFIG="$(mktemp -d)"
-trap 'rm -rf "$TMP_DOCKER_CONFIG"' EXIT
+TMP_DEPLOY_ENV="$(mktemp)"
+trap 'rm -rf "$TMP_DOCKER_CONFIG" "$TMP_DEPLOY_ENV"' EXIT
+
+cat >"$TMP_DEPLOY_ENV" <<EOF
+PROD_VITE_APP_VERSION=$RESOLVED_SHA
+PROD_APP_BUILD_SHA=$RESOLVED_SHA
+EOF
 
 mkdir -p "$TMP_DOCKER_CONFIG/cli-plugins"
 if [[ -d "$HOME/.docker/cli-plugins" ]]; then
@@ -52,17 +58,13 @@ cat >"$TMP_DOCKER_CONFIG/config.json" <<'JSON'
 }
 JSON
 
-PROD_VITE_APP_VERSION="$RESOLVED_SHA" \
-PROD_APP_BUILD_SHA="$RESOLVED_SHA" \
-DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" build boltorezka-api-prod
+DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" build boltorezka-api-prod
 
 if [[ "$FULL_RECREATE" == "1" ]]; then
   echo "[deploy-prod] full recreate enabled"
-  PROD_APP_BUILD_SHA="$RESOLVED_SHA" \
-  DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d --force-recreate boltorezka-api-prod
+  DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" up -d --force-recreate boltorezka-api-prod
 else
-  PROD_APP_BUILD_SHA="$RESOLVED_SHA" \
-  DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d --no-deps --force-recreate boltorezka-api-prod
+  DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" up -d --no-deps --force-recreate boltorezka-api-prod
 fi
 
 echo "[deploy-prod] wait api health"
