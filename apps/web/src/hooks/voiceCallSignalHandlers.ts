@@ -85,7 +85,7 @@ export async function handleIncomingSignalEvent({
           targetUserId: fromUserId,
           reason: "room_voice_disabled"
         },
-        { maxRetries: 1 }
+        { trackAck: false, maxRetries: 0 }
       );
       rememberRequestTarget(rejectRequestId, "call.reject", fromUserId);
       return;
@@ -117,7 +117,7 @@ export async function handleIncomingSignalEvent({
           targetUserId: fromUserId,
           signal: answerSignal
         },
-        { maxRetries: 1 }
+        { trackAck: false, maxRetries: 0 }
       );
       rememberRequestTarget(answerRequestId, "call.answer", fromUserId);
 

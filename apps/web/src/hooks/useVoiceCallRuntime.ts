@@ -1021,7 +1021,11 @@ export function useVoiceCallRuntime({
     const peerIds = Array.from(peersRef.current.keys());
     peerIds.forEach((userId) => {
       if (activeTargetIds.has(userId)) {
-        const requestId = sendWsEvent("call.hangup", { targetUserId: userId, reason: "manual" }, { maxRetries: 1 });
+        const requestId = sendWsEvent(
+          "call.hangup",
+          { targetUserId: userId, reason: "manual" },
+          { trackAck: false, maxRetries: 0 }
+        );
         rememberRequestTarget(requestId, "call.hangup", userId);
       }
       closePeer(userId);
