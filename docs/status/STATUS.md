@@ -30,6 +30,8 @@
 	- документ `docs/operations/PERFORMANCE_GATE.md`.
 - Закрыт Phase 0 (Discovery & ADR):
 	- утверждён канонический пакет `docs/architecture/PHASE0_MVP_ADR.md` (MVP boundaries + ADR summary).
+- Закрыт Phase 3 (Voice / WebRTC MVP):
+	- утверждён канонический policy-пакет `docs/runbooks/PHASE3_VOICE_WEBRTC_MVP_POLICY.md` (room-size contract + graceful degradation policy).
 - Последний test rollout/smoke по feature ветке (`origin/feature/video-stream-overlay-chat-toggle`, SHA `b931324`) — PASS.
 - Выполнен refresh pre-prod decision package под актуальные gate-правила и evidence (`docs/runbooks/PREPROD_DECISION_PACKAGE.md`).
 
