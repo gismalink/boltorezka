@@ -1282,6 +1282,14 @@ export function useVoiceCallRuntime({
         return;
       }
 
+      if (reason.startsWith("watchdog-")) {
+        logVoiceDiagnostics("runtime video-sync trigger ignored", {
+          reason,
+          skip: "watchdog-local-resync-only"
+        });
+        return;
+      }
+
       const now = Date.now();
       if (now - lastVideoSyncOfferAtRef.current < OFFER_VIDEO_SYNC_MIN_INTERVAL_MS) {
         logVoiceDiagnostics("runtime video-sync trigger ignored", {
