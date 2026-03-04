@@ -25,5 +25,6 @@
   - [PERFORMANCE_GATE](operations/PERFORMANCE_GATE.md)
 - `architecture/` — architecture-level documentation
   - [ARCHITECTURE](architecture/ARCHITECTURE.md)
+  - [PHASE0_MVP_ADR](architecture/PHASE0_MVP_ADR.md)
 - `plans/` — scoped design/product plans
   - [DISCORD_CHANNEL_TREE_PLAN](plans/DISCORD_CHANNEL_TREE_PLAN.md)

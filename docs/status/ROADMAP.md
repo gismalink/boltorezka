@@ -96,13 +96,12 @@
 
 ### Phase 0 — Discovery & ADR
 
-Статус: **IN PROGRESS (partial)**.
+Статус: **DONE**.
 
-- Черновые архитектурные решения и baseline уже зафиксированы в канонике (`docs/architecture/ARCHITECTURE.md`, `docs/runbooks/VOICE_BASELINE_RUNBOOK.md`),
-- но формальный пакет Phase 0 (`MVP boundaries + ADR`) отдельными артефактами ещё не утверждён.
+- MVP boundaries и ADR формально зафиксированы в каноническом пакете: `docs/architecture/PHASE0_MVP_ADR.md`.
 
-- [ ] Утвердить MVP-границы (participants, retention, platforms).
-- [ ] Зафиксировать ADR (signaling, media topology, auth/session).
+- [x] Утвердить MVP-границы (participants, retention, platforms).
+- [x] Зафиксировать ADR (signaling, media topology, auth/session).
 
 ### Phase 3 — Voice / WebRTC MVP
 
