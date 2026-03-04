@@ -51,6 +51,10 @@ type RelayOutcome = {
   relayedCount: number;
 };
 
+const CALL_SIGNAL_MIN_BYTES = 2;
+const CALL_SDP_SIGNAL_MAX_BYTES = 600_000;
+const CALL_ICE_SIGNAL_MAX_BYTES = 12_000;
+
 function sendJson(socket: WebSocket, payload: unknown): void {
   if (socket.readyState === socket.OPEN) {
     socket.send(JSON.stringify(payload));
@@ -1143,16 +1147,20 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
               }
 
               const signalSize = safeJsonSize(signal);
-              if (!Number.isFinite(signalSize) || signalSize < 2 || signalSize > 12000) {
+              const maxSignalSize = eventType === "call.offer" || eventType === "call.answer"
+                ? CALL_SDP_SIGNAL_MAX_BYTES
+                : CALL_ICE_SIGNAL_MAX_BYTES;
+              if (!Number.isFinite(signalSize) || signalSize < CALL_SIGNAL_MIN_BYTES || signalSize > maxSignalSize) {
                 logCallDebug("call signal rejected: invalid signal size", {
                   eventType,
                   userId: state.userId,
                   roomId: state.roomId,
                   roomSlug: state.roomSlug,
                   requestId,
-                  signalSize
+                  signalSize,
+                  maxSignalSize
                 });
-                sendValidationNack(connection, requestId, eventType, "payload.signal size must be between 2 and 12000 bytes");
+                sendValidationNack(connection, requestId, eventType, `payload.signal size must be between ${CALL_SIGNAL_MIN_BYTES} and ${maxSignalSize} bytes`);
                 return;
               }
 
