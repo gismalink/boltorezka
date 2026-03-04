@@ -2,6 +2,30 @@
 
 Отдельный журнал результатов тестов/нагрузки.
 
+## 2026-03-04 — Cycle #14 (full test deploy after preprod refresh)
+
+- Environment: `test` (`https://test.boltorezka.gismalink.art`)
+- Build ref: `origin/feature/video-stream-overlay-chat-toggle` (`94c8d0e`)
+- Ingress ref: `edge/main` (`095b504`)
+
+### Functional gate
+
+- `TEST_REF=origin/feature/video-stream-overlay-chat-toggle npm run deploy:test:smoke`: PASS
+  - `smoke:sso`: PASS
+  - `smoke:api`: PASS
+  - `smoke:web:version-cache`: PASS
+  - `smoke:realtime`: PASS (`ok=true`, `reconnectOk=true`)
+
+### Scope covered by this cycle
+
+- Full test rollout подтверждён на актуальном SHA после обновления pre-prod пакета,
+- Caddy-only static delivery и API split routing остаются стабильными.
+
+### Decision
+
+- Cycle #14: PASS.
+- Test contour ready for next pre-prod sign-off review stage.
+
 ## 2026-03-04 — Cycle #13 (Caddy-only static serving migration)
 
 - Environment: `test` (`https://test.boltorezka.gismalink.art`)
