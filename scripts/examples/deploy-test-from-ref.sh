@@ -79,13 +79,14 @@ DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file 
 if [[ -d "$EDGE_REPO_DIR/ingress" ]]; then
   echo "[deploy-test] sync static bundle -> $EDGE_STATIC_DIR_TEST"
   mkdir -p "$EDGE_STATIC_DIR_TEST"
+  touch "$EDGE_STATIC_DIR_TEST/.gitkeep"
 
   WEB_IMAGE_CID="$(docker create boltorezka-api:test)"
   docker cp "$WEB_IMAGE_CID:/app/public/." "$TMP_WEB_DIST_DIR/"
   docker rm "$WEB_IMAGE_CID" >/dev/null
   WEB_IMAGE_CID=""
 
-  find "$EDGE_STATIC_DIR_TEST" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
+  find "$EDGE_STATIC_DIR_TEST" -mindepth 1 -maxdepth 1 ! -name '.gitkeep' -exec rm -rf {} +
   cp -R "$TMP_WEB_DIST_DIR/." "$EDGE_STATIC_DIR_TEST/"
 else
   echo "[deploy-test] warning: edge repo not found at $EDGE_REPO_DIR; static sync skipped"
