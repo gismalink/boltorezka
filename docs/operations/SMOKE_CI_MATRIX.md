@@ -16,7 +16,7 @@
 | Stage | Command | Required |
 |---|---|---|
 | Deploy + postdeploy smoke | `TEST_REF=origin/<branch_or_main> npm run deploy:test:smoke` | Yes |
-| API contract smoke in postdeploy | included in `deploy:test:smoke` (`smoke:sso` + `smoke:api` + `smoke:realtime`), bearer auto-generated server-side from smoke user + JWT secret (`JWT_SECRET`/`TEST_JWT_SECRET`/api container env fallback) | Yes |
+| API/Web contract smoke in postdeploy | included in `deploy:test:smoke` (`smoke:sso` + `smoke:api` + `smoke:web:version-cache` + `smoke:realtime`), bearer auto-generated server-side from smoke user + JWT secret (`JWT_SECRET`/`TEST_JWT_SECRET`/api container env fallback) | Yes |
 | Auto rollback policy (optional) | `AUTO_ROLLBACK_ON_FAIL=1 AUTO_ROLLBACK_SMOKE=1 TEST_REF=origin/<ref> npm run deploy:test:smoke` | Optional |
 | Extended relay smoke | `SMOKE_CALL_SIGNAL=1` flow with 2 ws-ticket | Yes |
 
@@ -37,6 +37,8 @@ Current CI command:
 
 | Contract | Smoke signal |
 |---|---|
+| `GET /version` + build SHA compatibility | `npm run smoke:web:version-cache` |
+| `index.html` cache-control (`no-store`) + immutable hash assets | `npm run smoke:web:version-cache` |
 | `GET /health` | API smoke / postdeploy smoke |
 | `GET /v1/auth/mode` + SSO redirect | `npm run smoke:sso` |
 | `GET /v1/auth/ws-ticket` + WS connect | `npm run smoke:realtime` |

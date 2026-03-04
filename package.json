@@ -12,6 +12,7 @@
     "smoke:sso": "node ./scripts/smoke-sso-redirect.mjs",
     "smoke:realtime": "node ./scripts/smoke-realtime.mjs",
     "smoke:web:static": "node ./scripts/smoke-web-static-contract.mjs",
+    "smoke:web:version-cache": "node ./scripts/smoke-web-version-cache.mjs",
     "smoke:web:denied-media": "node ./scripts/smoke-web-denied-media.mjs",
     "smoke:web:e2e": "bash ./scripts/smoke-web-e2e.sh",
     "smoke:test:postdeploy": "bash ./scripts/examples/postdeploy-smoke-test.sh \"${REPO_DIR:-$PWD}\"",

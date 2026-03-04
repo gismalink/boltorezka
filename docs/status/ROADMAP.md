@@ -3,7 +3,7 @@
 Этот документ хранит только план и открытые задачи.
 Фактически реализованные изменения и evidence ведутся отдельно в `docs/status/FEATURE_LOG.md`.
 
-## Current status (single-pane, 2026-03-03)
+## Current status (single-pane, 2026-03-04)
 
 - Краткий статус и release snapshot: `docs/status/STATUS.md`.
 - Каноника по voice baseline: `docs/runbooks/VOICE_BASELINE_RUNBOOK.md`.
@@ -26,10 +26,16 @@
 
 ## Focus now (операционный фокус)
 
-1. Закрыть web MVP polish: стабильный media-permission UX + единый control bar на desktop/mobile.
-2. Держать denied-media UX под автоматическим smoke-gate (banner + lock controls), затем перейти к browser-level E2E.
-3. Выполнить deprecation dry-run для legacy `apps/api/public` по утверждённому плану.
+1. Закрыть browser-level E2E для denied-media UX (после уже закрытого smoke-gate).
+2. Довести dual-path readiness до отдельного static delivery path в `test`.
+3. Зафиксировать post-MVP performance gate (API p95 + WS reconnect + call/video setup success).
 4. Поддерживать test-first release cadence: каждое изменение через `deploy:test:smoke` с фиксированным evidence.
+5. [x] Ввести frontend version compatibility gate:
+  - [x] `index.html` no-store/no-cache,
+  - [x] hash-assets immutable,
+  - [x] единый build SHA в web bundle + API runtime,
+  - [x] auto-reload клиента при новой серверной версии,
+  - [x] smoke: `smoke:web:version-cache`.
 
 ## Completed milestones (свернуто)
 
@@ -54,6 +60,16 @@
   - [x] voice connect/disconnect
 - [x] Smoke-gate: denied media permissions UX (`banner + lock controls`).
 - [ ] Browser-level E2E: denied media permissions UX (headless browser path).
+- [x] Video windows + camera streaming UX:
+  - [x] draggable/resizable video windows overlay (multi-user tiles),
+  - [x] self-preview при одиночном участнике video-room,
+  - [x] toggle show/hide video windows в chat panel,
+  - [x] sender-side effect pipeline + server controls (`none` / `8-bit` / `ASCII`),
+  - [x] owner preview в server video settings.
+- [x] Frontend/API version compatibility & anti-cache strategy:
+  - [x] `GET /version` с `appBuildSha`,
+  - [x] клиентская проверка версии + auto-reload,
+  - [x] smoke-проверка cache/version контракта.
 - [x] Подготовить deprecation-план для legacy `apps/api/public`.
 - [ ] Реализовать карточку пользователя (web, Discord-like footer):
   - [x] Отдельный UI-блок с avatar/name/username и индикатором статуса.
@@ -119,11 +135,12 @@
 ## Execution plan (ближайшие действия)
 
 1. [x] Добавить `smoke:web:e2e` шаг для denied-media UX (persist banner/lock states).
+1.1. [x] Добавить `smoke:web:version-cache` шаг (no-store index + immutable assets + buildSha match).
 2. [ ] Выполнить deprecation dry-run в `test` (dual-path readiness + rollback rehearsal).
   - [x] rollback rehearsal (previous SHA -> restore main) validated in `test`.
   - [x] static delivery contract smoke (split `SMOKE_WEB_BASE_URL` / `SMOKE_API_URL`) added and validated in `test`.
   - [ ] dual-path readiness validation (separate static delivery path).
-3. [ ] Зафиксировать post-MVP performance gate (API p95 + WS reconnect + call setup success) и пороги GO/NO-GO.
+3. [ ] Зафиксировать post-MVP performance gate (API p95 + WS reconnect + call/video setup success) и пороги GO/NO-GO.
 4. [ ] После закрытия пунктов 1-3 выполнить новый pre-prod package refresh.
 
 ## KPI MVP

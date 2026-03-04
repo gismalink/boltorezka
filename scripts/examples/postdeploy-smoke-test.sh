@@ -19,6 +19,7 @@ SMOKE_CHAT_SENT_DELTA=0
 SMOKE_CHAT_IDEMPOTENCY_HIT_DELTA=0
 SMOKE_SUMMARY_TEXT="health=fail mode=unknown sso=fail realtime=fail delta(nack=0,ack=0,chat=0,idem=0)"
 API_SMOKE_STATUS="skip"
+VERSION_CACHE_STATUS="skip"
 
 write_summary() {
   mkdir -p .deploy
@@ -158,10 +159,26 @@ else
   API_SMOKE_STATUS="pass"
 fi
 
+echo "[postdeploy-smoke] smoke:web:version-cache"
+EXPECTED_BUILD_SHA=""
+if [[ -f ".deploy/last-deploy-test.env" ]]; then
+  set +u
+  source ".deploy/last-deploy-test.env"
+  set -u
+  EXPECTED_BUILD_SHA="${DEPLOY_SHA:-}"
+fi
+
+if [[ -n "$EXPECTED_BUILD_SHA" ]]; then
+  SMOKE_WEB_BASE_URL="$BASE_URL" SMOKE_EXPECT_BUILD_SHA="$EXPECTED_BUILD_SHA" npm run smoke:web:version-cache
+else
+  SMOKE_WEB_BASE_URL="$BASE_URL" npm run smoke:web:version-cache
+fi
+VERSION_CACHE_STATUS="pass"
+
 if [[ "${SMOKE_REALTIME:-1}" == "0" ]]; then
   echo "[postdeploy-smoke] realtime smoke skipped (SMOKE_REALTIME=0)"
   SMOKE_STATUS="pass"
-  SMOKE_SUMMARY_TEXT="health=pass mode=sso sso=pass api=$API_SMOKE_STATUS realtime=skip delta(nack=0,ack=0,chat=0,idem=0)"
+  SMOKE_SUMMARY_TEXT="health=pass mode=sso sso=pass api=$API_SMOKE_STATUS version_cache=$VERSION_CACHE_STATUS realtime=skip delta(nack=0,ack=0,chat=0,idem=0)"
   exit 0
 fi
 
@@ -231,6 +248,6 @@ SMOKE_CHAT_SENT_DELTA=$((CHAT_SENT_AFTER - CHAT_SENT_BEFORE))
 SMOKE_CHAT_IDEMPOTENCY_HIT_DELTA=$((CHAT_IDEMPOTENCY_HIT_AFTER - CHAT_IDEMPOTENCY_HIT_BEFORE))
 
 SMOKE_STATUS="pass"
-SMOKE_SUMMARY_TEXT="health=pass mode=sso sso=pass api=$API_SMOKE_STATUS realtime=pass delta(nack=$SMOKE_NACK_DELTA,ack=$SMOKE_ACK_DELTA,chat=$SMOKE_CHAT_SENT_DELTA,idem=$SMOKE_CHAT_IDEMPOTENCY_HIT_DELTA)"
+SMOKE_SUMMARY_TEXT="health=pass mode=sso sso=pass api=$API_SMOKE_STATUS version_cache=$VERSION_CACHE_STATUS realtime=pass delta(nack=$SMOKE_NACK_DELTA,ack=$SMOKE_ACK_DELTA,chat=$SMOKE_CHAT_SENT_DELTA,idem=$SMOKE_CHAT_IDEMPOTENCY_HIT_DELTA)"
 
 echo "[postdeploy-smoke] done"
