@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import type { MutableRefObject } from "react";
 import { logVoiceDiagnostics } from "../utils/voiceDiagnostics";
 import {
@@ -66,6 +66,43 @@ export function useVoiceRuntimeMediaEffects({
   const mediaRecoveryInProgressRef = useRef(false);
   const outgoingVideoProcessorRef = useRef<OutgoingVideoTrackHandle | null>(null);
 
+  const replaceOutgoingAudioTrack = useCallback(async () => {
+    const stream = localStreamRef.current;
+    if (!stream) {
+      return false;
+    }
+
+    const nextStream = await navigator.mediaDevices.getUserMedia({
+      audio: getAudioConstraints(),
+      video: false
+    });
+    const nextTrack = nextStream.getAudioTracks()[0] || null;
+    if (!nextTrack) {
+      nextStream.getTracks().forEach((track) => track.stop());
+      return false;
+    }
+
+    nextTrack.enabled = !micMuted;
+
+    const connections = Array.from(peersRef.current.values()).map((item) => item.connection);
+    await Promise.all(
+      connections.map(async (connection) => {
+        const sender = connection.getSenders().find((item) => item.track?.kind === "audio");
+        if (sender) {
+          await sender.replaceTrack(nextTrack);
+        }
+      })
+    );
+
+    const currentStream = localStreamRef.current;
+    const videoTracks = currentStream?.getVideoTracks() || [];
+    currentStream?.getAudioTracks().forEach((track) => track.stop());
+    const mergedStream = new MediaStream([nextTrack, ...videoTracks]);
+    localStreamRef.current = mergedStream;
+    setLocalVideoStream(videoTracks.length > 0 ? mergedStream : null);
+    return true;
+  }, [localStreamRef, peersRef, getAudioConstraints, micMuted, setLocalVideoStream]);
+
   useEffect(() => {
     if (!localStreamRef.current) {
       return;
@@ -113,8 +150,8 @@ export function useVoiceRuntimeMediaEffects({
   }, [retryRemoteAudioPlayback]);
 
   useEffect(() => {
-    const connections = Array.from(peersRef.current.values()).map((item) => item.connection);
-    if (connections.length === 0 || !localStreamRef.current) {
+    const hasConnections = Array.from(peersRef.current.values()).length > 0;
+    if (!hasConnections || !localStreamRef.current) {
       return;
     }
 
@@ -122,39 +159,11 @@ export function useVoiceRuntimeMediaEffects({
 
     const replaceAudioTrack = async () => {
       try {
-        const nextStream = await navigator.mediaDevices.getUserMedia({
-          audio: getAudioConstraints(),
-          video: false
-        });
-
-        if (cancelled) {
-          nextStream.getTracks().forEach((track) => track.stop());
+        const replaced = await replaceOutgoingAudioTrack();
+        if (cancelled || !replaced) {
           return;
         }
 
-        const nextTrack = nextStream.getAudioTracks()[0];
-        if (!nextTrack) {
-          nextStream.getTracks().forEach((track) => track.stop());
-          return;
-        }
-
-        nextTrack.enabled = !micMuted;
-
-        await Promise.all(
-          connections.map(async (connection) => {
-            const sender = connection.getSenders().find((item) => item.track?.kind === "audio");
-            if (sender) {
-              await sender.replaceTrack(nextTrack);
-            }
-          })
-        );
-
-        const currentStream = localStreamRef.current;
-        const videoTracks = currentStream?.getVideoTracks() || [];
-        currentStream?.getAudioTracks().forEach((track) => track.stop());
-        const mergedStream = new MediaStream([nextTrack, ...videoTracks]);
-        localStreamRef.current = mergedStream;
-        setLocalVideoStream(videoTracks.length > 0 ? mergedStream : null);
         pushCallLog("input device switched for active call");
         logVoiceDiagnostics("runtime input track replaced", {
           selectedInputId: selectedInputId || "default"
@@ -173,6 +182,52 @@ export function useVoiceRuntimeMediaEffects({
       cancelled = true;
     };
   }, [peersRef, localStreamRef, selectedInputId, getAudioConstraints, micMuted, t, pushToastThrottled, pushCallLog, setLocalVideoStream]);
+
+  useEffect(() => {
+    if (!roomVoiceConnected || !localStreamRef.current || !navigator.mediaDevices?.addEventListener) {
+      return;
+    }
+
+    let cancelled = false;
+    let pendingTimer: number | null = null;
+
+    const handleDeviceChange = () => {
+      if (pendingTimer !== null) {
+        window.clearTimeout(pendingTimer);
+      }
+
+      pendingTimer = window.setTimeout(() => {
+        pendingTimer = null;
+        if (cancelled || !localStreamRef.current) {
+          return;
+        }
+
+        void replaceOutgoingAudioTrack()
+          .then((replaced) => {
+            if (!cancelled && replaced) {
+              pushCallLog("input device auto-updated after system devicechange");
+              logVoiceDiagnostics("runtime input auto-updated", {
+                selectedInputId: selectedInputId || "default"
+              });
+            }
+          })
+          .catch((error) => {
+            if (!cancelled) {
+              pushCallLog(`input device auto-update failed: ${(error as Error).message}`);
+            }
+          });
+      }, 350);
+    };
+
+    navigator.mediaDevices.addEventListener("devicechange", handleDeviceChange);
+    return () => {
+      cancelled = true;
+      if (pendingTimer !== null) {
+        window.clearTimeout(pendingTimer);
+      }
+      navigator.mediaDevices.removeEventListener("devicechange", handleDeviceChange);
+    };
+  }, [roomVoiceConnected, localStreamRef, replaceOutgoingAudioTrack, pushCallLog, selectedInputId]);
 
   useEffect(() => {
     if (!allowVideoStreaming || !localStreamRef.current) {

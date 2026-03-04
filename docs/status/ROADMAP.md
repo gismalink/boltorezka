@@ -78,6 +78,10 @@
   - [x] Попап «Устройство вывода» + выбор аудио-устройства + ползунок громкости звука.
   - [x] Persist выбранных устройств/громкости в localStorage и восстановление при reload.
   - [x] Fallback-поведение при отказе в media permissions (понятный UI state без крэшей).
+- [x] Авто-обновление input audio device при system `devicechange`:
+  - [x] реакция на `navigator.mediaDevices.devicechange` во время активного звонка,
+  - [x] авто-refresh outgoing audio track (включая `selectedInputId=default`),
+  - [x] логирование успешного auto-update/failure в call log.
 - [ ] Реализовать Discord-like структуру каналов (категории + текст/голос):
   - [x] Добавить category layer в data model (порядок, сворачивание, управление видимостью).
   - [x] Разделить channels по типу: `text` и `voice` (в едином tree endpoint).
