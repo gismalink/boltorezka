@@ -701,8 +701,16 @@ export function useVoiceCallRuntime({
         connection.addTrack(track, stream);
       }
     });
+
+    if (allowVideoStreaming) {
+      const hasVideoSender = connection.getSenders().some((sender) => sender.track?.kind === "video");
+      if (!hasVideoSender) {
+        connection.addTransceiver("video", { direction: "sendrecv" });
+      }
+    }
+
     await applyAudioQualityToConnection(connection, "peer");
-  }, [ensureLocalStream, applyAudioQualityToConnection]);
+  }, [ensureLocalStream, applyAudioQualityToConnection, allowVideoStreaming]);
 
   const scheduleReconnect = useCallback((targetUserId: string, trigger: string) => {
     if (!roomVoiceConnectedRef.current) {

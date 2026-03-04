@@ -2,6 +2,39 @@
 
 Отдельный журнал результатов тестов/нагрузки.
 
+## 2026-03-04 — Cycle #16 (RTC row/camera hotfix local smoke)
+
+- Environment: local web preview (`http://127.0.0.1:4173`)
+- Build ref: working tree (post-merge fixes)
+
+### Functional gate
+
+- `npm --prefix apps/web run build`: PASS
+- `npm run smoke:web:e2e`: FAIL (no `SMOKE_BEARER_TOKEN` / `SMOKE_WS_TICKET`, auto-ticket path unavailable в локальном окружении)
+- `SMOKE_WEB_BASE_URL=http://127.0.0.1:4173 npm run smoke:web:denied-media:browser`: PASS
+  - denied banner visible,
+  - request media access CTA visible.
+- `SMOKE_API_URL=https://test.boltorezka.gismalink.art SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art SMOKE_BEARER_TOKEN=<token> npm run smoke:web:e2e`: FAIL (`[smoke:realtime] timeout: ack for call.offer`).
+- `SMOKE_API_URL=https://test.boltorezka.gismalink.art SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art SMOKE_BEARER_TOKEN=<token> SMOKE_E2E_CALL_SIGNAL=0 SMOKE_E2E_RECONNECT=0 npm run smoke:web:e2e`: PASS.
+- `SMOKE_API_URL=https://test.boltorezka.gismalink.art SMOKE_BEARER_TOKEN=<token> SMOKE_CALL_SIGNAL=1 SMOKE_RECONNECT=0 npm run smoke:realtime`: FAIL-fast с явной причиной (`second ticket from another user required`).
+
+### Root cause + fix
+
+- Root cause: call-signal smoke запускался с двумя ws-ticket одного и того же userId; для non-text channels второй join эвиктит первый socket (`ChannelSessionMoved`), из-за чего `call.offer` ack не мог стабильно пройти.
+- Fix: `scripts/smoke-web-e2e.sh` обновлён — auto-ticket path генерирует `SMOKE_WS_TICKET_SECOND` из другого пользователя (`SMOKE_USER_EMAIL_SECOND` или автоматически `email <> SMOKE_USER_EMAIL`).
+- Guardrail: `scripts/smoke-realtime.mjs` теперь валит сценарий call-signal сразу с понятной ошибкой при same-user pair вместо timeout.
+
+### Scope covered by this cycle
+
+- Исправлен RTC/video sender baseline для peer-соединений (fix кейса «не видят камеры друг друга»),
+- Упрощён RTC badge в списке участников до `rtc` с state-based styling (transparent / blinking / connected),
+- Восстановлена цветовая семантика текущего пользователя (default orange, speaking blue как у остальных).
+
+### Decision
+
+- Cycle #16: PARTIAL PASS.
+- Full-default `smoke:web:e2e` остаётся нестабильным в call-signal stage (`call.offer` ack timeout).
+
 ## 2026-03-04 — Cycle #15 (origin/main rollout validation)
 
 - Environment: `test` (`https://test.boltorezka.gismalink.art`)

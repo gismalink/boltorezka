@@ -337,16 +337,11 @@ export function RoomsPanel({
                   : "bi-mic";
               const audioIconClass = isAudioOutputMuted ? "bi-headset-vr" : "bi-headphones";
               const isFullyMuted = micState === "muted" && isAudioOutputMuted;
-              const rtcStateLabel = rtcState === "connected"
-                ? t("rtc.connected")
-                : rtcState === "connecting"
-                  ? t("rtc.connecting")
-                  : "";
               const rtcStateClass = rtcState === "connecting"
-                ? "text-[#ffd166]"
+                ? "channel-member-rtc-connecting"
                 : rtcState === "connected"
-                  ? "text-[var(--pixel-success)]"
-                  : "";
+                  ? "channel-member-rtc-connected"
+                  : "channel-member-rtc-disconnected";
 
               return (
             <li
@@ -355,9 +350,7 @@ export function RoomsPanel({
             >
               <span className="channel-member-avatar">{(member.userName || "U").charAt(0).toUpperCase()}</span>
               <span className="channel-member-name">{member.userName}</span>
-              {rtcState !== "disconnected" ? (
-                <span className={`channel-member-rtc ${rtcStateClass}`}>{rtcStateLabel}</span>
-              ) : null}
+              <span className={`channel-member-rtc ${rtcStateClass}`}>rtc</span>
               <span className="channel-member-icons" aria-hidden="true">
                 <i className={`bi ${micIconClass} channel-member-mic-icon`} />
                 <i className={`bi ${audioIconClass} channel-member-audio-icon`} />

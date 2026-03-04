@@ -2,6 +2,7 @@ import WS from "ws";
 
 const baseUrl = (process.env.SMOKE_API_URL ?? "http://localhost:8080").replace(/\/+$/, "");
 const bearerToken = process.env.SMOKE_BEARER_TOKEN ?? "";
+const bearerTokenSecond = process.env.SMOKE_BEARER_TOKEN_SECOND ?? "";
 const preissuedTicket = process.env.SMOKE_WS_TICKET ?? "";
 const preissuedTicketSecond = process.env.SMOKE_WS_TICKET_SECOND ?? "";
 const preissuedTicketReconnect = process.env.SMOKE_WS_TICKET_RECONNECT ?? "";
@@ -71,14 +72,15 @@ async function resolveSecondTicket() {
     return preissuedTicketSecond;
   }
 
-  if (!bearerToken) {
+  const tokenForSecondTicket = bearerTokenSecond || bearerToken;
+  if (!tokenForSecondTicket) {
     return null;
   }
 
   const { response, payload } = await fetchJson("/v1/auth/ws-ticket", {
     method: "GET",
     headers: {
-      Authorization: `Bearer ${bearerToken}`
+      Authorization: `Bearer ${tokenForSecondTicket}`
     }
   });
 
@@ -279,6 +281,9 @@ function waitForEvent(events, predicate, label) {
     const secondUserId = String(secondReady?.payload?.userId || "").trim();
     if (!secondUserId) {
       throw new Error("[smoke:realtime] second websocket user id is missing");
+    }
+    if (secondUserId === firstUserId) {
+      throw new Error("[smoke:realtime] call-signal requires second ticket from another user (first and second user ids are equal)");
     }
 
     const secondJoinRequest = `join2-${Date.now()}`;

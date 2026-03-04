@@ -22,7 +22,9 @@ const checks = [
   },
   {
     name: "unified 4-control bar layout",
-    ok: userDockSource.includes("user-panel-actions-grid") && userDockSource.includes("bi bi-camera-video") && userDockSource.includes("bi bi-telephone-x")
+    ok: userDockSource.includes("user-panel-actions-grid")
+      && (userDockSource.includes("bi-camera-video") || userDockSource.includes("bi-camera-video-fill") || userDockSource.includes("bi-camera-video-off-fill"))
+      && userDockSource.includes("bi bi-telephone-x")
   },
   {
     name: "media controls lock state variable",

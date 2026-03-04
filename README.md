@@ -62,7 +62,8 @@ Legacy-файлы перенесены в `legacy/poc/`.
 - `SMOKE_API=1 npm run check` — verify + API smoke (`scripts/smoke-api.mjs`)
 - `SMOKE_API_URL=https://test.boltorezka.gismalink.art npm run smoke:sso` — SSO redirect/mode smoke (`scripts/smoke-sso-redirect.mjs`)
 - `SMOKE_API_URL=https://test.boltorezka.gismalink.art SMOKE_BEARER_TOKEN=<jwt> npm run smoke:realtime` — WS protocol smoke (`nack/ack/idempotency`) через `ws-ticket` (`scripts/smoke-realtime.mjs`)
-- `SMOKE_CALL_SIGNAL=1 SMOKE_API_URL=https://test.boltorezka.gismalink.art SMOKE_BEARER_TOKEN=<jwt> npm run smoke:realtime` — расширенный WS smoke + relay проверки `call.offer`, `call.reject` и `call.hangup` (второй ws-ticket создаётся автоматически)
+- `SMOKE_CALL_SIGNAL=1 SMOKE_API_URL=https://test.boltorezka.gismalink.art SMOKE_BEARER_TOKEN=<jwt1> SMOKE_BEARER_TOKEN_SECOND=<jwt2> npm run smoke:realtime` — расширенный WS smoke + relay проверки `call.offer`, `call.reject` и `call.hangup` с гарантированно разными пользователями
+- `npm run smoke:auth:bootstrap` — создать/обновить 2 test users в DB, сгенерировать bearer tokens и сохранить их для переиспользования в `.deploy/smoke-auth.env` (gitignored)
 - `SMOKE_API_URL=https://test.boltorezka.gismalink.art SMOKE_API=1 SMOKE_SSO=1 npm run check` — единый verify + API + SSO smoke
 - `SMOKE_API_URL=https://test.boltorezka.gismalink.art SMOKE_API=1 SMOKE_SSO=1 SMOKE_REALTIME=1 SMOKE_WS_TICKET=<ticket> npm run check` — полный verify + API + SSO + realtime smoke
 - `npm run deploy:test` — deploy test from git ref (`scripts/examples/deploy-test-from-ref.sh`)
@@ -79,6 +80,21 @@ Legacy-файлы перенесены в `legacy/poc/`.
 - Workflow: `.github/workflows/test-smoke.yml` (daily + manual dispatch).
 - Required repository variable: `TEST_SMOKE_API_URL` (optional, default `https://test.boltorezka.gismalink.art`).
 - Required repository secret: `TEST_SMOKE_BEARER_TOKEN` (должен быть `admin`/`super_admin`, т.к. smoke проверяет `GET /v1/telemetry/summary`).
+
+### Быстрый bootstrap test users + reusable tokens
+
+Локальный контур:
+
+- `npm run smoke:auth:bootstrap`
+- `set -a; source .deploy/smoke-auth.env; set +a`
+
+Test host contour (server compose):
+
+- `SMOKE_AUTH_COMPOSE_FILE=infra/docker-compose.host.yml SMOKE_AUTH_ENV_FILE=infra/.env.host SMOKE_AUTH_POSTGRES_SERVICE=boltorezka-db-test SMOKE_AUTH_API_SERVICE=boltorezka-api-test SMOKE_API_URL=https://test.boltorezka.gismalink.art npm run smoke:auth:bootstrap`
+
+После этого можно запускать full smoke:
+
+- `set -a; source .deploy/smoke-auth.env; set +a && SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art npm run smoke:web:e2e`
 
 Перед server deploy обязательно:
 

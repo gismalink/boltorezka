@@ -12,6 +12,7 @@ ENV_FILE="${SMOKE_E2E_ENV_FILE:-infra/.env.host}"
 POSTGRES_SERVICE="${SMOKE_E2E_POSTGRES_SERVICE:-boltorezka-db-test}"
 REDIS_SERVICE="${SMOKE_E2E_REDIS_SERVICE:-boltorezka-redis-test}"
 USER_EMAIL="${SMOKE_USER_EMAIL:-gismalink@gmail.com}"
+USER_EMAIL_SECOND="${SMOKE_USER_EMAIL_SECOND:-}"
 
 compose() {
   docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" "$@"
@@ -39,6 +40,23 @@ auto_generate_tickets() {
     return 1
   fi
 
+  local payload_second=""
+  if [[ "$RUN_CALL_SIGNAL" == "1" ]]; then
+    if [[ -n "$USER_EMAIL_SECOND" ]]; then
+      payload_second="$(compose exec -T "$POSTGRES_SERVICE" psql -U "$TEST_POSTGRES_USER" -d "$TEST_POSTGRES_DB" -tAc "select json_build_object('userId', id::text, 'userName', coalesce(name,email,'unknown'), 'email', email, 'role', coalesce(role,'user'), 'issuedAt', now()::text)::text from users where email='${USER_EMAIL_SECOND}' limit 1;")"
+      if [[ -z "$payload_second" ]]; then
+        echo "[smoke:web-e2e] cannot resolve second smoke user payload for email=$USER_EMAIL_SECOND" >&2
+        return 1
+      fi
+    else
+      payload_second="$(compose exec -T "$POSTGRES_SERVICE" psql -U "$TEST_POSTGRES_USER" -d "$TEST_POSTGRES_DB" -tAc "select json_build_object('userId', id::text, 'userName', coalesce(name,email,'unknown'), 'email', email, 'role', coalesce(role,'user'), 'issuedAt', now()::text)::text from users where email <> '${USER_EMAIL}' order by created_at asc limit 1;")"
+      if [[ -z "$payload_second" ]]; then
+        echo "[smoke:web-e2e] cannot resolve second smoke user payload (set SMOKE_USER_EMAIL_SECOND)" >&2
+        return 1
+      fi
+    fi
+  fi
+
   if [[ -z "${SMOKE_WS_TICKET:-}" ]]; then
     local primary
     primary="$(uuidgen | tr '[:upper:]' '[:lower:]')"
@@ -49,7 +67,7 @@ auto_generate_tickets() {
   if [[ "$RUN_CALL_SIGNAL" == "1" && -z "${SMOKE_WS_TICKET_SECOND:-}" ]]; then
     local second
     second="$(uuidgen | tr '[:upper:]' '[:lower:]')"
-    compose exec -T "$REDIS_SERVICE" redis-cli SETEX "ws:ticket:$second" 120 "$payload" >/dev/null
+    compose exec -T "$REDIS_SERVICE" redis-cli SETEX "ws:ticket:$second" 120 "$payload_second" >/dev/null
     export SMOKE_WS_TICKET_SECOND="$second"
   fi
 
