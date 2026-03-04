@@ -22,7 +22,7 @@
 ## Execution plan (open items only)
 
 - [x] Legacy deprecation — Phase D: подготовить decommission change-set для сворачивания runtime-coupling API/static после стабилизации cutover.
-- [ ] Legacy deprecation — Phase D: провести test rehearsal decommission + rollback по runbook и зафиксировать evidence.
+- [x] Legacy deprecation — Phase D: провести test rehearsal decommission + rollback по runbook и зафиксировать evidence.
 - [ ] Legacy deprecation — Phase D: после стабилизации обновить финальные runbooks/contracts/release note по итоговому статусу deprecation.
 - [ ] #6 Выполнить hardening batch для Phase 6: reconnect/failure сценарии + security review checklist с evidence.
 - [ ] #7 Сформировать финальный runbook bundle (`deploy/smoke/rollback/incident response`) и синхронизировать docs index.

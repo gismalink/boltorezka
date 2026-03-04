@@ -85,6 +85,18 @@ Exit criteria:
    - `PROD_API_SERVE_STATIC=0`.
 - Локальная backward compatibility сохранена (без env переменной API по умолчанию продолжает раздавать static).
 
+#### Phase D rehearsal evidence (2026-03-04)
+
+- Rehearsal rollout в `test` на SHA `8eeed7b` показал ожидаемый эффект decoupling:
+   - API/SSO/realtime smoke остаются PASS,
+   - web version-cache smoke падает с `index fetch failed: 404` (static route через API отключён).
+- Rollback rehearsal выполнен на SHA `b931324`:
+   - полный `deploy:test:smoke` — PASS.
+
+Вывод:
+- rollback path validated;
+- для финального закрытия deprecation требуется отдельный внешний static delivery path (не через API container) и smoke на этом пути.
+
 ## 5) Rollback plan
 
 Rollback trigger:

@@ -3,6 +3,7 @@ set -euo pipefail
 
 REPO_DIR="${1:-$PWD}"
 BASE_URL="${SMOKE_API_URL:-https://test.boltorezka.gismalink.art}"
+WEB_BASE_URL="${SMOKE_WEB_BASE_URL:-$BASE_URL}"
 COMPOSE_FILE="infra/docker-compose.host.yml"
 ENV_FILE="infra/.env.host"
 POSTGRES_SERVICE="${TEST_POSTGRES_SERVICE:-boltorezka-db-test}"
@@ -26,6 +27,7 @@ write_summary() {
 
   printf 'SMOKE_TIMESTAMP_UTC=%q\n' "$SMOKE_TIMESTAMP_UTC" >"$SUMMARY_FILE_REL"
   printf 'SMOKE_BASE_URL=%q\n' "$BASE_URL" >>"$SUMMARY_FILE_REL"
+  printf 'SMOKE_WEB_BASE_URL=%q\n' "$WEB_BASE_URL" >>"$SUMMARY_FILE_REL"
   printf 'SMOKE_STATUS=%q\n' "$SMOKE_STATUS" >>"$SUMMARY_FILE_REL"
   printf 'SMOKE_NACK_DELTA=%q\n' "$SMOKE_NACK_DELTA" >>"$SUMMARY_FILE_REL"
   printf 'SMOKE_ACK_DELTA=%q\n' "$SMOKE_ACK_DELTA" >>"$SUMMARY_FILE_REL"
@@ -169,9 +171,9 @@ if [[ -f ".deploy/last-deploy-test.env" ]]; then
 fi
 
 if [[ -n "$EXPECTED_BUILD_SHA" ]]; then
-  SMOKE_WEB_BASE_URL="$BASE_URL" SMOKE_EXPECT_BUILD_SHA="$EXPECTED_BUILD_SHA" npm run smoke:web:version-cache
+  SMOKE_API_URL="$BASE_URL" SMOKE_WEB_BASE_URL="$WEB_BASE_URL" SMOKE_EXPECT_BUILD_SHA="$EXPECTED_BUILD_SHA" npm run smoke:web:version-cache
 else
-  SMOKE_WEB_BASE_URL="$BASE_URL" npm run smoke:web:version-cache
+  SMOKE_API_URL="$BASE_URL" SMOKE_WEB_BASE_URL="$WEB_BASE_URL" npm run smoke:web:version-cache
 fi
 VERSION_CACHE_STATUS="pass"
 
