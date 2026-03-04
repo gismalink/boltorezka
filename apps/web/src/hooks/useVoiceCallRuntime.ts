@@ -52,6 +52,10 @@ const AUDIO_QUALITY_SAMPLE_RATE: Record<AudioQuality, number> = {
   high: 48000
 };
 
+const OFFER_MIN_INTERVAL_MS = 10000;
+const OFFER_VIDEO_SYNC_MIN_INTERVAL_MS = 20000;
+const OFFER_ICE_RESTART_MIN_INTERVAL_MS = 5000;
+
 export function useVoiceCallRuntime({
   localUserId,
   roomSlug,
@@ -899,8 +903,16 @@ export function useVoiceCallRuntime({
       return;
     }
 
+    const reason = String(options?.reason || "");
+    const isVideoSyncReason = reason.startsWith("video-sync:");
+    const minIntervalMs = options?.iceRestart
+      ? OFFER_ICE_RESTART_MIN_INTERVAL_MS
+      : isVideoSyncReason
+        ? OFFER_VIDEO_SYNC_MIN_INTERVAL_MS
+        : OFFER_MIN_INTERVAL_MS;
+
     const now = Date.now();
-    if (existingPeer && now - existingPeer.lastOfferAt < 1200) {
+    if (existingPeer && now - existingPeer.lastOfferAt < minIntervalMs) {
       return;
     }
 
@@ -1182,7 +1194,7 @@ export function useVoiceCallRuntime({
       }
 
       const now = Date.now();
-      if (now - lastVideoSyncOfferAtRef.current < 300) {
+      if (now - lastVideoSyncOfferAtRef.current < OFFER_VIDEO_SYNC_MIN_INTERVAL_MS) {
         return;
       }
       lastVideoSyncOfferAtRef.current = now;
