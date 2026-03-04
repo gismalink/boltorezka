@@ -514,7 +514,9 @@ export function App() {
   }, [serverVideoWindowMaxWidth]);
 
   useEffect(() => {
-    if (!currentRoomSupportsRtc || !roomVoiceConnected || !canManageAudioQuality) {
+    const activeRoom = rooms.find((room) => room.slug === roomSlug);
+    const roomSupportsRtc = activeRoom ? activeRoom.kind !== "text" : false;
+    if (!roomSupportsRtc || !roomVoiceConnected || !canManageAudioQuality) {
       return;
     }
 
@@ -540,7 +542,8 @@ export function App() {
     lastBroadcastVideoPolicyRef.current = serialized;
     sendWsEvent("call.video_state", { settings: payload }, { maxRetries: 1 });
   }, [
-    currentRoomSupportsRtc,
+    rooms,
+    roomSlug,
     roomVoiceConnected,
     canManageAudioQuality,
     serverVideoEffectType,
@@ -738,6 +741,107 @@ export function App() {
     [pushLog, sendWsEvent, loadTelemetrySummary]
   );
 
+  const normalizeIntInRange = useCallback((value: unknown, min: number, max: number): number | null => {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) {
+      return null;
+    }
+
+    return Math.max(min, Math.min(max, Math.round(numeric)));
+  }, []);
+
+  /** Applies video policy updates received from realtime events for non-admin clients. */
+  const handleIncomingVideoState = useCallback((payload: {
+    roomSlug?: unknown;
+    settings?: {
+      effectType?: unknown;
+      resolution?: unknown;
+      fps?: unknown;
+      pixelFxStrength?: unknown;
+      pixelFxPixelSize?: unknown;
+      pixelFxGridThickness?: unknown;
+      asciiCellSize?: unknown;
+      asciiContrast?: unknown;
+      asciiColor?: unknown;
+      windowMinWidth?: unknown;
+      windowMaxWidth?: unknown;
+    };
+  }) => {
+    if (canManageAudioQuality) {
+      return;
+    }
+
+    const payloadRoomSlug = String(payload.roomSlug || "").trim();
+    if (payloadRoomSlug && payloadRoomSlug !== roomSlugRef.current) {
+      return;
+    }
+
+    const settings = payload.settings;
+    if (!settings) {
+      return;
+    }
+
+    const effectType = String(settings.effectType || "").trim();
+    if (effectType === "none" || effectType === "pixel8" || effectType === "ascii") {
+      setServerVideoEffectType(effectType);
+    }
+
+    const resolution = String(settings.resolution || "").trim();
+    if (resolution === "160x120" || resolution === "320x240" || resolution === "640x480") {
+      setServerVideoResolution(resolution);
+    }
+
+    const fps = Number(settings.fps);
+    if (fps === 10 || fps === 15 || fps === 24 || fps === 30) {
+      setServerVideoFps(fps);
+    }
+
+    const pixelFxStrength = normalizeIntInRange(settings.pixelFxStrength, 0, 100);
+    if (pixelFxStrength !== null) {
+      setServerVideoPixelFxStrength(pixelFxStrength);
+    }
+
+    const pixelFxPixelSize = normalizeIntInRange(settings.pixelFxPixelSize, 2, 10);
+    if (pixelFxPixelSize !== null) {
+      setServerVideoPixelFxPixelSize(pixelFxPixelSize);
+    }
+
+    const pixelFxGridThickness = normalizeIntInRange(settings.pixelFxGridThickness, 1, 4);
+    if (pixelFxGridThickness !== null) {
+      setServerVideoPixelFxGridThickness(pixelFxGridThickness);
+    }
+
+    const asciiCellSize = normalizeIntInRange(settings.asciiCellSize, 4, 16);
+    if (asciiCellSize !== null) {
+      setServerVideoAsciiCellSize(asciiCellSize);
+    }
+
+    const asciiContrast = normalizeIntInRange(settings.asciiContrast, 60, 200);
+    if (asciiContrast !== null) {
+      setServerVideoAsciiContrast(asciiContrast);
+    }
+
+    const asciiColor = String(settings.asciiColor || "").trim();
+    if (/^#[0-9a-fA-F]{6}$/.test(asciiColor)) {
+      setServerVideoAsciiColor(asciiColor);
+    }
+
+    const minWidth = normalizeIntInRange(settings.windowMinWidth, 80, 300);
+    const maxWidthBase = normalizeIntInRange(settings.windowMaxWidth, 120, 480);
+    if (minWidth !== null || maxWidthBase !== null) {
+      const nextMinWidth = minWidth ?? serverVideoWindowMinWidth;
+      const nextMaxWidth = Math.max(maxWidthBase ?? serverVideoWindowMaxWidth, nextMinWidth);
+      setServerVideoWindowMinWidth(nextMinWidth);
+      setServerVideoWindowMaxWidth(nextMaxWidth);
+    }
+  }, [
+    canManageAudioQuality,
+    normalizeIntInRange,
+    roomSlugRef,
+    serverVideoWindowMaxWidth,
+    serverVideoWindowMinWidth
+  ]);
+
   const {
     beginSso,
     logout,
@@ -861,76 +965,7 @@ export function App() {
     onCallSignal: handleIncomingSignal,
     onCallTerminal: handleIncomingTerminal,
     onCallMicState: handleIncomingMicState,
-    onCallVideoState: (payload) => {
-      if (canManageAudioQuality) {
-        return;
-      }
-
-      const payloadRoomSlug = String(payload.roomSlug || "").trim();
-      if (payloadRoomSlug && payloadRoomSlug !== roomSlugRef.current) {
-        return;
-      }
-
-      const settings = payload.settings;
-      if (!settings) {
-        return;
-      }
-
-      const effectType = String(settings.effectType || "").trim();
-      if (effectType === "none" || effectType === "pixel8" || effectType === "ascii") {
-        setServerVideoEffectType(effectType);
-      }
-
-      const resolution = String(settings.resolution || "").trim();
-      if (resolution === "160x120" || resolution === "320x240" || resolution === "640x480") {
-        setServerVideoResolution(resolution);
-      }
-
-      const fps = Number(settings.fps);
-      if (fps === 10 || fps === 15 || fps === 24 || fps === 30) {
-        setServerVideoFps(fps);
-      }
-
-      const pixelFxStrength = Number(settings.pixelFxStrength);
-      if (Number.isFinite(pixelFxStrength)) {
-        setServerVideoPixelFxStrength(Math.max(0, Math.min(100, pixelFxStrength)));
-      }
-
-      const pixelFxPixelSize = Number(settings.pixelFxPixelSize);
-      if (Number.isFinite(pixelFxPixelSize)) {
-        setServerVideoPixelFxPixelSize(Math.max(2, Math.min(10, Math.round(pixelFxPixelSize))));
-      }
-
-      const pixelFxGridThickness = Number(settings.pixelFxGridThickness);
-      if (Number.isFinite(pixelFxGridThickness)) {
-        setServerVideoPixelFxGridThickness(Math.max(1, Math.min(4, Math.round(pixelFxGridThickness))));
-      }
-
-      const asciiCellSize = Number(settings.asciiCellSize);
-      if (Number.isFinite(asciiCellSize)) {
-        setServerVideoAsciiCellSize(Math.max(4, Math.min(16, Math.round(asciiCellSize))));
-      }
-
-      const asciiContrast = Number(settings.asciiContrast);
-      if (Number.isFinite(asciiContrast)) {
-        setServerVideoAsciiContrast(Math.max(60, Math.min(200, Math.round(asciiContrast))));
-      }
-
-      const asciiColor = String(settings.asciiColor || "").trim();
-      if (/^#[0-9a-fA-F]{6}$/.test(asciiColor)) {
-        setServerVideoAsciiColor(asciiColor);
-      }
-
-      const minWidthRaw = Number(settings.windowMinWidth);
-      const maxWidthRaw = Number(settings.windowMaxWidth);
-      if (Number.isFinite(minWidthRaw) || Number.isFinite(maxWidthRaw)) {
-        const minWidth = Number.isFinite(minWidthRaw) ? Math.max(80, Math.min(300, Math.round(minWidthRaw))) : serverVideoWindowMinWidth;
-        const maxWidthBase = Number.isFinite(maxWidthRaw) ? Math.max(120, Math.min(480, Math.round(maxWidthRaw))) : serverVideoWindowMaxWidth;
-        const maxWidth = Math.max(maxWidthBase, minWidth);
-        setServerVideoWindowMinWidth(minWidth);
-        setServerVideoWindowMaxWidth(maxWidth);
-      }
-    },
+    onCallVideoState: handleIncomingVideoState,
     onCallNack: handleCallNack,
     onAudioQualityUpdated: (payload) => {
       const scope = String(payload.scope || "").trim();
