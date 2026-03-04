@@ -23,6 +23,9 @@
 	- split-smoke (`SMOKE_API_URL` + `SMOKE_WEB_BASE_URL`) — PASS.
 - Закрыт runtime UX пункт по устройствам ввода:
 	- при system `devicechange` в active call выполняется auto-refresh outgoing mic track (включая `default` route).
+- Закрыт browser-level denied-media E2E путь:
+	- добавлен headless smoke `smoke:web:denied-media:browser` (Playwright),
+	- интеграция в `smoke:web:e2e` как opt-in stage через `SMOKE_E2E_DENIED_MEDIA_BROWSER=1`.
 - Зафиксирован post-MVP performance gate и пороги GO/NO-GO:
 	- документ `docs/operations/PERFORMANCE_GATE.md`.
 - Последний test rollout/smoke по feature ветке (`origin/feature/video-stream-overlay-chat-toggle`, SHA `b931324`) — PASS.

@@ -5,6 +5,7 @@ BASE_URL="${SMOKE_API_URL:-http://localhost:8080}"
 RUN_CALL_SIGNAL="${SMOKE_E2E_CALL_SIGNAL:-1}"
 RUN_RECONNECT="${SMOKE_E2E_RECONNECT:-1}"
 RUN_DENIED_MEDIA="${SMOKE_E2E_DENIED_MEDIA:-1}"
+RUN_DENIED_MEDIA_BROWSER="${SMOKE_E2E_DENIED_MEDIA_BROWSER:-0}"
 RUN_STATIC_CONTRACT="${SMOKE_E2E_STATIC_CONTRACT:-1}"
 COMPOSE_FILE="${SMOKE_E2E_COMPOSE_FILE:-infra/docker-compose.host.yml}"
 ENV_FILE="${SMOKE_E2E_ENV_FILE:-infra/.env.host}"
@@ -99,6 +100,13 @@ if [[ "$RUN_DENIED_MEDIA" == "1" ]]; then
   npm run smoke:web:denied-media
 else
   echo "[smoke:web-e2e] denied-media ux gate skipped (SMOKE_E2E_DENIED_MEDIA=0)"
+fi
+
+if [[ "$RUN_DENIED_MEDIA_BROWSER" == "1" ]]; then
+  echo "[smoke:web-e2e] denied-media browser gate"
+  SMOKE_API_URL="$BASE_URL" SMOKE_WEB_BASE_URL="${SMOKE_WEB_BASE_URL:-$BASE_URL}" npm run smoke:web:denied-media:browser
+else
+  echo "[smoke:web-e2e] denied-media browser gate skipped (SMOKE_E2E_DENIED_MEDIA_BROWSER=0)"
 fi
 
 echo "[smoke:web-e2e] done"

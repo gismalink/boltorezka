@@ -2,6 +2,26 @@
 
 Отдельный журнал результатов тестов/нагрузки.
 
+## 2026-03-04 — Cycle #11 (browser-level denied-media headless E2E)
+
+- Environment: local web (`http://localhost:5173`)
+- Build ref: `origin/feature/video-stream-overlay-chat-toggle` (working tree)
+
+### Functional gate
+
+- `SMOKE_WEB_BASE_URL=http://localhost:5173 npm run smoke:web:denied-media:browser`: PASS
+  - denied banner visible,
+  - request media access CTA visible.
+
+### Scope covered by this cycle
+
+- Browser-level headless validation of denied-media UX path (runtime DOM, not source-only check).
+
+### Decision
+
+- Cycle #11: PASS.
+- Roadmap пункт `Browser-level E2E: denied media permissions UX` переведён в completed.
+
 ## 2026-03-04 — Cycle #10 (audio input devicechange auto-update)
 
 - Environment: `test` (`https://test.boltorezka.gismalink.art`)

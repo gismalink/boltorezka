@@ -26,8 +26,7 @@
 
 ## Focus now (операционный фокус)
 
-1. Закрыть browser-level E2E для denied-media UX (после уже закрытого smoke-gate).
-2. Поддерживать test-first release cadence: каждое изменение через `deploy:test:smoke` с фиксированным evidence.
+1. Поддерживать test-first release cadence: каждое изменение через `deploy:test:smoke` с фиксированным evidence.
 
 ## Completed milestones (свернуто)
 
@@ -51,7 +50,7 @@
   - [x] send/receive message
   - [x] voice connect/disconnect
 - [x] Smoke-gate: denied media permissions UX (`banner + lock controls`).
-- [ ] Browser-level E2E: denied media permissions UX (headless browser path).
+- [x] Browser-level E2E: denied media permissions UX (headless browser path).
 - [x] Video windows + camera streaming UX:
   - [x] draggable/resizable video windows overlay (multi-user tiles),
   - [x] self-preview при одиночном участнике video-room,
