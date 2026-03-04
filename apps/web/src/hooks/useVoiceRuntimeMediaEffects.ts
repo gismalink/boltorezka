@@ -68,6 +68,24 @@ export function useVoiceRuntimeMediaEffects({
   const mediaRecoveryInProgressRef = useRef(false);
   const outgoingVideoProcessorRef = useRef<OutgoingVideoTrackHandle | null>(null);
 
+  const findSenderByKind = useCallback((
+    connection: RTCPeerConnection,
+    kind: "audio" | "video"
+  ) => {
+    const direct = connection.getSenders().find((sender) => sender.track?.kind === kind);
+    if (direct) {
+      return direct;
+    }
+
+    const viaTransceiver = connection.getTransceivers().find((transceiver) => {
+      const senderKind = transceiver.sender.track?.kind;
+      const receiverKind = transceiver.receiver.track?.kind;
+      return senderKind === kind || receiverKind === kind;
+    });
+
+    return viaTransceiver?.sender;
+  }, []);
+
   const replaceOutgoingAudioTrack = useCallback(async () => {
     const stream = localStreamRef.current;
     if (!stream) {
@@ -89,7 +107,7 @@ export function useVoiceRuntimeMediaEffects({
     const connections = Array.from(peersRef.current.values()).map((item) => item.connection);
     await Promise.all(
       connections.map(async (connection) => {
-        const sender = connection.getSenders().find((item) => item.track?.kind === "audio");
+        const sender = findSenderByKind(connection, "audio");
         if (sender) {
           await sender.replaceTrack(nextTrack);
         }
@@ -103,7 +121,7 @@ export function useVoiceRuntimeMediaEffects({
     localStreamRef.current = mergedStream;
     setLocalVideoStream(videoTracks.length > 0 ? mergedStream : null);
     return true;
-  }, [localStreamRef, peersRef, getAudioConstraints, micMuted, setLocalVideoStream]);
+  }, [localStreamRef, peersRef, getAudioConstraints, micMuted, setLocalVideoStream, findSenderByKind]);
 
   useEffect(() => {
     if (!localStreamRef.current) {
@@ -258,7 +276,7 @@ export function useVoiceRuntimeMediaEffects({
 
         await Promise.all(
           connections.map(async (connection) => {
-            const sender = connection.getSenders().find((item) => item.track?.kind === "video");
+            const sender = findSenderByKind(connection, "video");
             if (sender) {
               await sender.replaceTrack(null);
             }
@@ -320,7 +338,7 @@ export function useVoiceRuntimeMediaEffects({
 
       await Promise.all(
         connections.map(async (connection) => {
-          const sender = connection.getSenders().find((item) => item.track?.kind === "video");
+          const sender = findSenderByKind(connection, "video");
           if (sender) {
             await sender.replaceTrack(nextVideoTrack);
             return;
@@ -361,7 +379,8 @@ export function useVoiceRuntimeMediaEffects({
     getVideoConstraints,
     setLocalVideoStream,
     onVideoTrackSyncNeeded,
-    pushCallLog
+    pushCallLog,
+    findSenderByKind
   ]);
 
   useEffect(() => {
@@ -434,14 +453,14 @@ export function useVoiceRuntimeMediaEffects({
 
         await Promise.all(
           Array.from(peersRef.current.values()).map(async ({ connection }) => {
-            const audioSender = connection.getSenders().find((item) => item.track?.kind === "audio");
+            const audioSender = findSenderByKind(connection, "audio");
             if (audioSender) {
               await audioSender.replaceTrack(nextAudioTrack);
             } else {
               connection.addTrack(nextAudioTrack, mergedStream);
             }
 
-            const videoSender = connection.getSenders().find((item) => item.track?.kind === "video");
+            const videoSender = findSenderByKind(connection, "video");
             if (videoSender) {
               await videoSender.replaceTrack(nextVideoTrack && videoStreamingEnabled ? nextVideoTrack : null);
             } else if (nextVideoTrack && allowVideoStreaming && videoStreamingEnabled) {
@@ -593,6 +612,7 @@ export function useVoiceRuntimeMediaEffects({
     setLocalVideoStream,
     pushCallLog,
     pushToastThrottled,
-    t
+    t,
+    findSenderByKind
   ]);
 }

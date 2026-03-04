@@ -88,6 +88,24 @@ export function useVoiceCallRuntime({
   setCallStatus,
   setLastCallPeer
 }: UseVoiceCallRuntimeArgs) {
+  const findSenderByKind = useCallback((
+    connection: RTCPeerConnection,
+    kind: "audio" | "video"
+  ) => {
+    const direct = connection.getSenders().find((sender) => sender.track?.kind === kind);
+    if (direct) {
+      return direct;
+    }
+
+    const viaTransceiver = connection.getTransceivers().find((transceiver) => {
+      const senderKind = transceiver.sender.track?.kind;
+      const receiverKind = transceiver.receiver.track?.kind;
+      return senderKind === kind || receiverKind === kind;
+    });
+
+    return viaTransceiver?.sender;
+  }, []);
+
   const [roomVoiceConnected, setRoomVoiceConnected] = useState(false);
   const [connectedPeerUserIds, setConnectedPeerUserIds] = useState<string[]>([]);
   const [connectingPeerUserIds, setConnectingPeerUserIds] = useState<string[]>([]);
@@ -737,22 +755,36 @@ export function useVoiceCallRuntime({
 
   const attachLocalTracks = useCallback(async (connection: RTCPeerConnection) => {
     const stream = await ensureLocalStream();
-    const existingTrackIds = new Set(connection.getSenders().map((sender) => sender.track?.id).filter(Boolean));
-    stream.getTracks().forEach((track) => {
-      if (!existingTrackIds.has(track.id)) {
-        connection.addTrack(track, stream);
+    const nextAudioTrack = stream.getAudioTracks()[0] || null;
+    const nextVideoTrack = stream.getVideoTracks()[0] || null;
+
+    if (nextAudioTrack) {
+      const audioSender = findSenderByKind(connection, "audio");
+      if (audioSender) {
+        await audioSender.replaceTrack(nextAudioTrack);
+      } else {
+        connection.addTrack(nextAudioTrack, stream);
       }
-    });
+    }
 
     if (allowVideoStreaming) {
-      const hasVideoSender = connection.getSenders().some((sender) => sender.track?.kind === "video");
+      const videoSender = findSenderByKind(connection, "video");
+      if (videoSender) {
+        await videoSender.replaceTrack(nextVideoTrack);
+      } else if (nextVideoTrack) {
+        connection.addTrack(nextVideoTrack, stream);
+      }
+    }
+
+    if (allowVideoStreaming) {
+      const hasVideoSender = Boolean(findSenderByKind(connection, "video"));
       if (!hasVideoSender) {
         connection.addTransceiver("video", { direction: "sendrecv" });
       }
     }
 
     await applyAudioQualityToConnection(connection, "peer");
-  }, [ensureLocalStream, applyAudioQualityToConnection, allowVideoStreaming]);
+  }, [ensureLocalStream, applyAudioQualityToConnection, allowVideoStreaming, findSenderByKind]);
 
   const scheduleReconnect = useCallback((targetUserId: string, trigger: string) => {
     if (!roomVoiceConnectedRef.current) {
