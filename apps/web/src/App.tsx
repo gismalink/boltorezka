@@ -26,6 +26,7 @@ import {
   useMediaDevicePreferences,
   useMicrophoneLevelMeter,
   usePopupOutsideClose,
+  useRealtimeSoundEffects,
   useRealtimeChatLifecycle,
   useRoomAdminActions,
   useRoomsDerived,
@@ -211,11 +212,6 @@ export function App() {
   const userSettingsRef = useRef<HTMLDivElement>(null);
   const toastTimeoutsRef = useRef<Map<number, number>>(new Map());
   const toastLastShownAtRef = useRef<Map<string, number>>(new Map());
-  const previousWsStateRef = useRef<"disconnected" | "connecting" | "connected">("disconnected");
-  const previousPresenceRoomSlugRef = useRef<string>(roomSlug);
-  const presenceSoundInitializedRef = useRef(false);
-  const previousPresenceIdsRef = useRef<string[]>([]);
-  const previousChatMessageIdRef = useRef<string | null>(null);
   const serverVideoPreviewHandleRef = useRef<OutgoingVideoTrackHandle | null>(null);
   const serverVideoPreviewRawTrackRef = useRef<MediaStreamTrack | null>(null);
   const lastBroadcastVideoPolicyRef = useRef("");
@@ -1066,71 +1062,14 @@ export function App() {
     void loadTelemetrySummary();
   }, [wsState, loadTelemetrySummary]);
 
-  useEffect(() => {
-    const prevState = previousWsStateRef.current;
-    if (prevState === "connected" && wsState === "disconnected") {
-      void playServerSound("server_disconnected");
-    }
-
-    previousWsStateRef.current = wsState;
-  }, [wsState, playServerSound]);
-
-  useEffect(() => {
-    const currentMembers = roomsPresenceDetailsBySlug[roomSlug] || [];
-    const currentIds = currentMembers
-      .map((member) => String(member.userId || "").trim())
-      .filter((userId) => userId.length > 0);
-
-    if (previousPresenceRoomSlugRef.current !== roomSlug) {
-      previousPresenceRoomSlugRef.current = roomSlug;
-      previousPresenceIdsRef.current = currentIds;
-      presenceSoundInitializedRef.current = true;
-      return;
-    }
-
-    if (!presenceSoundInitializedRef.current) {
-      presenceSoundInitializedRef.current = true;
-      previousPresenceIdsRef.current = currentIds;
-      return;
-    }
-
-    const prevIds = previousPresenceIdsRef.current;
-
-    const myId = String(user?.id || "").trim();
-    const prevSet = new Set(prevIds);
-    const nextSet = new Set(currentIds);
-
-    const joined = currentIds.some((id) => id !== myId && !prevSet.has(id));
-    const left = prevIds.some((id) => id !== myId && !nextSet.has(id));
-
-    if (joined) {
-      void playServerSound("member_join");
-    } else if (left) {
-      void playServerSound("member_leave");
-    }
-
-    previousPresenceIdsRef.current = currentIds;
-  }, [roomsPresenceDetailsBySlug, roomSlug, user?.id, playServerSound]);
-
-  useEffect(() => {
-    const latest = messages.length > 0 ? messages[messages.length - 1] : null;
-    if (!latest) {
-      previousChatMessageIdRef.current = null;
-      return;
-    }
-
-    if (!previousChatMessageIdRef.current) {
-      previousChatMessageIdRef.current = latest.id;
-      return;
-    }
-
-    if (previousChatMessageIdRef.current !== latest.id) {
-      if (latest.user_id !== user?.id) {
-        void playServerSound("chat_message");
-      }
-      previousChatMessageIdRef.current = latest.id;
-    }
-  }, [messages, user?.id, playServerSound]);
+  useRealtimeSoundEffects({
+    wsState,
+    roomsPresenceDetailsBySlug,
+    roomSlug,
+    userId: user?.id,
+    messages,
+    playServerSound
+  });
 
   const { refreshDevices, requestMediaAccess, requestVideoAccess } = useMediaDevicePreferences({
     t,
