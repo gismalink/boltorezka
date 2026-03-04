@@ -2,6 +2,62 @@
 
 Отдельный журнал результатов тестов/нагрузки.
 
+## 2026-03-04 — Cycle #9 (version-cache gate + dual-path readiness)
+
+- Environment: `test` (`https://test.boltorezka.gismalink.art`)
+- Build ref: `origin/feature/video-stream-overlay-chat-toggle` (`edb033f`)
+
+### Functional gate
+
+- `TEST_REF=origin/feature/video-stream-overlay-chat-toggle npm run deploy:test:smoke`: PASS
+  - `health`: PASS
+  - `smoke:sso`: PASS
+  - `smoke:api`: PASS
+  - `smoke:web:version-cache`: PASS
+  - `smoke:realtime`: PASS (`ok=true`, `reconnectOk=true`)
+
+### Dual-path validation (separate static path)
+
+- `SMOKE_API_URL=https://test.boltorezka.gismalink.art SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art/__web npm run smoke:web:static` — PASS.
+- `SMOKE_API_URL=https://test.boltorezka.gismalink.art SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art/__web SMOKE_EXPECT_BUILD_SHA=edb033fa61aaeb71df24f78d3055b8c3f1c49f1d npm run smoke:web:version-cache` — PASS.
+
+### Scope covered by this cycle
+
+- build-version compatibility gate (`/version` + client auto-reload),
+- anti-cache policy (`index.html` no-store, hash-assets immutable),
+- separate static delivery path readiness in test (`/__web/`).
+
+### Decision
+
+- Cycle #9: PASS.
+- Roadmap пункт `deprecation dry-run (dual-path readiness + rollback rehearsal)` переведён в completed.
+
+## 2026-03-04 — Cycle #8 (feature video runtime/control increments)
+
+- Environment: `test` (`https://test.boltorezka.gismalink.art`)
+- Build ref: `origin/feature/video-stream-overlay-chat-toggle` (`1c40a14`)
+
+### Functional gate
+
+- `TEST_REF=origin/feature/video-stream-overlay-chat-toggle npm run deploy:test:smoke`: PASS
+  - `health`: PASS
+  - `smoke:sso`: PASS
+  - `smoke:api`: PASS
+  - `smoke:realtime`: PASS (`ok=true`, `reconnectOk=true`)
+
+### Scope covered by this cycle
+
+- sender-side video effects runtime (`none` / `8-bit` / `ASCII`),
+- owner preview and conditional server settings,
+- ASCII controls (cell size, contrast, color),
+- video windows drag/resize UX and server min/max resize bounds,
+- compact server video slider layout.
+
+### Decision
+
+- Cycle #8: PASS.
+- Изменения готовы к дальнейшему test-first циклу и накоплению pre-prod evidence.
+
 ## 2026-03-02 — Cycle #1 (MVP gate + API load P1)
 
 - Environment: `test` (`https://test.boltorezka.gismalink.art`)

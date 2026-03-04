@@ -1,11 +1,27 @@
 # Boltorezka Status Snapshot
 
-## Текущее состояние (2026-03-03)
+## Текущее состояние (2026-03-04)
 
 - Prod и test работают в GitOps-модели с test-first циклом; последние smoke в test — PASS.
 - React web остаётся default UI path; deploy-скрипты используют API-only mode по умолчанию (`--no-deps`, `FULL_RECREATE=1` только по явному флагу).
 - Voice baseline зафиксирован канонически (`relay + TURN TLS/TCP`) и дополнен live-применением audio quality updates через realtime event.
 - Закрыт web UX hardening по media permissions: persistent denied banner + lock контролов + единый control bar (desktop/mobile).
+- Закрыт video UX/runtime инкремент в web:
+	- sender-side видео-эффекты (`none` / `8-bit` / `ASCII`) с server-side control panel,
+	- owner preview в Server Video tab,
+	- server controls: resolution/fps/effect params, ASCII color, video-window min/max resize width,
+	- video windows: drag за любую область + resize за любой угол (handles on hover),
+	- local camera mirrored (`scaleX(-1)`) для self-view consistency.
+- Закрыт frontend compatibility gate:
+	- `index.html` no-store/no-cache,
+	- hash-assets immutable,
+	- единый build SHA в web bundle + API `/version`,
+	- auto-reload клиента при новой версии,
+	- smoke `smoke:web:version-cache` в postdeploy gate.
+- Закрыт dual-path readiness в `test`:
+	- добавлен отдельный static delivery path `https://test.boltorezka.gismalink.art/__web/`,
+	- split-smoke (`SMOKE_API_URL` + `SMOKE_WEB_BASE_URL`) — PASS.
+- Последний test rollout/smoke по feature ветке (`origin/feature/video-stream-overlay-chat-toggle`, SHA `edb033f`) — PASS.
 
 ## Канонические документы
 
