@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
-const baseUrl = (process.env.SMOKE_WEB_BASE_URL ?? process.env.SMOKE_API_URL ?? "http://localhost:8080").replace(/\/+$/, "");
+const apiBaseUrl = (process.env.SMOKE_API_URL ?? process.env.SMOKE_WEB_BASE_URL ?? "http://localhost:8080").replace(/\/+$/, "");
+const webBaseUrl = (process.env.SMOKE_WEB_BASE_URL ?? apiBaseUrl).replace(/\/+$/, "");
 const expectedBuildSha = String(process.env.SMOKE_EXPECT_BUILD_SHA || "").trim();
 
 function hasToken(value, token) {
@@ -23,7 +24,7 @@ async function readText(url, options = {}) {
 }
 
 async function main() {
-  const versionUrl = `${baseUrl}/version`;
+  const versionUrl = `${apiBaseUrl}/version`;
   const versionResponse = await fetch(versionUrl, {
     cache: "no-store",
     headers: {
@@ -45,7 +46,7 @@ async function main() {
     throw new Error(`[smoke:web:version-cache] appBuildSha mismatch: expected=${expectedBuildSha} actual=${appBuildSha}`);
   }
 
-  const webRootUrl = `${baseUrl}/`;
+  const webRootUrl = `${webBaseUrl}/`;
   const { response: indexResponse, text: indexHtml } = await readText(webRootUrl, {
     cache: "no-store"
   });
@@ -74,7 +75,7 @@ async function main() {
     throw new Error(`[smoke:web:version-cache] asset cache-control must include immutable, got: ${assetCacheControl || "<empty>"}`);
   }
 
-  console.log(`[smoke:web:version-cache] ok base=${baseUrl} sha=${appBuildSha} asset=${new URL(assetUrl).pathname}`);
+  console.log(`[smoke:web:version-cache] ok api=${apiBaseUrl} web=${webBaseUrl} sha=${appBuildSha} asset=${new URL(assetUrl).pathname}`);
 }
 
 main().catch((error) => {
