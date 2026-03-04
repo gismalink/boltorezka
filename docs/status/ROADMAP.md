@@ -6,6 +6,7 @@
 ## Open workstreams
 
 - Phase 5 (iOS/macOS kickoff scope): `docs/plans/PHASE5_IOS_MACOS_SCOPE_NOTE.md`.
+- Legacy static deprecation: `docs/runbooks/LEGACY_PUBLIC_DEPRECATION_PLAN.md`.
 
 ### Phase 5 — iOS & macOS (open)
 
@@ -20,6 +21,9 @@
 
 ## Execution plan (open items only)
 
+- [ ] Legacy deprecation — Phase D: подготовить decommission change-set для сворачивания runtime-coupling API/static после стабилизации cutover.
+- [ ] Legacy deprecation — Phase D: провести test rehearsal decommission + rollback по runbook и зафиксировать evidence.
+- [ ] Legacy deprecation — Phase D: после стабилизации обновить финальные runbooks/contracts/release note по итоговому статусу deprecation.
 - [ ] #6 Выполнить hardening batch для Phase 6: reconnect/failure сценарии + security review checklist с evidence.
 - [ ] #7 Сформировать финальный runbook bundle (`deploy/smoke/rollback/incident response`) и синхронизировать docs index.
 
