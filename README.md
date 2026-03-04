@@ -66,12 +66,12 @@ Legacy-файлы перенесены в `legacy/poc/`.
 - `npm run smoke:auth:bootstrap` — создать/обновить 2 test users в DB, сгенерировать bearer tokens и сохранить их для переиспользования в `.deploy/smoke-auth.env` (gitignored)
 - `SMOKE_API_URL=https://test.boltorezka.gismalink.art SMOKE_API=1 SMOKE_SSO=1 npm run check` — единый verify + API + SSO smoke
 - `SMOKE_API_URL=https://test.boltorezka.gismalink.art SMOKE_API=1 SMOKE_SSO=1 SMOKE_REALTIME=1 SMOKE_WS_TICKET=<ticket> npm run check` — полный verify + API + SSO + realtime smoke
-- `npm run deploy:test` — deploy test from git ref (`scripts/examples/deploy-test-from-ref.sh`)
-- `npm run smoke:test:postdeploy` — серверный post-deploy smoke (`health + mode + smoke:sso + smoke:realtime + ws metrics`) (`scripts/examples/postdeploy-smoke-test.sh`)
-- `TEST_REF=origin/<branch> npm run deploy:test:smoke` — one-command test rollout + post-deploy smoke (`scripts/examples/deploy-test-and-smoke.sh`)
+- `npm run deploy:test` — deploy test from git ref (`scripts/deploy/deploy-test-from-ref.sh`)
+- `npm run smoke:test:postdeploy` — серверный post-deploy smoke (`health + mode + smoke:sso + smoke:realtime + ws metrics`) (`scripts/deploy/postdeploy-smoke-test.sh`)
+- `TEST_REF=origin/<branch> npm run deploy:test:smoke` — one-command test rollout + post-deploy smoke (`scripts/deploy/deploy-test-and-smoke.sh`)
 - `AUTO_ROLLBACK_ON_FAIL=1 AUTO_ROLLBACK_SMOKE=1 TEST_REF=origin/<branch> npm run deploy:test:smoke` — при fail deploy/smoke автоматически выполняет rollback на предыдущий test SHA (с optional rollback smoke)
 - `DEPLOY_NOTES='notes' TEST_REF=origin/<branch> npm run deploy:test:smoke` — тот же one-command flow + автоматическая запись release-log (`.deploy/release-log.tsv`, и в `~/srv/edge/RELEASE_LOG.md` если доступен edge release-log script)
-- `npm run deploy:prod` — deploy prod from git ref (`scripts/examples/deploy-prod-from-ref.sh`)
+- `npm run deploy:prod` — deploy prod from git ref (`scripts/deploy/deploy-prod-from-ref.sh`)
 
 По умолчанию deploy-скрипты обновляют API-сервис и синхронизируют web static в edge Caddy (`--no-deps --force-recreate`), без полного recreate зависимостей. Для полного recreate используй `FULL_RECREATE=1`.
 

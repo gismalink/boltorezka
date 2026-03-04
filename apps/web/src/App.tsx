@@ -958,45 +958,55 @@ export function App() {
     setEditingMessageId(null);
   }, [roomSlug]);
 
-  useEffect(() => {
-    if (!token) {
-      setUser(null);
-      setRooms([]);
-      setRoomsTree(null);
-      setMessages([]);
-      setMessagesHasMore(false);
-      setMessagesNextCursor(null);
-      setLoadingOlderMessages(false);
-      setAdminUsers([]);
-      setRoomsPresenceBySlug({});
-      setRoomsPresenceDetailsBySlug({});
-      setTelemetrySummary(null);
-      setServerAudioQuality("standard");
-      setServerAudioQualitySaving(false);
-      realtimeClientRef.current?.dispose();
-      realtimeClientRef.current = null;
-      return;
-    }
+  /** Clears all session-bound client state when auth token is absent/invalid. */
+  const resetSessionState = useCallback(() => {
+    setUser(null);
+    setRooms([]);
+    setRoomsTree(null);
+    setMessages([]);
+    setMessagesHasMore(false);
+    setMessagesNextCursor(null);
+    setLoadingOlderMessages(false);
+    setAdminUsers([]);
+    setRoomsPresenceBySlug({});
+    setRoomsPresenceDetailsBySlug({});
+    setTelemetrySummary(null);
+    setServerAudioQuality("standard");
+    setServerAudioQualitySaving(false);
+    realtimeClientRef.current?.dispose();
+    realtimeClientRef.current = null;
+  }, []);
 
-    localStorage.setItem("boltorezka_token", token);
+  /** Loads session bootstrap data after token is set and persists the token locally. */
+  const bootstrapSessionState = useCallback((nextToken: string) => {
+    localStorage.setItem("boltorezka_token", nextToken);
 
-    api.me(token)
+    api.me(nextToken)
       .then((res) => setUser(res.user))
       .catch(() => {
         setToken("");
         localStorage.removeItem("boltorezka_token");
       });
 
-    api.rooms(token)
+    api.rooms(nextToken)
       .then((res) => setRooms(res.rooms))
       .catch((error) => pushLog(`rooms failed: ${error.message}`));
 
-    api.serverAudioQuality(token)
+    api.serverAudioQuality(nextToken)
       .then((res) => setServerAudioQuality(res.audioQuality))
       .catch((error) => pushLog(`server audio quality failed: ${error.message}`));
 
-    void roomAdminController.loadRoomTree(token);
-  }, [token]);
+    void roomAdminController.loadRoomTree(nextToken);
+  }, [pushLog, roomAdminController]);
+
+  useEffect(() => {
+    if (!token) {
+      resetSessionState();
+      return;
+    }
+
+    bootstrapSessionState(token);
+  }, [bootstrapSessionState, resetSessionState, token]);
 
   const { loadOlderMessages } = useRealtimeChatLifecycle({
     token,

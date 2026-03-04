@@ -129,7 +129,7 @@
 
 - Rollback target: previous known-good `main` SHA.
 - Deploy command (prod path):
-  - `bash ./scripts/examples/deploy-prod-from-ref.sh <known-good-ref> <repo-dir>`
+  - `bash ./scripts/deploy/deploy-prod-from-ref.sh <known-good-ref> <repo-dir>`
 - Post-rollback mandatory checks:
   - `curl -I https://boltorezka.gismalink.art/health`
   - short SSO + room + chat smoke
