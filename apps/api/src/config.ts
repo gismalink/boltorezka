@@ -18,6 +18,27 @@ const parseCsv = (value: unknown): string[] =>
     .map((item) => item.trim().toLowerCase())
     .filter(Boolean);
 
+/**
+ * @param {unknown} value
+ * @param {boolean} defaultValue
+ * @returns {boolean}
+ */
+const parseBoolean = (value: unknown, defaultValue: boolean): boolean => {
+  if (value === undefined || value === null || String(value).trim() === "") {
+    return defaultValue;
+  }
+
+  const normalized = String(value).trim().toLowerCase();
+  if (["1", "true", "yes", "on"].includes(normalized)) {
+    return true;
+  }
+  if (["0", "false", "no", "off"].includes(normalized)) {
+    return false;
+  }
+
+  return defaultValue;
+};
+
 const authMode = (process.env.AUTH_MODE || "sso").toLowerCase() === "local" ? "local" : "sso";
 
 export const config = {
@@ -37,5 +58,6 @@ export const config = {
     .trim()
     .toLowerCase(),
   appVersion: String(process.env.APP_VERSION || process.env.npm_package_version || "0.1.0").trim(),
-  appBuildSha: String(process.env.APP_BUILD_SHA || "").trim()
+  appBuildSha: String(process.env.APP_BUILD_SHA || "").trim(),
+  apiServeStatic: parseBoolean(process.env.API_SERVE_STATIC, true)
 };

@@ -54,20 +54,26 @@ const setStaticCacheHeaders = (response: { setHeader: (name: string, value: stri
   response.setHeader("Cache-Control", "no-cache, max-age=0, must-revalidate");
 };
 
-await app.register(fastifyStatic, {
-  root: path.join(__dirname, "../public"),
-  prefix: "/",
-  cacheControl: false,
-  setHeaders: setStaticCacheHeaders
-});
+if (config.apiServeStatic) {
+  await app.register(fastifyStatic, {
+    root: path.join(__dirname, "../public"),
+    prefix: "/",
+    cacheControl: false,
+    setHeaders: setStaticCacheHeaders
+  });
 
-await app.register(fastifyStatic, {
-  root: path.join(__dirname, "../public"),
-  prefix: "/__web/",
-  decorateReply: false,
-  cacheControl: false,
-  setHeaders: setStaticCacheHeaders
-});
+  await app.register(fastifyStatic, {
+    root: path.join(__dirname, "../public"),
+    prefix: "/__web/",
+    decorateReply: false,
+    cacheControl: false,
+    setHeaders: setStaticCacheHeaders
+  });
+
+  app.log.info("Static web serving is enabled (API_SERVE_STATIC=1)");
+} else {
+  app.log.info("Static web serving is disabled (API_SERVE_STATIC=0)");
+}
 
 app.decorate("jwtExpiresIn", config.jwtExpiresIn);
 app.decorate("redis", redis);

@@ -13,4 +13,5 @@ export type AppConfig = {
   superAdminEmail: string;
   appVersion: string;
   appBuildSha: string;
+  apiServeStatic: boolean;
 };

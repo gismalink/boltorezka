@@ -75,6 +75,16 @@ Exit criteria:
 2. Обновить docs/contracts/runbooks.
 3. Зафиксировать release note с итоговым статусом deprecation.
 
+#### Phase D execution update (2026-03-04)
+
+- В API добавлен runtime toggle `API_SERVE_STATIC`:
+   - `1` (default) — static serving из `apps/api/public` включён,
+   - `0` — API не регистрирует static routes (`/` и `/__web/`).
+- В host compose для server контуров установлен decommission-safe default:
+   - `TEST_API_SERVE_STATIC=0`,
+   - `PROD_API_SERVE_STATIC=0`.
+- Локальная backward compatibility сохранена (без env переменной API по умолчанию продолжает раздавать static).
+
 ## 5) Rollback plan
 
 Rollback trigger:

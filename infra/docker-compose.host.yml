@@ -66,6 +66,7 @@ services:
       WS_CALL_DEBUG: ${TEST_WS_CALL_DEBUG:-0}
       APP_VERSION: ${TEST_APP_VERSION:-0.1.0}
       APP_BUILD_SHA: ${TEST_APP_BUILD_SHA:-}
+      API_SERVE_STATIC: ${TEST_API_SERVE_STATIC:-0}
     depends_on:
       boltorezka-turn:
         condition: service_started
@@ -142,6 +143,7 @@ services:
       WS_CALL_DEBUG: ${PROD_WS_CALL_DEBUG:-0}
       APP_VERSION: ${PROD_APP_VERSION:-0.1.0}
       APP_BUILD_SHA: ${PROD_APP_BUILD_SHA:-}
+      API_SERVE_STATIC: ${PROD_API_SERVE_STATIC:-0}
     depends_on:
       boltorezka-turn:
         condition: service_started
