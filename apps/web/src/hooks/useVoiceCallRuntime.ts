@@ -104,6 +104,7 @@ export function useVoiceCallRuntime({
   const requestTargetByIdRef = useRef<Map<string, { targetUserId: string; eventType: string }>>(new Map());
   const blockedTargetUntilRef = useRef<Map<string, number>>(new Map());
   const roomTargetsResyncTimerRef = useRef<number | null>(null);
+  const lastVideoSyncOfferAtRef = useRef(0);
   const lastToastRef = useRef<{ key: string; at: number }>({ key: "", at: 0 });
   const localSpeakingRef = useRef(false);
   const localSpeakingLastAboveAtRef = useRef(0);
@@ -1131,6 +1132,27 @@ export function useVoiceCallRuntime({
     setLocalVideoStream,
     applyRemoteAudioOutput,
     retryRemoteAudioPlayback,
+    onVideoTrackSyncNeeded: (reason) => {
+      if (!roomVoiceConnectedRef.current) {
+        return;
+      }
+
+      const now = Date.now();
+      if (now - lastVideoSyncOfferAtRef.current < 300) {
+        return;
+      }
+      lastVideoSyncOfferAtRef.current = now;
+
+      for (const [targetUserId, peer] of peersRef.current.entries()) {
+        if (!shouldInitiateOffer(targetUserId)) {
+          continue;
+        }
+
+        void startOfferRef.current?.(targetUserId, peer.label || targetUserId, {
+          reason: `video-sync:${reason}`
+        });
+      }
+    },
     pushCallLog,
     pushToastThrottled,
     t

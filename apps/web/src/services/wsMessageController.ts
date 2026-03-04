@@ -36,6 +36,14 @@ type WsMessageControllerOptions = {
   onCallMicState?: (
     payload: { fromUserId?: string; fromUserName?: string; muted?: boolean; speaking?: boolean; audioMuted?: boolean }
   ) => void;
+  onCallVideoState?: (
+    payload: {
+      fromUserId?: string;
+      fromUserName?: string;
+      roomSlug?: string;
+      settings?: Record<string, unknown>;
+    }
+  ) => void;
   onAudioQualityUpdated?: (
     payload: {
       scope?: string;
@@ -253,6 +261,20 @@ export class WsMessageController {
         muted: typeof mutedRaw === "boolean" ? mutedRaw : undefined,
         speaking: typeof speakingRaw === "boolean" ? speakingRaw : undefined,
         audioMuted: typeof audioMutedRaw === "boolean" ? audioMutedRaw : undefined
+      });
+    }
+
+    if (message.type === "call.video_state") {
+      const fromUserName = String(message.payload?.fromUserName || message.payload?.fromUserId || "unknown");
+      this.options.pushCallLog(`call.video_state from ${fromUserName}`);
+      this.options.onCallVideoState?.({
+        fromUserId: String(message.payload?.fromUserId || message.payload?.userId || "").trim() || undefined,
+        fromUserName: String(message.payload?.fromUserName || message.payload?.userName || "").trim() || undefined,
+        roomSlug: String(message.payload?.roomSlug || "").trim() || undefined,
+        settings:
+          message.payload?.settings && typeof message.payload.settings === "object"
+            ? (message.payload.settings as Record<string, unknown>)
+            : undefined
       });
     }
 

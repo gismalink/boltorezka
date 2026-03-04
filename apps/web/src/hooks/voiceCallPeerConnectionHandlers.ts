@@ -139,9 +139,18 @@ export function bindVoicePeerConnectionHandlers({
     if (track) {
       track.onmute = () => {
         pushCallLog(`remote track muted <- ${targetLabel || targetUserId}`);
+        if (track.kind === "video") {
+          clearRemoteVideoStream(targetUserId);
+        }
       };
       track.onunmute = () => {
         pushCallLog(`remote track unmuted <- ${targetLabel || targetUserId}`);
+        if (track.kind === "video") {
+          const currentPeer = peersRef.current.get(targetUserId);
+          if (currentPeer?.remoteStream) {
+            setRemoteVideoStream(targetUserId, currentPeer.remoteStream);
+          }
+        }
         retryRemoteAudioPlayback("track-unmuted");
       };
       track.onended = () => {

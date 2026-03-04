@@ -31,6 +31,7 @@ type UseVoiceRuntimeMediaEffectsArgs = {
   setLocalVideoStream: (value: MediaStream | null) => void;
   applyRemoteAudioOutput: (element: HTMLAudioElement) => Promise<void>;
   retryRemoteAudioPlayback: (reason: string) => void;
+  onVideoTrackSyncNeeded?: (reason: string) => void;
   pushCallLog: (text: string) => void;
   pushToastThrottled: (key: string, message: string) => void;
   t: (key: string) => string;
@@ -59,6 +60,7 @@ export function useVoiceRuntimeMediaEffects({
   setLocalVideoStream,
   applyRemoteAudioOutput,
   retryRemoteAudioPlayback,
+  onVideoTrackSyncNeeded,
   pushCallLog,
   pushToastThrottled,
   t
@@ -263,6 +265,8 @@ export function useVoiceRuntimeMediaEffects({
           })
         );
 
+        onVideoTrackSyncNeeded?.("video-disabled");
+
         setLocalVideoStream(null);
         return;
       }
@@ -326,6 +330,8 @@ export function useVoiceRuntimeMediaEffects({
         })
       );
 
+      onVideoTrackSyncNeeded?.("video-enabled-or-updated");
+
       setLocalVideoStream(stream);
     };
 
@@ -354,6 +360,7 @@ export function useVoiceRuntimeMediaEffects({
     selectedVideoInputId,
     getVideoConstraints,
     setLocalVideoStream,
+    onVideoTrackSyncNeeded,
     pushCallLog
   ]);
 

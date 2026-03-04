@@ -1,5 +1,6 @@
 import type {
   CallMicStateEventType,
+  CallVideoStateEventType,
   CallSignalEventType,
   CallTerminalEventType,
   PresenceUser,
@@ -21,6 +22,7 @@ import type {
 export const CALL_SIGNAL_EVENT_TYPES = ["call.offer", "call.answer", "call.ice"];
 export const CALL_TERMINAL_EVENT_TYPES = ["call.reject", "call.hangup"];
 export const CALL_MIC_STATE_EVENT_TYPES = ["call.mic_state"];
+export const CALL_VIDEO_STATE_EVENT_TYPES = ["call.video_state"];
 
 type ParsedIncomingEnvelope = {
   type: string;
@@ -47,6 +49,10 @@ export function isCallTerminalEventType(value: unknown): value is CallTerminalEv
 
 export function isCallMicStateEventType(value: unknown): value is CallMicStateEventType {
   return typeof value === "string" && CALL_MIC_STATE_EVENT_TYPES.includes(value);
+}
+
+export function isCallVideoStateEventType(value: unknown): value is CallVideoStateEventType {
+  return typeof value === "string" && CALL_VIDEO_STATE_EVENT_TYPES.includes(value);
 }
 
 /**
@@ -116,7 +122,7 @@ export function asKnownWsIncomingEnvelope(
         payload: envelope.payload
       };
     default:
-      if (isCallSignalEventType(envelope.type) || isCallTerminalEventType(envelope.type) || isCallMicStateEventType(envelope.type)) {
+      if (isCallSignalEventType(envelope.type) || isCallTerminalEventType(envelope.type) || isCallMicStateEventType(envelope.type) || isCallVideoStateEventType(envelope.type)) {
         return {
           type: envelope.type,
           requestId: envelope.requestId,
@@ -445,6 +451,24 @@ export function buildCallMicStateRelayEnvelope(
       muted: payload.muted,
       speaking: payload.speaking,
       audioMuted: payload.audioMuted
+    }
+  };
+}
+
+export function buildCallVideoStateRelayEnvelope(
+  eventType: CallVideoStateEventType,
+  fromUserId: string,
+  fromUserName: string,
+  roomId: string,
+  roomSlug: string | null,
+  targetUserId: string | null,
+  settings: Record<string, unknown>
+): WsOutgoingEnvelope {
+  return {
+    type: eventType,
+    payload: {
+      ...buildCallRelayBasePayload(fromUserId, fromUserName, roomId, roomSlug, targetUserId),
+      settings
     }
   };
 }

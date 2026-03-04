@@ -10,6 +10,7 @@ import {
   buildCallMicStateRelayEnvelope,
   buildCallSignalRelayEnvelope,
   buildCallTerminalRelayEnvelope,
+  buildCallVideoStateRelayEnvelope,
   buildChatDeletedEnvelope,
   buildChatEditedEnvelope,
   buildChatMessageEnvelope,
@@ -1379,6 +1380,78 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
                   muted: mutedRaw,
                   speaking: speaking ?? null,
                   audioMuted: audioMuted ?? null
+                }
+              );
+              return;
+              }
+
+              case "call.video_state": {
+              if (!state.roomId) {
+                logCallDebug("call video_state rejected: no active room", {
+                  eventType,
+                  userId: state.userId,
+                  requestId
+                });
+                sendNoActiveRoomNack(connection, requestId, eventType);
+                return;
+              }
+
+              const settingsRaw = payload?.settings;
+              if (!settingsRaw || typeof settingsRaw !== "object" || Array.isArray(settingsRaw)) {
+                logCallDebug("call video_state rejected: invalid settings payload", {
+                  eventType,
+                  userId: state.userId,
+                  roomId: state.roomId,
+                  roomSlug: state.roomSlug,
+                  requestId
+                });
+                sendValidationNack(connection, requestId, eventType, "payload.settings object is required");
+                return;
+              }
+
+              const targetUserId = normalizeRequestId(getPayloadString(payload, "targetUserId", 128)) || null;
+              const relayEnvelope = buildCallVideoStateRelayEnvelope(
+                knownMessage.type,
+                state.userId,
+                state.userName,
+                state.roomId,
+                state.roomSlug,
+                targetUserId,
+                settingsRaw as Record<string, unknown>
+              );
+
+              const relayOutcome = relayToTargetOrRoom(connection, state.roomId, targetUserId, relayEnvelope);
+              if (!relayOutcome.ok) {
+                logCallDebug("call video_state relay failed: target not in room", {
+                  eventType,
+                  userId: state.userId,
+                  roomId: state.roomId,
+                  roomSlug: state.roomSlug,
+                  requestId,
+                  targetUserId,
+                  relayedTo: relayOutcome.relayedCount
+                });
+                sendTargetNotInRoomNack(connection, requestId, eventType);
+                return;
+              }
+
+              logCallDebug("call video_state relayed", {
+                eventType,
+                userId: state.userId,
+                roomId: state.roomId,
+                roomSlug: state.roomSlug,
+                requestId,
+                targetUserId,
+                relayedTo: relayOutcome.relayedCount
+              });
+
+              sendAckWithMetrics(
+                connection,
+                requestId,
+                eventType,
+                {
+                  relayedTo: relayOutcome.relayedCount,
+                  targetUserId
                 }
               );
               return;

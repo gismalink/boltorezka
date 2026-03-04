@@ -1,7 +1,8 @@
 export type CallSignalEventType = "call.offer" | "call.answer" | "call.ice";
 export type CallTerminalEventType = "call.reject" | "call.hangup";
 export type CallMicStateEventType = "call.mic_state";
-export type CallEventType = CallSignalEventType | CallTerminalEventType | CallMicStateEventType;
+export type CallVideoStateEventType = "call.video_state";
+export type CallEventType = CallSignalEventType | CallTerminalEventType | CallMicStateEventType | CallVideoStateEventType;
 
 export type WsIncomingPayload = Record<string, unknown>;
 
@@ -82,6 +83,13 @@ export type WsIncomingCallMicStateEnvelope = {
   payload?: WsIncomingPayload;
 };
 
+export type WsIncomingCallVideoStateEnvelope = {
+  type: CallVideoStateEventType;
+  requestId?: string;
+  idempotencyKey?: string;
+  payload?: WsIncomingPayload;
+};
+
 export type WsIncomingKnownEnvelope =
   | WsIncomingPingEnvelope
   | WsIncomingRoomJoinEnvelope
@@ -92,7 +100,8 @@ export type WsIncomingKnownEnvelope =
   | WsIncomingChatDeleteEnvelope
   | WsIncomingCallSignalEnvelope
   | WsIncomingCallTerminalEnvelope
-  | WsIncomingCallMicStateEnvelope;
+  | WsIncomingCallMicStateEnvelope
+  | WsIncomingCallVideoStateEnvelope;
 
 export type WsIncomingUnknownEnvelope = WsIncomingBaseEnvelope;
 
@@ -192,4 +201,8 @@ export type CallMicStateRelayPayload = CallRelayBasePayload & {
   muted: boolean;
   speaking?: boolean;
   audioMuted?: boolean;
+};
+
+export type CallVideoStateRelayPayload = CallRelayBasePayload & {
+  settings: Record<string, unknown>;
 };
