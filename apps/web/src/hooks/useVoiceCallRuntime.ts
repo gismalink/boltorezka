@@ -55,6 +55,8 @@ const AUDIO_QUALITY_SAMPLE_RATE: Record<AudioQuality, number> = {
 const OFFER_MIN_INTERVAL_MS = 10000;
 const OFFER_VIDEO_SYNC_MIN_INTERVAL_MS = 20000;
 const OFFER_ICE_RESTART_MIN_INTERVAL_MS = 5000;
+const OFFER_TRACE_EVERY_N = 5;
+const OFFER_TRACE_MIN_GAP_MS = 30000;
 
 export function useVoiceCallRuntime({
   localUserId,
@@ -109,6 +111,7 @@ export function useVoiceCallRuntime({
   const blockedTargetUntilRef = useRef<Map<string, number>>(new Map());
   const roomTargetsResyncTimerRef = useRef<number | null>(null);
   const lastVideoSyncOfferAtRef = useRef(0);
+  const offerTraceStateRef = useRef<Map<string, { count: number; lastLoggedAt: number }>>(new Map());
   const lastToastRef = useRef<{ key: string; at: number }>({ key: "", at: 0 });
   const localSpeakingRef = useRef(false);
   const localSpeakingLastAboveAtRef = useRef(0);
@@ -219,6 +222,40 @@ export function useVoiceCallRuntime({
       return false;
     }
     return true;
+  }, []);
+
+  const traceOfferEvent = useCallback((
+    event: string,
+    targetUserId: string,
+    targetLabel: string,
+    reason: string,
+    extra: Record<string, unknown> = {}
+  ) => {
+    const normalizedReason = String(reason || "unspecified");
+    const key = `${event}:${targetUserId}:${normalizedReason}`;
+    const now = Date.now();
+    const state = offerTraceStateRef.current.get(key) || { count: 0, lastLoggedAt: 0 };
+    const nextCount = state.count + 1;
+    const shouldLog = nextCount === 1
+      || nextCount % OFFER_TRACE_EVERY_N === 0
+      || now - state.lastLoggedAt >= OFFER_TRACE_MIN_GAP_MS;
+
+    offerTraceStateRef.current.set(key, {
+      count: nextCount,
+      lastLoggedAt: shouldLog ? now : state.lastLoggedAt
+    });
+
+    if (!shouldLog) {
+      return;
+    }
+
+    logVoiceDiagnostics(`runtime ${event}`, {
+      targetUserId,
+      targetLabel: targetLabel || targetUserId,
+      reason: normalizedReason,
+      count: nextCount,
+      ...extra
+    });
   }, []);
 
   const rememberRequestTarget = useCallback((requestId: string | null, eventType: string, targetUserId: string) => {
@@ -894,16 +931,19 @@ export function useVoiceCallRuntime({
       return;
     }
 
+    const reason = String(options?.reason || "manual");
+
     if (isTargetTemporarilyBlocked(normalizedTarget)) {
+      traceOfferEvent("offer skipped", normalizedTarget, targetLabel, reason, { skip: "target-blocked" });
       return;
     }
 
     const existingPeer = peersRef.current.get(normalizedTarget);
     if (existingPeer?.offerInFlight) {
+      traceOfferEvent("offer skipped", normalizedTarget, targetLabel, reason, { skip: "in-flight" });
       return;
     }
 
-    const reason = String(options?.reason || "");
     const isVideoSyncReason = reason.startsWith("video-sync:");
     const minIntervalMs = options?.iceRestart
       ? OFFER_ICE_RESTART_MIN_INTERVAL_MS
@@ -913,13 +953,19 @@ export function useVoiceCallRuntime({
 
     const now = Date.now();
     if (existingPeer && now - existingPeer.lastOfferAt < minIntervalMs) {
+      traceOfferEvent("offer skipped", normalizedTarget, targetLabel, reason, {
+        skip: "min-interval",
+        elapsedMs: now - existingPeer.lastOfferAt,
+        minIntervalMs
+      });
       return;
     }
 
     if (existingPeer && existingPeer.connection.signalingState !== "stable") {
-      pushCallLog(
-        `call.offer skipped: signaling ${existingPeer.connection.signalingState} (${targetLabel || normalizedTarget})`
-      );
+      traceOfferEvent("offer skipped", normalizedTarget, targetLabel, reason, {
+        skip: "signaling-not-stable",
+        signalingState: existingPeer.connection.signalingState
+      });
       return;
     }
 
@@ -931,9 +977,10 @@ export function useVoiceCallRuntime({
       const connection = ensurePeerConnection(normalizedTarget, targetLabel);
       const peer = peersRef.current.get(normalizedTarget);
       if (peer && peer.connection.signalingState !== "stable") {
-        pushCallLog(
-          `call.offer skipped: signaling ${peer.connection.signalingState} (${targetLabel || normalizedTarget})`
-        );
+        traceOfferEvent("offer skipped", normalizedTarget, targetLabel, reason, {
+          skip: "post-ensure-signaling-not-stable",
+          signalingState: peer.connection.signalingState
+        });
         return;
       }
       await attachLocalTracks(connection);
@@ -960,6 +1007,9 @@ export function useVoiceCallRuntime({
       rememberRequestTarget(requestId, "call.offer", normalizedTarget);
 
       if (!requestId) {
+        traceOfferEvent("offer skipped", normalizedTarget, targetLabel, reason, {
+          skip: "socket-unavailable"
+        });
         pushCallLog("call.offer skipped: socket unavailable");
         return;
       }
@@ -974,6 +1024,9 @@ export function useVoiceCallRuntime({
         pushCallLog(`call.offer ice-restart -> ${targetLabel || normalizedTarget}${options.reason ? ` (${options.reason})` : ""}`);
       }
       pushCallLog(`call.offer sent -> ${targetLabel || normalizedTarget}`);
+      traceOfferEvent("offer sent", normalizedTarget, targetLabel, reason, {
+        iceRestart: Boolean(options?.iceRestart)
+      });
     } catch (error) {
       const errorName = (error as { name?: string })?.name || "";
       if (errorName === "NotAllowedError" || errorName === "SecurityError") {
@@ -989,7 +1042,7 @@ export function useVoiceCallRuntime({
         activePeer.offerInFlight = false;
       }
     }
-  }, [roomVoiceConnectedRef, ensurePeerConnection, attachLocalTracks, sendWsEvent, setLastCallPeer, updateCallStatus, pushCallLog, t, pushToastThrottled, closePeer, rememberRequestTarget, isTargetTemporarilyBlocked, allowVideoStreaming]);
+  }, [roomVoiceConnectedRef, ensurePeerConnection, attachLocalTracks, sendWsEvent, setLastCallPeer, updateCallStatus, pushCallLog, t, pushToastThrottled, closePeer, rememberRequestTarget, isTargetTemporarilyBlocked, allowVideoStreaming, traceOfferEvent]);
 
   startOfferRef.current = startOffer;
 
@@ -1190,17 +1243,38 @@ export function useVoiceCallRuntime({
     retryRemoteAudioPlayback,
     onVideoTrackSyncNeeded: (reason) => {
       if (!roomVoiceConnectedRef.current) {
+        logVoiceDiagnostics("runtime video-sync trigger ignored", {
+          reason,
+          skip: "room-not-connected"
+        });
         return;
       }
 
       const now = Date.now();
       if (now - lastVideoSyncOfferAtRef.current < OFFER_VIDEO_SYNC_MIN_INTERVAL_MS) {
+        logVoiceDiagnostics("runtime video-sync trigger ignored", {
+          reason,
+          skip: "global-video-sync-cooldown",
+          elapsedMs: now - lastVideoSyncOfferAtRef.current,
+          minIntervalMs: OFFER_VIDEO_SYNC_MIN_INTERVAL_MS
+        });
         return;
       }
       lastVideoSyncOfferAtRef.current = now;
 
+      logVoiceDiagnostics("runtime video-sync trigger", {
+        reason,
+        peers: peersRef.current.size
+      });
+
       for (const [targetUserId, peer] of peersRef.current.entries()) {
         if (!shouldInitiateOffer(targetUserId)) {
+          logVoiceDiagnostics("runtime video-sync target skipped", {
+            reason,
+            targetUserId,
+            targetLabel: peer.label || targetUserId,
+            skip: "offer-ordering"
+          });
           continue;
         }
 
