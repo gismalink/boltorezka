@@ -97,6 +97,22 @@ Exit criteria:
 - rollback path validated;
 - для финального закрытия deprecation требуется отдельный внешний static delivery path (не через API container) и smoke на этом пути.
 
+#### Phase D finalization evidence (2026-03-04)
+
+- Внешний static delivery path выведен в test через split ingress routing:
+   - API matcher paths (`/v1*`, `/health`, `/version`, `/metrics`) -> `boltorezka-api-test`,
+   - default web paths (и совместимый `/__web/*`) -> `boltorezka-web-test`.
+- В `boltorezka` host compose поднят отдельный web static service и deploy scripts переведены на `api+web` rollout.
+- После принудительного recreate `edge-caddy` выполнен postdeploy smoke:
+   - `smoke:sso` PASS,
+   - `smoke:api` PASS,
+   - `smoke:web:version-cache` PASS,
+   - `smoke:realtime` PASS.
+
+Статус:
+- Legacy deprecation plan (Phase D) для test-контура завершён.
+- Prod rollout остаётся только по отдельному explicit approval.
+
 ## 5) Rollback plan
 
 Rollback trigger:

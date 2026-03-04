@@ -2,6 +2,30 @@
 
 Отдельный журнал результатов тестов/нагрузки.
 
+## 2026-03-04 — Cycle #12 (external static path rollout, decoupled API/web)
+
+- Environment: `test` (`https://test.boltorezka.gismalink.art`)
+- Build ref: `origin/feature/video-stream-overlay-chat-toggle` (`2906b08`)
+- Ingress ref: `edge/main` (`91db6c8`, split web/api routing)
+
+### Functional gate
+
+- `npm run smoke:test:postdeploy`: PASS
+  - `smoke:sso`: PASS
+  - `smoke:api`: PASS
+  - `smoke:web:version-cache`: PASS
+  - `smoke:realtime`: PASS (`ok=true`, `reconnectOk=true`)
+
+### Scope covered by this cycle
+
+- Test contour switched to external static delivery path (`web-default`),
+- API static serving kept disabled (`API_SERVE_STATIC=0`) without regression in postdeploy gate.
+
+### Decision
+
+- Cycle #12: PASS.
+- Legacy deprecation Phase D finalized for test contour.
+
 ## 2026-03-04 — Cycle #11 (browser-level denied-media headless E2E)
 
 - Environment: local web (`http://localhost:5173`)
