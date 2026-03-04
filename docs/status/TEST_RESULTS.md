@@ -2,6 +2,30 @@
 
 Отдельный журнал результатов тестов/нагрузки.
 
+## 2026-03-04 — Cycle #10 (audio input devicechange auto-update)
+
+- Environment: `test` (`https://test.boltorezka.gismalink.art`)
+- Build ref: `origin/feature/video-stream-overlay-chat-toggle` (`b931324`)
+
+### Functional gate
+
+- `TEST_REF=origin/feature/video-stream-overlay-chat-toggle npm run deploy:test:smoke`: PASS
+  - `health`: PASS
+  - `smoke:sso`: PASS
+  - `smoke:api`: PASS
+  - `smoke:web:version-cache`: PASS
+  - `smoke:realtime`: PASS (`ok=true`, `reconnectOk=true`)
+
+### Scope covered by this cycle
+
+- Runtime auto-refresh outgoing audio track on system `devicechange` during active call,
+- explicit call-log visibility for auto-update success/failure.
+
+### Decision
+
+- Cycle #10: PASS.
+- Roadmap пункт по system devicechange handling для input device переведён в completed.
+
 ## 2026-03-04 — Cycle #9 (version-cache gate + dual-path readiness)
 
 - Environment: `test` (`https://test.boltorezka.gismalink.art`)

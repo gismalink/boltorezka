@@ -21,6 +21,10 @@
 - Закрыт dual-path readiness в `test`:
 	- добавлен отдельный static delivery path `https://test.boltorezka.gismalink.art/__web/`,
 	- split-smoke (`SMOKE_API_URL` + `SMOKE_WEB_BASE_URL`) — PASS.
+- Закрыт runtime UX пункт по устройствам ввода:
+	- при system `devicechange` в active call выполняется auto-refresh outgoing mic track (включая `default` route).
+- Зафиксирован post-MVP performance gate и пороги GO/NO-GO:
+	- документ `docs/operations/PERFORMANCE_GATE.md`.
 - Последний test rollout/smoke по feature ветке (`origin/feature/video-stream-overlay-chat-toggle`, SHA `edb033f`) — PASS.
 
 ## Канонические документы

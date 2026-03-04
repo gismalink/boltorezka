@@ -22,6 +22,7 @@
 - `operations/` — smoke/CI matrices and operational quality gates
   - [SMOKE_CI_MATRIX](operations/SMOKE_CI_MATRIX.md)
   - [FRONTEND_VERSIONING_POLICY](operations/FRONTEND_VERSIONING_POLICY.md)
+  - [PERFORMANCE_GATE](operations/PERFORMANCE_GATE.md)
 - `architecture/` — architecture-level documentation
   - [ARCHITECTURE](architecture/ARCHITECTURE.md)
 - `plans/` — scoped design/product plans
