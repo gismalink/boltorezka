@@ -72,7 +72,7 @@ Legacy-файлы перенесены в `legacy/poc/`.
 - `DEPLOY_NOTES='notes' TEST_REF=origin/<branch> npm run deploy:test:smoke` — тот же one-command flow + автоматическая запись release-log (`.deploy/release-log.tsv`, и в `~/srv/edge/RELEASE_LOG.md` если доступен edge release-log script)
 - `npm run deploy:prod` — deploy prod from git ref (`scripts/examples/deploy-prod-from-ref.sh`)
 
-По умолчанию deploy-скрипты обновляют только API-сервис (`--no-deps --force-recreate`), без полного recreate зависимостей. Для полного recreate используй `FULL_RECREATE=1`.
+По умолчанию deploy-скрипты обновляют API+web сервисы (`--no-deps --force-recreate`), без полного recreate зависимостей. Для полного recreate используй `FULL_RECREATE=1`.
 
 ### CI smoke (GitHub Actions)
 

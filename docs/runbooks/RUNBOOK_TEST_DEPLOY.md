@@ -33,7 +33,7 @@ One-command для Boltorezka (deploy + post-deploy smoke):
 - `ssh mac-mini 'cd ~/srv/boltorezka && TEST_REF=origin/<feature-branch> npm run deploy:test:smoke'`
 - `ssh mac-mini 'cd ~/srv/boltorezka && AUTO_ROLLBACK_ON_FAIL=1 AUTO_ROLLBACK_SMOKE=1 TEST_REF=origin/<branch> npm run deploy:test:smoke'`
 
-Режим деплоя по умолчанию в скриптах Boltorezka: `api-only` (`docker compose up --no-deps --force-recreate <api-service>`), чтобы не перезапускать shared зависимости (включая TURN) на каждом релизе.
+Режим деплоя по умолчанию в скриптах Boltorezka: `api+web` (`docker compose up --no-deps --force-recreate <api-service> <web-service>`), чтобы не перезапускать shared зависимости (включая TURN) на каждом релизе.
 
 Полный recreate зависимостей включать только при необходимости и явно:
 

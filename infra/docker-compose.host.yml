@@ -78,6 +78,23 @@ services:
       - edge_public
       - data_test
 
+  boltorezka-web-test:
+    build:
+      context: ../apps/web
+      dockerfile: Dockerfile.static
+      args:
+        VITE_RTC_ICE_SERVERS_JSON: ${TEST_VITE_RTC_ICE_SERVERS_JSON:-}
+        VITE_RTC_ICE_TRANSPORT_POLICY: ${TEST_VITE_RTC_ICE_TRANSPORT_POLICY:-all}
+        VITE_RTC_RECONNECT_MAX_ATTEMPTS: ${TEST_VITE_RTC_RECONNECT_MAX_ATTEMPTS:-3}
+        VITE_RTC_RECONNECT_BASE_DELAY_MS: ${TEST_VITE_RTC_RECONNECT_BASE_DELAY_MS:-1000}
+        VITE_RTC_RECONNECT_MAX_DELAY_MS: ${TEST_VITE_RTC_RECONNECT_MAX_DELAY_MS:-8000}
+        VITE_APP_VERSION: ${TEST_VITE_APP_VERSION:-}
+    image: boltorezka-web:test
+    container_name: boltorezka-web-test
+    restart: unless-stopped
+    networks:
+      - edge_public
+
   boltorezka-db-test:
     image: postgres:16
     container_name: boltorezka-db-test
@@ -154,6 +171,23 @@ services:
     networks:
       - edge_public
       - data_prod
+
+  boltorezka-web-prod:
+    build:
+      context: ../apps/web
+      dockerfile: Dockerfile.static
+      args:
+        VITE_RTC_ICE_SERVERS_JSON: ${PROD_VITE_RTC_ICE_SERVERS_JSON:-}
+        VITE_RTC_ICE_TRANSPORT_POLICY: ${PROD_VITE_RTC_ICE_TRANSPORT_POLICY:-all}
+        VITE_RTC_RECONNECT_MAX_ATTEMPTS: ${PROD_VITE_RTC_RECONNECT_MAX_ATTEMPTS:-3}
+        VITE_RTC_RECONNECT_BASE_DELAY_MS: ${PROD_VITE_RTC_RECONNECT_BASE_DELAY_MS:-1000}
+        VITE_RTC_RECONNECT_MAX_DELAY_MS: ${PROD_VITE_RTC_RECONNECT_MAX_DELAY_MS:-8000}
+        VITE_APP_VERSION: ${PROD_VITE_APP_VERSION:-}
+    image: boltorezka-web:prod
+    container_name: boltorezka-web-prod
+    restart: unless-stopped
+    networks:
+      - edge_public
 
   boltorezka-db-prod:
     image: postgres:16
