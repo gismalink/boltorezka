@@ -1,5 +1,8 @@
+// Purpose: API smoke checks for health, auth mode, protected endpoints and room hierarchy contracts.
 const baseUrl = (process.env.SMOKE_API_URL ?? 'http://localhost:8080').replace(/\/+$/, '');
-const token = process.env.SMOKE_BEARER_TOKEN ?? '';
+const allowLegacyBearer = process.env.SMOKE_ALLOW_LEGACY_BEARER === '1';
+const token = process.env.SMOKE_TEST_BEARER_TOKEN
+  ?? (allowLegacyBearer ? (process.env.SMOKE_BEARER_TOKEN ?? '') : '');
 const checkTelemetrySummary = process.env.SMOKE_TELEMETRY_SUMMARY !== '0';
 const checkRoomHierarchy = process.env.SMOKE_ROOM_HIERARCHY !== '0';
 
@@ -190,7 +193,7 @@ async function fetchJson(path, options = {}) {
       }
     }
   } else {
-    console.log('[smoke] SMOKE_BEARER_TOKEN is not set -> protected endpoints skipped');
+    console.log('[smoke] SMOKE_TEST_BEARER_TOKEN is not set -> protected endpoints skipped');
   }
 
   console.log(

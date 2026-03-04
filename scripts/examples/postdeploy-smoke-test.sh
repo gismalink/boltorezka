@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Purpose: Example template for running post-deploy smoke checks and metrics snapshot.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -14,7 +15,7 @@ ENV_FILE="infra/.env.host"
 POSTGRES_SERVICE="${TEST_POSTGRES_SERVICE:-boltorezka-db-test}"
 REDIS_SERVICE="${TEST_REDIS_SERVICE:-boltorezka-redis-test}"
 API_SERVICE="${TEST_API_SERVICE:-boltorezka-api-test}"
-USER_EMAIL="${SMOKE_USER_EMAIL:-gismalink@gmail.com}"
+USER_EMAIL="${SMOKE_USER_EMAIL:-smoke-rtc-1@example.test}"
 SUMMARY_FILE_REL=".deploy/last-smoke-summary.env"
 
 SMOKE_TIMESTAMP_UTC="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
@@ -43,7 +44,7 @@ write_summary() {
 
 trap write_summary EXIT
 
-if [[ "${SMOKE_REALTIME:-1}" != "0" ]] && [[ -z "${SMOKE_BEARER_TOKEN:-}" && -z "${SMOKE_WS_TICKET:-}" ]]; then
+if [[ "${SMOKE_REALTIME:-1}" != "0" ]] && [[ -z "${SMOKE_TEST_BEARER_TOKEN:-}" && -z "${SMOKE_WS_TICKET:-}" ]]; then
   AUTO_TICKET=1
 else
   AUTO_TICKET=0
@@ -127,7 +128,7 @@ set +a
 SMOKE_USER_ID=""
 SMOKE_USER_ROLE=""
 
-if [[ -z "${SMOKE_BEARER_TOKEN:-}" ]]; then
+if [[ -z "${SMOKE_TEST_BEARER_TOKEN:-}" ]]; then
   if [[ -z "${TEST_POSTGRES_USER:-}" || -z "${TEST_POSTGRES_DB:-}" ]]; then
     echo "[postdeploy-smoke] TEST_POSTGRES_USER/TEST_POSTGRES_DB are required for auto-bearer" >&2
     exit 1
@@ -151,7 +152,7 @@ if [[ -z "${SMOKE_BEARER_TOKEN:-}" ]]; then
 
   if [[ -n "$JWT_SECRET_CANDIDATE" ]]; then
     GENERATED_BEARER="$(make_hs256_jwt "$JWT_SECRET_CANDIDATE" "$SMOKE_USER_ID" "$SMOKE_USER_ROLE")"
-    export SMOKE_BEARER_TOKEN="$GENERATED_BEARER"
+    export SMOKE_TEST_BEARER_TOKEN="$GENERATED_BEARER"
   else
     echo "[postdeploy-smoke] warning: cannot resolve JWT secret; protected smoke:api checks may be skipped"
   fi

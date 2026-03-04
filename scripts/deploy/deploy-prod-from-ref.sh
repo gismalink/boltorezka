@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Purpose: Deploy production services from a specific git ref with rollout safety checks.
 set -euo pipefail
 
 if [[ $# -lt 1 ]]; then

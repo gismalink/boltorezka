@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Purpose: Run end-to-end smoke scenario (SSO, realtime, media, static contract) for web app.
 set -euo pipefail
 
 BASE_URL="${SMOKE_API_URL:-http://localhost:8080}"
@@ -11,8 +12,23 @@ COMPOSE_FILE="${SMOKE_E2E_COMPOSE_FILE:-infra/docker-compose.host.yml}"
 ENV_FILE="${SMOKE_E2E_ENV_FILE:-infra/.env.host}"
 POSTGRES_SERVICE="${SMOKE_E2E_POSTGRES_SERVICE:-boltorezka-db-test}"
 REDIS_SERVICE="${SMOKE_E2E_REDIS_SERVICE:-boltorezka-redis-test}"
-USER_EMAIL="${SMOKE_USER_EMAIL:-gismalink@gmail.com}"
-USER_EMAIL_SECOND="${SMOKE_USER_EMAIL_SECOND:-}"
+USER_EMAIL="${SMOKE_USER_EMAIL:-smoke-rtc-1@example.test}"
+USER_EMAIL_SECOND="${SMOKE_USER_EMAIL_SECOND:-smoke-rtc-2@example.test}"
+
+require_test_email() {
+  local email="$1"
+  local label="$2"
+
+  if [[ "${SMOKE_ALLOW_NON_TEST_ACCOUNTS:-0}" == "1" ]]; then
+    return 0
+  fi
+
+  if [[ -z "$email" || "$email" != *@example.test ]]; then
+    echo "[smoke:web-e2e] $label must be a dedicated test account (@example.test): $email" >&2
+    echo "[smoke:web-e2e] set SMOKE_ALLOW_NON_TEST_ACCOUNTS=1 only for explicit exception" >&2
+    exit 1
+  fi
+}
 
 compose() {
   docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" "$@"
@@ -81,18 +97,23 @@ auto_generate_tickets() {
   return 0
 }
 
-if [[ -z "${SMOKE_BEARER_TOKEN:-}" && -z "${SMOKE_WS_TICKET:-}" ]]; then
+require_test_email "$USER_EMAIL" "SMOKE_USER_EMAIL"
+if [[ -n "$USER_EMAIL_SECOND" ]]; then
+  require_test_email "$USER_EMAIL_SECOND" "SMOKE_USER_EMAIL_SECOND"
+fi
+
+if [[ -z "${SMOKE_TEST_BEARER_TOKEN:-}" && -z "${SMOKE_WS_TICKET:-}" ]]; then
   echo "[smoke:web-e2e] no bearer/ticket provided, trying auto-ticket path"
   if ! auto_generate_tickets; then
-    echo "[smoke:web-e2e] requires SMOKE_BEARER_TOKEN or SMOKE_WS_TICKET (or working auto-ticket path)" >&2
+    echo "[smoke:web-e2e] requires SMOKE_TEST_BEARER_TOKEN or SMOKE_WS_TICKET (or working auto-ticket path)" >&2
     exit 1
   fi
 fi
 
-if [[ "$RUN_CALL_SIGNAL" == "1" ]] && [[ -z "${SMOKE_BEARER_TOKEN:-}" && -z "${SMOKE_WS_TICKET_SECOND:-}" ]]; then
+if [[ "$RUN_CALL_SIGNAL" == "1" ]] && [[ -z "${SMOKE_TEST_BEARER_TOKEN:-}" && -z "${SMOKE_WS_TICKET_SECOND:-}" ]]; then
   echo "[smoke:web-e2e] call-signal needs second ticket, trying auto-ticket path"
   if ! auto_generate_tickets; then
-    echo "[smoke:web-e2e] call-signal scenario requires SMOKE_BEARER_TOKEN or SMOKE_WS_TICKET_SECOND" >&2
+    echo "[smoke:web-e2e] call-signal scenario requires SMOKE_TEST_BEARER_TOKEN or SMOKE_WS_TICKET_SECOND" >&2
     exit 1
   fi
 fi

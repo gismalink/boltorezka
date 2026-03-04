@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Purpose: Bootstrap dedicated smoke users and generate test-only bearer tokens.
 set -euo pipefail
 
 COMPOSE_FILE="${SMOKE_AUTH_COMPOSE_FILE:-docker-compose.yml}"
@@ -131,9 +132,12 @@ SMOKE_API_URL=$API_BASE_URL
 SMOKE_USER_EMAIL=$USER1_EMAIL_ACTUAL
 SMOKE_USER_EMAIL_SECOND=$USER2_EMAIL_ACTUAL
 
-SMOKE_BEARER_TOKEN=$TOKEN1
-SMOKE_BEARER_TOKEN_SECOND=$TOKEN2
-SMOKE_BEARER_TOKENS=$TOKEN1,$TOKEN2
+SMOKE_TEST_BEARER_TOKEN=$TOKEN1
+SMOKE_TEST_BEARER_TOKEN_SECOND=$TOKEN2
+SMOKE_TEST_BEARER_TOKENS=$TOKEN1,$TOKEN2
+
+# legacy vars are intentionally not emitted by default.
+# set SMOKE_ALLOW_LEGACY_BEARER=1 only for explicit temporary compatibility.
 
 SMOKE_USER_ID=$USER1_ID
 SMOKE_USER_ID_SECOND=$USER2_ID

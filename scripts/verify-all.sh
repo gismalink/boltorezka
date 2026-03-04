@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Purpose: Unified local verification entrypoint for compose config and optional smoke suites.
 set -euo pipefail
 
 echo "[verify] docker compose config"
@@ -26,8 +27,8 @@ else
 fi
 
 if [[ "${SMOKE_REALTIME:-0}" == "1" ]]; then
-  if [[ -z "${SMOKE_BEARER_TOKEN:-}" && -z "${SMOKE_WS_TICKET:-}" ]]; then
-    echo "[verify] smoke realtime requires SMOKE_BEARER_TOKEN or SMOKE_WS_TICKET"
+  if [[ -z "${SMOKE_TEST_BEARER_TOKEN:-}" && -z "${SMOKE_WS_TICKET:-}" ]]; then
+    echo "[verify] smoke realtime requires SMOKE_TEST_BEARER_TOKEN or SMOKE_WS_TICKET"
     exit 1
   fi
   echo "[verify] smoke realtime"

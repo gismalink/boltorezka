@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Purpose: Deploy test contour from a specific git ref and verify API health.
 set -euo pipefail
 
 if [[ $# -lt 1 ]]; then

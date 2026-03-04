@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Purpose: Run test deploy and immediately execute post-deploy smoke gates.
 set -euo pipefail
 
 if [[ $# -lt 1 ]]; then

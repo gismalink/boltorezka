@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// Purpose: Verify version endpoint/build-sha and cache policy for index and hashed assets.
 
 const apiBaseUrl = (process.env.SMOKE_API_URL ?? process.env.SMOKE_WEB_BASE_URL ?? "http://localhost:8080").replace(/\/+$/, "");
 const webBaseUrl = (process.env.SMOKE_WEB_BASE_URL ?? apiBaseUrl).replace(/\/+$/, "");

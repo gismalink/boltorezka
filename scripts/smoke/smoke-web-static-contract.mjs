@@ -1,3 +1,4 @@
+// Purpose: Validate web static delivery contract (index/assets/auth mode endpoints).
 const apiBaseUrl = (process.env.SMOKE_API_URL ?? "http://localhost:8080").replace(/\/+$/, "");
 const webBaseUrl = (process.env.SMOKE_WEB_BASE_URL ?? apiBaseUrl).replace(/\/+$/, "");
 

@@ -1,8 +1,16 @@
+// Purpose: Run websocket load test with many clients and aggregate ack/nack/error counters.
 import WS from "ws";
 
 const baseUrl = (process.env.SMOKE_API_URL ?? "http://localhost:8080").replace(/\/+$/, "");
-const bearerToken = String(process.env.SMOKE_BEARER_TOKEN ?? "").trim();
-const bearerTokens = String(process.env.SMOKE_BEARER_TOKENS ?? "")
+const allowLegacyBearer = process.env.SMOKE_ALLOW_LEGACY_BEARER === "1";
+const bearerToken = String(
+  process.env.SMOKE_TEST_BEARER_TOKEN
+  ?? (allowLegacyBearer ? (process.env.SMOKE_BEARER_TOKEN ?? "") : "")
+).trim();
+const bearerTokens = String(
+  process.env.SMOKE_TEST_BEARER_TOKENS
+  ?? (allowLegacyBearer ? (process.env.SMOKE_BEARER_TOKENS ?? "") : "")
+)
   .split(",")
   .map((token) => token.trim())
   .filter(Boolean);
@@ -18,7 +26,7 @@ if (!/^https?:\/\//.test(baseUrl)) {
 }
 
 if (!bearerToken && bearerTokens.length === 0) {
-  console.error("[ws-load] set SMOKE_BEARER_TOKEN or SMOKE_BEARER_TOKENS");
+  console.error("[ws-load] set SMOKE_TEST_BEARER_TOKEN or SMOKE_TEST_BEARER_TOKENS");
   process.exit(1);
 }
 

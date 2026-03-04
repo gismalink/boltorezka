@@ -1,3 +1,4 @@
+// Purpose: Validate SSO redirect contract and provider routing from auth start endpoint.
 const baseUrl = (process.env.SMOKE_API_URL ?? "http://localhost:8080").replace(/\/+$/, "");
 const provider = (process.env.SSO_PROVIDER ?? "google").toLowerCase();
 

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// Purpose: Static smoke for denied media UI markers in built web assets.
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 

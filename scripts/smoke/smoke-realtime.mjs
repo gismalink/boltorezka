@@ -1,8 +1,12 @@
+// Purpose: Realtime WebSocket smoke checks for join/chat/idempotency/call relay/reconnect flows.
 import WS from "ws";
 
 const baseUrl = (process.env.SMOKE_API_URL ?? "http://localhost:8080").replace(/\/+$/, "");
-const bearerToken = process.env.SMOKE_BEARER_TOKEN ?? "";
-const bearerTokenSecond = process.env.SMOKE_BEARER_TOKEN_SECOND ?? "";
+const allowLegacyBearer = process.env.SMOKE_ALLOW_LEGACY_BEARER === "1";
+const bearerToken = process.env.SMOKE_TEST_BEARER_TOKEN
+  ?? (allowLegacyBearer ? (process.env.SMOKE_BEARER_TOKEN ?? "") : "");
+const bearerTokenSecond = process.env.SMOKE_TEST_BEARER_TOKEN_SECOND
+  ?? (allowLegacyBearer ? (process.env.SMOKE_BEARER_TOKEN_SECOND ?? "") : "");
 const preissuedTicket = process.env.SMOKE_WS_TICKET ?? "";
 const preissuedTicketSecond = process.env.SMOKE_WS_TICKET_SECOND ?? "";
 const preissuedTicketReconnect = process.env.SMOKE_WS_TICKET_RECONNECT ?? "";
@@ -19,12 +23,12 @@ if (!isHttp) {
 }
 
 if (!preissuedTicket && !bearerToken) {
-  console.error("[smoke:realtime] set SMOKE_BEARER_TOKEN or SMOKE_WS_TICKET");
+  console.error("[smoke:realtime] set SMOKE_TEST_BEARER_TOKEN or SMOKE_WS_TICKET");
   process.exit(1);
 }
 
 if (smokeCallSignal && !bearerToken && !preissuedTicketSecond) {
-  console.error("[smoke:realtime] SMOKE_CALL_SIGNAL=1 requires SMOKE_BEARER_TOKEN or SMOKE_WS_TICKET_SECOND");
+  console.error("[smoke:realtime] SMOKE_CALL_SIGNAL=1 requires SMOKE_TEST_BEARER_TOKEN or SMOKE_WS_TICKET_SECOND");
   process.exit(1);
 }
 
@@ -97,7 +101,7 @@ async function resolveReconnectTicket() {
   }
 
   if (!bearerToken) {
-    throw new Error("[smoke:realtime] SMOKE_RECONNECT=1 requires SMOKE_BEARER_TOKEN or SMOKE_WS_TICKET_RECONNECT");
+    throw new Error("[smoke:realtime] SMOKE_RECONNECT=1 requires SMOKE_TEST_BEARER_TOKEN or SMOKE_WS_TICKET_RECONNECT");
   }
 
   const { response, payload } = await fetchJson("/v1/auth/ws-ticket", {
@@ -464,7 +468,7 @@ function waitForEvent(events, predicate, label) {
     wsReconnect.close();
   } else if (smokeReconnect && !canRunReconnect) {
     reconnectSkipped = true;
-    console.warn("[smoke:realtime] reconnect scenario skipped: set SMOKE_BEARER_TOKEN or SMOKE_WS_TICKET_RECONNECT");
+    console.warn("[smoke:realtime] reconnect scenario skipped: set SMOKE_TEST_BEARER_TOKEN or SMOKE_WS_TICKET_RECONNECT");
   }
 
   ws.close();

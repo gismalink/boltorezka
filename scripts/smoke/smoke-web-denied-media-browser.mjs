@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// Purpose: Browser-level smoke for denied media UX and locked camera/mic controls.
 import { chromium } from "playwright";
 
 const baseUrl = String(process.env.SMOKE_WEB_BASE_URL || process.env.SMOKE_API_URL || "http://localhost:8080").replace(/\/$/, "");

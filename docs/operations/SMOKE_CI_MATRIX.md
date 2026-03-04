@@ -27,7 +27,7 @@ Workflow: `.github/workflows/test-smoke.yml`
 | Variable/Secret | Purpose | Required |
 |---|---|---|
 | `TEST_SMOKE_API_URL` (repo variable) | Target URL for test contour | Optional |
-| `TEST_SMOKE_BEARER_TOKEN` (repo secret) | Bearer for protected smoke checks (`telemetry/summary`) | Yes |
+| `TEST_SMOKE_TEST_BEARER_TOKEN` (repo secret) | Bearer of dedicated smoke test account for protected checks (`telemetry/summary`) | Yes |
 
 Current CI command:
 
