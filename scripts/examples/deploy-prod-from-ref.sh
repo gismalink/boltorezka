@@ -52,12 +52,16 @@ cat >"$TMP_DOCKER_CONFIG/config.json" <<'JSON'
 }
 JSON
 
+PROD_VITE_APP_VERSION="$RESOLVED_SHA" \
+PROD_APP_BUILD_SHA="$RESOLVED_SHA" \
 DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" build boltorezka-api-prod
 
 if [[ "$FULL_RECREATE" == "1" ]]; then
   echo "[deploy-prod] full recreate enabled"
+  PROD_APP_BUILD_SHA="$RESOLVED_SHA" \
   DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d --force-recreate boltorezka-api-prod
 else
+  PROD_APP_BUILD_SHA="$RESOLVED_SHA" \
   DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d --no-deps --force-recreate boltorezka-api-prod
 fi
 

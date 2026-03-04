@@ -60,6 +60,8 @@ const MAX_CHAT_IMAGE_DATA_URL_LENGTH = 18000;
 const MAX_CHAT_IMAGE_MAX_SIDE = 1000;
 const MAX_CHAT_IMAGE_QUALITY = 0.6;
 const MESSAGE_EDIT_DELETE_WINDOW_MS = 10 * 60 * 1000;
+const VERSION_POLL_INTERVAL_MS = 60000;
+const CLIENT_BUILD_VERSION = String(import.meta.env.VITE_APP_VERSION || "").trim();
 
 type ServerMenuTab = "users" | "events" | "telemetry" | "call" | "sound" | "video";
 type MobileTab = "channels" | "chat" | "settings";
@@ -295,6 +297,53 @@ export function App() {
       });
       toastTimeoutsRef.current.clear();
       toastLastShownAtRef.current.clear();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!CLIENT_BUILD_VERSION) {
+      return;
+    }
+
+    let cancelled = false;
+    let inFlight = false;
+
+    const checkVersion = async () => {
+      if (cancelled || inFlight) {
+        return;
+      }
+
+      inFlight = true;
+      try {
+        const payload = await api.version();
+        const serverBuildVersion = String(payload.appBuildSha || "").trim();
+        if (!cancelled && serverBuildVersion && serverBuildVersion !== CLIENT_BUILD_VERSION) {
+          window.location.reload();
+        }
+      } catch {
+        return;
+      } finally {
+        inFlight = false;
+      }
+    };
+
+    void checkVersion();
+    const intervalId = window.setInterval(() => {
+      void checkVersion();
+    }, VERSION_POLL_INTERVAL_MS);
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        void checkVersion();
+      }
+    };
+
+    document.addEventListener("visibilitychange", onVisibilityChange);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
     };
   }, []);
 

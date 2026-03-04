@@ -11,4 +11,6 @@ export type AppConfig = {
   authSsoBaseUrl: string;
   allowedReturnHosts: string[];
   superAdminEmail: string;
+  appVersion: string;
+  appBuildSha: string;
 };

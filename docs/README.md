@@ -6,6 +6,7 @@
   - [STATUS](status/STATUS.md)
   - [ROADMAP](status/ROADMAP.md)
   - [FEATURE_LOG](status/FEATURE_LOG.md)
+  - [FEATURE_LOG_INDEX](status/feature-log/README.md)
 - `runbooks/` — operational checklists and rollout/deploy runbooks
   - [RUNBOOK_TEST_DEPLOY](runbooks/RUNBOOK_TEST_DEPLOY.md)
   - [RUNBOOK_TEST_ROLLOUT_QUICKSTART](runbooks/RUNBOOK_TEST_ROLLOUT_QUICKSTART.md)
@@ -20,6 +21,7 @@
   - [OPENAPI_V1](contracts/OPENAPI_V1.yaml)
 - `operations/` — smoke/CI matrices and operational quality gates
   - [SMOKE_CI_MATRIX](operations/SMOKE_CI_MATRIX.md)
+  - [FRONTEND_VERSIONING_POLICY](operations/FRONTEND_VERSIONING_POLICY.md)
 - `architecture/` — architecture-level documentation
   - [ARCHITECTURE](architecture/ARCHITECTURE.md)
 - `plans/` — scoped design/product plans

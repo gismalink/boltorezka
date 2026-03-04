@@ -58,12 +58,16 @@ cat >"$TMP_DOCKER_CONFIG/config.json" <<'JSON'
 }
 JSON
 
+TEST_VITE_APP_VERSION="$RESOLVED_SHA" \
+TEST_APP_BUILD_SHA="$RESOLVED_SHA" \
 DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" build boltorezka-api-test
 
 if [[ "$FULL_RECREATE" == "1" ]]; then
   echo "[deploy-test] full recreate enabled"
+  TEST_APP_BUILD_SHA="$RESOLVED_SHA" \
   DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d --force-recreate boltorezka-api-test
 else
+  TEST_APP_BUILD_SHA="$RESOLVED_SHA" \
   DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d --no-deps --force-recreate boltorezka-api-test
 fi
 

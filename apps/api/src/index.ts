@@ -34,7 +34,28 @@ await app.register(websocket);
 
 await app.register(fastifyStatic, {
   root: path.join(__dirname, "../public"),
-  prefix: "/"
+  prefix: "/",
+  setHeaders: (response, filePath) => {
+    const normalizedPath = String(filePath || "").replace(/\\/g, "/");
+    const fileName = path.basename(normalizedPath);
+
+    if (fileName === "index.html") {
+      response.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0");
+      response.setHeader("Pragma", "no-cache");
+      response.setHeader("Expires", "0");
+      return;
+    }
+
+    const isHashedAsset = normalizedPath.includes("/assets/")
+      && /-[A-Za-z0-9_-]{8,}\./.test(fileName);
+
+    if (isHashedAsset) {
+      response.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+      return;
+    }
+
+    response.setHeader("Cache-Control", "no-cache, max-age=0, must-revalidate");
+  }
 });
 
 app.decorate("jwtExpiresIn", config.jwtExpiresIn);

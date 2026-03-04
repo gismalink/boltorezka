@@ -48,6 +48,7 @@ services:
         VITE_RTC_RECONNECT_MAX_ATTEMPTS: ${TEST_VITE_RTC_RECONNECT_MAX_ATTEMPTS:-3}
         VITE_RTC_RECONNECT_BASE_DELAY_MS: ${TEST_VITE_RTC_RECONNECT_BASE_DELAY_MS:-1000}
         VITE_RTC_RECONNECT_MAX_DELAY_MS: ${TEST_VITE_RTC_RECONNECT_MAX_DELAY_MS:-8000}
+        VITE_APP_VERSION: ${TEST_VITE_APP_VERSION:-}
     image: boltorezka-api:test
     container_name: boltorezka-api-test
     restart: unless-stopped
@@ -63,6 +64,8 @@ services:
       ALLOWED_RETURN_HOSTS: ${TEST_ALLOWED_RETURN_HOSTS:-test.boltorezka.gismalink.art}
       SUPER_ADMIN_EMAIL: ${TEST_SUPER_ADMIN_EMAIL:-gismalink@gmail.com}
       WS_CALL_DEBUG: ${TEST_WS_CALL_DEBUG:-0}
+      APP_VERSION: ${TEST_APP_VERSION:-0.1.0}
+      APP_BUILD_SHA: ${TEST_APP_BUILD_SHA:-}
     depends_on:
       boltorezka-turn:
         condition: service_started
@@ -121,6 +124,7 @@ services:
         VITE_RTC_RECONNECT_MAX_ATTEMPTS: ${PROD_VITE_RTC_RECONNECT_MAX_ATTEMPTS:-3}
         VITE_RTC_RECONNECT_BASE_DELAY_MS: ${PROD_VITE_RTC_RECONNECT_BASE_DELAY_MS:-1000}
         VITE_RTC_RECONNECT_MAX_DELAY_MS: ${PROD_VITE_RTC_RECONNECT_MAX_DELAY_MS:-8000}
+        VITE_APP_VERSION: ${PROD_VITE_APP_VERSION:-}
     image: boltorezka-api:prod
     container_name: boltorezka-api-prod
     restart: unless-stopped
@@ -136,6 +140,8 @@ services:
       ALLOWED_RETURN_HOSTS: ${PROD_ALLOWED_RETURN_HOSTS:-boltorezka.gismalink.art}
       SUPER_ADMIN_EMAIL: ${PROD_SUPER_ADMIN_EMAIL:-gismalink@gmail.com}
       WS_CALL_DEBUG: ${PROD_WS_CALL_DEBUG:-0}
+      APP_VERSION: ${PROD_APP_VERSION:-0.1.0}
+      APP_BUILD_SHA: ${PROD_APP_BUILD_SHA:-}
     depends_on:
       boltorezka-turn:
         condition: service_started

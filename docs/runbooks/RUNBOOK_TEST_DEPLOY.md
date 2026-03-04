@@ -52,6 +52,8 @@ One-command для Boltorezka (deploy + post-deploy smoke):
 2. `docker compose ps` без деградации сервисов.
 3. `docker compose logs --tail=120 <service>` без критических ошибок.
 4. HTTP health endpoint отвечает 200.
+4.1. Version endpoint отвечает 200 и содержит актуальный `appBuildSha`:
+   - `curl https://test.boltorezka.gismalink.art/version`
 5. WS handshake успешен.
 6. End-to-end smoke:
    - login,

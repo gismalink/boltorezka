@@ -35,5 +35,7 @@ export const config = {
   allowedReturnHosts: parseCsv(process.env.ALLOWED_RETURN_HOSTS),
   superAdminEmail: String(process.env.SUPER_ADMIN_EMAIL || "gismalink@gmail.com")
     .trim()
-    .toLowerCase()
+    .toLowerCase(),
+  appVersion: String(process.env.APP_VERSION || process.env.npm_package_version || "0.1.0").trim(),
+  appBuildSha: String(process.env.APP_BUILD_SHA || "").trim()
 };
