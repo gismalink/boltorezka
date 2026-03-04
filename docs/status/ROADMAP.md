@@ -138,7 +138,7 @@
   - [x] dual-path readiness validation (separate static delivery path `/__web/`) validated in `test`.
 3. [x] Зафиксировать post-MVP performance gate (API p95 + WS reconnect + call/video setup success) и пороги GO/NO-GO.
   - [x] Канонический документ: `docs/operations/PERFORMANCE_GATE.md`.
-4. [ ] Выполнить новый pre-prod package refresh на основании обновлённых gate-правил.
+4. [x] Выполнить новый pre-prod package refresh на основании обновлённых gate-правил.
 
 ## KPI MVP
 

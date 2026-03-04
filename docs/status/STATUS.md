@@ -25,7 +25,8 @@
 	- при system `devicechange` в active call выполняется auto-refresh outgoing mic track (включая `default` route).
 - Зафиксирован post-MVP performance gate и пороги GO/NO-GO:
 	- документ `docs/operations/PERFORMANCE_GATE.md`.
-- Последний test rollout/smoke по feature ветке (`origin/feature/video-stream-overlay-chat-toggle`, SHA `edb033f`) — PASS.
+- Последний test rollout/smoke по feature ветке (`origin/feature/video-stream-overlay-chat-toggle`, SHA `b931324`) — PASS.
+- Выполнен refresh pre-prod decision package под актуальные gate-правила и evidence (`docs/runbooks/PREPROD_DECISION_PACKAGE.md`).
 
 ## Канонические документы
 
