@@ -39,7 +39,7 @@ Purpose: keep RTC runtime predictable under glare/reconnect/load, while reducing
 
 - [x] `voiceCallOfferPolicy.test.ts` created.
 - [x] `voiceCallPeerRecovery.test.ts` created.
-- [ ] Create `voiceCallSignalHandlers.test.ts` (glare, rollback, nack handling).
+- [x] Create `voiceCallSignalHandlers.test.ts` (glare, rollback, nack handling).
 - [ ] Create `voiceCallPeerConnectionHandlers.test.ts` (ICE/state/track events).
 - [ ] Create `voiceCallLocalMedia.test.ts` (constraints/device paths/failures).
 - [ ] Create `voiceCallPeerRegistry.test.ts` (status derivation/create/close).
