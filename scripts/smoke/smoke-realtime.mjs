@@ -362,6 +362,83 @@ async function runThreeWayRaceScenario({
     throw new Error(`[smoke:realtime] race3way unexpected nack codes: ${hardFailures.map((result) => result.code).join(",")}`);
   }
 
+  const targetedIceRequestId = `race-ice-targeted-${Date.now()}`;
+  const targetedIceSignal = {
+    candidate: "candidate:1 1 udp 2130706431 10.0.0.1 54545 typ host",
+    sdpMid: "0",
+    sdpMLineIndex: 0
+  };
+  wsThird.send(JSON.stringify({
+    type: "call.ice",
+    requestId: targetedIceRequestId,
+    payload: {
+      targetUserId: firstUserId,
+      signal: targetedIceSignal
+    }
+  }));
+
+  const targetedIceAck = await waitForEvent(
+    thirdEvents,
+    (item) => item?.type === "ack" && item?.payload?.requestId === targetedIceRequestId,
+    "ack for race targeted call.ice"
+  );
+  if (Number(targetedIceAck?.payload?.relayedTo || 0) !== 1) {
+    throw new Error(`[smoke:realtime] expected targeted call.ice relayedTo=1, got ${Number(targetedIceAck?.payload?.relayedTo || 0)}`);
+  }
+
+  const targetedIceRelayToFirst = await waitForEvent(
+    firstEvents,
+    (item) => item?.type === "call.ice"
+      && String(item?.payload?.fromUserId || "") === thirdUserId
+      && String(item?.payload?.targetUserId || "") === firstUserId
+      && String(item?.payload?.signal?.candidate || "").includes("candidate:"),
+    "relayed targeted call.ice C->A"
+  );
+  if (!targetedIceRelayToFirst) {
+    throw new Error("[smoke:realtime] targeted call.ice did not reach first peer");
+  }
+
+  const broadcastIceRequestId = `race-ice-broadcast-${Date.now()}`;
+  const broadcastIceSignal = {
+    candidate: "candidate:2 1 udp 2130706431 10.0.0.2 54546 typ host",
+    sdpMid: "0",
+    sdpMLineIndex: 0
+  };
+  firstWs.send(JSON.stringify({
+    type: "call.ice",
+    requestId: broadcastIceRequestId,
+    payload: {
+      signal: broadcastIceSignal
+    }
+  }));
+
+  const broadcastIceAck = await waitForEvent(
+    firstEvents,
+    (item) => item?.type === "ack" && item?.payload?.requestId === broadcastIceRequestId,
+    "ack for race broadcast call.ice"
+  );
+  if (Number(broadcastIceAck?.payload?.relayedTo || 0) < 2) {
+    throw new Error(`[smoke:realtime] expected broadcast call.ice relayedTo>=2, got ${Number(broadcastIceAck?.payload?.relayedTo || 0)}`);
+  }
+
+  const broadcastIceRelayToSecond = await waitForEvent(
+    secondEvents,
+    (item) => item?.type === "call.ice"
+      && String(item?.payload?.fromUserId || "") === firstUserId
+      && String(item?.payload?.signal?.candidate || "").includes("candidate:"),
+    "relayed broadcast call.ice A->B"
+  );
+  const broadcastIceRelayToThird = await waitForEvent(
+    thirdEvents,
+    (item) => item?.type === "call.ice"
+      && String(item?.payload?.fromUserId || "") === firstUserId
+      && String(item?.payload?.signal?.candidate || "").includes("candidate:"),
+    "relayed broadcast call.ice A->C"
+  );
+  if (!broadcastIceRelayToSecond || !broadcastIceRelayToThird) {
+    throw new Error("[smoke:realtime] broadcast call.ice did not relay to all expected peers");
+  }
+
   const offerRateLimitedThreshold = getOfferRateLimitedThreshold();
   if (offerRateLimited > offerRateLimitedThreshold) {
     const mode = strictRaceOfferRateLimit ? "strict" : "soft";
@@ -444,9 +521,11 @@ async function runThreeWayRaceScenario({
   return {
     race3WayOk: true,
     race3WayReconnectOk: true,
+    race3WayIceRelayOk: true,
     race3WayOfferRateLimited: offerRateLimited,
     race3WayOfferRateLimitedThreshold: offerRateLimitedThreshold,
     race3WayOfferRateLimitedStrictMode: strictRaceOfferRateLimit,
+    race3WayIceRelayCount: Number(targetedIceAck?.payload?.relayedTo || 0) + Number(broadcastIceAck?.payload?.relayedTo || 0),
     cameraToggleReconnectOk
   };
 }
@@ -909,6 +988,8 @@ async function runLiveRoomBehaviorScenario({ roomSlug, timeoutMs }) {
   let callHangupRelayed = false;
   let race3WayOk = false;
   let race3WayReconnectOk = false;
+  let race3WayIceRelayOk = false;
+  let race3WayIceRelayCount = 0;
   let race3WayOfferRateLimited = 0;
   let race3WayOfferRateLimitedThreshold = getOfferRateLimitedThreshold();
   let race3WayOfferRateLimitedStrictMode = strictRaceOfferRateLimit;
@@ -1085,6 +1166,8 @@ async function runLiveRoomBehaviorScenario({ roomSlug, timeoutMs }) {
       });
       race3WayOk = raceResult.race3WayOk;
       race3WayReconnectOk = raceResult.race3WayReconnectOk;
+      race3WayIceRelayOk = raceResult.race3WayIceRelayOk;
+      race3WayIceRelayCount = raceResult.race3WayIceRelayCount;
       race3WayOfferRateLimited = raceResult.race3WayOfferRateLimited;
       race3WayOfferRateLimitedThreshold = raceResult.race3WayOfferRateLimitedThreshold;
       race3WayOfferRateLimitedStrictMode = raceResult.race3WayOfferRateLimitedStrictMode;
@@ -1184,6 +1267,8 @@ async function runLiveRoomBehaviorScenario({ roomSlug, timeoutMs }) {
         reconnectSkipped,
         race3WayOk,
         race3WayReconnectOk,
+        race3WayIceRelayOk,
+        race3WayIceRelayCount,
         race3WayOfferRateLimited,
         race3WayOfferRateLimitedThreshold,
         race3WayOfferRateLimitedStrictMode,
