@@ -534,6 +534,7 @@ async function runLiveRoomBehaviorScenario({ roomSlug, timeoutMs }) {
   }
 
   const startedAt = Date.now();
+  const forceRejoinAfterMs = Math.floor(liveRoomDurationMs * 0.6);
   const stats = {
     micEvents: 0,
     videoEvents: 0,
@@ -542,6 +543,38 @@ async function runLiveRoomBehaviorScenario({ roomSlug, timeoutMs }) {
     offerAttempts: 0,
     leaveRejoinEvents: 0,
     acceptedNacks: 0
+  };
+
+  const performLeaveAndRejoin = async () => {
+    const connected = sessions.filter((item) => item.ws.readyState === WS.OPEN);
+    const rejoinCandidate = pickRandom(connected.filter((item) => Boolean(item.bearerToken)));
+    if (!rejoinCandidate) {
+      return false;
+    }
+
+    rejoinCandidate.ws.close();
+    await sleep(randomInt(1200, 2600));
+
+    const reconnectTicket = await resolveTicketFromBearerToken(rejoinCandidate.bearerToken, `${rejoinCandidate.label}-rejoin`);
+    const reconnectedSession = await openRealtimeSocket({
+      ticket: reconnectTicket,
+      label: `${rejoinCandidate.label}-rejoin`,
+      timeoutMs
+    });
+    await sendAckedEvent({
+      ws: reconnectedSession.ws,
+      events: reconnectedSession.events,
+      type: "room.join",
+      payload: { roomSlug },
+      label: `rejoin-${rejoinCandidate.label}`,
+      timeoutMs
+    });
+
+    rejoinCandidate.ws = reconnectedSession.ws;
+    rejoinCandidate.events = reconnectedSession.events;
+    rejoinCandidate.userId = reconnectedSession.userId;
+    stats.leaveRejoinEvents += 1;
+    return true;
   };
 
   while (Date.now() - startedAt < liveRoomDurationMs) {
@@ -553,6 +586,12 @@ async function runLiveRoomBehaviorScenario({ roomSlug, timeoutMs }) {
     const actor = pickRandom(connected);
     if (!actor) {
       throw new Error("[smoke:realtime] failed to pick actor for live-room scenario");
+    }
+
+    if (stats.leaveRejoinEvents === 0 && Date.now() - startedAt >= forceRejoinAfterMs) {
+      await performLeaveAndRejoin();
+      await sleep(randomInt(liveRoomStepMinMs, liveRoomStepMaxMs));
+      continue;
     }
 
     const roll = Math.random();
@@ -646,31 +685,7 @@ async function runLiveRoomBehaviorScenario({ roomSlug, timeoutMs }) {
         stats.offerAttempts += 1;
       }
     } else {
-      const rejoinCandidate = pickRandom(connected.filter((item) => Boolean(item.bearerToken)));
-      if (rejoinCandidate) {
-        rejoinCandidate.ws.close();
-        await sleep(randomInt(1200, 2600));
-
-        const reconnectTicket = await resolveTicketFromBearerToken(rejoinCandidate.bearerToken, `${rejoinCandidate.label}-rejoin`);
-        const reconnectedSession = await openRealtimeSocket({
-          ticket: reconnectTicket,
-          label: `${rejoinCandidate.label}-rejoin`,
-          timeoutMs
-        });
-        await sendAckedEvent({
-          ws: reconnectedSession.ws,
-          events: reconnectedSession.events,
-          type: "room.join",
-          payload: { roomSlug },
-          label: `rejoin-${rejoinCandidate.label}`,
-          timeoutMs
-        });
-
-        rejoinCandidate.ws = reconnectedSession.ws;
-        rejoinCandidate.events = reconnectedSession.events;
-        rejoinCandidate.userId = reconnectedSession.userId;
-        stats.leaveRejoinEvents += 1;
-      }
+      await performLeaveAndRejoin();
     }
 
     await sleep(randomInt(liveRoomStepMinMs, liveRoomStepMaxMs));
@@ -693,6 +708,10 @@ async function runLiveRoomBehaviorScenario({ roomSlug, timeoutMs }) {
 
   if (totalActions < 30) {
     throw new Error(`[smoke:realtime] live-room scenario too short: only ${totalActions} actions completed`);
+  }
+
+  if (stats.leaveRejoinEvents < 1) {
+    throw new Error("[smoke:realtime] live-room scenario must include at least one leave/rejoin event");
   }
 
   return {
