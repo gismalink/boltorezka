@@ -45,7 +45,7 @@ Purpose: keep RTC runtime predictable under glare/reconnect/load, while reducing
 - [x] Create `voiceCallPeerRegistry.test.ts` (status derivation/create/close).
 - [x] Create `voiceCallTargetSync.test.ts` (target add/remove/resync timer).
 - [x] Create `voiceCallUtils.test.ts` (candidate parse + ICE gather settle behavior).
-- [ ] Create `voiceCallPeerLifecycle.test.ts` (context create/dispose cleanup).
+- [x] Create `voiceCallPeerLifecycle.test.ts` (context create/dispose cleanup).
 - [ ] Create `useVoiceRuntimeMediaEffects.test.ts` (watchdog/device/effects sync).
 
 ## Smoke And Deploy Hardening
