@@ -30,7 +30,7 @@ Purpose: keep RTC runtime predictable under glare/reconnect/load, while reducing
 ## Optimization And Hardening
 
 - [x] Make pending ICE flush resilient to partial failures (process all queued candidates via `Promise.allSettled`).
-- [ ] Add bounded queue size for `pendingRemoteCandidates` in `voiceCallPeerConnectionHandlers.ts`.
+- [x] Add bounded queue size for `pendingRemoteCandidates` in incoming ICE path (`voiceCallSignalHandlers.ts`).
 - [ ] Add per-reason cadence buckets in `voiceCallOfferPolicy.ts` so video-sync offers do not block manual recovery.
 - [ ] Add structured offer lifecycle logs (`created`, `sent`, `settled`, `failed`) in `useVoiceCallRuntime.ts`.
 - [ ] Add glare decision trace logs in `voiceCallSignalHandlers.ts` (`ignore` vs `rollback` with peer IDs).

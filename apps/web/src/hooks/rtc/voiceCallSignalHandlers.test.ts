@@ -133,6 +133,49 @@ describe("voiceCallSignalHandlers", () => {
     expect(pushCallLog).toHaveBeenCalledWith("call.ice queued <- User 2 (1)");
   });
 
+  it("caps queued ICE candidates and drops oldest on overflow", async () => {
+    const pushCallLog = vi.fn();
+    const peer = createPeer();
+    const connection = {
+      remoteDescription: null,
+      addIceCandidate: vi.fn(async () => undefined)
+    } as any;
+
+    for (let index = 0; index < 70; index += 1) {
+      await handleIncomingSignalEvent({
+        eventType: "call.ice",
+        payload: {
+          fromUserId: "user-2",
+          fromUserName: "User 2",
+          signal: {
+            candidate: {
+              candidate: `candidate:${index} 1 udp 2122260223 10.0.0.1 ${8998 + index} typ host`
+            }
+          }
+        },
+        roomVoiceConnectedRef: { current: true },
+        peersRef: { current: new Map([["user-2", peer]]) } as any,
+        sendWsEvent: vi.fn(),
+        rememberRequestTarget: vi.fn(),
+        ensurePeerConnection: vi.fn(() => connection),
+        clearPeerReconnectTimer: vi.fn(),
+        attachLocalTracks: vi.fn(async () => undefined),
+        flushPendingRemoteCandidates: vi.fn(async () => undefined),
+        setLastCallPeer: vi.fn(),
+        updateCallStatus: vi.fn(),
+        pushCallLog,
+        closePeer: vi.fn(),
+        shouldInitiateOffer: vi.fn(() => false)
+      });
+    }
+
+    expect(peer.pendingRemoteCandidates).toHaveLength(64);
+    expect(peer.pendingRemoteCandidates[0]?.candidate).toContain("candidate:6");
+    expect(peer.pendingRemoteCandidates[63]?.candidate).toContain("candidate:69");
+    expect(pushCallLog).toHaveBeenCalledWith("call.ice queued overflow <- User 2 (drop oldest)");
+    expect(connection.addIceCandidate).not.toHaveBeenCalled();
+  });
+
   it("blocks target and schedules resync on TargetNotInRoom nack", () => {
     const requestTargetByIdRef = {
       current: new Map([

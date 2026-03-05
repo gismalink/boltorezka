@@ -15,6 +15,8 @@ import {
   markSettingRemoteAnswerPending
 } from "./voiceCallNegotiationState";
 
+const MAX_PENDING_REMOTE_CANDIDATES = 64;
+
 async function preparePeerConnectionForRemoteDescription({
   fromUserId,
   fromUserName,
@@ -242,6 +244,10 @@ export async function handleIncomingSignalEvent({
 
     if (!connection.remoteDescription) {
       if (peer) {
+        if (peer.pendingRemoteCandidates.length >= MAX_PENDING_REMOTE_CANDIDATES) {
+          peer.pendingRemoteCandidates.shift();
+          pushCallLog(`call.ice queued overflow <- ${fromUserName} (drop oldest)`);
+        }
         peer.pendingRemoteCandidates.push(candidate);
         pushCallLog(`call.ice queued <- ${fromUserName} (${peer.pendingRemoteCandidates.length})`);
       }
