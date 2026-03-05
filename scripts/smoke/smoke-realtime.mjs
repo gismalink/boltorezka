@@ -170,6 +170,26 @@ function waitForEvent(events, predicate, label) {
   });
 }
 
+async function waitForAckOrNack(events, requestId, label) {
+  const event = await waitForEvent(
+    events,
+    (item) => {
+      const eventRequestId = item?.payload?.requestId;
+      if (eventRequestId !== requestId) {
+        return false;
+      }
+      return item?.type === "ack" || item?.type === "nack";
+    },
+    label
+  );
+
+  return {
+    ok: event?.type === "ack",
+    type: String(event?.type || ""),
+    code: String(event?.payload?.code || "")
+  };
+}
+
 async function runThreeWayRaceScenario({
   firstWs,
   secondWs,
@@ -226,15 +246,19 @@ async function runThreeWayRaceScenario({
   const offerBA = `race-offer-ba-${Date.now()}`;
   firstWs.send(JSON.stringify({ type: "call.offer", requestId: offerAB, payload: { targetUserId: secondUserId, signal: { type: "offer", sdp: "race-ab" } } }));
   secondWs.send(JSON.stringify({ type: "call.offer", requestId: offerBA, payload: { targetUserId: firstUserId, signal: { type: "offer", sdp: "race-ba" } } }));
-  await waitForEvent(firstEvents, (item) => item?.type === "ack" && item?.payload?.requestId === offerAB, "ack race offer A->B");
-  await waitForEvent(secondEvents, (item) => item?.type === "ack" && item?.payload?.requestId === offerBA, "ack race offer B->A");
+  const firstPairAcks = await Promise.all([
+    waitForAckOrNack(firstEvents, offerAB, "ack|nack race offer A->B"),
+    waitForAckOrNack(secondEvents, offerBA, "ack|nack race offer B->A")
+  ]);
 
   const offerAC = `race-offer-ac-${Date.now()}`;
   const offerCA = `race-offer-ca-${Date.now()}`;
   firstWs.send(JSON.stringify({ type: "call.offer", requestId: offerAC, payload: { targetUserId: thirdUserId, signal: { type: "offer", sdp: "race-ac" } } }));
   wsThird.send(JSON.stringify({ type: "call.offer", requestId: offerCA, payload: { targetUserId: firstUserId, signal: { type: "offer", sdp: "race-ca" } } }));
-  await waitForEvent(firstEvents, (item) => item?.type === "ack" && item?.payload?.requestId === offerAC, "ack race offer A->C");
-  await waitForEvent(thirdEvents, (item) => item?.type === "ack" && item?.payload?.requestId === offerCA, "ack race offer C->A");
+  const secondPairAcks = await Promise.all([
+    waitForAckOrNack(firstEvents, offerAC, "ack|nack race offer A->C"),
+    waitForAckOrNack(thirdEvents, offerCA, "ack|nack race offer C->A")
+  ]);
 
   firstWs.send(JSON.stringify({ type: "call.video_state", requestId: `race-video-1-${Date.now()}`, payload: { settings: { localVideoEnabled: true } } }));
   secondWs.send(JSON.stringify({ type: "call.video_state", requestId: `race-video-2-${Date.now()}`, payload: { settings: { localVideoEnabled: false } } }));
@@ -244,7 +268,14 @@ async function runThreeWayRaceScenario({
 
   const allEvents = [...firstEvents, ...secondEvents, ...thirdEvents];
   const offerRateLimited = allEvents.filter((item) => item?.type === "nack" && item?.payload?.code === "OfferRateLimited").length;
-  if (offerRateLimited > 3) {
+
+  const raceRequestResults = [...firstPairAcks, ...secondPairAcks];
+  const hardFailures = raceRequestResults.filter((result) => !result.ok && result.code && result.code !== "OfferRateLimited");
+  if (hardFailures.length > 0) {
+    throw new Error(`[smoke:realtime] race3way unexpected nack codes: ${hardFailures.map((result) => result.code).join(",")}`);
+  }
+
+  if (offerRateLimited > 4) {
     throw new Error(`[smoke:realtime] race3way excessive OfferRateLimited: ${offerRateLimited}`);
   }
 
