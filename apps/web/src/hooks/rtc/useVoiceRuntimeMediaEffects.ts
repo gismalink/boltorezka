@@ -71,6 +71,86 @@ export function useVoiceRuntimeMediaEffects({
   const lastVideoResyncAtRef = useRef(0);
   const outgoingVideoProcessorRef = useRef<OutgoingVideoTrackHandle | null>(null);
 
+  const buildOutgoingVideoTrack = useCallback((nextRawVideoTrack: MediaStreamTrack | null) => {
+    outgoingVideoProcessorRef.current?.stop();
+    outgoingVideoProcessorRef.current = null;
+
+    if (!nextRawVideoTrack) {
+      return null;
+    }
+
+    const constraints = extractTrackConstraints(getVideoConstraints());
+    const processedVideoHandle = serverVideoEffectType !== "none"
+      ? createProcessedVideoTrack(nextRawVideoTrack, {
+        width: constraints.width,
+        height: constraints.height,
+        fps: constraints.fps,
+        effectType: serverVideoEffectType,
+        strength: serverVideoPixelFxStrength,
+        pixelSize: serverVideoPixelFxPixelSize,
+        gridThickness: serverVideoPixelFxGridThickness,
+        asciiCellSize: serverVideoAsciiCellSize,
+        asciiContrast: serverVideoAsciiContrast,
+        asciiColor: serverVideoAsciiColor
+      })
+      : null;
+
+    if (processedVideoHandle) {
+      outgoingVideoProcessorRef.current = processedVideoHandle;
+    }
+
+    return processedVideoHandle?.track || nextRawVideoTrack;
+  }, [
+    getVideoConstraints,
+    serverVideoEffectType,
+    serverVideoPixelFxStrength,
+    serverVideoPixelFxPixelSize,
+    serverVideoPixelFxGridThickness,
+    serverVideoAsciiCellSize,
+    serverVideoAsciiContrast,
+    serverVideoAsciiColor
+  ]);
+
+  const syncAudioTrackToConnections = useCallback(async (
+    connections: RTCPeerConnection[],
+    nextAudioTrack: MediaStreamTrack,
+    stream: MediaStream
+  ) => {
+    await Promise.all(
+      connections.map(async (connection) => {
+        const sender = findSenderByKind(connection, "audio");
+        if (sender) {
+          await sender.replaceTrack(nextAudioTrack);
+          return;
+        }
+
+        connection.addTrack(nextAudioTrack, stream);
+      })
+    );
+  }, []);
+
+  const syncVideoTrackToConnections = useCallback(async (
+    connections: RTCPeerConnection[],
+    nextVideoTrack: MediaStreamTrack | null,
+    stream: MediaStream
+  ) => {
+    const shouldSendVideo = Boolean(nextVideoTrack && allowVideoStreaming && videoStreamingEnabled);
+
+    await Promise.all(
+      connections.map(async (connection) => {
+        const sender = findSenderByKind(connection, "video");
+        if (sender) {
+          await sender.replaceTrack(shouldSendVideo ? nextVideoTrack : null);
+          return;
+        }
+
+        if (shouldSendVideo && nextVideoTrack) {
+          connection.addTrack(nextVideoTrack, stream);
+        }
+      })
+    );
+  }, [allowVideoStreaming, videoStreamingEnabled]);
+
   const replaceOutgoingAudioTrack = useCallback(async () => {
     const stream = localStreamRef.current;
     if (!stream) {
@@ -290,29 +370,7 @@ export function useVoiceRuntimeMediaEffects({
         return;
       }
 
-      outgoingVideoProcessorRef.current?.stop();
-      outgoingVideoProcessorRef.current = null;
-
-      const constraints = extractTrackConstraints(getVideoConstraints());
-      const processedVideoHandle = serverVideoEffectType !== "none"
-        ? createProcessedVideoTrack(nextRawVideoTrack, {
-          width: constraints.width,
-          height: constraints.height,
-          fps: constraints.fps,
-          effectType: serverVideoEffectType,
-          strength: serverVideoPixelFxStrength,
-          pixelSize: serverVideoPixelFxPixelSize,
-          gridThickness: serverVideoPixelFxGridThickness,
-          asciiCellSize: serverVideoAsciiCellSize,
-          asciiContrast: serverVideoAsciiContrast,
-          asciiColor: serverVideoAsciiColor
-        })
-        : null;
-
-      const nextVideoTrack = processedVideoHandle?.track || nextRawVideoTrack;
-      if (processedVideoHandle) {
-        outgoingVideoProcessorRef.current = processedVideoHandle;
-      }
+      const nextVideoTrack = buildOutgoingVideoTrack(nextRawVideoTrack);
 
       currentVideoTracks.forEach((track) => {
         stream.removeTrack(track);
@@ -321,17 +379,7 @@ export function useVoiceRuntimeMediaEffects({
 
       stream.addTrack(nextVideoTrack);
 
-      await Promise.all(
-        connections.map(async (connection) => {
-          const sender = findSenderByKind(connection, "video");
-          if (sender) {
-            await sender.replaceTrack(nextVideoTrack);
-            return;
-          }
-
-          connection.addTrack(nextVideoTrack, stream);
-        })
-      );
+      await syncVideoTrackToConnections(connections, nextVideoTrack, stream);
 
       onVideoTrackSyncNeeded?.("video-enabled-or-updated");
 
@@ -353,18 +401,12 @@ export function useVoiceRuntimeMediaEffects({
     peersRef,
     allowVideoStreaming,
     videoStreamingEnabled,
-    serverVideoEffectType,
-    serverVideoPixelFxStrength,
-    serverVideoPixelFxPixelSize,
-    serverVideoPixelFxGridThickness,
-    serverVideoAsciiCellSize,
-    serverVideoAsciiContrast,
-    serverVideoAsciiColor,
     selectedVideoInputId,
-    getVideoConstraints,
     setLocalVideoStream,
     onVideoTrackSyncNeeded,
     pushCallLog,
+    buildOutgoingVideoTrack,
+    syncVideoTrackToConnections
   ]);
 
   useEffect(() => {
@@ -416,29 +458,7 @@ export function useVoiceRuntimeMediaEffects({
 
         nextAudioTrack.enabled = !micMuted;
 
-        outgoingVideoProcessorRef.current?.stop();
-        outgoingVideoProcessorRef.current = null;
-
-        const constraints = extractTrackConstraints(getVideoConstraints());
-        const processedVideoHandle = nextRawVideoTrack && serverVideoEffectType !== "none"
-          ? createProcessedVideoTrack(nextRawVideoTrack, {
-            width: constraints.width,
-            height: constraints.height,
-            fps: constraints.fps,
-            effectType: serverVideoEffectType,
-            strength: serverVideoPixelFxStrength,
-            pixelSize: serverVideoPixelFxPixelSize,
-            gridThickness: serverVideoPixelFxGridThickness,
-            asciiCellSize: serverVideoAsciiCellSize,
-            asciiContrast: serverVideoAsciiContrast,
-            asciiColor: serverVideoAsciiColor
-          })
-          : null;
-
-        const nextVideoTrack = processedVideoHandle?.track || nextRawVideoTrack;
-        if (processedVideoHandle) {
-          outgoingVideoProcessorRef.current = processedVideoHandle;
-        }
+        const nextVideoTrack = buildOutgoingVideoTrack(nextRawVideoTrack);
 
         const mergedTracks: MediaStreamTrack[] = [nextAudioTrack];
         if (nextVideoTrack && allowVideoStreaming && videoStreamingEnabled) {
@@ -446,23 +466,9 @@ export function useVoiceRuntimeMediaEffects({
         }
         const mergedStream = new MediaStream(mergedTracks);
 
-        await Promise.all(
-          Array.from(peersRef.current.values()).map(async ({ connection }) => {
-            const audioSender = findSenderByKind(connection, "audio");
-            if (audioSender) {
-              await audioSender.replaceTrack(nextAudioTrack);
-            } else {
-              connection.addTrack(nextAudioTrack, mergedStream);
-            }
-
-            const videoSender = findSenderByKind(connection, "video");
-            if (videoSender) {
-              await videoSender.replaceTrack(nextVideoTrack && videoStreamingEnabled ? nextVideoTrack : null);
-            } else if (nextVideoTrack && allowVideoStreaming && videoStreamingEnabled) {
-              connection.addTrack(nextVideoTrack, mergedStream);
-            }
-          })
-        );
+        const connections = Array.from(peersRef.current.values()).map(({ connection }) => connection);
+        await syncAudioTrackToConnections(connections, nextAudioTrack, mergedStream);
+        await syncVideoTrackToConnections(connections, nextVideoTrack, mergedStream);
 
         localStreamRef.current?.getTracks().forEach((track) => track.stop());
         localStreamRef.current = mergedStream;
@@ -626,5 +632,8 @@ export function useVoiceRuntimeMediaEffects({
     pushCallLog,
     pushToastThrottled,
     t,
+    buildOutgoingVideoTrack,
+    syncAudioTrackToConnections,
+    syncVideoTrackToConnections
   ]);
 }

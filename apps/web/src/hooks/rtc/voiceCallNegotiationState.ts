@@ -1,6 +1,13 @@
 import type { VoicePeerContext } from "./voiceCallTypes";
 import type { OfferCadenceBucket } from "./voiceCallOfferPolicy";
 
+// Negotiation transition model:
+// 1) start offer: makingOffer=true -> offerInFlight=true
+// 2) glare handling may set ignoreOffer=true for local designated offerer path
+// 3) when answer is being applied: isSettingRemoteAnswerPending=true
+// 4) completion path resets volatile flags and records offer cadence timestamps
+// These flags are intentionally independent to represent overlapping async phases.
+
 export function createNegotiationStateDefaults() {
   return {
     makingOffer: false,

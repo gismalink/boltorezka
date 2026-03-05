@@ -22,10 +22,10 @@
   - [x] создание local description и отправка
   - [x] post-send bookkeeping/metrics
 - [x] Вынести обработку очереди candidates из `useVoiceCallRuntime.ts` в отдельный helper/модуль.
-- [ ] Укрупнить связанные media effects в `useVoiceRuntimeMediaEffects.ts`, чтобы уменьшить overlap:
-  - [ ] синхронизация audio track/device
-  - [ ] синхронизация video track/effects
-- [ ] Добавить документацию по переходам в `voiceCallNegotiationState.ts` (жизненный цикл флагов и ожидаемый порядок).
+- [x] Укрупнить связанные media effects в `useVoiceRuntimeMediaEffects.ts`, чтобы уменьшить overlap:
+  - [x] синхронизация audio track/device
+  - [x] синхронизация video track/effects
+- [x] Добавить документацию по переходам в `voiceCallNegotiationState.ts` (жизненный цикл флагов и ожидаемый порядок).
 
 ## Оптимизация И Усиление Надежности
 
