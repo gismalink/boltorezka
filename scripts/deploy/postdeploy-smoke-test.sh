@@ -12,6 +12,7 @@ REDIS_SERVICE="${TEST_REDIS_SERVICE:-boltorezka-redis-test}"
 API_SERVICE="${TEST_API_SERVICE:-boltorezka-api-test}"
 USER_EMAIL="${SMOKE_USER_EMAIL:-smoke-rtc-1@example.test}"
 USER_EMAIL_SECOND="${SMOKE_USER_EMAIL_SECOND:-smoke-rtc-2@example.test}"
+USER_EMAIL_THIRD="${SMOKE_USER_EMAIL_THIRD:-smoke-rtc-3@example.test}"
 SUMMARY_FILE_REL=".deploy/last-smoke-summary.env"
 
 SMOKE_TIMESTAMP_UTC="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
@@ -23,6 +24,8 @@ SMOKE_CHAT_IDEMPOTENCY_HIT_DELTA=0
 SMOKE_SUMMARY_TEXT="health=fail mode=unknown sso=fail realtime=fail delta(nack=0,ack=0,chat=0,idem=0)"
 API_SMOKE_STATUS="skip"
 VERSION_CACHE_STATUS="skip"
+EXTENDED_REALTIME_STATUS="skip"
+JWT_SECRET_CANDIDATE=""
 
 write_summary() {
   mkdir -p .deploy
@@ -35,6 +38,7 @@ write_summary() {
   printf 'SMOKE_ACK_DELTA=%q\n' "$SMOKE_ACK_DELTA" >>"$SUMMARY_FILE_REL"
   printf 'SMOKE_CHAT_SENT_DELTA=%q\n' "$SMOKE_CHAT_SENT_DELTA" >>"$SUMMARY_FILE_REL"
   printf 'SMOKE_CHAT_IDEMPOTENCY_HIT_DELTA=%q\n' "$SMOKE_CHAT_IDEMPOTENCY_HIT_DELTA" >>"$SUMMARY_FILE_REL"
+  printf 'SMOKE_EXTENDED_REALTIME_STATUS=%q\n' "$EXTENDED_REALTIME_STATUS" >>"$SUMMARY_FILE_REL"
   printf 'SMOKE_SUMMARY_TEXT=%q\n' "$SMOKE_SUMMARY_TEXT" >>"$SUMMARY_FILE_REL"
 }
 
@@ -76,6 +80,17 @@ require_test_email() {
     echo "[postdeploy-smoke] set SMOKE_ALLOW_NON_TEST_ACCOUNTS=1 only for explicit exception" >&2
     exit 1
   fi
+}
+
+resolve_user_meta_by_email() {
+  local email="$1"
+
+  if [[ -z "${TEST_POSTGRES_USER:-}" || -z "${TEST_POSTGRES_DB:-}" ]]; then
+    echo "[postdeploy-smoke] TEST_POSTGRES_USER/TEST_POSTGRES_DB are required" >&2
+    exit 1
+  fi
+
+  compose exec -T "$POSTGRES_SERVICE" psql -U "$TEST_POSTGRES_USER" -d "$TEST_POSTGRES_DB" -tAc "select id::text || '|' || coalesce(role,'user') from users where email='${email}' limit 1;"
 }
 
 base64url() {
@@ -136,6 +151,9 @@ require_test_email "$USER_EMAIL" "SMOKE_USER_EMAIL"
 if [[ -n "$USER_EMAIL_SECOND" ]]; then
   require_test_email "$USER_EMAIL_SECOND" "SMOKE_USER_EMAIL_SECOND"
 fi
+if [[ -n "$USER_EMAIL_THIRD" ]]; then
+  require_test_email "$USER_EMAIL_THIRD" "SMOKE_USER_EMAIL_THIRD"
+fi
 
 set -a
 source "$ENV_FILE"
@@ -145,12 +163,7 @@ SMOKE_USER_ID=""
 SMOKE_USER_ROLE=""
 
 if [[ -z "${SMOKE_TEST_BEARER_TOKEN:-}" ]]; then
-  if [[ -z "${TEST_POSTGRES_USER:-}" || -z "${TEST_POSTGRES_DB:-}" ]]; then
-    echo "[postdeploy-smoke] TEST_POSTGRES_USER/TEST_POSTGRES_DB are required for auto-bearer" >&2
-    exit 1
-  fi
-
-  USER_META="$(compose exec -T "$POSTGRES_SERVICE" psql -U "$TEST_POSTGRES_USER" -d "$TEST_POSTGRES_DB" -tAc "select id::text || '|' || coalesce(role,'user') from users where email='${USER_EMAIL}' limit 1;")"
+  USER_META="$(resolve_user_meta_by_email "$USER_EMAIL")"
 
   if [[ -z "$USER_META" ]]; then
     echo "[postdeploy-smoke] cannot resolve smoke user for auto-bearer email=$USER_EMAIL" >&2
@@ -202,18 +215,13 @@ VERSION_CACHE_STATUS="pass"
 if [[ "${SMOKE_REALTIME:-1}" == "0" ]]; then
   echo "[postdeploy-smoke] realtime smoke skipped (SMOKE_REALTIME=0)"
   SMOKE_STATUS="pass"
-  SMOKE_SUMMARY_TEXT="health=pass mode=sso sso=pass api=$API_SMOKE_STATUS version_cache=$VERSION_CACHE_STATUS realtime=skip delta(nack=0,ack=0,chat=0,idem=0)"
+  SMOKE_SUMMARY_TEXT="health=pass mode=sso sso=pass api=$API_SMOKE_STATUS version_cache=$VERSION_CACHE_STATUS realtime=skip extended_realtime=$EXTENDED_REALTIME_STATUS delta(nack=0,ack=0,chat=0,idem=0)"
   exit 0
 fi
 
 if [[ "$AUTO_TICKET" == "1" ]]; then
-  if [[ -z "${TEST_POSTGRES_USER:-}" || -z "${TEST_POSTGRES_DB:-}" ]]; then
-    echo "[postdeploy-smoke] TEST_POSTGRES_USER/TEST_POSTGRES_DB are required for auto-ticket" >&2
-    exit 1
-  fi
-
   if [[ -z "$SMOKE_USER_ID" || -z "$SMOKE_USER_ROLE" ]]; then
-    USER_META="$(compose exec -T "$POSTGRES_SERVICE" psql -U "$TEST_POSTGRES_USER" -d "$TEST_POSTGRES_DB" -tAc "select id::text || '|' || coalesce(role,'user') from users where email='${USER_EMAIL}' limit 1;")"
+    USER_META="$(resolve_user_meta_by_email "$USER_EMAIL")"
     if [[ -z "$USER_META" ]]; then
       echo "[postdeploy-smoke] cannot resolve smoke user for auto-ticket email=$USER_EMAIL" >&2
       exit 1
@@ -257,6 +265,65 @@ CHAT_IDEMPOTENCY_HIT_BEFORE="$(metric_from_hgetall "$METRICS_BEFORE_RAW" "chat_i
 echo "[postdeploy-smoke] smoke:realtime"
 SMOKE_API_URL="$BASE_URL" SMOKE_RECONNECT=1 npm run smoke:realtime
 
+if [[ "${SMOKE_EXTENDED_GATE:-0}" == "1" ]]; then
+  if [[ -z "${SMOKE_TEST_BEARER_TOKEN_SECOND:-}" ]]; then
+    USER_META_SECOND="$(resolve_user_meta_by_email "$USER_EMAIL_SECOND")"
+    if [[ -z "$USER_META_SECOND" ]]; then
+      echo "[postdeploy-smoke] cannot resolve second smoke user for extended gate email=$USER_EMAIL_SECOND" >&2
+      exit 1
+    fi
+
+    if [[ -z "$JWT_SECRET_CANDIDATE" ]]; then
+      JWT_SECRET_CANDIDATE="${JWT_SECRET:-${TEST_JWT_SECRET:-}}"
+      if [[ -z "$JWT_SECRET_CANDIDATE" ]]; then
+        JWT_SECRET_CANDIDATE="$(compose exec -T "$API_SERVICE" printenv JWT_SECRET 2>/dev/null | tr -d '\r' | tr -d '\n')"
+      fi
+    fi
+
+    if [[ -z "$JWT_SECRET_CANDIDATE" ]]; then
+      echo "[postdeploy-smoke] cannot generate SMOKE_TEST_BEARER_TOKEN_SECOND (missing JWT secret)" >&2
+      exit 1
+    fi
+
+    SMOKE_TEST_BEARER_TOKEN_SECOND="$(make_hs256_jwt "$JWT_SECRET_CANDIDATE" "${USER_META_SECOND%%|*}" "${USER_META_SECOND##*|}")"
+    export SMOKE_TEST_BEARER_TOKEN_SECOND
+  fi
+
+  if [[ -z "${SMOKE_TEST_BEARER_TOKEN_THIRD:-}" ]]; then
+    USER_META_THIRD="$(resolve_user_meta_by_email "$USER_EMAIL_THIRD")"
+    if [[ -z "$USER_META_THIRD" ]]; then
+      echo "[postdeploy-smoke] cannot resolve third smoke user for extended gate email=$USER_EMAIL_THIRD" >&2
+      exit 1
+    fi
+
+    if [[ -z "$JWT_SECRET_CANDIDATE" ]]; then
+      JWT_SECRET_CANDIDATE="${JWT_SECRET:-${TEST_JWT_SECRET:-}}"
+      if [[ -z "$JWT_SECRET_CANDIDATE" ]]; then
+        JWT_SECRET_CANDIDATE="$(compose exec -T "$API_SERVICE" printenv JWT_SECRET 2>/dev/null | tr -d '\r' | tr -d '\n')"
+      fi
+    fi
+
+    if [[ -z "$JWT_SECRET_CANDIDATE" ]]; then
+      echo "[postdeploy-smoke] cannot generate SMOKE_TEST_BEARER_TOKEN_THIRD (missing JWT secret)" >&2
+      exit 1
+    fi
+
+    SMOKE_TEST_BEARER_TOKEN_THIRD="$(make_hs256_jwt "$JWT_SECRET_CANDIDATE" "${USER_META_THIRD%%|*}" "${USER_META_THIRD##*|}")"
+    export SMOKE_TEST_BEARER_TOKEN_THIRD
+  fi
+
+  echo "[postdeploy-smoke] smoke:realtime (extended gate)"
+  SMOKE_API_URL="$BASE_URL" \
+    SMOKE_RECONNECT=1 \
+    SMOKE_CALL_SIGNAL=1 \
+    SMOKE_CALL_RACE_3WAY=1 \
+    SMOKE_CALL_CAMERA_TOGGLE_RECONNECT=1 \
+    SMOKE_RACE_STRICT_OFFER_RATE_LIMIT="${SMOKE_RACE_STRICT_OFFER_RATE_LIMIT:-1}" \
+    SMOKE_RACE_OFFER_RATE_LIMIT_STRICT_THRESHOLD="${SMOKE_RACE_OFFER_RATE_LIMIT_STRICT_THRESHOLD:-4}" \
+    npm run smoke:realtime
+  EXTENDED_REALTIME_STATUS="pass"
+fi
+
 echo "[postdeploy-smoke] realtime metrics after"
 METRICS_AFTER_RAW="$(compose exec -T "$REDIS_SERVICE" redis-cli HGETALL "ws:metrics:$DAY" | cat)"
 printf '%s\n' "$METRICS_AFTER_RAW"
@@ -272,6 +339,6 @@ SMOKE_CHAT_SENT_DELTA=$((CHAT_SENT_AFTER - CHAT_SENT_BEFORE))
 SMOKE_CHAT_IDEMPOTENCY_HIT_DELTA=$((CHAT_IDEMPOTENCY_HIT_AFTER - CHAT_IDEMPOTENCY_HIT_BEFORE))
 
 SMOKE_STATUS="pass"
-SMOKE_SUMMARY_TEXT="health=pass mode=sso sso=pass api=$API_SMOKE_STATUS version_cache=$VERSION_CACHE_STATUS realtime=pass delta(nack=$SMOKE_NACK_DELTA,ack=$SMOKE_ACK_DELTA,chat=$SMOKE_CHAT_SENT_DELTA,idem=$SMOKE_CHAT_IDEMPOTENCY_HIT_DELTA)"
+SMOKE_SUMMARY_TEXT="health=pass mode=sso sso=pass api=$API_SMOKE_STATUS version_cache=$VERSION_CACHE_STATUS realtime=pass extended_realtime=$EXTENDED_REALTIME_STATUS delta(nack=$SMOKE_NACK_DELTA,ack=$SMOKE_ACK_DELTA,chat=$SMOKE_CHAT_SENT_DELTA,idem=$SMOKE_CHAT_IDEMPOTENCY_HIT_DELTA)"
 
 echo "[postdeploy-smoke] done"
