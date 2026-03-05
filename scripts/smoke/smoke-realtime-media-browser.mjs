@@ -8,6 +8,8 @@ const timeoutMs = Number(process.env.SMOKE_TIMEOUT_MS || 20000);
 const settleMs = Number(process.env.SMOKE_RTC_MEDIA_SETTLE_MS || 12000);
 const toneFrequencyHz = Number(process.env.SMOKE_RTC_TONE_FREQUENCY_HZ || 440);
 const iceServersCsv = String(process.env.SMOKE_RTC_ICE_SERVERS || "stun:stun.l.google.com:19302,stun:stun1.l.google.com:19302");
+const targetUserIdEnv = String(process.env.SMOKE_RTC_TARGET_USER_ID || "").trim();
+const preferHumanTarget = process.env.SMOKE_RTC_PREFER_HUMAN !== "0";
 
 const tokenA = String(process.env.SMOKE_TEST_BEARER_TOKEN || "").trim();
 const tokenB = String(process.env.SMOKE_TEST_BEARER_TOKEN_SECOND || "").trim();
@@ -81,7 +83,8 @@ async function preparePeerPage({ context, label, ticket }) {
       relayedAnswerCount: 0,
       relayedIceCount: 0,
       joinAcked: false,
-      pendingRemoteCandidates: []
+      pendingRemoteCandidates: [],
+      presentUserIds: new Set()
     };
 
     const waitFor = async (predicate, labelText, timeoutMsValue = timeoutMsInner) => {
@@ -302,6 +305,34 @@ async function preparePeerPage({ context, label, ticket }) {
 
       if (data?.type === "server.ready") {
         state.userId = String(data?.payload?.userId || "").trim();
+        if (state.userId) {
+          state.presentUserIds.add(state.userId);
+        }
+      }
+
+      if (data?.type === "room.presence") {
+        const users = Array.isArray(data?.payload?.users) ? data.payload.users : [];
+        state.presentUserIds.clear();
+        users.forEach((user) => {
+          const userId = String(user?.userId || "").trim();
+          if (userId) {
+            state.presentUserIds.add(userId);
+          }
+        });
+      }
+
+      if (data?.type === "presence.joined") {
+        const userId = String(data?.payload?.userId || "").trim();
+        if (userId) {
+          state.presentUserIds.add(userId);
+        }
+      }
+
+      if (data?.type === "presence.left") {
+        const userId = String(data?.payload?.userId || "").trim();
+        if (userId) {
+          state.presentUserIds.delete(userId);
+        }
       }
 
       if (data?.type === "call.offer") {
@@ -332,10 +363,22 @@ async function preparePeerPage({ context, label, ticket }) {
         relayedOfferCount: state.relayedOfferCount,
         relayedAnswerCount: state.relayedAnswerCount,
         relayedIceCount: state.relayedIceCount,
+        presentUserIds: Array.from(state.presentUserIds),
         joinAcked: state.joinAcked,
         connectionState: state.pc?.connectionState || "new",
         iceConnectionState: state.pc?.iceConnectionState || "new"
       }),
+      waitForRoomPeer: async (excludeUserIds = [], timeoutForPeerMs = timeoutMsInner) => {
+        const excluded = new Set((Array.isArray(excludeUserIds) ? excludeUserIds : []).map((item) => String(item || "").trim()));
+        return waitFor(() => {
+          for (const userId of state.presentUserIds.values()) {
+            if (userId && !excluded.has(userId)) {
+              return userId;
+            }
+          }
+          return "";
+        }, `${labelInner} wait room peer`, timeoutForPeerMs);
+      },
       startCall: async (targetUserId) => {
         state.remoteUserId = String(targetUserId || "").trim();
         const pc = ensurePeerConnection();
@@ -411,6 +454,7 @@ async function preparePeerPage({ context, label, ticket }) {
           relayedIceCount: state.relayedIceCount
         };
       },
+      getPresenceUserIds: () => Array.from(state.presentUserIds),
       closeAll: async () => {
         try {
           state.toneTrack?.stop();
@@ -493,9 +537,32 @@ async function main() {
       throw new Error("[smoke:realtime:media] expected two distinct users in room");
     }
 
-    await pageA.evaluate((targetUserId) => window.__rtcMediaSmoke.startCall(targetUserId), peerB.userId);
+    let targetUserId = peerB.userId;
+    let targetKind = "bot";
+
+    if (targetUserIdEnv) {
+      targetUserId = targetUserIdEnv;
+      targetKind = targetUserId === peerB.userId ? "bot" : "human-explicit";
+    } else if (preferHumanTarget) {
+      const detected = await pageA.evaluate(
+        ({ excludedIds, peerTimeoutMs }) => window.__rtcMediaSmoke.waitForRoomPeer(excludedIds, peerTimeoutMs),
+        {
+          excludedIds: [peerA.userId, peerB.userId],
+          peerTimeoutMs: Math.max(timeoutMs, 90000)
+        }
+      ).catch(() => "");
+
+      if (detected) {
+        targetUserId = String(detected);
+        targetKind = "human-detected";
+      }
+    }
+
+    await pageA.evaluate((targetUserId) => window.__rtcMediaSmoke.startCall(targetUserId), targetUserId);
     await pageA.evaluate(() => window.__rtcMediaSmoke.waitConnected());
-    await pageB.evaluate(() => window.__rtcMediaSmoke.waitConnected());
+    if (targetUserId === peerB.userId) {
+      await pageB.evaluate(() => window.__rtcMediaSmoke.waitConnected());
+    }
 
     await new Promise((resolve) => setTimeout(resolve, Math.max(4000, settleMs)));
 
@@ -504,16 +571,22 @@ async function main() {
     const stateA = await pageA.evaluate(() => window.__rtcMediaSmoke.getState());
     const stateB = await pageB.evaluate(() => window.__rtcMediaSmoke.getState());
 
-    const relayLooksHealthy = (Number(statsA.relayedAnswerCount || 0) >= 1)
-      && (Number(statsB.relayedOfferCount || 0) >= 1)
-      && (Number(statsA.relayedIceCount || 0) >= 1 || Number(statsB.relayedIceCount || 0) >= 1);
+    const isBotToBot = targetUserId === peerB.userId;
 
-    const mediaLooksHealthy = [statsA, statsB].every((item) => (
-      Number(item.outboundAudioBytes || 0) > 0
-      && Number(item.outboundAudioPackets || 0) > 0
-      && Number(item.inboundAudioBytes || 0) > 0
-      && Number(item.inboundAudioPackets || 0) > 0
-    ));
+    const relayLooksHealthy = isBotToBot
+      ? ((Number(statsA.relayedAnswerCount || 0) >= 1)
+        && (Number(statsB.relayedOfferCount || 0) >= 1)
+        && (Number(statsA.relayedIceCount || 0) >= 1 || Number(statsB.relayedIceCount || 0) >= 1))
+      : ((Number(statsA.relayedAnswerCount || 0) >= 1) && (Number(statsA.relayedIceCount || 0) >= 1));
+
+    const mediaLooksHealthy = isBotToBot
+      ? [statsA, statsB].every((item) => (
+        Number(item.outboundAudioBytes || 0) > 0
+        && Number(item.outboundAudioPackets || 0) > 0
+        && Number(item.inboundAudioBytes || 0) > 0
+        && Number(item.inboundAudioPackets || 0) > 0
+      ))
+      : (Number(statsA.outboundAudioBytes || 0) > 0 && Number(statsA.outboundAudioPackets || 0) > 0);
 
     if (!relayLooksHealthy) {
       throw new Error("[smoke:realtime:media] signaling relay is incomplete (offer/answer/ice)");
@@ -531,7 +604,9 @@ async function main() {
       toneFrequencyHz,
       users: {
         peerA: peerA.userId,
-        peerB: peerB.userId
+        peerB: peerB.userId,
+        targetUserId,
+        targetKind
       },
       peerA: {
         state: stateA,
