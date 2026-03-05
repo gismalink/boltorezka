@@ -2,11 +2,16 @@
 # Purpose: Запускает browser RTC media smoke для test-room с токенами smoke-пользователей и авто-получением ws-ticket.
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
+
 BASE_URL="${SMOKE_API_URL:-https://test.boltorezka.gismalink.art}"
 ROOM_SLUG="${SMOKE_ROOM_SLUG:-test-room}"
 SETTLE_MS="${SMOKE_RTC_MEDIA_SETTLE_MS:-480000}"
 TIMEOUT_MS="${SMOKE_TIMEOUT_MS:-120000}"
 AUTH_ENV_FILE="${SMOKE_AUTH_ENV_FILE:-.deploy/smoke-auth-live-a.env}"
+
+cd "$REPO_DIR"
 
 if [[ ! -f "$AUTH_ENV_FILE" ]]; then
   echo "[smoke:realtime:media] missing auth env file: $AUTH_ENV_FILE" >&2
