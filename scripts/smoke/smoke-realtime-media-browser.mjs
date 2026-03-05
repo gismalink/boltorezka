@@ -94,6 +94,9 @@ async function preparePeerPage({ context, label, ticket, toneHz }) {
       relayedIceCount: 0,
       joinAcked: false,
       lastVideoStateBroadcastAt: 0,
+      lastLocalVideoEnabledBroadcast: null,
+      remoteVideoStateByUserId: new Map(),
+      remoteVideoStateTransitionsByUserId: new Map(),
       pendingRemoteCandidates: [],
       presentUserIds: new Set(),
       peerLastSeenAt: new Map(),
@@ -213,16 +216,21 @@ async function preparePeerPage({ context, label, ticket, toneHz }) {
       return ackPromise;
     };
 
-    const broadcastLocalVideoState = async () => {
+    const broadcastLocalVideoState = async (localVideoEnabled = true) => {
       const now = Date.now();
-      if (now - state.lastVideoStateBroadcastAt < 700) {
+      const normalizedEnabled = Boolean(localVideoEnabled);
+      if (
+        now - state.lastVideoStateBroadcastAt < 700
+        && state.lastLocalVideoEnabledBroadcast === normalizedEnabled
+      ) {
         return;
       }
 
       state.lastVideoStateBroadcastAt = now;
+      state.lastLocalVideoEnabledBroadcast = normalizedEnabled;
       await sendEvent("call.video_state", {
         settings: {
-          localVideoEnabled: true
+          localVideoEnabled: normalizedEnabled
         }
       });
     };
@@ -509,6 +517,17 @@ async function preparePeerPage({ context, label, ticket, toneHz }) {
       if (data?.type === "call.ice") {
         handleIncomingIce(data.payload).catch(() => undefined);
       }
+
+      if (data?.type === "call.video_state") {
+        const fromUserId = String(data?.payload?.fromUserId || data?.payload?.userId || "").trim();
+        const localVideoEnabled = data?.payload?.settings?.localVideoEnabled;
+        if (fromUserId && typeof localVideoEnabled === "boolean") {
+          state.remoteVideoStateByUserId.set(fromUserId, localVideoEnabled);
+          const existing = state.remoteVideoStateTransitionsByUserId.get(fromUserId) || [];
+          existing.push(localVideoEnabled);
+          state.remoteVideoStateTransitionsByUserId.set(fromUserId, existing.slice(-8));
+        }
+      }
     });
 
     await waitFor(() => ws.readyState === WebSocket.OPEN, `${labelInner} websocket open`);
@@ -679,6 +698,35 @@ async function preparePeerPage({ context, label, ticket, toneHz }) {
         };
       },
       getPresenceUserIds: () => Array.from(state.presentUserIds),
+      sendLocalVideoState: async (localVideoEnabled) => {
+        await broadcastLocalVideoState(Boolean(localVideoEnabled));
+      },
+      waitForRemoteVideoState: async (fromUserId, expectedEnabled, timeoutForStateMs = timeoutMsInner) => {
+        const normalizedUserId = String(fromUserId || "").trim();
+        const normalizedExpected = Boolean(expectedEnabled);
+        await waitFor(() => {
+          if (!normalizedUserId) {
+            return false;
+          }
+
+          return state.remoteVideoStateByUserId.get(normalizedUserId) === normalizedExpected;
+        }, `${labelInner} remote video state ${normalizedUserId}=${normalizedExpected}`, timeoutForStateMs);
+      },
+      getRemoteVideoStateSnapshot: () => {
+        const byUser = {};
+        state.remoteVideoStateByUserId.forEach((value, key) => {
+          byUser[key] = Boolean(value);
+        });
+        const transitionsByUser = {};
+        state.remoteVideoStateTransitionsByUserId.forEach((value, key) => {
+          transitionsByUser[key] = Array.isArray(value) ? value.map(Boolean) : [];
+        });
+
+        return {
+          byUser,
+          transitionsByUser
+        };
+      },
       closeAll: async () => {
         try {
           state.toneTrack?.stop();
@@ -901,6 +949,44 @@ async function main() {
     const stateA = await pageA.evaluate(() => window.__rtcMediaSmoke.getState());
     const stateB = await pageB.evaluate(() => window.__rtcMediaSmoke.getState());
 
+    await pageA.evaluate(() => window.__rtcMediaSmoke.sendLocalVideoState(false));
+    await pageB.evaluate(
+      ({ fromUserId, timeoutForStateMs }) => window.__rtcMediaSmoke.waitForRemoteVideoState(fromUserId, false, timeoutForStateMs),
+      { fromUserId: peerA.userId, timeoutForStateMs: Math.max(timeoutMs, 12000) }
+    );
+    await pageA.evaluate(() => window.__rtcMediaSmoke.sendLocalVideoState(true));
+    await pageB.evaluate(
+      ({ fromUserId, timeoutForStateMs }) => window.__rtcMediaSmoke.waitForRemoteVideoState(fromUserId, true, timeoutForStateMs),
+      { fromUserId: peerA.userId, timeoutForStateMs: Math.max(timeoutMs, 12000) }
+    );
+
+    await pageB.evaluate(() => window.__rtcMediaSmoke.sendLocalVideoState(false));
+    await pageA.evaluate(
+      ({ fromUserId, timeoutForStateMs }) => window.__rtcMediaSmoke.waitForRemoteVideoState(fromUserId, false, timeoutForStateMs),
+      { fromUserId: peerB.userId, timeoutForStateMs: Math.max(timeoutMs, 12000) }
+    );
+    await pageB.evaluate(() => window.__rtcMediaSmoke.sendLocalVideoState(true));
+    await pageA.evaluate(
+      ({ fromUserId, timeoutForStateMs }) => window.__rtcMediaSmoke.waitForRemoteVideoState(fromUserId, true, timeoutForStateMs),
+      { fromUserId: peerB.userId, timeoutForStateMs: Math.max(timeoutMs, 12000) }
+    );
+
+    const [remoteVideoStateA, remoteVideoStateB] = await Promise.all([
+      pageA.evaluate(() => window.__rtcMediaSmoke.getRemoteVideoStateSnapshot()),
+      pageB.evaluate(() => window.__rtcMediaSmoke.getRemoteVideoStateSnapshot())
+    ]);
+
+    const cameraStateConvergenceOk = Boolean(
+      remoteVideoStateA?.byUser?.[peerB.userId] === true
+      && remoteVideoStateB?.byUser?.[peerA.userId] === true
+      && Array.isArray(remoteVideoStateA?.transitionsByUser?.[peerB.userId])
+      && remoteVideoStateA.transitionsByUser[peerB.userId].includes(false)
+      && remoteVideoStateA.transitionsByUser[peerB.userId].includes(true)
+      && Array.isArray(remoteVideoStateB?.transitionsByUser?.[peerA.userId])
+      && remoteVideoStateB.transitionsByUser[peerA.userId].includes(false)
+      && remoteVideoStateB.transitionsByUser[peerA.userId].includes(true)
+    );
+
     const isBotToBot = !targetUserId || targetUserId === peerA.userId || targetUserId === peerB.userId;
 
     const relayLooksHealthy = isBotToBot
@@ -942,6 +1028,10 @@ async function main() {
       throw new Error("[smoke:realtime:media] RTP audio stats did not grow on one or both peers");
     }
 
+    if (!cameraStateConvergenceOk) {
+      throw new Error("[smoke:realtime:media] camera state convergence failed for call.video_state off/on propagation");
+    }
+
     console.log(JSON.stringify({
       ok: true,
       baseUrl,
@@ -963,6 +1053,9 @@ async function main() {
         peerA: redialSuccessesA,
         peerB: redialSuccessesB
       },
+      cameraStateConvergenceOk,
+      remoteVideoStateA,
+      remoteVideoStateB,
       peerA: {
         state: stateA,
         stats: statsA

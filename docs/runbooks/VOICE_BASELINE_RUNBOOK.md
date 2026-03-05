@@ -62,3 +62,28 @@
 - Любые изменения voice сначала в `test`.
 - В `prod` только после успешного test smoke.
 - `prod` деплоится только из `main`.
+
+## 7) RTC observability signals (Phase 6.3)
+
+Минимальные метрики для replay-path и базовой диагностики:
+
+- `call_initial_state_sent` - сколько replay envelope `call.initial_state` отправлено на `room.join`.
+- `call_initial_state_participants_total` - суммарное число участников, отданных в replay snapshot.
+- `ack_sent`, `nack_sent` - общий транспортный health сигнал WS-контура.
+- `call_signal_sent` - активность offer/answer/ice relay.
+
+Где смотреть:
+
+- Redis hash `ws:metrics:<UTC-day>` на API контуре.
+- Postdeploy summary (`.deploy/last-smoke-summary.env`) теперь содержит delta по replay-path:
+  - `SMOKE_CALL_INITIAL_STATE_SENT_DELTA`
+  - `SMOKE_CALL_INITIAL_STATE_PARTICIPANTS_DELTA`
+
+## 8) Triage for late-join replay regressions
+
+Если появляются симптомы late-join рассинхрона (пустые камеры/неверный initial mic state):
+
+1. Проверить, что `smoke:realtime` проходит с `SMOKE_REQUIRE_INITIAL_STATE_REPLAY=1`.
+2. Сверить, что `call_initial_state_sent` растет во время smoke/join.
+3. Проверить `SMOKE_CALL_INITIAL_STATE_SENT_DELTA` в postdeploy summary (`>0` для realtime gate).
+4. Если envelope отправляется, но UI не сходится: проверить клиентский replay apply path в `WsMessageController` и App state maps merge.

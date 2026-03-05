@@ -19,6 +19,7 @@
 | API/Web contract smoke in postdeploy | included in `deploy:test:smoke` (`smoke:sso` + `smoke:api` + `smoke:web:version-cache` + `smoke:realtime`), bearer auto-generated server-side from smoke user + JWT secret (`JWT_SECRET`/`TEST_JWT_SECRET`/api container env fallback) | Yes |
 | Auto rollback policy (optional) | `AUTO_ROLLBACK_ON_FAIL=1 AUTO_ROLLBACK_SMOKE=1 TEST_REF=origin/<ref> npm run deploy:test:smoke` | Optional |
 | Extended relay smoke | `SMOKE_CALL_SIGNAL=1` flow with 2 ws-ticket | Yes |
+| Initial replay gate (`call.initial_state`) | enabled in postdeploy (`SMOKE_REQUIRE_INITIAL_STATE_REPLAY=1`), fail-fast on missing replay envelope | Yes |
 
 ## 3) GitHub Actions (`test-smoke.yml`)
 
@@ -28,10 +29,13 @@ Workflow: `.github/workflows/test-smoke.yml`
 |---|---|---|
 | `TEST_SMOKE_API_URL` (repo variable) | Target URL for test contour | Optional |
 | `TEST_SMOKE_TEST_BEARER_TOKEN` (repo secret) | Bearer of dedicated smoke test account for protected checks (`telemetry/summary`) | Yes |
+| `TEST_SMOKE_TEST_BEARER_TOKEN_SECOND` / `TEST_SMOKE_TEST_BEARER_TOKEN_THIRD` (repo secrets) | Optional second/third users for extended realtime smoke | Optional |
+| `TEST_SMOKE_EXTENDED_RTC` (repo variable `0/1`) | Toggle extended realtime smoke path in workflow | Optional |
 
 Current CI command:
 
-- `SMOKE_API=1 SMOKE_SSO=1 SMOKE_REALTIME=1 npm run check`
+- `SMOKE_API=1 SMOKE_SSO=1 SMOKE_REALTIME=1 SMOKE_REQUIRE_INITIAL_STATE_REPLAY=1 npm run check`
+- optional extended mode: `SMOKE_CALL_SIGNAL=1 SMOKE_CALL_RACE_3WAY=1` (wired via `TEST_SMOKE_EXTENDED_RTC=1` or manual workflow input `extended_rtc=1`)
 
 ## 4) Contract coverage map
 
@@ -42,6 +46,7 @@ Current CI command:
 | `GET /health` | API smoke / postdeploy smoke |
 | `GET /v1/auth/mode` + SSO redirect | `npm run smoke:sso` |
 | `GET /v1/auth/ws-ticket` + WS connect | `npm run smoke:realtime` |
+| `call.initial_state` replay envelope on `room.join` | `npm run smoke:realtime` (`SMOKE_REQUIRE_INITIAL_STATE_REPLAY=1`) |
 | Web static delivery contract (`web root + assets + api mode`) | `npm run smoke:web:static` (invoked from `smoke:web:e2e`) |
 | `chat.send` ack/nack/idempotency | `npm run smoke:realtime` |
 | `call.offer/reject/hangup` relay | extended realtime smoke (`SMOKE_CALL_SIGNAL=1`) |
