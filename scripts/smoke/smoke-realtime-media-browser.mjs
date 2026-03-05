@@ -549,7 +549,11 @@ async function preparePeerPage({ context, label, ticket, toneHz }) {
         );
       },
       ensureConnectedToRoomPeer: async ({ excludeUserIds = [], preferredTargetUserId = "" } = {}) => {
-        if (isPcConnected()) {
+        const preferred = String(preferredTargetUserId || "").trim();
+        const connectedRemoteUserId = String(state.remoteUserId || "").trim();
+        const shouldRetargetPreferred = Boolean(preferred && connectedRemoteUserId && preferred !== connectedRemoteUserId);
+
+        if (isPcConnected() && !shouldRetargetPreferred) {
           return {
             ok: true,
             connected: true,
@@ -558,7 +562,6 @@ async function preparePeerPage({ context, label, ticket, toneHz }) {
           };
         }
 
-        const preferred = String(preferredTargetUserId || "").trim();
         const selectedTarget = preferred || pickRoomPeer(excludeUserIds);
         if (!selectedTarget) {
           return {
@@ -571,6 +574,7 @@ async function preparePeerPage({ context, label, ticket, toneHz }) {
 
         if (state.remoteUserId && state.remoteUserId !== selectedTarget) {
           closePeerConnection();
+          state.remoteUserId = "";
         }
 
         state.reconnectAttempts += 1;
