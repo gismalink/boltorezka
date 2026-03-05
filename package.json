@@ -11,6 +11,7 @@
     "smoke:api": "node ./scripts/smoke/smoke-api.mjs",
     "smoke:sso": "node ./scripts/smoke/smoke-sso-redirect.mjs",
     "smoke:realtime": "node ./scripts/smoke/smoke-realtime.mjs",
+    "smoke:realtime:media": "node ./scripts/smoke/smoke-realtime-media-browser.mjs",
     "smoke:web:static": "node ./scripts/smoke/smoke-web-static-contract.mjs",
     "smoke:web:version-cache": "node ./scripts/smoke/smoke-web-version-cache.mjs",
     "smoke:web:denied-media": "node ./scripts/smoke/smoke-web-denied-media.mjs",
