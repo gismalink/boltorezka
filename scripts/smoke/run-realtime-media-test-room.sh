@@ -11,6 +11,16 @@ SETTLE_MS="${SMOKE_RTC_MEDIA_SETTLE_MS:-480000}"
 TIMEOUT_MS="${SMOKE_TIMEOUT_MS:-120000}"
 AUTH_ENV_FILE="${SMOKE_AUTH_ENV_FILE:-.deploy/smoke-auth-live-a.env}"
 
+BASE_HOST="$(printf '%s' "$BASE_URL" | sed -E 's#https?://([^/]+).*#\1#')"
+USE_LOCAL_RESOLVE="${SMOKE_USE_LOCAL_RESOLVE:-1}"
+
+resolve_flags=()
+resolver_rule=""
+if [[ "$USE_LOCAL_RESOLVE" == "1" && "$BASE_URL" == https://* && -n "$BASE_HOST" ]]; then
+  resolve_flags=(--resolve "$BASE_HOST:443:127.0.0.1")
+  resolver_rule="MAP $BASE_HOST 127.0.0.1"
+fi
+
 cd "$REPO_DIR"
 
 if [[ ! -f "$AUTH_ENV_FILE" ]]; then
@@ -27,8 +37,8 @@ if [[ -z "${SMOKE_TEST_BEARER_TOKEN:-}" || -z "${SMOKE_TEST_BEARER_TOKEN_SECOND:
   exit 1
 fi
 
-TICKET_PRIMARY="$(curl --retry 5 --retry-delay 1 -fsS -H "Authorization: Bearer $SMOKE_TEST_BEARER_TOKEN" "$BASE_URL/v1/auth/ws-ticket" | jq -r .ticket)"
-TICKET_SECOND="$(curl --retry 5 --retry-delay 1 -fsS -H "Authorization: Bearer $SMOKE_TEST_BEARER_TOKEN_SECOND" "$BASE_URL/v1/auth/ws-ticket" | jq -r .ticket)"
+TICKET_PRIMARY="$(curl --retry 8 --retry-delay 1 -fsS "${resolve_flags[@]}" -H "Authorization: Bearer $SMOKE_TEST_BEARER_TOKEN" "$BASE_URL/v1/auth/ws-ticket" | jq -r .ticket)"
+TICKET_SECOND="$(curl --retry 8 --retry-delay 1 -fsS "${resolve_flags[@]}" -H "Authorization: Bearer $SMOKE_TEST_BEARER_TOKEN_SECOND" "$BASE_URL/v1/auth/ws-ticket" | jq -r .ticket)"
 
 if [[ -z "$TICKET_PRIMARY" || "$TICKET_PRIMARY" == "null" || -z "$TICKET_SECOND" || "$TICKET_SECOND" == "null" ]]; then
   echo "[smoke:realtime:media] failed to resolve ws tickets" >&2
@@ -40,5 +50,6 @@ SMOKE_ROOM_SLUG="$ROOM_SLUG" \
 SMOKE_TIMEOUT_MS="$TIMEOUT_MS" \
 SMOKE_WS_TICKET="$TICKET_PRIMARY" \
 SMOKE_WS_TICKET_SECOND="$TICKET_SECOND" \
+SMOKE_CHROMIUM_HOST_RESOLVE_RULE="$resolver_rule" \
 SMOKE_RTC_MEDIA_SETTLE_MS="$SETTLE_MS" \
 npm run smoke:realtime:media

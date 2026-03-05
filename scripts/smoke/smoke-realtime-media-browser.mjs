@@ -8,6 +8,7 @@ const timeoutMs = Number(process.env.SMOKE_TIMEOUT_MS || 20000);
 const settleMs = Number(process.env.SMOKE_RTC_MEDIA_SETTLE_MS || 12000);
 const toneFrequencyHz = Number(process.env.SMOKE_RTC_TONE_FREQUENCY_HZ || 440);
 const iceServersCsv = String(process.env.SMOKE_RTC_ICE_SERVERS || "stun:stun.l.google.com:19302,stun:stun1.l.google.com:19302");
+const hostResolveRule = String(process.env.SMOKE_CHROMIUM_HOST_RESOLVE_RULE || "").trim();
 const targetUserIdEnv = String(process.env.SMOKE_RTC_TARGET_USER_ID || "").trim();
 
 const tokenA = String(process.env.SMOKE_TEST_BEARER_TOKEN || "").trim();
@@ -516,7 +517,7 @@ async function main() {
       "--use-fake-device-for-media-stream",
       "--use-fake-ui-for-media-stream",
       "--autoplay-policy=no-user-gesture-required"
-    ]
+    ].concat(hostResolveRule ? [`--host-resolver-rules=${hostResolveRule}`] : [])
   });
 
   const contextA = await browser.newContext();
