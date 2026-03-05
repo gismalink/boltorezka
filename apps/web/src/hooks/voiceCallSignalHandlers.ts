@@ -53,7 +53,8 @@ export async function handleIncomingSignalEvent({
   setLastCallPeer,
   updateCallStatus,
   pushCallLog,
-  closePeer
+  closePeer,
+  shouldInitiateOffer
 }: {
   eventType: "call.offer" | "call.answer" | "call.ice";
   payload: CallSignalPayload;
