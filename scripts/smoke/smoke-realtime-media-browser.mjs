@@ -772,6 +772,8 @@ async function main() {
 
     let targetUserId = "";
     let targetKind = "room-participant";
+    let targetCursorA = 0;
+    let targetCursorB = 0;
 
     if (targetUserIdEnv) {
       targetUserId = targetUserIdEnv;
@@ -793,10 +795,44 @@ async function main() {
       }
     }
 
+    const pickNextTarget = ({ candidates, cursor }) => {
+      if (!Array.isArray(candidates) || candidates.length === 0) {
+        return { nextTarget: "", nextCursor: cursor };
+      }
+
+      const normalizedCursor = cursor % candidates.length;
+      return {
+        nextTarget: String(candidates[normalizedCursor] || "").trim(),
+        nextCursor: normalizedCursor + 1
+      };
+    };
+
     const sessionDeadline = Date.now() + Math.max(8000, settleMs);
     let redialSuccessesA = 0;
     let redialSuccessesB = 0;
     while (Date.now() < sessionDeadline) {
+      const [presenceA, presenceB] = await Promise.all([
+        pageA.evaluate(() => window.__rtcMediaSmoke.getPresenceUserIds()),
+        pageB.evaluate(() => window.__rtcMediaSmoke.getPresenceUserIds())
+      ]);
+
+      const targetsA = Array.from(new Set((Array.isArray(presenceA) ? presenceA : [])
+        .map((item) => String(item || "").trim())
+        .filter((userId) => Boolean(userId && userId !== peerA.userId))));
+      const targetsB = Array.from(new Set((Array.isArray(presenceB) ? presenceB : [])
+        .map((item) => String(item || "").trim())
+        .filter((userId) => Boolean(userId && userId !== peerB.userId))));
+
+      const nextA = targetUserIdEnv
+        ? { nextTarget: targetUserIdEnv, nextCursor: targetCursorA }
+        : pickNextTarget({ candidates: targetsA, cursor: targetCursorA });
+      const nextB = targetUserIdEnv
+        ? { nextTarget: targetUserIdEnv, nextCursor: targetCursorB }
+        : pickNextTarget({ candidates: targetsB, cursor: targetCursorB });
+
+      targetCursorA = nextA.nextCursor;
+      targetCursorB = nextB.nextCursor;
+
       const [reconnectA, reconnectB] = await Promise.all([
         pageA.evaluate(
           ({ excludedIds, preferredTargetUserId }) => window.__rtcMediaSmoke.ensureConnectedToRoomPeer({
@@ -805,7 +841,7 @@ async function main() {
           }),
           {
             excludedIds: [peerA.userId],
-            preferredTargetUserId: targetUserId
+            preferredTargetUserId: nextA.nextTarget
           }
         ),
         pageB.evaluate(
@@ -815,7 +851,7 @@ async function main() {
           }),
           {
             excludedIds: [peerB.userId],
-            preferredTargetUserId: targetUserId
+            preferredTargetUserId: nextB.nextTarget
           }
         )
       ]);

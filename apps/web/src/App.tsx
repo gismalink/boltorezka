@@ -148,8 +148,7 @@ export function App() {
     if (value === "none" || value === "pixel8" || value === "ascii") {
       return value;
     }
-    const legacyEnabled = localStorage.getItem("boltorezka_server_video_fx_enabled") !== "0";
-    return legacyEnabled ? "pixel8" : "none";
+    return "none";
   });
   const [serverVideoResolution, setServerVideoResolution] = useState<ServerVideoResolution>(() => {
     const value = localStorage.getItem("boltorezka_server_video_resolution");

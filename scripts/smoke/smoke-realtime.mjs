@@ -614,7 +614,8 @@ async function runLiveRoomBehaviorScenario({ roomSlug, timeoutMs }) {
         muted: false,
         speaking: false,
         audioMuted: false,
-        videoEnabled: false
+        videoEnabled: false,
+        offerCursor: 0
       },
       tonePhase: index * liveRoomTonePhaseSpread
     };
@@ -815,8 +816,14 @@ async function runLiveRoomBehaviorScenario({ roomSlug, timeoutMs }) {
       stats.chatEvents += 1;
     } else if (roll < 0.97) {
       const targets = connected.filter((item) => item.userId !== actor.userId);
-      const target = pickRandom(targets);
-      if (target) {
+      if (targets.length > 0) {
+        const startIndex = actor.state.offerCursor % targets.length;
+        const orderedTargets = targets
+          .slice(startIndex)
+          .concat(targets.slice(0, startIndex));
+        actor.state.offerCursor = (actor.state.offerCursor + 1) % targets.length;
+
+        for (const target of orderedTargets) {
         const offerResult = await sendAckedEvent({
           ws: actor.ws,
           events: actor.events,
@@ -836,6 +843,7 @@ async function runLiveRoomBehaviorScenario({ roomSlug, timeoutMs }) {
           stats.acceptedNacks += 1;
         }
         stats.offerAttempts += 1;
+        }
       }
     } else {
       await performLeaveAndRejoin();
