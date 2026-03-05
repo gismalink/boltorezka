@@ -62,7 +62,7 @@ import type {
   UseVoiceCallRuntimeArgs,
   VoicePeerContext
 } from "./voiceCallTypes";
-import { buildLocalDescriptionAfterIceGathering } from "./voiceCallUtils";
+import { buildLocalDescriptionAfterIceGathering, findSenderByKind, normalizeRtcText } from "./voiceCallUtils";
 import { useVoiceRuntimeMediaEffects } from "./useVoiceRuntimeMediaEffects";
 
 const OFFER_TRACE_EVERY_N = 5;
@@ -101,24 +101,6 @@ export function useVoiceCallRuntime({
   type StartOfferOptions = { iceRestart?: boolean; reason?: OfferReason };
 
   // Core WebRTC orchestration for room calls: peer lifecycle, signaling, reconnects and media sync.
-  const findSenderByKind = useCallback((
-    connection: RTCPeerConnection,
-    kind: "audio" | "video"
-  ) => {
-    const direct = connection.getSenders().find((sender) => sender.track?.kind === kind);
-    if (direct) {
-      return direct;
-    }
-
-    const viaTransceiver = connection.getTransceivers().find((transceiver) => {
-      const senderKind = transceiver.sender.track?.kind;
-      const receiverKind = transceiver.receiver.track?.kind;
-      return senderKind === kind || receiverKind === kind;
-    });
-
-    return viaTransceiver?.sender;
-  }, []);
-
   const [roomVoiceConnected, setRoomVoiceConnected] = useState(false);
   const [connectedPeerUserIds, setConnectedPeerUserIds] = useState<string[]>([]);
   const [connectingPeerUserIds, setConnectingPeerUserIds] = useState<string[]>([]);
@@ -206,7 +188,7 @@ export function useVoiceCallRuntime({
     }
 
     Object.entries(remoteMicStateByUserIdRef.current).forEach(([userId, state]) => {
-      const normalized = String(userId || "").trim();
+      const normalized = normalizeRtcText(userId);
       if (!normalized) {
         return;
       }
@@ -284,8 +266,8 @@ export function useVoiceCallRuntime({
   }, []);
 
   const rememberRequestTarget = useCallback((requestId: string | null, eventType: string, targetUserId: string) => {
-    const normalizedRequestId = String(requestId || "").trim();
-    const normalizedTarget = String(targetUserId || "").trim();
+    const normalizedRequestId = normalizeRtcText(requestId);
+    const normalizedTarget = normalizeRtcText(targetUserId);
     if (!normalizedRequestId || !normalizedTarget) {
       return;
     }
@@ -512,7 +494,7 @@ export function useVoiceCallRuntime({
       findSenderByKind,
       applyAudioQualityToConnection
     });
-  }, [ensureLocalStream, applyAudioQualityToConnection, allowVideoStreaming, findSenderByKind]);
+  }, [ensureLocalStream, applyAudioQualityToConnection, allowVideoStreaming]);
 
   const scheduleReconnect = useCallback((targetUserId: string, trigger: string) => {
     schedulePeerReconnectForTarget({
@@ -539,13 +521,15 @@ export function useVoiceCallRuntime({
     }
 
     const pending = peer.pendingRemoteCandidates.splice(0, peer.pendingRemoteCandidates.length);
-    for (const candidate of pending) {
-      try {
-        await peer.connection.addIceCandidate(new RTCIceCandidate(candidate));
-      } catch (error) {
-        pushCallLog(`call.ice queued handling failed (${targetLabel || targetUserId}): ${(error as Error).message}`);
+    const settled = await Promise.allSettled(
+      pending.map((candidate) => peer.connection.addIceCandidate(new RTCIceCandidate(candidate)))
+    );
+
+    settled.forEach((result) => {
+      if (result.status === "rejected") {
+        pushCallLog(`call.ice queued handling failed (${targetLabel || targetUserId}): ${(result.reason as Error).message}`);
       }
-    }
+    });
 
     pushCallLog(`call.ice queued flushed <- ${targetLabel || targetUserId} (${pending.length})`);
   }, [pushCallLog]);

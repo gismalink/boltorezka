@@ -16,6 +16,28 @@ export function parseLocalCandidateMeta(rawCandidate: string): {
   };
 }
 
+export function normalizeRtcText(value: unknown): string {
+  return String(value || "").trim();
+}
+
+export function findSenderByKind(
+  connection: RTCPeerConnection,
+  kind: "audio" | "video"
+): RTCRtpSender | undefined {
+  const direct = connection.getSenders().find((sender) => sender.track?.kind === kind);
+  if (direct) {
+    return direct;
+  }
+
+  const viaTransceiver = connection.getTransceivers().find((transceiver) => {
+    const senderKind = transceiver.sender.track?.kind;
+    const receiverKind = transceiver.receiver.track?.kind;
+    return senderKind === kind || receiverKind === kind;
+  });
+
+  return viaTransceiver?.sender;
+}
+
 export async function buildLocalDescriptionAfterIceGathering(
   connection: RTCPeerConnection,
   timeoutMs = 1800

@@ -7,6 +7,7 @@ import {
   type OutgoingVideoTrackHandle
 } from "../../utils/videoPixelPipeline";
 import type { VoicePeersRef } from "./voiceCallTypes";
+import { findSenderByKind } from "./voiceCallUtils";
 
 type UseVoiceRuntimeMediaEffectsArgs = {
   localStreamRef: MutableRefObject<MediaStream | null>;
@@ -70,24 +71,6 @@ export function useVoiceRuntimeMediaEffects({
   const lastVideoResyncAtRef = useRef(0);
   const outgoingVideoProcessorRef = useRef<OutgoingVideoTrackHandle | null>(null);
 
-  const findSenderByKind = useCallback((
-    connection: RTCPeerConnection,
-    kind: "audio" | "video"
-  ) => {
-    const direct = connection.getSenders().find((sender) => sender.track?.kind === kind);
-    if (direct) {
-      return direct;
-    }
-
-    const viaTransceiver = connection.getTransceivers().find((transceiver) => {
-      const senderKind = transceiver.sender.track?.kind;
-      const receiverKind = transceiver.receiver.track?.kind;
-      return senderKind === kind || receiverKind === kind;
-    });
-
-    return viaTransceiver?.sender;
-  }, []);
-
   const replaceOutgoingAudioTrack = useCallback(async () => {
     const stream = localStreamRef.current;
     if (!stream) {
@@ -123,7 +106,7 @@ export function useVoiceRuntimeMediaEffects({
     localStreamRef.current = mergedStream;
     setLocalVideoStream(videoTracks.length > 0 ? mergedStream : null);
     return true;
-  }, [localStreamRef, peersRef, getAudioConstraints, micMuted, setLocalVideoStream, findSenderByKind]);
+  }, [localStreamRef, peersRef, getAudioConstraints, micMuted, setLocalVideoStream]);
 
   useEffect(() => {
     if (!localStreamRef.current) {
@@ -382,7 +365,6 @@ export function useVoiceRuntimeMediaEffects({
     setLocalVideoStream,
     onVideoTrackSyncNeeded,
     pushCallLog,
-    findSenderByKind
   ]);
 
   useEffect(() => {
@@ -644,6 +626,5 @@ export function useVoiceRuntimeMediaEffects({
     pushCallLog,
     pushToastThrottled,
     t,
-    findSenderByKind
   ]);
 }
