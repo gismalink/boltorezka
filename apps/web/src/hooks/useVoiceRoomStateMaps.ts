@@ -14,6 +14,8 @@ type UseVoiceRoomStateMapsArgs = {
   remoteMutedPeerUserIds: string[];
   remoteSpeakingPeerUserIds: string[];
   remoteAudioMutedPeerUserIds: string[];
+  initialMicStateByUserIdInCurrentRoom: Record<string, "muted" | "silent" | "speaking">;
+  initialAudioOutputMutedByUserIdInCurrentRoom: Record<string, boolean>;
 };
 
 const LOCAL_SPEAKING_THRESHOLD = 0.055;
@@ -30,7 +32,9 @@ export function useVoiceRoomStateMaps({
   connectedPeerUserIds,
   remoteMutedPeerUserIds,
   remoteSpeakingPeerUserIds,
-  remoteAudioMutedPeerUserIds
+  remoteAudioMutedPeerUserIds,
+  initialMicStateByUserIdInCurrentRoom,
+  initialAudioOutputMutedByUserIdInCurrentRoom
 }: UseVoiceRoomStateMapsArgs) {
   const voiceMicStateByUserIdInCurrentRoom = useMemo(() => {
     const statusByUserId: Record<string, "muted" | "silent" | "speaking"> = {};
@@ -39,6 +43,13 @@ export function useVoiceRoomStateMaps({
       const normalized = String(peerUserId || "").trim();
       if (normalized) {
         statusByUserId[normalized] = "silent";
+      }
+    });
+
+    Object.entries(initialMicStateByUserIdInCurrentRoom).forEach(([peerUserId, status]) => {
+      const normalized = String(peerUserId || "").trim();
+      if (normalized && (status === "muted" || status === "silent" || status === "speaking")) {
+        statusByUserId[normalized] = status;
       }
     });
 
@@ -62,7 +73,7 @@ export function useVoiceRoomStateMaps({
     }
 
     return statusByUserId;
-  }, [connectedPeerUserIds, remoteSpeakingPeerUserIds, remoteMutedPeerUserIds, roomVoiceConnected, userId, micMuted, micTestLevel]);
+  }, [connectedPeerUserIds, initialMicStateByUserIdInCurrentRoom, remoteSpeakingPeerUserIds, remoteMutedPeerUserIds, roomVoiceConnected, userId, micMuted, micTestLevel]);
 
   const voiceAudioOutputMutedByUserIdInCurrentRoom = useMemo(() => {
     const statusByUserId: Record<string, boolean> = {};
@@ -71,6 +82,13 @@ export function useVoiceRoomStateMaps({
       const normalized = String(peerUserId || "").trim();
       if (normalized) {
         statusByUserId[normalized] = false;
+      }
+    });
+
+    Object.entries(initialAudioOutputMutedByUserIdInCurrentRoom).forEach(([peerUserId, muted]) => {
+      const normalized = String(peerUserId || "").trim();
+      if (normalized) {
+        statusByUserId[normalized] = Boolean(muted);
       }
     });
 
@@ -86,7 +104,7 @@ export function useVoiceRoomStateMaps({
     }
 
     return statusByUserId;
-  }, [connectedPeerUserIds, remoteAudioMutedPeerUserIds, roomVoiceConnected, userId, audioMuted]);
+  }, [connectedPeerUserIds, initialAudioOutputMutedByUserIdInCurrentRoom, remoteAudioMutedPeerUserIds, roomVoiceConnected, userId, audioMuted]);
 
   const voiceRtcStateByUserIdInCurrentRoom = useMemo(() => {
     const statusByUserId: Record<string, "disconnected" | "connecting" | "connected"> = {};

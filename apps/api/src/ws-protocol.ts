@@ -8,6 +8,8 @@ import type {
   ChatMessagePayload,
   ChatEditedPayload,
   ChatDeletedPayload,
+  CallInitialStatePayload,
+  CallInitialStateParticipantPayload,
   RoomJoinedPayload,
   RoomLeftPayload,
   RoomPresencePayload,
@@ -469,6 +471,21 @@ export function buildCallVideoStateRelayEnvelope(
     payload: {
       ...buildCallRelayBasePayload(fromUserId, fromUserName, roomId, roomSlug, targetUserId),
       settings
+    }
+  };
+}
+
+export function buildCallInitialStateEnvelope(
+  roomId: string,
+  roomSlug: string,
+  participants: CallInitialStateParticipantPayload[]
+): { type: "call.initial_state"; payload: CallInitialStatePayload } {
+  return {
+    type: "call.initial_state",
+    payload: {
+      roomId,
+      roomSlug,
+      participants
     }
   };
 }

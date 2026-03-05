@@ -3,10 +3,16 @@
 Этот roadmap хранит только ссылки на отдельные плановые/канонические документы.
 Детали реализации и выполненные инкременты ведутся в `docs/status/FEATURE_LOG.md`.
 
+Последняя синхронизация: `2026-03-06`.
+
 ## Open workstreams
 
+- RTC stability hardening (active): `docs/status/RTC_STABILITY_ROADMAP.md`.
 - Phase 5 (iOS/macOS kickoff scope): `docs/plans/PHASE5_IOS_MACOS_SCOPE_NOTE.md`.
-- Legacy static deprecation: `docs/runbooks/LEGACY_PUBLIC_DEPRECATION_PLAN.md`.
+
+## Recently completed
+
+- Legacy static deprecation (Phase D): `docs/runbooks/LEGACY_PUBLIC_DEPRECATION_PLAN.md`.
 
 ### Phase 5 — iOS & macOS (open)
 
@@ -21,11 +27,17 @@
 
 ## Execution plan (open items only)
 
-- [x] Legacy deprecation — Phase D: подготовить decommission change-set для сворачивания runtime-coupling API/static после стабилизации cutover.
-- [x] Legacy deprecation — Phase D: провести test rehearsal decommission + rollback по runbook и зафиксировать evidence.
-- [x] Legacy deprecation — Phase D: после стабилизации обновить финальные runbooks/contracts/release note по итоговому статусу deprecation.
+- [x] #6.1 RTC plan Phase 1: canonical media-state + `call.initial_state` replay в server/client контрактах.
+- [ ] #6.2 RTC plan Phase 2: negotiation manager + offer fairness queue + stable defaults.
+- [ ] #6.3 RTC plan Phase 3-4: RTC observability + smoke/postdeploy gates.
 - [ ] #6 Выполнить hardening batch для Phase 6: reconnect/failure сценарии + security review checklist с evidence.
 - [ ] #7 Сформировать финальный runbook bundle (`deploy/smoke/rollback/incident response`) и синхронизировать docs index.
+
+## Sequencing decision (2026-03-06)
+
+- Выбран путь: сразу стартуем `docs/status/RTC_STABILITY_ROADMAP.md` с Phase 1.
+- Пункты `#6` и `#7` не откладываются, но идут как параллельный supporting workstream и закрываются по мере накопления evidence из RTC hardening.
+- Политика релиза не меняется: `test` first, `prod` только после явного подтверждения.
 
 ## Canonical plans & policies
 

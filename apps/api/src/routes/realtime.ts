@@ -7,6 +7,7 @@ import {
   buildRoomsPresenceEnvelope,
   asKnownWsIncomingEnvelope,
   buildAckEnvelope,
+  buildCallInitialStateEnvelope,
   buildCallMicStateRelayEnvelope,
   buildCallSignalRelayEnvelope,
   buildCallTerminalRelayEnvelope,
@@ -49,6 +50,13 @@ type CanJoinRoomResult =
 type RelayOutcome = {
   ok: boolean;
   relayedCount: number;
+};
+
+type CanonicalMediaState = {
+  muted: boolean;
+  speaking: boolean;
+  audioMuted: boolean;
+  localVideoEnabled: boolean;
 };
 
 const CALL_SIGNAL_MIN_BYTES = 2;
@@ -217,6 +225,32 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
   const socketState = new WeakMap<WebSocket, SocketState>();
   const lastCallOfferByPair = new Map<string, number>();
   const wsCallDebugEnabled = process.env.WS_CALL_DEBUG === "1";
+  const mediaStateByRoomUserKey = new Map<string, CanonicalMediaState>();
+
+  const mediaStateKey = (roomId: string, userId: string) => `${roomId}:${userId}`;
+
+  const setCanonicalMediaState = (
+    roomId: string,
+    userId: string,
+    patch: Partial<CanonicalMediaState>
+  ) => {
+    const key = mediaStateKey(roomId, userId);
+    const current = mediaStateByRoomUserKey.get(key) || {
+      muted: false,
+      speaking: false,
+      audioMuted: false,
+      localVideoEnabled: false
+    };
+
+    mediaStateByRoomUserKey.set(key, {
+      ...current,
+      ...patch
+    });
+  };
+
+  const clearCanonicalMediaState = (roomId: string, userId: string) => {
+    mediaStateByRoomUserKey.delete(mediaStateKey(roomId, userId));
+  };
 
   const isCallOfferRateLimited = (fromUserId: string, targetUserId: string): boolean => {
     const now = Date.now();
@@ -333,6 +367,48 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
     return users;
   };
 
+  const getCallInitialStateParticipants = (roomId: string) => {
+    const presenceByUserId = new Map<string, string>();
+    for (const user of getRoomPresence(roomId)) {
+      presenceByUserId.set(user.userId, user.userName);
+    }
+
+    const participants: Array<{
+      userId: string;
+      userName: string;
+      mic: { muted: boolean; speaking: boolean; audioMuted: boolean };
+      video: { localVideoEnabled: boolean };
+    }> = [];
+
+    const prefix = `${roomId}:`;
+    for (const [key, state] of mediaStateByRoomUserKey.entries()) {
+      if (!key.startsWith(prefix)) {
+        continue;
+      }
+
+      const userId = key.slice(prefix.length);
+      const userName = presenceByUserId.get(userId);
+      if (!userName) {
+        continue;
+      }
+
+      participants.push({
+        userId,
+        userName,
+        mic: {
+          muted: state.muted,
+          speaking: state.speaking,
+          audioMuted: state.audioMuted
+        },
+        video: {
+          localVideoEnabled: state.localVideoEnabled
+        }
+      });
+    }
+
+    return participants;
+  };
+
   const getAllRoomsPresence = () => {
     const result: Array<{ roomId: string; roomSlug: string; users: Array<{ userId: string; userName: string }> }> = [];
 
@@ -417,6 +493,7 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
       const previousRoomSlug = state.roomSlug;
 
       detachRoomSocket(previousRoomId, socket);
+      clearCanonicalMediaState(previousRoomId, state.userId);
       state.roomId = null;
       state.roomSlug = null;
       state.roomKind = null;
@@ -725,6 +802,7 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
 
                 if (state.roomId) {
                   detachRoomSocket(state.roomId, connection);
+                  clearCanonicalMediaState(state.roomId, state.userId);
                   broadcastRoom(
                     state.roomId,
                     buildPresenceLeftEnvelope(state.userId, state.userName, state.roomSlug, 0),
@@ -770,6 +848,15 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
                   )
                 );
 
+                sendJson(
+                  connection,
+                  buildCallInitialStateEnvelope(
+                    joinResult.room.id,
+                    joinResult.room.slug,
+                    getCallInitialStateParticipants(joinResult.room.id)
+                  )
+                );
+
                 broadcastRoom(
                   joinResult.room.id,
                   buildPresenceJoinedEnvelope(
@@ -796,6 +883,7 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
                 const previousRoomSlug = state.roomSlug;
 
                 detachRoomSocket(previousRoomId, connection);
+                clearCanonicalMediaState(previousRoomId, state.userId);
                 state.roomId = null;
                 state.roomSlug = null;
                 state.roomKind = null;
@@ -869,6 +957,7 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
 
                   kickedUserName = targetState.userName || kickedUserName;
                   detachRoomSocket(targetRoom.id, targetSocket);
+                  clearCanonicalMediaState(targetRoom.id, targetUserId);
                   targetState.roomId = null;
                   targetState.roomSlug = null;
                   targetState.roomKind = null;
@@ -1370,6 +1459,12 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
               const speaking = typeof speakingRaw === "boolean" ? speakingRaw : undefined;
               const audioMuted = typeof audioMutedRaw === "boolean" ? audioMutedRaw : undefined;
 
+              setCanonicalMediaState(state.roomId, state.userId, {
+                muted: mutedRaw,
+                speaking: speaking ?? false,
+                audioMuted: audioMuted ?? false
+              });
+
               const targetUserId = normalizeRequestId(getPayloadString(payload, "targetUserId", 128)) || null;
               logCallDebug("call mic_state received", {
                 eventType,
@@ -1460,6 +1555,14 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
               }
 
               const targetUserId = normalizeRequestId(getPayloadString(payload, "targetUserId", 128)) || null;
+
+              const localVideoEnabledRaw = (settingsRaw as Record<string, unknown>).localVideoEnabled;
+              if (typeof localVideoEnabledRaw === "boolean") {
+                setCanonicalMediaState(state.roomId, state.userId, {
+                  localVideoEnabled: localVideoEnabledRaw
+                });
+              }
+
               const relayEnvelope = buildCallVideoStateRelayEnvelope(
                 knownMessage.type,
                 state.userId,
@@ -1524,6 +1627,7 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
 
           if (state.roomId) {
             detachRoomSocket(state.roomId, connection);
+            clearCanonicalMediaState(state.roomId, state.userId);
             broadcastRoom(
               state.roomId,
               buildPresenceLeftEnvelope(

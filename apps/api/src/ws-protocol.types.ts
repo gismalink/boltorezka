@@ -206,3 +206,22 @@ export type CallMicStateRelayPayload = CallRelayBasePayload & {
 export type CallVideoStateRelayPayload = CallRelayBasePayload & {
   settings: Record<string, unknown>;
 };
+
+export type CallInitialStateParticipantPayload = {
+  userId: string;
+  userName: string;
+  mic: {
+    muted: boolean;
+    speaking: boolean;
+    audioMuted: boolean;
+  };
+  video: {
+    localVideoEnabled: boolean;
+  };
+};
+
+export type CallInitialStatePayload = {
+  roomId: string;
+  roomSlug: string;
+  participants: CallInitialStateParticipantPayload[];
+};

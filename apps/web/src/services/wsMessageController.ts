@@ -44,6 +44,23 @@ type WsMessageControllerOptions = {
       settings?: Record<string, unknown>;
     }
   ) => void;
+  onCallInitialState?: (
+    payload: {
+      roomSlug?: string;
+      participants?: Array<{
+        userId?: string;
+        userName?: string;
+        mic?: {
+          muted?: boolean;
+          speaking?: boolean;
+          audioMuted?: boolean;
+        };
+        video?: {
+          localVideoEnabled?: boolean;
+        };
+      }>;
+    }
+  ) => void;
   onAudioQualityUpdated?: (
     payload: {
       scope?: string;
@@ -298,6 +315,92 @@ export class WsMessageController {
     });
   }
 
+  private handleCallInitialState(message: WsIncoming): void {
+    const roomSlug = this.asTrimmedString(message.payload?.roomSlug) || undefined;
+    const participants: unknown[] = Array.isArray(message.payload?.participants)
+      ? message.payload?.participants
+      : [];
+
+    const normalizedParticipants: Array<{
+      userId?: string;
+      userName?: string;
+      mic?: { muted?: boolean; speaking?: boolean; audioMuted?: boolean };
+      video?: { localVideoEnabled?: boolean };
+    }> = [];
+
+    for (const item of participants) {
+      if (!item || typeof item !== "object") {
+        continue;
+      }
+
+      const participant = item as {
+        userId?: unknown;
+        userName?: unknown;
+        mic?: { muted?: unknown; speaking?: unknown; audioMuted?: unknown };
+        video?: { localVideoEnabled?: unknown };
+      };
+
+      normalizedParticipants.push({
+        userId: this.asTrimmedString(participant.userId) || undefined,
+        userName: this.asTrimmedString(participant.userName) || undefined,
+        mic: {
+          muted: typeof participant.mic?.muted === "boolean" ? participant.mic.muted : undefined,
+          speaking: typeof participant.mic?.speaking === "boolean" ? participant.mic.speaking : undefined,
+          audioMuted: typeof participant.mic?.audioMuted === "boolean" ? participant.mic.audioMuted : undefined
+        },
+        video: {
+          localVideoEnabled:
+            typeof participant.video?.localVideoEnabled === "boolean"
+              ? participant.video.localVideoEnabled
+              : undefined
+        }
+      });
+    }
+
+    this.options.onCallInitialState?.({
+      roomSlug,
+      participants: normalizedParticipants
+    });
+
+    participants.forEach((item) => {
+      if (!item || typeof item !== "object") {
+        return;
+      }
+
+      const participant = item as {
+        userId?: unknown;
+        userName?: unknown;
+        mic?: { muted?: unknown; speaking?: unknown; audioMuted?: unknown };
+        video?: { localVideoEnabled?: unknown };
+      };
+
+      const fromUserId = this.asTrimmedString(participant.userId) || undefined;
+      const fromUserName = this.asTrimmedString(participant.userName) || undefined;
+
+      this.options.onCallMicState?.({
+        fromUserId,
+        fromUserName,
+        muted: typeof participant.mic?.muted === "boolean" ? participant.mic.muted : undefined,
+        speaking: typeof participant.mic?.speaking === "boolean" ? participant.mic.speaking : undefined,
+        audioMuted: typeof participant.mic?.audioMuted === "boolean" ? participant.mic.audioMuted : undefined
+      });
+
+      this.options.onCallVideoState?.({
+        fromUserId,
+        fromUserName,
+        roomSlug,
+        settings: {
+          localVideoEnabled:
+            typeof participant.video?.localVideoEnabled === "boolean"
+              ? participant.video.localVideoEnabled
+              : false
+        }
+      });
+    });
+
+    this.options.pushCallLog(`call.initial_state replay (${participants.length})`);
+  }
+
   private handleRoomPresence(message: WsIncoming): void {
     const roomSlug = this.asTrimmedString(message.payload?.roomSlug);
     if (!roomSlug) {
@@ -400,6 +503,9 @@ export class WsMessageController {
         return;
       case "call.video_state":
         this.handleCallVideoState(message);
+        return;
+      case "call.initial_state":
+        this.handleCallInitialState(message);
         return;
       case "room.joined":
         this.options.setRoomSlug(String(message.payload?.roomSlug || ""));

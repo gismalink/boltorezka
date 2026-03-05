@@ -128,6 +128,8 @@ export function App() {
   const [selectedVideoInputId, setSelectedVideoInputId] = useState<string>(() => localStorage.getItem("boltorezka_selected_video_input_id") || "default");
   const [cameraEnabled, setCameraEnabled] = useState(false);
   const [voiceCameraEnabledByUserIdInCurrentRoom, setVoiceCameraEnabledByUserIdInCurrentRoom] = useState<Record<string, boolean>>({});
+  const [voiceInitialMicStateByUserIdInCurrentRoom, setVoiceInitialMicStateByUserIdInCurrentRoom] = useState<Record<string, "muted" | "silent" | "speaking">>({});
+  const [voiceInitialAudioOutputMutedByUserIdInCurrentRoom, setVoiceInitialAudioOutputMutedByUserIdInCurrentRoom] = useState<Record<string, boolean>>({});
   const [selectedInputProfile, setSelectedInputProfile] = useState<InputProfile>("custom");
   const [voiceSettingsPanel, setVoiceSettingsPanel] = useState<VoiceSettingsPanel>(null);
   const [mediaDevicesState, setMediaDevicesState] = useState<MediaDevicesState>("ready");
@@ -469,6 +471,8 @@ export function App() {
 
   useEffect(() => {
     setVoiceCameraEnabledByUserIdInCurrentRoom({});
+    setVoiceInitialMicStateByUserIdInCurrentRoom({});
+    setVoiceInitialAudioOutputMutedByUserIdInCurrentRoom({});
   }, [roomSlug]);
 
   useEffect(() => {
@@ -685,7 +689,9 @@ export function App() {
     connectedPeerUserIds,
     remoteMutedPeerUserIds,
     remoteSpeakingPeerUserIds,
-    remoteAudioMutedPeerUserIds
+    remoteAudioMutedPeerUserIds,
+    initialMicStateByUserIdInCurrentRoom: voiceInitialMicStateByUserIdInCurrentRoom,
+    initialAudioOutputMutedByUserIdInCurrentRoom: voiceInitialAudioOutputMutedByUserIdInCurrentRoom
   });
 
   const effectiveVoiceCameraEnabledByUserIdInCurrentRoom = useMemo(() => {
@@ -888,6 +894,52 @@ export function App() {
     handleIncomingVideoPolicyState(payload);
   }, [handleIncomingRtcVideoState, handleIncomingVideoPolicyState]);
 
+  const handleIncomingInitialCallState = useCallback((payload: {
+    roomSlug?: string;
+    participants?: Array<{
+      userId?: string;
+      userName?: string;
+      mic?: {
+        muted?: boolean;
+        speaking?: boolean;
+        audioMuted?: boolean;
+      };
+      video?: {
+        localVideoEnabled?: boolean;
+      };
+    }>;
+  }) => {
+    const payloadRoomSlug = String(payload.roomSlug || "").trim();
+    if (payloadRoomSlug && payloadRoomSlug !== roomSlugRef.current) {
+      return;
+    }
+
+    const participants = Array.isArray(payload.participants) ? payload.participants : [];
+    const nextMicState: Record<string, "muted" | "silent" | "speaking"> = {};
+    const nextAudioMutedState: Record<string, boolean> = {};
+    const nextCameraState: Record<string, boolean> = {};
+
+    participants.forEach((participant) => {
+      const userId = String(participant?.userId || "").trim();
+      if (!userId) {
+        return;
+      }
+
+      const micMuted = participant?.mic?.muted === true;
+      const micSpeaking = participant?.mic?.speaking === true;
+      nextMicState[userId] = micMuted ? "muted" : micSpeaking ? "speaking" : "silent";
+      nextAudioMutedState[userId] = participant?.mic?.audioMuted === true;
+      nextCameraState[userId] = participant?.video?.localVideoEnabled === true;
+    });
+
+    setVoiceInitialMicStateByUserIdInCurrentRoom(nextMicState);
+    setVoiceInitialAudioOutputMutedByUserIdInCurrentRoom(nextAudioMutedState);
+    setVoiceCameraEnabledByUserIdInCurrentRoom((prev) => ({
+      ...prev,
+      ...nextCameraState
+    }));
+  }, []);
+
   /** Syncs audio-quality updates from realtime into top-level room state stores. */
   const handleAudioQualityUpdated = useCallback((payload: {
     scope?: unknown;
@@ -1007,6 +1059,8 @@ export function App() {
     setRoomsPresenceBySlug({});
     setRoomsPresenceDetailsBySlug({});
     setVoiceCameraEnabledByUserIdInCurrentRoom({});
+    setVoiceInitialMicStateByUserIdInCurrentRoom({});
+    setVoiceInitialAudioOutputMutedByUserIdInCurrentRoom({});
     setTelemetrySummary(null);
     setServerAudioQuality("standard");
     setServerAudioQualitySaving(false);
@@ -1073,6 +1127,7 @@ export function App() {
     onCallTerminal: handleIncomingTerminal,
     onCallMicState: handleIncomingMicState,
     onCallVideoState: handleIncomingVideoState,
+    onCallInitialState: handleIncomingInitialCallState,
     onCallNack: handleCallNack,
     onAudioQualityUpdated: handleAudioQualityUpdated
   });
@@ -1097,6 +1152,8 @@ export function App() {
     if (wsState !== "connected") {
       setRoomsPresenceBySlug({});
       setRoomsPresenceDetailsBySlug({});
+      setVoiceInitialMicStateByUserIdInCurrentRoom({});
+      setVoiceInitialAudioOutputMutedByUserIdInCurrentRoom({});
       return;
     }
 

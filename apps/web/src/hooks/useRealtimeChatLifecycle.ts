@@ -52,6 +52,23 @@ type UseRealtimeChatLifecycleArgs = {
       settings?: Record<string, unknown>;
     }
   ) => void;
+  onCallInitialState?: (
+    payload: {
+      roomSlug?: string;
+      participants?: Array<{
+        userId?: string;
+        userName?: string;
+        mic?: {
+          muted?: boolean;
+          speaking?: boolean;
+          audioMuted?: boolean;
+        };
+        video?: {
+          localVideoEnabled?: boolean;
+        };
+      }>;
+    }
+  ) => void;
   onCallNack?: (
     payload: { requestId: string; eventType: string; code: string; message: string }
   ) => void;
@@ -96,6 +113,7 @@ export function useRealtimeChatLifecycle({
   onCallTerminal,
   onCallMicState,
   onCallVideoState,
+  onCallInitialState,
   onCallNack,
   onAudioQualityUpdated
 }: UseRealtimeChatLifecycleArgs) {
@@ -103,6 +121,7 @@ export function useRealtimeChatLifecycle({
   const onCallTerminalRef = useRef(onCallTerminal);
   const onCallMicStateRef = useRef(onCallMicState);
   const onCallVideoStateRef = useRef(onCallVideoState);
+  const onCallInitialStateRef = useRef(onCallInitialState);
   const onCallNackRef = useRef(onCallNack);
   const onAudioQualityUpdatedRef = useRef(onAudioQualityUpdated);
 
@@ -121,6 +140,10 @@ export function useRealtimeChatLifecycle({
   useEffect(() => {
     onCallVideoStateRef.current = onCallVideoState;
   }, [onCallVideoState]);
+
+  useEffect(() => {
+    onCallInitialStateRef.current = onCallInitialState;
+  }, [onCallInitialState]);
 
   useEffect(() => {
     onCallNackRef.current = onCallNack;
@@ -169,6 +192,7 @@ export function useRealtimeChatLifecycle({
       onCallTerminal: (...args) => onCallTerminalRef.current?.(...args),
       onCallMicState: (...args) => onCallMicStateRef.current?.(...args),
       onCallVideoState: (...args) => onCallVideoStateRef.current?.(...args),
+      onCallInitialState: (...args) => onCallInitialStateRef.current?.(...args),
       onCallNack: (...args) => onCallNackRef.current?.(...args),
       onAudioQualityUpdated: (...args) => onAudioQualityUpdatedRef.current?.(...args)
     });
