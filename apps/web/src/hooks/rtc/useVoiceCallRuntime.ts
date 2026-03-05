@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { AudioQuality, PresenceMember } from "../../domain";
+import type { PresenceMember } from "../../domain";
 import {
   decrementVoiceCounter,
   incrementVoiceCounter,
@@ -40,6 +40,14 @@ import {
   disposeVoicePeerContext
 } from "./voiceCallPeerLifecycle";
 import {
+  applyAudioQualityToPeerConnection,
+  attachLocalTracksForRtc,
+  buildAudioConstraints,
+  buildVideoConstraints,
+  ensureLocalStreamForRtc,
+  releaseLocalStreamForRtc
+} from "./voiceCallLocalMedia";
+import {
   clearPeerReconnectTimerForTarget,
   clearPeerStatsTimerForTarget,
   schedulePeerReconnectForTarget,
@@ -56,20 +64,6 @@ import type {
 } from "./voiceCallTypes";
 import { buildLocalDescriptionAfterIceGathering } from "./voiceCallUtils";
 import { useVoiceRuntimeMediaEffects } from "./useVoiceRuntimeMediaEffects";
-
-const AUDIO_QUALITY_MAX_BITRATE: Record<AudioQuality, number> = {
-  retro: 12000,
-  low: 24000,
-  standard: 40000,
-  high: 64000
-};
-
-const AUDIO_QUALITY_SAMPLE_RATE: Record<AudioQuality, number> = {
-  retro: 12000,
-  low: 16000,
-  standard: 24000,
-  high: 48000
-};
 
 const OFFER_TRACE_EVERY_N = 5;
 const OFFER_TRACE_MIN_GAP_MS = 30000;
@@ -324,77 +318,32 @@ export function useVoiceCallRuntime({
   }, [clearRoomTargetsResyncTimer]);
 
   const getAudioConstraints = useCallback((): MediaTrackConstraints => {
-    const sampleRate = AUDIO_QUALITY_SAMPLE_RATE[serverAudioQuality] || AUDIO_QUALITY_SAMPLE_RATE.standard;
-    const base: MediaTrackConstraints = {
-      echoCancellation: true,
-      noiseSuppression: true,
-      autoGainControl: true,
-      sampleRate: { ideal: sampleRate },
-      channelCount: { ideal: serverAudioQuality === "high" ? 2 : 1 }
-    };
-
-    if (selectedInputId && selectedInputId !== "default") {
-      return {
-        ...base,
-        deviceId: { exact: selectedInputId }
-      };
-    }
-
-    return base;
+    return buildAudioConstraints({
+      selectedInputId,
+      serverAudioQuality
+    });
   }, [selectedInputId, serverAudioQuality]);
 
   const getVideoConstraints = useCallback((): MediaTrackConstraints | false => {
-    if (!allowVideoStreaming || !videoStreamingEnabled) {
-      return false;
-    }
-
-    const [width, height] = serverVideoResolution.split("x").map((item) => Number(item));
-
-    if (selectedVideoInputId && selectedVideoInputId !== "default") {
-      return {
-        width: { ideal: width || 320 },
-        height: { ideal: height || 240 },
-        frameRate: { ideal: serverVideoFps, max: serverVideoFps },
-        deviceId: { exact: selectedVideoInputId }
-      };
-    }
-
-    return {
-      width: { ideal: width || 320 },
-      height: { ideal: height || 240 },
-      frameRate: { ideal: serverVideoFps, max: serverVideoFps }
-    };
+    return buildVideoConstraints({
+      allowVideoStreaming,
+      videoStreamingEnabled,
+      selectedVideoInputId,
+      serverVideoResolution,
+      serverVideoFps
+    });
   }, [allowVideoStreaming, videoStreamingEnabled, selectedVideoInputId, serverVideoResolution, serverVideoFps]);
 
   const applyAudioQualityToConnection = useCallback(async (
     connection: RTCPeerConnection,
     targetLabel: string
   ) => {
-    const maxBitrate = AUDIO_QUALITY_MAX_BITRATE[serverAudioQuality] || AUDIO_QUALITY_MAX_BITRATE.standard;
-    const audioSenders = connection
-      .getSenders()
-      .filter((sender) => sender.track?.kind === "audio");
-
-    await Promise.all(
-      audioSenders.map(async (sender) => {
-        try {
-          const params = sender.getParameters();
-          const encodings = Array.isArray(params.encodings) && params.encodings.length > 0
-            ? params.encodings
-            : [{}];
-
-          encodings[0] = {
-            ...encodings[0],
-            maxBitrate
-          };
-
-          params.encodings = encodings;
-          await sender.setParameters(params);
-        } catch (error) {
-          pushCallLog(`audio quality apply skipped (${targetLabel}): ${(error as Error).message}`);
-        }
-      })
-    );
+    await applyAudioQualityToPeerConnection({
+      connection,
+      targetLabel,
+      serverAudioQuality,
+      pushCallLog
+    });
   }, [serverAudioQuality, pushCallLog]);
 
   const applyRemoteAudioOutput = useCallback(async (element: HTMLAudioElement) => {
@@ -520,15 +469,10 @@ export function useVoiceCallRuntime({
   }, [audioMuted, applyRemoteAudioOutput, pushCallLog, shouldInitiateOffer]);
 
   const releaseLocalStream = useCallback(() => {
-    if (!localStreamRef.current) {
-      return;
-    }
-
-    localStreamRef.current.getTracks().forEach((track) => track.stop());
-    localStreamRef.current = null;
-    setLocalVideoStream(null);
-    decrementVoiceCounter("runtimeLocalStreams");
-    logVoiceDiagnostics("runtime local stream released");
+    releaseLocalStreamForRtc({
+      localStreamRef,
+      setLocalVideoStream
+    });
   }, []);
 
   const closePeer = useCallback((targetUserId: string, reason?: string) => {
@@ -591,98 +535,29 @@ export function useVoiceCallRuntime({
   }, [closePeer, resetRoomState, pushCallLog]);
 
   const ensureLocalStream = useCallback(async () => {
-    if (localStreamRef.current) {
-      return localStreamRef.current;
-    }
-
-    if (!navigator.mediaDevices?.getUserMedia) {
-      pushToastThrottled("browser-unsupported", t("settings.browserUnsupported"));
-      throw new Error("MediaDevicesUnsupported");
-    }
-
-    const audioConstraints = getAudioConstraints();
-    let stream: MediaStream;
-
-    try {
-      stream = await navigator.mediaDevices.getUserMedia({
-        audio: audioConstraints,
-        video: getVideoConstraints()
-      });
-    } catch (error) {
-      const errorName = (error as { name?: string })?.name || "";
-      const hasExactDeviceId = typeof audioConstraints === "object"
-        && audioConstraints !== null
-        && Object.prototype.hasOwnProperty.call(audioConstraints, "deviceId");
-
-      if (!hasExactDeviceId || (errorName !== "NotFoundError" && errorName !== "OverconstrainedError")) {
-        throw error;
-      }
-
-      const fallbackConstraints = { ...(audioConstraints as MediaTrackConstraints) };
-      delete (fallbackConstraints as { deviceId?: unknown }).deviceId;
-
-      stream = await navigator.mediaDevices.getUserMedia({
-        audio: fallbackConstraints,
-        video: getVideoConstraints()
-      });
-      pushCallLog("input device fallback applied: default microphone");
-    }
-
-    stream.getAudioTracks().forEach((track) => {
-      track.enabled = !micMuted;
+    return ensureLocalStreamForRtc({
+      localStreamRef,
+      getAudioConstraints,
+      getVideoConstraints,
+      micMuted,
+      t,
+      pushToastThrottled,
+      selectedInputId,
+      allowVideoStreaming,
+      videoStreamingEnabled,
+      setLocalVideoStream,
+      pushCallLog
     });
-
-    if (allowVideoStreaming && videoStreamingEnabled) {
-      const hasVideoTrack = stream.getVideoTracks().length > 0;
-      if (hasVideoTrack) {
-        setLocalVideoStream(stream);
-      } else {
-        setLocalVideoStream(null);
-      }
-    } else {
-      stream.getVideoTracks().forEach((track) => track.stop());
-      setLocalVideoStream(null);
-    }
-
-    localStreamRef.current = stream;
-    incrementVoiceCounter("runtimeLocalStreams");
-    logVoiceDiagnostics("runtime local stream acquired", {
-      selectedInputId: selectedInputId || "default"
-    });
-    return stream;
   }, [getAudioConstraints, getVideoConstraints, micMuted, t, pushToastThrottled, selectedInputId, allowVideoStreaming, videoStreamingEnabled, pushCallLog]);
 
   const attachLocalTracks = useCallback(async (connection: RTCPeerConnection) => {
-    const stream = await ensureLocalStream();
-    const nextAudioTrack = stream.getAudioTracks()[0] || null;
-    const nextVideoTrack = stream.getVideoTracks()[0] || null;
-
-    if (nextAudioTrack) {
-      const audioSender = findSenderByKind(connection, "audio");
-      if (audioSender) {
-        await audioSender.replaceTrack(nextAudioTrack);
-      } else {
-        connection.addTrack(nextAudioTrack, stream);
-      }
-    }
-
-    if (allowVideoStreaming) {
-      const videoSender = findSenderByKind(connection, "video");
-      if (videoSender) {
-        await videoSender.replaceTrack(nextVideoTrack);
-      } else if (nextVideoTrack) {
-        connection.addTrack(nextVideoTrack, stream);
-      }
-    }
-
-    if (allowVideoStreaming) {
-      const hasVideoSender = Boolean(findSenderByKind(connection, "video"));
-      if (!hasVideoSender) {
-        connection.addTransceiver("video", { direction: "sendrecv" });
-      }
-    }
-
-    await applyAudioQualityToConnection(connection, "peer");
+    await attachLocalTracksForRtc({
+      connection,
+      ensureLocalStream,
+      allowVideoStreaming,
+      findSenderByKind,
+      applyAudioQualityToConnection
+    });
   }, [ensureLocalStream, applyAudioQualityToConnection, allowVideoStreaming, findSenderByKind]);
 
   const scheduleReconnect = useCallback((targetUserId: string, trigger: string) => {

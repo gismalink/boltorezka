@@ -9,6 +9,7 @@ Purpose: keep `useVoiceCallRuntime.ts` focused on orchestration while moving iso
 - [x] Removed legacy compatibility re-export layer from `hooks/*`.
 - [x] Extracted peer context create/dispose logic to `voiceCallPeerLifecycle.ts`.
 - [x] Extracted peer reconnect/stats recovery flows to `voiceCallPeerRecovery.ts`.
+- [x] Extracted local media constraints/acquisition/attach to `voiceCallLocalMedia.ts`.
 
 ## In Progress
 
@@ -20,7 +21,6 @@ Purpose: keep `useVoiceCallRuntime.ts` focused on orchestration while moving iso
 
 ## Next
 
-- [ ] Extract local stream acquisition and track attach to `voiceCallLocalMedia.ts`.
 - [ ] Extract room target synchronization and blocklist cadence to `voiceCallTargetSync.ts`.
 - [ ] Add unit tests for offer cadence and reconnect scheduling helpers.
 - [ ] Add focused integration smoke for camera-toggle + reconnect in 3-way call.
