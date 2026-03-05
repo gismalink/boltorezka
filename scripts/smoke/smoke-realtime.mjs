@@ -28,6 +28,9 @@ const liveRoomStepMaxMs = Number(process.env.SMOKE_CALL_LIVE_ROOM_STEP_MAX_MS ??
 const liveRoomActionTimeoutMs = Number(process.env.SMOKE_CALL_LIVE_ROOM_ACTION_TIMEOUT_MS ?? 7000);
 const liveRoomTicketPool = String(process.env.SMOKE_CALL_LIVE_ROOM_TICKETS ?? "");
 const liveRoomBearerPool = String(process.env.SMOKE_CALL_LIVE_ROOM_BEARER_TOKENS ?? process.env.SMOKE_TEST_BEARER_TOKENS ?? "");
+const liveRoomToneMode = process.env.SMOKE_CALL_LIVE_ROOM_TONE_MODE === "1";
+const liveRoomTonePeriodMs = Number(process.env.SMOKE_CALL_LIVE_ROOM_TONE_PERIOD_MS ?? 7000);
+const liveRoomTonePhaseSpread = Number(process.env.SMOKE_CALL_LIVE_ROOM_TONE_PHASE_SPREAD ?? 0.9);
 
 const isHttp = baseUrl.startsWith("http://") || baseUrl.startsWith("https://");
 if (!isHttp) {
@@ -52,6 +55,11 @@ if (smokeCallLiveRoom && (liveRoomDurationMs < 60000 || liveRoomDurationMs > 900
 
 if (smokeCallLiveRoom && (liveRoomStepMinMs < 400 || liveRoomStepMaxMs < liveRoomStepMinMs)) {
   console.error("[smoke:realtime] invalid live room step bounds");
+  process.exit(1);
+}
+
+if (smokeCallLiveRoom && (liveRoomTonePeriodMs < 1200 || liveRoomTonePeriodMs > 60000)) {
+  console.error("[smoke:realtime] invalid SMOKE_CALL_LIVE_ROOM_TONE_PERIOD_MS (1200..60000)");
   process.exit(1);
 }
 
@@ -496,7 +504,8 @@ async function runLiveRoomBehaviorScenario({ roomSlug, timeoutMs }) {
         speaking: false,
         audioMuted: false,
         videoEnabled: false
-      }
+      },
+      tonePhase: index * liveRoomTonePhaseSpread
     };
   });
 
@@ -542,7 +551,22 @@ async function runLiveRoomBehaviorScenario({ roomSlug, timeoutMs }) {
     chatEvents: 0,
     offerAttempts: 0,
     leaveRejoinEvents: 0,
-    acceptedNacks: 0
+    acceptedNacks: 0,
+    toneModeEnabled: liveRoomToneMode,
+    toneSpeakingSwitches: 0,
+    toneSpeakingTicks: 0,
+    toneTotalTicks: 0
+  };
+
+  const computeToneSpeaking = (actor, nowMs) => {
+    if (!liveRoomToneMode) {
+      return null;
+    }
+
+    const period = Math.max(1200, liveRoomTonePeriodMs);
+    const normalized = ((nowMs - startedAt) / period) * Math.PI * 2;
+    const value = Math.sin(normalized + actor.tonePhase);
+    return value > 0.1;
   };
 
   const performLeaveAndRejoin = async () => {
@@ -599,7 +623,22 @@ async function runLiveRoomBehaviorScenario({ roomSlug, timeoutMs }) {
       if (Math.random() < 0.45) {
         actor.state.muted = !actor.state.muted;
       }
-      actor.state.speaking = !actor.state.muted && !actor.state.audioMuted && Math.random() < 0.65;
+      const prevSpeaking = actor.state.speaking;
+      const toneSpeaking = computeToneSpeaking(actor, Date.now());
+      const nextSpeaking = toneSpeaking === null
+        ? (!actor.state.muted && !actor.state.audioMuted && Math.random() < 0.65)
+        : (!actor.state.muted && !actor.state.audioMuted && toneSpeaking);
+      actor.state.speaking = nextSpeaking;
+
+      if (liveRoomToneMode) {
+        stats.toneTotalTicks += 1;
+        if (nextSpeaking) {
+          stats.toneSpeakingTicks += 1;
+        }
+        if (prevSpeaking !== nextSpeaking) {
+          stats.toneSpeakingSwitches += 1;
+        }
+      }
 
       await sendAckedEvent({
         ws: actor.ws,
@@ -633,6 +672,9 @@ async function runLiveRoomBehaviorScenario({ roomSlug, timeoutMs }) {
       actor.state.audioMuted = !actor.state.audioMuted;
       if (actor.state.audioMuted) {
         actor.state.speaking = false;
+      } else if (liveRoomToneMode) {
+        const toneSpeaking = computeToneSpeaking(actor, Date.now());
+        actor.state.speaking = Boolean(toneSpeaking);
       }
       await sendAckedEvent({
         ws: actor.ws,
@@ -719,6 +761,9 @@ async function runLiveRoomBehaviorScenario({ roomSlug, timeoutMs }) {
     participants: sessions.length,
     durationMs: liveRoomDurationMs,
     totalActions,
+    toneSpeakingDutyCycle: stats.toneTotalTicks > 0
+      ? Number((stats.toneSpeakingTicks / stats.toneTotalTicks).toFixed(4))
+      : null,
     ...stats
   };
 }
