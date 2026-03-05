@@ -105,6 +105,7 @@ export type VoicePeerContext = {
   isSettingRemoteAnswerPending: boolean;
   offerInFlight: boolean;
   lastOfferAt: number;
+  lastOfferAtByBucket: Partial<Record<"manual" | "video-sync" | "ice-restart", number>>;
   pendingRemoteCandidates: RTCIceCandidateInit[];
 };
 

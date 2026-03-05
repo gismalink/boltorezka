@@ -1,6 +1,7 @@
 // Purpose: Shared offer policy for RTC runtime and signal handlers.
 
 export type OfferReason = "manual" | "inbound-stalled" | `video-sync:${string}`;
+export type OfferCadenceBucket = "manual" | "video-sync" | "ice-restart";
 
 export const OFFER_MIN_INTERVAL_MS = 10000;
 
@@ -33,4 +34,14 @@ export function resolveOfferMinIntervalMs(reason: string, iceRestart?: boolean):
     return OFFER_VIDEO_SYNC_MIN_INTERVAL_MS;
   }
   return OFFER_MIN_INTERVAL_MS;
+}
+
+export function resolveOfferCadenceBucket(reason: string, iceRestart?: boolean): OfferCadenceBucket {
+  if (iceRestart) {
+    return "ice-restart";
+  }
+  if (isVideoSyncReason(reason)) {
+    return "video-sync";
+  }
+  return "manual";
 }

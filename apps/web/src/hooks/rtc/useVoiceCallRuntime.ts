@@ -22,12 +22,14 @@ import {
   isDesignatedOfferer,
   type OfferReason,
   OFFER_VIDEO_SYNC_MIN_INTERVAL_MS,
+  resolveOfferCadenceBucket,
   resolveOfferMinIntervalMs
 } from "./voiceCallOfferPolicy";
 import {
+  getLastOfferAtForBucket,
   markMakingOffer,
   markOfferInFlight,
-  markOfferSentNow
+  markOfferSentNowForBucket
 } from "./voiceCallNegotiationState";
 import {
   applyAudioQualityToPeerConnection,
@@ -104,6 +106,7 @@ export function useVoiceCallRuntime({
     targetLabel: string;
     reason: OfferReason;
     iceRestart: boolean;
+    cadenceBucket: "manual" | "video-sync" | "ice-restart";
   };
 
   // Core WebRTC orchestration for room calls: peer lifecycle, signaling, reconnects and media sync.
@@ -588,11 +591,13 @@ export function useVoiceCallRuntime({
     }
 
     const minIntervalMs = resolveOfferMinIntervalMs(reason, Boolean(options?.iceRestart));
+    const cadenceBucket = resolveOfferCadenceBucket(reason, Boolean(options?.iceRestart));
     const now = Date.now();
-    if (existingPeer && now - existingPeer.lastOfferAt < minIntervalMs) {
+    const lastOfferAtForBucket = getLastOfferAtForBucket(existingPeer, cadenceBucket);
+    if (existingPeer && now - lastOfferAtForBucket < minIntervalMs) {
       traceOfferEvent("offer skipped", normalizedTarget, targetLabel, reason, {
         skip: "min-interval",
-        elapsedMs: now - existingPeer.lastOfferAt,
+        elapsedMs: now - lastOfferAtForBucket,
         minIntervalMs
       });
       return null;
@@ -610,7 +615,8 @@ export function useVoiceCallRuntime({
       normalizedTarget,
       targetLabel,
       reason,
-      iceRestart: Boolean(options?.iceRestart)
+      iceRestart: Boolean(options?.iceRestart),
+      cadenceBucket
     };
   }, [isTargetTemporarilyBlocked, traceOfferEvent]);
 
@@ -662,10 +668,10 @@ export function useVoiceCallRuntime({
   }, [ensurePeerConnection, attachLocalTracks, allowVideoStreaming, pushCallLog, sendWsEvent, rememberRequestTarget, traceOfferEvent]);
 
   const commitStartOfferSuccess = useCallback((context: StartOfferContext): void => {
-    const { normalizedTarget, targetLabel, reason, iceRestart } = context;
+    const { normalizedTarget, targetLabel, reason, iceRestart, cadenceBucket } = context;
     setLastCallPeer(targetLabel || normalizedTarget);
     updateCallStatus();
-    markOfferSentNow(peersRef.current.get(normalizedTarget));
+    markOfferSentNowForBucket(peersRef.current.get(normalizedTarget), cadenceBucket);
     if (iceRestart) {
       pushCallLog(`call.offer ice-restart -> ${targetLabel || normalizedTarget}${reason ? ` (${reason})` : ""}`);
     }

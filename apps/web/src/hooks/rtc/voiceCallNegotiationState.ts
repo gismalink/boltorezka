@@ -1,4 +1,5 @@
 import type { VoicePeerContext } from "./voiceCallTypes";
+import type { OfferCadenceBucket } from "./voiceCallOfferPolicy";
 
 export function createNegotiationStateDefaults() {
   return {
@@ -6,7 +7,8 @@ export function createNegotiationStateDefaults() {
     ignoreOffer: false,
     isSettingRemoteAnswerPending: false,
     offerInFlight: false,
-    lastOfferAt: 0
+    lastOfferAt: 0,
+    lastOfferAtByBucket: {}
   };
 }
 
@@ -49,8 +51,26 @@ export function markSettingRemoteAnswerPending(peer: VoicePeerContext | undefine
 }
 
 export function markOfferSentNow(peer: VoicePeerContext | undefined) {
+  markOfferSentNowForBucket(peer, "manual");
+}
+
+export function getLastOfferAtForBucket(peer: VoicePeerContext | undefined, bucket: OfferCadenceBucket): number {
+  if (!peer) {
+    return 0;
+  }
+
+  return peer.lastOfferAtByBucket[bucket] || 0;
+}
+
+export function markOfferSentNowForBucket(
+  peer: VoicePeerContext | undefined,
+  bucket: OfferCadenceBucket,
+  at = Date.now()
+) {
   if (!peer) {
     return;
   }
-  peer.lastOfferAt = Date.now();
+
+  peer.lastOfferAt = at;
+  peer.lastOfferAtByBucket[bucket] = at;
 }

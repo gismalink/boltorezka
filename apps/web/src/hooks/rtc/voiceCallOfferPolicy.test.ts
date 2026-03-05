@@ -3,6 +3,7 @@ import {
   OFFER_ICE_RESTART_MIN_INTERVAL_MS,
   OFFER_MIN_INTERVAL_MS,
   OFFER_VIDEO_SYNC_MIN_INTERVAL_MS,
+  resolveOfferCadenceBucket,
   resolveOfferMinIntervalMs
 } from "./voiceCallOfferPolicy";
 
@@ -18,6 +19,12 @@ describe("voiceCallOfferPolicy", () => {
   it("prioritizes ice-restart cadence over reason", () => {
     expect(resolveOfferMinIntervalMs("manual", true)).toBe(OFFER_ICE_RESTART_MIN_INTERVAL_MS);
     expect(resolveOfferMinIntervalMs("video-sync:remote", true)).toBe(OFFER_ICE_RESTART_MIN_INTERVAL_MS);
+  });
+
+  it("resolves cadence bucket by reason and restart mode", () => {
+    expect(resolveOfferCadenceBucket("manual")).toBe("manual");
+    expect(resolveOfferCadenceBucket("video-sync:watchdog")).toBe("video-sync");
+    expect(resolveOfferCadenceBucket("manual", true)).toBe("ice-restart");
   });
 
   it("uses deterministic user-id ordering for designated offerer", () => {
