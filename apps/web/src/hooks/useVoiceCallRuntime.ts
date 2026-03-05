@@ -54,7 +54,8 @@ const AUDIO_QUALITY_SAMPLE_RATE: Record<AudioQuality, number> = {
 };
 
 const OFFER_MIN_INTERVAL_MS = 10000;
-const OFFER_VIDEO_SYNC_MIN_INTERVAL_MS = 3000;
+// Keep video-sync offer cadence at or above server-side OfferRateLimited threshold (5s).
+const OFFER_VIDEO_SYNC_MIN_INTERVAL_MS = 5000;
 const OFFER_ICE_RESTART_MIN_INTERVAL_MS = 5000;
 const OFFER_TRACE_EVERY_N = 5;
 const OFFER_TRACE_MIN_GAP_MS = 30000;
