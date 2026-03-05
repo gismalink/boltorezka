@@ -225,6 +225,7 @@ export function useVoiceCallRuntime({
   }, []);
 
   const shouldInitiateOffer = useCallback((targetUserId: string) => {
+    // Deterministic single-offerer policy per peer pair to avoid glare.
     const local = String(localUserId || "").trim();
     const target = String(targetUserId || "").trim();
     if (!target) {
@@ -980,6 +981,7 @@ export function useVoiceCallRuntime({
       return;
     }
 
+    // Video-sync reasons are bursty (camera toggles/watchdog resync), so they use a dedicated cadence.
     const isVideoSyncReason = reason.startsWith("video-sync:");
     const minIntervalMs = options?.iceRestart
       ? OFFER_ICE_RESTART_MIN_INTERVAL_MS

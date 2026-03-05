@@ -39,6 +39,47 @@ async function preparePeerConnectionForRemoteDescription({
   return connection;
 }
 
+async function handleOfferGlare({
+  existingConnection,
+  fromUserId,
+  fromUserName,
+  sendWsEvent,
+  rememberRequestTarget,
+  shouldInitiateOffer,
+  pushCallLog
+}: {
+  existingConnection: RTCPeerConnection | null;
+  fromUserId: string;
+  fromUserName: string;
+  sendWsEvent: WsSender;
+  rememberRequestTarget: (requestId: string | null, eventType: string, targetUserId: string) => void;
+  shouldInitiateOffer: (targetUserId: string) => boolean;
+  pushCallLog: (text: string) => void;
+}): Promise<"ignore-remote-offer" | "accept-remote-offer"> {
+  if (!existingConnection || existingConnection.signalingState !== "have-local-offer") {
+    return "accept-remote-offer";
+  }
+
+  const localIsDesignatedOfferer = shouldInitiateOffer(fromUserId);
+  if (localIsDesignatedOfferer) {
+    pushCallLog(`call.offer ignored (glare, local-offerer) <- ${fromUserName}`);
+    const rejectRequestId = sendWsEvent(
+      "call.reject",
+      {
+        targetUserId: fromUserId,
+        reason: "glare-local-offer"
+      },
+      { trackAck: false, maxRetries: 0 }
+    );
+    rememberRequestTarget(rejectRequestId, "call.reject", fromUserId);
+    return "ignore-remote-offer";
+  }
+
+  await existingConnection.setLocalDescription({ type: "rollback" });
+  pushCallLog(`call.offer glare rollback <- ${fromUserName}`);
+  return "accept-remote-offer";
+}
+
 export async function handleIncomingSignalEvent({
   eventType,
   payload,
@@ -96,27 +137,17 @@ export async function handleIncomingSignalEvent({
     try {
       const existingPeer = peersRef.current.get(fromUserId);
       const existingConnection = existingPeer?.connection;
-      const localIsDesignatedOfferer = shouldInitiateOffer(fromUserId);
-
-      // Resolve offer glare deterministically: designated offerer is impolite and keeps local offer,
-      // non-designated side is polite and rolls back local offer before accepting remote one.
-      if (existingConnection && existingConnection.signalingState === "have-local-offer") {
-        if (localIsDesignatedOfferer) {
-          pushCallLog(`call.offer ignored (glare, local-offerer) <- ${fromUserName}`);
-          const rejectRequestId = sendWsEvent(
-            "call.reject",
-            {
-              targetUserId: fromUserId,
-              reason: "glare-local-offer"
-            },
-            { trackAck: false, maxRetries: 0 }
-          );
-          rememberRequestTarget(rejectRequestId, "call.reject", fromUserId);
-          return;
-        }
-
-        await existingConnection.setLocalDescription({ type: "rollback" });
-        pushCallLog(`call.offer glare rollback <- ${fromUserName}`);
+      const glareResolution = await handleOfferGlare({
+        existingConnection: existingConnection || null,
+        fromUserId,
+        fromUserName,
+        sendWsEvent,
+        rememberRequestTarget,
+        shouldInitiateOffer,
+        pushCallLog
+      });
+      if (glareResolution === "ignore-remote-offer") {
+        return;
       }
 
       const connection = await preparePeerConnectionForRemoteDescription({

@@ -52,6 +52,8 @@ Legacy-файлы перенесены в `legacy/poc/`.
 
 ## Process scripts (Projo-aligned)
 
+Полная карта скриптов и быстрые сценарии: `scripts/README.md`.
+
 - `npm run check` — локальный verify pipeline (`scripts/verify-all.sh`)
 - `npm run check:api-types` — baseline backend typecheck (`apps/api/tsconfig.json`, `allowJs+checkJs`)
 - Первый TS-модуль API: `apps/api/src/ws-protocol.types.ts` (type-only контракт для WS protocol слоя)
