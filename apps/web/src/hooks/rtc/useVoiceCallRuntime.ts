@@ -11,11 +11,7 @@ import {
   REMOTE_SPEAKING_OFF_THRESHOLD,
   REMOTE_SPEAKING_ON_THRESHOLD,
   RTC_CONFIG,
-  RTC_INBOUND_STALL_TICKS,
-  RTC_RECONNECT_BASE_DELAY_MS,
   RTC_RECONNECT_MAX_ATTEMPTS,
-  RTC_RECONNECT_MAX_DELAY_MS,
-  RTC_STATS_POLL_MS,
   TARGET_NOT_IN_ROOM_BLOCK_MS,
   TARGET_NOT_IN_ROOM_RESYNC_GRACE_MS
 } from "./voiceCallConfig";
@@ -43,6 +39,12 @@ import {
   createVoicePeerContext,
   disposeVoicePeerContext
 } from "./voiceCallPeerLifecycle";
+import {
+  clearPeerReconnectTimerForTarget,
+  clearPeerStatsTimerForTarget,
+  schedulePeerReconnectForTarget,
+  startPeerStatsMonitorForTarget
+} from "./voiceCallPeerRecovery";
 import type {
   CallMicStatePayload,
   CallNackPayload,
@@ -497,118 +499,24 @@ export function useVoiceCallRuntime({
   }, [setCallStatus]);
 
   const clearPeerReconnectTimer = useCallback((targetUserId: string) => {
-    const peer = peersRef.current.get(targetUserId);
-    if (!peer || peer.reconnectTimer === null) {
-      return;
-    }
-
-    window.clearTimeout(peer.reconnectTimer);
-    peer.reconnectTimer = null;
-    decrementVoiceCounter("runtimeReconnectTimers");
-    logVoiceDiagnostics("runtime reconnect timer cleared", { targetUserId });
+    clearPeerReconnectTimerForTarget(peersRef, targetUserId);
   }, []);
 
   const clearPeerStatsTimer = useCallback((targetUserId: string) => {
-    const peer = peersRef.current.get(targetUserId);
-    if (!peer || peer.statsTimer === null) {
-      return;
-    }
-
-    window.clearInterval(peer.statsTimer);
-    peer.statsTimer = null;
+    clearPeerStatsTimerForTarget(peersRef, targetUserId);
   }, []);
 
   const startPeerStatsMonitor = useCallback((targetUserId: string, targetLabel: string) => {
-    const peer = peersRef.current.get(targetUserId);
-    if (!peer || peer.statsTimer !== null) {
-      return;
-    }
-
-    peer.statsTimer = window.setInterval(() => {
-      const current = peersRef.current.get(targetUserId);
-      if (!current) {
-        return;
-      }
-
-      const state = current.connection.connectionState;
-      if (state !== "connected" && !current.hasRemoteTrack) {
-        return;
-      }
-
-      void current.connection.getStats()
-        .then((report) => {
-          let inboundBytes = 0;
-          let outboundBytes = 0;
-          report.forEach((item) => {
-            if (item.type === "inbound-rtp") {
-              const mediaType = (item as RTCInboundRtpStreamStats & { mediaType?: string }).mediaType;
-              const kind = (item as RTCInboundRtpStreamStats & { kind?: string }).kind;
-              const isAudio = mediaType === "audio" || kind === "audio";
-              if (!isAudio) {
-                return;
-              }
-
-              inboundBytes += Number((item as RTCInboundRtpStreamStats).bytesReceived || 0);
-              return;
-            }
-
-            if (item.type === "outbound-rtp") {
-              const mediaType = (item as RTCOutboundRtpStreamStats & { mediaType?: string }).mediaType;
-              const kind = (item as RTCOutboundRtpStreamStats & { kind?: string }).kind;
-              const isAudio = mediaType === "audio" || kind === "audio";
-              if (!isAudio) {
-                return;
-              }
-
-              outboundBytes += Number((item as RTCOutboundRtpStreamStats).bytesSent || 0);
-            }
-          });
-
-          const inboundDelta = inboundBytes - current.lastInboundBytes;
-          const outboundDelta = outboundBytes - current.lastOutboundBytes;
-          current.lastInboundBytes = inboundBytes;
-          current.lastOutboundBytes = outboundBytes;
-
-          if (inboundDelta > 0) {
-            if (current.inboundStalled) {
-              current.inboundStalled = false;
-              current.inboundStalledTicks = 0;
-              current.stallRecoveryAttempts = 0;
-              pushCallLog(`remote inbound audio resumed <- ${targetLabel || targetUserId}`);
-            }
-
-            if (!audioMuted && current.audioElement.paused && current.audioElement.srcObject) {
-              void applyRemoteAudioOutput(current.audioElement);
-              void current.audioElement.play()
-                .then(() => {
-                  pushCallLog(`remote audio resumed (stats-flow) <- ${targetLabel || targetUserId}`);
-                })
-                .catch((error) => {
-                  pushCallLog(`remote audio resume failed (stats-flow, ${targetLabel || targetUserId}): ${(error as Error).message}`);
-                });
-            }
-            return;
-          }
-
-          current.inboundStalledTicks += 1;
-          if (!current.inboundStalled && current.inboundStalledTicks >= RTC_INBOUND_STALL_TICKS) {
-            current.inboundStalled = true;
-            pushCallLog(`remote inbound audio stalled <- ${targetLabel || targetUserId} (in:${inboundDelta} out:${outboundDelta})`);
-
-            if (shouldInitiateOffer(targetUserId) && current.stallRecoveryAttempts < 2 && current.connection.connectionState === "connected") {
-              current.stallRecoveryAttempts += 1;
-              pushCallLog(`rtc stall recovery offer -> ${targetLabel || targetUserId}`);
-              void startOfferRef.current?.(targetUserId, targetLabel || targetUserId, {
-                iceRestart: true,
-                reason: "inbound-stalled"
-              });
-            }
-          }
-        })
-        .catch((error) => {
-          pushCallLog(`rtc stats failed (${targetLabel || targetUserId}): ${(error as Error).message}`);
-        });
-    }, RTC_STATS_POLL_MS);
+    startPeerStatsMonitorForTarget({
+      peersRef,
+      targetUserId,
+      targetLabel,
+      audioMuted,
+      applyRemoteAudioOutput,
+      pushCallLog,
+      shouldInitiateOffer,
+      startOffer: startOfferRef.current
+    });
   }, [audioMuted, applyRemoteAudioOutput, pushCallLog, shouldInitiateOffer]);
 
   const releaseLocalStream = useCallback(() => {
@@ -778,59 +686,16 @@ export function useVoiceCallRuntime({
   }, [ensureLocalStream, applyAudioQualityToConnection, allowVideoStreaming, findSenderByKind]);
 
   const scheduleReconnect = useCallback((targetUserId: string, trigger: string) => {
-    if (!roomVoiceConnectedRef.current) {
-      return;
-    }
-
-    if (!shouldInitiateOffer(targetUserId)) {
-      closePeer(targetUserId, `rtc ${trigger}, waiting remote re-offer`);
-      return;
-    }
-
-    const peer = peersRef.current.get(targetUserId);
-    if (!peer) {
-      return;
-    }
-
-    if (peer.reconnectTimer !== null) {
-      return;
-    }
-
-    if (peer.reconnectAttempts >= RTC_RECONNECT_MAX_ATTEMPTS) {
-      closePeer(targetUserId, `rtc ${trigger}, reconnect exhausted: ${peer.label}`);
-      return;
-    }
-
-    const attempt = peer.reconnectAttempts + 1;
-    peer.reconnectAttempts = attempt;
-    const delay = Math.min(
-      RTC_RECONNECT_MAX_DELAY_MS,
-      RTC_RECONNECT_BASE_DELAY_MS * 2 ** (attempt - 1)
-    );
-
-    updateCallStatus();
-    pushCallLog(`rtc ${trigger}, reconnect ${peer.label} in ${delay}ms (${attempt}/${RTC_RECONNECT_MAX_ATTEMPTS})`);
-
-    peer.reconnectTimer = window.setTimeout(async () => {
-      const current = peersRef.current.get(targetUserId);
-      if (current) {
-        current.reconnectTimer = null;
-        decrementVoiceCounter("runtimeReconnectTimers");
-      }
-
-      try {
-        const label = peersRef.current.get(targetUserId)?.label || targetUserId;
-        await startOfferRef.current?.(targetUserId, label);
-      } catch (error) {
-        pushCallLog(`reconnect attempt failed: ${(error as Error).message}`);
-      }
-    }, delay);
-    incrementVoiceCounter("runtimeReconnectTimers");
-    logVoiceDiagnostics("runtime reconnect timer scheduled", {
+    schedulePeerReconnectForTarget({
+      roomVoiceConnectedRef,
+      peersRef,
       targetUserId,
       trigger,
-      delay,
-      attempt
+      shouldInitiateOffer,
+      closePeer,
+      updateCallStatus,
+      pushCallLog,
+      startOffer: startOfferRef.current
     });
   }, [closePeer, pushCallLog, updateCallStatus, shouldInitiateOffer]);
 
