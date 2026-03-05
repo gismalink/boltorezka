@@ -34,11 +34,15 @@ import {
   resolveOfferMinIntervalMs
 } from "./voiceCallOfferPolicy";
 import {
-  createNegotiationStateDefaults,
   markMakingOffer,
   markOfferInFlight,
   markOfferSentNow
 } from "./voiceCallNegotiationState";
+import {
+  createHiddenRemoteAudioElement,
+  createVoicePeerContext,
+  disposeVoicePeerContext
+} from "./voiceCallPeerLifecycle";
 import type {
   CallMicStatePayload,
   CallNackPayload,
@@ -627,28 +631,7 @@ export function useVoiceCallRuntime({
 
     clearPeerReconnectTimer(targetUserId);
     clearPeerStatsTimer(targetUserId);
-    peer.connection.onicecandidate = null;
-    peer.connection.onicecandidateerror = null;
-    peer.connection.oniceconnectionstatechange = null;
-    peer.connection.onicegatheringstatechange = null;
-    peer.connection.onconnectionstatechange = null;
-    peer.connection.ontrack = null;
-    if (peer.speakingAnimationFrameId) {
-      cancelAnimationFrame(peer.speakingAnimationFrameId);
-      peer.speakingAnimationFrameId = 0;
-    }
-    if (peer.speakingAudioContext) {
-      void peer.speakingAudioContext.close();
-      peer.speakingAudioContext = null;
-    }
-    peer.speakingSource = null;
-    peer.speakingGain = null;
-    peer.speakingAnalyser = null;
-    peer.speakingData = null;
-    peer.connection.close();
-    peer.audioElement.pause();
-    peer.audioElement.srcObject = null;
-    peer.audioElement.remove();
+    disposeVoicePeerContext(peer);
     peersRef.current.delete(targetUserId);
     clearRemoteVideoStream(targetUserId);
     decrementVoiceCounter("runtimePeers");
@@ -882,48 +865,10 @@ export function useVoiceCallRuntime({
       return existing.connection;
     }
 
-    const remoteAudioElement = document.createElement("audio");
-    remoteAudioElement.autoplay = true;
-    remoteAudioElement.setAttribute("playsinline", "true");
-    remoteAudioElement.style.position = "fixed";
-    remoteAudioElement.style.width = "1px";
-    remoteAudioElement.style.height = "1px";
-    remoteAudioElement.style.opacity = "0";
-    remoteAudioElement.style.pointerEvents = "none";
-    remoteAudioElement.style.left = "-9999px";
-    remoteAudioElement.style.top = "-9999px";
-    remoteAudioElement.dataset.audioRoute = "element";
-    document.body.appendChild(remoteAudioElement);
+    const remoteAudioElement = createHiddenRemoteAudioElement();
 
     const connection = new RTCPeerConnection(RTC_CONFIG);
-    const peerContext = {
-      connection,
-      audioElement: remoteAudioElement,
-      remoteStream: null,
-      label: targetLabel,
-      hasRemoteTrack: false,
-      isRemoteMicMuted: false,
-      isRemoteSpeaking: false,
-      isRemoteAudioMuted: false,
-      hasRemoteSpeakingSignal: false,
-      speakingLastAboveAt: 0,
-      speakingAudioContext: null as AudioContext | null,
-      speakingSource: null as MediaStreamAudioSourceNode | null,
-      speakingAnimationFrameId: 0,
-      speakingAnalyser: null as AnalyserNode | null,
-      speakingData: null as Uint8Array<ArrayBuffer> | null,
-      speakingGain: null as GainNode | null,
-      statsTimer: null as number | null,
-      lastInboundBytes: 0,
-      lastOutboundBytes: 0,
-      inboundStalledTicks: 0,
-      inboundStalled: false,
-      stallRecoveryAttempts: 0,
-      reconnectAttempts: 0,
-      reconnectTimer: null as number | null,
-      ...createNegotiationStateDefaults(),
-      pendingRemoteCandidates: [] as RTCIceCandidateInit[]
-    };
+    const peerContext = createVoicePeerContext(connection, remoteAudioElement, targetLabel);
     peersRef.current.set(targetUserId, peerContext);
     incrementVoiceCounter("runtimePeers");
     incrementVoiceCounter("runtimeAudioElements");
