@@ -21,7 +21,7 @@
   - [x] preflight checks
   - [x] создание local description и отправка
   - [x] post-send bookkeeping/metrics
-- [ ] Вынести обработку очереди candidates из `useVoiceCallRuntime.ts` в отдельный helper/модуль.
+- [x] Вынести обработку очереди candidates из `useVoiceCallRuntime.ts` в отдельный helper/модуль.
 - [ ] Укрупнить связанные media effects в `useVoiceRuntimeMediaEffects.ts`, чтобы уменьшить overlap:
   - [ ] синхронизация audio track/device
   - [ ] синхронизация video track/effects

@@ -18,6 +18,7 @@ import {
   dispatchIncomingSignalForRtc,
   dispatchIncomingTerminalForRtc
 } from "./voiceCallSignalDispatch";
+import { flushQueuedRemoteCandidatesForPeer } from "./voiceCallCandidateQueue";
 import {
   isDesignatedOfferer,
   type OfferReason,
@@ -553,27 +554,12 @@ export function useVoiceCallRuntime({
   }, [closePeer, pushCallLog, updateCallStatus, shouldInitiateOffer]);
 
   const flushPendingRemoteCandidates = useCallback(async (targetUserId: string, targetLabel: string) => {
-    const peer = peersRef.current.get(targetUserId);
-    if (!peer) {
-      return;
-    }
-
-    if (!peer.connection.remoteDescription || peer.pendingRemoteCandidates.length === 0) {
-      return;
-    }
-
-    const pending = peer.pendingRemoteCandidates.splice(0, peer.pendingRemoteCandidates.length);
-    const settled = await Promise.allSettled(
-      pending.map((candidate) => peer.connection.addIceCandidate(new RTCIceCandidate(candidate)))
-    );
-
-    settled.forEach((result) => {
-      if (result.status === "rejected") {
-        pushCallLog(`call.ice queued handling failed (${targetLabel || targetUserId}): ${(result.reason as Error).message}`);
-      }
+    await flushQueuedRemoteCandidatesForPeer({
+      peer: peersRef.current.get(targetUserId),
+      targetUserId,
+      targetLabel,
+      pushCallLog
     });
-
-    pushCallLog(`call.ice queued flushed <- ${targetLabel || targetUserId} (${pending.length})`);
   }, [pushCallLog]);
 
   const ensurePeerConnection = useCallback((targetUserId: string, targetLabel: string) => {
