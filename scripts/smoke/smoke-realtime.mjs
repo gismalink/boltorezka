@@ -37,6 +37,7 @@ const pollBackoffFactor = Number(process.env.SMOKE_POLL_BACKOFF_FACTOR ?? 1.35);
 const strictRaceOfferRateLimit = process.env.SMOKE_RACE_STRICT_OFFER_RATE_LIMIT === "1";
 const raceOfferRateLimitedSoftThreshold = Number(process.env.SMOKE_RACE_OFFER_RATE_LIMIT_THRESHOLD ?? 4);
 const raceOfferRateLimitedStrictThreshold = Number(process.env.SMOKE_RACE_OFFER_RATE_LIMIT_STRICT_THRESHOLD ?? 0);
+const requireInitialStateReplay = process.env.SMOKE_REQUIRE_INITIAL_STATE_REPLAY !== "0";
 
 const isHttp = baseUrl.startsWith("http://") || baseUrl.startsWith("https://");
 if (!isHttp) {
@@ -265,6 +266,25 @@ async function waitForAckOrNack(events, requestId, label) {
     type: String(event?.type || ""),
     code: String(event?.payload?.code || "")
   };
+}
+
+async function waitForInitialStateReplay(events, label, expectedRoomSlug) {
+  const replay = await waitForEvent(
+    events,
+    (item) => item?.type === "call.initial_state",
+    `call.initial_state (${label})`
+  );
+
+  const replayRoomSlug = String(replay?.payload?.roomSlug || "").trim();
+  if (expectedRoomSlug && replayRoomSlug && replayRoomSlug !== expectedRoomSlug) {
+    throw new Error(`[smoke:realtime] ${label} call.initial_state roomSlug mismatch: expected=${expectedRoomSlug} actual=${replayRoomSlug}`);
+  }
+
+  if (!Array.isArray(replay?.payload?.participants)) {
+    throw new Error(`[smoke:realtime] ${label} call.initial_state participants must be array`);
+  }
+
+  return replay;
 }
 
 async function runThreeWayRaceScenario({
@@ -947,6 +967,12 @@ async function runLiveRoomBehaviorScenario({ roomSlug, timeoutMs }) {
     "ack for room.join"
   );
 
+  let initialStateReplayFirstOk = false;
+  if (requireInitialStateReplay) {
+    await waitForInitialStateReplay(events, "first", roomSlug);
+    initialStateReplayFirstOk = true;
+  }
+
   const idempotencyKey = `idem-${Date.now()}`;
   const requestChat1 = `chat1-${Date.now()}`;
 
@@ -1004,6 +1030,7 @@ async function runLiveRoomBehaviorScenario({ roomSlug, timeoutMs }) {
   let cameraToggleReconnectOk = false;
   let liveRoomOk = false;
   let liveRoomStats = null;
+  let initialStateReplaySecondOk = false;
   let reconnectOk = false;
   let reconnectSkipped = false;
   if (smokeCallSignal) {
@@ -1056,6 +1083,11 @@ async function runLiveRoomBehaviorScenario({ roomSlug, timeoutMs }) {
       (item) => item?.type === "ack" && item?.payload?.requestId === secondJoinRequest,
       "ack for second room.join"
     );
+
+    if (requireInitialStateReplay) {
+      await waitForInitialStateReplay(secondEvents, "second", roomSlug);
+      initialStateReplaySecondOk = true;
+    }
 
     const callRequestId = `call-offer-${Date.now()}`;
     const signalPayload = { type: "offer", sdp: "smoke-offer-sdp" };
@@ -1181,6 +1213,10 @@ async function runLiveRoomBehaviorScenario({ roomSlug, timeoutMs }) {
       race3WayOfferRateLimitedStrictMode = raceResult.race3WayOfferRateLimitedStrictMode;
       cameraToggleReconnectOk = raceResult.cameraToggleReconnectOk;
     }
+
+    if (requireInitialStateReplay && !initialStateReplaySecondOk) {
+      throw new Error("[smoke:realtime] call.initial_state replay missing for second join");
+    }
   }
 
   if (smokeReconnect && canRunReconnect) {
@@ -1271,6 +1307,9 @@ async function runLiveRoomBehaviorScenario({ roomSlug, timeoutMs }) {
         nackCode: nack?.payload?.code ?? null,
         firstMessageId: firstAck?.payload?.messageId ?? null,
         duplicateIdempotencyKey: duplicateAck?.payload?.idempotencyKey ?? null,
+        requireInitialStateReplay,
+        initialStateReplayFirstOk,
+        initialStateReplaySecondOk: smokeCallSignal ? initialStateReplaySecondOk : null,
         reconnectOk,
         reconnectSkipped,
         race3WayOk,

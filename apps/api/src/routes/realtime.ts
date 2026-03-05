@@ -298,6 +298,20 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
     }
   };
 
+  const incrementMetricBy = async (name: string, value: number) => {
+    const delta = Number.isFinite(value) ? Math.max(0, Math.floor(value)) : 0;
+    if (delta <= 0) {
+      return;
+    }
+
+    try {
+      const day = new Date().toISOString().slice(0, 10);
+      await fastify.redis.hIncrBy(`ws:metrics:${day}`, name, delta);
+    } catch {
+      return;
+    }
+  };
+
   const attachUserSocket = (userId: string, socket: WebSocket) => {
     const userSockets = socketsByUserId.get(userId) || new Set();
     userSockets.add(socket);
@@ -848,14 +862,17 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
                   )
                 );
 
+                const initialStateParticipants = getCallInitialStateParticipants(joinResult.room.id);
                 sendJson(
                   connection,
                   buildCallInitialStateEnvelope(
                     joinResult.room.id,
                     joinResult.room.slug,
-                    getCallInitialStateParticipants(joinResult.room.id)
+                    initialStateParticipants
                   )
                 );
+                void incrementMetric("call_initial_state_sent");
+                void incrementMetricBy("call_initial_state_participants_total", initialStateParticipants.length);
 
                 broadcastRoom(
                   joinResult.room.id,

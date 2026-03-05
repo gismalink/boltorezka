@@ -31,10 +31,13 @@
 - [ ] Добавить counters/histograms для RTC (`offer/glare/reconnect/state-lag`) в `apps/api/src/routes/realtime.ts`.
 - [ ] Задокументировать SLO и triage для RTC в `docs/runbooks/VOICE_BASELINE_RUNBOOK.md` и `docs/operations/SMOKE_CI_MATRIX.md`.
 
+Progress (2026-03-06):
+- Добавлены `call_initial_state_sent` и `call_initial_state_participants_total` в server metrics (`apps/api/src/routes/realtime.ts`) как первый шаг observability для replay-path.
+
 ## Phase 4 - Smoke and deploy gates
 
 - [ ] Расширить smoke проверки late-join replay + camera convergence в `scripts/smoke/smoke-realtime.mjs` и `scripts/smoke/smoke-realtime-media-browser.mjs`.
-- [ ] Добавить pass/fail gate для `call.initial_state` в `scripts/deploy/postdeploy-smoke-test.sh`.
+- [x] Добавить pass/fail gate для `call.initial_state` в `scripts/deploy/postdeploy-smoke-test.sh`.
 - [ ] Включить optional extended RTC gate в `.github/workflows/test-smoke.yml`.
 
 ## Phase 5 - Controlled rollout

@@ -21,7 +21,9 @@ SMOKE_NACK_DELTA=0
 SMOKE_ACK_DELTA=0
 SMOKE_CHAT_SENT_DELTA=0
 SMOKE_CHAT_IDEMPOTENCY_HIT_DELTA=0
-SMOKE_SUMMARY_TEXT="health=fail mode=unknown sso=fail realtime=fail delta(nack=0,ack=0,chat=0,idem=0)"
+SMOKE_CALL_INITIAL_STATE_SENT_DELTA=0
+SMOKE_CALL_INITIAL_STATE_PARTICIPANTS_DELTA=0
+SMOKE_SUMMARY_TEXT="health=fail mode=unknown sso=fail realtime=fail delta(nack=0,ack=0,chat=0,idem=0,initial_state=0,initial_state_participants=0)"
 API_SMOKE_STATUS="skip"
 VERSION_CACHE_STATUS="skip"
 EXTENDED_REALTIME_STATUS="skip"
@@ -38,6 +40,8 @@ write_summary() {
   printf 'SMOKE_ACK_DELTA=%q\n' "$SMOKE_ACK_DELTA" >>"$SUMMARY_FILE_REL"
   printf 'SMOKE_CHAT_SENT_DELTA=%q\n' "$SMOKE_CHAT_SENT_DELTA" >>"$SUMMARY_FILE_REL"
   printf 'SMOKE_CHAT_IDEMPOTENCY_HIT_DELTA=%q\n' "$SMOKE_CHAT_IDEMPOTENCY_HIT_DELTA" >>"$SUMMARY_FILE_REL"
+  printf 'SMOKE_CALL_INITIAL_STATE_SENT_DELTA=%q\n' "$SMOKE_CALL_INITIAL_STATE_SENT_DELTA" >>"$SUMMARY_FILE_REL"
+  printf 'SMOKE_CALL_INITIAL_STATE_PARTICIPANTS_DELTA=%q\n' "$SMOKE_CALL_INITIAL_STATE_PARTICIPANTS_DELTA" >>"$SUMMARY_FILE_REL"
   printf 'SMOKE_EXTENDED_REALTIME_STATUS=%q\n' "$EXTENDED_REALTIME_STATUS" >>"$SUMMARY_FILE_REL"
   printf 'SMOKE_SUMMARY_TEXT=%q\n' "$SMOKE_SUMMARY_TEXT" >>"$SUMMARY_FILE_REL"
 }
@@ -215,7 +219,7 @@ VERSION_CACHE_STATUS="pass"
 if [[ "${SMOKE_REALTIME:-1}" == "0" ]]; then
   echo "[postdeploy-smoke] realtime smoke skipped (SMOKE_REALTIME=0)"
   SMOKE_STATUS="pass"
-  SMOKE_SUMMARY_TEXT="health=pass mode=sso sso=pass api=$API_SMOKE_STATUS version_cache=$VERSION_CACHE_STATUS realtime=skip extended_realtime=$EXTENDED_REALTIME_STATUS delta(nack=0,ack=0,chat=0,idem=0)"
+  SMOKE_SUMMARY_TEXT="health=pass mode=sso sso=pass api=$API_SMOKE_STATUS version_cache=$VERSION_CACHE_STATUS realtime=skip extended_realtime=$EXTENDED_REALTIME_STATUS delta(nack=0,ack=0,chat=0,idem=0,initial_state=0,initial_state_participants=0)"
   exit 0
 fi
 
@@ -261,9 +265,11 @@ NACK_BEFORE="$(metric_from_hgetall "$METRICS_BEFORE_RAW" "nack_sent")"
 ACK_BEFORE="$(metric_from_hgetall "$METRICS_BEFORE_RAW" "ack_sent")"
 CHAT_SENT_BEFORE="$(metric_from_hgetall "$METRICS_BEFORE_RAW" "chat_sent")"
 CHAT_IDEMPOTENCY_HIT_BEFORE="$(metric_from_hgetall "$METRICS_BEFORE_RAW" "chat_idempotency_hit")"
+CALL_INITIAL_STATE_SENT_BEFORE="$(metric_from_hgetall "$METRICS_BEFORE_RAW" "call_initial_state_sent")"
+CALL_INITIAL_STATE_PARTICIPANTS_BEFORE="$(metric_from_hgetall "$METRICS_BEFORE_RAW" "call_initial_state_participants_total")"
 
 echo "[postdeploy-smoke] smoke:realtime"
-SMOKE_API_URL="$BASE_URL" SMOKE_RECONNECT=1 npm run smoke:realtime
+SMOKE_API_URL="$BASE_URL" SMOKE_RECONNECT=1 SMOKE_REQUIRE_INITIAL_STATE_REPLAY=1 npm run smoke:realtime
 
 if [[ "${SMOKE_EXTENDED_GATE:-0}" == "1" ]]; then
   if [[ "$AUTO_TICKET" == "1" ]]; then
@@ -345,6 +351,7 @@ if [[ "${SMOKE_EXTENDED_GATE:-0}" == "1" ]]; then
   echo "[postdeploy-smoke] smoke:realtime (extended gate)"
   SMOKE_API_URL="$BASE_URL" \
     SMOKE_RECONNECT=1 \
+    SMOKE_REQUIRE_INITIAL_STATE_REPLAY=1 \
     SMOKE_CALL_SIGNAL=1 \
     SMOKE_CALL_RACE_3WAY=1 \
     SMOKE_CALL_CAMERA_TOGGLE_RECONNECT=1 \
@@ -362,13 +369,17 @@ NACK_AFTER="$(metric_from_hgetall "$METRICS_AFTER_RAW" "nack_sent")"
 ACK_AFTER="$(metric_from_hgetall "$METRICS_AFTER_RAW" "ack_sent")"
 CHAT_SENT_AFTER="$(metric_from_hgetall "$METRICS_AFTER_RAW" "chat_sent")"
 CHAT_IDEMPOTENCY_HIT_AFTER="$(metric_from_hgetall "$METRICS_AFTER_RAW" "chat_idempotency_hit")"
+CALL_INITIAL_STATE_SENT_AFTER="$(metric_from_hgetall "$METRICS_AFTER_RAW" "call_initial_state_sent")"
+CALL_INITIAL_STATE_PARTICIPANTS_AFTER="$(metric_from_hgetall "$METRICS_AFTER_RAW" "call_initial_state_participants_total")"
 
 SMOKE_NACK_DELTA=$((NACK_AFTER - NACK_BEFORE))
 SMOKE_ACK_DELTA=$((ACK_AFTER - ACK_BEFORE))
 SMOKE_CHAT_SENT_DELTA=$((CHAT_SENT_AFTER - CHAT_SENT_BEFORE))
 SMOKE_CHAT_IDEMPOTENCY_HIT_DELTA=$((CHAT_IDEMPOTENCY_HIT_AFTER - CHAT_IDEMPOTENCY_HIT_BEFORE))
+SMOKE_CALL_INITIAL_STATE_SENT_DELTA=$((CALL_INITIAL_STATE_SENT_AFTER - CALL_INITIAL_STATE_SENT_BEFORE))
+SMOKE_CALL_INITIAL_STATE_PARTICIPANTS_DELTA=$((CALL_INITIAL_STATE_PARTICIPANTS_AFTER - CALL_INITIAL_STATE_PARTICIPANTS_BEFORE))
 
 SMOKE_STATUS="pass"
-SMOKE_SUMMARY_TEXT="health=pass mode=sso sso=pass api=$API_SMOKE_STATUS version_cache=$VERSION_CACHE_STATUS realtime=pass extended_realtime=$EXTENDED_REALTIME_STATUS delta(nack=$SMOKE_NACK_DELTA,ack=$SMOKE_ACK_DELTA,chat=$SMOKE_CHAT_SENT_DELTA,idem=$SMOKE_CHAT_IDEMPOTENCY_HIT_DELTA)"
+SMOKE_SUMMARY_TEXT="health=pass mode=sso sso=pass api=$API_SMOKE_STATUS version_cache=$VERSION_CACHE_STATUS realtime=pass extended_realtime=$EXTENDED_REALTIME_STATUS delta(nack=$SMOKE_NACK_DELTA,ack=$SMOKE_ACK_DELTA,chat=$SMOKE_CHAT_SENT_DELTA,idem=$SMOKE_CHAT_IDEMPOTENCY_HIT_DELTA,initial_state=$SMOKE_CALL_INITIAL_STATE_SENT_DELTA,initial_state_participants=$SMOKE_CALL_INITIAL_STATE_PARTICIPANTS_DELTA)"
 
 echo "[postdeploy-smoke] done"
