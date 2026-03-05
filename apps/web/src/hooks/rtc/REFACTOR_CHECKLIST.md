@@ -31,12 +31,12 @@ Purpose: keep `useVoiceCallRuntime.ts` focused on orchestration while moving iso
 
 - [x] `apps/web`: `npm run build`
 - [x] `scripts/smoke`: `node --check scripts/smoke/smoke-realtime.mjs`
-- [ ] test deploy: `TEST_REF=origin/feature/video-stream-investigation npm run deploy:test:smoke`
-- [ ] explicit 3-way smoke:
-  - [ ] `set -a; source .deploy/smoke-auth.env; set +a`
-  - [ ] `SMOKE_CALL_SIGNAL=1 SMOKE_CALL_RACE_3WAY=1 SMOKE_CALL_CAMERA_TOGGLE_RECONNECT=1 SMOKE_RECONNECT=1 npm run smoke:realtime`
+- [x] test deploy: `TEST_REF=origin/feature/video-stream-investigation npm run deploy:test:smoke`
+- [x] explicit 3-way smoke:
+  - [x] `set -a; source .deploy/smoke-auth.env; set +a`
+  - [x] `SMOKE_CALL_SIGNAL=1 SMOKE_CALL_RACE_3WAY=1 SMOKE_CALL_CAMERA_TOGGLE_RECONNECT=1 SMOKE_RECONNECT=1 npm run smoke:realtime`
 
-## Blockers
+## Verification Notes
 
-- `deploy:test:smoke` currently fails before deploy because `infra/.env.host` is missing.
-- Explicit smoke currently cannot run locally because `SMOKE_API_URL=http://localhost:8080` is unreachable and Docker daemon is not running for `smoke-auth-bootstrap.sh`.
+- Server-side validation completed on `2026-03-05` in `~/srv/boltorezka` for `origin/feature/video-stream-investigation` (`8c62d97`).
+- Explicit 3-way smoke result: `race3WayOk=true`, `race3WayReconnectOk=true`, `cameraToggleReconnectOk=true`.
