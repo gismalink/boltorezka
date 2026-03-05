@@ -127,6 +127,7 @@ export function App() {
   const [selectedOutputId, setSelectedOutputId] = useState<string>(() => localStorage.getItem("boltorezka_selected_output_id") || "default");
   const [selectedVideoInputId, setSelectedVideoInputId] = useState<string>(() => localStorage.getItem("boltorezka_selected_video_input_id") || "default");
   const [cameraEnabled, setCameraEnabled] = useState(false);
+  const [voiceCameraEnabledByUserIdInCurrentRoom, setVoiceCameraEnabledByUserIdInCurrentRoom] = useState<Record<string, boolean>>({});
   const [selectedInputProfile, setSelectedInputProfile] = useState<InputProfile>("custom");
   const [voiceSettingsPanel, setVoiceSettingsPanel] = useState<VoiceSettingsPanel>(null);
   const [mediaDevicesState, setMediaDevicesState] = useState<MediaDevicesState>("ready");
@@ -468,6 +469,10 @@ export function App() {
   }, [allowVideoStreaming]);
 
   useEffect(() => {
+    setVoiceCameraEnabledByUserIdInCurrentRoom({});
+  }, [roomSlug]);
+
+  useEffect(() => {
     localStorage.setItem("boltorezka_server_video_effect_type", serverVideoEffectType);
     localStorage.setItem("boltorezka_server_video_fx_enabled", serverVideoEffectType === "none" ? "0" : "1");
   }, [serverVideoEffectType]);
@@ -684,6 +689,19 @@ export function App() {
     remoteAudioMutedPeerUserIds
   });
 
+  const effectiveVoiceCameraEnabledByUserIdInCurrentRoom = useMemo(() => {
+    const map: Record<string, boolean> = {
+      ...voiceCameraEnabledByUserIdInCurrentRoom
+    };
+
+    const localUserId = String(user?.id || "").trim();
+    if (localUserId) {
+      map[localUserId] = Boolean(roomVoiceConnected && allowVideoStreaming && cameraEnabled);
+    }
+
+    return map;
+  }, [voiceCameraEnabledByUserIdInCurrentRoom, user?.id, roomVoiceConnected, allowVideoStreaming, cameraEnabled]);
+
   const authController = useMemo(
     () =>
       new AuthController({
@@ -857,6 +875,16 @@ export function App() {
     roomSlug?: string;
     settings?: Record<string, unknown>;
   }) => {
+    const fromUserId = String(payload.fromUserId || "").trim();
+    const payloadRoomSlug = String(payload.roomSlug || "").trim();
+    const localVideoEnabled = payload.settings?.localVideoEnabled;
+    if (fromUserId && typeof localVideoEnabled === "boolean" && (!payloadRoomSlug || payloadRoomSlug === roomSlugRef.current)) {
+      setVoiceCameraEnabledByUserIdInCurrentRoom((prev) => ({
+        ...prev,
+        [fromUserId]: localVideoEnabled
+      }));
+    }
+
     handleIncomingRtcVideoState(payload);
     handleIncomingVideoPolicyState(payload);
   }, [handleIncomingRtcVideoState, handleIncomingVideoPolicyState]);
@@ -979,6 +1007,7 @@ export function App() {
     setAdminUsers([]);
     setRoomsPresenceBySlug({});
     setRoomsPresenceDetailsBySlug({});
+    setVoiceCameraEnabledByUserIdInCurrentRoom({});
     setTelemetrySummary(null);
     setServerAudioQuality("standard");
     setServerAudioQualitySaving(false);
@@ -1751,6 +1780,7 @@ export function App() {
               liveRoomMembersBySlug={roomsPresenceBySlug}
               liveRoomMemberDetailsBySlug={roomsPresenceDetailsBySlug}
               voiceMicStateByUserIdInCurrentRoom={voiceMicStateByUserIdInCurrentRoom}
+              voiceCameraEnabledByUserIdInCurrentRoom={effectiveVoiceCameraEnabledByUserIdInCurrentRoom}
               voiceAudioOutputMutedByUserIdInCurrentRoom={voiceAudioOutputMutedByUserIdInCurrentRoom}
               voiceRtcStateByUserIdInCurrentRoom={voiceRtcStateByUserIdInCurrentRoom}
               collapsedCategoryIds={collapsedCategoryIds}

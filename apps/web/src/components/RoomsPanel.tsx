@@ -27,6 +27,7 @@ export function RoomsPanel({
   liveRoomMembersBySlug,
   liveRoomMemberDetailsBySlug,
   voiceMicStateByUserIdInCurrentRoom,
+  voiceCameraEnabledByUserIdInCurrentRoom,
   voiceAudioOutputMutedByUserIdInCurrentRoom,
   voiceRtcStateByUserIdInCurrentRoom,
   collapsedCategoryIds,
@@ -323,6 +324,9 @@ export function RoomsPanel({
               const micState = roomHasVoiceState && member.userId
                 ? (voiceMicStateByUserIdInCurrentRoom[member.userId] || "silent")
                 : "silent";
+              const isCameraEnabled = roomHasVoiceState && member.userId
+                ? Boolean(voiceCameraEnabledByUserIdInCurrentRoom[member.userId])
+                : false;
               const isVoiceActive = micState === "speaking";
               const isAudioOutputMuted = roomHasVoiceState && member.userId
                 ? Boolean(voiceAudioOutputMutedByUserIdInCurrentRoom[member.userId])
@@ -352,6 +356,7 @@ export function RoomsPanel({
               <span className="channel-member-name">{member.userName}</span>
               <span className={`channel-member-rtc ${rtcStateClass}`}>rtc</span>
               <span className="channel-member-icons" aria-hidden="true">
+                {isCameraEnabled ? <i className="bi bi-camera-video-fill channel-member-camera-icon" /> : null}
                 <i className={`bi ${micIconClass} channel-member-mic-icon`} />
                 <i className={`bi ${audioIconClass} channel-member-audio-icon`} />
               </span>

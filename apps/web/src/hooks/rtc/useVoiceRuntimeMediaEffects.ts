@@ -377,7 +377,9 @@ export function useVoiceRuntimeMediaEffects({
         track.stop();
       });
 
-      stream.addTrack(nextVideoTrack);
+      if (nextVideoTrack) {
+        stream.addTrack(nextVideoTrack);
+      }
 
       await syncVideoTrackToConnections(connections, nextVideoTrack, stream);
 

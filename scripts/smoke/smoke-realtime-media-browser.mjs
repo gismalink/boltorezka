@@ -1,12 +1,17 @@
 #!/usr/bin/env node
-// Purpose: Browser media-plane smoke for realtime RTC audio over signaling relay with measurable RTP stats.
+// Purpose: Browser media-plane smoke for realtime RTC audio+video over signaling relay with measurable RTP stats.
 import { chromium } from "playwright";
 
 const baseUrl = String(process.env.SMOKE_API_URL || "http://localhost:8080").replace(/\/+$/, "");
 const roomSlug = String(process.env.SMOKE_ROOM_SLUG || "test-room").trim();
 const timeoutMs = Number(process.env.SMOKE_TIMEOUT_MS || 20000);
 const settleMs = Number(process.env.SMOKE_RTC_MEDIA_SETTLE_MS || 12000);
-const toneFrequencyHz = Number(process.env.SMOKE_RTC_TONE_FREQUENCY_HZ || 440);
+const toneBaseFrequencyHz = Number(process.env.SMOKE_RTC_TONE_FREQUENCY_HZ || process.env.SMOKE_RTC_TONE_FREQUENCY_BASE_HZ || 440);
+const toneFrequencySpreadHz = Number(process.env.SMOKE_RTC_TONE_SPREAD_HZ || 18);
+const melodyStepMs = Number(process.env.SMOKE_RTC_TONE_MELODY_STEP_MS || 440);
+const videoNoiseWidth = Number(process.env.SMOKE_RTC_VIDEO_NOISE_WIDTH || 320);
+const videoNoiseHeight = Number(process.env.SMOKE_RTC_VIDEO_NOISE_HEIGHT || 240);
+const videoNoiseFps = Number(process.env.SMOKE_RTC_VIDEO_NOISE_FPS || 12);
 const iceServersCsv = String(process.env.SMOKE_RTC_ICE_SERVERS || "stun:stun.l.google.com:19302,stun:stun1.l.google.com:19302");
 const hostResolveRule = String(process.env.SMOKE_CHROMIUM_HOST_RESOLVE_RULE || "").trim();
 const targetUserIdEnv = String(process.env.SMOKE_RTC_TARGET_USER_ID || "").trim();
@@ -51,11 +56,11 @@ async function fetchTicket(token, label) {
   return ticket;
 }
 
-async function preparePeerPage({ context, label, ticket }) {
+async function preparePeerPage({ context, label, ticket, toneHz }) {
   const page = await context.newPage();
   await page.goto(baseUrl, { waitUntil: "domcontentloaded", timeout: timeoutMs });
 
-  const result = await page.evaluate(async ({ baseUrlInner, roomSlugInner, ticketInner, labelInner, timeoutMsInner, toneHz, iceServers }) => {
+  const result = await page.evaluate(async ({ baseUrlInner, roomSlugInner, ticketInner, labelInner, timeoutMsInner, toneHz, melodyStepMsInner, iceServers, videoNoiseWidthInner, videoNoiseHeightInner, videoNoiseFpsInner }) => {
     const toWsUrl = (httpUrl) => {
       const parsed = new URL(httpUrl);
       parsed.protocol = parsed.protocol === "https:" ? "wss:" : "ws:";
@@ -77,7 +82,11 @@ async function preparePeerPage({ context, label, ticket }) {
       toneAudioContext: null,
       toneOscillator: null,
       toneGain: null,
+      toneMelodyTimer: null,
       toneTrack: null,
+      videoCanvas: null,
+      videoNoiseTimer: null,
+      videoTrack: null,
       callConnectedAt: 0,
       inboundTrackCount: 0,
       relayedOfferCount: 0,
@@ -90,6 +99,9 @@ async function preparePeerPage({ context, label, ticket }) {
       reconnectAttempts: 0,
       reconnectSuccesses: 0
     };
+
+    const noteRatios = [1, 9 / 8, 5 / 4, 4 / 3, 3 / 2, 5 / 3, 15 / 8, 2];
+    const labelHash = Array.from(labelInner).reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
 
     const markPeerSeen = (userId) => {
       const normalized = String(userId || "").trim();
@@ -218,6 +230,14 @@ async function preparePeerPage({ context, label, ticket }) {
       gain.connect(destination);
       oscillator.start();
 
+      const melodyStartIndex = labelHash % noteRatios.length;
+      let step = 0;
+      state.toneMelodyTimer = window.setInterval(() => {
+        const ratio = noteRatios[(melodyStartIndex + step) % noteRatios.length] || 1;
+        oscillator.frequency.value = Math.max(140, toneHz * ratio);
+        step += 1;
+      }, Math.max(140, melodyStepMsInner));
+
       const [track] = destination.stream.getAudioTracks();
       if (!track) {
         throw new Error("[smoke:realtime:media] tone track is missing");
@@ -230,6 +250,56 @@ async function preparePeerPage({ context, label, ticket }) {
       return track;
     };
 
+    const ensureVideoTrack = () => {
+      if (state.videoTrack) {
+        return state.videoTrack;
+      }
+
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.max(64, Number(videoNoiseWidthInner) || 320);
+      canvas.height = Math.max(48, Number(videoNoiseHeightInner) || 240);
+      const ctx = canvas.getContext("2d", { alpha: false });
+      if (!ctx) {
+        throw new Error("[smoke:realtime:media] canvas2d context is missing");
+      }
+
+      let frame = 0;
+      const paint = () => {
+        const w = canvas.width;
+        const h = canvas.height;
+        const image = ctx.createImageData(w, h);
+        const data = image.data;
+
+        for (let i = 0; i < data.length; i += 4) {
+          const x = ((i / 4) % w);
+          const y = Math.floor((i / 4) / w);
+          const noise = (Math.random() * 255) | 0;
+          data[i] = (noise + ((x + frame) % 255)) & 255;
+          data[i + 1] = (noise + ((y * 2 + frame * 3) % 255)) & 255;
+          data[i + 2] = (noise + ((x + y + frame * 5) % 255)) & 255;
+          data[i + 3] = 255;
+        }
+
+        ctx.putImageData(image, 0, 0);
+        ctx.fillStyle = "rgba(255,255,255,0.14)";
+        ctx.fillRect((frame * 7) % w, 0, 2, h);
+        frame += 1;
+      };
+
+      paint();
+      state.videoNoiseTimer = window.setInterval(paint, Math.max(40, Math.round(1000 / Math.max(1, Number(videoNoiseFpsInner) || 12))));
+
+      const stream = canvas.captureStream(Math.max(1, Number(videoNoiseFpsInner) || 12));
+      const [track] = stream.getVideoTracks();
+      if (!track) {
+        throw new Error("[smoke:realtime:media] video track is missing");
+      }
+
+      state.videoCanvas = canvas;
+      state.videoTrack = track;
+      return track;
+    };
+
     const ensurePeerConnection = () => {
       if (state.pc) {
         return state.pc;
@@ -237,7 +307,9 @@ async function preparePeerPage({ context, label, ticket }) {
 
       const pc = new RTCPeerConnection({ iceServers });
       const toneTrack = ensureToneTrack();
+      const videoTrack = ensureVideoTrack();
       pc.addTrack(toneTrack);
+      pc.addTrack(videoTrack);
 
       pc.onicecandidate = (event) => {
         if (!event.candidate || !state.remoteUserId) {
@@ -426,6 +498,7 @@ async function preparePeerPage({ context, label, ticket }) {
 
     await sendEvent("room.join", { roomSlug: roomSlugInner });
     state.joinAcked = true;
+    await sendEvent("call.video_state", { settings: { localVideoEnabled: true } });
 
     window.__rtcMediaSmoke = {
       getState: () => ({
@@ -538,6 +611,10 @@ async function preparePeerPage({ context, label, ticket }) {
         let outboundAudioPackets = 0;
         let inboundAudioBytes = 0;
         let inboundAudioPackets = 0;
+        let outboundVideoBytes = 0;
+        let outboundVideoPackets = 0;
+        let inboundVideoBytes = 0;
+        let inboundVideoPackets = 0;
 
         report.forEach((entry) => {
           if (entry.type === "outbound-rtp" && entry.kind === "audio") {
@@ -549,6 +626,16 @@ async function preparePeerPage({ context, label, ticket }) {
             inboundAudioBytes += Number(entry.bytesReceived || 0);
             inboundAudioPackets += Number(entry.packetsReceived || 0);
           }
+
+          if (entry.type === "outbound-rtp" && entry.kind === "video") {
+            outboundVideoBytes += Number(entry.bytesSent || 0);
+            outboundVideoPackets += Number(entry.packetsSent || 0);
+          }
+
+          if (entry.type === "inbound-rtp" && entry.kind === "video") {
+            inboundVideoBytes += Number(entry.bytesReceived || 0);
+            inboundVideoPackets += Number(entry.packetsReceived || 0);
+          }
         });
 
         return {
@@ -559,6 +646,10 @@ async function preparePeerPage({ context, label, ticket }) {
           outboundAudioPackets,
           inboundAudioBytes,
           inboundAudioPackets,
+          outboundVideoBytes,
+          outboundVideoPackets,
+          inboundVideoBytes,
+          inboundVideoPackets,
           inboundTrackCount: state.inboundTrackCount,
           relayedOfferCount: state.relayedOfferCount,
           relayedAnswerCount: state.relayedAnswerCount,
@@ -572,6 +663,10 @@ async function preparePeerPage({ context, label, ticket }) {
         } catch {
           // noop
         }
+        if (state.toneMelodyTimer !== null) {
+          clearInterval(state.toneMelodyTimer);
+          state.toneMelodyTimer = null;
+        }
         try {
           state.toneOscillator?.stop();
         } catch {
@@ -581,6 +676,15 @@ async function preparePeerPage({ context, label, ticket }) {
           await state.toneAudioContext?.close?.();
         } catch {
           // noop
+        }
+        try {
+          state.videoTrack?.stop();
+        } catch {
+          // noop
+        }
+        if (state.videoNoiseTimer !== null) {
+          clearInterval(state.videoNoiseTimer);
+          state.videoNoiseTimer = null;
         }
         try {
           state.pc?.close();
@@ -605,7 +709,11 @@ async function preparePeerPage({ context, label, ticket }) {
     ticketInner: ticket,
     labelInner: label,
     timeoutMsInner: timeoutMs,
-    toneHz: toneFrequencyHz,
+    toneHz,
+    melodyStepMsInner: melodyStepMs,
+    videoNoiseWidthInner: videoNoiseWidth,
+    videoNoiseHeightInner: videoNoiseHeight,
+    videoNoiseFpsInner: videoNoiseFps,
     iceServers: iceServersCsv
       .split(",")
       .map((item) => item.trim())
@@ -638,8 +746,18 @@ async function main() {
   let pageB = null;
 
   try {
-    const peerA = await preparePeerPage({ context: contextA, label: "peer-a", ticket: ticketA });
-    const peerB = await preparePeerPage({ context: contextB, label: "peer-b", ticket: ticketB });
+    const peerA = await preparePeerPage({
+      context: contextA,
+      label: "peer-a",
+      ticket: ticketA,
+      toneHz: Math.max(140, toneBaseFrequencyHz - toneFrequencySpreadHz)
+    });
+    const peerB = await preparePeerPage({
+      context: contextB,
+      label: "peer-b",
+      ticket: ticketB,
+      toneHz: Math.max(140, toneBaseFrequencyHz + toneFrequencySpreadHz)
+    });
 
     pageA = peerA.page;
     pageB = peerB.page;
@@ -742,12 +860,18 @@ async function main() {
       ? [statsA, statsB].every((item) => (
         Number(item.outboundAudioBytes || 0) > 0
         && Number(item.outboundAudioPackets || 0) > 0
+        && Number(item.outboundVideoBytes || 0) > 0
+        && Number(item.outboundVideoPackets || 0) > 0
       ))
       : (
         Number(statsA.outboundAudioBytes || 0) > 0
         && Number(statsA.outboundAudioPackets || 0) > 0
+        && Number(statsA.outboundVideoBytes || 0) > 0
+        && Number(statsA.outboundVideoPackets || 0) > 0
         && Number(statsB.outboundAudioBytes || 0) > 0
         && Number(statsB.outboundAudioPackets || 0) > 0
+        && Number(statsB.outboundVideoBytes || 0) > 0
+        && Number(statsB.outboundVideoPackets || 0) > 0
         && redialSuccessesA > 0
         && redialSuccessesB > 0
       );
@@ -765,7 +889,12 @@ async function main() {
       baseUrl,
       roomSlug,
       settleMs,
-      toneFrequencyHz,
+      toneBaseFrequencyHz,
+      toneFrequencySpreadHz,
+      melodyStepMs,
+      videoNoiseWidth,
+      videoNoiseHeight,
+      videoNoiseFps,
       users: {
         peerA: peerA.userId,
         peerB: peerB.userId,

@@ -721,6 +721,10 @@ pre {
   color: var(--pixel-neon-cyan);
 }
 
+.channel-member-camera-icon {
+  color: color-mix(in srgb, var(--pixel-neon-gold) 74%, var(--pixel-text) 26%);
+}
+
 .channel-member-audio-icon {
   color: var(--pixel-muted);
 }
