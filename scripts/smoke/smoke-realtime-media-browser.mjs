@@ -10,6 +10,7 @@ const toneFrequencyHz = Number(process.env.SMOKE_RTC_TONE_FREQUENCY_HZ || 440);
 const iceServersCsv = String(process.env.SMOKE_RTC_ICE_SERVERS || "stun:stun.l.google.com:19302,stun:stun1.l.google.com:19302");
 const hostResolveRule = String(process.env.SMOKE_CHROMIUM_HOST_RESOLVE_RULE || "").trim();
 const targetUserIdEnv = String(process.env.SMOKE_RTC_TARGET_USER_ID || "").trim();
+const reconnectIntervalMs = Number(process.env.SMOKE_RTC_RECONNECT_INTERVAL_MS || 3000);
 
 const tokenA = String(process.env.SMOKE_TEST_BEARER_TOKEN || "").trim();
 const tokenB = String(process.env.SMOKE_TEST_BEARER_TOKEN_SECOND || "").trim();
@@ -84,7 +85,81 @@ async function preparePeerPage({ context, label, ticket }) {
       relayedIceCount: 0,
       joinAcked: false,
       pendingRemoteCandidates: [],
-      presentUserIds: new Set()
+      presentUserIds: new Set(),
+      peerLastSeenAt: new Map(),
+      reconnectAttempts: 0,
+      reconnectSuccesses: 0
+    };
+
+    const markPeerSeen = (userId) => {
+      const normalized = String(userId || "").trim();
+      if (!normalized) {
+        return;
+      }
+      state.presentUserIds.add(normalized);
+      state.peerLastSeenAt.set(normalized, Date.now());
+    };
+
+    const unmarkPeer = (userId) => {
+      const normalized = String(userId || "").trim();
+      if (!normalized) {
+        return;
+      }
+      state.presentUserIds.delete(normalized);
+      state.peerLastSeenAt.delete(normalized);
+    };
+
+    const isPcConnected = () => {
+      const pc = state.pc;
+      if (!pc) {
+        return false;
+      }
+
+      return (
+        pc.connectionState === "connected"
+        || pc.iceConnectionState === "connected"
+        || pc.iceConnectionState === "completed"
+      );
+    };
+
+    const closePeerConnection = () => {
+      if (!state.pc) {
+        return;
+      }
+
+      try {
+        state.pc.onicecandidate = null;
+        state.pc.onconnectionstatechange = null;
+        state.pc.oniceconnectionstatechange = null;
+        state.pc.ontrack = null;
+        state.pc.close();
+      } catch {
+        // noop
+      }
+
+      state.pc = null;
+      state.pendingRemoteCandidates = [];
+      state.callConnectedAt = 0;
+    };
+
+    const pickRoomPeer = (excludedIds = []) => {
+      const excluded = new Set((Array.isArray(excludedIds) ? excludedIds : []).map((item) => String(item || "").trim()));
+      let bestUserId = "";
+      let bestSeenAt = -1;
+
+      for (const userId of state.presentUserIds.values()) {
+        if (!userId || excluded.has(userId)) {
+          continue;
+        }
+
+        const seenAt = Number(state.peerLastSeenAt.get(userId) || 0);
+        if (seenAt >= bestSeenAt) {
+          bestSeenAt = seenAt;
+          bestUserId = userId;
+        }
+      }
+
+      return bestUserId;
     };
 
     const waitFor = async (predicate, labelText, timeoutMsValue = timeoutMsInner) => {
@@ -305,33 +380,31 @@ async function preparePeerPage({ context, label, ticket }) {
 
       if (data?.type === "server.ready") {
         state.userId = String(data?.payload?.userId || "").trim();
-        if (state.userId) {
-          state.presentUserIds.add(state.userId);
-        }
+        markPeerSeen(state.userId);
       }
 
       if (data?.type === "room.presence") {
         const users = Array.isArray(data?.payload?.users) ? data.payload.users : [];
         state.presentUserIds.clear();
+        state.peerLastSeenAt.clear();
         users.forEach((user) => {
           const userId = String(user?.userId || "").trim();
-          if (userId) {
-            state.presentUserIds.add(userId);
-          }
+          markPeerSeen(userId);
         });
       }
 
       if (data?.type === "presence.joined") {
         const userId = String(data?.payload?.userId || "").trim();
-        if (userId) {
-          state.presentUserIds.add(userId);
-        }
+        markPeerSeen(userId);
       }
 
       if (data?.type === "presence.left") {
         const userId = String(data?.payload?.userId || "").trim();
-        if (userId) {
-          state.presentUserIds.delete(userId);
+        unmarkPeer(userId);
+
+        if (state.remoteUserId && state.remoteUserId === userId) {
+          closePeerConnection();
+          state.remoteUserId = "";
         }
       }
 
@@ -364,6 +437,8 @@ async function preparePeerPage({ context, label, ticket }) {
         relayedAnswerCount: state.relayedAnswerCount,
         relayedIceCount: state.relayedIceCount,
         presentUserIds: Array.from(state.presentUserIds),
+        reconnectAttempts: state.reconnectAttempts,
+        reconnectSuccesses: state.reconnectSuccesses,
         joinAcked: state.joinAcked,
         connectionState: state.pc?.connectionState || "new",
         iceConnectionState: state.pc?.iceConnectionState || "new"
@@ -395,20 +470,56 @@ async function preparePeerPage({ context, label, ticket }) {
       },
       waitConnected: async () => {
         await waitFor(
-          () => {
-            const pc = state.pc;
-            if (!pc) {
-              return false;
-            }
-            return (
-              pc.connectionState === "connected"
-              || pc.iceConnectionState === "connected"
-              || pc.iceConnectionState === "completed"
-            );
-          },
+          () => isPcConnected(),
           `${labelInner} peer connection connected`,
           timeoutMsInner
         );
+      },
+      ensureConnectedToRoomPeer: async ({ excludeUserIds = [], preferredTargetUserId = "" } = {}) => {
+        if (isPcConnected()) {
+          return {
+            ok: true,
+            connected: true,
+            targetUserId: state.remoteUserId || "",
+            reason: "already-connected"
+          };
+        }
+
+        const preferred = String(preferredTargetUserId || "").trim();
+        const selectedTarget = preferred || pickRoomPeer(excludeUserIds);
+        if (!selectedTarget) {
+          return {
+            ok: false,
+            connected: false,
+            targetUserId: "",
+            reason: "no-target"
+          };
+        }
+
+        if (state.remoteUserId && state.remoteUserId !== selectedTarget) {
+          closePeerConnection();
+        }
+
+        state.reconnectAttempts += 1;
+
+        try {
+          await window.__rtcMediaSmoke.startCall(selectedTarget);
+          await window.__rtcMediaSmoke.waitConnected();
+          state.reconnectSuccesses += 1;
+          return {
+            ok: true,
+            connected: true,
+            targetUserId: selectedTarget,
+            reason: "connected"
+          };
+        } catch (error) {
+          return {
+            ok: false,
+            connected: false,
+            targetUserId: selectedTarget,
+            reason: String(error instanceof Error ? error.message : error || "connect-failed")
+          };
+        }
       },
       getRtcStats: async () => {
         const pc = state.pc;
@@ -558,13 +669,26 @@ async function main() {
       }
     }
 
-    await pageA.evaluate((targetUserId) => window.__rtcMediaSmoke.startCall(targetUserId), targetUserId);
-    await pageA.evaluate(() => window.__rtcMediaSmoke.waitConnected());
-    if (targetUserId === peerB.userId) {
-      await pageB.evaluate(() => window.__rtcMediaSmoke.waitConnected());
-    }
+    const sessionDeadline = Date.now() + Math.max(8000, settleMs);
+    let redialSuccesses = 0;
+    while (Date.now() < sessionDeadline) {
+      const reconnectResult = await pageA.evaluate(
+        ({ excludedIds, preferredTargetUserId }) => window.__rtcMediaSmoke.ensureConnectedToRoomPeer({
+          excludeUserIds: excludedIds,
+          preferredTargetUserId
+        }),
+        {
+          excludedIds: [peerA.userId],
+          preferredTargetUserId: targetUserId
+        }
+      );
 
-    await new Promise((resolve) => setTimeout(resolve, Math.max(4000, settleMs)));
+      if (reconnectResult?.ok) {
+        redialSuccesses += 1;
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, Math.max(800, reconnectIntervalMs)));
+    }
 
     const statsA = await pageA.evaluate(() => window.__rtcMediaSmoke.getRtcStats());
     const statsB = await pageB.evaluate(() => window.__rtcMediaSmoke.getRtcStats());
@@ -608,6 +732,7 @@ async function main() {
         targetUserId,
         targetKind
       },
+      redialSuccesses,
       peerA: {
         state: stateA,
         stats: statsA
