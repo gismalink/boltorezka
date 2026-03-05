@@ -10,6 +10,7 @@ This folder contains WebRTC call runtime modules.
 - `voiceCallLocalMedia.ts` - local media constraints, stream acquisition, and track attach helpers.
 - `voiceCallTargetSync.ts` - room target reconciliation and resync timer orchestration.
 - `voiceCallSignalDispatch.ts` - runtime signal/nack/mic/terminal dispatch glue.
+- `voiceCallPeerRegistry.ts` - peer map status derivation and peer create/close wiring.
 - `useVoiceRuntimeMediaEffects.ts` - media/watchdog/device effects for active calls.
 - `voiceCallOfferPolicy.ts` - single-offerer and offer-cadence policy.
 - `voiceCallConfig.ts` - RTC constants and thresholds.

@@ -15,6 +15,7 @@ const preissuedTicketThird = process.env.SMOKE_WS_TICKET_THIRD ?? "";
 const preissuedTicketReconnect = process.env.SMOKE_WS_TICKET_RECONNECT ?? "";
 const smokeCallSignal = process.env.SMOKE_CALL_SIGNAL === "1";
 const smokeCallRace3Way = process.env.SMOKE_CALL_RACE_3WAY === "1";
+const smokeCallCameraToggleReconnect = process.env.SMOKE_CALL_CAMERA_TOGGLE_RECONNECT === "1";
 const smokeReconnect = process.env.SMOKE_RECONNECT === "1";
 const canRunReconnect = Boolean(preissuedTicketReconnect || bearerToken);
 const roomSlug = process.env.SMOKE_ROOM_SLUG ?? "general";
@@ -38,6 +39,11 @@ if (smokeCallSignal && !bearerToken && !preissuedTicketSecond) {
 
 if (smokeCallRace3Way && !preissuedTicketThird && !bearerTokenThird) {
   console.error("[smoke:realtime] SMOKE_CALL_RACE_3WAY=1 requires SMOKE_TEST_BEARER_TOKEN_THIRD or SMOKE_WS_TICKET_THIRD");
+  process.exit(1);
+}
+
+if (smokeCallCameraToggleReconnect && !smokeCallRace3Way) {
+  console.error("[smoke:realtime] SMOKE_CALL_CAMERA_TOGGLE_RECONNECT=1 requires SMOKE_CALL_RACE_3WAY=1");
   process.exit(1);
 }
 
@@ -199,7 +205,8 @@ async function runThreeWayRaceScenario({
   firstUserId,
   secondUserId,
   roomSlug,
-  timeoutMs
+  timeoutMs,
+  cameraToggleReconnect
 }) {
   const thirdTicket = await resolveThirdTicket();
   const wsThirdUrl = toWsUrl(baseUrl);
@@ -261,9 +268,18 @@ async function runThreeWayRaceScenario({
     waitForAckOrNack(thirdEvents, offerCA, "ack|nack race offer C->A")
   ]);
 
-  firstWs.send(JSON.stringify({ type: "call.video_state", requestId: `race-video-1-${Date.now()}`, payload: { settings: { localVideoEnabled: true } } }));
-  secondWs.send(JSON.stringify({ type: "call.video_state", requestId: `race-video-2-${Date.now()}`, payload: { settings: { localVideoEnabled: false } } }));
-  wsThird.send(JSON.stringify({ type: "call.video_state", requestId: `race-video-3-${Date.now()}`, payload: { settings: { localVideoEnabled: true } } }));
+  const raceVideoRequestFirst = `race-video-1-${Date.now()}`;
+  const raceVideoRequestSecond = `race-video-2-${Date.now()}`;
+  const raceVideoRequestThird = `race-video-3-${Date.now()}`;
+  firstWs.send(JSON.stringify({ type: "call.video_state", requestId: raceVideoRequestFirst, payload: { settings: { localVideoEnabled: true } } }));
+  secondWs.send(JSON.stringify({ type: "call.video_state", requestId: raceVideoRequestSecond, payload: { settings: { localVideoEnabled: false } } }));
+  wsThird.send(JSON.stringify({ type: "call.video_state", requestId: raceVideoRequestThird, payload: { settings: { localVideoEnabled: true } } }));
+
+  if (cameraToggleReconnect) {
+    await waitForEvent(firstEvents, (item) => item?.type === "ack" && item?.payload?.requestId === raceVideoRequestFirst, "ack race video state A");
+    await waitForEvent(secondEvents, (item) => item?.type === "ack" && item?.payload?.requestId === raceVideoRequestSecond, "ack race video state B");
+    await waitForEvent(thirdEvents, (item) => item?.type === "ack" && item?.payload?.requestId === raceVideoRequestThird, "ack race video state C");
+  }
 
   await new Promise((resolve) => setTimeout(resolve, 1000));
 
@@ -317,12 +333,45 @@ async function runThreeWayRaceScenario({
   wsThirdReconnect.send(JSON.stringify({ type: "room.join", requestId: rejoinRequest, payload: { roomSlug } }));
   await waitForEvent(reconnectEvents, (item) => item?.type === "ack" && item?.payload?.requestId === rejoinRequest, "ack for third rejoin");
 
+  let cameraToggleReconnectOk = false;
+  if (cameraToggleReconnect) {
+    const reconnectOfferRequest = `race-reconnect-offer-a3-${Date.now()}`;
+    firstWs.send(JSON.stringify({
+      type: "call.offer",
+      requestId: reconnectOfferRequest,
+      payload: {
+        targetUserId: thirdUserId,
+        signal: { type: "offer", sdp: "race-reconnect-a3" }
+      }
+    }));
+
+    const reconnectOfferResult = await waitForAckOrNack(firstEvents, reconnectOfferRequest, "ack|nack race reconnect offer A->C");
+    if (!reconnectOfferResult.ok && reconnectOfferResult.code && reconnectOfferResult.code !== "OfferRateLimited") {
+      throw new Error(`[smoke:realtime] race reconnect unexpected nack: ${reconnectOfferResult.code}`);
+    }
+
+    const reconnectVideoRequest = `race-video-reconnect-3-${Date.now()}`;
+    wsThirdReconnect.send(JSON.stringify({
+      type: "call.video_state",
+      requestId: reconnectVideoRequest,
+      payload: { settings: { localVideoEnabled: false } }
+    }));
+    await waitForEvent(
+      reconnectEvents,
+      (item) => item?.type === "ack" && item?.payload?.requestId === reconnectVideoRequest,
+      "ack for race reconnect video state C"
+    );
+
+    cameraToggleReconnectOk = true;
+  }
+
   wsThirdReconnect.close();
 
   return {
     race3WayOk: true,
     race3WayReconnectOk: true,
-    race3WayOfferRateLimited: offerRateLimited
+    race3WayOfferRateLimited: offerRateLimited,
+    cameraToggleReconnectOk
   };
 }
 
@@ -436,6 +485,7 @@ async function runThreeWayRaceScenario({
   let race3WayOk = false;
   let race3WayReconnectOk = false;
   let race3WayOfferRateLimited = 0;
+  let cameraToggleReconnectOk = false;
   let reconnectOk = false;
   let reconnectSkipped = false;
   if (smokeCallSignal) {
@@ -601,11 +651,13 @@ async function runThreeWayRaceScenario({
         firstUserId,
         secondUserId,
         roomSlug,
-        timeoutMs
+        timeoutMs,
+        cameraToggleReconnect: smokeCallCameraToggleReconnect
       });
       race3WayOk = raceResult.race3WayOk;
       race3WayReconnectOk = raceResult.race3WayReconnectOk;
       race3WayOfferRateLimited = raceResult.race3WayOfferRateLimited;
+      cameraToggleReconnectOk = raceResult.cameraToggleReconnectOk;
     }
   }
 
@@ -697,6 +749,7 @@ async function runThreeWayRaceScenario({
         race3WayOk,
         race3WayReconnectOk,
         race3WayOfferRateLimited,
+        cameraToggleReconnectOk,
         callSignalRelayed,
         callRejectRelayed,
         callHangupRelayed

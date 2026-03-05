@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { PresenceMember } from "../../domain";
 import {
-  decrementVoiceCounter,
-  incrementVoiceCounter,
   logVoiceDiagnostics
 } from "../../utils/voiceDiagnostics";
 import {
@@ -10,12 +8,10 @@ import {
   REMOTE_SPEAKING_HOLD_MS,
   REMOTE_SPEAKING_OFF_THRESHOLD,
   REMOTE_SPEAKING_ON_THRESHOLD,
-  RTC_CONFIG,
   RTC_RECONNECT_MAX_ATTEMPTS,
   TARGET_NOT_IN_ROOM_BLOCK_MS,
   TARGET_NOT_IN_ROOM_RESYNC_GRACE_MS
 } from "./voiceCallConfig";
-import { bindVoicePeerConnectionHandlers } from "./voiceCallPeerConnectionHandlers";
 import {
   dispatchCallNackForRtc,
   dispatchIncomingMicStateForRtc,
@@ -33,11 +29,6 @@ import {
   markOfferInFlight,
   markOfferSentNow
 } from "./voiceCallNegotiationState";
-import {
-  createHiddenRemoteAudioElement,
-  createVoicePeerContext,
-  disposeVoicePeerContext
-} from "./voiceCallPeerLifecycle";
 import {
   applyAudioQualityToPeerConnection,
   attachLocalTracksForRtc,
@@ -57,6 +48,11 @@ import {
   scheduleRoomTargetsResyncForRtc,
   syncRoomTargetsForRtc
 } from "./voiceCallTargetSync";
+import {
+  closePeerForRtc,
+  deriveCallStatusForRtc,
+  ensurePeerConnectionForRtc
+} from "./voiceCallPeerRegistry";
 import type {
   CallMicStatePayload,
   CallNackPayload,
@@ -408,39 +404,10 @@ export function useVoiceCallRuntime({
   }, [audioMuted, applyRemoteAudioOutput, pushCallLog]);
 
   const updateCallStatus = useCallback(() => {
-    const peers = Array.from(peersRef.current.values());
-    const connectedUserIds = Array.from(peersRef.current.entries())
-      .filter(([, peer]) => peer.connection.connectionState === "connected" || peer.hasRemoteTrack)
-      .map(([userId]) => userId);
-    const connectingUserIds = Array.from(peersRef.current.entries())
-      .filter(([, peer]) => {
-        if (peer.connection.connectionState === "connected" || peer.hasRemoteTrack) {
-          return false;
-        }
-
-        const state = peer.connection.connectionState;
-        return state === "new" || state === "connecting";
-      })
-      .map(([userId]) => userId);
-    setConnectedPeerUserIds(connectedUserIds);
-    setConnectingPeerUserIds(connectingUserIds);
-
-    const anyConnected = peers.some((peer) => peer.connection.connectionState === "connected" || peer.hasRemoteTrack);
-    if (anyConnected) {
-      setCallStatus("active");
-      return;
-    }
-
-    const anyConnecting = peers.some((peer) => {
-      const state = peer.connection.connectionState;
-      return state === "connecting" || state === "new";
-    });
-    if (anyConnecting) {
-      setCallStatus("connecting");
-      return;
-    }
-
-    setCallStatus("idle");
+    const snapshot = deriveCallStatusForRtc(peersRef);
+    setConnectedPeerUserIds(snapshot.connectedUserIds);
+    setConnectingPeerUserIds(snapshot.connectingUserIds);
+    setCallStatus(snapshot.status);
   }, [setCallStatus]);
 
   const clearPeerReconnectTimer = useCallback((targetUserId: string) => {
@@ -472,26 +439,17 @@ export function useVoiceCallRuntime({
   }, []);
 
   const closePeer = useCallback((targetUserId: string, reason?: string) => {
-    const peer = peersRef.current.get(targetUserId);
-    if (!peer) {
-      return;
-    }
-
-    clearPeerReconnectTimer(targetUserId);
-    clearPeerStatsTimer(targetUserId);
-    disposeVoicePeerContext(peer);
-    peersRef.current.delete(targetUserId);
-    clearRemoteVideoStream(targetUserId);
-    decrementVoiceCounter("runtimePeers");
-    decrementVoiceCounter("runtimeAudioElements");
-    logVoiceDiagnostics("runtime peer closed", { targetUserId, label: peer.label });
-    syncPeerVoiceState();
-
-    if (reason) {
-      pushCallLog(reason);
-    }
-
-    updateCallStatus();
+    closePeerForRtc({
+      targetUserId,
+      peersRef,
+      clearPeerReconnectTimer,
+      clearPeerStatsTimer,
+      clearRemoteVideoStream,
+      syncPeerVoiceState,
+      updateCallStatus,
+      pushCallLog,
+      reason
+    });
   }, [clearPeerReconnectTimer, clearPeerStatsTimer, pushCallLog, updateCallStatus, syncPeerVoiceState, clearRemoteVideoStream]);
 
   const resetRoomState = useCallback((options?: { clearRequestState?: boolean }) => {
@@ -593,28 +551,7 @@ export function useVoiceCallRuntime({
   }, [pushCallLog]);
 
   const ensurePeerConnection = useCallback((targetUserId: string, targetLabel: string) => {
-    const existing = peersRef.current.get(targetUserId);
-    if (existing) {
-      if (existing.label !== targetLabel) {
-        existing.label = targetLabel;
-      }
-      return existing.connection;
-    }
-
-    const remoteAudioElement = createHiddenRemoteAudioElement();
-
-    const connection = new RTCPeerConnection(RTC_CONFIG);
-    const peerContext = createVoicePeerContext(connection, remoteAudioElement, targetLabel);
-    peersRef.current.set(targetUserId, peerContext);
-    incrementVoiceCounter("runtimePeers");
-    incrementVoiceCounter("runtimeAudioElements");
-    logVoiceDiagnostics("runtime peer created", {
-      targetUserId,
-      targetLabel
-    });
-
-    bindVoicePeerConnectionHandlers({
-      connection,
+    return ensurePeerConnectionForRtc({
       targetUserId,
       targetLabel,
       peersRef,
@@ -634,9 +571,6 @@ export function useVoiceCallRuntime({
       audioMuted,
       outputVolume
     });
-
-    void applyRemoteAudioOutput(remoteAudioElement);
-    return connection;
   }, [sendWsEvent, applyRemoteAudioOutput, clearPeerReconnectTimer, closePeer, scheduleReconnect, updateCallStatus, syncPeerVoiceState, retryRemoteAudioPlayback, startPeerStatsMonitor, rememberRequestTarget, audioMuted, outputVolume, setRemoteVideoStream, clearRemoteVideoStream]);
 
   ensurePeerConnectionRef.current = ensurePeerConnection;
