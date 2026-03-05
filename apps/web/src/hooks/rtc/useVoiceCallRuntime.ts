@@ -274,6 +274,39 @@ export function useVoiceCallRuntime({
     });
   }, []);
 
+  const traceOfferLifecycle = useCallback((args: {
+    stage: "created" | "sent" | "settled" | "failed";
+    targetUserId: string;
+    targetLabel: string;
+    reason: string;
+    iceRestart: boolean;
+    cadenceBucket: "manual" | "video-sync" | "ice-restart";
+    settledBy?: "complete" | "timeout" | "already-complete";
+    message?: string;
+  }) => {
+    const {
+      stage,
+      targetUserId,
+      targetLabel,
+      reason,
+      iceRestart,
+      cadenceBucket,
+      settledBy,
+      message
+    } = args;
+
+    logVoiceDiagnostics("runtime offer lifecycle", {
+      stage,
+      targetUserId,
+      targetLabel: targetLabel || targetUserId,
+      reason,
+      iceRestart,
+      cadenceBucket,
+      settledBy,
+      message
+    });
+  }, []);
+
   const rememberRequestTarget = useCallback((requestId: string | null, eventType: string, targetUserId: string) => {
     const normalizedRequestId = normalizeRtcText(requestId);
     const normalizedTarget = normalizeRtcText(targetUserId);
@@ -621,7 +654,7 @@ export function useVoiceCallRuntime({
   }, [isTargetTemporarilyBlocked, traceOfferEvent]);
 
   const sendStartOfferSignal = useCallback(async (context: StartOfferContext): Promise<boolean> => {
-    const { normalizedTarget, targetLabel, reason, iceRestart } = context;
+    const { normalizedTarget, targetLabel, reason, iceRestart, cadenceBucket } = context;
 
     const connection = ensurePeerConnection(normalizedTarget, targetLabel);
     const peer = peersRef.current.get(normalizedTarget);
@@ -642,6 +675,16 @@ export function useVoiceCallRuntime({
     await connection.setLocalDescription(offer);
 
     const { signal, settledBy } = await buildLocalDescriptionAfterIceGathering(connection);
+    traceOfferLifecycle({
+      stage: "settled",
+      targetUserId: normalizedTarget,
+      targetLabel,
+      reason,
+      iceRestart,
+      cadenceBucket,
+      settledBy
+    });
+
     if (settledBy === "timeout") {
       pushCallLog(`rtc ice gathering timeout before offer -> ${targetLabel || normalizedTarget}`);
     }
@@ -660,12 +703,21 @@ export function useVoiceCallRuntime({
       traceOfferEvent("offer skipped", normalizedTarget, targetLabel, reason, {
         skip: "socket-unavailable"
       });
+      traceOfferLifecycle({
+        stage: "failed",
+        targetUserId: normalizedTarget,
+        targetLabel,
+        reason,
+        iceRestart,
+        cadenceBucket,
+        message: "socket-unavailable"
+      });
       pushCallLog("call.offer skipped: socket unavailable");
       return false;
     }
 
     return true;
-  }, [ensurePeerConnection, attachLocalTracks, allowVideoStreaming, pushCallLog, sendWsEvent, rememberRequestTarget, traceOfferEvent]);
+  }, [ensurePeerConnection, attachLocalTracks, allowVideoStreaming, pushCallLog, sendWsEvent, rememberRequestTarget, traceOfferEvent, traceOfferLifecycle]);
 
   const commitStartOfferSuccess = useCallback((context: StartOfferContext): void => {
     const { normalizedTarget, targetLabel, reason, iceRestart, cadenceBucket } = context;
@@ -679,7 +731,15 @@ export function useVoiceCallRuntime({
     traceOfferEvent("offer sent", normalizedTarget, targetLabel, reason, {
       iceRestart
     });
-  }, [setLastCallPeer, updateCallStatus, pushCallLog, traceOfferEvent]);
+    traceOfferLifecycle({
+      stage: "sent",
+      targetUserId: normalizedTarget,
+      targetLabel,
+      reason,
+      iceRestart,
+      cadenceBucket
+    });
+  }, [setLastCallPeer, updateCallStatus, pushCallLog, traceOfferEvent, traceOfferLifecycle]);
 
   const startOffer = useCallback(async (
     targetUserId: string,
@@ -691,8 +751,23 @@ export function useVoiceCallRuntime({
       return;
     }
 
-    const { normalizedTarget } = context;
+    const {
+      normalizedTarget,
+      targetLabel: resolvedTargetLabel,
+      reason,
+      iceRestart,
+      cadenceBucket
+    } = context;
     const existingPeer = peersRef.current.get(normalizedTarget);
+
+    traceOfferLifecycle({
+      stage: "created",
+      targetUserId: normalizedTarget,
+      targetLabel: resolvedTargetLabel,
+      reason,
+      iceRestart,
+      cadenceBucket
+    });
 
     markOfferInFlight(existingPeer, true);
     markMakingOffer(existingPeer, true);
@@ -712,13 +787,22 @@ export function useVoiceCallRuntime({
         pushToastThrottled("devices-load-failed", t("settings.devicesLoadFailed"));
       }
       pushCallLog(`call.offer failed (${targetLabel || normalizedTarget}): ${(error as Error).message}`);
+      traceOfferLifecycle({
+        stage: "failed",
+        targetUserId: normalizedTarget,
+        targetLabel: resolvedTargetLabel,
+        reason,
+        iceRestart,
+        cadenceBucket,
+        message: (error as Error).message
+      });
       closePeer(normalizedTarget);
     } finally {
       const activePeer = peersRef.current.get(normalizedTarget);
       markMakingOffer(activePeer, false);
       markOfferInFlight(activePeer, false);
     }
-  }, [runStartOfferPreflight, commitStartOfferSuccess, sendStartOfferSignal, pushCallLog, t, pushToastThrottled, closePeer]);
+  }, [runStartOfferPreflight, commitStartOfferSuccess, sendStartOfferSignal, pushCallLog, t, pushToastThrottled, closePeer, traceOfferLifecycle]);
 
   startOfferRef.current = startOffer;
 

@@ -32,7 +32,7 @@
 - [x] Сделан устойчивый flush pending ICE (обработка частичных ошибок через `Promise.allSettled`).
 - [x] Добавлен ограниченный размер очереди `pendingRemoteCandidates` во входящем ICE пути (`voiceCallSignalHandlers.ts`).
 - [x] Добавлены per-reason cadence buckets в `voiceCallOfferPolicy.ts`/runtime, чтобы `video-sync` не блокировал manual recovery.
-- [ ] Добавить структурированные offer lifecycle логи (`created`, `sent`, `settled`, `failed`) в `useVoiceCallRuntime.ts`.
+- [x] Добавить структурированные offer lifecycle логи (`created`, `sent`, `settled`, `failed`) в `useVoiceCallRuntime.ts`.
 - [ ] Добавить трассировку glare-решений в `voiceCallSignalHandlers.ts` (`ignore` vs `rollback` с peer IDs).
 
 ## Расширение Тестового Покрытия
