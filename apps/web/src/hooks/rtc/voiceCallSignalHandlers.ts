@@ -53,7 +53,8 @@ async function handleOfferGlare({
   sendWsEvent,
   rememberRequestTarget,
   shouldInitiateOffer,
-  pushCallLog
+  pushCallLog,
+  logVoiceDiagnostics
 }: {
   existingPeer: VoicePeerContext | null;
   fromUserId: string;
@@ -62,6 +63,7 @@ async function handleOfferGlare({
   rememberRequestTarget: (requestId: string | null, eventType: string, targetUserId: string) => void;
   shouldInitiateOffer: (targetUserId: string) => boolean;
   pushCallLog: (text: string) => void;
+  logVoiceDiagnostics: (event: string, data: Record<string, unknown>) => void;
 }): Promise<"ignore-remote-offer" | "accept-remote-offer"> {
   const existingConnection = existingPeer?.connection || null;
   const offerCollision = hasOfferCollision(existingPeer || undefined);
@@ -74,6 +76,13 @@ async function handleOfferGlare({
   if (localIsDesignatedOfferer) {
     markIgnoreOffer(existingPeer || undefined, true);
     pushCallLog(`call.offer ignored (glare, local-offerer) <- ${fromUserName}`);
+    logVoiceDiagnostics("runtime glare decision", {
+      decision: "ignore",
+      fromUserId,
+      targetUserId: fromUserId,
+      fromUserName,
+      signalingState: existingConnection?.signalingState || "unknown"
+    });
     const rejectRequestId = sendWsEvent(
       "call.reject",
       {
@@ -91,6 +100,13 @@ async function handleOfferGlare({
     await existingConnection.setLocalDescription({ type: "rollback" });
   }
   pushCallLog(`call.offer glare rollback <- ${fromUserName}`);
+  logVoiceDiagnostics("runtime glare decision", {
+    decision: "rollback",
+    fromUserId,
+    targetUserId: fromUserId,
+    fromUserName,
+    signalingState: existingConnection?.signalingState || "unknown"
+  });
   return "accept-remote-offer";
 }
 
@@ -109,7 +125,8 @@ export async function handleIncomingSignalEvent({
   updateCallStatus,
   pushCallLog,
   closePeer,
-  shouldInitiateOffer
+  shouldInitiateOffer,
+  logVoiceDiagnostics
 }: {
   eventType: "call.offer" | "call.answer" | "call.ice";
   payload: CallSignalPayload;
@@ -126,7 +143,9 @@ export async function handleIncomingSignalEvent({
   pushCallLog: (text: string) => void;
   closePeer: (targetUserId: string, reason?: string) => void;
   shouldInitiateOffer: (targetUserId: string) => boolean;
+  logVoiceDiagnostics?: (event: string, data: Record<string, unknown>) => void;
 }) {
+  const traceVoiceDiagnostics = logVoiceDiagnostics || (() => undefined);
   const fromUserId = String(payload.fromUserId || "").trim();
   const fromUserName = String(payload.fromUserName || fromUserId || "unknown").trim();
   const signal = payload.signal;
@@ -157,7 +176,8 @@ export async function handleIncomingSignalEvent({
         sendWsEvent,
         rememberRequestTarget,
         shouldInitiateOffer,
-        pushCallLog
+        pushCallLog,
+        logVoiceDiagnostics: traceVoiceDiagnostics
       });
       if (glareResolution === "ignore-remote-offer") {
         return;

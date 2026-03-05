@@ -54,6 +54,7 @@ describe("voiceCallSignalHandlers", () => {
     const sendWsEvent = vi.fn(() => "req-reject-glare");
     const rememberRequestTarget = vi.fn();
     const ensurePeerConnection = vi.fn();
+    const logVoiceDiagnostics = vi.fn();
 
     const peer = createPeer({
       makingOffer: true,
@@ -79,7 +80,8 @@ describe("voiceCallSignalHandlers", () => {
       updateCallStatus: vi.fn(),
       pushCallLog: vi.fn(),
       closePeer: vi.fn(),
-      shouldInitiateOffer: vi.fn(() => true)
+      shouldInitiateOffer: vi.fn(() => true),
+      logVoiceDiagnostics
     });
 
     expect(sendWsEvent).toHaveBeenCalledWith(
@@ -91,7 +93,93 @@ describe("voiceCallSignalHandlers", () => {
       { trackAck: false, maxRetries: 0 }
     );
     expect(rememberRequestTarget).toHaveBeenCalledWith("req-reject-glare", "call.reject", "user-2");
+    expect(logVoiceDiagnostics).toHaveBeenCalledWith("runtime glare decision", {
+      decision: "ignore",
+      fromUserId: "user-2",
+      targetUserId: "user-2",
+      fromUserName: "User 2",
+      signalingState: "stable"
+    });
     expect(ensurePeerConnection).not.toHaveBeenCalled();
+  });
+
+  it("logs rollback glare decision when remote offer is accepted", async () => {
+    const originalRtcSessionDescription = globalThis.RTCSessionDescription;
+    const originalRtcIceCandidate = globalThis.RTCIceCandidate;
+    const logVoiceDiagnostics = vi.fn();
+
+    globalThis.RTCSessionDescription = class {
+      constructor(public init: RTCSessionDescriptionInit) {}
+    } as unknown as typeof RTCSessionDescription;
+    globalThis.RTCIceCandidate = class {
+      constructor(public init: RTCIceCandidateInit) {}
+    } as unknown as typeof RTCIceCandidate;
+
+    const rollingConnection = {
+      signalingState: "have-local-offer",
+      setLocalDescription: vi.fn(async () => undefined)
+    } as any;
+
+    const respondingConnection = {
+      iceGatheringState: "complete",
+      localDescription: {
+        type: "answer",
+        sdp: "answer-sdp"
+      },
+      setRemoteDescription: vi.fn(async () => undefined),
+      createAnswer: vi.fn(async () => ({ type: "answer", sdp: "answer-sdp" })),
+      setLocalDescription: vi.fn(async () => undefined),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn()
+    } as any;
+
+    try {
+      await handleIncomingSignalEvent({
+        eventType: "call.offer",
+        payload: {
+          fromUserId: "user-2",
+          fromUserName: "User 2",
+          signal: { type: "offer", sdp: "dummy" }
+        },
+        roomVoiceConnectedRef: { current: true },
+        peersRef: {
+          current: new Map([
+            [
+              "user-2",
+              createPeer({
+                makingOffer: true,
+                isSettingRemoteAnswerPending: false,
+                connection: rollingConnection
+              })
+            ]
+          ])
+        } as any,
+        sendWsEvent: vi.fn(() => "req-answer"),
+        rememberRequestTarget: vi.fn(),
+        ensurePeerConnection: vi.fn(() => respondingConnection),
+        clearPeerReconnectTimer: vi.fn(),
+        attachLocalTracks: vi.fn(async () => undefined),
+        flushPendingRemoteCandidates: vi.fn(async () => undefined),
+        setLastCallPeer: vi.fn(),
+        updateCallStatus: vi.fn(),
+        pushCallLog: vi.fn(),
+        closePeer: vi.fn(),
+        shouldInitiateOffer: vi.fn(() => false),
+        logVoiceDiagnostics
+      });
+    } finally {
+      globalThis.RTCSessionDescription = originalRtcSessionDescription;
+      globalThis.RTCIceCandidate = originalRtcIceCandidate;
+    }
+
+    expect(rollingConnection.setLocalDescription).toHaveBeenCalledWith({ type: "rollback" });
+    expect(logVoiceDiagnostics).toHaveBeenCalledWith("runtime glare decision", {
+      decision: "rollback",
+      fromUserId: "user-2",
+      targetUserId: "user-2",
+      fromUserName: "User 2",
+      signalingState: "have-local-offer"
+    });
   });
 
   it("queues incoming ICE when remote description is not set", async () => {

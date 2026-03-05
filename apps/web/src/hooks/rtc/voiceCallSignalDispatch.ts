@@ -62,7 +62,8 @@ export async function dispatchIncomingSignalForRtc(args: {
     updateCallStatus: args.updateCallStatus,
     pushCallLog: args.pushCallLog,
     closePeer: args.closePeer,
-    shouldInitiateOffer: args.shouldInitiateOffer
+    shouldInitiateOffer: args.shouldInitiateOffer,
+    logVoiceDiagnostics: args.logVoiceDiagnostics
   });
 }
 
