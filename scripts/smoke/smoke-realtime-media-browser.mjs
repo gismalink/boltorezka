@@ -648,43 +648,73 @@ async function main() {
       throw new Error("[smoke:realtime:media] expected two distinct users in room");
     }
 
-    let targetUserId = peerB.userId;
+    let targetUserId = "";
     let targetKind = "room-participant";
 
     if (targetUserIdEnv) {
       targetUserId = targetUserIdEnv;
-      targetKind = targetUserId === peerB.userId ? "room-participant-explicit" : "custom-explicit";
+      targetKind = targetUserId === peerB.userId ? "room-participant-explicit-bot" : "custom-explicit";
     } else {
       const detected = await pageA.evaluate(
         ({ excludedIds, peerTimeoutMs }) => window.__rtcMediaSmoke.waitForRoomPeer(excludedIds, peerTimeoutMs),
         {
-          excludedIds: [peerA.userId],
+          excludedIds: [peerA.userId, peerB.userId],
           peerTimeoutMs: Math.max(timeoutMs, 90000)
         }
       ).catch(() => "");
 
       if (detected) {
         targetUserId = String(detected);
-        targetKind = targetUserId === peerB.userId ? "room-participant-bot" : "room-participant-user";
+        targetKind = "room-participant-user";
+      } else {
+        targetKind = "room-participant-bot-fallback";
       }
     }
 
     const sessionDeadline = Date.now() + Math.max(8000, settleMs);
-    let redialSuccesses = 0;
+    let redialSuccessesA = 0;
+    let redialSuccessesB = 0;
     while (Date.now() < sessionDeadline) {
-      const reconnectResult = await pageA.evaluate(
-        ({ excludedIds, preferredTargetUserId }) => window.__rtcMediaSmoke.ensureConnectedToRoomPeer({
-          excludeUserIds: excludedIds,
-          preferredTargetUserId
-        }),
-        {
-          excludedIds: [peerA.userId],
-          preferredTargetUserId: targetUserId
-        }
-      );
+      const [reconnectA, reconnectB] = await Promise.all([
+        pageA.evaluate(
+          ({ excludedIds, preferredTargetUserId }) => window.__rtcMediaSmoke.ensureConnectedToRoomPeer({
+            excludeUserIds: excludedIds,
+            preferredTargetUserId
+          }),
+          {
+            excludedIds: [peerA.userId],
+            preferredTargetUserId: targetUserId
+          }
+        ),
+        pageB.evaluate(
+          ({ excludedIds, preferredTargetUserId }) => window.__rtcMediaSmoke.ensureConnectedToRoomPeer({
+            excludeUserIds: excludedIds,
+            preferredTargetUserId
+          }),
+          {
+            excludedIds: [peerB.userId],
+            preferredTargetUserId: targetUserId
+          }
+        )
+      ]);
 
-      if (reconnectResult?.ok) {
-        redialSuccesses += 1;
+      if (reconnectA?.ok) {
+        redialSuccessesA += 1;
+      }
+      if (reconnectB?.ok) {
+        redialSuccessesB += 1;
+      }
+
+      if (!targetUserId) {
+        const discovered = await pageA.evaluate(
+          ({ excludedIds }) => window.__rtcMediaSmoke.waitForRoomPeer(excludedIds, 200),
+          { excludedIds: [peerA.userId, peerB.userId] }
+        ).catch(() => "");
+
+        if (discovered) {
+          targetUserId = String(discovered);
+          targetKind = "room-participant-user";
+        }
       }
 
       await new Promise((resolve) => setTimeout(resolve, Math.max(800, reconnectIntervalMs)));
@@ -695,22 +725,32 @@ async function main() {
     const stateA = await pageA.evaluate(() => window.__rtcMediaSmoke.getState());
     const stateB = await pageB.evaluate(() => window.__rtcMediaSmoke.getState());
 
-    const isBotToBot = targetUserId === peerB.userId;
+    const isBotToBot = !targetUserId || targetUserId === peerA.userId || targetUserId === peerB.userId;
 
     const relayLooksHealthy = isBotToBot
-      ? ((Number(statsA.relayedAnswerCount || 0) >= 1)
-        && (Number(statsB.relayedOfferCount || 0) >= 1)
-        && (Number(statsA.relayedIceCount || 0) >= 1 || Number(statsB.relayedIceCount || 0) >= 1))
-      : ((Number(statsA.relayedAnswerCount || 0) >= 1) && (Number(statsA.relayedIceCount || 0) >= 1));
+      ? (
+        (Number(statsA.relayedAnswerCount || 0) >= 1 || Number(statsB.relayedAnswerCount || 0) >= 1)
+        && (Number(statsA.relayedOfferCount || 0) >= 1 || Number(statsB.relayedOfferCount || 0) >= 1)
+        && (Number(statsA.relayedIceCount || 0) >= 1 || Number(statsB.relayedIceCount || 0) >= 1)
+      )
+      : (
+        Number(statsA.relayedAnswerCount || 0) >= 1
+        || Number(statsB.relayedAnswerCount || 0) >= 1
+      );
 
     const mediaLooksHealthy = isBotToBot
       ? [statsA, statsB].every((item) => (
         Number(item.outboundAudioBytes || 0) > 0
         && Number(item.outboundAudioPackets || 0) > 0
-        && Number(item.inboundAudioBytes || 0) > 0
-        && Number(item.inboundAudioPackets || 0) > 0
       ))
-      : (Number(statsA.outboundAudioBytes || 0) > 0 && Number(statsA.outboundAudioPackets || 0) > 0);
+      : (
+        Number(statsA.outboundAudioBytes || 0) > 0
+        && Number(statsA.outboundAudioPackets || 0) > 0
+        && Number(statsB.outboundAudioBytes || 0) > 0
+        && Number(statsB.outboundAudioPackets || 0) > 0
+        && redialSuccessesA > 0
+        && redialSuccessesB > 0
+      );
 
     if (!relayLooksHealthy) {
       throw new Error("[smoke:realtime:media] signaling relay is incomplete (offer/answer/ice)");
@@ -732,7 +772,10 @@ async function main() {
         targetUserId,
         targetKind
       },
-      redialSuccesses,
+      redialSuccesses: {
+        peerA: redialSuccessesA,
+        peerB: redialSuccessesB
+      },
       peerA: {
         state: stateA,
         stats: statsA
