@@ -16,10 +16,18 @@ const preissuedTicketReconnect = process.env.SMOKE_WS_TICKET_RECONNECT ?? "";
 const smokeCallSignal = process.env.SMOKE_CALL_SIGNAL === "1";
 const smokeCallRace3Way = process.env.SMOKE_CALL_RACE_3WAY === "1";
 const smokeCallCameraToggleReconnect = process.env.SMOKE_CALL_CAMERA_TOGGLE_RECONNECT === "1";
+const smokeCallLiveRoom = process.env.SMOKE_CALL_LIVE_ROOM === "1";
 const smokeReconnect = process.env.SMOKE_RECONNECT === "1";
 const canRunReconnect = Boolean(preissuedTicketReconnect || bearerToken);
 const roomSlug = process.env.SMOKE_ROOM_SLUG ?? "general";
 const timeoutMs = Number(process.env.SMOKE_TIMEOUT_MS ?? 10000);
+const liveRoomDurationMs = Number(process.env.SMOKE_CALL_LIVE_ROOM_DURATION_MS ?? 300000);
+const liveRoomParticipantCount = Number(process.env.SMOKE_CALL_LIVE_ROOM_PARTICIPANTS ?? 6);
+const liveRoomStepMinMs = Number(process.env.SMOKE_CALL_LIVE_ROOM_STEP_MIN_MS ?? 3000);
+const liveRoomStepMaxMs = Number(process.env.SMOKE_CALL_LIVE_ROOM_STEP_MAX_MS ?? 9000);
+const liveRoomActionTimeoutMs = Number(process.env.SMOKE_CALL_LIVE_ROOM_ACTION_TIMEOUT_MS ?? 7000);
+const liveRoomTicketPool = String(process.env.SMOKE_CALL_LIVE_ROOM_TICKETS ?? "");
+const liveRoomBearerPool = String(process.env.SMOKE_CALL_LIVE_ROOM_BEARER_TOKENS ?? process.env.SMOKE_TEST_BEARER_TOKENS ?? "");
 
 const isHttp = baseUrl.startsWith("http://") || baseUrl.startsWith("https://");
 if (!isHttp) {
@@ -27,8 +35,23 @@ if (!isHttp) {
   process.exit(1);
 }
 
-if (!preissuedTicket && !bearerToken) {
+if (!preissuedTicket && !bearerToken && !smokeCallLiveRoom) {
   console.error("[smoke:realtime] set SMOKE_TEST_BEARER_TOKEN or SMOKE_WS_TICKET");
+  process.exit(1);
+}
+
+if (smokeCallLiveRoom && (liveRoomParticipantCount < 5 || liveRoomParticipantCount > 6)) {
+  console.error("[smoke:realtime] SMOKE_CALL_LIVE_ROOM_PARTICIPANTS must be between 5 and 6");
+  process.exit(1);
+}
+
+if (smokeCallLiveRoom && (liveRoomDurationMs < 60000 || liveRoomDurationMs > 900000)) {
+  console.error("[smoke:realtime] SMOKE_CALL_LIVE_ROOM_DURATION_MS must be between 60000 and 900000");
+  process.exit(1);
+}
+
+if (smokeCallLiveRoom && (liveRoomStepMinMs < 400 || liveRoomStepMaxMs < liveRoomStepMinMs)) {
+  console.error("[smoke:realtime] invalid live room step bounds");
   process.exit(1);
 }
 
@@ -53,6 +76,36 @@ function toWsUrl(httpUrl) {
   return parsed;
 }
 
+function parseCsvList(value) {
+  return String(value || "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
+function randomInt(min, max) {
+  const floorMin = Math.floor(min);
+  const floorMax = Math.floor(max);
+  if (floorMax <= floorMin) {
+    return floorMin;
+  }
+  return floorMin + Math.floor(Math.random() * (floorMax - floorMin + 1));
+}
+
+function pickRandom(items) {
+  if (!Array.isArray(items) || items.length === 0) {
+    return null;
+  }
+
+  return items[randomInt(0, items.length - 1)] || null;
+}
+
 async function fetchJson(path, options = {}) {
   const response = await fetch(`${baseUrl}${path}`, options);
   const text = await response.text();
@@ -67,23 +120,39 @@ async function fetchJson(path, options = {}) {
   return { response, payload };
 }
 
+async function resolveTicketFromBearerToken(token, label) {
+  const { response, payload } = await fetchJson("/v1/auth/ws-ticket", {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`
+    }
+  });
+
+  if (!response.ok || !payload?.ticket) {
+    throw new Error(`[smoke:realtime] ${label} /v1/auth/ws-ticket failed: ${response.status}`);
+  }
+
+  return payload.ticket;
+}
+
 async function resolveTicket() {
   if (preissuedTicket) {
     return preissuedTicket;
   }
 
-  const { response, payload } = await fetchJson("/v1/auth/ws-ticket", {
-    method: "GET",
-    headers: {
-      Authorization: `Bearer ${bearerToken}`
+  if (!bearerToken) {
+    const poolTicket = parseCsvList(liveRoomTicketPool)[0];
+    if (poolTicket) {
+      return poolTicket;
     }
-  });
 
-  if (!response.ok || !payload?.ticket) {
-    throw new Error(`[smoke:realtime] /v1/auth/ws-ticket failed: ${response.status}`);
+    const poolBearerToken = parseCsvList(liveRoomBearerPool)[0];
+    if (poolBearerToken) {
+      return resolveTicketFromBearerToken(poolBearerToken, "primary-from-pool");
+    }
   }
 
-  return payload.ticket;
+  return resolveTicketFromBearerToken(bearerToken, "primary");
 }
 
 async function resolveSecondTicket() {
@@ -96,18 +165,7 @@ async function resolveSecondTicket() {
     return null;
   }
 
-  const { response, payload } = await fetchJson("/v1/auth/ws-ticket", {
-    method: "GET",
-    headers: {
-      Authorization: `Bearer ${tokenForSecondTicket}`
-    }
-  });
-
-  if (!response.ok || !payload?.ticket) {
-    throw new Error(`[smoke:realtime] second /v1/auth/ws-ticket failed: ${response.status}`);
-  }
-
-  return payload.ticket;
+  return resolveTicketFromBearerToken(tokenForSecondTicket, "second");
 }
 
 async function resolveReconnectTicket() {
@@ -119,18 +177,7 @@ async function resolveReconnectTicket() {
     throw new Error("[smoke:realtime] SMOKE_RECONNECT=1 requires SMOKE_TEST_BEARER_TOKEN or SMOKE_WS_TICKET_RECONNECT");
   }
 
-  const { response, payload } = await fetchJson("/v1/auth/ws-ticket", {
-    method: "GET",
-    headers: {
-      Authorization: `Bearer ${bearerToken}`
-    }
-  });
-
-  if (!response.ok || !payload?.ticket) {
-    throw new Error(`[smoke:realtime] reconnect /v1/auth/ws-ticket failed: ${response.status}`);
-  }
-
-  return payload.ticket;
+  return resolveTicketFromBearerToken(bearerToken, "reconnect");
 }
 
 async function resolveThirdTicket() {
@@ -142,18 +189,7 @@ async function resolveThirdTicket() {
     throw new Error("[smoke:realtime] third ticket requires SMOKE_TEST_BEARER_TOKEN_THIRD or SMOKE_WS_TICKET_THIRD");
   }
 
-  const { response, payload } = await fetchJson("/v1/auth/ws-ticket", {
-    method: "GET",
-    headers: {
-      Authorization: `Bearer ${bearerTokenThird}`
-    }
-  });
-
-  if (!response.ok || !payload?.ticket) {
-    throw new Error(`[smoke:realtime] third /v1/auth/ws-ticket failed: ${response.status}`);
-  }
-
-  return payload.ticket;
+  return resolveTicketFromBearerToken(bearerTokenThird, "third");
 }
 
 function waitForEvent(events, predicate, label) {
@@ -375,6 +411,299 @@ async function runThreeWayRaceScenario({
   };
 }
 
+async function openRealtimeSocket({ ticket, label, timeoutMs }) {
+  const wsUrl = toWsUrl(baseUrl);
+  wsUrl.pathname = "/v1/realtime/ws";
+  wsUrl.search = "";
+  wsUrl.searchParams.set("ticket", ticket);
+
+  const ws = new WS(wsUrl.toString());
+  const events = [];
+
+  ws.on("message", (raw) => {
+    try {
+      const value = typeof raw === "string" ? raw : raw.toString("utf8");
+      events.push(JSON.parse(value));
+    } catch {
+      return;
+    }
+  });
+
+  await new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`[smoke:realtime] ${label} websocket open timeout`)), timeoutMs);
+
+    ws.once("open", () => {
+      clearTimeout(timer);
+      resolve();
+    });
+
+    ws.once("error", (error) => {
+      clearTimeout(timer);
+      reject(error);
+    });
+  });
+
+  const ready = await waitForEvent(events, (item) => item?.type === "server.ready", `server.ready for ${label}`);
+  const userId = String(ready?.payload?.userId || "").trim();
+  if (!userId) {
+    throw new Error(`[smoke:realtime] ${label} user id is missing`);
+  }
+
+  return { ws, events, userId };
+}
+
+async function sendAckedEvent({ ws, events, type, payload, idempotencyKey, label, timeoutMs, allowedNackCodes = [] }) {
+  const requestId = `${label}-${Date.now()}-${randomInt(1000, 9999)}`;
+  const frame = {
+    type,
+    requestId,
+    payload
+  };
+
+  if (idempotencyKey) {
+    frame.idempotencyKey = idempotencyKey;
+  }
+
+  ws.send(JSON.stringify(frame));
+
+  const result = await waitForAckOrNack(events, requestId, `${type} ack|nack (${label})`);
+  if (!result.ok && !allowedNackCodes.includes(result.code)) {
+    throw new Error(`[smoke:realtime] ${type} unexpected nack (${label}): ${result.code || "unknown"}`);
+  }
+
+  return result;
+}
+
+async function runLiveRoomBehaviorScenario({ roomSlug, timeoutMs }) {
+  const explicitTickets = parseCsvList(liveRoomTicketPool);
+  const explicitBearerTokens = parseCsvList(liveRoomBearerPool);
+
+  const baseTickets = [preissuedTicket, preissuedTicketSecond, preissuedTicketThird]
+    .filter(Boolean)
+    .concat(explicitTickets);
+  const baseBearerTokens = [bearerToken, bearerTokenSecond, bearerTokenThird]
+    .filter(Boolean)
+    .concat(explicitBearerTokens);
+
+  const participantDefs = Array.from({ length: liveRoomParticipantCount }, (_, index) => {
+    const slot = index + 1;
+    return {
+      label: `live-user-${slot}`,
+      ticket: baseTickets[index] || "",
+      bearerToken: baseBearerTokens[index] || "",
+      state: {
+        muted: false,
+        speaking: false,
+        audioMuted: false,
+        videoEnabled: false
+      }
+    };
+  });
+
+  const missingCredentials = participantDefs.filter((item) => !item.ticket && !item.bearerToken);
+  if (missingCredentials.length > 0) {
+    throw new Error(
+      `[smoke:realtime] SMOKE_CALL_LIVE_ROOM=1 requires credentials for ${liveRoomParticipantCount} users via SMOKE_CALL_LIVE_ROOM_TICKETS or SMOKE_CALL_LIVE_ROOM_BEARER_TOKENS`
+    );
+  }
+
+  const sessions = [];
+  for (const participant of participantDefs) {
+    const ticket = participant.ticket || await resolveTicketFromBearerToken(participant.bearerToken, participant.label);
+    const session = await openRealtimeSocket({ ticket, label: participant.label, timeoutMs });
+    await sendAckedEvent({
+      ws: session.ws,
+      events: session.events,
+      type: "room.join",
+      payload: { roomSlug },
+      label: `join-${participant.label}`,
+      timeoutMs
+    });
+
+    sessions.push({
+      ...session,
+      ...participant
+    });
+
+    await sleep(randomInt(300, 1300));
+  }
+
+  const uniqueUserIds = new Set(sessions.map((item) => item.userId));
+  if (uniqueUserIds.size !== sessions.length) {
+    throw new Error("[smoke:realtime] live-room scenario requires distinct users for each participant");
+  }
+
+  const startedAt = Date.now();
+  const stats = {
+    micEvents: 0,
+    videoEvents: 0,
+    headsetEvents: 0,
+    chatEvents: 0,
+    offerAttempts: 0,
+    leaveRejoinEvents: 0,
+    acceptedNacks: 0
+  };
+
+  while (Date.now() - startedAt < liveRoomDurationMs) {
+    const connected = sessions.filter((item) => item.ws.readyState === WS.OPEN);
+    if (connected.length < Math.max(4, liveRoomParticipantCount - 1)) {
+      throw new Error("[smoke:realtime] too few active participants during live-room scenario");
+    }
+
+    const actor = pickRandom(connected);
+    if (!actor) {
+      throw new Error("[smoke:realtime] failed to pick actor for live-room scenario");
+    }
+
+    const roll = Math.random();
+    if (roll < 0.3) {
+      if (Math.random() < 0.45) {
+        actor.state.muted = !actor.state.muted;
+      }
+      actor.state.speaking = !actor.state.muted && !actor.state.audioMuted && Math.random() < 0.65;
+
+      await sendAckedEvent({
+        ws: actor.ws,
+        events: actor.events,
+        type: "call.mic_state",
+        payload: {
+          muted: actor.state.muted,
+          speaking: actor.state.speaking,
+          audioMuted: actor.state.audioMuted
+        },
+        label: `mic-${actor.label}`,
+        timeoutMs: liveRoomActionTimeoutMs
+      });
+      stats.micEvents += 1;
+    } else if (roll < 0.55) {
+      actor.state.videoEnabled = !actor.state.videoEnabled;
+      await sendAckedEvent({
+        ws: actor.ws,
+        events: actor.events,
+        type: "call.video_state",
+        payload: {
+          settings: {
+            localVideoEnabled: actor.state.videoEnabled
+          }
+        },
+        label: `video-${actor.label}`,
+        timeoutMs: liveRoomActionTimeoutMs
+      });
+      stats.videoEvents += 1;
+    } else if (roll < 0.75) {
+      actor.state.audioMuted = !actor.state.audioMuted;
+      if (actor.state.audioMuted) {
+        actor.state.speaking = false;
+      }
+      await sendAckedEvent({
+        ws: actor.ws,
+        events: actor.events,
+        type: "call.mic_state",
+        payload: {
+          muted: actor.state.muted,
+          speaking: actor.state.speaking,
+          audioMuted: actor.state.audioMuted
+        },
+        label: `headset-${actor.label}`,
+        timeoutMs: liveRoomActionTimeoutMs
+      });
+      stats.headsetEvents += 1;
+    } else if (roll < 0.9) {
+      await sendAckedEvent({
+        ws: actor.ws,
+        events: actor.events,
+        type: "chat.send",
+        payload: {
+          text: `${actor.label} says hello at ${new Date().toISOString()}`
+        },
+        idempotencyKey: `live-chat-${Date.now()}-${randomInt(1000, 9999)}`,
+        label: `chat-${actor.label}`,
+        timeoutMs: liveRoomActionTimeoutMs
+      });
+      stats.chatEvents += 1;
+    } else if (roll < 0.97) {
+      const targets = connected.filter((item) => item.userId !== actor.userId);
+      const target = pickRandom(targets);
+      if (target) {
+        const offerResult = await sendAckedEvent({
+          ws: actor.ws,
+          events: actor.events,
+          type: "call.offer",
+          payload: {
+            targetUserId: target.userId,
+            signal: {
+              type: "offer",
+              sdp: `live-offer-${actor.userId}-${target.userId}-${Date.now()}`
+            }
+          },
+          label: `offer-${actor.label}`,
+          timeoutMs: liveRoomActionTimeoutMs,
+          allowedNackCodes: ["OfferRateLimited", "TargetNotInRoom"]
+        });
+        if (!offerResult.ok) {
+          stats.acceptedNacks += 1;
+        }
+        stats.offerAttempts += 1;
+      }
+    } else {
+      const rejoinCandidate = pickRandom(connected.filter((item) => Boolean(item.bearerToken)));
+      if (rejoinCandidate) {
+        rejoinCandidate.ws.close();
+        await sleep(randomInt(1200, 2600));
+
+        const reconnectTicket = await resolveTicketFromBearerToken(rejoinCandidate.bearerToken, `${rejoinCandidate.label}-rejoin`);
+        const reconnectedSession = await openRealtimeSocket({
+          ticket: reconnectTicket,
+          label: `${rejoinCandidate.label}-rejoin`,
+          timeoutMs
+        });
+        await sendAckedEvent({
+          ws: reconnectedSession.ws,
+          events: reconnectedSession.events,
+          type: "room.join",
+          payload: { roomSlug },
+          label: `rejoin-${rejoinCandidate.label}`,
+          timeoutMs
+        });
+
+        rejoinCandidate.ws = reconnectedSession.ws;
+        rejoinCandidate.events = reconnectedSession.events;
+        rejoinCandidate.userId = reconnectedSession.userId;
+        stats.leaveRejoinEvents += 1;
+      }
+    }
+
+    await sleep(randomInt(liveRoomStepMinMs, liveRoomStepMaxMs));
+  }
+
+  sessions.forEach((session) => {
+    try {
+      session.ws.close();
+    } catch {
+      return;
+    }
+  });
+
+  const totalActions = stats.micEvents
+    + stats.videoEvents
+    + stats.headsetEvents
+    + stats.chatEvents
+    + stats.offerAttempts
+    + stats.leaveRejoinEvents;
+
+  if (totalActions < 30) {
+    throw new Error(`[smoke:realtime] live-room scenario too short: only ${totalActions} actions completed`);
+  }
+
+  return {
+    ok: true,
+    participants: sessions.length,
+    durationMs: liveRoomDurationMs,
+    totalActions,
+    ...stats
+  };
+}
+
 (async () => {
   const ticket = await resolveTicket();
   const secondTicket = smokeCallSignal ? await resolveSecondTicket() : null;
@@ -486,6 +815,8 @@ async function runThreeWayRaceScenario({
   let race3WayReconnectOk = false;
   let race3WayOfferRateLimited = 0;
   let cameraToggleReconnectOk = false;
+  let liveRoomOk = false;
+  let liveRoomStats = null;
   let reconnectOk = false;
   let reconnectSkipped = false;
   if (smokeCallSignal) {
@@ -730,6 +1061,11 @@ async function runThreeWayRaceScenario({
     console.warn("[smoke:realtime] reconnect scenario skipped: set SMOKE_TEST_BEARER_TOKEN or SMOKE_WS_TICKET_RECONNECT");
   }
 
+  if (smokeCallLiveRoom) {
+    liveRoomStats = await runLiveRoomBehaviorScenario({ roomSlug, timeoutMs });
+    liveRoomOk = Boolean(liveRoomStats?.ok);
+  }
+
   ws.close();
   if (wsSecond) {
     wsSecond.close();
@@ -750,6 +1086,8 @@ async function runThreeWayRaceScenario({
         race3WayReconnectOk,
         race3WayOfferRateLimited,
         cameraToggleReconnectOk,
+        liveRoomOk,
+        liveRoomStats,
         callSignalRelayed,
         callRejectRelayed,
         callHangupRelayed
