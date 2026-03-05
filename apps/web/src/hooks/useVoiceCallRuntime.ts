@@ -1205,9 +1205,10 @@ export function useVoiceCallRuntime({
       setLastCallPeer,
       updateCallStatus,
       pushCallLog,
-      closePeer
+      closePeer,
+      shouldInitiateOffer
     });
-  }, [sendWsEvent, rememberRequestTarget, ensurePeerConnection, clearPeerReconnectTimer, attachLocalTracks, flushPendingRemoteCandidates, setLastCallPeer, updateCallStatus, pushCallLog, closePeer]);
+  }, [sendWsEvent, rememberRequestTarget, ensurePeerConnection, clearPeerReconnectTimer, attachLocalTracks, flushPendingRemoteCandidates, setLastCallPeer, updateCallStatus, pushCallLog, closePeer, shouldInitiateOffer]);
 
   const handleIncomingTerminal = useCallback((eventType: "call.reject" | "call.hangup", payload: CallTerminalPayload) => {
     handleIncomingTerminalEvent({
@@ -1260,11 +1261,8 @@ export function useVoiceCallRuntime({
     }
 
     const peer = peersRef.current.get(fromUserId);
-    if (!peer) {
-      return;
-    }
-
-    void startOfferRef.current?.(fromUserId, peer.label || fromUserId, {
+    const targetLabel = String(payload.fromUserName || peer?.label || fromUserId).trim();
+    void startOfferRef.current?.(fromUserId, targetLabel || fromUserId, {
       reason: `video-sync:remote-video-state:${remoteVideoEnabled ? "on" : "off"}`
     });
   }, [shouldInitiateOffer]);
@@ -1338,10 +1336,8 @@ export function useVoiceCallRuntime({
         peers: peersRef.current.size
       });
 
-      const isExplicitCameraToggle = reason === "video-enabled-or-updated" || reason === "video-disabled";
-
       for (const [targetUserId, peer] of peersRef.current.entries()) {
-        if (!isExplicitCameraToggle && !shouldInitiateOffer(targetUserId)) {
+        if (!shouldInitiateOffer(targetUserId)) {
           logVoiceDiagnostics("runtime video-sync target skipped", {
             reason,
             targetUserId,
