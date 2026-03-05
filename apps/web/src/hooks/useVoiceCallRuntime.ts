@@ -27,6 +27,11 @@ import {
   handleIncomingTerminalEvent,
   logInvalidSignalPayload
 } from "./voiceCallSignalHandlers";
+import {
+  isDesignatedOfferer,
+  OFFER_VIDEO_SYNC_MIN_INTERVAL_MS,
+  resolveOfferMinIntervalMs
+} from "./voiceCallOfferPolicy";
 import type {
   CallMicStatePayload,
   CallNackPayload,
@@ -53,10 +58,6 @@ const AUDIO_QUALITY_SAMPLE_RATE: Record<AudioQuality, number> = {
   high: 48000
 };
 
-const OFFER_MIN_INTERVAL_MS = 10000;
-// Keep video-sync offer cadence at or above server-side OfferRateLimited threshold (5s).
-const OFFER_VIDEO_SYNC_MIN_INTERVAL_MS = 5000;
-const OFFER_ICE_RESTART_MIN_INTERVAL_MS = 5000;
 const OFFER_TRACE_EVERY_N = 5;
 const OFFER_TRACE_MIN_GAP_MS = 30000;
 
@@ -90,6 +91,7 @@ export function useVoiceCallRuntime({
   setCallStatus,
   setLastCallPeer
 }: UseVoiceCallRuntimeArgs) {
+  // Core WebRTC orchestration for room calls: peer lifecycle, signaling, reconnects and media sync.
   const findSenderByKind = useCallback((
     connection: RTCPeerConnection,
     kind: "audio" | "video"
@@ -226,15 +228,7 @@ export function useVoiceCallRuntime({
 
   const shouldInitiateOffer = useCallback((targetUserId: string) => {
     // Deterministic single-offerer policy per peer pair to avoid glare.
-    const local = String(localUserId || "").trim();
-    const target = String(targetUserId || "").trim();
-    if (!target) {
-      return false;
-    }
-    if (!local) {
-      return true;
-    }
-    return local.localeCompare(target) < 0;
+    return isDesignatedOfferer(localUserId, targetUserId);
   }, [localUserId]);
 
   const isTargetTemporarilyBlocked = useCallback((targetUserId: string) => {
@@ -982,12 +976,7 @@ export function useVoiceCallRuntime({
     }
 
     // Video-sync reasons are bursty (camera toggles/watchdog resync), so they use a dedicated cadence.
-    const isVideoSyncReason = reason.startsWith("video-sync:");
-    const minIntervalMs = options?.iceRestart
-      ? OFFER_ICE_RESTART_MIN_INTERVAL_MS
-      : isVideoSyncReason
-        ? OFFER_VIDEO_SYNC_MIN_INTERVAL_MS
-        : OFFER_MIN_INTERVAL_MS;
+    const minIntervalMs = resolveOfferMinIntervalMs(reason, Boolean(options?.iceRestart));
 
     const now = Date.now();
     if (existingPeer && now - existingPeer.lastOfferAt < minIntervalMs) {
