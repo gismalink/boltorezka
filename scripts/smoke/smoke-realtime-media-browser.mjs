@@ -79,7 +79,8 @@ async function preparePeerPage({ context, label, ticket }) {
       relayedOfferCount: 0,
       relayedAnswerCount: 0,
       relayedIceCount: 0,
-      joinAcked: false
+      joinAcked: false,
+      pendingRemoteCandidates: []
     };
 
     const waitFor = async (predicate, labelText, timeoutMsValue = timeoutMsInner) => {
@@ -194,6 +195,22 @@ async function preparePeerPage({ context, label, ticket }) {
       return pc;
     };
 
+    const flushPendingRemoteCandidates = async () => {
+      const pc = state.pc;
+      if (!pc || !pc.remoteDescription || state.pendingRemoteCandidates.length === 0) {
+        return;
+      }
+
+      const pending = state.pendingRemoteCandidates.splice(0, state.pendingRemoteCandidates.length);
+      for (const candidate of pending) {
+        try {
+          await pc.addIceCandidate(new RTCIceCandidate(candidate));
+        } catch {
+          // noop
+        }
+      }
+    };
+
     const handleIncomingOffer = async (payload) => {
       const fromUserId = String(payload?.fromUserId || "").trim();
       const signal = payload?.signal;
@@ -206,6 +223,7 @@ async function preparePeerPage({ context, label, ticket }) {
 
       const pc = ensurePeerConnection();
       await pc.setRemoteDescription(new RTCSessionDescription(signal));
+      await flushPendingRemoteCandidates();
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
 
@@ -230,6 +248,7 @@ async function preparePeerPage({ context, label, ticket }) {
 
       const pc = ensurePeerConnection();
       await pc.setRemoteDescription(new RTCSessionDescription(signal));
+      await flushPendingRemoteCandidates();
     };
 
     const handleIncomingIce = async (payload) => {
@@ -244,6 +263,11 @@ async function preparePeerPage({ context, label, ticket }) {
       state.relayedIceCount += 1;
 
       const pc = ensurePeerConnection();
+      if (!pc.remoteDescription) {
+        state.pendingRemoteCandidates.push(candidate);
+        return;
+      }
+
       try {
         await pc.addIceCandidate(new RTCIceCandidate(candidate));
       } catch {
