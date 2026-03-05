@@ -7,6 +7,7 @@ const roomSlug = String(process.env.SMOKE_ROOM_SLUG || "test-room").trim();
 const timeoutMs = Number(process.env.SMOKE_TIMEOUT_MS || 20000);
 const settleMs = Number(process.env.SMOKE_RTC_MEDIA_SETTLE_MS || 12000);
 const toneFrequencyHz = Number(process.env.SMOKE_RTC_TONE_FREQUENCY_HZ || 440);
+const iceServersCsv = String(process.env.SMOKE_RTC_ICE_SERVERS || "stun:stun.l.google.com:19302,stun:stun1.l.google.com:19302");
 
 const tokenA = String(process.env.SMOKE_TEST_BEARER_TOKEN || "").trim();
 const tokenB = String(process.env.SMOKE_TEST_BEARER_TOKEN_SECOND || "").trim();
@@ -51,7 +52,7 @@ async function preparePeerPage({ context, label, ticket }) {
   const page = await context.newPage();
   await page.goto(baseUrl, { waitUntil: "domcontentloaded", timeout: timeoutMs });
 
-  const result = await page.evaluate(async ({ baseUrlInner, roomSlugInner, ticketInner, labelInner, timeoutMsInner, toneHz }) => {
+  const result = await page.evaluate(async ({ baseUrlInner, roomSlugInner, ticketInner, labelInner, timeoutMsInner, toneHz, iceServers }) => {
     const toWsUrl = (httpUrl) => {
       const parsed = new URL(httpUrl);
       parsed.protocol = parsed.protocol === "https:" ? "wss:" : "ws:";
@@ -156,7 +157,7 @@ async function preparePeerPage({ context, label, ticket }) {
         return state.pc;
       }
 
-      const pc = new RTCPeerConnection();
+      const pc = new RTCPeerConnection({ iceServers });
       const toneTrack = ensureToneTrack();
       pc.addTrack(toneTrack);
 
@@ -449,7 +450,12 @@ async function preparePeerPage({ context, label, ticket }) {
     ticketInner: ticket,
     labelInner: label,
     timeoutMsInner: timeoutMs,
-    toneHz: toneFrequencyHz
+    toneHz: toneFrequencyHz,
+    iceServers: iceServersCsv
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean)
+      .map((url) => ({ urls: url }))
   });
 
   return { page, userId: String(result?.userId || "").trim() };
