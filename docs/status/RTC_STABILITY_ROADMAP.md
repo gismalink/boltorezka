@@ -28,7 +28,7 @@
 
 ## Phase 3 - Observability
 
-- [ ] Добавить counters/histograms для RTC (`offer/glare/reconnect/state-lag`) в `apps/api/src/routes/realtime.ts`.
+- [x] Добавить counters/histograms для RTC (`offer/glare/reconnect/state-lag`) в `apps/api/src/routes/realtime.ts`.
 - [x] Задокументировать SLO и triage для RTC в `docs/runbooks/VOICE_BASELINE_RUNBOOK.md` и `docs/operations/SMOKE_CI_MATRIX.md`.
 
 Progress (2026-03-06):
@@ -43,6 +43,9 @@ Progress (2026-03-06):
 Progress (2026-03-06):
 - `scripts/smoke/smoke-realtime.mjs` уже проверяет `call.initial_state` replay строго (`SMOKE_REQUIRE_INITIAL_STATE_REPLAY=1`).
 - `scripts/smoke/smoke-realtime-media-browser.mjs` проверяет `call.video_state` off/on convergence в обе стороны (A->B, B->A).
+
+Status (2026-03-06):
+- `#6.3` закрыт: observability + smoke/deploy gates внедрены и валидированы в test.
 
 ## Phase 5 - Controlled rollout
 

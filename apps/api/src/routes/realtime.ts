@@ -57,6 +57,7 @@ type CanonicalMediaState = {
   speaking: boolean;
   audioMuted: boolean;
   localVideoEnabled: boolean;
+  lastUpdatedAtMs: number;
 };
 
 const CALL_SIGNAL_MIN_BYTES = 2;
@@ -64,6 +65,8 @@ const CALL_SDP_SIGNAL_MAX_BYTES = 600_000;
 const CALL_ICE_SIGNAL_MAX_BYTES = 12_000;
 const CALL_OFFER_MIN_INTERVAL_MS = 5000;
 const CALL_OFFER_RATE_LIMIT_TTL_MS = 60000;
+const CALL_RECONNECT_WINDOW_MS = 90000;
+const CALL_GLARE_WINDOW_MS = 2500;
 
 function sendJson(socket: WebSocket, payload: unknown): void {
   if (socket.readyState === socket.OPEN) {
@@ -226,6 +229,7 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
   const lastCallOfferByPair = new Map<string, number>();
   const wsCallDebugEnabled = process.env.WS_CALL_DEBUG === "1";
   const mediaStateByRoomUserKey = new Map<string, CanonicalMediaState>();
+  const recentRoomDetachByRoomUserKey = new Map<string, number>();
 
   const mediaStateKey = (roomId: string, userId: string) => `${roomId}:${userId}`;
 
@@ -239,17 +243,44 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
       muted: false,
       speaking: false,
       audioMuted: false,
-      localVideoEnabled: false
+      localVideoEnabled: false,
+      lastUpdatedAtMs: Date.now()
     };
 
     mediaStateByRoomUserKey.set(key, {
       ...current,
-      ...patch
+      ...patch,
+      lastUpdatedAtMs: Date.now()
     });
   };
 
   const clearCanonicalMediaState = (roomId: string, userId: string) => {
     mediaStateByRoomUserKey.delete(mediaStateKey(roomId, userId));
+  };
+
+  const markRecentRoomDetach = (roomId: string, userId: string) => {
+    const key = mediaStateKey(roomId, userId);
+    recentRoomDetachByRoomUserKey.set(key, Date.now());
+
+    if (recentRoomDetachByRoomUserKey.size > 6000) {
+      const threshold = Date.now() - CALL_RECONNECT_WINDOW_MS;
+      for (const [storedKey, at] of recentRoomDetachByRoomUserKey.entries()) {
+        if (at < threshold) {
+          recentRoomDetachByRoomUserKey.delete(storedKey);
+        }
+      }
+    }
+  };
+
+  const consumeRecentReconnectMark = (roomId: string, userId: string): boolean => {
+    const key = mediaStateKey(roomId, userId);
+    const at = recentRoomDetachByRoomUserKey.get(key) || 0;
+    if (!at) {
+      return false;
+    }
+
+    recentRoomDetachByRoomUserKey.delete(key);
+    return Date.now() - at <= CALL_RECONNECT_WINDOW_MS;
   };
 
   const isCallOfferRateLimited = (fromUserId: string, targetUserId: string): boolean => {
@@ -421,6 +452,31 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
     }
 
     return participants;
+  };
+
+  const getCallInitialStateLagStats = (roomId: string): { count: number; totalLagMs: number } => {
+    const presenceByUserId = new Set(getRoomPresence(roomId).map((item) => item.userId));
+    const prefix = `${roomId}:`;
+    const now = Date.now();
+    let count = 0;
+    let totalLagMs = 0;
+
+    for (const [key, state] of mediaStateByRoomUserKey.entries()) {
+      if (!key.startsWith(prefix)) {
+        continue;
+      }
+
+      const userId = key.slice(prefix.length);
+      if (!presenceByUserId.has(userId)) {
+        continue;
+      }
+
+      const lagMs = Math.max(0, now - Number(state.lastUpdatedAtMs || 0));
+      totalLagMs += lagMs;
+      count += 1;
+    }
+
+    return { count, totalLagMs };
   };
 
   const getAllRoomsPresence = () => {
@@ -815,6 +871,7 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
                 }
 
                 if (state.roomId) {
+                  markRecentRoomDetach(state.roomId, state.userId);
                   detachRoomSocket(state.roomId, connection);
                   clearCanonicalMediaState(state.roomId, state.userId);
                   broadcastRoom(
@@ -833,6 +890,10 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
                 state.roomSlug = joinResult.room.slug;
                 state.roomKind = joinResult.room.kind;
                 attachRoomSocket(joinResult.room.id, connection);
+
+                if (consumeRecentReconnectMark(joinResult.room.id, state.userId)) {
+                  void incrementMetric("call_reconnect_joined");
+                }
 
                 sendJson(
                   connection,
@@ -863,6 +924,7 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
                 );
 
                 const initialStateParticipants = getCallInitialStateParticipants(joinResult.room.id);
+                const initialStateLagStats = getCallInitialStateLagStats(joinResult.room.id);
                 sendJson(
                   connection,
                   buildCallInitialStateEnvelope(
@@ -873,6 +935,8 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
                 );
                 void incrementMetric("call_initial_state_sent");
                 void incrementMetricBy("call_initial_state_participants_total", initialStateParticipants.length);
+                void incrementMetricBy("call_initial_state_lag_ms_total", initialStateLagStats.totalLagMs);
+                void incrementMetricBy("call_initial_state_lag_samples", initialStateLagStats.count);
 
                 broadcastRoom(
                   joinResult.room.id,
@@ -899,6 +963,7 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
                 const previousRoomId = state.roomId;
                 const previousRoomSlug = state.roomSlug;
 
+                markRecentRoomDetach(previousRoomId, state.userId);
                 detachRoomSocket(previousRoomId, connection);
                 clearCanonicalMediaState(previousRoomId, state.userId);
                 state.roomId = null;
@@ -973,6 +1038,7 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
                   }
 
                   kickedUserName = targetState.userName || kickedUserName;
+                  markRecentRoomDetach(targetRoom.id, targetUserId);
                   detachRoomSocket(targetRoom.id, targetSocket);
                   clearCanonicalMediaState(targetRoom.id, targetUserId);
                   targetState.roomId = null;
@@ -1297,6 +1363,22 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
               }
 
               const targetUserId = normalizeRequestId(getPayloadString(payload, "targetUserId", 128)) || null;
+              if (eventType === "call.offer") {
+                void incrementMetric("call_offer_received");
+                if (targetUserId) {
+                  const reverseKey = `${targetUserId}->${state.userId}`;
+                  const reverseLastAt = lastCallOfferByPair.get(reverseKey) || 0;
+                  if (reverseLastAt > 0 && Date.now() - reverseLastAt <= CALL_GLARE_WINDOW_MS) {
+                    void incrementMetric("call_glare_suspected");
+                  }
+                }
+              }
+              if (eventType === "call.answer") {
+                void incrementMetric("call_answer_received");
+              }
+              if (eventType === "call.ice") {
+                void incrementMetric("call_ice_received");
+              }
               if (eventType === "call.offer" && targetUserId) {
                 if (isCallOfferRateLimited(state.userId, targetUserId)) {
                   logCallDebug("call signal rejected: offer rate limited", {
@@ -1309,6 +1391,7 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
                   });
                   sendNack(connection, requestId, eventType, "OfferRateLimited", "Too many call offers; retry in a few seconds");
                   void incrementMetric("nack_sent");
+                  void incrementMetric("call_offer_rate_limited");
                   return;
                 }
               }
@@ -1349,6 +1432,7 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
                   relayedTo: relayOutcome.relayedCount
                 });
                 sendTargetNotInRoomNack(connection, requestId, eventType);
+                void incrementMetric("call_signal_target_miss");
                 return;
               }
 
@@ -1421,6 +1505,7 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
                   relayedTo: relayOutcome.relayedCount
                 });
                 sendTargetNotInRoomNack(connection, requestId, eventType);
+                void incrementMetric("call_terminal_target_miss");
                 return;
               }
 
@@ -1516,6 +1601,7 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
                   relayedTo: relayOutcome.relayedCount
                 });
                 sendTargetNotInRoomNack(connection, requestId, eventType);
+                void incrementMetric("call_mic_state_target_miss");
                 return;
               }
 
@@ -1602,6 +1688,7 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
                   relayedTo: relayOutcome.relayedCount
                 });
                 sendTargetNotInRoomNack(connection, requestId, eventType);
+                void incrementMetric("call_video_state_target_miss");
                 return;
               }
 
@@ -1643,6 +1730,7 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
           detachUserSocket(state.userId, connection);
 
           if (state.roomId) {
+            markRecentRoomDetach(state.roomId, state.userId);
             detachRoomSocket(state.roomId, connection);
             clearCanonicalMediaState(state.roomId, state.userId);
             broadcastRoom(

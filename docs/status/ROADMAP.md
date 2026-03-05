@@ -29,7 +29,7 @@
 
 - [x] #6.1 RTC plan Phase 1: canonical media-state + `call.initial_state` replay в server/client контрактах.
 - [x] #6.2 RTC plan Phase 2: negotiation manager + offer fairness queue + stable defaults.
-- [ ] #6.3 RTC plan Phase 3-4: RTC observability + smoke/postdeploy gates.
+- [x] #6.3 RTC plan Phase 3-4: RTC observability + smoke/postdeploy gates.
 - [ ] #6 Выполнить hardening batch для Phase 6: reconnect/failure сценарии + security review checklist с evidence.
 - [ ] #7 Сформировать финальный runbook bundle (`deploy/smoke/rollback/incident response`) и синхронизировать docs index.
 
