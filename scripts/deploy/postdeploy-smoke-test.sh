@@ -266,6 +266,36 @@ echo "[postdeploy-smoke] smoke:realtime"
 SMOKE_API_URL="$BASE_URL" SMOKE_RECONNECT=1 npm run smoke:realtime
 
 if [[ "${SMOKE_EXTENDED_GATE:-0}" == "1" ]]; then
+  if [[ "$AUTO_TICKET" == "1" ]]; then
+    unset SMOKE_WS_TICKET
+    unset SMOKE_WS_TICKET_RECONNECT
+    unset SMOKE_WS_TICKET_SECOND
+    unset SMOKE_WS_TICKET_THIRD
+  fi
+
+  if [[ -z "${SMOKE_TEST_BEARER_TOKEN:-}" ]]; then
+    USER_META_PRIMARY="$(resolve_user_meta_by_email "$USER_EMAIL")"
+    if [[ -z "$USER_META_PRIMARY" ]]; then
+      echo "[postdeploy-smoke] cannot resolve primary smoke user for extended gate email=$USER_EMAIL" >&2
+      exit 1
+    fi
+
+    if [[ -z "$JWT_SECRET_CANDIDATE" ]]; then
+      JWT_SECRET_CANDIDATE="${JWT_SECRET:-${TEST_JWT_SECRET:-}}"
+      if [[ -z "$JWT_SECRET_CANDIDATE" ]]; then
+        JWT_SECRET_CANDIDATE="$(compose exec -T "$API_SERVICE" printenv JWT_SECRET 2>/dev/null | tr -d '\r' | tr -d '\n')"
+      fi
+    fi
+
+    if [[ -z "$JWT_SECRET_CANDIDATE" ]]; then
+      echo "[postdeploy-smoke] cannot generate SMOKE_TEST_BEARER_TOKEN for extended gate (missing JWT secret)" >&2
+      exit 1
+    fi
+
+    SMOKE_TEST_BEARER_TOKEN="$(make_hs256_jwt "$JWT_SECRET_CANDIDATE" "${USER_META_PRIMARY%%|*}" "${USER_META_PRIMARY##*|}")"
+    export SMOKE_TEST_BEARER_TOKEN
+  fi
+
   if [[ -z "${SMOKE_TEST_BEARER_TOKEN_SECOND:-}" ]]; then
     USER_META_SECOND="$(resolve_user_meta_by_email "$USER_EMAIL_SECOND")"
     if [[ -z "$USER_META_SECOND" ]]; then
