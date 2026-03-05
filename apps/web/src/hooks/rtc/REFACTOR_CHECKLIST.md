@@ -50,8 +50,8 @@
 
 ## Усиление Smoke/Deploy
 
-- [ ] Улучшить ожидание событий в `scripts/smoke/smoke-realtime.mjs` (adaptive polling/backoff).
-- [ ] Добавить опциональный строгий режим порога `OfferRateLimited` для race-сценариев.
+- [x] Улучшить ожидание событий в `scripts/smoke/smoke-realtime.mjs` (adaptive polling/backoff).
+- [x] Добавить опциональный строгий режим порога `OfferRateLimited` для race-сценариев.
 - [ ] Добавить явные ICE relay assertions в 3-way smoke сценарий.
 - [ ] Добавить опциональный extended postdeploy smoke gate в `scripts/deploy/postdeploy-smoke-test.sh`.
 

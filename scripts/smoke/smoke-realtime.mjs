@@ -31,6 +31,12 @@ const liveRoomBearerPool = String(process.env.SMOKE_CALL_LIVE_ROOM_BEARER_TOKENS
 const liveRoomToneMode = process.env.SMOKE_CALL_LIVE_ROOM_TONE_MODE === "1";
 const liveRoomTonePeriodMs = Number(process.env.SMOKE_CALL_LIVE_ROOM_TONE_PERIOD_MS ?? 7000);
 const liveRoomTonePhaseSpread = Number(process.env.SMOKE_CALL_LIVE_ROOM_TONE_PHASE_SPREAD ?? 0.9);
+const pollIntervalMinMs = Number(process.env.SMOKE_POLL_INTERVAL_MIN_MS ?? 25);
+const pollIntervalMaxMs = Number(process.env.SMOKE_POLL_INTERVAL_MAX_MS ?? 220);
+const pollBackoffFactor = Number(process.env.SMOKE_POLL_BACKOFF_FACTOR ?? 1.35);
+const strictRaceOfferRateLimit = process.env.SMOKE_RACE_STRICT_OFFER_RATE_LIMIT === "1";
+const raceOfferRateLimitedSoftThreshold = Number(process.env.SMOKE_RACE_OFFER_RATE_LIMIT_THRESHOLD ?? 4);
+const raceOfferRateLimitedStrictThreshold = Number(process.env.SMOKE_RACE_OFFER_RATE_LIMIT_STRICT_THRESHOLD ?? 0);
 
 const isHttp = baseUrl.startsWith("http://") || baseUrl.startsWith("https://");
 if (!isHttp) {
@@ -60,6 +66,21 @@ if (smokeCallLiveRoom && (liveRoomStepMinMs < 400 || liveRoomStepMaxMs < liveRoo
 
 if (smokeCallLiveRoom && (liveRoomTonePeriodMs < 1200 || liveRoomTonePeriodMs > 60000)) {
   console.error("[smoke:realtime] invalid SMOKE_CALL_LIVE_ROOM_TONE_PERIOD_MS (1200..60000)");
+  process.exit(1);
+}
+
+if (pollIntervalMinMs < 5 || pollIntervalMaxMs < pollIntervalMinMs) {
+  console.error("[smoke:realtime] invalid adaptive poll interval bounds");
+  process.exit(1);
+}
+
+if (pollBackoffFactor < 1 || pollBackoffFactor > 3) {
+  console.error("[smoke:realtime] SMOKE_POLL_BACKOFF_FACTOR must be between 1 and 3");
+  process.exit(1);
+}
+
+if (raceOfferRateLimitedSoftThreshold < 0 || raceOfferRateLimitedStrictThreshold < 0) {
+  console.error("[smoke:realtime] OfferRateLimited thresholds must be >= 0");
   process.exit(1);
 }
 
@@ -200,24 +221,29 @@ async function resolveThirdTicket() {
   return resolveTicketFromBearerToken(bearerTokenThird, "third");
 }
 
-function waitForEvent(events, predicate, label) {
+function getOfferRateLimitedThreshold() {
+  return strictRaceOfferRateLimit
+    ? raceOfferRateLimitedStrictThreshold
+    : raceOfferRateLimitedSoftThreshold;
+}
+
+async function waitForEvent(events, predicate, label, options = {}) {
   const started = Date.now();
+  const waitTimeoutMs = Number(options.timeoutMs ?? timeoutMs);
+  let pollMs = Number(options.initialPollMs ?? pollIntervalMinMs);
 
-  return new Promise((resolve, reject) => {
-    const timer = setInterval(() => {
-      const hit = events.find(predicate);
-      if (hit) {
-        clearInterval(timer);
-        resolve(hit);
-        return;
-      }
+  while (Date.now() - started <= waitTimeoutMs) {
+    const hit = events.find(predicate);
+    if (hit) {
+      return hit;
+    }
 
-      if (Date.now() - started > timeoutMs) {
-        clearInterval(timer);
-        reject(new Error(`[smoke:realtime] timeout: ${label}`));
-      }
-    }, 50);
-  });
+    await sleep(pollMs);
+    const backoffMs = Math.round(pollMs * pollBackoffFactor);
+    pollMs = Math.min(pollIntervalMaxMs, Math.max(pollIntervalMinMs, backoffMs));
+  }
+
+  throw new Error(`[smoke:realtime] timeout: ${label}`);
 }
 
 async function waitForAckOrNack(events, requestId, label) {
@@ -336,8 +362,12 @@ async function runThreeWayRaceScenario({
     throw new Error(`[smoke:realtime] race3way unexpected nack codes: ${hardFailures.map((result) => result.code).join(",")}`);
   }
 
-  if (offerRateLimited > 4) {
-    throw new Error(`[smoke:realtime] race3way excessive OfferRateLimited: ${offerRateLimited}`);
+  const offerRateLimitedThreshold = getOfferRateLimitedThreshold();
+  if (offerRateLimited > offerRateLimitedThreshold) {
+    const mode = strictRaceOfferRateLimit ? "strict" : "soft";
+    throw new Error(
+      `[smoke:realtime] race3way excessive OfferRateLimited: ${offerRateLimited} (threshold=${offerRateLimitedThreshold}, mode=${mode})`
+    );
   }
 
   wsThird.close();
@@ -415,6 +445,8 @@ async function runThreeWayRaceScenario({
     race3WayOk: true,
     race3WayReconnectOk: true,
     race3WayOfferRateLimited: offerRateLimited,
+    race3WayOfferRateLimitedThreshold: offerRateLimitedThreshold,
+    race3WayOfferRateLimitedStrictMode: strictRaceOfferRateLimit,
     cameraToggleReconnectOk
   };
 }
@@ -878,6 +910,8 @@ async function runLiveRoomBehaviorScenario({ roomSlug, timeoutMs }) {
   let race3WayOk = false;
   let race3WayReconnectOk = false;
   let race3WayOfferRateLimited = 0;
+  let race3WayOfferRateLimitedThreshold = getOfferRateLimitedThreshold();
+  let race3WayOfferRateLimitedStrictMode = strictRaceOfferRateLimit;
   let cameraToggleReconnectOk = false;
   let liveRoomOk = false;
   let liveRoomStats = null;
@@ -1052,6 +1086,8 @@ async function runLiveRoomBehaviorScenario({ roomSlug, timeoutMs }) {
       race3WayOk = raceResult.race3WayOk;
       race3WayReconnectOk = raceResult.race3WayReconnectOk;
       race3WayOfferRateLimited = raceResult.race3WayOfferRateLimited;
+      race3WayOfferRateLimitedThreshold = raceResult.race3WayOfferRateLimitedThreshold;
+      race3WayOfferRateLimitedStrictMode = raceResult.race3WayOfferRateLimitedStrictMode;
       cameraToggleReconnectOk = raceResult.cameraToggleReconnectOk;
     }
   }
@@ -1149,6 +1185,8 @@ async function runLiveRoomBehaviorScenario({ roomSlug, timeoutMs }) {
         race3WayOk,
         race3WayReconnectOk,
         race3WayOfferRateLimited,
+        race3WayOfferRateLimitedThreshold,
+        race3WayOfferRateLimitedStrictMode,
         cameraToggleReconnectOk,
         liveRoomOk,
         liveRoomStats,
