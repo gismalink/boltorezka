@@ -19,7 +19,7 @@ This folder contains operational scripts grouped by purpose.
   - `smoke-web-denied-media.mjs` - denied media state smoke.
   - `smoke-web-denied-media-browser.mjs` - browser denied media smoke.
   - `smoke-web-e2e.sh` - end-to-end browser smoke.
-  - `smoke-auth-bootstrap.sh` - bootstrap test users/tokens for smoke.
+  - `smoke-auth-bootstrap.sh` - bootstrap test users/tokens for smoke (supports optional third user for 3-way race checks).
 - root scripts:
   - `verify-all.sh` - single local entrypoint for verify + optional smoke toggles.
   - `ws-load.mjs` - websocket load generator for room/chat traffic.

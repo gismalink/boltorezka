@@ -84,6 +84,20 @@
 - войти в `general`
 - отправить сообщение и проверить realtime во второй вкладке
 
+## Smoke users (test)
+
+Где хранится список пользователей на сервере:
+
+- Источник истины: PostgreSQL таблица `users` в test БД (`boltorezka-db-test` через `infra/docker-compose.host.yml` + `infra/.env.host`).
+- Быстрый просмотр на сервере:
+  - `ssh mac-mini 'cd ~/srv/boltorezka && docker compose -f infra/docker-compose.host.yml --env-file infra/.env.host exec -T boltorezka-db-test psql -U "$TEST_POSTGRES_USER" -d "$TEST_POSTGRES_DB" -c "select id, email, role, created_at from users order by created_at desc limit 50;"'`
+
+Где хранится ссылка на bootstrap-токены:
+
+- Локальный env-файл на сервере после bootstrap: `~/srv/boltorezka/.deploy/smoke-auth.env`
+- Команда bootstrap для 3-way smoke (создаёт 3-го пользователя и token):
+  - `ssh mac-mini 'cd ~/srv/boltorezka && SMOKE_AUTH_COMPOSE_FILE=infra/docker-compose.host.yml SMOKE_AUTH_ENV_FILE=infra/.env.host SMOKE_AUTH_POSTGRES_SERVICE=boltorezka-db-test SMOKE_AUTH_API_SERVICE=boltorezka-api-test SMOKE_API_URL=https://test.boltorezka.gismalink.art SMOKE_AUTH_USER3_EMAIL=smoke-rtc-3@example.test bash ./scripts/smoke/smoke-auth-bootstrap.sh'`
+
 ## Rollback trigger
 
 Делай rollback, если:
