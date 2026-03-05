@@ -17,12 +17,11 @@ import {
 } from "./voiceCallConfig";
 import { bindVoicePeerConnectionHandlers } from "./voiceCallPeerConnectionHandlers";
 import {
-  handleCallNackEvent,
-  handleIncomingMicStateEvent,
-  handleIncomingSignalEvent,
-  handleIncomingTerminalEvent,
-  logInvalidSignalPayload
-} from "./voiceCallSignalHandlers";
+  dispatchCallNackForRtc,
+  dispatchIncomingMicStateForRtc,
+  dispatchIncomingSignalForRtc,
+  dispatchIncomingTerminalForRtc
+} from "./voiceCallSignalDispatch";
 import {
   isDesignatedOfferer,
   type OfferReason,
@@ -832,20 +831,7 @@ export function useVoiceCallRuntime({
     eventType: "call.offer" | "call.answer" | "call.ice",
     payload: CallSignalPayload
   ) => {
-    const fromUserId = String(payload.fromUserId || "").trim();
-    const signal = payload.signal;
-    if (!fromUserId || !signal || typeof signal !== "object") {
-      pushCallLog(`${eventType} ignored: invalid payload`);
-      logInvalidSignalPayload({
-        eventType,
-        fromUserId,
-        signal,
-        logVoiceDiagnostics
-      });
-      return;
-    }
-
-    await handleIncomingSignalEvent({
+    await dispatchIncomingSignalForRtc({
       eventType,
       payload,
       roomVoiceConnectedRef,
@@ -860,12 +846,13 @@ export function useVoiceCallRuntime({
       updateCallStatus,
       pushCallLog,
       closePeer,
-      shouldInitiateOffer
+      shouldInitiateOffer,
+      logVoiceDiagnostics
     });
   }, [sendWsEvent, rememberRequestTarget, ensurePeerConnection, clearPeerReconnectTimer, attachLocalTracks, flushPendingRemoteCandidates, setLastCallPeer, updateCallStatus, pushCallLog, closePeer, shouldInitiateOffer]);
 
   const handleIncomingTerminal = useCallback((eventType: "call.reject" | "call.hangup", payload: CallTerminalPayload) => {
-    handleIncomingTerminalEvent({
+    dispatchIncomingTerminalForRtc({
       eventType,
       payload,
       closePeer,
@@ -874,24 +861,10 @@ export function useVoiceCallRuntime({
   }, [closePeer, updateCallStatus]);
 
   const handleIncomingMicState = useCallback((payload: CallMicStatePayload) => {
-    const fromUserId = String(payload.fromUserId || "").trim();
-    if (fromUserId) {
-      const previous = remoteMicStateByUserIdRef.current[fromUserId] || {
-        muted: false,
-        speaking: false,
-        audioMuted: false
-      };
-
-      remoteMicStateByUserIdRef.current[fromUserId] = {
-        muted: typeof payload.muted === "boolean" ? payload.muted : previous.muted,
-        speaking: typeof payload.speaking === "boolean" ? payload.speaking : previous.speaking,
-        audioMuted: typeof payload.audioMuted === "boolean" ? payload.audioMuted : previous.audioMuted
-      };
-    }
-
-    handleIncomingMicStateEvent({
+    dispatchIncomingMicStateForRtc({
       payload,
       peersRef,
+      remoteMicStateByUserIdRef,
       syncPeerVoiceState
     });
   }, [syncPeerVoiceState]);
@@ -922,7 +895,7 @@ export function useVoiceCallRuntime({
   }, [shouldInitiateOffer]);
 
   const handleCallNack = useCallback((payload: CallNackPayload) => {
-    handleCallNackEvent({
+    dispatchCallNackForRtc({
       payload,
       requestTargetByIdRef,
       blockedTargetUntilRef,

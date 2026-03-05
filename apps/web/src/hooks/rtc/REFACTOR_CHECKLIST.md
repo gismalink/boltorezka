@@ -11,11 +11,12 @@ Purpose: keep `useVoiceCallRuntime.ts` focused on orchestration while moving iso
 - [x] Extracted peer reconnect/stats recovery flows to `voiceCallPeerRecovery.ts`.
 - [x] Extracted local media constraints/acquisition/attach to `voiceCallLocalMedia.ts`.
 - [x] Extracted room target sync and resync timer flow to `voiceCallTargetSync.ts`.
+- [x] Extracted signaling dispatch glue to `voiceCallSignalDispatch.ts`.
 
 ## In Progress
 
 - [ ] Split `useVoiceCallRuntime.ts` into smaller orchestration sections with stable boundaries:
-  - [ ] signaling dispatch
+  - [x] signaling dispatch
   - [ ] media acquisition and track attach
   - [ ] peer map lifecycle
   - [x] room target sync
