@@ -10,6 +10,18 @@ export const OFFER_VIDEO_SYNC_MIN_INTERVAL_MS = 5000;
 
 export const OFFER_ICE_RESTART_MIN_INTERVAL_MS = 5000;
 
+export const OFFER_RETRY_BUDGET_BY_BUCKET: Record<OfferCadenceBucket, number> = {
+  manual: 2,
+  "ice-restart": 2,
+  "video-sync": 1
+};
+
+const OFFER_RETRY_DELAY_BASE_MS_BY_BUCKET: Record<OfferCadenceBucket, number> = {
+  manual: 700,
+  "ice-restart": 500,
+  "video-sync": 900
+};
+
 export function isDesignatedOfferer(localUserId: string, targetUserId: string): boolean {
   const local = String(localUserId || "").trim();
   const target = String(targetUserId || "").trim();
@@ -44,4 +56,14 @@ export function resolveOfferCadenceBucket(reason: string, iceRestart?: boolean):
     return "video-sync";
   }
   return "manual";
+}
+
+export function resolveOfferRetryBudget(bucket: OfferCadenceBucket): number {
+  return OFFER_RETRY_BUDGET_BY_BUCKET[bucket] || 0;
+}
+
+export function resolveOfferRetryDelayMs(bucket: OfferCadenceBucket, attempt: number): number {
+  const safeAttempt = Math.max(1, Math.min(4, Math.round(attempt)));
+  const baseMs = OFFER_RETRY_DELAY_BASE_MS_BY_BUCKET[bucket] || 700;
+  return baseMs * safeAttempt;
 }

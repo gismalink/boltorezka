@@ -22,9 +22,9 @@
 
 ## Phase 2 - Negotiation reliability
 
-- [ ] Вынести negotiation flags/state в единый manager (`apps/web/src/hooks/rtc/voiceCallNegotiationState.ts`).
-- [ ] Добавить offer retry budget + fairness queue (`manual`, `video-sync`, `ice-restart`) в `apps/web/src/hooks/rtc/voiceCallOfferPolicy.ts`.
-- [ ] Оставить video effects default=`none` до завершения hardening.
+- [x] Вынести negotiation flags/state в единый manager (`apps/web/src/hooks/rtc/voiceCallNegotiationState.ts`).
+- [x] Добавить offer retry budget + fairness queue (`manual`, `video-sync`, `ice-restart`) в `apps/web/src/hooks/rtc/voiceCallOfferPolicy.ts`.
+- [x] Оставить video effects default=`none` до завершения hardening.
 
 ## Phase 3 - Observability
 

@@ -21,16 +21,25 @@ import {
 import { flushQueuedRemoteCandidatesForPeer } from "./voiceCallCandidateQueue";
 import {
   isDesignatedOfferer,
+  type OfferCadenceBucket,
   type OfferReason,
   OFFER_VIDEO_SYNC_MIN_INTERVAL_MS,
   resolveOfferCadenceBucket,
-  resolveOfferMinIntervalMs
+  resolveOfferMinIntervalMs,
+  resolveOfferRetryBudget,
+  resolveOfferRetryDelayMs
 } from "./voiceCallOfferPolicy";
 import {
+  clearOfferQueue,
+  createOfferQueueState,
+  dequeueNextOfferRequest,
+  enqueueOfferRequest,
   getLastOfferAtForBucket,
   markMakingOffer,
+  markOfferQueueActiveForTarget,
   markOfferInFlight,
-  markOfferSentNowForBucket
+  markOfferSentNowForBucket,
+  type QueuedOfferRequest
 } from "./voiceCallNegotiationState";
 import {
   applyAudioQualityToPeerConnection,
@@ -107,7 +116,7 @@ export function useVoiceCallRuntime({
     targetLabel: string;
     reason: OfferReason;
     iceRestart: boolean;
-    cadenceBucket: "manual" | "video-sync" | "ice-restart";
+    cadenceBucket: OfferCadenceBucket;
   };
 
   // Core WebRTC orchestration for room calls: peer lifecycle, signaling, reconnects and media sync.
@@ -133,6 +142,8 @@ export function useVoiceCallRuntime({
   const requestTargetByIdRef = useRef<Map<string, { targetUserId: string; eventType: string }>>(new Map());
   const blockedTargetUntilRef = useRef<Map<string, number>>(new Map());
   const roomTargetsResyncTimerRef = useRef<number | null>(null);
+  const offerQueueRef = useRef(createOfferQueueState());
+  const offerQueueDrainInProgressRef = useRef(false);
   const lastVideoSyncOfferAtRef = useRef(0);
   const offerTraceStateRef = useRef<Map<string, { count: number; lastLoggedAt: number }>>(new Map());
   const lastToastRef = useRef<{ key: string; at: number }>({ key: "", at: 0 });
@@ -496,6 +507,8 @@ export function useVoiceCallRuntime({
     remoteMicStateByUserIdRef.current = {};
     lastSentMicStateRef.current = null;
     lastSentVideoStateRef.current = null;
+    clearOfferQueue(offerQueueRef.current);
+    offerQueueDrainInProgressRef.current = false;
     clearRoomTargetsResyncTimer();
     setLastCallPeer("");
     setCallStatus("idle");
@@ -727,68 +740,162 @@ export function useVoiceCallRuntime({
     });
   }, [setLastCallPeer, updateCallStatus, pushCallLog, traceOfferEvent, traceOfferLifecycle]);
 
+  const requeueOfferRequest = useCallback((request: QueuedOfferRequest, errorCode: string) => {
+    const retryBudget = resolveOfferRetryBudget(request.cadenceBucket);
+    if (request.attempt >= retryBudget) {
+      traceOfferEvent("offer dropped", request.targetUserId, request.targetLabel, request.reason, {
+        skip: "retry-budget-exhausted",
+        cadenceBucket: request.cadenceBucket,
+        attempt: request.attempt,
+        errorCode
+      });
+      return;
+    }
+
+    const nextAttempt = request.attempt + 1;
+    const delayMs = resolveOfferRetryDelayMs(request.cadenceBucket, nextAttempt);
+    const accepted = enqueueOfferRequest(offerQueueRef.current, {
+      ...request,
+      attempt: nextAttempt,
+      enqueuedAt: Date.now()
+    });
+    if (!accepted) {
+      return;
+    }
+
+    traceOfferEvent("offer requeued", request.targetUserId, request.targetLabel, request.reason, {
+      cadenceBucket: request.cadenceBucket,
+      attempt: nextAttempt,
+      delayMs,
+      errorCode
+    });
+
+    window.setTimeout(() => {
+      void startOfferRef.current?.(request.targetUserId, request.targetLabel, {
+        reason: request.reason as OfferReason,
+        iceRestart: request.iceRestart
+      });
+    }, delayMs);
+  }, [traceOfferEvent]);
+
+  const drainOfferQueue = useCallback(async () => {
+    if (offerQueueDrainInProgressRef.current) {
+      return;
+    }
+
+    offerQueueDrainInProgressRef.current = true;
+
+    try {
+      while (roomVoiceConnectedRef.current) {
+        const queued = dequeueNextOfferRequest(offerQueueRef.current);
+        if (!queued) {
+          break;
+        }
+
+        const context = runStartOfferPreflight(queued.targetUserId, queued.targetLabel, {
+          reason: queued.reason as OfferReason,
+          iceRestart: queued.iceRestart
+        });
+        if (!context) {
+          requeueOfferRequest(queued, "preflight-blocked");
+          continue;
+        }
+
+        const {
+          normalizedTarget,
+          targetLabel: resolvedTargetLabel,
+          reason,
+          iceRestart,
+          cadenceBucket
+        } = context;
+        const existingPeer = peersRef.current.get(normalizedTarget);
+
+        traceOfferLifecycle({
+          stage: "created",
+          targetUserId: normalizedTarget,
+          targetLabel: resolvedTargetLabel,
+          reason,
+          iceRestart,
+          cadenceBucket
+        });
+
+        markOfferQueueActiveForTarget(offerQueueRef.current, normalizedTarget, true);
+        markOfferInFlight(existingPeer, true);
+        markMakingOffer(existingPeer, true);
+
+        try {
+          const sent = await sendStartOfferSignal(context);
+          if (!sent) {
+            requeueOfferRequest(queued, "signal-not-sent");
+            continue;
+          }
+
+          commitStartOfferSuccess(context);
+        } catch (error) {
+          const errorName = (error as { name?: string })?.name || "";
+          if (errorName === "NotAllowedError" || errorName === "SecurityError") {
+            pushToastThrottled("media-denied", t("settings.mediaDenied"));
+          } else {
+            pushToastThrottled("devices-load-failed", t("settings.devicesLoadFailed"));
+            requeueOfferRequest(queued, "exception");
+          }
+          pushCallLog(`call.offer failed (${resolvedTargetLabel || normalizedTarget}): ${(error as Error).message}`);
+          traceOfferLifecycle({
+            stage: "failed",
+            targetUserId: normalizedTarget,
+            targetLabel: resolvedTargetLabel,
+            reason,
+            iceRestart,
+            cadenceBucket,
+            message: (error as Error).message
+          });
+          closePeer(normalizedTarget);
+        } finally {
+          const activePeer = peersRef.current.get(normalizedTarget);
+          markMakingOffer(activePeer, false);
+          markOfferInFlight(activePeer, false);
+          markOfferQueueActiveForTarget(offerQueueRef.current, normalizedTarget, false);
+        }
+      }
+    } finally {
+      offerQueueDrainInProgressRef.current = false;
+    }
+  }, [runStartOfferPreflight, sendStartOfferSignal, commitStartOfferSuccess, pushToastThrottled, t, pushCallLog, traceOfferLifecycle, closePeer, requeueOfferRequest]);
+
   const startOffer = useCallback(async (
     targetUserId: string,
     targetLabel: string,
     options?: StartOfferOptions
   ) => {
-    const context = runStartOfferPreflight(targetUserId, targetLabel, options);
-    if (!context) {
+    const normalizedTarget = normalizeRtcText(targetUserId);
+    if (!normalizedTarget || !roomVoiceConnectedRef.current) {
       return;
     }
 
-    const {
-      normalizedTarget,
-      targetLabel: resolvedTargetLabel,
-      reason,
-      iceRestart,
-      cadenceBucket
-    } = context;
-    const existingPeer = peersRef.current.get(normalizedTarget);
-
-    traceOfferLifecycle({
-      stage: "created",
+    const reason = (options?.reason || "manual") as OfferReason;
+    const iceRestart = Boolean(options?.iceRestart);
+    const cadenceBucket = resolveOfferCadenceBucket(reason, iceRestart);
+    const accepted = enqueueOfferRequest(offerQueueRef.current, {
       targetUserId: normalizedTarget,
-      targetLabel: resolvedTargetLabel,
+      targetLabel: String(targetLabel || normalizedTarget).trim() || normalizedTarget,
       reason,
       iceRestart,
-      cadenceBucket
+      cadenceBucket,
+      attempt: 0,
+      enqueuedAt: Date.now()
     });
 
-    markOfferInFlight(existingPeer, true);
-    markMakingOffer(existingPeer, true);
-
-    try {
-      const sent = await sendStartOfferSignal(context);
-      if (!sent) {
-        return;
-      }
-
-      commitStartOfferSuccess(context);
-    } catch (error) {
-      const errorName = (error as { name?: string })?.name || "";
-      if (errorName === "NotAllowedError" || errorName === "SecurityError") {
-        pushToastThrottled("media-denied", t("settings.mediaDenied"));
-      } else {
-        pushToastThrottled("devices-load-failed", t("settings.devicesLoadFailed"));
-      }
-      pushCallLog(`call.offer failed (${targetLabel || normalizedTarget}): ${(error as Error).message}`);
-      traceOfferLifecycle({
-        stage: "failed",
-        targetUserId: normalizedTarget,
-        targetLabel: resolvedTargetLabel,
-        reason,
-        iceRestart,
-        cadenceBucket,
-        message: (error as Error).message
-      });
-      closePeer(normalizedTarget);
-    } finally {
-      const activePeer = peersRef.current.get(normalizedTarget);
-      markMakingOffer(activePeer, false);
-      markOfferInFlight(activePeer, false);
+    if (!accepted) {
+      return;
     }
-  }, [runStartOfferPreflight, commitStartOfferSuccess, sendStartOfferSignal, pushCallLog, t, pushToastThrottled, closePeer, traceOfferLifecycle]);
+
+    traceOfferEvent("offer queued", normalizedTarget, targetLabel, reason, {
+      cadenceBucket,
+      iceRestart
+    });
+
+    await drainOfferQueue();
+  }, [traceOfferEvent, drainOfferQueue]);
 
   startOfferRef.current = startOffer;
 
