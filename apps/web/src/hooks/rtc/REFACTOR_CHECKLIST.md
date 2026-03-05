@@ -10,6 +10,7 @@ Purpose: keep `useVoiceCallRuntime.ts` focused on orchestration while moving iso
 - [x] Extracted peer context create/dispose logic to `voiceCallPeerLifecycle.ts`.
 - [x] Extracted peer reconnect/stats recovery flows to `voiceCallPeerRecovery.ts`.
 - [x] Extracted local media constraints/acquisition/attach to `voiceCallLocalMedia.ts`.
+- [x] Extracted room target sync and resync timer flow to `voiceCallTargetSync.ts`.
 
 ## In Progress
 
@@ -17,11 +18,10 @@ Purpose: keep `useVoiceCallRuntime.ts` focused on orchestration while moving iso
   - [ ] signaling dispatch
   - [ ] media acquisition and track attach
   - [ ] peer map lifecycle
-  - [ ] room target sync
+  - [x] room target sync
 
 ## Next
 
-- [ ] Extract room target synchronization and blocklist cadence to `voiceCallTargetSync.ts`.
 - [ ] Add unit tests for offer cadence and reconnect scheduling helpers.
 - [ ] Add focused integration smoke for camera-toggle + reconnect in 3-way call.
 
