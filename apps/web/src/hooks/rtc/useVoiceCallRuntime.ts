@@ -99,6 +99,12 @@ export function useVoiceCallRuntime({
   setLastCallPeer
 }: UseVoiceCallRuntimeArgs) {
   type StartOfferOptions = { iceRestart?: boolean; reason?: OfferReason };
+  type StartOfferContext = {
+    normalizedTarget: string;
+    targetLabel: string;
+    reason: OfferReason;
+    iceRestart: boolean;
+  };
 
   // Core WebRTC orchestration for room calls: peer lifecycle, signaling, reconnects and media sync.
   const [roomVoiceConnected, setRoomVoiceConnected] = useState(false);
@@ -559,32 +565,29 @@ export function useVoiceCallRuntime({
 
   ensurePeerConnectionRef.current = ensurePeerConnection;
 
-  const startOffer = useCallback(async (
+  const runStartOfferPreflight = useCallback((
     targetUserId: string,
     targetLabel: string,
     options?: StartOfferOptions
-  ) => {
-    const normalizedTarget = targetUserId.trim();
+  ): StartOfferContext | null => {
+    const normalizedTarget = normalizeRtcText(targetUserId);
     if (!normalizedTarget || !roomVoiceConnectedRef.current) {
-      return;
+      return null;
     }
 
     const reason = (options?.reason || "manual") as OfferReason;
-
     if (isTargetTemporarilyBlocked(normalizedTarget)) {
       traceOfferEvent("offer skipped", normalizedTarget, targetLabel, reason, { skip: "target-blocked" });
-      return;
+      return null;
     }
 
     const existingPeer = peersRef.current.get(normalizedTarget);
     if (existingPeer?.offerInFlight || existingPeer?.makingOffer) {
       traceOfferEvent("offer skipped", normalizedTarget, targetLabel, reason, { skip: "in-flight" });
-      return;
+      return null;
     }
 
-    // Video-sync reasons are bursty (camera toggles/watchdog resync), so they use a dedicated cadence.
     const minIntervalMs = resolveOfferMinIntervalMs(reason, Boolean(options?.iceRestart));
-
     const now = Date.now();
     if (existingPeer && now - existingPeer.lastOfferAt < minIntervalMs) {
       traceOfferEvent("offer skipped", normalizedTarget, targetLabel, reason, {
@@ -592,7 +595,7 @@ export function useVoiceCallRuntime({
         elapsedMs: now - existingPeer.lastOfferAt,
         minIntervalMs
       });
-      return;
+      return null;
     }
 
     if (existingPeer && existingPeer.connection.signalingState !== "stable") {
@@ -600,64 +603,101 @@ export function useVoiceCallRuntime({
         skip: "signaling-not-stable",
         signalingState: existingPeer.connection.signalingState
       });
+      return null;
+    }
+
+    return {
+      normalizedTarget,
+      targetLabel,
+      reason,
+      iceRestart: Boolean(options?.iceRestart)
+    };
+  }, [isTargetTemporarilyBlocked, traceOfferEvent]);
+
+  const sendStartOfferSignal = useCallback(async (context: StartOfferContext): Promise<boolean> => {
+    const { normalizedTarget, targetLabel, reason, iceRestart } = context;
+
+    const connection = ensurePeerConnection(normalizedTarget, targetLabel);
+    const peer = peersRef.current.get(normalizedTarget);
+    if (peer && peer.connection.signalingState !== "stable") {
+      traceOfferEvent("offer skipped", normalizedTarget, targetLabel, reason, {
+        skip: "post-ensure-signaling-not-stable",
+        signalingState: peer.connection.signalingState
+      });
+      return false;
+    }
+
+    await attachLocalTracks(connection);
+    const offer = await connection.createOffer({
+      offerToReceiveAudio: true,
+      offerToReceiveVideo: allowVideoStreaming,
+      iceRestart
+    });
+    await connection.setLocalDescription(offer);
+
+    const { signal, settledBy } = await buildLocalDescriptionAfterIceGathering(connection);
+    if (settledBy === "timeout") {
+      pushCallLog(`rtc ice gathering timeout before offer -> ${targetLabel || normalizedTarget}`);
+    }
+
+    const requestId = sendWsEvent(
+      "call.offer",
+      {
+        targetUserId: normalizedTarget,
+        signal
+      },
+      { trackAck: false, maxRetries: 0 }
+    );
+    rememberRequestTarget(requestId, "call.offer", normalizedTarget);
+
+    if (!requestId) {
+      traceOfferEvent("offer skipped", normalizedTarget, targetLabel, reason, {
+        skip: "socket-unavailable"
+      });
+      pushCallLog("call.offer skipped: socket unavailable");
+      return false;
+    }
+
+    return true;
+  }, [ensurePeerConnection, attachLocalTracks, allowVideoStreaming, pushCallLog, sendWsEvent, rememberRequestTarget, traceOfferEvent]);
+
+  const commitStartOfferSuccess = useCallback((context: StartOfferContext): void => {
+    const { normalizedTarget, targetLabel, reason, iceRestart } = context;
+    setLastCallPeer(targetLabel || normalizedTarget);
+    updateCallStatus();
+    markOfferSentNow(peersRef.current.get(normalizedTarget));
+    if (iceRestart) {
+      pushCallLog(`call.offer ice-restart -> ${targetLabel || normalizedTarget}${reason ? ` (${reason})` : ""}`);
+    }
+    pushCallLog(`call.offer sent -> ${targetLabel || normalizedTarget}`);
+    traceOfferEvent("offer sent", normalizedTarget, targetLabel, reason, {
+      iceRestart
+    });
+  }, [setLastCallPeer, updateCallStatus, pushCallLog, traceOfferEvent]);
+
+  const startOffer = useCallback(async (
+    targetUserId: string,
+    targetLabel: string,
+    options?: StartOfferOptions
+  ) => {
+    const context = runStartOfferPreflight(targetUserId, targetLabel, options);
+    if (!context) {
       return;
     }
+
+    const { normalizedTarget } = context;
+    const existingPeer = peersRef.current.get(normalizedTarget);
 
     markOfferInFlight(existingPeer, true);
     markMakingOffer(existingPeer, true);
 
     try {
-      const connection = ensurePeerConnection(normalizedTarget, targetLabel);
-      const peer = peersRef.current.get(normalizedTarget);
-      if (peer && peer.connection.signalingState !== "stable") {
-        markMakingOffer(peer, false);
-        traceOfferEvent("offer skipped", normalizedTarget, targetLabel, reason, {
-          skip: "post-ensure-signaling-not-stable",
-          signalingState: peer.connection.signalingState
-        });
-        return;
-      }
-      await attachLocalTracks(connection);
-      const offer = await connection.createOffer({
-        offerToReceiveAudio: true,
-        offerToReceiveVideo: allowVideoStreaming,
-        iceRestart: Boolean(options?.iceRestart)
-      });
-      await connection.setLocalDescription(offer);
-
-      const { signal, settledBy } = await buildLocalDescriptionAfterIceGathering(connection);
-      if (settledBy === "timeout") {
-        pushCallLog(`rtc ice gathering timeout before offer -> ${targetLabel || normalizedTarget}`);
-      }
-
-      const requestId = sendWsEvent(
-        "call.offer",
-        {
-          targetUserId: normalizedTarget,
-          signal
-        },
-        { trackAck: false, maxRetries: 0 }
-      );
-      rememberRequestTarget(requestId, "call.offer", normalizedTarget);
-
-      if (!requestId) {
-        traceOfferEvent("offer skipped", normalizedTarget, targetLabel, reason, {
-          skip: "socket-unavailable"
-        });
-        pushCallLog("call.offer skipped: socket unavailable");
+      const sent = await sendStartOfferSignal(context);
+      if (!sent) {
         return;
       }
 
-      setLastCallPeer(targetLabel || normalizedTarget);
-      updateCallStatus();
-      markOfferSentNow(peersRef.current.get(normalizedTarget));
-      if (options?.iceRestart) {
-        pushCallLog(`call.offer ice-restart -> ${targetLabel || normalizedTarget}${options.reason ? ` (${options.reason})` : ""}`);
-      }
-      pushCallLog(`call.offer sent -> ${targetLabel || normalizedTarget}`);
-      traceOfferEvent("offer sent", normalizedTarget, targetLabel, reason, {
-        iceRestart: Boolean(options?.iceRestart)
-      });
+      commitStartOfferSuccess(context);
     } catch (error) {
       const errorName = (error as { name?: string })?.name || "";
       if (errorName === "NotAllowedError" || errorName === "SecurityError") {
@@ -672,7 +712,7 @@ export function useVoiceCallRuntime({
       markMakingOffer(activePeer, false);
       markOfferInFlight(activePeer, false);
     }
-  }, [roomVoiceConnectedRef, ensurePeerConnection, attachLocalTracks, sendWsEvent, setLastCallPeer, updateCallStatus, pushCallLog, t, pushToastThrottled, closePeer, rememberRequestTarget, isTargetTemporarilyBlocked, allowVideoStreaming, traceOfferEvent]);
+  }, [runStartOfferPreflight, commitStartOfferSuccess, sendStartOfferSignal, pushCallLog, t, pushToastThrottled, closePeer]);
 
   startOfferRef.current = startOffer;
 

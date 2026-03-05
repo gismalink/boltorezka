@@ -17,10 +17,10 @@ Purpose: keep RTC runtime predictable under glare/reconnect/load, while reducing
 
 ## Remaining Refactor Debt
 
-- [ ] Split `startOffer` internals in `useVoiceCallRuntime.ts` into focused helpers:
-  - [ ] preflight checks
-  - [ ] local description creation and send
-  - [ ] post-send bookkeeping/metrics
+- [x] Split `startOffer` internals in `useVoiceCallRuntime.ts` into focused helpers:
+  - [x] preflight checks
+  - [x] local description creation and send
+  - [x] post-send bookkeeping/metrics
 - [ ] Extract candidate queue sequencing from `useVoiceCallRuntime.ts` to dedicated helper/module.
 - [ ] Consolidate related media effects in `useVoiceRuntimeMediaEffects.ts` to reduce effect overlap:
   - [ ] audio track/device sync
