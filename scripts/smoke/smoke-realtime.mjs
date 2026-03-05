@@ -7,10 +7,14 @@ const bearerToken = process.env.SMOKE_TEST_BEARER_TOKEN
   ?? (allowLegacyBearer ? (process.env.SMOKE_BEARER_TOKEN ?? "") : "");
 const bearerTokenSecond = process.env.SMOKE_TEST_BEARER_TOKEN_SECOND
   ?? (allowLegacyBearer ? (process.env.SMOKE_BEARER_TOKEN_SECOND ?? "") : "");
+const bearerTokenThird = process.env.SMOKE_TEST_BEARER_TOKEN_THIRD
+  ?? (allowLegacyBearer ? (process.env.SMOKE_BEARER_TOKEN_THIRD ?? "") : "");
 const preissuedTicket = process.env.SMOKE_WS_TICKET ?? "";
 const preissuedTicketSecond = process.env.SMOKE_WS_TICKET_SECOND ?? "";
+const preissuedTicketThird = process.env.SMOKE_WS_TICKET_THIRD ?? "";
 const preissuedTicketReconnect = process.env.SMOKE_WS_TICKET_RECONNECT ?? "";
 const smokeCallSignal = process.env.SMOKE_CALL_SIGNAL === "1";
+const smokeCallRace3Way = process.env.SMOKE_CALL_RACE_3WAY === "1";
 const smokeReconnect = process.env.SMOKE_RECONNECT === "1";
 const canRunReconnect = Boolean(preissuedTicketReconnect || bearerToken);
 const roomSlug = process.env.SMOKE_ROOM_SLUG ?? "general";
@@ -29,6 +33,11 @@ if (!preissuedTicket && !bearerToken) {
 
 if (smokeCallSignal && !bearerToken && !preissuedTicketSecond) {
   console.error("[smoke:realtime] SMOKE_CALL_SIGNAL=1 requires SMOKE_TEST_BEARER_TOKEN or SMOKE_WS_TICKET_SECOND");
+  process.exit(1);
+}
+
+if (smokeCallRace3Way && !preissuedTicketThird && !bearerTokenThird) {
+  console.error("[smoke:realtime] SMOKE_CALL_RACE_3WAY=1 requires SMOKE_TEST_BEARER_TOKEN_THIRD or SMOKE_WS_TICKET_THIRD");
   process.exit(1);
 }
 
@@ -118,6 +127,29 @@ async function resolveReconnectTicket() {
   return payload.ticket;
 }
 
+async function resolveThirdTicket() {
+  if (preissuedTicketThird) {
+    return preissuedTicketThird;
+  }
+
+  if (!bearerTokenThird) {
+    throw new Error("[smoke:realtime] third ticket requires SMOKE_TEST_BEARER_TOKEN_THIRD or SMOKE_WS_TICKET_THIRD");
+  }
+
+  const { response, payload } = await fetchJson("/v1/auth/ws-ticket", {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${bearerTokenThird}`
+    }
+  });
+
+  if (!response.ok || !payload?.ticket) {
+    throw new Error(`[smoke:realtime] third /v1/auth/ws-ticket failed: ${response.status}`);
+  }
+
+  return payload.ticket;
+}
+
 function waitForEvent(events, predicate, label) {
   const started = Date.now();
 
@@ -136,6 +168,130 @@ function waitForEvent(events, predicate, label) {
       }
     }, 50);
   });
+}
+
+async function runThreeWayRaceScenario({
+  firstWs,
+  secondWs,
+  firstEvents,
+  secondEvents,
+  firstUserId,
+  secondUserId,
+  roomSlug,
+  timeoutMs
+}) {
+  const thirdTicket = await resolveThirdTicket();
+  const wsThirdUrl = toWsUrl(baseUrl);
+  wsThirdUrl.pathname = "/v1/realtime/ws";
+  wsThirdUrl.search = "";
+  wsThirdUrl.searchParams.set("ticket", thirdTicket);
+  const wsThird = new WS(wsThirdUrl.toString());
+  const thirdEvents = [];
+
+  wsThird.on("message", (raw) => {
+    try {
+      const value = typeof raw === "string" ? raw : raw.toString("utf8");
+      thirdEvents.push(JSON.parse(value));
+    } catch {
+      return;
+    }
+  });
+
+  await new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error("[smoke:realtime] third websocket open timeout")), timeoutMs);
+
+    wsThird.once("open", () => {
+      clearTimeout(timer);
+      resolve();
+    });
+
+    wsThird.once("error", (error) => {
+      clearTimeout(timer);
+      reject(error);
+    });
+  });
+
+  const thirdReady = await waitForEvent(thirdEvents, (item) => item?.type === "server.ready", "server.ready for third websocket");
+  const thirdUserId = String(thirdReady?.payload?.userId || "").trim();
+  if (!thirdUserId || thirdUserId === firstUserId || thirdUserId === secondUserId) {
+    throw new Error("[smoke:realtime] third websocket must belong to distinct user");
+  }
+
+  const joinRequest = `join3-${Date.now()}`;
+  wsThird.send(JSON.stringify({ type: "room.join", requestId: joinRequest, payload: { roomSlug } }));
+  await waitForEvent(thirdEvents, (item) => item?.type === "ack" && item?.payload?.requestId === joinRequest, "ack for third room.join");
+
+  // Send concurrent offer pairs to trigger possible glare paths in a controlled manner.
+  const offerAB = `race-offer-ab-${Date.now()}`;
+  const offerBA = `race-offer-ba-${Date.now()}`;
+  firstWs.send(JSON.stringify({ type: "call.offer", requestId: offerAB, payload: { targetUserId: secondUserId, signal: { type: "offer", sdp: "race-ab" } } }));
+  secondWs.send(JSON.stringify({ type: "call.offer", requestId: offerBA, payload: { targetUserId: firstUserId, signal: { type: "offer", sdp: "race-ba" } } }));
+  await waitForEvent(firstEvents, (item) => item?.type === "ack" && item?.payload?.requestId === offerAB, "ack race offer A->B");
+  await waitForEvent(secondEvents, (item) => item?.type === "ack" && item?.payload?.requestId === offerBA, "ack race offer B->A");
+
+  const offerAC = `race-offer-ac-${Date.now()}`;
+  const offerCA = `race-offer-ca-${Date.now()}`;
+  firstWs.send(JSON.stringify({ type: "call.offer", requestId: offerAC, payload: { targetUserId: thirdUserId, signal: { type: "offer", sdp: "race-ac" } } }));
+  wsThird.send(JSON.stringify({ type: "call.offer", requestId: offerCA, payload: { targetUserId: firstUserId, signal: { type: "offer", sdp: "race-ca" } } }));
+  await waitForEvent(firstEvents, (item) => item?.type === "ack" && item?.payload?.requestId === offerAC, "ack race offer A->C");
+  await waitForEvent(thirdEvents, (item) => item?.type === "ack" && item?.payload?.requestId === offerCA, "ack race offer C->A");
+
+  firstWs.send(JSON.stringify({ type: "call.video_state", requestId: `race-video-1-${Date.now()}`, payload: { settings: { localVideoEnabled: true } } }));
+  secondWs.send(JSON.stringify({ type: "call.video_state", requestId: `race-video-2-${Date.now()}`, payload: { settings: { localVideoEnabled: false } } }));
+  wsThird.send(JSON.stringify({ type: "call.video_state", requestId: `race-video-3-${Date.now()}`, payload: { settings: { localVideoEnabled: true } } }));
+
+  await new Promise((resolve) => setTimeout(resolve, 1000));
+
+  const allEvents = [...firstEvents, ...secondEvents, ...thirdEvents];
+  const offerRateLimited = allEvents.filter((item) => item?.type === "nack" && item?.payload?.code === "OfferRateLimited").length;
+  if (offerRateLimited > 3) {
+    throw new Error(`[smoke:realtime] race3way excessive OfferRateLimited: ${offerRateLimited}`);
+  }
+
+  wsThird.close();
+
+  const reconnectTicket = await resolveThirdTicket();
+  const wsThirdReconnectUrl = toWsUrl(baseUrl);
+  wsThirdReconnectUrl.pathname = "/v1/realtime/ws";
+  wsThirdReconnectUrl.search = "";
+  wsThirdReconnectUrl.searchParams.set("ticket", reconnectTicket);
+  const wsThirdReconnect = new WS(wsThirdReconnectUrl.toString());
+  const reconnectEvents = [];
+  wsThirdReconnect.on("message", (raw) => {
+    try {
+      const value = typeof raw === "string" ? raw : raw.toString("utf8");
+      reconnectEvents.push(JSON.parse(value));
+    } catch {
+      return;
+    }
+  });
+
+  await new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error("[smoke:realtime] third reconnect websocket open timeout")), timeoutMs);
+
+    wsThirdReconnect.once("open", () => {
+      clearTimeout(timer);
+      resolve();
+    });
+
+    wsThirdReconnect.once("error", (error) => {
+      clearTimeout(timer);
+      reject(error);
+    });
+  });
+
+  await waitForEvent(reconnectEvents, (item) => item?.type === "server.ready", "server.ready for third reconnect websocket");
+  const rejoinRequest = `rejoin3-${Date.now()}`;
+  wsThirdReconnect.send(JSON.stringify({ type: "room.join", requestId: rejoinRequest, payload: { roomSlug } }));
+  await waitForEvent(reconnectEvents, (item) => item?.type === "ack" && item?.payload?.requestId === rejoinRequest, "ack for third rejoin");
+
+  wsThirdReconnect.close();
+
+  return {
+    race3WayOk: true,
+    race3WayReconnectOk: true,
+    race3WayOfferRateLimited: offerRateLimited
+  };
 }
 
 (async () => {
@@ -245,6 +401,9 @@ function waitForEvent(events, predicate, label) {
   let callSignalRelayed = false;
   let callRejectRelayed = false;
   let callHangupRelayed = false;
+  let race3WayOk = false;
+  let race3WayReconnectOk = false;
+  let race3WayOfferRateLimited = 0;
   let reconnectOk = false;
   let reconnectSkipped = false;
   if (smokeCallSignal) {
@@ -400,6 +559,22 @@ function waitForEvent(events, predicate, label) {
     }
 
     callHangupRelayed = true;
+
+    if (smokeCallRace3Way) {
+      const raceResult = await runThreeWayRaceScenario({
+        firstWs: ws,
+        secondWs: wsSecond,
+        firstEvents: events,
+        secondEvents,
+        firstUserId,
+        secondUserId,
+        roomSlug,
+        timeoutMs
+      });
+      race3WayOk = raceResult.race3WayOk;
+      race3WayReconnectOk = raceResult.race3WayReconnectOk;
+      race3WayOfferRateLimited = raceResult.race3WayOfferRateLimited;
+    }
   }
 
   if (smokeReconnect && canRunReconnect) {
@@ -487,6 +662,9 @@ function waitForEvent(events, predicate, label) {
         duplicateIdempotencyKey: duplicateAck?.payload?.idempotencyKey ?? null,
         reconnectOk,
         reconnectSkipped,
+        race3WayOk,
+        race3WayReconnectOk,
+        race3WayOfferRateLimited,
         callSignalRelayed,
         callRejectRelayed,
         callHangupRelayed

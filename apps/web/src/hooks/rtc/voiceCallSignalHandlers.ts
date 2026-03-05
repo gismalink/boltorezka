@@ -9,6 +9,11 @@ import type {
   WsSender
 } from "./voiceCallTypes";
 import { buildLocalDescriptionAfterIceGathering } from "./voiceCallUtils";
+import {
+  hasOfferCollision,
+  markIgnoreOffer,
+  markSettingRemoteAnswerPending
+} from "./voiceCallNegotiationState";
 
 async function preparePeerConnectionForRemoteDescription({
   fromUserId,
@@ -57,14 +62,7 @@ async function handleOfferGlare({
   pushCallLog: (text: string) => void;
 }): Promise<"ignore-remote-offer" | "accept-remote-offer"> {
   const existingConnection = existingPeer?.connection || null;
-  const offerCollision = Boolean(
-    existingConnection
-      && (
-        existingPeer?.makingOffer
-        || existingPeer?.isSettingRemoteAnswerPending
-        || existingConnection.signalingState !== "stable"
-      )
-  );
+  const offerCollision = hasOfferCollision(existingPeer || undefined);
 
   if (!offerCollision) {
     return "accept-remote-offer";
@@ -72,9 +70,7 @@ async function handleOfferGlare({
 
   const localIsDesignatedOfferer = shouldInitiateOffer(fromUserId);
   if (localIsDesignatedOfferer) {
-    if (existingPeer) {
-      existingPeer.ignoreOffer = true;
-    }
+    markIgnoreOffer(existingPeer || undefined, true);
     pushCallLog(`call.offer ignored (glare, local-offerer) <- ${fromUserName}`);
     const rejectRequestId = sendWsEvent(
       "call.reject",
@@ -88,9 +84,7 @@ async function handleOfferGlare({
     return "ignore-remote-offer";
   }
 
-  if (existingPeer) {
-    existingPeer.ignoreOffer = false;
-  }
+  markIgnoreOffer(existingPeer || undefined, false);
   if (existingConnection && existingConnection.signalingState === "have-local-offer") {
     await existingConnection.setLocalDescription({ type: "rollback" });
   }
@@ -167,9 +161,7 @@ export async function handleIncomingSignalEvent({
         return;
       }
 
-      if (existingPeer) {
-        existingPeer.ignoreOffer = false;
-      }
+      markIgnoreOffer(existingPeer || undefined, false);
 
       const connection = await preparePeerConnectionForRemoteDescription({
         fromUserId,
@@ -221,10 +213,7 @@ export async function handleIncomingSignalEvent({
         clearPeerReconnectTimer
       });
 
-      const peer = peersRef.current.get(fromUserId);
-      if (peer) {
-        peer.isSettingRemoteAnswerPending = true;
-      }
+      markSettingRemoteAnswerPending(peersRef.current.get(fromUserId), true);
 
       await connection.setRemoteDescription(new RTCSessionDescription(signal as unknown as RTCSessionDescriptionInit));
       await flushPendingRemoteCandidates(fromUserId, fromUserName);
@@ -234,10 +223,7 @@ export async function handleIncomingSignalEvent({
     } catch (error) {
       pushCallLog(`call.answer handling failed: ${(error as Error).message}`);
     } finally {
-      const peer = peersRef.current.get(fromUserId);
-      if (peer) {
-        peer.isSettingRemoteAnswerPending = false;
-      }
+      markSettingRemoteAnswerPending(peersRef.current.get(fromUserId), false);
     }
 
     return;

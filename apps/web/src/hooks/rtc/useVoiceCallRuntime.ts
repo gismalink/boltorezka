@@ -33,6 +33,12 @@ import {
   OFFER_VIDEO_SYNC_MIN_INTERVAL_MS,
   resolveOfferMinIntervalMs
 } from "./voiceCallOfferPolicy";
+import {
+  createNegotiationStateDefaults,
+  markMakingOffer,
+  markOfferInFlight,
+  markOfferSentNow
+} from "./voiceCallNegotiationState";
 import type {
   CallMicStatePayload,
   CallNackPayload,
@@ -915,11 +921,7 @@ export function useVoiceCallRuntime({
       stallRecoveryAttempts: 0,
       reconnectAttempts: 0,
       reconnectTimer: null as number | null,
-      makingOffer: false,
-      ignoreOffer: false,
-      isSettingRemoteAnswerPending: false,
-      offerInFlight: false,
-      lastOfferAt: 0,
+      ...createNegotiationStateDefaults(),
       pendingRemoteCandidates: [] as RTCIceCandidateInit[]
     };
     peersRef.current.set(targetUserId, peerContext);
@@ -1002,16 +1004,14 @@ export function useVoiceCallRuntime({
       return;
     }
 
-    if (existingPeer) {
-      existingPeer.offerInFlight = true;
-      existingPeer.makingOffer = true;
-    }
+    markOfferInFlight(existingPeer, true);
+    markMakingOffer(existingPeer, true);
 
     try {
       const connection = ensurePeerConnection(normalizedTarget, targetLabel);
       const peer = peersRef.current.get(normalizedTarget);
       if (peer && peer.connection.signalingState !== "stable") {
-        peer.makingOffer = false;
+        markMakingOffer(peer, false);
         traceOfferEvent("offer skipped", normalizedTarget, targetLabel, reason, {
           skip: "post-ensure-signaling-not-stable",
           signalingState: peer.connection.signalingState
@@ -1051,10 +1051,7 @@ export function useVoiceCallRuntime({
 
       setLastCallPeer(targetLabel || normalizedTarget);
       updateCallStatus();
-      const activePeer = peersRef.current.get(normalizedTarget);
-      if (activePeer) {
-        activePeer.lastOfferAt = Date.now();
-      }
+      markOfferSentNow(peersRef.current.get(normalizedTarget));
       if (options?.iceRestart) {
         pushCallLog(`call.offer ice-restart -> ${targetLabel || normalizedTarget}${options.reason ? ` (${options.reason})` : ""}`);
       }
@@ -1073,10 +1070,8 @@ export function useVoiceCallRuntime({
       closePeer(normalizedTarget);
     } finally {
       const activePeer = peersRef.current.get(normalizedTarget);
-      if (activePeer) {
-        activePeer.makingOffer = false;
-        activePeer.offerInFlight = false;
-      }
+      markMakingOffer(activePeer, false);
+      markOfferInFlight(activePeer, false);
     }
   }, [roomVoiceConnectedRef, ensurePeerConnection, attachLocalTracks, sendWsEvent, setLastCallPeer, updateCallStatus, pushCallLog, t, pushToastThrottled, closePeer, rememberRequestTarget, isTargetTemporarilyBlocked, allowVideoStreaming, traceOfferEvent]);
 

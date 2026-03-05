@@ -30,7 +30,7 @@ const BAYER_4X4 = [
 ] as const;
 
 export function extractTrackConstraints(constraints: MediaTrackConstraints | false) {
-  if (!constraints || constraints === false) {
+  if (!constraints) {
     return { width: 320, height: 240, fps: 15 };
   }
 
