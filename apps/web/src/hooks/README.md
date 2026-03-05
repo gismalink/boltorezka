@@ -1,18 +1,25 @@
 # Hooks Map
 
-## RTC Core
+## Top-level hooks
 
-- `useVoiceCallRuntime.ts` - main room call orchestrator (signaling, peers, reconnect, media state).
-- `voiceCallSignalHandlers.ts` - incoming `call.*` and nack/terminal handlers.
-- `voiceCallPeerConnectionHandlers.ts` - `RTCPeerConnection` event wiring (`ontrack`, ICE, state).
-- `useVoiceRuntimeMediaEffects.ts` - device switching, video processing, watchdog recovery.
-- `voiceCallOfferPolicy.ts` - single-offerer and offer-cadence policy helpers.
-- `voiceCallConfig.ts` - RTC-related constants and thresholds.
-- `voiceCallUtils.ts` - ICE/SDP utility helpers.
-- `voiceCallTypes.ts` - shared types for runtime modules.
+- `useAuthProfileFlow.ts`
+- `useAutoRoomVoiceConnection.ts`
+- `useCollapsedCategories.ts`
+- `useMediaDevicePreferences.ts`
+- `useMicrophoneLevelMeter.ts`
+- `usePopupOutsideClose.ts`
+- `useRealtimeChatLifecycle.ts`
+- `useRealtimeSoundEffects.ts`
+- `useRoomAdminActions.ts`
+- `useRoomsDerived.ts`
+- `useScreenWakeLock.ts`
+- `useServerMenuAccessGuard.ts`
+- `useServerSounds.ts`
+- `useVoiceRoomStateMaps.ts`
 
-## Why this split
+## RTC modules
 
-- Keep side-effect-heavy runtime (`useVoiceCallRuntime`) focused on orchestration.
-- Keep deterministic policy decisions in pure helpers (`voiceCallOfferPolicy.ts`).
-- Keep protocol handlers (`voiceCallSignalHandlers.ts`) testable and readable.
+- See `hooks/rtc/README.md` for detailed RTC runtime structure.
+
+Migration note:
+- RTC legacy paths in `hooks/*` now act as compatibility re-exports to `hooks/rtc/*`.
