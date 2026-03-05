@@ -9,7 +9,6 @@ const settleMs = Number(process.env.SMOKE_RTC_MEDIA_SETTLE_MS || 12000);
 const toneFrequencyHz = Number(process.env.SMOKE_RTC_TONE_FREQUENCY_HZ || 440);
 const iceServersCsv = String(process.env.SMOKE_RTC_ICE_SERVERS || "stun:stun.l.google.com:19302,stun:stun1.l.google.com:19302");
 const targetUserIdEnv = String(process.env.SMOKE_RTC_TARGET_USER_ID || "").trim();
-const preferHumanTarget = process.env.SMOKE_RTC_PREFER_HUMAN !== "0";
 
 const tokenA = String(process.env.SMOKE_TEST_BEARER_TOKEN || "").trim();
 const tokenB = String(process.env.SMOKE_TEST_BEARER_TOKEN_SECOND || "").trim();
@@ -538,23 +537,23 @@ async function main() {
     }
 
     let targetUserId = peerB.userId;
-    let targetKind = "bot";
+    let targetKind = "room-participant";
 
     if (targetUserIdEnv) {
       targetUserId = targetUserIdEnv;
-      targetKind = targetUserId === peerB.userId ? "bot" : "human-explicit";
-    } else if (preferHumanTarget) {
+      targetKind = targetUserId === peerB.userId ? "room-participant-explicit" : "custom-explicit";
+    } else {
       const detected = await pageA.evaluate(
         ({ excludedIds, peerTimeoutMs }) => window.__rtcMediaSmoke.waitForRoomPeer(excludedIds, peerTimeoutMs),
         {
-          excludedIds: [peerA.userId, peerB.userId],
+          excludedIds: [peerA.userId],
           peerTimeoutMs: Math.max(timeoutMs, 90000)
         }
       ).catch(() => "");
 
       if (detected) {
         targetUserId = String(detected);
-        targetKind = "human-detected";
+        targetKind = targetUserId === peerB.userId ? "room-participant-bot" : "room-participant-user";
       }
     }
 
