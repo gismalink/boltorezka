@@ -181,7 +181,11 @@ export function bindVoicePeerConnectionHandlers({
     });
 
     peer.remoteStream = resolvedStream;
-    if (resolvedStream.getVideoTracks().length > 0) {
+    const hasLiveVideoTrack = resolvedStream
+      .getVideoTracks()
+      .some((item) => item.readyState === "live");
+
+    if (hasLiveVideoTrack) {
       setRemoteVideoStream(targetUserId, resolvedStream);
     }
 

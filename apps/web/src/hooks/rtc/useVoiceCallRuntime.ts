@@ -917,6 +917,11 @@ export function useVoiceCallRuntime({
       return;
     }
 
+    if (!remoteVideoEnabled) {
+      // Keep UI/state consistent even when offer ownership is on the other side.
+      clearRemoteVideoStream(fromUserId);
+    }
+
     if (!shouldInitiateOffer(fromUserId)) {
       return;
     }
@@ -926,7 +931,7 @@ export function useVoiceCallRuntime({
     void startOfferRef.current?.(fromUserId, targetLabel || fromUserId, {
       reason: `video-sync:remote-video-state:${remoteVideoEnabled ? "on" : "off"}`
     });
-  }, [shouldInitiateOffer]);
+  }, [shouldInitiateOffer, clearRemoteVideoStream]);
 
   const handleCallNack = useCallback((payload: CallNackPayload) => {
     dispatchCallNackForRtc({

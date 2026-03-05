@@ -93,6 +93,7 @@ async function preparePeerPage({ context, label, ticket, toneHz }) {
       relayedAnswerCount: 0,
       relayedIceCount: 0,
       joinAcked: false,
+      lastVideoStateBroadcastAt: 0,
       pendingRemoteCandidates: [],
       presentUserIds: new Set(),
       peerLastSeenAt: new Map(),
@@ -210,6 +211,20 @@ async function preparePeerPage({ context, label, ticket, toneHz }) {
 
       state.ws.send(JSON.stringify(frame));
       return ackPromise;
+    };
+
+    const broadcastLocalVideoState = async () => {
+      const now = Date.now();
+      if (now - state.lastVideoStateBroadcastAt < 700) {
+        return;
+      }
+
+      state.lastVideoStateBroadcastAt = now;
+      await sendEvent("call.video_state", {
+        settings: {
+          localVideoEnabled: true
+        }
+      });
     };
 
     const ensureToneTrack = () => {
@@ -468,6 +483,9 @@ async function preparePeerPage({ context, label, ticket, toneHz }) {
       if (data?.type === "presence.joined") {
         const userId = String(data?.payload?.userId || "").trim();
         markPeerSeen(userId);
+        if (userId && userId !== state.userId) {
+          broadcastLocalVideoState().catch(() => undefined);
+        }
       }
 
       if (data?.type === "presence.left") {
@@ -498,7 +516,7 @@ async function preparePeerPage({ context, label, ticket, toneHz }) {
 
     await sendEvent("room.join", { roomSlug: roomSlugInner });
     state.joinAcked = true;
-    await sendEvent("call.video_state", { settings: { localVideoEnabled: true } });
+    await broadcastLocalVideoState();
 
     window.__rtcMediaSmoke = {
       getState: () => ({
