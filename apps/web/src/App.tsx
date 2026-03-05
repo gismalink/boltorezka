@@ -49,7 +49,7 @@ import type {
   TelemetrySummary,
   User
 } from "./domain";
-import type { ServerVideoEffectType } from "./hooks/voiceCallTypes";
+import type { ServerVideoEffectType } from "./hooks/rtc/voiceCallTypes";
 import { createProcessedVideoTrack, type OutgoingVideoTrackHandle } from "./utils/videoPixelPipeline";
 
 const MAX_CHAT_RETRIES = 3;

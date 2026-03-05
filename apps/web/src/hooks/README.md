@@ -22,4 +22,4 @@
 - See `hooks/rtc/README.md` for detailed RTC runtime structure.
 
 Migration note:
-- RTC legacy paths in `hooks/*` now act as compatibility re-exports to `hooks/rtc/*`.
+- RTC modules are imported directly from `hooks/rtc/*`.

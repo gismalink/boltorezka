@@ -22,13 +22,13 @@
 
 Ключевые места:
 
-- `apps/web/src/hooks/voiceCallUtils.ts`
+- `apps/web/src/hooks/rtc/voiceCallUtils.ts`
   - helper для ожидания ICE gathering перед отправкой SDP.
-- `apps/web/src/hooks/useVoiceCallRuntime.ts`
+- `apps/web/src/hooks/rtc/useVoiceCallRuntime.ts`
   - runtime peer lifecycle, remote audio output routing, reconnect/statistics flow.
-- `apps/web/src/hooks/voiceCallSignalHandlers.ts`
+- `apps/web/src/hooks/rtc/voiceCallSignalHandlers.ts`
   - обработка incoming signaling + ответный SDP с ожиданием ICE gathering.
-- `apps/web/src/hooks/useVoiceRuntimeMediaEffects.ts`
+- `apps/web/src/hooks/rtc/useVoiceRuntimeMediaEffects.ts`
   - media effects, output volume/mute, retry playback после user gesture.
 - `apps/api/src/routes/realtime.ts`
   - WS relay для `call.*` событий в пределах room.

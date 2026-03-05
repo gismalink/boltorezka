@@ -171,6 +171,7 @@ function waitForEvent(events, predicate, label) {
 }
 
 async function waitForAckOrNack(events, requestId, label) {
+  // Concurrent offer races may legitimately return nack; this helper treats both as terminal outcomes.
   const event = await waitForEvent(
     events,
     (item) => {

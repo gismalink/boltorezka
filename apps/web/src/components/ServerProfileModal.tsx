@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import type { AudioQuality, TelemetrySummary, User } from "../domain";
-import type { ServerVideoEffectType } from "../hooks/voiceCallTypes";
+import type { ServerVideoEffectType } from "../hooks/rtc/voiceCallTypes";
 
 type ServerMenuTab = "users" | "events" | "telemetry" | "call" | "sound" | "video";
 
