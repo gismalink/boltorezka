@@ -725,8 +725,27 @@ async function preparePeerPage({ context, label, ticket, toneHz, iceServers }) {
         let outboundVideoPackets = 0;
         let inboundVideoBytes = 0;
         let inboundVideoPackets = 0;
+        let selectedCandidatePairId = "";
+        const localCandidatesById = new Map();
+        const remoteCandidatesById = new Map();
+        const candidatePairsById = new Map();
 
         report.forEach((entry) => {
+          if (entry.type === "local-candidate") {
+            localCandidatesById.set(String(entry.id || ""), entry);
+          }
+
+          if (entry.type === "remote-candidate") {
+            remoteCandidatesById.set(String(entry.id || ""), entry);
+          }
+
+          if (entry.type === "candidate-pair") {
+            candidatePairsById.set(String(entry.id || ""), entry);
+            if (entry.nominated || entry.selected || entry.state === "succeeded") {
+              selectedCandidatePairId = String(entry.id || selectedCandidatePairId || "");
+            }
+          }
+
           if (entry.type === "outbound-rtp" && entry.kind === "audio") {
             outboundAudioBytes += Number(entry.bytesSent || 0);
             outboundAudioPackets += Number(entry.packetsSent || 0);
@@ -748,6 +767,20 @@ async function preparePeerPage({ context, label, ticket, toneHz, iceServers }) {
           }
         });
 
+        let selectedPair = null;
+        if (selectedCandidatePairId) {
+          selectedPair = candidatePairsById.get(selectedCandidatePairId) || null;
+        }
+        if (!selectedPair && pc.sctp && pc.sctp.transport && pc.sctp.transport.iceTransport) {
+          const fallbackPairId = String(pc.sctp.transport.iceTransport.selectedCandidatePairId || "");
+          if (fallbackPairId) {
+            selectedCandidatePairId = fallbackPairId;
+            selectedPair = candidatePairsById.get(fallbackPairId) || null;
+          }
+        }
+        const localCandidate = selectedPair ? localCandidatesById.get(String(selectedPair.localCandidateId || "")) : null;
+        const remoteCandidate = selectedPair ? remoteCandidatesById.get(String(selectedPair.remoteCandidateId || "")) : null;
+
         return {
           hasPeerConnection: true,
           connectionState: pc.connectionState,
@@ -763,7 +796,14 @@ async function preparePeerPage({ context, label, ticket, toneHz, iceServers }) {
           inboundTrackCount: state.inboundTrackCount,
           relayedOfferCount: state.relayedOfferCount,
           relayedAnswerCount: state.relayedAnswerCount,
-          relayedIceCount: state.relayedIceCount
+          relayedIceCount: state.relayedIceCount,
+          selectedCandidatePairId,
+          selectedCandidatePairState: selectedPair ? String(selectedPair.state || "") : "",
+          selectedCandidatePairRttMs: selectedPair ? Number(selectedPair.currentRoundTripTime || 0) * 1000 : 0,
+          localCandidateType: localCandidate ? String(localCandidate.candidateType || "") : "",
+          localCandidateProtocol: localCandidate ? String(localCandidate.protocol || "") : "",
+          remoteCandidateType: remoteCandidate ? String(remoteCandidate.candidateType || "") : "",
+          remoteCandidateProtocol: remoteCandidate ? String(remoteCandidate.protocol || "") : ""
         };
       },
       getPresenceUserIds: () => Array.from(state.presentUserIds),
