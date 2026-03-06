@@ -1,11 +1,12 @@
 # План Миграции SFU (Decision Package)
 
-Дата: 2026-03-06  
-Статус: Stage 0 завершен, Stage 1 готов к запуску в test
+Дата: 2026-03-07  
+Статус: Stage 0 завершен, Stage 1 завершен в test, Stage 2 (canary) в работе
 
 Execution reference:
 - `docs/architecture/SFU_STAGE0_EXECUTION_PLAN.md`
 - `docs/runbooks/SFU_STAGE1_DARK_LAUNCH_RUNBOOK.md`
+- `docs/runbooks/SFU_STAGE2_CANARY_RUNBOOK.md`
 
 ## 1) Цель
 
@@ -80,6 +81,11 @@ Stage 1: Dark launch в test
 Stage 2: Canary-комнаты
 - Включить SFU только для выбранных внутренних комнат/пользователей.
 - Сравнить setup success, reconnect quality и camera consistency с P2P baseline.
+
+Stage 2 control knobs (test-first):
+- `RTC_MEDIA_TOPOLOGY_SFU_ROOMS=<csv-room-slugs>`
+- `RTC_MEDIA_TOPOLOGY_SFU_USERS=<csv-user-ids>`
+- Приоритет routing: user-canary (`sfu`) -> room-canary (`sfu`) -> `RTC_MEDIA_TOPOLOGY_DEFAULT`.
 
 Stage 3: Гибрид по умолчанию в test
 - Автомаршрутизация комнат выше порога в SFU.
