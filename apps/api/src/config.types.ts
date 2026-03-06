@@ -17,4 +17,5 @@ export type AppConfig = {
   rtcFeatureInitialStateReplay: boolean;
   rtcMediaTopologyDefault: "p2p" | "sfu";
   rtcMediaTopologySfuRooms: string[];
+  rtcMediaTopologySfuUsers: string[];
 };

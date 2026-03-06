@@ -65,5 +65,6 @@ export const config: AppConfig = {
   apiServeStatic: parseBoolean(process.env.API_SERVE_STATIC, true),
   rtcFeatureInitialStateReplay: parseBoolean(process.env.RTC_FEATURE_INITIAL_STATE_REPLAY, true),
   rtcMediaTopologyDefault,
-  rtcMediaTopologySfuRooms: parseCsv(process.env.RTC_MEDIA_TOPOLOGY_SFU_ROOMS)
+  rtcMediaTopologySfuRooms: parseCsv(process.env.RTC_MEDIA_TOPOLOGY_SFU_ROOMS),
+  rtcMediaTopologySfuUsers: parseCsv(process.env.RTC_MEDIA_TOPOLOGY_SFU_USERS)
 };

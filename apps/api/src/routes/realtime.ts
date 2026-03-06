@@ -482,7 +482,7 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
     return { count, totalLagMs };
   };
 
-  const getAllRoomsPresence = () => {
+  const getAllRoomsPresence = (forUserId: string | null = null) => {
     const result: Array<{
       roomId: string;
       roomSlug: string;
@@ -508,7 +508,7 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
         roomId,
         roomSlug,
         users: getRoomPresence(roomId),
-        mediaTopology: resolveRoomMediaTopology(roomSlug)
+        mediaTopology: resolveRoomMediaTopology(roomSlug, forUserId)
       });
     }
 
@@ -516,7 +516,6 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
   };
 
   const broadcastAllRoomsPresence = () => {
-    const envelope = buildRoomsPresenceEnvelope(getAllRoomsPresence());
     const seen = new Set<WebSocket>();
 
     for (const userSockets of socketsByUserId.values()) {
@@ -525,6 +524,8 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
           continue;
         }
         seen.add(socket);
+        const state = socketState.get(socket);
+        const envelope = buildRoomsPresenceEnvelope(getAllRoomsPresence(state?.userId || null));
         sendJson(socket, envelope);
       }
     }
@@ -550,7 +551,12 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
     return result;
   };
 
-  function resolveRoomMediaTopology(roomSlug: string): MediaTopology {
+  function resolveRoomMediaTopology(roomSlug: string, userId: string | null = null): MediaTopology {
+    const normalizedUserId = String(userId || "").trim().toLowerCase();
+    if (normalizedUserId && config.rtcMediaTopologySfuUsers.includes(normalizedUserId)) {
+      return "sfu";
+    }
+
     const normalizedSlug = String(roomSlug || "").trim().toLowerCase();
     if (!normalizedSlug) {
       return config.rtcMediaTopologyDefault;
@@ -843,7 +849,7 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
         await fastify.redis.expire(`presence:user:${userId}`, 120);
 
         sendJson(connection, buildServerReadyEnvelope(userId, userName));
-        sendJson(connection, buildRoomsPresenceEnvelope(getAllRoomsPresence()));
+        sendJson(connection, buildRoomsPresenceEnvelope(getAllRoomsPresence(userId)));
 
         connection.on("message", async (raw: RawData) => {
           try {
@@ -921,7 +927,7 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
                     joinResult.room.id,
                     joinResult.room.slug,
                     joinResult.room.title,
-                    resolveRoomMediaTopology(joinResult.room.slug)
+                    resolveRoomMediaTopology(joinResult.room.slug, state.userId)
                   )
                 );
 
@@ -941,7 +947,7 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
                     joinResult.room.id,
                     joinResult.room.slug,
                     getRoomPresence(joinResult.room.id),
-                    resolveRoomMediaTopology(joinResult.room.slug)
+                    resolveRoomMediaTopology(joinResult.room.slug, state.userId)
                   )
                 );
 
