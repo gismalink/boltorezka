@@ -12,6 +12,7 @@ const melodyStepMs = Number(process.env.SMOKE_RTC_TONE_MELODY_STEP_MS || 440);
 const videoNoiseWidth = Number(process.env.SMOKE_RTC_VIDEO_NOISE_WIDTH || 320);
 const videoNoiseHeight = Number(process.env.SMOKE_RTC_VIDEO_NOISE_HEIGHT || 240);
 const videoNoiseFps = Number(process.env.SMOKE_RTC_VIDEO_NOISE_FPS || 12);
+const iceServersJsonRaw = String(process.env.SMOKE_RTC_ICE_SERVERS_JSON || "").trim();
 const iceServersCsv = String(process.env.SMOKE_RTC_ICE_SERVERS || "stun:stun.l.google.com:19302,stun:stun1.l.google.com:19302");
 const hostResolveRule = String(process.env.SMOKE_CHROMIUM_HOST_RESOLVE_RULE || "").trim();
 const targetUserIdEnv = String(process.env.SMOKE_RTC_TARGET_USER_ID || "").trim();
@@ -21,6 +22,55 @@ const tokenA = String(process.env.SMOKE_TEST_BEARER_TOKEN || "").trim();
 const tokenB = String(process.env.SMOKE_TEST_BEARER_TOKEN_SECOND || "").trim();
 const ticketAEnv = String(process.env.SMOKE_WS_TICKET || "").trim();
 const ticketBEnv = String(process.env.SMOKE_WS_TICKET_SECOND || "").trim();
+
+function resolveIceServers() {
+  if (iceServersJsonRaw) {
+    let parsed;
+    try {
+      parsed = JSON.parse(iceServersJsonRaw);
+    } catch (error) {
+      throw new Error(`[smoke:realtime:media] invalid SMOKE_RTC_ICE_SERVERS_JSON: ${error instanceof Error ? error.message : String(error)}`);
+    }
+
+    if (!Array.isArray(parsed)) {
+      throw new Error("[smoke:realtime:media] SMOKE_RTC_ICE_SERVERS_JSON must be a JSON array");
+    }
+
+    const normalized = parsed
+      .filter((entry) => entry && typeof entry === "object")
+      .map((entry) => {
+        const urls = Array.isArray(entry.urls)
+          ? entry.urls.map((url) => String(url || "").trim()).filter(Boolean)
+          : [String(entry.urls || "").trim()].filter(Boolean);
+
+        if (urls.length === 0) {
+          return null;
+        }
+
+        const server = { urls };
+        if (entry.username !== undefined) {
+          server.username = String(entry.username || "").trim();
+        }
+        if (entry.credential !== undefined) {
+          server.credential = String(entry.credential || "").trim();
+        }
+        return server;
+      })
+      .filter(Boolean);
+
+    if (normalized.length === 0) {
+      throw new Error("[smoke:realtime:media] SMOKE_RTC_ICE_SERVERS_JSON has no valid entries");
+    }
+
+    return normalized;
+  }
+
+  return iceServersCsv
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .map((url) => ({ urls: [url] }));
+}
 
 function assertPreconditions() {
   const isHttp = baseUrl.startsWith("http://") || baseUrl.startsWith("https://");
@@ -784,11 +834,7 @@ async function preparePeerPage({ context, label, ticket, toneHz }) {
     videoNoiseWidthInner: videoNoiseWidth,
     videoNoiseHeightInner: videoNoiseHeight,
     videoNoiseFpsInner: videoNoiseFps,
-    iceServers: iceServersCsv
-      .split(",")
-      .map((item) => item.trim())
-      .filter(Boolean)
-      .map((url) => ({ urls: url }))
+    iceServers
   });
 
   return { page, userId: String(result?.userId || "").trim() };
@@ -796,6 +842,7 @@ async function preparePeerPage({ context, label, ticket, toneHz }) {
 
 async function main() {
   assertPreconditions();
+  const iceServers = resolveIceServers();
 
   const ticketA = ticketAEnv || await fetchTicket(tokenA, "primary");
   const ticketB = ticketBEnv || await fetchTicket(tokenB, "secondary");
