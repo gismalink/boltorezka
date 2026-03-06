@@ -1,7 +1,8 @@
 # SFU Stage 0 - Execution Plan (Test-first)
 
 Дата старта: 2026-03-06  
-Статус: In progress (Stage 0)
+Дата закрытия: 2026-03-06  
+Статус: Completed (Stage 0)
 
 ## 1) Цель Stage 0
 
@@ -64,3 +65,9 @@
 - Только `test` rollout.
 - Изменения в `prod` только по явному подтверждению после test smoke.
 - Rollback должен работать без code revert (через routing/feature flags).
+
+## 7) Итог Stage 0
+
+- Контракты, routing metadata и smoke gates готовы.
+- Rollback thresholds и Stage 1 dark launch runbook зафиксированы.
+- Следующий активный этап: Stage 1 dark launch execution в `test`.
