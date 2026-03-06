@@ -1,6 +1,7 @@
 import type { Dispatch, SetStateAction } from "react";
 import type { Message, PresenceMember, WsIncoming } from "../domain";
 import type { CallStatus } from "./callSignalingController";
+import { RTC_FEATURE_INITIAL_STATE_REPLAY } from "../hooks/rtc/voiceCallConfig";
 
 type WsMessageControllerOptions = {
   clearPendingRequest: (requestId: string) => void;
@@ -316,6 +317,11 @@ export class WsMessageController {
   }
 
   private handleCallInitialState(message: WsIncoming): void {
+    if (!RTC_FEATURE_INITIAL_STATE_REPLAY) {
+      this.options.pushCallLog("call.initial_state ignored (feature disabled)");
+      return;
+    }
+
     const roomSlug = this.asTrimmedString(message.payload?.roomSlug) || undefined;
     const participants: unknown[] = Array.isArray(message.payload?.participants)
       ? message.payload?.participants

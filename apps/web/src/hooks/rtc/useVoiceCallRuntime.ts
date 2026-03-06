@@ -5,6 +5,8 @@ import {
 } from "../../utils/voiceDiagnostics";
 import {
   ERROR_TOAST_THROTTLE_MS,
+  RTC_FEATURE_NEGOTIATION_MANAGER_V2,
+  RTC_FEATURE_OFFER_QUEUE,
   REMOTE_SPEAKING_HOLD_MS,
   REMOTE_SPEAKING_OFF_THRESHOLD,
   REMOTE_SPEAKING_ON_THRESHOLD,
@@ -617,7 +619,7 @@ export function useVoiceCallRuntime({
     }
 
     const existingPeer = peersRef.current.get(normalizedTarget);
-    if (existingPeer?.offerInFlight || existingPeer?.makingOffer) {
+    if (RTC_FEATURE_NEGOTIATION_MANAGER_V2 && (existingPeer?.offerInFlight || existingPeer?.makingOffer)) {
       traceOfferEvent("offer skipped", normalizedTarget, targetLabel, reason, { skip: "in-flight" });
       return null;
     }
@@ -625,11 +627,13 @@ export function useVoiceCallRuntime({
     const minIntervalMs = resolveOfferMinIntervalMs(reason, Boolean(options?.iceRestart));
     const cadenceBucket = resolveOfferCadenceBucket(reason, Boolean(options?.iceRestart));
     const now = Date.now();
-    const lastOfferAtForBucket = getLastOfferAtForBucket(existingPeer, cadenceBucket);
-    if (existingPeer && now - lastOfferAtForBucket < minIntervalMs) {
+    const lastOfferAtForCadence = RTC_FEATURE_NEGOTIATION_MANAGER_V2
+      ? getLastOfferAtForBucket(existingPeer, cadenceBucket)
+      : Number(existingPeer?.lastOfferAt || 0);
+    if (existingPeer && now - lastOfferAtForCadence < minIntervalMs) {
       traceOfferEvent("offer skipped", normalizedTarget, targetLabel, reason, {
         skip: "min-interval",
-        elapsedMs: now - lastOfferAtForBucket,
+        elapsedMs: now - lastOfferAtForCadence,
         minIntervalMs
       });
       return null;
@@ -741,6 +745,10 @@ export function useVoiceCallRuntime({
   }, [setLastCallPeer, updateCallStatus, pushCallLog, traceOfferEvent, traceOfferLifecycle]);
 
   const requeueOfferRequest = useCallback((request: QueuedOfferRequest, errorCode: string) => {
+    if (!RTC_FEATURE_OFFER_QUEUE) {
+      return;
+    }
+
     const retryBudget = resolveOfferRetryBudget(request.cadenceBucket);
     if (request.attempt >= retryBudget) {
       traceOfferEvent("offer dropped", request.targetUserId, request.targetLabel, request.reason, {
@@ -875,6 +883,68 @@ export function useVoiceCallRuntime({
     const reason = (options?.reason || "manual") as OfferReason;
     const iceRestart = Boolean(options?.iceRestart);
     const cadenceBucket = resolveOfferCadenceBucket(reason, iceRestart);
+
+    if (!RTC_FEATURE_OFFER_QUEUE) {
+      const context = runStartOfferPreflight(normalizedTarget, targetLabel, {
+        reason,
+        iceRestart
+      });
+      if (!context) {
+        return;
+      }
+
+      const existingPeer = peersRef.current.get(context.normalizedTarget);
+      const resolvedTargetLabel = context.targetLabel || context.normalizedTarget;
+
+      traceOfferLifecycle({
+        stage: "created",
+        targetUserId: context.normalizedTarget,
+        targetLabel: resolvedTargetLabel,
+        reason: context.reason,
+        iceRestart: context.iceRestart,
+        cadenceBucket: context.cadenceBucket
+      });
+
+      if (RTC_FEATURE_NEGOTIATION_MANAGER_V2) {
+        markOfferInFlight(existingPeer, true);
+        markMakingOffer(existingPeer, true);
+      }
+
+      try {
+        const sent = await sendStartOfferSignal(context);
+        if (!sent) {
+          return;
+        }
+        commitStartOfferSuccess(context);
+      } catch (error) {
+        const errorName = (error as { name?: string })?.name || "";
+        if (errorName === "NotAllowedError" || errorName === "SecurityError") {
+          pushToastThrottled("media-denied", t("settings.mediaDenied"));
+        } else {
+          pushToastThrottled("devices-load-failed", t("settings.devicesLoadFailed"));
+        }
+        pushCallLog(`call.offer failed (${resolvedTargetLabel}): ${(error as Error).message}`);
+        traceOfferLifecycle({
+          stage: "failed",
+          targetUserId: context.normalizedTarget,
+          targetLabel: resolvedTargetLabel,
+          reason: context.reason,
+          iceRestart: context.iceRestart,
+          cadenceBucket: context.cadenceBucket,
+          message: (error as Error).message
+        });
+        closePeer(context.normalizedTarget);
+      } finally {
+        if (RTC_FEATURE_NEGOTIATION_MANAGER_V2) {
+          const activePeer = peersRef.current.get(context.normalizedTarget);
+          markMakingOffer(activePeer, false);
+          markOfferInFlight(activePeer, false);
+        }
+      }
+
+      return;
+    }
+
     const accepted = enqueueOfferRequest(offerQueueRef.current, {
       targetUserId: normalizedTarget,
       targetLabel: String(targetLabel || normalizedTarget).trim() || normalizedTarget,
@@ -895,7 +965,18 @@ export function useVoiceCallRuntime({
     });
 
     await drainOfferQueue();
-  }, [traceOfferEvent, drainOfferQueue]);
+  }, [
+    traceOfferEvent,
+    runStartOfferPreflight,
+    traceOfferLifecycle,
+    sendStartOfferSignal,
+    commitStartOfferSuccess,
+    pushToastThrottled,
+    t,
+    pushCallLog,
+    closePeer,
+    drainOfferQueue
+  ]);
 
   startOfferRef.current = startOffer;
 

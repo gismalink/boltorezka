@@ -14,4 +14,5 @@ export type AppConfig = {
   appVersion: string;
   appBuildSha: string;
   apiServeStatic: boolean;
+  rtcFeatureInitialStateReplay: boolean;
 };

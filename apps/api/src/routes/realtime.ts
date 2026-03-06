@@ -1,6 +1,7 @@
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import type { RawData, WebSocket } from "ws";
 import { db } from "../db.js";
+import { config } from "../config.js";
 import { registerRealtimeSocket, unregisterRealtimeSocket } from "../realtime-broadcast.js";
 import type { InsertedMessageRow, RoomRow } from "../db.types.ts";
 import {
@@ -923,20 +924,22 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
                   )
                 );
 
-                const initialStateParticipants = getCallInitialStateParticipants(joinResult.room.id);
-                const initialStateLagStats = getCallInitialStateLagStats(joinResult.room.id);
-                sendJson(
-                  connection,
-                  buildCallInitialStateEnvelope(
-                    joinResult.room.id,
-                    joinResult.room.slug,
-                    initialStateParticipants
-                  )
-                );
-                void incrementMetric("call_initial_state_sent");
-                void incrementMetricBy("call_initial_state_participants_total", initialStateParticipants.length);
-                void incrementMetricBy("call_initial_state_lag_ms_total", initialStateLagStats.totalLagMs);
-                void incrementMetricBy("call_initial_state_lag_samples", initialStateLagStats.count);
+                if (config.rtcFeatureInitialStateReplay) {
+                  const initialStateParticipants = getCallInitialStateParticipants(joinResult.room.id);
+                  const initialStateLagStats = getCallInitialStateLagStats(joinResult.room.id);
+                  sendJson(
+                    connection,
+                    buildCallInitialStateEnvelope(
+                      joinResult.room.id,
+                      joinResult.room.slug,
+                      initialStateParticipants
+                    )
+                  );
+                  void incrementMetric("call_initial_state_sent");
+                  void incrementMetricBy("call_initial_state_participants_total", initialStateParticipants.length);
+                  void incrementMetricBy("call_initial_state_lag_ms_total", initialStateLagStats.totalLagMs);
+                  void incrementMetricBy("call_initial_state_lag_samples", initialStateLagStats.count);
+                }
 
                 broadcastRoom(
                   joinResult.room.id,

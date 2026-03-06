@@ -62,6 +62,22 @@ function readPositiveIntFromEnv(name: string, fallback: number): number {
   return Math.max(0, Math.floor(raw));
 }
 
+function readBooleanFromEnv(name: string, fallback: boolean): boolean {
+  const raw = String(import.meta.env[name as keyof ImportMetaEnv] || "").trim().toLowerCase();
+  if (!raw) {
+    return fallback;
+  }
+
+  if (["1", "true", "yes", "on"].includes(raw)) {
+    return true;
+  }
+  if (["0", "false", "no", "off"].includes(raw)) {
+    return false;
+  }
+
+  return fallback;
+}
+
 const RTC_ICE_SERVERS = readIceServersFromEnv();
 const RTC_ICE_TRANSPORT_POLICY: RTCIceTransportPolicy =
   String(import.meta.env.VITE_RTC_ICE_TRANSPORT_POLICY || "").trim().toLowerCase() === "relay"
@@ -79,6 +95,9 @@ export const RTC_RECONNECT_MAX_DELAY_MS = Math.max(
   RTC_RECONNECT_BASE_DELAY_MS,
   readPositiveIntFromEnv("VITE_RTC_RECONNECT_MAX_DELAY_MS", 8000)
 );
+export const RTC_FEATURE_INITIAL_STATE_REPLAY = readBooleanFromEnv("VITE_RTC_FEATURE_INITIAL_STATE_REPLAY", true);
+export const RTC_FEATURE_NEGOTIATION_MANAGER_V2 = readBooleanFromEnv("VITE_RTC_FEATURE_NEGOTIATION_MANAGER_V2", true);
+export const RTC_FEATURE_OFFER_QUEUE = readBooleanFromEnv("VITE_RTC_FEATURE_OFFER_QUEUE", true);
 
 export const ERROR_TOAST_THROTTLE_MS = 12000;
 export const REMOTE_SPEAKING_ON_THRESHOLD = 0.055;

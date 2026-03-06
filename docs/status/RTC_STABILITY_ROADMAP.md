@@ -49,8 +49,15 @@ Status (2026-03-06):
 
 ## Phase 5 - Controlled rollout
 
-- [ ] Ввести feature flags: `initial_state_replay`, `negotiation_manager_v2`, `offer_queue`.
+- [x] Ввести feature flags: `initial_state_replay`, `negotiation_manager_v2`, `offer_queue`.
 - [ ] После стабильных метрик сформировать decision package по SFU-migration в `docs/architecture/SFU_MIGRATION_PLAN.md`.
+
+Progress (2026-03-06):
+- Добавлены runtime toggles для controlled rollback без code revert:
+	- `RTC_FEATURE_INITIAL_STATE_REPLAY` (API),
+	- `VITE_RTC_FEATURE_INITIAL_STATE_REPLAY` (Web),
+	- `VITE_RTC_FEATURE_NEGOTIATION_MANAGER_V2` (Web),
+	- `VITE_RTC_FEATURE_OFFER_QUEUE` (Web).
 
 ## Acceptance gates
 

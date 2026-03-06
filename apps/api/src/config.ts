@@ -59,5 +59,6 @@ export const config = {
     .toLowerCase(),
   appVersion: String(process.env.APP_VERSION || process.env.npm_package_version || "0.1.0").trim(),
   appBuildSha: String(process.env.APP_BUILD_SHA || "").trim(),
-  apiServeStatic: parseBoolean(process.env.API_SERVE_STATIC, true)
+  apiServeStatic: parseBoolean(process.env.API_SERVE_STATIC, true),
+  rtcFeatureInitialStateReplay: parseBoolean(process.env.RTC_FEATURE_INITIAL_STATE_REPLAY, true)
 };
