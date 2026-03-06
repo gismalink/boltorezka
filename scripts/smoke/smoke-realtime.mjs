@@ -38,6 +38,10 @@ const strictRaceOfferRateLimit = process.env.SMOKE_RACE_STRICT_OFFER_RATE_LIMIT 
 const raceOfferRateLimitedSoftThreshold = Number(process.env.SMOKE_RACE_OFFER_RATE_LIMIT_THRESHOLD ?? 4);
 const raceOfferRateLimitedStrictThreshold = Number(process.env.SMOKE_RACE_OFFER_RATE_LIMIT_STRICT_THRESHOLD ?? 0);
 const requireInitialStateReplay = process.env.SMOKE_REQUIRE_INITIAL_STATE_REPLAY !== "0";
+const requireMediaTopology = process.env.SMOKE_REQUIRE_MEDIA_TOPOLOGY !== "0";
+const expectedMediaTopology = String(process.env.SMOKE_EXPECT_MEDIA_TOPOLOGY || "p2p").trim().toLowerCase() === "sfu"
+  ? "sfu"
+  : "p2p";
 
 const isHttp = baseUrl.startsWith("http://") || baseUrl.startsWith("https://");
 if (!isHttp) {
@@ -285,6 +289,30 @@ async function waitForInitialStateReplay(events, label, expectedRoomSlug) {
   }
 
   return replay;
+}
+
+async function waitForRoomTopology(events, label, expectedRoomSlug, expectedTopology) {
+  const joined = await waitForEvent(
+    events,
+    (item) => item?.type === "room.joined" && String(item?.payload?.roomSlug || "").trim() === expectedRoomSlug,
+    `room.joined (${label})`
+  );
+
+  const joinedTopology = String(joined?.payload?.mediaTopology || "").trim().toLowerCase();
+  if (joinedTopology !== expectedTopology) {
+    throw new Error(`[smoke:realtime] ${label} room.joined mediaTopology mismatch: expected=${expectedTopology} actual=${joinedTopology || "missing"}`);
+  }
+
+  const presence = await waitForEvent(
+    events,
+    (item) => item?.type === "room.presence" && String(item?.payload?.roomSlug || "").trim() === expectedRoomSlug,
+    `room.presence (${label})`
+  );
+
+  const presenceTopology = String(presence?.payload?.mediaTopology || "").trim().toLowerCase();
+  if (presenceTopology !== expectedTopology) {
+    throw new Error(`[smoke:realtime] ${label} room.presence mediaTopology mismatch: expected=${expectedTopology} actual=${presenceTopology || "missing"}`);
+  }
 }
 
 async function runThreeWayRaceScenario({
@@ -968,6 +996,12 @@ async function runLiveRoomBehaviorScenario({ roomSlug, timeoutMs }) {
   );
 
   let initialStateReplayFirstOk = false;
+  let mediaTopologyFirstOk = false;
+  if (requireMediaTopology) {
+    await waitForRoomTopology(events, "first", roomSlug, expectedMediaTopology);
+    mediaTopologyFirstOk = true;
+  }
+
   if (requireInitialStateReplay) {
     await waitForInitialStateReplay(events, "first", roomSlug);
     initialStateReplayFirstOk = true;
@@ -1031,6 +1065,7 @@ async function runLiveRoomBehaviorScenario({ roomSlug, timeoutMs }) {
   let liveRoomOk = false;
   let liveRoomStats = null;
   let initialStateReplaySecondOk = false;
+  let mediaTopologySecondOk = false;
   let reconnectOk = false;
   let reconnectSkipped = false;
   if (smokeCallSignal) {
@@ -1083,6 +1118,11 @@ async function runLiveRoomBehaviorScenario({ roomSlug, timeoutMs }) {
       (item) => item?.type === "ack" && item?.payload?.requestId === secondJoinRequest,
       "ack for second room.join"
     );
+
+    if (requireMediaTopology) {
+      await waitForRoomTopology(secondEvents, "second", roomSlug, expectedMediaTopology);
+      mediaTopologySecondOk = true;
+    }
 
     if (requireInitialStateReplay) {
       await waitForInitialStateReplay(secondEvents, "second", roomSlug);
@@ -1217,6 +1257,9 @@ async function runLiveRoomBehaviorScenario({ roomSlug, timeoutMs }) {
     if (requireInitialStateReplay && !initialStateReplaySecondOk) {
       throw new Error("[smoke:realtime] call.initial_state replay missing for second join");
     }
+    if (requireMediaTopology && !mediaTopologySecondOk) {
+      throw new Error("[smoke:realtime] mediaTopology missing for second join");
+    }
   }
 
   if (smokeReconnect && canRunReconnect) {
@@ -1307,6 +1350,10 @@ async function runLiveRoomBehaviorScenario({ roomSlug, timeoutMs }) {
         nackCode: nack?.payload?.code ?? null,
         firstMessageId: firstAck?.payload?.messageId ?? null,
         duplicateIdempotencyKey: duplicateAck?.payload?.idempotencyKey ?? null,
+        requireMediaTopology,
+        expectedMediaTopology,
+        mediaTopologyFirstOk,
+        mediaTopologySecondOk: smokeCallSignal ? mediaTopologySecondOk : null,
         requireInitialStateReplay,
         initialStateReplayFirstOk,
         initialStateReplaySecondOk: smokeCallSignal ? initialStateReplaySecondOk : null,

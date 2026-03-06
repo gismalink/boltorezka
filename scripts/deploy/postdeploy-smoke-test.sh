@@ -269,7 +269,12 @@ CALL_INITIAL_STATE_SENT_BEFORE="$(metric_from_hgetall "$METRICS_BEFORE_RAW" "cal
 CALL_INITIAL_STATE_PARTICIPANTS_BEFORE="$(metric_from_hgetall "$METRICS_BEFORE_RAW" "call_initial_state_participants_total")"
 
 echo "[postdeploy-smoke] smoke:realtime"
-SMOKE_API_URL="$BASE_URL" SMOKE_RECONNECT=1 SMOKE_REQUIRE_INITIAL_STATE_REPLAY=1 npm run smoke:realtime
+SMOKE_API_URL="$BASE_URL" \
+SMOKE_RECONNECT=1 \
+SMOKE_REQUIRE_INITIAL_STATE_REPLAY=1 \
+SMOKE_REQUIRE_MEDIA_TOPOLOGY=1 \
+SMOKE_EXPECT_MEDIA_TOPOLOGY="${SMOKE_EXPECT_MEDIA_TOPOLOGY:-${RTC_MEDIA_TOPOLOGY_DEFAULT:-p2p}}" \
+npm run smoke:realtime
 
 if [[ "${SMOKE_EXTENDED_GATE:-0}" == "1" ]]; then
   if [[ "$AUTO_TICKET" == "1" ]]; then
