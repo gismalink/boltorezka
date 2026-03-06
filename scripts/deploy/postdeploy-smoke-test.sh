@@ -271,7 +271,15 @@ CALL_INITIAL_STATE_SENT_BEFORE="$(metric_from_hgetall "$METRICS_BEFORE_RAW" "cal
 CALL_INITIAL_STATE_PARTICIPANTS_BEFORE="$(metric_from_hgetall "$METRICS_BEFORE_RAW" "call_initial_state_participants_total")"
 
 echo "[postdeploy-smoke] smoke:realtime"
+BASELINE_SMOKE_ROOM_SLUG="${SMOKE_ROOM_SLUG:-general}"
+if [[ -n "${SMOKE_SFU_ROOM_SLUG:-}" && "$BASELINE_SMOKE_ROOM_SLUG" == "$SMOKE_SFU_ROOM_SLUG" ]]; then
+  # Keep baseline realtime check on a P2P room when Stage 1 routes the default room to SFU.
+  BASELINE_SMOKE_ROOM_SLUG="${SMOKE_SFU_ROOM_SLUG}-p2p-smoke"
+  echo "[postdeploy-smoke] baseline room slug adjusted for Stage 1: $BASELINE_SMOKE_ROOM_SLUG"
+fi
+
 SMOKE_API_URL="$BASE_URL" \
+SMOKE_ROOM_SLUG="$BASELINE_SMOKE_ROOM_SLUG" \
 SMOKE_RECONNECT=1 \
 SMOKE_REQUIRE_INITIAL_STATE_REPLAY=1 \
 SMOKE_REQUIRE_MEDIA_TOPOLOGY=1 \
