@@ -370,6 +370,13 @@ fi
 
 if [[ -n "${SMOKE_SFU_ROOM_SLUG:-}" ]]; then
   echo "[postdeploy-smoke] smoke:realtime (sfu topology room=$SMOKE_SFU_ROOM_SLUG)"
+
+  # ws tickets are one-time; ensure optional second run re-resolves fresh tickets.
+  unset SMOKE_WS_TICKET
+  unset SMOKE_WS_TICKET_RECONNECT
+  unset SMOKE_WS_TICKET_SECOND
+  unset SMOKE_WS_TICKET_THIRD
+
   SMOKE_API_URL="$BASE_URL" \
     SMOKE_ROOM_SLUG="$SMOKE_SFU_ROOM_SLUG" \
     SMOKE_RECONNECT=1 \
