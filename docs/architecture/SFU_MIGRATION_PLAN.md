@@ -102,6 +102,9 @@ Stage 4: Production readiness package
 
 ## 8) Политика rollback
 
+Операционные thresholds и пошаговый rollback flow зафиксированы в:
+- `docs/runbooks/SFU_STAGE1_DARK_LAUNCH_RUNBOOK.md`
+
 Примеры триггеров rollback:
 - устойчивая деградация call setup,
 - reconnect failures выше порога,
@@ -142,4 +145,5 @@ Stage 4: Production readiness package
 - `docs/architecture/ARCHITECTURE.md`
 - `docs/architecture/PHASE0_MVP_ADR.md`
 - `docs/runbooks/VOICE_BASELINE_RUNBOOK.md`
+- `docs/runbooks/SFU_STAGE1_DARK_LAUNCH_RUNBOOK.md`
 - `docs/status/RTC_STABILITY_ROADMAP.md`

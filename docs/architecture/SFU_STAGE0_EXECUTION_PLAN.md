@@ -40,7 +40,8 @@
 - [x] Добавлен optional SFU room smoke profile в postdeploy gate:
    - `SMOKE_SFU_ROOM_SLUG=<slug>`
    - `SMOKE_SFU_EXPECT_MEDIA_TOPOLOGY=sfu` (default)
-- [ ] Зафиксировать rollback thresholds и runbook draft для Stage 1.
+- [x] Зафиксированы rollback thresholds и runbook draft для Stage 1:
+   - `docs/runbooks/SFU_STAGE1_DARK_LAUNCH_RUNBOOK.md`
 
 ## 4) Гейты выхода из Stage 0
 
@@ -56,6 +57,7 @@
 - `docs/architecture/SFU_STAGE0_EXECUTION_PLAN.md`
 - `docs/architecture/SFU_SESSION_CONTRACT.md`
 - `docs/runbooks/VOICE_BASELINE_RUNBOOK.md` (дополнение SFU telemetry)
+- `docs/runbooks/SFU_STAGE1_DARK_LAUNCH_RUNBOOK.md`
 
 ## 6) Политика выполнения
 
