@@ -1,6 +1,6 @@
 # Boltorezka Pre-Prod Decision Package
 
-Дата: 2026-03-04  
+Дата: 2026-03-07  
 Среда подготовки: `test`  
 Релизный поток: `feature/* -> test -> merge -> main -> prod`
 
@@ -9,6 +9,7 @@
 - Decision status: **REFRESHED (NO-GO пока не выполнен новый prod sign-off)**.
 - Причина: пакет обновлён под актуальные gate-правила и свежие test evidence (`Cycle #15`, rollout от `origin/main`), но новый explicit prod approval ещё не заполнялся.
 - Production rollout policy: только из `origin/main` после отдельного explicit approval.
+- SFU readiness reference: `docs/runbooks/SFU_STAGE4_PROD_READINESS_PACKAGE.md`.
 
 ## 2) Scope of evidence
 
@@ -218,10 +219,10 @@
 
 ### 8.4 Current gate record (2026-03-01)
 
-### 8.4 Current gate record (refresh 2026-03-04)
+### 8.4 Current gate record (refresh 2026-03-07)
 
 - Target main SHA: `<to-fill-before-next-prod>`
-- Last test deploy SHA: `29ad7be` (`origin/main`)
+- Last test deploy SHA: `0fcad14` (`origin/feature/video-stream-investigation`, Stage 3 SFU-default profile)
 - smoke:sso: `PASS`
 - smoke:api: `PASS`
 - smoke:realtime: `PASS`
@@ -229,8 +230,10 @@
 - smoke:web:version-cache: `PASS`
 - smoke:web:e2e: `PASS`
 - call relay scenario (`SMOKE_CALL_SIGNAL=1`): `PASS`
+- SFU default profile (`deploy:test:sfu`): `PASS x3 consecutive`
+- mediaTopology gate: `expected=sfu`, `mediaTopologyFirstOk=true`
 - Performance gate (`docs/operations/PERFORMANCE_GATE.md`): `READY_FOR_SIGNOFF`
 - Release Owner: `<to-fill-before-next-prod>`
 - Rollback Owner: `<to-fill-before-next-prod>`
 - Rollback ref: `<to-fill-before-next-prod>`
-- Final decision: `NO-GO (pending explicit prod approval and sign-off fields)`
+- Final decision: `NO-GO (pending merge-to-main validation, explicit prod approval and sign-off fields)`

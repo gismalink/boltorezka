@@ -3,6 +3,7 @@
 Чеклист перед запросом на rollout в `prod`.
 
 Decision package (обязательно к заполнению перед `prod`): [PREPROD_DECISION_PACKAGE.md](PREPROD_DECISION_PACKAGE.md)
+SFU Stage 4 readiness reference: [SFU_STAGE4_PROD_READINESS_PACKAGE.md](SFU_STAGE4_PROD_READINESS_PACKAGE.md)
 
 ## 1) Branch и Git
 
@@ -31,6 +32,16 @@ Decision package (обязательно к заполнению перед `pro
    - `super_admin` может `demote` администратора обратно в `user`,
    - `super_admin` может `ban/unban` пользователя,
    - banned user не получает `ws-ticket` и не проходит guarded auth paths.
+
+## 2.1) SFU stage gate (если target release включает SFU rollout)
+
+1. `deploy:test:sfu` (или эквивалентный SFU-default профиль) проходит 3 раза подряд.
+2. В realtime smoke подтверждено:
+   - `expectedMediaTopology=sfu`,
+   - `mediaTopologyFirstOk=true`,
+   - `reconnectOk=true`.
+3. Проверка user-reported media status regressions выполнена (нет массового `stalled` flapping).
+4. Rollback path в P2P проверен как минимум dry-run в `test`.
 
 ## 3) Runtime и конфигурация
 
