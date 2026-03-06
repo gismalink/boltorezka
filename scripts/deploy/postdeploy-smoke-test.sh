@@ -272,17 +272,19 @@ CALL_INITIAL_STATE_PARTICIPANTS_BEFORE="$(metric_from_hgetall "$METRICS_BEFORE_R
 
 echo "[postdeploy-smoke] smoke:realtime"
 BASELINE_SMOKE_ROOM_SLUG="${SMOKE_ROOM_SLUG:-general}"
+BASELINE_REQUIRE_MEDIA_TOPOLOGY=1
 if [[ -n "${SMOKE_SFU_ROOM_SLUG:-}" && "$BASELINE_SMOKE_ROOM_SLUG" == "$SMOKE_SFU_ROOM_SLUG" ]]; then
-  # Keep baseline realtime check on a P2P room when Stage 1 routes the default room to SFU.
-  BASELINE_SMOKE_ROOM_SLUG="${SMOKE_BASELINE_P2P_ROOM_SLUG:-kuhnya}"
-  echo "[postdeploy-smoke] baseline room slug adjusted for Stage 1: $BASELINE_SMOKE_ROOM_SLUG"
+  # Stage 1 may route the default room to SFU and test data may not include a second P2P room.
+  # Keep baseline smoke for join/chat/reconnect, and run topology assertion in the dedicated SFU pass below.
+  BASELINE_REQUIRE_MEDIA_TOPOLOGY=0
+  echo "[postdeploy-smoke] baseline topology assert skipped for Stage 1 (room=$BASELINE_SMOKE_ROOM_SLUG)"
 fi
 
 SMOKE_API_URL="$BASE_URL" \
 SMOKE_ROOM_SLUG="$BASELINE_SMOKE_ROOM_SLUG" \
 SMOKE_RECONNECT=1 \
 SMOKE_REQUIRE_INITIAL_STATE_REPLAY=1 \
-SMOKE_REQUIRE_MEDIA_TOPOLOGY=1 \
+SMOKE_REQUIRE_MEDIA_TOPOLOGY="$BASELINE_REQUIRE_MEDIA_TOPOLOGY" \
 SMOKE_EXPECT_MEDIA_TOPOLOGY="${SMOKE_EXPECT_MEDIA_TOPOLOGY:-${RTC_MEDIA_TOPOLOGY_DEFAULT:-p2p}}" \
 npm run smoke:realtime
 
