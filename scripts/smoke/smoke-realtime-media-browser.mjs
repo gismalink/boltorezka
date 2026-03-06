@@ -125,7 +125,7 @@ async function fetchTicket(token, label) {
   return ticket;
 }
 
-async function preparePeerPage({ context, label, ticket, toneHz }) {
+async function preparePeerPage({ context, label, ticket, toneHz, iceServers }) {
   const page = await context.newPage();
   await page.goto(baseUrl, { waitUntil: "domcontentloaded", timeout: timeoutMs });
 
@@ -886,13 +886,15 @@ async function main() {
       context: contextA,
       label: "peer-a",
       ticket: ticketA,
-      toneHz: Math.max(140, toneBaseFrequencyHz - toneFrequencySpreadHz)
+      toneHz: Math.max(140, toneBaseFrequencyHz - toneFrequencySpreadHz),
+      iceServers
     });
     const peerB = await preparePeerPage({
       context: contextB,
       label: "peer-b",
       ticket: ticketB,
-      toneHz: Math.max(140, toneBaseFrequencyHz + toneFrequencySpreadHz)
+      toneHz: Math.max(140, toneBaseFrequencyHz + toneFrequencySpreadHz),
+      iceServers
     });
 
     pageA = peerA.page;
