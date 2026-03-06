@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# Purpose: Run test deploy+smoke with SFU as default topology (Stage 3 profile).
+set -euo pipefail
+
+if [[ -z "${TEST_REF:-}" ]]; then
+  echo "[deploy-test-sfu-default] set TEST_REF=origin/feature/<name>" >&2
+  exit 1
+fi
+
+export TEST_RTC_MEDIA_TOPOLOGY_DEFAULT="${TEST_RTC_MEDIA_TOPOLOGY_DEFAULT:-sfu}"
+export TEST_RTC_MEDIA_TOPOLOGY_SFU_ROOMS="${TEST_RTC_MEDIA_TOPOLOGY_SFU_ROOMS:-}"
+export TEST_RTC_MEDIA_TOPOLOGY_SFU_USERS="${TEST_RTC_MEDIA_TOPOLOGY_SFU_USERS:-}"
+export SMOKE_EXPECT_MEDIA_TOPOLOGY="${SMOKE_EXPECT_MEDIA_TOPOLOGY:-sfu}"
+
+exec bash ./scripts/deploy/deploy-test-and-smoke.sh "$TEST_REF" "${REPO_DIR:-$PWD}"
