@@ -90,6 +90,7 @@ export function App() {
   const [toasts, setToasts] = useState<Array<{ id: number; message: string }>>([]);
   const [roomsPresenceBySlug, setRoomsPresenceBySlug] = useState<Record<string, string[]>>({});
   const [roomsPresenceDetailsBySlug, setRoomsPresenceDetailsBySlug] = useState<Record<string, PresenceMember[]>>({});
+  const [roomMediaTopologyBySlug, setRoomMediaTopologyBySlug] = useState<Record<string, "p2p" | "sfu">>({});
   const [eventLog, setEventLog] = useState<string[]>([]);
   const [telemetrySummary, setTelemetrySummary] = useState<TelemetrySummary | null>(null);
   const [wsState, setWsState] = useState<"disconnected" | "connecting" | "connected">(
@@ -1062,6 +1063,7 @@ export function App() {
     setAdminUsers([]);
     setRoomsPresenceBySlug({});
     setRoomsPresenceDetailsBySlug({});
+    setRoomMediaTopologyBySlug({});
     setVoiceCameraEnabledByUserIdInCurrentRoom({});
     setVoiceInitialMicStateByUserIdInCurrentRoom({});
     setVoiceInitialAudioOutputMutedByUserIdInCurrentRoom({});
@@ -1121,6 +1123,18 @@ export function App() {
     setLastCallPeer,
     setCallStatus,
     setRoomSlug,
+    onRoomMediaTopology: ({ roomSlug: nextRoomSlug, mediaTopology }) => {
+      setRoomMediaTopologyBySlug((prev) => {
+        if (prev[nextRoomSlug] === mediaTopology) {
+          return prev;
+        }
+
+        return {
+          ...prev,
+          [nextRoomSlug]: mediaTopology
+        };
+      });
+    },
     setRoomsPresenceBySlug,
     setRoomsPresenceDetailsBySlug,
     pushLog,
@@ -1156,6 +1170,7 @@ export function App() {
     if (wsState !== "connected") {
       setRoomsPresenceBySlug({});
       setRoomsPresenceDetailsBySlug({});
+      setRoomMediaTopologyBySlug({});
       setVoiceInitialMicStateByUserIdInCurrentRoom({});
       setVoiceInitialAudioOutputMutedByUserIdInCurrentRoom({});
       return;
@@ -1172,6 +1187,16 @@ export function App() {
     messages,
     playServerSound
   });
+
+  useEffect(() => {
+    if (!roomSlug) {
+      return;
+    }
+
+    if (roomMediaTopologyBySlug[roomSlug] === "sfu") {
+      pushCallLog(`media topology for ${roomSlug}: sfu (stage0 contract)`);
+    }
+  }, [roomSlug, roomMediaTopologyBySlug, pushCallLog]);
 
   const { refreshDevices, requestMediaAccess, requestVideoAccess } = useMediaDevicePreferences({
     t,

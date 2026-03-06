@@ -15,4 +15,6 @@ export type AppConfig = {
   appBuildSha: string;
   apiServeStatic: boolean;
   rtcFeatureInitialStateReplay: boolean;
+  rtcMediaTopologyDefault: "p2p" | "sfu";
+  rtcMediaTopologySfuRooms: string[];
 };

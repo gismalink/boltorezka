@@ -29,6 +29,16 @@
    - rollback smoke path на P2P.
 5. Подготовить rollout/rollback runbook draft для Stage 1 (dark launch).
 
+## 3.1 Текущий прогресс
+
+- [x] Зафиксирован routing contract `mediaTopology` (`p2p|sfu`) в server WS событиях room-уровня.
+- [x] Добавлен Stage 0 канонический транспортный контракт: `docs/architecture/SFU_SESSION_CONTRACT.md`.
+- [x] Добавлены test env hooks:
+   - `RTC_MEDIA_TOPOLOGY_DEFAULT` (default `p2p`)
+   - `RTC_MEDIA_TOPOLOGY_SFU_ROOMS` (csv roomSlug list)
+- [ ] Добавить smoke assertions для `mediaTopology` routing.
+- [ ] Зафиксировать rollback thresholds и runbook draft для Stage 1.
+
 ## 4) Гейты выхода из Stage 0
 
 - Контракт SFU session утвержден и зафиксирован в canonical docs.
@@ -41,6 +51,7 @@
 - `docs/architecture/SFU_MIGRATION_PLAN.md`
 - `docs/architecture/PHASE0_MVP_ADR.md`
 - `docs/architecture/SFU_STAGE0_EXECUTION_PLAN.md`
+- `docs/architecture/SFU_SESSION_CONTRACT.md`
 - `docs/runbooks/VOICE_BASELINE_RUNBOOK.md` (дополнение SFU telemetry)
 
 ## 6) Политика выполнения

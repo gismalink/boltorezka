@@ -23,6 +23,7 @@ type UseRealtimeChatLifecycleArgs = {
   setLastCallPeer: (peer: string) => void;
   setCallStatus: (status: CallStatus) => void;
   setRoomSlug: (slug: string) => void;
+  onRoomMediaTopology?: (payload: { roomSlug: string; mediaTopology: "p2p" | "sfu" }) => void;
   setRoomsPresenceBySlug: Dispatch<SetStateAction<Record<string, string[]>>>;
   setRoomsPresenceDetailsBySlug: Dispatch<SetStateAction<Record<string, PresenceMember[]>>>;
   pushLog: (text: string) => void;
@@ -103,6 +104,7 @@ export function useRealtimeChatLifecycle({
   setLastCallPeer,
   setCallStatus,
   setRoomSlug,
+  onRoomMediaTopology,
   setRoomsPresenceBySlug,
   setRoomsPresenceDetailsBySlug,
   pushLog,
@@ -124,6 +126,7 @@ export function useRealtimeChatLifecycle({
   const onCallInitialStateRef = useRef(onCallInitialState);
   const onCallNackRef = useRef(onCallNack);
   const onAudioQualityUpdatedRef = useRef(onAudioQualityUpdated);
+  const onRoomMediaTopologyRef = useRef(onRoomMediaTopology);
 
   useEffect(() => {
     onCallSignalRef.current = onCallSignal;
@@ -154,6 +157,10 @@ export function useRealtimeChatLifecycle({
   }, [onAudioQualityUpdated]);
 
   useEffect(() => {
+    onRoomMediaTopologyRef.current = onRoomMediaTopology;
+  }, [onRoomMediaTopology]);
+
+  useEffect(() => {
     roomSlugRef.current = roomSlug;
     realtimeClientRef.current?.setRoomSlug(roomSlug);
   }, [roomSlug]);
@@ -174,6 +181,7 @@ export function useRealtimeChatLifecycle({
       pushCallLog,
       pushToast,
       setRoomSlug,
+      onRoomMediaTopology: (...args) => onRoomMediaTopologyRef.current?.(...args),
       setRoomsPresenceBySlug,
       setRoomsPresenceDetailsBySlug,
       trackNack: ({ requestId, eventType, code, message }) => {

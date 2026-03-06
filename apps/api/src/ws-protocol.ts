@@ -8,6 +8,7 @@ import type {
   ChatMessagePayload,
   ChatEditedPayload,
   ChatDeletedPayload,
+  MediaTopology,
   CallInitialStatePayload,
   CallInitialStateParticipantPayload,
   RoomJoinedPayload,
@@ -250,10 +251,15 @@ export function buildServerReadyEnvelope(userId: string, userName: string): WsOu
  * @param {string} roomTitle
  * @returns {{ type: "room.joined", payload: RoomJoinedPayload }}
  */
-export function buildRoomJoinedEnvelope(roomId: string, roomSlug: string, roomTitle: string): { type: "room.joined"; payload: RoomJoinedPayload } {
+export function buildRoomJoinedEnvelope(
+  roomId: string,
+  roomSlug: string,
+  roomTitle: string,
+  mediaTopology: MediaTopology
+): { type: "room.joined"; payload: RoomJoinedPayload } {
   return {
     type: "room.joined",
-    payload: { roomId, roomSlug, roomTitle }
+    payload: { roomId, roomSlug, roomTitle, mediaTopology }
   };
 }
 
@@ -275,16 +281,21 @@ export function buildRoomLeftEnvelope(roomId: string, roomSlug: string): { type:
  * @param {PresenceUser[]} users
  * @returns {{ type: "room.presence", payload: RoomPresencePayload }}
  */
-export function buildRoomPresenceEnvelope(roomId: string, roomSlug: string, users: PresenceUser[]): { type: "room.presence"; payload: RoomPresencePayload } {
+export function buildRoomPresenceEnvelope(
+  roomId: string,
+  roomSlug: string,
+  users: PresenceUser[],
+  mediaTopology: MediaTopology
+): { type: "room.presence"; payload: RoomPresencePayload } {
   return {
     type: "room.presence",
-    payload: { roomId, roomSlug, users }
+    payload: { roomId, roomSlug, users, mediaTopology }
   };
 }
 
 export function buildRoomsPresenceEnvelope(
-  rooms: Array<{ roomId: string; roomSlug: string; users: PresenceUser[] }>
-): { type: "rooms.presence"; payload: { rooms: Array<{ roomId: string; roomSlug: string; users: PresenceUser[] }> } } {
+  rooms: Array<{ roomId: string; roomSlug: string; users: PresenceUser[]; mediaTopology: MediaTopology }>
+): { type: "rooms.presence"; payload: { rooms: Array<{ roomId: string; roomSlug: string; users: PresenceUser[]; mediaTopology: MediaTopology }> } } {
   return {
     type: "rooms.presence",
     payload: { rooms }

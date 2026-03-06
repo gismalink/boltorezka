@@ -17,6 +17,7 @@ type WsMessageControllerOptions = {
   pushCallLog: (text: string) => void;
   pushToast: (message: string) => void;
   setRoomSlug: (slug: string) => void;
+  onRoomMediaTopology?: (payload: { roomSlug: string; mediaTopology: "p2p" | "sfu" }) => void;
   setRoomsPresenceBySlug: Dispatch<SetStateAction<Record<string, string[]>>>;
   setRoomsPresenceDetailsBySlug: Dispatch<SetStateAction<Record<string, PresenceMember[]>>>;
   trackNack: (data: {
@@ -84,6 +85,10 @@ export class WsMessageController {
 
   private asTrimmedString(value: unknown): string {
     return String(value || "").trim();
+  }
+
+  private asMediaTopology(value: unknown): "p2p" | "sfu" {
+    return String(value || "").trim().toLowerCase() === "sfu" ? "sfu" : "p2p";
   }
 
   private toPresenceMember(item: { userId?: string; userName?: string } | null | undefined): PresenceMember | null {
@@ -413,6 +418,11 @@ export class WsMessageController {
       return;
     }
 
+    this.options.onRoomMediaTopology?.({
+      roomSlug,
+      mediaTopology: this.asMediaTopology(message.payload?.mediaTopology)
+    });
+
     const users = this.mapPresenceMembers(message.payload?.users);
     this.options.setRoomsPresenceBySlug((prev) => ({
       ...prev,
@@ -434,6 +444,11 @@ export class WsMessageController {
       if (!roomSlug) {
         return;
       }
+
+      this.options.onRoomMediaTopology?.({
+        roomSlug,
+        mediaTopology: this.asMediaTopology((room as { mediaTopology?: unknown }).mediaTopology)
+      });
 
       const users = this.mapPresenceMembers(room?.users);
       next[roomSlug] = users.map((item) => item.userName);
@@ -514,8 +529,17 @@ export class WsMessageController {
         this.handleCallInitialState(message);
         return;
       case "room.joined":
-        this.options.setRoomSlug(String(message.payload?.roomSlug || ""));
+      {
+        const roomSlug = this.asTrimmedString(message.payload?.roomSlug);
+        this.options.setRoomSlug(roomSlug);
+        if (roomSlug) {
+          this.options.onRoomMediaTopology?.({
+            roomSlug,
+            mediaTopology: this.asMediaTopology(message.payload?.mediaTopology)
+          });
+        }
         return;
+      }
       case "room.presence":
         this.handleRoomPresence(message);
         return;

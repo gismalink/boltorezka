@@ -61,6 +61,8 @@ type CanonicalMediaState = {
   lastUpdatedAtMs: number;
 };
 
+type MediaTopology = "p2p" | "sfu";
+
 const CALL_SIGNAL_MIN_BYTES = 2;
 const CALL_SDP_SIGNAL_MAX_BYTES = 600_000;
 const CALL_ICE_SIGNAL_MAX_BYTES = 12_000;
@@ -481,7 +483,12 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
   };
 
   const getAllRoomsPresence = () => {
-    const result: Array<{ roomId: string; roomSlug: string; users: Array<{ userId: string; userName: string }> }> = [];
+    const result: Array<{
+      roomId: string;
+      roomSlug: string;
+      users: Array<{ userId: string; userName: string }>;
+      mediaTopology: MediaTopology;
+    }> = [];
 
     for (const [roomId, roomSockets] of socketsByRoomId.entries()) {
       let roomSlug: string | null = null;
@@ -500,7 +507,8 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
       result.push({
         roomId,
         roomSlug,
-        users: getRoomPresence(roomId)
+        users: getRoomPresence(roomId),
+        mediaTopology: resolveRoomMediaTopology(roomSlug)
       });
     }
 
@@ -541,6 +549,17 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
 
     return result;
   };
+
+  function resolveRoomMediaTopology(roomSlug: string): MediaTopology {
+    const normalizedSlug = String(roomSlug || "").trim().toLowerCase();
+    if (!normalizedSlug) {
+      return config.rtcMediaTopologyDefault;
+    }
+
+    return config.rtcMediaTopologySfuRooms.includes(normalizedSlug)
+      ? "sfu"
+      : config.rtcMediaTopologyDefault;
+  }
 
   const evictUserFromOtherNonTextChannels = (userId: string, keepSocket: WebSocket) => {
     const userSockets = socketsByUserId.get(userId);
@@ -901,7 +920,8 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
                   buildRoomJoinedEnvelope(
                     joinResult.room.id,
                     joinResult.room.slug,
-                    joinResult.room.title
+                    joinResult.room.title,
+                    resolveRoomMediaTopology(joinResult.room.slug)
                   )
                 );
 
@@ -920,7 +940,8 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
                   buildRoomPresenceEnvelope(
                     joinResult.room.id,
                     joinResult.room.slug,
-                    getRoomPresence(joinResult.room.id)
+                    getRoomPresence(joinResult.room.id),
+                    resolveRoomMediaTopology(joinResult.room.slug)
                   )
                 );
 

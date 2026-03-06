@@ -149,16 +149,20 @@ export type ChatDeletedPayload = {
   ts: string;
 };
 
+export type MediaTopology = "p2p" | "sfu";
+
 export type RoomJoinedPayload = {
   roomId: string;
   roomSlug: string;
   roomTitle: string;
+  mediaTopology: MediaTopology;
 };
 
 export type RoomPresencePayload = {
   roomId: string;
   roomSlug: string;
   users: PresenceUser[];
+  mediaTopology: MediaTopology;
 };
 
 export type RoomLeftPayload = {
