@@ -9,6 +9,7 @@
 
 - RTC stability hardening (active): `docs/status/RTC_STABILITY_ROADMAP.md`.
 - Phase 5 (iOS/macOS kickoff scope): `docs/plans/PHASE5_IOS_MACOS_SCOPE_NOTE.md`.
+- SFU migration decision package: `docs/architecture/SFU_MIGRATION_PLAN.md`.
 
 ## Recently completed
 
@@ -43,6 +44,7 @@
 
 - Architecture baseline: `docs/architecture/ARCHITECTURE.md`.
 - Phase 0 (MVP boundaries + ADR): `docs/architecture/PHASE0_MVP_ADR.md`.
+- SFU migration decision package: `docs/architecture/SFU_MIGRATION_PLAN.md`.
 - Phase 3 (Voice/WebRTC MVP policy): `docs/runbooks/PHASE3_VOICE_WEBRTC_MVP_POLICY.md`.
 - Voice baseline runbook: `docs/runbooks/VOICE_BASELINE_RUNBOOK.md`.
 - Performance gate: `docs/operations/PERFORMANCE_GATE.md`.
