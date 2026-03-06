@@ -1,58 +1,67 @@
-# Phase 0 — MVP Boundaries & ADR (Canonical)
+# Phase 0 - Границы MVP и ADR (Канон)
 
 Дата фиксации: 2026-03-04  
-Статус: Approved for current MVP scope
+Дата актуализации: 2026-03-06  
+Статус: Действует для текущего MVP-контура
 
-## 1) MVP boundaries (approved)
+## 1) Границы MVP (утверждено)
 
-### 1.1 Participants / room scale (MVP)
+### 1.1 Масштаб участников/комнат (MVP)
 
-- Voice/video runtime remains P2P-first with TURN relay baseline.
-- Practical planning envelope for current contour:
-  - voice/chat active room target: up to `~50` relay-active participants in conservative mode,
-  - elevated test profile reached higher synthetic values, but product limit для MVP фиксируем консервативно.
-- For larger groups, MVP policy: split into multiple rooms/channels instead of single oversized call session.
+- Базовая media-топология в MVP: WebRTC P2P-first + TURN relay baseline.
+- Практический консервативный контур планирования:
+  - целевой активный voice/chat room: до `~50` relay-active участников;
+  - в тестовых профилях наблюдались более высокие синтетические значения, но продуктовый лимит для MVP фиксируется консервативно.
+- Для больших групп в MVP применяется policy: деление на несколько комнат/каналов, а не один oversized session.
 
 ### 1.2 Retention (MVP)
 
-- Message and room data retention is DB-backed with standard operational backups.
-- Ephemeral realtime artifacts (presence/ws-ticket/session routing) are Redis-scoped and intentionally short-lived.
-- No additional long-term media retention pipeline is included in MVP scope.
+- Сообщения и room-данные хранятся в Postgres с операционными бэкапами.
+- Эфемерные realtime-артефакты (presence/ws-ticket/session routing) остаются Redis-scoped и short-lived.
+- Отдельный long-term pipeline хранения медиа в MVP не включен.
 
-### 1.3 Platforms (MVP)
+### 1.3 Платформы (MVP)
 
-- Primary GA target in current MVP cycle: Web.
-- iOS/macOS are planned phases (post-MVP) and not part of current release gate.
+- Основная GA-цель текущего MVP-цикла: Web.
+- iOS/macOS остаются post-MVP фазами и не входят в текущий release gate.
 
-## 2) ADR summary (approved)
+## 2) Сводка ADR (утверждено)
 
-### ADR-001: Signaling architecture
+### ADR-001: Архитектура signaling
 
-- Decision: single backend runtime (`boltorezka-api`) handles HTTP API + WS signaling.
-- Rationale: lower operational complexity, simpler ownership, sufficient current scale.
-- Consequence: revisit split-service architecture only after measured scale pressure.
+- Решение: единый backend runtime (`boltorezka-api`) обслуживает HTTP API + WS signaling.
+- Обоснование: ниже операционная сложность, понятная ownership-модель, достаточность для текущего масштаба.
+- Следствие: split-service архитектура пересматривается только при подтвержденном scale pressure.
 
-### ADR-002: Media topology
+### ADR-002: Media-топология
 
-- Decision: WebRTC P2P with TURN relay baseline (`relay + turns:gismalink.art:5349?transport=tcp`).
-- Rationale: robust path for restrictive/mobile networks and predictable behavior in test/prod.
-- Consequence: explicit room-size constraints remain required; SFU path stays post-MVP evolution.
+- Решение: WebRTC P2P + TURN relay baseline (`relay + turns:gismalink.art:5349?transport=tcp`).
+- Обоснование: предсказуемость поведения в test/prod и устойчивость в ограниченных сетях.
+- Следствие: ограничение по размеру комнат остается обязательным; SFU идет как post-MVP эволюция.
 
-### ADR-003: Auth/session model
+### ADR-003: Auth/session модель
 
-- Decision: SSO-first auth (`AUTH_MODE=sso`) + local JWT session + short-lived ws-ticket for realtime handshake.
-- Rationale: centralized identity flow, clear boundary between web session and realtime connect ticket.
-- Consequence: smoke/deploy gate must validate SSO + ws-ticket/realtime path on every rollout.
+- Решение: SSO-first auth (`AUTH_MODE=sso`) + локальная JWT-сессия + short-lived ws-ticket для realtime handshake.
+- Обоснование: централизованный identity flow и явная граница между web session и realtime ticket.
+- Следствие: каждый rollout обязан проходить smoke по SSO + ws-ticket/realtime path.
 
-## 3) Canonical references
+## 3) Актуальное состояние к 2026-03-06
 
-- Architecture baseline: `docs/architecture/ARCHITECTURE.md`
+- Controlled rollout toggle-пакет (Phase 5) внедрен и используется как policy fallback.
+- RTC hardening package (Phase 6.1-6.3) закрыт в test-контуре.
+- Decision package по SFU зафиксирован: `docs/architecture/SFU_MIGRATION_PLAN.md`.
+- Текущий документ остается источником MVP-ограничений до завершения SFU Stage 0.
+
+## 4) Канонические ссылки
+
+- Архитектурный baseline: `docs/architecture/ARCHITECTURE.md`
 - Voice baseline: `docs/runbooks/VOICE_BASELINE_RUNBOOK.md`
 - Pre-prod gate: `docs/runbooks/PREPROD_DECISION_PACKAGE.md`
 - Test/load evidence: `docs/status/TEST_RESULTS.md`
+- SFU migration decision package: `docs/architecture/SFU_MIGRATION_PLAN.md`
 
-## 4) Out of scope for this Phase 0 package
+## 5) Что остается вне scope этого Phase 0 пакета
 
-- Final SFU architecture selection and migration timeline.
-- Platform-specific iOS/macOS lifecycle hardening.
-- Full production abuse/security hardening package (tracked in later phases).
+- Финальный SFU runtime design и завершенный migration timeline для production.
+- Platform-specific hardening для iOS/macOS.
+- Полный production abuse/security hardening package (идет в следующих фазах).

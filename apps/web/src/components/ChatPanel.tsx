@@ -1,4 +1,4 @@
-import { ClipboardEvent, FormEvent, KeyboardEvent, ReactNode, RefObject, useEffect, useMemo, useState } from "react";
+import { ClipboardEvent, FormEvent, KeyboardEvent, ReactNode, RefObject, useEffect, useState } from "react";
 import type { Message } from "../domain";
 
 const CHAT_MARKDOWN_IMAGE_PATTERN = /!\[[^\]]*\]\((data:image\/[a-zA-Z0-9.+-]+;base64,[^)\s]+|https?:\/\/[^)\s]+)\)/g;
@@ -13,6 +13,7 @@ type ChatPanelProps = {
   messagesHasMore: boolean;
   loadingOlderMessages: boolean;
   chatText: string;
+  composePreviewImageUrl: string | null;
   chatLogRef: RefObject<HTMLDivElement>;
   onLoadOlderMessages: () => void;
   onSetChatText: (value: string) => void;
@@ -38,6 +39,7 @@ export function ChatPanel({
   messagesHasMore,
   loadingOlderMessages,
   chatText,
+  composePreviewImageUrl,
   chatLogRef,
   onLoadOlderMessages,
   onSetChatText,
@@ -72,20 +74,7 @@ export function ChatPanel({
     };
   }, [previewImageUrl]);
 
-  const composePreviewImages = useMemo(() => {
-    const urls: string[] = [];
-    let match: RegExpExecArray | null;
-    CHAT_MARKDOWN_IMAGE_PATTERN.lastIndex = 0;
-
-    while ((match = CHAT_MARKDOWN_IMAGE_PATTERN.exec(chatText)) !== null) {
-      const imageUrl = String(match[1] || "").trim();
-      if (imageUrl) {
-        urls.push(imageUrl);
-      }
-    }
-
-    return urls;
-  }, [chatText]);
+  const composePreviewImage = composePreviewImageUrl;
 
   const formatMessageTime = (value: string) => {
     const date = new Date(value);
@@ -299,32 +288,24 @@ export function ChatPanel({
           placeholder={hasActiveRoom ? t("chat.typePlaceholder") : t("chat.selectChannelPlaceholder")}
           disabled={!hasActiveRoom}
         />
+        {composePreviewImage ? (
+          <button
+            type="button"
+            className="chat-compose-thumb-btn"
+            onClick={() => setPreviewImageUrl(composePreviewImage)}
+            aria-label={t("chat.openImagePreview")}
+            title={t("chat.openImagePreview")}
+          >
+            <img
+              src={composePreviewImage}
+              alt="chat-compose-image"
+              className="chat-compose-thumb"
+              loading="lazy"
+            />
+          </button>
+        ) : null}
         <button type="submit" disabled={!hasActiveRoom}>{editingMessageId ? t("chat.saveEdit") : t("chat.send")}</button>
       </form>
-      {composePreviewImages.length > 0 ? (
-        <div className="chat-compose-image-preview" aria-live="polite">
-          <span className="muted">{t("chat.imagePastedPreview")}</span>
-          <div className="chat-compose-image-preview-list">
-            {composePreviewImages.map((imageUrl, index) => (
-              <button
-                key={`compose-preview-${index}`}
-                type="button"
-                className="chat-inline-image-btn"
-                onClick={() => setPreviewImageUrl(imageUrl)}
-                aria-label={t("chat.openImagePreview")}
-                title={t("chat.openImagePreview")}
-              >
-                <img
-                  src={imageUrl}
-                  alt="chat-compose-image"
-                  className="chat-inline-image"
-                  loading="lazy"
-                />
-              </button>
-            ))}
-          </div>
-        </div>
-      ) : null}
       {previewImageUrl ? (
         <div
           className="chat-image-modal-overlay popup-layer-content"

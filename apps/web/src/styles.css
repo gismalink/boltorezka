@@ -59,16 +59,27 @@
   cursor: zoom-in;
 }
 
-.chat-compose-image-preview {
-  margin-top: 8px;
-  display: grid;
-  gap: 6px;
+.chat-compose-thumb-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 34px;
+  width: 34px;
+  height: 34px;
+  padding: 1px;
+  background: transparent;
+  cursor: zoom-in;
 }
 
-.chat-compose-image-preview-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+.chat-compose-thumb {
+  display: block;
+  max-width: 30px;
+  max-height: 30px;
+  width: auto;
+  height: auto;
+  border: var(--border-thin) solid color-mix(in srgb, var(--pixel-border) 68%, transparent 32%);
+  image-rendering: auto;
+  object-fit: contain;
 }
 
 .chat-image-modal-overlay {

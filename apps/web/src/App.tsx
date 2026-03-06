@@ -82,6 +82,7 @@ export function App() {
   const [messagesNextCursor, setMessagesNextCursor] = useState<MessagesCursor | null>(null);
   const [loadingOlderMessages, setLoadingOlderMessages] = useState(false);
   const [chatText, setChatText] = useState("");
+  const [pendingChatImageDataUrl, setPendingChatImageDataUrl] = useState<string | null>(null);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [callStatus, setCallStatus] = useState<CallStatus>("idle");
   const [lastCallPeer, setLastCallPeer] = useState("");
@@ -1044,6 +1045,7 @@ export function App() {
 
   useEffect(() => {
     setEditingMessageId(null);
+    setPendingChatImageDataUrl(null);
   }, [roomSlug]);
 
   /** Clears all session-bound client state when auth token is absent/invalid. */
@@ -1052,6 +1054,8 @@ export function App() {
     setRooms([]);
     setRoomsTree(null);
     setMessages([]);
+    setChatText("");
+    setPendingChatImageDataUrl(null);
     setMessagesHasMore(false);
     setMessagesNextCursor(null);
     setLoadingOlderMessages(false);
@@ -1311,9 +1315,13 @@ export function App() {
       return;
     }
 
-    const result = chatController.sendMessage(chatText, user, MAX_CHAT_RETRIES);
+    const baseText = chatText.trim();
+    const imageMarkdown = pendingChatImageDataUrl ? `![скриншот](${pendingChatImageDataUrl})` : "";
+    const outgoingText = [baseText, imageMarkdown].filter(Boolean).join("\n");
+    const result = chatController.sendMessage(outgoingText, user, MAX_CHAT_RETRIES);
     if (result.sent) {
       setChatText("");
+      setPendingChatImageDataUrl(null);
     }
   };
 
@@ -1337,18 +1345,14 @@ export function App() {
     void (async () => {
       try {
         const dataUrl = await compressImageToDataUrl(file);
-        const now = new Date();
-        const hh = String(now.getHours()).padStart(2, "0");
-        const mm = String(now.getMinutes()).padStart(2, "0");
-        const screenshotName = `скриншот-${hh}-${mm}`;
-        const markdown = `![${screenshotName}](${dataUrl})`;
+        const markdown = `![скриншот](${dataUrl})`;
 
         if (markdown.length > MAX_CHAT_IMAGE_DATA_URL_LENGTH) {
           pushToast(t("chat.imageTooLarge"));
           return;
         }
 
-        setChatText((prev) => `${prev}${prev ? "\n" : ""}${markdown}`);
+        setPendingChatImageDataUrl(dataUrl);
       } catch {
         pushToast(t("chat.imageTooLarge"));
       }
@@ -1904,6 +1908,7 @@ export function App() {
               messagesHasMore={messagesHasMore}
               loadingOlderMessages={loadingOlderMessages}
               chatText={chatText}
+              composePreviewImageUrl={pendingChatImageDataUrl}
               chatLogRef={chatLogRef}
               onLoadOlderMessages={() => void loadOlderMessages()}
               onSetChatText={setChatText}

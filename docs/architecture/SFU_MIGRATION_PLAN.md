@@ -1,7 +1,10 @@
 # План Миграции SFU (Decision Package)
 
 Дата: 2026-03-06  
-Статус: Утвержден как decision package для исполнения после завершения Phase 5
+Статус: Утвержден и переведен в исполнение (Stage 0 запущен 2026-03-06)
+
+Execution reference:
+- `docs/architecture/SFU_STAGE0_EXECUTION_PLAN.md`
 
 ## 1) Цель
 
