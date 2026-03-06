@@ -1020,12 +1020,33 @@ async function main() {
         && redialSuccessesB > 0
       );
 
+    const failureSnapshot = JSON.stringify({
+      users: {
+        peerA: peerA.userId,
+        peerB: peerB.userId,
+        targetUserId,
+        targetKind
+      },
+      redialSuccesses: {
+        peerA: redialSuccessesA,
+        peerB: redialSuccessesB
+      },
+      peerA: {
+        state: stateA,
+        stats: statsA
+      },
+      peerB: {
+        state: stateB,
+        stats: statsB
+      }
+    });
+
     if (!relayLooksHealthy) {
-      throw new Error("[smoke:realtime:media] signaling relay is incomplete (offer/answer/ice)");
+      throw new Error(`[smoke:realtime:media] signaling relay is incomplete (offer/answer/ice) snapshot=${failureSnapshot}`);
     }
 
     if (!mediaLooksHealthy) {
-      throw new Error("[smoke:realtime:media] RTP audio stats did not grow on one or both peers");
+      throw new Error(`[smoke:realtime:media] RTP audio stats did not grow on one or both peers snapshot=${failureSnapshot}`);
     }
 
     if (!cameraStateConvergenceOk) {
