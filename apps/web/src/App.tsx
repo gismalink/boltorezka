@@ -416,6 +416,8 @@ export function App() {
     remoteMutedPeerUserIds,
     remoteSpeakingPeerUserIds,
     remoteAudioMutedPeerUserIds,
+    voiceMediaStatusByPeerUserId,
+    localVoiceMediaStatusSummary,
     localVideoStream,
     remoteVideoStreamsByUserId,
     connectRoom,
@@ -708,6 +710,19 @@ export function App() {
 
     return map;
   }, [voiceCameraEnabledByUserIdInCurrentRoom, user?.id, roomVoiceConnected, allowVideoStreaming, cameraEnabled]);
+
+  const voiceMediaStatusSummaryByUserIdInCurrentRoom = useMemo(() => {
+    const map = {
+      ...voiceMediaStatusByPeerUserId
+    };
+
+    const localUserId = String(user?.id || "").trim();
+    if (localUserId) {
+      map[localUserId] = localVoiceMediaStatusSummary;
+    }
+
+    return map;
+  }, [voiceMediaStatusByPeerUserId, user?.id, localVoiceMediaStatusSummary]);
 
   const authController = useMemo(
     () =>
@@ -1631,6 +1646,7 @@ export function App() {
       currentRoomSupportsVideo={currentRoomSupportsVideo}
       currentRoomTitle={currentRoom?.title || ""}
       callStatus={callStatus}
+      localVoiceMediaStatusSummary={localVoiceMediaStatusSummary}
       lastCallPeer={lastCallPeer}
       roomVoiceConnected={roomVoiceConnected}
       cameraEnabled={cameraEnabled}
@@ -1730,6 +1746,7 @@ export function App() {
       currentRoomSupportsVideo={currentRoomSupportsVideo}
       currentRoomTitle={currentRoom?.title || ""}
       callStatus={callStatus}
+      localVoiceMediaStatusSummary={localVoiceMediaStatusSummary}
       lastCallPeer={lastCallPeer}
       roomVoiceConnected={roomVoiceConnected}
       cameraEnabled={cameraEnabled}
@@ -1869,6 +1886,7 @@ export function App() {
               voiceCameraEnabledByUserIdInCurrentRoom={effectiveVoiceCameraEnabledByUserIdInCurrentRoom}
               voiceAudioOutputMutedByUserIdInCurrentRoom={voiceAudioOutputMutedByUserIdInCurrentRoom}
               voiceRtcStateByUserIdInCurrentRoom={voiceRtcStateByUserIdInCurrentRoom}
+              voiceMediaStatusSummaryByUserIdInCurrentRoom={voiceMediaStatusSummaryByUserIdInCurrentRoom}
               collapsedCategoryIds={collapsedCategoryIds}
               uncategorizedRooms={uncategorizedRooms}
               newCategorySlug={newCategorySlug}

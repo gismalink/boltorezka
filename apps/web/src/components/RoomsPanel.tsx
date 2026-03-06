@@ -31,6 +31,7 @@ export function RoomsPanel({
   voiceCameraEnabledByUserIdInCurrentRoom,
   voiceAudioOutputMutedByUserIdInCurrentRoom,
   voiceRtcStateByUserIdInCurrentRoom,
+  voiceMediaStatusSummaryByUserIdInCurrentRoom,
   collapsedCategoryIds,
   uncategorizedRooms,
   newCategorySlug,
@@ -343,6 +344,10 @@ export function RoomsPanel({
               const rtcState = roomHasVoiceState && member.userId
                 ? (voiceRtcStateByUserIdInCurrentRoom[member.userId] || "disconnected")
                 : "disconnected";
+              const mediaStatus = roomHasVoiceState && member.userId
+                ? (voiceMediaStatusSummaryByUserIdInCurrentRoom[member.userId]
+                  || (rtcState === "connected" ? "signaling" : rtcState === "connecting" ? "connecting" : "disconnected"))
+                : "disconnected";
               const micIconClass = micState === "muted"
                 ? "bi-mic-mute"
                 : micState === "speaking"
@@ -350,11 +355,28 @@ export function RoomsPanel({
                   : "bi-mic";
               const audioIconClass = isAudioOutputMuted ? "bi-headset-vr" : "bi-headphones";
               const isFullyMuted = micState === "muted" && isAudioOutputMuted;
-              const rtcStateClass = rtcState === "connecting"
-                ? "channel-member-rtc-connecting"
-                : rtcState === "connected"
-                  ? "channel-member-rtc-connected"
-                  : "channel-member-rtc-disconnected";
+              const mediaStatusClass = mediaStatus === "media"
+                ? "channel-member-rtc-media"
+                : mediaStatus === "signaling"
+                  ? "channel-member-rtc-signaling"
+                  : mediaStatus === "stalled"
+                    ? "channel-member-rtc-stalled"
+                    : mediaStatus === "connecting"
+                      ? "channel-member-rtc-connecting"
+                      : mediaStatus === "idle"
+                        ? "channel-member-rtc-idle"
+                        : "channel-member-rtc-disconnected";
+              const mediaStatusLabel = mediaStatus === "media"
+                ? t("rooms.mediaBadge.media")
+                : mediaStatus === "signaling"
+                  ? t("rooms.mediaBadge.signaling")
+                  : mediaStatus === "stalled"
+                    ? t("rooms.mediaBadge.stalled")
+                    : mediaStatus === "connecting"
+                      ? t("rooms.mediaBadge.connecting")
+                      : mediaStatus === "idle"
+                        ? t("rooms.mediaBadge.idle")
+                        : t("rooms.mediaBadge.disconnected");
 
               return (
             <li
@@ -363,7 +385,7 @@ export function RoomsPanel({
             >
               <span className="channel-member-avatar">{(member.userName || "U").charAt(0).toUpperCase()}</span>
               <span className="channel-member-name">{member.userName}</span>
-              <span className={`channel-member-rtc ${rtcStateClass}`}>rtc</span>
+              <span className={`channel-member-rtc ${mediaStatusClass}`}>{mediaStatusLabel}</span>
               <span className="channel-member-icons" aria-hidden="true">
                 {isCameraEnabled ? <i className="bi bi-camera-video-fill channel-member-camera-icon" /> : null}
                 <i className={`bi ${micIconClass} channel-member-mic-icon`} />

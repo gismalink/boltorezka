@@ -44,6 +44,8 @@ export type CallNackPayload = {
 
 export type ServerVideoEffectType = "none" | "pixel8" | "ascii";
 
+export type VoiceMediaStatusSummary = "idle" | "connecting" | "signaling" | "media" | "stalled" | "disconnected";
+
 export type UseVoiceCallRuntimeArgs = {
   localUserId: string;
   roomSlug: string;

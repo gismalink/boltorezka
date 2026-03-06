@@ -1,6 +1,7 @@
 import type { FormEvent, RefObject } from "react";
 import type { Lang, TranslateFn } from "../i18n";
 import type { ChannelAudioQualitySetting, PresenceMember, Room, RoomKind, RoomsTreeResponse, User } from "../domain";
+import type { VoiceMediaStatusSummary } from "../hooks/rtc/voiceCallTypes";
 
 export type InputProfile = "noise_reduction" | "studio" | "custom";
 export type VoiceSettingsPanel = "input_device" | "input_profile" | null;
@@ -15,6 +16,7 @@ export type UserDockProps = {
   currentRoomSupportsRtc: boolean;
   currentRoomTitle: string;
   callStatus: "idle" | "ringing" | "connecting" | "active";
+  localVoiceMediaStatusSummary: VoiceMediaStatusSummary;
   lastCallPeer: string;
   roomVoiceConnected: boolean;
   currentRoomSupportsVideo: boolean;
@@ -98,6 +100,7 @@ export type RoomsPanelProps = {
   voiceCameraEnabledByUserIdInCurrentRoom: Record<string, boolean>;
   voiceAudioOutputMutedByUserIdInCurrentRoom: Record<string, boolean>;
   voiceRtcStateByUserIdInCurrentRoom: Record<string, "disconnected" | "connecting" | "connected">;
+  voiceMediaStatusSummaryByUserIdInCurrentRoom: Record<string, VoiceMediaStatusSummary>;
   collapsedCategoryIds: string[];
   uncategorizedRooms: Room[];
   newCategorySlug: string;

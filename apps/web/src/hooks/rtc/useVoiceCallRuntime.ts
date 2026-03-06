@@ -74,6 +74,7 @@ import type {
   CallTerminalPayload,
   CallVideoStatePayload,
   UseVoiceCallRuntimeArgs,
+  VoiceMediaStatusSummary,
   VoicePeerContext
 } from "./voiceCallTypes";
 import { buildLocalDescriptionAfterIceGathering, findSenderByKind, normalizeRtcText } from "./voiceCallUtils";
@@ -128,6 +129,8 @@ export function useVoiceCallRuntime({
   const [remoteMutedPeerUserIds, setRemoteMutedPeerUserIds] = useState<string[]>([]);
   const [remoteSpeakingPeerUserIds, setRemoteSpeakingPeerUserIds] = useState<string[]>([]);
   const [remoteAudioMutedPeerUserIds, setRemoteAudioMutedPeerUserIds] = useState<string[]>([]);
+  const [voiceMediaStatusByPeerUserId, setVoiceMediaStatusByPeerUserId] = useState<Record<string, VoiceMediaStatusSummary>>({});
+  const [localVoiceMediaStatusSummary, setLocalVoiceMediaStatusSummary] = useState<VoiceMediaStatusSummary>("idle");
   const [localVideoStream, setLocalVideoStream] = useState<MediaStream | null>(null);
   const [remoteVideoStreamsByUserId, setRemoteVideoStreamsByUserId] = useState<Record<string, MediaStream>>({});
   const roomVoiceConnectedRef = useRef(false);
@@ -1229,6 +1232,84 @@ export function useVoiceCallRuntime({
   }, [roomVoiceTargets]);
 
   useEffect(() => {
+    const derivePeerStatus = (peer: VoicePeerContext): VoiceMediaStatusSummary => {
+      const connectionState = peer.connection.connectionState;
+      const iceState = peer.connection.iceConnectionState;
+
+      if (peer.inboundStalled) {
+        return "stalled";
+      }
+
+      if (peer.hasRemoteTrack) {
+        return "media";
+      }
+
+      if (connectionState === "connected") {
+        return "signaling";
+      }
+
+      if (connectionState === "connecting" || iceState === "checking" || iceState === "new") {
+        return "connecting";
+      }
+
+      if (connectionState === "disconnected" || connectionState === "failed" || connectionState === "closed") {
+        return "disconnected";
+      }
+
+      return "signaling";
+    };
+
+    const refreshStatuses = () => {
+      if (!roomVoiceConnectedRef.current) {
+        setVoiceMediaStatusByPeerUserId({});
+        setLocalVoiceMediaStatusSummary("idle");
+        return;
+      }
+
+      const nextByPeer: Record<string, VoiceMediaStatusSummary> = {};
+      const statuses = new Set<VoiceMediaStatusSummary>();
+      for (const [peerUserId, peer] of peersRef.current.entries()) {
+        const status = derivePeerStatus(peer);
+        nextByPeer[peerUserId] = status;
+        statuses.add(status);
+      }
+
+      setVoiceMediaStatusByPeerUserId(nextByPeer);
+
+      if (statuses.size === 0) {
+        setLocalVoiceMediaStatusSummary("connecting");
+        return;
+      }
+
+      if (statuses.has("stalled")) {
+        setLocalVoiceMediaStatusSummary("stalled");
+        return;
+      }
+
+      if (statuses.has("media")) {
+        setLocalVoiceMediaStatusSummary("media");
+        return;
+      }
+
+      if (statuses.has("signaling")) {
+        setLocalVoiceMediaStatusSummary("signaling");
+        return;
+      }
+
+      if (statuses.has("connecting")) {
+        setLocalVoiceMediaStatusSummary("connecting");
+        return;
+      }
+
+      setLocalVoiceMediaStatusSummary("disconnected");
+    };
+
+    refreshStatuses();
+    const timer = window.setInterval(refreshStatuses, 900);
+    return () => window.clearInterval(timer);
+  }, [roomVoiceConnected]);
+
+  useEffect(() => {
     if (!roomVoiceConnectedRef.current) {
       return;
     }
@@ -1318,6 +1399,8 @@ export function useVoiceCallRuntime({
     remoteMutedPeerUserIds,
     remoteSpeakingPeerUserIds,
     remoteAudioMutedPeerUserIds,
+    voiceMediaStatusByPeerUserId,
+    localVoiceMediaStatusSummary,
     localVideoStream,
     remoteVideoStreamsByUserId,
     connectRoom,

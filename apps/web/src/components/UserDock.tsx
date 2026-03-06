@@ -8,6 +8,7 @@ export function UserDock({
   currentRoomSupportsVideo,
   currentRoomTitle,
   callStatus,
+  localVoiceMediaStatusSummary,
   lastCallPeer,
   cameraEnabled,
   micMuted,
@@ -83,6 +84,15 @@ export function UserDock({
   const modalBarCount = 42;
   const miniActiveBars = Math.min(miniBarCount, Math.round(micTestLevel * miniBarCount));
   const modalActiveBars = Math.min(modalBarCount, Math.round(micTestLevel * modalBarCount));
+  const localMediaStatusLabelByKey: Record<string, string> = {
+    idle: t("rtc.media.idle"),
+    connecting: t("rtc.media.connecting"),
+    signaling: t("rtc.media.signaling"),
+    media: t("rtc.media.media"),
+    stalled: t("rtc.media.stalled"),
+    disconnected: t("rtc.media.disconnected")
+  };
+  const localMediaStatusLabel = localMediaStatusLabelByKey[localVoiceMediaStatusSummary] || localMediaStatusLabelByKey.disconnected;
   return (
     <>
       <div className={`user-dock ${inlineSettingsMode ? "user-dock-inline-hidden" : ""} relative z-20 mt-auto flex min-h-0 flex-col gap-4`}>
@@ -96,6 +106,7 @@ export function UserDock({
                   {lastCallPeer ? ` · ${lastCallPeer}` : ""}
                 </div>
                 <div className="muted rtc-subtitle">{t("call.status")}: {callStatus}</div>
+                <div className="muted rtc-subtitle">{t("rtc.mediaStatus")}: {localMediaStatusLabel}</div>
               </div>
               <div className="rtc-top-actions inline-flex gap-2">
                 <button type="button" className="secondary icon-btn tiny" data-tooltip={t("rtc.muteConnection")} onClick={onToggleMic}>

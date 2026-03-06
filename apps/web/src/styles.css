@@ -825,6 +825,26 @@ pre {
   border-color: color-mix(in srgb, var(--pixel-neon-cyan) 58%, transparent 42%);
 }
 
+.channel-member-rtc-idle {
+  opacity: 0.48;
+}
+
+.channel-member-rtc-signaling {
+  color: color-mix(in srgb, var(--pixel-neon-gold) 72%, var(--pixel-text) 28%);
+  border-color: color-mix(in srgb, var(--pixel-neon-gold) 54%, transparent 46%);
+}
+
+.channel-member-rtc-media {
+  color: var(--pixel-neon-cyan);
+  border-color: color-mix(in srgb, var(--pixel-neon-cyan) 62%, transparent 38%);
+}
+
+.channel-member-rtc-stalled {
+  color: #ff9a9a;
+  border-color: color-mix(in srgb, #ff9a9a 62%, transparent 38%);
+  animation: channel-member-rtc-pulse 0.95s steps(2, end) infinite;
+}
+
 .channel-member-rtc-connecting {
   color: var(--pixel-neon-gold);
   border-color: color-mix(in srgb, var(--pixel-neon-gold) 62%, transparent 38%);
