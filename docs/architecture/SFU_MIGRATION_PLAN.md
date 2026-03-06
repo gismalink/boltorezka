@@ -1,140 +1,140 @@
-# SFU Migration Plan (Decision Package)
+# План Миграции SFU (Decision Package)
 
-Date: 2026-03-06  
-Status: Approved as decision package for post-Phase-5 execution
+Дата: 2026-03-06  
+Статус: Утвержден как decision package для исполнения после завершения Phase 5
 
-## 1) Purpose
+## 1) Цель
 
-This document defines when and how Boltorezka should move from the current P2P/TURN baseline to SFU topology, with measurable entry gates, rollback policy, and incremental rollout steps.
+Документ определяет, когда и как Boltorezka должна перейти от текущего P2P/TURN baseline к SFU-топологии: с измеримыми входными gate, политикой отката и поэтапным rollout.
 
-## 2) Current baseline and constraints
+## 2) Текущий baseline и ограничения
 
-Current media baseline:
-- Topology: WebRTC P2P + TURN relay-first.
-- Signaling/runtime hardening: Phase 6.1-6.3 completed.
-- Controlled rollout toggles (Phase 5):
+Текущий media baseline:
+- Топология: WebRTC P2P + TURN relay-first.
+- Hardening signaling/runtime: Phase 6.1-6.3 завершены.
+- Toggle'ы controlled rollout (Phase 5):
   - `RTC_FEATURE_INITIAL_STATE_REPLAY`
   - `VITE_RTC_FEATURE_INITIAL_STATE_REPLAY`
   - `VITE_RTC_FEATURE_NEGOTIATION_MANAGER_V2`
   - `VITE_RTC_FEATURE_OFFER_QUEUE`
 
-Observed constraints requiring SFU-ready planning:
-- 3-way race/live-room scenarios are not strict-gated and can stay unstable under current P2P behavior.
-- P2P complexity grows non-linearly with room size, reconnect churn, and mixed network quality.
-- Camera convergence and late-join consistency are now guarded, but scaling behavior still depends on client-side mesh state.
+Наблюдаемые ограничения, требующие SFU-ready планирования:
+- Сценарии 3-way race/live-room не находятся под strict-gate и могут оставаться нестабильными в текущем P2P-поведении.
+- Сложность P2P растет нелинейно с размером комнаты, reconnect churn и смешанным качеством сети.
+- Camera convergence и late-join consistency уже защищены gate, но масштабирование по-прежнему зависит от client-side mesh state.
 
-## 3) Decision matrix
+## 3) Матрица решений
 
-Option A: keep P2P only
-- Pros: lowest immediate implementation cost.
-- Cons: limited room scalability, rising reconnect/signaling complexity.
-- Decision: rejected as long-term path.
+Вариант A: оставить только P2P
+- Плюсы: минимальная немедленная стоимость реализации.
+- Минусы: ограниченная масштабируемость комнат, рост сложности reconnect/signaling.
+- Решение: отклонен как долгосрочный путь.
 
-Option B: hybrid topology (P2P default, SFU for larger rooms)
-- Pros: safe migration, preserves small-room efficiency, reduces risk.
-- Cons: routing/control complexity and dual-mode testing burden.
-- Decision: selected.
+Вариант B: гибридная топология (P2P по умолчанию, SFU для больших комнат)
+- Плюсы: безопасная миграция, сохраняет эффективность малых комнат, снижает риск.
+- Минусы: сложность routing/control и двойная нагрузка на тестирование.
+- Решение: выбран.
 
-Option C: full SFU-only switch
-- Pros: single media topology and predictable large-room behavior.
-- Cons: highest migration risk and blast radius.
-- Decision: deferred.
+Вариант C: полный переход на SFU-only
+- Плюсы: единая media-топология и предсказуемое поведение для больших комнат.
+- Минусы: максимальный риск миграции и blast radius.
+- Решение: отложен.
 
-## 4) Entry gates for SFU implementation start
+## 4) Входные gate для старта SFU-реализации
 
-Implementation work starts when all gates below are true for test contour:
-1. At least 3 consecutive `deploy:test:smoke` runs pass with replay gate enabled.
-2. No regressions in `call.initial_state` smoke assertions.
-3. Reconnect path remains healthy (`call_reconnect_joined` observed with no critical errors).
-4. No active rollback by Phase 5 feature toggles for 48h after latest RTC changes.
+Работы по реализации стартуют, когда в test-контуре одновременно выполняются все условия:
+1. Минимум 3 подряд успешных прогона `deploy:test:smoke` с включенным replay gate.
+2. Отсутствие регрессий в smoke-assertions по `call.initial_state`.
+3. Reconnect path остается стабильным (`call_reconnect_joined` наблюдается без критичных ошибок).
+4. Нет активного rollback через Phase 5 feature toggles в течение 48 часов после последних RTC-изменений.
 
-## 5) Target architecture (hybrid)
+## 5) Целевая архитектура (гибрид)
 
 Control plane:
-- Existing `boltorezka-api` remains source of truth for auth, room membership, and signaling authorization.
+- Текущий `boltorezka-api` остается источником истины для auth, room membership и signaling authorization.
 
 Media routing:
-- Add SFU service as media plane for rooms above threshold.
-- Keep TURN for fallback and constrained networks.
+- Добавить SFU-сервис как media plane для комнат выше порога.
+- Сохранить TURN как fallback для ограниченных сетей.
 
-Room policy:
-- Small rooms: keep P2P path.
-- Large/unstable rooms: route through SFU.
-- Routing decision must be deterministic and exposed in room/session metadata.
+Политика комнат:
+- Малые комнаты: сохраняем P2P path.
+- Большие/нестабильные комнаты: маршрутизируем через SFU.
+- Routing decision должен быть детерминированным и отражаться в metadata room/session.
 
-## 6) Migration stages
+## 6) Этапы миграции
 
-Stage 0: Readiness and contracts
-- Define SFU session contract (`join`, `publish`, `subscribe`, `leave`) and capability envelope for clients.
-- Extend observability schema with SFU-specific metrics.
+Stage 0: Готовность и контракты
+- Определить SFU session contract (`join`, `publish`, `subscribe`, `leave`) и capability envelope для клиентов.
+- Расширить схему observability SFU-специфичными метриками.
 
-Stage 1: Dark launch in test
-- Deploy SFU in test only.
-- Keep P2P as default.
-- Introduce room-level switch `mediaTopology=sfu|p2p` in test tooling.
+Stage 1: Dark launch в test
+- Развернуть SFU только в test.
+- Сохранить P2P как default.
+- Ввести room-level switch `mediaTopology=sfu|p2p` в test tooling.
 
-Stage 2: Canary rooms
-- Enable SFU only for selected internal rooms/users.
-- Compare setup success, reconnect quality, and camera consistency against P2P baseline.
+Stage 2: Canary-комнаты
+- Включить SFU только для выбранных внутренних комнат/пользователей.
+- Сравнить setup success, reconnect quality и camera consistency с P2P baseline.
 
-Stage 3: Hybrid default in test
-- Auto-route rooms above threshold to SFU.
-- Keep manual rollback to P2P path.
+Stage 3: Гибрид по умолчанию в test
+- Автомаршрутизация комнат выше порога в SFU.
+- Сохранить ручной rollback на P2P path.
 
 Stage 4: Production readiness package
-- Promote to prod only from `main` and only after explicit approval.
-- Include final rollout/rollback runbook evidence.
+- Продвижение в prod только из `main` и только по явному подтверждению.
+- Включить финальные evidence по rollout/rollback runbook.
 
-## 7) Success criteria
+## 7) Критерии успеха
 
-Hard criteria:
-- Realtime smoke remains green with replay gate strict.
-- Call setup success ratio does not regress compared to current baseline.
-- Reconnect stability improves for multi-party scenarios.
-- No increase in severe incident rate during canary period.
+Жесткие критерии:
+- Realtime smoke остается зеленым при strict replay gate.
+- Доля успешного call setup не деградирует относительно текущего baseline.
+- Reconnect stability улучшается в многопользовательских сценариях.
+- В canary-период не растет частота severe-инцидентов.
 
-Operational criteria:
-- Clear on-call triage flow for SFU failure classes.
-- Rollback can be executed without code revert.
+Операционные критерии:
+- Четкий on-call triage flow для классов SFU-ошибок.
+- Rollback выполняется без code revert.
 
-## 8) Rollback policy
+## 8) Политика rollback
 
-Rollback trigger examples:
-- sustained call setup degradation,
-- reconnect failures above threshold,
+Примеры триггеров rollback:
+- устойчивая деградация call setup,
+- reconnect failures выше порога,
 - severe media one-way-audio/video incidents.
 
-Rollback actions:
-1. Disable SFU room routing for test/prod contour.
-2. Force P2P path for new sessions.
-3. Keep active sessions until disconnect where possible, then rejoin on P2P.
-4. Preserve metrics and incident timeline for postmortem.
+Действия rollback:
+1. Отключить SFU room routing для test/prod контура.
+2. Принудительно вернуть P2P path для новых сессий.
+3. По возможности сохранить активные сессии до disconnect, затем rejoin на P2P.
+4. Сохранить метрики и timeline инцидента для postmortem.
 
-## 9) Risks and mitigations
+## 9) Риски и mitigation
 
-Risk: dual topology complexity.
-- Mitigation: keep one canonical routing decision source and explicit telemetry labels.
+Риск: сложность dual-topology.
+- Mitigation: единый канонический источник routing decision и явные telemetry labels.
 
-Risk: client version mismatch during rollout.
-- Mitigation: maintain version compatibility checks and cache/version smoke gates.
+Риск: несовместимость client version во время rollout.
+- Mitigation: сохранить version compatibility checks и cache/version smoke gates.
 
-Risk: operational overhead.
-- Mitigation: stage-based rollout with test-first policy and scripted smoke enforcement.
+Риск: операционная нагрузка.
+- Mitigation: поэтапный rollout с test-first политикой и scripted smoke enforcement.
 
-## 10) Ownership and evidence
+## 10) Ответственность и evidence
 
-Owners:
+Ответственные:
 - Realtime/API: backend owner.
 - WebRTC runtime: web owner.
 - Deploy/runbook: operations owner.
 
-Evidence sources:
+Источники evidence:
 - `docs/status/FEATURE_LOG.md`
 - `docs/runbooks/VOICE_BASELINE_RUNBOOK.md`
 - `docs/operations/SMOKE_CI_MATRIX.md`
-- postdeploy summary and Redis `ws:metrics:<day>` snapshots.
+- postdeploy summary и снапшоты Redis `ws:metrics:<day>`.
 
-## 11) Canonical links
+## 11) Канонические ссылки
 
 - `docs/architecture/ARCHITECTURE.md`
 - `docs/architecture/PHASE0_MVP_ADR.md`

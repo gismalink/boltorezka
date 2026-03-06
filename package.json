@@ -18,6 +18,7 @@
     "smoke:web:denied-media:browser": "node ./scripts/smoke/smoke-web-denied-media-browser.mjs",
     "smoke:auth:bootstrap": "bash ./scripts/smoke/smoke-auth-bootstrap.sh",
     "smoke:web:e2e": "bash ./scripts/smoke/smoke-web-e2e.sh",
+    "backup:db:all": "bash ./scripts/ops/backup-postgres-all.sh",
     "smoke:test:postdeploy": "bash ./scripts/deploy/postdeploy-smoke-test.sh \"${REPO_DIR:-$PWD}\"",
     "deploy:test": "bash ./scripts/deploy/deploy-test-from-ref.sh \"${TEST_REF:?set TEST_REF=origin/feature/<name>}\" \"${REPO_DIR:-$PWD}\"",
     "deploy:test:smoke": "bash ./scripts/deploy/deploy-test-and-smoke.sh \"${TEST_REF:?set TEST_REF=origin/feature/<name>}\" \"${REPO_DIR:-$PWD}\"",

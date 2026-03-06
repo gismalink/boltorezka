@@ -23,6 +23,8 @@ This folder contains operational scripts grouped by purpose.
 - root scripts:
   - `verify-all.sh` - single local entrypoint for verify + optional smoke toggles.
   - `ws-load.mjs` - websocket load generator for room/chat traffic.
+- `ops/`:
+  - `backup-postgres-all.sh` - backup all Postgres DBs (test/prod) to host storage outside Docker.
 
 ## Common Flows
 

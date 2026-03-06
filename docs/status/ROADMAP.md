@@ -47,6 +47,7 @@
 - SFU migration decision package: `docs/architecture/SFU_MIGRATION_PLAN.md`.
 - Phase 3 (Voice/WebRTC MVP policy): `docs/runbooks/PHASE3_VOICE_WEBRTC_MVP_POLICY.md`.
 - Voice baseline runbook: `docs/runbooks/VOICE_BASELINE_RUNBOOK.md`.
+- DB backup runbook: `docs/operations/DB_BACKUP_RUNBOOK.md`.
 - Performance gate: `docs/operations/PERFORMANCE_GATE.md`.
 - Pre-prod decision package: `docs/runbooks/PREPROD_DECISION_PACKAGE.md`.
 - Discord channel tree plan: `docs/plans/DISCORD_CHANNEL_TREE_PLAN.md`.

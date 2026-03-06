@@ -1,5 +1,7 @@
-import { ClipboardEvent, FormEvent, KeyboardEvent, ReactNode, RefObject } from "react";
+import { ClipboardEvent, FormEvent, KeyboardEvent, ReactNode, RefObject, useEffect, useMemo, useState } from "react";
 import type { Message } from "../domain";
+
+const CHAT_MARKDOWN_IMAGE_PATTERN = /!\[[^\]]*\]\((data:image\/[a-zA-Z0-9.+-]+;base64,[^)\s]+|https?:\/\/[^)\s]+)\)/g;
 
 type ChatPanelProps = {
   t: (key: string) => string;
@@ -50,7 +52,41 @@ export function ChatPanel({
   onEditMessage,
   onDeleteMessage
 }: ChatPanelProps) {
+  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
   const hasActiveRoom = Boolean(roomSlug);
+
+  useEffect(() => {
+    if (!previewImageUrl) {
+      return;
+    }
+
+    const onKeyDown = (event: globalThis.KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setPreviewImageUrl(null);
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [previewImageUrl]);
+
+  const composePreviewImages = useMemo(() => {
+    const urls: string[] = [];
+    let match: RegExpExecArray | null;
+    CHAT_MARKDOWN_IMAGE_PATTERN.lastIndex = 0;
+
+    while ((match = CHAT_MARKDOWN_IMAGE_PATTERN.exec(chatText)) !== null) {
+      const imageUrl = String(match[1] || "").trim();
+      if (imageUrl) {
+        urls.push(imageUrl);
+      }
+    }
+
+    return urls;
+  }, [chatText]);
+
   const formatMessageTime = (value: string) => {
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) {
@@ -65,7 +101,6 @@ export function ChatPanel({
 
   const renderMessageText = (value: string): ReactNode[] => {
     const text = String(value || "");
-    const markdownImagePattern = /!\[[^\]]*\]\((data:image\/[a-zA-Z0-9.+-]+;base64,[^)\s]+|https?:\/\/[^)\s]+)\)/g;
     const urlPattern = /((https?:\/\/|www\.)[^\s<]+)/gi;
     const result: ReactNode[] = [];
     let imageMatch: RegExpExecArray | null;
@@ -123,7 +158,8 @@ export function ChatPanel({
       }
     };
 
-    while ((imageMatch = markdownImagePattern.exec(text)) !== null) {
+    CHAT_MARKDOWN_IMAGE_PATTERN.lastIndex = 0;
+    while ((imageMatch = CHAT_MARKDOWN_IMAGE_PATTERN.exec(text)) !== null) {
       const start = imageMatch.index;
       if (start > cursor) {
         pushTextWithLinks(text.slice(cursor, start));
@@ -132,13 +168,21 @@ export function ChatPanel({
       const imageUrl = String(imageMatch[1] || "").trim();
       if (imageUrl) {
         result.push(
-          <img
-            key={`img-${keyIndex}-${start}`}
-            src={imageUrl}
-            alt="chat-image"
-            className="chat-inline-image"
-            loading="lazy"
-          />
+          <button
+            key={`img-btn-${keyIndex}-${start}`}
+            type="button"
+            className="chat-inline-image-btn"
+            onClick={() => setPreviewImageUrl(imageUrl)}
+            aria-label={t("chat.openImagePreview")}
+            title={t("chat.openImagePreview")}
+          >
+            <img
+              src={imageUrl}
+              alt="chat-image"
+              className="chat-inline-image"
+              loading="lazy"
+            />
+          </button>
         );
         keyIndex += 1;
       }
@@ -257,6 +301,50 @@ export function ChatPanel({
         />
         <button type="submit" disabled={!hasActiveRoom}>{editingMessageId ? t("chat.saveEdit") : t("chat.send")}</button>
       </form>
+      {composePreviewImages.length > 0 ? (
+        <div className="chat-compose-image-preview" aria-live="polite">
+          <span className="muted">{t("chat.imagePastedPreview")}</span>
+          <div className="chat-compose-image-preview-list">
+            {composePreviewImages.map((imageUrl, index) => (
+              <button
+                key={`compose-preview-${index}`}
+                type="button"
+                className="chat-inline-image-btn"
+                onClick={() => setPreviewImageUrl(imageUrl)}
+                aria-label={t("chat.openImagePreview")}
+                title={t("chat.openImagePreview")}
+              >
+                <img
+                  src={imageUrl}
+                  alt="chat-compose-image"
+                  className="chat-inline-image"
+                  loading="lazy"
+                />
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
+      {previewImageUrl ? (
+        <div
+          className="chat-image-modal-overlay popup-layer-content"
+          role="dialog"
+          aria-modal="true"
+          aria-label={t("chat.imagePreviewTitle")}
+          onClick={() => setPreviewImageUrl(null)}
+        >
+          <div className="chat-image-modal-card" onClick={(event) => event.stopPropagation()}>
+            <button
+              type="button"
+              className="secondary tiny chat-image-modal-close"
+              onClick={() => setPreviewImageUrl(null)}
+            >
+              {t("chat.closeImagePreview")}
+            </button>
+            <img src={previewImageUrl} alt="chat-image-preview" className="chat-image-modal-media" />
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }
