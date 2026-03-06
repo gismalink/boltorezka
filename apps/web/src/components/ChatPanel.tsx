@@ -8,7 +8,6 @@ type ChatPanelProps = {
   locale: string;
   roomSlug: string;
   roomTitle: string;
-  roomMediaTopology: "p2p" | "sfu" | null;
   messages: Message[];
   currentUserId: string | null;
   messagesHasMore: boolean;
@@ -35,7 +34,6 @@ export function ChatPanel({
   locale,
   roomSlug,
   roomTitle,
-  roomMediaTopology,
   messages,
   currentUserId,
   messagesHasMore,
@@ -190,19 +188,8 @@ export function ChatPanel({
 
   return (
     <section className="card middle-card flex min-h-0 flex-1 flex-col overflow-hidden">
-      <h2 className="chat-title-row">
-        <span>{t("chat.title")}</span>
-        <span>
-          ({hasActiveRoom ? roomTitle || roomSlug : t("chat.noChannel")})
-        </span>
-        {hasActiveRoom && roomMediaTopology ? (
-          <span
-            className={`channel-member-rtc room-topology-badge room-topology-badge-${roomMediaTopology}`}
-            aria-label={`media topology ${roomMediaTopology}`}
-          >
-            {roomMediaTopology}
-          </span>
-        ) : null}
+      <h2>
+        {t("chat.title")} ({hasActiveRoom ? roomTitle || roomSlug : t("chat.noChannel")})
       </h2>
       <div className="mb-3 flex flex-wrap items-center gap-3">
         <button

@@ -1929,7 +1929,6 @@ export function App() {
               locale={locale}
               roomSlug={roomSlug}
               roomTitle={currentRoom?.title || ""}
-              roomMediaTopology={roomMediaTopologyBySlug[roomSlug] || null}
               messages={messages}
               currentUserId={user?.id || null}
               messagesHasMore={messagesHasMore}

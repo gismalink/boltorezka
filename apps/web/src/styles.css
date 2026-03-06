@@ -831,13 +831,6 @@ pre {
   animation: channel-member-rtc-pulse 0.95s steps(2, end) infinite;
 }
 
-.chat-title-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
 .room-topology-badge {
   text-transform: lowercase;
 }
