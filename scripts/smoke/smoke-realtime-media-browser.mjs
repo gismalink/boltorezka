@@ -25,11 +25,30 @@ const ticketBEnv = String(process.env.SMOKE_WS_TICKET_SECOND || "").trim();
 
 function resolveIceServers() {
   if (iceServersJsonRaw) {
+    const candidates = [iceServersJsonRaw];
+    const outerSingleQuoted = iceServersJsonRaw.match(/^'(.*)'$/s);
+    const outerDoubleQuoted = iceServersJsonRaw.match(/^"(.*)"$/s);
+    if (outerSingleQuoted) {
+      candidates.push(outerSingleQuoted[1]);
+    }
+    if (outerDoubleQuoted) {
+      candidates.push(outerDoubleQuoted[1]);
+    }
+    candidates.push(iceServersJsonRaw.replace(/\\"/g, '"'));
+
     let parsed;
-    try {
-      parsed = JSON.parse(iceServersJsonRaw);
-    } catch (error) {
-      throw new Error(`[smoke:realtime:media] invalid SMOKE_RTC_ICE_SERVERS_JSON: ${error instanceof Error ? error.message : String(error)}`);
+    let parseError = null;
+    for (const candidate of candidates) {
+      try {
+        parsed = JSON.parse(candidate);
+        parseError = null;
+        break;
+      } catch (error) {
+        parseError = error;
+      }
+    }
+    if (!parsed) {
+      throw new Error(`[smoke:realtime:media] invalid SMOKE_RTC_ICE_SERVERS_JSON: ${parseError instanceof Error ? parseError.message : String(parseError)}`);
     }
 
     if (!Array.isArray(parsed)) {
