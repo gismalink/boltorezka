@@ -274,7 +274,7 @@ echo "[postdeploy-smoke] smoke:realtime"
 BASELINE_SMOKE_ROOM_SLUG="${SMOKE_ROOM_SLUG:-general}"
 if [[ -n "${SMOKE_SFU_ROOM_SLUG:-}" && "$BASELINE_SMOKE_ROOM_SLUG" == "$SMOKE_SFU_ROOM_SLUG" ]]; then
   # Keep baseline realtime check on a P2P room when Stage 1 routes the default room to SFU.
-  BASELINE_SMOKE_ROOM_SLUG="${SMOKE_SFU_ROOM_SLUG}-p2p-smoke"
+  BASELINE_SMOKE_ROOM_SLUG="${SMOKE_BASELINE_P2P_ROOM_SLUG:-kuhnya}"
   echo "[postdeploy-smoke] baseline room slug adjusted for Stage 1: $BASELINE_SMOKE_ROOM_SLUG"
 fi
 
