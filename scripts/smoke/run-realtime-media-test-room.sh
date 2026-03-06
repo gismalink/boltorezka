@@ -68,9 +68,9 @@ if [[ -z "$TICKET_PRIMARY" || "$TICKET_PRIMARY" == "null" || -z "$TICKET_SECOND"
   exit 1
 fi
 
-ICE_JSON="${SMOKE_RTC_ICE_SERVERS_JSON:-}"
+ICE_JSON="${TEST_VITE_RTC_ICE_SERVERS_JSON:-}"
 if [[ -z "$ICE_JSON" ]]; then
-  ICE_JSON="${TEST_VITE_RTC_ICE_SERVERS_JSON:-}"
+  ICE_JSON="${SMOKE_RTC_ICE_SERVERS_JSON:-}"
 fi
 
 if [[ -z "$ICE_JSON" && -n "${TURN_USERNAME:-}" && -n "${TURN_PASSWORD:-}" ]]; then
