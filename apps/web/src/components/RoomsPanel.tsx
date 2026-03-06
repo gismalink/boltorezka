@@ -22,6 +22,7 @@ export function RoomsPanel({
   canManageAudioQuality,
   roomsTree,
   roomSlug,
+  roomMediaTopologyBySlug,
   currentUserId,
   currentUserName,
   liveRoomMembersBySlug,
@@ -188,6 +189,14 @@ export function RoomsPanel({
       >
         <i className={`bi ${ROOM_KIND_ICON_CLASS[room.kind]}`} aria-hidden="true" />
         <span>{room.title}</span>
+        {roomMediaTopologyBySlug[room.slug] ? (
+          <span
+            className={`channel-member-rtc room-topology-badge room-topology-badge-${roomMediaTopologyBySlug[room.slug]}`}
+            aria-label={`media topology ${roomMediaTopologyBySlug[room.slug]}`}
+          >
+            {roomMediaTopologyBySlug[room.slug]}
+          </span>
+        ) : null}
       </button>
       {canCreateRooms ? (
         <div

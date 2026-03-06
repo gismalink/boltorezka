@@ -831,6 +831,27 @@ pre {
   animation: channel-member-rtc-pulse 0.95s steps(2, end) infinite;
 }
 
+.chat-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.room-topology-badge {
+  text-transform: lowercase;
+}
+
+.room-topology-badge-p2p {
+  color: var(--pixel-neon-gold);
+  border-color: color-mix(in srgb, var(--pixel-neon-gold) 62%, transparent 38%);
+}
+
+.room-topology-badge-sfu {
+  color: var(--pixel-neon-cyan);
+  border-color: color-mix(in srgb, var(--pixel-neon-cyan) 58%, transparent 42%);
+}
+
 @keyframes channel-member-rtc-pulse {
   0%,
   49% {
