@@ -27,6 +27,7 @@ SMOKE_SUMMARY_TEXT="health=fail mode=unknown sso=fail realtime=fail delta(nack=0
 API_SMOKE_STATUS="skip"
 VERSION_CACHE_STATUS="skip"
 EXTENDED_REALTIME_STATUS="skip"
+SMOKE_SFU_TOPOLOGY_STATUS="skip"
 JWT_SECRET_CANDIDATE=""
 
 write_summary() {
@@ -43,6 +44,7 @@ write_summary() {
   printf 'SMOKE_CALL_INITIAL_STATE_SENT_DELTA=%q\n' "$SMOKE_CALL_INITIAL_STATE_SENT_DELTA" >>"$SUMMARY_FILE_REL"
   printf 'SMOKE_CALL_INITIAL_STATE_PARTICIPANTS_DELTA=%q\n' "$SMOKE_CALL_INITIAL_STATE_PARTICIPANTS_DELTA" >>"$SUMMARY_FILE_REL"
   printf 'SMOKE_EXTENDED_REALTIME_STATUS=%q\n' "$EXTENDED_REALTIME_STATUS" >>"$SUMMARY_FILE_REL"
+  printf 'SMOKE_SFU_TOPOLOGY_STATUS=%q\n' "$SMOKE_SFU_TOPOLOGY_STATUS" >>"$SUMMARY_FILE_REL"
   printf 'SMOKE_SUMMARY_TEXT=%q\n' "$SMOKE_SUMMARY_TEXT" >>"$SUMMARY_FILE_REL"
 }
 
@@ -219,7 +221,7 @@ VERSION_CACHE_STATUS="pass"
 if [[ "${SMOKE_REALTIME:-1}" == "0" ]]; then
   echo "[postdeploy-smoke] realtime smoke skipped (SMOKE_REALTIME=0)"
   SMOKE_STATUS="pass"
-  SMOKE_SUMMARY_TEXT="health=pass mode=sso sso=pass api=$API_SMOKE_STATUS version_cache=$VERSION_CACHE_STATUS realtime=skip extended_realtime=$EXTENDED_REALTIME_STATUS delta(nack=0,ack=0,chat=0,idem=0,initial_state=0,initial_state_participants=0)"
+  SMOKE_SUMMARY_TEXT="health=pass mode=sso sso=pass api=$API_SMOKE_STATUS version_cache=$VERSION_CACHE_STATUS realtime=skip extended_realtime=$EXTENDED_REALTIME_STATUS sfu_topology=$SMOKE_SFU_TOPOLOGY_STATUS delta(nack=0,ack=0,chat=0,idem=0,initial_state=0,initial_state_participants=0)"
   exit 0
 fi
 
@@ -366,6 +368,18 @@ if [[ "${SMOKE_EXTENDED_GATE:-0}" == "1" ]]; then
   EXTENDED_REALTIME_STATUS="pass"
 fi
 
+if [[ -n "${SMOKE_SFU_ROOM_SLUG:-}" ]]; then
+  echo "[postdeploy-smoke] smoke:realtime (sfu topology room=$SMOKE_SFU_ROOM_SLUG)"
+  SMOKE_API_URL="$BASE_URL" \
+    SMOKE_ROOM_SLUG="$SMOKE_SFU_ROOM_SLUG" \
+    SMOKE_RECONNECT=1 \
+    SMOKE_REQUIRE_INITIAL_STATE_REPLAY=1 \
+    SMOKE_REQUIRE_MEDIA_TOPOLOGY=1 \
+    SMOKE_EXPECT_MEDIA_TOPOLOGY="${SMOKE_SFU_EXPECT_MEDIA_TOPOLOGY:-sfu}" \
+    npm run smoke:realtime
+  SMOKE_SFU_TOPOLOGY_STATUS="pass"
+fi
+
 echo "[postdeploy-smoke] realtime metrics after"
 METRICS_AFTER_RAW="$(compose exec -T "$REDIS_SERVICE" redis-cli HGETALL "ws:metrics:$DAY" | cat)"
 printf '%s\n' "$METRICS_AFTER_RAW"
@@ -385,6 +399,6 @@ SMOKE_CALL_INITIAL_STATE_SENT_DELTA=$((CALL_INITIAL_STATE_SENT_AFTER - CALL_INIT
 SMOKE_CALL_INITIAL_STATE_PARTICIPANTS_DELTA=$((CALL_INITIAL_STATE_PARTICIPANTS_AFTER - CALL_INITIAL_STATE_PARTICIPANTS_BEFORE))
 
 SMOKE_STATUS="pass"
-SMOKE_SUMMARY_TEXT="health=pass mode=sso sso=pass api=$API_SMOKE_STATUS version_cache=$VERSION_CACHE_STATUS realtime=pass extended_realtime=$EXTENDED_REALTIME_STATUS delta(nack=$SMOKE_NACK_DELTA,ack=$SMOKE_ACK_DELTA,chat=$SMOKE_CHAT_SENT_DELTA,idem=$SMOKE_CHAT_IDEMPOTENCY_HIT_DELTA,initial_state=$SMOKE_CALL_INITIAL_STATE_SENT_DELTA,initial_state_participants=$SMOKE_CALL_INITIAL_STATE_PARTICIPANTS_DELTA)"
+SMOKE_SUMMARY_TEXT="health=pass mode=sso sso=pass api=$API_SMOKE_STATUS version_cache=$VERSION_CACHE_STATUS realtime=pass extended_realtime=$EXTENDED_REALTIME_STATUS sfu_topology=$SMOKE_SFU_TOPOLOGY_STATUS delta(nack=$SMOKE_NACK_DELTA,ack=$SMOKE_ACK_DELTA,chat=$SMOKE_CHAT_SENT_DELTA,idem=$SMOKE_CHAT_IDEMPOTENCY_HIT_DELTA,initial_state=$SMOKE_CALL_INITIAL_STATE_SENT_DELTA,initial_state_participants=$SMOKE_CALL_INITIAL_STATE_PARTICIPANTS_DELTA)"
 
 echo "[postdeploy-smoke] done"

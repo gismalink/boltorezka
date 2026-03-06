@@ -36,7 +36,10 @@
 - [x] Добавлены test env hooks:
    - `RTC_MEDIA_TOPOLOGY_DEFAULT` (default `p2p`)
    - `RTC_MEDIA_TOPOLOGY_SFU_ROOMS` (csv roomSlug list)
-- [ ] Добавить smoke assertions для `mediaTopology` routing.
+- [x] Добавлены smoke assertions для `mediaTopology` routing.
+- [x] Добавлен optional SFU room smoke profile в postdeploy gate:
+   - `SMOKE_SFU_ROOM_SLUG=<slug>`
+   - `SMOKE_SFU_EXPECT_MEDIA_TOPOLOGY=sfu` (default)
 - [ ] Зафиксировать rollback thresholds и runbook draft для Stage 1.
 
 ## 4) Гейты выхода из Stage 0
