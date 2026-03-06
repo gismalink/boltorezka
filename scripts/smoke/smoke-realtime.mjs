@@ -989,11 +989,10 @@ async function runLiveRoomBehaviorScenario({ roomSlug, timeoutMs }) {
   const requestJoin = `join-${Date.now()}`;
   ws.send(JSON.stringify({ type: "room.join", requestId: requestJoin, payload: { roomSlug } }));
 
-  await waitForEvent(
-    events,
-    (item) => item?.type === "ack" && item?.payload?.requestId === requestJoin,
-    "ack for room.join"
-  );
+  const joinResult = await waitForAckOrNack(events, requestJoin, "ack|nack for room.join");
+  if (!joinResult.ok) {
+    throw new Error(`[smoke:realtime] room.join rejected: ${joinResult.code || joinResult.type || "unknown"}`);
+  }
 
   let initialStateReplayFirstOk = false;
   let mediaTopologyFirstOk = false;
