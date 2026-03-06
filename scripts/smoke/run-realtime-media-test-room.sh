@@ -73,6 +73,10 @@ if [[ -z "$ICE_JSON" ]]; then
   ICE_JSON="${SMOKE_RTC_ICE_SERVERS_JSON:-}"
 fi
 
+if [[ -n "$ICE_JSON" ]] && ! printf '%s' "$ICE_JSON" | jq -e . >/dev/null 2>&1; then
+  ICE_JSON=""
+fi
+
 if [[ -z "$ICE_JSON" && -n "${TURN_USERNAME:-}" && -n "${TURN_PASSWORD:-}" ]]; then
   ICE_JSON="$(jq -cn \
     --arg host "$BASE_HOST" \
