@@ -68,6 +68,8 @@ services:
       APP_VERSION: ${TEST_APP_VERSION:-0.1.0}
       APP_BUILD_SHA: ${TEST_APP_BUILD_SHA:-}
       API_SERVE_STATIC: ${TEST_API_SERVE_STATIC:-0}
+      RTC_MEDIA_TOPOLOGY_DEFAULT: ${TEST_RTC_MEDIA_TOPOLOGY_DEFAULT:-p2p}
+      RTC_MEDIA_TOPOLOGY_SFU_ROOMS: ${TEST_RTC_MEDIA_TOPOLOGY_SFU_ROOMS:-}
     depends_on:
       boltorezka-turn:
         condition: service_started
@@ -146,6 +148,8 @@ services:
       APP_VERSION: ${PROD_APP_VERSION:-0.1.0}
       APP_BUILD_SHA: ${PROD_APP_BUILD_SHA:-}
       API_SERVE_STATIC: ${PROD_API_SERVE_STATIC:-0}
+      RTC_MEDIA_TOPOLOGY_DEFAULT: ${PROD_RTC_MEDIA_TOPOLOGY_DEFAULT:-p2p}
+      RTC_MEDIA_TOPOLOGY_SFU_ROOMS: ${PROD_RTC_MEDIA_TOPOLOGY_SFU_ROOMS:-}
     depends_on:
       boltorezka-turn:
         condition: service_started
