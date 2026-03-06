@@ -135,6 +135,15 @@ export function startPeerStatsMonitorForTarget(args: {
           return;
         }
 
+        if (!current.isRemoteSpeaking) {
+          current.inboundStalledTicks = 0;
+          if (current.inboundStalled) {
+            current.inboundStalled = false;
+            current.stallRecoveryAttempts = 0;
+          }
+          return;
+        }
+
         current.inboundStalledTicks += 1;
         if (!current.inboundStalled && current.inboundStalledTicks >= RTC_INBOUND_STALL_TICKS) {
           current.inboundStalled = true;
