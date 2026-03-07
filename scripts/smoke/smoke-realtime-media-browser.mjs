@@ -15,6 +15,8 @@ const videoNoiseHeight = Number(process.env.SMOKE_RTC_VIDEO_NOISE_HEIGHT || 240)
 const videoNoiseFps = Number(process.env.SMOKE_RTC_VIDEO_NOISE_FPS || 12);
 const iceServersJsonRaw = String(process.env.SMOKE_RTC_ICE_SERVERS_JSON || "").trim();
 const iceServersCsv = String(process.env.SMOKE_RTC_ICE_SERVERS || "stun:stun.l.google.com:19302,stun:stun1.l.google.com:19302");
+const iceTransportPolicyRaw = String(process.env.SMOKE_RTC_ICE_TRANSPORT_POLICY || "all").trim().toLowerCase();
+const iceTransportPolicy = iceTransportPolicyRaw === "relay" ? "relay" : "all";
 const hostResolveRule = String(process.env.SMOKE_CHROMIUM_HOST_RESOLVE_RULE || "").trim();
 const targetUserIdEnv = String(process.env.SMOKE_RTC_TARGET_USER_ID || "").trim();
 const reconnectIntervalMs = Number(process.env.SMOKE_RTC_RECONNECT_INTERVAL_MS || 3000);
@@ -127,11 +129,11 @@ async function fetchTicket(token, label) {
   return ticket;
 }
 
-async function preparePeerPage({ context, label, ticket, toneHz, iceServers }) {
+async function preparePeerPage({ context, label, ticket, toneHz, iceServers, iceTransportPolicy }) {
   const page = await context.newPage();
   await page.goto(baseUrl, { waitUntil: "domcontentloaded", timeout: timeoutMs });
 
-  const result = await page.evaluate(async ({ baseUrlInner, roomSlugInner, ticketInner, labelInner, timeoutMsInner, toneHz, melodyStepMsInner, iceServers, videoNoiseWidthInner, videoNoiseHeightInner, videoNoiseFpsInner, broadcastOffersInner }) => {
+  const result = await page.evaluate(async ({ baseUrlInner, roomSlugInner, ticketInner, labelInner, timeoutMsInner, toneHz, melodyStepMsInner, iceServers, iceTransportPolicyInner, videoNoiseWidthInner, videoNoiseHeightInner, videoNoiseFpsInner, broadcastOffersInner }) => {
     const toWsUrl = (httpUrl) => {
       const parsed = new URL(httpUrl);
       parsed.protocol = parsed.protocol === "https:" ? "wss:" : "ws:";
@@ -403,7 +405,7 @@ async function preparePeerPage({ context, label, ticket, toneHz, iceServers }) {
         return state.pc;
       }
 
-      const pc = new RTCPeerConnection({ iceServers });
+      const pc = new RTCPeerConnection({ iceServers, iceTransportPolicy: iceTransportPolicyInner });
       const toneTrack = ensureToneTrack();
       const videoTrack = ensureVideoTrack();
       pc.addTrack(toneTrack);
@@ -923,7 +925,8 @@ async function preparePeerPage({ context, label, ticket, toneHz, iceServers }) {
     videoNoiseHeightInner: videoNoiseHeight,
     videoNoiseFpsInner: videoNoiseFps,
     broadcastOffersInner: broadcastOffers,
-    iceServers
+    iceServers,
+    iceTransportPolicyInner: iceTransportPolicy
   });
 
   return { page, userId: String(result?.userId || "").trim() };
@@ -957,14 +960,16 @@ async function main() {
       label: "peer-a",
       ticket: ticketA,
       toneHz: Math.max(140, toneBaseFrequencyHz - toneFrequencySpreadHz),
-      iceServers
+      iceServers,
+      iceTransportPolicy
     });
     const peerB = await preparePeerPage({
       context: contextB,
       label: "peer-b",
       ticket: ticketB,
       toneHz: Math.max(140, toneBaseFrequencyHz + toneFrequencySpreadHz),
-      iceServers
+      iceServers,
+      iceTransportPolicy
     });
 
     pageA = peerA.page;
