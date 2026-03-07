@@ -222,7 +222,7 @@
 ### 8.4 Current gate record (refresh 2026-03-07)
 
 - Target main SHA: `<to-fill-before-next-prod>`
-- Last test deploy SHA: `58c678f` (`origin/feature/video-stream-investigation`, Stage 3 SFU-default profile)
+- Last test deploy SHA: `2dc2d40` (`origin/feature/video-stream-investigation`, Stage 3 SFU-default profile)
 - smoke:sso: `PASS`
 - smoke:api: `PASS`
 - smoke:realtime: `PASS`
@@ -230,7 +230,7 @@
 - smoke:web:version-cache: `PASS`
 - smoke:web:e2e: `PASS`
 - call relay scenario (`SMOKE_CALL_SIGNAL=1`): `PASS`
-- SFU default profile (`deploy:test:sfu`): `PASS x5 consecutive`
+- SFU default profile (`deploy:test:sfu`): `PASS x6 consecutive`
 - mediaTopology gate: `expected=sfu`, `mediaTopologyFirstOk=true`
 - Performance gate (`docs/operations/PERFORMANCE_GATE.md`): `READY_FOR_SIGNOFF`
 - Release Owner: `<to-fill-before-next-prod>`

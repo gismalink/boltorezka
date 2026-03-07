@@ -10,13 +10,13 @@
 ## 2) Verified test candidate
 
 - Branch: `origin/feature/video-stream-investigation`
-- Candidate SHA: `58c678f76e6fc695e2dece05dab715dc1e937fa7`
+- Candidate SHA: `2dc2d40d856bc1e1f1be9b617db6b8324d70b77d`
 - Test profile: `deploy:test:sfu`
-- Evidence window: latest refresh `2026-03-07T20:35:05Z`
+- Evidence window: latest refresh `2026-03-07T21:38:42Z`
 
 ## 3) Stage 3 evidence (must-pass)
 
-- `deploy:test:sfu` consecutive runs: `5/5 PASS`
+- `deploy:test:sfu` consecutive runs: `6/6 PASS`
 - Latest smoke summary:
   - `SMOKE_STATUS=pass`
   - `SMOKE_NACK_DELTA=1`
@@ -26,6 +26,10 @@
   - `expectedMediaTopology=sfu`
   - `mediaTopologyFirstOk=true`
   - `reconnectOk=true`
+- Extended realtime notes (non-strict diagnostics):
+  - `race3WayOk=false`
+  - `race3WayIceRelayOk=false`
+  - `liveRoomOk=false`
 
 ## 4) Runtime risk posture
 
