@@ -17,6 +17,7 @@ const iceServersJsonRaw = String(process.env.SMOKE_RTC_ICE_SERVERS_JSON || "").t
 const iceServersCsv = String(process.env.SMOKE_RTC_ICE_SERVERS || "stun:stun.l.google.com:19302,stun:stun1.l.google.com:19302");
 const iceTransportPolicyRaw = String(process.env.SMOKE_RTC_ICE_TRANSPORT_POLICY || "all").trim().toLowerCase();
 const iceTransportPolicy = iceTransportPolicyRaw === "relay" ? "relay" : "all";
+const disableMdnsHostCandidates = process.env.SMOKE_RTC_DISABLE_MDNS !== "0";
 const hostResolveRule = String(process.env.SMOKE_CHROMIUM_HOST_RESOLVE_RULE || "").trim();
 const targetUserIdEnv = String(process.env.SMOKE_RTC_TARGET_USER_ID || "").trim();
 const reconnectIntervalMs = Number(process.env.SMOKE_RTC_RECONNECT_INTERVAL_MS || 3000);
@@ -945,7 +946,9 @@ async function main() {
       "--use-fake-device-for-media-stream",
       "--use-fake-ui-for-media-stream",
       "--autoplay-policy=no-user-gesture-required"
-    ].concat(hostResolveRule ? [`--host-resolver-rules=${hostResolveRule}`] : [])
+    ]
+      .concat(disableMdnsHostCandidates ? ["--disable-features=WebRtcHideLocalIpsWithMdns"] : [])
+      .concat(hostResolveRule ? [`--host-resolver-rules=${hostResolveRule}`] : [])
   });
 
   const contextA = await browser.newContext();
