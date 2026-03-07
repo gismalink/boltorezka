@@ -118,6 +118,14 @@ if [[ -z "$ICE_JSON" && -n "$HOST_TURN_USERNAME" && -n "$HOST_TURN_PASSWORD" ]];
     '[{urls:["turn:" + $host + ":3478?transport=udp","turns:" + $host + ":5349?transport=tcp"],username:$user,credential:$pass}]')"
 fi
 
+if [[ -n "$ICE_JSON" ]]; then
+  ICE_URLS_DEBUG="$(printf '%s' "$ICE_JSON" | jq -r '[.[].urls[]?] | join(",")' 2>/dev/null || echo "<invalid-json>")"
+  ICE_COUNT_DEBUG="$(printf '%s' "$ICE_JSON" | jq -r 'length' 2>/dev/null || echo 0)"
+  echo "[smoke:realtime:media] ice servers configured: count=$ICE_COUNT_DEBUG urls=$ICE_URLS_DEBUG"
+else
+  echo "[smoke:realtime:media] ice servers configured: <empty>"
+fi
+
 SMOKE_API_URL="$BASE_URL" \
 SMOKE_ROOM_SLUG="$ROOM_SLUG" \
 SMOKE_TIMEOUT_MS="$TIMEOUT_MS" \
