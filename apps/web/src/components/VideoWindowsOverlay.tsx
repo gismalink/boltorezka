@@ -4,8 +4,10 @@ import type { PointerEvent as ReactPointerEvent } from "react";
 type VideoWindowsOverlayProps = {
   t: (key: string) => string;
   localUserLabel: string;
+  localCameraEnabled: boolean;
   localVideoStream: MediaStream | null;
   remoteVideoStreamsByUserId: Record<string, MediaStream>;
+  remoteCameraEnabledByUserId: Record<string, boolean>;
   remoteLabelsByUserId: Record<string, string>;
   minWidth: number;
   maxWidth: number;
@@ -23,17 +25,9 @@ type ResizeCorner = "top-left" | "top-right" | "bottom-left" | "bottom-right";
 type TileItem = {
   id: string;
   label: string;
-  stream: MediaStream;
+  stream: MediaStream | null;
   muted: boolean;
 };
-
-function hasRenderableVideoTrack(stream: MediaStream): boolean {
-  return stream
-    .getVideoTracks()
-    // Mobile browsers may transiently report muted/disabled during renegotiation.
-    // Keep tile visible if a live remote video track exists.
-    .some((track) => track.readyState === "live");
-}
 
 const TILE_GAP = 12;
 const VIEWPORT_GUTTER = 12;
@@ -81,6 +75,13 @@ function VideoTile({
       return;
     }
 
+    if (!stream) {
+      if (element.srcObject) {
+        element.srcObject = null;
+      }
+      return;
+    }
+
     if (element.srcObject !== stream) {
       element.srcObject = stream;
       void element.play().catch(() => {
@@ -104,14 +105,20 @@ function VideoTile({
       <div className="video-window-header">
         <span className="video-window-label">{label}</span>
       </div>
-      <video
-        ref={videoRef}
-        className="video-window-media"
-        style={mirrored ? { transform: "scaleX(-1)" } : undefined}
-        autoPlay
-        playsInline
-        muted={muted}
-      />
+      {stream ? (
+        <video
+          ref={videoRef}
+          className="video-window-media"
+          style={mirrored ? { transform: "scaleX(-1)" } : undefined}
+          autoPlay
+          playsInline
+          muted={muted}
+        />
+      ) : (
+        <div className="video-window-media" style={{ display: "grid", placeItems: "center", fontSize: "12px", opacity: 0.8 }}>
+          Waiting for stream
+        </div>
+      )}
       <button
         type="button"
         className="video-window-resize video-window-resize-top-left"
@@ -143,8 +150,10 @@ function VideoTile({
 export function VideoWindowsOverlay({
   t,
   localUserLabel,
+  localCameraEnabled,
   localVideoStream,
   remoteVideoStreamsByUserId,
+  remoteCameraEnabledByUserId,
   remoteLabelsByUserId,
   minWidth,
   maxWidth,
@@ -156,7 +165,7 @@ export function VideoWindowsOverlay({
   const items = useMemo<TileItem[]>(() => {
     const next: TileItem[] = [];
 
-    if (localVideoStream) {
+    if (localCameraEnabled) {
       next.push({
         id: "local",
         label: localUserLabel || t("video.you"),
@@ -165,21 +174,21 @@ export function VideoWindowsOverlay({
       });
     }
 
-    Object.entries(remoteVideoStreamsByUserId).forEach(([userId, stream]) => {
-      if (!hasRenderableVideoTrack(stream)) {
+    Object.entries(remoteCameraEnabledByUserId).forEach(([userId, enabled]) => {
+      if (!enabled || userId === "local") {
         return;
       }
 
       next.push({
         id: userId,
         label: remoteLabelsByUserId[userId] || userId,
-        stream,
+        stream: remoteVideoStreamsByUserId[userId] || null,
         muted: false
       });
     });
 
     return next;
-  }, [localVideoStream, localUserLabel, remoteLabelsByUserId, remoteVideoStreamsByUserId, t]);
+  }, [localCameraEnabled, localVideoStream, localUserLabel, remoteCameraEnabledByUserId, remoteLabelsByUserId, remoteVideoStreamsByUserId, t]);
 
   const [layoutsById, setLayoutsById] = useState<Record<string, TileLayout>>({});
   const dragStateRef = useRef<

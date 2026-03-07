@@ -1999,8 +1999,10 @@ export function App() {
         <VideoWindowsOverlay
           t={t}
           localUserLabel={user?.name || t("video.you")}
+          localCameraEnabled={allowVideoStreaming && cameraEnabled}
           localVideoStream={localVideoStream}
           remoteVideoStreamsByUserId={remoteVideoStreamsByUserId}
+          remoteCameraEnabledByUserId={effectiveVoiceCameraEnabledByUserIdInCurrentRoom}
           remoteLabelsByUserId={remoteVideoLabelsByUserId}
           minWidth={Math.min(serverVideoWindowMinWidth, serverVideoWindowMaxWidth)}
           maxWidth={Math.max(serverVideoWindowMinWidth, serverVideoWindowMaxWidth)}
