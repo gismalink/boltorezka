@@ -1007,18 +1007,21 @@ export function useVoiceCallRuntime({
   syncRoomTargetsRef.current = syncRoomTargets;
 
   const connectRoom = useCallback(async () => {
+    try {
+      await ensureLocalStream();
+    } catch (error) {
+      pushCallLog(`voice room connect blocked: ${(error as Error).message}`);
+      setCallStatus("idle");
+      return;
+    }
+
     roomVoiceConnectedRef.current = true;
     setRoomVoiceConnected(true);
     pushCallLog("voice room connect requested");
 
     if (roomVoiceTargetsRef.current.length === 0) {
       if (allowVideoStreaming && videoStreamingEnabled) {
-        try {
-          await ensureLocalStream();
-          pushCallLog("voice room local video preview enabled");
-        } catch (error) {
-          pushCallLog(`voice room local preview failed: ${(error as Error).message}`);
-        }
+        pushCallLog("voice room local video preview enabled");
       }
       pushCallLog("voice room waiting for participants");
       setCallStatus("idle");

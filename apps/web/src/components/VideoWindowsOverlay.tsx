@@ -27,6 +27,12 @@ type TileItem = {
   muted: boolean;
 };
 
+function hasRenderableVideoTrack(stream: MediaStream): boolean {
+  return stream
+    .getVideoTracks()
+    .some((track) => track.readyState === "live" && track.enabled && !track.muted);
+}
+
 const TILE_GAP = 12;
 const VIEWPORT_GUTTER = 12;
 const DEFAULT_Y = 76;
@@ -158,6 +164,10 @@ export function VideoWindowsOverlay({
     }
 
     Object.entries(remoteVideoStreamsByUserId).forEach(([userId, stream]) => {
+      if (!hasRenderableVideoTrack(stream)) {
+        return;
+      }
+
       next.push({
         id: userId,
         label: remoteLabelsByUserId[userId] || userId,
