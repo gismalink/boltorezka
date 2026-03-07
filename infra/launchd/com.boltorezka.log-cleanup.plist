@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.boltorezka.log-cleanup</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>/Users/davidshvartsman/srv/boltorezka/scripts/ops/cleanup-server-logs.sh</string>
+  </array>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+    <key>BOLTOREZKA_BASE_DIR</key>
+    <string>/Users/davidshvartsman/srv/boltorezka</string>
+    <key>EDGE_BASE_DIR</key>
+    <string>/Users/davidshvartsman/srv/edge</string>
+    <key>LOG_RETENTION_DAYS</key>
+    <string>1</string>
+  </dict>
+
+  <key>StartInterval</key>
+  <integer>3600</integer>
+
+  <key>WorkingDirectory</key>
+  <string>/Users/davidshvartsman/srv/boltorezka</string>
+
+  <key>RunAtLoad</key>
+  <true/>
+
+  <key>KeepAlive</key>
+  <false/>
+
+  <key>StandardOutPath</key>
+  <string>/Users/davidshvartsman/srv/edge/logs/boltorezka-log-cleanup.out.log</string>
+
+  <key>StandardErrorPath</key>
+  <string>/Users/davidshvartsman/srv/edge/logs/boltorezka-log-cleanup.err.log</string>
+</dict>
+</plist>

@@ -17,15 +17,17 @@ const smokeCallSignal = process.env.SMOKE_CALL_SIGNAL === "1";
 const smokeCallRace3Way = process.env.SMOKE_CALL_RACE_3WAY === "1";
 const smokeCallCameraToggleReconnect = process.env.SMOKE_CALL_CAMERA_TOGGLE_RECONNECT === "1";
 const smokeCallLiveRoom = process.env.SMOKE_CALL_LIVE_ROOM === "1";
+const liveRoomBroadcastOffers = process.env.SMOKE_CALL_LIVE_ROOM_BROADCAST_OFFERS !== "0";
 const smokeReconnect = process.env.SMOKE_RECONNECT === "1";
 const canRunReconnect = Boolean(preissuedTicketReconnect || bearerToken);
 const roomSlug = process.env.SMOKE_ROOM_SLUG ?? "general";
-const timeoutMs = Number(process.env.SMOKE_TIMEOUT_MS ?? 10000);
-const liveRoomDurationMs = Number(process.env.SMOKE_CALL_LIVE_ROOM_DURATION_MS ?? 300000);
+const MAX_SMOKE_TEST_DURATION_MS = 120000;
+const timeoutMs = Math.min(Number(process.env.SMOKE_TIMEOUT_MS ?? 10000), MAX_SMOKE_TEST_DURATION_MS);
+const liveRoomDurationMs = Number(process.env.SMOKE_CALL_LIVE_ROOM_DURATION_MS ?? 90000);
 const liveRoomParticipantCount = Number(process.env.SMOKE_CALL_LIVE_ROOM_PARTICIPANTS ?? 6);
 const liveRoomStepMinMs = Number(process.env.SMOKE_CALL_LIVE_ROOM_STEP_MIN_MS ?? 3000);
 const liveRoomStepMaxMs = Number(process.env.SMOKE_CALL_LIVE_ROOM_STEP_MAX_MS ?? 9000);
-const liveRoomActionTimeoutMs = Number(process.env.SMOKE_CALL_LIVE_ROOM_ACTION_TIMEOUT_MS ?? 7000);
+const liveRoomActionTimeoutMs = Math.min(Number(process.env.SMOKE_CALL_LIVE_ROOM_ACTION_TIMEOUT_MS ?? 7000), MAX_SMOKE_TEST_DURATION_MS);
 const liveRoomTicketPool = String(process.env.SMOKE_CALL_LIVE_ROOM_TICKETS ?? "");
 const liveRoomBearerPool = String(process.env.SMOKE_CALL_LIVE_ROOM_BEARER_TOKENS ?? process.env.SMOKE_TEST_BEARER_TOKENS ?? "");
 const liveRoomToneMode = process.env.SMOKE_CALL_LIVE_ROOM_TONE_MODE === "1";
@@ -59,8 +61,13 @@ if (smokeCallLiveRoom && (liveRoomParticipantCount < 5 || liveRoomParticipantCou
   process.exit(1);
 }
 
-if (smokeCallLiveRoom && (liveRoomDurationMs < 60000 || liveRoomDurationMs > 900000)) {
-  console.error("[smoke:realtime] SMOKE_CALL_LIVE_ROOM_DURATION_MS must be between 60000 and 900000");
+if (smokeCallLiveRoom && (liveRoomDurationMs < 60000 || liveRoomDurationMs > MAX_SMOKE_TEST_DURATION_MS)) {
+  console.error(`[smoke:realtime] SMOKE_CALL_LIVE_ROOM_DURATION_MS must be between 60000 and ${MAX_SMOKE_TEST_DURATION_MS}`);
+  process.exit(1);
+}
+
+if (smokeCallLiveRoom && liveRoomActionTimeoutMs > MAX_SMOKE_TEST_DURATION_MS) {
+  console.error(`[smoke:realtime] SMOKE_CALL_LIVE_ROOM_ACTION_TIMEOUT_MS must be <= ${MAX_SMOKE_TEST_DURATION_MS}`);
   process.exit(1);
 }
 
@@ -872,17 +879,21 @@ async function runLiveRoomBehaviorScenario({ roomSlug, timeoutMs }) {
         actor.state.offerCursor = (actor.state.offerCursor + 1) % targets.length;
 
         for (const target of orderedTargets) {
-        const offerResult = await sendAckedEvent({
-          ws: actor.ws,
-          events: actor.events,
-          type: "call.offer",
-          payload: {
-            targetUserId: target.userId,
+          const offerPayload = {
             signal: {
               type: "offer",
               sdp: `live-offer-${actor.userId}-${target.userId}-${Date.now()}`
             }
-          },
+          };
+          if (!liveRoomBroadcastOffers) {
+            offerPayload.targetUserId = target.userId;
+          }
+
+        const offerResult = await sendAckedEvent({
+          ws: actor.ws,
+          events: actor.events,
+          type: "call.offer",
+          payload: offerPayload,
           label: `offer-${actor.label}`,
           timeoutMs: liveRoomActionTimeoutMs,
           allowedNackCodes: ["OfferRateLimited", "TargetNotInRoom"]

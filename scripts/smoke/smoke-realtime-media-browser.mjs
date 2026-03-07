@@ -4,8 +4,9 @@ import { chromium } from "playwright";
 
 const baseUrl = String(process.env.SMOKE_API_URL || "http://localhost:8080").replace(/\/+$/, "");
 const roomSlug = String(process.env.SMOKE_ROOM_SLUG || "test-room").trim();
-const timeoutMs = Number(process.env.SMOKE_TIMEOUT_MS || 20000);
-const settleMs = Number(process.env.SMOKE_RTC_MEDIA_SETTLE_MS || 12000);
+const MAX_SMOKE_TEST_DURATION_MS = 120000;
+const timeoutMs = Math.min(Number(process.env.SMOKE_TIMEOUT_MS || 20000), MAX_SMOKE_TEST_DURATION_MS);
+const settleMs = Math.min(Number(process.env.SMOKE_RTC_MEDIA_SETTLE_MS || 12000), MAX_SMOKE_TEST_DURATION_MS);
 const toneBaseFrequencyHz = Number(process.env.SMOKE_RTC_TONE_FREQUENCY_HZ || process.env.SMOKE_RTC_TONE_FREQUENCY_BASE_HZ || 440);
 const toneFrequencySpreadHz = Number(process.env.SMOKE_RTC_TONE_SPREAD_HZ || 18);
 const melodyStepMs = Number(process.env.SMOKE_RTC_TONE_MELODY_STEP_MS || 440);
@@ -17,6 +18,7 @@ const iceServersCsv = String(process.env.SMOKE_RTC_ICE_SERVERS || "stun:stun.l.g
 const hostResolveRule = String(process.env.SMOKE_CHROMIUM_HOST_RESOLVE_RULE || "").trim();
 const targetUserIdEnv = String(process.env.SMOKE_RTC_TARGET_USER_ID || "").trim();
 const reconnectIntervalMs = Number(process.env.SMOKE_RTC_RECONNECT_INTERVAL_MS || 3000);
+const broadcastOffers = process.env.SMOKE_RTC_BROADCAST_OFFERS !== "0";
 
 const tokenA = String(process.env.SMOKE_TEST_BEARER_TOKEN || "").trim();
 const tokenB = String(process.env.SMOKE_TEST_BEARER_TOKEN_SECOND || "").trim();
@@ -129,7 +131,7 @@ async function preparePeerPage({ context, label, ticket, toneHz, iceServers }) {
   const page = await context.newPage();
   await page.goto(baseUrl, { waitUntil: "domcontentloaded", timeout: timeoutMs });
 
-  const result = await page.evaluate(async ({ baseUrlInner, roomSlugInner, ticketInner, labelInner, timeoutMsInner, toneHz, melodyStepMsInner, iceServers, videoNoiseWidthInner, videoNoiseHeightInner, videoNoiseFpsInner }) => {
+  const result = await page.evaluate(async ({ baseUrlInner, roomSlugInner, ticketInner, labelInner, timeoutMsInner, toneHz, melodyStepMsInner, iceServers, videoNoiseWidthInner, videoNoiseHeightInner, videoNoiseFpsInner, broadcastOffersInner }) => {
     const toWsUrl = (httpUrl) => {
       const parsed = new URL(httpUrl);
       parsed.protocol = parsed.protocol === "https:" ? "wss:" : "ws:";
@@ -657,13 +659,18 @@ async function preparePeerPage({ context, label, ticket, toneHz, iceServers }) {
         const offer = await pc.createOffer();
         await pc.setLocalDescription(offer);
 
-        await sendEvent("call.offer", {
-          targetUserId: state.remoteUserId,
+        const payload = {
           signal: {
             type: pc.localDescription?.type || "offer",
             sdp: pc.localDescription?.sdp || ""
           }
-        });
+        };
+
+        if (!broadcastOffersInner && state.remoteUserId) {
+          payload.targetUserId = state.remoteUserId;
+        }
+
+        await sendEvent("call.offer", payload);
       },
       waitConnected: async () => {
         await waitFor(
@@ -915,6 +922,7 @@ async function preparePeerPage({ context, label, ticket, toneHz, iceServers }) {
     videoNoiseWidthInner: videoNoiseWidth,
     videoNoiseHeightInner: videoNoiseHeight,
     videoNoiseFpsInner: videoNoiseFps,
+    broadcastOffersInner: broadcastOffers,
     iceServers
   });
 
