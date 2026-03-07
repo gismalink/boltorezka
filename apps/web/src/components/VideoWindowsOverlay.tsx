@@ -30,7 +30,9 @@ type TileItem = {
 function hasRenderableVideoTrack(stream: MediaStream): boolean {
   return stream
     .getVideoTracks()
-    .some((track) => track.readyState === "live" && track.enabled && !track.muted);
+    // Mobile browsers may transiently report muted/disabled during renegotiation.
+    // Keep tile visible if a live remote video track exists.
+    .some((track) => track.readyState === "live");
 }
 
 const TILE_GAP = 12;
