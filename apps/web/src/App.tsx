@@ -62,6 +62,7 @@ const MAX_CHAT_IMAGE_MAX_SIDE = 1200;
 const MAX_CHAT_IMAGE_QUALITY = 0.6;
 const MESSAGE_EDIT_DELETE_WINDOW_MS = 10 * 60 * 1000;
 const VERSION_POLL_INTERVAL_MS = 60000;
+const ROOM_SLUG_STORAGE_KEY = "boltorezka_room_slug";
 const CLIENT_BUILD_VERSION = String(import.meta.env.VITE_APP_VERSION || "").trim();
 const CLIENT_BUILD_DATE = String(import.meta.env.VITE_APP_BUILD_DATE || "").trim();
 const CLIENT_BUILD_DATE_LABEL = CLIENT_BUILD_DATE ? `v.${CLIENT_BUILD_DATE}` : "";
@@ -76,7 +77,10 @@ export function App() {
   const [authMode, setAuthMode] = useState("loading");
   const [rooms, setRooms] = useState<Room[]>([]);
   const [roomsTree, setRoomsTree] = useState<RoomsTreeResponse | null>(null);
-  const [roomSlug, setRoomSlug] = useState("general");
+  const [roomSlug, setRoomSlug] = useState(() => {
+    const stored = String(localStorage.getItem(ROOM_SLUG_STORAGE_KEY) || "").trim();
+    return stored || "general";
+  });
   const [messages, setMessages] = useState<Message[]>([]);
   const [messagesHasMore, setMessagesHasMore] = useState(false);
   const [messagesNextCursor, setMessagesNextCursor] = useState<MessagesCursor | null>(null);
@@ -144,7 +148,7 @@ export function App() {
   const [appMenuOpen, setAppMenuOpen] = useState(false);
   const [serverMenuTab, setServerMenuTab] = useState<ServerMenuTab>("events");
   const [isMobileViewport, setIsMobileViewport] = useState(false);
-  const [mobileTab, setMobileTab] = useState<MobileTab>("chat");
+  const [mobileTab, setMobileTab] = useState<MobileTab>("channels");
   const [serverAudioQuality, setServerAudioQuality] = useState<AudioQuality>("standard");
   const [serverAudioQualitySaving, setServerAudioQualitySaving] = useState(false);
   const [serverVideoEffectType, setServerVideoEffectType] = useState<ServerVideoEffectType>(() => {
@@ -1064,6 +1068,10 @@ export function App() {
     setPendingChatImageDataUrl(null);
   }, [roomSlug]);
 
+  useEffect(() => {
+    localStorage.setItem(ROOM_SLUG_STORAGE_KEY, roomSlug);
+  }, [roomSlug]);
+
   /** Clears all session-bound client state when auth token is absent/invalid. */
   const resetSessionState = useCallback(() => {
     setUser(null);
@@ -1619,6 +1627,21 @@ export function App() {
 
   const currentRoomSupportsRtc = currentRoom ? currentRoom.kind !== "text" : false;
 
+  useEffect(() => {
+    if (!roomSlug) {
+      return;
+    }
+
+    if (allRooms.length === 0) {
+      return;
+    }
+
+    const roomExists = allRooms.some((room) => room.slug === roomSlug);
+    if (!roomExists) {
+      setRoomSlug("general");
+    }
+  }, [allRooms, roomSlug]);
+
   useAutoRoomVoiceConnection({
     currentRoomSupportsRtc,
     roomVoiceTargetsCount: currentRoomVoiceTargets.length,
@@ -1636,7 +1659,7 @@ export function App() {
     setServerMenuTab
   });
 
-  useScreenWakeLock(Boolean(user));
+  useScreenWakeLock(Boolean(user && roomSlug && currentRoomSupportsRtc && roomVoiceConnected));
 
   const userDockNode = user ? (
     <UserDock
