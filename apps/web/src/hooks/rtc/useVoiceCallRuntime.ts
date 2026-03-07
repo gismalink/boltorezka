@@ -1168,14 +1168,6 @@ export function useVoiceCallRuntime({
         return;
       }
 
-      if (reason.startsWith("watchdog-")) {
-        logVoiceDiagnostics("runtime video-sync trigger ignored", {
-          reason,
-          skip: "watchdog-local-resync-only"
-        });
-        return;
-      }
-
       const now = Date.now();
       if (now - lastVideoSyncOfferAtRef.current < OFFER_VIDEO_SYNC_MIN_INTERVAL_MS) {
         logVoiceDiagnostics("runtime video-sync trigger ignored", {
@@ -1193,7 +1185,33 @@ export function useVoiceCallRuntime({
         peers: peersRef.current.size
       });
 
+      const watchdogVideoSenderMissing = reason === "watchdog-video-sender-missing";
+
       for (const [targetUserId, peer] of peersRef.current.entries()) {
+        if (watchdogVideoSenderMissing) {
+          if (!allowVideoStreaming || !videoStreamingEnabled) {
+            logVoiceDiagnostics("runtime video-sync target skipped", {
+              reason,
+              targetUserId,
+              targetLabel: peer.label || targetUserId,
+              skip: "video-disabled"
+            });
+            continue;
+          }
+
+          const videoSender = findSenderByKind(peer.connection, "video");
+          const hasLiveVideoSender = Boolean(videoSender?.track && videoSender.track.readyState === "live");
+          if (hasLiveVideoSender) {
+            logVoiceDiagnostics("runtime video-sync target skipped", {
+              reason,
+              targetUserId,
+              targetLabel: peer.label || targetUserId,
+              skip: "video-sender-present"
+            });
+            continue;
+          }
+        }
+
         if (!shouldInitiateOffer(targetUserId)) {
           logVoiceDiagnostics("runtime video-sync target skipped", {
             reason,
