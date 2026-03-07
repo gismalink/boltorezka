@@ -91,11 +91,19 @@ export async function syncRoomTargetsForRtc(args: {
 
     if (exists) {
       const connectionState = String(existingPeer?.connection?.connectionState || "");
+      const iceConnectionState = String(existingPeer?.connection?.iceConnectionState || "");
       const hasRemoteTrack = Boolean(existingPeer?.hasRemoteTrack);
       const reconnectTimerActive = typeof existingPeer?.reconnectTimer === "number";
+      const offerFlowBusy = Boolean(existingPeer?.offerInFlight || existingPeer?.makingOffer);
+      const signalingState = String(existingPeer?.connection?.signalingState || "");
       const staleDisconnected = connectionState === "disconnected" && !reconnectTimerActive;
       const staleFailed = connectionState === "failed" || connectionState === "closed";
-      const stalePeer = !hasRemoteTrack && (staleDisconnected || staleFailed);
+      const staleConnectedNoMedia = !hasRemoteTrack
+        && connectionState === "connected"
+        && (iceConnectionState === "connected" || iceConnectionState === "completed")
+        && !offerFlowBusy
+        && signalingState === "stable";
+      const stalePeer = !hasRemoteTrack && (staleDisconnected || staleFailed || staleConnectedNoMedia);
 
       if (stalePeer) {
         if (shouldInitiateOffer(userId)) {

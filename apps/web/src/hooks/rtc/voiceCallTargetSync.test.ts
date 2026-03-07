@@ -163,4 +163,51 @@ describe("voiceCallTargetSync", () => {
     });
     expect(updateCallStatus).toHaveBeenCalled();
   });
+
+  it("recreates connected peer without remote media track and triggers resync", async () => {
+    const peersRef = {
+      current: new Map([
+        [
+          "no-media-user",
+          {
+            label: "No Media User",
+            hasRemoteTrack: false,
+            reconnectTimer: null,
+            offerInFlight: false,
+            makingOffer: false,
+            connection: {
+              connectionState: "connected",
+              iceConnectionState: "connected",
+              signalingState: "stable"
+            }
+          }
+        ]
+      ])
+    } as any;
+
+    const startOffer = vi.fn(async () => undefined);
+    const closePeer = vi.fn();
+    const updateCallStatus = vi.fn();
+    const pushCallLog = vi.fn();
+
+    await syncRoomTargetsForRtc({
+      roomVoiceConnectedRef: { current: true },
+      roomVoiceTargetsRef: {
+        current: [{ userId: "no-media-user", userName: "No Media User" }]
+      } as any,
+      peersRef,
+      isTargetTemporarilyBlocked: () => false,
+      shouldInitiateOffer: () => true,
+      startOffer,
+      closePeer,
+      updateCallStatus,
+      pushCallLog
+    });
+
+    expect(closePeer).toHaveBeenCalledWith("no-media-user", "peer stale, re-sync: no-media-user");
+    expect(startOffer).toHaveBeenCalledWith("no-media-user", "No Media User", {
+      reason: "video-sync:target-resync"
+    });
+    expect(updateCallStatus).toHaveBeenCalled();
+  });
 });
