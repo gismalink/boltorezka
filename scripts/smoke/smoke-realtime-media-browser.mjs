@@ -1069,28 +1069,28 @@ async function main() {
       targetCursorA = nextA.nextCursor;
       targetCursorB = nextB.nextCursor;
 
-      const [reconnectA, reconnectB] = await Promise.all([
-        pageA.evaluate(
-          ({ excludedIds, preferredTargetUserId }) => window.__rtcMediaSmoke.ensureConnectedToRoomPeer({
-            excludeUserIds: excludedIds,
-            preferredTargetUserId
-          }),
-          {
-            excludedIds: [peerA.userId],
-            preferredTargetUserId: nextA.nextTarget
-          }
-        ),
-        pageB.evaluate(
-          ({ excludedIds, preferredTargetUserId }) => window.__rtcMediaSmoke.ensureConnectedToRoomPeer({
-            excludeUserIds: excludedIds,
-            preferredTargetUserId
-          }),
-          {
-            excludedIds: [peerB.userId],
-            preferredTargetUserId: nextB.nextTarget
-          }
-        )
-      ]);
+      const reconnectA = await pageA.evaluate(
+        ({ excludedIds, preferredTargetUserId }) => window.__rtcMediaSmoke.ensureConnectedToRoomPeer({
+          excludeUserIds: excludedIds,
+          preferredTargetUserId
+        }),
+        {
+          excludedIds: [peerA.userId],
+          preferredTargetUserId: nextA.nextTarget
+        }
+      );
+
+      // Run peer-b attempt after peer-a to reduce glare from simultaneous offers.
+      const reconnectB = await pageB.evaluate(
+        ({ excludedIds, preferredTargetUserId }) => window.__rtcMediaSmoke.ensureConnectedToRoomPeer({
+          excludeUserIds: excludedIds,
+          preferredTargetUserId
+        }),
+        {
+          excludedIds: [peerB.userId],
+          preferredTargetUserId: nextB.nextTarget
+        }
+      );
 
       if (reconnectA?.ok) {
         redialSuccessesA += 1;
