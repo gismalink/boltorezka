@@ -35,12 +35,45 @@ if [[ ! -f "$AUTH_ENV_FILE" ]]; then
   exit 1
 fi
 
+read_env_raw() {
+  local key="$1"
+  local file="$2"
+  if [[ ! -f "$file" ]]; then
+    return 0
+  fi
+
+  local line
+  line="$(grep -m1 -E "^${key}=" "$file" || true)"
+  if [[ -z "$line" ]]; then
+    return 0
+  fi
+  printf '%s' "${line#*=}"
+}
+
+strip_outer_quotes() {
+  local value="$1"
+  if [[ "$value" =~ ^\"(.*)\"$ ]]; then
+    printf '%s' "${BASH_REMATCH[1]}"
+    return
+  fi
+  if [[ "$value" =~ ^\'(.*)\'$ ]]; then
+    printf '%s' "${BASH_REMATCH[1]}"
+    return
+  fi
+  printf '%s' "$value"
+}
+
 set -a
 source "$AUTH_ENV_FILE"
-if [[ -f "$HOST_ENV_FILE" ]]; then
-  source "$HOST_ENV_FILE"
-fi
 set +a
+
+HOST_ICE_JSON_RAW="$(read_env_raw TEST_VITE_RTC_ICE_SERVERS_JSON "$HOST_ENV_FILE")"
+HOST_TURN_USERNAME_RAW="$(read_env_raw TURN_USERNAME "$HOST_ENV_FILE")"
+HOST_TURN_PASSWORD_RAW="$(read_env_raw TURN_PASSWORD "$HOST_ENV_FILE")"
+
+HOST_ICE_JSON="$(strip_outer_quotes "$HOST_ICE_JSON_RAW")"
+HOST_TURN_USERNAME="$(strip_outer_quotes "$HOST_TURN_USERNAME_RAW")"
+HOST_TURN_PASSWORD="$(strip_outer_quotes "$HOST_TURN_PASSWORD_RAW")"
 
 # Backward compatibility: older smoke auth files use SMOKE_BEARER_TOKEN names.
 if [[ -z "${SMOKE_TEST_BEARER_TOKEN:-}" && -n "${SMOKE_BEARER_TOKEN:-}" ]]; then
@@ -68,7 +101,7 @@ if [[ -z "$TICKET_PRIMARY" || "$TICKET_PRIMARY" == "null" || -z "$TICKET_SECOND"
   exit 1
 fi
 
-ICE_JSON="${TEST_VITE_RTC_ICE_SERVERS_JSON:-}"
+ICE_JSON="$HOST_ICE_JSON"
 if [[ -z "$ICE_JSON" ]]; then
   ICE_JSON="${SMOKE_RTC_ICE_SERVERS_JSON:-}"
 fi
@@ -77,11 +110,11 @@ if [[ -n "$ICE_JSON" ]] && ! printf '%s' "$ICE_JSON" | jq -e . >/dev/null 2>&1; 
   ICE_JSON=""
 fi
 
-if [[ -z "$ICE_JSON" && -n "${TURN_USERNAME:-}" && -n "${TURN_PASSWORD:-}" ]]; then
+if [[ -z "$ICE_JSON" && -n "$HOST_TURN_USERNAME" && -n "$HOST_TURN_PASSWORD" ]]; then
   ICE_JSON="$(jq -cn \
-    --arg host "$BASE_HOST" \
-    --arg user "$TURN_USERNAME" \
-    --arg pass "$TURN_PASSWORD" \
+    --arg host "gismalink.art" \
+    --arg user "$HOST_TURN_USERNAME" \
+    --arg pass "$HOST_TURN_PASSWORD" \
     '[{urls:["turn:" + $host + ":3478?transport=udp","turns:" + $host + ":5349?transport=tcp"],username:$user,credential:$pass}]')"
 fi
 
