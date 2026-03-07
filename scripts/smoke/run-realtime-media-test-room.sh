@@ -9,7 +9,7 @@ BASE_URL="${SMOKE_API_URL:-https://test.boltorezka.gismalink.art}"
 ROOM_SLUG="${SMOKE_ROOM_SLUG:-test-room}"
 SETTLE_MS="${SMOKE_RTC_MEDIA_SETTLE_MS:-45000}"
 TIMEOUT_MS="${SMOKE_TIMEOUT_MS:-120000}"
-AUTH_ENV_FILE="${SMOKE_AUTH_ENV_FILE:-.deploy/smoke-auth-live-a.env}"
+AUTH_ENV_FILE="${SMOKE_AUTH_ENV_FILE:-.deploy/smoke-auth.env}"
 HOST_ENV_FILE="${SMOKE_HOST_ENV_FILE:-infra/.env.host}"
 TONE_BASE_HZ="${SMOKE_RTC_TONE_FREQUENCY_BASE_HZ:-438}"
 TONE_SPREAD_HZ="${SMOKE_RTC_TONE_SPREAD_HZ:-22}"
@@ -27,7 +27,7 @@ if [[ "$SETTLE_MS" =~ ^[0-9]+$ ]] && (( SETTLE_MS > MAX_TEST_DURATION_MS )); the
 fi
 
 BASE_HOST="$(printf '%s' "$BASE_URL" | sed -E 's#https?://([^/]+).*#\1#')"
-USE_LOCAL_RESOLVE="${SMOKE_USE_LOCAL_RESOLVE:-1}"
+USE_LOCAL_RESOLVE="${SMOKE_USE_LOCAL_RESOLVE:-0}"
 
 resolve_flags=()
 resolver_rule=""
