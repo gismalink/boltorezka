@@ -122,4 +122,45 @@ describe("voiceCallTargetSync", () => {
     expect(pushCallLog).toHaveBeenCalledWith("voice room awaiting offer <- Remote Offerer");
     expect(updateCallStatus).toHaveBeenCalled();
   });
+
+  it("recreates stale disconnected peer and starts targeted resync offer", async () => {
+    const peersRef = {
+      current: new Map([
+        [
+          "stale-user",
+          {
+            label: "Stale User",
+            hasRemoteTrack: false,
+            reconnectTimer: null,
+            connection: { connectionState: "disconnected" }
+          }
+        ]
+      ])
+    } as any;
+
+    const startOffer = vi.fn(async () => undefined);
+    const closePeer = vi.fn();
+    const updateCallStatus = vi.fn();
+    const pushCallLog = vi.fn();
+
+    await syncRoomTargetsForRtc({
+      roomVoiceConnectedRef: { current: true },
+      roomVoiceTargetsRef: {
+        current: [{ userId: "stale-user", userName: "Stale User" }]
+      } as any,
+      peersRef,
+      isTargetTemporarilyBlocked: () => false,
+      shouldInitiateOffer: () => true,
+      startOffer,
+      closePeer,
+      updateCallStatus,
+      pushCallLog
+    });
+
+    expect(closePeer).toHaveBeenCalledWith("stale-user", "peer stale, re-sync: stale-user");
+    expect(startOffer).toHaveBeenCalledWith("stale-user", "Stale User", {
+      reason: "video-sync:target-resync"
+    });
+    expect(updateCallStatus).toHaveBeenCalled();
+  });
 });

@@ -1342,6 +1342,24 @@ export function useVoiceCallRuntime({
     if (!roomVoiceConnected) {
       return;
     }
+
+    // Periodic reconciliation heals stale peer contexts when presence does not change.
+    const intervalId = window.setInterval(() => {
+      if (!roomVoiceConnectedRef.current) {
+        return;
+      }
+      void syncRoomTargets();
+    }, 6000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [roomVoiceConnected, syncRoomTargets]);
+
+  useEffect(() => {
+    if (!roomVoiceConnected) {
+      return;
+    }
     if (!allowVideoStreaming || !videoStreamingEnabled) {
       return;
     }

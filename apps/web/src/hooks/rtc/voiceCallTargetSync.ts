@@ -41,7 +41,11 @@ export async function syncRoomTargetsForRtc(args: {
   peersRef: MutableRefObject<Map<string, VoicePeerContext>>;
   isTargetTemporarilyBlocked: (targetUserId: string) => boolean;
   shouldInitiateOffer: (targetUserId: string) => boolean;
-  startOffer: (targetUserId: string, targetLabel: string) => Promise<void>;
+  startOffer: (
+    targetUserId: string,
+    targetLabel: string,
+    options?: { reason?: "manual" | "inbound-stalled" | `video-sync:${string}`; iceRestart?: boolean }
+  ) => Promise<void>;
   closePeer: (targetUserId: string, reason?: string) => void;
   updateCallStatus: () => void;
   pushCallLog: (text: string) => void;
@@ -82,7 +86,32 @@ export async function syncRoomTargetsForRtc(args: {
       continue;
     }
 
-    const exists = peersRef.current.has(userId);
+    const existingPeer = peersRef.current.get(userId);
+    const exists = Boolean(existingPeer);
+
+    if (exists) {
+      const connectionState = String(existingPeer?.connection?.connectionState || "");
+      const hasRemoteTrack = Boolean(existingPeer?.hasRemoteTrack);
+      const reconnectTimerActive = typeof existingPeer?.reconnectTimer === "number";
+      const staleDisconnected = connectionState === "disconnected" && !reconnectTimerActive;
+      const staleFailed = connectionState === "failed" || connectionState === "closed";
+      const stalePeer = !hasRemoteTrack && (staleDisconnected || staleFailed);
+
+      if (stalePeer) {
+        if (shouldInitiateOffer(userId)) {
+          // Recreate an unhealthy peer context first to avoid reusing a failed RTCPeerConnection.
+          closePeer(userId, `peer stale, re-sync: ${userId}`);
+          await startOffer(userId, userName, {
+            reason: "video-sync:target-resync"
+          });
+        } else {
+          closePeer(userId, `peer stale, awaiting remote re-offer: ${userId}`);
+          pushCallLog(`voice room awaiting offer <- ${userName}`);
+        }
+        continue;
+      }
+    }
+
     if (!exists) {
       if (shouldInitiateOffer(userId)) {
         await startOffer(userId, userName);
