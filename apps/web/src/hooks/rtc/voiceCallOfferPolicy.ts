@@ -5,8 +5,9 @@ export type OfferCadenceBucket = "manual" | "video-sync" | "ice-restart";
 
 export const OFFER_MIN_INTERVAL_MS = 10000;
 
-// Keep video-sync cadence at/above server OfferRateLimited threshold (5s).
-export const OFFER_VIDEO_SYNC_MIN_INTERVAL_MS = 5000;
+// Keep video-sync cadence comfortably above server OfferRateLimited threshold (5s)
+// to avoid edge collisions from simultaneous reconnect/sync triggers.
+export const OFFER_VIDEO_SYNC_MIN_INTERVAL_MS = 8000;
 
 export const OFFER_ICE_RESTART_MIN_INTERVAL_MS = 5000;
 
