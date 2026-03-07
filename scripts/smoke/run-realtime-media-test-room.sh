@@ -114,9 +114,9 @@ if [[ -z "$TICKET_PRIMARY" || "$TICKET_PRIMARY" == "null" || -z "$TICKET_SECOND"
   exit 1
 fi
 
-ICE_JSON="$HOST_ICE_JSON"
+ICE_JSON="${SMOKE_RTC_ICE_SERVERS_JSON:-}"
 if [[ -z "$ICE_JSON" ]]; then
-  ICE_JSON="${SMOKE_RTC_ICE_SERVERS_JSON:-}"
+  ICE_JSON="$HOST_ICE_JSON"
 fi
 
 if [[ -n "$ICE_JSON" ]] && ! printf '%s' "$ICE_JSON" | jq -e . >/dev/null 2>&1; then
