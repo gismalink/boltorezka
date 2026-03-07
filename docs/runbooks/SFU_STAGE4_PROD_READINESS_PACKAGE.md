@@ -10,13 +10,13 @@
 ## 2) Verified test candidate
 
 - Branch: `origin/feature/video-stream-investigation`
-- Candidate SHA: `4f9655ed6c9c35187ad7d348d6732e72c8c5678b`
+- Candidate SHA: `58c678f76e6fc695e2dece05dab715dc1e937fa7`
 - Test profile: `deploy:test:sfu`
-- Evidence window: latest refresh `2026-03-07T20:21:30Z`
+- Evidence window: latest refresh `2026-03-07T20:35:05Z`
 
 ## 3) Stage 3 evidence (must-pass)
 
-- `deploy:test:sfu` consecutive runs: `4/4 PASS`
+- `deploy:test:sfu` consecutive runs: `5/5 PASS`
 - Latest smoke summary:
   - `SMOKE_STATUS=pass`
   - `SMOKE_NACK_DELTA=1`
