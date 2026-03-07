@@ -1,13 +1,14 @@
 # План Миграции SFU (Decision Package)
 
 Дата: 2026-03-07  
-Статус: Stage 0-2 завершены в test, Stage 3 (SFU-by-default в test) в работе
+Статус: Stage 0-3 завершены в test, Stage 4 (prod readiness package) в работе
 
 Execution reference:
-- `docs/architecture/SFU_STAGE0_EXECUTION_PLAN.md`
+- `docs/plans/SFU_STAGE0_EXECUTION_PLAN.md`
 - `docs/runbooks/SFU_STAGE1_DARK_LAUNCH_RUNBOOK.md`
 - `docs/runbooks/SFU_STAGE2_CANARY_RUNBOOK.md`
 - `docs/runbooks/SFU_STAGE3_DEFAULT_SFU_TEST_RUNBOOK.md`
+- `docs/runbooks/SFU_STAGE4_PROD_READINESS_PACKAGE.md`
 
 ## 1) Цель
 
@@ -91,6 +92,7 @@ Stage 2 control knobs (test-first):
 Stage 3: Гибрид по умолчанию в test
 - Автомаршрутизация комнат выше порога в SFU.
 - Сохранить ручной rollback на P2P path.
+- Статус: Completed в test (последний evidence refresh: `deploy:test:sfu` PASS, `sha=4f9655e`, `expectedMediaTopology=sfu`, `mediaTopologyFirstOk=true`, серия `PASS x4`).
 
 Stage 3 rollout profile (test):
 - `RTC_MEDIA_TOPOLOGY_DEFAULT=sfu`

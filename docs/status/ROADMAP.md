@@ -3,17 +3,17 @@
 Этот roadmap хранит только ссылки на отдельные плановые/канонические документы.
 Детали реализации и выполненные инкременты ведутся в `docs/status/FEATURE_LOG.md`.
 
-Последняя синхронизация: `2026-03-06`.
+Последняя синхронизация: `2026-03-07` (SFU Stage 3 closed in test, Stage 4 readiness active).
 
 ## Open workstreams
 
 - RTC stability hardening (active): `docs/status/RTC_STABILITY_ROADMAP.md`.
 - Phase 5 (iOS/macOS kickoff scope): `docs/plans/PHASE5_IOS_MACOS_SCOPE_NOTE.md`.
-- SFU migration decision package: `docs/architecture/SFU_MIGRATION_PLAN.md`.
+- SFU migration decision package: `docs/plans/SFU_MIGRATION_PLAN.md`.
 
 ## Recently completed
 
-- Legacy static deprecation (Phase D): `docs/runbooks/LEGACY_PUBLIC_DEPRECATION_PLAN.md`.
+- Legacy static deprecation (Phase D): `docs/runbooks/legacy/LEGACY_PUBLIC_DEPRECATION_PLAN.md`.
 
 ### Phase 5 — iOS & macOS (open)
 
@@ -44,7 +44,7 @@
 
 - Architecture baseline: `docs/architecture/ARCHITECTURE.md`.
 - Phase 0 (MVP boundaries + ADR): `docs/architecture/PHASE0_MVP_ADR.md`.
-- SFU migration decision package: `docs/architecture/SFU_MIGRATION_PLAN.md`.
+- SFU migration decision package: `docs/plans/SFU_MIGRATION_PLAN.md`.
 - Phase 3 (Voice/WebRTC MVP policy): `docs/runbooks/PHASE3_VOICE_WEBRTC_MVP_POLICY.md`.
 - Voice baseline runbook: `docs/runbooks/VOICE_BASELINE_RUNBOOK.md`.
 - DB backup runbook: `docs/operations/DB_BACKUP_RUNBOOK.md`.

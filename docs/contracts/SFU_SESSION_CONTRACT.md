@@ -118,6 +118,6 @@ Server outbound events:
 
 ## 9) Связанные документы
 
-- `docs/architecture/SFU_MIGRATION_PLAN.md`
-- `docs/architecture/SFU_STAGE0_EXECUTION_PLAN.md`
+- `docs/plans/SFU_MIGRATION_PLAN.md`
+- `docs/plans/SFU_STAGE0_EXECUTION_PLAN.md`
 - `docs/architecture/PHASE0_MVP_ADR.md`
