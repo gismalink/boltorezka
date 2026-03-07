@@ -132,7 +132,8 @@ if [[ -z "$ICE_JSON" && -n "$HOST_TURN_USERNAME" && -n "$HOST_TURN_PASSWORD" ]];
 fi
 
 TURN_HOST_FOR_SMOKE="${HOST_TURN_CERT_DOMAIN:-gismalink.art}"
-if [[ -n "$ICE_JSON" ]] && printf '%s' "$ICE_JSON" | jq -e . >/dev/null 2>&1; then
+APPEND_TURN_UDP="${SMOKE_RTC_APPEND_TURN_UDP:-1}"
+if [[ "$APPEND_TURN_UDP" == "1" && -n "$ICE_JSON" ]] && printf '%s' "$ICE_JSON" | jq -e . >/dev/null 2>&1; then
   HAS_TURN_UDP="$(printf '%s' "$ICE_JSON" | jq -r '[.[].urls[]? | select(startswith("turn:") and contains(":3478"))] | length')"
   if [[ "$HAS_TURN_UDP" == "0" ]]; then
     ICE_JSON="$(printf '%s' "$ICE_JSON" | jq -c --arg host "$TURN_HOST_FOR_SMOKE" 'map(.urls = (((.urls // []) + ["turn:" + $host + ":3478?transport=udp"]) | unique))')"
