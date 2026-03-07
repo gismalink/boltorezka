@@ -178,6 +178,8 @@ async function preparePeerPage({ context, label, ticket, toneHz, iceServers, ice
       reconnectSuccesses: 0,
       localIceSentCount: 0,
       localIceCandidateTypes: new Set(),
+      iceCandidateErrorCount: 0,
+      lastIceCandidateError: "",
       addIceErrorCount: 0,
       lastAddIceError: ""
     };
@@ -440,6 +442,14 @@ async function preparePeerPage({ context, label, ticket, toneHz, iceServers, ice
         }
       };
 
+      pc.onicecandidateerror = (event) => {
+        state.iceCandidateErrorCount += 1;
+        const errorCode = Number(event?.errorCode || 0);
+        const errorText = String(event?.errorText || "");
+        const url = String(event?.url || "");
+        state.lastIceCandidateError = `code=${errorCode} text=${errorText} url=${url}`.trim();
+      };
+
       pc.oniceconnectionstatechange = () => {
         if (pc.iceConnectionState === "connected" || pc.iceConnectionState === "completed") {
           state.callConnectedAt = Date.now();
@@ -639,11 +649,14 @@ async function preparePeerPage({ context, label, ticket, toneHz, iceServers, ice
         reconnectSuccesses: state.reconnectSuccesses,
         localIceSentCount: state.localIceSentCount,
         localIceCandidateTypes: Array.from(state.localIceCandidateTypes),
+        iceCandidateErrorCount: state.iceCandidateErrorCount,
+        lastIceCandidateError: state.lastIceCandidateError,
         addIceErrorCount: state.addIceErrorCount,
         lastAddIceError: state.lastAddIceError,
         joinAcked: state.joinAcked,
         connectionState: state.pc?.connectionState || "new",
-        iceConnectionState: state.pc?.iceConnectionState || "new"
+        iceConnectionState: state.pc?.iceConnectionState || "new",
+        iceGatheringState: state.pc?.iceGatheringState || "new"
       }),
       waitForRoomPeer: async (excludeUserIds = [], timeoutForPeerMs = timeoutMsInner) => {
         const excluded = new Set((Array.isArray(excludeUserIds) ? excludeUserIds : []).map((item) => String(item || "").trim()));
@@ -753,6 +766,8 @@ async function preparePeerPage({ context, label, ticket, toneHz, iceServers, ice
         let outboundVideoPackets = 0;
         let inboundVideoBytes = 0;
         let inboundVideoPackets = 0;
+        let candidatePairsTotal = 0;
+        let candidatePairsSucceeded = 0;
         let selectedCandidatePairId = "";
         const localCandidatesById = new Map();
         const remoteCandidatesById = new Map();
@@ -768,7 +783,11 @@ async function preparePeerPage({ context, label, ticket, toneHz, iceServers, ice
           }
 
           if (entry.type === "candidate-pair") {
+            candidatePairsTotal += 1;
             candidatePairsById.set(String(entry.id || ""), entry);
+            if (entry.state === "succeeded") {
+              candidatePairsSucceeded += 1;
+            }
             if (entry.nominated || entry.selected || entry.state === "succeeded") {
               selectedCandidatePairId = String(entry.id || selectedCandidatePairId || "");
             }
@@ -827,8 +846,13 @@ async function preparePeerPage({ context, label, ticket, toneHz, iceServers, ice
           relayedIceCount: state.relayedIceCount,
           localIceSentCount: state.localIceSentCount,
           localIceCandidateTypes: Array.from(state.localIceCandidateTypes),
+          iceCandidateErrorCount: state.iceCandidateErrorCount,
+          lastIceCandidateError: state.lastIceCandidateError,
           addIceErrorCount: state.addIceErrorCount,
           lastAddIceError: state.lastAddIceError,
+          iceGatheringState: pc.iceGatheringState,
+          candidatePairsTotal,
+          candidatePairsSucceeded,
           selectedCandidatePairId,
           selectedCandidatePairState: selectedPair ? String(selectedPair.state || "") : "",
           selectedCandidatePairRttMs: selectedPair ? Number(selectedPair.currentRoundTripTime || 0) * 1000 : 0,
