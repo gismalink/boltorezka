@@ -170,7 +170,11 @@ async function preparePeerPage({ context, label, ticket, toneHz, iceServers }) {
       presentUserIds: new Set(),
       peerLastSeenAt: new Map(),
       reconnectAttempts: 0,
-      reconnectSuccesses: 0
+      reconnectSuccesses: 0,
+      localIceSentCount: 0,
+      localIceCandidateTypes: new Set(),
+      addIceErrorCount: 0,
+      lastAddIceError: ""
     };
 
     const noteRatios = [1, 9 / 8, 5 / 4, 4 / 3, 3 / 2, 5 / 3, 15 / 8, 2];
@@ -408,6 +412,13 @@ async function preparePeerPage({ context, label, ticket, toneHz, iceServers }) {
           return;
         }
 
+        state.localIceSentCount += 1;
+        const candidateLine = String(event.candidate.candidate || "");
+        const candidateTypeMatch = candidateLine.match(/\btyp\s+([a-z0-9]+)/i);
+        if (candidateTypeMatch?.[1]) {
+          state.localIceCandidateTypes.add(String(candidateTypeMatch[1]).toLowerCase());
+        }
+
         state.ws.send(JSON.stringify({
           type: "call.ice",
           requestId: `ice-${Date.now()}-${Math.floor(Math.random() * 100000)}`,
@@ -448,8 +459,9 @@ async function preparePeerPage({ context, label, ticket, toneHz, iceServers }) {
       for (const candidate of pending) {
         try {
           await pc.addIceCandidate(new RTCIceCandidate(candidate));
-        } catch {
-          // noop
+        } catch (error) {
+          state.addIceErrorCount += 1;
+          state.lastAddIceError = String(error instanceof Error ? error.message : error || "addIceCandidate failed");
         }
       }
     };
@@ -513,7 +525,9 @@ async function preparePeerPage({ context, label, ticket, toneHz, iceServers }) {
 
       try {
         await pc.addIceCandidate(new RTCIceCandidate(candidate));
-      } catch {
+      } catch (error) {
+        state.addIceErrorCount += 1;
+        state.lastAddIceError = String(error instanceof Error ? error.message : error || "addIceCandidate failed");
         return;
       }
     };
@@ -618,6 +632,10 @@ async function preparePeerPage({ context, label, ticket, toneHz, iceServers }) {
         presentUserIds: Array.from(state.presentUserIds),
         reconnectAttempts: state.reconnectAttempts,
         reconnectSuccesses: state.reconnectSuccesses,
+        localIceSentCount: state.localIceSentCount,
+        localIceCandidateTypes: Array.from(state.localIceCandidateTypes),
+        addIceErrorCount: state.addIceErrorCount,
+        lastAddIceError: state.lastAddIceError,
         joinAcked: state.joinAcked,
         connectionState: state.pc?.connectionState || "new",
         iceConnectionState: state.pc?.iceConnectionState || "new"
@@ -797,6 +815,10 @@ async function preparePeerPage({ context, label, ticket, toneHz, iceServers }) {
           relayedOfferCount: state.relayedOfferCount,
           relayedAnswerCount: state.relayedAnswerCount,
           relayedIceCount: state.relayedIceCount,
+          localIceSentCount: state.localIceSentCount,
+          localIceCandidateTypes: Array.from(state.localIceCandidateTypes),
+          addIceErrorCount: state.addIceErrorCount,
+          lastAddIceError: state.lastAddIceError,
           selectedCandidatePairId,
           selectedCandidatePairState: selectedPair ? String(selectedPair.state || "") : "",
           selectedCandidatePairRttMs: selectedPair ? Number(selectedPair.currentRoundTripTime || 0) * 1000 : 0,
