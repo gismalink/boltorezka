@@ -703,9 +703,17 @@ export function App() {
   });
 
   const effectiveVoiceCameraEnabledByUserIdInCurrentRoom = useMemo(() => {
-    const map: Record<string, boolean> = {
-      ...voiceCameraEnabledByUserIdInCurrentRoom
-    };
+    const map: Record<string, boolean> = {};
+    const activeTargetIds = new Set(
+      currentRoomVoiceTargets
+        .map((member) => String(member.userId || "").trim())
+        .filter((userId) => userId.length > 0)
+    );
+
+    // Keep camera status strictly scoped to current room participants.
+    activeTargetIds.forEach((userId) => {
+      map[userId] = voiceCameraEnabledByUserIdInCurrentRoom[userId] === true;
+    });
 
     const localUserId = String(user?.id || "").trim();
     if (localUserId) {
@@ -713,7 +721,7 @@ export function App() {
     }
 
     return map;
-  }, [voiceCameraEnabledByUserIdInCurrentRoom, user?.id, roomVoiceConnected, allowVideoStreaming, cameraEnabled]);
+  }, [voiceCameraEnabledByUserIdInCurrentRoom, currentRoomVoiceTargets, user?.id, roomVoiceConnected, allowVideoStreaming, cameraEnabled]);
 
   const voiceMediaStatusSummaryByUserIdInCurrentRoom = useMemo(() => {
     const map = {
@@ -955,10 +963,8 @@ export function App() {
 
     setVoiceInitialMicStateByUserIdInCurrentRoom(nextMicState);
     setVoiceInitialAudioOutputMutedByUserIdInCurrentRoom(nextAudioMutedState);
-    setVoiceCameraEnabledByUserIdInCurrentRoom((prev) => ({
-      ...prev,
-      ...nextCameraState
-    }));
+    // Initial state should replace previous snapshot for this room to avoid stale ghost entries.
+    setVoiceCameraEnabledByUserIdInCurrentRoom(nextCameraState);
   }, []);
 
   /** Syncs audio-quality updates from realtime into top-level room state stores. */
