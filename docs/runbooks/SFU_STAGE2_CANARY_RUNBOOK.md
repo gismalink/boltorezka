@@ -10,7 +10,7 @@
 ## 2) Область применения
 
 - Контур: только `test`.
-- Stage: `Stage 2 (Canary)` из `docs/architecture/SFU_MIGRATION_PLAN.md`.
+- Stage: `Stage 2 (Canary)` из `docs/plans/SFU_MIGRATION_PLAN.md`.
 - Topology policy:
   - default `p2p`,
   - SFU включается точечно по room/user allowlist.
@@ -69,6 +69,6 @@ Routing priority (server-side):
 
 ## 8) Связанные документы
 
-- `docs/architecture/SFU_MIGRATION_PLAN.md`
+- `docs/plans/SFU_MIGRATION_PLAN.md`
 - `docs/runbooks/SFU_STAGE1_DARK_LAUNCH_RUNBOOK.md`
-- `docs/architecture/SFU_SESSION_CONTRACT.md`
+- `docs/contracts/SFU_SESSION_CONTRACT.md`

@@ -1,5 +1,7 @@
 # Legacy `apps/api/public` Deprecation Plan
 
+> Legacy status: archived historical plan. Completed for test contour; keep for evidence only.
+
 Цель: безопасно вывести из эксплуатации legacy static path в `apps/api/public`, не ломая текущий production/runtime flow, где API-контейнер раздаёт собранный React bundle из `public`.
 
 ## 1) Текущее состояние

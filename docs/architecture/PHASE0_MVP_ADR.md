@@ -49,7 +49,7 @@
 
 - Controlled rollout toggle-пакет (Phase 5) внедрен и используется как policy fallback.
 - RTC hardening package (Phase 6.1-6.3) закрыт в test-контуре.
-- Decision package по SFU зафиксирован: `docs/architecture/SFU_MIGRATION_PLAN.md`.
+- Decision package по SFU зафиксирован: `docs/plans/SFU_MIGRATION_PLAN.md`.
 - Текущий документ остается источником MVP-ограничений до завершения SFU Stage 0.
 
 ## 4) Канонические ссылки
@@ -58,7 +58,7 @@
 - Voice baseline: `docs/runbooks/VOICE_BASELINE_RUNBOOK.md`
 - Pre-prod gate: `docs/runbooks/PREPROD_DECISION_PACKAGE.md`
 - Test/load evidence: `docs/status/TEST_RESULTS.md`
-- SFU migration decision package: `docs/architecture/SFU_MIGRATION_PLAN.md`
+- SFU migration decision package: `docs/plans/SFU_MIGRATION_PLAN.md`
 
 ## 5) Что остается вне scope этого Phase 0 пакета
 

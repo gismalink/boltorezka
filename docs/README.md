@@ -12,18 +12,24 @@
 - `runbooks/` — operational checklists and rollout/deploy runbooks
   - [RUNBOOK_TEST_DEPLOY](runbooks/RUNBOOK_TEST_DEPLOY.md)
   - [RUNBOOK_TEST_ROLLOUT_QUICKSTART](runbooks/RUNBOOK_TEST_ROLLOUT_QUICKSTART.md)
+  - [SFU_STAGE1_DARK_LAUNCH_RUNBOOK](runbooks/SFU_STAGE1_DARK_LAUNCH_RUNBOOK.md)
+  - [SFU_STAGE2_CANARY_RUNBOOK](runbooks/SFU_STAGE2_CANARY_RUNBOOK.md)
+  - [SFU_STAGE3_DEFAULT_SFU_TEST_RUNBOOK](runbooks/SFU_STAGE3_DEFAULT_SFU_TEST_RUNBOOK.md)
+  - [SFU_STAGE4_PROD_READINESS_PACKAGE](runbooks/SFU_STAGE4_PROD_READINESS_PACKAGE.md)
   - [VOICE_BASELINE_RUNBOOK](runbooks/VOICE_BASELINE_RUNBOOK.md)
   - [PHASE3_VOICE_WEBRTC_MVP_POLICY](runbooks/PHASE3_VOICE_WEBRTC_MVP_POLICY.md)
-  - [LEGACY_PUBLIC_DEPRECATION_PLAN](runbooks/LEGACY_PUBLIC_DEPRECATION_PLAN.md)
-  - [MERGE_READY_CHECKLIST_2026-03-04](runbooks/MERGE_READY_CHECKLIST_2026-03-04.md)
+  - [LOG_RETENTION_1DAY_RUNBOOK](runbooks/LOG_RETENTION_1DAY_RUNBOOK.md)
   - [PREPROD_CHECKLIST](runbooks/PREPROD_CHECKLIST.md)
   - [PREPROD_DECISION_PACKAGE](runbooks/PREPROD_DECISION_PACKAGE.md)
   - [workflow-checklist](runbooks/workflow-checklist.md)
+  - [legacy runbooks index](runbooks/legacy/README.md)
 - `contracts/` — HTTP/WS contracts and OpenAPI artifact
   - [API_CONTRACT_V1](contracts/API_CONTRACT_V1.md)
   - [WS_CONTRACT_V1](contracts/WS_CONTRACT_V1.md)
+  - [SFU_SESSION_CONTRACT](contracts/SFU_SESSION_CONTRACT.md)
   - [OPENAPI_V1](contracts/OPENAPI_V1.yaml)
 - `operations/` — smoke/CI matrices and operational quality gates
+  - [DB_BACKUP_RUNBOOK](operations/DB_BACKUP_RUNBOOK.md)
   - [SMOKE_CI_MATRIX](operations/SMOKE_CI_MATRIX.md)
   - [FRONTEND_VERSIONING_POLICY](operations/FRONTEND_VERSIONING_POLICY.md)
   - [PERFORMANCE_GATE](operations/PERFORMANCE_GATE.md)
@@ -31,6 +37,13 @@
   - [ARCHITECTURE](architecture/ARCHITECTURE.md)
   - [PHASE0_MVP_ADR](architecture/PHASE0_MVP_ADR.md)
 - `plans/` — scoped design/product plans
+  - [SFU_MIGRATION_PLAN](plans/SFU_MIGRATION_PLAN.md)
+  - [SFU_STAGE0_EXECUTION_PLAN](plans/SFU_STAGE0_EXECUTION_PLAN.md)
   - [DISCORD_CHANNEL_TREE_PLAN](plans/DISCORD_CHANNEL_TREE_PLAN.md)
   - [TEST_PLAN_MVP_LOAD_2026-03](plans/TEST_PLAN_MVP_LOAD_2026-03.md)
   - [PHASE5_IOS_MACOS_SCOPE_NOTE](plans/PHASE5_IOS_MACOS_SCOPE_NOTE.md)
+
+## Legacy policy
+
+- Закрытые/исторические runbook-документы переносятся в `docs/runbooks/legacy/`.
+- Legacy-документы не удаляются, если в них есть release evidence или исторические ссылки из `status/feature-log`.

@@ -1,5 +1,7 @@
 # Merge-Ready Checklist (Boltorezka + Edge)
 
+> Legacy status: dated snapshot (`2026-03-04`), not a current release checklist.
+
 Дата: 2026-03-04  
 Статус: Ready for merge workflow execution
 
