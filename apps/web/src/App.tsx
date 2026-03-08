@@ -716,9 +716,18 @@ export function App() {
         .filter((userId) => userId.length > 0)
     );
 
-    // Keep camera status strictly scoped to current room participants.
+    // Keep camera status strictly scoped to current room participants and active RTC peers.
     activeTargetIds.forEach((userId) => {
-      map[userId] = voiceCameraEnabledByUserIdInCurrentRoom[userId] === true;
+      const cameraEnabled = voiceCameraEnabledByUserIdInCurrentRoom[userId] === true;
+      if (!cameraEnabled) {
+        map[userId] = false;
+        return;
+      }
+
+      const rtcState = voiceRtcStateByUserIdInCurrentRoom[userId];
+      const hasRtcPeer = rtcState === "connecting" || rtcState === "connected";
+      const hasRemoteStream = Object.prototype.hasOwnProperty.call(remoteVideoStreamsByUserId, userId);
+      map[userId] = hasRtcPeer || hasRemoteStream;
     });
 
     const localUserId = String(user?.id || "").trim();
@@ -727,7 +736,16 @@ export function App() {
     }
 
     return map;
-  }, [voiceCameraEnabledByUserIdInCurrentRoom, currentRoomVoiceTargets, user?.id, roomVoiceConnected, allowVideoStreaming, cameraEnabled]);
+  }, [
+    voiceCameraEnabledByUserIdInCurrentRoom,
+    voiceRtcStateByUserIdInCurrentRoom,
+    remoteVideoStreamsByUserId,
+    currentRoomVoiceTargets,
+    user?.id,
+    roomVoiceConnected,
+    allowVideoStreaming,
+    cameraEnabled
+  ]);
 
   const voiceMediaStatusSummaryByUserIdInCurrentRoom = useMemo(() => {
     const map = {
