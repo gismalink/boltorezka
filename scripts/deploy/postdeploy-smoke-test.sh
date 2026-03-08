@@ -367,6 +367,24 @@ if [[ "$AUTO_TICKET" == "1" ]]; then
   GENERATED_RECONNECT_TICKET="$(uuidgen | tr '[:upper:]' '[:lower:]')"
   compose exec -T "$REDIS_SERVICE" redis-cli SETEX "ws:ticket:$GENERATED_RECONNECT_TICKET" 120 "$PAYLOAD" >/dev/null
   export SMOKE_WS_TICKET_RECONNECT="$GENERATED_RECONNECT_TICKET"
+
+  USER_META_SECOND_AUTO="$(resolve_user_meta_by_email "$USER_EMAIL_SECOND")"
+  if [[ -z "$USER_META_SECOND_AUTO" ]]; then
+    echo "[postdeploy-smoke] cannot resolve second smoke user for auto-ticket email=$USER_EMAIL_SECOND" >&2
+    exit 1
+  fi
+
+  SECOND_USER_ID="${USER_META_SECOND_AUTO%%|*}"
+  SECOND_PAYLOAD="$(compose exec -T "$POSTGRES_SERVICE" psql -U "$TEST_POSTGRES_USER" -d "$TEST_POSTGRES_DB" -tAc "select json_build_object('userId', id::text, 'userName', coalesce(name,email,'unknown'), 'email', email, 'role', coalesce(role,'user'), 'issuedAt', now()::text)::text from users where id='${SECOND_USER_ID}' limit 1;")"
+
+  if [[ -z "$SECOND_PAYLOAD" ]]; then
+    echo "[postdeploy-smoke] cannot resolve second smoke user payload for email=$USER_EMAIL_SECOND" >&2
+    exit 1
+  fi
+
+  GENERATED_SECOND_TICKET="$(uuidgen | tr '[:upper:]' '[:lower:]')"
+  compose exec -T "$REDIS_SERVICE" redis-cli SETEX "ws:ticket:$GENERATED_SECOND_TICKET" 120 "$SECOND_PAYLOAD" >/dev/null
+  export SMOKE_WS_TICKET_SECOND="$GENERATED_SECOND_TICKET"
 fi
 
 DAY="$(date -u +%F)"
