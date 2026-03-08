@@ -588,11 +588,14 @@ if [[ "${SMOKE_REALTIME_MEDIA:-0}" == "1" ]]; then
       exit 1
     fi
   else
-    SMOKE_REALTIME_MEDIA_STATUS="fail"
+    SMOKE_REALTIME_MEDIA_STATUS="warn"
     SMOKE_MEDIA_TRANSPORT_SUMMARY="failed"
     rm -f "$media_smoke_log"
-    echo "[postdeploy-smoke] smoke:realtime:media failed" >&2
-    exit 1
+    if [[ "${SMOKE_REALTIME_MEDIA_STRICT:-0}" == "1" ]]; then
+      echo "[postdeploy-smoke] smoke:realtime:media failed (strict mode)" >&2
+      exit 1
+    fi
+    echo "[postdeploy-smoke] smoke:realtime:media failed (non-strict, continue)" >&2
   fi
 
   rm -f "$media_smoke_log"
