@@ -25,6 +25,8 @@ This folder contains operational scripts grouped by purpose.
   - `ws-load.mjs` - websocket load generator for room/chat traffic.
 - `ops/`:
   - `backup-postgres-all.sh` - backup all Postgres DBs (test/prod) to host storage outside Docker.
+  - `cleanup-server-logs.sh` - prune operation logs by retention policy.
+  - `scheduler/` - portable scheduled jobs interface (job manifests, runner, launchd adapter).
 
 ## Common Flows
 
@@ -36,6 +38,10 @@ This folder contains operational scripts grouped by purpose.
   - `PROD_REF=origin/main npm run deploy:prod`
 - Local verify pipeline:
   - `npm run check`
+- List scheduled jobs:
+  - `npm run scheduler:list`
+- Run one scheduled job manually:
+  - `npm run scheduler:run -- backup-postgres-all`
 
 ## Notes
 

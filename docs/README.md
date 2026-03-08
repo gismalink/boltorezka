@@ -30,6 +30,7 @@
   - [OPENAPI_V1](contracts/OPENAPI_V1.yaml)
 - `operations/` — smoke/CI matrices and operational quality gates
   - [DB_BACKUP_RUNBOOK](operations/DB_BACKUP_RUNBOOK.md)
+  - [SCHEDULER_PORTABILITY_RUNBOOK](operations/SCHEDULER_PORTABILITY_RUNBOOK.md)
   - [SMOKE_CI_MATRIX](operations/SMOKE_CI_MATRIX.md)
   - [FRONTEND_VERSIONING_POLICY](operations/FRONTEND_VERSIONING_POLICY.md)
   - [PERFORMANCE_GATE](operations/PERFORMANCE_GATE.md)

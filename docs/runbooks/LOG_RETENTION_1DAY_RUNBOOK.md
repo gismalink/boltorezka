@@ -22,20 +22,26 @@ bash ./scripts/ops/cleanup-server-logs.sh
 
 ## Periodic Run (launchd)
 
-- LaunchAgent template: `infra/launchd/com.boltorezka.log-cleanup.plist`
-- Installer script: `scripts/ops/install-log-cleanup-launchd.sh`
+- Preferred installer: `scripts/ops/scheduler/install-launchd-job.sh cleanup-server-logs`
+- Source-of-truth job manifest: `scripts/ops/scheduler/jobs/cleanup-server-logs.env`
 
 Install/refresh on server:
 
 ```bash
 cd ~/srv/boltorezka
-bash ./scripts/ops/install-log-cleanup-launchd.sh
+bash ./scripts/ops/scheduler/install-launchd-job.sh cleanup-server-logs
 ```
 
 Verify agent:
 
 ```bash
-launchctl print "gui/$(id -u)/com.boltorezka.log-cleanup" | sed -n '1,80p'
+launchctl print "gui/$(id -u)/com.boltorezka.scheduler.cleanup-server-logs" | sed -n '1,80p'
+```
+
+Execution history:
+
+```bash
+tail -n 30 ~/srv/boltorezka/.deploy/scheduler/executions.ndjson
 ```
 
 ## Notes
