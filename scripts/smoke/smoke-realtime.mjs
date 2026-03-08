@@ -34,6 +34,8 @@ const liveRoomBearerPool = String(process.env.SMOKE_CALL_LIVE_ROOM_BEARER_TOKENS
 const liveRoomToneMode = process.env.SMOKE_CALL_LIVE_ROOM_TONE_MODE === "1";
 const liveRoomTonePeriodMs = Number(process.env.SMOKE_CALL_LIVE_ROOM_TONE_PERIOD_MS ?? 7000);
 const liveRoomTonePhaseSpread = Number(process.env.SMOKE_CALL_LIVE_ROOM_TONE_PHASE_SPREAD ?? 0.9);
+const liveRoomRequireLateJoin = process.env.SMOKE_CALL_LIVE_ROOM_REQUIRE_LATE_JOIN === "1";
+const liveRoomLateJoinAtRatio = Number(process.env.SMOKE_CALL_LIVE_ROOM_LATE_JOIN_AT_RATIO ?? 0.3);
 const pollIntervalMinMs = Number(process.env.SMOKE_POLL_INTERVAL_MIN_MS ?? 25);
 const pollIntervalMaxMs = Number(process.env.SMOKE_POLL_INTERVAL_MAX_MS ?? 220);
 const pollBackoffFactor = Number(process.env.SMOKE_POLL_BACKOFF_FACTOR ?? 1.35);
@@ -79,6 +81,11 @@ if (smokeCallLiveRoom && (liveRoomStepMinMs < 400 || liveRoomStepMaxMs < liveRoo
 
 if (smokeCallLiveRoom && (liveRoomTonePeriodMs < 1200 || liveRoomTonePeriodMs > 60000)) {
   console.error("[smoke:realtime] invalid SMOKE_CALL_LIVE_ROOM_TONE_PERIOD_MS (1200..60000)");
+  process.exit(1);
+}
+
+if (smokeCallLiveRoom && liveRoomRequireLateJoin && (liveRoomLateJoinAtRatio < 0.1 || liveRoomLateJoinAtRatio > 0.8)) {
+  console.error("[smoke:realtime] SMOKE_CALL_LIVE_ROOM_LATE_JOIN_AT_RATIO must be between 0.1 and 0.8");
   process.exit(1);
 }
 
@@ -696,7 +703,14 @@ async function runLiveRoomBehaviorScenario({ roomSlug, timeoutMs }) {
   }
 
   const sessions = [];
-  for (const participant of participantDefs) {
+  const immediateParticipants = liveRoomRequireLateJoin
+    ? participantDefs.slice(0, Math.max(1, participantDefs.length - 1))
+    : participantDefs;
+  const lateJoinParticipant = liveRoomRequireLateJoin
+    ? participantDefs[participantDefs.length - 1]
+    : null;
+
+  for (const participant of immediateParticipants) {
     const ticket = participant.ticket || await resolveTicketFromBearerToken(participant.bearerToken, participant.label);
     const session = await openRealtimeSocket({ ticket, label: participant.label, timeoutMs });
     await sendAckedEvent({
@@ -722,6 +736,7 @@ async function runLiveRoomBehaviorScenario({ roomSlug, timeoutMs }) {
   }
 
   const startedAt = Date.now();
+  const lateJoinDueAtMs = startedAt + Math.floor(liveRoomDurationMs * liveRoomLateJoinAtRatio);
   const forceRejoinAfterMs = Math.floor(liveRoomDurationMs * 0.6);
   const stats = {
     micEvents: 0,
@@ -729,6 +744,7 @@ async function runLiveRoomBehaviorScenario({ roomSlug, timeoutMs }) {
     headsetEvents: 0,
     chatEvents: 0,
     offerAttempts: 0,
+    lateJoinEvents: 0,
     leaveRejoinEvents: 0,
     acceptedNacks: 0,
     toneModeEnabled: liveRoomToneMode,
@@ -781,6 +797,31 @@ async function runLiveRoomBehaviorScenario({ roomSlug, timeoutMs }) {
   };
 
   while (Date.now() - startedAt < liveRoomDurationMs) {
+    if (liveRoomRequireLateJoin && lateJoinParticipant && stats.lateJoinEvents === 0 && Date.now() >= lateJoinDueAtMs) {
+      const lateTicket = lateJoinParticipant.ticket || await resolveTicketFromBearerToken(lateJoinParticipant.bearerToken, lateJoinParticipant.label);
+      const lateSession = await openRealtimeSocket({ ticket: lateTicket, label: `${lateJoinParticipant.label}-late`, timeoutMs });
+      await sendAckedEvent({
+        ws: lateSession.ws,
+        events: lateSession.events,
+        type: "room.join",
+        payload: { roomSlug },
+        label: `join-late-${lateJoinParticipant.label}`,
+        timeoutMs
+      });
+
+      sessions.push({
+        ...lateSession,
+        ...lateJoinParticipant
+      });
+
+      const uniqueLateJoinUserIds = new Set(sessions.map((item) => item.userId));
+      if (uniqueLateJoinUserIds.size !== sessions.length) {
+        throw new Error("[smoke:realtime] late-join scenario produced duplicate users");
+      }
+
+      stats.lateJoinEvents += 1;
+    }
+
     const connected = sessions.filter((item) => item.ws.readyState === WS.OPEN);
     if (connected.length < Math.max(4, liveRoomParticipantCount - 1)) {
       throw new Error("[smoke:realtime] too few active participants during live-room scenario");
@@ -936,6 +977,7 @@ async function runLiveRoomBehaviorScenario({ roomSlug, timeoutMs }) {
     + stats.headsetEvents
     + stats.chatEvents
     + stats.offerAttempts
+    + stats.lateJoinEvents
     + stats.leaveRejoinEvents;
 
   if (totalActions < 30) {
@@ -944,6 +986,10 @@ async function runLiveRoomBehaviorScenario({ roomSlug, timeoutMs }) {
 
   if (stats.leaveRejoinEvents < 1) {
     throw new Error("[smoke:realtime] live-room scenario must include at least one leave/rejoin event");
+  }
+
+  if (liveRoomRequireLateJoin && stats.lateJoinEvents < 1) {
+    throw new Error("[smoke:realtime] live-room scenario must include at least one late join event");
   }
 
   return {
