@@ -201,27 +201,25 @@ export function bindVoicePeerConnectionHandlers({
       if (Context) {
         const speakingAudioContext = new Context();
         const speakingAnalyser = speakingAudioContext.createAnalyser();
-        const speakingGain = speakingAudioContext.createGain();
         speakingAnalyser.fftSize = 512;
         speakingAnalyser.smoothingTimeConstant = 0.8;
         const source = speakingAudioContext.createMediaStreamSource(resolvedStream);
         source.connect(speakingAnalyser);
-        source.connect(speakingGain);
-        speakingGain.connect(speakingAudioContext.destination);
-        speakingGain.gain.value = audioMuted ? 0 : Math.max(0, Math.min(1, outputVolume / 100));
 
         void speakingAudioContext.resume().catch(() => {
           pushCallLog(`audio context resume deferred <- ${targetLabel || targetUserId}`);
         });
-        remoteAudioElement.dataset.audioRoute = "context";
-        remoteAudioElement.muted = true;
-        pushCallLog(`audio route fallback: context <- ${targetLabel || targetUserId}`);
+        // Keep audio element as the primary output route.
+        // AudioContext is used only for speaking-level analysis.
+        remoteAudioElement.dataset.audioRoute = "element";
+        remoteAudioElement.muted = audioMuted;
+        remoteAudioElement.volume = Math.max(0, Math.min(1, outputVolume / 100));
 
         peer.speakingAudioContext = speakingAudioContext;
         peer.speakingSource = source;
         peer.speakingAnalyser = speakingAnalyser;
         peer.speakingData = new Uint8Array(new ArrayBuffer(speakingAnalyser.fftSize));
-        peer.speakingGain = speakingGain;
+        peer.speakingGain = null;
 
         const tickSpeaking = () => {
           const current = peersRef.current.get(targetUserId);
