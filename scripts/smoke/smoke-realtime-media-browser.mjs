@@ -23,6 +23,7 @@ const hostResolveRule = String(process.env.SMOKE_CHROMIUM_HOST_RESOLVE_RULE || "
 const targetUserIdEnv = String(process.env.SMOKE_RTC_TARGET_USER_ID || "").trim();
 const reconnectIntervalMs = Number(process.env.SMOKE_RTC_RECONNECT_INTERVAL_MS || 3000);
 const broadcastOffers = process.env.SMOKE_RTC_BROADCAST_OFFERS === "1";
+const requireIceRestart = process.env.SMOKE_RTC_REQUIRE_ICE_RESTART === "1";
 
 const tokenA = String(process.env.SMOKE_TEST_BEARER_TOKEN || "").trim();
 const tokenB = String(process.env.SMOKE_TEST_BEARER_TOKEN_SECOND || "").trim();
@@ -774,6 +775,30 @@ async function preparePeerPage({ context, label, ticket, toneHz, iceServers, ice
 
         await sendEvent("call.offer", payload);
       },
+      restartIce: async (targetUserId) => {
+        const normalizedTarget = String(targetUserId || "").trim();
+        if (!normalizedTarget) {
+          throw new Error("[smoke:realtime:media] restartIce targetUserId is required");
+        }
+
+        state.remoteUserId = normalizedTarget;
+        const pc = ensurePeerConnection();
+        const restartOffer = await pc.createOffer({ iceRestart: true });
+        await pc.setLocalDescription(restartOffer);
+
+        await sendEvent("call.offer", {
+          targetUserId: normalizedTarget,
+          signal: {
+            type: pc.localDescription?.type || "offer",
+            sdp: pc.localDescription?.sdp || ""
+          }
+        });
+
+        return {
+          ok: true,
+          targetUserId: normalizedTarget
+        };
+      },
       waitConnected: async () => {
         await waitFor(
           () => isPcConnected(),
@@ -1159,6 +1184,50 @@ async function main() {
       await new Promise((resolve) => setTimeout(resolve, Math.max(800, reconnectIntervalMs)));
     }
 
+    const restartEvidence = {
+      required: requireIceRestart,
+      attempted: false,
+      connectedAfter: false,
+      targetUserId: "",
+      relayedOffersDelta: 0,
+      relayedAnswersDelta: 0
+    };
+
+    if (requireIceRestart) {
+      const [beforeA, beforeB] = await Promise.all([
+        pageA.evaluate(() => window.__rtcMediaSmoke.getState()),
+        pageB.evaluate(() => window.__rtcMediaSmoke.getState())
+      ]);
+
+      restartEvidence.attempted = true;
+      restartEvidence.targetUserId = peerB.userId;
+
+      await pageA.evaluate(
+        ({ targetUserId }) => window.__rtcMediaSmoke.restartIce(targetUserId),
+        { targetUserId: peerB.userId }
+      );
+
+      await Promise.all([
+        pageA.evaluate(() => window.__rtcMediaSmoke.waitConnected()),
+        pageB.evaluate(() => window.__rtcMediaSmoke.waitConnected())
+      ]);
+
+      const [afterA, afterB] = await Promise.all([
+        pageA.evaluate(() => window.__rtcMediaSmoke.getState()),
+        pageB.evaluate(() => window.__rtcMediaSmoke.getState())
+      ]);
+
+      restartEvidence.connectedAfter = true;
+      restartEvidence.relayedOffersDelta = Math.max(
+        Number(afterA?.relayedOfferCount || 0) - Number(beforeA?.relayedOfferCount || 0),
+        Number(afterB?.relayedOfferCount || 0) - Number(beforeB?.relayedOfferCount || 0)
+      );
+      restartEvidence.relayedAnswersDelta = Math.max(
+        Number(afterA?.relayedAnswerCount || 0) - Number(beforeA?.relayedAnswerCount || 0),
+        Number(afterB?.relayedAnswerCount || 0) - Number(beforeB?.relayedAnswerCount || 0)
+      );
+    }
+
     const statsA = await pageA.evaluate(() => window.__rtcMediaSmoke.getRtcStats());
     const statsB = await pageB.evaluate(() => window.__rtcMediaSmoke.getRtcStats());
     const transportSummary = buildTransportSummary({ statsA, statsB, iceServers });
@@ -1281,6 +1350,17 @@ async function main() {
       throw new Error("[smoke:realtime:media] camera state convergence failed for call.video_state off/on propagation");
     }
 
+    if (requireIceRestart) {
+      const restartLooksHealthy = restartEvidence.attempted
+        && restartEvidence.connectedAfter
+        && restartEvidence.relayedOffersDelta >= 1
+        && restartEvidence.relayedAnswersDelta >= 1;
+
+      if (!restartLooksHealthy) {
+        throw new Error(`[smoke:realtime:media] ice restart verification failed snapshot=${JSON.stringify(restartEvidence)}`);
+      }
+    }
+
     console.log(JSON.stringify({
       ok: true,
       baseUrl,
@@ -1303,6 +1383,7 @@ async function main() {
         peerB: redialSuccessesB
       },
       transportSummary,
+      iceRestart: restartEvidence,
       oneWaySummary: {
         audioIncidents: oneWayAudioIncidents,
         videoIncidents: oneWayVideoIncidents,
