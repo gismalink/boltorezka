@@ -638,6 +638,7 @@ if [[ "${SMOKE_REALTIME_MEDIA:-0}" == "1" ]]; then
       SMOKE_RTC_WS_READY_TIMEOUT_MS="${SMOKE_RTC_WS_READY_TIMEOUT_MS:-35000}" \
       SMOKE_RTC_ICE_SERVERS_JSON="${SMOKE_RTC_ICE_SERVERS_JSON:-$media_ice_servers_json}" \
       SMOKE_RTC_ICE_TRANSPORT_POLICY="${SMOKE_RTC_ICE_TRANSPORT_POLICY:-${TEST_VITE_RTC_ICE_TRANSPORT_POLICY:-all}}" \
+      SMOKE_RTC_REQUIRE_ICE_RESTART="${SMOKE_RTC_REQUIRE_ICE_RESTART:-0}" \
       node ./scripts/smoke/smoke-realtime-media-browser.mjs | tee "$media_smoke_log"; then
       media_run_ok=1
       break
