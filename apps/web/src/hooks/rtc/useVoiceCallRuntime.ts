@@ -379,7 +379,62 @@ export function useVoiceCallRuntime({
     });
   }, [serverAudioQuality, pushCallLog]);
 
+  const activateContextAudioFallback = useCallback((
+    element: HTMLAudioElement,
+    reason: string
+  ): boolean => {
+    const peerEntry = Array.from(peersRef.current.entries())
+      .find(([, peer]) => peer.audioElement === element);
+    if (!peerEntry) {
+      return false;
+    }
+
+    const [userId, peer] = peerEntry;
+    const label = peer.label || userId;
+
+    if (!peer.speakingAudioContext || !peer.speakingSource) {
+      pushCallLog(`audio route fallback skipped (${reason}, ${label}): context unavailable`);
+      return false;
+    }
+
+    try {
+      if (!peer.speakingGain) {
+        const gain = peer.speakingAudioContext.createGain();
+        peer.speakingSource.connect(gain);
+        gain.connect(peer.speakingAudioContext.destination);
+        peer.speakingGain = gain;
+      }
+
+      const normalizedVolume = Number.isFinite(outputVolume)
+        ? Math.max(0, Math.min(1, outputVolume / 100))
+        : 1;
+      peer.speakingGain.gain.value = audioMuted ? 0 : normalizedVolume;
+      element.dataset.audioRoute = "context";
+      element.muted = true;
+
+      if (peer.speakingAudioContext.state === "suspended") {
+        void peer.speakingAudioContext.resume().catch(() => {
+          pushCallLog(`audio context resume deferred <- ${label}`);
+        });
+      }
+
+      pushCallLog(`audio route fallback: context <- ${label} (${reason})`);
+      return true;
+    } catch (error) {
+      pushCallLog(`audio route fallback failed (${reason}, ${label}): ${(error as Error).message}`);
+      return false;
+    }
+  }, [audioMuted, outputVolume, peersRef, pushCallLog]);
+
   const applyRemoteAudioOutput = useCallback(async (element: HTMLAudioElement) => {
+    const peerEntry = Array.from(peersRef.current.values())
+      .find((peer) => peer.audioElement === element);
+
+    if (peerEntry?.speakingGain) {
+      // Keep context path silent unless fallback route is explicitly activated.
+      peerEntry.speakingGain.gain.value = 0;
+    }
+
     element.dataset.audioRoute = "element";
     element.muted = audioMuted;
     const normalizedVolume = Number.isFinite(outputVolume)
@@ -418,8 +473,9 @@ export function useVoiceCallRuntime({
       await element.play();
     } catch (error) {
       pushCallLog(`audio play retry failed: ${(error as Error).message}`);
+      activateContextAudioFallback(element, "play-retry-failed");
     }
-  }, [audioMuted, outputVolume, selectedOutputId, pushCallLog]);
+  }, [audioMuted, outputVolume, selectedOutputId, peersRef, pushCallLog, activateContextAudioFallback]);
 
   const retryRemoteAudioPlayback = useCallback((reason: string) => {
     if (audioMuted) {
@@ -446,9 +502,10 @@ export function useVoiceCallRuntime({
         })
         .catch((error) => {
           pushCallLog(`remote audio resume failed (${reason}, ${peer.label || userId}): ${(error as Error).message}`);
+          activateContextAudioFallback(element, `resume-failed:${reason}`);
         });
     });
-  }, [audioMuted, applyRemoteAudioOutput, pushCallLog, outputVolume]);
+  }, [audioMuted, applyRemoteAudioOutput, pushCallLog, outputVolume, activateContextAudioFallback]);
 
   const updateCallStatus = useCallback(() => {
     const snapshot = deriveCallStatusForRtc(peersRef);

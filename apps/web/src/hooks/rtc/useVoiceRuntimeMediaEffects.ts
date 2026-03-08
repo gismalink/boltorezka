@@ -207,10 +207,11 @@ export function useVoiceRuntimeMediaEffects({
   useEffect(() => {
     const gainValue = audioMuted ? 0 : Math.max(0, Math.min(1, outputVolume / 100));
     peersRef.current.forEach((peer) => {
+      const route = String(peer.audioElement.dataset.audioRoute || "element");
       if (peer.speakingGain) {
-        peer.speakingGain.gain.value = gainValue;
+        peer.speakingGain.gain.value = route === "context" ? gainValue : 0;
       }
-      if (!audioMuted && peer.speakingAudioContext?.state === "suspended") {
+      if (!audioMuted && route === "context" && peer.speakingAudioContext?.state === "suspended") {
         void peer.speakingAudioContext.resume().catch(() => {
           return;
         });
