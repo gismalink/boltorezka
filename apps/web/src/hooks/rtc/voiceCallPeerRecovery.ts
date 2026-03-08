@@ -80,6 +80,28 @@ export function startPeerStatsMonitorForTarget(args: {
       return;
     }
 
+    if (state === "connected" && !current.hasRemoteTrack) {
+      current.inboundStalledTicks += 1;
+
+      if (
+        shouldInitiateOffer(targetUserId)
+        && current.stallRecoveryAttempts < 2
+        && current.inboundStalledTicks >= RTC_INBOUND_STALL_TICKS
+      ) {
+        current.stallRecoveryAttempts += 1;
+        current.inboundStalledTicks = 0;
+        pushCallLog(`rtc no-remote-track recovery offer -> ${targetLabel || targetUserId}`);
+        void startOffer?.(targetUserId, targetLabel || targetUserId, {
+          iceRestart: true,
+          reason: "inbound-stalled"
+        });
+      }
+
+      return;
+    }
+
+    current.inboundStalledTicks = 0;
+
     void current.connection.getStats()
       .then((report) => {
         let inboundBytes = 0;
