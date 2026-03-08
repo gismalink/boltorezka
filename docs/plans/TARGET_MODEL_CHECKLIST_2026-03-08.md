@@ -27,6 +27,9 @@ Validation note (2026-03-08): добавлен fail-fast anti-loop guard в `smo
 Validation note (2026-03-08): явный signaling reconnect smoke (`SMOKE_CALL_SIGNAL=1 SMOKE_RECONNECT=1`, room=`test-room`) прошел с `callNegotiationReconnectOk=true`, `callSignalRelayed=true`, `callSignalIdempotencyOk=true`.
 Validation note (2026-03-08): устранен self-duplicate camera tile (`local + black remote by own userId`) - `VideoWindowsOverlay` исключает `currentUserId` из remote списка; test rollout `deploy:test:sfu` на SHA `e648e36` зеленый, ручная проверка подтверждает отсутствие дубля на устройствах.
 Validation note (2026-03-08): `SFU-first` policy формализован в ADR (`docs/architecture/PHASE0_MVP_ADR.md`, ADR-004) и в Stage 3 runbook (`docs/runbooks/SFU_STAGE3_DEFAULT_SFU_TEST_RUNBOOK.md`).
+Validation note (2026-03-08): внешний TURN TLS handshake подтвержден из текущего клиента: `openssl s_client -connect gismalink.art:5349 -servername gismalink.art -brief` -> `Verification: OK`, `TLSv1.3`.
+Validation note (2026-03-08): `turns`-only relay media smoke (`turns:gismalink.art:5349?transport=tcp`, `iceTransportPolicy=relay`) проходит в `test-room` с `ok=true`, one-way incidents `audio=0`, `video=0`.
+Validation note (2026-03-08): DNS/public IP для TURN консистентны: `TURN_CERT_DOMAIN=gismalink.art`, `TURN_EXTERNAL_IP=95.165.154.118`, `dig gismalink.art A -> 95.165.154.118`.
 
 ## 0) Базовые инварианты (обязательно)
 
@@ -47,9 +50,9 @@ Validation note (2026-03-08): `SFU-first` policy формализован в ADR
 - [x] Проверено совпадение диапазона в compose и `.env.host`.
 - [x] Postdeploy smoke валидирует размер relay диапазона (`SMOKE_EXPECT_TURN_RANGE_SIZE=1001`) и падает при регрессии.
 - [ ] На роутере/NAT проброшены UDP/TCP `30000-31000` + `3478` + `5349`.
-- [ ] DNS и public IP для TURN актуальны (`TURN_EXTERNAL_IP`, домен/cert).
+- [x] DNS и public IP для TURN актуальны (`TURN_EXTERNAL_IP`, домен/cert).
 - [x] TLS cert для `turns` валиден и не истекает в ближайшее окно релиза.
-- [ ] `turns:5349?transport=tcp` работает из внешней сети.
+- [x] `turns:5349?transport=tcp` работает из внешней сети.
 - [x] Проверен fallback `turn:3478?transport=tcp`.
 - [x] Проверен fallback `turn:3478?transport=udp`.
 - [x] Нет `508 Cannot create socket` в нормальном тестовом профиле (подтверждено strict-by-default SFU smoke rollout'ами на `e49ccc4`).
