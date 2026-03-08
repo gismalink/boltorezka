@@ -193,6 +193,9 @@ export function bindVoicePeerConnectionHandlers({
     if (remoteAudioElement.srcObject !== resolvedStream) {
       remoteAudioElement.srcObject = resolvedStream;
     }
+    remoteAudioElement.dataset.audioRoute = "element";
+    remoteAudioElement.muted = audioMuted;
+    remoteAudioElement.volume = Math.max(0, Math.min(1, outputVolume / 100));
     peer.hasRemoteTrack = true;
     startPeerStatsMonitor(targetUserId, targetLabel);
 

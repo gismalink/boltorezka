@@ -380,8 +380,8 @@ export function useVoiceCallRuntime({
   }, [serverAudioQuality, pushCallLog]);
 
   const applyRemoteAudioOutput = useCallback(async (element: HTMLAudioElement) => {
-    const route = String(element.dataset.audioRoute || "element");
-    element.muted = route === "context" ? true : audioMuted;
+    element.dataset.audioRoute = "element";
+    element.muted = audioMuted;
     element.volume = Math.max(0, Math.min(1, outputVolume / 100));
 
     const sinkId = selectedOutputId && selectedOutputId !== "default" ? selectedOutputId : "";
@@ -407,10 +407,6 @@ export function useVoiceCallRuntime({
       }
     }
 
-    if (route === "context") {
-      return;
-    }
-
     if (!element.paused || audioMuted || !element.srcObject) {
       return;
     }
@@ -429,9 +425,13 @@ export function useVoiceCallRuntime({
 
     peersRef.current.forEach((peer, userId) => {
       const element = peer.audioElement;
-      if (!element.srcObject || !element.paused) {
+      if (!element.srcObject) {
         return;
       }
+
+      element.dataset.audioRoute = "element";
+      element.muted = false;
+      element.volume = Math.max(0, Math.min(1, outputVolume / 100));
 
       void applyRemoteAudioOutput(element);
       void element.play()
@@ -442,7 +442,7 @@ export function useVoiceCallRuntime({
           pushCallLog(`remote audio resume failed (${reason}, ${peer.label || userId}): ${(error as Error).message}`);
         });
     });
-  }, [audioMuted, applyRemoteAudioOutput, pushCallLog]);
+  }, [audioMuted, applyRemoteAudioOutput, pushCallLog, outputVolume]);
 
   const updateCallStatus = useCallback(() => {
     const snapshot = deriveCallStatusForRtc(peersRef);
