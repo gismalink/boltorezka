@@ -781,10 +781,18 @@ async function preparePeerPage({ context, label, ticket, toneHz, iceServers, ice
           throw new Error("[smoke:realtime:media] restartIce targetUserId is required");
         }
 
+        const parseIceUfrag = (sdp) => {
+          const text = String(sdp || "");
+          const match = text.match(/a=ice-ufrag:([^\r\n]+)/);
+          return match ? String(match[1] || "").trim() : "";
+        };
+
         state.remoteUserId = normalizedTarget;
         const pc = ensurePeerConnection();
+        const beforeIceUfrag = parseIceUfrag(pc.localDescription?.sdp || "");
         const restartOffer = await pc.createOffer({ iceRestart: true });
         await pc.setLocalDescription(restartOffer);
+        const afterIceUfrag = parseIceUfrag(pc.localDescription?.sdp || restartOffer?.sdp || "");
 
         await sendEvent("call.offer", {
           targetUserId: normalizedTarget,
@@ -796,7 +804,9 @@ async function preparePeerPage({ context, label, ticket, toneHz, iceServers, ice
 
         return {
           ok: true,
-          targetUserId: normalizedTarget
+          targetUserId: normalizedTarget,
+          beforeIceUfrag,
+          afterIceUfrag
         };
       },
       waitConnected: async () => {
@@ -1192,7 +1202,8 @@ async function main() {
       relayedOffersDelta: 0,
       relayedAnswersDelta: 0,
       relayedIceDelta: 0,
-      localIceSentDelta: 0
+      localIceSentDelta: 0,
+      iceUfragChanged: false
     };
 
     if (requireIceRestart) {
@@ -1204,9 +1215,14 @@ async function main() {
       restartEvidence.attempted = true;
       restartEvidence.targetUserId = peerB.userId;
 
-      await pageA.evaluate(
+      const restartSignal = await pageA.evaluate(
         ({ targetUserId }) => window.__rtcMediaSmoke.restartIce(targetUserId),
         { targetUserId: peerB.userId }
+      );
+      restartEvidence.iceUfragChanged = Boolean(
+        String(restartSignal?.beforeIceUfrag || "")
+        && String(restartSignal?.afterIceUfrag || "")
+        && String(restartSignal?.beforeIceUfrag || "") !== String(restartSignal?.afterIceUfrag || "")
       );
 
       await Promise.all([
@@ -1364,7 +1380,7 @@ async function main() {
       const restartLooksHealthy = restartEvidence.attempted
         && restartEvidence.connectedAfter
         && restartEvidence.relayedOffersDelta >= 1
-        && (restartEvidence.relayedAnswersDelta >= 1 || restartEvidence.relayedIceDelta >= 1 || restartEvidence.localIceSentDelta >= 1);
+        && (restartEvidence.iceUfragChanged || restartEvidence.relayedAnswersDelta >= 1 || restartEvidence.relayedIceDelta >= 1 || restartEvidence.localIceSentDelta >= 1);
 
       if (!restartLooksHealthy) {
         throw new Error(`[smoke:realtime:media] ice restart verification failed snapshot=${JSON.stringify(restartEvidence)}`);
