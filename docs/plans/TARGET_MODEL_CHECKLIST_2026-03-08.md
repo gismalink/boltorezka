@@ -30,6 +30,7 @@ Validation note (2026-03-08): `SFU-first` policy формализован в ADR
 Validation note (2026-03-08): внешний TURN TLS handshake подтвержден из текущего клиента: `openssl s_client -connect gismalink.art:5349 -servername gismalink.art -brief` -> `Verification: OK`, `TLSv1.3`.
 Validation note (2026-03-08): `turns`-only relay media smoke (`turns:gismalink.art:5349?transport=tcp`, `iceTransportPolicy=relay`) проходит в `test-room` с `ok=true`, one-way incidents `audio=0`, `video=0`.
 Validation note (2026-03-08): DNS/public IP для TURN консистентны: `TURN_CERT_DOMAIN=gismalink.art`, `TURN_EXTERNAL_IP=95.165.154.118`, `dig gismalink.art A -> 95.165.154.118`.
+Validation note (2026-03-09): в postdeploy smoke добавлена метрика TURN allocation failures (`SMOKE_TURN_ALLOCATION_FAILURES`, `SMOKE_TURN_ALLOCATION_STATUS`) по лог-паттернам `Cannot create socket`/`error 508`; поддержан optional strict threshold `SMOKE_TURN_ALLOCATION_FAIL_THRESHOLD`.
 
 ## 0) Базовые инварианты (обязательно)
 
@@ -56,7 +57,7 @@ Validation note (2026-03-08): DNS/public IP для TURN консистентны
 - [x] Проверен fallback `turn:3478?transport=tcp`.
 - [x] Проверен fallback `turn:3478?transport=udp`.
 - [x] Нет `508 Cannot create socket` в нормальном тестовом профиле (подтверждено strict-by-default SFU smoke rollout'ами на `e49ccc4`).
-- [ ] Метрика отказов allocation вынесена в операционный мониторинг.
+- [x] Метрика отказов allocation вынесена в операционный мониторинг.
 
 ## 2) Control Plane Контракты (API/WS)
 

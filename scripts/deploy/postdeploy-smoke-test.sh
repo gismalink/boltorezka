@@ -31,6 +31,8 @@ SMOKE_SFU_TOPOLOGY_STATUS="skip"
 SMOKE_REALTIME_MEDIA_STATUS="skip"
 SMOKE_MEDIA_TRANSPORT_SUMMARY="n/a"
 SMOKE_TURN_TLS_STATUS="skip"
+SMOKE_TURN_ALLOCATION_FAILURES=0
+SMOKE_TURN_ALLOCATION_STATUS="skip"
 SMOKE_ONE_WAY_AUDIO_INCIDENTS=0
 SMOKE_ONE_WAY_VIDEO_INCIDENTS=0
 JWT_SECRET_CANDIDATE=""
@@ -53,6 +55,8 @@ write_summary() {
   printf 'SMOKE_REALTIME_MEDIA_STATUS=%q\n' "$SMOKE_REALTIME_MEDIA_STATUS" >>"$SUMMARY_FILE_REL"
   printf 'SMOKE_MEDIA_TRANSPORT_SUMMARY=%q\n' "$SMOKE_MEDIA_TRANSPORT_SUMMARY" >>"$SUMMARY_FILE_REL"
   printf 'SMOKE_TURN_TLS_STATUS=%q\n' "$SMOKE_TURN_TLS_STATUS" >>"$SUMMARY_FILE_REL"
+  printf 'SMOKE_TURN_ALLOCATION_FAILURES=%q\n' "$SMOKE_TURN_ALLOCATION_FAILURES" >>"$SUMMARY_FILE_REL"
+  printf 'SMOKE_TURN_ALLOCATION_STATUS=%q\n' "$SMOKE_TURN_ALLOCATION_STATUS" >>"$SUMMARY_FILE_REL"
   printf 'SMOKE_ONE_WAY_AUDIO_INCIDENTS=%q\n' "$SMOKE_ONE_WAY_AUDIO_INCIDENTS" >>"$SUMMARY_FILE_REL"
   printf 'SMOKE_ONE_WAY_VIDEO_INCIDENTS=%q\n' "$SMOKE_ONE_WAY_VIDEO_INCIDENTS" >>"$SUMMARY_FILE_REL"
   printf 'SMOKE_SUMMARY_TEXT=%q\n' "$SMOKE_SUMMARY_TEXT" >>"$SUMMARY_FILE_REL"
@@ -319,6 +323,43 @@ validate_turn_tls_handshake() {
 
 validate_turn_tls_handshake
 
+collect_turn_allocation_failures() {
+  local turn_service="${SMOKE_TURN_SERVICE:-boltorezka-turn}"
+  local log_window="${SMOKE_TURN_LOG_WINDOW:-30m}"
+  local strict_threshold_raw="${SMOKE_TURN_ALLOCATION_FAIL_THRESHOLD:--1}"
+  local strict_threshold=-1
+
+  if [[ "$strict_threshold_raw" =~ ^-?[0-9]+$ ]]; then
+    strict_threshold="$strict_threshold_raw"
+  fi
+
+  local turn_logs=""
+  if ! turn_logs="$(compose logs --since "$log_window" "$turn_service" 2>/dev/null | cat)"; then
+    SMOKE_TURN_ALLOCATION_STATUS="skip"
+    SMOKE_TURN_ALLOCATION_FAILURES=0
+    echo "[postdeploy-smoke] turn allocation metric skipped (service/log unavailable: $turn_service)"
+    return 0
+  fi
+
+  local failures
+  failures="$(printf '%s\n' "$turn_logs" | grep -Eci 'Cannot create socket|error 508|allocation[^[:alnum:]]*(fail|error|denied)')"
+  SMOKE_TURN_ALLOCATION_FAILURES="${failures:-0}"
+
+  if (( SMOKE_TURN_ALLOCATION_FAILURES == 0 )); then
+    SMOKE_TURN_ALLOCATION_STATUS="pass"
+  else
+    SMOKE_TURN_ALLOCATION_STATUS="warn"
+  fi
+
+  echo "[postdeploy-smoke] turn allocation failures (${log_window}): ${SMOKE_TURN_ALLOCATION_FAILURES}"
+
+  if (( strict_threshold >= 0 && SMOKE_TURN_ALLOCATION_FAILURES > strict_threshold )); then
+    SMOKE_TURN_ALLOCATION_STATUS="fail"
+    echo "[postdeploy-smoke] turn allocation failures threshold exceeded: ${SMOKE_TURN_ALLOCATION_FAILURES} > ${strict_threshold}" >&2
+    exit 1
+  fi
+}
+
 SMOKE_USER_ID=""
 SMOKE_USER_ROLE=""
 
@@ -373,9 +414,10 @@ fi
 VERSION_CACHE_STATUS="pass"
 
 if [[ "${SMOKE_REALTIME:-1}" == "0" ]]; then
+  collect_turn_allocation_failures
   echo "[postdeploy-smoke] realtime smoke skipped (SMOKE_REALTIME=0)"
   SMOKE_STATUS="pass"
-  SMOKE_SUMMARY_TEXT="health=pass mode=sso sso=pass api=$API_SMOKE_STATUS version_cache=$VERSION_CACHE_STATUS turn_tls=$SMOKE_TURN_TLS_STATUS realtime=skip extended_realtime=$EXTENDED_REALTIME_STATUS sfu_topology=$SMOKE_SFU_TOPOLOGY_STATUS realtime_media=$SMOKE_REALTIME_MEDIA_STATUS transport=$SMOKE_MEDIA_TRANSPORT_SUMMARY one_way(audio=$SMOKE_ONE_WAY_AUDIO_INCIDENTS,video=$SMOKE_ONE_WAY_VIDEO_INCIDENTS) delta(nack=0,ack=0,chat=0,idem=0,initial_state=0,initial_state_participants=0)"
+  SMOKE_SUMMARY_TEXT="health=pass mode=sso sso=pass api=$API_SMOKE_STATUS version_cache=$VERSION_CACHE_STATUS turn_tls=$SMOKE_TURN_TLS_STATUS turn_alloc_failures=$SMOKE_TURN_ALLOCATION_FAILURES turn_alloc_status=$SMOKE_TURN_ALLOCATION_STATUS realtime=skip extended_realtime=$EXTENDED_REALTIME_STATUS sfu_topology=$SMOKE_SFU_TOPOLOGY_STATUS realtime_media=$SMOKE_REALTIME_MEDIA_STATUS transport=$SMOKE_MEDIA_TRANSPORT_SUMMARY one_way(audio=$SMOKE_ONE_WAY_AUDIO_INCIDENTS,video=$SMOKE_ONE_WAY_VIDEO_INCIDENTS) delta(nack=0,ack=0,chat=0,idem=0,initial_state=0,initial_state_participants=0)"
   exit 0
 fi
 
@@ -695,7 +737,9 @@ SMOKE_CHAT_IDEMPOTENCY_HIT_DELTA=$((CHAT_IDEMPOTENCY_HIT_AFTER - CHAT_IDEMPOTENC
 SMOKE_CALL_INITIAL_STATE_SENT_DELTA=$((CALL_INITIAL_STATE_SENT_AFTER - CALL_INITIAL_STATE_SENT_BEFORE))
 SMOKE_CALL_INITIAL_STATE_PARTICIPANTS_DELTA=$((CALL_INITIAL_STATE_PARTICIPANTS_AFTER - CALL_INITIAL_STATE_PARTICIPANTS_BEFORE))
 
+collect_turn_allocation_failures
+
 SMOKE_STATUS="pass"
-SMOKE_SUMMARY_TEXT="health=pass mode=sso sso=pass api=$API_SMOKE_STATUS version_cache=$VERSION_CACHE_STATUS turn_tls=$SMOKE_TURN_TLS_STATUS realtime=pass extended_realtime=$EXTENDED_REALTIME_STATUS sfu_topology=$SMOKE_SFU_TOPOLOGY_STATUS realtime_media=$SMOKE_REALTIME_MEDIA_STATUS transport=$SMOKE_MEDIA_TRANSPORT_SUMMARY one_way(audio=$SMOKE_ONE_WAY_AUDIO_INCIDENTS,video=$SMOKE_ONE_WAY_VIDEO_INCIDENTS) delta(nack=$SMOKE_NACK_DELTA,ack=$SMOKE_ACK_DELTA,chat=$SMOKE_CHAT_SENT_DELTA,idem=$SMOKE_CHAT_IDEMPOTENCY_HIT_DELTA,initial_state=$SMOKE_CALL_INITIAL_STATE_SENT_DELTA,initial_state_participants=$SMOKE_CALL_INITIAL_STATE_PARTICIPANTS_DELTA)"
+SMOKE_SUMMARY_TEXT="health=pass mode=sso sso=pass api=$API_SMOKE_STATUS version_cache=$VERSION_CACHE_STATUS turn_tls=$SMOKE_TURN_TLS_STATUS turn_alloc_failures=$SMOKE_TURN_ALLOCATION_FAILURES turn_alloc_status=$SMOKE_TURN_ALLOCATION_STATUS realtime=pass extended_realtime=$EXTENDED_REALTIME_STATUS sfu_topology=$SMOKE_SFU_TOPOLOGY_STATUS realtime_media=$SMOKE_REALTIME_MEDIA_STATUS transport=$SMOKE_MEDIA_TRANSPORT_SUMMARY one_way(audio=$SMOKE_ONE_WAY_AUDIO_INCIDENTS,video=$SMOKE_ONE_WAY_VIDEO_INCIDENTS) delta(nack=$SMOKE_NACK_DELTA,ack=$SMOKE_ACK_DELTA,chat=$SMOKE_CHAT_SENT_DELTA,idem=$SMOKE_CHAT_IDEMPOTENCY_HIT_DELTA,initial_state=$SMOKE_CALL_INITIAL_STATE_SENT_DELTA,initial_state_participants=$SMOKE_CALL_INITIAL_STATE_PARTICIPANTS_DELTA)"
 
 echo "[postdeploy-smoke] done"
