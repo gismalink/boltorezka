@@ -3,6 +3,7 @@ import type { PointerEvent as ReactPointerEvent } from "react";
 
 type VideoWindowsOverlayProps = {
   t: (key: string) => string;
+  currentUserId: string;
   localUserLabel: string;
   localCameraEnabled: boolean;
   localVideoStream: MediaStream | null;
@@ -60,7 +61,7 @@ function VideoTile({
 }: {
   id: string;
   label: string;
-  stream: MediaStream;
+  stream: MediaStream | null;
   muted: boolean;
   mirrored: boolean;
   layout: TileLayout;
@@ -149,6 +150,7 @@ function VideoTile({
 
 export function VideoWindowsOverlay({
   t,
+  currentUserId,
   localUserLabel,
   localCameraEnabled,
   localVideoStream,
@@ -164,6 +166,7 @@ export function VideoWindowsOverlay({
 
   const items = useMemo<TileItem[]>(() => {
     const next: TileItem[] = [];
+    const normalizedCurrentUserId = String(currentUserId || "").trim();
 
     if (localCameraEnabled) {
       next.push({
@@ -175,7 +178,7 @@ export function VideoWindowsOverlay({
     }
 
     Object.entries(remoteCameraEnabledByUserId).forEach(([userId, enabled]) => {
-      if (!enabled || userId === "local") {
+      if (!enabled || userId === "local" || (normalizedCurrentUserId && userId === normalizedCurrentUserId)) {
         return;
       }
 
@@ -188,7 +191,7 @@ export function VideoWindowsOverlay({
     });
 
     return next;
-  }, [localCameraEnabled, localVideoStream, localUserLabel, remoteCameraEnabledByUserId, remoteLabelsByUserId, remoteVideoStreamsByUserId, t]);
+  }, [currentUserId, localCameraEnabled, localVideoStream, localUserLabel, remoteCameraEnabledByUserId, remoteLabelsByUserId, remoteVideoStreamsByUserId, t]);
 
   const [layoutsById, setLayoutsById] = useState<Record<string, TileLayout>>({});
   const dragStateRef = useRef<

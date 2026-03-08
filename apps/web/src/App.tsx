@@ -2027,6 +2027,7 @@ export function App() {
 
         <VideoWindowsOverlay
           t={t}
+          currentUserId={user?.id || ""}
           localUserLabel={user?.name || t("video.you")}
           localCameraEnabled={allowVideoStreaming && cameraEnabled}
           localVideoStream={localVideoStream}
