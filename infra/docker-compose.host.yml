@@ -226,4 +226,4 @@ volumes:
   postgres_prod_data:
   ingress_caddy_data:
     external: true
-    name: ingress_caddy_data
+    name: edge_caddy_data
