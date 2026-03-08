@@ -81,22 +81,8 @@ export function startPeerStatsMonitorForTarget(args: {
     }
 
     if (state === "connected" && !current.hasRemoteTrack) {
-      current.inboundStalledTicks += 1;
-
-      if (
-        shouldInitiateOffer(targetUserId)
-        && current.stallRecoveryAttempts < 2
-        && current.inboundStalledTicks >= RTC_INBOUND_STALL_TICKS
-      ) {
-        current.stallRecoveryAttempts += 1;
-        current.inboundStalledTicks = 0;
-        pushCallLog(`rtc no-remote-track recovery offer -> ${targetLabel || targetUserId}`);
-        void startOffer?.(targetUserId, targetLabel || targetUserId, {
-          iceRestart: true,
-          reason: "inbound-stalled"
-        });
-      }
-
+      // Avoid renegotiation storms before the first remote track arrives.
+      current.inboundStalledTicks = 0;
       return;
     }
 
