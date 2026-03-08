@@ -115,7 +115,7 @@ main() {
     scheduler_append_event "{\"ts\":\"$(scheduler_now_utc)\",\"job_id\":\"$job_id\",\"status\":\"skipped_locked\"}"
     exit 0
   fi
-  trap 'cleanup_lock "$lock_dir"' EXIT
+  trap "cleanup_lock '$lock_dir'" EXIT
 
   local start_ts start_epoch run_id stdout_log stderr_log end_ts end_epoch duration status
   start_ts="$(scheduler_now_utc)"
