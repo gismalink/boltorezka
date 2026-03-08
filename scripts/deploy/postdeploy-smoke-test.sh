@@ -553,6 +553,16 @@ if [[ "${SMOKE_REALTIME_MEDIA:-0}" == "1" ]]; then
     media_ice_servers_json="[{\"urls\":[\"turn:${media_turn_domain}:3478?transport=udp\",\"turn:${media_turn_domain}:3478?transport=tcp\",\"turns:${media_turn_domain}:5349?transport=tcp\"],\"username\":\"${TURN_USERNAME}\",\"credential\":\"${TURN_PASSWORD}\"}]"
   fi
 
+  # ws tickets are one-time; prefer fresh issuance via bearer tokens for each media attempt.
+  media_ws_ticket="${SMOKE_WS_TICKET:-}"
+  media_ws_ticket_second="${SMOKE_WS_TICKET_SECOND:-}"
+  if [[ -n "${SMOKE_TEST_BEARER_TOKEN:-}" ]]; then
+    media_ws_ticket=""
+  fi
+  if [[ -n "${SMOKE_TEST_BEARER_TOKEN_SECOND:-}" ]]; then
+    media_ws_ticket_second=""
+  fi
+
   if [[ -z "${SMOKE_TEST_BEARER_TOKEN_SECOND:-}" && -z "${SMOKE_WS_TICKET_SECOND:-}" ]]; then
     USER_META_SECOND_MEDIA="$(resolve_user_meta_by_email "$USER_EMAIL_SECOND")"
     if [[ -z "$USER_META_SECOND_MEDIA" ]]; then
@@ -586,8 +596,9 @@ if [[ "${SMOKE_REALTIME_MEDIA:-0}" == "1" ]]; then
       SMOKE_ROOM_SLUG="$BASELINE_SMOKE_ROOM_SLUG" \
       SMOKE_TEST_BEARER_TOKEN="${SMOKE_TEST_BEARER_TOKEN:-}" \
       SMOKE_TEST_BEARER_TOKEN_SECOND="${SMOKE_TEST_BEARER_TOKEN_SECOND:-}" \
-      SMOKE_WS_TICKET="${SMOKE_WS_TICKET:-}" \
-      SMOKE_WS_TICKET_SECOND="${SMOKE_WS_TICKET_SECOND:-}" \
+      SMOKE_WS_TICKET="$media_ws_ticket" \
+      SMOKE_WS_TICKET_SECOND="$media_ws_ticket_second" \
+      SMOKE_RTC_WS_READY_TIMEOUT_MS="${SMOKE_RTC_WS_READY_TIMEOUT_MS:-35000}" \
       SMOKE_RTC_ICE_SERVERS_JSON="${SMOKE_RTC_ICE_SERVERS_JSON:-$media_ice_servers_json}" \
       SMOKE_RTC_ICE_TRANSPORT_POLICY="${SMOKE_RTC_ICE_TRANSPORT_POLICY:-${TEST_VITE_RTC_ICE_TRANSPORT_POLICY:-all}}" \
       node ./scripts/smoke/smoke-realtime-media-browser.mjs | tee "$media_smoke_log"; then

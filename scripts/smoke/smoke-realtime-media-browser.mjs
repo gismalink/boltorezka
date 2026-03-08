@@ -6,6 +6,7 @@ const baseUrl = String(process.env.SMOKE_API_URL || "http://localhost:8080").rep
 const roomSlug = String(process.env.SMOKE_ROOM_SLUG || "test-room").trim();
 const MAX_SMOKE_TEST_DURATION_MS = 120000;
 const timeoutMs = Math.min(Number(process.env.SMOKE_TIMEOUT_MS || 20000), MAX_SMOKE_TEST_DURATION_MS);
+const wsReadyTimeoutMs = Math.min(Number(process.env.SMOKE_RTC_WS_READY_TIMEOUT_MS || 35000), MAX_SMOKE_TEST_DURATION_MS);
 const settleMs = Math.min(Number(process.env.SMOKE_RTC_MEDIA_SETTLE_MS || 12000), MAX_SMOKE_TEST_DURATION_MS);
 const toneBaseFrequencyHz = Number(process.env.SMOKE_RTC_TONE_FREQUENCY_HZ || process.env.SMOKE_RTC_TONE_FREQUENCY_BASE_HZ || 440);
 const toneFrequencySpreadHz = Number(process.env.SMOKE_RTC_TONE_SPREAD_HZ || 18);
@@ -215,7 +216,7 @@ async function preparePeerPage({ context, label, ticket, toneHz, iceServers, ice
   const page = await context.newPage();
   await page.goto(baseUrl, { waitUntil: "domcontentloaded", timeout: timeoutMs });
 
-  const result = await page.evaluate(async ({ baseUrlInner, roomSlugInner, ticketInner, labelInner, timeoutMsInner, toneHz, melodyStepMsInner, iceServers, iceTransportPolicyInner, videoNoiseWidthInner, videoNoiseHeightInner, videoNoiseFpsInner, broadcastOffersInner }) => {
+  const result = await page.evaluate(async ({ baseUrlInner, roomSlugInner, ticketInner, labelInner, timeoutMsInner, wsReadyTimeoutMsInner, toneHz, melodyStepMsInner, iceServers, iceTransportPolicyInner, videoNoiseWidthInner, videoNoiseHeightInner, videoNoiseFpsInner, broadcastOffersInner }) => {
     const toWsUrl = (httpUrl) => {
       const parsed = new URL(httpUrl);
       parsed.protocol = parsed.protocol === "https:" ? "wss:" : "ws:";
@@ -709,8 +710,8 @@ async function preparePeerPage({ context, label, ticket, toneHz, iceServers, ice
       }
     });
 
-    await waitFor(() => ws.readyState === WebSocket.OPEN, `${labelInner} websocket open`);
-    await waitFor(() => state.userId, `${labelInner} server.ready userId`);
+    await waitFor(() => ws.readyState === WebSocket.OPEN, `${labelInner} websocket open`, wsReadyTimeoutMsInner);
+    await waitFor(() => state.userId, `${labelInner} server.ready userId`, wsReadyTimeoutMsInner);
 
     await sendEvent("room.join", { roomSlug: roomSlugInner });
     state.joinAcked = true;
@@ -1027,6 +1028,7 @@ async function preparePeerPage({ context, label, ticket, toneHz, iceServers, ice
     ticketInner: ticket,
     labelInner: label,
     timeoutMsInner: timeoutMs,
+    wsReadyTimeoutMsInner: wsReadyTimeoutMs,
     toneHz,
     melodyStepMsInner: melodyStepMs,
     videoNoiseWidthInner: videoNoiseWidth,
