@@ -54,8 +54,9 @@ Rollback target profile (test/prod-safe):
 
 1. Merge feature -> `main`.
 2. Re-run test from `origin/main` with SFU profile equivalent.
-3. Fill owners/sign-off fields in `PREPROD_DECISION_PACKAGE.md`.
-4. Explicit prod approval from release owner.
+3. Attach fresh baseline comparison artifact (`TEST_REF=origin/main npm run smoke:compare:p2p-sfu`) with both profiles green and no regression in one-way incidents.
+4. Fill owners/sign-off fields in `PREPROD_DECISION_PACKAGE.md`.
+5. Explicit prod approval from release owner.
 
 ## 7) Final decision
 
