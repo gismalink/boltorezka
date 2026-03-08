@@ -28,6 +28,10 @@ API_SMOKE_STATUS="skip"
 VERSION_CACHE_STATUS="skip"
 EXTENDED_REALTIME_STATUS="skip"
 SMOKE_SFU_TOPOLOGY_STATUS="skip"
+SMOKE_REALTIME_MEDIA_STATUS="skip"
+SMOKE_MEDIA_TRANSPORT_SUMMARY="n/a"
+SMOKE_ONE_WAY_AUDIO_INCIDENTS=0
+SMOKE_ONE_WAY_VIDEO_INCIDENTS=0
 JWT_SECRET_CANDIDATE=""
 
 write_summary() {
@@ -45,6 +49,10 @@ write_summary() {
   printf 'SMOKE_CALL_INITIAL_STATE_PARTICIPANTS_DELTA=%q\n' "$SMOKE_CALL_INITIAL_STATE_PARTICIPANTS_DELTA" >>"$SUMMARY_FILE_REL"
   printf 'SMOKE_EXTENDED_REALTIME_STATUS=%q\n' "$EXTENDED_REALTIME_STATUS" >>"$SUMMARY_FILE_REL"
   printf 'SMOKE_SFU_TOPOLOGY_STATUS=%q\n' "$SMOKE_SFU_TOPOLOGY_STATUS" >>"$SUMMARY_FILE_REL"
+  printf 'SMOKE_REALTIME_MEDIA_STATUS=%q\n' "$SMOKE_REALTIME_MEDIA_STATUS" >>"$SUMMARY_FILE_REL"
+  printf 'SMOKE_MEDIA_TRANSPORT_SUMMARY=%q\n' "$SMOKE_MEDIA_TRANSPORT_SUMMARY" >>"$SUMMARY_FILE_REL"
+  printf 'SMOKE_ONE_WAY_AUDIO_INCIDENTS=%q\n' "$SMOKE_ONE_WAY_AUDIO_INCIDENTS" >>"$SUMMARY_FILE_REL"
+  printf 'SMOKE_ONE_WAY_VIDEO_INCIDENTS=%q\n' "$SMOKE_ONE_WAY_VIDEO_INCIDENTS" >>"$SUMMARY_FILE_REL"
   printf 'SMOKE_SUMMARY_TEXT=%q\n' "$SMOKE_SUMMARY_TEXT" >>"$SUMMARY_FILE_REL"
 }
 
@@ -140,6 +148,84 @@ metric_from_hgetall() {
   '
 }
 
+parse_media_transport_summary() {
+  local payload_path="$1"
+
+  node - "$payload_path" <<'NODE'
+const fs = require("fs");
+
+const path = process.argv[2];
+const content = fs.readFileSync(path, "utf8").trim();
+if (!content) {
+  process.stdout.write("n/a");
+  process.exit(0);
+}
+
+const start = content.indexOf("{");
+const end = content.lastIndexOf("}");
+if (start === -1 || end === -1 || end <= start) {
+  process.stdout.write("n/a");
+  process.exit(0);
+}
+
+let payload;
+try {
+  payload = JSON.parse(content.slice(start, end + 1));
+} catch {
+  process.stdout.write("n/a");
+  process.exit(0);
+}
+
+const summary = payload && payload.transportSummary ? payload.transportSummary : null;
+if (!summary || !summary.selectedBuckets) {
+  process.stdout.write("n/a");
+  process.exit(0);
+}
+
+const buckets = summary.selectedBuckets;
+const protocols = Array.isArray(summary.selectedProtocols) ? summary.selectedProtocols.join("+") : "";
+
+const udp = Number(buckets.udp || 0);
+const tcp = Number(buckets.tcp || 0);
+const tlsRelay = Number(buckets.tlsRelay || 0);
+const unknown = Number(buckets.unknown || 0);
+
+const configured = summary.configured || {};
+const cfg = `cfg(udp=${configured.udp ? 1 : 0},tcp=${configured.tcp ? 1 : 0},tls=${configured.tlsRelay ? 1 : 0})`;
+process.stdout.write(`selected(udp=${udp},tcp=${tcp},tlsRelay=${tlsRelay},unknown=${unknown},proto=${protocols || "none"}) ${cfg}`);
+NODE
+}
+
+parse_media_one_way_counters() {
+  local payload_path="$1"
+
+  node - "$payload_path" <<'NODE'
+const fs = require("fs");
+
+const path = process.argv[2];
+const content = fs.readFileSync(path, "utf8").trim();
+const start = content.indexOf("{");
+const end = content.lastIndexOf("}");
+if (start === -1 || end === -1 || end <= start) {
+  process.stdout.write("0|0");
+  process.exit(0);
+}
+
+let payload;
+try {
+  payload = JSON.parse(content.slice(start, end + 1));
+} catch {
+  process.stdout.write("0|0");
+  process.exit(0);
+}
+
+const oneWay = payload && payload.oneWaySummary ? payload.oneWaySummary : {};
+const audio = Number(oneWay.audioIncidents || 0);
+const video = Number(oneWay.videoIncidents || 0);
+process.stdout.write(`${audio}|${video}`);
+NODE
+}
+
 echo "[postdeploy-smoke] health"
 curl -fsS "$BASE_URL/health" >/dev/null
 
@@ -164,6 +250,37 @@ fi
 set -a
 source "$ENV_FILE"
 set +a
+
+validate_turn_range() {
+  local min_port_raw="${TURN_MIN_PORT:-30000}"
+  local max_port_raw="${TURN_MAX_PORT:-31000}"
+  local expected_size_raw="${SMOKE_EXPECT_TURN_RANGE_SIZE:-1001}"
+
+  if [[ ! "$min_port_raw" =~ ^[0-9]+$ || ! "$max_port_raw" =~ ^[0-9]+$ || ! "$expected_size_raw" =~ ^[0-9]+$ ]]; then
+    echo "[postdeploy-smoke] TURN range values must be numeric: min=$min_port_raw max=$max_port_raw expected_size=$expected_size_raw" >&2
+    exit 1
+  fi
+
+  local min_port="$min_port_raw"
+  local max_port="$max_port_raw"
+  local expected_size="$expected_size_raw"
+
+  if (( max_port < min_port )); then
+    echo "[postdeploy-smoke] invalid TURN range: max < min ($min_port-$max_port)" >&2
+    exit 1
+  fi
+
+  local actual_size=$((max_port - min_port + 1))
+  echo "[postdeploy-smoke] turn relay range: ${min_port}-${max_port} (${actual_size} ports)"
+
+  if (( actual_size != expected_size )); then
+    echo "[postdeploy-smoke] TURN relay range size mismatch: expected ${expected_size}, got ${actual_size}" >&2
+    echo "[postdeploy-smoke] set TURN_MIN_PORT/TURN_MAX_PORT to keep ${expected_size} ports in test baseline" >&2
+    exit 1
+  fi
+}
+
+validate_turn_range
 
 SMOKE_USER_ID=""
 SMOKE_USER_ROLE=""
@@ -221,7 +338,7 @@ VERSION_CACHE_STATUS="pass"
 if [[ "${SMOKE_REALTIME:-1}" == "0" ]]; then
   echo "[postdeploy-smoke] realtime smoke skipped (SMOKE_REALTIME=0)"
   SMOKE_STATUS="pass"
-  SMOKE_SUMMARY_TEXT="health=pass mode=sso sso=pass api=$API_SMOKE_STATUS version_cache=$VERSION_CACHE_STATUS realtime=skip extended_realtime=$EXTENDED_REALTIME_STATUS sfu_topology=$SMOKE_SFU_TOPOLOGY_STATUS delta(nack=0,ack=0,chat=0,idem=0,initial_state=0,initial_state_participants=0)"
+  SMOKE_SUMMARY_TEXT="health=pass mode=sso sso=pass api=$API_SMOKE_STATUS version_cache=$VERSION_CACHE_STATUS realtime=skip extended_realtime=$EXTENDED_REALTIME_STATUS sfu_topology=$SMOKE_SFU_TOPOLOGY_STATUS realtime_media=$SMOKE_REALTIME_MEDIA_STATUS transport=$SMOKE_MEDIA_TRANSPORT_SUMMARY one_way(audio=$SMOKE_ONE_WAY_AUDIO_INCIDENTS,video=$SMOKE_ONE_WAY_VIDEO_INCIDENTS) delta(nack=0,ack=0,chat=0,idem=0,initial_state=0,initial_state_participants=0)"
   exit 0
 fi
 
@@ -397,6 +514,66 @@ if [[ -n "${SMOKE_SFU_ROOM_SLUG:-}" ]]; then
   SMOKE_SFU_TOPOLOGY_STATUS="pass"
 fi
 
+if [[ "${SMOKE_REALTIME_MEDIA:-0}" == "1" ]]; then
+  echo "[postdeploy-smoke] smoke:realtime:media"
+  media_smoke_log="$(mktemp)"
+
+  if [[ -z "${SMOKE_TEST_BEARER_TOKEN_SECOND:-}" && -z "${SMOKE_WS_TICKET_SECOND:-}" ]]; then
+    USER_META_SECOND_MEDIA="$(resolve_user_meta_by_email "$USER_EMAIL_SECOND")"
+    if [[ -z "$USER_META_SECOND_MEDIA" ]]; then
+      rm -f "$media_smoke_log"
+      echo "[postdeploy-smoke] cannot resolve second smoke user for realtime media gate email=$USER_EMAIL_SECOND" >&2
+      exit 1
+    fi
+
+    if [[ -z "$JWT_SECRET_CANDIDATE" ]]; then
+      JWT_SECRET_CANDIDATE="${JWT_SECRET:-${TEST_JWT_SECRET:-}}"
+      if [[ -z "$JWT_SECRET_CANDIDATE" ]]; then
+        JWT_SECRET_CANDIDATE="$(compose exec -T "$API_SERVICE" printenv JWT_SECRET 2>/dev/null | tr -d '\r' | tr -d '\n')"
+      fi
+    fi
+
+    if [[ -z "$JWT_SECRET_CANDIDATE" ]]; then
+      rm -f "$media_smoke_log"
+      echo "[postdeploy-smoke] cannot generate SMOKE_TEST_BEARER_TOKEN_SECOND for realtime media gate (missing JWT secret)" >&2
+      exit 1
+    fi
+
+    SMOKE_TEST_BEARER_TOKEN_SECOND="$(make_hs256_jwt "$JWT_SECRET_CANDIDATE" "${USER_META_SECOND_MEDIA%%|*}" "${USER_META_SECOND_MEDIA##*|}")"
+    export SMOKE_TEST_BEARER_TOKEN_SECOND
+  fi
+
+  if SMOKE_API_URL="$BASE_URL" \
+    SMOKE_ROOM_SLUG="$BASELINE_SMOKE_ROOM_SLUG" \
+    SMOKE_TEST_BEARER_TOKEN="${SMOKE_TEST_BEARER_TOKEN:-}" \
+    SMOKE_TEST_BEARER_TOKEN_SECOND="${SMOKE_TEST_BEARER_TOKEN_SECOND:-}" \
+    SMOKE_WS_TICKET="${SMOKE_WS_TICKET:-}" \
+    SMOKE_WS_TICKET_SECOND="${SMOKE_WS_TICKET_SECOND:-}" \
+    SMOKE_RTC_ICE_SERVERS_JSON="${SMOKE_RTC_ICE_SERVERS_JSON:-${TEST_VITE_RTC_ICE_SERVERS_JSON:-}}" \
+    SMOKE_RTC_ICE_TRANSPORT_POLICY="${SMOKE_RTC_ICE_TRANSPORT_POLICY:-${TEST_VITE_RTC_ICE_TRANSPORT_POLICY:-all}}" \
+    node ./scripts/smoke/smoke-realtime-media-browser.mjs | tee "$media_smoke_log"; then
+    SMOKE_REALTIME_MEDIA_STATUS="pass"
+    SMOKE_MEDIA_TRANSPORT_SUMMARY="$(parse_media_transport_summary "$media_smoke_log")"
+    one_way_counters="$(parse_media_one_way_counters "$media_smoke_log")"
+    SMOKE_ONE_WAY_AUDIO_INCIDENTS="${one_way_counters%%|*}"
+    SMOKE_ONE_WAY_VIDEO_INCIDENTS="${one_way_counters##*|}"
+
+    if [[ "${SMOKE_FAIL_ON_ONE_WAY:-1}" == "1" ]] && { [[ "$SMOKE_ONE_WAY_AUDIO_INCIDENTS" != "0" ]] || [[ "$SMOKE_ONE_WAY_VIDEO_INCIDENTS" != "0" ]]; }; then
+      rm -f "$media_smoke_log"
+      echo "[postdeploy-smoke] one-way media incidents detected: audio=$SMOKE_ONE_WAY_AUDIO_INCIDENTS video=$SMOKE_ONE_WAY_VIDEO_INCIDENTS" >&2
+      exit 1
+    fi
+  else
+    SMOKE_REALTIME_MEDIA_STATUS="fail"
+    SMOKE_MEDIA_TRANSPORT_SUMMARY="failed"
+    rm -f "$media_smoke_log"
+    echo "[postdeploy-smoke] smoke:realtime:media failed" >&2
+    exit 1
+  fi
+
+  rm -f "$media_smoke_log"
+fi
+
 echo "[postdeploy-smoke] realtime metrics after"
 METRICS_AFTER_RAW="$(compose exec -T "$REDIS_SERVICE" redis-cli HGETALL "ws:metrics:$DAY" | cat)"
 printf '%s\n' "$METRICS_AFTER_RAW"
@@ -416,6 +593,6 @@ SMOKE_CALL_INITIAL_STATE_SENT_DELTA=$((CALL_INITIAL_STATE_SENT_AFTER - CALL_INIT
 SMOKE_CALL_INITIAL_STATE_PARTICIPANTS_DELTA=$((CALL_INITIAL_STATE_PARTICIPANTS_AFTER - CALL_INITIAL_STATE_PARTICIPANTS_BEFORE))
 
 SMOKE_STATUS="pass"
-SMOKE_SUMMARY_TEXT="health=pass mode=sso sso=pass api=$API_SMOKE_STATUS version_cache=$VERSION_CACHE_STATUS realtime=pass extended_realtime=$EXTENDED_REALTIME_STATUS sfu_topology=$SMOKE_SFU_TOPOLOGY_STATUS delta(nack=$SMOKE_NACK_DELTA,ack=$SMOKE_ACK_DELTA,chat=$SMOKE_CHAT_SENT_DELTA,idem=$SMOKE_CHAT_IDEMPOTENCY_HIT_DELTA,initial_state=$SMOKE_CALL_INITIAL_STATE_SENT_DELTA,initial_state_participants=$SMOKE_CALL_INITIAL_STATE_PARTICIPANTS_DELTA)"
+SMOKE_SUMMARY_TEXT="health=pass mode=sso sso=pass api=$API_SMOKE_STATUS version_cache=$VERSION_CACHE_STATUS realtime=pass extended_realtime=$EXTENDED_REALTIME_STATUS sfu_topology=$SMOKE_SFU_TOPOLOGY_STATUS realtime_media=$SMOKE_REALTIME_MEDIA_STATUS transport=$SMOKE_MEDIA_TRANSPORT_SUMMARY one_way(audio=$SMOKE_ONE_WAY_AUDIO_INCIDENTS,video=$SMOKE_ONE_WAY_VIDEO_INCIDENTS) delta(nack=$SMOKE_NACK_DELTA,ack=$SMOKE_ACK_DELTA,chat=$SMOKE_CHAT_SENT_DELTA,idem=$SMOKE_CHAT_IDEMPOTENCY_HIT_DELTA,initial_state=$SMOKE_CALL_INITIAL_STATE_SENT_DELTA,initial_state_participants=$SMOKE_CALL_INITIAL_STATE_PARTICIPANTS_DELTA)"
 
 echo "[postdeploy-smoke] done"

@@ -96,6 +96,87 @@ function resolveIceServers() {
     .map((url) => ({ urls: [url] }));
 }
 
+function normalizeProtocol(value) {
+  const protocol = String(value || "").trim().toLowerCase();
+  if (protocol === "udp" || protocol === "tcp") {
+    return protocol;
+  }
+  return "";
+}
+
+function classifyTransportBucket(stats, tlsPreferredByConfig) {
+  const localType = String(stats?.localCandidateType || "").trim().toLowerCase();
+  const remoteType = String(stats?.remoteCandidateType || "").trim().toLowerCase();
+  const localProtocol = normalizeProtocol(stats?.localCandidateProtocol);
+  const remoteProtocol = normalizeProtocol(stats?.remoteCandidateProtocol);
+  const localPort = Number(stats?.localCandidatePort || 0);
+  const remotePort = Number(stats?.remoteCandidatePort || 0);
+
+  const relayPath = localType === "relay" || remoteType === "relay";
+  const protocol = localProtocol || remoteProtocol;
+
+  if (relayPath && protocol === "tcp") {
+    const tlsPortDetected = localPort === 5349 || remotePort === 5349;
+    if (tlsPortDetected || tlsPreferredByConfig) {
+      return "tlsRelay";
+    }
+    return "tcp";
+  }
+
+  if (protocol === "udp") {
+    return "udp";
+  }
+
+  if (protocol === "tcp") {
+    return "tcp";
+  }
+
+  return "unknown";
+}
+
+function buildTransportSummary({ statsA, statsB, iceServers }) {
+  const urls = (Array.isArray(iceServers) ? iceServers : [])
+    .flatMap((server) => {
+      const rawUrls = server?.urls;
+      if (Array.isArray(rawUrls)) {
+        return rawUrls;
+      }
+      return [rawUrls];
+    })
+    .map((url) => String(url || "").trim())
+    .filter(Boolean);
+
+  const configured = {
+    udp: urls.some((url) => /transport=udp/i.test(url)),
+    tcp: urls.some((url) => /transport=tcp/i.test(url)),
+    tlsRelay: urls.some((url) => /^turns:/i.test(url))
+  };
+
+  const buckets = { udp: 0, tcp: 0, tlsRelay: 0, unknown: 0 };
+  const selectedProtocols = new Set();
+  const peers = [statsA, statsB].filter(Boolean);
+
+  for (const stats of peers) {
+    const localProtocol = normalizeProtocol(stats.localCandidateProtocol);
+    const remoteProtocol = normalizeProtocol(stats.remoteCandidateProtocol);
+    if (localProtocol) {
+      selectedProtocols.add(localProtocol);
+    }
+    if (remoteProtocol) {
+      selectedProtocols.add(remoteProtocol);
+    }
+
+    const bucket = classifyTransportBucket(stats, configured.tlsRelay);
+    buckets[bucket] = Number(buckets[bucket] || 0) + 1;
+  }
+
+  return {
+    configured,
+    selectedProtocols: Array.from(selectedProtocols),
+    selectedBuckets: buckets
+  };
+}
+
 function assertPreconditions() {
   const isHttp = baseUrl.startsWith("http://") || baseUrl.startsWith("https://");
   if (!isHttp) {
@@ -858,8 +939,10 @@ async function preparePeerPage({ context, label, ticket, toneHz, iceServers, ice
           selectedCandidatePairRttMs: selectedPair ? Number(selectedPair.currentRoundTripTime || 0) * 1000 : 0,
           localCandidateType: localCandidate ? String(localCandidate.candidateType || "") : "",
           localCandidateProtocol: localCandidate ? String(localCandidate.protocol || "") : "",
+          localCandidatePort: localCandidate ? Number(localCandidate.port || 0) : 0,
           remoteCandidateType: remoteCandidate ? String(remoteCandidate.candidateType || "") : "",
-          remoteCandidateProtocol: remoteCandidate ? String(remoteCandidate.protocol || "") : ""
+          remoteCandidateProtocol: remoteCandidate ? String(remoteCandidate.protocol || "") : "",
+          remoteCandidatePort: remoteCandidate ? Number(remoteCandidate.port || 0) : 0
         };
       },
       getPresenceUserIds: () => Array.from(state.presentUserIds),
@@ -1116,6 +1199,7 @@ async function main() {
 
     const statsA = await pageA.evaluate(() => window.__rtcMediaSmoke.getRtcStats());
     const statsB = await pageB.evaluate(() => window.__rtcMediaSmoke.getRtcStats());
+    const transportSummary = buildTransportSummary({ statsA, statsB, iceServers });
     const stateA = await pageA.evaluate(() => window.__rtcMediaSmoke.getState());
     const stateB = await pageB.evaluate(() => window.__rtcMediaSmoke.getState());
 
@@ -1190,6 +1274,18 @@ async function main() {
         && redialSuccessesB > 0
       );
 
+    const peerAAudioOutboundOk = Number(statsA.outboundAudioBytes || 0) > 0 && Number(statsA.outboundAudioPackets || 0) > 0;
+    const peerAAudioInboundOk = Number(statsA.inboundAudioBytes || 0) > 0 && Number(statsA.inboundAudioPackets || 0) > 0;
+    const peerBAudioOutboundOk = Number(statsB.outboundAudioBytes || 0) > 0 && Number(statsB.outboundAudioPackets || 0) > 0;
+    const peerBAudioInboundOk = Number(statsB.inboundAudioBytes || 0) > 0 && Number(statsB.inboundAudioPackets || 0) > 0;
+    const peerAVideoOutboundOk = Number(statsA.outboundVideoBytes || 0) > 0 && Number(statsA.outboundVideoPackets || 0) > 0;
+    const peerAVideoInboundOk = Number(statsA.inboundVideoBytes || 0) > 0 && Number(statsA.inboundVideoPackets || 0) > 0;
+    const peerBVideoOutboundOk = Number(statsB.outboundVideoBytes || 0) > 0 && Number(statsB.outboundVideoPackets || 0) > 0;
+    const peerBVideoInboundOk = Number(statsB.inboundVideoBytes || 0) > 0 && Number(statsB.inboundVideoPackets || 0) > 0;
+
+    const oneWayAudioIncidents = Number(peerAAudioOutboundOk && !peerBAudioInboundOk) + Number(peerBAudioOutboundOk && !peerAAudioInboundOk);
+    const oneWayVideoIncidents = Number(peerAVideoOutboundOk && !peerBVideoInboundOk) + Number(peerBVideoOutboundOk && !peerAVideoInboundOk);
+
     const failureSnapshot = JSON.stringify({
       users: {
         peerA: peerA.userId,
@@ -1243,6 +1339,23 @@ async function main() {
       redialSuccesses: {
         peerA: redialSuccessesA,
         peerB: redialSuccessesB
+      },
+      transportSummary,
+      oneWaySummary: {
+        audioIncidents: oneWayAudioIncidents,
+        videoIncidents: oneWayVideoIncidents,
+        peerA: {
+          outboundAudioOk: peerAAudioOutboundOk,
+          inboundAudioOk: peerAAudioInboundOk,
+          outboundVideoOk: peerAVideoOutboundOk,
+          inboundVideoOk: peerAVideoInboundOk
+        },
+        peerB: {
+          outboundAudioOk: peerBAudioOutboundOk,
+          inboundAudioOk: peerBAudioInboundOk,
+          outboundVideoOk: peerBVideoOutboundOk,
+          inboundVideoOk: peerBVideoInboundOk
+        }
       },
       cameraStateConvergenceOk,
       remoteVideoStateA,
