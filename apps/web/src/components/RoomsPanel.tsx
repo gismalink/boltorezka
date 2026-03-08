@@ -24,7 +24,6 @@ export function RoomsPanel({
   roomSlug,
   roomMediaTopologyBySlug,
   currentUserId,
-  currentUserName,
   liveRoomMembersBySlug,
   liveRoomMemberDetailsBySlug,
   voiceMicStateByUserIdInCurrentRoom,
@@ -132,24 +131,6 @@ export function RoomsPanel({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [confirmPopup]);
 
-  const dedupeMemberNames = (names: string[]) => {
-    const byKey = new Map<string, string>();
-    names.forEach((nameRaw) => {
-      const normalized = String(nameRaw || "").trim();
-      if (!normalized) {
-        return;
-      }
-
-      const key = normalized.toLocaleLowerCase();
-      if (!byKey.has(key)) {
-        byKey.set(key, normalized);
-      }
-    });
-
-    return Array.from(byKey.values());
-  };
-
-  const normalizedCurrentUserName = String(currentUserName || "").trim().toLocaleLowerCase();
   const normalizedCurrentUserId = String(currentUserId || "").trim();
   const mapRoomMembers = (slug: string) => {
     const details = liveRoomMemberDetailsBySlug[slug] || [];
@@ -171,10 +152,13 @@ export function RoomsPanel({
       return Array.from(byKey.values());
     }
 
-    return dedupeMemberNames(liveRoomMembersBySlug[slug] || []).map((userName) => ({
+    return (liveRoomMembersBySlug[slug] || []).map((nameRaw) => {
+      const userName = String(nameRaw || "").trim();
+      return {
       userId: "",
       userName
-    }));
+      };
+    }).filter((member) => member.userName.length > 0);
   };
 
   const renderRoomRow = (room: Room) => (
@@ -327,10 +311,9 @@ export function RoomsPanel({
         <ul className="channel-members-list col-span-full grid gap-0.5 pl-4 pt-0.5">
           {roomMembers.map((member) => (
             (() => {
-              const normalizedMemberName = member.userName.trim().toLocaleLowerCase();
-              const isCurrentUser = normalizedCurrentUserId
-                ? member.userId && member.userId === normalizedCurrentUserId
-                : normalizedCurrentUserName && normalizedMemberName === normalizedCurrentUserName;
+              const isCurrentUser = Boolean(
+                normalizedCurrentUserId && member.userId && member.userId === normalizedCurrentUserId
+              );
               const micState = roomHasVoiceState && member.userId
                 ? (voiceMicStateByUserIdInCurrentRoom[member.userId] || "silent")
                 : "silent";

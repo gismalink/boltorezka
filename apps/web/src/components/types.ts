@@ -93,7 +93,6 @@ export type RoomsPanelProps = {
   roomSlug: string;
   roomMediaTopologyBySlug: Record<string, "p2p" | "sfu">;
   currentUserId: string;
-  currentUserName: string;
   liveRoomMembersBySlug: Record<string, string[]>;
   liveRoomMemberDetailsBySlug: Record<string, PresenceMember[]>;
   voiceMicStateByUserIdInCurrentRoom: Record<string, "muted" | "silent" | "speaking">;

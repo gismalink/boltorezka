@@ -1932,7 +1932,6 @@ export function App() {
               roomSlug={roomSlug}
               roomMediaTopologyBySlug={roomMediaTopologyBySlug}
               currentUserId={user?.id || ""}
-              currentUserName={user?.name || ""}
               liveRoomMembersBySlug={roomsPresenceBySlug}
               liveRoomMemberDetailsBySlug={roomsPresenceDetailsBySlug}
               voiceMicStateByUserIdInCurrentRoom={voiceMicStateByUserIdInCurrentRoom}
