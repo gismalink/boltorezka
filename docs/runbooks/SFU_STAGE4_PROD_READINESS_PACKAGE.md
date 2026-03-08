@@ -49,6 +49,9 @@
   - Scenario: repeated `Wi-Fi -> LTE -> Wi-Fi` switches without page reload.
   - Server log snapshot (`boltorezka-api-test`, last 20m): `ws.connected=1`, `ws.disconnected/reconnect=0`, `call.offer/call.answer=338`.
   - Verdict: room state preserved, media path survived handoff via renegotiation (no forced reconnect loop).
+- WS privacy/logging evidence:
+  - `call.*` server logs сохраняют только агрегированную SDP/ICE мета-информацию, ICE address/port маскируются.
+  - Raw ICE fields доступны только под явным debug-флагом `WS_CALL_DEBUG_RAW_ICE=1` (должен оставаться выключенным в test/prod baseline).
 
 ## 4) Runtime risk posture
 
