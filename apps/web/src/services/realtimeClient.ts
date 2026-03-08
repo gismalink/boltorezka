@@ -71,11 +71,6 @@ export class RealtimeClient {
     payload: Record<string, unknown>,
     options: { withIdempotency?: boolean; trackAck?: boolean; maxRetries?: number } = {}
   ) {
-    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-      this.options.onLog(`ws send skipped: ${eventType} (socket is not open)`);
-      return null;
-    }
-
     const requestId = crypto.randomUUID();
     const envelope: WsOutgoing = {
       type: eventType,
@@ -95,10 +90,23 @@ export class RealtimeClient {
         retries: 0,
         maxRetries: options.maxRetries ?? 0
       });
+    }
+
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+      if (!trackAck) {
+        this.options.onLog(`ws send skipped: ${eventType} (socket is not open)`);
+        return null;
+      }
+
+      this.options.onLog(`ws send queued: ${eventType} (socket is not open)`);
       this.armAckTimeout(requestId);
+      return requestId;
     }
 
     this.ws.send(JSON.stringify(envelope));
+    if (trackAck) {
+      this.armAckTimeout(requestId);
+    }
     return requestId;
   }
 

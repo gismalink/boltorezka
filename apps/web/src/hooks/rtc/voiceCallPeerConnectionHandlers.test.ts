@@ -105,7 +105,7 @@ describe("voiceCallPeerConnectionHandlers", () => {
         targetUserId: "user-2",
         signal: { candidate: "candidate:0 1 udp 2122260223 10.0.0.1 8998 typ host" }
       },
-      { trackAck: false, maxRetries: 0 }
+      { trackAck: true, maxRetries: 1 }
     );
     expect(rememberRequestTarget).toHaveBeenCalledWith("req-ice-1", "call.ice", "user-2");
     expect(pushCallLog).toHaveBeenCalledWith(
@@ -157,7 +157,7 @@ describe("voiceCallPeerConnectionHandlers", () => {
         targetUserId: "user-2",
         signal: { candidate: "candidate:1 1 udp 2122260223 10.0.0.2 9000 typ host" }
       },
-      { trackAck: false, maxRetries: 0 }
+      { trackAck: true, maxRetries: 1 }
     );
     expect(rememberRequestTarget).toHaveBeenCalledWith("req-ice-race", "call.ice", "user-2");
   });

@@ -71,7 +71,7 @@ export function bindVoicePeerConnectionHandlers({
         targetUserId,
         signal: event.candidate.toJSON()
       },
-      { trackAck: false, maxRetries: 0 }
+      { trackAck: true, maxRetries: 1 }
     );
 
     if (!requestId) {
