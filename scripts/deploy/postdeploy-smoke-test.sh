@@ -342,7 +342,7 @@ collect_turn_allocation_failures() {
   fi
 
   local failures
-  failures="$(printf '%s\n' "$turn_logs" | grep -Eci 'Cannot create socket|error 508|allocation[^[:alnum:]]*(fail|error|denied)')"
+  failures="$(printf '%s\n' "$turn_logs" | grep -Eci 'Cannot create socket|error 508|allocation[^[:alnum:]]*(fail|error|denied)' || true)"
   SMOKE_TURN_ALLOCATION_FAILURES="${failures:-0}"
 
   if (( SMOKE_TURN_ALLOCATION_FAILURES == 0 )); then
