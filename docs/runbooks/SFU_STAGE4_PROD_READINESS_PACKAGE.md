@@ -10,9 +10,9 @@
 ## 2) Verified test candidate
 
 - Branch: `origin/feature/video-stream-investigation`
-- Candidate SHA: `ff0d207d54f617fc7ca581ce8c16cf4bcf6f213f`
+- Candidate SHA: `471e0ad48413009ef4ca8c6f9142efd58691d18c`
 - Test profile: `deploy:test:sfu`
-- Evidence window: latest refresh `2026-03-08T19:40:08Z`
+- Evidence window: latest refresh `2026-03-08T19:48:48Z`
 
 ## 3) Stage 3 evidence (must-pass)
 
@@ -36,6 +36,7 @@
   - `race3WayOk=false`
   - `race3WayIceRelayOk=false`
   - dedicated live-room stress (6 participants) passed: `liveRoomOk=true`, `totalActions=42`, `leaveRejoinEvents=2`, `acceptedNacks=0`
+  - explicit late-join/leave stress passed (`SMOKE_CALL_LIVE_ROOM_REQUIRE_LATE_JOIN=1`): `liveRoomOk=true`, `totalActions=44`, `lateJoinEvents=1`, `leaveRejoinEvents=2`, `acceptedNacks=0`
 - Baseline comparison evidence (`p2p vs sfu`, same ref):
   - Artifact: `~/srv/boltorezka/.deploy/compare-p2p-sfu-20260308T184848Z.md`
   - `p2p`: `SMOKE_STATUS=pass`, `SMOKE_REALTIME_MEDIA_STATUS=pass`, `SMOKE_TURN_TLS_STATUS=pass`, one-way `audio=0`, `video=0`, `ACK=51`, `NACK=3`
