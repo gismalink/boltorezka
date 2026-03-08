@@ -98,7 +98,7 @@ Strategy update (2026-03-08): принят курс `SFU-first` - сначала
 - [ ] Проверка mixed профиля (`all`) с приоритетом direct path.
 - [x] Негативный контрактный тест: `call.*` без `targetUserId` отклоняется (`ValidationError`) и не релеится в комнату.
 - [x] Тест идемпотентности `call.*`: дубликаты `offer/answer/ice` не вызывают повторного применения сигналов.
-- [ ] Тест устойчивости: WS reconnect в фазе negotiation не оставляет сессию в подвешенном состоянии.
+- [x] Тест устойчивости: WS reconnect в фазе negotiation не оставляет сессию в подвешенном состоянии.
 - [x] Smoke на каждой test-выкатке (`deploy:test:smoke`).
 - [x] Набор regression тестов для stale-peer recovery и offer policy.
 

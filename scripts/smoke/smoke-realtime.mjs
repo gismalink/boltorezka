@@ -11,6 +11,7 @@ const bearerTokenThird = process.env.SMOKE_TEST_BEARER_TOKEN_THIRD
   ?? (allowLegacyBearer ? (process.env.SMOKE_BEARER_TOKEN_THIRD ?? "") : "");
 const preissuedTicket = process.env.SMOKE_WS_TICKET ?? "";
 const preissuedTicketSecond = process.env.SMOKE_WS_TICKET_SECOND ?? "";
+const preissuedTicketSecondReconnect = process.env.SMOKE_WS_TICKET_SECOND_RECONNECT ?? "";
 const preissuedTicketThird = process.env.SMOKE_WS_TICKET_THIRD ?? "";
 const preissuedTicketReconnect = process.env.SMOKE_WS_TICKET_RECONNECT ?? "";
 const smokeCallSignal = process.env.SMOKE_CALL_SIGNAL === "1";
@@ -207,6 +208,19 @@ async function resolveSecondTicket() {
   }
 
   return resolveTicketFromBearerToken(tokenForSecondTicket, "second");
+}
+
+async function resolveSecondReconnectTicket() {
+  if (preissuedTicketSecondReconnect) {
+    return preissuedTicketSecondReconnect;
+  }
+
+  const tokenForSecondTicket = bearerTokenSecond || bearerToken;
+  if (!tokenForSecondTicket) {
+    return null;
+  }
+
+  return resolveTicketFromBearerToken(tokenForSecondTicket, "second-reconnect");
 }
 
 async function resolveReconnectTicket() {
@@ -1066,6 +1080,8 @@ async function runLiveRoomBehaviorScenario({ roomSlug, timeoutMs }) {
   let mediaTopologySecondOk = false;
   let callMissingTargetRejected = false;
   let callSignalIdempotencyOk = false;
+  let callNegotiationReconnectOk = false;
+  let callNegotiationReconnectSkipped = false;
   let reconnectOk = false;
   let reconnectSkipped = false;
   if (smokeCallSignal) {
@@ -1318,6 +1334,120 @@ async function runLiveRoomBehaviorScenario({ roomSlug, timeoutMs }) {
 
     callHangupRelayed = true;
 
+    // Validate negotiation resilience for signaling path: offer sent, WS reconnect, answer applies.
+    await sleep(5500);
+
+    const reconnectOfferRequestId = `call-offer-reconnect-${Date.now()}`;
+    ws.send(
+      JSON.stringify({
+        type: "call.offer",
+        requestId: reconnectOfferRequestId,
+        payload: {
+          targetUserId: secondUserId,
+          signal: { type: "offer", sdp: "smoke-reconnect-offer" }
+        }
+      })
+    );
+
+    const reconnectOfferAck = await waitForEvent(
+      events,
+      (item) => item?.type === "ack" && item?.payload?.requestId === reconnectOfferRequestId,
+      "ack for reconnect-window call.offer"
+    );
+    if (Number(reconnectOfferAck?.payload?.relayedTo || 0) < 1) {
+      throw new Error("[smoke:realtime] reconnect-window call.offer must relay to target");
+    }
+
+    await waitForEvent(
+      secondEvents,
+      (item) => item?.type === "call.offer" && String(item?.payload?.requestId || "") === reconnectOfferRequestId,
+      "relayed reconnect-window call.offer"
+    );
+
+    const secondReconnectTicket = await resolveSecondReconnectTicket();
+    if (!secondReconnectTicket) {
+      callNegotiationReconnectSkipped = true;
+    } else {
+      wsSecond.close();
+      await sleep(300);
+
+      const wsSecondReconnectUrl = toWsUrl(baseUrl);
+      wsSecondReconnectUrl.pathname = "/v1/realtime/ws";
+      wsSecondReconnectUrl.search = "";
+      wsSecondReconnectUrl.searchParams.set("ticket", secondReconnectTicket);
+      wsSecond = new WS(wsSecondReconnectUrl.toString());
+
+      wsSecond.on("message", (raw) => {
+        try {
+          const value = typeof raw === "string" ? raw : raw.toString("utf8");
+          secondEvents.push(JSON.parse(value));
+        } catch {
+          return;
+        }
+      });
+
+      await new Promise((resolve, reject) => {
+        const timer = setTimeout(() => reject(new Error("[smoke:realtime] second reconnect websocket open timeout")), timeoutMs);
+
+        wsSecond.once("open", () => {
+          clearTimeout(timer);
+          resolve();
+        });
+
+        wsSecond.once("error", (error) => {
+          clearTimeout(timer);
+          reject(error);
+        });
+      });
+
+      const secondReconnectReady = await waitForEvent(
+        secondEvents,
+        (item) => item?.type === "server.ready",
+        "server.ready for second reconnect websocket"
+      );
+      const secondReconnectUserId = String(secondReconnectReady?.payload?.userId || "").trim();
+      if (!secondReconnectUserId || secondReconnectUserId !== secondUserId) {
+        throw new Error("[smoke:realtime] second reconnect websocket must preserve user identity");
+      }
+
+      const secondReconnectJoinRequest = `join2-reconnect-${Date.now()}`;
+      wsSecond.send(JSON.stringify({ type: "room.join", requestId: secondReconnectJoinRequest, payload: { roomSlug } }));
+      await waitForEvent(
+        secondEvents,
+        (item) => item?.type === "ack" && item?.payload?.requestId === secondReconnectJoinRequest,
+        "ack for second room.join after reconnect"
+      );
+
+      const reconnectAnswerRequestId = `call-answer-reconnect-${Date.now()}`;
+      wsSecond.send(
+        JSON.stringify({
+          type: "call.answer",
+          requestId: reconnectAnswerRequestId,
+          payload: {
+            targetUserId: firstUserId,
+            signal: { type: "answer", sdp: "smoke-reconnect-answer" }
+          }
+        })
+      );
+
+      const reconnectAnswerAck = await waitForEvent(
+        secondEvents,
+        (item) => item?.type === "ack" && item?.payload?.requestId === reconnectAnswerRequestId,
+        "ack for reconnect-window call.answer"
+      );
+      if (Number(reconnectAnswerAck?.payload?.relayedTo || 0) < 1) {
+        throw new Error("[smoke:realtime] reconnect-window call.answer must relay to target");
+      }
+
+      await waitForEvent(
+        events,
+        (item) => item?.type === "call.answer" && String(item?.payload?.requestId || "") === reconnectAnswerRequestId,
+        "relayed reconnect-window call.answer"
+      );
+
+      callNegotiationReconnectOk = true;
+    }
+
     if (smokeCallRace3Way) {
       const raceResult = await runThreeWayRaceScenario({
         firstWs: ws,
@@ -1458,6 +1588,8 @@ async function runLiveRoomBehaviorScenario({ roomSlug, timeoutMs }) {
         callSignalRelayed,
         callMissingTargetRejected,
         callSignalIdempotencyOk,
+        callNegotiationReconnectOk,
+        callNegotiationReconnectSkipped,
         callRejectRelayed,
         callHangupRelayed
       },
