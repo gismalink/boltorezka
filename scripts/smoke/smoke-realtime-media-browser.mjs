@@ -24,6 +24,15 @@ const targetUserIdEnv = String(process.env.SMOKE_RTC_TARGET_USER_ID || "").trim(
 const reconnectIntervalMs = Number(process.env.SMOKE_RTC_RECONNECT_INTERVAL_MS || 3000);
 const broadcastOffers = process.env.SMOKE_RTC_BROADCAST_OFFERS === "1";
 const requireIceRestart = process.env.SMOKE_RTC_REQUIRE_ICE_RESTART === "1";
+const emulateMobilePeerA = process.env.SMOKE_RTC_EMULATE_MOBILE_PEER_A === "1";
+const emulateMobilePeerB = process.env.SMOKE_RTC_EMULATE_MOBILE_PEER_B === "1";
+const mobileViewportWidth = Number(process.env.SMOKE_RTC_MOBILE_VIEWPORT_WIDTH || 390);
+const mobileViewportHeight = Number(process.env.SMOKE_RTC_MOBILE_VIEWPORT_HEIGHT || 844);
+const mobileDeviceScaleFactor = Number(process.env.SMOKE_RTC_MOBILE_DPR || 3);
+const mobileUserAgent = String(
+  process.env.SMOKE_RTC_MOBILE_USER_AGENT
+  || "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1"
+).trim();
 
 const tokenA = String(process.env.SMOKE_TEST_BEARER_TOKEN || "").trim();
 const tokenB = String(process.env.SMOKE_TEST_BEARER_TOKEN_SECOND || "").trim();
@@ -1099,8 +1108,19 @@ async function main() {
       .concat(hostResolveRule ? [`--host-resolver-rules=${hostResolveRule}`] : [])
   });
 
-  const contextA = await browser.newContext();
-  const contextB = await browser.newContext();
+  const mobileContextOptions = {
+    viewport: {
+      width: Math.max(280, Math.floor(mobileViewportWidth) || 390),
+      height: Math.max(480, Math.floor(mobileViewportHeight) || 844)
+    },
+    isMobile: true,
+    hasTouch: true,
+    deviceScaleFactor: Math.max(1, Number.isFinite(mobileDeviceScaleFactor) ? mobileDeviceScaleFactor : 3),
+    userAgent: mobileUserAgent
+  };
+
+  const contextA = await browser.newContext(emulateMobilePeerA ? mobileContextOptions : {});
+  const contextB = await browser.newContext(emulateMobilePeerB ? mobileContextOptions : {});
 
   let pageA = null;
   let pageB = null;
@@ -1398,6 +1418,10 @@ async function main() {
       videoNoiseWidth,
       videoNoiseHeight,
       videoNoiseFps,
+      emulation: {
+        peerA: emulateMobilePeerA ? "mobile" : "desktop",
+        peerB: emulateMobilePeerB ? "mobile" : "desktop"
+      },
       users: {
         peerA: peerA.userId,
         peerB: peerB.userId,
