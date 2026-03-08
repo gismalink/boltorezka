@@ -23,6 +23,8 @@ Validation note (2026-03-08): пройден 1:1 desktop-mobile emulated media s
 Validation note (2026-03-08): пройден explicit late-join/leave stress (`SMOKE_CALL_LIVE_ROOM_REQUIRE_LATE_JOIN=1`) в SFU baseline: `liveRoomOk=true`, `participants=6`, `totalActions=44`, `lateJoinEvents=1`, `leaveRejoinEvents=2`, `acceptedNacks=0`.
 Validation note (2026-03-08): ручной network handoff в `test-room` (многократные переключения `Wi-Fi -> LTE -> Wi-Fi`) подтвержден без потери room state и без ручного reload; server logs: `ws.connected=1`, `ws.disconnected/reconnect=0`, при этом наблюдались повторные `call.offer/call.answer` (renegotiation без разрыва сессии).
 Validation note (2026-03-08): WS call logging в API маскирует ICE address/port (`maskIceAddress`, `maskIcePort`) и логирует только агрегированную SDP/ICE meta; raw ICE (`iceAddressRaw`, `icePortRaw`) появляется только при явном debug-флаге `WS_CALL_DEBUG_RAW_ICE=1`.
+Validation note (2026-03-08): добавлен fail-fast anti-loop guard в `smoke:realtime:media` (`SMOKE_RTC_MAX_RELAYED_OFFERS`, `SMOKE_RTC_MAX_RELAYED_ANSWERS`, `SMOKE_RTC_MAX_RENEGOTIATION_EVENTS`); server `deploy:test:sfu` на SHA `86e19e1` прошел с `renegotiationEventsTotal=5` (лимит `80`).
+Validation note (2026-03-08): явный signaling reconnect smoke (`SMOKE_CALL_SIGNAL=1 SMOKE_RECONNECT=1`, room=`test-room`) прошел с `callNegotiationReconnectOk=true`, `callSignalRelayed=true`, `callSignalIdempotencyOk=true`.
 
 ## 0) Базовые инварианты (обязательно)
 
@@ -73,10 +75,10 @@ Validation note (2026-03-08): WS call logging в API маскирует ICE addr
 - [x] Offer churn ограничен антифлуд-политикой.
 - [x] Reconnect имеет backoff и cap по попыткам.
 - [x] `offer/answer` отправляются с `ack` tracking и bounded retry/backoff (не только `ICE`).
-- [ ] Не возникает endless renegotiation loop.
+- [x] Не возникает endless renegotiation loop.
 - [x] ICE restart path покрыт e2e smoke.
 - [x] При временной деградации сети сессия восстанавливается без ручного reload.
-- [ ] Потеря WS в окне negotiation (`offer sent -> answer apply`) восстанавливается автоматически.
+- [x] Потеря WS в окне negotiation (`offer sent -> answer apply`) восстанавливается автоматически.
 - [x] Локальные mute/camera toggles не триггерят лишние renegotiation.
 - [x] Поток state-событий имеет идемпотентную обработку.
 

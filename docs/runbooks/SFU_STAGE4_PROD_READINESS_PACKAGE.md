@@ -52,6 +52,12 @@
 - WS privacy/logging evidence:
   - `call.*` server logs сохраняют только агрегированную SDP/ICE мета-информацию, ICE address/port маскируются.
   - Raw ICE fields доступны только под явным debug-флагом `WS_CALL_DEBUG_RAW_ICE=1` (должен оставаться выключенным в test/prod baseline).
+- Renegotiation loop guard evidence:
+  - Added fail-fast thresholds in `smoke:realtime:media`: `SMOKE_RTC_MAX_RELAYED_OFFERS`, `SMOKE_RTC_MAX_RELAYED_ANSWERS`, `SMOKE_RTC_MAX_RENEGOTIATION_EVENTS`.
+  - `deploy:test:sfu` on SHA `86e19e112b193d73fa0af5f783c0943671127740` passed with `renegotiationEventsTotal=5` (limit `80`).
+- Negotiation-window reconnect evidence:
+  - Command: `SMOKE_CALL_SIGNAL=1 SMOKE_RECONNECT=1 SMOKE_ROOM_SLUG=test-room npm run smoke:realtime`
+  - Result: `callNegotiationReconnectOk=true`, `callSignalRelayed=true`, `callSignalIdempotencyOk=true`, `mediaTopologySecondOk=true`.
 
 ## 4) Runtime risk posture
 
