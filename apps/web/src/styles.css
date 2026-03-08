@@ -1351,6 +1351,18 @@ pre {
   max-width: 100%;
 }
 
+.profile-readonly-input {
+  background: color-mix(in srgb, var(--pixel-panel-2) 65%, #000 35%);
+  border-color: color-mix(in srgb, var(--pixel-border) 55%, #000 45%);
+  color: var(--pixel-muted);
+  cursor: not-allowed;
+}
+
+.profile-readonly-input:focus-visible {
+  outline: var(--border-thin) solid color-mix(in srgb, var(--pixel-neon-pink) 55%, transparent 45%);
+  border-color: color-mix(in srgb, var(--pixel-border) 65%, #000 35%);
+}
+
 .server-profile-modal {
   width: min(1100px, 100%);
 }

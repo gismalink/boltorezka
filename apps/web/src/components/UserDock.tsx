@@ -4,6 +4,7 @@ import { PopupPortal } from "./PopupPortal";
 
 export function UserDock({
   t,
+  user,
   currentRoomSupportsRtc,
   currentRoomSupportsVideo,
   currentRoomTitle,
@@ -515,7 +516,11 @@ export function UserDock({
                     </label>
                     <label className="grid gap-[var(--space-md)]">
                       <span className="subheading">{t("settings.email")}</span>
-                      <input value={profileEmail} readOnly disabled />
+                      <input className="profile-readonly-input" value={profileEmail} readOnly aria-readonly="true" />
+                    </label>
+                    <label className="grid gap-[var(--space-md)]">
+                      <span className="subheading">ID</span>
+                      <input className="profile-readonly-input" value={user.id} readOnly aria-readonly="true" />
                     </label>
                     <label className="grid gap-[var(--space-md)]">
                       <span className="subheading">{t("settings.language")}</span>
