@@ -22,7 +22,7 @@ const disableMdnsHostCandidates = process.env.SMOKE_RTC_DISABLE_MDNS !== "0";
 const hostResolveRule = String(process.env.SMOKE_CHROMIUM_HOST_RESOLVE_RULE || "").trim();
 const targetUserIdEnv = String(process.env.SMOKE_RTC_TARGET_USER_ID || "").trim();
 const reconnectIntervalMs = Number(process.env.SMOKE_RTC_RECONNECT_INTERVAL_MS || 3000);
-const broadcastOffers = process.env.SMOKE_RTC_BROADCAST_OFFERS !== "0";
+const broadcastOffers = process.env.SMOKE_RTC_BROADCAST_OFFERS === "1";
 
 const tokenA = String(process.env.SMOKE_TEST_BEARER_TOKEN || "").trim();
 const tokenB = String(process.env.SMOKE_TEST_BEARER_TOKEN_SECOND || "").trim();
@@ -753,19 +753,23 @@ async function preparePeerPage({ context, label, ticket, toneHz, iceServers, ice
       },
       startCall: async (targetUserId) => {
         state.remoteUserId = String(targetUserId || "").trim();
+        if (!state.remoteUserId) {
+          throw new Error("[smoke:realtime:media] startCall targetUserId is required");
+        }
         const pc = ensurePeerConnection();
         const offer = await pc.createOffer();
         await pc.setLocalDescription(offer);
 
         const payload = {
+          targetUserId: state.remoteUserId,
           signal: {
             type: pc.localDescription?.type || "offer",
             sdp: pc.localDescription?.sdp || ""
           }
         };
 
-        if (!broadcastOffersInner && state.remoteUserId) {
-          payload.targetUserId = state.remoteUserId;
+        if (broadcastOffersInner) {
+          delete payload.targetUserId;
         }
 
         await sendEvent("call.offer", payload);
