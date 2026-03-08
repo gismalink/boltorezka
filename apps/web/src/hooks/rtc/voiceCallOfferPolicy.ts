@@ -3,18 +3,18 @@
 export type OfferReason = "manual" | "inbound-stalled" | `video-sync:${string}`;
 export type OfferCadenceBucket = "manual" | "video-sync" | "ice-restart";
 
-export const OFFER_MIN_INTERVAL_MS = 10000;
+export const OFFER_MIN_INTERVAL_MS = 18000;
 
 // Keep video-sync cadence comfortably above server OfferRateLimited threshold (5s)
 // to avoid edge collisions from simultaneous reconnect/sync triggers.
-export const OFFER_VIDEO_SYNC_MIN_INTERVAL_MS = 8000;
+export const OFFER_VIDEO_SYNC_MIN_INTERVAL_MS = 15000;
 
-export const OFFER_ICE_RESTART_MIN_INTERVAL_MS = 5000;
+export const OFFER_ICE_RESTART_MIN_INTERVAL_MS = 12000;
 
 export const OFFER_RETRY_BUDGET_BY_BUCKET: Record<OfferCadenceBucket, number> = {
-  manual: 2,
-  "ice-restart": 2,
-  "video-sync": 1
+  manual: 1,
+  "ice-restart": 1,
+  "video-sync": 0
 };
 
 const OFFER_RETRY_DELAY_BASE_MS_BY_BUCKET: Record<OfferCadenceBucket, number> = {
