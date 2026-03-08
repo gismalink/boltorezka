@@ -21,6 +21,12 @@ USER3_EMAIL="${SMOKE_AUTH_USER3_EMAIL:-}"
 USER3_NAME="${SMOKE_AUTH_USER3_NAME:-Smoke RTC Three}"
 USER3_ROLE="${SMOKE_AUTH_USER3_ROLE:-user}"
 
+TOTAL_USERS="${SMOKE_AUTH_TOTAL_USERS:-2}"
+EMAIL_PREFIX="${SMOKE_AUTH_EMAIL_PREFIX:-smoke-rtc}"
+EMAIL_DOMAIN="${SMOKE_AUTH_EMAIL_DOMAIN:-example.test}"
+EXTRA_USER_ROLE="${SMOKE_AUTH_USER_ROLE_DEFAULT:-user}"
+EXTRA_USER_NAME_PREFIX="${SMOKE_AUTH_USER_NAME_PREFIX:-Smoke RTC}"
+
 TOKEN_TTL_SEC="${SMOKE_AUTH_TOKEN_TTL_SEC:-2592000}"
 OUTPUT_FILE_REL="${SMOKE_AUTH_OUTPUT_FILE:-.deploy/smoke-auth.env}"
 
@@ -64,6 +70,21 @@ make_hs256_jwt() {
   printf '%s.%s' "$unsigned" "$signature"
 }
 
+default_user_email() {
+  local index="$1"
+  printf '%s-%s@%s' "$EMAIL_PREFIX" "$index" "$EMAIL_DOMAIN"
+}
+
+default_user_name() {
+  local index="$1"
+  printf '%s %s' "$EXTRA_USER_NAME_PREFIX" "$index"
+}
+
+join_by_comma() {
+  local IFS=","
+  printf '%s' "$*"
+}
+
 if [[ ! -f "$COMPOSE_FILE" ]]; then
   echo "[smoke-auth-bootstrap] missing compose file: $COMPOSE_FILE" >&2
   exit 1
@@ -73,6 +94,11 @@ if [[ -f "$ENV_FILE" ]]; then
   set -a
   source "$ENV_FILE"
   set +a
+fi
+
+if ! [[ "$TOTAL_USERS" =~ ^[0-9]+$ ]] || (( TOTAL_USERS < 2 || TOTAL_USERS > 6 )); then
+  echo "[smoke-auth-bootstrap] SMOKE_AUTH_TOTAL_USERS must be integer in range 2..6" >&2
+  exit 1
 fi
 
 DB_USER="${SMOKE_AUTH_DB_USER:-${TEST_POSTGRES_USER:-${POSTGRES_USER:-boltorezka}}}"
@@ -109,47 +135,74 @@ upsert_user_sql() {
 }
 
 echo "[smoke-auth-bootstrap] upsert users in DB"
-USER1_ROW="$(compose_exec "$POSTGRES_SERVICE" psql -U "$DB_USER" -d "$DB_NAME" -F '|' -Atc "$(upsert_user_sql "$USER1_EMAIL" "$USER1_NAME" "$USER1_ROLE")")"
-USER2_ROW="$(compose_exec "$POSTGRES_SERVICE" psql -U "$DB_USER" -d "$DB_NAME" -F '|' -Atc "$(upsert_user_sql "$USER2_EMAIL" "$USER2_NAME" "$USER2_ROLE")")"
-USER3_ROW=""
+declare -a USER_IDS USER_EMAILS USER_NAMES USER_ROLES TOKENS
 
-if [[ -n "$USER3_EMAIL" ]]; then
-  USER3_ROW="$(compose_exec "$POSTGRES_SERVICE" psql -U "$DB_USER" -d "$DB_NAME" -F '|' -Atc "$(upsert_user_sql "$USER3_EMAIL" "$USER3_NAME" "$USER3_ROLE")")"
-fi
+for (( index=1; index<=TOTAL_USERS; index++ )); do
+  email=""
+  name=""
+  role=""
 
-if [[ -z "$USER1_ROW" || -z "$USER2_ROW" || ( -n "$USER3_EMAIL" && -z "$USER3_ROW" ) ]]; then
-  echo "[smoke-auth-bootstrap] failed to upsert users" >&2
-  exit 1
-fi
+  if (( index == 1 )); then
+    email="$USER1_EMAIL"
+    name="$USER1_NAME"
+    role="$USER1_ROLE"
+  elif (( index == 2 )); then
+    email="$USER2_EMAIL"
+    name="$USER2_NAME"
+    role="$USER2_ROLE"
+  elif (( index == 3 )); then
+    email="${USER3_EMAIL:-$(default_user_email 3)}"
+    name="${USER3_NAME:-$(default_user_name 3)}"
+    role="${USER3_ROLE:-$EXTRA_USER_ROLE}"
+  else
+    email="$(default_user_email "$index")"
+    name="$(default_user_name "$index")"
+    role="$EXTRA_USER_ROLE"
+  fi
 
-IFS='|' read -r USER1_ID USER1_EMAIL_ACTUAL USER1_NAME_ACTUAL USER1_ROLE_ACTUAL <<<"$USER1_ROW"
-IFS='|' read -r USER2_ID USER2_EMAIL_ACTUAL USER2_NAME_ACTUAL USER2_ROLE_ACTUAL <<<"$USER2_ROW"
+  row="$(compose_exec "$POSTGRES_SERVICE" psql -U "$DB_USER" -d "$DB_NAME" -F '|' -Atc "$(upsert_user_sql "$email" "$name" "$role")")"
+  if [[ -z "$row" ]]; then
+    echo "[smoke-auth-bootstrap] failed to upsert user index=$index email=$email" >&2
+    exit 1
+  fi
+
+  IFS='|' read -r user_id user_email_actual user_name_actual user_role_actual <<<"$row"
+  token="$(make_hs256_jwt "$JWT_SECRET_CANDIDATE" "$user_id" "$user_email_actual" "$user_name_actual" "$user_role_actual")"
+
+  USER_IDS+=("$user_id")
+  USER_EMAILS+=("$user_email_actual")
+  USER_NAMES+=("$user_name_actual")
+  USER_ROLES+=("$user_role_actual")
+  TOKENS+=("$token")
+done
+
+echo "[smoke-auth-bootstrap] verify generated tokens against /v1/auth/me"
+for token in "${TOKENS[@]}"; do
+  curl -fsS -H "Authorization: Bearer $token" "$API_BASE_URL/v1/auth/me" >/dev/null
+done
+
+TOKEN_LIST="$(join_by_comma "${TOKENS[@]}")"
+USER_EMAIL_LIST="$(join_by_comma "${USER_EMAILS[@]}")"
+
+USER1_ID="${USER_IDS[0]}"
+USER1_EMAIL_ACTUAL="${USER_EMAILS[0]}"
+USER1_ROLE_ACTUAL="${USER_ROLES[0]}"
+TOKEN1="${TOKENS[0]}"
+
+USER2_ID="${USER_IDS[1]}"
+USER2_EMAIL_ACTUAL="${USER_EMAILS[1]}"
+USER2_ROLE_ACTUAL="${USER_ROLES[1]}"
+TOKEN2="${TOKENS[1]}"
 
 USER3_ID=""
 USER3_EMAIL_ACTUAL=""
-USER3_NAME_ACTUAL=""
 USER3_ROLE_ACTUAL=""
-if [[ -n "$USER3_ROW" ]]; then
-  IFS='|' read -r USER3_ID USER3_EMAIL_ACTUAL USER3_NAME_ACTUAL USER3_ROLE_ACTUAL <<<"$USER3_ROW"
-fi
-
-TOKEN1="$(make_hs256_jwt "$JWT_SECRET_CANDIDATE" "$USER1_ID" "$USER1_EMAIL_ACTUAL" "$USER1_NAME_ACTUAL" "$USER1_ROLE_ACTUAL")"
-TOKEN2="$(make_hs256_jwt "$JWT_SECRET_CANDIDATE" "$USER2_ID" "$USER2_EMAIL_ACTUAL" "$USER2_NAME_ACTUAL" "$USER2_ROLE_ACTUAL")"
 TOKEN3=""
-if [[ -n "$USER3_ID" ]]; then
-  TOKEN3="$(make_hs256_jwt "$JWT_SECRET_CANDIDATE" "$USER3_ID" "$USER3_EMAIL_ACTUAL" "$USER3_NAME_ACTUAL" "$USER3_ROLE_ACTUAL")"
-fi
-
-echo "[smoke-auth-bootstrap] verify generated tokens against /v1/auth/me"
-curl -fsS -H "Authorization: Bearer $TOKEN1" "$API_BASE_URL/v1/auth/me" >/dev/null
-curl -fsS -H "Authorization: Bearer $TOKEN2" "$API_BASE_URL/v1/auth/me" >/dev/null
-if [[ -n "$TOKEN3" ]]; then
-  curl -fsS -H "Authorization: Bearer $TOKEN3" "$API_BASE_URL/v1/auth/me" >/dev/null
-fi
-
-TOKEN_LIST="$TOKEN1,$TOKEN2"
-if [[ -n "$TOKEN3" ]]; then
-  TOKEN_LIST="$TOKEN_LIST,$TOKEN3"
+if (( TOTAL_USERS >= 3 )); then
+  USER3_ID="${USER_IDS[2]}"
+  USER3_EMAIL_ACTUAL="${USER_EMAILS[2]}"
+  USER3_ROLE_ACTUAL="${USER_ROLES[2]}"
+  TOKEN3="${TOKENS[2]}"
 fi
 
 mkdir -p "$(dirname "$OUTPUT_FILE_REL")"
@@ -164,6 +217,10 @@ SMOKE_USER_EMAIL_SECOND=$USER2_EMAIL_ACTUAL
 SMOKE_TEST_BEARER_TOKEN=$TOKEN1
 SMOKE_TEST_BEARER_TOKEN_SECOND=$TOKEN2
 SMOKE_TEST_BEARER_TOKENS=$TOKEN_LIST
+SMOKE_CALL_LIVE_ROOM_BEARER_TOKENS=$TOKEN_LIST
+
+SMOKE_USER_EMAILS=$USER_EMAIL_LIST
+SMOKE_USER_COUNT=$TOTAL_USERS
 
 SMOKE_USER_ID=$USER1_ID
 SMOKE_USER_ID_SECOND=$USER2_ID
@@ -194,9 +251,9 @@ chmod 600 "$OUTPUT_FILE_REL" || true
 
 echo "[smoke-auth-bootstrap] done"
 if [[ -n "$USER3_EMAIL_ACTUAL" ]]; then
-  echo "[smoke-auth-bootstrap] users: $USER1_EMAIL_ACTUAL ($USER1_ROLE_ACTUAL), $USER2_EMAIL_ACTUAL ($USER2_ROLE_ACTUAL), $USER3_EMAIL_ACTUAL ($USER3_ROLE_ACTUAL)"
+  echo "[smoke-auth-bootstrap] users: $USER_EMAIL_LIST"
 else
-  echo "[smoke-auth-bootstrap] users: $USER1_EMAIL_ACTUAL ($USER1_ROLE_ACTUAL), $USER2_EMAIL_ACTUAL ($USER2_ROLE_ACTUAL)"
+  echo "[smoke-auth-bootstrap] users: $USER_EMAIL_LIST"
 fi
 echo "[smoke-auth-bootstrap] env file: $OUTPUT_FILE_REL"
 echo "[smoke-auth-bootstrap] use: set -a; source $OUTPUT_FILE_REL; set +a"
