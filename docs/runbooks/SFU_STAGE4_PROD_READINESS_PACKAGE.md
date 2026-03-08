@@ -1,6 +1,6 @@
 # SFU Stage 4 Production Readiness Package
 
-Дата: 2026-03-07  
+Дата: 2026-03-08  
 Статус: NO-GO (pending explicit prod approval)
 
 ## 1) Scope
@@ -10,22 +10,28 @@
 ## 2) Verified test candidate
 
 - Branch: `origin/feature/video-stream-investigation`
-- Candidate SHA: `2dc2d40d856bc1e1f1be9b617db6b8324d70b77d`
+- Candidate SHA: `d87a8292bd853c86f42efe7d1d4ab0a0c8a4a981`
 - Test profile: `deploy:test:sfu`
-- Evidence window: latest refresh `2026-03-07T21:38:42Z`
+- Evidence window: latest refresh `2026-03-08T18:02:30Z`
 
 ## 3) Stage 3 evidence (must-pass)
 
-- `deploy:test:sfu` consecutive runs: `6/6 PASS`
+- `deploy:test:sfu` consecutive runs: `4/4 PASS` (latest cycle on 2026-03-08)
 - Latest smoke summary:
   - `SMOKE_STATUS=pass`
   - `SMOKE_NACK_DELTA=1`
-  - `SMOKE_ACK_DELTA=5`
-  - `SMOKE_CALL_INITIAL_STATE_SENT_DELTA=2`
+  - `SMOKE_ACK_DELTA=36`
+  - `SMOKE_CALL_INITIAL_STATE_SENT_DELTA=5`
+  - `SMOKE_REALTIME_MEDIA_STATUS=pass`
+  - `SMOKE_TURN_TLS_STATUS=pass`
 - Realtime smoke invariants:
   - `expectedMediaTopology=sfu`
   - `mediaTopologyFirstOk=true`
   - `reconnectOk=true`
+- Mixed profile evidence:
+  - `iceTransportPolicy=all` smoke passed with selected pair `host/udp` (direct path)
+- Manual voice evidence:
+  - 3-device run passed (including 1 device over mobile network)
 - Extended realtime notes (non-strict diagnostics):
   - `race3WayOk=false`
   - `race3WayIceRelayOk=false`
@@ -55,3 +61,8 @@ Rollback target profile (test/prod-safe):
 
 - Current status: `NO-GO`.
 - Condition to flip to `GO`: all gates in section 6 completed and signed.
+
+## 8) Checkpoint markers
+
+- Interim checkpoint: `checkpoint-sfu-interim-working-2026-03-08`
+- RC checkpoint: `release-candidate-sfu-test-2026-03-08`
