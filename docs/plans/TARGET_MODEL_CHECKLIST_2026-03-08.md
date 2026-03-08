@@ -16,6 +16,7 @@ Validation note (2026-03-08): mixed-profile media smoke (`iceTransportPolicy=all
 Validation note (2026-03-08): TURN TLS cert проверен в контейнере (`notAfter=Jun 4 08:20:38 2026 GMT`), текущего окна релиза достаточно.
 Validation note (2026-03-08): relay-only fallback smoke на `turn:3478` пройден отдельно для `transport=udp` и `transport=tcp` (one-way incidents = 0 в обоих сценариях).
 Validation note (2026-03-08): ICE restart e2e smoke пройден (`SMOKE_RTC_REQUIRE_ICE_RESTART=1`), подтверждено сменой `ice-ufrag` (`iceUfragChanged=true`) при сохранении connected media path.
+Validation note (2026-03-08): ICE restart gate включен по умолчанию в `deploy:test:sfu` (экспорт `SMOKE_RTC_REQUIRE_ICE_RESTART=1` + явный прокид в postdeploy media smoke).
 
 ## 0) Базовые инварианты (обязательно)
 
