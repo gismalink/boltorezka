@@ -1,7 +1,7 @@
 # Phase 0 - Границы MVP и ADR (Канон)
 
 Дата фиксации: 2026-03-04  
-Дата актуализации: 2026-03-06  
+Дата актуализации: 2026-03-08  
 Статус: Действует для текущего MVP-контура
 
 ## 1) Границы MVP (утверждено)
@@ -45,11 +45,19 @@
 - Обоснование: централизованный identity flow и явная граница между web session и realtime ticket.
 - Следствие: каждый rollout обязан проходить smoke по SSO + ws-ticket/realtime path.
 
-## 3) Актуальное состояние к 2026-03-06
+### ADR-004: SFU-first media baseline (post-MVP transition)
+
+- Решение: для текущего migration track принят `SFU-first` подход - все глубокие проверки и отладка voice/video выполняются на baseline `mediaTopology=sfu`; legacy `p2p` остается только как rollback/compare path.
+- Выбор media-plane: operational baseline закреплен за текущим SFU routing profile (`RTC_MEDIA_TOPOLOGY_DEFAULT=sfu` в test Stage 3), без подключения внешних SFU движков в этом цикле (варианты LiveKit/mediasoup/Janus отложены до отдельного ADR при изменении архитектуры runtime).
+- Обоснование: снижение неоднозначности mixed-topology поведения, единый test baseline и детерминированные rollout/smoke gate.
+- Следствие: release/readiness evidence по voice/video считается валидным только для SFU baseline; pre-prod пакет обязан включать SFU smoke + baseline compare `p2p vs sfu`.
+
+## 3) Актуальное состояние к 2026-03-08
 
 - Controlled rollout toggle-пакет (Phase 5) внедрен и используется как policy fallback.
 - RTC hardening package (Phase 6.1-6.3) закрыт в test-контуре.
 - Decision package по SFU зафиксирован: `docs/plans/SFU_MIGRATION_PLAN.md`.
+- `SFU-first` решение зафиксировано в ADR-004 и операционных runbook Stage 3/4.
 - Текущий документ остается источником MVP-ограничений до завершения SFU Stage 0.
 
 ## 4) Канонические ссылки

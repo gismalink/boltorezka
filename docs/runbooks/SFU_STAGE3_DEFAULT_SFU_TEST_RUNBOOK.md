@@ -14,6 +14,8 @@
 - Policy:
   - `TEST_RTC_MEDIA_TOPOLOGY_DEFAULT=sfu`
   - room/user allowlists используются для точечных override сценариев и диагностики.
+  - `SFU-first`: voice/video validation и triage выполняются на SFU baseline; P2P используется только для rollback/compare.
+  - ADR reference: `docs/architecture/PHASE0_MVP_ADR.md` (ADR-004).
 
 ## 3) Базовый rollout профиль
 

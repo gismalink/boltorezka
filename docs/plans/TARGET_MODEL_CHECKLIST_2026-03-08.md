@@ -26,6 +26,7 @@ Validation note (2026-03-08): WS call logging в API маскирует ICE addr
 Validation note (2026-03-08): добавлен fail-fast anti-loop guard в `smoke:realtime:media` (`SMOKE_RTC_MAX_RELAYED_OFFERS`, `SMOKE_RTC_MAX_RELAYED_ANSWERS`, `SMOKE_RTC_MAX_RENEGOTIATION_EVENTS`); server `deploy:test:sfu` на SHA `86e19e1` прошел с `renegotiationEventsTotal=5` (лимит `80`).
 Validation note (2026-03-08): явный signaling reconnect smoke (`SMOKE_CALL_SIGNAL=1 SMOKE_RECONNECT=1`, room=`test-room`) прошел с `callNegotiationReconnectOk=true`, `callSignalRelayed=true`, `callSignalIdempotencyOk=true`.
 Validation note (2026-03-08): устранен self-duplicate camera tile (`local + black remote by own userId`) - `VideoWindowsOverlay` исключает `currentUserId` из remote списка; test rollout `deploy:test:sfu` на SHA `e648e36` зеленый, ручная проверка подтверждает отсутствие дубля на устройствах.
+Validation note (2026-03-08): `SFU-first` policy формализован в ADR (`docs/architecture/PHASE0_MVP_ADR.md`, ADR-004) и в Stage 3 runbook (`docs/runbooks/SFU_STAGE3_DEFAULT_SFU_TEST_RUNBOOK.md`).
 
 ## 0) Базовые инварианты (обязательно)
 
@@ -123,7 +124,7 @@ Validation note (2026-03-08): устранен self-duplicate camera tile (`loca
 
 ## 7) SFU Эволюция До Целевой Модели
 
-- [ ] Зафиксирован выбор SFU media-plane (LiveKit/mediasoup/Janus) с ADR.
+- [x] Зафиксирован выбор SFU media-plane (LiveKit/mediasoup/Janus) с ADR.
 - [x] Определен контракт интеграции SFU с текущим control plane.
 - [x] Описан lifecycle: `join`, `publish`, `subscribe`, `leave`, `reconnect`.
 - [ ] Определены лимиты комнат и adaptive policies на клиентах.
@@ -134,7 +135,7 @@ Validation note (2026-03-08): устранен self-duplicate camera tile (`loca
 - [x] Подготовлены playbook для частичных деградаций SFU.
 - [x] Достигнут критерий: SFU path не хуже P2P по setup/reconnect (артефакт на feature-кандидате: `~/srv/boltorezka/.deploy/compare-p2p-sfu-20260308T184848Z.md`; для pre-prod из `main` повторить тот же шаг).
 - [ ] Полный переход всех voice/video сессий на SFU завершен (без fallback на legacy P2P в штатном профиле).
-- [ ] Решение `SFU-first` зафиксировано в ADR/runbook: глубокая voice отладка выполняется только после переключения baseline на SFU.
+- [x] Решение `SFU-first` зафиксировано в ADR/runbook: глубокая voice отладка выполняется только после переключения baseline на SFU.
 
 ## 8) Безопасность И Надежность
 
