@@ -149,18 +149,18 @@ services:
       - -ec
       - |
         cat > /tmp/livekit.yaml <<EOF
-        port: ${LIVEKIT_TEST_SIGNAL_PORT}
+        port: $${LIVEKIT_TEST_SIGNAL_PORT}
         bind_addresses:
           - "0.0.0.0"
         rtc:
-          tcp_port: ${LIVEKIT_TEST_TCP_PORT}
-          port_range_start: ${LIVEKIT_TEST_RTC_PORT_START}
-          port_range_end: ${LIVEKIT_TEST_RTC_PORT_END}
+          tcp_port: $${LIVEKIT_TEST_TCP_PORT}
+          port_range_start: $${LIVEKIT_TEST_RTC_PORT_START}
+          port_range_end: $${LIVEKIT_TEST_RTC_PORT_END}
           use_external_ip: true
         redis:
           address: boltorezka-redis-test:6379
         keys:
-          ${LIVEKIT_TEST_API_KEY}: ${LIVEKIT_TEST_API_SECRET}
+          $${LIVEKIT_TEST_API_KEY}: $${LIVEKIT_TEST_API_SECRET}
         logging:
           level: info
         EOF
