@@ -536,6 +536,17 @@ if [[ "${SMOKE_REALTIME_MEDIA:-0}" == "1" ]]; then
   echo "[postdeploy-smoke] smoke:realtime:media"
   media_smoke_log="$(mktemp)"
   media_ice_servers_json=""
+  media_retry_count="${SMOKE_REALTIME_MEDIA_RETRIES:-1}"
+  media_retry_delay_sec="${SMOKE_REALTIME_MEDIA_RETRY_DELAY_SEC:-5}"
+  media_attempt=1
+  media_run_ok=0
+
+  if ! [[ "$media_retry_count" =~ ^[0-9]+$ ]] || (( media_retry_count < 1 )); then
+    media_retry_count=1
+  fi
+  if ! [[ "$media_retry_delay_sec" =~ ^[0-9]+$ ]]; then
+    media_retry_delay_sec=5
+  fi
 
   if [[ -n "${TURN_USERNAME:-}" && -n "${TURN_PASSWORD:-}" ]]; then
     media_turn_domain="${TURN_CERT_DOMAIN:-gismalink.art}"
@@ -567,15 +578,31 @@ if [[ "${SMOKE_REALTIME_MEDIA:-0}" == "1" ]]; then
     export SMOKE_TEST_BEARER_TOKEN_SECOND
   fi
 
-  if SMOKE_API_URL="$BASE_URL" \
-    SMOKE_ROOM_SLUG="$BASELINE_SMOKE_ROOM_SLUG" \
-    SMOKE_TEST_BEARER_TOKEN="${SMOKE_TEST_BEARER_TOKEN:-}" \
-    SMOKE_TEST_BEARER_TOKEN_SECOND="${SMOKE_TEST_BEARER_TOKEN_SECOND:-}" \
-    SMOKE_WS_TICKET="${SMOKE_WS_TICKET:-}" \
-    SMOKE_WS_TICKET_SECOND="${SMOKE_WS_TICKET_SECOND:-}" \
-    SMOKE_RTC_ICE_SERVERS_JSON="${SMOKE_RTC_ICE_SERVERS_JSON:-$media_ice_servers_json}" \
-    SMOKE_RTC_ICE_TRANSPORT_POLICY="${SMOKE_RTC_ICE_TRANSPORT_POLICY:-${TEST_VITE_RTC_ICE_TRANSPORT_POLICY:-all}}" \
-    node ./scripts/smoke/smoke-realtime-media-browser.mjs | tee "$media_smoke_log"; then
+  while (( media_attempt <= media_retry_count )); do
+    : >"$media_smoke_log"
+    echo "[postdeploy-smoke] smoke:realtime:media attempt $media_attempt/$media_retry_count"
+
+    if SMOKE_API_URL="$BASE_URL" \
+      SMOKE_ROOM_SLUG="$BASELINE_SMOKE_ROOM_SLUG" \
+      SMOKE_TEST_BEARER_TOKEN="${SMOKE_TEST_BEARER_TOKEN:-}" \
+      SMOKE_TEST_BEARER_TOKEN_SECOND="${SMOKE_TEST_BEARER_TOKEN_SECOND:-}" \
+      SMOKE_WS_TICKET="${SMOKE_WS_TICKET:-}" \
+      SMOKE_WS_TICKET_SECOND="${SMOKE_WS_TICKET_SECOND:-}" \
+      SMOKE_RTC_ICE_SERVERS_JSON="${SMOKE_RTC_ICE_SERVERS_JSON:-$media_ice_servers_json}" \
+      SMOKE_RTC_ICE_TRANSPORT_POLICY="${SMOKE_RTC_ICE_TRANSPORT_POLICY:-${TEST_VITE_RTC_ICE_TRANSPORT_POLICY:-all}}" \
+      node ./scripts/smoke/smoke-realtime-media-browser.mjs | tee "$media_smoke_log"; then
+      media_run_ok=1
+      break
+    fi
+
+    ((media_attempt++))
+    if (( media_attempt <= media_retry_count )); then
+      echo "[postdeploy-smoke] smoke:realtime:media transient failure, retry in ${media_retry_delay_sec}s"
+      sleep "$media_retry_delay_sec"
+    fi
+  done
+
+  if (( media_run_ok == 1 )); then
     SMOKE_REALTIME_MEDIA_STATUS="pass"
     SMOKE_MEDIA_TRANSPORT_SUMMARY="$(parse_media_transport_summary "$media_smoke_log")"
     one_way_counters="$(parse_media_one_way_counters "$media_smoke_log")"
