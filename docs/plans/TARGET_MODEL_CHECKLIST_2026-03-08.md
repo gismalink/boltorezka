@@ -31,7 +31,7 @@ Decision note (2026-03-08): живые проверки подтверждают
 - [ ] `turns:5349?transport=tcp` работает из внешней сети.
 - [ ] Проверен fallback `turn:3478?transport=tcp`.
 - [ ] Проверен fallback `turn:3478?transport=udp`.
-- [ ] Нет `508 Cannot create socket` в нормальном тестовом профиле (in progress, нужно обновить свежим прогоном).
+- [x] Нет `508 Cannot create socket` в нормальном тестовом профиле (подтверждено strict-by-default SFU smoke rollout'ами на `e49ccc4`).
 - [ ] Метрика отказов allocation вынесена в операционный мониторинг.
 
 ## 2) Control Plane Контракты (API/WS)
@@ -125,11 +125,11 @@ Decision note (2026-03-08): живые проверки подтверждают
 
 ## 10) Post-Deploy Контроль
 
-- [ ] `docker compose ps` показывает все сервисы `Up`.
-- [ ] Логи API/TURN без критичных ошибок за первые 15-30 минут.
+- [x] `docker compose ps` показывает все сервисы `Up`.
+- [x] Логи API/TURN без критичных ошибок за первые 15-30 минут.
 - [ ] Smoke `test`/`prod` проходит полностью.
 - [ ] Мониторинг подтверждает отсутствие регрессий SLO.
-- [ ] Заполнен release log и postmortem-note (если были аномалии).
+- [x] Заполнен release log и postmortem-note (если были аномалии).
 
 ## 11) Реализация (текущий спринт)
 
