@@ -30,6 +30,7 @@ EXTENDED_REALTIME_STATUS="skip"
 SMOKE_SFU_TOPOLOGY_STATUS="skip"
 SMOKE_REALTIME_MEDIA_STATUS="skip"
 SMOKE_MEDIA_TRANSPORT_SUMMARY="n/a"
+SMOKE_TURN_TLS_STATUS="skip"
 SMOKE_ONE_WAY_AUDIO_INCIDENTS=0
 SMOKE_ONE_WAY_VIDEO_INCIDENTS=0
 JWT_SECRET_CANDIDATE=""
@@ -51,6 +52,7 @@ write_summary() {
   printf 'SMOKE_SFU_TOPOLOGY_STATUS=%q\n' "$SMOKE_SFU_TOPOLOGY_STATUS" >>"$SUMMARY_FILE_REL"
   printf 'SMOKE_REALTIME_MEDIA_STATUS=%q\n' "$SMOKE_REALTIME_MEDIA_STATUS" >>"$SUMMARY_FILE_REL"
   printf 'SMOKE_MEDIA_TRANSPORT_SUMMARY=%q\n' "$SMOKE_MEDIA_TRANSPORT_SUMMARY" >>"$SUMMARY_FILE_REL"
+  printf 'SMOKE_TURN_TLS_STATUS=%q\n' "$SMOKE_TURN_TLS_STATUS" >>"$SUMMARY_FILE_REL"
   printf 'SMOKE_ONE_WAY_AUDIO_INCIDENTS=%q\n' "$SMOKE_ONE_WAY_AUDIO_INCIDENTS" >>"$SUMMARY_FILE_REL"
   printf 'SMOKE_ONE_WAY_VIDEO_INCIDENTS=%q\n' "$SMOKE_ONE_WAY_VIDEO_INCIDENTS" >>"$SUMMARY_FILE_REL"
   printf 'SMOKE_SUMMARY_TEXT=%q\n' "$SMOKE_SUMMARY_TEXT" >>"$SUMMARY_FILE_REL"
@@ -282,6 +284,41 @@ validate_turn_range() {
 
 validate_turn_range
 
+validate_turn_tls_handshake() {
+  local turn_domain="${TURN_CERT_DOMAIN:-}"
+  local turn_port="${TURN_TLS_PORT:-5349}"
+  local strict_mode="${SMOKE_TURN_TLS_STRICT:-1}"
+
+  if [[ -z "$turn_domain" ]]; then
+    SMOKE_TURN_TLS_STATUS="skip"
+    echo "[postdeploy-smoke] turn tls check skipped (TURN_CERT_DOMAIN is empty)"
+    return 0
+  fi
+
+  if ! command -v openssl >/dev/null 2>&1; then
+    SMOKE_TURN_TLS_STATUS="skip"
+    echo "[postdeploy-smoke] turn tls check skipped (openssl is not available)"
+    return 0
+  fi
+
+  echo "[postdeploy-smoke] turn tls handshake (${turn_domain}:${turn_port})"
+  if printf '' | openssl s_client -connect "${turn_domain}:${turn_port}" -servername "$turn_domain" -brief >/dev/null 2>&1; then
+    SMOKE_TURN_TLS_STATUS="pass"
+    return 0
+  fi
+
+  SMOKE_TURN_TLS_STATUS="fail"
+  echo "[postdeploy-smoke] turn tls handshake failed (${turn_domain}:${turn_port})" >&2
+
+  if [[ "$strict_mode" == "1" ]]; then
+    exit 1
+  fi
+
+  echo "[postdeploy-smoke] continuing because SMOKE_TURN_TLS_STRICT=0" >&2
+}
+
+validate_turn_tls_handshake
+
 SMOKE_USER_ID=""
 SMOKE_USER_ROLE=""
 
@@ -338,7 +375,7 @@ VERSION_CACHE_STATUS="pass"
 if [[ "${SMOKE_REALTIME:-1}" == "0" ]]; then
   echo "[postdeploy-smoke] realtime smoke skipped (SMOKE_REALTIME=0)"
   SMOKE_STATUS="pass"
-  SMOKE_SUMMARY_TEXT="health=pass mode=sso sso=pass api=$API_SMOKE_STATUS version_cache=$VERSION_CACHE_STATUS realtime=skip extended_realtime=$EXTENDED_REALTIME_STATUS sfu_topology=$SMOKE_SFU_TOPOLOGY_STATUS realtime_media=$SMOKE_REALTIME_MEDIA_STATUS transport=$SMOKE_MEDIA_TRANSPORT_SUMMARY one_way(audio=$SMOKE_ONE_WAY_AUDIO_INCIDENTS,video=$SMOKE_ONE_WAY_VIDEO_INCIDENTS) delta(nack=0,ack=0,chat=0,idem=0,initial_state=0,initial_state_participants=0)"
+  SMOKE_SUMMARY_TEXT="health=pass mode=sso sso=pass api=$API_SMOKE_STATUS version_cache=$VERSION_CACHE_STATUS turn_tls=$SMOKE_TURN_TLS_STATUS realtime=skip extended_realtime=$EXTENDED_REALTIME_STATUS sfu_topology=$SMOKE_SFU_TOPOLOGY_STATUS realtime_media=$SMOKE_REALTIME_MEDIA_STATUS transport=$SMOKE_MEDIA_TRANSPORT_SUMMARY one_way(audio=$SMOKE_ONE_WAY_AUDIO_INCIDENTS,video=$SMOKE_ONE_WAY_VIDEO_INCIDENTS) delta(nack=0,ack=0,chat=0,idem=0,initial_state=0,initial_state_participants=0)"
   exit 0
 fi
 
@@ -658,6 +695,6 @@ SMOKE_CALL_INITIAL_STATE_SENT_DELTA=$((CALL_INITIAL_STATE_SENT_AFTER - CALL_INIT
 SMOKE_CALL_INITIAL_STATE_PARTICIPANTS_DELTA=$((CALL_INITIAL_STATE_PARTICIPANTS_AFTER - CALL_INITIAL_STATE_PARTICIPANTS_BEFORE))
 
 SMOKE_STATUS="pass"
-SMOKE_SUMMARY_TEXT="health=pass mode=sso sso=pass api=$API_SMOKE_STATUS version_cache=$VERSION_CACHE_STATUS realtime=pass extended_realtime=$EXTENDED_REALTIME_STATUS sfu_topology=$SMOKE_SFU_TOPOLOGY_STATUS realtime_media=$SMOKE_REALTIME_MEDIA_STATUS transport=$SMOKE_MEDIA_TRANSPORT_SUMMARY one_way(audio=$SMOKE_ONE_WAY_AUDIO_INCIDENTS,video=$SMOKE_ONE_WAY_VIDEO_INCIDENTS) delta(nack=$SMOKE_NACK_DELTA,ack=$SMOKE_ACK_DELTA,chat=$SMOKE_CHAT_SENT_DELTA,idem=$SMOKE_CHAT_IDEMPOTENCY_HIT_DELTA,initial_state=$SMOKE_CALL_INITIAL_STATE_SENT_DELTA,initial_state_participants=$SMOKE_CALL_INITIAL_STATE_PARTICIPANTS_DELTA)"
+SMOKE_SUMMARY_TEXT="health=pass mode=sso sso=pass api=$API_SMOKE_STATUS version_cache=$VERSION_CACHE_STATUS turn_tls=$SMOKE_TURN_TLS_STATUS realtime=pass extended_realtime=$EXTENDED_REALTIME_STATUS sfu_topology=$SMOKE_SFU_TOPOLOGY_STATUS realtime_media=$SMOKE_REALTIME_MEDIA_STATUS transport=$SMOKE_MEDIA_TRANSPORT_SUMMARY one_way(audio=$SMOKE_ONE_WAY_AUDIO_INCIDENTS,video=$SMOKE_ONE_WAY_VIDEO_INCIDENTS) delta(nack=$SMOKE_NACK_DELTA,ack=$SMOKE_ACK_DELTA,chat=$SMOKE_CHAT_SENT_DELTA,idem=$SMOKE_CHAT_IDEMPOTENCY_HIT_DELTA,initial_state=$SMOKE_CALL_INITIAL_STATE_SENT_DELTA,initial_state_participants=$SMOKE_CALL_INITIAL_STATE_PARTICIPANTS_DELTA)"
 
 echo "[postdeploy-smoke] done"
