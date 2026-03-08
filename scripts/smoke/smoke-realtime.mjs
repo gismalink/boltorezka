@@ -1194,58 +1194,58 @@ async function runLiveRoomBehaviorScenario({ roomSlug, timeoutMs }) {
 
     callMissingTargetRejected = true;
 
-    const idempotentOfferRequestId = `call-offer-idem-${Date.now()}`;
-    const idempotentOfferPayload = {
+    const idempotentAnswerRequestId = `call-answer-idem-${Date.now()}`;
+    const idempotentAnswerPayload = {
       targetUserId: secondUserId,
-      signal: { type: "offer", sdp: "smoke-idempotent-offer" }
+      signal: { type: "answer", sdp: "smoke-idempotent-answer" }
     };
 
     ws.send(
       JSON.stringify({
-        type: "call.offer",
-        requestId: idempotentOfferRequestId,
-        payload: idempotentOfferPayload
+        type: "call.answer",
+        requestId: idempotentAnswerRequestId,
+        payload: idempotentAnswerPayload
       })
     );
 
     const idempotentFirstAck = await waitForEvent(
       events,
-      (item) => item?.type === "ack" && item?.payload?.requestId === idempotentOfferRequestId,
-      "ack for first idempotent call.offer"
+      (item) => item?.type === "ack" && item?.payload?.requestId === idempotentAnswerRequestId,
+      "ack for first idempotent call.answer"
     );
     if (Number(idempotentFirstAck?.payload?.relayedTo || 0) < 1) {
-      throw new Error("[smoke:realtime] first idempotent call.offer must relay to target");
+      throw new Error("[smoke:realtime] first idempotent call.answer must relay to target");
     }
 
     await waitForEvent(
       secondEvents,
-      (item) => item?.type === "call.offer" && String(item?.payload?.requestId || "") === idempotentOfferRequestId,
-      "relayed first idempotent call.offer"
+      (item) => item?.type === "call.answer" && String(item?.payload?.requestId || "") === idempotentAnswerRequestId,
+      "relayed first idempotent call.answer"
     );
 
     ws.send(
       JSON.stringify({
-        type: "call.offer",
-        requestId: idempotentOfferRequestId,
-        payload: idempotentOfferPayload
+        type: "call.answer",
+        requestId: idempotentAnswerRequestId,
+        payload: idempotentAnswerPayload
       })
     );
 
     const idempotentDuplicateAck = await waitForEvent(
       events,
-      (item) => item?.type === "ack" && item?.payload?.requestId === idempotentOfferRequestId && item?.payload?.duplicate === true,
-      "duplicate ack for idempotent call.offer"
+      (item) => item?.type === "ack" && item?.payload?.requestId === idempotentAnswerRequestId && item?.payload?.duplicate === true,
+      "duplicate ack for idempotent call.answer"
     );
     if (idempotentDuplicateAck?.payload?.duplicate !== true) {
-      throw new Error("[smoke:realtime] duplicate call.offer ack must include duplicate=true");
+      throw new Error("[smoke:realtime] duplicate call.answer ack must include duplicate=true");
     }
 
     await sleep(350);
     const idempotentRelayedCount = secondEvents.filter(
-      (item) => item?.type === "call.offer" && String(item?.payload?.requestId || "") === idempotentOfferRequestId
+      (item) => item?.type === "call.answer" && String(item?.payload?.requestId || "") === idempotentAnswerRequestId
     ).length;
     if (idempotentRelayedCount !== 1) {
-      throw new Error(`[smoke:realtime] duplicate call.offer must not be relayed twice, got ${idempotentRelayedCount}`);
+      throw new Error(`[smoke:realtime] duplicate call.answer must not be relayed twice, got ${idempotentRelayedCount}`);
     }
 
     callSignalIdempotencyOk = true;
