@@ -4,7 +4,10 @@ import type { VoicePeerContext } from "./voiceCallTypes";
 export function createHiddenRemoteAudioElement(): HTMLAudioElement {
   const remoteAudioElement = document.createElement("audio");
   remoteAudioElement.autoplay = true;
+  remoteAudioElement.preload = "auto";
+  remoteAudioElement.playsInline = true;
   remoteAudioElement.setAttribute("playsinline", "true");
+  remoteAudioElement.setAttribute("webkit-playsinline", "true");
   remoteAudioElement.style.position = "fixed";
   remoteAudioElement.style.width = "1px";
   remoteAudioElement.style.height = "1px";

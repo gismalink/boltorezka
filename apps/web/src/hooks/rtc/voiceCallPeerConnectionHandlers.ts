@@ -199,70 +199,80 @@ export function bindVoicePeerConnectionHandlers({
     peer.hasRemoteTrack = true;
     startPeerStatsMonitor(targetUserId, targetLabel);
 
-    if (!peer.speakingAudioContext) {
+    const hasRemoteAudioTrack = resolvedStream
+      .getAudioTracks()
+      .some((item) => item.readyState === "live");
+
+    if (hasRemoteAudioTrack && !peer.speakingAudioContext) {
       const Context = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
       if (Context) {
-        const speakingAudioContext = new Context();
-        const speakingAnalyser = speakingAudioContext.createAnalyser();
-        speakingAnalyser.fftSize = 512;
-        speakingAnalyser.smoothingTimeConstant = 0.8;
-        const source = speakingAudioContext.createMediaStreamSource(resolvedStream);
-        source.connect(speakingAnalyser);
+        try {
+          const speakingAudioContext = new Context();
+          const speakingAnalyser = speakingAudioContext.createAnalyser();
+          speakingAnalyser.fftSize = 512;
+          speakingAnalyser.smoothingTimeConstant = 0.8;
+          const source = speakingAudioContext.createMediaStreamSource(resolvedStream);
+          source.connect(speakingAnalyser);
 
-        void speakingAudioContext.resume().catch(() => {
-          pushCallLog(`audio context resume deferred <- ${targetLabel || targetUserId}`);
-        });
-        // Keep audio element as the primary output route.
-        // AudioContext is used only for speaking-level analysis.
-        remoteAudioElement.dataset.audioRoute = "element";
-        remoteAudioElement.muted = audioMuted;
-        remoteAudioElement.volume = Math.max(0, Math.min(1, outputVolume / 100));
+          void speakingAudioContext.resume().catch(() => {
+            pushCallLog(`audio context resume deferred <- ${targetLabel || targetUserId}`);
+          });
+          // Keep audio element as the primary output route.
+          // AudioContext is used only for speaking-level analysis.
+          remoteAudioElement.dataset.audioRoute = "element";
+          remoteAudioElement.muted = audioMuted;
+          remoteAudioElement.volume = Math.max(0, Math.min(1, outputVolume / 100));
 
-        peer.speakingAudioContext = speakingAudioContext;
-        peer.speakingSource = source;
-        peer.speakingAnalyser = speakingAnalyser;
-        peer.speakingData = new Uint8Array(new ArrayBuffer(speakingAnalyser.fftSize));
-        peer.speakingGain = null;
+          peer.speakingAudioContext = speakingAudioContext;
+          peer.speakingSource = source;
+          peer.speakingAnalyser = speakingAnalyser;
+          peer.speakingData = new Uint8Array(new ArrayBuffer(speakingAnalyser.fftSize));
+          peer.speakingGain = null;
 
-        const tickSpeaking = () => {
-          const current = peersRef.current.get(targetUserId);
-          if (!current || !current.speakingAnalyser || !current.speakingData) {
-            return;
-          }
+          const tickSpeaking = () => {
+            const current = peersRef.current.get(targetUserId);
+            if (!current || !current.speakingAnalyser || !current.speakingData) {
+              return;
+            }
 
-          current.speakingAnalyser.getByteTimeDomainData(current.speakingData);
-          let sum = 0;
-          for (let index = 0; index < current.speakingData.length; index += 1) {
-            const normalized = (current.speakingData[index] - 128) / 128;
-            sum += normalized * normalized;
-          }
+            current.speakingAnalyser.getByteTimeDomainData(current.speakingData);
+            let sum = 0;
+            for (let index = 0; index < current.speakingData.length; index += 1) {
+              const normalized = (current.speakingData[index] - 128) / 128;
+              sum += normalized * normalized;
+            }
 
-          const rms = Math.sqrt(sum / current.speakingData.length);
-          const now = Date.now();
+            const rms = Math.sqrt(sum / current.speakingData.length);
+            const now = Date.now();
 
-          if (current.hasRemoteSpeakingSignal) {
-            current.speakingAnimationFrameId = requestAnimationFrame(tickSpeaking);
-            return;
-          }
+            if (current.hasRemoteSpeakingSignal) {
+              current.speakingAnimationFrameId = requestAnimationFrame(tickSpeaking);
+              return;
+            }
 
-          if (rms >= REMOTE_SPEAKING_ON_THRESHOLD) {
-            current.speakingLastAboveAt = now;
-            if (!current.isRemoteMicMuted && !current.isRemoteSpeaking) {
-              current.isRemoteSpeaking = true;
+            if (rms >= REMOTE_SPEAKING_ON_THRESHOLD) {
+              current.speakingLastAboveAt = now;
+              if (!current.isRemoteMicMuted && !current.isRemoteSpeaking) {
+                current.isRemoteSpeaking = true;
+                syncPeerVoiceState();
+              }
+            } else if (
+              current.isRemoteSpeaking
+              && (current.isRemoteMicMuted || (rms <= REMOTE_SPEAKING_OFF_THRESHOLD && now - current.speakingLastAboveAt > REMOTE_SPEAKING_HOLD_MS))
+            ) {
+              current.isRemoteSpeaking = false;
               syncPeerVoiceState();
             }
-          } else if (
-            current.isRemoteSpeaking
-            && (current.isRemoteMicMuted || (rms <= REMOTE_SPEAKING_OFF_THRESHOLD && now - current.speakingLastAboveAt > REMOTE_SPEAKING_HOLD_MS))
-          ) {
-            current.isRemoteSpeaking = false;
-            syncPeerVoiceState();
-          }
 
-          current.speakingAnimationFrameId = requestAnimationFrame(tickSpeaking);
-        };
+            current.speakingAnimationFrameId = requestAnimationFrame(tickSpeaking);
+          };
 
-        peer.speakingAnimationFrameId = requestAnimationFrame(tickSpeaking);
+          peer.speakingAnimationFrameId = requestAnimationFrame(tickSpeaking);
+        } catch (error) {
+          pushCallLog(
+            `audio analyser init skipped (${targetLabel || targetUserId}): ${(error as Error).message}`
+          );
+        }
       }
     }
 
