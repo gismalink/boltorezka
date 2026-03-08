@@ -10,9 +10,9 @@
 ## 2) Verified test candidate
 
 - Branch: `origin/feature/video-stream-investigation`
-- Candidate SHA: `abb5e678ba37aa7638362cefd4ad06ab8d3ce48d`
+- Candidate SHA: `ff0d207d54f617fc7ca581ce8c16cf4bcf6f213f`
 - Test profile: `deploy:test:sfu`
-- Evidence window: latest refresh `2026-03-08T19:37:52Z`
+- Evidence window: latest refresh `2026-03-08T19:40:08Z`
 
 ## 3) Stage 3 evidence (must-pass)
 
@@ -41,6 +41,9 @@
   - `p2p`: `SMOKE_STATUS=pass`, `SMOKE_REALTIME_MEDIA_STATUS=pass`, `SMOKE_TURN_TLS_STATUS=pass`, one-way `audio=0`, `video=0`, `ACK=51`, `NACK=3`
   - `sfu`: `SMOKE_STATUS=pass`, `SMOKE_REALTIME_MEDIA_STATUS=pass`, `SMOKE_TURN_TLS_STATUS=pass`, one-way `audio=0`, `video=0`, `ACK=33`, `NACK=1`
   - Verdict: SFU не хуже P2P по setup/reconnect в test-кандидате, с меньшим signaling шумом.
+- Desktop-mobile evidence (browser emulation):
+  - Command: `SMOKE_RTC_EMULATE_MOBILE_PEER_B=1 SMOKE_RTC_REQUIRE_ICE_RESTART=1 npm run smoke:realtime:media`
+  - Result: `ok=true`, `emulation.peerA=desktop`, `emulation.peerB=mobile`, one-way `audio=0`, `video=0`, `cameraStateConvergenceOk=true`, `iceUfragChanged=true`.
 
 ## 4) Runtime risk posture
 
