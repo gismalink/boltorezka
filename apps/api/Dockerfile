@@ -19,7 +19,7 @@ ENV VITE_APP_VERSION=${VITE_APP_VERSION}
 ENV VITE_APP_BUILD_DATE=${VITE_APP_BUILD_DATE}
 
 COPY --from=web package.json package-lock.json* ./
-RUN npm install
+RUN npm install --no-audit --no-fund --fetch-retries=5 --fetch-retry-factor=2 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000
 
 COPY --from=web . ./
 RUN npm run build
@@ -29,7 +29,7 @@ FROM node:22-alpine
 WORKDIR /app
 
 COPY package.json package-lock.json* ./
-RUN npm install
+RUN npm install --no-audit --no-fund --fetch-retries=5 --fetch-retry-factor=2 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000
 
 COPY src ./src
 RUN mkdir -p public
