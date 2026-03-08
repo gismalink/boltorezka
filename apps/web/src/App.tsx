@@ -141,7 +141,13 @@ export function App() {
   const [mediaDevicesState, setMediaDevicesState] = useState<MediaDevicesState>("ready");
   const [mediaDevicesHint, setMediaDevicesHint] = useState("");
   const [micVolume, setMicVolume] = useState<number>(() => Number(localStorage.getItem("boltorezka_mic_volume") || 75));
-  const [outputVolume, setOutputVolume] = useState<number>(() => Number(localStorage.getItem("boltorezka_output_volume") || 70));
+  const [outputVolume, setOutputVolume] = useState<number>(() => {
+    const parsed = Number(localStorage.getItem("boltorezka_output_volume"));
+    if (!Number.isFinite(parsed)) {
+      return 70;
+    }
+    return Math.max(0, Math.min(100, parsed));
+  });
   const [micTestLevel, setMicTestLevel] = useState(0);
   const [authMenuOpen, setAuthMenuOpen] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);

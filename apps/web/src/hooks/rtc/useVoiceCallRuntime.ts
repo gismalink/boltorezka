@@ -382,7 +382,10 @@ export function useVoiceCallRuntime({
   const applyRemoteAudioOutput = useCallback(async (element: HTMLAudioElement) => {
     element.dataset.audioRoute = "element";
     element.muted = audioMuted;
-    element.volume = Math.max(0, Math.min(1, outputVolume / 100));
+    const normalizedVolume = Number.isFinite(outputVolume)
+      ? Math.max(0, Math.min(1, outputVolume / 100))
+      : 1;
+    element.volume = normalizedVolume;
 
     const sinkId = selectedOutputId && selectedOutputId !== "default" ? selectedOutputId : "";
     const withSink = element as HTMLAudioElement & {
@@ -431,7 +434,10 @@ export function useVoiceCallRuntime({
 
       element.dataset.audioRoute = "element";
       element.muted = false;
-      element.volume = Math.max(0, Math.min(1, outputVolume / 100));
+      const normalizedVolume = Number.isFinite(outputVolume)
+        ? Math.max(0, Math.min(1, outputVolume / 100))
+        : 1;
+      element.volume = normalizedVolume;
 
       void applyRemoteAudioOutput(element);
       void element.play()

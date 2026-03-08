@@ -190,12 +190,15 @@ export function bindVoicePeerConnectionHandlers({
     }
 
     const remoteAudioElement = peer.audioElement;
+    const normalizedVolume = Number.isFinite(outputVolume)
+      ? Math.max(0, Math.min(1, outputVolume / 100))
+      : 1;
     if (remoteAudioElement.srcObject !== resolvedStream) {
       remoteAudioElement.srcObject = resolvedStream;
     }
     remoteAudioElement.dataset.audioRoute = "element";
     remoteAudioElement.muted = audioMuted;
-    remoteAudioElement.volume = Math.max(0, Math.min(1, outputVolume / 100));
+    remoteAudioElement.volume = normalizedVolume;
     peer.hasRemoteTrack = true;
     startPeerStatsMonitor(targetUserId, targetLabel);
 
@@ -221,7 +224,7 @@ export function bindVoicePeerConnectionHandlers({
           // AudioContext is used only for speaking-level analysis.
           remoteAudioElement.dataset.audioRoute = "element";
           remoteAudioElement.muted = audioMuted;
-          remoteAudioElement.volume = Math.max(0, Math.min(1, outputVolume / 100));
+          remoteAudioElement.volume = normalizedVolume;
 
           peer.speakingAudioContext = speakingAudioContext;
           peer.speakingSource = source;
