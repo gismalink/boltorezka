@@ -185,6 +185,9 @@ export type PresenceLeftPayload = {
 };
 
 export type CallRelayBasePayload = {
+  requestId: string | null;
+  sessionId: string;
+  traceId: string;
   fromUserId: string;
   fromUserName: string;
   roomId: string;

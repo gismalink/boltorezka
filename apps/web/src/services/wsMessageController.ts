@@ -29,7 +29,14 @@ type WsMessageControllerOptions = {
   onCallNack?: (payload: { requestId: string; eventType: string; code: string; message: string }) => void;
   onCallSignal?: (
     eventType: "call.offer" | "call.answer" | "call.ice",
-    payload: { fromUserId?: string; fromUserName?: string; signal?: Record<string, unknown> }
+    payload: {
+      requestId?: string;
+      sessionId?: string;
+      traceId?: string;
+      fromUserId?: string;
+      fromUserName?: string;
+      signal?: Record<string, unknown>;
+    }
   ) => void;
   onCallTerminal?: (
     eventType: "call.reject" | "call.hangup",
@@ -253,6 +260,9 @@ export class WsMessageController {
 
     this.options.pushCallLog(`${message.type} from ${fromUserName} (${hasSignal ? "signal" : "no-signal"})`);
     this.options.onCallSignal?.(message.type, {
+      requestId: this.asTrimmedString(message.payload?.requestId) || undefined,
+      sessionId: this.asTrimmedString(message.payload?.sessionId) || undefined,
+      traceId: this.asTrimmedString(message.payload?.traceId) || undefined,
       fromUserId: this.asTrimmedString(message.payload?.fromUserId || message.payload?.userId) || undefined,
       fromUserName: this.asTrimmedString(message.payload?.fromUserName || message.payload?.userName) || undefined,
       signal:

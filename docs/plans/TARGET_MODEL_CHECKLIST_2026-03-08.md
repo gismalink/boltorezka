@@ -6,6 +6,7 @@
 Статусы ниже проставлены по текущему состоянию кода/доков на ветке `feature/video-stream-investigation`.
 
 Decision note (2026-03-08): живые проверки подтверждают стабильный voice path (audio OK). Остаточные проблемы camera stream visibility в mixed-device сценариях переведены в целевой SFU track и не блокируют текущий pre-SFU hardening.
+Strategy update (2026-03-08): принят курс `SFU-first` - сначала полный переход на SFU media-plane, затем полная фаза тестирования и отладки voice/video на новом baseline.
 
 ## 0) Базовые инварианты (обязательно)
 
@@ -41,6 +42,9 @@ Decision note (2026-03-08): живые проверки подтверждают
 - [x] `call.initial_state` содержит полную и непротиворечивую snapshot-модель.
 - [x] Для late-join состояния участников/камер/микрофонов приходят консистентно.
 - [x] WS rate-limit не ломает восстановление сессии.
+- [x] Для `call.offer`/`call.answer`/`call.ice` `targetUserId` обязателен; room-wide broadcast call-сигналов запрещен.
+- [x] Для `call.offer`/`call.answer`/`call.ice` включена transport-level идемпотентность (server dedupe по `requestId` + client-side защита от повторного применения).
+- [x] Relay payload для `call.*` содержит корреляционные поля (`requestId`, `sessionId`, `traceId`) для сквозной диагностики.
 - [ ] Коды ошибок разделены: auth/permissions/topology/transport.
 - [ ] Ошибки коррелируются по `roomId`, `userId`, `sessionId`, `traceId`.
 - [ ] Нет утечки приватных данных в WS payload и логи.
@@ -52,9 +56,11 @@ Decision note (2026-03-08): живые проверки подтверждают
 - [x] stale peer (connected без remote media) автопересоздается.
 - [x] Offer churn ограничен антифлуд-политикой.
 - [x] Reconnect имеет backoff и cap по попыткам.
+- [x] `offer/answer` отправляются с `ack` tracking и bounded retry/backoff (не только `ICE`).
 - [ ] Не возникает endless renegotiation loop.
 - [ ] ICE restart path покрыт e2e smoke.
 - [ ] При временной деградации сети сессия восстанавливается без ручного reload.
+- [ ] Потеря WS в окне negotiation (`offer sent -> answer apply`) восстанавливается автоматически.
 - [x] Локальные mute/camera toggles не триггерят лишние renegotiation.
 - [x] Поток state-событий имеет идемпотентную обработку.
 
@@ -75,6 +81,7 @@ Decision note (2026-03-08): живые проверки подтверждают
 - [x] Логируются ключевые RTC этапы: offer/answer/ice/connected/failed.
 - [x] Есть разрез метрик по topology (`p2p`/`sfu`).
 - [x] Есть разрез по сети (`udp`/`tcp`/`tls relay`).
+- [ ] RTC-логи маскируют candidate IP/port и приватные данные; raw candidate logging включается только debug-флагом.
 - [ ] Есть SLO-дэшборд: setup success, reconnect success, median join time.
 - [ ] Настроены алерты на деградацию (rolling 5m/30m windows).
 - [x] В runbook есть единый triage flow для инцидентов.
@@ -89,6 +96,9 @@ Decision note (2026-03-08): живые проверки подтверждают
 - [ ] Переключение Wi-Fi -> LTE -> Wi-Fi без потери room state.
 - [ ] Проверка relay-only профиля (`iceTransportPolicy=relay`).
 - [ ] Проверка mixed профиля (`all`) с приоритетом direct path.
+- [x] Негативный контрактный тест: `call.*` без `targetUserId` отклоняется (`ValidationError`) и не релеится в комнату.
+- [x] Тест идемпотентности `call.*`: дубликаты `offer/answer/ice` не вызывают повторного применения сигналов.
+- [ ] Тест устойчивости: WS reconnect в фазе negotiation не оставляет сессию в подвешенном состоянии.
 - [x] Smoke на каждой test-выкатке (`deploy:test:smoke`).
 - [x] Набор regression тестов для stale-peer recovery и offer policy.
 
@@ -104,6 +114,8 @@ Decision note (2026-03-08): живые проверки подтверждают
 - [x] Сформирован rollback без code revert (только конфиг/toggle).
 - [x] Подготовлены playbook для частичных деградаций SFU.
 - [ ] Достигнут критерий: SFU path не хуже P2P по setup/reconnect.
+- [ ] Полный переход всех voice/video сессий на SFU завершен (без fallback на legacy P2P в штатном профиле).
+- [ ] Решение `SFU-first` зафиксировано в ADR/runbook: глубокая voice отладка выполняется только после переключения baseline на SFU.
 
 ## 8) Безопасность И Надежность
 
@@ -141,9 +153,9 @@ Decision note (2026-03-08): живые проверки подтверждают
 
 ## 12) Краткий План Исполнения (рекомендуемая последовательность)
 
-1. Зафиксировать baseline (текущие метрики test).
-2. Добить стабильность runtime (one-way media и ghost-эффекты до нуля).
-3. Закрыть observability gaps (алерты + единый triage).
-4. Провести серию controlled canary SFU-сессий.
-5. Подтвердить критерии качества и rollback readiness.
+1. Завершить полный rewrite voice/video на SFU media-plane и убрать зависимость от legacy P2P в штатном пути.
+2. Закрыть control-plane контракты под SFU baseline (обязательный `targetUserId`, идемпотентность `call.*`, correlation IDs, `ack/retry` для SDP).
+3. Зафиксировать post-rewrite baseline в `test` и включить shadow telemetry/SLO сигналы.
+4. Провести полную матрицу тестирования и отладки voice/video уже на SFU (включая reconnect, mixed devices, relay-only/mixed профили).
+5. Подтвердить критерии качества, rollback readiness и отсутствие критичных инцидентов.
 6. Подготовить prod decision package и выполнить rollout только после явного approve.

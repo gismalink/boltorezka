@@ -9,6 +9,9 @@ export type WsSender = (
 ) => string | null;
 
 export type CallSignalPayload = {
+  requestId?: string;
+  sessionId?: string;
+  traceId?: string;
   fromUserId?: string;
   fromUserName?: string;
   signal?: Record<string, unknown>;

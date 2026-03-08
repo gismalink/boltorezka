@@ -373,16 +373,22 @@ export function buildPongEnvelope(): { type: "pong"; payload: PongPayload } {
  * @param {string} roomId
  * @param {string | null} roomSlug
  * @param {string | null} targetUserId
- * @returns {{ fromUserId: string, fromUserName: string, roomId: string, roomSlug: string | null, targetUserId: string | null, ts: string }}
+ * @returns {{ requestId: string | null, sessionId: string, traceId: string, fromUserId: string, fromUserName: string, roomId: string, roomSlug: string | null, targetUserId: string | null, ts: string }}
  */
 function buildCallRelayBasePayload(
+  requestId: string | null,
+  sessionId: string,
+  traceId: string,
   fromUserId: string,
   fromUserName: string,
   roomId: string,
   roomSlug: string | null,
   targetUserId: string | null
-): { fromUserId: string; fromUserName: string; roomId: string; roomSlug: string | null; targetUserId: string | null; ts: string } {
+): { requestId: string | null; sessionId: string; traceId: string; fromUserId: string; fromUserName: string; roomId: string; roomSlug: string | null; targetUserId: string | null; ts: string } {
   return {
+    requestId,
+    sessionId,
+    traceId,
     fromUserId,
     fromUserName,
     roomId,
@@ -404,6 +410,9 @@ function buildCallRelayBasePayload(
  */
 export function buildCallSignalRelayEnvelope(
   eventType: CallSignalEventType,
+  requestId: string | null,
+  sessionId: string,
+  traceId: string,
   fromUserId: string,
   fromUserName: string,
   roomId: string,
@@ -414,7 +423,7 @@ export function buildCallSignalRelayEnvelope(
   return {
     type: eventType,
     payload: {
-      ...buildCallRelayBasePayload(fromUserId, fromUserName, roomId, roomSlug, targetUserId),
+      ...buildCallRelayBasePayload(requestId, sessionId, traceId, fromUserId, fromUserName, roomId, roomSlug, targetUserId),
       signal
     }
   };
@@ -432,6 +441,9 @@ export function buildCallSignalRelayEnvelope(
  */
 export function buildCallTerminalRelayEnvelope(
   eventType: CallTerminalEventType,
+  requestId: string | null,
+  sessionId: string,
+  traceId: string,
   fromUserId: string,
   fromUserName: string,
   roomId: string,
@@ -442,7 +454,7 @@ export function buildCallTerminalRelayEnvelope(
   return {
     type: eventType,
     payload: {
-      ...buildCallRelayBasePayload(fromUserId, fromUserName, roomId, roomSlug, targetUserId),
+      ...buildCallRelayBasePayload(requestId, sessionId, traceId, fromUserId, fromUserName, roomId, roomSlug, targetUserId),
       reason
     }
   };
@@ -450,6 +462,9 @@ export function buildCallTerminalRelayEnvelope(
 
 export function buildCallMicStateRelayEnvelope(
   eventType: CallMicStateEventType,
+  requestId: string | null,
+  sessionId: string,
+  traceId: string,
   fromUserId: string,
   fromUserName: string,
   roomId: string,
@@ -460,7 +475,7 @@ export function buildCallMicStateRelayEnvelope(
   return {
     type: eventType,
     payload: {
-      ...buildCallRelayBasePayload(fromUserId, fromUserName, roomId, roomSlug, targetUserId),
+      ...buildCallRelayBasePayload(requestId, sessionId, traceId, fromUserId, fromUserName, roomId, roomSlug, targetUserId),
       muted: payload.muted,
       speaking: payload.speaking,
       audioMuted: payload.audioMuted
@@ -470,6 +485,9 @@ export function buildCallMicStateRelayEnvelope(
 
 export function buildCallVideoStateRelayEnvelope(
   eventType: CallVideoStateEventType,
+  requestId: string | null,
+  sessionId: string,
+  traceId: string,
   fromUserId: string,
   fromUserName: string,
   roomId: string,
@@ -480,7 +498,7 @@ export function buildCallVideoStateRelayEnvelope(
   return {
     type: eventType,
     payload: {
-      ...buildCallRelayBasePayload(fromUserId, fromUserName, roomId, roomSlug, targetUserId),
+      ...buildCallRelayBasePayload(requestId, sessionId, traceId, fromUserId, fromUserName, roomId, roomSlug, targetUserId),
       settings
     }
   };

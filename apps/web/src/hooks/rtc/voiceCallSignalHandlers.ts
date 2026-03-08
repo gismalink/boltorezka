@@ -210,7 +210,7 @@ export async function handleIncomingSignalEvent({
           targetUserId: fromUserId,
           signal: answerSignal
         },
-        { trackAck: false, maxRetries: 0 }
+        { trackAck: true, maxRetries: 1 }
       );
       rememberRequestTarget(answerRequestId, "call.answer", fromUserId);
 

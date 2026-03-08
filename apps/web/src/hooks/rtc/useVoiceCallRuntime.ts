@@ -149,6 +149,7 @@ export function useVoiceCallRuntime({
   const roomTargetsResyncTimerRef = useRef<number | null>(null);
   const offerQueueRef = useRef(createOfferQueueState());
   const offerQueueDrainInProgressRef = useRef(false);
+  const seenIncomingSignalRequestIdsRef = useRef<Map<string, number>>(new Map());
   const lastVideoSyncOfferAtRef = useRef(0);
   const offerTraceStateRef = useRef<Map<string, { count: number; lastLoggedAt: number }>>(new Map());
   const lastToastRef = useRef<{ key: string; at: number }>({ key: "", at: 0 });
@@ -247,6 +248,37 @@ export function useVoiceCallRuntime({
     // Deterministic single-offerer policy per peer pair to avoid glare.
     return isDesignatedOfferer(localUserId, targetUserId);
   }, [localUserId]);
+
+  const shouldSkipDuplicateIncomingSignal = useCallback((
+    eventType: "call.offer" | "call.answer" | "call.ice",
+    payload: CallSignalPayload
+  ): boolean => {
+    const requestId = normalizeRtcText(payload.requestId);
+    if (!requestId) {
+      return false;
+    }
+
+    const fromUserId = normalizeRtcText(payload.fromUserId);
+    const key = `${eventType}:${fromUserId}:${requestId}`;
+    const now = Date.now();
+    const ttlMs = 2 * 60 * 1000;
+    const seenAt = seenIncomingSignalRequestIdsRef.current.get(key) || 0;
+    if (seenAt > 0 && now - seenAt <= ttlMs) {
+      return true;
+    }
+
+    seenIncomingSignalRequestIdsRef.current.set(key, now);
+    if (seenIncomingSignalRequestIdsRef.current.size > 2000) {
+      const threshold = now - ttlMs;
+      for (const [storedKey, at] of seenIncomingSignalRequestIdsRef.current.entries()) {
+        if (at < threshold) {
+          seenIncomingSignalRequestIdsRef.current.delete(storedKey);
+        }
+      }
+    }
+
+    return false;
+  }, []);
 
   const isTargetTemporarilyBlocked = useCallback((targetUserId: string) => {
     const until = blockedTargetUntilRef.current.get(targetUserId) || 0;
@@ -764,7 +796,7 @@ export function useVoiceCallRuntime({
         targetUserId: normalizedTarget,
         signal
       },
-      { trackAck: false, maxRetries: 0 }
+      { trackAck: true, maxRetries: 1 }
     );
     rememberRequestTarget(requestId, "call.offer", normalizedTarget);
 
@@ -1122,6 +1154,11 @@ export function useVoiceCallRuntime({
     eventType: "call.offer" | "call.answer" | "call.ice",
     payload: CallSignalPayload
   ) => {
+    if (shouldSkipDuplicateIncomingSignal(eventType, payload)) {
+      pushCallLog(`${eventType} ignored: duplicate requestId`);
+      return;
+    }
+
     await dispatchIncomingSignalForRtc({
       eventType,
       payload,
@@ -1140,7 +1177,7 @@ export function useVoiceCallRuntime({
       shouldInitiateOffer,
       logVoiceDiagnostics
     });
-  }, [sendWsEvent, rememberRequestTarget, ensurePeerConnection, clearPeerReconnectTimer, attachLocalTracks, flushPendingRemoteCandidates, setLastCallPeer, updateCallStatus, pushCallLog, closePeer, shouldInitiateOffer]);
+  }, [sendWsEvent, rememberRequestTarget, ensurePeerConnection, clearPeerReconnectTimer, attachLocalTracks, flushPendingRemoteCandidates, setLastCallPeer, updateCallStatus, pushCallLog, closePeer, shouldInitiateOffer, shouldSkipDuplicateIncomingSignal]);
 
   const handleIncomingTerminal = useCallback((eventType: "call.reject" | "call.hangup", payload: CallTerminalPayload) => {
     dispatchIncomingTerminalForRtc({
