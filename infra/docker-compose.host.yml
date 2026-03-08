@@ -132,6 +132,50 @@ services:
     networks:
       - data_test
 
+  boltorezka-livekit-test:
+    image: livekit/livekit-server:v1.8.3
+    container_name: boltorezka-livekit-test
+    restart: unless-stopped
+    profiles: ["livekit-test"]
+    environment:
+      LIVEKIT_TEST_API_KEY: ${LIVEKIT_TEST_API_KEY:-devkey}
+      LIVEKIT_TEST_API_SECRET: ${LIVEKIT_TEST_API_SECRET:-devsecret}
+      LIVEKIT_TEST_SIGNAL_PORT: ${TEST_LIVEKIT_SIGNAL_PORT:-7880}
+      LIVEKIT_TEST_TCP_PORT: ${TEST_LIVEKIT_TCP_PORT:-7881}
+      LIVEKIT_TEST_RTC_PORT_START: ${TEST_LIVEKIT_RTC_PORT_START:-32000}
+      LIVEKIT_TEST_RTC_PORT_END: ${TEST_LIVEKIT_RTC_PORT_END:-32100}
+    command:
+      - /bin/sh
+      - -ec
+      - |
+        cat > /tmp/livekit.yaml <<EOF
+        port: ${LIVEKIT_TEST_SIGNAL_PORT}
+        bind_addresses:
+          - "0.0.0.0"
+        rtc:
+          tcp_port: ${LIVEKIT_TEST_TCP_PORT}
+          port_range_start: ${LIVEKIT_TEST_RTC_PORT_START}
+          port_range_end: ${LIVEKIT_TEST_RTC_PORT_END}
+          use_external_ip: true
+        redis:
+          address: boltorezka-redis-test:6379
+        keys:
+          ${LIVEKIT_TEST_API_KEY}: ${LIVEKIT_TEST_API_SECRET}
+        logging:
+          level: info
+        EOF
+        exec livekit-server --config /tmp/livekit.yaml
+    ports:
+      - "${TEST_LIVEKIT_SIGNAL_PORT:-7880}:7880/tcp"
+      - "${TEST_LIVEKIT_TCP_PORT:-7881}:7881/tcp"
+      - "${TEST_LIVEKIT_RTC_PORT_START:-32000}-${TEST_LIVEKIT_RTC_PORT_END:-32100}:${TEST_LIVEKIT_RTC_PORT_START:-32000}-${TEST_LIVEKIT_RTC_PORT_END:-32100}/udp"
+    depends_on:
+      boltorezka-redis-test:
+        condition: service_healthy
+    networks:
+      - edge_public
+      - data_test
+
   boltorezka-api-prod:
     build:
       context: ../apps/api

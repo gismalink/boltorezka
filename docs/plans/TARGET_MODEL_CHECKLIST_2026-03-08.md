@@ -35,6 +35,8 @@ Validation note (2026-03-09): подтверждено вручную, что н
 Validation note (2026-03-09): baseline compare `p2p vs sfu` повторен от `origin/main` с policy override (`ALLOW_TEST_FROM_MAIN=1`), артефакт `~/srv/boltorezka/.deploy/compare-p2p-sfu-20260308T212146Z.md`: оба профиля `pass`, one-way `0/0`, `ACK` (`p2p=34`, `sfu=31`), `NACK` (`1/1`).
 Validation note (2026-03-09): лимиты room/capacity и client adaptive policy зафиксированы в `docs/runbooks/PHASE3_VOICE_WEBRTC_MVP_POLICY.md` (validated envelope, bounded reconnect/backoff, graceful degradation).
 Validation note (2026-03-09): anti-abuse policy документирована: server offer rate-limit (`apps/api/src/routes/realtime.ts`, `CALL_OFFER_MIN_INTERVAL_MS=5000` + ttl cleanup) и smoke anti-loop thresholds (`SMOKE_RTC_MAX_RELAYED_OFFERS/ANSWERS/RENEGOTIATION_EVENTS`) в `docs/operations/SMOKE_CI_MATRIX.md`.
+Decision update (2026-03-09): целевой SFU media-plane закреплен за `LiveKit`; текущий встроенный SFU path остается как migration/rollback path до завершения Stage 4.
+Validation note (2026-03-09): подготовлен Stage A foundation scaffolding для `LiveKit` в `test`: `infra/docker-compose.host.yml` (`boltorezka-livekit-test`, profile `livekit-test`), env-шаблон `infra/.env.host.example` (`TEST_LIVEKIT_*`, `LIVEKIT_TEST_API_*`), ops scripts `scripts/ops/livekit-test-{up,check,down}.sh`, runbook `docs/runbooks/LIVEKIT_TEST_FOUNDATION_RUNBOOK.md`.
 
 ## 0) Базовые инварианты (обязательно)
 
@@ -132,7 +134,7 @@ Validation note (2026-03-09): anti-abuse policy документирована: 
 
 ## 7) SFU Эволюция До Целевой Модели
 
-- [x] Зафиксирован выбор SFU media-plane (LiveKit/mediasoup/Janus) с ADR.
+- [x] Зафиксирован выбор SFU media-plane (`LiveKit`) с ADR.
 - [x] Определен контракт интеграции SFU с текущим control plane.
 - [x] Описан lifecycle: `join`, `publish`, `subscribe`, `leave`, `reconnect`.
 - [x] Определены лимиты комнат и adaptive policies на клиентах.
@@ -144,6 +146,11 @@ Validation note (2026-03-09): anti-abuse policy документирована: 
 - [x] Достигнут критерий: SFU path не хуже P2P по setup/reconnect (артефакт на feature-кандидате: `~/srv/boltorezka/.deploy/compare-p2p-sfu-20260308T184848Z.md`; для pre-prod из `main` повторить тот же шаг).
 - [ ] Полный переход всех voice/video сессий на SFU завершен (без fallback на legacy P2P в штатном профиле).
 - [x] Решение `SFU-first` зафиксировано в ADR/runbook: глубокая voice отладка выполняется только после переключения baseline на SFU.
+- [ ] Поднят `LiveKit` в `test` контуре (self-hosted) и задокументирован GitOps rollout/rollback runbook.
+- [ ] Реализован server-side token minting для `LiveKit` (room-scoped grants, TTL, audit fields) без выдачи секретов в клиент.
+- [ ] Добавлен transport adapter `mediaTopology=livekit` в control plane (`join/publish/subscribe/leave/reconnect`) с correlation IDs.
+- [ ] Добавлены smoke-gate'ы для `LiveKit` path (`join`, publish/subscribe, reconnect, late-join, one-way incidents).
+- [ ] Проведен baseline compare `sfu-current vs livekit` в `test` и зафиксирован decision package по default routing.
 
 ## 8) Безопасность И Надежность
 
@@ -181,9 +188,9 @@ Validation note (2026-03-09): anti-abuse policy документирована: 
 
 ## 12) Краткий План Исполнения (рекомендуемая последовательность)
 
-1. Завершить полный rewrite voice/video на SFU media-plane и убрать зависимость от legacy P2P в штатном пути.
-2. Закрыть control-plane контракты под SFU baseline (обязательный `targetUserId`, идемпотентность `call.*`, correlation IDs, `ack/retry` для SDP).
-3. Зафиксировать post-rewrite baseline в `test` и включить shadow telemetry/SLO сигналы.
-4. Провести полную матрицу тестирования и отладки voice/video уже на SFU (включая reconnect, mixed devices, relay-only/mixed профили).
-5. Подтвердить критерии качества, rollback readiness и отсутствие критичных инцидентов.
-6. Подготовить prod decision package и выполнить rollout только после явного approve.
+1. Поднять `LiveKit` в `test` как отдельный media-plane сервис и зафиксировать GitOps runbook (deploy/rollback/check).
+2. Добавить backend token-minting endpoint/flow для `LiveKit` с room/user grants, TTL и audit correlation.
+3. Ввести routing profile `mediaTopology=livekit` и adapter в control plane, сохранив rollback на текущий SFU path.
+4. Расширить smoke/postdeploy гейты: `livekit join/publish/subscribe/reconnect/late-join`, one-way и transport breakdown.
+5. Провести полную тест-матрицу на `LiveKit` baseline и сравнение `sfu-current vs livekit` по setup/reconnect/incident rate.
+6. После стабилизации закрепить `LiveKit` как default в `test`, затем подготовить prod decision package и rollout только по явному approve.

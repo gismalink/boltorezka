@@ -26,6 +26,9 @@ This folder contains operational scripts grouped by purpose.
 - `ops/`:
   - `backup-postgres-all.sh` - backup all Postgres DBs (test/prod) to host storage outside Docker.
   - `cleanup-server-logs.sh` - prune operation logs by retention policy.
+  - `livekit-test-up.sh` - start LiveKit in test profile (`livekit-test`).
+  - `livekit-test-check.sh` - check LiveKit test status and logs.
+  - `livekit-test-down.sh` - stop LiveKit test service.
   - `scheduler/` - portable scheduled jobs interface (job manifests, runner, launchd adapter).
 
 ## Common Flows
@@ -42,6 +45,10 @@ This folder contains operational scripts grouped by purpose.
   - `npm run scheduler:list`
 - Run one scheduled job manually:
   - `npm run scheduler:run -- backup-postgres-all`
+- Start LiveKit test foundation:
+  - `npm run livekit:test:up`
+- Check LiveKit test status:
+  - `npm run livekit:test:check`
 
 ## Notes
 
