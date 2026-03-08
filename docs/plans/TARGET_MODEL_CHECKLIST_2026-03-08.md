@@ -7,6 +7,7 @@
 
 Decision note (2026-03-08): живые проверки подтверждают стабильный voice path (audio OK). Остаточные проблемы camera stream visibility в mixed-device сценариях переведены в целевой SFU track и не блокируют текущий pre-SFU hardening.
 Strategy update (2026-03-08): принят курс `SFU-first` - сначала полный переход на SFU media-plane, затем полная фаза тестирования и отладки voice/video на новом baseline.
+Validation note (2026-03-08): GitOps test rollout `deploy:test:sfu` на SHA `b5d5bc1` прошел `SMOKE_STATUS=pass`, включая strict `smoke:realtime:media` (targeted signaling, relay/udp selected, one-way incidents = 0).
 
 ## 0) Базовые инварианты (обязательно)
 
@@ -94,7 +95,7 @@ Strategy update (2026-03-08): принят курс `SFU-first` - сначала
 - [ ] 4-6 участников с активными камерами и mute/unmute циклом.
 - [ ] Late join/leave в активной комнате без рассинхрона.
 - [ ] Переключение Wi-Fi -> LTE -> Wi-Fi без потери room state.
-- [ ] Проверка relay-only профиля (`iceTransportPolicy=relay`).
+- [x] Проверка relay-only профиля (`iceTransportPolicy=relay`).
 - [ ] Проверка mixed профиля (`all`) с приоритетом direct path.
 - [x] Негативный контрактный тест: `call.*` без `targetUserId` отклоняется (`ValidationError`) и не релеится в комнату.
 - [x] Тест идемпотентности `call.*`: дубликаты `offer/answer/ice` не вызывают повторного применения сигналов.
