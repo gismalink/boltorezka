@@ -32,6 +32,9 @@ Validation note (2026-03-08): `turns`-only relay media smoke (`turns:gismalink.a
 Validation note (2026-03-08): DNS/public IP для TURN консистентны: `TURN_CERT_DOMAIN=gismalink.art`, `TURN_EXTERNAL_IP=95.165.154.118`, `dig gismalink.art A -> 95.165.154.118`.
 Validation note (2026-03-09): в postdeploy smoke добавлена метрика TURN allocation failures (`SMOKE_TURN_ALLOCATION_FAILURES`, `SMOKE_TURN_ALLOCATION_STATUS`) по лог-паттернам `Cannot create socket`/`error 508`; поддержан optional strict threshold `SMOKE_TURN_ALLOCATION_FAIL_THRESHOLD`.
 Validation note (2026-03-09): подтверждено вручную, что на роутере/NAT проброшены UDP/TCP `30000-31000` + `3478` + `5349`.
+Validation note (2026-03-09): baseline compare `p2p vs sfu` повторен от `origin/main` с policy override (`ALLOW_TEST_FROM_MAIN=1`), артефакт `~/srv/boltorezka/.deploy/compare-p2p-sfu-20260308T212146Z.md`: оба профиля `pass`, one-way `0/0`, `ACK` (`p2p=34`, `sfu=31`), `NACK` (`1/1`).
+Validation note (2026-03-09): лимиты room/capacity и client adaptive policy зафиксированы в `docs/runbooks/PHASE3_VOICE_WEBRTC_MVP_POLICY.md` (validated envelope, bounded reconnect/backoff, graceful degradation).
+Validation note (2026-03-09): anti-abuse policy документирована: server offer rate-limit (`apps/api/src/routes/realtime.ts`, `CALL_OFFER_MIN_INTERVAL_MS=5000` + ttl cleanup) и smoke anti-loop thresholds (`SMOKE_RTC_MAX_RELAYED_OFFERS/ANSWERS/RENEGOTIATION_EVENTS`) в `docs/operations/SMOKE_CI_MATRIX.md`.
 
 ## 0) Базовые инварианты (обязательно)
 
@@ -132,10 +135,10 @@ Validation note (2026-03-09): подтверждено вручную, что н
 - [x] Зафиксирован выбор SFU media-plane (LiveKit/mediasoup/Janus) с ADR.
 - [x] Определен контракт интеграции SFU с текущим control plane.
 - [x] Описан lifecycle: `join`, `publish`, `subscribe`, `leave`, `reconnect`.
-- [ ] Определены лимиты комнат и adaptive policies на клиентах.
+- [x] Определены лимиты комнат и adaptive policies на клиентах.
 - [x] Реализован test-only dark launch SFU.
 - [x] Введен room-level и user-level canary routing.
-- [ ] Поднят shadow telemetry для сравнения P2P vs SFU.
+- [x] Поднят shadow telemetry для сравнения P2P vs SFU.
 - [x] Сформирован rollback без code revert (только конфиг/toggle).
 - [x] Подготовлены playbook для частичных деградаций SFU.
 - [x] Достигнут критерий: SFU path не хуже P2P по setup/reconnect (артефакт на feature-кандидате: `~/srv/boltorezka/.deploy/compare-p2p-sfu-20260308T184848Z.md`; для pre-prod из `main` повторить тот же шаг).
@@ -149,7 +152,7 @@ Validation note (2026-03-09): подтверждено вручную, что н
 - [x] JWT/SSO flow не использует `?token=` в URL callback.
 - [x] Return URL проходит только через validated `state`.
 - [x] Ограничены allowed origins/hosts для test/prod.
-- [ ] Нагрузочные лимиты и anti-abuse меры задокументированы.
+- [x] Нагрузочные лимиты и anti-abuse меры задокументированы.
 
 ## 9) Release Readiness Gate Перед Prod
 
