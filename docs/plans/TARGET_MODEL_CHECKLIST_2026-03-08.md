@@ -11,6 +11,7 @@ Validation note (2026-03-08): GitOps test rollout `deploy:test:sfu` на SHA `b5
 Validation note (2026-03-08): подтверждена серия из 3 подряд зеленых `deploy:test:sfu` на SHA `152d11b` (`SMOKE_STATUS=pass`, `SMOKE_REALTIME_MEDIA_STATUS=pass`).
 Validation note (2026-03-08): устранен TLS-cert volume mismatch для TURN (`edge_caddy_data` вместо пустого `ingress_caddy_data`); после этого `deploy:test:sfu` на SHA `0c0b8af` зеленый, а изолированный `turns`-only media smoke проходит без `iceCandidateError 701`.
 Validation note (2026-03-08): в postdeploy добавлен обязательный TURN TLS handshake gate (`SMOKE_TURN_TLS_STATUS`), проверка подтверждена на SHA `d87a829` (`turn_tls=pass`).
+Validation note (2026-03-08): ручная проверка voice успешна на 3 устройствах, включая 1 устройство из мобильной сети; checkpoint tags: `checkpoint-sfu-interim-working-2026-03-08`, `release-candidate-sfu-test-2026-03-08`.
 
 ## 0) Базовые инварианты (обязательно)
 
