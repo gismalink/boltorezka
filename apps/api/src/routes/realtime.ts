@@ -116,12 +116,43 @@ function safeJsonSize(value: unknown): number {
   }
 }
 
+function maskIceAddress(value: string | null): string | null {
+  if (!value) {
+    return null;
+  }
+
+  if (value.includes(":")) {
+    const parts = value.split(":").filter(Boolean);
+    if (parts.length >= 2) {
+      return `${parts[0]}:*:${parts[parts.length - 1]}`;
+    }
+    return "*:*";
+  }
+
+  const parts = value.split(".");
+  if (parts.length === 4) {
+    return `${parts[0]}.${parts[1]}.*.*`;
+  }
+
+  return "masked";
+}
+
+function maskIcePort(value: number | null): number | null {
+  if (!Number.isFinite(value) || value === null) {
+    return null;
+  }
+
+  return Math.floor(value / 1000) * 1000;
+}
+
 function extractIceCandidateMeta(signal: unknown): {
   iceCandidateType: string | null;
   iceTransport: string | null;
   iceTcpType: string | null;
   iceAddress: string | null;
   icePort: number | null;
+  iceAddressRaw?: string | null;
+  icePortRaw?: number | null;
 } {
   let candidateLine: string | null = null;
 
@@ -153,13 +184,21 @@ function extractIceCandidateMeta(signal: unknown): {
   const tcpTypeMatch = candidateLine.match(/\btcptype\s+([a-z0-9]+)/i);
   const addressPortMatch = candidateLine.match(/candidate:[^\s]+\s+\d+\s+(?:udp|tcp)\s+\d+\s+([^\s]+)\s+(\d+)/i);
   const icePortRaw = addressPortMatch?.[2] ? Number.parseInt(addressPortMatch[2], 10) : null;
+  const iceAddressRaw = addressPortMatch?.[1] ?? null;
+  const wsCallDebugRawIceEnabled = process.env.WS_CALL_DEBUG_RAW_ICE === "1";
 
   return {
     iceCandidateType: typeMatch?.[1]?.toLowerCase() ?? null,
     iceTransport: transportMatch?.[1]?.toLowerCase() ?? null,
     iceTcpType: tcpTypeMatch?.[1]?.toLowerCase() ?? null,
-    iceAddress: addressPortMatch?.[1] ?? null,
-    icePort: Number.isFinite(icePortRaw) ? icePortRaw : null
+    iceAddress: maskIceAddress(iceAddressRaw),
+    icePort: maskIcePort(Number.isFinite(icePortRaw) ? icePortRaw : null),
+    ...(wsCallDebugRawIceEnabled
+      ? {
+          iceAddressRaw,
+          icePortRaw: Number.isFinite(icePortRaw) ? icePortRaw : null
+        }
+      : {})
   };
 }
 

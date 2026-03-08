@@ -81,7 +81,7 @@ Strategy update (2026-03-08): принят курс `SFU-first` - сначала
 - [x] Логируются ключевые RTC этапы: offer/answer/ice/connected/failed.
 - [x] Есть разрез метрик по topology (`p2p`/`sfu`).
 - [x] Есть разрез по сети (`udp`/`tcp`/`tls relay`).
-- [ ] RTC-логи маскируют candidate IP/port и приватные данные; raw candidate logging включается только debug-флагом.
+- [x] RTC-логи маскируют candidate IP/port и приватные данные; raw candidate logging включается только debug-флагом (`WS_CALL_DEBUG_RAW_ICE=1`).
 - [ ] Есть SLO-дэшборд: setup success, reconnect success, median join time.
 - [ ] Настроены алерты на деградацию (rolling 5m/30m windows).
 - [x] В runbook есть единый triage flow для инцидентов.
