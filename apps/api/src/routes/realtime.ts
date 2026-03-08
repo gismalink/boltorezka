@@ -62,6 +62,7 @@ type CanonicalMediaState = {
 };
 
 type MediaTopology = "p2p" | "sfu";
+type RealtimeErrorCategory = "auth" | "permissions" | "topology" | "transport";
 
 const CALL_SIGNAL_MIN_BYTES = 2;
 const CALL_SDP_SIGNAL_MAX_BYTES = 600_000;
@@ -99,13 +100,35 @@ function sendAck(socket: WebSocket, requestId: string | null, eventType: string,
   sendJson(socket, buildAckEnvelope(requestId, eventType, meta));
 }
 
+function resolveErrorCategory(code: string): RealtimeErrorCategory {
+  if (code === "Forbidden" || code === "ChannelKicked") {
+    return "permissions";
+  }
+
+  if (
+    code === "RoomNotFound"
+    || code === "NoActiveRoom"
+    || code === "TargetNotInRoom"
+    || code === "ChannelSessionMoved"
+  ) {
+    return "topology";
+  }
+
+  if (code === "MissingTicket" || code === "InvalidTicket") {
+    return "auth";
+  }
+
+  return "transport";
+}
+
 function sendNack(socket: WebSocket, requestId: string | null, eventType: string, code: string, message: string) {
+  const category = resolveErrorCategory(code);
   if (!requestId) {
-    sendJson(socket, buildErrorEnvelope(code, message));
+    sendJson(socket, buildErrorEnvelope(code, message, category));
     return;
   }
 
-  sendJson(socket, buildNackEnvelope(requestId, eventType, code, message));
+  sendJson(socket, buildNackEnvelope(requestId, eventType, code, message, category));
 }
 
 function safeJsonSize(value: unknown): number {
@@ -639,7 +662,8 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
         socket,
         buildErrorEnvelope(
           "ChannelSessionMoved",
-          "You were disconnected from this channel because your account joined another channel elsewhere"
+          "You were disconnected from this channel because your account joined another channel elsewhere",
+          "topology"
         )
       );
 
@@ -772,7 +796,7 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
   };
 
   const sendInvalidEnvelopeError = (socket: WebSocket) => {
-    sendJson(socket, buildErrorEnvelope("ValidationError", "Invalid ws envelope"));
+    sendJson(socket, buildErrorEnvelope("ValidationError", "Invalid ws envelope", "transport"));
     void incrementMetric("nack_sent");
   };
 
@@ -907,7 +931,7 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
         const ticket = url.searchParams.get("ticket");
 
         if (!ticket) {
-          sendJson(connection, buildErrorEnvelope("MissingTicket", "ticket query param is required"));
+          sendJson(connection, buildErrorEnvelope("MissingTicket", "ticket query param is required", "auth"));
           connection.close(4001, "Missing ticket");
           return;
         }
@@ -916,7 +940,7 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
         const ticketPayload = await fastify.redis.get(ticketKey);
 
         if (!ticketPayload) {
-          sendJson(connection, buildErrorEnvelope("InvalidTicket", "WebSocket ticket is invalid or expired"));
+          sendJson(connection, buildErrorEnvelope("InvalidTicket", "WebSocket ticket is invalid or expired", "auth"));
           connection.close(4002, "Invalid ticket");
           return;
         }
@@ -927,7 +951,7 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
         try {
           claims = JSON.parse(ticketPayload);
         } catch {
-          sendJson(connection, buildErrorEnvelope("InvalidTicket", "Ticket payload is corrupted"));
+          sendJson(connection, buildErrorEnvelope("InvalidTicket", "Ticket payload is corrupted", "auth"));
           connection.close(4003, "Invalid ticket");
           return;
         }
@@ -935,7 +959,7 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
         const userId = claims.userId;
 
         if (!userId) {
-          sendJson(connection, buildErrorEnvelope("InvalidTicket", "Ticket subject is missing"));
+          sendJson(connection, buildErrorEnvelope("InvalidTicket", "Ticket subject is missing", "auth"));
           connection.close(4004, "Invalid ticket");
           return;
         }
@@ -1192,7 +1216,8 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
                     targetSocket,
                     buildErrorEnvelope(
                       "ChannelKicked",
-                      `You were removed from #${targetRoom.slug} by a moderator`
+                      `You were removed from #${targetRoom.slug} by a moderator`,
+                      "permissions"
                     )
                   );
                 }

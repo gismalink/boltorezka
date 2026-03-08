@@ -998,6 +998,9 @@ async function runLiveRoomBehaviorScenario({ roomSlug, timeoutMs }) {
     (item) => item?.type === "nack" && item?.payload?.requestId === requestNack,
     "nack before room.join"
   );
+  if (String(nack?.payload?.category || "") !== "topology") {
+    throw new Error(`[smoke:realtime] expected nack.category=topology for pre-join chat, got ${String(nack?.payload?.category || "missing")}`);
+  }
 
   const requestJoin = `join-${Date.now()}`;
   ws.send(JSON.stringify({ type: "room.join", requestId: requestJoin, payload: { roomSlug } }));
@@ -1199,6 +1202,9 @@ async function runLiveRoomBehaviorScenario({ roomSlug, timeoutMs }) {
 
     if (String(missingTargetOfferNack?.payload?.code || "") !== "ValidationError") {
       throw new Error(`[smoke:realtime] expected ValidationError for call.offer without targetUserId, got ${String(missingTargetOfferNack?.payload?.code || "unknown")}`);
+    }
+    if (String(missingTargetOfferNack?.payload?.category || "") !== "transport") {
+      throw new Error(`[smoke:realtime] expected transport category for call.offer missing target, got ${String(missingTargetOfferNack?.payload?.category || "missing")}`);
     }
 
     const missingTargetRelayed = secondEvents.some(

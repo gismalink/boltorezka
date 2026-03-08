@@ -204,7 +204,13 @@ export function buildAckEnvelope(requestId: string, eventType: string, meta: Rec
  * @param {string} message
  * @returns {WsOutgoingEnvelope}
  */
-export function buildNackEnvelope(requestId: string, eventType: string, code: string, message: string): WsOutgoingEnvelope {
+export function buildNackEnvelope(
+  requestId: string,
+  eventType: string,
+  code: string,
+  message: string,
+  category?: "auth" | "permissions" | "topology" | "transport"
+): WsOutgoingEnvelope {
   return {
     type: "nack",
     payload: {
@@ -212,7 +218,8 @@ export function buildNackEnvelope(requestId: string, eventType: string, code: st
       eventType,
       code,
       message,
-      ts: Date.now()
+      ts: Date.now(),
+      ...(category ? { category } : {})
     }
   };
 }
@@ -222,10 +229,18 @@ export function buildNackEnvelope(requestId: string, eventType: string, code: st
  * @param {string} message
  * @returns {WsOutgoingEnvelope}
  */
-export function buildErrorEnvelope(code: string, message: string): WsOutgoingEnvelope {
+export function buildErrorEnvelope(
+  code: string,
+  message: string,
+  category?: "auth" | "permissions" | "topology" | "transport"
+): WsOutgoingEnvelope {
   return {
     type: "error",
-    payload: { code, message }
+    payload: {
+      code,
+      message,
+      ...(category ? { category } : {})
+    }
   };
 }
 
