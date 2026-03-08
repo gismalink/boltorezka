@@ -21,9 +21,14 @@ SFU Stage 4 readiness reference: [SFU_STAGE4_PROD_READINESS_PACKAGE.md](SFU_STAG
    - Complete SSO Session,
    - room join,
    - message send/receive в двух вкладках.
+4.1. Postdeploy smoke summary в `test` подтверждает:
+   - `SMOKE_STATUS=pass`,
+   - `SMOKE_REALTIME_MEDIA_STATUS=pass`,
+   - `SMOKE_TURN_TLS_STATUS=pass`.
 5. Extended realtime relay smoke пройден:
    - `SMOKE_CALL_SIGNAL=1` сценарий с двумя `ws-ticket`,
    - подтверждены relay `call.offer/call.reject/call.hangup`.
+5.1. Mixed-profile media smoke (`iceTransportPolicy=all`, STUN+TURN) пройден с direct path (selected candidate pair `host/udp` или `srflx/udp`, не relay-only).
 6. RBAC smoke пройден:
    - `super_admin` может промоутить пользователя в `admin`,
    - обычный `user` не может создавать комнату,

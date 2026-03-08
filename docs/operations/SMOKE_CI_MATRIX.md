@@ -18,6 +18,7 @@
 | Deploy + postdeploy smoke | `TEST_REF=origin/<branch_or_main> npm run deploy:test:smoke` | Yes |
 | API/Web contract smoke in postdeploy | included in `deploy:test:smoke` (`smoke:sso` + `smoke:api` + `smoke:web:version-cache` + `smoke:realtime`), bearer auto-generated server-side from smoke user + JWT secret (`JWT_SECRET`/`TEST_JWT_SECRET`/api container env fallback) | Yes |
 | Browser media transport + one-way gate (SFU profile) | included in `deploy:test:sfu` via `SMOKE_REALTIME_MEDIA=1` and `SMOKE_FAIL_ON_ONE_WAY=1`; strict mode default: `SMOKE_REALTIME_MEDIA_STRICT=1`; transient retry enabled by default (`SMOKE_REALTIME_MEDIA_RETRIES=2`, `SMOKE_REALTIME_MEDIA_RETRY_DELAY_SEC=5`), websocket readiness timeout increased (`SMOKE_RTC_WS_READY_TIMEOUT_MS=35000`), emergency bypass only: `SMOKE_REALTIME_MEDIA_STRICT=0` | Yes |
+| TURN TLS handshake gate | included in postdeploy smoke (`SMOKE_TURN_TLS_STATUS`), strict by default (`SMOKE_TURN_TLS_STRICT=1`) | Yes |
 | Auto rollback policy (optional) | `AUTO_ROLLBACK_ON_FAIL=1 AUTO_ROLLBACK_SMOKE=1 TEST_REF=origin/<ref> npm run deploy:test:smoke` | Optional |
 | Extended relay smoke | `SMOKE_CALL_SIGNAL=1` flow with 2 ws-ticket | Yes |
 | Initial replay gate (`call.initial_state`) | enabled in postdeploy (`SMOKE_REQUIRE_INITIAL_STATE_REPLAY=1`), fail-fast on missing replay envelope | Yes |
@@ -52,6 +53,7 @@ Current CI command:
 | `chat.send` ack/nack/idempotency | `npm run smoke:realtime` |
 | `call.offer/reject/hangup` relay | extended realtime smoke (`SMOKE_CALL_SIGNAL=1`) |
 | Browser media transport breakdown (`udp`/`tcp`/`tls relay`) | postdeploy summary (`SMOKE_REALTIME_MEDIA=1`) |
+| TURN TLS endpoint availability (`turns:5349`) | postdeploy summary (`SMOKE_TURN_TLS_STATUS`) |
 | one-way media counters (`audio`/`video`) | postdeploy summary + fail gate (`SMOKE_FAIL_ON_ONE_WAY=1`) |
 | Denied media UX gate (`banner + lock controls`) | `npm run smoke:web:denied-media` (invoked from `smoke:web:e2e`) |
 | Browser-level denied media UX gate (headless) | `SMOKE_WEB_BASE_URL=<url> npm run smoke:web:denied-media:browser` (optional in `smoke:web:e2e` via `SMOKE_E2E_DENIED_MEDIA_BROWSER=1`) |

@@ -138,7 +138,7 @@ Validation note (2026-03-08): mixed-profile media smoke (`iceTransportPolicy=all
 - [ ] Нет критичных инцидентов в последние 48 часов.
 - [x] Подготовлен release summary с метриками и рисками.
 - [x] Rollback команда и ответственный подтверждены.
-- [ ] Smoke-чеклист для prod готов до старта окна релиза.
+- [x] Smoke-чеклист для prod готов до старта окна релиза.
 - [ ] Принято явное подтверждение на `prod` rollout.
 
 ## 10) Post-Deploy Контроль
