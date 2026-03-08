@@ -9,6 +9,7 @@ Decision note (2026-03-08): живые проверки подтверждают
 Strategy update (2026-03-08): принят курс `SFU-first` - сначала полный переход на SFU media-plane, затем полная фаза тестирования и отладки voice/video на новом baseline.
 Validation note (2026-03-08): GitOps test rollout `deploy:test:sfu` на SHA `b5d5bc1` прошел `SMOKE_STATUS=pass`, включая strict `smoke:realtime:media` (targeted signaling, relay/udp selected, one-way incidents = 0).
 Validation note (2026-03-08): подтверждена серия из 3 подряд зеленых `deploy:test:sfu` на SHA `152d11b` (`SMOKE_STATUS=pass`, `SMOKE_REALTIME_MEDIA_STATUS=pass`).
+Validation note (2026-03-08): устранен TLS-cert volume mismatch для TURN (`edge_caddy_data` вместо пустого `ingress_caddy_data`); после этого `deploy:test:sfu` на SHA `0c0b8af` зеленый, а изолированный `turns`-only media smoke проходит без `iceCandidateError 701`.
 
 ## 0) Базовые инварианты (обязательно)
 
