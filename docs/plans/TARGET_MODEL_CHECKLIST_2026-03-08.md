@@ -21,6 +21,7 @@ Validation note (2026-03-08): baseline-сравнение `TEST_REF=origin/featu
 Validation note (2026-03-08): пройден live-room stress на 6 участников (`SMOKE_CALL_LIVE_ROOM=1`, `SMOKE_CALL_LIVE_ROOM_PARTICIPANTS=6`) в test SFU baseline: `liveRoomOk=true`, `totalActions=42`, `leaveRejoinEvents=2`, `acceptedNacks=0`.
 Validation note (2026-03-08): пройден 1:1 desktop-mobile emulated media smoke (`SMOKE_RTC_EMULATE_MOBILE_PEER_B=1`): `SMOKE_RTC_REQUIRE_ICE_RESTART=1`, `oneWay(audio=0,video=0)`, `cameraStateConvergenceOk=true`, `iceUfragChanged=true`.
 Validation note (2026-03-08): пройден explicit late-join/leave stress (`SMOKE_CALL_LIVE_ROOM_REQUIRE_LATE_JOIN=1`) в SFU baseline: `liveRoomOk=true`, `participants=6`, `totalActions=44`, `lateJoinEvents=1`, `leaveRejoinEvents=2`, `acceptedNacks=0`.
+Validation note (2026-03-08): ручной network handoff в `test-room` (многократные переключения `Wi-Fi -> LTE -> Wi-Fi`) подтвержден без потери room state и без ручного reload; server logs: `ws.connected=1`, `ws.disconnected/reconnect=0`, при этом наблюдались повторные `call.offer/call.answer` (renegotiation без разрыва сессии).
 
 ## 0) Базовые инварианты (обязательно)
 
@@ -73,7 +74,7 @@ Validation note (2026-03-08): пройден explicit late-join/leave stress (`S
 - [x] `offer/answer` отправляются с `ack` tracking и bounded retry/backoff (не только `ICE`).
 - [ ] Не возникает endless renegotiation loop.
 - [x] ICE restart path покрыт e2e smoke.
-- [ ] При временной деградации сети сессия восстанавливается без ручного reload.
+- [x] При временной деградации сети сессия восстанавливается без ручного reload.
 - [ ] Потеря WS в окне negotiation (`offer sent -> answer apply`) восстанавливается автоматически.
 - [x] Локальные mute/camera toggles не триггерят лишние renegotiation.
 - [x] Поток state-событий имеет идемпотентную обработку.
@@ -107,7 +108,7 @@ Validation note (2026-03-08): пройден explicit late-join/leave stress (`S
 - [x] 3-way mixed devices (Mac + iPhone + Android/другой desktop).
 - [x] 4-6 участников с активными камерами и mute/unmute циклом.
 - [x] Late join/leave в активной комнате без рассинхрона.
-- [ ] Переключение Wi-Fi -> LTE -> Wi-Fi без потери room state.
+- [x] Переключение Wi-Fi -> LTE -> Wi-Fi без потери room state.
 - [x] Проверка relay-only профиля (`iceTransportPolicy=relay`).
 - [x] Проверка mixed профиля (`all`) с приоритетом direct path.
 - [x] Негативный контрактный тест: `call.*` без `targetUserId` отклоняется (`ValidationError`) и не релеится в комнату.

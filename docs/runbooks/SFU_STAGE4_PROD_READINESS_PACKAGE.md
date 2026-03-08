@@ -10,7 +10,7 @@
 ## 2) Verified test candidate
 
 - Branch: `origin/feature/video-stream-investigation`
-- Candidate SHA: `471e0ad48413009ef4ca8c6f9142efd58691d18c`
+- Candidate SHA: `5ce4cef2aaa7129f877eb9555aaf1f7562dd4a5f`
 - Test profile: `deploy:test:sfu`
 - Evidence window: latest refresh `2026-03-08T19:48:48Z`
 
@@ -45,6 +45,10 @@
 - Desktop-mobile evidence (browser emulation):
   - Command: `SMOKE_RTC_EMULATE_MOBILE_PEER_B=1 SMOKE_RTC_REQUIRE_ICE_RESTART=1 npm run smoke:realtime:media`
   - Result: `ok=true`, `emulation.peerA=desktop`, `emulation.peerB=mobile`, one-way `audio=0`, `video=0`, `cameraStateConvergenceOk=true`, `iceUfragChanged=true`.
+- Network handoff evidence (manual, test-room):
+  - Scenario: repeated `Wi-Fi -> LTE -> Wi-Fi` switches without page reload.
+  - Server log snapshot (`boltorezka-api-test`, last 20m): `ws.connected=1`, `ws.disconnected/reconnect=0`, `call.offer/call.answer=338`.
+  - Verdict: room state preserved, media path survived handoff via renegotiation (no forced reconnect loop).
 
 ## 4) Runtime risk posture
 
