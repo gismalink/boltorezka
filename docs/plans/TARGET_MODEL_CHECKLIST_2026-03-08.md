@@ -13,6 +13,7 @@ Validation note (2026-03-08): устранен TLS-cert volume mismatch для T
 Validation note (2026-03-08): в postdeploy добавлен обязательный TURN TLS handshake gate (`SMOKE_TURN_TLS_STATUS`), проверка подтверждена на SHA `d87a829` (`turn_tls=pass`).
 Validation note (2026-03-08): ручная проверка voice успешна на 3 устройствах, включая 1 устройство из мобильной сети; checkpoint tags: `checkpoint-sfu-interim-working-2026-03-08`, `release-candidate-sfu-test-2026-03-08`.
 Validation note (2026-03-08): mixed-profile media smoke (`iceTransportPolicy=all`, STUN+TURN) прошел; selected candidate pair = `host/udp` (direct path, без relay), one-way incidents = 0.
+Validation note (2026-03-08): TURN TLS cert проверен в контейнере (`notAfter=Jun 4 08:20:38 2026 GMT`), текущего окна релиза достаточно.
 
 ## 0) Базовые инварианты (обязательно)
 
@@ -34,7 +35,7 @@ Validation note (2026-03-08): mixed-profile media smoke (`iceTransportPolicy=all
 - [x] Postdeploy smoke валидирует размер relay диапазона (`SMOKE_EXPECT_TURN_RANGE_SIZE=1001`) и падает при регрессии.
 - [ ] На роутере/NAT проброшены UDP/TCP `30000-31000` + `3478` + `5349`.
 - [ ] DNS и public IP для TURN актуальны (`TURN_EXTERNAL_IP`, домен/cert).
-- [ ] TLS cert для `turns` валиден и не истекает в ближайшее окно релиза.
+- [x] TLS cert для `turns` валиден и не истекает в ближайшее окно релиза.
 - [ ] `turns:5349?transport=tcp` работает из внешней сети.
 - [ ] Проверен fallback `turn:3478?transport=tcp`.
 - [ ] Проверен fallback `turn:3478?transport=udp`.
