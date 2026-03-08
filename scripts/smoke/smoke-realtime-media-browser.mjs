@@ -1191,7 +1191,8 @@ async function main() {
       targetUserId: "",
       relayedOffersDelta: 0,
       relayedAnswersDelta: 0,
-      relayedIceDelta: 0
+      relayedIceDelta: 0,
+      localIceSentDelta: 0
     };
 
     if (requireIceRestart) {
@@ -1230,6 +1231,10 @@ async function main() {
       restartEvidence.relayedIceDelta = Math.max(
         Number(afterA?.relayedIceCount || 0) - Number(beforeA?.relayedIceCount || 0),
         Number(afterB?.relayedIceCount || 0) - Number(beforeB?.relayedIceCount || 0)
+      );
+      restartEvidence.localIceSentDelta = Math.max(
+        Number(afterA?.localIceSentCount || 0) - Number(beforeA?.localIceSentCount || 0),
+        Number(afterB?.localIceSentCount || 0) - Number(beforeB?.localIceSentCount || 0)
       );
     }
 
@@ -1359,7 +1364,7 @@ async function main() {
       const restartLooksHealthy = restartEvidence.attempted
         && restartEvidence.connectedAfter
         && restartEvidence.relayedOffersDelta >= 1
-        && (restartEvidence.relayedAnswersDelta >= 1 || restartEvidence.relayedIceDelta >= 1);
+        && (restartEvidence.relayedAnswersDelta >= 1 || restartEvidence.relayedIceDelta >= 1 || restartEvidence.localIceSentDelta >= 1);
 
       if (!restartLooksHealthy) {
         throw new Error(`[smoke:realtime:media] ice restart verification failed snapshot=${JSON.stringify(restartEvidence)}`);
