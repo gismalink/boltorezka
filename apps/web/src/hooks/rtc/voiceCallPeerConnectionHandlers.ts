@@ -51,8 +51,7 @@ export function bindVoicePeerConnectionHandlers({
   outputVolume
 }: BindVoicePeerConnectionHandlersArgs) {
   connection.onicecandidate = (event) => {
-    const peer = peersRef.current.get(targetUserId);
-    if (!peer || peer.connection !== connection || connection.connectionState === "closed") {
+    if (connection.connectionState === "closed") {
       return;
     }
 

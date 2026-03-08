@@ -113,6 +113,55 @@ describe("voiceCallPeerConnectionHandlers", () => {
     );
   });
 
+  it("sends ICE even when peer context is temporarily missing", () => {
+    const connection = createConnection();
+    const sendWsEvent = vi.fn(() => "req-ice-race");
+    const rememberRequestTarget = vi.fn();
+
+    const peersRef = {
+      current: new Map()
+    } as any;
+
+    bindVoicePeerConnectionHandlers({
+      connection: connection as any,
+      targetUserId: "user-2",
+      targetLabel: "User Two",
+      peersRef,
+      sendWsEvent,
+      rememberRequestTarget,
+      pushCallLog: vi.fn(),
+      clearPeerReconnectTimer: vi.fn(),
+      startPeerStatsMonitor: vi.fn(),
+      updateCallStatus: vi.fn(),
+      retryRemoteAudioPlayback: vi.fn(),
+      scheduleReconnect: vi.fn(),
+      closePeer: vi.fn(),
+      applyRemoteAudioOutput: vi.fn(async () => undefined),
+      syncPeerVoiceState: vi.fn(),
+      setRemoteVideoStream: vi.fn(),
+      clearRemoteVideoStream: vi.fn(),
+      audioMuted: false,
+      outputVolume: 100
+    });
+
+    connection.onicecandidate?.({
+      candidate: {
+        candidate: "candidate:1 1 udp 2122260223 10.0.0.2 9000 typ host",
+        toJSON: () => ({ candidate: "candidate:1 1 udp 2122260223 10.0.0.2 9000 typ host" })
+      }
+    });
+
+    expect(sendWsEvent).toHaveBeenCalledWith(
+      "call.ice",
+      {
+        targetUserId: "user-2",
+        signal: { candidate: "candidate:1 1 udp 2122260223 10.0.0.2 9000 typ host" }
+      },
+      { trackAck: false, maxRetries: 0 }
+    );
+    expect(rememberRequestTarget).toHaveBeenCalledWith("req-ice-race", "call.ice", "user-2");
+  });
+
   it("starts stats and clears reconnect state on connected", () => {
     const connection = createConnection();
     const clearPeerReconnectTimer = vi.fn();
