@@ -125,6 +125,20 @@ function parseCsvList(value) {
     .filter(Boolean);
 }
 
+function uniqueList(values) {
+  const seen = new Set();
+  const result = [];
+  for (const rawValue of values) {
+    const value = String(rawValue || "").trim();
+    if (!value || seen.has(value)) {
+      continue;
+    }
+    seen.add(value);
+    result.push(value);
+  }
+  return result;
+}
+
 function sleep(ms) {
   return new Promise((resolve) => {
     setTimeout(resolve, ms);
@@ -654,12 +668,8 @@ async function runLiveRoomBehaviorScenario({ roomSlug, timeoutMs }) {
   const explicitTickets = parseCsvList(liveRoomTicketPool);
   const explicitBearerTokens = parseCsvList(liveRoomBearerPool);
 
-  const baseTickets = [preissuedTicket, preissuedTicketSecond, preissuedTicketThird]
-    .filter(Boolean)
-    .concat(explicitTickets);
-  const baseBearerTokens = [bearerToken, bearerTokenSecond, bearerTokenThird]
-    .filter(Boolean)
-    .concat(explicitBearerTokens);
+  const baseTickets = uniqueList([preissuedTicket, preissuedTicketSecond, preissuedTicketThird, ...explicitTickets]);
+  const baseBearerTokens = uniqueList([bearerToken, bearerTokenSecond, bearerTokenThird, ...explicitBearerTokens]);
 
   const participantDefs = Array.from({ length: liveRoomParticipantCount }, (_, index) => {
     const slot = index + 1;
