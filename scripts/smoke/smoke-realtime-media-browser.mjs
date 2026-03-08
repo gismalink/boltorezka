@@ -24,6 +24,9 @@ const targetUserIdEnv = String(process.env.SMOKE_RTC_TARGET_USER_ID || "").trim(
 const reconnectIntervalMs = Number(process.env.SMOKE_RTC_RECONNECT_INTERVAL_MS || 3000);
 const broadcastOffers = process.env.SMOKE_RTC_BROADCAST_OFFERS === "1";
 const requireIceRestart = process.env.SMOKE_RTC_REQUIRE_ICE_RESTART === "1";
+const maxRelayedOffers = Number(process.env.SMOKE_RTC_MAX_RELAYED_OFFERS ?? 40);
+const maxRelayedAnswers = Number(process.env.SMOKE_RTC_MAX_RELAYED_ANSWERS ?? 40);
+const maxRenegotiationEvents = Number(process.env.SMOKE_RTC_MAX_RENEGOTIATION_EVENTS ?? 80);
 const emulateMobilePeerA = process.env.SMOKE_RTC_EMULATE_MOBILE_PEER_A === "1";
 const emulateMobilePeerB = process.env.SMOKE_RTC_EMULATE_MOBILE_PEER_B === "1";
 const mobileViewportWidth = Number(process.env.SMOKE_RTC_MOBILE_VIEWPORT_WIDTH || 390);
@@ -204,6 +207,18 @@ function assertPreconditions() {
 
   if (!ticketBEnv && !tokenB) {
     throw new Error("[smoke:realtime:media] set SMOKE_TEST_BEARER_TOKEN_SECOND or SMOKE_WS_TICKET_SECOND");
+  }
+
+  if (!Number.isFinite(maxRelayedOffers) || maxRelayedOffers < 2) {
+    throw new Error("[smoke:realtime:media] SMOKE_RTC_MAX_RELAYED_OFFERS must be >= 2");
+  }
+
+  if (!Number.isFinite(maxRelayedAnswers) || maxRelayedAnswers < 2) {
+    throw new Error("[smoke:realtime:media] SMOKE_RTC_MAX_RELAYED_ANSWERS must be >= 2");
+  }
+
+  if (!Number.isFinite(maxRenegotiationEvents) || maxRenegotiationEvents < 4) {
+    throw new Error("[smoke:realtime:media] SMOKE_RTC_MAX_RENEGOTIATION_EVENTS must be >= 4");
   }
 }
 
@@ -1362,6 +1377,19 @@ async function main() {
 
     const oneWayAudioIncidents = Number(peerAAudioOutboundOk && !peerBAudioInboundOk) + Number(peerBAudioOutboundOk && !peerAAudioInboundOk);
     const oneWayVideoIncidents = Number(peerAVideoOutboundOk && !peerBVideoInboundOk) + Number(peerBVideoOutboundOk && !peerAVideoInboundOk);
+    const relayedOffersTotal = Number(statsA.relayedOfferCount || 0) + Number(statsB.relayedOfferCount || 0);
+    const relayedAnswersTotal = Number(statsA.relayedAnswerCount || 0) + Number(statsB.relayedAnswerCount || 0);
+    const renegotiationEventsTotal = relayedOffersTotal + relayedAnswersTotal;
+    const renegotiationSummary = {
+      relayedOffersTotal,
+      relayedAnswersTotal,
+      renegotiationEventsTotal,
+      limits: {
+        maxRelayedOffers,
+        maxRelayedAnswers,
+        maxRenegotiationEvents
+      }
+    };
 
     const failureSnapshot = JSON.stringify({
       users: {
@@ -1394,6 +1422,14 @@ async function main() {
 
     if (!cameraStateConvergenceOk) {
       throw new Error("[smoke:realtime:media] camera state convergence failed for call.video_state off/on propagation");
+    }
+
+    if (
+      relayedOffersTotal > maxRelayedOffers
+      || relayedAnswersTotal > maxRelayedAnswers
+      || renegotiationEventsTotal > maxRenegotiationEvents
+    ) {
+      throw new Error(`[smoke:realtime:media] excessive negotiation churn detected snapshot=${JSON.stringify(renegotiationSummary)}`);
     }
 
     if (requireIceRestart) {
@@ -1450,6 +1486,7 @@ async function main() {
           inboundVideoOk: peerBVideoInboundOk
         }
       },
+      renegotiationSummary,
       cameraStateConvergenceOk,
       remoteVideoStateA,
       remoteVideoStateB,
