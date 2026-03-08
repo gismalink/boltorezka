@@ -10,6 +10,7 @@ fi
 REPO_DIR="${REPO_DIR:-$PWD}"
 DEPLOY_RETRIES="${COMPARE_DEPLOY_RETRIES:-3}"
 RETRY_DELAY_SEC="${COMPARE_RETRY_DELAY_SEC:-12}"
+RESTORE_REF="${COMPARE_RESTORE_REF:-1}"
 TIMESTAMP_UTC="$(date -u +%Y%m%dT%H%M%SZ)"
 REPORT_PATH="$REPO_DIR/.deploy/compare-p2p-sfu-${TIMESTAMP_UTC}.md"
 P2P_ENV_PATH="$REPO_DIR/.deploy/compare-p2p-${TIMESTAMP_UTC}.env"
@@ -24,6 +25,26 @@ fi
 
 mkdir -p "$REPO_DIR/.deploy"
 cd "$REPO_DIR"
+
+ORIGINAL_BRANCH="$(git symbolic-ref --quiet --short HEAD 2>/dev/null || true)"
+ORIGINAL_COMMIT="$(git rev-parse --short HEAD 2>/dev/null || true)"
+
+restore_original_ref() {
+  if [[ "$RESTORE_REF" != "1" ]]; then
+    return 0
+  fi
+
+  if [[ -n "$ORIGINAL_BRANCH" ]]; then
+    git checkout "$ORIGINAL_BRANCH" >/dev/null 2>&1 || true
+    return 0
+  fi
+
+  if [[ -n "$ORIGINAL_COMMIT" ]]; then
+    git checkout --detach "$ORIGINAL_COMMIT" >/dev/null 2>&1 || true
+  fi
+}
+
+trap restore_original_ref EXIT
 
 run_profile() {
   local profile="$1"

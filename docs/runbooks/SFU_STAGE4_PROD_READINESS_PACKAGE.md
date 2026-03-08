@@ -10,9 +10,9 @@
 ## 2) Verified test candidate
 
 - Branch: `origin/feature/video-stream-investigation`
-- Candidate SHA: `d87a8292bd853c86f42efe7d1d4ab0a0c8a4a981`
+- Candidate SHA: `053a14265a2685481c189a32d1ac79e6c6956abb`
 - Test profile: `deploy:test:sfu`
-- Evidence window: latest refresh `2026-03-08T18:02:30Z`
+- Evidence window: latest refresh `2026-03-08T18:49:37Z`
 
 ## 3) Stage 3 evidence (must-pass)
 
@@ -36,6 +36,11 @@
   - `race3WayOk=false`
   - `race3WayIceRelayOk=false`
   - `liveRoomOk=false`
+- Baseline comparison evidence (`p2p vs sfu`, same ref):
+  - Artifact: `~/srv/boltorezka/.deploy/compare-p2p-sfu-20260308T184848Z.md`
+  - `p2p`: `SMOKE_STATUS=pass`, `SMOKE_REALTIME_MEDIA_STATUS=pass`, `SMOKE_TURN_TLS_STATUS=pass`, one-way `audio=0`, `video=0`, `ACK=51`, `NACK=3`
+  - `sfu`: `SMOKE_STATUS=pass`, `SMOKE_REALTIME_MEDIA_STATUS=pass`, `SMOKE_TURN_TLS_STATUS=pass`, one-way `audio=0`, `video=0`, `ACK=33`, `NACK=1`
+  - Verdict: SFU не хуже P2P по setup/reconnect в test-кандидате, с меньшим signaling шумом.
 
 ## 4) Runtime risk posture
 
