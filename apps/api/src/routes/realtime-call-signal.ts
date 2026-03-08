@@ -32,10 +32,33 @@ export type RealtimeCallSignalHandlerDeps = {
     targetUserId: string | null,
     relayEnvelope: unknown
   ) => RelayOutcome;
-  sendNoActiveRoomNack: (socket: WebSocket, requestId: string | null, eventType: string) => void;
-  sendValidationNack: (socket: WebSocket, requestId: string | null, eventType: string, message: string) => void;
-  sendTargetNotInRoomNack: (socket: WebSocket, requestId: string | null, eventType: string) => void;
-  sendNack: (socket: WebSocket, requestId: string | null, eventType: string, code: string, message: string) => void;
+  sendNoActiveRoomNack: (
+    socket: WebSocket,
+    requestId: string | null,
+    eventType: string,
+    meta?: Record<string, unknown>
+  ) => void;
+  sendValidationNack: (
+    socket: WebSocket,
+    requestId: string | null,
+    eventType: string,
+    message: string,
+    meta?: Record<string, unknown>
+  ) => void;
+  sendTargetNotInRoomNack: (
+    socket: WebSocket,
+    requestId: string | null,
+    eventType: string,
+    meta?: Record<string, unknown>
+  ) => void;
+  sendNack: (
+    socket: WebSocket,
+    requestId: string | null,
+    eventType: string,
+    code: string,
+    message: string,
+    meta?: Record<string, unknown>
+  ) => void;
   sendAckWithMetrics: (
     socket: WebSocket,
     requestId: string | null,
@@ -67,8 +90,9 @@ export class RealtimeCallSignalHandler {
     requestId: string | null;
     eventType: RealtimeCallSignalEventType;
     state: RealtimeSocketStateLike;
+    traceId: string;
   }): string | null {
-    const { payload, connection, requestId, eventType, state } = args;
+    const { payload, connection, requestId, eventType, state, traceId } = args;
     const targetUserId = this.deps.normalizeRequestId(getPayloadString(payload, "targetUserId", 128)) || null;
     if (targetUserId) {
       return targetUserId;
@@ -81,7 +105,12 @@ export class RealtimeCallSignalHandler {
       roomSlug: state.roomSlug,
       requestId
     });
-    this.deps.sendValidationNack(connection, requestId, eventType, "payload.targetUserId is required");
+    this.deps.sendValidationNack(connection, requestId, eventType, "payload.targetUserId is required", {
+      traceId,
+      roomId: state.roomId,
+      userId: state.userId,
+      sessionId: state.sessionId
+    });
     void this.deps.incrementMetric("call_signal_missing_target");
     return null;
   }
@@ -103,13 +132,20 @@ export class RealtimeCallSignalHandler {
       lastCallOfferByPair
     } = args;
 
+    const traceId = this.deps.buildCallTraceId(eventType, requestId, state.sessionId);
+
     if (!state.roomId) {
       this.deps.logCallDebug("call signal rejected: no active room", {
         eventType,
         userId: state.userId,
         requestId
       });
-      this.deps.sendNoActiveRoomNack(connection, requestId, eventType);
+      this.deps.sendNoActiveRoomNack(connection, requestId, eventType, {
+        traceId,
+        roomId: state.roomId,
+        userId: state.userId,
+        sessionId: state.sessionId
+      });
       return;
     }
 
@@ -122,7 +158,12 @@ export class RealtimeCallSignalHandler {
         roomSlug: state.roomSlug,
         requestId
       });
-      this.deps.sendValidationNack(connection, requestId, eventType, "payload.signal object is required");
+      this.deps.sendValidationNack(connection, requestId, eventType, "payload.signal object is required", {
+        traceId,
+        roomId: state.roomId,
+        userId: state.userId,
+        sessionId: state.sessionId
+      });
       return;
     }
 
@@ -149,7 +190,13 @@ export class RealtimeCallSignalHandler {
         connection,
         requestId,
         eventType,
-        `payload.signal size must be between ${this.deps.callSignalMinBytes} and ${maxSignalSize} bytes`
+        `payload.signal size must be between ${this.deps.callSignalMinBytes} and ${maxSignalSize} bytes`,
+        {
+          traceId,
+          roomId: state.roomId,
+          userId: state.userId,
+          sessionId: state.sessionId
+        }
       );
       return;
     }
@@ -159,7 +206,8 @@ export class RealtimeCallSignalHandler {
       connection,
       requestId,
       eventType,
-      state
+      state,
+      traceId
     });
     if (!targetUserId) {
       return;
@@ -200,7 +248,20 @@ export class RealtimeCallSignalHandler {
           requestId,
           targetUserId
         });
-        this.deps.sendNack(connection, requestId, eventType, "OfferRateLimited", "Too many call offers; retry in a few seconds");
+        this.deps.sendNack(
+          connection,
+          requestId,
+          eventType,
+          "OfferRateLimited",
+          "Too many call offers; retry in a few seconds",
+          {
+            traceId,
+            roomId: state.roomId,
+            userId: state.userId,
+            sessionId: state.sessionId,
+            targetUserId
+          }
+        );
         void this.deps.incrementMetric("nack_sent");
         void this.deps.incrementMetric("call_offer_rate_limited");
         return;
@@ -215,7 +276,6 @@ export class RealtimeCallSignalHandler {
       void this.deps.incrementMetric("call_ice_received");
     }
 
-    const traceId = this.deps.buildCallTraceId(eventType, requestId, state.sessionId);
     const iceMeta = eventType === "call.ice" ? this.deps.extractIceCandidateMeta(signal) : null;
     const sdpMeta = eventType === "call.offer" || eventType === "call.answer" ? this.deps.extractSdpMeta(signal) : null;
 
@@ -260,7 +320,13 @@ export class RealtimeCallSignalHandler {
         targetUserId,
         relayedTo: relayOutcome.relayedCount
       });
-      this.deps.sendTargetNotInRoomNack(connection, requestId, eventType);
+      this.deps.sendTargetNotInRoomNack(connection, requestId, eventType, {
+        traceId,
+        roomId: state.roomId,
+        userId: state.userId,
+        sessionId: state.sessionId,
+        targetUserId
+      });
       void this.deps.incrementMetric("call_signal_target_miss");
       return;
     }

@@ -46,7 +46,7 @@ Strategy update (2026-03-08): принят курс `SFU-first` - сначала
 - [x] Для `call.offer`/`call.answer`/`call.ice` включена transport-level идемпотентность (server dedupe по `requestId` + client-side защита от повторного применения).
 - [x] Relay payload для `call.*` содержит корреляционные поля (`requestId`, `sessionId`, `traceId`) для сквозной диагностики.
 - [x] Коды ошибок разделены: auth/permissions/topology/transport.
-- [ ] Ошибки коррелируются по `roomId`, `userId`, `sessionId`, `traceId`.
+- [x] Ошибки коррелируются по `roomId`, `userId`, `sessionId`, `traceId`.
 - [ ] Нет утечки приватных данных в WS payload и логи.
 
 ## 3) WebRTC Runtime Стабильность (клиент)

@@ -209,7 +209,8 @@ export function buildNackEnvelope(
   eventType: string,
   code: string,
   message: string,
-  category?: "auth" | "permissions" | "topology" | "transport"
+  category?: "auth" | "permissions" | "topology" | "transport",
+  meta: Record<string, unknown> = {}
 ): WsOutgoingEnvelope {
   return {
     type: "nack",
@@ -219,7 +220,8 @@ export function buildNackEnvelope(
       code,
       message,
       ts: Date.now(),
-      ...(category ? { category } : {})
+      ...(category ? { category } : {}),
+      ...meta
     }
   };
 }

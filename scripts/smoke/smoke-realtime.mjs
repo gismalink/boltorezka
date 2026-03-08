@@ -1206,6 +1206,18 @@ async function runLiveRoomBehaviorScenario({ roomSlug, timeoutMs }) {
     if (String(missingTargetOfferNack?.payload?.category || "") !== "transport") {
       throw new Error(`[smoke:realtime] expected transport category for call.offer missing target, got ${String(missingTargetOfferNack?.payload?.category || "missing")}`);
     }
+    if (String(missingTargetOfferNack?.payload?.userId || "") !== firstUserId) {
+      throw new Error("[smoke:realtime] call.offer missing target nack must include sender userId");
+    }
+    if (!String(missingTargetOfferNack?.payload?.sessionId || "")) {
+      throw new Error("[smoke:realtime] call.offer missing target nack must include sessionId");
+    }
+    if (!String(missingTargetOfferNack?.payload?.traceId || "").startsWith("call.offer:")) {
+      throw new Error("[smoke:realtime] call.offer missing target nack must include call traceId");
+    }
+    if (!String(missingTargetOfferNack?.payload?.roomId || "")) {
+      throw new Error("[smoke:realtime] call.offer missing target nack must include roomId");
+    }
 
     const missingTargetRelayed = secondEvents.some(
       (item) => item?.type === "call.offer" && String(item?.payload?.requestId || "") === missingTargetOfferRequestId

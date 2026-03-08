@@ -121,14 +121,21 @@ function resolveErrorCategory(code: string): RealtimeErrorCategory {
   return "transport";
 }
 
-function sendNack(socket: WebSocket, requestId: string | null, eventType: string, code: string, message: string) {
+function sendNack(
+  socket: WebSocket,
+  requestId: string | null,
+  eventType: string,
+  code: string,
+  message: string,
+  meta: Record<string, unknown> = {}
+) {
   const category = resolveErrorCategory(code);
   if (!requestId) {
     sendJson(socket, buildErrorEnvelope(code, message, category));
     return;
   }
 
-  sendJson(socket, buildNackEnvelope(requestId, eventType, code, message, category));
+  sendJson(socket, buildNackEnvelope(requestId, eventType, code, message, category, meta));
 }
 
 function safeJsonSize(value: unknown): number {
@@ -761,26 +768,49 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
     return { ok: true, relayedCount };
   };
 
+  const buildErrorCorrelationMeta = (
+    socket: WebSocket,
+    extra: Record<string, unknown> = {}
+  ): Record<string, unknown> => {
+    const state = socketState.get(socket);
+    return {
+      roomId: state?.roomId ?? null,
+      userId: state?.userId ?? null,
+      sessionId: state?.sessionId ?? null,
+      ...extra
+    };
+  };
+
   const sendNoActiveRoomNack = (
     socket: WebSocket,
     requestId: string | null,
-    eventType: string
+    eventType: string,
+    meta: Record<string, unknown> = {}
   ) => {
-    sendNack(socket, requestId, eventType, "NoActiveRoom", "Join a room first");
+    sendNack(
+      socket,
+      requestId,
+      eventType,
+      "NoActiveRoom",
+      "Join a room first",
+      buildErrorCorrelationMeta(socket, meta)
+    );
     void incrementMetric("nack_sent");
   };
 
   const sendTargetNotInRoomNack = (
     socket: WebSocket,
     requestId: string | null,
-    eventType: string
+    eventType: string,
+    meta: Record<string, unknown> = {}
   ) => {
     sendNack(
       socket,
       requestId,
       eventType,
       "TargetNotInRoom",
-      "Target user is offline or not in this room"
+      "Target user is offline or not in this room",
+      buildErrorCorrelationMeta(socket, meta)
     );
     void incrementMetric("nack_sent");
   };
@@ -789,9 +819,17 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
     socket: WebSocket,
     requestId: string | null,
     eventType: string,
-    message: string
+    message: string,
+    meta: Record<string, unknown> = {}
   ) => {
-    sendNack(socket, requestId, eventType, "ValidationError", message);
+    sendNack(
+      socket,
+      requestId,
+      eventType,
+      "ValidationError",
+      message,
+      buildErrorCorrelationMeta(socket, meta)
+    );
     void incrementMetric("nack_sent");
   };
 
