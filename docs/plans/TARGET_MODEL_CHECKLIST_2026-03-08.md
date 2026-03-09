@@ -41,6 +41,7 @@ Validation note (2026-03-09): `LiveKit` Stage A поднят в `test` на се
 Validation note (2026-03-09): Stage B token minting validated на `test`: backend endpoint `POST /v1/auth/livekit-token` возвращает signed token + `url/room/identity/expiresInSec` при `TEST_LIVEKIT_ENABLED=1`; проверено в `test-room` через smoke bearer token.
 Validation note (2026-03-09): control-plane livekit routing + guard validated в `test-room` на SHA `4c7d783`: `room.joined.mediaTopology=livekit` для двух smoke users, `call.offer` в этой комнате возвращает `nack.code=LiveKitSignalingDisabled` и не релеится target user.
 Validation note (2026-03-09): baseline compare `sfu-current vs livekit-topology` выполнен в `test` на SHA `8b996e8` командой `TEST_REF=origin/feature/scheduler-interface-portable npm run smoke:compare:sfu-livekit`; артефакт `~/srv/boltorezka/.deploy/compare-sfu-livekit-20260309T085858Z.md` (оба профиля `pass`, livekit guard `pass`, guard code `LiveKitSignalingDisabled`).
+Validation note (2026-03-09): добавлен `livekit` control smoke-gate в postdeploy/compare (`SMOKE_LIVEKIT_ROOM_SLUG`): token-flow (`join/reconnect/late-join`) + `mediaTopology=livekit` guard (`LiveKitSignalingDisabled`) validated на SHA `acd9232`; артефакт `~/srv/boltorezka/.deploy/compare-sfu-livekit-20260309T091552Z.md` (`livekit_gate=pass`).
 
 ## 0) Базовые инварианты (обязательно)
 
@@ -153,7 +154,7 @@ Validation note (2026-03-09): baseline compare `sfu-current vs livekit-topology`
 - [x] Поднят `LiveKit` в `test` контуре (self-hosted) и задокументирован GitOps rollout/rollback runbook.
 - [x] Реализован server-side token minting для `LiveKit` (room-scoped grants, TTL, audit fields) без выдачи секретов в клиент.
 - [ ] Добавлен transport adapter `mediaTopology=livekit` в control plane (`join/publish/subscribe/leave/reconnect`) с correlation IDs.
-- [ ] Добавлены smoke-gate'ы для `LiveKit` path (`join`, publish/subscribe, reconnect, late-join, one-way incidents).
+- [ ] Добавлены smoke-gate'ы для `LiveKit` path (`join`, publish/subscribe, reconnect, late-join, one-way incidents). (control-plane gates готовы; media publish/subscribe + one-way incidents остаются)
 - [x] Проведен baseline compare `sfu-current vs livekit` в `test` и зафиксирован decision package по default routing.
 
 ## 8) Безопасность И Надежность
