@@ -20,4 +20,5 @@ Scope: full runtime transition to LiveKit-only media topology and release closur
 ## 3) Validation Notes
 
 - Validation note (2026-03-09): legacy `p2p/sfu` topology branches removed from active runtime paths; media topology contract is now `livekit` only.
+- Validation note (2026-03-09): ingress moved to strict LiveKit signaling policy (`/rtc*` only), deprecated `/livekit/rtc*` routes explicitly return `404`.
 - Validation note (2026-03-09): release-gate items above are intentionally kept open until production change window decision.
