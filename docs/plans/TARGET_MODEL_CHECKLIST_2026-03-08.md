@@ -52,6 +52,7 @@ Validation note (2026-03-09): camera transmit fix для LiveKit overlay path (`
 Validation note (2026-03-09): rolling SLO status повторно подтвержден на сервере (`~/srv/boltorezka/.deploy/slo/last-slo-eval.env`): `SLO_ROLLING_STATUS=pass`, `SLO_ROLLING_ALERT_COUNT=0`, `SLO_ROLLING_TS=2026-03-09T15:35:44.202Z`.
 Validation note (2026-03-09): выполнен repository secret-check (heuristic signatures, tracked files) с артефактом `.deploy/security/secret-heuristic-scan-20260309T154311Z.txt`; явных hardcoded секретов/ключей не обнаружено, совпадения относятся к runtime env-переменным в smoke/deploy scripts.
 Validation note (2026-03-09): ручной live-check с 5 устройствами в `test-room` подтвердил быстрый camera toggle без фризов; server metrics artifact `~/srv/boltorezka/.deploy/metrics-live/test-room-live-2min-20260309T155930Z.txt` фиксирует стабильные `tracks_video=4` и `tracks_audio=5` в 4 подряд окнах по 30s, без роста `nack`/`reconnect`/`offer`/`answer`/`ice` counters.
+Validation note (2026-03-09): добавлен и проверен test-профиль полного LiveKit routing (`deploy:test:livekit:allrooms`, script `scripts/deploy/deploy-test-livekit-all-default.sh`), rollout на SHA `08a257b` прошел `SMOKE_STATUS=pass`; baseline `general` и `test-room` подтверждают `expectedMediaTopology=livekit`, `SMOKE_LIVEKIT_GATE_STATUS=pass`, `SMOKE_LIVEKIT_MEDIA_STATUS=pass`.
 
 ## 0) Базовые инварианты (обязательно)
 
