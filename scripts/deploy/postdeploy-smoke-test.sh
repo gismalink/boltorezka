@@ -488,6 +488,7 @@ CALL_INITIAL_STATE_PARTICIPANTS_BEFORE="$(metric_from_hgetall "$METRICS_BEFORE_R
 
 echo "[postdeploy-smoke] smoke:realtime"
 BASELINE_SMOKE_ROOM_SLUG="${SMOKE_ROOM_SLUG:-general}"
+MEDIA_SMOKE_ROOM_SLUG="${SMOKE_REALTIME_MEDIA_ROOM_SLUG:-$BASELINE_SMOKE_ROOM_SLUG}"
 BASELINE_REQUIRE_MEDIA_TOPOLOGY=1
 if [[ -n "${SMOKE_SFU_ROOM_SLUG:-}" && "$BASELINE_SMOKE_ROOM_SLUG" == "$SMOKE_SFU_ROOM_SLUG" ]]; then
   # Stage 1 may route the default room to SFU and test data may not include a second P2P room.
@@ -705,7 +706,7 @@ if [[ "${SMOKE_REALTIME_MEDIA:-0}" == "1" ]]; then
     echo "[postdeploy-smoke] smoke:realtime:media attempt $media_attempt/$media_retry_count"
 
     if SMOKE_API_URL="$BASE_URL" \
-      SMOKE_ROOM_SLUG="$BASELINE_SMOKE_ROOM_SLUG" \
+      SMOKE_ROOM_SLUG="$MEDIA_SMOKE_ROOM_SLUG" \
       SMOKE_TEST_BEARER_TOKEN="${SMOKE_TEST_BEARER_TOKEN:-}" \
       SMOKE_TEST_BEARER_TOKEN_SECOND="${SMOKE_TEST_BEARER_TOKEN_SECOND:-}" \
       SMOKE_WS_TICKET="$media_ws_ticket" \
