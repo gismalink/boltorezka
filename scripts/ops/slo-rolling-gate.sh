@@ -28,10 +28,8 @@ mkdir -p "$SLO_STATE_DIR"
 
 summary_json="$(curl -fsS -H "Authorization: Bearer $SLO_BEARER_TOKEN" "${SLO_BASE_URL%/}${SLO_SUMMARY_ENDPOINT}")"
 
-snapshot_json="$(printf '%s' "$summary_json" | node <<'NODE'
-const fs = require("fs");
-const raw = fs.readFileSync(0, "utf8");
-const payload = JSON.parse(raw || "{}");
+snapshot_json="$(node - "$summary_json" <<'NODE'
+const payload = JSON.parse(process.argv[2] || "{}");
 const m = payload.metrics || {};
 
 const num = (v) => {
@@ -55,6 +53,14 @@ const snapshot = {
     call_signal_target_miss: num(m.call_signal_target_miss)
   }
 };
+
+if (!snapshot.day) {
+  throw new Error("telemetry summary payload missing day");
+}
+
+if (!Object.prototype.hasOwnProperty.call(m, "ack_sent") || !Object.prototype.hasOwnProperty.call(m, "nack_sent")) {
+  throw new Error("telemetry summary payload missing required ack/nack counters");
+}
 
 process.stdout.write(JSON.stringify(snapshot));
 NODE
