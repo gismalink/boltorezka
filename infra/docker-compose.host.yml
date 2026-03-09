@@ -274,6 +274,52 @@ services:
     networks:
       - data_prod
 
+  boltorezka-livekit-prod:
+    image: livekit/livekit-server:v1.8.3
+    container_name: boltorezka-livekit-prod
+    restart: unless-stopped
+    profiles: ["livekit-prod"]
+    environment:
+      LIVEKIT_PROD_API_KEY: ${PROD_LIVEKIT_API_KEY:-}
+      LIVEKIT_PROD_API_SECRET: ${PROD_LIVEKIT_API_SECRET:-}
+      LIVEKIT_PROD_SIGNAL_PORT: ${PROD_LIVEKIT_SIGNAL_PORT:-7880}
+      LIVEKIT_PROD_TCP_PORT: ${PROD_LIVEKIT_TCP_PORT:-7882}
+      LIVEKIT_PROD_RTC_PORT_START: ${PROD_LIVEKIT_RTC_PORT_START:-35000}
+      LIVEKIT_PROD_RTC_PORT_END: ${PROD_LIVEKIT_RTC_PORT_END:-35999}
+    entrypoint:
+      - /bin/sh
+      - -ec
+    command:
+      - |
+        if [ -z "${LIVEKIT_PROD_API_KEY:-}" ] || [ -z "${LIVEKIT_PROD_API_SECRET:-}" ]; then
+          echo "[livekit-prod] PROD_LIVEKIT_API_KEY and PROD_LIVEKIT_API_SECRET must be set" >&2
+          exit 1
+        fi
+        cat > /tmp/livekit.yaml <<EOF
+        port: ${PROD_LIVEKIT_SIGNAL_PORT:-7880}
+        bind_addresses:
+          - "0.0.0.0"
+        rtc:
+          tcp_port: ${PROD_LIVEKIT_TCP_PORT:-7882}
+          port_range_start: ${PROD_LIVEKIT_RTC_PORT_START:-35000}
+          port_range_end: ${PROD_LIVEKIT_RTC_PORT_END:-35999}
+          use_external_ip: true
+        redis:
+          address: boltorezka-redis-prod:6379
+        logging:
+          level: info
+        EOF
+        exec /livekit-server --config /tmp/livekit.yaml --keys "${LIVEKIT_PROD_API_KEY}: ${LIVEKIT_PROD_API_SECRET}"
+    ports:
+      - "${PROD_LIVEKIT_TCP_PORT:-7882}:${PROD_LIVEKIT_TCP_PORT:-7882}/tcp"
+      - "${PROD_LIVEKIT_RTC_PORT_START:-35000}-${PROD_LIVEKIT_RTC_PORT_END:-35999}:${PROD_LIVEKIT_RTC_PORT_START:-35000}-${PROD_LIVEKIT_RTC_PORT_END:-35999}/udp"
+    depends_on:
+      boltorezka-redis-prod:
+        condition: service_healthy
+    networks:
+      - edge_public
+      - data_prod
+
 networks:
   edge_public:
     external: true
