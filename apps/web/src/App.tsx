@@ -1711,6 +1711,7 @@ export function App() {
       userSettingsOpen={userSettingsOpen}
       userSettingsTab={userSettingsTab}
       voiceSettingsPanel={voiceSettingsPanel}
+      profileUsername={String(user.username || user.email.split("@")[0] || "")}
       profileNameDraft={profileNameDraft}
       profileEmail={user.email}
       profileSaving={profileSaving}
@@ -1811,6 +1812,7 @@ export function App() {
       userSettingsOpen={userSettingsOpen}
       userSettingsTab={userSettingsTab}
       voiceSettingsPanel={voiceSettingsPanel}
+      profileUsername={String(user.username || user.email.split("@")[0] || "")}
       profileNameDraft={profileNameDraft}
       profileEmail={user.email}
       profileSaving={profileSaving}

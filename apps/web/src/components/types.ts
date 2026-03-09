@@ -28,6 +28,7 @@ export type UserDockProps = {
   userSettingsOpen: boolean;
   userSettingsTab: "profile" | "sound" | "camera" | "server_sounds";
   voiceSettingsPanel: VoiceSettingsPanel;
+  profileUsername: string;
   profileNameDraft: string;
   profileEmail: string;
   profileSaving: boolean;

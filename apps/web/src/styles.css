@@ -720,7 +720,7 @@ pre {
 .channel-members-list {
   list-style: none;
   margin: 0;
-  padding: 2px 0 0 var(--space-md);
+  padding: 2px 0 0 var(--space-xl);
 }
 
 .channel-member-avatar {
@@ -748,9 +748,15 @@ pre {
 .channel-member-icons {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
   color: var(--pixel-muted);
   font-size: calc(var(--font-size-sm) - 0.12rem);
+}
+
+.channel-member-status-icon-anchor {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .channel-member-rtc {
@@ -818,6 +824,32 @@ pre {
 
 .channel-member-rtc-disconnected {
   opacity: 0.28;
+}
+
+.channel-member-status-disconnected {
+  opacity: 0.42;
+}
+
+.channel-member-status-idle {
+  color: var(--pixel-muted);
+}
+
+.channel-member-status-signaling {
+  color: color-mix(in srgb, var(--pixel-neon-gold) 72%, var(--pixel-text) 28%);
+}
+
+.channel-member-status-media {
+  color: var(--pixel-neon-cyan);
+}
+
+.channel-member-status-stalled {
+  color: #ff9a9a;
+  animation: channel-member-rtc-pulse 0.95s steps(2, end) infinite;
+}
+
+.channel-member-status-connecting {
+  color: var(--pixel-neon-gold);
+  animation: channel-member-rtc-pulse 0.95s steps(2, end) infinite;
 }
 
 .channel-member-rtc-connected {

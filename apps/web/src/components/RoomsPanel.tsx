@@ -338,41 +338,84 @@ export function RoomsPanel({
                   : "bi-mic";
               const audioIconClass = isAudioOutputMuted ? "bi-headset-vr" : "bi-headphones";
               const isFullyMuted = micState === "muted" && isAudioOutputMuted;
+              const mediaStatusIconClass = mediaStatus === "media"
+                ? "bi-broadcast-pin"
+                : mediaStatus === "signaling"
+                  ? "bi-arrow-repeat"
+                  : mediaStatus === "stalled"
+                    ? "bi-exclamation-triangle"
+                    : mediaStatus === "connecting"
+                      ? "bi-hourglass-split"
+                      : mediaStatus === "idle"
+                        ? "bi-pause-circle"
+                        : "bi-plug";
               const mediaStatusClass = mediaStatus === "media"
-                ? "channel-member-rtc-media"
+                ? "channel-member-status-media"
                 : mediaStatus === "signaling"
-                  ? "channel-member-rtc-signaling"
+                  ? "channel-member-status-signaling"
                   : mediaStatus === "stalled"
-                    ? "channel-member-rtc-stalled"
+                    ? "channel-member-status-stalled"
                     : mediaStatus === "connecting"
-                      ? "channel-member-rtc-connecting"
+                      ? "channel-member-status-connecting"
                       : mediaStatus === "idle"
-                        ? "channel-member-rtc-idle"
-                        : "channel-member-rtc-disconnected";
-              const mediaStatusLabel = mediaStatus === "media"
-                ? t("rooms.mediaBadge.media")
+                        ? "channel-member-status-idle"
+                        : "channel-member-status-disconnected";
+              const connectionTooltip = mediaStatus === "media"
+                ? t("rooms.memberStatus.connection.media")
                 : mediaStatus === "signaling"
-                  ? t("rooms.mediaBadge.signaling")
+                  ? t("rooms.memberStatus.connection.signaling")
                   : mediaStatus === "stalled"
-                    ? t("rooms.mediaBadge.stalled")
+                    ? t("rooms.memberStatus.connection.stalled")
                     : mediaStatus === "connecting"
-                      ? t("rooms.mediaBadge.connecting")
+                      ? t("rooms.memberStatus.connection.connecting")
                       : mediaStatus === "idle"
-                        ? t("rooms.mediaBadge.idle")
-                        : t("rooms.mediaBadge.disconnected");
+                        ? t("rooms.memberStatus.connection.idle")
+                        : t("rooms.memberStatus.connection.disconnected");
+              const micTooltip = micState === "muted"
+                ? t("rooms.memberStatus.mic.muted")
+                : micState === "speaking"
+                  ? t("rooms.memberStatus.mic.speaking")
+                  : t("rooms.memberStatus.mic.silent");
+              const audioTooltip = isAudioOutputMuted
+                ? t("rooms.memberStatus.audio.muted")
+                : t("rooms.memberStatus.audio.unmuted");
+              const cameraTooltip = isCameraEnabled
+                ? t("rooms.memberStatus.camera.on")
+                : t("rooms.memberStatus.camera.off");
+              const selfMicTooltip = micState === "muted"
+                ? t("rooms.memberStatus.self.mic.muted")
+                : micState === "speaking"
+                  ? t("rooms.memberStatus.self.mic.speaking")
+                  : t("rooms.memberStatus.self.mic.ready");
+              const selfAudioTooltip = isAudioOutputMuted
+                ? t("rooms.memberStatus.self.audio.muted")
+                : t("rooms.memberStatus.self.audio.unmuted");
+              const selfCameraTooltip = isCameraEnabled
+                ? t("rooms.memberStatus.self.camera.on")
+                : t("rooms.memberStatus.self.camera.off");
 
               return (
             <li
               key={`${room.id}-${member.userId || member.userName}`}
-              className={`channel-member-item grid min-h-[22px] grid-cols-[auto_1fr_auto_auto_auto] items-center gap-1.5 ${isCurrentUser ? "channel-member-item-current" : ""} ${isVoiceActive ? "channel-member-item-voice-active" : ""} ${isFullyMuted ? "channel-member-item-self-muted" : ""}`}
+              className={`channel-member-item grid min-h-[22px] grid-cols-[auto_1fr_auto_auto] items-center gap-1.5 ${isCurrentUser ? "channel-member-item-current" : ""} ${isVoiceActive ? "channel-member-item-voice-active" : ""} ${isFullyMuted ? "channel-member-item-self-muted" : ""}`}
             >
               <span className="channel-member-avatar">{(member.userName || "U").charAt(0).toUpperCase()}</span>
               <span className="channel-member-name">{member.userName}</span>
-              <span className={`channel-member-rtc ${mediaStatusClass}`}>{mediaStatusLabel}</span>
               <span className="channel-member-icons" aria-hidden="true">
-                {isCameraEnabled ? <i className="bi bi-camera-video-fill channel-member-camera-icon" /> : null}
-                <i className={`bi ${micIconClass} channel-member-mic-icon`} />
-                <i className={`bi ${audioIconClass} channel-member-audio-icon`} />
+                {!isCurrentUser ? (
+                  <span className="channel-member-status-icon-anchor" data-tooltip={connectionTooltip}>
+                    <i className={`bi ${mediaStatusIconClass} ${mediaStatusClass}`} />
+                  </span>
+                ) : null}
+                <span className="channel-member-status-icon-anchor" data-tooltip={isCurrentUser ? selfMicTooltip : micTooltip}>
+                  <i className={`bi ${micIconClass} channel-member-mic-icon`} />
+                </span>
+                <span className="channel-member-status-icon-anchor" data-tooltip={isCurrentUser ? selfAudioTooltip : audioTooltip}>
+                  <i className={`bi ${audioIconClass} channel-member-audio-icon`} />
+                </span>
+                <span className="channel-member-status-icon-anchor" data-tooltip={isCurrentUser ? selfCameraTooltip : cameraTooltip}>
+                  <i className={`bi ${isCameraEnabled ? "bi-camera-video-fill" : "bi-camera-video-off"} channel-member-camera-icon`} />
+                </span>
               </span>
               {canKickMembers && room.slug && member.userId && !isCurrentUser ? (
                 <button

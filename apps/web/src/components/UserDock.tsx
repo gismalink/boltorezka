@@ -19,6 +19,7 @@ export function UserDock({
   userSettingsOpen,
   userSettingsTab,
   voiceSettingsPanel,
+  profileUsername,
   profileNameDraft,
   profileEmail,
   profileSaving,
@@ -85,52 +86,36 @@ export function UserDock({
   const modalBarCount = 42;
   const miniActiveBars = Math.min(miniBarCount, Math.round(micTestLevel * miniBarCount));
   const modalActiveBars = Math.min(modalBarCount, Math.round(micTestLevel * modalBarCount));
-  const localMediaStatusLabelByKey: Record<string, string> = {
-    idle: t("rtc.media.idle"),
-    connecting: t("rtc.media.connecting"),
-    signaling: t("rtc.media.signaling"),
-    media: t("rtc.media.media"),
-    stalled: t("rtc.media.stalled"),
-    disconnected: t("rtc.media.disconnected")
-  };
-  const localMediaStatusLabel = localMediaStatusLabelByKey[localVoiceMediaStatusSummary] || localMediaStatusLabelByKey.disconnected;
+  void localVoiceMediaStatusSummary;
+  void callStatus;
+  void lastCallPeer;
+  void currentRoomTitle;
   return (
     <>
       <div className={`user-dock ${inlineSettingsMode ? "user-dock-inline-hidden" : ""} relative z-20 mt-auto flex min-h-0 flex-col gap-4`}>
         {currentRoomSupportsRtc ? (
           <section className="card compact rtc-connection-card flex flex-col gap-3 max-[800px]:hidden">
-            <div className="rtc-title-row flex items-start justify-between gap-3">
-              <div>
-                <div className="rtc-title">{t("rtc.connection")}</div>
-                <div className="muted rtc-subtitle">
-                  {currentRoomTitle}
-                  {lastCallPeer ? ` · ${lastCallPeer}` : ""}
-                </div>
-                <div className="muted rtc-subtitle">{t("call.status")}: {callStatus}</div>
-                <div className="muted rtc-subtitle">{t("rtc.mediaStatus")}: {localMediaStatusLabel}</div>
-              </div>
-              <div className="rtc-top-actions inline-flex gap-2">
-                <button type="button" className="secondary icon-btn tiny" data-tooltip={t("rtc.muteConnection")} onClick={onToggleMic}>
-                  <i className="bi bi-soundwave" aria-hidden="true" />
-                </button>
-                <button type="button" className="secondary icon-btn tiny" data-tooltip={t("rtc.disconnect")} onClick={onDisconnectCall}>
-                  <i className="bi bi-telephone-x" aria-hidden="true" />
-                </button>
-              </div>
-            </div>
             <div className="rtc-actions-grid grid grid-cols-4 gap-2">
-              <button type="button" className="secondary" data-tooltip={t("rtc.noiseReduction")}>
-                <i className="bi bi-sliders" aria-hidden="true" />
-              </button>
-              <button type="button" className="secondary" data-tooltip={t("rtc.screenShare")}>
-                <i className="bi bi-display" aria-hidden="true" />
-              </button>
-              <button type="button" className="secondary" data-tooltip={t("rtc.effects")}>
-                <i className="bi bi-stars" aria-hidden="true" />
-              </button>
-              <button type="button" className="secondary" data-tooltip={t("rtc.activities")}>
-                <i className="bi bi-lightning-charge" aria-hidden="true" />
-              </button>
+              <span data-tooltip={t("rtc.comingSoon")}>
+                <button type="button" className="secondary" disabled>
+                  <i className="bi bi-sliders" aria-hidden="true" />
+                </button>
+              </span>
+              <span data-tooltip={t("rtc.comingSoon")}>
+                <button type="button" className="secondary" disabled>
+                  <i className="bi bi-display" aria-hidden="true" />
+                </button>
+              </span>
+              <span data-tooltip={t("rtc.comingSoon")}>
+                <button type="button" className="secondary" disabled>
+                  <i className="bi bi-stars" aria-hidden="true" />
+                </button>
+              </span>
+              <span data-tooltip={t("rtc.comingSoon")}>
+                <button type="button" className="secondary" disabled>
+                  <i className="bi bi-lightning-charge" aria-hidden="true" />
+                </button>
+              </span>
             </div>
           </section>
         ) : null}
@@ -510,6 +495,10 @@ export function UserDock({
                 <form className="grid gap-4" onSubmit={onSaveProfile}>
                   <div className="grid gap-3">
                     <h3 className="subheading">{t("settings.profileSection")}</h3>
+                    <label className="grid gap-[var(--space-md)]">
+                      <span className="subheading">{t("settings.username")}</span>
+                      <input className="profile-readonly-input" value={profileUsername} readOnly aria-readonly="true" />
+                    </label>
                     <label className="grid gap-[var(--space-md)]">
                       <span className="subheading">{t("settings.displayName")}</span>
                       <input value={profileNameDraft} onChange={(event) => onSetProfileNameDraft(event.target.value)} />
