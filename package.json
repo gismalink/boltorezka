@@ -24,6 +24,7 @@
     "smoke:all": "bash ./scripts/smoke/run-all-smokes.sh",
     "smoke:web:e2e": "bash ./scripts/smoke/smoke-web-e2e.sh",
     "backup:db:all": "bash ./scripts/ops/backup-postgres-all.sh",
+    "turn:rotate": "bash ./scripts/ops/rotate-turn-credentials.sh",
     "livekit:test:up": "bash ./scripts/ops/livekit-test-up.sh",
     "livekit:test:check": "bash ./scripts/ops/livekit-test-check.sh",
     "livekit:test:down": "bash ./scripts/ops/livekit-test-down.sh",

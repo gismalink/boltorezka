@@ -163,7 +163,8 @@ Validation note (2026-03-09): в ветке `feature/sfu-livekit-final-cutover` 
 - [x] Сформирован rollback без code revert (только конфиг/toggle).
 - [x] Подготовлены playbook для частичных деградаций SFU.
 - [x] Достигнут критерий: SFU path не хуже P2P по setup/reconnect (артефакт на feature-кандидате: `~/srv/boltorezka/.deploy/compare-p2p-sfu-20260308T184848Z.md`; для pre-prod из `main` повторить тот же шаг).
-- [ ] Полный переход всех voice/video сессий на SFU завершен (без fallback на legacy P2P в штатном профиле).
+- [x] Полный переход всех voice/video сессий на SFU завершен (без fallback на legacy P2P в штатном профиле).
+Validation note (2026-03-09): в `scripts/deploy/postdeploy-smoke-test.sh` добавлен strict gate `SMOKE_REQUIRE_LIVEKIT_STANDARD_PROFILE=1`: проверяет `TEST_RTC_MEDIA_TOPOLOGY_DEFAULT=livekit`, `TEST_LIVEKIT_ENABLED=1` и пустые legacy override-поля `TEST_RTC_MEDIA_TOPOLOGY_SFU_ROOMS/USERS`; при нарушении smoke завершает deploy с fail.
 - [x] Решение `SFU-first` зафиксировано в ADR/runbook: глубокая voice отладка выполняется только после переключения baseline на SFU.
 - [x] Поднят `LiveKit` в `test` контуре (self-hosted) и задокументирован GitOps rollout/rollback runbook.
 - [x] Реализован server-side token minting для `LiveKit` (room-scoped grants, TTL, audit fields) без выдачи секретов в клиент.
@@ -174,7 +175,8 @@ Validation note (2026-03-09): в ветке `feature/sfu-livekit-final-cutover` 
 
 ## 8) Безопасность И Надежность
 
-- [ ] TURN credentials ротируются по расписанию.
+- [x] TURN credentials ротируются по расписанию.
+Validation note (2026-03-09): добавлены `scripts/ops/rotate-turn-credentials.sh` + scheduler job `scripts/ops/scheduler/jobs/turn-credentials-rotate.env` (interval 28d), marker `.deploy/turn-credentials-last-rotation.env` и freshness-gate в postdeploy smoke (`SMOKE_TURN_ROTATION_STATUS`).
 - [x] Нет захардкоженных секретов в репозитории.
 - [x] JWT/SSO flow не использует `?token=` в URL callback.
 - [x] Return URL проходит только через validated `state`.

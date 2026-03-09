@@ -24,6 +24,7 @@
 | Baseline comparison (SFU-current vs LiveKit-topology, same ref) | `TEST_REF=origin/<branch_or_main> npm run smoke:compare:sfu-livekit` | Required for LiveKit decision package |
 | LiveKit control gate (token-flow + signaling guard) | included in postdeploy when `SMOKE_LIVEKIT_ROOM_SLUG=<room>` (`SMOKE_LIVEKIT_GATE_STATUS`) | Required |
 | LiveKit media gate (browser publish/subscribe/reconnect/late-join) | included in postdeploy when `SMOKE_LIVEKIT_ROOM_SLUG=<room>` and `SMOKE_LIVEKIT_MEDIA=1` (`SMOKE_LIVEKIT_MEDIA_STATUS`) | Required for LiveKit media-plane validation |
+| LiveKit standard profile gate (no legacy SFU fallback in baseline) | included in postdeploy by default (`SMOKE_REQUIRE_LIVEKIT_STANDARD_PROFILE=1`): enforces `TEST_RTC_MEDIA_TOPOLOGY_DEFAULT=livekit`, `TEST_LIVEKIT_ENABLED=1`, and empty `TEST_RTC_MEDIA_TOPOLOGY_SFU_ROOMS/USERS` (`SMOKE_LIVEKIT_STANDARD_PROFILE_STATUS`) | Yes |
 | Auto rollback policy (optional) | `AUTO_ROLLBACK_ON_FAIL=1 AUTO_ROLLBACK_SMOKE=1 TEST_REF=origin/<ref> npm run deploy:test:smoke` | Optional |
 | Extended relay smoke | `SMOKE_CALL_SIGNAL=1` flow with 2 ws-ticket | Yes |
 | Initial replay gate (`call.initial_state`) | enabled in postdeploy (`SMOKE_REQUIRE_INITIAL_STATE_REPLAY=1`), fail-fast on missing replay envelope | Yes |
@@ -59,6 +60,7 @@ Current CI command:
 | `call.offer/reject/hangup` relay | extended realtime smoke (`SMOKE_CALL_SIGNAL=1`) |
 | Browser media transport breakdown (`udp`/`tcp`/`tls relay`) | postdeploy summary (`SMOKE_REALTIME_MEDIA=1`) |
 | TURN TLS endpoint availability (`turns:5349`) | postdeploy summary (`SMOKE_TURN_TLS_STATUS`) |
+| TURN credentials rotation freshness (`marker` age) | postdeploy summary + fail gate (`SMOKE_TURN_ROTATION_STATUS`, `SMOKE_TURN_ROTATION_MAX_AGE_DAYS`) |
 | TURN allocation failure counter (`508` / `Cannot create socket`) | postdeploy summary (`SMOKE_TURN_ALLOCATION_FAILURES`, `SMOKE_TURN_ALLOCATION_STATUS`) |
 | one-way media counters (`audio`/`video`) | postdeploy summary + fail gate (`SMOKE_FAIL_ON_ONE_WAY=1`) |
 | Denied media UX gate (`banner + lock controls`) | `npm run smoke:web:denied-media` (invoked from `smoke:web:e2e`) |
