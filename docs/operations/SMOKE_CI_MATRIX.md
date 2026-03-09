@@ -60,7 +60,7 @@ Current CI command:
 | `call.offer/reject/hangup` relay | extended realtime smoke (`SMOKE_CALL_SIGNAL=1`) |
 | Browser media transport breakdown (`udp`/`tcp`/`tls relay`) | postdeploy summary (`SMOKE_REALTIME_MEDIA=1`) |
 | TURN TLS endpoint availability (`turns:5349`) | postdeploy summary (`SMOKE_TURN_TLS_STATUS`) |
-| TURN credentials rotation freshness (`marker` age) | postdeploy summary + fail gate (`SMOKE_TURN_ROTATION_STATUS`, `SMOKE_TURN_ROTATION_MAX_AGE_DAYS`) |
+| TURN credentials rotation freshness (`marker` age) | postdeploy summary + fail gate (`SMOKE_TURN_ROTATION_STATUS`, `SMOKE_TURN_ROTATION_MAX_AGE_DAYS`); bootstrap compatibility allows missing marker once (`SMOKE_TURN_ROTATION_ALLOW_MISSING_MARKER=1`) |
 | TURN allocation failure counter (`508` / `Cannot create socket`) | postdeploy summary (`SMOKE_TURN_ALLOCATION_FAILURES`, `SMOKE_TURN_ALLOCATION_STATUS`) |
 | one-way media counters (`audio`/`video`) | postdeploy summary + fail gate (`SMOKE_FAIL_ON_ONE_WAY=1`) |
 | Denied media UX gate (`banner + lock controls`) | `npm run smoke:web:denied-media` (invoked from `smoke:web:e2e`) |

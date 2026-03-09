@@ -68,6 +68,7 @@ Secrets are not logged to stdout and are not written to audit logs.
 - Marker file: `.deploy/turn-credentials-last-rotation.env`
 - Maximum age: `SMOKE_TURN_ROTATION_MAX_AGE_DAYS=35`
 - Strict mode: `SMOKE_TURN_ROTATION_STRICT=1`
+- Bootstrap allow (missing marker): `SMOKE_TURN_ROTATION_ALLOW_MISSING_MARKER=1`
 
 If marker is missing or stale, smoke fails in strict mode.
 

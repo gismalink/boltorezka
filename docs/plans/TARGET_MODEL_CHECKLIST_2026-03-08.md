@@ -176,7 +176,7 @@ Validation note (2026-03-09): в `scripts/deploy/postdeploy-smoke-test.sh` до�
 ## 8) Безопасность И Надежность
 
 - [x] TURN credentials ротируются по расписанию.
-Validation note (2026-03-09): добавлены `scripts/ops/rotate-turn-credentials.sh` + scheduler job `scripts/ops/scheduler/jobs/turn-credentials-rotate.env` (interval 28d), marker `.deploy/turn-credentials-last-rotation.env` и freshness-gate в postdeploy smoke (`SMOKE_TURN_ROTATION_STATUS`).
+Validation note (2026-03-09): добавлены `scripts/ops/rotate-turn-credentials.sh` + scheduler job `scripts/ops/scheduler/jobs/turn-credentials-rotate.env` (interval 28d), marker `.deploy/turn-credentials-last-rotation.env` и freshness-gate в postdeploy smoke (`SMOKE_TURN_ROTATION_STATUS`, bootstrap-совместимость `SMOKE_TURN_ROTATION_ALLOW_MISSING_MARKER=1`).
 - [x] Нет захардкоженных секретов в репозитории.
 - [x] JWT/SSO flow не использует `?token=` в URL callback.
 - [x] Return URL проходит только через validated `state`.

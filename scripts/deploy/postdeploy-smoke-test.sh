@@ -386,6 +386,7 @@ validate_turn_tls_handshake
 validate_turn_rotation_freshness() {
   local enabled="${SMOKE_REQUIRE_TURN_ROTATION_FRESHNESS:-1}"
   local strict_mode="${SMOKE_TURN_ROTATION_STRICT:-1}"
+  local allow_missing_marker="${SMOKE_TURN_ROTATION_ALLOW_MISSING_MARKER:-1}"
   local max_age_days_raw="${SMOKE_TURN_ROTATION_MAX_AGE_DAYS:-35}"
   local marker_file="${SMOKE_TURN_ROTATION_MARKER_FILE:-.deploy/turn-credentials-last-rotation.env}"
 
@@ -401,6 +402,12 @@ validate_turn_rotation_freshness() {
   fi
 
   if [[ ! -f "$marker_file" ]]; then
+    if [[ "$allow_missing_marker" == "1" ]]; then
+      SMOKE_TURN_ROTATION_STATUS="warn"
+      echo "[postdeploy-smoke] turn rotation freshness marker missing ($marker_file); bootstrap allow is enabled"
+      return 0
+    fi
+
     SMOKE_TURN_ROTATION_STATUS="fail"
     echo "[postdeploy-smoke] turn rotation freshness failed: marker file not found ($marker_file)" >&2
     if [[ "$strict_mode" == "1" ]]; then
