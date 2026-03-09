@@ -97,27 +97,23 @@ export function UserDock({
           <section className="card compact rtc-connection-card flex flex-col gap-3 max-[800px]:hidden">
             <div className="rtc-actions-grid grid grid-cols-4 gap-2">
               <span data-tooltip={t("rtc.comingSoon")}>
-                <button type="button" className="secondary rtc-placeholder-btn" disabled>
+                <button type="button" className="secondary rtc-placeholder-btn" aria-label={t("rtc.noiseReduction")} disabled>
                   <i className="bi bi-sliders" aria-hidden="true" />
-                  <span>{`${t("rtc.noiseReduction")}...`}</span>
                 </button>
               </span>
               <span data-tooltip={t("rtc.comingSoon")}>
-                <button type="button" className="secondary rtc-placeholder-btn" disabled>
+                <button type="button" className="secondary rtc-placeholder-btn" aria-label={t("rtc.screenShare")} disabled>
                   <i className="bi bi-display" aria-hidden="true" />
-                  <span>{`${t("rtc.screenShare")}...`}</span>
                 </button>
               </span>
               <span data-tooltip={t("rtc.comingSoon")}>
-                <button type="button" className="secondary rtc-placeholder-btn" disabled>
+                <button type="button" className="secondary rtc-placeholder-btn" aria-label={t("rtc.effects")} disabled>
                   <i className="bi bi-stars" aria-hidden="true" />
-                  <span>{`${t("rtc.effects")}...`}</span>
                 </button>
               </span>
               <span data-tooltip={t("rtc.comingSoon")}>
-                <button type="button" className="secondary rtc-placeholder-btn" disabled>
+                <button type="button" className="secondary rtc-placeholder-btn" aria-label={t("rtc.activities")} disabled>
                   <i className="bi bi-lightning-charge" aria-hidden="true" />
-                  <span>{`${t("rtc.activities")}...`}</span>
                 </button>
               </span>
             </div>
