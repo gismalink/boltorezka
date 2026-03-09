@@ -123,17 +123,52 @@ async function setupPeer(page, tokenPayload, peerName) {
         attachState(room);
         await room.connect(url, currentToken, { autoSubscribe: true });
 
-        const stream = await navigator.mediaDevices.getUserMedia({
-          audio: true,
-          video: { width: 320, height: 240, frameRate: 15 }
-        });
+        const canvas = document.createElement("canvas");
+        canvas.width = 320;
+        canvas.height = 240;
+        const ctx = canvas.getContext("2d");
+        let frame = 0;
+        const drawTimer = setInterval(() => {
+          if (!ctx) {
+            return;
+          }
+          frame += 1;
+          ctx.fillStyle = frame % 2 === 0 ? "#4b9cff" : "#18c58f";
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.fillStyle = "#0b1220";
+          ctx.font = "20px sans-serif";
+          ctx.fillText(`${name} frame ${frame}`, 12, 40);
+        }, 120);
 
-        const localTracks = stream.getTracks();
+        const videoStream = canvas.captureStream(15);
+        const videoTrack = videoStream.getVideoTracks()[0];
+
+        const audioContext = new AudioContext();
+        const oscillator = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+        gain.gain.value = 0.05;
+        oscillator.frequency.value = 440;
+        oscillator.connect(gain);
+        const destination = audioContext.createMediaStreamDestination();
+        gain.connect(destination);
+        oscillator.start();
+
+        const audioTrack = destination.stream.getAudioTracks()[0];
+        const localTracks = [audioTrack, videoTrack].filter(Boolean);
         for (const track of localTracks) {
           await room.localParticipant.publishTrack(track);
         }
 
-        return { room, localTracks };
+        return {
+          room,
+          localTracks,
+          resources: {
+            drawTimer,
+            oscillator,
+            audioContext,
+            videoStream
+          }
+        };
       }
 
       const current = await connectAndPublish(token);
@@ -145,8 +180,26 @@ async function setupPeer(page, tokenPayload, peerName) {
         token,
         room: current.room,
         localTracks: current.localTracks,
+        resources: current.resources,
         async reconnect(nextToken) {
           state.reconnectCount += 1;
+          if (globalThis.__lkSmoke.resources?.drawTimer) {
+            clearInterval(globalThis.__lkSmoke.resources.drawTimer);
+          }
+          if (globalThis.__lkSmoke.resources?.oscillator) {
+            try {
+              globalThis.__lkSmoke.resources.oscillator.stop();
+            } catch {
+              // no-op
+            }
+          }
+          if (globalThis.__lkSmoke.resources?.audioContext) {
+            try {
+              await globalThis.__lkSmoke.resources.audioContext.close();
+            } catch {
+              // no-op
+            }
+          }
           for (const track of globalThis.__lkSmoke.localTracks || []) {
             try {
               track.stop();
@@ -164,9 +217,27 @@ async function setupPeer(page, tokenPayload, peerName) {
           const connected = await connectAndPublish(nextToken);
           globalThis.__lkSmoke.room = connected.room;
           globalThis.__lkSmoke.localTracks = connected.localTracks;
+          globalThis.__lkSmoke.resources = connected.resources;
           globalThis.__lkSmoke.token = nextToken;
         },
         async disconnect() {
+          if (globalThis.__lkSmoke.resources?.drawTimer) {
+            clearInterval(globalThis.__lkSmoke.resources.drawTimer);
+          }
+          if (globalThis.__lkSmoke.resources?.oscillator) {
+            try {
+              globalThis.__lkSmoke.resources.oscillator.stop();
+            } catch {
+              // no-op
+            }
+          }
+          if (globalThis.__lkSmoke.resources?.audioContext) {
+            try {
+              await globalThis.__lkSmoke.resources.audioContext.close();
+            } catch {
+              // no-op
+            }
+          }
           for (const track of globalThis.__lkSmoke.localTracks || []) {
             try {
               track.stop();
