@@ -100,6 +100,15 @@ export type TelemetrySummary = {
   };
 };
 
+export type LivekitTokenResponse = {
+  token: string;
+  url: string;
+  roomName: string;
+  roomId: string;
+  mediaTopology: "livekit" | "sfu" | "p2p";
+  traceId: string;
+};
+
 export type ServerAudioQualityResponse = {
   audioQuality: AudioQuality;
 };

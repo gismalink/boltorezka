@@ -33,6 +33,7 @@ import {
   useScreenWakeLock,
   useServerSounds,
   useServerMenuAccessGuard,
+  useLivekitVoiceRuntime,
   useVoiceCallRuntime,
   useVoiceRoomStateMaps
 } from "./hooks";
@@ -418,26 +419,10 @@ export function App() {
   }, [rooms, roomsTree, roomSlug]);
   const allowVideoStreaming = currentRoomKind === "text_voice_video";
   const currentRoomSupportsVideo = allowVideoStreaming;
+  const currentRoomMediaTopology = roomMediaTopologyBySlug[roomSlug] || "p2p";
+  const isLivekitRoomTopology = currentRoomMediaTopology === "livekit";
 
-  const {
-    roomVoiceConnected,
-    connectedPeerUserIds,
-    connectingPeerUserIds,
-    remoteMutedPeerUserIds,
-    remoteSpeakingPeerUserIds,
-    remoteAudioMutedPeerUserIds,
-    voiceMediaStatusByPeerUserId,
-    localVoiceMediaStatusSummary,
-    localVideoStream,
-    remoteVideoStreamsByUserId,
-    connectRoom,
-    disconnectRoom,
-    handleIncomingSignal,
-    handleIncomingTerminal,
-    handleIncomingMicState,
-    handleIncomingVideoState: handleIncomingRtcVideoState,
-    handleCallNack
-  } = useVoiceCallRuntime({
+  const rtcVoiceRuntime = useVoiceCallRuntime({
     localUserId: user?.id || "",
     roomSlug,
     allowVideoStreaming,
@@ -467,6 +452,58 @@ export function App() {
     setCallStatus,
     setLastCallPeer
   });
+
+  const livekitVoiceRuntime = useLivekitVoiceRuntime({
+    token,
+    localUserId: user?.id || "",
+    roomSlug,
+    allowVideoStreaming,
+    videoStreamingEnabled: cameraEnabled,
+    roomVoiceTargets: currentRoomVoiceTargets,
+    selectedInputId,
+    selectedOutputId,
+    selectedVideoInputId,
+    micMuted,
+    audioMuted,
+    outputVolume,
+    pushToast,
+    pushCallLog,
+    setCallStatus,
+    setLastCallPeer
+  });
+
+  const activeVoiceRuntime = isLivekitRoomTopology ? livekitVoiceRuntime : rtcVoiceRuntime;
+  const disconnectLegacyRtcRoom = rtcVoiceRuntime.disconnectRoom;
+  const disconnectLivekitRoom = livekitVoiceRuntime.disconnectRoom;
+
+  const {
+    roomVoiceConnected,
+    connectedPeerUserIds,
+    connectingPeerUserIds,
+    remoteMutedPeerUserIds,
+    remoteSpeakingPeerUserIds,
+    remoteAudioMutedPeerUserIds,
+    voiceMediaStatusByPeerUserId,
+    localVoiceMediaStatusSummary,
+    localVideoStream,
+    remoteVideoStreamsByUserId,
+    connectRoom,
+    disconnectRoom,
+    handleIncomingSignal,
+    handleIncomingTerminal,
+    handleIncomingMicState,
+    handleIncomingVideoState: handleIncomingRtcVideoState,
+    handleCallNack
+  } = activeVoiceRuntime;
+
+  useEffect(() => {
+    if (isLivekitRoomTopology) {
+      disconnectLegacyRtcRoom();
+      return;
+    }
+
+    disconnectLivekitRoom();
+  }, [disconnectLegacyRtcRoom, disconnectLivekitRoom, isLivekitRoomTopology]);
 
   const remoteVideoLabelsByUserId = useMemo(() => {
     const labels: Record<string, string> = {};
@@ -537,7 +574,7 @@ export function App() {
   useEffect(() => {
     const activeRoom = rooms.find((room) => room.slug === roomSlug);
     const roomSupportsRtc = activeRoom ? activeRoom.kind !== "text" : false;
-    if (!roomSupportsRtc || !roomVoiceConnected || !canManageAudioQuality) {
+    if (!roomSupportsRtc || !roomVoiceConnected || !canManageAudioQuality || isLivekitRoomTopology) {
       return;
     }
 
@@ -567,6 +604,7 @@ export function App() {
     roomSlug,
     roomVoiceConnected,
     canManageAudioQuality,
+    isLivekitRoomTopology,
     serverVideoEffectType,
     serverVideoResolution,
     serverVideoFps,
