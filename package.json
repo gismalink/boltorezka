@@ -35,6 +35,7 @@
     "deploy:test": "bash ./scripts/deploy/deploy-test-from-ref.sh \"${TEST_REF:?set TEST_REF=origin/feature/<name>}\" \"${REPO_DIR:-$PWD}\"",
     "deploy:test:smoke": "bash ./scripts/deploy/deploy-test-and-smoke.sh \"${TEST_REF:?set TEST_REF=origin/feature/<name>}\" \"${REPO_DIR:-$PWD}\"",
     "deploy:test:livekit": "bash ./scripts/deploy/deploy-test-livekit-default.sh",
+    "deploy:test:livekit:allrooms": "bash ./scripts/deploy/deploy-test-livekit-all-default.sh",
     "deploy:test:sfu": "bash ./scripts/deploy/deploy-test-sfu-default.sh",
     "deploy:prod": "bash ./scripts/deploy/deploy-prod-from-ref.sh \"${PROD_REF:-origin/main}\" \"${REPO_DIR:-$PWD}\""
   },

@@ -51,6 +51,7 @@ Validation note (2026-03-09): зафиксирован release-candidate checkpo
 Validation note (2026-03-09): camera transmit fix для LiveKit overlay path (`adaptiveStream=false`) выкачен в `test` на SHA `694dc18` (`TEST_REF=origin/feature/scheduler-interface-portable npm run deploy:test:livekit` на сервере); postdeploy smoke снова зеленый, включая `smoke:livekit:token-flow` и `smoke:livekit:media` (`oneWayIncidents.audio=0`, `oneWayIncidents.video=0`), после чего получено ручное подтверждение `все работает`.
 Validation note (2026-03-09): rolling SLO status повторно подтвержден на сервере (`~/srv/boltorezka/.deploy/slo/last-slo-eval.env`): `SLO_ROLLING_STATUS=pass`, `SLO_ROLLING_ALERT_COUNT=0`, `SLO_ROLLING_TS=2026-03-09T15:35:44.202Z`.
 Validation note (2026-03-09): выполнен repository secret-check (heuristic signatures, tracked files) с артефактом `.deploy/security/secret-heuristic-scan-20260309T154311Z.txt`; явных hardcoded секретов/ключей не обнаружено, совпадения относятся к runtime env-переменным в smoke/deploy scripts.
+Validation note (2026-03-09): ручной live-check с 5 устройствами в `test-room` подтвердил быстрый camera toggle без фризов; server metrics artifact `~/srv/boltorezka/.deploy/metrics-live/test-room-live-2min-20260309T155930Z.txt` фиксирует стабильные `tracks_video=4` и `tracks_audio=5` в 4 подряд окнах по 30s, без роста `nack`/`reconnect`/`offer`/`answer`/`ice` counters.
 
 ## 0) Базовые инварианты (обязательно)
 
@@ -115,7 +116,7 @@ Validation note (2026-03-09): выполнен repository secret-check (heuristi
 - [x] Если статус камеры `off`, окно скрывается.
 - [x] Призрачные окна отсутствуют (статусы чистятся по room presence).
 - [x] При rejoin не остается stale карточек пользователей.
-- [ ] Сетка камер стабильна при 3+ участниках и быстрых toggle (deferred: закрываем в полном SFU rollout).
+- [x] Сетка камер стабильна при 3+ участниках и быстрых toggle.
 - [x] На mobile и desktop одинаковая логика видимости.
 
 ## 5) Observability И Диагностика
