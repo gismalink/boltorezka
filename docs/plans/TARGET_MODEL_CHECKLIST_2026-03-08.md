@@ -45,6 +45,7 @@ Validation note (2026-03-09): добавлен `livekit` control smoke-gate в p
 Validation note (2026-03-09): dedicated `LiveKit` media smoke-gate (browser publish/subscribe/reconnect/late-join + one-way counters) внедрен и validated в `test` на SHA `fabf8c3` через `TEST_REF=origin/feature/scheduler-interface-portable npm run deploy:test:livekit`; summary `~/srv/boltorezka/.deploy/last-smoke-summary.env` содержит `SMOKE_STATUS=pass`, `SMOKE_LIVEKIT_GATE_STATUS=pass`, `SMOKE_LIVEKIT_MEDIA_STATUS=pass`.
 Validation note (2026-03-09): control-plane adapter для `mediaTopology=livekit` дополнен correlation IDs для `room.join/leave/reconnect` (WS envelopes + ack meta) и token handoff (`POST /v1/auth/livekit-token` возвращает `roomId`, `mediaTopology=livekit`, `traceId`) на SHA `ca4fbd7`; test deploy smoke `deploy:test:livekit` прошел (`SMOKE_STATUS=pass`, `SMOKE_LIVEKIT_GATE_STATUS=pass`, `SMOKE_LIVEKIT_MEDIA_STATUS=pass`).
 Validation note (2026-03-09): введен rolling SLO monitor (`npm run slo:check`) с окнами `5m/30m`, артефактами `.deploy/slo/last-slo-report.md` + `.deploy/slo/last-slo-eval.env` и scheduler job `slo-rolling-gate`; runbook: `docs/operations/SLO_ROLLING_ALERTS.md`.
+Validation note (2026-03-09): launchd job `com.boltorezka.scheduler.slo-rolling-gate` установлен в `test` на сервере (interval `300s`, state `running`), первый стабильный run `20260309T110006Z` завершен `success`; `SLO_ROLLING_STATUS=pass`, `SLO_ROLLING_5M_ACK=55`, `SLO_ROLLING_5M_NACK=0`.
 
 ## 0) Базовые инварианты (обязательно)
 
