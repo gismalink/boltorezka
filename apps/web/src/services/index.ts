@@ -1,6 +1,5 @@
 export { AuthController } from "./authController";
-export { CallSignalingController } from "./callSignalingController";
-export type { CallSignalEventType, CallStatus } from "./callSignalingController";
+export type { CallStatus } from "./callTypes";
 export { ChatController } from "./chatController";
 export { RealtimeClient } from "./realtimeClient";
 export { RoomAdminController } from "./roomAdminController";

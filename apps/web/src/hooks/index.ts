@@ -12,5 +12,4 @@ export { useScreenWakeLock } from "./useScreenWakeLock";
 export { useServerSounds } from "./useServerSounds";
 export { useServerMenuAccessGuard } from "./useServerMenuAccessGuard";
 export { useLivekitVoiceRuntime } from "./rtc/useLivekitVoiceRuntime";
-export { useVoiceCallRuntime } from "./rtc/useVoiceCallRuntime";
 export { useVoiceRoomStateMaps } from "./useVoiceRoomStateMaps";

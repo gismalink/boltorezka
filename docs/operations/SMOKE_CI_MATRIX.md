@@ -24,7 +24,7 @@
 | LiveKit media gate (browser publish/subscribe/reconnect/late-join) | included in postdeploy when `SMOKE_LIVEKIT_ROOM_SLUG=<room>` and `SMOKE_LIVEKIT_MEDIA=1` (`SMOKE_LIVEKIT_MEDIA_STATUS`) | Required for LiveKit media-plane validation |
 | LiveKit standard profile gate | included in postdeploy by default (`SMOKE_REQUIRE_LIVEKIT_STANDARD_PROFILE=1`): enforces enabled LiveKit runtime (`SMOKE_LIVEKIT_STANDARD_PROFILE_STATUS`) | Yes |
 | Auto rollback policy (optional) | `AUTO_ROLLBACK_ON_FAIL=1 AUTO_ROLLBACK_SMOKE=1 TEST_REF=origin/<ref> npm run deploy:test:smoke` | Optional |
-| Extended relay smoke | `SMOKE_CALL_SIGNAL=1` flow with 2 ws-ticket | Yes |
+| Extended realtime-state smoke | `SMOKE_CALL_SIGNAL=1` flow with 2 ws-ticket (`call.mic_state`/`call.video_state` relay + `call.initial_state` replay) | Yes |
 | Initial replay gate (`call.initial_state`) | enabled in postdeploy (`SMOKE_REQUIRE_INITIAL_STATE_REPLAY=1`), fail-fast on missing replay envelope | Yes |
 
 ## 3) GitHub Actions (`test-smoke.yml`)
@@ -41,7 +41,7 @@ Workflow: `.github/workflows/test-smoke.yml`
 Current CI command:
 
 - `SMOKE_API=1 SMOKE_SSO=1 SMOKE_REALTIME=1 SMOKE_REQUIRE_INITIAL_STATE_REPLAY=1 npm run check`
-- optional extended mode: `SMOKE_CALL_SIGNAL=1 SMOKE_CALL_RACE_3WAY=1` (wired via `TEST_SMOKE_EXTENDED_RTC=1` or manual workflow input `extended_rtc=1`)
+- optional extended mode: `SMOKE_CALL_SIGNAL=1` (wired via `TEST_SMOKE_EXTENDED_RTC=1` or manual workflow input `extended_rtc=1`)
 
 ## 4) Contract coverage map
 
@@ -55,7 +55,7 @@ Current CI command:
 | `call.initial_state` replay envelope on `room.join` | `npm run smoke:realtime` (`SMOKE_REQUIRE_INITIAL_STATE_REPLAY=1`) |
 | Web static delivery contract (`web root + assets + api mode`) | `npm run smoke:web:static` (invoked from `smoke:web:e2e`) |
 | `chat.send` ack/nack/idempotency | `npm run smoke:realtime` |
-| `call.offer/reject/hangup` relay | extended realtime smoke (`SMOKE_CALL_SIGNAL=1`) |
+| `call.mic_state` / `call.video_state` relay | extended realtime smoke (`SMOKE_CALL_SIGNAL=1`) |
 | Browser media transport breakdown (`udp`/`tcp`/`tls relay`) | postdeploy summary (`SMOKE_REALTIME_MEDIA=1`) |
 | TURN TLS endpoint availability (`turns:5349`) | postdeploy summary (`SMOKE_TURN_TLS_STATUS`) |
 | TURN credentials rotation freshness (`marker` age) | postdeploy summary + fail gate (`SMOKE_TURN_ROTATION_STATUS`, `SMOKE_TURN_ROTATION_MAX_AGE_DAYS`); bootstrap compatibility allows missing marker once (`SMOKE_TURN_ROTATION_ALLOW_MISSING_MARKER=1`) |

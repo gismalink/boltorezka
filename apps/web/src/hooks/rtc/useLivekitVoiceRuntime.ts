@@ -7,6 +7,7 @@ import {
   Track,
   type LocalTrack,
   type RemoteAudioTrack,
+  type TrackPublication,
   type RemoteParticipant,
   type RemoteTrack,
   type RemoteTrackPublication
@@ -168,7 +169,6 @@ export function useLivekitVoiceRuntime({
 
     const element = track.attach();
     element.autoplay = true;
-    element.playsInline = true;
     element.style.display = "none";
     document.body.appendChild(element);
     remoteAudioElementsRef.current.set(participantId, element);
@@ -275,7 +275,7 @@ export function useLivekitVoiceRuntime({
     setLocalVoiceMediaStatusSummary("disconnected");
     setLocalVideoStream(null);
     setRemoteVideoStreamsByUserId({});
-    setCallStatus("disconnected");
+    setCallStatus("idle");
     setLastCallPeer("");
   }, [setCallStatus, setLastCallPeer]);
 
@@ -446,12 +446,12 @@ export function useLivekitVoiceRuntime({
         }
       );
 
-      room.on(RoomEvent.TrackMuted, (_publication: RemoteTrackPublication, participant: RemoteParticipant) => {
+      room.on(RoomEvent.TrackMuted, (_publication: TrackPublication, participant: Participant) => {
         const participantId = String(participant.identity || "").trim() || participant.sid;
         setRemoteMutedPeerUserIds((prev) => (prev.includes(participantId) ? prev : [...prev, participantId]));
       });
 
-      room.on(RoomEvent.TrackUnmuted, (_publication: RemoteTrackPublication, participant: RemoteParticipant) => {
+      room.on(RoomEvent.TrackUnmuted, (_publication: TrackPublication, participant: Participant) => {
         const participantId = String(participant.identity || "").trim() || participant.sid;
         setRemoteMutedPeerUserIds((prev) => prev.filter((id) => id !== participantId));
       });
@@ -497,7 +497,7 @@ export function useLivekitVoiceRuntime({
       } catch (error) {
         cleanupRoom();
         setLocalVoiceMediaStatusSummary("disconnected");
-        setCallStatus("disconnected");
+        setCallStatus("idle");
 
         if (!disconnectRequestedRef.current && !isExpectedDisconnectError(error)) {
           pushToast(`LiveKit connect failed: ${error instanceof Error ? error.message : "unknown error"}`);

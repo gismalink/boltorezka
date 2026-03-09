@@ -1,4 +1,4 @@
-# Voice Baseline Runbook (WebRTC/TURN)
+# Voice Baseline Runbook (LiveKit/TURN)
 
 Цель: зафиксировать рабочую конфигурацию голоса в Boltorezka и шаги проверки после изменений.
 
@@ -8,8 +8,8 @@
 
 - WebRTC policy: `relay` для нестабильных сетей/мобильных клиентов.
 - TURN server: `turns:gismalink.art:5349?transport=tcp`.
-- Signaling: стабильный обмен `call.offer`, `call.answer`, `call.ice`, `call.mic_state`.
-- ICE-send strategy: offer/answer отправляются после завершения ICE gathering (или timeout guard), а не мгновенно.
+- Realtime WS layer: стабильный обмен `call.mic_state`, `call.video_state` + replay `call.initial_state`.
+- Media signaling/transport: LiveKit (`/rtc`).
 
 Рекомендуемые env для frontend:
 
@@ -22,16 +22,10 @@
 
 Ключевые места:
 
-- `apps/web/src/hooks/rtc/voiceCallUtils.ts`
-  - helper для ожидания ICE gathering перед отправкой SDP.
-- `apps/web/src/hooks/rtc/useVoiceCallRuntime.ts`
-  - runtime peer lifecycle, remote audio output routing, reconnect/statistics flow.
-- `apps/web/src/hooks/rtc/voiceCallSignalHandlers.ts`
-  - обработка incoming signaling + ответный SDP с ожиданием ICE gathering.
-- `apps/web/src/hooks/rtc/useVoiceRuntimeMediaEffects.ts`
-  - media effects, output volume/mute, retry playback после user gesture.
+- `apps/web/src/hooks/rtc/useLivekitVoiceRuntime.ts`
+  - LiveKit runtime lifecycle, connect/disconnect, remote track binding.
 - `apps/api/src/routes/realtime.ts`
-  - WS relay для `call.*` событий в пределах room.
+  - WS relay для `call.mic_state`/`call.video_state` + replay `call.initial_state`.
 
 ## 3) Mobile notes
 
@@ -46,14 +40,14 @@
 2. `curl -fsS https://<env-domain>/v1/auth/mode` (ожидается `mode=sso`)
 3. Пройти SSO login и зайти в голосовой канал в двух клиентах.
 4. Проверить, что слышно в обе стороны.
-5. Проверить API logs на `call.offer/call.answer/call.ice/call.mic_state`.
+5. Проверить API logs на `call.mic_state/call.video_state/call.initial_state`.
 6. Проверить TURN logs: `ALLOCATE -> CREATE_PERMISSION -> CHANNEL_BIND` + ненулевой `peer usage`.
 
 ## 5) Быстрая диагностика, если “signaling есть, звука нет”
 
 - Проверить, что frontend реально использует `relay` и корректный `VITE_RTC_ICE_SERVERS_JSON`.
 - Проверить TURN credentials и доступность `turns` endpoint.
-- Проверить, что SDP отправляется после ICE gathering (не урезанный candidate set).
+- Проверить, что `room.joined.mediaTopology=livekit` и клиент получил `call.initial_state`.
 - Проверить, что remote audio не заглушен (`audioMuted=false`, output volume > 0).
 - Для mobile: учитывать autoplay/user-gesture ограничения браузера.
 
@@ -70,7 +64,7 @@
 - `call_initial_state_sent` - сколько replay envelope `call.initial_state` отправлено на `room.join`.
 - `call_initial_state_participants_total` - суммарное число участников, отданных в replay snapshot.
 - `ack_sent`, `nack_sent` - общий транспортный health сигнал WS-контура.
-- `call_signal_sent` - активность offer/answer/ice relay.
+- `call_initial_state_sent` / `call_initial_state_participants_total` - baseline replay-path сигнал.
 
 Где смотреть:
 

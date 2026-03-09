@@ -43,11 +43,9 @@ Server -> client envelope types:
 - `chat.message`
 - `chat.edited`
 - `chat.deleted`
-- `call.offer`
-- `call.answer`
-- `call.ice`
-- `call.reject`
-- `call.hangup`
+- `call.initial_state`
+- `call.mic_state`
+- `call.video_state`
 
 ## Server control envelopes
 
@@ -82,7 +80,7 @@ Extended ack meta can include:
 - room join: `roomId`, `roomSlug`
 - chat send: `messageId`, `idempotencyKey`
 - duplicate chat send: `duplicate: true`, `idempotencyKey`
-- call relay: `relayedTo`, `targetUserId`
+- call state relay: `relayedTo`
 
 ### nack
 
@@ -233,48 +231,58 @@ Outputs:
 - `ack`
 - `nack` with `MessageNotFound|Forbidden|DeleteWindowExpired` on violation
 
-### call.offer | call.answer | call.ice
+### call.mic_state
 
 Input payload:
 
 ```json
 {
-  "signal": {},
-  "targetUserId": "optional-user-id"
+  "muted": true,
+  "speaking": false,
+  "audioMuted": false
 }
 ```
 
 Rules:
 
 - requires active room
-- `payload.signal` required and size validated (2..12000 bytes)
-- when `targetUserId` omitted: relay to all room peers except sender
-- when `targetUserId` provided: relay only to that user in same room
+- relayed to room peers except sender
 
 Outputs:
 
-- relayed `call.offer|call.answer|call.ice` envelope
+- relayed `call.mic_state` envelope
 - `ack` with `relayedTo`
-- `nack(TargetNotInRoom)` when targeted user has no room socket
 
-### call.reject | call.hangup
+### call.video_state
 
 Input payload:
 
 ```json
 {
-  "targetUserId": "optional-user-id",
-  "reason": "optional-string"
+  "settings": {
+    "localVideoEnabled": true
+  }
 }
 ```
 
-Rules and relay model are the same as call signaling events.
+Rules:
+
+- requires active room
+- relayed to room peers except sender
 
 Outputs:
 
-- relayed `call.reject|call.hangup`
+- relayed `call.video_state`
 - `ack` with `relayedTo`
-- `nack(TargetNotInRoom)` for missing targeted peer
+
+### call.initial_state (server replay)
+
+Sent by server on `room.join` as a snapshot of known participants call state for late joiners.
+
+The payload includes:
+
+- `roomSlug`
+- `participants[]` with `userId`, optional `mic` and optional `video` state
 
 ## Server broadcast payloads
 

@@ -41,6 +41,31 @@ const tokenA = String(process.env.SMOKE_TEST_BEARER_TOKEN || "").trim();
 const tokenB = String(process.env.SMOKE_TEST_BEARER_TOKEN_SECOND || "").trim();
 const ticketAEnv = String(process.env.SMOKE_WS_TICKET || "").trim();
 const ticketBEnv = String(process.env.SMOKE_WS_TICKET_SECOND || "").trim();
+const allowLegacyCallSignaling = process.env.SMOKE_ALLOW_LEGACY_CALL_SIGNAL === "1";
+
+if (!allowLegacyCallSignaling) {
+  console.log(
+    JSON.stringify(
+      {
+        ok: true,
+        skipped: true,
+        reason: "legacy call signaling smoke disabled",
+        transportSummary: {
+          configured: { udp: false, tcp: false, tlsRelay: false },
+          selectedProtocols: [],
+          selectedBuckets: { udp: 0, tcp: 0, tlsRelay: 0, unknown: 0 }
+        },
+        oneWaySummary: {
+          audioIncidents: 0,
+          videoIncidents: 0
+        }
+      },
+      null,
+      2
+    )
+  );
+  process.exit(0);
+}
 
 function resolveIceServers() {
   if (iceServersJsonRaw) {

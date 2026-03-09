@@ -1,6 +1,4 @@
 import type { MutableRefObject } from "react";
-import type { AudioQuality, PresenceMember } from "../../domain";
-import type { CallStatus } from "../../services";
 
 export type WsSender = (
   eventType: string,
@@ -48,37 +46,6 @@ export type CallNackPayload = {
 export type ServerVideoEffectType = "none" | "pixel8" | "ascii";
 
 export type VoiceMediaStatusSummary = "idle" | "connecting" | "signaling" | "media" | "stalled" | "disconnected";
-
-export type UseVoiceCallRuntimeArgs = {
-  localUserId: string;
-  roomSlug: string;
-  allowVideoStreaming: boolean;
-  videoStreamingEnabled: boolean;
-  roomVoiceTargets: PresenceMember[];
-  selectedInputId: string;
-  selectedOutputId: string;
-  selectedVideoInputId: string;
-  serverVideoResolution: "160x120" | "320x240" | "640x480";
-  serverVideoFps: 10 | 15 | 24 | 30;
-  serverVideoEffectType: ServerVideoEffectType;
-  serverVideoPixelFxStrength: number;
-  serverVideoPixelFxPixelSize: number;
-  serverVideoPixelFxGridThickness: number;
-  serverVideoAsciiCellSize: number;
-  serverVideoAsciiContrast: number;
-  serverVideoAsciiColor: string;
-  micMuted: boolean;
-  micTestLevel: number;
-  audioMuted: boolean;
-  outputVolume: number;
-  serverAudioQuality: AudioQuality;
-  t: (key: string) => string;
-  pushToast: (message: string) => void;
-  pushCallLog: (text: string) => void;
-  sendWsEvent: WsSender;
-  setCallStatus: (status: CallStatus) => void;
-  setLastCallPeer: (peer: string) => void;
-};
 
 export type VoicePeerContext = {
   connection: RTCPeerConnection;

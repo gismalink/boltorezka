@@ -34,7 +34,6 @@ import {
   useServerSounds,
   useServerMenuAccessGuard,
   useLivekitVoiceRuntime,
-  useVoiceCallRuntime,
   useVoiceRoomStateMaps
 } from "./hooks";
 import { detectInitialLang, LANGUAGE_OPTIONS, LOCALE_BY_LANG, TEXT, type Lang } from "./i18n";
@@ -422,37 +421,6 @@ export function App() {
   const currentRoomMediaTopology = roomMediaTopologyBySlug[roomSlug] || "livekit";
   const isLivekitRoomTopology = currentRoomMediaTopology === "livekit";
 
-  const rtcVoiceRuntime = useVoiceCallRuntime({
-    localUserId: user?.id || "",
-    roomSlug,
-    allowVideoStreaming,
-    videoStreamingEnabled: cameraEnabled,
-    roomVoiceTargets: currentRoomVoiceTargets,
-    selectedInputId,
-    selectedOutputId,
-    selectedVideoInputId,
-    serverVideoResolution,
-    serverVideoFps,
-    serverVideoEffectType,
-    serverVideoPixelFxStrength,
-    serverVideoPixelFxPixelSize,
-    serverVideoPixelFxGridThickness,
-    serverVideoAsciiCellSize,
-    serverVideoAsciiContrast,
-    serverVideoAsciiColor,
-    micMuted,
-    micTestLevel,
-    audioMuted,
-    outputVolume,
-    serverAudioQuality: effectiveAudioQuality,
-    t,
-    pushToast,
-    pushCallLog,
-    sendWsEvent,
-    setCallStatus,
-    setLastCallPeer
-  });
-
   const livekitVoiceRuntime = useLivekitVoiceRuntime({
     token,
     localUserId: user?.id || "",
@@ -472,10 +440,6 @@ export function App() {
     setLastCallPeer
   });
 
-  const activeVoiceRuntime = isLivekitRoomTopology ? livekitVoiceRuntime : rtcVoiceRuntime;
-  const disconnectLegacyRtcRoom = rtcVoiceRuntime.disconnectRoom;
-  const disconnectLivekitRoom = livekitVoiceRuntime.disconnectRoom;
-
   const {
     roomVoiceConnected,
     connectedPeerUserIds,
@@ -492,16 +456,7 @@ export function App() {
     handleIncomingMicState,
     handleIncomingVideoState: handleIncomingRtcVideoState,
     handleCallNack
-  } = activeVoiceRuntime;
-
-  useEffect(() => {
-    if (isLivekitRoomTopology) {
-      disconnectLegacyRtcRoom();
-      return;
-    }
-
-    disconnectLivekitRoom();
-  }, [disconnectLegacyRtcRoom, disconnectLivekitRoom, isLivekitRoomTopology]);
+  } = livekitVoiceRuntime;
 
   const remoteVideoLabelsByUserId = useMemo(() => {
     const labels: Record<string, string> = {};
@@ -1216,8 +1171,6 @@ export function App() {
     lastMessageIdRef,
     setWsState,
     setMessages,
-    setLastCallPeer,
-    setCallStatus,
     setRoomSlug,
     onRoomMediaTopology: ({ roomSlug: nextRoomSlug, mediaTopology }) => {
       setRoomMediaTopologyBySlug((prev) => {

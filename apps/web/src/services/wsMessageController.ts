@@ -1,6 +1,5 @@
 import type { Dispatch, SetStateAction } from "react";
 import type { Message, PresenceMember, WsIncoming } from "../domain";
-import type { CallStatus } from "./callSignalingController";
 import { RTC_FEATURE_INITIAL_STATE_REPLAY } from "../hooks/rtc/voiceCallConfig";
 
 type WsMessageControllerOptions = {
@@ -11,8 +10,6 @@ type WsMessageControllerOptions = {
     patch?: Partial<Message>
   ) => void;
   setMessages: Dispatch<SetStateAction<Message[]>>;
-  setLastCallPeer: (peer: string) => void;
-  setCallStatus: (status: CallStatus) => void;
   pushLog: (text: string) => void;
   pushCallLog: (text: string) => void;
   pushToast: (message: string) => void;
@@ -27,21 +24,6 @@ type WsMessageControllerOptions = {
     message: string;
   }) => void;
   onCallNack?: (payload: { requestId: string; eventType: string; code: string; message: string }) => void;
-  onCallSignal?: (
-    eventType: "call.offer" | "call.answer" | "call.ice",
-    payload: {
-      requestId?: string;
-      sessionId?: string;
-      traceId?: string;
-      fromUserId?: string;
-      fromUserName?: string;
-      signal?: Record<string, unknown>;
-    }
-  ) => void;
-  onCallTerminal?: (
-    eventType: "call.reject" | "call.hangup",
-    payload: { fromUserId?: string; fromUserName?: string; reason?: string | null }
-  ) => void;
   onCallMicState?: (
     payload: { fromUserId?: string; fromUserName?: string; muted?: boolean; speaking?: boolean; audioMuted?: boolean }
   ) => void;
@@ -244,54 +226,6 @@ export class WsMessageController {
     }
 
     this.options.setMessages((prev) => prev.filter((item) => item.id !== messageId));
-  }
-
-  private handleCallSignal(message: WsIncoming): void {
-    if (message.type !== "call.offer" && message.type !== "call.answer" && message.type !== "call.ice") {
-      return;
-    }
-
-    const fromUserName = String(message.payload?.fromUserName || message.payload?.fromUserId || "unknown");
-    const hasSignal = Boolean(message.payload?.signal && typeof message.payload.signal === "object");
-
-    this.options.setLastCallPeer(fromUserName);
-    if (message.type === "call.offer") {
-      this.options.setCallStatus("ringing");
-    }
-    if (message.type === "call.answer") {
-      this.options.setCallStatus("active");
-    }
-
-    this.options.pushCallLog(`${message.type} from ${fromUserName} (${hasSignal ? "signal" : "no-signal"})`);
-    this.options.onCallSignal?.(message.type, {
-      requestId: this.asTrimmedString(message.payload?.requestId) || undefined,
-      sessionId: this.asTrimmedString(message.payload?.sessionId) || undefined,
-      traceId: this.asTrimmedString(message.payload?.traceId) || undefined,
-      fromUserId: this.asTrimmedString(message.payload?.fromUserId || message.payload?.userId) || undefined,
-      fromUserName: this.asTrimmedString(message.payload?.fromUserName || message.payload?.userName) || undefined,
-      signal:
-        message.payload?.signal && typeof message.payload.signal === "object"
-          ? (message.payload.signal as Record<string, unknown>)
-          : undefined
-    });
-  }
-
-  private handleCallTerminal(message: WsIncoming): void {
-    if (message.type !== "call.reject" && message.type !== "call.hangup") {
-      return;
-    }
-
-    const fromUserName = String(message.payload?.fromUserName || message.payload?.fromUserId || "unknown");
-    const reason = this.asTrimmedString(message.payload?.reason);
-
-    this.options.setLastCallPeer(fromUserName);
-    this.options.setCallStatus("idle");
-    this.options.pushCallLog(`${message.type} from ${fromUserName}${reason ? ` (${reason})` : ""}`);
-    this.options.onCallTerminal?.(message.type, {
-      fromUserId: this.asTrimmedString(message.payload?.fromUserId) || undefined,
-      fromUserName: this.asTrimmedString(message.payload?.fromUserName) || undefined,
-      reason: reason || null
-    });
   }
 
   private handleCallMicState(message: WsIncoming): void {
@@ -523,15 +457,6 @@ export class WsMessageController {
         return;
       case "chat.deleted":
         this.handleChatDeleted(message);
-        return;
-      case "call.offer":
-      case "call.answer":
-      case "call.ice":
-        this.handleCallSignal(message);
-        return;
-      case "call.reject":
-      case "call.hangup":
-        this.handleCallTerminal(message);
         return;
       case "call.mic_state":
         this.handleCallMicState(message);

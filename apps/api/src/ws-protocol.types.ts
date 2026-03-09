@@ -1,8 +1,6 @@
-export type CallSignalEventType = "call.offer" | "call.answer" | "call.ice";
-export type CallTerminalEventType = "call.reject" | "call.hangup";
 export type CallMicStateEventType = "call.mic_state";
 export type CallVideoStateEventType = "call.video_state";
-export type CallEventType = CallSignalEventType | CallTerminalEventType | CallMicStateEventType | CallVideoStateEventType;
+export type CallEventType = CallMicStateEventType | CallVideoStateEventType;
 
 export type WsIncomingPayload = Record<string, unknown>;
 
@@ -62,20 +60,6 @@ export type WsIncomingChatDeleteEnvelope = {
   payload?: WsIncomingPayload;
 };
 
-export type WsIncomingCallSignalEnvelope = {
-  type: CallSignalEventType;
-  requestId?: string;
-  idempotencyKey?: string;
-  payload?: WsIncomingPayload;
-};
-
-export type WsIncomingCallTerminalEnvelope = {
-  type: CallTerminalEventType;
-  requestId?: string;
-  idempotencyKey?: string;
-  payload?: WsIncomingPayload;
-};
-
 export type WsIncomingCallMicStateEnvelope = {
   type: CallMicStateEventType;
   requestId?: string;
@@ -98,8 +82,6 @@ export type WsIncomingKnownEnvelope =
   | WsIncomingChatSendEnvelope
   | WsIncomingChatEditEnvelope
   | WsIncomingChatDeleteEnvelope
-  | WsIncomingCallSignalEnvelope
-  | WsIncomingCallTerminalEnvelope
   | WsIncomingCallMicStateEnvelope
   | WsIncomingCallVideoStateEnvelope;
 
@@ -206,14 +188,6 @@ export type CallRelayBasePayload = {
   roomSlug: string | null;
   targetUserId: string | null;
   ts: string;
-};
-
-export type CallSignalRelayPayload = CallRelayBasePayload & {
-  signal: Record<string, unknown>;
-};
-
-export type CallTerminalRelayPayload = CallRelayBasePayload & {
-  reason: string | null;
 };
 
 export type CallMicStateRelayPayload = CallRelayBasePayload & {
