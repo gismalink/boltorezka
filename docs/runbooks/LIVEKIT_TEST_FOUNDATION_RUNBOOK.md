@@ -100,3 +100,5 @@ docker compose -f infra/docker-compose.host.yml --env-file infra/.env.host ps
 - Keep LiveKit secrets only in host env (`infra/.env.host`), never in git.
 - If ports conflict, adjust `TEST_LIVEKIT_*` in env and re-run `livekit:test:up`.
 - For deploy windows use GitOps scripts from `~/srv/edge/scripts/*` per server policy.
+- Ingress currently keeps a compatibility bridge `/rtc/v1* -> /rtc*` because `livekit-client` probes `v1` path while `livekit-server v1.8.3` serves `/rtc*`.
+- This bridge is intentional and should be removed only after LiveKit server upgrade is validated in both `test` and `prod` with native `/rtc/v1` responses.
