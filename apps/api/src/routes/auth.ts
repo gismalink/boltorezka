@@ -36,14 +36,26 @@ function resolveLivekitClientUrl(request: FastifyRequest): string {
   try {
     const parsed = new URL(raw);
     const forwardedProto = String(request.headers["x-forwarded-proto"] || "").trim().toLowerCase();
+    const forwardedHostRaw = String(request.headers["x-forwarded-host"] || "").trim();
+    const requestHostRaw = String(request.headers.host || "").trim();
     const requestProto = forwardedProto || String((request as { protocol?: string }).protocol || "").trim().toLowerCase();
     const isHttps = requestProto === "https";
+    const isIpHost = /^\d{1,3}(?:\.\d{1,3}){3}$/.test(parsed.hostname);
+
+    if (isHttps && isIpHost) {
+      const sourceHost = (forwardedHostRaw || requestHostRaw).split(",")[0]?.trim() || "";
+      const normalizedHost = sourceHost.includes(":") ? sourceHost.split(":")[0] : sourceHost;
+      if (normalizedHost) {
+        parsed.hostname = normalizedHost;
+        parsed.port = "";
+        if (!parsed.pathname || parsed.pathname === "/") {
+          parsed.pathname = "/livekit";
+        }
+      }
+    }
 
     if (isHttps && parsed.protocol === "ws:") {
       parsed.protocol = "wss:";
-      if (parsed.port === "7880") {
-        parsed.port = "7881";
-      }
     }
 
     return parsed.toString();
