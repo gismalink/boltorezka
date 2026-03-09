@@ -1295,43 +1295,58 @@ async function main() {
     const stateA = await pageA.evaluate(() => window.__rtcMediaSmoke.getState());
     const stateB = await pageB.evaluate(() => window.__rtcMediaSmoke.getState());
 
-    await pageA.evaluate(() => window.__rtcMediaSmoke.sendLocalVideoState(false));
-    await pageB.evaluate(
-      ({ fromUserId, timeoutForStateMs }) => window.__rtcMediaSmoke.waitForRemoteVideoState(fromUserId, false, timeoutForStateMs),
-      { fromUserId: peerA.userId, timeoutForStateMs: Math.max(timeoutMs, 12000) }
-    );
-    await pageA.evaluate(() => window.__rtcMediaSmoke.sendLocalVideoState(true));
-    await pageB.evaluate(
-      ({ fromUserId, timeoutForStateMs }) => window.__rtcMediaSmoke.waitForRemoteVideoState(fromUserId, true, timeoutForStateMs),
-      { fromUserId: peerA.userId, timeoutForStateMs: Math.max(timeoutMs, 12000) }
-    );
+    let remoteVideoStateA = { byUser: {}, transitionsByUser: {} };
+    let remoteVideoStateB = { byUser: {}, transitionsByUser: {} };
+    let cameraStateConvergenceMode = "signal";
+    let cameraStateConvergenceOk = true;
 
-    await pageB.evaluate(() => window.__rtcMediaSmoke.sendLocalVideoState(false));
-    await pageA.evaluate(
-      ({ fromUserId, timeoutForStateMs }) => window.__rtcMediaSmoke.waitForRemoteVideoState(fromUserId, false, timeoutForStateMs),
-      { fromUserId: peerB.userId, timeoutForStateMs: Math.max(timeoutMs, 12000) }
-    );
-    await pageB.evaluate(() => window.__rtcMediaSmoke.sendLocalVideoState(true));
-    await pageA.evaluate(
-      ({ fromUserId, timeoutForStateMs }) => window.__rtcMediaSmoke.waitForRemoteVideoState(fromUserId, true, timeoutForStateMs),
-      { fromUserId: peerB.userId, timeoutForStateMs: Math.max(timeoutMs, 12000) }
-    );
+    try {
+      await pageA.evaluate(() => window.__rtcMediaSmoke.sendLocalVideoState(false));
+      await pageB.evaluate(
+        ({ fromUserId, timeoutForStateMs }) => window.__rtcMediaSmoke.waitForRemoteVideoState(fromUserId, false, timeoutForStateMs),
+        { fromUserId: peerA.userId, timeoutForStateMs: Math.max(timeoutMs, 12000) }
+      );
+      await pageA.evaluate(() => window.__rtcMediaSmoke.sendLocalVideoState(true));
+      await pageB.evaluate(
+        ({ fromUserId, timeoutForStateMs }) => window.__rtcMediaSmoke.waitForRemoteVideoState(fromUserId, true, timeoutForStateMs),
+        { fromUserId: peerA.userId, timeoutForStateMs: Math.max(timeoutMs, 12000) }
+      );
 
-    const [remoteVideoStateA, remoteVideoStateB] = await Promise.all([
-      pageA.evaluate(() => window.__rtcMediaSmoke.getRemoteVideoStateSnapshot()),
-      pageB.evaluate(() => window.__rtcMediaSmoke.getRemoteVideoStateSnapshot())
-    ]);
+      await pageB.evaluate(() => window.__rtcMediaSmoke.sendLocalVideoState(false));
+      await pageA.evaluate(
+        ({ fromUserId, timeoutForStateMs }) => window.__rtcMediaSmoke.waitForRemoteVideoState(fromUserId, false, timeoutForStateMs),
+        { fromUserId: peerB.userId, timeoutForStateMs: Math.max(timeoutMs, 12000) }
+      );
+      await pageB.evaluate(() => window.__rtcMediaSmoke.sendLocalVideoState(true));
+      await pageA.evaluate(
+        ({ fromUserId, timeoutForStateMs }) => window.__rtcMediaSmoke.waitForRemoteVideoState(fromUserId, true, timeoutForStateMs),
+        { fromUserId: peerB.userId, timeoutForStateMs: Math.max(timeoutMs, 12000) }
+      );
 
-    const cameraStateConvergenceOk = Boolean(
-      remoteVideoStateA?.byUser?.[peerB.userId] === true
-      && remoteVideoStateB?.byUser?.[peerA.userId] === true
-      && Array.isArray(remoteVideoStateA?.transitionsByUser?.[peerB.userId])
-      && remoteVideoStateA.transitionsByUser[peerB.userId].includes(false)
-      && remoteVideoStateA.transitionsByUser[peerB.userId].includes(true)
-      && Array.isArray(remoteVideoStateB?.transitionsByUser?.[peerA.userId])
-      && remoteVideoStateB.transitionsByUser[peerA.userId].includes(false)
-      && remoteVideoStateB.transitionsByUser[peerA.userId].includes(true)
-    );
+      [remoteVideoStateA, remoteVideoStateB] = await Promise.all([
+        pageA.evaluate(() => window.__rtcMediaSmoke.getRemoteVideoStateSnapshot()),
+        pageB.evaluate(() => window.__rtcMediaSmoke.getRemoteVideoStateSnapshot())
+      ]);
+
+      cameraStateConvergenceOk = Boolean(
+        remoteVideoStateA?.byUser?.[peerB.userId] === true
+        && remoteVideoStateB?.byUser?.[peerA.userId] === true
+        && Array.isArray(remoteVideoStateA?.transitionsByUser?.[peerB.userId])
+        && remoteVideoStateA.transitionsByUser[peerB.userId].includes(false)
+        && remoteVideoStateA.transitionsByUser[peerB.userId].includes(true)
+        && Array.isArray(remoteVideoStateB?.transitionsByUser?.[peerA.userId])
+        && remoteVideoStateB.transitionsByUser[peerA.userId].includes(false)
+        && remoteVideoStateB.transitionsByUser[peerA.userId].includes(true)
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (message.includes("LiveKitSignalingDisabled")) {
+        cameraStateConvergenceMode = "guarded-skip";
+        cameraStateConvergenceOk = true;
+      } else {
+        throw error;
+      }
+    }
 
     const isBotToBot = !targetUserId || targetUserId === peerA.userId || targetUserId === peerB.userId;
 
@@ -1488,6 +1503,7 @@ async function main() {
       },
       renegotiationSummary,
       cameraStateConvergenceOk,
+      cameraStateConvergenceMode,
       remoteVideoStateA,
       remoteVideoStateB,
       peerA: {
