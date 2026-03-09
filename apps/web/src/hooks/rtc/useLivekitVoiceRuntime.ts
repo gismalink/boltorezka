@@ -94,6 +94,27 @@ const isExpectedDisconnectError = (error: unknown): boolean => {
     || normalized.includes("aborterror");
 };
 
+// livekit-client v2 probes /rtc/v1 first and falls back to /rtc on older servers.
+// We force v0 from the first attempt to avoid noisy 404/WS errors when server is /rtc-only.
+function forceLivekitV0SignalPath(room: Room) {
+  type EngineJoin = (
+    url: string,
+    token: string,
+    opts: unknown,
+    abortSignal?: AbortSignal,
+    useV0Path?: boolean
+  ) => Promise<unknown>;
+
+  const engine = room.engine as unknown as { join: EngineJoin; __boltorezkaV0Patched?: boolean };
+  if (engine.__boltorezkaV0Patched) {
+    return;
+  }
+
+  const baseJoin = engine.join.bind(room.engine);
+  engine.join = (url, token, opts, abortSignal) => baseJoin(url, token, opts, abortSignal, true);
+  engine.__boltorezkaV0Patched = true;
+}
+
 function buildRemoteMicMutedSet(room: Room): Set<string> {
   const muted = new Set<string>();
   room.remoteParticipants.forEach((participant, participantId) => {
@@ -365,6 +386,8 @@ export function useLivekitVoiceRuntime({
           adaptiveStream: false,
           dynacast: true
         });
+
+        forceLivekitV0SignalPath(room);
 
         roomRef.current = room;
 
