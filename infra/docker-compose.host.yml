@@ -144,10 +144,10 @@ services:
       LIVEKIT_TEST_TCP_PORT: ${TEST_LIVEKIT_TCP_PORT:-7881}
       LIVEKIT_TEST_RTC_PORT_START: ${TEST_LIVEKIT_RTC_PORT_START:-32000}
       LIVEKIT_TEST_RTC_PORT_END: ${TEST_LIVEKIT_RTC_PORT_END:-32100}
-    command:
+    entrypoint:
       - /bin/sh
       - -ec
-      - |
+    command: |
         cat > /tmp/livekit.yaml <<EOF
         port: ${TEST_LIVEKIT_SIGNAL_PORT:-7880}
         bind_addresses:
@@ -162,8 +162,7 @@ services:
         logging:
           level: info
         EOF
-        printf '%s: %s\n' "${LIVEKIT_TEST_API_KEY:-devkey}" "${LIVEKIT_TEST_API_SECRET:-devsecret}" > /tmp/livekit.keys
-        exec livekit-server --config /tmp/livekit.yaml --key-file /tmp/livekit.keys
+        exec /livekit-server --config /tmp/livekit.yaml --keys "${LIVEKIT_TEST_API_KEY:-devkey}: ${LIVEKIT_TEST_API_SECRET:-devsecret}"
     ports:
       - "${TEST_LIVEKIT_SIGNAL_PORT:-7880}:7880/tcp"
       - "${TEST_LIVEKIT_TCP_PORT:-7881}:7881/tcp"
