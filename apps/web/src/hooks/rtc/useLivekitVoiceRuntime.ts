@@ -361,7 +361,8 @@ export function useLivekitVoiceRuntime({
         });
 
         const room = new Room({
-          adaptiveStream: true,
+          // Overlay renders remote tracks via custom MediaStream plumbing; keep adaptive off to avoid track pausing/freezes.
+          adaptiveStream: false,
           dynacast: true
         });
 
