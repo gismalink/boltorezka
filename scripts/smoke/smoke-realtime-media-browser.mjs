@@ -288,7 +288,8 @@ async function preparePeerPage({ context, label, ticket, toneHz, iceServers, ice
       iceCandidateErrorCount: 0,
       lastIceCandidateError: "",
       addIceErrorCount: 0,
-      lastAddIceError: ""
+      lastAddIceError: "",
+      videoStateSignalingGuarded: false
     };
 
     const noteRatios = [1, 9 / 8, 5 / 4, 4 / 3, 3 / 2, 5 / 3, 15 / 8, 2];
@@ -415,11 +416,20 @@ async function preparePeerPage({ context, label, ticket, toneHz, iceServers, ice
 
       state.lastVideoStateBroadcastAt = now;
       state.lastLocalVideoEnabledBroadcast = normalizedEnabled;
-      await sendEvent("call.video_state", {
-        settings: {
-          localVideoEnabled: normalizedEnabled
+      try {
+        await sendEvent("call.video_state", {
+          settings: {
+            localVideoEnabled: normalizedEnabled
+          }
+        });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        if (message.includes("LiveKitSignalingDisabled")) {
+          state.videoStateSignalingGuarded = true;
+          return;
         }
-      });
+        throw error;
+      }
     };
 
     const ensureToneTrack = () => {
@@ -760,6 +770,7 @@ async function preparePeerPage({ context, label, ticket, toneHz, iceServers, ice
         lastIceCandidateError: state.lastIceCandidateError,
         addIceErrorCount: state.addIceErrorCount,
         lastAddIceError: state.lastAddIceError,
+        videoStateSignalingGuarded: state.videoStateSignalingGuarded,
         joinAcked: state.joinAcked,
         connectionState: state.pc?.connectionState || "new",
         iceConnectionState: state.pc?.iceConnectionState || "new",
@@ -1297,10 +1308,11 @@ async function main() {
 
     let remoteVideoStateA = { byUser: {}, transitionsByUser: {} };
     let remoteVideoStateB = { byUser: {}, transitionsByUser: {} };
-    let cameraStateConvergenceMode = "signal";
+    const videoStateSignalingGuarded = Boolean(stateA?.videoStateSignalingGuarded || stateB?.videoStateSignalingGuarded);
+    let cameraStateConvergenceMode = videoStateSignalingGuarded ? "guarded-skip" : "signal";
     let cameraStateConvergenceOk = true;
 
-    try {
+    if (!videoStateSignalingGuarded) {
       await pageA.evaluate(() => window.__rtcMediaSmoke.sendLocalVideoState(false));
       await pageB.evaluate(
         ({ fromUserId, timeoutForStateMs }) => window.__rtcMediaSmoke.waitForRemoteVideoState(fromUserId, false, timeoutForStateMs),
@@ -1338,14 +1350,6 @@ async function main() {
         && remoteVideoStateB.transitionsByUser[peerA.userId].includes(false)
         && remoteVideoStateB.transitionsByUser[peerA.userId].includes(true)
       );
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      if (message.includes("LiveKitSignalingDisabled")) {
-        cameraStateConvergenceMode = "guarded-skip";
-        cameraStateConvergenceOk = true;
-      } else {
-        throw error;
-      }
     }
 
     const isBotToBot = !targetUserId || targetUserId === peerA.userId || targetUserId === peerB.userId;
