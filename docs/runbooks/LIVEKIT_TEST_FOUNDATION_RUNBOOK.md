@@ -1,6 +1,6 @@
 # LiveKit Test Foundation Runbook
 
-Purpose: raise and validate LiveKit as a dedicated SFU media-plane in `test` contour without changing default routing for production traffic.
+Purpose: validate LiveKit runtime in `test` contour and keep rollout gates aligned with current livekit-only baseline.
 
 Scope:
 - `test` only.
@@ -45,16 +45,14 @@ Expected:
 - `boltorezka-livekit-test` is `Up`.
 - Logs do not contain repeated fatal bootstrap errors.
 
-## 3) Keep current routing unchanged
+## 3) Routing baseline
 
-Foundation stage does not switch application routing by itself.
+Current runtime baseline is livekit-only.
 
-Current default still controlled by:
-- `TEST_RTC_MEDIA_TOPOLOGY_DEFAULT`
-- `TEST_RTC_MEDIA_TOPOLOGY_SFU_ROOMS`
-- `TEST_RTC_MEDIA_TOPOLOGY_SFU_USERS`
-
-LiveKit integration and `mediaTopology=livekit` adapter are Stage B/C tasks.
+Operational checks in `test` should confirm:
+- `TEST_LIVEKIT_ENABLED=1` (or env-specific equivalent in host profile),
+- realtime smoke reports `expectedMediaTopology=livekit`,
+- no legacy topology override variables are used in active deploy profile.
 
 ## 3.1) Stage B token minting check
 

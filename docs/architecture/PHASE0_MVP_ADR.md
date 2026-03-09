@@ -1,7 +1,7 @@
 # Phase 0 - Границы MVP и ADR (Канон)
 
 Дата фиксации: 2026-03-04  
-Дата актуализации: 2026-03-08  
+Дата актуализации: 2026-03-09  
 Статус: Действует для текущего MVP-контура
 
 ## 1) Границы MVP (утверждено)
@@ -35,9 +35,9 @@
 
 ### ADR-002: Media-топология
 
-- Решение: WebRTC P2P + TURN relay baseline (`relay + turns:gismalink.art:5349?transport=tcp`).
-- Обоснование: предсказуемость поведения в test/prod и устойчивость в ограниченных сетях.
-- Следствие: ограничение по размеру комнат остается обязательным; SFU идет как post-MVP эволюция.
+- Решение: LiveKit-only media baseline в активном runtime-контуре.
+- Обоснование: единая media-plane модель упрощает rollout/smoke и исключает неоднозначность mixed-topology поведения.
+- Следствие: активные deploy/smoke профили не используют legacy `p2p/sfu` routing override.
 
 ### ADR-003: Auth/session модель
 
@@ -45,21 +45,20 @@
 - Обоснование: централизованный identity flow и явная граница между web session и realtime ticket.
 - Следствие: каждый rollout обязан проходить smoke по SSO + ws-ticket/realtime path.
 
-### ADR-004: SFU-first media baseline (post-MVP transition)
+### ADR-004: LiveKit full-transition baseline
 
-- Решение: для текущего migration track принят `SFU-first` подход - все глубокие проверки и отладка voice/video выполняются на baseline `mediaTopology=sfu`; legacy `p2p` остается только как rollback/compare path.
-- Выбор media-plane: целевой внешний SFU движок для transition track - `LiveKit` (self-hosted). До завершения migration stages текущий SFU routing profile (`RTC_MEDIA_TOPOLOGY_DEFAULT=sfu` в test Stage 3) сохраняется как промежуточный baseline и rollback path.
-- Историческая пометка: прежнее откладывание внешнего SFU-движка не закреплялось отдельным ADR с достаточным обоснованием и трактуется как временная тактика стабилизации, а не как целевое архитектурное решение.
-- Обоснование: снижение неоднозначности mixed-topology поведения, единый test baseline и детерминированные rollout/smoke gate.
-- Следствие: release/readiness evidence по voice/video считается валидным только для SFU baseline; в рамках внедрения LiveKit pre-prod пакет обязан включать сравнение `sfu-current vs livekit` и rollback drills.
+- Решение: migration track завершен переходом на livekit-only baseline для активного runtime.
+- Историческая пометка: предыдущие Stage 0-4 SFU/P2P материалы сохраняются как архив evidence и не используются как операционная каноника для новых rollout.
+- Обоснование: единый media-plane baseline уменьшает количество conditional paths в API/Web и снижает риск регрессий при deploy.
+- Следствие: release/readiness evidence по voice/video фиксируется в рамках livekit-only smoke/gate профиля.
 
-## 3) Актуальное состояние к 2026-03-08
+## 3) Актуальное состояние к 2026-03-09
 
 - Controlled rollout toggle-пакет (Phase 5) внедрен и используется как policy fallback.
 - RTC hardening package (Phase 6.1-6.3) закрыт в test-контуре.
-- Decision package по SFU зафиксирован: `docs/plans/SFU_MIGRATION_PLAN.md`.
-- `SFU-first` решение зафиксировано в ADR-004 и операционных runbook Stage 3/4.
-- Текущий документ остается источником MVP-ограничений до завершения SFU Stage 0.
+- Полный runtime-переход на LiveKit завершен в активном контуре (API/Web/scripts/infra livekit-only).
+- Decision package по transition закрывается через `docs/plans/LIVEKIT_FULL_TRANSITION_CHECKLIST_2026-03-09.md`.
+- SFU/P2P stage-материалы остаются в репозитории как исторический контекст и evidence.
 
 ## 4) Канонические ссылки
 
@@ -67,7 +66,7 @@
 - Voice baseline: `docs/runbooks/VOICE_BASELINE_RUNBOOK.md`
 - Pre-prod gate: `docs/runbooks/PREPROD_DECISION_PACKAGE.md`
 - Test/load evidence: `docs/status/TEST_RESULTS.md`
-- SFU migration decision package: `docs/plans/SFU_MIGRATION_PLAN.md`
+- LiveKit transition decision package: `docs/plans/LIVEKIT_FULL_TRANSITION_CHECKLIST_2026-03-09.md`
 
 ## 5) Что остается вне scope этого Phase 0 пакета
 

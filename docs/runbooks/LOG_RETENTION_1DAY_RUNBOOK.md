@@ -6,7 +6,7 @@ Purpose: enforce max 1-day retention for boltorezka operational logs on macOS se
 
 - `~/srv/boltorezka/.deploy/*.log|*.tsv|*.out|*.err`
 - `~/srv/edge/logs/*.log|*.out|*.err`
-- `/tmp/sfu-media-smoke*.log`, `/tmp/deploy-sfu*.log`, `/tmp/boltorezka-smoke*.log`
+- `/tmp/livekit-media-smoke*.log`, `/tmp/deploy-livekit*.log`, `/tmp/boltorezka-smoke*.log`
 
 ## Script
 
