@@ -27,6 +27,31 @@ const livekitTokenSchema = z.object({
 
 const safeHostSet = new Set(config.allowedReturnHosts);
 
+function resolveLivekitClientUrl(request: FastifyRequest): string {
+  const raw = String(config.livekitUrl || "").trim();
+  if (!raw) {
+    return raw;
+  }
+
+  try {
+    const parsed = new URL(raw);
+    const forwardedProto = String(request.headers["x-forwarded-proto"] || "").trim().toLowerCase();
+    const requestProto = forwardedProto || String((request as { protocol?: string }).protocol || "").trim().toLowerCase();
+    const isHttps = requestProto === "https";
+
+    if (isHttps && parsed.protocol === "ws:") {
+      parsed.protocol = "wss:";
+      if (parsed.port === "7880") {
+        parsed.port = "7881";
+      }
+    }
+
+    return parsed.toString();
+  } catch {
+    return raw;
+  }
+}
+
 function resolveSafeReturnUrl(value: unknown, request: FastifyRequest): string {
   if (!value || typeof value !== "string") {
     return "/";
@@ -415,7 +440,7 @@ export async function authRoutes(fastify: FastifyInstance) {
       const token = await accessToken.toJwt();
       const response: LivekitTokenResponse = {
         token,
-        url: config.livekitUrl,
+        url: resolveLivekitClientUrl(request),
         room: room.slug,
         roomId: room.id,
         identity,
