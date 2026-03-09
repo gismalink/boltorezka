@@ -91,7 +91,7 @@ export type RoomsPanelProps = {
   canManageAudioQuality: boolean;
   roomsTree: RoomsTreeResponse | null;
   roomSlug: string;
-  roomMediaTopologyBySlug: Record<string, "p2p" | "sfu">;
+  roomMediaTopologyBySlug: Record<string, "p2p" | "sfu" | "livekit">;
   currentUserId: string;
   liveRoomMembersBySlug: Record<string, string[]>;
   liveRoomMemberDetailsBySlug: Record<string, PresenceMember[]>;

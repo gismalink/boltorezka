@@ -94,7 +94,7 @@ export function App() {
   const [toasts, setToasts] = useState<Array<{ id: number; message: string }>>([]);
   const [roomsPresenceBySlug, setRoomsPresenceBySlug] = useState<Record<string, string[]>>({});
   const [roomsPresenceDetailsBySlug, setRoomsPresenceDetailsBySlug] = useState<Record<string, PresenceMember[]>>({});
-  const [roomMediaTopologyBySlug, setRoomMediaTopologyBySlug] = useState<Record<string, "p2p" | "sfu">>({});
+  const [roomMediaTopologyBySlug, setRoomMediaTopologyBySlug] = useState<Record<string, "p2p" | "sfu" | "livekit">>({});
   const [eventLog, setEventLog] = useState<string[]>([]);
   const [telemetrySummary, setTelemetrySummary] = useState<TelemetrySummary | null>(null);
   const [wsState, setWsState] = useState<"disconnected" | "connecting" | "connected">(
@@ -1246,8 +1246,9 @@ export function App() {
       return;
     }
 
-    if (roomMediaTopologyBySlug[roomSlug] === "sfu") {
-      pushCallLog(`media topology for ${roomSlug}: sfu (stage0 contract)`);
+    const roomTopology = roomMediaTopologyBySlug[roomSlug];
+    if (roomTopology === "sfu" || roomTopology === "livekit") {
+      pushCallLog(`media topology for ${roomSlug}: ${roomTopology}`);
     }
   }, [roomSlug, roomMediaTopologyBySlug, pushCallLog]);
 

@@ -61,7 +61,7 @@ type CanonicalMediaState = {
   lastUpdatedAtMs: number;
 };
 
-type MediaTopology = "p2p" | "sfu";
+type MediaTopology = "p2p" | "sfu" | "livekit";
 type RealtimeErrorCategory = "auth" | "permissions" | "topology" | "transport";
 
 const CALL_SIGNAL_MIN_BYTES = 2;
@@ -623,6 +623,10 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
 
   function resolveRoomMediaTopology(roomSlug: string, userId: string | null = null): MediaTopology {
     const normalizedUserId = String(userId || "").trim().toLowerCase();
+    if (config.livekitEnabled && normalizedUserId && config.rtcMediaTopologyLivekitUsers.includes(normalizedUserId)) {
+      return "livekit";
+    }
+
     if (normalizedUserId && config.rtcMediaTopologySfuUsers.includes(normalizedUserId)) {
       return "sfu";
     }
@@ -632,10 +636,22 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
       return config.rtcMediaTopologyDefault;
     }
 
+    if (config.livekitEnabled && config.rtcMediaTopologyLivekitRooms.includes(normalizedSlug)) {
+      return "livekit";
+    }
+
     return config.rtcMediaTopologySfuRooms.includes(normalizedSlug)
       ? "sfu"
       : config.rtcMediaTopologyDefault;
   }
+
+  const resolveActiveRoomMediaTopology = (state: SocketState): MediaTopology => {
+    if (!state.roomSlug) {
+      return config.rtcMediaTopologyDefault;
+    }
+
+    return resolveRoomMediaTopology(state.roomSlug, state.userId);
+  };
 
   const evictUserFromOtherNonTextChannels = (userId: string, keepSocket: WebSocket) => {
     const userSockets = socketsByUserId.get(userId);
@@ -1045,6 +1061,27 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
 
             if (!knownMessage) {
               sendUnknownEventNack(connection, requestId, eventType);
+              return;
+            }
+
+            if (
+              knownMessage.type.startsWith("call.")
+              && state.roomSlug
+              && resolveActiveRoomMediaTopology(state) === "livekit"
+            ) {
+              sendNack(
+                connection,
+                requestId,
+                eventType,
+                "LiveKitSignalingDisabled",
+                "Legacy call signaling is disabled for livekit topology; use LiveKit token/session flow",
+                buildErrorCorrelationMeta(connection, {
+                  mediaTopology: "livekit",
+                  roomSlug: state.roomSlug,
+                  roomId: state.roomId
+                })
+              );
+              void incrementMetric("nack_sent");
               return;
             }
 

@@ -23,7 +23,7 @@ type UseRealtimeChatLifecycleArgs = {
   setLastCallPeer: (peer: string) => void;
   setCallStatus: (status: CallStatus) => void;
   setRoomSlug: (slug: string) => void;
-  onRoomMediaTopology?: (payload: { roomSlug: string; mediaTopology: "p2p" | "sfu" }) => void;
+  onRoomMediaTopology?: (payload: { roomSlug: string; mediaTopology: "p2p" | "sfu" | "livekit" }) => void;
   setRoomsPresenceBySlug: Dispatch<SetStateAction<Record<string, string[]>>>;
   setRoomsPresenceDetailsBySlug: Dispatch<SetStateAction<Record<string, PresenceMember[]>>>;
   pushLog: (text: string) => void;
