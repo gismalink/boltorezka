@@ -11,6 +11,7 @@ const clientScriptUrl = String(
   process.env.SMOKE_LIVEKIT_CLIENT_CDN_URL
   || "https://cdn.jsdelivr.net/npm/livekit-client@2.15.8/dist/livekit-client.umd.min.js"
 ).trim();
+const signalUrlOverride = String(process.env.SMOKE_LIVEKIT_MEDIA_SIGNAL_URL || "").trim();
 
 const bearerA = String(process.env.SMOKE_TEST_BEARER_TOKEN || "").trim();
 const bearerB = String(process.env.SMOKE_TEST_BEARER_TOKEN_SECOND || "").trim();
@@ -56,6 +57,8 @@ async function mintLivekitToken(bearerToken, label) {
 }
 
 async function setupPeer(page, tokenPayload, peerName) {
+  const connectUrl = signalUrlOverride || tokenPayload.url;
+
   await page.goto("about:blank", { waitUntil: "domcontentloaded", timeout: timeoutMs });
   await page.addScriptTag({ url: clientScriptUrl });
 
@@ -180,7 +183,7 @@ async function setupPeer(page, tokenPayload, peerName) {
       };
     },
     {
-      url: tokenPayload.url,
+      url: connectUrl,
       token: tokenPayload.token,
       roomName: roomSlug,
       name: peerName
