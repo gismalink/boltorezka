@@ -102,3 +102,23 @@ docker compose -f infra/docker-compose.host.yml --env-file infra/.env.host ps
 - For deploy windows use GitOps scripts from `~/srv/edge/scripts/*` per server policy.
 - Ingress currently keeps a compatibility bridge `/rtc/v1* -> /rtc*` because `livekit-client` probes `v1` path while `livekit-server v1.8.3` serves `/rtc*`.
 - This bridge is intentional and should be removed only after LiveKit server upgrade is validated in both `test` and `prod` with native `/rtc/v1` responses.
+
+## 6) Exit checklist: remove compatibility bridge
+
+Use this checklist before deleting `/rtc/v1* -> /rtc*` rewrite rules in edge ingress.
+
+1. Upgrade `livekit/livekit-server` image in `infra/docker-compose.host.yml` for both `livekit-test` and `livekit-prod` profiles.
+2. In `test`, verify native endpoints (without ingress rewrite fallback):
+  - `https://test.boltorezka.gismalink.art/rtc/v1/validate` returns `401` (not `404`).
+  - `https://test.boltorezka.gismalink.art/rtc/v1` no longer fails with `404` during browser connect.
+3. Run full `test` gate after upgrade:
+  - `TEST_REF=origin/<branch> npm run deploy:test:smoke`.
+  - `SMOKE_STATUS=pass`, `SMOKE_LIVEKIT_GATE_STATUS=pass`, `SMOKE_LIVEKIT_MEDIA_STATUS=pass`.
+4. Remove rewrite rules from `edge/ingress/caddy/Caddyfile` for both `test.boltorezka.gismalink.art` and `boltorezka.gismalink.art`.
+5. Recreate Caddy container after config update to avoid stale bind-mount inode:
+  - `cd ~/srv/edge/ingress && docker compose up -d --force-recreate edge-caddy`.
+6. Re-validate in `prod`:
+  - `https://boltorezka.gismalink.art/rtc/v1/validate` returns `401`.
+  - `https://boltorezka.gismalink.art/version` returns `200`.
+
+Rollback rule: if any step fails, re-enable compatibility rewrite and redeploy ingress before continuing rollout.
