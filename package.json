@@ -11,6 +11,7 @@
     "smoke:api": "node ./scripts/smoke/smoke-api.mjs",
     "smoke:sso": "node ./scripts/smoke/smoke-sso-redirect.mjs",
     "smoke:realtime": "node ./scripts/smoke/smoke-realtime.mjs",
+    "smoke:livekit:token-flow": "node ./scripts/smoke/smoke-livekit-token-flow.mjs",
     "smoke:realtime:media": "node ./scripts/smoke/smoke-realtime-media-browser.mjs",
     "smoke:compare:p2p-sfu": "bash ./scripts/smoke/compare-p2p-sfu-baseline.sh",
     "smoke:compare:sfu-livekit": "bash ./scripts/smoke/compare-sfu-livekit-baseline.sh",
