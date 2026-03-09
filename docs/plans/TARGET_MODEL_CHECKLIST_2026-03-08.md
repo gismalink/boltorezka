@@ -42,6 +42,7 @@ Validation note (2026-03-09): Stage B token minting validated на `test`: backe
 Validation note (2026-03-09): control-plane livekit routing + guard validated в `test-room` на SHA `4c7d783`: `room.joined.mediaTopology=livekit` для двух smoke users, `call.offer` в этой комнате возвращает `nack.code=LiveKitSignalingDisabled` и не релеится target user.
 Validation note (2026-03-09): baseline compare `sfu-current vs livekit-topology` выполнен в `test` на SHA `8b996e8` командой `TEST_REF=origin/feature/scheduler-interface-portable npm run smoke:compare:sfu-livekit`; артефакт `~/srv/boltorezka/.deploy/compare-sfu-livekit-20260309T085858Z.md` (оба профиля `pass`, livekit guard `pass`, guard code `LiveKitSignalingDisabled`).
 Validation note (2026-03-09): добавлен `livekit` control smoke-gate в postdeploy/compare (`SMOKE_LIVEKIT_ROOM_SLUG`): token-flow (`join/reconnect/late-join`) + `mediaTopology=livekit` guard (`LiveKitSignalingDisabled`) validated на SHA `acd9232`; артефакт `~/srv/boltorezka/.deploy/compare-sfu-livekit-20260309T091552Z.md` (`livekit_gate=pass`).
+Validation note (2026-03-09): dedicated `LiveKit` media smoke-gate (browser publish/subscribe/reconnect/late-join + one-way counters) внедрен и validated в `test` на SHA `fabf8c3` через `TEST_REF=origin/feature/scheduler-interface-portable npm run deploy:test:livekit`; summary `~/srv/boltorezka/.deploy/last-smoke-summary.env` содержит `SMOKE_STATUS=pass`, `SMOKE_LIVEKIT_GATE_STATUS=pass`, `SMOKE_LIVEKIT_MEDIA_STATUS=pass`.
 
 ## 0) Базовые инварианты (обязательно)
 
@@ -155,7 +156,7 @@ Validation note (2026-03-09): добавлен `livekit` control smoke-gate в p
 - [x] Реализован server-side token minting для `LiveKit` (room-scoped grants, TTL, audit fields) без выдачи секретов в клиент.
 - [x] Legacy custom-SFU path зафиксирован как fallback-only (rollback), активная разработка ведется в `LiveKit` path (`deploy:test:livekit`).
 - [ ] Добавлен transport adapter `mediaTopology=livekit` в control plane (`join/publish/subscribe/leave/reconnect`) с correlation IDs.
-- [ ] Добавлены smoke-gate'ы для `LiveKit` path (`join`, publish/subscribe, reconnect, late-join, one-way incidents). (control-plane gates готовы; media publish/subscribe + one-way incidents требуют dedicated LiveKit client E2E, т.к. legacy `call.*` signaling в livekit path guard-ится)
+- [x] Добавлены smoke-gate'ы для `LiveKit` path (`join`, publish/subscribe, reconnect, late-join, one-way incidents).
 - [x] Проведен baseline compare `sfu-current vs livekit` в `test` и зафиксирован decision package по default routing.
 
 ## 8) Безопасность И Надежность
