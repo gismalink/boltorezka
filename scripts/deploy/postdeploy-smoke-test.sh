@@ -620,6 +620,7 @@ if [[ -n "${SMOKE_LIVEKIT_ROOM_SLUG:-}" ]]; then
     SMOKE_AUTH_ENV_FILE="$ENV_FILE" \
     SMOKE_AUTH_API_SERVICE="$API_SERVICE" \
     SMOKE_AUTH_POSTGRES_SERVICE="$POSTGRES_SERVICE" \
+    SMOKE_AUTH_TOTAL_USERS=3 \
     SMOKE_API_URL="$BASE_URL" \
     SMOKE_AUTH_OUTPUT_FILE=".deploy/smoke-auth-livekit-gate.env" \
     bash ./scripts/smoke/smoke-auth-bootstrap.sh
