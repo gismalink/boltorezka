@@ -22,7 +22,8 @@
 | TURN allocation failures metric | included in postdeploy smoke summary (`SMOKE_TURN_ALLOCATION_FAILURES`, `SMOKE_TURN_ALLOCATION_STATUS`) from TURN logs (`Cannot create socket`/`error 508` patterns); optional strict threshold `SMOKE_TURN_ALLOCATION_FAIL_THRESHOLD` | Yes |
 | Baseline comparison (P2P vs SFU, same ref) | `TEST_REF=origin/<branch_or_main> npm run smoke:compare:p2p-sfu` | Required for pre-prod package |
 | Baseline comparison (SFU-current vs LiveKit-topology, same ref) | `TEST_REF=origin/<branch_or_main> npm run smoke:compare:sfu-livekit` | Required for LiveKit decision package |
-| LiveKit control gate (token-flow + signaling guard) | included in postdeploy when `SMOKE_LIVEKIT_ROOM_SLUG=<room>` (`SMOKE_LIVEKIT_GATE_STATUS`) | Required for LiveKit Stage C control-plane validation |
+| LiveKit control gate (token-flow + signaling guard) | included in postdeploy when `SMOKE_LIVEKIT_ROOM_SLUG=<room>` (`SMOKE_LIVEKIT_GATE_STATUS`) | Required |
+| LiveKit media gate (browser publish/subscribe/reconnect/late-join) | included in postdeploy when `SMOKE_LIVEKIT_ROOM_SLUG=<room>` and `SMOKE_LIVEKIT_MEDIA=1` (`SMOKE_LIVEKIT_MEDIA_STATUS`) | Required for LiveKit media-plane validation |
 | Auto rollback policy (optional) | `AUTO_ROLLBACK_ON_FAIL=1 AUTO_ROLLBACK_SMOKE=1 TEST_REF=origin/<ref> npm run deploy:test:smoke` | Optional |
 | Extended relay smoke | `SMOKE_CALL_SIGNAL=1` flow with 2 ws-ticket | Yes |
 | Initial replay gate (`call.initial_state`) | enabled in postdeploy (`SMOKE_REQUIRE_INITIAL_STATE_REPLAY=1`), fail-fast on missing replay envelope | Yes |
