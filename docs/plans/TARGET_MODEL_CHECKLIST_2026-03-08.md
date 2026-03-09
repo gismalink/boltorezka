@@ -54,6 +54,7 @@ Validation note (2026-03-09): выполнен repository secret-check (heuristi
 Validation note (2026-03-09): ручной live-check с 5 устройствами в `test-room` подтвердил быстрый camera toggle без фризов; server metrics artifact `~/srv/boltorezka/.deploy/metrics-live/test-room-live-2min-20260309T155930Z.txt` фиксирует стабильные `tracks_video=4` и `tracks_audio=5` в 4 подряд окнах по 30s, без роста `nack`/`reconnect`/`offer`/`answer`/`ice` counters.
 Validation note (2026-03-09): добавлен и проверен test-профиль полного LiveKit routing (`deploy:test:livekit:allrooms`, script `scripts/deploy/deploy-test-livekit-all-default.sh`), rollout на SHA `08a257b` прошел `SMOKE_STATUS=pass`; baseline `general` и `test-room` подтверждают `expectedMediaTopology=livekit`, `SMOKE_LIVEKIT_GATE_STATUS=pass`, `SMOKE_LIVEKIT_MEDIA_STATUS=pass`.
 Validation note (2026-03-09): `deploy:test:livekit` переведен на all-rooms LiveKit default profile (`TEST_RTC_MEDIA_TOPOLOGY_DEFAULT=livekit` в `scripts/deploy/deploy-test-livekit-default.sh`), legacy path остается rollback-only через конфигурационные override.
+Validation note (2026-03-09): post-promotion server retry deploy для `deploy:test:livekit` на SHA `ea9d318` прошел успешно после транзиентного build-network сбоя (`npm install ECONNRESET` на первой попытке): итоговый прогон завершился `SMOKE_STATUS=pass`, `SMOKE_LIVEKIT_GATE_STATUS=pass`, `SMOKE_LIVEKIT_MEDIA_STATUS=pass`, `expectedMediaTopology=livekit` для `general` и `test-room`.
 
 ## 0) Базовые инварианты (обязательно)
 
