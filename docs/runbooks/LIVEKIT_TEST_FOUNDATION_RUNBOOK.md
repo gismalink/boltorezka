@@ -19,6 +19,12 @@ Scope:
   - `TEST_LIVEKIT_RTC_PORT_END`
 - Router/NAT has UDP forward for configured LiveKit RTC range.
 
+Recommended baseline (validated):
+- `TEST_LIVEKIT_RTC_PORT_START=34000`
+- `TEST_LIVEKIT_RTC_PORT_END=34999`
+- `TEST_LIVEKIT_TCP_PORT=7881`
+- `LIVEKIT_TEST_API_SECRET` length >= 32 chars
+
 ## 2) Deploy foundation in test
 
 On server:
@@ -49,6 +55,32 @@ Current default still controlled by:
 - `TEST_RTC_MEDIA_TOPOLOGY_SFU_USERS`
 
 LiveKit integration and `mediaTopology=livekit` adapter are Stage B/C tasks.
+
+## 3.1) Stage B token minting check
+
+Enable API-side tokening in `test` env:
+
+```bash
+TEST_LIVEKIT_ENABLED=1
+TEST_LIVEKIT_URL=ws://<public-ip-or-domain>:7880
+TEST_LIVEKIT_TOKEN_TTL_SEC=1800
+```
+
+Smoke call (requires bearer token):
+
+```bash
+curl -X POST "https://test.boltorezka.gismalink.art/v1/auth/livekit-token" \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  --data '{"roomSlug":"test-room"}'
+```
+
+Expected response fields:
+- `token`
+- `url`
+- `room`
+- `identity`
+- `expiresInSec`
 
 ## 4) Rollback (test)
 

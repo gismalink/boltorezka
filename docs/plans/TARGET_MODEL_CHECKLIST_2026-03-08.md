@@ -38,6 +38,7 @@ Validation note (2026-03-09): anti-abuse policy документирована: 
 Decision update (2026-03-09): целевой SFU media-plane закреплен за `LiveKit`; текущий встроенный SFU path остается как migration/rollback path до завершения Stage 4.
 Validation note (2026-03-09): подготовлен Stage A foundation scaffolding для `LiveKit` в `test`: `infra/docker-compose.host.yml` (`boltorezka-livekit-test`, profile `livekit-test`), env-шаблон `infra/.env.host.example` (`TEST_LIVEKIT_*`, `LIVEKIT_TEST_API_*`), ops scripts `scripts/ops/livekit-test-{up,check,down}.sh`, runbook `docs/runbooks/LIVEKIT_TEST_FOUNDATION_RUNBOOK.md`.
 Validation note (2026-03-09): `LiveKit` Stage A поднят в `test` на сервере (`feature/scheduler-interface-portable`, SHA `92c3ea0`), после добавления NAT-forward (`UDP 34000-34999`, `TCP 7881`) и host-secrets (`LIVEKIT_TEST_API_SECRET` length `64`); контейнер `boltorezka-livekit-test` в `Up`, `restartCount=0`.
+Validation note (2026-03-09): Stage B token minting validated на `test`: backend endpoint `POST /v1/auth/livekit-token` возвращает signed token + `url/room/identity/expiresInSec` при `TEST_LIVEKIT_ENABLED=1`; проверено в `test-room` через smoke bearer token.
 
 ## 0) Базовые инварианты (обязательно)
 
@@ -148,7 +149,7 @@ Validation note (2026-03-09): `LiveKit` Stage A поднят в `test` на се
 - [ ] Полный переход всех voice/video сессий на SFU завершен (без fallback на legacy P2P в штатном профиле).
 - [x] Решение `SFU-first` зафиксировано в ADR/runbook: глубокая voice отладка выполняется только после переключения baseline на SFU.
 - [x] Поднят `LiveKit` в `test` контуре (self-hosted) и задокументирован GitOps rollout/rollback runbook.
-- [ ] Реализован server-side token minting для `LiveKit` (room-scoped grants, TTL, audit fields) без выдачи секретов в клиент.
+- [x] Реализован server-side token minting для `LiveKit` (room-scoped grants, TTL, audit fields) без выдачи секретов в клиент.
 - [ ] Добавлен transport adapter `mediaTopology=livekit` в control plane (`join/publish/subscribe/leave/reconnect`) с correlation IDs.
 - [ ] Добавлены smoke-gate'ы для `LiveKit` path (`join`, publish/subscribe, reconnect, late-join, one-way incidents).
 - [ ] Проведен baseline compare `sfu-current vs livekit` в `test` и зафиксирован decision package по default routing.

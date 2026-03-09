@@ -96,6 +96,10 @@ Stage B: Control-plane интеграция
 - Добавить adapter lifecycle: `join`, `publish`, `subscribe`, `leave`, `reconnect`.
 - Сохранить correlation IDs и idempotency требования в signaling.
 
+Stage B status update (2026-03-09):
+- Базовый token minting endpoint внедрен: `POST /v1/auth/livekit-token` (auth required, room access check, TTL grants, audit log fields).
+- Следующий шаг Stage B: подключить `mediaTopology=livekit` transport adapter в runtime signaling flow.
+
 Stage C: Canary и сравнение
 - Включить `mediaTopology=livekit` для выбранных room/user в test.
 - Сравнить `setup/reconnect/one-way incidents` против current SFU baseline.
