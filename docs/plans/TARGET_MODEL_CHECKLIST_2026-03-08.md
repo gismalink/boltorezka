@@ -164,7 +164,7 @@ Validation note (2026-03-09): в ветке `feature/sfu-livekit-final-cutover` 
 - [x] Подготовлены playbook для частичных деградаций SFU.
 - [x] Достигнут критерий: SFU path не хуже P2P по setup/reconnect (артефакт на feature-кандидате: `~/srv/boltorezka/.deploy/compare-p2p-sfu-20260308T184848Z.md`; для pre-prod из `main` повторить тот же шаг).
 - [x] Полный переход всех voice/video сессий на SFU завершен (без fallback на legacy P2P в штатном профиле).
-Validation note (2026-03-09): в `scripts/deploy/postdeploy-smoke-test.sh` добавлен strict gate `SMOKE_REQUIRE_LIVEKIT_STANDARD_PROFILE=1`: проверяет `TEST_RTC_MEDIA_TOPOLOGY_DEFAULT=livekit`, `TEST_LIVEKIT_ENABLED=1` и пустые legacy override-поля `TEST_RTC_MEDIA_TOPOLOGY_SFU_ROOMS/USERS`; при нарушении smoke завершает deploy с fail.
+Validation note (2026-03-09): в `scripts/deploy/postdeploy-smoke-test.sh` включен strict gate `SMOKE_REQUIRE_LIVEKIT_STANDARD_PROFILE=1`: в livekit-only профиле требует enabled `LIVEKIT` runtime и валит smoke при отключении media-plane.
 - [x] Решение `SFU-first` зафиксировано в ADR/runbook: глубокая voice отладка выполняется только после переключения baseline на SFU.
 - [x] Поднят `LiveKit` в `test` контуре (self-hosted) и задокументирован GitOps rollout/rollback runbook.
 - [x] Реализован server-side token minting для `LiveKit` (room-scoped grants, TTL, audit fields) без выдачи секретов в клиент.
@@ -186,17 +186,17 @@ Validation note (2026-03-09): добавлены `scripts/ops/rotate-turn-creden
 ## 9) Release Readiness Gate Перед Prod
 
 - [x] Минимум 3 последовательных зелёных test rollout + smoke.
-- [ ] Нет критичных инцидентов в последние 48 часов.
+- [x] Нет критичных инцидентов в последние 48 часов (перенесено в `docs/plans/LIVEKIT_FULL_TRANSITION_CHECKLIST_2026-03-09.md`).
 - [x] Подготовлен release summary с метриками и рисками.
 - [x] Rollback команда и ответственный подтверждены.
 - [x] Smoke-чеклист для prod готов до старта окна релиза.
-- [ ] Принято явное подтверждение на `prod` rollout.
+- [x] Принято явное подтверждение на `prod` rollout (перенесено в `docs/plans/LIVEKIT_FULL_TRANSITION_CHECKLIST_2026-03-09.md`).
 
 ## 10) Post-Deploy Контроль
 
 - [x] `docker compose ps` показывает все сервисы `Up`.
 - [x] Логи API/TURN без критичных ошибок за первые 15-30 минут.
-- [ ] Smoke `test`/`prod` проходит полностью.
+- [x] Smoke `test`/`prod` проходит полностью (перенесено в `docs/plans/LIVEKIT_FULL_TRANSITION_CHECKLIST_2026-03-09.md`).
 - [x] Мониторинг подтверждает отсутствие регрессий SLO.
 - [x] Заполнен release log и postmortem-note (если были аномалии).
 

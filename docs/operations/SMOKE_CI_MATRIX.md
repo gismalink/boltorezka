@@ -17,14 +17,12 @@
 |---|---|---|
 | Deploy + postdeploy smoke | `TEST_REF=origin/<branch_or_main> npm run deploy:test:smoke` | Yes |
 | API/Web contract smoke in postdeploy | included in `deploy:test:smoke` (`smoke:sso` + `smoke:api` + `smoke:web:version-cache` + `smoke:realtime`), bearer auto-generated server-side from smoke user + JWT secret (`JWT_SECRET`/`TEST_JWT_SECRET`/api container env fallback) | Yes |
-| Browser media transport + one-way gate (SFU profile) | included in `deploy:test:sfu` via `SMOKE_REALTIME_MEDIA=1` and `SMOKE_FAIL_ON_ONE_WAY=1`; strict mode default: `SMOKE_REALTIME_MEDIA_STRICT=1`; transient retry enabled by default (`SMOKE_REALTIME_MEDIA_RETRIES=2`, `SMOKE_REALTIME_MEDIA_RETRY_DELAY_SEC=5`), websocket readiness timeout increased (`SMOKE_RTC_WS_READY_TIMEOUT_MS=35000`), anti-loop thresholds enabled by default (`SMOKE_RTC_MAX_RELAYED_OFFERS=40`, `SMOKE_RTC_MAX_RELAYED_ANSWERS=40`, `SMOKE_RTC_MAX_RENEGOTIATION_EVENTS=80`), emergency bypass only: `SMOKE_REALTIME_MEDIA_STRICT=0` | Yes |
+| Browser media transport + one-way gate (LiveKit profile) | included in `deploy:test:livekit` via `SMOKE_REALTIME_MEDIA=1` and `SMOKE_FAIL_ON_ONE_WAY=1`; strict mode default: `SMOKE_REALTIME_MEDIA_STRICT=1`; transient retry enabled by default (`SMOKE_REALTIME_MEDIA_RETRIES=2`, `SMOKE_REALTIME_MEDIA_RETRY_DELAY_SEC=5`), websocket readiness timeout increased (`SMOKE_RTC_WS_READY_TIMEOUT_MS=35000`), anti-loop thresholds enabled by default (`SMOKE_RTC_MAX_RELAYED_OFFERS=40`, `SMOKE_RTC_MAX_RELAYED_ANSWERS=40`, `SMOKE_RTC_MAX_RENEGOTIATION_EVENTS=80`), emergency bypass only: `SMOKE_REALTIME_MEDIA_STRICT=0` | Yes |
 | TURN TLS handshake gate | included in postdeploy smoke (`SMOKE_TURN_TLS_STATUS`), strict by default (`SMOKE_TURN_TLS_STRICT=1`) | Yes |
 | TURN allocation failures metric | included in postdeploy smoke summary (`SMOKE_TURN_ALLOCATION_FAILURES`, `SMOKE_TURN_ALLOCATION_STATUS`) from TURN logs (`Cannot create socket`/`error 508` patterns); optional strict threshold `SMOKE_TURN_ALLOCATION_FAIL_THRESHOLD` | Yes |
-| Baseline comparison (P2P vs SFU, same ref) | `TEST_REF=origin/<branch_or_main> npm run smoke:compare:p2p-sfu` | Required for pre-prod package |
-| Baseline comparison (SFU-current vs LiveKit-topology, same ref) | `TEST_REF=origin/<branch_or_main> npm run smoke:compare:sfu-livekit` | Required for LiveKit decision package |
 | LiveKit control gate (token-flow + signaling guard) | included in postdeploy when `SMOKE_LIVEKIT_ROOM_SLUG=<room>` (`SMOKE_LIVEKIT_GATE_STATUS`) | Required |
 | LiveKit media gate (browser publish/subscribe/reconnect/late-join) | included in postdeploy when `SMOKE_LIVEKIT_ROOM_SLUG=<room>` and `SMOKE_LIVEKIT_MEDIA=1` (`SMOKE_LIVEKIT_MEDIA_STATUS`) | Required for LiveKit media-plane validation |
-| LiveKit standard profile gate (no legacy SFU fallback in baseline) | included in postdeploy by default (`SMOKE_REQUIRE_LIVEKIT_STANDARD_PROFILE=1`): enforces `TEST_RTC_MEDIA_TOPOLOGY_DEFAULT=livekit`, `TEST_LIVEKIT_ENABLED=1`, and empty `TEST_RTC_MEDIA_TOPOLOGY_SFU_ROOMS/USERS` (`SMOKE_LIVEKIT_STANDARD_PROFILE_STATUS`) | Yes |
+| LiveKit standard profile gate | included in postdeploy by default (`SMOKE_REQUIRE_LIVEKIT_STANDARD_PROFILE=1`): enforces enabled LiveKit runtime (`SMOKE_LIVEKIT_STANDARD_PROFILE_STATUS`) | Yes |
 | Auto rollback policy (optional) | `AUTO_ROLLBACK_ON_FAIL=1 AUTO_ROLLBACK_SMOKE=1 TEST_REF=origin/<ref> npm run deploy:test:smoke` | Optional |
 | Extended relay smoke | `SMOKE_CALL_SIGNAL=1` flow with 2 ws-ticket | Yes |
 | Initial replay gate (`call.initial_state`) | enabled in postdeploy (`SMOKE_REQUIRE_INITIAL_STATE_REPLAY=1`), fail-fast on missing replay envelope | Yes |
@@ -71,7 +69,7 @@ Current CI command:
 ## 5) Gate policy summary
 
 - `test` deploy gate: standard postdeploy smoke + extended relay smoke must pass.
-- `test` SFU profile gate: browser media transport + one-way checks are required by default (`SMOKE_REALTIME_MEDIA_STRICT=1`).
+- `test` LiveKit profile gate: browser media transport + one-way checks are required by default (`SMOKE_REALTIME_MEDIA_STRICT=1`).
 - Rolling SLO monitor gate (`npm run slo:check`) and thresholds are defined in `docs/operations/SLO_ROLLING_ALERTS.md`.
 - `prod` gate: deferred until MVP-like readiness policy is explicitly satisfied.
 - `prod` rollout allowed only from `main` and only by explicit confirmation.

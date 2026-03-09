@@ -27,7 +27,6 @@ SMOKE_SUMMARY_TEXT="health=fail mode=unknown sso=fail realtime=fail delta(nack=0
 API_SMOKE_STATUS="skip"
 VERSION_CACHE_STATUS="skip"
 EXTENDED_REALTIME_STATUS="skip"
-SMOKE_SFU_TOPOLOGY_STATUS="skip"
 SMOKE_REALTIME_MEDIA_STATUS="skip"
 SMOKE_LIVEKIT_GATE_STATUS="skip"
 SMOKE_LIVEKIT_MEDIA_STATUS="skip"
@@ -55,7 +54,6 @@ write_summary() {
   printf 'SMOKE_CALL_INITIAL_STATE_SENT_DELTA=%q\n' "$SMOKE_CALL_INITIAL_STATE_SENT_DELTA" >>"$SUMMARY_FILE_REL"
   printf 'SMOKE_CALL_INITIAL_STATE_PARTICIPANTS_DELTA=%q\n' "$SMOKE_CALL_INITIAL_STATE_PARTICIPANTS_DELTA" >>"$SUMMARY_FILE_REL"
   printf 'SMOKE_EXTENDED_REALTIME_STATUS=%q\n' "$EXTENDED_REALTIME_STATUS" >>"$SUMMARY_FILE_REL"
-  printf 'SMOKE_SFU_TOPOLOGY_STATUS=%q\n' "$SMOKE_SFU_TOPOLOGY_STATUS" >>"$SUMMARY_FILE_REL"
   printf 'SMOKE_REALTIME_MEDIA_STATUS=%q\n' "$SMOKE_REALTIME_MEDIA_STATUS" >>"$SUMMARY_FILE_REL"
   printf 'SMOKE_LIVEKIT_GATE_STATUS=%q\n' "$SMOKE_LIVEKIT_GATE_STATUS" >>"$SUMMARY_FILE_REL"
   printf 'SMOKE_LIVEKIT_MEDIA_STATUS=%q\n' "$SMOKE_LIVEKIT_MEDIA_STATUS" >>"$SUMMARY_FILE_REL"
@@ -275,10 +273,7 @@ trim_lower() {
 validate_livekit_standard_profile() {
   local enabled="${SMOKE_REQUIRE_LIVEKIT_STANDARD_PROFILE:-1}"
   local prefix="${SMOKE_LIVEKIT_STANDARD_ENV_PREFIX:-TEST_}"
-  local default_var="${prefix}RTC_MEDIA_TOPOLOGY_DEFAULT"
   local livekit_enabled_var="${prefix}LIVEKIT_ENABLED"
-  local sfu_rooms_var="${prefix}RTC_MEDIA_TOPOLOGY_SFU_ROOMS"
-  local sfu_users_var="${prefix}RTC_MEDIA_TOPOLOGY_SFU_USERS"
 
   if [[ "$enabled" != "1" ]]; then
     SMOKE_LIVEKIT_STANDARD_PROFILE_STATUS="skip"
@@ -286,18 +281,8 @@ validate_livekit_standard_profile() {
     return 0
   fi
 
-  local topology_default_raw="${!default_var:-${RTC_MEDIA_TOPOLOGY_DEFAULT:-livekit}}"
   local livekit_enabled_raw="${!livekit_enabled_var:-${LIVEKIT_ENABLED:-1}}"
-  local topology_default="$(trim_lower "$topology_default_raw")"
   local livekit_enabled="$(trim_lower "$livekit_enabled_raw")"
-  local sfu_rooms="$(trim_lower "${!sfu_rooms_var:-}")"
-  local sfu_users="$(trim_lower "${!sfu_users_var:-}")"
-
-  if [[ "$topology_default" != "livekit" ]]; then
-    SMOKE_LIVEKIT_STANDARD_PROFILE_STATUS="fail"
-    echo "[postdeploy-smoke] livekit standard profile gate failed: ${default_var} fallback chain must resolve to livekit (got: $topology_default_raw)" >&2
-    exit 1
-  fi
 
   if [[ "$livekit_enabled" != "1" && "$livekit_enabled" != "true" && "$livekit_enabled" != "yes" && "$livekit_enabled" != "on" ]]; then
     SMOKE_LIVEKIT_STANDARD_PROFILE_STATUS="fail"
@@ -305,14 +290,8 @@ validate_livekit_standard_profile() {
     exit 1
   fi
 
-  if [[ -n "$sfu_rooms" || -n "$sfu_users" ]]; then
-    SMOKE_LIVEKIT_STANDARD_PROFILE_STATUS="fail"
-    echo "[postdeploy-smoke] livekit standard profile gate failed: legacy SFU canary overrides must be empty in standard profile (${sfu_rooms_var}/${sfu_users_var})" >&2
-    exit 1
-  fi
-
   SMOKE_LIVEKIT_STANDARD_PROFILE_STATUS="pass"
-  echo "[postdeploy-smoke] livekit standard profile gate: pass (${default_var}=livekit, ${livekit_enabled_var}=1)"
+  echo "[postdeploy-smoke] livekit standard profile gate: pass (${livekit_enabled_var}=1)"
 }
 
 validate_livekit_standard_profile
@@ -556,7 +535,7 @@ if [[ "${SMOKE_REALTIME:-1}" == "0" ]]; then
   collect_turn_allocation_failures
   echo "[postdeploy-smoke] realtime smoke skipped (SMOKE_REALTIME=0)"
   SMOKE_STATUS="pass"
-  SMOKE_SUMMARY_TEXT="health=pass mode=sso sso=pass api=$API_SMOKE_STATUS version_cache=$VERSION_CACHE_STATUS livekit_standard=$SMOKE_LIVEKIT_STANDARD_PROFILE_STATUS turn_tls=$SMOKE_TURN_TLS_STATUS turn_rotation=$SMOKE_TURN_ROTATION_STATUS turn_alloc_failures=$SMOKE_TURN_ALLOCATION_FAILURES turn_alloc_status=$SMOKE_TURN_ALLOCATION_STATUS realtime=skip extended_realtime=$EXTENDED_REALTIME_STATUS sfu_topology=$SMOKE_SFU_TOPOLOGY_STATUS realtime_media=$SMOKE_REALTIME_MEDIA_STATUS transport=$SMOKE_MEDIA_TRANSPORT_SUMMARY one_way(audio=$SMOKE_ONE_WAY_AUDIO_INCIDENTS,video=$SMOKE_ONE_WAY_VIDEO_INCIDENTS) delta(nack=0,ack=0,chat=0,idem=0,initial_state=0,initial_state_participants=0)"
+  SMOKE_SUMMARY_TEXT="health=pass mode=sso sso=pass api=$API_SMOKE_STATUS version_cache=$VERSION_CACHE_STATUS livekit_standard=$SMOKE_LIVEKIT_STANDARD_PROFILE_STATUS turn_tls=$SMOKE_TURN_TLS_STATUS turn_rotation=$SMOKE_TURN_ROTATION_STATUS turn_alloc_failures=$SMOKE_TURN_ALLOCATION_FAILURES turn_alloc_status=$SMOKE_TURN_ALLOCATION_STATUS realtime=skip extended_realtime=$EXTENDED_REALTIME_STATUS realtime_media=$SMOKE_REALTIME_MEDIA_STATUS transport=$SMOKE_MEDIA_TRANSPORT_SUMMARY one_way(audio=$SMOKE_ONE_WAY_AUDIO_INCIDENTS,video=$SMOKE_ONE_WAY_VIDEO_INCIDENTS) delta(nack=0,ack=0,chat=0,idem=0,initial_state=0,initial_state_participants=0)"
   exit 0
 fi
 
@@ -626,20 +605,13 @@ CALL_INITIAL_STATE_PARTICIPANTS_BEFORE="$(metric_from_hgetall "$METRICS_BEFORE_R
 echo "[postdeploy-smoke] smoke:realtime"
 BASELINE_SMOKE_ROOM_SLUG="${SMOKE_ROOM_SLUG:-general}"
 MEDIA_SMOKE_ROOM_SLUG="${SMOKE_REALTIME_MEDIA_ROOM_SLUG:-$BASELINE_SMOKE_ROOM_SLUG}"
-BASELINE_REQUIRE_MEDIA_TOPOLOGY=1
-if [[ -n "${SMOKE_SFU_ROOM_SLUG:-}" && "$BASELINE_SMOKE_ROOM_SLUG" == "$SMOKE_SFU_ROOM_SLUG" ]]; then
-  # Stage 1 may route the default room to SFU and test data may not include a second P2P room.
-  # Keep baseline smoke for join/chat/reconnect, and run topology assertion in the dedicated SFU pass below.
-  BASELINE_REQUIRE_MEDIA_TOPOLOGY=0
-  echo "[postdeploy-smoke] baseline topology assert skipped for Stage 1 (room=$BASELINE_SMOKE_ROOM_SLUG)"
-fi
 
 SMOKE_API_URL="$BASE_URL" \
 SMOKE_ROOM_SLUG="$BASELINE_SMOKE_ROOM_SLUG" \
 SMOKE_RECONNECT=1 \
 SMOKE_REQUIRE_INITIAL_STATE_REPLAY=1 \
-SMOKE_REQUIRE_MEDIA_TOPOLOGY="$BASELINE_REQUIRE_MEDIA_TOPOLOGY" \
-SMOKE_EXPECT_MEDIA_TOPOLOGY="${SMOKE_EXPECT_MEDIA_TOPOLOGY:-${TEST_RTC_MEDIA_TOPOLOGY_DEFAULT:-${RTC_MEDIA_TOPOLOGY_DEFAULT:-livekit}}}" \
+SMOKE_REQUIRE_MEDIA_TOPOLOGY=1 \
+SMOKE_EXPECT_MEDIA_TOPOLOGY="${SMOKE_EXPECT_MEDIA_TOPOLOGY:-livekit}" \
 npm run smoke:realtime
 
 if [[ "${SMOKE_EXTENDED_GATE:-0}" == "1" ]]; then
@@ -730,25 +702,6 @@ if [[ "${SMOKE_EXTENDED_GATE:-0}" == "1" ]]; then
     SMOKE_RACE_OFFER_RATE_LIMIT_STRICT_THRESHOLD="${SMOKE_RACE_OFFER_RATE_LIMIT_STRICT_THRESHOLD:-4}" \
     npm run smoke:realtime
   EXTENDED_REALTIME_STATUS="pass"
-fi
-
-if [[ -n "${SMOKE_SFU_ROOM_SLUG:-}" ]]; then
-  echo "[postdeploy-smoke] smoke:realtime (sfu topology room=$SMOKE_SFU_ROOM_SLUG)"
-
-  # ws tickets are one-time; ensure optional second run re-resolves fresh tickets.
-  unset SMOKE_WS_TICKET
-  unset SMOKE_WS_TICKET_RECONNECT
-  unset SMOKE_WS_TICKET_SECOND
-  unset SMOKE_WS_TICKET_THIRD
-
-  SMOKE_API_URL="$BASE_URL" \
-    SMOKE_ROOM_SLUG="$SMOKE_SFU_ROOM_SLUG" \
-    SMOKE_RECONNECT=1 \
-    SMOKE_REQUIRE_INITIAL_STATE_REPLAY=1 \
-    SMOKE_REQUIRE_MEDIA_TOPOLOGY=1 \
-    SMOKE_EXPECT_MEDIA_TOPOLOGY="${SMOKE_SFU_EXPECT_MEDIA_TOPOLOGY:-sfu}" \
-    npm run smoke:realtime
-  SMOKE_SFU_TOPOLOGY_STATUS="pass"
 fi
 
 if [[ -n "${SMOKE_LIVEKIT_ROOM_SLUG:-}" ]]; then
@@ -923,6 +876,6 @@ SMOKE_CALL_INITIAL_STATE_PARTICIPANTS_DELTA=$((CALL_INITIAL_STATE_PARTICIPANTS_A
 collect_turn_allocation_failures
 
 SMOKE_STATUS="pass"
-SMOKE_SUMMARY_TEXT="health=pass mode=sso sso=pass api=$API_SMOKE_STATUS version_cache=$VERSION_CACHE_STATUS livekit_standard=$SMOKE_LIVEKIT_STANDARD_PROFILE_STATUS turn_tls=$SMOKE_TURN_TLS_STATUS turn_rotation=$SMOKE_TURN_ROTATION_STATUS turn_alloc_failures=$SMOKE_TURN_ALLOCATION_FAILURES turn_alloc_status=$SMOKE_TURN_ALLOCATION_STATUS realtime=pass extended_realtime=$EXTENDED_REALTIME_STATUS sfu_topology=$SMOKE_SFU_TOPOLOGY_STATUS livekit_gate=$SMOKE_LIVEKIT_GATE_STATUS livekit_media=$SMOKE_LIVEKIT_MEDIA_STATUS realtime_media=$SMOKE_REALTIME_MEDIA_STATUS transport=$SMOKE_MEDIA_TRANSPORT_SUMMARY one_way(audio=$SMOKE_ONE_WAY_AUDIO_INCIDENTS,video=$SMOKE_ONE_WAY_VIDEO_INCIDENTS) delta(nack=$SMOKE_NACK_DELTA,ack=$SMOKE_ACK_DELTA,chat=$SMOKE_CHAT_SENT_DELTA,idem=$SMOKE_CHAT_IDEMPOTENCY_HIT_DELTA,initial_state=$SMOKE_CALL_INITIAL_STATE_SENT_DELTA,initial_state_participants=$SMOKE_CALL_INITIAL_STATE_PARTICIPANTS_DELTA)"
+SMOKE_SUMMARY_TEXT="health=pass mode=sso sso=pass api=$API_SMOKE_STATUS version_cache=$VERSION_CACHE_STATUS livekit_standard=$SMOKE_LIVEKIT_STANDARD_PROFILE_STATUS turn_tls=$SMOKE_TURN_TLS_STATUS turn_rotation=$SMOKE_TURN_ROTATION_STATUS turn_alloc_failures=$SMOKE_TURN_ALLOCATION_FAILURES turn_alloc_status=$SMOKE_TURN_ALLOCATION_STATUS realtime=pass extended_realtime=$EXTENDED_REALTIME_STATUS livekit_gate=$SMOKE_LIVEKIT_GATE_STATUS livekit_media=$SMOKE_LIVEKIT_MEDIA_STATUS realtime_media=$SMOKE_REALTIME_MEDIA_STATUS transport=$SMOKE_MEDIA_TRANSPORT_SUMMARY one_way(audio=$SMOKE_ONE_WAY_AUDIO_INCIDENTS,video=$SMOKE_ONE_WAY_VIDEO_INCIDENTS) delta(nack=$SMOKE_NACK_DELTA,ack=$SMOKE_ACK_DELTA,chat=$SMOKE_CHAT_SENT_DELTA,idem=$SMOKE_CHAT_IDEMPOTENCY_HIT_DELTA,initial_state=$SMOKE_CALL_INITIAL_STATE_SENT_DELTA,initial_state_participants=$SMOKE_CALL_INITIAL_STATE_PARTICIPANTS_DELTA)"
 
 echo "[postdeploy-smoke] done"

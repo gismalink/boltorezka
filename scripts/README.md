@@ -38,6 +38,8 @@ This folder contains operational scripts grouped by purpose.
   - `TEST_REF=origin/feature/<name> npm run deploy:test:smoke`
 - Test-only post-deploy smoke:
   - `npm run smoke:test:postdeploy`
+- LiveKit-only test rollout + smoke:
+  - `TEST_REF=origin/feature/<name> npm run deploy:test:livekit`
 - Prod rollout (only after test validation):
   - `PROD_REF=origin/main npm run deploy:prod`
 - Local verify pipeline:

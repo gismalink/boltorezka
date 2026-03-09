@@ -61,7 +61,7 @@ type CanonicalMediaState = {
   lastUpdatedAtMs: number;
 };
 
-type MediaTopology = "p2p" | "sfu" | "livekit";
+type MediaTopology = "livekit";
 type RealtimeErrorCategory = "auth" | "permissions" | "topology" | "transport";
 
 const CALL_SIGNAL_MIN_BYTES = 2;
@@ -621,33 +621,13 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
     return result;
   };
 
-  function resolveRoomMediaTopology(roomSlug: string, userId: string | null = null): MediaTopology {
-    const normalizedUserId = String(userId || "").trim().toLowerCase();
-    if (config.livekitEnabled && normalizedUserId && config.rtcMediaTopologyLivekitUsers.includes(normalizedUserId)) {
-      return "livekit";
-    }
-
-    if (normalizedUserId && config.rtcMediaTopologySfuUsers.includes(normalizedUserId)) {
-      return "sfu";
-    }
-
-    const normalizedSlug = String(roomSlug || "").trim().toLowerCase();
-    if (!normalizedSlug) {
-      return config.rtcMediaTopologyDefault;
-    }
-
-    if (config.livekitEnabled && config.rtcMediaTopologyLivekitRooms.includes(normalizedSlug)) {
-      return "livekit";
-    }
-
-    return config.rtcMediaTopologySfuRooms.includes(normalizedSlug)
-      ? "sfu"
-      : config.rtcMediaTopologyDefault;
+  function resolveRoomMediaTopology(_roomSlug: string, _userId: string | null = null): MediaTopology {
+    return "livekit";
   }
 
   const resolveActiveRoomMediaTopology = (state: SocketState): MediaTopology => {
     if (!state.roomSlug) {
-      return config.rtcMediaTopologyDefault;
+      return "livekit";
     }
 
     return resolveRoomMediaTopology(state.roomSlug, state.userId);

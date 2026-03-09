@@ -95,7 +95,7 @@ export function App() {
   const [toasts, setToasts] = useState<Array<{ id: number; message: string }>>([]);
   const [roomsPresenceBySlug, setRoomsPresenceBySlug] = useState<Record<string, string[]>>({});
   const [roomsPresenceDetailsBySlug, setRoomsPresenceDetailsBySlug] = useState<Record<string, PresenceMember[]>>({});
-  const [roomMediaTopologyBySlug, setRoomMediaTopologyBySlug] = useState<Record<string, "p2p" | "sfu" | "livekit">>({});
+  const [roomMediaTopologyBySlug, setRoomMediaTopologyBySlug] = useState<Record<string, "livekit">>({});
   const [eventLog, setEventLog] = useState<string[]>([]);
   const [telemetrySummary, setTelemetrySummary] = useState<TelemetrySummary | null>(null);
   const [wsState, setWsState] = useState<"disconnected" | "connecting" | "connected">(
@@ -419,7 +419,7 @@ export function App() {
   }, [rooms, roomsTree, roomSlug]);
   const allowVideoStreaming = currentRoomKind === "text_voice_video";
   const currentRoomSupportsVideo = allowVideoStreaming;
-  const currentRoomMediaTopology = roomMediaTopologyBySlug[roomSlug] || "p2p";
+  const currentRoomMediaTopology = roomMediaTopologyBySlug[roomSlug] || "livekit";
   const isLivekitRoomTopology = currentRoomMediaTopology === "livekit";
 
   const rtcVoiceRuntime = useVoiceCallRuntime({
@@ -489,8 +489,6 @@ export function App() {
     remoteVideoStreamsByUserId,
     connectRoom,
     disconnectRoom,
-    handleIncomingSignal,
-    handleIncomingTerminal,
     handleIncomingMicState,
     handleIncomingVideoState: handleIncomingRtcVideoState,
     handleCallNack
@@ -1239,8 +1237,6 @@ export function App() {
     pushCallLog,
     pushToast,
     markMessageDelivery,
-    onCallSignal: handleIncomingSignal,
-    onCallTerminal: handleIncomingTerminal,
     onCallMicState: handleIncomingMicState,
     onCallVideoState: handleIncomingVideoState,
     onCallInitialState: handleIncomingInitialCallState,
@@ -1292,7 +1288,7 @@ export function App() {
     }
 
     const roomTopology = roomMediaTopologyBySlug[roomSlug];
-    if (roomTopology === "sfu" || roomTopology === "livekit") {
+    if (roomTopology === "livekit") {
       pushCallLog(`media topology for ${roomSlug}: ${roomTopology}`);
     }
   }, [roomSlug, roomMediaTopologyBySlug, pushCallLog]);

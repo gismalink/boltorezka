@@ -149,7 +149,7 @@ export type ChatDeletedPayload = {
   ts: string;
 };
 
-export type MediaTopology = "p2p" | "sfu" | "livekit";
+export type MediaTopology = "livekit";
 
 export type RealtimeCorrelationPayload = {
   requestId: string | null;

@@ -45,11 +45,12 @@ const raceOfferRateLimitedStrictThreshold = Number(process.env.SMOKE_RACE_OFFER_
 const requireInitialStateReplay = process.env.SMOKE_REQUIRE_INITIAL_STATE_REPLAY !== "0";
 const requireMediaTopology = process.env.SMOKE_REQUIRE_MEDIA_TOPOLOGY !== "0";
 const rawExpectedMediaTopology = String(process.env.SMOKE_EXPECT_MEDIA_TOPOLOGY || "livekit").trim().toLowerCase();
-const expectedMediaTopology = rawExpectedMediaTopology === "sfu"
-  ? "sfu"
-  : rawExpectedMediaTopology === "livekit"
-    ? "livekit"
-    : "p2p";
+const expectedMediaTopology = "livekit";
+
+if (rawExpectedMediaTopology && rawExpectedMediaTopology !== "livekit") {
+  console.error(`[smoke:realtime] only livekit topology is supported, got: ${rawExpectedMediaTopology}`);
+  process.exit(1);
+}
 
 const isHttp = baseUrl.startsWith("http://") || baseUrl.startsWith("https://");
 if (!isHttp) {
