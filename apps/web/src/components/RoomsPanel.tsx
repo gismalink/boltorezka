@@ -337,7 +337,6 @@ export function RoomsPanel({
                   ? "bi-mic-fill"
                   : "bi-mic";
               const audioIconClass = isAudioOutputMuted ? "bi-headset-vr" : "bi-headphones";
-              const isFullyMuted = micState === "muted" && isAudioOutputMuted;
               const mediaStatusIconClass = mediaStatus === "media"
                 ? "bi-broadcast-pin"
                 : mediaStatus === "signaling"
@@ -398,7 +397,7 @@ export function RoomsPanel({
               return (
             <li
               key={`${room.id}-${member.userId || member.userName}`}
-              className={`channel-member-item grid min-h-[22px] grid-cols-[auto_1fr_auto_auto] items-center gap-1.5 ${isCurrentUser ? "channel-member-item-current" : ""} ${isVoiceActive ? "channel-member-item-voice-active" : ""} ${isFullyMuted ? "channel-member-item-self-muted" : ""}`}
+              className={`channel-member-item grid min-h-[22px] grid-cols-[auto_1fr_auto_auto] items-center gap-1.5 ${isCurrentUser ? "channel-member-item-current" : ""} ${isVoiceActive ? "channel-member-item-voice-active" : ""}`}
             >
               <span className="channel-member-avatar">{(member.userName || "U").charAt(0).toUpperCase()}</span>
               <span className="channel-member-name">{member.userName}</span>

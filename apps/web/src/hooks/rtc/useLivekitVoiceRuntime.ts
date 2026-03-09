@@ -94,7 +94,7 @@ const isExpectedDisconnectError = (error: unknown): boolean => {
     || normalized.includes("aborterror");
 };
 
-function buildAudioMutedSet(room: Room): Set<string> {
+function buildRemoteMicMutedSet(room: Room): Set<string> {
   const muted = new Set<string>();
   room.remoteParticipants.forEach((participant, participantId) => {
     const hasMutedMic = Array.from(participant.trackPublications.values()).some(
@@ -224,7 +224,7 @@ export function useLivekitVoiceRuntime({
       .map((participant) => String(participant.identity || "").trim())
       .filter((identity) => identity.length > 0);
 
-    const mutedSet = buildAudioMutedSet(room);
+    const mutedSet = buildRemoteMicMutedSet(room);
     const nextStatus: Record<string, VoiceMediaStatusSummary> = {};
     participants.forEach((participant) => {
       const participantId = String(participant.identity || "").trim();
@@ -240,7 +240,8 @@ export function useLivekitVoiceRuntime({
     setConnectedPeerUserIds(connectedIds);
     setConnectingPeerUserIds([]);
     setRemoteMutedPeerUserIds(Array.from(mutedSet));
-    setRemoteAudioMutedPeerUserIds(Array.from(mutedSet));
+    // LiveKit does not expose remote output mute state; keep it independent from mic mute.
+    setRemoteAudioMutedPeerUserIds([]);
     setVoiceMediaStatusByPeerUserId(nextStatus);
   }, []);
 
@@ -447,13 +448,11 @@ export function useLivekitVoiceRuntime({
       room.on(RoomEvent.TrackMuted, (_publication: RemoteTrackPublication, participant: RemoteParticipant) => {
         const participantId = String(participant.identity || "").trim() || participant.sid;
         setRemoteMutedPeerUserIds((prev) => (prev.includes(participantId) ? prev : [...prev, participantId]));
-        setRemoteAudioMutedPeerUserIds((prev) => (prev.includes(participantId) ? prev : [...prev, participantId]));
       });
 
       room.on(RoomEvent.TrackUnmuted, (_publication: RemoteTrackPublication, participant: RemoteParticipant) => {
         const participantId = String(participant.identity || "").trim() || participant.sid;
         setRemoteMutedPeerUserIds((prev) => prev.filter((id) => id !== participantId));
-        setRemoteAudioMutedPeerUserIds((prev) => prev.filter((id) => id !== participantId));
       });
 
         const signalUrl = normalizeLivekitSignalUrl(livekit.url);
