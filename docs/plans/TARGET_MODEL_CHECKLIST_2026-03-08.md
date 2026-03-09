@@ -50,6 +50,7 @@ Validation note (2026-03-09): frontend переключен на native `LiveKit
 Validation note (2026-03-09): зафиксирован release-candidate checkpoint tag `release-candidate-livekit-test-2026-03-09` на SHA `63b4718` после ручного подтверждения стабильности `p2p` и `livekit` комнат (до отдельного фикса camera transmit в livekit).
 Validation note (2026-03-09): camera transmit fix для LiveKit overlay path (`adaptiveStream=false`) выкачен в `test` на SHA `694dc18` (`TEST_REF=origin/feature/scheduler-interface-portable npm run deploy:test:livekit` на сервере); postdeploy smoke снова зеленый, включая `smoke:livekit:token-flow` и `smoke:livekit:media` (`oneWayIncidents.audio=0`, `oneWayIncidents.video=0`), после чего получено ручное подтверждение `все работает`.
 Validation note (2026-03-09): rolling SLO status повторно подтвержден на сервере (`~/srv/boltorezka/.deploy/slo/last-slo-eval.env`): `SLO_ROLLING_STATUS=pass`, `SLO_ROLLING_ALERT_COUNT=0`, `SLO_ROLLING_TS=2026-03-09T15:35:44.202Z`.
+Validation note (2026-03-09): выполнен repository secret-check (heuristic signatures, tracked files) с артефактом `.deploy/security/secret-heuristic-scan-20260309T154311Z.txt`; явных hardcoded секретов/ключей не обнаружено, совпадения относятся к runtime env-переменным в smoke/deploy scripts.
 
 ## 0) Базовые инварианты (обязательно)
 
@@ -169,7 +170,7 @@ Validation note (2026-03-09): rolling SLO status повторно подтвер
 ## 8) Безопасность И Надежность
 
 - [ ] TURN credentials ротируются по расписанию.
-- [ ] Нет захардкоженных секретов в репозитории.
+- [x] Нет захардкоженных секретов в репозитории.
 - [x] JWT/SSO flow не использует `?token=` в URL callback.
 - [x] Return URL проходит только через validated `state`.
 - [x] Ограничены allowed origins/hosts для test/prod.
