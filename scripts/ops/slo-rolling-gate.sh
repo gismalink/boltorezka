@@ -116,11 +116,18 @@ if (snapshots.length === 0) {
 
 snapshots.sort((a, b) => a.epoch - b.epoch);
 const current = snapshots[snapshots.length - 1];
+const currentDay = String(current.day || "");
+const dayScopedSnapshots = snapshots.filter((item) => String(item.day || "") === currentDay && currentDay);
+
+if (dayScopedSnapshots.length === 0) {
+  process.stdout.write(JSON.stringify({ ok: false, error: "no day-scoped snapshots" }));
+  process.exit(0);
+}
 
 function pickBaseline(windowMinutes) {
   const targetEpoch = current.epoch - windowMinutes * 60 * 1000;
-  let candidate = snapshots[0];
-  for (const item of snapshots) {
+  let candidate = dayScopedSnapshots[0];
+  for (const item of dayScopedSnapshots) {
     if (item.epoch <= targetEpoch) {
       candidate = item;
     } else {
