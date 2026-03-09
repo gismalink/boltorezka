@@ -44,9 +44,12 @@ const raceOfferRateLimitedSoftThreshold = Number(process.env.SMOKE_RACE_OFFER_RA
 const raceOfferRateLimitedStrictThreshold = Number(process.env.SMOKE_RACE_OFFER_RATE_LIMIT_STRICT_THRESHOLD ?? 0);
 const requireInitialStateReplay = process.env.SMOKE_REQUIRE_INITIAL_STATE_REPLAY !== "0";
 const requireMediaTopology = process.env.SMOKE_REQUIRE_MEDIA_TOPOLOGY !== "0";
-const expectedMediaTopology = String(process.env.SMOKE_EXPECT_MEDIA_TOPOLOGY || "p2p").trim().toLowerCase() === "sfu"
+const rawExpectedMediaTopology = String(process.env.SMOKE_EXPECT_MEDIA_TOPOLOGY || "p2p").trim().toLowerCase();
+const expectedMediaTopology = rawExpectedMediaTopology === "sfu"
   ? "sfu"
-  : "p2p";
+  : rawExpectedMediaTopology === "livekit"
+    ? "livekit"
+    : "p2p";
 
 const isHttp = baseUrl.startsWith("http://") || baseUrl.startsWith("https://");
 if (!isHttp) {
@@ -1139,6 +1142,7 @@ async function runLiveRoomBehaviorScenario({ roomSlug, timeoutMs }) {
   let mediaTopologySecondOk = false;
   let callMissingTargetRejected = false;
   let callSignalIdempotencyOk = false;
+  let callSignalGuarded = false;
   let callNegotiationReconnectOk = false;
   let callNegotiationReconnectSkipped = false;
   let reconnectOk = false;
@@ -1204,244 +1208,286 @@ async function runLiveRoomBehaviorScenario({ roomSlug, timeoutMs }) {
       initialStateReplaySecondOk = true;
     }
 
-    const callRequestId = `call-offer-${Date.now()}`;
-    const signalPayload = { type: "offer", sdp: "smoke-offer-sdp" };
-    ws.send(
-      JSON.stringify({
-        type: "call.offer",
-        requestId: callRequestId,
-        payload: {
-          targetUserId: secondUserId,
-          signal: signalPayload
-        }
-      })
-    );
+    const livekitSignalingDisabledMode = requireMediaTopology && expectedMediaTopology === "livekit";
 
-    const callAck = await waitForEvent(
-      events,
-      (item) => item?.type === "ack" && item?.payload?.requestId === callRequestId,
-      "ack for call.offer"
-    );
+    if (livekitSignalingDisabledMode) {
+      const guardRequestId = `call-offer-livekit-guard-${Date.now()}`;
+      ws.send(
+        JSON.stringify({
+          type: "call.offer",
+          requestId: guardRequestId,
+          payload: {
+            targetUserId: secondUserId,
+            signal: { type: "offer", sdp: "smoke-livekit-guard" }
+          }
+        })
+      );
 
-    const relayedOffer = await waitForEvent(
-      secondEvents,
-      (item) => item?.type === "call.offer" && item?.payload?.signal?.type === "offer",
-      "relayed call.offer"
-    );
+      const guardNack = await waitForEvent(
+        events,
+        (item) => item?.type === "nack" && item?.payload?.requestId === guardRequestId,
+        "nack for call.offer in livekit mode"
+      );
 
-    if (Number(callAck?.payload?.relayedTo || 0) < 1) {
-      throw new Error("[smoke:realtime] expected call.offer relayedTo >= 1");
-    }
+      if (String(guardNack?.payload?.code || "") !== "LiveKitSignalingDisabled") {
+        throw new Error(`[smoke:realtime] expected LiveKitSignalingDisabled for call.offer in livekit mode, got ${String(guardNack?.payload?.code || "unknown")}`);
+      }
 
-    if (String(relayedOffer?.payload?.targetUserId || "") !== secondUserId) {
-      throw new Error("[smoke:realtime] relayed call.offer targetUserId mismatch");
-    }
+      const guardRelayed = secondEvents.some(
+        (item) => item?.type === "call.offer" && String(item?.payload?.requestId || "") === guardRequestId
+      );
+      if (guardRelayed) {
+        throw new Error("[smoke:realtime] call.offer must not be relayed when mediaTopology=livekit");
+      }
 
-    callSignalRelayed = true;
-
-    const missingTargetOfferRequestId = `call-offer-missing-target-${Date.now()}`;
-    ws.send(
-      JSON.stringify({
-        type: "call.offer",
-        requestId: missingTargetOfferRequestId,
-        payload: {
-          signal: { type: "offer", sdp: "smoke-missing-target" }
-        }
-      })
-    );
-
-    const missingTargetOfferNack = await waitForEvent(
-      events,
-      (item) => item?.type === "nack" && item?.payload?.requestId === missingTargetOfferRequestId,
-      "nack for call.offer missing target"
-    );
-
-    if (String(missingTargetOfferNack?.payload?.code || "") !== "ValidationError") {
-      throw new Error(`[smoke:realtime] expected ValidationError for call.offer without targetUserId, got ${String(missingTargetOfferNack?.payload?.code || "unknown")}`);
-    }
-    if (String(missingTargetOfferNack?.payload?.category || "") !== "transport") {
-      throw new Error(`[smoke:realtime] expected transport category for call.offer missing target, got ${String(missingTargetOfferNack?.payload?.category || "missing")}`);
-    }
-    if (String(missingTargetOfferNack?.payload?.userId || "") !== firstUserId) {
-      throw new Error("[smoke:realtime] call.offer missing target nack must include sender userId");
-    }
-    if (!String(missingTargetOfferNack?.payload?.sessionId || "")) {
-      throw new Error("[smoke:realtime] call.offer missing target nack must include sessionId");
-    }
-    if (!String(missingTargetOfferNack?.payload?.traceId || "").startsWith("call.offer:")) {
-      throw new Error("[smoke:realtime] call.offer missing target nack must include call traceId");
-    }
-    if (!String(missingTargetOfferNack?.payload?.roomId || "")) {
-      throw new Error("[smoke:realtime] call.offer missing target nack must include roomId");
-    }
-
-    const missingTargetRelayed = secondEvents.some(
-      (item) => item?.type === "call.offer" && String(item?.payload?.requestId || "") === missingTargetOfferRequestId
-    );
-    if (missingTargetRelayed) {
-      throw new Error("[smoke:realtime] call.offer without targetUserId must not be relayed");
-    }
-
-    callMissingTargetRejected = true;
-
-    const idempotentAnswerRequestId = `call-answer-idem-${Date.now()}`;
-    const idempotentAnswerPayload = {
-      targetUserId: secondUserId,
-      signal: { type: "answer", sdp: "smoke-idempotent-answer" }
-    };
-
-    ws.send(
-      JSON.stringify({
-        type: "call.answer",
-        requestId: idempotentAnswerRequestId,
-        payload: idempotentAnswerPayload
-      })
-    );
-
-    const idempotentFirstAck = await waitForEvent(
-      events,
-      (item) => item?.type === "ack" && item?.payload?.requestId === idempotentAnswerRequestId,
-      "ack for first idempotent call.answer"
-    );
-    if (Number(idempotentFirstAck?.payload?.relayedTo || 0) < 1) {
-      throw new Error("[smoke:realtime] first idempotent call.answer must relay to target");
-    }
-
-    await waitForEvent(
-      secondEvents,
-      (item) => item?.type === "call.answer" && String(item?.payload?.requestId || "") === idempotentAnswerRequestId,
-      "relayed first idempotent call.answer"
-    );
-
-    ws.send(
-      JSON.stringify({
-        type: "call.answer",
-        requestId: idempotentAnswerRequestId,
-        payload: idempotentAnswerPayload
-      })
-    );
-
-    const idempotentDuplicateAck = await waitForEvent(
-      events,
-      (item) => item?.type === "ack" && item?.payload?.requestId === idempotentAnswerRequestId && item?.payload?.duplicate === true,
-      "duplicate ack for idempotent call.answer"
-    );
-    if (idempotentDuplicateAck?.payload?.duplicate !== true) {
-      throw new Error("[smoke:realtime] duplicate call.answer ack must include duplicate=true");
-    }
-
-    await sleep(350);
-    const idempotentRelayedCount = secondEvents.filter(
-      (item) => item?.type === "call.answer" && String(item?.payload?.requestId || "") === idempotentAnswerRequestId
-    ).length;
-    if (idempotentRelayedCount !== 1) {
-      throw new Error(`[smoke:realtime] duplicate call.answer must not be relayed twice, got ${idempotentRelayedCount}`);
-    }
-
-    callSignalIdempotencyOk = true;
-
-    const rejectRequestId = `call-reject-${Date.now()}`;
-    wsSecond.send(
-      JSON.stringify({
-        type: "call.reject",
-        requestId: rejectRequestId,
-        payload: {
-          targetUserId: firstUserId,
-          reason: "smoke-reject"
-        }
-      })
-    );
-
-    const rejectAck = await waitForEvent(
-      secondEvents,
-      (item) => item?.type === "ack" && item?.payload?.requestId === rejectRequestId,
-      "ack for call.reject"
-    );
-
-    const relayedReject = await waitForEvent(
-      events,
-      (item) => item?.type === "call.reject" && item?.payload?.reason === "smoke-reject",
-      "relayed call.reject"
-    );
-
-    if (Number(rejectAck?.payload?.relayedTo || 0) < 1) {
-      throw new Error("[smoke:realtime] expected call.reject relayedTo >= 1");
-    }
-
-    if (String(relayedReject?.payload?.targetUserId || "") !== firstUserId) {
-      throw new Error("[smoke:realtime] relayed call.reject targetUserId mismatch");
-    }
-
-    callRejectRelayed = true;
-
-    const hangupRequestId = `call-hangup-${Date.now()}`;
-    ws.send(
-      JSON.stringify({
-        type: "call.hangup",
-        requestId: hangupRequestId,
-        payload: {
-          targetUserId: secondUserId,
-          reason: "smoke-hangup"
-        }
-      })
-    );
-
-    const hangupAck = await waitForEvent(
-      events,
-      (item) => item?.type === "ack" && item?.payload?.requestId === hangupRequestId,
-      "ack for call.hangup"
-    );
-
-    const relayedHangup = await waitForEvent(
-      secondEvents,
-      (item) => item?.type === "call.hangup" && item?.payload?.reason === "smoke-hangup",
-      "relayed call.hangup"
-    );
-
-    if (Number(hangupAck?.payload?.relayedTo || 0) < 1) {
-      throw new Error("[smoke:realtime] expected call.hangup relayedTo >= 1");
-    }
-
-    if (String(relayedHangup?.payload?.targetUserId || "") !== secondUserId) {
-      throw new Error("[smoke:realtime] relayed call.hangup targetUserId mismatch");
-    }
-
-    callHangupRelayed = true;
-
-    // Validate negotiation resilience for signaling path: offer sent, WS reconnect, answer applies.
-    await sleep(5500);
-
-    const reconnectOfferRequestId = `call-offer-reconnect-${Date.now()}`;
-    ws.send(
-      JSON.stringify({
-        type: "call.offer",
-        requestId: reconnectOfferRequestId,
-        payload: {
-          targetUserId: secondUserId,
-          signal: { type: "offer", sdp: "smoke-reconnect-offer" }
-        }
-      })
-    );
-
-    const reconnectOfferAck = await waitForEvent(
-      events,
-      (item) => item?.type === "ack" && item?.payload?.requestId === reconnectOfferRequestId,
-      "ack for reconnect-window call.offer"
-    );
-    if (Number(reconnectOfferAck?.payload?.relayedTo || 0) < 1) {
-      throw new Error("[smoke:realtime] reconnect-window call.offer must relay to target");
-    }
-
-    await waitForEvent(
-      secondEvents,
-      (item) => item?.type === "call.offer" && String(item?.payload?.requestId || "") === reconnectOfferRequestId,
-      "relayed reconnect-window call.offer"
-    );
-
-    const secondReconnectTicket = await resolveSecondReconnectTicket();
-    if (!secondReconnectTicket) {
+      callSignalGuarded = true;
+      callMissingTargetRejected = true;
+      callSignalIdempotencyOk = true;
       callNegotiationReconnectSkipped = true;
+
+      if (smokeCallRace3Way) {
+        console.warn("[smoke:realtime] race3way scenario skipped for livekit topology (legacy call.* is disabled)");
+      }
     } else {
+
+      const callRequestId = `call-offer-${Date.now()}`;
+      const signalPayload = { type: "offer", sdp: "smoke-offer-sdp" };
+      ws.send(
+        JSON.stringify({
+          type: "call.offer",
+          requestId: callRequestId,
+          payload: {
+            targetUserId: secondUserId,
+            signal: signalPayload
+          }
+        })
+      );
+
+      const callAck = await waitForEvent(
+        events,
+        (item) => item?.type === "ack" && item?.payload?.requestId === callRequestId,
+        "ack for call.offer"
+      );
+
+      const relayedOffer = await waitForEvent(
+        secondEvents,
+        (item) => item?.type === "call.offer" && item?.payload?.signal?.type === "offer",
+        "relayed call.offer"
+      );
+
+      if (Number(callAck?.payload?.relayedTo || 0) < 1) {
+        throw new Error("[smoke:realtime] expected call.offer relayedTo >= 1");
+      }
+
+      if (String(relayedOffer?.payload?.targetUserId || "") !== secondUserId) {
+        throw new Error("[smoke:realtime] relayed call.offer targetUserId mismatch");
+      }
+
+      callSignalRelayed = true;
+
+      const missingTargetOfferRequestId = `call-offer-missing-target-${Date.now()}`;
+      ws.send(
+        JSON.stringify({
+          type: "call.offer",
+          requestId: missingTargetOfferRequestId,
+          payload: {
+            signal: { type: "offer", sdp: "smoke-missing-target" }
+          }
+        })
+      );
+
+      const missingTargetOfferNack = await waitForEvent(
+        events,
+        (item) => item?.type === "nack" && item?.payload?.requestId === missingTargetOfferRequestId,
+        "nack for call.offer missing target"
+      );
+
+      if (String(missingTargetOfferNack?.payload?.code || "") !== "ValidationError") {
+        throw new Error(`[smoke:realtime] expected ValidationError for call.offer without targetUserId, got ${String(missingTargetOfferNack?.payload?.code || "unknown")}`);
+      }
+      if (String(missingTargetOfferNack?.payload?.category || "") !== "transport") {
+        throw new Error(`[smoke:realtime] expected transport category for call.offer missing target, got ${String(missingTargetOfferNack?.payload?.category || "missing")}`);
+      }
+      if (String(missingTargetOfferNack?.payload?.userId || "") !== firstUserId) {
+        throw new Error("[smoke:realtime] call.offer missing target nack must include sender userId");
+      }
+      if (!String(missingTargetOfferNack?.payload?.sessionId || "")) {
+        throw new Error("[smoke:realtime] call.offer missing target nack must include sessionId");
+      }
+      if (!String(missingTargetOfferNack?.payload?.traceId || "").startsWith("call.offer:")) {
+        throw new Error("[smoke:realtime] call.offer missing target nack must include call traceId");
+      }
+      if (!String(missingTargetOfferNack?.payload?.roomId || "")) {
+        throw new Error("[smoke:realtime] call.offer missing target nack must include roomId");
+      }
+
+      const missingTargetRelayed = secondEvents.some(
+        (item) => item?.type === "call.offer" && String(item?.payload?.requestId || "") === missingTargetOfferRequestId
+      );
+      if (missingTargetRelayed) {
+        throw new Error("[smoke:realtime] call.offer without targetUserId must not be relayed");
+      }
+
+      callMissingTargetRejected = true;
+
+      const idempotentAnswerRequestId = `call-answer-idem-${Date.now()}`;
+      const idempotentAnswerPayload = {
+        targetUserId: secondUserId,
+        signal: { type: "answer", sdp: "smoke-idempotent-answer" }
+      };
+
+      ws.send(
+        JSON.stringify({
+          type: "call.answer",
+          requestId: idempotentAnswerRequestId,
+          payload: idempotentAnswerPayload
+        })
+      );
+
+      const idempotentFirstAck = await waitForEvent(
+        events,
+        (item) => item?.type === "ack" && item?.payload?.requestId === idempotentAnswerRequestId,
+        "ack for first idempotent call.answer"
+      );
+      if (Number(idempotentFirstAck?.payload?.relayedTo || 0) < 1) {
+        throw new Error("[smoke:realtime] first idempotent call.answer must relay to target");
+      }
+
+      await waitForEvent(
+        secondEvents,
+        (item) => item?.type === "call.answer" && String(item?.payload?.requestId || "") === idempotentAnswerRequestId,
+        "relayed first idempotent call.answer"
+      );
+
+      ws.send(
+        JSON.stringify({
+          type: "call.answer",
+          requestId: idempotentAnswerRequestId,
+          payload: idempotentAnswerPayload
+        })
+      );
+
+      const idempotentDuplicateAck = await waitForEvent(
+        events,
+        (item) => item?.type === "ack" && item?.payload?.requestId === idempotentAnswerRequestId && item?.payload?.duplicate === true,
+        "duplicate ack for idempotent call.answer"
+      );
+      if (idempotentDuplicateAck?.payload?.duplicate !== true) {
+        throw new Error("[smoke:realtime] duplicate call.answer ack must include duplicate=true");
+      }
+
+      await sleep(350);
+      const idempotentRelayedCount = secondEvents.filter(
+        (item) => item?.type === "call.answer" && String(item?.payload?.requestId || "") === idempotentAnswerRequestId
+      ).length;
+      if (idempotentRelayedCount !== 1) {
+        throw new Error(`[smoke:realtime] duplicate call.answer must not be relayed twice, got ${idempotentRelayedCount}`);
+      }
+
+      callSignalIdempotencyOk = true;
+
+      const rejectRequestId = `call-reject-${Date.now()}`;
+      wsSecond.send(
+        JSON.stringify({
+          type: "call.reject",
+          requestId: rejectRequestId,
+          payload: {
+            targetUserId: firstUserId,
+            reason: "smoke-reject"
+          }
+        })
+      );
+
+      const rejectAck = await waitForEvent(
+        secondEvents,
+        (item) => item?.type === "ack" && item?.payload?.requestId === rejectRequestId,
+        "ack for call.reject"
+      );
+
+      const relayedReject = await waitForEvent(
+        events,
+        (item) => item?.type === "call.reject" && item?.payload?.reason === "smoke-reject",
+        "relayed call.reject"
+      );
+
+      if (Number(rejectAck?.payload?.relayedTo || 0) < 1) {
+        throw new Error("[smoke:realtime] expected call.reject relayedTo >= 1");
+      }
+
+      if (String(relayedReject?.payload?.targetUserId || "") !== firstUserId) {
+        throw new Error("[smoke:realtime] relayed call.reject targetUserId mismatch");
+      }
+
+      callRejectRelayed = true;
+
+      const hangupRequestId = `call-hangup-${Date.now()}`;
+      ws.send(
+        JSON.stringify({
+          type: "call.hangup",
+          requestId: hangupRequestId,
+          payload: {
+            targetUserId: secondUserId,
+            reason: "smoke-hangup"
+          }
+        })
+      );
+
+      const hangupAck = await waitForEvent(
+        events,
+        (item) => item?.type === "ack" && item?.payload?.requestId === hangupRequestId,
+        "ack for call.hangup"
+      );
+
+      const relayedHangup = await waitForEvent(
+        secondEvents,
+        (item) => item?.type === "call.hangup" && item?.payload?.reason === "smoke-hangup",
+        "relayed call.hangup"
+      );
+
+      if (Number(hangupAck?.payload?.relayedTo || 0) < 1) {
+        throw new Error("[smoke:realtime] expected call.hangup relayedTo >= 1");
+      }
+
+      if (String(relayedHangup?.payload?.targetUserId || "") !== secondUserId) {
+        throw new Error("[smoke:realtime] relayed call.hangup targetUserId mismatch");
+      }
+
+      callHangupRelayed = true;
+
+      // Validate negotiation resilience for signaling path: offer sent, WS reconnect, answer applies.
+      await sleep(5500);
+
+      const reconnectOfferRequestId = `call-offer-reconnect-${Date.now()}`;
+      ws.send(
+        JSON.stringify({
+          type: "call.offer",
+          requestId: reconnectOfferRequestId,
+          payload: {
+            targetUserId: secondUserId,
+            signal: { type: "offer", sdp: "smoke-reconnect-offer" }
+          }
+        })
+      );
+
+      const reconnectOfferAck = await waitForEvent(
+        events,
+        (item) => item?.type === "ack" && item?.payload?.requestId === reconnectOfferRequestId,
+        "ack for reconnect-window call.offer"
+      );
+      if (Number(reconnectOfferAck?.payload?.relayedTo || 0) < 1) {
+        throw new Error("[smoke:realtime] reconnect-window call.offer must relay to target");
+      }
+
+      await waitForEvent(
+        secondEvents,
+        (item) => item?.type === "call.offer" && String(item?.payload?.requestId || "") === reconnectOfferRequestId,
+        "relayed reconnect-window call.offer"
+      );
+
+      const secondReconnectTicket = await resolveSecondReconnectTicket();
+      if (!secondReconnectTicket) {
+        callNegotiationReconnectSkipped = true;
+      } else {
       wsSecond.close();
       await sleep(300);
 
@@ -1519,29 +1565,30 @@ async function runLiveRoomBehaviorScenario({ roomSlug, timeoutMs }) {
         "relayed reconnect-window call.answer"
       );
 
-      callNegotiationReconnectOk = true;
-    }
+        callNegotiationReconnectOk = true;
+      }
 
-    if (smokeCallRace3Way) {
-      const raceResult = await runThreeWayRaceScenario({
-        firstWs: ws,
-        secondWs: wsSecond,
-        firstEvents: events,
-        secondEvents,
-        firstUserId,
-        secondUserId,
-        roomSlug,
-        timeoutMs,
-        cameraToggleReconnect: smokeCallCameraToggleReconnect
-      });
-      race3WayOk = raceResult.race3WayOk;
-      race3WayReconnectOk = raceResult.race3WayReconnectOk;
-      race3WayIceRelayOk = raceResult.race3WayIceRelayOk;
-      race3WayIceRelayCount = raceResult.race3WayIceRelayCount;
-      race3WayOfferRateLimited = raceResult.race3WayOfferRateLimited;
-      race3WayOfferRateLimitedThreshold = raceResult.race3WayOfferRateLimitedThreshold;
-      race3WayOfferRateLimitedStrictMode = raceResult.race3WayOfferRateLimitedStrictMode;
-      cameraToggleReconnectOk = raceResult.cameraToggleReconnectOk;
+      if (smokeCallRace3Way) {
+        const raceResult = await runThreeWayRaceScenario({
+          firstWs: ws,
+          secondWs: wsSecond,
+          firstEvents: events,
+          secondEvents,
+          firstUserId,
+          secondUserId,
+          roomSlug,
+          timeoutMs,
+          cameraToggleReconnect: smokeCallCameraToggleReconnect
+        });
+        race3WayOk = raceResult.race3WayOk;
+        race3WayReconnectOk = raceResult.race3WayReconnectOk;
+        race3WayIceRelayOk = raceResult.race3WayIceRelayOk;
+        race3WayIceRelayCount = raceResult.race3WayIceRelayCount;
+        race3WayOfferRateLimited = raceResult.race3WayOfferRateLimited;
+        race3WayOfferRateLimitedThreshold = raceResult.race3WayOfferRateLimitedThreshold;
+        race3WayOfferRateLimitedStrictMode = raceResult.race3WayOfferRateLimitedStrictMode;
+        cameraToggleReconnectOk = raceResult.cameraToggleReconnectOk;
+      }
     }
 
     if (requireInitialStateReplay && !initialStateReplaySecondOk) {
@@ -1660,6 +1707,7 @@ async function runLiveRoomBehaviorScenario({ roomSlug, timeoutMs }) {
         liveRoomOk,
         liveRoomStats,
         callSignalRelayed,
+        callSignalGuarded,
         callMissingTargetRejected,
         callSignalIdempotencyOk,
         callNegotiationReconnectOk,

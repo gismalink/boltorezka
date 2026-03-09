@@ -39,6 +39,7 @@ Decision update (2026-03-09): целевой SFU media-plane закреплен 
 Validation note (2026-03-09): подготовлен Stage A foundation scaffolding для `LiveKit` в `test`: `infra/docker-compose.host.yml` (`boltorezka-livekit-test`, profile `livekit-test`), env-шаблон `infra/.env.host.example` (`TEST_LIVEKIT_*`, `LIVEKIT_TEST_API_*`), ops scripts `scripts/ops/livekit-test-{up,check,down}.sh`, runbook `docs/runbooks/LIVEKIT_TEST_FOUNDATION_RUNBOOK.md`.
 Validation note (2026-03-09): `LiveKit` Stage A поднят в `test` на сервере (`feature/scheduler-interface-portable`, SHA `92c3ea0`), после добавления NAT-forward (`UDP 34000-34999`, `TCP 7881`) и host-secrets (`LIVEKIT_TEST_API_SECRET` length `64`); контейнер `boltorezka-livekit-test` в `Up`, `restartCount=0`.
 Validation note (2026-03-09): Stage B token minting validated на `test`: backend endpoint `POST /v1/auth/livekit-token` возвращает signed token + `url/room/identity/expiresInSec` при `TEST_LIVEKIT_ENABLED=1`; проверено в `test-room` через smoke bearer token.
+Validation note (2026-03-09): control-plane livekit routing + guard validated в `test-room` на SHA `4c7d783`: `room.joined.mediaTopology=livekit` для двух smoke users, `call.offer` в этой комнате возвращает `nack.code=LiveKitSignalingDisabled` и не релеится target user.
 
 ## 0) Базовые инварианты (обязательно)
 
