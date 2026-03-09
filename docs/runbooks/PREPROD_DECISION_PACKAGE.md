@@ -193,6 +193,10 @@
   - `appBuildSha` в `/version` соответствует deployed SHA.
 8. **Performance gate compliance**
   - соблюдены пороги из `docs/operations/PERFORMANCE_GATE.md` (API latency/reliability + realtime stability) для текущего release кандидата.
+9. **Rolling SLO alerts gate**
+  - выполнен `npm run slo:check` в `test` с актуальным admin bearer;
+  - статус в `.deploy/slo/last-slo-eval.env`: `SLO_ROLLING_STATUS=pass`;
+  - при `SLO_ROLLING_STATUS=alert` решение только `NO-GO` до triage/стабилизации.
 
 ### 8.2 Automatic NO-GO conditions
 
@@ -212,6 +216,7 @@
 - reconnectOk: `true | false`
 - smoke:web:e2e: `PASS | FAIL`
 - call relay scenario: `PASS | FAIL`
+- slo:check (`SLO_ROLLING_STATUS`): `pass | alert`
 - Release Owner: `<name>`
 - Rollback Owner: `<name>`
 - Rollback ref: `<known-good-sha>`

@@ -70,5 +70,6 @@ Current CI command:
 
 - `test` deploy gate: standard postdeploy smoke + extended relay smoke must pass.
 - `test` SFU profile gate: browser media transport + one-way checks are required by default (`SMOKE_REALTIME_MEDIA_STRICT=1`).
+- Rolling SLO monitor gate (`npm run slo:check`) and thresholds are defined in `docs/operations/SLO_ROLLING_ALERTS.md`.
 - `prod` gate: deferred until MVP-like readiness policy is explicitly satisfied.
 - `prod` rollout allowed only from `main` and only by explicit confirmation.

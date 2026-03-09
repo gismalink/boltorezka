@@ -27,6 +27,7 @@
     "livekit:test:up": "bash ./scripts/ops/livekit-test-up.sh",
     "livekit:test:check": "bash ./scripts/ops/livekit-test-check.sh",
     "livekit:test:down": "bash ./scripts/ops/livekit-test-down.sh",
+    "slo:check": "bash ./scripts/ops/slo-rolling-gate.sh",
     "scheduler:list": "bash ./scripts/ops/scheduler/list-jobs.sh",
     "scheduler:run": "bash ./scripts/ops/scheduler/run-job.sh",
     "scheduler:install:launchd": "bash ./scripts/ops/scheduler/install-launchd-job.sh",

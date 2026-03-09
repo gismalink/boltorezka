@@ -100,7 +100,21 @@ export async function telemetryRoutes(fastify: FastifyInstance) {
           ack_sent: toNumber(values.ack_sent),
           chat_sent: toNumber(values.chat_sent),
           chat_idempotency_hit: toNumber(values.chat_idempotency_hit),
-          telemetry_web_event: toNumber(values.telemetry_web_event)
+          telemetry_web_event: toNumber(values.telemetry_web_event),
+          call_signal_sent: toNumber(values.call_signal_sent),
+          call_offer_received: toNumber(values.call_offer_received),
+          call_answer_received: toNumber(values.call_answer_received),
+          call_ice_received: toNumber(values.call_ice_received),
+          call_reconnect_joined: toNumber(values.call_reconnect_joined),
+          call_initial_state_sent: toNumber(values.call_initial_state_sent),
+          call_initial_state_participants_total: toNumber(values.call_initial_state_participants_total),
+          call_initial_state_lag_ms_total: toNumber(values.call_initial_state_lag_ms_total),
+          call_initial_state_lag_samples: toNumber(values.call_initial_state_lag_samples),
+          call_offer_rate_limited: toNumber(values.call_offer_rate_limited),
+          call_glare_suspected: toNumber(values.call_glare_suspected),
+          call_signal_target_miss: toNumber(values.call_signal_target_miss),
+          call_hangup_sent: toNumber(values.call_hangup_sent),
+          call_reject_sent: toNumber(values.call_reject_sent)
         }
       };
     }
