@@ -885,14 +885,18 @@ async function runLiveRoomBehaviorScenario({ roomSlug, timeoutMs }) {
     }
 
     const micStateRequestId = `call-mic-state-${Date.now()}`;
-    const micPayload = { muted: false, speaking: true, audioMuted: false };
+    const micPayload = {
+      muted: false,
+      speaking: true,
+      audioMuted: false,
+      targetUserId: secondUserId
+    };
     ws.send(JSON.stringify({ type: "call.mic_state", requestId: micStateRequestId, payload: micPayload }));
 
-    await waitForEvent(
-      events,
-      (item) => item?.type === "ack" && item?.payload?.requestId === micStateRequestId,
-      "ack for call.mic_state"
-    );
+    const micStateResult = await waitForAckOrNack(events, micStateRequestId, "ack|nack for call.mic_state");
+    if (!micStateResult.ok) {
+      throw new Error(`[smoke:realtime] call.mic_state rejected: ${micStateResult.code || "unknown"}`);
+    }
 
     await waitForEvent(
       secondEvents,
@@ -907,14 +911,16 @@ async function runLiveRoomBehaviorScenario({ roomSlug, timeoutMs }) {
     wsSecond.send(JSON.stringify({
       type: "call.video_state",
       requestId: videoStateRequestId,
-      payload: { settings: { localVideoEnabled: true } }
+      payload: {
+        targetUserId: firstUserId,
+        settings: { localVideoEnabled: true }
+      }
     }));
 
-    await waitForEvent(
-      secondEvents,
-      (item) => item?.type === "ack" && item?.payload?.requestId === videoStateRequestId,
-      "ack for call.video_state"
-    );
+    const videoStateResult = await waitForAckOrNack(secondEvents, videoStateRequestId, "ack|nack for call.video_state");
+    if (!videoStateResult.ok) {
+      throw new Error(`[smoke:realtime] call.video_state rejected: ${videoStateResult.code || "unknown"}`);
+    }
 
     await waitForEvent(
       events,
