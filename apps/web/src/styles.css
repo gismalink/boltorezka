@@ -794,6 +794,11 @@ pre {
   color: var(--pixel-neon-cyan);
 }
 
+.channel-member-mic-icon-muted {
+  color: color-mix(in srgb, var(--pixel-muted) 68%, transparent 32%);
+  opacity: 0.55;
+}
+
 .channel-member-camera-icon {
   color: color-mix(in srgb, var(--pixel-neon-gold) 74%, var(--pixel-text) 26%);
 }
@@ -827,7 +832,8 @@ pre {
 }
 
 .channel-member-status-disconnected {
-  opacity: 0.42;
+  color: #ff6f8a;
+  opacity: 1;
 }
 
 .channel-member-status-idle {
@@ -1126,6 +1132,38 @@ pre {
 
 .rtc-actions-grid {
   margin-top: var(--space-md);
+}
+
+.rtc-actions-grid > span {
+  display: block;
+  width: 100%;
+}
+
+.rtc-placeholder-btn {
+  width: 100%;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-xs);
+  font-size: calc(var(--font-size-sm) - 0.08rem);
+  line-height: 1.2;
+}
+
+.rtc-placeholder-btn .bi {
+  font-size: 13px;
+}
+
+.rtc-placeholder-btn:disabled,
+.rtc-placeholder-btn:disabled:hover,
+.rtc-placeholder-btn:disabled:active,
+.rtc-placeholder-btn:disabled:focus-visible {
+  cursor: not-allowed;
+  transform: none;
+  border-color: color-mix(in srgb, var(--pixel-muted) 72%, transparent 28%);
+  box-shadow: none;
+  color: color-mix(in srgb, var(--pixel-muted) 82%, transparent 18%);
+  opacity: 0.72;
 }
 
 .user-avatar-badge {

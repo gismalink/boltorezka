@@ -153,6 +153,7 @@ Validation note (2026-03-09): добавлен `livekit` control smoke-gate в p
 - [x] Решение `SFU-first` зафиксировано в ADR/runbook: глубокая voice отладка выполняется только после переключения baseline на SFU.
 - [x] Поднят `LiveKit` в `test` контуре (self-hosted) и задокументирован GitOps rollout/rollback runbook.
 - [x] Реализован server-side token minting для `LiveKit` (room-scoped grants, TTL, audit fields) без выдачи секретов в клиент.
+- [x] Legacy custom-SFU path зафиксирован как fallback-only (rollback), активная разработка ведется в `LiveKit` path (`deploy:test:livekit`).
 - [ ] Добавлен transport adapter `mediaTopology=livekit` в control plane (`join/publish/subscribe/leave/reconnect`) с correlation IDs.
 - [ ] Добавлены smoke-gate'ы для `LiveKit` path (`join`, publish/subscribe, reconnect, late-join, one-way incidents). (control-plane gates готовы; media publish/subscribe + one-way incidents требуют dedicated LiveKit client E2E, т.к. legacy `call.*` signaling в livekit path guard-ится)
 - [x] Проведен baseline compare `sfu-current vs livekit` в `test` и зафиксирован decision package по default routing.

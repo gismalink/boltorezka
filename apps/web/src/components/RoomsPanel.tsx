@@ -393,6 +393,7 @@ export function RoomsPanel({
               const selfCameraTooltip = isCameraEnabled
                 ? t("rooms.memberStatus.self.camera.on")
                 : t("rooms.memberStatus.self.camera.off");
+              const micIconStateClass = micState === "muted" ? "channel-member-mic-icon-muted" : "";
 
               return (
             <li
@@ -408,14 +409,16 @@ export function RoomsPanel({
                   </span>
                 ) : null}
                 <span className="channel-member-status-icon-anchor" data-tooltip={isCurrentUser ? selfMicTooltip : micTooltip}>
-                  <i className={`bi ${micIconClass} channel-member-mic-icon`} />
+                  <i className={`bi ${micIconClass} channel-member-mic-icon ${micIconStateClass}`} />
                 </span>
                 <span className="channel-member-status-icon-anchor" data-tooltip={isCurrentUser ? selfAudioTooltip : audioTooltip}>
                   <i className={`bi ${audioIconClass} channel-member-audio-icon`} />
                 </span>
-                <span className="channel-member-status-icon-anchor" data-tooltip={isCurrentUser ? selfCameraTooltip : cameraTooltip}>
-                  <i className={`bi ${isCameraEnabled ? "bi-camera-video-fill" : "bi-camera-video-off"} channel-member-camera-icon`} />
-                </span>
+                {isCameraEnabled ? (
+                  <span className="channel-member-status-icon-anchor" data-tooltip={isCurrentUser ? selfCameraTooltip : cameraTooltip}>
+                    <i className="bi bi-camera-video-fill channel-member-camera-icon" />
+                  </span>
+                ) : null}
               </span>
               {canKickMembers && room.slug && member.userId && !isCurrentUser ? (
                 <button
