@@ -44,7 +44,7 @@ const raceOfferRateLimitedSoftThreshold = Number(process.env.SMOKE_RACE_OFFER_RA
 const raceOfferRateLimitedStrictThreshold = Number(process.env.SMOKE_RACE_OFFER_RATE_LIMIT_STRICT_THRESHOLD ?? 0);
 const requireInitialStateReplay = process.env.SMOKE_REQUIRE_INITIAL_STATE_REPLAY !== "0";
 const requireMediaTopology = process.env.SMOKE_REQUIRE_MEDIA_TOPOLOGY !== "0";
-const rawExpectedMediaTopology = String(process.env.SMOKE_EXPECT_MEDIA_TOPOLOGY || "p2p").trim().toLowerCase();
+const rawExpectedMediaTopology = String(process.env.SMOKE_EXPECT_MEDIA_TOPOLOGY || "livekit").trim().toLowerCase();
 const expectedMediaTopology = rawExpectedMediaTopology === "sfu"
   ? "sfu"
   : rawExpectedMediaTopology === "livekit"
