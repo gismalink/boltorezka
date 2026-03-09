@@ -135,7 +135,7 @@ services:
       - data_test
 
   boltorezka-livekit-test:
-    image: livekit/livekit-server:v1.8.3
+    image: livekit/livekit-server:v1.9.12
     container_name: boltorezka-livekit-test
     restart: unless-stopped
     profiles: ["livekit-test"]
@@ -265,7 +265,7 @@ services:
       - data_prod
 
   boltorezka-livekit-prod:
-    image: livekit/livekit-server:v1.8.3
+    image: livekit/livekit-server:v1.9.12
     container_name: boltorezka-livekit-prod
     restart: unless-stopped
     profiles: ["livekit-prod"]
