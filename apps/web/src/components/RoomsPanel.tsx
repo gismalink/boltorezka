@@ -305,7 +305,9 @@ export function RoomsPanel({
           return null;
         }
 
-        const roomHasVoiceState = room.slug === roomSlug;
+        const roomSupportsRtc = room.kind !== "text";
+        const roomSupportsVideo = room.kind === "text_voice_video";
+        const roomHasVoiceState = roomSupportsRtc && room.slug === roomSlug;
 
         return (
         <ul className="channel-members-list col-span-full grid gap-0.5 pl-4 pt-0.5">
@@ -317,7 +319,7 @@ export function RoomsPanel({
               const micState = roomHasVoiceState && member.userId
                 ? (voiceMicStateByUserIdInCurrentRoom[member.userId] || "silent")
                 : "silent";
-              const isCameraEnabled = roomHasVoiceState && member.userId
+              const isCameraEnabled = roomHasVoiceState && roomSupportsVideo && member.userId
                 ? Boolean(voiceCameraEnabledByUserIdInCurrentRoom[member.userId])
                 : false;
               const isVoiceActive = micState === "speaking";
@@ -407,12 +409,16 @@ export function RoomsPanel({
                     <i className={`bi ${mediaStatusIconClass} ${mediaStatusClass}`} />
                   </span>
                 ) : null}
-                <span className="channel-member-status-icon-anchor" data-tooltip={isCurrentUser ? selfMicTooltip : micTooltip}>
-                  <i className={`bi ${micIconClass} channel-member-mic-icon ${micIconStateClass}`} />
-                </span>
-                <span className="channel-member-status-icon-anchor" data-tooltip={isCurrentUser ? selfAudioTooltip : audioTooltip}>
-                  <i className={`bi ${audioIconClass} channel-member-audio-icon`} />
-                </span>
+                {roomSupportsRtc ? (
+                  <span className="channel-member-status-icon-anchor" data-tooltip={isCurrentUser ? selfMicTooltip : micTooltip}>
+                    <i className={`bi ${micIconClass} channel-member-mic-icon ${micIconStateClass}`} />
+                  </span>
+                ) : null}
+                {roomSupportsRtc ? (
+                  <span className="channel-member-status-icon-anchor" data-tooltip={isCurrentUser ? selfAudioTooltip : audioTooltip}>
+                    <i className={`bi ${audioIconClass} channel-member-audio-icon`} />
+                  </span>
+                ) : null}
                 {isCameraEnabled ? (
                   <span className="channel-member-status-icon-anchor" data-tooltip={isCurrentUser ? selfCameraTooltip : cameraTooltip}>
                     <i className="bi bi-camera-video-fill channel-member-camera-icon" />

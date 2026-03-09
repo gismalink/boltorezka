@@ -1793,10 +1793,7 @@ export function App() {
         });
       }}
       onToggleCamera={() => {
-        if (!allowVideoStreaming) {
-          return;
-        }
-        if (!cameraEnabled) {
+        if (allowVideoStreaming && !cameraEnabled) {
           requestVideoAccess();
         }
         setCameraEnabled((value) => !value);
@@ -1894,10 +1891,7 @@ export function App() {
         });
       }}
       onToggleCamera={() => {
-        if (!allowVideoStreaming) {
-          return;
-        }
-        if (!cameraEnabled) {
+        if (allowVideoStreaming && !cameraEnabled) {
           requestVideoAccess();
         }
         setCameraEnabled((value) => !value);
