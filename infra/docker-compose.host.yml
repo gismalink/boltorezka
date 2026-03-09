@@ -159,12 +159,10 @@ services:
           use_external_ip: true
         redis:
           address: boltorezka-redis-test:6379
-        keys:
-          ${LIVEKIT_TEST_API_KEY:-devkey}: ${LIVEKIT_TEST_API_SECRET:-devsecret}
         logging:
           level: info
         EOF
-        exec livekit-server --config /tmp/livekit.yaml
+        exec livekit-server --config /tmp/livekit.yaml --keys "${LIVEKIT_TEST_API_KEY:-devkey}: ${LIVEKIT_TEST_API_SECRET:-devsecret}"
     ports:
       - "${TEST_LIVEKIT_SIGNAL_PORT:-7880}:7880/tcp"
       - "${TEST_LIVEKIT_TCP_PORT:-7881}:7881/tcp"
