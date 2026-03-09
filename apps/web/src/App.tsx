@@ -1718,7 +1718,8 @@ export function App() {
     currentRoomSupportsRtc,
     roomVoiceTargetsCount: currentRoomVoiceTargets.length,
     roomVoiceConnected,
-    keepConnectedWithoutTargets: allowVideoStreaming && cameraEnabled,
+    // Keep established LiveKit sessions alive across short presence/ws flaps.
+    keepConnectedWithoutTargets: (allowVideoStreaming && cameraEnabled) || roomVoiceConnected,
     connectRoom,
     disconnectRoom
   });
