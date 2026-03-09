@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Purpose: Run test deploy+smoke with LiveKit as default topology candidate while keeping legacy SFU path as rollback-only.
+# Purpose: Run test deploy+smoke with LiveKit as default topology for all test rooms.
 set -euo pipefail
 
 if [[ -z "${TEST_REF:-}" ]]; then
@@ -9,14 +9,14 @@ fi
 
 LIVEKIT_ROOM_SLUG="${SMOKE_LIVEKIT_ROOM_SLUG:-test-room}"
 
-export TEST_RTC_MEDIA_TOPOLOGY_DEFAULT="${TEST_RTC_MEDIA_TOPOLOGY_DEFAULT:-p2p}"
+export TEST_RTC_MEDIA_TOPOLOGY_DEFAULT="${TEST_RTC_MEDIA_TOPOLOGY_DEFAULT:-livekit}"
 export TEST_RTC_MEDIA_TOPOLOGY_SFU_ROOMS="${TEST_RTC_MEDIA_TOPOLOGY_SFU_ROOMS:-}"
 export TEST_RTC_MEDIA_TOPOLOGY_SFU_USERS="${TEST_RTC_MEDIA_TOPOLOGY_SFU_USERS:-}"
-export TEST_RTC_MEDIA_TOPOLOGY_LIVEKIT_ROOMS="${TEST_RTC_MEDIA_TOPOLOGY_LIVEKIT_ROOMS:-$LIVEKIT_ROOM_SLUG}"
+export TEST_RTC_MEDIA_TOPOLOGY_LIVEKIT_ROOMS="${TEST_RTC_MEDIA_TOPOLOGY_LIVEKIT_ROOMS:-}"
 export TEST_RTC_MEDIA_TOPOLOGY_LIVEKIT_USERS="${TEST_RTC_MEDIA_TOPOLOGY_LIVEKIT_USERS:-}"
 
-# LiveKit path validates control-plane gates and dedicated LiveKit media browser E2E.
-export SMOKE_EXPECT_MEDIA_TOPOLOGY="${SMOKE_EXPECT_MEDIA_TOPOLOGY:-p2p}"
+# LiveKit path validates baseline and dedicated room gates with LiveKit topology.
+export SMOKE_EXPECT_MEDIA_TOPOLOGY="${SMOKE_EXPECT_MEDIA_TOPOLOGY:-livekit}"
 export SMOKE_SFU_ROOM_SLUG="${SMOKE_SFU_ROOM_SLUG:-$LIVEKIT_ROOM_SLUG}"
 export SMOKE_SFU_EXPECT_MEDIA_TOPOLOGY="${SMOKE_SFU_EXPECT_MEDIA_TOPOLOGY:-livekit}"
 export SMOKE_LIVEKIT_ROOM_SLUG="${SMOKE_LIVEKIT_ROOM_SLUG:-$LIVEKIT_ROOM_SLUG}"
