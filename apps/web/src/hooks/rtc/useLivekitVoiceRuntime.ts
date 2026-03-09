@@ -64,6 +64,14 @@ type LivekitRuntimeApi = {
 
 const EMPTY_HANDLER = () => {};
 
+const isExpectedDisconnectError = (error: unknown): boolean => {
+  const text = error instanceof Error ? error.message : String(error || "");
+  const normalized = text.toLowerCase();
+  return normalized.includes("client initiated disconnect")
+    || normalized.includes("abort handler called")
+    || normalized.includes("aborterror");
+};
+
 function buildAudioMutedSet(room: Room): Set<string> {
   const muted = new Set<string>();
   room.remoteParticipants.forEach((participant, participantId) => {
@@ -110,6 +118,8 @@ export function useLivekitVoiceRuntime({
   const localTracksRef = useRef<Map<Track.Source, LocalTrack>>(new Map());
   const remoteAudioElementsRef = useRef<Map<string, HTMLAudioElement>>(new Map());
   const prevRoomSlugRef = useRef(roomSlug);
+  const connectInFlightRef = useRef<Promise<void> | null>(null);
+  const disconnectRequestedRef = useRef(false);
 
   const applyAudioOutputSettings = useCallback(() => {
     remoteAudioElementsRef.current.forEach((element) => {
@@ -296,28 +306,43 @@ export function useLivekitVoiceRuntime({
       return;
     }
 
-    if (roomRef.current && roomRef.current.state === "connected") {
+    if (connectInFlightRef.current) {
+      return connectInFlightRef.current;
+    }
+
+    if (roomRef.current && (
+      roomRef.current.state === "connected"
+      || roomRef.current.state === "connecting"
+      || roomRef.current.state === "reconnecting"
+    )) {
       return;
     }
 
+    disconnectRequestedRef.current = false;
+
+    const peerIds = roomVoiceTargets
+      .map((member) => String(member.userId || "").trim())
+      .filter((userId) => userId.length > 0);
+    setConnectingPeerUserIds(peerIds);
     setLocalVoiceMediaStatusSummary("connecting");
     setCallStatus("connecting");
     pushCallLog(`livekit connect start for ${roomSlug}`);
 
-    try {
-      const livekit = await api.livekitToken(token, {
-        roomSlug,
-        canPublish: true,
-        canSubscribe: true,
-        canPublishData: true
-      });
+    const connectPromise = (async () => {
+      try {
+        const livekit = await api.livekitToken(token, {
+          roomSlug,
+          canPublish: true,
+          canSubscribe: true,
+          canPublishData: true
+        });
 
-      const room = new Room({
-        adaptiveStream: true,
-        dynacast: true
-      });
+        const room = new Room({
+          adaptiveStream: true,
+          dynacast: true
+        });
 
-      roomRef.current = room;
+        roomRef.current = room;
 
       room.on(RoomEvent.Connected, () => {
         setRoomVoiceConnected(true);
@@ -409,50 +434,60 @@ export function useLivekitVoiceRuntime({
         setRemoteAudioMutedPeerUserIds((prev) => prev.filter((id) => id !== participantId));
       });
 
-      await room.connect(livekit.url, livekit.token);
+        await room.connect(livekit.url, livekit.token);
 
-      const tracks = await createLocalTracks({
-        audio: {
-          ...(selectedInputId && selectedInputId !== "default"
-            ? { deviceId: { exact: selectedInputId } }
-            : {})
-        },
-        video: allowVideoStreaming && videoStreamingEnabled
-          ? {
-            ...(selectedVideoInputId && selectedVideoInputId !== "default"
-              ? { deviceId: { exact: selectedVideoInputId } }
+        const tracks = await createLocalTracks({
+          audio: {
+            ...(selectedInputId && selectedInputId !== "default"
+              ? { deviceId: { exact: selectedInputId } }
               : {})
-          }
-          : false
-      });
+          },
+          video: allowVideoStreaming && videoStreamingEnabled
+            ? {
+              ...(selectedVideoInputId && selectedVideoInputId !== "default"
+                ? { deviceId: { exact: selectedVideoInputId } }
+                : {})
+            }
+            : false
+        });
 
-      for (const track of tracks) {
-        await room.localParticipant.publishTrack(track);
-        localTracksRef.current.set(track.source, track);
-      }
-
-      const localAudioTrack = localTracksRef.current.get(Track.Source.Microphone);
-      if (localAudioTrack) {
-        if (micMuted) {
-          await localAudioTrack.mute();
-        } else {
-          await localAudioTrack.unmute();
+        for (const track of tracks) {
+          await room.localParticipant.publishTrack(track);
+          localTracksRef.current.set(track.source, track);
         }
+
+        const localAudioTrack = localTracksRef.current.get(Track.Source.Microphone);
+        if (localAudioTrack) {
+          if (micMuted) {
+            await localAudioTrack.mute();
+          } else {
+            await localAudioTrack.unmute();
+          }
+        }
+
+        const localVideoTrack = localTracksRef.current.get(Track.Source.Camera);
+        setLocalVideoStream(localVideoTrack ? new MediaStream([localVideoTrack.mediaStreamTrack]) : null);
+
+        refreshRemoteStates(room);
+        applyAudioOutputSettings();
+        pushCallLog(`livekit connected to ${livekit.roomId}`);
+      } catch (error) {
+        cleanupRoom();
+        setLocalVoiceMediaStatusSummary("disconnected");
+        setCallStatus("disconnected");
+
+        if (!disconnectRequestedRef.current && !isExpectedDisconnectError(error)) {
+          pushToast(`LiveKit connect failed: ${error instanceof Error ? error.message : "unknown error"}`);
+        }
+        pushCallLog(`livekit connect failed for ${roomSlug}`);
+      } finally {
+        connectInFlightRef.current = null;
+        setConnectingPeerUserIds([]);
       }
+    })();
 
-      const localVideoTrack = localTracksRef.current.get(Track.Source.Camera);
-      setLocalVideoStream(localVideoTrack ? new MediaStream([localVideoTrack.mediaStreamTrack]) : null);
-
-      refreshRemoteStates(room);
-      applyAudioOutputSettings();
-      pushCallLog(`livekit connected to ${livekit.roomId}`);
-    } catch (error) {
-      cleanupRoom();
-      setLocalVoiceMediaStatusSummary("disconnected");
-      setCallStatus("disconnected");
-      pushToast(`LiveKit connect failed: ${error instanceof Error ? error.message : "unknown error"}`);
-      pushCallLog(`livekit connect failed for ${roomSlug}`);
-    }
+    connectInFlightRef.current = connectPromise;
+    return connectPromise;
   }, [
     allowVideoStreaming,
     applyAudioOutputSettings,
@@ -463,6 +498,7 @@ export function useLivekitVoiceRuntime({
     pushCallLog,
     pushToast,
     refreshRemoteStates,
+    roomVoiceTargets,
     roomSlug,
     selectedInputId,
     selectedVideoInputId,
@@ -481,6 +517,7 @@ export function useLivekitVoiceRuntime({
     if (!hasActiveSession) {
       return;
     }
+    disconnectRequestedRef.current = true;
     cleanupRoom();
   }, [cleanupRoom, roomVoiceConnected]);
 
