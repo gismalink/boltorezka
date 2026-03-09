@@ -756,6 +756,13 @@ export function App() {
 
     // Keep camera status strictly scoped to current room participants and active RTC peers.
     activeTargetIds.forEach((userId) => {
+      const hasRemoteStream = Object.prototype.hasOwnProperty.call(remoteVideoStreamsByUserId, userId);
+      if (isLivekitRoomTopology) {
+        // LiveKit rooms derive camera visibility from subscribed video tracks, not legacy call.video_state.
+        map[userId] = hasRemoteStream;
+        return;
+      }
+
       const cameraEnabled = voiceCameraEnabledByUserIdInCurrentRoom[userId] === true;
       if (!cameraEnabled) {
         map[userId] = false;
@@ -764,7 +771,6 @@ export function App() {
 
       const rtcState = voiceRtcStateByUserIdInCurrentRoom[userId];
       const hasRtcPeer = rtcState === "connecting" || rtcState === "connected";
-      const hasRemoteStream = Object.prototype.hasOwnProperty.call(remoteVideoStreamsByUserId, userId);
       map[userId] = hasRtcPeer || hasRemoteStream;
     });
 
@@ -778,6 +784,7 @@ export function App() {
     voiceCameraEnabledByUserIdInCurrentRoom,
     voiceRtcStateByUserIdInCurrentRoom,
     remoteVideoStreamsByUserId,
+    isLivekitRoomTopology,
     currentRoomVoiceTargets,
     user?.id,
     roomVoiceConnected,

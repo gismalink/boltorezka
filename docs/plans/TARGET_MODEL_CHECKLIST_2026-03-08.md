@@ -47,6 +47,7 @@ Validation note (2026-03-09): control-plane adapter для `mediaTopology=liveki
 Validation note (2026-03-09): введен rolling SLO monitor (`npm run slo:check`) с окнами `5m/30m`, артефактами `.deploy/slo/last-slo-report.md` + `.deploy/slo/last-slo-eval.env` и scheduler job `slo-rolling-gate`; runbook: `docs/operations/SLO_ROLLING_ALERTS.md`.
 Validation note (2026-03-09): launchd job `com.boltorezka.scheduler.slo-rolling-gate` установлен в `test` на сервере (interval `300s`, state `running`), первый стабильный run `20260309T110006Z` завершен `success`; `SLO_ROLLING_STATUS=pass`, `SLO_ROLLING_5M_ACK=55`, `SLO_ROLLING_5M_NACK=0`.
 Validation note (2026-03-09): frontend переключен на native `LiveKit` runtime для комнат с `mediaTopology=livekit` (без legacy `call.*` media path), test rollout на SHA `601f3e3` выполнен командой `TEST_REF=origin/feature/scheduler-interface-portable npm run deploy:test:livekit`; postdeploy summary: `SMOKE_STATUS=pass`, `SMOKE_LIVEKIT_GATE_STATUS=pass`, `SMOKE_LIVEKIT_MEDIA_STATUS=pass`, `expectedMediaTopology=livekit`, `callSignalGuarded=true` (`LiveKitSignalingDisabled`).
+Validation note (2026-03-09): зафиксирован release-candidate checkpoint tag `release-candidate-livekit-test-2026-03-09` на SHA `63b4718` после ручного подтверждения стабильности `p2p` и `livekit` комнат (до отдельного фикса camera transmit в livekit).
 
 ## 0) Базовые инварианты (обязательно)
 
