@@ -143,8 +143,8 @@ services:
     restart: unless-stopped
     profiles: ["livekit-test"]
     environment:
-      LIVEKIT_TEST_API_KEY: ${LIVEKIT_TEST_API_KEY:-devkey}
-      LIVEKIT_TEST_API_SECRET: ${LIVEKIT_TEST_API_SECRET:-devsecret}
+      LIVEKIT_TEST_API_KEY: ${LIVEKIT_TEST_API_KEY:-}
+      LIVEKIT_TEST_API_SECRET: ${LIVEKIT_TEST_API_SECRET:-}
       LIVEKIT_TEST_SIGNAL_PORT: ${TEST_LIVEKIT_SIGNAL_PORT:-7880}
       LIVEKIT_TEST_TCP_PORT: ${TEST_LIVEKIT_TCP_PORT:-7881}
       LIVEKIT_TEST_RTC_PORT_START: ${TEST_LIVEKIT_RTC_PORT_START:-34000}
@@ -154,6 +154,10 @@ services:
       - -ec
     command:
       - |
+        if [ -z "${LIVEKIT_TEST_API_KEY:-}" ] || [ -z "${LIVEKIT_TEST_API_SECRET:-}" ]; then
+          echo "[livekit-test] LIVEKIT_TEST_API_KEY and LIVEKIT_TEST_API_SECRET must be set" >&2
+          exit 1
+        fi
         cat > /tmp/livekit.yaml <<EOF
         port: ${TEST_LIVEKIT_SIGNAL_PORT:-7880}
         bind_addresses:
@@ -168,7 +172,7 @@ services:
         logging:
           level: info
         EOF
-        exec /livekit-server --config /tmp/livekit.yaml --keys "${LIVEKIT_TEST_API_KEY:-devkey}: ${LIVEKIT_TEST_API_SECRET:-devsecret}"
+        exec /livekit-server --config /tmp/livekit.yaml --keys "${LIVEKIT_TEST_API_KEY}: ${LIVEKIT_TEST_API_SECRET}"
     ports:
       - "${TEST_LIVEKIT_SIGNAL_PORT:-7880}:7880/tcp"
       - "${TEST_LIVEKIT_TCP_PORT:-7881}:7881/tcp"
