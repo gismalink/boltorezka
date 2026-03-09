@@ -106,7 +106,7 @@ docker compose -f infra/docker-compose.host.yml --env-file infra/.env.host ps
 Current ingress policy is strict and clean:
 - only `/rtc*` is supported for LiveKit signaling,
 - deprecated `/livekit/rtc*` paths return explicit `404`,
-- `/rtc/v1*` compatibility rewrites are not used.
+- `/rtc/v1*` is bridged to `/rtc*` to suppress client fallback 404 noise with current LiveKit server profile.
 
 Required alignment:
 - API `livekit-token` response must return base signal URL (without `/livekit` suffix),
@@ -115,8 +115,9 @@ Required alignment:
 
 Operational verification:
 1. `https://<domain>/rtc/validate` returns `401`.
-2. `https://<domain>/livekit/rtc/validate` returns `404`.
-3. Postdeploy smoke remains green (`SMOKE_STATUS=pass`, `SMOKE_LIVEKIT_GATE_STATUS=pass`, `SMOKE_LIVEKIT_MEDIA_STATUS=pass`).
+2. `https://<domain>/rtc/v1/validate` returns `401`.
+3. `https://<domain>/livekit/rtc/validate` returns `404`.
+4. Postdeploy smoke remains green (`SMOKE_STATUS=pass`, `SMOKE_LIVEKIT_GATE_STATUS=pass`, `SMOKE_LIVEKIT_MEDIA_STATUS=pass`).
 
 ## 6) Exit checklist: remove compatibility bridge
 
