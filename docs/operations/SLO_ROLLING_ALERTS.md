@@ -28,6 +28,11 @@ Important:
 - `SLO_BEARER_TOKEN` must be admin/super_admin (required by `/v1/telemetry/summary`).
 - Do not commit token values.
 
+Scheduler-friendly fallback (no secret in git):
+
+- `SLO_BEARER_TOKEN_FILE=.deploy/smoke-auth-livekit-gate.env`
+- `SLO_BEARER_TOKEN_FILE_KEY=SMOKE_TEST_BEARER_TOKEN`
+
 ## 3) Default thresholds
 
 - `SLO_MIN_ACK_5M=20`
@@ -44,6 +49,7 @@ In strict mode (`SLO_STRICT=1`), alert state exits non-zero.
 Job file:
 
 - `scripts/ops/scheduler/jobs/slo-rolling-gate.env`
+- by default this job uses `SLO_BEARER_TOKEN_FILE` fallback instead of hardcoded token.
 
 Run manually:
 
