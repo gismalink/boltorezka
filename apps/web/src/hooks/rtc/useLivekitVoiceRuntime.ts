@@ -64,6 +64,28 @@ type LivekitRuntimeApi = {
 
 const EMPTY_HANDLER = () => {};
 
+const normalizeLivekitSignalUrl = (rawUrl: string): string => {
+  const value = String(rawUrl || "").trim();
+  if (!value) {
+    return value;
+  }
+
+  try {
+    const parsed = new URL(value);
+    const isHttpsPage = typeof window !== "undefined" && window.location.protocol === "https:";
+    if (isHttpsPage && parsed.protocol === "ws:") {
+      parsed.protocol = "wss:";
+      if (parsed.port === "7880") {
+        parsed.port = "7881";
+      }
+      return parsed.toString();
+    }
+    return parsed.toString();
+  } catch {
+    return value;
+  }
+};
+
 const isExpectedDisconnectError = (error: unknown): boolean => {
   const text = error instanceof Error ? error.message : String(error || "");
   const normalized = text.toLowerCase();
@@ -434,7 +456,8 @@ export function useLivekitVoiceRuntime({
         setRemoteAudioMutedPeerUserIds((prev) => prev.filter((id) => id !== participantId));
       });
 
-        await room.connect(livekit.url, livekit.token);
+        const signalUrl = normalizeLivekitSignalUrl(livekit.url);
+        await room.connect(signalUrl, livekit.token);
 
         const tracks = await createLocalTracks({
           audio: {
