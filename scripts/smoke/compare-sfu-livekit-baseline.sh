@@ -144,7 +144,7 @@ LIVEKIT_GUARD_STATUS="fail"
 LIVEKIT_GUARD_CODE="n/a"
 if [[ -f "$LIVEKIT_GUARD_JSON" ]]; then
   LIVEKIT_GUARD_STATUS="$(node -e 'const fs=require("fs");try{const j=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));process.stdout.write(j.ok===true&&j.callSignalGuarded===true?"pass":"fail")}catch{process.stdout.write("fail")}' "$LIVEKIT_GUARD_JSON")"
-  LIVEKIT_GUARD_CODE="$(node -e 'const fs=require("fs");try{const j=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));process.stdout.write(String(j.nackCode||"n/a"))}catch{process.stdout.write("n/a")}' "$LIVEKIT_GUARD_JSON")"
+  LIVEKIT_GUARD_CODE="$(node -e 'const fs=require("fs");try{const j=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));process.stdout.write(String(j.callSignalGuardCode||"n/a"))}catch{process.stdout.write("n/a")}' "$LIVEKIT_GUARD_JSON")"
 fi
 
 cat >"$REPORT_PATH" <<EOF
@@ -162,9 +162,9 @@ cat >"$REPORT_PATH" <<EOF
 
 ## Raw artifacts
 
-- sfu-current env: `$SFU_ENV_PATH`
-- livekit-topology env: `$LIVEKIT_ENV_PATH`
-- livekit guard json: `$LIVEKIT_GUARD_JSON`
+- sfu-current env: \`$SFU_ENV_PATH\`
+- livekit-topology env: \`$LIVEKIT_ENV_PATH\`
+- livekit guard json: \`$LIVEKIT_GUARD_JSON\`
 EOF
 
 echo "[compare:sfu-livekit] report: $REPORT_PATH"

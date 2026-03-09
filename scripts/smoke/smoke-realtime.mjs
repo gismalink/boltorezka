@@ -1143,6 +1143,7 @@ async function runLiveRoomBehaviorScenario({ roomSlug, timeoutMs }) {
   let callMissingTargetRejected = false;
   let callSignalIdempotencyOk = false;
   let callSignalGuarded = false;
+  let callSignalGuardCode = null;
   let callNegotiationReconnectOk = false;
   let callNegotiationReconnectSkipped = false;
   let reconnectOk = false;
@@ -1241,6 +1242,7 @@ async function runLiveRoomBehaviorScenario({ roomSlug, timeoutMs }) {
       }
 
       callSignalGuarded = true;
+      callSignalGuardCode = String(guardNack?.payload?.code || "");
       callMissingTargetRejected = true;
       callSignalIdempotencyOk = true;
       callNegotiationReconnectSkipped = true;
@@ -1708,6 +1710,7 @@ async function runLiveRoomBehaviorScenario({ roomSlug, timeoutMs }) {
         liveRoomStats,
         callSignalRelayed,
         callSignalGuarded,
+        callSignalGuardCode,
         callMissingTargetRejected,
         callSignalIdempotencyOk,
         callNegotiationReconnectOk,
