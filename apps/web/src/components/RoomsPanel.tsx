@@ -402,7 +402,7 @@ export function RoomsPanel({
               <span className="channel-member-avatar">{(member.userName || "U").charAt(0).toUpperCase()}</span>
               <span className="channel-member-name">{member.userName}</span>
               <span className="channel-member-icons" aria-hidden="true">
-                {!isCurrentUser ? (
+                {roomHasVoiceState && !isCurrentUser ? (
                   <span className="channel-member-status-icon-anchor" data-tooltip={connectionTooltip}>
                     <i className={`bi ${mediaStatusIconClass} ${mediaStatusClass}`} />
                   </span>
