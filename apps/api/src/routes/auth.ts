@@ -391,6 +391,7 @@ export async function authRoutes(fastify: FastifyInstance) {
       const identity = userId;
       const participantName = String(currentUser?.name || currentUser?.email || identity).trim();
       const issuedAt = new Date().toISOString();
+      const traceId = randomUUID();
 
       const accessToken = new AccessToken(config.livekitApiKey, config.livekitApiSecret, {
         identity,
@@ -416,9 +417,12 @@ export async function authRoutes(fastify: FastifyInstance) {
         token,
         url: config.livekitUrl,
         room: room.slug,
+        roomId: room.id,
         identity,
         expiresInSec: config.livekitTokenTtlSec,
-        issuedAt
+        issuedAt,
+        mediaTopology: "livekit",
+        traceId
       };
 
       fastify.log.info(
@@ -426,6 +430,7 @@ export async function authRoutes(fastify: FastifyInstance) {
           userId: identity,
           roomId: room.id,
           roomSlug: room.slug,
+          traceId,
           expiresInSec: config.livekitTokenTtlSec,
           canPublish: parsed.data.canPublish,
           canSubscribe: parsed.data.canSubscribe,

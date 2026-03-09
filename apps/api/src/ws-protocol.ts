@@ -11,6 +11,7 @@ import type {
   MediaTopology,
   CallInitialStatePayload,
   CallInitialStateParticipantPayload,
+  RealtimeCorrelationPayload,
   RoomJoinedPayload,
   RoomLeftPayload,
   RoomPresencePayload,
@@ -272,11 +273,20 @@ export function buildRoomJoinedEnvelope(
   roomId: string,
   roomSlug: string,
   roomTitle: string,
-  mediaTopology: MediaTopology
+  mediaTopology: MediaTopology,
+  correlation: RealtimeCorrelationPayload | null = null,
+  reconnect = false
 ): { type: "room.joined"; payload: RoomJoinedPayload } {
   return {
     type: "room.joined",
-    payload: { roomId, roomSlug, roomTitle, mediaTopology }
+    payload: {
+      roomId,
+      roomSlug,
+      roomTitle,
+      mediaTopology,
+      ...(correlation ? { correlation } : {}),
+      ...(reconnect ? { reconnect: true } : {})
+    }
   };
 }
 
@@ -285,10 +295,18 @@ export function buildRoomJoinedEnvelope(
  * @param {string} roomSlug
  * @returns {{ type: "room.left", payload: RoomLeftPayload }}
  */
-export function buildRoomLeftEnvelope(roomId: string, roomSlug: string): { type: "room.left"; payload: RoomLeftPayload } {
+export function buildRoomLeftEnvelope(
+  roomId: string,
+  roomSlug: string,
+  correlation: RealtimeCorrelationPayload | null = null
+): { type: "room.left"; payload: RoomLeftPayload } {
   return {
     type: "room.left",
-    payload: { roomId, roomSlug }
+    payload: {
+      roomId,
+      roomSlug,
+      ...(correlation ? { correlation } : {})
+    }
   };
 }
 
@@ -302,11 +320,18 @@ export function buildRoomPresenceEnvelope(
   roomId: string,
   roomSlug: string,
   users: PresenceUser[],
-  mediaTopology: MediaTopology
+  mediaTopology: MediaTopology,
+  correlation: RealtimeCorrelationPayload | null = null
 ): { type: "room.presence"; payload: RoomPresencePayload } {
   return {
     type: "room.presence",
-    payload: { roomId, roomSlug, users, mediaTopology }
+    payload: {
+      roomId,
+      roomSlug,
+      users,
+      mediaTopology,
+      ...(correlation ? { correlation } : {})
+    }
   };
 }
 
@@ -326,10 +351,22 @@ export function buildRoomsPresenceEnvelope(
  * @param {number} presenceCount
  * @returns {{ type: "presence.joined", payload: PresenceJoinedPayload }}
  */
-export function buildPresenceJoinedEnvelope(userId: string, userName: string, roomSlug: string, presenceCount: number): { type: "presence.joined"; payload: PresenceJoinedPayload } {
+export function buildPresenceJoinedEnvelope(
+  userId: string,
+  userName: string,
+  roomSlug: string,
+  presenceCount: number,
+  correlation: RealtimeCorrelationPayload | null = null
+): { type: "presence.joined"; payload: PresenceJoinedPayload } {
   return {
     type: "presence.joined",
-    payload: { userId, userName, roomSlug, presenceCount }
+    payload: {
+      userId,
+      userName,
+      roomSlug,
+      presenceCount,
+      ...(correlation ? { correlation } : {})
+    }
   };
 }
 
@@ -340,10 +377,22 @@ export function buildPresenceJoinedEnvelope(userId: string, userName: string, ro
  * @param {number} presenceCount
  * @returns {{ type: "presence.left", payload: PresenceLeftPayload }}
  */
-export function buildPresenceLeftEnvelope(userId: string, userName: string, roomSlug: string | null, presenceCount: number): { type: "presence.left"; payload: PresenceLeftPayload } {
+export function buildPresenceLeftEnvelope(
+  userId: string,
+  userName: string,
+  roomSlug: string | null,
+  presenceCount: number,
+  correlation: RealtimeCorrelationPayload | null = null
+): { type: "presence.left"; payload: PresenceLeftPayload } {
   return {
     type: "presence.left",
-    payload: { userId, userName, roomSlug, presenceCount }
+    payload: {
+      userId,
+      userName,
+      roomSlug,
+      presenceCount,
+      ...(correlation ? { correlation } : {})
+    }
   };
 }
 

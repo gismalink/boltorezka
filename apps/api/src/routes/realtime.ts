@@ -1101,6 +1101,7 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
                 }
 
                 const joinResult = await canJoinRoom(roomSlug, state.userId);
+                const traceId = buildCallTraceId(eventType, requestId, state.sessionId);
 
                 if (!joinResult.ok) {
                   sendJoinDeniedNack(connection, requestId, eventType, joinResult.reason);
@@ -1113,7 +1114,17 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
                   clearCanonicalMediaState(state.roomId, state.userId);
                   broadcastRoom(
                     state.roomId,
-                    buildPresenceLeftEnvelope(state.userId, state.userName, state.roomSlug, 0),
+                    buildPresenceLeftEnvelope(
+                      state.userId,
+                      state.userName,
+                      state.roomSlug,
+                      0,
+                      {
+                        requestId,
+                        sessionId: state.sessionId,
+                        traceId
+                      }
+                    ),
                     connection
                   );
                   broadcastAllRoomsPresence();
@@ -1123,12 +1134,14 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
                   evictUserFromOtherNonTextChannels(state.userId, connection);
                 }
 
+                const roomMediaTopology = resolveRoomMediaTopology(joinResult.room.slug, state.userId);
+                const reconnected = consumeRecentReconnectMark(joinResult.room.id, state.userId);
                 state.roomId = joinResult.room.id;
                 state.roomSlug = joinResult.room.slug;
                 state.roomKind = joinResult.room.kind;
                 attachRoomSocket(joinResult.room.id, connection);
 
-                if (consumeRecentReconnectMark(joinResult.room.id, state.userId)) {
+                if (reconnected) {
                   void incrementMetric("call_reconnect_joined");
                 }
 
@@ -1138,7 +1151,13 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
                     joinResult.room.id,
                     joinResult.room.slug,
                     joinResult.room.title,
-                    resolveRoomMediaTopology(joinResult.room.slug, state.userId)
+                    roomMediaTopology,
+                    {
+                      requestId,
+                      sessionId: state.sessionId,
+                      traceId
+                    },
+                    reconnected
                   )
                 );
 
@@ -1148,7 +1167,11 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
                   eventType,
                   {
                     roomId: joinResult.room.id,
-                    roomSlug: joinResult.room.slug
+                    roomSlug: joinResult.room.slug,
+                    mediaTopology: roomMediaTopology,
+                    sessionId: state.sessionId,
+                    traceId,
+                    reconnect: reconnected
                   }
                 );
 
@@ -1158,7 +1181,12 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
                     joinResult.room.id,
                     joinResult.room.slug,
                     getRoomPresence(joinResult.room.id),
-                    resolveRoomMediaTopology(joinResult.room.slug, state.userId)
+                    roomMediaTopology,
+                    {
+                      requestId,
+                      sessionId: state.sessionId,
+                      traceId
+                    }
                   )
                 );
 
@@ -1185,7 +1213,12 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
                     state.userId,
                     state.userName,
                     joinResult.room.slug,
-                    getRoomPresence(joinResult.room.id).length
+                    getRoomPresence(joinResult.room.id).length,
+                    {
+                      requestId,
+                      sessionId: state.sessionId,
+                      traceId
+                    }
                   ),
                   connection
                 );
@@ -1200,6 +1233,7 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
                   sendNoActiveRoomNack(connection, requestId, eventType);
                   return;
                 }
+                const traceId = buildCallTraceId(eventType, requestId, state.sessionId);
 
                 const previousRoomId = state.roomId;
                 const previousRoomSlug = state.roomSlug;
@@ -1211,10 +1245,19 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
                 state.roomSlug = null;
                 state.roomKind = null;
 
-                sendJson(connection, buildRoomLeftEnvelope(previousRoomId, previousRoomSlug));
+                sendJson(
+                  connection,
+                  buildRoomLeftEnvelope(previousRoomId, previousRoomSlug, {
+                    requestId,
+                    sessionId: state.sessionId,
+                    traceId
+                  })
+                );
                 sendAckWithMetrics(connection, requestId, eventType, {
                   roomId: previousRoomId,
-                  roomSlug: previousRoomSlug
+                  roomSlug: previousRoomSlug,
+                  sessionId: state.sessionId,
+                  traceId
                 });
 
                 broadcastRoom(
@@ -1223,7 +1266,12 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
                     state.userId,
                     state.userName,
                     previousRoomSlug,
-                    getRoomPresence(previousRoomId).length
+                    getRoomPresence(previousRoomId).length,
+                    {
+                      requestId,
+                      sessionId: state.sessionId,
+                      traceId
+                    }
                   ),
                   connection
                 );

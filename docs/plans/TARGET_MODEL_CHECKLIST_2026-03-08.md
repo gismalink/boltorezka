@@ -43,6 +43,7 @@ Validation note (2026-03-09): control-plane livekit routing + guard validated в
 Validation note (2026-03-09): baseline compare `sfu-current vs livekit-topology` выполнен в `test` на SHA `8b996e8` командой `TEST_REF=origin/feature/scheduler-interface-portable npm run smoke:compare:sfu-livekit`; артефакт `~/srv/boltorezka/.deploy/compare-sfu-livekit-20260309T085858Z.md` (оба профиля `pass`, livekit guard `pass`, guard code `LiveKitSignalingDisabled`).
 Validation note (2026-03-09): добавлен `livekit` control smoke-gate в postdeploy/compare (`SMOKE_LIVEKIT_ROOM_SLUG`): token-flow (`join/reconnect/late-join`) + `mediaTopology=livekit` guard (`LiveKitSignalingDisabled`) validated на SHA `acd9232`; артефакт `~/srv/boltorezka/.deploy/compare-sfu-livekit-20260309T091552Z.md` (`livekit_gate=pass`).
 Validation note (2026-03-09): dedicated `LiveKit` media smoke-gate (browser publish/subscribe/reconnect/late-join + one-way counters) внедрен и validated в `test` на SHA `fabf8c3` через `TEST_REF=origin/feature/scheduler-interface-portable npm run deploy:test:livekit`; summary `~/srv/boltorezka/.deploy/last-smoke-summary.env` содержит `SMOKE_STATUS=pass`, `SMOKE_LIVEKIT_GATE_STATUS=pass`, `SMOKE_LIVEKIT_MEDIA_STATUS=pass`.
+Validation note (2026-03-09): control-plane adapter для `mediaTopology=livekit` дополнен correlation IDs для `room.join/leave/reconnect` (WS envelopes + ack meta) и token handoff (`POST /v1/auth/livekit-token` возвращает `roomId`, `mediaTopology=livekit`, `traceId`) на SHA `ddd4a58+`.
 
 ## 0) Базовые инварианты (обязательно)
 
@@ -155,7 +156,7 @@ Validation note (2026-03-09): dedicated `LiveKit` media smoke-gate (browser publ
 - [x] Поднят `LiveKit` в `test` контуре (self-hosted) и задокументирован GitOps rollout/rollback runbook.
 - [x] Реализован server-side token minting для `LiveKit` (room-scoped grants, TTL, audit fields) без выдачи секретов в клиент.
 - [x] Legacy custom-SFU path зафиксирован как fallback-only (rollback), активная разработка ведется в `LiveKit` path (`deploy:test:livekit`).
-- [ ] Добавлен transport adapter `mediaTopology=livekit` в control plane (`join/publish/subscribe/leave/reconnect`) с correlation IDs.
+- [x] Добавлен transport adapter `mediaTopology=livekit` в control plane (`join/publish/subscribe/leave/reconnect`) с correlation IDs.
 - [x] Добавлены smoke-gate'ы для `LiveKit` path (`join`, publish/subscribe, reconnect, late-join, one-way incidents).
 - [x] Проведен baseline compare `sfu-current vs livekit` в `test` и зафиксирован decision package по default routing.
 
