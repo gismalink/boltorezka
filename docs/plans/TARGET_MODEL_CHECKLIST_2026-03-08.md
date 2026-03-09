@@ -49,6 +49,7 @@ Validation note (2026-03-09): launchd job `com.boltorezka.scheduler.slo-rolling-
 Validation note (2026-03-09): frontend переключен на native `LiveKit` runtime для комнат с `mediaTopology=livekit` (без legacy `call.*` media path), test rollout на SHA `601f3e3` выполнен командой `TEST_REF=origin/feature/scheduler-interface-portable npm run deploy:test:livekit`; postdeploy summary: `SMOKE_STATUS=pass`, `SMOKE_LIVEKIT_GATE_STATUS=pass`, `SMOKE_LIVEKIT_MEDIA_STATUS=pass`, `expectedMediaTopology=livekit`, `callSignalGuarded=true` (`LiveKitSignalingDisabled`).
 Validation note (2026-03-09): зафиксирован release-candidate checkpoint tag `release-candidate-livekit-test-2026-03-09` на SHA `63b4718` после ручного подтверждения стабильности `p2p` и `livekit` комнат (до отдельного фикса camera transmit в livekit).
 Validation note (2026-03-09): camera transmit fix для LiveKit overlay path (`adaptiveStream=false`) выкачен в `test` на SHA `694dc18` (`TEST_REF=origin/feature/scheduler-interface-portable npm run deploy:test:livekit` на сервере); postdeploy smoke снова зеленый, включая `smoke:livekit:token-flow` и `smoke:livekit:media` (`oneWayIncidents.audio=0`, `oneWayIncidents.video=0`), после чего получено ручное подтверждение `все работает`.
+Validation note (2026-03-09): rolling SLO status повторно подтвержден на сервере (`~/srv/boltorezka/.deploy/slo/last-slo-eval.env`): `SLO_ROLLING_STATUS=pass`, `SLO_ROLLING_ALERT_COUNT=0`, `SLO_ROLLING_TS=2026-03-09T15:35:44.202Z`.
 
 ## 0) Базовые инварианты (обязательно)
 
@@ -188,7 +189,7 @@ Validation note (2026-03-09): camera transmit fix для LiveKit overlay path (`
 - [x] `docker compose ps` показывает все сервисы `Up`.
 - [x] Логи API/TURN без критичных ошибок за первые 15-30 минут.
 - [ ] Smoke `test`/`prod` проходит полностью.
-- [ ] Мониторинг подтверждает отсутствие регрессий SLO.
+- [x] Мониторинг подтверждает отсутствие регрессий SLO.
 - [x] Заполнен release log и postmortem-note (если были аномалии).
 
 ## 11) Реализация (текущий спринт)
