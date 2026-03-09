@@ -895,47 +895,56 @@ async function runLiveRoomBehaviorScenario({ roomSlug, timeoutMs }) {
 
     const micStateResult = await waitForAckOrNack(events, micStateRequestId, "ack|nack for call.mic_state");
     if (!micStateResult.ok) {
-      throw new Error(`[smoke:realtime] call.mic_state rejected: ${micStateResult.code || "unknown"}`);
-    }
-
-    await waitForEvent(
-      secondEvents,
-      (item) => item?.type === "call.mic_state"
-        && String(item?.payload?.fromUserId || "") === firstUserId
-        && item?.payload?.muted === micPayload.muted
-        && item?.payload?.speaking === micPayload.speaking,
-      "relayed call.mic_state"
-    );
-
-    const videoStateRequestId = `call-video-state-${Date.now()}`;
-    wsSecond.send(JSON.stringify({
-      type: "call.video_state",
-      requestId: videoStateRequestId,
-      payload: {
-        targetUserId: firstUserId,
-        settings: { localVideoEnabled: true }
+      if (micStateResult.code !== "LiveKitSignalingDisabled") {
+        throw new Error(`[smoke:realtime] call.mic_state rejected: ${micStateResult.code || "unknown"}`);
       }
-    }));
 
-    const videoStateResult = await waitForAckOrNack(secondEvents, videoStateRequestId, "ack|nack for call.video_state");
-    if (!videoStateResult.ok) {
-      throw new Error(`[smoke:realtime] call.video_state rejected: ${videoStateResult.code || "unknown"}`);
+      callSignalRelayed = false;
+      callSignalGuarded = true;
+      callSignalGuardCode = micStateResult.code;
+      callMissingTargetRejected = true;
+      callSignalIdempotencyOk = true;
+      callNegotiationReconnectSkipped = true;
+    } else {
+      await waitForEvent(
+        secondEvents,
+        (item) => item?.type === "call.mic_state"
+          && String(item?.payload?.fromUserId || "") === firstUserId
+          && item?.payload?.muted === micPayload.muted
+          && item?.payload?.speaking === micPayload.speaking,
+        "relayed call.mic_state"
+      );
+
+      const videoStateRequestId = `call-video-state-${Date.now()}`;
+      wsSecond.send(JSON.stringify({
+        type: "call.video_state",
+        requestId: videoStateRequestId,
+        payload: {
+          targetUserId: firstUserId,
+          settings: { localVideoEnabled: true }
+        }
+      }));
+
+      const videoStateResult = await waitForAckOrNack(secondEvents, videoStateRequestId, "ack|nack for call.video_state");
+      if (!videoStateResult.ok) {
+        throw new Error(`[smoke:realtime] call.video_state rejected: ${videoStateResult.code || "unknown"}`);
+      }
+
+      await waitForEvent(
+        events,
+        (item) => item?.type === "call.video_state"
+          && String(item?.payload?.fromUserId || "") === secondUserId
+          && item?.payload?.settings?.localVideoEnabled === true,
+        "relayed call.video_state"
+      );
+
+      callSignalRelayed = true;
+      callSignalGuarded = false;
+      callSignalGuardCode = null;
+      callMissingTargetRejected = true;
+      callSignalIdempotencyOk = true;
+      callNegotiationReconnectSkipped = true;
     }
-
-    await waitForEvent(
-      events,
-      (item) => item?.type === "call.video_state"
-        && String(item?.payload?.fromUserId || "") === secondUserId
-        && item?.payload?.settings?.localVideoEnabled === true,
-      "relayed call.video_state"
-    );
-
-    callSignalRelayed = true;
-    callSignalGuarded = true;
-    callSignalGuardCode = "legacy-disabled";
-    callMissingTargetRejected = true;
-    callSignalIdempotencyOk = true;
-    callNegotiationReconnectSkipped = true;
 
     if (requireInitialStateReplay && !initialStateReplaySecondOk) {
       throw new Error("[smoke:realtime] call.initial_state replay missing for second join");
