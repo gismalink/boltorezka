@@ -13,6 +13,7 @@
     "smoke:realtime": "node ./scripts/smoke/smoke-realtime.mjs",
     "smoke:realtime:media": "node ./scripts/smoke/smoke-realtime-media-browser.mjs",
     "smoke:compare:p2p-sfu": "bash ./scripts/smoke/compare-p2p-sfu-baseline.sh",
+    "smoke:compare:sfu-livekit": "bash ./scripts/smoke/compare-sfu-livekit-baseline.sh",
     "smoke:web:static": "node ./scripts/smoke/smoke-web-static-contract.mjs",
     "smoke:web:version-cache": "node ./scripts/smoke/smoke-web-version-cache.mjs",
     "smoke:web:denied-media": "node ./scripts/smoke/smoke-web-denied-media.mjs",
