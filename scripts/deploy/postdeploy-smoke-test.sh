@@ -286,20 +286,22 @@ validate_livekit_standard_profile() {
     return 0
   fi
 
-  local topology_default="$(trim_lower "${!default_var:-}")"
-  local livekit_enabled="$(trim_lower "${!livekit_enabled_var:-}")"
+  local topology_default_raw="${!default_var:-${RTC_MEDIA_TOPOLOGY_DEFAULT:-livekit}}"
+  local livekit_enabled_raw="${!livekit_enabled_var:-${LIVEKIT_ENABLED:-1}}"
+  local topology_default="$(trim_lower "$topology_default_raw")"
+  local livekit_enabled="$(trim_lower "$livekit_enabled_raw")"
   local sfu_rooms="$(trim_lower "${!sfu_rooms_var:-}")"
   local sfu_users="$(trim_lower "${!sfu_users_var:-}")"
 
   if [[ "$topology_default" != "livekit" ]]; then
     SMOKE_LIVEKIT_STANDARD_PROFILE_STATUS="fail"
-    echo "[postdeploy-smoke] livekit standard profile gate failed: ${default_var} must be livekit (got: ${!default_var:-<empty>})" >&2
+    echo "[postdeploy-smoke] livekit standard profile gate failed: ${default_var} fallback chain must resolve to livekit (got: $topology_default_raw)" >&2
     exit 1
   fi
 
   if [[ "$livekit_enabled" != "1" && "$livekit_enabled" != "true" && "$livekit_enabled" != "yes" && "$livekit_enabled" != "on" ]]; then
     SMOKE_LIVEKIT_STANDARD_PROFILE_STATUS="fail"
-    echo "[postdeploy-smoke] livekit standard profile gate failed: ${livekit_enabled_var} must be enabled (got: ${!livekit_enabled_var:-<empty>})" >&2
+    echo "[postdeploy-smoke] livekit standard profile gate failed: ${livekit_enabled_var} fallback chain must resolve to enabled (got: $livekit_enabled_raw)" >&2
     exit 1
   fi
 
