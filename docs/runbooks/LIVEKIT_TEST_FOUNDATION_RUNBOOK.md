@@ -1,6 +1,6 @@
 # LiveKit Test Foundation Runbook
 
-Purpose: raise and validate LiveKit as a dedicated SFU media-plane in `test` contour without changing default routing for production traffic.
+Purpose: validate LiveKit runtime in `test` contour and keep rollout gates aligned with current livekit-only baseline.
 
 Scope:
 - `test` only.
@@ -45,16 +45,14 @@ Expected:
 - `boltorezka-livekit-test` is `Up`.
 - Logs do not contain repeated fatal bootstrap errors.
 
-## 3) Keep current routing unchanged
+## 3) Routing baseline
 
-Foundation stage does not switch application routing by itself.
+Current runtime baseline is livekit-only.
 
-Current default still controlled by:
-- `TEST_RTC_MEDIA_TOPOLOGY_DEFAULT`
-- `TEST_RTC_MEDIA_TOPOLOGY_SFU_ROOMS`
-- `TEST_RTC_MEDIA_TOPOLOGY_SFU_USERS`
-
-LiveKit integration and `mediaTopology=livekit` adapter are Stage B/C tasks.
+Operational checks in `test` should confirm:
+- `TEST_LIVEKIT_ENABLED=1` (or env-specific equivalent in host profile),
+- realtime smoke reports `expectedMediaTopology=livekit`,
+- no legacy topology override variables are used in active deploy profile.
 
 ## 3.1) Stage B token minting check
 
@@ -102,3 +100,41 @@ docker compose -f infra/docker-compose.host.yml --env-file infra/.env.host ps
 - Keep LiveKit secrets only in host env (`infra/.env.host`), never in git.
 - If ports conflict, adjust `TEST_LIVEKIT_*` in env and re-run `livekit:test:up`.
 - For deploy windows use GitOps scripts from `~/srv/edge/scripts/*` per server policy.
+
+## 6) Strict routing policy (current)
+
+Current ingress policy is strict and clean:
+- only `/rtc*` is supported for LiveKit signaling,
+- deprecated `/livekit/rtc*` paths return explicit `404`,
+- `/rtc/v1*` is bridged to `/rtc*` to suppress client fallback 404 noise with current LiveKit server profile.
+
+Required alignment:
+- API `livekit-token` response must return base signal URL (without `/livekit` suffix),
+- web runtime must connect via returned base URL,
+- any environment still returning `/livekit` is considered misconfigured and must be fixed at source.
+
+Operational verification:
+1. `https://<domain>/rtc/validate` returns `401`.
+2. `https://<domain>/rtc/v1/validate` returns `401`.
+3. `https://<domain>/livekit/rtc/validate` returns `404`.
+4. Postdeploy smoke remains green (`SMOKE_STATUS=pass`, `SMOKE_LIVEKIT_GATE_STATUS=pass`, `SMOKE_LIVEKIT_MEDIA_STATUS=pass`).
+
+## 6) Exit checklist: remove compatibility bridge
+
+Use this checklist before deleting `/rtc/v1* -> /rtc*` rewrite rules in edge ingress.
+
+1. Upgrade `livekit/livekit-server` image in `infra/docker-compose.host.yml` for both `livekit-test` and `livekit-prod` profiles.
+2. In `test`, verify native endpoints (without ingress rewrite fallback):
+  - `https://test.boltorezka.gismalink.art/rtc/v1/validate` returns `401` (not `404`).
+  - `https://test.boltorezka.gismalink.art/rtc/v1` no longer fails with `404` during browser connect.
+3. Run full `test` gate after upgrade:
+  - `TEST_REF=origin/<branch> npm run deploy:test:smoke`.
+  - `SMOKE_STATUS=pass`, `SMOKE_LIVEKIT_GATE_STATUS=pass`, `SMOKE_LIVEKIT_MEDIA_STATUS=pass`.
+4. Remove rewrite rules from `edge/ingress/caddy/Caddyfile` for both `test.boltorezka.gismalink.art` and `boltorezka.gismalink.art`.
+5. Recreate Caddy container after config update to avoid stale bind-mount inode:
+  - `cd ~/srv/edge/ingress && docker compose up -d --force-recreate edge-caddy`.
+6. Re-validate in `prod`:
+  - `https://boltorezka.gismalink.art/rtc/v1/validate` returns `401`.
+  - `https://boltorezka.gismalink.art/version` returns `200`.
+
+Rollback rule: if any step fails, re-enable compatibility rewrite and redeploy ingress before continuing rollout.

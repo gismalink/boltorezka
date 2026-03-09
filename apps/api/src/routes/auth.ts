@@ -48,9 +48,6 @@ function resolveLivekitClientUrl(request: FastifyRequest): string {
       if (normalizedHost) {
         parsed.hostname = normalizedHost;
         parsed.port = "";
-        if (!parsed.pathname || parsed.pathname === "/") {
-          parsed.pathname = "/livekit";
-        }
       }
     }
 

@@ -3,7 +3,6 @@ import type { RawData, WebSocket } from "ws";
 import { db } from "../db.js";
 import { config } from "../config.js";
 import { registerRealtimeSocket, unregisterRealtimeSocket } from "../realtime-broadcast.js";
-import { RealtimeCallSignalHandler } from "./realtime-call-signal.js";
 import type { InsertedMessageRow, RoomRow } from "../db.types.ts";
 import {
   buildRoomsPresenceEnvelope,
@@ -11,7 +10,6 @@ import {
   buildAckEnvelope,
   buildCallInitialStateEnvelope,
   buildCallMicStateRelayEnvelope,
-  buildCallTerminalRelayEnvelope,
   buildCallVideoStateRelayEnvelope,
   buildChatDeletedEnvelope,
   buildChatEditedEnvelope,
@@ -61,17 +59,10 @@ type CanonicalMediaState = {
   lastUpdatedAtMs: number;
 };
 
-type MediaTopology = "p2p" | "sfu" | "livekit";
+type MediaTopology = "livekit";
 type RealtimeErrorCategory = "auth" | "permissions" | "topology" | "transport";
 
-const CALL_SIGNAL_MIN_BYTES = 2;
-const CALL_SDP_SIGNAL_MAX_BYTES = 600_000;
-const CALL_ICE_SIGNAL_MAX_BYTES = 12_000;
-const CALL_OFFER_MIN_INTERVAL_MS = 5000;
-const CALL_OFFER_RATE_LIMIT_TTL_MS = 60000;
 const CALL_RECONNECT_WINDOW_MS = 90000;
-const CALL_GLARE_WINDOW_MS = 2500;
-const CALL_SIGNAL_IDEMPOTENCY_TTL_SEC = 120;
 
 function sendJson(socket: WebSocket, payload: unknown): void {
   if (socket.readyState === socket.OPEN) {
@@ -138,168 +129,10 @@ function sendNack(
   sendJson(socket, buildNackEnvelope(requestId, eventType, code, message, category, meta));
 }
 
-function safeJsonSize(value: unknown): number {
-  try {
-    return JSON.stringify(value).length;
-  } catch {
-    return Number.POSITIVE_INFINITY;
-  }
-}
-
-function maskIceAddress(value: string | null): string | null {
-  if (!value) {
-    return null;
-  }
-
-  if (value.includes(":")) {
-    const parts = value.split(":").filter(Boolean);
-    if (parts.length >= 2) {
-      return `${parts[0]}:*:${parts[parts.length - 1]}`;
-    }
-    return "*:*";
-  }
-
-  const parts = value.split(".");
-  if (parts.length === 4) {
-    return `${parts[0]}.${parts[1]}.*.*`;
-  }
-
-  return "masked";
-}
-
-function maskIcePort(value: number | null): number | null {
-  if (!Number.isFinite(value) || value === null) {
-    return null;
-  }
-
-  return Math.floor(value / 1000) * 1000;
-}
-
-function extractIceCandidateMeta(signal: unknown): {
-  iceCandidateType: string | null;
-  iceTransport: string | null;
-  iceTcpType: string | null;
-  iceAddress: string | null;
-  icePort: number | null;
-  iceAddressRaw?: string | null;
-  icePortRaw?: number | null;
-} {
-  let candidateLine: string | null = null;
-
-  if (signal && typeof signal === "object") {
-    const maybeSignal = signal as { candidate?: unknown };
-
-    if (typeof maybeSignal.candidate === "string") {
-      candidateLine = maybeSignal.candidate;
-    } else if (maybeSignal.candidate && typeof maybeSignal.candidate === "object") {
-      const nestedCandidate = maybeSignal.candidate as { candidate?: unknown };
-      if (typeof nestedCandidate.candidate === "string") {
-        candidateLine = nestedCandidate.candidate;
-      }
-    }
-  }
-
-  if (!candidateLine) {
-    return {
-      iceCandidateType: null,
-      iceTransport: null,
-      iceTcpType: null,
-      iceAddress: null,
-      icePort: null
-    };
-  }
-
-  const typeMatch = candidateLine.match(/\btyp\s+([a-z0-9]+)/i);
-  const transportMatch = candidateLine.match(/\b(udp|tcp)\b/i);
-  const tcpTypeMatch = candidateLine.match(/\btcptype\s+([a-z0-9]+)/i);
-  const addressPortMatch = candidateLine.match(/candidate:[^\s]+\s+\d+\s+(?:udp|tcp)\s+\d+\s+([^\s]+)\s+(\d+)/i);
-  const icePortRaw = addressPortMatch?.[2] ? Number.parseInt(addressPortMatch[2], 10) : null;
-  const iceAddressRaw = addressPortMatch?.[1] ?? null;
-  const wsCallDebugRawIceEnabled = process.env.WS_CALL_DEBUG_RAW_ICE === "1";
-
-  return {
-    iceCandidateType: typeMatch?.[1]?.toLowerCase() ?? null,
-    iceTransport: transportMatch?.[1]?.toLowerCase() ?? null,
-    iceTcpType: tcpTypeMatch?.[1]?.toLowerCase() ?? null,
-    iceAddress: maskIceAddress(iceAddressRaw),
-    icePort: maskIcePort(Number.isFinite(icePortRaw) ? icePortRaw : null),
-    ...(wsCallDebugRawIceEnabled
-      ? {
-          iceAddressRaw,
-          icePortRaw: Number.isFinite(icePortRaw) ? icePortRaw : null
-        }
-      : {})
-  };
-}
-
-function extractSdpMeta(signal: unknown): {
-  sdpLength: number | null;
-  sdpCandidateLines: number | null;
-  sdpRelayCandidates: number | null;
-  sdpSrflxCandidates: number | null;
-  sdpHostCandidates: number | null;
-  sdpHasRelay: boolean | null;
-  sdpHasTrickleOption: boolean | null;
-} {
-  if (!signal || typeof signal !== "object") {
-    return {
-      sdpLength: null,
-      sdpCandidateLines: null,
-      sdpRelayCandidates: null,
-      sdpSrflxCandidates: null,
-      sdpHostCandidates: null,
-      sdpHasRelay: null,
-      sdpHasTrickleOption: null
-    };
-  }
-
-  const maybeSignal = signal as { sdp?: unknown };
-  if (typeof maybeSignal.sdp !== "string") {
-    return {
-      sdpLength: null,
-      sdpCandidateLines: null,
-      sdpRelayCandidates: null,
-      sdpSrflxCandidates: null,
-      sdpHostCandidates: null,
-      sdpHasRelay: null,
-      sdpHasTrickleOption: null
-    };
-  }
-
-  const sdp = maybeSignal.sdp;
-  const candidateLines = sdp.match(/^a=candidate:.*$/gm) ?? [];
-  let relay = 0;
-  let srflx = 0;
-  let host = 0;
-
-  for (const line of candidateLines) {
-    const typeMatch = line.match(/\btyp\s+([a-z0-9]+)/i);
-    const candidateType = typeMatch?.[1]?.toLowerCase() ?? null;
-    if (candidateType === "relay") {
-      relay += 1;
-    } else if (candidateType === "srflx") {
-      srflx += 1;
-    } else if (candidateType === "host") {
-      host += 1;
-    }
-  }
-
-  return {
-    sdpLength: sdp.length,
-    sdpCandidateLines: candidateLines.length,
-    sdpRelayCandidates: relay,
-    sdpSrflxCandidates: srflx,
-    sdpHostCandidates: host,
-    sdpHasRelay: relay > 0,
-    sdpHasTrickleOption: /a=ice-options:\s*trickle/i.test(sdp)
-  };
-}
-
 export async function realtimeRoutes(fastify: FastifyInstance) {
   const socketsByUserId = new Map<string, Set<WebSocket>>();
   const socketsByRoomId = new Map<string, Set<WebSocket>>();
   const socketState = new WeakMap<WebSocket, SocketState>();
-  const lastCallOfferByPair = new Map<string, number>();
   const wsCallDebugEnabled = process.env.WS_CALL_DEBUG === "1";
   const mediaStateByRoomUserKey = new Map<string, CanonicalMediaState>();
   const recentRoomDetachByRoomUserKey = new Map<string, number>();
@@ -354,29 +187,6 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
 
     recentRoomDetachByRoomUserKey.delete(key);
     return Date.now() - at <= CALL_RECONNECT_WINDOW_MS;
-  };
-
-  const isCallOfferRateLimited = (fromUserId: string, targetUserId: string): boolean => {
-    const now = Date.now();
-    const key = `${fromUserId}->${targetUserId}`;
-    const lastAt = lastCallOfferByPair.get(key) || 0;
-
-    if (lastAt > 0 && now - lastAt < CALL_OFFER_MIN_INTERVAL_MS) {
-      return true;
-    }
-
-    lastCallOfferByPair.set(key, now);
-
-    if (lastCallOfferByPair.size > 4000) {
-      const threshold = now - CALL_OFFER_RATE_LIMIT_TTL_MS;
-      for (const [pairKey, pairLastAt] of lastCallOfferByPair.entries()) {
-        if (pairLastAt < threshold) {
-          lastCallOfferByPair.delete(pairKey);
-        }
-      }
-    }
-
-    return false;
   };
 
   const logCallDebug = (message: string, meta: Record<string, unknown> = {}) => {
@@ -621,33 +431,13 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
     return result;
   };
 
-  function resolveRoomMediaTopology(roomSlug: string, userId: string | null = null): MediaTopology {
-    const normalizedUserId = String(userId || "").trim().toLowerCase();
-    if (config.livekitEnabled && normalizedUserId && config.rtcMediaTopologyLivekitUsers.includes(normalizedUserId)) {
-      return "livekit";
-    }
-
-    if (normalizedUserId && config.rtcMediaTopologySfuUsers.includes(normalizedUserId)) {
-      return "sfu";
-    }
-
-    const normalizedSlug = String(roomSlug || "").trim().toLowerCase();
-    if (!normalizedSlug) {
-      return config.rtcMediaTopologyDefault;
-    }
-
-    if (config.livekitEnabled && config.rtcMediaTopologyLivekitRooms.includes(normalizedSlug)) {
-      return "livekit";
-    }
-
-    return config.rtcMediaTopologySfuRooms.includes(normalizedSlug)
-      ? "sfu"
-      : config.rtcMediaTopologyDefault;
+  function resolveRoomMediaTopology(_roomSlug: string, _userId: string | null = null): MediaTopology {
+    return "livekit";
   }
 
   const resolveActiveRoomMediaTopology = (state: SocketState): MediaTopology => {
     if (!state.roomSlug) {
-      return config.rtcMediaTopologyDefault;
+      return "livekit";
     }
 
     return resolveRoomMediaTopology(state.roomSlug, state.userId);
@@ -914,65 +704,6 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
 
     return `${eventType}:${sessionId}:${Date.now()}`;
   };
-
-  const checkAndMarkCallSignalIdempotency = async (args: {
-    userId: string;
-    eventType: "call.offer" | "call.answer" | "call.ice";
-    requestId: string | null;
-    targetUserId: string;
-    connection: WebSocket;
-  }): Promise<boolean> => {
-    const { userId, eventType, requestId, targetUserId, connection } = args;
-    if (!requestId) {
-      return false;
-    }
-
-    const key = `ws:call-idempotency:${userId}:${eventType}:${requestId}`;
-
-    try {
-      const created = await fastify.redis.set(key, "1", { NX: true, EX: CALL_SIGNAL_IDEMPOTENCY_TTL_SEC });
-      if (created !== null) {
-        return false;
-      }
-
-      sendAckWithMetrics(
-        connection,
-        requestId,
-        eventType,
-        {
-          duplicate: true,
-          targetUserId
-        },
-        ["call_signal_idempotency_hit"]
-      );
-      return true;
-    } catch {
-      // Do not block signaling flow when Redis dedupe is temporarily unavailable.
-      return false;
-    }
-  };
-
-  const callSignalHandler = new RealtimeCallSignalHandler({
-    callSignalMinBytes: CALL_SIGNAL_MIN_BYTES,
-    callSdpSignalMaxBytes: CALL_SDP_SIGNAL_MAX_BYTES,
-    callIceSignalMaxBytes: CALL_ICE_SIGNAL_MAX_BYTES,
-    callGlareWindowMs: CALL_GLARE_WINDOW_MS,
-    normalizeRequestId,
-    safeJsonSize,
-    extractIceCandidateMeta,
-    extractSdpMeta,
-    isCallOfferRateLimited,
-    relayToTargetOrRoom,
-    sendNoActiveRoomNack,
-    sendValidationNack,
-    sendTargetNotInRoomNack,
-    sendNack,
-    sendAckWithMetrics,
-    incrementMetric,
-    logCallDebug,
-    buildCallTraceId,
-    checkAndMarkCallSignalIdempotency
-  });
 
   fastify.get(
     "/v1/realtime/ws",
@@ -1606,104 +1337,6 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
                   messageId: deletedMessage.id
                 });
                 return;
-              }
-
-              case "call.offer":
-              case "call.answer":
-              case "call.ice": {
-                await callSignalHandler.handle({
-                  eventType: knownMessage.type,
-                  payload,
-                  state,
-                  requestId,
-                  connection,
-                  lastCallOfferByPair
-                });
-                return;
-              }
-
-              case "call.hangup":
-              case "call.reject": {
-              if (!state.roomId) {
-                logCallDebug("call terminal rejected: no active room", {
-                  eventType,
-                  userId: state.userId,
-                  requestId
-                });
-                sendNoActiveRoomNack(connection, requestId, eventType);
-                return;
-              }
-
-              const targetUserId = normalizeRequestId(getPayloadString(payload, "targetUserId", 128)) || null;
-              const reason = getPayloadString(payload, "reason", 128) || null;
-              const traceId = buildCallTraceId(eventType, requestId, state.sessionId);
-              logCallDebug("call terminal received", {
-                eventType,
-                userId: state.userId,
-                sessionId: state.sessionId,
-                traceId,
-                roomId: state.roomId,
-                roomSlug: state.roomSlug,
-                requestId,
-                targetUserId,
-                reason
-              });
-              const relayEnvelope = buildCallTerminalRelayEnvelope(
-                knownMessage.type,
-                requestId,
-                state.sessionId,
-                traceId,
-                state.userId,
-                state.userName,
-                state.roomId,
-                state.roomSlug,
-                targetUserId,
-                reason
-              );
-
-              const relayOutcome = relayToTargetOrRoom(connection, state.roomId, targetUserId, relayEnvelope);
-              if (!relayOutcome.ok) {
-                logCallDebug("call terminal relay failed: target not in room", {
-                  eventType,
-                  userId: state.userId,
-                  sessionId: state.sessionId,
-                  traceId,
-                  roomId: state.roomId,
-                  roomSlug: state.roomSlug,
-                  requestId,
-                  targetUserId,
-                  reason,
-                  relayedTo: relayOutcome.relayedCount
-                });
-                sendTargetNotInRoomNack(connection, requestId, eventType);
-                void incrementMetric("call_terminal_target_miss");
-                return;
-              }
-
-              logCallDebug("call terminal relayed", {
-                eventType,
-                userId: state.userId,
-                sessionId: state.sessionId,
-                traceId,
-                roomId: state.roomId,
-                roomSlug: state.roomSlug,
-                requestId,
-                targetUserId,
-                reason,
-                relayedTo: relayOutcome.relayedCount
-              });
-
-              sendAckWithMetrics(
-                connection,
-                requestId,
-                eventType,
-                {
-                  relayedTo: relayOutcome.relayedCount,
-                  targetUserId
-                },
-                [knownMessage.type === "call.hangup" ? "call_hangup_sent" : "call_reject_sent"]
-              );
-              return;
               }
 
               case "call.mic_state": {

@@ -3,7 +3,7 @@
 Чеклист перед запросом на rollout в `prod`.
 
 Decision package (обязательно к заполнению перед `prod`): [PREPROD_DECISION_PACKAGE.md](PREPROD_DECISION_PACKAGE.md)
-SFU Stage 4 readiness reference: [SFU_STAGE4_PROD_READINESS_PACKAGE.md](SFU_STAGE4_PROD_READINESS_PACKAGE.md)
+LiveKit full-transition reference: [../plans/LIVEKIT_FULL_TRANSITION_CHECKLIST_2026-03-09.md](../plans/LIVEKIT_FULL_TRANSITION_CHECKLIST_2026-03-09.md)
 
 ## 1) Branch и Git
 
@@ -38,15 +38,15 @@ SFU Stage 4 readiness reference: [SFU_STAGE4_PROD_READINESS_PACKAGE.md](SFU_STAG
    - `super_admin` может `ban/unban` пользователя,
    - banned user не получает `ws-ticket` и не проходит guarded auth paths.
 
-## 2.1) SFU stage gate (если target release включает SFU rollout)
+## 2.1) LiveKit stage gate
 
-1. `deploy:test:sfu` (или эквивалентный SFU-default профиль) проходит 3 раза подряд.
+1. `deploy:test:livekit` (или `deploy:test:smoke` в livekit-only профиле) проходит 3 раза подряд.
 2. В realtime smoke подтверждено:
-   - `expectedMediaTopology=sfu`,
+   - `expectedMediaTopology=livekit`,
    - `mediaTopologyFirstOk=true`,
    - `reconnectOk=true`.
 3. Проверка user-reported media status regressions выполнена (нет массового `stalled` flapping).
-4. Rollback path в P2P проверен как минимум dry-run в `test`.
+4. Rollback path на предыдущий stable SHA в `test` проверен как минимум dry-run.
 
 ## 3) Runtime и конфигурация
 

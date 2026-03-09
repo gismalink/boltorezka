@@ -893,16 +893,6 @@ pre {
   text-transform: lowercase;
 }
 
-.room-topology-badge-p2p {
-  color: var(--pixel-neon-gold);
-  border-color: color-mix(in srgb, var(--pixel-neon-gold) 62%, transparent 38%);
-}
-
-.room-topology-badge-sfu {
-  color: var(--pixel-neon-cyan);
-  border-color: color-mix(in srgb, var(--pixel-neon-cyan) 58%, transparent 42%);
-}
-
 .room-topology-badge-livekit {
   color: #6ee7b7;
   border-color: color-mix(in srgb, #6ee7b7 58%, transparent 42%);

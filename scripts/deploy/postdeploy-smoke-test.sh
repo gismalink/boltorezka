@@ -27,14 +27,15 @@ SMOKE_SUMMARY_TEXT="health=fail mode=unknown sso=fail realtime=fail delta(nack=0
 API_SMOKE_STATUS="skip"
 VERSION_CACHE_STATUS="skip"
 EXTENDED_REALTIME_STATUS="skip"
-SMOKE_SFU_TOPOLOGY_STATUS="skip"
 SMOKE_REALTIME_MEDIA_STATUS="skip"
 SMOKE_LIVEKIT_GATE_STATUS="skip"
 SMOKE_LIVEKIT_MEDIA_STATUS="skip"
+SMOKE_LIVEKIT_STANDARD_PROFILE_STATUS="skip"
 SMOKE_MEDIA_TRANSPORT_SUMMARY="n/a"
 SMOKE_TURN_TLS_STATUS="skip"
 SMOKE_TURN_ALLOCATION_FAILURES=0
 SMOKE_TURN_ALLOCATION_STATUS="skip"
+SMOKE_TURN_ROTATION_STATUS="skip"
 SMOKE_ONE_WAY_AUDIO_INCIDENTS=0
 SMOKE_ONE_WAY_VIDEO_INCIDENTS=0
 JWT_SECRET_CANDIDATE=""
@@ -53,14 +54,15 @@ write_summary() {
   printf 'SMOKE_CALL_INITIAL_STATE_SENT_DELTA=%q\n' "$SMOKE_CALL_INITIAL_STATE_SENT_DELTA" >>"$SUMMARY_FILE_REL"
   printf 'SMOKE_CALL_INITIAL_STATE_PARTICIPANTS_DELTA=%q\n' "$SMOKE_CALL_INITIAL_STATE_PARTICIPANTS_DELTA" >>"$SUMMARY_FILE_REL"
   printf 'SMOKE_EXTENDED_REALTIME_STATUS=%q\n' "$EXTENDED_REALTIME_STATUS" >>"$SUMMARY_FILE_REL"
-  printf 'SMOKE_SFU_TOPOLOGY_STATUS=%q\n' "$SMOKE_SFU_TOPOLOGY_STATUS" >>"$SUMMARY_FILE_REL"
   printf 'SMOKE_REALTIME_MEDIA_STATUS=%q\n' "$SMOKE_REALTIME_MEDIA_STATUS" >>"$SUMMARY_FILE_REL"
   printf 'SMOKE_LIVEKIT_GATE_STATUS=%q\n' "$SMOKE_LIVEKIT_GATE_STATUS" >>"$SUMMARY_FILE_REL"
   printf 'SMOKE_LIVEKIT_MEDIA_STATUS=%q\n' "$SMOKE_LIVEKIT_MEDIA_STATUS" >>"$SUMMARY_FILE_REL"
+  printf 'SMOKE_LIVEKIT_STANDARD_PROFILE_STATUS=%q\n' "$SMOKE_LIVEKIT_STANDARD_PROFILE_STATUS" >>"$SUMMARY_FILE_REL"
   printf 'SMOKE_MEDIA_TRANSPORT_SUMMARY=%q\n' "$SMOKE_MEDIA_TRANSPORT_SUMMARY" >>"$SUMMARY_FILE_REL"
   printf 'SMOKE_TURN_TLS_STATUS=%q\n' "$SMOKE_TURN_TLS_STATUS" >>"$SUMMARY_FILE_REL"
   printf 'SMOKE_TURN_ALLOCATION_FAILURES=%q\n' "$SMOKE_TURN_ALLOCATION_FAILURES" >>"$SUMMARY_FILE_REL"
   printf 'SMOKE_TURN_ALLOCATION_STATUS=%q\n' "$SMOKE_TURN_ALLOCATION_STATUS" >>"$SUMMARY_FILE_REL"
+  printf 'SMOKE_TURN_ROTATION_STATUS=%q\n' "$SMOKE_TURN_ROTATION_STATUS" >>"$SUMMARY_FILE_REL"
   printf 'SMOKE_ONE_WAY_AUDIO_INCIDENTS=%q\n' "$SMOKE_ONE_WAY_AUDIO_INCIDENTS" >>"$SUMMARY_FILE_REL"
   printf 'SMOKE_ONE_WAY_VIDEO_INCIDENTS=%q\n' "$SMOKE_ONE_WAY_VIDEO_INCIDENTS" >>"$SUMMARY_FILE_REL"
   printf 'SMOKE_SUMMARY_TEXT=%q\n' "$SMOKE_SUMMARY_TEXT" >>"$SUMMARY_FILE_REL"
@@ -261,6 +263,39 @@ set -a
 source "$ENV_FILE"
 set +a
 
+trim_lower() {
+  local value="$1"
+  # shellcheck disable=SC2001
+  value="$(printf '%s' "$value" | sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//')"
+  printf '%s' "$value" | tr '[:upper:]' '[:lower:]'
+}
+
+validate_livekit_standard_profile() {
+  local enabled="${SMOKE_REQUIRE_LIVEKIT_STANDARD_PROFILE:-1}"
+  local prefix="${SMOKE_LIVEKIT_STANDARD_ENV_PREFIX:-TEST_}"
+  local livekit_enabled_var="${prefix}LIVEKIT_ENABLED"
+
+  if [[ "$enabled" != "1" ]]; then
+    SMOKE_LIVEKIT_STANDARD_PROFILE_STATUS="skip"
+    echo "[postdeploy-smoke] livekit standard profile gate skipped (SMOKE_REQUIRE_LIVEKIT_STANDARD_PROFILE=0)"
+    return 0
+  fi
+
+  local livekit_enabled_raw="${!livekit_enabled_var:-${LIVEKIT_ENABLED:-1}}"
+  local livekit_enabled="$(trim_lower "$livekit_enabled_raw")"
+
+  if [[ "$livekit_enabled" != "1" && "$livekit_enabled" != "true" && "$livekit_enabled" != "yes" && "$livekit_enabled" != "on" ]]; then
+    SMOKE_LIVEKIT_STANDARD_PROFILE_STATUS="fail"
+    echo "[postdeploy-smoke] livekit standard profile gate failed: ${livekit_enabled_var} fallback chain must resolve to enabled (got: $livekit_enabled_raw)" >&2
+    exit 1
+  fi
+
+  SMOKE_LIVEKIT_STANDARD_PROFILE_STATUS="pass"
+  echo "[postdeploy-smoke] livekit standard profile gate: pass (${livekit_enabled_var}=1)"
+}
+
+validate_livekit_standard_profile
+
 validate_turn_range() {
   local min_port_raw="${TURN_MIN_PORT:-30000}"
   local max_port_raw="${TURN_MAX_PORT:-31000}"
@@ -326,6 +361,85 @@ validate_turn_tls_handshake() {
 }
 
 validate_turn_tls_handshake
+
+validate_turn_rotation_freshness() {
+  local enabled="${SMOKE_REQUIRE_TURN_ROTATION_FRESHNESS:-1}"
+  local strict_mode="${SMOKE_TURN_ROTATION_STRICT:-1}"
+  local allow_missing_marker="${SMOKE_TURN_ROTATION_ALLOW_MISSING_MARKER:-1}"
+  local max_age_days_raw="${SMOKE_TURN_ROTATION_MAX_AGE_DAYS:-35}"
+  local marker_file="${SMOKE_TURN_ROTATION_MARKER_FILE:-.deploy/turn-credentials-last-rotation.env}"
+
+  if [[ "$enabled" != "1" ]]; then
+    SMOKE_TURN_ROTATION_STATUS="skip"
+    echo "[postdeploy-smoke] turn rotation freshness check skipped (SMOKE_REQUIRE_TURN_ROTATION_FRESHNESS=0)"
+    return 0
+  fi
+
+  if [[ ! "$max_age_days_raw" =~ ^[0-9]+$ ]]; then
+    echo "[postdeploy-smoke] SMOKE_TURN_ROTATION_MAX_AGE_DAYS must be numeric: $max_age_days_raw" >&2
+    exit 1
+  fi
+
+  if [[ ! -f "$marker_file" ]]; then
+    if [[ "$allow_missing_marker" == "1" ]]; then
+      SMOKE_TURN_ROTATION_STATUS="warn"
+      echo "[postdeploy-smoke] turn rotation freshness marker missing ($marker_file); bootstrap allow is enabled"
+      return 0
+    fi
+
+    SMOKE_TURN_ROTATION_STATUS="fail"
+    echo "[postdeploy-smoke] turn rotation freshness failed: marker file not found ($marker_file)" >&2
+    if [[ "$strict_mode" == "1" ]]; then
+      exit 1
+    fi
+    echo "[postdeploy-smoke] continuing because SMOKE_TURN_ROTATION_STRICT=0" >&2
+    return 0
+  fi
+
+  # shellcheck disable=SC1090
+  source "$marker_file"
+  local rotated_at="${TURN_ROTATED_AT_UTC:-}"
+  if [[ -z "$rotated_at" ]]; then
+    SMOKE_TURN_ROTATION_STATUS="fail"
+    echo "[postdeploy-smoke] turn rotation freshness failed: TURN_ROTATED_AT_UTC missing in $marker_file" >&2
+    if [[ "$strict_mode" == "1" ]]; then
+      exit 1
+    fi
+    echo "[postdeploy-smoke] continuing because SMOKE_TURN_ROTATION_STRICT=0" >&2
+    return 0
+  fi
+
+  local now_epoch rotated_epoch
+  now_epoch="$(date -u +%s)"
+  rotated_epoch="$(node -e 'const ts = Date.parse(process.argv[1]); if (Number.isNaN(ts)) process.exit(1); process.stdout.write(String(Math.floor(ts / 1000)));' "$rotated_at" 2>/dev/null || true)"
+  if [[ -z "$rotated_epoch" || ! "$rotated_epoch" =~ ^[0-9]+$ ]]; then
+    SMOKE_TURN_ROTATION_STATUS="fail"
+    echo "[postdeploy-smoke] turn rotation freshness failed: invalid TURN_ROTATED_AT_UTC ($rotated_at)" >&2
+    if [[ "$strict_mode" == "1" ]]; then
+      exit 1
+    fi
+    echo "[postdeploy-smoke] continuing because SMOKE_TURN_ROTATION_STRICT=0" >&2
+    return 0
+  fi
+
+  local age_days
+  age_days="$(( (now_epoch - rotated_epoch) / 86400 ))"
+
+  if (( age_days > max_age_days_raw )); then
+    SMOKE_TURN_ROTATION_STATUS="fail"
+    echo "[postdeploy-smoke] turn rotation freshness failed: age=${age_days}d > ${max_age_days_raw}d (marker=$marker_file)" >&2
+    if [[ "$strict_mode" == "1" ]]; then
+      exit 1
+    fi
+    echo "[postdeploy-smoke] continuing because SMOKE_TURN_ROTATION_STRICT=0" >&2
+    return 0
+  fi
+
+  SMOKE_TURN_ROTATION_STATUS="pass"
+  echo "[postdeploy-smoke] turn rotation freshness: pass (age=${age_days}d <= ${max_age_days_raw}d)"
+}
+
+validate_turn_rotation_freshness
 
 collect_turn_allocation_failures() {
   local turn_service="${SMOKE_TURN_SERVICE:-boltorezka-turn}"
@@ -421,7 +535,7 @@ if [[ "${SMOKE_REALTIME:-1}" == "0" ]]; then
   collect_turn_allocation_failures
   echo "[postdeploy-smoke] realtime smoke skipped (SMOKE_REALTIME=0)"
   SMOKE_STATUS="pass"
-  SMOKE_SUMMARY_TEXT="health=pass mode=sso sso=pass api=$API_SMOKE_STATUS version_cache=$VERSION_CACHE_STATUS turn_tls=$SMOKE_TURN_TLS_STATUS turn_alloc_failures=$SMOKE_TURN_ALLOCATION_FAILURES turn_alloc_status=$SMOKE_TURN_ALLOCATION_STATUS realtime=skip extended_realtime=$EXTENDED_REALTIME_STATUS sfu_topology=$SMOKE_SFU_TOPOLOGY_STATUS realtime_media=$SMOKE_REALTIME_MEDIA_STATUS transport=$SMOKE_MEDIA_TRANSPORT_SUMMARY one_way(audio=$SMOKE_ONE_WAY_AUDIO_INCIDENTS,video=$SMOKE_ONE_WAY_VIDEO_INCIDENTS) delta(nack=0,ack=0,chat=0,idem=0,initial_state=0,initial_state_participants=0)"
+  SMOKE_SUMMARY_TEXT="health=pass mode=sso sso=pass api=$API_SMOKE_STATUS version_cache=$VERSION_CACHE_STATUS livekit_standard=$SMOKE_LIVEKIT_STANDARD_PROFILE_STATUS turn_tls=$SMOKE_TURN_TLS_STATUS turn_rotation=$SMOKE_TURN_ROTATION_STATUS turn_alloc_failures=$SMOKE_TURN_ALLOCATION_FAILURES turn_alloc_status=$SMOKE_TURN_ALLOCATION_STATUS realtime=skip extended_realtime=$EXTENDED_REALTIME_STATUS realtime_media=$SMOKE_REALTIME_MEDIA_STATUS transport=$SMOKE_MEDIA_TRANSPORT_SUMMARY one_way(audio=$SMOKE_ONE_WAY_AUDIO_INCIDENTS,video=$SMOKE_ONE_WAY_VIDEO_INCIDENTS) delta(nack=0,ack=0,chat=0,idem=0,initial_state=0,initial_state_participants=0)"
   exit 0
 fi
 
@@ -491,20 +605,13 @@ CALL_INITIAL_STATE_PARTICIPANTS_BEFORE="$(metric_from_hgetall "$METRICS_BEFORE_R
 echo "[postdeploy-smoke] smoke:realtime"
 BASELINE_SMOKE_ROOM_SLUG="${SMOKE_ROOM_SLUG:-general}"
 MEDIA_SMOKE_ROOM_SLUG="${SMOKE_REALTIME_MEDIA_ROOM_SLUG:-$BASELINE_SMOKE_ROOM_SLUG}"
-BASELINE_REQUIRE_MEDIA_TOPOLOGY=1
-if [[ -n "${SMOKE_SFU_ROOM_SLUG:-}" && "$BASELINE_SMOKE_ROOM_SLUG" == "$SMOKE_SFU_ROOM_SLUG" ]]; then
-  # Stage 1 may route the default room to SFU and test data may not include a second P2P room.
-  # Keep baseline smoke for join/chat/reconnect, and run topology assertion in the dedicated SFU pass below.
-  BASELINE_REQUIRE_MEDIA_TOPOLOGY=0
-  echo "[postdeploy-smoke] baseline topology assert skipped for Stage 1 (room=$BASELINE_SMOKE_ROOM_SLUG)"
-fi
 
 SMOKE_API_URL="$BASE_URL" \
 SMOKE_ROOM_SLUG="$BASELINE_SMOKE_ROOM_SLUG" \
 SMOKE_RECONNECT=1 \
 SMOKE_REQUIRE_INITIAL_STATE_REPLAY=1 \
-SMOKE_REQUIRE_MEDIA_TOPOLOGY="$BASELINE_REQUIRE_MEDIA_TOPOLOGY" \
-SMOKE_EXPECT_MEDIA_TOPOLOGY="${SMOKE_EXPECT_MEDIA_TOPOLOGY:-${RTC_MEDIA_TOPOLOGY_DEFAULT:-p2p}}" \
+SMOKE_REQUIRE_MEDIA_TOPOLOGY=1 \
+SMOKE_EXPECT_MEDIA_TOPOLOGY="${SMOKE_EXPECT_MEDIA_TOPOLOGY:-livekit}" \
 npm run smoke:realtime
 
 if [[ "${SMOKE_EXTENDED_GATE:-0}" == "1" ]]; then
@@ -595,25 +702,6 @@ if [[ "${SMOKE_EXTENDED_GATE:-0}" == "1" ]]; then
     SMOKE_RACE_OFFER_RATE_LIMIT_STRICT_THRESHOLD="${SMOKE_RACE_OFFER_RATE_LIMIT_STRICT_THRESHOLD:-4}" \
     npm run smoke:realtime
   EXTENDED_REALTIME_STATUS="pass"
-fi
-
-if [[ -n "${SMOKE_SFU_ROOM_SLUG:-}" ]]; then
-  echo "[postdeploy-smoke] smoke:realtime (sfu topology room=$SMOKE_SFU_ROOM_SLUG)"
-
-  # ws tickets are one-time; ensure optional second run re-resolves fresh tickets.
-  unset SMOKE_WS_TICKET
-  unset SMOKE_WS_TICKET_RECONNECT
-  unset SMOKE_WS_TICKET_SECOND
-  unset SMOKE_WS_TICKET_THIRD
-
-  SMOKE_API_URL="$BASE_URL" \
-    SMOKE_ROOM_SLUG="$SMOKE_SFU_ROOM_SLUG" \
-    SMOKE_RECONNECT=1 \
-    SMOKE_REQUIRE_INITIAL_STATE_REPLAY=1 \
-    SMOKE_REQUIRE_MEDIA_TOPOLOGY=1 \
-    SMOKE_EXPECT_MEDIA_TOPOLOGY="${SMOKE_SFU_EXPECT_MEDIA_TOPOLOGY:-sfu}" \
-    npm run smoke:realtime
-  SMOKE_SFU_TOPOLOGY_STATUS="pass"
 fi
 
 if [[ -n "${SMOKE_LIVEKIT_ROOM_SLUG:-}" ]]; then
@@ -788,6 +876,6 @@ SMOKE_CALL_INITIAL_STATE_PARTICIPANTS_DELTA=$((CALL_INITIAL_STATE_PARTICIPANTS_A
 collect_turn_allocation_failures
 
 SMOKE_STATUS="pass"
-SMOKE_SUMMARY_TEXT="health=pass mode=sso sso=pass api=$API_SMOKE_STATUS version_cache=$VERSION_CACHE_STATUS turn_tls=$SMOKE_TURN_TLS_STATUS turn_alloc_failures=$SMOKE_TURN_ALLOCATION_FAILURES turn_alloc_status=$SMOKE_TURN_ALLOCATION_STATUS realtime=pass extended_realtime=$EXTENDED_REALTIME_STATUS sfu_topology=$SMOKE_SFU_TOPOLOGY_STATUS livekit_gate=$SMOKE_LIVEKIT_GATE_STATUS livekit_media=$SMOKE_LIVEKIT_MEDIA_STATUS realtime_media=$SMOKE_REALTIME_MEDIA_STATUS transport=$SMOKE_MEDIA_TRANSPORT_SUMMARY one_way(audio=$SMOKE_ONE_WAY_AUDIO_INCIDENTS,video=$SMOKE_ONE_WAY_VIDEO_INCIDENTS) delta(nack=$SMOKE_NACK_DELTA,ack=$SMOKE_ACK_DELTA,chat=$SMOKE_CHAT_SENT_DELTA,idem=$SMOKE_CHAT_IDEMPOTENCY_HIT_DELTA,initial_state=$SMOKE_CALL_INITIAL_STATE_SENT_DELTA,initial_state_participants=$SMOKE_CALL_INITIAL_STATE_PARTICIPANTS_DELTA)"
+SMOKE_SUMMARY_TEXT="health=pass mode=sso sso=pass api=$API_SMOKE_STATUS version_cache=$VERSION_CACHE_STATUS livekit_standard=$SMOKE_LIVEKIT_STANDARD_PROFILE_STATUS turn_tls=$SMOKE_TURN_TLS_STATUS turn_rotation=$SMOKE_TURN_ROTATION_STATUS turn_alloc_failures=$SMOKE_TURN_ALLOCATION_FAILURES turn_alloc_status=$SMOKE_TURN_ALLOCATION_STATUS realtime=pass extended_realtime=$EXTENDED_REALTIME_STATUS livekit_gate=$SMOKE_LIVEKIT_GATE_STATUS livekit_media=$SMOKE_LIVEKIT_MEDIA_STATUS realtime_media=$SMOKE_REALTIME_MEDIA_STATUS transport=$SMOKE_MEDIA_TRANSPORT_SUMMARY one_way(audio=$SMOKE_ONE_WAY_AUDIO_INCIDENTS,video=$SMOKE_ONE_WAY_VIDEO_INCIDENTS) delta(nack=$SMOKE_NACK_DELTA,ack=$SMOKE_ACK_DELTA,chat=$SMOKE_CHAT_SENT_DELTA,idem=$SMOKE_CHAT_IDEMPOTENCY_HIT_DELTA,initial_state=$SMOKE_CALL_INITIAL_STATE_SENT_DELTA,initial_state_participants=$SMOKE_CALL_INITIAL_STATE_PARTICIPANTS_DELTA)"
 
 echo "[postdeploy-smoke] done"

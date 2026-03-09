@@ -34,7 +34,6 @@ import {
   useServerSounds,
   useServerMenuAccessGuard,
   useLivekitVoiceRuntime,
-  useVoiceCallRuntime,
   useVoiceRoomStateMaps
 } from "./hooks";
 import { detectInitialLang, LANGUAGE_OPTIONS, LOCALE_BY_LANG, TEXT, type Lang } from "./i18n";
@@ -95,7 +94,7 @@ export function App() {
   const [toasts, setToasts] = useState<Array<{ id: number; message: string }>>([]);
   const [roomsPresenceBySlug, setRoomsPresenceBySlug] = useState<Record<string, string[]>>({});
   const [roomsPresenceDetailsBySlug, setRoomsPresenceDetailsBySlug] = useState<Record<string, PresenceMember[]>>({});
-  const [roomMediaTopologyBySlug, setRoomMediaTopologyBySlug] = useState<Record<string, "p2p" | "sfu" | "livekit">>({});
+  const [roomMediaTopologyBySlug, setRoomMediaTopologyBySlug] = useState<Record<string, "livekit">>({});
   const [eventLog, setEventLog] = useState<string[]>([]);
   const [telemetrySummary, setTelemetrySummary] = useState<TelemetrySummary | null>(null);
   const [wsState, setWsState] = useState<"disconnected" | "connecting" | "connected">(
@@ -419,39 +418,8 @@ export function App() {
   }, [rooms, roomsTree, roomSlug]);
   const allowVideoStreaming = currentRoomKind === "text_voice_video";
   const currentRoomSupportsVideo = allowVideoStreaming;
-  const currentRoomMediaTopology = roomMediaTopologyBySlug[roomSlug] || "p2p";
+  const currentRoomMediaTopology = roomMediaTopologyBySlug[roomSlug] || "livekit";
   const isLivekitRoomTopology = currentRoomMediaTopology === "livekit";
-
-  const rtcVoiceRuntime = useVoiceCallRuntime({
-    localUserId: user?.id || "",
-    roomSlug,
-    allowVideoStreaming,
-    videoStreamingEnabled: cameraEnabled,
-    roomVoiceTargets: currentRoomVoiceTargets,
-    selectedInputId,
-    selectedOutputId,
-    selectedVideoInputId,
-    serverVideoResolution,
-    serverVideoFps,
-    serverVideoEffectType,
-    serverVideoPixelFxStrength,
-    serverVideoPixelFxPixelSize,
-    serverVideoPixelFxGridThickness,
-    serverVideoAsciiCellSize,
-    serverVideoAsciiContrast,
-    serverVideoAsciiColor,
-    micMuted,
-    micTestLevel,
-    audioMuted,
-    outputVolume,
-    serverAudioQuality: effectiveAudioQuality,
-    t,
-    pushToast,
-    pushCallLog,
-    sendWsEvent,
-    setCallStatus,
-    setLastCallPeer
-  });
 
   const livekitVoiceRuntime = useLivekitVoiceRuntime({
     token,
@@ -472,10 +440,6 @@ export function App() {
     setLastCallPeer
   });
 
-  const activeVoiceRuntime = isLivekitRoomTopology ? livekitVoiceRuntime : rtcVoiceRuntime;
-  const disconnectLegacyRtcRoom = rtcVoiceRuntime.disconnectRoom;
-  const disconnectLivekitRoom = livekitVoiceRuntime.disconnectRoom;
-
   const {
     roomVoiceConnected,
     connectedPeerUserIds,
@@ -489,21 +453,10 @@ export function App() {
     remoteVideoStreamsByUserId,
     connectRoom,
     disconnectRoom,
-    handleIncomingSignal,
-    handleIncomingTerminal,
     handleIncomingMicState,
     handleIncomingVideoState: handleIncomingRtcVideoState,
     handleCallNack
-  } = activeVoiceRuntime;
-
-  useEffect(() => {
-    if (isLivekitRoomTopology) {
-      disconnectLegacyRtcRoom();
-      return;
-    }
-
-    disconnectLivekitRoom();
-  }, [disconnectLegacyRtcRoom, disconnectLivekitRoom, isLivekitRoomTopology]);
+  } = livekitVoiceRuntime;
 
   const remoteVideoLabelsByUserId = useMemo(() => {
     const labels: Record<string, string> = {};
@@ -1218,8 +1171,6 @@ export function App() {
     lastMessageIdRef,
     setWsState,
     setMessages,
-    setLastCallPeer,
-    setCallStatus,
     setRoomSlug,
     onRoomMediaTopology: ({ roomSlug: nextRoomSlug, mediaTopology }) => {
       setRoomMediaTopologyBySlug((prev) => {
@@ -1239,8 +1190,6 @@ export function App() {
     pushCallLog,
     pushToast,
     markMessageDelivery,
-    onCallSignal: handleIncomingSignal,
-    onCallTerminal: handleIncomingTerminal,
     onCallMicState: handleIncomingMicState,
     onCallVideoState: handleIncomingVideoState,
     onCallInitialState: handleIncomingInitialCallState,
@@ -1292,7 +1241,7 @@ export function App() {
     }
 
     const roomTopology = roomMediaTopologyBySlug[roomSlug];
-    if (roomTopology === "sfu" || roomTopology === "livekit") {
+    if (roomTopology === "livekit") {
       pushCallLog(`media topology for ${roomSlug}: ${roomTopology}`);
     }
   }, [roomSlug, roomMediaTopologyBySlug, pushCallLog]);
@@ -1722,7 +1671,8 @@ export function App() {
     currentRoomSupportsRtc,
     roomVoiceTargetsCount: currentRoomVoiceTargets.length,
     roomVoiceConnected,
-    keepConnectedWithoutTargets: allowVideoStreaming && cameraEnabled,
+    // Keep established LiveKit sessions alive across short presence/ws flaps.
+    keepConnectedWithoutTargets: (allowVideoStreaming && cameraEnabled) || roomVoiceConnected,
     connectRoom,
     disconnectRoom
   });

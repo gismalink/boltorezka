@@ -105,7 +105,7 @@ export type LivekitTokenResponse = {
   url: string;
   roomName: string;
   roomId: string;
-  mediaTopology: "livekit" | "sfu" | "p2p";
+  mediaTopology: "livekit";
   traceId: string;
 };
 

@@ -3,7 +3,7 @@ import { api } from "../api";
 import { trackClientEvent } from "../telemetry";
 import type { Message, MessagesCursor, PresenceMember } from "../domain";
 import { RealtimeClient, WsMessageController } from "../services";
-import type { CallStatus, ChatController } from "../services";
+import type { ChatController } from "../services";
 
 type UseRealtimeChatLifecycleArgs = {
   token: string;
@@ -20,10 +20,8 @@ type UseRealtimeChatLifecycleArgs = {
   lastMessageIdRef: MutableRefObject<string | null>;
   setWsState: (value: "disconnected" | "connecting" | "connected") => void;
   setMessages: Dispatch<SetStateAction<Message[]>>;
-  setLastCallPeer: (peer: string) => void;
-  setCallStatus: (status: CallStatus) => void;
   setRoomSlug: (slug: string) => void;
-  onRoomMediaTopology?: (payload: { roomSlug: string; mediaTopology: "p2p" | "sfu" | "livekit" }) => void;
+  onRoomMediaTopology?: (payload: { roomSlug: string; mediaTopology: "livekit" }) => void;
   setRoomsPresenceBySlug: Dispatch<SetStateAction<Record<string, string[]>>>;
   setRoomsPresenceDetailsBySlug: Dispatch<SetStateAction<Record<string, PresenceMember[]>>>;
   pushLog: (text: string) => void;
@@ -33,14 +31,6 @@ type UseRealtimeChatLifecycleArgs = {
     requestId: string,
     status: "sending" | "delivered" | "failed",
     patch?: Partial<Message>
-  ) => void;
-  onCallSignal?: (
-    eventType: "call.offer" | "call.answer" | "call.ice",
-    payload: { fromUserId?: string; fromUserName?: string; signal?: Record<string, unknown> }
-  ) => void;
-  onCallTerminal?: (
-    eventType: "call.reject" | "call.hangup",
-    payload: { fromUserId?: string; fromUserName?: string; reason?: string | null }
   ) => void;
   onCallMicState?: (
     payload: { fromUserId?: string; fromUserName?: string; muted?: boolean; speaking?: boolean; audioMuted?: boolean }
@@ -101,8 +91,6 @@ export function useRealtimeChatLifecycle({
   lastMessageIdRef,
   setWsState,
   setMessages,
-  setLastCallPeer,
-  setCallStatus,
   setRoomSlug,
   onRoomMediaTopology,
   setRoomsPresenceBySlug,
@@ -111,30 +99,18 @@ export function useRealtimeChatLifecycle({
   pushCallLog,
   pushToast,
   markMessageDelivery,
-  onCallSignal,
-  onCallTerminal,
   onCallMicState,
   onCallVideoState,
   onCallInitialState,
   onCallNack,
   onAudioQualityUpdated
 }: UseRealtimeChatLifecycleArgs) {
-  const onCallSignalRef = useRef(onCallSignal);
-  const onCallTerminalRef = useRef(onCallTerminal);
   const onCallMicStateRef = useRef(onCallMicState);
   const onCallVideoStateRef = useRef(onCallVideoState);
   const onCallInitialStateRef = useRef(onCallInitialState);
   const onCallNackRef = useRef(onCallNack);
   const onAudioQualityUpdatedRef = useRef(onAudioQualityUpdated);
   const onRoomMediaTopologyRef = useRef(onRoomMediaTopology);
-
-  useEffect(() => {
-    onCallSignalRef.current = onCallSignal;
-  }, [onCallSignal]);
-
-  useEffect(() => {
-    onCallTerminalRef.current = onCallTerminal;
-  }, [onCallTerminal]);
 
   useEffect(() => {
     onCallMicStateRef.current = onCallMicState;
@@ -175,8 +151,6 @@ export function useRealtimeChatLifecycle({
       clearPendingRequest: (requestId) => realtimeClientRef.current?.clearPendingRequest(requestId),
       markMessageDelivery,
       setMessages,
-      setLastCallPeer,
-      setCallStatus,
       pushLog,
       pushCallLog,
       pushToast,
@@ -196,8 +170,6 @@ export function useRealtimeChatLifecycle({
           token
         );
       },
-      onCallSignal: (...args) => onCallSignalRef.current?.(...args),
-      onCallTerminal: (...args) => onCallTerminalRef.current?.(...args),
       onCallMicState: (...args) => onCallMicStateRef.current?.(...args),
       onCallVideoState: (...args) => onCallVideoStateRef.current?.(...args),
       onCallInitialState: (...args) => onCallInitialStateRef.current?.(...args),

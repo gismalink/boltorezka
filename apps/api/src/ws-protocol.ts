@@ -1,8 +1,6 @@
 import type {
   CallMicStateEventType,
   CallVideoStateEventType,
-  CallSignalEventType,
-  CallTerminalEventType,
   PresenceUser,
   PongPayload,
   ChatMessagePayload,
@@ -23,8 +21,6 @@ import type {
   WsOutgoingEnvelope
 } from "./ws-protocol.types.ts";
 
-export const CALL_SIGNAL_EVENT_TYPES = ["call.offer", "call.answer", "call.ice"];
-export const CALL_TERMINAL_EVENT_TYPES = ["call.reject", "call.hangup"];
 export const CALL_MIC_STATE_EVENT_TYPES = ["call.mic_state"];
 export const CALL_VIDEO_STATE_EVENT_TYPES = ["call.video_state"];
 
@@ -34,22 +30,6 @@ type ParsedIncomingEnvelope = {
   idempotencyKey?: string;
   payload?: WsIncomingPayload;
 };
-
-/**
- * @param {unknown} value
- * @returns {value is CallSignalEventType}
- */
-export function isCallSignalEventType(value: unknown): value is CallSignalEventType {
-  return typeof value === "string" && CALL_SIGNAL_EVENT_TYPES.includes(value);
-}
-
-/**
- * @param {unknown} value
- * @returns {value is CallTerminalEventType}
- */
-export function isCallTerminalEventType(value: unknown): value is CallTerminalEventType {
-  return typeof value === "string" && CALL_TERMINAL_EVENT_TYPES.includes(value);
-}
 
 export function isCallMicStateEventType(value: unknown): value is CallMicStateEventType {
   return typeof value === "string" && CALL_MIC_STATE_EVENT_TYPES.includes(value);
@@ -119,6 +99,8 @@ export function asKnownWsIncomingEnvelope(
     case "chat.send":
     case "chat.edit":
     case "chat.delete":
+    case "call.mic_state":
+    case "call.video_state":
       return {
         type: envelope.type,
         requestId: envelope.requestId,
@@ -126,15 +108,6 @@ export function asKnownWsIncomingEnvelope(
         payload: envelope.payload
       };
     default:
-      if (isCallSignalEventType(envelope.type) || isCallTerminalEventType(envelope.type) || isCallMicStateEventType(envelope.type) || isCallVideoStateEventType(envelope.type)) {
-        return {
-          type: envelope.type,
-          requestId: envelope.requestId,
-          idempotencyKey: envelope.idempotencyKey,
-          payload: envelope.payload
-        };
-      }
-
       return null;
   }
 }
@@ -161,23 +134,6 @@ export function getPayloadString(payload: Record<string, unknown> | undefined, k
   }
 
   return trimmed.slice(0, maxLength);
-}
-
-/**
- * @param {Record<string, unknown> | undefined} payload
- * @returns {Record<string, unknown> | null}
- */
-export function getCallSignal(payload: Record<string, unknown> | undefined): Record<string, unknown> | null {
-  if (!payload) {
-    return null;
-  }
-
-  const signal = payload.signal;
-  if (!isObjectRecord(signal)) {
-    return null;
-  }
-
-  return signal;
 }
 
 /**
@@ -461,68 +417,6 @@ function buildCallRelayBasePayload(
     roomSlug,
     targetUserId,
     ts: new Date().toISOString()
-  };
-}
-
-/**
- * @param {CallSignalEventType} eventType
- * @param {string} fromUserId
- * @param {string} fromUserName
- * @param {string} roomId
- * @param {string | null} roomSlug
- * @param {string | null} targetUserId
- * @param {Record<string, unknown>} signal
- * @returns {WsOutgoingEnvelope}
- */
-export function buildCallSignalRelayEnvelope(
-  eventType: CallSignalEventType,
-  requestId: string | null,
-  sessionId: string,
-  traceId: string,
-  fromUserId: string,
-  fromUserName: string,
-  roomId: string,
-  roomSlug: string | null,
-  targetUserId: string | null,
-  signal: Record<string, unknown>
-): WsOutgoingEnvelope {
-  return {
-    type: eventType,
-    payload: {
-      ...buildCallRelayBasePayload(requestId, sessionId, traceId, fromUserId, fromUserName, roomId, roomSlug, targetUserId),
-      signal
-    }
-  };
-}
-
-/**
- * @param {CallTerminalEventType} eventType
- * @param {string} fromUserId
- * @param {string} fromUserName
- * @param {string} roomId
- * @param {string | null} roomSlug
- * @param {string | null} targetUserId
- * @param {string | null} reason
- * @returns {WsOutgoingEnvelope}
- */
-export function buildCallTerminalRelayEnvelope(
-  eventType: CallTerminalEventType,
-  requestId: string | null,
-  sessionId: string,
-  traceId: string,
-  fromUserId: string,
-  fromUserName: string,
-  roomId: string,
-  roomSlug: string | null,
-  targetUserId: string | null,
-  reason: string | null
-): WsOutgoingEnvelope {
-  return {
-    type: eventType,
-    payload: {
-      ...buildCallRelayBasePayload(requestId, sessionId, traceId, fromUserId, fromUserName, roomId, roomSlug, targetUserId),
-      reason
-    }
   };
 }
 
