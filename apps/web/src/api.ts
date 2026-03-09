@@ -2,6 +2,7 @@ import type {
   AudioQuality,
   AuthModeResponse,
   MessagesCursor,
+  LivekitTokenResponse,
   RoomCategory,
   Room,
   RoomKind,
@@ -108,6 +109,7 @@ const endpoints = {
   ssoSession: "/v1/auth/sso/session",
   me: "/v1/auth/me",
   wsTicket: "/v1/auth/ws-ticket",
+  livekitToken: "/v1/auth/livekit-token",
   rooms: "/v1/rooms",
   roomsTree: "/v1/rooms/tree",
   roomCategories: "/v1/room-categories",
@@ -141,6 +143,10 @@ export const api = {
   updateMe: (token: string, input: { name: string }) =>
     fetchJson<{ user: User | null }>(endpoints.me, token, withJsonBody("PATCH", input)),
   wsTicket: (token: string) => fetchJson<{ ticket: string; expiresInSec: number }>(endpoints.wsTicket, token),
+  livekitToken: (
+    token: string,
+    input: { roomSlug: string; canPublish?: boolean; canSubscribe?: boolean; canPublishData?: boolean }
+  ) => fetchJson<LivekitTokenResponse>(endpoints.livekitToken, token, withJsonBody("POST", input)),
   rooms: (token: string) => fetchJson<{ rooms: Room[] }>(endpoints.rooms, token),
   roomTree: (token: string) => fetchJson<RoomsTreeResponse>(endpoints.roomsTree, token),
   createCategory: (token: string, input: { slug: string; title: string; position?: number }) =>

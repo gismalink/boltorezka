@@ -35,6 +35,26 @@ Validation note (2026-03-09): подтверждено вручную, что н
 Validation note (2026-03-09): baseline compare `p2p vs sfu` повторен от `origin/main` с policy override (`ALLOW_TEST_FROM_MAIN=1`), артефакт `~/srv/boltorezka/.deploy/compare-p2p-sfu-20260308T212146Z.md`: оба профиля `pass`, one-way `0/0`, `ACK` (`p2p=34`, `sfu=31`), `NACK` (`1/1`).
 Validation note (2026-03-09): лимиты room/capacity и client adaptive policy зафиксированы в `docs/runbooks/PHASE3_VOICE_WEBRTC_MVP_POLICY.md` (validated envelope, bounded reconnect/backoff, graceful degradation).
 Validation note (2026-03-09): anti-abuse policy документирована: server offer rate-limit (`apps/api/src/routes/realtime.ts`, `CALL_OFFER_MIN_INTERVAL_MS=5000` + ttl cleanup) и smoke anti-loop thresholds (`SMOKE_RTC_MAX_RELAYED_OFFERS/ANSWERS/RENEGOTIATION_EVENTS`) в `docs/operations/SMOKE_CI_MATRIX.md`.
+Decision update (2026-03-09): целевой SFU media-plane закреплен за `LiveKit`; текущий встроенный SFU path остается как migration/rollback path до завершения Stage 4.
+Validation note (2026-03-09): подготовлен Stage A foundation scaffolding для `LiveKit` в `test`: `infra/docker-compose.host.yml` (`boltorezka-livekit-test`, profile `livekit-test`), env-шаблон `infra/.env.host.example` (`TEST_LIVEKIT_*`, `LIVEKIT_TEST_API_*`), ops scripts `scripts/ops/livekit-test-{up,check,down}.sh`, runbook `docs/runbooks/LIVEKIT_TEST_FOUNDATION_RUNBOOK.md`.
+Validation note (2026-03-09): `LiveKit` Stage A поднят в `test` на сервере (`feature/scheduler-interface-portable`, SHA `92c3ea0`), после добавления NAT-forward (`UDP 34000-34999`, `TCP 7881`) и host-secrets (`LIVEKIT_TEST_API_SECRET` length `64`); контейнер `boltorezka-livekit-test` в `Up`, `restartCount=0`.
+Validation note (2026-03-09): Stage B token minting validated на `test`: backend endpoint `POST /v1/auth/livekit-token` возвращает signed token + `url/room/identity/expiresInSec` при `TEST_LIVEKIT_ENABLED=1`; проверено в `test-room` через smoke bearer token.
+Validation note (2026-03-09): control-plane livekit routing + guard validated в `test-room` на SHA `4c7d783`: `room.joined.mediaTopology=livekit` для двух smoke users, `call.offer` в этой комнате возвращает `nack.code=LiveKitSignalingDisabled` и не релеится target user.
+Validation note (2026-03-09): baseline compare `sfu-current vs livekit-topology` выполнен в `test` на SHA `8b996e8` командой `TEST_REF=origin/feature/scheduler-interface-portable npm run smoke:compare:sfu-livekit`; артефакт `~/srv/boltorezka/.deploy/compare-sfu-livekit-20260309T085858Z.md` (оба профиля `pass`, livekit guard `pass`, guard code `LiveKitSignalingDisabled`).
+Validation note (2026-03-09): добавлен `livekit` control smoke-gate в postdeploy/compare (`SMOKE_LIVEKIT_ROOM_SLUG`): token-flow (`join/reconnect/late-join`) + `mediaTopology=livekit` guard (`LiveKitSignalingDisabled`) validated на SHA `acd9232`; артефакт `~/srv/boltorezka/.deploy/compare-sfu-livekit-20260309T091552Z.md` (`livekit_gate=pass`).
+Validation note (2026-03-09): dedicated `LiveKit` media smoke-gate (browser publish/subscribe/reconnect/late-join + one-way counters) внедрен и validated в `test` на SHA `fabf8c3` через `TEST_REF=origin/feature/scheduler-interface-portable npm run deploy:test:livekit`; summary `~/srv/boltorezka/.deploy/last-smoke-summary.env` содержит `SMOKE_STATUS=pass`, `SMOKE_LIVEKIT_GATE_STATUS=pass`, `SMOKE_LIVEKIT_MEDIA_STATUS=pass`.
+Validation note (2026-03-09): control-plane adapter для `mediaTopology=livekit` дополнен correlation IDs для `room.join/leave/reconnect` (WS envelopes + ack meta) и token handoff (`POST /v1/auth/livekit-token` возвращает `roomId`, `mediaTopology=livekit`, `traceId`) на SHA `ca4fbd7`; test deploy smoke `deploy:test:livekit` прошел (`SMOKE_STATUS=pass`, `SMOKE_LIVEKIT_GATE_STATUS=pass`, `SMOKE_LIVEKIT_MEDIA_STATUS=pass`).
+Validation note (2026-03-09): введен rolling SLO monitor (`npm run slo:check`) с окнами `5m/30m`, артефактами `.deploy/slo/last-slo-report.md` + `.deploy/slo/last-slo-eval.env` и scheduler job `slo-rolling-gate`; runbook: `docs/operations/SLO_ROLLING_ALERTS.md`.
+Validation note (2026-03-09): launchd job `com.boltorezka.scheduler.slo-rolling-gate` установлен в `test` на сервере (interval `300s`, state `running`), первый стабильный run `20260309T110006Z` завершен `success`; `SLO_ROLLING_STATUS=pass`, `SLO_ROLLING_5M_ACK=55`, `SLO_ROLLING_5M_NACK=0`.
+Validation note (2026-03-09): frontend переключен на native `LiveKit` runtime для комнат с `mediaTopology=livekit` (без legacy `call.*` media path), test rollout на SHA `601f3e3` выполнен командой `TEST_REF=origin/feature/scheduler-interface-portable npm run deploy:test:livekit`; postdeploy summary: `SMOKE_STATUS=pass`, `SMOKE_LIVEKIT_GATE_STATUS=pass`, `SMOKE_LIVEKIT_MEDIA_STATUS=pass`, `expectedMediaTopology=livekit`, `callSignalGuarded=true` (`LiveKitSignalingDisabled`).
+Validation note (2026-03-09): зафиксирован release-candidate checkpoint tag `release-candidate-livekit-test-2026-03-09` на SHA `63b4718` после ручного подтверждения стабильности `p2p` и `livekit` комнат (до отдельного фикса camera transmit в livekit).
+Validation note (2026-03-09): camera transmit fix для LiveKit overlay path (`adaptiveStream=false`) выкачен в `test` на SHA `694dc18` (`TEST_REF=origin/feature/scheduler-interface-portable npm run deploy:test:livekit` на сервере); postdeploy smoke снова зеленый, включая `smoke:livekit:token-flow` и `smoke:livekit:media` (`oneWayIncidents.audio=0`, `oneWayIncidents.video=0`), после чего получено ручное подтверждение `все работает`.
+Validation note (2026-03-09): rolling SLO status повторно подтвержден на сервере (`~/srv/boltorezka/.deploy/slo/last-slo-eval.env`): `SLO_ROLLING_STATUS=pass`, `SLO_ROLLING_ALERT_COUNT=0`, `SLO_ROLLING_TS=2026-03-09T15:35:44.202Z`.
+Validation note (2026-03-09): выполнен repository secret-check (heuristic signatures, tracked files) с артефактом `.deploy/security/secret-heuristic-scan-20260309T154311Z.txt`; явных hardcoded секретов/ключей не обнаружено, совпадения относятся к runtime env-переменным в smoke/deploy scripts.
+Validation note (2026-03-09): ручной live-check с 5 устройствами в `test-room` подтвердил быстрый camera toggle без фризов; server metrics artifact `~/srv/boltorezka/.deploy/metrics-live/test-room-live-2min-20260309T155930Z.txt` фиксирует стабильные `tracks_video=4` и `tracks_audio=5` в 4 подряд окнах по 30s, без роста `nack`/`reconnect`/`offer`/`answer`/`ice` counters.
+Validation note (2026-03-09): добавлен и проверен test-профиль полного LiveKit routing (`deploy:test:livekit:allrooms`, script `scripts/deploy/deploy-test-livekit-all-default.sh`), rollout на SHA `08a257b` прошел `SMOKE_STATUS=pass`; baseline `general` и `test-room` подтверждают `expectedMediaTopology=livekit`, `SMOKE_LIVEKIT_GATE_STATUS=pass`, `SMOKE_LIVEKIT_MEDIA_STATUS=pass`.
+Validation note (2026-03-09): `deploy:test:livekit` переведен на all-rooms LiveKit default profile (`TEST_RTC_MEDIA_TOPOLOGY_DEFAULT=livekit` в `scripts/deploy/deploy-test-livekit-default.sh`), legacy path остается rollback-only через конфигурационные override.
+Validation note (2026-03-09): post-promotion server retry deploy для `deploy:test:livekit` на SHA `ea9d318` прошел успешно после транзиентного build-network сбоя (`npm install ECONNRESET` на первой попытке): итоговый прогон завершился `SMOKE_STATUS=pass`, `SMOKE_LIVEKIT_GATE_STATUS=pass`, `SMOKE_LIVEKIT_MEDIA_STATUS=pass`, `expectedMediaTopology=livekit` для `general` и `test-room`.
 
 ## 0) Базовые инварианты (обязательно)
 
@@ -99,7 +119,7 @@ Validation note (2026-03-09): anti-abuse policy документирована: 
 - [x] Если статус камеры `off`, окно скрывается.
 - [x] Призрачные окна отсутствуют (статусы чистятся по room presence).
 - [x] При rejoin не остается stale карточек пользователей.
-- [ ] Сетка камер стабильна при 3+ участниках и быстрых toggle (deferred: закрываем в полном SFU rollout).
+- [x] Сетка камер стабильна при 3+ участниках и быстрых toggle.
 - [x] На mobile и desktop одинаковая логика видимости.
 
 ## 5) Observability И Диагностика
@@ -110,8 +130,8 @@ Validation note (2026-03-09): anti-abuse policy документирована: 
 - [x] Есть разрез метрик по topology (`p2p`/`sfu`).
 - [x] Есть разрез по сети (`udp`/`tcp`/`tls relay`).
 - [x] RTC-логи маскируют candidate IP/port и приватные данные; raw candidate logging включается только debug-флагом (`WS_CALL_DEBUG_RAW_ICE=1`).
-- [ ] Есть SLO-дэшборд: setup success, reconnect success, median join time.
-- [ ] Настроены алерты на деградацию (rolling 5m/30m windows).
+- [x] Есть SLO-дэшборд: setup success, reconnect success, median join time.
+- [x] Настроены алерты на деградацию (rolling 5m/30m windows).
 - [x] В runbook есть единый triage flow для инцидентов.
 
 ## 6) Тестовая Матрица (ручная + автоматическая)
@@ -132,7 +152,7 @@ Validation note (2026-03-09): anti-abuse policy документирована: 
 
 ## 7) SFU Эволюция До Целевой Модели
 
-- [x] Зафиксирован выбор SFU media-plane (LiveKit/mediasoup/Janus) с ADR.
+- [x] Зафиксирован выбор SFU media-plane (`LiveKit`) с ADR.
 - [x] Определен контракт интеграции SFU с текущим control plane.
 - [x] Описан lifecycle: `join`, `publish`, `subscribe`, `leave`, `reconnect`.
 - [x] Определены лимиты комнат и adaptive policies на клиентах.
@@ -144,11 +164,17 @@ Validation note (2026-03-09): anti-abuse policy документирована: 
 - [x] Достигнут критерий: SFU path не хуже P2P по setup/reconnect (артефакт на feature-кандидате: `~/srv/boltorezka/.deploy/compare-p2p-sfu-20260308T184848Z.md`; для pre-prod из `main` повторить тот же шаг).
 - [ ] Полный переход всех voice/video сессий на SFU завершен (без fallback на legacy P2P в штатном профиле).
 - [x] Решение `SFU-first` зафиксировано в ADR/runbook: глубокая voice отладка выполняется только после переключения baseline на SFU.
+- [x] Поднят `LiveKit` в `test` контуре (self-hosted) и задокументирован GitOps rollout/rollback runbook.
+- [x] Реализован server-side token minting для `LiveKit` (room-scoped grants, TTL, audit fields) без выдачи секретов в клиент.
+- [x] Legacy custom-SFU path зафиксирован как fallback-only (rollback), активная разработка ведется в `LiveKit` path (`deploy:test:livekit`).
+- [x] Добавлен transport adapter `mediaTopology=livekit` в control plane (`join/publish/subscribe/leave/reconnect`) с correlation IDs.
+- [x] Добавлены smoke-gate'ы для `LiveKit` path (`join`, publish/subscribe, reconnect, late-join, one-way incidents).
+- [x] Проведен baseline compare `sfu-current vs livekit` в `test` и зафиксирован decision package по default routing.
 
 ## 8) Безопасность И Надежность
 
 - [ ] TURN credentials ротируются по расписанию.
-- [ ] Нет захардкоженных секретов в репозитории.
+- [x] Нет захардкоженных секретов в репозитории.
 - [x] JWT/SSO flow не использует `?token=` в URL callback.
 - [x] Return URL проходит только через validated `state`.
 - [x] Ограничены allowed origins/hosts для test/prod.
@@ -168,7 +194,7 @@ Validation note (2026-03-09): anti-abuse policy документирована: 
 - [x] `docker compose ps` показывает все сервисы `Up`.
 - [x] Логи API/TURN без критичных ошибок за первые 15-30 минут.
 - [ ] Smoke `test`/`prod` проходит полностью.
-- [ ] Мониторинг подтверждает отсутствие регрессий SLO.
+- [x] Мониторинг подтверждает отсутствие регрессий SLO.
 - [x] Заполнен release log и postmortem-note (если были аномалии).
 
 ## 11) Реализация (текущий спринт)
@@ -181,9 +207,9 @@ Validation note (2026-03-09): anti-abuse policy документирована: 
 
 ## 12) Краткий План Исполнения (рекомендуемая последовательность)
 
-1. Завершить полный rewrite voice/video на SFU media-plane и убрать зависимость от legacy P2P в штатном пути.
-2. Закрыть control-plane контракты под SFU baseline (обязательный `targetUserId`, идемпотентность `call.*`, correlation IDs, `ack/retry` для SDP).
-3. Зафиксировать post-rewrite baseline в `test` и включить shadow telemetry/SLO сигналы.
-4. Провести полную матрицу тестирования и отладки voice/video уже на SFU (включая reconnect, mixed devices, relay-only/mixed профили).
-5. Подтвердить критерии качества, rollback readiness и отсутствие критичных инцидентов.
-6. Подготовить prod decision package и выполнить rollout только после явного approve.
+1. Поднять `LiveKit` в `test` как отдельный media-plane сервис и зафиксировать GitOps runbook (deploy/rollback/check).
+2. Добавить backend token-minting endpoint/flow для `LiveKit` с room/user grants, TTL и audit correlation.
+3. Ввести routing profile `mediaTopology=livekit` и adapter в control plane, сохранив rollback на текущий SFU path.
+4. Расширить smoke/postdeploy гейты: `livekit join/publish/subscribe/reconnect/late-join`, one-way и transport breakdown.
+5. Провести полную тест-матрицу на `LiveKit` baseline и сравнение `sfu-current vs livekit` по setup/reconnect/incident rate.
+6. После стабилизации закрепить `LiveKit` как default в `test`, затем подготовить prod decision package и rollout только по явному approve.

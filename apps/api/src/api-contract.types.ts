@@ -24,6 +24,18 @@ export type WsTicketResponse = {
   expiresInSec: number;
 };
 
+export type LivekitTokenResponse = {
+  token: string;
+  url: string;
+  room: string;
+  roomId: string;
+  identity: string;
+  expiresInSec: number;
+  issuedAt: string;
+  mediaTopology: "livekit";
+  traceId: string;
+};
+
 export type MeResponse = {
   user: UserRow | null;
 };

@@ -15,7 +15,14 @@ export type AppConfig = {
   appBuildSha: string;
   apiServeStatic: boolean;
   rtcFeatureInitialStateReplay: boolean;
-  rtcMediaTopologyDefault: "p2p" | "sfu";
+  rtcMediaTopologyDefault: "p2p" | "sfu" | "livekit";
   rtcMediaTopologySfuRooms: string[];
   rtcMediaTopologySfuUsers: string[];
+  rtcMediaTopologyLivekitRooms: string[];
+  rtcMediaTopologyLivekitUsers: string[];
+  livekitEnabled: boolean;
+  livekitUrl: string;
+  livekitApiKey: string;
+  livekitApiSecret: string;
+  livekitTokenTtlSec: number;
 };

@@ -15,6 +15,10 @@ export async function dbHealthcheck() {
 export async function ensureSchema() {
   await db.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT 'user'");
   await db.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_banned BOOLEAN NOT NULL DEFAULT FALSE");
+  await db.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS username TEXT");
+  await db.query(
+    "UPDATE users SET username = split_part(email, '@', 1) WHERE coalesce(trim(username), '') = '' AND coalesce(trim(email), '') <> ''"
+  );
   await db.query(
     `CREATE TABLE IF NOT EXISTS server_settings (
       id BOOLEAN PRIMARY KEY DEFAULT TRUE,

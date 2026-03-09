@@ -17,7 +17,7 @@ type WsMessageControllerOptions = {
   pushCallLog: (text: string) => void;
   pushToast: (message: string) => void;
   setRoomSlug: (slug: string) => void;
-  onRoomMediaTopology?: (payload: { roomSlug: string; mediaTopology: "p2p" | "sfu" }) => void;
+  onRoomMediaTopology?: (payload: { roomSlug: string; mediaTopology: "p2p" | "sfu" | "livekit" }) => void;
   setRoomsPresenceBySlug: Dispatch<SetStateAction<Record<string, string[]>>>;
   setRoomsPresenceDetailsBySlug: Dispatch<SetStateAction<Record<string, PresenceMember[]>>>;
   trackNack: (data: {
@@ -94,8 +94,15 @@ export class WsMessageController {
     return String(value || "").trim();
   }
 
-  private asMediaTopology(value: unknown): "p2p" | "sfu" {
-    return String(value || "").trim().toLowerCase() === "sfu" ? "sfu" : "p2p";
+  private asMediaTopology(value: unknown): "p2p" | "sfu" | "livekit" {
+    const normalized = String(value || "").trim().toLowerCase();
+    if (normalized === "livekit") {
+      return "livekit";
+    }
+    if (normalized === "sfu") {
+      return "sfu";
+    }
+    return "p2p";
   }
 
   private toPresenceMember(item: { userId?: string; userName?: string } | null | undefined): PresenceMember | null {

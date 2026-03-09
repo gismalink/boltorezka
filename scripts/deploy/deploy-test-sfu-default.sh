@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
-# Purpose: Run test deploy+smoke with SFU as default topology (Stage 3 profile).
+# Purpose: Run test deploy+smoke with legacy SFU as default topology (rollback-only profile).
 set -euo pipefail
 
 if [[ -z "${TEST_REF:-}" ]]; then
   echo "[deploy-test-sfu-default] set TEST_REF=origin/feature/<name>" >&2
   exit 1
 fi
+
+echo "[deploy-test-sfu-default] legacy fallback profile: prefer deploy-test-livekit-default for ongoing work" >&2
 
 export TEST_RTC_MEDIA_TOPOLOGY_DEFAULT="${TEST_RTC_MEDIA_TOPOLOGY_DEFAULT:-sfu}"
 export TEST_RTC_MEDIA_TOPOLOGY_SFU_ROOMS="${TEST_RTC_MEDIA_TOPOLOGY_SFU_ROOMS:-}"

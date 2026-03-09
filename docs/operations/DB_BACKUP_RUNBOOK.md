@@ -53,6 +53,19 @@ BACKUP_ROOT=/Users/davidshvartsman/backups/boltorezka RETENTION_DAYS=21 bash ./s
 
 Минимум: запускать ежедневно.
 
+Предпочтительно через единый scheduler interface:
+
+```bash
+cd ~/srv/boltorezka
+bash ./scripts/ops/scheduler/install-launchd-job.sh backup-postgres-all
+```
+
+Source-of-truth для расписания/команды:
+- `scripts/ops/scheduler/jobs/backup-postgres-all.env`
+
+Централизованные execution-логи scheduler:
+- `~/srv/boltorezka/.deploy/scheduler/executions.ndjson`
+
 Пример cron (если используется):
 
 ```cron

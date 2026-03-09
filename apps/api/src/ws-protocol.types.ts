@@ -149,13 +149,21 @@ export type ChatDeletedPayload = {
   ts: string;
 };
 
-export type MediaTopology = "p2p" | "sfu";
+export type MediaTopology = "p2p" | "sfu" | "livekit";
+
+export type RealtimeCorrelationPayload = {
+  requestId: string | null;
+  sessionId: string;
+  traceId: string;
+};
 
 export type RoomJoinedPayload = {
   roomId: string;
   roomSlug: string;
   roomTitle: string;
   mediaTopology: MediaTopology;
+  correlation?: RealtimeCorrelationPayload;
+  reconnect?: boolean;
 };
 
 export type RoomPresencePayload = {
@@ -163,11 +171,13 @@ export type RoomPresencePayload = {
   roomSlug: string;
   users: PresenceUser[];
   mediaTopology: MediaTopology;
+  correlation?: RealtimeCorrelationPayload;
 };
 
 export type RoomLeftPayload = {
   roomId: string;
   roomSlug: string;
+  correlation?: RealtimeCorrelationPayload;
 };
 
 export type PresenceJoinedPayload = {
@@ -175,6 +185,7 @@ export type PresenceJoinedPayload = {
   userName: string;
   roomSlug: string;
   presenceCount: number;
+  correlation?: RealtimeCorrelationPayload;
 };
 
 export type PresenceLeftPayload = {
@@ -182,6 +193,7 @@ export type PresenceLeftPayload = {
   userName: string;
   roomSlug: string | null;
   presenceCount: number;
+  correlation?: RealtimeCorrelationPayload;
 };
 
 export type CallRelayBasePayload = {

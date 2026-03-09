@@ -3,6 +3,7 @@ export type UserRole = "user" | "admin" | "super_admin";
 export type UserRow = {
   id: string;
   email: string;
+  username: string | null;
   name: string;
   role: UserRole;
   is_banned: boolean;
@@ -12,6 +13,7 @@ export type UserRow = {
 export type UserCompactRow = {
   id: string;
   email: string;
+  username: string | null;
   name: string;
   role: UserRole;
   is_banned: boolean;

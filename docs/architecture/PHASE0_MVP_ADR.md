@@ -48,9 +48,10 @@
 ### ADR-004: SFU-first media baseline (post-MVP transition)
 
 - Решение: для текущего migration track принят `SFU-first` подход - все глубокие проверки и отладка voice/video выполняются на baseline `mediaTopology=sfu`; legacy `p2p` остается только как rollback/compare path.
-- Выбор media-plane: operational baseline закреплен за текущим SFU routing profile (`RTC_MEDIA_TOPOLOGY_DEFAULT=sfu` в test Stage 3), без подключения внешних SFU движков в этом цикле (варианты LiveKit/mediasoup/Janus отложены до отдельного ADR при изменении архитектуры runtime).
+- Выбор media-plane: целевой внешний SFU движок для transition track - `LiveKit` (self-hosted). До завершения migration stages текущий SFU routing profile (`RTC_MEDIA_TOPOLOGY_DEFAULT=sfu` в test Stage 3) сохраняется как промежуточный baseline и rollback path.
+- Историческая пометка: прежнее откладывание внешнего SFU-движка не закреплялось отдельным ADR с достаточным обоснованием и трактуется как временная тактика стабилизации, а не как целевое архитектурное решение.
 - Обоснование: снижение неоднозначности mixed-topology поведения, единый test baseline и детерминированные rollout/smoke gate.
-- Следствие: release/readiness evidence по voice/video считается валидным только для SFU baseline; pre-prod пакет обязан включать SFU smoke + baseline compare `p2p vs sfu`.
+- Следствие: release/readiness evidence по voice/video считается валидным только для SFU baseline; в рамках внедрения LiveKit pre-prod пакет обязан включать сравнение `sfu-current vs livekit` и rollback drills.
 
 ## 3) Актуальное состояние к 2026-03-08
 

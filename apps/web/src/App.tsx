@@ -33,6 +33,7 @@ import {
   useScreenWakeLock,
   useServerSounds,
   useServerMenuAccessGuard,
+  useLivekitVoiceRuntime,
   useVoiceCallRuntime,
   useVoiceRoomStateMaps
 } from "./hooks";
@@ -94,7 +95,7 @@ export function App() {
   const [toasts, setToasts] = useState<Array<{ id: number; message: string }>>([]);
   const [roomsPresenceBySlug, setRoomsPresenceBySlug] = useState<Record<string, string[]>>({});
   const [roomsPresenceDetailsBySlug, setRoomsPresenceDetailsBySlug] = useState<Record<string, PresenceMember[]>>({});
-  const [roomMediaTopologyBySlug, setRoomMediaTopologyBySlug] = useState<Record<string, "p2p" | "sfu">>({});
+  const [roomMediaTopologyBySlug, setRoomMediaTopologyBySlug] = useState<Record<string, "p2p" | "sfu" | "livekit">>({});
   const [eventLog, setEventLog] = useState<string[]>([]);
   const [telemetrySummary, setTelemetrySummary] = useState<TelemetrySummary | null>(null);
   const [wsState, setWsState] = useState<"disconnected" | "connecting" | "connected">(
@@ -418,26 +419,10 @@ export function App() {
   }, [rooms, roomsTree, roomSlug]);
   const allowVideoStreaming = currentRoomKind === "text_voice_video";
   const currentRoomSupportsVideo = allowVideoStreaming;
+  const currentRoomMediaTopology = roomMediaTopologyBySlug[roomSlug] || "p2p";
+  const isLivekitRoomTopology = currentRoomMediaTopology === "livekit";
 
-  const {
-    roomVoiceConnected,
-    connectedPeerUserIds,
-    connectingPeerUserIds,
-    remoteMutedPeerUserIds,
-    remoteSpeakingPeerUserIds,
-    remoteAudioMutedPeerUserIds,
-    voiceMediaStatusByPeerUserId,
-    localVoiceMediaStatusSummary,
-    localVideoStream,
-    remoteVideoStreamsByUserId,
-    connectRoom,
-    disconnectRoom,
-    handleIncomingSignal,
-    handleIncomingTerminal,
-    handleIncomingMicState,
-    handleIncomingVideoState: handleIncomingRtcVideoState,
-    handleCallNack
-  } = useVoiceCallRuntime({
+  const rtcVoiceRuntime = useVoiceCallRuntime({
     localUserId: user?.id || "",
     roomSlug,
     allowVideoStreaming,
@@ -467,6 +452,58 @@ export function App() {
     setCallStatus,
     setLastCallPeer
   });
+
+  const livekitVoiceRuntime = useLivekitVoiceRuntime({
+    token,
+    localUserId: user?.id || "",
+    roomSlug,
+    allowVideoStreaming,
+    videoStreamingEnabled: cameraEnabled,
+    roomVoiceTargets: currentRoomVoiceTargets,
+    selectedInputId,
+    selectedOutputId,
+    selectedVideoInputId,
+    micMuted,
+    audioMuted,
+    outputVolume,
+    pushToast,
+    pushCallLog,
+    setCallStatus,
+    setLastCallPeer
+  });
+
+  const activeVoiceRuntime = isLivekitRoomTopology ? livekitVoiceRuntime : rtcVoiceRuntime;
+  const disconnectLegacyRtcRoom = rtcVoiceRuntime.disconnectRoom;
+  const disconnectLivekitRoom = livekitVoiceRuntime.disconnectRoom;
+
+  const {
+    roomVoiceConnected,
+    connectedPeerUserIds,
+    connectingPeerUserIds,
+    remoteMutedPeerUserIds,
+    remoteSpeakingPeerUserIds,
+    remoteAudioMutedPeerUserIds,
+    voiceMediaStatusByPeerUserId,
+    localVoiceMediaStatusSummary,
+    localVideoStream,
+    remoteVideoStreamsByUserId,
+    connectRoom,
+    disconnectRoom,
+    handleIncomingSignal,
+    handleIncomingTerminal,
+    handleIncomingMicState,
+    handleIncomingVideoState: handleIncomingRtcVideoState,
+    handleCallNack
+  } = activeVoiceRuntime;
+
+  useEffect(() => {
+    if (isLivekitRoomTopology) {
+      disconnectLegacyRtcRoom();
+      return;
+    }
+
+    disconnectLivekitRoom();
+  }, [disconnectLegacyRtcRoom, disconnectLivekitRoom, isLivekitRoomTopology]);
 
   const remoteVideoLabelsByUserId = useMemo(() => {
     const labels: Record<string, string> = {};
@@ -537,7 +574,7 @@ export function App() {
   useEffect(() => {
     const activeRoom = rooms.find((room) => room.slug === roomSlug);
     const roomSupportsRtc = activeRoom ? activeRoom.kind !== "text" : false;
-    if (!roomSupportsRtc || !roomVoiceConnected || !canManageAudioQuality) {
+    if (!roomSupportsRtc || !roomVoiceConnected || !canManageAudioQuality || isLivekitRoomTopology) {
       return;
     }
 
@@ -567,6 +604,7 @@ export function App() {
     roomSlug,
     roomVoiceConnected,
     canManageAudioQuality,
+    isLivekitRoomTopology,
     serverVideoEffectType,
     serverVideoResolution,
     serverVideoFps,
@@ -718,6 +756,13 @@ export function App() {
 
     // Keep camera status strictly scoped to current room participants and active RTC peers.
     activeTargetIds.forEach((userId) => {
+      const hasRemoteStream = Object.prototype.hasOwnProperty.call(remoteVideoStreamsByUserId, userId);
+      if (isLivekitRoomTopology) {
+        // LiveKit rooms derive camera visibility from subscribed video tracks, not legacy call.video_state.
+        map[userId] = hasRemoteStream;
+        return;
+      }
+
       const cameraEnabled = voiceCameraEnabledByUserIdInCurrentRoom[userId] === true;
       if (!cameraEnabled) {
         map[userId] = false;
@@ -726,7 +771,6 @@ export function App() {
 
       const rtcState = voiceRtcStateByUserIdInCurrentRoom[userId];
       const hasRtcPeer = rtcState === "connecting" || rtcState === "connected";
-      const hasRemoteStream = Object.prototype.hasOwnProperty.call(remoteVideoStreamsByUserId, userId);
       map[userId] = hasRtcPeer || hasRemoteStream;
     });
 
@@ -740,6 +784,7 @@ export function App() {
     voiceCameraEnabledByUserIdInCurrentRoom,
     voiceRtcStateByUserIdInCurrentRoom,
     remoteVideoStreamsByUserId,
+    isLivekitRoomTopology,
     currentRoomVoiceTargets,
     user?.id,
     roomVoiceConnected,
@@ -1246,8 +1291,9 @@ export function App() {
       return;
     }
 
-    if (roomMediaTopologyBySlug[roomSlug] === "sfu") {
-      pushCallLog(`media topology for ${roomSlug}: sfu (stage0 contract)`);
+    const roomTopology = roomMediaTopologyBySlug[roomSlug];
+    if (roomTopology === "sfu" || roomTopology === "livekit") {
+      pushCallLog(`media topology for ${roomSlug}: ${roomTopology}`);
     }
   }, [roomSlug, roomMediaTopologyBySlug, pushCallLog]);
 
@@ -1710,6 +1756,7 @@ export function App() {
       userSettingsOpen={userSettingsOpen}
       userSettingsTab={userSettingsTab}
       voiceSettingsPanel={voiceSettingsPanel}
+      profileUsername={String(user.username || user.email.split("@")[0] || "")}
       profileNameDraft={profileNameDraft}
       profileEmail={user.email}
       profileSaving={profileSaving}
@@ -1810,6 +1857,7 @@ export function App() {
       userSettingsOpen={userSettingsOpen}
       userSettingsTab={userSettingsTab}
       voiceSettingsPanel={voiceSettingsPanel}
+      profileUsername={String(user.username || user.email.split("@")[0] || "")}
       profileNameDraft={profileNameDraft}
       profileEmail={user.email}
       profileSaving={profileSaving}

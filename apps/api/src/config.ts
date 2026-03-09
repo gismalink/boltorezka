@@ -40,9 +40,14 @@ const parseBoolean = (value: unknown, defaultValue: boolean): boolean => {
 };
 
 const authMode = (process.env.AUTH_MODE || "sso").toLowerCase() === "local" ? "local" : "sso";
-const rtcMediaTopologyDefault = (String(process.env.RTC_MEDIA_TOPOLOGY_DEFAULT || "p2p").trim().toLowerCase() === "sfu")
+const rtcMediaTopologyDefaultRaw = String(process.env.RTC_MEDIA_TOPOLOGY_DEFAULT || "p2p").trim().toLowerCase();
+const livekitEnabledRaw = parseBoolean(process.env.LIVEKIT_ENABLED, false);
+const rtcMediaTopologyDefault = rtcMediaTopologyDefaultRaw === "sfu"
   ? "sfu"
-  : "p2p";
+  : rtcMediaTopologyDefaultRaw === "livekit" && livekitEnabledRaw
+    ? "livekit"
+    : "p2p";
+const livekitTokenTtlSecRaw = Number.parseInt(String(process.env.LIVEKIT_TOKEN_TTL_SEC || "1800"), 10);
 
 export const config: AppConfig = {
   port: Number(process.env.PORT || 8080),
@@ -66,5 +71,14 @@ export const config: AppConfig = {
   rtcFeatureInitialStateReplay: parseBoolean(process.env.RTC_FEATURE_INITIAL_STATE_REPLAY, true),
   rtcMediaTopologyDefault,
   rtcMediaTopologySfuRooms: parseCsv(process.env.RTC_MEDIA_TOPOLOGY_SFU_ROOMS),
-  rtcMediaTopologySfuUsers: parseCsv(process.env.RTC_MEDIA_TOPOLOGY_SFU_USERS)
+  rtcMediaTopologySfuUsers: parseCsv(process.env.RTC_MEDIA_TOPOLOGY_SFU_USERS),
+  rtcMediaTopologyLivekitRooms: parseCsv(process.env.RTC_MEDIA_TOPOLOGY_LIVEKIT_ROOMS),
+  rtcMediaTopologyLivekitUsers: parseCsv(process.env.RTC_MEDIA_TOPOLOGY_LIVEKIT_USERS),
+  livekitEnabled: livekitEnabledRaw,
+  livekitUrl: String(process.env.LIVEKIT_URL || "").trim(),
+  livekitApiKey: String(process.env.LIVEKIT_API_KEY || "").trim(),
+  livekitApiSecret: String(process.env.LIVEKIT_API_SECRET || "").trim(),
+  livekitTokenTtlSec: Number.isFinite(livekitTokenTtlSecRaw) && livekitTokenTtlSecRaw > 0
+    ? livekitTokenTtlSecRaw
+    : 1800
 };

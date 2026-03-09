@@ -1,7 +1,8 @@
 # План Миграции SFU (Decision Package)
 
 Дата: 2026-03-07  
-Статус: Stage 0-3 завершены в test, Stage 4 (prod readiness package) в работе
+Дата актуализации: 2026-03-09
+Статус: Stage 0-3 (current SFU profile) завершены в test; LiveKit Stage A-D в работе
 
 Execution reference:
 - `docs/plans/SFU_STAGE0_EXECUTION_PLAN.md`
@@ -41,12 +42,20 @@ Execution reference:
 Вариант B: гибридная топология (P2P по умолчанию, SFU для больших комнат)
 - Плюсы: безопасная миграция, сохраняет эффективность малых комнат, снижает риск.
 - Минусы: сложность routing/control и двойная нагрузка на тестирование.
-- Решение: выбран.
+- Решение: выбран как migration pattern.
 
 Вариант C: полный переход на SFU-only
 - Плюсы: единая media-топология и предсказуемое поведение для больших комнат.
 - Минусы: максимальный риск миграции и blast radius.
-- Решение: отложен.
+- Решение: отложен до стабилизации `LiveKit` baseline в test.
+
+Принятое уточнение (2026-03-09):
+- Целевой внешний SFU media-plane: `LiveKit` (self-hosted).
+- Текущий встроенный SFU routing profile используется как промежуточный baseline и rollback path.
+
+Историческая коррекция:
+- Ранее отложенный выбор внешнего SFU движка (LiveKit/mediasoup/Janus) не имел зафиксированного архитектурного обоснования и рассматривается как временное тактическое решение периода стабилизации.
+- Текущее решение (LiveKit как target) фиксирует возврат к исходной целевой модели с явными gate и rollback-планом.
 
 ## 4) Входные gate для старта SFU-реализации
 
@@ -72,38 +81,39 @@ Media routing:
 
 ## 6) Этапы миграции
 
-Stage 0: Готовность и контракты
-- Определить SFU session contract (`join`, `publish`, `subscribe`, `leave`) и capability envelope для клиентов.
-- Расширить схему observability SFU-специфичными метриками.
+Переходный контур (завершен):
+- Stage 0-3 для текущего SFU profile в test завершены (dark launch/canary/default-sfu-test).
 
-Stage 1: Dark launch в test
-- Развернуть SFU только в test.
-- Сохранить P2P как default.
-- Ввести room-level switch `mediaTopology=sfu|p2p` в test tooling.
+LiveKit контур (целевой):
 
-Stage 2: Canary-комнаты
-- Включить SFU только для выбранных внутренних комнат/пользователей.
-- Сравнить setup success, reconnect quality и camera consistency с P2P baseline.
+Stage A: LiveKit foundation в test
+- Развернуть LiveKit в test по GitOps.
+- Зафиксировать env/ports/TLS и health-check в runbook.
+- Подготовить rollback: отключение `mediaTopology=livekit` без code revert.
 
-Stage 2 control knobs (test-first):
-- `RTC_MEDIA_TOPOLOGY_SFU_ROOMS=<csv-room-slugs>`
-- `RTC_MEDIA_TOPOLOGY_SFU_USERS=<csv-user-ids>`
-- Приоритет routing: user-canary (`sfu`) -> room-canary (`sfu`) -> `RTC_MEDIA_TOPOLOGY_DEFAULT`.
+Stage B: Control-plane интеграция
+- Реализовать server-side token minting (room/user scoped grants, TTL, trace fields).
+- Добавить adapter lifecycle: `join`, `publish`, `subscribe`, `leave`, `reconnect`.
+- Сохранить correlation IDs и idempotency требования в signaling.
 
-Stage 3: Гибрид по умолчанию в test
-- Автомаршрутизация комнат выше порога в SFU.
-- Сохранить ручной rollback на P2P path.
-- Статус: Completed в test (последний evidence refresh: `deploy:test:sfu` PASS, `sha=4f9655e`, `expectedMediaTopology=sfu`, `mediaTopologyFirstOk=true`, серия `PASS x4`).
+Stage B status update (2026-03-09):
+- Базовый token minting endpoint внедрен: `POST /v1/auth/livekit-token` (auth required, room access check, TTL grants, audit log fields).
+- Следующий шаг Stage B: подключить `mediaTopology=livekit` transport adapter в runtime signaling flow.
 
-Stage 3 rollout profile (test):
-- `RTC_MEDIA_TOPOLOGY_DEFAULT=sfu`
-- `RTC_MEDIA_TOPOLOGY_SFU_ROOMS=`
-- `RTC_MEDIA_TOPOLOGY_SFU_USERS=`
-- Expected smoke topology: `sfu`.
+Stage C: Canary и сравнение
+- Включить `mediaTopology=livekit` для выбранных room/user в test.
+- Сравнить `setup/reconnect/one-way incidents` против current SFU baseline.
+- Обновить smoke/postdeploy gates для LiveKit path.
 
-Stage 4: Production readiness package
-- Продвижение в prod только из `main` и только по явному подтверждению.
-- Включить финальные evidence по rollout/rollback runbook.
+Stage C status update (2026-03-09):
+- Добавлен автоматизированный compare gate `smoke:compare:sfu-livekit` (`scripts/smoke/compare-sfu-livekit-baseline.sh`).
+- В `test` выполнен baseline compare на SHA `8b996e8`, артефакт: `~/srv/boltorezka/.deploy/compare-sfu-livekit-20260309T085858Z.md`.
+- Результат: `sfu-current=pass`, `livekit-topology=pass`, livekit signaling guard `pass` (`LiveKitSignalingDisabled`).
+
+Stage D: Default LiveKit в test -> prod readiness
+- Перевести `test` default routing на `livekit` при выполнении quality gates.
+- Сформировать pre-prod decision package с evidence и rollback drills.
+- В `prod` только после явного approve и smoke от `main`.
 
 ## 7) Критерии успеха
 
@@ -156,6 +166,7 @@ Stage 4: Production readiness package
 - `docs/runbooks/VOICE_BASELINE_RUNBOOK.md`
 - `docs/operations/SMOKE_CI_MATRIX.md`
 - postdeploy summary и снапшоты Redis `ws:metrics:<day>`.
+- LiveKit artifacts: token minting audit logs + `compare-sfu-livekit-<timestamp>.md`.
 
 ## 11) Канонические ссылки
 

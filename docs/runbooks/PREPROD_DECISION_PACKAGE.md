@@ -193,6 +193,10 @@
   - `appBuildSha` в `/version` соответствует deployed SHA.
 8. **Performance gate compliance**
   - соблюдены пороги из `docs/operations/PERFORMANCE_GATE.md` (API latency/reliability + realtime stability) для текущего release кандидата.
+9. **Rolling SLO alerts gate**
+  - выполнен `npm run slo:check` в `test` с актуальным admin bearer;
+  - статус в `.deploy/slo/last-slo-eval.env`: `SLO_ROLLING_STATUS=pass`;
+  - при `SLO_ROLLING_STATUS=alert` решение только `NO-GO` до triage/стабилизации.
 
 ### 8.2 Automatic NO-GO conditions
 
@@ -212,27 +216,27 @@
 - reconnectOk: `true | false`
 - smoke:web:e2e: `PASS | FAIL`
 - call relay scenario: `PASS | FAIL`
+- slo:check (`SLO_ROLLING_STATUS`): `pass | alert`
 - Release Owner: `<name>`
 - Rollback Owner: `<name>`
 - Rollback ref: `<known-good-sha>`
 - Final decision: `GO | NO-GO`
 
-### 8.4 Current gate record (2026-03-01)
-
-### 8.4 Current gate record (refresh 2026-03-07)
+### 8.4 Current gate record (refresh 2026-03-09)
 
 - Target main SHA: `<to-fill-before-next-prod>`
-- Last test deploy SHA: `2dc2d40` (`origin/feature/video-stream-investigation`, Stage 3 SFU-default profile)
+- Last test deploy SHA: `694dc18` (`origin/feature/scheduler-interface-portable`, LiveKit runtime stabilization)
 - smoke:sso: `PASS`
 - smoke:api: `PASS`
 - smoke:realtime: `PASS`
 - reconnectOk: `true`
 - smoke:web:version-cache: `PASS`
-- smoke:web:e2e: `PASS`
+- smoke:web:e2e: `PASS` (last validated baseline)
 - call relay scenario (`SMOKE_CALL_SIGNAL=1`): `PASS`
-- SFU default profile (`deploy:test:sfu`): `PASS x6 consecutive`
-- mediaTopology gate: `expected=sfu`, `mediaTopologyFirstOk=true`
-- Performance gate (`docs/operations/PERFORMANCE_GATE.md`): `READY_FOR_SIGNOFF`
+- livekit control gate (`smoke:livekit:token-flow`): `PASS`
+- livekit media gate (`smoke:livekit:media`): `PASS` (`oneWayIncidents.audio=0`, `oneWayIncidents.video=0`)
+- mediaTopology gate: `expected=livekit`, `mediaTopologyFirstOk=true`, `callSignalGuardCode=LiveKitSignalingDisabled`
+- Performance gate (`docs/operations/PERFORMANCE_GATE.md`): `READY_FOR_SIGNOFF` (test contour)
 - Release Owner: `<to-fill-before-next-prod>`
 - Rollback Owner: `<to-fill-before-next-prod>`
 - Rollback ref: `<to-fill-before-next-prod>`

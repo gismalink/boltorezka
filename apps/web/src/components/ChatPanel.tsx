@@ -75,6 +75,11 @@ export function ChatPanel({
   }, [previewImageUrl]);
 
   const composePreviewImage = composePreviewImageUrl;
+  const historyButtonLabel = loadingOlderMessages
+    ? t("chat.loading")
+    : !messagesHasMore
+      ? t("chat.historyLoaded")
+      : t("chat.loadOlder");
 
   const formatMessageTime = (value: string) => {
     const date = new Date(value);
@@ -198,7 +203,7 @@ export function ChatPanel({
           onClick={onLoadOlderMessages}
           disabled={!hasActiveRoom || !messagesHasMore || loadingOlderMessages}
         >
-          {loadingOlderMessages ? t("chat.loading") : t("chat.loadOlder")}
+          {historyButtonLabel}
         </button>
         {showVideoToggle ? (
           <button
@@ -208,9 +213,6 @@ export function ChatPanel({
           >
             {videoWindowsVisible ? t("chat.hideAllVideos") : t("chat.showAllVideos")}
           </button>
-        ) : null}
-        {!messagesHasMore && messages.length > 0 ? (
-          <span className="muted">{t("chat.historyLoaded")}</span>
         ) : null}
         {!hasActiveRoom ? (
           <span className="muted">{t("chat.noChannelHint")}</span>
