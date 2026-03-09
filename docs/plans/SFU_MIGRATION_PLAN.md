@@ -105,6 +105,11 @@ Stage C: Canary и сравнение
 - Сравнить `setup/reconnect/one-way incidents` против current SFU baseline.
 - Обновить smoke/postdeploy gates для LiveKit path.
 
+Stage C status update (2026-03-09):
+- Добавлен автоматизированный compare gate `smoke:compare:sfu-livekit` (`scripts/smoke/compare-sfu-livekit-baseline.sh`).
+- В `test` выполнен baseline compare на SHA `8b996e8`, артефакт: `~/srv/boltorezka/.deploy/compare-sfu-livekit-20260309T085858Z.md`.
+- Результат: `sfu-current=pass`, `livekit-topology=pass`, livekit signaling guard `pass` (`LiveKitSignalingDisabled`).
+
 Stage D: Default LiveKit в test -> prod readiness
 - Перевести `test` default routing на `livekit` при выполнении quality gates.
 - Сформировать pre-prod decision package с evidence и rollback drills.

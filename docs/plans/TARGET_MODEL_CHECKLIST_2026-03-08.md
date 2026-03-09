@@ -40,6 +40,7 @@ Validation note (2026-03-09): подготовлен Stage A foundation scaffold
 Validation note (2026-03-09): `LiveKit` Stage A поднят в `test` на сервере (`feature/scheduler-interface-portable`, SHA `92c3ea0`), после добавления NAT-forward (`UDP 34000-34999`, `TCP 7881`) и host-secrets (`LIVEKIT_TEST_API_SECRET` length `64`); контейнер `boltorezka-livekit-test` в `Up`, `restartCount=0`.
 Validation note (2026-03-09): Stage B token minting validated на `test`: backend endpoint `POST /v1/auth/livekit-token` возвращает signed token + `url/room/identity/expiresInSec` при `TEST_LIVEKIT_ENABLED=1`; проверено в `test-room` через smoke bearer token.
 Validation note (2026-03-09): control-plane livekit routing + guard validated в `test-room` на SHA `4c7d783`: `room.joined.mediaTopology=livekit` для двух smoke users, `call.offer` в этой комнате возвращает `nack.code=LiveKitSignalingDisabled` и не релеится target user.
+Validation note (2026-03-09): baseline compare `sfu-current vs livekit-topology` выполнен в `test` на SHA `8b996e8` командой `TEST_REF=origin/feature/scheduler-interface-portable npm run smoke:compare:sfu-livekit`; артефакт `~/srv/boltorezka/.deploy/compare-sfu-livekit-20260309T085858Z.md` (оба профиля `pass`, livekit guard `pass`, guard code `LiveKitSignalingDisabled`).
 
 ## 0) Базовые инварианты (обязательно)
 
@@ -153,7 +154,7 @@ Validation note (2026-03-09): control-plane livekit routing + guard validated в
 - [x] Реализован server-side token minting для `LiveKit` (room-scoped grants, TTL, audit fields) без выдачи секретов в клиент.
 - [ ] Добавлен transport adapter `mediaTopology=livekit` в control plane (`join/publish/subscribe/leave/reconnect`) с correlation IDs.
 - [ ] Добавлены smoke-gate'ы для `LiveKit` path (`join`, publish/subscribe, reconnect, late-join, one-way incidents).
-- [ ] Проведен baseline compare `sfu-current vs livekit` в `test` и зафиксирован decision package по default routing.
+- [x] Проведен baseline compare `sfu-current vs livekit` в `test` и зафиксирован decision package по default routing.
 
 ## 8) Безопасность И Надежность
 
