@@ -18,4 +18,9 @@ export type AppConfig = {
   rtcMediaTopologyDefault: "p2p" | "sfu";
   rtcMediaTopologySfuRooms: string[];
   rtcMediaTopologySfuUsers: string[];
+  livekitEnabled: boolean;
+  livekitUrl: string;
+  livekitApiKey: string;
+  livekitApiSecret: string;
+  livekitTokenTtlSec: number;
 };

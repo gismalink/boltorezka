@@ -86,6 +86,11 @@ services:
       RTC_MEDIA_TOPOLOGY_DEFAULT: ${TEST_RTC_MEDIA_TOPOLOGY_DEFAULT:-p2p}
       RTC_MEDIA_TOPOLOGY_SFU_ROOMS: ${TEST_RTC_MEDIA_TOPOLOGY_SFU_ROOMS:-}
       RTC_MEDIA_TOPOLOGY_SFU_USERS: ${TEST_RTC_MEDIA_TOPOLOGY_SFU_USERS:-}
+      LIVEKIT_ENABLED: ${TEST_LIVEKIT_ENABLED:-0}
+      LIVEKIT_URL: ${TEST_LIVEKIT_URL:-wss://test.boltorezka.gismalink.art/livekit}
+      LIVEKIT_API_KEY: ${LIVEKIT_TEST_API_KEY:-}
+      LIVEKIT_API_SECRET: ${LIVEKIT_TEST_API_SECRET:-}
+      LIVEKIT_TOKEN_TTL_SEC: ${TEST_LIVEKIT_TOKEN_TTL_SEC:-1800}
     depends_on:
       boltorezka-turn:
         condition: service_started
@@ -142,8 +147,8 @@ services:
       LIVEKIT_TEST_API_SECRET: ${LIVEKIT_TEST_API_SECRET:-devsecret}
       LIVEKIT_TEST_SIGNAL_PORT: ${TEST_LIVEKIT_SIGNAL_PORT:-7880}
       LIVEKIT_TEST_TCP_PORT: ${TEST_LIVEKIT_TCP_PORT:-7881}
-      LIVEKIT_TEST_RTC_PORT_START: ${TEST_LIVEKIT_RTC_PORT_START:-32000}
-      LIVEKIT_TEST_RTC_PORT_END: ${TEST_LIVEKIT_RTC_PORT_END:-32100}
+      LIVEKIT_TEST_RTC_PORT_START: ${TEST_LIVEKIT_RTC_PORT_START:-34000}
+      LIVEKIT_TEST_RTC_PORT_END: ${TEST_LIVEKIT_RTC_PORT_END:-34999}
     entrypoint:
       - /bin/sh
       - -ec
@@ -155,8 +160,8 @@ services:
           - "0.0.0.0"
         rtc:
           tcp_port: ${TEST_LIVEKIT_TCP_PORT:-7881}
-          port_range_start: ${TEST_LIVEKIT_RTC_PORT_START:-32000}
-          port_range_end: ${TEST_LIVEKIT_RTC_PORT_END:-32100}
+          port_range_start: ${TEST_LIVEKIT_RTC_PORT_START:-34000}
+          port_range_end: ${TEST_LIVEKIT_RTC_PORT_END:-34999}
           use_external_ip: true
         redis:
           address: boltorezka-redis-test:6379
@@ -167,7 +172,7 @@ services:
     ports:
       - "${TEST_LIVEKIT_SIGNAL_PORT:-7880}:7880/tcp"
       - "${TEST_LIVEKIT_TCP_PORT:-7881}:7881/tcp"
-      - "${TEST_LIVEKIT_RTC_PORT_START:-32000}-${TEST_LIVEKIT_RTC_PORT_END:-32100}:${TEST_LIVEKIT_RTC_PORT_START:-32000}-${TEST_LIVEKIT_RTC_PORT_END:-32100}/udp"
+      - "${TEST_LIVEKIT_RTC_PORT_START:-34000}-${TEST_LIVEKIT_RTC_PORT_END:-34999}:${TEST_LIVEKIT_RTC_PORT_START:-34000}-${TEST_LIVEKIT_RTC_PORT_END:-34999}/udp"
     depends_on:
       boltorezka-redis-test:
         condition: service_healthy
@@ -210,6 +215,11 @@ services:
       RTC_MEDIA_TOPOLOGY_DEFAULT: ${PROD_RTC_MEDIA_TOPOLOGY_DEFAULT:-p2p}
       RTC_MEDIA_TOPOLOGY_SFU_ROOMS: ${PROD_RTC_MEDIA_TOPOLOGY_SFU_ROOMS:-}
       RTC_MEDIA_TOPOLOGY_SFU_USERS: ${PROD_RTC_MEDIA_TOPOLOGY_SFU_USERS:-}
+      LIVEKIT_ENABLED: ${PROD_LIVEKIT_ENABLED:-0}
+      LIVEKIT_URL: ${PROD_LIVEKIT_URL:-wss://boltorezka.gismalink.art/livekit}
+      LIVEKIT_API_KEY: ${PROD_LIVEKIT_API_KEY:-}
+      LIVEKIT_API_SECRET: ${PROD_LIVEKIT_API_SECRET:-}
+      LIVEKIT_TOKEN_TTL_SEC: ${PROD_LIVEKIT_TOKEN_TTL_SEC:-1800}
     depends_on:
       boltorezka-turn:
         condition: service_started

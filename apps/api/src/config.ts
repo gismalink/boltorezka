@@ -43,6 +43,7 @@ const authMode = (process.env.AUTH_MODE || "sso").toLowerCase() === "local" ? "l
 const rtcMediaTopologyDefault = (String(process.env.RTC_MEDIA_TOPOLOGY_DEFAULT || "p2p").trim().toLowerCase() === "sfu")
   ? "sfu"
   : "p2p";
+const livekitTokenTtlSecRaw = Number.parseInt(String(process.env.LIVEKIT_TOKEN_TTL_SEC || "1800"), 10);
 
 export const config: AppConfig = {
   port: Number(process.env.PORT || 8080),
@@ -66,5 +67,12 @@ export const config: AppConfig = {
   rtcFeatureInitialStateReplay: parseBoolean(process.env.RTC_FEATURE_INITIAL_STATE_REPLAY, true),
   rtcMediaTopologyDefault,
   rtcMediaTopologySfuRooms: parseCsv(process.env.RTC_MEDIA_TOPOLOGY_SFU_ROOMS),
-  rtcMediaTopologySfuUsers: parseCsv(process.env.RTC_MEDIA_TOPOLOGY_SFU_USERS)
+  rtcMediaTopologySfuUsers: parseCsv(process.env.RTC_MEDIA_TOPOLOGY_SFU_USERS),
+  livekitEnabled: parseBoolean(process.env.LIVEKIT_ENABLED, false),
+  livekitUrl: String(process.env.LIVEKIT_URL || "").trim(),
+  livekitApiKey: String(process.env.LIVEKIT_API_KEY || "").trim(),
+  livekitApiSecret: String(process.env.LIVEKIT_API_SECRET || "").trim(),
+  livekitTokenTtlSec: Number.isFinite(livekitTokenTtlSecRaw) && livekitTokenTtlSecRaw > 0
+    ? livekitTokenTtlSecRaw
+    : 1800
 };
