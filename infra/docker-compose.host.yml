@@ -162,9 +162,7 @@ services:
         logging:
           level: info
         EOF
-        cat > /tmp/livekit.keys <<EOF
-        ${LIVEKIT_TEST_API_KEY:-devkey}: ${LIVEKIT_TEST_API_SECRET:-devsecret}
-        EOF
+        printf '%s: %s\n' "${LIVEKIT_TEST_API_KEY:-devkey}" "${LIVEKIT_TEST_API_SECRET:-devsecret}" > /tmp/livekit.keys
         exec livekit-server --config /tmp/livekit.yaml --key-file /tmp/livekit.keys
     ports:
       - "${TEST_LIVEKIT_SIGNAL_PORT:-7880}:7880/tcp"
