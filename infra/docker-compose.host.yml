@@ -291,7 +291,7 @@ services:
       - -ec
     command:
       - |
-        if [ -z "${LIVEKIT_PROD_API_KEY:-}" ] || [ -z "${LIVEKIT_PROD_API_SECRET:-}" ]; then
+        if [ -z "$${LIVEKIT_PROD_API_KEY:-}" ] || [ -z "$${LIVEKIT_PROD_API_SECRET:-}" ]; then
           echo "[livekit-prod] PROD_LIVEKIT_API_KEY and PROD_LIVEKIT_API_SECRET must be set" >&2
           exit 1
         fi
@@ -309,7 +309,7 @@ services:
         logging:
           level: info
         EOF
-        exec /livekit-server --config /tmp/livekit.yaml --keys "${LIVEKIT_PROD_API_KEY}: ${LIVEKIT_PROD_API_SECRET}"
+        exec /livekit-server --config /tmp/livekit.yaml --keys "$${LIVEKIT_PROD_API_KEY}: $${LIVEKIT_PROD_API_SECRET}"
     ports:
       - "${PROD_LIVEKIT_TCP_PORT:-7882}:${PROD_LIVEKIT_TCP_PORT:-7882}/tcp"
       - "${PROD_LIVEKIT_RTC_PORT_START:-35000}-${PROD_LIVEKIT_RTC_PORT_END:-35999}:${PROD_LIVEKIT_RTC_PORT_START:-35000}-${PROD_LIVEKIT_RTC_PORT_END:-35999}/udp"
