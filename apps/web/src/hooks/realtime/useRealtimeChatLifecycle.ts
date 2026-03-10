@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, type Dispatch, type MutableRefObject, type RefObject, type SetStateAction } from "react";
-import { api } from "../api";
-import { trackClientEvent } from "../telemetry";
-import type { Message, MessagesCursor, PresenceMember } from "../domain";
-import { RealtimeClient, WsMessageController } from "../services";
-import type { ChatController } from "../services";
+import { api } from "../../api";
+import { trackClientEvent } from "../../telemetry";
+import type { Message, MessagesCursor, PresenceMember } from "../../domain";
+import { RealtimeClient, WsMessageController } from "../../services";
+import type { ChatController } from "../../services";
 
 type UseRealtimeChatLifecycleArgs = {
   token: string;

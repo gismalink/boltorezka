@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
-import type { Message, PresenceMember } from "../domain";
-import type { ServerSoundEvent } from "./useServerSounds";
+import type { Message, PresenceMember } from "../../domain";
+import type { ServerSoundEvent } from "../useServerSounds";
 
 type RealtimeWsState = "disconnected" | "connecting" | "connected";
 

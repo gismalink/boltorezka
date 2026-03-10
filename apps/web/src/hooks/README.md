@@ -12,17 +12,20 @@
 	- `app/effects/usePersistedClientSettings.ts`
 - `app/media/*` - app media lifecycle helpers:
 	- `app/media/useServerVideoPreview.ts`
+- `realtime/*` - websocket lifecycle + realtime UX logic:
+	- `realtime/useRealtimeChatLifecycle.ts`
+	- `realtime/useRealtimeSoundEffects.ts`
+- `rooms/*` - room/category/channel state and admin actions:
+	- `rooms/useCollapsedCategories.ts`
+	- `rooms/useRoomsDerived.ts`
+	- `rooms/useRoomMediaCapabilities.ts`
+	- `rooms/useRoomAdminActions.ts`
 
 - `useAuthProfileFlow.ts`
 - `useAutoRoomVoiceConnection.ts`
-- `useCollapsedCategories.ts`
 - `useMediaDevicePreferences.ts`
 - `useMicrophoneLevelMeter.ts`
 - `usePopupOutsideClose.ts`
-- `useRealtimeChatLifecycle.ts`
-- `useRealtimeSoundEffects.ts`
-- `useRoomAdminActions.ts`
-- `useRoomsDerived.ts`
 - `useScreenWakeLock.ts`
 - `useServerMenuAccessGuard.ts`
 - `useServerSounds.ts`

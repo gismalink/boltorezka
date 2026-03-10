@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import type { RoomsTreeResponse } from "../domain";
+import type { RoomsTreeResponse } from "../../domain";
 
 const COLLAPSED_CATEGORIES_STORAGE_KEY = "boltorezka_collapsed_category_ids";
 
