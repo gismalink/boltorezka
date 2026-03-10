@@ -814,8 +814,24 @@ pre {
   color: var(--pixel-muted);
 }
 
+.channel-member-audio-icon-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .channel-member-audio-icon-muted {
   color: var(--pixel-danger);
+}
+
+.channel-member-audio-muted-badge {
+  position: absolute;
+  right: -5px;
+  bottom: -5px;
+  font-size: 0.58rem;
+  color: var(--pixel-danger);
+  filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.5));
 }
 
 .headphones-icon-muted {

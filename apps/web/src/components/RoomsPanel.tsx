@@ -407,7 +407,10 @@ export function RoomsPanel({
                 ) : null}
                 {roomSupportsRtc ? (
                   <span className="channel-member-status-icon-anchor" data-tooltip={isCurrentUser ? selfAudioTooltip : audioTooltip}>
-                    <i className={`bi bi-headphones channel-member-audio-icon ${isAudioOutputMuted ? "channel-member-audio-icon-muted" : ""}`} />
+                    <span className={`channel-member-audio-icon-wrap ${isAudioOutputMuted ? "channel-member-audio-icon-wrap-muted" : ""}`}>
+                      <i className={`bi bi-headphones channel-member-audio-icon ${isAudioOutputMuted ? "channel-member-audio-icon-muted" : ""}`} />
+                      {isAudioOutputMuted ? <i className="bi bi-slash-circle-fill channel-member-audio-muted-badge" /> : null}
+                    </span>
                   </span>
                 ) : null}
                 {isCameraEnabled ? (
