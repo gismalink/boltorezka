@@ -125,7 +125,7 @@ export function App() {
   const [editingRoomKind, setEditingRoomKind] = useState<RoomKind>("text");
   const [editingRoomCategoryId, setEditingRoomCategoryId] = useState<string>("none");
   const [editingRoomAudioQualitySetting, setEditingRoomAudioQualitySetting] = useState<ChannelAudioQualitySetting>("server_default");
-  const [micMuted, setMicMuted] = useState(true);
+  const [micMuted, setMicMuted] = useState<boolean>(() => localStorage.getItem("boltorezka_mic_muted") !== "0");
   const [audioMuted, setAudioMuted] = useState<boolean>(() => localStorage.getItem("boltorezka_audio_muted") === "1");
   const [lang, setLang] = useState<Lang>(() => detectInitialLang());
   const [profileNameDraft, setProfileNameDraft] = useState("");
@@ -137,7 +137,7 @@ export function App() {
   const [selectedInputId, setSelectedInputId] = useState<string>(() => localStorage.getItem("boltorezka_selected_input_id") || "default");
   const [selectedOutputId, setSelectedOutputId] = useState<string>(() => localStorage.getItem("boltorezka_selected_output_id") || "default");
   const [selectedVideoInputId, setSelectedVideoInputId] = useState<string>(() => localStorage.getItem("boltorezka_selected_video_input_id") || "default");
-  const [cameraEnabled, setCameraEnabled] = useState(false);
+  const [cameraEnabled, setCameraEnabled] = useState<boolean>(() => localStorage.getItem("boltorezka_camera_enabled") === "1");
   const [screenShareOwnerByRoomSlug, setScreenShareOwnerByRoomSlug] = useState<Record<string, { userId: string | null; userName: string | null }>>({});
   const [voiceCameraEnabledByUserIdInCurrentRoom, setVoiceCameraEnabledByUserIdInCurrentRoom] = useState<Record<string, boolean>>({});
   const [voiceInitialMicStateByUserIdInCurrentRoom, setVoiceInitialMicStateByUserIdInCurrentRoom] = useState<Record<string, "muted" | "silent" | "speaking">>({});
@@ -405,7 +405,9 @@ export function App() {
 
   usePersistedClientSettings({
     selectedInputProfile,
+    micMuted,
     audioMuted,
+    cameraEnabled,
     serverVideoEffectType,
     serverVideoResolution,
     serverVideoFps,

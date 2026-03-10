@@ -463,11 +463,11 @@ export function RoomRow({
                             note: noteValue
                           }
                         }));
-                        setMemberMenuOpenKey((current) => {
-                          const shouldOpen = current !== menuKey;
-                          memberMenuAnchorRef.current = shouldOpen ? event.currentTarget : null;
-                          return shouldOpen ? menuKey : null;
-                        });
+                        const shouldOpen = memberMenuOpenKey !== menuKey;
+                        memberMenuAnchorRef.current = shouldOpen
+                          ? ((event.currentTarget.closest(".channel-member-settings-anchor") as HTMLElement | null) || event.currentTarget)
+                          : null;
+                        setMemberMenuOpenKey(shouldOpen ? menuKey : null);
                       }}
                     >
                       <i className="bi bi-gear" aria-hidden="true" />
@@ -477,7 +477,7 @@ export function RoomRow({
                         open
                         anchorRef={memberMenuAnchorRef as { current: HTMLElement | null }}
                         className="settings-popup channel-member-settings-popup"
-                        placement="right-start"
+                        placement="bottom-end"
                       >
                         <div className="grid gap-3">
                           <div className="subheading">{member.userName}</div>

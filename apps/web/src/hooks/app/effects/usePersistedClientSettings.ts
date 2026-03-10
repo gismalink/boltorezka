@@ -2,7 +2,9 @@ import { useEffect } from "react";
 
 type UsePersistedClientSettingsArgs = {
   selectedInputProfile: string;
+  micMuted: boolean;
   audioMuted: boolean;
+  cameraEnabled: boolean;
   serverVideoEffectType: "none" | "pixel8" | "ascii";
   serverVideoResolution: string;
   serverVideoFps: 10 | 15 | 24 | 30;
@@ -18,7 +20,9 @@ type UsePersistedClientSettingsArgs = {
 
 export function usePersistedClientSettings({
   selectedInputProfile,
+  micMuted,
   audioMuted,
+  cameraEnabled,
   serverVideoEffectType,
   serverVideoResolution,
   serverVideoFps,
@@ -38,6 +42,14 @@ export function usePersistedClientSettings({
   useEffect(() => {
     localStorage.setItem("boltorezka_audio_muted", audioMuted ? "1" : "0");
   }, [audioMuted]);
+
+  useEffect(() => {
+    localStorage.setItem("boltorezka_mic_muted", micMuted ? "1" : "0");
+  }, [micMuted]);
+
+  useEffect(() => {
+    localStorage.setItem("boltorezka_camera_enabled", cameraEnabled ? "1" : "0");
+  }, [cameraEnabled]);
 
   useEffect(() => {
     localStorage.setItem("boltorezka_server_video_effect_type", serverVideoEffectType);
