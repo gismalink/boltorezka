@@ -137,7 +137,13 @@ export function App() {
   const [voiceCameraEnabledByUserIdInCurrentRoom, setVoiceCameraEnabledByUserIdInCurrentRoom] = useState<Record<string, boolean>>({});
   const [voiceInitialMicStateByUserIdInCurrentRoom, setVoiceInitialMicStateByUserIdInCurrentRoom] = useState<Record<string, "muted" | "silent" | "speaking">>({});
   const [voiceInitialAudioOutputMutedByUserIdInCurrentRoom, setVoiceInitialAudioOutputMutedByUserIdInCurrentRoom] = useState<Record<string, boolean>>({});
-  const [selectedInputProfile, setSelectedInputProfile] = useState<InputProfile>("custom");
+  const [selectedInputProfile, setSelectedInputProfile] = useState<InputProfile>(() => {
+    const value = String(localStorage.getItem("boltorezka_selected_input_profile") || "").trim();
+    if (value === "noise_reduction" || value === "studio" || value === "custom") {
+      return value;
+    }
+    return "custom";
+  });
   const [voiceSettingsPanel, setVoiceSettingsPanel] = useState<VoiceSettingsPanel>(null);
   const [mediaDevicesState, setMediaDevicesState] = useState<MediaDevicesState>("ready");
   const [mediaDevicesHint, setMediaDevicesHint] = useState("");
@@ -471,6 +477,7 @@ export function App() {
     videoStreamingEnabled: cameraEnabled,
     roomVoiceTargets: currentRoomVoiceTargets,
     selectedInputId,
+    selectedInputProfile,
     selectedOutputId,
     selectedVideoInputId,
     micMuted,
@@ -533,6 +540,10 @@ export function App() {
     setVoiceInitialMicStateByUserIdInCurrentRoom({});
     setVoiceInitialAudioOutputMutedByUserIdInCurrentRoom({});
   }, [roomSlug]);
+
+  useEffect(() => {
+    localStorage.setItem("boltorezka_selected_input_profile", selectedInputProfile);
+  }, [selectedInputProfile]);
 
   useEffect(() => {
     localStorage.setItem("boltorezka_server_video_effect_type", serverVideoEffectType);

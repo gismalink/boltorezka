@@ -33,6 +33,7 @@ type UseLivekitVoiceRuntimeArgs = {
   videoStreamingEnabled: boolean;
   roomVoiceTargets: PresenceMember[];
   selectedInputId: string;
+  selectedInputProfile: "noise_reduction" | "studio" | "custom";
   selectedOutputId: string;
   selectedVideoInputId: string;
   micMuted: boolean;
@@ -122,6 +123,7 @@ export function useLivekitVoiceRuntime({
   videoStreamingEnabled,
   roomVoiceTargets,
   selectedInputId,
+  selectedInputProfile,
   selectedOutputId,
   selectedVideoInputId,
   micMuted,
@@ -152,6 +154,41 @@ export function useLivekitVoiceRuntime({
   const prevRoomSlugRef = useRef(roomSlug);
   const connectInFlightRef = useRef<Promise<void> | null>(null);
   const disconnectRequestedRef = useRef(false);
+  const lastAppliedMicConfigRef = useRef("");
+
+  const buildAudioConstraints = useCallback((): true | MediaTrackConstraints => {
+    const base: MediaTrackConstraints = {
+      ...(selectedInputId && selectedInputId !== "default"
+        ? { deviceId: { exact: selectedInputId } }
+        : {})
+    };
+
+    if (selectedInputProfile === "noise_reduction") {
+      return {
+        ...base,
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+        channelCount: 1
+      };
+    }
+
+    if (selectedInputProfile === "studio") {
+      return {
+        ...base,
+        echoCancellation: false,
+        noiseSuppression: false,
+        autoGainControl: false
+      };
+    }
+
+    return Object.keys(base).length > 0 ? base : true;
+  }, [selectedInputId, selectedInputProfile]);
+
+  const buildMicConfigKey = useCallback(() => {
+    const deviceId = selectedInputId && selectedInputId !== "default" ? selectedInputId : "default";
+    return `${deviceId}:${selectedInputProfile}`;
+  }, [selectedInputId, selectedInputProfile]);
 
   const applyAudioOutputSettings = useCallback(() => {
     remoteAudioElementsRef.current.forEach((element) => {
@@ -312,6 +349,7 @@ export function useLivekitVoiceRuntime({
     setRemoteScreenShareStreamsByUserId({});
     setCallStatus("idle");
     setLastCallPeer("");
+    lastAppliedMicConfigRef.current = "";
   }, [setCallStatus, setLastCallPeer]);
 
   const publishMissingVideoTrack = useCallback(async () => {
@@ -548,11 +586,7 @@ export function useLivekitVoiceRuntime({
         await room.connect(signalUrl, livekit.token);
 
         const tracks = await createLocalTracks({
-          audio: {
-            ...(selectedInputId && selectedInputId !== "default"
-              ? { deviceId: { exact: selectedInputId } }
-              : {})
-          },
+          audio: buildAudioConstraints(),
           video: allowVideoStreaming && videoStreamingEnabled
             ? {
               ...(selectedVideoInputId && selectedVideoInputId !== "default"
@@ -578,6 +612,7 @@ export function useLivekitVoiceRuntime({
 
         const localVideoTrack = localTracksRef.current.get(Track.Source.Camera);
         setLocalVideoStream(localVideoTrack ? new MediaStream([localVideoTrack.mediaStreamTrack]) : null);
+        lastAppliedMicConfigRef.current = buildMicConfigKey();
 
         refreshRemoteStates(room);
         applyAudioOutputSettings();
@@ -611,7 +646,10 @@ export function useLivekitVoiceRuntime({
     refreshRemoteStates,
     roomVoiceTargets,
     roomSlug,
+    buildAudioConstraints,
+    buildMicConfigKey,
     selectedInputId,
+    selectedInputProfile,
     selectedVideoInputId,
     setCallStatus,
     setLastCallPeer,
@@ -664,24 +702,14 @@ export function useLivekitVoiceRuntime({
       return;
     }
 
-    const desiredDeviceId = selectedInputId && selectedInputId !== "default"
-      ? selectedInputId
-      : "default";
+    const nextMicConfigKey = buildMicConfigKey();
+    if (lastAppliedMicConfigRef.current === nextMicConfigKey) {
+      return;
+    }
 
     try {
-      const audioTrackWithDeviceSwitch = currentAudioTrack as LocalTrack & {
-        setDeviceId?: (deviceId: string) => Promise<boolean>;
-      };
-
-      if (typeof audioTrackWithDeviceSwitch.setDeviceId === "function") {
-        await audioTrackWithDeviceSwitch.setDeviceId(desiredDeviceId);
-        return;
-      }
-
       const replacementTracks = await createLocalTracks({
-        audio: desiredDeviceId !== "default"
-          ? { deviceId: { exact: desiredDeviceId } }
-          : true,
+        audio: buildAudioConstraints(),
         video: false
       });
       const replacementAudioTrack = replacementTracks.find((track) => track.kind === Track.Kind.Audio);
@@ -698,10 +726,11 @@ export function useLivekitVoiceRuntime({
       if (micMuted) {
         await replacementAudioTrack.mute();
       }
+      lastAppliedMicConfigRef.current = nextMicConfigKey;
     } catch (error) {
       pushCallLog(`livekit mic device switch failed: ${error instanceof Error ? error.message : "unknown error"}`);
     }
-  }, [micMuted, pushCallLog, roomVoiceConnected, selectedInputId]);
+  }, [buildAudioConstraints, buildMicConfigKey, micMuted, pushCallLog, roomVoiceConnected]);
 
   useEffect(() => {
     void switchMicrophoneInput();
