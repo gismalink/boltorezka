@@ -20,4 +20,5 @@ export { useServerSounds } from "./media/useServerSounds";
 export { useServerMenuAccessGuard } from "./ui/useServerMenuAccessGuard";
 export { useToastQueue, type AppToast } from "./app/state/useToastQueue";
 export { useLivekitVoiceRuntime } from "./rtc/useLivekitVoiceRuntime";
+export { useVoiceSignalingOrchestrator } from "./voice/useVoiceSignalingOrchestrator";
 export { useVoiceRoomStateMaps } from "./voice/useVoiceRoomStateMaps";

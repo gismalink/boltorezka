@@ -42,6 +42,7 @@ import {
   useServerMenuAccessGuard,
   useToastQueue,
   useLivekitVoiceRuntime,
+  useVoiceSignalingOrchestrator,
   useVoiceRoomStateMaps
 } from "./hooks";
 import { detectInitialLang, LANGUAGE_OPTIONS, LOCALE_BY_LANG, TEXT, type Lang } from "./i18n";
@@ -252,8 +253,6 @@ export function App() {
   const audioOutputAnchorRef = useRef<HTMLDivElement>(null);
   const voiceSettingsAnchorRef = useRef<HTMLDivElement>(null);
   const userSettingsRef = useRef<HTMLDivElement>(null);
-  const lastBroadcastVideoPolicyRef = useRef("");
-  const lastBroadcastMicStateRef = useRef("");
 
   const canCreateRooms = user?.role === "admin" || user?.role === "super_admin";
   const canPromote = user?.role === "super_admin";
@@ -337,7 +336,7 @@ export function App() {
     return members.filter((member) => member.userId !== me);
   }, [roomsPresenceDetailsBySlug, roomSlug, user?.id]);
 
-  const { currentRoom: activeRoomSnapshot, currentRoomKind, currentRoomAudioQualityOverride } = useCurrentRoomSnapshot({
+  const { currentRoomKind, currentRoomAudioQualityOverride } = useCurrentRoomSnapshot({
     rooms,
     roomsTree,
     roomSlug
@@ -438,37 +437,14 @@ export function App() {
     serverVideoWindowMaxWidth
   });
 
-  useEffect(() => {
-    const roomSupportsRtc = activeRoomSnapshot ? activeRoomSnapshot.kind !== "text" : false;
-    if (!roomSupportsRtc || !roomVoiceConnected || !canManageAudioQuality) {
-      return;
-    }
-
-    const payload = {
-      effectType: serverVideoEffectType,
-      resolution: serverVideoResolution,
-      fps: serverVideoFps,
-      pixelFxStrength: serverVideoPixelFxStrength,
-      pixelFxPixelSize: serverVideoPixelFxPixelSize,
-      pixelFxGridThickness: serverVideoPixelFxGridThickness,
-      asciiCellSize: serverVideoAsciiCellSize,
-      asciiContrast: serverVideoAsciiContrast,
-      asciiColor: serverVideoAsciiColor,
-      windowMinWidth: Math.min(serverVideoWindowMinWidth, serverVideoWindowMaxWidth),
-      windowMaxWidth: Math.max(serverVideoWindowMinWidth, serverVideoWindowMaxWidth)
-    };
-
-    const serialized = JSON.stringify({ payload, audience: videoPolicyAudienceKey });
-    if (lastBroadcastVideoPolicyRef.current === serialized) {
-      return;
-    }
-
-    lastBroadcastVideoPolicyRef.current = serialized;
-    sendWsEvent("call.video_state", { settings: payload }, { maxRetries: 1 });
-  }, [
-    activeRoomSnapshot,
+  useVoiceSignalingOrchestrator({
     roomVoiceConnected,
+    currentRoomSupportsRtc,
+    micMuted,
+    micTestLevel,
+    audioMuted,
     canManageAudioQuality,
+    videoPolicyAudienceKey,
     serverVideoEffectType,
     serverVideoResolution,
     serverVideoFps,
@@ -480,9 +456,8 @@ export function App() {
     serverVideoAsciiColor,
     serverVideoWindowMinWidth,
     serverVideoWindowMaxWidth,
-    videoPolicyAudienceKey,
     sendWsEvent
-  ]);
+  });
 
   const serverVideoPreviewStream = useServerVideoPreview({
     appMenuOpen,
@@ -1756,33 +1731,6 @@ export function App() {
   });
 
   useScreenWakeLock(Boolean(user && roomSlug && currentRoomSupportsRtc && roomVoiceConnected));
-
-  useEffect(() => {
-    if (!roomVoiceConnected || !currentRoomSupportsRtc) {
-      lastBroadcastMicStateRef.current = "";
-      return;
-    }
-
-    const speaking = !micMuted && micTestLevel >= 0.055;
-    const signature = `${micMuted ? 1 : 0}:${speaking ? 1 : 0}:${audioMuted ? 1 : 0}`;
-    if (lastBroadcastMicStateRef.current === signature) {
-      return;
-    }
-
-    const requestId = sendWsEvent(
-      "call.mic_state",
-      {
-        muted: micMuted,
-        speaking,
-        audioMuted
-      },
-      { maxRetries: 1 }
-    );
-
-    if (requestId) {
-      lastBroadcastMicStateRef.current = signature;
-    }
-  }, [audioMuted, currentRoomSupportsRtc, micMuted, micTestLevel, roomVoiceConnected, sendWsEvent]);
 
   useEffect(() => {
     if (!isLocalScreenSharing || !localScreenShareStream || !roomSlug) {

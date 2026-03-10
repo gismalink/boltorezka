@@ -32,6 +32,7 @@
 	- `ui/useServerMenuAccessGuard.ts`
 - `voice/*` - voice-room orchestration helpers:
 	- `voice/useAutoRoomVoiceConnection.ts`
+	- `voice/useVoiceSignalingOrchestrator.ts`
 	- `voice/useVoiceRoomStateMaps.ts`
 
 ## RTC modules
