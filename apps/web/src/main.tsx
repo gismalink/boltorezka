@@ -6,6 +6,10 @@ import "bootstrap-icons/font/bootstrap-icons.css";
 import "./tailwind.css";
 import "./styles.css";
 
+const hostname = window.location.hostname.toLowerCase();
+const isTestHost = hostname.startsWith("test.") || hostname.includes(".test.");
+document.title = isTestHost ? "Boltorezka (test)" : "Boltorezka";
+
 createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <ErrorBoundary>

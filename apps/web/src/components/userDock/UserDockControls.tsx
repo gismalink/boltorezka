@@ -442,7 +442,7 @@ export function UserDockControls({
 
           <button
             type="button"
-            className="secondary icon-btn user-panel-disconnect-btn"
+            className="secondary icon-btn user-panel-disconnect-btn flex w-full items-center justify-center"
             data-tooltip={t("mobile.disconnect")}
             onClick={onDisconnectCall}
           >

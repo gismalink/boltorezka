@@ -1156,9 +1156,11 @@ pre {
 }
 
 .user-panel-disconnect-btn {
-  margin-left: var(--space-sm);
-  justify-self: start;
-  align-self: center;
+  margin-left: 0;
+  width: 100%;
+  min-height: var(--icon-size-md);
+  justify-self: stretch;
+  align-self: stretch;
 }
 
 @media (max-width: 800px) {

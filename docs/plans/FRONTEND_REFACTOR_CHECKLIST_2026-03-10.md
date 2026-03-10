@@ -46,11 +46,11 @@
 
 ## RNNoise (добавлено)
 
-- [ ] Уточнить целевой путь интеграции RNNoise:
+- [x] Уточнить целевой путь интеграции RNNoise:
   - client-side preprocessing в браузере,
   - или server-side/LiveKit noise suppression profile.
 - [ ] Подготовить техдизайн (1 страница): ограничения CPU, latency budget, fallback policy.
-- [ ] Добавить флаг в UI/настройки (`noise_reduction` как отдельный режим с явным статусом).
+- [x] Добавить флаг в UI/настройки (`noise_reduction` как отдельный режим с явным статусом).
 - [ ] Добавить telemetry метрики:
   - включение/выключение RNNoise,
   - ошибки инициализации,
