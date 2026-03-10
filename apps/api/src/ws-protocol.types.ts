@@ -74,6 +74,20 @@ export type WsIncomingCallVideoStateEnvelope = {
   payload?: WsIncomingPayload;
 };
 
+export type WsIncomingScreenShareStartEnvelope = {
+  type: "screen.share.start";
+  requestId?: string;
+  idempotencyKey?: string;
+  payload?: WsIncomingPayload;
+};
+
+export type WsIncomingScreenShareStopEnvelope = {
+  type: "screen.share.stop";
+  requestId?: string;
+  idempotencyKey?: string;
+  payload?: WsIncomingPayload;
+};
+
 export type WsIncomingKnownEnvelope =
   | WsIncomingPingEnvelope
   | WsIncomingRoomJoinEnvelope
@@ -83,7 +97,9 @@ export type WsIncomingKnownEnvelope =
   | WsIncomingChatEditEnvelope
   | WsIncomingChatDeleteEnvelope
   | WsIncomingCallMicStateEnvelope
-  | WsIncomingCallVideoStateEnvelope;
+  | WsIncomingCallVideoStateEnvelope
+  | WsIncomingScreenShareStartEnvelope
+  | WsIncomingScreenShareStopEnvelope;
 
 export type WsIncomingUnknownEnvelope = WsIncomingBaseEnvelope;
 

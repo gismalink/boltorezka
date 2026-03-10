@@ -133,6 +133,7 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
   const socketsByUserId = new Map<string, Set<WebSocket>>();
   const socketsByRoomId = new Map<string, Set<WebSocket>>();
   const socketState = new WeakMap<WebSocket, SocketState>();
+  const screenShareOwnerByRoomId = new Map<string, string>();
   const wsCallDebugEnabled = process.env.WS_CALL_DEBUG === "1";
   const mediaStateByRoomUserKey = new Map<string, CanonicalMediaState>();
   const recentRoomDetachByRoomUserKey = new Map<string, number>();
@@ -335,6 +336,35 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
     }
 
     return participants;
+  };
+
+  const buildScreenShareStateEnvelope = (roomId: string, roomSlug: string | null) => {
+    const ownerUserId = screenShareOwnerByRoomId.get(roomId) || null;
+    const ownerUserName = ownerUserId
+      ? (getRoomPresence(roomId).find((item) => item.userId === ownerUserId)?.userName || null)
+      : null;
+
+    return {
+      type: "screen.share.state",
+      payload: {
+        roomId,
+        roomSlug,
+        active: Boolean(ownerUserId),
+        ownerUserId,
+        ownerUserName,
+        ts: new Date().toISOString()
+      }
+    };
+  };
+
+  const clearRoomScreenShareOwnerIfMatches = (roomId: string, userId: string, roomSlug: string | null) => {
+    const currentOwnerUserId = screenShareOwnerByRoomId.get(roomId) || null;
+    if (!currentOwnerUserId || currentOwnerUserId !== userId) {
+      return;
+    }
+
+    screenShareOwnerByRoomId.delete(roomId);
+    broadcastRoom(roomId, buildScreenShareStateEnvelope(roomId, roomSlug));
   };
 
   const getCallInitialStateLagStats = (roomId: string): { count: number; totalLagMs: number } => {
@@ -877,6 +907,8 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
                   }
                 );
 
+                sendJson(connection, buildScreenShareStateEnvelope(joinResult.room.id, joinResult.room.slug));
+
                 sendJson(
                   connection,
                   buildRoomPresenceEnvelope(
@@ -943,6 +975,7 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
                 markRecentRoomDetach(previousRoomId, state.userId);
                 detachRoomSocket(previousRoomId, connection);
                 clearCanonicalMediaState(previousRoomId, state.userId);
+                clearRoomScreenShareOwnerIfMatches(previousRoomId, state.userId, previousRoomSlug);
                 state.roomId = null;
                 state.roomSlug = null;
                 state.roomKind = null;
@@ -1032,6 +1065,7 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
                   markRecentRoomDetach(targetRoom.id, targetUserId);
                   detachRoomSocket(targetRoom.id, targetSocket);
                   clearCanonicalMediaState(targetRoom.id, targetUserId);
+                  clearRoomScreenShareOwnerIfMatches(targetRoom.id, targetUserId, targetRoom.slug);
                   targetState.roomId = null;
                   targetState.roomSlug = null;
                   targetState.roomKind = null;
@@ -1310,6 +1344,66 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
                 return;
               }
 
+              case "screen.share.start": {
+                if (!state.roomId || !state.roomSlug) {
+                  sendNoActiveRoomNack(connection, requestId, eventType);
+                  return;
+                }
+
+                const currentOwnerUserId = screenShareOwnerByRoomId.get(state.roomId) || null;
+                if (currentOwnerUserId && currentOwnerUserId !== state.userId) {
+                  sendNack(
+                    connection,
+                    requestId,
+                    eventType,
+                    "ScreenShareAlreadyActive",
+                    "Another user is already sharing the screen",
+                    {
+                      roomId: state.roomId,
+                      roomSlug: state.roomSlug,
+                      ownerUserId: currentOwnerUserId
+                    }
+                  );
+                  void incrementMetric("nack_sent");
+                  return;
+                }
+
+                screenShareOwnerByRoomId.set(state.roomId, state.userId);
+                const envelope = buildScreenShareStateEnvelope(state.roomId, state.roomSlug);
+                broadcastRoom(state.roomId, envelope);
+                sendAckWithMetrics(connection, requestId, eventType, {
+                  roomId: state.roomId,
+                  roomSlug: state.roomSlug,
+                  ownerUserId: state.userId
+                });
+                return;
+              }
+
+              case "screen.share.stop": {
+                if (!state.roomId || !state.roomSlug) {
+                  sendNoActiveRoomNack(connection, requestId, eventType);
+                  return;
+                }
+
+                const currentOwnerUserId = screenShareOwnerByRoomId.get(state.roomId) || null;
+                if (currentOwnerUserId && currentOwnerUserId !== state.userId) {
+                  sendForbiddenNack(connection, requestId, eventType, "Only current screen-share owner can stop it");
+                  return;
+                }
+
+                if (currentOwnerUserId === state.userId) {
+                  screenShareOwnerByRoomId.delete(state.roomId);
+                  broadcastRoom(state.roomId, buildScreenShareStateEnvelope(state.roomId, state.roomSlug));
+                }
+
+                sendAckWithMetrics(connection, requestId, eventType, {
+                  roomId: state.roomId,
+                  roomSlug: state.roomSlug,
+                  stopped: currentOwnerUserId === state.userId
+                });
+                return;
+              }
+
               case "call.mic_state": {
               if (!state.roomId) {
                 logCallDebug("call mic_state rejected: no active room", {
@@ -1528,6 +1622,7 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
             markRecentRoomDetach(state.roomId, state.userId);
             detachRoomSocket(state.roomId, connection);
             clearCanonicalMediaState(state.roomId, state.userId);
+            clearRoomScreenShareOwnerIfMatches(state.roomId, state.userId, state.roomSlug);
             broadcastRoom(
               state.roomId,
               buildPresenceLeftEnvelope(

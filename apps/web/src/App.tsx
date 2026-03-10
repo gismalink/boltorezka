@@ -133,6 +133,7 @@ export function App() {
   const [selectedOutputId, setSelectedOutputId] = useState<string>(() => localStorage.getItem("boltorezka_selected_output_id") || "default");
   const [selectedVideoInputId, setSelectedVideoInputId] = useState<string>(() => localStorage.getItem("boltorezka_selected_video_input_id") || "default");
   const [cameraEnabled, setCameraEnabled] = useState(false);
+  const [screenShareOwnerByRoomSlug, setScreenShareOwnerByRoomSlug] = useState<Record<string, { userId: string | null; userName: string | null }>>({});
   const [voiceCameraEnabledByUserIdInCurrentRoom, setVoiceCameraEnabledByUserIdInCurrentRoom] = useState<Record<string, boolean>>({});
   const [voiceInitialMicStateByUserIdInCurrentRoom, setVoiceInitialMicStateByUserIdInCurrentRoom] = useState<Record<string, "muted" | "silent" | "speaking">>({});
   const [voiceInitialAudioOutputMutedByUserIdInCurrentRoom, setVoiceInitialAudioOutputMutedByUserIdInCurrentRoom] = useState<Record<string, boolean>>({});
@@ -219,6 +220,9 @@ export function App() {
   const [realtimeReconnectNonce, setRealtimeReconnectNonce] = useState(0);
   const [videoWindowsVisible, setVideoWindowsVisible] = useState(true);
   const realtimeClientRef = useRef<RealtimeClient | null>(null);
+  const pendingWsRequestResolversRef = useRef<
+    Map<string, { resolve: () => void; reject: (error: Error) => void; timeoutId: number }>
+  >(new Map());
   const roomSlugRef = useRef(roomSlug);
   const lastRoomSlugForScrollRef = useRef(roomSlug);
   const lastMessageIdRef = useRef<string | null>(null);
@@ -385,6 +389,41 @@ export function App() {
     return realtimeClientRef.current?.sendEvent(eventType, payload, options) ?? null;
   }, []);
 
+  const sendWsEventAwaitAck = useCallback((
+    eventType: string,
+    payload: Record<string, unknown>,
+    options: { withIdempotency?: boolean; trackAck?: boolean; maxRetries?: number } = {}
+  ) => {
+    const requestId = sendWsEvent(eventType, payload, {
+      trackAck: true,
+      maxRetries: 1,
+      ...options
+    });
+
+    if (!requestId) {
+      return Promise.reject(new Error("ws_not_connected"));
+    }
+
+    return new Promise<void>((resolve, reject) => {
+      const timeoutId = window.setTimeout(() => {
+        pendingWsRequestResolversRef.current.delete(requestId);
+        reject(new Error(`${eventType}:ack_timeout`));
+      }, 10000);
+
+      pendingWsRequestResolversRef.current.set(requestId, {
+        resolve: () => {
+          window.clearTimeout(timeoutId);
+          resolve();
+        },
+        reject: (error) => {
+          window.clearTimeout(timeoutId);
+          reject(error);
+        },
+        timeoutId
+      });
+    });
+  }, [sendWsEvent]);
+
   const currentRoomVoiceTargets = useMemo(() => {
     const members = roomsPresenceDetailsBySlug[roomSlug] || [];
     const me = user?.id || "";
@@ -454,6 +493,11 @@ export function App() {
     localVoiceMediaStatusSummary,
     localVideoStream,
     remoteVideoStreamsByUserId,
+    localScreenShareStream,
+    remoteScreenShareStreamsByUserId,
+    isLocalScreenSharing,
+    startLocalScreenShare,
+    stopLocalScreenShare,
     connectRoom,
     disconnectRoom,
     handleIncomingMicState,
@@ -725,6 +769,49 @@ export function App() {
 
     return Array.from(ids);
   }, [remoteSpeakingPeerUserIds, user?.id, voiceMicStateByUserIdInCurrentRoom]);
+
+  const currentRoomScreenShareOwner = useMemo(() => {
+    return screenShareOwnerByRoomSlug[roomSlug] || { userId: null, userName: null };
+  }, [screenShareOwnerByRoomSlug, roomSlug]);
+
+  const activeScreenShare = useMemo(() => {
+    const localUserId = String(user?.id || "").trim();
+    if (isLocalScreenSharing && localScreenShareStream) {
+      return {
+        stream: localScreenShareStream,
+        ownerUserId: localUserId || "local",
+        ownerLabel: user?.name || t("video.you"),
+        local: true
+      };
+    }
+
+    const ownerUserId = String(currentRoomScreenShareOwner.userId || "").trim();
+    if (!ownerUserId) {
+      return null;
+    }
+
+    const stream = remoteScreenShareStreamsByUserId[ownerUserId] || null;
+    if (!stream) {
+      return null;
+    }
+
+    return {
+      stream,
+      ownerUserId,
+      ownerLabel: currentRoomScreenShareOwner.userName || remoteVideoLabelsByUserId[ownerUserId] || ownerUserId,
+      local: false
+    };
+  }, [
+    currentRoomScreenShareOwner.userId,
+    currentRoomScreenShareOwner.userName,
+    isLocalScreenSharing,
+    localScreenShareStream,
+    remoteScreenShareStreamsByUserId,
+    remoteVideoLabelsByUserId,
+    t,
+    user?.id,
+    user?.name
+  ]);
 
   const effectiveVoiceCameraEnabledByUserIdInCurrentRoom = useMemo(() => {
     const map: Record<string, boolean> = {};
@@ -1177,6 +1264,14 @@ export function App() {
     bootstrapSessionState(token);
   }, [bootstrapSessionState, resetSessionState, token]);
 
+  useEffect(() => () => {
+    pendingWsRequestResolversRef.current.forEach((pending) => {
+      window.clearTimeout(pending.timeoutId);
+      pending.reject(new Error("ws_disposed"));
+    });
+    pendingWsRequestResolversRef.current.clear();
+  }, []);
+
   const { loadOlderMessages } = useRealtimeChatLifecycle({
     token,
     reconnectNonce: realtimeReconnectNonce,
@@ -1216,6 +1311,38 @@ export function App() {
     onCallInitialState: handleIncomingInitialCallState,
     onCallNack: handleCallNack,
     onAudioQualityUpdated: handleAudioQualityUpdated,
+    onAck: ({ requestId }) => {
+      const pending = pendingWsRequestResolversRef.current.get(requestId);
+      if (!pending) {
+        return;
+      }
+
+      pendingWsRequestResolversRef.current.delete(requestId);
+      pending.resolve();
+    },
+    onNack: ({ requestId, eventType, code, message }) => {
+      const pending = pendingWsRequestResolversRef.current.get(requestId);
+      if (!pending) {
+        return;
+      }
+
+      pendingWsRequestResolversRef.current.delete(requestId);
+      pending.reject(new Error(`${eventType}:${code}:${message}`));
+    },
+    onScreenShareState: (payload) => {
+      const targetRoomSlug = String(payload.roomSlug || "").trim();
+      if (!targetRoomSlug) {
+        return;
+      }
+
+      setScreenShareOwnerByRoomSlug((prev) => ({
+        ...prev,
+        [targetRoomSlug]: {
+          userId: payload.active ? (payload.ownerUserId ?? null) : null,
+          userName: payload.active ? (payload.ownerUserName ?? null) : null
+        }
+      }));
+    },
     onChatCleared: (payload) => {
       const targetRoomSlug = String(payload.roomSlug || "").trim();
       const activeRoomSlug = roomSlugRef.current;
@@ -1253,6 +1380,7 @@ export function App() {
       setRoomsPresenceBySlug({});
       setRoomsPresenceDetailsBySlug({});
       setRoomMediaTopologyBySlug({});
+      setScreenShareOwnerByRoomSlug({});
       setVoiceInitialMicStateByUserIdInCurrentRoom({});
       setVoiceInitialAudioOutputMutedByUserIdInCurrentRoom({});
       return;
@@ -1563,6 +1691,69 @@ export function App() {
     });
   }, []);
 
+  const handleToggleScreenShare = useCallback(async () => {
+    if (!token || !roomSlug || !currentRoomSupportsRtc || !roomVoiceConnected) {
+      pushToast(t("call.autoWaiting"));
+      return;
+    }
+
+    const localUserId = String(user?.id || "").trim();
+    const ownerUserId = String(currentRoomScreenShareOwner.userId || "").trim();
+
+    if (isLocalScreenSharing) {
+      try {
+        await stopLocalScreenShare();
+      } finally {
+        try {
+          await sendWsEventAwaitAck("screen.share.stop", { roomSlug }, { maxRetries: 1 });
+        } catch {
+          return;
+        }
+      }
+      return;
+    }
+
+    if (ownerUserId && ownerUserId !== localUserId) {
+      const ownerName = currentRoomScreenShareOwner.userName || ownerUserId;
+      pushToast(`Screen share is already active: ${ownerName}`);
+      return;
+    }
+
+    try {
+      await sendWsEventAwaitAck("screen.share.start", { roomSlug }, { maxRetries: 1 });
+      await startLocalScreenShare();
+    } catch (error) {
+      const text = error instanceof Error ? error.message : String(error || "");
+      if (text.includes("ScreenShareAlreadyActive")) {
+        pushToast("Screen share is already active in this room");
+      } else if (text.includes("NotAllowedError") || text.includes("Permission denied")) {
+        pushToast("Screen share permission denied");
+      } else {
+        pushToast("Failed to start screen share");
+      }
+
+      try {
+        await sendWsEventAwaitAck("screen.share.stop", { roomSlug }, { maxRetries: 1 });
+      } catch {
+        return;
+      }
+    }
+  }, [
+    currentRoomScreenShareOwner.userId,
+    currentRoomScreenShareOwner.userName,
+    currentRoomSupportsRtc,
+    isLocalScreenSharing,
+    roomSlug,
+    roomVoiceConnected,
+    sendWsEventAwaitAck,
+    startLocalScreenShare,
+    stopLocalScreenShare,
+    t,
+    token,
+    user?.id,
+    pushToast
+  ]);
+
   const promote = async (userId: string) => {
     if (!token || !canPromote) return;
     await roomAdminController.promote(token, userId);
@@ -1713,6 +1904,36 @@ export function App() {
 
   useScreenWakeLock(Boolean(user && roomSlug && currentRoomSupportsRtc && roomVoiceConnected));
 
+  useEffect(() => {
+    if (!isLocalScreenSharing || !localScreenShareStream || !roomSlug) {
+      return;
+    }
+
+    const track = localScreenShareStream.getVideoTracks()[0];
+    if (!track) {
+      return;
+    }
+
+    const onEnded = () => {
+      void stopLocalScreenShare();
+      void sendWsEventAwaitAck("screen.share.stop", { roomSlug }, { maxRetries: 1 }).catch(() => undefined);
+    };
+
+    track.addEventListener("ended", onEnded);
+    return () => {
+      track.removeEventListener("ended", onEnded);
+    };
+  }, [isLocalScreenSharing, localScreenShareStream, roomSlug, sendWsEventAwaitAck, stopLocalScreenShare]);
+
+  useEffect(() => {
+    if (roomVoiceConnected || !isLocalScreenSharing || !roomSlug) {
+      return;
+    }
+
+    void stopLocalScreenShare();
+    void sendWsEventAwaitAck("screen.share.stop", { roomSlug }, { maxRetries: 1 }).catch(() => undefined);
+  }, [isLocalScreenSharing, roomSlug, roomVoiceConnected, sendWsEventAwaitAck, stopLocalScreenShare]);
+
   const userDockNode = user ? (
     <UserDock
       t={t}
@@ -1724,6 +1945,9 @@ export function App() {
       localVoiceMediaStatusSummary={localVoiceMediaStatusSummary}
       lastCallPeer={lastCallPeer}
       roomVoiceConnected={roomVoiceConnected}
+      screenShareActive={Boolean(currentRoomScreenShareOwner.userId)}
+      screenShareOwnedByCurrentUser={Boolean(currentRoomScreenShareOwner.userId && currentRoomScreenShareOwner.userId === user.id)}
+      canStartScreenShare={Boolean(currentRoomSupportsRtc && roomVoiceConnected && (!currentRoomScreenShareOwner.userId || currentRoomScreenShareOwner.userId === user.id))}
       cameraEnabled={cameraEnabled}
       micMuted={micMuted}
       audioMuted={audioMuted}
@@ -1773,6 +1997,9 @@ export function App() {
           requestVideoAccess();
         }
         setCameraEnabled((value) => !value);
+      }}
+      onToggleScreenShare={() => {
+        void handleToggleScreenShare();
       }}
       onRequestVideoAccess={requestVideoAccess}
       onToggleVoiceSettings={() => {
@@ -1822,6 +2049,9 @@ export function App() {
       localVoiceMediaStatusSummary={localVoiceMediaStatusSummary}
       lastCallPeer={lastCallPeer}
       roomVoiceConnected={roomVoiceConnected}
+      screenShareActive={Boolean(currentRoomScreenShareOwner.userId)}
+      screenShareOwnedByCurrentUser={Boolean(currentRoomScreenShareOwner.userId && currentRoomScreenShareOwner.userId === user.id)}
+      canStartScreenShare={Boolean(currentRoomSupportsRtc && roomVoiceConnected && (!currentRoomScreenShareOwner.userId || currentRoomScreenShareOwner.userId === user.id))}
       cameraEnabled={cameraEnabled}
       micMuted={micMuted}
       audioMuted={audioMuted}
@@ -1871,6 +2101,9 @@ export function App() {
           requestVideoAccess();
         }
         setCameraEnabled((value) => !value);
+      }}
+      onToggleScreenShare={() => {
+        void handleToggleScreenShare();
       }}
       onRequestVideoAccess={requestVideoAccess}
       onToggleVoiceSettings={() => {
@@ -2052,6 +2285,10 @@ export function App() {
           remoteVideoStreamsByUserId={remoteVideoStreamsByUserId}
           remoteCameraEnabledByUserId={effectiveVoiceCameraEnabledByUserIdInCurrentRoom}
           remoteLabelsByUserId={remoteVideoLabelsByUserId}
+          screenShareStream={activeScreenShare?.stream || null}
+          screenShareOwnerLabel={activeScreenShare?.ownerLabel || ""}
+          screenShareOwnerUserId={activeScreenShare?.ownerUserId || ""}
+          screenShareActive={Boolean(activeScreenShare?.stream)}
           minWidth={Math.min(serverVideoWindowMinWidth, serverVideoWindowMaxWidth)}
           maxWidth={Math.max(serverVideoWindowMinWidth, serverVideoWindowMaxWidth)}
           visible={allowVideoStreaming && videoWindowsVisible}

@@ -11,6 +11,9 @@ export function UserDock({
   callStatus,
   localVoiceMediaStatusSummary,
   lastCallPeer,
+  screenShareActive,
+  screenShareOwnedByCurrentUser,
+  canStartScreenShare,
   cameraEnabled,
   micMuted,
   audioMuted,
@@ -48,6 +51,7 @@ export function UserDock({
   onToggleMic,
   onToggleAudio,
   onToggleCamera,
+  onToggleScreenShare,
   onToggleVoiceSettings,
   onToggleAudioOutput,
   onOpenUserSettings,
@@ -89,6 +93,7 @@ export function UserDock({
   void localVoiceMediaStatusSummary;
   void callStatus;
   void lastCallPeer;
+  void screenShareOwnedByCurrentUser;
   void currentRoomTitle;
   void currentRoomSupportsVideo;
   return (
@@ -103,7 +108,13 @@ export function UserDock({
                 </button>
               </span>
               <span data-tooltip={t("rtc.comingSoon")}>
-                <button type="button" className="secondary rtc-placeholder-btn" aria-label={t("rtc.screenShare")} disabled>
+                  <button
+                    type="button"
+                    className={`secondary rtc-placeholder-btn ${screenShareActive ? "icon-btn-danger" : ""}`}
+                    aria-label={t("rtc.screenShare")}
+                    onClick={onToggleScreenShare}
+                    disabled={!canStartScreenShare}
+                  >
                   <i className="bi bi-display" aria-hidden="true" />
                 </button>
               </span>

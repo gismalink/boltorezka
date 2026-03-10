@@ -19,6 +19,9 @@ export type UserDockProps = {
   localVoiceMediaStatusSummary: VoiceMediaStatusSummary;
   lastCallPeer: string;
   roomVoiceConnected: boolean;
+  screenShareActive: boolean;
+  screenShareOwnedByCurrentUser: boolean;
+  canStartScreenShare: boolean;
   currentRoomSupportsVideo: boolean;
   cameraEnabled: boolean;
   micMuted: boolean;
@@ -57,6 +60,7 @@ export type UserDockProps = {
   onToggleMic: () => void;
   onToggleAudio: () => void;
   onToggleCamera: () => void;
+  onToggleScreenShare: () => void;
   onToggleVoiceSettings: () => void;
   onToggleAudioOutput: () => void;
   onOpenUserSettings: (tab: "profile" | "sound" | "camera") => void;

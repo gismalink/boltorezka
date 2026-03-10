@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   createLocalTracks,
+  createLocalScreenTracks,
   Participant,
   Room,
   RoomEvent,
@@ -54,6 +55,11 @@ type LivekitRuntimeApi = {
   localVoiceMediaStatusSummary: VoiceMediaStatusSummary;
   localVideoStream: MediaStream | null;
   remoteVideoStreamsByUserId: Record<string, MediaStream>;
+  localScreenShareStream: MediaStream | null;
+  remoteScreenShareStreamsByUserId: Record<string, MediaStream>;
+  isLocalScreenSharing: boolean;
+  startLocalScreenShare: () => Promise<void>;
+  stopLocalScreenShare: () => Promise<void>;
   connectRoom: () => Promise<void>;
   disconnectRoom: () => void;
   handleIncomingSignal: (payload: CallSignalPayload) => void;
@@ -136,6 +142,9 @@ export function useLivekitVoiceRuntime({
   const [localVoiceMediaStatusSummary, setLocalVoiceMediaStatusSummary] = useState<VoiceMediaStatusSummary>("idle");
   const [localVideoStream, setLocalVideoStream] = useState<MediaStream | null>(null);
   const [remoteVideoStreamsByUserId, setRemoteVideoStreamsByUserId] = useState<Record<string, MediaStream>>({});
+  const [localScreenShareStream, setLocalScreenShareStream] = useState<MediaStream | null>(null);
+  const [remoteScreenShareStreamsByUserId, setRemoteScreenShareStreamsByUserId] = useState<Record<string, MediaStream>>({});
+  const [isLocalScreenSharing, setIsLocalScreenSharing] = useState(false);
 
   const roomRef = useRef<Room | null>(null);
   const localTracksRef = useRef<Map<Track.Source, LocalTrack>>(new Map());
@@ -200,6 +209,29 @@ export function useLivekitVoiceRuntime({
 
   const removeRemoteVideoStream = useCallback((participantId: string) => {
     setRemoteVideoStreamsByUserId((prev) => {
+      if (!Object.prototype.hasOwnProperty.call(prev, participantId)) {
+        return prev;
+      }
+      const next = { ...prev };
+      delete next[participantId];
+      return next;
+    });
+  }, []);
+
+  const upsertRemoteScreenShareStream = useCallback((participantId: string, track: MediaStreamTrack) => {
+    setRemoteScreenShareStreamsByUserId((prev) => {
+      const currentStream = prev[participantId] || new MediaStream();
+      currentStream.getVideoTracks().forEach((existingTrack) => currentStream.removeTrack(existingTrack));
+      currentStream.addTrack(track);
+      return {
+        ...prev,
+        [participantId]: currentStream
+      };
+    });
+  }, []);
+
+  const removeRemoteScreenShareStream = useCallback((participantId: string) => {
+    setRemoteScreenShareStreamsByUserId((prev) => {
       if (!Object.prototype.hasOwnProperty.call(prev, participantId)) {
         return prev;
       }
@@ -274,7 +306,10 @@ export function useLivekitVoiceRuntime({
     setVoiceMediaStatusByPeerUserId({});
     setLocalVoiceMediaStatusSummary("disconnected");
     setLocalVideoStream(null);
+    setLocalScreenShareStream(null);
+    setIsLocalScreenSharing(false);
     setRemoteVideoStreamsByUserId({});
+    setRemoteScreenShareStreamsByUserId({});
     setCallStatus("idle");
     setLastCallPeer("");
   }, [setCallStatus, setLastCallPeer]);
@@ -323,6 +358,50 @@ export function useLivekitVoiceRuntime({
     localTracksRef.current.delete(Track.Source.Camera);
     setLocalVideoStream(null);
   }, []);
+
+  const stopLocalScreenShare = useCallback(async () => {
+    const room = roomRef.current;
+    const localScreenTrack = localTracksRef.current.get(Track.Source.ScreenShare);
+    if (!localScreenTrack) {
+      setLocalScreenShareStream(null);
+      setIsLocalScreenSharing(false);
+      return;
+    }
+
+    room?.localParticipant.unpublishTrack(localScreenTrack);
+    localScreenTrack.stop();
+    localTracksRef.current.delete(Track.Source.ScreenShare);
+    setLocalScreenShareStream(null);
+    setIsLocalScreenSharing(false);
+  }, []);
+
+  const startLocalScreenShare = useCallback(async () => {
+    const room = roomRef.current;
+    if (!room || !roomVoiceConnected) {
+      throw new Error("room_not_connected");
+    }
+
+    const existingTrack = localTracksRef.current.get(Track.Source.ScreenShare);
+    if (existingTrack) {
+      return;
+    }
+
+    const tracks = await createLocalScreenTracks({
+      audio: false,
+      video: true
+    });
+
+    const localScreenTrack = tracks.find((track) => track.kind === Track.Kind.Video);
+    if (!localScreenTrack) {
+      tracks.forEach((track) => track.stop());
+      throw new Error("screen_share_track_missing");
+    }
+
+    await room.localParticipant.publishTrack(localScreenTrack);
+    localTracksRef.current.set(Track.Source.ScreenShare, localScreenTrack);
+    setLocalScreenShareStream(new MediaStream([localScreenTrack.mediaStreamTrack]));
+    setIsLocalScreenSharing(true);
+  }, [roomVoiceConnected]);
 
   const connectRoom = useCallback(async () => {
     if (!token || !localUserId || !roomSlug) {
@@ -400,6 +479,7 @@ export function useLivekitVoiceRuntime({
         const participantId = String(participant.identity || "").trim() || participant.sid;
         detachRemoteAudioTrack(participantId);
         removeRemoteVideoStream(participantId);
+        removeRemoteScreenShareStream(participantId);
         refreshRemoteStates(room);
       });
 
@@ -420,7 +500,11 @@ export function useLivekitVoiceRuntime({
           }
 
           if (track.kind === Track.Kind.Video) {
-            upsertRemoteVideoStream(participantId, track.mediaStreamTrack);
+            if (publication.source === Track.Source.ScreenShare) {
+              upsertRemoteScreenShareStream(participantId, track.mediaStreamTrack);
+            } else {
+              upsertRemoteVideoStream(participantId, track.mediaStreamTrack);
+            }
           }
 
           const nextStatus = publication.isMuted ? "connecting" : "media";
@@ -440,7 +524,11 @@ export function useLivekitVoiceRuntime({
             detachRemoteAudioTrack(participantId);
           }
           if (track.kind === Track.Kind.Video) {
-            removeRemoteVideoStream(participantId);
+            if (_publication.source === Track.Source.ScreenShare) {
+              removeRemoteScreenShareStream(participantId);
+            } else {
+              removeRemoteVideoStream(participantId);
+            }
           }
           refreshRemoteStates(room);
         }
@@ -531,8 +619,10 @@ export function useLivekitVoiceRuntime({
     videoStreamingEnabled,
     detachRemoteAudioTrack,
     removeRemoteVideoStream,
+    removeRemoteScreenShareStream,
     attachRemoteAudioTrack,
-    upsertRemoteVideoStream
+    upsertRemoteVideoStream,
+    upsertRemoteScreenShareStream
   ]);
 
   const disconnectRoom = useCallback(() => {
@@ -677,6 +767,11 @@ export function useLivekitVoiceRuntime({
     localVoiceMediaStatusSummary,
     localVideoStream,
     remoteVideoStreamsByUserId,
+    localScreenShareStream,
+    remoteScreenShareStreamsByUserId,
+    isLocalScreenSharing,
+    startLocalScreenShare,
+    stopLocalScreenShare,
     connectRoom,
     disconnectRoom,
     handleIncomingSignal: noopSignal,

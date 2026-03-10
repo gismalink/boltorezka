@@ -71,6 +71,22 @@ type WsMessageControllerOptions = {
       clearedAt?: string;
     }
   ) => void;
+  onAck?: (
+    payload: { requestId: string; eventType: string; meta: Record<string, unknown> }
+  ) => void;
+  onNack?: (
+    payload: { requestId: string; eventType: string; code: string; message: string }
+  ) => void;
+  onScreenShareState?: (
+    payload: {
+      roomId?: string;
+      roomSlug?: string;
+      active?: boolean;
+      ownerUserId?: string | null;
+      ownerUserName?: string | null;
+      ts?: string;
+    }
+  ) => void;
 };
 
 export class WsMessageController {
@@ -137,6 +153,14 @@ export class WsMessageController {
         id: String(message.payload?.messageId || requestId)
       });
     }
+
+    this.options.onAck?.({
+      requestId,
+      eventType,
+      meta: typeof message.payload === "object" && message.payload
+        ? (message.payload as Record<string, unknown>)
+        : {}
+    });
   }
 
   /**
@@ -163,6 +187,7 @@ export class WsMessageController {
     }
 
     this.options.pushLog(`nack ${eventType}: ${code} ${nackMessage}`);
+    this.options.onNack?.({ requestId, eventType, code, message: nackMessage });
     if (eventType.startsWith("call.")) {
       this.options.pushCallLog(`nack ${eventType}: ${code} ${nackMessage}`);
       this.options.onCallNack?.({ requestId, eventType, code, message: nackMessage });
@@ -245,6 +270,27 @@ export class WsMessageController {
       roomSlug,
       deletedCount,
       clearedAt
+    });
+  }
+
+  private handleScreenShareState(message: WsIncoming): void {
+    this.options.onScreenShareState?.({
+      roomId: this.asTrimmedString(message.payload?.roomId) || undefined,
+      roomSlug: this.asTrimmedString(message.payload?.roomSlug) || undefined,
+      active: typeof message.payload?.active === "boolean" ? message.payload.active : undefined,
+      ownerUserId:
+        typeof message.payload?.ownerUserId === "string"
+          ? this.asTrimmedString(message.payload.ownerUserId)
+          : message.payload?.ownerUserId === null
+            ? null
+            : undefined,
+      ownerUserName:
+        typeof message.payload?.ownerUserName === "string"
+          ? this.asTrimmedString(message.payload.ownerUserName)
+          : message.payload?.ownerUserName === null
+            ? null
+            : undefined,
+      ts: typeof message.payload?.ts === "string" ? message.payload.ts : undefined
     });
   }
 
@@ -480,6 +526,9 @@ export class WsMessageController {
         return;
       case "chat.cleared":
         this.handleChatCleared(message);
+        return;
+      case "screen.share.state":
+        this.handleScreenShareState(message);
         return;
       case "call.mic_state":
         this.handleCallMicState(message);

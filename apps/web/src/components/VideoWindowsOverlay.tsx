@@ -12,6 +12,10 @@ type VideoWindowsOverlayProps = {
   remoteVideoStreamsByUserId: Record<string, MediaStream>;
   remoteCameraEnabledByUserId: Record<string, boolean>;
   remoteLabelsByUserId: Record<string, string>;
+  screenShareStream: MediaStream | null;
+  screenShareOwnerLabel: string;
+  screenShareOwnerUserId: string;
+  screenShareActive: boolean;
   minWidth: number;
   maxWidth: number;
   visible: boolean;
@@ -31,6 +35,7 @@ type TileItem = {
   label: string;
   stream: MediaStream | null;
   muted: boolean;
+  isScreenShare?: boolean;
 };
 
 const TILE_GAP = 12;
@@ -58,20 +63,24 @@ function VideoTile({
   stream,
   muted,
   mirrored,
+  isScreenShare,
   layout,
   zIndex,
   onDragStart,
-  onResizeStart
+  onResizeStart,
+  onOpenScreenFullscreen
 }: {
   id: string;
   label: string;
   stream: MediaStream | null;
   muted: boolean;
   mirrored: boolean;
+  isScreenShare?: boolean;
   layout: TileLayout;
   zIndex: number;
   onDragStart: (id: string, event: ReactPointerEvent<HTMLDivElement>) => void;
   onResizeStart: (id: string, corner: ResizeCorner, event: ReactPointerEvent<HTMLButtonElement>) => void;
+  onOpenScreenFullscreen?: (payload: { id: string; label: string; stream: MediaStream | null; mirrored?: boolean }) => void;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -111,6 +120,27 @@ function VideoTile({
     >
       <div className="video-window-header">
         <span className="video-window-label">{label}</span>
+        {isScreenShare ? (
+          <button
+            type="button"
+            className="secondary icon-btn tiny"
+            onPointerDown={(event) => {
+              event.stopPropagation();
+            }}
+            onClick={(event) => {
+              event.stopPropagation();
+              onOpenScreenFullscreen?.({
+                id,
+                label,
+                stream,
+                mirrored
+              });
+            }}
+            aria-label="Open fullscreen"
+          >
+            <i className="bi bi-arrows-fullscreen" aria-hidden="true" />
+          </button>
+        ) : null}
       </div>
       {stream ? (
         <video
@@ -163,6 +193,10 @@ export function VideoWindowsOverlay({
   remoteVideoStreamsByUserId,
   remoteCameraEnabledByUserId,
   remoteLabelsByUserId,
+  screenShareStream,
+  screenShareOwnerLabel,
+  screenShareOwnerUserId,
+  screenShareActive,
   minWidth,
   maxWidth,
   visible,
@@ -197,8 +231,38 @@ export function VideoWindowsOverlay({
       });
     });
 
+    if (screenShareActive) {
+      next.push({
+        id: `screen-share:${screenShareOwnerUserId || "unknown"}`,
+        label: `${screenShareOwnerLabel || "Screen"} - Screen`,
+        stream: screenShareStream,
+        muted: true,
+        isScreenShare: true
+      });
+    }
+
     return next;
-  }, [currentUserId, localCameraEnabled, localVideoStream, localUserLabel, remoteCameraEnabledByUserId, remoteLabelsByUserId, remoteVideoStreamsByUserId, t]);
+  }, [
+    currentUserId,
+    localCameraEnabled,
+    localVideoStream,
+    localUserLabel,
+    remoteCameraEnabledByUserId,
+    remoteLabelsByUserId,
+    remoteVideoStreamsByUserId,
+    screenShareActive,
+    screenShareOwnerLabel,
+    screenShareOwnerUserId,
+    screenShareStream,
+    t
+  ]);
+
+  const [fullscreenScreenShare, setFullscreenScreenShare] = useState<{
+    id: string;
+    label: string;
+    stream: MediaStream | null;
+    mirrored?: boolean;
+  } | null>(null);
 
   const [layoutsById, setLayoutsById] = useState<Record<string, TileLayout>>({});
   const [zOrderById, setZOrderById] = useState<Record<string, number>>({});
@@ -358,6 +422,7 @@ export function VideoWindowsOverlay({
           stream={item.stream}
           muted={item.muted}
           mirrored={item.id === "local"}
+          isScreenShare={item.isScreenShare}
           layout={layoutsById[item.id] || defaultLayout(0, effectiveMinWidth, effectiveMaxWidth)}
           zIndex={(speakingIdSet.has(item.id) ? 2000 : 1000) + (zOrderById[item.id] || 0)}
           onDragStart={(id, event) => {
@@ -391,8 +456,45 @@ export function VideoWindowsOverlay({
             };
             event.preventDefault();
           }}
+          onOpenScreenFullscreen={(payload) => {
+            setFullscreenScreenShare(payload);
+          }}
         />
       ))}
+
+      {fullscreenScreenShare ? (
+        <div
+          className="chat-image-modal-overlay video-screen-fullscreen-overlay"
+          onClick={() => setFullscreenScreenShare(null)}
+          role="presentation"
+        >
+          <div className="chat-image-modal-panel video-screen-fullscreen-panel" onClick={(event) => event.stopPropagation()}>
+            <button
+              type="button"
+              className="secondary icon-btn chat-image-modal-close"
+              onClick={() => setFullscreenScreenShare(null)}
+              aria-label="Close fullscreen"
+            >
+              <i className="bi bi-x-lg" aria-hidden="true" />
+            </button>
+            <video
+              autoPlay
+              playsInline
+              muted
+              className="chat-image-modal-media video-screen-fullscreen-media"
+              ref={(element) => {
+                if (!element) {
+                  return;
+                }
+                if (element.srcObject !== fullscreenScreenShare.stream) {
+                  element.srcObject = fullscreenScreenShare.stream;
+                  void element.play().catch(() => undefined);
+                }
+              }}
+            />
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
