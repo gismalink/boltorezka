@@ -736,18 +736,6 @@ pre {
   justify-content: center;
 }
 
-.channel-member-rtc {
-  display: inline-flex;
-  align-items: center;
-  min-height: 16px;
-  padding: 0 6px;
-  border: var(--border-thin) solid color-mix(in srgb, var(--pixel-muted) 62%, transparent 38%);
-  background: color-mix(in srgb, var(--pixel-panel-2) 82%, transparent 18%);
-  color: var(--pixel-muted);
-  font-size: calc(var(--font-size-sm) - 0.18rem);
-  line-height: 1;
-}
-
 .channel-member-item-current .channel-member-name {
   color: var(--pixel-neon-gold);
   text-shadow: 1px 0 0 var(--pixel-hard-shadow);
@@ -792,10 +780,6 @@ pre {
   color: var(--pixel-danger);
 }
 
-.channel-member-item-self-muted {
-  opacity: 0.3;
-}
-
 .channel-member-item-current.channel-member-item-voice-active .channel-member-name,
 .channel-member-item-current.channel-member-item-voice-active .channel-member-avatar,
 .channel-member-item-current.channel-member-item-voice-active .channel-member-mic-icon {
@@ -810,10 +794,6 @@ pre {
 
 .channel-member-item-current.channel-member-item-voice-active .channel-member-avatar {
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--pixel-neon-cyan) 56%, transparent 44%);
-}
-
-.channel-member-rtc-disconnected {
-  opacity: 0.28;
 }
 
 .channel-member-status-disconnected {
@@ -841,46 +821,6 @@ pre {
 .channel-member-status-connecting {
   color: var(--pixel-neon-gold);
   animation: channel-member-rtc-pulse 0.95s steps(2, end) infinite;
-}
-
-.channel-member-rtc-connected {
-  color: var(--pixel-neon-cyan);
-  border-color: color-mix(in srgb, var(--pixel-neon-cyan) 58%, transparent 42%);
-}
-
-.channel-member-rtc-idle {
-  opacity: 0.48;
-}
-
-.channel-member-rtc-signaling {
-  color: color-mix(in srgb, var(--pixel-neon-gold) 72%, var(--pixel-text) 28%);
-  border-color: color-mix(in srgb, var(--pixel-neon-gold) 54%, transparent 46%);
-}
-
-.channel-member-rtc-media {
-  color: var(--pixel-neon-cyan);
-  border-color: color-mix(in srgb, var(--pixel-neon-cyan) 62%, transparent 38%);
-}
-
-.channel-member-rtc-stalled {
-  color: #ff9a9a;
-  border-color: color-mix(in srgb, #ff9a9a 62%, transparent 38%);
-  animation: channel-member-rtc-pulse 0.95s steps(2, end) infinite;
-}
-
-.channel-member-rtc-connecting {
-  color: var(--pixel-neon-gold);
-  border-color: color-mix(in srgb, var(--pixel-neon-gold) 62%, transparent 38%);
-  animation: channel-member-rtc-pulse 0.95s steps(2, end) infinite;
-}
-
-.room-topology-badge {
-  text-transform: lowercase;
-}
-
-.room-topology-badge-livekit {
-  color: #6ee7b7;
-  border-color: color-mix(in srgb, #6ee7b7 58%, transparent 42%);
 }
 
 @keyframes channel-member-rtc-pulse {
@@ -1088,17 +1028,6 @@ pre {
 .rtc-connection-card {
   border-color: var(--pixel-border);
   background: var(--pixel-panel-2);
-}
-
-.rtc-title {
-  color: var(--pixel-neon-gold);
-  font-weight: 700;
-  text-shadow: 1px 1px 0 var(--pixel-hard-shadow), -1px 0 0 var(--pixel-neon-pink);
-}
-
-.rtc-subtitle {
-  font-size: var(--font-size-sm);
-  margin-top: var(--space-xxs);
 }
 
 .rtc-actions-grid {
