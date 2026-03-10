@@ -1,3 +1,5 @@
+/// this component is for rendering draggable/resizable video windows for local and remote video streams, as an overlay on top of the main app UI. It is used in the "call" page when the user has enabled the "floating video windows" setting. The component is designed to be self-contained and not rely on any external state or context, other than the props passed to it. The parent component is responsible for managing the state of the video streams and camera enabled flags, as well as the visibility of the overlay.
+
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 
@@ -13,6 +15,7 @@ type VideoWindowsOverlayProps = {
   minWidth: number;
   maxWidth: number;
   visible: boolean;
+  speakingWindowIds: string[];
 };
 
 type TileLayout = {
@@ -56,6 +59,7 @@ function VideoTile({
   muted,
   mirrored,
   layout,
+  zIndex,
   onDragStart,
   onResizeStart
 }: {
@@ -65,6 +69,7 @@ function VideoTile({
   muted: boolean;
   mirrored: boolean;
   layout: TileLayout;
+  zIndex: number;
   onDragStart: (id: string, event: ReactPointerEvent<HTMLDivElement>) => void;
   onResizeStart: (id: string, corner: ResizeCorner, event: ReactPointerEvent<HTMLButtonElement>) => void;
 }) {
@@ -100,7 +105,8 @@ function VideoTile({
       style={{
         width: `${layout.width}px`,
         height: `${height}px`,
-        transform: `translate(${layout.x}px, ${layout.y}px)`
+        transform: `translate(${layout.x}px, ${layout.y}px)`,
+        zIndex
       }}
     >
       <div className="video-window-header">
@@ -159,7 +165,8 @@ export function VideoWindowsOverlay({
   remoteLabelsByUserId,
   minWidth,
   maxWidth,
-  visible
+  visible,
+  speakingWindowIds
 }: VideoWindowsOverlayProps) {
   const effectiveMinWidth = Math.max(80, Math.min(480, Math.round(minWidth)));
   const effectiveMaxWidth = Math.max(effectiveMinWidth, Math.min(480, Math.round(maxWidth)));
@@ -194,6 +201,8 @@ export function VideoWindowsOverlay({
   }, [currentUserId, localCameraEnabled, localVideoStream, localUserLabel, remoteCameraEnabledByUserId, remoteLabelsByUserId, remoteVideoStreamsByUserId, t]);
 
   const [layoutsById, setLayoutsById] = useState<Record<string, TileLayout>>({});
+  const [zOrderById, setZOrderById] = useState<Record<string, number>>({});
+  const zOrderCounterRef = useRef(0);
   const dragStateRef = useRef<
     | {
       id: string;
@@ -206,6 +215,17 @@ export function VideoWindowsOverlay({
     }
     | null
   >(null);
+
+  const speakingIdSet = useMemo(() => {
+    const next = new Set<string>();
+    speakingWindowIds.forEach((id) => {
+      const normalized = String(id || "").trim();
+      if (normalized) {
+        next.add(normalized);
+      }
+    });
+    return next;
+  }, [speakingWindowIds]);
 
   useEffect(() => {
     setLayoutsById((prev) => {
@@ -221,6 +241,38 @@ export function VideoWindowsOverlay({
       return next;
     });
   }, [items, effectiveMinWidth, effectiveMaxWidth]);
+
+  useEffect(() => {
+    setZOrderById((prev) => {
+      const next: Record<string, number> = {};
+      let nextCounter = zOrderCounterRef.current;
+
+      items.forEach((item, index) => {
+        const existing = prev[item.id];
+        if (typeof existing === "number") {
+          next[item.id] = existing;
+          nextCounter = Math.max(nextCounter, existing);
+          return;
+        }
+
+        nextCounter += 1;
+        // Keep deterministic initial order for newly appeared windows.
+        next[item.id] = nextCounter + index;
+      });
+
+      zOrderCounterRef.current = nextCounter + items.length;
+      return next;
+    });
+  }, [items]);
+
+  const bringToFront = (id: string) => {
+    zOrderCounterRef.current += 1;
+    const nextOrder = zOrderCounterRef.current;
+    setZOrderById((prev) => ({
+      ...prev,
+      [id]: nextOrder
+    }));
+  };
 
   useEffect(() => {
     const handlePointerMove = (event: PointerEvent) => {
@@ -307,12 +359,14 @@ export function VideoWindowsOverlay({
           muted={item.muted}
           mirrored={item.id === "local"}
           layout={layoutsById[item.id] || defaultLayout(0, effectiveMinWidth, effectiveMaxWidth)}
+          zIndex={(speakingIdSet.has(item.id) ? 2000 : 1000) + (zOrderById[item.id] || 0)}
           onDragStart={(id, event) => {
             const target = event.target as HTMLElement;
             if (target.closest(".video-window-resize")) {
               return;
             }
             const layout = layoutsById[id] || defaultLayout(0, effectiveMinWidth, effectiveMaxWidth);
+            bringToFront(id);
             dragStateRef.current = {
               id,
               mode: "drag",
@@ -325,6 +379,7 @@ export function VideoWindowsOverlay({
           }}
           onResizeStart={(id, corner, event) => {
             const layout = layoutsById[id] || defaultLayout(0, effectiveMinWidth, effectiveMaxWidth);
+            bringToFront(id);
             dragStateRef.current = {
               id,
               mode: "resize",

@@ -435,14 +435,6 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
     return "livekit";
   }
 
-  const resolveActiveRoomMediaTopology = (state: SocketState): MediaTopology => {
-    if (!state.roomSlug) {
-      return "livekit";
-    }
-
-    return resolveRoomMediaTopology(state.roomSlug, state.userId);
-  };
-
   const evictUserFromOtherNonTextChannels = (userId: string, keepSocket: WebSocket) => {
     const userSockets = socketsByUserId.get(userId);
     if (!userSockets) {
@@ -792,27 +784,6 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
 
             if (!knownMessage) {
               sendUnknownEventNack(connection, requestId, eventType);
-              return;
-            }
-
-            if (
-              knownMessage.type.startsWith("call.")
-              && state.roomSlug
-              && resolveActiveRoomMediaTopology(state) === "livekit"
-            ) {
-              sendNack(
-                connection,
-                requestId,
-                eventType,
-                "LiveKitSignalingDisabled",
-                "Legacy call signaling is disabled for livekit topology; use LiveKit token/session flow",
-                buildErrorCorrelationMeta(connection, {
-                  mediaTopology: "livekit",
-                  roomSlug: state.roomSlug,
-                  roomId: state.roomId
-                })
-              );
-              void incrementMetric("nack_sent");
               return;
             }
 

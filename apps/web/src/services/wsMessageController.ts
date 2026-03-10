@@ -85,10 +85,7 @@ export class WsMessageController {
   }
 
   private asMediaTopology(value: unknown): "livekit" {
-    const normalized = String(value || "").trim().toLowerCase();
-    if (normalized && normalized !== "livekit") {
-      this.options.pushLog(`non-livekit topology ignored: ${normalized}`);
-    }
+    void value;
     return "livekit";
   }
 

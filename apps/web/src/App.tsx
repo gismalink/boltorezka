@@ -423,8 +423,6 @@ export function App() {
   }, [rooms, roomsTree, roomSlug]);
   const allowVideoStreaming = currentRoomKind === "text_voice_video";
   const currentRoomSupportsVideo = allowVideoStreaming;
-  const currentRoomMediaTopology = roomMediaTopologyBySlug[roomSlug] || "livekit";
-  const isLivekitRoomTopology = currentRoomMediaTopology === "livekit";
 
   const livekitVoiceRuntime = useLivekitVoiceRuntime({
     token,
@@ -469,6 +467,14 @@ export function App() {
       labels[member.userId] = member.userName || member.userId;
     });
     return labels;
+  }, [currentRoomVoiceTargets]);
+
+  const videoPolicyAudienceKey = useMemo(() => {
+    return currentRoomVoiceTargets
+      .map((member) => String(member.userId || "").trim())
+      .filter((userId) => userId.length > 0)
+      .sort()
+      .join("|");
   }, [currentRoomVoiceTargets]);
 
   useEffect(() => {
@@ -532,7 +538,7 @@ export function App() {
   useEffect(() => {
     const activeRoom = rooms.find((room) => room.slug === roomSlug);
     const roomSupportsRtc = activeRoom ? activeRoom.kind !== "text" : false;
-    if (!roomSupportsRtc || !roomVoiceConnected || !canManageAudioQuality || isLivekitRoomTopology) {
+    if (!roomSupportsRtc || !roomVoiceConnected || !canManageAudioQuality) {
       return;
     }
 
@@ -550,7 +556,7 @@ export function App() {
       windowMaxWidth: Math.max(serverVideoWindowMinWidth, serverVideoWindowMaxWidth)
     };
 
-    const serialized = JSON.stringify(payload);
+    const serialized = JSON.stringify({ payload, audience: videoPolicyAudienceKey });
     if (lastBroadcastVideoPolicyRef.current === serialized) {
       return;
     }
@@ -562,7 +568,6 @@ export function App() {
     roomSlug,
     roomVoiceConnected,
     canManageAudioQuality,
-    isLivekitRoomTopology,
     serverVideoEffectType,
     serverVideoResolution,
     serverVideoFps,
@@ -574,6 +579,7 @@ export function App() {
     serverVideoAsciiColor,
     serverVideoWindowMinWidth,
     serverVideoWindowMaxWidth,
+    videoPolicyAudienceKey,
     sendWsEvent
   ]);
 
@@ -704,6 +710,22 @@ export function App() {
     initialAudioOutputMutedByUserIdInCurrentRoom: voiceInitialAudioOutputMutedByUserIdInCurrentRoom
   });
 
+  const speakingVideoWindowIds = useMemo(() => {
+    const ids = new Set<string>();
+
+    remoteSpeakingPeerUserIds
+      .map((userId) => String(userId || "").trim())
+      .filter((userId) => userId.length > 0)
+      .forEach((userId) => ids.add(userId));
+
+    const localUserId = String(user?.id || "").trim();
+    if (localUserId && voiceMicStateByUserIdInCurrentRoom[localUserId] === "speaking") {
+      ids.add("local");
+    }
+
+    return Array.from(ids);
+  }, [remoteSpeakingPeerUserIds, user?.id, voiceMicStateByUserIdInCurrentRoom]);
+
   const effectiveVoiceCameraEnabledByUserIdInCurrentRoom = useMemo(() => {
     const map: Record<string, boolean> = {};
     const activeTargetIds = new Set(
@@ -715,21 +737,8 @@ export function App() {
     // Keep camera status strictly scoped to current room participants and active RTC peers.
     activeTargetIds.forEach((userId) => {
       const hasRemoteStream = Object.prototype.hasOwnProperty.call(remoteVideoStreamsByUserId, userId);
-      if (isLivekitRoomTopology) {
-        // LiveKit rooms derive camera visibility from subscribed video tracks, not legacy call.video_state.
-        map[userId] = hasRemoteStream;
-        return;
-      }
-
-      const cameraEnabled = voiceCameraEnabledByUserIdInCurrentRoom[userId] === true;
-      if (!cameraEnabled) {
-        map[userId] = false;
-        return;
-      }
-
-      const rtcState = voiceRtcStateByUserIdInCurrentRoom[userId];
-      const hasRtcPeer = rtcState === "connecting" || rtcState === "connected";
-      map[userId] = hasRtcPeer || hasRemoteStream;
+      // LiveKit-only path: remote camera visibility follows subscribed remote video tracks.
+      map[userId] = hasRemoteStream;
     });
 
     const localUserId = String(user?.id || "").trim();
@@ -739,10 +748,7 @@ export function App() {
 
     return map;
   }, [
-    voiceCameraEnabledByUserIdInCurrentRoom,
-    voiceRtcStateByUserIdInCurrentRoom,
     remoteVideoStreamsByUserId,
-    isLivekitRoomTopology,
     currentRoomVoiceTargets,
     user?.id,
     roomVoiceConnected,
@@ -1367,17 +1373,6 @@ export function App() {
             : 1;
           const targetWidth = Math.max(1, Math.round(originalWidth * scale));
           const targetHeight = Math.max(1, Math.round(originalHeight * scale));
-
-          const canvas = document.createElement("canvas");
-          canvas.width = targetWidth;
-          canvas.height = targetHeight;
-          const context = canvas.getContext("2d");
-          if (!context) {
-            reject(new Error("canvas_failed"));
-            return;
-          }
-
-          context.drawImage(image, 0, 0, targetWidth, targetHeight);
           const compressed = canvas.toDataURL("image/jpeg", serverChatImagePolicy.jpegQuality);
           resolve(compressed);
         };
@@ -2060,6 +2055,7 @@ export function App() {
           minWidth={Math.min(serverVideoWindowMinWidth, serverVideoWindowMaxWidth)}
           maxWidth={Math.max(serverVideoWindowMinWidth, serverVideoWindowMaxWidth)}
           visible={allowVideoStreaming && videoWindowsVisible}
+          speakingWindowIds={speakingVideoWindowIds}
         />
 
         {isMobileViewport && user && mobileTab === "settings" ? (
