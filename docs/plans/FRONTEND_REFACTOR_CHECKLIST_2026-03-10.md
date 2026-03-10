@@ -12,7 +12,7 @@
 - [x] Этап 6: выделение snapshot текущей комнаты (`useCurrentRoomSnapshot`)
 - [x] Этап 7: выделение persisted local settings (audio/video/localStorage)
 - [ ] Этап 8: декомпозиция `UserDock` на подкомпоненты
-- [ ] Этап 9: декомпозиция `RoomsPanel` на подкомпоненты
+- [x] Этап 9: декомпозиция `RoomsPanel` на подкомпоненты
 - [ ] Этап 10: Tailwind migration (mostly), кроме зафиксированных CSS-исключений
 
 ## Дополнительно после этапов 1-7
@@ -23,6 +23,7 @@
 - [x] Этап 9 (progress): вынесен `RoomsConfirmOverlay` из `RoomsPanel`.
 - [x] Этап 9 (progress): вынесен `RoomsPanelHeader` (create category/channel popups) из `RoomsPanel`.
 - [x] Этап 9 (progress): вынесен `RoomsCategoryBlock` (category collapse/settings/channels list) из `RoomsPanel`.
+- [x] Этап 9 (progress): вынесена утилита `mapRoomMembersForSlug` и блок `RoomsUncategorizedBlock`.
 
 - [x] Вынесены realtime/call обработчики в `useRealtimeIncomingCallState`.
 - [x] Вынесена screen-share orchestration логика в `useScreenShareOrchestrator`.

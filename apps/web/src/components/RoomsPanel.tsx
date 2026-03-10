@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import type { Room } from "../domain";
-import { PopupPortal } from "./PopupPortal";
 import { RoomsCategoryBlock } from "./roomsPanel/RoomsCategoryBlock";
 import { RoomRow } from "./roomsPanel/RoomRow";
 import { RoomsConfirmOverlay } from "./roomsPanel/RoomsConfirmOverlay";
 import { RoomsPanelHeader } from "./roomsPanel/RoomsPanelHeader";
+import { RoomsUncategorizedBlock } from "./roomsPanel/RoomsUncategorizedBlock";
+import { mapRoomMembersForSlug } from "./roomsPanel/roomMembers";
 import type { RoomsPanelProps } from "./types";
 
 type ConfirmPopupState =
@@ -128,34 +129,6 @@ export function RoomsPanel({
   }, [confirmPopup]);
 
   const normalizedCurrentUserId = String(currentUserId || "").trim();
-  const mapRoomMembers = (slug: string) => {
-    const details = liveRoomMemberDetailsBySlug[slug] || [];
-    if (details.length > 0) {
-      const byKey = new Map<string, { userId: string; userName: string }>();
-      details.forEach((member) => {
-        const userId = String(member.userId || "").trim();
-        const userName = String(member.userName || member.userId || "").trim();
-        if (!userName) {
-          return;
-        }
-
-        const key = userId || userName.toLocaleLowerCase();
-        if (!byKey.has(key)) {
-          byKey.set(key, { userId, userName });
-        }
-      });
-
-      return Array.from(byKey.values());
-    }
-
-    return (liveRoomMembersBySlug[slug] || []).map((nameRaw) => {
-      const userName = String(nameRaw || "").trim();
-      return {
-      userId: "",
-      userName
-      };
-    }).filter((member) => member.userName.length > 0);
-  };
 
   const renderRoomRow = (room: Room) => (
     <RoomRow
@@ -185,7 +158,7 @@ export function RoomsPanel({
       onJoinRoom={onJoinRoom}
       onKickRoomMember={onKickRoomMember}
       room={room}
-      roomMembers={mapRoomMembers(room.slug)}
+      roomMembers={mapRoomMembersForSlug(liveRoomMemberDetailsBySlug, liveRoomMembersBySlug, room.slug)}
       normalizedCurrentUserId={normalizedCurrentUserId}
       onRequestClearChannel={(targetRoom) => setConfirmPopup({ kind: "clear-channel", room: targetRoom })}
       onRequestArchiveChannel={(targetRoom) => setConfirmPopup({ kind: "archive-channel", room: targetRoom })}
@@ -241,16 +214,7 @@ export function RoomsPanel({
           />
         ))}
 
-        {uncategorizedRooms.length > 0 ? (
-          <div className="category-block">
-            <div className="category-title">{t("rooms.uncategorized")}</div>
-            <ul className="rooms-list">
-              {uncategorizedRooms.map((room) => (
-                <li key={room.id}>{renderRoomRow(room)}</li>
-              ))}
-            </ul>
-          </div>
-        ) : null}
+        <RoomsUncategorizedBlock t={t} rooms={uncategorizedRooms} renderRoomRow={renderRoomRow} />
       </div>
       </section>
 

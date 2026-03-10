@@ -2,8 +2,7 @@ import { useRef } from "react";
 import type { ChannelAudioQualitySetting, Room, RoomKind } from "../../domain";
 import { PopupPortal } from "../PopupPortal";
 import type { RoomsPanelProps } from "../types";
-
-type RoomMember = { userId: string; userName: string };
+import type { RoomMember } from "./roomMembers";
 
 const ROOM_KIND_ICON_CLASS: Record<RoomKind, string> = {
   text: "bi-hash",
