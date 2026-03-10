@@ -42,6 +42,7 @@ import {
   useWsEventAcks,
   useRoomAdminActions,
   useRoomMediaCapabilities,
+  useRoomPresenceActions,
   useRoomsDerived,
   useScreenWakeLock,
   useServerVideoPreview,
@@ -1085,44 +1086,24 @@ export function App() {
     }
   };
 
-  const joinRoom = (slug: string) => {
-    roomAdminController.joinRoom(slug);
-  };
-
-  const leaveRoom = () => {
-    if (!roomSlug) {
-      return;
-    }
-
-    disconnectRoom();
-    void sendWsEvent("room.leave", {}, { maxRetries: 1 });
-    setRoomSlug("");
-    setMessages([]);
-    setMessagesHasMore(false);
-    setMessagesNextCursor(null);
-  };
-
-  const kickRoomMember = (targetRoomSlug: string, targetUserId: string, targetUserName: string) => {
-    if (!targetRoomSlug || !targetUserId || !canCreateRooms) {
-      return;
-    }
-
-    const requestId = sendWsEvent(
-      "room.kick",
-      {
-        roomSlug: targetRoomSlug,
-        targetUserId
-      },
-      { maxRetries: 1 }
-    );
-
-    if (!requestId) {
-      pushToast(t("toast.serverError"));
-      return;
-    }
-
-    pushLog(`kick requested: ${targetUserName || targetUserId} from #${targetRoomSlug}`);
-  };
+  const {
+    joinRoom,
+    leaveRoom,
+    kickRoomMember
+  } = useRoomPresenceActions({
+    roomSlug,
+    canCreateRooms,
+    roomAdminController,
+    disconnectRoom,
+    sendWsEvent,
+    pushToast,
+    pushLog,
+    t,
+    setRoomSlug,
+    setMessages,
+    setMessagesHasMore,
+    setMessagesNextCursor
+  });
 
   const handleToggleMic = useCallback(() => {
     setMicMuted((value) => {
