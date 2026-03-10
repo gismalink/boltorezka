@@ -774,6 +774,22 @@ export function App() {
     return screenShareOwnerByRoomSlug[roomSlug] || { userId: null, userName: null };
   }, [screenShareOwnerByRoomSlug, roomSlug]);
 
+  const normalizedCurrentUserId = useMemo(() => String(user?.id || "").trim(), [user?.id]);
+  const normalizedScreenShareOwnerUserId = useMemo(
+    () => String(currentRoomScreenShareOwner.userId || "").trim(),
+    [currentRoomScreenShareOwner.userId]
+  );
+  const isCurrentUserScreenShareOwner = Boolean(
+    normalizedCurrentUserId
+    && normalizedScreenShareOwnerUserId
+    && normalizedCurrentUserId === normalizedScreenShareOwnerUserId
+  );
+  const canToggleScreenShare = Boolean(
+    currentRoomKind !== "text"
+    && roomVoiceConnected
+    && (!normalizedScreenShareOwnerUserId || isCurrentUserScreenShareOwner)
+  );
+
   const activeScreenShare = useMemo(() => {
     const localUserId = String(user?.id || "").trim();
     if (isLocalScreenSharing && localScreenShareStream) {
@@ -1956,8 +1972,8 @@ export function App() {
       lastCallPeer={lastCallPeer}
       roomVoiceConnected={roomVoiceConnected}
       screenShareActive={Boolean(currentRoomScreenShareOwner.userId)}
-      screenShareOwnedByCurrentUser={Boolean(currentRoomScreenShareOwner.userId && currentRoomScreenShareOwner.userId === user.id)}
-      canStartScreenShare={Boolean(currentRoomSupportsRtc && roomVoiceConnected && (!currentRoomScreenShareOwner.userId || currentRoomScreenShareOwner.userId === user.id))}
+      screenShareOwnedByCurrentUser={isCurrentUserScreenShareOwner}
+      canStartScreenShare={canToggleScreenShare}
       cameraEnabled={cameraEnabled}
       micMuted={micMuted}
       audioMuted={audioMuted}
@@ -2060,8 +2076,8 @@ export function App() {
       lastCallPeer={lastCallPeer}
       roomVoiceConnected={roomVoiceConnected}
       screenShareActive={Boolean(currentRoomScreenShareOwner.userId)}
-      screenShareOwnedByCurrentUser={Boolean(currentRoomScreenShareOwner.userId && currentRoomScreenShareOwner.userId === user.id)}
-      canStartScreenShare={Boolean(currentRoomSupportsRtc && roomVoiceConnected && (!currentRoomScreenShareOwner.userId || currentRoomScreenShareOwner.userId === user.id))}
+      screenShareOwnedByCurrentUser={isCurrentUserScreenShareOwner}
+      canStartScreenShare={canToggleScreenShare}
       cameraEnabled={cameraEnabled}
       micMuted={micMuted}
       audioMuted={audioMuted}

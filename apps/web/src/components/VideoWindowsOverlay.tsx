@@ -208,8 +208,14 @@ export function VideoWindowsOverlay({
   const items = useMemo<TileItem[]>(() => {
     const next: TileItem[] = [];
     const normalizedCurrentUserId = String(currentUserId || "").trim();
+    const normalizedScreenShareOwnerUserId = String(screenShareOwnerUserId || "").trim();
+    const hasScreenShareOwner = Boolean(screenShareActive && normalizedScreenShareOwnerUserId);
 
-    if (localCameraEnabled) {
+    const shouldHideLocalCameraTile = hasScreenShareOwner
+      && Boolean(normalizedCurrentUserId)
+      && normalizedCurrentUserId === normalizedScreenShareOwnerUserId;
+
+    if (localCameraEnabled && !shouldHideLocalCameraTile) {
       next.push({
         id: "local",
         label: localUserLabel || t("video.you"),
@@ -220,6 +226,10 @@ export function VideoWindowsOverlay({
 
     Object.entries(remoteCameraEnabledByUserId).forEach(([userId, enabled]) => {
       if (!enabled || userId === "local" || (normalizedCurrentUserId && userId === normalizedCurrentUserId)) {
+        return;
+      }
+
+      if (hasScreenShareOwner && userId === normalizedScreenShareOwnerUserId) {
         return;
       }
 
