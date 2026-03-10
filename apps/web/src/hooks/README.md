@@ -16,6 +16,7 @@
 	- `realtime/useRealtimeChatLifecycle.ts`
 	- `realtime/useRealtimeIncomingCallState.ts`
 	- `realtime/useScreenShareOrchestrator.ts`
+	- `realtime/useWsEventAcks.ts`
 	- `realtime/useRealtimeSoundEffects.ts`
 - `rooms/*` - room/category/channel state and admin actions:
 	- `rooms/useCollapsedCategories.ts`

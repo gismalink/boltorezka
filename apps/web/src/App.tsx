@@ -35,6 +35,7 @@ import {
   useRealtimeChatLifecycle,
   useRealtimeIncomingCallState,
   useScreenShareOrchestrator,
+  useWsEventAcks,
   useRoomAdminActions,
   useRoomMediaCapabilities,
   useRoomsDerived,
@@ -240,9 +241,6 @@ export function App() {
   } = useAppUiState();
   const { toasts, pushToast } = useToastQueue();
   const realtimeClientRef = useRef<RealtimeClient | null>(null);
-  const pendingWsRequestResolversRef = useRef<
-    Map<string, { resolve: () => void; reject: (error: Error) => void; timeoutId: number }>
-  >(new Map());
   const roomSlugRef = useRef(roomSlug);
   const lastRoomSlugForScrollRef = useRef(roomSlug);
   const lastMessageIdRef = useRef<string | null>(null);
@@ -289,48 +287,14 @@ export function App() {
     );
   };
 
-  const sendWsEvent = useCallback((
-    eventType: string,
-    payload: Record<string, unknown>,
-    options: { withIdempotency?: boolean; trackAck?: boolean; maxRetries?: number } = {}
-  ) => {
-    return realtimeClientRef.current?.sendEvent(eventType, payload, options) ?? null;
-  }, []);
-
-  const sendWsEventAwaitAck = useCallback((
-    eventType: string,
-    payload: Record<string, unknown>,
-    options: { withIdempotency?: boolean; trackAck?: boolean; maxRetries?: number } = {}
-  ) => {
-    const requestId = sendWsEvent(eventType, payload, {
-      trackAck: true,
-      maxRetries: 1,
-      ...options
-    });
-
-    if (!requestId) {
-      return Promise.reject(new Error("ws_not_connected"));
-    }
-
-    return new Promise<void>((resolve, reject) => {
-      const timeoutId = window.setTimeout(() => {
-        pendingWsRequestResolversRef.current.delete(requestId);
-        reject(new Error(`${eventType}:ack_timeout`));
-      }, 10000);
-
-      pendingWsRequestResolversRef.current.set(requestId, {
-        resolve: () => {
-          window.clearTimeout(timeoutId);
-          resolve();
-        },
-        reject: (error) => {
-          window.clearTimeout(timeoutId);
-          reject(error);
-        },
-        timeoutId
-      });
-    });
-  }, [sendWsEvent]);
+  const {
+    sendWsEvent,
+    sendWsEventAwaitAck,
+    handleWsAck,
+    handleWsNack
+  } = useWsEventAcks({
+    realtimeClientRef
+  });
 
   const currentRoomVoiceTargets = useMemo(() => {
     const members = roomsPresenceDetailsBySlug[roomSlug] || [];
@@ -798,14 +762,6 @@ export function App() {
     bootstrapSessionState(token);
   }, [bootstrapSessionState, resetSessionState, token]);
 
-  useEffect(() => () => {
-    pendingWsRequestResolversRef.current.forEach((pending) => {
-      window.clearTimeout(pending.timeoutId);
-      pending.reject(new Error("ws_disposed"));
-    });
-    pendingWsRequestResolversRef.current.clear();
-  }, []);
-
   const { loadOlderMessages } = useRealtimeChatLifecycle({
     token,
     reconnectNonce: realtimeReconnectNonce,
@@ -845,24 +801,8 @@ export function App() {
     onCallInitialState: handleIncomingInitialCallState,
     onCallNack: handleCallNack,
     onAudioQualityUpdated: handleAudioQualityUpdated,
-    onAck: ({ requestId }) => {
-      const pending = pendingWsRequestResolversRef.current.get(requestId);
-      if (!pending) {
-        return;
-      }
-
-      pendingWsRequestResolversRef.current.delete(requestId);
-      pending.resolve();
-    },
-    onNack: ({ requestId, eventType, code, message }) => {
-      const pending = pendingWsRequestResolversRef.current.get(requestId);
-      if (!pending) {
-        return;
-      }
-
-      pendingWsRequestResolversRef.current.delete(requestId);
-      pending.reject(new Error(`${eventType}:${code}:${message}`));
-    },
+    onAck: handleWsAck,
+    onNack: handleWsNack,
     onScreenShareState: handleIncomingScreenShareState,
     onChatCleared: (payload) => {
       const targetRoomSlug = String(payload.roomSlug || "").trim();

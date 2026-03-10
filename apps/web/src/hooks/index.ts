@@ -13,6 +13,7 @@ export { useRealtimeSoundEffects } from "./realtime/useRealtimeSoundEffects";
 export { useRealtimeChatLifecycle } from "./realtime/useRealtimeChatLifecycle";
 export { useRealtimeIncomingCallState } from "./realtime/useRealtimeIncomingCallState";
 export { useScreenShareOrchestrator } from "./realtime/useScreenShareOrchestrator";
+export { useWsEventAcks } from "./realtime/useWsEventAcks";
 export { useRoomAdminActions } from "./rooms/useRoomAdminActions";
 export { useRoomMediaCapabilities } from "./rooms/useRoomMediaCapabilities";
 export { useRoomsDerived } from "./rooms/useRoomsDerived";
