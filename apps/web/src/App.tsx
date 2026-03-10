@@ -29,6 +29,7 @@ import {
   useCurrentRoomSnapshot,
   useMediaDevicePreferences,
   useMicrophoneLevelMeter,
+  usePersistedClientSettings,
   usePopupOutsideClose,
   useRealtimeSoundEffects,
   useRealtimeChatLifecycle,
@@ -424,58 +425,21 @@ export function App() {
     setVoiceInitialAudioOutputMutedByUserIdInCurrentRoom({});
   }, [roomSlug]);
 
-  useEffect(() => {
-    localStorage.setItem("boltorezka_selected_input_profile", selectedInputProfile);
-  }, [selectedInputProfile]);
-
-  useEffect(() => {
-    localStorage.setItem("boltorezka_audio_muted", audioMuted ? "1" : "0");
-  }, [audioMuted]);
-
-  useEffect(() => {
-    localStorage.setItem("boltorezka_server_video_effect_type", serverVideoEffectType);
-    localStorage.setItem("boltorezka_server_video_fx_enabled", serverVideoEffectType === "none" ? "0" : "1");
-  }, [serverVideoEffectType]);
-
-  useEffect(() => {
-    localStorage.setItem("boltorezka_server_video_resolution", serverVideoResolution);
-  }, [serverVideoResolution]);
-
-  useEffect(() => {
-    localStorage.setItem("boltorezka_server_video_fps", String(serverVideoFps));
-  }, [serverVideoFps]);
-
-  useEffect(() => {
-    localStorage.setItem("boltorezka_server_video_fx_strength", String(serverVideoPixelFxStrength));
-  }, [serverVideoPixelFxStrength]);
-
-  useEffect(() => {
-    localStorage.setItem("boltorezka_server_video_fx_pixel_size", String(serverVideoPixelFxPixelSize));
-  }, [serverVideoPixelFxPixelSize]);
-
-  useEffect(() => {
-    localStorage.setItem("boltorezka_server_video_fx_grid_thickness", String(serverVideoPixelFxGridThickness));
-  }, [serverVideoPixelFxGridThickness]);
-
-  useEffect(() => {
-    localStorage.setItem("boltorezka_server_video_ascii_cell_size", String(serverVideoAsciiCellSize));
-  }, [serverVideoAsciiCellSize]);
-
-  useEffect(() => {
-    localStorage.setItem("boltorezka_server_video_ascii_contrast", String(serverVideoAsciiContrast));
-  }, [serverVideoAsciiContrast]);
-
-  useEffect(() => {
-    localStorage.setItem("boltorezka_server_video_ascii_color", serverVideoAsciiColor);
-  }, [serverVideoAsciiColor]);
-
-  useEffect(() => {
-    localStorage.setItem("boltorezka_server_video_window_min_width", String(serverVideoWindowMinWidth));
-  }, [serverVideoWindowMinWidth]);
-
-  useEffect(() => {
-    localStorage.setItem("boltorezka_server_video_window_max_width", String(serverVideoWindowMaxWidth));
-  }, [serverVideoWindowMaxWidth]);
+  usePersistedClientSettings({
+    selectedInputProfile,
+    audioMuted,
+    serverVideoEffectType,
+    serverVideoResolution,
+    serverVideoFps,
+    serverVideoPixelFxStrength,
+    serverVideoPixelFxPixelSize,
+    serverVideoPixelFxGridThickness,
+    serverVideoAsciiCellSize,
+    serverVideoAsciiContrast,
+    serverVideoAsciiColor,
+    serverVideoWindowMinWidth,
+    serverVideoWindowMaxWidth
+  });
 
   useEffect(() => {
     const roomSupportsRtc = activeRoomSnapshot ? activeRoomSnapshot.kind !== "text" : false;

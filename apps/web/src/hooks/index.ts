@@ -5,6 +5,7 @@ export { useAutoRoomVoiceConnection } from "./useAutoRoomVoiceConnection";
 export { useBuildVersionSync } from "./app/useBuildVersionSync";
 export { useCollapsedCategories } from "./useCollapsedCategories";
 export { useCurrentRoomSnapshot } from "./app/useCurrentRoomSnapshot";
+export { usePersistedClientSettings } from "./app/usePersistedClientSettings";
 export { useMediaDevicePreferences } from "./useMediaDevicePreferences";
 export { useMicrophoneLevelMeter } from "./useMicrophoneLevelMeter";
 export { usePopupOutsideClose } from "./usePopupOutsideClose";
