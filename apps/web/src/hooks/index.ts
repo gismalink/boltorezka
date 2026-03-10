@@ -13,5 +13,6 @@ export { useRoomsDerived } from "./useRoomsDerived";
 export { useScreenWakeLock } from "./useScreenWakeLock";
 export { useServerSounds } from "./useServerSounds";
 export { useServerMenuAccessGuard } from "./useServerMenuAccessGuard";
+export { useToastQueue, type AppToast } from "./useToastQueue";
 export { useLivekitVoiceRuntime } from "./rtc/useLivekitVoiceRuntime";
 export { useVoiceRoomStateMaps } from "./useVoiceRoomStateMaps";

@@ -35,6 +35,7 @@ import {
   useScreenWakeLock,
   useServerSounds,
   useServerMenuAccessGuard,
+  useToastQueue,
   useLivekitVoiceRuntime,
   useVoiceRoomStateMaps
 } from "./hooks";
@@ -55,10 +56,6 @@ import type { ServerVideoEffectType } from "./hooks/rtc/voiceCallTypes";
 import { createProcessedVideoTrack, type OutgoingVideoTrackHandle } from "./utils/videoPixelPipeline";
 
 const MAX_CHAT_RETRIES = 3;
-const TOAST_AUTO_DISMISS_MS = 4500;
-const TOAST_ID_RANDOM_RANGE = 10000;
-const TOAST_DUPLICATE_THROTTLE_MS = 12000;
-const TOAST_MAX_VISIBLE = 4;
 const DEFAULT_CHAT_IMAGE_DATA_URL_LENGTH = 28000;
 const DEFAULT_CHAT_IMAGE_MAX_SIDE = 1200;
 const DEFAULT_CHAT_IMAGE_QUALITY = 0.6;
@@ -91,7 +88,6 @@ export function App() {
   const [callStatus, setCallStatus] = useState<CallStatus>("idle");
   const [lastCallPeer, setLastCallPeer] = useState("");
   const [callEventLog, setCallEventLog] = useState<string[]>([]);
-  const [toasts, setToasts] = useState<Array<{ id: number; message: string }>>([]);
   const [roomsPresenceBySlug, setRoomsPresenceBySlug] = useState<Record<string, string[]>>({});
   const [roomsPresenceDetailsBySlug, setRoomsPresenceDetailsBySlug] = useState<Record<string, PresenceMember[]>>({});
   const [roomMediaTopologyBySlug, setRoomMediaTopologyBySlug] = useState<Record<string, "livekit">>({});
@@ -239,6 +235,7 @@ export function App() {
     videoWindowsVisible,
     setVideoWindowsVisible
   } = useAppUiState();
+  const { toasts, pushToast } = useToastQueue();
   const realtimeClientRef = useRef<RealtimeClient | null>(null);
   const pendingWsRequestResolversRef = useRef<
     Map<string, { resolve: () => void; reject: (error: Error) => void; timeoutId: number }>
@@ -255,8 +252,6 @@ export function App() {
   const audioOutputAnchorRef = useRef<HTMLDivElement>(null);
   const voiceSettingsAnchorRef = useRef<HTMLDivElement>(null);
   const userSettingsRef = useRef<HTMLDivElement>(null);
-  const toastTimeoutsRef = useRef<Map<number, number>>(new Map());
-  const toastLastShownAtRef = useRef<Map<string, number>>(new Map());
   const serverVideoPreviewHandleRef = useRef<OutgoingVideoTrackHandle | null>(null);
   const serverVideoPreviewRawTrackRef = useRef<MediaStreamTrack | null>(null);
   const lastBroadcastVideoPolicyRef = useRef("");
@@ -287,61 +282,6 @@ export function App() {
   const pushCallLog = useCallback((text: string) => {
     setCallEventLog((prev) => [`${new Date().toLocaleTimeString(locale)} ${text}`, ...prev].slice(0, 30));
   }, [locale]);
-
-  const pushToast = useCallback((message: string) => {
-    const normalized = String(message || "").trim();
-    if (!normalized) {
-      return;
-    }
-
-    const now = Date.now();
-    const lastAt = toastLastShownAtRef.current.get(normalized) || 0;
-    if (now - lastAt < TOAST_DUPLICATE_THROTTLE_MS) {
-      return;
-    }
-    toastLastShownAtRef.current.set(normalized, now);
-
-    const toast = {
-      id: Date.now() + Math.floor(Math.random() * TOAST_ID_RANDOM_RANGE),
-      message: normalized
-    };
-
-    setToasts((prev) => {
-      if (prev.some((item) => item.message === normalized)) {
-        return prev;
-      }
-
-      const next = [...prev, toast];
-      if (next.length <= TOAST_MAX_VISIBLE) {
-        return next;
-      }
-
-      const [oldest, ...rest] = next;
-      const timeoutId = toastTimeoutsRef.current.get(oldest.id);
-      if (typeof timeoutId === "number") {
-        window.clearTimeout(timeoutId);
-        toastTimeoutsRef.current.delete(oldest.id);
-      }
-
-      return rest;
-    });
-
-    const timeoutId = window.setTimeout(() => {
-      toastTimeoutsRef.current.delete(toast.id);
-      setToasts((prev) => prev.filter((item) => item.id !== toast.id));
-    }, TOAST_AUTO_DISMISS_MS);
-    toastTimeoutsRef.current.set(toast.id, timeoutId);
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      toastTimeoutsRef.current.forEach((timeoutId) => {
-        window.clearTimeout(timeoutId);
-      });
-      toastTimeoutsRef.current.clear();
-      toastLastShownAtRef.current.clear();
-    };
-  }, []);
 
   useEffect(() => {
     if (!CLIENT_BUILD_VERSION) {
@@ -1118,13 +1058,14 @@ export function App() {
     });
 
     if (typeof payload.audioMuted === "boolean") {
+      const nextAudioMuted = payload.audioMuted;
       setVoiceInitialAudioOutputMutedByUserIdInCurrentRoom((prev) => {
-        if (prev[fromUserId] === payload.audioMuted) {
+        if (prev[fromUserId] === nextAudioMuted) {
           return prev;
         }
         return {
           ...prev,
-          [fromUserId]: payload.audioMuted
+          [fromUserId]: nextAudioMuted
         };
       });
     }
