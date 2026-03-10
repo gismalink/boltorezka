@@ -1,4 +1,5 @@
 export { useAuthProfileFlow } from "./useAuthProfileFlow";
+export { useAppEventLogs } from "./useAppEventLogs";
 export { useAppUiState, type AppMobileTab, type AppServerMenuTab } from "./useAppUiState";
 export { useAutoRoomVoiceConnection } from "./useAutoRoomVoiceConnection";
 export { useBuildVersionSync } from "./useBuildVersionSync";

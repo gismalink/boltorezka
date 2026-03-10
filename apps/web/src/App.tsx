@@ -22,6 +22,7 @@ import type { InputProfile, MediaDevicesState } from "./components";
 import {
   useAppUiState,
   useAutoRoomVoiceConnection,
+  useAppEventLogs,
   useAuthProfileFlow,
   useBuildVersionSync,
   useCollapsedCategories,
@@ -87,11 +88,9 @@ export function App() {
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [callStatus, setCallStatus] = useState<CallStatus>("idle");
   const [lastCallPeer, setLastCallPeer] = useState("");
-  const [callEventLog, setCallEventLog] = useState<string[]>([]);
   const [roomsPresenceBySlug, setRoomsPresenceBySlug] = useState<Record<string, string[]>>({});
   const [roomsPresenceDetailsBySlug, setRoomsPresenceDetailsBySlug] = useState<Record<string, PresenceMember[]>>({});
   const [roomMediaTopologyBySlug, setRoomMediaTopologyBySlug] = useState<Record<string, "livekit">>({});
-  const [eventLog, setEventLog] = useState<string[]>([]);
   const [telemetrySummary, setTelemetrySummary] = useState<TelemetrySummary | null>(null);
   const [wsState, setWsState] = useState<"disconnected" | "connecting" | "connected">(
     "disconnected"
@@ -266,6 +265,7 @@ export function App() {
     const dict = TEXT[lang];
     return (key: string) => dict[key] || key;
   }, [lang]);
+  const { eventLog, callEventLog, pushLog, pushCallLog } = useAppEventLogs(locale);
 
   const { collapsedCategoryIds, toggleCategoryCollapsed } = useCollapsedCategories(roomsTree);
   const {
@@ -274,14 +274,6 @@ export function App() {
     setEventEnabled: setServerSoundEnabled,
     playServerSound
   } = useServerSounds();
-
-  const pushLog = useCallback((text: string) => {
-    setEventLog((prev) => [`${new Date().toLocaleTimeString(locale)} ${text}`, ...prev].slice(0, 30));
-  }, [locale]);
-
-  const pushCallLog = useCallback((text: string) => {
-    setCallEventLog((prev) => [`${new Date().toLocaleTimeString(locale)} ${text}`, ...prev].slice(0, 30));
-  }, [locale]);
 
   useBuildVersionSync(CLIENT_BUILD_VERSION);
 
