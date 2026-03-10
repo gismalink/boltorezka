@@ -41,6 +41,8 @@ type UserDockSettingsOverlayProps = Pick<
   | "serverSoundsEnabled"
   | "onSetServerSoundEnabled"
   | "onPreviewServerSound"
+  | "noiseSuppressionEnabled"
+  | "onToggleNoiseSuppression"
 > & {
   mediaDevicesUnavailable: boolean;
   mediaControlsLocked: boolean;
@@ -89,6 +91,8 @@ export function UserDockSettingsOverlay({
   serverSoundsEnabled,
   onSetServerSoundEnabled,
   onPreviewServerSound,
+  noiseSuppressionEnabled,
+  onToggleNoiseSuppression,
   mediaDevicesUnavailable,
   mediaControlsLocked,
   mediaDevicesWarningText,
@@ -258,6 +262,18 @@ export function UserDockSettingsOverlay({
               <div className="grid gap-2">
                 <h3 className="subheading">{t("settings.inputProfile")}</h3>
                 <p className="muted media-devices-warning">{t("settings.inputProfileLocked")}</p>
+                <label className="voice-sound-checkbox flex items-center justify-between gap-3">
+                  <span>{t("settings.useRnn")}</span>
+                  <button
+                    type="button"
+                    className={`secondary icon-btn tiny ${noiseSuppressionEnabled ? "icon-btn-danger" : ""}`}
+                    aria-label={t("settings.useRnn")}
+                    data-tooltip={noiseSuppressionEnabled ? t("rtc.noiseReductionOn") : t("rtc.noiseReductionOff")}
+                    onClick={onToggleNoiseSuppression}
+                  >
+                    <i className={`bi ${noiseSuppressionEnabled ? "bi-toggle-on" : "bi-toggle-off"}`} aria-hidden="true" />
+                  </button>
+                </label>
               </div>
             </>
           ) : userSettingsTab === "camera" ? (

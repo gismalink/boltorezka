@@ -189,6 +189,8 @@ export function UserDock({
         mediaDevicesUnavailable={mediaDevicesUnavailable}
         mediaControlsLocked={mediaControlsLocked}
         mediaDevicesWarningText={mediaDevicesWarningText}
+        noiseSuppressionEnabled={noiseSuppressionEnabled}
+        onToggleNoiseSuppression={onToggleNoiseSuppression}
         modalBarCount={modalBarCount}
         modalActiveBars={modalActiveBars}
       />
