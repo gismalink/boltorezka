@@ -1377,8 +1377,16 @@ export function App() {
     setSelectedVideoInputId
   });
 
+  const shouldRunMicrophoneMeter = Boolean(user)
+    && (
+      roomVoiceConnected
+      || voiceSettingsOpen
+      || voiceSettingsPanel === "input_device"
+      || (userSettingsOpen && userSettingsTab === "sound")
+    );
+
   useMicrophoneLevelMeter({
-    running: Boolean(user),
+    running: shouldRunMicrophoneMeter,
     selectedInputId,
     t,
     pushToast,
