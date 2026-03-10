@@ -2,6 +2,9 @@ FROM node:22-alpine AS web-build
 
 WORKDIR /web
 
+COPY --from=web package.json package-lock.json* ./
+RUN --mount=type=cache,target=/root/.npm npm ci --no-audit --no-fund --fetch-retries=5 --fetch-retry-factor=2 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000
+
 ARG VITE_RTC_ICE_SERVERS_JSON
 ARG VITE_RTC_ICE_TRANSPORT_POLICY
 ARG VITE_RTC_RECONNECT_MAX_ATTEMPTS
@@ -18,9 +21,6 @@ ENV VITE_RTC_RECONNECT_MAX_DELAY_MS=${VITE_RTC_RECONNECT_MAX_DELAY_MS}
 ENV VITE_APP_VERSION=${VITE_APP_VERSION}
 ENV VITE_APP_BUILD_DATE=${VITE_APP_BUILD_DATE}
 
-COPY --from=web package.json package-lock.json* ./
-RUN npm install --no-audit --no-fund --fetch-retries=5 --fetch-retry-factor=2 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000
-
 COPY --from=web . ./
 RUN npm run build
 
@@ -29,7 +29,7 @@ FROM node:22-alpine
 WORKDIR /app
 
 COPY package.json package-lock.json* ./
-RUN npm install --no-audit --no-fund --fetch-retries=5 --fetch-retry-factor=2 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000
+RUN --mount=type=cache,target=/root/.npm npm ci --no-audit --no-fund --fetch-retries=5 --fetch-retry-factor=2 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000
 
 COPY src ./src
 RUN mkdir -p public
