@@ -225,6 +225,21 @@ if (start === -1 || end === -1 || end <= start) {
   process.exit(0);
 }
 
+let payload;
+try {
+  payload = JSON.parse(content.slice(start, end + 1));
+} catch {
+  process.stdout.write("0|0");
+  process.exit(0);
+}
+
+const oneWay = payload && payload.oneWaySummary ? payload.oneWaySummary : {};
+const audio = Number(oneWay.audioIncidents || 0);
+const video = Number(oneWay.videoIncidents || 0);
+process.stdout.write(`${audio}|${video}`);
+NODE
+}
+
 http_get_with_retries() {
   local url="$1"
   local label="$2"
@@ -245,21 +260,6 @@ http_get_with_retries() {
 
   echo "[postdeploy-smoke] ${label} failed after ${SMOKE_HTTP_RETRIES} attempts: ${url}" >&2
   return 1
-}
-
-let payload;
-try {
-  payload = JSON.parse(content.slice(start, end + 1));
-} catch {
-  process.stdout.write("0|0");
-  process.exit(0);
-}
-
-const oneWay = payload && payload.oneWaySummary ? payload.oneWaySummary : {};
-const audio = Number(oneWay.audioIncidents || 0);
-const video = Number(oneWay.videoIncidents || 0);
-process.stdout.write(`${audio}|${video}`);
-NODE
 }
 
 echo "[postdeploy-smoke] health"
