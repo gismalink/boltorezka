@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import type { Room, RoomsTreeResponse } from "../domain";
+import type { Room, RoomsTreeResponse } from "../../domain";
 
 type UseRoomsDerivedArgs = {
   roomsTree: RoomsTreeResponse | null;

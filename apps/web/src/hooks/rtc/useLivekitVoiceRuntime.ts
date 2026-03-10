@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   createLocalTracks,
   createLocalScreenTracks,
+  type LocalAudioTrack,
   Participant,
   Room,
   RoomEvent,
@@ -16,6 +17,7 @@ import {
 import { api } from "../../api";
 import type { PresenceMember } from "../../domain";
 import type { CallStatus } from "../../services";
+import { RnnoiseAudioProcessor } from "./rnnoiseAudioProcessor";
 import type {
   CallMicStatePayload,
   CallNackPayload,
@@ -35,6 +37,7 @@ type UseLivekitVoiceRuntimeArgs = {
   selectedInputId: string;
   selectedInputProfile: "noise_reduction" | "studio" | "custom";
   selectedOutputId: string;
+  memberVolumeByUserId: Record<string, number>;
   selectedVideoInputId: string;
   micMuted: boolean;
   audioMuted: boolean;
@@ -125,6 +128,7 @@ export function useLivekitVoiceRuntime({
   selectedInputId,
   selectedInputProfile,
   selectedOutputId,
+  memberVolumeByUserId,
   selectedVideoInputId,
   micMuted,
   audioMuted,
@@ -150,6 +154,8 @@ export function useLivekitVoiceRuntime({
 
   const roomRef = useRef<Room | null>(null);
   const localTracksRef = useRef<Map<Track.Source, LocalTrack>>(new Map());
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const rnnoiseProcessorRef = useRef<RnnoiseAudioProcessor | null>(null);
   const remoteAudioElementsRef = useRef<Map<string, HTMLAudioElement>>(new Map());
   const prevRoomSlugRef = useRef(roomSlug);
   const connectInFlightRef = useRef<Promise<void> | null>(null);
@@ -167,7 +173,7 @@ export function useLivekitVoiceRuntime({
       return {
         ...base,
         echoCancellation: true,
-        noiseSuppression: true,
+        noiseSuppression: false,
         autoGainControl: true,
         channelCount: 1
       };
@@ -191,9 +197,11 @@ export function useLivekitVoiceRuntime({
   }, [selectedInputId, selectedInputProfile]);
 
   const applyAudioOutputSettings = useCallback(() => {
-    remoteAudioElementsRef.current.forEach((element) => {
+    remoteAudioElementsRef.current.forEach((element, participantId) => {
+      const peerVolume = Math.max(0, Math.min(100, Number(memberVolumeByUserId[participantId] ?? 100)));
+      const mixedVolume = (Math.max(0, Math.min(100, outputVolume)) / 100) * (peerVolume / 100);
       element.muted = audioMuted;
-      element.volume = Math.max(0, Math.min(1, outputVolume / 100));
+      element.volume = Math.max(0, Math.min(1, mixedVolume));
       if (
         selectedOutputId
         && selectedOutputId !== "default"
@@ -204,7 +212,7 @@ export function useLivekitVoiceRuntime({
         });
       }
     });
-  }, [audioMuted, outputVolume, selectedOutputId]);
+  }, [audioMuted, memberVolumeByUserId, outputVolume, selectedOutputId]);
 
   const attachRemoteAudioTrack = useCallback((participantId: string, track: RemoteAudioTrack) => {
     const existing = remoteAudioElementsRef.current.get(participantId);
@@ -314,6 +322,47 @@ export function useLivekitVoiceRuntime({
     setVoiceMediaStatusByPeerUserId(nextStatus);
   }, []);
 
+  const releaseRnnoiseProcessor = useCallback(async () => {
+    const processor = rnnoiseProcessorRef.current;
+    rnnoiseProcessorRef.current = null;
+    if (processor) {
+      await processor.destroy().catch(() => undefined);
+    }
+    if (audioContextRef.current) {
+      await audioContextRef.current.close().catch(() => undefined);
+      audioContextRef.current = null;
+    }
+  }, []);
+
+  const applyNoiseSuppressionProcessor = useCallback(async (audioTrack: LocalAudioTrack) => {
+    if (selectedInputProfile !== "noise_reduction") {
+      await audioTrack.stopProcessor().catch(() => undefined);
+      await releaseRnnoiseProcessor();
+      return;
+    }
+
+    if (typeof AudioContext === "undefined") {
+      pushCallLog("rnnoise unavailable: AudioContext is not supported");
+      return;
+    }
+
+    const audioContext = audioContextRef.current ?? new AudioContext({ sampleRate: 48000 });
+    if (audioContext.state === "suspended") {
+      await audioContext.resume().catch(() => undefined);
+    }
+    audioContextRef.current = audioContext;
+
+    const processor = new RnnoiseAudioProcessor();
+    await audioTrack.setAudioContext(audioContext);
+    await audioTrack.setProcessor(processor);
+
+    const previousProcessor = rnnoiseProcessorRef.current;
+    rnnoiseProcessorRef.current = processor;
+    if (previousProcessor) {
+      await previousProcessor.destroy().catch(() => undefined);
+    }
+  }, [pushCallLog, releaseRnnoiseProcessor, selectedInputProfile]);
+
   const cleanupRoom = useCallback(() => {
     const room = roomRef.current;
     if (room) {
@@ -324,9 +373,13 @@ export function useLivekitVoiceRuntime({
     roomRef.current = null;
 
     localTracksRef.current.forEach((track) => {
+      if (track.kind === Track.Kind.Audio) {
+        void (track as LocalAudioTrack).stopProcessor().catch(() => undefined);
+      }
       track.stop();
     });
     localTracksRef.current.clear();
+    void releaseRnnoiseProcessor();
 
     remoteAudioElementsRef.current.forEach((element) => {
       element.srcObject = null;
@@ -350,7 +403,7 @@ export function useLivekitVoiceRuntime({
     setCallStatus("idle");
     setLastCallPeer("");
     lastAppliedMicConfigRef.current = "";
-  }, [setCallStatus, setLastCallPeer]);
+  }, [releaseRnnoiseProcessor, setCallStatus, setLastCallPeer]);
 
   const publishMissingVideoTrack = useCallback(async () => {
     const room = roomRef.current;
@@ -603,6 +656,7 @@ export function useLivekitVoiceRuntime({
 
         const localAudioTrack = localTracksRef.current.get(Track.Source.Microphone);
         if (localAudioTrack) {
+          await applyNoiseSuppressionProcessor(localAudioTrack as LocalAudioTrack);
           if (micMuted) {
             await localAudioTrack.mute();
           } else {
@@ -659,6 +713,7 @@ export function useLivekitVoiceRuntime({
     removeRemoteVideoStream,
     removeRemoteScreenShareStream,
     attachRemoteAudioTrack,
+    applyNoiseSuppressionProcessor,
     upsertRemoteVideoStream,
     upsertRemoteScreenShareStream
   ]);
@@ -719,9 +774,11 @@ export function useLivekitVoiceRuntime({
       }
 
       room.localParticipant.unpublishTrack(currentAudioTrack);
+      await (currentAudioTrack as LocalAudioTrack).stopProcessor().catch(() => undefined);
       currentAudioTrack.stop();
       await room.localParticipant.publishTrack(replacementAudioTrack);
       localTracksRef.current.set(Track.Source.Microphone, replacementAudioTrack);
+      await applyNoiseSuppressionProcessor(replacementAudioTrack as LocalAudioTrack);
 
       if (micMuted) {
         await replacementAudioTrack.mute();
@@ -730,7 +787,7 @@ export function useLivekitVoiceRuntime({
     } catch (error) {
       pushCallLog(`livekit mic device switch failed: ${error instanceof Error ? error.message : "unknown error"}`);
     }
-  }, [buildAudioConstraints, buildMicConfigKey, micMuted, pushCallLog, roomVoiceConnected]);
+  }, [applyNoiseSuppressionProcessor, buildAudioConstraints, buildMicConfigKey, micMuted, pushCallLog, roomVoiceConnected]);
 
   useEffect(() => {
     void switchMicrophoneInput();

@@ -42,6 +42,7 @@ const TILE_GAP = 12;
 const VIEWPORT_GUTTER = 12;
 const DEFAULT_Y = 76;
 const ASPECT_RATIO = 4 / 3;
+const VIDEO_LAYOUTS_STORAGE_KEY = "boltorezka_video_windows_layouts_v2";
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
@@ -50,8 +51,10 @@ function clamp(value: number, min: number, max: number) {
 function defaultLayout(index: number, minWidth: number, maxWidth: number): TileLayout {
   const width = clamp(140, minWidth, maxWidth);
   const height = width / ASPECT_RATIO;
+  const maxX = Math.max(VIEWPORT_GUTTER, window.innerWidth - width - VIEWPORT_GUTTER);
+  const centeredX = clamp(Math.round((window.innerWidth - width) / 2), VIEWPORT_GUTTER, maxX);
   return {
-    x: Math.max(VIEWPORT_GUTTER, window.innerWidth - width - VIEWPORT_GUTTER),
+    x: centeredX,
     y: DEFAULT_Y + index * (height + TILE_GAP),
     width
   };
@@ -292,8 +295,38 @@ export function VideoWindowsOverlay({
   }, [speakingWindowIds]);
 
   useEffect(() => {
+    try {
+      const raw = localStorage.getItem(VIDEO_LAYOUTS_STORAGE_KEY);
+      if (!raw) {
+        return;
+      }
+      const parsed = JSON.parse(raw) as Record<string, { x?: number; y?: number; width?: number }>;
+      if (!parsed || typeof parsed !== "object") {
+        return;
+      }
+      const restored: Record<string, TileLayout> = {};
+      Object.entries(parsed).forEach(([id, layout]) => {
+        const width = Number(layout?.width);
+        const x = Number(layout?.x);
+        const y = Number(layout?.y);
+        if (!Number.isFinite(width) || !Number.isFinite(x) || !Number.isFinite(y)) {
+          return;
+        }
+        restored[id] = {
+          width,
+          x,
+          y
+        };
+      });
+      setLayoutsById(restored);
+    } catch {
+      return;
+    }
+  }, []);
+
+  useEffect(() => {
     setLayoutsById((prev) => {
-      const next: Record<string, TileLayout> = {};
+      const next: Record<string, TileLayout> = { ...prev };
       items.forEach((item, index) => {
         next[item.id] = prev[item.id]
           ? {
@@ -305,6 +338,37 @@ export function VideoWindowsOverlay({
       return next;
     });
   }, [items, effectiveMinWidth, effectiveMaxWidth]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(VIDEO_LAYOUTS_STORAGE_KEY, JSON.stringify(layoutsById));
+    } catch {
+      return;
+    }
+  }, [layoutsById]);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setLayoutsById((prev) => {
+        const next: Record<string, TileLayout> = {};
+        Object.entries(prev).forEach(([id, layout]) => {
+          const nextWidth = clamp(layout.width, effectiveMinWidth, effectiveMaxWidth);
+          const nextHeight = nextWidth / ASPECT_RATIO;
+          const maxX = Math.max(VIEWPORT_GUTTER, window.innerWidth - nextWidth - VIEWPORT_GUTTER);
+          const maxY = Math.max(VIEWPORT_GUTTER, window.innerHeight - nextHeight - VIEWPORT_GUTTER);
+          next[id] = {
+            width: nextWidth,
+            x: clamp(layout.x, VIEWPORT_GUTTER, maxX),
+            y: clamp(layout.y, VIEWPORT_GUTTER, maxY)
+          };
+        });
+        return next;
+      });
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, [effectiveMinWidth, effectiveMaxWidth]);
 
   useEffect(() => {
     setZOrderById((prev) => {

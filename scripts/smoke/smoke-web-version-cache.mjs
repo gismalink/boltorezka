@@ -4,6 +4,10 @@
 const apiBaseUrl = (process.env.SMOKE_API_URL ?? process.env.SMOKE_WEB_BASE_URL ?? "http://localhost:8080").replace(/\/+$/, "");
 const webBaseUrl = (process.env.SMOKE_WEB_BASE_URL ?? apiBaseUrl).replace(/\/+$/, "");
 const expectedBuildSha = String(process.env.SMOKE_EXPECT_BUILD_SHA || "").trim();
+const fetchTimeoutMs = Number(process.env.SMOKE_FETCH_TIMEOUT_MS || 15000);
+const maxFetchAttempts = Number(process.env.SMOKE_FETCH_RETRIES || 3);
+const versionSettleAttempts = Number(process.env.SMOKE_VERSION_SETTLE_ATTEMPTS || 5);
+const retryDelayMs = Number(process.env.SMOKE_FETCH_RETRY_DELAY_MS || 700);
 
 function hasToken(value, token) {
   return String(value || "")
@@ -19,33 +23,98 @@ function extractFirstAssetPath(html) {
 }
 
 async function readText(url, options = {}) {
-  const response = await fetch(url, options);
+  const response = await fetchWithRetry(url, options, `GET ${new URL(url).pathname}`);
   const text = await response.text();
   return { response, text };
 }
 
-async function main() {
-  const versionUrl = `${apiBaseUrl}/version`;
-  const versionResponse = await fetch(versionUrl, {
-    cache: "no-store",
-    headers: {
-      "cache-control": "no-cache"
-    }
-  });
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
-  if (!versionResponse.ok) {
-    throw new Error(`[smoke:web:version-cache] /version failed: ${versionResponse.status}`);
+function toErrorMessage(error) {
+  if (!error) {
+    return "unknown error";
+  }
+  if (error instanceof Error) {
+    return error.message || error.name;
+  }
+  return String(error);
+}
+
+async function fetchWithRetry(url, options = {}, label = "request") {
+  let lastError = null;
+
+  for (let attempt = 1; attempt <= maxFetchAttempts; attempt += 1) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(new Error(`timeout after ${fetchTimeoutMs}ms`)), fetchTimeoutMs);
+
+    try {
+      const response = await fetch(url, {
+        ...options,
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+      return response;
+    } catch (error) {
+      clearTimeout(timeoutId);
+      lastError = error;
+      if (attempt < maxFetchAttempts) {
+        await sleep(retryDelayMs * attempt);
+      }
+    }
   }
 
-  const versionPayload = await versionResponse.json();
-  const appBuildSha = String(versionPayload?.appBuildSha || "").trim();
-  if (!appBuildSha) {
+  const errorText = toErrorMessage(lastError);
+  throw new Error(`[smoke:web:version-cache] ${label} failed after ${maxFetchAttempts} attempts: ${errorText}`);
+}
+
+async function resolveVersionPayload(versionUrl) {
+  let lastObservedSha = "";
+
+  for (let attempt = 1; attempt <= versionSettleAttempts; attempt += 1) {
+    const versionResponse = await fetchWithRetry(
+      versionUrl,
+      {
+        cache: "no-store",
+        headers: {
+          "cache-control": "no-cache"
+        }
+      },
+      `GET ${new URL(versionUrl).pathname}`
+    );
+
+    if (!versionResponse.ok) {
+      throw new Error(`[smoke:web:version-cache] /version failed: ${versionResponse.status}`);
+    }
+
+    const versionPayload = await versionResponse.json();
+    const appBuildSha = String(versionPayload?.appBuildSha || "").trim();
+    lastObservedSha = appBuildSha;
+
+    const shaMatches = !expectedBuildSha || appBuildSha === expectedBuildSha;
+    if (appBuildSha && shaMatches) {
+      return versionPayload;
+    }
+
+    if (attempt < versionSettleAttempts) {
+      await sleep(retryDelayMs * attempt);
+    }
+  }
+
+  if (!lastObservedSha) {
     throw new Error("[smoke:web:version-cache] /version returned empty appBuildSha");
   }
 
-  if (expectedBuildSha && appBuildSha !== expectedBuildSha) {
-    throw new Error(`[smoke:web:version-cache] appBuildSha mismatch: expected=${expectedBuildSha} actual=${appBuildSha}`);
-  }
+  throw new Error(
+    `[smoke:web:version-cache] appBuildSha mismatch after ${versionSettleAttempts} checks: expected=${expectedBuildSha} actual=${lastObservedSha}`
+  );
+}
+
+async function main() {
+  const versionUrl = `${apiBaseUrl}/version`;
+  const versionPayload = await resolveVersionPayload(versionUrl);
+  const appBuildSha = String(versionPayload?.appBuildSha || "").trim();
 
   const webRootUrl = `${webBaseUrl}/`;
   const { response: indexResponse, text: indexHtml } = await readText(webRootUrl, {
@@ -66,7 +135,7 @@ async function main() {
   }
 
   const assetUrl = new URL(assetPath, webRootUrl).toString();
-  const assetResponse = await fetch(assetUrl, { method: "HEAD", cache: "no-store" });
+  const assetResponse = await fetchWithRetry(assetUrl, { method: "HEAD", cache: "no-store" }, `HEAD ${new URL(assetUrl).pathname}`);
   if (!assetResponse.ok) {
     throw new Error(`[smoke:web:version-cache] asset HEAD failed: ${assetResponse.status} (${assetUrl})`);
   }

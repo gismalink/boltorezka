@@ -11,7 +11,8 @@ import type {
   ServerAudioQualityResponse,
   ServerChatImagePolicyResponse,
   TelemetrySummary,
-  User
+  User,
+  RoomMemberPreference
 } from "./domain";
 
 type ApiErrorPayload = {
@@ -117,7 +118,8 @@ const endpoints = {
   telemetrySummary: "/v1/telemetry/summary",
   adminUsers: "/v1/admin/users",
   adminServerAudioQuality: "/v1/admin/server/audio-quality",
-  adminServerChatImagePolicy: "/v1/admin/server/chat-image-policy"
+  adminServerChatImagePolicy: "/v1/admin/server/chat-image-policy",
+  memberPreferences: "/v1/member-preferences"
 } as const;
 
 const withId = (basePath: string, id: string) => `${basePath}/${encodeURIComponent(id)}`;
@@ -219,5 +221,26 @@ export const api = {
   banUser: (token: string, userId: string) =>
     fetchJson<{ user: User }>(withSuffix(endpoints.adminUsers, userId, "ban"), token, withJsonBody("POST")),
   unbanUser: (token: string, userId: string) =>
-    fetchJson<{ user: User }>(withSuffix(endpoints.adminUsers, userId, "unban"), token, withJsonBody("POST"))
+    fetchJson<{ user: User }>(withSuffix(endpoints.adminUsers, userId, "unban"), token, withJsonBody("POST")),
+  memberPreferences: (token: string, targetUserIds: string[]) => {
+    const normalizedIds = Array.from(new Set(
+      targetUserIds
+        .map((id) => String(id || "").trim())
+        .filter((id) => id.length > 0)
+    ));
+
+    if (normalizedIds.length === 0) {
+      return Promise.resolve({ preferences: [] as RoomMemberPreference[] });
+    }
+
+    const params = new URLSearchParams();
+    params.set("targetUserIds", normalizedIds.join(","));
+    return fetchJson<{ preferences: RoomMemberPreference[] }>(`${endpoints.memberPreferences}?${params.toString()}`, token);
+  },
+  upsertMemberPreference: (token: string, targetUserId: string, input: { volume: number; note: string }) =>
+    fetchJson<{ preference: RoomMemberPreference }>(
+      `${endpoints.memberPreferences}/${encodeURIComponent(targetUserId)}`,
+      token,
+      withJsonBody("PUT", input)
+    )
 };

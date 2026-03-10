@@ -71,3 +71,11 @@ export type ServerSettingsRow = {
   updated_at: string;
   updated_by: string | null;
 };
+
+export type UserMemberPreferenceRow = {
+  viewer_user_id: string;
+  target_user_id: string;
+  volume: number;
+  note: string;
+  updated_at: string;
+};

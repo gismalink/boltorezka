@@ -1,6 +1,6 @@
 import { FormEvent, useCallback } from "react";
-import { RoomAdminController } from "../services";
-import type { ChannelAudioQualitySetting, Message, MessagesCursor, Room, RoomKind } from "../domain";
+import { RoomAdminController } from "../../services";
+import type { ChannelAudioQualitySetting, Message, MessagesCursor, Room, RoomKind } from "../../domain";
 
 type UseRoomAdminActionsArgs = {
   token: string;

@@ -3,7 +3,7 @@ import {
   decrementVoiceCounter,
   incrementVoiceCounter,
   logVoiceDiagnostics
-} from "../utils/voiceDiagnostics";
+} from "../../utils/voiceDiagnostics";
 
 type UseMicrophoneLevelMeterArgs = {
   running: boolean;

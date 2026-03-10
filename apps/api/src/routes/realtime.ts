@@ -1099,6 +1099,123 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
                 return;
               }
 
+              case "room.move_member": {
+                const fromRoomSlug = getPayloadString(payload, "fromRoomSlug", 80);
+                const toRoomSlug = getPayloadString(payload, "toRoomSlug", 80);
+                const targetUserId = normalizeRequestId(getPayloadString(payload, "targetUserId", 128));
+
+                if (!fromRoomSlug || !toRoomSlug || !targetUserId) {
+                  sendValidationNack(connection, requestId, eventType, "fromRoomSlug, toRoomSlug and targetUserId are required");
+                  return;
+                }
+
+                if (fromRoomSlug === toRoomSlug) {
+                  sendValidationNack(connection, requestId, eventType, "fromRoomSlug and toRoomSlug must be different");
+                  return;
+                }
+
+                const canModerate = await isUserModerator(state.userId);
+                if (!canModerate) {
+                  sendForbiddenNack(connection, requestId, eventType);
+                  return;
+                }
+
+                const roomsResult = await db.query<RoomRow>(
+                  `SELECT id, slug, title, kind, is_public
+                   FROM rooms
+                   WHERE slug IN ($1, $2) AND is_archived = FALSE`,
+                  [fromRoomSlug, toRoomSlug]
+                );
+
+                const fromRoom = roomsResult.rows.find((row) => row.slug === fromRoomSlug) || null;
+                const toRoom = roomsResult.rows.find((row) => row.slug === toRoomSlug) || null;
+
+                if (!fromRoom || !toRoom) {
+                  sendNack(connection, requestId, eventType, "RoomNotFound", "Cannot find source or target room");
+                  void incrementMetric("nack_sent");
+                  return;
+                }
+
+                const targetSockets = getUserRoomSockets(targetUserId, fromRoom.id);
+                if (targetSockets.length === 0) {
+                  sendTargetNotInRoomNack(connection, requestId, eventType, {
+                    fromRoomSlug,
+                    targetUserId
+                  });
+                  return;
+                }
+
+                await db.query(
+                  `INSERT INTO room_members (room_id, user_id, role)
+                   VALUES ($1, $2, 'member')
+                   ON CONFLICT (room_id, user_id) DO NOTHING`,
+                  [toRoom.id, targetUserId]
+                );
+
+                const roomMediaTopology = resolveRoomMediaTopology(toRoom.slug, targetUserId);
+                const initialStateParticipants = getCallInitialStateParticipants(toRoom.id);
+                let movedUserName = "unknown";
+
+                for (const targetSocket of targetSockets) {
+                  const targetState = socketState.get(targetSocket);
+                  if (!targetState || targetState.roomId !== fromRoom.id || targetState.roomSlug !== fromRoom.slug) {
+                    continue;
+                  }
+
+                  movedUserName = targetState.userName || movedUserName;
+
+                  markRecentRoomDetach(fromRoom.id, targetUserId);
+                  detachRoomSocket(fromRoom.id, targetSocket);
+                  clearCanonicalMediaState(fromRoom.id, targetUserId);
+                  clearRoomScreenShareOwnerIfMatches(fromRoom.id, targetUserId, fromRoom.slug);
+
+                  targetState.roomId = toRoom.id;
+                  targetState.roomSlug = toRoom.slug;
+                  targetState.roomKind = toRoom.kind;
+                  attachRoomSocket(toRoom.id, targetSocket);
+
+                  sendJson(targetSocket, buildRoomLeftEnvelope(fromRoom.id, fromRoom.slug));
+                  sendJson(targetSocket, buildRoomJoinedEnvelope(toRoom.id, toRoom.slug, toRoom.title, roomMediaTopology));
+                  sendJson(targetSocket, buildRoomPresenceEnvelope(toRoom.id, toRoom.slug, getRoomPresence(toRoom.id), roomMediaTopology));
+                  sendJson(targetSocket, buildScreenShareStateEnvelope(toRoom.id, toRoom.slug));
+
+                  if (config.rtcFeatureInitialStateReplay) {
+                    sendJson(targetSocket, buildCallInitialStateEnvelope(toRoom.id, toRoom.slug, initialStateParticipants));
+                    void incrementMetric("call_initial_state_sent");
+                    void incrementMetricBy("call_initial_state_participants_total", initialStateParticipants.length);
+                  }
+                }
+
+                broadcastRoom(
+                  fromRoom.id,
+                  buildPresenceLeftEnvelope(
+                    targetUserId,
+                    movedUserName,
+                    fromRoom.slug,
+                    getRoomPresence(fromRoom.id).length
+                  )
+                );
+
+                broadcastRoom(
+                  toRoom.id,
+                  buildPresenceJoinedEnvelope(
+                    targetUserId,
+                    movedUserName,
+                    toRoom.slug,
+                    getRoomPresence(toRoom.id).length
+                  )
+                );
+
+                broadcastAllRoomsPresence();
+
+                sendAckWithMetrics(connection, requestId, eventType, {
+                  targetUserId,
+                  fromRoomSlug: fromRoom.slug,
+                  toRoomSlug: toRoom.slug
+                });
+                return;
+              }
+
               case "chat.send": {
                 if (!state.roomId) {
                   sendNoActiveRoomNack(connection, requestId, eventType);

@@ -1,4 +1,4 @@
-import type { RoomKind } from "../domain";
+import type { RoomKind } from "../../domain";
 
 type RoomMediaCapabilities = {
   supportsText: boolean;

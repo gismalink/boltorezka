@@ -39,6 +39,13 @@ export type WsIncomingRoomKickEnvelope = {
   payload?: WsIncomingPayload;
 };
 
+export type WsIncomingRoomMoveMemberEnvelope = {
+  type: "room.move_member";
+  requestId?: string;
+  idempotencyKey?: string;
+  payload?: WsIncomingPayload;
+};
+
 export type WsIncomingChatSendEnvelope = {
   type: "chat.send";
   requestId?: string;
@@ -93,6 +100,7 @@ export type WsIncomingKnownEnvelope =
   | WsIncomingRoomJoinEnvelope
   | WsIncomingRoomLeaveEnvelope
   | WsIncomingRoomKickEnvelope
+  | WsIncomingRoomMoveMemberEnvelope
   | WsIncomingChatSendEnvelope
   | WsIncomingChatEditEnvelope
   | WsIncomingChatDeleteEnvelope

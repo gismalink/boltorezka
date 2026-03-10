@@ -14,6 +14,7 @@ import { adminRoutes } from "./routes/admin.js";
 import { roomsRoutes } from "./routes/rooms.js";
 import { realtimeRoutes } from "./routes/realtime.js";
 import { telemetryRoutes } from "./routes/telemetry.js";
+import { memberPreferencesRoutes } from "./routes/member-preferences.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -84,6 +85,7 @@ await app.register(adminRoutes);
 await app.register(roomsRoutes);
 await app.register(realtimeRoutes);
 await app.register(telemetryRoutes);
+await app.register(memberPreferencesRoutes);
 
 const shutdown = async () => {
   app.log.info("Graceful shutdown started");

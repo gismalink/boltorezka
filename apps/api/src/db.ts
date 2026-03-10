@@ -64,6 +64,19 @@ export async function ensureSchema() {
   await db.query("ALTER TABLE rooms ADD COLUMN IF NOT EXISTS position INTEGER NOT NULL DEFAULT 0");
   await db.query("ALTER TABLE rooms ADD COLUMN IF NOT EXISTS is_archived BOOLEAN NOT NULL DEFAULT FALSE");
   await db.query("ALTER TABLE messages ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ");
+  await db.query(
+    `CREATE TABLE IF NOT EXISTS user_member_preferences (
+      viewer_user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      target_user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      volume SMALLINT NOT NULL DEFAULT 100,
+      note VARCHAR(32) NOT NULL DEFAULT '',
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      PRIMARY KEY (viewer_user_id, target_user_id),
+      CONSTRAINT user_member_preferences_volume_check CHECK (volume BETWEEN 0 AND 100),
+      CONSTRAINT user_member_preferences_note_length_check CHECK (char_length(note) <= 32)
+    )`
+  );
+  await db.query("CREATE INDEX IF NOT EXISTS idx_user_member_preferences_viewer ON user_member_preferences(viewer_user_id)");
   await db.query("CREATE INDEX IF NOT EXISTS idx_rooms_category_position ON rooms(category_id, position)");
   await db.query("CREATE INDEX IF NOT EXISTS idx_rooms_archived ON rooms(is_archived)");
 }

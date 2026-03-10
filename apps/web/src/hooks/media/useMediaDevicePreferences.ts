@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef } from "react";
-import type { MediaDevicesState } from "../components";
+import type { MediaDevicesState } from "../../components";
 
 type DeviceOption = { id: string; label: string };
 
