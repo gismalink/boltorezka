@@ -9,11 +9,15 @@
 	- `app/state/useToastQueue.ts`
 - `app/effects/*` - app side-effects and persistence hooks:
 	- `app/effects/useBuildVersionSync.ts`
+	- `app/effects/useAdminUsersSync.ts`
 	- `app/effects/usePersistedClientSettings.ts`
+	- `app/effects/useSessionStateLifecycle.ts`
+	- `app/effects/useTelemetryRefresh.ts`
 - `app/media/*` - app media lifecycle helpers:
 	- `app/media/useServerVideoPreview.ts`
 - `realtime/*` - websocket lifecycle + realtime UX logic:
 	- `realtime/useRealtimeChatLifecycle.ts`
+	- `realtime/useRealtimeConnectionReset.ts`
 	- `realtime/useRealtimeIncomingCallState.ts`
 	- `realtime/useScreenShareOrchestrator.ts`
 	- `realtime/useWsEventAcks.ts`

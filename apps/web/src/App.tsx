@@ -21,10 +21,13 @@ import {
 import type { InputProfile, MediaDevicesState } from "./components";
 import {
   useAppUiState,
+  useAdminUsersSync,
   useAutoRoomVoiceConnection,
   useAppEventLogs,
   useAuthProfileFlow,
   useBuildVersionSync,
+  useSessionStateLifecycle,
+  useTelemetryRefresh,
   useCollapsedCategories,
   useCurrentRoomSnapshot,
   useMediaDevicePreferences,
@@ -33,6 +36,7 @@ import {
   usePopupOutsideClose,
   useRealtimeSoundEffects,
   useRealtimeChatLifecycle,
+  useRealtimeConnectionReset,
   useRealtimeIncomingCallState,
   useScreenShareOrchestrator,
   useWsEventAcks,
@@ -696,71 +700,36 @@ export function App() {
     localStorage.setItem(ROOM_SLUG_STORAGE_KEY, roomSlug);
   }, [roomSlug]);
 
-  /** Clears all session-bound client state when auth token is absent/invalid. */
-  const resetSessionState = useCallback(() => {
-    setUser(null);
-    setRooms([]);
-    setRoomsTree(null);
-    setMessages([]);
-    setChatText("");
-    setPendingChatImageDataUrl(null);
-    setMessagesHasMore(false);
-    setMessagesNextCursor(null);
-    setLoadingOlderMessages(false);
-    setAdminUsers([]);
-    setRoomsPresenceBySlug({});
-    setRoomsPresenceDetailsBySlug({});
-    setRoomMediaTopologyBySlug({});
-    setVoiceCameraEnabledByUserIdInCurrentRoom({});
-    setVoiceInitialMicStateByUserIdInCurrentRoom({});
-    setVoiceInitialAudioOutputMutedByUserIdInCurrentRoom({});
-    setTelemetrySummary(null);
-    setServerAudioQuality("standard");
-    setServerAudioQualitySaving(false);
-    realtimeClientRef.current?.dispose();
-    realtimeClientRef.current = null;
-  }, []);
-
-  /** Loads session bootstrap data after token is set and persists the token locally. */
-  const bootstrapSessionState = useCallback((nextToken: string) => {
-    localStorage.setItem("boltorezka_token", nextToken);
-
-    api.me(nextToken)
-      .then((res) => setUser(res.user))
-      .catch(() => {
-        setToken("");
-        localStorage.removeItem("boltorezka_token");
-      });
-
-    api.rooms(nextToken)
-      .then((res) => setRooms(res.rooms))
-      .catch((error) => pushLog(`rooms failed: ${error.message}`));
-
-    api.serverAudioQuality(nextToken)
-      .then((res) => setServerAudioQuality(res.audioQuality))
-      .catch((error) => pushLog(`server audio quality failed: ${error.message}`));
-
-    api.serverChatImagePolicy(nextToken)
-      .then((res) => {
-        setServerChatImagePolicy({
-          maxDataUrlLength: Math.max(8000, Math.min(250000, Math.round(Number(res.maxDataUrlLength) || DEFAULT_CHAT_IMAGE_DATA_URL_LENGTH))),
-          maxImageSide: Math.max(256, Math.min(4096, Math.round(Number(res.maxImageSide) || DEFAULT_CHAT_IMAGE_MAX_SIDE))),
-          jpegQuality: Math.max(0.3, Math.min(0.95, Number(res.jpegQuality) || DEFAULT_CHAT_IMAGE_QUALITY))
-        });
-      })
-      .catch((error) => pushLog(`server chat image policy failed: ${error.message}`));
-
-    void roomAdminController.loadRoomTree(nextToken);
-  }, [pushLog, roomAdminController]);
-
-  useEffect(() => {
-    if (!token) {
-      resetSessionState();
-      return;
-    }
-
-    bootstrapSessionState(token);
-  }, [bootstrapSessionState, resetSessionState, token]);
+  useSessionStateLifecycle({
+    token,
+    roomAdminController,
+    pushLog,
+    realtimeClientRef,
+    defaultChatImageDataUrlLength: DEFAULT_CHAT_IMAGE_DATA_URL_LENGTH,
+    defaultChatImageMaxSide: DEFAULT_CHAT_IMAGE_MAX_SIDE,
+    defaultChatImageQuality: DEFAULT_CHAT_IMAGE_QUALITY,
+    setToken,
+    setUser,
+    setRooms,
+    setRoomsTree,
+    setMessages,
+    setChatText,
+    setPendingChatImageDataUrl,
+    setMessagesHasMore,
+    setMessagesNextCursor,
+    setLoadingOlderMessages,
+    setAdminUsers,
+    setRoomsPresenceBySlug,
+    setRoomsPresenceDetailsBySlug,
+    setRoomMediaTopologyBySlug,
+    setVoiceCameraEnabledByUserIdInCurrentRoom,
+    setVoiceInitialMicStateByUserIdInCurrentRoom,
+    setVoiceInitialAudioOutputMutedByUserIdInCurrentRoom,
+    setTelemetrySummary,
+    setServerAudioQuality,
+    setServerAudioQualitySaving,
+    setServerChatImagePolicy
+  });
 
   const { loadOlderMessages } = useRealtimeChatLifecycle({
     token,
@@ -820,35 +789,30 @@ export function App() {
     }
   });
 
-  useEffect(() => {
-    if (!token || !canPromote) return;
-    api.adminUsers(token)
-      .then((res) => setAdminUsers(res.users))
-      .catch((error) => pushLog(`admin users failed: ${error.message}`));
-  }, [token, canPromote]);
+  useAdminUsersSync({
+    token,
+    canPromote,
+    pushLog,
+    setAdminUsers
+  });
 
-  useEffect(() => {
-    if (!token || !canViewTelemetry) {
-      setTelemetrySummary(null);
-      return;
-    }
+  useTelemetryRefresh({
+    token,
+    canViewTelemetry,
+    wsState,
+    setTelemetrySummary,
+    loadTelemetrySummary
+  });
 
-    void loadTelemetrySummary();
-  }, [token, canViewTelemetry, loadTelemetrySummary]);
-
-  useEffect(() => {
-    if (wsState !== "connected") {
-      setRoomsPresenceBySlug({});
-      setRoomsPresenceDetailsBySlug({});
-      setRoomMediaTopologyBySlug({});
-      setScreenShareOwnerByRoomSlug({});
-      setVoiceInitialMicStateByUserIdInCurrentRoom({});
-      setVoiceInitialAudioOutputMutedByUserIdInCurrentRoom({});
-      return;
-    }
-
-    void loadTelemetrySummary();
-  }, [wsState, loadTelemetrySummary]);
+  useRealtimeConnectionReset({
+    wsState,
+    setRoomsPresenceBySlug,
+    setRoomsPresenceDetailsBySlug,
+    setRoomMediaTopologyBySlug,
+    setScreenShareOwnerByRoomSlug,
+    setVoiceInitialMicStateByUserIdInCurrentRoom,
+    setVoiceInitialAudioOutputMutedByUserIdInCurrentRoom
+  });
 
   useRealtimeSoundEffects({
     wsState,
