@@ -139,7 +139,7 @@ export function App() {
   const [voiceInitialAudioOutputMutedByUserIdInCurrentRoom, setVoiceInitialAudioOutputMutedByUserIdInCurrentRoom] = useState<Record<string, boolean>>({});
   const [selectedInputProfile, setSelectedInputProfile] = useState<InputProfile>(() => {
     const value = String(localStorage.getItem("boltorezka_selected_input_profile") || "").trim();
-    if (value === "noise_reduction" || value === "studio" || value === "custom") {
+    if (value === "noise_reduction" || value === "custom") {
       return value;
     }
     return "custom";
@@ -1903,6 +1903,11 @@ export function App() {
     : selectedInputProfile === "studio"
       ? t("settings.studio")
       : t("settings.custom");
+  const noiseSuppressionEnabled = selectedInputProfile === "noise_reduction";
+
+  const handleToggleNoiseSuppression = useCallback(() => {
+    setSelectedInputProfile((current) => (current === "noise_reduction" ? "custom" : "noise_reduction"));
+  }, []);
 
   const currentRoomSupportsRtc = currentRoom ? currentRoom.kind !== "text" : false;
 
@@ -1985,6 +1990,7 @@ export function App() {
       screenShareActive={Boolean(currentRoomScreenShareOwner.userId)}
       screenShareOwnedByCurrentUser={isCurrentUserScreenShareOwner}
       canStartScreenShare={canToggleScreenShare}
+      noiseSuppressionEnabled={noiseSuppressionEnabled}
       cameraEnabled={cameraEnabled}
       micMuted={micMuted}
       audioMuted={audioMuted}
@@ -2038,6 +2044,7 @@ export function App() {
       onToggleScreenShare={() => {
         void handleToggleScreenShare();
       }}
+      onToggleNoiseSuppression={handleToggleNoiseSuppression}
       onRequestVideoAccess={requestVideoAccess}
       onToggleVoiceSettings={() => {
         setAudioOutputMenuOpen(false);
@@ -2089,6 +2096,7 @@ export function App() {
       screenShareActive={Boolean(currentRoomScreenShareOwner.userId)}
       screenShareOwnedByCurrentUser={isCurrentUserScreenShareOwner}
       canStartScreenShare={canToggleScreenShare}
+      noiseSuppressionEnabled={noiseSuppressionEnabled}
       cameraEnabled={cameraEnabled}
       micMuted={micMuted}
       audioMuted={audioMuted}
@@ -2142,6 +2150,7 @@ export function App() {
       onToggleScreenShare={() => {
         void handleToggleScreenShare();
       }}
+      onToggleNoiseSuppression={handleToggleNoiseSuppression}
       onRequestVideoAccess={requestVideoAccess}
       onToggleVoiceSettings={() => {
         setAudioOutputMenuOpen(false);

@@ -14,6 +14,7 @@ export function UserDock({
   screenShareActive,
   screenShareOwnedByCurrentUser,
   canStartScreenShare,
+  noiseSuppressionEnabled,
   cameraEnabled,
   micMuted,
   audioMuted,
@@ -52,6 +53,7 @@ export function UserDock({
   onToggleAudio,
   onToggleCamera,
   onToggleScreenShare,
+  onToggleNoiseSuppression,
   onToggleVoiceSettings,
   onToggleAudioOutput,
   onOpenUserSettings,
@@ -86,6 +88,12 @@ export function UserDock({
   const mediaDevicesUnavailable = mediaDevicesState !== "ready";
   const mediaControlsLocked = mediaDevicesState === "denied";
   const mediaDevicesWarningText = mediaDevicesHint || t("settings.mediaUnavailable");
+  const screenShareBlockedByOtherUser = screenShareActive && !screenShareOwnedByCurrentUser && !canStartScreenShare;
+  const screenShareTooltip = screenShareBlockedByOtherUser
+    ? t("rtc.screenShareBusy")
+    : screenShareActive
+      ? t("rtc.stopScreenShare")
+      : t("rtc.screenShare");
   const miniBarCount = 20;
   const modalBarCount = 42;
   const miniActiveBars = Math.min(miniBarCount, Math.round(micTestLevel * miniBarCount));
@@ -102,12 +110,17 @@ export function UserDock({
         {currentRoomSupportsRtc ? (
           <section className="card compact rtc-connection-card flex flex-col gap-3 max-[800px]:hidden">
             <div className="rtc-actions-grid grid grid-cols-4 gap-2">
-              <span data-tooltip={t("rtc.comingSoon")}>
-                <button type="button" className="secondary rtc-placeholder-btn" aria-label={t("rtc.noiseReduction")} disabled>
+              <span data-tooltip={noiseSuppressionEnabled ? t("rtc.noiseReductionOn") : t("rtc.noiseReductionOff")}>
+                <button
+                  type="button"
+                  className={`secondary rtc-placeholder-btn ${noiseSuppressionEnabled ? "icon-btn-danger" : ""}`}
+                  aria-label={t("rtc.noiseReduction")}
+                  onClick={onToggleNoiseSuppression}
+                >
                   <i className="bi bi-sliders" aria-hidden="true" />
                 </button>
               </span>
-              <span data-tooltip={t("rtc.comingSoon")}>
+              <span data-tooltip={screenShareTooltip}>
                   <button
                     type="button"
                     className={`secondary rtc-placeholder-btn ${screenShareActive ? "icon-btn-danger" : ""}`}
@@ -184,12 +197,12 @@ export function UserDock({
                     <button
                       ref={inputProfileRowRef}
                       type="button"
-                      className={`secondary voice-menu-row flex w-full items-center justify-between gap-3 text-left ${voiceSettingsPanel === "input_profile" ? "voice-menu-row-active" : ""}`}
-                      onClick={() => onSetVoiceSettingsPanel(voiceSettingsPanel === "input_profile" ? null : "input_profile")}
+                      className="secondary voice-menu-row flex w-full items-center justify-between gap-3 text-left"
+                      disabled
                     >
                       <span className="voice-menu-text grid min-w-0 gap-0.5">
                         <span className="voice-menu-title">{t("settings.inputProfile")}</span>
-                        <span className="voice-menu-subtitle">{inputProfileLabel}</span>
+                        <span className="voice-menu-subtitle">{t("settings.inputProfileLocked")}</span>
                       </span>
                       <i className="bi bi-chevron-right" aria-hidden="true" />
                     </button>
@@ -265,49 +278,13 @@ export function UserDock({
                   </PopupPortal>
 
                   <PopupPortal
-                    open={voiceSettingsPanel === "input_profile"}
+                    open={false}
                     anchorRef={inputProfileRowRef}
                     className="settings-popup voice-submenu-popup"
                     placement={isMobileViewport ? "bottom-start" : "right-start"}
                     offset={isMobileViewport ? 6 : 8}
                   >
-                    <div>
-                      <div className="device-list mt-4 grid gap-2">
-                        <button
-                          type="button"
-                          className={`secondary device-item radio-item flex items-center justify-between gap-4 text-left ${selectedInputProfile === "noise_reduction" ? "device-item-active" : ""}`}
-                          onClick={() => {
-                            onSetSelectedInputProfile("noise_reduction");
-                            onSetVoiceSettingsPanel(null);
-                          }}
-                        >
-                          <span>{t("settings.voiceIsolation")}</span>
-                          <i className={`bi ${selectedInputProfile === "noise_reduction" ? "bi-record-circle-fill" : "bi-circle"}`} aria-hidden="true" />
-                        </button>
-                        <button
-                          type="button"
-                          className={`secondary device-item radio-item flex items-center justify-between gap-4 text-left ${selectedInputProfile === "studio" ? "device-item-active" : ""}`}
-                          onClick={() => {
-                            onSetSelectedInputProfile("studio");
-                            onSetVoiceSettingsPanel(null);
-                          }}
-                        >
-                          <span>{t("settings.studio")}</span>
-                          <i className={`bi ${selectedInputProfile === "studio" ? "bi-record-circle-fill" : "bi-circle"}`} aria-hidden="true" />
-                        </button>
-                        <button
-                          type="button"
-                          className={`secondary device-item radio-item flex items-center justify-between gap-4 text-left ${selectedInputProfile === "custom" ? "device-item-active" : ""}`}
-                          onClick={() => {
-                            onSetSelectedInputProfile("custom");
-                            onSetVoiceSettingsPanel(null);
-                          }}
-                        >
-                          <span>{t("settings.custom")}</span>
-                          <i className={`bi ${selectedInputProfile === "custom" ? "bi-record-circle-fill" : "bi-circle"}`} aria-hidden="true" />
-                        </button>
-                      </div>
-                    </div>
+                    <div />
                   </PopupPortal>
                 </div>
               </PopupPortal>
@@ -614,33 +591,7 @@ export function UserDock({
 
                   <div className="grid gap-2">
                     <h3 className="subheading">{t("settings.inputProfile")}</h3>
-                    <button
-                      type="button"
-                      className={`secondary device-item radio-item flex items-center justify-between gap-4 text-left ${selectedInputProfile === "noise_reduction" ? "device-item-active" : ""}`}
-                      disabled={mediaControlsLocked}
-                      onClick={() => onSetSelectedInputProfile("noise_reduction")}
-                    >
-                      <span>{t("settings.voiceIsolation")}</span>
-                      <i className={`bi ${selectedInputProfile === "noise_reduction" ? "bi-record-circle-fill" : "bi-circle"}`} aria-hidden="true" />
-                    </button>
-                    <button
-                      type="button"
-                      className={`secondary device-item radio-item flex items-center justify-between gap-4 text-left ${selectedInputProfile === "studio" ? "device-item-active" : ""}`}
-                      disabled={mediaControlsLocked}
-                      onClick={() => onSetSelectedInputProfile("studio")}
-                    >
-                      <span>{t("settings.studio")}</span>
-                      <i className={`bi ${selectedInputProfile === "studio" ? "bi-record-circle-fill" : "bi-circle"}`} aria-hidden="true" />
-                    </button>
-                    <button
-                      type="button"
-                      className={`secondary device-item radio-item flex items-center justify-between gap-4 text-left ${selectedInputProfile === "custom" ? "device-item-active" : ""}`}
-                      disabled={mediaControlsLocked}
-                      onClick={() => onSetSelectedInputProfile("custom")}
-                    >
-                      <span>{t("settings.custom")}</span>
-                      <i className={`bi ${selectedInputProfile === "custom" ? "bi-record-circle-fill" : "bi-circle"}`} aria-hidden="true" />
-                    </button>
+                    <p className="muted media-devices-warning">{t("settings.inputProfileLocked")}</p>
                   </div>
                 </>
               ) : userSettingsTab === "camera" ? (
