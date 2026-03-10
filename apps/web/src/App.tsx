@@ -1760,6 +1760,16 @@ export function App() {
     });
   }, []);
 
+  const handleToggleAudio = useCallback(() => {
+    setAudioMuted((value) => {
+      const nextMuted = !value;
+      if (nextMuted) {
+        setMicMuted(true);
+      }
+      return nextMuted;
+    });
+  }, []);
+
   const handleToggleScreenShare = useCallback(async () => {
     if (!token || !roomSlug || currentRoomKind === "text" || !roomVoiceConnected) {
       pushToast(t("call.autoWaiting"));
@@ -2084,9 +2094,7 @@ export function App() {
       voiceSettingsAnchorRef={voiceSettingsAnchorRef}
       userSettingsRef={userSettingsRef}
       onToggleMic={handleToggleMic}
-      onToggleAudio={() => {
-        setAudioMuted((value) => !value);
-      }}
+      onToggleAudio={handleToggleAudio}
       onToggleCamera={() => {
         if (allowVideoStreaming && !cameraEnabled) {
           requestVideoAccess();
@@ -2184,9 +2192,7 @@ export function App() {
       voiceSettingsAnchorRef={voiceSettingsAnchorRef}
       userSettingsRef={userSettingsRef}
       onToggleMic={handleToggleMic}
-      onToggleAudio={() => {
-        setAudioMuted((value) => !value);
-      }}
+      onToggleAudio={handleToggleAudio}
       onToggleCamera={() => {
         if (allowVideoStreaming && !cameraEnabled) {
           requestVideoAccess();

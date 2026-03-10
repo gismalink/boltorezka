@@ -67,7 +67,7 @@ export function useVoiceRoomStateMaps({
       }
     });
 
-    if (roomVoiceConnected && userId) {
+    if (userId) {
       const localSpeaking = !micMuted && micTestLevel >= LOCAL_SPEAKING_THRESHOLD;
       statusByUserId[userId] = micMuted ? "muted" : localSpeaking ? "speaking" : "silent";
     }
@@ -99,7 +99,7 @@ export function useVoiceRoomStateMaps({
       }
     });
 
-    if (roomVoiceConnected && userId) {
+    if (userId) {
       statusByUserId[userId] = audioMuted;
     }
 
