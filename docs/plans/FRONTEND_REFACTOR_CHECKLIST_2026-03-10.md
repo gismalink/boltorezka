@@ -17,6 +17,8 @@
 
 ## Дополнительно после этапов 1-7
 
+- [x] Этап 8 (progress): вынесен `UserDockSettingsOverlay` из `UserDock`.
+
 - [x] Вынесены realtime/call обработчики в `useRealtimeIncomingCallState`.
 - [x] Вынесена screen-share orchestration логика в `useScreenShareOrchestrator`.
 - [x] Вынесена WS ack/nack orchestration логика в `useWsEventAcks`.
