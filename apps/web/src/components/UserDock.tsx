@@ -117,7 +117,7 @@ export function UserDock({
                   aria-label={t("rtc.noiseReduction")}
                   onClick={onToggleNoiseSuppression}
                 >
-                  <i className="bi bi-sliders" aria-hidden="true" />
+                  <i className="bi bi-soundwave" aria-hidden="true" />
                 </button>
               </span>
               <span data-tooltip={screenShareTooltip}>
@@ -299,7 +299,14 @@ export function UserDock({
                   disabled={mediaControlsLocked}
                   onClick={onToggleAudio}
                 >
-                  <i className={`bi ${audioMuted ? "bi-volume-mute-fill" : "bi-headphones"}`} aria-hidden="true" />
+                  {audioMuted ? (
+                    <span className="icon-muted-headphones" aria-hidden="true">
+                      <i className="bi bi-headphones" />
+                      <i className="bi bi-slash-lg" />
+                    </span>
+                  ) : (
+                    <i className="bi bi-headphones" aria-hidden="true" />
+                  )}
                 </button>
                 <button
                   type="button"

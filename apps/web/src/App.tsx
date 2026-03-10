@@ -246,6 +246,7 @@ export function App() {
   const serverVideoPreviewHandleRef = useRef<OutgoingVideoTrackHandle | null>(null);
   const serverVideoPreviewRawTrackRef = useRef<MediaStreamTrack | null>(null);
   const lastBroadcastVideoPolicyRef = useRef("");
+  const lastBroadcastMicStateRef = useRef("");
 
   const canCreateRooms = user?.role === "admin" || user?.role === "super_admin";
   const canPromote = user?.role === "super_admin";
@@ -507,10 +508,11 @@ export function App() {
     stopLocalScreenShare,
     connectRoom,
     disconnectRoom,
-    handleIncomingMicState,
+    handleIncomingMicState: _handleIncomingRtcMicState,
     handleIncomingVideoState: handleIncomingRtcVideoState,
     handleCallNack
   } = livekitVoiceRuntime;
+  void _handleIncomingRtcMicState;
 
   const remoteVideoLabelsByUserId = useMemo(() => {
     const labels: Record<string, string> = {};
@@ -1069,6 +1071,44 @@ export function App() {
     handleIncomingRtcVideoState(payload);
     handleIncomingVideoPolicyState(payload);
   }, [handleIncomingRtcVideoState, handleIncomingVideoPolicyState]);
+
+  const handleIncomingMicState = useCallback((payload: {
+    fromUserId?: string;
+    muted?: boolean;
+    speaking?: boolean;
+    audioMuted?: boolean;
+  }) => {
+    const fromUserId = String(payload.fromUserId || "").trim();
+    if (!fromUserId) {
+      return;
+    }
+
+    setVoiceInitialMicStateByUserIdInCurrentRoom((prev) => {
+      const muted = payload.muted === true;
+      const speaking = payload.speaking === true;
+      const nextState: "muted" | "silent" | "speaking" = muted ? "muted" : speaking ? "speaking" : "silent";
+      if (prev[fromUserId] === nextState) {
+        return prev;
+      }
+      return {
+        ...prev,
+        [fromUserId]: nextState
+      };
+    });
+
+    if (typeof payload.audioMuted === "boolean") {
+      const nextAudioMuted = payload.audioMuted;
+      setVoiceInitialAudioOutputMutedByUserIdInCurrentRoom((prev) => {
+        if (prev[fromUserId] === nextAudioMuted) {
+          return prev;
+        }
+        return {
+          ...prev,
+          [fromUserId]: nextAudioMuted
+        };
+      });
+    }
+  }, []);
 
   const handleIncomingInitialCallState = useCallback((payload: {
     roomSlug?: string;
@@ -1945,6 +1985,33 @@ export function App() {
   });
 
   useScreenWakeLock(Boolean(user && roomSlug && currentRoomSupportsRtc && roomVoiceConnected));
+
+  useEffect(() => {
+    if (!roomVoiceConnected || !currentRoomSupportsRtc) {
+      lastBroadcastMicStateRef.current = "";
+      return;
+    }
+
+    const speaking = !micMuted && micTestLevel >= 0.055;
+    const signature = `${micMuted ? 1 : 0}:${audioMuted ? 1 : 0}:${speaking ? 1 : 0}`;
+    if (lastBroadcastMicStateRef.current === signature) {
+      return;
+    }
+
+    const requestId = sendWsEvent(
+      "call.mic_state",
+      {
+        muted: micMuted,
+        speaking,
+        audioMuted
+      },
+      { maxRetries: 1 }
+    );
+
+    if (requestId) {
+      lastBroadcastMicStateRef.current = signature;
+    }
+  }, [audioMuted, currentRoomSupportsRtc, micMuted, micTestLevel, roomVoiceConnected, sendWsEvent]);
 
   useEffect(() => {
     if (!isLocalScreenSharing || !localScreenShareStream || !roomSlug) {

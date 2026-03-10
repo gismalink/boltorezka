@@ -65,6 +65,26 @@ export function TooltipPortal() {
     setState((prev) => (prev.visible ? { ...prev, visible: false } : prev));
   };
 
+  const syncAnchorTooltipText = () => {
+    const anchor = anchorRef.current;
+    if (!anchor) {
+      return;
+    }
+
+    if (!anchor.isConnected) {
+      hide();
+      return;
+    }
+
+    const text = getTooltipText(anchor);
+    if (!text) {
+      hide();
+      return;
+    }
+
+    setState((prev) => (prev.text === text ? prev : { ...prev, text }));
+  };
+
   const showForAnchor = (anchor: HTMLElement) => {
     const text = getTooltipText(anchor);
     if (!text) {
@@ -201,6 +221,34 @@ export function TooltipPortal() {
     updatePosition();
     const id = window.requestAnimationFrame(updatePosition);
     return () => window.cancelAnimationFrame(id);
+  }, [state.visible, state.text]);
+
+  useEffect(() => {
+    if (!state.visible) {
+      return;
+    }
+
+    syncAnchorTooltipText();
+  });
+
+  useEffect(() => {
+    if (!state.visible || !anchorRef.current) {
+      return;
+    }
+
+    const observer = new MutationObserver(() => {
+      syncAnchorTooltipText();
+      updatePosition();
+    });
+
+    observer.observe(anchorRef.current, {
+      attributes: true,
+      attributeFilter: ["data-tooltip"]
+    });
+
+    return () => {
+      observer.disconnect();
+    };
   }, [state.visible, state.text]);
 
   if (!root) {

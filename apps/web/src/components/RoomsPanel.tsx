@@ -330,7 +330,6 @@ export function RoomsPanel({
                 : micState === "speaking"
                   ? "bi-mic-fill"
                   : "bi-mic";
-              const audioIconClass = isAudioOutputMuted ? "bi-headset-vr" : "bi-headphones";
               const mediaStatusIconClass = mediaStatus === "media"
                 ? "bi-broadcast-pin"
                 : mediaStatus === "signaling"
@@ -408,7 +407,14 @@ export function RoomsPanel({
                 ) : null}
                 {roomSupportsRtc ? (
                   <span className="channel-member-status-icon-anchor" data-tooltip={isCurrentUser ? selfAudioTooltip : audioTooltip}>
-                    <i className={`bi ${audioIconClass} channel-member-audio-icon`} />
+                    {isAudioOutputMuted ? (
+                      <span className="icon-muted-headphones channel-member-audio-icon" aria-hidden="true">
+                        <i className="bi bi-headphones" />
+                        <i className="bi bi-slash-lg" />
+                      </span>
+                    ) : (
+                      <i className="bi bi-headphones channel-member-audio-icon" />
+                    )}
                   </span>
                 ) : null}
                 {isCameraEnabled ? (

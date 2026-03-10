@@ -814,6 +814,22 @@ pre {
   color: var(--pixel-muted);
 }
 
+.icon-muted-headphones {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1em;
+  height: 1em;
+}
+
+.icon-muted-headphones .bi-slash-lg {
+  position: absolute;
+  inset: 0;
+  color: var(--pixel-danger);
+  transform: scale(0.92);
+}
+
 .channel-member-item-self-muted {
   opacity: 0.3;
 }
