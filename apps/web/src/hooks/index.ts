@@ -7,6 +7,7 @@ export { usePopupOutsideClose } from "./usePopupOutsideClose";
 export { useRealtimeSoundEffects } from "./useRealtimeSoundEffects";
 export { useRealtimeChatLifecycle } from "./useRealtimeChatLifecycle";
 export { useRoomAdminActions } from "./useRoomAdminActions";
+export { useRoomMediaCapabilities } from "./useRoomMediaCapabilities";
 export { useRoomsDerived } from "./useRoomsDerived";
 export { useScreenWakeLock } from "./useScreenWakeLock";
 export { useServerSounds } from "./useServerSounds";

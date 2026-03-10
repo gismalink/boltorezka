@@ -29,6 +29,7 @@ import {
   useRealtimeSoundEffects,
   useRealtimeChatLifecycle,
   useRoomAdminActions,
+  useRoomMediaCapabilities,
   useRoomsDerived,
   useScreenWakeLock,
   useServerSounds,
@@ -467,8 +468,11 @@ export function App() {
 
     return roomFromTree?.kind || "text";
   }, [rooms, roomsTree, roomSlug]);
-  const allowVideoStreaming = currentRoomKind === "text_voice_video";
-  const currentRoomSupportsVideo = allowVideoStreaming;
+  const roomMediaCapabilities = useRoomMediaCapabilities(currentRoomKind);
+  const currentRoomSupportsRtc = roomMediaCapabilities.supportsVoice;
+  const currentRoomSupportsVideo = roomMediaCapabilities.supportsCamera;
+  const allowVideoStreaming = roomMediaCapabilities.supportsCamera;
+  const currentRoomSupportsScreenShare = roomMediaCapabilities.supportsScreenShare;
 
   const livekitVoiceRuntime = useLivekitVoiceRuntime({
     token,
@@ -802,7 +806,7 @@ export function App() {
     && normalizedCurrentUserId === normalizedScreenShareOwnerUserId
   );
   const canToggleScreenShare = Boolean(
-    currentRoomKind !== "text"
+    currentRoomSupportsScreenShare
     && roomVoiceConnected
     && (!normalizedScreenShareOwnerUserId || isCurrentUserScreenShareOwner)
   );
@@ -1963,8 +1967,6 @@ export function App() {
     setSelectedInputProfile((current) => (current === "noise_reduction" ? "custom" : "noise_reduction"));
   }, []);
 
-  const currentRoomSupportsRtc = currentRoomKind !== "text";
-
   useEffect(() => {
     if (!roomSlug) {
       return;
@@ -2254,7 +2256,7 @@ export function App() {
   ) : null;
 
   return (
-    <main className="app legacy-layout mx-auto grid h-[100dvh] max-h-[100dvh] w-full max-w-[1400px] grid-rows-[auto_1fr] gap-4 overflow-hidden p-4 min-[801px]:gap-6 min-[801px]:p-8">
+    <main className="app legacy-layout mx-auto grid h-[100dvh] max-h-[100dvh] w-full max-w-[1400px] grid-rows-[auto_1fr] gap-4 overflow-hidden p-4 desktop:gap-6 desktop:p-8">
       <AppHeader
         t={t}
         user={user}
@@ -2282,9 +2284,9 @@ export function App() {
         </div>
       ) : null}
 
-      <div className={`workspace ${isMobileViewport ? "workspace-mobile" : ""} grid h-full min-h-0 items-stretch gap-4 min-[801px]:grid-cols-[320px_1fr] min-[801px]:gap-6`}>
+      <div className={`workspace ${isMobileViewport ? "workspace-mobile" : ""} grid h-full min-h-0 items-stretch gap-4 desktop:grid-cols-[320px_1fr] desktop:gap-6`}>
         {(!isMobileViewport || mobileTab === "channels") ? (
-          <aside className="leftcolumn flex min-h-0 flex-col gap-4 overflow-hidden min-[801px]:gap-6">
+          <aside className="leftcolumn flex min-h-0 flex-col gap-4 overflow-hidden desktop:gap-6">
             <RoomsPanel
               t={t}
               canCreateRooms={canCreateRooms}
@@ -2355,7 +2357,7 @@ export function App() {
         ) : null}
 
         {(!isMobileViewport || mobileTab === "chat") ? (
-          <section className="middlecolumn flex min-h-0 flex-col gap-4 min-[801px]:gap-6">
+          <section className="middlecolumn flex min-h-0 flex-col gap-4 desktop:gap-6">
             <ChatPanel
               t={t}
               locale={locale}
@@ -2407,7 +2409,7 @@ export function App() {
         />
 
         {isMobileViewport && user && mobileTab === "settings" ? (
-          <aside className="leftcolumn mobile-settings-column flex min-h-0 flex-col gap-4 overflow-hidden min-[801px]:gap-6">
+          <aside className="leftcolumn mobile-settings-column flex min-h-0 flex-col gap-4 overflow-hidden desktop:gap-6">
             {userDockInlineSettingsNode}
           </aside>
         ) : null}

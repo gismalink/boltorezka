@@ -113,7 +113,7 @@ export function UserDock({
     <>
       <div className={`user-dock ${inlineSettingsMode ? "user-dock-inline-hidden" : ""} relative z-20 mt-auto flex min-h-0 flex-col gap-4`}>
         {currentRoomSupportsRtc ? (
-          <section className="card compact rtc-connection-card flex flex-col gap-3 max-[800px]:hidden">
+          <section className="card compact rtc-connection-card flex flex-col gap-3 max-desktop:hidden">
             <div className="rtc-actions-grid grid grid-cols-4 gap-2">
               <span data-tooltip={noiseSuppressionEnabled ? t("rtc.noiseReductionOn") : t("rtc.noiseReductionOff")}>
                 <button
@@ -150,9 +150,9 @@ export function UserDock({
           </section>
         ) : null}
 
-        <section className="card compact user-panel-card flex items-center justify-between gap-3 max-[800px]:grid max-[800px]:grid-cols-1 max-[800px]:gap-0">
+        <section className="card compact user-panel-card flex items-center justify-between gap-3 max-desktop:grid max-desktop:grid-cols-1 max-desktop:gap-0">
           <div className={`user-panel-actions user-panel-actions-grid ${mediaControlsLocked ? "user-panel-actions-locked" : ""}`}>
-            <div className="voice-settings-anchor relative max-[800px]:min-w-0" ref={voiceSettingsAnchorRef}>
+            <div className="voice-settings-anchor relative max-desktop:min-w-0" ref={voiceSettingsAnchorRef}>
               <div className="audio-output-group split-control-group user-panel-split-group inline-flex items-center gap-0">
                 <button
                   type="button"
@@ -295,7 +295,7 @@ export function UserDock({
               </PopupPortal>
             </div>
 
-            <div className="audio-output-anchor relative max-[800px]:min-w-0" ref={audioOutputAnchorRef}>
+            <div className="audio-output-anchor relative max-desktop:min-w-0" ref={audioOutputAnchorRef}>
               <div className="audio-output-group split-control-group user-panel-split-group inline-flex items-center gap-0">
                 <button
                   type="button"
@@ -370,7 +370,7 @@ export function UserDock({
               </PopupPortal>
             </div>
 
-            <div className="camera-anchor relative max-[800px]:min-w-0" ref={cameraAnchorRef}>
+            <div className="camera-anchor relative max-desktop:min-w-0" ref={cameraAnchorRef}>
               <div className="audio-output-group split-control-group user-panel-split-group inline-flex items-center gap-0">
                 <button
                   type="button"
@@ -440,34 +440,34 @@ export function UserDock({
 
       {userSettingsOpen || inlineSettingsMode ? (
         <div className={`voice-preferences-overlay fixed inset-0 z-[60] flex items-center justify-center p-[var(--space-3xl)] ${inlineSettingsMode ? "inline-settings-mode" : ""} ${inlineSettingsMode ? "contents" : ""}`}>
-          <section className="card voice-preferences-modal user-settings-modal grid w-full max-w-[980px] min-w-0 gap-4 max-[800px]:h-full max-[800px]:max-h-none max-[800px]:min-h-0 max-[800px]:overflow-hidden max-[800px]:p-4 min-[801px]:grid-cols-[250px_1fr]" ref={userSettingsRef}>
+          <section className="card voice-preferences-modal user-settings-modal grid w-full max-w-[980px] min-w-0 gap-4 max-desktop:h-full max-desktop:max-h-none max-desktop:min-h-0 max-desktop:overflow-hidden max-desktop:p-4 desktop:grid-cols-[250px_1fr]" ref={userSettingsRef}>
             <div className="user-settings-sidebar grid min-w-0 content-start gap-3">
               <div className="voice-preferences-kicker">{t("settings.title")}</div>
-              <div className="user-settings-tab-group grid min-w-0 gap-2 max-[800px]:grid-cols-2 max-[800px]:gap-2">
+              <div className="user-settings-tab-group grid min-w-0 gap-2 max-desktop:grid-cols-2 max-desktop:gap-2">
                 <button
                   type="button"
-                  className={`secondary user-settings-tab-btn justify-start text-left max-[800px]:min-w-0 max-[800px]:justify-center ${userSettingsTab === "profile" ? "user-settings-tab-btn-active" : ""}`}
+                  className={`secondary user-settings-tab-btn justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${userSettingsTab === "profile" ? "user-settings-tab-btn-active" : ""}`}
                   onClick={() => onSetUserSettingsTab("profile")}
                 >
                   {t("settings.tabProfile")}
                 </button>
                 <button
                   type="button"
-                  className={`secondary user-settings-tab-btn justify-start text-left max-[800px]:min-w-0 max-[800px]:justify-center ${userSettingsTab === "sound" ? "user-settings-tab-btn-active" : ""}`}
+                  className={`secondary user-settings-tab-btn justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${userSettingsTab === "sound" ? "user-settings-tab-btn-active" : ""}`}
                   onClick={() => onSetUserSettingsTab("sound")}
                 >
                   {t("settings.tabSound")}
                 </button>
                 <button
                   type="button"
-                  className={`secondary user-settings-tab-btn justify-start text-left max-[800px]:min-w-0 max-[800px]:justify-center ${userSettingsTab === "camera" ? "user-settings-tab-btn-active" : ""}`}
+                  className={`secondary user-settings-tab-btn justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${userSettingsTab === "camera" ? "user-settings-tab-btn-active" : ""}`}
                   onClick={() => onSetUserSettingsTab("camera")}
                 >
                   {t("settings.tabCamera")}
                 </button>
                 <button
                   type="button"
-                  className={`secondary user-settings-tab-btn justify-start text-left max-[800px]:min-w-0 max-[800px]:justify-center ${userSettingsTab === "server_sounds" ? "user-settings-tab-btn-active" : ""}`}
+                  className={`secondary user-settings-tab-btn justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${userSettingsTab === "server_sounds" ? "user-settings-tab-btn-active" : ""}`}
                   onClick={() => onSetUserSettingsTab("server_sounds")}
                 >
                   {t("settings.tabServerSounds")}
@@ -523,7 +523,7 @@ export function UserDock({
                 </form>
               ) : userSettingsTab === "sound" ? (
                 <>
-                  <div className="voice-preferences-grid grid gap-3 min-[801px]:grid-cols-2">
+                  <div className="voice-preferences-grid grid gap-3 desktop:grid-cols-2">
                     <label className="grid gap-[var(--space-md)]">
                       <span className="subheading">{t("settings.microphone")}</span>
                       <select value={selectedInputId} disabled={mediaDevicesUnavailable} onChange={(event) => onSetSelectedInputId(event.target.value)}>
@@ -555,7 +555,7 @@ export function UserDock({
                     <p className="muted media-devices-warning">{mediaDevicesWarningText}</p>
                   ) : null}
 
-                  <div className="voice-preferences-grid grid gap-3 min-[801px]:grid-cols-2">
+                  <div className="voice-preferences-grid grid gap-3 desktop:grid-cols-2">
                     <label className="slider-label grid gap-2">
                       {t("settings.micVolume")}
                       <input
@@ -582,7 +582,7 @@ export function UserDock({
 
                   <div className="voice-test-row grid gap-2">
                     <div className="subheading">{t("settings.micTest")}</div>
-                    <div className="voice-level-bars mt-0 grid grid-cols-12 gap-0.5 min-[801px]:grid-cols-[repeat(42,minmax(0,1fr))]" aria-hidden="true">
+                    <div className="voice-level-bars mt-0 grid grid-cols-12 gap-0.5 desktop:grid-cols-[repeat(42,minmax(0,1fr))]" aria-hidden="true">
                       {Array.from({ length: modalBarCount }).map((_, index) => (
                         <span
                           key={`modal-bar-${index}`}
@@ -601,7 +601,7 @@ export function UserDock({
                 </>
               ) : userSettingsTab === "camera" ? (
                 <>
-                  <div className="voice-preferences-grid grid gap-3 min-[801px]:grid-cols-1">
+                  <div className="voice-preferences-grid grid gap-3 desktop:grid-cols-1">
                     <label className="grid gap-[var(--space-md)]">
                       <span className="subheading">{t("video.cameraDevice")}</span>
                       <select value={selectedVideoInputId} disabled={mediaDevicesUnavailable} onChange={(event) => onSetSelectedVideoInputId(event.target.value)}>

@@ -140,13 +140,13 @@ export function ServerProfileModal({
         }
       }}
     >
-      <section className="card voice-preferences-modal user-settings-modal server-profile-modal grid w-full max-w-[980px] min-w-0 gap-4 min-[801px]:grid-cols-[250px_1fr]">
+      <section className="card voice-preferences-modal user-settings-modal server-profile-modal grid w-full max-w-[980px] min-w-0 gap-4 desktop:grid-cols-[250px_1fr]">
         <div className="user-settings-sidebar grid min-w-0 content-start gap-2">
           <div className="voice-preferences-kicker">{t("server.title")}</div>
           {canPromote ? (
             <button
               type="button"
-              className={`secondary user-settings-tab-btn min-h-[42px] justify-start text-left max-[800px]:min-w-0 max-[800px]:justify-center ${serverMenuTab === "users" ? "user-settings-tab-btn-active" : ""}`}
+              className={`secondary user-settings-tab-btn min-h-[42px] justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${serverMenuTab === "users" ? "user-settings-tab-btn-active" : ""}`}
               onClick={() => onSetServerMenuTab("users")}
             >
               {t("server.tabUsers")}
@@ -154,7 +154,7 @@ export function ServerProfileModal({
           ) : null}
           <button
             type="button"
-            className={`secondary user-settings-tab-btn min-h-[42px] justify-start text-left max-[800px]:min-w-0 max-[800px]:justify-center ${serverMenuTab === "events" ? "user-settings-tab-btn-active" : ""}`}
+            className={`secondary user-settings-tab-btn min-h-[42px] justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${serverMenuTab === "events" ? "user-settings-tab-btn-active" : ""}`}
             onClick={() => onSetServerMenuTab("events")}
           >
             {t("server.tabEvents")}
@@ -162,7 +162,7 @@ export function ServerProfileModal({
           {canViewTelemetry ? (
             <button
               type="button"
-              className={`secondary user-settings-tab-btn min-h-[42px] justify-start text-left max-[800px]:min-w-0 max-[800px]:justify-center ${serverMenuTab === "telemetry" ? "user-settings-tab-btn-active" : ""}`}
+              className={`secondary user-settings-tab-btn min-h-[42px] justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${serverMenuTab === "telemetry" ? "user-settings-tab-btn-active" : ""}`}
               onClick={() => onSetServerMenuTab("telemetry")}
             >
               {t("server.tabTelemetry")}
@@ -170,7 +170,7 @@ export function ServerProfileModal({
           ) : null}
           <button
             type="button"
-            className={`secondary user-settings-tab-btn min-h-[42px] justify-start text-left max-[800px]:min-w-0 max-[800px]:justify-center ${serverMenuTab === "call" ? "user-settings-tab-btn-active" : ""}`}
+            className={`secondary user-settings-tab-btn min-h-[42px] justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${serverMenuTab === "call" ? "user-settings-tab-btn-active" : ""}`}
             onClick={() => onSetServerMenuTab("call")}
           >
             {t("server.tabCall")}
@@ -178,7 +178,7 @@ export function ServerProfileModal({
           {canManageAudioQuality ? (
             <button
               type="button"
-              className={`secondary user-settings-tab-btn min-h-[42px] justify-start text-left max-[800px]:min-w-0 max-[800px]:justify-center ${serverMenuTab === "sound" ? "user-settings-tab-btn-active" : ""}`}
+              className={`secondary user-settings-tab-btn min-h-[42px] justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${serverMenuTab === "sound" ? "user-settings-tab-btn-active" : ""}`}
               onClick={() => onSetServerMenuTab("sound")}
             >
               {t("server.tabSound")}
@@ -187,7 +187,7 @@ export function ServerProfileModal({
           {canManageAudioQuality ? (
             <button
               type="button"
-              className={`secondary user-settings-tab-btn min-h-[42px] justify-start text-left max-[800px]:min-w-0 max-[800px]:justify-center ${serverMenuTab === "video" ? "user-settings-tab-btn-active" : ""}`}
+              className={`secondary user-settings-tab-btn min-h-[42px] justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${serverMenuTab === "video" ? "user-settings-tab-btn-active" : ""}`}
               onClick={() => onSetServerMenuTab("video")}
             >
               {t("server.tabVideo")}
@@ -195,7 +195,7 @@ export function ServerProfileModal({
           ) : null}
           <button
             type="button"
-            className={`secondary user-settings-tab-btn min-h-[42px] justify-start text-left max-[800px]:min-w-0 max-[800px]:justify-center ${serverMenuTab === "chat_images" ? "user-settings-tab-btn-active" : ""}`}
+            className={`secondary user-settings-tab-btn min-h-[42px] justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${serverMenuTab === "chat_images" ? "user-settings-tab-btn-active" : ""}`}
             onClick={() => onSetServerMenuTab("chat_images")}
           >
             {t("server.tabChatImages")}
@@ -229,7 +229,7 @@ export function ServerProfileModal({
               <p className="muted">Users total: {totalUsers} · Admins: {totalAdmins} · Banned: {totalBanned}</p>
               <ul className="admin-list grid gap-2">
                 {adminUsers.map((item) => (
-                  <li key={item.id} className="admin-row grid min-h-[42px] grid-cols-[minmax(0,1fr)_auto] items-center gap-2 max-[800px]:grid-cols-1">
+                  <li key={item.id} className="admin-row grid min-h-[42px] grid-cols-[minmax(0,1fr)_auto] items-center gap-2 max-desktop:grid-cols-1">
                     <span className="min-w-0 break-words">
                       {item.email} ({item.role})
                       {item.is_banned ? ` · ${t("admin.banned")}` : ""}

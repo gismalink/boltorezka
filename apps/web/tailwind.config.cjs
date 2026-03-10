@@ -21,6 +21,9 @@ module.exports = {
       },
       boxShadow: {
         pixel: "0 0 0 1px #35e6ff, 3px 3px 0 #07060a, -1px -1px 0 #cf4a86"
+      },
+      screens: {
+        desktop: "801px"
       }
     }
   },
