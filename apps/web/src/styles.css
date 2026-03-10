@@ -862,12 +862,7 @@ pre {
 }
 
 .channel-member-settings-popup {
-  position: absolute;
-  left: calc(100% + var(--offset-menu));
-  right: auto;
-  top: 0;
   width: min(92vw, 280px);
-  z-index: 40;
 }
 
 .channel-member-item-draggable {
@@ -882,6 +877,11 @@ pre {
 
 .channel-member-item-draggable:active {
   cursor: grabbing;
+}
+
+.channel-row-drop-target {
+  background: color-mix(in srgb, var(--pixel-panel) 66%, var(--pixel-neon-cyan) 34%);
+  box-shadow: inset 3px 0 0 color-mix(in srgb, var(--pixel-neon-cyan) 75%, var(--pixel-border) 25%);
 }
 
 .room-btn-drop-target {
@@ -1566,8 +1566,6 @@ pre {
   }
 
   .channel-member-settings-popup {
-    left: auto;
-    right: 0;
-    top: calc(100% + var(--offset-menu));
+    width: min(92vw, 320px);
   }
 }

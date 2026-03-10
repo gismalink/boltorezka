@@ -84,6 +84,7 @@ export function RoomRow({
   onRequestArchiveChannel
 }: RoomRowProps) {
   const channelSettingsAnchorRef = useRef<HTMLDivElement>(null);
+  const memberMenuAnchorRef = useRef<HTMLElement | null>(null);
   const [memberMenuOpenKey, setMemberMenuOpenKey] = useState<string | null>(null);
   const [memberPreferenceDrafts, setMemberPreferenceDrafts] = useState<Record<string, { volume: number; note: string }>>({});
   const [dropTargetActive, setDropTargetActive] = useState(false);
@@ -97,10 +98,11 @@ export function RoomRow({
       if (!target) {
         return;
       }
-      if (target.closest(".channel-member-settings-anchor")) {
+      if (target.closest(".channel-member-settings-anchor") || target.closest(".channel-member-settings-popup")) {
         return;
       }
       setMemberMenuOpenKey(null);
+      memberMenuAnchorRef.current = null;
     };
 
     window.addEventListener("pointerdown", onPointerDown);
@@ -113,7 +115,25 @@ export function RoomRow({
       userName,
       fromRoomSlug: room.slug
     }));
+    event.dataTransfer.setData("application/x-boltorezka-member-from-room", room.slug);
     event.dataTransfer.effectAllowed = "move";
+  };
+
+  const resolveDragSourceRoom = (event: DragEvent): string => {
+    const directRoomSlug = event.dataTransfer.getData("application/x-boltorezka-member-from-room");
+    if (directRoomSlug) {
+      return directRoomSlug;
+    }
+    const payload = event.dataTransfer.getData("application/x-boltorezka-member");
+    if (!payload) {
+      return "";
+    }
+    try {
+      const parsed = JSON.parse(payload) as { fromRoomSlug?: string };
+      return String(parsed.fromRoomSlug || "").trim();
+    } catch {
+      return "";
+    }
   };
 
   const onRoomDragOver = (event: DragEvent) => {
@@ -123,6 +143,11 @@ export function RoomRow({
 
     const hasPayload = Array.from(event.dataTransfer.types).includes("application/x-boltorezka-member");
     if (!hasPayload) {
+      return;
+    }
+
+    const fromRoomSlug = resolveDragSourceRoom(event);
+    if (!fromRoomSlug || fromRoomSlug === room.slug) {
       return;
     }
 
@@ -161,7 +186,13 @@ export function RoomRow({
   };
 
   return (
-    <div className="channel-row relative grid grid-cols-[1fr_auto] items-center gap-2">
+    <div
+      className={`channel-row relative grid grid-cols-[1fr_auto] items-center gap-2 ${dropTargetActive ? "channel-row-drop-target" : ""}`}
+      onDragOver={onRoomDragOver}
+      onDragEnter={onRoomDragOver}
+      onDragLeave={() => setDropTargetActive(false)}
+      onDrop={onRoomDrop}
+    >
       <button
         className={`secondary room-btn ${roomSlug === room.slug ? "room-btn-active" : "room-btn-interactive"} ${dropTargetActive ? "room-btn-drop-target" : ""}`}
         onClick={() => {
@@ -169,10 +200,6 @@ export function RoomRow({
             onJoinRoom(room.slug);
           }
         }}
-        onDragOver={onRoomDragOver}
-        onDragEnter={onRoomDragOver}
-        onDragLeave={() => setDropTargetActive(false)}
-        onDrop={onRoomDrop}
       >
         <i className={`bi ${ROOM_KIND_ICON_CLASS[room.kind]}`} aria-hidden="true" />
         <span>{room.title}</span>
@@ -425,7 +452,7 @@ export function RoomRow({
                       className="secondary icon-btn tiny channel-member-settings-btn"
                       aria-label={t("rooms.memberSettings")}
                       data-tooltip={t("rooms.memberSettings")}
-                      onClick={() => {
+                      onClick={(event) => {
                         if (!member.userId) {
                           return;
                         }
@@ -436,13 +463,22 @@ export function RoomRow({
                             note: noteValue
                           }
                         }));
-                        setMemberMenuOpenKey((current) => current === menuKey ? null : menuKey);
+                        setMemberMenuOpenKey((current) => {
+                          const shouldOpen = current !== menuKey;
+                          memberMenuAnchorRef.current = shouldOpen ? event.currentTarget : null;
+                          return shouldOpen ? menuKey : null;
+                        });
                       }}
                     >
                       <i className="bi bi-gear" aria-hidden="true" />
                     </button>
                     {memberMenuOpenKey === menuKey && member.userId ? (
-                      <div className="settings-popup floating-popup channel-member-settings-popup">
+                      <PopupPortal
+                        open
+                        anchorRef={memberMenuAnchorRef as { current: HTMLElement | null }}
+                        className="settings-popup channel-member-settings-popup"
+                        placement="right-start"
+                      >
                         <div className="grid gap-3">
                           <div className="subheading">{member.userName}</div>
                           <label className="slider-label grid gap-1.5">
@@ -506,13 +542,14 @@ export function RoomRow({
                               onClick={() => {
                                 onKickRoomMember(room.slug, member.userId as string, member.userName);
                                 setMemberMenuOpenKey(null);
+                                  memberMenuAnchorRef.current = null;
                               }}
                             >
                               <i className="bi bi-person-x" aria-hidden="true" /> {t("rooms.kickFromChannel")}
                             </button>
                           ) : null}
                         </div>
-                      </div>
+                      </PopupPortal>
                     ) : null}
                   </div>
                 ) : null}
