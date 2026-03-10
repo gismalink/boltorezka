@@ -9,6 +9,7 @@ import type {
   RoomMessagesResponse,
   RoomsTreeResponse,
   ServerAudioQualityResponse,
+  ServerChatImagePolicyResponse,
   TelemetrySummary,
   User
 } from "./domain";
@@ -115,7 +116,8 @@ const endpoints = {
   roomCategories: "/v1/room-categories",
   telemetrySummary: "/v1/telemetry/summary",
   adminUsers: "/v1/admin/users",
-  adminServerAudioQuality: "/v1/admin/server/audio-quality"
+  adminServerAudioQuality: "/v1/admin/server/audio-quality",
+  adminServerChatImagePolicy: "/v1/admin/server/chat-image-policy"
 } as const;
 
 const withId = (basePath: string, id: string) => `${basePath}/${encodeURIComponent(id)}`;
@@ -201,6 +203,8 @@ export const api = {
   },
   telemetrySummary: (token: string) => fetchJson<TelemetrySummary>(endpoints.telemetrySummary, token),
   serverAudioQuality: (token: string) => fetchJson<ServerAudioQualityResponse>(endpoints.adminServerAudioQuality, token),
+  serverChatImagePolicy: (token: string) =>
+    fetchJson<ServerChatImagePolicyResponse>(endpoints.adminServerChatImagePolicy, token),
   updateServerAudioQuality: (token: string, audioQuality: AudioQuality) =>
     fetchJson<ServerAudioQualityResponse>(
       endpoints.adminServerAudioQuality,

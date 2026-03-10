@@ -57,9 +57,9 @@ const TOAST_AUTO_DISMISS_MS = 4500;
 const TOAST_ID_RANDOM_RANGE = 10000;
 const TOAST_DUPLICATE_THROTTLE_MS = 12000;
 const TOAST_MAX_VISIBLE = 4;
-const MAX_CHAT_IMAGE_DATA_URL_LENGTH = 28000;
-const MAX_CHAT_IMAGE_MAX_SIDE = 1200;
-const MAX_CHAT_IMAGE_QUALITY = 0.6;
+const DEFAULT_CHAT_IMAGE_DATA_URL_LENGTH = 28000;
+const DEFAULT_CHAT_IMAGE_MAX_SIDE = 1200;
+const DEFAULT_CHAT_IMAGE_QUALITY = 0.6;
 const MESSAGE_EDIT_DELETE_WINDOW_MS = 10 * 60 * 1000;
 const VERSION_POLL_INTERVAL_MS = 60000;
 const ROOM_SLUG_STORAGE_KEY = "boltorezka_room_slug";
@@ -133,10 +133,17 @@ export function App() {
   const [selectedOutputId, setSelectedOutputId] = useState<string>(() => localStorage.getItem("boltorezka_selected_output_id") || "default");
   const [selectedVideoInputId, setSelectedVideoInputId] = useState<string>(() => localStorage.getItem("boltorezka_selected_video_input_id") || "default");
   const [cameraEnabled, setCameraEnabled] = useState(false);
+  const [screenShareOwnerByRoomSlug, setScreenShareOwnerByRoomSlug] = useState<Record<string, { userId: string | null; userName: string | null }>>({});
   const [voiceCameraEnabledByUserIdInCurrentRoom, setVoiceCameraEnabledByUserIdInCurrentRoom] = useState<Record<string, boolean>>({});
   const [voiceInitialMicStateByUserIdInCurrentRoom, setVoiceInitialMicStateByUserIdInCurrentRoom] = useState<Record<string, "muted" | "silent" | "speaking">>({});
   const [voiceInitialAudioOutputMutedByUserIdInCurrentRoom, setVoiceInitialAudioOutputMutedByUserIdInCurrentRoom] = useState<Record<string, boolean>>({});
-  const [selectedInputProfile, setSelectedInputProfile] = useState<InputProfile>("custom");
+  const [selectedInputProfile, setSelectedInputProfile] = useState<InputProfile>(() => {
+    const value = String(localStorage.getItem("boltorezka_selected_input_profile") || "").trim();
+    if (value === "noise_reduction" || value === "custom") {
+      return value;
+    }
+    return "custom";
+  });
   const [voiceSettingsPanel, setVoiceSettingsPanel] = useState<VoiceSettingsPanel>(null);
   const [mediaDevicesState, setMediaDevicesState] = useState<MediaDevicesState>("ready");
   const [mediaDevicesHint, setMediaDevicesHint] = useState("");
@@ -157,6 +164,11 @@ export function App() {
   const [mobileTab, setMobileTab] = useState<MobileTab>("channels");
   const [serverAudioQuality, setServerAudioQuality] = useState<AudioQuality>("standard");
   const [serverAudioQualitySaving, setServerAudioQualitySaving] = useState(false);
+  const [serverChatImagePolicy, setServerChatImagePolicy] = useState({
+    maxDataUrlLength: DEFAULT_CHAT_IMAGE_DATA_URL_LENGTH,
+    maxImageSide: DEFAULT_CHAT_IMAGE_MAX_SIDE,
+    jpegQuality: DEFAULT_CHAT_IMAGE_QUALITY
+  });
   const [serverVideoEffectType, setServerVideoEffectType] = useState<ServerVideoEffectType>(() => {
     const value = localStorage.getItem("boltorezka_server_video_effect_type");
     if (value === "none" || value === "pixel8" || value === "ascii") {
@@ -214,6 +226,9 @@ export function App() {
   const [realtimeReconnectNonce, setRealtimeReconnectNonce] = useState(0);
   const [videoWindowsVisible, setVideoWindowsVisible] = useState(true);
   const realtimeClientRef = useRef<RealtimeClient | null>(null);
+  const pendingWsRequestResolversRef = useRef<
+    Map<string, { resolve: () => void; reject: (error: Error) => void; timeoutId: number }>
+  >(new Map());
   const roomSlugRef = useRef(roomSlug);
   const lastRoomSlugForScrollRef = useRef(roomSlug);
   const lastMessageIdRef = useRef<string | null>(null);
@@ -380,6 +395,41 @@ export function App() {
     return realtimeClientRef.current?.sendEvent(eventType, payload, options) ?? null;
   }, []);
 
+  const sendWsEventAwaitAck = useCallback((
+    eventType: string,
+    payload: Record<string, unknown>,
+    options: { withIdempotency?: boolean; trackAck?: boolean; maxRetries?: number } = {}
+  ) => {
+    const requestId = sendWsEvent(eventType, payload, {
+      trackAck: true,
+      maxRetries: 1,
+      ...options
+    });
+
+    if (!requestId) {
+      return Promise.reject(new Error("ws_not_connected"));
+    }
+
+    return new Promise<void>((resolve, reject) => {
+      const timeoutId = window.setTimeout(() => {
+        pendingWsRequestResolversRef.current.delete(requestId);
+        reject(new Error(`${eventType}:ack_timeout`));
+      }, 10000);
+
+      pendingWsRequestResolversRef.current.set(requestId, {
+        resolve: () => {
+          window.clearTimeout(timeoutId);
+          resolve();
+        },
+        reject: (error) => {
+          window.clearTimeout(timeoutId);
+          reject(error);
+        },
+        timeoutId
+      });
+    });
+  }, [sendWsEvent]);
+
   const currentRoomVoiceTargets = useMemo(() => {
     const members = roomsPresenceDetailsBySlug[roomSlug] || [];
     const me = user?.id || "";
@@ -418,8 +468,6 @@ export function App() {
   }, [rooms, roomsTree, roomSlug]);
   const allowVideoStreaming = currentRoomKind === "text_voice_video";
   const currentRoomSupportsVideo = allowVideoStreaming;
-  const currentRoomMediaTopology = roomMediaTopologyBySlug[roomSlug] || "livekit";
-  const isLivekitRoomTopology = currentRoomMediaTopology === "livekit";
 
   const livekitVoiceRuntime = useLivekitVoiceRuntime({
     token,
@@ -429,6 +477,7 @@ export function App() {
     videoStreamingEnabled: cameraEnabled,
     roomVoiceTargets: currentRoomVoiceTargets,
     selectedInputId,
+    selectedInputProfile,
     selectedOutputId,
     selectedVideoInputId,
     micMuted,
@@ -451,6 +500,11 @@ export function App() {
     localVoiceMediaStatusSummary,
     localVideoStream,
     remoteVideoStreamsByUserId,
+    localScreenShareStream,
+    remoteScreenShareStreamsByUserId,
+    isLocalScreenSharing,
+    startLocalScreenShare,
+    stopLocalScreenShare,
     connectRoom,
     disconnectRoom,
     handleIncomingMicState,
@@ -466,6 +520,14 @@ export function App() {
     return labels;
   }, [currentRoomVoiceTargets]);
 
+  const videoPolicyAudienceKey = useMemo(() => {
+    return currentRoomVoiceTargets
+      .map((member) => String(member.userId || "").trim())
+      .filter((userId) => userId.length > 0)
+      .sort()
+      .join("|");
+  }, [currentRoomVoiceTargets]);
+
   useEffect(() => {
     if (!allowVideoStreaming) {
       setCameraEnabled(false);
@@ -478,6 +540,10 @@ export function App() {
     setVoiceInitialMicStateByUserIdInCurrentRoom({});
     setVoiceInitialAudioOutputMutedByUserIdInCurrentRoom({});
   }, [roomSlug]);
+
+  useEffect(() => {
+    localStorage.setItem("boltorezka_selected_input_profile", selectedInputProfile);
+  }, [selectedInputProfile]);
 
   useEffect(() => {
     localStorage.setItem("boltorezka_server_video_effect_type", serverVideoEffectType);
@@ -527,7 +593,7 @@ export function App() {
   useEffect(() => {
     const activeRoom = rooms.find((room) => room.slug === roomSlug);
     const roomSupportsRtc = activeRoom ? activeRoom.kind !== "text" : false;
-    if (!roomSupportsRtc || !roomVoiceConnected || !canManageAudioQuality || isLivekitRoomTopology) {
+    if (!roomSupportsRtc || !roomVoiceConnected || !canManageAudioQuality) {
       return;
     }
 
@@ -545,7 +611,7 @@ export function App() {
       windowMaxWidth: Math.max(serverVideoWindowMinWidth, serverVideoWindowMaxWidth)
     };
 
-    const serialized = JSON.stringify(payload);
+    const serialized = JSON.stringify({ payload, audience: videoPolicyAudienceKey });
     if (lastBroadcastVideoPolicyRef.current === serialized) {
       return;
     }
@@ -557,7 +623,6 @@ export function App() {
     roomSlug,
     roomVoiceConnected,
     canManageAudioQuality,
-    isLivekitRoomTopology,
     serverVideoEffectType,
     serverVideoResolution,
     serverVideoFps,
@@ -569,6 +634,7 @@ export function App() {
     serverVideoAsciiColor,
     serverVideoWindowMinWidth,
     serverVideoWindowMaxWidth,
+    videoPolicyAudienceKey,
     sendWsEvent
   ]);
 
@@ -699,6 +765,81 @@ export function App() {
     initialAudioOutputMutedByUserIdInCurrentRoom: voiceInitialAudioOutputMutedByUserIdInCurrentRoom
   });
 
+  const speakingVideoWindowIds = useMemo(() => {
+    const ids = new Set<string>();
+
+    remoteSpeakingPeerUserIds
+      .map((userId) => String(userId || "").trim())
+      .filter((userId) => userId.length > 0)
+      .forEach((userId) => ids.add(userId));
+
+    const localUserId = String(user?.id || "").trim();
+    if (localUserId && voiceMicStateByUserIdInCurrentRoom[localUserId] === "speaking") {
+      ids.add("local");
+    }
+
+    return Array.from(ids);
+  }, [remoteSpeakingPeerUserIds, user?.id, voiceMicStateByUserIdInCurrentRoom]);
+
+  const currentRoomScreenShareOwner = useMemo(() => {
+    return screenShareOwnerByRoomSlug[roomSlug] || { userId: null, userName: null };
+  }, [screenShareOwnerByRoomSlug, roomSlug]);
+
+  const normalizedCurrentUserId = useMemo(() => String(user?.id || "").trim(), [user?.id]);
+  const normalizedScreenShareOwnerUserId = useMemo(
+    () => String(currentRoomScreenShareOwner.userId || "").trim(),
+    [currentRoomScreenShareOwner.userId]
+  );
+  const isCurrentUserScreenShareOwner = Boolean(
+    normalizedCurrentUserId
+    && normalizedScreenShareOwnerUserId
+    && normalizedCurrentUserId === normalizedScreenShareOwnerUserId
+  );
+  const canToggleScreenShare = Boolean(
+    currentRoomKind !== "text"
+    && roomVoiceConnected
+    && (!normalizedScreenShareOwnerUserId || isCurrentUserScreenShareOwner)
+  );
+
+  const activeScreenShare = useMemo(() => {
+    const localUserId = String(user?.id || "").trim();
+    if (isLocalScreenSharing && localScreenShareStream) {
+      return {
+        stream: localScreenShareStream,
+        ownerUserId: localUserId || "local",
+        ownerLabel: user?.name || t("video.you"),
+        local: true
+      };
+    }
+
+    const ownerUserId = String(currentRoomScreenShareOwner.userId || "").trim();
+    if (!ownerUserId) {
+      return null;
+    }
+
+    const stream = remoteScreenShareStreamsByUserId[ownerUserId] || null;
+    if (!stream) {
+      return null;
+    }
+
+    return {
+      stream,
+      ownerUserId,
+      ownerLabel: currentRoomScreenShareOwner.userName || remoteVideoLabelsByUserId[ownerUserId] || ownerUserId,
+      local: false
+    };
+  }, [
+    currentRoomScreenShareOwner.userId,
+    currentRoomScreenShareOwner.userName,
+    isLocalScreenSharing,
+    localScreenShareStream,
+    remoteScreenShareStreamsByUserId,
+    remoteVideoLabelsByUserId,
+    t,
+    user?.id,
+    user?.name
+  ]);
+
   const effectiveVoiceCameraEnabledByUserIdInCurrentRoom = useMemo(() => {
     const map: Record<string, boolean> = {};
     const activeTargetIds = new Set(
@@ -710,21 +851,8 @@ export function App() {
     // Keep camera status strictly scoped to current room participants and active RTC peers.
     activeTargetIds.forEach((userId) => {
       const hasRemoteStream = Object.prototype.hasOwnProperty.call(remoteVideoStreamsByUserId, userId);
-      if (isLivekitRoomTopology) {
-        // LiveKit rooms derive camera visibility from subscribed video tracks, not legacy call.video_state.
-        map[userId] = hasRemoteStream;
-        return;
-      }
-
-      const cameraEnabled = voiceCameraEnabledByUserIdInCurrentRoom[userId] === true;
-      if (!cameraEnabled) {
-        map[userId] = false;
-        return;
-      }
-
-      const rtcState = voiceRtcStateByUserIdInCurrentRoom[userId];
-      const hasRtcPeer = rtcState === "connecting" || rtcState === "connected";
-      map[userId] = hasRtcPeer || hasRemoteStream;
+      // LiveKit-only path: remote camera visibility follows subscribed remote video tracks.
+      map[userId] = hasRemoteStream;
     });
 
     const localUserId = String(user?.id || "").trim();
@@ -734,10 +862,7 @@ export function App() {
 
     return map;
   }, [
-    voiceCameraEnabledByUserIdInCurrentRoom,
-    voiceRtcStateByUserIdInCurrentRoom,
     remoteVideoStreamsByUserId,
-    isLivekitRoomTopology,
     currentRoomVoiceTargets,
     user?.id,
     roomVoiceConnected,
@@ -1144,6 +1269,16 @@ export function App() {
       .then((res) => setServerAudioQuality(res.audioQuality))
       .catch((error) => pushLog(`server audio quality failed: ${error.message}`));
 
+    api.serverChatImagePolicy(nextToken)
+      .then((res) => {
+        setServerChatImagePolicy({
+          maxDataUrlLength: Math.max(8000, Math.min(250000, Math.round(Number(res.maxDataUrlLength) || DEFAULT_CHAT_IMAGE_DATA_URL_LENGTH))),
+          maxImageSide: Math.max(256, Math.min(4096, Math.round(Number(res.maxImageSide) || DEFAULT_CHAT_IMAGE_MAX_SIDE))),
+          jpegQuality: Math.max(0.3, Math.min(0.95, Number(res.jpegQuality) || DEFAULT_CHAT_IMAGE_QUALITY))
+        });
+      })
+      .catch((error) => pushLog(`server chat image policy failed: ${error.message}`));
+
     void roomAdminController.loadRoomTree(nextToken);
   }, [pushLog, roomAdminController]);
 
@@ -1155,6 +1290,14 @@ export function App() {
 
     bootstrapSessionState(token);
   }, [bootstrapSessionState, resetSessionState, token]);
+
+  useEffect(() => () => {
+    pendingWsRequestResolversRef.current.forEach((pending) => {
+      window.clearTimeout(pending.timeoutId);
+      pending.reject(new Error("ws_disposed"));
+    });
+    pendingWsRequestResolversRef.current.clear();
+  }, []);
 
   const { loadOlderMessages } = useRealtimeChatLifecycle({
     token,
@@ -1194,7 +1337,53 @@ export function App() {
     onCallVideoState: handleIncomingVideoState,
     onCallInitialState: handleIncomingInitialCallState,
     onCallNack: handleCallNack,
-    onAudioQualityUpdated: handleAudioQualityUpdated
+    onAudioQualityUpdated: handleAudioQualityUpdated,
+    onAck: ({ requestId }) => {
+      const pending = pendingWsRequestResolversRef.current.get(requestId);
+      if (!pending) {
+        return;
+      }
+
+      pendingWsRequestResolversRef.current.delete(requestId);
+      pending.resolve();
+    },
+    onNack: ({ requestId, eventType, code, message }) => {
+      const pending = pendingWsRequestResolversRef.current.get(requestId);
+      if (!pending) {
+        return;
+      }
+
+      pendingWsRequestResolversRef.current.delete(requestId);
+      pending.reject(new Error(`${eventType}:${code}:${message}`));
+    },
+    onScreenShareState: (payload) => {
+      const targetRoomSlug = String(payload.roomSlug || "").trim();
+      if (!targetRoomSlug) {
+        return;
+      }
+
+      setScreenShareOwnerByRoomSlug((prev) => ({
+        ...prev,
+        [targetRoomSlug]: {
+          userId: payload.active ? (payload.ownerUserId ?? null) : null,
+          userName: payload.active ? (payload.ownerUserName ?? null) : null
+        }
+      }));
+    },
+    onChatCleared: (payload) => {
+      const targetRoomSlug = String(payload.roomSlug || "").trim();
+      const activeRoomSlug = roomSlugRef.current;
+      if (!targetRoomSlug || targetRoomSlug !== activeRoomSlug) {
+        return;
+      }
+
+      setMessages([]);
+      setMessagesHasMore(false);
+      setMessagesNextCursor(null);
+
+      const deletedCount = Number(payload.deletedCount || 0);
+      pushLog(`channel chat cleared by admin (${Number.isFinite(deletedCount) ? deletedCount : 0})`);
+    }
   });
 
   useEffect(() => {
@@ -1218,6 +1407,7 @@ export function App() {
       setRoomsPresenceBySlug({});
       setRoomsPresenceDetailsBySlug({});
       setRoomMediaTopologyBySlug({});
+      setScreenShareOwnerByRoomSlug({});
       setVoiceInitialMicStateByUserIdInCurrentRoom({});
       setVoiceInitialAudioOutputMutedByUserIdInCurrentRoom({});
       return;
@@ -1333,21 +1523,22 @@ export function App() {
           const originalWidth = Math.max(1, Math.round(image.naturalWidth || 1));
           const originalHeight = Math.max(1, Math.round(image.naturalHeight || 1));
           const maxSide = Math.max(originalWidth, originalHeight);
-          const scale = maxSide > MAX_CHAT_IMAGE_MAX_SIDE ? MAX_CHAT_IMAGE_MAX_SIDE / maxSide : 1;
+          const scale = maxSide > serverChatImagePolicy.maxImageSide
+            ? serverChatImagePolicy.maxImageSide / maxSide
+            : 1;
           const targetWidth = Math.max(1, Math.round(originalWidth * scale));
           const targetHeight = Math.max(1, Math.round(originalHeight * scale));
-
           const canvas = document.createElement("canvas");
           canvas.width = targetWidth;
           canvas.height = targetHeight;
           const context = canvas.getContext("2d");
           if (!context) {
-            reject(new Error("canvas_failed"));
+            reject(new Error("canvas_context_unavailable"));
             return;
           }
 
           context.drawImage(image, 0, 0, targetWidth, targetHeight);
-          const compressed = canvas.toDataURL("image/jpeg", MAX_CHAT_IMAGE_QUALITY);
+          const compressed = canvas.toDataURL("image/jpeg", serverChatImagePolicy.jpegQuality);
           resolve(compressed);
         };
         image.src = source;
@@ -1355,7 +1546,7 @@ export function App() {
 
       reader.readAsDataURL(file);
     });
-  }, []);
+  }, [serverChatImagePolicy.jpegQuality, serverChatImagePolicy.maxImageSide]);
 
   const sendMessage = (event: FormEvent) => {
     event.preventDefault();
@@ -1420,7 +1611,7 @@ export function App() {
         const dataUrl = await compressImageToDataUrl(file);
         const markdown = `![скриншот](${dataUrl})`;
 
-        if (markdown.length > MAX_CHAT_IMAGE_DATA_URL_LENGTH) {
+        if (markdown.length > serverChatImagePolicy.maxDataUrlLength) {
           pushToast(t("chat.imageTooLarge"));
           return;
         }
@@ -1537,6 +1728,69 @@ export function App() {
     });
   }, []);
 
+  const handleToggleScreenShare = useCallback(async () => {
+    if (!token || !roomSlug || currentRoomKind === "text" || !roomVoiceConnected) {
+      pushToast(t("call.autoWaiting"));
+      return;
+    }
+
+    const localUserId = String(user?.id || "").trim();
+    const ownerUserId = String(currentRoomScreenShareOwner.userId || "").trim();
+
+    if (isLocalScreenSharing) {
+      try {
+        await stopLocalScreenShare();
+      } finally {
+        try {
+          await sendWsEventAwaitAck("screen.share.stop", { roomSlug }, { maxRetries: 1 });
+        } catch {
+          return;
+        }
+      }
+      return;
+    }
+
+    if (ownerUserId && ownerUserId !== localUserId) {
+      const ownerName = currentRoomScreenShareOwner.userName || ownerUserId;
+      pushToast(`Screen share is already active: ${ownerName}`);
+      return;
+    }
+
+    try {
+      await sendWsEventAwaitAck("screen.share.start", { roomSlug }, { maxRetries: 1 });
+      await startLocalScreenShare();
+    } catch (error) {
+      const text = error instanceof Error ? error.message : String(error || "");
+      if (text.includes("ScreenShareAlreadyActive")) {
+        pushToast("Screen share is already active in this room");
+      } else if (text.includes("NotAllowedError") || text.includes("Permission denied")) {
+        pushToast("Screen share permission denied");
+      } else {
+        pushToast("Failed to start screen share");
+      }
+
+      try {
+        await sendWsEventAwaitAck("screen.share.stop", { roomSlug }, { maxRetries: 1 });
+      } catch {
+        return;
+      }
+    }
+  }, [
+    currentRoomScreenShareOwner.userId,
+    currentRoomScreenShareOwner.userName,
+    currentRoomKind,
+    isLocalScreenSharing,
+    roomSlug,
+    roomVoiceConnected,
+    sendWsEventAwaitAck,
+    startLocalScreenShare,
+    stopLocalScreenShare,
+    t,
+    token,
+    user?.id,
+    pushToast
+  ]);
+
   const promote = async (userId: string) => {
     if (!token || !canPromote) return;
     await roomAdminController.promote(token, userId);
@@ -1649,6 +1903,11 @@ export function App() {
     : selectedInputProfile === "studio"
       ? t("settings.studio")
       : t("settings.custom");
+  const noiseSuppressionEnabled = selectedInputProfile === "noise_reduction";
+
+  const handleToggleNoiseSuppression = useCallback(() => {
+    setSelectedInputProfile((current) => (current === "noise_reduction" ? "custom" : "noise_reduction"));
+  }, []);
 
   const currentRoomSupportsRtc = currentRoom ? currentRoom.kind !== "text" : false;
 
@@ -1687,6 +1946,36 @@ export function App() {
 
   useScreenWakeLock(Boolean(user && roomSlug && currentRoomSupportsRtc && roomVoiceConnected));
 
+  useEffect(() => {
+    if (!isLocalScreenSharing || !localScreenShareStream || !roomSlug) {
+      return;
+    }
+
+    const track = localScreenShareStream.getVideoTracks()[0];
+    if (!track) {
+      return;
+    }
+
+    const onEnded = () => {
+      void stopLocalScreenShare();
+      void sendWsEventAwaitAck("screen.share.stop", { roomSlug }, { maxRetries: 1 }).catch(() => undefined);
+    };
+
+    track.addEventListener("ended", onEnded);
+    return () => {
+      track.removeEventListener("ended", onEnded);
+    };
+  }, [isLocalScreenSharing, localScreenShareStream, roomSlug, sendWsEventAwaitAck, stopLocalScreenShare]);
+
+  useEffect(() => {
+    if (roomVoiceConnected || !isLocalScreenSharing || !roomSlug) {
+      return;
+    }
+
+    void stopLocalScreenShare();
+    void sendWsEventAwaitAck("screen.share.stop", { roomSlug }, { maxRetries: 1 }).catch(() => undefined);
+  }, [isLocalScreenSharing, roomSlug, roomVoiceConnected, sendWsEventAwaitAck, stopLocalScreenShare]);
+
   const userDockNode = user ? (
     <UserDock
       t={t}
@@ -1698,6 +1987,10 @@ export function App() {
       localVoiceMediaStatusSummary={localVoiceMediaStatusSummary}
       lastCallPeer={lastCallPeer}
       roomVoiceConnected={roomVoiceConnected}
+      screenShareActive={Boolean(currentRoomScreenShareOwner.userId)}
+      screenShareOwnedByCurrentUser={isCurrentUserScreenShareOwner}
+      canStartScreenShare={canToggleScreenShare}
+      noiseSuppressionEnabled={noiseSuppressionEnabled}
       cameraEnabled={cameraEnabled}
       micMuted={micMuted}
       audioMuted={audioMuted}
@@ -1748,6 +2041,10 @@ export function App() {
         }
         setCameraEnabled((value) => !value);
       }}
+      onToggleScreenShare={() => {
+        void handleToggleScreenShare();
+      }}
+      onToggleNoiseSuppression={handleToggleNoiseSuppression}
       onRequestVideoAccess={requestVideoAccess}
       onToggleVoiceSettings={() => {
         setAudioOutputMenuOpen(false);
@@ -1796,6 +2093,10 @@ export function App() {
       localVoiceMediaStatusSummary={localVoiceMediaStatusSummary}
       lastCallPeer={lastCallPeer}
       roomVoiceConnected={roomVoiceConnected}
+      screenShareActive={Boolean(currentRoomScreenShareOwner.userId)}
+      screenShareOwnedByCurrentUser={isCurrentUserScreenShareOwner}
+      canStartScreenShare={canToggleScreenShare}
+      noiseSuppressionEnabled={noiseSuppressionEnabled}
       cameraEnabled={cameraEnabled}
       micMuted={micMuted}
       audioMuted={audioMuted}
@@ -1846,6 +2147,10 @@ export function App() {
         }
         setCameraEnabled((value) => !value);
       }}
+      onToggleScreenShare={() => {
+        void handleToggleScreenShare();
+      }}
+      onToggleNoiseSuppression={handleToggleNoiseSuppression}
       onRequestVideoAccess={requestVideoAccess}
       onToggleVoiceSettings={() => {
         setAudioOutputMenuOpen(false);
@@ -2026,9 +2331,14 @@ export function App() {
           remoteVideoStreamsByUserId={remoteVideoStreamsByUserId}
           remoteCameraEnabledByUserId={effectiveVoiceCameraEnabledByUserIdInCurrentRoom}
           remoteLabelsByUserId={remoteVideoLabelsByUserId}
+          screenShareStream={activeScreenShare?.stream || null}
+          screenShareOwnerLabel={activeScreenShare?.ownerLabel || ""}
+          screenShareOwnerUserId={activeScreenShare?.ownerUserId || ""}
+          screenShareActive={Boolean(activeScreenShare?.stream)}
           minWidth={Math.min(serverVideoWindowMinWidth, serverVideoWindowMaxWidth)}
           maxWidth={Math.max(serverVideoWindowMinWidth, serverVideoWindowMaxWidth)}
           visible={allowVideoStreaming && videoWindowsVisible}
+          speakingWindowIds={speakingVideoWindowIds}
         />
 
         {isMobileViewport && user && mobileTab === "settings" ? (

@@ -84,3 +84,9 @@ export type PromoteUserResponse = {
 export type ServerAudioQualityResponse = {
   audioQuality: AudioQuality;
 };
+
+export type ServerChatImagePolicyResponse = {
+  maxDataUrlLength: number;
+  maxImageSide: number;
+  jpegQuality: number;
+};

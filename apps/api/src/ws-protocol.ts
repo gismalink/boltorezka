@@ -101,6 +101,8 @@ export function asKnownWsIncomingEnvelope(
     case "chat.delete":
     case "call.mic_state":
     case "call.video_state":
+    case "screen.share.start":
+    case "screen.share.stop":
       return {
         type: envelope.type,
         requestId: envelope.requestId,

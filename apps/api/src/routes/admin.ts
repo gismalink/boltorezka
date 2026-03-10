@@ -4,7 +4,12 @@ import { db } from "../db.js";
 import { broadcastRealtimeEnvelope } from "../realtime-broadcast.js";
 import { loadCurrentUser, requireAuth, requireRole } from "../middleware/auth.js";
 import type { ServerSettingsRow, UserRow } from "../db.types.ts";
-import type { AdminUsersResponse, PromoteUserResponse, ServerAudioQualityResponse } from "../api-contract.types.ts";
+import type {
+  AdminUsersResponse,
+  PromoteUserResponse,
+  ServerAudioQualityResponse,
+  ServerChatImagePolicyResponse
+} from "../api-contract.types.ts";
 
 const promoteSchema = z.object({
   role: z.literal("admin").default("admin")
@@ -55,6 +60,33 @@ async function loadServerAudioQuality() {
   return "standard" as const;
 }
 
+function readIntEnv(name: string, fallback: number, min: number, max: number): number {
+  const raw = Number(process.env[name]);
+  if (!Number.isFinite(raw)) {
+    return fallback;
+  }
+
+  return Math.max(min, Math.min(max, Math.round(raw)));
+}
+
+function readFloatEnv(name: string, fallback: number, min: number, max: number): number {
+  const raw = Number(process.env[name]);
+  if (!Number.isFinite(raw)) {
+    return fallback;
+  }
+
+  const normalized = Math.max(min, Math.min(max, raw));
+  return Number(normalized.toFixed(2));
+}
+
+function loadServerChatImagePolicy(): ServerChatImagePolicyResponse {
+  return {
+    maxDataUrlLength: readIntEnv("CHAT_IMAGE_MAX_DATA_URL_LENGTH", 28000, 8000, 250000),
+    maxImageSide: readIntEnv("CHAT_IMAGE_MAX_SIDE", 1200, 256, 4096),
+    jpegQuality: readFloatEnv("CHAT_IMAGE_JPEG_QUALITY", 0.6, 0.3, 0.95)
+  };
+}
+
 export async function adminRoutes(fastify: FastifyInstance) {
   fastify.get(
     "/v1/admin/server/audio-quality",
@@ -65,6 +97,16 @@ export async function adminRoutes(fastify: FastifyInstance) {
       const audioQuality = await loadServerAudioQuality();
       const response: ServerAudioQualityResponse = { audioQuality };
       return response;
+    }
+  );
+
+  fastify.get(
+    "/v1/admin/server/chat-image-policy",
+    {
+      preHandler: [requireAuth]
+    },
+    async () => {
+      return loadServerChatImagePolicy();
     }
   );
 

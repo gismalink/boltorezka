@@ -13,11 +13,11 @@ services:
         TURN_LISTEN_IP_ARG=""
         TURN_RELAY_IP_ARG=""
         TURN_VERBOSE_ARG=""
-        if [ -n "${TURN_LISTEN_IP:-}" ]; then
-          TURN_LISTEN_IP_ARG="--listening-ip=${TURN_LISTEN_IP}"
+        if [ -n "$${TURN_LISTEN_IP:-}" ]; then
+          TURN_LISTEN_IP_ARG="--listening-ip=$${TURN_LISTEN_IP}"
         fi
-        if [ -n "${TURN_RELAY_IP:-}" ]; then
-          TURN_RELAY_IP_ARG="--relay-ip=${TURN_RELAY_IP}"
+        if [ -n "$${TURN_RELAY_IP:-}" ]; then
+          TURN_RELAY_IP_ARG="--relay-ip=$${TURN_RELAY_IP}"
         fi
         if [ "${TURN_VERBOSE:-1}" = "1" ]; then
           TURN_VERBOSE_ARG="--verbose"

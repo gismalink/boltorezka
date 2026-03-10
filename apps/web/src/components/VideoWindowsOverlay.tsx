@@ -1,3 +1,5 @@
+/// this component is for rendering draggable/resizable video windows for local and remote video streams, as an overlay on top of the main app UI. It is used in the "call" page when the user has enabled the "floating video windows" setting. The component is designed to be self-contained and not rely on any external state or context, other than the props passed to it. The parent component is responsible for managing the state of the video streams and camera enabled flags, as well as the visibility of the overlay.
+
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 
@@ -10,9 +12,14 @@ type VideoWindowsOverlayProps = {
   remoteVideoStreamsByUserId: Record<string, MediaStream>;
   remoteCameraEnabledByUserId: Record<string, boolean>;
   remoteLabelsByUserId: Record<string, string>;
+  screenShareStream: MediaStream | null;
+  screenShareOwnerLabel: string;
+  screenShareOwnerUserId: string;
+  screenShareActive: boolean;
   minWidth: number;
   maxWidth: number;
   visible: boolean;
+  speakingWindowIds: string[];
 };
 
 type TileLayout = {
@@ -28,6 +35,7 @@ type TileItem = {
   label: string;
   stream: MediaStream | null;
   muted: boolean;
+  isScreenShare?: boolean;
 };
 
 const TILE_GAP = 12;
@@ -55,18 +63,24 @@ function VideoTile({
   stream,
   muted,
   mirrored,
+  isScreenShare,
   layout,
+  zIndex,
   onDragStart,
-  onResizeStart
+  onResizeStart,
+  onOpenScreenFullscreen
 }: {
   id: string;
   label: string;
   stream: MediaStream | null;
   muted: boolean;
   mirrored: boolean;
+  isScreenShare?: boolean;
   layout: TileLayout;
+  zIndex: number;
   onDragStart: (id: string, event: ReactPointerEvent<HTMLDivElement>) => void;
   onResizeStart: (id: string, corner: ResizeCorner, event: ReactPointerEvent<HTMLButtonElement>) => void;
+  onOpenScreenFullscreen?: (payload: { id: string; label: string; stream: MediaStream | null; mirrored?: boolean }) => void;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -100,11 +114,33 @@ function VideoTile({
       style={{
         width: `${layout.width}px`,
         height: `${height}px`,
-        transform: `translate(${layout.x}px, ${layout.y}px)`
+        transform: `translate(${layout.x}px, ${layout.y}px)`,
+        zIndex
       }}
     >
       <div className="video-window-header">
         <span className="video-window-label">{label}</span>
+        {isScreenShare ? (
+          <button
+            type="button"
+            className="secondary icon-btn tiny"
+            onPointerDown={(event) => {
+              event.stopPropagation();
+            }}
+            onClick={(event) => {
+              event.stopPropagation();
+              onOpenScreenFullscreen?.({
+                id,
+                label,
+                stream,
+                mirrored
+              });
+            }}
+            aria-label="Open fullscreen"
+          >
+            <i className="bi bi-arrows-fullscreen" aria-hidden="true" />
+          </button>
+        ) : null}
       </div>
       {stream ? (
         <video
@@ -157,9 +193,14 @@ export function VideoWindowsOverlay({
   remoteVideoStreamsByUserId,
   remoteCameraEnabledByUserId,
   remoteLabelsByUserId,
+  screenShareStream,
+  screenShareOwnerLabel,
+  screenShareOwnerUserId,
+  screenShareActive,
   minWidth,
   maxWidth,
-  visible
+  visible,
+  speakingWindowIds
 }: VideoWindowsOverlayProps) {
   const effectiveMinWidth = Math.max(80, Math.min(480, Math.round(minWidth)));
   const effectiveMaxWidth = Math.max(effectiveMinWidth, Math.min(480, Math.round(maxWidth)));
@@ -167,8 +208,14 @@ export function VideoWindowsOverlay({
   const items = useMemo<TileItem[]>(() => {
     const next: TileItem[] = [];
     const normalizedCurrentUserId = String(currentUserId || "").trim();
+    const normalizedScreenShareOwnerUserId = String(screenShareOwnerUserId || "").trim();
+    const hasScreenShareOwner = Boolean(screenShareActive && normalizedScreenShareOwnerUserId);
 
-    if (localCameraEnabled) {
+    const shouldHideLocalCameraTile = hasScreenShareOwner
+      && Boolean(normalizedCurrentUserId)
+      && normalizedCurrentUserId === normalizedScreenShareOwnerUserId;
+
+    if (localCameraEnabled && !shouldHideLocalCameraTile) {
       next.push({
         id: "local",
         label: localUserLabel || t("video.you"),
@@ -182,6 +229,10 @@ export function VideoWindowsOverlay({
         return;
       }
 
+      if (hasScreenShareOwner && userId === normalizedScreenShareOwnerUserId) {
+        return;
+      }
+
       next.push({
         id: userId,
         label: remoteLabelsByUserId[userId] || userId,
@@ -190,10 +241,42 @@ export function VideoWindowsOverlay({
       });
     });
 
+    if (screenShareActive) {
+      next.push({
+        id: `screen-share:${screenShareOwnerUserId || "unknown"}`,
+        label: `${screenShareOwnerLabel || "Screen"} - Screen`,
+        stream: screenShareStream,
+        muted: true,
+        isScreenShare: true
+      });
+    }
+
     return next;
-  }, [currentUserId, localCameraEnabled, localVideoStream, localUserLabel, remoteCameraEnabledByUserId, remoteLabelsByUserId, remoteVideoStreamsByUserId, t]);
+  }, [
+    currentUserId,
+    localCameraEnabled,
+    localVideoStream,
+    localUserLabel,
+    remoteCameraEnabledByUserId,
+    remoteLabelsByUserId,
+    remoteVideoStreamsByUserId,
+    screenShareActive,
+    screenShareOwnerLabel,
+    screenShareOwnerUserId,
+    screenShareStream,
+    t
+  ]);
+
+  const [fullscreenScreenShare, setFullscreenScreenShare] = useState<{
+    id: string;
+    label: string;
+    stream: MediaStream | null;
+    mirrored?: boolean;
+  } | null>(null);
 
   const [layoutsById, setLayoutsById] = useState<Record<string, TileLayout>>({});
+  const [zOrderById, setZOrderById] = useState<Record<string, number>>({});
+  const zOrderCounterRef = useRef(0);
   const dragStateRef = useRef<
     | {
       id: string;
@@ -206,6 +289,17 @@ export function VideoWindowsOverlay({
     }
     | null
   >(null);
+
+  const speakingIdSet = useMemo(() => {
+    const next = new Set<string>();
+    speakingWindowIds.forEach((id) => {
+      const normalized = String(id || "").trim();
+      if (normalized) {
+        next.add(normalized);
+      }
+    });
+    return next;
+  }, [speakingWindowIds]);
 
   useEffect(() => {
     setLayoutsById((prev) => {
@@ -221,6 +315,38 @@ export function VideoWindowsOverlay({
       return next;
     });
   }, [items, effectiveMinWidth, effectiveMaxWidth]);
+
+  useEffect(() => {
+    setZOrderById((prev) => {
+      const next: Record<string, number> = {};
+      let nextCounter = zOrderCounterRef.current;
+
+      items.forEach((item, index) => {
+        const existing = prev[item.id];
+        if (typeof existing === "number") {
+          next[item.id] = existing;
+          nextCounter = Math.max(nextCounter, existing);
+          return;
+        }
+
+        nextCounter += 1;
+        // Keep deterministic initial order for newly appeared windows.
+        next[item.id] = nextCounter + index;
+      });
+
+      zOrderCounterRef.current = nextCounter + items.length;
+      return next;
+    });
+  }, [items]);
+
+  const bringToFront = (id: string) => {
+    zOrderCounterRef.current += 1;
+    const nextOrder = zOrderCounterRef.current;
+    setZOrderById((prev) => ({
+      ...prev,
+      [id]: nextOrder
+    }));
+  };
 
   useEffect(() => {
     const handlePointerMove = (event: PointerEvent) => {
@@ -297,8 +423,17 @@ export function VideoWindowsOverlay({
   }
 
   return (
-    <div className="video-windows-overlay" aria-label={t("video.overlayAria") }>
-      {items.map((item) => (
+    <div
+      className="video-windows-overlay"
+      aria-label={t("video.overlayAria") }
+      style={fullscreenScreenShare ? { pointerEvents: "auto" } : undefined}
+    >
+      {items.map((item) => {
+        if (fullscreenScreenShare && item.isScreenShare) {
+          return null;
+        }
+
+        return (
         <VideoTile
           key={item.id}
           id={item.id}
@@ -306,13 +441,16 @@ export function VideoWindowsOverlay({
           stream={item.stream}
           muted={item.muted}
           mirrored={item.id === "local"}
+          isScreenShare={item.isScreenShare}
           layout={layoutsById[item.id] || defaultLayout(0, effectiveMinWidth, effectiveMaxWidth)}
+          zIndex={(speakingIdSet.has(item.id) ? 2000 : 1000) + (zOrderById[item.id] || 0)}
           onDragStart={(id, event) => {
             const target = event.target as HTMLElement;
             if (target.closest(".video-window-resize")) {
               return;
             }
             const layout = layoutsById[id] || defaultLayout(0, effectiveMinWidth, effectiveMaxWidth);
+            bringToFront(id);
             dragStateRef.current = {
               id,
               mode: "drag",
@@ -325,6 +463,7 @@ export function VideoWindowsOverlay({
           }}
           onResizeStart={(id, corner, event) => {
             const layout = layoutsById[id] || defaultLayout(0, effectiveMinWidth, effectiveMaxWidth);
+            bringToFront(id);
             dragStateRef.current = {
               id,
               mode: "resize",
@@ -336,8 +475,46 @@ export function VideoWindowsOverlay({
             };
             event.preventDefault();
           }}
+          onOpenScreenFullscreen={(payload) => {
+            setFullscreenScreenShare(payload);
+          }}
         />
-      ))}
+        );
+      })}
+
+      {fullscreenScreenShare ? (
+        <div
+          className="chat-image-modal-overlay video-screen-fullscreen-overlay"
+          onClick={() => setFullscreenScreenShare(null)}
+          role="presentation"
+        >
+          <div className="chat-image-modal-panel video-screen-fullscreen-panel" onClick={(event) => event.stopPropagation()}>
+            <button
+              type="button"
+              className="secondary icon-btn chat-image-modal-close"
+              onClick={() => setFullscreenScreenShare(null)}
+              aria-label="Close fullscreen"
+            >
+              <i className="bi bi-x-lg" aria-hidden="true" />
+            </button>
+            <video
+              autoPlay
+              playsInline
+              muted
+              className="chat-image-modal-media video-screen-fullscreen-media"
+              ref={(element) => {
+                if (!element) {
+                  return;
+                }
+                if (element.srcObject !== fullscreenScreenShare.stream) {
+                  element.srcObject = fullscreenScreenShare.stream;
+                  void element.play().catch(() => undefined);
+                }
+              }}
+            />
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

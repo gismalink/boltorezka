@@ -252,6 +252,13 @@
   transform: none;
 }
 
+@media (hover: none), (pointer: coarse) {
+  .video-window-resize {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
 html,
 body,
 #root {

@@ -753,12 +753,13 @@ export async function roomsRoutes(fastify: FastifyInstance) {
         });
       }
 
-      const roomExists = await db.query<{ exists: boolean }>(
-        "SELECT EXISTS(SELECT 1 FROM rooms WHERE id = $1 AND is_archived = FALSE) AS exists",
+      const roomResult = await db.query<{ id: string; slug: string }>(
+        "SELECT id, slug FROM rooms WHERE id = $1 AND is_archived = FALSE",
         [roomId]
       );
 
-      if (!roomExists.rows[0]?.exists) {
+      const room = roomResult.rows[0];
+      if (!room) {
         return reply.code(404).send({
           error: "RoomNotFound",
           message: "Room does not exist"
@@ -775,10 +776,23 @@ export async function roomsRoutes(fastify: FastifyInstance) {
         [roomId]
       );
 
+      const deletedCount = deleted.rows[0]?.deleted_count || 0;
+
+      // Notify connected clients so active room views are cleared in realtime.
+      broadcastRealtimeEnvelope({
+        type: "chat.cleared",
+        payload: {
+          roomId,
+          roomSlug: room.slug,
+          deletedCount,
+          clearedAt: new Date().toISOString()
+        }
+      });
+
       return {
         ok: true,
         roomId,
-        deletedCount: deleted.rows[0]?.deleted_count || 0
+        deletedCount
       };
     }
   );

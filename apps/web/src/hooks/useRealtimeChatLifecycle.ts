@@ -74,6 +74,30 @@ type UseRealtimeChatLifecycleArgs = {
       updatedByUserId?: string | null;
     }
   ) => void;
+  onChatCleared?: (
+    payload: {
+      roomId?: string;
+      roomSlug?: string;
+      deletedCount?: number;
+      clearedAt?: string;
+    }
+  ) => void;
+  onAck?: (
+    payload: { requestId: string; eventType: string; meta: Record<string, unknown> }
+  ) => void;
+  onNack?: (
+    payload: { requestId: string; eventType: string; code: string; message: string }
+  ) => void;
+  onScreenShareState?: (
+    payload: {
+      roomId?: string;
+      roomSlug?: string;
+      active?: boolean;
+      ownerUserId?: string | null;
+      ownerUserName?: string | null;
+      ts?: string;
+    }
+  ) => void;
 };
 
 export function useRealtimeChatLifecycle({
@@ -103,13 +127,21 @@ export function useRealtimeChatLifecycle({
   onCallVideoState,
   onCallInitialState,
   onCallNack,
-  onAudioQualityUpdated
+  onAudioQualityUpdated,
+  onChatCleared,
+  onAck,
+  onNack,
+  onScreenShareState
 }: UseRealtimeChatLifecycleArgs) {
   const onCallMicStateRef = useRef(onCallMicState);
   const onCallVideoStateRef = useRef(onCallVideoState);
   const onCallInitialStateRef = useRef(onCallInitialState);
   const onCallNackRef = useRef(onCallNack);
   const onAudioQualityUpdatedRef = useRef(onAudioQualityUpdated);
+  const onChatClearedRef = useRef(onChatCleared);
+  const onAckRef = useRef(onAck);
+  const onNackRef = useRef(onNack);
+  const onScreenShareStateRef = useRef(onScreenShareState);
   const onRoomMediaTopologyRef = useRef(onRoomMediaTopology);
 
   useEffect(() => {
@@ -131,6 +163,22 @@ export function useRealtimeChatLifecycle({
   useEffect(() => {
     onAudioQualityUpdatedRef.current = onAudioQualityUpdated;
   }, [onAudioQualityUpdated]);
+
+  useEffect(() => {
+    onChatClearedRef.current = onChatCleared;
+  }, [onChatCleared]);
+
+  useEffect(() => {
+    onAckRef.current = onAck;
+  }, [onAck]);
+
+  useEffect(() => {
+    onNackRef.current = onNack;
+  }, [onNack]);
+
+  useEffect(() => {
+    onScreenShareStateRef.current = onScreenShareState;
+  }, [onScreenShareState]);
 
   useEffect(() => {
     onRoomMediaTopologyRef.current = onRoomMediaTopology;
@@ -174,7 +222,11 @@ export function useRealtimeChatLifecycle({
       onCallVideoState: (...args) => onCallVideoStateRef.current?.(...args),
       onCallInitialState: (...args) => onCallInitialStateRef.current?.(...args),
       onCallNack: (...args) => onCallNackRef.current?.(...args),
-      onAudioQualityUpdated: (...args) => onAudioQualityUpdatedRef.current?.(...args)
+      onAudioQualityUpdated: (...args) => onAudioQualityUpdatedRef.current?.(...args),
+      onChatCleared: (...args) => onChatClearedRef.current?.(...args),
+      onAck: (...args) => onAckRef.current?.(...args),
+      onNack: (...args) => onNackRef.current?.(...args),
+      onScreenShareState: (...args) => onScreenShareStateRef.current?.(...args)
     });
 
     const client = new RealtimeClient({

@@ -63,6 +63,30 @@ type WsMessageControllerOptions = {
       updatedByUserId?: string | null;
     }
   ) => void;
+  onChatCleared?: (
+    payload: {
+      roomId?: string;
+      roomSlug?: string;
+      deletedCount?: number;
+      clearedAt?: string;
+    }
+  ) => void;
+  onAck?: (
+    payload: { requestId: string; eventType: string; meta: Record<string, unknown> }
+  ) => void;
+  onNack?: (
+    payload: { requestId: string; eventType: string; code: string; message: string }
+  ) => void;
+  onScreenShareState?: (
+    payload: {
+      roomId?: string;
+      roomSlug?: string;
+      active?: boolean;
+      ownerUserId?: string | null;
+      ownerUserName?: string | null;
+      ts?: string;
+    }
+  ) => void;
 };
 
 export class WsMessageController {
@@ -77,10 +101,7 @@ export class WsMessageController {
   }
 
   private asMediaTopology(value: unknown): "livekit" {
-    const normalized = String(value || "").trim().toLowerCase();
-    if (normalized && normalized !== "livekit") {
-      this.options.pushLog(`non-livekit topology ignored: ${normalized}`);
-    }
+    void value;
     return "livekit";
   }
 
@@ -132,6 +153,14 @@ export class WsMessageController {
         id: String(message.payload?.messageId || requestId)
       });
     }
+
+    this.options.onAck?.({
+      requestId,
+      eventType,
+      meta: typeof message.payload === "object" && message.payload
+        ? (message.payload as Record<string, unknown>)
+        : {}
+    });
   }
 
   /**
@@ -158,6 +187,7 @@ export class WsMessageController {
     }
 
     this.options.pushLog(`nack ${eventType}: ${code} ${nackMessage}`);
+    this.options.onNack?.({ requestId, eventType, code, message: nackMessage });
     if (eventType.startsWith("call.")) {
       this.options.pushCallLog(`nack ${eventType}: ${code} ${nackMessage}`);
       this.options.onCallNack?.({ requestId, eventType, code, message: nackMessage });
@@ -226,6 +256,42 @@ export class WsMessageController {
     }
 
     this.options.setMessages((prev) => prev.filter((item) => item.id !== messageId));
+  }
+
+  private handleChatCleared(message: WsIncoming): void {
+    const roomId = this.asTrimmedString(message.payload?.roomId) || undefined;
+    const roomSlug = this.asTrimmedString(message.payload?.roomSlug) || undefined;
+    const deletedCountRaw = Number(message.payload?.deletedCount);
+    const deletedCount = Number.isFinite(deletedCountRaw) ? Math.max(0, Math.round(deletedCountRaw)) : undefined;
+    const clearedAt = this.asTrimmedString(message.payload?.clearedAt) || undefined;
+
+    this.options.onChatCleared?.({
+      roomId,
+      roomSlug,
+      deletedCount,
+      clearedAt
+    });
+  }
+
+  private handleScreenShareState(message: WsIncoming): void {
+    this.options.onScreenShareState?.({
+      roomId: this.asTrimmedString(message.payload?.roomId) || undefined,
+      roomSlug: this.asTrimmedString(message.payload?.roomSlug) || undefined,
+      active: typeof message.payload?.active === "boolean" ? message.payload.active : undefined,
+      ownerUserId:
+        typeof message.payload?.ownerUserId === "string"
+          ? this.asTrimmedString(message.payload.ownerUserId)
+          : message.payload?.ownerUserId === null
+            ? null
+            : undefined,
+      ownerUserName:
+        typeof message.payload?.ownerUserName === "string"
+          ? this.asTrimmedString(message.payload.ownerUserName)
+          : message.payload?.ownerUserName === null
+            ? null
+            : undefined,
+      ts: typeof message.payload?.ts === "string" ? message.payload.ts : undefined
+    });
   }
 
   private handleCallMicState(message: WsIncoming): void {
@@ -457,6 +523,12 @@ export class WsMessageController {
         return;
       case "chat.deleted":
         this.handleChatDeleted(message);
+        return;
+      case "chat.cleared":
+        this.handleChatCleared(message);
+        return;
+      case "screen.share.state":
+        this.handleScreenShareState(message);
         return;
       case "call.mic_state":
         this.handleCallMicState(message);
