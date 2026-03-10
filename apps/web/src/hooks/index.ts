@@ -21,6 +21,7 @@ export { useWsEventAcks } from "./realtime/useWsEventAcks";
 export { useRoomAdminActions } from "./rooms/useRoomAdminActions";
 export { useRoomMediaCapabilities } from "./rooms/useRoomMediaCapabilities";
 export { useRoomPresenceActions } from "./rooms/useRoomPresenceActions";
+export { useServerModerationActions } from "./rooms/useServerModerationActions";
 export { useRoomsDerived } from "./rooms/useRoomsDerived";
 export { useScreenWakeLock } from "./ui/useScreenWakeLock";
 export { useServerVideoPreview } from "./app/media/useServerVideoPreview";

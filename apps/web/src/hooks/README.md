@@ -27,6 +27,7 @@
 	- `rooms/useRoomsDerived.ts`
 	- `rooms/useRoomMediaCapabilities.ts`
 	- `rooms/useRoomPresenceActions.ts`
+	- `rooms/useServerModerationActions.ts`
 	- `rooms/useRoomAdminActions.ts`
 - `auth/*` - auth/profile session flows:
 	- `auth/useAuthProfileFlow.ts`

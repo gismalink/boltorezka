@@ -43,6 +43,7 @@ import {
   useRoomAdminActions,
   useRoomMediaCapabilities,
   useRoomPresenceActions,
+  useServerModerationActions,
   useRoomsDerived,
   useScreenWakeLock,
   useServerVideoPreview,
@@ -1125,45 +1126,20 @@ export function App() {
     });
   }, []);
 
-  const promote = async (userId: string) => {
-    if (!token || !canPromote) return;
-    await roomAdminController.promote(token, userId);
-  };
-
-  const demote = async (userId: string) => {
-    if (!token || !canPromote) return;
-    await roomAdminController.demote(token, userId);
-  };
-
-  const setUserBan = async (userId: string, banned: boolean) => {
-    if (!token || !canPromote) return;
-    await roomAdminController.setBan(token, userId, banned);
-  };
-
-  const setServerAudioQualityValue = async (value: AudioQuality) => {
-    setServerAudioQuality(value);
-
-    if (!token || !canManageAudioQuality) {
-      return;
-    }
-
-    setServerAudioQualitySaving(true);
-    try {
-      const response = await api.updateServerAudioQuality(token, value);
-      setServerAudioQuality(response.audioQuality);
-      pushLog(`server audio quality updated: ${response.audioQuality}`);
-    } catch (error) {
-      pushLog(`server audio quality update failed: ${(error as Error).message}`);
-      try {
-        const current = await api.serverAudioQuality(token);
-        setServerAudioQuality(current.audioQuality);
-      } catch {
-        setServerAudioQuality("standard");
-      }
-    } finally {
-      setServerAudioQualitySaving(false);
-    }
-  };
+  const {
+    promote,
+    demote,
+    setUserBan,
+    setServerAudioQualityValue
+  } = useServerModerationActions({
+    token,
+    canPromote,
+    canManageAudioQuality,
+    roomAdminController,
+    pushLog,
+    setServerAudioQuality,
+    setServerAudioQualitySaving
+  });
 
   const {
     uncategorizedRooms,
