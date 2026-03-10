@@ -1100,6 +1100,18 @@ export function App() {
       };
     });
 
+    if (typeof payload.audioMuted === "boolean") {
+      setVoiceInitialAudioOutputMutedByUserIdInCurrentRoom((prev) => {
+        if (prev[fromUserId] === payload.audioMuted) {
+          return prev;
+        }
+        return {
+          ...prev,
+          [fromUserId]: payload.audioMuted
+        };
+      });
+    }
+
   }, []);
 
   const handleIncomingInitialCallState = useCallback((payload: {
@@ -1136,7 +1148,7 @@ export function App() {
       const micMuted = participant?.mic?.muted === true;
       const micSpeaking = participant?.mic?.speaking === true;
       nextMicState[userId] = micMuted ? "muted" : micSpeaking ? "speaking" : "silent";
-      nextAudioMutedState[userId] = false;
+      nextAudioMutedState[userId] = participant?.mic?.audioMuted === true;
       nextCameraState[userId] = participant?.video?.localVideoEnabled === true;
     });
 
@@ -2004,7 +2016,8 @@ export function App() {
       "call.mic_state",
       {
         muted: micMuted,
-        speaking
+        speaking,
+        audioMuted
       },
       { maxRetries: 1 }
     );
@@ -2012,7 +2025,7 @@ export function App() {
     if (requestId) {
       lastBroadcastMicStateRef.current = signature;
     }
-  }, [currentRoomSupportsRtc, micMuted, micTestLevel, roomVoiceConnected, sendWsEvent]);
+  }, [audioMuted, currentRoomSupportsRtc, micMuted, micTestLevel, roomVoiceConnected, sendWsEvent]);
 
   useEffect(() => {
     if (!isLocalScreenSharing || !localScreenShareStream || !roomSlug) {
