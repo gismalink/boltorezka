@@ -117,7 +117,7 @@ export function App() {
   const [editingRoomCategoryId, setEditingRoomCategoryId] = useState<string>("none");
   const [editingRoomAudioQualitySetting, setEditingRoomAudioQualitySetting] = useState<ChannelAudioQualitySetting>("server_default");
   const [micMuted, setMicMuted] = useState(true);
-  const [audioMuted, setAudioMuted] = useState(false);
+  const [audioMuted, setAudioMuted] = useState<boolean>(() => localStorage.getItem("boltorezka_audio_muted") === "1");
   const [audioOutputMenuOpen, setAudioOutputMenuOpen] = useState(false);
   const [voiceSettingsOpen, setVoiceSettingsOpen] = useState(false);
   const [userSettingsOpen, setUserSettingsOpen] = useState(false);
@@ -546,6 +546,10 @@ export function App() {
   useEffect(() => {
     localStorage.setItem("boltorezka_selected_input_profile", selectedInputProfile);
   }, [selectedInputProfile]);
+
+  useEffect(() => {
+    localStorage.setItem("boltorezka_audio_muted", audioMuted ? "1" : "0");
+  }, [audioMuted]);
 
   useEffect(() => {
     localStorage.setItem("boltorezka_server_video_effect_type", serverVideoEffectType);
@@ -1096,18 +1100,6 @@ export function App() {
       };
     });
 
-    if (typeof payload.audioMuted === "boolean") {
-      const nextAudioMuted = payload.audioMuted;
-      setVoiceInitialAudioOutputMutedByUserIdInCurrentRoom((prev) => {
-        if (prev[fromUserId] === nextAudioMuted) {
-          return prev;
-        }
-        return {
-          ...prev,
-          [fromUserId]: nextAudioMuted
-        };
-      });
-    }
   }, []);
 
   const handleIncomingInitialCallState = useCallback((payload: {
@@ -1144,7 +1136,7 @@ export function App() {
       const micMuted = participant?.mic?.muted === true;
       const micSpeaking = participant?.mic?.speaking === true;
       nextMicState[userId] = micMuted ? "muted" : micSpeaking ? "speaking" : "silent";
-      nextAudioMutedState[userId] = participant?.mic?.audioMuted === true;
+      nextAudioMutedState[userId] = false;
       nextCameraState[userId] = participant?.video?.localVideoEnabled === true;
     });
 
@@ -1993,7 +1985,7 @@ export function App() {
     }
 
     const speaking = !micMuted && micTestLevel >= 0.055;
-    const signature = `${micMuted ? 1 : 0}:${audioMuted ? 1 : 0}:${speaking ? 1 : 0}`;
+    const signature = `${micMuted ? 1 : 0}:${speaking ? 1 : 0}`;
     if (lastBroadcastMicStateRef.current === signature) {
       return;
     }
@@ -2002,8 +1994,7 @@ export function App() {
       "call.mic_state",
       {
         muted: micMuted,
-        speaking,
-        audioMuted
+        speaking
       },
       { maxRetries: 1 }
     );
@@ -2011,7 +2002,7 @@ export function App() {
     if (requestId) {
       lastBroadcastMicStateRef.current = signature;
     }
-  }, [audioMuted, currentRoomSupportsRtc, micMuted, micTestLevel, roomVoiceConnected, sendWsEvent]);
+  }, [currentRoomSupportsRtc, micMuted, micTestLevel, roomVoiceConnected, sendWsEvent]);
 
   useEffect(() => {
     if (!isLocalScreenSharing || !localScreenShareStream || !roomSlug) {
@@ -2094,13 +2085,7 @@ export function App() {
       userSettingsRef={userSettingsRef}
       onToggleMic={handleToggleMic}
       onToggleAudio={() => {
-        setAudioMuted((value) => {
-          const nextMuted = !value;
-          if (nextMuted) {
-            setMicMuted(true);
-          }
-          return nextMuted;
-        });
+        setAudioMuted((value) => !value);
       }}
       onToggleCamera={() => {
         if (allowVideoStreaming && !cameraEnabled) {
@@ -2200,13 +2185,7 @@ export function App() {
       userSettingsRef={userSettingsRef}
       onToggleMic={handleToggleMic}
       onToggleAudio={() => {
-        setAudioMuted((value) => {
-          const nextMuted = !value;
-          if (nextMuted) {
-            setMicMuted(true);
-          }
-          return nextMuted;
-        });
+        setAudioMuted((value) => !value);
       }}
       onToggleCamera={() => {
         if (allowVideoStreaming && !cameraEnabled) {
