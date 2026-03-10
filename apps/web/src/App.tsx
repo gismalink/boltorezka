@@ -34,6 +34,7 @@ import {
   useRealtimeSoundEffects,
   useRealtimeChatLifecycle,
   useRealtimeIncomingCallState,
+  useScreenShareOrchestrator,
   useRoomAdminActions,
   useRoomMediaCapabilities,
   useRoomsDerived,
@@ -513,64 +514,33 @@ export function App() {
     return Array.from(ids);
   }, [remoteSpeakingPeerUserIds, user?.id, voiceMicStateByUserIdInCurrentRoom]);
 
-  const currentRoomScreenShareOwner = useMemo(() => {
-    return screenShareOwnerByRoomSlug[roomSlug] || { userId: null, userName: null };
-  }, [screenShareOwnerByRoomSlug, roomSlug]);
-
-  const normalizedCurrentUserId = useMemo(() => String(user?.id || "").trim(), [user?.id]);
-  const normalizedScreenShareOwnerUserId = useMemo(
-    () => String(currentRoomScreenShareOwner.userId || "").trim(),
-    [currentRoomScreenShareOwner.userId]
-  );
-  const isCurrentUserScreenShareOwner = Boolean(
-    normalizedCurrentUserId
-    && normalizedScreenShareOwnerUserId
-    && normalizedCurrentUserId === normalizedScreenShareOwnerUserId
-  );
-  const canToggleScreenShare = Boolean(
-    currentRoomSupportsScreenShare
-    && roomVoiceConnected
-    && (!normalizedScreenShareOwnerUserId || isCurrentUserScreenShareOwner)
-  );
-
-  const activeScreenShare = useMemo(() => {
-    const localUserId = String(user?.id || "").trim();
-    if (isLocalScreenSharing && localScreenShareStream) {
-      return {
-        stream: localScreenShareStream,
-        ownerUserId: localUserId || "local",
-        ownerLabel: user?.name || t("video.you"),
-        local: true
-      };
-    }
-
-    const ownerUserId = String(currentRoomScreenShareOwner.userId || "").trim();
-    if (!ownerUserId) {
-      return null;
-    }
-
-    const stream = remoteScreenShareStreamsByUserId[ownerUserId] || null;
-    if (!stream) {
-      return null;
-    }
-
-    return {
-      stream,
-      ownerUserId,
-      ownerLabel: currentRoomScreenShareOwner.userName || remoteVideoLabelsByUserId[ownerUserId] || ownerUserId,
-      local: false
-    };
-  }, [
-    currentRoomScreenShareOwner.userId,
-    currentRoomScreenShareOwner.userName,
+  const {
+    currentRoomScreenShareOwner,
+    isCurrentUserScreenShareOwner,
+    canToggleScreenShare,
+    activeScreenShare,
+    handleIncomingScreenShareState,
+    handleToggleScreenShare
+  } = useScreenShareOrchestrator({
+    hasSessionToken: Boolean(token),
+    roomSlug,
+    currentRoomKind,
+    currentRoomSupportsScreenShare,
+    roomVoiceConnected,
+    userId: user?.id || "",
+    userName: user?.name || "",
+    t,
+    pushToast,
+    screenShareOwnerByRoomSlug,
+    setScreenShareOwnerByRoomSlug,
     isLocalScreenSharing,
     localScreenShareStream,
     remoteScreenShareStreamsByUserId,
     remoteVideoLabelsByUserId,
-    t,
-    user?.id,
-    user?.name
-  ]);
+    startLocalScreenShare,
+    stopLocalScreenShare,
+    sendWsEventAwaitAck
+  });
 
   const effectiveVoiceCameraEnabledByUserIdInCurrentRoom = useMemo(() => {
     const map: Record<string, boolean> = {};
@@ -893,20 +863,7 @@ export function App() {
       pendingWsRequestResolversRef.current.delete(requestId);
       pending.reject(new Error(`${eventType}:${code}:${message}`));
     },
-    onScreenShareState: (payload) => {
-      const targetRoomSlug = String(payload.roomSlug || "").trim();
-      if (!targetRoomSlug) {
-        return;
-      }
-
-      setScreenShareOwnerByRoomSlug((prev) => ({
-        ...prev,
-        [targetRoomSlug]: {
-          userId: payload.active ? (payload.ownerUserId ?? null) : null,
-          userName: payload.active ? (payload.ownerUserName ?? null) : null
-        }
-      }));
-    },
+    onScreenShareState: handleIncomingScreenShareState,
     onChatCleared: (payload) => {
       const targetRoomSlug = String(payload.roomSlug || "").trim();
       const activeRoomSlug = roomSlugRef.current;
@@ -1283,69 +1240,6 @@ export function App() {
     });
   }, []);
 
-  const handleToggleScreenShare = useCallback(async () => {
-    if (!token || !roomSlug || currentRoomKind === "text" || !roomVoiceConnected) {
-      pushToast(t("call.autoWaiting"));
-      return;
-    }
-
-    const localUserId = String(user?.id || "").trim();
-    const ownerUserId = String(currentRoomScreenShareOwner.userId || "").trim();
-
-    if (isLocalScreenSharing) {
-      try {
-        await stopLocalScreenShare();
-      } finally {
-        try {
-          await sendWsEventAwaitAck("screen.share.stop", { roomSlug }, { maxRetries: 1 });
-        } catch {
-          return;
-        }
-      }
-      return;
-    }
-
-    if (ownerUserId && ownerUserId !== localUserId) {
-      const ownerName = currentRoomScreenShareOwner.userName || ownerUserId;
-      pushToast(`Screen share is already active: ${ownerName}`);
-      return;
-    }
-
-    try {
-      await sendWsEventAwaitAck("screen.share.start", { roomSlug }, { maxRetries: 1 });
-      await startLocalScreenShare();
-    } catch (error) {
-      const text = error instanceof Error ? error.message : String(error || "");
-      if (text.includes("ScreenShareAlreadyActive")) {
-        pushToast("Screen share is already active in this room");
-      } else if (text.includes("NotAllowedError") || text.includes("Permission denied")) {
-        pushToast("Screen share permission denied");
-      } else {
-        pushToast("Failed to start screen share");
-      }
-
-      try {
-        await sendWsEventAwaitAck("screen.share.stop", { roomSlug }, { maxRetries: 1 });
-      } catch {
-        return;
-      }
-    }
-  }, [
-    currentRoomScreenShareOwner.userId,
-    currentRoomScreenShareOwner.userName,
-    currentRoomKind,
-    isLocalScreenSharing,
-    roomSlug,
-    roomVoiceConnected,
-    sendWsEventAwaitAck,
-    startLocalScreenShare,
-    stopLocalScreenShare,
-    t,
-    token,
-    user?.id,
-    pushToast
-  ]);
-
   const promote = async (userId: string) => {
     if (!token || !canPromote) return;
     await roomAdminController.promote(token, userId);
@@ -1498,36 +1392,6 @@ export function App() {
   });
 
   useScreenWakeLock(Boolean(user && roomSlug && currentRoomSupportsRtc && roomVoiceConnected));
-
-  useEffect(() => {
-    if (!isLocalScreenSharing || !localScreenShareStream || !roomSlug) {
-      return;
-    }
-
-    const track = localScreenShareStream.getVideoTracks()[0];
-    if (!track) {
-      return;
-    }
-
-    const onEnded = () => {
-      void stopLocalScreenShare();
-      void sendWsEventAwaitAck("screen.share.stop", { roomSlug }, { maxRetries: 1 }).catch(() => undefined);
-    };
-
-    track.addEventListener("ended", onEnded);
-    return () => {
-      track.removeEventListener("ended", onEnded);
-    };
-  }, [isLocalScreenSharing, localScreenShareStream, roomSlug, sendWsEventAwaitAck, stopLocalScreenShare]);
-
-  useEffect(() => {
-    if (roomVoiceConnected || !isLocalScreenSharing || !roomSlug) {
-      return;
-    }
-
-    void stopLocalScreenShare();
-    void sendWsEventAwaitAck("screen.share.stop", { roomSlug }, { maxRetries: 1 }).catch(() => undefined);
-  }, [isLocalScreenSharing, roomSlug, roomVoiceConnected, sendWsEventAwaitAck, stopLocalScreenShare]);
 
   const userDockNode = user ? (
     <UserDock
