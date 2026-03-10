@@ -68,6 +68,13 @@ export type PresenceMember = {
   userName: string;
 };
 
+export type RoomMemberPreference = {
+  targetUserId: string;
+  volume: number;
+  note: string;
+  updatedAt: string;
+};
+
 export type RoomMessagesResponse = {
   room: Room;
   messages: Message[];

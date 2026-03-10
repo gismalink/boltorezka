@@ -1,5 +1,5 @@
-import { useRef } from "react";
-import type { ChannelAudioQualitySetting, Room, RoomKind } from "../../domain";
+import { type DragEvent, useEffect, useRef, useState } from "react";
+import type { ChannelAudioQualitySetting, Room, RoomKind, RoomMemberPreference } from "../../domain";
 import { PopupPortal } from "../PopupPortal";
 import type { RoomsPanelProps } from "../types";
 import type { RoomMember } from "./roomMembers";
@@ -37,6 +37,9 @@ type RoomRowProps = Pick<
   | "onOpenChannelSettingsPopup"
   | "onJoinRoom"
   | "onKickRoomMember"
+  | "onMoveRoomMember"
+  | "onSaveMemberPreference"
+  | "memberPreferencesByUserId"
 > & {
   room: Room;
   roomMembers: RoomMember[];
@@ -71,6 +74,9 @@ export function RoomRow({
   onOpenChannelSettingsPopup,
   onJoinRoom,
   onKickRoomMember,
+  onMoveRoomMember,
+  onSaveMemberPreference,
+  memberPreferencesByUserId,
   room,
   roomMembers,
   normalizedCurrentUserId,
@@ -78,20 +84,95 @@ export function RoomRow({
   onRequestArchiveChannel
 }: RoomRowProps) {
   const channelSettingsAnchorRef = useRef<HTMLDivElement>(null);
+  const [memberMenuOpenKey, setMemberMenuOpenKey] = useState<string | null>(null);
+  const [memberPreferenceDrafts, setMemberPreferenceDrafts] = useState<Record<string, { volume: number; note: string }>>({});
+  const [dropTargetActive, setDropTargetActive] = useState(false);
   const roomSupportsRtc = room.kind !== "text";
   const roomSupportsVideo = room.kind === "text_voice_video";
   const roomHasVoiceState = roomSupportsRtc && room.slug === roomSlug;
 
+  useEffect(() => {
+    const onPointerDown = (event: MouseEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (!target) {
+        return;
+      }
+      if (target.closest(".channel-member-settings-anchor")) {
+        return;
+      }
+      setMemberMenuOpenKey(null);
+    };
+
+    window.addEventListener("pointerdown", onPointerDown);
+    return () => window.removeEventListener("pointerdown", onPointerDown);
+  }, []);
+
+  const startDragMember = (event: DragEvent, userId: string, userName: string) => {
+    event.dataTransfer.setData("application/x-boltorezka-member", JSON.stringify({
+      userId,
+      userName,
+      fromRoomSlug: room.slug
+    }));
+    event.dataTransfer.effectAllowed = "move";
+  };
+
+  const onRoomDragOver = (event: DragEvent) => {
+    if (!canKickMembers) {
+      return;
+    }
+
+    const hasPayload = Array.from(event.dataTransfer.types).includes("application/x-boltorezka-member");
+    if (!hasPayload) {
+      return;
+    }
+
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+    setDropTargetActive(true);
+  };
+
+  const onRoomDrop = (event: DragEvent) => {
+    event.preventDefault();
+    setDropTargetActive(false);
+
+    if (!canKickMembers) {
+      return;
+    }
+
+    const payload = event.dataTransfer.getData("application/x-boltorezka-member");
+    if (!payload) {
+      return;
+    }
+
+    try {
+      const parsed = JSON.parse(payload) as { userId?: string; userName?: string; fromRoomSlug?: string };
+      const targetUserId = String(parsed.userId || "").trim();
+      const targetUserName = String(parsed.userName || "").trim();
+      const fromRoomSlug = String(parsed.fromRoomSlug || "").trim();
+
+      if (!targetUserId || !fromRoomSlug || fromRoomSlug === room.slug) {
+        return;
+      }
+
+      onMoveRoomMember(fromRoomSlug, room.slug, targetUserId, targetUserName || targetUserId);
+    } catch {
+      return;
+    }
+  };
+
   return (
     <div className="channel-row relative grid grid-cols-[1fr_auto] items-center gap-2">
       <button
-        className={`secondary room-btn ${roomSlug === room.slug ? "room-btn-active" : "room-btn-interactive"}`}
+        className={`secondary room-btn ${roomSlug === room.slug ? "room-btn-active" : "room-btn-interactive"} ${dropTargetActive ? "room-btn-drop-target" : ""}`}
         onClick={() => {
           if (roomSlug !== room.slug) {
             onJoinRoom(room.slug);
           }
         }}
-        disabled={roomSlug === room.slug}
+        onDragOver={onRoomDragOver}
+        onDragEnter={onRoomDragOver}
+        onDragLeave={() => setDropTargetActive(false)}
+        onDrop={onRoomDrop}
       >
         <i className={`bi ${ROOM_KIND_ICON_CLASS[room.kind]}`} aria-hidden="true" />
         <span>{room.title}</span>
@@ -290,11 +371,28 @@ export function RoomRow({
               ? t("rooms.memberStatus.self.camera.on")
               : t("rooms.memberStatus.self.camera.off");
             const micIconStateClass = micState === "muted" ? "channel-member-mic-icon-muted" : "";
+            const memberPreference = member.userId
+              ? (memberPreferencesByUserId[member.userId] || null)
+              : null;
+            const memberDraft = member.userId
+              ? memberPreferenceDrafts[member.userId]
+              : null;
+            const volumeValue = Math.max(0, Math.min(100, Number(memberDraft?.volume ?? memberPreference?.volume ?? 100)));
+            const noteValue = String(memberDraft?.note ?? memberPreference?.note ?? "");
+            const menuKey = `${room.slug}:${member.userId || member.userName}`;
+            const canManageMember = Boolean(member.userId) && !isCurrentUser;
 
             return (
               <li
                 key={`${room.id}-${member.userId || member.userName}`}
                 className={`channel-member-item grid min-h-[22px] grid-cols-[auto_1fr_auto_auto] items-center gap-1.5 ${isCurrentUser ? "channel-member-item-current" : ""} ${isVoiceActive ? "channel-member-item-voice-active" : ""}`}
+                draggable={Boolean(canKickMembers && canManageMember)}
+                onDragStart={(event) => {
+                  if (!member.userId) {
+                    return;
+                  }
+                  startDragMember(event, member.userId, member.userName);
+                }}
               >
                 <span className="channel-member-avatar">{(member.userName || "U").charAt(0).toUpperCase()}</span>
                 <span className="channel-member-name">{member.userName}</span>
@@ -320,16 +418,99 @@ export function RoomRow({
                     </span>
                   ) : null}
                 </span>
-                {canKickMembers && room.slug && member.userId && !isCurrentUser ? (
-                  <button
-                    type="button"
-                    className="secondary icon-btn tiny channel-member-kick-btn"
-                    aria-label={t("rooms.kickFromChannel")}
-                    data-tooltip={t("rooms.kickFromChannel")}
-                    onClick={() => onKickRoomMember(room.slug, member.userId, member.userName)}
-                  >
-                    <i className="bi bi-person-x" aria-hidden="true" />
-                  </button>
+                {canManageMember ? (
+                  <div className="channel-member-settings-anchor relative">
+                    <button
+                      type="button"
+                      className="secondary icon-btn tiny channel-member-settings-btn"
+                      aria-label={t("rooms.memberSettings")}
+                      data-tooltip={t("rooms.memberSettings")}
+                      onClick={() => {
+                        if (!member.userId) {
+                          return;
+                        }
+                        setMemberPreferenceDrafts((prev) => ({
+                          ...prev,
+                          [member.userId as string]: {
+                            volume: volumeValue,
+                            note: noteValue
+                          }
+                        }));
+                        setMemberMenuOpenKey((current) => current === menuKey ? null : menuKey);
+                      }}
+                    >
+                      <i className="bi bi-gear" aria-hidden="true" />
+                    </button>
+                    {memberMenuOpenKey === menuKey && member.userId ? (
+                      <div className="settings-popup channel-member-settings-popup">
+                        <div className="grid gap-3">
+                          <div className="subheading">{member.userName}</div>
+                          <label className="slider-label grid gap-1.5">
+                            {t("rooms.personalVolume")}: {volumeValue}%
+                            <input
+                              type="range"
+                              min={0}
+                              max={100}
+                              value={volumeValue}
+                              onChange={(event) => {
+                                const nextVolume = Math.max(0, Math.min(100, Number(event.target.value) || 0));
+                                setMemberPreferenceDrafts((prev) => ({
+                                  ...prev,
+                                  [member.userId as string]: {
+                                    volume: nextVolume,
+                                    note: noteValue
+                                  }
+                                }));
+                              }}
+                            />
+                          </label>
+                          <label className="grid gap-1.5">
+                            <span className="subheading">{t("rooms.memberNote")}</span>
+                            <input
+                              type="text"
+                              maxLength={32}
+                              value={noteValue}
+                              onChange={(event) => {
+                                const nextNote = event.target.value.slice(0, 32);
+                                setMemberPreferenceDrafts((prev) => ({
+                                  ...prev,
+                                  [member.userId as string]: {
+                                    volume: volumeValue,
+                                    note: nextNote
+                                  }
+                                }));
+                              }}
+                              placeholder={t("rooms.memberNotePlaceholder")}
+                            />
+                          </label>
+                          <button
+                            type="button"
+                            className="secondary"
+                            onClick={() => {
+                              void onSaveMemberPreference(member.userId as string, {
+                                volume: volumeValue,
+                                note: noteValue
+                              });
+                            }}
+                          >
+                            <i className="bi bi-save" aria-hidden="true" /> {t("rooms.save")}
+                          </button>
+                          {canKickMembers ? (
+                            <button
+                              type="button"
+                              className="secondary delete-action-btn"
+                              onClick={() => {
+                                onKickRoomMember(room.slug, member.userId as string, member.userName);
+                                setMemberMenuOpenKey(null);
+                              }}
+                            >
+                              <i className="bi bi-person-x" aria-hidden="true" /> {t("rooms.kickFromChannel")}
+                            </button>
+                          ) : null}
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
                 ) : null}
               </li>
             );

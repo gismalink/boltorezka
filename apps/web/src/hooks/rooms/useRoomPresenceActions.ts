@@ -84,9 +84,33 @@ export function useRoomPresenceActions({
     pushLog(`kick requested: ${targetUserName || targetUserId} from #${targetRoomSlug}`);
   }, [canCreateRooms, pushLog, pushToast, sendWsEvent, t]);
 
+  const moveRoomMember = useCallback((fromRoomSlug: string, toRoomSlug: string, targetUserId: string, targetUserName: string) => {
+    if (!fromRoomSlug || !toRoomSlug || !targetUserId || fromRoomSlug === toRoomSlug || !canCreateRooms) {
+      return;
+    }
+
+    const requestId = sendWsEvent(
+      "room.move_member",
+      {
+        fromRoomSlug,
+        toRoomSlug,
+        targetUserId
+      },
+      { maxRetries: 1 }
+    );
+
+    if (!requestId) {
+      pushToast(t("toast.serverError"));
+      return;
+    }
+
+    pushLog(`move requested: ${targetUserName || targetUserId} #${fromRoomSlug} -> #${toRoomSlug}`);
+  }, [canCreateRooms, pushLog, pushToast, sendWsEvent, t]);
+
   return {
     joinRoom,
     leaveRoom,
-    kickRoomMember
+    kickRoomMember,
+    moveRoomMember
   };
 }

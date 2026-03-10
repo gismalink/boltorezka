@@ -37,6 +37,7 @@ type UseLivekitVoiceRuntimeArgs = {
   selectedInputId: string;
   selectedInputProfile: "noise_reduction" | "studio" | "custom";
   selectedOutputId: string;
+  memberVolumeByUserId: Record<string, number>;
   selectedVideoInputId: string;
   micMuted: boolean;
   audioMuted: boolean;
@@ -127,6 +128,7 @@ export function useLivekitVoiceRuntime({
   selectedInputId,
   selectedInputProfile,
   selectedOutputId,
+  memberVolumeByUserId,
   selectedVideoInputId,
   micMuted,
   audioMuted,
@@ -195,9 +197,11 @@ export function useLivekitVoiceRuntime({
   }, [selectedInputId, selectedInputProfile]);
 
   const applyAudioOutputSettings = useCallback(() => {
-    remoteAudioElementsRef.current.forEach((element) => {
+    remoteAudioElementsRef.current.forEach((element, participantId) => {
+      const peerVolume = Math.max(0, Math.min(100, Number(memberVolumeByUserId[participantId] ?? 100)));
+      const mixedVolume = (Math.max(0, Math.min(100, outputVolume)) / 100) * (peerVolume / 100);
       element.muted = audioMuted;
-      element.volume = Math.max(0, Math.min(1, outputVolume / 100));
+      element.volume = Math.max(0, Math.min(1, mixedVolume));
       if (
         selectedOutputId
         && selectedOutputId !== "default"
@@ -208,7 +212,7 @@ export function useLivekitVoiceRuntime({
         });
       }
     });
-  }, [audioMuted, outputVolume, selectedOutputId]);
+  }, [audioMuted, memberVolumeByUserId, outputVolume, selectedOutputId]);
 
   const attachRemoteAudioTrack = useCallback((participantId: string, track: RemoteAudioTrack) => {
     const existing = remoteAudioElementsRef.current.get(participantId);

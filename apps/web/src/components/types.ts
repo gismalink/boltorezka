@@ -1,6 +1,6 @@
 import type { FormEvent, RefObject } from "react";
 import type { Lang, TranslateFn } from "../i18n";
-import type { ChannelAudioQualitySetting, PresenceMember, Room, RoomKind, RoomsTreeResponse, User } from "../domain";
+import type { ChannelAudioQualitySetting, PresenceMember, Room, RoomKind, RoomMemberPreference, RoomsTreeResponse, User } from "../domain";
 import type { VoiceMediaStatusSummary } from "../hooks/rtc/voiceCallTypes";
 
 export type InputProfile = "noise_reduction" | "studio" | "custom";
@@ -102,6 +102,7 @@ export type RoomsPanelProps = {
   currentUserId: string;
   liveRoomMembersBySlug: Record<string, string[]>;
   liveRoomMemberDetailsBySlug: Record<string, PresenceMember[]>;
+  memberPreferencesByUserId: Record<string, RoomMemberPreference>;
   voiceMicStateByUserIdInCurrentRoom: Record<string, "muted" | "silent" | "speaking">;
   voiceCameraEnabledByUserIdInCurrentRoom: Record<string, boolean>;
   voiceAudioOutputMutedByUserIdInCurrentRoom: Record<string, boolean>;
@@ -154,4 +155,6 @@ export type RoomsPanelProps = {
   onToggleCategoryCollapsed: (categoryId: string) => void;
   onJoinRoom: (slug: string) => void;
   onKickRoomMember: (roomSlug: string, userId: string, userName: string) => void;
+  onMoveRoomMember: (fromRoomSlug: string, toRoomSlug: string, userId: string, userName: string) => void;
+  onSaveMemberPreference: (targetUserId: string, input: { volume: number; note: string }) => Promise<void>;
 };

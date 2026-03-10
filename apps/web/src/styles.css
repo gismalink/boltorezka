@@ -842,10 +842,36 @@ pre {
   min-width: 22px;
 }
 
+.channel-member-settings-btn {
+  opacity: 0;
+  pointer-events: none;
+  min-height: 22px;
+  min-width: 22px;
+}
+
 .channel-member-item:hover .channel-member-kick-btn,
 .channel-member-item:focus-within .channel-member-kick-btn {
   opacity: 1;
   pointer-events: auto;
+}
+
+.channel-member-item:hover .channel-member-settings-btn,
+.channel-member-item:focus-within .channel-member-settings-btn {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.channel-member-settings-popup {
+  position: absolute;
+  right: 0;
+  top: calc(100% + var(--offset-menu));
+  width: min(92vw, 280px);
+  z-index: 40;
+}
+
+.room-btn-drop-target {
+  border-color: color-mix(in srgb, var(--pixel-neon-cyan) 75%, var(--pixel-border) 25%);
+  background: color-mix(in srgb, var(--pixel-panel) 70%, var(--pixel-neon-cyan) 30%);
 }
 
 .channel-row:hover .channel-action-btn,

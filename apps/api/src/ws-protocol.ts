@@ -96,6 +96,7 @@ export function asKnownWsIncomingEnvelope(
     case "room.join":
     case "room.leave":
     case "room.kick":
+    case "room.move_member":
     case "chat.send":
     case "chat.edit":
     case "chat.delete":

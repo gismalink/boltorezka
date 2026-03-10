@@ -61,6 +61,7 @@ import type {
   Message,
   MessagesCursor,
   PresenceMember,
+  RoomMemberPreference,
   Room,
   RoomKind,
   RoomsTreeResponse,
@@ -102,6 +103,7 @@ export function App() {
   const [lastCallPeer, setLastCallPeer] = useState("");
   const [roomsPresenceBySlug, setRoomsPresenceBySlug] = useState<Record<string, string[]>>({});
   const [roomsPresenceDetailsBySlug, setRoomsPresenceDetailsBySlug] = useState<Record<string, PresenceMember[]>>({});
+  const [memberPreferencesByUserId, setMemberPreferencesByUserId] = useState<Record<string, RoomMemberPreference>>({});
   const [roomMediaTopologyBySlug, setRoomMediaTopologyBySlug] = useState<Record<string, "livekit">>({});
   const [telemetrySummary, setTelemetrySummary] = useState<TelemetrySummary | null>(null);
   const [wsState, setWsState] = useState<"disconnected" | "connecting" | "connected">(
@@ -319,6 +321,13 @@ export function App() {
   const currentRoomSupportsVideo = roomMediaCapabilities.supportsCamera;
   const allowVideoStreaming = roomMediaCapabilities.supportsCamera;
   const currentRoomSupportsScreenShare = roomMediaCapabilities.supportsScreenShare;
+  const memberVolumeByUserId = useMemo(() => {
+    const volumes: Record<string, number> = {};
+    Object.entries(memberPreferencesByUserId).forEach(([userId, preference]) => {
+      volumes[userId] = Number(preference?.volume ?? 100);
+    });
+    return volumes;
+  }, [memberPreferencesByUserId]);
 
   const livekitVoiceRuntime = useLivekitVoiceRuntime({
     token,
@@ -330,6 +339,7 @@ export function App() {
     selectedInputId,
     selectedInputProfile,
     selectedOutputId,
+    memberVolumeByUserId,
     selectedVideoInputId,
     micMuted,
     audioMuted,
@@ -1090,7 +1100,8 @@ export function App() {
   const {
     joinRoom,
     leaveRoom,
-    kickRoomMember
+    kickRoomMember,
+    moveRoomMember
   } = useRoomPresenceActions({
     roomSlug,
     canCreateRooms,
@@ -1125,6 +1136,81 @@ export function App() {
       return nextMuted;
     });
   }, []);
+
+  const saveMemberPreference = useCallback(async (targetUserId: string, input: { volume: number; note: string }) => {
+    if (!token || !targetUserId) {
+      return;
+    }
+
+    const nextPreference: RoomMemberPreference = {
+      targetUserId,
+      volume: Math.max(0, Math.min(100, Math.round(Number(input.volume) || 0))),
+      note: String(input.note || "").trim().slice(0, 32),
+      updatedAt: new Date().toISOString()
+    };
+
+    setMemberPreferencesByUserId((prev) => ({
+      ...prev,
+      [targetUserId]: nextPreference
+    }));
+
+    try {
+      const response = await api.upsertMemberPreference(token, targetUserId, {
+        volume: nextPreference.volume,
+        note: nextPreference.note
+      });
+
+      setMemberPreferencesByUserId((prev) => ({
+        ...prev,
+        [targetUserId]: response.preference
+      }));
+    } catch (error) {
+      pushLog(`member preference save failed: ${(error as Error).message}`);
+      pushToast(t("toast.serverError"));
+    }
+  }, [pushLog, pushToast, t, token]);
+
+  useEffect(() => {
+    if (!token || !user?.id) {
+      setMemberPreferencesByUserId({});
+      return;
+    }
+
+    const targetUserIds = Array.from(new Set(
+      Object.values(roomsPresenceDetailsBySlug)
+        .flat()
+        .map((member) => String(member.userId || "").trim())
+        .filter((memberUserId) => memberUserId.length > 0 && memberUserId !== user.id)
+    ));
+
+    if (targetUserIds.length === 0) {
+      return;
+    }
+
+    let active = true;
+    void (async () => {
+      try {
+        const response = await api.memberPreferences(token, targetUserIds);
+        if (!active) {
+          return;
+        }
+
+        setMemberPreferencesByUserId((prev) => {
+          const next = { ...prev };
+          response.preferences.forEach((preference) => {
+            next[preference.targetUserId] = preference;
+          });
+          return next;
+        });
+      } catch (error) {
+        pushLog(`member preferences load failed: ${(error as Error).message}`);
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [roomsPresenceDetailsBySlug, token, user?.id, pushLog]);
 
   const {
     promote,
@@ -1493,6 +1579,7 @@ export function App() {
               currentUserId={user?.id || ""}
               liveRoomMembersBySlug={roomsPresenceBySlug}
               liveRoomMemberDetailsBySlug={roomsPresenceDetailsBySlug}
+              memberPreferencesByUserId={memberPreferencesByUserId}
               voiceMicStateByUserIdInCurrentRoom={voiceMicStateByUserIdInCurrentRoom}
               voiceCameraEnabledByUserIdInCurrentRoom={effectiveVoiceCameraEnabledByUserIdInCurrentRoom}
               voiceAudioOutputMutedByUserIdInCurrentRoom={voiceAudioOutputMutedByUserIdInCurrentRoom}
@@ -1545,6 +1632,8 @@ export function App() {
               onToggleCategoryCollapsed={toggleCategoryCollapsed}
               onJoinRoom={joinRoom}
               onKickRoomMember={kickRoomMember}
+              onMoveRoomMember={moveRoomMember}
+              onSaveMemberPreference={saveMemberPreference}
             />
 
             {userDockNode}

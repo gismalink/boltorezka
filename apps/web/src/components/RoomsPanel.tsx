@@ -25,6 +25,7 @@ export function RoomsPanel({
   currentUserId,
   liveRoomMembersBySlug,
   liveRoomMemberDetailsBySlug,
+  memberPreferencesByUserId,
   voiceMicStateByUserIdInCurrentRoom,
   voiceCameraEnabledByUserIdInCurrentRoom,
   voiceAudioOutputMutedByUserIdInCurrentRoom,
@@ -76,7 +77,9 @@ export function RoomsPanel({
   onDeleteChannel,
   onToggleCategoryCollapsed,
   onJoinRoom,
-  onKickRoomMember
+  onKickRoomMember,
+  onMoveRoomMember,
+  onSaveMemberPreference
 }: RoomsPanelProps) {
   const [confirmPopup, setConfirmPopup] = useState<ConfirmPopupState>(null);
 
@@ -157,6 +160,9 @@ export function RoomsPanel({
       onOpenChannelSettingsPopup={onOpenChannelSettingsPopup}
       onJoinRoom={onJoinRoom}
       onKickRoomMember={onKickRoomMember}
+      onMoveRoomMember={onMoveRoomMember}
+      onSaveMemberPreference={onSaveMemberPreference}
+      memberPreferencesByUserId={memberPreferencesByUserId}
       room={room}
       roomMembers={mapRoomMembersForSlug(liveRoomMemberDetailsBySlug, liveRoomMembersBySlug, room.slug)}
       normalizedCurrentUserId={normalizedCurrentUserId}
