@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import type { AudioQuality, Room, RoomKind, RoomsTreeResponse } from "../../domain";
+import type { AudioQuality, Room, RoomKind, RoomsTreeResponse } from "../../../domain";
 
 type UseCurrentRoomSnapshotArgs = {
   rooms: Room[];

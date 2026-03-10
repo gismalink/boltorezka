@@ -2,12 +2,16 @@
 
 ## Top-level hooks
 
-- `app/*` - app orchestration hooks extracted from `App.tsx`:
-	- `app/useAppUiState.ts`
-	- `app/useAppEventLogs.ts`
-	- `app/useBuildVersionSync.ts`
-	- `app/useCurrentRoomSnapshot.ts`
-	- `app/useToastQueue.ts`
+- `app/state/*` - app state composition hooks extracted from `App.tsx`:
+	- `app/state/useAppUiState.ts`
+	- `app/state/useAppEventLogs.ts`
+	- `app/state/useCurrentRoomSnapshot.ts`
+	- `app/state/useToastQueue.ts`
+- `app/effects/*` - app side-effects and persistence hooks:
+	- `app/effects/useBuildVersionSync.ts`
+	- `app/effects/usePersistedClientSettings.ts`
+- `app/media/*` - app media lifecycle helpers:
+	- `app/media/useServerVideoPreview.ts`
 
 - `useAuthProfileFlow.ts`
 - `useAutoRoomVoiceConnection.ts`
