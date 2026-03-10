@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { Room, RoomKind } from "../domain";
 import { PopupPortal } from "./PopupPortal";
 import { RoomRow } from "./roomsPanel/RoomRow";
+import { RoomsConfirmOverlay } from "./roomsPanel/RoomsConfirmOverlay";
 import type { RoomsPanelProps } from "./types";
 
 type ConfirmPopupState =
@@ -359,39 +360,12 @@ export function RoomsPanel({
       </div>
       </section>
 
-      {confirmPopup ? (
-        <div
-          className="settings-confirm-overlay popup-layer-content fixed inset-0 z-[60] grid place-items-center bg-black/60 p-4"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget) {
-              setConfirmPopup(null);
-            }
-          }}
-        >
-          <div className="card compact settings-confirm-modal popup-layer-content w-full max-w-[420px]">
-            <h3 className="subheading settings-confirm-title">{t("rooms.confirmTitle")}</h3>
-            <p className="muted settings-confirm-text">
-              {confirmPopup.kind === "clear-channel"
-                ? t("rooms.confirmClear")
-                : confirmPopup.kind === "archive-channel"
-                  ? t("rooms.confirmArchiveChannel")
-                  : t("rooms.confirmDeleteCategory")}
-            </p>
-            <div className="delete-confirm-actions flex flex-wrap items-center gap-3">
-              <button type="button" className="secondary" onClick={() => setConfirmPopup(null)}>
-                {t("common.no")}
-              </button>
-              <button
-                type="button"
-                className={confirmPopup.kind === "clear-channel" ? "clear-confirm-btn" : "delete-confirm-btn"}
-                onClick={submitConfirmPopup}
-              >
-                {t("common.yes")}
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
+      <RoomsConfirmOverlay
+        t={t}
+        kind={confirmPopup?.kind || null}
+        onClose={() => setConfirmPopup(null)}
+        onConfirm={submitConfirmPopup}
+      />
     </>
   );
 }
