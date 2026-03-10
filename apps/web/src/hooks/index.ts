@@ -11,6 +11,7 @@ export { useMicrophoneLevelMeter } from "./media/useMicrophoneLevelMeter";
 export { usePopupOutsideClose } from "./ui/usePopupOutsideClose";
 export { useRealtimeSoundEffects } from "./realtime/useRealtimeSoundEffects";
 export { useRealtimeChatLifecycle } from "./realtime/useRealtimeChatLifecycle";
+export { useRealtimeIncomingCallState } from "./realtime/useRealtimeIncomingCallState";
 export { useRoomAdminActions } from "./rooms/useRoomAdminActions";
 export { useRoomMediaCapabilities } from "./rooms/useRoomMediaCapabilities";
 export { useRoomsDerived } from "./rooms/useRoomsDerived";

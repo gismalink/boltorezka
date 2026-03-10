@@ -33,6 +33,7 @@ import {
   usePopupOutsideClose,
   useRealtimeSoundEffects,
   useRealtimeChatLifecycle,
+  useRealtimeIncomingCallState,
   useRoomAdminActions,
   useRoomMediaCapabilities,
   useRoomsDerived,
@@ -670,269 +671,35 @@ export function App() {
     [pushLog, sendWsEvent, loadTelemetrySummary]
   );
 
-  const normalizeIntInRange = useCallback((value: unknown, min: number, max: number): number | null => {
-    const numeric = Number(value);
-    if (!Number.isFinite(numeric)) {
-      return null;
-    }
-
-    return Math.max(min, Math.min(max, Math.round(numeric)));
-  }, []);
-
-  const normalizeAudioQuality = useCallback((value: unknown): AudioQuality | null | undefined => {
-    if (value === null) {
-      return null;
-    }
-
-    return value === "retro" || value === "low" || value === "standard" || value === "high"
-      ? value
-      : undefined;
-  }, []);
-
-  /** Applies video policy updates received from realtime events for non-admin clients. */
-  const handleIncomingVideoPolicyState = useCallback((payload: {
-    roomSlug?: unknown;
-    settings?: {
-      effectType?: unknown;
-      resolution?: unknown;
-      fps?: unknown;
-      pixelFxStrength?: unknown;
-      pixelFxPixelSize?: unknown;
-      pixelFxGridThickness?: unknown;
-      asciiCellSize?: unknown;
-      asciiContrast?: unknown;
-      asciiColor?: unknown;
-      windowMinWidth?: unknown;
-      windowMaxWidth?: unknown;
-    };
-  }) => {
-    if (canManageAudioQuality) {
-      return;
-    }
-
-    const payloadRoomSlug = String(payload.roomSlug || "").trim();
-    if (payloadRoomSlug && payloadRoomSlug !== roomSlugRef.current) {
-      return;
-    }
-
-    const settings = payload.settings;
-    if (!settings) {
-      return;
-    }
-
-    const effectType = String(settings.effectType || "").trim();
-    if (effectType === "none" || effectType === "pixel8" || effectType === "ascii") {
-      setServerVideoEffectType(effectType);
-    }
-
-    const resolution = String(settings.resolution || "").trim();
-    if (resolution === "160x120" || resolution === "320x240" || resolution === "640x480") {
-      setServerVideoResolution(resolution);
-    }
-
-    const fps = Number(settings.fps);
-    if (fps === 10 || fps === 15 || fps === 24 || fps === 30) {
-      setServerVideoFps(fps);
-    }
-
-    const pixelFxStrength = normalizeIntInRange(settings.pixelFxStrength, 0, 100);
-    if (pixelFxStrength !== null) {
-      setServerVideoPixelFxStrength(pixelFxStrength);
-    }
-
-    const pixelFxPixelSize = normalizeIntInRange(settings.pixelFxPixelSize, 2, 10);
-    if (pixelFxPixelSize !== null) {
-      setServerVideoPixelFxPixelSize(pixelFxPixelSize);
-    }
-
-    const pixelFxGridThickness = normalizeIntInRange(settings.pixelFxGridThickness, 1, 4);
-    if (pixelFxGridThickness !== null) {
-      setServerVideoPixelFxGridThickness(pixelFxGridThickness);
-    }
-
-    const asciiCellSize = normalizeIntInRange(settings.asciiCellSize, 4, 16);
-    if (asciiCellSize !== null) {
-      setServerVideoAsciiCellSize(asciiCellSize);
-    }
-
-    const asciiContrast = normalizeIntInRange(settings.asciiContrast, 60, 200);
-    if (asciiContrast !== null) {
-      setServerVideoAsciiContrast(asciiContrast);
-    }
-
-    const asciiColor = String(settings.asciiColor || "").trim();
-    if (/^#[0-9a-fA-F]{6}$/.test(asciiColor)) {
-      setServerVideoAsciiColor(asciiColor);
-    }
-
-    const minWidth = normalizeIntInRange(settings.windowMinWidth, 80, 300);
-    const maxWidthBase = normalizeIntInRange(settings.windowMaxWidth, 120, 480);
-    if (minWidth !== null || maxWidthBase !== null) {
-      const nextMinWidth = minWidth ?? serverVideoWindowMinWidth;
-      const nextMaxWidth = Math.max(maxWidthBase ?? serverVideoWindowMaxWidth, nextMinWidth);
-      setServerVideoWindowMinWidth(nextMinWidth);
-      setServerVideoWindowMaxWidth(nextMaxWidth);
-    }
-  }, [
+  const {
+    handleIncomingVideoState,
+    handleIncomingMicState,
+    handleIncomingInitialCallState,
+    handleAudioQualityUpdated
+  } = useRealtimeIncomingCallState({
     canManageAudioQuality,
-    normalizeIntInRange,
     roomSlugRef,
+    serverVideoWindowMinWidth,
     serverVideoWindowMaxWidth,
-    serverVideoWindowMinWidth
-  ]);
-
-  const handleIncomingVideoState = useCallback((payload: {
-    fromUserId?: string;
-    fromUserName?: string;
-    roomSlug?: string;
-    settings?: Record<string, unknown>;
-  }) => {
-    const fromUserId = String(payload.fromUserId || "").trim();
-    const payloadRoomSlug = String(payload.roomSlug || "").trim();
-    const localVideoEnabled = payload.settings?.localVideoEnabled;
-    if (fromUserId && typeof localVideoEnabled === "boolean" && (!payloadRoomSlug || payloadRoomSlug === roomSlugRef.current)) {
-      setVoiceCameraEnabledByUserIdInCurrentRoom((prev) => ({
-        ...prev,
-        [fromUserId]: localVideoEnabled
-      }));
-    }
-
-    handleIncomingRtcVideoState(payload);
-    handleIncomingVideoPolicyState(payload);
-  }, [handleIncomingRtcVideoState, handleIncomingVideoPolicyState]);
-
-  const handleIncomingMicState = useCallback((payload: {
-    fromUserId?: string;
-    muted?: boolean;
-    speaking?: boolean;
-    audioMuted?: boolean;
-  }) => {
-    const fromUserId = String(payload.fromUserId || "").trim();
-    if (!fromUserId) {
-      return;
-    }
-
-    setVoiceInitialMicStateByUserIdInCurrentRoom((prev) => {
-      const muted = payload.muted === true;
-      const speaking = payload.speaking === true;
-      const nextState: "muted" | "silent" | "speaking" = muted ? "muted" : speaking ? "speaking" : "silent";
-      if (prev[fromUserId] === nextState) {
-        return prev;
-      }
-      return {
-        ...prev,
-        [fromUserId]: nextState
-      };
-    });
-
-    if (typeof payload.audioMuted === "boolean") {
-      const nextAudioMuted = payload.audioMuted;
-      setVoiceInitialAudioOutputMutedByUserIdInCurrentRoom((prev) => {
-        if (prev[fromUserId] === nextAudioMuted) {
-          return prev;
-        }
-        return {
-          ...prev,
-          [fromUserId]: nextAudioMuted
-        };
-      });
-    }
-
-  }, []);
-
-  const handleIncomingInitialCallState = useCallback((payload: {
-    roomSlug?: string;
-    participants?: Array<{
-      userId?: string;
-      userName?: string;
-      mic?: {
-        muted?: boolean;
-        speaking?: boolean;
-        audioMuted?: boolean;
-      };
-      video?: {
-        localVideoEnabled?: boolean;
-      };
-    }>;
-  }) => {
-    const payloadRoomSlug = String(payload.roomSlug || "").trim();
-    if (payloadRoomSlug && payloadRoomSlug !== roomSlugRef.current) {
-      return;
-    }
-
-    const participants = Array.isArray(payload.participants) ? payload.participants : [];
-    const nextMicState: Record<string, "muted" | "silent" | "speaking"> = {};
-    const nextAudioMutedState: Record<string, boolean> = {};
-    const nextCameraState: Record<string, boolean> = {};
-
-    participants.forEach((participant) => {
-      const userId = String(participant?.userId || "").trim();
-      if (!userId) {
-        return;
-      }
-
-      const micMuted = participant?.mic?.muted === true;
-      const micSpeaking = participant?.mic?.speaking === true;
-      nextMicState[userId] = micMuted ? "muted" : micSpeaking ? "speaking" : "silent";
-      nextAudioMutedState[userId] = participant?.mic?.audioMuted === true;
-      nextCameraState[userId] = participant?.video?.localVideoEnabled === true;
-    });
-
-    setVoiceInitialMicStateByUserIdInCurrentRoom(nextMicState);
-    setVoiceInitialAudioOutputMutedByUserIdInCurrentRoom(nextAudioMutedState);
-    // Initial state should replace previous snapshot for this room to avoid stale ghost entries.
-    setVoiceCameraEnabledByUserIdInCurrentRoom(nextCameraState);
-  }, []);
-
-  /** Syncs audio-quality updates from realtime into top-level room state stores. */
-  const handleAudioQualityUpdated = useCallback((payload: {
-    scope?: unknown;
-    audioQuality?: unknown;
-    roomId?: unknown;
-    audioQualityOverride?: unknown;
-  }) => {
-    const scope = String(payload.scope || "").trim();
-
-    if (scope === "server") {
-      const nextAudioQuality = normalizeAudioQuality(payload.audioQuality);
-      if (nextAudioQuality && nextAudioQuality !== null) {
-        setServerAudioQuality(nextAudioQuality);
-      }
-      return;
-    }
-
-    if (scope !== "room") {
-      return;
-    }
-
-    const roomId = String(payload.roomId || "").trim();
-    if (!roomId) {
-      return;
-    }
-
-    const normalizedOverride = normalizeAudioQuality(payload.audioQualityOverride);
-    if (typeof normalizedOverride === "undefined") {
-      return;
-    }
-
-    setRooms((prev) => prev.map((room) => (room.id === roomId ? { ...room, audio_quality_override: normalizedOverride } : room)));
-    setRoomsTree((prev) => {
-      if (!prev) {
-        return prev;
-      }
-
-      const patchRoom = (room: Room) => (room.id === roomId ? { ...room, audio_quality_override: normalizedOverride } : room);
-
-      return {
-        ...prev,
-        categories: (prev.categories || []).map((category) => ({
-          ...category,
-          channels: (category.channels || []).map(patchRoom)
-        })),
-        uncategorized: (prev.uncategorized || []).map(patchRoom)
-      };
-    });
-  }, [normalizeAudioQuality]);
+    handleIncomingRtcVideoState,
+    setServerVideoEffectType,
+    setServerVideoResolution,
+    setServerVideoFps,
+    setServerVideoPixelFxStrength,
+    setServerVideoPixelFxPixelSize,
+    setServerVideoPixelFxGridThickness,
+    setServerVideoAsciiCellSize,
+    setServerVideoAsciiContrast,
+    setServerVideoAsciiColor,
+    setServerVideoWindowMinWidth,
+    setServerVideoWindowMaxWidth,
+    setVoiceCameraEnabledByUserIdInCurrentRoom,
+    setVoiceInitialMicStateByUserIdInCurrentRoom,
+    setVoiceInitialAudioOutputMutedByUserIdInCurrentRoom,
+    setServerAudioQuality,
+    setRooms,
+    setRoomsTree
+  });
 
   const {
     beginSso,
