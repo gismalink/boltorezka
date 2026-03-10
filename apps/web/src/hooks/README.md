@@ -2,6 +2,13 @@
 
 ## Top-level hooks
 
+- `app/*` - app orchestration hooks extracted from `App.tsx`:
+	- `app/useAppUiState.ts`
+	- `app/useAppEventLogs.ts`
+	- `app/useBuildVersionSync.ts`
+	- `app/useCurrentRoomSnapshot.ts`
+	- `app/useToastQueue.ts`
+
 - `useAuthProfileFlow.ts`
 - `useAutoRoomVoiceConnection.ts`
 - `useCollapsedCategories.ts`
