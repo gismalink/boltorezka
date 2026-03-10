@@ -423,8 +423,17 @@ export function VideoWindowsOverlay({
   }
 
   return (
-    <div className="video-windows-overlay" aria-label={t("video.overlayAria") }>
-      {items.map((item) => (
+    <div
+      className="video-windows-overlay"
+      aria-label={t("video.overlayAria") }
+      style={fullscreenScreenShare ? { pointerEvents: "auto" } : undefined}
+    >
+      {items.map((item) => {
+        if (fullscreenScreenShare && item.isScreenShare) {
+          return null;
+        }
+
+        return (
         <VideoTile
           key={item.id}
           id={item.id}
@@ -470,7 +479,8 @@ export function VideoWindowsOverlay({
             setFullscreenScreenShare(payload);
           }}
         />
-      ))}
+        );
+      })}
 
       {fullscreenScreenShare ? (
         <div
