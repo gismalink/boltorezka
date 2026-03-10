@@ -142,7 +142,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 6px;
+  padding: 0 20px;
   border-bottom: var(--border-thin) solid color-mix(in srgb, var(--pixel-border) 70%, transparent 30%);
   background: color-mix(in srgb, var(--pixel-panel-2) 82%, var(--pixel-neon-pink) 18%);
   cursor: move;
@@ -152,9 +152,14 @@
 .video-window-label {
   font-size: 10px;
   color: var(--pixel-text);
+  padding-left: 6px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.video-window-fullscreen-btn {
+  margin-right: 6px;
 }
 
 .video-window-media {

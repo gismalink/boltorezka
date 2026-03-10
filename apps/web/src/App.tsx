@@ -1963,7 +1963,7 @@ export function App() {
     setSelectedInputProfile((current) => (current === "noise_reduction" ? "custom" : "noise_reduction"));
   }, []);
 
-  const currentRoomSupportsRtc = currentRoom ? currentRoom.kind !== "text" : false;
+  const currentRoomSupportsRtc = currentRoomKind !== "text";
 
   useEffect(() => {
     if (!roomSlug) {
@@ -2374,7 +2374,7 @@ export function App() {
               onChatInputKeyDown={handleChatInputKeyDown}
               onSendMessage={sendMessage}
               editingMessageId={editingMessageId}
-              showVideoToggle={allowVideoStreaming}
+              showVideoToggle={currentRoomSupportsRtc}
               videoWindowsVisible={videoWindowsVisible}
               onToggleVideoWindows={() => setVideoWindowsVisible((prev) => !prev)}
               onCancelEdit={() => {
@@ -2402,7 +2402,7 @@ export function App() {
           screenShareActive={Boolean(activeScreenShare?.stream)}
           minWidth={Math.min(serverVideoWindowMinWidth, serverVideoWindowMaxWidth)}
           maxWidth={Math.max(serverVideoWindowMinWidth, serverVideoWindowMaxWidth)}
-          visible={allowVideoStreaming && videoWindowsVisible}
+          visible={currentRoomSupportsRtc && videoWindowsVisible}
           speakingWindowIds={speakingVideoWindowIds}
         />
 

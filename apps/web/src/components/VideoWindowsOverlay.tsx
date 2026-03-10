@@ -123,7 +123,7 @@ function VideoTile({
         {isScreenShare ? (
           <button
             type="button"
-            className="secondary icon-btn tiny"
+            className="secondary icon-btn tiny video-window-fullscreen-btn"
             onPointerDown={(event) => {
               event.stopPropagation();
             }}
@@ -207,15 +207,9 @@ export function VideoWindowsOverlay({
 
   const items = useMemo<TileItem[]>(() => {
     const next: TileItem[] = [];
-    const normalizedCurrentUserId = String(currentUserId || "").trim();
-    const normalizedScreenShareOwnerUserId = String(screenShareOwnerUserId || "").trim();
-    const hasScreenShareOwner = Boolean(screenShareActive && normalizedScreenShareOwnerUserId);
+      const normalizedCurrentUserId = String(currentUserId || "").trim();
 
-    const shouldHideLocalCameraTile = hasScreenShareOwner
-      && Boolean(normalizedCurrentUserId)
-      && normalizedCurrentUserId === normalizedScreenShareOwnerUserId;
-
-    if (localCameraEnabled && !shouldHideLocalCameraTile) {
+      if (localCameraEnabled) {
       next.push({
         id: "local",
         label: localUserLabel || t("video.you"),
@@ -226,10 +220,6 @@ export function VideoWindowsOverlay({
 
     Object.entries(remoteCameraEnabledByUserId).forEach(([userId, enabled]) => {
       if (!enabled || userId === "local" || (normalizedCurrentUserId && userId === normalizedCurrentUserId)) {
-        return;
-      }
-
-      if (hasScreenShareOwner && userId === normalizedScreenShareOwnerUserId) {
         return;
       }
 

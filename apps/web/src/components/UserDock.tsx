@@ -87,6 +87,12 @@ export function UserDock({
   const [cameraMenuOpen, setCameraMenuOpen] = useState(false);
   const mediaDevicesUnavailable = mediaDevicesState !== "ready";
   const mediaControlsLocked = mediaDevicesState === "denied";
+  const cameraControlDisabled = mediaControlsLocked || !currentRoomSupportsVideo;
+  const cameraTooltip = !currentRoomSupportsVideo
+    ? t("video.cameraUnavailableInRoom")
+    : cameraEnabled
+      ? t("video.disableCamera")
+      : t("video.enableCamera");
   const mediaDevicesWarningText = mediaDevicesHint || t("settings.mediaUnavailable");
   const screenShareBlockedByOtherUser = screenShareActive && !screenShareOwnedByCurrentUser && !canStartScreenShare;
   const screenShareTooltip = screenShareBlockedByOtherUser
@@ -103,7 +109,6 @@ export function UserDock({
   void lastCallPeer;
   void screenShareOwnedByCurrentUser;
   void currentRoomTitle;
-  void currentRoomSupportsVideo;
   return (
     <>
       <div className={`user-dock ${inlineSettingsMode ? "user-dock-inline-hidden" : ""} relative z-20 mt-auto flex min-h-0 flex-col gap-4`}>
@@ -370,8 +375,8 @@ export function UserDock({
                 <button
                   type="button"
                   className={`secondary icon-btn split-main-btn user-panel-main-btn ${cameraEnabled ? "" : "icon-btn-danger"}`}
-                  data-tooltip={cameraEnabled ? t("video.disableCamera") : t("video.enableCamera")}
-                  disabled={mediaControlsLocked}
+                  data-tooltip={cameraTooltip}
+                  disabled={cameraControlDisabled}
                   onClick={onToggleCamera}
                 >
                   <i className={`bi ${cameraEnabled ? "bi-camera-video-fill" : "bi-camera-video-off-fill"}`} aria-hidden="true" />
@@ -380,7 +385,7 @@ export function UserDock({
                   type="button"
                   className="secondary icon-btn split-caret-btn"
                   data-tooltip={t("video.cameraDevice")}
-                  disabled={mediaControlsLocked}
+                  disabled={cameraControlDisabled}
                   onClick={() => {
                     onRequestVideoAccess();
                     setCameraMenuOpen((value) => !value);
