@@ -13,8 +13,8 @@ export function RoomsUncategorizedBlock({ t, rooms, renderRoomRow }: RoomsUncate
   }
 
   return (
-    <div className="category-block">
-      <div className="category-title">{t("rooms.uncategorized")}</div>
+    <div className="mt-[var(--space-md)]">
+      <div className="mb-[var(--space-xs)] text-[var(--font-size-sm)] uppercase tracking-[0.04em] text-[var(--pixel-muted)]">{t("rooms.uncategorized")}</div>
       <ul className="rooms-list">
         {rooms.map((room) => (
           <li key={room.id}>{renderRoomRow(room)}</li>

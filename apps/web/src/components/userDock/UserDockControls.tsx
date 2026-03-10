@@ -203,7 +203,7 @@ export function UserDockControls({
                   <button
                     ref={inputDeviceRowRef}
                     type="button"
-                    className={`secondary voice-menu-row flex w-full items-center justify-between gap-3 text-left ${voiceSettingsPanel === "input_device" ? "voice-menu-row-active" : ""}`}
+                    className={`secondary flex w-full items-center justify-between gap-3 px-[var(--space-lg)] py-[var(--space-lg)] text-left ${voiceSettingsPanel === "input_device" ? "voice-menu-row-active" : ""}`}
                     disabled={mediaDevicesUnavailable}
                     onClick={() => onSetVoiceSettingsPanel(voiceSettingsPanel === "input_device" ? null : "input_device")}
                   >
@@ -216,7 +216,7 @@ export function UserDockControls({
                   <button
                     ref={inputProfileRowRef}
                     type="button"
-                    className="secondary voice-menu-row flex w-full items-center justify-between gap-3 text-left"
+                    className="secondary flex w-full items-center justify-between gap-3 px-[var(--space-lg)] py-[var(--space-lg)] text-left"
                     disabled
                   >
                     <span className="voice-menu-text grid min-w-0 gap-0.5">
@@ -243,7 +243,7 @@ export function UserDockControls({
                   />
                 </label>
 
-                <div className="voice-level-bars grid grid-cols-[repeat(20,minmax(0,1fr))] gap-0.5" aria-hidden="true">
+                <div className="mt-[var(--space-md)] grid grid-cols-[repeat(20,minmax(0,1fr))] gap-0.5" aria-hidden="true">
                   {Array.from({ length: miniBarCount }).map((_, index) => (
                     <span
                       key={`bar-${index}`}
@@ -254,7 +254,7 @@ export function UserDockControls({
 
                 <button
                   type="button"
-                  className="secondary voice-footer-row flex w-full items-center justify-between gap-4 text-left"
+                  className="secondary mt-[var(--space-xl)] flex w-full items-center justify-between gap-4 text-left"
                   disabled={mediaControlsLocked}
                   onClick={() => {
                     onSetVoiceSettingsOpen(false);
@@ -368,7 +368,7 @@ export function UserDockControls({
                 </label>
                 <button
                   type="button"
-                  className="secondary voice-footer-row flex w-full items-center justify-between gap-4 text-left"
+                  className="secondary mt-[var(--space-xl)] flex w-full items-center justify-between gap-4 text-left"
                   disabled={mediaControlsLocked}
                   onClick={() => {
                     onSetAudioOutputMenuOpen(false);

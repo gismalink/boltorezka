@@ -13,7 +13,7 @@
 - [x] Этап 7: выделение persisted local settings (audio/video/localStorage)
 - [x] Этап 8: декомпозиция `UserDock` на подкомпоненты
 - [x] Этап 9: декомпозиция `RoomsPanel` на подкомпоненты
-- [ ] Этап 10: Tailwind migration (mostly), кроме зафиксированных CSS-исключений
+- [x] Этап 10: Tailwind migration (mostly), кроме зафиксированных CSS-исключений
 
 ## Дополнительно после этапов 1-7
 
@@ -24,6 +24,15 @@
 - [x] Этап 9 (progress): вынесен `RoomsPanelHeader` (create category/channel popups) из `RoomsPanel`.
 - [x] Этап 9 (progress): вынесен `RoomsCategoryBlock` (category collapse/settings/channels list) из `RoomsPanel`.
 - [x] Этап 9 (progress): вынесена утилита `mapRoomMembersForSlug` и блок `RoomsUncategorizedBlock`.
+- [x] Этап 10 (progress): перенесены safe layout-стили `RoomsPanel`/`UserDock` из `styles.css` в Tailwind utility-классы в JSX.
+- [x] Этап 10 (progress): удалены дублирующие CSS-правила (`category-block`, `category-title`, `category-collapse-btn`, `channel-members-list`, `user-dock-inline-hidden`, `voice-menu-row`, `voice-level-bars`, `voice-footer-row`).
+
+## CSS-исключения для Stage 10 (осознанно оставлены)
+
+- Сложные pixel-art визуальные эффекты, `color-mix`, и многоступенчатые `box-shadow`.
+- Realtime state-стили участников канала (`channel-member-*-status*`, pulse-анимации).
+- Popup/overlay геометрия, завязанная на custom offsets и desktop/mobile поведении.
+- Video window rendering/resize слои и эффекты изображения.
 
 - [x] Вынесены realtime/call обработчики в `useRealtimeIncomingCallState`.
 - [x] Вынесена screen-share orchestration логика в `useScreenShareOrchestrator`.

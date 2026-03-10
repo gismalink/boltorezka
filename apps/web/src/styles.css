@@ -621,27 +621,6 @@ pre {
   letter-spacing: 0.04em;
 }
 
-.category-block {
-  margin-top: var(--space-md);
-}
-
-.category-collapse-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-xs);
-  border: 0;
-  box-shadow: none;
-  background: transparent;
-  padding: 0;
-}
-
-.category-collapse-btn:hover,
-.category-collapse-btn:focus-visible,
-.category-collapse-btn:active {
-  transform: none;
-  box-shadow: none;
-}
-
 .category-action-btn {
   opacity: 0;
   pointer-events: none;
@@ -663,14 +642,6 @@ pre {
   right: 0;
   top: calc(100% + var(--offset-menu));
   z-index: 30;
-}
-
-.category-title {
-  font-size: var(--font-size-sm);
-  text-transform: uppercase;
-  color: var(--pixel-muted);
-  letter-spacing: 0.04em;
-  margin-bottom: var(--space-xs);
 }
 
 .room-btn {
@@ -727,12 +698,6 @@ pre {
   box-shadow:
     inset 3px 0 0 var(--pixel-accent),
     0 0 0 1px color-mix(in srgb, var(--pixel-neon-cyan) 70%, transparent 30%);
-}
-
-.channel-members-list {
-  list-style: none;
-  margin: 0;
-  padding: 2px 0 0 var(--space-xl);
 }
 
 .channel-member-avatar {
@@ -1120,10 +1085,6 @@ pre {
   color: #ffe8ef;
 }
 
-.user-dock-inline-hidden {
-  display: none;
-}
-
 .rtc-connection-card {
   border-color: var(--pixel-border);
   background: var(--pixel-panel-2);
@@ -1316,10 +1277,6 @@ pre {
   padding: var(--space-lg);
 }
 
-.voice-menu-row {
-  padding: var(--space-lg) var(--space-lg);
-}
-
 .voice-menu-row-active {
   background: #4a133b;
   border-color: var(--pixel-border);
@@ -1348,10 +1305,6 @@ pre {
   min-width: 240px;
 }
 
-.voice-level-bars {
-  margin-top: var(--space-md);
-}
-
 .voice-level-bar {
   display: block;
   flex: 1 1 0;
@@ -1364,10 +1317,6 @@ pre {
 
 .voice-level-bar-active {
   background: var(--pixel-neon-cyan);
-}
-
-.voice-footer-row {
-  margin-top: var(--space-xl);
 }
 
 .media-devices-warning {

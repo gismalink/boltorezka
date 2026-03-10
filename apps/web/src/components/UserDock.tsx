@@ -93,7 +93,7 @@ export function UserDock({
   void currentRoomTitle;
   return (
     <>
-      <div className={`user-dock ${inlineSettingsMode ? "user-dock-inline-hidden" : ""} relative z-20 mt-auto flex min-h-0 flex-col gap-4`}>
+      <div className={`user-dock relative z-20 mt-auto flex min-h-0 flex-col gap-4 ${inlineSettingsMode ? "hidden" : ""}`}>
         <UserDockControls
           t={t}
           currentRoomSupportsRtc={currentRoomSupportsRtc}
