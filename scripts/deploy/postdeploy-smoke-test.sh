@@ -5,6 +5,8 @@ set -euo pipefail
 REPO_DIR="${1:-$PWD}"
 BASE_URL="${SMOKE_API_URL:-https://test.boltorezka.gismalink.art}"
 WEB_BASE_URL="${SMOKE_WEB_BASE_URL:-$BASE_URL}"
+SMOKE_HTTP_RETRIES="${SMOKE_HTTP_RETRIES:-8}"
+SMOKE_HTTP_RETRY_DELAY_SEC="${SMOKE_HTTP_RETRY_DELAY_SEC:-2}"
 COMPOSE_FILE="infra/docker-compose.host.yml"
 ENV_FILE="infra/.env.host"
 POSTGRES_SERVICE="${TEST_POSTGRES_SERVICE:-boltorezka-db-test}"
@@ -223,6 +225,28 @@ if (start === -1 || end === -1 || end <= start) {
   process.exit(0);
 }
 
+http_get_with_retries() {
+  local url="$1"
+  local label="$2"
+  local attempt=1
+  local output=""
+
+  while (( attempt <= SMOKE_HTTP_RETRIES )); do
+    if output="$(curl --connect-timeout 5 --max-time 15 -fsS "$url" 2>/dev/null)"; then
+      printf '%s' "$output"
+      return 0
+    fi
+
+    if (( attempt < SMOKE_HTTP_RETRIES )); then
+      sleep "$SMOKE_HTTP_RETRY_DELAY_SEC"
+    fi
+    attempt=$((attempt + 1))
+  done
+
+  echo "[postdeploy-smoke] ${label} failed after ${SMOKE_HTTP_RETRIES} attempts: ${url}" >&2
+  return 1
+}
+
 let payload;
 try {
   payload = JSON.parse(content.slice(start, end + 1));
@@ -239,12 +263,25 @@ NODE
 }
 
 echo "[postdeploy-smoke] health"
-curl -fsS "$BASE_URL/health" >/dev/null
+http_get_with_retries "$BASE_URL/health" "health preflight" >/dev/null
 
 echo "[postdeploy-smoke] auth mode"
-MODE_JSON="$(curl -fsS "$BASE_URL/v1/auth/mode")"
+mode_attempt=1
+MODE_JSON=""
+while (( mode_attempt <= SMOKE_HTTP_RETRIES )); do
+  MODE_JSON="$(http_get_with_retries "$BASE_URL/v1/auth/mode" "auth mode preflight")"
+  if [[ "$MODE_JSON" == *'"mode":"sso"'* ]]; then
+    break
+  fi
+
+  if (( mode_attempt < SMOKE_HTTP_RETRIES )); then
+    sleep "$SMOKE_HTTP_RETRY_DELAY_SEC"
+  fi
+  mode_attempt=$((mode_attempt + 1))
+done
+
 if [[ "$MODE_JSON" != *'"mode":"sso"'* ]]; then
-  echo "[postdeploy-smoke] expected mode=sso, got: $MODE_JSON" >&2
+  echo "[postdeploy-smoke] expected mode=sso after retries, got: $MODE_JSON" >&2
   exit 1
 fi
 
