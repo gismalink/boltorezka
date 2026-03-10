@@ -4,6 +4,7 @@ export { useAppUiState, type AppMobileTab, type AppServerMenuTab } from "./useAp
 export { useAutoRoomVoiceConnection } from "./useAutoRoomVoiceConnection";
 export { useBuildVersionSync } from "./useBuildVersionSync";
 export { useCollapsedCategories } from "./useCollapsedCategories";
+export { useCurrentRoomSnapshot } from "./useCurrentRoomSnapshot";
 export { useMediaDevicePreferences } from "./useMediaDevicePreferences";
 export { useMicrophoneLevelMeter } from "./useMicrophoneLevelMeter";
 export { usePopupOutsideClose } from "./usePopupOutsideClose";

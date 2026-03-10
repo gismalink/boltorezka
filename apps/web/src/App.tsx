@@ -26,6 +26,7 @@ import {
   useAuthProfileFlow,
   useBuildVersionSync,
   useCollapsedCategories,
+  useCurrentRoomSnapshot,
   useMediaDevicePreferences,
   useMicrophoneLevelMeter,
   usePopupOutsideClose,
@@ -338,36 +339,12 @@ export function App() {
     return members.filter((member) => member.userId !== me);
   }, [roomsPresenceDetailsBySlug, roomSlug, user?.id]);
 
-  const currentRoomAudioQualityOverride = useMemo(() => {
-    const roomFromList = rooms.find((room) => room.slug === roomSlug);
-    if (roomFromList) {
-      return roomFromList.audio_quality_override ?? null;
-    }
-
-    const roomFromTree = (roomsTree?.categories || [])
-      .flatMap((category) => category.channels || [])
-      .find((room) => room.slug === roomSlug)
-      ?? (roomsTree?.uncategorized || []).find((room) => room.slug === roomSlug)
-      ?? null;
-
-    return roomFromTree?.audio_quality_override ?? null;
-  }, [rooms, roomsTree, roomSlug]);
-
+  const { currentRoom: activeRoomSnapshot, currentRoomKind, currentRoomAudioQualityOverride } = useCurrentRoomSnapshot({
+    rooms,
+    roomsTree,
+    roomSlug
+  });
   const effectiveAudioQuality = currentRoomAudioQualityOverride ?? serverAudioQuality;
-  const currentRoomKind = useMemo<RoomKind>(() => {
-    const roomFromList = rooms.find((room) => room.slug === roomSlug);
-    if (roomFromList) {
-      return roomFromList.kind;
-    }
-
-    const roomFromTree = (roomsTree?.categories || [])
-      .flatMap((category) => category.channels || [])
-      .find((room) => room.slug === roomSlug)
-      ?? (roomsTree?.uncategorized || []).find((room) => room.slug === roomSlug)
-      ?? null;
-
-    return roomFromTree?.kind || "text";
-  }, [rooms, roomsTree, roomSlug]);
   const roomMediaCapabilities = useRoomMediaCapabilities(currentRoomKind);
   const currentRoomSupportsRtc = roomMediaCapabilities.supportsVoice;
   const currentRoomSupportsVideo = roomMediaCapabilities.supportsCamera;
@@ -501,8 +478,7 @@ export function App() {
   }, [serverVideoWindowMaxWidth]);
 
   useEffect(() => {
-    const activeRoom = rooms.find((room) => room.slug === roomSlug);
-    const roomSupportsRtc = activeRoom ? activeRoom.kind !== "text" : false;
+    const roomSupportsRtc = activeRoomSnapshot ? activeRoomSnapshot.kind !== "text" : false;
     if (!roomSupportsRtc || !roomVoiceConnected || !canManageAudioQuality) {
       return;
     }
@@ -529,8 +505,7 @@ export function App() {
     lastBroadcastVideoPolicyRef.current = serialized;
     sendWsEvent("call.video_state", { settings: payload }, { maxRetries: 1 });
   }, [
-    rooms,
-    roomSlug,
+    activeRoomSnapshot,
     roomVoiceConnected,
     canManageAudioQuality,
     serverVideoEffectType,
