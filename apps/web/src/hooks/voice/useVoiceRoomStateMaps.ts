@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import type { CallStatus } from "../services";
+import type { CallStatus } from "../../services";
 
 type UseVoiceRoomStateMapsArgs = {
   userId: string;

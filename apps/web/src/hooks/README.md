@@ -20,16 +20,19 @@
 	- `rooms/useRoomsDerived.ts`
 	- `rooms/useRoomMediaCapabilities.ts`
 	- `rooms/useRoomAdminActions.ts`
-
-- `useAuthProfileFlow.ts`
-- `useAutoRoomVoiceConnection.ts`
-- `useMediaDevicePreferences.ts`
-- `useMicrophoneLevelMeter.ts`
-- `usePopupOutsideClose.ts`
-- `useScreenWakeLock.ts`
-- `useServerMenuAccessGuard.ts`
-- `useServerSounds.ts`
-- `useVoiceRoomStateMaps.ts`
+- `auth/*` - auth/profile session flows:
+	- `auth/useAuthProfileFlow.ts`
+- `media/*` - media devices, mic meter, and server sounds:
+	- `media/useMediaDevicePreferences.ts`
+	- `media/useMicrophoneLevelMeter.ts`
+	- `media/useServerSounds.ts`
+- `ui/*` - UI behavior helpers:
+	- `ui/usePopupOutsideClose.ts`
+	- `ui/useScreenWakeLock.ts`
+	- `ui/useServerMenuAccessGuard.ts`
+- `voice/*` - voice-room orchestration helpers:
+	- `voice/useAutoRoomVoiceConnection.ts`
+	- `voice/useVoiceRoomStateMaps.ts`
 
 ## RTC modules
 

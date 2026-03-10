@@ -1,8 +1,8 @@
 import { FormEvent, type MutableRefObject, useEffect } from "react";
-import { api } from "../api";
-import type { AuthController } from "../services";
-import type { User } from "../domain";
-import type { VoiceSettingsPanel } from "../components";
+import { api } from "../../api";
+import type { AuthController } from "../../services";
+import type { User } from "../../domain";
+import type { VoiceSettingsPanel } from "../../components";
 
 type UseAuthProfileFlowArgs = {
   authController: AuthController;
