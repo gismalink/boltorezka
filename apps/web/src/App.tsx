@@ -2007,7 +2007,7 @@ export function App() {
     }
 
     const speaking = !micMuted && micTestLevel >= 0.055;
-    const signature = `${micMuted ? 1 : 0}:${speaking ? 1 : 0}`;
+    const signature = `${micMuted ? 1 : 0}:${speaking ? 1 : 0}:${audioMuted ? 1 : 0}`;
     if (lastBroadcastMicStateRef.current === signature) {
       return;
     }
