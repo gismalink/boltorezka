@@ -563,6 +563,60 @@ export function useLivekitVoiceRuntime({
     })();
   }, [micMuted]);
 
+  const switchMicrophoneInput = useCallback(async () => {
+    if (!roomVoiceConnected) {
+      return;
+    }
+
+    const room = roomRef.current;
+    const currentAudioTrack = localTracksRef.current.get(Track.Source.Microphone);
+    if (!room || !currentAudioTrack) {
+      return;
+    }
+
+    const desiredDeviceId = selectedInputId && selectedInputId !== "default"
+      ? selectedInputId
+      : "default";
+
+    try {
+      const audioTrackWithDeviceSwitch = currentAudioTrack as LocalTrack & {
+        setDeviceId?: (deviceId: string) => Promise<boolean>;
+      };
+
+      if (typeof audioTrackWithDeviceSwitch.setDeviceId === "function") {
+        await audioTrackWithDeviceSwitch.setDeviceId(desiredDeviceId);
+        return;
+      }
+
+      const replacementTracks = await createLocalTracks({
+        audio: desiredDeviceId !== "default"
+          ? { deviceId: { exact: desiredDeviceId } }
+          : true,
+        video: false
+      });
+      const replacementAudioTrack = replacementTracks.find((track) => track.kind === Track.Kind.Audio);
+      if (!replacementAudioTrack) {
+        replacementTracks.forEach((track) => track.stop());
+        return;
+      }
+
+      room.localParticipant.unpublishTrack(currentAudioTrack);
+      currentAudioTrack.stop();
+      await room.localParticipant.publishTrack(replacementAudioTrack);
+      localTracksRef.current.set(Track.Source.Microphone, replacementAudioTrack);
+
+      if (micMuted) {
+        await replacementAudioTrack.mute();
+      }
+    } catch (error) {
+      pushCallLog(`livekit mic device switch failed: ${error instanceof Error ? error.message : "unknown error"}`);
+    }
+  }, [micMuted, pushCallLog, roomVoiceConnected, selectedInputId]);
+
+  useEffect(() => {
+    void switchMicrophoneInput();
+  }, [switchMicrophoneInput]);
+
   useEffect(() => {
     if (!roomVoiceConnected) {
       return;

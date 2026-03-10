@@ -57,9 +57,9 @@ const TOAST_AUTO_DISMISS_MS = 4500;
 const TOAST_ID_RANDOM_RANGE = 10000;
 const TOAST_DUPLICATE_THROTTLE_MS = 12000;
 const TOAST_MAX_VISIBLE = 4;
-const MAX_CHAT_IMAGE_DATA_URL_LENGTH = 28000;
-const MAX_CHAT_IMAGE_MAX_SIDE = 1200;
-const MAX_CHAT_IMAGE_QUALITY = 0.6;
+const DEFAULT_CHAT_IMAGE_DATA_URL_LENGTH = 28000;
+const DEFAULT_CHAT_IMAGE_MAX_SIDE = 1200;
+const DEFAULT_CHAT_IMAGE_QUALITY = 0.6;
 const MESSAGE_EDIT_DELETE_WINDOW_MS = 10 * 60 * 1000;
 const VERSION_POLL_INTERVAL_MS = 60000;
 const ROOM_SLUG_STORAGE_KEY = "boltorezka_room_slug";
@@ -157,6 +157,11 @@ export function App() {
   const [mobileTab, setMobileTab] = useState<MobileTab>("channels");
   const [serverAudioQuality, setServerAudioQuality] = useState<AudioQuality>("standard");
   const [serverAudioQualitySaving, setServerAudioQualitySaving] = useState(false);
+  const [serverChatImagePolicy, setServerChatImagePolicy] = useState({
+    maxDataUrlLength: DEFAULT_CHAT_IMAGE_DATA_URL_LENGTH,
+    maxImageSide: DEFAULT_CHAT_IMAGE_MAX_SIDE,
+    jpegQuality: DEFAULT_CHAT_IMAGE_QUALITY
+  });
   const [serverVideoEffectType, setServerVideoEffectType] = useState<ServerVideoEffectType>(() => {
     const value = localStorage.getItem("boltorezka_server_video_effect_type");
     if (value === "none" || value === "pixel8" || value === "ascii") {
@@ -1144,6 +1149,16 @@ export function App() {
       .then((res) => setServerAudioQuality(res.audioQuality))
       .catch((error) => pushLog(`server audio quality failed: ${error.message}`));
 
+    api.serverChatImagePolicy(nextToken)
+      .then((res) => {
+        setServerChatImagePolicy({
+          maxDataUrlLength: Math.max(8000, Math.min(250000, Math.round(Number(res.maxDataUrlLength) || DEFAULT_CHAT_IMAGE_DATA_URL_LENGTH))),
+          maxImageSide: Math.max(256, Math.min(4096, Math.round(Number(res.maxImageSide) || DEFAULT_CHAT_IMAGE_MAX_SIDE))),
+          jpegQuality: Math.max(0.3, Math.min(0.95, Number(res.jpegQuality) || DEFAULT_CHAT_IMAGE_QUALITY))
+        });
+      })
+      .catch((error) => pushLog(`server chat image policy failed: ${error.message}`));
+
     void roomAdminController.loadRoomTree(nextToken);
   }, [pushLog, roomAdminController]);
 
@@ -1194,7 +1209,21 @@ export function App() {
     onCallVideoState: handleIncomingVideoState,
     onCallInitialState: handleIncomingInitialCallState,
     onCallNack: handleCallNack,
-    onAudioQualityUpdated: handleAudioQualityUpdated
+    onAudioQualityUpdated: handleAudioQualityUpdated,
+    onChatCleared: (payload) => {
+      const targetRoomSlug = String(payload.roomSlug || "").trim();
+      const activeRoomSlug = roomSlugRef.current;
+      if (!targetRoomSlug || targetRoomSlug !== activeRoomSlug) {
+        return;
+      }
+
+      setMessages([]);
+      setMessagesHasMore(false);
+      setMessagesNextCursor(null);
+
+      const deletedCount = Number(payload.deletedCount || 0);
+      pushLog(`channel chat cleared by admin (${Number.isFinite(deletedCount) ? deletedCount : 0})`);
+    }
   });
 
   useEffect(() => {
@@ -1333,7 +1362,9 @@ export function App() {
           const originalWidth = Math.max(1, Math.round(image.naturalWidth || 1));
           const originalHeight = Math.max(1, Math.round(image.naturalHeight || 1));
           const maxSide = Math.max(originalWidth, originalHeight);
-          const scale = maxSide > MAX_CHAT_IMAGE_MAX_SIDE ? MAX_CHAT_IMAGE_MAX_SIDE / maxSide : 1;
+          const scale = maxSide > serverChatImagePolicy.maxImageSide
+            ? serverChatImagePolicy.maxImageSide / maxSide
+            : 1;
           const targetWidth = Math.max(1, Math.round(originalWidth * scale));
           const targetHeight = Math.max(1, Math.round(originalHeight * scale));
 
@@ -1347,7 +1378,7 @@ export function App() {
           }
 
           context.drawImage(image, 0, 0, targetWidth, targetHeight);
-          const compressed = canvas.toDataURL("image/jpeg", MAX_CHAT_IMAGE_QUALITY);
+          const compressed = canvas.toDataURL("image/jpeg", serverChatImagePolicy.jpegQuality);
           resolve(compressed);
         };
         image.src = source;
@@ -1355,7 +1386,7 @@ export function App() {
 
       reader.readAsDataURL(file);
     });
-  }, []);
+  }, [serverChatImagePolicy.jpegQuality, serverChatImagePolicy.maxImageSide]);
 
   const sendMessage = (event: FormEvent) => {
     event.preventDefault();
@@ -1420,7 +1451,7 @@ export function App() {
         const dataUrl = await compressImageToDataUrl(file);
         const markdown = `![скриншот](${dataUrl})`;
 
-        if (markdown.length > MAX_CHAT_IMAGE_DATA_URL_LENGTH) {
+        if (markdown.length > serverChatImagePolicy.maxDataUrlLength) {
           pushToast(t("chat.imageTooLarge"));
           return;
         }

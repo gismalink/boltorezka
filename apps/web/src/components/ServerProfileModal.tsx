@@ -100,6 +100,9 @@ export function ServerProfileModal({
   onSetServerVideoWindowMaxWidth
 }: ServerProfileModalProps) {
   const previewVideoRef = useRef<HTMLVideoElement>(null);
+  const totalUsers = adminUsers.length;
+  const totalAdmins = adminUsers.filter((item) => item.role === "admin" || item.role === "super_admin").length;
+  const totalBanned = adminUsers.filter((item) => item.is_banned).length;
 
   useEffect(() => {
     const element = previewVideoRef.current;
@@ -209,6 +212,7 @@ export function ServerProfileModal({
           {serverMenuTab === "users" && canPromote ? (
             <section className="grid gap-3">
               <h3>{t("admin.title")}</h3>
+              <p className="muted">Users total: {totalUsers} · Admins: {totalAdmins} · Banned: {totalBanned}</p>
               <ul className="admin-list grid gap-2">
                 {adminUsers.map((item) => (
                   <li key={item.id} className="admin-row grid min-h-[42px] grid-cols-[minmax(0,1fr)_auto] items-center gap-2 max-[800px]:grid-cols-1">

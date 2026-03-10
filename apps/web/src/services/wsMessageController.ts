@@ -63,6 +63,14 @@ type WsMessageControllerOptions = {
       updatedByUserId?: string | null;
     }
   ) => void;
+  onChatCleared?: (
+    payload: {
+      roomId?: string;
+      roomSlug?: string;
+      deletedCount?: number;
+      clearedAt?: string;
+    }
+  ) => void;
 };
 
 export class WsMessageController {
@@ -226,6 +234,21 @@ export class WsMessageController {
     }
 
     this.options.setMessages((prev) => prev.filter((item) => item.id !== messageId));
+  }
+
+  private handleChatCleared(message: WsIncoming): void {
+    const roomId = this.asTrimmedString(message.payload?.roomId) || undefined;
+    const roomSlug = this.asTrimmedString(message.payload?.roomSlug) || undefined;
+    const deletedCountRaw = Number(message.payload?.deletedCount);
+    const deletedCount = Number.isFinite(deletedCountRaw) ? Math.max(0, Math.round(deletedCountRaw)) : undefined;
+    const clearedAt = this.asTrimmedString(message.payload?.clearedAt) || undefined;
+
+    this.options.onChatCleared?.({
+      roomId,
+      roomSlug,
+      deletedCount,
+      clearedAt
+    });
   }
 
   private handleCallMicState(message: WsIncoming): void {
@@ -457,6 +480,9 @@ export class WsMessageController {
         return;
       case "chat.deleted":
         this.handleChatDeleted(message);
+        return;
+      case "chat.cleared":
+        this.handleChatCleared(message);
         return;
       case "call.mic_state":
         this.handleCallMicState(message);

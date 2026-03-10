@@ -74,6 +74,14 @@ type UseRealtimeChatLifecycleArgs = {
       updatedByUserId?: string | null;
     }
   ) => void;
+  onChatCleared?: (
+    payload: {
+      roomId?: string;
+      roomSlug?: string;
+      deletedCount?: number;
+      clearedAt?: string;
+    }
+  ) => void;
 };
 
 export function useRealtimeChatLifecycle({
@@ -103,13 +111,15 @@ export function useRealtimeChatLifecycle({
   onCallVideoState,
   onCallInitialState,
   onCallNack,
-  onAudioQualityUpdated
+  onAudioQualityUpdated,
+  onChatCleared
 }: UseRealtimeChatLifecycleArgs) {
   const onCallMicStateRef = useRef(onCallMicState);
   const onCallVideoStateRef = useRef(onCallVideoState);
   const onCallInitialStateRef = useRef(onCallInitialState);
   const onCallNackRef = useRef(onCallNack);
   const onAudioQualityUpdatedRef = useRef(onAudioQualityUpdated);
+  const onChatClearedRef = useRef(onChatCleared);
   const onRoomMediaTopologyRef = useRef(onRoomMediaTopology);
 
   useEffect(() => {
@@ -131,6 +141,10 @@ export function useRealtimeChatLifecycle({
   useEffect(() => {
     onAudioQualityUpdatedRef.current = onAudioQualityUpdated;
   }, [onAudioQualityUpdated]);
+
+  useEffect(() => {
+    onChatClearedRef.current = onChatCleared;
+  }, [onChatCleared]);
 
   useEffect(() => {
     onRoomMediaTopologyRef.current = onRoomMediaTopology;
@@ -174,7 +188,8 @@ export function useRealtimeChatLifecycle({
       onCallVideoState: (...args) => onCallVideoStateRef.current?.(...args),
       onCallInitialState: (...args) => onCallInitialStateRef.current?.(...args),
       onCallNack: (...args) => onCallNackRef.current?.(...args),
-      onAudioQualityUpdated: (...args) => onAudioQualityUpdatedRef.current?.(...args)
+      onAudioQualityUpdated: (...args) => onAudioQualityUpdatedRef.current?.(...args),
+      onChatCleared: (...args) => onChatClearedRef.current?.(...args)
     });
 
     const client = new RealtimeClient({
