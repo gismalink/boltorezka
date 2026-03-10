@@ -67,7 +67,7 @@ const CLIENT_BUILD_VERSION = String(import.meta.env.VITE_APP_VERSION || "").trim
 const CLIENT_BUILD_DATE = String(import.meta.env.VITE_APP_BUILD_DATE || "").trim();
 const CLIENT_BUILD_DATE_LABEL = CLIENT_BUILD_DATE ? `v.${CLIENT_BUILD_DATE}` : "";
 
-type ServerMenuTab = "users" | "events" | "telemetry" | "call" | "sound" | "video";
+type ServerMenuTab = "users" | "events" | "telemetry" | "call" | "sound" | "video" | "chat_images";
 type MobileTab = "channels" | "chat" | "settings";
 type ServerVideoResolution = "160x120" | "320x240" | "640x480";
 
@@ -2463,6 +2463,7 @@ export function App() {
         serverAudioQuality={serverAudioQuality}
         serverAudioQualitySaving={serverAudioQualitySaving}
         canManageAudioQuality={canManageAudioQuality}
+        serverChatImagePolicy={serverChatImagePolicy}
         serverVideoEffectType={serverVideoEffectType}
         serverVideoResolution={serverVideoResolution}
         serverVideoFps={serverVideoFps}

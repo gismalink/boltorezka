@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 import type { AudioQuality, TelemetrySummary, User } from "../domain";
 import type { ServerVideoEffectType } from "../hooks/rtc/voiceCallTypes";
 
-type ServerMenuTab = "users" | "events" | "telemetry" | "call" | "sound" | "video";
+type ServerMenuTab = "users" | "events" | "telemetry" | "call" | "sound" | "video" | "chat_images";
 
 type ServerProfileModalProps = {
   open: boolean;
@@ -20,6 +20,11 @@ type ServerProfileModalProps = {
   serverAudioQuality: AudioQuality;
   serverAudioQualitySaving: boolean;
   canManageAudioQuality: boolean;
+  serverChatImagePolicy: {
+    maxDataUrlLength: number;
+    maxImageSide: number;
+    jpegQuality: number;
+  };
   serverVideoEffectType: ServerVideoEffectType;
   serverVideoResolution: "160x120" | "320x240" | "640x480";
   serverVideoFps: 10 | 15 | 24 | 30;
@@ -68,6 +73,7 @@ export function ServerProfileModal({
   serverAudioQuality,
   serverAudioQualitySaving,
   canManageAudioQuality,
+  serverChatImagePolicy,
   serverVideoEffectType,
   serverVideoResolution,
   serverVideoFps,
@@ -187,6 +193,13 @@ export function ServerProfileModal({
               {t("server.tabVideo")}
             </button>
           ) : null}
+          <button
+            type="button"
+            className={`secondary user-settings-tab-btn min-h-[42px] justify-start text-left max-[800px]:min-w-0 max-[800px]:justify-center ${serverMenuTab === "chat_images" ? "user-settings-tab-btn-active" : ""}`}
+            onClick={() => onSetServerMenuTab("chat_images")}
+          >
+            {t("server.tabChatImages")}
+          </button>
         </div>
 
         <div className="user-settings-content grid min-h-0 min-w-0 grid-rows-[auto_minmax(0,1fr)] content-start gap-4 overflow-auto overflow-x-hidden pr-0">
@@ -198,6 +211,7 @@ export function ServerProfileModal({
               {serverMenuTab === "call" ? t("server.tabCall") : null}
               {serverMenuTab === "sound" ? t("server.tabSound") : null}
               {serverMenuTab === "video" ? t("server.tabVideo") : null}
+              {serverMenuTab === "chat_images" ? t("server.tabChatImages") : null}
             </h2>
             <button
               type="button"
@@ -513,6 +527,19 @@ export function ServerProfileModal({
                   </label>
                 </div>
               ) : null}
+            </section>
+          ) : null}
+
+          {serverMenuTab === "chat_images" ? (
+            <section className="grid gap-3">
+              <h3>{t("server.chatImagesTitle")}</h3>
+              <p className="muted">{t("server.chatImagesHint")}</p>
+              <div className="grid gap-2">
+                <div>maxDataUrlLength: {serverChatImagePolicy.maxDataUrlLength}</div>
+                <div>maxImageSide: {serverChatImagePolicy.maxImageSide}px</div>
+                <div>jpegQuality: {serverChatImagePolicy.jpegQuality}</div>
+              </div>
+              <p className="muted">{t("server.chatImagesReadonly")}</p>
             </section>
           ) : null}
         </div>
