@@ -299,14 +299,7 @@ export function UserDock({
                   disabled={mediaControlsLocked}
                   onClick={onToggleAudio}
                 >
-                  {audioMuted ? (
-                    <span className="icon-muted-headphones" aria-hidden="true">
-                      <i className="bi bi-headphones" />
-                      <i className="bi bi-slash-lg" />
-                    </span>
-                  ) : (
-                    <i className="bi bi-headphones" aria-hidden="true" />
-                  )}
+                  <i className={`bi bi-headphones ${audioMuted ? "headphones-icon-muted" : ""}`} aria-hidden="true" />
                 </button>
                 <button
                   type="button"
