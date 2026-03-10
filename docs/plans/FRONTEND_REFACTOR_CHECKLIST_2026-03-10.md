@@ -10,10 +10,22 @@
 - [x] Этап 4: выделение build-version sync (`useBuildVersionSync`)
 - [x] Этап 5: выделение event logs (`useAppEventLogs`)
 - [x] Этап 6: выделение snapshot текущей комнаты (`useCurrentRoomSnapshot`)
-- [ ] Этап 7: выделение persisted local settings (audio/video/localStorage)
+- [x] Этап 7: выделение persisted local settings (audio/video/localStorage)
 - [ ] Этап 8: декомпозиция `UserDock` на подкомпоненты
 - [ ] Этап 9: декомпозиция `RoomsPanel` на подкомпоненты
 - [ ] Этап 10: Tailwind migration (mostly), кроме зафиксированных CSS-исключений
+
+## Дополнительно после этапов 1-7
+
+- [x] Вынесены realtime/call обработчики в `useRealtimeIncomingCallState`.
+- [x] Вынесена screen-share orchestration логика в `useScreenShareOrchestrator`.
+- [x] Вынесена WS ack/nack orchestration логика в `useWsEventAcks`.
+- [x] Вынесены session/token lifecycle эффекты в `useSessionStateLifecycle`.
+- [x] Вынесены ws disconnect reset эффекты в `useRealtimeConnectionReset`.
+- [x] Вынесена telemetry refresh orchestration в `useTelemetryRefresh`.
+- [x] Вынесен sync admin users в `useAdminUsersSync`.
+- [x] Вынесены room presence actions (`join/leave/kick`) в `useRoomPresenceActions`.
+- [x] Вынесены moderation/server-audio actions в `useServerModerationActions`.
 
 ## RNNoise (добавлено)
 
