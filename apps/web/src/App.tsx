@@ -1501,6 +1501,16 @@ export function App() {
             : 1;
           const targetWidth = Math.max(1, Math.round(originalWidth * scale));
           const targetHeight = Math.max(1, Math.round(originalHeight * scale));
+          const canvas = document.createElement("canvas");
+          canvas.width = targetWidth;
+          canvas.height = targetHeight;
+          const context = canvas.getContext("2d");
+          if (!context) {
+            reject(new Error("canvas_context_unavailable"));
+            return;
+          }
+
+          context.drawImage(image, 0, 0, targetWidth, targetHeight);
           const compressed = canvas.toDataURL("image/jpeg", serverChatImagePolicy.jpegQuality);
           resolve(compressed);
         };
@@ -1692,7 +1702,7 @@ export function App() {
   }, []);
 
   const handleToggleScreenShare = useCallback(async () => {
-    if (!token || !roomSlug || !currentRoomSupportsRtc || !roomVoiceConnected) {
+    if (!token || !roomSlug || currentRoomKind === "text" || !roomVoiceConnected) {
       pushToast(t("call.autoWaiting"));
       return;
     }
@@ -1741,7 +1751,7 @@ export function App() {
   }, [
     currentRoomScreenShareOwner.userId,
     currentRoomScreenShareOwner.userName,
-    currentRoomSupportsRtc,
+    currentRoomKind,
     isLocalScreenSharing,
     roomSlug,
     roomVoiceConnected,
