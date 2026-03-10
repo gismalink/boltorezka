@@ -96,8 +96,8 @@ if [[ -f "$ENV_FILE" ]]; then
   set +a
 fi
 
-if ! [[ "$TOTAL_USERS" =~ ^[0-9]+$ ]] || (( TOTAL_USERS < 2 || TOTAL_USERS > 6 )); then
-  echo "[smoke-auth-bootstrap] SMOKE_AUTH_TOTAL_USERS must be integer in range 2..6" >&2
+if ! [[ "$TOTAL_USERS" =~ ^[0-9]+$ ]] || (( TOTAL_USERS < 2 || TOTAL_USERS > 500 )); then
+  echo "[smoke-auth-bootstrap] SMOKE_AUTH_TOTAL_USERS must be integer in range 2..500" >&2
   exit 1
 fi
 
