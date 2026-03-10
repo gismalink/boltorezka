@@ -1,4 +1,5 @@
 export { useAuthProfileFlow } from "./useAuthProfileFlow";
+export { useAppUiState, type AppMobileTab, type AppServerMenuTab } from "./useAppUiState";
 export { useAutoRoomVoiceConnection } from "./useAutoRoomVoiceConnection";
 export { useCollapsedCategories } from "./useCollapsedCategories";
 export { useMediaDevicePreferences } from "./useMediaDevicePreferences";

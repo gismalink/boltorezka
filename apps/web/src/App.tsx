@@ -18,8 +18,9 @@ import {
   UserDock,
   VideoWindowsOverlay
 } from "./components";
-import type { InputProfile, MediaDevicesState, VoiceSettingsPanel } from "./components";
+import type { InputProfile, MediaDevicesState } from "./components";
 import {
+  useAppUiState,
   useAutoRoomVoiceConnection,
   useAuthProfileFlow,
   useCollapsedCategories,
@@ -68,8 +69,6 @@ const CLIENT_BUILD_VERSION = String(import.meta.env.VITE_APP_VERSION || "").trim
 const CLIENT_BUILD_DATE = String(import.meta.env.VITE_APP_BUILD_DATE || "").trim();
 const CLIENT_BUILD_DATE_LABEL = CLIENT_BUILD_DATE ? `v.${CLIENT_BUILD_DATE}` : "";
 
-type ServerMenuTab = "users" | "events" | "telemetry" | "call" | "sound" | "video" | "chat_images";
-type MobileTab = "channels" | "chat" | "settings";
 type ServerVideoResolution = "160x120" | "320x240" | "640x480";
 
 export function App() {
@@ -119,10 +118,6 @@ export function App() {
   const [editingRoomAudioQualitySetting, setEditingRoomAudioQualitySetting] = useState<ChannelAudioQualitySetting>("server_default");
   const [micMuted, setMicMuted] = useState(true);
   const [audioMuted, setAudioMuted] = useState<boolean>(() => localStorage.getItem("boltorezka_audio_muted") === "1");
-  const [audioOutputMenuOpen, setAudioOutputMenuOpen] = useState(false);
-  const [voiceSettingsOpen, setVoiceSettingsOpen] = useState(false);
-  const [userSettingsOpen, setUserSettingsOpen] = useState(false);
-  const [userSettingsTab, setUserSettingsTab] = useState<"profile" | "sound" | "camera" | "server_sounds">("profile");
   const [lang, setLang] = useState<Lang>(() => detectInitialLang());
   const [profileNameDraft, setProfileNameDraft] = useState("");
   const [profileStatusText, setProfileStatusText] = useState("");
@@ -145,7 +140,6 @@ export function App() {
     }
     return "custom";
   });
-  const [voiceSettingsPanel, setVoiceSettingsPanel] = useState<VoiceSettingsPanel>(null);
   const [mediaDevicesState, setMediaDevicesState] = useState<MediaDevicesState>("ready");
   const [mediaDevicesHint, setMediaDevicesHint] = useState("");
   const [micVolume, setMicVolume] = useState<number>(() => Number(localStorage.getItem("boltorezka_mic_volume") || 75));
@@ -157,12 +151,6 @@ export function App() {
     return Math.max(0, Math.min(100, parsed));
   });
   const [micTestLevel, setMicTestLevel] = useState(0);
-  const [authMenuOpen, setAuthMenuOpen] = useState(false);
-  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
-  const [appMenuOpen, setAppMenuOpen] = useState(false);
-  const [serverMenuTab, setServerMenuTab] = useState<ServerMenuTab>("events");
-  const [isMobileViewport, setIsMobileViewport] = useState(false);
-  const [mobileTab, setMobileTab] = useState<MobileTab>("channels");
   const [serverAudioQuality, setServerAudioQuality] = useState<AudioQuality>("standard");
   const [serverAudioQualitySaving, setServerAudioQualitySaving] = useState(false);
   const [serverChatImagePolicy, setServerChatImagePolicy] = useState({
@@ -225,7 +213,32 @@ export function App() {
   });
   const [serverVideoPreviewStream, setServerVideoPreviewStream] = useState<MediaStream | null>(null);
   const [realtimeReconnectNonce, setRealtimeReconnectNonce] = useState(0);
-  const [videoWindowsVisible, setVideoWindowsVisible] = useState(true);
+  const {
+    audioOutputMenuOpen,
+    setAudioOutputMenuOpen,
+    voiceSettingsOpen,
+    setVoiceSettingsOpen,
+    userSettingsOpen,
+    setUserSettingsOpen,
+    userSettingsTab,
+    setUserSettingsTab,
+    voiceSettingsPanel,
+    setVoiceSettingsPanel,
+    authMenuOpen,
+    setAuthMenuOpen,
+    profileMenuOpen,
+    setProfileMenuOpen,
+    appMenuOpen,
+    setAppMenuOpen,
+    serverMenuTab,
+    setServerMenuTab,
+    isMobileViewport,
+    setIsMobileViewport,
+    mobileTab,
+    setMobileTab,
+    videoWindowsVisible,
+    setVideoWindowsVisible
+  } = useAppUiState();
   const realtimeClientRef = useRef<RealtimeClient | null>(null);
   const pendingWsRequestResolversRef = useRef<
     Map<string, { resolve: () => void; reject: (error: Error) => void; timeoutId: number }>
