@@ -11,7 +11,7 @@
 - [x] Этап 5: выделение event logs (`useAppEventLogs`)
 - [x] Этап 6: выделение snapshot текущей комнаты (`useCurrentRoomSnapshot`)
 - [x] Этап 7: выделение persisted local settings (audio/video/localStorage)
-- [ ] Этап 8: декомпозиция `UserDock` на подкомпоненты
+- [x] Этап 8: декомпозиция `UserDock` на подкомпоненты
 - [x] Этап 9: декомпозиция `RoomsPanel` на подкомпоненты
 - [ ] Этап 10: Tailwind migration (mostly), кроме зафиксированных CSS-исключений
 
