@@ -863,10 +863,25 @@ pre {
 
 .channel-member-settings-popup {
   position: absolute;
-  right: 0;
-  top: calc(100% + var(--offset-menu));
+  left: calc(100% + var(--offset-menu));
+  right: auto;
+  top: 0;
   width: min(92vw, 280px);
   z-index: 40;
+}
+
+.channel-member-item-draggable {
+  cursor: grab;
+}
+
+.channel-member-item-draggable:hover,
+.channel-member-item-draggable:focus-within {
+  background: color-mix(in srgb, var(--pixel-panel) 72%, var(--pixel-neon-cyan) 28%);
+  box-shadow: inset 2px 0 0 color-mix(in srgb, var(--pixel-neon-cyan) 72%, var(--pixel-border) 28%);
+}
+
+.channel-member-item-draggable:active {
+  cursor: grabbing;
 }
 
 .room-btn-drop-target {
@@ -1548,5 +1563,11 @@ pre {
   .voice-submenu-popup {
     left: auto !important;
     right: var(--space-xs) !important;
+  }
+
+  .channel-member-settings-popup {
+    left: auto;
+    right: 0;
+    top: calc(100% + var(--offset-menu));
   }
 }

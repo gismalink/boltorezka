@@ -385,7 +385,7 @@ export function RoomRow({
             return (
               <li
                 key={`${room.id}-${member.userId || member.userName}`}
-                className={`channel-member-item grid min-h-[22px] grid-cols-[auto_1fr_auto_auto] items-center gap-1.5 ${isCurrentUser ? "channel-member-item-current" : ""} ${isVoiceActive ? "channel-member-item-voice-active" : ""}`}
+                className={`channel-member-item grid min-h-[22px] grid-cols-[auto_1fr_auto_auto] items-center gap-1.5 ${isCurrentUser ? "channel-member-item-current" : ""} ${isVoiceActive ? "channel-member-item-voice-active" : ""} ${canKickMembers && canManageMember ? "channel-member-item-draggable" : ""}`}
                 draggable={Boolean(canKickMembers && canManageMember)}
                 onDragStart={(event) => {
                   if (!member.userId) {
@@ -442,7 +442,7 @@ export function RoomRow({
                       <i className="bi bi-gear" aria-hidden="true" />
                     </button>
                     {memberMenuOpenKey === menuKey && member.userId ? (
-                      <div className="settings-popup channel-member-settings-popup">
+                      <div className="settings-popup floating-popup channel-member-settings-popup">
                         <div className="grid gap-3">
                           <div className="subheading">{member.userName}</div>
                           <label className="slider-label grid gap-1.5">
@@ -465,7 +465,23 @@ export function RoomRow({
                             />
                           </label>
                           <label className="grid gap-1.5">
-                            <span className="subheading">{t("rooms.memberNote")}</span>
+                            <span className="row items-center justify-between gap-2">
+                              <span className="subheading">{t("rooms.memberNote")}</span>
+                              <button
+                                type="button"
+                                className="secondary icon-btn tiny"
+                                aria-label={t("rooms.save")}
+                                data-tooltip={t("rooms.save")}
+                                onClick={() => {
+                                  void onSaveMemberPreference(member.userId as string, {
+                                    volume: volumeValue,
+                                    note: noteValue
+                                  });
+                                }}
+                              >
+                                <i className="bi bi-check2" aria-hidden="true" />
+                              </button>
+                            </span>
                             <input
                               type="text"
                               maxLength={32}
@@ -483,18 +499,6 @@ export function RoomRow({
                               placeholder={t("rooms.memberNotePlaceholder")}
                             />
                           </label>
-                          <button
-                            type="button"
-                            className="secondary"
-                            onClick={() => {
-                              void onSaveMemberPreference(member.userId as string, {
-                                volume: volumeValue,
-                                note: noteValue
-                              });
-                            }}
-                          >
-                            <i className="bi bi-save" aria-hidden="true" /> {t("rooms.save")}
-                          </button>
                           {canKickMembers ? (
                             <button
                               type="button"
