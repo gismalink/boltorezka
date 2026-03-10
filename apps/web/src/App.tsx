@@ -310,7 +310,7 @@ export function App() {
     return members.filter((member) => member.userId !== me);
   }, [roomsPresenceDetailsBySlug, roomSlug, user?.id]);
 
-  const { currentRoomKind, currentRoomAudioQualityOverride } = useCurrentRoomSnapshot({
+  const { currentRoom: currentRoomSnapshot, currentRoomKind, currentRoomAudioQualityOverride } = useCurrentRoomSnapshot({
     rooms,
     roomsTree,
     roomSlug
@@ -391,11 +391,17 @@ export function App() {
   }, [currentRoomVoiceTargets]);
 
   useEffect(() => {
+    // Wait until room metadata is resolved; otherwise boot-time fallback to "text"
+    // can incorrectly clear persisted camera state on page reload.
+    if (!currentRoomSnapshot) {
+      return;
+    }
+
     if (!allowVideoStreaming) {
       setCameraEnabled(false);
       setVideoWindowsVisible(true);
     }
-  }, [allowVideoStreaming]);
+  }, [allowVideoStreaming, currentRoomSnapshot, setVideoWindowsVisible]);
 
   useEffect(() => {
     setVoiceCameraEnabledByUserIdInCurrentRoom({});
