@@ -18,6 +18,7 @@
 ## Дополнительно после этапов 1-7
 
 - [x] Этап 8 (progress): вынесен `UserDockSettingsOverlay` из `UserDock`.
+- [x] Этап 8 (progress): вынесен `UserDockControls` (RTC/actions/popup controls) из `UserDock`.
 
 - [x] Вынесены realtime/call обработчики в `useRealtimeIncomingCallState`.
 - [x] Вынесена screen-share orchestration логика в `useScreenShareOrchestrator`.
