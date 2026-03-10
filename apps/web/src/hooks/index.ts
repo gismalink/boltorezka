@@ -1,6 +1,7 @@
 export { useAuthProfileFlow } from "./useAuthProfileFlow";
 export { useAppUiState, type AppMobileTab, type AppServerMenuTab } from "./useAppUiState";
 export { useAutoRoomVoiceConnection } from "./useAutoRoomVoiceConnection";
+export { useBuildVersionSync } from "./useBuildVersionSync";
 export { useCollapsedCategories } from "./useCollapsedCategories";
 export { useMediaDevicePreferences } from "./useMediaDevicePreferences";
 export { useMicrophoneLevelMeter } from "./useMicrophoneLevelMeter";
