@@ -21,6 +21,8 @@
 - [x] Этап 8 (progress): вынесен `UserDockControls` (RTC/actions/popup controls) из `UserDock`.
 - [x] Этап 9 (progress): вынесен `RoomRow` (настройки канала + presence статусы участников) из `RoomsPanel`.
 - [x] Этап 9 (progress): вынесен `RoomsConfirmOverlay` из `RoomsPanel`.
+- [x] Этап 9 (progress): вынесен `RoomsPanelHeader` (create category/channel popups) из `RoomsPanel`.
+- [x] Этап 9 (progress): вынесен `RoomsCategoryBlock` (category collapse/settings/channels list) из `RoomsPanel`.
 
 - [x] Вынесены realtime/call обработчики в `useRealtimeIncomingCallState`.
 - [x] Вынесена screen-share orchestration логика в `useScreenShareOrchestrator`.
