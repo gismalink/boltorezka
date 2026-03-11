@@ -11,6 +11,7 @@ import {
   handleScreenShareStop
 } from "./realtime-call-screen.js";
 import { handleChatDelete, handleChatEdit, handleChatSend } from "./realtime-chat.js";
+import { isDuplicateCallSignal } from "./realtime-idempotency.js";
 import { closeRealtimeConnection, initializeRealtimeConnection } from "./realtime-lifecycle.js";
 import { createRealtimeMediaStateStore } from "./realtime-media-state.js";
 import { handleRoomKick, handleRoomMoveMember } from "./realtime-moderation.js";
@@ -371,15 +372,15 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
       return false;
     }
 
-    const idempotencyKey = `ws:idempotency:call:${state.userId}:${eventType}:${requestId}`;
-
     try {
-      const setResult = await fastify.redis.set(idempotencyKey, "1", {
-        NX: true,
-        EX: 120
-      });
+      const isDuplicate = await isDuplicateCallSignal(
+        fastify.redis,
+        state.userId,
+        eventType,
+        requestId
+      );
 
-      if (setResult) {
+      if (!isDuplicate) {
         return false;
       }
 
