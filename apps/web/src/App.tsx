@@ -27,6 +27,7 @@ import {
   useAuthProfileFlow,
   useBuildVersionSync,
   useSessionStateLifecycle,
+  useMemberPreferencesSync,
   useTelemetryRefresh,
   useCollapsedCategories,
   useCurrentRoomSnapshot,
@@ -1178,47 +1179,13 @@ export function App() {
     }
   }, [pushLog, pushToast, t, token]);
 
-  useEffect(() => {
-    if (!token || !user?.id) {
-      setMemberPreferencesByUserId({});
-      return;
-    }
-
-    const targetUserIds = Array.from(new Set(
-      Object.values(roomsPresenceDetailsBySlug)
-        .flat()
-        .map((member) => String(member.userId || "").trim())
-        .filter((memberUserId) => memberUserId.length > 0 && memberUserId !== user.id)
-    ));
-
-    if (targetUserIds.length === 0) {
-      return;
-    }
-
-    let active = true;
-    void (async () => {
-      try {
-        const response = await api.memberPreferences(token, targetUserIds);
-        if (!active) {
-          return;
-        }
-
-        setMemberPreferencesByUserId((prev) => {
-          const next = { ...prev };
-          response.preferences.forEach((preference) => {
-            next[preference.targetUserId] = preference;
-          });
-          return next;
-        });
-      } catch (error) {
-        pushLog(`member preferences load failed: ${(error as Error).message}`);
-      }
-    })();
-
-    return () => {
-      active = false;
-    };
-  }, [roomsPresenceDetailsBySlug, token, user?.id, pushLog]);
+  useMemberPreferencesSync({
+    token,
+    currentUserId: user?.id || "",
+    roomsPresenceDetailsBySlug,
+    setMemberPreferencesByUserId,
+    pushLog
+  });
 
   const {
     promote,
@@ -1349,201 +1316,112 @@ export function App() {
 
   useScreenWakeLock(Boolean(user && roomSlug && currentRoomSupportsRtc && roomVoiceConnected));
 
-  const userDockNode = user ? (
-    <UserDock
-      t={t}
-      user={user}
-      currentRoomSupportsRtc={currentRoomSupportsRtc}
-      currentRoomSupportsVideo={currentRoomSupportsVideo}
-      currentRoomTitle={currentRoom?.title || ""}
-      callStatus={callStatus}
-      localVoiceMediaStatusSummary={localVoiceMediaStatusSummary}
-      lastCallPeer={lastCallPeer}
-      roomVoiceConnected={roomVoiceConnected}
-      screenShareActive={Boolean(currentRoomScreenShareOwner.userId)}
-      screenShareOwnedByCurrentUser={isCurrentUserScreenShareOwner}
-      canStartScreenShare={canToggleScreenShare}
-      noiseSuppressionEnabled={noiseSuppressionEnabled}
-      cameraEnabled={cameraEnabled}
-      micMuted={micMuted}
-      audioMuted={audioMuted}
-      audioOutputMenuOpen={audioOutputMenuOpen}
-      voiceSettingsOpen={voiceSettingsOpen}
-      userSettingsOpen={userSettingsOpen}
-      userSettingsTab={userSettingsTab}
-      voiceSettingsPanel={voiceSettingsPanel}
-      profileUsername={String(user.username || user.email.split("@")[0] || "")}
-      profileNameDraft={profileNameDraft}
-      profileEmail={user.email}
-      profileSaving={profileSaving}
-      profileStatusText={profileStatusText}
-      selectedLang={lang}
-      languageOptions={LANGUAGE_OPTIONS}
-      inputOptions={inputOptions}
-      outputOptions={outputOptions}
-      videoInputOptions={videoInputOptions}
-      selectedInputId={selectedInputId}
-      selectedOutputId={selectedOutputId}
-      selectedVideoInputId={selectedVideoInputId}
-      selectedInputProfile={selectedInputProfile}
-      inputProfileLabel={inputProfileLabel}
-      currentInputLabel={currentInputLabel}
-      micVolume={micVolume}
-      outputVolume={outputVolume}
-      serverSoundsMasterVolume={serverSoundSettings.masterVolume}
-      serverSoundsEnabled={serverSoundSettings.enabledByEvent}
-      micTestLevel={micTestLevel}
-      mediaDevicesState={mediaDevicesState}
-      mediaDevicesHint={mediaDevicesHint}
-      audioOutputAnchorRef={audioOutputAnchorRef}
-      voiceSettingsAnchorRef={voiceSettingsAnchorRef}
-      userSettingsRef={userSettingsRef}
-      onToggleMic={handleToggleMic}
-      onToggleAudio={handleToggleAudio}
-      onToggleCamera={() => {
-        if (allowVideoStreaming && !cameraEnabled) {
-          requestVideoAccess();
-        }
-        setCameraEnabled((value) => !value);
-      }}
-      onToggleScreenShare={() => {
-        void handleToggleScreenShare();
-      }}
-      onToggleNoiseSuppression={handleToggleNoiseSuppression}
-      onRequestVideoAccess={requestVideoAccess}
-      onToggleVoiceSettings={() => {
-        setAudioOutputMenuOpen(false);
-        setVoiceSettingsPanel(null);
-        setVoiceSettingsOpen((value) => !value);
-      }}
-      onToggleAudioOutput={() => {
-        setVoiceSettingsOpen(false);
-        setVoiceSettingsPanel(null);
-        setAudioOutputMenuOpen((value) => !value);
-      }}
-      onOpenUserSettings={openUserSettings}
-      onSetVoiceSettingsOpen={setVoiceSettingsOpen}
-      onSetAudioOutputMenuOpen={setAudioOutputMenuOpen}
-      onSetVoiceSettingsPanel={setVoiceSettingsPanel}
-      onSetUserSettingsOpen={setUserSettingsOpen}
-      onSetUserSettingsTab={setUserSettingsTab}
-      onSetProfileNameDraft={setProfileNameDraft}
-      onSetSelectedLang={setLang}
-      onSaveProfile={saveMyProfile}
-      onSetSelectedInputId={setSelectedInputId}
-      onSetSelectedOutputId={setSelectedOutputId}
-      onSetSelectedVideoInputId={setSelectedVideoInputId}
-      onSetSelectedInputProfile={setSelectedInputProfile}
-      onRefreshDevices={() => refreshDevices(true)}
-      onRequestMediaAccess={requestMediaAccess}
-      onSetMicVolume={setMicVolume}
-      onSetOutputVolume={setOutputVolume}
-      onSetServerSoundsMasterVolume={setServerSoundsMasterVolume}
-      onSetServerSoundEnabled={setServerSoundEnabled}
-      onPreviewServerSound={playServerSound}
-      onDisconnectCall={leaveRoom}
-      isMobileViewport={isMobileViewport}
-      inlineSettingsMode={false}
-    />
-  ) : null;
+  const handleToggleCamera = useCallback(() => {
+    if (allowVideoStreaming && !cameraEnabled) {
+      requestVideoAccess();
+    }
+    setCameraEnabled((value) => !value);
+  }, [allowVideoStreaming, cameraEnabled, requestVideoAccess]);
 
-  const userDockInlineSettingsNode = user ? (
-    <UserDock
-      t={t}
-      user={user}
-      currentRoomSupportsRtc={currentRoomSupportsRtc}
-      currentRoomSupportsVideo={currentRoomSupportsVideo}
-      currentRoomTitle={currentRoom?.title || ""}
-      callStatus={callStatus}
-      localVoiceMediaStatusSummary={localVoiceMediaStatusSummary}
-      lastCallPeer={lastCallPeer}
-      roomVoiceConnected={roomVoiceConnected}
-      screenShareActive={Boolean(currentRoomScreenShareOwner.userId)}
-      screenShareOwnedByCurrentUser={isCurrentUserScreenShareOwner}
-      canStartScreenShare={canToggleScreenShare}
-      noiseSuppressionEnabled={noiseSuppressionEnabled}
-      cameraEnabled={cameraEnabled}
-      micMuted={micMuted}
-      audioMuted={audioMuted}
-      audioOutputMenuOpen={audioOutputMenuOpen}
-      voiceSettingsOpen={voiceSettingsOpen}
-      userSettingsOpen={userSettingsOpen}
-      userSettingsTab={userSettingsTab}
-      voiceSettingsPanel={voiceSettingsPanel}
-      profileUsername={String(user.username || user.email.split("@")[0] || "")}
-      profileNameDraft={profileNameDraft}
-      profileEmail={user.email}
-      profileSaving={profileSaving}
-      profileStatusText={profileStatusText}
-      selectedLang={lang}
-      languageOptions={LANGUAGE_OPTIONS}
-      inputOptions={inputOptions}
-      outputOptions={outputOptions}
-      videoInputOptions={videoInputOptions}
-      selectedInputId={selectedInputId}
-      selectedOutputId={selectedOutputId}
-      selectedVideoInputId={selectedVideoInputId}
-      selectedInputProfile={selectedInputProfile}
-      inputProfileLabel={inputProfileLabel}
-      currentInputLabel={currentInputLabel}
-      micVolume={micVolume}
-      outputVolume={outputVolume}
-      serverSoundsMasterVolume={serverSoundSettings.masterVolume}
-      serverSoundsEnabled={serverSoundSettings.enabledByEvent}
-      micTestLevel={micTestLevel}
-      mediaDevicesState={mediaDevicesState}
-      mediaDevicesHint={mediaDevicesHint}
-      audioOutputAnchorRef={audioOutputAnchorRef}
-      voiceSettingsAnchorRef={voiceSettingsAnchorRef}
-      userSettingsRef={userSettingsRef}
-      onToggleMic={handleToggleMic}
-      onToggleAudio={handleToggleAudio}
-      onToggleCamera={() => {
-        if (allowVideoStreaming && !cameraEnabled) {
-          requestVideoAccess();
-        }
-        setCameraEnabled((value) => !value);
-      }}
-      onToggleScreenShare={() => {
-        void handleToggleScreenShare();
-      }}
-      onToggleNoiseSuppression={handleToggleNoiseSuppression}
-      onRequestVideoAccess={requestVideoAccess}
-      onToggleVoiceSettings={() => {
-        setAudioOutputMenuOpen(false);
-        setVoiceSettingsPanel(null);
-        setVoiceSettingsOpen((value) => !value);
-      }}
-      onToggleAudioOutput={() => {
-        setVoiceSettingsOpen(false);
-        setVoiceSettingsPanel(null);
-        setAudioOutputMenuOpen((value) => !value);
-      }}
-      onOpenUserSettings={openUserSettings}
-      onSetVoiceSettingsOpen={setVoiceSettingsOpen}
-      onSetAudioOutputMenuOpen={setAudioOutputMenuOpen}
-      onSetVoiceSettingsPanel={setVoiceSettingsPanel}
-      onSetUserSettingsOpen={setUserSettingsOpen}
-      onSetUserSettingsTab={setUserSettingsTab}
-      onSetProfileNameDraft={setProfileNameDraft}
-      onSetSelectedLang={setLang}
-      onSaveProfile={saveMyProfile}
-      onSetSelectedInputId={setSelectedInputId}
-      onSetSelectedOutputId={setSelectedOutputId}
-      onSetSelectedVideoInputId={setSelectedVideoInputId}
-      onSetSelectedInputProfile={setSelectedInputProfile}
-      onRefreshDevices={() => refreshDevices(true)}
-      onRequestMediaAccess={requestMediaAccess}
-      onSetMicVolume={setMicVolume}
-      onSetOutputVolume={setOutputVolume}
-      onSetServerSoundsMasterVolume={setServerSoundsMasterVolume}
-      onSetServerSoundEnabled={setServerSoundEnabled}
-      onPreviewServerSound={playServerSound}
-      onDisconnectCall={leaveRoom}
-      isMobileViewport={isMobileViewport}
-      inlineSettingsMode
-    />
-  ) : null;
+  const handleToggleScreenShareClick = useCallback(() => {
+    void handleToggleScreenShare();
+  }, [handleToggleScreenShare]);
+
+  const handleToggleVoiceSettings = useCallback(() => {
+    setAudioOutputMenuOpen(false);
+    setVoiceSettingsPanel(null);
+    setVoiceSettingsOpen((value) => !value);
+  }, [setAudioOutputMenuOpen, setVoiceSettingsOpen, setVoiceSettingsPanel]);
+
+  const handleToggleAudioOutput = useCallback(() => {
+    setVoiceSettingsOpen(false);
+    setVoiceSettingsPanel(null);
+    setAudioOutputMenuOpen((value) => !value);
+  }, [setAudioOutputMenuOpen, setVoiceSettingsOpen, setVoiceSettingsPanel]);
+
+  const userDockSharedProps = user ? {
+    t,
+    user,
+    currentRoomSupportsRtc,
+    currentRoomSupportsVideo,
+    currentRoomTitle: currentRoom?.title || "",
+    callStatus,
+    localVoiceMediaStatusSummary,
+    lastCallPeer,
+    roomVoiceConnected,
+    screenShareActive: Boolean(currentRoomScreenShareOwner.userId),
+    screenShareOwnedByCurrentUser: isCurrentUserScreenShareOwner,
+    canStartScreenShare: canToggleScreenShare,
+    noiseSuppressionEnabled,
+    cameraEnabled,
+    micMuted,
+    audioMuted,
+    audioOutputMenuOpen,
+    voiceSettingsOpen,
+    userSettingsOpen,
+    userSettingsTab,
+    voiceSettingsPanel,
+    profileUsername: String(user.username || user.email.split("@")[0] || ""),
+    profileNameDraft,
+    profileEmail: user.email,
+    profileSaving,
+    profileStatusText,
+    selectedLang: lang,
+    languageOptions: LANGUAGE_OPTIONS,
+    inputOptions,
+    outputOptions,
+    videoInputOptions,
+    selectedInputId,
+    selectedOutputId,
+    selectedVideoInputId,
+    selectedInputProfile,
+    inputProfileLabel,
+    currentInputLabel,
+    micVolume,
+    outputVolume,
+    serverSoundsMasterVolume: serverSoundSettings.masterVolume,
+    serverSoundsEnabled: serverSoundSettings.enabledByEvent,
+    micTestLevel,
+    mediaDevicesState,
+    mediaDevicesHint,
+    audioOutputAnchorRef,
+    voiceSettingsAnchorRef,
+    userSettingsRef,
+    onToggleMic: handleToggleMic,
+    onToggleAudio: handleToggleAudio,
+    onToggleCamera: handleToggleCamera,
+    onToggleScreenShare: handleToggleScreenShareClick,
+    onToggleNoiseSuppression: handleToggleNoiseSuppression,
+    onRequestVideoAccess: requestVideoAccess,
+    onToggleVoiceSettings: handleToggleVoiceSettings,
+    onToggleAudioOutput: handleToggleAudioOutput,
+    onOpenUserSettings: openUserSettings,
+    onSetVoiceSettingsOpen: setVoiceSettingsOpen,
+    onSetAudioOutputMenuOpen: setAudioOutputMenuOpen,
+    onSetVoiceSettingsPanel: setVoiceSettingsPanel,
+    onSetUserSettingsOpen: setUserSettingsOpen,
+    onSetUserSettingsTab: setUserSettingsTab,
+    onSetProfileNameDraft: setProfileNameDraft,
+    onSetSelectedLang: setLang,
+    onSaveProfile: saveMyProfile,
+    onSetSelectedInputId: setSelectedInputId,
+    onSetSelectedOutputId: setSelectedOutputId,
+    onSetSelectedVideoInputId: setSelectedVideoInputId,
+    onSetSelectedInputProfile: setSelectedInputProfile,
+    onRefreshDevices: () => refreshDevices(true),
+    onRequestMediaAccess: requestMediaAccess,
+    onSetMicVolume: setMicVolume,
+    onSetOutputVolume: setOutputVolume,
+    onSetServerSoundsMasterVolume: setServerSoundsMasterVolume,
+    onSetServerSoundEnabled: setServerSoundEnabled,
+    onPreviewServerSound: playServerSound,
+    onDisconnectCall: leaveRoom,
+    isMobileViewport
+  } : null;
+
+  const userDockNode = userDockSharedProps ? <UserDock {...userDockSharedProps} inlineSettingsMode={false} /> : null;
+
+  const userDockInlineSettingsNode = userDockSharedProps ? <UserDock {...userDockSharedProps} inlineSettingsMode /> : null;
 
   return (
     <main className="app legacy-layout mx-auto grid h-[100dvh] max-h-[100dvh] w-full max-w-[1400px] grid-rows-[auto_1fr] gap-4 overflow-hidden p-4 desktop:gap-6 desktop:p-8">
