@@ -42,7 +42,7 @@ Legacy-файлы перенесены в `legacy/poc/`.
 - WS контракт v1: [docs/contracts/WS_CONTRACT_V1.md](docs/contracts/WS_CONTRACT_V1.md)
 - OpenAPI artifact v1: [docs/contracts/OPENAPI_V1.yaml](docs/contracts/OPENAPI_V1.yaml)
 - Smoke/CI matrix: [docs/operations/SMOKE_CI_MATRIX.md](docs/operations/SMOKE_CI_MATRIX.md)
-- Test plan (MVP + load): [docs/plans/2026-03_TEST_PLAN_MVP_LOAD.md](docs/plans/2026-03_TEST_PLAN_MVP_LOAD.md)
+- Test plan (MVP + load): [docs/plans/2026-03-02_TEST_PLAN_MVP_LOAD.md](docs/plans/2026-03-02_TEST_PLAN_MVP_LOAD.md)
 - Voice baseline runbook: [docs/runbooks/VOICE_BASELINE_RUNBOOK.md](docs/runbooks/VOICE_BASELINE_RUNBOOK.md)
 - TURN credential rotation runbook: [docs/runbooks/TURN_CREDENTIAL_ROTATION_RUNBOOK.md](docs/runbooks/TURN_CREDENTIAL_ROTATION_RUNBOOK.md)
 - Legacy static deprecation plan: [docs/runbooks/LEGACY_PUBLIC_DEPRECATION_PLAN.md](docs/runbooks/LEGACY_PUBLIC_DEPRECATION_PLAN.md)

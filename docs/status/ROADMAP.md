@@ -8,8 +8,8 @@
 ## Open workstreams
 
 - RTC stability hardening (active): `docs/status/RTC_STABILITY_ROADMAP.md`.
-- Phase 5 (iOS/macOS kickoff scope): `docs/plans/PHASE5_IOS_MACOS_SCOPE_NOTE.md`.
-- SFU migration decision package: `docs/plans/SFU_MIGRATION_PLAN.md`.
+- Phase 5 (iOS/macOS kickoff scope): `docs/plans/2026-03-04_PHASE5_IOS_MACOS_SCOPE_NOTE.md`.
+- SFU migration decision package: `docs/plans/2026-03-06_SFU_MIGRATION_PLAN.md`.
 
 ## Recently completed
 
@@ -44,13 +44,13 @@
 
 - Architecture baseline: `docs/architecture/ARCHITECTURE.md`.
 - Phase 0 (MVP boundaries + ADR): `docs/architecture/PHASE0_MVP_ADR.md`.
-- SFU migration decision package: `docs/plans/SFU_MIGRATION_PLAN.md`.
+- SFU migration decision package: `docs/plans/2026-03-06_SFU_MIGRATION_PLAN.md`.
 - Phase 3 (Voice/WebRTC MVP policy): `docs/runbooks/PHASE3_VOICE_WEBRTC_MVP_POLICY.md`.
 - Voice baseline runbook: `docs/runbooks/VOICE_BASELINE_RUNBOOK.md`.
 - DB backup runbook: `docs/operations/DB_BACKUP_RUNBOOK.md`.
 - Performance gate: `docs/operations/PERFORMANCE_GATE.md`.
 - Pre-prod decision package: `docs/runbooks/PREPROD_DECISION_PACKAGE.md`.
-- Discord channel tree plan: `docs/plans/DISCORD_CHANNEL_TREE_PLAN.md`.
+- Discord channel tree plan: `docs/plans/2026-02-28_DISCORD_CHANNEL_TREE_PLAN.md`.
 
 ## Status & evidence
 
