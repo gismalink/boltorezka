@@ -131,12 +131,14 @@ make_hs256_jwt() {
   local secret="$1"
   local sub="$2"
   local role="$3"
+  local sid="$4"
+  local auth_mode="${5:-sso}"
   local now exp header payload unsigned signature
 
   now="$(date +%s)"
   exp="$((now + 3600))"
   header='{"alg":"HS256","typ":"JWT"}'
-  payload="{\"sub\":\"$sub\",\"role\":\"$role\",\"iat\":$now,\"exp\":$exp}"
+  payload="{\"sub\":\"$sub\",\"sid\":\"$sid\",\"role\":\"$role\",\"authMode\":\"$auth_mode\",\"iat\":$now,\"exp\":$exp}"
 
   unsigned="$(printf '%s' "$header" | base64url).$(printf '%s' "$payload" | base64url)"
   signature="$(printf '%s' "$unsigned" | openssl dgst -sha256 -hmac "$secret" -binary | base64url)"
@@ -538,7 +540,11 @@ if [[ -z "${SMOKE_TEST_BEARER_TOKEN:-}" ]]; then
   fi
 
   if [[ -n "$JWT_SECRET_CANDIDATE" ]]; then
-    GENERATED_BEARER="$(make_hs256_jwt "$JWT_SECRET_CANDIDATE" "$SMOKE_USER_ID" "$SMOKE_USER_ROLE")"
+    GENERATED_SESSION_ID="$(uuidgen | tr '[:upper:]' '[:lower:]')"
+    GENERATED_BEARER="$(make_hs256_jwt "$JWT_SECRET_CANDIDATE" "$SMOKE_USER_ID" "$SMOKE_USER_ROLE" "$GENERATED_SESSION_ID" "sso")"
+    AUTH_SESSION_TTL_SEC="${SMOKE_AUTH_SESSION_TTL_SEC:-2592000}"
+    AUTH_SESSION_PAYLOAD="$(printf '{\"userId\":\"%s\",\"authMode\":\"sso\",\"issuedAt\":\"%s\",\"rotatedFrom\":null}' "$SMOKE_USER_ID" "$(date -u +%Y-%m-%dT%H:%M:%SZ)")"
+    compose exec -T "$REDIS_SERVICE" redis-cli SETEX "auth:session:$GENERATED_SESSION_ID" "$AUTH_SESSION_TTL_SEC" "$AUTH_SESSION_PAYLOAD" >/dev/null
     export SMOKE_TEST_BEARER_TOKEN="$GENERATED_BEARER"
   else
     echo "[postdeploy-smoke] warning: cannot resolve JWT secret; protected smoke:api checks may be skipped"
