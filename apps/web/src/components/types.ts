@@ -64,6 +64,7 @@ export type UserDockProps = {
   onToggleCamera: () => void;
   onToggleScreenShare: () => void;
   onToggleNoiseSuppression: () => void;
+  onSetNoiseSuppressionEnabled: (value: boolean) => void;
   onToggleSelfMonitor: () => void;
   onToggleVoiceSettings: () => void;
   onToggleAudioOutput: () => void;

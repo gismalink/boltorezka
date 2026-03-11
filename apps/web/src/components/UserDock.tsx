@@ -55,6 +55,7 @@ export function UserDock({
   onToggleCamera,
   onToggleScreenShare,
   onToggleNoiseSuppression,
+  onSetNoiseSuppressionEnabled,
   onToggleSelfMonitor,
   onToggleVoiceSettings,
   onToggleAudioOutput,
@@ -195,6 +196,7 @@ export function UserDock({
         selfMonitorEnabled={selfMonitorEnabled}
         onToggleSelfMonitor={onToggleSelfMonitor}
         onToggleNoiseSuppression={onToggleNoiseSuppression}
+        onSetNoiseSuppressionEnabled={onSetNoiseSuppressionEnabled}
         modalBarCount={modalBarCount}
         modalActiveBars={modalActiveBars}
       />

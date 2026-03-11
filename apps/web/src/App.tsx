@@ -1291,6 +1291,10 @@ export function App() {
     setSelectedInputProfile((current) => (current === "noise_reduction" ? "custom" : "noise_reduction"));
   }, []);
 
+  const handleSetNoiseSuppressionEnabled = useCallback((enabled: boolean) => {
+    setSelectedInputProfile(enabled ? "noise_reduction" : "custom");
+  }, []);
+
   useEffect(() => {
     if (!roomSlug) {
       return;
@@ -1403,6 +1407,7 @@ export function App() {
     onToggleCamera: handleToggleCamera,
     onToggleScreenShare: handleToggleScreenShareClick,
     onToggleNoiseSuppression: handleToggleNoiseSuppression,
+    onSetNoiseSuppressionEnabled: handleSetNoiseSuppressionEnabled,
     selfMonitorEnabled,
     onToggleSelfMonitor: () => setSelfMonitorEnabled((value) => !value),
     onRequestVideoAccess: requestVideoAccess,

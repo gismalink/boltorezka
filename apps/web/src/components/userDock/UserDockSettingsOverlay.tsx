@@ -45,6 +45,7 @@ type UserDockSettingsOverlayProps = Pick<
   | "onToggleSelfMonitor"
   | "noiseSuppressionEnabled"
   | "onToggleNoiseSuppression"
+  | "onSetNoiseSuppressionEnabled"
 > & {
   mediaDevicesUnavailable: boolean;
   mediaControlsLocked: boolean;
@@ -97,6 +98,7 @@ export function UserDockSettingsOverlay({
   onToggleSelfMonitor,
   noiseSuppressionEnabled,
   onToggleNoiseSuppression,
+  onSetNoiseSuppressionEnabled,
   mediaDevicesUnavailable,
   mediaControlsLocked,
   mediaDevicesWarningText,
@@ -295,6 +297,23 @@ export function UserDockSettingsOverlay({
                   </button>
                 </label>
                 <p className="muted media-devices-warning">{t("settings.rnnClientHint")}</p>
+                <p className="muted media-devices-warning">{t("settings.rnnAbHint")}</p>
+                <div className="quality-toggle-group" role="group" aria-label={t("settings.rnnAbTitle") }>
+                  <button
+                    type="button"
+                    className={`secondary quality-toggle-btn ${!noiseSuppressionEnabled ? "quality-toggle-btn-active" : ""}`}
+                    onClick={() => onSetNoiseSuppressionEnabled(false)}
+                  >
+                    {t("settings.rnnOff")}
+                  </button>
+                  <button
+                    type="button"
+                    className={`secondary quality-toggle-btn ${noiseSuppressionEnabled ? "quality-toggle-btn-active" : ""}`}
+                    onClick={() => onSetNoiseSuppressionEnabled(true)}
+                  >
+                    {t("settings.rnnOn")}
+                  </button>
+                </div>
               </div>
             </>
           ) : userSettingsTab === "camera" ? (
