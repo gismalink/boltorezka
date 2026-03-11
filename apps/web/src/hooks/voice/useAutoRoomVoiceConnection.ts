@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 
 type UseAutoRoomVoiceConnectionArgs = {
+  roomMediaResolved?: boolean;
   currentRoomSupportsRtc: boolean;
   roomVoiceTargetsCount: number;
   roomVoiceConnected: boolean;
@@ -13,6 +14,7 @@ type UseAutoRoomVoiceConnectionArgs = {
 const DEFAULT_DISCONNECT_GRACE_MS = 8000;
 
 export function useAutoRoomVoiceConnection({
+  roomMediaResolved = true,
   currentRoomSupportsRtc,
   roomVoiceTargetsCount,
   roomVoiceConnected,
@@ -24,6 +26,14 @@ export function useAutoRoomVoiceConnection({
   const autoRoomDisconnectTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
+    if (!roomMediaResolved) {
+      if (autoRoomDisconnectTimerRef.current !== null) {
+        window.clearTimeout(autoRoomDisconnectTimerRef.current);
+        autoRoomDisconnectTimerRef.current = null;
+      }
+      return;
+    }
+
     if (!currentRoomSupportsRtc) {
       if (autoRoomDisconnectTimerRef.current !== null) {
         window.clearTimeout(autoRoomDisconnectTimerRef.current);
@@ -72,6 +82,7 @@ export function useAutoRoomVoiceConnection({
       }
     };
   }, [
+    roomMediaResolved,
     currentRoomSupportsRtc,
     roomVoiceTargetsCount,
     roomVoiceConnected,

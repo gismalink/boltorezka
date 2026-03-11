@@ -1329,6 +1329,7 @@ export function App() {
   }, [allRooms, roomSlug]);
 
   useAutoRoomVoiceConnection({
+    roomMediaResolved: Boolean(currentRoomSnapshot),
     currentRoomSupportsRtc,
     roomVoiceTargetsCount: currentRoomVoiceTargets.length,
     roomVoiceConnected,
