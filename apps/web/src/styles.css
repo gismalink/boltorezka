@@ -319,6 +319,56 @@ textarea {
   box-sizing: border-box;
 }
 
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 20px;
+  padding: 0;
+  border: var(--border-thin) solid color-mix(in srgb, var(--pixel-border) 70%, transparent 30%);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(0, 0, 0, 0.3)),
+    color-mix(in srgb, var(--pixel-panel-2) 78%, #000 22%);
+  box-shadow:
+    inset 0 0 0 1px #0b1430,
+    2px 2px 0 var(--pixel-hard-shadow);
+}
+
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 8px;
+  border: var(--border-thin) solid color-mix(in srgb, var(--pixel-neon-cyan) 48%, transparent 52%);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--pixel-neon-cyan) 80%, #fff 20%), color-mix(in srgb, var(--pixel-neon-cyan) 40%, transparent 60%));
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  margin-top: -6px;
+  border: var(--border-strong) solid var(--pixel-neon-cyan);
+  background: color-mix(in srgb, var(--pixel-panel-2) 55%, #bce7ff 45%);
+  box-shadow:
+    0 0 0 1px var(--pixel-neon-pink),
+    2px 2px 0 var(--pixel-hard-shadow);
+}
+
+input[type="range"]::-moz-range-track {
+  height: 8px;
+  border: var(--border-thin) solid color-mix(in srgb, var(--pixel-neon-cyan) 48%, transparent 52%);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--pixel-neon-cyan) 80%, #fff 20%), color-mix(in srgb, var(--pixel-neon-cyan) 40%, transparent 60%));
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border: var(--border-strong) solid var(--pixel-neon-cyan);
+  background: color-mix(in srgb, var(--pixel-panel-2) 55%, #bce7ff 45%);
+  box-shadow:
+    0 0 0 1px var(--pixel-neon-pink),
+    2px 2px 0 var(--pixel-hard-shadow);
+}
+
 textarea {
   resize: vertical;
   min-height: calc(var(--space-md) * 10 + var(--space-xs));
@@ -375,6 +425,10 @@ textarea:focus-visible {
   width: var(--icon-size-sm);
   height: var(--icon-size-sm);
   font-size: var(--font-size-sm);
+}
+
+.icon-btn.toggle-wide {
+  width: calc(var(--icon-size-sm) * 2);
 }
 
 .icon-action {

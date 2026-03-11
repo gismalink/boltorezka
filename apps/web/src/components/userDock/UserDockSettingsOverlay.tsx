@@ -282,7 +282,7 @@ export function UserDockSettingsOverlay({
                   <span>{t("settings.useRnn")}</span>
                   <button
                     type="button"
-                    className={`secondary icon-btn tiny ${noiseSuppressionEnabled ? "icon-btn-danger" : ""}`}
+                    className={`secondary icon-btn tiny toggle-wide ${noiseSuppressionEnabled ? "icon-btn-danger" : ""}`}
                     aria-label={t("settings.useRnn")}
                     data-tooltip={noiseSuppressionEnabled ? t("rtc.noiseReductionOn") : t("rtc.noiseReductionOff")}
                     onClick={onToggleNoiseSuppression}
