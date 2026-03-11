@@ -361,6 +361,46 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
     }
   };
 
+  const handleCallIdempotency = async (
+    socket: WebSocket,
+    state: SocketState,
+    requestId: string | null,
+    eventType: string
+  ): Promise<boolean> => {
+    if (!requestId) {
+      return false;
+    }
+
+    const idempotencyKey = `ws:idempotency:call:${state.userId}:${eventType}:${requestId}`;
+
+    try {
+      const setResult = await fastify.redis.set(idempotencyKey, "1", {
+        NX: true,
+        EX: 120
+      });
+
+      if (setResult) {
+        return false;
+      }
+
+      sendAckWithMetrics(
+        socket,
+        requestId,
+        eventType,
+        {
+          duplicate: true,
+          idempotencyKey: requestId
+        },
+        ["call_idempotency_hit"]
+      );
+
+      return true;
+    } catch {
+      // Fail-open: idempotency storage outage should not break realtime signaling.
+      return false;
+    }
+  };
+
   const buildCallTraceId = (
     eventType: string,
     requestId: string | null,
@@ -897,6 +937,10 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
               }
 
               case "call.mic_state": {
+                if (await handleCallIdempotency(connection, state, requestId, eventType)) {
+                  return;
+                }
+
                 handleCallMicState({
                   connection,
                   state,
@@ -930,6 +974,10 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
               }
 
               case "call.video_state": {
+                if (await handleCallIdempotency(connection, state, requestId, eventType)) {
+                  return;
+                }
+
                 handleCallVideoState({
                   connection,
                   state,
