@@ -57,7 +57,7 @@
 - Controlled rollout toggle-пакет (Phase 5) внедрен и используется как policy fallback.
 - RTC hardening package (Phase 6.1-6.3) закрыт в test-контуре.
 - Полный runtime-переход на LiveKit завершен в активном контуре (API/Web/scripts/infra livekit-only).
-- Decision package по transition закрывается через `docs/plans/LIVEKIT_FULL_TRANSITION_CHECKLIST_2026-03-09.md`.
+- Decision package по transition закрывается через `docs/plans/2026-03-09_LIVEKIT_FULL_TRANSITION_CHECKLIST.md`.
 - SFU/P2P stage-материалы остаются в репозитории как исторический контекст и evidence.
 
 ## 4) Канонические ссылки
@@ -66,7 +66,7 @@
 - Voice baseline: `docs/runbooks/VOICE_BASELINE_RUNBOOK.md`
 - Pre-prod gate: `docs/runbooks/PREPROD_DECISION_PACKAGE.md`
 - Test/load evidence: `docs/status/TEST_RESULTS.md`
-- LiveKit transition decision package: `docs/plans/LIVEKIT_FULL_TRANSITION_CHECKLIST_2026-03-09.md`
+- LiveKit transition decision package: `docs/plans/2026-03-09_LIVEKIT_FULL_TRANSITION_CHECKLIST.md`
 
 ## 5) Что остается вне scope этого Phase 0 пакета
 

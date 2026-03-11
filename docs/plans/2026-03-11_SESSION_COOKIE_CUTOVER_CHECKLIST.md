@@ -3,9 +3,9 @@
 Цель: безопасно перевести web-auth с bearer в localStorage на HttpOnly cookie как primary режим, без регрессий SSO/realtime и без нарушения текущих GitOps/gate-политик.
 
 Связанные документы:
-- `docs/architecture/ADR_2026-03-11_AUTH_SESSION_STORAGE.md`
+- `docs/architecture/2026-03-11_ADR_AUTH_SESSION_STORAGE.md`
 - `docs/operations/SMOKE_CI_MATRIX.md`
-- `docs/reviews/AUDIT_2026-03-11.md`
+- `docs/reviews/2026-03-11_AUDIT.md`
 
 ## 0) Scope and constraints
 
