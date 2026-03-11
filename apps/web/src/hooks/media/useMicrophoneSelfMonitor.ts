@@ -1,5 +1,6 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { RnnoiseAudioProcessor, type RnnoiseSuppressionLevel } from "../rtc/rnnoiseAudioProcessor";
+import { getSelfMonitorGain, shouldUseRnnoiseInSelfMonitor } from "./selfMonitorUtils";
 
 type UseMicrophoneSelfMonitorArgs = {
   enabled: boolean;
@@ -20,6 +21,8 @@ export function useMicrophoneSelfMonitor({
   t,
   pushToast
 }: UseMicrophoneSelfMonitorArgs) {
+  const sessionRef = useRef(0);
+
   useEffect(() => {
     if (!enabled) {
       return;
@@ -31,13 +34,22 @@ export function useMicrophoneSelfMonitor({
     }
 
     let disposed = false;
+    const sessionId = ++sessionRef.current;
     let stream: MediaStream | null = null;
     let context: AudioContext | null = null;
     let processor: RnnoiseAudioProcessor | null = null;
+    let sourceNode: MediaStreamAudioSourceNode | null = null;
+    let gainNode: GainNode | null = null;
 
-    const stop = () => {
+    const stop = async () => {
+      sourceNode?.disconnect();
+      sourceNode = null;
+
+      gainNode?.disconnect();
+      gainNode = null;
+
       if (processor) {
-        void processor.destroy();
+        await processor.destroy().catch(() => undefined);
         processor = null;
       }
 
@@ -47,10 +59,12 @@ export function useMicrophoneSelfMonitor({
       }
 
       if (context) {
-        void context.close();
+        await context.close().catch(() => undefined);
         context = null;
       }
     };
+
+    const isCurrentSession = () => !disposed && sessionRef.current === sessionId;
 
     const start = async () => {
       try {
@@ -73,8 +87,8 @@ export function useMicrophoneSelfMonitor({
         };
 
         stream = await getStream();
-        if (disposed || !stream) {
-          stop();
+        if (!stream || !isCurrentSession()) {
+          await stop();
           return;
         }
 
@@ -84,19 +98,30 @@ export function useMicrophoneSelfMonitor({
         }
 
         context = new Context();
+        if (!isCurrentSession()) {
+          await stop();
+          return;
+        }
+
         let monitorStream = stream;
         const inputTrack = stream.getAudioTracks()[0];
         if (!inputTrack) {
           throw new Error("AudioTrackMissing");
         }
 
-        if (selectedInputProfile === "noise_reduction") {
+        if (shouldUseRnnoiseInSelfMonitor(selectedInputProfile)) {
           try {
             const nextProcessor = new RnnoiseAudioProcessor(rnnoiseSuppressionLevel);
             await nextProcessor.init({
               track: inputTrack,
               audioContext: context
             });
+
+            if (!isCurrentSession()) {
+              await nextProcessor.destroy().catch(() => undefined);
+              await stop();
+              return;
+            }
 
             if (nextProcessor.processedTrack) {
               processor = nextProcessor;
@@ -109,13 +134,18 @@ export function useMicrophoneSelfMonitor({
           }
         }
 
-        const source = context.createMediaStreamSource(monitorStream);
-        const gain = context.createGain();
-        gain.gain.value = Math.max(0, Math.min(0.7, (micVolume / 100) * 0.7));
-        source.connect(gain);
-        gain.connect(context.destination);
+        if (!isCurrentSession()) {
+          await stop();
+          return;
+        }
+
+        sourceNode = context.createMediaStreamSource(monitorStream);
+        gainNode = context.createGain();
+        gainNode.gain.value = getSelfMonitorGain(micVolume);
+        sourceNode.connect(gainNode);
+        gainNode.connect(context.destination);
       } catch (error) {
-        if (disposed) {
+        if (!isCurrentSession()) {
           return;
         }
 
@@ -124,7 +154,7 @@ export function useMicrophoneSelfMonitor({
           || "";
         const denied = errorName === "NotAllowedError" || errorName === "SecurityError";
         pushToast(denied ? t("settings.mediaDenied") : t("settings.devicesLoadFailed"));
-        stop();
+        await stop();
       }
     };
 
@@ -132,7 +162,7 @@ export function useMicrophoneSelfMonitor({
 
     return () => {
       disposed = true;
-      stop();
+      void stop();
     };
   }, [enabled, micVolume, pushToast, rnnoiseSuppressionLevel, selectedInputId, selectedInputProfile, t]);
 }
