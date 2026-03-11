@@ -1,8 +1,11 @@
 import { useEffect } from "react";
+import { RnnoiseAudioProcessor, type RnnoiseSuppressionLevel } from "../rtc/rnnoiseAudioProcessor";
 
 type UseMicrophoneSelfMonitorArgs = {
   enabled: boolean;
   selectedInputId: string;
+  selectedInputProfile: "noise_reduction" | "studio" | "custom";
+  rnnoiseSuppressionLevel: RnnoiseSuppressionLevel;
   micVolume: number;
   t: (key: string) => string;
   pushToast: (message: string) => void;
@@ -11,6 +14,8 @@ type UseMicrophoneSelfMonitorArgs = {
 export function useMicrophoneSelfMonitor({
   enabled,
   selectedInputId,
+  selectedInputProfile,
+  rnnoiseSuppressionLevel,
   micVolume,
   t,
   pushToast
@@ -28,8 +33,14 @@ export function useMicrophoneSelfMonitor({
     let disposed = false;
     let stream: MediaStream | null = null;
     let context: AudioContext | null = null;
+    let processor: RnnoiseAudioProcessor | null = null;
 
     const stop = () => {
+      if (processor) {
+        void processor.destroy();
+        processor = null;
+      }
+
       if (stream) {
         stream.getTracks().forEach((track) => track.stop());
         stream = null;
@@ -73,7 +84,32 @@ export function useMicrophoneSelfMonitor({
         }
 
         context = new Context();
-        const source = context.createMediaStreamSource(stream);
+        let monitorStream = stream;
+        const inputTrack = stream.getAudioTracks()[0];
+        if (!inputTrack) {
+          throw new Error("AudioTrackMissing");
+        }
+
+        if (selectedInputProfile === "noise_reduction") {
+          try {
+            const nextProcessor = new RnnoiseAudioProcessor(rnnoiseSuppressionLevel);
+            await nextProcessor.init({
+              track: inputTrack,
+              audioContext: context
+            });
+
+            if (nextProcessor.processedTrack) {
+              processor = nextProcessor;
+              monitorStream = new MediaStream([nextProcessor.processedTrack]);
+            } else {
+              void nextProcessor.destroy();
+            }
+          } catch {
+            pushToast(t("settings.rnnFallbackError"));
+          }
+        }
+
+        const source = context.createMediaStreamSource(monitorStream);
         const gain = context.createGain();
         gain.gain.value = Math.max(0, Math.min(0.7, (micVolume / 100) * 0.7));
         source.connect(gain);
@@ -98,5 +134,5 @@ export function useMicrophoneSelfMonitor({
       disposed = true;
       stop();
     };
-  }, [enabled, micVolume, pushToast, selectedInputId, t]);
+  }, [enabled, micVolume, pushToast, rnnoiseSuppressionLevel, selectedInputId, selectedInputProfile, t]);
 }

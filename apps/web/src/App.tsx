@@ -914,6 +914,8 @@ export function App() {
   useMicrophoneSelfMonitor({
     enabled: selfMonitorEnabled,
     selectedInputId,
+    selectedInputProfile,
+    rnnoiseSuppressionLevel,
     micVolume,
     t,
     pushToast
