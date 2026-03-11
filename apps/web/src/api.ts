@@ -109,6 +109,8 @@ const endpoints = {
   version: "/version",
   authMode: "/v1/auth/mode",
   ssoSession: "/v1/auth/sso/session",
+  authRefresh: "/v1/auth/refresh",
+  authLogout: "/v1/auth/logout",
   me: "/v1/auth/me",
   wsTicket: "/v1/auth/ws-ticket",
   livekitToken: "/v1/auth/livekit-token",
@@ -143,6 +145,8 @@ export const api = {
   ),
   authMode: () => fetchJson<AuthModeResponse>(endpoints.authMode),
   ssoSession: () => fetchJson<{ authenticated: boolean; token: string | null; user: User | null }>(endpoints.ssoSession),
+  authRefresh: (token: string) => fetchJson<{ token: string; user: User | null }>(endpoints.authRefresh, token, withJsonBody("POST")),
+  authLogout: (token: string) => fetchJson<{ ok: true }>(endpoints.authLogout, token, withJsonBody("POST")),
   me: (token: string) => fetchJson<{ user: User | null }>(endpoints.me, token),
   updateMe: (token: string, input: { name: string }) =>
     fetchJson<{ user: User | null }>(endpoints.me, token, withJsonBody("PATCH", input)),
