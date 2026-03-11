@@ -816,11 +816,11 @@ async function runLiveRoomBehaviorScenario({ roomSlug, timeoutMs }) {
   let liveRoomStats = null;
   let initialStateReplaySecondOk = false;
   let mediaTopologySecondOk = false;
-  let callMissingTargetRejected = false;
-  let callSignalIdempotencyOk = false;
+  let callMissingTargetRejected = null;
+  let callSignalIdempotencyOk = null;
   let callSignalGuarded = false;
   let callSignalGuardCode = null;
-  let callNegotiationReconnectSkipped = false;
+  let callNegotiationReconnectSkipped = null;
   let reconnectOk = false;
   let reconnectSkipped = false;
   if (smokeCallSignal) {
@@ -902,9 +902,9 @@ async function runLiveRoomBehaviorScenario({ roomSlug, timeoutMs }) {
       callSignalRelayed = false;
       callSignalGuarded = true;
       callSignalGuardCode = micStateResult.code;
-      callMissingTargetRejected = true;
-      callSignalIdempotencyOk = true;
-      callNegotiationReconnectSkipped = true;
+      callMissingTargetRejected = null;
+      callSignalIdempotencyOk = null;
+      callNegotiationReconnectSkipped = null;
     } else {
       await waitForEvent(
         secondEvents,
@@ -938,12 +938,69 @@ async function runLiveRoomBehaviorScenario({ roomSlug, timeoutMs }) {
         "relayed call.video_state"
       );
 
+      const missingTargetRequestId = `call-missing-target-${Date.now()}`;
+      ws.send(
+        JSON.stringify({
+          type: "call.mic_state",
+          requestId: missingTargetRequestId,
+          payload: {
+            muted: false,
+            speaking: false,
+            audioMuted: false,
+            targetUserId: crypto.randomUUID()
+          }
+        })
+      );
+
+      const missingTargetResult = await waitForAckOrNack(
+        events,
+        missingTargetRequestId,
+        "ack|nack for call.mic_state missing target"
+      );
+      if (missingTargetResult.ok || missingTargetResult.code !== "TargetNotInRoom") {
+        throw new Error(
+          `[smoke:realtime] expected TargetNotInRoom for missing target, got: ${missingTargetResult.code || missingTargetResult.type || "unknown"}`
+        );
+      }
+
+      const duplicateCallRequestId = `call-dup-${Date.now()}`;
+      const duplicateCallPayload = {
+        targetUserId: firstUserId,
+        settings: { localVideoEnabled: false }
+      };
+      const duplicateBaselineCount = events.filter(
+        (item) => item?.type === "call.video_state" && item?.payload?.requestId === duplicateCallRequestId
+      ).length;
+
+      wsSecond.send(JSON.stringify({
+        type: "call.video_state",
+        requestId: duplicateCallRequestId,
+        payload: duplicateCallPayload
+      }));
+      wsSecond.send(JSON.stringify({
+        type: "call.video_state",
+        requestId: duplicateCallRequestId,
+        payload: duplicateCallPayload
+      }));
+
+      await waitForEvent(
+        events,
+        (item) => item?.type === "call.video_state"
+          && String(item?.payload?.fromUserId || "") === secondUserId
+          && item?.payload?.requestId === duplicateCallRequestId,
+        "relayed duplicate call.video_state"
+      );
+      await sleep(250);
+      const duplicateObservedCount = events.filter(
+        (item) => item?.type === "call.video_state" && item?.payload?.requestId === duplicateCallRequestId
+      ).length - duplicateBaselineCount;
+
       callSignalRelayed = true;
       callSignalGuarded = false;
       callSignalGuardCode = null;
       callMissingTargetRejected = true;
-      callSignalIdempotencyOk = true;
-      callNegotiationReconnectSkipped = true;
+      callSignalIdempotencyOk = duplicateObservedCount === 1;
+      callNegotiationReconnectSkipped = null;
     }
 
     if (requireInitialStateReplay && !initialStateReplaySecondOk) {
