@@ -40,10 +40,7 @@ jobs:
           SMOKE_EXTENDED_RTC: ${{ github.event.inputs.extended_rtc || vars.TEST_SMOKE_EXTENDED_RTC || '0' }}
           SMOKE_TELEMETRY_SUMMARY: '1'
         run: |
-          SMOKE_API=1 \
-          SMOKE_SSO=1 \
-          SMOKE_REALTIME=1 \
           SMOKE_REQUIRE_INITIAL_STATE_REPLAY=1 \
           SMOKE_CALL_SIGNAL="$SMOKE_EXTENDED_RTC" \
           SMOKE_CALL_RACE_3WAY="$SMOKE_EXTENDED_RTC" \
-          npm run check
+          npm run check:required

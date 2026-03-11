@@ -7,9 +7,10 @@
 | Stage | Command | Required |
 |---|---|---|
 | Typecheck | `npm run check:api-types` | Yes |
-| Verify baseline | `npm run check` | Yes |
-| API smoke | `SMOKE_API=1 npm run check` | Recommended |
-| API+SSO smoke | `SMOKE_API=1 SMOKE_SSO=1 SMOKE_API_URL=https://test.boltorezka.gismalink.art npm run check` | Recommended |
+| Verify baseline (quick) | `npm run check:quick` | Yes |
+| API smoke | `SMOKE_API=1 npm run check:quick` | Recommended |
+| API+SSO smoke | `SMOKE_API=1 SMOKE_SSO=1 SMOKE_API_URL=https://test.boltorezka.gismalink.art npm run check:quick` | Recommended |
+| Required gate (API+SSO+realtime, при наличии токена) | `SMOKE_TEST_BEARER_TOKEN=<token> SMOKE_API_URL=https://test.boltorezka.gismalink.art npm run check:required` | CI / test gate |
 
 ## 2) Test deploy gate
 
@@ -40,8 +41,13 @@ Workflow: `.github/workflows/test-smoke.yml`
 
 Current CI command:
 
-- `SMOKE_API=1 SMOKE_SSO=1 SMOKE_REALTIME=1 SMOKE_REQUIRE_INITIAL_STATE_REPLAY=1 npm run check`
+- `SMOKE_REQUIRE_INITIAL_STATE_REPLAY=1 npm run check:required`
 - optional extended mode: `SMOKE_CALL_SIGNAL=1` (wired via `TEST_SMOKE_EXTENDED_RTC=1` or manual workflow input `extended_rtc=1`)
+
+Policy:
+
+- `check` оставлен как alias на `check:quick` для обратной совместимости.
+- В CI и обязательных gate используем только `check:required`.
 
 ## 4) Contract coverage map
 
