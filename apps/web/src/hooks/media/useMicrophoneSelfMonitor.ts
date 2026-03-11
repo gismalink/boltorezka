@@ -24,6 +24,7 @@ export function useMicrophoneSelfMonitor({
 }: UseMicrophoneSelfMonitorArgs) {
   const sessionRef = useRef(0);
   const gainNodeRef = useRef<GainNode | null>(null);
+  const teardownChainRef = useRef<Promise<void>>(Promise.resolve());
 
   useEffect(() => {
     const gainNode = gainNodeRef.current;
@@ -83,6 +84,12 @@ export function useMicrophoneSelfMonitor({
 
     const start = async () => {
       try {
+        // Prevent overlapping audio graphs when user toggles monitor rapidly.
+        await teardownChainRef.current.catch(() => undefined);
+        if (!isCurrentSession()) {
+          return;
+        }
+
         const getStream = async () => {
           if (selectedInputId && selectedInputId !== "default") {
             try {
@@ -179,7 +186,12 @@ export function useMicrophoneSelfMonitor({
 
     return () => {
       disposed = true;
-      void stop();
+      const stopPromise = stop();
+      teardownChainRef.current = teardownChainRef.current
+        .then(() => stopPromise)
+        .catch(() => stopPromise)
+        .then(() => undefined)
+        .catch(() => undefined);
     };
   }, [enabled, pushToast, rnnoiseSuppressionLevel, selectedInputId, selectedInputProfile, t]);
 }
