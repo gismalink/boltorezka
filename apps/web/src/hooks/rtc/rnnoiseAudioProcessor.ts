@@ -45,6 +45,10 @@ export class RnnoiseAudioProcessor implements TrackProcessor<Track.Kind.Audio, A
 
   private wetGainNode?: GainNode;
 
+  private wetSplitterNode?: ChannelSplitterNode;
+
+  private wetMergerNode?: ChannelMergerNode;
+
   constructor(private readonly suppressionLevel: RnnoiseSuppressionLevel = "medium") {}
 
   async init(opts: AudioProcessorOptions): Promise<void> {
@@ -69,6 +73,12 @@ export class RnnoiseAudioProcessor implements TrackProcessor<Track.Kind.Audio, A
     this.wetGainNode?.disconnect();
     this.wetGainNode = undefined;
 
+    this.wetSplitterNode?.disconnect();
+    this.wetSplitterNode = undefined;
+
+    this.wetMergerNode?.disconnect();
+    this.wetMergerNode = undefined;
+
     this.destinationNode?.disconnect();
     this.destinationNode = undefined;
 
@@ -92,6 +102,8 @@ export class RnnoiseAudioProcessor implements TrackProcessor<Track.Kind.Audio, A
     });
     this.dryGainNode = opts.audioContext.createGain();
     this.wetGainNode = opts.audioContext.createGain();
+    this.wetSplitterNode = opts.audioContext.createChannelSplitter(1);
+    this.wetMergerNode = opts.audioContext.createChannelMerger(2);
     this.destinationNode = opts.audioContext.createMediaStreamDestination();
 
     const levelMix: Record<RnnoiseSuppressionLevel, { dry: number; wet: number }> = {
@@ -107,7 +119,11 @@ export class RnnoiseAudioProcessor implements TrackProcessor<Track.Kind.Audio, A
     this.dryGainNode.connect(this.destinationNode);
 
     this.sourceNode.connect(this.rnnoiseNode);
-    this.rnnoiseNode.connect(this.wetGainNode);
+    // RNNoise output is mono; explicitly duplicate it to both L/R channels.
+    this.rnnoiseNode.connect(this.wetSplitterNode);
+    this.wetSplitterNode.connect(this.wetMergerNode, 0, 0);
+    this.wetSplitterNode.connect(this.wetMergerNode, 0, 1);
+    this.wetMergerNode.connect(this.wetGainNode);
     this.wetGainNode.connect(this.destinationNode);
 
     this.processedTrack = this.destinationNode.stream.getAudioTracks()[0];
