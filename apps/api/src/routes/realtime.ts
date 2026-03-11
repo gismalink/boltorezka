@@ -4,6 +4,7 @@ import { db } from "../db.js";
 import { config } from "../config.js";
 import { registerRealtimeSocket, unregisterRealtimeSocket } from "../realtime-broadcast.js";
 import { normalizeRequestId, sendAck, sendJson, sendNack } from "./realtime-io.js";
+import { handleChatDelete, handleChatEdit, handleChatSend } from "./realtime-chat.js";
 import { createRealtimeMediaStateStore } from "./realtime-media-state.js";
 import { handleRoomKick, handleRoomMoveMember } from "./realtime-moderation.js";
 import { createRealtimeRoomStateStore } from "./realtime-room-state.js";
@@ -743,246 +744,87 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
               }
 
               case "chat.send": {
-                if (!state.roomId) {
-                  sendNoActiveRoomNack(connection, requestId, eventType);
-                  return;
-                }
-
-                const text = getPayloadString(payload, "text", 20000);
-
-                if (!text) {
-                  sendValidationNack(connection, requestId, eventType, "Message text is required");
-                  return;
-                }
-
-                const idempotencyKey = normalizeRequestId(knownMessage.idempotencyKey) || requestId;
-
-                if (idempotencyKey) {
-                  const idemRedisKey = `ws:idempotency:${state.userId}:${idempotencyKey}`;
-                  const cachedPayloadRaw = await fastify.redis.get(idemRedisKey);
-
-                  if (cachedPayloadRaw) {
-                    try {
-                      const cachedPayload = JSON.parse(cachedPayloadRaw);
-                      sendJson(connection, buildChatMessageEnvelope(cachedPayload));
-                    } catch {
-                      await fastify.redis.del(idemRedisKey);
-                    }
-
-                    sendAckWithMetrics(
-                      connection,
-                      requestId,
-                      eventType,
-                      {
-                        duplicate: true,
-                        idempotencyKey
-                      },
-                      ["chat_idempotency_hit"]
-                    );
-                    return;
-                  }
-                }
-
-                const inserted = await db.query<InsertedMessageRow>(
-                  `INSERT INTO messages (room_id, user_id, body)
-                   VALUES ($1, $2, $3)
-                   RETURNING id, room_id, user_id, body, created_at`,
-                  [state.roomId, state.userId, text]
-                );
-
-                const chatMessage = inserted.rows[0];
-
-                const chatPayload = {
-                  id: chatMessage.id,
-                  roomId: chatMessage.room_id,
-                  roomSlug: state.roomSlug,
-                  userId: chatMessage.user_id,
-                  userName: state.userName,
-                  text: chatMessage.body,
-                  createdAt: chatMessage.created_at,
-                  senderRequestId: requestId || null
-                };
-
-                if (idempotencyKey) {
-                  await fastify.redis.setEx(
-                    `ws:idempotency:${state.userId}:${idempotencyKey}`,
-                    120,
-                    JSON.stringify(chatPayload)
-                  );
-                }
-
-                broadcastRoom(state.roomId, buildChatMessageEnvelope(chatPayload));
-
-                sendAckWithMetrics(
+                await handleChatSend({
                   connection,
+                  state,
+                  payload,
                   requestId,
                   eventType,
-                  {
-                    messageId: chatMessage.id,
-                    idempotencyKey: idempotencyKey || null
-                  },
-                  ["chat_sent"]
-                );
+                  incomingIdempotencyKey: knownMessage.idempotencyKey,
+                  normalizeRequestId,
+                  getPayloadString,
+                  sendNoActiveRoomNack,
+                  sendValidationNack,
+                  sendForbiddenNack,
+                  sendNack,
+                  incrementMetric,
+                  sendJson,
+                  sendAckWithMetrics,
+                  broadcastRoom,
+                  buildChatMessageEnvelope,
+                  buildChatEditedEnvelope,
+                  buildChatDeletedEnvelope,
+                  redisGet: fastify.redis.get.bind(fastify.redis),
+                  redisDel: fastify.redis.del.bind(fastify.redis),
+                  redisSetEx: fastify.redis.setEx.bind(fastify.redis),
+                  dbQuery: db.query.bind(db)
+                });
 
                 return;
               }
 
               case "chat.edit": {
-                if (!state.roomId) {
-                  sendNoActiveRoomNack(connection, requestId, eventType);
-                  return;
-                }
-
-                const messageId = normalizeRequestId(getPayloadString(payload, "messageId", 128));
-                const text = getPayloadString(payload, "text", 20000);
-                if (!messageId || !text) {
-                  sendValidationNack(connection, requestId, eventType, "messageId and text are required");
-                  return;
-                }
-
-                const existingMessage = await db.query<{
-                  id: string;
-                  room_id: string;
-                  user_id: string;
-                  created_at: string;
-                }>(
-                  `SELECT id, room_id, user_id, created_at
-                   FROM messages
-                   WHERE id = $1 AND room_id = $2
-                   LIMIT 1`,
-                  [messageId, state.roomId]
-                );
-
-                if ((existingMessage.rowCount || 0) === 0) {
-                  sendNack(connection, requestId, eventType, "MessageNotFound", "Message not found");
-                  void incrementMetric("nack_sent");
-                  return;
-                }
-
-                const messageRow = existingMessage.rows[0];
-                if (messageRow.user_id !== state.userId) {
-                  sendForbiddenNack(connection, requestId, eventType, "You can edit only your own messages");
-                  return;
-                }
-
-                const createdAtTs = Number(new Date(messageRow.created_at));
-                const withinWindow = Number.isFinite(createdAtTs) && Date.now() - createdAtTs <= 10 * 60 * 1000;
-                if (!withinWindow) {
-                  sendNack(connection, requestId, eventType, "EditWindowExpired", "Message edit window has expired");
-                  void incrementMetric("nack_sent");
-                  return;
-                }
-
-                const updated = await db.query<{
-                  id: string;
-                  room_id: string;
-                  body: string;
-                  updated_at: string;
-                }>(
-                  `UPDATE messages
-                   SET body = $1, updated_at = NOW()
-                   WHERE id = $2 AND room_id = $3
-                   RETURNING id, room_id, body, updated_at`,
-                  [text, messageId, state.roomId]
-                );
-
-                if ((updated.rowCount || 0) === 0) {
-                  sendNack(connection, requestId, eventType, "MessageNotFound", "Message not found");
-                  void incrementMetric("nack_sent");
-                  return;
-                }
-
-                const updatedMessage = updated.rows[0];
-                broadcastRoom(
-                  state.roomId,
-                  buildChatEditedEnvelope({
-                    id: updatedMessage.id,
-                    roomId: updatedMessage.room_id,
-                    roomSlug: state.roomSlug,
-                    text: updatedMessage.body,
-                    editedAt: updatedMessage.updated_at,
-                    editedByUserId: state.userId
-                  })
-                );
-
-                sendAckWithMetrics(connection, requestId, eventType, {
-                  messageId: updatedMessage.id
+                await handleChatEdit({
+                  connection,
+                  state,
+                  payload,
+                  requestId,
+                  eventType,
+                  normalizeRequestId,
+                  getPayloadString,
+                  sendNoActiveRoomNack,
+                  sendValidationNack,
+                  sendForbiddenNack,
+                  sendNack,
+                  incrementMetric,
+                  sendJson,
+                  sendAckWithMetrics,
+                  broadcastRoom,
+                  buildChatMessageEnvelope,
+                  buildChatEditedEnvelope,
+                  buildChatDeletedEnvelope,
+                  redisGet: fastify.redis.get.bind(fastify.redis),
+                  redisDel: fastify.redis.del.bind(fastify.redis),
+                  redisSetEx: fastify.redis.setEx.bind(fastify.redis),
+                  dbQuery: db.query.bind(db)
                 });
                 return;
               }
 
               case "chat.delete": {
-                if (!state.roomId) {
-                  sendNoActiveRoomNack(connection, requestId, eventType);
-                  return;
-                }
-
-                const messageId = normalizeRequestId(getPayloadString(payload, "messageId", 128));
-                if (!messageId) {
-                  sendValidationNack(connection, requestId, eventType, "messageId is required");
-                  return;
-                }
-
-                const existingMessage = await db.query<{
-                  id: string;
-                  room_id: string;
-                  user_id: string;
-                  created_at: string;
-                }>(
-                  `SELECT id, room_id, user_id, created_at
-                   FROM messages
-                   WHERE id = $1 AND room_id = $2
-                   LIMIT 1`,
-                  [messageId, state.roomId]
-                );
-
-                if ((existingMessage.rowCount || 0) === 0) {
-                  sendNack(connection, requestId, eventType, "MessageNotFound", "Message not found");
-                  void incrementMetric("nack_sent");
-                  return;
-                }
-
-                const messageRow = existingMessage.rows[0];
-                if (messageRow.user_id !== state.userId) {
-                  sendForbiddenNack(connection, requestId, eventType, "You can delete only your own messages");
-                  return;
-                }
-
-                const createdAtTs = Number(new Date(messageRow.created_at));
-                const withinWindow = Number.isFinite(createdAtTs) && Date.now() - createdAtTs <= 10 * 60 * 1000;
-                if (!withinWindow) {
-                  sendNack(connection, requestId, eventType, "DeleteWindowExpired", "Message delete window has expired");
-                  void incrementMetric("nack_sent");
-                  return;
-                }
-
-                const deleted = await db.query<{ id: string; room_id: string }>(
-                  `DELETE FROM messages
-                   WHERE id = $1 AND room_id = $2
-                   RETURNING id, room_id`,
-                  [messageId, state.roomId]
-                );
-
-                if ((deleted.rowCount || 0) === 0) {
-                  sendNack(connection, requestId, eventType, "MessageNotFound", "Message not found");
-                  void incrementMetric("nack_sent");
-                  return;
-                }
-
-                const deletedMessage = deleted.rows[0];
-                broadcastRoom(
-                  state.roomId,
-                  buildChatDeletedEnvelope({
-                    id: deletedMessage.id,
-                    roomId: deletedMessage.room_id,
-                    roomSlug: state.roomSlug,
-                    deletedByUserId: state.userId,
-                    ts: new Date().toISOString()
-                  })
-                );
-
-                sendAckWithMetrics(connection, requestId, eventType, {
-                  messageId: deletedMessage.id
+                await handleChatDelete({
+                  connection,
+                  state,
+                  payload,
+                  requestId,
+                  eventType,
+                  normalizeRequestId,
+                  getPayloadString,
+                  sendNoActiveRoomNack,
+                  sendValidationNack,
+                  sendForbiddenNack,
+                  sendNack,
+                  incrementMetric,
+                  sendJson,
+                  sendAckWithMetrics,
+                  broadcastRoom,
+                  buildChatMessageEnvelope,
+                  buildChatEditedEnvelope,
+                  buildChatDeletedEnvelope,
+                  redisGet: fastify.redis.get.bind(fastify.redis),
+                  redisDel: fastify.redis.del.bind(fastify.redis),
+                  redisSetEx: fastify.redis.setEx.bind(fastify.redis),
+                  dbQuery: db.query.bind(db)
                 });
                 return;
               }
