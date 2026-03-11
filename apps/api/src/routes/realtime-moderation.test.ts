@@ -111,3 +111,59 @@ test("realtime-moderation: room.kick requires moderator permissions", async () =
 
   assert.equal(forbiddenCalls, 1);
 });
+
+test("realtime-moderation: room.kick sends RoomNotFound nack and increments metric", async () => {
+  const params = createBaseParams();
+  params.payload = { roomSlug: "missing-room", targetUserId: "user-2" };
+
+  let nackCode: string | null = null;
+  let nackMetricCalls = 0;
+
+  params.sendNack = (
+    _socket: unknown,
+    _requestId: unknown,
+    _eventType: unknown,
+    code: string
+  ) => {
+    nackCode = code;
+  };
+  params.incrementMetric = async (name: string) => {
+    if (name === "nack_sent") {
+      nackMetricCalls += 1;
+    }
+  };
+  params.dbQuery = async () => ({ rowCount: 0, rows: [] });
+
+  await handleRoomKick(params as any);
+
+  assert.equal(nackCode, "RoomNotFound");
+  assert.equal(nackMetricCalls, 1);
+});
+
+test("realtime-moderation: room.move_member sends target-not-in-room nack", async () => {
+  const params = createBaseParams();
+  params.eventType = "room.move_member";
+  params.payload = {
+    fromRoomSlug: "general",
+    toRoomSlug: "voice",
+    targetUserId: "user-2"
+  };
+
+  let targetMissCalls = 0;
+
+  params.dbQuery = async () => ({
+    rowCount: 2,
+    rows: [
+      { id: "room-1", slug: "general", title: "General", kind: "text_voice", is_public: true },
+      { id: "room-2", slug: "voice", title: "Voice", kind: "text_voice", is_public: true }
+    ]
+  });
+  params.getUserRoomSockets = () => [];
+  params.sendTargetNotInRoomNack = () => {
+    targetMissCalls += 1;
+  };
+
+  await handleRoomMoveMember(params as any);
+
+  assert.equal(targetMissCalls, 1);
+});
