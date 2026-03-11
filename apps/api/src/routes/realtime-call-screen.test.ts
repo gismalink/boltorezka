@@ -99,6 +99,62 @@ test("realtime-call-screen: call mic_state target miss sends target-not-in-room 
   assert.equal(targetMissMetricCalls, 1);
 });
 
+test("realtime-call-screen: call mic_state validates muted boolean", () => {
+  const params = createBaseParams();
+  params.payload = { speaking: true };
+
+  let validationMessage: string | null = null;
+  params.sendValidationNack = (
+    _socket: unknown,
+    _requestId: unknown,
+    _eventType: unknown,
+    message: string
+  ) => {
+    validationMessage = message;
+  };
+
+  handleCallMicState(params as any);
+
+  assert.equal(validationMessage, "payload.muted boolean is required");
+});
+
+test("realtime-call-screen: call mic_state relays and acks with media metadata", () => {
+  const params = createBaseParams();
+  params.payload = {
+    muted: false,
+    speaking: true,
+    audioMuted: false,
+    targetUserId: "u2"
+  };
+
+  const canonicalPatches: Array<Record<string, unknown>> = [];
+  let ackMeta: Record<string, unknown> | null = null;
+
+  params.setCanonicalMediaState = (_roomId: string, _userId: string, patch: Record<string, unknown>) => {
+    canonicalPatches.push(patch);
+  };
+  params.relayToTargetOrRoom = () => ({ ok: true, relayedCount: 3 });
+  params.sendAckWithMetrics = (
+    _socket: unknown,
+    _requestId: string | null,
+    _eventType: string,
+    meta?: Record<string, unknown>
+  ) => {
+    ackMeta = meta || null;
+  };
+
+  handleCallMicState(params as any);
+
+  assert.deepEqual(canonicalPatches, [{ muted: false, speaking: true, audioMuted: false }]);
+  assert.deepEqual(ackMeta, {
+    relayedTo: 3,
+    targetUserId: "u2",
+    muted: false,
+    speaking: true,
+    audioMuted: false
+  });
+});
+
 test("realtime-call-screen: call video_state validates settings payload", () => {
   const params = createBaseParams();
   params.eventType = "call.video_state";
@@ -158,4 +214,33 @@ test("realtime-call-screen: call video_state relays and acks with target metadat
     relayedTo: 2,
     targetUserId: "u2"
   });
+});
+
+test("realtime-call-screen: call video_state target miss sends target-not-in-room nack", () => {
+  const params = createBaseParams();
+  params.eventType = "call.video_state";
+  params.payload = {
+    targetUserId: "u-missing",
+    settings: {
+      localVideoEnabled: false
+    }
+  };
+
+  let targetMissNackCalls = 0;
+  let targetMissMetricCalls = 0;
+
+  params.relayToTargetOrRoom = () => ({ ok: false, relayedCount: 0 });
+  params.sendTargetNotInRoomNack = () => {
+    targetMissNackCalls += 1;
+  };
+  params.incrementMetric = async (name: string) => {
+    if (name === "call_video_state_target_miss") {
+      targetMissMetricCalls += 1;
+    }
+  };
+
+  handleCallVideoState(params as any);
+
+  assert.equal(targetMissNackCalls, 1);
+  assert.equal(targetMissMetricCalls, 1);
 });
