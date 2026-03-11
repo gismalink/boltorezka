@@ -35,6 +35,12 @@ async function fetchJson(path, options = {}) {
 }
 
 (async () => {
+  const initialClaims = decodeJwtPayload(token);
+  if (!initialClaims?.sid) {
+    console.log('[smoke:auth:session] skipped: SMOKE_TEST_BEARER_TOKEN has no sid claim');
+    process.exit(0);
+  }
+
   const authHeaders = { Authorization: `Bearer ${token}` };
 
   const { response: refreshResponse, payload: refreshPayload } = await fetchJson('/v1/auth/refresh', {
@@ -56,8 +62,6 @@ async function fetchJson(path, options = {}) {
     throw new Error('[smoke:auth:session] refreshed token missing sid claim');
   }
 
-  const initialClaims = decodeJwtPayload(token);
-
   const { response: meResponse } = await fetchJson('/v1/auth/me', {
     method: 'GET',
     headers: { Authorization: `Bearer ${refreshedToken}` }
@@ -67,15 +71,13 @@ async function fetchJson(path, options = {}) {
     throw new Error(`[smoke:auth:session] /v1/auth/me with refreshed token failed: ${meResponse.status}`);
   }
 
-  if (initialClaims?.sid) {
-    const { response: staleResponse } = await fetchJson('/v1/auth/me', {
-      method: 'GET',
-      headers: authHeaders
-    });
+  const { response: staleResponse } = await fetchJson('/v1/auth/me', {
+    method: 'GET',
+    headers: authHeaders
+  });
 
-    if (staleResponse.status !== 401) {
-      throw new Error(`[smoke:auth:session] stale token expected 401 after refresh rotation, got ${staleResponse.status}`);
-    }
+  if (staleResponse.status !== 401) {
+    throw new Error(`[smoke:auth:session] stale token expected 401 after refresh rotation, got ${staleResponse.status}`);
   }
 
   const { response: logoutResponse } = await fetchJson('/v1/auth/logout', {
