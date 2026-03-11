@@ -51,6 +51,7 @@
   - или server-side/LiveKit noise suppression profile.
 - [ ] Подготовить техдизайн (1 страница): ограничения CPU, latency budget, fallback policy.
 - [x] Добавить флаг в UI/настройки (`noise_reduction` как отдельный режим с явным статусом).
+- [x] Добавить выбор уровня шумоподавления (`soft` / `medium` / `strong`) с сохранением в localStorage.
 - [ ] Добавить telemetry метрики:
   - включение/выключение RNNoise,
   - ошибки инициализации,

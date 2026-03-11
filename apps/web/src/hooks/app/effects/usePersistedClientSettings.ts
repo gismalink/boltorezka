@@ -2,6 +2,7 @@ import { useEffect } from "react";
 
 type UsePersistedClientSettingsArgs = {
   selectedInputProfile: string;
+  rnnoiseSuppressionLevel: "soft" | "medium" | "strong";
   selfMonitorEnabled: boolean;
   micMuted: boolean;
   audioMuted: boolean;
@@ -21,6 +22,7 @@ type UsePersistedClientSettingsArgs = {
 
 export function usePersistedClientSettings({
   selectedInputProfile,
+  rnnoiseSuppressionLevel,
   selfMonitorEnabled,
   micMuted,
   audioMuted,
@@ -40,6 +42,10 @@ export function usePersistedClientSettings({
   useEffect(() => {
     localStorage.setItem("boltorezka_selected_input_profile", selectedInputProfile);
   }, [selectedInputProfile]);
+
+  useEffect(() => {
+    localStorage.setItem("boltorezka_rnnoise_level", rnnoiseSuppressionLevel);
+  }, [rnnoiseSuppressionLevel]);
 
   useEffect(() => {
     localStorage.setItem("boltorezka_self_monitor", selfMonitorEnabled ? "1" : "0");

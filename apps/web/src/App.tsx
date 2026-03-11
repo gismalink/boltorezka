@@ -71,6 +71,7 @@ import type {
   User
 } from "./domain";
 import type { ServerVideoEffectType } from "./hooks/rtc/voiceCallTypes";
+import type { RnnoiseSuppressionLevel } from "./hooks/rtc/rnnoiseAudioProcessor";
 
 const MAX_CHAT_RETRIES = 3;
 const DEFAULT_CHAT_IMAGE_DATA_URL_LENGTH = 28000;
@@ -151,6 +152,13 @@ export function App() {
       return value;
     }
     return "custom";
+  });
+  const [rnnoiseSuppressionLevel, setRnnoiseSuppressionLevel] = useState<RnnoiseSuppressionLevel>(() => {
+    const value = String(localStorage.getItem("boltorezka_rnnoise_level") || "").trim();
+    if (value === "soft" || value === "medium" || value === "strong") {
+      return value;
+    }
+    return "medium";
   });
   const [selfMonitorEnabled, setSelfMonitorEnabled] = useState<boolean>(() => localStorage.getItem("boltorezka_self_monitor") === "1");
   const [mediaDevicesState, setMediaDevicesState] = useState<MediaDevicesState>("ready");
@@ -342,6 +350,7 @@ export function App() {
     roomVoiceTargets: currentRoomVoiceTargets,
     selectedInputId,
     selectedInputProfile,
+    rnnoiseSuppressionLevel,
     selectedOutputId,
     memberVolumeByUserId,
     selectedVideoInputId,
@@ -424,6 +433,7 @@ export function App() {
 
   usePersistedClientSettings({
     selectedInputProfile,
+    rnnoiseSuppressionLevel,
     selfMonitorEnabled,
     micMuted,
     audioMuted,
@@ -1374,6 +1384,7 @@ export function App() {
     screenShareOwnedByCurrentUser: isCurrentUserScreenShareOwner,
     canStartScreenShare: canToggleScreenShare,
     noiseSuppressionEnabled,
+    rnnoiseSuppressionLevel,
     rnnoiseRuntimeStatus,
     cameraEnabled,
     micMuted,
@@ -1414,6 +1425,7 @@ export function App() {
     onToggleCamera: handleToggleCamera,
     onToggleScreenShare: handleToggleScreenShareClick,
     onToggleNoiseSuppression: handleToggleNoiseSuppression,
+    onSetRnnoiseSuppressionLevel: setRnnoiseSuppressionLevel,
     selfMonitorEnabled,
     onToggleSelfMonitor: () => setSelfMonitorEnabled((value) => !value),
     onRequestVideoAccess: requestVideoAccess,

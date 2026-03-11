@@ -17,7 +17,7 @@ import {
 import { api } from "../../api";
 import type { PresenceMember } from "../../domain";
 import type { CallStatus } from "../../services";
-import { RnnoiseAudioProcessor } from "./rnnoiseAudioProcessor";
+import { RnnoiseAudioProcessor, type RnnoiseSuppressionLevel } from "./rnnoiseAudioProcessor";
 import type {
   CallMicStatePayload,
   CallNackPayload,
@@ -36,6 +36,7 @@ type UseLivekitVoiceRuntimeArgs = {
   roomVoiceTargets: PresenceMember[];
   selectedInputId: string;
   selectedInputProfile: "noise_reduction" | "studio" | "custom";
+  rnnoiseSuppressionLevel: RnnoiseSuppressionLevel;
   selectedOutputId: string;
   memberVolumeByUserId: Record<string, number>;
   selectedVideoInputId: string;
@@ -137,6 +138,7 @@ export function useLivekitVoiceRuntime({
   roomVoiceTargets,
   selectedInputId,
   selectedInputProfile,
+  rnnoiseSuppressionLevel,
   selectedOutputId,
   memberVolumeByUserId,
   selectedVideoInputId,
@@ -416,7 +418,7 @@ export function useLivekitVoiceRuntime({
       }
       audioContextRef.current = audioContext;
 
-      const processor = new RnnoiseAudioProcessor();
+      const processor = new RnnoiseAudioProcessor(rnnoiseSuppressionLevel);
       await audioTrack.setAudioContext(audioContext);
       await audioTrack.setProcessor(processor);
 
@@ -434,7 +436,7 @@ export function useLivekitVoiceRuntime({
       await audioTrack.stopProcessor().catch(() => undefined);
       await releaseRnnoiseProcessor();
     }
-  }, [onRnnoiseFallback, onRnnoiseStatusChange, pushCallLog, releaseRnnoiseProcessor, selectedInputProfile]);
+  }, [onRnnoiseFallback, onRnnoiseStatusChange, pushCallLog, releaseRnnoiseProcessor, rnnoiseSuppressionLevel, selectedInputProfile]);
 
   const cleanupRoom = useCallback(() => {
     const room = roomRef.current;

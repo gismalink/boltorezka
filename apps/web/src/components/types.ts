@@ -2,6 +2,7 @@ import type { FormEvent, RefObject } from "react";
 import type { Lang, TranslateFn } from "../i18n";
 import type { ChannelAudioQualitySetting, PresenceMember, Room, RoomKind, RoomMemberPreference, RoomsTreeResponse, User } from "../domain";
 import type { VoiceMediaStatusSummary } from "../hooks/rtc/voiceCallTypes";
+import type { RnnoiseSuppressionLevel } from "../hooks/rtc/rnnoiseAudioProcessor";
 
 export type InputProfile = "noise_reduction" | "studio" | "custom";
 export type VoiceSettingsPanel = "input_device" | "input_profile" | null;
@@ -23,6 +24,7 @@ export type UserDockProps = {
   screenShareOwnedByCurrentUser: boolean;
   canStartScreenShare: boolean;
   noiseSuppressionEnabled: boolean;
+  rnnoiseSuppressionLevel: RnnoiseSuppressionLevel;
   rnnoiseRuntimeStatus: "inactive" | "active" | "unavailable" | "error";
   selfMonitorEnabled: boolean;
   currentRoomSupportsVideo: boolean;
@@ -65,6 +67,7 @@ export type UserDockProps = {
   onToggleCamera: () => void;
   onToggleScreenShare: () => void;
   onToggleNoiseSuppression: () => void;
+  onSetRnnoiseSuppressionLevel: (value: RnnoiseSuppressionLevel) => void;
   onToggleSelfMonitor: () => void;
   onToggleVoiceSettings: () => void;
   onToggleAudioOutput: () => void;

@@ -44,8 +44,10 @@ type UserDockSettingsOverlayProps = Pick<
   | "selfMonitorEnabled"
   | "onToggleSelfMonitor"
   | "noiseSuppressionEnabled"
+  | "rnnoiseSuppressionLevel"
   | "rnnoiseRuntimeStatus"
   | "onToggleNoiseSuppression"
+  | "onSetRnnoiseSuppressionLevel"
 > & {
   mediaDevicesUnavailable: boolean;
   mediaControlsLocked: boolean;
@@ -97,8 +99,10 @@ export function UserDockSettingsOverlay({
   selfMonitorEnabled,
   onToggleSelfMonitor,
   noiseSuppressionEnabled,
+  rnnoiseSuppressionLevel,
   rnnoiseRuntimeStatus,
   onToggleNoiseSuppression,
+  onSetRnnoiseSuppressionLevel,
   mediaDevicesUnavailable,
   mediaControlsLocked,
   mediaDevicesWarningText,
@@ -298,15 +302,47 @@ export function UserDockSettingsOverlay({
                 </label>
                 <p className="muted media-devices-warning">{t("settings.rnnClientHint")}</p>
                 {noiseSuppressionEnabled ? (
-                  <p className="muted media-devices-warning">
-                    {rnnoiseRuntimeStatus === "active"
-                      ? t("settings.rnnStatusActive")
-                      : rnnoiseRuntimeStatus === "unavailable"
-                        ? t("settings.rnnStatusUnavailable")
-                        : rnnoiseRuntimeStatus === "error"
-                          ? t("settings.rnnStatusError")
-                          : t("settings.rnnStatusPending")}
-                  </p>
+                  <>
+                    <label className="grid gap-2">
+                      <span className="subheading">{t("settings.rnnLevel")}</span>
+                      <div className="quality-toggle-group" role="radiogroup" aria-label={t("settings.rnnLevel") }>
+                        <button
+                          type="button"
+                          className={`secondary quality-toggle-btn ${rnnoiseSuppressionLevel === "soft" ? "quality-toggle-btn-active" : ""}`}
+                          aria-pressed={rnnoiseSuppressionLevel === "soft"}
+                          onClick={() => onSetRnnoiseSuppressionLevel("soft")}
+                        >
+                          {t("settings.rnnLevelSoft")}
+                        </button>
+                        <button
+                          type="button"
+                          className={`secondary quality-toggle-btn ${rnnoiseSuppressionLevel === "medium" ? "quality-toggle-btn-active" : ""}`}
+                          aria-pressed={rnnoiseSuppressionLevel === "medium"}
+                          onClick={() => onSetRnnoiseSuppressionLevel("medium")}
+                        >
+                          {t("settings.rnnLevelMedium")}
+                        </button>
+                        <button
+                          type="button"
+                          className={`secondary quality-toggle-btn ${rnnoiseSuppressionLevel === "strong" ? "quality-toggle-btn-active" : ""}`}
+                          aria-pressed={rnnoiseSuppressionLevel === "strong"}
+                          onClick={() => onSetRnnoiseSuppressionLevel("strong")}
+                        >
+                          {t("settings.rnnLevelStrong")}
+                        </button>
+                      </div>
+                    </label>
+                    <p className="muted media-devices-warning">{t("settings.rnnLevelHint")}</p>
+                    <p className="muted media-devices-warning">
+                      {rnnoiseRuntimeStatus === "active"
+                        ? t("settings.rnnStatusActive")
+                        : rnnoiseRuntimeStatus === "unavailable"
+                          ? t("settings.rnnStatusUnavailable")
+                          : rnnoiseRuntimeStatus === "error"
+                            ? t("settings.rnnStatusError")
+                            : t("settings.rnnStatusPending")}
+                    </p>
+                  </>
                 ) : null}
               </div>
             </>
