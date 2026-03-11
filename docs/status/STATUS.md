@@ -39,7 +39,7 @@
 - Закрыт Phase 3 (Voice / WebRTC MVP):
 	- утверждён канонический policy-пакет `docs/runbooks/PHASE3_VOICE_WEBRTC_MVP_POLICY.md` (room-size contract + graceful degradation policy).
 - Подготовлен kickoff-пакет для Phase 5 (iOS/macOS):
-	- зафиксирован scope note `docs/plans/PHASE5_IOS_MACOS_SCOPE_NOTE.md` (MVP boundaries + shared Swift package bootstrap contract).
+	- зафиксирован scope note `docs/plans/2026-03-04_PHASE5_IOS_MACOS_SCOPE_NOTE.md` (MVP boundaries + shared Swift package bootstrap contract).
 - Legacy deprecation (Phase D) переведен в completed; в open workstreams больше не является текущим фокусом.
 - Активирован новый execution workstream по RTC stability:
 	- `docs/status/RTC_STABILITY_ROADMAP.md` (Discord-inspired incremental hardening).

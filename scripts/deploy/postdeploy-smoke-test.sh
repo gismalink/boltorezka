@@ -27,6 +27,7 @@ SMOKE_CALL_INITIAL_STATE_SENT_DELTA=0
 SMOKE_CALL_INITIAL_STATE_PARTICIPANTS_DELTA=0
 SMOKE_SUMMARY_TEXT="health=fail mode=unknown sso=fail realtime=fail delta(nack=0,ack=0,chat=0,idem=0,initial_state=0,initial_state_participants=0)"
 API_SMOKE_STATUS="skip"
+API_AUTH_SESSION_STATUS="skip"
 VERSION_CACHE_STATUS="skip"
 EXTENDED_REALTIME_STATUS="skip"
 SMOKE_REALTIME_MEDIA_STATUS="skip"
@@ -49,6 +50,7 @@ write_summary() {
   printf 'SMOKE_BASE_URL=%q\n' "$BASE_URL" >>"$SUMMARY_FILE_REL"
   printf 'SMOKE_WEB_BASE_URL=%q\n' "$WEB_BASE_URL" >>"$SUMMARY_FILE_REL"
   printf 'SMOKE_STATUS=%q\n' "$SMOKE_STATUS" >>"$SUMMARY_FILE_REL"
+  printf 'SMOKE_AUTH_SESSION_STATUS=%q\n' "$API_AUTH_SESSION_STATUS" >>"$SUMMARY_FILE_REL"
   printf 'SMOKE_NACK_DELTA=%q\n' "$SMOKE_NACK_DELTA" >>"$SUMMARY_FILE_REL"
   printf 'SMOKE_ACK_DELTA=%q\n' "$SMOKE_ACK_DELTA" >>"$SUMMARY_FILE_REL"
   printf 'SMOKE_CHAT_SENT_DELTA=%q\n' "$SMOKE_CHAT_SENT_DELTA" >>"$SUMMARY_FILE_REL"
@@ -129,12 +131,14 @@ make_hs256_jwt() {
   local secret="$1"
   local sub="$2"
   local role="$3"
+  local sid="$4"
+  local auth_mode="${5:-sso}"
   local now exp header payload unsigned signature
 
   now="$(date +%s)"
   exp="$((now + 3600))"
   header='{"alg":"HS256","typ":"JWT"}'
-  payload="{\"sub\":\"$sub\",\"role\":\"$role\",\"iat\":$now,\"exp\":$exp}"
+  payload="{\"sub\":\"$sub\",\"sid\":\"$sid\",\"role\":\"$role\",\"authMode\":\"$auth_mode\",\"iat\":$now,\"exp\":$exp}"
 
   unsigned="$(printf '%s' "$header" | base64url).$(printf '%s' "$payload" | base64url)"
   signature="$(printf '%s' "$unsigned" | openssl dgst -sha256 -hmac "$secret" -binary | base64url)"
@@ -536,7 +540,11 @@ if [[ -z "${SMOKE_TEST_BEARER_TOKEN:-}" ]]; then
   fi
 
   if [[ -n "$JWT_SECRET_CANDIDATE" ]]; then
-    GENERATED_BEARER="$(make_hs256_jwt "$JWT_SECRET_CANDIDATE" "$SMOKE_USER_ID" "$SMOKE_USER_ROLE")"
+    GENERATED_SESSION_ID="$(uuidgen | tr '[:upper:]' '[:lower:]')"
+    GENERATED_BEARER="$(make_hs256_jwt "$JWT_SECRET_CANDIDATE" "$SMOKE_USER_ID" "$SMOKE_USER_ROLE" "$GENERATED_SESSION_ID" "sso")"
+    AUTH_SESSION_TTL_SEC="${SMOKE_AUTH_SESSION_TTL_SEC:-2592000}"
+    AUTH_SESSION_PAYLOAD="$(printf '{\"userId\":\"%s\",\"authMode\":\"sso\",\"issuedAt\":\"%s\",\"rotatedFrom\":null}' "$SMOKE_USER_ID" "$(date -u +%Y-%m-%dT%H:%M:%SZ)")"
+    compose exec -T "$REDIS_SERVICE" redis-cli SETEX "auth:session:$GENERATED_SESSION_ID" "$AUTH_SESSION_TTL_SEC" "$AUTH_SESSION_PAYLOAD" >/dev/null
     export SMOKE_TEST_BEARER_TOKEN="$GENERATED_BEARER"
   else
     echo "[postdeploy-smoke] warning: cannot resolve JWT secret; protected smoke:api checks may be skipped"
@@ -546,10 +554,23 @@ fi
 if [[ "${SMOKE_API:-1}" == "0" ]]; then
   echo "[postdeploy-smoke] smoke:api skipped (SMOKE_API=0)"
   API_SMOKE_STATUS="skip"
+  API_AUTH_SESSION_STATUS="skip"
 else
   echo "[postdeploy-smoke] smoke:api"
   SMOKE_API_URL="$BASE_URL" npm run smoke:api
   API_SMOKE_STATUS="pass"
+
+  if [[ "${SMOKE_AUTH_SESSION:-1}" == "0" ]]; then
+    echo "[postdeploy-smoke] smoke:auth:session skipped (SMOKE_AUTH_SESSION=0)"
+    API_AUTH_SESSION_STATUS="skip"
+  elif [[ -z "${SMOKE_TEST_BEARER_TOKEN:-}" ]]; then
+    echo "[postdeploy-smoke] smoke:auth:session skipped (no bearer token)"
+    API_AUTH_SESSION_STATUS="skip"
+  else
+    echo "[postdeploy-smoke] smoke:auth:session"
+    SMOKE_API_URL="$BASE_URL" npm run smoke:auth:session
+    API_AUTH_SESSION_STATUS="pass"
+  fi
 fi
 
 echo "[postdeploy-smoke] smoke:web:version-cache"
@@ -572,7 +593,7 @@ if [[ "${SMOKE_REALTIME:-1}" == "0" ]]; then
   collect_turn_allocation_failures
   echo "[postdeploy-smoke] realtime smoke skipped (SMOKE_REALTIME=0)"
   SMOKE_STATUS="pass"
-  SMOKE_SUMMARY_TEXT="health=pass mode=sso sso=pass api=$API_SMOKE_STATUS version_cache=$VERSION_CACHE_STATUS livekit_standard=$SMOKE_LIVEKIT_STANDARD_PROFILE_STATUS turn_tls=$SMOKE_TURN_TLS_STATUS turn_rotation=$SMOKE_TURN_ROTATION_STATUS turn_alloc_failures=$SMOKE_TURN_ALLOCATION_FAILURES turn_alloc_status=$SMOKE_TURN_ALLOCATION_STATUS realtime=skip extended_realtime=$EXTENDED_REALTIME_STATUS realtime_media=$SMOKE_REALTIME_MEDIA_STATUS transport=$SMOKE_MEDIA_TRANSPORT_SUMMARY one_way(audio=$SMOKE_ONE_WAY_AUDIO_INCIDENTS,video=$SMOKE_ONE_WAY_VIDEO_INCIDENTS) delta(nack=0,ack=0,chat=0,idem=0,initial_state=0,initial_state_participants=0)"
+  SMOKE_SUMMARY_TEXT="health=pass mode=sso sso=pass api=$API_SMOKE_STATUS auth_session=$API_AUTH_SESSION_STATUS version_cache=$VERSION_CACHE_STATUS livekit_standard=$SMOKE_LIVEKIT_STANDARD_PROFILE_STATUS turn_tls=$SMOKE_TURN_TLS_STATUS turn_rotation=$SMOKE_TURN_ROTATION_STATUS turn_alloc_failures=$SMOKE_TURN_ALLOCATION_FAILURES turn_alloc_status=$SMOKE_TURN_ALLOCATION_STATUS realtime=skip extended_realtime=$EXTENDED_REALTIME_STATUS realtime_media=$SMOKE_REALTIME_MEDIA_STATUS transport=$SMOKE_MEDIA_TRANSPORT_SUMMARY one_way(audio=$SMOKE_ONE_WAY_AUDIO_INCIDENTS,video=$SMOKE_ONE_WAY_VIDEO_INCIDENTS) delta(nack=0,ack=0,chat=0,idem=0,initial_state=0,initial_state_participants=0)"
   exit 0
 fi
 
@@ -646,6 +667,7 @@ MEDIA_SMOKE_ROOM_SLUG="${SMOKE_REALTIME_MEDIA_ROOM_SLUG:-$BASELINE_SMOKE_ROOM_SL
 SMOKE_API_URL="$BASE_URL" \
 SMOKE_ROOM_SLUG="$BASELINE_SMOKE_ROOM_SLUG" \
 SMOKE_RECONNECT=1 \
+SMOKE_CALL_SIGNAL=1 \
 SMOKE_REQUIRE_INITIAL_STATE_REPLAY=1 \
 SMOKE_REQUIRE_MEDIA_TOPOLOGY=1 \
 SMOKE_EXPECT_MEDIA_TOPOLOGY="${SMOKE_EXPECT_MEDIA_TOPOLOGY:-livekit}" \
@@ -913,6 +935,6 @@ SMOKE_CALL_INITIAL_STATE_PARTICIPANTS_DELTA=$((CALL_INITIAL_STATE_PARTICIPANTS_A
 collect_turn_allocation_failures
 
 SMOKE_STATUS="pass"
-SMOKE_SUMMARY_TEXT="health=pass mode=sso sso=pass api=$API_SMOKE_STATUS version_cache=$VERSION_CACHE_STATUS livekit_standard=$SMOKE_LIVEKIT_STANDARD_PROFILE_STATUS turn_tls=$SMOKE_TURN_TLS_STATUS turn_rotation=$SMOKE_TURN_ROTATION_STATUS turn_alloc_failures=$SMOKE_TURN_ALLOCATION_FAILURES turn_alloc_status=$SMOKE_TURN_ALLOCATION_STATUS realtime=pass extended_realtime=$EXTENDED_REALTIME_STATUS livekit_gate=$SMOKE_LIVEKIT_GATE_STATUS livekit_media=$SMOKE_LIVEKIT_MEDIA_STATUS realtime_media=$SMOKE_REALTIME_MEDIA_STATUS transport=$SMOKE_MEDIA_TRANSPORT_SUMMARY one_way(audio=$SMOKE_ONE_WAY_AUDIO_INCIDENTS,video=$SMOKE_ONE_WAY_VIDEO_INCIDENTS) delta(nack=$SMOKE_NACK_DELTA,ack=$SMOKE_ACK_DELTA,chat=$SMOKE_CHAT_SENT_DELTA,idem=$SMOKE_CHAT_IDEMPOTENCY_HIT_DELTA,initial_state=$SMOKE_CALL_INITIAL_STATE_SENT_DELTA,initial_state_participants=$SMOKE_CALL_INITIAL_STATE_PARTICIPANTS_DELTA)"
+SMOKE_SUMMARY_TEXT="health=pass mode=sso sso=pass api=$API_SMOKE_STATUS auth_session=$API_AUTH_SESSION_STATUS version_cache=$VERSION_CACHE_STATUS livekit_standard=$SMOKE_LIVEKIT_STANDARD_PROFILE_STATUS turn_tls=$SMOKE_TURN_TLS_STATUS turn_rotation=$SMOKE_TURN_ROTATION_STATUS turn_alloc_failures=$SMOKE_TURN_ALLOCATION_FAILURES turn_alloc_status=$SMOKE_TURN_ALLOCATION_STATUS realtime=pass extended_realtime=$EXTENDED_REALTIME_STATUS livekit_gate=$SMOKE_LIVEKIT_GATE_STATUS livekit_media=$SMOKE_LIVEKIT_MEDIA_STATUS realtime_media=$SMOKE_REALTIME_MEDIA_STATUS transport=$SMOKE_MEDIA_TRANSPORT_SUMMARY one_way(audio=$SMOKE_ONE_WAY_AUDIO_INCIDENTS,video=$SMOKE_ONE_WAY_VIDEO_INCIDENTS) delta(nack=$SMOKE_NACK_DELTA,ack=$SMOKE_ACK_DELTA,chat=$SMOKE_CHAT_SENT_DELTA,idem=$SMOKE_CHAT_IDEMPOTENCY_HIT_DELTA,initial_state=$SMOKE_CALL_INITIAL_STATE_SENT_DELTA,initial_state_participants=$SMOKE_CALL_INITIAL_STATE_PARTICIPANTS_DELTA)"
 
 echo "[postdeploy-smoke] done"

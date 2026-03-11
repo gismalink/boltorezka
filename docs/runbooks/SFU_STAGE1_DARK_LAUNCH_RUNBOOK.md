@@ -10,7 +10,7 @@
 ## 2) Область применения
 
 - Контур: только `test`.
-- Stage: `Stage 1 (Dark launch)` из `docs/plans/SFU_MIGRATION_PLAN.md`.
+- Stage: `Stage 1 (Dark launch)` из `docs/plans/2026-03-06_SFU_MIGRATION_PLAN.md`.
 - Topology policy:
   - default `p2p`,
   - SFU включается room-level routing (`mediaTopology=sfu`) для ограниченного набора комнат.
@@ -80,7 +80,7 @@
 
 ## 9) Связанные документы
 
-- `docs/plans/SFU_STAGE0_EXECUTION_PLAN.md`
-- `docs/plans/SFU_MIGRATION_PLAN.md`
+- `docs/plans/2026-03-06_SFU_STAGE0_EXECUTION_PLAN.md`
+- `docs/plans/2026-03-06_SFU_MIGRATION_PLAN.md`
 - `docs/contracts/SFU_SESSION_CONTRACT.md`
 - `docs/runbooks/VOICE_BASELINE_RUNBOOK.md`

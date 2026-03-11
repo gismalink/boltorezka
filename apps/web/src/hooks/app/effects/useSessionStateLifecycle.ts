@@ -1,5 +1,5 @@
 import { useCallback, useEffect, type Dispatch, type MutableRefObject, type SetStateAction } from "react";
-import { api } from "../../../api";
+import { ApiError, api } from "../../../api";
 import type {
   AudioQuality,
   Message,
@@ -123,7 +123,23 @@ export function useSessionStateLifecycle({
 
     api.me(nextToken)
       .then((res) => setUser(res.user))
-      .catch(() => {
+      .catch(async (error) => {
+        if (error instanceof ApiError && error.status === 401) {
+          try {
+            const refreshed = await api.authRefresh(nextToken);
+            const refreshedToken = String(refreshed.token || "").trim();
+            if (refreshedToken) {
+              setToken(refreshedToken);
+              localStorage.setItem("boltorezka_token", refreshedToken);
+              const me = await api.me(refreshedToken);
+              setUser(me.user);
+              return;
+            }
+          } catch {
+            // Fall through to hard reset when refresh fails.
+          }
+        }
+
         setToken("");
         localStorage.removeItem("boltorezka_token");
       });

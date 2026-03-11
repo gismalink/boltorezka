@@ -26,6 +26,48 @@ const livekitTokenSchema = z.object({
 });
 
 const safeHostSet = new Set(config.allowedReturnHosts);
+const AUTH_SESSION_PREFIX = "auth:session:";
+const AUTH_SESSION_TTL_SEC = 60 * 60 * 24 * 30;
+
+async function issueAuthSessionToken(
+  fastify: FastifyInstance,
+  user: UserRow,
+  authMode: "sso" = "sso",
+  previousSessionId: string | null = null
+) {
+  const sessionId = randomUUID();
+
+  await fastify.redis.setEx(
+    `${AUTH_SESSION_PREFIX}${sessionId}`,
+    AUTH_SESSION_TTL_SEC,
+    JSON.stringify({
+      userId: user.id,
+      authMode,
+      issuedAt: new Date().toISOString(),
+      rotatedFrom: previousSessionId || null
+    })
+  );
+
+  if (previousSessionId && previousSessionId !== sessionId) {
+    await fastify.redis.del(`${AUTH_SESSION_PREFIX}${previousSessionId}`);
+  }
+
+  const token = await fastify.jwt.sign(
+    {
+      sub: user.id,
+      sid: sessionId,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      authMode
+    },
+    {
+      expiresIn: fastify.jwtExpiresIn
+    }
+  );
+
+  return { token, sessionId };
+}
 
 function resolveLivekitClientUrl(request: FastifyRequest): string {
   const raw = String(config.livekitUrl || "").trim();
@@ -242,18 +284,7 @@ export async function authRoutes(fastify: FastifyInstance) {
         });
       }
 
-      const token = await reply.jwtSign(
-        {
-          sub: localUser.id,
-          email: localUser.email,
-          name: localUser.name,
-          role: localUser.role,
-          authMode: "sso"
-        },
-        {
-          expiresIn: fastify.jwtExpiresIn
-        }
-      );
+      const { token } = await issueAuthSessionToken(fastify, localUser, "sso");
 
       const response: SsoSessionResponse = {
         authenticated: true,
@@ -290,6 +321,50 @@ export async function authRoutes(fastify: FastifyInstance) {
       message: "Local login is disabled. Use SSO login."
     });
   });
+
+  fastify.post(
+    "/v1/auth/refresh",
+    {
+      preHandler: [requireAuth]
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const user = request.currentUser;
+      if (!user) {
+        return reply.code(401).send({
+          error: "Unauthorized",
+          message: "Valid bearer token is required"
+        });
+      }
+
+      const previousSessionId = String(request.user?.sid || "").trim() || null;
+      if (!previousSessionId) {
+        return reply.code(401).send({
+          error: "Unauthorized",
+          message: "Session refresh requires re-login"
+        });
+      }
+
+      const { token } = await issueAuthSessionToken(fastify, user, "sso", previousSessionId);
+      return {
+        token,
+        user
+      };
+    }
+  );
+
+  fastify.post(
+    "/v1/auth/logout",
+    {
+      preHandler: [requireAuth]
+    },
+    async (request: FastifyRequest) => {
+      const sessionId = String(request.user?.sid || "").trim();
+      if (sessionId) {
+        await fastify.redis.del(`${AUTH_SESSION_PREFIX}${sessionId}`);
+      }
+      return { ok: true };
+    }
+  );
 
   fastify.get(
     "/v1/auth/ws-ticket",

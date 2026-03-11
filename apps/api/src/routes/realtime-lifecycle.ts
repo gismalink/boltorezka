@@ -1,0 +1,129 @@
+import type { WebSocket } from "ws";
+
+type SocketState = {
+  userId: string;
+  userName: string;
+  roomId: string | null;
+  roomSlug: string | null;
+};
+
+export async function initializeRealtimeConnection(params: {
+  connection: WebSocket;
+  userId: string;
+  userName: string;
+  socketState: WeakMap<WebSocket, any>;
+  attachUserSocket: (userId: string, socket: WebSocket) => void;
+  registerRealtimeSocket: (socket: WebSocket) => void;
+  redisHSet: (key: string, value: Record<string, string>) => Promise<unknown>;
+  redisExpire: (key: string, seconds: number) => Promise<unknown>;
+  sendJson: (socket: WebSocket, payload: unknown) => void;
+  buildServerReadyEnvelope: (userId: string, userName: string) => unknown;
+  buildRoomsPresenceEnvelope: (...args: any[]) => unknown;
+  getAllRoomsPresence: (forUserId: string | null) => unknown;
+}) {
+  const {
+    connection,
+    userId,
+    userName,
+    socketState,
+    attachUserSocket,
+    registerRealtimeSocket,
+    redisHSet,
+    redisExpire,
+    sendJson,
+    buildServerReadyEnvelope,
+    buildRoomsPresenceEnvelope,
+    getAllRoomsPresence
+  } = params;
+
+  socketState.set(connection, {
+    sessionId: crypto.randomUUID(),
+    userId,
+    userName,
+    roomId: null,
+    roomSlug: null,
+    roomKind: null
+  });
+
+  attachUserSocket(userId, connection);
+  registerRealtimeSocket(connection);
+
+  await redisHSet(`presence:user:${userId}`, {
+    online: "1",
+    updatedAt: new Date().toISOString()
+  });
+  await redisExpire(`presence:user:${userId}`, 120);
+
+  sendJson(connection, buildServerReadyEnvelope(userId, userName));
+  sendJson(connection, buildRoomsPresenceEnvelope(getAllRoomsPresence(userId)));
+}
+
+export async function closeRealtimeConnection(params: {
+  connection: WebSocket;
+  socketState: WeakMap<WebSocket, SocketState>;
+  unregisterRealtimeSocket: (socket: WebSocket) => void;
+  detachUserSocket: (userId: string, socket: WebSocket) => void;
+  markRecentRoomDetach: (roomId: string, userId: string) => void;
+  detachRoomSocket: (roomId: string, socket: WebSocket) => void;
+  clearCanonicalMediaState: (roomId: string, userId: string) => void;
+  clearRoomScreenShareOwnerIfMatches: (roomId: string, userId: string, roomSlug: string | null) => void;
+  broadcastRoom: (roomId: string, payload: unknown, excludedSocket?: WebSocket | null) => void;
+  buildPresenceLeftEnvelope: (...args: any[]) => unknown;
+  getRoomPresence: (roomId: string) => Array<{ userId: string; userName: string }>;
+  broadcastAllRoomsPresence: () => void;
+  socketsByUserId: Map<string, Set<WebSocket>>;
+  redisHSet: (key: string, value: Record<string, string>) => Promise<unknown>;
+  redisExpire: (key: string, seconds: number) => Promise<unknown>;
+}) {
+  const {
+    connection,
+    socketState,
+    unregisterRealtimeSocket,
+    detachUserSocket,
+    markRecentRoomDetach,
+    detachRoomSocket,
+    clearCanonicalMediaState,
+    clearRoomScreenShareOwnerIfMatches,
+    broadcastRoom,
+    buildPresenceLeftEnvelope,
+    getRoomPresence,
+    broadcastAllRoomsPresence,
+    socketsByUserId,
+    redisHSet,
+    redisExpire
+  } = params;
+
+  const state = socketState.get(connection);
+  unregisterRealtimeSocket(connection);
+  if (!state) {
+    return;
+  }
+
+  detachUserSocket(state.userId, connection);
+
+  if (state.roomId) {
+    markRecentRoomDetach(state.roomId, state.userId);
+    detachRoomSocket(state.roomId, connection);
+    clearCanonicalMediaState(state.roomId, state.userId);
+    clearRoomScreenShareOwnerIfMatches(state.roomId, state.userId, state.roomSlug);
+    broadcastRoom(
+      state.roomId,
+      buildPresenceLeftEnvelope(
+        state.userId,
+        state.userName,
+        state.roomSlug,
+        getRoomPresence(state.roomId).length
+      )
+    );
+    broadcastAllRoomsPresence();
+  }
+
+  const userSockets = socketsByUserId.get(state.userId);
+  if (!userSockets || userSockets.size === 0) {
+    await redisHSet(`presence:user:${state.userId}`, {
+      online: "0",
+      updatedAt: new Date().toISOString()
+    });
+    await redisExpire(`presence:user:${state.userId}`, 120);
+  }
+}

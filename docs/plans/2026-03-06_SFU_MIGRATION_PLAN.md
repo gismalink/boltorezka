@@ -5,8 +5,8 @@
 Статус: Stage 0-3 (current SFU profile) завершены в test; LiveKit Stage A-D в работе
 
 Execution reference:
-- `docs/plans/SFU_STAGE0_EXECUTION_PLAN.md`
-- `docs/plans/TARGET_MODEL_CHECKLIST_2026-03-08.md`
+- `docs/plans/2026-03-06_SFU_STAGE0_EXECUTION_PLAN.md`
+- `docs/plans/2026-03-08_TARGET_MODEL_CHECKLIST.md`
 - `docs/runbooks/SFU_STAGE1_DARK_LAUNCH_RUNBOOK.md`
 - `docs/runbooks/SFU_STAGE2_CANARY_RUNBOOK.md`
 - `docs/runbooks/SFU_STAGE3_DEFAULT_SFU_TEST_RUNBOOK.md`

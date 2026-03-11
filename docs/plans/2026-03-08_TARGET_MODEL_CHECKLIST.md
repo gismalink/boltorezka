@@ -186,17 +186,17 @@ Validation note (2026-03-09): добавлены `scripts/ops/rotate-turn-creden
 ## 9) Release Readiness Gate Перед Prod
 
 - [x] Минимум 3 последовательных зелёных test rollout + smoke.
-- [x] Нет критичных инцидентов в последние 48 часов (перенесено в `docs/plans/LIVEKIT_FULL_TRANSITION_CHECKLIST_2026-03-09.md`).
+- [x] Нет критичных инцидентов в последние 48 часов (перенесено в `docs/plans/2026-03-09_LIVEKIT_FULL_TRANSITION_CHECKLIST.md`).
 - [x] Подготовлен release summary с метриками и рисками.
 - [x] Rollback команда и ответственный подтверждены.
 - [x] Smoke-чеклист для prod готов до старта окна релиза.
-- [x] Принято явное подтверждение на `prod` rollout (перенесено в `docs/plans/LIVEKIT_FULL_TRANSITION_CHECKLIST_2026-03-09.md`).
+- [x] Принято явное подтверждение на `prod` rollout (перенесено в `docs/plans/2026-03-09_LIVEKIT_FULL_TRANSITION_CHECKLIST.md`).
 
 ## 10) Post-Deploy Контроль
 
 - [x] `docker compose ps` показывает все сервисы `Up`.
 - [x] Логи API/TURN без критичных ошибок за первые 15-30 минут.
-- [x] Smoke `test`/`prod` проходит полностью (перенесено в `docs/plans/LIVEKIT_FULL_TRANSITION_CHECKLIST_2026-03-09.md`).
+- [x] Smoke `test`/`prod` проходит полностью (перенесено в `docs/plans/2026-03-09_LIVEKIT_FULL_TRANSITION_CHECKLIST.md`).
 - [x] Мониторинг подтверждает отсутствие регрессий SLO.
 - [x] Заполнен release log и postmortem-note (если были аномалии).
 

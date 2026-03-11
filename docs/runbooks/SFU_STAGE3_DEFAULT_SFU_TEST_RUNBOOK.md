@@ -10,7 +10,7 @@
 ## 2) Область применения
 
 - Контур: только `test`.
-- Stage: `Stage 3` из `docs/plans/SFU_MIGRATION_PLAN.md`.
+- Stage: `Stage 3` из `docs/plans/2026-03-06_SFU_MIGRATION_PLAN.md`.
 - Policy:
   - `TEST_RTC_MEDIA_TOPOLOGY_DEFAULT=sfu`
   - room/user allowlists используются для точечных override сценариев и диагностики.
@@ -50,6 +50,6 @@
 
 ## 7) Связанные документы
 
-- `docs/plans/SFU_MIGRATION_PLAN.md`
+- `docs/plans/2026-03-06_SFU_MIGRATION_PLAN.md`
 - `docs/runbooks/SFU_STAGE2_CANARY_RUNBOOK.md`
 - `docs/runbooks/SFU_STAGE1_DARK_LAUNCH_RUNBOOK.md`

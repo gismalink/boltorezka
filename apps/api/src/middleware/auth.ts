@@ -41,6 +41,24 @@ export async function requireAuth(request: FastifyRequest, reply: FastifyReply) 
     return unauthorized(reply);
   }
 
+  const userId = String(request.user?.sub || "").trim();
+  const sessionId = String(request.user?.sid || "").trim();
+  if (userId && sessionId) {
+    const raw = await request.server.redis.get(`auth:session:${sessionId}`);
+    if (!raw) {
+      return unauthorized(reply);
+    }
+
+    try {
+      const payload = JSON.parse(raw) as { userId?: string; revoked?: boolean };
+      if (payload?.revoked === true || String(payload?.userId || "") !== userId) {
+        return unauthorized(reply);
+      }
+    } catch {
+      return unauthorized(reply);
+    }
+  }
+
   if (request.currentUser) {
     if (request.currentUser.is_banned) {
       return banned(reply);

@@ -4,6 +4,7 @@ export { useAppEventLogs } from "./app/state/useAppEventLogs";
 export { useAppUiState, type AppMobileTab, type AppServerMenuTab } from "./app/state/useAppUiState";
 export { useAutoRoomVoiceConnection } from "./voice/useAutoRoomVoiceConnection";
 export { useBuildVersionSync } from "./app/effects/useBuildVersionSync";
+export { useMemberPreferencesSync } from "./app/effects/useMemberPreferencesSync";
 export { useSessionStateLifecycle } from "./app/effects/useSessionStateLifecycle";
 export { useTelemetryRefresh } from "./app/effects/useTelemetryRefresh";
 export { useCollapsedCategories } from "./rooms/useCollapsedCategories";

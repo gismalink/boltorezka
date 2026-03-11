@@ -3,7 +3,7 @@
 Чеклист перед запросом на rollout в `prod`.
 
 Decision package (обязательно к заполнению перед `prod`): [PREPROD_DECISION_PACKAGE.md](PREPROD_DECISION_PACKAGE.md)
-LiveKit full-transition reference: [../plans/LIVEKIT_FULL_TRANSITION_CHECKLIST_2026-03-09.md](../plans/LIVEKIT_FULL_TRANSITION_CHECKLIST_2026-03-09.md)
+LiveKit full-transition reference: [../plans/2026-03-09_LIVEKIT_FULL_TRANSITION_CHECKLIST.md](../plans/2026-03-09_LIVEKIT_FULL_TRANSITION_CHECKLIST.md)
 
 ## 1) Branch и Git
 
