@@ -3,6 +3,7 @@ import { z } from "zod";
 import { db } from "../db.js";
 import { requireAuth } from "../middleware/auth.js";
 import type { UserMemberPreferenceRow } from "../db.types.ts";
+import { validateTargetUserId, validateTargetUserIdsCsv } from "./member-preferences.validation.js";
 
 const updateMemberPreferenceSchema = z.object({
   volume: z.number().int().min(0).max(100),
@@ -24,15 +25,15 @@ export async function memberPreferencesRoutes(fastify: FastifyInstance) {
         });
       }
 
-      const rawTargetIds = String((request.query as { targetUserIds?: string })?.targetUserIds || "").trim();
-      const targetUserIds = Array.from(
-        new Set(
-          rawTargetIds
-            .split(",")
-            .map((item) => item.trim())
-            .filter((item) => item.length > 0)
-        )
-      ).slice(0, 200);
+        const targetIdsValidation = validateTargetUserIdsCsv((request.query as { targetUserIds?: string })?.targetUserIds);
+        if (!targetIdsValidation.ok) {
+          return reply.code(400).send({
+            error: "ValidationError",
+            issues: targetIdsValidation.issues
+          });
+        }
+
+        const targetUserIds = targetIdsValidation.value;
 
       if (targetUserIds.length === 0) {
         return { preferences: [] };
@@ -66,14 +67,23 @@ export async function memberPreferencesRoutes(fastify: FastifyInstance) {
     },
     async (request, reply) => {
       const viewerUserId = String(request.user?.sub || "").trim();
-      const targetUserId = String(request.params?.targetUserId || "").trim();
+        const targetUserIdValidation = validateTargetUserId(request.params?.targetUserId);
 
-      if (!viewerUserId || !targetUserId) {
+        if (!viewerUserId) {
         return reply.code(400).send({
           error: "ValidationError",
-          message: "viewer and target user ids are required"
+            message: "viewer user id is required"
         });
       }
+
+        if (!targetUserIdValidation.ok) {
+          return reply.code(400).send({
+            error: "ValidationError",
+            issues: targetUserIdValidation.issues
+          });
+        }
+
+        const targetUserId = targetUserIdValidation.value;
 
       const parsed = updateMemberPreferenceSchema.safeParse(request.body || {});
       if (!parsed.success) {
