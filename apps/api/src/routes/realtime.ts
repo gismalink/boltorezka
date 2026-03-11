@@ -6,6 +6,7 @@ import { registerRealtimeSocket, unregisterRealtimeSocket } from "../realtime-br
 import { normalizeRequestId, sendAck, sendJson, sendNack } from "./realtime-io.js";
 import { createRealtimeMediaStateStore } from "./realtime-media-state.js";
 import { createRealtimeRoomStateStore } from "./realtime-room-state.js";
+import { buildErrorCorrelationMeta, relayToTargetOrRoom } from "./realtime-relay.js";
 import type { InsertedMessageRow, RoomRow } from "../db.types.ts";
 import {
   buildRoomsPresenceEnvelope,
@@ -46,11 +47,6 @@ type WsTicketClaims = {
 type CanJoinRoomResult =
   | { ok: true; room: RoomRow }
   | { ok: false; reason: "RoomNotFound" | "Forbidden" };
-
-type RelayOutcome = {
-  ok: boolean;
-  relayedCount: number;
-};
 
 type MediaTopology = "livekit";
 
@@ -250,58 +246,6 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
     };
   };
 
-  const relayToTargetOrRoom = (
-    senderSocket: WebSocket,
-    roomId: string,
-    targetUserId: string | null,
-    relayEnvelope: unknown
-  ): RelayOutcome => {
-    let relayedCount = 0;
-
-    if (targetUserId) {
-      const targetSockets = getUserRoomSockets(targetUserId, roomId);
-      for (const targetSocket of targetSockets) {
-        if (targetSocket === senderSocket) {
-          continue;
-        }
-
-        sendJson(targetSocket, relayEnvelope);
-        relayedCount += 1;
-      }
-
-      if (relayedCount === 0) {
-        return { ok: false, relayedCount };
-      }
-
-      return { ok: true, relayedCount };
-    }
-
-    const roomSockets = socketsByRoomId.get(roomId) || new Set();
-    for (const roomSocket of roomSockets) {
-      if (roomSocket === senderSocket) {
-        continue;
-      }
-
-      sendJson(roomSocket, relayEnvelope);
-      relayedCount += 1;
-    }
-
-    return { ok: true, relayedCount };
-  };
-
-  const buildErrorCorrelationMeta = (
-    socket: WebSocket,
-    extra: Record<string, unknown> = {}
-  ): Record<string, unknown> => {
-    const state = socketState.get(socket);
-    return {
-      roomId: state?.roomId ?? null,
-      userId: state?.userId ?? null,
-      sessionId: state?.sessionId ?? null,
-      ...extra
-    };
-  };
-
   const sendNoActiveRoomNack = (
     socket: WebSocket,
     requestId: string | null,
@@ -314,7 +258,7 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
       eventType,
       "NoActiveRoom",
       "Join a room first",
-      buildErrorCorrelationMeta(socket, meta)
+      buildErrorCorrelationMeta(socket, socketState, meta)
     );
     void incrementMetric("nack_sent");
   };
@@ -331,7 +275,7 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
       eventType,
       "TargetNotInRoom",
       "Target user is offline or not in this room",
-      buildErrorCorrelationMeta(socket, meta)
+      buildErrorCorrelationMeta(socket, socketState, meta)
     );
     void incrementMetric("nack_sent");
   };
@@ -349,7 +293,7 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
       eventType,
       "ValidationError",
       message,
-      buildErrorCorrelationMeta(socket, meta)
+      buildErrorCorrelationMeta(socket, socketState, meta)
     );
     void incrementMetric("nack_sent");
   };
@@ -1276,7 +1220,15 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
                 { muted: mutedRaw, speaking, audioMuted }
               );
 
-              const relayOutcome = relayToTargetOrRoom(connection, state.roomId, targetUserId, relayEnvelope);
+              const relayOutcome = relayToTargetOrRoom({
+                senderSocket: connection,
+                roomId: state.roomId,
+                targetUserId,
+                relayEnvelope,
+                getUserRoomSockets,
+                socketsByRoomId,
+                sendJson
+              });
               if (!relayOutcome.ok) {
                 logCallDebug("call mic_state relay failed: target not in room", {
                   eventType,
@@ -1371,7 +1323,15 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
                 settingsRaw as Record<string, unknown>
               );
 
-              const relayOutcome = relayToTargetOrRoom(connection, state.roomId, targetUserId, relayEnvelope);
+              const relayOutcome = relayToTargetOrRoom({
+                senderSocket: connection,
+                roomId: state.roomId,
+                targetUserId,
+                relayEnvelope,
+                getUserRoomSockets,
+                socketsByRoomId,
+                sendJson
+              });
               if (!relayOutcome.ok) {
                 logCallDebug("call video_state relay failed: target not in room", {
                   eventType,
