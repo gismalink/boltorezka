@@ -105,6 +105,14 @@ const isExpectedDisconnectError = (error: unknown): boolean => {
     || normalized.includes("aborterror");
 };
 
+  const isAutoplayBlockedError = (error: unknown): boolean => {
+    if (!error || typeof error !== "object") {
+      return false;
+    }
+    const maybeName = "name" in error ? String((error as { name?: unknown }).name || "") : "";
+    return maybeName === "NotAllowedError";
+  };
+
 function buildRemoteMicMutedSet(room: Room): Set<string> {
   const muted = new Set<string>();
   room.remoteParticipants.forEach((participant, participantId) => {
@@ -157,6 +165,7 @@ export function useLivekitVoiceRuntime({
   const audioContextRef = useRef<AudioContext | null>(null);
   const rnnoiseProcessorRef = useRef<RnnoiseAudioProcessor | null>(null);
   const remoteAudioElementsRef = useRef<Map<string, HTMLAudioElement>>(new Map());
+  const remoteAudioBlockedByAutoplayRef = useRef<Set<string>>(new Set());
   const prevRoomSlugRef = useRef(roomSlug);
   const connectInFlightRef = useRef<Promise<void> | null>(null);
   const disconnectRequestedRef = useRef(false);
@@ -196,12 +205,37 @@ export function useLivekitVoiceRuntime({
     return `${deviceId}:${selectedInputProfile}`;
   }, [selectedInputId, selectedInputProfile]);
 
-  const applyAudioOutputSettings = useCallback(() => {
+    const tryPlayRemoteAudioElement = useCallback((participantId: string, element: HTMLAudioElement) => {
+      const playPromise = element.play();
+      if (!playPromise || typeof playPromise.then !== "function") {
+        remoteAudioBlockedByAutoplayRef.current.delete(participantId);
+        return;
+      }
+
+      void playPromise
+        .then(() => {
+          remoteAudioBlockedByAutoplayRef.current.delete(participantId);
+        })
+        .catch((error) => {
+          if (isAutoplayBlockedError(error)) {
+            remoteAudioBlockedByAutoplayRef.current.add(participantId);
+            pushCallLog(`remote audio autoplay blocked for ${participantId}; waiting for user interaction`);
+            return;
+          }
+
+          pushCallLog(`remote audio play failed for ${participantId}: ${error instanceof Error ? error.message : "unknown error"}`);
+        });
+    }, [pushCallLog]);
+
+    const applyAudioOutputSettings = useCallback(() => {
     remoteAudioElementsRef.current.forEach((element, participantId) => {
       const peerVolume = Math.max(0, Math.min(100, Number(memberVolumeByUserId[participantId] ?? 100)));
       const mixedVolume = (Math.max(0, Math.min(100, outputVolume)) / 100) * (peerVolume / 100);
       element.muted = audioMuted;
       element.volume = Math.max(0, Math.min(1, mixedVolume));
+        if (!audioMuted) {
+          tryPlayRemoteAudioElement(participantId, element);
+        }
       if (
         selectedOutputId
         && selectedOutputId !== "default"
@@ -212,7 +246,7 @@ export function useLivekitVoiceRuntime({
         });
       }
     });
-  }, [audioMuted, memberVolumeByUserId, outputVolume, selectedOutputId]);
+  }, [audioMuted, memberVolumeByUserId, outputVolume, selectedOutputId, tryPlayRemoteAudioElement]);
 
   const attachRemoteAudioTrack = useCallback((participantId: string, track: RemoteAudioTrack) => {
     const existing = remoteAudioElementsRef.current.get(participantId);
@@ -227,7 +261,10 @@ export function useLivekitVoiceRuntime({
     document.body.appendChild(element);
     remoteAudioElementsRef.current.set(participantId, element);
     applyAudioOutputSettings();
-  }, [applyAudioOutputSettings]);
+      if (!audioMuted) {
+        tryPlayRemoteAudioElement(participantId, element);
+      }
+    }, [applyAudioOutputSettings, audioMuted, tryPlayRemoteAudioElement]);
 
   const detachRemoteAudioTrack = useCallback((participantId: string) => {
     const element = remoteAudioElementsRef.current.get(participantId);
@@ -238,7 +275,26 @@ export function useLivekitVoiceRuntime({
     element.srcObject = null;
     element.remove();
     remoteAudioElementsRef.current.delete(participantId);
+      remoteAudioBlockedByAutoplayRef.current.delete(participantId);
   }, []);
+
+    const retryBlockedRemoteAudioPlayback = useCallback(() => {
+      if (remoteAudioBlockedByAutoplayRef.current.size === 0) {
+        return;
+      }
+
+      remoteAudioBlockedByAutoplayRef.current.forEach((participantId) => {
+        const element = remoteAudioElementsRef.current.get(participantId);
+        if (!element) {
+          remoteAudioBlockedByAutoplayRef.current.delete(participantId);
+          return;
+        }
+
+        if (!audioMuted) {
+          tryPlayRemoteAudioElement(participantId, element);
+        }
+      });
+    }, [audioMuted, tryPlayRemoteAudioElement]);
 
   const upsertRemoteVideoStream = useCallback((participantId: string, track: MediaStreamTrack) => {
     setRemoteVideoStreamsByUserId((prev) => {
@@ -730,6 +786,22 @@ export function useLivekitVoiceRuntime({
   useEffect(() => {
     applyAudioOutputSettings();
   }, [applyAudioOutputSettings]);
+
+    useEffect(() => {
+      const unlockPlayback = () => {
+        retryBlockedRemoteAudioPlayback();
+      };
+
+      window.addEventListener("pointerdown", unlockPlayback, { passive: true });
+      window.addEventListener("keydown", unlockPlayback, { passive: true });
+      window.addEventListener("touchstart", unlockPlayback, { passive: true });
+
+      return () => {
+        window.removeEventListener("pointerdown", unlockPlayback);
+        window.removeEventListener("keydown", unlockPlayback);
+        window.removeEventListener("touchstart", unlockPlayback);
+      };
+    }, [retryBlockedRemoteAudioPlayback]);
 
   useEffect(() => {
     const localAudioTrack = localTracksRef.current.get(Track.Source.Microphone);
