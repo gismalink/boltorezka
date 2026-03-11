@@ -11,6 +11,7 @@ import {
   handleScreenShareStop
 } from "./realtime-call-screen.js";
 import { handleChatDelete, handleChatEdit, handleChatSend } from "./realtime-chat.js";
+import { closeRealtimeConnection, initializeRealtimeConnection } from "./realtime-lifecycle.js";
 import { createRealtimeMediaStateStore } from "./realtime-media-state.js";
 import { handleRoomKick, handleRoomMoveMember } from "./realtime-moderation.js";
 import { createRealtimeRoomStateStore } from "./realtime-room-state.js";
@@ -418,26 +419,20 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
 
         const userName = claims.userName || claims.name || claims.email || "unknown";
 
-        socketState.set(connection, {
-          sessionId: crypto.randomUUID(),
+        await initializeRealtimeConnection({
+          connection,
           userId,
           userName,
-          roomId: null,
-          roomSlug: null,
-          roomKind: null
+          socketState,
+          attachUserSocket,
+          registerRealtimeSocket,
+          redisHSet: fastify.redis.hSet.bind(fastify.redis),
+          redisExpire: fastify.redis.expire.bind(fastify.redis),
+          sendJson,
+          buildServerReadyEnvelope,
+          buildRoomsPresenceEnvelope,
+          getAllRoomsPresence
         });
-
-        attachUserSocket(userId, connection);
-        registerRealtimeSocket(connection);
-
-        await fastify.redis.hSet(`presence:user:${userId}`, {
-          online: "1",
-          updatedAt: new Date().toISOString()
-        });
-        await fastify.redis.expire(`presence:user:${userId}`, 120);
-
-        sendJson(connection, buildServerReadyEnvelope(userId, userName));
-        sendJson(connection, buildRoomsPresenceEnvelope(getAllRoomsPresence(userId)));
 
         connection.on("message", async (raw: RawData) => {
           try {
@@ -974,39 +969,23 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
         });
 
         connection.on("close", async () => {
-          const state = socketState.get(connection);
-          unregisterRealtimeSocket(connection);
-          if (!state) {
-            return;
-          }
-
-          detachUserSocket(state.userId, connection);
-
-          if (state.roomId) {
-            markRecentRoomDetach(state.roomId, state.userId);
-            detachRoomSocket(state.roomId, connection);
-            clearCanonicalMediaState(state.roomId, state.userId);
-            clearRoomScreenShareOwnerIfMatches(state.roomId, state.userId, state.roomSlug);
-            broadcastRoom(
-              state.roomId,
-              buildPresenceLeftEnvelope(
-                state.userId,
-                state.userName,
-                state.roomSlug,
-                getRoomPresence(state.roomId).length
-              )
-            );
-            broadcastAllRoomsPresence();
-          }
-
-          const userSockets = socketsByUserId.get(state.userId);
-          if (!userSockets || userSockets.size === 0) {
-            await fastify.redis.hSet(`presence:user:${state.userId}`, {
-              online: "0",
-              updatedAt: new Date().toISOString()
-            });
-            await fastify.redis.expire(`presence:user:${state.userId}`, 120);
-          }
+          await closeRealtimeConnection({
+            connection,
+            socketState,
+            unregisterRealtimeSocket,
+            detachUserSocket,
+            markRecentRoomDetach,
+            detachRoomSocket,
+            clearCanonicalMediaState,
+            clearRoomScreenShareOwnerIfMatches,
+            broadcastRoom,
+            buildPresenceLeftEnvelope,
+            getRoomPresence,
+            broadcastAllRoomsPresence,
+            socketsByUserId,
+            redisHSet: fastify.redis.hSet.bind(fastify.redis),
+            redisExpire: fastify.redis.expire.bind(fastify.redis)
+          });
         });
       } catch (error) {
         fastify.log.error(error, "ws connection failed");
