@@ -340,7 +340,7 @@ export function UserDockSettingsOverlay({
                           ? t("settings.rnnStatusUnavailable")
                           : rnnoiseRuntimeStatus === "error"
                             ? t("settings.rnnStatusError")
-                            : t("settings.rnnStatusPending")}
+                            : t("settings.rnnStatusInactive")}
                     </p>
                   </>
                 ) : null}

@@ -341,6 +341,24 @@ export function App() {
     return volumes;
   }, [memberPreferencesByUserId]);
 
+  const handleRnnoiseStatusChange = useCallback((status: "inactive" | "active" | "unavailable" | "error") => {
+    setRnnoiseRuntimeStatus(selectedInputProfile === "noise_reduction" ? status : "inactive");
+  }, [selectedInputProfile]);
+
+  const handleRnnoiseFallback = useCallback((reason: "unavailable" | "error") => {
+    if (selectedInputProfile !== "noise_reduction") {
+      return;
+    }
+
+    setSelectedInputProfile("custom");
+    setRnnoiseRuntimeStatus("inactive");
+    if (reason === "unavailable") {
+      pushToast(t("settings.rnnFallbackUnavailable"));
+    } else {
+      pushToast(t("settings.rnnFallbackError"));
+    }
+  }, [pushToast, selectedInputProfile, t]);
+
   const livekitVoiceRuntime = useLivekitVoiceRuntime({
     token,
     localUserId: user?.id || "",
@@ -359,15 +377,8 @@ export function App() {
     outputVolume,
     pushToast,
     pushCallLog,
-    onRnnoiseStatusChange: setRnnoiseRuntimeStatus,
-    onRnnoiseFallback: (reason) => {
-      setSelectedInputProfile("custom");
-      if (reason === "unavailable") {
-        pushToast(t("settings.rnnFallbackUnavailable"));
-      } else {
-        pushToast(t("settings.rnnFallbackError"));
-      }
-    },
+    onRnnoiseStatusChange: handleRnnoiseStatusChange,
+    onRnnoiseFallback: handleRnnoiseFallback,
     setCallStatus,
     setLastCallPeer
   });
@@ -1310,8 +1321,20 @@ export function App() {
   const noiseSuppressionEnabled = selectedInputProfile === "noise_reduction";
 
   const handleToggleNoiseSuppression = useCallback(() => {
-    setSelectedInputProfile((current) => (current === "noise_reduction" ? "custom" : "noise_reduction"));
+    setSelectedInputProfile((current) => {
+      const next = current === "noise_reduction" ? "custom" : "noise_reduction";
+      if (next !== "noise_reduction") {
+        setRnnoiseRuntimeStatus("inactive");
+      }
+      return next;
+    });
   }, []);
+
+  useEffect(() => {
+    if (selectedInputProfile !== "noise_reduction") {
+      setRnnoiseRuntimeStatus("inactive");
+    }
+  }, [selectedInputProfile]);
 
   useEffect(() => {
     if (!roomSlug) {
