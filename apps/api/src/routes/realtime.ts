@@ -4,12 +4,18 @@ import { db } from "../db.js";
 import { config } from "../config.js";
 import { registerRealtimeSocket, unregisterRealtimeSocket } from "../realtime-broadcast.js";
 import { normalizeRequestId, sendAck, sendJson, sendNack } from "./realtime-io.js";
+import {
+  handleCallMicState,
+  handleCallVideoState,
+  handleScreenShareStart,
+  handleScreenShareStop
+} from "./realtime-call-screen.js";
 import { handleChatDelete, handleChatEdit, handleChatSend } from "./realtime-chat.js";
 import { createRealtimeMediaStateStore } from "./realtime-media-state.js";
 import { handleRoomKick, handleRoomMoveMember } from "./realtime-moderation.js";
 import { createRealtimeRoomStateStore } from "./realtime-room-state.js";
 import { buildErrorCorrelationMeta, relayToTargetOrRoom } from "./realtime-relay.js";
-import type { InsertedMessageRow, RoomRow } from "../db.types.ts";
+import type { RoomRow } from "../db.types.ts";
 import {
   buildRoomsPresenceEnvelope,
   asKnownWsIncomingEnvelope,
@@ -830,278 +836,135 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
               }
 
               case "screen.share.start": {
-                if (!state.roomId || !state.roomSlug) {
-                  sendNoActiveRoomNack(connection, requestId, eventType);
-                  return;
-                }
-
-                const currentOwnerUserId = screenShareOwnerByRoomId.get(state.roomId) || null;
-                if (currentOwnerUserId && currentOwnerUserId !== state.userId) {
-                  sendNack(
-                    connection,
-                    requestId,
-                    eventType,
-                    "ScreenShareAlreadyActive",
-                    "Another user is already sharing the screen",
-                    {
-                      roomId: state.roomId,
-                      roomSlug: state.roomSlug,
-                      ownerUserId: currentOwnerUserId
-                    }
-                  );
-                  void incrementMetric("nack_sent");
-                  return;
-                }
-
-                screenShareOwnerByRoomId.set(state.roomId, state.userId);
-                const envelope = buildScreenShareStateEnvelope(state.roomId, state.roomSlug);
-                broadcastRoom(state.roomId, envelope);
-                sendAckWithMetrics(connection, requestId, eventType, {
-                  roomId: state.roomId,
-                  roomSlug: state.roomSlug,
-                  ownerUserId: state.userId
+                handleScreenShareStart({
+                  connection,
+                  state,
+                  payload,
+                  requestId,
+                  eventType,
+                  sendNoActiveRoomNack,
+                  sendValidationNack,
+                  sendForbiddenNack,
+                  sendNack,
+                  sendTargetNotInRoomNack,
+                  sendAckWithMetrics,
+                  incrementMetric,
+                  logCallDebug,
+                  normalizeRequestId,
+                  getPayloadString,
+                  setCanonicalMediaState,
+                  buildCallTraceId,
+                  knownMessageType: knownMessage.type,
+                  buildCallMicStateRelayEnvelope,
+                  buildCallVideoStateRelayEnvelope,
+                  relayToTargetOrRoom,
+                  getUserRoomSockets,
+                  socketsByRoomId,
+                  sendJson,
+                  screenShareOwnerByRoomId,
+                  buildScreenShareStateEnvelope,
+                  broadcastRoom
                 });
                 return;
               }
 
               case "screen.share.stop": {
-                if (!state.roomId || !state.roomSlug) {
-                  sendNoActiveRoomNack(connection, requestId, eventType);
-                  return;
-                }
-
-                const currentOwnerUserId = screenShareOwnerByRoomId.get(state.roomId) || null;
-                if (currentOwnerUserId && currentOwnerUserId !== state.userId) {
-                  sendForbiddenNack(connection, requestId, eventType, "Only current screen-share owner can stop it");
-                  return;
-                }
-
-                if (currentOwnerUserId === state.userId) {
-                  screenShareOwnerByRoomId.delete(state.roomId);
-                  broadcastRoom(state.roomId, buildScreenShareStateEnvelope(state.roomId, state.roomSlug));
-                }
-
-                sendAckWithMetrics(connection, requestId, eventType, {
-                  roomId: state.roomId,
-                  roomSlug: state.roomSlug,
-                  stopped: currentOwnerUserId === state.userId
+                handleScreenShareStop({
+                  connection,
+                  state,
+                  payload,
+                  requestId,
+                  eventType,
+                  sendNoActiveRoomNack,
+                  sendValidationNack,
+                  sendForbiddenNack,
+                  sendNack,
+                  sendTargetNotInRoomNack,
+                  sendAckWithMetrics,
+                  incrementMetric,
+                  logCallDebug,
+                  normalizeRequestId,
+                  getPayloadString,
+                  setCanonicalMediaState,
+                  buildCallTraceId,
+                  knownMessageType: knownMessage.type,
+                  buildCallMicStateRelayEnvelope,
+                  buildCallVideoStateRelayEnvelope,
+                  relayToTargetOrRoom,
+                  getUserRoomSockets,
+                  socketsByRoomId,
+                  sendJson,
+                  screenShareOwnerByRoomId,
+                  buildScreenShareStateEnvelope,
+                  broadcastRoom
                 });
                 return;
               }
 
               case "call.mic_state": {
-              if (!state.roomId) {
-                logCallDebug("call mic_state rejected: no active room", {
-                  eventType,
-                  userId: state.userId,
-                  requestId
-                });
-                sendNoActiveRoomNack(connection, requestId, eventType);
-                return;
-              }
-
-              const mutedRaw = payload?.muted;
-              if (typeof mutedRaw !== "boolean") {
-                logCallDebug("call mic_state rejected: missing muted boolean", {
-                  eventType,
-                  userId: state.userId,
-                  roomId: state.roomId,
-                  roomSlug: state.roomSlug,
-                  requestId
-                });
-                sendValidationNack(connection, requestId, eventType, "payload.muted boolean is required");
-                return;
-              }
-              const speakingRaw = payload?.speaking;
-              const audioMutedRaw = payload?.audioMuted;
-              const speaking = typeof speakingRaw === "boolean" ? speakingRaw : undefined;
-              const audioMuted = typeof audioMutedRaw === "boolean" ? audioMutedRaw : undefined;
-              const traceId = buildCallTraceId(eventType, requestId, state.sessionId);
-
-              setCanonicalMediaState(state.roomId, state.userId, {
-                muted: mutedRaw,
-                speaking: speaking ?? false,
-                audioMuted: audioMuted ?? false
-              });
-
-              const targetUserId = normalizeRequestId(getPayloadString(payload, "targetUserId", 128)) || null;
-              logCallDebug("call mic_state received", {
-                eventType,
-                userId: state.userId,
-                sessionId: state.sessionId,
-                traceId,
-                roomId: state.roomId,
-                roomSlug: state.roomSlug,
-                requestId,
-                targetUserId,
-                muted: mutedRaw,
-                speaking: speaking ?? null,
-                audioMuted: audioMuted ?? null
-              });
-              const relayEnvelope = buildCallMicStateRelayEnvelope(
-                knownMessage.type,
-                requestId,
-                state.sessionId,
-                traceId,
-                state.userId,
-                state.userName,
-                state.roomId,
-                state.roomSlug,
-                targetUserId,
-                { muted: mutedRaw, speaking, audioMuted }
-              );
-
-              const relayOutcome = relayToTargetOrRoom({
-                senderSocket: connection,
-                roomId: state.roomId,
-                targetUserId,
-                relayEnvelope,
-                getUserRoomSockets,
-                socketsByRoomId,
-                sendJson
-              });
-              if (!relayOutcome.ok) {
-                logCallDebug("call mic_state relay failed: target not in room", {
-                  eventType,
-                  userId: state.userId,
-                  sessionId: state.sessionId,
-                  traceId,
-                  roomId: state.roomId,
-                  roomSlug: state.roomSlug,
+                handleCallMicState({
+                  connection,
+                  state,
+                  payload,
                   requestId,
-                  targetUserId,
-                  relayedTo: relayOutcome.relayedCount
+                  eventType,
+                  sendNoActiveRoomNack,
+                  sendValidationNack,
+                  sendForbiddenNack,
+                  sendNack,
+                  sendTargetNotInRoomNack,
+                  sendAckWithMetrics,
+                  incrementMetric,
+                  logCallDebug,
+                  normalizeRequestId,
+                  getPayloadString,
+                  setCanonicalMediaState,
+                  buildCallTraceId,
+                  knownMessageType: knownMessage.type,
+                  buildCallMicStateRelayEnvelope,
+                  buildCallVideoStateRelayEnvelope,
+                  relayToTargetOrRoom,
+                  getUserRoomSockets,
+                  socketsByRoomId,
+                  sendJson,
+                  screenShareOwnerByRoomId,
+                  buildScreenShareStateEnvelope,
+                  broadcastRoom
                 });
-                sendTargetNotInRoomNack(connection, requestId, eventType);
-                void incrementMetric("call_mic_state_target_miss");
                 return;
-              }
-
-              logCallDebug("call mic_state relayed", {
-                eventType,
-                userId: state.userId,
-                sessionId: state.sessionId,
-                traceId,
-                roomId: state.roomId,
-                roomSlug: state.roomSlug,
-                requestId,
-                targetUserId,
-                relayedTo: relayOutcome.relayedCount,
-                muted: mutedRaw,
-                speaking: speaking ?? null,
-                audioMuted: audioMuted ?? null
-              });
-
-              sendAckWithMetrics(
-                connection,
-                requestId,
-                eventType,
-                {
-                  relayedTo: relayOutcome.relayedCount,
-                  targetUserId,
-                  muted: mutedRaw,
-                  speaking: speaking ?? null,
-                  audioMuted: audioMuted ?? null
-                }
-              );
-              return;
               }
 
               case "call.video_state": {
-              if (!state.roomId) {
-                logCallDebug("call video_state rejected: no active room", {
-                  eventType,
-                  userId: state.userId,
-                  requestId
-                });
-                sendNoActiveRoomNack(connection, requestId, eventType);
-                return;
-              }
-
-              const settingsRaw = payload?.settings;
-              if (!settingsRaw || typeof settingsRaw !== "object" || Array.isArray(settingsRaw)) {
-                logCallDebug("call video_state rejected: invalid settings payload", {
-                  eventType,
-                  userId: state.userId,
-                  roomId: state.roomId,
-                  roomSlug: state.roomSlug,
-                  requestId
-                });
-                sendValidationNack(connection, requestId, eventType, "payload.settings object is required");
-                return;
-              }
-
-              const targetUserId = normalizeRequestId(getPayloadString(payload, "targetUserId", 128)) || null;
-
-              const localVideoEnabledRaw = (settingsRaw as Record<string, unknown>).localVideoEnabled;
-              if (typeof localVideoEnabledRaw === "boolean") {
-                setCanonicalMediaState(state.roomId, state.userId, {
-                  localVideoEnabled: localVideoEnabledRaw
-                });
-              }
-              const traceId = buildCallTraceId(eventType, requestId, state.sessionId);
-
-              const relayEnvelope = buildCallVideoStateRelayEnvelope(
-                knownMessage.type,
-                requestId,
-                state.sessionId,
-                traceId,
-                state.userId,
-                state.userName,
-                state.roomId,
-                state.roomSlug,
-                targetUserId,
-                settingsRaw as Record<string, unknown>
-              );
-
-              const relayOutcome = relayToTargetOrRoom({
-                senderSocket: connection,
-                roomId: state.roomId,
-                targetUserId,
-                relayEnvelope,
-                getUserRoomSockets,
-                socketsByRoomId,
-                sendJson
-              });
-              if (!relayOutcome.ok) {
-                logCallDebug("call video_state relay failed: target not in room", {
-                  eventType,
-                  userId: state.userId,
-                  sessionId: state.sessionId,
-                  traceId,
-                  roomId: state.roomId,
-                  roomSlug: state.roomSlug,
+                handleCallVideoState({
+                  connection,
+                  state,
+                  payload,
                   requestId,
-                  targetUserId,
-                  relayedTo: relayOutcome.relayedCount
+                  eventType,
+                  sendNoActiveRoomNack,
+                  sendValidationNack,
+                  sendForbiddenNack,
+                  sendNack,
+                  sendTargetNotInRoomNack,
+                  sendAckWithMetrics,
+                  incrementMetric,
+                  logCallDebug,
+                  normalizeRequestId,
+                  getPayloadString,
+                  setCanonicalMediaState,
+                  buildCallTraceId,
+                  knownMessageType: knownMessage.type,
+                  buildCallMicStateRelayEnvelope,
+                  buildCallVideoStateRelayEnvelope,
+                  relayToTargetOrRoom,
+                  getUserRoomSockets,
+                  socketsByRoomId,
+                  sendJson,
+                  screenShareOwnerByRoomId,
+                  buildScreenShareStateEnvelope,
+                  broadcastRoom
                 });
-                sendTargetNotInRoomNack(connection, requestId, eventType);
-                void incrementMetric("call_video_state_target_miss");
                 return;
-              }
-
-              logCallDebug("call video_state relayed", {
-                eventType,
-                userId: state.userId,
-                sessionId: state.sessionId,
-                traceId,
-                roomId: state.roomId,
-                roomSlug: state.roomSlug,
-                requestId,
-                targetUserId,
-                relayedTo: relayOutcome.relayedCount
-              });
-
-              sendAckWithMetrics(
-                connection,
-                requestId,
-                eventType,
-                {
-                  relayedTo: relayOutcome.relayedCount,
-                  targetUserId
-                }
-              );
-              return;
               }
             }
           } catch (error) {
