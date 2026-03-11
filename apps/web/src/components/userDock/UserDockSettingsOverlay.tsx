@@ -44,8 +44,8 @@ type UserDockSettingsOverlayProps = Pick<
   | "selfMonitorEnabled"
   | "onToggleSelfMonitor"
   | "noiseSuppressionEnabled"
+  | "rnnoiseRuntimeStatus"
   | "onToggleNoiseSuppression"
-  | "onSetNoiseSuppressionEnabled"
 > & {
   mediaDevicesUnavailable: boolean;
   mediaControlsLocked: boolean;
@@ -97,8 +97,8 @@ export function UserDockSettingsOverlay({
   selfMonitorEnabled,
   onToggleSelfMonitor,
   noiseSuppressionEnabled,
+  rnnoiseRuntimeStatus,
   onToggleNoiseSuppression,
-  onSetNoiseSuppressionEnabled,
   mediaDevicesUnavailable,
   mediaControlsLocked,
   mediaDevicesWarningText,
@@ -297,23 +297,17 @@ export function UserDockSettingsOverlay({
                   </button>
                 </label>
                 <p className="muted media-devices-warning">{t("settings.rnnClientHint")}</p>
-                <p className="muted media-devices-warning">{t("settings.rnnAbHint")}</p>
-                <div className="quality-toggle-group" role="group" aria-label={t("settings.rnnAbTitle") }>
-                  <button
-                    type="button"
-                    className={`secondary quality-toggle-btn ${!noiseSuppressionEnabled ? "quality-toggle-btn-active" : ""}`}
-                    onClick={() => onSetNoiseSuppressionEnabled(false)}
-                  >
-                    {t("settings.rnnOff")}
-                  </button>
-                  <button
-                    type="button"
-                    className={`secondary quality-toggle-btn ${noiseSuppressionEnabled ? "quality-toggle-btn-active" : ""}`}
-                    onClick={() => onSetNoiseSuppressionEnabled(true)}
-                  >
-                    {t("settings.rnnOn")}
-                  </button>
-                </div>
+                {noiseSuppressionEnabled ? (
+                  <p className="muted media-devices-warning">
+                    {rnnoiseRuntimeStatus === "active"
+                      ? t("settings.rnnStatusActive")
+                      : rnnoiseRuntimeStatus === "unavailable"
+                        ? t("settings.rnnStatusUnavailable")
+                        : rnnoiseRuntimeStatus === "error"
+                          ? t("settings.rnnStatusError")
+                          : t("settings.rnnStatusPending")}
+                  </p>
+                ) : null}
               </div>
             </>
           ) : userSettingsTab === "camera" ? (

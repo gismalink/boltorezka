@@ -23,6 +23,7 @@ export type UserDockProps = {
   screenShareOwnedByCurrentUser: boolean;
   canStartScreenShare: boolean;
   noiseSuppressionEnabled: boolean;
+  rnnoiseRuntimeStatus: "inactive" | "active" | "unavailable" | "error";
   selfMonitorEnabled: boolean;
   currentRoomSupportsVideo: boolean;
   cameraEnabled: boolean;
@@ -64,7 +65,6 @@ export type UserDockProps = {
   onToggleCamera: () => void;
   onToggleScreenShare: () => void;
   onToggleNoiseSuppression: () => void;
-  onSetNoiseSuppressionEnabled: (value: boolean) => void;
   onToggleSelfMonitor: () => void;
   onToggleVoiceSettings: () => void;
   onToggleAudioOutput: () => void;

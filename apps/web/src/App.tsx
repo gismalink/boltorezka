@@ -132,6 +132,7 @@ export function App() {
   const [lang, setLang] = useState<Lang>(() => detectInitialLang());
   const [profileNameDraft, setProfileNameDraft] = useState("");
   const [profileStatusText, setProfileStatusText] = useState("");
+  const [rnnoiseRuntimeStatus, setRnnoiseRuntimeStatus] = useState<"inactive" | "active" | "unavailable" | "error">("inactive");
   const [profileSaving, setProfileSaving] = useState(false);
   const [inputDevices, setInputDevices] = useState<Array<{ id: string; label: string }>>([]);
   const [outputDevices, setOutputDevices] = useState<Array<{ id: string; label: string }>>([]);
@@ -349,6 +350,15 @@ export function App() {
     outputVolume,
     pushToast,
     pushCallLog,
+    onRnnoiseStatusChange: setRnnoiseRuntimeStatus,
+    onRnnoiseFallback: (reason) => {
+      setSelectedInputProfile("custom");
+      if (reason === "unavailable") {
+        pushToast(t("settings.rnnFallbackUnavailable"));
+      } else {
+        pushToast(t("settings.rnnFallbackError"));
+      }
+    },
     setCallStatus,
     setLastCallPeer
   });
@@ -1291,10 +1301,6 @@ export function App() {
     setSelectedInputProfile((current) => (current === "noise_reduction" ? "custom" : "noise_reduction"));
   }, []);
 
-  const handleSetNoiseSuppressionEnabled = useCallback((enabled: boolean) => {
-    setSelectedInputProfile(enabled ? "noise_reduction" : "custom");
-  }, []);
-
   useEffect(() => {
     if (!roomSlug) {
       return;
@@ -1368,6 +1374,7 @@ export function App() {
     screenShareOwnedByCurrentUser: isCurrentUserScreenShareOwner,
     canStartScreenShare: canToggleScreenShare,
     noiseSuppressionEnabled,
+    rnnoiseRuntimeStatus,
     cameraEnabled,
     micMuted,
     audioMuted,
@@ -1407,7 +1414,6 @@ export function App() {
     onToggleCamera: handleToggleCamera,
     onToggleScreenShare: handleToggleScreenShareClick,
     onToggleNoiseSuppression: handleToggleNoiseSuppression,
-    onSetNoiseSuppressionEnabled: handleSetNoiseSuppressionEnabled,
     selfMonitorEnabled,
     onToggleSelfMonitor: () => setSelfMonitorEnabled((value) => !value),
     onRequestVideoAccess: requestVideoAccess,

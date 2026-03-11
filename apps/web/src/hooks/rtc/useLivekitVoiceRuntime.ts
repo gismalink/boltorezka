@@ -44,6 +44,8 @@ type UseLivekitVoiceRuntimeArgs = {
   outputVolume: number;
   pushToast: (message: string) => void;
   pushCallLog: (text: string) => void;
+  onRnnoiseStatusChange?: (status: "inactive" | "active" | "unavailable" | "error") => void;
+  onRnnoiseFallback?: (reason: "unavailable" | "error") => void;
   setCallStatus: (status: CallStatus) => void;
   setLastCallPeer: (peer: string) => void;
 };
@@ -143,6 +145,8 @@ export function useLivekitVoiceRuntime({
   outputVolume,
   pushToast,
   pushCallLog,
+  onRnnoiseStatusChange,
+  onRnnoiseFallback,
   setCallStatus,
   setLastCallPeer
 }: UseLivekitVoiceRuntimeArgs): LivekitRuntimeApi {
@@ -392,6 +396,7 @@ export function useLivekitVoiceRuntime({
 
   const applyNoiseSuppressionProcessor = useCallback(async (audioTrack: LocalAudioTrack) => {
     if (selectedInputProfile !== "noise_reduction") {
+      onRnnoiseStatusChange?.("inactive");
       await audioTrack.stopProcessor().catch(() => undefined);
       await releaseRnnoiseProcessor();
       return;
@@ -399,25 +404,37 @@ export function useLivekitVoiceRuntime({
 
     if (typeof AudioContext === "undefined") {
       pushCallLog("rnnoise unavailable: AudioContext is not supported");
+      onRnnoiseStatusChange?.("unavailable");
+      onRnnoiseFallback?.("unavailable");
       return;
     }
 
-    const audioContext = audioContextRef.current ?? new AudioContext({ sampleRate: 48000 });
-    if (audioContext.state === "suspended") {
-      await audioContext.resume().catch(() => undefined);
-    }
-    audioContextRef.current = audioContext;
+    try {
+      const audioContext = audioContextRef.current ?? new AudioContext({ sampleRate: 48000 });
+      if (audioContext.state === "suspended") {
+        await audioContext.resume().catch(() => undefined);
+      }
+      audioContextRef.current = audioContext;
 
-    const processor = new RnnoiseAudioProcessor();
-    await audioTrack.setAudioContext(audioContext);
-    await audioTrack.setProcessor(processor);
+      const processor = new RnnoiseAudioProcessor();
+      await audioTrack.setAudioContext(audioContext);
+      await audioTrack.setProcessor(processor);
 
-    const previousProcessor = rnnoiseProcessorRef.current;
-    rnnoiseProcessorRef.current = processor;
-    if (previousProcessor) {
-      await previousProcessor.destroy().catch(() => undefined);
+      const previousProcessor = rnnoiseProcessorRef.current;
+      rnnoiseProcessorRef.current = processor;
+      if (previousProcessor) {
+        await previousProcessor.destroy().catch(() => undefined);
+      }
+
+      onRnnoiseStatusChange?.("active");
+    } catch (error) {
+      pushCallLog(`rnnoise processor failed: ${error instanceof Error ? error.message : "unknown error"}`);
+      onRnnoiseStatusChange?.("error");
+      onRnnoiseFallback?.("error");
+      await audioTrack.stopProcessor().catch(() => undefined);
+      await releaseRnnoiseProcessor();
     }
-  }, [pushCallLog, releaseRnnoiseProcessor, selectedInputProfile]);
+  }, [onRnnoiseFallback, onRnnoiseStatusChange, pushCallLog, releaseRnnoiseProcessor, selectedInputProfile]);
 
   const cleanupRoom = useCallback(() => {
     const room = roomRef.current;
