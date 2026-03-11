@@ -270,26 +270,31 @@ export function UserDockSettingsOverlay({
                   <span>{t("settings.listenSelf")}</span>
                   <button
                     type="button"
-                    className={`secondary icon-btn tiny ${selfMonitorEnabled ? "icon-btn-danger" : ""}`}
+                    className={`ui-switch ${selfMonitorEnabled ? "ui-switch-on" : ""}`}
+                    role="switch"
+                    aria-checked={selfMonitorEnabled}
                     aria-label={t("settings.listenSelf")}
                     data-tooltip={selfMonitorEnabled ? t("settings.listenSelfOn") : t("settings.listenSelfOff")}
                     onClick={onToggleSelfMonitor}
                   >
-                    <i className={`bi ${selfMonitorEnabled ? "bi-toggle-on" : "bi-toggle-off"}`} aria-hidden="true" />
+                    <span className="ui-switch-thumb" aria-hidden="true" />
                   </button>
                 </label>
                 <label className="voice-sound-checkbox flex items-center justify-between gap-3">
                   <span>{t("settings.useRnn")}</span>
                   <button
                     type="button"
-                    className={`secondary icon-btn tiny toggle-wide ${noiseSuppressionEnabled ? "icon-btn-danger" : ""}`}
+                    className={`ui-switch ${noiseSuppressionEnabled ? "ui-switch-on" : ""}`}
+                    role="switch"
+                    aria-checked={noiseSuppressionEnabled}
                     aria-label={t("settings.useRnn")}
                     data-tooltip={noiseSuppressionEnabled ? t("rtc.noiseReductionOn") : t("rtc.noiseReductionOff")}
                     onClick={onToggleNoiseSuppression}
                   >
-                    <i className={`bi ${noiseSuppressionEnabled ? "bi-toggle-on" : "bi-toggle-off"}`} aria-hidden="true" />
+                    <span className="ui-switch-thumb" aria-hidden="true" />
                   </button>
                 </label>
+                <p className="muted media-devices-warning">{t("settings.rnnClientHint")}</p>
               </div>
             </>
           ) : userSettingsTab === "camera" ? (
@@ -335,11 +340,16 @@ export function UserDockSettingsOverlay({
               <label className="voice-sound-checkbox flex items-center justify-between gap-3">
                 <span>{t("settings.serverSoundMemberJoin")}</span>
                 <div className="inline-flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={serverSoundsEnabled.member_join}
-                    onChange={(event) => onSetServerSoundEnabled("member_join", event.target.checked)}
-                  />
+                  <button
+                    type="button"
+                    className={`ui-switch ${serverSoundsEnabled.member_join ? "ui-switch-on" : ""}`}
+                    role="switch"
+                    aria-checked={serverSoundsEnabled.member_join}
+                    aria-label={t("settings.serverSoundMemberJoin")}
+                    onClick={() => onSetServerSoundEnabled("member_join", !serverSoundsEnabled.member_join)}
+                  >
+                    <span className="ui-switch-thumb" aria-hidden="true" />
+                  </button>
                   <button type="button" className="secondary icon-btn tiny" onClick={() => onPreviewServerSound("member_join")}>♪</button>
                 </div>
               </label>
@@ -347,11 +357,16 @@ export function UserDockSettingsOverlay({
               <label className="voice-sound-checkbox flex items-center justify-between gap-3">
                 <span>{t("settings.serverSoundMemberLeave")}</span>
                 <div className="inline-flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={serverSoundsEnabled.member_leave}
-                    onChange={(event) => onSetServerSoundEnabled("member_leave", event.target.checked)}
-                  />
+                  <button
+                    type="button"
+                    className={`ui-switch ${serverSoundsEnabled.member_leave ? "ui-switch-on" : ""}`}
+                    role="switch"
+                    aria-checked={serverSoundsEnabled.member_leave}
+                    aria-label={t("settings.serverSoundMemberLeave")}
+                    onClick={() => onSetServerSoundEnabled("member_leave", !serverSoundsEnabled.member_leave)}
+                  >
+                    <span className="ui-switch-thumb" aria-hidden="true" />
+                  </button>
                   <button type="button" className="secondary icon-btn tiny" onClick={() => onPreviewServerSound("member_leave")}>♪</button>
                 </div>
               </label>
@@ -359,11 +374,16 @@ export function UserDockSettingsOverlay({
               <label className="voice-sound-checkbox flex items-center justify-between gap-3">
                 <span>{t("settings.serverSoundDisconnected")}</span>
                 <div className="inline-flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={serverSoundsEnabled.server_disconnected}
-                    onChange={(event) => onSetServerSoundEnabled("server_disconnected", event.target.checked)}
-                  />
+                  <button
+                    type="button"
+                    className={`ui-switch ${serverSoundsEnabled.server_disconnected ? "ui-switch-on" : ""}`}
+                    role="switch"
+                    aria-checked={serverSoundsEnabled.server_disconnected}
+                    aria-label={t("settings.serverSoundDisconnected")}
+                    onClick={() => onSetServerSoundEnabled("server_disconnected", !serverSoundsEnabled.server_disconnected)}
+                  >
+                    <span className="ui-switch-thumb" aria-hidden="true" />
+                  </button>
                   <button type="button" className="secondary icon-btn tiny" onClick={() => onPreviewServerSound("server_disconnected")}>♪</button>
                 </div>
               </label>
@@ -371,11 +391,16 @@ export function UserDockSettingsOverlay({
               <label className="voice-sound-checkbox flex items-center justify-between gap-3">
                 <span>{t("settings.serverSoundChatMessage")}</span>
                 <div className="inline-flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={serverSoundsEnabled.chat_message}
-                    onChange={(event) => onSetServerSoundEnabled("chat_message", event.target.checked)}
-                  />
+                  <button
+                    type="button"
+                    className={`ui-switch ${serverSoundsEnabled.chat_message ? "ui-switch-on" : ""}`}
+                    role="switch"
+                    aria-checked={serverSoundsEnabled.chat_message}
+                    aria-label={t("settings.serverSoundChatMessage")}
+                    onClick={() => onSetServerSoundEnabled("chat_message", !serverSoundsEnabled.chat_message)}
+                  >
+                    <span className="ui-switch-thumb" aria-hidden="true" />
+                  </button>
                   <button type="button" className="secondary icon-btn tiny" onClick={() => onPreviewServerSound("chat_message")}>♪</button>
                 </div>
               </label>

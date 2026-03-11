@@ -431,6 +431,49 @@ textarea:focus-visible {
   width: calc(var(--icon-size-sm) * 2);
 }
 
+.ui-switch {
+  position: relative;
+  width: 42px;
+  height: 24px;
+  padding: 0;
+  border-radius: 999px;
+  border: var(--border-strong) solid var(--pixel-border);
+  background: color-mix(in srgb, var(--pixel-panel-2) 86%, black 14%);
+  box-shadow: 2px 2px 0 var(--pixel-hard-shadow);
+  transition: background-color 120ms ease, border-color 120ms ease;
+}
+
+.ui-switch:hover {
+  transform: none;
+}
+
+.ui-switch:active {
+  transform: none;
+  box-shadow: 2px 2px 0 var(--pixel-hard-shadow);
+}
+
+.ui-switch.ui-switch-on {
+  border-color: var(--pixel-neon-cyan);
+  background: color-mix(in srgb, var(--pixel-neon-cyan) 42%, var(--pixel-panel) 58%);
+}
+
+.ui-switch-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border: var(--border-strong) solid var(--pixel-border);
+  border-radius: 50%;
+  background: var(--pixel-text);
+  transition: transform 120ms ease;
+}
+
+.ui-switch.ui-switch-on .ui-switch-thumb {
+  transform: translateX(18px);
+  border-color: var(--pixel-neon-cyan);
+}
+
 .icon-action {
   width: 100%;
 }
@@ -839,11 +882,6 @@ pre {
 .channel-member-item-current.channel-member-item-voice-active .channel-member-mic-icon {
   color: var(--pixel-neon-cyan);
   border-color: var(--pixel-neon-cyan);
-}
-
-.voice-sound-checkbox input[type="checkbox"] {
-  width: 16px;
-  height: 16px;
 }
 
 .channel-member-item-current.channel-member-item-voice-active .channel-member-avatar {
