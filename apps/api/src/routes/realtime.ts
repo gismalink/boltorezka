@@ -4,6 +4,7 @@ import { db } from "../db.js";
 import { config } from "../config.js";
 import { registerRealtimeSocket, unregisterRealtimeSocket } from "../realtime-broadcast.js";
 import { normalizeRequestId, sendAck, sendJson, sendNack } from "./realtime-io.js";
+import { createRealtimeMediaStateStore } from "./realtime-media-state.js";
 import type { InsertedMessageRow, RoomRow } from "../db.types.ts";
 import {
   buildRoomsPresenceEnvelope,
@@ -50,17 +51,7 @@ type RelayOutcome = {
   relayedCount: number;
 };
 
-type CanonicalMediaState = {
-  muted: boolean;
-  speaking: boolean;
-  audioMuted: boolean;
-  localVideoEnabled: boolean;
-  lastUpdatedAtMs: number;
-};
-
 type MediaTopology = "livekit";
-
-const CALL_RECONNECT_WINDOW_MS = 90000;
 
 export async function realtimeRoutes(fastify: FastifyInstance) {
   const socketsByUserId = new Map<string, Set<WebSocket>>();
@@ -68,60 +59,6 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
   const socketState = new WeakMap<WebSocket, SocketState>();
   const screenShareOwnerByRoomId = new Map<string, string>();
   const wsCallDebugEnabled = process.env.WS_CALL_DEBUG === "1";
-  const mediaStateByRoomUserKey = new Map<string, CanonicalMediaState>();
-  const recentRoomDetachByRoomUserKey = new Map<string, number>();
-
-  const mediaStateKey = (roomId: string, userId: string) => `${roomId}:${userId}`;
-
-  const setCanonicalMediaState = (
-    roomId: string,
-    userId: string,
-    patch: Partial<CanonicalMediaState>
-  ) => {
-    const key = mediaStateKey(roomId, userId);
-    const current = mediaStateByRoomUserKey.get(key) || {
-      muted: false,
-      speaking: false,
-      audioMuted: false,
-      localVideoEnabled: false,
-      lastUpdatedAtMs: Date.now()
-    };
-
-    mediaStateByRoomUserKey.set(key, {
-      ...current,
-      ...patch,
-      lastUpdatedAtMs: Date.now()
-    });
-  };
-
-  const clearCanonicalMediaState = (roomId: string, userId: string) => {
-    mediaStateByRoomUserKey.delete(mediaStateKey(roomId, userId));
-  };
-
-  const markRecentRoomDetach = (roomId: string, userId: string) => {
-    const key = mediaStateKey(roomId, userId);
-    recentRoomDetachByRoomUserKey.set(key, Date.now());
-
-    if (recentRoomDetachByRoomUserKey.size > 6000) {
-      const threshold = Date.now() - CALL_RECONNECT_WINDOW_MS;
-      for (const [storedKey, at] of recentRoomDetachByRoomUserKey.entries()) {
-        if (at < threshold) {
-          recentRoomDetachByRoomUserKey.delete(storedKey);
-        }
-      }
-    }
-  };
-
-  const consumeRecentReconnectMark = (roomId: string, userId: string): boolean => {
-    const key = mediaStateKey(roomId, userId);
-    const at = recentRoomDetachByRoomUserKey.get(key) || 0;
-    if (!at) {
-      return false;
-    }
-
-    recentRoomDetachByRoomUserKey.delete(key);
-    return Date.now() - at <= CALL_RECONNECT_WINDOW_MS;
-  };
 
   const logCallDebug = (message: string, meta: Record<string, unknown> = {}) => {
     if (!wsCallDebugEnabled) {
@@ -229,47 +166,14 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
     return users;
   };
 
-  const getCallInitialStateParticipants = (roomId: string) => {
-    const presenceByUserId = new Map<string, string>();
-    for (const user of getRoomPresence(roomId)) {
-      presenceByUserId.set(user.userId, user.userName);
-    }
-
-    const participants: Array<{
-      userId: string;
-      userName: string;
-      mic: { muted: boolean; speaking: boolean; audioMuted: boolean };
-      video: { localVideoEnabled: boolean };
-    }> = [];
-
-    const prefix = `${roomId}:`;
-    for (const [key, state] of mediaStateByRoomUserKey.entries()) {
-      if (!key.startsWith(prefix)) {
-        continue;
-      }
-
-      const userId = key.slice(prefix.length);
-      const userName = presenceByUserId.get(userId);
-      if (!userName) {
-        continue;
-      }
-
-      participants.push({
-        userId,
-        userName,
-        mic: {
-          muted: state.muted,
-          speaking: state.speaking,
-          audioMuted: state.audioMuted
-        },
-        video: {
-          localVideoEnabled: state.localVideoEnabled
-        }
-      });
-    }
-
-    return participants;
-  };
+  const {
+    setCanonicalMediaState,
+    clearCanonicalMediaState,
+    markRecentRoomDetach,
+    consumeRecentReconnectMark,
+    getCallInitialStateParticipants,
+    getCallInitialStateLagStats
+  } = createRealtimeMediaStateStore(getRoomPresence);
 
   const buildScreenShareStateEnvelope = (roomId: string, roomSlug: string | null) => {
     const ownerUserId = screenShareOwnerByRoomId.get(roomId) || null;
@@ -298,31 +202,6 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
 
     screenShareOwnerByRoomId.delete(roomId);
     broadcastRoom(roomId, buildScreenShareStateEnvelope(roomId, roomSlug));
-  };
-
-  const getCallInitialStateLagStats = (roomId: string): { count: number; totalLagMs: number } => {
-    const presenceByUserId = new Set(getRoomPresence(roomId).map((item) => item.userId));
-    const prefix = `${roomId}:`;
-    const now = Date.now();
-    let count = 0;
-    let totalLagMs = 0;
-
-    for (const [key, state] of mediaStateByRoomUserKey.entries()) {
-      if (!key.startsWith(prefix)) {
-        continue;
-      }
-
-      const userId = key.slice(prefix.length);
-      if (!presenceByUserId.has(userId)) {
-        continue;
-      }
-
-      const lagMs = Math.max(0, now - Number(state.lastUpdatedAtMs || 0));
-      totalLagMs += lagMs;
-      count += 1;
-    }
-
-    return { count, totalLagMs };
   };
 
   const getAllRoomsPresence = (forUserId: string | null = null) => {
