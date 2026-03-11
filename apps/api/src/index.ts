@@ -22,6 +22,24 @@ const app = Fastify({
   logger: true
 });
 
+app.addHook("onSend", async (request, reply, payload) => {
+  reply.header("X-Content-Type-Options", "nosniff");
+  reply.header("X-Frame-Options", "DENY");
+  reply.header("Referrer-Policy", "strict-origin-when-cross-origin");
+  reply.header("Permissions-Policy", "camera=(self), microphone=(self), geolocation=()");
+
+  const contentType = String(reply.getHeader("content-type") || "").toLowerCase();
+  const isHtmlResponse = contentType.includes("text/html");
+  if (isHtmlResponse) {
+    reply.header(
+      "Content-Security-Policy",
+      "default-src 'self'; base-uri 'self'; frame-ancestors 'none'; object-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https: wss:; media-src 'self' blob:; worker-src 'self' blob:"
+    );
+  }
+
+  return payload;
+});
+
 await app.register(cors, {
   origin: config.corsOrigin,
   credentials: true
