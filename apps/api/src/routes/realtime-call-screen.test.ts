@@ -1,6 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { handleCallMicState, handleCallVideoState, handleScreenShareStart } from "./realtime-call-screen.js";
+import {
+  handleCallMicState,
+  handleCallVideoState,
+  handleScreenShareStart,
+  handleScreenShareStop
+} from "./realtime-call-screen.js";
 
 function createBaseParams(): any {
   return {
@@ -118,6 +123,22 @@ test("realtime-call-screen: call mic_state validates muted boolean", () => {
   assert.equal(validationMessage, "payload.muted boolean is required");
 });
 
+test("realtime-call-screen: call mic_state returns no-active-room nack when room is missing", () => {
+  const params = createBaseParams();
+  params.state.roomId = null;
+  params.state.roomSlug = null;
+  params.payload = { muted: true };
+
+  let noActiveRoomCalls = 0;
+  params.sendNoActiveRoomNack = () => {
+    noActiveRoomCalls += 1;
+  };
+
+  handleCallMicState(params as any);
+
+  assert.equal(noActiveRoomCalls, 1);
+});
+
 test("realtime-call-screen: call mic_state relays and acks with media metadata", () => {
   const params = createBaseParams();
   params.payload = {
@@ -173,6 +194,23 @@ test("realtime-call-screen: call video_state validates settings payload", () => 
   handleCallVideoState(params as any);
 
   assert.equal(validationMessage, "payload.settings object is required");
+});
+
+test("realtime-call-screen: call video_state returns no-active-room nack when room is missing", () => {
+  const params = createBaseParams();
+  params.eventType = "call.video_state";
+  params.state.roomId = null;
+  params.state.roomSlug = null;
+  params.payload = { settings: { localVideoEnabled: true } };
+
+  let noActiveRoomCalls = 0;
+  params.sendNoActiveRoomNack = () => {
+    noActiveRoomCalls += 1;
+  };
+
+  handleCallVideoState(params as any);
+
+  assert.equal(noActiveRoomCalls, 1);
 });
 
 test("realtime-call-screen: call video_state relays and acks with target metadata", () => {
@@ -243,4 +281,25 @@ test("realtime-call-screen: call video_state target miss sends target-not-in-roo
 
   assert.equal(targetMissNackCalls, 1);
   assert.equal(targetMissMetricCalls, 1);
+});
+
+test("realtime-call-screen: screen share stop rejects non-owner", () => {
+  const params = createBaseParams();
+  params.eventType = "screen.share.stop";
+  params.screenShareOwnerByRoomId.set("room-1", "u2");
+
+  let forbiddenCalls = 0;
+  let broadcastCalls = 0;
+  params.sendForbiddenNack = () => {
+    forbiddenCalls += 1;
+  };
+  params.broadcastRoom = () => {
+    broadcastCalls += 1;
+  };
+
+  handleScreenShareStop(params as any);
+
+  assert.equal(forbiddenCalls, 1);
+  assert.equal(broadcastCalls, 0);
+  assert.equal(params.screenShareOwnerByRoomId.get("room-1"), "u2");
 });
