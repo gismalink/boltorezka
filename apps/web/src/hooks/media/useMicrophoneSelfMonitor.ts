@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
+import { Track } from "livekit-client";
 import { RnnoiseAudioProcessor, type RnnoiseSuppressionLevel } from "../rtc/rnnoiseAudioProcessor";
-import { getSelfMonitorGain, shouldUseRnnoiseInSelfMonitor } from "./selfMonitorUtils";
+import { getEffectiveRnnoiseLevel, getSelfMonitorGain, shouldUseRnnoiseInSelfMonitor } from "./selfMonitorUtils";
 
 type UseMicrophoneSelfMonitorArgs = {
   enabled: boolean;
@@ -22,6 +23,16 @@ export function useMicrophoneSelfMonitor({
   pushToast
 }: UseMicrophoneSelfMonitorArgs) {
   const sessionRef = useRef(0);
+  const gainNodeRef = useRef<GainNode | null>(null);
+
+  useEffect(() => {
+    const gainNode = gainNodeRef.current;
+    if (!gainNode) {
+      return;
+    }
+
+    gainNode.gain.value = getSelfMonitorGain(micVolume);
+  }, [micVolume]);
 
   useEffect(() => {
     if (!enabled) {
@@ -40,12 +51,16 @@ export function useMicrophoneSelfMonitor({
     let processor: RnnoiseAudioProcessor | null = null;
     let sourceNode: MediaStreamAudioSourceNode | null = null;
     let gainNode: GainNode | null = null;
+    const effectiveRnnoiseLevel = getEffectiveRnnoiseLevel(selectedInputProfile, rnnoiseSuppressionLevel);
 
     const stop = async () => {
       sourceNode?.disconnect();
       sourceNode = null;
 
       gainNode?.disconnect();
+      if (gainNodeRef.current === gainNode) {
+        gainNodeRef.current = null;
+      }
       gainNode = null;
 
       if (processor) {
@@ -111,8 +126,9 @@ export function useMicrophoneSelfMonitor({
 
         if (shouldUseRnnoiseInSelfMonitor(selectedInputProfile)) {
           try {
-            const nextProcessor = new RnnoiseAudioProcessor(rnnoiseSuppressionLevel);
+            const nextProcessor = new RnnoiseAudioProcessor(effectiveRnnoiseLevel);
             await nextProcessor.init({
+              kind: Track.Kind.Audio,
               track: inputTrack,
               audioContext: context
             });
@@ -142,6 +158,7 @@ export function useMicrophoneSelfMonitor({
         sourceNode = context.createMediaStreamSource(monitorStream);
         gainNode = context.createGain();
         gainNode.gain.value = getSelfMonitorGain(micVolume);
+        gainNodeRef.current = gainNode;
         sourceNode.connect(gainNode);
         gainNode.connect(context.destination);
       } catch (error) {
@@ -164,5 +181,5 @@ export function useMicrophoneSelfMonitor({
       disposed = true;
       void stop();
     };
-  }, [enabled, micVolume, pushToast, rnnoiseSuppressionLevel, selectedInputId, selectedInputProfile, t]);
+  }, [enabled, pushToast, rnnoiseSuppressionLevel, selectedInputId, selectedInputProfile, t]);
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getSelfMonitorGain, shouldUseRnnoiseInSelfMonitor } from "./selfMonitorUtils";
+import { getEffectiveRnnoiseLevel, getSelfMonitorGain, shouldUseRnnoiseInSelfMonitor } from "./selfMonitorUtils";
 
 describe("useMicrophoneSelfMonitor helpers", () => {
   it("clamps monitor gain to valid range", () => {
@@ -14,5 +14,12 @@ describe("useMicrophoneSelfMonitor helpers", () => {
     expect(shouldUseRnnoiseInSelfMonitor("noise_reduction")).toBe(true);
     expect(shouldUseRnnoiseInSelfMonitor("studio")).toBe(false);
     expect(shouldUseRnnoiseInSelfMonitor("custom")).toBe(false);
+  });
+
+  it("does not apply RNNoise level changes when profile is not noise_reduction", () => {
+    expect(getEffectiveRnnoiseLevel("noise_reduction", "soft")).toBe("soft");
+    expect(getEffectiveRnnoiseLevel("noise_reduction", "strong")).toBe("strong");
+    expect(getEffectiveRnnoiseLevel("studio", "strong")).toBe("medium");
+    expect(getEffectiveRnnoiseLevel("custom", "soft")).toBe("medium");
   });
 });

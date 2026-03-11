@@ -5,3 +5,10 @@ export const getSelfMonitorGain = (micVolume: number): number => {
 export const shouldUseRnnoiseInSelfMonitor = (selectedInputProfile: "noise_reduction" | "studio" | "custom"): boolean => {
   return selectedInputProfile === "noise_reduction";
 };
+
+export const getEffectiveRnnoiseLevel = (
+  selectedInputProfile: "noise_reduction" | "studio" | "custom",
+  rnnoiseSuppressionLevel: "soft" | "medium" | "strong"
+): "soft" | "medium" | "strong" => {
+  return shouldUseRnnoiseInSelfMonitor(selectedInputProfile) ? rnnoiseSuppressionLevel : "medium";
+};
