@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { PopupPortal } from "../PopupPortal";
 import type { UserDockProps } from "../types";
 
@@ -123,6 +123,30 @@ export function UserDockControls({
       : t("rtc.screenShare");
   const miniBarCount = 20;
   const miniActiveBars = Math.min(miniBarCount, Math.round(micTestLevel * miniBarCount));
+
+  useEffect(() => {
+    if (!cameraMenuOpen) {
+      return;
+    }
+
+    const onClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node | null;
+      const insideCamera = Boolean(target && cameraAnchorRef.current?.contains(target));
+      const insidePopupLayer = Boolean(target && target instanceof HTMLElement && target.closest(".popup-layer-content"));
+      if (!insideCamera && !insidePopupLayer) {
+        setCameraMenuOpen(false);
+      }
+    };
+
+    window.addEventListener("mousedown", onClickOutside);
+    return () => window.removeEventListener("mousedown", onClickOutside);
+  }, [cameraMenuOpen]);
+
+  useEffect(() => {
+    if (cameraControlDisabled) {
+      setCameraMenuOpen(false);
+    }
+  }, [cameraControlDisabled]);
 
   return (
     <>
