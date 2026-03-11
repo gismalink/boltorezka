@@ -73,7 +73,7 @@ services:
       DATABASE_URL: postgresql://${TEST_POSTGRES_USER}:${TEST_POSTGRES_PASSWORD}@boltorezka-db-test:5432/${TEST_POSTGRES_DB}
       REDIS_URL: redis://boltorezka-redis-test:6379
       JWT_SECRET: ${TEST_JWT_SECRET}
-      JWT_EXPIRES_IN: ${TEST_JWT_EXPIRES_IN:-7d}
+      JWT_EXPIRES_IN: ${TEST_JWT_EXPIRES_IN:-12h}
       CORS_ORIGIN: ${TEST_CORS_ORIGIN:-https://test.boltorezka.gismalink.art}
       AUTH_MODE: sso
       AUTH_SSO_BASE_URL: ${TEST_AUTH_SSO_BASE_URL:-https://test.auth.gismalink.art}
@@ -203,7 +203,7 @@ services:
       DATABASE_URL: postgresql://${PROD_POSTGRES_USER}:${PROD_POSTGRES_PASSWORD}@boltorezka-db-prod:5432/${PROD_POSTGRES_DB}
       REDIS_URL: redis://boltorezka-redis-prod:6379
       JWT_SECRET: ${PROD_JWT_SECRET}
-      JWT_EXPIRES_IN: ${PROD_JWT_EXPIRES_IN:-7d}
+      JWT_EXPIRES_IN: ${PROD_JWT_EXPIRES_IN:-12h}
       CORS_ORIGIN: ${PROD_CORS_ORIGIN:-https://boltorezka.gismalink.art}
       AUTH_MODE: sso
       AUTH_SSO_BASE_URL: ${PROD_AUTH_SSO_BASE_URL:-https://auth.gismalink.art}
