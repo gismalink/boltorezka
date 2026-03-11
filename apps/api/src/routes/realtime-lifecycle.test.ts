@@ -111,3 +111,59 @@ test("realtime-lifecycle: close detaches room and marks offline when last socket
     "expire:presence:user:u1:120"
   ]);
 });
+
+test("realtime-lifecycle: close does not mark offline when another user socket is still active", async () => {
+  const connection = {} as any;
+  const socketState = new WeakMap<any, any>();
+  socketState.set(connection, {
+    userId: "u1",
+    userName: "Alice",
+    roomId: null,
+    roomSlug: null
+  });
+
+  const events: string[] = [];
+  const socketsByUserId = new Map<string, Set<any>>([["u1", new Set([{}])]]);
+
+  await closeRealtimeConnection({
+    connection,
+    socketState,
+    unregisterRealtimeSocket: () => {
+      events.push("unregister");
+    },
+    detachUserSocket: () => {
+      events.push("detach-user");
+    },
+    markRecentRoomDetach: () => {
+      events.push("mark-detach");
+    },
+    detachRoomSocket: () => {
+      events.push("detach-room");
+    },
+    clearCanonicalMediaState: () => {
+      events.push("clear-media");
+    },
+    clearRoomScreenShareOwnerIfMatches: () => {
+      events.push("clear-screen-owner");
+    },
+    broadcastRoom: () => {
+      events.push("broadcast-room");
+    },
+    buildPresenceLeftEnvelope: () => ({ type: "presence.left" }),
+    getRoomPresence: () => [],
+    broadcastAllRoomsPresence: () => {
+      events.push("broadcast-all-presence");
+    },
+    socketsByUserId,
+    redisHSet: async (key, value) => {
+      events.push(`hset:${key}:${value.online}`);
+      return 1;
+    },
+    redisExpire: async (key, seconds) => {
+      events.push(`expire:${key}:${seconds}`);
+      return 1;
+    }
+  });
+
+  assert.deepEqual(events, ["unregister", "detach-user"]);
+});
