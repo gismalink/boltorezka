@@ -12,6 +12,7 @@ export { useCurrentRoomSnapshot } from "./app/state/useCurrentRoomSnapshot";
 export { usePersistedClientSettings } from "./app/effects/usePersistedClientSettings";
 export { useMediaDevicePreferences } from "./media/useMediaDevicePreferences";
 export { useMicrophoneLevelMeter } from "./media/useMicrophoneLevelMeter";
+export { useMicrophoneSelfMonitor } from "./media/useMicrophoneSelfMonitor";
 export { usePopupOutsideClose } from "./ui/usePopupOutsideClose";
 export { useRealtimeSoundEffects } from "./realtime/useRealtimeSoundEffects";
 export { useRealtimeChatLifecycle } from "./realtime/useRealtimeChatLifecycle";

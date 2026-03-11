@@ -33,6 +33,7 @@ import {
   useCurrentRoomSnapshot,
   useMediaDevicePreferences,
   useMicrophoneLevelMeter,
+  useMicrophoneSelfMonitor,
   usePersistedClientSettings,
   usePopupOutsideClose,
   useRealtimeSoundEffects,
@@ -150,6 +151,7 @@ export function App() {
     }
     return "custom";
   });
+  const [selfMonitorEnabled, setSelfMonitorEnabled] = useState<boolean>(() => localStorage.getItem("boltorezka_self_monitor") === "1");
   const [mediaDevicesState, setMediaDevicesState] = useState<MediaDevicesState>("ready");
   const [mediaDevicesHint, setMediaDevicesHint] = useState("");
   const [micVolume, setMicVolume] = useState<number>(() => Number(localStorage.getItem("boltorezka_mic_volume") || 75));
@@ -412,6 +414,7 @@ export function App() {
 
   usePersistedClientSettings({
     selectedInputProfile,
+    selfMonitorEnabled,
     micMuted,
     audioMuted,
     cameraEnabled,
@@ -886,6 +889,14 @@ export function App() {
     t,
     pushToast,
     setLevel: setMicTestLevel
+  });
+
+  useMicrophoneSelfMonitor({
+    enabled: selfMonitorEnabled,
+    selectedInputId,
+    micVolume,
+    t,
+    pushToast
   });
 
   usePopupOutsideClose({
@@ -1392,6 +1403,8 @@ export function App() {
     onToggleCamera: handleToggleCamera,
     onToggleScreenShare: handleToggleScreenShareClick,
     onToggleNoiseSuppression: handleToggleNoiseSuppression,
+    selfMonitorEnabled,
+    onToggleSelfMonitor: () => setSelfMonitorEnabled((value) => !value),
     onRequestVideoAccess: requestVideoAccess,
     onToggleVoiceSettings: handleToggleVoiceSettings,
     onToggleAudioOutput: handleToggleAudioOutput,

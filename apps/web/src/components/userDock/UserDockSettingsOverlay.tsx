@@ -41,6 +41,8 @@ type UserDockSettingsOverlayProps = Pick<
   | "serverSoundsEnabled"
   | "onSetServerSoundEnabled"
   | "onPreviewServerSound"
+  | "selfMonitorEnabled"
+  | "onToggleSelfMonitor"
   | "noiseSuppressionEnabled"
   | "onToggleNoiseSuppression"
 > & {
@@ -91,6 +93,8 @@ export function UserDockSettingsOverlay({
   serverSoundsEnabled,
   onSetServerSoundEnabled,
   onPreviewServerSound,
+  selfMonitorEnabled,
+  onToggleSelfMonitor,
   noiseSuppressionEnabled,
   onToggleNoiseSuppression,
   mediaDevicesUnavailable,
@@ -262,6 +266,18 @@ export function UserDockSettingsOverlay({
               <div className="grid gap-2">
                 <h3 className="subheading">{t("settings.inputProfile")}</h3>
                 <p className="muted media-devices-warning">{t("settings.inputProfileLocked")}</p>
+                <label className="voice-sound-checkbox flex items-center justify-between gap-3">
+                  <span>{t("settings.listenSelf")}</span>
+                  <button
+                    type="button"
+                    className={`secondary icon-btn tiny ${selfMonitorEnabled ? "icon-btn-danger" : ""}`}
+                    aria-label={t("settings.listenSelf")}
+                    data-tooltip={selfMonitorEnabled ? t("settings.listenSelfOn") : t("settings.listenSelfOff")}
+                    onClick={onToggleSelfMonitor}
+                  >
+                    <i className={`bi ${selfMonitorEnabled ? "bi-toggle-on" : "bi-toggle-off"}`} aria-hidden="true" />
+                  </button>
+                </label>
                 <label className="voice-sound-checkbox flex items-center justify-between gap-3">
                   <span>{t("settings.useRnn")}</span>
                   <button

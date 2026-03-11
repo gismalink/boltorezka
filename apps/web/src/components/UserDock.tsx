@@ -15,6 +15,7 @@ export function UserDock({
   screenShareOwnedByCurrentUser,
   canStartScreenShare,
   noiseSuppressionEnabled,
+  selfMonitorEnabled,
   cameraEnabled,
   micMuted,
   audioMuted,
@@ -54,6 +55,7 @@ export function UserDock({
   onToggleCamera,
   onToggleScreenShare,
   onToggleNoiseSuppression,
+  onToggleSelfMonitor,
   onToggleVoiceSettings,
   onToggleAudioOutput,
   onOpenUserSettings,
@@ -190,6 +192,8 @@ export function UserDock({
         mediaControlsLocked={mediaControlsLocked}
         mediaDevicesWarningText={mediaDevicesWarningText}
         noiseSuppressionEnabled={noiseSuppressionEnabled}
+        selfMonitorEnabled={selfMonitorEnabled}
+        onToggleSelfMonitor={onToggleSelfMonitor}
         onToggleNoiseSuppression={onToggleNoiseSuppression}
         modalBarCount={modalBarCount}
         modalActiveBars={modalActiveBars}

@@ -2,6 +2,7 @@ import { useEffect } from "react";
 
 type UsePersistedClientSettingsArgs = {
   selectedInputProfile: string;
+  selfMonitorEnabled: boolean;
   micMuted: boolean;
   audioMuted: boolean;
   cameraEnabled: boolean;
@@ -20,6 +21,7 @@ type UsePersistedClientSettingsArgs = {
 
 export function usePersistedClientSettings({
   selectedInputProfile,
+  selfMonitorEnabled,
   micMuted,
   audioMuted,
   cameraEnabled,
@@ -38,6 +40,10 @@ export function usePersistedClientSettings({
   useEffect(() => {
     localStorage.setItem("boltorezka_selected_input_profile", selectedInputProfile);
   }, [selectedInputProfile]);
+
+  useEffect(() => {
+    localStorage.setItem("boltorezka_self_monitor", selfMonitorEnabled ? "1" : "0");
+  }, [selfMonitorEnabled]);
 
   useEffect(() => {
     localStorage.setItem("boltorezka_audio_muted", audioMuted ? "1" : "0");
