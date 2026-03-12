@@ -449,6 +449,10 @@ textarea {
 }
 
 .range-slider-wrap {
+  width: 100%;
+}
+
+.range-slider-inner {
   position: relative;
   width: calc(100% - 32px);
   max-width: calc(100% - 32px);
@@ -456,7 +460,6 @@ textarea {
 }
 
 .range-slider-input {
-  --range-progress: 50%;
   --range-thumb-width: 54px;
   --range-thumb-height: 22px;
   --range-track-height: 8px;
