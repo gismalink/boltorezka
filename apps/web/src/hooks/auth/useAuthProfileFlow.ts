@@ -71,7 +71,7 @@ export function useAuthProfileFlow({
 
   const logout = () => {
     setProfileMenuOpen(false);
-    authController.logout();
+    void authController.logout(token);
   };
 
   const openUserSettings = (tab: "profile" | "sound" | "camera") => {
