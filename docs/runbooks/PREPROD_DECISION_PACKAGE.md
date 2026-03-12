@@ -151,6 +151,19 @@
   - short SSO + room + chat smoke
   - logs review (critical errors)
 
+### 5.4 Test rollback validation evidence (2026-03-13)
+
+- Manual rollback cycle executed in `test`:
+  1. rollback target deploy: `TEST_REF=249f1e4 npm run deploy:test:smoke` -> PASS,
+  2. forward restore deploy: `TEST_REF=origin/feature/session-cookie-hardening npm run deploy:test:smoke` -> PASS.
+- In both runs:
+  - `smoke:auth:cookie-negative` -> PASS,
+  - `smoke:auth:cookie-ws-ticket` -> PASS,
+  - postdeploy summary finished with `done`.
+- Conclusion:
+  - rollback deploy path is operational,
+  - rollback cycle does not break auth/session semantics in test contour.
+
 ## 6) Release log / audit artifacts
 
 - Local artifact:
