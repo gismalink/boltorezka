@@ -17,6 +17,12 @@ async function isVisible(locator) {
 }
 
 async function assertNoCrash(page, runtimeErrors) {
+  const fallback = page.locator('[data-testid="error-boundary-fallback"]').first();
+  if (await isVisible(fallback)) {
+    const errorText = (await fallback.innerText()).trim();
+    throw new Error(`error boundary fallback is visible: ${errorText}`);
+  }
+
   const crashLocator = page.getByText(crashMessage, { exact: true });
   if (await isVisible(crashLocator)) {
     throw new Error(`error boundary message is visible: ${crashMessage}`);
