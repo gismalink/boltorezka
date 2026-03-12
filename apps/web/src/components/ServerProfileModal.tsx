@@ -114,6 +114,10 @@ export function ServerProfileModal({
   const totalUsers = adminUsers.length;
   const totalAdmins = adminUsers.filter((item) => item.role === "admin" || item.role === "super_admin").length;
   const totalBanned = adminUsers.filter((item) => item.is_banned).length;
+  const rnnoiseProcessSamples = telemetrySummary?.metrics.rnnoise_process_cost_samples ?? 0;
+  const rnnoiseProcessAvgMs = rnnoiseProcessSamples > 0
+    ? (telemetrySummary?.metrics.rnnoise_process_cost_us_sum ?? 0) / rnnoiseProcessSamples / 1000
+    : 0;
 
   useEffect(() => {
     const element = previewVideoRef.current;
@@ -281,6 +285,12 @@ export function ServerProfileModal({
                 <div>chat_sent: {telemetrySummary?.metrics.chat_sent ?? 0}</div>
                 <div>chat_idempotency_hit: {telemetrySummary?.metrics.chat_idempotency_hit ?? 0}</div>
                 <div>telemetry_web_event: {telemetrySummary?.metrics.telemetry_web_event ?? 0}</div>
+                <div>rnnoise_toggle_on: {telemetrySummary?.metrics.rnnoise_toggle_on ?? 0}</div>
+                <div>rnnoise_toggle_off: {telemetrySummary?.metrics.rnnoise_toggle_off ?? 0}</div>
+                <div>rnnoise_init_error: {telemetrySummary?.metrics.rnnoise_init_error ?? 0}</div>
+                <div>rnnoise_fallback_unavailable: {telemetrySummary?.metrics.rnnoise_fallback_unavailable ?? 0}</div>
+                <div>rnnoise_process_cost_samples: {rnnoiseProcessSamples}</div>
+                <div>rnnoise_process_avg_ms: {rnnoiseProcessAvgMs.toFixed(3)}</div>
               </div>
               <button onClick={onRefreshTelemetry}>{t("telemetry.refresh")}</button>
             </section>

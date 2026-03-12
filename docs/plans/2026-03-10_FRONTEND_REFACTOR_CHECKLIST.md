@@ -49,15 +49,19 @@
 - [x] Уточнить целевой путь интеграции RNNoise:
   - client-side preprocessing в браузере,
   - или server-side/LiveKit noise suppression profile.
-- [ ] Подготовить техдизайн (1 страница): ограничения CPU, latency budget, fallback policy.
+- [x] Подготовить техдизайн (1 страница): ограничения CPU, latency budget, fallback policy.
+  - `docs/architecture/2026-03-12_RNNOISE_CLIENT_TECH_DESIGN.md`
 - [x] Добавить флаг в UI/настройки (`noise_reduction` как отдельный режим с явным статусом).
 - [x] Добавить выбор уровня шумоподавления (`soft` / `medium` / `strong`) с сохранением в localStorage.
-- [ ] Добавить telemetry метрики:
-  - включение/выключение RNNoise,
-  - ошибки инициализации,
-  - средняя стоимость обработки кадра.
-- [ ] Реализовать canary rollout только в `test` и smoke-check сценарий «voice with RNNoise on/off».
-- [ ] После canary обновить runbook и критерии включения по умолчанию.
+- [x] Добавить telemetry метрики:
+  - включение/выключение RNNoise (`rnnoise_toggle_on` / `rnnoise_toggle_off`),
+  - ошибки инициализации (`rnnoise_init_error`) + fallback unavailable (`rnnoise_fallback_unavailable`),
+  - средняя стоимость применения процессора (`rnnoise_process_cost_us_sum` / `rnnoise_process_cost_samples`, отображается как `rnnoise_process_avg_ms`).
+- [x] Реализовать canary rollout только в `test` и smoke-check сценарий «voice with RNNoise on/off».
+  - Добавлен browser smoke `smoke:web:rnnoise:browser` и включён в `postdeploy-smoke-test.sh` как `web_rnnoise` (test gate).
+- [x] После canary обновить runbook и критерии включения по умолчанию.
+  - Обновлён `docs/runbooks/VOICE_BASELINE_RUNBOOK.md` (раздел RNNoise canary/default-enable policy).
+  - Обновлена smoke-matrix каноника: `docs/operations/SMOKE_CI_MATRIX.md`.
 
 ## UI Themes (добавлено 2026-03-12)
 

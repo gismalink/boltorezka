@@ -107,6 +107,12 @@ export type TelemetrySummary = {
     chat_sent: number;
     chat_idempotency_hit: number;
     telemetry_web_event: number;
+    rnnoise_toggle_on: number;
+    rnnoise_toggle_off: number;
+    rnnoise_init_error: number;
+    rnnoise_fallback_unavailable: number;
+    rnnoise_process_cost_us_sum: number;
+    rnnoise_process_cost_samples: number;
   };
 };
 

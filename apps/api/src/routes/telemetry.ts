@@ -26,6 +26,15 @@ function resolveBearerToken(authHeader: unknown): string | null {
   return match[1].trim() || "__invalid__";
 }
 
+function asString(value: unknown): string {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function asNumber(value: unknown): number | null {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 export async function telemetryRoutes(fastify: FastifyInstance) {
   fastify.post("/v1/telemetry/web", async (request: FastifyRequest, reply: FastifyReply) => {
     const parsed = telemetrySchema.safeParse(request.body);
@@ -71,7 +80,38 @@ export async function telemetryRoutes(fastify: FastifyInstance) {
 
     try {
       const day = new Date().toISOString().slice(0, 10);
-      await fastify.redis.hIncrBy(`ws:metrics:${day}`, "telemetry_web_event", 1);
+      const metricsKey = `ws:metrics:${day}`;
+      await fastify.redis.hIncrBy(metricsKey, "telemetry_web_event", 1);
+
+      if (telemetry.event === "rnnoise_status") {
+        const status = asString(telemetry.meta.status);
+        const reason = asString(telemetry.meta.reason);
+
+        if (status === "active") {
+          await fastify.redis.hIncrBy(metricsKey, "rnnoise_toggle_on", 1);
+        }
+
+        if (status === "inactive" && (reason === "profile_not_noise_reduction" || reason === "suppression_none")) {
+          await fastify.redis.hIncrBy(metricsKey, "rnnoise_toggle_off", 1);
+        }
+
+        if (status === "error") {
+          await fastify.redis.hIncrBy(metricsKey, "rnnoise_init_error", 1);
+        }
+
+        if (status === "unavailable") {
+          await fastify.redis.hIncrBy(metricsKey, "rnnoise_fallback_unavailable", 1);
+        }
+      }
+
+      if (telemetry.event === "rnnoise_processor_apply_ms") {
+        const ms = asNumber(telemetry.meta.ms);
+        if (ms !== null && ms >= 0) {
+          const micros = Math.round(ms * 1000);
+          await fastify.redis.hIncrBy(metricsKey, "rnnoise_process_cost_us_sum", micros);
+          await fastify.redis.hIncrBy(metricsKey, "rnnoise_process_cost_samples", 1);
+        }
+      }
     } catch {
       return { ok: true };
     }
@@ -101,6 +141,12 @@ export async function telemetryRoutes(fastify: FastifyInstance) {
           chat_sent: toNumber(values.chat_sent),
           chat_idempotency_hit: toNumber(values.chat_idempotency_hit),
           telemetry_web_event: toNumber(values.telemetry_web_event),
+          rnnoise_toggle_on: toNumber(values.rnnoise_toggle_on),
+          rnnoise_toggle_off: toNumber(values.rnnoise_toggle_off),
+          rnnoise_init_error: toNumber(values.rnnoise_init_error),
+          rnnoise_fallback_unavailable: toNumber(values.rnnoise_fallback_unavailable),
+          rnnoise_process_cost_us_sum: toNumber(values.rnnoise_process_cost_us_sum),
+          rnnoise_process_cost_samples: toNumber(values.rnnoise_process_cost_samples),
           call_signal_sent: toNumber(values.call_signal_sent),
           call_offer_received: toNumber(values.call_offer_received),
           call_answer_received: toNumber(values.call_answer_received),
