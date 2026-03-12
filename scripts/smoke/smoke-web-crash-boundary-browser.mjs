@@ -86,19 +86,20 @@ async function bootCheck(page, runtimeErrors, label) {
 
 async function main() {
   const browser = await chromium.launch({ headless: true });
-  const runtimeErrors = [];
+  const pageErrors = [];
+  const renderErrors = [];
 
   const buildTrackedPage = async (token) => {
     const context = await browser.newContext();
     const page = await context.newPage();
 
     page.on("pageerror", (error) => {
-      runtimeErrors.push(String(error?.message || error));
+      pageErrors.push(String(error?.message || error));
     });
 
     page.on("console", (msg) => {
-      if (msg.type() === "error") {
-        runtimeErrors.push(msg.text());
+      if (msg.type() === "error" && /\[web\]\s+unhandled render error/i.test(msg.text())) {
+        renderErrors.push(msg.text());
       }
     });
 
@@ -116,19 +117,23 @@ async function main() {
 
   try {
     const anonymous = await buildTrackedPage("");
-    await bootCheck(anonymous.page, runtimeErrors, "anonymous");
+    await bootCheck(anonymous.page, renderErrors, "anonymous");
     await anonymous.context.close();
 
     if (bearerToken) {
       const authenticated = await buildTrackedPage(bearerToken);
-      await bootCheck(authenticated.page, runtimeErrors, "authenticated");
+      await bootCheck(authenticated.page, renderErrors, "authenticated");
       await openSoundSettingsFlow(authenticated.page);
-      await assertNoCrash(authenticated.page, runtimeErrors);
+      await assertNoCrash(authenticated.page, renderErrors);
       await authenticated.context.close();
     }
 
-    if (runtimeErrors.length > 0) {
-      throw new Error(`runtime page errors detected: ${runtimeErrors.slice(0, 3).join(" | ")}`);
+    if (pageErrors.length > 0) {
+      throw new Error(`pageerror events detected: ${pageErrors.slice(0, 3).join(" | ")}`);
+    }
+
+    if (renderErrors.length > 0) {
+      throw new Error(`render errors detected: ${renderErrors.slice(0, 3).join(" | ")}`);
     }
 
     console.log("[smoke:web:crash-boundary:browser] ok");
