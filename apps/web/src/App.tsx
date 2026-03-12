@@ -81,11 +81,28 @@ const MAX_CHAT_RETRIES = 3;
 const DEFAULT_CHAT_IMAGE_DATA_URL_LENGTH = 28000;
 const DEFAULT_CHAT_IMAGE_MAX_SIDE = 1200;
 const DEFAULT_CHAT_IMAGE_QUALITY = 0.6;
+const DEFAULT_MIC_VOLUME = 75;
+const DEFAULT_OUTPUT_VOLUME = 70;
 const MESSAGE_EDIT_DELETE_WINDOW_MS = 10 * 60 * 1000;
 const ROOM_SLUG_STORAGE_KEY = "boltorezka_room_slug";
 const CLIENT_BUILD_VERSION = String(import.meta.env.VITE_APP_VERSION || "").trim();
 const CLIENT_BUILD_DATE = String(import.meta.env.VITE_APP_BUILD_DATE || "").trim();
 const CLIENT_BUILD_DATE_LABEL = CLIENT_BUILD_DATE ? `v.${CLIENT_BUILD_DATE}` : "";
+
+function readNonZeroDefaultVolume(storageKey: string, fallback: number): number {
+  const raw = localStorage.getItem(storageKey);
+  if (raw === null || raw.trim() === "") {
+    return fallback;
+  }
+
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed)) {
+    return fallback;
+  }
+
+  const normalized = Math.max(0, Math.min(100, Math.round(parsed)));
+  return normalized === 0 ? fallback : normalized;
+}
 
 export function App() {
   const [token, setToken] = useState(localStorage.getItem("boltorezka_token") || "");
@@ -165,14 +182,8 @@ export function App() {
   const [selfMonitorEnabled, setSelfMonitorEnabled] = useState<boolean>(() => localStorage.getItem("boltorezka_self_monitor") === "1");
   const [mediaDevicesState, setMediaDevicesState] = useState<MediaDevicesState>("ready");
   const [mediaDevicesHint, setMediaDevicesHint] = useState("");
-  const [micVolume, setMicVolume] = useState<number>(() => Number(localStorage.getItem("boltorezka_mic_volume") || 75));
-  const [outputVolume, setOutputVolume] = useState<number>(() => {
-    const parsed = Number(localStorage.getItem("boltorezka_output_volume"));
-    if (!Number.isFinite(parsed)) {
-      return 70;
-    }
-    return Math.max(0, Math.min(100, parsed));
-  });
+  const [micVolume, setMicVolume] = useState<number>(() => readNonZeroDefaultVolume("boltorezka_mic_volume", DEFAULT_MIC_VOLUME));
+  const [outputVolume, setOutputVolume] = useState<number>(() => readNonZeroDefaultVolume("boltorezka_output_volume", DEFAULT_OUTPUT_VOLUME));
   const [micTestLevel, setMicTestLevel] = useState(0);
   const [serverAudioQuality, setServerAudioQuality] = useState<AudioQuality>("standard");
   const [serverAudioQualitySaving, setServerAudioQualitySaving] = useState(false);
