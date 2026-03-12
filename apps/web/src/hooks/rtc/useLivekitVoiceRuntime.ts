@@ -200,7 +200,6 @@ export function useLivekitVoiceRuntime({
 
   const roomRef = useRef<Room | null>(null);
   const localTracksRef = useRef<Map<Track.Source, LocalTrack>>(new Map());
-  const audioContextRef = useRef<AudioContext | null>(null);
   const rnnoiseProcessorRef = useRef<RnnoiseAudioProcessor | null>(null);
   const remoteAudioElementsRef = useRef<Map<string, HTMLAudioElement>>(new Map());
   const remoteAudioBlockedByAutoplayRef = useRef<Set<string>>(new Set());
@@ -493,10 +492,6 @@ export function useLivekitVoiceRuntime({
     if (processor) {
       await processor.destroy().catch(() => undefined);
     }
-    if (audioContextRef.current) {
-      await audioContextRef.current.close().catch(() => undefined);
-      audioContextRef.current = null;
-    }
   }, []);
 
   const applyNoiseSuppressionProcessor = useCallback(async (audioTrack: LocalAudioTrack) => {
@@ -515,14 +510,7 @@ export function useLivekitVoiceRuntime({
     }
 
     try {
-      const audioContext = audioContextRef.current ?? new AudioContext({ sampleRate: 48000 });
-      if (audioContext.state === "suspended") {
-        await audioContext.resume().catch(() => undefined);
-      }
-      audioContextRef.current = audioContext;
-
       const processor = new RnnoiseAudioProcessor(rnnoiseSuppressionLevel);
-      await audioTrack.setAudioContext(audioContext);
       await audioTrack.setProcessor(processor);
 
       const previousProcessor = rnnoiseProcessorRef.current;

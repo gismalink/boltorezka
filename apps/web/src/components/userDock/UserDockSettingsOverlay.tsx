@@ -284,7 +284,7 @@ export function UserDockSettingsOverlay({
               <div className="grid gap-2">
                 <h3 className="subheading">{t("settings.inputProfile")}</h3>
                 <p className="muted media-devices-warning">{t("settings.inputProfileLocked")}</p>
-                <label className="voice-sound-checkbox flex items-center justify-between gap-3">
+                <div className="voice-sound-checkbox flex items-center justify-between gap-3">
                   <span>{t("settings.listenSelf")}</span>
                   <button
                     type="button"
@@ -297,8 +297,8 @@ export function UserDockSettingsOverlay({
                   >
                     <span className="ui-switch-thumb" aria-hidden="true" />
                   </button>
-                </label>
-                <label className="voice-sound-checkbox flex items-center justify-between gap-3">
+                </div>
+                <div className="voice-sound-checkbox flex items-center justify-between gap-3">
                   <span>{t("settings.useRnn")}</span>
                   <button
                     type="button"
@@ -311,7 +311,7 @@ export function UserDockSettingsOverlay({
                   >
                     <span className="ui-switch-thumb" aria-hidden="true" />
                   </button>
-                </label>
+                </div>
                 <p className="muted media-devices-warning">{t("settings.rnnClientHint")}</p>
                 {noiseSuppressionEnabled ? (
                   <>
