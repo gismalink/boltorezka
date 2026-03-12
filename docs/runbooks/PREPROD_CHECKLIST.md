@@ -51,12 +51,20 @@ LiveKit full-transition reference: [../plans/2026-03-09_LIVEKIT_FULL_TRANSITION_
 ## 3) Runtime и конфигурация
 
 1. `AUTH_MODE=sso` в test/prod окружениях.
+1.1. Cookie-mode rollout discipline:
+   - `TEST_AUTH_COOKIE_MODE=1` зафиксирован в test,
+   - `PROD_AUTH_COOKIE_MODE` переключается только после explicit GO.
 2. `AUTH_SSO_BASE_URL`:
    - test -> `https://test.auth.gismalink.art`
    - prod -> `https://auth.gismalink.art`
+2.1. CORS + credentialed requests:
+   - `CORS_ORIGIN` задан явным app origin (без `*` для credentialed режима),
+   - web-клиент отправляет auth-запросы с `credentials: include`.
 3. `ALLOWED_RETURN_HOSTS`:
    - test содержит `test.boltorezka.gismalink.art`
    - prod содержит `boltorezka.gismalink.art`
+3.1. Cookie policy соответствует окружению:
+   - `AUTH_SESSION_COOKIE_DOMAIN`, `AUTH_SESSION_COOKIE_SAMESITE`, `AUTH_SESSION_COOKIE_SECURE` проверены для test/prod.
 4. Edge ingress содержит маршруты для test/prod Boltorezka.
 5. Voice baseline соответствует канонике:
    - `docs/runbooks/VOICE_BASELINE_RUNBOOK.md`,

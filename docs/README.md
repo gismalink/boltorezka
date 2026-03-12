@@ -38,6 +38,7 @@
 - `architecture/` — architecture-level documentation
   - [ARCHITECTURE](architecture/ARCHITECTURE.md)
   - [PHASE0_MVP_ADR](architecture/PHASE0_MVP_ADR.md)
+  - [AUTH_SESSION_STORAGE_ADR_2026-03-11](architecture/2026-03-11_ADR_AUTH_SESSION_STORAGE.md)
   - [RNNOISE_CLIENT_TECH_DESIGN_2026-03-12](architecture/2026-03-12_RNNOISE_CLIENT_TECH_DESIGN.md)
 - `plans/` — scoped design/product plans
   - [SFU_MIGRATION_PLAN](plans/2026-03-06_SFU_MIGRATION_PLAN.md)

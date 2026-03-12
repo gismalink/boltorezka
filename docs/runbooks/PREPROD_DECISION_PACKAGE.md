@@ -21,6 +21,21 @@
 
 ## 3) Current technical evidence
 
+### 3.0 Cookie cutover package (2026-03-13)
+
+- Cookie mode in test: `TEST_AUTH_COOKIE_MODE=1` (persisted in host env).
+- Web build gate for cookie-primary: `VITE_AUTH_COOKIE_MODE=1` passed in test build args.
+- Session behavior evidence:
+  - logout revokes server session before SSO redirect (`POST /v1/auth/logout` in web flow),
+  - manual scenario: 3 different accounts, login/logout from first attempt, no ghost presence after logout.
+- Automated smoke evidence:
+  - `smoke:auth:cookie-negative` — PASS,
+  - `smoke:auth:cookie-ws-ticket` — PASS,
+  - `deploy:test:smoke` with cookie-mode — PASS on repeated cycles.
+- Remaining pre-prod risks for cookie rollout:
+  - browser matrix (Chrome/Safari/Firefox + iOS Safari) not fully captured,
+  - auth/reconnect baseline-vs-current delta not yet formalized.
+
 ### 3.1 Latest verified test rollout
 
 - Branch: `origin/main`

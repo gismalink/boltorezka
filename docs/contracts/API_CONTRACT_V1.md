@@ -6,7 +6,29 @@
 
 - Base path: `/v1/*`
 - Auth mode: `sso`
-- Bearer JWT: required для protected endpoints
+- Protected endpoints: Bearer JWT; при `AUTH_COOKIE_MODE=1` разрешён cookie-backed auth через `boltorezka_session*`.
+
+## CORS / Credentialed requests
+
+- Server CORS policy: `origin = CORS_ORIGIN`, `credentials = true`.
+- Cookie-based auth работает только при credentialed requests (`fetch(..., { credentials: "include" })`).
+- При `credentials=true` нельзя использовать wildcard origin в production; должен быть явно задан app origin.
+- Для test/prod в compose задаются отдельные `CORS_ORIGIN` и cookie `Domain`.
+
+## Session contract (SSO + local API session)
+
+1. `GET /v1/auth/sso/session`
+  - Exchange central SSO session -> local API session token (JWT with `sid`).
+  - При `AUTH_COOKIE_MODE=1` дополнительно выставляет HttpOnly cookie с тем же токеном.
+2. `POST /v1/auth/refresh` (protected)
+  - Требует валидную auth session (bearer или cookie-token при cookie-mode).
+  - Выполняет session rotation: выдаёт новый `sid`, старый session key инвалидируется.
+  - При cookie-mode обновляет HttpOnly cookie.
+3. `POST /v1/auth/logout` (protected)
+  - Удаляет server-side session (`auth:session:<sid>`).
+  - При cookie-mode очищает HttpOnly cookie.
+4. `GET /v1/auth/ws-ticket` (protected)
+  - Выдаёт short-lived ws ticket (45s) для realtime connect.
 
 ## Auth
 
@@ -38,6 +60,27 @@
   - `sso` metadata when authenticated
 - 503 `SsoUnavailable` при проблеме с central SSO
 
+### POST /v1/auth/refresh
+
+- Auth: protected (`requireAuth`)
+- Accepts:
+  - Bearer JWT, или
+  - cookie token when `AUTH_COOKIE_MODE=1`
+- 200:
+  - `token`: string
+  - `user`: User
+- 401 `Unauthorized`
+
+### POST /v1/auth/logout
+
+- Auth: protected (`requireAuth`)
+- Accepts:
+  - Bearer JWT, или
+  - cookie token when `AUTH_COOKIE_MODE=1`
+- 200:
+  - `ok: true`
+- 401 `Unauthorized`
+
 ### POST /v1/auth/register
 
 - Auth: public
@@ -50,13 +93,19 @@
 
 ### GET /v1/auth/me
 
-- Auth: Bearer JWT
+- Auth: protected (`requireAuth`)
+- Accepts:
+  - Bearer JWT, или
+  - cookie token when `AUTH_COOKIE_MODE=1`
 - 200:
   - `user: User | null`
 
 ### GET /v1/auth/ws-ticket
 
-- Auth: Bearer JWT
+- Auth: protected (`requireAuth`)
+- Accepts:
+  - Bearer JWT, или
+  - cookie token when `AUTH_COOKIE_MODE=1`
 - 200:
   - `ticket`: uuid
   - `expiresInSec`: number (current 45)
