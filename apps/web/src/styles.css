@@ -319,54 +319,93 @@ textarea {
   box-sizing: border-box;
 }
 
-input[type="range"] {
+.range-slider-wrap {
+  position: relative;
+  width: 100%;
+}
+
+.range-slider-input {
+  --range-progress: 50%;
+  --range-thumb-width: 54px;
+  --range-thumb-height: 22px;
+  --range-track-height: 8px;
   -webkit-appearance: none;
   appearance: none;
   width: 100%;
-  height: 20px;
+  height: 22px;
   padding: 0;
-  border: var(--border-thin) solid color-mix(in srgb, var(--pixel-border) 70%, transparent 30%);
+  margin: 0;
+  border: none;
+  background: transparent;
+}
+
+.range-slider-input::-webkit-slider-runnable-track {
+  height: var(--range-track-height);
+  border: var(--border-thin) solid color-mix(in srgb, var(--pixel-neon-cyan) 48%, transparent 52%);
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(0, 0, 0, 0.3)),
-    color-mix(in srgb, var(--pixel-panel-2) 78%, #000 22%);
+    linear-gradient(90deg, color-mix(in srgb, var(--pixel-neon-cyan) 80%, #fff 20%), color-mix(in srgb, var(--pixel-neon-cyan) 72%, #9ad3ff 28%))
+      0 0 / var(--range-progress) 100% no-repeat,
+    linear-gradient(90deg, color-mix(in srgb, var(--pixel-panel-2) 78%, #000 22%), color-mix(in srgb, var(--pixel-panel-2) 70%, #061a2b 30%));
   box-shadow:
     inset 0 0 0 1px #0b1430,
     2px 2px 0 var(--pixel-hard-shadow);
 }
 
-input[type="range"]::-webkit-slider-runnable-track {
-  height: 8px;
-  border: var(--border-thin) solid color-mix(in srgb, var(--pixel-neon-cyan) 48%, transparent 52%);
-  background: linear-gradient(90deg, color-mix(in srgb, var(--pixel-neon-cyan) 80%, #fff 20%), color-mix(in srgb, var(--pixel-neon-cyan) 40%, transparent 60%));
-}
-
-input[type="range"]::-webkit-slider-thumb {
+.range-slider-input::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 18px;
-  height: 18px;
-  margin-top: -6px;
-  border: var(--border-strong) solid var(--pixel-neon-cyan);
-  background: color-mix(in srgb, var(--pixel-panel-2) 55%, #bce7ff 45%);
-  box-shadow:
-    0 0 0 1px var(--pixel-neon-pink),
-    2px 2px 0 var(--pixel-hard-shadow);
+  width: var(--range-thumb-width);
+  height: var(--range-thumb-height);
+  margin-top: calc((var(--range-track-height) - var(--range-thumb-height)) / 2);
+  border: none;
+  background: transparent;
 }
 
-input[type="range"]::-moz-range-track {
-  height: 8px;
+.range-slider-input::-moz-range-track {
+  height: var(--range-track-height);
   border: var(--border-thin) solid color-mix(in srgb, var(--pixel-neon-cyan) 48%, transparent 52%);
-  background: linear-gradient(90deg, color-mix(in srgb, var(--pixel-neon-cyan) 80%, #fff 20%), color-mix(in srgb, var(--pixel-neon-cyan) 40%, transparent 60%));
+  background: linear-gradient(90deg, color-mix(in srgb, var(--pixel-panel-2) 78%, #000 22%), color-mix(in srgb, var(--pixel-panel-2) 70%, #061a2b 30%));
+  box-shadow:
+    inset 0 0 0 1px #0b1430,
+    2px 2px 0 var(--pixel-hard-shadow);
 }
 
-input[type="range"]::-moz-range-thumb {
-  width: 18px;
-  height: 18px;
+.range-slider-input::-moz-range-progress {
+  height: var(--range-track-height);
+  border: var(--border-thin) solid color-mix(in srgb, var(--pixel-neon-cyan) 48%, transparent 52%);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--pixel-neon-cyan) 80%, #fff 20%), color-mix(in srgb, var(--pixel-neon-cyan) 72%, #9ad3ff 28%));
+}
+
+.range-slider-input::-moz-range-thumb {
+  width: var(--range-thumb-width);
+  height: var(--range-thumb-height);
+  border: none;
+  background: transparent;
+}
+
+.range-slider-thumb-value {
+  position: absolute;
+  top: 50%;
+  min-width: 46px;
+  height: var(--range-thumb-height, 22px);
+  padding: 0 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  font-size: 10px;
+  line-height: 1;
+  color: var(--pixel-text);
   border: var(--border-strong) solid var(--pixel-neon-cyan);
   background: color-mix(in srgb, var(--pixel-panel-2) 55%, #bce7ff 45%);
   box-shadow:
     0 0 0 1px var(--pixel-neon-pink),
     2px 2px 0 var(--pixel-hard-shadow);
+}
+
+.range-slider-input:disabled + .range-slider-thumb-value {
+  opacity: 0.55;
 }
 
 textarea {

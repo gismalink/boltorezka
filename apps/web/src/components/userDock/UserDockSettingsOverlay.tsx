@@ -1,4 +1,5 @@
 import type { UserDockProps } from "../types";
+import { RangeSlider } from "../RangeSlider";
 
 type UserDockSettingsOverlayProps = Pick<
   UserDockProps,
@@ -233,24 +234,24 @@ export function UserDockSettingsOverlay({
               <div className="voice-preferences-grid grid gap-3 desktop:grid-cols-2">
                 <label className="slider-label grid gap-2">
                   {t("settings.micVolume")}
-                  <input
-                    type="range"
+                  <RangeSlider
                     min={0}
                     max={100}
                     value={micVolume}
                     disabled={mediaControlsLocked}
-                    onChange={(event) => onSetMicVolume(Number(event.target.value))}
+                    valueSuffix="%"
+                    onChange={onSetMicVolume}
                   />
                 </label>
                 <label className="slider-label grid gap-2">
                   {t("settings.outputVolume")}
-                  <input
-                    type="range"
+                  <RangeSlider
                     min={0}
                     max={100}
                     value={outputVolume}
                     disabled={mediaControlsLocked}
-                    onChange={(event) => onSetOutputVolume(Number(event.target.value))}
+                    valueSuffix="%"
+                    onChange={onSetOutputVolume}
                   />
                 </label>
               </div>
@@ -377,12 +378,12 @@ export function UserDockSettingsOverlay({
               <h3 className="subheading">{t("settings.serverSoundsSection")}</h3>
               <label className="slider-label grid gap-2">
                 {t("settings.serverSoundsMasterVolume")}
-                <input
-                  type="range"
+                <RangeSlider
                   min={0}
                   max={100}
                   value={serverSoundsMasterVolume}
-                  onChange={(event) => onSetServerSoundsMasterVolume(Number(event.target.value))}
+                  valueSuffix="%"
+                  onChange={onSetServerSoundsMasterVolume}
                 />
               </label>
 

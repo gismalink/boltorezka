@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import type { AudioQuality, TelemetrySummary, User } from "../domain";
 import type { ServerScreenShareResolution, ServerVideoEffectType } from "../hooks/rtc/voiceCallTypes";
+import { RangeSlider } from "./RangeSlider";
 
 type ServerMenuTab = "users" | "events" | "telemetry" | "call" | "sound" | "video" | "chat_images";
 
@@ -462,25 +463,25 @@ export function ServerProfileModal({
               <div className="server-video-sliders">
                 <label className="slider-label grid gap-2">
                   {t("server.videoWindowMinWidth")}: {serverVideoWindowMinWidth}px
-                  <input
-                    type="range"
+                  <RangeSlider
                     min={80}
                     max={300}
                     step={1}
                     value={serverVideoWindowMinWidth}
-                    onChange={(event) => onSetServerVideoWindowMinWidth(Number(event.target.value))}
+                    valueSuffix="px"
+                    onChange={onSetServerVideoWindowMinWidth}
                   />
                 </label>
 
                 <label className="slider-label grid gap-2">
                   {t("server.videoWindowMaxWidth")}: {serverVideoWindowMaxWidth}px
-                  <input
-                    type="range"
+                  <RangeSlider
                     min={120}
                     max={480}
                     step={1}
                     value={serverVideoWindowMaxWidth}
-                    onChange={(event) => onSetServerVideoWindowMaxWidth(Number(event.target.value))}
+                    valueSuffix="px"
+                    onChange={onSetServerVideoWindowMaxWidth}
                   />
                 </label>
               </div>
@@ -489,37 +490,37 @@ export function ServerProfileModal({
                 <div className="server-video-sliders">
                   <label className="slider-label grid gap-2">
                     {t("server.videoFxStrength")}: {serverVideoPixelFxStrength}%
-                    <input
-                      type="range"
+                    <RangeSlider
                       min={0}
                       max={100}
                       step={1}
                       value={serverVideoPixelFxStrength}
-                      onChange={(event) => onSetServerVideoPixelFxStrength(Number(event.target.value))}
+                      valueSuffix="%"
+                      onChange={onSetServerVideoPixelFxStrength}
                     />
                   </label>
 
                   <label className="slider-label grid gap-2">
                     {t("server.videoFxPixelSize")}: {serverVideoPixelFxPixelSize}px
-                    <input
-                      type="range"
+                    <RangeSlider
                       min={2}
                       max={10}
                       step={1}
                       value={serverVideoPixelFxPixelSize}
-                      onChange={(event) => onSetServerVideoPixelFxPixelSize(Number(event.target.value))}
+                      valueSuffix="px"
+                      onChange={onSetServerVideoPixelFxPixelSize}
                     />
                   </label>
 
                   <label className="slider-label grid gap-2">
                     {t("server.videoFxGridThickness")}: {serverVideoPixelFxGridThickness}px
-                    <input
-                      type="range"
+                    <RangeSlider
                       min={1}
                       max={4}
                       step={1}
                       value={serverVideoPixelFxGridThickness}
-                      onChange={(event) => onSetServerVideoPixelFxGridThickness(Number(event.target.value))}
+                      valueSuffix="px"
+                      onChange={onSetServerVideoPixelFxGridThickness}
                     />
                   </label>
                 </div>
@@ -529,25 +530,25 @@ export function ServerProfileModal({
                 <div className="server-video-sliders">
                   <label className="slider-label grid gap-2">
                     {t("server.videoAsciiCellSize")}: {serverVideoAsciiCellSize}px
-                    <input
-                      type="range"
+                    <RangeSlider
                       min={4}
                       max={16}
                       step={1}
                       value={serverVideoAsciiCellSize}
-                      onChange={(event) => onSetServerVideoAsciiCellSize(Number(event.target.value))}
+                      valueSuffix="px"
+                      onChange={onSetServerVideoAsciiCellSize}
                     />
                   </label>
 
                   <label className="slider-label grid gap-2">
                     {t("server.videoAsciiContrast")}: {serverVideoAsciiContrast}%
-                    <input
-                      type="range"
+                    <RangeSlider
                       min={60}
                       max={200}
                       step={5}
                       value={serverVideoAsciiContrast}
-                      onChange={(event) => onSetServerVideoAsciiContrast(Number(event.target.value))}
+                      valueSuffix="%"
+                      onChange={onSetServerVideoAsciiContrast}
                     />
                   </label>
 
