@@ -65,9 +65,9 @@
 
 - [x] Базовый auth session smoke уже есть: `smoke:auth:session`.
 - [x] Добавить cookie-mode integration smoke (login -> refresh -> logout -> revoked).
-- [ ] Добавить negative smoke (expired cookie, rotated refresh replay, invalid domain/path).
+- [x] Добавить negative smoke (expired cookie, rotated refresh replay, invalid domain/path).
 - [ ] Добавить regression smoke для ws-ticket и realtime reconnect в cookie-mode.
-- [x] `deploy:test:smoke` проходит стабильно с cookie-mode flag включенным (2026-03-12: pass #1).
+- [x] `deploy:test:smoke` проходит стабильно с cookie-mode flag включенным (2026-03-12/#13: pass #1/#2/#3 — 3/3 ✅).
 
 ## 8) Rollout plan
 
@@ -80,7 +80,7 @@ Progress note (2026-03-12): backend реализует `AUTH_COOKIE_MODE` с Htt
 
 ### Phase B - Cookie primary on test
 - [x] Включить cookie primary на test (feature/session-cookie-hardening + `AUTH_COOKIE_MODE=1`).
-- [ ] Прогнать минимум 3 подряд успешных `deploy:test:smoke`.
+- [x] Прогнать минимум 3 подряд успешных `deploy:test:smoke` (2026-03-13: pass #1/#2/#3 ✅).
 - [ ] Пройти ручной сценарий SSO callback + realtime join/reconnect.
 - [ ] Подтвердить отсутствие роста auth/reconnect error-rate.
 
