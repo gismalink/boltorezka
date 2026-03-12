@@ -3,11 +3,13 @@ import {
   createLocalTracks,
   createLocalScreenTracks,
   type LocalAudioTrack,
+  type ScreenShareCaptureOptions,
   Participant,
   Room,
   RoomEvent,
   Track,
   type LocalTrack,
+  type VideoCaptureOptions,
   type RemoteAudioTrack,
   type TrackPublication,
   type RemoteParticipant,
@@ -15,6 +17,7 @@ import {
   type RemoteTrackPublication
 } from "livekit-client";
 import { api } from "../../api";
+import type { AudioQuality } from "../../domain";
 import type { PresenceMember } from "../../domain";
 import type { CallStatus } from "../../services";
 import { RnnoiseAudioProcessor, type RnnoiseSuppressionLevel } from "./rnnoiseAudioProcessor";
@@ -22,6 +25,8 @@ import type {
   CallMicStatePayload,
   CallNackPayload,
   CallSignalPayload,
+  ServerScreenShareResolution,
+  ServerVideoResolution,
   CallTerminalPayload,
   CallVideoStatePayload,
   VoiceMediaStatusSummary
@@ -33,6 +38,10 @@ type UseLivekitVoiceRuntimeArgs = {
   roomSlug: string;
   allowVideoStreaming: boolean;
   videoStreamingEnabled: boolean;
+  videoResolution: ServerVideoResolution;
+  videoFps: 10 | 15 | 24 | 30;
+  screenShareResolution: ServerScreenShareResolution;
+  audioQuality: AudioQuality;
   roomVoiceTargets: PresenceMember[];
   selectedInputId: string;
   selectedInputProfile: "noise_reduction" | "studio" | "custom";
@@ -77,6 +86,25 @@ type LivekitRuntimeApi = {
 };
 
 const EMPTY_HANDLER = () => {};
+
+function parseResolution(value: ServerVideoResolution): { width: number; height: number } {
+  const [rawWidth, rawHeight] = String(value).split("x");
+  const width = Math.max(1, Number(rawWidth) || 320);
+  const height = Math.max(1, Number(rawHeight) || 240);
+  return { width, height };
+}
+
+function parseScreenShareResolution(value: ServerScreenShareResolution): { width: number; height: number } | null {
+  if (value === "hd") {
+    return { width: 1280, height: 720 };
+  }
+
+  if (value === "fullhd") {
+    return { width: 1920, height: 1080 };
+  }
+
+  return null;
+}
 
 const normalizeLivekitSignalUrl = (rawUrl: string): string => {
   const value = String(rawUrl || "").trim();
@@ -135,6 +163,10 @@ export function useLivekitVoiceRuntime({
   roomSlug,
   allowVideoStreaming,
   videoStreamingEnabled,
+  videoResolution,
+  videoFps,
+  screenShareResolution,
+  audioQuality,
   roomVoiceTargets,
   selectedInputId,
   selectedInputProfile,
@@ -184,9 +216,19 @@ export function useLivekitVoiceRuntime({
         : {})
     };
 
+    const qualityHint: MediaTrackConstraints =
+      audioQuality === "retro"
+        ? { sampleRate: 16000, channelCount: 1 }
+        : audioQuality === "low"
+          ? { sampleRate: 24000, channelCount: 1 }
+          : audioQuality === "standard"
+            ? { sampleRate: 48000, channelCount: 1 }
+            : { sampleRate: 48000, channelCount: 2 };
+
     if (selectedInputProfile === "noise_reduction") {
       return {
         ...base,
+        ...qualityHint,
         echoCancellation: true,
         noiseSuppression: false,
         autoGainControl: true,
@@ -197,19 +239,80 @@ export function useLivekitVoiceRuntime({
     if (selectedInputProfile === "studio") {
       return {
         ...base,
+        ...qualityHint,
         echoCancellation: false,
         noiseSuppression: false,
         autoGainControl: false
       };
     }
 
-    return Object.keys(base).length > 0 ? base : true;
-  }, [selectedInputId, selectedInputProfile]);
+    const constraints = {
+      ...base,
+      ...qualityHint
+    };
+    return Object.keys(constraints).length > 0 ? constraints : true;
+  }, [audioQuality, selectedInputId, selectedInputProfile]);
+
+  const buildCameraVideoOptions = useCallback((): VideoCaptureOptions => {
+    const { width, height } = parseResolution(videoResolution);
+    return {
+      resolution: {
+        width,
+        height,
+        frameRate: videoFps
+      },
+      frameRate: videoFps,
+      ...(selectedVideoInputId && selectedVideoInputId !== "default"
+        ? { deviceId: { exact: selectedVideoInputId } }
+        : {})
+    };
+  }, [selectedVideoInputId, videoFps, videoResolution]);
+
+  const buildCameraApplyConstraints = useCallback((): MediaTrackConstraints => {
+    const { width, height } = parseResolution(videoResolution);
+    return {
+      width: { ideal: width },
+      height: { ideal: height },
+      frameRate: { ideal: videoFps }
+    };
+  }, [videoFps, videoResolution]);
+
+  const buildScreenShareOptions = useCallback((): ScreenShareCaptureOptions => {
+    const targetResolution = parseScreenShareResolution(screenShareResolution);
+    const resolution = targetResolution
+      ? {
+        width: targetResolution.width,
+        height: targetResolution.height,
+        frameRate: videoFps
+      }
+      : undefined;
+
+    return {
+      audio: false,
+      video: true,
+      ...(resolution ? { resolution } : {})
+    };
+  }, [screenShareResolution, videoFps]);
+
+  const buildScreenShareApplyConstraints = useCallback((): MediaTrackConstraints => {
+    const targetResolution = parseScreenShareResolution(screenShareResolution);
+    if (!targetResolution) {
+      return {
+        frameRate: { ideal: videoFps }
+      };
+    }
+
+    return {
+      width: { ideal: targetResolution.width },
+      height: { ideal: targetResolution.height },
+      frameRate: { ideal: videoFps }
+    };
+  }, [screenShareResolution, videoFps]);
 
   const buildMicConfigKey = useCallback(() => {
     const deviceId = selectedInputId && selectedInputId !== "default" ? selectedInputId : "default";
-    return `${deviceId}:${selectedInputProfile}`;
-  }, [selectedInputId, selectedInputProfile]);
+    return `${deviceId}:${selectedInputProfile}:${audioQuality}`;
+  }, [audioQuality, selectedInputId, selectedInputProfile]);
 
     const tryPlayRemoteAudioElement = useCallback((participantId: string, element: HTMLAudioElement) => {
       const playPromise = element.play();
@@ -493,11 +596,7 @@ export function useLivekitVoiceRuntime({
 
     const tracks = await createLocalTracks({
       audio: false,
-      video: {
-        ...(selectedVideoInputId && selectedVideoInputId !== "default"
-          ? { deviceId: { exact: selectedVideoInputId } }
-          : {})
-      }
+      video: buildCameraVideoOptions()
     });
 
     const localVideoTrack = tracks.find((track) => track.kind === Track.Kind.Video);
@@ -509,7 +608,7 @@ export function useLivekitVoiceRuntime({
     await room.localParticipant.publishTrack(localVideoTrack);
     localTracksRef.current.set(Track.Source.Camera, localVideoTrack);
     setLocalVideoStream(new MediaStream([localVideoTrack.mediaStreamTrack]));
-  }, [allowVideoStreaming, selectedVideoInputId, videoStreamingEnabled]);
+  }, [allowVideoStreaming, buildCameraVideoOptions, videoStreamingEnabled]);
 
   const unpublishVideoTrack = useCallback(() => {
     const room = roomRef.current;
@@ -552,10 +651,7 @@ export function useLivekitVoiceRuntime({
       return;
     }
 
-    const tracks = await createLocalScreenTracks({
-      audio: false,
-      video: true
-    });
+    const tracks = await createLocalScreenTracks(buildScreenShareOptions());
 
     const localScreenTrack = tracks.find((track) => track.kind === Track.Kind.Video);
     if (!localScreenTrack) {
@@ -567,7 +663,7 @@ export function useLivekitVoiceRuntime({
     localTracksRef.current.set(Track.Source.ScreenShare, localScreenTrack);
     setLocalScreenShareStream(new MediaStream([localScreenTrack.mediaStreamTrack]));
     setIsLocalScreenSharing(true);
-  }, [roomVoiceConnected]);
+  }, [buildScreenShareOptions, roomVoiceConnected]);
 
   const connectRoom = useCallback(async () => {
     if (!token || !localUserId || !roomSlug) {
@@ -716,11 +812,7 @@ export function useLivekitVoiceRuntime({
         const tracks = await createLocalTracks({
           audio: buildAudioConstraints(),
           video: allowVideoStreaming && videoStreamingEnabled
-            ? {
-              ...(selectedVideoInputId && selectedVideoInputId !== "default"
-                ? { deviceId: { exact: selectedVideoInputId } }
-                : {})
-            }
+            ? buildCameraVideoOptions()
             : false
         });
 
@@ -776,10 +868,10 @@ export function useLivekitVoiceRuntime({
     roomVoiceTargets,
     roomSlug,
     buildAudioConstraints,
+    buildCameraVideoOptions,
     buildMicConfigKey,
     selectedInputId,
     selectedInputProfile,
-    selectedVideoInputId,
     setCallStatus,
     setLastCallPeer,
     token,
@@ -883,6 +975,44 @@ export function useLivekitVoiceRuntime({
   useEffect(() => {
     void switchMicrophoneInput();
   }, [switchMicrophoneInput]);
+
+  useEffect(() => {
+    if (!roomVoiceConnected || !allowVideoStreaming || !videoStreamingEnabled) {
+      return;
+    }
+
+    const localVideoTrack = localTracksRef.current.get(Track.Source.Camera);
+    const mediaTrack = localVideoTrack?.mediaStreamTrack;
+    if (!mediaTrack) {
+      return;
+    }
+
+    const constraints = buildCameraApplyConstraints();
+    void mediaTrack.applyConstraints({
+      width: constraints.width,
+      height: constraints.height,
+      frameRate: constraints.frameRate
+    }).catch((error) => {
+      pushCallLog(`livekit camera constraints update failed: ${error instanceof Error ? error.message : "unknown error"}`);
+    });
+  }, [allowVideoStreaming, buildCameraApplyConstraints, pushCallLog, roomVoiceConnected, videoStreamingEnabled]);
+
+  useEffect(() => {
+    if (!roomVoiceConnected || !isLocalScreenSharing) {
+      return;
+    }
+
+    const localScreenTrack = localTracksRef.current.get(Track.Source.ScreenShare);
+    const mediaTrack = localScreenTrack?.mediaStreamTrack;
+    if (!mediaTrack) {
+      return;
+    }
+
+    const constraints = buildScreenShareApplyConstraints();
+    void mediaTrack.applyConstraints(constraints).catch((error) => {
+      pushCallLog(`livekit screen-share constraints update failed: ${error instanceof Error ? error.message : "unknown error"}`);
+    });
+  }, [buildScreenShareApplyConstraints, isLocalScreenSharing, pushCallLog, roomVoiceConnected]);
 
   useEffect(() => {
     if (!roomVoiceConnected) {

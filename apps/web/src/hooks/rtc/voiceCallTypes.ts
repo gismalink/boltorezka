@@ -44,6 +44,8 @@ export type CallNackPayload = {
 };
 
 export type ServerVideoEffectType = "none" | "pixel8" | "ascii";
+export type ServerVideoResolution = "160x120" | "320x240" | "640x480";
+export type ServerScreenShareResolution = "hd" | "fullhd" | "max";
 
 export type VoiceMediaStatusSummary = "idle" | "connecting" | "signaling" | "media" | "stalled" | "disconnected";
 

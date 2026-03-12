@@ -1,6 +1,6 @@
 import { useCallback, type Dispatch, type MutableRefObject, type SetStateAction } from "react";
 import type { AudioQuality, Room, RoomsTreeResponse } from "../../domain";
-import type { ServerVideoEffectType } from "../rtc/voiceCallTypes";
+import type { ServerScreenShareResolution, ServerVideoEffectType } from "../rtc/voiceCallTypes";
 
 type ServerVideoResolution = "160x120" | "320x240" | "640x480";
 
@@ -50,6 +50,7 @@ type UseRealtimeIncomingCallStateArgs = {
   setServerVideoEffectType: Dispatch<SetStateAction<ServerVideoEffectType>>;
   setServerVideoResolution: Dispatch<SetStateAction<ServerVideoResolution>>;
   setServerVideoFps: Dispatch<SetStateAction<10 | 15 | 24 | 30>>;
+  setServerScreenShareResolution: Dispatch<SetStateAction<ServerScreenShareResolution>>;
   setServerVideoPixelFxStrength: Dispatch<SetStateAction<number>>;
   setServerVideoPixelFxPixelSize: Dispatch<SetStateAction<number>>;
   setServerVideoPixelFxGridThickness: Dispatch<SetStateAction<number>>;
@@ -94,6 +95,7 @@ export function useRealtimeIncomingCallState({
   setServerVideoEffectType,
   setServerVideoResolution,
   setServerVideoFps,
+  setServerScreenShareResolution,
   setServerVideoPixelFxStrength,
   setServerVideoPixelFxPixelSize,
   setServerVideoPixelFxGridThickness,
@@ -115,6 +117,7 @@ export function useRealtimeIncomingCallState({
       effectType?: unknown;
       resolution?: unknown;
       fps?: unknown;
+      screenShareResolution?: unknown;
       pixelFxStrength?: unknown;
       pixelFxPixelSize?: unknown;
       pixelFxGridThickness?: unknown;
@@ -152,6 +155,11 @@ export function useRealtimeIncomingCallState({
     const fps = Number(settings.fps);
     if (fps === 10 || fps === 15 || fps === 24 || fps === 30) {
       setServerVideoFps(fps);
+    }
+
+    const screenShareResolution = String(settings.screenShareResolution || "").trim();
+    if (screenShareResolution === "hd" || screenShareResolution === "fullhd" || screenShareResolution === "max") {
+      setServerScreenShareResolution(screenShareResolution);
     }
 
     const pixelFxStrength = normalizeIntInRange(settings.pixelFxStrength, 0, 100);
@@ -202,6 +210,7 @@ export function useRealtimeIncomingCallState({
     setServerVideoAsciiContrast,
     setServerVideoEffectType,
     setServerVideoFps,
+    setServerScreenShareResolution,
     setServerVideoPixelFxGridThickness,
     setServerVideoPixelFxPixelSize,
     setServerVideoPixelFxStrength,

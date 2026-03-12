@@ -10,6 +10,7 @@ type UsePersistedClientSettingsArgs = {
   serverVideoEffectType: "none" | "pixel8" | "ascii";
   serverVideoResolution: string;
   serverVideoFps: 10 | 15 | 24 | 30;
+  serverScreenShareResolution: "hd" | "fullhd" | "max";
   serverVideoPixelFxStrength: number;
   serverVideoPixelFxPixelSize: number;
   serverVideoPixelFxGridThickness: number;
@@ -30,6 +31,7 @@ export function usePersistedClientSettings({
   serverVideoEffectType,
   serverVideoResolution,
   serverVideoFps,
+  serverScreenShareResolution,
   serverVideoPixelFxStrength,
   serverVideoPixelFxPixelSize,
   serverVideoPixelFxGridThickness,
@@ -75,6 +77,10 @@ export function usePersistedClientSettings({
   useEffect(() => {
     localStorage.setItem("boltorezka_server_video_fps", String(serverVideoFps));
   }, [serverVideoFps]);
+
+  useEffect(() => {
+    localStorage.setItem("boltorezka_server_screen_share_resolution", serverScreenShareResolution);
+  }, [serverScreenShareResolution]);
 
   useEffect(() => {
     localStorage.setItem("boltorezka_server_video_fx_strength", String(serverVideoPixelFxStrength));

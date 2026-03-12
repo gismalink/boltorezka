@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import type { ServerVideoEffectType } from "../rtc/voiceCallTypes";
+import type { ServerScreenShareResolution, ServerVideoEffectType } from "../rtc/voiceCallTypes";
 
 type SendWsEvent = (
   eventType: string,
@@ -18,6 +18,7 @@ type UseVoiceSignalingOrchestratorArgs = {
   serverVideoEffectType: ServerVideoEffectType;
   serverVideoResolution: string;
   serverVideoFps: 10 | 15 | 24 | 30;
+  serverScreenShareResolution: ServerScreenShareResolution;
   serverVideoPixelFxStrength: number;
   serverVideoPixelFxPixelSize: number;
   serverVideoPixelFxGridThickness: number;
@@ -42,6 +43,7 @@ export function useVoiceSignalingOrchestrator({
   serverVideoEffectType,
   serverVideoResolution,
   serverVideoFps,
+  serverScreenShareResolution,
   serverVideoPixelFxStrength,
   serverVideoPixelFxPixelSize,
   serverVideoPixelFxGridThickness,
@@ -83,7 +85,7 @@ export function useVoiceSignalingOrchestrator({
   }, [audioMuted, currentRoomSupportsRtc, micMuted, micTestLevel, roomVoiceConnected, sendWsEvent]);
 
   useEffect(() => {
-    if (!currentRoomSupportsRtc || !roomVoiceConnected || !canManageAudioQuality) {
+    if (!currentRoomSupportsRtc || !canManageAudioQuality) {
       return;
     }
 
@@ -98,7 +100,8 @@ export function useVoiceSignalingOrchestrator({
       asciiContrast: serverVideoAsciiContrast,
       asciiColor: serverVideoAsciiColor,
       windowMinWidth: Math.min(serverVideoWindowMinWidth, serverVideoWindowMaxWidth),
-      windowMaxWidth: Math.max(serverVideoWindowMinWidth, serverVideoWindowMaxWidth)
+      windowMaxWidth: Math.max(serverVideoWindowMinWidth, serverVideoWindowMaxWidth),
+      screenShareResolution: serverScreenShareResolution
     };
 
     const serialized = JSON.stringify({ payload, audience: videoPolicyAudienceKey });
@@ -110,11 +113,11 @@ export function useVoiceSignalingOrchestrator({
     sendWsEvent("call.video_state", { settings: payload }, { maxRetries: 1 });
   }, [
     currentRoomSupportsRtc,
-    roomVoiceConnected,
     canManageAudioQuality,
     serverVideoEffectType,
     serverVideoResolution,
     serverVideoFps,
+    serverScreenShareResolution,
     serverVideoPixelFxStrength,
     serverVideoPixelFxPixelSize,
     serverVideoPixelFxGridThickness,

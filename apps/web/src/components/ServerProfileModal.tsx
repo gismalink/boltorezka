@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import type { AudioQuality, TelemetrySummary, User } from "../domain";
-import type { ServerVideoEffectType } from "../hooks/rtc/voiceCallTypes";
+import type { ServerScreenShareResolution, ServerVideoEffectType } from "../hooks/rtc/voiceCallTypes";
 
 type ServerMenuTab = "users" | "events" | "telemetry" | "call" | "sound" | "video" | "chat_images";
 
@@ -28,6 +28,7 @@ type ServerProfileModalProps = {
   serverVideoEffectType: ServerVideoEffectType;
   serverVideoResolution: "160x120" | "320x240" | "640x480";
   serverVideoFps: 10 | 15 | 24 | 30;
+  serverScreenShareResolution: ServerScreenShareResolution;
   serverVideoPixelFxStrength: number;
   serverVideoPixelFxPixelSize: number;
   serverVideoPixelFxGridThickness: number;
@@ -47,6 +48,7 @@ type ServerProfileModalProps = {
   onSetServerVideoEffectType: (value: ServerVideoEffectType) => void;
   onSetServerVideoResolution: (value: "160x120" | "320x240" | "640x480") => void;
   onSetServerVideoFps: (value: 10 | 15 | 24 | 30) => void;
+  onSetServerScreenShareResolution: (value: ServerScreenShareResolution) => void;
   onSetServerVideoPixelFxStrength: (value: number) => void;
   onSetServerVideoPixelFxPixelSize: (value: number) => void;
   onSetServerVideoPixelFxGridThickness: (value: number) => void;
@@ -77,6 +79,7 @@ export function ServerProfileModal({
   serverVideoEffectType,
   serverVideoResolution,
   serverVideoFps,
+  serverScreenShareResolution,
   serverVideoPixelFxStrength,
   serverVideoPixelFxPixelSize,
   serverVideoPixelFxGridThickness,
@@ -96,6 +99,7 @@ export function ServerProfileModal({
   onSetServerVideoEffectType,
   onSetServerVideoResolution,
   onSetServerVideoFps,
+  onSetServerScreenShareResolution,
   onSetServerVideoPixelFxStrength,
   onSetServerVideoPixelFxPixelSize,
   onSetServerVideoPixelFxGridThickness,
@@ -422,6 +426,36 @@ export function ServerProfileModal({
                       {fps} FPS
                     </button>
                   ))}
+                </div>
+              </div>
+
+              <div className="grid gap-2">
+                <span>{t("server.screenShareResolution")}</span>
+                <div className="quality-toggle-group" role="radiogroup" aria-label={t("server.screenShareResolution")}>
+                  <button
+                    type="button"
+                    className={`secondary quality-toggle-btn ${serverScreenShareResolution === "hd" ? "quality-toggle-btn-active" : ""}`}
+                    onClick={() => onSetServerScreenShareResolution("hd")}
+                    aria-pressed={serverScreenShareResolution === "hd"}
+                  >
+                    {t("server.screenShareHd")}
+                  </button>
+                  <button
+                    type="button"
+                    className={`secondary quality-toggle-btn ${serverScreenShareResolution === "fullhd" ? "quality-toggle-btn-active" : ""}`}
+                    onClick={() => onSetServerScreenShareResolution("fullhd")}
+                    aria-pressed={serverScreenShareResolution === "fullhd"}
+                  >
+                    {t("server.screenShareFullhd")}
+                  </button>
+                  <button
+                    type="button"
+                    className={`secondary quality-toggle-btn ${serverScreenShareResolution === "max" ? "quality-toggle-btn-active" : ""}`}
+                    onClick={() => onSetServerScreenShareResolution("max")}
+                    aria-pressed={serverScreenShareResolution === "max"}
+                  >
+                    {t("server.screenShareMax")}
+                  </button>
                 </div>
               </div>
 

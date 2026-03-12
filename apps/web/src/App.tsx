@@ -70,7 +70,11 @@ import type {
   TelemetrySummary,
   User
 } from "./domain";
-import type { ServerVideoEffectType } from "./hooks/rtc/voiceCallTypes";
+import type {
+  ServerScreenShareResolution,
+  ServerVideoEffectType,
+  ServerVideoResolution
+} from "./hooks/rtc/voiceCallTypes";
 import type { RnnoiseSuppressionLevel } from "./hooks/rtc/rnnoiseAudioProcessor";
 
 const MAX_CHAT_RETRIES = 3;
@@ -82,8 +86,6 @@ const ROOM_SLUG_STORAGE_KEY = "boltorezka_room_slug";
 const CLIENT_BUILD_VERSION = String(import.meta.env.VITE_APP_VERSION || "").trim();
 const CLIENT_BUILD_DATE = String(import.meta.env.VITE_APP_BUILD_DATE || "").trim();
 const CLIENT_BUILD_DATE_LABEL = CLIENT_BUILD_DATE ? `v.${CLIENT_BUILD_DATE}` : "";
-
-type ServerVideoResolution = "160x120" | "320x240" | "640x480";
 
 export function App() {
   const [token, setToken] = useState(localStorage.getItem("boltorezka_token") || "");
@@ -199,6 +201,13 @@ export function App() {
       return value;
     }
     return 15;
+  });
+  const [serverScreenShareResolution, setServerScreenShareResolution] = useState<ServerScreenShareResolution>(() => {
+    const value = localStorage.getItem("boltorezka_server_screen_share_resolution");
+    if (value === "hd" || value === "fullhd" || value === "max") {
+      return value;
+    }
+    return "fullhd";
   });
   const [serverVideoPixelFxStrength, setServerVideoPixelFxStrength] = useState(() => {
     const value = Number(localStorage.getItem("boltorezka_server_video_fx_strength"));
@@ -365,6 +374,10 @@ export function App() {
     roomSlug,
     allowVideoStreaming,
     videoStreamingEnabled: cameraEnabled,
+    videoResolution: serverVideoResolution,
+    videoFps: serverVideoFps,
+    screenShareResolution: serverScreenShareResolution,
+    audioQuality: effectiveAudioQuality,
     roomVoiceTargets: currentRoomVoiceTargets,
     selectedInputId,
     selectedInputProfile,
@@ -452,6 +465,7 @@ export function App() {
     serverVideoEffectType,
     serverVideoResolution,
     serverVideoFps,
+    serverScreenShareResolution,
     serverVideoPixelFxStrength,
     serverVideoPixelFxPixelSize,
     serverVideoPixelFxGridThickness,
@@ -473,6 +487,7 @@ export function App() {
     serverVideoEffectType,
     serverVideoResolution,
     serverVideoFps,
+    serverScreenShareResolution,
     serverVideoPixelFxStrength,
     serverVideoPixelFxPixelSize,
     serverVideoPixelFxGridThickness,
@@ -678,6 +693,7 @@ export function App() {
     setServerVideoEffectType,
     setServerVideoResolution,
     setServerVideoFps,
+    setServerScreenShareResolution,
     setServerVideoPixelFxStrength,
     setServerVideoPixelFxPixelSize,
     setServerVideoPixelFxGridThickness,
@@ -1699,6 +1715,7 @@ export function App() {
         serverVideoEffectType={serverVideoEffectType}
         serverVideoResolution={serverVideoResolution}
         serverVideoFps={serverVideoFps}
+        serverScreenShareResolution={serverScreenShareResolution}
         serverVideoPixelFxStrength={serverVideoPixelFxStrength}
         serverVideoPixelFxPixelSize={serverVideoPixelFxPixelSize}
         serverVideoPixelFxGridThickness={serverVideoPixelFxGridThickness}
@@ -1718,6 +1735,7 @@ export function App() {
         onSetServerVideoEffectType={setServerVideoEffectType}
         onSetServerVideoResolution={setServerVideoResolution}
         onSetServerVideoFps={setServerVideoFps}
+        onSetServerScreenShareResolution={setServerScreenShareResolution}
         onSetServerVideoPixelFxStrength={setServerVideoPixelFxStrength}
         onSetServerVideoPixelFxPixelSize={setServerVideoPixelFxPixelSize}
         onSetServerVideoPixelFxGridThickness={setServerVideoPixelFxGridThickness}
