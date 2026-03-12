@@ -65,6 +65,7 @@ services:
         VITE_RTC_RECONNECT_MAX_DELAY_MS: ${TEST_VITE_RTC_RECONNECT_MAX_DELAY_MS:-8000}
         VITE_APP_VERSION: ${TEST_VITE_APP_VERSION:-}
         VITE_APP_BUILD_DATE: ${TEST_VITE_APP_BUILD_DATE:-}
+      VITE_AUTH_COOKIE_MODE: ${TEST_AUTH_COOKIE_MODE:-0}
     image: boltorezka-api:test
     container_name: boltorezka-api-test
     restart: unless-stopped
@@ -202,6 +203,7 @@ services:
         VITE_RTC_RECONNECT_MAX_DELAY_MS: ${PROD_VITE_RTC_RECONNECT_MAX_DELAY_MS:-8000}
         VITE_APP_VERSION: ${PROD_VITE_APP_VERSION:-}
         VITE_APP_BUILD_DATE: ${PROD_VITE_APP_BUILD_DATE:-}
+      VITE_AUTH_COOKIE_MODE: ${PROD_AUTH_COOKIE_MODE:-0}
     image: boltorezka-api:prod
     container_name: boltorezka-api-prod
     restart: unless-stopped

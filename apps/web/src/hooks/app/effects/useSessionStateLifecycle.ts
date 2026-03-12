@@ -12,6 +12,10 @@ import type {
 } from "../../../domain";
 import type { RealtimeClient, RoomAdminController } from "../../../services";
 
+// When built with VITE_AUTH_COOKIE_MODE=1 the HttpOnly cookie is the primary
+// session mechanism. localStorage is not used for token persistence.
+const COOKIE_MODE = import.meta.env.VITE_AUTH_COOKIE_MODE === "1";
+
 type UseSessionStateLifecycleArgs = {
   token: string;
   roomAdminController: RoomAdminController;
@@ -127,6 +131,7 @@ export function useSessionStateLifecycle({
       .then(({ token: refreshedToken }) => {
         const jwt = String(refreshedToken || "").trim();
         if (jwt) {
+          if (COOKIE_MODE) localStorage.removeItem("boltorezka_token");
           setToken(jwt);
           // bootstrapSessionState fires automatically via the token useEffect
         } else {
@@ -144,7 +149,7 @@ export function useSessionStateLifecycle({
   }, [pushLog, resetSessionState, setToken]);
 
   const bootstrapSessionState = useCallback((nextToken: string) => {
-    localStorage.setItem("boltorezka_token", nextToken);
+    if (!COOKIE_MODE) localStorage.setItem("boltorezka_token", nextToken);
 
     api.me(nextToken)
       .then((res) => setUser(res.user))
@@ -155,7 +160,7 @@ export function useSessionStateLifecycle({
             const refreshedToken = String(refreshed.token || "").trim();
             if (refreshedToken) {
               setToken(refreshedToken);
-              localStorage.setItem("boltorezka_token", refreshedToken);
+              if (!COOKIE_MODE) localStorage.setItem("boltorezka_token", refreshedToken);
               const me = await api.me(refreshedToken);
               setUser(me.user);
               return;
@@ -203,13 +208,14 @@ export function useSessionStateLifecycle({
 
   useEffect(() => {
     if (!token) {
-      const persistedToken = localStorage.getItem("boltorezka_token");
-      if (persistedToken) {
-        setToken(persistedToken);
-        bootstrapSessionState(persistedToken);
-        return;
+      if (!COOKIE_MODE) {
+        const persistedToken = localStorage.getItem("boltorezka_token");
+        if (persistedToken) {
+          setToken(persistedToken);
+          bootstrapSessionState(persistedToken);
+          return;
+        }
       }
-
       bootstrapCookieSessionState();
       return;
     }
