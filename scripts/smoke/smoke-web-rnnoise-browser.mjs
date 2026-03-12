@@ -46,16 +46,47 @@ async function assertNoCrash(page, runtimeErrors) {
 }
 
 async function openSoundSettings(page, runtimeErrors) {
-  const caretButton = page.locator(".split-caret-btn").first();
-  await caretButton.waitFor({ state: "visible", timeout: timeoutMs });
-  await caretButton.click({ timeout: timeoutMs });
+  const voiceSettingsBtn = page.getByRole("button", { name: /voice settings|настройки голоса/i }).first();
 
-  const voiceSettingsBtn = page.getByRole("button", { name: /voice settings|настройки голоса/i });
-  await voiceSettingsBtn.waitFor({ state: "visible", timeout: timeoutMs });
-  await voiceSettingsBtn.click({ timeout: timeoutMs });
+  // Path A: open split menu and click "Voice Settings".
+  if (await voiceSettingsBtn.count() === 0 || !(await voiceSettingsBtn.isVisible().catch(() => false))) {
+    const caretButtons = page.locator(".split-caret-btn");
+    const caretCount = await caretButtons.count();
+    let opened = false;
+    for (let i = 0; i < caretCount; i += 1) {
+      const candidate = caretButtons.nth(i);
+      const visible = await candidate.isVisible().catch(() => false);
+      if (!visible) {
+        continue;
+      }
+      await candidate.click({ timeout: timeoutMs });
+      if (await voiceSettingsBtn.isVisible().catch(() => false)) {
+        opened = true;
+        break;
+      }
+    }
+
+    // Path B: open generic user settings and switch to Sound tab.
+    if (!opened && !(await voiceSettingsBtn.isVisible().catch(() => false))) {
+      const userSettingsBtn = page.getByRole("button", { name: /user settings|настройки пользователя/i }).first();
+      if (await userSettingsBtn.count() > 0 && await userSettingsBtn.isVisible().catch(() => false)) {
+        await userSettingsBtn.click({ timeout: timeoutMs });
+      }
+    }
+  }
+
+  if (await voiceSettingsBtn.count() > 0 && await voiceSettingsBtn.isVisible().catch(() => false)) {
+    await voiceSettingsBtn.click({ timeout: timeoutMs });
+  }
 
   const settingsModal = page.locator(".user-settings-modal").first();
   await settingsModal.waitFor({ state: "visible", timeout: timeoutMs });
+
+  const soundTab = settingsModal.getByRole("button", { name: /sound|звук/i }).first();
+  if (await soundTab.count() > 0 && await soundTab.isVisible().catch(() => false)) {
+    await soundTab.click({ timeout: timeoutMs });
+  }
+
   await assertNoCrash(page, runtimeErrors);
   return settingsModal;
 }
