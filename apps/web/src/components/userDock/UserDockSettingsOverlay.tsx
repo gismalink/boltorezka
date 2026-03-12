@@ -227,31 +227,16 @@ export function UserDockSettingsOverlay({
                 </button>
               </div>
 
-              <div className="voice-preferences-grid grid gap-3 desktop:grid-cols-2">
-                <label className="grid gap-[var(--space-md)]">
-                  <span className="subheading">{t("settings.microphone")}</span>
-                  <select value={selectedInputId} disabled={mediaDevicesUnavailable} onChange={(event) => onSetSelectedInputId(event.target.value)}>
-                    {inputOptions.map((device) => (
-                      <option key={device.id} value={device.id}>{device.label}</option>
-                    ))}
-                  </select>
-                </label>
-                <label className="grid gap-[var(--space-md)]">
-                  <span className="subheading">{t("settings.speaker")}</span>
-                  <select value={selectedOutputId} disabled={mediaDevicesUnavailable} onChange={(event) => onSetSelectedOutputId(event.target.value)}>
-                    {outputOptions.map((device) => (
-                      <option key={device.id} value={device.id}>{device.label}</option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-
-              {mediaDevicesUnavailable ? (
-                <p className="muted media-devices-warning">{mediaDevicesWarningText}</p>
-              ) : null}
-
               <div className="voice-preferences-grid grid gap-[var(--space-md)] desktop:grid-cols-2">
                 <div className="grid gap-[var(--space-md)]">
+                  <label className="grid gap-[var(--space-md)]">
+                    <span className="subheading">{t("settings.microphone")}</span>
+                    <select value={selectedInputId} disabled={mediaDevicesUnavailable} onChange={(event) => onSetSelectedInputId(event.target.value)}>
+                      {inputOptions.map((device) => (
+                        <option key={device.id} value={device.id}>{device.label}</option>
+                      ))}
+                    </select>
+                  </label>
                   <RangeSlider
                     min={0}
                     max={100}
@@ -262,6 +247,14 @@ export function UserDockSettingsOverlay({
                   />
                 </div>
                 <div className="grid gap-[var(--space-md)]">
+                  <label className="grid gap-[var(--space-md)]">
+                    <span className="subheading">{t("settings.speaker")}</span>
+                    <select value={selectedOutputId} disabled={mediaDevicesUnavailable} onChange={(event) => onSetSelectedOutputId(event.target.value)}>
+                      {outputOptions.map((device) => (
+                        <option key={device.id} value={device.id}>{device.label}</option>
+                      ))}
+                    </select>
+                  </label>
                   <RangeSlider
                     min={0}
                     max={100}
@@ -272,6 +265,10 @@ export function UserDockSettingsOverlay({
                   />
                 </div>
               </div>
+
+              {mediaDevicesUnavailable ? (
+                <p className="muted media-devices-warning">{mediaDevicesWarningText}</p>
+              ) : null}
 
               <div className="voice-test-row grid gap-2">
                 <div className="subheading">{t("settings.micTest")}</div>
