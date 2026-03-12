@@ -72,6 +72,18 @@ async function openSoundSettings(page, runtimeErrors) {
       if (await userSettingsBtn.count() > 0 && await userSettingsBtn.isVisible().catch(() => false)) {
         await userSettingsBtn.click({ timeout: timeoutMs });
       }
+
+      // Path C: open profile menu in the header and launch user settings.
+      if (!(await page.locator(".user-settings-modal:visible").first().isVisible().catch(() => false))) {
+        const profileIcon = page.locator(".profile-icon").first();
+        if (await profileIcon.count() > 0 && await profileIcon.isVisible().catch(() => false)) {
+          await profileIcon.click({ timeout: timeoutMs });
+          const profileSettingsBtn = page.getByRole("button", { name: /user settings|настройки пользователя/i }).first();
+          if (await profileSettingsBtn.count() > 0 && await profileSettingsBtn.isVisible().catch(() => false)) {
+            await profileSettingsBtn.click({ timeout: timeoutMs });
+          }
+        }
+      }
     }
   }
 
@@ -79,7 +91,7 @@ async function openSoundSettings(page, runtimeErrors) {
     await voiceSettingsBtn.click({ timeout: timeoutMs });
   }
 
-  const settingsModal = page.locator(".user-settings-modal").first();
+  const settingsModal = page.locator(".user-settings-modal:visible").first();
   await settingsModal.waitFor({ state: "visible", timeout: timeoutMs });
 
   const soundTab = settingsModal.getByRole("button", { name: /sound|звук/i }).first();
