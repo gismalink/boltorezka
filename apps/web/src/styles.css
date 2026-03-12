@@ -49,6 +49,16 @@
   --danger-btn-bg: #4a1d2a;
   --danger-banner-bg: color-mix(in srgb, var(--pixel-panel) 86%, #000 14%);
   --danger-banner-text: #ffd9e8;
+  --provider-google-bg: #ea4335;
+  --provider-yandex-bg: #ff0000;
+  --provider-text-color: #ffffff;
+  --overlay-backdrop-bg: rgba(0, 0, 0, 0.75);
+  --video-grid-line-color: rgba(0, 0, 0, 0.14);
+  --slider-fill-hi-1: #ffffff;
+  --slider-fill-hi-2: #9ad3ff;
+  --slider-track-low-2: #061a2b;
+  --slider-thumb-hi: #bce7ff;
+  --room-btn-depth-mix: color-mix(in srgb, var(--pixel-panel-2) 82%, var(--pixel-depth-color) 18%);
 
   --space-xxs: 2px;
   --space-xs: 4px;
@@ -122,6 +132,16 @@
   --danger-btn-bg: #fee2e2;
   --danger-banner-bg: #fff1f2;
   --danger-banner-text: #9f1239;
+  --provider-google-bg: #ea4335;
+  --provider-yandex-bg: #ff0000;
+  --provider-text-color: #ffffff;
+  --overlay-backdrop-bg: rgba(15, 23, 42, 0.46);
+  --video-grid-line-color: rgba(15, 23, 42, 0.12);
+  --slider-fill-hi-1: #dbeafe;
+  --slider-fill-hi-2: #bfdbfe;
+  --slider-track-low-2: #dbe6f2;
+  --slider-thumb-hi: #eaf3ff;
+  --room-btn-depth-mix: color-mix(in srgb, var(--pixel-panel-2) 92%, var(--pixel-depth-color) 8%);
 }
 
 [data-ui-theme="material-classic"] body {
@@ -198,7 +218,7 @@
   display: grid;
   place-items: center;
   padding: 16px;
-  background: rgba(0, 0, 0, 0.75);
+  background: var(--overlay-backdrop-bg);
 }
 
 .chat-image-modal-card {
@@ -292,8 +312,8 @@
     hue-rotate(calc((var(--video-pixel-strength) / 100) * -8deg));
   transform: translateZ(0);
   background-image:
-    linear-gradient(to right, rgba(0, 0, 0, 0.14) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(0, 0, 0, 0.14) 1px, transparent 1px);
+    linear-gradient(to right, var(--video-grid-line-color) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--video-grid-line-color) 1px, transparent 1px);
   background-size: var(--video-pixel-size) var(--video-pixel-size);
 }
 
@@ -452,9 +472,9 @@ textarea {
   height: var(--range-track-height);
   border: var(--border-thin) solid color-mix(in srgb, var(--pixel-neon-cyan) 48%, transparent 52%);
   background:
-    linear-gradient(90deg, color-mix(in srgb, var(--pixel-neon-cyan) 80%, #fff 20%), color-mix(in srgb, var(--pixel-neon-cyan) 72%, #9ad3ff 28%))
+    linear-gradient(90deg, color-mix(in srgb, var(--pixel-neon-cyan) 80%, var(--slider-fill-hi-1) 20%), color-mix(in srgb, var(--pixel-neon-cyan) 72%, var(--slider-fill-hi-2) 28%))
       0 0 / var(--range-progress) 100% no-repeat,
-    linear-gradient(90deg, color-mix(in srgb, var(--pixel-panel-2) 78%, #000 22%), color-mix(in srgb, var(--pixel-panel-2) 70%, #061a2b 30%));
+    linear-gradient(90deg, color-mix(in srgb, var(--pixel-panel-2) 78%, var(--pixel-depth-color) 22%), color-mix(in srgb, var(--pixel-panel-2) 70%, var(--slider-track-low-2) 30%));
   box-shadow:
     inset 0 0 0 1px var(--pixel-inset-stroke),
     2px 2px 0 var(--pixel-hard-shadow);
@@ -473,7 +493,7 @@ textarea {
 .range-slider-input::-moz-range-track {
   height: var(--range-track-height);
   border: var(--border-thin) solid color-mix(in srgb, var(--pixel-neon-cyan) 48%, transparent 52%);
-  background: linear-gradient(90deg, color-mix(in srgb, var(--pixel-panel-2) 78%, #000 22%), color-mix(in srgb, var(--pixel-panel-2) 70%, #061a2b 30%));
+  background: linear-gradient(90deg, color-mix(in srgb, var(--pixel-panel-2) 78%, var(--pixel-depth-color) 22%), color-mix(in srgb, var(--pixel-panel-2) 70%, var(--slider-track-low-2) 30%));
   box-shadow:
     inset 0 0 0 1px var(--pixel-inset-stroke),
     2px 2px 0 var(--pixel-hard-shadow);
@@ -482,7 +502,7 @@ textarea {
 .range-slider-input::-moz-range-progress {
   height: var(--range-track-height);
   border: var(--border-thin) solid color-mix(in srgb, var(--pixel-neon-cyan) 48%, transparent 52%);
-  background: linear-gradient(90deg, color-mix(in srgb, var(--pixel-neon-cyan) 80%, #fff 20%), color-mix(in srgb, var(--pixel-neon-cyan) 72%, #9ad3ff 28%));
+  background: linear-gradient(90deg, color-mix(in srgb, var(--pixel-neon-cyan) 80%, var(--slider-fill-hi-1) 20%), color-mix(in srgb, var(--pixel-neon-cyan) 72%, var(--slider-fill-hi-2) 28%));
 }
 
 .range-slider-input::-moz-range-thumb {
@@ -507,7 +527,7 @@ textarea {
   line-height: 1;
   color: var(--pixel-text);
   border: var(--border-strong) solid var(--pixel-neon-cyan);
-  background: color-mix(in srgb, var(--pixel-panel-2) 55%, #bce7ff 45%);
+  background: color-mix(in srgb, var(--pixel-panel-2) 55%, var(--slider-thumb-hi) 45%);
   box-shadow:
     0 0 0 1px var(--pixel-neon-pink),
     2px 2px 0 var(--pixel-hard-shadow);
@@ -838,13 +858,13 @@ pre {
 }
 
 .provider-google {
-  background: #ea4335;
-  color: #ffffff;
+  background: var(--provider-google-bg);
+  color: var(--provider-text-color);
 }
 
 .provider-yandex {
-  background: #ff0000;
-  color: #ffffff;
+  background: var(--provider-yandex-bg);
+  color: var(--provider-text-color);
 }
 
 .tooltip-bubble {
@@ -928,7 +948,7 @@ pre {
   gap: var(--space-sm);
   border: 0;
   box-shadow: none;
-  background: color-mix(in srgb, var(--pixel-panel-2) 82%, #000 18%);
+  background: var(--room-btn-depth-mix);
   padding: var(--space-sm) var(--space-md);
   font-size: calc(var(--font-size-sm) + 0.02rem);
   line-height: 1.2;
