@@ -288,14 +288,12 @@ export function UserDockSettingsOverlay({
                   <span>{t("settings.listenSelf")}</span>
                   <button
                     type="button"
-                    className={`ui-switch ${selfMonitorEnabled ? "ui-switch-on" : ""}`}
-                    role="switch"
-                    aria-checked={selfMonitorEnabled}
-                    aria-label={t("settings.listenSelf")}
-                    data-tooltip={selfMonitorEnabled ? t("settings.listenSelfOn") : t("settings.listenSelfOff")}
+                    className={`secondary quality-toggle-btn ${selfMonitorEnabled ? "quality-toggle-btn-active" : ""}`}
+                    aria-pressed={selfMonitorEnabled}
+                    aria-label="mic test"
                     onClick={onToggleSelfMonitor}
                   >
-                    <span className="ui-switch-thumb" aria-hidden="true" />
+                    mic test
                   </button>
                 </div>
                 <div className="voice-sound-checkbox flex items-center justify-between gap-3">

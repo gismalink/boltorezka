@@ -975,6 +975,14 @@ export function App() {
     pushToast
   });
 
+  useEffect(() => {
+    if (userSettingsOpen && userSettingsTab === "sound") {
+      return;
+    }
+
+    setSelfMonitorEnabled(false);
+  }, [userSettingsOpen, userSettingsTab]);
+
   usePopupOutsideClose({
     isAnyPopupOpen: Boolean(
       profileMenuOpen
