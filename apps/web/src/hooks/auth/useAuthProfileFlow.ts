@@ -85,10 +85,6 @@ export function useAuthProfileFlow({
 
   const saveMyProfile = async (event: FormEvent) => {
     event.preventDefault();
-    if (!token) {
-      return;
-    }
-
     const trimmedName = profileNameDraft.trim();
     if (!trimmedName) {
       setProfileStatusText(t("profile.saveError"));

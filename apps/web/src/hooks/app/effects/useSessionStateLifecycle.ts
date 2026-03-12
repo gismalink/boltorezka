@@ -118,49 +118,30 @@ export function useSessionStateLifecycle({
     setVoiceInitialMicStateByUserIdInCurrentRoom
   ]);
 
+  // In cookie-mode the page may reload with token="" while the user is still
+  // authenticated via HttpOnly cookie. Use authRefresh (which reads the cookie)
+  // to obtain a real JWT, then put it in state — this re-establishes the full
+  // bearer flow so all existing !token guards across the app work correctly.
   const bootstrapCookieSessionState = useCallback(() => {
-    api.me("")
-      .then((res) => setUser(res.user))
+    api.authRefresh("")
+      .then(({ token: refreshedToken }) => {
+        const jwt = String(refreshedToken || "").trim();
+        if (jwt) {
+          setToken(jwt);
+          // bootstrapSessionState fires automatically via the token useEffect
+        } else {
+          resetSessionState();
+        }
+      })
       .catch((error) => {
         if (error instanceof ApiError && error.status === 401) {
-          setToken("");
+          resetSessionState();
           return;
         }
-        pushLog(`cookie-session validation failed: ${error.message}`);
-        setToken("");
+        pushLog(`cookie-session bootstrap failed: ${error.message}`);
+        resetSessionState();
       });
-
-    api.rooms("")
-      .then((res) => setRooms(res.rooms))
-      .catch((error) => pushLog(`rooms failed: ${error.message}`));
-
-    api.serverAudioQuality("")
-      .then((res) => setServerAudioQuality(res.audioQuality))
-      .catch((error) => pushLog(`server audio quality failed: ${error.message}`));
-
-    api.serverChatImagePolicy("")
-      .then((res) => {
-        setServerChatImagePolicy({
-          maxDataUrlLength: Math.max(8000, Math.min(250000, Math.round(Number(res.maxDataUrlLength) || defaultChatImageDataUrlLength))),
-          maxImageSide: Math.max(256, Math.min(4096, Math.round(Number(res.maxImageSide) || defaultChatImageMaxSide))),
-          jpegQuality: Math.max(0.3, Math.min(0.95, Number(res.jpegQuality) || defaultChatImageQuality))
-        });
-      })
-      .catch((error) => pushLog(`server chat image policy failed: ${error.message}`));
-
-    void roomAdminController.loadRoomTree("");
-  }, [
-    defaultChatImageDataUrlLength,
-    defaultChatImageMaxSide,
-    defaultChatImageQuality,
-    pushLog,
-    roomAdminController,
-    setRooms,
-    setServerAudioQuality,
-    setServerChatImagePolicy,
-    setToken,
-    setUser
-  ]);
+  }, [pushLog, resetSessionState, setToken]);
 
   const bootstrapSessionState = useCallback((nextToken: string) => {
     localStorage.setItem("boltorezka_token", nextToken);
