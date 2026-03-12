@@ -18,6 +18,14 @@
   --pixel-neon-gold: #e57f12;
   --pixel-shadow: #140812;
   --pixel-hard-shadow: #07060a;
+  --pixel-inset-stroke: #0b1430;
+  --scrollbar-thumb-bg: #cf4a86;
+  --scrollbar-thumb-border: #140812;
+  --scrollbar-track-bg: #140812;
+  --heading-color: #eaffff;
+  --heading-shadow: 1px 1px 0 var(--pixel-hard-shadow), -1px 0 0 var(--pixel-neon-cyan);
+  --app-title-color: #eff8ff;
+  --app-title-shadow: 2px 2px 0 var(--pixel-hard-shadow), -2px 0 0 var(--pixel-neon-cyan), 2px 0 0 var(--pixel-neon-pink);
 
   --space-xxs: 2px;
   --space-xs: 4px;
@@ -60,6 +68,21 @@
   --pixel-neon-gold: #ca8a04;
   --pixel-shadow: #94a3b8;
   --pixel-hard-shadow: rgba(15, 23, 42, 0.12);
+  --pixel-inset-stroke: #d4deeb;
+  --scrollbar-thumb-bg: #9aa8bc;
+  --scrollbar-thumb-border: #e2e8f0;
+  --scrollbar-track-bg: #e8edf5;
+  --heading-color: #1f2937;
+  --heading-shadow: none;
+  --app-title-color: #1f2937;
+  --app-title-shadow: none;
+}
+
+[data-ui-theme="material-classic"] body {
+  background:
+    radial-gradient(1000px 600px at 25% -8%, rgba(37, 99, 235, 0.14), rgba(255, 255, 255, 0) 58%),
+    radial-gradient(1000px 700px at 100% 100%, rgba(100, 116, 139, 0.12), rgba(255, 255, 255, 0) 62%),
+    linear-gradient(180deg, #f7f9fd 0%, #eef3f9 100%);
 }
 
 [data-ui-theme="material-classic"] button,
@@ -331,8 +354,8 @@ h1,
 h2,
 h3 {
   font-family: "Jersey 25", "Press Start 2P", "VT323", Inter, system-ui, sans-serif;
-  color: #eaffff;
-  text-shadow: 1px 1px 0 var(--pixel-hard-shadow), -1px 0 0 var(--pixel-neon-cyan);
+  color: var(--heading-color);
+  text-shadow: var(--heading-shadow);
 }
 
 button,
@@ -348,7 +371,7 @@ textarea {
   font-size: var(--font-size-sm);
   line-height: 1.3;
   box-shadow:
-    inset 0 0 0 1px #0b1430,
+    inset 0 0 0 1px var(--pixel-inset-stroke),
     2px 2px 0 var(--pixel-hard-shadow);
 }
 
@@ -387,7 +410,7 @@ textarea {
       0 0 / var(--range-progress) 100% no-repeat,
     linear-gradient(90deg, color-mix(in srgb, var(--pixel-panel-2) 78%, #000 22%), color-mix(in srgb, var(--pixel-panel-2) 70%, #061a2b 30%));
   box-shadow:
-    inset 0 0 0 1px #0b1430,
+    inset 0 0 0 1px var(--pixel-inset-stroke),
     2px 2px 0 var(--pixel-hard-shadow);
 }
 
@@ -406,7 +429,7 @@ textarea {
   border: var(--border-thin) solid color-mix(in srgb, var(--pixel-neon-cyan) 48%, transparent 52%);
   background: linear-gradient(90deg, color-mix(in srgb, var(--pixel-panel-2) 78%, #000 22%), color-mix(in srgb, var(--pixel-panel-2) 70%, #061a2b 30%));
   box-shadow:
-    inset 0 0 0 1px #0b1430,
+    inset 0 0 0 1px var(--pixel-inset-stroke),
     2px 2px 0 var(--pixel-hard-shadow);
 }
 
@@ -606,12 +629,12 @@ pre {
 }
 
 *::-webkit-scrollbar-thumb {
-  background: #cf4a86;
-  border: var(--border-strong) solid #140812;
+  background: var(--scrollbar-thumb-bg);
+  border: var(--border-strong) solid var(--scrollbar-thumb-border);
 }
 
 *::-webkit-scrollbar-track {
-  background: #140812;
+  background: var(--scrollbar-track-bg);
 }
 
 .app {
@@ -631,11 +654,39 @@ pre {
 .app-title {
   margin: 0;
   font-size: 28px;
-  color: #eff8ff;
-  text-shadow:
-    2px 2px 0 var(--pixel-hard-shadow),
-    -2px 0 0 var(--pixel-neon-cyan),
-    2px 0 0 var(--pixel-neon-pink);
+  color: var(--app-title-color);
+  text-shadow: var(--app-title-shadow);
+}
+
+[data-ui-theme="material-classic"] .range-slider-input::-webkit-slider-runnable-track {
+  border: var(--border-thin) solid color-mix(in srgb, var(--pixel-border) 82%, transparent 18%);
+  background:
+    linear-gradient(90deg, #3b82f6, #2563eb) 0 0 / var(--range-progress) 100% no-repeat,
+    linear-gradient(90deg, #ecf1f8, #dde6f1);
+  box-shadow:
+    inset 0 0 0 1px var(--pixel-inset-stroke),
+    0 1px 2px rgba(15, 23, 42, 0.1);
+}
+
+[data-ui-theme="material-classic"] .range-slider-input::-moz-range-track {
+  border: var(--border-thin) solid color-mix(in srgb, var(--pixel-border) 82%, transparent 18%);
+  background: linear-gradient(90deg, #ecf1f8, #dde6f1);
+  box-shadow:
+    inset 0 0 0 1px var(--pixel-inset-stroke),
+    0 1px 2px rgba(15, 23, 42, 0.1);
+}
+
+[data-ui-theme="material-classic"] .range-slider-input::-moz-range-progress {
+  border: var(--border-thin) solid color-mix(in srgb, var(--pixel-border) 82%, transparent 18%);
+  background: linear-gradient(90deg, #3b82f6, #2563eb);
+}
+
+[data-ui-theme="material-classic"] .range-slider-thumb-value {
+  border-color: #2563eb;
+  background: #f8fbff;
+  box-shadow:
+    0 0 0 1px #93c5fd,
+    0 2px 6px rgba(37, 99, 235, 0.18);
 }
 
 .logo-version {
