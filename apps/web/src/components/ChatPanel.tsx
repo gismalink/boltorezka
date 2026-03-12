@@ -224,9 +224,9 @@ export function ChatPanel({
           const createdAtTs = Number(new Date(message.created_at));
           const canManageOwnMessage = isOwn && Number.isFinite(createdAtTs) && (Date.now() - createdAtTs) <= 10 * 60 * 1000;
           const deliveryClass = message.deliveryStatus === "sending"
-            ? "text-[#ffd166]"
+            ? "delivery-sending"
             : message.deliveryStatus === "delivered"
-              ? "text-[#d4f0ff]"
+              ? "delivery-delivered"
               : message.deliveryStatus === "failed"
                 ? "text-[var(--pixel-danger)]"
                 : "";
