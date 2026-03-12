@@ -95,7 +95,11 @@ async function fetchJson<T>(path: string, token?: string, init: RequestInit = {}
     headers["content-type"] = "application/json";
   }
 
-  const response = await fetch(path, { ...init, headers });
+  const response = await fetch(path, {
+    credentials: "include",
+    ...init,
+    headers
+  });
   const payload = await response.json().catch(() => ({}));
 
   if (!response.ok) {

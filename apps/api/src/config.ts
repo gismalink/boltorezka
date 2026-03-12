@@ -42,6 +42,13 @@ const parseBoolean = (value: unknown, defaultValue: boolean): boolean => {
 const authMode = (process.env.AUTH_MODE || "sso").toLowerCase() === "local" ? "local" : "sso";
 const livekitEnabledRaw = parseBoolean(process.env.LIVEKIT_ENABLED, true);
 const livekitTokenTtlSecRaw = Number.parseInt(String(process.env.LIVEKIT_TOKEN_TTL_SEC || "1800"), 10);
+const authSessionCookieSameSiteRaw = String(process.env.AUTH_SESSION_COOKIE_SAMESITE || "Lax").trim().toLowerCase();
+const authSessionCookieSameSite: "Lax" | "Strict" | "None" = authSessionCookieSameSiteRaw === "strict"
+  ? "Strict"
+  : authSessionCookieSameSiteRaw === "none"
+    ? "None"
+    : "Lax";
+const authSessionCookieMaxAgeSecRaw = Number.parseInt(String(process.env.AUTH_SESSION_COOKIE_MAX_AGE_SEC || `${60 * 60 * 24 * 30}`), 10);
 
 export const config: AppConfig = {
   port: Number(process.env.PORT || 8080),
@@ -55,6 +62,15 @@ export const config: AppConfig = {
     /\/+$/,
     ""
   ),
+  authCookieMode: parseBoolean(process.env.AUTH_COOKIE_MODE, false),
+  authSessionCookieName: String(process.env.AUTH_SESSION_COOKIE_NAME || "boltorezka_session").trim() || "boltorezka_session",
+  authSessionCookieSecure: parseBoolean(process.env.AUTH_SESSION_COOKIE_SECURE, true),
+  authSessionCookieSameSite,
+  authSessionCookieDomain: String(process.env.AUTH_SESSION_COOKIE_DOMAIN || "").trim(),
+  authSessionCookiePath: String(process.env.AUTH_SESSION_COOKIE_PATH || "/").trim() || "/",
+  authSessionCookieMaxAgeSec: Number.isFinite(authSessionCookieMaxAgeSecRaw) && authSessionCookieMaxAgeSecRaw > 0
+    ? authSessionCookieMaxAgeSecRaw
+    : 60 * 60 * 24 * 30,
   allowedReturnHosts: parseCsv(process.env.ALLOWED_RETURN_HOSTS),
   superAdminEmail: String(process.env.SUPER_ADMIN_EMAIL || "gismalink@gmail.com")
     .trim()

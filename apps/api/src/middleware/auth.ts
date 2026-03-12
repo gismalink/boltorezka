@@ -1,11 +1,12 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { db } from "../db.js";
 import type { UserRow } from "../db.types.ts";
+import { config } from "../config.js";
 
 function unauthorized(reply: FastifyReply) {
   return reply.code(401).send({
     error: "Unauthorized",
-    message: "Valid bearer token is required"
+    message: "Valid auth session is required"
   });
 }
 
@@ -34,9 +35,62 @@ async function resolveCurrentUser(request: FastifyRequest) {
   return result.rows[0];
 }
 
+function resolveBearerToken(headerValue: unknown): string | null {
+  const raw = String(headerValue || "").trim();
+  const match = raw.match(/^Bearer\s+(.+)$/i);
+  if (!match) {
+    return null;
+  }
+  const token = String(match[1] || "").trim();
+  return token || null;
+}
+
+function readCookieValue(cookieHeader: unknown, cookieName: string): string | null {
+  const raw = String(cookieHeader || "");
+  if (!raw) {
+    return null;
+  }
+
+  const parts = raw.split(";");
+  for (const part of parts) {
+    const [name, ...rest] = part.split("=");
+    if (String(name || "").trim() !== cookieName) {
+      continue;
+    }
+
+    const value = rest.join("=").trim();
+    if (!value) {
+      return null;
+    }
+
+    try {
+      return decodeURIComponent(value);
+    } catch {
+      return value;
+    }
+  }
+
+  return null;
+}
+
 export async function requireAuth(request: FastifyRequest, reply: FastifyReply) {
+  const bearerToken = resolveBearerToken(request.headers.authorization);
+  const cookieToken = config.authCookieMode
+    ? readCookieValue(request.headers.cookie, config.authSessionCookieName)
+    : null;
+  const authToken = bearerToken || cookieToken;
+
+  if (!authToken) {
+    return unauthorized(reply);
+  }
+
   try {
-    await request.jwtVerify();
+    if (bearerToken) {
+      await request.jwtVerify();
+    } else {
+      const payload = await request.server.jwt.verify(authToken);
+      request.user = payload as typeof request.user;
+    }
   } catch {
     return unauthorized(reply);
   }

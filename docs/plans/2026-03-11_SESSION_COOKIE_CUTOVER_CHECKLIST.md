@@ -19,13 +19,13 @@
 - [ ] Cookie policy определена: `HttpOnly`, `Secure`, `SameSite`, `Domain`, `Path`, `Max-Age`.
 - [ ] CSRF strategy утверждена (минимум: `SameSite` + state-changing endpoint protection).
 - [ ] Session fixation защита проверена (новый sid при login/refresh policy).
-- [ ] Logout/revoke инвалидирует server-side session state.
+- [x] Logout/revoke инвалидирует server-side session state.
 - [ ] Ограничения по CORS + credentialed requests документированы.
 
 ## 2) API and auth backend changes
 
 - [ ] Единый session contract для login/refresh/logout/revoke зафиксирован.
-- [ ] Cookie issuance реализована в auth endpoints.
+- [x] Cookie issuance реализована в auth endpoints.
 - [ ] Refresh rotation и replay-protection подтверждены.
 - [ ] TTL/expiry policy согласована (access vs refresh vs ws-ticket).
 - [ ] Error taxonomy не ломает текущий API/WS contract.
@@ -34,8 +34,8 @@
 ## 3) Web client cutover
 
 - [ ] Auth bootstrap переведен на cookie flow (без localStorage как primary).
-- [ ] Все auth-запросы используют `credentials` policy, совместимую с cookie-mode.
-- [ ] Legacy bearer path оставлен только как временный fallback (feature flag).
+- [x] Все auth-запросы используют `credentials` policy, совместимую с cookie-mode.
+- [x] Legacy bearer path оставлен только как временный fallback (feature flag).
 - [ ] UI/UX сценарии login/logout/session-expired не деградировали.
 - [ ] Авто-восстановление сессии после refresh работает в cookie-mode.
 
@@ -72,9 +72,11 @@
 ## 8) Rollout plan
 
 ### Phase A - Preparation (test only)
-- [ ] Ввести feature flag `AUTH_COOKIE_MODE` (или эквивалент) в test.
-- [ ] Включить dual-path (cookie primary + bearer fallback) на ограниченный период.
+- [x] Ввести feature flag `AUTH_COOKIE_MODE` (или эквивалент) в test.
+- [x] Включить dual-path (cookie primary + bearer fallback) на ограниченный период.
 - [ ] Зафиксировать baseline метрики до включения cookie-mode.
+
+Progress note (2026-03-12): backend реализует `AUTH_COOKIE_MODE` с HttpOnly session-cookie issuance/clear на `sso/session|refresh|logout`; `requireAuth` поддерживает cookie token + bearer fallback. Включение флага на test и smoke-подтверждение остаются отдельным шагом.
 
 ### Phase B - Cookie primary on test
 - [ ] Включить cookie primary на test.
