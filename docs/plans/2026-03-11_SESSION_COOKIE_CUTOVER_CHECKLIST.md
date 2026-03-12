@@ -57,7 +57,7 @@
 ## 6) Security hardening bundle (related)
 
 - [ ] CSP обновлен под cookie-mode и проверен без false-positive breakage.
-- [ ] Убраны лишние места хранения auth-состояния в localStorage/sessionStorage.
+- [x] Убраны лишние места хранения auth-состояния в localStorage/sessionStorage: в cookie-mode отключены localStorage read/write для `boltorezka_token` (включая init в `App.tsx` и lifecycle bootstrap), сохранён только fallback path при `VITE_AUTH_COOKIE_MODE=0`.
 - [ ] Structured logs содержат `requestId/userId/sessionId` для auth-flow.
 - [ ] Audit trail на login/refresh/logout/revoke достаточен для расследований.
 
