@@ -303,7 +303,6 @@ export function UserDockControls({
                           <i className={`bi ${selectedInputId === device.id ? "bi-record-circle-fill" : "bi-circle"}`} aria-hidden="true" />
                         </button>
                       ))}
-                      <button type="button" className="secondary device-item justify-start text-left">{t("settings.showMore")}</button>
                     </div>
                   </div>
                 </PopupPortal>

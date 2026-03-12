@@ -1709,7 +1709,7 @@ pre {
   align-self: end;
 }
 
-.slider-label input[type="range"] {
+.slider-label input[type="range"]:not(.range-slider-input) {
   width: 100%;
 }
 
