@@ -8,11 +8,28 @@ const bearerToken = String(process.env.SMOKE_TEST_BEARER_TOKEN || "").trim();
 const appUrl = `${baseUrl}/`;
 const crashMessage = "UI crashed unexpectedly. Please reload and try again.";
 
-async function assertNoCrash(page) {
+async function isVisible(locator) {
+  const count = await locator.count();
+  if (count === 0) {
+    return false;
+  }
+  return locator.first().isVisible();
+}
+
+async function assertNoCrash(page, runtimeErrors) {
   const crashLocator = page.getByText(crashMessage, { exact: true });
-  const count = await crashLocator.count();
-  if (count > 0 && (await crashLocator.first().isVisible())) {
+  if (await isVisible(crashLocator)) {
     throw new Error(`error boundary message is visible: ${crashMessage}`);
+  }
+
+  const reloadUiButton = page.getByRole("button", { name: /reload ui/i });
+  if (await isVisible(reloadUiButton)) {
+    throw new Error("error boundary fallback button is visible: Reload UI");
+  }
+
+  const renderError = runtimeErrors.find((message) => /\[web\]\s+unhandled render error/i.test(message));
+  if (renderError) {
+    throw new Error(`render error logged to console: ${renderError}`);
   }
 }
 
@@ -37,7 +54,7 @@ async function openSoundSettingsFlow(page) {
   for (let i = 0; i < Math.min(switchCount, 4); i += 1) {
     await switches.nth(i).click({ timeout: timeoutMs });
     await page.waitForTimeout(150);
-    await assertNoCrash(page);
+    await assertNoCrash(page, []);
   }
 
   // Exercise RNNoise level buttons when visible.
@@ -47,50 +64,80 @@ async function openSoundSettingsFlow(page) {
     if (await levelBtn.count()) {
       await levelBtn.click({ timeout: timeoutMs });
       await page.waitForTimeout(150);
-      await assertNoCrash(page);
+      await assertNoCrash(page, []);
     }
   }
 
   return true;
 }
 
+async function bootCheck(page, runtimeErrors, label) {
+  await page.goto(appUrl, { waitUntil: "domcontentloaded", timeout: timeoutMs });
+  await page.locator("#root").waitFor({ state: "visible", timeout: timeoutMs });
+
+  // Check repeatedly during first render/effect window to catch startup crashes.
+  for (let i = 0; i < 6; i += 1) {
+    await page.waitForTimeout(500);
+    await assertNoCrash(page, runtimeErrors);
+  }
+
+  console.log(`- startup path ok (${label})`);
+}
+
 async function main() {
   const browser = await chromium.launch({ headless: true });
-  const context = await browser.newContext();
-  const page = await context.newPage();
   const runtimeErrors = [];
 
-  page.on("pageerror", (error) => {
-    runtimeErrors.push(String(error?.message || error));
-  });
+  const buildTrackedPage = async (token) => {
+    const context = await browser.newContext();
+    const page = await context.newPage();
+
+    page.on("pageerror", (error) => {
+      runtimeErrors.push(String(error?.message || error));
+    });
+
+    page.on("console", (msg) => {
+      if (msg.type() === "error") {
+        runtimeErrors.push(msg.text());
+      }
+    });
+
+    await page.addInitScript((presetToken) => {
+      localStorage.setItem("boltorezka_lang", "en");
+      if (presetToken) {
+        localStorage.setItem("boltorezka_token", presetToken);
+      } else {
+        localStorage.removeItem("boltorezka_token");
+      }
+    }, token);
+
+    return { context, page };
+  };
 
   try {
-    await page.addInitScript((token) => {
-      if (token) {
-        localStorage.setItem("boltorezka_token", token);
-      }
-      localStorage.setItem("boltorezka_lang", "en");
-    }, bearerToken);
+    const anonymous = await buildTrackedPage("");
+    await bootCheck(anonymous.page, runtimeErrors, "anonymous");
+    await anonymous.context.close();
 
-    await page.goto(appUrl, { waitUntil: "domcontentloaded", timeout: timeoutMs });
-    await page.locator("#root").waitFor({ state: "visible", timeout: timeoutMs });
-
-    // Allow app effects to settle, then assert that the ErrorBoundary fallback never appears.
-    await page.waitForTimeout(2000);
-    await assertNoCrash(page);
-    await openSoundSettingsFlow(page);
-    await page.waitForTimeout(2000);
-    await assertNoCrash(page);
+    if (bearerToken) {
+      const authenticated = await buildTrackedPage(bearerToken);
+      await bootCheck(authenticated.page, runtimeErrors, "authenticated");
+      await openSoundSettingsFlow(authenticated.page);
+      await assertNoCrash(authenticated.page, runtimeErrors);
+      await authenticated.context.close();
+    }
 
     if (runtimeErrors.length > 0) {
       throw new Error(`runtime page errors detected: ${runtimeErrors.slice(0, 3).join(" | ")}`);
     }
 
     console.log("[smoke:web:crash-boundary:browser] ok");
-    console.log("- app root visible");
-    console.log("- error boundary fallback is not visible at boot and after sound-settings interactions");
+    console.log("- error boundary fallback is not visible on startup");
+    console.log("- runtime console/page errors were not observed");
+    if (bearerToken) {
+      console.log("- sound settings interaction path passed");
+    }
   } finally {
-    await context.close();
     await browser.close();
   }
 }
