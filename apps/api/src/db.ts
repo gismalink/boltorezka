@@ -16,6 +16,10 @@ export async function ensureSchema() {
   await db.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT 'user'");
   await db.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_banned BOOLEAN NOT NULL DEFAULT FALSE");
   await db.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS username TEXT");
+  await db.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS ui_theme TEXT NOT NULL DEFAULT '8-neon-bit'");
+  await db.query("UPDATE users SET ui_theme = '8-neon-bit' WHERE ui_theme IS NULL OR coalesce(trim(ui_theme), '') = ''");
+  await db.query("ALTER TABLE users DROP CONSTRAINT IF EXISTS users_ui_theme_check");
+  await db.query("ALTER TABLE users ADD CONSTRAINT users_ui_theme_check CHECK (ui_theme IN ('8-neon-bit', 'material-classic'))");
   await db.query(
     "UPDATE users SET username = split_part(email, '@', 1) WHERE coalesce(trim(username), '') = '' AND coalesce(trim(email), '') <> ''"
   );

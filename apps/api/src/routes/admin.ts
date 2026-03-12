@@ -27,7 +27,7 @@ const serverAudioQualitySchema = z.object({
 
 async function loadUserById(userId: string) {
   const result = await db.query<UserRow>(
-    "SELECT id, email, name, role, is_banned, created_at FROM users WHERE id = $1",
+    "SELECT id, email, username, name, ui_theme, role, is_banned, created_at FROM users WHERE id = $1",
     [userId]
   );
   return result.rows[0] || null;
@@ -162,7 +162,7 @@ export async function adminRoutes(fastify: FastifyInstance) {
     },
     async () => {
       const result = await db.query<UserRow>(
-        `SELECT id, email, name, role, is_banned, created_at
+        `SELECT id, email, username, name, ui_theme, role, is_banned, created_at
          FROM users
          ORDER BY created_at ASC`
       );
@@ -213,7 +213,7 @@ export async function adminRoutes(fastify: FastifyInstance) {
         `UPDATE users
          SET role = 'admin'
          WHERE id = $1
-         RETURNING id, email, name, role, is_banned, created_at`,
+         RETURNING id, email, username, name, ui_theme, role, is_banned, created_at`,
         [userId]
       );
 
@@ -272,7 +272,7 @@ export async function adminRoutes(fastify: FastifyInstance) {
         `UPDATE users
          SET role = 'user'
          WHERE id = $1
-         RETURNING id, email, name, role, is_banned, created_at`,
+         RETURNING id, email, username, name, ui_theme, role, is_banned, created_at`,
         [userId]
       );
 
@@ -322,7 +322,7 @@ export async function adminRoutes(fastify: FastifyInstance) {
         `UPDATE users
          SET is_banned = TRUE
          WHERE id = $1
-         RETURNING id, email, name, role, is_banned, created_at`,
+         RETURNING id, email, username, name, ui_theme, role, is_banned, created_at`,
         [userId]
       );
 
@@ -357,7 +357,7 @@ export async function adminRoutes(fastify: FastifyInstance) {
         `UPDATE users
          SET is_banned = FALSE
          WHERE id = $1
-         RETURNING id, email, name, role, is_banned, created_at`,
+         RETURNING id, email, username, name, ui_theme, role, is_banned, created_at`,
         [userId]
       );
 

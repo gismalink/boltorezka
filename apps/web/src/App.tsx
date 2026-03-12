@@ -68,6 +68,7 @@ import type {
   RoomKind,
   RoomsTreeResponse,
   TelemetrySummary,
+  UiTheme,
   User
 } from "./domain";
 import type {
@@ -83,6 +84,7 @@ const DEFAULT_CHAT_IMAGE_MAX_SIDE = 1200;
 const DEFAULT_CHAT_IMAGE_QUALITY = 0.6;
 const DEFAULT_MIC_VOLUME = 75;
 const DEFAULT_OUTPUT_VOLUME = 70;
+const DEFAULT_UI_THEME: UiTheme = "8-neon-bit";
 const MESSAGE_EDIT_DELETE_WINDOW_MS = 10 * 60 * 1000;
 const ROOM_SLUG_STORAGE_KEY = "boltorezka_room_slug";
 const CLIENT_BUILD_VERSION = String(import.meta.env.VITE_APP_VERSION || "").trim();
@@ -102,6 +104,10 @@ function readNonZeroDefaultVolume(storageKey: string, fallback: number): number 
 
   const normalized = Math.max(0, Math.min(100, Math.round(parsed)));
   return normalized === 0 ? fallback : normalized;
+}
+
+function normalizeUiTheme(value: unknown): UiTheme {
+  return value === "material-classic" ? "material-classic" : DEFAULT_UI_THEME;
 }
 
 export function App() {
@@ -150,6 +156,9 @@ export function App() {
   const [micMuted, setMicMuted] = useState<boolean>(() => localStorage.getItem("boltorezka_mic_muted") !== "0");
   const [audioMuted, setAudioMuted] = useState<boolean>(() => localStorage.getItem("boltorezka_audio_muted") === "1");
   const [lang, setLang] = useState<Lang>(() => detectInitialLang());
+  const [selectedUiTheme, setSelectedUiTheme] = useState<UiTheme>(() =>
+    normalizeUiTheme(localStorage.getItem("boltorezka_ui_theme"))
+  );
   const [profileNameDraft, setProfileNameDraft] = useState("");
   const [profileStatusText, setProfileStatusText] = useState("");
   const [rnnoiseRuntimeStatus, setRnnoiseRuntimeStatus] = useState<"inactive" | "active" | "unavailable" | "error">("inactive");
@@ -732,6 +741,7 @@ export function App() {
     authMode,
     autoSsoAttemptedRef,
     profileNameDraft,
+    selectedUiTheme,
     t,
     setAuthMode,
     setAuthMenuOpen,
@@ -754,6 +764,11 @@ export function App() {
   }, [lang]);
 
   useEffect(() => {
+    document.documentElement.setAttribute("data-ui-theme", selectedUiTheme);
+    localStorage.setItem("boltorezka_ui_theme", selectedUiTheme);
+  }, [selectedUiTheme]);
+
+  useEffect(() => {
     const mediaQuery = window.matchMedia("(max-width: 800px)");
     const apply = (matches: boolean) => {
       setIsMobileViewport(matches);
@@ -770,6 +785,7 @@ export function App() {
 
   useEffect(() => {
     setProfileNameDraft(user?.name || "");
+    setSelectedUiTheme(normalizeUiTheme(user?.ui_theme));
     setProfileStatusText("");
   }, [user]);
 
@@ -1452,6 +1468,7 @@ export function App() {
     profileSaving,
     profileStatusText,
     selectedLang: lang,
+    selectedUiTheme,
     languageOptions: LANGUAGE_OPTIONS,
     inputOptions,
     outputOptions,
@@ -1491,6 +1508,7 @@ export function App() {
     onSetUserSettingsTab: setUserSettingsTab,
     onSetProfileNameDraft: setProfileNameDraft,
     onSetSelectedLang: setLang,
+    onSetSelectedUiTheme: setSelectedUiTheme,
     onSaveProfile: saveMyProfile,
     onSetSelectedInputId: setSelectedInputId,
     onSetSelectedOutputId: setSelectedOutputId,

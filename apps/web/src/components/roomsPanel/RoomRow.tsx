@@ -1,6 +1,7 @@
 import { type DragEvent, useEffect, useRef, useState } from "react";
 import type { ChannelAudioQualitySetting, Room, RoomKind, RoomMemberPreference } from "../../domain";
 import { PopupPortal } from "../PopupPortal";
+import { RangeSlider } from "../RangeSlider";
 import type { RoomsPanelProps } from "../types";
 import type { RoomMember } from "./roomMembers";
 
@@ -483,13 +484,13 @@ export function RoomRow({
                           <div className="subheading">{member.userName}</div>
                           <label className="slider-label grid gap-1.5">
                             {t("rooms.personalVolume")}: {volumeValue}%
-                            <input
-                              type="range"
+                            <RangeSlider
                               min={0}
                               max={100}
                               value={volumeValue}
-                              onChange={(event) => {
-                                const nextVolume = Math.max(0, Math.min(100, Number(event.target.value) || 0));
+                              valueSuffix="%"
+                              onChange={(nextValue) => {
+                                const nextVolume = Math.max(0, Math.min(100, Number(nextValue) || 0));
                                 setMemberPreferenceDrafts((prev) => ({
                                   ...prev,
                                   [member.userId as string]: {

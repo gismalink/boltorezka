@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { PopupPortal } from "../PopupPortal";
+import { RangeSlider } from "../RangeSlider";
 import type { UserDockProps } from "../types";
 
 type UserDockControlsProps = Pick<
@@ -257,13 +258,13 @@ export function UserDockControls({
 
                 <label className="slider-label grid gap-2">
                   {t("settings.micVolume")}
-                  <input
-                    type="range"
+                  <RangeSlider
                     min={0}
                     max={100}
                     value={micVolume}
                     disabled={mediaControlsLocked}
-                    onChange={(event) => onSetMicVolume(Number(event.target.value))}
+                    valueSuffix="%"
+                    onChange={onSetMicVolume}
                   />
                 </label>
 
@@ -381,13 +382,13 @@ export function UserDockControls({
                 ) : null}
                 <label className="slider-label grid gap-2">
                   {t("settings.soundVolume")}
-                  <input
-                    type="range"
+                  <RangeSlider
                     min={0}
                     max={100}
                     value={outputVolume}
                     disabled={mediaControlsLocked}
-                    onChange={(event) => onSetOutputVolume(Number(event.target.value))}
+                    valueSuffix="%"
+                    onChange={onSetOutputVolume}
                   />
                 </label>
                 <button

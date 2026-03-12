@@ -59,6 +59,19 @@
 - [ ] Реализовать canary rollout только в `test` и smoke-check сценарий «voice with RNNoise on/off».
 - [ ] После canary обновить runbook и критерии включения по умолчанию.
 
+## UI Themes (добавлено 2026-03-12)
+
+- [x] Создана feature-ветка для UI-итераций (`feature/slider-thumb-fill-value`).
+- [x] Добавить поле `users.ui_theme` в БД + CHECK constraint (`8-neon-bit` | `material-classic`).
+- [x] Прокинуть `ui_theme` через API контракты пользователя (`/v1/auth/me`, `PATCH /v1/auth/me`, SSO session).
+- [x] Добавить в профиль пользователя выбор темы интерфейса (default: `8-Neon-Bit`).
+- [x] Реализовать вторую тему (`material-classic`) в frontend-стилях.
+- [x] Сохранение выбора темы на бэке через обновление профиля.
+- [x] Применение темы при логине/refresh + fallback из localStorage до загрузки профиля.
+- [x] Smoke-check в `test`: смена темы, перезаход, тема сохраняется.
+- [x] Дополнительный UI-pass: убраны оставшиеся hardcoded стили в кнопках/панелях/чате/camera-controls, вынесены в theme tokens.
+- [x] Дополнительный UI-pass: точечный аудит Tailwind usage (гибридный режим сохранён как целевой).
+
 ## Правила выполнения
 
 - Все изменения только через feature branch + GitOps.
