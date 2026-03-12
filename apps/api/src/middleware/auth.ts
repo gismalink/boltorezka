@@ -23,7 +23,7 @@ async function resolveCurrentUser(request: FastifyRequest) {
   }
 
   const result = await db.query<UserRow>(
-    "SELECT id, email, name, role, is_banned, created_at FROM users WHERE id = $1",
+    "SELECT id, email, username, name, ui_theme, role, is_banned, created_at FROM users WHERE id = $1",
     [userId]
   );
 

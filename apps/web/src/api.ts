@@ -148,7 +148,7 @@ export const api = {
   authRefresh: (token: string) => fetchJson<{ token: string; user: User | null }>(endpoints.authRefresh, token, withJsonBody("POST")),
   authLogout: (token: string) => fetchJson<{ ok: true }>(endpoints.authLogout, token, withJsonBody("POST")),
   me: (token: string) => fetchJson<{ user: User | null }>(endpoints.me, token),
-  updateMe: (token: string, input: { name: string }) =>
+  updateMe: (token: string, input: { name: string; uiTheme?: "8-neon-bit" | "material-classic" }) =>
     fetchJson<{ user: User | null }>(endpoints.me, token, withJsonBody("PATCH", input)),
   wsTicket: (token: string) => fetchJson<{ ticket: string; expiresInSec: number }>(endpoints.wsTicket, token),
   livekitToken: (

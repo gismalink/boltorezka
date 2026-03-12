@@ -3,11 +3,14 @@ export type AuthModeResponse = {
   ssoBaseUrl: string;
 };
 
+export type UiTheme = "8-neon-bit" | "material-classic";
+
 export type User = {
   id: string;
   email: string;
   username: string | null;
   name: string;
+  ui_theme: UiTheme;
   role: "user" | "admin" | "super_admin";
   is_banned: boolean;
   created_at: string;

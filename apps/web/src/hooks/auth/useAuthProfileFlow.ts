@@ -10,6 +10,7 @@ type UseAuthProfileFlowArgs = {
   authMode: string;
   autoSsoAttemptedRef: MutableRefObject<boolean>;
   profileNameDraft: string;
+  selectedUiTheme: "8-neon-bit" | "material-classic";
   t: (key: string) => string;
   setAuthMode: (value: string) => void;
   setAuthMenuOpen: (value: boolean) => void;
@@ -32,6 +33,7 @@ export function useAuthProfileFlow({
   authMode,
   autoSsoAttemptedRef,
   profileNameDraft,
+  selectedUiTheme,
   t,
   setAuthMode,
   setAuthMenuOpen,
@@ -97,7 +99,10 @@ export function useAuthProfileFlow({
     setProfileStatusText("");
 
     try {
-      const response = await api.updateMe(token, { name: trimmedName });
+      const response = await api.updateMe(token, {
+        name: trimmedName,
+        uiTheme: selectedUiTheme
+      });
       if (response.user) {
         setUser(response.user);
       }

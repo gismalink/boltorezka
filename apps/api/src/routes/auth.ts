@@ -15,8 +15,10 @@ import type {
 } from "../api-contract.types.ts";
 
 const ssoProviderSchema = z.enum(["google", "yandex"]);
+const uiThemeSchema = z.enum(["8-neon-bit", "material-classic"]);
 const updateProfileSchema = z.object({
-  name: z.string().trim().min(1).max(80)
+  name: z.string().trim().min(1).max(80),
+  uiTheme: uiThemeSchema.optional()
 });
 const livekitTokenSchema = z.object({
   roomSlug: z.string().trim().min(1).max(80),
@@ -184,7 +186,7 @@ async function upsertSsoUser(profile: Record<string, unknown> | null | undefined
   const isSuperAdmin = normalizedEmail === config.superAdminEmail;
 
   const existing = await db.query<UserRow>(
-    "SELECT id, email, username, name, role, is_banned, created_at FROM users WHERE email = $1",
+    "SELECT id, email, username, name, ui_theme, role, is_banned, created_at FROM users WHERE email = $1",
     [normalizedEmail]
   );
 
@@ -196,7 +198,7 @@ async function upsertSsoUser(profile: Record<string, unknown> | null | undefined
          name = $2,
          role = CASE WHEN $3 THEN 'super_admin' ELSE role END
        WHERE email = $1
-       RETURNING id, email, username, name, role, is_banned, created_at`,
+       RETURNING id, email, username, name, ui_theme, role, is_banned, created_at`,
       [normalizedEmail, displayName, isSuperAdmin, normalizedUsername]
     );
 
@@ -208,7 +210,7 @@ async function upsertSsoUser(profile: Record<string, unknown> | null | undefined
   const created = await db.query<UserRow>(
     `INSERT INTO users (email, password_hash, username, name, role)
      VALUES ($1, $2, $3, $4, $5)
-     RETURNING id, email, username, name, role, is_banned, created_at`,
+     RETURNING id, email, username, name, ui_theme, role, is_banned, created_at`,
     [normalizedEmail, "__sso_only__", normalizedUsername, displayName, newRole]
   );
 
@@ -381,7 +383,7 @@ export async function authRoutes(fastify: FastifyInstance) {
       }
 
       const userResult = await db.query<UserCompactRow>(
-        "SELECT id, email, name, role, is_banned FROM users WHERE id = $1",
+        "SELECT id, email, username, name, ui_theme, role, is_banned FROM users WHERE id = $1",
         [userId]
       );
 
@@ -560,7 +562,7 @@ export async function authRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest) => {
       const userId = String(request.user?.sub || "").trim();
       const result = await db.query<UserRow>(
-        "SELECT id, email, username, name, role, is_banned, created_at FROM users WHERE id = $1",
+        "SELECT id, email, username, name, ui_theme, role, is_banned, created_at FROM users WHERE id = $1",
         [userId]
       );
 
@@ -600,10 +602,11 @@ export async function authRoutes(fastify: FastifyInstance) {
 
       const updated = await db.query<UserRow>(
         `UPDATE users
-         SET name = $2
+         SET name = $2,
+             ui_theme = COALESCE($3, ui_theme)
          WHERE id = $1
-         RETURNING id, email, username, name, role, is_banned, created_at`,
-        [userId, parsed.data.name]
+         RETURNING id, email, username, name, ui_theme, role, is_banned, created_at`,
+        [userId, parsed.data.name, parsed.data.uiTheme ?? null]
       );
 
       if (updated.rowCount === 0) {

@@ -1,6 +1,6 @@
 import type { FormEvent, RefObject } from "react";
 import type { Lang, TranslateFn } from "../i18n";
-import type { ChannelAudioQualitySetting, PresenceMember, Room, RoomKind, RoomMemberPreference, RoomsTreeResponse, User } from "../domain";
+import type { ChannelAudioQualitySetting, PresenceMember, Room, RoomKind, RoomMemberPreference, RoomsTreeResponse, UiTheme, User } from "../domain";
 import type { VoiceMediaStatusSummary } from "../hooks/rtc/voiceCallTypes";
 import type { RnnoiseSuppressionLevel } from "../hooks/rtc/rnnoiseAudioProcessor";
 
@@ -42,6 +42,7 @@ export type UserDockProps = {
   profileSaving: boolean;
   profileStatusText: string;
   selectedLang: Lang;
+  selectedUiTheme: UiTheme;
   languageOptions: Array<{ value: Lang; label: string }>;
   inputOptions: DeviceOption[];
   outputOptions: DeviceOption[];
@@ -79,6 +80,7 @@ export type UserDockProps = {
   onSetUserSettingsTab: (value: "profile" | "sound" | "camera" | "server_sounds") => void;
   onSetProfileNameDraft: (value: string) => void;
   onSetSelectedLang: (value: Lang) => void;
+  onSetSelectedUiTheme: (value: UiTheme) => void;
   onSaveProfile: (event: FormEvent) => void;
   onSetSelectedInputId: (value: string) => void;
   onSetSelectedOutputId: (value: string) => void;

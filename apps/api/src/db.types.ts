@@ -1,10 +1,12 @@
 export type UserRole = "user" | "admin" | "super_admin";
+export type UiTheme = "8-neon-bit" | "material-classic";
 
 export type UserRow = {
   id: string;
   email: string;
   username: string | null;
   name: string;
+  ui_theme: UiTheme;
   role: UserRole;
   is_banned: boolean;
   created_at: string;
@@ -15,6 +17,7 @@ export type UserCompactRow = {
   email: string;
   username: string | null;
   name: string;
+  ui_theme: UiTheme;
   role: UserRole;
   is_banned: boolean;
 };

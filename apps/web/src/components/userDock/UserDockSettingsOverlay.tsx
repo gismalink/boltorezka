@@ -19,8 +19,10 @@ type UserDockSettingsOverlayProps = Pick<
   | "onSaveProfile"
   | "onSetProfileNameDraft"
   | "selectedLang"
+  | "selectedUiTheme"
   | "languageOptions"
   | "onSetSelectedLang"
+  | "onSetSelectedUiTheme"
   | "inputOptions"
   | "outputOptions"
   | "selectedInputId"
@@ -74,8 +76,10 @@ export function UserDockSettingsOverlay({
   onSaveProfile,
   onSetProfileNameDraft,
   selectedLang,
+  selectedUiTheme,
   languageOptions,
   onSetSelectedLang,
+  onSetSelectedUiTheme,
   inputOptions,
   outputOptions,
   selectedInputId,
@@ -187,6 +191,13 @@ export function UserDockSettingsOverlay({
                     {languageOptions.map((option) => (
                       <option key={option.value} value={option.value}>{option.label}</option>
                     ))}
+                  </select>
+                </label>
+                <label className="grid gap-[var(--space-md)]">
+                  <span className="subheading">{t("settings.theme")}</span>
+                  <select value={selectedUiTheme} onChange={(event) => onSetSelectedUiTheme(event.target.value as "8-neon-bit" | "material-classic") }>
+                    <option value="8-neon-bit">{t("settings.theme8NeonBit")}</option>
+                    <option value="material-classic">{t("settings.themeMaterialClassic")}</option>
                   </select>
                 </label>
               </div>

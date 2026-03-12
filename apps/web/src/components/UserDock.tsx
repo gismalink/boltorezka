@@ -32,6 +32,7 @@ export function UserDock({
   profileSaving,
   profileStatusText,
   selectedLang,
+  selectedUiTheme,
   languageOptions,
   inputOptions,
   outputOptions,
@@ -69,6 +70,7 @@ export function UserDock({
   onSetUserSettingsTab,
   onSetProfileNameDraft,
   onSetSelectedLang,
+  onSetSelectedUiTheme,
   onSaveProfile,
   onSetSelectedInputId,
   onSetSelectedOutputId,
@@ -168,8 +170,10 @@ export function UserDock({
         onSaveProfile={onSaveProfile}
         onSetProfileNameDraft={onSetProfileNameDraft}
         selectedLang={selectedLang}
+        selectedUiTheme={selectedUiTheme}
         languageOptions={languageOptions}
         onSetSelectedLang={onSetSelectedLang}
+        onSetSelectedUiTheme={onSetSelectedUiTheme}
         inputOptions={inputOptions}
         outputOptions={outputOptions}
         selectedInputId={selectedInputId}
