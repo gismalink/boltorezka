@@ -598,7 +598,7 @@ if [[ "${SMOKE_WEB_CRASH_BOUNDARY_BROWSER:-1}" == "1" ]]; then
   fi
 
   echo "[postdeploy-smoke] smoke:web:crash-boundary:browser"
-  SMOKE_API_URL="$BASE_URL" SMOKE_WEB_BASE_URL="$WEB_BASE_URL" npm run smoke:web:crash-boundary:browser
+  SMOKE_API_URL="$BASE_URL" SMOKE_WEB_BASE_URL="$WEB_BASE_URL" SMOKE_TEST_BEARER_TOKEN="${SMOKE_TEST_BEARER_TOKEN:-}" npm run smoke:web:crash-boundary:browser
   WEB_CRASH_BOUNDARY_STATUS="pass"
 else
   echo "[postdeploy-smoke] smoke:web:crash-boundary:browser skipped (SMOKE_WEB_CRASH_BOUNDARY_BROWSER=0)"
