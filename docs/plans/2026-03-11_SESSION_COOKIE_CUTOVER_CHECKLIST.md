@@ -66,8 +66,8 @@
 - [x] Базовый auth session smoke уже есть: `smoke:auth:session`.
 - [x] Добавить cookie-mode integration smoke (login -> refresh -> logout -> revoked).
 - [x] Добавить negative smoke (expired cookie, rotated refresh replay, invalid domain/path).
-- [ ] Добавить regression smoke для ws-ticket и realtime reconnect в cookie-mode.
-- [x] `deploy:test:smoke` проходит стабильно с cookie-mode flag включенным (2026-03-12/#13: pass #1/#2/#3 — 3/3 ✅).
+- [x] Добавить regression smoke для ws-ticket и realtime reconnect в cookie-mode (`smoke:auth:cookie-ws-ticket`, 2026-03-13).
+- [x] `deploy:test:smoke` проходит стабильно с cookie-mode flag включенным (2026-03-12/#13: pass #1/#2/#3 ✅, cookie smokes интегрированы 2026-03-13).
 
 ## 8) Rollout plan
 
@@ -78,6 +78,8 @@
 
 Progress note (2026-03-12): backend реализует `AUTH_COOKIE_MODE` с HttpOnly session-cookie issuance/clear на `sso/session|refresh|logout`; `requireAuth` поддерживает cookie token + bearer fallback. Test deploy с `AUTH_COOKIE_MODE=1` выполнен, `deploy:test:smoke` прошел (pass #1).
 
+Progress note (2026-03-13): `TEST_AUTH_COOKIE_MODE=1` зафиксирован в `infra/.env.host` на сервере (постоянно). `smoke:auth:cookie-negative` и `smoke:auth:cookie-ws-ticket` интегрированы в postdeploy-smoke-test.sh и запускаются автоматически при каждом deploy:test:smoke.
+
 ### Phase B - Cookie primary on test
 - [x] Включить cookie primary на test (feature/session-cookie-hardening + `AUTH_COOKIE_MODE=1`).
 - [x] Прогнать минимум 3 подряд успешных `deploy:test:smoke` (2026-03-13: pass #1/#2/#3 ✅).
@@ -85,8 +87,8 @@ Progress note (2026-03-12): backend реализует `AUTH_COOKIE_MODE` с Htt
 - [ ] Подтвердить отсутствие роста auth/reconnect error-rate.
 
 ### Phase C - Legacy cleanup readiness
-- [ ] Зафиксировать, что fallback bearer path не используется в test.
-- [ ] Удалить/ограничить legacy bearer bootstrap в web.
+- [ ] Зафиксировать, что fallback bearer path не используется в test (нужен metrics/log-based check или VITE_AUTH_PRIMARY_MODE=cookie).
+- [ ] Удалить/ограничить legacy bearer bootstrap в web (отдельное решение: true cookie-primary vs cookie-as-fallback).
 - [ ] Обновить runbooks/ADR/status docs по финальному режиму.
 
 ### Phase D - Prod readiness gate

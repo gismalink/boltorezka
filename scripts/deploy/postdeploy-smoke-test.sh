@@ -580,21 +580,45 @@ fi
 # Cookie-mode regression smokes (run when TEST_AUTH_COOKIE_MODE=1 is set in env).
 # Checks: negative security properties (invalid/missing cookie → 401, replay → 401)
 # and ws-ticket issuance via cookie-only auth (no bearer header).
+# Each smoke gets a freshly minted session because smoke:auth:session rotates and
+# revokes the shared SMOKE_TEST_BEARER_TOKEN before this block runs.
 EFFECTIVE_COOKIE_MODE="${TEST_AUTH_COOKIE_MODE:-${AUTH_COOKIE_MODE:-0}}"
 COOKIE_NEGATIVE_STATUS="skip"
 COOKIE_WS_TICKET_STATUS="skip"
+
+mint_fresh_smoke_bearer() {
+  local label="$1"
+  if [[ -z "${SMOKE_USER_ID:-}" || -z "${SMOKE_USER_ROLE:-}" ]]; then
+    echo "[postdeploy-smoke] $label: cannot mint bearer (SMOKE_USER_ID/ROLE not resolved)" >&2
+    return 1
+  fi
+  if [[ -z "${JWT_SECRET_CANDIDATE:-}" ]]; then
+    echo "[postdeploy-smoke] $label: cannot mint bearer (JWT_SECRET_CANDIDATE not set)" >&2
+    return 1
+  fi
+  local new_session_id new_bearer
+  new_session_id="$(uuidgen | tr '[:upper:]' '[:lower:]')"
+  new_bearer="$(make_hs256_jwt "$JWT_SECRET_CANDIDATE" "$SMOKE_USER_ID" "$SMOKE_USER_ROLE" "$new_session_id" "sso")"
+  compose exec -T "$REDIS_SERVICE" redis-cli SETEX \
+    "auth:session:${new_session_id}" "${SMOKE_AUTH_SESSION_TTL_SEC:-2592000}" \
+    "{\"userId\":\"${SMOKE_USER_ID}\",\"authMode\":\"sso\",\"issuedAt\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",\"rotatedFrom\":null}" >/dev/null
+  printf '%s' "$new_bearer"
+}
+
 if [[ "$EFFECTIVE_COOKIE_MODE" == "1" ]]; then
   COOKIE_NAME="${TEST_AUTH_SESSION_COOKIE_NAME:-${AUTH_SESSION_COOKIE_NAME:-boltorezka_session_test}}"
   if [[ "${SMOKE_COOKIE_NEGATIVE:-1}" == "0" ]]; then
     echo "[postdeploy-smoke] smoke:auth:cookie-negative skipped (SMOKE_COOKIE_NEGATIVE=0)"
     COOKIE_NEGATIVE_STATUS="skip"
-  elif [[ -z "${SMOKE_TEST_BEARER_TOKEN:-}" ]]; then
-    echo "[postdeploy-smoke] smoke:auth:cookie-negative skipped (no bearer token)"
+  elif [[ -z "${SMOKE_USER_ID:-}" || -z "${JWT_SECRET_CANDIDATE:-}" ]]; then
+    echo "[postdeploy-smoke] smoke:auth:cookie-negative skipped (no JWT secret or user id)"
     COOKIE_NEGATIVE_STATUS="skip"
   else
+    COOKIE_NEGATIVE_BEARER="$(mint_fresh_smoke_bearer "cookie-negative")"
     echo "[postdeploy-smoke] smoke:auth:cookie-negative (cookie-mode=1)"
     SMOKE_API_URL="$BASE_URL" \
       SMOKE_SESSION_COOKIE_NAME="$COOKIE_NAME" \
+      SMOKE_TEST_BEARER_TOKEN="$COOKIE_NEGATIVE_BEARER" \
       npm run smoke:auth:cookie-negative
     COOKIE_NEGATIVE_STATUS="pass"
   fi
@@ -602,13 +626,15 @@ if [[ "$EFFECTIVE_COOKIE_MODE" == "1" ]]; then
   if [[ "${SMOKE_COOKIE_WS_TICKET:-1}" == "0" ]]; then
     echo "[postdeploy-smoke] smoke:auth:cookie-ws-ticket skipped (SMOKE_COOKIE_WS_TICKET=0)"
     COOKIE_WS_TICKET_STATUS="skip"
-  elif [[ -z "${SMOKE_TEST_BEARER_TOKEN:-}" ]]; then
-    echo "[postdeploy-smoke] smoke:auth:cookie-ws-ticket skipped (no bearer token)"
+  elif [[ -z "${SMOKE_USER_ID:-}" || -z "${JWT_SECRET_CANDIDATE:-}" ]]; then
+    echo "[postdeploy-smoke] smoke:auth:cookie-ws-ticket skipped (no JWT secret or user id)"
     COOKIE_WS_TICKET_STATUS="skip"
   else
+    COOKIE_WS_TICKET_BEARER="$(mint_fresh_smoke_bearer "cookie-ws-ticket")"
     echo "[postdeploy-smoke] smoke:auth:cookie-ws-ticket (cookie-mode=1)"
     SMOKE_API_URL="$BASE_URL" \
       SMOKE_SESSION_COOKIE_NAME="$COOKIE_NAME" \
+      SMOKE_TEST_BEARER_TOKEN="$COOKIE_WS_TICKET_BEARER" \
       npm run smoke:auth:cookie-ws-ticket
     COOKIE_WS_TICKET_STATUS="pass"
   fi
