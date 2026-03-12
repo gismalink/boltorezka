@@ -8,7 +8,7 @@ export const shouldUseRnnoiseInSelfMonitor = (selectedInputProfile: "noise_reduc
 
 export const getEffectiveRnnoiseLevel = (
   selectedInputProfile: "noise_reduction" | "studio" | "custom",
-  rnnoiseSuppressionLevel: "soft" | "medium" | "strong"
-): "soft" | "medium" | "strong" => {
-  return shouldUseRnnoiseInSelfMonitor(selectedInputProfile) ? rnnoiseSuppressionLevel : "medium";
+  rnnoiseSuppressionLevel: "none" | "soft" | "medium" | "strong"
+): "none" | "soft" | "medium" | "strong" => {
+  return shouldUseRnnoiseInSelfMonitor(selectedInputProfile) ? rnnoiseSuppressionLevel : "none";
 };

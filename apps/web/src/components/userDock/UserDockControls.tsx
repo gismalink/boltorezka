@@ -106,7 +106,6 @@ export function UserDockControls({
   mediaDevicesWarningText
 }: UserDockControlsProps) {
   const inputDeviceRowRef = useRef<HTMLButtonElement>(null);
-  const inputProfileRowRef = useRef<HTMLButtonElement>(null);
   const cameraAnchorRef = useRef<HTMLDivElement>(null);
   const [cameraMenuOpen, setCameraMenuOpen] = useState(false);
 
@@ -238,18 +237,6 @@ export function UserDockControls({
                     </span>
                     <i className="bi bi-chevron-right" aria-hidden="true" />
                   </button>
-                  <button
-                    ref={inputProfileRowRef}
-                    type="button"
-                    className="secondary flex w-full items-center justify-between gap-3 px-[var(--space-lg)] py-[var(--space-lg)] text-left"
-                    disabled
-                  >
-                    <span className="voice-menu-text grid min-w-0 gap-0.5">
-                      <span className="voice-menu-title">{t("settings.inputProfile")}</span>
-                      <span className="voice-menu-subtitle">{t("settings.inputProfileLocked")}</span>
-                    </span>
-                    <i className="bi bi-chevron-right" aria-hidden="true" />
-                  </button>
                 </div>
 
                 {mediaDevicesUnavailable ? (
@@ -316,20 +303,10 @@ export function UserDockControls({
                           <i className={`bi ${selectedInputId === device.id ? "bi-record-circle-fill" : "bi-circle"}`} aria-hidden="true" />
                         </button>
                       ))}
-                      <button type="button" className="secondary device-item justify-start text-left">{t("settings.showMore")}</button>
                     </div>
                   </div>
                 </PopupPortal>
 
-                <PopupPortal
-                  open={false}
-                  anchorRef={inputProfileRowRef}
-                  className="settings-popup voice-submenu-popup"
-                  placement={isMobileViewport ? "bottom-start" : "right-start"}
-                  offset={isMobileViewport ? 6 : 8}
-                >
-                  <div />
-                </PopupPortal>
               </div>
             </PopupPortal>
           </div>

@@ -81,3 +81,28 @@
 2. Сверить, что `call_initial_state_sent` растет во время smoke/join.
 3. Проверить `SMOKE_CALL_INITIAL_STATE_SENT_DELTA` в postdeploy summary (`>0` для realtime gate).
 4. Если envelope отправляется, но UI не сходится: проверить клиентский replay apply path в `WsMessageController` и App state maps merge.
+
+## 9) RNNoise canary and default-enable policy
+
+RNNoise в Boltorezka работает как client-side preprocessing profile (`noise_reduction`) и не должен ломать baseline voice path.
+
+Минимальный canary smoke для `test`:
+
+1. Postdeploy smoke включает browser gate `smoke:web:rnnoise:browser`.
+2. В summary должен быть `web_rnnoise=pass`.
+3. В telemetry summary проверяются counters:
+  - `rnnoise_toggle_on` / `rnnoise_toggle_off`,
+  - `rnnoise_init_error`,
+  - `rnnoise_fallback_unavailable`,
+  - `rnnoise_process_avg_ms` (из `sum/samples`).
+
+Критерии перевода в default-enabled режим:
+
+1. Минимум 3 последовательных test rollout с `web_rnnoise=pass`.
+2. Нет растущего тренда по init/fallback ошибкам.
+3. Нет заметной деградации processing-cost proxy (`rnnoise_process_avg_ms`) относительно стабильного окна.
+4. Нет user-facing регрессий по слышимости/стабильности voice.
+
+Если критерии не выполнены, RNNoise остаётся opt-in режимом.
+
+Ссылка на техдизайн: `docs/architecture/2026-03-12_RNNOISE_CLIENT_TECH_DESIGN.md`.

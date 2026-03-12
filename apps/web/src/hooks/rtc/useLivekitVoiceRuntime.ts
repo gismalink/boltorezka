@@ -20,6 +20,7 @@ import { api } from "../../api";
 import type { AudioQuality } from "../../domain";
 import type { PresenceMember } from "../../domain";
 import type { CallStatus } from "../../services";
+import { trackClientEvent } from "../../telemetry";
 import { RnnoiseAudioProcessor, type RnnoiseSuppressionLevel } from "./rnnoiseAudioProcessor";
 import type {
   CallMicStatePayload,
@@ -46,6 +47,8 @@ type UseLivekitVoiceRuntimeArgs = {
   selectedInputId: string;
   selectedInputProfile: "noise_reduction" | "studio" | "custom";
   rnnoiseSuppressionLevel: RnnoiseSuppressionLevel;
+  preRnnEchoCancellationEnabled: boolean;
+  preRnnAutoGainControlEnabled: boolean;
   selectedOutputId: string;
   memberVolumeByUserId: Record<string, number>;
   selectedVideoInputId: string;
@@ -171,6 +174,8 @@ export function useLivekitVoiceRuntime({
   selectedInputId,
   selectedInputProfile,
   rnnoiseSuppressionLevel,
+  preRnnEchoCancellationEnabled,
+  preRnnAutoGainControlEnabled,
   selectedOutputId,
   memberVolumeByUserId,
   selectedVideoInputId,
@@ -200,7 +205,6 @@ export function useLivekitVoiceRuntime({
 
   const roomRef = useRef<Room | null>(null);
   const localTracksRef = useRef<Map<Track.Source, LocalTrack>>(new Map());
-  const audioContextRef = useRef<AudioContext | null>(null);
   const rnnoiseProcessorRef = useRef<RnnoiseAudioProcessor | null>(null);
   const remoteAudioElementsRef = useRef<Map<string, HTMLAudioElement>>(new Map());
   const remoteAudioBlockedByAutoplayRef = useRef<Set<string>>(new Set());
@@ -208,6 +212,28 @@ export function useLivekitVoiceRuntime({
   const connectInFlightRef = useRef<Promise<void> | null>(null);
   const disconnectRequestedRef = useRef(false);
   const lastAppliedMicConfigRef = useRef("");
+  const lastRnnoiseTelemetryStatusRef = useRef("");
+
+  const trackRnnoiseStatus = useCallback((
+    status: "inactive" | "active" | "unavailable" | "error",
+    reason?: string
+  ) => {
+    const telemetryKey = `${status}:${reason || ""}:${selectedInputProfile}:${rnnoiseSuppressionLevel}`;
+    if (telemetryKey === lastRnnoiseTelemetryStatusRef.current) {
+      return;
+    }
+    lastRnnoiseTelemetryStatusRef.current = telemetryKey;
+    trackClientEvent(
+      "rnnoise_status",
+      {
+        status,
+        reason: reason || null,
+        selectedInputProfile,
+        rnnoiseSuppressionLevel
+      },
+      token || undefined
+    );
+  }, [rnnoiseSuppressionLevel, selectedInputProfile, token]);
 
   const buildAudioConstraints = useCallback((): true | MediaTrackConstraints => {
     const base: MediaTrackConstraints = {
@@ -229,9 +255,9 @@ export function useLivekitVoiceRuntime({
       return {
         ...base,
         ...qualityHint,
-        echoCancellation: true,
+        echoCancellation: preRnnEchoCancellationEnabled,
         noiseSuppression: false,
-        autoGainControl: true,
+        autoGainControl: preRnnAutoGainControlEnabled,
         channelCount: 1
       };
     }
@@ -251,7 +277,7 @@ export function useLivekitVoiceRuntime({
       ...qualityHint
     };
     return Object.keys(constraints).length > 0 ? constraints : true;
-  }, [audioQuality, selectedInputId, selectedInputProfile]);
+  }, [audioQuality, preRnnAutoGainControlEnabled, preRnnEchoCancellationEnabled, selectedInputId, selectedInputProfile]);
 
   const buildCameraVideoOptions = useCallback((): VideoCaptureOptions => {
     const { width, height } = parseResolution(videoResolution);
@@ -311,8 +337,8 @@ export function useLivekitVoiceRuntime({
 
   const buildMicConfigKey = useCallback(() => {
     const deviceId = selectedInputId && selectedInputId !== "default" ? selectedInputId : "default";
-    return `${deviceId}:${selectedInputProfile}:${audioQuality}`;
-  }, [audioQuality, selectedInputId, selectedInputProfile]);
+    return `${deviceId}:${selectedInputProfile}:${audioQuality}:${preRnnEchoCancellationEnabled ? "ec1" : "ec0"}:${preRnnAutoGainControlEnabled ? "agc1" : "agc0"}`;
+  }, [audioQuality, preRnnAutoGainControlEnabled, preRnnEchoCancellationEnabled, selectedInputId, selectedInputProfile]);
 
     const tryPlayRemoteAudioElement = useCallback((participantId: string, element: HTMLAudioElement) => {
       const playPromise = element.play();
@@ -493,14 +519,19 @@ export function useLivekitVoiceRuntime({
     if (processor) {
       await processor.destroy().catch(() => undefined);
     }
-    if (audioContextRef.current) {
-      await audioContextRef.current.close().catch(() => undefined);
-      audioContextRef.current = null;
-    }
   }, []);
 
   const applyNoiseSuppressionProcessor = useCallback(async (audioTrack: LocalAudioTrack) => {
     if (selectedInputProfile !== "noise_reduction") {
+      trackRnnoiseStatus("inactive", "profile_not_noise_reduction");
+      onRnnoiseStatusChange?.("inactive");
+      await audioTrack.stopProcessor().catch(() => undefined);
+      await releaseRnnoiseProcessor();
+      return;
+    }
+
+    if (rnnoiseSuppressionLevel === "none") {
+      trackRnnoiseStatus("inactive", "suppression_none");
       onRnnoiseStatusChange?.("inactive");
       await audioTrack.stopProcessor().catch(() => undefined);
       await releaseRnnoiseProcessor();
@@ -509,21 +540,28 @@ export function useLivekitVoiceRuntime({
 
     if (typeof AudioContext === "undefined") {
       pushCallLog("rnnoise unavailable: AudioContext is not supported");
+      trackRnnoiseStatus("unavailable", "audio_context_unsupported");
       onRnnoiseStatusChange?.("unavailable");
       onRnnoiseFallback?.("unavailable");
       return;
     }
 
     try {
-      const audioContext = audioContextRef.current ?? new AudioContext({ sampleRate: 48000 });
-      if (audioContext.state === "suspended") {
-        await audioContext.resume().catch(() => undefined);
-      }
-      audioContextRef.current = audioContext;
-
       const processor = new RnnoiseAudioProcessor(rnnoiseSuppressionLevel);
-      await audioTrack.setAudioContext(audioContext);
+      const startedAt = performance.now();
       await audioTrack.setProcessor(processor);
+      const setupMs = performance.now() - startedAt;
+      if (Number.isFinite(setupMs) && setupMs >= 0) {
+        trackClientEvent(
+          "rnnoise_processor_apply_ms",
+          {
+            ms: Number(setupMs.toFixed(3)),
+            selectedInputProfile,
+            rnnoiseSuppressionLevel
+          },
+          token || undefined
+        );
+      }
 
       const previousProcessor = rnnoiseProcessorRef.current;
       rnnoiseProcessorRef.current = processor;
@@ -531,15 +569,17 @@ export function useLivekitVoiceRuntime({
         await previousProcessor.destroy().catch(() => undefined);
       }
 
+      trackRnnoiseStatus("active", "processor_attached");
       onRnnoiseStatusChange?.("active");
     } catch (error) {
       pushCallLog(`rnnoise processor failed: ${error instanceof Error ? error.message : "unknown error"}`);
+      trackRnnoiseStatus("error", error instanceof Error ? error.message : "unknown_error");
       onRnnoiseStatusChange?.("error");
       onRnnoiseFallback?.("error");
       await audioTrack.stopProcessor().catch(() => undefined);
       await releaseRnnoiseProcessor();
     }
-  }, [onRnnoiseFallback, onRnnoiseStatusChange, pushCallLog, releaseRnnoiseProcessor, rnnoiseSuppressionLevel, selectedInputProfile]);
+  }, [onRnnoiseFallback, onRnnoiseStatusChange, pushCallLog, releaseRnnoiseProcessor, rnnoiseSuppressionLevel, selectedInputProfile, token, trackRnnoiseStatus]);
 
   const cleanupRoom = useCallback(() => {
     const room = roomRef.current;

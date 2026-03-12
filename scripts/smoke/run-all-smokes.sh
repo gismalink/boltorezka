@@ -144,6 +144,9 @@ if [[ "$RUN_DENIED_MEDIA_BROWSER" == "1" ]]; then
     env SMOKE_API_URL="$BASE_URL" SMOKE_WEB_BASE_URL="$WEB_BASE_URL" npm run smoke:web:denied-media:browser
 fi
 
+run_case "smoke:web:rnnoise:browser" \
+  env SMOKE_API_URL="$BASE_URL" SMOKE_WEB_BASE_URL="$WEB_BASE_URL" SMOKE_TEST_BEARER_TOKEN="${SMOKE_TEST_BEARER_TOKEN:-}" npm run smoke:web:rnnoise:browser
+
 run_case "smoke:realtime" \
   env \
   SMOKE_API_URL="$BASE_URL" \

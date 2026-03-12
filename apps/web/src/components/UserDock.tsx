@@ -17,6 +17,8 @@ export function UserDock({
   noiseSuppressionEnabled,
   rnnoiseSuppressionLevel,
   rnnoiseRuntimeStatus,
+  preRnnEchoCancellationEnabled,
+  preRnnAutoGainControlEnabled,
   selfMonitorEnabled,
   cameraEnabled,
   micMuted,
@@ -59,6 +61,8 @@ export function UserDock({
   onToggleScreenShare,
   onToggleNoiseSuppression,
   onSetRnnoiseSuppressionLevel,
+  onTogglePreRnnEchoCancellation,
+  onTogglePreRnnAutoGainControl,
   onToggleSelfMonitor,
   onToggleVoiceSettings,
   onToggleAudioOutput,
@@ -201,10 +205,14 @@ export function UserDock({
         noiseSuppressionEnabled={noiseSuppressionEnabled}
         rnnoiseSuppressionLevel={rnnoiseSuppressionLevel}
         rnnoiseRuntimeStatus={rnnoiseRuntimeStatus}
+        preRnnEchoCancellationEnabled={preRnnEchoCancellationEnabled}
+        preRnnAutoGainControlEnabled={preRnnAutoGainControlEnabled}
         selfMonitorEnabled={selfMonitorEnabled}
         onToggleSelfMonitor={onToggleSelfMonitor}
         onToggleNoiseSuppression={onToggleNoiseSuppression}
         onSetRnnoiseSuppressionLevel={onSetRnnoiseSuppressionLevel}
+        onTogglePreRnnEchoCancellation={onTogglePreRnnEchoCancellation}
+        onTogglePreRnnAutoGainControl={onTogglePreRnnAutoGainControl}
         modalBarCount={modalBarCount}
         modalActiveBars={modalActiveBars}
       />
