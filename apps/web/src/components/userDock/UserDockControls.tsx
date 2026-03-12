@@ -308,15 +308,6 @@ export function UserDockControls({
                   </div>
                 </PopupPortal>
 
-                <PopupPortal
-                  open={false}
-                  anchorRef={inputProfileRowRef}
-                  className="settings-popup voice-submenu-popup"
-                  placement={isMobileViewport ? "bottom-start" : "right-start"}
-                  offset={isMobileViewport ? 6 : 8}
-                >
-                  <div />
-                </PopupPortal>
               </div>
             </PopupPortal>
           </div>
