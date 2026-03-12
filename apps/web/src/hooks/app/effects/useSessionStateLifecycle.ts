@@ -118,6 +118,50 @@ export function useSessionStateLifecycle({
     setVoiceInitialMicStateByUserIdInCurrentRoom
   ]);
 
+  const bootstrapCookieSessionState = useCallback(() => {
+    api.me("")
+      .then((res) => setUser(res.user))
+      .catch((error) => {
+        if (error instanceof ApiError && error.status === 401) {
+          setToken("");
+          return;
+        }
+        pushLog(`cookie-session validation failed: ${error.message}`);
+        setToken("");
+      });
+
+    api.rooms("")
+      .then((res) => setRooms(res.rooms))
+      .catch((error) => pushLog(`rooms failed: ${error.message}`));
+
+    api.serverAudioQuality("")
+      .then((res) => setServerAudioQuality(res.audioQuality))
+      .catch((error) => pushLog(`server audio quality failed: ${error.message}`));
+
+    api.serverChatImagePolicy("")
+      .then((res) => {
+        setServerChatImagePolicy({
+          maxDataUrlLength: Math.max(8000, Math.min(250000, Math.round(Number(res.maxDataUrlLength) || defaultChatImageDataUrlLength))),
+          maxImageSide: Math.max(256, Math.min(4096, Math.round(Number(res.maxImageSide) || defaultChatImageMaxSide))),
+          jpegQuality: Math.max(0.3, Math.min(0.95, Number(res.jpegQuality) || defaultChatImageQuality))
+        });
+      })
+      .catch((error) => pushLog(`server chat image policy failed: ${error.message}`));
+
+    void roomAdminController.loadRoomTree("");
+  }, [
+    defaultChatImageDataUrlLength,
+    defaultChatImageMaxSide,
+    defaultChatImageQuality,
+    pushLog,
+    roomAdminController,
+    setRooms,
+    setServerAudioQuality,
+    setServerChatImagePolicy,
+    setToken,
+    setUser
+  ]);
+
   const bootstrapSessionState = useCallback((nextToken: string) => {
     localStorage.setItem("boltorezka_token", nextToken);
 
@@ -178,10 +222,17 @@ export function useSessionStateLifecycle({
 
   useEffect(() => {
     if (!token) {
-      resetSessionState();
+      const persistedToken = localStorage.getItem("boltorezka_token");
+      if (persistedToken) {
+        setToken(persistedToken);
+        bootstrapSessionState(persistedToken);
+        return;
+      }
+
+      bootstrapCookieSessionState();
       return;
     }
 
     bootstrapSessionState(token);
-  }, [bootstrapSessionState, resetSessionState, token]);
+  }, [bootstrapCookieSessionState, bootstrapSessionState, setToken, token]);
 }

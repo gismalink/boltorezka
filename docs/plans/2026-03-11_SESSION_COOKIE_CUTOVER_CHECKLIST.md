@@ -64,10 +64,10 @@
 ## 7) Test plan (must pass)
 
 - [x] Базовый auth session smoke уже есть: `smoke:auth:session`.
-- [ ] Добавить cookie-mode integration smoke (login -> refresh -> logout -> revoked).
+- [x] Добавить cookie-mode integration smoke (login -> refresh -> logout -> revoked).
 - [ ] Добавить negative smoke (expired cookie, rotated refresh replay, invalid domain/path).
 - [ ] Добавить regression smoke для ws-ticket и realtime reconnect в cookie-mode.
-- [ ] `deploy:test:smoke` проходит стабильно с cookie-mode flag включенным.
+- [x] `deploy:test:smoke` проходит стабильно с cookie-mode flag включенным (2026-03-12: pass #1).
 
 ## 8) Rollout plan
 
@@ -76,10 +76,10 @@
 - [x] Включить dual-path (cookie primary + bearer fallback) на ограниченный период.
 - [ ] Зафиксировать baseline метрики до включения cookie-mode.
 
-Progress note (2026-03-12): backend реализует `AUTH_COOKIE_MODE` с HttpOnly session-cookie issuance/clear на `sso/session|refresh|logout`; `requireAuth` поддерживает cookie token + bearer fallback. Включение флага на test и smoke-подтверждение остаются отдельным шагом.
+Progress note (2026-03-12): backend реализует `AUTH_COOKIE_MODE` с HttpOnly session-cookie issuance/clear на `sso/session|refresh|logout`; `requireAuth` поддерживает cookie token + bearer fallback. Test deploy с `AUTH_COOKIE_MODE=1` выполнен, `deploy:test:smoke` прошел (pass #1).
 
 ### Phase B - Cookie primary on test
-- [ ] Включить cookie primary на test.
+- [x] Включить cookie primary на test (feature/session-cookie-hardening + `AUTH_COOKIE_MODE=1`).
 - [ ] Прогнать минимум 3 подряд успешных `deploy:test:smoke`.
 - [ ] Пройти ручной сценарий SSO callback + realtime join/reconnect.
 - [ ] Подтвердить отсутствие роста auth/reconnect error-rate.
