@@ -47,52 +47,51 @@ async function assertNoCrash(page, runtimeErrors) {
 
 async function openSoundSettings(page, runtimeErrors) {
   const voiceSettingsBtn = page.getByRole("button", { name: /voice settings|настройки голоса/i }).first();
-
-  // Path A: open split menu and click "Voice Settings".
-  if (await voiceSettingsBtn.count() === 0 || !(await voiceSettingsBtn.isVisible().catch(() => false))) {
-    const caretButtons = page.locator(".split-caret-btn");
-    const caretCount = await caretButtons.count();
-    let opened = false;
-    for (let i = 0; i < caretCount; i += 1) {
-      const candidate = caretButtons.nth(i);
-      const visible = await candidate.isVisible().catch(() => false);
-      if (!visible) {
-        continue;
-      }
-      await candidate.click({ timeout: timeoutMs });
-      if (await voiceSettingsBtn.isVisible().catch(() => false)) {
-        opened = true;
-        break;
-      }
-    }
-
-    // Path B: open generic user settings and switch to Sound tab.
-    if (!opened && !(await voiceSettingsBtn.isVisible().catch(() => false))) {
-      const userSettingsBtn = page.getByRole("button", { name: /user settings|настройки пользователя/i }).first();
-      if (await userSettingsBtn.count() > 0 && await userSettingsBtn.isVisible().catch(() => false)) {
-        await userSettingsBtn.click({ timeout: timeoutMs });
-      }
-
-      // Path C: open profile menu in the header and launch user settings.
-      if (!(await page.locator(".user-settings-modal:visible").first().isVisible().catch(() => false))) {
-        const profileIcon = page.locator(".profile-icon").first();
-        if (await profileIcon.count() > 0 && await profileIcon.isVisible().catch(() => false)) {
-          await profileIcon.click({ timeout: timeoutMs });
-          const profileSettingsBtn = page.getByRole("button", { name: /user settings|настройки пользователя/i }).first();
-          if (await profileSettingsBtn.count() > 0 && await profileSettingsBtn.isVisible().catch(() => false)) {
-            await profileSettingsBtn.click({ timeout: timeoutMs });
-          }
-        }
-      }
-    }
-  }
-
-  if (await voiceSettingsBtn.count() > 0 && await voiceSettingsBtn.isVisible().catch(() => false)) {
-    await voiceSettingsBtn.click({ timeout: timeoutMs });
-  }
-
   const settingsModal = page.locator(".user-settings-modal:visible").first();
-  await settingsModal.waitFor({ state: "visible", timeout: timeoutMs });
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    if (await settingsModal.isVisible().catch(() => false)) {
+      break;
+    }
+
+    // Path A: open split menu and click "Voice Settings".
+    const visibleCarets = page.locator(".split-caret-btn:visible");
+    if (await visibleCarets.count() > 0) {
+      await visibleCarets.first().click({ timeout: timeoutMs });
+      if (await voiceSettingsBtn.isVisible().catch(() => false)) {
+        await voiceSettingsBtn.click({ timeout: timeoutMs });
+      }
+    }
+
+    if (await settingsModal.isVisible().catch(() => false)) {
+      break;
+    }
+
+    // Path B: open profile menu in header and launch "User settings".
+    const profileIcon = page.locator(".profile-icon:visible").first();
+    if (await profileIcon.count() > 0) {
+      await profileIcon.click({ timeout: timeoutMs });
+      const profileSettingsBtn = page.getByRole("button", { name: /user settings|настройки пользователя/i }).first();
+      if (await profileSettingsBtn.isVisible().catch(() => false)) {
+        await profileSettingsBtn.click({ timeout: timeoutMs });
+      }
+    }
+
+    if (await settingsModal.isVisible().catch(() => false)) {
+      break;
+    }
+
+    await page.waitForTimeout(300);
+  }
+
+  if (!(await settingsModal.isVisible().catch(() => false))) {
+    const visibleCaretsCount = await page.locator(".split-caret-btn:visible").count();
+    const profileIconCount = await page.locator(".profile-icon:visible").count();
+    const voiceSettingsVisible = await voiceSettingsBtn.isVisible().catch(() => false);
+    throw new Error(
+      `user settings modal did not open: visibleCarets=${visibleCaretsCount} profileIcons=${profileIconCount} voiceSettingsVisible=${voiceSettingsVisible}`
+    );
+  }
 
   const soundTab = settingsModal.getByRole("button", { name: /sound|звук/i }).first();
   if (await soundTab.count() > 0 && await soundTab.isVisible().catch(() => false)) {
