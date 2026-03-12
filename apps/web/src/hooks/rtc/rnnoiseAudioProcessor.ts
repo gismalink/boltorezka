@@ -4,7 +4,7 @@ import rnnoiseWorkletUrl from "@sapphi-red/web-noise-suppressor/rnnoiseWorklet.j
 import rnnoiseWasmUrl from "@sapphi-red/web-noise-suppressor/rnnoise.wasm?url";
 import rnnoiseSimdWasmUrl from "@sapphi-red/web-noise-suppressor/rnnoise_simd.wasm?url";
 
-export type RnnoiseSuppressionLevel = "soft" | "medium" | "strong";
+export type RnnoiseSuppressionLevel = "none" | "soft" | "medium" | "strong";
 
 let rnnoiseWasmPromise: Promise<ArrayBuffer> | null = null;
 const workletLoadByContext = new WeakMap<AudioContext, Promise<void>>();
@@ -107,6 +107,7 @@ export class RnnoiseAudioProcessor implements TrackProcessor<Track.Kind.Audio, A
     this.destinationNode = opts.audioContext.createMediaStreamDestination();
 
     const levelMix: Record<RnnoiseSuppressionLevel, { dry: number; wet: number }> = {
+      none: { dry: 1, wet: 0 },
       soft: { dry: 0.35, wet: 0.65 },
       medium: { dry: 0.15, wet: 0.85 },
       strong: { dry: 0, wet: 1 }

@@ -349,6 +349,14 @@ export function UserDockSettingsOverlay({
                       <div className="quality-toggle-group" role="radiogroup" aria-label={t("settings.rnnLevel") }>
                         <button
                           type="button"
+                          className={`secondary quality-toggle-btn ${rnnoiseSuppressionLevel === "none" ? "quality-toggle-btn-active" : ""}`}
+                          aria-pressed={rnnoiseSuppressionLevel === "none"}
+                          onClick={() => onSetRnnoiseSuppressionLevel("none")}
+                        >
+                          {t("settings.rnnLevelNone")}
+                        </button>
+                        <button
+                          type="button"
                           className={`secondary quality-toggle-btn ${rnnoiseSuppressionLevel === "soft" ? "quality-toggle-btn-active" : ""}`}
                           aria-pressed={rnnoiseSuppressionLevel === "soft"}
                           onClick={() => onSetRnnoiseSuppressionLevel("soft")}

@@ -254,7 +254,7 @@ export function useLivekitVoiceRuntime({
       ...qualityHint
     };
     return Object.keys(constraints).length > 0 ? constraints : true;
-  }, [audioQuality, selectedInputId, selectedInputProfile]);
+  }, [audioQuality, preRnnAutoGainControlEnabled, preRnnEchoCancellationEnabled, selectedInputId, selectedInputProfile]);
 
   const buildCameraVideoOptions = useCallback((): VideoCaptureOptions => {
     const { width, height } = parseResolution(videoResolution);
@@ -500,6 +500,13 @@ export function useLivekitVoiceRuntime({
 
   const applyNoiseSuppressionProcessor = useCallback(async (audioTrack: LocalAudioTrack) => {
     if (selectedInputProfile !== "noise_reduction") {
+      onRnnoiseStatusChange?.("inactive");
+      await audioTrack.stopProcessor().catch(() => undefined);
+      await releaseRnnoiseProcessor();
+      return;
+    }
+
+    if (rnnoiseSuppressionLevel === "none") {
       onRnnoiseStatusChange?.("inactive");
       await audioTrack.stopProcessor().catch(() => undefined);
       await releaseRnnoiseProcessor();

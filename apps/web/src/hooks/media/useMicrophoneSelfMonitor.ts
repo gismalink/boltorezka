@@ -131,7 +131,7 @@ export function useMicrophoneSelfMonitor({
           throw new Error("AudioTrackMissing");
         }
 
-        if (shouldUseRnnoiseInSelfMonitor(selectedInputProfile)) {
+        if (shouldUseRnnoiseInSelfMonitor(selectedInputProfile) && effectiveRnnoiseLevel !== "none") {
           try {
             const nextProcessor = new RnnoiseAudioProcessor(effectiveRnnoiseLevel);
             await nextProcessor.init({

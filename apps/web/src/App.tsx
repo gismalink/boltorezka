@@ -183,7 +183,7 @@ export function App() {
   });
   const [rnnoiseSuppressionLevel, setRnnoiseSuppressionLevel] = useState<RnnoiseSuppressionLevel>(() => {
     const value = String(localStorage.getItem("boltorezka_rnnoise_level") || "").trim();
-    if (value === "soft" || value === "medium" || value === "strong") {
+    if (value === "none" || value === "soft" || value === "medium" || value === "strong") {
       return value;
     }
     return "medium";

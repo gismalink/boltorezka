@@ -2,7 +2,7 @@ import { useEffect } from "react";
 
 type UsePersistedClientSettingsArgs = {
   selectedInputProfile: string;
-  rnnoiseSuppressionLevel: "soft" | "medium" | "strong";
+  rnnoiseSuppressionLevel: "none" | "soft" | "medium" | "strong";
   preRnnEchoCancellationEnabled: boolean;
   preRnnAutoGainControlEnabled: boolean;
   selfMonitorEnabled: boolean;

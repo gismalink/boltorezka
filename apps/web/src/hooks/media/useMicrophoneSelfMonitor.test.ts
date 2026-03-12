@@ -17,9 +17,10 @@ describe("useMicrophoneSelfMonitor helpers", () => {
   });
 
   it("does not apply RNNoise level changes when profile is not noise_reduction", () => {
+    expect(getEffectiveRnnoiseLevel("noise_reduction", "none")).toBe("none");
     expect(getEffectiveRnnoiseLevel("noise_reduction", "soft")).toBe("soft");
     expect(getEffectiveRnnoiseLevel("noise_reduction", "strong")).toBe("strong");
-    expect(getEffectiveRnnoiseLevel("studio", "strong")).toBe("medium");
-    expect(getEffectiveRnnoiseLevel("custom", "soft")).toBe("medium");
+    expect(getEffectiveRnnoiseLevel("studio", "strong")).toBe("none");
+    expect(getEffectiveRnnoiseLevel("custom", "soft")).toBe("none");
   });
 });
