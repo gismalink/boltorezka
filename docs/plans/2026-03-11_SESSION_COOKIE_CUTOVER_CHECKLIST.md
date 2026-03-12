@@ -28,7 +28,7 @@
 - [x] Cookie issuance реализована в auth endpoints (`/sso/session`, `/refresh`, `/logout` — `buildSessionCookieValue/Clear`).
 - [x] Refresh rotation и replay-protection подтверждены: `smoke:auth:cookie-negative` (replay → 401), `smoke:auth:session` (stale-after-rotation → 401) — 2026-03-13.
 - [x] TTL/expiry policy: access-token через `jwtExpiresIn`, cookie `Max-Age=2592000` (30д), ws-ticket `expiresInSec=45` — все зафиксированы в config.
-- [ ] Error taxonomy не ломает текущий API/WS contract.
+- [x] Error taxonomy не ломает текущий API/WS contract: baseline envelope (`error`, `message`) задокументирован в `docs/contracts/API_CONTRACT_V1.md`; ключевые negative-сценарии (`401/403`) покрыты `smoke:auth:session`, `smoke:auth:cookie-negative`, `smoke:auth:cookie-ws-ticket`.
 - [ ] Rate limits для auth/session endpoints подтверждены.
 
 ## 3) Web client cutover
@@ -48,9 +48,9 @@
 
 ## 5) Cross-domain and environment matrix
 
-- [ ] Test-domain matrix проверен: app domain, auth domain, callback domain.
-- [ ] Cookie `Domain/Path/SameSite` валидированы для test SSO callback flow.
-- [ ] HTTPS-only behavior (`Secure`) подтвержден на test.
+- [x] Test-domain matrix проверен: app domain, auth domain, callback domain (ручной SSO прогон 2026-03-13: 3 аккаунта, login/logout с первого раза).
+- [x] Cookie `Domain/Path/SameSite` валидированы для test SSO callback flow (cookie bootstrap + logout/revoke + ws-ticket cookie smokes проходят стабильно).
+- [x] HTTPS-only behavior (`Secure`) подтвержден на test: cookie-mode smokes выполняются через `https://test.boltorezka.gismalink.art`, session cookie устанавливается/очищается корректно.
 - [ ] Browser matrix: Chrome/Safari/Firefox (минимум smoke-login/logout).
 - [ ] Mobile web behavior (iOS/macOS Safari) проверен отдельным smoke-pass.
 
