@@ -3,6 +3,8 @@ import { useEffect } from "react";
 type UsePersistedClientSettingsArgs = {
   selectedInputProfile: string;
   rnnoiseSuppressionLevel: "soft" | "medium" | "strong";
+  preRnnEchoCancellationEnabled: boolean;
+  preRnnAutoGainControlEnabled: boolean;
   selfMonitorEnabled: boolean;
   micMuted: boolean;
   audioMuted: boolean;
@@ -24,6 +26,8 @@ type UsePersistedClientSettingsArgs = {
 export function usePersistedClientSettings({
   selectedInputProfile,
   rnnoiseSuppressionLevel,
+  preRnnEchoCancellationEnabled,
+  preRnnAutoGainControlEnabled,
   selfMonitorEnabled,
   micMuted,
   audioMuted,
@@ -48,6 +52,14 @@ export function usePersistedClientSettings({
   useEffect(() => {
     localStorage.setItem("boltorezka_rnnoise_level", rnnoiseSuppressionLevel);
   }, [rnnoiseSuppressionLevel]);
+
+  useEffect(() => {
+    localStorage.setItem("boltorezka_pre_rnn_echo_cancellation", preRnnEchoCancellationEnabled ? "1" : "0");
+  }, [preRnnEchoCancellationEnabled]);
+
+  useEffect(() => {
+    localStorage.setItem("boltorezka_pre_rnn_agc", preRnnAutoGainControlEnabled ? "1" : "0");
+  }, [preRnnAutoGainControlEnabled]);
 
   useEffect(() => {
     localStorage.setItem("boltorezka_self_monitor", selfMonitorEnabled ? "1" : "0");

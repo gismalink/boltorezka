@@ -515,13 +515,15 @@ textarea {
 .range-slider-thumb-value {
   position: absolute;
   top: 50%;
+  left: calc((100% - var(--range-thumb-width, 54px)) * var(--range-progress-ratio, 0));
   min-width: 46px;
+  width: var(--range-thumb-width, 54px);
   height: var(--range-thumb-height, 22px);
-  padding: 0 6px;
+  padding: 0 4px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  transform: translate(-50%, -50%);
+  transform: translateY(-50%);
   pointer-events: none;
   font-size: 10px;
   line-height: 1;

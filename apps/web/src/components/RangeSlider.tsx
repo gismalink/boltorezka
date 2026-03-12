@@ -36,7 +36,13 @@ export function RangeSlider({
     : `${Math.round(safeValue)}${valueSuffix || ""}`;
 
   return (
-    <div className="range-slider-wrap">
+    <div
+      className="range-slider-wrap"
+      style={{
+        ["--range-progress" as string]: `${percent}%`,
+        ["--range-progress-ratio" as string]: `${percent / 100}`
+      }}
+    >
       <input
         {...rest}
         type="range"
@@ -45,15 +51,11 @@ export function RangeSlider({
         step={step}
         value={safeValue}
         className={`range-slider-input ${className || ""}`.trim()}
-        style={{
-          ...(style as CSSProperties),
-          ["--range-progress" as string]: `${percent}%`
-        }}
+        style={style as CSSProperties}
         onChange={(event) => onChange(Number(event.target.value))}
       />
       <span
         className="range-slider-thumb-value"
-        style={{ left: `${percent}%` }}
         aria-hidden="true"
       >
         {thumbValue}

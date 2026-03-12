@@ -246,7 +246,7 @@ export function UserDockControls({
                   >
                     <span className="voice-menu-text grid min-w-0 gap-0.5">
                       <span className="voice-menu-title">{t("settings.inputProfile")}</span>
-                      <span className="voice-menu-subtitle">{t("settings.inputProfileLocked")}</span>
+                      <span className="voice-menu-subtitle">{t("settings.useRnn")}</span>
                     </span>
                     <i className="bi bi-chevron-right" aria-hidden="true" />
                   </button>

@@ -188,6 +188,8 @@ export function App() {
     }
     return "medium";
   });
+  const [preRnnEchoCancellationEnabled, setPreRnnEchoCancellationEnabled] = useState<boolean>(() => localStorage.getItem("boltorezka_pre_rnn_echo_cancellation") !== "0");
+  const [preRnnAutoGainControlEnabled, setPreRnnAutoGainControlEnabled] = useState<boolean>(() => localStorage.getItem("boltorezka_pre_rnn_agc") !== "0");
   const [selfMonitorEnabled, setSelfMonitorEnabled] = useState<boolean>(() => localStorage.getItem("boltorezka_self_monitor") === "1");
   const [mediaDevicesState, setMediaDevicesState] = useState<MediaDevicesState>("ready");
   const [mediaDevicesHint, setMediaDevicesHint] = useState("");
@@ -402,6 +404,8 @@ export function App() {
     selectedInputId,
     selectedInputProfile,
     rnnoiseSuppressionLevel,
+    preRnnEchoCancellationEnabled,
+    preRnnAutoGainControlEnabled,
     selectedOutputId,
     memberVolumeByUserId,
     selectedVideoInputId,
@@ -478,6 +482,8 @@ export function App() {
   usePersistedClientSettings({
     selectedInputProfile,
     rnnoiseSuppressionLevel,
+    preRnnEchoCancellationEnabled,
+    preRnnAutoGainControlEnabled,
     selfMonitorEnabled,
     micMuted,
     audioMuted,
@@ -1462,6 +1468,8 @@ export function App() {
     noiseSuppressionEnabled,
     rnnoiseSuppressionLevel,
     rnnoiseRuntimeStatus,
+    preRnnEchoCancellationEnabled,
+    preRnnAutoGainControlEnabled,
     cameraEnabled,
     micMuted,
     audioMuted,
@@ -1503,6 +1511,8 @@ export function App() {
     onToggleScreenShare: handleToggleScreenShareClick,
     onToggleNoiseSuppression: handleToggleNoiseSuppression,
     onSetRnnoiseSuppressionLevel: setRnnoiseSuppressionLevel,
+    onTogglePreRnnEchoCancellation: () => setPreRnnEchoCancellationEnabled((value) => !value),
+    onTogglePreRnnAutoGainControl: () => setPreRnnAutoGainControlEnabled((value) => !value),
     selfMonitorEnabled,
     onToggleSelfMonitor: () => setSelfMonitorEnabled((value) => !value),
     onRequestVideoAccess: requestVideoAccess,

@@ -49,8 +49,12 @@ type UserDockSettingsOverlayProps = Pick<
   | "noiseSuppressionEnabled"
   | "rnnoiseSuppressionLevel"
   | "rnnoiseRuntimeStatus"
+  | "preRnnEchoCancellationEnabled"
+  | "preRnnAutoGainControlEnabled"
   | "onToggleNoiseSuppression"
   | "onSetRnnoiseSuppressionLevel"
+  | "onTogglePreRnnEchoCancellation"
+  | "onTogglePreRnnAutoGainControl"
 > & {
   mediaDevicesUnavailable: boolean;
   mediaControlsLocked: boolean;
@@ -106,8 +110,12 @@ export function UserDockSettingsOverlay({
   noiseSuppressionEnabled,
   rnnoiseSuppressionLevel,
   rnnoiseRuntimeStatus,
+  preRnnEchoCancellationEnabled,
+  preRnnAutoGainControlEnabled,
   onToggleNoiseSuppression,
   onSetRnnoiseSuppressionLevel,
+  onTogglePreRnnEchoCancellation,
+  onTogglePreRnnAutoGainControl,
   mediaDevicesUnavailable,
   mediaControlsLocked,
   mediaDevicesWarningText,
@@ -210,6 +218,15 @@ export function UserDockSettingsOverlay({
             </form>
           ) : userSettingsTab === "sound" ? (
             <>
+              <div className="flex flex-wrap items-center gap-3">
+                <button type="button" className="secondary" onClick={onRequestMediaAccess}>
+                  {t("settings.requestMediaAccess")}
+                </button>
+                <button type="button" className="secondary" onClick={onRefreshDevices}>
+                  {t("settings.refreshDevices")}
+                </button>
+              </div>
+
               <div className="voice-preferences-grid grid gap-3 desktop:grid-cols-2">
                 <label className="grid gap-[var(--space-md)]">
                   <span className="subheading">{t("settings.microphone")}</span>
@@ -229,22 +246,12 @@ export function UserDockSettingsOverlay({
                 </label>
               </div>
 
-              <div className="flex flex-wrap items-center gap-3">
-                <button type="button" className="secondary" onClick={onRequestMediaAccess}>
-                  {t("settings.requestMediaAccess")}
-                </button>
-                <button type="button" className="secondary" onClick={onRefreshDevices}>
-                  {t("settings.refreshDevices")}
-                </button>
-              </div>
-
               {mediaDevicesUnavailable ? (
                 <p className="muted media-devices-warning">{mediaDevicesWarningText}</p>
               ) : null}
 
-              <div className="voice-preferences-grid grid gap-3 desktop:grid-cols-2">
-                <label className="slider-label grid gap-2">
-                  {t("settings.micVolume")}
+              <div className="voice-preferences-grid grid gap-[var(--space-md)] desktop:grid-cols-2">
+                <div className="grid gap-[var(--space-md)]">
                   <RangeSlider
                     min={0}
                     max={100}
@@ -253,9 +260,8 @@ export function UserDockSettingsOverlay({
                     valueSuffix="%"
                     onChange={onSetMicVolume}
                   />
-                </label>
-                <label className="slider-label grid gap-2">
-                  {t("settings.outputVolume")}
+                </div>
+                <div className="grid gap-[var(--space-md)]">
                   <RangeSlider
                     min={0}
                     max={100}
@@ -264,7 +270,7 @@ export function UserDockSettingsOverlay({
                     valueSuffix="%"
                     onChange={onSetOutputVolume}
                   />
-                </label>
+                </div>
               </div>
 
               <div className="voice-test-row grid gap-2">
@@ -283,7 +289,6 @@ export function UserDockSettingsOverlay({
 
               <div className="grid gap-2">
                 <h3 className="subheading">{t("settings.inputProfile")}</h3>
-                <p className="muted media-devices-warning">{t("settings.inputProfileLocked")}</p>
                 <div className="voice-sound-checkbox flex items-center justify-between gap-3">
                   <span>{t("settings.listenSelf")}</span>
                   <button
@@ -313,6 +318,35 @@ export function UserDockSettingsOverlay({
                 <p className="muted media-devices-warning">{t("settings.rnnClientHint")}</p>
                 {noiseSuppressionEnabled ? (
                   <>
+                    <div className="grid gap-2">
+                      <span className="subheading">{t("settings.preRnnFilters")}</span>
+                      <div className="voice-sound-checkbox flex items-center justify-between gap-3">
+                        <span>{t("settings.echoCancellation")}</span>
+                        <button
+                          type="button"
+                          className={`ui-switch ${preRnnEchoCancellationEnabled ? "ui-switch-on" : ""}`}
+                          role="switch"
+                          aria-checked={preRnnEchoCancellationEnabled}
+                          aria-label={t("settings.echoCancellation")}
+                          onClick={onTogglePreRnnEchoCancellation}
+                        >
+                          <span className="ui-switch-thumb" aria-hidden="true" />
+                        </button>
+                      </div>
+                      <div className="voice-sound-checkbox flex items-center justify-between gap-3">
+                        <span>{t("settings.autoGainControl")}</span>
+                        <button
+                          type="button"
+                          className={`ui-switch ${preRnnAutoGainControlEnabled ? "ui-switch-on" : ""}`}
+                          role="switch"
+                          aria-checked={preRnnAutoGainControlEnabled}
+                          aria-label={t("settings.autoGainControl")}
+                          onClick={onTogglePreRnnAutoGainControl}
+                        >
+                          <span className="ui-switch-thumb" aria-hidden="true" />
+                        </button>
+                      </div>
+                    </div>
                     <label className="grid gap-2">
                       <span className="subheading">{t("settings.rnnLevel")}</span>
                       <div className="quality-toggle-group" role="radiogroup" aria-label={t("settings.rnnLevel") }>

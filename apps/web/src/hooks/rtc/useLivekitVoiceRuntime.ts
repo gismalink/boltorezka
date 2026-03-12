@@ -46,6 +46,8 @@ type UseLivekitVoiceRuntimeArgs = {
   selectedInputId: string;
   selectedInputProfile: "noise_reduction" | "studio" | "custom";
   rnnoiseSuppressionLevel: RnnoiseSuppressionLevel;
+  preRnnEchoCancellationEnabled: boolean;
+  preRnnAutoGainControlEnabled: boolean;
   selectedOutputId: string;
   memberVolumeByUserId: Record<string, number>;
   selectedVideoInputId: string;
@@ -171,6 +173,8 @@ export function useLivekitVoiceRuntime({
   selectedInputId,
   selectedInputProfile,
   rnnoiseSuppressionLevel,
+  preRnnEchoCancellationEnabled,
+  preRnnAutoGainControlEnabled,
   selectedOutputId,
   memberVolumeByUserId,
   selectedVideoInputId,
@@ -228,9 +232,9 @@ export function useLivekitVoiceRuntime({
       return {
         ...base,
         ...qualityHint,
-        echoCancellation: true,
+        echoCancellation: preRnnEchoCancellationEnabled,
         noiseSuppression: false,
-        autoGainControl: true,
+        autoGainControl: preRnnAutoGainControlEnabled,
         channelCount: 1
       };
     }
@@ -310,8 +314,8 @@ export function useLivekitVoiceRuntime({
 
   const buildMicConfigKey = useCallback(() => {
     const deviceId = selectedInputId && selectedInputId !== "default" ? selectedInputId : "default";
-    return `${deviceId}:${selectedInputProfile}:${audioQuality}`;
-  }, [audioQuality, selectedInputId, selectedInputProfile]);
+    return `${deviceId}:${selectedInputProfile}:${audioQuality}:${preRnnEchoCancellationEnabled ? "ec1" : "ec0"}:${preRnnAutoGainControlEnabled ? "agc1" : "agc0"}`;
+  }, [audioQuality, preRnnAutoGainControlEnabled, preRnnEchoCancellationEnabled, selectedInputId, selectedInputProfile]);
 
     const tryPlayRemoteAudioElement = useCallback((participantId: string, element: HTMLAudioElement) => {
       const playPromise = element.play();

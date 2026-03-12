@@ -26,6 +26,8 @@ export type UserDockProps = {
   noiseSuppressionEnabled: boolean;
   rnnoiseSuppressionLevel: RnnoiseSuppressionLevel;
   rnnoiseRuntimeStatus: "inactive" | "active" | "unavailable" | "error";
+  preRnnEchoCancellationEnabled: boolean;
+  preRnnAutoGainControlEnabled: boolean;
   selfMonitorEnabled: boolean;
   currentRoomSupportsVideo: boolean;
   cameraEnabled: boolean;
@@ -69,6 +71,8 @@ export type UserDockProps = {
   onToggleScreenShare: () => void;
   onToggleNoiseSuppression: () => void;
   onSetRnnoiseSuppressionLevel: (value: RnnoiseSuppressionLevel) => void;
+  onTogglePreRnnEchoCancellation: () => void;
+  onTogglePreRnnAutoGainControl: () => void;
   onToggleSelfMonitor: () => void;
   onToggleVoiceSettings: () => void;
   onToggleAudioOutput: () => void;
