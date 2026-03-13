@@ -98,6 +98,7 @@ type UseRealtimeChatLifecycleArgs = {
       ts?: string;
     }
   ) => void;
+  onSessionMoved?: (payload: { code: string; message: string }) => void;
 };
 
 export function useRealtimeChatLifecycle({
@@ -131,7 +132,8 @@ export function useRealtimeChatLifecycle({
   onChatCleared,
   onAck,
   onNack,
-  onScreenShareState
+  onScreenShareState,
+  onSessionMoved
 }: UseRealtimeChatLifecycleArgs) {
   const onCallMicStateRef = useRef(onCallMicState);
   const onCallVideoStateRef = useRef(onCallVideoState);
@@ -226,7 +228,8 @@ export function useRealtimeChatLifecycle({
       onChatCleared: (...args) => onChatClearedRef.current?.(...args),
       onAck: (...args) => onAckRef.current?.(...args),
       onNack: (...args) => onNackRef.current?.(...args),
-      onScreenShareState: (...args) => onScreenShareStateRef.current?.(...args)
+      onScreenShareState: (...args) => onScreenShareStateRef.current?.(...args),
+      onSessionMoved: (...args) => onSessionMoved?.(...args)
     });
 
     const client = new RealtimeClient({

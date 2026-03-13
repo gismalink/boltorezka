@@ -120,7 +120,7 @@ export function App() {
   const [roomsTree, setRoomsTree] = useState<RoomsTreeResponse | null>(null);
   const [roomSlug, setRoomSlug] = useState(() => {
     const stored = String(localStorage.getItem(ROOM_SLUG_STORAGE_KEY) || "").trim();
-    return stored || "general";
+    return stored;
   });
   const [showAppUpdatedOverlay, setShowAppUpdatedOverlay] = useState(
     () => sessionStorage.getItem(VERSION_UPDATE_PENDING_KEY) === "1"
@@ -808,8 +808,22 @@ export function App() {
   }, [roomSlug]);
 
   useEffect(() => {
-    localStorage.setItem(ROOM_SLUG_STORAGE_KEY, roomSlug);
+    if (roomSlug) {
+      localStorage.setItem(ROOM_SLUG_STORAGE_KEY, roomSlug);
+      return;
+    }
+
+    localStorage.removeItem(ROOM_SLUG_STORAGE_KEY);
   }, [roomSlug]);
+
+  const showDesktopBrowserCompletion = useMemo(() => {
+    if (typeof window === "undefined" || window.boltorezkaDesktop) {
+      return false;
+    }
+
+    const url = new URL(window.location.href);
+    return url.searchParams.get("desktop_handoff_complete") === "1";
+  }, [token]);
 
   useSessionStateLifecycle({
     token,
@@ -884,6 +898,31 @@ export function App() {
     onAck: handleWsAck,
     onNack: handleWsNack,
     onScreenShareState: handleIncomingScreenShareState,
+    onSessionMoved: ({ code, message }) => {
+      const activeSlug = String(roomSlugRef.current || "").trim();
+      if (activeSlug) {
+        setRoomsPresenceBySlug((prev) => {
+          if (!(activeSlug in prev)) {
+            return prev;
+          }
+          const next = { ...prev };
+          delete next[activeSlug];
+          return next;
+        });
+        setRoomsPresenceDetailsBySlug((prev) => {
+          if (!(activeSlug in prev)) {
+            return prev;
+          }
+          const next = { ...prev };
+          delete next[activeSlug];
+          return next;
+        });
+      }
+
+      disconnectRoom();
+      setRoomSlug("");
+      pushLog(`session moved: ${code} ${message}`);
+    },
     onChatCleared: (payload) => {
       const targetRoomSlug = String(payload.roomSlug || "").trim();
       const activeRoomSlug = roomSlugRef.current;
@@ -1411,9 +1450,39 @@ export function App() {
 
     const roomExists = allRooms.some((room) => room.slug === roomSlug);
     if (!roomExists) {
-      setRoomSlug("general");
+      setRoomSlug("");
     }
   }, [allRooms, roomSlug]);
+
+  if (showDesktopBrowserCompletion) {
+    return (
+      <main className="app legacy-layout mx-auto grid h-[100dvh] max-h-[100dvh] w-full max-w-[760px] place-items-center p-6">
+        <section className="settings-sheet w-full max-w-[560px] p-6 text-center">
+          <h1 className="text-2xl font-semibold">Авторизация завершена</h1>
+          <p className="mt-3 text-sm opacity-80">
+            Вы вошли в Boltorezka Desktop. Это окно можно закрыть.
+          </p>
+          <div className="mt-5 flex justify-center">
+            <button
+              type="button"
+              className="secondary"
+              onClick={() => {
+                const url = new URL(window.location.href);
+                url.searchParams.delete("desktop_handoff");
+                url.searchParams.delete("desktop_handoff_bootstrap");
+                url.searchParams.delete("desktop_handoff_refreshed");
+                url.searchParams.delete("desktop_handoff_sent");
+                url.searchParams.delete("desktop_handoff_complete");
+                window.location.replace(url.toString());
+              }}
+            >
+              Открыть веб-версию
+            </button>
+          </div>
+        </section>
+      </main>
+    );
+  }
 
   useAutoRoomVoiceConnection({
     roomMediaResolved: Boolean(currentRoomSnapshot),

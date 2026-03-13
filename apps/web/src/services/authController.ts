@@ -76,9 +76,17 @@ export class AuthController {
 
     const currentUrl = new URL(resolveCurrentReturnUrl());
     currentUrl.searchParams.delete("desktop_handoff");
+    currentUrl.searchParams.delete("desktop_handoff_bootstrap");
+    currentUrl.searchParams.delete("desktop_handoff_refreshed");
     currentUrl.searchParams.delete("desktop_handoff_sent");
+    currentUrl.searchParams.set("desktop_handoff_complete", "1");
     const deepLink = buildDesktopHandoffDeepLink(response.code, currentUrl.toString());
     window.location.href = deepLink;
+
+    // Keep browser on a safe completion page instead of chat UI after protocol handoff.
+    window.setTimeout(() => {
+      window.location.replace(currentUrl.toString());
+    }, 250);
   }
 
   async completeDesktopHandoff(code: string) {

@@ -32,7 +32,7 @@ export class RealtimeClient {
   private token = "";
   private ws: WebSocket | null = null;
   private reconnectAttempt = 0;
-  private activeRoomSlug = "general";
+  private activeRoomSlug = "";
   private pingInterval: ReturnType<typeof setInterval> | null = null;
   private reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
   private isDisposed = false;
