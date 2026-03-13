@@ -83,9 +83,17 @@ async function waitByWallClock(windowMs) {
   const startedAt = Date.now();
   const deadline = startedAt + windowMs;
   let nextProgressAt = startedAt + 10000;
+  let prevTickAt = startedAt;
+  let maxGapMs = 0;
 
   while (Date.now() < deadline) {
     const now = Date.now();
+    const gapMs = now - prevTickAt;
+    if (gapMs > maxGapMs) {
+      maxGapMs = gapMs;
+    }
+    prevTickAt = now;
+
     if (now >= nextProgressAt) {
       const remaining = Math.max(0, deadline - now);
       console.log(`[smoke:desktop:sleep-wake] waiting... remainingMs=${remaining}`);
@@ -94,7 +102,10 @@ async function waitByWallClock(windowMs) {
     await new Promise((resolve) => setTimeout(resolve, 250));
   }
 
-  return Date.now() - startedAt;
+  return {
+    elapsedMs: Date.now() - startedAt,
+    maxGapMs
+  };
 }
 
 async function readMarkers(page) {
@@ -141,8 +152,9 @@ async function main() {
     console.log("[smoke:desktop:sleep-wake] wait-window-start");
     console.log(`- instruction: sleep device during next ${windowMs}ms, then wake and unlock`);
 
-    const elapsedMs = await waitByWallClock(windowMs);
-    const suspendObserved = elapsedMs >= windowMs + suspendThresholdMs;
+    const waitStats = await waitByWallClock(windowMs);
+    const elapsedMs = waitStats.elapsedMs;
+    const suspendObserved = waitStats.maxGapMs >= suspendThresholdMs;
 
     let after = null;
     let windowRecoveryMode = "automatic";
@@ -189,6 +201,7 @@ async function main() {
     console.log(`- baseUrl: ${baseUrl}`);
     console.log(`- windowMs: ${windowMs}`);
     console.log(`- elapsedMs: ${elapsedMs}`);
+    console.log(`- maxGapMs: ${waitStats.maxGapMs}`);
     console.log(`- suspendObserved: ${suspendObserved}`);
     console.log(`- requireSuspend: ${requireSuspend}`);
     console.log(`- windowRecoveryMode: ${windowRecoveryMode}`);
