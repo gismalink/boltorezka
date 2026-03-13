@@ -92,6 +92,7 @@ type LivekitRuntimeApi = {
 
 const EMPTY_HANDLER = () => {};
 type MediaTrackConstraintsWithVolume = MediaTrackConstraints & { volume?: number };
+type EventEmitterLike = { setMaxListeners?: (count: number) => void };
 
 function parseResolution(value: ServerVideoResolution): { width: number; height: number } {
   const [rawWidth, rawHeight] = String(value).split("x");
@@ -132,6 +133,32 @@ const normalizeLivekitSignalUrl = (rawUrl: string): string => {
   } catch {
     return value;
   }
+};
+
+const setEmitterMaxListeners = (candidate: unknown, count: number) => {
+  if (!candidate || typeof candidate !== "object") {
+    return;
+  }
+
+  const emitter = candidate as EventEmitterLike;
+  if (typeof emitter.setMaxListeners === "function") {
+    emitter.setMaxListeners(count);
+  }
+};
+
+const relaxLivekitEmitterLimits = (room: Room, maxListeners = 64) => {
+  const engine = room.engine as unknown as {
+    client?: unknown;
+    publisher?: unknown;
+    subscriber?: unknown;
+    pcManager?: unknown;
+  };
+
+  setEmitterMaxListeners(engine, maxListeners);
+  setEmitterMaxListeners(engine.client, maxListeners);
+  setEmitterMaxListeners(engine.publisher, maxListeners);
+  setEmitterMaxListeners(engine.subscriber, maxListeners);
+  setEmitterMaxListeners(engine.pcManager, maxListeners);
 };
 
 const isExpectedDisconnectError = (error: unknown): boolean => {
@@ -778,6 +805,9 @@ export function useLivekitVoiceRuntime({
           adaptiveStream: false,
           dynacast: true
         });
+
+  // LiveKit may attach many internal listeners during long-lived reconnect/video sessions.
+  relaxLivekitEmitterLimits(room);
 
         roomRef.current = room;
 
