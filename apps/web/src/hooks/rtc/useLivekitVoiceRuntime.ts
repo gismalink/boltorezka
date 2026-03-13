@@ -208,6 +208,7 @@ export function useLivekitVoiceRuntime({
   const rnnoiseProcessorRef = useRef<RnnoiseAudioProcessor | null>(null);
   const remoteAudioElementsRef = useRef<Map<string, HTMLAudioElement>>(new Map());
   const remoteAudioBlockedByAutoplayRef = useRef<Set<string>>(new Set());
+  const hasUserInteractionRef = useRef(false);
   const prevRoomSlugRef = useRef(roomSlug);
   const connectInFlightRef = useRef<Promise<void> | null>(null);
   const disconnectRequestedRef = useRef(false);
@@ -341,6 +342,11 @@ export function useLivekitVoiceRuntime({
   }, [audioQuality, preRnnAutoGainControlEnabled, preRnnEchoCancellationEnabled, selectedInputId, selectedInputProfile]);
 
     const tryPlayRemoteAudioElement = useCallback((participantId: string, element: HTMLAudioElement) => {
+      if (!hasUserInteractionRef.current) {
+        remoteAudioBlockedByAutoplayRef.current.add(participantId);
+        return;
+      }
+
       const playPromise = element.play();
       if (!playPromise || typeof playPromise.then !== "function") {
         remoteAudioBlockedByAutoplayRef.current.delete(participantId);
@@ -383,15 +389,17 @@ export function useLivekitVoiceRuntime({
     });
   }, [audioMuted, memberVolumeByUserId, outputVolume, selectedOutputId, tryPlayRemoteAudioElement]);
 
-  const attachRemoteAudioTrack = useCallback((participantId: string, track: RemoteAudioTrack) => {
+    const attachRemoteAudioTrack = useCallback((participantId: string, track: RemoteAudioTrack) => {
     const existing = remoteAudioElementsRef.current.get(participantId);
     if (existing) {
       existing.remove();
       remoteAudioElementsRef.current.delete(participantId);
     }
 
-    const element = track.attach();
-    element.autoplay = true;
+    const element = document.createElement("audio");
+    element.autoplay = false;
+    element.playsInline = true;
+    track.attach(element);
     element.style.display = "none";
     document.body.appendChild(element);
     remoteAudioElementsRef.current.set(participantId, element);
@@ -940,6 +948,7 @@ export function useLivekitVoiceRuntime({
 
     useEffect(() => {
       const unlockPlayback = () => {
+        hasUserInteractionRef.current = true;
         retryBlockedRemoteAudioPlayback();
       };
 
