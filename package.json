@@ -14,6 +14,8 @@
     "desktop:dev": "npm --prefix apps/desktop-electron run dev",
     "desktop:build": "npm --prefix apps/desktop-electron run build",
     "desktop:smoke": "bash ./scripts/smoke/smoke-desktop-foundation.sh \"${REPO_DIR:-$PWD}\"",
+    "desktop:smoke:full": "npm run desktop:smoke && npm run smoke:desktop:runtime",
+    "smoke:desktop:runtime": "node ./scripts/smoke/smoke-desktop-runtime.mjs",
     "smoke:api": "node ./scripts/smoke/smoke-api.mjs",
     "smoke:auth:session": "node ./scripts/smoke/smoke-auth-session.mjs",
     "smoke:auth:cookie-mode": "node ./scripts/smoke/smoke-auth-cookie-mode.mjs",

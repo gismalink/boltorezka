@@ -13,6 +13,7 @@
 | Auth session lifecycle smoke (refresh/logout/revoke) | `SMOKE_TEST_BEARER_TOKEN=<sid-token> SMOKE_API_URL=https://test.boltorezka.gismalink.art npm run smoke:auth:session` | Recommended |
 | RNNoise browser smoke (voice settings on/off) | `SMOKE_TEST_BEARER_TOKEN=<token> SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art npm run smoke:web:rnnoise:browser` | Recommended |
 | Desktop foundation smoke (Electron shell) | `npm run desktop:smoke` | Recommended for desktop feature branches |
+| Desktop runtime smoke (Electron + runtime markers) | `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art npm run smoke:desktop:runtime` | Recommended for desktop feature branches |
 | Required gate (API+SSO+realtime, при наличии токена) | `SMOKE_TEST_BEARER_TOKEN=<token> SMOKE_API_URL=https://test.boltorezka.gismalink.art npm run check:required` | CI / test gate |
 
 ## 2) Test deploy gate
@@ -76,6 +77,7 @@ Policy:
 | Browser-level denied media UX gate (headless) | `SMOKE_WEB_BASE_URL=<url> npm run smoke:web:denied-media:browser` (optional in `smoke:web:e2e` via `SMOKE_E2E_DENIED_MEDIA_BROWSER=1`) |
 | Browser-level RNNoise voice-settings gate (headless) | `SMOKE_WEB_BASE_URL=<url> SMOKE_TEST_BEARER_TOKEN=<token> npm run smoke:web:rnnoise:browser` |
 | Desktop shell packaging baseline (`main/preload/renderer bundle`) | `npm run desktop:smoke` |
+| Desktop shell runtime baseline (`runtime=desktop` markers via Electron launch) | `npm run smoke:desktop:runtime` |
 | Client telemetry runtime labels (`runtime`/`platform`/`electronVersion`) | `POST /v1/telemetry/web` payload from `trackClientEvent` |
 | `GET /v1/telemetry/summary` | CI (`SMOKE_TELEMETRY_SUMMARY=1`) |
 | `POST /v1/room-categories` + `POST /v1/rooms` + `GET /v1/rooms/tree` | API smoke (`SMOKE_API=1`, hierarchy block with cleanup) |

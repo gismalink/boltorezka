@@ -181,3 +181,6 @@ Progress note (2026-03-13, M1 foundation):
 
 Progress note (2026-03-13, M2 observability start):
 - В `trackClientEvent` добавлены runtime labels для desktop/web (`runtime`, `platform`, `electronVersion`) для всех client telemetry событий.
+
+Progress note (2026-03-13, M2 validation start):
+- Добавлен desktop runtime smoke (`scripts/smoke/smoke-desktop-runtime.mjs`) с запуском Electron shell через Playwright и проверкой runtime markers (`runtime=desktop`, `platform`, `electronVersion`).
