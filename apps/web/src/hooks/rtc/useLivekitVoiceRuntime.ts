@@ -372,9 +372,10 @@ export function useLivekitVoiceRuntime({
     remoteAudioElementsRef.current.forEach((element, participantId) => {
       const peerVolume = Math.max(0, Math.min(100, Number(memberVolumeByUserId[participantId] ?? 100)));
       const mixedVolume = (Math.max(0, Math.min(100, outputVolume)) / 100) * (peerVolume / 100);
-      element.muted = audioMuted;
+      const canPlayAudibly = hasUserInteractionRef.current;
+      element.muted = audioMuted || !canPlayAudibly;
       element.volume = Math.max(0, Math.min(1, mixedVolume));
-        if (!audioMuted) {
+        if (!audioMuted && canPlayAudibly) {
           tryPlayRemoteAudioElement(participantId, element);
         }
       if (
@@ -399,6 +400,7 @@ export function useLivekitVoiceRuntime({
     const element = document.createElement("audio");
     element.autoplay = false;
     element.setAttribute("playsinline", "");
+    element.muted = true;
     track.attach(element);
     element.style.display = "none";
     document.body.appendChild(element);
@@ -948,7 +950,11 @@ export function useLivekitVoiceRuntime({
 
     useEffect(() => {
       const unlockPlayback = () => {
+        if (hasUserInteractionRef.current) {
+          return;
+        }
         hasUserInteractionRef.current = true;
+        applyAudioOutputSettings();
         retryBlockedRemoteAudioPlayback();
       };
 
@@ -961,7 +967,7 @@ export function useLivekitVoiceRuntime({
         window.removeEventListener("keydown", unlockPlayback);
         window.removeEventListener("touchstart", unlockPlayback);
       };
-    }, [retryBlockedRemoteAudioPlayback]);
+    }, [applyAudioOutputSettings, retryBlockedRemoteAudioPlayback]);
 
   useEffect(() => {
     const localAudioTrack = localTracksRef.current.get(Track.Source.Microphone);
