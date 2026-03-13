@@ -91,6 +91,7 @@ type LivekitRuntimeApi = {
 };
 
 const EMPTY_HANDLER = () => {};
+type MediaTrackConstraintsWithVolume = MediaTrackConstraints & { volume?: number };
 
 function parseResolution(value: ServerVideoResolution): { width: number; height: number } {
   const [rawWidth, rawHeight] = String(value).split("x");
@@ -266,7 +267,7 @@ export function useLivekitVoiceRuntime({
         noiseSuppression: false,
         autoGainControl: preRnnAutoGainControlEnabled,
         channelCount: 1
-      };
+      } as MediaTrackConstraintsWithVolume;
     }
 
     if (selectedInputProfile === "studio") {
@@ -277,10 +278,10 @@ export function useLivekitVoiceRuntime({
         echoCancellation: false,
         noiseSuppression: false,
         autoGainControl: false
-      };
+      } as MediaTrackConstraintsWithVolume;
     }
 
-    const constraints = {
+    const constraints: MediaTrackConstraintsWithVolume = {
       ...base,
       ...qualityHint,
       volume: inputVolume
@@ -1017,7 +1018,8 @@ export function useLivekitVoiceRuntime({
     }
 
     const normalizedVolume = Math.max(0, Math.min(1, Number(micVolume) / 100));
-    void mediaTrack.applyConstraints({ volume: normalizedVolume }).catch((error) => {
+    const constraints: MediaTrackConstraintsWithVolume = { volume: normalizedVolume };
+    void mediaTrack.applyConstraints(constraints).catch((error) => {
       pushCallLog(`livekit mic volume apply failed: ${error instanceof Error ? error.message : "unknown error"}`);
     });
   }, [micVolume, pushCallLog, roomVoiceConnected]);
