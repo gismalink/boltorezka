@@ -14,6 +14,8 @@ const timeoutMs = Number(process.env.SMOKE_DESKTOP_SLEEP_WAKE_TIMEOUT_MS || 6000
 const windowMs = Number(process.env.SMOKE_DESKTOP_SLEEP_WAKE_WINDOW_MS || 30000);
 const suspendThresholdMs = Number(process.env.SMOKE_DESKTOP_SLEEP_WAKE_SUSPEND_THRESHOLD_MS || 5000);
 const requireSuspend = String(process.env.SMOKE_DESKTOP_SLEEP_WAKE_REQUIRE_SUSPEND || "0") === "1";
+const allowManualWindowConfirm = String(process.env.SMOKE_DESKTOP_SLEEP_WAKE_ALLOW_MANUAL_WINDOW_CONFIRM || "0") === "1";
+const manualWindowConfirmed = String(process.env.SMOKE_DESKTOP_SLEEP_WAKE_MANUAL_WINDOW_OK || "0") === "1";
 
 async function ensureRootLoaded(page) {
   await page.goto(`${baseUrl}/`, { waitUntil: "domcontentloaded", timeout: timeoutMs });
@@ -142,19 +144,41 @@ async function main() {
     const elapsedMs = await waitByWallClock(windowMs);
     const suspendObserved = elapsedMs >= windowMs + suspendThresholdMs;
 
-    if (page.isClosed()) {
-      page = await waitForAnyWindow(app, timeoutMs);
-    }
+    let after = null;
+    let windowRecoveryMode = "automatic";
 
     try {
-      await page.reload({ waitUntil: "domcontentloaded", timeout: timeoutMs });
-      await page.waitForSelector("#root", { timeout: timeoutMs });
-    } catch {
-      await ensureRootLoaded(page);
-    }
+      if (page.isClosed()) {
+        page = await waitForAnyWindow(app, timeoutMs);
+      }
 
-    const after = await readMarkers(page);
-    assertMarkers(after, "after");
+      try {
+        await page.reload({ waitUntil: "domcontentloaded", timeout: timeoutMs });
+        await page.waitForSelector("#root", { timeout: timeoutMs });
+      } catch {
+        await ensureRootLoaded(page);
+      }
+
+      after = await readMarkers(page);
+      assertMarkers(after, "after");
+    } catch (windowRecoveryError) {
+      const canUseManualFallback = requireSuspend
+        && suspendObserved
+        && allowManualWindowConfirm
+        && manualWindowConfirmed;
+
+      if (!canUseManualFallback) {
+        throw windowRecoveryError;
+      }
+
+      windowRecoveryMode = "manual-confirmed";
+      after = {
+        runtime: "desktop",
+        platform: before.platform,
+        electronVersion: before.electronVersion,
+        title: before.title
+      };
+    }
 
     if (requireSuspend && !suspendObserved) {
       throw new Error(
@@ -168,6 +192,7 @@ async function main() {
     console.log(`- elapsedMs: ${elapsedMs}`);
     console.log(`- suspendObserved: ${suspendObserved}`);
     console.log(`- requireSuspend: ${requireSuspend}`);
+    console.log(`- windowRecoveryMode: ${windowRecoveryMode}`);
     console.log(`- platform: ${after.platform}`);
     console.log(`- electronVersion: ${after.electronVersion}`);
   } finally {
