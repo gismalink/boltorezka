@@ -200,3 +200,7 @@ Progress note (2026-03-13, M2 telemetry sanity):
 Progress note (2026-03-13, M2 validation checkpoint):
 - Пройден полный M2 smoke automation цикл на test (`desktop:smoke:m2`): foundation/runtime/reconnect/telemetry — PASS.
 - Результат зафиксирован в `docs/status/TEST_RESULTS.md` (Cycle #17, `origin/feature/electron-desktop-foundation`, SHA `704b7df`).
+
+Progress note (2026-03-13, auth hardening dependency):
+- P1 пункты `rate limits` и `structured auth logs/audit trail` закрыты.
+- Остается `SLO/baseline` evidence: локальный `npm run slo:check` без admin bearer возвращает `401` на `/v1/telemetry/summary`; закрытие пункта выполняется отдельным прогоном с admin token в test.
