@@ -32,9 +32,10 @@
 
 ## 4) Security smoke
 
-- [ ] Renderer не имеет доступа к Node API (`nodeIntegration=false`).
-- [ ] `contextIsolation=true`, `sandbox=true`.
-- [ ] Внешние ссылки открываются во внешнем браузере, не внутри app window.
+- [x] Renderer не имеет доступа к Node API (`nodeIntegration=false`).
+- [x] `contextIsolation=true`, `sandbox=true`.
+- [x] Внешние ссылки открываются во внешнем браузере, не внутри app window.
+  - `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art npm run smoke:desktop:security`
 
 ## 5) Release gate policy
 
@@ -47,3 +48,4 @@
 - [x] M2 smoke automation slice закрыт на test: `desktop:smoke`, `smoke:desktop:runtime`, `smoke:desktop:reconnect`, `smoke:desktop:telemetry` — PASS.
 - [x] Evidence зафиксирован в `docs/status/TEST_RESULTS.md` (Cycle #17, SHA `704b7df`).
 - [x] Full chain с soak (`desktop:smoke:m2:soak`) прошел на test, evidence: `docs/status/TEST_RESULTS.md` (Cycle #20).
+- [x] Security baseline smoke (`smoke:desktop:security`) и полный chain (`desktop:smoke:m2:secure`) прошли на test, evidence: `docs/status/TEST_RESULTS.md` (Cycle #21).

@@ -83,6 +83,7 @@ Policy:
 | Desktop reconnect baseline (`network flap -> reload -> runtime markers`) | `npm run smoke:desktop:reconnect` |
 | Desktop reconnect soak baseline (`N` offline/online cycles in single run) | `SMOKE_WEB_BASE_URL=<url> SMOKE_DESKTOP_SOAK_CYCLES=8 npm run smoke:desktop:soak` |
 | Desktop telemetry payload baseline (`desktop_smoke_probe` meta labels) | `npm run smoke:desktop:telemetry` |
+| Desktop security baseline (`webPreferences + renderer isolation + bridge allowlist`) | `SMOKE_WEB_BASE_URL=<url> npm run smoke:desktop:security` |
 | Client telemetry runtime labels (`runtime`/`platform`/`electronVersion`) | `POST /v1/telemetry/web` payload from `trackClientEvent` |
 | `GET /v1/telemetry/summary` | CI (`SMOKE_TELEMETRY_SUMMARY=1`) |
 | `POST /v1/room-categories` + `POST /v1/rooms` + `GET /v1/rooms/tree` | API smoke (`SMOKE_API=1`, hierarchy block with cleanup) |

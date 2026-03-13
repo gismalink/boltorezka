@@ -2,6 +2,32 @@
 
 Отдельный журнал результатов тестов/нагрузки.
 
+## 2026-03-13 — Cycle #21 (Desktop security baseline + secure chain)
+
+- Environment: `test` (`https://test.boltorezka.gismalink.art`)
+- Build ref: `origin/feature/electron-desktop-foundation` (working tree, post-`78955dd`)
+
+### Functional gate
+
+- `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art npm run smoke:desktop:security`: PASS
+  - contextIsolation: `true`
+  - sandbox: `true`
+  - nodeIntegration: `false`
+  - webSecurity: `true`
+  - preload bridge keys: `platform,version`
+  - popupBlocked: `true`
+- `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art SMOKE_DESKTOP_SOAK_CYCLES=2 npm run desktop:smoke:m2:secure`: PASS
+
+### Scope covered by this cycle
+
+- Добавлен и валидирован desktop security smoke (webPreferences + renderer isolation + bridge allowlist),
+- Подтвержден агрегированный `desktop:smoke:m2:secure` command для M2 regression на feature/test.
+
+### Decision
+
+- Cycle #21: PASS.
+- Security smoke может использоваться как обязательный desktop pre-merge gate вместе с M2 chain.
+
 ## 2026-03-13 — Cycle #20 (Desktop M2 plus soak chain)
 
 - Environment: `test` (`https://test.boltorezka.gismalink.art`)

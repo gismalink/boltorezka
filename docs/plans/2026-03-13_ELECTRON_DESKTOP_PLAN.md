@@ -212,3 +212,7 @@ Progress note (2026-03-13, M2 stability automation):
 Progress note (2026-03-13, M2 full chain):
 - Добавлен агрегированный command `npm run desktop:smoke:m2:soak`.
 - Test evidence: `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art SMOKE_DESKTOP_SOAK_CYCLES=3 npm run desktop:smoke:m2:soak` -> PASS (foundation/runtime/reconnect/telemetry/soak).
+
+Progress note (2026-03-13, security automation):
+- Добавлен `scripts/smoke/smoke-desktop-security.mjs` и root commands `npm run smoke:desktop:security`, `npm run desktop:smoke:m2:secure`.
+- Test evidence: security baseline PASS (`contextIsolation=true`, `sandbox=true`, `nodeIntegration=false`, bridge allowlist `platform,version`) и full secure chain PASS.
