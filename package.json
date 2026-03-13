@@ -29,6 +29,7 @@
     "smoke:desktop:diagnostics": "node ./scripts/smoke/smoke-desktop-diagnostics.mjs",
     "smoke:desktop:sleep-wake": "node ./scripts/smoke/smoke-desktop-sleep-wake.mjs",
     "smoke:desktop:stability": "node ./scripts/smoke/smoke-desktop-stability.mjs",
+    "smoke:desktop:stability:15m": "SMOKE_DESKTOP_STABILITY_DURATION_MS=900000 npm run smoke:desktop:stability",
     "smoke:api": "node ./scripts/smoke/smoke-api.mjs",
     "smoke:auth:session": "node ./scripts/smoke/smoke-auth-session.mjs",
     "smoke:auth:cookie-mode": "node ./scripts/smoke/smoke-auth-cookie-mode.mjs",

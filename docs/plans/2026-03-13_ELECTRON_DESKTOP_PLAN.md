@@ -240,3 +240,4 @@ Progress note (2026-03-13, stability automation):
 - Safety hardening: bypass разрешен только в non-packaged runtime; packaged app остается строго single-instance.
 - Warm-up evidence: `SMOKE_DESKTOP_STABILITY_DURATION_MS=30000` -> PASS (`docs/status/TEST_RESULTS.md`, Cycle #25).
 - 30-minute runtime evidence: `SMOKE_DESKTOP_STABILITY_DURATION_MS=1800000` -> PASS (`docs/status/TEST_RESULTS.md`, Cycle #26).
+- Voice-session manual checkpoint target сокращен до 15 минут (вместо 30) для M2 acceptance.

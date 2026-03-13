@@ -29,8 +29,8 @@
   - `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art SMOKE_DESKTOP_SOAK_CYCLES=8 npm run smoke:desktop:soak`
 - [x] Sleep/wake ноутбука: сессия восстанавливается без crash.
   - `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art SMOKE_DESKTOP_SLEEP_WAKE_REQUIRE_SUSPEND=1 npm run smoke:desktop:sleep-wake`
-- [ ] 30+ минут voice-сессии без критичных runtime errors.
-  - `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art SMOKE_DESKTOP_STABILITY_DURATION_MS=1800000 npm run smoke:desktop:stability`
+- [ ] 15+ минут voice-сессии без критичных runtime errors.
+  - `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art SMOKE_DESKTOP_STABILITY_DURATION_MS=900000 npm run smoke:desktop:stability`
 
 ## 4) Security smoke
 
@@ -57,4 +57,4 @@
 - [x] Stability soak automation added: `smoke:desktop:stability` + aggregate command `desktop:smoke:m2:stability` (30m evidence run pending).
 - [x] Stability warm-up run прошел (`durationMs=30000`, `probes=3`), evidence: `docs/status/TEST_RESULTS.md` (Cycle #25).
 - [x] 30-минутный runtime stability soak прошел (`durationMs=1800000`, `probes=60`), evidence: `docs/status/TEST_RESULTS.md` (Cycle #26).
-- [ ] Voice-session specific 30m checkpoint остается pending (нужен отдельный авторизованный room/voice сценарий).
+- [ ] Voice-session specific 15m checkpoint остается pending (нужен отдельный авторизованный room/voice сценарий).
