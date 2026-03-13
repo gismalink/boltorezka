@@ -2,6 +2,8 @@
   "name": "boltorezka-desktop",
   "private": true,
   "version": "0.1.0",
+  "description": "Electron desktop shell for Boltorezka",
+  "author": "Boltorezka Team",
   "main": "src/main.cjs",
   "scripts": {
     "dev": "concurrently -k -n WEB,DESKTOP -c cyan,green \"npm --prefix ../web run dev -- --host 127.0.0.1 --port 5173\" \"wait-on tcp:127.0.0.1:5173 && cross-env ELECTRON_RENDERER_URL=http://127.0.0.1:5173 electron .\"",

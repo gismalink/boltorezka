@@ -28,36 +28,36 @@ Out of scope (v1.1+):
 ## 2) Архитектурный профиль
 
 Renderer (существующий web app):
-- [ ] Переиспользуется без форка бизнес-логики.
-- [ ] Runtime env для desktop отделен от web env (префикс `DESKTOP_`/`ELECTRON_`).
+- [x] Переиспользуется без форка бизнес-логики.
+- [x] Runtime env для desktop отделен от web env (префикс `DESKTOP_`/`ELECTRON_`).
 
 Main process:
-- [ ] Управление окном, lifecycle, single-instance lock.
+- [x] Управление окном, lifecycle, single-instance lock.
 - [ ] Auto-update orchestration.
-- [ ] Без прямой доменной логики и без доступа renderer к Node API.
+- [x] Без прямой доменной логики и без доступа renderer к Node API.
 
 Preload bridge:
-- [ ] Строгий allowlist IPC API.
-- [ ] Typed contract между renderer и main.
-- [ ] Без передачи секретов в renderer.
+- [x] Строгий allowlist IPC API.
+- [x] Typed contract между renderer и main.
+- [x] Без передачи секретов в renderer.
 
 Security defaults:
-- [ ] `contextIsolation=true`.
-- [ ] `sandbox=true`.
-- [ ] `nodeIntegration=false`.
-- [ ] Навигация/внешние ссылки ограничены и контролируются.
+- [x] `contextIsolation=true`.
+- [x] `sandbox=true`.
+- [x] `nodeIntegration=false`.
+- [x] Навигация/внешние ссылки ограничены и контролируются.
 
 ## 3) Milestones и deliverables
 
 ### M1 - Foundation (каркас)
-- [ ] Создан пакет `apps/desktop-electron`.
-- [ ] Dev режим: окно грузит локальный web dev server.
-- [ ] Prod режим: окно грузит собранный web dist.
-- [ ] Базовый packaging для macOS test build.
+- [x] Создан пакет `apps/desktop-electron`.
+- [x] Dev режим: окно грузит локальный web dev server.
+- [x] Prod режим: окно грузит собранный web dist.
+- [x] Базовый packaging для macOS test build.
 
 Definition of done:
-- [ ] Приложение стартует локально и в packaged режиме.
-- [ ] Нет критичных security warnings в конфиге Electron.
+- [x] Приложение стартует локально и в packaged режиме.
+- [x] Нет критичных security warnings в конфиге Electron.
 
 ### M2 - RTC/media parity
 - [ ] Voice connect/disconnect parity с web.
@@ -90,16 +90,16 @@ Definition of done:
 ## 4) Execution checklist (по потокам)
 
 ### 4.1 Repository and build
-- [ ] Добавить `apps/desktop-electron/package.json` + build scripts.
-- [ ] Добавить корневые команды (например `desktop:dev`, `desktop:build`).
+- [x] Добавить `apps/desktop-electron/package.json` + build scripts.
+- [x] Добавить корневые команды (например `desktop:dev`, `desktop:build`).
 - [ ] Настроить единый app version/build SHA для renderer + desktop package.
 - [ ] Добавить CI jobs для desktop artifacts.
 
 ### 4.2 Electron security
-- [ ] Ввести preload-only bridge.
-- [ ] Запретить произвольные `window.open`/navigation.
+- [x] Ввести preload-only bridge.
+- [x] Запретить произвольные `window.open`/navigation.
 - [ ] Включить CSP и аудит внешних ресурсов.
-- [ ] Проверить, что renderer не получает прямой доступ к fs/process/env.
+- [x] Проверить, что renderer не получает прямой доступ к fs/process/env.
 
 ### 4.3 RTC validation
 - [ ] Проверить media permissions на macOS и Windows.
@@ -166,7 +166,15 @@ Desktop smoke (must pass):
 
 ## 9) Следующие шаги (next action)
 
-- [ ] Создать feature-ветку `feature/electron-desktop-foundation`.
-- [ ] Добавить каркас `apps/desktop-electron` и базовые команды запуска/сборки.
-- [ ] Подготовить отдельный desktop smoke checklist документ (test gate).
-- [ ] После M1 выполнить первый test rollout и зафиксировать результаты в `docs/status`.
+- [x] Создать feature-ветку `feature/electron-desktop-foundation`.
+- [x] Добавить каркас `apps/desktop-electron` и базовые команды запуска/сборки.
+- [x] Подготовить отдельный desktop smoke checklist документ (test gate).
+- [x] После M1 выполнить первый test rollout и зафиксировать результаты в `docs/status`.
+
+## 10) Progress notes
+
+Progress note (2026-03-13, M1 foundation):
+- Desktop shell scaffold внедрен: `apps/desktop-electron` (`main.cjs`, `preload.cjs`, packaging config, root scripts `desktop:*`).
+- Добавлен typed bridge в web renderer (`apps/web/src/desktopBridge.ts`, runtime markers в `main.tsx`).
+- Добавлен desktop smoke script: `npm run desktop:smoke` (`scripts/smoke/smoke-desktop-foundation.sh`).
+- Первый test rollout ветки `feature/electron-desktop-foundation` прошел (`deploy:test:smoke` PASS, SHA `524583dc041c3f9a12cf3d748c7d264cb90e2c11`).

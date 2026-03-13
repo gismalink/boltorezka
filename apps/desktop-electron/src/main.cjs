@@ -4,6 +4,11 @@ const { app, BrowserWindow, shell } = require("electron");
 const isDev = !app.isPackaged;
 const rendererUrl = process.env.ELECTRON_RENDERER_URL || "http://127.0.0.1:5173";
 
+const hasInstanceLock = app.requestSingleInstanceLock();
+if (!hasInstanceLock) {
+  app.quit();
+}
+
 function createMainWindow() {
   const window = new BrowserWindow({
     width: 1400,
@@ -52,6 +57,19 @@ app.whenReady().then(() => {
       createMainWindow();
     }
   });
+});
+
+app.on("second-instance", () => {
+  const [window] = BrowserWindow.getAllWindows();
+  if (!window) {
+    createMainWindow();
+    return;
+  }
+
+  if (window.isMinimized()) {
+    window.restore();
+  }
+  window.focus();
 });
 
 app.on("window-all-closed", () => {
