@@ -2,6 +2,27 @@
 
 Отдельный журнал результатов тестов/нагрузки.
 
+## 2026-03-13 — Cycle #27 (Desktop SSO externalization gate)
+
+- Environment: `test` (`https://test.boltorezka.gismalink.art`)
+- Build ref: `origin/feature/electron-desktop-foundation` (working tree, post-`ec19740`)
+
+### Functional gate
+
+- `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art npm run smoke:desktop:sso-external`: PASS
+  - `ssoStartExternalized=true`
+  - `ssoLogoutExternalized=true`
+
+### Scope covered by this cycle
+
+- Добавлен и подтвержден regression gate на desktop SSO externalization,
+- Зафиксировано, что auth start/logout flow не остается внутри app window.
+
+### Decision
+
+- Cycle #27: PASS.
+- Desktop SSO externalization behavior закреплен автоматическим smoke.
+
 ## 2026-03-13 — Cycle #26 (Desktop 30-minute stability soak)
 
 - Environment: `test` (`https://test.boltorezka.gismalink.art`)

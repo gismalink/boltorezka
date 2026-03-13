@@ -6,6 +6,15 @@ const isDev = !app.isPackaged;
 const rendererUrl = process.env.ELECTRON_RENDERER_URL || "http://127.0.0.1:5173";
 const allowMultipleInstances = !app.isPackaged
   && String(process.env.ELECTRON_ALLOW_MULTIPLE_INSTANCES || "0") === "1";
+const suppressExternalOpenForSmoke = String(process.env.ELECTRON_SMOKE_SUPPRESS_EXTERNAL_OPEN || "0") === "1";
+
+function openExternal(url) {
+  global.__boltorezkaLastExternalUrl = String(url || "");
+  if (suppressExternalOpenForSmoke) {
+    return;
+  }
+  void shell.openExternal(url);
+}
 
 if (!allowMultipleInstances) {
   const hasInstanceLock = app.requestSingleInstanceLock();
@@ -59,7 +68,7 @@ function createMainWindow() {
   }
 
   window.webContents.setWindowOpenHandler(({ url }) => {
-    shell.openExternal(url);
+    openExternal(url);
     return { action: "deny" };
   });
 
@@ -85,28 +94,28 @@ function createMainWindow() {
   window.webContents.on("will-navigate", (event, url) => {
     if (shouldOpenExternalNavigation(url)) {
       event.preventDefault();
-      shell.openExternal(url);
+      openExternal(url);
       return;
     }
 
     const allowedPrefix = isDev ? rendererUrl : "file://";
     if (!url.startsWith(allowedPrefix)) {
       event.preventDefault();
-      shell.openExternal(url);
+      openExternal(url);
     }
   });
 
   window.webContents.on("will-redirect", (event, url) => {
     if (shouldOpenExternalNavigation(url)) {
       event.preventDefault();
-      shell.openExternal(url);
+      openExternal(url);
       return;
     }
 
     const allowedPrefix = isDev ? rendererUrl : "file://";
     if (!url.startsWith(allowedPrefix)) {
       event.preventDefault();
-      shell.openExternal(url);
+      openExternal(url);
     }
   });
 

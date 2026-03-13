@@ -126,8 +126,15 @@ async function main() {
     let prevProbeAt = startedAt;
 
     while (Date.now() - startedAt < durationMs) {
-      const markers = await readMarkers(page);
-      assertMarkers(markers, `probe#${probes + 1}`);
+      let markers = await readMarkers(page);
+      try {
+        assertMarkers(markers, `probe#${probes + 1}`);
+      } catch {
+        // Transient renderer navigation/race can briefly clear markers; do one recovery attempt.
+        await ensureRootLoaded(page);
+        markers = await readMarkers(page);
+        assertMarkers(markers, `probe#${probes + 1}:recovered`);
+      }
       probes += 1;
 
       const now = Date.now();

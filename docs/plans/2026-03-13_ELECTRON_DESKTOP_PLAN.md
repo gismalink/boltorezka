@@ -241,3 +241,7 @@ Progress note (2026-03-13, stability automation):
 - Warm-up evidence: `SMOKE_DESKTOP_STABILITY_DURATION_MS=30000` -> PASS (`docs/status/TEST_RESULTS.md`, Cycle #25).
 - 30-minute runtime evidence: `SMOKE_DESKTOP_STABILITY_DURATION_MS=1800000` -> PASS (`docs/status/TEST_RESULTS.md`, Cycle #26).
 - Voice-session manual checkpoint target сокращен до 15 минут (вместо 30) для M2 acceptance.
+
+Progress note (2026-03-13, SSO externalization gate):
+- Добавлен smoke `scripts/smoke/smoke-desktop-sso-external.mjs` и команда `npm run smoke:desktop:sso-external`.
+- Test evidence: SSO start/logout externalization PASS (`docs/status/TEST_RESULTS.md`, Cycle #27).
