@@ -232,3 +232,9 @@ Progress note (2026-03-13, sleep/wake assist):
 Progress note (2026-03-13, sleep/wake strict evidence):
 - Strict run выполнен успешно: `elapsedMs=90157`, `maxGapMs=28610`, `suspendObserved=true`, `windowRecoveryMode=manual-confirmed`.
 - Evidence зафиксирован в `docs/status/TEST_RESULTS.md` (Cycle #24).
+
+Progress note (2026-03-13, stability automation):
+- Добавлен `scripts/smoke/smoke-desktop-stability.mjs` и команды `npm run smoke:desktop:stability`, `npm run desktop:smoke:m2:stability`.
+- Команда предназначена для long-session gate (`SMOKE_DESKTOP_STABILITY_DURATION_MS=1800000`) с проверкой стабильности runtime markers и отсутствия критичных runtime errors.
+- Для smoke-runner добавлен controllable bypass single-instance lock (`ELECTRON_ALLOW_MULTIPLE_INSTANCES=1`) без влияния на обычный desktop runtime.
+- Warm-up evidence: `SMOKE_DESKTOP_STABILITY_DURATION_MS=30000` -> PASS (`docs/status/TEST_RESULTS.md`, Cycle #25).

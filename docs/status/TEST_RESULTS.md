@@ -2,6 +2,29 @@
 
 Отдельный журнал результатов тестов/нагрузки.
 
+## 2026-03-13 — Cycle #25 (Desktop stability soak warm-up)
+
+- Environment: `test` (`https://test.boltorezka.gismalink.art`)
+- Build ref: `origin/feature/electron-desktop-foundation` (working tree, post-`ff432d9`)
+
+### Functional gate
+
+- `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art SMOKE_DESKTOP_STABILITY_DURATION_MS=30000 SMOKE_DESKTOP_STABILITY_PROBE_INTERVAL_MS=10000 npm run smoke:desktop:stability`: PASS
+  - `durationMs=30000`
+  - `elapsedMs=30002`
+  - `probes=3`
+  - `maxProbeGapMs=10005`
+
+### Scope covered by this cycle
+
+- Подтверждена рабочая автоматизация long-session stability smoke,
+- Зафиксирован warm-up evidence перед отдельным 30+ минут evidence run.
+
+### Decision
+
+- Cycle #25: PASS.
+- Stability automation готов к 30m evidence прогону.
+
 ## 2026-03-13 — Cycle #24 (Desktop sleep/wake strict evidence)
 
 - Environment: `test` (`https://test.boltorezka.gismalink.art`)

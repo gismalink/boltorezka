@@ -30,6 +30,7 @@
 - [x] Sleep/wake ноутбука: сессия восстанавливается без crash.
   - `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art SMOKE_DESKTOP_SLEEP_WAKE_REQUIRE_SUSPEND=1 npm run smoke:desktop:sleep-wake`
 - [ ] 30+ минут voice-сессии без критичных runtime errors.
+  - `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art SMOKE_DESKTOP_STABILITY_DURATION_MS=1800000 npm run smoke:desktop:stability`
 
 ## 4) Security smoke
 
@@ -53,3 +54,5 @@
 - [x] Diagnostics artifact smoke (`smoke:desktop:diagnostics`) и полный chain (`desktop:smoke:m2:secure:diag`) прошли на test, evidence: `docs/status/TEST_RESULTS.md` (Cycle #22).
 - [x] Sleep/wake assist automation added: `smoke:desktop:sleep-wake` + runbook `docs/runbooks/DESKTOP_SLEEP_WAKE_RUNBOOK.md` (strict evidence run pending).
 - [x] Strict sleep/wake evidence run прошел (`suspendObserved=true`, `windowRecoveryMode=manual-confirmed`), evidence: `docs/status/TEST_RESULTS.md` (Cycle #24).
+- [x] Stability soak automation added: `smoke:desktop:stability` + aggregate command `desktop:smoke:m2:stability` (30m evidence run pending).
+- [x] Stability warm-up run прошел (`durationMs=30000`, `probes=3`), evidence: `docs/status/TEST_RESULTS.md` (Cycle #25).
