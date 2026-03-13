@@ -158,7 +158,7 @@ Desktop smoke (must pass):
 Риск: незакрытые пункты session/cookie hardening могут всплыть в desktop prod stage.
 - Mitigation:
 - [x] Для M1/M2 test validation использовать текущий cookie primary режим (`AUTH_COOKIE_MODE=1`) как базовый, без блокировки desktop разработки.
-- [ ] До desktop prod readiness закрыть auth/session hardening пункты класса P1: structured auth logs/audit trail, SLO/baseline мониторинг.
+- [ ] До desktop prod readiness закрыть auth/session hardening пункты класса P1: SLO/baseline мониторинг.
 - [ ] Держать desktop release gate зависимым от актуального статуса `docs/plans/2026-03-11_SESSION_COOKIE_CUTOVER_CHECKLIST.md`.
 
 ## 8) Примерная оценка сроков

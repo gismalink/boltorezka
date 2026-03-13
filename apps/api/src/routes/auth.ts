@@ -38,6 +38,25 @@ type AuthRateLimitPolicy = {
   windowSec: number;
 };
 
+function buildAuthAuditContext(request: FastifyRequest, extra: Record<string, unknown> = {}) {
+  const requestId = String(request.id || "").trim() || null;
+  const userId = String(request.user?.sub || request.currentUser?.id || "").trim() || null;
+  const sessionId = String(request.user?.sid || "").trim() || null;
+  const ip = String(request.ip || request.headers["x-forwarded-for"] || "unknown")
+    .split(",")[0]
+    .trim() || null;
+  const userAgent = String(request.headers["user-agent"] || "").trim() || null;
+
+  return {
+    requestId,
+    userId,
+    sessionId,
+    ip,
+    userAgent,
+    ...extra
+  };
+}
+
 function resolveRateLimitSubject(request: FastifyRequest): string {
   const userId = String(request.user?.sub || "").trim();
   if (userId) {
@@ -61,6 +80,16 @@ function makeAuthRateLimiter(policy: AuthRateLimitPolicy) {
     }
 
     if (current > policy.max) {
+      request.server.log.warn(
+        buildAuthAuditContext(request, {
+          event: "auth.rate_limit.exceeded",
+          namespace: policy.namespace,
+          limit: policy.max,
+          windowSec: policy.windowSec,
+          current
+        }),
+        "auth rate limit exceeded"
+      );
       reply.header("Retry-After", String(policy.windowSec));
       return reply.code(429).send({
         error: "RateLimitExceeded",
@@ -427,6 +456,16 @@ export async function authRoutes(fastify: FastifyInstance) {
         appendSetCookie(reply, buildSessionCookieValue(token));
       }
 
+      fastify.log.info(
+        buildAuthAuditContext(request, {
+          event: "auth.session.issued",
+          flow: "sso-session",
+          userId: localUser.id,
+          authMode: "sso"
+        }),
+        "auth session issued"
+      );
+
       const response: SsoSessionResponse = {
         authenticated: true,
         user: localUser,
@@ -440,7 +479,16 @@ export async function authRoutes(fastify: FastifyInstance) {
       };
         return response;
       } catch (error) {
-        fastify.log.error(error, "sso session exchange failed");
+        fastify.log.error(
+          {
+            err: error,
+            ...buildAuthAuditContext(request, {
+              event: "auth.session.exchange_failed",
+              flow: "sso-session"
+            })
+          },
+          "sso session exchange failed"
+        );
         return reply.code(503).send({
           authenticated: false,
           error: "SsoUnavailable",
@@ -480,16 +528,34 @@ export async function authRoutes(fastify: FastifyInstance) {
 
       const previousSessionId = String(request.user?.sid || "").trim() || null;
       if (!previousSessionId) {
+        fastify.log.warn(
+          buildAuthAuditContext(request, {
+            event: "auth.session.refresh_denied",
+            reason: "missing_session_id"
+          }),
+          "auth refresh denied"
+        );
         return reply.code(401).send({
           error: "Unauthorized",
           message: "Session refresh requires re-login"
         });
       }
 
-      const { token } = await issueAuthSessionToken(fastify, user, "sso", previousSessionId);
+      const { token, sessionId } = await issueAuthSessionToken(fastify, user, "sso", previousSessionId);
       if (config.authCookieMode) {
         appendSetCookie(reply, buildSessionCookieValue(token));
       }
+
+      fastify.log.info(
+        buildAuthAuditContext(request, {
+          event: "auth.session.refreshed",
+          previousSessionId,
+          nextSessionId: sessionId,
+          authMode: "sso"
+        }),
+        "auth session refreshed"
+      );
+
       return {
         token,
         user
@@ -511,6 +577,15 @@ export async function authRoutes(fastify: FastifyInstance) {
       if (config.authCookieMode) {
         appendSetCookie(reply, buildSessionCookieClearValue());
       }
+
+      fastify.log.info(
+        buildAuthAuditContext(request, {
+          event: "auth.session.logout",
+          revokedSessionId: sessionId || null,
+          authMode: "sso"
+        }),
+        "auth session logout"
+      );
 
       return { ok: true };
     }
@@ -568,6 +643,16 @@ export async function authRoutes(fastify: FastifyInstance) {
         ticket,
         expiresInSec
       };
+
+      fastify.log.info(
+        buildAuthAuditContext(request, {
+          event: "auth.ws_ticket.issued",
+          ticketTtlSec: expiresInSec,
+          authMode: "sso"
+        }),
+        "ws ticket issued"
+      );
+
       return response;
     }
   );
