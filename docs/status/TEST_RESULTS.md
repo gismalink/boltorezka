@@ -2,6 +2,34 @@
 
 Отдельный журнал результатов тестов/нагрузки.
 
+## 2026-03-13 — Cycle #17 (Electron M2 telemetry stabilization)
+
+- Environment: `test` (`https://test.boltorezka.gismalink.art`)
+- Build ref: `origin/feature/electron-desktop-foundation` (`704b7df`)
+
+### Functional gate
+
+- `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art npm run smoke:desktop:telemetry`: PASS
+  - runtime: `desktop`
+  - platform: `darwin`
+  - electronVersion: `35.7.5`
+- `npm run desktop:smoke:m2`: PASS
+  - `desktop:smoke` (foundation build): PASS
+  - `smoke:desktop:runtime`: PASS
+  - `smoke:desktop:reconnect`: PASS
+  - `smoke:desktop:telemetry`: PASS
+
+### Scope covered by this cycle
+
+- Закрыта стабилизация desktop telemetry smoke на test contour,
+- Подтверждён полный M2 smoke-цикл (foundation/runtime/reconnect/telemetry),
+- Runtime telemetry labels (`runtime/platform/electronVersion`) подтверждены в desktop execution path.
+
+### Decision
+
+- Cycle #17: PASS.
+- M2 automation slice готов к следующему этапу (sleep/wake evidence и дальнейшие desktop hardening шаги).
+
 ## 2026-03-04 — Cycle #16 (RTC row/camera hotfix local smoke)
 
 - Environment: local web preview (`http://127.0.0.1:4173`)
