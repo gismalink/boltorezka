@@ -114,7 +114,7 @@ Definition of done:
 - [ ] Зафиксировать rollback шаги в runbook.
 
 ### 4.5 Observability
-- [ ] Добавить desktop telemetry labels (platform, app channel, app version).
+- [x] Добавить desktop telemetry labels (platform, app channel, app version).
 - [ ] Добавить сбор crash/report артефактов.
 - [ ] Обновить дашборд/логи для desktop-сессий.
 
@@ -178,3 +178,6 @@ Progress note (2026-03-13, M1 foundation):
 - Добавлен typed bridge в web renderer (`apps/web/src/desktopBridge.ts`, runtime markers в `main.tsx`).
 - Добавлен desktop smoke script: `npm run desktop:smoke` (`scripts/smoke/smoke-desktop-foundation.sh`).
 - Первый test rollout ветки `feature/electron-desktop-foundation` прошел (`deploy:test:smoke` PASS, SHA `524583dc041c3f9a12cf3d748c7d264cb90e2c11`).
+
+Progress note (2026-03-13, M2 observability start):
+- В `trackClientEvent` добавлены runtime labels для desktop/web (`runtime`, `platform`, `electronVersion`) для всех client telemetry событий.

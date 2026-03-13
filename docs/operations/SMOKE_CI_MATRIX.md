@@ -76,6 +76,7 @@ Policy:
 | Browser-level denied media UX gate (headless) | `SMOKE_WEB_BASE_URL=<url> npm run smoke:web:denied-media:browser` (optional in `smoke:web:e2e` via `SMOKE_E2E_DENIED_MEDIA_BROWSER=1`) |
 | Browser-level RNNoise voice-settings gate (headless) | `SMOKE_WEB_BASE_URL=<url> SMOKE_TEST_BEARER_TOKEN=<token> npm run smoke:web:rnnoise:browser` |
 | Desktop shell packaging baseline (`main/preload/renderer bundle`) | `npm run desktop:smoke` |
+| Client telemetry runtime labels (`runtime`/`platform`/`electronVersion`) | `POST /v1/telemetry/web` payload from `trackClientEvent` |
 | `GET /v1/telemetry/summary` | CI (`SMOKE_TELEMETRY_SUMMARY=1`) |
 | `POST /v1/room-categories` + `POST /v1/rooms` + `GET /v1/rooms/tree` | API smoke (`SMOKE_API=1`, hierarchy block with cleanup) |
 
