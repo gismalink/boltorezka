@@ -2,6 +2,29 @@
 
 Отдельный журнал результатов тестов/нагрузки.
 
+## 2026-03-13 — Cycle #23 (Desktop sleep/wake assist automation)
+
+- Environment: `test` (`https://test.boltorezka.gismalink.art`)
+- Build ref: `origin/feature/electron-desktop-foundation` (working tree, post-`accc79c`)
+
+### Functional gate
+
+- `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art SMOKE_DESKTOP_SLEEP_WAKE_WINDOW_MS=10000 npm run smoke:desktop:sleep-wake`: PASS
+  - `elapsedMs=10002`
+  - `suspendObserved=false`
+  - `requireSuspend=false`
+  - runtime markers after reload: `runtime=desktop`, `platform=darwin`, `electronVersion=35.7.5`
+
+### Scope covered by this cycle
+
+- Проверена техническая готовность sleep/wake assist smoke (launch/wait/reload/runtime validation),
+- Подготовлен путь к evidence-grade прогону в strict режиме (`SMOKE_DESKTOP_SLEEP_WAKE_REQUIRE_SUSPEND=1`).
+
+### Decision
+
+- Cycle #23: PASS (assist automation).
+- Strict suspend evidence run остается pending и должен быть выполнен на реальном sleep/wake сценарии.
+
 ## 2026-03-13 — Cycle #22 (Desktop diagnostics artifact + full secure chain)
 
 - Environment: `test` (`https://test.boltorezka.gismalink.art`)

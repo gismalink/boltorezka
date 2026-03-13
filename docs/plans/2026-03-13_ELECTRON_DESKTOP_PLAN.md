@@ -107,6 +107,9 @@ Definition of done:
 - [ ] Проверить поведение после sleep/wake ноутбука.
 - [ ] Проверить длительную сессию + переключения девайсов.
 
+Runbook:
+- `docs/runbooks/DESKTOP_SLEEP_WAKE_RUNBOOK.md`
+
 ### 4.4 Auto-update
 - [ ] Выбрать release feed и схему каналов.
 - [ ] Настроить update policy (silent/download-only/prompt).
@@ -221,3 +224,7 @@ Progress note (2026-03-13, diagnostics automation):
 - Добавлен runtime diagnostics artifact snapshot в Electron main (`ELECTRON_DESKTOP_DIAGNOSTICS_OUT`) и smoke `scripts/smoke/smoke-desktop-diagnostics.mjs`.
 - Добавлен агрегированный command `npm run desktop:smoke:m2:secure:diag`.
 - Test evidence: diagnostics smoke PASS и full secure+diag chain PASS.
+
+Progress note (2026-03-13, sleep/wake assist):
+- Добавлен `scripts/smoke/smoke-desktop-sleep-wake.mjs` и command `npm run smoke:desktop:sleep-wake` (опционально strict `SMOKE_DESKTOP_SLEEP_WAKE_REQUIRE_SUSPEND=1`).
+- Добавлен runbook `docs/runbooks/DESKTOP_SLEEP_WAKE_RUNBOOK.md` для evidence-grade ручного сценария.

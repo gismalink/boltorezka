@@ -85,6 +85,7 @@ Policy:
 | Desktop telemetry payload baseline (`desktop_smoke_probe` meta labels) | `npm run smoke:desktop:telemetry` |
 | Desktop security baseline (`webPreferences + renderer isolation + bridge allowlist`) | `SMOKE_WEB_BASE_URL=<url> npm run smoke:desktop:security` |
 | Desktop diagnostics artifact baseline (`runtime/security snapshot file`) | `SMOKE_WEB_BASE_URL=<url> npm run smoke:desktop:diagnostics` |
+| Desktop sleep/wake assist baseline (`pre/post wake markers`, optional strict suspend detect) | `SMOKE_WEB_BASE_URL=<url> SMOKE_DESKTOP_SLEEP_WAKE_REQUIRE_SUSPEND=1 npm run smoke:desktop:sleep-wake` |
 | Client telemetry runtime labels (`runtime`/`platform`/`electronVersion`) | `POST /v1/telemetry/web` payload from `trackClientEvent` |
 | `GET /v1/telemetry/summary` | CI (`SMOKE_TELEMETRY_SUMMARY=1`) |
 | `POST /v1/room-categories` + `POST /v1/rooms` + `GET /v1/rooms/tree` | API smoke (`SMOKE_API=1`, hierarchy block with cleanup) |
