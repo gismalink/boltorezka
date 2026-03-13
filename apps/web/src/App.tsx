@@ -410,6 +410,7 @@ export function App() {
     selectedOutputId,
     memberVolumeByUserId,
     selectedVideoInputId,
+    micVolume,
     micMuted,
     audioMuted,
     outputVolume,

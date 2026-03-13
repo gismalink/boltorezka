@@ -52,6 +52,7 @@ type UseLivekitVoiceRuntimeArgs = {
   selectedOutputId: string;
   memberVolumeByUserId: Record<string, number>;
   selectedVideoInputId: string;
+  micVolume: number;
   micMuted: boolean;
   audioMuted: boolean;
   outputVolume: number;
@@ -179,6 +180,7 @@ export function useLivekitVoiceRuntime({
   selectedOutputId,
   memberVolumeByUserId,
   selectedVideoInputId,
+  micVolume,
   micMuted,
   audioMuted,
   outputVolume,
@@ -251,11 +253,13 @@ export function useLivekitVoiceRuntime({
           : audioQuality === "standard"
             ? { sampleRate: 48000, channelCount: 1 }
             : { sampleRate: 48000, channelCount: 2 };
+    const inputVolume = Math.max(0, Math.min(1, Number(micVolume) / 100));
 
     if (selectedInputProfile === "noise_reduction") {
       return {
         ...base,
         ...qualityHint,
+        volume: inputVolume,
         echoCancellation: preRnnEchoCancellationEnabled,
         noiseSuppression: false,
         autoGainControl: preRnnAutoGainControlEnabled,
@@ -267,6 +271,7 @@ export function useLivekitVoiceRuntime({
       return {
         ...base,
         ...qualityHint,
+        volume: inputVolume,
         echoCancellation: false,
         noiseSuppression: false,
         autoGainControl: false
@@ -275,10 +280,11 @@ export function useLivekitVoiceRuntime({
 
     const constraints = {
       ...base,
-      ...qualityHint
+      ...qualityHint,
+      volume: inputVolume
     };
     return Object.keys(constraints).length > 0 ? constraints : true;
-  }, [audioQuality, preRnnAutoGainControlEnabled, preRnnEchoCancellationEnabled, selectedInputId, selectedInputProfile]);
+  }, [audioQuality, micVolume, preRnnAutoGainControlEnabled, preRnnEchoCancellationEnabled, selectedInputId, selectedInputProfile]);
 
   const buildCameraVideoOptions = useCallback((): VideoCaptureOptions => {
     const { width, height } = parseResolution(videoResolution);
@@ -983,6 +989,23 @@ export function useLivekitVoiceRuntime({
       }
     })();
   }, [micMuted]);
+
+  useEffect(() => {
+    if (!roomVoiceConnected) {
+      return;
+    }
+
+    const localAudioTrack = localTracksRef.current.get(Track.Source.Microphone);
+    const mediaTrack = localAudioTrack?.mediaStreamTrack;
+    if (!mediaTrack) {
+      return;
+    }
+
+    const normalizedVolume = Math.max(0, Math.min(1, Number(micVolume) / 100));
+    void mediaTrack.applyConstraints({ volume: normalizedVolume }).catch((error) => {
+      pushCallLog(`livekit mic volume apply failed: ${error instanceof Error ? error.message : "unknown error"}`);
+    });
+  }, [micVolume, pushCallLog, roomVoiceConnected]);
 
   const switchMicrophoneInput = useCallback(async () => {
     if (!roomVoiceConnected) {
