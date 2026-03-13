@@ -22,6 +22,7 @@ async function ensureRootLoaded(page) {
 
 async function waitForAnyWindow(app, waitTimeoutMs) {
   const startedAt = Date.now();
+  let nextActivateNudgeAt = startedAt;
   while (Date.now() - startedAt < waitTimeoutMs) {
     const windows = app.windows();
     if (windows.length > 0) {
@@ -30,6 +31,28 @@ async function waitForAnyWindow(app, waitTimeoutMs) {
         return active;
       }
     }
+
+    const now = Date.now();
+    if (now >= nextActivateNudgeAt) {
+      try {
+        const countAfterActivate = await app.evaluate(({ app: electronApp, BrowserWindow }) => {
+          if (BrowserWindow.getAllWindows().length === 0) {
+            electronApp.emit("activate");
+          }
+          return BrowserWindow.getAllWindows().length;
+        });
+        if (Number(countAfterActivate || 0) > 0) {
+          const refreshed = app.windows();
+          if (refreshed.length > 0 && !refreshed[refreshed.length - 1].isClosed()) {
+            return refreshed[refreshed.length - 1];
+          }
+        }
+      } catch {
+        // Keep polling; app may still be resuming after wake.
+      }
+      nextActivateNudgeAt = now + 3000;
+    }
+
     await new Promise((resolve) => setTimeout(resolve, 250));
   }
 
