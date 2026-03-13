@@ -187,3 +187,6 @@ Progress note (2026-03-13, M2 validation start):
 
 Progress note (2026-03-13, M2 reconnect start):
 - Добавлен desktop reconnect smoke (`scripts/smoke/smoke-desktop-reconnect.mjs`) с симуляцией network flap (`setOffline`) и последующим reload/проверкой runtime markers.
+
+Progress note (2026-03-13, M2 telemetry sanity):
+- Добавлен desktop telemetry smoke (`scripts/smoke/smoke-desktop-telemetry.mjs`) с проверкой `desktop_smoke_probe` payload (`meta.runtime=desktop`, `meta.platform`, `meta.electronVersion`).

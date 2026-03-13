@@ -15,6 +15,7 @@
 | Desktop foundation smoke (Electron shell) | `npm run desktop:smoke` | Recommended for desktop feature branches |
 | Desktop runtime smoke (Electron + runtime markers) | `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art npm run smoke:desktop:runtime` | Recommended for desktop feature branches |
 | Desktop reconnect smoke (Electron + network flap + reload) | `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art npm run smoke:desktop:reconnect` | Recommended for desktop feature branches |
+| Desktop telemetry smoke (Electron + runtime labels payload) | `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art npm run smoke:desktop:telemetry` | Recommended for desktop feature branches |
 | Required gate (API+SSO+realtime, при наличии токена) | `SMOKE_TEST_BEARER_TOKEN=<token> SMOKE_API_URL=https://test.boltorezka.gismalink.art npm run check:required` | CI / test gate |
 
 ## 2) Test deploy gate
@@ -80,6 +81,7 @@ Policy:
 | Desktop shell packaging baseline (`main/preload/renderer bundle`) | `npm run desktop:smoke` |
 | Desktop shell runtime baseline (`runtime=desktop` markers via Electron launch) | `npm run smoke:desktop:runtime` |
 | Desktop reconnect baseline (`network flap -> reload -> runtime markers`) | `npm run smoke:desktop:reconnect` |
+| Desktop telemetry payload baseline (`desktop_smoke_probe` meta labels) | `npm run smoke:desktop:telemetry` |
 | Client telemetry runtime labels (`runtime`/`platform`/`electronVersion`) | `POST /v1/telemetry/web` payload from `trackClientEvent` |
 | `GET /v1/telemetry/summary` | CI (`SMOKE_TELEMETRY_SUMMARY=1`) |
 | `POST /v1/room-categories` + `POST /v1/rooms` + `GET /v1/rooms/tree` | API smoke (`SMOKE_API=1`, hierarchy block with cleanup) |

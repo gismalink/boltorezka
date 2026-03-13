@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { App } from "./App";
 import { ErrorBoundary } from "./ErrorBoundary";
 import { getDesktopBridgeInfo } from "./desktopBridge";
+import { trackClientEvent } from "./telemetry";
 import "bootstrap-icons/font/bootstrap-icons.css";
 import "./tailwind.css";
 import "./styles.css";
@@ -19,6 +20,24 @@ if (desktopBridge) {
 document.title = isDesktop
   ? isTestHost ? "Boltorezka Desktop (test)" : "Boltorezka Desktop"
   : isTestHost ? "Boltorezka (test)" : "Boltorezka";
+
+const searchParams = new URLSearchParams(window.location.search);
+if (isDesktop) {
+  const smokeWindow = window as Window & {
+    __boltorezkaDesktopSmokeTrack?: () => void;
+  };
+
+  smokeWindow.__boltorezkaDesktopSmokeTrack = () => {
+    trackClientEvent("desktop_smoke_probe", {
+      probe: true,
+      source: "desktop_smoke"
+    });
+  };
+
+  if (searchParams.get("desktop_smoke_telemetry") === "1") {
+    smokeWindow.__boltorezkaDesktopSmokeTrack();
+  }
+}
 
 createRoot(document.getElementById("root")!).render(
   <React.StrictMode>

@@ -8,6 +8,8 @@
   - `npm run desktop:smoke`
 - [ ] Runtime desktop smoke проходит:
   - `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art npm run smoke:desktop:runtime`
+- [ ] Telemetry desktop smoke проходит:
+  - `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art npm run smoke:desktop:telemetry`
 - [ ] Есть собранный desktop артефакт в `apps/desktop-electron/dist`.
 - [ ] Web renderer собирается и вшивается в desktop package.
 
