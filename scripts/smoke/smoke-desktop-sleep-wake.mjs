@@ -36,6 +36,24 @@ async function waitForAnyWindow(app, waitTimeoutMs) {
   throw new Error(`desktop window is unavailable after wake (timeout ${waitTimeoutMs}ms)`);
 }
 
+async function waitByWallClock(windowMs) {
+  const startedAt = Date.now();
+  const deadline = startedAt + windowMs;
+  let nextProgressAt = startedAt + 10000;
+
+  while (Date.now() < deadline) {
+    const now = Date.now();
+    if (now >= nextProgressAt) {
+      const remaining = Math.max(0, deadline - now);
+      console.log(`[smoke:desktop:sleep-wake] waiting... remainingMs=${remaining}`);
+      nextProgressAt = now + 10000;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  }
+
+  return Date.now() - startedAt;
+}
+
 async function readMarkers(page) {
   return page.evaluate(() => ({
     runtime: document.documentElement.dataset.runtime || "",
@@ -80,9 +98,7 @@ async function main() {
     console.log("[smoke:desktop:sleep-wake] wait-window-start");
     console.log(`- instruction: sleep device during next ${windowMs}ms, then wake and unlock`);
 
-    const startedAt = Date.now();
-    await new Promise((resolve) => setTimeout(resolve, windowMs));
-    const elapsedMs = Date.now() - startedAt;
+    const elapsedMs = await waitByWallClock(windowMs);
     const suspendObserved = elapsedMs >= windowMs + suspendThresholdMs;
 
     if (page.isClosed()) {
