@@ -30,6 +30,47 @@ const livekitTokenSchema = z.object({
 const safeHostSet = new Set(config.allowedReturnHosts);
 const AUTH_SESSION_PREFIX = "auth:session:";
 const AUTH_SESSION_TTL_SEC = 60 * 60 * 24 * 30;
+const AUTH_RATE_LIMIT_PREFIX = "auth:rl:";
+
+type AuthRateLimitPolicy = {
+  namespace: string;
+  max: number;
+  windowSec: number;
+};
+
+function resolveRateLimitSubject(request: FastifyRequest): string {
+  const userId = String(request.user?.sub || "").trim();
+  if (userId) {
+    return `u:${userId}`;
+  }
+
+  const ip = String(request.ip || request.headers["x-forwarded-for"] || "unknown")
+    .split(",")[0]
+    .trim();
+  return `ip:${ip || "unknown"}`;
+}
+
+function makeAuthRateLimiter(policy: AuthRateLimitPolicy) {
+  return async (request: FastifyRequest, reply: FastifyReply) => {
+    const nowWindow = Math.floor(Date.now() / 1000 / policy.windowSec);
+    const key = `${AUTH_RATE_LIMIT_PREFIX}${policy.namespace}:${resolveRateLimitSubject(request)}:${nowWindow}`;
+
+    const current = await request.server.redis.incr(key);
+    if (current === 1) {
+      await request.server.redis.expire(key, policy.windowSec);
+    }
+
+    if (current > policy.max) {
+      reply.header("Retry-After", String(policy.windowSec));
+      return reply.code(429).send({
+        error: "RateLimitExceeded",
+        message: `Too many requests for ${policy.namespace}`
+      });
+    }
+
+    return undefined;
+  };
+}
 
 function appendSetCookie(reply: FastifyReply, value: string) {
   const current = reply.getHeader("set-cookie");
@@ -274,6 +315,32 @@ async function upsertSsoUser(profile: Record<string, unknown> | null | undefined
 }
 
 export async function authRoutes(fastify: FastifyInstance) {
+  const limitSsoStart = makeAuthRateLimiter({
+    namespace: "sso-start",
+    max: 30,
+    windowSec: 60
+  });
+  const limitSsoSession = makeAuthRateLimiter({
+    namespace: "sso-session",
+    max: 20,
+    windowSec: 60
+  });
+  const limitRefresh = makeAuthRateLimiter({
+    namespace: "refresh",
+    max: 20,
+    windowSec: 60
+  });
+  const limitLogout = makeAuthRateLimiter({
+    namespace: "logout",
+    max: 20,
+    windowSec: 60
+  });
+  const limitWsTicket = makeAuthRateLimiter({
+    namespace: "ws-ticket",
+    max: 60,
+    windowSec: 60
+  });
+
   fastify.get("/v1/auth/mode", async () => {
     const response: AuthModeResponse = {
       mode: config.authMode,
@@ -288,6 +355,11 @@ export async function authRoutes(fastify: FastifyInstance) {
       request: FastifyRequest<{ Querystring: { provider?: string; returnUrl?: string } }>,
       reply: FastifyReply
     ) => {
+      await limitSsoStart(request, reply);
+      if (reply.sent) {
+        return;
+      }
+
       const providerRaw = String(request.query.provider || "google").toLowerCase();
     const parsedProvider = ssoProviderSchema.safeParse(providerRaw);
 
@@ -313,9 +385,14 @@ export async function authRoutes(fastify: FastifyInstance) {
     }
   );
 
-  fastify.get("/v1/auth/sso/session", async (request: FastifyRequest, reply: FastifyReply) => {
-    try {
-      const ssoTokenResult = await proxyAuthGetJson(request, "/auth/get-token");
+  fastify.get(
+    "/v1/auth/sso/session",
+    {
+      preHandler: [limitSsoSession]
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const ssoTokenResult = await proxyAuthGetJson(request, "/auth/get-token");
 
       if (!ssoTokenResult.ok || !ssoTokenResult.data?.authenticated) {
         if (config.authCookieMode) {
@@ -361,16 +438,17 @@ export async function authRoutes(fastify: FastifyInstance) {
           role: localUser.role || ssoUser.role || ssoTokenResult.data?.role || "user"
         }
       };
-      return response;
-    } catch (error) {
-      fastify.log.error(error, "sso session exchange failed");
-      return reply.code(503).send({
-        authenticated: false,
-        error: "SsoUnavailable",
-        message: "Central SSO is temporarily unavailable"
-      });
+        return response;
+      } catch (error) {
+        fastify.log.error(error, "sso session exchange failed");
+        return reply.code(503).send({
+          authenticated: false,
+          error: "SsoUnavailable",
+          message: "Central SSO is temporarily unavailable"
+        });
+      }
     }
-  });
+  );
 
   fastify.post("/v1/auth/register", async (_request: FastifyRequest, reply: FastifyReply) => {
     return reply.code(410).send({
@@ -389,7 +467,7 @@ export async function authRoutes(fastify: FastifyInstance) {
   fastify.post(
     "/v1/auth/refresh",
     {
-      preHandler: [requireAuth]
+      preHandler: [requireAuth, limitRefresh]
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const user = request.currentUser;
@@ -422,7 +500,7 @@ export async function authRoutes(fastify: FastifyInstance) {
   fastify.post(
     "/v1/auth/logout",
     {
-      preHandler: [requireAuth]
+      preHandler: [requireAuth, limitLogout]
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const sessionId = String(request.user?.sid || "").trim();
@@ -441,7 +519,7 @@ export async function authRoutes(fastify: FastifyInstance) {
   fastify.get(
     "/v1/auth/ws-ticket",
     {
-      preHandler: [requireAuth]
+      preHandler: [requireAuth, limitWsTicket]
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const userId = String(request.user?.sub || "").trim();
