@@ -49,3 +49,4 @@
 - [x] Evidence зафиксирован в `docs/status/TEST_RESULTS.md` (Cycle #17, SHA `704b7df`).
 - [x] Full chain с soak (`desktop:smoke:m2:soak`) прошел на test, evidence: `docs/status/TEST_RESULTS.md` (Cycle #20).
 - [x] Security baseline smoke (`smoke:desktop:security`) и полный chain (`desktop:smoke:m2:secure`) прошли на test, evidence: `docs/status/TEST_RESULTS.md` (Cycle #21).
+- [x] Diagnostics artifact smoke (`smoke:desktop:diagnostics`) и полный chain (`desktop:smoke:m2:secure:diag`) прошли на test, evidence: `docs/status/TEST_RESULTS.md` (Cycle #22).

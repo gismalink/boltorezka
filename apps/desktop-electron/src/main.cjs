@@ -1,4 +1,5 @@
 const path = require("path");
+const fs = require("fs");
 const { app, BrowserWindow, shell } = require("electron");
 
 const isDev = !app.isPackaged;
@@ -25,6 +26,33 @@ function createMainWindow() {
       webSecurity: true
     }
   });
+
+  const diagnosticsOut = String(process.env.ELECTRON_DESKTOP_DIAGNOSTICS_OUT || "").trim();
+  if (diagnosticsOut) {
+    try {
+      fs.mkdirSync(path.dirname(diagnosticsOut), { recursive: true });
+      const prefs = window.webContents.getLastWebPreferences();
+      const payload = {
+        ts: new Date().toISOString(),
+        isPackaged: app.isPackaged,
+        appVersion: app.getVersion(),
+        platform: process.platform,
+        arch: process.arch,
+        electronVersion: process.versions.electron,
+        chromeVersion: process.versions.chrome,
+        rendererUrl: isDev ? rendererUrl : "file://.../web/dist/index.html",
+        webPreferences: {
+          contextIsolation: Boolean(prefs.contextIsolation),
+          sandbox: Boolean(prefs.sandbox),
+          nodeIntegration: Boolean(prefs.nodeIntegration),
+          webSecurity: Boolean(prefs.webSecurity)
+        }
+      };
+      fs.writeFileSync(diagnosticsOut, `${JSON.stringify(payload, null, 2)}\n`, "utf8");
+    } catch {
+      // Diagnostics are best-effort and must never break app startup.
+    }
+  }
 
   window.webContents.setWindowOpenHandler(({ url }) => {
     shell.openExternal(url);

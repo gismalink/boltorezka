@@ -2,6 +2,30 @@
 
 Отдельный журнал результатов тестов/нагрузки.
 
+## 2026-03-13 — Cycle #22 (Desktop diagnostics artifact + full secure chain)
+
+- Environment: `test` (`https://test.boltorezka.gismalink.art`)
+- Build ref: `origin/feature/electron-desktop-foundation` (working tree, post-`3b6fa30`)
+
+### Functional gate
+
+- `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art npm run smoke:desktop:diagnostics`: PASS
+  - diagnostics artifact generated
+  - `platform=darwin`
+  - `electronVersion=35.7.5`
+  - `webPreferences`: `contextIsolation=true`, `sandbox=true`, `nodeIntegration=false`
+- `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art SMOKE_DESKTOP_SOAK_CYCLES=2 npm run desktop:smoke:m2:secure:diag`: PASS
+
+### Scope covered by this cycle
+
+- Добавлен automated diagnostics artifact smoke для desktop runtime/security snapshot,
+- Подтверждена единая chain-команда `desktop:smoke:m2:secure:diag` как расширенный M2 regression gate.
+
+### Decision
+
+- Cycle #22: PASS.
+- Desktop observability baseline усилен runtime diagnostics artifact проверкой.
+
 ## 2026-03-13 — Cycle #21 (Desktop security baseline + secure chain)
 
 - Environment: `test` (`https://test.boltorezka.gismalink.art`)

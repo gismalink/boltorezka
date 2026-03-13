@@ -216,3 +216,8 @@ Progress note (2026-03-13, M2 full chain):
 Progress note (2026-03-13, security automation):
 - Добавлен `scripts/smoke/smoke-desktop-security.mjs` и root commands `npm run smoke:desktop:security`, `npm run desktop:smoke:m2:secure`.
 - Test evidence: security baseline PASS (`contextIsolation=true`, `sandbox=true`, `nodeIntegration=false`, bridge allowlist `platform,version`) и full secure chain PASS.
+
+Progress note (2026-03-13, diagnostics automation):
+- Добавлен runtime diagnostics artifact snapshot в Electron main (`ELECTRON_DESKTOP_DIAGNOSTICS_OUT`) и smoke `scripts/smoke/smoke-desktop-diagnostics.mjs`.
+- Добавлен агрегированный command `npm run desktop:smoke:m2:secure:diag`.
+- Test evidence: diagnostics smoke PASS и full secure+diag chain PASS.
