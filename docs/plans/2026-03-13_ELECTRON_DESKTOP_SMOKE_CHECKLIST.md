@@ -56,3 +56,5 @@
 - [x] Strict sleep/wake evidence run прошел (`suspendObserved=true`, `windowRecoveryMode=manual-confirmed`), evidence: `docs/status/TEST_RESULTS.md` (Cycle #24).
 - [x] Stability soak automation added: `smoke:desktop:stability` + aggregate command `desktop:smoke:m2:stability` (30m evidence run pending).
 - [x] Stability warm-up run прошел (`durationMs=30000`, `probes=3`), evidence: `docs/status/TEST_RESULTS.md` (Cycle #25).
+- [x] 30-минутный runtime stability soak прошел (`durationMs=1800000`, `probes=60`), evidence: `docs/status/TEST_RESULTS.md` (Cycle #26).
+- [ ] Voice-session specific 30m checkpoint остается pending (нужен отдельный авторизованный room/voice сценарий).

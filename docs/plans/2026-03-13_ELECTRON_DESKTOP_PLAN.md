@@ -237,4 +237,6 @@ Progress note (2026-03-13, stability automation):
 - Добавлен `scripts/smoke/smoke-desktop-stability.mjs` и команды `npm run smoke:desktop:stability`, `npm run desktop:smoke:m2:stability`.
 - Команда предназначена для long-session gate (`SMOKE_DESKTOP_STABILITY_DURATION_MS=1800000`) с проверкой стабильности runtime markers и отсутствия критичных runtime errors.
 - Для smoke-runner добавлен controllable bypass single-instance lock (`ELECTRON_ALLOW_MULTIPLE_INSTANCES=1`) без влияния на обычный desktop runtime.
+- Safety hardening: bypass разрешен только в non-packaged runtime; packaged app остается строго single-instance.
 - Warm-up evidence: `SMOKE_DESKTOP_STABILITY_DURATION_MS=30000` -> PASS (`docs/status/TEST_RESULTS.md`, Cycle #25).
+- 30-minute runtime evidence: `SMOKE_DESKTOP_STABILITY_DURATION_MS=1800000` -> PASS (`docs/status/TEST_RESULTS.md`, Cycle #26).

@@ -2,6 +2,29 @@
 
 Отдельный журнал результатов тестов/нагрузки.
 
+## 2026-03-13 — Cycle #26 (Desktop 30-minute stability soak)
+
+- Environment: `test` (`https://test.boltorezka.gismalink.art`)
+- Build ref: `origin/feature/electron-desktop-foundation` (working tree, post-`87584d2`)
+
+### Functional gate
+
+- `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art SMOKE_DESKTOP_STABILITY_DURATION_MS=1800000 SMOKE_DESKTOP_STABILITY_PROBE_INTERVAL_MS=30000 npm run smoke:desktop:stability`: PASS
+  - `durationMs=1800000`
+  - `elapsedMs=1800001`
+  - `probes=60`
+  - `maxProbeGapMs=30008`
+
+### Scope covered by this cycle
+
+- Подтвержден 30-минутный desktop runtime stability soak в test-контуре,
+- Сформирован evidence слой для M2 long-session runtime stability automation.
+
+### Decision
+
+- Cycle #26: PASS.
+- Runtime stability gate на 30 минут подтвержден; voice-session specific 30m gate остается отдельным ручным checkpoint.
+
 ## 2026-03-13 — Cycle #25 (Desktop stability soak warm-up)
 
 - Environment: `test` (`https://test.boltorezka.gismalink.art`)
