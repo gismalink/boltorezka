@@ -204,3 +204,7 @@ Progress note (2026-03-13, M2 validation checkpoint):
 Progress note (2026-03-13, auth hardening dependency):
 - P1 пункты `rate limits` и `structured auth logs/audit trail` закрыты.
 - `SLO/baseline` evidence закрыт server-side прогоном `~/srv/boltorezka/scripts/ops/scheduler/run-job.sh slo-rolling-gate`: `SLO_ROLLING_STATUS=pass`, `SLO_ROLLING_ALERT_COUNT=0` (2026-03-13T17:52:39Z).
+
+Progress note (2026-03-13, M2 stability automation):
+- Добавлен `scripts/smoke/smoke-desktop-soak.mjs` и root command `npm run smoke:desktop:soak` (повторяющиеся offline/online reconnect циклы в одном Electron run).
+- Test evidence: `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art SMOKE_DESKTOP_SOAK_CYCLES=4 npm run smoke:desktop:soak` -> PASS.

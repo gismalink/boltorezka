@@ -23,8 +23,10 @@
 
 ## 3) Reconnect and stability smoke
 
-- [ ] Кратковременный network flap: reconnect восстанавливается.
+- [x] Кратковременный network flap: reconnect восстанавливается.
   - `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art npm run smoke:desktop:reconnect`
+- [x] Reconnect soak automation (несколько циклов подряд) проходит.
+  - `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art SMOKE_DESKTOP_SOAK_CYCLES=8 npm run smoke:desktop:soak`
 - [ ] Sleep/wake ноутбука: сессия восстанавливается без crash.
 - [ ] 30+ минут voice-сессии без критичных runtime errors.
 

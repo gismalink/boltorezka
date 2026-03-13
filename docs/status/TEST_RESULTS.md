@@ -2,6 +2,29 @@
 
 Отдельный журнал результатов тестов/нагрузки.
 
+## 2026-03-13 — Cycle #19 (Desktop reconnect soak automation)
+
+- Environment: `test` (`https://test.boltorezka.gismalink.art`)
+- Build ref: `origin/feature/electron-desktop-foundation` (working tree, post-`a6f232d`)
+
+### Functional gate
+
+- `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art SMOKE_DESKTOP_SOAK_CYCLES=4 npm run smoke:desktop:soak`: PASS
+  - runtime: `desktop`
+  - platform: `darwin`
+  - electronVersion: `35.7.5`
+  - reconnect cycles: `4/4`
+
+### Scope covered by this cycle
+
+- Добавлен repeatable soak smoke для desktop reconnect stability (многократный network flap в одном Electron run),
+- Сформирован automation evidence слой между single reconnect smoke и долгим ручным soak.
+
+### Decision
+
+- Cycle #19: PASS.
+- M2 stability automation расширен новым `smoke:desktop:soak` gate.
+
 ## 2026-03-13 — Cycle #18 (Rolling SLO gate evidence)
 
 - Environment: `test` (`https://test.boltorezka.gismalink.art`)
