@@ -4,7 +4,8 @@ const { app, BrowserWindow, shell } = require("electron");
 
 const isDev = !app.isPackaged;
 const rendererUrl = process.env.ELECTRON_RENDERER_URL || "http://127.0.0.1:5173";
-const allowMultipleInstances = String(process.env.ELECTRON_ALLOW_MULTIPLE_INSTANCES || "0") === "1";
+const allowMultipleInstances = !app.isPackaged
+  && String(process.env.ELECTRON_ALLOW_MULTIPLE_INSTANCES || "0") === "1";
 
 if (!allowMultipleInstances) {
   const hasInstanceLock = app.requestSingleInstanceLock();
