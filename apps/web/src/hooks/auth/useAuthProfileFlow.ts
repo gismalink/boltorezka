@@ -71,7 +71,7 @@ export function useAuthProfileFlow({
   }, [token, authMode, authController, autoSsoAttemptedRef]);
 
   useEffect(() => {
-    if (typeof window === "undefined" || window.boltorezkaDesktop || token || authMode !== "sso") {
+    if (typeof window === "undefined" || window.boltorezkaDesktop || authMode !== "sso") {
       return;
     }
 
@@ -85,8 +85,15 @@ export function useAuthProfileFlow({
 
     url.searchParams.set("desktop_handoff_bootstrap", "1");
     window.history.replaceState({}, "", url.toString());
-    void authController.completeSso({ silent: true });
-  }, [token, authMode, authController]);
+    void authController.completeSso({ silent: true }).finally(() => {
+      const updated = new URL(window.location.href);
+      if (updated.searchParams.get("desktop_handoff") !== "1") {
+        return;
+      }
+      updated.searchParams.set("desktop_handoff_refreshed", "1");
+      window.history.replaceState({}, "", updated.toString());
+    });
+  }, [authMode, authController]);
 
   useEffect(() => {
     if (typeof window === "undefined" || !token || authMode !== "sso") {
@@ -95,6 +102,9 @@ export function useAuthProfileFlow({
 
     const url = new URL(window.location.href);
     if (url.searchParams.get("desktop_handoff") !== "1") {
+      return;
+    }
+    if (url.searchParams.get("desktop_handoff_refreshed") !== "1") {
       return;
     }
     if (url.searchParams.get("desktop_handoff_sent") === "1") {

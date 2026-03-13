@@ -17,6 +17,8 @@ function resolveDesktopSsoReturnUrl(defaultReturnUrl: string) {
 
   const parsed = new URL(defaultReturnUrl);
   parsed.searchParams.set("desktop_handoff", "1");
+  parsed.searchParams.delete("desktop_handoff_bootstrap");
+  parsed.searchParams.delete("desktop_handoff_refreshed");
   parsed.searchParams.delete("desktop_handoff_sent");
   return parsed.toString();
 }
