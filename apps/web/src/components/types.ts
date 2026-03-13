@@ -20,6 +20,7 @@ export type UserDockProps = {
   localVoiceMediaStatusSummary: VoiceMediaStatusSummary;
   lastCallPeer: string;
   roomVoiceConnected: boolean;
+  remoteAudioAutoplayBlocked: boolean;
   screenShareActive: boolean;
   screenShareOwnedByCurrentUser: boolean;
   canStartScreenShare: boolean;

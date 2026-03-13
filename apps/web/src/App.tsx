@@ -424,6 +424,7 @@ export function App() {
 
   const {
     roomVoiceConnected,
+    remoteAudioAutoplayBlocked,
     connectedPeerUserIds,
     connectingPeerUserIds,
     remoteMutedPeerUserIds,
@@ -1464,6 +1465,7 @@ export function App() {
     localVoiceMediaStatusSummary,
     lastCallPeer,
     roomVoiceConnected,
+    remoteAudioAutoplayBlocked,
     screenShareActive: Boolean(currentRoomScreenShareOwner.userId),
     screenShareOwnedByCurrentUser: isCurrentUserScreenShareOwner,
     canStartScreenShare: canToggleScreenShare,

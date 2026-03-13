@@ -66,6 +66,7 @@ type UseLivekitVoiceRuntimeArgs = {
 
 type LivekitRuntimeApi = {
   roomVoiceConnected: boolean;
+  remoteAudioAutoplayBlocked: boolean;
   connectedPeerUserIds: string[];
   connectingPeerUserIds: string[];
   remoteMutedPeerUserIds: string[];
@@ -192,6 +193,7 @@ export function useLivekitVoiceRuntime({
   setLastCallPeer
 }: UseLivekitVoiceRuntimeArgs): LivekitRuntimeApi {
   const [roomVoiceConnected, setRoomVoiceConnected] = useState(false);
+  const [remoteAudioAutoplayBlocked, setRemoteAudioAutoplayBlocked] = useState(false);
   const [connectedPeerUserIds, setConnectedPeerUserIds] = useState<string[]>([]);
   const [connectingPeerUserIds, setConnectingPeerUserIds] = useState<string[]>([]);
   const [remoteMutedPeerUserIds, setRemoteMutedPeerUserIds] = useState<string[]>([]);
@@ -350,22 +352,30 @@ export function useLivekitVoiceRuntime({
     const tryPlayRemoteAudioElement = useCallback((participantId: string, element: HTMLAudioElement) => {
       if (!hasUserInteractionRef.current) {
         remoteAudioBlockedByAutoplayRef.current.add(participantId);
+        setRemoteAudioAutoplayBlocked(true);
         return;
       }
 
       const playPromise = element.play();
       if (!playPromise || typeof playPromise.then !== "function") {
         remoteAudioBlockedByAutoplayRef.current.delete(participantId);
+        if (remoteAudioBlockedByAutoplayRef.current.size === 0) {
+          setRemoteAudioAutoplayBlocked(false);
+        }
         return;
       }
 
       void playPromise
         .then(() => {
           remoteAudioBlockedByAutoplayRef.current.delete(participantId);
+          if (remoteAudioBlockedByAutoplayRef.current.size === 0) {
+            setRemoteAudioAutoplayBlocked(false);
+          }
         })
         .catch((error) => {
           if (isAutoplayBlockedError(error)) {
             remoteAudioBlockedByAutoplayRef.current.add(participantId);
+            setRemoteAudioAutoplayBlocked(true);
             pushCallLog(`remote audio autoplay blocked for ${participantId}; waiting for user interaction`);
             return;
           }
@@ -427,6 +437,9 @@ export function useLivekitVoiceRuntime({
     element.remove();
     remoteAudioElementsRef.current.delete(participantId);
       remoteAudioBlockedByAutoplayRef.current.delete(participantId);
+      if (remoteAudioBlockedByAutoplayRef.current.size === 0) {
+        setRemoteAudioAutoplayBlocked(false);
+      }
   }, []);
 
     const retryBlockedRemoteAudioPlayback = useCallback(() => {
@@ -620,6 +633,8 @@ export function useLivekitVoiceRuntime({
       element.remove();
     });
     remoteAudioElementsRef.current.clear();
+    remoteAudioBlockedByAutoplayRef.current.clear();
+    setRemoteAudioAutoplayBlocked(false);
 
     setRoomVoiceConnected(false);
     setConnectedPeerUserIds([]);
@@ -1143,6 +1158,7 @@ export function useLivekitVoiceRuntime({
 
   return {
     roomVoiceConnected,
+    remoteAudioAutoplayBlocked,
     connectedPeerUserIds,
     connectingPeerUserIds,
     remoteMutedPeerUserIds,
