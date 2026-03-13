@@ -20,6 +20,22 @@ async function ensureRootLoaded(page) {
   await page.waitForSelector("#root", { timeout: timeoutMs });
 }
 
+async function waitForAnyWindow(app, waitTimeoutMs) {
+  const startedAt = Date.now();
+  while (Date.now() - startedAt < waitTimeoutMs) {
+    const windows = app.windows();
+    if (windows.length > 0) {
+      const active = windows[windows.length - 1];
+      if (!active.isClosed()) {
+        return active;
+      }
+    }
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  }
+
+  throw new Error(`desktop window is unavailable after wake (timeout ${waitTimeoutMs}ms)`);
+}
+
 async function readMarkers(page) {
   return page.evaluate(() => ({
     runtime: document.documentElement.dataset.runtime || "",
@@ -55,7 +71,7 @@ async function main() {
   });
 
   try {
-    const page = await app.firstWindow();
+    let page = await app.firstWindow();
     await ensureRootLoaded(page);
 
     const before = await readMarkers(page);
@@ -65,12 +81,20 @@ async function main() {
     console.log(`- instruction: sleep device during next ${windowMs}ms, then wake and unlock`);
 
     const startedAt = Date.now();
-    await page.waitForTimeout(windowMs);
+    await new Promise((resolve) => setTimeout(resolve, windowMs));
     const elapsedMs = Date.now() - startedAt;
     const suspendObserved = elapsedMs >= windowMs + suspendThresholdMs;
 
-    await page.reload({ waitUntil: "domcontentloaded", timeout: timeoutMs });
-    await page.waitForSelector("#root", { timeout: timeoutMs });
+    if (page.isClosed()) {
+      page = await waitForAnyWindow(app, timeoutMs);
+    }
+
+    try {
+      await page.reload({ waitUntil: "domcontentloaded", timeout: timeoutMs });
+      await page.waitForSelector("#root", { timeout: timeoutMs });
+    } catch {
+      await ensureRootLoaded(page);
+    }
 
     const after = await readMarkers(page);
     assertMarkers(after, "after");
