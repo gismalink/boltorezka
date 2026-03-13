@@ -4,14 +4,14 @@
 
 ## 1) Foundation smoke (обязательный)
 
-- [ ] Сборка desktop foundation проходит:
+- [x] Сборка desktop foundation проходит:
   - `npm run desktop:smoke`
-- [ ] Runtime desktop smoke проходит:
+- [x] Runtime desktop smoke проходит:
   - `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art npm run smoke:desktop:runtime`
-- [ ] Telemetry desktop smoke проходит:
+- [x] Telemetry desktop smoke проходит:
   - `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art npm run smoke:desktop:telemetry`
-- [ ] Есть собранный desktop артефакт в `apps/desktop-electron/dist`.
-- [ ] Web renderer собирается и вшивается в desktop package.
+- [x] Есть собранный desktop артефакт в `apps/desktop-electron/dist`.
+- [x] Web renderer собирается и вшивается в desktop package.
 
 ## 2) Runtime smoke (manual, test env)
 
@@ -36,6 +36,11 @@
 
 ## 5) Release gate policy
 
-- [ ] Все desktop изменения идут через feature branch.
+- [x] Все desktop изменения идут через feature branch.
 - [ ] Перед merge в `main`: foundation smoke + runtime smoke на test.
 - [ ] Перед `prod`: merge в `main` -> test gate -> smoke -> явное подтверждение.
+
+## 6) Progress note (2026-03-13)
+
+- [x] M2 smoke automation slice закрыт на test: `desktop:smoke`, `smoke:desktop:runtime`, `smoke:desktop:reconnect`, `smoke:desktop:telemetry` — PASS.
+- [x] Evidence зафиксирован в `docs/status/TEST_RESULTS.md` (Cycle #17, SHA `704b7df`).

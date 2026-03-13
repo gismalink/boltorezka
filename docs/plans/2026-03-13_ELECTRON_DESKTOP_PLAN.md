@@ -155,6 +155,12 @@ Desktop smoke (must pass):
 - [ ] Security checklist как hard gate до prod.
 - [ ] Code review правил preload/IPC и запрет broad bridge API.
 
+Риск: незакрытые пункты session/cookie hardening могут всплыть в desktop prod stage.
+- Mitigation:
+- [x] Для M1/M2 test validation использовать текущий cookie primary режим (`AUTH_COOKIE_MODE=1`) как базовый, без блокировки desktop разработки.
+- [ ] До desktop prod readiness закрыть auth/session hardening пункты класса P1: rate limits, structured auth logs/audit trail, SLO/baseline мониторинг.
+- [ ] Держать desktop release gate зависимым от актуального статуса `docs/plans/2026-03-11_SESSION_COOKIE_CUTOVER_CHECKLIST.md`.
+
 ## 8) Примерная оценка сроков
 
 - [ ] M1 Foundation: 2-3 рабочих дня.
@@ -190,3 +196,7 @@ Progress note (2026-03-13, M2 reconnect start):
 
 Progress note (2026-03-13, M2 telemetry sanity):
 - Добавлен desktop telemetry smoke (`scripts/smoke/smoke-desktop-telemetry.mjs`) с проверкой `desktop_smoke_probe` payload (`meta.runtime=desktop`, `meta.platform`, `meta.electronVersion`).
+
+Progress note (2026-03-13, M2 validation checkpoint):
+- Пройден полный M2 smoke automation цикл на test (`desktop:smoke:m2`): foundation/runtime/reconnect/telemetry — PASS.
+- Результат зафиксирован в `docs/status/TEST_RESULTS.md` (Cycle #17, `origin/feature/electron-desktop-foundation`, SHA `704b7df`).
