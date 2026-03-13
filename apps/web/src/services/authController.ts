@@ -83,10 +83,11 @@ export class AuthController {
     const deepLink = buildDesktopHandoffDeepLink(response.code, currentUrl.toString());
     window.location.href = deepLink;
 
-    // Keep browser on a safe completion page instead of chat UI after protocol handoff.
+    // Keep browser on a safe completion page, but give OS-level protocol handling
+    // enough time so we do not cancel deep-link handoff back into Electron.
     window.setTimeout(() => {
       window.location.replace(currentUrl.toString());
-    }, 250);
+    }, 1800);
   }
 
   async completeDesktopHandoff(code: string) {
