@@ -398,7 +398,7 @@ export function useLivekitVoiceRuntime({
 
     const element = document.createElement("audio");
     element.autoplay = false;
-    element.playsInline = true;
+    element.setAttribute("playsinline", "");
     track.attach(element);
     element.style.display = "none";
     document.body.appendChild(element);
