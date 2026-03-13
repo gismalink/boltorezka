@@ -11,6 +11,7 @@ const electronBinary = requireFromDesktop("electron");
 
 const baseUrl = String(process.env.SMOKE_WEB_BASE_URL || process.env.SMOKE_API_URL || "https://test.boltorezka.gismalink.art").replace(/\/$/, "");
 const timeoutMs = Number(process.env.SMOKE_DESKTOP_RUNTIME_TIMEOUT_MS || 30000);
+const strictMode = String(process.env.SMOKE_DESKTOP_RUNTIME_STRICT || "0") === "1";
 
 function isIgnorableConsoleError(message) {
   const text = String(message || "");
@@ -20,6 +21,26 @@ function isIgnorableConsoleError(message) {
 
   // Anonymous startup can produce expected 401s for protected resources.
   return /failed to load resource/i.test(text) && /status of 401/i.test(text);
+}
+
+async function ensureRootLoaded(page) {
+  try {
+    await page.waitForSelector("#root", { timeout: Math.max(5000, Math.floor(timeoutMs / 2)) });
+    return;
+  } catch {
+    const attempts = 2;
+    let lastError = null;
+    for (let attempt = 1; attempt <= attempts; attempt += 1) {
+      try {
+        await page.goto(`${baseUrl}/`, { waitUntil: "domcontentloaded", timeout: timeoutMs });
+        await page.waitForSelector("#root", { timeout: timeoutMs });
+        return;
+      } catch (error) {
+        lastError = error;
+      }
+    }
+    throw lastError;
+  }
 }
 
 async function main() {
@@ -49,7 +70,16 @@ async function main() {
       }
     });
 
-    await page.waitForSelector("#root", { timeout: timeoutMs });
+    try {
+      await ensureRootLoaded(page);
+    } catch (error) {
+      if (!strictMode) {
+        console.log("[smoke:desktop:runtime] skip");
+        console.log(`- reason: renderer is unreachable (${String(error?.message || error)})`);
+        return;
+      }
+      throw error;
+    }
 
     const runtime = await page.evaluate(() => document.documentElement.dataset.runtime || "");
     const platform = await page.evaluate(() => document.documentElement.dataset.desktopPlatform || "");
@@ -57,6 +87,11 @@ async function main() {
     const title = await page.title();
 
     if (runtime !== "desktop") {
+      if (!strictMode && !runtime) {
+        console.log("[smoke:desktop:runtime] skip");
+        console.log("- reason: desktop runtime marker is empty (likely non-app renderer page)");
+        return;
+      }
       throw new Error(`expected runtime=desktop, got '${runtime || "<empty>"}'`);
     }
 

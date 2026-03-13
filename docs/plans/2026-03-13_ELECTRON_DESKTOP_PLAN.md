@@ -184,3 +184,6 @@ Progress note (2026-03-13, M2 observability start):
 
 Progress note (2026-03-13, M2 validation start):
 - Добавлен desktop runtime smoke (`scripts/smoke/smoke-desktop-runtime.mjs`) с запуском Electron shell через Playwright и проверкой runtime markers (`runtime=desktop`, `platform`, `electronVersion`).
+
+Progress note (2026-03-13, M2 reconnect start):
+- Добавлен desktop reconnect smoke (`scripts/smoke/smoke-desktop-reconnect.mjs`) с симуляцией network flap (`setOffline`) и последующим reload/проверкой runtime markers.
