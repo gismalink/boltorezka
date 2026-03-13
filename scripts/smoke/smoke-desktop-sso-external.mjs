@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Purpose: Verify that SSO start/logout routes are externalized from Electron app window.
+// Purpose: Verify that SSO start is externalized and desktop logout stays in-app.
 import path from "path";
 import { createRequire } from "module";
 import { _electron as electron } from "playwright";
@@ -34,7 +34,8 @@ async function main() {
       ...process.env,
       ELECTRON_RENDERER_URL: `${baseUrl}/`,
       ELECTRON_ALLOW_MULTIPLE_INSTANCES: "1",
-      ELECTRON_SMOKE_SUPPRESS_EXTERNAL_OPEN: "1"
+      ELECTRON_SMOKE_SUPPRESS_EXTERNAL_OPEN: "1",
+      ELECTRON_FORCE_EXTERNAL_SSO_START: "1"
     }
   });
 
@@ -48,10 +49,15 @@ async function main() {
 
     const startExternalUrl = await getLastExternalUrl(app);
     const startExternalized = startExternalUrl.includes("/v1/auth/sso/start")
-      || /\/auth\/(google|yandex)(\?|$)/i.test(startExternalUrl);
+      || /\/auth\/(google|yandex)(\?|$)/i.test(startExternalUrl)
+      || /accounts\.google\.com\/(o\/oauth2\/v2\/auth|v3\/signin\/accountchooser)/i.test(startExternalUrl);
     if (!startExternalized) {
       throw new Error(`expected externalized sso/start url, got '${startExternalUrl || "<empty>"}'`);
     }
+
+    await app.evaluate(() => {
+      global.__boltorezkaLastExternalUrl = "";
+    });
 
     await ensureRootLoaded(page);
 
@@ -60,10 +66,15 @@ async function main() {
     await page.waitForTimeout(1200);
 
     const logoutExternalUrl = await getLastExternalUrl(app);
-    const logoutExternalized = logoutExternalUrl.includes("/v1/auth/sso/logout")
+    const logoutWasExternalized = logoutExternalUrl.includes("/v1/auth/sso/logout")
       || /\/auth\/logout(\?|$)/i.test(logoutExternalUrl);
-    if (!logoutExternalized) {
-      throw new Error(`expected externalized sso/logout url, got '${logoutExternalUrl || "<empty>"}'`);
+    if (logoutWasExternalized) {
+      throw new Error(`expected local desktop logout handling, got external url '${logoutExternalUrl}'`);
+    }
+
+    const logoutUrlAfterFlow = page.url();
+    if (!/desktop_logged_out=1/.test(logoutUrlAfterFlow)) {
+      throw new Error(`expected desktop local logout marker in url, got '${logoutUrlAfterFlow || "<empty>"}'`);
     }
 
     const runtime = await page.evaluate(() => document.documentElement.dataset.runtime || "");
@@ -74,7 +85,7 @@ async function main() {
     console.log("[smoke:desktop:sso-external] ok");
     console.log(`- baseUrl: ${baseUrl}`);
     console.log(`- ssoStartExternalized: ${startExternalized}`);
-    console.log(`- ssoLogoutExternalized: ${logoutExternalized}`);
+    console.log("- ssoLogoutMode: local-desktop");
   } finally {
     await app.close();
   }

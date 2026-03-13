@@ -26,10 +26,15 @@ const livekitTokenSchema = z.object({
   canSubscribe: z.boolean().optional().default(true),
   canPublishData: z.boolean().optional().default(true)
 });
+const desktopHandoffExchangeSchema = z.object({
+  code: z.string().trim().min(10).max(128)
+});
 
 const safeHostSet = new Set(config.allowedReturnHosts);
 const AUTH_SESSION_PREFIX = "auth:session:";
 const AUTH_SESSION_TTL_SEC = 60 * 60 * 24 * 30;
+const AUTH_DESKTOP_HANDOFF_PREFIX = "auth:desktop-handoff:";
+const AUTH_DESKTOP_HANDOFF_TTL_SEC = 120;
 const AUTH_RATE_LIMIT_PREFIX = "auth:rl:";
 
 type AuthRateLimitPolicy = {
@@ -369,6 +374,16 @@ export async function authRoutes(fastify: FastifyInstance) {
     max: 60,
     windowSec: 60
   });
+  const limitDesktopHandoffCreate = makeAuthRateLimiter({
+    namespace: "desktop-handoff-create",
+    max: 20,
+    windowSec: 60
+  });
+  const limitDesktopHandoffExchange = makeAuthRateLimiter({
+    namespace: "desktop-handoff-exchange",
+    max: 40,
+    windowSec: 60
+  });
 
   fastify.get("/v1/auth/mode", async () => {
     const response: AuthModeResponse = {
@@ -495,6 +510,120 @@ export async function authRoutes(fastify: FastifyInstance) {
           message: "Central SSO is temporarily unavailable"
         });
       }
+    }
+  );
+
+  fastify.post(
+    "/v1/auth/desktop-handoff",
+    {
+      preHandler: [requireAuth, limitDesktopHandoffCreate]
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const userId = String(request.user?.sub || "").trim();
+      if (!userId) {
+        return reply.code(401).send({
+          error: "Unauthorized",
+          message: "Valid bearer token is required"
+        });
+      }
+
+      const code = randomUUID();
+      await fastify.redis.setEx(
+        `${AUTH_DESKTOP_HANDOFF_PREFIX}${code}`,
+        AUTH_DESKTOP_HANDOFF_TTL_SEC,
+        JSON.stringify({
+          userId,
+          issuedAt: new Date().toISOString()
+        })
+      );
+
+      fastify.log.info(
+        buildAuthAuditContext(request, {
+          event: "auth.desktop_handoff.issued",
+          userId,
+          ttlSec: AUTH_DESKTOP_HANDOFF_TTL_SEC
+        }),
+        "desktop handoff code issued"
+      );
+
+      return {
+        ok: true,
+        code,
+        expiresInSec: AUTH_DESKTOP_HANDOFF_TTL_SEC
+      };
+    }
+  );
+
+  fastify.post(
+    "/v1/auth/desktop-handoff/exchange",
+    {
+      preHandler: [limitDesktopHandoffExchange]
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const parsed = desktopHandoffExchangeSchema.safeParse(request.body || {});
+      if (!parsed.success) {
+        return reply.code(400).send({
+          error: "ValidationError",
+          issues: parsed.error.flatten()
+        });
+      }
+
+      const key = `${AUTH_DESKTOP_HANDOFF_PREFIX}${parsed.data.code}`;
+      const raw = await fastify.redis.get(key);
+      if (!raw) {
+        return reply.code(404).send({
+          error: "DesktopHandoffExpired",
+          message: "Desktop handoff code is expired or invalid"
+        });
+      }
+
+      await fastify.redis.del(key);
+
+      let handoffUserId = "";
+      try {
+        const payload = JSON.parse(raw) as { userId?: string };
+        handoffUserId = String(payload.userId || "").trim();
+      } catch {
+        handoffUserId = "";
+      }
+
+      if (!handoffUserId) {
+        return reply.code(400).send({
+          error: "DesktopHandoffInvalid",
+          message: "Desktop handoff payload is invalid"
+        });
+      }
+
+      const userResult = await db.query<UserRow>(
+        "SELECT id, email, username, name, ui_theme, role, is_banned, created_at FROM users WHERE id = $1 LIMIT 1",
+        [handoffUserId]
+      );
+
+      if ((userResult.rowCount || 0) === 0) {
+        return reply.code(401).send({
+          error: "Unauthorized",
+          message: "User does not exist"
+        });
+      }
+
+      const user = userResult.rows[0];
+      if (user.is_banned) {
+        return reply.code(403).send({
+          error: "UserBanned",
+          message: "User is banned"
+        });
+      }
+
+      const { token } = await issueAuthSessionToken(fastify, user, "sso");
+      if (config.authCookieMode) {
+        appendSetCookie(reply, buildSessionCookieValue(token));
+      }
+
+      return {
+        authenticated: true,
+        token,
+        user
+      };
     }
   );
 

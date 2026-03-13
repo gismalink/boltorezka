@@ -4,9 +4,77 @@ const { app, BrowserWindow, shell } = require("electron");
 
 const isDev = !app.isPackaged;
 const rendererUrl = process.env.ELECTRON_RENDERER_URL || "http://127.0.0.1:5173";
+const desktopProtocol = "boltorezka";
 const allowMultipleInstances = !app.isPackaged
   && String(process.env.ELECTRON_ALLOW_MULTIPLE_INSTANCES || "0") === "1";
 const suppressExternalOpenForSmoke = String(process.env.ELECTRON_SMOKE_SUPPRESS_EXTERNAL_OPEN || "0") === "1";
+let mainWindow = null;
+let pendingProtocolUrl = "";
+
+function isSameRendererOrigin(url) {
+  try {
+    return new URL(url).origin === new URL(rendererUrl).origin;
+  } catch {
+    return false;
+  }
+}
+
+function withDesktopSsoParams(url, handoffCode = "") {
+  try {
+    const parsed = new URL(url);
+    if (handoffCode) {
+      parsed.searchParams.set("desktop_sso_complete", "1");
+      parsed.searchParams.set("desktop_sso_code", handoffCode);
+    }
+    return parsed.toString();
+  } catch {
+    const fallback = new URL(`${rendererUrl.replace(/\/$/, "")}/`);
+    if (handoffCode) {
+      fallback.searchParams.set("desktop_sso_complete", "1");
+      fallback.searchParams.set("desktop_sso_code", handoffCode);
+    }
+    return fallback.toString();
+  }
+}
+
+function resolveDesktopCallbackTarget(protocolUrl) {
+  try {
+    const parsed = new URL(protocolUrl);
+    const normalizedPath = parsed.pathname.replace(/\/+$/, "");
+    const isSsoCallback = parsed.protocol === `${desktopProtocol}:`
+      && (normalizedPath === "/auth/sso-complete" || normalizedPath === "auth/sso-complete");
+    if (!isSsoCallback) {
+      return "";
+    }
+
+    const handoffCode = String(parsed.searchParams.get("desktop_sso_code") || "").trim();
+    const target = String(parsed.searchParams.get("target") || "").trim();
+    if (target && isSameRendererOrigin(target)) {
+      return withDesktopSsoParams(target, handoffCode);
+    }
+    return withDesktopSsoParams(`${rendererUrl.replace(/\/$/, "")}/`, handoffCode);
+  } catch {
+    return "";
+  }
+}
+
+function handleProtocolUrl(rawUrl) {
+  const target = resolveDesktopCallbackTarget(rawUrl);
+  if (!target) {
+    return;
+  }
+
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    if (mainWindow.isMinimized()) {
+      mainWindow.restore();
+    }
+    mainWindow.focus();
+    void mainWindow.loadURL(target);
+    return;
+  }
+
+  pendingProtocolUrl = target;
+}
 
 function openExternal(url) {
   global.__boltorezkaLastExternalUrl = String(url || "");
@@ -14,6 +82,27 @@ function openExternal(url) {
     return;
   }
   void shell.openExternal(url);
+}
+
+async function clearDesktopSessionState(webContents, rendererOrigin) {
+  try {
+    await webContents.session.clearStorageData({
+      origin: rendererOrigin,
+      storages: ["cookies", "localstorage", "indexeddb", "serviceworkers", "cachestorage"]
+    });
+  } catch {
+    // Best-effort cleanup.
+  }
+}
+
+async function clearDesktopSessionStateAll(webContents) {
+  try {
+    await webContents.session.clearStorageData({
+      storages: ["cookies", "localstorage", "indexeddb", "serviceworkers", "cachestorage"]
+    });
+  } catch {
+    // Best-effort cleanup.
+  }
 }
 
 if (!allowMultipleInstances) {
@@ -72,16 +161,54 @@ function createMainWindow() {
     return { action: "deny" };
   });
 
+  const handleDesktopLocalLogoutNavigation = (url) => {
+    try {
+      const parsed = new URL(url);
+      const rendererOrigin = new URL(rendererUrl).origin;
+      const isSameOrigin = parsed.origin === rendererOrigin;
+      const isSsoLogout = parsed.pathname === "/v1/auth/sso/logout";
+      if (isSameOrigin && isSsoLogout) {
+        const target = `${rendererUrl.replace(/\/$/, "")}/?desktop_logged_out=1`;
+        void clearDesktopSessionState(window.webContents, rendererOrigin)
+          .finally(() => {
+            void window.loadURL(target);
+          });
+        return true;
+      }
+
+      const isCentralAuthHost = /(test\.)?auth\.gismalink\.art$/i.test(parsed.hostname);
+      const isCentralLogoutPath = parsed.pathname === "/auth/logout";
+      const returnUrlRaw = String(parsed.searchParams.get("returnUrl") || "").trim();
+
+      if (!isCentralAuthHost || !isCentralLogoutPath || !returnUrlRaw) {
+        return false;
+      }
+
+      const returnUrl = new URL(returnUrlRaw);
+      if (returnUrl.origin !== rendererOrigin) {
+        return false;
+      }
+
+      const target = `${rendererUrl.replace(/\/$/, "")}/?desktop_logged_out=1`;
+      void clearDesktopSessionState(window.webContents, rendererOrigin)
+        .finally(() => {
+          void window.loadURL(target);
+        });
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
   const shouldOpenExternalNavigation = (url) => {
     try {
       const parsed = new URL(url);
       const rendererOrigin = new URL(rendererUrl).origin;
       const isSameOrigin = parsed.origin === rendererOrigin;
-      const isSsoStartOrLogout = parsed.pathname === "/v1/auth/sso/start"
-        || parsed.pathname === "/v1/auth/sso/logout";
+      const isSsoStart = parsed.pathname === "/v1/auth/sso/start";
 
-      // SSO start/logout must always run in system browser, even on same-origin API path.
-      if (isSameOrigin && isSsoStartOrLogout) {
+      // Keep SSO start in external browser for passkeys/password managers.
+      if (isSameOrigin && isSsoStart) {
         return true;
       }
 
@@ -92,6 +219,11 @@ function createMainWindow() {
   };
 
   window.webContents.on("will-navigate", (event, url) => {
+    if (handleDesktopLocalLogoutNavigation(url)) {
+      event.preventDefault();
+      return;
+    }
+
     if (shouldOpenExternalNavigation(url)) {
       event.preventDefault();
       openExternal(url);
@@ -106,6 +238,11 @@ function createMainWindow() {
   });
 
   window.webContents.on("will-redirect", (event, url) => {
+    if (handleDesktopLocalLogoutNavigation(url)) {
+      event.preventDefault();
+      return;
+    }
+
     if (shouldOpenExternalNavigation(url)) {
       event.preventDefault();
       openExternal(url);
@@ -119,30 +256,52 @@ function createMainWindow() {
     }
   });
 
-  if (isDev) {
-    void window.loadURL(rendererUrl);
+    if (isDev) {
+      const initialTarget = pendingProtocolUrl || rendererUrl;
+      void clearDesktopSessionStateAll(window.webContents)
+        .finally(() => {
+          void window.loadURL(initialTarget);
+        });
   } else {
     const indexPath = path.resolve(__dirname, "../../web/dist/index.html");
     void window.loadFile(indexPath);
   }
 
+  pendingProtocolUrl = "";
+
   return window;
 }
 
+if (process.defaultApp && process.argv.length >= 2) {
+  app.setAsDefaultProtocolClient(desktopProtocol, process.execPath, [path.resolve(process.argv[1])]);
+} else {
+  app.setAsDefaultProtocolClient(desktopProtocol);
+}
+
+app.on("open-url", (event, url) => {
+  event.preventDefault();
+  handleProtocolUrl(url);
+});
+
 app.whenReady().then(() => {
-  createMainWindow();
+  mainWindow = createMainWindow();
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {
-      createMainWindow();
+      mainWindow = createMainWindow();
     }
   });
 });
 
-app.on("second-instance", () => {
+app.on("second-instance", (_event, argv) => {
+  const protocolArg = (argv || []).find((value) => String(value || "").startsWith(`${desktopProtocol}://`));
+  if (protocolArg) {
+    handleProtocolUrl(protocolArg);
+  }
+
   const [window] = BrowserWindow.getAllWindows();
   if (!window) {
-    createMainWindow();
+    mainWindow = createMainWindow();
     return;
   }
 
