@@ -87,6 +87,7 @@ const DEFAULT_OUTPUT_VOLUME = 70;
 const DEFAULT_UI_THEME: UiTheme = "8-neon-bit";
 const MESSAGE_EDIT_DELETE_WINDOW_MS = 10 * 60 * 1000;
 const ROOM_SLUG_STORAGE_KEY = "boltorezka_room_slug";
+const VERSION_UPDATE_PENDING_KEY = "boltorezka_update_reload_pending";
 const CLIENT_BUILD_VERSION = String(import.meta.env.VITE_APP_VERSION || "").trim();
 const CLIENT_BUILD_DATE = String(import.meta.env.VITE_APP_BUILD_DATE || "").trim();
 const CLIENT_BUILD_DATE_LABEL = CLIENT_BUILD_DATE ? `v.${CLIENT_BUILD_DATE}` : "";
@@ -121,6 +122,9 @@ export function App() {
     const stored = String(localStorage.getItem(ROOM_SLUG_STORAGE_KEY) || "").trim();
     return stored || "general";
   });
+  const [showAppUpdatedOverlay, setShowAppUpdatedOverlay] = useState(
+    () => sessionStorage.getItem(VERSION_UPDATE_PENDING_KEY) === "1"
+  );
   const [messages, setMessages] = useState<Message[]>([]);
   const [messagesHasMore, setMessagesHasMore] = useState(false);
   const [messagesNextCursor, setMessagesNextCursor] = useState<MessagesCursor | null>(null);
@@ -1413,7 +1417,7 @@ export function App() {
 
   useAutoRoomVoiceConnection({
     roomMediaResolved: Boolean(currentRoomSnapshot),
-    currentRoomSupportsRtc,
+    currentRoomSupportsRtc: currentRoomSupportsRtc && !showAppUpdatedOverlay,
     roomVoiceTargetsCount: currentRoomVoiceTargets.length,
     roomVoiceConnected,
     // Keep established LiveKit sessions alive across short presence/ws flaps.
@@ -1421,6 +1425,11 @@ export function App() {
     connectRoom,
     disconnectRoom
   });
+
+  const acknowledgeUpdatedApp = useCallback(() => {
+    sessionStorage.removeItem(VERSION_UPDATE_PENDING_KEY);
+    setShowAppUpdatedOverlay(false);
+  }, []);
 
   useServerMenuAccessGuard({
     serverMenuTab,
@@ -1806,6 +1815,23 @@ export function App() {
       />
 
       <ToastStack toasts={toasts} />
+
+      {showAppUpdatedOverlay ? (
+        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/80 p-4" role="dialog" aria-modal="true" aria-live="polite">
+          <div className="w-full max-w-md rounded-2xl border border-white/20 bg-neutral-950/95 p-6 text-center shadow-2xl">
+            <h2 className="text-2xl font-bold tracking-wide text-white">{t("overlay.appUpdatedTitle")}</h2>
+            <p className="mt-3 text-sm leading-relaxed text-white/80">{t("overlay.appUpdatedMessage")}</p>
+            <button
+              type="button"
+              className="primary mt-6 inline-flex w-full items-center justify-center"
+              onClick={acknowledgeUpdatedApp}
+              autoFocus
+            >
+              {t("overlay.appUpdatedContinue")}
+            </button>
+          </div>
+        </div>
+      ) : null}
 
     </main>
   );

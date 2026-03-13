@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { api } from "../../../api";
 
 const VERSION_POLL_INTERVAL_MS = 60000;
+const VERSION_UPDATE_PENDING_KEY = "boltorezka_update_reload_pending";
 
 export function useBuildVersionSync(clientBuildVersion: string) {
   useEffect(() => {
@@ -22,6 +23,11 @@ export function useBuildVersionSync(clientBuildVersion: string) {
         const payload = await api.version();
         const serverBuildVersion = String(payload.appBuildSha || "").trim();
         if (!cancelled && serverBuildVersion && serverBuildVersion !== clientBuildVersion) {
+          try {
+            sessionStorage.setItem(VERSION_UPDATE_PENDING_KEY, "1");
+          } catch {
+            // Ignore storage failures and continue with reload.
+          }
           window.location.reload();
         }
       } catch {
