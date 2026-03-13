@@ -63,7 +63,46 @@ function createMainWindow() {
     return { action: "deny" };
   });
 
+  const shouldOpenExternalNavigation = (url) => {
+    try {
+      const parsed = new URL(url);
+      const rendererOrigin = new URL(rendererUrl).origin;
+      const isSameOrigin = parsed.origin === rendererOrigin;
+      const isSsoStartOrLogout = parsed.pathname === "/v1/auth/sso/start"
+        || parsed.pathname === "/v1/auth/sso/logout";
+
+      // SSO start/logout must always run in system browser, even on same-origin API path.
+      if (isSameOrigin && isSsoStartOrLogout) {
+        return true;
+      }
+
+      return false;
+    } catch {
+      return false;
+    }
+  };
+
   window.webContents.on("will-navigate", (event, url) => {
+    if (shouldOpenExternalNavigation(url)) {
+      event.preventDefault();
+      shell.openExternal(url);
+      return;
+    }
+
+    const allowedPrefix = isDev ? rendererUrl : "file://";
+    if (!url.startsWith(allowedPrefix)) {
+      event.preventDefault();
+      shell.openExternal(url);
+    }
+  });
+
+  window.webContents.on("will-redirect", (event, url) => {
+    if (shouldOpenExternalNavigation(url)) {
+      event.preventDefault();
+      shell.openExternal(url);
+      return;
+    }
+
     const allowedPrefix = isDev ? rendererUrl : "file://";
     if (!url.startsWith(allowedPrefix)) {
       event.preventDefault();
