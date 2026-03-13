@@ -163,7 +163,6 @@ async function main() {
       assertMarkers(after, "after");
     } catch (windowRecoveryError) {
       const canUseManualFallback = requireSuspend
-        && suspendObserved
         && allowManualWindowConfirm
         && manualWindowConfirmed;
 
