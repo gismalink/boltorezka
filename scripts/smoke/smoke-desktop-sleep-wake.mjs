@@ -23,6 +23,19 @@ async function ensureRootLoaded(page) {
 async function waitForAnyWindow(app, waitTimeoutMs) {
   const startedAt = Date.now();
   let nextActivateNudgeAt = startedAt;
+
+  const tryFirstWindowWithTimeout = async (ms) => {
+    try {
+      const candidate = await Promise.race([
+        app.firstWindow(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error("firstWindow timeout")), ms))
+      ]);
+      return candidate;
+    } catch {
+      return null;
+    }
+  };
+
   while (Date.now() - startedAt < waitTimeoutMs) {
     const windows = app.windows();
     if (windows.length > 0) {
@@ -30,6 +43,11 @@ async function waitForAnyWindow(app, waitTimeoutMs) {
       if (!active.isClosed()) {
         return active;
       }
+    }
+
+    const firstWindowCandidate = await tryFirstWindowWithTimeout(1200);
+    if (firstWindowCandidate && !firstWindowCandidate.isClosed()) {
+      return firstWindowCandidate;
     }
 
     const now = Date.now();
