@@ -158,7 +158,7 @@ Desktop smoke (must pass):
 Риск: незакрытые пункты session/cookie hardening могут всплыть в desktop prod stage.
 - Mitigation:
 - [x] Для M1/M2 test validation использовать текущий cookie primary режим (`AUTH_COOKIE_MODE=1`) как базовый, без блокировки desktop разработки.
-- [ ] До desktop prod readiness закрыть auth/session hardening пункты класса P1: SLO/baseline мониторинг.
+- [x] До desktop prod readiness закрыть auth/session hardening пункты класса P1: SLO/baseline мониторинг (rolling gate PASS, 2026-03-13).
 - [ ] Держать desktop release gate зависимым от актуального статуса `docs/plans/2026-03-11_SESSION_COOKIE_CUTOVER_CHECKLIST.md`.
 
 ## 8) Примерная оценка сроков
@@ -203,4 +203,4 @@ Progress note (2026-03-13, M2 validation checkpoint):
 
 Progress note (2026-03-13, auth hardening dependency):
 - P1 пункты `rate limits` и `structured auth logs/audit trail` закрыты.
-- Остается `SLO/baseline` evidence: локальный `npm run slo:check` без admin bearer возвращает `401` на `/v1/telemetry/summary`; закрытие пункта выполняется отдельным прогоном с admin token в test.
+- `SLO/baseline` evidence закрыт server-side прогоном `~/srv/boltorezka/scripts/ops/scheduler/run-job.sh slo-rolling-gate`: `SLO_ROLLING_STATUS=pass`, `SLO_ROLLING_ALERT_COUNT=0` (2026-03-13T17:52:39Z).

@@ -2,6 +2,28 @@
 
 Отдельный журнал результатов тестов/нагрузки.
 
+## 2026-03-13 — Cycle #18 (Rolling SLO gate evidence)
+
+- Environment: `test` (`https://test.boltorezka.gismalink.art`)
+- Contour: server-side scheduler job (`~/srv/boltorezka/scripts/ops/scheduler/run-job.sh slo-rolling-gate`)
+
+### Functional gate
+
+- `slo-rolling-gate`: PASS
+  - `SLO_ROLLING_STATUS=pass`
+  - `SLO_ROLLING_ALERT_COUNT=0`
+  - `SLO_ROLLING_TS=2026-03-13T17:52:39.405Z`
+
+### Scope covered by this cycle
+
+- Подтвержден актуальный rolling SLO baseline gate для auth/reconnect на test,
+- Снят оставшийся блокер по `SLO/baseline` для desktop prod-readiness dependency chain.
+
+### Decision
+
+- Cycle #18: PASS.
+- SLO gate evidence добавлен в cookie/session и desktop plan документы.
+
 ## 2026-03-13 — Cycle #17 (Electron M2 telemetry stabilization)
 
 - Environment: `test` (`https://test.boltorezka.gismalink.art`)
