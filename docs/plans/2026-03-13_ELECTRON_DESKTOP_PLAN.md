@@ -208,3 +208,7 @@ Progress note (2026-03-13, auth hardening dependency):
 Progress note (2026-03-13, M2 stability automation):
 - Добавлен `scripts/smoke/smoke-desktop-soak.mjs` и root command `npm run smoke:desktop:soak` (повторяющиеся offline/online reconnect циклы в одном Electron run).
 - Test evidence: `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art SMOKE_DESKTOP_SOAK_CYCLES=4 npm run smoke:desktop:soak` -> PASS.
+
+Progress note (2026-03-13, M2 full chain):
+- Добавлен агрегированный command `npm run desktop:smoke:m2:soak`.
+- Test evidence: `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art SMOKE_DESKTOP_SOAK_CYCLES=3 npm run desktop:smoke:m2:soak` -> PASS (foundation/runtime/reconnect/telemetry/soak).

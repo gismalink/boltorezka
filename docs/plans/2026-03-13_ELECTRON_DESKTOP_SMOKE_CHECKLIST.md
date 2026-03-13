@@ -46,3 +46,4 @@
 
 - [x] M2 smoke automation slice закрыт на test: `desktop:smoke`, `smoke:desktop:runtime`, `smoke:desktop:reconnect`, `smoke:desktop:telemetry` — PASS.
 - [x] Evidence зафиксирован в `docs/status/TEST_RESULTS.md` (Cycle #17, SHA `704b7df`).
+- [x] Full chain с soak (`desktop:smoke:m2:soak`) прошел на test, evidence: `docs/status/TEST_RESULTS.md` (Cycle #20).

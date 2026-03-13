@@ -2,6 +2,30 @@
 
 Отдельный журнал результатов тестов/нагрузки.
 
+## 2026-03-13 — Cycle #20 (Desktop M2 plus soak chain)
+
+- Environment: `test` (`https://test.boltorezka.gismalink.art`)
+- Build ref: `origin/feature/electron-desktop-foundation` (working tree, post-`46b8f4d`)
+
+### Functional gate
+
+- `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art SMOKE_DESKTOP_SOAK_CYCLES=3 npm run desktop:smoke:m2:soak`: PASS
+  - `desktop:smoke`: PASS
+  - `smoke:desktop:runtime`: PASS
+  - `smoke:desktop:reconnect`: PASS
+  - `smoke:desktop:telemetry`: PASS
+  - `smoke:desktop:soak`: PASS (`cycles=3`)
+
+### Scope covered by this cycle
+
+- Подтвержден единый end-to-end M2 automation command с интегрированным reconnect soak gate,
+- Снижен операционный риск ручного запуска нескольких desktop smoke команд по отдельности.
+
+### Decision
+
+- Cycle #20: PASS.
+- `desktop:smoke:m2:soak` можно использовать как основной M2 regression command на feature/test этапах.
+
 ## 2026-03-13 — Cycle #19 (Desktop reconnect soak automation)
 
 - Environment: `test` (`https://test.boltorezka.gismalink.art`)
