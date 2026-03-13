@@ -21,6 +21,21 @@
 
 ## 3) Current technical evidence
 
+### 3.0 Cookie cutover package (2026-03-13)
+
+- Cookie mode in test: `TEST_AUTH_COOKIE_MODE=1` (persisted in host env).
+- Web build gate for cookie-primary: `VITE_AUTH_COOKIE_MODE=1` passed in test build args.
+- Session behavior evidence:
+  - logout revokes server session before SSO redirect (`POST /v1/auth/logout` in web flow),
+  - manual scenario: 3 different accounts, login/logout from first attempt, no ghost presence after logout.
+- Automated smoke evidence:
+  - `smoke:auth:cookie-negative` — PASS,
+  - `smoke:auth:cookie-ws-ticket` — PASS,
+  - `deploy:test:smoke` with cookie-mode — PASS on repeated cycles.
+- Remaining pre-prod risks for cookie rollout:
+  - browser matrix (Chrome/Safari/Firefox + iOS Safari) not fully captured,
+  - auth/reconnect baseline-vs-current delta not yet formalized.
+
 ### 3.1 Latest verified test rollout
 
 - Branch: `origin/main`
@@ -135,6 +150,19 @@
   - `curl -I https://boltorezka.gismalink.art/health`
   - short SSO + room + chat smoke
   - logs review (critical errors)
+
+### 5.4 Test rollback validation evidence (2026-03-13)
+
+- Manual rollback cycle executed in `test`:
+  1. rollback target deploy: `TEST_REF=249f1e4 npm run deploy:test:smoke` -> PASS,
+  2. forward restore deploy: `TEST_REF=origin/feature/session-cookie-hardening npm run deploy:test:smoke` -> PASS.
+- In both runs:
+  - `smoke:auth:cookie-negative` -> PASS,
+  - `smoke:auth:cookie-ws-ticket` -> PASS,
+  - postdeploy summary finished with `done`.
+- Conclusion:
+  - rollback deploy path is operational,
+  - rollback cycle does not break auth/session semantics in test contour.
 
 ## 6) Release log / audit artifacts
 

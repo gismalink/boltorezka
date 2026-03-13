@@ -31,6 +31,62 @@ const safeHostSet = new Set(config.allowedReturnHosts);
 const AUTH_SESSION_PREFIX = "auth:session:";
 const AUTH_SESSION_TTL_SEC = 60 * 60 * 24 * 30;
 
+function appendSetCookie(reply: FastifyReply, value: string) {
+  const current = reply.getHeader("set-cookie");
+  if (!current) {
+    reply.header("set-cookie", value);
+    return;
+  }
+
+  if (Array.isArray(current)) {
+    reply.header("set-cookie", [...current.map((item) => String(item)), value]);
+    return;
+  }
+
+  reply.header("set-cookie", [String(current), value]);
+}
+
+function buildSessionCookieValue(token: string) {
+  const parts = [
+    `${config.authSessionCookieName}=${encodeURIComponent(token)}`,
+    `Path=${config.authSessionCookiePath}`,
+    `Max-Age=${config.authSessionCookieMaxAgeSec}`,
+    "HttpOnly",
+    `SameSite=${config.authSessionCookieSameSite}`
+  ];
+
+  if (config.authSessionCookieDomain) {
+    parts.push(`Domain=${config.authSessionCookieDomain}`);
+  }
+
+  if (config.authSessionCookieSecure) {
+    parts.push("Secure");
+  }
+
+  return parts.join("; ");
+}
+
+function buildSessionCookieClearValue() {
+  const parts = [
+    `${config.authSessionCookieName}=`,
+    `Path=${config.authSessionCookiePath}`,
+    "Max-Age=0",
+    "Expires=Thu, 01 Jan 1970 00:00:00 GMT",
+    "HttpOnly",
+    `SameSite=${config.authSessionCookieSameSite}`
+  ];
+
+  if (config.authSessionCookieDomain) {
+    parts.push(`Domain=${config.authSessionCookieDomain}`);
+  }
+
+  if (config.authSessionCookieSecure) {
+    parts.push("Secure");
+  }
+
+  return parts.join("; ");
+}
+
 async function issueAuthSessionToken(
   fastify: FastifyInstance,
   user: UserRow,
@@ -262,6 +318,9 @@ export async function authRoutes(fastify: FastifyInstance) {
       const ssoTokenResult = await proxyAuthGetJson(request, "/auth/get-token");
 
       if (!ssoTokenResult.ok || !ssoTokenResult.data?.authenticated) {
+        if (config.authCookieMode) {
+          appendSetCookie(reply, buildSessionCookieClearValue());
+        }
         const response: SsoSessionResponse = {
           authenticated: false,
           user: null,
@@ -287,6 +346,9 @@ export async function authRoutes(fastify: FastifyInstance) {
       }
 
       const { token } = await issueAuthSessionToken(fastify, localUser, "sso");
+      if (config.authCookieMode) {
+        appendSetCookie(reply, buildSessionCookieValue(token));
+      }
 
       const response: SsoSessionResponse = {
         authenticated: true,
@@ -347,6 +409,9 @@ export async function authRoutes(fastify: FastifyInstance) {
       }
 
       const { token } = await issueAuthSessionToken(fastify, user, "sso", previousSessionId);
+      if (config.authCookieMode) {
+        appendSetCookie(reply, buildSessionCookieValue(token));
+      }
       return {
         token,
         user
@@ -359,11 +424,16 @@ export async function authRoutes(fastify: FastifyInstance) {
     {
       preHandler: [requireAuth]
     },
-    async (request: FastifyRequest) => {
+    async (request: FastifyRequest, reply: FastifyReply) => {
       const sessionId = String(request.user?.sid || "").trim();
       if (sessionId) {
         await fastify.redis.del(`${AUTH_SESSION_PREFIX}${sessionId}`);
       }
+
+      if (config.authCookieMode) {
+        appendSetCookie(reply, buildSessionCookieClearValue());
+      }
+
       return { ok: true };
     }
   );

@@ -47,7 +47,18 @@ export class AuthController {
     }
   }
 
-  logout() {
+  async logout(token: string) {
+    // Revoke the server-side session and clear the HttpOnly cookie BEFORE
+    // navigating. This is required in cookie-mode: without it the browser
+    // still holds a valid cookie and bootstrapCookieSessionState() will
+    // silently re-authenticate the user after the SSO logout redirect.
+    try {
+      // token may be "" in cookie-mode; fetchJson sends credentials:include
+      // so the HttpOnly cookie is always forwarded regardless.
+      await api.authLogout(token);
+    } catch {
+      // Best-effort: proceed with logout even if the API call fails.
+    }
     localStorage.removeItem("boltorezka_token");
     this.options.setToken("");
     this.options.setUser(null);

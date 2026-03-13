@@ -9,6 +9,13 @@ export type AppConfig = {
   corsOrigin: string;
   authMode: AuthMode;
   authSsoBaseUrl: string;
+  authCookieMode: boolean;
+  authSessionCookieName: string;
+  authSessionCookieSecure: boolean;
+  authSessionCookieSameSite: "Lax" | "Strict" | "None";
+  authSessionCookieDomain: string;
+  authSessionCookiePath: string;
+  authSessionCookieMaxAgeSec: number;
   allowedReturnHosts: string[];
   superAdminEmail: string;
   appVersion: string;

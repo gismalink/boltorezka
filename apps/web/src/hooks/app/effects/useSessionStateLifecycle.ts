@@ -12,6 +12,10 @@ import type {
 } from "../../../domain";
 import type { RealtimeClient, RoomAdminController } from "../../../services";
 
+// When built with VITE_AUTH_COOKIE_MODE=1 the HttpOnly cookie is the primary
+// session mechanism. localStorage is not used for token persistence.
+const COOKIE_MODE = import.meta.env.VITE_AUTH_COOKIE_MODE === "1";
+
 type UseSessionStateLifecycleArgs = {
   token: string;
   roomAdminController: RoomAdminController;
@@ -118,8 +122,34 @@ export function useSessionStateLifecycle({
     setVoiceInitialMicStateByUserIdInCurrentRoom
   ]);
 
+  // In cookie-mode the page may reload with token="" while the user is still
+  // authenticated via HttpOnly cookie. Use authRefresh (which reads the cookie)
+  // to obtain a real JWT, then put it in state — this re-establishes the full
+  // bearer flow so all existing !token guards across the app work correctly.
+  const bootstrapCookieSessionState = useCallback(() => {
+    api.authRefresh("")
+      .then(({ token: refreshedToken }) => {
+        const jwt = String(refreshedToken || "").trim();
+        if (jwt) {
+          if (COOKIE_MODE) localStorage.removeItem("boltorezka_token");
+          setToken(jwt);
+          // bootstrapSessionState fires automatically via the token useEffect
+        } else {
+          resetSessionState();
+        }
+      })
+      .catch((error) => {
+        if (error instanceof ApiError && error.status === 401) {
+          resetSessionState();
+          return;
+        }
+        pushLog(`cookie-session bootstrap failed: ${error.message}`);
+        resetSessionState();
+      });
+  }, [pushLog, resetSessionState, setToken]);
+
   const bootstrapSessionState = useCallback((nextToken: string) => {
-    localStorage.setItem("boltorezka_token", nextToken);
+    if (!COOKIE_MODE) localStorage.setItem("boltorezka_token", nextToken);
 
     api.me(nextToken)
       .then((res) => setUser(res.user))
@@ -130,7 +160,7 @@ export function useSessionStateLifecycle({
             const refreshedToken = String(refreshed.token || "").trim();
             if (refreshedToken) {
               setToken(refreshedToken);
-              localStorage.setItem("boltorezka_token", refreshedToken);
+              if (!COOKIE_MODE) localStorage.setItem("boltorezka_token", refreshedToken);
               const me = await api.me(refreshedToken);
               setUser(me.user);
               return;
@@ -178,10 +208,18 @@ export function useSessionStateLifecycle({
 
   useEffect(() => {
     if (!token) {
-      resetSessionState();
+      if (!COOKIE_MODE) {
+        const persistedToken = localStorage.getItem("boltorezka_token");
+        if (persistedToken) {
+          setToken(persistedToken);
+          bootstrapSessionState(persistedToken);
+          return;
+        }
+      }
+      bootstrapCookieSessionState();
       return;
     }
 
     bootstrapSessionState(token);
-  }, [bootstrapSessionState, resetSessionState, token]);
+  }, [bootstrapCookieSessionState, bootstrapSessionState, setToken, token]);
 }

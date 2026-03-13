@@ -71,7 +71,7 @@ export function useAuthProfileFlow({
 
   const logout = () => {
     setProfileMenuOpen(false);
-    authController.logout();
+    void authController.logout(token);
   };
 
   const openUserSettings = (tab: "profile" | "sound" | "camera") => {
@@ -85,10 +85,6 @@ export function useAuthProfileFlow({
 
   const saveMyProfile = async (event: FormEvent) => {
     event.preventDefault();
-    if (!token) {
-      return;
-    }
-
     const trimmedName = profileNameDraft.trim();
     if (!trimmedName) {
       setProfileStatusText(t("profile.saveError"));

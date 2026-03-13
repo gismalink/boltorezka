@@ -90,6 +90,7 @@ const ROOM_SLUG_STORAGE_KEY = "boltorezka_room_slug";
 const CLIENT_BUILD_VERSION = String(import.meta.env.VITE_APP_VERSION || "").trim();
 const CLIENT_BUILD_DATE = String(import.meta.env.VITE_APP_BUILD_DATE || "").trim();
 const CLIENT_BUILD_DATE_LABEL = CLIENT_BUILD_DATE ? `v.${CLIENT_BUILD_DATE}` : "";
+const COOKIE_MODE = import.meta.env.VITE_AUTH_COOKIE_MODE === "1";
 
 function readNonZeroDefaultVolume(storageKey: string, fallback: number): number {
   const raw = localStorage.getItem(storageKey);
@@ -111,7 +112,7 @@ function normalizeUiTheme(value: unknown): UiTheme {
 }
 
 export function App() {
-  const [token, setToken] = useState(localStorage.getItem("boltorezka_token") || "");
+  const [token, setToken] = useState(() => (COOKIE_MODE ? "" : localStorage.getItem("boltorezka_token") || ""));
   const [user, setUser] = useState<User | null>(null);
   const [authMode, setAuthMode] = useState("loading");
   const [rooms, setRooms] = useState<Room[]>([]);

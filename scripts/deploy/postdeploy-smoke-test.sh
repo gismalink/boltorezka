@@ -577,6 +577,71 @@ else
   fi
 fi
 
+# Cookie-mode regression smokes (run when TEST_AUTH_COOKIE_MODE=1 is set in env).
+# Checks: negative security properties (invalid/missing cookie → 401, replay → 401)
+# and ws-ticket issuance via cookie-only auth (no bearer header).
+# Each smoke gets a freshly minted session because smoke:auth:session rotates and
+# revokes the shared SMOKE_TEST_BEARER_TOKEN before this block runs.
+EFFECTIVE_COOKIE_MODE="${TEST_AUTH_COOKIE_MODE:-${AUTH_COOKIE_MODE:-0}}"
+COOKIE_NEGATIVE_STATUS="skip"
+COOKIE_WS_TICKET_STATUS="skip"
+
+mint_fresh_smoke_bearer() {
+  local label="$1"
+  if [[ -z "${SMOKE_USER_ID:-}" || -z "${SMOKE_USER_ROLE:-}" ]]; then
+    echo "[postdeploy-smoke] $label: cannot mint bearer (SMOKE_USER_ID/ROLE not resolved)" >&2
+    return 1
+  fi
+  if [[ -z "${JWT_SECRET_CANDIDATE:-}" ]]; then
+    echo "[postdeploy-smoke] $label: cannot mint bearer (JWT_SECRET_CANDIDATE not set)" >&2
+    return 1
+  fi
+  local new_session_id new_bearer
+  new_session_id="$(uuidgen | tr '[:upper:]' '[:lower:]')"
+  new_bearer="$(make_hs256_jwt "$JWT_SECRET_CANDIDATE" "$SMOKE_USER_ID" "$SMOKE_USER_ROLE" "$new_session_id" "sso")"
+  compose exec -T "$REDIS_SERVICE" redis-cli SETEX \
+    "auth:session:${new_session_id}" "${SMOKE_AUTH_SESSION_TTL_SEC:-2592000}" \
+    "{\"userId\":\"${SMOKE_USER_ID}\",\"authMode\":\"sso\",\"issuedAt\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",\"rotatedFrom\":null}" >/dev/null
+  printf '%s' "$new_bearer"
+}
+
+if [[ "$EFFECTIVE_COOKIE_MODE" == "1" ]]; then
+  COOKIE_NAME="${TEST_AUTH_SESSION_COOKIE_NAME:-${AUTH_SESSION_COOKIE_NAME:-boltorezka_session_test}}"
+  if [[ "${SMOKE_COOKIE_NEGATIVE:-1}" == "0" ]]; then
+    echo "[postdeploy-smoke] smoke:auth:cookie-negative skipped (SMOKE_COOKIE_NEGATIVE=0)"
+    COOKIE_NEGATIVE_STATUS="skip"
+  elif [[ -z "${SMOKE_USER_ID:-}" || -z "${JWT_SECRET_CANDIDATE:-}" ]]; then
+    echo "[postdeploy-smoke] smoke:auth:cookie-negative skipped (no JWT secret or user id)"
+    COOKIE_NEGATIVE_STATUS="skip"
+  else
+    COOKIE_NEGATIVE_BEARER="$(mint_fresh_smoke_bearer "cookie-negative")"
+    echo "[postdeploy-smoke] smoke:auth:cookie-negative (cookie-mode=1)"
+    SMOKE_API_URL="$BASE_URL" \
+      SMOKE_SESSION_COOKIE_NAME="$COOKIE_NAME" \
+      SMOKE_TEST_BEARER_TOKEN="$COOKIE_NEGATIVE_BEARER" \
+      npm run smoke:auth:cookie-negative
+    COOKIE_NEGATIVE_STATUS="pass"
+  fi
+
+  if [[ "${SMOKE_COOKIE_WS_TICKET:-1}" == "0" ]]; then
+    echo "[postdeploy-smoke] smoke:auth:cookie-ws-ticket skipped (SMOKE_COOKIE_WS_TICKET=0)"
+    COOKIE_WS_TICKET_STATUS="skip"
+  elif [[ -z "${SMOKE_USER_ID:-}" || -z "${JWT_SECRET_CANDIDATE:-}" ]]; then
+    echo "[postdeploy-smoke] smoke:auth:cookie-ws-ticket skipped (no JWT secret or user id)"
+    COOKIE_WS_TICKET_STATUS="skip"
+  else
+    COOKIE_WS_TICKET_BEARER="$(mint_fresh_smoke_bearer "cookie-ws-ticket")"
+    echo "[postdeploy-smoke] smoke:auth:cookie-ws-ticket (cookie-mode=1)"
+    SMOKE_API_URL="$BASE_URL" \
+      SMOKE_SESSION_COOKIE_NAME="$COOKIE_NAME" \
+      SMOKE_TEST_BEARER_TOKEN="$COOKIE_WS_TICKET_BEARER" \
+      npm run smoke:auth:cookie-ws-ticket
+    COOKIE_WS_TICKET_STATUS="pass"
+  fi
+else
+  echo "[postdeploy-smoke] cookie-mode smokes skipped (TEST_AUTH_COOKIE_MODE != 1)"
+fi
+
 echo "[postdeploy-smoke] smoke:web:version-cache"
 EXPECTED_BUILD_SHA=""
 if [[ -f ".deploy/last-deploy-test.env" ]]; then
@@ -623,7 +688,7 @@ if [[ "${SMOKE_REALTIME:-1}" == "0" ]]; then
   collect_turn_allocation_failures
   echo "[postdeploy-smoke] realtime smoke skipped (SMOKE_REALTIME=0)"
   SMOKE_STATUS="pass"
-  SMOKE_SUMMARY_TEXT="health=pass mode=sso sso=pass api=$API_SMOKE_STATUS auth_session=$API_AUTH_SESSION_STATUS version_cache=$VERSION_CACHE_STATUS web_crash_boundary=$WEB_CRASH_BOUNDARY_STATUS web_rnnoise=$WEB_RNNOISE_STATUS livekit_standard=$SMOKE_LIVEKIT_STANDARD_PROFILE_STATUS turn_tls=$SMOKE_TURN_TLS_STATUS turn_rotation=$SMOKE_TURN_ROTATION_STATUS turn_alloc_failures=$SMOKE_TURN_ALLOCATION_FAILURES turn_alloc_status=$SMOKE_TURN_ALLOCATION_STATUS realtime=skip extended_realtime=$EXTENDED_REALTIME_STATUS realtime_media=$SMOKE_REALTIME_MEDIA_STATUS transport=$SMOKE_MEDIA_TRANSPORT_SUMMARY one_way(audio=$SMOKE_ONE_WAY_AUDIO_INCIDENTS,video=$SMOKE_ONE_WAY_VIDEO_INCIDENTS) delta(nack=0,ack=0,chat=0,idem=0,initial_state=0,initial_state_participants=0)"
+  SMOKE_SUMMARY_TEXT="health=pass mode=sso sso=pass api=$API_SMOKE_STATUS auth_session=$API_AUTH_SESSION_STATUS cookie_negative=$COOKIE_NEGATIVE_STATUS cookie_ws_ticket=$COOKIE_WS_TICKET_STATUS version_cache=$VERSION_CACHE_STATUS web_crash_boundary=$WEB_CRASH_BOUNDARY_STATUS web_rnnoise=$WEB_RNNOISE_STATUS livekit_standard=$SMOKE_LIVEKIT_STANDARD_PROFILE_STATUS turn_tls=$SMOKE_TURN_TLS_STATUS turn_rotation=$SMOKE_TURN_ROTATION_STATUS turn_alloc_failures=$SMOKE_TURN_ALLOCATION_FAILURES turn_alloc_status=$SMOKE_TURN_ALLOCATION_STATUS realtime=skip extended_realtime=$EXTENDED_REALTIME_STATUS realtime_media=$SMOKE_REALTIME_MEDIA_STATUS transport=$SMOKE_MEDIA_TRANSPORT_SUMMARY one_way(audio=$SMOKE_ONE_WAY_AUDIO_INCIDENTS,video=$SMOKE_ONE_WAY_VIDEO_INCIDENTS) delta(nack=0,ack=0,chat=0,idem=0,initial_state=0,initial_state_participants=0)"
   exit 0
 fi
 
@@ -965,6 +1030,6 @@ SMOKE_CALL_INITIAL_STATE_PARTICIPANTS_DELTA=$((CALL_INITIAL_STATE_PARTICIPANTS_A
 collect_turn_allocation_failures
 
 SMOKE_STATUS="pass"
-SMOKE_SUMMARY_TEXT="health=pass mode=sso sso=pass api=$API_SMOKE_STATUS auth_session=$API_AUTH_SESSION_STATUS version_cache=$VERSION_CACHE_STATUS web_crash_boundary=$WEB_CRASH_BOUNDARY_STATUS web_rnnoise=$WEB_RNNOISE_STATUS livekit_standard=$SMOKE_LIVEKIT_STANDARD_PROFILE_STATUS turn_tls=$SMOKE_TURN_TLS_STATUS turn_rotation=$SMOKE_TURN_ROTATION_STATUS turn_alloc_failures=$SMOKE_TURN_ALLOCATION_FAILURES turn_alloc_status=$SMOKE_TURN_ALLOCATION_STATUS realtime=pass extended_realtime=$EXTENDED_REALTIME_STATUS livekit_gate=$SMOKE_LIVEKIT_GATE_STATUS livekit_media=$SMOKE_LIVEKIT_MEDIA_STATUS realtime_media=$SMOKE_REALTIME_MEDIA_STATUS transport=$SMOKE_MEDIA_TRANSPORT_SUMMARY one_way(audio=$SMOKE_ONE_WAY_AUDIO_INCIDENTS,video=$SMOKE_ONE_WAY_VIDEO_INCIDENTS) delta(nack=$SMOKE_NACK_DELTA,ack=$SMOKE_ACK_DELTA,chat=$SMOKE_CHAT_SENT_DELTA,idem=$SMOKE_CHAT_IDEMPOTENCY_HIT_DELTA,initial_state=$SMOKE_CALL_INITIAL_STATE_SENT_DELTA,initial_state_participants=$SMOKE_CALL_INITIAL_STATE_PARTICIPANTS_DELTA)"
+SMOKE_SUMMARY_TEXT="health=pass mode=sso sso=pass api=$API_SMOKE_STATUS auth_session=$API_AUTH_SESSION_STATUS cookie_negative=$COOKIE_NEGATIVE_STATUS cookie_ws_ticket=$COOKIE_WS_TICKET_STATUS version_cache=$VERSION_CACHE_STATUS web_crash_boundary=$WEB_CRASH_BOUNDARY_STATUS web_rnnoise=$WEB_RNNOISE_STATUS livekit_standard=$SMOKE_LIVEKIT_STANDARD_PROFILE_STATUS turn_tls=$SMOKE_TURN_TLS_STATUS turn_rotation=$SMOKE_TURN_ROTATION_STATUS turn_alloc_failures=$SMOKE_TURN_ALLOCATION_FAILURES turn_alloc_status=$SMOKE_TURN_ALLOCATION_STATUS realtime=pass extended_realtime=$EXTENDED_REALTIME_STATUS livekit_gate=$SMOKE_LIVEKIT_GATE_STATUS livekit_media=$SMOKE_LIVEKIT_MEDIA_STATUS realtime_media=$SMOKE_REALTIME_MEDIA_STATUS transport=$SMOKE_MEDIA_TRANSPORT_SUMMARY one_way(audio=$SMOKE_ONE_WAY_AUDIO_INCIDENTS,video=$SMOKE_ONE_WAY_VIDEO_INCIDENTS) delta(nack=$SMOKE_NACK_DELTA,ack=$SMOKE_ACK_DELTA,chat=$SMOKE_CHAT_SENT_DELTA,idem=$SMOKE_CHAT_IDEMPOTENCY_HIT_DELTA,initial_state=$SMOKE_CALL_INITIAL_STATE_SENT_DELTA,initial_state_participants=$SMOKE_CALL_INITIAL_STATE_PARTICIPANTS_DELTA)"
 
 echo "[postdeploy-smoke] done"
