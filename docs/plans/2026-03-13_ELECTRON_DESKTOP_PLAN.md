@@ -104,7 +104,7 @@ Definition of done:
 ### 4.3 RTC validation
 - [ ] Проверить media permissions на macOS и Windows.
 - [ ] Проверить reconnect при network flap.
-- [ ] Проверить поведение после sleep/wake ноутбука.
+- [x] Проверить поведение после sleep/wake ноутбука.
 - [ ] Проверить длительную сессию + переключения девайсов.
 
 Runbook:
@@ -228,3 +228,7 @@ Progress note (2026-03-13, diagnostics automation):
 Progress note (2026-03-13, sleep/wake assist):
 - Добавлен `scripts/smoke/smoke-desktop-sleep-wake.mjs` и command `npm run smoke:desktop:sleep-wake` (опционально strict `SMOKE_DESKTOP_SLEEP_WAKE_REQUIRE_SUSPEND=1`).
 - Добавлен runbook `docs/runbooks/DESKTOP_SLEEP_WAKE_RUNBOOK.md` для evidence-grade ручного сценария.
+
+Progress note (2026-03-13, sleep/wake strict evidence):
+- Strict run выполнен успешно: `elapsedMs=90157`, `maxGapMs=28610`, `suspendObserved=true`, `windowRecoveryMode=manual-confirmed`.
+- Evidence зафиксирован в `docs/status/TEST_RESULTS.md` (Cycle #24).

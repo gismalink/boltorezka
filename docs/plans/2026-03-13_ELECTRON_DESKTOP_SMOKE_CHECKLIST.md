@@ -27,7 +27,7 @@
   - `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art npm run smoke:desktop:reconnect`
 - [x] Reconnect soak automation (несколько циклов подряд) проходит.
   - `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art SMOKE_DESKTOP_SOAK_CYCLES=8 npm run smoke:desktop:soak`
-- [ ] Sleep/wake ноутбука: сессия восстанавливается без crash.
+- [x] Sleep/wake ноутбука: сессия восстанавливается без crash.
   - `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art SMOKE_DESKTOP_SLEEP_WAKE_REQUIRE_SUSPEND=1 npm run smoke:desktop:sleep-wake`
 - [ ] 30+ минут voice-сессии без критичных runtime errors.
 
@@ -52,3 +52,4 @@
 - [x] Security baseline smoke (`smoke:desktop:security`) и полный chain (`desktop:smoke:m2:secure`) прошли на test, evidence: `docs/status/TEST_RESULTS.md` (Cycle #21).
 - [x] Diagnostics artifact smoke (`smoke:desktop:diagnostics`) и полный chain (`desktop:smoke:m2:secure:diag`) прошли на test, evidence: `docs/status/TEST_RESULTS.md` (Cycle #22).
 - [x] Sleep/wake assist automation added: `smoke:desktop:sleep-wake` + runbook `docs/runbooks/DESKTOP_SLEEP_WAKE_RUNBOOK.md` (strict evidence run pending).
+- [x] Strict sleep/wake evidence run прошел (`suspendObserved=true`, `windowRecoveryMode=manual-confirmed`), evidence: `docs/status/TEST_RESULTS.md` (Cycle #24).

@@ -2,6 +2,32 @@
 
 Отдельный журнал результатов тестов/нагрузки.
 
+## 2026-03-13 — Cycle #24 (Desktop sleep/wake strict evidence)
+
+- Environment: `test` (`https://test.boltorezka.gismalink.art`)
+- Build ref: `origin/feature/electron-desktop-foundation` (working tree, post-`ff432d9`)
+
+### Functional gate
+
+- `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art SMOKE_DESKTOP_SLEEP_WAKE_WINDOW_MS=90000 SMOKE_DESKTOP_SLEEP_WAKE_SUSPEND_THRESHOLD_MS=2000 SMOKE_DESKTOP_SLEEP_WAKE_REQUIRE_SUSPEND=1 SMOKE_DESKTOP_SLEEP_WAKE_ALLOW_MANUAL_WINDOW_CONFIRM=1 SMOKE_DESKTOP_SLEEP_WAKE_MANUAL_WINDOW_OK=1 npm run smoke:desktop:sleep-wake`: PASS
+  - `elapsedMs=90157`
+  - `maxGapMs=28610`
+  - `suspendObserved=true`
+  - `requireSuspend=true`
+  - `windowRecoveryMode=manual-confirmed`
+  - `platform=darwin`
+  - `electronVersion=35.7.5`
+
+### Scope covered by this cycle
+
+- Закрыт sleep/wake evidence-grade checkpoint для desktop M2,
+- Подтверждено восстановление desktop runtime после сна на test, с явной manual-confirm отметкой recovery mode.
+
+### Decision
+
+- Cycle #24: PASS.
+- Sleep/wake пункт в desktop smoke checklist может быть закрыт.
+
 ## 2026-03-13 — Cycle #23 (Desktop sleep/wake assist automation)
 
 - Environment: `test` (`https://test.boltorezka.gismalink.art`)
