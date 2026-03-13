@@ -125,6 +125,7 @@ export function App() {
   const [showAppUpdatedOverlay, setShowAppUpdatedOverlay] = useState(
     () => sessionStorage.getItem(VERSION_UPDATE_PENDING_KEY) === "1"
   );
+  const [sessionMovedOverlayMessage, setSessionMovedOverlayMessage] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [messagesHasMore, setMessagesHasMore] = useState(false);
   const [messagesNextCursor, setMessagesNextCursor] = useState<MessagesCursor | null>(null);
@@ -920,7 +921,10 @@ export function App() {
       }
 
       disconnectRoom();
+      realtimeClientRef.current?.dispose();
+      realtimeClientRef.current = null;
       setRoomSlug("");
+      setSessionMovedOverlayMessage(`${code}: ${message}`);
       pushLog(`session moved: ${code} ${message}`);
     },
     onChatCleared: (payload) => {
@@ -1460,7 +1464,7 @@ export function App() {
         <section className="settings-sheet w-full max-w-[560px] p-6 text-center">
           <h1 className="text-2xl font-semibold">Авторизация завершена</h1>
           <p className="mt-3 text-sm opacity-80">
-            Вы вошли в Boltorezka Desktop. Это окно можно закрыть.
+            Вы вошли в Boltorezka Desktop. Эту вкладку можно закрыть.
           </p>
           <div className="mt-5 flex justify-center">
             <button
@@ -1897,6 +1901,28 @@ export function App() {
               autoFocus
             >
               {t("overlay.appUpdatedContinue")}
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {sessionMovedOverlayMessage ? (
+        <div className="fixed inset-0 z-[310] flex items-center justify-center bg-black/85 p-4" role="dialog" aria-modal="true" aria-live="assertive">
+          <div className="w-full max-w-md rounded-2xl border border-white/20 bg-neutral-950/95 p-6 text-center shadow-2xl">
+            <h2 className="text-2xl font-bold tracking-wide text-white">Приложение открыто в другом месте</h2>
+            <p className="mt-3 text-sm leading-relaxed text-white/80">
+              Эта сессия перенесена в другое окно или вкладку. Работа с каналами здесь остановлена.
+            </p>
+            <p className="mt-2 text-xs text-white/60">{sessionMovedOverlayMessage}</p>
+            <button
+              type="button"
+              className="primary mt-6 inline-flex w-full items-center justify-center"
+              onClick={() => {
+                setSessionMovedOverlayMessage("");
+                window.location.reload();
+              }}
+            >
+              Открыть здесь
             </button>
           </div>
         </div>
