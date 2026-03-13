@@ -1,0 +1,172 @@
+# Electron Desktop Plan (2026-03-13)
+
+Цель: выпустить desktop-версию Boltorezka с максимальным переиспользованием текущего web-клиента, без регрессий в realtime/voice/video и с соблюдением текущего GitOps-процесса (feature -> test -> smoke -> main -> prod).
+
+## 0) Decision summary
+
+- [x] Базовая платформа для v1: Electron.
+- [x] Подход: тонкая desktop-оболочка вокруг текущего React/Vite renderer.
+- [x] Принцип: доменная логика остается в web-части; main/preload только для desktop-интеграций.
+- [x] Rollout policy: test-first, prod только после test smoke и явного подтверждения.
+
+## 1) Scope v1
+
+In scope (MVP):
+- [ ] Запуск Boltorezka как standalone desktop app (macOS + Windows).
+- [ ] Auth flow (SSO/login/logout) без деградации текущего web-поведения.
+- [ ] Voice/video/screen share в parity с web.
+- [ ] Выбор input/output устройств, mute/unmute, reconnect behavior.
+- [ ] Автообновления desktop-клиента (test/prod каналы).
+- [ ] Базовые crash/log артефакты для диагностики.
+
+Out of scope (v1.1+):
+- [ ] Tray-first UX и background call mode.
+- [ ] Offline mode.
+- [ ] Linux release как production target.
+- [ ] Расширенные deep-link сценарии и rich notifications.
+
+## 2) Архитектурный профиль
+
+Renderer (существующий web app):
+- [ ] Переиспользуется без форка бизнес-логики.
+- [ ] Runtime env для desktop отделен от web env (префикс `DESKTOP_`/`ELECTRON_`).
+
+Main process:
+- [ ] Управление окном, lifecycle, single-instance lock.
+- [ ] Auto-update orchestration.
+- [ ] Без прямой доменной логики и без доступа renderer к Node API.
+
+Preload bridge:
+- [ ] Строгий allowlist IPC API.
+- [ ] Typed contract между renderer и main.
+- [ ] Без передачи секретов в renderer.
+
+Security defaults:
+- [ ] `contextIsolation=true`.
+- [ ] `sandbox=true`.
+- [ ] `nodeIntegration=false`.
+- [ ] Навигация/внешние ссылки ограничены и контролируются.
+
+## 3) Milestones и deliverables
+
+### M1 - Foundation (каркас)
+- [ ] Создан пакет `apps/desktop-electron`.
+- [ ] Dev режим: окно грузит локальный web dev server.
+- [ ] Prod режим: окно грузит собранный web dist.
+- [ ] Базовый packaging для macOS test build.
+
+Definition of done:
+- [ ] Приложение стартует локально и в packaged режиме.
+- [ ] Нет критичных security warnings в конфиге Electron.
+
+### M2 - RTC/media parity
+- [ ] Voice connect/disconnect parity с web.
+- [ ] Device switch (input/output) работает стабильно.
+- [ ] Camera + screen share работают в desktop.
+- [ ] Long-session stability (минимум 2 часа) без критичных деградаций.
+
+Definition of done:
+- [ ] Пройден desktop smoke сценарий для RTC.
+- [ ] Нет блокирующих regressions относительно web baseline.
+
+### M3 - Update/release channel
+- [ ] Настроены каналы auto-update: test и prod.
+- [ ] Реализован безопасный update flow с rollback-процедурой.
+- [ ] Сборки подписываются (где применимо).
+
+Definition of done:
+- [ ] Обновление test->test проходит автоматически.
+- [ ] Rollback runbook проверен на test.
+
+### M4 - Prod readiness
+- [ ] Пройден pre-prod checklist.
+- [ ] Подтверждены smoke + ручной critical path на test.
+- [ ] Выполнен controlled rollout в prod.
+
+Definition of done:
+- [ ] Первый production desktop release доступен целевой аудитории.
+- [ ] Подготовлены on-call инструкции и triage flow.
+
+## 4) Execution checklist (по потокам)
+
+### 4.1 Repository and build
+- [ ] Добавить `apps/desktop-electron/package.json` + build scripts.
+- [ ] Добавить корневые команды (например `desktop:dev`, `desktop:build`).
+- [ ] Настроить единый app version/build SHA для renderer + desktop package.
+- [ ] Добавить CI jobs для desktop artifacts.
+
+### 4.2 Electron security
+- [ ] Ввести preload-only bridge.
+- [ ] Запретить произвольные `window.open`/navigation.
+- [ ] Включить CSP и аудит внешних ресурсов.
+- [ ] Проверить, что renderer не получает прямой доступ к fs/process/env.
+
+### 4.3 RTC validation
+- [ ] Проверить media permissions на macOS и Windows.
+- [ ] Проверить reconnect при network flap.
+- [ ] Проверить поведение после sleep/wake ноутбука.
+- [ ] Проверить длительную сессию + переключения девайсов.
+
+### 4.4 Auto-update
+- [ ] Выбрать release feed и схему каналов.
+- [ ] Настроить update policy (silent/download-only/prompt).
+- [ ] Реализовать безопасное применение обновления.
+- [ ] Зафиксировать rollback шаги в runbook.
+
+### 4.5 Observability
+- [ ] Добавить desktop telemetry labels (platform, app channel, app version).
+- [ ] Добавить сбор crash/report артефактов.
+- [ ] Обновить дашборд/логи для desktop-сессий.
+
+## 5) QA matrix и smoke
+
+Минимальная матрица v1:
+- [ ] macOS (Intel/Apple Silicon): login, voice, camera, screen share, reconnect.
+- [ ] Windows 10/11: login, voice, camera, screen share, reconnect.
+
+Desktop smoke (must pass):
+- [ ] Startup + auth flow.
+- [ ] Join room + voice handshake.
+- [ ] Mute/unmute + input/output switch.
+- [ ] Screen share start/stop.
+- [ ] Forced app update path (version mismatch) и корректный recovery.
+
+## 6) GitOps rollout policy (desktop)
+
+- [ ] Все задачи делаются в feature-ветках.
+- [ ] В test деплоится конкретная feature/main ветка, только через scripted flow.
+- [ ] Перед prod desktop-release: merge в main -> test gate -> smoke -> явное подтверждение -> prod.
+- [ ] Без ручных правок на сервере, только через git + GitOps.
+
+## 7) Риски и mitigation
+
+Риск: расхождение web и desktop поведения media APIs.
+- Mitigation:
+- [ ] Ранний cross-platform soak на M2.
+- [ ] Desktop-specific telemetry и быстрый rollback channel.
+
+Риск: сложность code signing/notarization и задержка релиза.
+- Mitigation:
+- [ ] Вынести signing pipeline в отдельный milestone.
+- [ ] Иметь test channel без blocking прод-пайплайна.
+
+Риск: регрессии безопасности из-за неверной Electron-конфигурации.
+- Mitigation:
+- [ ] Security checklist как hard gate до prod.
+- [ ] Code review правил preload/IPC и запрет broad bridge API.
+
+## 8) Примерная оценка сроков
+
+- [ ] M1 Foundation: 2-3 рабочих дня.
+- [ ] M2 RTC/media parity: 3-5 рабочих дней.
+- [ ] M3 Update/release: 2-3 рабочих дня.
+- [ ] M4 Prod readiness: 2-3 рабочих дня.
+
+Итого ориентир для первого production-ready релиза: 2-4 недели (в зависимости от signing/update и объема cross-platform QA).
+
+## 9) Следующие шаги (next action)
+
+- [ ] Создать feature-ветку `feature/electron-desktop-foundation`.
+- [ ] Добавить каркас `apps/desktop-electron` и базовые команды запуска/сборки.
+- [ ] Подготовить отдельный desktop smoke checklist документ (test gate).
+- [ ] После M1 выполнить первый test rollout и зафиксировать результаты в `docs/status`.
