@@ -283,6 +283,11 @@ Progress note (2026-03-14, deterministic handoff phase 2 test evidence):
 - Evidence зафиксирован в `docs/status/TEST_RESULTS.md` (Cycle #30).
 - Runbook quickstart обновлен секцией deterministic handoff smoke (`docs/runbooks/RUNBOOK_TEST_ROLLOUT_QUICKSTART.md`).
 
+Progress note (2026-03-14, voice checkpoint 15m gate):
+- Выполнен `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art npm run smoke:desktop:voice-checkpoint:15m`: PASS.
+- Метрики: `elapsedMs=900001`, `probes=90`, `maxProbeGapMs=10012`, voice evidence через meter counters (`meterSessions=1`, `meterStreams=1`).
+- Evidence зафиксирован в `docs/status/TEST_RESULTS.md` (Cycle #31).
+
 ## 11) Known Follow-ups
 
 - [ ] Провести короткий cross-browser handoff soak (20 последовательных входов) и приложить агрегированное evidence к auth runbook.
@@ -293,5 +298,5 @@ Progress note (2026-03-14, deterministic handoff phase 2 test evidence):
 Ближайший practical order выполнения:
 - [x] Реализовать Phase 1 из `2026-03-14_DESKTOP_HANDOFF_DETERMINISTIC_DESIGN.md` (attempt + complete ack + polling status).
 - [x] Добавить deterministic handoff smoke (happy path + timeout path).
-- [ ] Повторить desktop voice checkpoint 15m на test после стабилизации handoff flow.
+- [x] Повторить desktop voice checkpoint 15m на test после стабилизации handoff flow.
 - [x] Зафиксировать evidence в `docs/status/TEST_RESULTS.md` и обновить runbook секцию auth desktop handoff.

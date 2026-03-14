@@ -2,6 +2,29 @@
 
 Отдельный журнал результатов тестов/нагрузки.
 
+## 2026-03-14 — Cycle #31 (Desktop voice checkpoint 15m after deterministic handoff)
+
+- Environment: `test` (`https://test.boltorezka.gismalink.art`)
+- Build ref: `origin/feature/electron-desktop-foundation` (`dbe678a`)
+
+### Functional gate
+
+- `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art npm run smoke:desktop:voice-checkpoint:15m`: PASS
+  - `elapsedMs=900001`
+  - `probes=90`
+  - `maxProbeGapMs=10012`
+  - `maxVoiceCounters={"meterSessions":1,"meterStreams":1,"meterAudioContexts":1}`
+
+### Scope covered by this cycle
+
+- Закрыт формальный 15-minute voice checkpoint gate для desktop M2 acceptance на test.
+- Подтверждено, что после deterministic handoff rollout voice diagnostics остаются стабильными в 15-минутном окне.
+
+### Decision
+
+- Cycle #31: PASS.
+- Continuation checkpoint по voice 15m закрыт.
+
 ## 2026-03-14 — Cycle #30 (Deterministic handoff smoke on test rollout)
 
 - Environment: `test` (`https://test.boltorezka.gismalink.art`)
