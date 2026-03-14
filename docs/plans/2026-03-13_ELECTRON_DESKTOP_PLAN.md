@@ -131,7 +131,7 @@ Desktop smoke (must pass):
 - [x] Startup + auth flow.
 - [x] Join room + voice handshake.
 - [x] Mute/unmute + input/output switch.
-- [ ] Screen share start/stop.
+- [x] Screen share start/stop.
 - [ ] Forced app update path (version mismatch) и корректный recovery.
 
 ## 6) GitOps rollout policy (desktop)
@@ -300,7 +300,7 @@ Progress note (2026-03-14, handoff browser-level soak):
 
 Progress note (2026-03-14, M2 voice parity checklist alignment):
 - На базе Cycle #31 (`smoke:desktop:voice-checkpoint:15m` PASS) и ранее собранных desktop RTC evidence отмечены как закрытые пункты `Voice connect/disconnect parity` и `Join room + voice handshake`.
-- Следующие M2 focus-пункты остаются: `Mute/unmute + input/output switch`, `Screen share start/stop`, `2h stability`.
+- Следующие M2 focus-пункты остаются: `2h stability`.
 
 Progress note (2026-03-14, build version/SHA unification):
 - Для desktop pipeline добавлен `apps/desktop-electron/scripts/build-renderer.cjs`, который прокидывает `VITE_APP_VERSION` из desktop package version и `VITE_APP_BUILD_SHA` (env/git SHA) в renderer build.
@@ -325,6 +325,12 @@ Progress note (2026-03-15, desktop media permissions rollback):
 - В ходе попытки ускорить screen-share startup в Electron main были добавлены жесткие permission handlers (`setPermissionCheckHandler`/`setPermissionRequestHandler`), что привело к регрессии доступа к mic/camera (баннер "разрешите доступ к устройствам").
 - Выполнен rollback этих handlers, сохранен только `setDisplayMediaRequestHandler` для screen-share path.
 - После перезапуска desktop runtime устройства восстановлены; manual verification PASS.
+
+Progress note (2026-03-15, test rollout after rollback):
+- Выполнен rollout в test ветки `origin/feature/electron-desktop-foundation` (SHA `db34f4d`) через `deploy-test-and-smoke.sh`: PASS.
+- Postdeploy smoke pack в test прошел без регрессий (auth/api/web/realtime gates).
+- Ручная проверка после rollout: screen share и media devices работают корректно.
+- Evidence зафиксирован в `docs/status/TEST_RESULTS.md` (Cycle #37).
 
 ## 11) Known Follow-ups
 

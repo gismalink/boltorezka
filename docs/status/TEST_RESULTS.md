@@ -2,6 +2,30 @@
 
 Отдельный журнал результатов тестов/нагрузки.
 
+## 2026-03-15 — Cycle #37 (Test rollout after desktop media-permission rollback)
+
+- Environment: `test` (`https://test.boltorezka.gismalink.art`)
+- Build ref: `origin/feature/electron-desktop-foundation` (`db34f4d`)
+
+### Functional gate
+
+- Rollout: `ssh mac-mini 'cd ~/srv/boltorezka && bash ./scripts/deploy/deploy-test-and-smoke.sh origin/feature/electron-desktop-foundation "$PWD"'`: PASS
+- Post-deploy smoke pack: PASS
+  - `smoke:sso`, `smoke:api`, `smoke:auth:session`, `smoke:auth:cookie-negative`, `smoke:auth:cookie-ws-ticket`
+  - `smoke:web:version-cache` (`sha=db34f4d0da06bdd3a1c3f06eaebfada1cb277142`)
+  - `smoke:web:crash-boundary:browser`, `smoke:web:rnnoise:browser`, `smoke:realtime`
+
+### Scope covered by this cycle
+
+- Подтвержден успешный test rollout после rollback агрессивных desktop permission handlers.
+- Подтверждено восстановление desktop media path после перезапуска runtime: баннер доступа к устройствам исчез, устройства работают.
+- Manual verification после rollout: screen share стартует, devices path работает.
+
+### Decision
+
+- Cycle #37: PASS.
+- M2 practical blocker по `Screen share start/stop` снят на test в ручной проверке.
+
 ## 2026-03-14 — Cycle #36 (Desktop screenshare gate diagnostics)
 
 - Environment: `test` (`https://test.boltorezka.gismalink.art`)
