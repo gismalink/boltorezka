@@ -19,7 +19,7 @@
 - [ ] Авторизация открывается штатно (SSO redirect без ошибок).
 - [ ] Подключение к комнате выполняется.
 - [ ] Микрофон mute/unmute работает.
-- [ ] Screen share start/stop работает.
+- [x] Screen share start/stop работает.
 
 ## 3) Reconnect and stability smoke
 
@@ -29,8 +29,11 @@
   - `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art SMOKE_DESKTOP_SOAK_CYCLES=8 npm run smoke:desktop:soak`
 - [x] Sleep/wake ноутбука: сессия восстанавливается без crash.
   - `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art SMOKE_DESKTOP_SLEEP_WAKE_REQUIRE_SUSPEND=1 npm run smoke:desktop:sleep-wake`
-- [ ] 15+ минут voice-сессии без критичных runtime errors.
-  - `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art SMOKE_DESKTOP_STABILITY_DURATION_MS=900000 npm run smoke:desktop:stability`
+- [x] 15+ минут voice-сессии без критичных runtime errors.
+  - `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art npm run smoke:desktop:voice-checkpoint:15m`
+- [ ] 2h long-run stability soak (standalone packaged desktop gate).
+  - `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art SMOKE_DESKTOP_STABILITY_DURATION_MS=7200000 npm run smoke:desktop:stability`
+  - Policy: выполняется только на этапе standalone packaged client (post-signing/notarization).
 
 ## 4) Security smoke
 
@@ -57,4 +60,8 @@
 - [x] Stability soak automation added: `smoke:desktop:stability` + aggregate command `desktop:smoke:m2:stability` (30m evidence run pending).
 - [x] Stability warm-up run прошел (`durationMs=30000`, `probes=3`), evidence: `docs/status/TEST_RESULTS.md` (Cycle #25).
 - [x] 30-минутный runtime stability soak прошел (`durationMs=1800000`, `probes=60`), evidence: `docs/status/TEST_RESULTS.md` (Cycle #26).
-- [ ] Voice-session specific 15m checkpoint остается pending (нужен отдельный авторизованный room/voice сценарий).
+- [x] Voice-session specific 15m checkpoint прошел, evidence: `docs/status/TEST_RESULTS.md` (Cycle #31).
+- [x] Media controls smoke (mic/audio/device menus) прошел, evidence: `docs/status/TEST_RESULTS.md` (Cycle #35).
+- [x] Test rollout после rollback desktop permissions прошел, manual подтверждение screen share/devices, evidence: `docs/status/TEST_RESULTS.md` (Cycle #37).
+- [x] Forced app update path (version mismatch -> recovery) проверен автоматизированным smoke, evidence: `docs/status/TEST_RESULTS.md` (Cycle #38).
+- [x] Зафиксирована practical stability policy в runbook (`15-30m` per iteration, `2h` только на standalone release gate).

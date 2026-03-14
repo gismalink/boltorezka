@@ -132,7 +132,7 @@ Desktop smoke (must pass):
 - [x] Join room + voice handshake.
 - [x] Mute/unmute + input/output switch.
 - [x] Screen share start/stop.
-- [ ] Forced app update path (version mismatch) и корректный recovery.
+- [x] Forced app update path (version mismatch) и корректный recovery.
 
 ## 6) GitOps rollout policy (desktop)
 
@@ -332,10 +332,22 @@ Progress note (2026-03-15, test rollout after rollback):
 - Ручная проверка после rollout: screen share и media devices работают корректно.
 - Evidence зафиксирован в `docs/status/TEST_RESULTS.md` (Cycle #37).
 
+Progress note (2026-03-15, long-run stability gate policy update):
+- 2h stability gate временно снят с текущего dev-loop (слишком низкая информативность для web-hosted desktop shell между частыми итерациями).
+- Gate переносится на стадию standalone packaged client (signed/notarized build), где long-run имеет практический смысл для release readiness.
+- До standalone этапа применяется укороченный practical gate: `15-30m` stability/checkpoint на каждую значимую media-итерацию.
+- Следующий активный пункт плана: обновление dashboard/logs для desktop-сессий.
+
+Progress note (2026-03-15, forced app update smoke):
+- Добавлен smoke `scripts/smoke/smoke-web-version-mismatch-browser.mjs` и root command `npm run smoke:web:version-mismatch:browser`.
+- На test подтвержден flow `version mismatch -> reload -> app updated overlay -> continue/recovery`.
+- Evidence зафиксирован в `docs/status/TEST_RESULTS.md` (Cycle #38).
+
 ## 11) Known Follow-ups
 
 - [x] Провести browser-level handoff soak (Chromium/WebKit/Firefox) поверх уже закрытого protocol-level soak и приложить агрегированное evidence к auth runbook.
 	- Дизайн: `docs/plans/2026-03-14_DESKTOP_HANDOFF_DETERMINISTIC_DESIGN.md`.
+- [ ] Выполнить 2h stability soak на standalone packaged desktop client (post-signing/notarization) и зафиксировать evidence в отдельном release-gate цикле.
 
 ## 12) Checklist continuation (2026-03-14)
 
@@ -344,3 +356,7 @@ Progress note (2026-03-15, test rollout after rollback):
 - [x] Добавить deterministic handoff smoke (happy path + timeout path).
 - [x] Повторить desktop voice checkpoint 15m на test после стабилизации handoff flow.
 - [x] Зафиксировать evidence в `docs/status/TEST_RESULTS.md` и обновить runbook секцию auth desktop handoff.
+
+Checklist continuation (2026-03-15, updated):
+- [x] Добавить и прогнать автоматизированный smoke для `Forced app update path` (version mismatch -> reload/overlay recovery).
+- [x] Зафиксировать practical stability policy в runbook desktop test gates (`15-30m` per iteration, `2h` only for standalone release gate).

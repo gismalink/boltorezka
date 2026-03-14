@@ -2,6 +2,28 @@
 
 Отдельный журнал результатов тестов/нагрузки.
 
+## 2026-03-15 — Cycle #38 (Forced app update path: version mismatch -> recovery)
+
+- Environment: `test` (`https://test.boltorezka.gismalink.art`)
+- Build ref: `origin/feature/electron-desktop-foundation` (`cbf851f`)
+
+### Functional gate
+
+- `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art npm run smoke:web:version-mismatch:browser`: PASS
+  - `mode=mismatch`
+  - `versionRequests=2`
+  - `mismatchSha=smoke-mismatch-sha`
+
+### Scope covered by this cycle
+
+- Подтвержден forced update flow на version mismatch: клиент фиксирует расхождение build SHA и инициирует reload.
+- Подтвержден recovery path: overlay "App updated" отображается, после `Continue` pending-флаг очищается и UI возвращается в рабочее состояние.
+
+### Decision
+
+- Cycle #38: PASS.
+- Desktop checklist пункт `Forced app update path (version mismatch) и корректный recovery` закрыт.
+
 ## 2026-03-15 — Cycle #37 (Test rollout after desktop media-permission rollback)
 
 - Environment: `test` (`https://test.boltorezka.gismalink.art`)

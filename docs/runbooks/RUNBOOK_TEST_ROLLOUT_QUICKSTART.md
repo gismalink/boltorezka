@@ -68,6 +68,27 @@
 - `attemptStatusAfterComplete=completed`
 - `timeoutPathStatus=expired`
 
+## Desktop stability gate policy (practical)
+
+Цель: не блокировать daily iteration избыточным long-run smoke, но сохранить release-grade контроль.
+
+1) На каждую значимую media-итерацию (test/dev loop):
+
+- Использовать `15-30m` gate:
+  - `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art npm run smoke:desktop:voice-checkpoint:15m`
+  - при необходимости: `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art SMOKE_DESKTOP_STABILITY_DURATION_MS=1800000 npm run smoke:desktop:stability`
+
+2) `2h` long-run gate выполнять только для standalone packaged desktop клиента
+
+- Условие запуска: post-signing/notarization release candidate.
+- Команда:
+  - `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art SMOKE_DESKTOP_STABILITY_DURATION_MS=7200000 npm run smoke:desktop:stability`
+
+3) Для web-hosted desktop shell в активной разработке
+
+- `2h` gate не является обязательным pre-merge требованием.
+- Обязательны: короткий checkpoint + regression smoke по затронутому функционалу.
+
 ### One-command альтернатива (deploy + smoke)
 
 Используй команду из шага 3 (`deploy:test:smoke`) как единый запуск deploy+smoke.
