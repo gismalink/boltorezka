@@ -2,6 +2,35 @@
 
 Отдельный журнал результатов тестов/нагрузки.
 
+## 2026-03-15 — Cycle #40 (Postdeploy smoke stabilized after retry-hardening)
+
+- Environment: `test` (`https://test.boltorezka.gismalink.art`)
+- Build ref: `origin/feature/electron-desktop-foundation` (`a3b84ae` smoke scripts in server repo, app deploy SHA remains `030b0ec`)
+
+### Functional gate
+
+- Server postdeploy rerun:
+  - `ssh mac-mini 'cd ~/srv/boltorezka && bash ./scripts/deploy/postdeploy-smoke-test.sh "$PWD"'`: PASS
+  - `smoke:sso`: PASS
+  - `smoke:api`: PASS
+  - `smoke:auth:session`: PASS
+  - `smoke:auth:cookie-negative`: PASS
+  - `smoke:auth:cookie-ws-ticket`: PASS
+  - `smoke:web:version-cache`: PASS (`sha=030b0ecc032edb97a369b15df350560c3ab22d4e`)
+  - `smoke:web:crash-boundary:browser`: PASS
+  - `smoke:web:rnnoise:browser`: PASS
+  - `smoke:realtime`: PASS (`reconnectOk=true`, `mediaTopologyFirstOk=true`)
+
+### Scope covered by this cycle
+
+- Подтверждена стабильность postdeploy smoke после hardening retry logic в `smoke:sso` и browser startup path (`smoke:web:crash-boundary:browser`).
+- Cycle #39 закрыт повторным прогоном: внешний connectivity flake более не блокирует общий gate.
+
+### Decision
+
+- Cycle #40: PASS.
+- Test gate восстановлен в green-state.
+
 ## 2026-03-15 — Cycle #39 (Observability counters rollout verification)
 
 - Environment: `test` (`https://test.boltorezka.gismalink.art`)
@@ -27,7 +56,7 @@
 ### Decision
 
 - Cycle #39: PARTIAL (observability counters verified, postdeploy realtime blocked by external `ETIMEDOUT`).
-- Требуется стабилизировать сетевую доступность test домена и повторить postdeploy realtime gate.
+- Закрыт повторным прогоном (см. Cycle #40).
 
 ## 2026-03-15 — Cycle #38 (Forced app update path: version mismatch -> recovery)
 

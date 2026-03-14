@@ -4,6 +4,8 @@ import { chromium } from "playwright";
 
 const baseUrl = String(process.env.SMOKE_WEB_BASE_URL || process.env.SMOKE_API_URL || "http://localhost:8080").replace(/\/$/, "");
 const timeoutMs = Number(process.env.SMOKE_WEB_BROWSER_TIMEOUT_MS || 25000);
+const bootRetries = Number(process.env.SMOKE_WEB_BOOT_RETRIES || 3);
+const bootRetryDelayMs = Number(process.env.SMOKE_WEB_BOOT_RETRY_DELAY_MS || 1000);
 const bearerToken = String(process.env.SMOKE_TEST_BEARER_TOKEN || "").trim();
 const appUrl = `${baseUrl}/`;
 const crashMessage = "UI crashed unexpectedly. Please reload and try again.";
@@ -78,7 +80,24 @@ async function openSoundSettingsFlow(page) {
 }
 
 async function bootCheck(page, runtimeErrors, label) {
-  await page.goto(appUrl, { waitUntil: "domcontentloaded", timeout: timeoutMs });
+  let lastError = null;
+  for (let attempt = 1; attempt <= bootRetries; attempt += 1) {
+    try {
+      await page.goto(appUrl, { waitUntil: "domcontentloaded", timeout: timeoutMs });
+      lastError = null;
+      break;
+    } catch (error) {
+      lastError = error;
+      if (attempt < bootRetries) {
+        await page.waitForTimeout(bootRetryDelayMs * attempt);
+      }
+    }
+  }
+
+  if (lastError) {
+    throw lastError;
+  }
+
   await page.locator("#root").waitFor({ state: "visible", timeout: timeoutMs });
 
   // Check repeatedly during first render/effect window to catch startup crashes.

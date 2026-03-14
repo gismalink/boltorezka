@@ -353,6 +353,11 @@ Progress note (2026-03-15, observability rollout verification):
 - Подтверждена доступность новых summary полей через internal API path (`boltorezka-api-test` localhost).
 - Внешний postdeploy realtime gate нестабилен из-за сетевого `ETIMEDOUT` к `test.boltorezka.gismalink.art:443` (повторяемо в `smoke:realtime`), поэтому цикл зафиксирован как PARTIAL (`docs/status/TEST_RESULTS.md`, Cycle #39).
 
+Progress note (2026-03-15, postdeploy gate recovery):
+- Добавлен retry-hardening для `smoke:sso` и browser boot path в `smoke:web:crash-boundary:browser` для снижения сетевых флейков.
+- Server-side postdeploy smoke повторен и прошел полностью (включая `smoke:realtime`), evidence: `docs/status/TEST_RESULTS.md` (Cycle #40).
+- Partial статус Cycle #39 закрыт повторным green-run.
+
 ## 11) Known Follow-ups
 
 - [x] Провести browser-level handoff soak (Chromium/WebKit/Firefox) поверх уже закрытого protocol-level soak и приложить агрегированное evidence к auth runbook.
