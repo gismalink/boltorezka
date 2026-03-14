@@ -288,9 +288,14 @@ Progress note (2026-03-14, voice checkpoint 15m gate):
 - Метрики: `elapsedMs=900001`, `probes=90`, `maxProbeGapMs=10012`, voice evidence через meter counters (`meterSessions=1`, `meterStreams=1`).
 - Evidence зафиксирован в `docs/status/TEST_RESULTS.md` (Cycle #31).
 
+Progress note (2026-03-14, handoff soak 20 cycles):
+- Добавлен smoke `scripts/smoke/smoke-desktop-handoff-soak.mjs` и команда `npm run smoke:desktop:handoff:soak`.
+- Выполнен soak на test: `SMOKE_DESKTOP_HANDOFF_SOAK_CYCLES=20` -> PASS (`elapsedMs=15003`, state transition `pending->completed` во всех циклах).
+- Evidence зафиксирован в `docs/status/TEST_RESULTS.md` (Cycle #32).
+
 ## 11) Known Follow-ups
 
-- [ ] Провести короткий cross-browser handoff soak (20 последовательных входов) и приложить агрегированное evidence к auth runbook.
+- [ ] Провести browser-level handoff soak (Chromium/WebKit/Firefox) поверх уже закрытого protocol-level soak и приложить агрегированное evidence к auth runbook.
 	- Дизайн: `docs/plans/2026-03-14_DESKTOP_HANDOFF_DETERMINISTIC_DESIGN.md`.
 
 ## 12) Checklist continuation (2026-03-14)

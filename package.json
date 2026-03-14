@@ -33,6 +33,7 @@
     "smoke:desktop:voice-checkpoint:15m": "SMOKE_DESKTOP_VOICE_DURATION_MS=900000 node ./scripts/smoke/smoke-desktop-voice-checkpoint.mjs",
     "smoke:desktop:sso-external": "node ./scripts/smoke/smoke-desktop-sso-external.mjs",
     "smoke:desktop:handoff-deterministic": "node ./scripts/smoke/smoke-desktop-handoff-deterministic.mjs",
+    "smoke:desktop:handoff:soak": "node ./scripts/smoke/smoke-desktop-handoff-soak.mjs",
     "smoke:api": "node ./scripts/smoke/smoke-api.mjs",
     "smoke:auth:session": "node ./scripts/smoke/smoke-auth-session.mjs",
     "smoke:auth:cookie-mode": "node ./scripts/smoke/smoke-auth-cookie-mode.mjs",

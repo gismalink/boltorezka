@@ -54,6 +54,10 @@
 
 - `TOKEN="$(ssh mac-mini "cd ~/srv/boltorezka && set -a && source .deploy/smoke-auth.env && set +a && printf '%s' \"\$SMOKE_TEST_BEARER_TOKEN\"")" && SMOKE_TEST_BEARER_TOKEN="$TOKEN" SMOKE_API_URL=https://test.boltorezka.gismalink.art npm run smoke:desktop:handoff-deterministic`
 
+3) При необходимости soak на 20 последовательных циклов:
+
+- `TOKEN="$(ssh mac-mini "cd ~/srv/boltorezka && set -a && source .deploy/smoke-auth.env && set +a && printf '%s' \"\$SMOKE_TEST_BEARER_TOKEN\"")" && SMOKE_TEST_BEARER_TOKEN="$TOKEN" SMOKE_API_URL=https://test.boltorezka.gismalink.art SMOKE_DESKTOP_HANDOFF_SOAK_CYCLES=20 npm run smoke:desktop:handoff:soak`
+
 Ожидаемый PASS:
 
 - `attemptStatusBeforeComplete=pending`

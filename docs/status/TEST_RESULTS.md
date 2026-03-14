@@ -2,6 +2,29 @@
 
 Отдельный журнал результатов тестов/нагрузки.
 
+## 2026-03-14 — Cycle #32 (Desktop handoff soak 20 cycles)
+
+- Environment: `test` (`https://test.boltorezka.gismalink.art`)
+- Build ref: `origin/feature/electron-desktop-foundation` (`dbe678a`)
+
+### Functional gate
+
+- `SMOKE_TEST_BEARER_TOKEN=<server smoke token> SMOKE_API_URL=https://test.boltorezka.gismalink.art SMOKE_DESKTOP_HANDOFF_SOAK_CYCLES=20 npm run smoke:desktop:handoff:soak`: PASS
+  - `cycles=20`
+  - `elapsedMs=15003`
+  - `stateTransition=pending->completed` (все циклы)
+  - `userId` стабилен во всех циклах
+
+### Scope covered by this cycle
+
+- Подтверждена стабильность deterministic handoff protocol под последовательной нагрузкой (20 циклов create/exchange/complete/status).
+- Race-condition класса "attempt state drift" в текущем test контуре не воспроизведен.
+
+### Decision
+
+- Cycle #32: PASS.
+- Soak-evidence для handoff протокола зафиксирован.
+
 ## 2026-03-14 — Cycle #31 (Desktop voice checkpoint 15m after deterministic handoff)
 
 - Environment: `test` (`https://test.boltorezka.gismalink.art`)
