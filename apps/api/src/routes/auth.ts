@@ -29,18 +29,29 @@ const livekitTokenSchema = z.object({
 const desktopHandoffExchangeSchema = z.object({
   code: z.string().trim().min(10).max(128)
 });
+const desktopHandoffAttemptIdSchema = z.object({
+  attemptId: z.string().uuid()
+});
 
 const safeHostSet = new Set(config.allowedReturnHosts);
 const AUTH_SESSION_PREFIX = "auth:session:";
 const AUTH_SESSION_TTL_SEC = 60 * 60 * 24 * 30;
 const AUTH_DESKTOP_HANDOFF_PREFIX = "auth:desktop-handoff:";
 const AUTH_DESKTOP_HANDOFF_TTL_SEC = 120;
+const AUTH_DESKTOP_HANDOFF_ATTEMPT_PREFIX = "auth:desktop-handoff-attempt:";
 const AUTH_RATE_LIMIT_PREFIX = "auth:rl:";
 
 type AuthRateLimitPolicy = {
   namespace: string;
   max: number;
   windowSec: number;
+};
+
+type DesktopHandoffAttemptState = {
+  status: "pending" | "completed";
+  userId: string;
+  createdAt: string;
+  completedAt: string | null;
 };
 
 function buildAuthAuditContext(request: FastifyRequest, extra: Record<string, unknown> = {}) {
@@ -384,6 +395,21 @@ export async function authRoutes(fastify: FastifyInstance) {
     max: 40,
     windowSec: 60
   });
+  const limitDesktopHandoffAttemptCreate = makeAuthRateLimiter({
+    namespace: "desktop-handoff-attempt-create",
+    max: 20,
+    windowSec: 60
+  });
+  const limitDesktopHandoffAttemptStatus = makeAuthRateLimiter({
+    namespace: "desktop-handoff-attempt-status",
+    max: 80,
+    windowSec: 60
+  });
+  const limitDesktopHandoffAttemptComplete = makeAuthRateLimiter({
+    namespace: "desktop-handoff-attempt-complete",
+    max: 40,
+    windowSec: 60
+  });
 
   fastify.get("/v1/auth/mode", async () => {
     const response: AuthModeResponse = {
@@ -510,6 +536,186 @@ export async function authRoutes(fastify: FastifyInstance) {
           message: "Central SSO is temporarily unavailable"
         });
       }
+    }
+  );
+
+  fastify.post(
+    "/v1/auth/desktop-handoff/attempt",
+    {
+      preHandler: [requireAuth, limitDesktopHandoffAttemptCreate]
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const userId = String(request.user?.sub || "").trim();
+      if (!userId) {
+        return reply.code(401).send({
+          error: "Unauthorized",
+          message: "Valid bearer token is required"
+        });
+      }
+
+      const attemptId = randomUUID();
+      const state: DesktopHandoffAttemptState = {
+        status: "pending",
+        userId,
+        createdAt: new Date().toISOString(),
+        completedAt: null
+      };
+
+      await fastify.redis.setEx(
+        `${AUTH_DESKTOP_HANDOFF_ATTEMPT_PREFIX}${attemptId}`,
+        AUTH_DESKTOP_HANDOFF_TTL_SEC,
+        JSON.stringify(state)
+      );
+
+      fastify.log.info(
+        buildAuthAuditContext(request, {
+          event: "auth.desktop_handoff.attempt_created",
+          userId,
+          attemptId,
+          ttlSec: AUTH_DESKTOP_HANDOFF_TTL_SEC
+        }),
+        "desktop handoff attempt created"
+      );
+
+      return {
+        ok: true,
+        attemptId,
+        expiresInSec: AUTH_DESKTOP_HANDOFF_TTL_SEC
+      };
+    }
+  );
+
+  fastify.get(
+    "/v1/auth/desktop-handoff/attempt/:attemptId",
+    {
+      preHandler: [limitDesktopHandoffAttemptStatus]
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const params = (request.params || {}) as { attemptId?: string };
+      const parsed = desktopHandoffAttemptIdSchema.safeParse({
+        attemptId: params.attemptId
+      });
+      if (!parsed.success) {
+        return reply.code(400).send({
+          error: "ValidationError",
+          issues: parsed.error.flatten()
+        });
+      }
+
+      const key = `${AUTH_DESKTOP_HANDOFF_ATTEMPT_PREFIX}${parsed.data.attemptId}`;
+      const raw = await fastify.redis.get(key);
+      if (!raw) {
+        return {
+          status: "expired"
+        };
+      }
+
+      try {
+        const state = JSON.parse(raw) as DesktopHandoffAttemptState;
+        if (state.status === "completed") {
+          return {
+            status: "completed"
+          };
+        }
+
+        return {
+          status: "pending"
+        };
+      } catch {
+        return {
+          status: "expired"
+        };
+      }
+    }
+  );
+
+  fastify.post(
+    "/v1/auth/desktop-handoff/complete",
+    {
+      preHandler: [requireAuth, limitDesktopHandoffAttemptComplete]
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const userId = String(request.user?.sub || "").trim();
+      if (!userId) {
+        return reply.code(401).send({
+          error: "Unauthorized",
+          message: "Valid bearer token is required"
+        });
+      }
+
+      const parsed = desktopHandoffAttemptIdSchema.safeParse(request.body || {});
+      if (!parsed.success) {
+        return reply.code(400).send({
+          error: "ValidationError",
+          issues: parsed.error.flatten()
+        });
+      }
+
+      const key = `${AUTH_DESKTOP_HANDOFF_ATTEMPT_PREFIX}${parsed.data.attemptId}`;
+      const raw = await fastify.redis.get(key);
+      if (!raw) {
+        return reply.code(404).send({
+          error: "DesktopHandoffAttemptExpired",
+          message: "Desktop handoff attempt is expired or invalid"
+        });
+      }
+
+      let state: DesktopHandoffAttemptState | null = null;
+      try {
+        state = JSON.parse(raw) as DesktopHandoffAttemptState;
+      } catch {
+        state = null;
+      }
+
+      if (!state || !state.userId) {
+        return reply.code(400).send({
+          error: "DesktopHandoffAttemptInvalid",
+          message: "Desktop handoff attempt payload is invalid"
+        });
+      }
+
+      if (state.userId !== userId) {
+        return reply.code(403).send({
+          error: "DesktopHandoffAttemptForbidden",
+          message: "Desktop handoff attempt belongs to another user"
+        });
+      }
+
+      if (state.status === "completed") {
+        return {
+          ok: true,
+          status: "completed"
+        };
+      }
+
+      const ttlSec = await fastify.redis.ttl(key);
+      if (ttlSec <= 0) {
+        return {
+          status: "expired"
+        };
+      }
+
+      const nextState: DesktopHandoffAttemptState = {
+        ...state,
+        status: "completed",
+        completedAt: new Date().toISOString()
+      };
+
+      await fastify.redis.setEx(key, ttlSec, JSON.stringify(nextState));
+
+      fastify.log.info(
+        buildAuthAuditContext(request, {
+          event: "auth.desktop_handoff.attempt_completed",
+          userId,
+          attemptId: parsed.data.attemptId
+        }),
+        "desktop handoff attempt completed"
+      );
+
+      return {
+        ok: true,
+        status: "completed"
+      };
     }
   );
 

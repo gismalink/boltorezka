@@ -2,6 +2,27 @@
 
 Отдельный журнал результатов тестов/нагрузки.
 
+## 2026-03-14 — Cycle #29 (Deterministic handoff phase 1 regression check)
+
+- Environment: `test` (`https://test.boltorezka.gismalink.art`)
+- Build ref: `origin/feature/electron-desktop-foundation` (working tree, post-phase1 deterministic handoff)
+
+### Functional gate
+
+- `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art npm run smoke:desktop:sso-external`: PASS
+  - `ssoStartExternalized=true`
+  - `ssoLogoutMode=local-desktop`
+
+### Scope covered by this cycle
+
+- Подтверждено, что переход на deterministic handoff phase 1 не ломает desktop SSO start/logout регрессии.
+- Актуализирован baseline: logout в desktop остается локальным (без external logout redirect).
+
+### Decision
+
+- Cycle #29: PASS.
+- Можно переходить к Phase 2: отдельный deterministic handoff smoke (happy path + timeout path).
+
 ## 2026-03-14 — Cycle #28 (Desktop manual RTC checkpoint after multi-client fix)
 
 - Environment: `test` (`https://test.boltorezka.gismalink.art`)

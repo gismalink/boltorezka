@@ -23,12 +23,34 @@ function resolveDesktopSsoReturnUrl(defaultReturnUrl: string) {
   return parsed.toString();
 }
 
-function buildDesktopHandoffDeepLink(code: string, targetUrl: string) {
+function buildDesktopHandoffDeepLink(code: string, targetUrl: string, attemptId: string) {
   const host = window.location.hostname || "localhost";
   const target = new URL(targetUrl);
   target.searchParams.set("desktop_sso_code", code);
   target.searchParams.set("desktop_sso_complete", "1");
-  return `boltorezka://${host}/auth/sso-complete?target=${encodeURIComponent(target.toString())}`;
+  target.searchParams.set("desktop_handoff_attempt", attemptId);
+  return `boltorezka://${host}/auth/sso-complete?attemptId=${encodeURIComponent(attemptId)}&target=${encodeURIComponent(target.toString())}`;
+}
+
+async function waitForDesktopHandoffCompletion(token: string, attemptId: string) {
+  const timeoutMs = 60000;
+  const pollIntervalMs = 1500;
+  const startedAt = Date.now();
+
+  while (Date.now() - startedAt < timeoutMs) {
+    const status = await api.desktopHandoffAttemptStatus(token, attemptId);
+    if (status.status === "completed") {
+      return "completed" as const;
+    }
+    if (status.status === "expired") {
+      return "expired" as const;
+    }
+    await new Promise((resolve) => {
+      window.setTimeout(resolve, pollIntervalMs);
+    });
+  }
+
+  return "timeout" as const;
 }
 
 type AuthControllerOptions = {
@@ -69,6 +91,11 @@ export class AuthController {
   }
 
   async startDesktopBrowserHandoff(token: string) {
+    const attemptResponse = await api.desktopHandoffAttemptCreate(token);
+    if (!attemptResponse.attemptId) {
+      throw new Error("desktop handoff attempt id is missing");
+    }
+
     const response = await api.desktopHandoffCreate(token);
     if (!response.code) {
       throw new Error("desktop handoff code is missing");
@@ -79,21 +106,28 @@ export class AuthController {
     currentUrl.searchParams.delete("desktop_handoff_bootstrap");
     currentUrl.searchParams.delete("desktop_handoff_refreshed");
     currentUrl.searchParams.delete("desktop_handoff_sent");
+    currentUrl.searchParams.set("desktop_handoff_attempt", attemptResponse.attemptId);
     currentUrl.searchParams.set("desktop_handoff_complete", "1");
-    const deepLink = buildDesktopHandoffDeepLink(response.code, currentUrl.toString());
+    const deepLink = buildDesktopHandoffDeepLink(response.code, currentUrl.toString(), attemptResponse.attemptId);
     window.location.href = deepLink;
 
-    // Keep browser on a safe completion page, but give OS-level protocol handling
-    // enough time so we do not cancel deep-link handoff back into Electron.
-    window.setTimeout(() => {
-      window.location.replace(currentUrl.toString());
-    }, 1800);
+    const status = await waitForDesktopHandoffCompletion(token, attemptResponse.attemptId).catch(() => "timeout" as const);
+    if (status !== "completed") {
+      currentUrl.searchParams.set("desktop_handoff_error", status);
+    } else {
+      currentUrl.searchParams.delete("desktop_handoff_error");
+    }
+    window.location.replace(currentUrl.toString());
   }
 
-  async completeDesktopHandoff(code: string) {
+  async completeDesktopHandoff(code: string, attemptId: string | null = null) {
     const response = await api.desktopHandoffExchange(code);
     if (!response.authenticated || !response.token) {
       throw new Error("desktop handoff is not authenticated");
+    }
+
+    if (attemptId) {
+      await api.desktopHandoffComplete(response.token, attemptId);
     }
 
     this.options.setToken(response.token);

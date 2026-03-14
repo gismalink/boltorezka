@@ -826,6 +826,15 @@ export function App() {
     return url.searchParams.get("desktop_handoff_complete") === "1";
   }, [token]);
 
+  const desktopHandoffError = useMemo(() => {
+    if (typeof window === "undefined" || window.boltorezkaDesktop) {
+      return "";
+    }
+
+    const url = new URL(window.location.href);
+    return String(url.searchParams.get("desktop_handoff_error") || "").trim();
+  }, [token]);
+
   useSessionStateLifecycle({
     token,
     roomAdminController,
@@ -1464,7 +1473,9 @@ export function App() {
         <section className="settings-sheet w-full max-w-[560px] p-6 text-center">
           <h1 className="text-2xl font-semibold">Авторизация завершена</h1>
           <p className="mt-3 text-sm opacity-80">
-            Вы вошли в Boltorezka Desktop. Эту вкладку можно закрыть.
+            {desktopHandoffError
+              ? "Не удалось подтвердить вход в Desktop. Попробуйте открыть приложение еще раз."
+              : "Вы вошли в Boltorezka Desktop. Эту вкладку можно закрыть."}
           </p>
           <div className="mt-5 flex justify-center">
             <button
@@ -1476,7 +1487,9 @@ export function App() {
                 url.searchParams.delete("desktop_handoff_bootstrap");
                 url.searchParams.delete("desktop_handoff_refreshed");
                 url.searchParams.delete("desktop_handoff_sent");
+                url.searchParams.delete("desktop_handoff_attempt");
                 url.searchParams.delete("desktop_handoff_complete");
+                url.searchParams.delete("desktop_handoff_error");
                 window.location.replace(url.toString());
               }}
             >

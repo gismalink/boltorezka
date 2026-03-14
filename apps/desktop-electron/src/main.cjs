@@ -19,12 +19,15 @@ function isSameRendererOrigin(url) {
   }
 }
 
-function withDesktopSsoParams(url, handoffCode = "") {
+function withDesktopSsoParams(url, handoffCode = "", attemptId = "") {
   try {
     const parsed = new URL(url);
     if (handoffCode) {
       parsed.searchParams.set("desktop_sso_complete", "1");
       parsed.searchParams.set("desktop_sso_code", handoffCode);
+    }
+    if (attemptId) {
+      parsed.searchParams.set("desktop_handoff_attempt", attemptId);
     }
     return parsed.toString();
   } catch {
@@ -32,6 +35,9 @@ function withDesktopSsoParams(url, handoffCode = "") {
     if (handoffCode) {
       fallback.searchParams.set("desktop_sso_complete", "1");
       fallback.searchParams.set("desktop_sso_code", handoffCode);
+    }
+    if (attemptId) {
+      fallback.searchParams.set("desktop_handoff_attempt", attemptId);
     }
     return fallback.toString();
   }
@@ -48,11 +54,12 @@ function resolveDesktopCallbackTarget(protocolUrl) {
     }
 
     const handoffCode = String(parsed.searchParams.get("desktop_sso_code") || "").trim();
+    const attemptId = String(parsed.searchParams.get("attemptId") || "").trim();
     const target = String(parsed.searchParams.get("target") || "").trim();
     if (target && isSameRendererOrigin(target)) {
-      return withDesktopSsoParams(target, handoffCode);
+      return withDesktopSsoParams(target, handoffCode, attemptId);
     }
-    return withDesktopSsoParams(`${rendererUrl.replace(/\/$/, "")}/`, handoffCode);
+    return withDesktopSsoParams(`${rendererUrl.replace(/\/$/, "")}/`, handoffCode, attemptId);
   } catch {
     return "";
   }

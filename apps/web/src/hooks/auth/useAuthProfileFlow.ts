@@ -126,13 +126,15 @@ export function useAuthProfileFlow({
 
     const url = new URL(window.location.href);
     const handoffCode = String(url.searchParams.get("desktop_sso_code") || "").trim();
+    const handoffAttemptId = String(url.searchParams.get("desktop_handoff_attempt") || "").trim() || null;
     if (!handoffCode) {
       return;
     }
 
-    void authController.completeDesktopHandoff(handoffCode);
+    void authController.completeDesktopHandoff(handoffCode, handoffAttemptId);
     url.searchParams.delete("desktop_sso_code");
     url.searchParams.delete("desktop_sso_complete");
+    url.searchParams.delete("desktop_handoff_attempt");
     window.history.replaceState({}, "", url.toString());
   }, [token, authMode, authController]);
 

@@ -103,7 +103,7 @@ Definition of done:
 
 ### 4.3 RTC validation
 - [ ] Проверить media permissions на macOS и Windows.
-- [ ] Проверить reconnect при network flap.
+- [x] Проверить reconnect при network flap.
 - [x] Проверить поведение после sleep/wake ноутбука.
 - [ ] Проверить длительную сессию + переключения девайсов.
 
@@ -118,7 +118,7 @@ Runbook:
 
 ### 4.5 Observability
 - [x] Добавить desktop telemetry labels (platform, app channel, app version).
-- [ ] Добавить сбор crash/report артефактов.
+- [x] Добавить сбор crash/report артефактов.
 - [ ] Обновить дашборд/логи для desktop-сессий.
 
 ## 5) QA matrix и smoke
@@ -267,15 +267,25 @@ Progress note (2026-03-14, manual RTC/sleep-wake checkpoint):
 	- После sleep наблюдается временный video disconnect с последующим корректным восстановлением после wake.
 - Evidence зафиксирован в `docs/status/TEST_RESULTS.md` (Cycle #28, manual PASS).
 
+Progress note (2026-03-14, deterministic handoff phase 1):
+- Реализован backend протокол попытки handoff: `/v1/auth/desktop-handoff/attempt`, `/v1/auth/desktop-handoff/attempt/:attemptId`, `/v1/auth/desktop-handoff/complete`.
+- В web auth flow убран timer fallback после deep-link: browser ждет статус попытки polling-механизмом и только затем показывает completion/error page.
+- В desktop callback прокидывается `attemptId` в renderer, а после `desktop-handoff/exchange` отправляется completion ack.
+- Validation: `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art npm run smoke:desktop:sso-external` -> PASS.
+
+Progress note (2026-03-14, deterministic handoff smoke phase 2 start):
+- Добавлен smoke `scripts/smoke/smoke-desktop-handoff-deterministic.mjs` и root command `npm run smoke:desktop:handoff-deterministic` (happy path + timeout/expired path на attempt protocol).
+- Для локального прогона требуется `SMOKE_TEST_BEARER_TOKEN`; при его отсутствии smoke корректно завершает работу с явной подсказкой по env.
+
 ## 11) Known Follow-ups
 
-- [ ] Заменить timer-based browser fallback после deep-link (`startDesktopBrowserHandoff`) на детерминированный handoff completion protocol (без таймера), чтобы исключить race-condition между `boltorezka://` и browser redirect.
-	- Дизайн вынесен: `docs/plans/2026-03-14_DESKTOP_HANDOFF_DETERMINISTIC_DESIGN.md`.
+- [ ] Закрыть deterministic handoff Phase 2: добавить отдельный smoke (happy path + timeout path) и обновить auth runbook секцию handoff.
+	- Дизайн: `docs/plans/2026-03-14_DESKTOP_HANDOFF_DETERMINISTIC_DESIGN.md`.
 
 ## 12) Checklist continuation (2026-03-14)
 
 Ближайший practical order выполнения:
-- [ ] Реализовать Phase 1 из `2026-03-14_DESKTOP_HANDOFF_DETERMINISTIC_DESIGN.md` (attempt + complete ack + polling status).
-- [ ] Добавить deterministic handoff smoke (happy path + timeout path).
+- [x] Реализовать Phase 1 из `2026-03-14_DESKTOP_HANDOFF_DETERMINISTIC_DESIGN.md` (attempt + complete ack + polling status).
+- [x] Добавить deterministic handoff smoke (happy path + timeout path).
 - [ ] Повторить desktop voice checkpoint 15m на test после стабилизации handoff flow.
 - [ ] Зафиксировать evidence в `docs/status/TEST_RESULTS.md` и обновить runbook секцию auth desktop handoff.

@@ -116,7 +116,9 @@ const endpoints = {
   authRefresh: "/v1/auth/refresh",
   authLogout: "/v1/auth/logout",
   authDesktopHandoff: "/v1/auth/desktop-handoff",
+  authDesktopHandoffAttempt: "/v1/auth/desktop-handoff/attempt",
   authDesktopHandoffExchange: "/v1/auth/desktop-handoff/exchange",
+  authDesktopHandoffComplete: "/v1/auth/desktop-handoff/complete",
   me: "/v1/auth/me",
   wsTicket: "/v1/auth/ws-ticket",
   livekitToken: "/v1/auth/livekit-token",
@@ -153,6 +155,23 @@ export const api = {
   ssoSession: () => fetchJson<{ authenticated: boolean; token: string | null; user: User | null }>(endpoints.ssoSession),
   authRefresh: (token: string) => fetchJson<{ token: string; user: User | null }>(endpoints.authRefresh, token, withJsonBody("POST")),
   authLogout: (token: string) => fetchJson<{ ok: true }>(endpoints.authLogout, token, withJsonBody("POST")),
+  desktopHandoffAttemptCreate: (token: string) =>
+    fetchJson<{ ok: true; attemptId: string; expiresInSec: number }>(
+      endpoints.authDesktopHandoffAttempt,
+      token,
+      withJsonBody("POST")
+    ),
+  desktopHandoffAttemptStatus: (token: string, attemptId: string) =>
+    fetchJson<{ status: "pending" | "completed" | "expired" }>(
+      `${endpoints.authDesktopHandoffAttempt}/${encodeURIComponent(attemptId)}`,
+      token
+    ),
+  desktopHandoffComplete: (token: string, attemptId: string) =>
+    fetchJson<{ ok?: true; status: "completed" | "expired" }>(
+      endpoints.authDesktopHandoffComplete,
+      token,
+      withJsonBody("POST", { attemptId })
+    ),
   desktopHandoffCreate: (token: string) =>
     fetchJson<{ ok: true; code: string; expiresInSec: number }>(endpoints.authDesktopHandoff, token, withJsonBody("POST")),
   desktopHandoffExchange: (code: string) =>
