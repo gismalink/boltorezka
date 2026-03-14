@@ -2,6 +2,26 @@
 
 Отдельный журнал результатов тестов/нагрузки.
 
+## 2026-03-14 — Cycle #36 (Desktop screenshare gate diagnostics)
+
+- Environment: `test` (`https://test.boltorezka.gismalink.art`)
+- Build ref: `origin/feature/electron-desktop-foundation` (`0e53086`)
+
+### Functional gate
+
+- `SMOKE_TEST_BEARER_TOKEN=<server smoke token> SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art SMOKE_ROOM_SLUG=general npm run smoke:desktop:screenshare`: SKIP
+  - reason: screen share control remains disabled in desktop runtime (`secondary rtc-placeholder-btn`)
+
+### Scope covered by this cycle
+
+- Добавлен automation probe для screen share control path с диагностикой disabled-state.
+- Подтвержден blocker для M2 `Screen share start/stop`: в текущем test контуре control недоступен, вероятно из-за `roomVoiceConnected=false`/room policy.
+
+### Decision
+
+- Cycle #36: SKIP (blocked).
+- Требуется отдельная отладка RTC/session policy для включения screen share control.
+
 ## 2026-03-14 — Cycle #35 (Desktop media controls smoke)
 
 - Environment: `test` (`https://test.boltorezka.gismalink.art`)

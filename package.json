@@ -36,6 +36,7 @@
     "smoke:desktop:handoff:soak": "node ./scripts/smoke/smoke-desktop-handoff-soak.mjs",
     "smoke:desktop:handoff:browser-soak": "node ./scripts/smoke/smoke-desktop-handoff-browser-soak.mjs",
     "smoke:desktop:media-controls": "node ./scripts/smoke/smoke-desktop-media-controls.mjs",
+    "smoke:desktop:screenshare": "node ./scripts/smoke/smoke-desktop-screenshare.mjs",
     "smoke:api": "node ./scripts/smoke/smoke-api.mjs",
     "smoke:auth:session": "node ./scripts/smoke/smoke-auth-session.mjs",
     "smoke:auth:cookie-mode": "node ./scripts/smoke/smoke-auth-cookie-mode.mjs",

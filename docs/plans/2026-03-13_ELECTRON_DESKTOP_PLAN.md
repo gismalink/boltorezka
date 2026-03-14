@@ -316,6 +316,11 @@ Progress note (2026-03-14, desktop media controls automation):
 - Сценарий выполняет authenticated desktop session через handoff/exchange, затем проверяет `mic/audio` toggle state transitions и device-menu flows (`input/output/camera`).
 - Test evidence: PASS (`docs/status/TEST_RESULTS.md`, Cycle #35).
 
+Progress note (2026-03-14, screenshare gate diagnostics):
+- Добавлен smoke `scripts/smoke/smoke-desktop-screenshare.mjs` и команда `npm run smoke:desktop:screenshare`.
+- На test (`roomSlug=general`) сценарий стабильно фиксирует disabled-state для screen share control и возвращает diagnostic SKIP.
+- Evidence: `docs/status/TEST_RESULTS.md` (Cycle #36, blocked by control disabled).
+
 ## 11) Known Follow-ups
 
 - [x] Провести browser-level handoff soak (Chromium/WebKit/Firefox) поверх уже закрытого protocol-level soak и приложить агрегированное evidence к auth runbook.
