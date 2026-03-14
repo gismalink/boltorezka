@@ -2,6 +2,30 @@
 
 Отдельный журнал результатов тестов/нагрузки.
 
+## 2026-03-14 — Cycle #35 (Desktop media controls smoke)
+
+- Environment: `test` (`https://test.boltorezka.gismalink.art`)
+- Build ref: `origin/feature/electron-desktop-foundation` (`800b338`)
+
+### Functional gate
+
+- `SMOKE_TEST_BEARER_TOKEN=<server smoke token> SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art npm run smoke:desktop:media-controls`: PASS
+  - `micStateTransition=1 -> 0`
+  - `audioStateTransition=0 -> 1`
+  - `inputOptionsCount=7`
+  - `outputOptionsCount=6`
+  - `cameraOptionsCount=2`
+
+### Scope covered by this cycle
+
+- Подтвержден рабочий desktop path для media controls: mic/audio toggles и меню выбора input/output/camera устройств.
+- Проверен authenticated desktop runtime через browser-first handoff + exchange в рамках smoke сценария.
+
+### Decision
+
+- Cycle #35: PASS.
+- Подготовлен automation baseline для M2 пункта `Mute/unmute + input/output switch`.
+
 ## 2026-03-14 — Cycle #34 (Desktop build metadata propagation)
 
 - Environment: `local build pipeline` (desktop package -> web renderer build)

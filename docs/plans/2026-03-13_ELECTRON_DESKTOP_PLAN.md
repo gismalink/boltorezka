@@ -130,7 +130,7 @@ Runbook:
 Desktop smoke (must pass):
 - [x] Startup + auth flow.
 - [x] Join room + voice handshake.
-- [ ] Mute/unmute + input/output switch.
+- [x] Mute/unmute + input/output switch.
 - [ ] Screen share start/stop.
 - [ ] Forced app update path (version mismatch) и корректный recovery.
 
@@ -310,6 +310,11 @@ Progress note (2026-03-14, build version/SHA unification):
 Progress note (2026-03-14, desktop artifacts CI):
 - Добавлен workflow `.github/workflows/desktop-artifacts.yml` с matrix `macos-latest` + `windows-latest`.
 - Pipeline собирает unpacked desktop artifacts (`npm --prefix apps/desktop-electron run build`) и публикует их через `actions/upload-artifact`.
+
+Progress note (2026-03-14, desktop media controls automation):
+- Добавлен smoke `scripts/smoke/smoke-desktop-media-controls.mjs` и команда `npm run smoke:desktop:media-controls`.
+- Сценарий выполняет authenticated desktop session через handoff/exchange, затем проверяет `mic/audio` toggle state transitions и device-menu flows (`input/output/camera`).
+- Test evidence: PASS (`docs/status/TEST_RESULTS.md`, Cycle #35).
 
 ## 11) Known Follow-ups
 
