@@ -92,7 +92,7 @@ Definition of done:
 ### 4.1 Repository and build
 - [x] Добавить `apps/desktop-electron/package.json` + build scripts.
 - [x] Добавить корневые команды (например `desktop:dev`, `desktop:build`).
-- [ ] Настроить единый app version/build SHA для renderer + desktop package.
+- [x] Настроить единый app version/build SHA для renderer + desktop package.
 - [ ] Добавить CI jobs для desktop artifacts.
 
 ### 4.2 Electron security
@@ -301,6 +301,11 @@ Progress note (2026-03-14, handoff browser-level soak):
 Progress note (2026-03-14, M2 voice parity checklist alignment):
 - На базе Cycle #31 (`smoke:desktop:voice-checkpoint:15m` PASS) и ранее собранных desktop RTC evidence отмечены как закрытые пункты `Voice connect/disconnect parity` и `Join room + voice handshake`.
 - Следующие M2 focus-пункты остаются: `Mute/unmute + input/output switch`, `Screen share start/stop`, `2h stability`.
+
+Progress note (2026-03-14, build version/SHA unification):
+- Для desktop pipeline добавлен `apps/desktop-electron/scripts/build-renderer.cjs`, который прокидывает `VITE_APP_VERSION` из desktop package version и `VITE_APP_BUILD_SHA` (env/git SHA) в renderer build.
+- `apps/desktop-electron/package.json` синхронизирован до `version=0.2.0`; `build:renderer` переведен на новый orchestrator.
+- Validation: `npm --prefix apps/desktop-electron run build:renderer` PASS, в логе: `VITE_APP_VERSION=0.2.0`, `VITE_APP_BUILD_SHA=1d7c504`.
 
 ## 11) Known Follow-ups
 

@@ -1,14 +1,14 @@
 {
   "name": "boltorezka-desktop",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Electron desktop shell for Boltorezka",
   "author": "Boltorezka Team",
   "main": "src/main.cjs",
   "scripts": {
     "dev": "concurrently -k -n WEB,DESKTOP -c cyan,green \"npm --prefix ../web run dev -- --host 127.0.0.1 --port 5173\" \"wait-on tcp:127.0.0.1:5173 && cross-env ELECTRON_RENDERER_URL=http://127.0.0.1:5173 electron .\"",
     "start": "electron .",
-    "build:renderer": "npm --prefix ../web run build",
+    "build:renderer": "node ./scripts/build-renderer.cjs",
     "build": "npm run build:renderer && electron-builder --dir",
     "dist": "npm run build:renderer && electron-builder"
   },

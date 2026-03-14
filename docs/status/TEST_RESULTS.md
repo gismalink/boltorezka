@@ -2,6 +2,27 @@
 
 Отдельный журнал результатов тестов/нагрузки.
 
+## 2026-03-14 — Cycle #34 (Desktop build metadata propagation)
+
+- Environment: `local build pipeline` (desktop package -> web renderer build)
+- Build ref: `origin/feature/electron-desktop-foundation` (`1d7c504` during run)
+
+### Functional gate
+
+- `npm --prefix apps/desktop-electron run build:renderer`: PASS
+  - `VITE_APP_VERSION=0.2.0`
+  - `VITE_APP_BUILD_SHA=1d7c504`
+  - `VITE_APP_BUILD_DATE=2026-03-14`
+
+### Scope covered by this cycle
+
+- Подтвержден единый build metadata path для desktop+renderer: desktop package version и build SHA синхронно попадают в web bundle при desktop build.
+
+### Decision
+
+- Cycle #34: PASS.
+- Checklist `4.1 / version+build SHA` может быть закрыт.
+
 ## 2026-03-14 — Cycle #33 (Desktop handoff browser-level soak)
 
 - Environment: `test` (`https://test.boltorezka.gismalink.art`)
