@@ -119,7 +119,7 @@ Runbook:
 ### 4.5 Observability
 - [x] Добавить desktop telemetry labels (platform, app channel, app version).
 - [x] Добавить сбор crash/report артефактов.
-- [ ] Обновить дашборд/логи для desktop-сессий.
+- [x] Обновить дашборд/логи для desktop-сессий.
 
 ## 5) QA matrix и smoke
 
@@ -342,6 +342,11 @@ Progress note (2026-03-15, forced app update smoke):
 - Добавлен smoke `scripts/smoke/smoke-web-version-mismatch-browser.mjs` и root command `npm run smoke:web:version-mismatch:browser`.
 - На test подтвержден flow `version mismatch -> reload -> app updated overlay -> continue/recovery`.
 - Evidence зафиксирован в `docs/status/TEST_RESULTS.md` (Cycle #38).
+
+Progress note (2026-03-15, desktop observability counters):
+- В `apps/api/src/routes/telemetry.ts` добавлены агрегаты runtime/platform для desktop-сессий в `ws:metrics:<day>`.
+- `GET /v1/telemetry/summary` расширен полями `telemetry_runtime_*`, `telemetry_desktop_platform_*`, `telemetry_desktop_electron_version_present`.
+- Документация матрицы smoke/CI обновлена (`docs/operations/SMOKE_CI_MATRIX.md`) для dashboard/log consumption этих метрик.
 
 ## 11) Known Follow-ups
 

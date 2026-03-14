@@ -90,6 +90,7 @@ Policy:
 | Desktop SSO externalization baseline (`/v1/auth/sso/start|logout` open in system browser) | `SMOKE_WEB_BASE_URL=<url> npm run smoke:desktop:sso-external` |
 | Client telemetry runtime labels (`runtime`/`platform`/`electronVersion`) | `POST /v1/telemetry/web` payload from `trackClientEvent` |
 | `GET /v1/telemetry/summary` | CI (`SMOKE_TELEMETRY_SUMMARY=1`) |
+| Desktop observability counters in telemetry summary | `GET /v1/telemetry/summary` -> `telemetry_runtime_desktop/web/unknown`, `telemetry_desktop_platform_*`, `telemetry_desktop_electron_version_present` |
 | `POST /v1/room-categories` + `POST /v1/rooms` + `GET /v1/rooms/tree` | API smoke (`SMOKE_API=1`, hierarchy block with cleanup) |
 
 ## 5) Gate policy summary
