@@ -254,6 +254,12 @@ Progress note (2026-03-14, auth UX/session consistency):
 - Убрано auto-join поведение в `general`: пользователь попадает в канал только если он был сохранен ранее.
 - Test rollout evidence: SHA `b3177e0eec6c577ae988b0f86763ed67b6ef7b60` в `test` (feature `origin/feature/electron-desktop-foundation`).
 
+Progress note (2026-03-14, RTC reconnect/state stabilization):
+- Исправлен transient RTC/regression UX после multi-client входов: realtime-presence reset теперь выполняется только при `wsState=disconnected` (не на `connecting`).
+- Для voice-enabled комнат включено удержание RTC transport даже при временном отсутствии peer-целей (`keepConnectedWithoutTargets=true`), чтобы исключить ложные состояния "Нет RTC-соединения" после churn/reconnect.
+- Локальный RTC статус пользователя теперь отражается при активном подключении независимо от количества peer-целей.
+- Validation: `npm --prefix apps/web run build` PASS, `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art npm run smoke:desktop:sso-external` PASS.
+
 ## 11) Known Follow-ups
 
 - [ ] Заменить timer-based browser fallback после deep-link (`startDesktopBrowserHandoff`) на детерминированный handoff completion protocol (без таймера), чтобы исключить race-condition между `boltorezka://` и browser redirect.

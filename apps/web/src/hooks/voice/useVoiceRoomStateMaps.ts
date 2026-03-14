@@ -123,7 +123,7 @@ export function useVoiceRoomStateMaps({
       }
     });
 
-    if (roomVoiceConnected && userId && roomVoiceTargetsCount > 0) {
+    if (roomVoiceConnected && userId) {
       if (callStatus === "active") {
         statusByUserId[userId] = "connected";
       } else if (callStatus === "connecting" || callStatus === "ringing") {

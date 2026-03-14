@@ -21,7 +21,9 @@ export function useRealtimeConnectionReset({
   setVoiceInitialAudioOutputMutedByUserIdInCurrentRoom
 }: UseRealtimeConnectionResetArgs) {
   useEffect(() => {
-    if (wsState === "connected") {
+    // Preserve live presence/topology while transport is reconnecting.
+    // Clear only after a confirmed disconnected state.
+    if (wsState !== "disconnected") {
       return;
     }
 

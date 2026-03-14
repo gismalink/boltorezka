@@ -1493,8 +1493,9 @@ export function App() {
     currentRoomSupportsRtc: currentRoomSupportsRtc && !showAppUpdatedOverlay,
     roomVoiceTargetsCount: currentRoomVoiceTargets.length,
     roomVoiceConnected,
-    // Keep established LiveKit sessions alive across short presence/ws flaps.
-    keepConnectedWithoutTargets: (allowVideoStreaming && cameraEnabled) || roomVoiceConnected,
+    // Keep RTC transport attached while user stays in a voice-enabled room.
+    // This avoids false "no RTC" states during presence churn and multi-client switches.
+    keepConnectedWithoutTargets: true,
     connectRoom,
     disconnectRoom
   });
