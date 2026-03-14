@@ -260,6 +260,13 @@ Progress note (2026-03-14, RTC reconnect/state stabilization):
 - Локальный RTC статус пользователя теперь отражается при активном подключении независимо от количества peer-целей.
 - Validation: `npm --prefix apps/web run build` PASS, `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art npm run smoke:desktop:sso-external` PASS.
 
+Progress note (2026-03-14, manual RTC/sleep-wake checkpoint):
+- После rollout `c745f06` на test выполнен практический прогон desktop runtime в реальном использовании:
+	- RTC/media соединение подтверждено в Electron.
+	- Аудио (включая наушники) и камера сохраняются при unfocused/minimized окне.
+	- После sleep наблюдается временный video disconnect с последующим корректным восстановлением после wake.
+- Evidence зафиксирован в `docs/status/TEST_RESULTS.md` (Cycle #28, manual PASS).
+
 ## 11) Known Follow-ups
 
 - [ ] Заменить timer-based browser fallback после deep-link (`startDesktopBrowserHandoff`) на детерминированный handoff completion protocol (без таймера), чтобы исключить race-condition между `boltorezka://` и browser redirect.

@@ -2,6 +2,28 @@
 
 Отдельный журнал результатов тестов/нагрузки.
 
+## 2026-03-14 — Cycle #28 (Desktop manual RTC checkpoint after multi-client fix)
+
+- Environment: `test` (`https://test.boltorezka.gismalink.art`)
+- Build ref: `origin/feature/electron-desktop-foundation` (`c745f06`)
+
+### Functional gate
+
+- Manual desktop/web verification after RTC multi-client stabilization rollout:
+  - Соединение устанавливается и держится в desktop runtime.
+  - Аудио (в т.ч. наушники) и камера работают при unfocused/minimized Electron window.
+  - После sleep видео-соединение кратковременно разрывается и корректно восстанавливается после wake.
+
+### Scope covered by this cycle
+
+- Подтверждена практическая работоспособность ключевого M2 сценария реального использования (desktop не в фокусе + sleep/wake recovery) на test.
+- Подтверждено, что последние фиксы reconnect/state не ломают media path в ручном checkpoint.
+
+### Decision
+
+- Cycle #28: PASS (manual checkpoint).
+- Остается формальный 15-minute voice automation checkpoint как отдельный evidence gate.
+
 ## 2026-03-13 — Cycle #27 (Desktop SSO externalization gate)
 
 - Environment: `test` (`https://test.boltorezka.gismalink.art`)
