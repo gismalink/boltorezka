@@ -2,6 +2,31 @@
 
 Отдельный журнал результатов тестов/нагрузки.
 
+## 2026-03-14 — Cycle #33 (Desktop handoff browser-level soak)
+
+- Environment: `test` (`https://test.boltorezka.gismalink.art`)
+- Build ref: `origin/feature/electron-desktop-foundation` (`dbe678a`)
+
+### Functional gate
+
+- `SMOKE_TEST_BEARER_TOKEN=<server smoke token> SMOKE_API_URL=https://test.boltorezka.gismalink.art SMOKE_DESKTOP_HANDOFF_BROWSER_SOAK_CYCLES=20 npm run smoke:desktop:handoff:browser-soak`: PASS
+  - `totalCycles=20`
+  - `elapsedMs=29960`
+  - Chromium: `7` cycles, stable user identity
+  - WebKit: `7` cycles, stable user identity
+  - Firefox: `6` cycles, stable user identity
+  - state transition: `pending->completed` (все циклы)
+
+### Scope covered by this cycle
+
+- Закрыт browser-level soak follow-up для deterministic handoff протокола на трех движках (Chromium/WebKit/Firefox).
+- Подтверждена воспроизводимость handoff flow без race на уровне browser fetch/polling path.
+
+### Decision
+
+- Cycle #33: PASS.
+- Handoff deterministic follow-up закрыт.
+
 ## 2026-03-14 — Cycle #32 (Desktop handoff soak 20 cycles)
 
 - Environment: `test` (`https://test.boltorezka.gismalink.art`)

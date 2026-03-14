@@ -293,9 +293,14 @@ Progress note (2026-03-14, handoff soak 20 cycles):
 - Выполнен soak на test: `SMOKE_DESKTOP_HANDOFF_SOAK_CYCLES=20` -> PASS (`elapsedMs=15003`, state transition `pending->completed` во всех циклах).
 - Evidence зафиксирован в `docs/status/TEST_RESULTS.md` (Cycle #32).
 
+Progress note (2026-03-14, handoff browser-level soak):
+- Добавлен smoke `scripts/smoke/smoke-desktop-handoff-browser-soak.mjs` и команда `npm run smoke:desktop:handoff:browser-soak`.
+- Выполнен cross-browser soak на test (Chromium/WebKit/Firefox, суммарно 20 циклов): PASS.
+- Evidence зафиксирован в `docs/status/TEST_RESULTS.md` (Cycle #33).
+
 ## 11) Known Follow-ups
 
-- [ ] Провести browser-level handoff soak (Chromium/WebKit/Firefox) поверх уже закрытого protocol-level soak и приложить агрегированное evidence к auth runbook.
+- [x] Провести browser-level handoff soak (Chromium/WebKit/Firefox) поверх уже закрытого protocol-level soak и приложить агрегированное evidence к auth runbook.
 	- Дизайн: `docs/plans/2026-03-14_DESKTOP_HANDOFF_DETERMINISTIC_DESIGN.md`.
 
 ## 12) Checklist continuation (2026-03-14)

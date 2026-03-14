@@ -34,6 +34,7 @@
     "smoke:desktop:sso-external": "node ./scripts/smoke/smoke-desktop-sso-external.mjs",
     "smoke:desktop:handoff-deterministic": "node ./scripts/smoke/smoke-desktop-handoff-deterministic.mjs",
     "smoke:desktop:handoff:soak": "node ./scripts/smoke/smoke-desktop-handoff-soak.mjs",
+    "smoke:desktop:handoff:browser-soak": "node ./scripts/smoke/smoke-desktop-handoff-browser-soak.mjs",
     "smoke:api": "node ./scripts/smoke/smoke-api.mjs",
     "smoke:auth:session": "node ./scripts/smoke/smoke-auth-session.mjs",
     "smoke:auth:cookie-mode": "node ./scripts/smoke/smoke-auth-cookie-mode.mjs",

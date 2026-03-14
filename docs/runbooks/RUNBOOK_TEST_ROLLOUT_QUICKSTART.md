@@ -58,6 +58,10 @@
 
 - `TOKEN="$(ssh mac-mini "cd ~/srv/boltorezka && set -a && source .deploy/smoke-auth.env && set +a && printf '%s' \"\$SMOKE_TEST_BEARER_TOKEN\"")" && SMOKE_TEST_BEARER_TOKEN="$TOKEN" SMOKE_API_URL=https://test.boltorezka.gismalink.art SMOKE_DESKTOP_HANDOFF_SOAK_CYCLES=20 npm run smoke:desktop:handoff:soak`
 
+4) Browser-level soak на трех движках (Chromium/WebKit/Firefox):
+
+- `TOKEN="$(ssh mac-mini "cd ~/srv/boltorezka && set -a && source .deploy/smoke-auth.env && set +a && printf '%s' \"\$SMOKE_TEST_BEARER_TOKEN\"")" && SMOKE_TEST_BEARER_TOKEN="$TOKEN" SMOKE_API_URL=https://test.boltorezka.gismalink.art SMOKE_DESKTOP_HANDOFF_BROWSER_SOAK_CYCLES=20 npm run smoke:desktop:handoff:browser-soak`
+
 Ожидаемый PASS:
 
 - `attemptStatusBeforeComplete=pending`
