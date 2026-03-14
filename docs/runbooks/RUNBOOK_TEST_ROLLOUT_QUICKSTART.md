@@ -42,6 +42,24 @@
 
 - `ssh mac-mini 'cd ~/srv/boltorezka && docker compose -f infra/docker-compose.host.yml --env-file infra/.env.host ps && docker compose -f infra/docker-compose.host.yml --env-file infra/.env.host logs --tail=120 boltorezka-api-test'`
 
+## Desktop auth handoff (deterministic) quick check
+
+После rollout рекомендуется отдельный regression gate для browser->desktop handoff protocol:
+
+1) Обновить smoke users/tokens на сервере:
+
+- `ssh mac-mini 'cd ~/srv/boltorezka && SMOKE_AUTH_COMPOSE_FILE=infra/docker-compose.host.yml SMOKE_AUTH_ENV_FILE=infra/.env.host SMOKE_AUTH_POSTGRES_SERVICE=boltorezka-db-test SMOKE_AUTH_API_SERVICE=boltorezka-api-test SMOKE_API_URL=https://test.boltorezka.gismalink.art bash ./scripts/smoke/smoke-auth-bootstrap.sh'`
+
+2) Запустить deterministic handoff smoke локально с токеном из серверного env:
+
+- `TOKEN="$(ssh mac-mini "cd ~/srv/boltorezka && set -a && source .deploy/smoke-auth.env && set +a && printf '%s' \"\$SMOKE_TEST_BEARER_TOKEN\"")" && SMOKE_TEST_BEARER_TOKEN="$TOKEN" SMOKE_API_URL=https://test.boltorezka.gismalink.art npm run smoke:desktop:handoff-deterministic`
+
+Ожидаемый PASS:
+
+- `attemptStatusBeforeComplete=pending`
+- `attemptStatusAfterComplete=completed`
+- `timeoutPathStatus=expired`
+
 ### One-command альтернатива (deploy + smoke)
 
 Используй команду из шага 3 (`deploy:test:smoke`) как единый запуск deploy+smoke.

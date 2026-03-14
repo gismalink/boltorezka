@@ -277,9 +277,15 @@ Progress note (2026-03-14, deterministic handoff smoke phase 2 start):
 - Добавлен smoke `scripts/smoke/smoke-desktop-handoff-deterministic.mjs` и root command `npm run smoke:desktop:handoff-deterministic` (happy path + timeout/expired path на attempt protocol).
 - Для локального прогона требуется `SMOKE_TEST_BEARER_TOKEN`; при его отсутствии smoke корректно завершает работу с явной подсказкой по env.
 
+Progress note (2026-03-14, deterministic handoff phase 2 test evidence):
+- Выполнен test rollout ветки `origin/feature/electron-desktop-foundation` (SHA `dbe678a`) через `deploy:test:smoke`: PASS.
+- Выполнен `smoke:desktop:handoff-deterministic` на test с server-generated smoke token: PASS (`pending -> completed`, timeout-path=`expired`).
+- Evidence зафиксирован в `docs/status/TEST_RESULTS.md` (Cycle #30).
+- Runbook quickstart обновлен секцией deterministic handoff smoke (`docs/runbooks/RUNBOOK_TEST_ROLLOUT_QUICKSTART.md`).
+
 ## 11) Known Follow-ups
 
-- [ ] Закрыть deterministic handoff Phase 2: добавить отдельный smoke (happy path + timeout path) и обновить auth runbook секцию handoff.
+- [ ] Провести короткий cross-browser handoff soak (20 последовательных входов) и приложить агрегированное evidence к auth runbook.
 	- Дизайн: `docs/plans/2026-03-14_DESKTOP_HANDOFF_DETERMINISTIC_DESIGN.md`.
 
 ## 12) Checklist continuation (2026-03-14)
@@ -288,4 +294,4 @@ Progress note (2026-03-14, deterministic handoff smoke phase 2 start):
 - [x] Реализовать Phase 1 из `2026-03-14_DESKTOP_HANDOFF_DETERMINISTIC_DESIGN.md` (attempt + complete ack + polling status).
 - [x] Добавить deterministic handoff smoke (happy path + timeout path).
 - [ ] Повторить desktop voice checkpoint 15m на test после стабилизации handoff flow.
-- [ ] Зафиксировать evidence в `docs/status/TEST_RESULTS.md` и обновить runbook секцию auth desktop handoff.
+- [x] Зафиксировать evidence в `docs/status/TEST_RESULTS.md` и обновить runbook секцию auth desktop handoff.

@@ -2,6 +2,30 @@
 
 Отдельный журнал результатов тестов/нагрузки.
 
+## 2026-03-14 — Cycle #30 (Deterministic handoff smoke on test rollout)
+
+- Environment: `test` (`https://test.boltorezka.gismalink.art`)
+- Build ref: `origin/feature/electron-desktop-foundation` (`dbe678a`)
+
+### Functional gate
+
+- Rollout: `ssh mac-mini 'cd ~/srv/boltorezka && TEST_REF=origin/feature/electron-desktop-foundation npm run deploy:test:smoke'`: PASS
+- Deterministic handoff smoke:
+  - `SMOKE_TEST_BEARER_TOKEN=<server smoke token> SMOKE_API_URL=https://test.boltorezka.gismalink.art npm run smoke:desktop:handoff-deterministic`: PASS
+  - `attemptStatusBeforeComplete=pending`
+  - `attemptStatusAfterComplete=completed`
+  - `timeoutPathStatus=expired`
+
+### Scope covered by this cycle
+
+- Подтверждена работоспособность `attempt/status/complete` протокола после реального test rollout.
+- Подтверждено отсутствие регрессии в базовом postdeploy smoke наборе test-контура.
+
+### Decision
+
+- Cycle #30: PASS.
+- Deterministic handoff Phase 2 automation/evidence закрыт.
+
 ## 2026-03-14 — Cycle #29 (Deterministic handoff phase 1 regression check)
 
 - Environment: `test` (`https://test.boltorezka.gismalink.art`)
