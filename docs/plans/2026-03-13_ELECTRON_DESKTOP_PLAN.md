@@ -14,10 +14,10 @@
 In scope (MVP):
 - [ ] Запуск Boltorezka как standalone desktop app (macOS + Windows).
 - [x] Auth flow (SSO/login/logout) без деградации текущего web-поведения.
-- [ ] Voice/video/screen share в parity с web.
-- [ ] Выбор input/output устройств, mute/unmute, reconnect behavior.
+- [x] Voice/video/screen share в parity с web (для текущего web-hosted desktop shell на test).
+- [x] Выбор input/output устройств, mute/unmute, reconnect behavior.
 - [ ] Автообновления desktop-клиента (test/prod каналы).
-- [ ] Базовые crash/log артефакты для диагностики.
+- [x] Базовые crash/log артефакты для диагностики.
 
 Out of scope (v1.1+):
 - [ ] Tray-first UX и background call mode.
@@ -61,13 +61,13 @@ Definition of done:
 
 ### M2 - RTC/media parity
 - [x] Voice connect/disconnect parity с web.
-- [ ] Device switch (input/output) работает стабильно.
-- [ ] Camera + screen share работают в desktop.
-- [ ] Long-session stability (минимум 2 часа) без критичных деградаций.
+- [x] Device switch (input/output) работает стабильно.
+- [x] Camera + screen share работают в desktop.
+- [ ] Long-session stability (минимум 2 часа) без критичных деградаций (deferred на standalone packaged gate).
 
 Definition of done:
-- [ ] Пройден desktop smoke сценарий для RTC.
-- [ ] Нет блокирующих regressions относительно web baseline.
+- [x] Пройден desktop smoke сценарий для RTC.
+- [x] Нет блокирующих regressions относительно web baseline.
 
 ### M3 - Update/release channel
 - [ ] Настроены каналы auto-update: test и prod.
@@ -105,7 +105,7 @@ Definition of done:
 - [ ] Проверить media permissions на macOS и Windows.
 - [x] Проверить reconnect при network flap.
 - [x] Проверить поведение после sleep/wake ноутбука.
-- [ ] Проверить длительную сессию + переключения девайсов.
+- [x] Проверить длительную сессию + переключения девайсов (15m/30m practical gates).
 
 Runbook:
 - `docs/runbooks/DESKTOP_SLEEP_WAKE_RUNBOOK.md`
@@ -136,17 +136,17 @@ Desktop smoke (must pass):
 
 ## 6) GitOps rollout policy (desktop)
 
-- [ ] Все задачи делаются в feature-ветках.
-- [ ] В test деплоится конкретная feature/main ветка, только через scripted flow.
-- [ ] Перед prod desktop-release: merge в main -> test gate -> smoke -> явное подтверждение -> prod.
-- [ ] Без ручных правок на сервере, только через git + GitOps.
+- [x] Все задачи делаются в feature-ветках.
+- [x] В test деплоится конкретная feature/main ветка, только через scripted flow.
+- [x] Перед prod desktop-release: merge в main -> test gate -> smoke -> явное подтверждение -> prod.
+- [x] Без ручных правок на сервере, только через git + GitOps.
 
 ## 7) Риски и mitigation
 
 Риск: расхождение web и desktop поведения media APIs.
 - Mitigation:
 - [ ] Ранний cross-platform soak на M2.
-- [ ] Desktop-specific telemetry и быстрый rollback channel.
+- [x] Desktop-specific telemetry и быстрый rollback channel.
 
 Риск: сложность code signing/notarization и задержка релиза.
 - Mitigation:

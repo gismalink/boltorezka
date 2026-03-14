@@ -2,6 +2,34 @@
 
 Отдельный журнал результатов тестов/нагрузки.
 
+## 2026-03-15 — Cycle #41 (Postdeploy rerun flake migrated to RNNoise browser smoke)
+
+- Environment: `test` (`https://test.boltorezka.gismalink.art`)
+- Build ref: `origin/feature/electron-desktop-foundation` (`843c2df`)
+
+### Functional gate
+
+- Server postdeploy rerun:
+  - `ssh mac-mini 'cd ~/srv/boltorezka && SMOKE_FETCH_RETRIES=8 SMOKE_FETCH_TIMEOUT_MS=20000 SMOKE_FETCH_RETRY_DELAY_MS=2500 SMOKE_REALTIME_RETRIES=4 SMOKE_REALTIME_RETRY_DELAY_MS=3000 ./scripts/deploy/postdeploy-smoke-test.sh'`: PARTIAL
+  - `smoke:sso`: PASS
+  - `smoke:api`: PASS
+  - `smoke:auth:session`: PASS
+  - `smoke:auth:cookie-negative`: PASS
+  - `smoke:auth:cookie-ws-ticket`: PASS
+  - `smoke:web:version-cache`: PASS (`sha=843c2dfc75708c4d9d2a977f2f0055c954341f70`)
+  - `smoke:web:crash-boundary:browser`: PASS
+  - `smoke:web:rnnoise:browser`: FAIL (`page.goto: net::ERR_CONNECTION_TIMED_OUT`)
+
+### Scope covered by this cycle
+
+- Подтверждено, что SSO/API/auth + version-cache + crash-boundary smoke остаются green в текущем test контуре.
+- Зафиксирован сетевой флейк на RNNoise browser startup path; функциональная деградация RNNoise flow на уровне приложения не подтверждена.
+
+### Decision
+
+- Cycle #41: PARTIAL (transient network timeout in `smoke:web:rnnoise:browser`).
+- Добавлен startup retry hardening в RNNoise smoke script; требуется повторный прогон после rollout нового SHA.
+
 ## 2026-03-15 — Cycle #40 (Postdeploy smoke stabilized after retry-hardening)
 
 - Environment: `test` (`https://test.boltorezka.gismalink.art`)
