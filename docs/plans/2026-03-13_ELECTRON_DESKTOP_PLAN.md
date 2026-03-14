@@ -13,7 +13,7 @@
 
 In scope (MVP):
 - [ ] Запуск Boltorezka как standalone desktop app (macOS + Windows).
-- [ ] Auth flow (SSO/login/logout) без деградации текущего web-поведения.
+- [x] Auth flow (SSO/login/logout) без деградации текущего web-поведения.
 - [ ] Voice/video/screen share в parity с web.
 - [ ] Выбор input/output устройств, mute/unmute, reconnect behavior.
 - [ ] Автообновления desktop-клиента (test/prod каналы).
@@ -128,7 +128,7 @@ Runbook:
 - [ ] Windows 10/11: login, voice, camera, screen share, reconnect.
 
 Desktop smoke (must pass):
-- [ ] Startup + auth flow.
+- [x] Startup + auth flow.
 - [ ] Join room + voice handshake.
 - [ ] Mute/unmute + input/output switch.
 - [ ] Screen share start/stop.
@@ -245,3 +245,24 @@ Progress note (2026-03-13, stability automation):
 Progress note (2026-03-13, SSO externalization gate):
 - Добавлен smoke `scripts/smoke/smoke-desktop-sso-external.mjs` и команда `npm run smoke:desktop:sso-external`.
 - Test evidence: SSO start/logout externalization PASS (`docs/status/TEST_RESULTS.md`, Cycle #27).
+
+Progress note (2026-03-14, auth UX/session consistency):
+- Реализован browser-first desktop handoff с одноразовым кодом (`/v1/auth/desktop-handoff`, `/v1/auth/desktop-handoff/exchange`) и deep-link возвратом в Electron.
+- Logout для desktop стабилизирован: локальный logout path + очистка session state в Electron, без принудительного перехода в browser chat UI.
+- Добавлена browser completion page для desktop login (`desktop_handoff_complete=1`): сообщение об успешной авторизации и безопасное завершение bridge-перехода.
+- Для конфликтов сессий (`ChannelSessionMoved`/`ChannelKicked`) добавлен блокирующий overlay “Приложение открыто в другом месте” + action “Открыть здесь”, чтобы исключить ложную интерактивность каналов.
+- Убрано auto-join поведение в `general`: пользователь попадает в канал только если он был сохранен ранее.
+- Test rollout evidence: SHA `b3177e0eec6c577ae988b0f86763ed67b6ef7b60` в `test` (feature `origin/feature/electron-desktop-foundation`).
+
+## 11) Known Follow-ups
+
+- [ ] Заменить timer-based browser fallback после deep-link (`startDesktopBrowserHandoff`) на детерминированный handoff completion protocol (без таймера), чтобы исключить race-condition между `boltorezka://` и browser redirect.
+	- Дизайн вынесен: `docs/plans/2026-03-14_DESKTOP_HANDOFF_DETERMINISTIC_DESIGN.md`.
+
+## 12) Checklist continuation (2026-03-14)
+
+Ближайший practical order выполнения:
+- [ ] Реализовать Phase 1 из `2026-03-14_DESKTOP_HANDOFF_DETERMINISTIC_DESIGN.md` (attempt + complete ack + polling status).
+- [ ] Добавить deterministic handoff smoke (happy path + timeout path).
+- [ ] Повторить desktop voice checkpoint 15m на test после стабилизации handoff flow.
+- [ ] Зафиксировать evidence в `docs/status/TEST_RESULTS.md` и обновить runbook секцию auth desktop handoff.
