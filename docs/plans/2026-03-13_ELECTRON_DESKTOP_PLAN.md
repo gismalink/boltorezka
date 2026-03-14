@@ -93,7 +93,7 @@ Definition of done:
 - [x] Добавить `apps/desktop-electron/package.json` + build scripts.
 - [x] Добавить корневые команды (например `desktop:dev`, `desktop:build`).
 - [x] Настроить единый app version/build SHA для renderer + desktop package.
-- [ ] Добавить CI jobs для desktop artifacts.
+- [x] Добавить CI jobs для desktop artifacts.
 
 ### 4.2 Electron security
 - [x] Ввести preload-only bridge.
@@ -306,6 +306,10 @@ Progress note (2026-03-14, build version/SHA unification):
 - Для desktop pipeline добавлен `apps/desktop-electron/scripts/build-renderer.cjs`, который прокидывает `VITE_APP_VERSION` из desktop package version и `VITE_APP_BUILD_SHA` (env/git SHA) в renderer build.
 - `apps/desktop-electron/package.json` синхронизирован до `version=0.2.0`; `build:renderer` переведен на новый orchestrator.
 - Validation: `npm --prefix apps/desktop-electron run build:renderer` PASS, в логе: `VITE_APP_VERSION=0.2.0`, `VITE_APP_BUILD_SHA=1d7c504`.
+
+Progress note (2026-03-14, desktop artifacts CI):
+- Добавлен workflow `.github/workflows/desktop-artifacts.yml` с matrix `macos-latest` + `windows-latest`.
+- Pipeline собирает unpacked desktop artifacts (`npm --prefix apps/desktop-electron run build`) и публикует их через `actions/upload-artifact`.
 
 ## 11) Known Follow-ups
 

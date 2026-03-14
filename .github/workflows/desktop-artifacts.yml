@@ -1,0 +1,58 @@
+name: desktop-artifacts
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - feature/**
+    paths:
+      - apps/desktop-electron/**
+      - apps/web/**
+      - .github/workflows/desktop-artifacts.yml
+  pull_request:
+    paths:
+      - apps/desktop-electron/**
+      - apps/web/**
+      - .github/workflows/desktop-artifacts.yml
+
+concurrency:
+  group: desktop-artifacts-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-desktop:
+    name: build-${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install web dependencies
+        run: npm --prefix apps/web ci
+
+      - name: Install desktop dependencies
+        run: npm --prefix apps/desktop-electron ci
+
+      - name: Build desktop unpacked artifact
+        shell: bash
+        run: |
+          APP_BUILD_SHA="${GITHUB_SHA}" npm --prefix apps/desktop-electron run build
+
+      - name: Upload desktop artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-${{ matrix.os }}-${{ github.sha }}
+          path: apps/desktop-electron/dist/**
+          if-no-files-found: error
