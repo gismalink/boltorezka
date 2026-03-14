@@ -60,7 +60,7 @@ Definition of done:
 - [x] Нет критичных security warnings в конфиге Electron.
 
 ### M2 - RTC/media parity
-- [ ] Voice connect/disconnect parity с web.
+- [x] Voice connect/disconnect parity с web.
 - [ ] Device switch (input/output) работает стабильно.
 - [ ] Camera + screen share работают в desktop.
 - [ ] Long-session stability (минимум 2 часа) без критичных деградаций.
@@ -129,7 +129,7 @@ Runbook:
 
 Desktop smoke (must pass):
 - [x] Startup + auth flow.
-- [ ] Join room + voice handshake.
+- [x] Join room + voice handshake.
 - [ ] Mute/unmute + input/output switch.
 - [ ] Screen share start/stop.
 - [ ] Forced app update path (version mismatch) и корректный recovery.
@@ -297,6 +297,10 @@ Progress note (2026-03-14, handoff browser-level soak):
 - Добавлен smoke `scripts/smoke/smoke-desktop-handoff-browser-soak.mjs` и команда `npm run smoke:desktop:handoff:browser-soak`.
 - Выполнен cross-browser soak на test (Chromium/WebKit/Firefox, суммарно 20 циклов): PASS.
 - Evidence зафиксирован в `docs/status/TEST_RESULTS.md` (Cycle #33).
+
+Progress note (2026-03-14, M2 voice parity checklist alignment):
+- На базе Cycle #31 (`smoke:desktop:voice-checkpoint:15m` PASS) и ранее собранных desktop RTC evidence отмечены как закрытые пункты `Voice connect/disconnect parity` и `Join room + voice handshake`.
+- Следующие M2 focus-пункты остаются: `Mute/unmute + input/output switch`, `Screen share start/stop`, `2h stability`.
 
 ## 11) Known Follow-ups
 
