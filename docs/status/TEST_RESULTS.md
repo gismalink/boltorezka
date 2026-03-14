@@ -2,6 +2,33 @@
 
 Отдельный журнал результатов тестов/нагрузки.
 
+## 2026-03-15 — Cycle #39 (Observability counters rollout verification)
+
+- Environment: `test` (`https://test.boltorezka.gismalink.art`)
+- Build ref: `origin/feature/electron-desktop-foundation` (`030b0ec`)
+
+### Functional gate
+
+- Rollout: `ssh mac-mini 'cd ~/srv/boltorezka && bash ./scripts/deploy/deploy-test-and-smoke.sh origin/feature/electron-desktop-foundation "$PWD"'`: PARTIAL
+  - deploy/rebuild: PASS
+  - postdeploy: FAIL (`smoke:realtime` -> `connect ETIMEDOUT 95.165.154.118:443`)
+- Retry postdeploy only: FAIL (тот же `ETIMEDOUT` на `smoke:realtime`)
+- Internal API verification (from API container localhost):
+  - `GET /v1/telemetry/summary` содержит новые поля
+    - `telemetry_runtime_desktop/web/unknown`
+    - `telemetry_desktop_platform_*`
+    - `telemetry_desktop_electron_version_present`
+
+### Scope covered by this cycle
+
+- Подтверждено, что релиз `030b0ec` развернут в test и telemetry summary расширен новыми desktop observability counters.
+- Выявлен внешний сетевой блокер текущего окружения/маршрута к test домену (`curl -I https://test.boltorezka.gismalink.art` -> timeout), влияющий на browser/electron smoke path.
+
+### Decision
+
+- Cycle #39: PARTIAL (observability counters verified, postdeploy realtime blocked by external `ETIMEDOUT`).
+- Требуется стабилизировать сетевую доступность test домена и повторить postdeploy realtime gate.
+
 ## 2026-03-15 — Cycle #38 (Forced app update path: version mismatch -> recovery)
 
 - Environment: `test` (`https://test.boltorezka.gismalink.art`)

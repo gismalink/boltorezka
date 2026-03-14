@@ -348,6 +348,11 @@ Progress note (2026-03-15, desktop observability counters):
 - `GET /v1/telemetry/summary` расширен полями `telemetry_runtime_*`, `telemetry_desktop_platform_*`, `telemetry_desktop_electron_version_present`.
 - Документация матрицы smoke/CI обновлена (`docs/operations/SMOKE_CI_MATRIX.md`) для dashboard/log consumption этих метрик.
 
+Progress note (2026-03-15, observability rollout verification):
+- Выполнен test rollout SHA `030b0ec`; deploy/rebuild прошли.
+- Подтверждена доступность новых summary полей через internal API path (`boltorezka-api-test` localhost).
+- Внешний postdeploy realtime gate нестабилен из-за сетевого `ETIMEDOUT` к `test.boltorezka.gismalink.art:443` (повторяемо в `smoke:realtime`), поэтому цикл зафиксирован как PARTIAL (`docs/status/TEST_RESULTS.md`, Cycle #39).
+
 ## 11) Known Follow-ups
 
 - [x] Провести browser-level handoff soak (Chromium/WebKit/Firefox) поверх уже закрытого protocol-level soak и приложить агрегированное evidence к auth runbook.
