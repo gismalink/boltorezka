@@ -375,3 +375,24 @@ Progress note (2026-03-15, postdeploy gate recovery):
 Checklist continuation (2026-03-15, updated):
 - [x] Добавить и прогнать автоматизированный smoke для `Forced app update path` (version mismatch -> reload/overlay recovery).
 - [x] Зафиксировать practical stability policy в runbook desktop test gates (`15-30m` per iteration, `2h` only for standalone release gate).
+
+## 13) Pre-merge snapshot (2026-03-15)
+
+Текущее состояние ветки `feature/electron-desktop-foundation` перед merge в `main`.
+
+Green now (test-validated):
+- Desktop auth/handoff/session consistency (browser-first handoff + deterministic protocol).
+- RTC base parity для текущего web-hosted desktop shell: join/voice handshake, reconnect, media controls, screen share start/stop.
+- Forced app update/recovery path (version mismatch -> reload -> overlay continue).
+- Desktop observability counters в telemetry summary (`telemetry_runtime_*`, `telemetry_desktop_platform_*`).
+- Server-side postdeploy smoke восстановлен в full PASS после anti-flake hardening (Cycle #40).
+
+Deferred to standalone packaged release gate:
+- 2h long-run stability soak.
+- Full cross-platform matrix sign-off (macOS Intel/Apple Silicon + Windows 10/11) как release-grade evidence.
+- Auto-update channel orchestration + signing/notarization + rollback runbook verification.
+
+Open for prod-readiness (после merge в `main`):
+- Merge ветки в `main` и повторный test gate уже из `origin/main`.
+- Pre-prod checklist completion (`M4` раздел, owners/rollback refs/sign-off).
+- Controlled prod rollout только после явного подтверждения.
