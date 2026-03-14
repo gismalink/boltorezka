@@ -1,6 +1,6 @@
 const path = require("path");
 const fs = require("fs");
-const { app, BrowserWindow, shell } = require("electron");
+const { app, BrowserWindow, shell, desktopCapturer } = require("electron");
 
 const isDev = !app.isPackaged;
 const rendererUrl = process.env.ELECTRON_RENDERER_URL || "http://127.0.0.1:5173";
@@ -166,6 +166,26 @@ function createMainWindow() {
   window.webContents.setWindowOpenHandler(({ url }) => {
     openExternal(url);
     return { action: "deny" };
+  });
+
+  window.webContents.session.setDisplayMediaRequestHandler(async (_request, callback) => {
+    try {
+      const sources = await desktopCapturer.getSources({
+        types: ["screen", "window"],
+        thumbnailSize: { width: 0, height: 0 }
+      });
+
+      if (!Array.isArray(sources) || sources.length === 0) {
+        callback({ video: null, audio: null });
+        return;
+      }
+
+      callback({ video: sources[0], audio: null });
+    } catch {
+      callback({ video: null, audio: null });
+    }
+  }, {
+    useSystemPicker: true
   });
 
   const handleDesktopLocalLogoutNavigation = (url) => {

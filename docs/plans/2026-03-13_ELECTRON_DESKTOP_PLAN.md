@@ -321,6 +321,11 @@ Progress note (2026-03-14, screenshare gate diagnostics):
 - На test (`roomSlug=general`) сценарий стабильно фиксирует disabled-state для screen share control и возвращает diagnostic SKIP.
 - Evidence: `docs/status/TEST_RESULTS.md` (Cycle #36, blocked by control disabled).
 
+Progress note (2026-03-15, desktop media permissions rollback):
+- В ходе попытки ускорить screen-share startup в Electron main были добавлены жесткие permission handlers (`setPermissionCheckHandler`/`setPermissionRequestHandler`), что привело к регрессии доступа к mic/camera (баннер "разрешите доступ к устройствам").
+- Выполнен rollback этих handlers, сохранен только `setDisplayMediaRequestHandler` для screen-share path.
+- После перезапуска desktop runtime устройства восстановлены; manual verification PASS.
+
 ## 11) Known Follow-ups
 
 - [x] Провести browser-level handoff soak (Chromium/WebKit/Firefox) поверх уже закрытого protocol-level soak и приложить агрегированное evidence к auth runbook.

@@ -599,6 +599,7 @@ export function App() {
     currentRoomKind,
     currentRoomSupportsScreenShare,
     roomVoiceConnected,
+    connectRoom,
     userId: user?.id || "",
     userName: user?.name || "",
     t,

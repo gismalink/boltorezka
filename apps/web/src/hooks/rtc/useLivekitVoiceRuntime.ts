@@ -741,7 +741,7 @@ export function useLivekitVoiceRuntime({
 
   const startLocalScreenShare = useCallback(async () => {
     const room = roomRef.current;
-    if (!room || !roomVoiceConnected) {
+    if (!room || room.state !== "connected") {
       throw new Error("room_not_connected");
     }
 
@@ -762,7 +762,7 @@ export function useLivekitVoiceRuntime({
     localTracksRef.current.set(Track.Source.ScreenShare, localScreenTrack);
     setLocalScreenShareStream(new MediaStream([localScreenTrack.mediaStreamTrack]));
     setIsLocalScreenSharing(true);
-  }, [buildScreenShareOptions, roomVoiceConnected]);
+  }, [buildScreenShareOptions]);
 
   const connectRoom = useCallback(async () => {
     if (!token || !localUserId || !roomSlug) {

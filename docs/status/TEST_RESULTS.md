@@ -1024,3 +1024,23 @@
 
 - These limits are valid for current `test` stack shape and this harness profile (Opus-like `~40 kbps` payload path).
 - Re-validate caps after infra changes (TURN range, host limits, Docker/Desktop version, API/DB release updates).
+
+## 2026-03-15 - Cycle #8 (desktop media permissions regression/rollback)
+
+- Environment: `test` desktop runtime (`ELECTRON_RENDERER_URL=https://test.boltorezka.gismalink.art`).
+- Trigger: после добавления агрессивных Electron permission handlers (`setPermissionCheckHandler`/`setPermissionRequestHandler`) UI показывал баннер "разрешите доступ к устройствам", микрофон/камера не активировались.
+
+### Root cause
+
+- Global permission interception в Electron main блокировал нормальный `getUserMedia` flow для renderer.
+
+### Fix
+
+- Удалены over-restrictive handlers `setPermissionCheckHandler` и `setPermissionRequestHandler` из `apps/desktop-electron/src/main.cjs`.
+- Сохранен только `setDisplayMediaRequestHandler` для screen-share path.
+- Electron процесс перезапущен после rollback.
+
+### Result
+
+- Manual verification: PASS.
+- Баннер доступа к устройствам исчез, медиа-устройства снова работают.
