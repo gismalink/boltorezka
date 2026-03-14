@@ -2,6 +2,38 @@
 
 Отдельный журнал результатов тестов/нагрузки.
 
+## 2026-03-15 — Cycle #42 (Test rollout on 64f6b72 with full postdeploy PASS)
+
+- Environment: `test` (`https://test.boltorezka.gismalink.art`)
+- Build ref: `origin/feature/electron-desktop-foundation` (`64f6b72`)
+
+### Functional gate
+
+- Rollout: `ssh mac-mini 'cd ~/srv/boltorezka && ./scripts/deploy/deploy-test-and-smoke.sh origin/feature/electron-desktop-foundation "$PWD"'`: PARTIAL
+  - deploy/rebuild: PASS
+  - postdeploy: FAIL on first run (`smoke:auth:session` -> `fetch failed`)
+- Retry postdeploy only:
+  - `ssh mac-mini 'cd ~/srv/boltorezka && SMOKE_FETCH_RETRIES=8 SMOKE_FETCH_TIMEOUT_MS=20000 SMOKE_FETCH_RETRY_DELAY_MS=2500 SMOKE_REALTIME_RETRIES=4 SMOKE_REALTIME_RETRY_DELAY_MS=3000 ./scripts/deploy/postdeploy-smoke-test.sh "$PWD"'`: PASS
+  - `smoke:sso`: PASS
+  - `smoke:api`: PASS
+  - `smoke:auth:session`: PASS
+  - `smoke:auth:cookie-negative`: PASS
+  - `smoke:auth:cookie-ws-ticket`: PASS
+  - `smoke:web:version-cache`: PASS (`sha=64f6b727eac6752db43134bb3311b4d86d102f40`)
+  - `smoke:web:crash-boundary:browser`: PASS
+  - `smoke:web:rnnoise:browser`: PASS
+  - `smoke:realtime`: PASS (`reconnectOk=true`, `mediaTopologyFirstOk=true`, `mediaTopologySecondOk=true`)
+
+### Scope covered by this cycle
+
+- Подтвержден test rollout на SHA `64f6b72` с green postdeploy пакетом после transient сетевого сбоя первого прогона.
+- Подтверждено, что retry-hardening в browser/realtime smoke path не ломает функциональные проверки и сохраняет expected coverage.
+
+### Decision
+
+- Cycle #42: PASS.
+- Pre-merge test gate на актуальном SHA считается green (с учетом transient rerun evidence).
+
 ## 2026-03-15 — Cycle #41 (Postdeploy rerun flake migrated to RNNoise browser smoke)
 
 - Environment: `test` (`https://test.boltorezka.gismalink.art`)
