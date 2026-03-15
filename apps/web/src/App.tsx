@@ -130,6 +130,7 @@ export function App() {
   const [desktopUpdateReadyVersion, setDesktopUpdateReadyVersion] = useState("");
   const [desktopUpdateApplying, setDesktopUpdateApplying] = useState(false);
   const [desktopUpdateBannerDismissed, setDesktopUpdateBannerDismissed] = useState(false);
+  const [showFirstRunIntro, setShowFirstRunIntro] = useState(false);
   const [sessionMovedOverlayMessage, setSessionMovedOverlayMessage] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [messagesHasMore, setMessagesHasMore] = useState(false);
@@ -808,6 +809,17 @@ export function App() {
     setSelectedUiTheme(normalizeUiTheme(user?.ui_theme));
     setProfileStatusText("");
   }, [user]);
+
+  useEffect(() => {
+    if (!user?.id) {
+      setShowFirstRunIntro(false);
+      return;
+    }
+
+    const storageKey = `boltorezka_intro_v1_seen:${user.id}`;
+    const alreadySeen = localStorage.getItem(storageKey) === "1";
+    setShowFirstRunIntro(!alreadySeen);
+  }, [user?.id]);
 
   useEffect(() => {
     setEditingMessageId(null);
@@ -1721,6 +1733,39 @@ export function App() {
     }
   }, [desktopUpdateApplying, desktopUpdateBridge, pushToast, t]);
 
+  const completeFirstRunIntro = useCallback(async () => {
+    if (!user?.id) {
+      return;
+    }
+
+    const trimmedName = profileNameDraft.trim();
+    if (!trimmedName) {
+      pushToast(t("profile.saveError"));
+      return;
+    }
+
+    setProfileSaving(true);
+    setProfileStatusText("");
+    try {
+      const response = await api.updateMe(token, {
+        name: trimmedName,
+        uiTheme: selectedUiTheme
+      });
+      if (response.user) {
+        setUser(response.user);
+      }
+      localStorage.setItem(`boltorezka_intro_v1_seen:${user.id}`, "1");
+      setShowFirstRunIntro(false);
+      pushToast(t("profile.saveSuccess"));
+    } catch (error) {
+      const message = (error as Error).message || t("profile.saveError");
+      setProfileStatusText(message);
+      pushToast(message);
+    } finally {
+      setProfileSaving(false);
+    }
+  }, [profileNameDraft, pushToast, selectedUiTheme, t, token, user?.id]);
+
   return (
     <main className="app legacy-layout mx-auto grid h-[100dvh] max-h-[100dvh] w-full max-w-[1400px] grid-rows-[auto_1fr] gap-4 overflow-hidden p-4 desktop:gap-6 desktop:p-8">
       <AppHeader
@@ -1776,6 +1821,8 @@ export function App() {
         </div>
       ) : null}
 
+      {user ? (
+      <>
       <div className={`workspace ${isMobileViewport ? "workspace-mobile" : ""} grid h-full min-h-0 items-stretch gap-4 desktop:grid-cols-[320px_1fr] desktop:gap-6`}>
         {(!isMobileViewport || mobileTab === "channels") ? (
           <aside className="leftcolumn flex min-h-0 flex-col gap-4 overflow-hidden desktop:gap-6">
@@ -1941,6 +1988,22 @@ export function App() {
           </button>
         </nav>
       ) : null}
+      </>
+      ) : authMode !== "loading" ? (
+        <section className="grid h-full min-h-0 place-items-center p-2">
+          <div className="card w-full max-w-xl p-8 text-center">
+            <h2 className="text-2xl font-bold text-pixel-text">{t("guest.welcomeTitle")}</h2>
+            <p className="mt-3 text-sm leading-relaxed text-pixel-muted">{t("guest.welcomePromo")}</p>
+            <button
+              type="button"
+              className="mt-6 inline-flex min-h-[42px] items-center justify-center px-5"
+              onClick={() => beginSso("google")}
+            >
+              {t("guest.loginCta")}
+            </button>
+          </div>
+        </section>
+      ) : null}
 
       <ServerProfileModal
         open={appMenuOpen}
@@ -2015,6 +2078,55 @@ export function App() {
               autoFocus
             >
               {t("overlay.appUpdatedContinue")}
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {user && showFirstRunIntro ? (
+        <div className="fixed inset-0 z-[305] flex items-center justify-center bg-black/85 p-4" role="dialog" aria-modal="true" aria-live="polite">
+          <div className="w-full max-w-md rounded-2xl border border-white/20 bg-neutral-950/95 p-6 shadow-2xl">
+            <h2 className="text-2xl font-bold tracking-wide text-white">{t("intro.title")}</h2>
+            <p className="mt-3 text-sm leading-relaxed text-white/80">{t("intro.description")}</p>
+
+            <div className="mt-5 grid gap-2">
+              <span className="text-xs uppercase tracking-wide text-white/60">{t("intro.skinLabel")}</span>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <button
+                  type="button"
+                  className={`secondary min-h-[40px] ${selectedUiTheme === "8-neon-bit" ? "user-settings-tab-btn-active" : ""}`}
+                  onClick={() => setSelectedUiTheme("8-neon-bit")}
+                >
+                  {t("settings.theme8NeonBit")}
+                </button>
+                <button
+                  type="button"
+                  className={`secondary min-h-[40px] ${selectedUiTheme === "material-classic" ? "user-settings-tab-btn-active" : ""}`}
+                  onClick={() => setSelectedUiTheme("material-classic")}
+                >
+                  {t("settings.themeMaterialClassic")}
+                </button>
+              </div>
+            </div>
+
+            <label className="mt-5 grid gap-2">
+              <span className="text-xs uppercase tracking-wide text-white/60">{t("intro.displayNameLabel")}</span>
+              <input
+                value={profileNameDraft}
+                onChange={(event) => setProfileNameDraft(event.target.value)}
+                placeholder={t("settings.displayName")}
+              />
+            </label>
+
+            <button
+              type="button"
+              className="primary mt-6 inline-flex w-full min-h-[42px] items-center justify-center"
+              disabled={profileSaving}
+              onClick={() => {
+                void completeFirstRunIntro();
+              }}
+            >
+              {profileSaving ? t("settings.saving") : t("intro.continueCta")}
             </button>
           </div>
         </div>
