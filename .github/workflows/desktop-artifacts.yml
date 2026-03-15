@@ -2,6 +2,20 @@ name: desktop-artifacts
 
 on:
   workflow_dispatch:
+    inputs:
+      release_channel:
+        description: "Desktop update channel"
+        required: false
+        default: "test"
+        type: choice
+        options:
+          - test
+          - prod
+      signed:
+        description: "Build signed/notarized release candidate"
+        required: false
+        default: false
+        type: boolean
   push:
     branches:
       - main
@@ -46,13 +60,34 @@ jobs:
         run: npm --prefix apps/desktop-electron ci
 
       - name: Build desktop unpacked artifact
+        if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.signed != 'true' }}
         shell: bash
         run: |
           APP_BUILD_SHA="${GITHUB_SHA}" npm --prefix apps/desktop-electron run build
 
+      - name: Build signed desktop release candidate
+        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.signed == 'true' }}
+        shell: bash
+        env:
+          ELECTRON_UPDATE_CHANNEL: ${{ github.event.inputs.release_channel || 'test' }}
+          APP_BUILD_SHA: ${{ github.sha }}
+          CSC_LINK: ${{ secrets.DESKTOP_CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.DESKTOP_CSC_KEY_PASSWORD }}
+          APPLE_ID: ${{ secrets.DESKTOP_APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.DESKTOP_APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.DESKTOP_APPLE_TEAM_ID }}
+          WIN_CSC_LINK: ${{ secrets.DESKTOP_WIN_CSC_LINK }}
+          WIN_CSC_KEY_PASSWORD: ${{ secrets.DESKTOP_WIN_CSC_KEY_PASSWORD }}
+        run: |
+          if [[ "${ELECTRON_UPDATE_CHANNEL}" == "prod" ]]; then
+            npm --prefix apps/desktop-electron run dist:prod
+          else
+            npm --prefix apps/desktop-electron run dist:test
+          fi
+
       - name: Upload desktop artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: desktop-${{ matrix.os }}-${{ github.sha }}
+          name: desktop-${{ matrix.os }}-${{ github.sha }}-${{ github.event_name == 'workflow_dispatch' && github.event.inputs.signed == 'true' && 'signed' || 'unsigned' }}
           path: apps/desktop-electron/dist/**
           if-no-files-found: error

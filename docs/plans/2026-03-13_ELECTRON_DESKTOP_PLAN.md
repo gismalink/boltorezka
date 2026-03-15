@@ -400,6 +400,11 @@ Progress note (2026-03-15, M3 safe apply flow):
 - В web renderer добавлен desktop update banner с явным действием `Restart and update`.
 - `quitAndInstall` вызывается только после явного подтверждения пользователя (без background auto-install).
 
+Progress note (2026-03-15, M3 signing readiness baseline):
+- Workflow `.github/workflows/desktop-artifacts.yml` расширен manual режимом signed release candidate (`workflow_dispatch`: `release_channel`, `signed=true`).
+- Для signed path зафиксирован набор required secrets для macOS/Windows code signing и notarization.
+- Добавлен runbook `docs/runbooks/DESKTOP_SIGNING_READINESS_RUNBOOK.md` с readiness sequence и promotion policy.
+
 ## 11) Known Follow-ups
 
 - [x] Провести browser-level handoff soak (Chromium/WebKit/Firefox) поверх уже закрытого protocol-level soak и приложить агрегированное evidence к auth runbook.

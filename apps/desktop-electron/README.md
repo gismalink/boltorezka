@@ -27,6 +27,20 @@ Safe apply flow:
 - После `update-downloaded` пользователь получает action `Restart and update`.
 - Применение обновления выполняется только по явному действию пользователя (`applyUpdate` -> `quitAndInstall`).
 
+## Signing readiness
+
+CI workflow `.github/workflows/desktop-artifacts.yml` поддерживает manual signed release-candidate режим:
+- inputs: `release_channel=test|prod`, `signed=true`
+- signed build запускает `dist:test` или `dist:prod`
+
+Необходимые secrets:
+- `DESKTOP_CSC_LINK`, `DESKTOP_CSC_KEY_PASSWORD`
+- `DESKTOP_APPLE_ID`, `DESKTOP_APPLE_APP_SPECIFIC_PASSWORD`, `DESKTOP_APPLE_TEAM_ID`
+- `DESKTOP_WIN_CSC_LINK`, `DESKTOP_WIN_CSC_KEY_PASSWORD`
+
+Детали readiness-check:
+- `docs/runbooks/DESKTOP_SIGNING_READINESS_RUNBOOK.md`
+
 Feed URL формируется так:
 - `${ELECTRON_UPDATE_FEED_BASE_URL}/${ELECTRON_UPDATE_CHANNEL}/{platform}`
 - `platform`: `mac`, `win`, `linux`
