@@ -2,6 +2,39 @@
 
 Отдельный журнал результатов тестов/нагрузки.
 
+## 2026-03-15 — Cycle #49 (Full test deploy+smoke with desktop update-feed gate)
+
+- Environment: `test` (`https://test.boltorezka.gismalink.art`, mac-mini server flow)
+- Build ref: `origin/feature/electron-desktop-foundation` (`2056029`)
+
+### Functional gate
+
+- Full rollout command: PASS
+  - `ssh -t mac-mini 'cd ~/srv/boltorezka && SMOKE_DESKTOP_UPDATE_FEED=1 SMOKE_DESKTOP_CHANNEL=test ./scripts/deploy/deploy-test-and-smoke.sh origin/feature/electron-desktop-foundation "$PWD"'`
+- Precondition to keep desktop feed alive during deploy: PASS
+  - test static sync now preserves `desktop/` subtree under `~/srv/edge/ingress/static/boltorezka/test`
+- Postdeploy smoke pack: PASS
+  - `smoke:sso`, `smoke:api`, `smoke:auth:session`, `smoke:auth:cookie-negative`, `smoke:auth:cookie-ws-ticket`
+  - `smoke:web:version-cache` (`sha=2056029789bbfdd5c955efc0e4e4187a7844d9cf`)
+  - `smoke:web:crash-boundary:browser`
+  - `smoke:web:rnnoise:browser`
+  - `smoke:desktop:update-feed`
+  - `smoke:realtime`
+- Summary marker: PASS
+  - `SMOKE_STATUS=pass`
+  - `SMOKE_DESKTOP_UPDATE_FEED_STATUS=pass`
+  - `SMOKE_SUMMARY_TEXT` contains `desktop_update_feed=pass`
+
+### Scope covered by this cycle
+
+- Подтверждено, что новый gate `desktop_update_feed` работает в полном `deploy-test-and-smoke` цикле, а не только в изолированном postdeploy запуске.
+- Закрыт regression risk: web static sync больше не удаляет desktop distribution feed.
+
+### Decision
+
+- Cycle #49: PASS.
+- Test rollout pipeline с desktop update-feed gate operationally green.
+
 ## 2026-03-15 — Cycle #48 (Postdeploy integration: desktop update-feed gate)
 
 - Environment: `test` (`mac-mini`, postdeploy smoke)

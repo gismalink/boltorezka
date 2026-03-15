@@ -421,6 +421,11 @@ Progress note (2026-03-15, M3 server-first distribution validation):
 - Добавлена генерация mac updater feed (`/desktop/<channel>/mac/latest-mac.yml` + zip/blockmap), совместимая с `electron-updater` generic provider.
 - Добавлен automation smoke `npm run smoke:desktop:update-feed`, проверяющий `latest.json`, `latest-mac.yml` и zip endpoint.
 
+Progress note (2026-03-15, postdeploy integration hardening):
+- `smoke:desktop:update-feed` встроен в `postdeploy-smoke-test.sh` и summary (`SMOKE_DESKTOP_UPDATE_FEED_STATUS`).
+- Устранен regression-risk в test deploy static sync: web static refresh теперь сохраняет `desktop/` subtree, чтобы не ломать updater feed между деплоями.
+- Выполнен full `deploy-test-and-smoke` прогон с `SMOKE_DESKTOP_UPDATE_FEED=1`: PASS (включая realtime gate).
+
 ## 11) Known Follow-ups
 
 - [x] Провести browser-level handoff soak (Chromium/WebKit/Firefox) поверх уже закрытого protocol-level soak и приложить агрегированное evidence к auth runbook.
