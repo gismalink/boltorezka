@@ -2,6 +2,39 @@
 
 Отдельный журнал результатов тестов/нагрузки.
 
+## 2026-03-15 — Cycle #43 (Server-first desktop build/publish test channel)
+
+- Environment: `local server-like run` (`edge static path on macOS workspace`)
+- Build ref: `origin/feature/electron-desktop-foundation` (`a186160`)
+
+### Functional gate
+
+- Server-first script run (isolated clone): PASS
+  - `DESKTOP_CHANNEL=test EDGE_REPO_DIR=/Users/davidshvartsman/Mamaiamcoder/edge DESKTOP_PUBLIC_BASE_URL=https://test.boltorezka.gismalink.art ./scripts/deploy/build-desktop-server-and-publish.sh HEAD /tmp/boltorezka-desktop-build-test`
+  - marker file created: `.deploy/last-desktop-build.env`
+  - `DESKTOP_BUILD_SHA=a1861606e1d45f527050149f144bfa5189985a95`
+  - `DESKTOP_BUILD_TARGET_DIR=/Users/davidshvartsman/Mamaiamcoder/edge/ingress/static/boltorezka/desktop/test/a1861606e1d45f527050149f144bfa5189985a95`
+- Channel manifest generation: PASS
+  - `latest.json` exists at `/Users/davidshvartsman/Mamaiamcoder/edge/ingress/static/boltorezka/desktop/test/latest.json`
+  - `channel=test`, `sha=a1861606e1d45f527050149f144bfa5189985a95`, `totalFiles=99`
+  - URLs generated with base `https://test.boltorezka.gismalink.art/desktop/test/<sha>/...`
+- Artifact publication snapshot: PASS
+  - Found published files including:
+    - `Boltorezka-0.2.0-arm64.dmg`
+    - `Boltorezka-0.2.0-arm64-mac.zip`
+    - `manifest.json`
+    - blockmap files
+
+### Scope covered by this cycle
+
+- Подтвержден end-to-end server-first path `build -> publish -> latest.json` для test канала.
+- Подтверждена корректная структура static distribution каталога `/desktop/test/<sha>/...` и channel pointer через `latest.json`.
+
+### Decision
+
+- Cycle #43: PASS (server-first pipeline verified for test channel).
+- Следующий шаг: выполнить аналогичный прогон на реальном серверном checkout (`~/srv/boltorezka`) и добавить smoke evidence установки/обновления desktop клиента.
+
 ## 2026-03-15 — Cycle #42 (Test rollout on 64f6b72 with full postdeploy PASS)
 
 - Environment: `test` (`https://test.boltorezka.gismalink.art`)
