@@ -2,6 +2,41 @@
 
 Отдельный журнал результатов тестов/нагрузки.
 
+## 2026-03-15 — Cycle #52 (Signed RC workflow dispatch on main, test channel)
+
+- Environment: `GitHub Actions` (`desktop-artifacts` workflow)
+- Build ref: `origin/main` (`de7d9c57661b267b51017b417d0c025bf20da9c6`)
+- Run: `https://github.com/gismalink/boltorezka/actions/runs/23116286958`
+
+### Functional gate
+
+- Signed RC dispatch: STARTED
+  - `gh workflow run desktop-artifacts.yml -f release_channel=test -f signed=true -f create_release_draft=false`
+- Workflow result: FAIL
+  - `build-macos-latest` -> FAIL (`Build signed desktop release candidate`)
+  - `build-windows-latest` -> FAIL (`Build signed desktop release candidate`)
+  - `github-release-chain` -> SKIPPED (upstream build failed)
+
+### Root cause evidence
+
+- Required signing env values were empty during run:
+  - `CSC_LINK`, `CSC_KEY_PASSWORD`, `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID`, `WIN_CSC_LINK`, `WIN_CSC_KEY_PASSWORD`.
+- macOS log contains explicit signing-path failure:
+  - `empty password will be used for code signing  reason=CSC_KEY_PASSWORD is not defined`
+  - `⨯ /Users/runner/work/boltorezka/boltorezka/apps/desktop-electron not a file`
+- Repository secret inventory check did not return required desktop signing secrets:
+  - `gh secret list --repo gismalink/boltorezka | rg "DESKTOP_(CSC_LINK|CSC_KEY_PASSWORD|APPLE_ID|APPLE_APP_SPECIFIC_PASSWORD|APPLE_TEAM_ID|WIN_CSC_LINK|WIN_CSC_KEY_PASSWORD)"` -> no matches.
+
+### Scope covered by this cycle
+
+- Подтверждено, что workflow dispatch и signed path wiring работают технически.
+- Выявлен operational blocker readiness-гейта: отсутствует configured secrets set для signing/notarization.
+
+### Decision
+
+- Cycle #52: FAIL (expected blocker).
+- Next action: заполнить required GitHub Secrets и повторить signed RC cycle для получения release-grade PASS evidence.
+
 ## 2026-03-15 — Cycle #51 (Controlled prod rollout from origin/main)
 
 - Environment: `prod` (`https://boltorezka.gismalink.art`, mac-mini)
