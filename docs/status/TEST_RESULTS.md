@@ -2,6 +2,32 @@
 
 Отдельный журнал результатов тестов/нагрузки.
 
+## 2026-03-15 — Cycle #47 (Automated desktop updater feed smoke command)
+
+- Environment: `test` (`https://test.boltorezka.gismalink.art`)
+- Build ref: `origin/feature/electron-desktop-foundation` (`dfb343c`)
+
+### Functional gate
+
+- Added smoke command:
+  - `smoke:desktop:update-feed` -> `node ./scripts/smoke/smoke-desktop-update-feed.mjs`
+- Command run: PASS
+  - `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art npm run smoke:desktop:update-feed`
+  - Output:
+    - `[smoke:desktop:update-feed] ok base=https://test.boltorezka.gismalink.art channel=test sha=dfb343c7532ac6028f0e9cfdf57ed8a6c8a11f17 path=Boltorezka-0.2.0-arm64-mac.zip contentLength=101903233`
+
+### Scope covered by this cycle
+
+- Автоматизирована проверка desktop update distribution contract для test:
+  - `/desktop/<channel>/latest.json`
+  - `/desktop/<channel>/mac/latest-mac.yml`
+  - `HEAD` на zip артефакт из YAML `path`.
+
+### Decision
+
+- Cycle #47: PASS.
+- Проверка updater feed вынесена в reusable smoke command для post-deploy циклов.
+
 ## 2026-03-15 — Cycle #46 (Electron updater generic feed compatibility on test)
 
 - Environment: `test` (`https://test.boltorezka.gismalink.art`)

@@ -37,6 +37,7 @@ This folder contains operational scripts grouped by purpose.
 
   - `TEST_REF=origin/feature/<name> npm run deploy:test:smoke`
   - `npm run smoke:test:postdeploy`
+  - `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art npm run smoke:desktop:update-feed`
   - `TEST_REF=origin/feature/<name> npm run deploy:test:livekit`
   - `PROD_REF=origin/main npm run deploy:prod`
   - `DESKTOP_REF=origin/feature/<name> DESKTOP_CHANNEL=test DESKTOP_PUBLIC_BASE_URL=https://test.boltorezka.gismalink.art npm run deploy:desktop:server`
