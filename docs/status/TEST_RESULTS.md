@@ -2,6 +2,35 @@
 
 Отдельный журнал результатов тестов/нагрузки.
 
+## 2026-03-15 — Cycle #44 (Server-first desktop build/publish on mac-mini server)
+
+- Environment: `test` (`mac-mini: ~/srv/boltorezka + ~/srv/edge`)
+- Build ref: `origin/feature/electron-desktop-foundation` (`ae44a04`)
+
+### Functional gate
+
+- Server-first script run on server checkout: PASS
+  - `ssh -t mac-mini 'cd ~/srv/boltorezka && DESKTOP_CHANNEL=test DESKTOP_PUBLIC_BASE_URL=https://test.boltorezka.gismalink.art ./scripts/deploy/build-desktop-server-and-publish.sh origin/feature/electron-desktop-foundation "$PWD"'`
+  - build/publish completed without script errors.
+- Published channel manifest on server edge static: PASS
+  - `~/srv/edge/ingress/static/boltorezka/desktop/test/latest.json`
+  - `channel=test`, `sha=ae44a04ef9acbc00ffea1d944263276ec0c4e68d`, `totalFiles=99`
+  - URLs point to `https://test.boltorezka.gismalink.art/desktop/test/<sha>/...`
+- Deploy marker on server checkout: PASS
+  - `~/srv/boltorezka/.deploy/last-desktop-build.env`
+  - `DESKTOP_BUILD_SHA=ae44a04ef9acbc00ffea1d944263276ec0c4e68d`
+  - `DESKTOP_BUILD_TARGET_DIR=~/srv/edge/ingress/static/boltorezka/desktop/test/ae44a04ef9acbc00ffea1d944263276ec0c4e68d`
+
+### Scope covered by this cycle
+
+- Подтверждена работоспособность server-first desktop build/publish в целевом server окружении (mac-mini), а не только локально.
+- Подтверждено обновление channel pointer `latest.json` и generation build snapshot каталога `/desktop/test/<sha>/...` на сервере.
+
+### Decision
+
+- Cycle #44: PASS.
+- Server-first desktop pipeline для `test` считается operationally verified.
+
 ## 2026-03-15 — Cycle #43 (Server-first desktop build/publish test channel)
 
 - Environment: `local server-like run` (`edge static path on macOS workspace`)
