@@ -405,6 +405,11 @@ Progress note (2026-03-15, M3 signing readiness baseline):
 - Для signed path зафиксирован набор required secrets для macOS/Windows code signing и notarization.
 - Добавлен runbook `docs/runbooks/DESKTOP_SIGNING_READINESS_RUNBOOK.md` с readiness sequence и promotion policy.
 
+Progress note (2026-03-15, M3 GitHub release-chain detail):
+- Для signed workflow добавлен `github-release-chain` job: агрегирует matrix artifacts, генерирует `desktop-release-manifest.json`.
+- Добавлен optional режим `create_release_draft=true` для создания GitHub Draft Release с вложенными signed артефактами.
+- Release остаётся draft по умолчанию и не инициирует automatic prod rollout.
+
 ## 11) Known Follow-ups
 
 - [x] Провести browser-level handoff soak (Chromium/WebKit/Firefox) поверх уже закрытого protocol-level soak и приложить агрегированное evidence к auth runbook.

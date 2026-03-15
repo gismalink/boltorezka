@@ -30,8 +30,9 @@ Safe apply flow:
 ## Signing readiness
 
 CI workflow `.github/workflows/desktop-artifacts.yml` поддерживает manual signed release-candidate режим:
-- inputs: `release_channel=test|prod`, `signed=true`
+- inputs: `release_channel=test|prod`, `signed=true`, `create_release_draft=true|false`
 - signed build запускает `dist:test` или `dist:prod`
+- при `create_release_draft=true` GitHub создаёт draft release и прикладывает собранные артефакты
 
 Необходимые secrets:
 - `DESKTOP_CSC_LINK`, `DESKTOP_CSC_KEY_PASSWORD`

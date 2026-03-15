@@ -16,6 +16,11 @@ on:
         required: false
         default: false
         type: boolean
+      create_release_draft:
+        description: "Create GitHub draft release from signed artifacts"
+        required: false
+        default: false
+        type: boolean
   push:
     branches:
       - main
@@ -33,6 +38,9 @@ on:
 concurrency:
   group: desktop-artifacts-${{ github.ref }}
   cancel-in-progress: true
+
+permissions:
+  contents: write
 
 jobs:
   build-desktop:
@@ -91,3 +99,139 @@ jobs:
           name: desktop-${{ matrix.os }}-${{ github.sha }}-${{ github.event_name == 'workflow_dispatch' && github.event.inputs.signed == 'true' && 'signed' || 'unsigned' }}
           path: apps/desktop-electron/dist/**
           if-no-files-found: error
+
+  github-release-chain:
+    name: github-release-chain
+    runs-on: ubuntu-latest
+    needs: build-desktop
+    if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.signed == 'true' }}
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: desktop-*
+          path: .release-artifacts
+          merge-multiple: false
+
+      - name: Build release manifest
+        shell: bash
+        env:
+          RELEASE_CHANNEL: ${{ github.event.inputs.release_channel || 'test' }}
+          SIGNED: ${{ github.event.inputs.signed }}
+          CREATE_RELEASE_DRAFT: ${{ github.event.inputs.create_release_draft }}
+          GIT_SHA: ${{ github.sha }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_NUMBER: ${{ github.run_number }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          node - <<'NODE'
+          const fs = require("fs");
+          const path = require("path");
+
+          const root = path.resolve(".release-artifacts");
+          const releaseRoot = path.resolve(".release-output");
+          fs.mkdirSync(releaseRoot, { recursive: true });
+
+          const isFile = (p) => {
+            try {
+              return fs.statSync(p).isFile();
+            } catch {
+              return false;
+            }
+          };
+
+          const collectFiles = (dir) => {
+            const entries = fs.readdirSync(dir, { withFileTypes: true });
+            const files = [];
+            for (const entry of entries) {
+              const abs = path.join(dir, entry.name);
+              if (entry.isDirectory()) {
+                files.push(...collectFiles(abs));
+              } else if (entry.isFile()) {
+                files.push(abs);
+              }
+            }
+            return files;
+          };
+
+          const artifactDirs = fs.existsSync(root)
+            ? fs.readdirSync(root, { withFileTypes: true })
+                .filter((entry) => entry.isDirectory())
+                .map((entry) => path.join(root, entry.name))
+            : [];
+
+          const releaseFiles = [];
+          const artifacts = artifactDirs.map((dir) => {
+            const files = collectFiles(dir).filter((filePath) => isFile(filePath));
+            const relFiles = files.map((filePath) => path.relative(path.resolve("."), filePath));
+            releaseFiles.push(...relFiles);
+            return {
+              artifactName: path.basename(dir),
+              files: relFiles,
+              fileCount: relFiles.length
+            };
+          });
+
+          const manifest = {
+            generatedAt: new Date().toISOString(),
+            gitSha: String(process.env.GIT_SHA || ""),
+            refName: String(process.env.REF_NAME || ""),
+            workflowRunId: String(process.env.RUN_ID || ""),
+            workflowRunNumber: String(process.env.RUN_NUMBER || ""),
+            releaseChannel: String(process.env.RELEASE_CHANNEL || "test"),
+            signed: String(process.env.SIGNED || "false") === "true",
+            createReleaseDraft: String(process.env.CREATE_RELEASE_DRAFT || "false") === "true",
+            artifacts,
+            totalFiles: releaseFiles.length
+          };
+
+          fs.writeFileSync(path.join(releaseRoot, "desktop-release-manifest.json"), `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
+
+          const shortSha = String(process.env.GIT_SHA || "").slice(0, 7) || "unknown";
+          const releaseTag = `desktop-${manifest.releaseChannel}-${shortSha}-run${manifest.workflowRunNumber}`;
+          fs.writeFileSync(path.join(releaseRoot, "release-tag.txt"), `${releaseTag}\n`, "utf8");
+          fs.writeFileSync(path.join(releaseRoot, "release-files.txt"), `${releaseFiles.join("\n")}\n`, "utf8");
+          NODE
+
+      - name: Upload release manifest artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-release-manifest-${{ github.sha }}
+          path: .release-output/desktop-release-manifest.json
+          if-no-files-found: error
+
+      - name: Create GitHub draft release
+        if: ${{ github.event.inputs.create_release_draft == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          RELEASE_TAG="$(cat .release-output/release-tag.txt | tr -d '\r\n')"
+          RELEASE_CHANNEL="${{ github.event.inputs.release_channel || 'test' }}"
+          SHORT_SHA="$(echo "${GITHUB_SHA}" | cut -c1-7)"
+          mapfile -t RELEASE_FILES < <(grep -v '^$' .release-output/release-files.txt)
+
+          if [[ "${#RELEASE_FILES[@]}" -eq 0 ]]; then
+            echo "[github-release-chain] no files to publish"
+            exit 1
+          fi
+
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            echo "[github-release-chain] draft already exists: $RELEASE_TAG"
+            gh release upload "$RELEASE_TAG" "${RELEASE_FILES[@]}" --clobber
+          else
+            gh release create "$RELEASE_TAG" "${RELEASE_FILES[@]}" \
+              --draft \
+              --title "Desktop ${RELEASE_CHANNEL} signed RC (${SHORT_SHA})" \
+              --notes "Signed desktop release candidate.\n\nChannel: ${RELEASE_CHANNEL}\nCommit: ${GITHUB_SHA}\nWorkflow run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          fi
+
+      - name: Workflow summary
+        shell: bash
+        run: |
+          echo "## Desktop GitHub Release Chain" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Signed build: true" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Channel: ${{ github.event.inputs.release_channel || 'test' }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Manifest artifact: desktop-release-manifest-${{ github.sha }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Draft release requested: ${{ github.event.inputs.create_release_draft || 'false' }}" >> "$GITHUB_STEP_SUMMARY"
