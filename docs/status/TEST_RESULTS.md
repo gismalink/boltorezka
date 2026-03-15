@@ -2,6 +2,38 @@
 
 Отдельный журнал результатов тестов/нагрузки.
 
+## 2026-03-15 — Cycle #46 (Electron updater generic feed compatibility on test)
+
+- Environment: `test` (`https://test.boltorezka.gismalink.art`)
+- Build ref: `origin/feature/electron-desktop-foundation` (`dfb343c`)
+
+### Functional gate
+
+- Root-cause detected before fix:
+  - `GET /desktop/test/mac/latest-mac.yml` returned SPA HTML, not updater metadata.
+- Fix applied:
+  - `scripts/deploy/build-desktop-server-and-publish.sh` now generates mac feed layer:
+    - `.../desktop/test/mac/latest-mac.yml`
+    - `.../desktop/test/mac/Boltorezka-0.2.0-arm64-mac.zip`
+    - `.../desktop/test/mac/*.blockmap`
+- Server run after fix: PASS
+  - `ssh -t mac-mini 'cd ~/srv/boltorezka && DESKTOP_CHANNEL=test DESKTOP_PUBLIC_BASE_URL=https://test.boltorezka.gismalink.art ./scripts/deploy/build-desktop-server-and-publish.sh origin/feature/electron-desktop-foundation "$PWD"'`
+  - script output confirms `mac updater feed` path written.
+- Public endpoint smoke: PASS
+  - `HEAD https://test.boltorezka.gismalink.art/desktop/test/mac/latest-mac.yml` -> `200`, `content-length=353`
+  - `GET https://test.boltorezka.gismalink.art/desktop/test/mac/latest-mac.yml` -> valid YAML (`version`, `path`, `sha512`, `releaseDate`)
+  - `HEAD https://test.boltorezka.gismalink.art/desktop/test/mac/Boltorezka-0.2.0-arm64-mac.zip` -> `200`, `content-type=application/zip`, `content-length=101903233`
+
+### Scope covered by this cycle
+
+- Подтверждена совместимость test distribution с `electron-updater` generic provider для mac.
+- Закрыт blocker, при котором update runtime получал SPA fallback вместо updater metadata.
+
+### Decision
+
+- Cycle #46: PASS.
+- M3 update feed для `test/mac` operationally green.
+
 ## 2026-03-15 — Cycle #45 (Desktop downloads routing fix: public /desktop path)
 
 - Environment: `test` (`https://test.boltorezka.gismalink.art`)
