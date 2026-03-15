@@ -87,6 +87,7 @@ type WsMessageControllerOptions = {
       ts?: string;
     }
   ) => void;
+  onSessionMoved?: (payload: { code: string; message: string }) => void;
 };
 
 export class WsMessageController {
@@ -478,6 +479,10 @@ export class WsMessageController {
     const errorMessage = String(message.payload?.message || "Unexpected websocket error");
     if (code === "ChannelSessionMoved" || code === "ChannelKicked") {
       this.options.setRoomSlug("");
+      this.options.onSessionMoved?.({
+        code,
+        message: errorMessage
+      });
     }
     this.options.pushToast(errorMessage);
     this.options.pushLog(`ws error ${code}: ${errorMessage}`);

@@ -18,6 +18,8 @@ const canRunReconnect = Boolean(preissuedTicketReconnect || bearerToken);
 const roomSlug = process.env.SMOKE_ROOM_SLUG ?? "general";
 const MAX_SMOKE_TEST_DURATION_MS = 120000;
 const timeoutMs = Math.min(Number(process.env.SMOKE_TIMEOUT_MS ?? 10000), MAX_SMOKE_TEST_DURATION_MS);
+const realtimeAttempts = Math.max(1, Number(process.env.SMOKE_REALTIME_RETRIES ?? 3));
+const realtimeRetryDelayMs = Math.max(0, Number(process.env.SMOKE_REALTIME_RETRY_DELAY_MS ?? 2000));
 const liveRoomDurationMs = Number(process.env.SMOKE_CALL_LIVE_ROOM_DURATION_MS ?? 90000);
 const liveRoomParticipantCount = Number(process.env.SMOKE_CALL_LIVE_ROOM_PARTICIPANTS ?? 6);
 const liveRoomStepMinMs = Number(process.env.SMOKE_CALL_LIVE_ROOM_STEP_MIN_MS ?? 3000);
@@ -130,6 +132,17 @@ function sleep(ms) {
   return new Promise((resolve) => {
     setTimeout(resolve, ms);
   });
+}
+
+function isTransientRealtimeError(error) {
+  const message = String(error instanceof Error ? error.message : error || "").toLowerCase();
+  return message.includes("etimedout")
+    || message.includes("econnreset")
+    || message.includes("econnrefused")
+    || message.includes("socket hang up")
+    || message.includes("websocket open timeout")
+    || message.includes("fetch failed")
+    || message.includes("networkerror");
 }
 
 function randomInt(min, max) {
@@ -693,7 +706,7 @@ async function runLiveRoomBehaviorScenario({ roomSlug, timeoutMs }) {
   };
 }
 
-(async () => {
+async function runRealtimeSmoke() {
   const ticket = await resolveTicket();
   const secondTicket = smokeCallSignal ? await resolveSecondTicket() : null;
   const wsUrl = toWsUrl(baseUrl);
@@ -1121,7 +1134,30 @@ async function runLiveRoomBehaviorScenario({ roomSlug, timeoutMs }) {
       2
     )
   );
-})().catch((error) => {
-  console.error(error instanceof Error ? error.message : String(error));
+}
+
+(async () => {
+  let lastError = null;
+
+  for (let attempt = 1; attempt <= realtimeAttempts; attempt += 1) {
+    try {
+      await runRealtimeSmoke();
+      return;
+    } catch (error) {
+      lastError = error;
+      const transient = isTransientRealtimeError(error);
+      const canRetry = transient && attempt < realtimeAttempts;
+
+      if (!canRetry) {
+        break;
+      }
+
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.warn(`[smoke:realtime] transient failure on attempt ${attempt}/${realtimeAttempts}: ${errorMessage}`);
+      await sleep(realtimeRetryDelayMs);
+    }
+  }
+
+  console.error(lastError instanceof Error ? lastError.message : String(lastError));
   process.exit(1);
-});
+})();

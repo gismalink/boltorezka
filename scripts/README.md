@@ -8,6 +8,7 @@ This folder contains operational scripts grouped by purpose.
   - `deploy-test-from-ref.sh` - deploy test from a git ref.
   - `deploy-test-and-smoke.sh` - deploy test and run post-deploy smoke.
   - `deploy-prod-from-ref.sh` - deploy prod from a git ref.
+  - `build-desktop-server-and-publish.sh` - build desktop artifacts on server and publish into edge static downloads + channel manifest.
   - `postdeploy-smoke-test.sh` - server-side smoke suite after deploy.
   - `seed-chatset.sql` - idempotent SQL seed for chat/category baseline.
 - `smoke/`:
@@ -34,29 +35,21 @@ This folder contains operational scripts grouped by purpose.
 
 ## Common Flows
 
-- Fast test rollout + smoke:
   - `TEST_REF=origin/feature/<name> npm run deploy:test:smoke`
-- Test-only post-deploy smoke:
   - `npm run smoke:test:postdeploy`
-- LiveKit-only test rollout + smoke:
+  - `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art npm run smoke:desktop:update-feed`
   - `TEST_REF=origin/feature/<name> npm run deploy:test:livekit`
-- Prod rollout (only after test validation):
   - `PROD_REF=origin/main npm run deploy:prod`
-- Local verify pipeline:
+  - `DESKTOP_REF=origin/feature/<name> DESKTOP_CHANNEL=test DESKTOP_PUBLIC_BASE_URL=https://test.boltorezka.gismalink.art npm run deploy:desktop:server`
   - `npm run check`
-- List scheduled jobs:
   - `npm run scheduler:list`
-- Run one scheduled job manually:
   - `npm run scheduler:run -- backup-postgres-all`
-- Run TURN credentials rotation manually:
   - `TURN_ROTATE_APPLY=1 npm run turn:rotate`
-- Start LiveKit test foundation:
   - `npm run livekit:test:up`
-- Check LiveKit test status:
   - `npm run livekit:test:check`
 
-## Notes
+ Публикация desktop артефактов в edge static web-root (`ingress/static/boltorezka/<channel>/desktop/<channel>/<sha>/...`) + генерация `latest.json`
+ - Для electron-updater дополнительно формируется `ingress/static/boltorezka/<channel>/desktop/<channel>/mac/latest-mac.yml` и копируются `*-mac.zip` + `*.blockmap`.
 
 - Keep test-first: use `deploy:test:smoke` before any prod rollout.
-- Prefer scripts over manual command chains for reproducible operations.
-- `scripts/examples/` is intentionally not used for active runbooks; canonical scripts are in `deploy/` and `smoke/`.
+  - `npm run scheduler:run -- backup-postgres-all`

@@ -1,0 +1,52 @@
+{
+  "name": "boltorezka-desktop",
+  "private": true,
+  "version": "0.2.0",
+  "description": "Electron desktop shell for Boltorezka",
+  "author": "Boltorezka Team",
+  "main": "src/main.cjs",
+  "scripts": {
+    "dev": "concurrently -k -n WEB,DESKTOP -c cyan,green \"npm --prefix ../web run dev -- --host 127.0.0.1 --port 5173\" \"wait-on tcp:127.0.0.1:5173 && cross-env ELECTRON_RENDERER_URL=http://127.0.0.1:5173 electron .\"",
+    "start": "electron .",
+    "build:renderer": "node ./scripts/build-renderer.cjs",
+    "build": "npm run build:renderer && electron-builder --dir",
+    "dist": "npm run build:renderer && electron-builder",
+    "dist:test": "cross-env ELECTRON_UPDATE_CHANNEL=test npm run dist",
+    "dist:prod": "cross-env ELECTRON_UPDATE_CHANNEL=prod npm run dist"
+  },
+  "build": {
+    "appId": "art.gismalink.boltorezka.desktop",
+    "productName": "Boltorezka",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "src/**/*",
+      "../web/dist/**/*",
+      "package.json"
+    ],
+    "extraMetadata": {
+      "main": "src/main.cjs"
+    },
+    "mac": {
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "category": "public.app-category.social-networking"
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    }
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "cross-env": "^7.0.3",
+    "electron": "^35.1.4",
+    "electron-builder": "^25.1.8",
+    "electron-updater": "^6.3.9",
+    "wait-on": "^8.0.3"
+  }
+}

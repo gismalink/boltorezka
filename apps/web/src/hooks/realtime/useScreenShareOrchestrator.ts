@@ -22,6 +22,7 @@ type UseScreenShareOrchestratorArgs = {
   currentRoomKind: RoomKind;
   currentRoomSupportsScreenShare: boolean;
   roomVoiceConnected: boolean;
+  connectRoom: () => Promise<void>;
   userId: string;
   userName: string;
   t: (key: string) => string;
@@ -43,6 +44,7 @@ export function useScreenShareOrchestrator({
   currentRoomKind,
   currentRoomSupportsScreenShare,
   roomVoiceConnected,
+  connectRoom,
   userId,
   userName,
   t,
@@ -75,7 +77,6 @@ export function useScreenShareOrchestrator({
 
   const canToggleScreenShare = Boolean(
     currentRoomSupportsScreenShare
-    && roomVoiceConnected
     && (!normalizedScreenShareOwnerUserId || isCurrentUserScreenShareOwner)
   );
 
@@ -134,7 +135,7 @@ export function useScreenShareOrchestrator({
   }, [setScreenShareOwnerByRoomSlug]);
 
   const handleToggleScreenShare = useCallback(async () => {
-    if (!hasSessionToken || !roomSlug || currentRoomKind === "text" || !roomVoiceConnected) {
+    if (!hasSessionToken || !roomSlug || currentRoomKind === "text") {
       pushToast(t("call.autoWaiting"));
       return;
     }
@@ -162,6 +163,10 @@ export function useScreenShareOrchestrator({
     }
 
     try {
+      if (!roomVoiceConnected) {
+        await connectRoom();
+      }
+
       await sendWsEventAwaitAck("screen.share.start", { roomSlug }, { maxRetries: 1 });
       await startLocalScreenShare();
     } catch (error) {
@@ -189,6 +194,7 @@ export function useScreenShareOrchestrator({
     pushToast,
     roomSlug,
     roomVoiceConnected,
+    connectRoom,
     sendWsEventAwaitAck,
     startLocalScreenShare,
     stopLocalScreenShare,

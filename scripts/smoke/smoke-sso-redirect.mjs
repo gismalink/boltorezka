@@ -1,6 +1,9 @@
 // Purpose: Validate SSO redirect contract and provider routing from auth start endpoint.
 const baseUrl = (process.env.SMOKE_API_URL ?? "http://localhost:8080").replace(/\/+$/, "");
 const provider = (process.env.SSO_PROVIDER ?? "google").toLowerCase();
+const fetchTimeoutMs = Number(process.env.SMOKE_FETCH_TIMEOUT_MS || 15000);
+const maxFetchAttempts = Number(process.env.SMOKE_FETCH_RETRIES || 3);
+const retryDelayMs = Number(process.env.SMOKE_FETCH_RETRY_DELAY_MS || 700);
 
 if (!["google", "yandex"].includes(provider)) {
   console.error(`[smoke:sso] invalid SSO_PROVIDER: ${provider}`);
@@ -8,7 +11,7 @@ if (!["google", "yandex"].includes(provider)) {
 }
 
 async function fetchJson(path, options = {}) {
-  const response = await fetch(`${baseUrl}${path}`, options);
+  const response = await fetchWithRetry(`${baseUrl}${path}`, options, path);
   const text = await response.text();
 
   let payload;
@@ -19,6 +22,47 @@ async function fetchJson(path, options = {}) {
   }
 
   return { response, payload };
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function toErrorMessage(error) {
+  if (!error) {
+    return "unknown error";
+  }
+  if (error instanceof Error) {
+    return error.message || error.name;
+  }
+  return String(error);
+}
+
+async function fetchWithRetry(url, options = {}, label = "request") {
+  let lastError = null;
+
+  for (let attempt = 1; attempt <= maxFetchAttempts; attempt += 1) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(new Error(`timeout after ${fetchTimeoutMs}ms`)), fetchTimeoutMs);
+
+    try {
+      const response = await fetch(url, {
+        ...options,
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+      return response;
+    } catch (error) {
+      clearTimeout(timeoutId);
+      lastError = error;
+      if (attempt < maxFetchAttempts) {
+        await sleep(retryDelayMs * attempt);
+      }
+    }
+  }
+
+  const errorText = toErrorMessage(lastError);
+  throw new Error(`[smoke:sso] ${label} failed after ${maxFetchAttempts} attempts: ${errorText}`);
 }
 
 (async () => {
@@ -41,7 +85,7 @@ async function fetchJson(path, options = {}) {
   }
 
   const startUrl = `${baseUrl}/v1/auth/sso/start?provider=${encodeURIComponent(provider)}&returnUrl=${encodeURIComponent(returnUrl)}`;
-  const redirectResponse = await fetch(startUrl, { method: "GET", redirect: "manual" });
+  const redirectResponse = await fetchWithRetry(startUrl, { method: "GET", redirect: "manual" }, "/v1/auth/sso/start");
   const location = redirectResponse.headers.get("location") || "";
 
   if (redirectResponse.status !== 302 || !location) {

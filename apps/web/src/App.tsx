@@ -56,6 +56,7 @@ import {
   useVoiceSignalingOrchestrator,
   useVoiceRoomStateMaps
 } from "./hooks";
+import { getDesktopUpdateBridge } from "./desktopBridge";
 import { detectInitialLang, LANGUAGE_OPTIONS, LOCALE_BY_LANG, TEXT, type Lang } from "./i18n";
 import type {
   AudioQuality,
@@ -113,6 +114,7 @@ function normalizeUiTheme(value: unknown): UiTheme {
 }
 
 export function App() {
+  const desktopUpdateBridge = useMemo(() => getDesktopUpdateBridge(), []);
   const [token, setToken] = useState(() => (COOKIE_MODE ? "" : localStorage.getItem("boltorezka_token") || ""));
   const [user, setUser] = useState<User | null>(null);
   const [authMode, setAuthMode] = useState("loading");
@@ -120,11 +122,15 @@ export function App() {
   const [roomsTree, setRoomsTree] = useState<RoomsTreeResponse | null>(null);
   const [roomSlug, setRoomSlug] = useState(() => {
     const stored = String(localStorage.getItem(ROOM_SLUG_STORAGE_KEY) || "").trim();
-    return stored || "general";
+    return stored;
   });
   const [showAppUpdatedOverlay, setShowAppUpdatedOverlay] = useState(
     () => sessionStorage.getItem(VERSION_UPDATE_PENDING_KEY) === "1"
   );
+  const [desktopUpdateReadyVersion, setDesktopUpdateReadyVersion] = useState("");
+  const [desktopUpdateApplying, setDesktopUpdateApplying] = useState(false);
+  const [desktopUpdateBannerDismissed, setDesktopUpdateBannerDismissed] = useState(false);
+  const [sessionMovedOverlayMessage, setSessionMovedOverlayMessage] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [messagesHasMore, setMessagesHasMore] = useState(false);
   const [messagesNextCursor, setMessagesNextCursor] = useState<MessagesCursor | null>(null);
@@ -598,6 +604,7 @@ export function App() {
     currentRoomKind,
     currentRoomSupportsScreenShare,
     roomVoiceConnected,
+    connectRoom,
     userId: user?.id || "",
     userName: user?.name || "",
     t,
@@ -808,8 +815,31 @@ export function App() {
   }, [roomSlug]);
 
   useEffect(() => {
-    localStorage.setItem(ROOM_SLUG_STORAGE_KEY, roomSlug);
+    if (roomSlug) {
+      localStorage.setItem(ROOM_SLUG_STORAGE_KEY, roomSlug);
+      return;
+    }
+
+    localStorage.removeItem(ROOM_SLUG_STORAGE_KEY);
   }, [roomSlug]);
+
+  const showDesktopBrowserCompletion = useMemo(() => {
+    if (typeof window === "undefined" || window.boltorezkaDesktop) {
+      return false;
+    }
+
+    const url = new URL(window.location.href);
+    return url.searchParams.get("desktop_handoff_complete") === "1";
+  }, [token]);
+
+  const desktopHandoffError = useMemo(() => {
+    if (typeof window === "undefined" || window.boltorezkaDesktop) {
+      return "";
+    }
+
+    const url = new URL(window.location.href);
+    return String(url.searchParams.get("desktop_handoff_error") || "").trim();
+  }, [token]);
 
   useSessionStateLifecycle({
     token,
@@ -884,6 +914,34 @@ export function App() {
     onAck: handleWsAck,
     onNack: handleWsNack,
     onScreenShareState: handleIncomingScreenShareState,
+    onSessionMoved: ({ code, message }) => {
+      const activeSlug = String(roomSlugRef.current || "").trim();
+      if (activeSlug) {
+        setRoomsPresenceBySlug((prev) => {
+          if (!(activeSlug in prev)) {
+            return prev;
+          }
+          const next = { ...prev };
+          delete next[activeSlug];
+          return next;
+        });
+        setRoomsPresenceDetailsBySlug((prev) => {
+          if (!(activeSlug in prev)) {
+            return prev;
+          }
+          const next = { ...prev };
+          delete next[activeSlug];
+          return next;
+        });
+      }
+
+      disconnectRoom();
+      realtimeClientRef.current?.dispose();
+      realtimeClientRef.current = null;
+      setRoomSlug("");
+      setSessionMovedOverlayMessage(`${code}: ${message}`);
+      pushLog(`session moved: ${code} ${message}`);
+    },
     onChatCleared: (payload) => {
       const targetRoomSlug = String(payload.roomSlug || "").trim();
       const activeRoomSlug = roomSlugRef.current;
@@ -1411,17 +1469,52 @@ export function App() {
 
     const roomExists = allRooms.some((room) => room.slug === roomSlug);
     if (!roomExists) {
-      setRoomSlug("general");
+      setRoomSlug("");
     }
   }, [allRooms, roomSlug]);
+
+  if (showDesktopBrowserCompletion) {
+    return (
+      <main className="app legacy-layout mx-auto grid h-[100dvh] max-h-[100dvh] w-full max-w-[760px] place-items-center p-6">
+        <section className="settings-sheet w-full max-w-[560px] p-6 text-center">
+          <h1 className="text-2xl font-semibold">Авторизация завершена</h1>
+          <p className="mt-3 text-sm opacity-80">
+            {desktopHandoffError
+              ? "Не удалось подтвердить вход в Desktop. Попробуйте открыть приложение еще раз."
+              : "Вы вошли в Boltorezka Desktop. Эту вкладку можно закрыть."}
+          </p>
+          <div className="mt-5 flex justify-center">
+            <button
+              type="button"
+              className="secondary"
+              onClick={() => {
+                const url = new URL(window.location.href);
+                url.searchParams.delete("desktop_handoff");
+                url.searchParams.delete("desktop_handoff_bootstrap");
+                url.searchParams.delete("desktop_handoff_refreshed");
+                url.searchParams.delete("desktop_handoff_sent");
+                url.searchParams.delete("desktop_handoff_attempt");
+                url.searchParams.delete("desktop_handoff_complete");
+                url.searchParams.delete("desktop_handoff_error");
+                window.location.replace(url.toString());
+              }}
+            >
+              Открыть веб-версию
+            </button>
+          </div>
+        </section>
+      </main>
+    );
+  }
 
   useAutoRoomVoiceConnection({
     roomMediaResolved: Boolean(currentRoomSnapshot),
     currentRoomSupportsRtc: currentRoomSupportsRtc && !showAppUpdatedOverlay,
     roomVoiceTargetsCount: currentRoomVoiceTargets.length,
     roomVoiceConnected,
-    // Keep established LiveKit sessions alive across short presence/ws flaps.
-    keepConnectedWithoutTargets: (allowVideoStreaming && cameraEnabled) || roomVoiceConnected,
+    // Keep RTC transport attached while user stays in a voice-enabled room.
+    // This avoids false "no RTC" states during presence churn and multi-client switches.
+    keepConnectedWithoutTargets: true,
     connectRoom,
     disconnectRoom
   });
@@ -1560,6 +1653,74 @@ export function App() {
 
   const userDockInlineSettingsNode = userDockSharedProps ? <UserDock {...userDockSharedProps} inlineSettingsMode /> : null;
 
+  useEffect(() => {
+    if (!desktopUpdateBridge) {
+      return;
+    }
+
+    let disposed = false;
+
+    desktopUpdateBridge.getStatus()
+      .then((status) => {
+        if (disposed) {
+          return;
+        }
+        if (String(status?.downloadedVersion || "").trim()) {
+          setDesktopUpdateReadyVersion(String(status.downloadedVersion).trim());
+          setDesktopUpdateBannerDismissed(false);
+        }
+      })
+      .catch(() => {
+        // Update status is best-effort.
+      });
+
+    const unsubscribe = desktopUpdateBridge.onStatus((event) => {
+      const eventType = String(event?.event || "").trim();
+      const version = String(event?.version || "").trim();
+      const message = String(event?.message || event?.lastError || "").trim();
+
+      if (eventType === "available" && version) {
+        pushToast(`${t("desktop.updateAvailableToast")} ${version}`);
+      }
+
+      if (eventType === "downloaded" && version) {
+        setDesktopUpdateReadyVersion(version);
+        setDesktopUpdateBannerDismissed(false);
+        pushToast(`${t("desktop.updateDownloadedToast")} ${version}`);
+      }
+
+      if (eventType === "error") {
+        pushToast(message ? `${t("desktop.updateErrorToast")} (${message})` : t("desktop.updateErrorToast"));
+      }
+    });
+
+    return () => {
+      disposed = true;
+      unsubscribe();
+    };
+  }, [desktopUpdateBridge, pushToast, t]);
+
+  const applyDesktopUpdate = useCallback(async () => {
+    if (!desktopUpdateBridge || desktopUpdateApplying) {
+      return;
+    }
+
+    setDesktopUpdateApplying(true);
+    try {
+      const result = await desktopUpdateBridge.applyUpdate();
+      if (!result?.ok) {
+        pushToast(`${t("desktop.updateApplyFailedToast")}: ${String(result?.reason || "unknown")}`);
+        setDesktopUpdateApplying(false);
+        return;
+      }
+
+      pushToast(t("desktop.updateApplyingToast"));
+    } catch {
+      pushToast(t("desktop.updateApplyFailedToast"));
+      setDesktopUpdateApplying(false);
+    }
+  }, [desktopUpdateApplying, desktopUpdateBridge, pushToast, t]);
+
   return (
     <main className="app legacy-layout mx-auto grid h-[100dvh] max-h-[100dvh] w-full max-w-[1400px] grid-rows-[auto_1fr] gap-4 overflow-hidden p-4 desktop:gap-6 desktop:p-8">
       <AppHeader
@@ -1585,6 +1746,32 @@ export function App() {
           <span>{t("mic.deniedBanner")}</span>
           <button type="button" className="secondary" onClick={requestMediaAccess}>
             {t("settings.requestMediaAccess")}
+          </button>
+        </div>
+      ) : null}
+
+      {desktopUpdateReadyVersion && !desktopUpdateBannerDismissed ? (
+        <div className="mic-denied-banner" role="status" aria-live="polite">
+          <span>{`${t("desktop.updateReadyBanner")} ${desktopUpdateReadyVersion}`}</span>
+          <button
+            type="button"
+            className="secondary"
+            disabled={desktopUpdateApplying}
+            onClick={() => {
+              setDesktopUpdateBannerDismissed(true);
+            }}
+          >
+            {t("desktop.updateLater")}
+          </button>
+          <button
+            type="button"
+            className="secondary"
+            disabled={desktopUpdateApplying}
+            onClick={() => {
+              void applyDesktopUpdate();
+            }}
+          >
+            {desktopUpdateApplying ? t("desktop.updateApplying") : t("desktop.updateRestartNow")}
           </button>
         </div>
       ) : null}
@@ -1828,6 +2015,28 @@ export function App() {
               autoFocus
             >
               {t("overlay.appUpdatedContinue")}
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {sessionMovedOverlayMessage ? (
+        <div className="fixed inset-0 z-[310] flex items-center justify-center bg-black/85 p-4" role="dialog" aria-modal="true" aria-live="assertive">
+          <div className="w-full max-w-md rounded-2xl border border-white/20 bg-neutral-950/95 p-6 text-center shadow-2xl">
+            <h2 className="text-2xl font-bold tracking-wide text-white">Приложение открыто в другом месте</h2>
+            <p className="mt-3 text-sm leading-relaxed text-white/80">
+              Эта сессия перенесена в другое окно или вкладку. Работа с каналами здесь остановлена.
+            </p>
+            <p className="mt-2 text-xs text-white/60">{sessionMovedOverlayMessage}</p>
+            <button
+              type="button"
+              className="primary mt-6 inline-flex w-full items-center justify-center"
+              onClick={() => {
+                setSessionMovedOverlayMessage("");
+                window.location.reload();
+              }}
+            >
+              Открыть здесь
             </button>
           </div>
         </div>

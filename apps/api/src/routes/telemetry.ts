@@ -35,6 +35,31 @@ function asNumber(value: unknown): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+function normalizeRuntime(value: unknown): "desktop" | "web" | "unknown" {
+  const runtime = asString(value).toLowerCase();
+  if (runtime === "desktop") {
+    return "desktop";
+  }
+  if (runtime === "web") {
+    return "web";
+  }
+  return "unknown";
+}
+
+function normalizeDesktopPlatform(value: unknown): "darwin" | "win32" | "linux" | "other" {
+  const platform = asString(value).toLowerCase();
+  if (platform === "darwin") {
+    return "darwin";
+  }
+  if (platform === "win32") {
+    return "win32";
+  }
+  if (platform === "linux") {
+    return "linux";
+  }
+  return "other";
+}
+
 export async function telemetryRoutes(fastify: FastifyInstance) {
   fastify.post("/v1/telemetry/web", async (request: FastifyRequest, reply: FastifyReply) => {
     const parsed = telemetrySchema.safeParse(request.body);
@@ -82,6 +107,18 @@ export async function telemetryRoutes(fastify: FastifyInstance) {
       const day = new Date().toISOString().slice(0, 10);
       const metricsKey = `ws:metrics:${day}`;
       await fastify.redis.hIncrBy(metricsKey, "telemetry_web_event", 1);
+
+      const runtime = normalizeRuntime(telemetry.meta.runtime);
+      await fastify.redis.hIncrBy(metricsKey, `telemetry_runtime_${runtime}`, 1);
+
+      if (runtime === "desktop") {
+        const platform = normalizeDesktopPlatform(telemetry.meta.platform);
+        await fastify.redis.hIncrBy(metricsKey, `telemetry_desktop_platform_${platform}`, 1);
+
+        if (asString(telemetry.meta.electronVersion)) {
+          await fastify.redis.hIncrBy(metricsKey, "telemetry_desktop_electron_version_present", 1);
+        }
+      }
 
       if (telemetry.event === "rnnoise_status") {
         const status = asString(telemetry.meta.status);
@@ -141,6 +178,14 @@ export async function telemetryRoutes(fastify: FastifyInstance) {
           chat_sent: toNumber(values.chat_sent),
           chat_idempotency_hit: toNumber(values.chat_idempotency_hit),
           telemetry_web_event: toNumber(values.telemetry_web_event),
+          telemetry_runtime_desktop: toNumber(values.telemetry_runtime_desktop),
+          telemetry_runtime_web: toNumber(values.telemetry_runtime_web),
+          telemetry_runtime_unknown: toNumber(values.telemetry_runtime_unknown),
+          telemetry_desktop_platform_darwin: toNumber(values.telemetry_desktop_platform_darwin),
+          telemetry_desktop_platform_win32: toNumber(values.telemetry_desktop_platform_win32),
+          telemetry_desktop_platform_linux: toNumber(values.telemetry_desktop_platform_linux),
+          telemetry_desktop_platform_other: toNumber(values.telemetry_desktop_platform_other),
+          telemetry_desktop_electron_version_present: toNumber(values.telemetry_desktop_electron_version_present),
           rnnoise_toggle_on: toNumber(values.rnnoise_toggle_on),
           rnnoise_toggle_off: toNumber(values.rnnoise_toggle_off),
           rnnoise_init_error: toNumber(values.rnnoise_init_error),

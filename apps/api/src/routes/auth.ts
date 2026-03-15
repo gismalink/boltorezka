@@ -26,10 +26,96 @@ const livekitTokenSchema = z.object({
   canSubscribe: z.boolean().optional().default(true),
   canPublishData: z.boolean().optional().default(true)
 });
+const desktopHandoffExchangeSchema = z.object({
+  code: z.string().trim().min(10).max(128)
+});
+const desktopHandoffAttemptIdSchema = z.object({
+  attemptId: z.string().uuid()
+});
 
 const safeHostSet = new Set(config.allowedReturnHosts);
 const AUTH_SESSION_PREFIX = "auth:session:";
 const AUTH_SESSION_TTL_SEC = 60 * 60 * 24 * 30;
+const AUTH_DESKTOP_HANDOFF_PREFIX = "auth:desktop-handoff:";
+const AUTH_DESKTOP_HANDOFF_TTL_SEC = 120;
+const AUTH_DESKTOP_HANDOFF_ATTEMPT_PREFIX = "auth:desktop-handoff-attempt:";
+const AUTH_RATE_LIMIT_PREFIX = "auth:rl:";
+
+type AuthRateLimitPolicy = {
+  namespace: string;
+  max: number;
+  windowSec: number;
+};
+
+type DesktopHandoffAttemptState = {
+  status: "pending" | "completed";
+  userId: string;
+  createdAt: string;
+  completedAt: string | null;
+};
+
+function buildAuthAuditContext(request: FastifyRequest, extra: Record<string, unknown> = {}) {
+  const requestId = String(request.id || "").trim() || null;
+  const userId = String(request.user?.sub || request.currentUser?.id || "").trim() || null;
+  const sessionId = String(request.user?.sid || "").trim() || null;
+  const ip = String(request.ip || request.headers["x-forwarded-for"] || "unknown")
+    .split(",")[0]
+    .trim() || null;
+  const userAgent = String(request.headers["user-agent"] || "").trim() || null;
+
+  return {
+    requestId,
+    userId,
+    sessionId,
+    ip,
+    userAgent,
+    ...extra
+  };
+}
+
+function resolveRateLimitSubject(request: FastifyRequest): string {
+  const userId = String(request.user?.sub || "").trim();
+  if (userId) {
+    return `u:${userId}`;
+  }
+
+  const ip = String(request.ip || request.headers["x-forwarded-for"] || "unknown")
+    .split(",")[0]
+    .trim();
+  return `ip:${ip || "unknown"}`;
+}
+
+function makeAuthRateLimiter(policy: AuthRateLimitPolicy) {
+  return async (request: FastifyRequest, reply: FastifyReply) => {
+    const nowWindow = Math.floor(Date.now() / 1000 / policy.windowSec);
+    const key = `${AUTH_RATE_LIMIT_PREFIX}${policy.namespace}:${resolveRateLimitSubject(request)}:${nowWindow}`;
+
+    const current = await request.server.redis.incr(key);
+    if (current === 1) {
+      await request.server.redis.expire(key, policy.windowSec);
+    }
+
+    if (current > policy.max) {
+      request.server.log.warn(
+        buildAuthAuditContext(request, {
+          event: "auth.rate_limit.exceeded",
+          namespace: policy.namespace,
+          limit: policy.max,
+          windowSec: policy.windowSec,
+          current
+        }),
+        "auth rate limit exceeded"
+      );
+      reply.header("Retry-After", String(policy.windowSec));
+      return reply.code(429).send({
+        error: "RateLimitExceeded",
+        message: `Too many requests for ${policy.namespace}`
+      });
+    }
+
+    return undefined;
+  };
+}
 
 function appendSetCookie(reply: FastifyReply, value: string) {
   const current = reply.getHeader("set-cookie");
@@ -274,6 +360,57 @@ async function upsertSsoUser(profile: Record<string, unknown> | null | undefined
 }
 
 export async function authRoutes(fastify: FastifyInstance) {
+  const limitSsoStart = makeAuthRateLimiter({
+    namespace: "sso-start",
+    max: 30,
+    windowSec: 60
+  });
+  const limitSsoSession = makeAuthRateLimiter({
+    namespace: "sso-session",
+    max: 20,
+    windowSec: 60
+  });
+  const limitRefresh = makeAuthRateLimiter({
+    namespace: "refresh",
+    max: 20,
+    windowSec: 60
+  });
+  const limitLogout = makeAuthRateLimiter({
+    namespace: "logout",
+    max: 20,
+    windowSec: 60
+  });
+  const limitWsTicket = makeAuthRateLimiter({
+    namespace: "ws-ticket",
+    max: 60,
+    windowSec: 60
+  });
+  const limitDesktopHandoffCreate = makeAuthRateLimiter({
+    namespace: "desktop-handoff-create",
+    max: 20,
+    windowSec: 60
+  });
+  const limitDesktopHandoffExchange = makeAuthRateLimiter({
+    namespace: "desktop-handoff-exchange",
+    max: 40,
+    windowSec: 60
+  });
+  const limitDesktopHandoffAttemptCreate = makeAuthRateLimiter({
+    namespace: "desktop-handoff-attempt-create",
+    max: 20,
+    windowSec: 60
+  });
+  const limitDesktopHandoffAttemptStatus = makeAuthRateLimiter({
+    namespace: "desktop-handoff-attempt-status",
+    max: 80,
+    windowSec: 60
+  });
+  const limitDesktopHandoffAttemptComplete = makeAuthRateLimiter({
+    namespace: "desktop-handoff-attempt-complete",
+    max: 40,
+    windowSec: 60
+  });
+
   fastify.get("/v1/auth/mode", async () => {
     const response: AuthModeResponse = {
       mode: config.authMode,
@@ -288,6 +425,11 @@ export async function authRoutes(fastify: FastifyInstance) {
       request: FastifyRequest<{ Querystring: { provider?: string; returnUrl?: string } }>,
       reply: FastifyReply
     ) => {
+      await limitSsoStart(request, reply);
+      if (reply.sent) {
+        return;
+      }
+
       const providerRaw = String(request.query.provider || "google").toLowerCase();
     const parsedProvider = ssoProviderSchema.safeParse(providerRaw);
 
@@ -313,9 +455,14 @@ export async function authRoutes(fastify: FastifyInstance) {
     }
   );
 
-  fastify.get("/v1/auth/sso/session", async (request: FastifyRequest, reply: FastifyReply) => {
-    try {
-      const ssoTokenResult = await proxyAuthGetJson(request, "/auth/get-token");
+  fastify.get(
+    "/v1/auth/sso/session",
+    {
+      preHandler: [limitSsoSession]
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const ssoTokenResult = await proxyAuthGetJson(request, "/auth/get-token");
 
       if (!ssoTokenResult.ok || !ssoTokenResult.data?.authenticated) {
         if (config.authCookieMode) {
@@ -350,6 +497,16 @@ export async function authRoutes(fastify: FastifyInstance) {
         appendSetCookie(reply, buildSessionCookieValue(token));
       }
 
+      fastify.log.info(
+        buildAuthAuditContext(request, {
+          event: "auth.session.issued",
+          flow: "sso-session",
+          userId: localUser.id,
+          authMode: "sso"
+        }),
+        "auth session issued"
+      );
+
       const response: SsoSessionResponse = {
         authenticated: true,
         user: localUser,
@@ -361,16 +518,320 @@ export async function authRoutes(fastify: FastifyInstance) {
           role: localUser.role || ssoUser.role || ssoTokenResult.data?.role || "user"
         }
       };
-      return response;
-    } catch (error) {
-      fastify.log.error(error, "sso session exchange failed");
-      return reply.code(503).send({
-        authenticated: false,
-        error: "SsoUnavailable",
-        message: "Central SSO is temporarily unavailable"
-      });
+        return response;
+      } catch (error) {
+        fastify.log.error(
+          {
+            err: error,
+            ...buildAuthAuditContext(request, {
+              event: "auth.session.exchange_failed",
+              flow: "sso-session"
+            })
+          },
+          "sso session exchange failed"
+        );
+        return reply.code(503).send({
+          authenticated: false,
+          error: "SsoUnavailable",
+          message: "Central SSO is temporarily unavailable"
+        });
+      }
     }
-  });
+  );
+
+  fastify.post(
+    "/v1/auth/desktop-handoff/attempt",
+    {
+      preHandler: [requireAuth, limitDesktopHandoffAttemptCreate]
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const userId = String(request.user?.sub || "").trim();
+      if (!userId) {
+        return reply.code(401).send({
+          error: "Unauthorized",
+          message: "Valid bearer token is required"
+        });
+      }
+
+      const attemptId = randomUUID();
+      const state: DesktopHandoffAttemptState = {
+        status: "pending",
+        userId,
+        createdAt: new Date().toISOString(),
+        completedAt: null
+      };
+
+      await fastify.redis.setEx(
+        `${AUTH_DESKTOP_HANDOFF_ATTEMPT_PREFIX}${attemptId}`,
+        AUTH_DESKTOP_HANDOFF_TTL_SEC,
+        JSON.stringify(state)
+      );
+
+      fastify.log.info(
+        buildAuthAuditContext(request, {
+          event: "auth.desktop_handoff.attempt_created",
+          userId,
+          attemptId,
+          ttlSec: AUTH_DESKTOP_HANDOFF_TTL_SEC
+        }),
+        "desktop handoff attempt created"
+      );
+
+      return {
+        ok: true,
+        attemptId,
+        expiresInSec: AUTH_DESKTOP_HANDOFF_TTL_SEC
+      };
+    }
+  );
+
+  fastify.get(
+    "/v1/auth/desktop-handoff/attempt/:attemptId",
+    {
+      preHandler: [limitDesktopHandoffAttemptStatus]
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const params = (request.params || {}) as { attemptId?: string };
+      const parsed = desktopHandoffAttemptIdSchema.safeParse({
+        attemptId: params.attemptId
+      });
+      if (!parsed.success) {
+        return reply.code(400).send({
+          error: "ValidationError",
+          issues: parsed.error.flatten()
+        });
+      }
+
+      const key = `${AUTH_DESKTOP_HANDOFF_ATTEMPT_PREFIX}${parsed.data.attemptId}`;
+      const raw = await fastify.redis.get(key);
+      if (!raw) {
+        return {
+          status: "expired"
+        };
+      }
+
+      try {
+        const state = JSON.parse(raw) as DesktopHandoffAttemptState;
+        if (state.status === "completed") {
+          return {
+            status: "completed"
+          };
+        }
+
+        return {
+          status: "pending"
+        };
+      } catch {
+        return {
+          status: "expired"
+        };
+      }
+    }
+  );
+
+  fastify.post(
+    "/v1/auth/desktop-handoff/complete",
+    {
+      preHandler: [requireAuth, limitDesktopHandoffAttemptComplete]
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const userId = String(request.user?.sub || "").trim();
+      if (!userId) {
+        return reply.code(401).send({
+          error: "Unauthorized",
+          message: "Valid bearer token is required"
+        });
+      }
+
+      const parsed = desktopHandoffAttemptIdSchema.safeParse(request.body || {});
+      if (!parsed.success) {
+        return reply.code(400).send({
+          error: "ValidationError",
+          issues: parsed.error.flatten()
+        });
+      }
+
+      const key = `${AUTH_DESKTOP_HANDOFF_ATTEMPT_PREFIX}${parsed.data.attemptId}`;
+      const raw = await fastify.redis.get(key);
+      if (!raw) {
+        return reply.code(404).send({
+          error: "DesktopHandoffAttemptExpired",
+          message: "Desktop handoff attempt is expired or invalid"
+        });
+      }
+
+      let state: DesktopHandoffAttemptState | null = null;
+      try {
+        state = JSON.parse(raw) as DesktopHandoffAttemptState;
+      } catch {
+        state = null;
+      }
+
+      if (!state || !state.userId) {
+        return reply.code(400).send({
+          error: "DesktopHandoffAttemptInvalid",
+          message: "Desktop handoff attempt payload is invalid"
+        });
+      }
+
+      if (state.userId !== userId) {
+        return reply.code(403).send({
+          error: "DesktopHandoffAttemptForbidden",
+          message: "Desktop handoff attempt belongs to another user"
+        });
+      }
+
+      if (state.status === "completed") {
+        return {
+          ok: true,
+          status: "completed"
+        };
+      }
+
+      const ttlSec = await fastify.redis.ttl(key);
+      if (ttlSec <= 0) {
+        return {
+          status: "expired"
+        };
+      }
+
+      const nextState: DesktopHandoffAttemptState = {
+        ...state,
+        status: "completed",
+        completedAt: new Date().toISOString()
+      };
+
+      await fastify.redis.setEx(key, ttlSec, JSON.stringify(nextState));
+
+      fastify.log.info(
+        buildAuthAuditContext(request, {
+          event: "auth.desktop_handoff.attempt_completed",
+          userId,
+          attemptId: parsed.data.attemptId
+        }),
+        "desktop handoff attempt completed"
+      );
+
+      return {
+        ok: true,
+        status: "completed"
+      };
+    }
+  );
+
+  fastify.post(
+    "/v1/auth/desktop-handoff",
+    {
+      preHandler: [requireAuth, limitDesktopHandoffCreate]
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const userId = String(request.user?.sub || "").trim();
+      if (!userId) {
+        return reply.code(401).send({
+          error: "Unauthorized",
+          message: "Valid bearer token is required"
+        });
+      }
+
+      const code = randomUUID();
+      await fastify.redis.setEx(
+        `${AUTH_DESKTOP_HANDOFF_PREFIX}${code}`,
+        AUTH_DESKTOP_HANDOFF_TTL_SEC,
+        JSON.stringify({
+          userId,
+          issuedAt: new Date().toISOString()
+        })
+      );
+
+      fastify.log.info(
+        buildAuthAuditContext(request, {
+          event: "auth.desktop_handoff.issued",
+          userId,
+          ttlSec: AUTH_DESKTOP_HANDOFF_TTL_SEC
+        }),
+        "desktop handoff code issued"
+      );
+
+      return {
+        ok: true,
+        code,
+        expiresInSec: AUTH_DESKTOP_HANDOFF_TTL_SEC
+      };
+    }
+  );
+
+  fastify.post(
+    "/v1/auth/desktop-handoff/exchange",
+    {
+      preHandler: [limitDesktopHandoffExchange]
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const parsed = desktopHandoffExchangeSchema.safeParse(request.body || {});
+      if (!parsed.success) {
+        return reply.code(400).send({
+          error: "ValidationError",
+          issues: parsed.error.flatten()
+        });
+      }
+
+      const key = `${AUTH_DESKTOP_HANDOFF_PREFIX}${parsed.data.code}`;
+      const raw = await fastify.redis.get(key);
+      if (!raw) {
+        return reply.code(404).send({
+          error: "DesktopHandoffExpired",
+          message: "Desktop handoff code is expired or invalid"
+        });
+      }
+
+      await fastify.redis.del(key);
+
+      let handoffUserId = "";
+      try {
+        const payload = JSON.parse(raw) as { userId?: string };
+        handoffUserId = String(payload.userId || "").trim();
+      } catch {
+        handoffUserId = "";
+      }
+
+      if (!handoffUserId) {
+        return reply.code(400).send({
+          error: "DesktopHandoffInvalid",
+          message: "Desktop handoff payload is invalid"
+        });
+      }
+
+      const userResult = await db.query<UserRow>(
+        "SELECT id, email, username, name, ui_theme, role, is_banned, created_at FROM users WHERE id = $1 LIMIT 1",
+        [handoffUserId]
+      );
+
+      if ((userResult.rowCount || 0) === 0) {
+        return reply.code(401).send({
+          error: "Unauthorized",
+          message: "User does not exist"
+        });
+      }
+
+      const user = userResult.rows[0];
+      if (user.is_banned) {
+        return reply.code(403).send({
+          error: "UserBanned",
+          message: "User is banned"
+        });
+      }
+
+      const { token } = await issueAuthSessionToken(fastify, user, "sso");
+      if (config.authCookieMode) {
+        appendSetCookie(reply, buildSessionCookieValue(token));
+      }
+
+      return {
+        authenticated: true,
+        token,
+        user
+      };
+    }
+  );
 
   fastify.post("/v1/auth/register", async (_request: FastifyRequest, reply: FastifyReply) => {
     return reply.code(410).send({
@@ -389,7 +850,7 @@ export async function authRoutes(fastify: FastifyInstance) {
   fastify.post(
     "/v1/auth/refresh",
     {
-      preHandler: [requireAuth]
+      preHandler: [requireAuth, limitRefresh]
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const user = request.currentUser;
@@ -402,16 +863,34 @@ export async function authRoutes(fastify: FastifyInstance) {
 
       const previousSessionId = String(request.user?.sid || "").trim() || null;
       if (!previousSessionId) {
+        fastify.log.warn(
+          buildAuthAuditContext(request, {
+            event: "auth.session.refresh_denied",
+            reason: "missing_session_id"
+          }),
+          "auth refresh denied"
+        );
         return reply.code(401).send({
           error: "Unauthorized",
           message: "Session refresh requires re-login"
         });
       }
 
-      const { token } = await issueAuthSessionToken(fastify, user, "sso", previousSessionId);
+      const { token, sessionId } = await issueAuthSessionToken(fastify, user, "sso", previousSessionId);
       if (config.authCookieMode) {
         appendSetCookie(reply, buildSessionCookieValue(token));
       }
+
+      fastify.log.info(
+        buildAuthAuditContext(request, {
+          event: "auth.session.refreshed",
+          previousSessionId,
+          nextSessionId: sessionId,
+          authMode: "sso"
+        }),
+        "auth session refreshed"
+      );
+
       return {
         token,
         user
@@ -422,7 +901,7 @@ export async function authRoutes(fastify: FastifyInstance) {
   fastify.post(
     "/v1/auth/logout",
     {
-      preHandler: [requireAuth]
+      preHandler: [requireAuth, limitLogout]
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const sessionId = String(request.user?.sid || "").trim();
@@ -434,6 +913,15 @@ export async function authRoutes(fastify: FastifyInstance) {
         appendSetCookie(reply, buildSessionCookieClearValue());
       }
 
+      fastify.log.info(
+        buildAuthAuditContext(request, {
+          event: "auth.session.logout",
+          revokedSessionId: sessionId || null,
+          authMode: "sso"
+        }),
+        "auth session logout"
+      );
+
       return { ok: true };
     }
   );
@@ -441,7 +929,7 @@ export async function authRoutes(fastify: FastifyInstance) {
   fastify.get(
     "/v1/auth/ws-ticket",
     {
-      preHandler: [requireAuth]
+      preHandler: [requireAuth, limitWsTicket]
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const userId = String(request.user?.sub || "").trim();
@@ -490,6 +978,16 @@ export async function authRoutes(fastify: FastifyInstance) {
         ticket,
         expiresInSec
       };
+
+      fastify.log.info(
+        buildAuthAuditContext(request, {
+          event: "auth.ws_ticket.issued",
+          ticketTtlSec: expiresInSec,
+          authMode: "sso"
+        }),
+        "ws ticket issued"
+      );
+
       return response;
     }
   );

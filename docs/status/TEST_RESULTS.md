@@ -2,6 +2,842 @@
 
 Отдельный журнал результатов тестов/нагрузки.
 
+## 2026-03-15 — Cycle #49 (Full test deploy+smoke with desktop update-feed gate)
+
+- Environment: `test` (`https://test.boltorezka.gismalink.art`, mac-mini server flow)
+- Build ref: `origin/feature/electron-desktop-foundation` (`2056029`)
+
+### Functional gate
+
+- Full rollout command: PASS
+  - `ssh -t mac-mini 'cd ~/srv/boltorezka && SMOKE_DESKTOP_UPDATE_FEED=1 SMOKE_DESKTOP_CHANNEL=test ./scripts/deploy/deploy-test-and-smoke.sh origin/feature/electron-desktop-foundation "$PWD"'`
+- Precondition to keep desktop feed alive during deploy: PASS
+  - test static sync now preserves `desktop/` subtree under `~/srv/edge/ingress/static/boltorezka/test`
+- Postdeploy smoke pack: PASS
+  - `smoke:sso`, `smoke:api`, `smoke:auth:session`, `smoke:auth:cookie-negative`, `smoke:auth:cookie-ws-ticket`
+  - `smoke:web:version-cache` (`sha=2056029789bbfdd5c955efc0e4e4187a7844d9cf`)
+  - `smoke:web:crash-boundary:browser`
+  - `smoke:web:rnnoise:browser`
+  - `smoke:desktop:update-feed`
+  - `smoke:realtime`
+- Summary marker: PASS
+  - `SMOKE_STATUS=pass`
+  - `SMOKE_DESKTOP_UPDATE_FEED_STATUS=pass`
+  - `SMOKE_SUMMARY_TEXT` contains `desktop_update_feed=pass`
+
+### Scope covered by this cycle
+
+- Подтверждено, что новый gate `desktop_update_feed` работает в полном `deploy-test-and-smoke` цикле, а не только в изолированном postdeploy запуске.
+- Закрыт regression risk: web static sync больше не удаляет desktop distribution feed.
+
+### Decision
+
+- Cycle #49: PASS.
+- Test rollout pipeline с desktop update-feed gate operationally green.
+
+## 2026-03-15 — Cycle #48 (Postdeploy integration: desktop update-feed gate)
+
+- Environment: `test` (`mac-mini`, postdeploy smoke)
+- Build ref: `origin/feature/electron-desktop-foundation` (`8bcfc12`)
+
+### Functional gate
+
+- `postdeploy-smoke-test.sh` интегрирован с desktop update-feed проверкой:
+  - добавлен шаг `smoke:desktop:update-feed`
+  - добавлен summary field `SMOKE_DESKTOP_UPDATE_FEED_STATUS`
+- Server run (fast mode) after sync to latest feature commit: PASS
+  - `SMOKE_DESKTOP_UPDATE_FEED=1 SMOKE_DESKTOP_CHANNEL=test SMOKE_REALTIME=0 SMOKE_WEB_CRASH_BOUNDARY_BROWSER=0 SMOKE_WEB_RNNOISE_BROWSER=0 ./scripts/deploy/postdeploy-smoke-test.sh "$PWD"`
+- Evidence from summary file: PASS
+  - `SMOKE_DESKTOP_UPDATE_FEED_STATUS=pass`
+  - `SMOKE_SUMMARY_TEXT` содержит `desktop_update_feed=pass`
+
+### Scope covered by this cycle
+
+- Desktop updater distribution contract включен в стандартный postdeploy smoke-пакет.
+- Снижена вероятность регрессии, когда `/desktop/...` endpoints отдают SPA fallback или невалидный updater feed.
+
+### Decision
+
+- Cycle #48: PASS.
+- Gate `desktop_update_feed` считается operationally wired into postdeploy checks.
+
+## 2026-03-15 — Cycle #47 (Automated desktop updater feed smoke command)
+
+- Environment: `test` (`https://test.boltorezka.gismalink.art`)
+- Build ref: `origin/feature/electron-desktop-foundation` (`dfb343c`)
+
+### Functional gate
+
+- Added smoke command:
+  - `smoke:desktop:update-feed` -> `node ./scripts/smoke/smoke-desktop-update-feed.mjs`
+- Command run: PASS
+  - `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art npm run smoke:desktop:update-feed`
+  - Output:
+    - `[smoke:desktop:update-feed] ok base=https://test.boltorezka.gismalink.art channel=test sha=dfb343c7532ac6028f0e9cfdf57ed8a6c8a11f17 path=Boltorezka-0.2.0-arm64-mac.zip contentLength=101903233`
+
+### Scope covered by this cycle
+
+- Автоматизирована проверка desktop update distribution contract для test:
+  - `/desktop/<channel>/latest.json`
+  - `/desktop/<channel>/mac/latest-mac.yml`
+  - `HEAD` на zip артефакт из YAML `path`.
+
+### Decision
+
+- Cycle #47: PASS.
+- Проверка updater feed вынесена в reusable smoke command для post-deploy циклов.
+
+## 2026-03-15 — Cycle #46 (Electron updater generic feed compatibility on test)
+
+- Environment: `test` (`https://test.boltorezka.gismalink.art`)
+- Build ref: `origin/feature/electron-desktop-foundation` (`dfb343c`)
+
+### Functional gate
+
+- Root-cause detected before fix:
+  - `GET /desktop/test/mac/latest-mac.yml` returned SPA HTML, not updater metadata.
+- Fix applied:
+  - `scripts/deploy/build-desktop-server-and-publish.sh` now generates mac feed layer:
+    - `.../desktop/test/mac/latest-mac.yml`
+    - `.../desktop/test/mac/Boltorezka-0.2.0-arm64-mac.zip`
+    - `.../desktop/test/mac/*.blockmap`
+- Server run after fix: PASS
+  - `ssh -t mac-mini 'cd ~/srv/boltorezka && DESKTOP_CHANNEL=test DESKTOP_PUBLIC_BASE_URL=https://test.boltorezka.gismalink.art ./scripts/deploy/build-desktop-server-and-publish.sh origin/feature/electron-desktop-foundation "$PWD"'`
+  - script output confirms `mac updater feed` path written.
+- Public endpoint smoke: PASS
+  - `HEAD https://test.boltorezka.gismalink.art/desktop/test/mac/latest-mac.yml` -> `200`, `content-length=353`
+  - `GET https://test.boltorezka.gismalink.art/desktop/test/mac/latest-mac.yml` -> valid YAML (`version`, `path`, `sha512`, `releaseDate`)
+  - `HEAD https://test.boltorezka.gismalink.art/desktop/test/mac/Boltorezka-0.2.0-arm64-mac.zip` -> `200`, `content-type=application/zip`, `content-length=101903233`
+
+### Scope covered by this cycle
+
+- Подтверждена совместимость test distribution с `electron-updater` generic provider для mac.
+- Закрыт blocker, при котором update runtime получал SPA fallback вместо updater metadata.
+
+### Decision
+
+- Cycle #46: PASS.
+- M3 update feed для `test/mac` operationally green.
+
+## 2026-03-15 — Cycle #45 (Desktop downloads routing fix: public /desktop path)
+
+- Environment: `test` (`https://test.boltorezka.gismalink.art`)
+- Build ref: `origin/feature/electron-desktop-foundation` (`8640a76`)
+
+### Functional gate
+
+- Root-cause detected: previous desktop publish target was outside Caddy web-root for test env.
+  - Symptom: `GET /desktop/test/latest.json` returned SPA `index.html`.
+- Fix applied in script and deployed on server: PASS
+  - publish target moved to env web-root path:
+    - `~/srv/edge/ingress/static/boltorezka/test/desktop/test/<sha>/...`
+    - `~/srv/edge/ingress/static/boltorezka/test/desktop/test/latest.json`
+  - run command:
+    - `ssh -t mac-mini 'cd ~/srv/boltorezka && DESKTOP_CHANNEL=test DESKTOP_PUBLIC_BASE_URL=https://test.boltorezka.gismalink.art ./scripts/deploy/build-desktop-server-and-publish.sh origin/feature/electron-desktop-foundation "$PWD"'`
+- Public endpoint smoke after fix: PASS
+  - `GET https://test.boltorezka.gismalink.art/desktop/test/latest.json` returns JSON (`sha=8640a7651944aea76b921fadf9f887cee3e00557`, `totalFiles=99`)
+  - `HEAD https://test.boltorezka.gismalink.art/desktop/test/8640a7651944aea76b921fadf9f887cee3e00557/Boltorezka-0.2.0-arm64.dmg` returns `200` with binary payload headers (`content-length=105422525`)
+
+### Scope covered by this cycle
+
+- Закрыт blocker на публичную раздачу desktop артефактов по ожидаемому URL `/desktop/<channel>/...`.
+- Подтверждено, что server-first publish path совместим с текущим Caddy routing без дополнительных правок ingress.
+
+### Decision
+
+- Cycle #45: PASS.
+- Test distribution path для desktop downloads operationally green.
+
+## 2026-03-15 — Cycle #44 (Server-first desktop build/publish on mac-mini server)
+
+- Environment: `test` (`mac-mini: ~/srv/boltorezka + ~/srv/edge`)
+- Build ref: `origin/feature/electron-desktop-foundation` (`ae44a04`)
+
+### Functional gate
+
+- Server-first script run on server checkout: PASS
+  - `ssh -t mac-mini 'cd ~/srv/boltorezka && DESKTOP_CHANNEL=test DESKTOP_PUBLIC_BASE_URL=https://test.boltorezka.gismalink.art ./scripts/deploy/build-desktop-server-and-publish.sh origin/feature/electron-desktop-foundation "$PWD"'`
+  - build/publish completed without script errors.
+- Published channel manifest on server edge static: PASS
+  - `~/srv/edge/ingress/static/boltorezka/desktop/test/latest.json`
+  - `channel=test`, `sha=ae44a04ef9acbc00ffea1d944263276ec0c4e68d`, `totalFiles=99`
+  - URLs point to `https://test.boltorezka.gismalink.art/desktop/test/<sha>/...`
+- Deploy marker on server checkout: PASS
+  - `~/srv/boltorezka/.deploy/last-desktop-build.env`
+  - `DESKTOP_BUILD_SHA=ae44a04ef9acbc00ffea1d944263276ec0c4e68d`
+  - `DESKTOP_BUILD_TARGET_DIR=~/srv/edge/ingress/static/boltorezka/desktop/test/ae44a04ef9acbc00ffea1d944263276ec0c4e68d`
+
+### Scope covered by this cycle
+
+- Подтверждена работоспособность server-first desktop build/publish в целевом server окружении (mac-mini), а не только локально.
+- Подтверждено обновление channel pointer `latest.json` и generation build snapshot каталога `/desktop/test/<sha>/...` на сервере.
+
+### Decision
+
+- Cycle #44: PASS.
+- Server-first desktop pipeline для `test` считается operationally verified.
+
+## 2026-03-15 — Cycle #43 (Server-first desktop build/publish test channel)
+
+- Environment: `local server-like run` (`edge static path on macOS workspace`)
+- Build ref: `origin/feature/electron-desktop-foundation` (`a186160`)
+
+### Functional gate
+
+- Server-first script run (isolated clone): PASS
+  - `DESKTOP_CHANNEL=test EDGE_REPO_DIR=/Users/davidshvartsman/Mamaiamcoder/edge DESKTOP_PUBLIC_BASE_URL=https://test.boltorezka.gismalink.art ./scripts/deploy/build-desktop-server-and-publish.sh HEAD /tmp/boltorezka-desktop-build-test`
+  - marker file created: `.deploy/last-desktop-build.env`
+  - `DESKTOP_BUILD_SHA=a1861606e1d45f527050149f144bfa5189985a95`
+  - `DESKTOP_BUILD_TARGET_DIR=/Users/davidshvartsman/Mamaiamcoder/edge/ingress/static/boltorezka/desktop/test/a1861606e1d45f527050149f144bfa5189985a95`
+- Channel manifest generation: PASS
+  - `latest.json` exists at `/Users/davidshvartsman/Mamaiamcoder/edge/ingress/static/boltorezka/desktop/test/latest.json`
+  - `channel=test`, `sha=a1861606e1d45f527050149f144bfa5189985a95`, `totalFiles=99`
+  - URLs generated with base `https://test.boltorezka.gismalink.art/desktop/test/<sha>/...`
+- Artifact publication snapshot: PASS
+  - Found published files including:
+    - `Boltorezka-0.2.0-arm64.dmg`
+    - `Boltorezka-0.2.0-arm64-mac.zip`
+    - `manifest.json`
+    - blockmap files
+
+### Scope covered by this cycle
+
+- Подтвержден end-to-end server-first path `build -> publish -> latest.json` для test канала.
+- Подтверждена корректная структура static distribution каталога `/desktop/test/<sha>/...` и channel pointer через `latest.json`.
+
+### Decision
+
+- Cycle #43: PASS (server-first pipeline verified for test channel).
+- Следующий шаг: выполнить аналогичный прогон на реальном серверном checkout (`~/srv/boltorezka`) и добавить smoke evidence установки/обновления desktop клиента.
+
+## 2026-03-15 — Cycle #42 (Test rollout on 64f6b72 with full postdeploy PASS)
+
+- Environment: `test` (`https://test.boltorezka.gismalink.art`)
+- Build ref: `origin/feature/electron-desktop-foundation` (`64f6b72`)
+
+### Functional gate
+
+- Rollout: `ssh mac-mini 'cd ~/srv/boltorezka && ./scripts/deploy/deploy-test-and-smoke.sh origin/feature/electron-desktop-foundation "$PWD"'`: PARTIAL
+  - deploy/rebuild: PASS
+  - postdeploy: FAIL on first run (`smoke:auth:session` -> `fetch failed`)
+- Retry postdeploy only:
+  - `ssh mac-mini 'cd ~/srv/boltorezka && SMOKE_FETCH_RETRIES=8 SMOKE_FETCH_TIMEOUT_MS=20000 SMOKE_FETCH_RETRY_DELAY_MS=2500 SMOKE_REALTIME_RETRIES=4 SMOKE_REALTIME_RETRY_DELAY_MS=3000 ./scripts/deploy/postdeploy-smoke-test.sh "$PWD"'`: PASS
+  - `smoke:sso`: PASS
+  - `smoke:api`: PASS
+  - `smoke:auth:session`: PASS
+  - `smoke:auth:cookie-negative`: PASS
+  - `smoke:auth:cookie-ws-ticket`: PASS
+  - `smoke:web:version-cache`: PASS (`sha=64f6b727eac6752db43134bb3311b4d86d102f40`)
+  - `smoke:web:crash-boundary:browser`: PASS
+  - `smoke:web:rnnoise:browser`: PASS
+  - `smoke:realtime`: PASS (`reconnectOk=true`, `mediaTopologyFirstOk=true`, `mediaTopologySecondOk=true`)
+
+### Scope covered by this cycle
+
+- Подтвержден test rollout на SHA `64f6b72` с green postdeploy пакетом после transient сетевого сбоя первого прогона.
+- Подтверждено, что retry-hardening в browser/realtime smoke path не ломает функциональные проверки и сохраняет expected coverage.
+
+### Decision
+
+- Cycle #42: PASS.
+- Pre-merge test gate на актуальном SHA считается green (с учетом transient rerun evidence).
+
+## 2026-03-15 — Cycle #41 (Postdeploy rerun flake migrated to RNNoise browser smoke)
+
+- Environment: `test` (`https://test.boltorezka.gismalink.art`)
+- Build ref: `origin/feature/electron-desktop-foundation` (`843c2df`)
+
+### Functional gate
+
+- Server postdeploy rerun:
+  - `ssh mac-mini 'cd ~/srv/boltorezka && SMOKE_FETCH_RETRIES=8 SMOKE_FETCH_TIMEOUT_MS=20000 SMOKE_FETCH_RETRY_DELAY_MS=2500 SMOKE_REALTIME_RETRIES=4 SMOKE_REALTIME_RETRY_DELAY_MS=3000 ./scripts/deploy/postdeploy-smoke-test.sh'`: PARTIAL
+  - `smoke:sso`: PASS
+  - `smoke:api`: PASS
+  - `smoke:auth:session`: PASS
+  - `smoke:auth:cookie-negative`: PASS
+  - `smoke:auth:cookie-ws-ticket`: PASS
+  - `smoke:web:version-cache`: PASS (`sha=843c2dfc75708c4d9d2a977f2f0055c954341f70`)
+  - `smoke:web:crash-boundary:browser`: PASS
+  - `smoke:web:rnnoise:browser`: FAIL (`page.goto: net::ERR_CONNECTION_TIMED_OUT`)
+
+### Scope covered by this cycle
+
+- Подтверждено, что SSO/API/auth + version-cache + crash-boundary smoke остаются green в текущем test контуре.
+- Зафиксирован сетевой флейк на RNNoise browser startup path; функциональная деградация RNNoise flow на уровне приложения не подтверждена.
+
+### Decision
+
+- Cycle #41: PARTIAL (transient network timeout in `smoke:web:rnnoise:browser`).
+- Добавлен startup retry hardening в RNNoise smoke script; требуется повторный прогон после rollout нового SHA.
+
+## 2026-03-15 — Cycle #40 (Postdeploy smoke stabilized after retry-hardening)
+
+- Environment: `test` (`https://test.boltorezka.gismalink.art`)
+- Build ref: `origin/feature/electron-desktop-foundation` (`a3b84ae` smoke scripts in server repo, app deploy SHA remains `030b0ec`)
+
+### Functional gate
+
+- Server postdeploy rerun:
+  - `ssh mac-mini 'cd ~/srv/boltorezka && bash ./scripts/deploy/postdeploy-smoke-test.sh "$PWD"'`: PASS
+  - `smoke:sso`: PASS
+  - `smoke:api`: PASS
+  - `smoke:auth:session`: PASS
+  - `smoke:auth:cookie-negative`: PASS
+  - `smoke:auth:cookie-ws-ticket`: PASS
+  - `smoke:web:version-cache`: PASS (`sha=030b0ecc032edb97a369b15df350560c3ab22d4e`)
+  - `smoke:web:crash-boundary:browser`: PASS
+  - `smoke:web:rnnoise:browser`: PASS
+  - `smoke:realtime`: PASS (`reconnectOk=true`, `mediaTopologyFirstOk=true`)
+
+### Scope covered by this cycle
+
+- Подтверждена стабильность postdeploy smoke после hardening retry logic в `smoke:sso` и browser startup path (`smoke:web:crash-boundary:browser`).
+- Cycle #39 закрыт повторным прогоном: внешний connectivity flake более не блокирует общий gate.
+
+### Decision
+
+- Cycle #40: PASS.
+- Test gate восстановлен в green-state.
+
+## 2026-03-15 — Cycle #39 (Observability counters rollout verification)
+
+- Environment: `test` (`https://test.boltorezka.gismalink.art`)
+- Build ref: `origin/feature/electron-desktop-foundation` (`030b0ec`)
+
+### Functional gate
+
+- Rollout: `ssh mac-mini 'cd ~/srv/boltorezka && bash ./scripts/deploy/deploy-test-and-smoke.sh origin/feature/electron-desktop-foundation "$PWD"'`: PARTIAL
+  - deploy/rebuild: PASS
+  - postdeploy: FAIL (`smoke:realtime` -> `connect ETIMEDOUT 95.165.154.118:443`)
+- Retry postdeploy only: FAIL (тот же `ETIMEDOUT` на `smoke:realtime`)
+- Internal API verification (from API container localhost):
+  - `GET /v1/telemetry/summary` содержит новые поля
+    - `telemetry_runtime_desktop/web/unknown`
+    - `telemetry_desktop_platform_*`
+    - `telemetry_desktop_electron_version_present`
+
+### Scope covered by this cycle
+
+- Подтверждено, что релиз `030b0ec` развернут в test и telemetry summary расширен новыми desktop observability counters.
+- Выявлен внешний сетевой блокер текущего окружения/маршрута к test домену (`curl -I https://test.boltorezka.gismalink.art` -> timeout), влияющий на browser/electron smoke path.
+
+### Decision
+
+- Cycle #39: PARTIAL (observability counters verified, postdeploy realtime blocked by external `ETIMEDOUT`).
+- Закрыт повторным прогоном (см. Cycle #40).
+
+## 2026-03-15 — Cycle #38 (Forced app update path: version mismatch -> recovery)
+
+- Environment: `test` (`https://test.boltorezka.gismalink.art`)
+- Build ref: `origin/feature/electron-desktop-foundation` (`cbf851f`)
+
+### Functional gate
+
+- `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art npm run smoke:web:version-mismatch:browser`: PASS
+  - `mode=mismatch`
+  - `versionRequests=2`
+  - `mismatchSha=smoke-mismatch-sha`
+
+### Scope covered by this cycle
+
+- Подтвержден forced update flow на version mismatch: клиент фиксирует расхождение build SHA и инициирует reload.
+- Подтвержден recovery path: overlay "App updated" отображается, после `Continue` pending-флаг очищается и UI возвращается в рабочее состояние.
+
+### Decision
+
+- Cycle #38: PASS.
+- Desktop checklist пункт `Forced app update path (version mismatch) и корректный recovery` закрыт.
+
+## 2026-03-15 — Cycle #37 (Test rollout after desktop media-permission rollback)
+
+- Environment: `test` (`https://test.boltorezka.gismalink.art`)
+- Build ref: `origin/feature/electron-desktop-foundation` (`db34f4d`)
+
+### Functional gate
+
+- Rollout: `ssh mac-mini 'cd ~/srv/boltorezka && bash ./scripts/deploy/deploy-test-and-smoke.sh origin/feature/electron-desktop-foundation "$PWD"'`: PASS
+- Post-deploy smoke pack: PASS
+  - `smoke:sso`, `smoke:api`, `smoke:auth:session`, `smoke:auth:cookie-negative`, `smoke:auth:cookie-ws-ticket`
+  - `smoke:web:version-cache` (`sha=db34f4d0da06bdd3a1c3f06eaebfada1cb277142`)
+  - `smoke:web:crash-boundary:browser`, `smoke:web:rnnoise:browser`, `smoke:realtime`
+
+### Scope covered by this cycle
+
+- Подтвержден успешный test rollout после rollback агрессивных desktop permission handlers.
+- Подтверждено восстановление desktop media path после перезапуска runtime: баннер доступа к устройствам исчез, устройства работают.
+- Manual verification после rollout: screen share стартует, devices path работает.
+
+### Decision
+
+- Cycle #37: PASS.
+- M2 practical blocker по `Screen share start/stop` снят на test в ручной проверке.
+
+## 2026-03-14 — Cycle #36 (Desktop screenshare gate diagnostics)
+
+- Environment: `test` (`https://test.boltorezka.gismalink.art`)
+- Build ref: `origin/feature/electron-desktop-foundation` (`0e53086`)
+
+### Functional gate
+
+- `SMOKE_TEST_BEARER_TOKEN=<server smoke token> SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art SMOKE_ROOM_SLUG=general npm run smoke:desktop:screenshare`: SKIP
+  - reason: screen share control remains disabled in desktop runtime (`secondary rtc-placeholder-btn`)
+
+### Scope covered by this cycle
+
+- Добавлен automation probe для screen share control path с диагностикой disabled-state.
+- Подтвержден blocker для M2 `Screen share start/stop`: в текущем test контуре control недоступен, вероятно из-за `roomVoiceConnected=false`/room policy.
+
+### Decision
+
+- Cycle #36: SKIP (blocked).
+- Требуется отдельная отладка RTC/session policy для включения screen share control.
+
+## 2026-03-14 — Cycle #35 (Desktop media controls smoke)
+
+- Environment: `test` (`https://test.boltorezka.gismalink.art`)
+- Build ref: `origin/feature/electron-desktop-foundation` (`800b338`)
+
+### Functional gate
+
+- `SMOKE_TEST_BEARER_TOKEN=<server smoke token> SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art npm run smoke:desktop:media-controls`: PASS
+  - `micStateTransition=1 -> 0`
+  - `audioStateTransition=0 -> 1`
+  - `inputOptionsCount=7`
+  - `outputOptionsCount=6`
+  - `cameraOptionsCount=2`
+
+### Scope covered by this cycle
+
+- Подтвержден рабочий desktop path для media controls: mic/audio toggles и меню выбора input/output/camera устройств.
+- Проверен authenticated desktop runtime через browser-first handoff + exchange в рамках smoke сценария.
+
+### Decision
+
+- Cycle #35: PASS.
+- Подготовлен automation baseline для M2 пункта `Mute/unmute + input/output switch`.
+
+## 2026-03-14 — Cycle #34 (Desktop build metadata propagation)
+
+- Environment: `local build pipeline` (desktop package -> web renderer build)
+- Build ref: `origin/feature/electron-desktop-foundation` (`1d7c504` during run)
+
+### Functional gate
+
+- `npm --prefix apps/desktop-electron run build:renderer`: PASS
+  - `VITE_APP_VERSION=0.2.0`
+  - `VITE_APP_BUILD_SHA=1d7c504`
+  - `VITE_APP_BUILD_DATE=2026-03-14`
+
+### Scope covered by this cycle
+
+- Подтвержден единый build metadata path для desktop+renderer: desktop package version и build SHA синхронно попадают в web bundle при desktop build.
+
+### Decision
+
+- Cycle #34: PASS.
+- Checklist `4.1 / version+build SHA` может быть закрыт.
+
+## 2026-03-14 — Cycle #33 (Desktop handoff browser-level soak)
+
+- Environment: `test` (`https://test.boltorezka.gismalink.art`)
+- Build ref: `origin/feature/electron-desktop-foundation` (`dbe678a`)
+
+### Functional gate
+
+- `SMOKE_TEST_BEARER_TOKEN=<server smoke token> SMOKE_API_URL=https://test.boltorezka.gismalink.art SMOKE_DESKTOP_HANDOFF_BROWSER_SOAK_CYCLES=20 npm run smoke:desktop:handoff:browser-soak`: PASS
+  - `totalCycles=20`
+  - `elapsedMs=29960`
+  - Chromium: `7` cycles, stable user identity
+  - WebKit: `7` cycles, stable user identity
+  - Firefox: `6` cycles, stable user identity
+  - state transition: `pending->completed` (все циклы)
+
+### Scope covered by this cycle
+
+- Закрыт browser-level soak follow-up для deterministic handoff протокола на трех движках (Chromium/WebKit/Firefox).
+- Подтверждена воспроизводимость handoff flow без race на уровне browser fetch/polling path.
+
+### Decision
+
+- Cycle #33: PASS.
+- Handoff deterministic follow-up закрыт.
+
+## 2026-03-14 — Cycle #32 (Desktop handoff soak 20 cycles)
+
+- Environment: `test` (`https://test.boltorezka.gismalink.art`)
+- Build ref: `origin/feature/electron-desktop-foundation` (`dbe678a`)
+
+### Functional gate
+
+- `SMOKE_TEST_BEARER_TOKEN=<server smoke token> SMOKE_API_URL=https://test.boltorezka.gismalink.art SMOKE_DESKTOP_HANDOFF_SOAK_CYCLES=20 npm run smoke:desktop:handoff:soak`: PASS
+  - `cycles=20`
+  - `elapsedMs=15003`
+  - `stateTransition=pending->completed` (все циклы)
+  - `userId` стабилен во всех циклах
+
+### Scope covered by this cycle
+
+- Подтверждена стабильность deterministic handoff protocol под последовательной нагрузкой (20 циклов create/exchange/complete/status).
+- Race-condition класса "attempt state drift" в текущем test контуре не воспроизведен.
+
+### Decision
+
+- Cycle #32: PASS.
+- Soak-evidence для handoff протокола зафиксирован.
+
+## 2026-03-14 — Cycle #31 (Desktop voice checkpoint 15m after deterministic handoff)
+
+- Environment: `test` (`https://test.boltorezka.gismalink.art`)
+- Build ref: `origin/feature/electron-desktop-foundation` (`dbe678a`)
+
+### Functional gate
+
+- `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art npm run smoke:desktop:voice-checkpoint:15m`: PASS
+  - `elapsedMs=900001`
+  - `probes=90`
+  - `maxProbeGapMs=10012`
+  - `maxVoiceCounters={"meterSessions":1,"meterStreams":1,"meterAudioContexts":1}`
+
+### Scope covered by this cycle
+
+- Закрыт формальный 15-minute voice checkpoint gate для desktop M2 acceptance на test.
+- Подтверждено, что после deterministic handoff rollout voice diagnostics остаются стабильными в 15-минутном окне.
+
+### Decision
+
+- Cycle #31: PASS.
+- Continuation checkpoint по voice 15m закрыт.
+
+## 2026-03-14 — Cycle #30 (Deterministic handoff smoke on test rollout)
+
+- Environment: `test` (`https://test.boltorezka.gismalink.art`)
+- Build ref: `origin/feature/electron-desktop-foundation` (`dbe678a`)
+
+### Functional gate
+
+- Rollout: `ssh mac-mini 'cd ~/srv/boltorezka && TEST_REF=origin/feature/electron-desktop-foundation npm run deploy:test:smoke'`: PASS
+- Deterministic handoff smoke:
+  - `SMOKE_TEST_BEARER_TOKEN=<server smoke token> SMOKE_API_URL=https://test.boltorezka.gismalink.art npm run smoke:desktop:handoff-deterministic`: PASS
+  - `attemptStatusBeforeComplete=pending`
+  - `attemptStatusAfterComplete=completed`
+  - `timeoutPathStatus=expired`
+
+### Scope covered by this cycle
+
+- Подтверждена работоспособность `attempt/status/complete` протокола после реального test rollout.
+- Подтверждено отсутствие регрессии в базовом postdeploy smoke наборе test-контура.
+
+### Decision
+
+- Cycle #30: PASS.
+- Deterministic handoff Phase 2 automation/evidence закрыт.
+
+## 2026-03-14 — Cycle #29 (Deterministic handoff phase 1 regression check)
+
+- Environment: `test` (`https://test.boltorezka.gismalink.art`)
+- Build ref: `origin/feature/electron-desktop-foundation` (working tree, post-phase1 deterministic handoff)
+
+### Functional gate
+
+- `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art npm run smoke:desktop:sso-external`: PASS
+  - `ssoStartExternalized=true`
+  - `ssoLogoutMode=local-desktop`
+
+### Scope covered by this cycle
+
+- Подтверждено, что переход на deterministic handoff phase 1 не ломает desktop SSO start/logout регрессии.
+- Актуализирован baseline: logout в desktop остается локальным (без external logout redirect).
+
+### Decision
+
+- Cycle #29: PASS.
+- Можно переходить к Phase 2: отдельный deterministic handoff smoke (happy path + timeout path).
+
+## 2026-03-14 — Cycle #28 (Desktop manual RTC checkpoint after multi-client fix)
+
+- Environment: `test` (`https://test.boltorezka.gismalink.art`)
+- Build ref: `origin/feature/electron-desktop-foundation` (`c745f06`)
+
+### Functional gate
+
+- Manual desktop/web verification after RTC multi-client stabilization rollout:
+  - Соединение устанавливается и держится в desktop runtime.
+  - Аудио (в т.ч. наушники) и камера работают при unfocused/minimized Electron window.
+  - После sleep видео-соединение кратковременно разрывается и корректно восстанавливается после wake.
+
+### Scope covered by this cycle
+
+- Подтверждена практическая работоспособность ключевого M2 сценария реального использования (desktop не в фокусе + sleep/wake recovery) на test.
+- Подтверждено, что последние фиксы reconnect/state не ломают media path в ручном checkpoint.
+
+### Decision
+
+- Cycle #28: PASS (manual checkpoint).
+- Остается формальный 15-minute voice automation checkpoint как отдельный evidence gate.
+
+## 2026-03-13 — Cycle #27 (Desktop SSO externalization gate)
+
+- Environment: `test` (`https://test.boltorezka.gismalink.art`)
+- Build ref: `origin/feature/electron-desktop-foundation` (working tree, post-`ec19740`)
+
+### Functional gate
+
+- `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art npm run smoke:desktop:sso-external`: PASS
+  - `ssoStartExternalized=true`
+  - `ssoLogoutExternalized=true`
+
+### Scope covered by this cycle
+
+- Добавлен и подтвержден regression gate на desktop SSO externalization,
+- Зафиксировано, что auth start/logout flow не остается внутри app window.
+
+### Decision
+
+- Cycle #27: PASS.
+- Desktop SSO externalization behavior закреплен автоматическим smoke.
+
+## 2026-03-13 — Cycle #26 (Desktop 30-minute stability soak)
+
+- Environment: `test` (`https://test.boltorezka.gismalink.art`)
+- Build ref: `origin/feature/electron-desktop-foundation` (working tree, post-`87584d2`)
+
+### Functional gate
+
+- `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art SMOKE_DESKTOP_STABILITY_DURATION_MS=1800000 SMOKE_DESKTOP_STABILITY_PROBE_INTERVAL_MS=30000 npm run smoke:desktop:stability`: PASS
+  - `durationMs=1800000`
+  - `elapsedMs=1800001`
+  - `probes=60`
+  - `maxProbeGapMs=30008`
+
+### Scope covered by this cycle
+
+- Подтвержден 30-минутный desktop runtime stability soak в test-контуре,
+- Сформирован evidence слой для M2 long-session runtime stability automation.
+
+### Decision
+
+- Cycle #26: PASS.
+- Runtime stability gate на 30 минут подтвержден; voice-session specific 30m gate остается отдельным ручным checkpoint.
+
+## 2026-03-13 — Cycle #25 (Desktop stability soak warm-up)
+
+- Environment: `test` (`https://test.boltorezka.gismalink.art`)
+- Build ref: `origin/feature/electron-desktop-foundation` (working tree, post-`ff432d9`)
+
+### Functional gate
+
+- `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art SMOKE_DESKTOP_STABILITY_DURATION_MS=30000 SMOKE_DESKTOP_STABILITY_PROBE_INTERVAL_MS=10000 npm run smoke:desktop:stability`: PASS
+  - `durationMs=30000`
+  - `elapsedMs=30002`
+  - `probes=3`
+  - `maxProbeGapMs=10005`
+
+### Scope covered by this cycle
+
+- Подтверждена рабочая автоматизация long-session stability smoke,
+- Зафиксирован warm-up evidence перед отдельным 30+ минут evidence run.
+
+### Decision
+
+- Cycle #25: PASS.
+- Stability automation готов к 30m evidence прогону.
+
+## 2026-03-13 — Cycle #24 (Desktop sleep/wake strict evidence)
+
+- Environment: `test` (`https://test.boltorezka.gismalink.art`)
+- Build ref: `origin/feature/electron-desktop-foundation` (working tree, post-`ff432d9`)
+
+### Functional gate
+
+- `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art SMOKE_DESKTOP_SLEEP_WAKE_WINDOW_MS=90000 SMOKE_DESKTOP_SLEEP_WAKE_SUSPEND_THRESHOLD_MS=2000 SMOKE_DESKTOP_SLEEP_WAKE_REQUIRE_SUSPEND=1 SMOKE_DESKTOP_SLEEP_WAKE_ALLOW_MANUAL_WINDOW_CONFIRM=1 SMOKE_DESKTOP_SLEEP_WAKE_MANUAL_WINDOW_OK=1 npm run smoke:desktop:sleep-wake`: PASS
+  - `elapsedMs=90157`
+  - `maxGapMs=28610`
+  - `suspendObserved=true`
+  - `requireSuspend=true`
+  - `windowRecoveryMode=manual-confirmed`
+  - `platform=darwin`
+  - `electronVersion=35.7.5`
+
+### Scope covered by this cycle
+
+- Закрыт sleep/wake evidence-grade checkpoint для desktop M2,
+- Подтверждено восстановление desktop runtime после сна на test, с явной manual-confirm отметкой recovery mode.
+
+### Decision
+
+- Cycle #24: PASS.
+- Sleep/wake пункт в desktop smoke checklist может быть закрыт.
+
+## 2026-03-13 — Cycle #23 (Desktop sleep/wake assist automation)
+
+- Environment: `test` (`https://test.boltorezka.gismalink.art`)
+- Build ref: `origin/feature/electron-desktop-foundation` (working tree, post-`accc79c`)
+
+### Functional gate
+
+- `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art SMOKE_DESKTOP_SLEEP_WAKE_WINDOW_MS=10000 npm run smoke:desktop:sleep-wake`: PASS
+  - `elapsedMs=10002`
+  - `suspendObserved=false`
+  - `requireSuspend=false`
+  - runtime markers after reload: `runtime=desktop`, `platform=darwin`, `electronVersion=35.7.5`
+
+### Scope covered by this cycle
+
+- Проверена техническая готовность sleep/wake assist smoke (launch/wait/reload/runtime validation),
+- Подготовлен путь к evidence-grade прогону в strict режиме (`SMOKE_DESKTOP_SLEEP_WAKE_REQUIRE_SUSPEND=1`).
+
+### Decision
+
+- Cycle #23: PASS (assist automation).
+- Strict suspend evidence run остается pending и должен быть выполнен на реальном sleep/wake сценарии.
+
+## 2026-03-13 — Cycle #22 (Desktop diagnostics artifact + full secure chain)
+
+- Environment: `test` (`https://test.boltorezka.gismalink.art`)
+- Build ref: `origin/feature/electron-desktop-foundation` (working tree, post-`3b6fa30`)
+
+### Functional gate
+
+- `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art npm run smoke:desktop:diagnostics`: PASS
+  - diagnostics artifact generated
+  - `platform=darwin`
+  - `electronVersion=35.7.5`
+  - `webPreferences`: `contextIsolation=true`, `sandbox=true`, `nodeIntegration=false`
+- `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art SMOKE_DESKTOP_SOAK_CYCLES=2 npm run desktop:smoke:m2:secure:diag`: PASS
+
+### Scope covered by this cycle
+
+- Добавлен automated diagnostics artifact smoke для desktop runtime/security snapshot,
+- Подтверждена единая chain-команда `desktop:smoke:m2:secure:diag` как расширенный M2 regression gate.
+
+### Decision
+
+- Cycle #22: PASS.
+- Desktop observability baseline усилен runtime diagnostics artifact проверкой.
+
+## 2026-03-13 — Cycle #21 (Desktop security baseline + secure chain)
+
+- Environment: `test` (`https://test.boltorezka.gismalink.art`)
+- Build ref: `origin/feature/electron-desktop-foundation` (working tree, post-`78955dd`)
+
+### Functional gate
+
+- `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art npm run smoke:desktop:security`: PASS
+  - contextIsolation: `true`
+  - sandbox: `true`
+  - nodeIntegration: `false`
+  - webSecurity: `true`
+  - preload bridge keys: `platform,version`
+  - popupBlocked: `true`
+- `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art SMOKE_DESKTOP_SOAK_CYCLES=2 npm run desktop:smoke:m2:secure`: PASS
+
+### Scope covered by this cycle
+
+- Добавлен и валидирован desktop security smoke (webPreferences + renderer isolation + bridge allowlist),
+- Подтвержден агрегированный `desktop:smoke:m2:secure` command для M2 regression на feature/test.
+
+### Decision
+
+- Cycle #21: PASS.
+- Security smoke может использоваться как обязательный desktop pre-merge gate вместе с M2 chain.
+
+## 2026-03-13 — Cycle #20 (Desktop M2 plus soak chain)
+
+- Environment: `test` (`https://test.boltorezka.gismalink.art`)
+- Build ref: `origin/feature/electron-desktop-foundation` (working tree, post-`46b8f4d`)
+
+### Functional gate
+
+- `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art SMOKE_DESKTOP_SOAK_CYCLES=3 npm run desktop:smoke:m2:soak`: PASS
+  - `desktop:smoke`: PASS
+  - `smoke:desktop:runtime`: PASS
+  - `smoke:desktop:reconnect`: PASS
+  - `smoke:desktop:telemetry`: PASS
+  - `smoke:desktop:soak`: PASS (`cycles=3`)
+
+### Scope covered by this cycle
+
+- Подтвержден единый end-to-end M2 automation command с интегрированным reconnect soak gate,
+- Снижен операционный риск ручного запуска нескольких desktop smoke команд по отдельности.
+
+### Decision
+
+- Cycle #20: PASS.
+- `desktop:smoke:m2:soak` можно использовать как основной M2 regression command на feature/test этапах.
+
+## 2026-03-13 — Cycle #19 (Desktop reconnect soak automation)
+
+- Environment: `test` (`https://test.boltorezka.gismalink.art`)
+- Build ref: `origin/feature/electron-desktop-foundation` (working tree, post-`a6f232d`)
+
+### Functional gate
+
+- `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art SMOKE_DESKTOP_SOAK_CYCLES=4 npm run smoke:desktop:soak`: PASS
+  - runtime: `desktop`
+  - platform: `darwin`
+  - electronVersion: `35.7.5`
+  - reconnect cycles: `4/4`
+
+### Scope covered by this cycle
+
+- Добавлен repeatable soak smoke для desktop reconnect stability (многократный network flap в одном Electron run),
+- Сформирован automation evidence слой между single reconnect smoke и долгим ручным soak.
+
+### Decision
+
+- Cycle #19: PASS.
+- M2 stability automation расширен новым `smoke:desktop:soak` gate.
+
+## 2026-03-13 — Cycle #18 (Rolling SLO gate evidence)
+
+- Environment: `test` (`https://test.boltorezka.gismalink.art`)
+- Contour: server-side scheduler job (`~/srv/boltorezka/scripts/ops/scheduler/run-job.sh slo-rolling-gate`)
+
+### Functional gate
+
+- `slo-rolling-gate`: PASS
+  - `SLO_ROLLING_STATUS=pass`
+  - `SLO_ROLLING_ALERT_COUNT=0`
+  - `SLO_ROLLING_TS=2026-03-13T17:52:39.405Z`
+
+### Scope covered by this cycle
+
+- Подтвержден актуальный rolling SLO baseline gate для auth/reconnect на test,
+- Снят оставшийся блокер по `SLO/baseline` для desktop prod-readiness dependency chain.
+
+### Decision
+
+- Cycle #18: PASS.
+- SLO gate evidence добавлен в cookie/session и desktop plan документы.
+
+## 2026-03-13 — Cycle #17 (Electron M2 telemetry stabilization)
+
+- Environment: `test` (`https://test.boltorezka.gismalink.art`)
+- Build ref: `origin/feature/electron-desktop-foundation` (`704b7df`)
+
+### Functional gate
+
+- `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art npm run smoke:desktop:telemetry`: PASS
+  - runtime: `desktop`
+  - platform: `darwin`
+  - electronVersion: `35.7.5`
+- `npm run desktop:smoke:m2`: PASS
+  - `desktop:smoke` (foundation build): PASS
+  - `smoke:desktop:runtime`: PASS
+  - `smoke:desktop:reconnect`: PASS
+  - `smoke:desktop:telemetry`: PASS
+
+### Scope covered by this cycle
+
+- Закрыта стабилизация desktop telemetry smoke на test contour,
+- Подтверждён полный M2 smoke-цикл (foundation/runtime/reconnect/telemetry),
+- Runtime telemetry labels (`runtime/platform/electronVersion`) подтверждены в desktop execution path.
+
+### Decision
+
+- Cycle #17: PASS.
+- M2 automation slice готов к следующему этапу (sleep/wake evidence и дальнейшие desktop hardening шаги).
+
 ## 2026-03-04 — Cycle #16 (RTC row/camera hotfix local smoke)
 
 - Environment: local web preview (`http://127.0.0.1:4173`)
@@ -558,3 +1394,23 @@
 
 - These limits are valid for current `test` stack shape and this harness profile (Opus-like `~40 kbps` payload path).
 - Re-validate caps after infra changes (TURN range, host limits, Docker/Desktop version, API/DB release updates).
+
+## 2026-03-15 - Cycle #8 (desktop media permissions regression/rollback)
+
+- Environment: `test` desktop runtime (`ELECTRON_RENDERER_URL=https://test.boltorezka.gismalink.art`).
+- Trigger: после добавления агрессивных Electron permission handlers (`setPermissionCheckHandler`/`setPermissionRequestHandler`) UI показывал баннер "разрешите доступ к устройствам", микрофон/камера не активировались.
+
+### Root cause
+
+- Global permission interception в Electron main блокировал нормальный `getUserMedia` flow для renderer.
+
+### Fix
+
+- Удалены over-restrictive handlers `setPermissionCheckHandler` и `setPermissionRequestHandler` из `apps/desktop-electron/src/main.cjs`.
+- Сохранен только `setDisplayMediaRequestHandler` для screen-share path.
+- Electron процесс перезапущен после rollback.
+
+### Result
+
+- Manual verification: PASS.
+- Баннер доступа к устройствам исчез, медиа-устройства снова работают.

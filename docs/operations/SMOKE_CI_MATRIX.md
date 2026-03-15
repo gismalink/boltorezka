@@ -12,6 +12,10 @@
 | API+SSO smoke | `SMOKE_API=1 SMOKE_SSO=1 SMOKE_API_URL=https://test.boltorezka.gismalink.art npm run check:quick` | Recommended |
 | Auth session lifecycle smoke (refresh/logout/revoke) | `SMOKE_TEST_BEARER_TOKEN=<sid-token> SMOKE_API_URL=https://test.boltorezka.gismalink.art npm run smoke:auth:session` | Recommended |
 | RNNoise browser smoke (voice settings on/off) | `SMOKE_TEST_BEARER_TOKEN=<token> SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art npm run smoke:web:rnnoise:browser` | Recommended |
+| Desktop foundation smoke (Electron shell) | `npm run desktop:smoke` | Recommended for desktop feature branches |
+| Desktop runtime smoke (Electron + runtime markers) | `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art npm run smoke:desktop:runtime` | Recommended for desktop feature branches |
+| Desktop reconnect smoke (Electron + network flap + reload) | `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art npm run smoke:desktop:reconnect` | Recommended for desktop feature branches |
+| Desktop telemetry smoke (Electron + runtime labels payload) | `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art npm run smoke:desktop:telemetry` | Recommended for desktop feature branches |
 | Required gate (API+SSO+realtime, при наличии токена) | `SMOKE_TEST_BEARER_TOKEN=<token> SMOKE_API_URL=https://test.boltorezka.gismalink.art npm run check:required` | CI / test gate |
 
 ## 2) Test deploy gate
@@ -74,7 +78,19 @@ Policy:
 | Denied media UX gate (`banner + lock controls`) | `npm run smoke:web:denied-media` (invoked from `smoke:web:e2e`) |
 | Browser-level denied media UX gate (headless) | `SMOKE_WEB_BASE_URL=<url> npm run smoke:web:denied-media:browser` (optional in `smoke:web:e2e` via `SMOKE_E2E_DENIED_MEDIA_BROWSER=1`) |
 | Browser-level RNNoise voice-settings gate (headless) | `SMOKE_WEB_BASE_URL=<url> SMOKE_TEST_BEARER_TOKEN=<token> npm run smoke:web:rnnoise:browser` |
+| Desktop shell packaging baseline (`main/preload/renderer bundle`) | `npm run desktop:smoke` |
+| Desktop shell runtime baseline (`runtime=desktop` markers via Electron launch) | `npm run smoke:desktop:runtime` |
+| Desktop reconnect baseline (`network flap -> reload -> runtime markers`) | `npm run smoke:desktop:reconnect` |
+| Desktop reconnect soak baseline (`N` offline/online cycles in single run) | `SMOKE_WEB_BASE_URL=<url> SMOKE_DESKTOP_SOAK_CYCLES=8 npm run smoke:desktop:soak` |
+| Desktop telemetry payload baseline (`desktop_smoke_probe` meta labels) | `npm run smoke:desktop:telemetry` |
+| Desktop security baseline (`webPreferences + renderer isolation + bridge allowlist`) | `SMOKE_WEB_BASE_URL=<url> npm run smoke:desktop:security` |
+| Desktop diagnostics artifact baseline (`runtime/security snapshot file`) | `SMOKE_WEB_BASE_URL=<url> npm run smoke:desktop:diagnostics` |
+| Desktop sleep/wake assist baseline (`pre/post wake markers`, optional strict suspend detect) | `SMOKE_WEB_BASE_URL=<url> SMOKE_DESKTOP_SLEEP_WAKE_REQUIRE_SUSPEND=1 npm run smoke:desktop:sleep-wake` |
+| Desktop stability soak baseline (`long-run runtime consistency + error-free session`) | `SMOKE_WEB_BASE_URL=<url> SMOKE_DESKTOP_STABILITY_DURATION_MS=1800000 npm run smoke:desktop:stability` |
+| Desktop SSO externalization baseline (`/v1/auth/sso/start|logout` open in system browser) | `SMOKE_WEB_BASE_URL=<url> npm run smoke:desktop:sso-external` |
+| Client telemetry runtime labels (`runtime`/`platform`/`electronVersion`) | `POST /v1/telemetry/web` payload from `trackClientEvent` |
 | `GET /v1/telemetry/summary` | CI (`SMOKE_TELEMETRY_SUMMARY=1`) |
+| Desktop observability counters in telemetry summary | `GET /v1/telemetry/summary` -> `telemetry_runtime_desktop/web/unknown`, `telemetry_desktop_platform_*`, `telemetry_desktop_electron_version_present` |
 | `POST /v1/room-categories` + `POST /v1/rooms` + `GET /v1/rooms/tree` | API smoke (`SMOKE_API=1`, hierarchy block with cleanup) |
 
 ## 5) Gate policy summary

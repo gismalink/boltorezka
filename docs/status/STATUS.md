@@ -2,6 +2,19 @@
 
 ## Текущее состояние (2026-03-06)
 
+Update (2026-03-15):
+
+- Desktop M3 update/release track переведен на server-first build/publish flow:
+	- `scripts/deploy/build-desktop-server-and-publish.sh` публикует channel-aware desktop artifacts в edge static web-root.
+	- Публичные test endpoints `/desktop/test/latest.json` и `/desktop/test/mac/latest-mac.yml` подтверждены.
+- Добавлен и подтвержден automation smoke для updater distribution contract:
+	- `npm run smoke:desktop:update-feed`.
+- Postdeploy gate расширен новым check:
+	- `SMOKE_DESKTOP_UPDATE_FEED_STATUS` в `last-smoke-summary.env`.
+	- full `deploy-test-and-smoke` cycle PASS с `desktop_update_feed=pass`.
+- Устранен regression risk test static sync:
+	- `deploy-test-from-ref.sh` теперь сохраняет `desktop/` subtree при web static refresh.
+
 - Prod и test работают в GitOps-модели с test-first циклом; последние smoke в test — PASS.
 - React web остаётся default UI path; deploy-скрипты используют API + Caddy static sync mode по умолчанию (`--no-deps`, `FULL_RECREATE=1` только по явному флагу).
 - Voice baseline зафиксирован канонически (`relay + TURN TLS/TCP`) и дополнен live-применением audio quality updates через realtime event.

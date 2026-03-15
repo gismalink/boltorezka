@@ -60,9 +60,104 @@ export function useAuthProfileFlow({
       return;
     }
 
+    if (typeof window !== "undefined" && window.boltorezkaDesktop) {
+      // Desktop must not silently restore SSO from ambient browser cookies.
+      // Session should be established only via explicit desktop handoff/login.
+      return;
+    }
+
     autoSsoAttemptedRef.current = true;
     void authController.completeSso({ silent: true });
   }, [token, authMode, authController, autoSsoAttemptedRef]);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || window.boltorezkaDesktop || authMode !== "sso") {
+      return;
+    }
+
+    const url = new URL(window.location.href);
+    if (url.searchParams.get("desktop_handoff") !== "1") {
+      return;
+    }
+    if (url.searchParams.get("desktop_handoff_bootstrap") === "1") {
+      return;
+    }
+
+    url.searchParams.set("desktop_handoff_bootstrap", "1");
+    window.history.replaceState({}, "", url.toString());
+    void authController.completeSso({ silent: true }).finally(() => {
+      const updated = new URL(window.location.href);
+      if (updated.searchParams.get("desktop_handoff") !== "1") {
+        return;
+      }
+      updated.searchParams.set("desktop_handoff_refreshed", "1");
+      window.history.replaceState({}, "", updated.toString());
+    });
+  }, [authMode, authController]);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !token || authMode !== "sso") {
+      return;
+    }
+
+    const url = new URL(window.location.href);
+    if (url.searchParams.get("desktop_handoff") !== "1") {
+      return;
+    }
+    if (url.searchParams.get("desktop_handoff_refreshed") !== "1") {
+      return;
+    }
+    if (url.searchParams.get("desktop_handoff_sent") === "1") {
+      return;
+    }
+
+    url.searchParams.set("desktop_handoff_sent", "1");
+    window.history.replaceState({}, "", url.toString());
+
+    void authController.startDesktopBrowserHandoff(token).catch(() => {
+      // Keep user on the web session if deep-link handoff is blocked or unavailable.
+    });
+  }, [token, authMode, authController]);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || token || authMode !== "sso") {
+      return;
+    }
+
+    const url = new URL(window.location.href);
+    const handoffCode = String(url.searchParams.get("desktop_sso_code") || "").trim();
+    const handoffAttemptId = String(url.searchParams.get("desktop_handoff_attempt") || "").trim() || null;
+    if (!handoffCode) {
+      return;
+    }
+
+    void authController.completeDesktopHandoff(handoffCode, handoffAttemptId);
+    url.searchParams.delete("desktop_sso_code");
+    url.searchParams.delete("desktop_sso_complete");
+    url.searchParams.delete("desktop_handoff_attempt");
+    window.history.replaceState({}, "", url.toString());
+  }, [token, authMode, authController]);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || token || authMode !== "sso") {
+      return;
+    }
+
+    if (window.boltorezkaDesktop) {
+      return;
+    }
+
+    const url = new URL(window.location.href);
+    const isDesktopCompleteFlag = url.searchParams.get("desktop_sso_complete") === "1";
+    const hasDesktopCode = Boolean(url.searchParams.get("desktop_sso_code"));
+    if (!isDesktopCompleteFlag || hasDesktopCode) {
+      return;
+    }
+
+    void authController.completeSso({ silent: false });
+    url.searchParams.delete("desktop_sso_complete");
+    window.history.replaceState({}, "", url.toString());
+  }, [token, authMode, authController]);
 
   const beginSso = (provider: "google" | "yandex") => {
     setAuthMenuOpen(false);

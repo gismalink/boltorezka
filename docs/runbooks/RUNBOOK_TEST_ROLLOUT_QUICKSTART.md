@@ -38,9 +38,63 @@
 
 - `ssh mac-mini 'cd ~/srv/boltorezka && npm run smoke:test:postdeploy'`
 
+Desktop update-feed gate (рекомендуется держать включенным в smoke):
+
+- `ssh mac-mini 'cd ~/srv/boltorezka && SMOKE_DESKTOP_UPDATE_FEED=1 SMOKE_DESKTOP_CHANNEL=test npm run smoke:test:postdeploy'`
+- expected summary fields в `~/srv/boltorezka/.deploy/last-smoke-summary.env`:
+  - `SMOKE_DESKTOP_UPDATE_FEED_STATUS=pass`
+  - `SMOKE_SUMMARY_TEXT` содержит `desktop_update_feed=pass`
+
 5) Логи сервиса после rollout:
 
 - `ssh mac-mini 'cd ~/srv/boltorezka && docker compose -f infra/docker-compose.host.yml --env-file infra/.env.host ps && docker compose -f infra/docker-compose.host.yml --env-file infra/.env.host logs --tail=120 boltorezka-api-test'`
+
+## Desktop auth handoff (deterministic) quick check
+
+После rollout рекомендуется отдельный regression gate для browser->desktop handoff protocol:
+
+1) Обновить smoke users/tokens на сервере:
+
+- `ssh mac-mini 'cd ~/srv/boltorezka && SMOKE_AUTH_COMPOSE_FILE=infra/docker-compose.host.yml SMOKE_AUTH_ENV_FILE=infra/.env.host SMOKE_AUTH_POSTGRES_SERVICE=boltorezka-db-test SMOKE_AUTH_API_SERVICE=boltorezka-api-test SMOKE_API_URL=https://test.boltorezka.gismalink.art bash ./scripts/smoke/smoke-auth-bootstrap.sh'`
+
+2) Запустить deterministic handoff smoke локально с токеном из серверного env:
+
+- `TOKEN="$(ssh mac-mini "cd ~/srv/boltorezka && set -a && source .deploy/smoke-auth.env && set +a && printf '%s' \"\$SMOKE_TEST_BEARER_TOKEN\"")" && SMOKE_TEST_BEARER_TOKEN="$TOKEN" SMOKE_API_URL=https://test.boltorezka.gismalink.art npm run smoke:desktop:handoff-deterministic`
+
+3) При необходимости soak на 20 последовательных циклов:
+
+- `TOKEN="$(ssh mac-mini "cd ~/srv/boltorezka && set -a && source .deploy/smoke-auth.env && set +a && printf '%s' \"\$SMOKE_TEST_BEARER_TOKEN\"")" && SMOKE_TEST_BEARER_TOKEN="$TOKEN" SMOKE_API_URL=https://test.boltorezka.gismalink.art SMOKE_DESKTOP_HANDOFF_SOAK_CYCLES=20 npm run smoke:desktop:handoff:soak`
+
+4) Browser-level soak на трех движках (Chromium/WebKit/Firefox):
+
+- `TOKEN="$(ssh mac-mini "cd ~/srv/boltorezka && set -a && source .deploy/smoke-auth.env && set +a && printf '%s' \"\$SMOKE_TEST_BEARER_TOKEN\"")" && SMOKE_TEST_BEARER_TOKEN="$TOKEN" SMOKE_API_URL=https://test.boltorezka.gismalink.art SMOKE_DESKTOP_HANDOFF_BROWSER_SOAK_CYCLES=20 npm run smoke:desktop:handoff:browser-soak`
+
+Ожидаемый PASS:
+
+- `attemptStatusBeforeComplete=pending`
+- `attemptStatusAfterComplete=completed`
+- `timeoutPathStatus=expired`
+
+## Desktop stability gate policy (practical)
+
+Цель: не блокировать daily iteration избыточным long-run smoke, но сохранить release-grade контроль.
+
+1) На каждую значимую media-итерацию (test/dev loop):
+
+- Использовать `15-30m` gate:
+  - `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art npm run smoke:desktop:voice-checkpoint:15m`
+  - при необходимости: `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art SMOKE_DESKTOP_STABILITY_DURATION_MS=1800000 npm run smoke:desktop:stability`
+
+2) `2h` long-run gate выполнять только для standalone packaged desktop клиента
+
+- Условие запуска: post-signing/notarization release candidate.
+- Команда:
+  - `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art SMOKE_DESKTOP_STABILITY_DURATION_MS=7200000 npm run smoke:desktop:stability`
+
+3) Для web-hosted desktop shell в активной разработке
+
+- `2h` gate не является обязательным pre-merge требованием.
+- Обязательны: короткий checkpoint + regression smoke по затронутому функционалу.
 
 ### One-command альтернатива (deploy + smoke)
 
@@ -83,6 +137,12 @@
 - нажать `Complete SSO Session`
 - войти в `general`
 - отправить сообщение и проверить realtime во второй вкладке
+
+6) Desktop update endpoints smoke:
+
+- `curl -sS https://test.boltorezka.gismalink.art/desktop/test/latest.json | head -n 20`
+- `curl -sS https://test.boltorezka.gismalink.art/desktop/test/mac/latest-mac.yml | head -n 20`
+- `curl -I -sS https://test.boltorezka.gismalink.art/desktop/test/mac/Boltorezka-0.2.0-arm64-mac.zip | head -n 8`
 
 ## Smoke users (test)
 
