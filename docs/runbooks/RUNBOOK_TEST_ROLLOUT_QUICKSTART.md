@@ -38,6 +38,13 @@
 
 - `ssh mac-mini 'cd ~/srv/boltorezka && npm run smoke:test:postdeploy'`
 
+Desktop update-feed gate (рекомендуется держать включенным в smoke):
+
+- `ssh mac-mini 'cd ~/srv/boltorezka && SMOKE_DESKTOP_UPDATE_FEED=1 SMOKE_DESKTOP_CHANNEL=test npm run smoke:test:postdeploy'`
+- expected summary fields в `~/srv/boltorezka/.deploy/last-smoke-summary.env`:
+  - `SMOKE_DESKTOP_UPDATE_FEED_STATUS=pass`
+  - `SMOKE_SUMMARY_TEXT` содержит `desktop_update_feed=pass`
+
 5) Логи сервиса после rollout:
 
 - `ssh mac-mini 'cd ~/srv/boltorezka && docker compose -f infra/docker-compose.host.yml --env-file infra/.env.host ps && docker compose -f infra/docker-compose.host.yml --env-file infra/.env.host logs --tail=120 boltorezka-api-test'`
@@ -130,6 +137,12 @@
 - нажать `Complete SSO Session`
 - войти в `general`
 - отправить сообщение и проверить realtime во второй вкладке
+
+6) Desktop update endpoints smoke:
+
+- `curl -sS https://test.boltorezka.gismalink.art/desktop/test/latest.json | head -n 20`
+- `curl -sS https://test.boltorezka.gismalink.art/desktop/test/mac/latest-mac.yml | head -n 20`
+- `curl -I -sS https://test.boltorezka.gismalink.art/desktop/test/mac/Boltorezka-0.2.0-arm64-mac.zip | head -n 8`
 
 ## Smoke users (test)
 
