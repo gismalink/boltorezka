@@ -210,7 +210,7 @@ Desktop smoke (must pass):
 - [x] Определить формат и размещение build-манифеста для desktop downloads (`test`/`prod`).
 - [ ] (Deferred) Вернуться к разделу desktop downloads после появления первых publishable desktop билдов.
 - [ ] Продолжить закрытие non-download задач M3: signing readiness + release-grade update verification.
-- [ ] Обновить pre-prod decision package под post-merge state `origin/main` и зафиксировать owner/sign-off draft.
+- [x] Обновить pre-prod decision package под post-merge state `origin/main` и зафиксировать owner/sign-off draft.
 - [ ] Подготовить controlled prod rollout command set (без выполнения) для explicit approval.
 
 ## 10) Progress notes

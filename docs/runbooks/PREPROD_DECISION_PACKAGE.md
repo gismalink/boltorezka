@@ -1,6 +1,6 @@
 # Boltorezka Pre-Prod Decision Package
 
-Дата: 2026-03-07  
+Дата: 2026-03-15  
 Среда подготовки: `test`  
 Релизный поток: `feature/* -> test -> merge -> main -> prod`
 
@@ -226,6 +226,9 @@
   - выполнен `npm run slo:check` в `test` с актуальным admin bearer;
   - статус в `.deploy/slo/last-slo-eval.env`: `SLO_ROLLING_STATUS=pass`;
   - при `SLO_ROLLING_STATUS=alert` решение только `NO-GO` до triage/стабилизации.
+10. **Desktop updater distribution gate**
+  - `smoke:desktop:update-feed` — PASS в postdeploy;
+  - в `.deploy/last-smoke-summary.env` присутствует `SMOKE_DESKTOP_UPDATE_FEED_STATUS=pass`.
 
 ### 8.2 Automatic NO-GO conditions
 
@@ -251,15 +254,16 @@
 - Rollback ref: `<known-good-sha>`
 - Final decision: `GO | NO-GO`
 
-### 8.4 Current gate record (refresh 2026-03-09)
+### 8.4 Current gate record (refresh 2026-03-15)
 
-- Target main SHA: `<to-fill-before-next-prod>`
-- Last test deploy SHA: `694dc18` (`origin/feature/scheduler-interface-portable`, LiveKit runtime stabilization)
+- Target main SHA: `10b6fd5c5ff1b5005a68e8f4c125d7f8af8980c0`
+- Last test deploy SHA: `10b6fd5c5ff1b5005a68e8f4c125d7f8af8980c0` (`origin/main`, post-merge gate)
 - smoke:sso: `PASS`
 - smoke:api: `PASS`
 - smoke:realtime: `PASS`
 - reconnectOk: `true`
 - smoke:web:version-cache: `PASS`
+- smoke:desktop:update-feed: `PASS`
 - smoke:web:e2e: `PASS` (last validated baseline)
 - call relay scenario (`SMOKE_CALL_SIGNAL=1`): `PASS`
 - livekit control gate (`smoke:livekit:token-flow`): `PASS`
@@ -269,4 +273,4 @@
 - Release Owner: `<to-fill-before-next-prod>`
 - Rollback Owner: `<to-fill-before-next-prod>`
 - Rollback ref: `<to-fill-before-next-prod>`
-- Final decision: `NO-GO (pending merge-to-main validation, explicit prod approval and sign-off fields)`
+- Final decision: `NO-GO (pending explicit prod approval/sign-off fields and controlled rollout confirmation)`
