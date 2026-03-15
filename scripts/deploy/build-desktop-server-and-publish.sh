@@ -12,8 +12,9 @@ GIT_REF="$1"
 REPO_DIR="${2:-$PWD}"
 DESKTOP_CHANNEL="${DESKTOP_CHANNEL:-test}"
 EDGE_REPO_DIR="${EDGE_REPO_DIR:-$HOME/srv/edge}"
-EDGE_DESKTOP_DIR_BASE="${EDGE_DESKTOP_DIR_BASE:-$EDGE_REPO_DIR/ingress/static/boltorezka/desktop}"
-PUBLISH_DIR="$EDGE_DESKTOP_DIR_BASE/$DESKTOP_CHANNEL"
+EDGE_DESKTOP_DIR_BASE="${EDGE_DESKTOP_DIR_BASE:-$EDGE_REPO_DIR/ingress/static/boltorezka}"
+# Caddy serves test/prod from /srv/static/boltorezka/<env>, so desktop artifacts must live under that root.
+PUBLISH_DIR="$EDGE_DESKTOP_DIR_BASE/$DESKTOP_CHANNEL/desktop/$DESKTOP_CHANNEL"
 PUBLIC_BASE_URL="${DESKTOP_PUBLIC_BASE_URL:-}"
 
 if [[ "$DESKTOP_CHANNEL" != "test" && "$DESKTOP_CHANNEL" != "prod" ]]; then

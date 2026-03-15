@@ -35,31 +35,19 @@ This folder contains operational scripts grouped by purpose.
 
 ## Common Flows
 
-- Fast test rollout + smoke:
   - `TEST_REF=origin/feature/<name> npm run deploy:test:smoke`
-- Test-only post-deploy smoke:
   - `npm run smoke:test:postdeploy`
-- LiveKit-only test rollout + smoke:
   - `TEST_REF=origin/feature/<name> npm run deploy:test:livekit`
-- Prod rollout (only after test validation):
   - `PROD_REF=origin/main npm run deploy:prod`
-- Desktop server build + publish (test/prod channel):
   - `DESKTOP_REF=origin/feature/<name> DESKTOP_CHANNEL=test DESKTOP_PUBLIC_BASE_URL=https://test.boltorezka.gismalink.art npm run deploy:desktop:server`
-- Local verify pipeline:
   - `npm run check`
-- List scheduled jobs:
   - `npm run scheduler:list`
-- Run one scheduled job manually:
   - `npm run scheduler:run -- backup-postgres-all`
-- Run TURN credentials rotation manually:
   - `TURN_ROTATE_APPLY=1 npm run turn:rotate`
-- Start LiveKit test foundation:
   - `npm run livekit:test:up`
-- Check LiveKit test status:
   - `npm run livekit:test:check`
 
-## Notes
+ Публикация desktop артефактов в edge static web-root (`ingress/static/boltorezka/<channel>/desktop/<channel>/<sha>/...`) + генерация `latest.json`
 
 - Keep test-first: use `deploy:test:smoke` before any prod rollout.
-- Prefer scripts over manual command chains for reproducible operations.
-- `scripts/examples/` is intentionally not used for active runbooks; canonical scripts are in `deploy/` and `smoke/`.
+  - `npm run scheduler:run -- backup-postgres-all`
