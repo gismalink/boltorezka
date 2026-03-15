@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 
-type ServerMenuTab = "users" | "events" | "telemetry" | "call" | "sound" | "video" | "chat_images";
+type ServerMenuTab = "users" | "events" | "telemetry" | "call" | "sound" | "video" | "chat_images" | "desktop_downloads";
 
 type UseServerMenuAccessGuardArgs = {
   serverMenuTab: ServerMenuTab;

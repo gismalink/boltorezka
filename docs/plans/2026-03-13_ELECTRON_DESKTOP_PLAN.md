@@ -135,18 +135,18 @@ Runbook:
 - [x] Обновить дашборд/логи для desktop-сессий.
 
 ### 4.6 Desktop download distribution
-- [ ] Frontend entrypoint: добавить в server menu кнопку `Get desktop app`.
-- [ ] UI behavior: по кнопке открывать popup `Desktop app downloads`.
-- [ ] В popup рендерить фиксированный список платформ: `macOS`, `Windows`, `Linux`.
-- [ ] Для платформ без артефакта показывать заглушку `Coming soon` и неактивную кнопку.
-- [ ] Для платформ с артефактом показывать активную кнопку `Download`.
-- [ ] Backend/source contract: frontend читает манифест доступных билдов (`channel`, `platform`, `version`, `sha`, `url`, `publishedAt`).
+- [x] Frontend entrypoint: добавить в server menu кнопку `Get desktop app`.
+- [x] UI behavior: по кнопке открывать popup `Desktop app downloads`.
+- [x] В popup рендерить фиксированный список платформ: `macOS`, `Windows`, `Linux`.
+- [x] Для платформ без артефакта показывать заглушку `Coming soon` и неактивную кнопку.
+- [x] Для платформ с артефактом показывать активную кнопку `Download`.
+- [x] Backend/source contract: frontend читает channel manifest (`/desktop/<channel>/latest.json`) и строит платформенные ссылки из опубликованных артефактов.
 - [x] Хранение артефактов: release storage для desktop билдов (по каналам `test`/`prod`) с immutable ссылками на конкретные версии.
 - [x] Публикация: server-first script при готовности билда обновляет манифест и добавляет ссылку на новый артефакт (GitHub path оставлен как fallback).
 - [ ] До появления реальных билдов popup работает в режиме заглушек без broken links.
 
 Status:
-- Deferred by product decision (2026-03-15): начинаем реализацию раздела после появления первых desktop билдов для скачивания.
+- Done (2026-03-15): реализован `Desktop app` tab в server menu, источником данных выступает `latest.json` текущего канала (`test`/`prod`), UI показывает availability по платформам и активирует `Download` только для опубликованных файлов.
 
 ## 5) QA matrix и smoke
 

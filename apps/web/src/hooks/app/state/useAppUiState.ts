@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { VoiceSettingsPanel } from "../../../components";
 
-export type AppServerMenuTab = "users" | "events" | "telemetry" | "call" | "sound" | "video" | "chat_images";
+export type AppServerMenuTab = "users" | "events" | "telemetry" | "call" | "sound" | "video" | "chat_images" | "desktop_downloads";
 export type AppMobileTab = "channels" | "chat" | "settings";
 
 export function useAppUiState() {

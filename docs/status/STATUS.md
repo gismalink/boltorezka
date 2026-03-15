@@ -20,6 +20,9 @@ Update (2026-03-15):
 	- `GET /v1/auth/mode` -> `mode=sso`.
 	- `smoke:web:version-cache` (prod URL) -> PASS.
 	- `smoke:desktop:update-feed` (`channel=prod`) -> PASS.
+- Реализован frontend download entrypoint для desktop distribution:
+	- в server menu добавлен tab `Desktop app`,
+	- UI читает `/desktop/<channel>/latest.json` и рендерит matrix `macOS/Windows/Linux` с `Download` только для опубликованных артефактов.
 
 - Prod и test работают в GitOps-модели с test-first циклом; последние smoke в test — PASS.
 - React web остаётся default UI path; deploy-скрипты используют API + Caddy static sync mode по умолчанию (`--no-deps`, `FULL_RECREATE=1` только по явному флагу).
