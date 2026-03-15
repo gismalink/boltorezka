@@ -2,6 +2,39 @@
 
 Отдельный журнал результатов тестов/нагрузки.
 
+## 2026-03-15 — Cycle #50 (Post-merge main gate: full test deploy+smoke PASS)
+
+- Environment: `test` (`https://test.boltorezka.gismalink.art`, mac-mini)
+- Build ref: `origin/main` (`10b6fd5`)
+
+### Functional gate
+
+- Pre-step desktop publish from `main`: PASS
+  - `DESKTOP_CHANNEL=test DESKTOP_PUBLIC_BASE_URL=https://test.boltorezka.gismalink.art ./scripts/deploy/build-desktop-server-and-publish.sh origin/main "$PWD"`
+  - published desktop SHA: `10b6fd5c5ff1b5005a68e8f4c125d7f8af8980c0`
+- Full test rollout from `main`: PASS
+  - `TEST_REF=origin/main ALLOW_TEST_FROM_MAIN=1 SMOKE_DESKTOP_UPDATE_FEED=1 SMOKE_DESKTOP_CHANNEL=test npm run deploy:test:smoke`
+  - postdeploy gates PASS:
+    - `smoke:sso`, `smoke:api`, `smoke:auth:session`, `smoke:auth:cookie-negative`, `smoke:auth:cookie-ws-ticket`
+    - `smoke:web:version-cache` (`sha=10b6fd5c5ff1b5005a68e8f4c125d7f8af8980c0`)
+    - `smoke:web:crash-boundary:browser`, `smoke:web:rnnoise:browser`
+    - `smoke:desktop:update-feed`
+    - `smoke:realtime`
+- Server summary marker: PASS
+  - `SMOKE_STATUS=pass`
+  - `SMOKE_DESKTOP_UPDATE_FEED_STATUS=pass`
+  - `SMOKE_SUMMARY_TEXT` contains `desktop_update_feed=pass`
+
+### Scope covered by this cycle
+
+- Закрыт обязательный post-merge test gate уже из `origin/main`.
+- Подтверждена стабильность полного test rollout pipeline после merge M3 desktop workstream в default branch.
+
+### Decision
+
+- Cycle #50: PASS.
+- `main` готов к дальнейшему pre-prod decision stage (prod rollout только по явному подтверждению).
+
 ## 2026-03-15 — Cycle #49 (Full test deploy+smoke with desktop update-feed gate)
 
 - Environment: `test` (`https://test.boltorezka.gismalink.art`, mac-mini server flow)

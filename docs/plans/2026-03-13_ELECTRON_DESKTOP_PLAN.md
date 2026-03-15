@@ -426,6 +426,10 @@ Progress note (2026-03-15, postdeploy integration hardening):
 - Устранен regression-risk в test deploy static sync: web static refresh теперь сохраняет `desktop/` subtree, чтобы не ломать updater feed между деплоями.
 - Выполнен full `deploy-test-and-smoke` прогон с `SMOKE_DESKTOP_UPDATE_FEED=1`: PASS (включая realtime gate).
 
+Progress note (2026-03-15, merge + post-merge gate):
+- Ветка `feature/electron-desktop-foundation` merged в `main` (merge commit `10b6fd5`).
+- Выполнен обязательный post-merge test gate уже из `origin/main`: `deploy:test:smoke` PASS с `desktop_update_feed=pass`.
+
 ## 11) Known Follow-ups
 
 - [x] Провести browser-level handoff soak (Chromium/WebKit/Firefox) поверх уже закрытого protocol-level soak и приложить агрегированное evidence к auth runbook.
