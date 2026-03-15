@@ -6,8 +6,8 @@
 
 ## 1) Decision summary
 
-- Decision status: **REFRESHED (NO-GO пока не выполнен новый prod sign-off)**.
-- Причина: пакет обновлён под актуальные gate-правила и свежие post-merge test evidence (`Cycle #50`, rollout от `origin/main`), но новый explicit prod approval ещё не заполнялся.
+- Decision status: **GO EXECUTED (controlled prod rollout completed on 2026-03-15)**.
+- Причина: выполнены pre-prod gate criteria, заполнен approval record и выполнен controlled prod rollout из `origin/main`.
 - Production rollout policy: только из `origin/main` после отдельного explicit approval.
 - SFU readiness reference: `docs/runbooks/SFU_STAGE4_PROD_READINESS_PACKAGE.md`.
 
@@ -183,12 +183,12 @@
 
 ### Approval record (to fill before prod)
 
-- Release Owner: `<name>`
-- Rollback Owner: `<name>`
-- Target prod ref: `origin/main@<sha>`
-- Rollback ref: `<known-good-sha>`
-- Decision: `GO | NO-GO`
-- Timestamp UTC: `<yyyy-mm-ddThh:mm:ssZ>`
+- Release Owner: `David Shvartsman`
+- Rollback Owner: `David Shvartsman`
+- Target prod ref: `origin/main@a19185a6f7e354f91a52608c4fa408964dca279c`
+- Rollback ref: `104e33142039e82736d18d7f1e24e38af260e668`
+- Decision: `GO`
+- Timestamp UTC: `2026-03-15T17:23:35Z`
 
 ## 8) MVP-like readiness gate (required before prod)
 
@@ -249,10 +249,10 @@
 - smoke:web:e2e: `PASS | FAIL`
 - call relay scenario: `PASS | FAIL`
 - slo:check (`SLO_ROLLING_STATUS`): `pass | alert`
-- Release Owner: `<name>`
-- Rollback Owner: `<name>`
-- Rollback ref: `<known-good-sha>`
-- Final decision: `GO | NO-GO`
+- Release Owner: `David Shvartsman`
+- Rollback Owner: `David Shvartsman`
+- Rollback ref: `104e33142039e82736d18d7f1e24e38af260e668`
+- Final decision: `GO (executed 2026-03-15)`
 
 ### 8.4 Current gate record (refresh 2026-03-15)
 
@@ -270,7 +270,7 @@
 - livekit media gate (`smoke:livekit:media`): `PASS` (`oneWayIncidents.audio=0`, `oneWayIncidents.video=0`)
 - mediaTopology gate: `expected=livekit`, `mediaTopologyFirstOk=true`, `callSignalGuardCode=LiveKitSignalingDisabled`
 - Performance gate (`docs/operations/PERFORMANCE_GATE.md`): `READY_FOR_SIGNOFF` (test contour)
-- Release Owner: `<to-fill-before-next-prod>`
-- Rollback Owner: `<to-fill-before-next-prod>`
-- Rollback ref: `<to-fill-before-next-prod>`
-- Final decision: `NO-GO (pending explicit prod approval/sign-off fields and controlled rollout confirmation)`
+- Release Owner: `David Shvartsman`
+- Rollback Owner: `David Shvartsman`
+- Rollback ref: `104e33142039e82736d18d7f1e24e38af260e668`
+- Final decision: `GO (controlled rollout completed on 2026-03-15, deploy SHA a19185a6f7e354f91a52608c4fa408964dca279c)`

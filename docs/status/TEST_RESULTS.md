@@ -2,6 +2,38 @@
 
 Отдельный журнал результатов тестов/нагрузки.
 
+## 2026-03-15 — Cycle #51 (Controlled prod rollout from origin/main)
+
+- Environment: `prod` (`https://boltorezka.gismalink.art`, mac-mini)
+- Build ref: `origin/main` (`a19185a`)
+
+### Functional gate
+
+- Desktop publish for prod channel: PASS
+  - `DESKTOP_CHANNEL=prod DESKTOP_PUBLIC_BASE_URL=https://boltorezka.gismalink.art ./scripts/deploy/build-desktop-server-and-publish.sh origin/main "$PWD"`
+  - `DESKTOP_BUILD_SHA=a19185a6f7e354f91a52608c4fa408964dca279c`
+- Controlled prod deploy: PASS
+  - `PROD_REF=origin/main npm run deploy:prod`
+  - deploy marker: `DEPLOY_SHA=a19185a6f7e354f91a52608c4fa408964dca279c`
+- Post-deploy checks: PASS
+  - `GET /health` -> `200`, `api/db/redis=ok`, `appBuildSha=a19185a6f7e354f91a52608c4fa408964dca279c`
+  - `GET /v1/auth/mode` -> `{"mode":"sso","ssoBaseUrl":"https://auth.gismalink.art"}`
+  - `smoke:web:version-cache` on prod -> PASS
+  - `smoke:desktop:update-feed` with `SMOKE_DESKTOP_CHANNEL=prod` -> PASS
+  - `GET /desktop/prod/latest.json` -> JSON manifest (channel `prod`)
+  - `GET /desktop/prod/mac/latest-mac.yml` -> valid updater YAML
+  - `docker compose ps boltorezka-api-prod` -> `Up`
+
+### Scope covered by this cycle
+
+- Выполнен controlled prod rollout из default branch (`origin/main`) по GitOps policy.
+- Подтверждена работоспособность desktop distribution/update endpoints в prod.
+
+### Decision
+
+- Cycle #51: PASS.
+- Prod rollout выполнен и верифицирован; rollback ref зафиксирован: `104e33142039e82736d18d7f1e24e38af260e668`.
+
 ## 2026-03-15 — Cycle #50 (Post-merge main gate: full test deploy+smoke PASS)
 
 - Environment: `test` (`https://test.boltorezka.gismalink.art`, mac-mini)

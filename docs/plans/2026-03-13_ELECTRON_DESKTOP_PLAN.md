@@ -89,9 +89,9 @@ Definition of done:
 - [ ] Rollback runbook проверен на test.
 
 ### M4 - Prod readiness
-- [ ] Пройден pre-prod checklist.
-- [ ] Подтверждены smoke + ручной critical path на test.
-- [ ] Выполнен controlled rollout в prod.
+- [x] Пройден pre-prod checklist.
+- [x] Подтверждены smoke + ручной critical path на test.
+- [x] Выполнен controlled rollout в prod.
 
 Definition of done:
 - [ ] Первый production desktop release доступен целевой аудитории.
@@ -431,6 +431,11 @@ Progress note (2026-03-15, postdeploy integration hardening):
 Progress note (2026-03-15, merge + post-merge gate):
 - Ветка `feature/electron-desktop-foundation` merged в `main` (merge commit `10b6fd5`).
 - Выполнен обязательный post-merge test gate уже из `origin/main`: `deploy:test:smoke` PASS с `desktop_update_feed=pass`.
+
+Progress note (2026-03-15, controlled prod rollout):
+- Выполнен controlled prod rollout из `origin/main` на SHA `a19185a6f7e354f91a52608c4fa408964dca279c`.
+- Prod post-checks green: `/health` (`api/db/redis=ok`), `/v1/auth/mode` (`sso`), `smoke:web:version-cache` PASS.
+- Desktop prod distribution/update endpoints подтверждены: `/desktop/prod/latest.json`, `/desktop/prod/mac/latest-mac.yml`, `smoke:desktop:update-feed` (`channel=prod`) PASS.
 
 ## 11) Known Follow-ups
 
