@@ -624,62 +624,28 @@ export function ServerProfileModal({
 
           {serverMenuTab === "desktop_downloads" ? (
             <section className="grid gap-3">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <h3>{t("server.desktopTitle")}</h3>
-                <button
-                  type="button"
-                  className="secondary"
-                  onClick={onRefreshDesktopDownloads}
-                  disabled={desktopDownloadsLoading}
-                >
-                  {t("server.desktopRefresh")}
-                </button>
-              </div>
+              <h3>{t("server.desktopTitle")}</h3>
               <p className="muted">{t("server.desktopHint")}</p>
-              <div className="grid gap-1">
-                <div>{t("server.desktopChannel")}: {desktopDownloadsChannel}</div>
-                <div>{t("server.desktopVersionSha")}: {desktopDownloadsSha || "-"}</div>
-                <div>{t("server.desktopBuiltAt")}: {desktopDownloadsBuiltAt || "-"}</div>
-                <div className="flex flex-wrap gap-3">
-                  <a href={desktopDownloadsManifestUrl} target="_blank" rel="noreferrer">{t("server.desktopManifest")}</a>
-                  <a href={desktopDownloadsUpdaterMacUrl} target="_blank" rel="noreferrer">{t("server.desktopUpdaterFeedMac")}</a>
-                </div>
+              <div className="grid gap-3 desktop:grid-cols-3">
+                {[
+                  { id: "windows", label: t("server.desktopPlatformWindows") },
+                  { id: "mac", label: t("server.desktopPlatformMac") },
+                  { id: "linux", label: t("server.desktopPlatformLinux") }
+                ].map((platform) => (
+                  <div key={platform.id} className="card compact grid gap-3 p-3">
+                    <div className="text-sm font-semibold">{platform.label}</div>
+                    <button
+                      type="button"
+                      className="secondary"
+                      disabled
+                      title={t("server.desktopSoon")}
+                      aria-label={`${t("server.desktopDownload")} (${t("server.desktopSoon")})`}
+                    >
+                      {t("server.desktopDownload")}
+                    </button>
+                  </div>
+                ))}
               </div>
-
-              {desktopDownloadsLoading ? <p className="muted">{t("server.desktopLoading")}</p> : null}
-              {desktopDownloadsError ? <p className="muted">{t("server.desktopError")}: {desktopDownloadsError}</p> : null}
-
-              {!desktopDownloadsLoading ? (
-                <ul className="admin-list grid gap-2">
-                  {desktopDownloadsItems.map((item) => (
-                    <li key={item.platform} className="admin-row grid min-h-[42px] grid-cols-[minmax(0,1fr)_auto] items-center gap-2 max-desktop:grid-cols-1">
-                      <span className="min-w-0 break-words">
-                        {item.platform === "mac" ? t("server.desktopPlatformMac") : null}
-                        {item.platform === "windows" ? t("server.desktopPlatformWindows") : null}
-                        {item.platform === "linux" ? t("server.desktopPlatformLinux") : null}
-                        {" · "}
-                        {item.available ? t("server.desktopAvailable") : t("server.desktopUnavailable")}
-                        {item.fileName ? ` · ${item.fileName}` : ""}
-                        {item.size > 0 ? ` · ${item.size} B` : ""}
-                      </span>
-                      {item.available ? (
-                        <a
-                          className="secondary inline-flex min-h-[34px] items-center justify-center px-3"
-                          href={item.url}
-                          target="_blank"
-                          rel="noreferrer"
-                        >
-                          {t("server.desktopDownload")}
-                        </a>
-                      ) : null}
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
-
-              {!desktopDownloadsLoading && !desktopDownloadsError && desktopDownloadsItems.every((item) => !item.available) ? (
-                <p className="muted">{t("server.desktopEmpty")}</p>
-              ) : null}
             </section>
           ) : null}
         </div>
