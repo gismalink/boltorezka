@@ -83,7 +83,8 @@ if [[ -d "$EDGE_REPO_DIR/ingress" ]]; then
   docker rm "$WEB_IMAGE_CID" >/dev/null
   WEB_IMAGE_CID=""
 
-  find "$EDGE_STATIC_DIR_PROD" -mindepth 1 -maxdepth 1 ! -name '.gitkeep' -exec rm -rf {} +
+  # Keep desktop distribution artifacts under static root between web/API deploys.
+  find "$EDGE_STATIC_DIR_PROD" -mindepth 1 -maxdepth 1 ! -name '.gitkeep' ! -name 'desktop' -exec rm -rf {} +
   cp -R "$TMP_WEB_DIST_DIR/." "$EDGE_STATIC_DIR_PROD/"
 else
   echo "[deploy-prod] warning: edge repo not found at $EDGE_REPO_DIR; static sync skipped"
