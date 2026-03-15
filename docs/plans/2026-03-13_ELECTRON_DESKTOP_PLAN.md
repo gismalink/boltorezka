@@ -70,11 +70,17 @@ Definition of done:
 - [x] Нет блокирующих regressions относительно web baseline.
 
 ### M3 - Update/release channel
+- [ ] Добавить в web UI пункт меню сервера `Get desktop app`.
+- [ ] По клику открывать popup с кнопками платформ-заглушек (`macOS`, `Windows`, `Linux`) и статусами доступности.
+- [ ] Источник загрузки: channel-aware артефакты (`test`/`prod`) из release storage, публикуемые CI.
 - [ ] Настроены каналы auto-update: test и prod.
 - [ ] Реализован безопасный update flow с rollback-процедурой.
 - [ ] Сборки подписываются (где применимо).
 
 Definition of done:
+- [ ] В меню сервера доступна точка входа `Get desktop app`.
+- [ ] Popup корректно показывает `available/coming soon` по каждой платформе.
+- [ ] Для доступных платформ кнопка ведет на актуальный артефакт выбранного канала (`test`/`prod`).
 - [ ] Обновление test->test проходит автоматически.
 - [ ] Rollback runbook проверен на test.
 
@@ -120,6 +126,17 @@ Runbook:
 - [x] Добавить desktop telemetry labels (platform, app channel, app version).
 - [x] Добавить сбор crash/report артефактов.
 - [x] Обновить дашборд/логи для desktop-сессий.
+
+### 4.6 Desktop download distribution
+- [ ] Frontend entrypoint: добавить в server menu кнопку `Get desktop app`.
+- [ ] UI behavior: по кнопке открывать popup `Desktop app downloads`.
+- [ ] В popup рендерить фиксированный список платформ: `macOS`, `Windows`, `Linux`.
+- [ ] Для платформ без артефакта показывать заглушку `Coming soon` и неактивную кнопку.
+- [ ] Для платформ с артефактом показывать активную кнопку `Download`.
+- [ ] Backend/source contract: frontend читает манифест доступных билдов (`channel`, `platform`, `version`, `sha`, `url`, `publishedAt`).
+- [ ] Хранение артефактов: release storage для desktop билдов (по каналам `test`/`prod`) с immutable ссылками на конкретные версии.
+- [ ] Публикация: CI при готовности билда обновляет манифест и добавляет ссылку на новый артефакт.
+- [ ] До появления реальных билдов popup работает в режиме заглушек без broken links.
 
 ## 5) QA matrix и smoke
 
@@ -179,6 +196,8 @@ Desktop smoke (must pass):
 - [x] Добавить каркас `apps/desktop-electron` и базовые команды запуска/сборки.
 - [x] Подготовить отдельный desktop smoke checklist документ (test gate).
 - [x] После M1 выполнить первый test rollout и зафиксировать результаты в `docs/status`.
+- [ ] Спроектировать и внедрить UI-поток `Get desktop app` -> popup платформ с заглушками.
+- [ ] Определить формат и размещение build-манифеста для desktop downloads (`test`/`prod`).
 
 ## 10) Progress notes
 
