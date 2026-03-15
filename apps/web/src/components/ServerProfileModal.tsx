@@ -5,14 +5,6 @@ import { RangeSlider } from "./RangeSlider";
 
 type ServerMenuTab = "users" | "events" | "telemetry" | "call" | "sound" | "video" | "chat_images" | "desktop_downloads";
 
-type DesktopDownloadItem = {
-  platform: "mac" | "windows" | "linux";
-  url: string;
-  fileName: string;
-  size: number;
-  available: boolean;
-};
-
 type ServerProfileModalProps = {
   open: boolean;
   t: (key: string) => string;
@@ -47,17 +39,8 @@ type ServerProfileModalProps = {
   serverVideoWindowMinWidth: number;
   serverVideoWindowMaxWidth: number;
   serverVideoPreviewStream: MediaStream | null;
-  desktopDownloadsChannel: "test" | "prod";
-  desktopDownloadsLoading: boolean;
-  desktopDownloadsError: string;
-  desktopDownloadsSha: string;
-  desktopDownloadsBuiltAt: string;
-  desktopDownloadsItems: DesktopDownloadItem[];
-  desktopDownloadsManifestUrl: string;
-  desktopDownloadsUpdaterMacUrl: string;
   onClose: () => void;
   onSetServerMenuTab: (value: ServerMenuTab) => void;
-  onRefreshDesktopDownloads: () => void;
   onPromote: (userId: string) => void;
   onDemote: (userId: string) => void;
   onSetBan: (userId: string, banned: boolean) => void;
@@ -107,17 +90,8 @@ export function ServerProfileModal({
   serverVideoWindowMinWidth,
   serverVideoWindowMaxWidth,
   serverVideoPreviewStream,
-  desktopDownloadsChannel,
-  desktopDownloadsLoading,
-  desktopDownloadsError,
-  desktopDownloadsSha,
-  desktopDownloadsBuiltAt,
-  desktopDownloadsItems,
-  desktopDownloadsManifestUrl,
-  desktopDownloadsUpdaterMacUrl,
   onClose,
   onSetServerMenuTab,
-  onRefreshDesktopDownloads,
   onPromote,
   onDemote,
   onSetBan,
@@ -175,7 +149,7 @@ export function ServerProfileModal({
         }
       }}
     >
-      <section className="card voice-preferences-modal user-settings-modal server-profile-modal grid w-full max-w-[980px] min-w-0 gap-4 desktop:grid-cols-[250px_1fr]">
+      <section className="card voice-preferences-modal user-settings-modal server-profile-modal grid w-full max-w-[980px] min-w-0 gap-4 max-desktop:h-full max-desktop:max-h-none max-desktop:min-h-0 max-desktop:overflow-hidden max-desktop:p-4 desktop:grid-cols-[250px_1fr]">
         <div className="user-settings-sidebar grid min-w-0 content-start gap-2">
           <div className="voice-preferences-kicker">{t("server.title")}</div>
           {canPromote ? (
@@ -244,7 +218,7 @@ export function ServerProfileModal({
           </button>
         </div>
 
-        <div className="user-settings-content grid min-h-0 min-w-0 grid-rows-[auto_minmax(0,1fr)] content-start gap-4 overflow-auto overflow-x-hidden pr-0">
+        <div className="user-settings-content grid min-h-0 min-w-0 content-start gap-4 overflow-auto overflow-x-hidden pr-0">
           <div className="voice-preferences-head flex items-center justify-between gap-3">
             <h2 className="mt-[var(--space-xxs)]">
               {serverMenuTab === "users" ? t("server.tabUsers") : null}

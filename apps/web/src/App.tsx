@@ -94,96 +94,6 @@ const CLIENT_BUILD_DATE = String(import.meta.env.VITE_APP_BUILD_DATE || "").trim
 const CLIENT_BUILD_DATE_LABEL = CLIENT_BUILD_DATE ? `v.${CLIENT_BUILD_DATE}` : "";
 const COOKIE_MODE = import.meta.env.VITE_AUTH_COOKIE_MODE === "1";
 
-type DesktopReleaseChannel = "test" | "prod";
-type DesktopDownloadPlatform = "mac" | "windows" | "linux";
-
-type DesktopLatestManifestFile = {
-  name: string;
-  relativePath: string;
-  size: number;
-  urlPath: string;
-  url?: string;
-};
-
-type DesktopLatestManifest = {
-  channel: string;
-  sha: string;
-  builtAt: string;
-  files: DesktopLatestManifestFile[];
-};
-
-type DesktopDownloadItem = {
-  platform: DesktopDownloadPlatform;
-  url: string;
-  fileName: string;
-  size: number;
-  available: boolean;
-};
-
-const DESKTOP_PLATFORMS: DesktopDownloadPlatform[] = ["mac", "windows", "linux"];
-
-function resolveDesktopReleaseChannel(): DesktopReleaseChannel {
-  if (typeof window === "undefined") {
-    return "prod";
-  }
-
-  const hostname = String(window.location.hostname || "").toLowerCase();
-  return hostname.startsWith("test.") || hostname.includes(".test.") ? "test" : "prod";
-}
-
-function scoreDesktopFileForPlatform(platform: DesktopDownloadPlatform, file: DesktopLatestManifestFile): number {
-  const path = `${file.relativePath}/${file.name}`.toLowerCase();
-
-  if (platform === "mac") {
-    if (path.includes("mac") && path.endsWith(".dmg")) return 100;
-    if (path.includes("mac") && path.endsWith(".zip")) return 90;
-    if (path.includes("darwin")) return 80;
-    return 0;
-  }
-
-  if (platform === "windows") {
-    if (path.includes("win") && path.endsWith(".exe")) return 100;
-    if (path.includes("win") && path.endsWith(".msi")) return 90;
-    if (path.includes("nsis") && path.endsWith(".exe")) return 80;
-    return 0;
-  }
-
-  if (path.includes("linux") && path.endsWith(".appimage")) return 100;
-  if (path.includes("linux") && path.endsWith(".deb")) return 90;
-  if (path.includes("linux") && path.endsWith(".rpm")) return 80;
-  return 0;
-}
-
-function toDesktopDownloadItem(
-  platform: DesktopDownloadPlatform,
-  files: DesktopLatestManifestFile[]
-): DesktopDownloadItem {
-  const sorted = files
-    .map((file) => ({ file, score: scoreDesktopFileForPlatform(platform, file) }))
-    .filter((item) => item.score > 0)
-    .sort((a, b) => b.score - a.score);
-
-  const selected = sorted[0]?.file;
-  if (!selected) {
-    return {
-      platform,
-      url: "",
-      fileName: "",
-      size: 0,
-      available: false
-    };
-  }
-
-  const resolvedUrl = String(selected.url || "").trim() || selected.urlPath;
-  return {
-    platform,
-    url: resolvedUrl,
-    fileName: selected.name,
-    size: Number.isFinite(selected.size) ? selected.size : 0,
-    available: Boolean(resolvedUrl)
-  };
-}
-
 function readNonZeroDefaultVolume(storageKey: string, fallback: number): number {
   const raw = localStorage.getItem(storageKey);
   if (raw === null || raw.trim() === "") {
@@ -220,19 +130,6 @@ export function App() {
   const [desktopUpdateReadyVersion, setDesktopUpdateReadyVersion] = useState("");
   const [desktopUpdateApplying, setDesktopUpdateApplying] = useState(false);
   const [desktopUpdateBannerDismissed, setDesktopUpdateBannerDismissed] = useState(false);
-  const [desktopDownloadsLoading, setDesktopDownloadsLoading] = useState(false);
-  const [desktopDownloadsError, setDesktopDownloadsError] = useState("");
-  const [desktopDownloadsSha, setDesktopDownloadsSha] = useState("");
-  const [desktopDownloadsBuiltAt, setDesktopDownloadsBuiltAt] = useState("");
-  const [desktopDownloadsItems, setDesktopDownloadsItems] = useState<DesktopDownloadItem[]>(() =>
-    DESKTOP_PLATFORMS.map((platform) => ({
-      platform,
-      url: "",
-      fileName: "",
-      size: 0,
-      available: false
-    }))
-  );
   const [sessionMovedOverlayMessage, setSessionMovedOverlayMessage] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [messagesHasMore, setMessagesHasMore] = useState(false);
@@ -437,81 +334,8 @@ export function App() {
     setEventEnabled: setServerSoundEnabled,
     playServerSound
   } = useServerSounds();
-  const desktopDownloadsChannel = useMemo<DesktopReleaseChannel>(() => resolveDesktopReleaseChannel(), []);
-  const desktopDownloadsManifestUrl = useMemo(
-    () => `/desktop/${desktopDownloadsChannel}/latest.json`,
-    [desktopDownloadsChannel]
-  );
-  const desktopDownloadsUpdaterMacUrl = useMemo(
-    () => `/desktop/${desktopDownloadsChannel}/mac/latest-mac.yml`,
-    [desktopDownloadsChannel]
-  );
-
-  const loadDesktopDownloads = useCallback(async () => {
-    setDesktopDownloadsLoading(true);
-    setDesktopDownloadsError("");
-
-    try {
-      const response = await fetch(desktopDownloadsManifestUrl, { cache: "no-store" });
-      if (!response.ok) {
-        throw new Error(`status ${response.status}`);
-      }
-
-      const payload = (await response.json()) as Partial<DesktopLatestManifest>;
-      const files = Array.isArray(payload.files)
-        ? payload.files.filter((file): file is DesktopLatestManifestFile => {
-          if (!file || typeof file !== "object") {
-            return false;
-          }
-
-          const fileName = String(file.name || "").trim();
-          const fileUrlPath = String(file.urlPath || "").trim();
-          return Boolean(fileName && fileUrlPath);
-        })
-        : [];
-
-      const items = DESKTOP_PLATFORMS.map((platform) => {
-        const item = toDesktopDownloadItem(platform, files);
-        const resolvedUrl = item.url.startsWith("http://") || item.url.startsWith("https://")
-          ? item.url
-          : new URL(item.url, window.location.origin).toString();
-
-        return {
-          ...item,
-          url: item.available ? resolvedUrl : ""
-        };
-      });
-
-      setDesktopDownloadsSha(String(payload.sha || "").trim());
-      setDesktopDownloadsBuiltAt(String(payload.builtAt || "").trim());
-      setDesktopDownloadsItems(items);
-    } catch (error) {
-      setDesktopDownloadsError((error as Error).message || "load failed");
-      setDesktopDownloadsSha("");
-      setDesktopDownloadsBuiltAt("");
-      setDesktopDownloadsItems(
-        DESKTOP_PLATFORMS.map((platform) => ({
-          platform,
-          url: "",
-          fileName: "",
-          size: 0,
-          available: false
-        }))
-      );
-    } finally {
-      setDesktopDownloadsLoading(false);
-    }
-  }, [desktopDownloadsManifestUrl]);
 
   useBuildVersionSync(CLIENT_BUILD_VERSION);
-
-  useEffect(() => {
-    if (!appMenuOpen || serverMenuTab !== "desktop_downloads") {
-      return;
-    }
-
-    void loadDesktopDownloads();
-  }, [appMenuOpen, serverMenuTab, loadDesktopDownloads]);
 
   const markMessageDelivery = (
     requestId: string,
@@ -2148,19 +1972,8 @@ export function App() {
         serverVideoWindowMinWidth={Math.min(serverVideoWindowMinWidth, serverVideoWindowMaxWidth)}
         serverVideoWindowMaxWidth={Math.max(serverVideoWindowMinWidth, serverVideoWindowMaxWidth)}
         serverVideoPreviewStream={serverVideoPreviewStream}
-        desktopDownloadsChannel={desktopDownloadsChannel}
-        desktopDownloadsLoading={desktopDownloadsLoading}
-        desktopDownloadsError={desktopDownloadsError}
-        desktopDownloadsSha={desktopDownloadsSha}
-        desktopDownloadsBuiltAt={desktopDownloadsBuiltAt}
-        desktopDownloadsItems={desktopDownloadsItems}
-        desktopDownloadsManifestUrl={desktopDownloadsManifestUrl}
-        desktopDownloadsUpdaterMacUrl={desktopDownloadsUpdaterMacUrl}
         onClose={() => setAppMenuOpen(false)}
         onSetServerMenuTab={setServerMenuTab}
-        onRefreshDesktopDownloads={() => {
-          void loadDesktopDownloads();
-        }}
         onPromote={(userId) => void promote(userId)}
         onDemote={(userId) => void demote(userId)}
         onSetBan={(userId, banned) => void setUserBan(userId, banned)}
