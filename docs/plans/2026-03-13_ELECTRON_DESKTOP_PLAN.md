@@ -16,7 +16,7 @@ In scope (MVP):
 - [x] Auth flow (SSO/login/logout) без деградации текущего web-поведения.
 - [x] Voice/video/screen share в parity с web (для текущего web-hosted desktop shell на test).
 - [x] Выбор input/output устройств, mute/unmute, reconnect behavior.
-- [ ] Автообновления desktop-клиента (test/prod каналы).
+- [x] Автообновления desktop-клиента (test/prod каналы).
 - [x] Базовые crash/log артефакты для диагностики.
 
 Out of scope (v1.1+):
@@ -33,7 +33,7 @@ Renderer (существующий web app):
 
 Main process:
 - [x] Управление окном, lifecycle, single-instance lock.
-- [ ] Auto-update orchestration.
+- [x] Auto-update orchestration.
 - [x] Без прямой доменной логики и без доступа renderer к Node API.
 
 Preload bridge:
@@ -72,7 +72,7 @@ Definition of done:
 ### M3 - Update/release channel
 - [ ] Добавить в web UI пункт меню сервера `Get desktop app`.
 - [ ] По клику открывать popup с кнопками платформ-заглушек (`macOS`, `Windows`, `Linux`) и статусами доступности.
-- [ ] Источник загрузки: channel-aware артефакты (`test`/`prod`) из release storage, публикуемые CI.
+- [x] Источник загрузки: channel-aware артефакты (`test`/`prod`) из release storage, публикуемые server-first script (GitHub manual fallback).
 - [x] Настроены каналы auto-update: test и prod (runtime policy + channel routing).
 - [x] Реализован безопасный update flow с rollback-процедурой.
 - [ ] Сборки подписываются (где применимо).
@@ -141,8 +141,8 @@ Runbook:
 - [ ] Для платформ без артефакта показывать заглушку `Coming soon` и неактивную кнопку.
 - [ ] Для платформ с артефактом показывать активную кнопку `Download`.
 - [ ] Backend/source contract: frontend читает манифест доступных билдов (`channel`, `platform`, `version`, `sha`, `url`, `publishedAt`).
-- [ ] Хранение артефактов: release storage для desktop билдов (по каналам `test`/`prod`) с immutable ссылками на конкретные версии.
-- [ ] Публикация: CI при готовности билда обновляет манифест и добавляет ссылку на новый артефакт.
+- [x] Хранение артефактов: release storage для desktop билдов (по каналам `test`/`prod`) с immutable ссылками на конкретные версии.
+- [x] Публикация: server-first script при готовности билда обновляет манифест и добавляет ссылку на новый артефакт (GitHub path оставлен как fallback).
 - [ ] До появления реальных билдов popup работает в режиме заглушек без broken links.
 
 Status:
@@ -207,9 +207,9 @@ Desktop smoke (must pass):
 - [x] Подготовить отдельный desktop smoke checklist документ (test gate).
 - [x] После M1 выполнить первый test rollout и зафиксировать результаты в `docs/status`.
 - [ ] Спроектировать и внедрить UI-поток `Get desktop app` -> popup платформ с заглушками.
-- [ ] Определить формат и размещение build-манифеста для desktop downloads (`test`/`prod`).
+- [x] Определить формат и размещение build-манифеста для desktop downloads (`test`/`prod`).
 - [ ] (Deferred) Вернуться к разделу desktop downloads после появления первых publishable desktop билдов.
-- [ ] Продолжить закрытие non-download задач M3: update channels, rollback flow, signing readiness.
+- [ ] Продолжить закрытие non-download задач M3: signing readiness + release-grade update verification.
 
 ## 10) Progress notes
 
@@ -414,6 +414,12 @@ Progress note (2026-03-15, M3 server-first build policy):
 - Принято решение перейти на server-first desktop build/publish: сборка выполняется на серверном GitOps checkout.
 - Добавлен script `scripts/deploy/build-desktop-server-and-publish.sh` (build + publish в edge static + `latest.json` manifest).
 - GitHub desktop workflow переведен в manual-only fallback режим для экономии CI ресурсов.
+
+Progress note (2026-03-15, M3 server-first distribution validation):
+- Выполнен end-to-end прогон на mac-mini (`~/srv/boltorezka` + `~/srv/edge`) для test канала; manifest и build snapshot публикуются в edge static.
+- Исправлен publish-path под реальный Caddy web-root (`/ingress/static/boltorezka/<channel>/desktop/<channel>/...`), публичный `/desktop/test/latest.json` подтвержден.
+- Добавлена генерация mac updater feed (`/desktop/<channel>/mac/latest-mac.yml` + zip/blockmap), совместимая с `electron-updater` generic provider.
+- Добавлен automation smoke `npm run smoke:desktop:update-feed`, проверяющий `latest.json`, `latest-mac.yml` и zip endpoint.
 
 ## 11) Known Follow-ups
 
