@@ -28,6 +28,7 @@
   - `allowDowngrade=false`
 - `autoInstallOnAppQuit=false` (ручной контроль окна релиза);
 - polling по умолчанию: `20m` (`ELECTRON_UPDATE_POLL_INTERVAL_MS`).
+- Safe apply: установка выполняется только по явному действию пользователя `Restart and update` (без авто-install в фоне).
 
 ## 3) Build commands
 
@@ -47,6 +48,14 @@
 3. Пройти desktop smoke + postdeploy smoke в `test`.
 4. Зафиксировать evidence в `docs/status/TEST_RESULTS.md`.
 5. После sign-off опубликовать в `.../prod/{platform}`.
+
+## 4.1 Apply flow (desktop user path)
+
+1. Desktop runtime получает `update-available`/`update-downloaded` через preload bridge.
+2. В renderer показывается banner: `Desktop update is ready to install`.
+3. Пользователь нажимает `Restart and update`.
+4. Renderer вызывает `applyUpdate` -> main process вызывает `quitAndInstall`.
+5. Приложение перезапускается уже на новой версии.
 
 ## 5) Rollback flow
 

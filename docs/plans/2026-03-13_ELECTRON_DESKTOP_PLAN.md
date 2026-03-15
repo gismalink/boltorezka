@@ -74,7 +74,7 @@ Definition of done:
 - [ ] По клику открывать popup с кнопками платформ-заглушек (`macOS`, `Windows`, `Linux`) и статусами доступности.
 - [ ] Источник загрузки: channel-aware артефакты (`test`/`prod`) из release storage, публикуемые CI.
 - [x] Настроены каналы auto-update: test и prod (runtime policy + channel routing).
-- [ ] Реализован безопасный update flow с rollback-процедурой.
+- [x] Реализован безопасный update flow с rollback-процедурой.
 - [ ] Сборки подписываются (где применимо).
 
 Note:
@@ -123,7 +123,7 @@ Runbook:
 ### 4.4 Auto-update
 - [x] Выбрать release feed и схему каналов.
 - [x] Настроить update policy (silent/download-only/prompt).
-- [ ] Реализовать безопасное применение обновления.
+- [x] Реализовать безопасное применение обновления.
 - [x] Зафиксировать rollback шаги в runbook.
 
 Runbook:
@@ -394,6 +394,11 @@ Progress note (2026-03-15, M3 update channels baseline):
 - Каналы `test/prod` выбираются через `ELECTRON_UPDATE_CHANNEL`, feed строится как `${ELECTRON_UPDATE_FEED_BASE_URL}/{channel}/{platform}`.
 - Runtime policy: safe no-op при отсутствии feed URL, periodic checks, controlled `allowPrerelease/allowDowngrade` для `test`.
 - Добавлен runbook `docs/runbooks/DESKTOP_UPDATE_CHANNELS_RUNBOOK.md` (rollout/rollback).
+
+Progress note (2026-03-15, M3 safe apply flow):
+- Добавлен preload/main IPC контракт для update actions: `get-state`, `check`, `download`, `apply`.
+- В web renderer добавлен desktop update banner с явным действием `Restart and update`.
+- `quitAndInstall` вызывается только после явного подтверждения пользователя (без background auto-install).
 
 ## 11) Known Follow-ups
 

@@ -22,6 +22,11 @@ Runtime env:
 - `ELECTRON_UPDATE_POLL_INTERVAL_MS` (default: `1200000`)
 - `ELECTRON_UPDATE_AUTO_DOWNLOAD` (`1` для автоскачивания, default: `0`)
 
+Safe apply flow:
+- Runtime публикует update status в renderer через preload bridge (`desktop:update-status`).
+- После `update-downloaded` пользователь получает action `Restart and update`.
+- Применение обновления выполняется только по явному действию пользователя (`applyUpdate` -> `quitAndInstall`).
+
 Feed URL формируется так:
 - `${ELECTRON_UPDATE_FEED_BASE_URL}/${ELECTRON_UPDATE_CHANNEL}/{platform}`
 - `platform`: `mac`, `win`, `linux`

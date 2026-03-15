@@ -1,6 +1,6 @@
 const path = require("path");
 const fs = require("fs");
-const { app, BrowserWindow, shell, desktopCapturer } = require("electron");
+const { app, BrowserWindow, shell, desktopCapturer, ipcMain } = require("electron");
 
 let autoUpdater = null;
 try {
@@ -25,6 +25,19 @@ const updateAutoDownload = String(process.env.ELECTRON_UPDATE_AUTO_DOWNLOAD || "
 let mainWindow = null;
 let pendingProtocolUrl = "";
 let updatePollTimer = null;
+const desktopUpdateState = {
+  enabled: false,
+  channel: updateChannel,
+  feedUrl: "",
+  lastEvent: "idle",
+  availableVersion: "",
+  downloadedVersion: "",
+  lastCheckedAt: "",
+  lastDownloadedAt: "",
+  lastError: "",
+  downloadPercent: 0,
+  autoDownload: updateAutoDownload
+};
 
 function logDesktopUpdate(message) {
   console.log(`[desktop:update] ${message}`);
@@ -55,13 +68,135 @@ function notifyRendererUpdateStatus(event, payload = {}) {
   }
 }
 
+function updateDesktopUpdateState(event, patch = {}) {
+  Object.assign(desktopUpdateState, patch, {
+    lastEvent: event,
+    channel: updateChannel
+  });
+  notifyRendererUpdateStatus(event, patch);
+}
+
+function isUpdateRuntimeEnabled() {
+  return Boolean(app.isPackaged && autoUpdater && updateFeedBaseUrl);
+}
+
+function registerUpdateIpcHandlers() {
+  ipcMain.handle("desktop:update:get-state", async () => ({ ...desktopUpdateState }));
+
+  ipcMain.handle("desktop:update:check", async () => {
+    if (!isUpdateRuntimeEnabled()) {
+      return {
+        ok: false,
+        reason: "update-runtime-disabled",
+        state: { ...desktopUpdateState }
+      };
+    }
+
+    try {
+      await autoUpdater.checkForUpdates();
+      return {
+        ok: true,
+        state: { ...desktopUpdateState }
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      updateDesktopUpdateState("error", { lastError: message });
+      return {
+        ok: false,
+        reason: message,
+        state: { ...desktopUpdateState }
+      };
+    }
+  });
+
+  ipcMain.handle("desktop:update:download", async () => {
+    if (!isUpdateRuntimeEnabled()) {
+      return {
+        ok: false,
+        reason: "update-runtime-disabled",
+        state: { ...desktopUpdateState }
+      };
+    }
+
+    if (!desktopUpdateState.availableVersion) {
+      return {
+        ok: false,
+        reason: "no-available-update",
+        state: { ...desktopUpdateState }
+      };
+    }
+
+    try {
+      await autoUpdater.downloadUpdate();
+      return {
+        ok: true,
+        state: { ...desktopUpdateState }
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      updateDesktopUpdateState("error", { lastError: message });
+      return {
+        ok: false,
+        reason: message,
+        state: { ...desktopUpdateState }
+      };
+    }
+  });
+
+  ipcMain.handle("desktop:update:apply", async () => {
+    if (!isUpdateRuntimeEnabled()) {
+      return {
+        ok: false,
+        reason: "update-runtime-disabled",
+        state: { ...desktopUpdateState }
+      };
+    }
+
+    if (!desktopUpdateState.downloadedVersion) {
+      return {
+        ok: false,
+        reason: "no-downloaded-update",
+        state: { ...desktopUpdateState }
+      };
+    }
+
+    updateDesktopUpdateState("applying", {
+      lastError: ""
+    });
+
+    setTimeout(() => {
+      try {
+        autoUpdater.quitAndInstall(false, true);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        updateDesktopUpdateState("error", { lastError: message });
+      }
+    }, 350);
+
+    return {
+      ok: true,
+      state: { ...desktopUpdateState }
+    };
+  });
+}
+
 function startAutoUpdateOrchestration() {
   if (!app.isPackaged || !autoUpdater) {
+    updateDesktopUpdateState("disabled", {
+      enabled: false,
+      feedUrl: "",
+      lastError: "app-not-packaged-or-updater-missing"
+    });
     return;
   }
 
   if (!updateFeedBaseUrl) {
     logDesktopUpdate("skipped: ELECTRON_UPDATE_FEED_BASE_URL is not configured");
+    updateDesktopUpdateState("disabled", {
+      enabled: false,
+      feedUrl: "",
+      lastError: "update-feed-base-url-missing"
+    });
     return;
   }
 
@@ -74,43 +209,78 @@ function startAutoUpdateOrchestration() {
     autoUpdater.allowDowngrade = updateChannel === "test";
     autoUpdater.allowPrerelease = updateChannel === "test";
     autoUpdater.setFeedURL({ provider: "generic", url: feedUrl });
+    updateDesktopUpdateState("enabled", {
+      enabled: true,
+      feedUrl,
+      lastError: "",
+      downloadPercent: 0
+    });
   } catch (error) {
     logDesktopUpdate(`feed init failed: ${error instanceof Error ? error.message : String(error)}`);
+    updateDesktopUpdateState("error", {
+      enabled: false,
+      feedUrl,
+      lastError: error instanceof Error ? error.message : String(error)
+    });
     return;
   }
 
   autoUpdater.on("checking-for-update", () => {
     logDesktopUpdate(`checking channel=${updateChannel}`);
-    notifyRendererUpdateStatus("checking");
+    updateDesktopUpdateState("checking", {
+      lastCheckedAt: new Date().toISOString(),
+      lastError: ""
+    });
   });
 
   autoUpdater.on("update-available", (info) => {
     const version = String(info?.version || "unknown");
     logDesktopUpdate(`available version=${version} channel=${updateChannel}`);
-    notifyRendererUpdateStatus("available", { version });
+    updateDesktopUpdateState("available", {
+      availableVersion: version,
+      lastError: "",
+      downloadPercent: 0
+    });
   });
 
   autoUpdater.on("update-not-available", (info) => {
     const version = String(info?.version || "unknown");
     logDesktopUpdate(`not-available current=${version} channel=${updateChannel}`);
-    notifyRendererUpdateStatus("not-available", { version });
+    updateDesktopUpdateState("not-available", {
+      availableVersion: "",
+      downloadedVersion: "",
+      lastError: "",
+      downloadPercent: 0,
+      lastCheckedAt: new Date().toISOString(),
+      currentVersion: version
+    });
   });
 
   autoUpdater.on("error", (error) => {
     const message = error instanceof Error ? error.message : String(error);
     logDesktopUpdate(`error: ${message}`);
-    notifyRendererUpdateStatus("error", { message });
+    updateDesktopUpdateState("error", { lastError: message, message });
   });
 
   autoUpdater.on("download-progress", (progress) => {
     const percent = Number(progress?.percent || 0);
-    notifyRendererUpdateStatus("download-progress", { percent: Number(percent.toFixed(2)) });
+    updateDesktopUpdateState("download-progress", {
+      percent: Number(percent.toFixed(2)),
+      downloadPercent: Number(percent.toFixed(2)),
+      lastError: ""
+    });
   });
 
   autoUpdater.on("update-downloaded", (info) => {
     const version = String(info?.version || "unknown");
     logDesktopUpdate(`downloaded version=${version}`);
-    notifyRendererUpdateStatus("downloaded", { version });
+    updateDesktopUpdateState("downloaded", {
+      downloadedVersion: version,
+      availableVersion: version,
+      lastDownloadedAt: new Date().toISOString(),
+      downloadPercent: 100,
+      lastError: ""
+    });
   });
 
   const checkOnce = async () => {
@@ -432,6 +602,7 @@ app.on("open-url", (event, url) => {
 });
 
 app.whenReady().then(() => {
+  registerUpdateIpcHandlers();
   mainWindow = createMainWindow();
   startAutoUpdateOrchestration();
 

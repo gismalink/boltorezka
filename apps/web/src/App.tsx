@@ -56,6 +56,7 @@ import {
   useVoiceSignalingOrchestrator,
   useVoiceRoomStateMaps
 } from "./hooks";
+import { getDesktopUpdateBridge } from "./desktopBridge";
 import { detectInitialLang, LANGUAGE_OPTIONS, LOCALE_BY_LANG, TEXT, type Lang } from "./i18n";
 import type {
   AudioQuality,
@@ -113,6 +114,7 @@ function normalizeUiTheme(value: unknown): UiTheme {
 }
 
 export function App() {
+  const desktopUpdateBridge = useMemo(() => getDesktopUpdateBridge(), []);
   const [token, setToken] = useState(() => (COOKIE_MODE ? "" : localStorage.getItem("boltorezka_token") || ""));
   const [user, setUser] = useState<User | null>(null);
   const [authMode, setAuthMode] = useState("loading");
@@ -125,6 +127,9 @@ export function App() {
   const [showAppUpdatedOverlay, setShowAppUpdatedOverlay] = useState(
     () => sessionStorage.getItem(VERSION_UPDATE_PENDING_KEY) === "1"
   );
+  const [desktopUpdateReadyVersion, setDesktopUpdateReadyVersion] = useState("");
+  const [desktopUpdateApplying, setDesktopUpdateApplying] = useState(false);
+  const [desktopUpdateBannerDismissed, setDesktopUpdateBannerDismissed] = useState(false);
   const [sessionMovedOverlayMessage, setSessionMovedOverlayMessage] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [messagesHasMore, setMessagesHasMore] = useState(false);
@@ -1648,6 +1653,74 @@ export function App() {
 
   const userDockInlineSettingsNode = userDockSharedProps ? <UserDock {...userDockSharedProps} inlineSettingsMode /> : null;
 
+  useEffect(() => {
+    if (!desktopUpdateBridge) {
+      return;
+    }
+
+    let disposed = false;
+
+    desktopUpdateBridge.getStatus()
+      .then((status) => {
+        if (disposed) {
+          return;
+        }
+        if (String(status?.downloadedVersion || "").trim()) {
+          setDesktopUpdateReadyVersion(String(status.downloadedVersion).trim());
+          setDesktopUpdateBannerDismissed(false);
+        }
+      })
+      .catch(() => {
+        // Update status is best-effort.
+      });
+
+    const unsubscribe = desktopUpdateBridge.onStatus((event) => {
+      const eventType = String(event?.event || "").trim();
+      const version = String(event?.version || "").trim();
+      const message = String(event?.message || event?.lastError || "").trim();
+
+      if (eventType === "available" && version) {
+        pushToast(`${t("desktop.updateAvailableToast")} ${version}`);
+      }
+
+      if (eventType === "downloaded" && version) {
+        setDesktopUpdateReadyVersion(version);
+        setDesktopUpdateBannerDismissed(false);
+        pushToast(`${t("desktop.updateDownloadedToast")} ${version}`);
+      }
+
+      if (eventType === "error") {
+        pushToast(message ? `${t("desktop.updateErrorToast")} (${message})` : t("desktop.updateErrorToast"));
+      }
+    });
+
+    return () => {
+      disposed = true;
+      unsubscribe();
+    };
+  }, [desktopUpdateBridge, pushToast, t]);
+
+  const applyDesktopUpdate = useCallback(async () => {
+    if (!desktopUpdateBridge || desktopUpdateApplying) {
+      return;
+    }
+
+    setDesktopUpdateApplying(true);
+    try {
+      const result = await desktopUpdateBridge.applyUpdate();
+      if (!result?.ok) {
+        pushToast(`${t("desktop.updateApplyFailedToast")}: ${String(result?.reason || "unknown")}`);
+        setDesktopUpdateApplying(false);
+        return;
+      }
+
+      pushToast(t("desktop.updateApplyingToast"));
+    } catch {
+      pushToast(t("desktop.updateApplyFailedToast"));
+      setDesktopUpdateApplying(false);
+    }
+  }, [desktopUpdateApplying, desktopUpdateBridge, pushToast, t]);
+
   return (
     <main className="app legacy-layout mx-auto grid h-[100dvh] max-h-[100dvh] w-full max-w-[1400px] grid-rows-[auto_1fr] gap-4 overflow-hidden p-4 desktop:gap-6 desktop:p-8">
       <AppHeader
@@ -1673,6 +1746,32 @@ export function App() {
           <span>{t("mic.deniedBanner")}</span>
           <button type="button" className="secondary" onClick={requestMediaAccess}>
             {t("settings.requestMediaAccess")}
+          </button>
+        </div>
+      ) : null}
+
+      {desktopUpdateReadyVersion && !desktopUpdateBannerDismissed ? (
+        <div className="mic-denied-banner" role="status" aria-live="polite">
+          <span>{`${t("desktop.updateReadyBanner")} ${desktopUpdateReadyVersion}`}</span>
+          <button
+            type="button"
+            className="secondary"
+            disabled={desktopUpdateApplying}
+            onClick={() => {
+              setDesktopUpdateBannerDismissed(true);
+            }}
+          >
+            {t("desktop.updateLater")}
+          </button>
+          <button
+            type="button"
+            className="secondary"
+            disabled={desktopUpdateApplying}
+            onClick={() => {
+              void applyDesktopUpdate();
+            }}
+          >
+            {desktopUpdateApplying ? t("desktop.updateApplying") : t("desktop.updateRestartNow")}
           </button>
         </div>
       ) : null}
