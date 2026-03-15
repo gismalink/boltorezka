@@ -2,6 +2,35 @@
 
 Отдельный журнал результатов тестов/нагрузки.
 
+## 2026-03-15 — Cycle #45 (Desktop downloads routing fix: public /desktop path)
+
+- Environment: `test` (`https://test.boltorezka.gismalink.art`)
+- Build ref: `origin/feature/electron-desktop-foundation` (`8640a76`)
+
+### Functional gate
+
+- Root-cause detected: previous desktop publish target was outside Caddy web-root for test env.
+  - Symptom: `GET /desktop/test/latest.json` returned SPA `index.html`.
+- Fix applied in script and deployed on server: PASS
+  - publish target moved to env web-root path:
+    - `~/srv/edge/ingress/static/boltorezka/test/desktop/test/<sha>/...`
+    - `~/srv/edge/ingress/static/boltorezka/test/desktop/test/latest.json`
+  - run command:
+    - `ssh -t mac-mini 'cd ~/srv/boltorezka && DESKTOP_CHANNEL=test DESKTOP_PUBLIC_BASE_URL=https://test.boltorezka.gismalink.art ./scripts/deploy/build-desktop-server-and-publish.sh origin/feature/electron-desktop-foundation "$PWD"'`
+- Public endpoint smoke after fix: PASS
+  - `GET https://test.boltorezka.gismalink.art/desktop/test/latest.json` returns JSON (`sha=8640a7651944aea76b921fadf9f887cee3e00557`, `totalFiles=99`)
+  - `HEAD https://test.boltorezka.gismalink.art/desktop/test/8640a7651944aea76b921fadf9f887cee3e00557/Boltorezka-0.2.0-arm64.dmg` returns `200` with binary payload headers (`content-length=105422525`)
+
+### Scope covered by this cycle
+
+- Закрыт blocker на публичную раздачу desktop артефактов по ожидаемому URL `/desktop/<channel>/...`.
+- Подтверждено, что server-first publish path совместим с текущим Caddy routing без дополнительных правок ingress.
+
+### Decision
+
+- Cycle #45: PASS.
+- Test distribution path для desktop downloads operationally green.
+
 ## 2026-03-15 — Cycle #44 (Server-first desktop build/publish on mac-mini server)
 
 - Environment: `test` (`mac-mini: ~/srv/boltorezka + ~/srv/edge`)
