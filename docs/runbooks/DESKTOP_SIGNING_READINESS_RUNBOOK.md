@@ -38,6 +38,7 @@ Primary policy (2026-03-15):
 4. Собирает desktop (`dist:test`/`dist:prod`).
 5. Публикует build в edge static web-root: `/ingress/static/boltorezka/<channel>/desktop/<channel>/<sha>/...`.
 6. Обновляет channel manifest: `/ingress/static/boltorezka/<channel>/desktop/<channel>/latest.json`.
+7. Генерирует mac updater feed: `/ingress/static/boltorezka/<channel>/desktop/<channel>/mac/latest-mac.yml` (+ `*-mac.zip`, `*.blockmap`).
 
 Manual запуск (`workflow_dispatch`) с параметрами:
 - `release_channel`: `test` | `prod`

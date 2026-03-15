@@ -50,6 +50,9 @@ Feed URL формируется так:
 - `${ELECTRON_UPDATE_FEED_BASE_URL}/${ELECTRON_UPDATE_CHANNEL}/{platform}`
 - `platform`: `mac`, `win`, `linux`
 
+Updater endpoint requirement:
+- Для mac generic provider endpoint `${ELECTRON_UPDATE_FEED_BASE_URL}/${ELECTRON_UPDATE_CHANNEL}/mac/latest-mac.yml` должен возвращать YAML манифест (не SPA HTML fallback).
+
 Детали rollout/rollback:
 - `docs/runbooks/DESKTOP_UPDATE_CHANNELS_RUNBOOK.md`
 

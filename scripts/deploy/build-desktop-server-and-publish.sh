@@ -57,11 +57,42 @@ if [[ ! -d "$DIST_DIR" ]]; then
 fi
 
 TARGET_DIR="$PUBLISH_DIR/$RESOLVED_SHA"
+UPDATER_MAC_DIR="$PUBLISH_DIR/mac"
 mkdir -p "$TARGET_DIR"
 
 # Keep only current build snapshot in target dir for idempotency.
 find "$TARGET_DIR" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
 cp -R "$DIST_DIR/." "$TARGET_DIR/"
+
+# Build electron-updater generic feed for mac channel: /desktop/<channel>/mac/latest-mac.yml
+mkdir -p "$UPDATER_MAC_DIR"
+find "$UPDATER_MAC_DIR" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
+
+MAC_ZIP_NAME="$(find "$TARGET_DIR" -maxdepth 1 -type f -name '*-mac.zip' -exec basename {} \; | head -n 1)"
+if [[ -z "$MAC_ZIP_NAME" ]]; then
+  echo "[desktop-build] missing mac zip artifact in $TARGET_DIR" >&2
+  exit 1
+fi
+
+cp "$TARGET_DIR/$MAC_ZIP_NAME" "$UPDATER_MAC_DIR/"
+if [[ -f "$TARGET_DIR/$MAC_ZIP_NAME.blockmap" ]]; then
+  cp "$TARGET_DIR/$MAC_ZIP_NAME.blockmap" "$UPDATER_MAC_DIR/"
+fi
+
+MAC_ZIP_SIZE="$(stat -f %z "$UPDATER_MAC_DIR/$MAC_ZIP_NAME")"
+MAC_ZIP_SHA512="$(shasum -a 512 "$UPDATER_MAC_DIR/$MAC_ZIP_NAME" | awk '{print $1}' | xxd -r -p | base64)"
+APP_VERSION="$(node -p "require('./apps/desktop-electron/package.json').version")"
+
+cat > "$UPDATER_MAC_DIR/latest-mac.yml" <<EOF
+version: $APP_VERSION
+files:
+  - url: $MAC_ZIP_NAME
+    sha512: $MAC_ZIP_SHA512
+    size: $MAC_ZIP_SIZE
+path: $MAC_ZIP_NAME
+sha512: $MAC_ZIP_SHA512
+releaseDate: '$BUILD_TS_UTC'
+EOF
 
 MANIFEST_TMP="$(mktemp)"
 CHANNEL_MANIFEST="$PUBLISH_DIR/latest.json"
@@ -129,6 +160,7 @@ rm -f "$MANIFEST_TMP"
 
 echo "[desktop-build] published: $TARGET_DIR"
 echo "[desktop-build] latest manifest: $CHANNEL_MANIFEST"
+echo "[desktop-build] mac updater feed: $UPDATER_MAC_DIR/latest-mac.yml"
 if [[ -n "$PUBLIC_BASE_URL" ]]; then
   echo "[desktop-build] public base: $PUBLIC_BASE_URL"
 fi
@@ -141,6 +173,7 @@ DESKTOP_BUILD_SHA="$RESOLVED_SHA"
 DESKTOP_BUILD_TIMESTAMP_UTC="$BUILD_TS_UTC"
 DESKTOP_BUILD_TARGET_DIR="$TARGET_DIR"
 DESKTOP_BUILD_MANIFEST="$CHANNEL_MANIFEST"
+DESKTOP_BUILD_UPDATER_MAC_FEED="$UPDATER_MAC_DIR/latest-mac.yml"
 EOF
 
 echo "[desktop-build] marker updated: .deploy/last-desktop-build.env"
