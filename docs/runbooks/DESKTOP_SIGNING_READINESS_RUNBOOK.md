@@ -113,3 +113,57 @@ Windows:
 - Signed build проходит минимум на одном successful cycle по каждой платформе.
 - Артефакты доступны в CI и пригодны для ручной проверки.
 - Результат зафиксирован в test results и desktop plan.
+
+## 7) Release-grade signing matrix
+
+Матрица фиксирует minimum gates для release candidate перед следующим публичным desktop rollout.
+
+| Platform | Signing gate | Verification gate | Status field |
+|---|---|---|---|
+| macOS (arm64/x64) | code sign + notarization + staple | install/open + update-check + smoke | `MAC_SIGNING_STATUS` |
+| Windows 10/11 | code sign | install/open + SmartScreen sanity + smoke | `WIN_SIGNING_STATUS` |
+
+Правило прохождения:
+- `PASS` по обеим платформам обязателен для статуса release-grade.
+- Если одна из платформ `FAIL`, итоговый статус: `NO-GO` для следующего desktop public release.
+
+## 8) Release-grade evidence checklist
+
+Заполнить после каждого signing cycle:
+
+1. Commit/ref:
+   - `<git-ref>`
+2. Workflow/server run id:
+   - `<run-id-or-marker>`
+3. macOS:
+   - signing: `PASS|FAIL`
+   - notarization: `PASS|FAIL`
+   - staple verification: `PASS|FAIL`
+   - runtime smoke (packaged): `PASS|FAIL`
+4. Windows:
+   - signing: `PASS|FAIL`
+   - install/open smoke: `PASS|FAIL`
+   - runtime smoke (packaged): `PASS|FAIL`
+5. Update channel verification:
+   - `smoke:desktop:update-feed` (target channel): `PASS|FAIL`
+6. Decision:
+   - `GO|NO-GO`
+
+Куда писать evidence:
+- `docs/status/TEST_RESULTS.md` (cycle entry)
+- `docs/status/feature-log/<date>.md` (release narrative)
+
+## 9) Command skeletons for verification
+
+macOS notarization/staple verification (на test RC артефакте):
+
+- `spctl --assess --type execute --verbose <path-to-app-or-dmg>`
+- `xcrun stapler validate <path-to-app-or-dmg>`
+
+Windows signing sanity (на RC артефакте):
+
+- `Get-AuthenticodeSignature <path-to-exe> | Format-List`
+
+Важно:
+- Эти команды используются только как verification layer поверх CI/server build pipeline.
+- Источником rollout истины остаются GitOps scripts и documented smoke gates.

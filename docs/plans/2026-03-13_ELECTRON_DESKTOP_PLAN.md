@@ -206,12 +206,12 @@ Desktop smoke (must pass):
 - [x] Добавить каркас `apps/desktop-electron` и базовые команды запуска/сборки.
 - [x] Подготовить отдельный desktop smoke checklist документ (test gate).
 - [x] После M1 выполнить первый test rollout и зафиксировать результаты в `docs/status`.
-- [ ] Спроектировать и внедрить UI-поток `Get desktop app` -> popup платформ с заглушками.
+- [x] Спроектировать и внедрить UI-поток `Get desktop app` -> popup платформ с заглушками.
 - [x] Определить формат и размещение build-манифеста для desktop downloads (`test`/`prod`).
-- [ ] (Deferred) Вернуться к разделу desktop downloads после появления первых publishable desktop билдов.
-- [ ] Продолжить закрытие non-download задач M3: signing readiness + release-grade update verification.
+- [x] (Deferred) Вернуться к разделу desktop downloads после появления первых publishable desktop билдов.
+- [ ] Закрыть non-download задачи M3: release-grade signing/notarization matrix + update verification evidence.
 - [x] Обновить pre-prod decision package под post-merge state `origin/main` и зафиксировать owner/sign-off draft.
-- [ ] Подготовить controlled prod rollout command set (без выполнения) для explicit approval.
+- [x] Подготовить controlled prod rollout command set (без выполнения) для explicit approval.
 
 ## 10) Progress notes
 
@@ -248,6 +248,10 @@ Progress note (2026-03-13, M2 stability automation):
 Progress note (2026-03-13, M2 full chain):
 - Добавлен агрегированный command `npm run desktop:smoke:m2:soak`.
 - Test evidence: `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art SMOKE_DESKTOP_SOAK_CYCLES=3 npm run desktop:smoke:m2:soak` -> PASS (foundation/runtime/reconnect/telemetry/soak).
+
+Progress note (2026-03-15, release-grade signing gate prep):
+- Runbook `docs/runbooks/DESKTOP_SIGNING_READINESS_RUNBOOK.md` расширен release-grade матрицей (macOS/Windows), evidence checklist и verification command skeletons.
+- Следующий execution step: выполнить signed RC cycle и заполнить evidence в `docs/status/TEST_RESULTS.md`.
 
 Progress note (2026-03-13, security automation):
 - Добавлен `scripts/smoke/smoke-desktop-security.mjs` и root commands `npm run smoke:desktop:security`, `npm run desktop:smoke:m2:secure`.
