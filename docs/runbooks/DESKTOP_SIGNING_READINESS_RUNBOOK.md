@@ -2,6 +2,10 @@
 
 Цель: подготовить и проверить signing/notarization pipeline для desktop release candidate без немедленного prod rollout.
 
+Primary policy (2026-03-15):
+- Server-first build/publish через GitOps checkout на сервере.
+- GitHub Actions workflow используется как manual fallback/backup path.
+
 ## 1) Scope
 
 Этот runbook покрывает readiness-подготовку:
@@ -15,6 +19,25 @@
 
 Используется workflow:
 - `.github/workflows/desktop-artifacts.yml`
+
+Важно:
+- workflow запускается вручную (manual-only fallback), не на каждый push/PR.
+
+## 2.0 Server-first entrypoint
+
+Основной entrypoint на сервере:
+- `scripts/deploy/build-desktop-server-and-publish.sh`
+
+Пример запуска на сервере:
+- `DESKTOP_CHANNEL=test DESKTOP_PUBLIC_BASE_URL=https://test.boltorezka.gismalink.art ./scripts/deploy/build-desktop-server-and-publish.sh origin/feature/electron-desktop-foundation "$PWD"`
+
+Что делает server script:
+1. Проверяет чистый repo.
+2. Делает fetch + checkout detach на целевой ref.
+3. Ставит зависимости web/desktop.
+4. Собирает desktop (`dist:test`/`dist:prod`).
+5. Публикует build в edge static: `/ingress/static/boltorezka/desktop/<channel>/<sha>/...`.
+6. Обновляет channel manifest: `/ingress/static/boltorezka/desktop/<channel>/latest.json`.
 
 Manual запуск (`workflow_dispatch`) с параметрами:
 - `release_channel`: `test` | `prod`
@@ -65,16 +88,15 @@ Windows:
 
 ## 4) Readiness check sequence
 
-1. Запустить `desktop-artifacts` вручную:
+1. На сервере выполнить server-first build script для `test` канала.
+2. Проверить публикацию в static downloads и `latest.json` манифест.
+3. Выполнить smoke/ручную проверку установки из server URL.
+4. Зафиксировать результаты в `docs/status/TEST_RESULTS.md`.
+5. При необходимости fallback выполнить GitHub manual workflow:
    - `release_channel=test`
    - `signed=true`
    - `create_release_draft=false` (или `true`, если нужен draft в Releases)
-2. Дождаться завершения matrix (`macos-latest`, `windows-latest`).
-3. Проверить, что artifacts загружены с suffix `signed`.
-4. Проверить наличие artifact `desktop-release-manifest-<sha>`.
-5. Если `create_release_draft=true`, проверить появление draft release и вложений.
-6. Зафиксировать результаты в `docs/status/TEST_RESULTS.md`.
-7. При ошибке signing/notarization:
+6. При ошибке signing/notarization:
    - проверить заполнение secrets,
    - проверить валидность сертификатов,
    - перезапустить workflow после исправления.

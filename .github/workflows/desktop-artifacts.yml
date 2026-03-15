@@ -21,19 +21,6 @@ on:
         required: false
         default: false
         type: boolean
-  push:
-    branches:
-      - main
-      - feature/**
-    paths:
-      - apps/desktop-electron/**
-      - apps/web/**
-      - .github/workflows/desktop-artifacts.yml
-  pull_request:
-    paths:
-      - apps/desktop-electron/**
-      - apps/web/**
-      - .github/workflows/desktop-artifacts.yml
 
 concurrency:
   group: desktop-artifacts-${{ github.ref }}

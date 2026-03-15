@@ -72,6 +72,7 @@
     "smoke:test:postdeploy": "bash ./scripts/deploy/postdeploy-smoke-test.sh \"${REPO_DIR:-$PWD}\"",
     "deploy:test": "bash ./scripts/deploy/deploy-test-from-ref.sh \"${TEST_REF:?set TEST_REF=origin/feature/<name>}\" \"${REPO_DIR:-$PWD}\"",
     "deploy:test:smoke": "bash ./scripts/deploy/deploy-test-and-smoke.sh \"${TEST_REF:?set TEST_REF=origin/feature/<name>}\" \"${REPO_DIR:-$PWD}\"",
+    "deploy:desktop:server": "bash ./scripts/deploy/build-desktop-server-and-publish.sh \"${DESKTOP_REF:?set DESKTOP_REF=origin/feature/<name>}\" \"${REPO_DIR:-$PWD}\"",
     "deploy:test:livekit": "bash ./scripts/deploy/deploy-test-livekit-default.sh",
     "deploy:test:livekit:allrooms": "bash ./scripts/deploy/deploy-test-livekit-all-default.sh",
     "deploy:prod": "bash ./scripts/deploy/deploy-prod-from-ref.sh \"${PROD_REF:-origin/main}\" \"${REPO_DIR:-$PWD}\""

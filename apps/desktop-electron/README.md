@@ -29,6 +29,10 @@ Safe apply flow:
 
 ## Signing readiness
 
+Primary path:
+- desktop build/publish выполняется на сервере через `scripts/deploy/build-desktop-server-and-publish.sh` (server-first).
+- GitHub workflow используется как manual fallback, когда нужен резервный CI-path.
+
 CI workflow `.github/workflows/desktop-artifacts.yml` поддерживает manual signed release-candidate режим:
 - inputs: `release_channel=test|prod`, `signed=true`, `create_release_draft=true|false`
 - signed build запускает `dist:test` или `dist:prod`

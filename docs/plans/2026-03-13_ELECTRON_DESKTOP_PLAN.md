@@ -410,6 +410,11 @@ Progress note (2026-03-15, M3 GitHub release-chain detail):
 - Добавлен optional режим `create_release_draft=true` для создания GitHub Draft Release с вложенными signed артефактами.
 - Release остаётся draft по умолчанию и не инициирует automatic prod rollout.
 
+Progress note (2026-03-15, M3 server-first build policy):
+- Принято решение перейти на server-first desktop build/publish: сборка выполняется на серверном GitOps checkout.
+- Добавлен script `scripts/deploy/build-desktop-server-and-publish.sh` (build + publish в edge static + `latest.json` manifest).
+- GitHub desktop workflow переведен в manual-only fallback режим для экономии CI ресурсов.
+
 ## 11) Known Follow-ups
 
 - [x] Провести browser-level handoff soak (Chromium/WebKit/Firefox) поверх уже закрытого protocol-level soak и приложить агрегированное evidence к auth runbook.

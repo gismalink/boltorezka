@@ -8,6 +8,7 @@ This folder contains operational scripts grouped by purpose.
   - `deploy-test-from-ref.sh` - deploy test from a git ref.
   - `deploy-test-and-smoke.sh` - deploy test and run post-deploy smoke.
   - `deploy-prod-from-ref.sh` - deploy prod from a git ref.
+  - `build-desktop-server-and-publish.sh` - build desktop artifacts on server and publish into edge static downloads + channel manifest.
   - `postdeploy-smoke-test.sh` - server-side smoke suite after deploy.
   - `seed-chatset.sql` - idempotent SQL seed for chat/category baseline.
 - `smoke/`:
@@ -42,6 +43,8 @@ This folder contains operational scripts grouped by purpose.
   - `TEST_REF=origin/feature/<name> npm run deploy:test:livekit`
 - Prod rollout (only after test validation):
   - `PROD_REF=origin/main npm run deploy:prod`
+- Desktop server build + publish (test/prod channel):
+  - `DESKTOP_REF=origin/feature/<name> DESKTOP_CHANNEL=test DESKTOP_PUBLIC_BASE_URL=https://test.boltorezka.gismalink.art npm run deploy:desktop:server`
 - Local verify pipeline:
   - `npm run check`
 - List scheduled jobs:
