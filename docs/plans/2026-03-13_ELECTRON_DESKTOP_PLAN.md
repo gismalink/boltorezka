@@ -73,7 +73,7 @@ Definition of done:
 - [ ] Добавить в web UI пункт меню сервера `Get desktop app`.
 - [ ] По клику открывать popup с кнопками платформ-заглушек (`macOS`, `Windows`, `Linux`) и статусами доступности.
 - [ ] Источник загрузки: channel-aware артефакты (`test`/`prod`) из release storage, публикуемые CI.
-- [ ] Настроены каналы auto-update: test и prod.
+- [x] Настроены каналы auto-update: test и prod (runtime policy + channel routing).
 - [ ] Реализован безопасный update flow с rollback-процедурой.
 - [ ] Сборки подписываются (где применимо).
 
@@ -121,10 +121,13 @@ Runbook:
 - `docs/runbooks/DESKTOP_SLEEP_WAKE_RUNBOOK.md`
 
 ### 4.4 Auto-update
-- [ ] Выбрать release feed и схему каналов.
-- [ ] Настроить update policy (silent/download-only/prompt).
+- [x] Выбрать release feed и схему каналов.
+- [x] Настроить update policy (silent/download-only/prompt).
 - [ ] Реализовать безопасное применение обновления.
-- [ ] Зафиксировать rollback шаги в runbook.
+- [x] Зафиксировать rollback шаги в runbook.
+
+Runbook:
+- `docs/runbooks/DESKTOP_UPDATE_CHANNELS_RUNBOOK.md`
 
 ### 4.5 Observability
 - [x] Добавить desktop telemetry labels (platform, app channel, app version).
@@ -385,6 +388,12 @@ Progress note (2026-03-15, postdeploy gate recovery):
 - Добавлен retry-hardening для `smoke:sso` и browser boot path в `smoke:web:crash-boundary:browser` для снижения сетевых флейков.
 - Server-side postdeploy smoke повторен и прошел полностью (включая `smoke:realtime`), evidence: `docs/status/TEST_RESULTS.md` (Cycle #40).
 - Partial статус Cycle #39 закрыт повторным green-run.
+
+Progress note (2026-03-15, M3 update channels baseline):
+- В `apps/desktop-electron/src/main.cjs` добавлен channel-aware update orchestration через `electron-updater`.
+- Каналы `test/prod` выбираются через `ELECTRON_UPDATE_CHANNEL`, feed строится как `${ELECTRON_UPDATE_FEED_BASE_URL}/{channel}/{platform}`.
+- Runtime policy: safe no-op при отсутствии feed URL, periodic checks, controlled `allowPrerelease/allowDowngrade` для `test`.
+- Добавлен runbook `docs/runbooks/DESKTOP_UPDATE_CHANNELS_RUNBOOK.md` (rollout/rollback).
 
 ## 11) Known Follow-ups
 

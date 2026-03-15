@@ -10,7 +10,9 @@
     "start": "electron .",
     "build:renderer": "node ./scripts/build-renderer.cjs",
     "build": "npm run build:renderer && electron-builder --dir",
-    "dist": "npm run build:renderer && electron-builder"
+    "dist": "npm run build:renderer && electron-builder",
+    "dist:test": "cross-env ELECTRON_UPDATE_CHANNEL=test npm run dist",
+    "dist:prod": "cross-env ELECTRON_UPDATE_CHANNEL=prod npm run dist"
   },
   "build": {
     "appId": "art.gismalink.boltorezka.desktop",
@@ -44,6 +46,7 @@
     "cross-env": "^7.0.3",
     "electron": "^35.1.4",
     "electron-builder": "^25.1.8",
+    "electron-updater": "^6.3.9",
     "wait-on": "^8.0.3"
   }
 }

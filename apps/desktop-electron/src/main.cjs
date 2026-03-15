@@ -2,14 +2,135 @@ const path = require("path");
 const fs = require("fs");
 const { app, BrowserWindow, shell, desktopCapturer } = require("electron");
 
+let autoUpdater = null;
+try {
+  ({ autoUpdater } = require("electron-updater"));
+} catch {
+  autoUpdater = null;
+}
+
 const isDev = !app.isPackaged;
 const rendererUrl = process.env.ELECTRON_RENDERER_URL || "http://127.0.0.1:5173";
 const desktopProtocol = "boltorezka";
 const allowMultipleInstances = !app.isPackaged
   && String(process.env.ELECTRON_ALLOW_MULTIPLE_INSTANCES || "0") === "1";
 const suppressExternalOpenForSmoke = String(process.env.ELECTRON_SMOKE_SUPPRESS_EXTERNAL_OPEN || "0") === "1";
+const configuredUpdateChannel = String(process.env.ELECTRON_UPDATE_CHANNEL || (isDev ? "test" : "prod")).trim().toLowerCase();
+const updateChannel = configuredUpdateChannel === "test" || configuredUpdateChannel === "prod"
+  ? configuredUpdateChannel
+  : "test";
+const updateFeedBaseUrl = String(process.env.ELECTRON_UPDATE_FEED_BASE_URL || "").trim().replace(/\/+$/, "");
+const updatePollIntervalMs = Math.max(0, Number(process.env.ELECTRON_UPDATE_POLL_INTERVAL_MS || 20 * 60 * 1000));
+const updateAutoDownload = String(process.env.ELECTRON_UPDATE_AUTO_DOWNLOAD || "0") === "1";
 let mainWindow = null;
 let pendingProtocolUrl = "";
+let updatePollTimer = null;
+
+function logDesktopUpdate(message) {
+  console.log(`[desktop:update] ${message}`);
+}
+
+function getFeedPlatformPath() {
+  if (process.platform === "darwin") {
+    return "mac";
+  }
+  if (process.platform === "win32") {
+    return "win";
+  }
+  return "linux";
+}
+
+function notifyRendererUpdateStatus(event, payload = {}) {
+  try {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send("desktop:update-status", {
+        event,
+        channel: updateChannel,
+        at: new Date().toISOString(),
+        ...payload
+      });
+    }
+  } catch {
+    // Renderer notification is best-effort.
+  }
+}
+
+function startAutoUpdateOrchestration() {
+  if (!app.isPackaged || !autoUpdater) {
+    return;
+  }
+
+  if (!updateFeedBaseUrl) {
+    logDesktopUpdate("skipped: ELECTRON_UPDATE_FEED_BASE_URL is not configured");
+    return;
+  }
+
+  const feedPlatform = getFeedPlatformPath();
+  const feedUrl = `${updateFeedBaseUrl}/${updateChannel}/${feedPlatform}`;
+
+  try {
+    autoUpdater.autoDownload = updateAutoDownload;
+    autoUpdater.autoInstallOnAppQuit = false;
+    autoUpdater.allowDowngrade = updateChannel === "test";
+    autoUpdater.allowPrerelease = updateChannel === "test";
+    autoUpdater.setFeedURL({ provider: "generic", url: feedUrl });
+  } catch (error) {
+    logDesktopUpdate(`feed init failed: ${error instanceof Error ? error.message : String(error)}`);
+    return;
+  }
+
+  autoUpdater.on("checking-for-update", () => {
+    logDesktopUpdate(`checking channel=${updateChannel}`);
+    notifyRendererUpdateStatus("checking");
+  });
+
+  autoUpdater.on("update-available", (info) => {
+    const version = String(info?.version || "unknown");
+    logDesktopUpdate(`available version=${version} channel=${updateChannel}`);
+    notifyRendererUpdateStatus("available", { version });
+  });
+
+  autoUpdater.on("update-not-available", (info) => {
+    const version = String(info?.version || "unknown");
+    logDesktopUpdate(`not-available current=${version} channel=${updateChannel}`);
+    notifyRendererUpdateStatus("not-available", { version });
+  });
+
+  autoUpdater.on("error", (error) => {
+    const message = error instanceof Error ? error.message : String(error);
+    logDesktopUpdate(`error: ${message}`);
+    notifyRendererUpdateStatus("error", { message });
+  });
+
+  autoUpdater.on("download-progress", (progress) => {
+    const percent = Number(progress?.percent || 0);
+    notifyRendererUpdateStatus("download-progress", { percent: Number(percent.toFixed(2)) });
+  });
+
+  autoUpdater.on("update-downloaded", (info) => {
+    const version = String(info?.version || "unknown");
+    logDesktopUpdate(`downloaded version=${version}`);
+    notifyRendererUpdateStatus("downloaded", { version });
+  });
+
+  const checkOnce = async () => {
+    try {
+      await autoUpdater.checkForUpdates();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      logDesktopUpdate(`check failed: ${message}`);
+    }
+  };
+
+  logDesktopUpdate(`enabled channel=${updateChannel} feed=${feedUrl} autoDownload=${updateAutoDownload ? "1" : "0"}`);
+  void checkOnce();
+
+  if (updatePollIntervalMs > 0) {
+    updatePollTimer = setInterval(() => {
+      void checkOnce();
+    }, updatePollIntervalMs);
+  }
+}
 
 function isSameRendererOrigin(url) {
   try {
@@ -312,6 +433,7 @@ app.on("open-url", (event, url) => {
 
 app.whenReady().then(() => {
   mainWindow = createMainWindow();
+  startAutoUpdateOrchestration();
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -339,6 +461,11 @@ app.on("second-instance", (_event, argv) => {
 });
 
 app.on("window-all-closed", () => {
+  if (updatePollTimer) {
+    clearInterval(updatePollTimer);
+    updatePollTimer = null;
+  }
+
   if (process.platform !== "darwin") {
     app.quit();
   }
