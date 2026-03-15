@@ -77,6 +77,10 @@ Definition of done:
 - [ ] Реализован безопасный update flow с rollback-процедурой.
 - [ ] Сборки подписываются (где применимо).
 
+Note:
+- Download UI поток (`Get desktop app` + popup платформ) переводим в deferred-state до появления первых publishable desktop билдов.
+- До этого момента фокус M3: release channels, update policy, signing/runbook, чтобы сразу подключить реальные ссылки после готовности артефактов.
+
 Definition of done:
 - [ ] В меню сервера доступна точка входа `Get desktop app`.
 - [ ] Popup корректно показывает `available/coming soon` по каждой платформе.
@@ -138,6 +142,9 @@ Runbook:
 - [ ] Публикация: CI при готовности билда обновляет манифест и добавляет ссылку на новый артефакт.
 - [ ] До появления реальных билдов popup работает в режиме заглушек без broken links.
 
+Status:
+- Deferred by product decision (2026-03-15): начинаем реализацию раздела после появления первых desktop билдов для скачивания.
+
 ## 5) QA matrix и smoke
 
 Минимальная матрица v1:
@@ -198,6 +205,8 @@ Desktop smoke (must pass):
 - [x] После M1 выполнить первый test rollout и зафиксировать результаты в `docs/status`.
 - [ ] Спроектировать и внедрить UI-поток `Get desktop app` -> popup платформ с заглушками.
 - [ ] Определить формат и размещение build-манифеста для desktop downloads (`test`/`prod`).
+- [ ] (Deferred) Вернуться к разделу desktop downloads после появления первых publishable desktop билдов.
+- [ ] Продолжить закрытие non-download задач M3: update channels, rollback flow, signing readiness.
 
 ## 10) Progress notes
 
