@@ -14,6 +14,12 @@ Update (2026-03-15):
 	- full `deploy-test-and-smoke` cycle PASS с `desktop_update_feed=pass`.
 - Устранен regression risk test static sync:
 	- `deploy-test-from-ref.sh` теперь сохраняет `desktop/` subtree при web static refresh.
+- Выполнен controlled prod rollout из `origin/main` на SHA `a19185a6f7e354f91a52608c4fa408964dca279c`.
+- Prod post-checks подтверждены:
+	- `GET /health` -> `200`, `api/db/redis=ok`, `appBuildSha=a19185a6f7e354f91a52608c4fa408964dca279c`.
+	- `GET /v1/auth/mode` -> `mode=sso`.
+	- `smoke:web:version-cache` (prod URL) -> PASS.
+	- `smoke:desktop:update-feed` (`channel=prod`) -> PASS.
 
 - Prod и test работают в GitOps-модели с test-first циклом; последние smoke в test — PASS.
 - React web остаётся default UI path; deploy-скрипты используют API + Caddy static sync mode по умолчанию (`--no-deps`, `FULL_RECREATE=1` только по явному флагу).
@@ -60,7 +66,7 @@ Update (2026-03-15):
 	- Phase 1 RTC стартует сразу,
 	- текущие `Phase 6` hardening/runbook пункты идут параллельно как supporting track,
 	- policy unchanged: `test` first, `prod` только по явному подтверждению.
-- Последний test rollout/smoke от `origin/main` (SHA `29ad7be`) — PASS.
+- Последний test rollout/smoke от `origin/main` (SHA `10b6fd5`) — PASS.
 - Выполнен refresh pre-prod decision package под актуальные gate-правила и evidence (`docs/runbooks/PREPROD_DECISION_PACKAGE.md`).
 
 ## Канонические документы
