@@ -21,6 +21,23 @@ on:
         required: false
         default: false
         type: boolean
+      signed_platforms:
+        description: "Which platform(s) should run signed path"
+        required: false
+        default: "all"
+        type: choice
+        options:
+          - all
+          - windows-only
+          - mac-only
+      windows_signing_provider:
+        description: "Windows signing provider for signed workflow"
+        required: false
+        default: "azure-oidc"
+        type: choice
+        options:
+          - azure-oidc
+          - pfx
 
 concurrency:
   group: desktop-artifacts-${{ github.ref }}
@@ -28,6 +45,7 @@ concurrency:
 
 permissions:
   contents: write
+  id-token: write
 
 jobs:
   build-desktop:
@@ -37,7 +55,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-latest, windows-latest]
+        include:
+          - os: macos-latest
+            platform: mac
+          - os: windows-latest
+            platform: windows
 
     steps:
       - name: Checkout
@@ -54,14 +76,65 @@ jobs:
       - name: Install desktop dependencies
         run: npm --prefix apps/desktop-electron ci
 
+      - name: Resolve signing plan
+        id: sign_plan
+        shell: bash
+        run: |
+          signed_dispatch="false"
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ github.event.inputs.signed }}" == "true" ]]; then
+            signed_dispatch="true"
+          fi
+
+          sign_current="false"
+          if [[ "$signed_dispatch" == "true" ]]; then
+            case "${{ github.event.inputs.signed_platforms || 'all' }}" in
+              all)
+                sign_current="true"
+                ;;
+              windows-only)
+                [[ "${{ matrix.platform }}" == "windows" ]] && sign_current="true"
+                ;;
+              mac-only)
+                [[ "${{ matrix.platform }}" == "mac" ]] && sign_current="true"
+                ;;
+            esac
+          fi
+
+          use_azure_windows="false"
+          if [[ "$sign_current" == "true" && "${{ matrix.platform }}" == "windows" && "${{ github.event.inputs.windows_signing_provider || 'azure-oidc' }}" == "azure-oidc" ]]; then
+            use_azure_windows="true"
+          fi
+
+          echo "signed_dispatch=$signed_dispatch" >> "$GITHUB_OUTPUT"
+          echo "sign_current=$sign_current" >> "$GITHUB_OUTPUT"
+          echo "use_azure_windows=$use_azure_windows" >> "$GITHUB_OUTPUT"
+
       - name: Build desktop unpacked artifact
-        if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.signed != 'true' }}
+        if: ${{ steps.sign_plan.outputs.sign_current != 'true' }}
         shell: bash
         run: |
           APP_BUILD_SHA="${GITHUB_SHA}" npm --prefix apps/desktop-electron run build
 
+      - name: Build Windows release candidate (Azure signing path)
+        if: ${{ steps.sign_plan.outputs.use_azure_windows == 'true' }}
+        shell: bash
+        env:
+          ELECTRON_UPDATE_CHANNEL: ${{ github.event.inputs.release_channel || 'test' }}
+          APP_BUILD_SHA: ${{ github.sha }}
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+          CSC_LINK: ""
+          CSC_KEY_PASSWORD: ""
+          WIN_CSC_LINK: ""
+          WIN_CSC_KEY_PASSWORD: ""
+        run: |
+          if [[ "${ELECTRON_UPDATE_CHANNEL}" == "prod" ]]; then
+            npm --prefix apps/desktop-electron run dist:prod
+          else
+            npm --prefix apps/desktop-electron run dist:test
+          fi
+
       - name: Build signed desktop release candidate
-        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.signed == 'true' }}
+        if: ${{ steps.sign_plan.outputs.sign_current == 'true' && steps.sign_plan.outputs.use_azure_windows != 'true' }}
         shell: bash
         env:
           ELECTRON_UPDATE_CHANNEL: ${{ github.event.inputs.release_channel || 'test' }}
@@ -80,10 +153,32 @@ jobs:
             npm --prefix apps/desktop-electron run dist:test
           fi
 
+      - name: Azure login (OIDC for Windows signing)
+        if: ${{ steps.sign_plan.outputs.use_azure_windows == 'true' }}
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_TRUSTED_SIGNING_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TRUSTED_SIGNING_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_TRUSTED_SIGNING_SUBSCRIPTION_ID }}
+
+      - name: Sign Windows artifacts with Azure Trusted Signing
+        if: ${{ steps.sign_plan.outputs.use_azure_windows == 'true' }}
+        uses: azure/artifact-signing-action@v1
+        with:
+          endpoint: ${{ secrets.AZURE_TRUSTED_SIGNING_ENDPOINT }}
+          signing-account-name: ${{ secrets.AZURE_TRUSTED_SIGNING_ACCOUNT_NAME }}
+          certificate-profile-name: ${{ secrets.AZURE_TRUSTED_SIGNING_CERT_PROFILE_NAME }}
+          files-folder: ${{ github.workspace }}\apps\desktop-electron\dist
+          files-folder-filter: exe,msi
+          files-folder-recurse: true
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
+
       - name: Upload desktop artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: desktop-${{ matrix.os }}-${{ github.sha }}-${{ github.event_name == 'workflow_dispatch' && github.event.inputs.signed == 'true' && 'signed' || 'unsigned' }}
+          name: desktop-${{ matrix.os }}-${{ github.sha }}-${{ steps.sign_plan.outputs.sign_current == 'true' && 'signed' || 'unsigned' }}
           path: apps/desktop-electron/dist/**
           if-no-files-found: error
 

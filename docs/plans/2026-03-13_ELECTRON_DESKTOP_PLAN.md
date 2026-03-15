@@ -253,6 +253,11 @@ Progress note (2026-03-15, release-grade signing gate prep):
 - Runbook `docs/runbooks/DESKTOP_SIGNING_READINESS_RUNBOOK.md` расширен release-grade матрицей (macOS/Windows), evidence checklist и verification command skeletons.
 - Следующий execution step: выполнить signed RC cycle и заполнить evidence в `docs/status/TEST_RESULTS.md`.
 
+Progress note (2026-03-15, Windows OIDC signing path):
+- Workflow `.github/workflows/desktop-artifacts.yml` расширен для `windows-only` signed режима до готовности Apple secrets.
+- Добавлен Windows signing provider `azure-oidc` через `azure/login` + `azure/artifact-signing-action` (OIDC), без обязательного `DESKTOP_WIN_CSC_LINK`/`DESKTOP_WIN_CSC_KEY_PASSWORD`.
+- Runbook обновлен новыми workflow inputs и списком Azure Trusted Signing secrets.
+
 Progress note (2026-03-13, security automation):
 - Добавлен `scripts/smoke/smoke-desktop-security.mjs` и root commands `npm run smoke:desktop:security`, `npm run desktop:smoke:m2:secure`.
 - Test evidence: security baseline PASS (`contextIsolation=true`, `sandbox=true`, `nodeIntegration=false`, bridge allowlist `platform,version`) и full secure chain PASS.

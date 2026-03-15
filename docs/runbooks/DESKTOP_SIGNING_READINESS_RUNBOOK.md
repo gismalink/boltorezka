@@ -44,10 +44,14 @@ Manual запуск (`workflow_dispatch`) с параметрами:
 - `release_channel`: `test` | `prod`
 - `signed`: `true`
 - `create_release_draft`: `true|false`
+- `signed_platforms`: `all` | `windows-only` | `mac-only`
+- `windows_signing_provider`: `azure-oidc` | `pfx`
 
 Поведение:
 - при `signed=false` или push/PR: собираются unsigned/unpacked artifacts;
 - при `signed=true`: запускается signed release candidate build (`dist:test` или `dist:prod`).
+- при `signed=true` + `signed_platforms=windows-only`: mac job остается unsigned (не блокирует RC при отсутствии Apple secrets).
+- при `signed=true` + `windows_signing_provider=azure-oidc`: Windows artifacts подписываются через Azure Artifact Signing по OIDC (без `DESKTOP_WIN_CSC_*`).
 - при `signed=true`: после matrix-build запускается `github-release-chain` job (manifest + optional draft release).
 
 ## 2.1 Что именно делает GitHub в этой цепочке
@@ -83,9 +87,50 @@ Windows:
 - `DESKTOP_WIN_CSC_LINK`
 - `DESKTOP_WIN_CSC_KEY_PASSWORD`
 
+Windows (Azure OIDC path, recommended):
+- `AZURE_TRUSTED_SIGNING_CLIENT_ID`
+- `AZURE_TRUSTED_SIGNING_TENANT_ID`
+- `AZURE_TRUSTED_SIGNING_SUBSCRIPTION_ID`
+- `AZURE_TRUSTED_SIGNING_ENDPOINT`
+- `AZURE_TRUSTED_SIGNING_ACCOUNT_NAME`
+- `AZURE_TRUSTED_SIGNING_CERT_PROFILE_NAME`
+
 Примечание:
 - сертификаты/ключи хранятся только в GitHub Secrets;
 - в репозиторий не коммитим p12/пароли/токены.
+
+### 3.1 UI template (placeholder values)
+
+Ниже шаблон значений для заполнения через GitHub UI (`Settings -> Secrets and variables -> Actions`).
+
+Важно:
+- это примеры-заглушки, не реальные секреты;
+- используйте ваши фактические сертификаты/пароли/ID;
+- значения типа `*_CSC_LINK` ожидаются в формате base64 содержимого certificate файла.
+
+| Secret name | Example placeholder |
+|---|---|
+| `DESKTOP_CSC_LINK` | `BASE64_P12_APPLE_CERT_PLACEHOLDER` |
+| `DESKTOP_CSC_KEY_PASSWORD` | `APPLE_P12_PASSWORD_PLACEHOLDER` |
+| `DESKTOP_APPLE_ID` | `apple-dev-account@example.com` |
+| `DESKTOP_APPLE_APP_SPECIFIC_PASSWORD` | `xxxx-xxxx-xxxx-xxxx` |
+| `DESKTOP_APPLE_TEAM_ID` | `TEAMID1234` |
+| `DESKTOP_WIN_CSC_LINK` | `BASE64_PFX_WINDOWS_CERT_PLACEHOLDER` |
+| `DESKTOP_WIN_CSC_KEY_PASSWORD` | `WINDOWS_PFX_PASSWORD_PLACEHOLDER` |
+| `AZURE_TRUSTED_SIGNING_CLIENT_ID` | `00000000-0000-0000-0000-000000000000` |
+| `AZURE_TRUSTED_SIGNING_TENANT_ID` | `11111111-1111-1111-1111-111111111111` |
+| `AZURE_TRUSTED_SIGNING_SUBSCRIPTION_ID` | `22222222-2222-2222-2222-222222222222` |
+| `AZURE_TRUSTED_SIGNING_ENDPOINT` | `https://eus.codesigning.azure.net` |
+| `AZURE_TRUSTED_SIGNING_ACCOUNT_NAME` | `trusted-signing-account-name` |
+| `AZURE_TRUSTED_SIGNING_CERT_PROFILE_NAME` | `trusted-signing-cert-profile` |
+
+Минимальная self-check после заполнения:
+- запустить `desktop-artifacts` с параметрами `release_channel=test`, `signed=true`;
+- убедиться, что jobs `build-macos-latest` и `build-windows-latest` завершаются `success`.
+
+Practical режим до готовности Apple-аккаунта:
+- запускать `signed=true`, `signed_platforms=windows-only`, `windows_signing_provider=azure-oidc`.
+- ожидаемое поведение: Windows проходит signed path, macOS проходит unsigned path без fail из-за отсутствующих Apple secrets.
 
 ## 4) Readiness check sequence
 
