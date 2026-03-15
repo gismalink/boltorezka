@@ -2,6 +2,32 @@
 
 Отдельный журнал результатов тестов/нагрузки.
 
+## 2026-03-15 — Cycle #48 (Postdeploy integration: desktop update-feed gate)
+
+- Environment: `test` (`mac-mini`, postdeploy smoke)
+- Build ref: `origin/feature/electron-desktop-foundation` (`8bcfc12`)
+
+### Functional gate
+
+- `postdeploy-smoke-test.sh` интегрирован с desktop update-feed проверкой:
+  - добавлен шаг `smoke:desktop:update-feed`
+  - добавлен summary field `SMOKE_DESKTOP_UPDATE_FEED_STATUS`
+- Server run (fast mode) after sync to latest feature commit: PASS
+  - `SMOKE_DESKTOP_UPDATE_FEED=1 SMOKE_DESKTOP_CHANNEL=test SMOKE_REALTIME=0 SMOKE_WEB_CRASH_BOUNDARY_BROWSER=0 SMOKE_WEB_RNNOISE_BROWSER=0 ./scripts/deploy/postdeploy-smoke-test.sh "$PWD"`
+- Evidence from summary file: PASS
+  - `SMOKE_DESKTOP_UPDATE_FEED_STATUS=pass`
+  - `SMOKE_SUMMARY_TEXT` содержит `desktop_update_feed=pass`
+
+### Scope covered by this cycle
+
+- Desktop updater distribution contract включен в стандартный postdeploy smoke-пакет.
+- Снижена вероятность регрессии, когда `/desktop/...` endpoints отдают SPA fallback или невалидный updater feed.
+
+### Decision
+
+- Cycle #48: PASS.
+- Gate `desktop_update_feed` считается operationally wired into postdeploy checks.
+
 ## 2026-03-15 — Cycle #47 (Automated desktop updater feed smoke command)
 
 - Environment: `test` (`https://test.boltorezka.gismalink.art`)
