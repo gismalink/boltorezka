@@ -210,6 +210,8 @@ Desktop smoke (must pass):
 - [x] Определить формат и размещение build-манифеста для desktop downloads (`test`/`prod`).
 - [ ] (Deferred) Вернуться к разделу desktop downloads после появления первых publishable desktop билдов.
 - [ ] Продолжить закрытие non-download задач M3: signing readiness + release-grade update verification.
+- [ ] Обновить pre-prod decision package под post-merge state `origin/main` и зафиксировать owner/sign-off draft.
+- [ ] Подготовить controlled prod rollout command set (без выполнения) для explicit approval.
 
 ## 10) Progress notes
 
@@ -448,9 +450,14 @@ Checklist continuation (2026-03-15, updated):
 - [x] Добавить и прогнать автоматизированный smoke для `Forced app update path` (version mismatch -> reload/overlay recovery).
 - [x] Зафиксировать practical stability policy в runbook desktop test gates (`15-30m` per iteration, `2h` only for standalone release gate).
 
-## 13) Pre-merge snapshot (2026-03-15)
+Checklist continuation (2026-03-15, post-merge):
+- [x] Merge `feature/electron-desktop-foundation` в `main`.
+- [x] Выполнить post-merge test gate уже из `origin/main` (`deploy:test:smoke` PASS, включая `desktop_update_feed=pass`).
+- [ ] Обновить pre-prod пакет и подготовить explicit approval запись перед возможным prod rollout.
 
-Текущее состояние ветки `feature/electron-desktop-foundation` перед merge в `main`.
+## 13) Post-merge snapshot (2026-03-15)
+
+Текущее состояние после merge desktop workstream в `main`.
 
 Green now (test-validated):
 - Desktop auth/handoff/session consistency (browser-first handoff + deterministic protocol).
@@ -458,6 +465,8 @@ Green now (test-validated):
 - Forced app update/recovery path (version mismatch -> reload -> overlay continue).
 - Desktop observability counters в telemetry summary (`telemetry_runtime_*`, `telemetry_desktop_platform_*`).
 - Server-side postdeploy smoke восстановлен в full PASS после anti-flake hardening (Cycle #40).
+- Desktop server-first distribution contract validated и встроен в postdeploy smoke (`desktop_update_feed=pass`).
+- Post-merge gate из `origin/main` пройден (Cycle #50, SHA `10b6fd5`).
 
 Deferred to standalone packaged release gate:
 - 2h long-run stability soak.
@@ -465,6 +474,6 @@ Deferred to standalone packaged release gate:
 - Auto-update channel orchestration + signing/notarization + rollback runbook verification.
 
 Open for prod-readiness (после merge в `main`):
-- Merge ветки в `main` и повторный test gate уже из `origin/main`.
 - Pre-prod checklist completion (`M4` раздел, owners/rollback refs/sign-off).
+- Signing/notarization readiness check для release-grade desktop artifacts.
 - Controlled prod rollout только после явного подтверждения.

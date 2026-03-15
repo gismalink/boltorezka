@@ -7,7 +7,7 @@
 ## 1) Decision summary
 
 - Decision status: **REFRESHED (NO-GO пока не выполнен новый prod sign-off)**.
-- Причина: пакет обновлён под актуальные gate-правила и свежие test evidence (`Cycle #15`, rollout от `origin/main`), но новый explicit prod approval ещё не заполнялся.
+- Причина: пакет обновлён под актуальные gate-правила и свежие post-merge test evidence (`Cycle #50`, rollout от `origin/main`), но новый explicit prod approval ещё не заполнялся.
 - Production rollout policy: только из `origin/main` после отдельного explicit approval.
 - SFU readiness reference: `docs/runbooks/SFU_STAGE4_PROD_READINESS_PACKAGE.md`.
 
@@ -39,14 +39,15 @@
 ### 3.1 Latest verified test rollout
 
 - Branch: `origin/main`
-- Verified deploy SHA in test: `29ad7be`
+- Verified deploy SHA in test: `10b6fd5`
 - Command:
-  - `ssh mac-mini 'cd ~/srv/boltorezka && TEST_REF=origin/main ALLOW_TEST_FROM_MAIN=1 npm run deploy:test:smoke'`
+  - `ssh mac-mini 'cd ~/srv/boltorezka && TEST_REF=origin/main ALLOW_TEST_FROM_MAIN=1 SMOKE_DESKTOP_UPDATE_FEED=1 SMOKE_DESKTOP_CHANNEL=test npm run deploy:test:smoke'`
 - Result:
   - `health` — PASS
   - `smoke:sso` — PASS
   - `smoke:api` — PASS
   - `smoke:web:version-cache` — PASS
+  - `smoke:desktop:update-feed` — PASS
   - `smoke:realtime` — PASS
   - `reconnectOk=true`
 
