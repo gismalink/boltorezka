@@ -48,13 +48,9 @@ echo "[desktop-build] signing mode: $DESKTOP_SIGNING_MODE"
 if [[ "$DESKTOP_SIGNING_MODE" == "unsigned" ]]; then
   # Deterministic unsigned test build: disable auto-discovery and clear explicit signing secrets.
   export CSC_IDENTITY_AUTO_DISCOVERY=false
-  export CSC_LINK=""
-  export CSC_KEY_PASSWORD=""
-  export APPLE_ID=""
-  export APPLE_APP_SPECIFIC_PASSWORD=""
-  export APPLE_TEAM_ID=""
-  export WIN_CSC_LINK=""
-  export WIN_CSC_KEY_PASSWORD=""
+  unset CSC_LINK CSC_KEY_PASSWORD
+  unset APPLE_ID APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID
+  unset WIN_CSC_LINK WIN_CSC_KEY_PASSWORD
 fi
 
 if [[ -n "$(git status --porcelain)" ]]; then
