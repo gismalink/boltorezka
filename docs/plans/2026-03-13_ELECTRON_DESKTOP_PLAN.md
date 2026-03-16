@@ -463,6 +463,12 @@ Progress note (2026-03-16, runtime routes centralization start):
 - Trigger: observed incident class `WS=ok, RTC=fail` в desktop, указывающий на divergence между transport resolvers.
 - Phase 1 started: унификация WS/RTC route resolution через единый transport runtime helper в web renderer.
 
+Progress note (2026-03-17, desktop media permissions fix + cleanup):
+- Найден и закрыт root cause микрофонного deny в packaged desktop: неверный entitlement key (`com.apple.security.device.microphone`) заменен на корректный `com.apple.security.device.audio-input`.
+- Подтверждено на test build: camera/microphone entitlements встроены в .app, системный запрос микрофона и media-flow восстановлены.
+- После валидации выполнен cleanup: временные debug/workaround изменения в runtime RTC/media bridge удалены, сохранены только release-необходимые изменения в `apps/desktop-electron/package.json` и `apps/desktop-electron/entitlements.mac.plist`.
+- UI polish: overlay `ChannelSessionMoved` приведен к каноничному popup стилю (`voice-preferences-overlay` + `card voice-preferences-modal`) для визуальной консистентности.
+
 ## 11) Known Follow-ups
 
 - [x] Провести browser-level handoff soak (Chromium/WebKit/Firefox) поверх уже закрытого protocol-level soak и приложить агрегированное evidence к auth runbook.

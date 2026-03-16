@@ -2159,13 +2159,13 @@ export function App() {
       ) : null}
 
       {sessionMovedOverlayMessage ? (
-        <div className="fixed inset-0 z-[310] flex items-center justify-center bg-black/85 p-4" role="dialog" aria-modal="true" aria-live="assertive">
-          <div className="w-full max-w-md rounded-2xl border border-white/20 bg-neutral-950/95 p-6 text-center shadow-2xl">
-            <h2 className="text-2xl font-bold tracking-wide text-white">Приложение открыто в другом месте</h2>
-            <p className="mt-3 text-sm leading-relaxed text-white/80">
+        <div className="voice-preferences-overlay fixed inset-0 z-[310] grid place-items-center p-4" role="dialog" aria-modal="true" aria-live="assertive">
+          <section className="card voice-preferences-modal w-full max-w-[620px] !h-auto !max-h-[90vh] overflow-auto p-6 text-center">
+            <h2>Приложение открыто в другом месте</h2>
+            <p className="mt-3 muted">
               Эта сессия перенесена в другое окно или вкладку. Работа с каналами здесь остановлена.
             </p>
-            <p className="mt-2 text-xs text-white/60">{sessionMovedOverlayMessage}</p>
+            <p className="mt-2 text-xs muted">{sessionMovedOverlayMessage}</p>
             <button
               type="button"
               className="primary mt-6 inline-flex w-full items-center justify-center"
@@ -2176,7 +2176,7 @@ export function App() {
             >
               Открыть здесь
             </button>
-          </div>
+          </section>
         </div>
       ) : null}
 
