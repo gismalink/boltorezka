@@ -69,6 +69,7 @@ type DesktopManifestFile = {
 
 type DesktopManifest = {
   channel?: string;
+  appVersion?: string;
   sha?: string;
   builtAt?: string;
   files?: DesktopManifestFile[];
@@ -721,6 +722,7 @@ export function ServerProfileModal({
               <p className="muted">{t("server.desktopHint")}</p>
               <p className="muted">
                 {t("server.desktopChannel")}: {desktopManifest?.channel || desktopChannel}
+                {desktopManifest?.appVersion ? ` · ${t("server.desktopAppVersion")}: ${desktopManifest.appVersion}` : ""}
                 {desktopManifest?.sha ? ` · ${t("server.desktopVersionSha")}: ${desktopManifest.sha.slice(0, 8)}` : ""}
               </p>
               {desktopChannel === "test" ? <p className="muted text-xs">{t("server.desktopUnsignedWarning")}</p> : null}
