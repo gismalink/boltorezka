@@ -310,6 +310,14 @@ function isSameRendererOrigin(url) {
   }
 }
 
+function getDesktopWindowTitle() {
+  const version = String(app.getVersion() || "").trim();
+  if (!version) {
+    return "Boltorezka";
+  }
+  return `Boltorezka v${version}`;
+}
+
 function withDesktopSsoParams(url, handoffCode = "", attemptId = "") {
   try {
     const parsed = new URL(url);
@@ -411,11 +419,13 @@ if (!allowMultipleInstances) {
 }
 
 function createMainWindow() {
+  const windowTitle = getDesktopWindowTitle();
   const window = new BrowserWindow({
     width: 1400,
     height: 900,
     minWidth: 1000,
     minHeight: 700,
+    title: windowTitle,
     autoHideMenuBar: true,
     backgroundColor: "#0b0f14",
     webPreferences: {
@@ -477,6 +487,16 @@ function createMainWindow() {
     }
   }, {
     useSystemPicker: true
+  });
+
+  window.webContents.on("page-title-updated", (event) => {
+    // Keep native title deterministic so test builds clearly show exact version.
+    event.preventDefault();
+    window.setTitle(windowTitle);
+  });
+
+  window.webContents.on("did-fail-load", (_event, code, description, validatedURL) => {
+    console.error(`[desktop] did-fail-load code=${code} desc=${description} url=${validatedURL}`);
   });
 
   const handleDesktopLocalLogoutNavigation = (url) => {
