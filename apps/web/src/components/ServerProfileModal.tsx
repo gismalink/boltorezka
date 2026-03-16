@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { AudioQuality, TelemetrySummary, User } from "../domain";
 import type { ServerScreenShareResolution, ServerVideoEffectType } from "../hooks/rtc/voiceCallTypes";
 import { RangeSlider } from "./RangeSlider";
@@ -60,6 +60,47 @@ type ServerProfileModalProps = {
   onSetServerVideoWindowMaxWidth: (value: number) => void;
 };
 
+type DesktopManifestFile = {
+  name: string;
+  relativePath?: string;
+  urlPath?: string;
+  url?: string;
+};
+
+type DesktopManifest = {
+  channel?: string;
+  sha?: string;
+  builtAt?: string;
+  files?: DesktopManifestFile[];
+};
+
+function pickDesktopArtifact(files: DesktopManifestFile[], platform: "windows" | "mac" | "linux"): DesktopManifestFile | null {
+  const withHref = files.filter((item) => {
+    const href = String(item.url || item.urlPath || "").trim();
+    return href.length > 0;
+  });
+
+  const byName = (patterns: RegExp[]): DesktopManifestFile | null => {
+    for (const pattern of patterns) {
+      const found = withHref.find((item) => pattern.test(item.name));
+      if (found) {
+        return found;
+      }
+    }
+    return null;
+  };
+
+  if (platform === "windows") {
+    return byName([/\.exe$/i, /\.msi$/i, /\.nsis(\.7z)?$/i]);
+  }
+
+  if (platform === "mac") {
+    return byName([/\.dmg$/i, /-mac\.zip$/i, /\.pkg$/i]);
+  }
+
+  return byName([/\.AppImage$/i, /\.deb$/i, /\.rpm$/i, /\.tar\.gz$/i, /linux/i]);
+}
+
 export function ServerProfileModal({
   open,
   t,
@@ -111,6 +152,9 @@ export function ServerProfileModal({
   onSetServerVideoWindowMaxWidth
 }: ServerProfileModalProps) {
   const previewVideoRef = useRef<HTMLVideoElement>(null);
+  const [desktopManifest, setDesktopManifest] = useState<DesktopManifest | null>(null);
+  const [desktopManifestLoading, setDesktopManifestLoading] = useState(false);
+  const [desktopManifestError, setDesktopManifestError] = useState("");
   const totalUsers = adminUsers.length;
   const totalAdmins = adminUsers.filter((item) => item.role === "admin" || item.role === "super_admin").length;
   const totalBanned = adminUsers.filter((item) => item.is_banned).length;
@@ -118,6 +162,33 @@ export function ServerProfileModal({
   const rnnoiseProcessAvgMs = rnnoiseProcessSamples > 0
     ? (telemetrySummary?.metrics.rnnoise_process_cost_us_sum ?? 0) / rnnoiseProcessSamples / 1000
     : 0;
+
+  const desktopChannel = useMemo<"test" | "prod">(() => {
+    if (typeof window === "undefined") {
+      return "prod";
+    }
+
+    const hostname = window.location.hostname.toLowerCase();
+    return hostname.startsWith("test.") || hostname.includes(".test.") ? "test" : "prod";
+  }, []);
+
+  const desktopCards = useMemo(
+    () => [
+      { id: "windows" as const, label: t("server.desktopPlatformWindows") },
+      { id: "mac" as const, label: t("server.desktopPlatformMac") },
+      { id: "linux" as const, label: t("server.desktopPlatformLinux") }
+    ].map((platform) => {
+      const files = Array.isArray(desktopManifest?.files) ? desktopManifest.files : [];
+      const artifact = pickDesktopArtifact(files, platform.id);
+      const href = String(artifact?.url || artifact?.urlPath || "").trim();
+      return {
+        ...platform,
+        href: href.length > 0 ? href : null,
+        fileName: artifact?.name || ""
+      };
+    }),
+    [desktopManifest, t]
+  );
 
   useEffect(() => {
     const element = previewVideoRef.current;
@@ -135,6 +206,54 @@ export function ServerProfileModal({
       return;
     });
   }, [serverVideoPreviewStream]);
+
+  useEffect(() => {
+    if (!open || serverMenuTab !== "desktop_downloads") {
+      return;
+    }
+
+    const controller = new AbortController();
+    let disposed = false;
+
+    async function loadDesktopManifest() {
+      setDesktopManifestLoading(true);
+      setDesktopManifestError("");
+
+      try {
+        const response = await fetch(`/desktop/${desktopChannel}/latest.json`, {
+          cache: "no-store",
+          signal: controller.signal
+        });
+
+        if (!response.ok) {
+          throw new Error(`status ${response.status}`);
+        }
+
+        const payload = (await response.json()) as DesktopManifest;
+        if (!disposed) {
+          setDesktopManifest(payload);
+        }
+      } catch (error) {
+        if (disposed || controller.signal.aborted) {
+          return;
+        }
+
+        setDesktopManifest(null);
+        setDesktopManifestError(error instanceof Error ? error.message : "unknown");
+      } finally {
+        if (!disposed) {
+          setDesktopManifestLoading(false);
+        }
+      }
+    }
+
+    void loadDesktopManifest();
+
+    return () => {
+      disposed = true;
+      controller.abort();
+    };
+  }, [desktopChannel, open, serverMenuTab]);
 
   if (!open) {
     return null;
@@ -600,23 +719,40 @@ export function ServerProfileModal({
             <section className="grid gap-3">
               <h3>{t("server.desktopTitle")}</h3>
               <p className="muted">{t("server.desktopHint")}</p>
+              <p className="muted">
+                {t("server.desktopChannel")}: {desktopManifest?.channel || desktopChannel}
+                {desktopManifest?.sha ? ` · ${t("server.desktopVersionSha")}: ${desktopManifest.sha.slice(0, 8)}` : ""}
+              </p>
+              {desktopManifestLoading ? <p className="muted">{t("server.desktopLoading")}</p> : null}
+              {desktopManifestError ? <p className="muted">{t("server.desktopError")}: {desktopManifestError}</p> : null}
               <div className="grid gap-3 desktop:grid-cols-3">
-                {[
-                  { id: "windows", label: t("server.desktopPlatformWindows") },
-                  { id: "mac", label: t("server.desktopPlatformMac") },
-                  { id: "linux", label: t("server.desktopPlatformLinux") }
-                ].map((platform) => (
+                {desktopCards.map((platform) => (
                   <div key={platform.id} className="card compact grid gap-3 p-3">
                     <div className="text-sm font-semibold">{platform.label}</div>
-                    <button
-                      type="button"
-                      className="secondary"
-                      disabled
-                      title={t("server.desktopSoon")}
-                      aria-label={`${t("server.desktopDownload")} (${t("server.desktopSoon")})`}
-                    >
-                      {t("server.desktopDownload")}
-                    </button>
+                    {platform.href ? (
+                      <button
+                        type="button"
+                        className="secondary"
+                        onClick={() => window.open(platform.href!, "_blank", "noopener,noreferrer")}
+                        title={platform.fileName}
+                        aria-label={`${t("server.desktopDownload")}: ${platform.fileName}`}
+                      >
+                        {t("server.desktopDownload")}
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        className="secondary"
+                        disabled
+                        title={t("server.desktopSoon")}
+                        aria-label={`${t("server.desktopDownload")} (${t("server.desktopSoon")})`}
+                      >
+                        {t("server.desktopDownload")}
+                      </button>
+                    )}
+                    <div className="muted text-xs">
+                      {platform.href ? t("server.desktopAvailable") : t("server.desktopUnavailable")}
+                    </div>
                   </div>
                 ))}
               </div>
