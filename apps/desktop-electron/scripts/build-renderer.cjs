@@ -54,12 +54,14 @@ function run() {
     ...process.env,
     VITE_APP_VERSION: version,
     VITE_APP_BUILD_SHA: buildSha,
-    VITE_APP_BUILD_DATE: buildDate
+    VITE_APP_BUILD_DATE: buildDate,
+    VITE_ASSET_BASE: "./"
   };
 
   console.log(`[desktop:build:renderer] VITE_APP_VERSION=${version}`);
   console.log(`[desktop:build:renderer] VITE_APP_BUILD_SHA=${buildSha}`);
   console.log(`[desktop:build:renderer] VITE_APP_BUILD_DATE=${buildDate}`);
+  console.log("[desktop:build:renderer] VITE_ASSET_BASE=./");
 
   const npmCmd = process.platform === "win32" ? "npm.cmd" : "npm";
   const result = spawnSync(npmCmd, ["--prefix", "../web", "run", "build"], {
