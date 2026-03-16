@@ -120,6 +120,81 @@ function isUpdateRuntimeEnabled() {
 function registerUpdateIpcHandlers() {
   ipcMain.handle("desktop:update:get-state", async () => ({ ...desktopUpdateState }));
 
+  ipcMain.handle("desktop:media:get-access-status", async (_event, mediaType) => {
+    const kind = String(mediaType || "").trim().toLowerCase();
+    if (kind !== "microphone" && kind !== "camera") {
+      return {
+        ok: false,
+        reason: "invalid-media-type",
+        status: "unknown"
+      };
+    }
+
+    if (process.platform !== "darwin") {
+      return {
+        ok: true,
+        status: "unknown"
+      };
+    }
+
+    try {
+      return {
+        ok: true,
+        status: systemPreferences.getMediaAccessStatus(kind)
+      };
+    } catch (error) {
+      return {
+        ok: false,
+        reason: error instanceof Error ? error.message : String(error),
+        status: "unknown"
+      };
+    }
+  });
+
+  ipcMain.handle("desktop:media:request-access", async (_event, mediaType) => {
+    const kind = String(mediaType || "").trim().toLowerCase();
+    if (kind !== "microphone" && kind !== "camera") {
+      return {
+        ok: false,
+        granted: false,
+        reason: "invalid-media-type",
+        status: "unknown"
+      };
+    }
+
+    if (process.platform !== "darwin") {
+      return {
+        ok: true,
+        granted: true,
+        status: "unknown"
+      };
+    }
+
+    try {
+      const beforeStatus = systemPreferences.getMediaAccessStatus(kind);
+      const granted = beforeStatus === "granted"
+        ? true
+        : await systemPreferences.askForMediaAccess(kind);
+      const afterStatus = systemPreferences.getMediaAccessStatus(kind);
+      logDesktopMedia(`${kind} access request via bridge: before=${beforeStatus} granted=${granted ? "1" : "0"} after=${afterStatus}`);
+
+      return {
+        ok: true,
+        granted,
+        status: afterStatus
+      };
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error);
+      logDesktopMedia(`${kind} access request failed: ${reason}`);
+      return {
+        ok: false,
+        granted: false,
+        reason,
+        status: "unknown"
+      };
+    }
+  });
+
   ipcMain.handle("desktop:update:check", async () => {
     if (!isUpdateRuntimeEnabled()) {
       return {

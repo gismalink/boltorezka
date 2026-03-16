@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef } from "react";
 import type { MediaDevicesState } from "../../components";
+import { getDesktopMediaBridge } from "../../desktopBridge";
 
 type DeviceOption = { id: string; label: string };
 
@@ -126,6 +127,25 @@ export function useMediaDevicePreferences({
   }, []);
 
   const requestMicPermission = useCallback(async () => {
+    const desktopMediaBridge = getDesktopMediaBridge();
+    if (desktopMediaBridge) {
+      try {
+        const status = await desktopMediaBridge.getAccessStatus("microphone");
+        if (status.ok && status.status === "denied") {
+          applyDeniedState();
+          return false;
+        }
+
+        const permission = await desktopMediaBridge.requestAccess("microphone");
+        if (!permission.ok || !permission.granted || permission.status === "denied") {
+          applyDeniedState();
+          return false;
+        }
+      } catch {
+        // Fall through to getUserMedia path.
+      }
+    }
+
     if (!navigator.mediaDevices?.getUserMedia) {
       return false;
     }
