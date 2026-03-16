@@ -40,6 +40,8 @@ fi
 
 cd "$REPO_DIR"
 
+bash ./scripts/ops/require-node-version.sh 22.12.0
+
 echo "[desktop-build] repo: $REPO_DIR"
 echo "[desktop-build] ref: $GIT_REF"
 echo "[desktop-build] channel: $DESKTOP_CHANNEL"
@@ -86,7 +88,7 @@ echo "[desktop-build] app version: $APP_VERSION (base: $BASE_APP_VERSION)"
 git checkout --detach "$RESOLVED_SHA"
 
 npm --prefix apps/web ci
-npm --prefix apps/desktop-electron ci
+npm --prefix apps/desktop-electron ci --omit=optional
 
 # Avoid stale artifacts from previous runs affecting manifest/feed selection.
 rm -rf apps/desktop-electron/dist
