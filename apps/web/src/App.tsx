@@ -396,10 +396,12 @@ export function App() {
   });
   const effectiveAudioQuality = currentRoomAudioQualityOverride ?? serverAudioQuality;
   const roomMediaCapabilities = useRoomMediaCapabilities(currentRoomKind);
-  const currentRoomSupportsRtc = roomMediaCapabilities.supportsVoice;
+  const currentRoomTopology = roomSlug ? roomMediaTopologyBySlug[roomSlug] : undefined;
+  const topologySupportsRtc = currentRoomTopology === "livekit";
+  const currentRoomSupportsRtc = roomMediaCapabilities.supportsVoice || topologySupportsRtc;
   const currentRoomSupportsVideo = roomMediaCapabilities.supportsCamera;
-  const allowVideoStreaming = roomMediaCapabilities.supportsCamera;
-  const currentRoomSupportsScreenShare = roomMediaCapabilities.supportsScreenShare;
+  const allowVideoStreaming = roomMediaCapabilities.supportsCamera || topologySupportsRtc;
+  const currentRoomSupportsScreenShare = roomMediaCapabilities.supportsScreenShare || topologySupportsRtc;
   const memberVolumeByUserId = useMemo(() => {
     const volumes: Record<string, number> = {};
     Object.entries(memberPreferencesByUserId).forEach(([userId, preference]) => {
@@ -1544,7 +1546,7 @@ export function App() {
   }
 
   useAutoRoomVoiceConnection({
-    roomMediaResolved: Boolean(currentRoomSnapshot),
+    roomMediaResolved: Boolean(currentRoomSnapshot) || topologySupportsRtc,
     currentRoomSupportsRtc: currentRoomSupportsRtc && !showAppUpdatedOverlay,
     roomVoiceTargetsCount: currentRoomVoiceTargets.length,
     roomVoiceConnected,
