@@ -476,6 +476,12 @@ Progress note (2026-03-17, plan review + policy sync):
 - Зафиксировано обязательное правило release discipline для frontend-фиксов: rebuild/publish всего клиентского набора в контуре (`web + desktop` и следующие платформы) на каждый cross-client frontend/runtime fix.
 - Основные открытые блокеры на текущий момент: release-grade signing/notarization evidence, активный desktop download contract (вместо placeholder), 2h standalone stability soak, Windows media validation.
 
+Progress note (2026-03-17, unchecked items audit):
+- Повторно проверены все незакрытые чекбоксы: всего `36` пунктов со статусом `[ ]`.
+- Из них подтвержденно execution-critical (реально блокируют desktop release readiness): signing/notarization evidence, Windows media permissions validation, активный download contract (manifest-driven links вместо placeholder), 2h standalone stability soak, pre-prod approval package refresh.
+- Отдельная группа `[ ]` остается осознанно deferred/out-of-scope по плану (`v1.1+`, post-signing gates, cross-platform QA expansion).
+- Оценочные сроки в разделе `Примерная оценка сроков` оставлены незакрытыми намеренно как reference, а не как task gate.
+
 ## 11) Known Follow-ups
 
 - [x] Провести browser-level handoff soak (Chromium/WebKit/Firefox) поверх уже закрытого protocol-level soak и приложить агрегированное evidence к auth runbook.
