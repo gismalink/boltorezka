@@ -88,7 +88,11 @@ echo "[desktop-build] app version: $APP_VERSION (base: $BASE_APP_VERSION)"
 git checkout --detach "$RESOLVED_SHA"
 
 npm --prefix apps/web ci
-npm --prefix apps/desktop-electron ci --omit=optional
+if [[ "$(uname -s)" == "Darwin" ]]; then
+  npm --prefix apps/desktop-electron ci
+else
+  npm --prefix apps/desktop-electron ci --omit=optional
+fi
 
 # Avoid stale artifacts from previous runs affecting manifest/feed selection.
 rm -rf apps/desktop-electron/dist
