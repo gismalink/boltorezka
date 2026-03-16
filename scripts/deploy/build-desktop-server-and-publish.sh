@@ -75,8 +75,9 @@ if [[ "$DESKTOP_CHANNEL" == "test" ]]; then
   if [[ -n "${DESKTOP_BUILD_VERSION:-}" ]]; then
     APP_VERSION="$DESKTOP_BUILD_VERSION"
   else
-    VERSION_DATE_TAG="$(date -u +%Y%m%d)"
-    VERSION_TIME_TAG="$(date -u +%H%M)"
+    VERSION_TZ="Europe/Moscow"
+    VERSION_DATE_TAG="$(TZ="$VERSION_TZ" date +%Y%m%d)"
+    VERSION_TIME_TAG="$(TZ="$VERSION_TZ" date +%H%M)"
     APP_VERSION="${BASE_APP_VERSION}-test.${VERSION_DATE_TAG}.${VERSION_TIME_TAG}"
   fi
 else
