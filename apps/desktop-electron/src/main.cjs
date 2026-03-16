@@ -1,7 +1,7 @@
 const path = require("path");
 const fs = require("fs");
 const { pathToFileURL } = require("url");
-const { app, BrowserWindow, shell, desktopCapturer, ipcMain } = require("electron");
+const { app, BrowserWindow, shell, desktopCapturer, ipcMain, systemPreferences } = require("electron");
 
 let autoUpdater = null;
 try {
@@ -41,6 +41,43 @@ const desktopUpdateState = {
 
 function logDesktopUpdate(message) {
   console.log(`[desktop:update] ${message}`);
+}
+
+function logDesktopMedia(message) {
+  console.log(`[desktop:media] ${message}`);
+}
+
+async function preflightMacMediaAccess() {
+  if (process.platform !== "darwin") {
+    return;
+  }
+
+  const enabled = String(process.env.ELECTRON_MEDIA_PREFLIGHT || (app.isPackaged ? "1" : "0")) === "1";
+  if (!enabled) {
+    return;
+  }
+
+  try {
+    const micStatus = systemPreferences.getMediaAccessStatus("microphone");
+    const camStatus = systemPreferences.getMediaAccessStatus("camera");
+    logDesktopMedia(`preflight status before request: microphone=${micStatus} camera=${camStatus}`);
+
+    if (micStatus === "not-determined") {
+      const micGranted = await systemPreferences.askForMediaAccess("microphone");
+      logDesktopMedia(`microphone permission requested: granted=${micGranted ? "1" : "0"}`);
+    }
+
+    if (camStatus === "not-determined") {
+      const cameraGranted = await systemPreferences.askForMediaAccess("camera");
+      logDesktopMedia(`camera permission requested: granted=${cameraGranted ? "1" : "0"}`);
+    }
+
+    const micStatusAfter = systemPreferences.getMediaAccessStatus("microphone");
+    const camStatusAfter = systemPreferences.getMediaAccessStatus("camera");
+    logDesktopMedia(`preflight status after request: microphone=${micStatusAfter} camera=${camStatusAfter}`);
+  } catch (error) {
+    logDesktopMedia(`preflight failed: ${error instanceof Error ? error.message : String(error)}`);
+  }
 }
 
 function getFeedPlatformPath() {
@@ -694,6 +731,7 @@ app.on("open-url", (event, url) => {
 
 app.whenReady().then(() => {
   registerUpdateIpcHandlers();
+  void preflightMacMediaAccess();
   mainWindow = createMainWindow();
   startAutoUpdateOrchestration();
 
