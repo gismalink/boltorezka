@@ -18,7 +18,10 @@ function resolveDesktopSsoReturnUrl(defaultReturnUrl: string) {
     return defaultReturnUrl;
   }
 
-  const parsed = new URL(defaultReturnUrl);
+  const baseUrl = CONFIGURED_PUBLIC_ORIGIN
+    ? `${CONFIGURED_PUBLIC_ORIGIN}/`
+    : defaultReturnUrl;
+  const parsed = new URL(baseUrl);
   parsed.searchParams.set("desktop_handoff", "1");
   parsed.searchParams.delete("desktop_handoff_bootstrap");
   parsed.searchParams.delete("desktop_handoff_refreshed");
