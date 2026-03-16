@@ -148,6 +148,21 @@ const isExpectedDisconnectError = (error: unknown): boolean => {
     || normalized.includes("aborterror");
 };
 
+const isMediaPermissionDeniedError = (error: unknown): boolean => {
+  if (!error || typeof error !== "object") {
+    return false;
+  }
+
+  const maybeName = "name" in error ? String((error as { name?: unknown }).name || "") : "";
+  if (maybeName === "NotAllowedError" || maybeName === "SecurityError" || maybeName === "PermissionDeniedError") {
+    return true;
+  }
+
+  const message = error instanceof Error ? error.message : String(error);
+  const normalized = message.toLowerCase();
+  return normalized.includes("permission denied") || normalized.includes("notallowederror");
+};
+
   const isAutoplayBlockedError = (error: unknown): boolean => {
     if (!error || typeof error !== "object") {
       return false;
@@ -896,12 +911,26 @@ export function useLivekitVoiceRuntime({
         }
         await room.connect(signalUrl, livekit.token);
 
-        const tracks = await createLocalTracks({
-          audio: buildAudioConstraints(),
-          video: allowVideoStreaming && videoStreamingEnabled
-            ? buildCameraVideoOptions()
-            : false
-        });
+        const wantVideoTrack = allowVideoStreaming && videoStreamingEnabled;
+        let tracks: LocalTrack[] = [];
+
+        try {
+          tracks = await createLocalTracks({
+            audio: buildAudioConstraints(),
+            video: wantVideoTrack ? buildCameraVideoOptions() : false
+          });
+        } catch (error) {
+          if (wantVideoTrack && isMediaPermissionDeniedError(error)) {
+            pushCallLog("livekit local tracks: camera permission denied, retrying with audio only");
+            pushToast("Camera permission denied, continuing with microphone only");
+            tracks = await createLocalTracks({
+              audio: buildAudioConstraints(),
+              video: false
+            });
+          } else {
+            throw error;
+          }
+        }
 
         for (const track of tracks) {
           await room.localParticipant.publishTrack(track);
@@ -931,7 +960,11 @@ export function useLivekitVoiceRuntime({
         setCallStatus("idle");
 
         if (!disconnectRequestedRef.current && !isExpectedDisconnectError(error)) {
-          pushToast(`LiveKit connect failed: ${error instanceof Error ? error.message : "unknown error"}`);
+          if (isMediaPermissionDeniedError(error)) {
+            pushToast("LiveKit connect failed: media permission denied (check macOS Camera/Microphone access)");
+          } else {
+            pushToast(`LiveKit connect failed: ${error instanceof Error ? error.message : "unknown error"}`);
+          }
         }
         pushCallLog(`livekit connect failed for ${roomSlug}`);
       } finally {
