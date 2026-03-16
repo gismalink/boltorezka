@@ -95,7 +95,7 @@ function pickDesktopArtifact(files: DesktopManifestFile[], platform: "windows" |
   }
 
   if (platform === "mac") {
-    return byName([/\.dmg$/i, /-mac\.zip$/i, /\.pkg$/i]);
+    return byName([/-mac\.zip$/i, /\.dmg$/i, /\.pkg$/i]);
   }
 
   return byName([/\.AppImage$/i, /\.deb$/i, /\.rpm$/i, /\.tar\.gz$/i, /linux/i]);
@@ -174,9 +174,9 @@ export function ServerProfileModal({
 
   const desktopCards = useMemo(
     () => [
-      { id: "windows" as const, label: t("server.desktopPlatformWindows") },
-      { id: "mac" as const, label: t("server.desktopPlatformMac") },
-      { id: "linux" as const, label: t("server.desktopPlatformLinux") }
+      { id: "windows" as const, label: t("server.desktopPlatformWindows"), iconClass: "bi-windows" },
+      { id: "mac" as const, label: t("server.desktopPlatformMac"), iconClass: "bi-apple" },
+      { id: "linux" as const, label: t("server.desktopPlatformLinux"), iconClass: "bi-ubuntu" }
     ].map((platform) => {
       const files = Array.isArray(desktopManifest?.files) ? desktopManifest.files : [];
       const artifact = pickDesktopArtifact(files, platform.id);
@@ -723,11 +723,13 @@ export function ServerProfileModal({
                 {t("server.desktopChannel")}: {desktopManifest?.channel || desktopChannel}
                 {desktopManifest?.sha ? ` · ${t("server.desktopVersionSha")}: ${desktopManifest.sha.slice(0, 8)}` : ""}
               </p>
+              {desktopChannel === "test" ? <p className="muted text-xs">{t("server.desktopUnsignedWarning")}</p> : null}
               {desktopManifestLoading ? <p className="muted">{t("server.desktopLoading")}</p> : null}
               {desktopManifestError ? <p className="muted">{t("server.desktopError")}: {desktopManifestError}</p> : null}
               <div className="grid gap-3 desktop:grid-cols-3">
                 {desktopCards.map((platform) => (
-                  <div key={platform.id} className="card compact grid gap-3 p-3">
+                  <div key={platform.id} className="card compact grid place-items-center gap-2 p-3 text-center">
+                    <i className={`bi ${platform.iconClass} text-xl`} aria-hidden="true" />
                     <div className="text-sm font-semibold">{platform.label}</div>
                     {platform.href ? (
                       <button
@@ -752,6 +754,9 @@ export function ServerProfileModal({
                     )}
                     <div className="muted text-xs">
                       {platform.href ? t("server.desktopAvailable") : t("server.desktopUnavailable")}
+                    </div>
+                    <div className="muted text-xs break-all">
+                      {platform.fileName || "-"}
                     </div>
                   </div>
                 ))}
