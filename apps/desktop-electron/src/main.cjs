@@ -361,9 +361,24 @@ function resolveDesktopCallbackTarget(protocolUrl) {
       return "";
     }
 
-    const handoffCode = String(parsed.searchParams.get("desktop_sso_code") || "").trim();
-    const attemptId = String(parsed.searchParams.get("attemptId") || "").trim();
     const target = String(parsed.searchParams.get("target") || "").trim();
+    let handoffCode = String(parsed.searchParams.get("desktop_sso_code") || "").trim();
+    let attemptId = String(parsed.searchParams.get("attemptId") || "").trim();
+
+    if (target) {
+      try {
+        const targetUrl = new URL(target);
+        if (!handoffCode) {
+          handoffCode = String(targetUrl.searchParams.get("desktop_sso_code") || "").trim();
+        }
+        if (!attemptId) {
+          attemptId = String(targetUrl.searchParams.get("desktop_handoff_attempt") || "").trim();
+        }
+      } catch {
+        // Ignore malformed target and rely on top-level params.
+      }
+    }
+
     if (isDev && target && isSameRendererOrigin(target)) {
       return withDesktopSsoParams(target, handoffCode, attemptId);
     }
@@ -603,15 +618,15 @@ function createMainWindow() {
     }
   });
 
-    if (isDev) {
-      const initialTarget = pendingProtocolUrl || rendererUrl;
-      void clearDesktopSessionStateAll(window.webContents)
-        .finally(() => {
-          void window.loadURL(initialTarget);
-        });
+  if (isDev) {
+    const initialTarget = pendingProtocolUrl || rendererUrl;
+    void clearDesktopSessionStateAll(window.webContents)
+      .finally(() => {
+        void window.loadURL(initialTarget);
+      });
   } else {
-    const indexPath = path.resolve(__dirname, "../../web/dist/index.html");
-    void window.loadFile(indexPath);
+    const initialTarget = pendingProtocolUrl || getRendererEntryUrl();
+    void window.loadURL(initialTarget);
   }
 
   pendingProtocolUrl = "";
