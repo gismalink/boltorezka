@@ -887,7 +887,13 @@ export function useLivekitVoiceRuntime({
         setRemoteMutedPeerUserIds((prev) => prev.filter((id) => id !== participantId));
       });
 
-        const signalUrl = normalizeLivekitSignalUrl(livekit.url);
+        const rawSignalUrl = String(livekit.url || "").trim();
+        const signalUrl = normalizeLivekitSignalUrl(rawSignalUrl);
+        pushCallLog(`livekit token trace=${String(livekit.traceId || "").trim() || "n/a"}`);
+        pushCallLog(`livekit signal raw=${rawSignalUrl || "n/a"}`);
+        if (rawSignalUrl !== signalUrl) {
+          pushCallLog(`livekit signal resolved=${signalUrl}`);
+        }
         await room.connect(signalUrl, livekit.token);
 
         const tracks = await createLocalTracks({

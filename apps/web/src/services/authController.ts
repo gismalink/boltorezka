@@ -1,9 +1,7 @@
 import { api } from "../api";
 import { trackClientEvent } from "../telemetry";
 import type { User } from "../domain";
-import { resolvePublicOrigin } from "../runtimeOrigin";
-
-const CONFIGURED_PUBLIC_ORIGIN = resolvePublicOrigin();
+import { resolveDesktopSsoReturnUrl, resolveSsoStartUrl } from "../transportRuntime";
 
 function resolveCurrentReturnUrl() {
   if (typeof window === "undefined") {
@@ -11,22 +9,6 @@ function resolveCurrentReturnUrl() {
   }
 
   return window.location.href;
-}
-
-function resolveDesktopSsoReturnUrl(defaultReturnUrl: string) {
-  if (typeof window === "undefined" || !window.boltorezkaDesktop) {
-    return defaultReturnUrl;
-  }
-
-  const baseUrl = CONFIGURED_PUBLIC_ORIGIN
-    ? `${CONFIGURED_PUBLIC_ORIGIN}/`
-    : defaultReturnUrl;
-  const parsed = new URL(baseUrl);
-  parsed.searchParams.set("desktop_handoff", "1");
-  parsed.searchParams.delete("desktop_handoff_bootstrap");
-  parsed.searchParams.delete("desktop_handoff_refreshed");
-  parsed.searchParams.delete("desktop_handoff_sent");
-  return parsed.toString();
 }
 
 function buildDesktopHandoffDeepLink(code: string, targetUrl: string, attemptId: string) {
@@ -74,8 +56,7 @@ export class AuthController {
 
   beginSso(provider: "google" | "yandex") {
     const returnUrl = resolveDesktopSsoReturnUrl(resolveCurrentReturnUrl());
-    const ssoPath = `/v1/auth/sso/start?provider=${encodeURIComponent(provider)}&returnUrl=${encodeURIComponent(returnUrl)}`;
-    const ssoUrl = CONFIGURED_PUBLIC_ORIGIN ? `${CONFIGURED_PUBLIC_ORIGIN}${ssoPath}` : ssoPath;
+    const ssoUrl = resolveSsoStartUrl(provider, returnUrl);
     window.location.href = ssoUrl;
   }
 
