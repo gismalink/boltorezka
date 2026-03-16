@@ -2,6 +2,8 @@ import { api } from "../api";
 import { trackClientEvent } from "../telemetry";
 import type { User } from "../domain";
 
+const CONFIGURED_PUBLIC_ORIGIN = String(import.meta.env.VITE_APP_PUBLIC_ORIGIN || "").trim().replace(/\/+$/, "");
+
 function resolveCurrentReturnUrl() {
   if (typeof window === "undefined") {
     return "/";
@@ -68,7 +70,9 @@ export class AuthController {
 
   beginSso(provider: "google" | "yandex") {
     const returnUrl = resolveDesktopSsoReturnUrl(resolveCurrentReturnUrl());
-    window.location.href = `/v1/auth/sso/start?provider=${encodeURIComponent(provider)}&returnUrl=${encodeURIComponent(returnUrl)}`;
+    const ssoPath = `/v1/auth/sso/start?provider=${encodeURIComponent(provider)}&returnUrl=${encodeURIComponent(returnUrl)}`;
+    const ssoUrl = CONFIGURED_PUBLIC_ORIGIN ? `${CONFIGURED_PUBLIC_ORIGIN}${ssoPath}` : ssoPath;
+    window.location.href = ssoUrl;
   }
 
   async completeSso(options: { silent?: boolean } = {}) {

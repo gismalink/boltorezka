@@ -92,9 +92,9 @@ npm --prefix apps/desktop-electron ci
 rm -rf apps/desktop-electron/dist
 
 if [[ "$DESKTOP_CHANNEL" == "prod" ]]; then
-  APP_BUILD_SHA="$RESOLVED_SHA" APP_VERSION="$APP_VERSION" npm --prefix apps/desktop-electron run dist:prod
+  APP_BUILD_SHA="$RESOLVED_SHA" APP_VERSION="$APP_VERSION" VITE_APP_PUBLIC_ORIGIN="$PUBLIC_BASE_URL" npm --prefix apps/desktop-electron run dist:prod
 else
-  APP_BUILD_SHA="$RESOLVED_SHA" APP_VERSION="$APP_VERSION" npm --prefix apps/desktop-electron run dist:test
+  APP_BUILD_SHA="$RESOLVED_SHA" APP_VERSION="$APP_VERSION" VITE_APP_PUBLIC_ORIGIN="$PUBLIC_BASE_URL" npm --prefix apps/desktop-electron run dist:test
 fi
 
 DIST_DIR="apps/desktop-electron/dist"

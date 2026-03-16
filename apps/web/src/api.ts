@@ -25,6 +25,18 @@ type ApiErrorPayload = {
   [key: string]: unknown;
 };
 
+const CONFIGURED_API_ORIGIN = String(import.meta.env.VITE_APP_PUBLIC_ORIGIN || "").trim().replace(/\/+$/, "");
+
+function withConfiguredApiOrigin(path: string): string {
+  if (!CONFIGURED_API_ORIGIN) {
+    return path;
+  }
+  if (!path.startsWith("/")) {
+    return path;
+  }
+  return `${CONFIGURED_API_ORIGIN}${path}`;
+}
+
 const firstValidationIssue = (payload: ApiErrorPayload): string | null => {
   const formErrors = Array.isArray(payload.issues?.formErrors)
     ? payload.issues?.formErrors
@@ -95,7 +107,7 @@ async function fetchJson<T>(path: string, token?: string, init: RequestInit = {}
     headers["content-type"] = "application/json";
   }
 
-  const response = await fetch(path, {
+  const response = await fetch(withConfiguredApiOrigin(path), {
     credentials: "include",
     ...init,
     headers

@@ -55,12 +55,16 @@ function run() {
     VITE_APP_VERSION: version,
     VITE_APP_BUILD_SHA: buildSha,
     VITE_APP_BUILD_DATE: buildDate,
+    VITE_APP_PUBLIC_ORIGIN: String(process.env.VITE_APP_PUBLIC_ORIGIN || "").trim(),
     VITE_ASSET_BASE: "./"
   };
 
   console.log(`[desktop:build:renderer] VITE_APP_VERSION=${version}`);
   console.log(`[desktop:build:renderer] VITE_APP_BUILD_SHA=${buildSha}`);
   console.log(`[desktop:build:renderer] VITE_APP_BUILD_DATE=${buildDate}`);
+  if (env.VITE_APP_PUBLIC_ORIGIN) {
+    console.log(`[desktop:build:renderer] VITE_APP_PUBLIC_ORIGIN=${env.VITE_APP_PUBLIC_ORIGIN}`);
+  }
   console.log("[desktop:build:renderer] VITE_ASSET_BASE=./");
 
   const npmCmd = process.platform === "win32" ? "npm.cmd" : "npm";
