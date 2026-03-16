@@ -41,6 +41,7 @@ This folder contains operational scripts grouped by purpose.
   - `TEST_REF=origin/feature/<name> npm run deploy:test:livekit`
   - `PROD_REF=origin/main npm run deploy:prod`
   - `DESKTOP_REF=origin/feature/<name> DESKTOP_CHANNEL=test DESKTOP_PUBLIC_BASE_URL=https://test.boltorezka.gismalink.art npm run deploy:desktop:server`
+  - `DESKTOP_REF=origin/main DESKTOP_CHANNEL=test DESKTOP_SIGNING_MODE=unsigned DESKTOP_PUBLIC_BASE_URL=https://test.boltorezka.gismalink.art npm run deploy:desktop:server`
   - `npm run check`
   - `npm run scheduler:list`
   - `npm run scheduler:run -- backup-postgres-all`

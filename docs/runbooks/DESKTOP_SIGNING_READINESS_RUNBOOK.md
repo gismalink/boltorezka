@@ -31,6 +31,11 @@ Primary policy (2026-03-15):
 Пример запуска на сервере:
 - `DESKTOP_CHANNEL=test DESKTOP_PUBLIC_BASE_URL=https://test.boltorezka.gismalink.art ./scripts/deploy/build-desktop-server-and-publish.sh origin/feature/electron-desktop-foundation "$PWD"`
 
+Временный режим до готовности dev-аккаунтов (test-only):
+- `DESKTOP_CHANNEL=test DESKTOP_SIGNING_MODE=unsigned DESKTOP_PUBLIC_BASE_URL=https://test.boltorezka.gismalink.art ./scripts/deploy/build-desktop-server-and-publish.sh origin/main "$PWD"`
+- `DESKTOP_SIGNING_MODE=self-signed` допускается только в `test` (использует сертификат из keychain/окружения, если он доступен).
+- Для `prod` разрешен только `DESKTOP_SIGNING_MODE=auto`.
+
 Что делает server script:
 1. Проверяет чистый repo.
 2. Делает fetch + checkout detach на целевой ref.
@@ -132,6 +137,12 @@ Practical режим до готовности Apple-аккаунта:
 - запускать `signed=true`, `signed_platforms=windows-only`, `windows_signing_provider=azure-oidc`.
 - ожидаемое поведение: Windows проходит signed path, macOS проходит unsigned path без fail из-за отсутствующих Apple secrets.
 
+Temporary test policy (до готовности коммерческих сертификатов):
+- допускается self-signed/не fully-trusted signing только для внутреннего `test` канала и ограниченного RC smoke;
+- допускается unsigned build (без подписи) только для внутреннего `test` канала и ограниченного RC smoke;
+- для `prod` и статуса release-grade это `NO-GO`;
+- обязательное действие: приобрести коммерческий Windows code-signing сертификат (OV/EV) и перевести pipeline на trusted signing path.
+
 ## 4) Readiness check sequence
 
 1. На сервере выполнить server-first build script для `test` канала.
@@ -151,6 +162,7 @@ Practical режим до готовности Apple-аккаунта:
 
 - `test` signed RC: допустим для валидации smoke/release gate.
 - `prod` signed RC: только после явного sign-off и готовности M4.
+- Self-signed artifacts: допустимы только в `test`, запрещены для `prod`.
 - Нет automatic prod rollout из readiness шага.
 
 ## 6) Exit criteria (readiness)

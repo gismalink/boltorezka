@@ -11,6 +11,7 @@ fi
 GIT_REF="$1"
 REPO_DIR="${2:-$PWD}"
 DESKTOP_CHANNEL="${DESKTOP_CHANNEL:-test}"
+DESKTOP_SIGNING_MODE="${DESKTOP_SIGNING_MODE:-auto}"
 EDGE_REPO_DIR="${EDGE_REPO_DIR:-$HOME/srv/edge}"
 EDGE_DESKTOP_DIR_BASE="${EDGE_DESKTOP_DIR_BASE:-$EDGE_REPO_DIR/ingress/static/boltorezka}"
 # Caddy serves test/prod from /srv/static/boltorezka/<env>, so desktop artifacts must live under that root.
@@ -22,11 +23,39 @@ if [[ "$DESKTOP_CHANNEL" != "test" && "$DESKTOP_CHANNEL" != "prod" ]]; then
   exit 1
 fi
 
+if [[ "$DESKTOP_SIGNING_MODE" != "auto" && "$DESKTOP_SIGNING_MODE" != "unsigned" && "$DESKTOP_SIGNING_MODE" != "self-signed" ]]; then
+  echo "[desktop-build] DESKTOP_SIGNING_MODE must be auto|unsigned|self-signed, got: $DESKTOP_SIGNING_MODE" >&2
+  exit 1
+fi
+
+if [[ "$DESKTOP_CHANNEL" == "prod" && "$DESKTOP_SIGNING_MODE" != "auto" ]]; then
+  echo "[desktop-build] prod supports only DESKTOP_SIGNING_MODE=auto" >&2
+  exit 1
+fi
+
+if [[ "$DESKTOP_SIGNING_MODE" == "self-signed" && "$DESKTOP_CHANNEL" != "test" ]]; then
+  echo "[desktop-build] self-signed mode is allowed only for test channel" >&2
+  exit 1
+fi
+
 cd "$REPO_DIR"
 
 echo "[desktop-build] repo: $REPO_DIR"
 echo "[desktop-build] ref: $GIT_REF"
 echo "[desktop-build] channel: $DESKTOP_CHANNEL"
+echo "[desktop-build] signing mode: $DESKTOP_SIGNING_MODE"
+
+if [[ "$DESKTOP_SIGNING_MODE" == "unsigned" ]]; then
+  # Deterministic unsigned test build: disable auto-discovery and clear explicit signing secrets.
+  export CSC_IDENTITY_AUTO_DISCOVERY=false
+  export CSC_LINK=""
+  export CSC_KEY_PASSWORD=""
+  export APPLE_ID=""
+  export APPLE_APP_SPECIFIC_PASSWORD=""
+  export APPLE_TEAM_ID=""
+  export WIN_CSC_LINK=""
+  export WIN_CSC_KEY_PASSWORD=""
+fi
 
 if [[ -n "$(git status --porcelain)" ]]; then
   echo "[desktop-build] repo must be clean before build" >&2
