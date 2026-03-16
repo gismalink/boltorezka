@@ -88,6 +88,9 @@ git checkout --detach "$RESOLVED_SHA"
 npm --prefix apps/web ci
 npm --prefix apps/desktop-electron ci
 
+# Avoid stale artifacts from previous runs affecting manifest/feed selection.
+rm -rf apps/desktop-electron/dist
+
 if [[ "$DESKTOP_CHANNEL" == "prod" ]]; then
   APP_BUILD_SHA="$RESOLVED_SHA" APP_VERSION="$APP_VERSION" npm --prefix apps/desktop-electron run dist:prod
 else
@@ -112,7 +115,7 @@ cp -R "$DIST_DIR/." "$TARGET_DIR/"
 mkdir -p "$UPDATER_MAC_DIR"
 find "$UPDATER_MAC_DIR" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
 
-MAC_ZIP_NAME="$(find "$TARGET_DIR" -maxdepth 1 -type f -name '*-mac.zip' -exec basename {} \; | head -n 1)"
+MAC_ZIP_NAME="$(find "$TARGET_DIR" -maxdepth 1 -type f \( -name '*-mac.zip' -o -name '*mac*.zip' \) -exec basename {} \; | head -n 1)"
 if [[ -z "$MAC_ZIP_NAME" ]]; then
   echo "[desktop-build] missing mac zip artifact in $TARGET_DIR" >&2
   exit 1
