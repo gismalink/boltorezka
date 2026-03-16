@@ -1,5 +1,6 @@
 const path = require("path");
 const fs = require("fs");
+const { pathToFileURL } = require("url");
 const { app, BrowserWindow, shell, desktopCapturer, ipcMain } = require("electron");
 
 let autoUpdater = null;
@@ -310,6 +311,15 @@ function isSameRendererOrigin(url) {
   }
 }
 
+function getRendererEntryUrl() {
+  if (isDev) {
+    return `${rendererUrl.replace(/\/$/, "")}/`;
+  }
+
+  const indexPath = path.resolve(__dirname, "../../web/dist/index.html");
+  return pathToFileURL(indexPath).toString();
+}
+
 function getDesktopWindowTitle() {
   const version = String(app.getVersion() || "").trim();
   if (!version) {
@@ -355,10 +365,10 @@ function resolveDesktopCallbackTarget(protocolUrl) {
     const handoffCode = String(parsed.searchParams.get("desktop_sso_code") || "").trim();
     const attemptId = String(parsed.searchParams.get("attemptId") || "").trim();
     const target = String(parsed.searchParams.get("target") || "").trim();
-    if (target && isSameRendererOrigin(target)) {
+    if (isDev && target && isSameRendererOrigin(target)) {
       return withDesktopSsoParams(target, handoffCode, attemptId);
     }
-    return withDesktopSsoParams(`${rendererUrl.replace(/\/$/, "")}/`, handoffCode, attemptId);
+    return withDesktopSsoParams(getRendererEntryUrl(), handoffCode, attemptId);
   } catch {
     return "";
   }
