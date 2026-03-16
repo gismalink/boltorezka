@@ -46,6 +46,8 @@
         "zip"
       ],
       "category": "public.app-category.social-networking",
+      "entitlements": "entitlements.mac.plist",
+      "entitlementsInherit": "entitlements.mac.plist",
       "extendInfo": {
         "NSCameraUsageDescription": "Boltorezka uses your camera for voice and video rooms.",
         "NSMicrophoneUsageDescription": "Boltorezka uses your microphone for voice and video rooms."
