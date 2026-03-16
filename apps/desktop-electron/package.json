@@ -36,6 +36,7 @@
     "extraMetadata": {
       "main": "src/main.cjs"
     },
+    "artifactName": "${productName}-${os}-${arch}.${ext}",
     "mac": {
       "target": [
         "dmg",
