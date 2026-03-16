@@ -2084,13 +2084,13 @@ export function App() {
       ) : null}
 
       {user && showFirstRunIntro ? (
-        <div className="fixed inset-0 z-[305] flex items-center justify-center bg-black/85 p-4" role="dialog" aria-modal="true" aria-live="polite">
-          <div className="w-full max-w-md rounded-2xl border border-white/20 bg-neutral-950/95 p-6 shadow-2xl">
-            <h2 className="text-2xl font-bold tracking-wide text-white">{t("intro.title")}</h2>
-            <p className="mt-3 text-sm leading-relaxed text-white/80">{t("intro.description")}</p>
+        <div className="voice-preferences-overlay fixed inset-0 z-[305] grid place-items-center p-4" role="dialog" aria-modal="true" aria-live="polite">
+          <section className="card voice-preferences-modal w-full max-w-[620px] !h-auto !max-h-[90vh] overflow-auto p-6">
+            <h2>{t("intro.title")}</h2>
+            <p className="muted">{t("intro.description")}</p>
 
             <div className="mt-5 grid gap-2">
-              <span className="text-xs uppercase tracking-wide text-white/60">{t("intro.skinLabel")}</span>
+              <span className="subheading">{t("intro.skinLabel")}</span>
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 <button
                   type="button"
@@ -2110,7 +2110,7 @@ export function App() {
             </div>
 
             <label className="mt-5 grid gap-2">
-              <span className="text-xs uppercase tracking-wide text-white/60">{t("intro.displayNameLabel")}</span>
+              <span className="subheading">{t("intro.displayNameLabel")}</span>
               <input
                 value={profileNameDraft}
                 onChange={(event) => setProfileNameDraft(event.target.value)}
@@ -2128,7 +2128,7 @@ export function App() {
             >
               {profileSaving ? t("settings.saving") : t("intro.continueCta")}
             </button>
-          </div>
+          </section>
         </div>
       ) : null}
 
