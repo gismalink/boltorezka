@@ -18,7 +18,7 @@ function run() {
     env: process.env
   });
 
-  process.exit(result.status || 1);
+  process.exit(typeof result.status === "number" ? result.status : 1);
 }
 
 run();
