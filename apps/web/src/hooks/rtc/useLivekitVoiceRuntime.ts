@@ -923,10 +923,24 @@ export function useLivekitVoiceRuntime({
           if (wantVideoTrack && isMediaPermissionDeniedError(error)) {
             pushCallLog("livekit local tracks: camera permission denied, retrying with audio only");
             pushToast("Camera permission denied, continuing with microphone only");
-            tracks = await createLocalTracks({
-              audio: buildAudioConstraints(),
-              video: false
-            });
+            try {
+              tracks = await createLocalTracks({
+                audio: buildAudioConstraints(),
+                video: false
+              });
+            } catch (audioOnlyError) {
+              if (isMediaPermissionDeniedError(audioOnlyError)) {
+                pushCallLog("livekit local tracks: microphone permission denied, switching to listen-only mode");
+                pushToast("Microphone permission denied, connected in listen-only mode");
+                tracks = [];
+              } else {
+                throw audioOnlyError;
+              }
+            }
+          } else if (isMediaPermissionDeniedError(error)) {
+            pushCallLog("livekit local tracks: microphone permission denied, switching to listen-only mode");
+            pushToast("Microphone permission denied, connected in listen-only mode");
+            tracks = [];
           } else {
             throw error;
           }
