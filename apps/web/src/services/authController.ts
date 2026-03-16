@@ -1,8 +1,9 @@
 import { api } from "../api";
 import { trackClientEvent } from "../telemetry";
 import type { User } from "../domain";
+import { resolvePublicOrigin } from "../runtimeOrigin";
 
-const CONFIGURED_PUBLIC_ORIGIN = String(import.meta.env.VITE_APP_PUBLIC_ORIGIN || "").trim().replace(/\/+$/, "");
+const CONFIGURED_PUBLIC_ORIGIN = resolvePublicOrigin();
 
 function resolveCurrentReturnUrl() {
   if (typeof window === "undefined") {

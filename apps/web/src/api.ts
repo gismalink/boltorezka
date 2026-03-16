@@ -14,6 +14,7 @@ import type {
   User,
   RoomMemberPreference
 } from "./domain";
+import { resolvePublicOrigin } from "./runtimeOrigin";
 
 type ApiErrorPayload = {
   message?: string;
@@ -25,7 +26,7 @@ type ApiErrorPayload = {
   [key: string]: unknown;
 };
 
-const CONFIGURED_API_ORIGIN = String(import.meta.env.VITE_APP_PUBLIC_ORIGIN || "").trim().replace(/\/+$/, "");
+const CONFIGURED_API_ORIGIN = resolvePublicOrigin();
 
 function withConfiguredApiOrigin(path: string): string {
   if (!CONFIGURED_API_ORIGIN) {
