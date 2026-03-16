@@ -112,7 +112,8 @@ Definition of done:
 - [x] Проверить, что renderer не получает прямой доступ к fs/process/env.
 
 ### 4.3 RTC validation
-- [ ] Проверить media permissions на macOS и Windows.
+- [x] Проверить media permissions на macOS.
+- [ ] Проверить media permissions на Windows.
 - [x] Проверить reconnect при network flap.
 - [x] Проверить поведение после sleep/wake ноутбука.
 - [x] Проверить длительную сессию + переключения девайсов (15m/30m practical gates).
@@ -174,6 +175,7 @@ Desktop smoke (must pass):
 - [x] В test деплоится конкретная feature/main ветка, только через scripted flow.
 - [x] Перед prod desktop-release: merge в main -> test gate -> smoke -> явное подтверждение -> prod.
 - [x] Без ручных правок на сервере, только через git + GitOps.
+- [x] Правило фронтенд-фиксoв: если изменение затрагивает общий frontend/runtime слой, перед test rollout обязательно пересобирать и публиковать весь набор клиентских артефактов текущего релизного контура (web + desktop mac, и следующие платформы по мере появления), чтобы не допускать version skew между клиентами.
 
 ## 7) Риски и mitigation
 
@@ -468,6 +470,11 @@ Progress note (2026-03-17, desktop media permissions fix + cleanup):
 - Подтверждено на test build: camera/microphone entitlements встроены в .app, системный запрос микрофона и media-flow восстановлены.
 - После валидации выполнен cleanup: временные debug/workaround изменения в runtime RTC/media bridge удалены, сохранены только release-необходимые изменения в `apps/desktop-electron/package.json` и `apps/desktop-electron/entitlements.mac.plist`.
 - UI polish: overlay `ChannelSessionMoved` приведен к каноничному popup стилю (`voice-preferences-overlay` + `card voice-preferences-modal`) для визуальной консистентности.
+
+Progress note (2026-03-17, plan review + policy sync):
+- Выполнена ревизия незакрытых пунктов плана: media permissions разделены на `macOS=done` и `Windows=pending`.
+- Зафиксировано обязательное правило release discipline для frontend-фиксов: rebuild/publish всего клиентского набора в контуре (`web + desktop` и следующие платформы) на каждый cross-client frontend/runtime fix.
+- Основные открытые блокеры на текущий момент: release-grade signing/notarization evidence, активный desktop download contract (вместо placeholder), 2h standalone stability soak, Windows media validation.
 
 ## 11) Known Follow-ups
 
