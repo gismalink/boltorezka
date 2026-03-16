@@ -310,6 +310,60 @@ function isSameRendererOrigin(url) {
   }
 }
 
+function isRendererTrustedForMedia(url) {
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol === "file:") {
+      return true;
+    }
+
+    if (isDev) {
+      return parsed.origin === new URL(rendererUrl).origin;
+    }
+
+    return false;
+  } catch {
+    return false;
+  }
+}
+
+function getPermissionRequestOrigin(webContents, details = {}) {
+  const requestingOrigin = String(details.requestingOrigin || details.securityOrigin || "").trim();
+  if (requestingOrigin) {
+    return requestingOrigin;
+  }
+
+  try {
+    return String(webContents.getURL() || "").trim();
+  } catch {
+    return "";
+  }
+}
+
+function configureMediaPermissionHandlers(webContents) {
+  const session = webContents.session;
+  const allowedPermissions = new Set(["media", "microphone", "camera", "display-capture"]);
+
+  session.setPermissionCheckHandler((contents, permission, requestingOrigin, details) => {
+    if (!allowedPermissions.has(permission)) {
+      return false;
+    }
+
+    const origin = String(requestingOrigin || "").trim() || getPermissionRequestOrigin(contents, details);
+    return isRendererTrustedForMedia(origin);
+  });
+
+  session.setPermissionRequestHandler((contents, permission, callback, details) => {
+    if (!allowedPermissions.has(permission)) {
+      callback(false);
+      return;
+    }
+
+    const origin = getPermissionRequestOrigin(contents, details);
+    callback(isRendererTrustedForMedia(origin));
+  });
+}
+
 function getRendererEntryUrl() {
   if (isDev) {
     return `${rendererUrl.replace(/\/$/, "")}/`;
@@ -492,6 +546,8 @@ function createMainWindow() {
     openExternal(url);
     return { action: "deny" };
   });
+
+  configureMediaPermissionHandlers(window.webContents);
 
   window.webContents.session.setDisplayMediaRequestHandler(async (_request, callback) => {
     try {

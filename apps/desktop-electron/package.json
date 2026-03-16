@@ -45,7 +45,11 @@
         "dmg",
         "zip"
       ],
-      "category": "public.app-category.social-networking"
+      "category": "public.app-category.social-networking",
+      "extendInfo": {
+        "NSCameraUsageDescription": "Boltorezka uses your camera for voice and video rooms.",
+        "NSMicrophoneUsageDescription": "Boltorezka uses your microphone for voice and video rooms."
+      }
     },
     "win": {
       "target": [
