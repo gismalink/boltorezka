@@ -1,7 +1,7 @@
 const path = require("path");
 const fs = require("fs");
 const { pathToFileURL } = require("url");
-const { app, BrowserWindow, shell, desktopCapturer, ipcMain, systemPreferences } = require("electron");
+const { app, BrowserWindow, shell, desktopCapturer, ipcMain } = require("electron");
 
 let autoUpdater = null;
 try {
@@ -43,43 +43,6 @@ function logDesktopUpdate(message) {
   console.log(`[desktop:update] ${message}`);
 }
 
-function logDesktopMedia(message) {
-  console.log(`[desktop:media] ${message}`);
-}
-
-async function preflightMacMediaAccess() {
-  if (process.platform !== "darwin") {
-    return;
-  }
-
-  const enabled = String(process.env.ELECTRON_MEDIA_PREFLIGHT || (app.isPackaged ? "1" : "0")) === "1";
-  if (!enabled) {
-    return;
-  }
-
-  try {
-    const micStatus = systemPreferences.getMediaAccessStatus("microphone");
-    const camStatus = systemPreferences.getMediaAccessStatus("camera");
-    logDesktopMedia(`preflight status before request: microphone=${micStatus} camera=${camStatus}`);
-
-    if (micStatus === "not-determined") {
-      const micGranted = await systemPreferences.askForMediaAccess("microphone");
-      logDesktopMedia(`microphone permission requested: granted=${micGranted ? "1" : "0"}`);
-    }
-
-    if (camStatus === "not-determined") {
-      const cameraGranted = await systemPreferences.askForMediaAccess("camera");
-      logDesktopMedia(`camera permission requested: granted=${cameraGranted ? "1" : "0"}`);
-    }
-
-    const micStatusAfter = systemPreferences.getMediaAccessStatus("microphone");
-    const camStatusAfter = systemPreferences.getMediaAccessStatus("camera");
-    logDesktopMedia(`preflight status after request: microphone=${micStatusAfter} camera=${camStatusAfter}`);
-  } catch (error) {
-    logDesktopMedia(`preflight failed: ${error instanceof Error ? error.message : String(error)}`);
-  }
-}
-
 function getFeedPlatformPath() {
   if (process.platform === "darwin") {
     return "mac";
@@ -119,81 +82,6 @@ function isUpdateRuntimeEnabled() {
 
 function registerUpdateIpcHandlers() {
   ipcMain.handle("desktop:update:get-state", async () => ({ ...desktopUpdateState }));
-
-  ipcMain.handle("desktop:media:get-access-status", async (_event, mediaType) => {
-    const kind = String(mediaType || "").trim().toLowerCase();
-    if (kind !== "microphone" && kind !== "camera") {
-      return {
-        ok: false,
-        reason: "invalid-media-type",
-        status: "unknown"
-      };
-    }
-
-    if (process.platform !== "darwin") {
-      return {
-        ok: true,
-        status: "unknown"
-      };
-    }
-
-    try {
-      return {
-        ok: true,
-        status: systemPreferences.getMediaAccessStatus(kind)
-      };
-    } catch (error) {
-      return {
-        ok: false,
-        reason: error instanceof Error ? error.message : String(error),
-        status: "unknown"
-      };
-    }
-  });
-
-  ipcMain.handle("desktop:media:request-access", async (_event, mediaType) => {
-    const kind = String(mediaType || "").trim().toLowerCase();
-    if (kind !== "microphone" && kind !== "camera") {
-      return {
-        ok: false,
-        granted: false,
-        reason: "invalid-media-type",
-        status: "unknown"
-      };
-    }
-
-    if (process.platform !== "darwin") {
-      return {
-        ok: true,
-        granted: true,
-        status: "unknown"
-      };
-    }
-
-    try {
-      const beforeStatus = systemPreferences.getMediaAccessStatus(kind);
-      const granted = beforeStatus === "granted"
-        ? true
-        : await systemPreferences.askForMediaAccess(kind);
-      const afterStatus = systemPreferences.getMediaAccessStatus(kind);
-      logDesktopMedia(`${kind} access request via bridge: before=${beforeStatus} granted=${granted ? "1" : "0"} after=${afterStatus}`);
-
-      return {
-        ok: true,
-        granted,
-        status: afterStatus
-      };
-    } catch (error) {
-      const reason = error instanceof Error ? error.message : String(error);
-      logDesktopMedia(`${kind} access request failed: ${reason}`);
-      return {
-        ok: false,
-        granted: false,
-        reason,
-        status: "unknown"
-      };
-    }
-  });
 
   ipcMain.handle("desktop:update:check", async () => {
     if (!isUpdateRuntimeEnabled()) {
@@ -422,51 +310,6 @@ function isSameRendererOrigin(url) {
   }
 }
 
-function isRendererTrustedForMedia(url) {
-  try {
-    const parsed = new URL(url);
-    if (parsed.protocol === "file:") {
-      return true;
-    }
-
-    if (isDev) {
-      return parsed.origin === new URL(rendererUrl).origin;
-    }
-
-    return false;
-  } catch {
-    return false;
-  }
-}
-
-function getPermissionRequestOrigin(webContents, details = {}) {
-  const requestingOrigin = String(details.requestingOrigin || details.securityOrigin || "").trim();
-  if (requestingOrigin) {
-    return requestingOrigin;
-  }
-
-  try {
-    return String(webContents.getURL() || "").trim();
-  } catch {
-    return "";
-  }
-}
-
-function configureMediaPermissionHandlers(webContents) {
-  const session = webContents.session;
-  const allowedPermissions = new Set(["media", "microphone", "camera"]);
-
-  session.setPermissionRequestHandler((contents, permission, callback, details) => {
-    if (!allowedPermissions.has(permission)) {
-      callback(false);
-      return;
-    }
-
-    const origin = getPermissionRequestOrigin(contents, details);
-    callback(isRendererTrustedForMedia(origin));
-  });
-}
-
 function getRendererEntryUrl() {
   if (isDev) {
     return `${rendererUrl.replace(/\/$/, "")}/`;
@@ -650,8 +493,6 @@ function createMainWindow() {
     return { action: "deny" };
   });
 
-  configureMediaPermissionHandlers(window.webContents);
-
   window.webContents.session.setDisplayMediaRequestHandler(async (_request, callback) => {
     try {
       const sources = await desktopCapturer.getSources({
@@ -806,7 +647,6 @@ app.on("open-url", (event, url) => {
 
 app.whenReady().then(() => {
   registerUpdateIpcHandlers();
-  void preflightMacMediaAccess();
   mainWindow = createMainWindow();
   startAutoUpdateOrchestration();
 

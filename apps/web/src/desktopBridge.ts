@@ -3,26 +3,6 @@ export type DesktopBridgeInfo = {
   version: string;
 };
 
-export type DesktopMediaKind = "microphone" | "camera";
-
-type DesktopMediaAccessStatusResult = {
-  ok: boolean;
-  reason?: string;
-  status: string;
-};
-
-type DesktopMediaRequestAccessResult = {
-  ok: boolean;
-  granted: boolean;
-  reason?: string;
-  status: string;
-};
-
-export type DesktopMediaBridge = {
-  getAccessStatus: (kind: DesktopMediaKind) => Promise<DesktopMediaAccessStatusResult>;
-  requestAccess: (kind: DesktopMediaKind) => Promise<DesktopMediaRequestAccessResult>;
-};
-
 export type DesktopUpdateEvent =
   | "idle"
   | "enabled"
@@ -75,7 +55,6 @@ export type DesktopUpdateBridge = {
 };
 
 type DesktopBridgeWithUpdate = DesktopBridgeInfo & {
-  media?: DesktopMediaBridge;
   update?: DesktopUpdateBridge;
 };
 
@@ -112,21 +91,4 @@ export function getDesktopUpdateBridge(): DesktopUpdateBridge | null {
   }
 
   return updateBridge;
-}
-
-export function getDesktopMediaBridge(): DesktopMediaBridge | null {
-  const bridge = (window as Window & { boltorezkaDesktop?: DesktopBridgeWithUpdate }).boltorezkaDesktop;
-  if (!bridge?.media) {
-    return null;
-  }
-
-  const mediaBridge = bridge.media;
-  if (
-    typeof mediaBridge.getAccessStatus !== "function"
-    || typeof mediaBridge.requestAccess !== "function"
-  ) {
-    return null;
-  }
-
-  return mediaBridge;
 }

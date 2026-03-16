@@ -15,10 +15,6 @@ ipcRenderer.on("desktop:update-status", (_event, payload) => {
 contextBridge.exposeInMainWorld("boltorezkaDesktop", {
   platform: process.platform,
   version: process.versions.electron,
-  media: {
-    getAccessStatus: (kind) => ipcRenderer.invoke("desktop:media:get-access-status", kind),
-    requestAccess: (kind) => ipcRenderer.invoke("desktop:media:request-access", kind)
-  },
   update: {
     getStatus: () => ipcRenderer.invoke("desktop:update:get-state"),
     checkForUpdates: () => ipcRenderer.invoke("desktop:update:check"),
