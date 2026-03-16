@@ -148,6 +148,13 @@ Runbook:
 Status:
 - Updated (2026-03-16): `Desktop app` tab в server menu переведен в UX-first placeholder режим (3 карточки `Windows/macOS/Linux` + disabled `Download` с tooltip `Soon`) без manifest fetch и без broken links до появления publishable desktop билдов.
 
+### 4.7 Runtime routes centralization (web/desktop)
+- [ ] Вынести единый transport resolver для runtime-specific endpoint routing (API/WS/RTC/SSO) вместо разрозненных `window.location` веток.
+- [ ] Перевести RTC signal URL normalization и realtime WS base на единый resolver.
+- [ ] Зафиксировать runtime matrix (`web-dev`, `web-prod`, `desktop-dev`, `desktop-prod`) и инварианты протоколов (`https/wss`) в runbook.
+- [ ] Добавить диагностику endpoint resolution в desktop call log (raw/live resolved URL), чтобы ускорить triage RTC инцидентов.
+- [ ] Прогнать targeted test smoke после рефакторинга (`smoke:realtime`, `smoke:livekit:token-flow`, desktop practical media check).
+
 ## 5) QA matrix и smoke
 
 Минимальная матрица v1:
@@ -450,6 +457,11 @@ Progress note (2026-03-16, desktop download UX simplification):
 - `Desktop app` popup упрощен для пользователей до 3 карточек платформ (`Windows`, `macOS`, `Linux`) с disabled кнопками `Download` и tooltip `Soon`.
 - Убран manifest-driven fetch в web UI для этой вкладки до появления первых publishable standalone desktop билдов.
 - Исправлено растягивание контента по высоте в `Server profile` tabs: layout приведен к паттерну `User settings`.
+
+Progress note (2026-03-16, runtime routes centralization start):
+- Зафиксирован новый рефакторный поток для централизации runtime endpoint resolution в desktop/web (API/WS/RTC/SSO).
+- Trigger: observed incident class `WS=ok, RTC=fail` в desktop, указывающий на divergence между transport resolvers.
+- Phase 1 started: унификация WS/RTC route resolution через единый transport runtime helper в web renderer.
 
 ## 11) Known Follow-ups
 

@@ -1,5 +1,5 @@
 import type { WsIncoming, WsOutgoing } from "../domain";
-import { resolvePublicOrigin } from "../runtimeOrigin";
+import { resolveRealtimeWsBase } from "../transportRuntime";
 
 const RECONNECT_DELAYS_MS = [1000, 2000, 4000, 8000, 12000];
 const ACK_TIMEOUT_MS = 6000;
@@ -23,26 +23,8 @@ type RealtimeClientOptions = {
   onRequestFailed?: (requestId: string, eventType: string, retries: number) => void;
 };
 
-const CONFIGURED_PUBLIC_ORIGIN = resolvePublicOrigin();
-
-function toWebSocketOrigin(httpOrigin: string): string {
-  try {
-    const parsed = new URL(httpOrigin);
-    const protocol = parsed.protocol === "https:" ? "wss:" : "ws:";
-    return `${protocol}//${parsed.host}`;
-  } catch {
-    return "";
-  }
-}
-
 function wsBase() {
-  const configuredWsOrigin = toWebSocketOrigin(CONFIGURED_PUBLIC_ORIGIN);
-  if (configuredWsOrigin) {
-    return configuredWsOrigin;
-  }
-
-  const protocol = window.location.protocol === "https:" ? "wss" : "ws";
-  return `${protocol}://${window.location.host}`;
+  return resolveRealtimeWsBase();
 }
 
 export class RealtimeClient {

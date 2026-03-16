@@ -21,6 +21,7 @@ import type { AudioQuality } from "../../domain";
 import type { PresenceMember } from "../../domain";
 import type { CallStatus } from "../../services";
 import { trackClientEvent } from "../../telemetry";
+import { normalizeLivekitSignalUrl } from "../../transportRuntime";
 import { RnnoiseAudioProcessor, type RnnoiseSuppressionLevel } from "./rnnoiseAudioProcessor";
 import type {
   CallMicStatePayload,
@@ -112,28 +113,6 @@ function parseScreenShareResolution(value: ServerScreenShareResolution): { width
 
   return null;
 }
-
-const normalizeLivekitSignalUrl = (rawUrl: string): string => {
-  const value = String(rawUrl || "").trim();
-  if (!value) {
-    return value;
-  }
-
-  try {
-    const parsed = new URL(value);
-    const isHttpsPage = typeof window !== "undefined" && window.location.protocol === "https:";
-    if (isHttpsPage && parsed.protocol === "ws:") {
-      parsed.protocol = "wss:";
-      if (parsed.port === "7880") {
-        parsed.port = "7881";
-      }
-      return parsed.toString();
-    }
-    return parsed.toString();
-  } catch {
-    return value;
-  }
-};
 
 const setEmitterMaxListeners = (candidate: unknown, count: number) => {
   if (!candidate || typeof candidate !== "object") {
