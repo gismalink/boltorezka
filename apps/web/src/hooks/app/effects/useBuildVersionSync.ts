@@ -10,6 +10,18 @@ export function useBuildVersionSync(clientBuildVersion: string) {
       return;
     }
 
+    // Desktop app has its own updater/feed and can intentionally run against
+    // a server deployed from a different web build. Web auto-reload sync here
+    // causes infinite "new version" loops in packaged desktop runtime.
+    if (typeof window !== "undefined" && window.boltorezkaDesktop) {
+      try {
+        sessionStorage.removeItem(VERSION_UPDATE_PENDING_KEY);
+      } catch {
+        // Ignore storage failures.
+      }
+      return;
+    }
+
     let cancelled = false;
     let inFlight = false;
 
