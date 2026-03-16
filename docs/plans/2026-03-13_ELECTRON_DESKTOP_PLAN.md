@@ -70,8 +70,8 @@ Definition of done:
 - [x] Нет блокирующих regressions относительно web baseline.
 
 ### M3 - Update/release channel
-- [ ] Добавить в web UI пункт меню сервера `Get desktop app`.
-- [ ] По клику открывать popup с кнопками платформ-заглушек (`macOS`, `Windows`, `Linux`) и статусами доступности.
+- [x] Добавить в web UI пункт меню сервера `Get desktop app`.
+- [x] По клику открывать popup с кнопками платформ-заглушек (`macOS`, `Windows`, `Linux`) и статусами доступности.
 - [x] Источник загрузки: channel-aware артефакты (`test`/`prod`) из release storage, публикуемые server-first script (GitHub manual fallback).
 - [x] Настроены каналы auto-update: test и prod (runtime policy + channel routing).
 - [x] Реализован безопасный update flow с rollback-процедурой.
@@ -82,8 +82,8 @@ Note:
 - До этого момента фокус M3: release channels, update policy, signing/runbook, чтобы сразу подключить реальные ссылки после готовности артефактов.
 
 Definition of done:
-- [ ] В меню сервера доступна точка входа `Get desktop app`.
-- [ ] Popup корректно показывает `available/coming soon` по каждой платформе.
+- [x] В меню сервера доступна точка входа `Get desktop app`.
+- [x] Popup работает в placeholder-режиме (`coming soon`) без broken links.
 - [ ] Для доступных платформ кнопка ведет на актуальный артефакт выбранного канала (`test`/`prod`).
 - [ ] Обновление test->test проходит автоматически.
 - [ ] Rollback runbook проверен на test.
@@ -139,14 +139,14 @@ Runbook:
 - [x] UI behavior: по кнопке открывать popup `Desktop app downloads`.
 - [x] В popup рендерить фиксированный список платформ: `macOS`, `Windows`, `Linux`.
 - [x] Для платформ без артефакта показывать заглушку `Coming soon` и неактивную кнопку.
-- [x] Для платформ с артефактом показывать активную кнопку `Download`.
-- [x] Backend/source contract: frontend читает channel manifest (`/desktop/<channel>/latest.json`) и строит платформенные ссылки из опубликованных артефактов.
+- [ ] Для платформ с артефактом показывать активную кнопку `Download`.
+- [ ] Backend/source contract: frontend читает channel manifest (`/desktop/<channel>/latest.json`) и строит платформенные ссылки из опубликованных артефактов.
 - [x] Хранение артефактов: release storage для desktop билдов (по каналам `test`/`prod`) с immutable ссылками на конкретные версии.
 - [x] Публикация: server-first script при готовности билда обновляет манифест и добавляет ссылку на новый артефакт (GitHub path оставлен как fallback).
-- [ ] До появления реальных билдов popup работает в режиме заглушек без broken links.
+- [x] До появления реальных билдов popup работает в режиме заглушек без broken links.
 
 Status:
-- Done (2026-03-15): реализован `Desktop app` tab в server menu, источником данных выступает `latest.json` текущего канала (`test`/`prod`), UI показывает availability по платформам и активирует `Download` только для опубликованных файлов.
+- Updated (2026-03-16): `Desktop app` tab в server menu переведен в UX-first placeholder режим (3 карточки `Windows/macOS/Linux` + disabled `Download` с tooltip `Soon`) без manifest fetch и без broken links до появления publishable desktop билдов.
 
 ## 5) QA matrix и smoke
 
@@ -445,6 +445,11 @@ Progress note (2026-03-15, controlled prod rollout):
 - Выполнен controlled prod rollout из `origin/main` на SHA `a19185a6f7e354f91a52608c4fa408964dca279c`.
 - Prod post-checks green: `/health` (`api/db/redis=ok`), `/v1/auth/mode` (`sso`), `smoke:web:version-cache` PASS.
 - Desktop prod distribution/update endpoints подтверждены: `/desktop/prod/latest.json`, `/desktop/prod/mac/latest-mac.yml`, `smoke:desktop:update-feed` (`channel=prod`) PASS.
+
+Progress note (2026-03-16, desktop download UX simplification):
+- `Desktop app` popup упрощен для пользователей до 3 карточек платформ (`Windows`, `macOS`, `Linux`) с disabled кнопками `Download` и tooltip `Soon`.
+- Убран manifest-driven fetch в web UI для этой вкладки до появления первых publishable standalone desktop билдов.
+- Исправлено растягивание контента по высоте в `Server profile` tabs: layout приведен к паттерну `User settings`.
 
 ## 11) Known Follow-ups
 
