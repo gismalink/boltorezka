@@ -2,6 +2,9 @@
   "name": "boltorezka",
   "private": true,
   "version": "1.0.0",
+  "engines": {
+    "node": ">=22.12.0"
+  },
   "scripts": {
     "check": "npm run check:quick",
     "check:quick": "bash ./scripts/verify-all.sh",
