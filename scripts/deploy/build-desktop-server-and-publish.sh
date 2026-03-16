@@ -62,17 +62,36 @@ git fetch --all --tags --prune
 RESOLVED_SHA="$(git rev-parse "$GIT_REF")"
 RESOLVED_SHA_SHORT="$(git rev-parse --short "$RESOLVED_SHA")"
 BUILD_TS_UTC="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+BASE_APP_VERSION="$(node -p "require('./apps/desktop-electron/package.json').version")"
+
+if [[ -z "$BASE_APP_VERSION" ]]; then
+  echo "[desktop-build] desktop package version is empty" >&2
+  exit 1
+fi
+
+if [[ "$DESKTOP_CHANNEL" == "test" ]]; then
+  if [[ -n "${DESKTOP_BUILD_VERSION:-}" ]]; then
+    APP_VERSION="$DESKTOP_BUILD_VERSION"
+  else
+    VERSION_DATE_TAG="$(date -u +%Y%m%d)"
+    VERSION_TIME_TAG="$(date -u +%H%M%S)"
+    APP_VERSION="${BASE_APP_VERSION}-test.d${VERSION_DATE_TAG}.t${VERSION_TIME_TAG}.sha${RESOLVED_SHA_SHORT}"
+  fi
+else
+  APP_VERSION="$BASE_APP_VERSION"
+fi
 
 echo "[desktop-build] resolved sha: $RESOLVED_SHA"
+echo "[desktop-build] app version: $APP_VERSION (base: $BASE_APP_VERSION)"
 git checkout --detach "$RESOLVED_SHA"
 
 npm --prefix apps/web ci
 npm --prefix apps/desktop-electron ci
 
 if [[ "$DESKTOP_CHANNEL" == "prod" ]]; then
-  APP_BUILD_SHA="$RESOLVED_SHA" npm --prefix apps/desktop-electron run dist:prod
+  APP_BUILD_SHA="$RESOLVED_SHA" APP_VERSION="$APP_VERSION" npm --prefix apps/desktop-electron run dist:prod
 else
-  APP_BUILD_SHA="$RESOLVED_SHA" npm --prefix apps/desktop-electron run dist:test
+  APP_BUILD_SHA="$RESOLVED_SHA" APP_VERSION="$APP_VERSION" npm --prefix apps/desktop-electron run dist:test
 fi
 
 DIST_DIR="apps/desktop-electron/dist"
@@ -106,7 +125,6 @@ fi
 
 MAC_ZIP_SIZE="$(stat -f %z "$UPDATER_MAC_DIR/$MAC_ZIP_NAME")"
 MAC_ZIP_SHA512="$(shasum -a 512 "$UPDATER_MAC_DIR/$MAC_ZIP_NAME" | awk '{print $1}' | xxd -r -p | base64)"
-APP_VERSION="$(node -p "require('./apps/desktop-electron/package.json').version")"
 
 cat > "$UPDATER_MAC_DIR/latest-mac.yml" <<EOF
 version: $APP_VERSION
@@ -123,7 +141,7 @@ MANIFEST_TMP="$(mktemp)"
 CHANNEL_MANIFEST="$PUBLISH_DIR/latest.json"
 BUILD_MANIFEST="$TARGET_DIR/manifest.json"
 
-node - <<'NODE' "$TARGET_DIR" "$DESKTOP_CHANNEL" "$RESOLVED_SHA" "$BUILD_TS_UTC" "$PUBLIC_BASE_URL" "$MANIFEST_TMP"
+node - <<'NODE' "$TARGET_DIR" "$DESKTOP_CHANNEL" "$RESOLVED_SHA" "$BUILD_TS_UTC" "$PUBLIC_BASE_URL" "$MANIFEST_TMP" "$APP_VERSION"
 const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
@@ -134,6 +152,7 @@ const sha = process.argv[4];
 const builtAt = process.argv[5];
 const publicBaseUrl = String(process.argv[6] || "").trim().replace(/\/+$/, "");
 const outputPath = process.argv[7];
+const appVersion = String(process.argv[8] || "").trim();
 
 function walk(dir) {
   const out = [];
@@ -171,6 +190,7 @@ const files = walk(targetDir)
 const payload = {
   channel,
   sha,
+  appVersion,
   builtAt,
   totalFiles: files.length,
   files
@@ -196,6 +216,7 @@ DESKTOP_BUILD_CHANNEL="$DESKTOP_CHANNEL"
 DESKTOP_BUILD_REF="$GIT_REF"
 DESKTOP_BUILD_SHA="$RESOLVED_SHA"
 DESKTOP_BUILD_TIMESTAMP_UTC="$BUILD_TS_UTC"
+DESKTOP_BUILD_APP_VERSION="$APP_VERSION"
 DESKTOP_BUILD_TARGET_DIR="$TARGET_DIR"
 DESKTOP_BUILD_MANIFEST="$CHANNEL_MANIFEST"
 DESKTOP_BUILD_UPDATER_MAC_FEED="$UPDATER_MAC_DIR/latest-mac.yml"

@@ -9,8 +9,8 @@
     "dev": "concurrently -k -n WEB,DESKTOP -c cyan,green \"npm --prefix ../web run dev -- --host 127.0.0.1 --port 5173\" \"wait-on tcp:127.0.0.1:5173 && cross-env ELECTRON_RENDERER_URL=http://127.0.0.1:5173 electron .\"",
     "start": "electron .",
     "build:renderer": "node ./scripts/build-renderer.cjs",
-    "build": "npm run build:renderer && electron-builder --dir",
-    "dist": "npm run build:renderer && electron-builder",
+    "build": "npm run build:renderer && node ./scripts/run-electron-builder.cjs --dir",
+    "dist": "npm run build:renderer && node ./scripts/run-electron-builder.cjs",
     "dist:test": "cross-env ELECTRON_UPDATE_CHANNEL=test npm run dist",
     "dist:prod": "cross-env ELECTRON_UPDATE_CHANNEL=prod npm run dist"
   },

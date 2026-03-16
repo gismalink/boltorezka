@@ -4,6 +4,11 @@ const path = require("path");
 const { execSync, spawnSync } = require("child_process");
 
 function resolveDesktopVersion() {
+  const fromEnv = String(process.env.APP_VERSION || "").trim();
+  if (fromEnv) {
+    return fromEnv;
+  }
+
   const pkgPath = path.resolve(__dirname, "..", "package.json");
   const raw = fs.readFileSync(pkgPath, "utf8");
   const pkg = JSON.parse(raw);
