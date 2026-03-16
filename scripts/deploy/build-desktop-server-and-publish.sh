@@ -115,7 +115,13 @@ cp -R "$DIST_DIR/." "$TARGET_DIR/"
 mkdir -p "$UPDATER_MAC_DIR"
 find "$UPDATER_MAC_DIR" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
 
-MAC_ZIP_NAME="$(find "$TARGET_DIR" -maxdepth 1 -type f \( -name '*-mac.zip' -o -name '*mac*.zip' \) -exec basename {} \; | head -n 1)"
+MAC_ZIP_NAME="$(find "$TARGET_DIR" -maxdepth 1 -type f -name '*-mac-arm*.zip' -exec basename {} \; | head -n 1)"
+if [[ -z "$MAC_ZIP_NAME" ]]; then
+  MAC_ZIP_NAME="$(find "$TARGET_DIR" -maxdepth 1 -type f -name '*-mac.zip' -exec basename {} \; | head -n 1)"
+fi
+if [[ -z "$MAC_ZIP_NAME" ]]; then
+  MAC_ZIP_NAME="$(find "$TARGET_DIR" -maxdepth 1 -type f -name '*mac*.zip' -exec basename {} \; | head -n 1)"
+fi
 if [[ -z "$MAC_ZIP_NAME" ]]; then
   echo "[desktop-build] missing mac zip artifact in $TARGET_DIR" >&2
   exit 1

@@ -96,7 +96,7 @@ function pickDesktopArtifact(files: DesktopManifestFile[], platform: "windows" |
   }
 
   if (platform === "mac") {
-    return byName([/-mac\.zip$/i, /\.dmg$/i, /\.pkg$/i]);
+    return byName([/-mac-arm\d*\.zip$/i, /-mac\.zip$/i, /\.dmg$/i, /\.pkg$/i]);
   }
 
   return byName([/\.AppImage$/i, /\.deb$/i, /\.rpm$/i, /\.tar\.gz$/i, /linux/i]);
