@@ -342,16 +342,7 @@ function getPermissionRequestOrigin(webContents, details = {}) {
 
 function configureMediaPermissionHandlers(webContents) {
   const session = webContents.session;
-  const allowedPermissions = new Set(["media", "microphone", "camera", "display-capture"]);
-
-  session.setPermissionCheckHandler((contents, permission, requestingOrigin, details) => {
-    if (!allowedPermissions.has(permission)) {
-      return false;
-    }
-
-    const origin = String(requestingOrigin || "").trim() || getPermissionRequestOrigin(contents, details);
-    return isRendererTrustedForMedia(origin);
-  });
+  const allowedPermissions = new Set(["media", "microphone", "camera"]);
 
   session.setPermissionRequestHandler((contents, permission, callback, details) => {
     if (!allowedPermissions.has(permission)) {
