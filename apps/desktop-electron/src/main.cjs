@@ -10,8 +10,23 @@ try {
   autoUpdater = null;
 }
 
-const isDev = !app.isPackaged;
-const rendererUrl = process.env.ELECTRON_RENDERER_URL || "http://127.0.0.1:5173";
+    const target = String(parsed.searchParams.get("target") || "").trim();
+    let handoffCode = String(parsed.searchParams.get("desktop_sso_code") || "").trim();
+    let attemptId = String(parsed.searchParams.get("attemptId") || "").trim();
+
+    if (target) {
+      try {
+        const targetUrl = new URL(target);
+        if (!handoffCode) {
+          handoffCode = String(targetUrl.searchParams.get("desktop_sso_code") || "").trim();
+        }
+        if (!attemptId) {
+          attemptId = String(targetUrl.searchParams.get("desktop_handoff_attempt") || "").trim();
+        }
+      } catch {
+        // Ignore malformed target and rely on top-level params.
+      }
+    }
 const desktopProtocol = "boltorezka";
 const allowMultipleInstances = !app.isPackaged
   && String(process.env.ELECTRON_ALLOW_MULTIPLE_INSTANCES || "0") === "1";
