@@ -22,8 +22,16 @@
     },
     "files": [
       "src/**/*",
-      "../web/dist/**/*",
       "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "../web/dist",
+        "to": "web/dist",
+        "filter": [
+          "**/*"
+        ]
+      }
     ],
     "extraMetadata": {
       "main": "src/main.cjs"
