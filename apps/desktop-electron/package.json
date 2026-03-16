@@ -1,7 +1,7 @@
 {
   "name": "boltorezka-desktop",
   "private": true,
-  "version": "0.2.0",
+  "version": "1.0.0",
   "description": "Electron desktop shell for Boltorezka",
   "author": "Boltorezka Team",
   "main": "src/main.cjs",
