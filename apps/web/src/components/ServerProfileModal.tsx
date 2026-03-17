@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { AudioQuality, TelemetrySummary, User } from "../domain";
+import { getDesktopUpdateBridge } from "../desktopBridge";
 import type { ServerScreenShareResolution, ServerVideoEffectType } from "../hooks/rtc/voiceCallTypes";
+import { resolvePublicOrigin } from "../runtimeOrigin";
 import { RangeSlider } from "./RangeSlider";
 
 type ServerMenuTab = "users" | "events" | "telemetry" | "call" | "sound" | "video" | "chat_images" | "desktop_downloads";
@@ -89,7 +91,8 @@ function encodePathSegments(path: string): string {
 function resolveDesktopArtifactHref(
   artifact: DesktopManifestFile | null,
   channel: "test" | "prod",
-  sha: string
+  sha: string,
+  publicOrigin = ""
 ): string | null {
   if (!artifact) {
     return null;
@@ -102,6 +105,9 @@ function resolveDesktopArtifactHref(
 
   const pathUrl = String(artifact.urlPath || "").trim();
   if (pathUrl) {
+    if (publicOrigin && pathUrl.startsWith("/")) {
+      return `${publicOrigin}${pathUrl}`;
+    }
     return pathUrl;
   }
 
@@ -110,7 +116,25 @@ function resolveDesktopArtifactHref(
     return null;
   }
 
-  return `/desktop/${channel}/${encodeURIComponent(sha)}/${encodePathSegments(relativePath)}`;
+  const relativeUrl = `/desktop/${channel}/${encodeURIComponent(sha)}/${encodePathSegments(relativePath)}`;
+  return publicOrigin ? `${publicOrigin}${relativeUrl}` : relativeUrl;
+}
+
+function normalizeDesktopChannel(value: string): "test" | "prod" {
+  return String(value || "").trim().toLowerCase() === "test" ? "test" : "prod";
+}
+
+function resolveDesktopChannelFromOrigin(origin: string): "test" | "prod" {
+  if (!origin) {
+    return "prod";
+  }
+
+  try {
+    const hostname = new URL(origin).hostname.toLowerCase();
+    return hostname.startsWith("test.") || hostname.includes(".test.") ? "test" : "prod";
+  } catch {
+    return "prod";
+  }
 }
 
 function pickDesktopArtifact(files: DesktopManifestFile[], platform: "windows" | "mac" | "linux"): DesktopManifestFile | null {
@@ -196,6 +220,7 @@ export function ServerProfileModal({
   const [desktopManifest, setDesktopManifest] = useState<DesktopManifest | null>(null);
   const [desktopManifestLoading, setDesktopManifestLoading] = useState(false);
   const [desktopManifestError, setDesktopManifestError] = useState("");
+  const [desktopBridgeChannel, setDesktopBridgeChannel] = useState<"test" | "prod" | null>(null);
   const [userAccessTab, setUserAccessTab] = useState<UserAccessTab>("active");
   const [userSearchQuery, setUserSearchQuery] = useState("");
   const totalUsers = adminUsers.length;
@@ -206,14 +231,24 @@ export function ServerProfileModal({
     ? (telemetrySummary?.metrics.rnnoise_process_cost_us_sum ?? 0) / rnnoiseProcessSamples / 1000
     : 0;
 
+  const desktopPublicOrigin = useMemo(() => resolvePublicOrigin(), []);
+
   const desktopChannel = useMemo<"test" | "prod">(() => {
+    if (desktopBridgeChannel) {
+      return desktopBridgeChannel;
+    }
+
+    if (desktopPublicOrigin) {
+      return resolveDesktopChannelFromOrigin(desktopPublicOrigin);
+    }
+
     if (typeof window === "undefined") {
       return "prod";
     }
 
     const hostname = window.location.hostname.toLowerCase();
     return hostname.startsWith("test.") || hostname.includes(".test.") ? "test" : "prod";
-  }, []);
+  }, [desktopBridgeChannel, desktopPublicOrigin]);
 
   const desktopCards = useMemo(
     () => [
@@ -226,7 +261,8 @@ export function ServerProfileModal({
       const href = resolveDesktopArtifactHref(
         artifact,
         desktopChannel,
-        String(desktopManifest?.sha || "").trim()
+        String(desktopManifest?.sha || "").trim(),
+        desktopPublicOrigin
       );
       return {
         ...platform,
@@ -234,8 +270,35 @@ export function ServerProfileModal({
         fileName: artifact?.name || ""
       };
     }),
-    [desktopChannel, desktopManifest, t]
+    [desktopChannel, desktopManifest, desktopPublicOrigin, t]
   );
+
+  useEffect(() => {
+    if (!open || serverMenuTab !== "desktop_downloads") {
+      return;
+    }
+
+    const desktopUpdate = getDesktopUpdateBridge();
+    if (!desktopUpdate) {
+      return;
+    }
+
+    let disposed = false;
+
+    void desktopUpdate.getStatus()
+      .then((status) => {
+        if (!disposed) {
+          setDesktopBridgeChannel(normalizeDesktopChannel(status.channel));
+        }
+      })
+      .catch(() => {
+        return;
+      });
+
+    return () => {
+      disposed = true;
+    };
+  }, [open, serverMenuTab]);
 
   const normalizedUserSearch = userSearchQuery.trim().toLowerCase();
 
@@ -413,7 +476,9 @@ export function ServerProfileModal({
       setDesktopManifestError("");
 
       try {
-        const response = await fetch(`/desktop/${desktopChannel}/latest.json`, {
+        const manifestPath = `/desktop/${desktopChannel}/latest.json`;
+        const manifestUrl = desktopPublicOrigin ? `${desktopPublicOrigin}${manifestPath}` : manifestPath;
+        const response = await fetch(manifestUrl, {
           cache: "no-store",
           signal: controller.signal
         });
@@ -446,7 +511,7 @@ export function ServerProfileModal({
       disposed = true;
       controller.abort();
     };
-  }, [desktopChannel, open, serverMenuTab]);
+  }, [desktopChannel, desktopPublicOrigin, open, serverMenuTab]);
 
   if (!open) {
     return null;
