@@ -90,6 +90,7 @@ const MESSAGE_EDIT_DELETE_WINDOW_MS = 10 * 60 * 1000;
 const ROOM_SLUG_STORAGE_KEY = "boltorezka_room_slug";
 const VERSION_UPDATE_PENDING_KEY = "boltorezka_update_reload_pending";
 const CLIENT_BUILD_VERSION = String(import.meta.env.VITE_APP_VERSION || "").trim();
+const CLIENT_BUILD_SHA = String(import.meta.env.VITE_APP_BUILD_SHA || CLIENT_BUILD_VERSION || "").trim();
 const CLIENT_BUILD_DATE = String(import.meta.env.VITE_APP_BUILD_DATE || "").trim();
 function formatBuildDateLabel(version: string, buildDate: string): string {
   const normalizedVersion = String(version || "").trim();
@@ -364,7 +365,7 @@ export function App() {
     playServerSound
   } = useServerSounds();
 
-  useBuildVersionSync(CLIENT_BUILD_VERSION);
+  useBuildVersionSync(CLIENT_BUILD_SHA);
 
   const markMessageDelivery = (
     requestId: string,
@@ -1747,6 +1748,23 @@ export function App() {
     }
 
     let disposed = false;
+    let downloadRequested = false;
+
+    const requestDesktopUpdateDownload = async () => {
+      if (disposed || downloadRequested) {
+        return;
+      }
+      downloadRequested = true;
+      try {
+        const result = await desktopUpdateBridge.downloadUpdate();
+        if (!result?.ok && String(result?.reason || "") !== "no-available-update") {
+          const reason = String(result?.reason || "").trim();
+          pushToast(reason ? `${t("desktop.updateErrorToast")} (${reason})` : t("desktop.updateErrorToast"));
+        }
+      } catch {
+        pushToast(t("desktop.updateErrorToast"));
+      }
+    };
 
     desktopUpdateBridge.getStatus()
       .then((status) => {
@@ -1756,11 +1774,20 @@ export function App() {
         if (String(status?.downloadedVersion || "").trim()) {
           setDesktopUpdateReadyVersion(String(status.downloadedVersion).trim());
           setDesktopUpdateBannerDismissed(false);
+          return;
+        }
+
+        if (String(status?.availableVersion || "").trim()) {
+          void requestDesktopUpdateDownload();
         }
       })
       .catch(() => {
         // Update status is best-effort.
       });
+
+    desktopUpdateBridge.checkForUpdates().catch(() => {
+      // Update check is best-effort.
+    });
 
     const unsubscribe = desktopUpdateBridge.onStatus((event) => {
       const eventType = String(event?.event || "").trim();
@@ -1769,6 +1796,7 @@ export function App() {
 
       if (eventType === "available" && version) {
         pushToast(`${t("desktop.updateAvailableToast")} ${version}`);
+        void requestDesktopUpdateDownload();
       }
 
       if (eventType === "downloaded" && version) {

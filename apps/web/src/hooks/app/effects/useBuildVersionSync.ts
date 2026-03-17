@@ -4,16 +4,19 @@ import { api } from "../../../api";
 const VERSION_POLL_INTERVAL_MS = 60000;
 const VERSION_UPDATE_PENDING_KEY = "boltorezka_update_reload_pending";
 
-export function useBuildVersionSync(clientBuildVersion: string) {
+export function useBuildVersionSync(clientBuildSha: string) {
   useEffect(() => {
-    if (!clientBuildVersion) {
+    if (!clientBuildSha) {
       return;
     }
 
     // Desktop app has its own updater/feed and can intentionally run against
-    // a server deployed from a different web build. Web auto-reload sync here
-    // causes infinite "new version" loops in packaged desktop runtime.
-    if (typeof window !== "undefined" && window.boltorezkaDesktop) {
+    // a server deployed from a different web build. For packaged desktop
+    // (file:// renderer) web auto-reload would keep reloading the same bundle.
+    // For remote desktop renderer (http/https), regular web version sync is safe.
+    const isDesktopRuntime = typeof window !== "undefined" && Boolean(window.boltorezkaDesktop);
+    const isLocalDesktopRenderer = isDesktopRuntime && window.location.protocol === "file:";
+    if (isLocalDesktopRenderer) {
       try {
         sessionStorage.removeItem(VERSION_UPDATE_PENDING_KEY);
       } catch {
@@ -34,7 +37,7 @@ export function useBuildVersionSync(clientBuildVersion: string) {
       try {
         const payload = await api.version();
         const serverBuildVersion = String(payload.appBuildSha || "").trim();
-        if (!cancelled && serverBuildVersion && serverBuildVersion !== clientBuildVersion) {
+        if (!cancelled && serverBuildVersion && serverBuildVersion !== clientBuildSha) {
           try {
             sessionStorage.setItem(VERSION_UPDATE_PENDING_KEY, "1");
           } catch {
@@ -67,5 +70,5 @@ export function useBuildVersionSync(clientBuildVersion: string) {
       window.clearInterval(intervalId);
       document.removeEventListener("visibilitychange", onVisibilityChange);
     };
-  }, [clientBuildVersion]);
+  }, [clientBuildSha]);
 }
