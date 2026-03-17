@@ -89,6 +89,7 @@ const DEFAULT_UI_THEME: UiTheme = "8-neon-bit";
 const MESSAGE_EDIT_DELETE_WINDOW_MS = 10 * 60 * 1000;
 const ROOM_SLUG_STORAGE_KEY = "boltorezka_room_slug";
 const VERSION_UPDATE_PENDING_KEY = "boltorezka_update_reload_pending";
+const PENDING_ACCESS_AUTO_REFRESH_SEC = 20;
 const CLIENT_BUILD_VERSION = String(import.meta.env.VITE_APP_VERSION || "").trim();
 const CLIENT_BUILD_SHA = String(import.meta.env.VITE_APP_BUILD_SHA || CLIENT_BUILD_VERSION || "").trim();
 const CLIENT_BUILD_DATE = String(import.meta.env.VITE_APP_BUILD_DATE || "").trim();
@@ -159,6 +160,7 @@ export function App() {
   const [desktopUpdateReadyVersion, setDesktopUpdateReadyVersion] = useState("");
   const [desktopUpdateApplying, setDesktopUpdateApplying] = useState(false);
   const [desktopUpdateBannerDismissed, setDesktopUpdateBannerDismissed] = useState(false);
+  const [pendingAccessRefreshInSec, setPendingAccessRefreshInSec] = useState(PENDING_ACCESS_AUTO_REFRESH_SEC);
   const [showFirstRunIntro, setShowFirstRunIntro] = useState(false);
   const [sessionMovedOverlayMessage, setSessionMovedOverlayMessage] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
@@ -1570,6 +1572,27 @@ export function App() {
     }
   }, [selectedInputProfile]);
 
+  useEffect(() => {
+    if (!user || user.access_state !== "pending") {
+      setPendingAccessRefreshInSec(PENDING_ACCESS_AUTO_REFRESH_SEC);
+      return;
+    }
+
+    setPendingAccessRefreshInSec(PENDING_ACCESS_AUTO_REFRESH_SEC);
+    const intervalId = window.setInterval(() => {
+      setPendingAccessRefreshInSec((previous) => {
+        if (previous <= 1) {
+          window.location.reload();
+          return PENDING_ACCESS_AUTO_REFRESH_SEC;
+        }
+
+        return previous - 1;
+      });
+    }, 1000);
+
+    return () => window.clearInterval(intervalId);
+  }, [user]);
+
   if (showDesktopBrowserCompletion) {
     return (
       <main className="app legacy-layout mx-auto grid h-[100dvh] max-h-[100dvh] w-full max-w-[760px] place-items-center p-6">
@@ -1615,6 +1638,14 @@ export function App() {
           <p className="mt-3 text-sm opacity-80">
             {blocked ? t("access.blockedMessage") : t("access.pendingMessage")}
           </p>
+          {!blocked ? (
+            <>
+              <p className="mt-2 text-sm opacity-80">{t("access.pendingQueueHint")}</p>
+              <p className="mt-1 text-xs opacity-70">
+                {t("access.autoRefreshPrefix")} {pendingAccessRefreshInSec} {t("access.autoRefreshSuffix")}
+              </p>
+            </>
+          ) : null}
           <div className="mt-5 flex justify-center gap-2">
             <button
               type="button"
