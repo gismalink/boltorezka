@@ -2,6 +2,23 @@
 
 Отдельный журнал результатов тестов/нагрузки.
 
+## 2026-03-17 — Cycle #62 (Early cross-platform soak consolidation for M2)
+
+- Environment: `test` + historical desktop smoke evidence consolidation
+- Scope: закрытие mitigation-пункта `Ранний cross-platform soak на M2` в desktop плане
+
+### Functional gate
+
+- Consolidated cross-platform soak evidence: PASS
+  - Cycle #20: `desktop:smoke:m2:soak` -> PASS (интегрированный foundation/runtime/reconnect/telemetry/soak chain).
+  - Cycle #33: browser-level handoff soak -> PASS (`Chromium/WebKit/Firefox`, 20 cycles total).
+  - Cycle #59: practical standalone macOS media validation -> PASS (downloaded test build).
+
+### Decision
+
+- Cycle #62: PASS.
+- Mitigation-пункт `Ранний cross-platform soak на M2` считается закрытым для текущего non-signing этапа.
+
 ## 2026-03-17 — Cycle #61 (Desktop release gate dependency on session/cookie checklist)
 
 - Environment: `docs/runbooks` + `docs/plans` (policy/dependency evidence cycle)

@@ -186,7 +186,7 @@ Desktop smoke (must pass):
 
 Риск: расхождение web и desktop поведения media APIs.
 - Mitigation:
-- [ ] Ранний cross-platform soak на M2.
+- [x] Ранний cross-platform soak на M2.
 - [x] Desktop-specific telemetry и быстрый rollback channel.
 
 Риск: сложность code signing/notarization и задержка релиза.
@@ -510,7 +510,7 @@ Progress note (2026-03-17, plan review + policy sync):
 - Основные открытые блокеры на текущий момент: release-grade signing/notarization evidence, активный desktop download contract (вместо placeholder), 2h standalone stability soak.
 
 Progress note (2026-03-17, unchecked items audit):
-- После выноса Win/Linux backlog и закрытия всех независимых от code-signing пунктов в текущем файле осталось `11` незакрытых пунктов.
+- После выноса Win/Linux backlog и закрытия всех независимых от code-signing пунктов в текущем файле осталось `10` незакрытых пунктов.
 - Из них подтвержденно execution-critical (реально блокируют desktop release readiness): release-grade signing/notarization evidence, первый production desktop release, release-grade update/signing verification по non-download M3.
 - Отдельная группа пунктов остается осознанно deferred/out-of-scope по плану (`v1.1+`, post-signing gates, cross-platform QA expansion).
 - Оценочные сроки в разделе `Примерная оценка сроков` оставлены незакрытыми намеренно как reference, а не как task gate.
@@ -601,6 +601,13 @@ Progress note (2026-03-17, on-call и security gate runbooks):
 Progress note (2026-03-17, session/cookie dependency gate formalization):
 - В `docs/runbooks/PREPROD_DECISION_PACKAGE.md` добавлена явная policy-связка desktop prod gate -> актуальный статус `docs/plans/2026-03-11_SESSION_COOKIE_CUTOVER_CHECKLIST.md`.
 - На этой базе закрыт mitigation-пункт `Держать desktop release gate зависимым от актуального статуса ...`.
+
+Progress note (2026-03-17, ранний cross-platform soak на M2):
+- Consolidation evidence зафиксирован по уже выполненным циклам:
+	- `Cycle #20`: `desktop:smoke:m2:soak` PASS (интегрированный reconnect/stability soak на test);
+	- `Cycle #33`: browser-level soak PASS на `Chromium/WebKit/Firefox` (20 циклов);
+	- `Cycle #59`: practical macOS standalone media validation PASS (downloaded test build).
+- На этой базе mitigation-пункт `Ранний cross-platform soak на M2` отмечен как закрытый для текущего этапа (без ожидания release-grade signing).
 
 ## 13) Post-merge snapshot (2026-03-15)
 
