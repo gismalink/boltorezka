@@ -17,6 +17,9 @@
     "dist:test": "cross-env ELECTRON_UPDATE_CHANNEL=test npm run dist",
     "dist:prod": "cross-env ELECTRON_UPDATE_CHANNEL=prod npm run dist"
   },
+  "dependencies": {
+    "electron-updater": "^6.8.3"
+  },
   "build": {
     "appId": "art.gismalink.boltorezka.desktop",
     "productName": "Boltorezka",
@@ -65,7 +68,6 @@
     "dmg-license": "^1.0.11",
     "electron": "^35.1.4",
     "electron-builder": "^26.8.1",
-    "electron-updater": "^6.3.9",
     "wait-on": "^8.0.3"
   }
 }
