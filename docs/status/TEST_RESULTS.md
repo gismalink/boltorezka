@@ -2,6 +2,24 @@
 
 Отдельный журнал результатов тестов/нагрузки.
 
+## 2026-03-17 — Cycle #64 (Manual auth login/logout on multiple accounts after migrations rollout)
+
+- Environment: `test` (`https://test.boltorezka.gismalink.art`, server GitOps rollout)
+- Build ref: `origin/feature/user-management-access-tabs` (`fde663be41bac1af103ee335d524626a640cc253`)
+- Scope: ручная валидация базового auth-сценария на нескольких аккаунтах после внедрения versioned DB migrations
+
+### Functional gate
+
+- Manual login/logout regression check: PASS (owner-confirmed)
+  - login успешно отрабатывает на нескольких аккаунтах;
+  - logout успешно завершает сессию на тех же аккаунтах;
+  - критичных регрессий auth flow после rollout не обнаружено.
+
+### Decision
+
+- Cycle #64: PASS.
+- Базовый auth smoke (manual multi-account) после migration rollout считается закрытым для текущей feature-итерации.
+
 ## 2026-03-17 — Cycle #63 (Desktop open-items decomposition after non-signing closures)
 
 - Environment: `docs/plans` + `docs/status` (execution-state consolidation)
