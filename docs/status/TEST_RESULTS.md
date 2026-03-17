@@ -1642,3 +1642,41 @@
 
 - Manual rollback path in `test` is operational and reproducible for desktop release flow.
 - M3 пункт `Rollback runbook verified on test` закрыт evidence-циклом.
+
+## 2026-03-17 - Cycle #55 (test->test auto-update end-to-end)
+
+- Environment: `test` desktop updater feed + packaged mac app from server-first publish.
+- Feature ref: `origin/feature/desktop-unsigned-mode`.
+
+### Root-cause fixes before rerun
+
+- Fixed packaged updater runtime dependency:
+  - `electron-updater` moved from `devDependencies` to `dependencies` in `apps/desktop-electron/package.json`.
+- Fixed packaged app updater metadata on server publish:
+  - `scripts/deploy/build-desktop-server-and-publish.sh` now injects `app-update.yml` into `.app/Contents/Resources`.
+
+### Validation flow
+
+1. Baseline publish to test:
+   - SHA `c4afd0e...`, app version `1.0.0-test.20260317.2043`.
+2. Launch baseline packaged app from published snapshot with updater env:
+   - `ELECTRON_UPDATE_CHANNEL=test`
+   - `ELECTRON_UPDATE_FEED_BASE_URL=https://test.boltorezka.gismalink.art/desktop`
+   - `ELECTRON_UPDATE_AUTO_DOWNLOAD=1`
+   - `ELECTRON_UPDATE_POLL_INTERVAL_MS=10000`
+   - `ELECTRON_DESKTOP_UPDATE_TRACE_OUT=/tmp/desktop-update-trace.jsonl`
+3. Publish next test build (same branch, new timestamp version):
+   - app version `1.0.0-test.20260317.2046`.
+4. Confirm updater trace state transitions in running baseline app.
+
+### Evidence
+
+- Trace confirms updater enabled in packaged app (`event=enabled`, `autoDownload=true`).
+- After next publish, trace confirms automatic flow:
+  - `event=available` (`availableVersion=1.0.0-test.20260317.2046`)
+  - `event=download-progress` (`percent` from ~24 to `100`)
+  - `event=downloaded` (`downloadedVersion=1.0.0-test.20260317.2046`)
+
+### Decision
+
+- M3 criterion `test->test update passes automatically` validated and closed.

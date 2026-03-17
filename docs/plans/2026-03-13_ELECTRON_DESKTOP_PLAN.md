@@ -85,7 +85,7 @@ Definition of done:
 - [x] В меню сервера доступна точка входа `Get desktop app`.
 - [x] Popup работает в placeholder-режиме (`coming soon`) без broken links.
 - [x] Для доступных платформ кнопка ведет на актуальный артефакт выбранного канала (`test`/`prod`).
-- [ ] Обновление test->test проходит автоматически.
+- [x] Обновление test->test проходит автоматически.
 - [x] Rollback runbook проверен на test.
 
 ### M4 - Prod readiness
@@ -519,6 +519,11 @@ Progress note (2026-03-17, rollback runbook validation on test):
 - Выполнен контрольный test rollout `origin/feature/desktop-unsigned-mode` на SHA `6ad9d69` с `ENABLE_DESKTOP_BUILD=1` и green postdeploy smoke.
 - Выполнен manual rollback cycle на known-good SHA `4ca3ddd` (через `TEST_REF=<sha>`), также с `ENABLE_DESKTOP_BUILD=1` и green postdeploy smoke.
 - В обоих циклах подтвержден updater feed gate (`smoke:desktop:update-feed` PASS) и realtime gate (`smoke:realtime` PASS), rollback path признан operational для M3.
+
+Progress note (2026-03-17, test->test auto-update evidence):
+- Для packaged updater найден и исправлен root cause: `electron-updater` перенесен в runtime dependencies (`apps/desktop-electron/package.json`) — до фикса updater runtime был disabled в packaged app.
+- Для server-first desktop publish добавлена генерация `app-update.yml` внутри `.app` bundle (`scripts/deploy/build-desktop-server-and-publish.sh`), что устранило `ENOENT .../Contents/Resources/app-update.yml` на этапе download.
+- Evidence цикл: baseline app `1.0.0-test.20260317.2043` запущен с `ELECTRON_UPDATE_AUTO_DOWNLOAD=1`, после публикации следующего test build (`1.0.0-test.20260317.2046`) зафиксированы события `available -> download-progress -> downloaded` в updater trace (`ELECTRON_DESKTOP_UPDATE_TRACE_OUT`).
 
 ## 11) Known Follow-ups
 

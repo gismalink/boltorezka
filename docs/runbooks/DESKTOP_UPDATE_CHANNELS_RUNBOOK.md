@@ -40,6 +40,7 @@
 Важно:
 - Подписание/notarization остается обязательным release-gate до публичного prod rollout.
 - Upload артефактов выполняется в channel-специфичный путь feed storage.
+- Для server-first publish обязательно сохранять `app-update.yml` внутри packaged `.app` (`Contents/Resources/app-update.yml`), иначе auto-download может падать с `ENOENT` даже при доступном `latest-mac.yml`.
 
 ## 4) Rollout flow
 
@@ -79,3 +80,4 @@
 - Каналы `test/prod` формально отделены и управляются env policy.
 - Runtime безопасно обрабатывает отсутствующий feed (без crash).
 - Описан rollback-процесс для update канала.
+- Для `test` подтвержден auto-download path (`available -> download-progress -> downloaded`) на packaged runtime.
