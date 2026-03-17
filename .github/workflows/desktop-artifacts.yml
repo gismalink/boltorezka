@@ -33,7 +33,7 @@ on:
       windows_signing_provider:
         description: "Windows signing provider for signed workflow"
         required: false
-        default: "azure-oidc"
+        default: "pfx"
         type: choice
         options:
           - azure-oidc
@@ -101,7 +101,7 @@ jobs:
           fi
 
           use_azure_windows="false"
-          if [[ "$sign_current" == "true" && "${{ matrix.platform }}" == "windows" && "${{ github.event.inputs.windows_signing_provider || 'azure-oidc' }}" == "azure-oidc" ]]; then
+          if [[ "$sign_current" == "true" && "${{ matrix.platform }}" == "windows" && "${{ github.event.inputs.windows_signing_provider || 'pfx' }}" == "azure-oidc" ]]; then
             use_azure_windows="true"
           fi
 

@@ -275,6 +275,11 @@ Progress note (2026-03-17, signing fallback execution update):
 - Последний run (`23209017455`) подтверждает progression до Azure OIDC шага; текущий remaining blocker: отсутствуют обязательные Azure values (`client-id`, `tenant-id`) для `azure/login@v2`.
 - Checklist пункт `Сборки подписываются (где применимо)` остается open до operational PASS evidence после заполнения Azure Trusted Signing secrets и успешного signed RC run.
 
+Progress note (2026-03-17, temporary self-signed mode):
+- Принято временное решение: для текущего test-контура используем self-signed/pfx путь (без Azure OIDC), чтобы не блокировать desktop delivery.
+- В `desktop-artifacts` default для `windows_signing_provider` переключен на `pfx`; Azure path остается опциональным для следующего этапа trusted-signing readiness.
+- Policy не меняет prod-gate: для production release остается требование release-grade signing/notarization evidence.
+
 Progress note (2026-03-15, Windows OIDC signing path):
 - Workflow `.github/workflows/desktop-artifacts.yml` расширен для `windows-only` signed режима до готовности Apple secrets.
 - Добавлен Windows signing provider `azure-oidc` через `azure/login` + `azure/artifact-signing-action` (OIDC), без обязательного `DESKTOP_WIN_CSC_LINK`/`DESKTOP_WIN_CSC_KEY_PASSWORD`.

@@ -2,6 +2,27 @@
 
 Отдельный журнал результатов тестов/нагрузки.
 
+## 2026-03-17 — Cycle #55 (Policy update: temporary self-signed/pfx mode)
+
+- Environment: `delivery policy` (`test` channel)
+- Decision basis: после цикла #54 engineering blockers закрыты, remaining blocker находится в Azure OIDC secrets readiness.
+
+### Functional gate
+
+- Temporary policy: ACCEPTED
+  - До готовности trusted-signing secrets используем self-signed/pfx путь для desktop signing в test pipeline.
+  - Workflow default updated: `windows_signing_provider=pfx` (Azure OIDC остается явным opt-in).
+
+### Scope covered by this cycle
+
+- Убрана дефолтная зависимость test-пайплайна от незаполненных Azure OIDC secrets.
+- Сохранен переходный путь к trusted signing без удаления Azure steps.
+
+### Decision
+
+- Cycle #55: PASS (policy alignment).
+- Next action: выполнить windows signed RC run с `windows_signing_provider=pfx` и зафиксировать artifact-level evidence.
+
 ## 2026-03-17 — Cycle #54 (Signing readiness fallback, windows-only Azure OIDC path)
 
 - Environment: `GitHub Actions` (`desktop-artifacts` workflow, `feature/desktop-unsigned-mode`)
