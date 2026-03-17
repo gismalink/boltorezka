@@ -266,9 +266,11 @@ export function ChatPanel({
                 ) : null}
 
                 <div className="chat-bubble w-fit min-w-[120px]">
-                  <div className="chat-meta flex items-baseline gap-2">
-                    {showAuthor ? <span className="chat-author">{message.user_name}</span> : <span className="chat-author-spacer" aria-hidden="true" />}
-                  </div>
+                  {showAuthor ? (
+                    <div className="chat-meta flex items-baseline gap-2">
+                      <span className="chat-author">{message.user_name}</span>
+                    </div>
+                  ) : null}
                   <div className="chat-content-row">
                     <p className="chat-text">{renderMessageText(message.text)}</p>
                     <span className="chat-time-wrap">
