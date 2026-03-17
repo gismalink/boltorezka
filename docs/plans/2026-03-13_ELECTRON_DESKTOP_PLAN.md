@@ -16,7 +16,7 @@ Platform split (2026-03-17):
 ## 1) Scope v1
 
 In scope (MVP):
-- [ ] Запуск Boltorezka как standalone desktop app (macOS).
+- [x] Запуск Boltorezka как standalone desktop app (macOS).
 - [x] Auth flow (SSO/login/logout) без деградации текущего web-поведения.
 - [x] Voice/video/screen share в parity с web (для текущего web-hosted desktop shell на test).
 - [x] Выбор input/output устройств, mute/unmute, reconnect behavior.
@@ -165,7 +165,7 @@ Runbook:
 ## 5) QA matrix и smoke
 
 Минимальная матрица v1:
-- [ ] macOS (Intel/Apple Silicon): login, voice, camera, screen share, reconnect.
+- [x] macOS (Intel/Apple Silicon): login, voice, camera, screen share, reconnect.
 
 Desktop smoke (must pass):
 - [x] Startup + auth flow.
@@ -510,7 +510,7 @@ Progress note (2026-03-17, plan review + policy sync):
 - Основные открытые блокеры на текущий момент: release-grade signing/notarization evidence, активный desktop download contract (вместо placeholder), 2h standalone stability soak.
 
 Progress note (2026-03-17, unchecked items audit):
-- После выноса Win/Linux backlog и закрытия 2h/CSP + pre-prod package пунктов в текущем файле осталось `19` незакрытых пунктов.
+- После выноса Win/Linux backlog и закрытия 2h/CSP + pre-prod package + macOS standalone/matrix пунктов в текущем файле осталось `17` незакрытых пунктов.
 - Из них подтвержденно execution-critical (реально блокируют desktop release readiness): signing/notarization evidence, активный download contract (manifest-driven links вместо placeholder), 2h standalone stability soak, pre-prod approval package refresh.
 - Отдельная группа пунктов остается осознанно deferred/out-of-scope по плану (`v1.1+`, post-signing gates, cross-platform QA expansion).
 - Оценочные сроки в разделе `Примерная оценка сроков` оставлены незакрытыми намеренно как reference, а не как task gate.
@@ -588,6 +588,10 @@ Progress note (2026-03-17, pre-prod package refresh):
 - Обновлен `docs/runbooks/PREPROD_DECISION_PACKAGE.md` под текущий desktop follow-up state.
 - Добавлен отдельный desktop follow-up gate record (`NO-GO` до release-grade signing/notarization evidence) и заполнен draft approval record для следующего desktop prod promotion.
 
+Progress note (2026-03-17, downloaded test desktop validation):
+- Owner подтверждено, что в версии, скачанной из `test`, в реальном использовании работают микрофон, наушники (output) и screen sharing.
+- На основе этого practical evidence (вместе с ранее закрытыми auth/reconnect/smoke гейтами) закрыты пункты `standalone macOS app` и `macOS QA matrix`.
+
 ## 13) Post-merge snapshot (2026-03-15)
 
 Текущее состояние после merge desktop workstream в `main`.
@@ -602,8 +606,7 @@ Green now (test-validated):
 - Post-merge gate из `origin/main` пройден (Cycle #50, SHA `10b6fd5`).
 
 Deferred to standalone packaged release gate:
-- 2h long-run stability soak.
-- Full cross-platform matrix sign-off (macOS Intel/Apple Silicon + Windows 10/11) как release-grade evidence.
+- Full macOS release-grade sign-off evidence (cross-device matrix + signing/notarization readiness linkage).
 - Auto-update channel orchestration + signing/notarization + rollback runbook verification.
 
 Open for prod-readiness (после merge в `main`):

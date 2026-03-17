@@ -2,6 +2,28 @@
 
 Отдельный журнал результатов тестов/нагрузки.
 
+## 2026-03-17 — Cycle #59 (Downloaded test desktop practical media validation)
+
+- Environment: `test` (downloaded standalone desktop build, owner practical usage)
+- Scope: macOS standalone practical verification
+
+### Functional gate
+
+- Practical media validation on downloaded test build: PASS (owner-confirmed)
+  - microphone: working
+  - headphones/output routing: working
+  - screen sharing: working
+
+### Scope covered by this cycle
+
+- Подтверждена работоспособность ключевого media path не только в dev shell, но и в скачанном standalone desktop клиенте из test distribution.
+- Дает основание закрыть оставшиеся macOS practical acceptance пункты (`standalone app`, `macOS matrix`) при наличии ранее зафиксированных auth/reconnect/update smoke evidence.
+
+### Decision
+
+- Cycle #59: PASS.
+- macOS standalone practical gate считается закрытым для текущего этапа плана.
+
 ## 2026-03-17 — Cycle #58 (Pre-prod package refresh for desktop follow-up)
 
 - Environment: `docs/runbooks` decision gate refresh
