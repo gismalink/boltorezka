@@ -2,6 +2,10 @@
 
 Цель: выпустить desktop-версию Boltorezka с максимальным переиспользованием текущего web-клиента, без регрессий в realtime/voice/video и с соблюдением текущего GitOps-процесса (feature -> test -> smoke -> main -> prod).
 
+Platform split (2026-03-17):
+- Windows backlog: `docs/plans/2026-03-17_ELECTRON_DESKTOP_WINDOWS_PLAN.md`
+- Linux backlog: `docs/plans/2026-03-17_ELECTRON_DESKTOP_LINUX_PLAN.md`
+
 ## 0) Decision summary
 
 - [x] Базовая платформа для v1: Electron.
@@ -12,7 +16,7 @@
 ## 1) Scope v1
 
 In scope (MVP):
-- [ ] Запуск Boltorezka как standalone desktop app (macOS + Windows).
+- [ ] Запуск Boltorezka как standalone desktop app (macOS).
 - [x] Auth flow (SSO/login/logout) без деградации текущего web-поведения.
 - [x] Voice/video/screen share в parity с web (для текущего web-hosted desktop shell на test).
 - [x] Выбор input/output устройств, mute/unmute, reconnect behavior.
@@ -22,7 +26,6 @@ In scope (MVP):
 Out of scope (v1.1+):
 - [ ] Tray-first UX и background call mode.
 - [ ] Offline mode.
-- [ ] Linux release как production target.
 - [ ] Расширенные deep-link сценарии и rich notifications.
 
 ## 2) Архитектурный профиль
@@ -113,7 +116,6 @@ Definition of done:
 
 ### 4.3 RTC validation
 - [x] Проверить media permissions на macOS.
-- [ ] Проверить media permissions на Windows.
 - [x] Проверить reconnect при network flap.
 - [x] Проверить поведение после sleep/wake ноутбука.
 - [x] Проверить длительную сессию + переключения девайсов (15m/30m practical gates).
@@ -164,7 +166,6 @@ Runbook:
 
 Минимальная матрица v1:
 - [ ] macOS (Intel/Apple Silicon): login, voice, camera, screen share, reconnect.
-- [ ] Windows 10/11: login, voice, camera, screen share, reconnect.
 
 Desktop smoke (must pass):
 - [x] Startup + auth flow.
@@ -497,13 +498,19 @@ Progress note (2026-03-17, desktop media permissions fix + cleanup):
 Progress note (2026-03-17, plan review + policy sync):
 - Выполнена ревизия незакрытых пунктов плана: media permissions разделены на `macOS=done` и `Windows=pending`.
 - Зафиксировано обязательное правило release discipline для frontend-фиксов: rebuild/publish всего клиентского набора в контуре (`web + desktop` и следующие платформы) на каждый cross-client frontend/runtime fix.
-- Основные открытые блокеры на текущий момент: release-grade signing/notarization evidence, активный desktop download contract (вместо placeholder), 2h standalone stability soak, Windows media validation.
+- Основные открытые блокеры на текущий момент: release-grade signing/notarization evidence, активный desktop download contract (вместо placeholder), 2h standalone stability soak.
 
 Progress note (2026-03-17, unchecked items audit):
-- Повторно проверены все незакрытые чекбоксы: всего `36` пунктов со статусом `[ ]`.
-- Из них подтвержденно execution-critical (реально блокируют desktop release readiness): signing/notarization evidence, Windows media permissions validation, активный download contract (manifest-driven links вместо placeholder), 2h standalone stability soak, pre-prod approval package refresh.
-- Отдельная группа `[ ]` остается осознанно deferred/out-of-scope по плану (`v1.1+`, post-signing gates, cross-platform QA expansion).
+- После выноса Win/Linux backlog в отдельные планы в текущем файле осталось `25` незакрытых пунктов.
+- Из них подтвержденно execution-critical (реально блокируют desktop release readiness): signing/notarization evidence, активный download contract (manifest-driven links вместо placeholder), 2h standalone stability soak, pre-prod approval package refresh.
+- Отдельная группа пунктов остается осознанно deferred/out-of-scope по плану (`v1.1+`, post-signing gates, cross-platform QA expansion).
 - Оценочные сроки в разделе `Примерная оценка сроков` оставлены незакрытыми намеренно как reference, а не как task gate.
+
+Progress note (2026-03-17, platform backlog split):
+- Все незавершенные Win/Linux задачи вынесены в отдельные документы:
+	- `docs/plans/2026-03-17_ELECTRON_DESKTOP_WINDOWS_PLAN.md`
+	- `docs/plans/2026-03-17_ELECTRON_DESKTOP_LINUX_PLAN.md`
+- Текущий `2026-03-13_ELECTRON_DESKTOP_PLAN.md` оставлен как основной macOS/general execution plan.
 
 Progress note (2026-03-17, room/chat behavior refactor rollout):
 - Реализовано разделение `joined room` и `active chat room`: чат открывается независимо от voice/video join, text-only комнаты работают как chat-only, для `text+voice`/`text+voice+video` добавлена hover-кнопка `Открыть чат` с active-state подсветкой.
