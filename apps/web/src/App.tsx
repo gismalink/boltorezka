@@ -349,6 +349,10 @@ export function App() {
   const canCreateRooms = user?.role === "admin" || user?.role === "super_admin";
   const canManageUsers = canCreateRooms;
   const canPromote = user?.role === "super_admin";
+  const canUseService = Boolean(
+    user && (user.role === "admin" || user.role === "super_admin" || user.access_state === "active")
+  );
+  const serviceToken = canUseService ? token : "";
   const canManageAudioQuality = canPromote;
   const canViewTelemetry = canPromote || canCreateRooms;
   const locale = LOCALE_BY_LANG[lang];
@@ -436,7 +440,7 @@ export function App() {
 
   const livekitVoiceRuntime = useLivekitVoiceRuntime({
     t,
-    token,
+    token: serviceToken,
     localUserId: user?.id || "",
     roomSlug,
     allowVideoStreaming,
@@ -633,7 +637,7 @@ export function App() {
     handleIncomingScreenShareState,
     handleToggleScreenShare
   } = useScreenShareOrchestrator({
-    hasSessionToken: Boolean(token),
+    hasSessionToken: Boolean(serviceToken),
     roomSlug,
     currentRoomKind,
     currentRoomSupportsScreenShare,
@@ -924,7 +928,7 @@ export function App() {
   });
 
   const { loadOlderMessages } = useRealtimeChatLifecycle({
-    token,
+    token: serviceToken,
     reconnectNonce: realtimeReconnectNonce,
     joinedRoomSlug: roomSlug,
     chatRoomSlug,
@@ -1593,6 +1597,38 @@ export function App() {
               }}
             >
               Открыть веб-версию
+            </button>
+          </div>
+        </section>
+      </main>
+    );
+  }
+
+  if (user && !canUseService) {
+    const blocked = user.access_state === "blocked";
+    return (
+      <main className="app legacy-layout mx-auto grid h-[100dvh] max-h-[100dvh] w-full max-w-[760px] place-items-center p-6">
+        <section className="settings-sheet w-full max-w-[560px] p-6 text-center">
+          <h1 className="text-2xl font-semibold">
+            {blocked ? t("access.blockedTitle") : t("access.pendingTitle")}
+          </h1>
+          <p className="mt-3 text-sm opacity-80">
+            {blocked ? t("access.blockedMessage") : t("access.pendingMessage")}
+          </p>
+          <div className="mt-5 flex justify-center gap-2">
+            <button
+              type="button"
+              className="secondary"
+              onClick={() => window.location.reload()}
+            >
+              {t("access.refresh")}
+            </button>
+            <button
+              type="button"
+              className="secondary"
+              onClick={() => logout()}
+            >
+              {t("access.logout")}
             </button>
           </div>
         </section>
