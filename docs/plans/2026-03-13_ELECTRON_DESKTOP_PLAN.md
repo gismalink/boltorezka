@@ -510,7 +510,7 @@ Progress note (2026-03-17, plan review + policy sync):
 - Основные открытые блокеры на текущий момент: release-grade signing/notarization evidence, активный desktop download contract (вместо placeholder), 2h standalone stability soak.
 
 Progress note (2026-03-17, unchecked items audit):
-- После выноса Win/Linux backlog и закрытия 2h/CSP пунктов в текущем файле осталось `20` незакрытых пунктов.
+- После выноса Win/Linux backlog и закрытия 2h/CSP + pre-prod package пунктов в текущем файле осталось `19` незакрытых пунктов.
 - Из них подтвержденно execution-critical (реально блокируют desktop release readiness): signing/notarization evidence, активный download contract (manifest-driven links вместо placeholder), 2h standalone stability soak, pre-prod approval package refresh.
 - Отдельная группа пунктов остается осознанно deferred/out-of-scope по плану (`v1.1+`, post-signing gates, cross-platform QA expansion).
 - Оценочные сроки в разделе `Примерная оценка сроков` оставлены незакрытыми намеренно как reference, а не как task gate.
@@ -582,7 +582,11 @@ Checklist continuation (2026-03-15, updated):
 Checklist continuation (2026-03-15, post-merge):
 - [x] Merge `feature/electron-desktop-foundation` в `main`.
 - [x] Выполнить post-merge test gate уже из `origin/main` (`deploy:test:smoke` PASS, включая `desktop_update_feed=pass`).
-- [ ] Обновить pre-prod пакет и подготовить explicit approval запись перед возможным prod rollout.
+- [x] Обновить pre-prod пакет и подготовить explicit approval запись перед возможным prod rollout.
+
+Progress note (2026-03-17, pre-prod package refresh):
+- Обновлен `docs/runbooks/PREPROD_DECISION_PACKAGE.md` под текущий desktop follow-up state.
+- Добавлен отдельный desktop follow-up gate record (`NO-GO` до release-grade signing/notarization evidence) и заполнен draft approval record для следующего desktop prod promotion.
 
 ## 13) Post-merge snapshot (2026-03-15)
 

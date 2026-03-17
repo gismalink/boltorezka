@@ -2,6 +2,24 @@
 
 Отдельный журнал результатов тестов/нагрузки.
 
+## 2026-03-17 — Cycle #58 (Pre-prod package refresh for desktop follow-up)
+
+- Environment: `docs/runbooks` decision gate refresh
+- Scope: desktop follow-up readiness after latest test validations
+
+### Functional gate
+
+- Pre-prod package refresh: PASS
+  - `docs/runbooks/PREPROD_DECISION_PACKAGE.md` updated with:
+    - desktop follow-up decision status (`NO-GO` for next desktop prod promotion),
+    - explicit approval draft record for next desktop prod rollout,
+    - refreshed desktop gate record referencing latest test evidence.
+
+### Decision
+
+- Cycle #58: PASS.
+- Plan checkbox `Обновить pre-prod пакет и подготовить explicit approval запись` can be treated as closed.
+
 ## 2026-03-17 — Cycle #57 (Manual 3h desktop usage + CSP audit)
 
 - Environment: `test` (desktop client practical usage) + local code/security verification

@@ -1,6 +1,6 @@
 # Boltorezka Pre-Prod Decision Package
 
-Дата: 2026-03-15  
+Дата: 2026-03-17  
 Среда подготовки: `test`  
 Релизный поток: `feature/* -> test -> merge -> main -> prod`
 
@@ -9,6 +9,7 @@
 - Decision status: **GO EXECUTED (controlled prod rollout completed on 2026-03-15)**.
 - Причина: выполнены pre-prod gate criteria, заполнен approval record и выполнен controlled prod rollout из `origin/main`.
 - Production rollout policy: только из `origin/main` после отдельного explicit approval.
+- Desktop follow-up status (2026-03-17): **NO-GO for next prod desktop promotion** до release-grade signing/notarization evidence.
 - SFU readiness reference: `docs/runbooks/SFU_STAGE4_PROD_READINESS_PACKAGE.md`.
 
 ## 2) Scope of evidence
@@ -190,6 +191,15 @@
 - Decision: `GO`
 - Timestamp UTC: `2026-03-15T17:23:35Z`
 
+### Approval record (desktop follow-up draft, 2026-03-17)
+
+- Release Owner: `David Shvartsman`
+- Rollback Owner: `David Shvartsman`
+- Target prod ref: `origin/main@<next-desktop-sha>`
+- Rollback ref: `a19185a6f7e354f91a52608c4fa408964dca279c`
+- Decision: `NO-GO (pending release-grade signing/notarization evidence)`
+- Timestamp UTC: `2026-03-17T00:00:00Z`
+
 ## 8) MVP-like readiness gate (required before prod)
 
 Этот раздел определяет, когда пункт roadmap “вернуться к `prod`” считается выполненным.
@@ -274,3 +284,15 @@
 - Rollback Owner: `David Shvartsman`
 - Rollback ref: `104e33142039e82736d18d7f1e24e38af260e668`
 - Final decision: `GO (controlled rollout completed on 2026-03-15, deploy SHA a19185a6f7e354f91a52608c4fa408964dca279c)`
+
+### 8.5 Desktop follow-up gate record (refresh 2026-03-17)
+
+- Scope: desktop post-rollout hardening/validation cycle in `test`.
+- Latest desktop evidence highlights:
+  - `smoke:desktop:update-feed` in postdeploy: `PASS`
+  - `test->test` auto-update packaged evidence: `PASS`
+  - `desktop-artifacts` self-signed/pfx validation run: `PASS` (`run 23209256293`)
+  - 2h practical stability gate: `PASS` (owner-confirmed ~3h session)
+- Remaining mandatory gate before next desktop prod promotion:
+  - release-grade signing/notarization evidence (`trusted signing` path for prod policy).
+- Decision for next desktop prod promotion: `NO-GO` until signing/notarization gate is green.
