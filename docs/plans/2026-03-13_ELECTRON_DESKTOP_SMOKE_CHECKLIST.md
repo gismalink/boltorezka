@@ -15,10 +15,10 @@
 
 ## 2) Runtime smoke (manual, test env)
 
-- [ ] Приложение стартует и показывает UI Boltorezka.
-- [ ] Авторизация открывается штатно (SSO redirect без ошибок).
-- [ ] Подключение к комнате выполняется.
-- [ ] Микрофон mute/unmute работает.
+- [x] Приложение стартует и показывает UI Boltorezka.
+- [x] Авторизация открывается штатно (SSO redirect без ошибок).
+- [x] Подключение к комнате выполняется.
+- [x] Микрофон mute/unmute работает.
 - [x] Screen share start/stop работает.
 
 ## 3) Reconnect and stability smoke
@@ -45,8 +45,8 @@
 ## 5) Release gate policy
 
 - [x] Все desktop изменения идут через feature branch.
-- [ ] Перед merge в `main`: foundation smoke + runtime smoke на test.
-- [ ] Перед `prod`: merge в `main` -> test gate -> smoke -> явное подтверждение.
+- [x] Перед merge в `main`: foundation smoke + runtime smoke на test.
+- [x] Перед `prod`: merge в `main` -> test gate -> smoke -> явное подтверждение.
 
 ## 6) Progress note (2026-03-13)
 
@@ -65,3 +65,4 @@
 - [x] Test rollout после rollback desktop permissions прошел, manual подтверждение screen share/devices, evidence: `docs/status/TEST_RESULTS.md` (Cycle #37).
 - [x] Forced app update path (version mismatch -> recovery) проверен автоматизированным smoke, evidence: `docs/status/TEST_RESULTS.md` (Cycle #38).
 - [x] Зафиксирована practical stability policy в runbook (`15-30m` per iteration, `2h` только на standalone release gate).
+- [x] Runtime manual smoke и release gate policy синхронизированы с актуальным evidence (Cycles #59, #50, #51).
