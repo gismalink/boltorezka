@@ -1,8 +1,8 @@
 import { useEffect } from "react";
 import { api } from "../../../api";
+import { VERSION_UPDATE_PENDING_KEY } from "../../../constants/appConfig";
 
 const VERSION_POLL_INTERVAL_MS = 60000;
-const VERSION_UPDATE_PENDING_KEY = "boltorezka_update_reload_pending";
 
 export function useBuildVersionSync(clientBuildSha: string) {
   useEffect(() => {

@@ -1,4 +1,16 @@
 export { AppHeader } from "./AppHeader";
+export { AppWorkspacePanels } from "./AppWorkspacePanels";
+export {
+	AccessStateGate,
+	AppUpdatedOverlay,
+	DesktopBrowserCompletionGate,
+	DesktopUpdateBanner,
+	FirstRunIntroOverlay,
+	GuestLoginGate,
+	MediaAccessDeniedBanner,
+	SessionMovedOverlay
+} from "./AppGuardsAndOverlays";
+export { AppWorkspaceContent } from "./AppWorkspaceContent";
 export { ChatPanel } from "./ChatPanel";
 export { PopupPortal } from "./PopupPortal";
 export { RoomsPanel } from "./RoomsPanel";
