@@ -14,6 +14,8 @@ DEPLOY_NOTES="${DEPLOY_NOTES:-}"
 EDGE_RELEASE_LOG_SCRIPT="${EDGE_RELEASE_LOG_SCRIPT:-$HOME/srv/edge/scripts/auth-cutover-release-log.sh}"
 AUTO_ROLLBACK_ON_FAIL="${AUTO_ROLLBACK_ON_FAIL:-0}"
 AUTO_ROLLBACK_SMOKE="${AUTO_ROLLBACK_SMOKE:-1}"
+ENABLE_DESKTOP_BUILD="${ENABLE_DESKTOP_BUILD:-0}"
+DESKTOP_BUILD_BASE_URL="${DESKTOP_PUBLIC_BASE_URL:-https://test.boltorezka.gismalink.art}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
@@ -37,12 +39,24 @@ set +e
 "$SCRIPT_DIR/deploy-test-from-ref.sh" "$GIT_REF" "$REPO_DIR"
 DEPLOY_EXIT=$?
 
+DESKTOP_BUILD_EXIT=0
+if [[ "$DEPLOY_EXIT" -eq 0 && "$ENABLE_DESKTOP_BUILD" == "1" ]]; then
+  DESKTOP_CHANNEL="${DESKTOP_CHANNEL:-test}" \
+  DESKTOP_PUBLIC_BASE_URL="$DESKTOP_BUILD_BASE_URL" \
+  "$SCRIPT_DIR/build-desktop-server-and-publish.sh" "$GIT_REF" "$REPO_DIR"
+  DESKTOP_BUILD_EXIT=$?
+fi
+
 SMOKE_EXIT=0
-if [[ "$DEPLOY_EXIT" -eq 0 ]]; then
+if [[ "$DEPLOY_EXIT" -eq 0 && "$DESKTOP_BUILD_EXIT" -eq 0 ]]; then
   "$SCRIPT_DIR/postdeploy-smoke-test.sh" "$REPO_DIR"
   SMOKE_EXIT=$?
 else
-  SMOKE_EXIT=$DEPLOY_EXIT
+  if [[ "$DEPLOY_EXIT" -ne 0 ]]; then
+    SMOKE_EXIT=$DEPLOY_EXIT
+  else
+    SMOKE_EXIT=$DESKTOP_BUILD_EXIT
+  fi
 fi
 set -e
 
@@ -107,6 +121,18 @@ if [[ "$SMOKE_STATUS" == "fail" && "$AUTO_ROLLBACK_ON_FAIL" == "1" && -n "$PREV_
 fi
 
 FINAL_NOTES="$DEPLOY_NOTES"
+if [[ "$ENABLE_DESKTOP_BUILD" == "1" ]]; then
+  if [[ "$DESKTOP_BUILD_EXIT" -eq 0 ]]; then
+    DESKTOP_BUILD_NOTE="desktop_build=pass"
+  else
+    DESKTOP_BUILD_NOTE="desktop_build=fail"
+  fi
+  if [[ -n "$FINAL_NOTES" ]]; then
+    FINAL_NOTES="$FINAL_NOTES; $DESKTOP_BUILD_NOTE"
+  else
+    FINAL_NOTES="$DESKTOP_BUILD_NOTE"
+  fi
+fi
 if [[ -n "${SMOKE_SUMMARY_TEXT:-}" ]]; then
   if [[ -n "$FINAL_NOTES" ]]; then
     FINAL_NOTES="$FINAL_NOTES; $SMOKE_SUMMARY_TEXT"

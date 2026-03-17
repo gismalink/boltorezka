@@ -8,6 +8,17 @@ function resolveConfiguredPublicOrigin(): string {
   return normalizeOrigin(resolvePublicOrigin());
 }
 
+export type TransportRuntimeId = "web-dev" | "web-prod" | "desktop-dev" | "desktop-prod";
+
+export type TransportRuntimeSnapshot = {
+  runtimeId: TransportRuntimeId;
+  isDesktopFileRuntime: boolean;
+  publicOrigin: string;
+  apiBase: string;
+  wsBase: string;
+  preferSecureTransport: boolean;
+};
+
 function isDesktopFileRuntime(): boolean {
   if (typeof window === "undefined") {
     return false;
@@ -19,6 +30,14 @@ function isDesktopFileRuntime(): boolean {
 function resolveWindowWsBase(): string {
   const protocol = window.location.protocol === "https:" ? "wss" : "ws";
   return `${protocol}://${window.location.host}`;
+}
+
+function resolveWindowApiBase(): string {
+  if (typeof window === "undefined") {
+    return "";
+  }
+
+  return `${window.location.protocol}//${window.location.host}`;
 }
 
 function toWebSocketOrigin(httpOrigin: string): string {
@@ -48,13 +67,38 @@ function shouldPreferSecureTransport(): boolean {
   return window.location.protocol === "https:";
 }
 
-export function resolveRealtimeWsBase(): string {
-  const configuredWsOrigin = toWebSocketOrigin(resolveConfiguredPublicOrigin());
-  if (configuredWsOrigin) {
-    return configuredWsOrigin;
+function resolveRuntimeId(isDesktopRuntime: boolean, preferSecureTransport: boolean): TransportRuntimeId {
+  if (isDesktopRuntime) {
+    return preferSecureTransport ? "desktop-prod" : "desktop-dev";
   }
 
-  return resolveWindowWsBase();
+  return preferSecureTransport ? "web-prod" : "web-dev";
+}
+
+export function resolveTransportRuntimeSnapshot(): TransportRuntimeSnapshot {
+  const configuredPublicOrigin = resolveConfiguredPublicOrigin();
+  const preferredSecure = shouldPreferSecureTransport();
+  const desktopFileRuntime = isDesktopFileRuntime();
+  const wsFromPublicOrigin = toWebSocketOrigin(configuredPublicOrigin);
+  const wsBase = wsFromPublicOrigin || resolveWindowWsBase();
+  const apiBase = configuredPublicOrigin || resolveWindowApiBase();
+
+  return {
+    runtimeId: resolveRuntimeId(desktopFileRuntime, preferredSecure),
+    isDesktopFileRuntime: desktopFileRuntime,
+    publicOrigin: configuredPublicOrigin,
+    apiBase,
+    wsBase,
+    preferSecureTransport: preferredSecure
+  };
+}
+
+export function resolveRealtimeWsBase(): string {
+  return resolveTransportRuntimeSnapshot().wsBase;
+}
+
+export function resolveApiBase(): string {
+  return resolveTransportRuntimeSnapshot().apiBase;
 }
 
 export function normalizeLivekitSignalUrl(rawUrl: string): string {
@@ -63,9 +107,11 @@ export function normalizeLivekitSignalUrl(rawUrl: string): string {
     return value;
   }
 
+  const snapshot = resolveTransportRuntimeSnapshot();
+
   try {
     const parsed = new URL(value);
-    if (shouldPreferSecureTransport() && parsed.protocol === "ws:") {
+    if (snapshot.preferSecureTransport && parsed.protocol === "ws:") {
       parsed.protocol = "wss:";
       if (parsed.port === "7880") {
         parsed.port = "7881";
@@ -96,4 +142,10 @@ export function resolveSsoStartUrl(provider: "google" | "yandex", returnUrl: str
   const ssoPath = `/v1/auth/sso/start?provider=${encodeURIComponent(provider)}&returnUrl=${encodeURIComponent(returnUrl)}`;
   const configuredOrigin = resolveConfiguredPublicOrigin();
   return configuredOrigin ? `${configuredOrigin}${ssoPath}` : ssoPath;
+}
+
+export function resolveSsoLogoutUrl(returnUrl: string): string {
+  const logoutPath = `/v1/auth/sso/logout?returnUrl=${encodeURIComponent(returnUrl)}`;
+  const configuredOrigin = resolveConfiguredPublicOrigin();
+  return configuredOrigin ? `${configuredOrigin}${logoutPath}` : logoutPath;
 }

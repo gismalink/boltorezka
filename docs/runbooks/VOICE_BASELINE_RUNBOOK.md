@@ -106,3 +106,30 @@ RNNoise в Boltorezka работает как client-side preprocessing profile 
 Если критерии не выполнены, RNNoise остаётся opt-in режимом.
 
 Ссылка на техдизайн: `docs/architecture/2026-03-12_RNNOISE_CLIENT_TECH_DESIGN.md`.
+
+## 10) Пользовательские типы RTC-ошибок (UI + support)
+
+Цель: показывать пользователю тип проблемы и действие, а не общий текст "нет RTC".
+
+Базовые коды:
+
+- `VC-ICE-001` (`ICE_CONNECTIVITY`): не установлена peer connection, обычно NAT/VPN/локальная сеть.
+- `VC-TURN-001` (`TURN_UNREACHABLE`): relay/TURN путь недоступен или не сработал.
+- `VC-AUTH-001` (`SIGNALING_AUTH`): устаревшая сессия/токен signaling.
+- `VC-NET-001` (`SIGNALING_NETWORK`): сетевая ошибка до media-фазы (ws/timeout/fetch).
+- `VC-MEDIA-001` (`MEDIA_PERMISSION`): нет разрешения на микрофон.
+- `VC-MEDIA-002` (`MEDIA_DEVICE_BUSY`): микрофон занят другим приложением.
+- `VC-AUDIO-001` (`AUTOPLAY_BLOCKED`): браузер заблокировал autoplay audio.
+- `VC-UNK-001` (`UNKNOWN`): не классифицированная ошибка.
+
+Рекомендуемые фразы support (коротко):
+
+1. Сообщите пользователю тип и код ошибки из toast (например, `VC-ICE-001`).
+2. Для `VC-ICE-001`/`VC-TURN-001`: "Отключите VPN/прокси, смените сеть, повторите вход".
+3. Для `VC-AUTH-001`: "Обновите страницу и войдите заново".
+4. Для `VC-MEDIA-*`: "Проверьте доступ к микрофону и занятость устройства".
+
+Operational note:
+
+- В client telemetry пишется событие `rtc_connect_failed` c `category`, `code`, `reason`.
+- В call log пишется расширенная строка `livekit connect failed category=... code=...` для triage.

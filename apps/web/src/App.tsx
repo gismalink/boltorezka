@@ -434,6 +434,7 @@ export function App() {
   }, [pushToast, selectedInputProfile, t]);
 
   const livekitVoiceRuntime = useLivekitVoiceRuntime({
+    t,
     token,
     localUserId: user?.id || "",
     roomSlug,

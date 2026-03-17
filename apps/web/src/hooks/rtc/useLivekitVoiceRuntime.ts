@@ -21,7 +21,7 @@ import type { AudioQuality } from "../../domain";
 import type { PresenceMember } from "../../domain";
 import type { CallStatus } from "../../services";
 import { trackClientEvent } from "../../telemetry";
-import { normalizeLivekitSignalUrl } from "../../transportRuntime";
+import { normalizeLivekitSignalUrl, resolveTransportRuntimeSnapshot } from "../../transportRuntime";
 import { RnnoiseAudioProcessor, type RnnoiseSuppressionLevel } from "./rnnoiseAudioProcessor";
 import type {
   CallMicStatePayload,
@@ -35,6 +35,7 @@ import type {
 } from "./voiceCallTypes";
 
 type UseLivekitVoiceRuntimeArgs = {
+  t: (key: string) => string;
   token: string;
   localUserId: string;
   roomSlug: string;
@@ -148,6 +149,110 @@ const isExpectedDisconnectError = (error: unknown): boolean => {
     || normalized.includes("aborterror");
 };
 
+type RtcConnectErrorCategory =
+  | "ICE_CONNECTIVITY"
+  | "TURN_UNREACHABLE"
+  | "SIGNALING_AUTH"
+  | "SIGNALING_NETWORK"
+  | "MEDIA_PERMISSION"
+  | "MEDIA_DEVICE_BUSY"
+  | "AUTOPLAY_BLOCKED"
+  | "UNKNOWN";
+
+type ClassifiedRtcConnectError = {
+  category: RtcConnectErrorCategory;
+  code: string;
+  reason: string;
+};
+
+const classifyRtcConnectError = (error: unknown): ClassifiedRtcConnectError => {
+  const message = error instanceof Error ? error.message : String(error || "unknown error");
+  const normalized = message.toLowerCase();
+  const name = error && typeof error === "object" && "name" in error
+    ? String((error as { name?: unknown }).name || "")
+    : "";
+  const normalizedName = name.toLowerCase();
+
+  if (normalized.includes("could not establish pc connection") || normalized.includes("ice") || normalized.includes("peer connection")) {
+    return {
+      category: "ICE_CONNECTIVITY",
+      code: "VC-ICE-001",
+      reason: message
+    };
+  }
+
+  if (normalized.includes("turn") || normalized.includes("relay")) {
+    return {
+      category: "TURN_UNREACHABLE",
+      code: "VC-TURN-001",
+      reason: message
+    };
+  }
+
+  if (normalized.includes("401") || normalized.includes("403") || normalized.includes("unauthorized") || normalized.includes("forbidden") || normalized.includes("token")) {
+    return {
+      category: "SIGNALING_AUTH",
+      code: "VC-AUTH-001",
+      reason: message
+    };
+  }
+
+  if (normalized.includes("websocket") || normalized.includes("network") || normalized.includes("timeout") || normalized.includes("failed to fetch")) {
+    return {
+      category: "SIGNALING_NETWORK",
+      code: "VC-NET-001",
+      reason: message
+    };
+  }
+
+  if (normalizedName === "notallowederror" && normalized.includes("play")) {
+    return {
+      category: "AUTOPLAY_BLOCKED",
+      code: "VC-AUDIO-001",
+      reason: message
+    };
+  }
+
+  if (normalizedName === "notallowederror" || normalized.includes("permission") || normalized.includes("denied")) {
+    return {
+      category: "MEDIA_PERMISSION",
+      code: "VC-MEDIA-001",
+      reason: message
+    };
+  }
+
+  if (normalizedName === "notreadableerror" || normalized.includes("device in use") || normalized.includes("could not start audio source")) {
+    return {
+      category: "MEDIA_DEVICE_BUSY",
+      code: "VC-MEDIA-002",
+      reason: message
+    };
+  }
+
+  return {
+    category: "UNKNOWN",
+    code: "VC-UNK-001",
+    reason: message
+  };
+};
+
+const buildRtcConnectErrorMessage = (
+  classified: ClassifiedRtcConnectError,
+  t: (key: string) => string
+): string => {
+  const keyByCategory: Record<RtcConnectErrorCategory, string> = {
+    ICE_CONNECTIVITY: "rtc.error.iceConnectivity",
+    TURN_UNREACHABLE: "rtc.error.turnUnreachable",
+    SIGNALING_AUTH: "rtc.error.signalingAuth",
+    SIGNALING_NETWORK: "rtc.error.signalingNetwork",
+    MEDIA_PERMISSION: "rtc.error.mediaPermission",
+    MEDIA_DEVICE_BUSY: "rtc.error.mediaDeviceBusy",
+    AUTOPLAY_BLOCKED: "rtc.error.autoplayBlocked",
+    UNKNOWN: "rtc.error.unknown"
+  };
+  return `${t(keyByCategory[classified.category])} [${classified.code}]`;
+};
+
   const isAutoplayBlockedError = (error: unknown): boolean => {
     if (!error || typeof error !== "object") {
       return false;
@@ -170,6 +275,7 @@ function buildRemoteMicMutedSet(room: Room): Set<string> {
 }
 
 export function useLivekitVoiceRuntime({
+  t,
   token,
   localUserId,
   roomSlug,
@@ -768,7 +874,13 @@ export function useLivekitVoiceRuntime({
     setConnectingPeerUserIds(peerIds);
     setLocalVoiceMediaStatusSummary("connecting");
     setCallStatus("connecting");
+    const transport = resolveTransportRuntimeSnapshot();
     pushCallLog(`livekit connect start for ${roomSlug}`);
+    if (transport.isDesktopFileRuntime) {
+      pushCallLog(
+        `transport runtime=${transport.runtimeId} api=${transport.apiBase || "n/a"} ws=${transport.wsBase || "n/a"} publicOrigin=${transport.publicOrigin || "n/a"}`
+      );
+    }
 
     const connectPromise = (async () => {
       try {
@@ -891,9 +1003,7 @@ export function useLivekitVoiceRuntime({
         const signalUrl = normalizeLivekitSignalUrl(rawSignalUrl);
         pushCallLog(`livekit token trace=${String(livekit.traceId || "").trim() || "n/a"}`);
         pushCallLog(`livekit signal raw=${rawSignalUrl || "n/a"}`);
-        if (rawSignalUrl !== signalUrl) {
-          pushCallLog(`livekit signal resolved=${signalUrl}`);
-        }
+        pushCallLog(`livekit signal resolved=${signalUrl || "n/a"}`);
         await room.connect(signalUrl, livekit.token);
 
         const tracks = await createLocalTracks({
@@ -931,9 +1041,20 @@ export function useLivekitVoiceRuntime({
         setCallStatus("idle");
 
         if (!disconnectRequestedRef.current && !isExpectedDisconnectError(error)) {
-          pushToast(`LiveKit connect failed: ${error instanceof Error ? error.message : "unknown error"}`);
+          const classified = classifyRtcConnectError(error);
+          pushToast(buildRtcConnectErrorMessage(classified, t));
+          trackClientEvent("rtc_connect_failed", {
+            roomSlug,
+            category: classified.category,
+            code: classified.code,
+            reason: classified.reason
+          });
+          pushCallLog(
+            `livekit connect failed category=${classified.category} code=${classified.code} room=${roomSlug} reason=${classified.reason}`
+          );
+        } else {
+          pushCallLog(`livekit connect failed for ${roomSlug}`);
         }
-        pushCallLog(`livekit connect failed for ${roomSlug}`);
       } finally {
         connectInFlightRef.current = null;
         setConnectingPeerUserIds([]);
@@ -961,6 +1082,7 @@ export function useLivekitVoiceRuntime({
     selectedInputProfile,
     setCallStatus,
     setLastCallPeer,
+    t,
     token,
     videoStreamingEnabled,
     detachRemoteAudioTrack,

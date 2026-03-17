@@ -34,6 +34,10 @@
 
 - `ssh mac-mini 'cd ~/srv/boltorezka && TEST_REF=origin/main ALLOW_TEST_FROM_MAIN=1 npm run deploy:test:smoke'`
 
+Опционально: включить server-side desktop build+publish в тот же запуск:
+
+- `ssh mac-mini 'cd ~/srv/boltorezka && TEST_REF=origin/main ALLOW_TEST_FROM_MAIN=1 ENABLE_DESKTOP_BUILD=1 DESKTOP_CHANNEL=test DESKTOP_SIGNING_MODE=unsigned DESKTOP_PUBLIC_BASE_URL=https://test.boltorezka.gismalink.art npm run deploy:test:smoke'`
+
 4) При необходимости повторить post-deploy smoke отдельно:
 
 - `ssh mac-mini 'cd ~/srv/boltorezka && npm run smoke:test:postdeploy'`

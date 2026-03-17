@@ -150,11 +150,14 @@ Status:
 - Updated (2026-03-16): `Desktop app` tab в server menu переведен в UX-first placeholder режим (3 карточки `Windows/macOS/Linux` + disabled `Download` с tooltip `Soon`) без manifest fetch и без broken links до появления publishable desktop билдов.
 
 ### 4.7 Runtime routes centralization (web/desktop)
-- [ ] Вынести единый transport resolver для runtime-specific endpoint routing (API/WS/RTC/SSO) вместо разрозненных `window.location` веток.
-- [ ] Перевести RTC signal URL normalization и realtime WS base на единый resolver.
-- [ ] Зафиксировать runtime matrix (`web-dev`, `web-prod`, `desktop-dev`, `desktop-prod`) и инварианты протоколов (`https/wss`) в runbook.
-- [ ] Добавить диагностику endpoint resolution в desktop call log (raw/live resolved URL), чтобы ускорить triage RTC инцидентов.
+- [x] Вынести единый transport resolver для runtime-specific endpoint routing (API/WS/RTC/SSO) вместо разрозненных `window.location` веток.
+- [x] Перевести RTC signal URL normalization и realtime WS base на единый resolver.
+- [x] Зафиксировать runtime matrix (`web-dev`, `web-prod`, `desktop-dev`, `desktop-prod`) и инварианты протоколов (`https/wss`) в runbook.
+- [x] Добавить диагностику endpoint resolution в desktop call log (raw/live resolved URL), чтобы ускорить triage RTC инцидентов.
 - [ ] Прогнать targeted test smoke после рефакторинга (`smoke:realtime`, `smoke:livekit:token-flow`, desktop practical media check).
+
+Runbook:
+- `docs/runbooks/DESKTOP_RUNTIME_TRANSPORT_RUNBOOK.md`
 
 ## 5) QA matrix и smoke
 
@@ -482,11 +485,26 @@ Progress note (2026-03-17, unchecked items audit):
 - Отдельная группа `[ ]` остается осознанно deferred/out-of-scope по плану (`v1.1+`, post-signing gates, cross-platform QA expansion).
 - Оценочные сроки в разделе `Примерная оценка сроков` оставлены незакрытыми намеренно как reference, а не как task gate.
 
+Progress note (2026-03-17, room/chat behavior refactor rollout):
+- Реализовано разделение `joined room` и `active chat room`: чат открывается независимо от voice/video join, text-only комнаты работают как chat-only, для `text+voice`/`text+voice+video` добавлена hover-кнопка `Открыть чат` с active-state подсветкой.
+- Изменения выкачены в `test` из `origin/feature/desktop-unsigned-mode`, SHA `4e2546d`; `deploy:test:smoke` на сервере (`~/srv/boltorezka`) прошел green.
+
+Progress note (2026-03-17, 2h stability interim evidence):
+- Пассивный 2h мониторинг (`.deploy/manual-desktop-2h-monitor-20260317T071254Z.log`) прервался из-за внешнего фактора (отключение питания) на `113/120` сэмплах, без явного `FAILED`.
+- По owner decision результат принят как `условно PASS` для текущей итерации (interim evidence), без закрытия release-gate пункта standalone `2h` soak.
+
+Progress note (2026-03-17, runtime transport centralization phase 1 complete):
+- В `apps/web/src/transportRuntime.ts` внедрен единый runtime snapshot resolver (`runtimeId`, `apiBase`, `wsBase`, `publicOrigin`, secure transport policy) для web/desktop режимов.
+- API и SSO logout URL переведены на общий resolver (`apps/web/src/api.ts`, `apps/web/src/services/authController.ts`).
+- В desktop call log добавлены endpoint diagnostics перед LiveKit connect (`transport runtime/api/ws/publicOrigin`) и постоянная пара `livekit signal raw/resolved` для triage инцидентов класса `WS=ok, RTC=fail`.
+- Runtime matrix и protocol invariants зафиксированы в `docs/runbooks/DESKTOP_RUNTIME_TRANSPORT_RUNBOOK.md`.
+
 ## 11) Known Follow-ups
 
 - [x] Провести browser-level handoff soak (Chromium/WebKit/Firefox) поверх уже закрытого protocol-level soak и приложить агрегированное evidence к auth runbook.
 	- Дизайн: `docs/plans/2026-03-14_DESKTOP_HANDOFF_DETERMINISTIC_DESIGN.md`.
 - [ ] Выполнить 2h stability soak на standalone packaged desktop client (post-signing/notarization) и зафиксировать evidence в отдельном release-gate цикле.
+	- Interim note (2026-03-17): пассивный мониторинг `113/120` принят как `условно PASS` для текущего dev-цикла после power outage; полноценный release-gate пункт остается открытым.
 
 ## 12) Checklist continuation (2026-03-14)
 

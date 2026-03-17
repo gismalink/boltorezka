@@ -1,7 +1,7 @@
 import { api } from "../api";
 import { trackClientEvent } from "../telemetry";
 import type { User } from "../domain";
-import { resolveDesktopSsoReturnUrl, resolveSsoStartUrl } from "../transportRuntime";
+import { resolveDesktopSsoReturnUrl, resolveSsoLogoutUrl, resolveSsoStartUrl } from "../transportRuntime";
 
 function resolveCurrentReturnUrl() {
   if (typeof window === "undefined") {
@@ -146,6 +146,6 @@ export class AuthController {
       }
 
     const returnUrl = resolveCurrentReturnUrl();
-    window.location.href = `/v1/auth/sso/logout?returnUrl=${encodeURIComponent(returnUrl)}`;
+    window.location.href = resolveSsoLogoutUrl(returnUrl);
   }
 }

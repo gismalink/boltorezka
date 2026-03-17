@@ -14,7 +14,7 @@ import type {
   User,
   RoomMemberPreference
 } from "./domain";
-import { resolvePublicOrigin } from "./runtimeOrigin";
+import { resolveApiBase } from "./transportRuntime";
 
 type ApiErrorPayload = {
   message?: string;
@@ -26,7 +26,7 @@ type ApiErrorPayload = {
   [key: string]: unknown;
 };
 
-const CONFIGURED_API_ORIGIN = resolvePublicOrigin();
+const CONFIGURED_API_ORIGIN = resolveApiBase();
 
 function withConfiguredApiOrigin(path: string): string {
   if (!CONFIGURED_API_ORIGIN) {
