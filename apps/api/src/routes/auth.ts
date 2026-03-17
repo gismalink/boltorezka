@@ -327,6 +327,7 @@ async function upsertSsoUser(profile: Record<string, unknown> | null | undefined
     String(profile?.username || "").trim() || normalizedEmail.split("@")[0] || "SSO User";
   const isSuperAdmin = normalizedEmail === config.superAdminEmail;
   const isSmokeRtcBot = /^smoke-rtc-\d+@example\.test$/.test(normalizedEmail);
+  const shouldForceActiveAccess = isSuperAdmin || isSmokeRtcBot;
 
   const existing = await db.query<UserRow>(
     "SELECT id, email, username, name, ui_theme, role, is_banned, access_state, is_bot, created_at FROM users WHERE email = $1",
@@ -340,11 +341,11 @@ async function upsertSsoUser(profile: Record<string, unknown> | null | undefined
          username = COALESCE($4, username),
          name = $2,
          role = CASE WHEN $3 THEN 'super_admin' ELSE role END,
-         access_state = CASE WHEN $3 THEN 'active' ELSE access_state END,
+         access_state = CASE WHEN $6 THEN 'active' ELSE access_state END,
          is_bot = CASE WHEN $5 THEN TRUE ELSE is_bot END
        WHERE email = $1
        RETURNING id, email, username, name, ui_theme, role, is_banned, access_state, is_bot, created_at`,
-      [normalizedEmail, displayName, isSuperAdmin, normalizedUsername, isSmokeRtcBot]
+      [normalizedEmail, displayName, isSuperAdmin, normalizedUsername, isSmokeRtcBot, shouldForceActiveAccess]
     );
 
     return updated.rows[0];
@@ -362,7 +363,7 @@ async function upsertSsoUser(profile: Record<string, unknown> | null | undefined
       normalizedUsername,
       displayName,
       newRole,
-      isSuperAdmin ? "active" : "pending",
+      shouldForceActiveAccess ? "active" : "pending",
       isSmokeRtcBot
     ]
   );
