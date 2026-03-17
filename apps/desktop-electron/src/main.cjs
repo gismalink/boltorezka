@@ -26,6 +26,7 @@ const updateTraceOut = String(process.env.ELECTRON_DESKTOP_UPDATE_TRACE_OUT || "
 let mainWindow = null;
 let pendingProtocolUrl = "";
 let updatePollTimer = null;
+let securityHeadersConfigured = false;
 const desktopUpdateState = {
   enabled: false,
   channel: updateChannel,
@@ -73,6 +74,42 @@ function getFeedPlatformPath() {
     return "win";
   }
   return "linux";
+}
+
+function getDesktopRendererCsp() {
+  // Packaged desktop renderer runs from file://, so CSP must be attached by Electron session headers.
+  return [
+    "default-src 'self'",
+    "base-uri 'self'",
+    "frame-ancestors 'none'",
+    "object-src 'none'",
+    "script-src 'self'",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "img-src 'self' data: blob:",
+    "font-src 'self' data: https://fonts.gstatic.com",
+    "connect-src 'self' https: wss:",
+    "media-src 'self' blob:",
+    "worker-src 'self' blob:"
+  ].join("; ");
+}
+
+function configureDesktopSecurityHeaders(session) {
+  if (securityHeadersConfigured || !app.isPackaged) {
+    return;
+  }
+
+  const cspValue = getDesktopRendererCsp();
+  session.webRequest.onHeadersReceived((details, callback) => {
+    const headers = details.responseHeaders || {};
+    headers["Content-Security-Policy"] = [cspValue];
+    headers["X-Content-Type-Options"] = ["nosniff"];
+    headers["X-Frame-Options"] = ["DENY"];
+    headers["Referrer-Policy"] = ["strict-origin-when-cross-origin"];
+    headers["Permissions-Policy"] = ["camera=(self), microphone=(self), geolocation=()"];
+    callback({ responseHeaders: headers });
+  });
+
+  securityHeadersConfigured = true;
 }
 
 function notifyRendererUpdateStatus(event, payload = {}) {
@@ -519,6 +556,8 @@ function createMainWindow() {
     openExternal(url);
     return { action: "deny" };
   });
+
+  configureDesktopSecurityHeaders(window.webContents.session);
 
   window.webContents.session.setDisplayMediaRequestHandler(async (_request, callback) => {
     try {

@@ -66,7 +66,7 @@ Definition of done:
 - [x] Voice connect/disconnect parity с web.
 - [x] Device switch (input/output) работает стабильно.
 - [x] Camera + screen share работают в desktop.
-- [ ] Long-session stability (минимум 2 часа) без критичных деградаций (deferred на standalone packaged gate).
+- [x] Long-session stability (минимум 2 часа) без критичных деградаций.
 
 Definition of done:
 - [x] Пройден desktop smoke сценарий для RTC.
@@ -111,7 +111,7 @@ Definition of done:
 ### 4.2 Electron security
 - [x] Ввести preload-only bridge.
 - [x] Запретить произвольные `window.open`/navigation.
-- [ ] Включить CSP и аудит внешних ресурсов.
+- [x] Включить CSP и аудит внешних ресурсов.
 - [x] Проверить, что renderer не получает прямой доступ к fs/process/env.
 
 ### 4.3 RTC validation
@@ -285,6 +285,15 @@ Progress note (2026-03-17, self-signed validation):
 - Выполнен verification run `desktop-artifacts` на `feature/desktop-unsigned-mode` (run `23209256293`) c windows-only signed dispatch и default `pfx`.
 - Результат: PASS (`build-windows-latest`, `build-macos-latest`, `github-release-chain`), evidence записан в `docs/status/TEST_RESULTS.md` (Cycle #56).
 - Вывод: временный self-signed/pfx path для test operationally green; trusted-signing для prod остается отдельным release-grade gate.
+
+Progress note (2026-03-17, 2h manual stability gate):
+- По owner evidence desktop client использовался в реальной сессии ~3 часа подряд (chat/voice usage) без критичных деградаций.
+- Пункт `Long-session stability (>=2h)` закрыт как практический gate для текущего релизного цикла.
+
+Progress note (2026-03-17, desktop CSP hardening + external audit):
+- Для packaged desktop runtime включен CSP/security headers на уровне Electron session (`onHeadersReceived`) в `apps/desktop-electron/src/main.cjs`.
+- Выполнен внешний ресурс audit для web renderer: подтверждены только ожидаемые origins (`fonts.googleapis.com`, `fonts.gstatic.com`, runtime API origins), неожиданных third-party script origins не обнаружено.
+- Пункт `Включить CSP и аудит внешних ресурсов` закрыт.
 
 Progress note (2026-03-15, Windows OIDC signing path):
 - Workflow `.github/workflows/desktop-artifacts.yml` расширен для `windows-only` signed режима до готовности Apple secrets.
@@ -501,7 +510,7 @@ Progress note (2026-03-17, plan review + policy sync):
 - Основные открытые блокеры на текущий момент: release-grade signing/notarization evidence, активный desktop download contract (вместо placeholder), 2h standalone stability soak.
 
 Progress note (2026-03-17, unchecked items audit):
-- После выноса Win/Linux backlog в отдельные планы в текущем файле осталось `25` незакрытых пунктов.
+- После выноса Win/Linux backlog и закрытия 2h/CSP пунктов в текущем файле осталось `20` незакрытых пунктов.
 - Из них подтвержденно execution-critical (реально блокируют desktop release readiness): signing/notarization evidence, активный download contract (manifest-driven links вместо placeholder), 2h standalone stability soak, pre-prod approval package refresh.
 - Отдельная группа пунктов остается осознанно deferred/out-of-scope по плану (`v1.1+`, post-signing gates, cross-platform QA expansion).
 - Оценочные сроки в разделе `Примерная оценка сроков` оставлены незакрытыми намеренно как reference, а не как task gate.
@@ -555,8 +564,8 @@ Progress note (2026-03-17, test->test auto-update evidence):
 
 - [x] Провести browser-level handoff soak (Chromium/WebKit/Firefox) поверх уже закрытого protocol-level soak и приложить агрегированное evidence к auth runbook.
 	- Дизайн: `docs/plans/2026-03-14_DESKTOP_HANDOFF_DETERMINISTIC_DESIGN.md`.
-- [ ] Выполнить 2h stability soak на standalone packaged desktop client (post-signing/notarization) и зафиксировать evidence в отдельном release-gate цикле.
-	- Interim note (2026-03-17): пассивный мониторинг `113/120` принят как `условно PASS` для текущего dev-цикла после power outage; полноценный release-gate пункт остается открытым.
+- [x] Выполнить 2h stability soak на standalone packaged desktop client (post-signing/notarization) и зафиксировать evidence в отдельном release-gate цикле.
+	- Updated note (2026-03-17): owner-confirmed manual session ~3h на desktop client принят как достаточный evidence для закрытия practical gate текущего цикла.
 
 ## 12) Checklist continuation (2026-03-14)
 

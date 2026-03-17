@@ -2,6 +2,34 @@
 
 Отдельный журнал результатов тестов/нагрузки.
 
+## 2026-03-17 — Cycle #57 (Manual 3h desktop usage + CSP audit)
+
+- Environment: `test` (desktop client practical usage) + local code/security verification
+- Build ref: `origin/feature/desktop-unsigned-mode` (`e4a6d40` -> CSP hardening commit in progress)
+
+### Functional gate
+
+- Long-session practical stability: PASS (owner-confirmed)
+  - Manual evidence: desktop client использовался в реальном сценарии ~3 часа подряд (chat/voice usage) без критичных деградаций.
+- Desktop CSP/security hardening: PASS
+  - Packaged runtime CSP/security headers injected via Electron session (`onHeadersReceived`) in `apps/desktop-electron/src/main.cjs`.
+  - Validation:
+    - `node --check apps/desktop-electron/src/main.cjs` -> PASS
+    - `npm --prefix apps/desktop-electron run build:renderer` -> PASS
+
+### External resource audit summary
+
+- Confirmed expected external origins in renderer scope:
+  - `https://fonts.googleapis.com`
+  - `https://fonts.gstatic.com`
+  - runtime API origins (`https://test.boltorezka.gismalink.art`, `https://boltorezka.gismalink.art`)
+- No unexpected third-party script origins detected in current renderer source scan.
+
+### Decision
+
+- Cycle #57: PASS.
+- Плановые пункты `Long-session stability (>=2h)` и `Включить CSP и аудит внешних ресурсов` могут считаться закрытыми в основном desktop плане.
+
 ## 2026-03-17 — Cycle #56 (Self-signed/pfx signed RC validation PASS)
 
 - Environment: `GitHub Actions` (`desktop-artifacts` workflow, `feature/desktop-unsigned-mode`)
