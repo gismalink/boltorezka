@@ -514,6 +514,11 @@ Progress note (2026-03-17, unchecked items audit):
 - Из них подтвержденно execution-critical (реально блокируют desktop release readiness): release-grade signing/notarization evidence, первый production desktop release, release-grade update/signing verification по non-download M3.
 - Отдельная группа пунктов остается осознанно deferred/out-of-scope по плану (`v1.1+`, post-signing gates, cross-platform QA expansion).
 - Оценочные сроки в разделе `Примерная оценка сроков` оставлены незакрытыми намеренно как reference, а не как task gate.
+- Декомпозиция остатка (`10`):
+	- `blocking/signing-dependent` (`3`): `Сборки подписываются`, `Первый production desktop release`, `Закрыть non-download задачи M3`.
+	- `deferred/out-of-scope` (`3`): `Tray-first UX`, `Offline mode`, `Расширенные deep-link и rich notifications`.
+	- `reference-only` (`4`): оценки сроков `M1/M2/M3/M4` в разделе `Примерная оценка сроков`.
+- Actionable-now без signing: `0` (следующее практическое движение возможно только после готовности release-grade signing/notarization входов или явного изменения scope).
 
 Progress note (2026-03-17, platform backlog split):
 - Все незавершенные Win/Linux задачи вынесены в отдельные документы:

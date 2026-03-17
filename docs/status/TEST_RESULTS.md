@@ -2,6 +2,25 @@
 
 Отдельный журнал результатов тестов/нагрузки.
 
+## 2026-03-17 — Cycle #63 (Desktop open-items decomposition after non-signing closures)
+
+- Environment: `docs/plans` + `docs/status` (execution-state consolidation)
+- Scope: явная классификация оставшихся desktop open items после закрытия всех non-signing задач
+
+### Functional gate
+
+- Open-items decomposition: PASS
+  - Total open items in `2026-03-13_ELECTRON_DESKTOP_PLAN.md`: `10`.
+  - `blocking/signing-dependent`: `3` (`signed builds`, `first prod desktop release`, `non-download M3 release-grade signing/update evidence`).
+  - `deferred/out-of-scope`: `3` (`tray-first UX`, `offline mode`, `deep-links/notifications`).
+  - `reference-only`: `4` (estimate lines `M1/M2/M3/M4`).
+  - Actionable-now without signing inputs: `0`.
+
+### Decision
+
+- Cycle #63: PASS.
+- Execution-plan состояние синхронизировано: до появления release-grade signing/notarization readiness новых закрываемых action items в текущем scope нет.
+
 ## 2026-03-17 — Cycle #62 (Early cross-platform soak consolidation for M2)
 
 - Environment: `test` + historical desktop smoke evidence consolidation
