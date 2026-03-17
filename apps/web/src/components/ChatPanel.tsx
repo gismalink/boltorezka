@@ -219,8 +219,12 @@ export function ChatPanel({
         ) : null}
       </div>
       <div className="chat-log min-h-0 flex-1" ref={chatLogRef}>
-        {messages.map((message) => {
+        {messages.map((message, index) => {
           const isOwn = currentUserId === message.user_id;
+          const previousMessage = index > 0 ? messages[index - 1] : null;
+          const nextMessage = index + 1 < messages.length ? messages[index + 1] : null;
+          const showAuthor = !previousMessage || previousMessage.user_id !== message.user_id;
+          const showAvatar = !isOwn && (!nextMessage || nextMessage.user_id !== message.user_id);
           const createdAtTs = Number(new Date(message.created_at));
           const canManageOwnMessage = isOwn && Number.isFinite(createdAtTs) && (Date.now() - createdAtTs) <= 10 * 60 * 1000;
           const deliveryClass = message.deliveryStatus === "sending"
@@ -241,35 +245,41 @@ export function ChatPanel({
           return (
             <article
               key={message.id}
-              className={`chat-message grid items-end gap-2 ${isOwn ? "chat-message-own grid-cols-1 justify-items-end" : "grid-cols-[34px_minmax(0,1fr)]"}`}
+              className={`chat-message group grid items-end gap-2 ${isOwn ? "chat-message-own grid-cols-1 justify-items-end" : "grid-cols-[34px_minmax(0,1fr)]"}`}
             >
               {!isOwn ? (
-                <div className="chat-avatar inline-flex h-[30px] w-[30px] items-center justify-center" aria-hidden="true">
-                  {(message.user_name || "U").charAt(0).toUpperCase()}
+                <div className="chat-avatar-slot inline-flex h-[30px] w-[30px] items-end justify-center" aria-hidden="true">
+                  {showAvatar ? (
+                    <div className="chat-avatar inline-flex h-[30px] w-[30px] items-center justify-center">
+                      {(message.user_name || "U").charAt(0).toUpperCase()}
+                    </div>
+                  ) : null}
                 </div>
               ) : null}
 
               <div className={`chat-bubble-wrap grid max-w-[min(92%,820px)] gap-0.5 ${isOwn ? "justify-items-end" : "justify-items-start"}`}>
+                {canManageOwnMessage ? (
+                  <div className={`chat-actions-side ${isOwn ? "chat-actions-side-own" : "chat-actions-side-peer"}`}>
+                    <button type="button" className="secondary tiny" onClick={() => onEditMessage(message.id)}>{t("chat.edit")}</button>
+                    <button type="button" className="secondary tiny" onClick={() => onDeleteMessage(message.id)}>{t("chat.delete")}</button>
+                  </div>
+                ) : null}
+
                 <div className="chat-bubble w-fit min-w-[120px]">
                   <div className="chat-meta flex items-baseline justify-between gap-2">
-                    <span className="chat-author">{message.user_name}</span>
-                    <span className="chat-time">{formatMessageTime(message.created_at)}</span>
+                    {showAuthor ? <span className="chat-author">{message.user_name}</span> : <span className="chat-author-spacer" aria-hidden="true" />}
+                    <span className="chat-time-wrap">
+                      <span className="chat-time">{formatMessageTime(message.created_at)}</span>
+                      {isOwn && message.deliveryStatus ? (
+                        <span className={`delivery ${deliveryClass}`}>
+                          {deliveryGlyph}
+                        </span>
+                      ) : null}
+                    </span>
                   </div>
                   <p className="chat-text">{renderMessageText(message.text)}</p>
                   {message.edited_at ? <div className="chat-edited-mark">{t("chat.editedMark")}</div> : null}
-                  {canManageOwnMessage ? (
-                    <div className="chat-actions-row flex items-center justify-end gap-2">
-                      <button type="button" className="secondary tiny" onClick={() => onEditMessage(message.id)}>{t("chat.edit")}</button>
-                      <button type="button" className="secondary tiny" onClick={() => onDeleteMessage(message.id)}>{t("chat.delete")}</button>
-                    </div>
-                  ) : null}
                 </div>
-
-                {isOwn && message.deliveryStatus ? (
-                  <span className={`delivery ${deliveryClass}`}>
-                    {deliveryGlyph}
-                  </span>
-                ) : null}
               </div>
             </article>
           );

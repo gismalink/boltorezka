@@ -1169,7 +1169,7 @@ export function App() {
 
   const sendMessage = (event: FormEvent) => {
     event.preventDefault();
-    if (!chatRoomSlug || chatRoomSlug !== roomSlug) {
+    if (!chatRoomSlug) {
       pushToast(t("chat.selectChannelPlaceholder"));
       return;
     }
@@ -1184,7 +1184,8 @@ export function App() {
         "chat.edit",
         {
           messageId: editingMessageId,
-          text: nextText
+          text: nextText,
+          roomSlug: chatRoomSlug
         },
         { withIdempotency: true, maxRetries: MAX_CHAT_RETRIES }
       );
@@ -1210,7 +1211,7 @@ export function App() {
   };
 
   const handleChatPaste = (event: ClipboardEvent<HTMLInputElement>) => {
-    if (!chatRoomSlug || chatRoomSlug !== roomSlug) {
+    if (!chatRoomSlug) {
       return;
     }
 
@@ -1273,7 +1274,7 @@ export function App() {
   };
 
   const startEditingMessage = (messageId: string) => {
-    if (!chatRoomSlug || chatRoomSlug !== roomSlug) {
+    if (!chatRoomSlug) {
       pushToast(t("chat.selectChannelPlaceholder"));
       return;
     }
@@ -1303,7 +1304,7 @@ export function App() {
   }, [chatRoomSlug]);
 
   const deleteOwnMessage = (messageId: string) => {
-    if (!chatRoomSlug || chatRoomSlug !== roomSlug) {
+    if (!chatRoomSlug) {
       pushToast(t("chat.selectChannelPlaceholder"));
       return;
     }
@@ -1315,7 +1316,10 @@ export function App() {
 
     const requestId = sendWsEvent(
       "chat.delete",
-      { messageId },
+      {
+        messageId,
+        roomSlug: chatRoomSlug
+      },
       { withIdempotency: true, maxRetries: 1 }
     );
 

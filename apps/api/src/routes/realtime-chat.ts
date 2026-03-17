@@ -7,6 +7,11 @@ type SocketState = {
   roomSlug: string | null;
 };
 
+type ResolvedChatRoom = {
+  roomId: string;
+  roomSlug: string;
+};
+
 type ChatCommonParams = {
   connection: WebSocket;
   state: SocketState;
@@ -45,6 +50,74 @@ type ChatCommonParams = {
   dbQuery: <T = unknown>(text: string, params?: unknown[]) => Promise<{ rowCount: number | null; rows: T[] }>;
 };
 
+async function resolveChatRoom(
+  params: Pick<
+    ChatCommonParams,
+    "state" | "payload" | "getPayloadString" | "dbQuery" | "connection" | "requestId" | "eventType" | "sendNoActiveRoomNack" | "sendNack"
+  >
+): Promise<ResolvedChatRoom | null> {
+  const {
+    state,
+    payload,
+    getPayloadString,
+    dbQuery,
+    connection,
+    requestId,
+    eventType,
+    sendNoActiveRoomNack,
+    sendNack
+  } = params;
+
+  const targetRoomSlug = getPayloadString(payload as Record<string, unknown>, "roomSlug", 128)
+    || (typeof state.roomSlug === "string" ? state.roomSlug.trim() : "");
+
+  if (!targetRoomSlug) {
+    if (!state.roomId || !state.roomSlug) {
+      sendNoActiveRoomNack(connection, requestId, eventType);
+      return null;
+    }
+
+    return {
+      roomId: state.roomId,
+      roomSlug: state.roomSlug
+    };
+  }
+
+  const roomResult = await dbQuery<{ id: string; slug: string; is_public: boolean }>(
+    `SELECT id, slug, is_public
+     FROM rooms
+     WHERE slug = $1 AND is_archived = FALSE
+     LIMIT 1`,
+    [targetRoomSlug]
+  );
+
+  if ((roomResult.rowCount || 0) === 0) {
+    sendNack(connection, requestId, eventType, "RoomNotFound", "Room does not exist");
+    return null;
+  }
+
+  const room = roomResult.rows[0];
+  if (!room.is_public) {
+    const membership = await dbQuery(
+      `SELECT 1
+       FROM room_members
+       WHERE room_id = $1 AND user_id = $2
+       LIMIT 1`,
+      [room.id, state.userId]
+    );
+
+    if ((membership.rowCount || 0) === 0) {
+      sendNack(connection, requestId, eventType, "Forbidden", "You cannot access this room");
+      return null;
+    }
+  }
+
+  return {
+    roomId: room.id,
+    roomSlug: room.slug
+  };
+}
+
 export async function handleChatSend(
   params: ChatCommonParams & { incomingIdempotencyKey?: string | null }
 ): Promise<void> {
@@ -58,6 +131,7 @@ export async function handleChatSend(
     normalizeRequestId,
     sendNoActiveRoomNack,
     sendValidationNack,
+    sendNack,
     redisGet,
     redisDel,
     sendJson,
@@ -69,8 +143,18 @@ export async function handleChatSend(
     incomingIdempotencyKey
   } = params;
 
-  if (!state.roomId) {
-    sendNoActiveRoomNack(connection, requestId, eventType);
+  const targetRoom = await resolveChatRoom({
+    state,
+    payload,
+    getPayloadString,
+    dbQuery,
+    connection,
+    requestId,
+    eventType,
+    sendNoActiveRoomNack,
+    sendNack
+  });
+  if (!targetRoom) {
     return;
   }
 
@@ -118,7 +202,7 @@ export async function handleChatSend(
     `INSERT INTO messages (room_id, user_id, body)
      VALUES ($1, $2, $3)
      RETURNING id, room_id, user_id, body, created_at`,
-    [state.roomId, state.userId, text]
+    [targetRoom.roomId, state.userId, text]
   );
 
   const chatMessage = inserted.rows[0];
@@ -126,7 +210,7 @@ export async function handleChatSend(
   const chatPayload = {
     id: chatMessage.id,
     roomId: chatMessage.room_id,
-    roomSlug: state.roomSlug,
+    roomSlug: targetRoom.roomSlug,
     userId: chatMessage.user_id,
     userName: state.userName,
     text: chatMessage.body,
@@ -142,7 +226,11 @@ export async function handleChatSend(
     );
   }
 
-  broadcastRoom(state.roomId, buildChatMessageEnvelope(chatPayload));
+  broadcastRoom(targetRoom.roomId, buildChatMessageEnvelope(chatPayload));
+
+  if (targetRoom.roomId !== state.roomId) {
+    sendJson(connection, buildChatMessageEnvelope(chatPayload));
+  }
 
   sendAckWithMetrics(
     connection,
@@ -171,13 +259,24 @@ export async function handleChatEdit(params: ChatCommonParams): Promise<void> {
     sendNack,
     incrementMetric,
     sendForbiddenNack,
+    sendJson,
     broadcastRoom,
     buildChatEditedEnvelope,
     sendAckWithMetrics
   } = params;
 
-  if (!state.roomId) {
-    sendNoActiveRoomNack(connection, requestId, eventType);
+  const targetRoom = await resolveChatRoom({
+    state,
+    payload,
+    getPayloadString,
+    dbQuery,
+    connection,
+    requestId,
+    eventType,
+    sendNoActiveRoomNack,
+    sendNack
+  });
+  if (!targetRoom) {
     return;
   }
 
@@ -198,7 +297,7 @@ export async function handleChatEdit(params: ChatCommonParams): Promise<void> {
      FROM messages
      WHERE id = $1 AND room_id = $2
      LIMIT 1`,
-    [messageId, state.roomId]
+    [messageId, targetRoom.roomId]
   );
 
   if ((existingMessage.rowCount || 0) === 0) {
@@ -231,7 +330,7 @@ export async function handleChatEdit(params: ChatCommonParams): Promise<void> {
      SET body = $1, updated_at = NOW()
      WHERE id = $2 AND room_id = $3
      RETURNING id, room_id, body, updated_at`,
-    [text, messageId, state.roomId]
+    [text, messageId, targetRoom.roomId]
   );
 
   if ((updated.rowCount || 0) === 0) {
@@ -242,16 +341,30 @@ export async function handleChatEdit(params: ChatCommonParams): Promise<void> {
 
   const updatedMessage = updated.rows[0];
   broadcastRoom(
-    state.roomId,
+    targetRoom.roomId,
     buildChatEditedEnvelope({
       id: updatedMessage.id,
       roomId: updatedMessage.room_id,
-      roomSlug: state.roomSlug,
+      roomSlug: targetRoom.roomSlug,
       text: updatedMessage.body,
       editedAt: updatedMessage.updated_at,
       editedByUserId: state.userId
     })
   );
+
+  if (targetRoom.roomId !== state.roomId) {
+    sendJson(
+      connection,
+      buildChatEditedEnvelope({
+        id: updatedMessage.id,
+        roomId: updatedMessage.room_id,
+        roomSlug: targetRoom.roomSlug,
+        text: updatedMessage.body,
+        editedAt: updatedMessage.updated_at,
+        editedByUserId: state.userId
+      })
+    );
+  }
 
   sendAckWithMetrics(connection, requestId, eventType, {
     messageId: updatedMessage.id
@@ -273,13 +386,24 @@ export async function handleChatDelete(params: ChatCommonParams): Promise<void> 
     sendNack,
     incrementMetric,
     sendForbiddenNack,
+    sendJson,
     broadcastRoom,
     buildChatDeletedEnvelope,
     sendAckWithMetrics
   } = params;
 
-  if (!state.roomId) {
-    sendNoActiveRoomNack(connection, requestId, eventType);
+  const targetRoom = await resolveChatRoom({
+    state,
+    payload,
+    getPayloadString,
+    dbQuery,
+    connection,
+    requestId,
+    eventType,
+    sendNoActiveRoomNack,
+    sendNack
+  });
+  if (!targetRoom) {
     return;
   }
 
@@ -299,7 +423,7 @@ export async function handleChatDelete(params: ChatCommonParams): Promise<void> 
      FROM messages
      WHERE id = $1 AND room_id = $2
      LIMIT 1`,
-    [messageId, state.roomId]
+    [messageId, targetRoom.roomId]
   );
 
   if ((existingMessage.rowCount || 0) === 0) {
@@ -326,7 +450,7 @@ export async function handleChatDelete(params: ChatCommonParams): Promise<void> 
     `DELETE FROM messages
      WHERE id = $1 AND room_id = $2
      RETURNING id, room_id`,
-    [messageId, state.roomId]
+    [messageId, targetRoom.roomId]
   );
 
   if ((deleted.rowCount || 0) === 0) {
@@ -337,15 +461,28 @@ export async function handleChatDelete(params: ChatCommonParams): Promise<void> 
 
   const deletedMessage = deleted.rows[0];
   broadcastRoom(
-    state.roomId,
+    targetRoom.roomId,
     buildChatDeletedEnvelope({
       id: deletedMessage.id,
       roomId: deletedMessage.room_id,
-      roomSlug: state.roomSlug,
+      roomSlug: targetRoom.roomSlug,
       deletedByUserId: state.userId,
       ts: new Date().toISOString()
     })
   );
+
+  if (targetRoom.roomId !== state.roomId) {
+    sendJson(
+      connection,
+      buildChatDeletedEnvelope({
+        id: deletedMessage.id,
+        roomId: deletedMessage.room_id,
+        roomSlug: targetRoom.roomSlug,
+        deletedByUserId: state.userId,
+        ts: new Date().toISOString()
+      })
+    );
+  }
 
   sendAckWithMetrics(connection, requestId, eventType, {
     messageId: deletedMessage.id
