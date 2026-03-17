@@ -326,6 +326,7 @@ async function upsertSsoUser(profile: Record<string, unknown> | null | undefined
   const displayName =
     String(profile?.username || "").trim() || normalizedEmail.split("@")[0] || "SSO User";
   const isSuperAdmin = normalizedEmail === config.superAdminEmail;
+  const isSmokeRtcBot = /^smoke-rtc-\d+@example\.test$/.test(normalizedEmail);
 
   const existing = await db.query<UserRow>(
     "SELECT id, email, username, name, ui_theme, role, is_banned, access_state, is_bot, created_at FROM users WHERE email = $1",
@@ -339,10 +340,11 @@ async function upsertSsoUser(profile: Record<string, unknown> | null | undefined
          username = COALESCE($4, username),
          name = $2,
          role = CASE WHEN $3 THEN 'super_admin' ELSE role END,
-         access_state = CASE WHEN $3 THEN 'active' ELSE access_state END
+         access_state = CASE WHEN $3 THEN 'active' ELSE access_state END,
+         is_bot = CASE WHEN $5 THEN TRUE ELSE is_bot END
        WHERE email = $1
        RETURNING id, email, username, name, ui_theme, role, is_banned, access_state, is_bot, created_at`,
-      [normalizedEmail, displayName, isSuperAdmin, normalizedUsername]
+      [normalizedEmail, displayName, isSuperAdmin, normalizedUsername, isSmokeRtcBot]
     );
 
     return updated.rows[0];
@@ -351,10 +353,18 @@ async function upsertSsoUser(profile: Record<string, unknown> | null | undefined
   const newRole = isSuperAdmin ? "super_admin" : "user";
 
   const created = await db.query<UserRow>(
-    `INSERT INTO users (email, password_hash, username, name, role, access_state)
-     VALUES ($1, $2, $3, $4, $5, $6)
+    `INSERT INTO users (email, password_hash, username, name, role, access_state, is_bot)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)
      RETURNING id, email, username, name, ui_theme, role, is_banned, access_state, is_bot, created_at`,
-    [normalizedEmail, "__sso_only__", normalizedUsername, displayName, newRole, isSuperAdmin ? "active" : "pending"]
+    [
+      normalizedEmail,
+      "__sso_only__",
+      normalizedUsername,
+      displayName,
+      newRole,
+      isSuperAdmin ? "active" : "pending",
+      isSmokeRtcBot
+    ]
   );
 
   return created.rows[0];

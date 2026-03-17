@@ -260,6 +260,129 @@ export function ServerProfileModal({
     });
   }, [normalizedUserSearch, userAccessTab, usersByTab]);
 
+  const getUserRowActions = (item: User) => {
+    const actions: Array<{ key: string; label: string; iconClass: string; primary?: boolean; onClick: () => void }> = [];
+    const isProtected = item.role === "super_admin";
+
+    if (canPromote && userAccessTab === "active" && !isProtected) {
+      if (item.role === "user") {
+        actions.push({
+          key: "promote",
+          label: t("admin.promote"),
+          iconClass: "bi-arrow-up-circle",
+          primary: true,
+          onClick: () => onPromote(item.id)
+        });
+      } else if (item.role === "admin") {
+        actions.push({
+          key: "demote",
+          label: t("admin.demote"),
+          iconClass: "bi-arrow-down-circle",
+          onClick: () => onDemote(item.id)
+        });
+      }
+    }
+
+    if (isProtected) {
+      return actions;
+    }
+
+    if (item.is_banned) {
+      actions.push({
+        key: "unban",
+        label: t("admin.unban"),
+        iconClass: "bi-person-check",
+        onClick: () => onSetBan(item.id, false)
+      });
+      return actions;
+    }
+
+    if (userAccessTab === "requests") {
+      if (item.access_state !== "active") {
+        actions.push({
+          key: "approve",
+          label: t("admin.approve"),
+          iconClass: "bi-check-circle",
+          onClick: () => onSetAccessState(item.id, "active")
+        });
+      }
+      if (item.access_state !== "blocked") {
+        actions.push({
+          key: "block",
+          label: t("admin.blockAccess"),
+          iconClass: "bi-slash-circle",
+          onClick: () => onSetAccessState(item.id, "blocked")
+        });
+      }
+      actions.push({
+        key: "ban",
+        label: t("admin.ban"),
+        iconClass: "bi-person-x",
+        onClick: () => onSetBan(item.id, true)
+      });
+      return actions;
+    }
+
+    if (userAccessTab === "blocked") {
+      if (item.access_state === "blocked") {
+        actions.push({
+          key: "approve",
+          label: t("admin.approve"),
+          iconClass: "bi-check-circle",
+          onClick: () => onSetAccessState(item.id, "active")
+        });
+      }
+      if (item.access_state !== "pending") {
+        actions.push({
+          key: "toRequests",
+          label: t("admin.toRequests"),
+          iconClass: "bi-inbox",
+          onClick: () => onSetAccessState(item.id, "pending")
+        });
+      }
+      actions.push({
+        key: "ban",
+        label: t("admin.ban"),
+        iconClass: "bi-person-x",
+        onClick: () => onSetBan(item.id, true)
+      });
+      return actions;
+    }
+
+    if (item.access_state !== "pending") {
+      actions.push({
+        key: "toRequests",
+        label: t("admin.toRequests"),
+        iconClass: "bi-inbox",
+        onClick: () => onSetAccessState(item.id, "pending")
+      });
+    }
+    if (item.access_state !== "blocked") {
+      actions.push({
+        key: "block",
+        label: t("admin.blockAccess"),
+        iconClass: "bi-slash-circle",
+        onClick: () => onSetAccessState(item.id, "blocked")
+      });
+    }
+    if (userAccessTab === "bots" && item.access_state !== "active") {
+      actions.push({
+        key: "approve",
+        label: t("admin.approve"),
+        iconClass: "bi-check-circle",
+        onClick: () => onSetAccessState(item.id, "active")
+      });
+    }
+    actions.push({
+      key: "ban",
+      label: t("admin.ban"),
+      iconClass: "bi-person-x",
+      onClick: () => onSetBan(item.id, true)
+    });
+
+    return actions;
+  };
+
   useEffect(() => {
     const element = previewVideoRef.current;
     if (!element) {
@@ -485,32 +608,18 @@ export function ServerProfileModal({
                       {!item.is_banned ? ` · ${t(`admin.access.${item.access_state}`)}` : ""}
                     </span>
                     <div className="row-actions flex flex-wrap items-stretch gap-2">
-                      {item.role === "user" ? (
-                        <button className="min-h-[34px]" onClick={() => onPromote(item.id)}>{t("admin.promote")}</button>
-                      ) : null}
-                      {item.role === "admin" ? (
-                        <button className="secondary min-h-[34px]" onClick={() => onDemote(item.id)}>{t("admin.demote")}</button>
-                      ) : null}
-                      {item.role !== "super_admin" ? (
-                        item.is_banned ? (
-                          <button className="secondary min-h-[34px]" onClick={() => onSetBan(item.id, false)}>{t("admin.unban")}</button>
-                        ) : (
-                          <button className="secondary min-h-[34px]" onClick={() => onSetBan(item.id, true)}>{t("admin.ban")}</button>
-                        )
-                      ) : null}
-                      {item.role !== "super_admin" && !item.is_banned ? (
-                        <>
-                          {item.access_state !== "active" ? (
-                            <button className="secondary min-h-[34px]" onClick={() => onSetAccessState(item.id, "active")}>{t("admin.approve")}</button>
-                          ) : null}
-                          {item.access_state !== "pending" ? (
-                            <button className="secondary min-h-[34px]" onClick={() => onSetAccessState(item.id, "pending")}>{t("admin.toRequests")}</button>
-                          ) : null}
-                          {item.access_state !== "blocked" ? (
-                            <button className="secondary min-h-[34px]" onClick={() => onSetAccessState(item.id, "blocked")}>{t("admin.blockAccess")}</button>
-                          ) : null}
-                        </>
-                      ) : null}
+                      {getUserRowActions(item).map((action) => (
+                        <button
+                          key={`${item.id}-${action.key}`}
+                          type="button"
+                          className={`${action.primary ? "" : "secondary "}min-h-[34px] min-w-[34px] px-2`}
+                          title={action.label}
+                          aria-label={action.label}
+                          onClick={action.onClick}
+                        >
+                          <i className={`bi ${action.iconClass}`} aria-hidden="true" />
+                        </button>
+                      ))}
                     </div>
                   </li>
                 ))}
