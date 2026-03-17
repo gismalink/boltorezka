@@ -295,4 +295,9 @@
   - 2h practical stability gate: `PASS` (owner-confirmed ~3h session)
 - Remaining mandatory gate before next desktop prod promotion:
   - release-grade signing/notarization evidence (`trusted signing` path for prod policy).
+- Mandatory dependency policy:
+  - перед следующим desktop prod promotion обязательно проверяется актуальный статус `docs/plans/2026-03-11_SESSION_COOKIE_CUTOVER_CHECKLIST.md`;
+  - при незакрытых hardening/operations пунктах auth/session решение остается `NO-GO` до закрытия или явного owner-решения с зафиксированным риском.
+- Current dependency snapshot:
+  - в session/cookie checklist остаются открытые пункты (browser/mobile matrix, CSP, baseline metrics, cookie primary no-fallback proof), поэтому dependency gate остается активным.
 - Decision for next desktop prod promotion: `NO-GO` until signing/notarization gate is green.

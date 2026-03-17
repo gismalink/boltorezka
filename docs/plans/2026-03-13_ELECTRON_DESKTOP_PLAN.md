@@ -203,7 +203,7 @@ Desktop smoke (must pass):
 - Mitigation:
 - [x] Для M1/M2 test validation использовать текущий cookie primary режим (`AUTH_COOKIE_MODE=1`) как базовый, без блокировки desktop разработки.
 - [x] До desktop prod readiness закрыть auth/session hardening пункты класса P1: SLO/baseline мониторинг (rolling gate PASS, 2026-03-13).
-- [ ] Держать desktop release gate зависимым от актуального статуса `docs/plans/2026-03-11_SESSION_COOKIE_CUTOVER_CHECKLIST.md`.
+- [x] Держать desktop release gate зависимым от актуального статуса `docs/plans/2026-03-11_SESSION_COOKIE_CUTOVER_CHECKLIST.md`.
 
 ## 8) Примерная оценка сроков
 
@@ -510,8 +510,8 @@ Progress note (2026-03-17, plan review + policy sync):
 - Основные открытые блокеры на текущий момент: release-grade signing/notarization evidence, активный desktop download contract (вместо placeholder), 2h standalone stability soak.
 
 Progress note (2026-03-17, unchecked items audit):
-- После выноса Win/Linux backlog и закрытия всех независимых от code-signing пунктов в текущем файле осталось `12` незакрытых пунктов.
-- Из них подтвержденно execution-critical (реально блокируют desktop release readiness): signing/notarization evidence, активный download contract (manifest-driven links вместо placeholder), 2h standalone stability soak, pre-prod approval package refresh.
+- После выноса Win/Linux backlog и закрытия всех независимых от code-signing пунктов в текущем файле осталось `11` незакрытых пунктов.
+- Из них подтвержденно execution-critical (реально блокируют desktop release readiness): release-grade signing/notarization evidence, первый production desktop release, release-grade update/signing verification по non-download M3.
 - Отдельная группа пунктов остается осознанно deferred/out-of-scope по плану (`v1.1+`, post-signing gates, cross-platform QA expansion).
 - Оценочные сроки в разделе `Примерная оценка сроков` оставлены незакрытыми намеренно как reference, а не как task gate.
 
@@ -597,6 +597,10 @@ Progress note (2026-03-17, on-call и security gate runbooks):
 	- `docs/runbooks/DESKTOP_ONCALL_TRIAGE_RUNBOOK.md`
 	- `docs/runbooks/DESKTOP_SECURITY_GATE_RUNBOOK.md`
 - На этой базе закрыты независимые от code-signing пункты: `on-call/triage flow`, `security checklist hard gate`, `preload/IPC code review policy`, а также mitigation-пункты про отдельный signing milestone и test channel без blocking prod.
+
+Progress note (2026-03-17, session/cookie dependency gate formalization):
+- В `docs/runbooks/PREPROD_DECISION_PACKAGE.md` добавлена явная policy-связка desktop prod gate -> актуальный статус `docs/plans/2026-03-11_SESSION_COOKIE_CUTOVER_CHECKLIST.md`.
+- На этой базе закрыт mitigation-пункт `Держать desktop release gate зависимым от актуального статуса ...`.
 
 ## 13) Post-merge snapshot (2026-03-15)
 

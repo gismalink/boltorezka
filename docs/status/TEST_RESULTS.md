@@ -2,6 +2,23 @@
 
 Отдельный журнал результатов тестов/нагрузки.
 
+## 2026-03-17 — Cycle #61 (Desktop release gate dependency on session/cookie checklist)
+
+- Environment: `docs/runbooks` + `docs/plans` (policy/dependency evidence cycle)
+- Scope: формализация обязательной зависимости desktop prod gate от статуса session/cookie checklist
+
+### Functional gate
+
+- Dependency policy alignment: PASS
+  - В `docs/runbooks/PREPROD_DECISION_PACKAGE.md` зафиксировано правило: перед следующим desktop prod promotion обязательно учитывается статус `docs/plans/2026-03-11_SESSION_COOKIE_CUTOVER_CHECKLIST.md`.
+  - Зафиксирован текущий dependency snapshot: остаются открытые session/cookie hardening пункты, поэтому dependency gate активен.
+  - На основании policy update в desktop master plan закрыт mitigation-пункт про зависимость desktop release gate от session/cookie checklist.
+
+### Decision
+
+- Cycle #61: PASS.
+- Dependency-gate формально закреплен в pre-prod decision package и синхронизирован с основным desktop планом.
+
 ## 2026-03-17 — Cycle #60 (Desktop non-signing checklist closures)
 
 - Environment: `docs/plans` + `docs/runbooks` (process/documentation evidence cycle)
