@@ -1614,3 +1614,31 @@
 
 - Desktop download source contract is active and robust for current publish manifest format.
 - Plan items for active `Download` button (available platform) and manifest-driven link building are closed.
+
+## 2026-03-17 - Cycle #54 (manual rollback validation with desktop build)
+
+- Environment: `test` (`https://test.boltorezka.gismalink.art`)
+- Rollout baseline: `TEST_REF=origin/feature/desktop-unsigned-mode` -> SHA `6ad9d69`
+- Rollback target: `TEST_REF=4ca3ddd2bebd62782a9cff2b7729b4eaf0c4e736`
+- Common flags:
+  - `ENABLE_DESKTOP_BUILD=1`
+  - `DESKTOP_CHANNEL=test`
+  - `DESKTOP_SIGNING_MODE=unsigned`
+  - `DESKTOP_PUBLIC_BASE_URL=https://test.boltorezka.gismalink.art`
+
+### Baseline rollout result (`6ad9d69`)
+
+- `deploy:test:smoke`: PASS
+- `smoke:desktop:update-feed`: PASS (`channel=test`, `sha=6ad9d69...`)
+- `smoke:realtime`: PASS (`ok=true`, `reconnectOk=true`)
+
+### Rollback rollout result (`4ca3ddd`)
+
+- `deploy:test:smoke`: PASS
+- `smoke:desktop:update-feed`: PASS (`channel=test`, `sha=4ca3ddd...`)
+- `smoke:realtime`: PASS (`ok=true`, `reconnectOk=true`)
+
+### Decision
+
+- Manual rollback path in `test` is operational and reproducible for desktop release flow.
+- M3 пункт `Rollback runbook verified on test` закрыт evidence-циклом.

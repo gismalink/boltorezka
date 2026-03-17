@@ -86,7 +86,7 @@ Definition of done:
 - [x] Popup работает в placeholder-режиме (`coming soon`) без broken links.
 - [x] Для доступных платформ кнопка ведет на актуальный артефакт выбранного канала (`test`/`prod`).
 - [ ] Обновление test->test проходит автоматически.
-- [ ] Rollback runbook проверен на test.
+- [x] Rollback runbook проверен на test.
 
 ### M4 - Prod readiness
 - [x] Пройден pre-prod checklist.
@@ -514,6 +514,11 @@ Progress note (2026-03-17, desktop download contract activation):
 - В `Server profile -> Desktop app` включен manifest-driven mapping платформенных ссылок из `/desktop/<channel>/latest.json`.
 - Frontend download resolver теперь поддерживает `url`, `urlPath` и fallback через `relativePath`+`sha`, чтобы кнопка `Download` оставалась рабочей при разных форматах publish manifest.
 - M3 download contract пункты закрыты: доступная платформа получает активный `Download`, недоступные платформы остаются в `Coming soon`.
+
+Progress note (2026-03-17, rollback runbook validation on test):
+- Выполнен контрольный test rollout `origin/feature/desktop-unsigned-mode` на SHA `6ad9d69` с `ENABLE_DESKTOP_BUILD=1` и green postdeploy smoke.
+- Выполнен manual rollback cycle на known-good SHA `4ca3ddd` (через `TEST_REF=<sha>`), также с `ENABLE_DESKTOP_BUILD=1` и green postdeploy smoke.
+- В обоих циклах подтвержден updater feed gate (`smoke:desktop:update-feed` PASS) и realtime gate (`smoke:realtime` PASS), rollback path признан operational для M3.
 
 ## 11) Known Follow-ups
 
