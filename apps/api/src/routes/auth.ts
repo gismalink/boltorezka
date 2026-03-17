@@ -327,6 +327,7 @@ async function upsertSsoUser(profile: Record<string, unknown> | null | undefined
     String(profile?.username || "").trim() || normalizedEmail.split("@")[0] || "SSO User";
   const isSuperAdmin = normalizedEmail === config.superAdminEmail;
   const isSmokeRtcBot = /^smoke-rtc-\d+@example\.test$/.test(normalizedEmail);
+  const isPrimarySmokeAdmin = normalizedEmail === "smoke-rtc-1@example.test";
   const shouldForceActiveAccess = isSuperAdmin || isSmokeRtcBot;
 
   const existing = await db.query<UserRow>(
@@ -340,18 +341,30 @@ async function upsertSsoUser(profile: Record<string, unknown> | null | undefined
        SET
          username = COALESCE($4, username),
          name = $2,
-         role = CASE WHEN $3 THEN 'super_admin' ELSE role END,
+         role = CASE
+           WHEN $3 THEN 'super_admin'
+           WHEN $7 THEN 'admin'
+           ELSE role
+         END,
          access_state = CASE WHEN $6 THEN 'active' ELSE access_state END,
          is_bot = CASE WHEN $5 THEN TRUE ELSE is_bot END
        WHERE email = $1
        RETURNING id, email, username, name, ui_theme, role, is_banned, access_state, is_bot, created_at`,
-      [normalizedEmail, displayName, isSuperAdmin, normalizedUsername, isSmokeRtcBot, shouldForceActiveAccess]
+      [
+        normalizedEmail,
+        displayName,
+        isSuperAdmin,
+        normalizedUsername,
+        isSmokeRtcBot,
+        shouldForceActiveAccess,
+        isPrimarySmokeAdmin
+      ]
     );
 
     return updated.rows[0];
   }
 
-  const newRole = isSuperAdmin ? "super_admin" : "user";
+  const newRole = isSuperAdmin ? "super_admin" : isPrimarySmokeAdmin ? "admin" : "user";
 
   const created = await db.query<UserRow>(
     `INSERT INTO users (email, password_hash, username, name, role, access_state, is_bot)
