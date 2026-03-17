@@ -148,6 +148,10 @@ export function App() {
     const stored = String(localStorage.getItem(ROOM_SLUG_STORAGE_KEY) || "").trim();
     return stored;
   });
+  const [chatRoomSlug, setChatRoomSlug] = useState(() => {
+    const stored = String(localStorage.getItem(ROOM_SLUG_STORAGE_KEY) || "").trim();
+    return stored;
+  });
   const [showAppUpdatedOverlay, setShowAppUpdatedOverlay] = useState(
     () => sessionStorage.getItem(VERSION_UPDATE_PENDING_KEY) === "1"
   );
@@ -329,7 +333,7 @@ export function App() {
   const { toasts, pushToast } = useToastQueue();
   const realtimeClientRef = useRef<RealtimeClient | null>(null);
   const roomSlugRef = useRef(roomSlug);
-  const lastRoomSlugForScrollRef = useRef(roomSlug);
+  const lastRoomSlugForScrollRef = useRef(chatRoomSlug);
   const lastMessageIdRef = useRef<string | null>(null);
   const chatLogRef = useRef<HTMLDivElement>(null);
   const autoSsoAttemptedRef = useRef(false);
@@ -850,7 +854,7 @@ export function App() {
   useEffect(() => {
     setEditingMessageId(null);
     setPendingChatImageDataUrl(null);
-  }, [roomSlug]);
+  }, [chatRoomSlug]);
 
   useEffect(() => {
     if (roomSlug) {
@@ -860,6 +864,12 @@ export function App() {
 
     localStorage.removeItem(ROOM_SLUG_STORAGE_KEY);
   }, [roomSlug]);
+
+  useEffect(() => {
+    if (!chatRoomSlug && roomSlug) {
+      setChatRoomSlug(roomSlug);
+    }
+  }, [chatRoomSlug, roomSlug]);
 
   const showDesktopBrowserCompletion = useMemo(() => {
     if (typeof window === "undefined" || window.boltorezkaDesktop) {
@@ -913,7 +923,8 @@ export function App() {
   const { loadOlderMessages } = useRealtimeChatLifecycle({
     token,
     reconnectNonce: realtimeReconnectNonce,
-    roomSlug,
+    joinedRoomSlug: roomSlug,
+    chatRoomSlug,
     messages,
     messagesNextCursor,
     loadingOlderMessages,
@@ -925,7 +936,7 @@ export function App() {
     lastMessageIdRef,
     setWsState,
     setMessages,
-    setRoomSlug,
+    setJoinedRoomSlug: setRoomSlug,
     onRoomMediaTopology: ({ roomSlug: nextRoomSlug, mediaTopology }) => {
       setRoomMediaTopologyBySlug((prev) => {
         if (prev[nextRoomSlug] === mediaTopology) {
@@ -955,6 +966,7 @@ export function App() {
     onSessionMoved: ({ code, message }) => {
       const activeSlug = String(roomSlugRef.current || "").trim();
       if (activeSlug) {
+        void playServerSound("self_disconnected");
         setRoomsPresenceBySlug((prev) => {
           if (!(activeSlug in prev)) {
             return prev;
@@ -982,8 +994,7 @@ export function App() {
     },
     onChatCleared: (payload) => {
       const targetRoomSlug = String(payload.roomSlug || "").trim();
-      const activeRoomSlug = roomSlugRef.current;
-      if (!targetRoomSlug || targetRoomSlug !== activeRoomSlug) {
+      if (!targetRoomSlug || targetRoomSlug !== chatRoomSlug) {
         return;
       }
 
@@ -1181,7 +1192,7 @@ export function App() {
 
   const sendMessage = (event: FormEvent) => {
     event.preventDefault();
-    if (!roomSlug) {
+    if (!chatRoomSlug) {
       return;
     }
 
@@ -1213,7 +1224,7 @@ export function App() {
     const baseText = chatText.trim();
     const imageMarkdown = pendingChatImageDataUrl ? `![скриншот](${pendingChatImageDataUrl})` : "";
     const outgoingText = [baseText, imageMarkdown].filter(Boolean).join("\n");
-    const result = chatController.sendMessage(outgoingText, user, MAX_CHAT_RETRIES);
+    const result = chatController.sendMessage(outgoingText, chatRoomSlug, user, MAX_CHAT_RETRIES);
     if (result.sent) {
       setChatText("");
       setPendingChatImageDataUrl(null);
@@ -1221,7 +1232,7 @@ export function App() {
   };
 
   const handleChatPaste = (event: ClipboardEvent<HTMLInputElement>) => {
-    if (!roomSlug) {
+    if (!chatRoomSlug) {
       return;
     }
 
@@ -1293,6 +1304,21 @@ export function App() {
     setChatText(targetMessage.text);
   };
 
+  const openRoomChat = useCallback((slug: string) => {
+    const normalized = String(slug || "").trim();
+    if (!normalized) {
+      return;
+    }
+
+    if (normalized !== chatRoomSlug) {
+      setMessages([]);
+      setMessagesHasMore(false);
+      setMessagesNextCursor(null);
+    }
+
+    setChatRoomSlug(normalized);
+  }, [chatRoomSlug]);
+
   const deleteOwnMessage = (messageId: string) => {
     const targetMessage = messages.find((item) => item.id === messageId);
     if (!targetMessage || !canManageOwnMessage(targetMessage)) {
@@ -1325,9 +1351,7 @@ export function App() {
     pushLog,
     t,
     setRoomSlug,
-    setMessages,
-    setMessagesHasMore,
-    setMessagesNextCursor
+    setChatRoomSlug
   });
 
   const handleToggleMic = useCallback(() => {
@@ -1416,6 +1440,47 @@ export function App() {
     roomSlug
   });
 
+  const activeChatRoom = useMemo(
+    () => allRooms.find((room) => room.slug === chatRoomSlug) || null,
+    [allRooms, chatRoomSlug]
+  );
+
+  useEffect(() => {
+    if (allRooms.length === 0) {
+      return;
+    }
+
+    if (roomSlug) {
+      const joinedRoomExists = allRooms.some((room) => room.slug === roomSlug);
+      if (!joinedRoomExists) {
+        setRoomSlug("");
+      }
+    }
+
+    if (chatRoomSlug) {
+      const chatRoomExists = allRooms.some((room) => room.slug === chatRoomSlug);
+      if (!chatRoomExists) {
+        setChatRoomSlug("");
+      }
+    }
+  }, [allRooms, roomSlug, chatRoomSlug]);
+
+  useEffect(() => {
+    if (chatRoomSlug) {
+      return;
+    }
+
+    if (roomSlug) {
+      setChatRoomSlug(roomSlug);
+      return;
+    }
+
+    const firstRoom = allRooms[0];
+    if (firstRoom?.slug) {
+      setChatRoomSlug(firstRoom.slug);
+    }
+  }, [allRooms, chatRoomSlug, roomSlug]);
+
   const {
     createRoom,
     createCategory,
@@ -1495,21 +1560,6 @@ export function App() {
       setRnnoiseRuntimeStatus("inactive");
     }
   }, [selectedInputProfile]);
-
-  useEffect(() => {
-    if (!roomSlug) {
-      return;
-    }
-
-    if (allRooms.length === 0) {
-      return;
-    }
-
-    const roomExists = allRooms.some((room) => room.slug === roomSlug);
-    if (!roomExists) {
-      setRoomSlug("");
-    }
-  }, [allRooms, roomSlug]);
 
   if (showDesktopBrowserCompletion) {
     return (
@@ -1859,6 +1909,7 @@ export function App() {
               canManageAudioQuality={canManageAudioQuality}
               roomsTree={roomsTree}
               roomSlug={roomSlug}
+              activeChatRoomSlug={chatRoomSlug}
               roomMediaTopologyBySlug={roomMediaTopologyBySlug}
               currentUserId={user?.id || ""}
               liveRoomMembersBySlug={roomsPresenceBySlug}
@@ -1915,6 +1966,7 @@ export function App() {
               onDeleteChannel={(room) => void deleteChannel(room)}
               onToggleCategoryCollapsed={toggleCategoryCollapsed}
               onJoinRoom={joinRoom}
+              onOpenRoomChat={openRoomChat}
               onKickRoomMember={kickRoomMember}
               onMoveRoomMember={moveRoomMember}
               onSaveMemberPreference={saveMemberPreference}
@@ -1929,8 +1981,8 @@ export function App() {
             <ChatPanel
               t={t}
               locale={locale}
-              roomSlug={roomSlug}
-              roomTitle={currentRoom?.title || ""}
+              roomSlug={chatRoomSlug}
+              roomTitle={activeChatRoom?.title || ""}
               messages={messages}
               currentUserId={user?.id || null}
               messagesHasMore={messagesHasMore}

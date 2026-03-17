@@ -21,6 +21,7 @@ export function RoomsPanel({
   canManageAudioQuality,
   roomsTree,
   roomSlug,
+  activeChatRoomSlug,
   roomMediaTopologyBySlug,
   currentUserId,
   liveRoomMembersBySlug,
@@ -77,6 +78,7 @@ export function RoomsPanel({
   onDeleteChannel,
   onToggleCategoryCollapsed,
   onJoinRoom,
+  onOpenRoomChat,
   onKickRoomMember,
   onMoveRoomMember,
   onSaveMemberPreference
@@ -141,6 +143,7 @@ export function RoomsPanel({
       canManageAudioQuality={canManageAudioQuality}
       roomsTree={roomsTree}
       roomSlug={roomSlug}
+      activeChatRoomSlug={activeChatRoomSlug}
       voiceMicStateByUserIdInCurrentRoom={voiceMicStateByUserIdInCurrentRoom}
       voiceCameraEnabledByUserIdInCurrentRoom={voiceCameraEnabledByUserIdInCurrentRoom}
       voiceAudioOutputMutedByUserIdInCurrentRoom={voiceAudioOutputMutedByUserIdInCurrentRoom}
@@ -159,6 +162,7 @@ export function RoomsPanel({
       onMoveChannel={onMoveChannel}
       onOpenChannelSettingsPopup={onOpenChannelSettingsPopup}
       onJoinRoom={onJoinRoom}
+      onOpenRoomChat={onOpenRoomChat}
       onKickRoomMember={onKickRoomMember}
       onMoveRoomMember={onMoveRoomMember}
       onSaveMemberPreference={onSaveMemberPreference}

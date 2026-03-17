@@ -9,7 +9,13 @@ export type VoiceSettingsPanel = "input_device" | "input_profile" | null;
 
 export type DeviceOption = { id: string; label: string };
 export type MediaDevicesState = "ready" | "unsupported" | "denied" | "error";
-export type ServerSoundEvent = "member_join" | "member_leave" | "server_disconnected" | "chat_message";
+export type ServerSoundEvent =
+  | "member_join"
+  | "member_leave"
+  | "server_disconnected"
+  | "chat_message"
+  | "self_disconnected"
+  | "self_joined_channel";
 
 export type UserDockProps = {
   t: TranslateFn;
@@ -111,6 +117,7 @@ export type RoomsPanelProps = {
   canManageAudioQuality: boolean;
   roomsTree: RoomsTreeResponse | null;
   roomSlug: string;
+  activeChatRoomSlug: string;
   roomMediaTopologyBySlug: Record<string, "livekit">;
   currentUserId: string;
   liveRoomMembersBySlug: Record<string, string[]>;
@@ -167,6 +174,7 @@ export type RoomsPanelProps = {
   onDeleteChannel: (room: Room) => void;
   onToggleCategoryCollapsed: (categoryId: string) => void;
   onJoinRoom: (slug: string) => void;
+  onOpenRoomChat: (slug: string) => void;
   onKickRoomMember: (roomSlug: string, userId: string, userName: string) => void;
   onMoveRoomMember: (fromRoomSlug: string, toRoomSlug: string, userId: string, userName: string) => void;
   onSaveMemberPreference: (targetUserId: string, input: { volume: number; note: string }) => Promise<void>;

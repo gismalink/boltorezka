@@ -24,6 +24,8 @@ export function useRealtimeSoundEffects({
 }: UseRealtimeSoundEffectsParams) {
   const previousWsStateRef = useRef<RealtimeWsState>("disconnected");
   const previousPresenceRoomSlugRef = useRef<string>(roomSlug);
+  const previousRoomSlugRef = useRef<string>(roomSlug);
+  const roomJoinSoundInitializedRef = useRef(false);
   const presenceSoundInitializedRef = useRef(false);
   const previousPresenceIdsRef = useRef<string[]>([]);
   const previousChatMessageIdRef = useRef<string | null>(null);
@@ -36,6 +38,21 @@ export function useRealtimeSoundEffects({
 
     previousWsStateRef.current = wsState;
   }, [playServerSound, wsState]);
+
+  useEffect(() => {
+    const previousRoomSlug = previousRoomSlugRef.current;
+    if (!roomJoinSoundInitializedRef.current) {
+      roomJoinSoundInitializedRef.current = true;
+      previousRoomSlugRef.current = roomSlug;
+      return;
+    }
+
+    if (roomSlug && roomSlug !== previousRoomSlug) {
+      void playServerSound("self_joined_channel");
+    }
+
+    previousRoomSlugRef.current = roomSlug;
+  }, [playServerSound, roomSlug]);
 
   useEffect(() => {
     const currentMembers = roomsPresenceDetailsBySlug[roomSlug] || [];

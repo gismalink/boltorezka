@@ -8,7 +8,8 @@ import type { ChatController } from "../../services";
 type UseRealtimeChatLifecycleArgs = {
   token: string;
   reconnectNonce: number;
-  roomSlug: string;
+  joinedRoomSlug: string;
+  chatRoomSlug: string;
   messages: Message[];
   messagesNextCursor: MessagesCursor | null;
   loadingOlderMessages: boolean;
@@ -20,7 +21,7 @@ type UseRealtimeChatLifecycleArgs = {
   lastMessageIdRef: MutableRefObject<string | null>;
   setWsState: (value: "disconnected" | "connecting" | "connected") => void;
   setMessages: Dispatch<SetStateAction<Message[]>>;
-  setRoomSlug: (slug: string) => void;
+  setJoinedRoomSlug: (slug: string) => void;
   onRoomMediaTopology?: (payload: { roomSlug: string; mediaTopology: "livekit" }) => void;
   setRoomsPresenceBySlug: Dispatch<SetStateAction<Record<string, string[]>>>;
   setRoomsPresenceDetailsBySlug: Dispatch<SetStateAction<Record<string, PresenceMember[]>>>;
@@ -104,7 +105,8 @@ type UseRealtimeChatLifecycleArgs = {
 export function useRealtimeChatLifecycle({
   token,
   reconnectNonce,
-  roomSlug,
+  joinedRoomSlug,
+  chatRoomSlug,
   messages,
   messagesNextCursor,
   loadingOlderMessages,
@@ -116,7 +118,7 @@ export function useRealtimeChatLifecycle({
   lastMessageIdRef,
   setWsState,
   setMessages,
-  setRoomSlug,
+  setJoinedRoomSlug,
   onRoomMediaTopology,
   setRoomsPresenceBySlug,
   setRoomsPresenceDetailsBySlug,
@@ -187,9 +189,9 @@ export function useRealtimeChatLifecycle({
   }, [onRoomMediaTopology]);
 
   useEffect(() => {
-    roomSlugRef.current = roomSlug;
-    realtimeClientRef.current?.setRoomSlug(roomSlug);
-  }, [roomSlug]);
+    roomSlugRef.current = joinedRoomSlug;
+    realtimeClientRef.current?.setRoomSlug(joinedRoomSlug);
+  }, [joinedRoomSlug]);
 
   useEffect(() => {
     if (!token) {
@@ -204,7 +206,7 @@ export function useRealtimeChatLifecycle({
       pushLog,
       pushCallLog,
       pushToast,
-      setRoomSlug,
+      setRoomSlug: setJoinedRoomSlug,
       onRoomMediaTopology: (...args) => onRoomMediaTopologyRef.current?.(...args),
       setRoomsPresenceBySlug,
       setRoomsPresenceDetailsBySlug,
@@ -278,9 +280,9 @@ export function useRealtimeChatLifecycle({
   }, [token, reconnectNonce]);
 
   useEffect(() => {
-    if (!token || !roomSlug) return;
-    void chatController.loadRecentMessages(token, roomSlug);
-  }, [token, roomSlug, chatController]);
+    if (!token || !chatRoomSlug) return;
+    void chatController.loadRecentMessages(token, chatRoomSlug);
+  }, [token, chatRoomSlug, chatController]);
 
   useEffect(() => {
     const chatLogElement = chatLogRef.current;
@@ -289,24 +291,24 @@ export function useRealtimeChatLifecycle({
     }
 
     const latestMessageId = messages.length > 0 ? messages[messages.length - 1].id : null;
-    const roomChanged = lastRoomSlugForScrollRef.current !== roomSlug;
+    const roomChanged = lastRoomSlugForScrollRef.current !== chatRoomSlug;
     const latestMessageChanged = latestMessageId !== lastMessageIdRef.current;
 
     if (roomChanged || latestMessageChanged) {
       chatLogElement.scrollTop = chatLogElement.scrollHeight;
     }
 
-    lastRoomSlugForScrollRef.current = roomSlug;
+    lastRoomSlugForScrollRef.current = chatRoomSlug;
     lastMessageIdRef.current = latestMessageId;
-  }, [messages, roomSlug]);
+  }, [messages, chatRoomSlug]);
 
   const loadOlderMessages = useCallback(async () => {
-    if (!token || !roomSlug || !messagesNextCursor || loadingOlderMessages) {
+    if (!token || !chatRoomSlug || !messagesNextCursor || loadingOlderMessages) {
       return;
     }
 
-    await chatController.loadOlderMessages(token, roomSlug, messagesNextCursor, loadingOlderMessages);
-  }, [token, roomSlug, messagesNextCursor, loadingOlderMessages, chatController]);
+    await chatController.loadOlderMessages(token, chatRoomSlug, messagesNextCursor, loadingOlderMessages);
+  }, [token, chatRoomSlug, messagesNextCursor, loadingOlderMessages, chatController]);
 
   return {
     loadOlderMessages

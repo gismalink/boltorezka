@@ -69,6 +69,7 @@ export class ChatController {
 
   sendMessage(
     textInput: string,
+    roomSlug: string,
     user: User | null,
     maxChatRetries: number
   ) {
@@ -79,7 +80,7 @@ export class ChatController {
 
     const requestId = this.options.sendWsEvent(
       "chat.send",
-      { text },
+      { text, roomSlug },
       { withIdempotency: true, maxRetries: maxChatRetries }
     );
     if (!requestId) {

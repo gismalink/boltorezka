@@ -487,6 +487,40 @@ export function UserDockSettingsOverlay({
               </label>
 
               <label className="voice-sound-checkbox flex items-center justify-between gap-3">
+                <span>{t("settings.serverSoundSelfDisconnected")}</span>
+                <div className="inline-flex items-center gap-2">
+                  <button
+                    type="button"
+                    className={`ui-switch ${serverSoundsEnabled.self_disconnected ? "ui-switch-on" : ""}`}
+                    role="switch"
+                    aria-checked={serverSoundsEnabled.self_disconnected}
+                    aria-label={t("settings.serverSoundSelfDisconnected")}
+                    onClick={() => onSetServerSoundEnabled("self_disconnected", !serverSoundsEnabled.self_disconnected)}
+                  >
+                    <span className="ui-switch-thumb" aria-hidden="true" />
+                  </button>
+                  <button type="button" className="secondary icon-btn tiny" onClick={() => onPreviewServerSound("self_disconnected")}>♪</button>
+                </div>
+              </label>
+
+              <label className="voice-sound-checkbox flex items-center justify-between gap-3">
+                <span>{t("settings.serverSoundSelfJoinedChannel")}</span>
+                <div className="inline-flex items-center gap-2">
+                  <button
+                    type="button"
+                    className={`ui-switch ${serverSoundsEnabled.self_joined_channel ? "ui-switch-on" : ""}`}
+                    role="switch"
+                    aria-checked={serverSoundsEnabled.self_joined_channel}
+                    aria-label={t("settings.serverSoundSelfJoinedChannel")}
+                    onClick={() => onSetServerSoundEnabled("self_joined_channel", !serverSoundsEnabled.self_joined_channel)}
+                  >
+                    <span className="ui-switch-thumb" aria-hidden="true" />
+                  </button>
+                  <button type="button" className="secondary icon-btn tiny" onClick={() => onPreviewServerSound("self_joined_channel")}>♪</button>
+                </div>
+              </label>
+
+              <label className="voice-sound-checkbox flex items-center justify-between gap-3">
                 <span>{t("settings.serverSoundChatMessage")}</span>
                 <div className="inline-flex items-center gap-2">
                   <button

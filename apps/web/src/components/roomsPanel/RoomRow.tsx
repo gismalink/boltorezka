@@ -19,6 +19,7 @@ type RoomRowProps = Pick<
   | "canManageAudioQuality"
   | "roomsTree"
   | "roomSlug"
+  | "activeChatRoomSlug"
   | "voiceMicStateByUserIdInCurrentRoom"
   | "voiceCameraEnabledByUserIdInCurrentRoom"
   | "voiceAudioOutputMutedByUserIdInCurrentRoom"
@@ -37,6 +38,7 @@ type RoomRowProps = Pick<
   | "onMoveChannel"
   | "onOpenChannelSettingsPopup"
   | "onJoinRoom"
+  | "onOpenRoomChat"
   | "onKickRoomMember"
   | "onMoveRoomMember"
   | "onSaveMemberPreference"
@@ -56,6 +58,7 @@ export function RoomRow({
   canManageAudioQuality,
   roomsTree,
   roomSlug,
+  activeChatRoomSlug,
   voiceMicStateByUserIdInCurrentRoom,
   voiceCameraEnabledByUserIdInCurrentRoom,
   voiceAudioOutputMutedByUserIdInCurrentRoom,
@@ -74,6 +77,7 @@ export function RoomRow({
   onMoveChannel,
   onOpenChannelSettingsPopup,
   onJoinRoom,
+  onOpenRoomChat,
   onKickRoomMember,
   onMoveRoomMember,
   onSaveMemberPreference,
@@ -92,6 +96,8 @@ export function RoomRow({
   const roomSupportsRtc = room.kind !== "text";
   const roomSupportsVideo = room.kind === "text_voice_video";
   const roomHasVoiceState = roomSupportsRtc && room.slug === roomSlug;
+  const roomChatActive = activeChatRoomSlug === room.slug;
+  const roomIsActive = roomSlug === room.slug || (!roomSupportsRtc && roomChatActive);
 
   useEffect(() => {
     const onPointerDown = (event: MouseEvent) => {
@@ -195,16 +201,36 @@ export function RoomRow({
       onDrop={onRoomDrop}
     >
       <button
-        className={`secondary room-btn ${roomSlug === room.slug ? "room-btn-active" : "room-btn-interactive"} ${dropTargetActive ? "room-btn-drop-target" : ""}`}
+        className={`secondary room-btn ${roomIsActive ? "room-btn-active" : "room-btn-interactive"} ${dropTargetActive ? "room-btn-drop-target" : ""}`}
         onClick={() => {
+          if (!roomSupportsRtc) {
+            onOpenRoomChat(room.slug);
+            return;
+          }
+
           if (roomSlug !== room.slug) {
             onJoinRoom(room.slug);
+            return;
           }
+
+          onOpenRoomChat(room.slug);
         }}
       >
         <i className={`bi ${ROOM_KIND_ICON_CLASS[room.kind]}`} aria-hidden="true" />
         <span>{room.title}</span>
       </button>
+      <div className="inline-flex items-center gap-1">
+      {roomSupportsRtc ? (
+        <button
+          type="button"
+          className={`secondary icon-btn tiny channel-chat-open-btn ${roomChatActive ? "channel-chat-open-btn-active" : ""}`}
+          data-tooltip={t("rooms.openChat")}
+          aria-label={t("rooms.openChat")}
+          onClick={() => onOpenRoomChat(room.slug)}
+        >
+          <i className="bi bi-chat-dots" aria-hidden="true" />
+        </button>
+      ) : null}
       {canCreateRooms ? (
         <div className="channel-settings-anchor" ref={channelSettingsAnchorRef}>
           <button
@@ -314,6 +340,7 @@ export function RoomRow({
           </PopupPortal>
         </div>
       ) : null}
+      </div>
 
       {roomMembers.length > 0 ? (
         <ul className="col-span-full m-0 list-none grid gap-0.5 pl-[var(--space-xl)] pt-[2px]">

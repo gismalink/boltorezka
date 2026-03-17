@@ -940,6 +940,12 @@ pre {
   transition: opacity 0.12s ease;
 }
 
+.channel-chat-open-btn {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s ease;
+}
+
 .category-title-row:hover .category-action-btn,
 .category-title-row:focus-within .category-action-btn,
 .category-settings-popup .category-action-btn {
@@ -1201,6 +1207,18 @@ pre {
 .room-btn-active + .channel-settings-anchor .channel-action-btn {
   opacity: 1;
   pointer-events: auto;
+}
+
+.channel-row:hover .channel-chat-open-btn,
+.channel-row:focus-within .channel-chat-open-btn,
+.channel-chat-open-btn-active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.channel-chat-open-btn-active {
+  border-color: color-mix(in srgb, var(--pixel-neon-cyan) 70%, var(--pixel-border) 30%);
+  box-shadow: inset 2px 0 0 color-mix(in srgb, var(--pixel-neon-cyan) 72%, var(--pixel-border) 28%);
 }
 
 .channel-settings-popup {

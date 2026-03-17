@@ -1,5 +1,4 @@
 import { useCallback, type Dispatch, type SetStateAction } from "react";
-import type { Message, MessagesCursor } from "../../domain";
 import type { RoomAdminController } from "../../services";
 
 type SendWsEvent = (
@@ -18,9 +17,7 @@ type UseRoomPresenceActionsArgs = {
   pushLog: (text: string) => void;
   t: (key: string) => string;
   setRoomSlug: Dispatch<SetStateAction<string>>;
-  setMessages: Dispatch<SetStateAction<Message[]>>;
-  setMessagesHasMore: Dispatch<SetStateAction<boolean>>;
-  setMessagesNextCursor: Dispatch<SetStateAction<MessagesCursor | null>>;
+  setChatRoomSlug: Dispatch<SetStateAction<string>>;
 };
 
 export function useRoomPresenceActions({
@@ -33,13 +30,12 @@ export function useRoomPresenceActions({
   pushLog,
   t,
   setRoomSlug,
-  setMessages,
-  setMessagesHasMore,
-  setMessagesNextCursor
+  setChatRoomSlug
 }: UseRoomPresenceActionsArgs) {
   const joinRoom = useCallback((slug: string) => {
     roomAdminController.joinRoom(slug);
-  }, [roomAdminController]);
+    setChatRoomSlug(slug);
+  }, [roomAdminController, setChatRoomSlug]);
 
   const leaveRoom = useCallback(() => {
     if (!roomSlug) {
@@ -49,16 +45,10 @@ export function useRoomPresenceActions({
     disconnectRoom();
     void sendWsEvent("room.leave", {}, { maxRetries: 1 });
     setRoomSlug("");
-    setMessages([]);
-    setMessagesHasMore(false);
-    setMessagesNextCursor(null);
   }, [
     disconnectRoom,
     roomSlug,
     sendWsEvent,
-    setMessages,
-    setMessagesHasMore,
-    setMessagesNextCursor,
     setRoomSlug
   ]);
 

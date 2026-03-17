@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-export type ServerSoundEvent = "member_join" | "member_leave" | "server_disconnected" | "chat_message";
+export type ServerSoundEvent =
+  | "member_join"
+  | "member_leave"
+  | "server_disconnected"
+  | "chat_message"
+  | "self_disconnected"
+  | "self_joined_channel";
 
 type ServerSoundSettings = {
   masterVolume: number;
@@ -15,7 +21,9 @@ const DEFAULT_SETTINGS: ServerSoundSettings = {
     member_join: true,
     member_leave: true,
     server_disconnected: true,
-    chat_message: true
+    chat_message: true,
+    self_disconnected: true,
+    self_joined_channel: true
   }
 };
 
@@ -42,7 +50,9 @@ export function useServerSounds() {
           member_join: parsed.enabledByEvent?.member_join ?? DEFAULT_SETTINGS.enabledByEvent.member_join,
           member_leave: parsed.enabledByEvent?.member_leave ?? DEFAULT_SETTINGS.enabledByEvent.member_leave,
           server_disconnected: parsed.enabledByEvent?.server_disconnected ?? DEFAULT_SETTINGS.enabledByEvent.server_disconnected,
-          chat_message: parsed.enabledByEvent?.chat_message ?? DEFAULT_SETTINGS.enabledByEvent.chat_message
+          chat_message: parsed.enabledByEvent?.chat_message ?? DEFAULT_SETTINGS.enabledByEvent.chat_message,
+          self_disconnected: parsed.enabledByEvent?.self_disconnected ?? DEFAULT_SETTINGS.enabledByEvent.self_disconnected,
+          self_joined_channel: parsed.enabledByEvent?.self_joined_channel ?? DEFAULT_SETTINGS.enabledByEvent.self_joined_channel
         }
       };
     } catch {
@@ -129,6 +139,19 @@ export function useServerSounds() {
       playTone(context, 520, baseTime, 0.1, toneVolume);
       playTone(context, 390, baseTime + 0.11, 0.11, toneVolume);
       playTone(context, 290, baseTime + 0.23, 0.12, toneVolume);
+      return;
+    }
+
+    if (event === "self_disconnected") {
+      playTone(context, 470, baseTime, 0.09, toneVolume);
+      playTone(context, 340, baseTime + 0.1, 0.1, toneVolume);
+      playTone(context, 250, baseTime + 0.215, 0.11, toneVolume);
+      return;
+    }
+
+    if (event === "self_joined_channel") {
+      playTone(context, 740, baseTime, 0.08, toneVolume);
+      playTone(context, 990, baseTime + 0.085, 0.09, toneVolume);
       return;
     }
 
