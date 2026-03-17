@@ -1591,3 +1591,26 @@
 
 - `deploy:test:smoke` cycle: PASS.
 - Desktop update feed gate восстановлен в green для `test` после включения server-side desktop build/publish.
+
+## 2026-03-17 - Cycle #53 (desktop download manifest contract activation)
+
+- Environment: local web build + published `test` manifest endpoints
+- Build ref: `origin/feature/desktop-unsigned-mode` (`f1a5ace` baseline before UI contract patch)
+
+### Contract checks
+
+- `GET https://test.boltorezka.gismalink.art/desktop/test/latest.json`: PASS
+  - contains `channel=test`, `sha=4ca3ddd...`
+  - contains artifact entries with `url`/`urlPath` for macOS binaries (`Boltorezka-mac-arm64.zip`, `.dmg`)
+- Frontend mapping updated in `ServerProfileModal`:
+  - download href resolution priority: `url` -> `urlPath` -> `relativePath + sha`
+  - platform card keeps `Coming soon` fallback when no artifact exists
+
+### Validation
+
+- `npm --prefix apps/web run build`: PASS
+
+### Decision
+
+- Desktop download source contract is active and robust for current publish manifest format.
+- Plan items for active `Download` button (available platform) and manifest-driven link building are closed.

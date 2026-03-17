@@ -84,7 +84,7 @@ Note:
 Definition of done:
 - [x] В меню сервера доступна точка входа `Get desktop app`.
 - [x] Popup работает в placeholder-режиме (`coming soon`) без broken links.
-- [ ] Для доступных платформ кнопка ведет на актуальный артефакт выбранного канала (`test`/`prod`).
+- [x] Для доступных платформ кнопка ведет на актуальный артефакт выбранного канала (`test`/`prod`).
 - [ ] Обновление test->test проходит автоматически.
 - [ ] Rollback runbook проверен на test.
 
@@ -140,14 +140,15 @@ Runbook:
 - [x] UI behavior: по кнопке открывать popup `Desktop app downloads`.
 - [x] В popup рендерить фиксированный список платформ: `macOS`, `Windows`, `Linux`.
 - [x] Для платформ без артефакта показывать заглушку `Coming soon` и неактивную кнопку.
-- [ ] Для платформ с артефактом показывать активную кнопку `Download`.
-- [ ] Backend/source contract: frontend читает channel manifest (`/desktop/<channel>/latest.json`) и строит платформенные ссылки из опубликованных артефактов.
+- [x] Для платформ с артефактом показывать активную кнопку `Download`.
+- [x] Backend/source contract: frontend читает channel manifest (`/desktop/<channel>/latest.json`) и строит платформенные ссылки из опубликованных артефактов.
 - [x] Хранение артефактов: release storage для desktop билдов (по каналам `test`/`prod`) с immutable ссылками на конкретные версии.
 - [x] Публикация: server-first script при готовности билда обновляет манифест и добавляет ссылку на новый артефакт (GitHub path оставлен как fallback).
 - [x] До появления реальных билдов popup работает в режиме заглушек без broken links.
 
 Status:
 - Updated (2026-03-16): `Desktop app` tab в server menu переведен в UX-first placeholder режим (3 карточки `Windows/macOS/Linux` + disabled `Download` с tooltip `Soon`) без manifest fetch и без broken links до появления publishable desktop билдов.
+- Updated (2026-03-17): после server-side publish test artifacts popup снова использует manifest-contract (`/desktop/<channel>/latest.json`); для доступной платформы (`macOS` в текущем test канале) отображается активная `Download` кнопка, для остальных платформ сохраняется `Coming soon`.
 
 ### 4.7 Runtime routes centralization (web/desktop)
 - [x] Вынести единый transport resolver для runtime-specific endpoint routing (API/WS/RTC/SSO) вместо разрозненных `window.location` веток.
@@ -508,6 +509,11 @@ Progress note (2026-03-17, test rollout with server-side desktop build):
 - Выполнен `deploy:test:smoke` для `origin/feature/desktop-unsigned-mode` (SHA `4ca3ddd`) c `ENABLE_DESKTOP_BUILD=1`, `DESKTOP_CHANNEL=test`, `DESKTOP_SIGNING_MODE=unsigned`.
 - Server-first desktop build/publish завершен успешно: обновлены `latest.json` и `mac/latest-mac.yml` для test канала, опубликован артефакт `Boltorezka-mac-arm64.zip`.
 - Postdeploy smoke прошел green, включая `smoke:desktop:update-feed` (`ok`, `channel=test`, `sha=4ca3ddd`) и `smoke:realtime` (`ok=true`, `reconnectOk=true`).
+
+Progress note (2026-03-17, desktop download contract activation):
+- В `Server profile -> Desktop app` включен manifest-driven mapping платформенных ссылок из `/desktop/<channel>/latest.json`.
+- Frontend download resolver теперь поддерживает `url`, `urlPath` и fallback через `relativePath`+`sha`, чтобы кнопка `Download` оставалась рабочей при разных форматах publish manifest.
+- M3 download contract пункты закрыты: доступная платформа получает активный `Download`, недоступные платформы остаются в `Coming soon`.
 
 ## 11) Known Follow-ups
 

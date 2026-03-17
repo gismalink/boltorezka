@@ -75,6 +75,41 @@ type DesktopManifest = {
   files?: DesktopManifestFile[];
 };
 
+function encodePathSegments(path: string): string {
+  return path
+    .split("/")
+    .filter((segment) => segment.length > 0)
+    .map((segment) => encodeURIComponent(segment))
+    .join("/");
+}
+
+function resolveDesktopArtifactHref(
+  artifact: DesktopManifestFile | null,
+  channel: "test" | "prod",
+  sha: string
+): string | null {
+  if (!artifact) {
+    return null;
+  }
+
+  const absoluteUrl = String(artifact.url || "").trim();
+  if (absoluteUrl) {
+    return absoluteUrl;
+  }
+
+  const pathUrl = String(artifact.urlPath || "").trim();
+  if (pathUrl) {
+    return pathUrl;
+  }
+
+  const relativePath = String(artifact.relativePath || "").trim().replace(/^\/+/, "");
+  if (!relativePath || !sha) {
+    return null;
+  }
+
+  return `/desktop/${channel}/${encodeURIComponent(sha)}/${encodePathSegments(relativePath)}`;
+}
+
 function pickDesktopArtifact(files: DesktopManifestFile[], platform: "windows" | "mac" | "linux"): DesktopManifestFile | null {
   const withHref = files.filter((item) => {
     const href = String(item.url || item.urlPath || "").trim();
@@ -181,14 +216,18 @@ export function ServerProfileModal({
     ].map((platform) => {
       const files = Array.isArray(desktopManifest?.files) ? desktopManifest.files : [];
       const artifact = pickDesktopArtifact(files, platform.id);
-      const href = String(artifact?.url || artifact?.urlPath || "").trim();
+      const href = resolveDesktopArtifactHref(
+        artifact,
+        desktopChannel,
+        String(desktopManifest?.sha || "").trim()
+      );
       return {
         ...platform,
-        href: href.length > 0 ? href : null,
+        href,
         fileName: artifact?.name || ""
       };
     }),
-    [desktopManifest, t]
+    [desktopChannel, desktopManifest, t]
   );
 
   useEffect(() => {
