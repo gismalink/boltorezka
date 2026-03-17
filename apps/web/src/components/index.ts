@@ -15,6 +15,7 @@ export { ChatPanel } from "./ChatPanel";
 export { PopupPortal } from "./PopupPortal";
 export { RoomsPanel } from "./RoomsPanel";
 export { ServerProfileModal } from "./ServerProfileModal";
+export { ServerProfileModalContainer } from "./ServerProfileModalContainer";
 export { ToastStack } from "./ToastStack";
 export { UserDock } from "./UserDock";
 export { VideoWindowsOverlay } from "./VideoWindowsOverlay";

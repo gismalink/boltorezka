@@ -1,7 +1,8 @@
-import type { ComponentProps, ReactNode } from "react";
+import type { ComponentProps } from "react";
 import { AppWorkspaceContent } from "./AppWorkspaceContent";
 import { ChatPanel } from "./ChatPanel";
 import { RoomsPanel } from "./RoomsPanel";
+import { UserDock } from "./UserDock";
 import { VideoWindowsOverlay } from "./VideoWindowsOverlay";
 
 type Translate = (key: string) => string;
@@ -14,8 +15,7 @@ type AppWorkspacePanelsProps = {
   onSelectTab: (tab: MobileTab) => void;
   t: Translate;
   hasUser: boolean;
-  userDockNode: ReactNode;
-  userDockInlineSettingsNode: ReactNode;
+  userDockSharedProps: ComponentProps<typeof UserDock> | null;
   roomsPanelProps: ComponentProps<typeof RoomsPanel>;
   chatPanelProps: ComponentProps<typeof ChatPanel>;
   videoWindowsOverlayProps: ComponentProps<typeof VideoWindowsOverlay>;
@@ -27,8 +27,7 @@ export function AppWorkspacePanels({
   onSelectTab,
   t,
   hasUser,
-  userDockNode,
-  userDockInlineSettingsNode,
+  userDockSharedProps,
   roomsPanelProps,
   chatPanelProps,
   videoWindowsOverlayProps
@@ -43,8 +42,8 @@ export function AppWorkspacePanels({
       roomsPanelNode={<RoomsPanel {...roomsPanelProps} />}
       chatPanelNode={<ChatPanel {...chatPanelProps} />}
       videoWindowsNode={<VideoWindowsOverlay {...videoWindowsOverlayProps} />}
-      userDockNode={userDockNode}
-      userDockInlineSettingsNode={userDockInlineSettingsNode}
+      userDockNode={userDockSharedProps ? <UserDock {...userDockSharedProps} inlineSettingsMode={false} /> : null}
+      userDockInlineSettingsNode={userDockSharedProps ? <UserDock {...userDockSharedProps} inlineSettingsMode /> : null}
     />
   );
 }

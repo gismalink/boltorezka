@@ -19,11 +19,9 @@ import {
   FirstRunIntroOverlay,
   GuestLoginGate,
   MediaAccessDeniedBanner,
+  ServerProfileModalContainer,
   SessionMovedOverlay,
-  ServerProfileModal,
-  ToastStack,
-  UserDock,
-  AppWorkspaceContent
+  ToastStack
 } from "./components";
 import {
   DEFAULT_CHAT_IMAGE_DATA_URL_LENGTH,
@@ -48,7 +46,10 @@ import {
   useDesktopHandoffState,
   useDesktopUpdateFlow,
   usePendingAccessAutoRefresh,
+  useWorkspaceRoomsPanelProps,
   useServerVideoWindowBounds,
+  useWorkspaceChatVideoProps,
+  useWorkspaceUserDockProps,
   useSessionStateLifecycle,
   useMemberPreferencesSync,
   useTelemetryRefresh,
@@ -79,7 +80,7 @@ import {
   useVoiceSignalingOrchestrator,
   useVoiceRoomStateMaps
 } from "./hooks";
-import { detectInitialLang, LANGUAGE_OPTIONS, LOCALE_BY_LANG, TEXT, type Lang } from "./i18n";
+import { detectInitialLang, LOCALE_BY_LANG, TEXT, type Lang } from "./i18n";
 import { DEFAULT_UI_THEME, formatBuildDateLabel, normalizeUiTheme, readNonZeroDefaultVolume } from "./utils/appShell";
 import type {
   AudioQuality,
@@ -1595,7 +1596,7 @@ export function App() {
     setAudioOutputMenuOpen((value) => !value);
   }, [setAudioOutputMenuOpen, setVoiceSettingsOpen, setVoiceSettingsPanel]);
 
-  const userDockSharedProps = user ? {
+  const userDockSharedProps = useWorkspaceUserDockProps({
     t,
     user,
     currentRoomSupportsRtc,
@@ -1622,14 +1623,11 @@ export function App() {
     userSettingsOpen,
     userSettingsTab,
     voiceSettingsPanel,
-    profileUsername: String(user.username || user.email.split("@")[0] || ""),
     profileNameDraft,
-    profileEmail: user.email,
     profileSaving,
     profileStatusText,
-    selectedLang: lang,
+    lang,
     selectedUiTheme,
-    languageOptions: LANGUAGE_OPTIONS,
     inputOptions,
     outputOptions,
     videoInputOptions,
@@ -1649,47 +1647,43 @@ export function App() {
     audioOutputAnchorRef,
     voiceSettingsAnchorRef,
     userSettingsRef,
-    onToggleMic: handleToggleMic,
-    onToggleAudio: handleToggleAudio,
-    onToggleCamera: handleToggleCamera,
-    onToggleScreenShare: handleToggleScreenShareClick,
-    onToggleNoiseSuppression: handleToggleNoiseSuppression,
-    onSetRnnoiseSuppressionLevel: setRnnoiseSuppressionLevel,
-    onTogglePreRnnEchoCancellation: () => setPreRnnEchoCancellationEnabled((value) => !value),
-    onTogglePreRnnAutoGainControl: () => setPreRnnAutoGainControlEnabled((value) => !value),
+    handleToggleMic,
+    handleToggleAudio,
+    handleToggleCamera,
+    handleToggleScreenShareClick,
+    handleToggleNoiseSuppression,
+    setRnnoiseSuppressionLevel,
+    setPreRnnEchoCancellationEnabled,
+    setPreRnnAutoGainControlEnabled,
     selfMonitorEnabled,
-    onToggleSelfMonitor: () => setSelfMonitorEnabled((value) => !value),
-    onRequestVideoAccess: requestVideoAccess,
-    onToggleVoiceSettings: handleToggleVoiceSettings,
-    onToggleAudioOutput: handleToggleAudioOutput,
-    onOpenUserSettings: openUserSettings,
-    onSetVoiceSettingsOpen: setVoiceSettingsOpen,
-    onSetAudioOutputMenuOpen: setAudioOutputMenuOpen,
-    onSetVoiceSettingsPanel: setVoiceSettingsPanel,
-    onSetUserSettingsOpen: setUserSettingsOpen,
-    onSetUserSettingsTab: setUserSettingsTab,
-    onSetProfileNameDraft: setProfileNameDraft,
-    onSetSelectedLang: setLang,
-    onSetSelectedUiTheme: setSelectedUiTheme,
-    onSaveProfile: saveMyProfile,
-    onSetSelectedInputId: setSelectedInputId,
-    onSetSelectedOutputId: setSelectedOutputId,
-    onSetSelectedVideoInputId: setSelectedVideoInputId,
-    onSetSelectedInputProfile: setSelectedInputProfile,
-    onRefreshDevices: () => refreshDevices(true),
-    onRequestMediaAccess: requestMediaAccess,
-    onSetMicVolume: setMicVolume,
-    onSetOutputVolume: setOutputVolume,
-    onSetServerSoundsMasterVolume: setServerSoundsMasterVolume,
-    onSetServerSoundEnabled: setServerSoundEnabled,
-    onPreviewServerSound: playServerSound,
-    onDisconnectCall: leaveRoom,
+    setSelfMonitorEnabled,
+    requestVideoAccess,
+    handleToggleVoiceSettings,
+    handleToggleAudioOutput,
+    openUserSettings,
+    setVoiceSettingsOpen,
+    setAudioOutputMenuOpen,
+    setVoiceSettingsPanel,
+    setUserSettingsOpen,
+    setUserSettingsTab,
+    setProfileNameDraft,
+    setLang,
+    setSelectedUiTheme,
+    saveMyProfile,
+    setSelectedInputId,
+    setSelectedOutputId,
+    setSelectedVideoInputId,
+    setSelectedInputProfile,
+    refreshDevices,
+    requestMediaAccess,
+    setMicVolume,
+    setOutputVolume,
+    setServerSoundsMasterVolume,
+    setServerSoundEnabled,
+    playServerSound,
+    leaveRoom,
     isMobileViewport
-  } : null;
-
-  const userDockNode = userDockSharedProps ? <UserDock {...userDockSharedProps} inlineSettingsMode={false} /> : null;
-
-  const userDockInlineSettingsNode = userDockSharedProps ? <UserDock {...userDockSharedProps} inlineSettingsMode /> : null;
+  });
 
   const completeFirstRunIntro = useCallback(async () => {
     if (!user?.id) {
@@ -1724,21 +1718,20 @@ export function App() {
     }
   }, [profileNameDraft, pushToast, selectedUiTheme, t, token, user?.id]);
 
-  const roomsPanelProps = {
+  const roomsPanelProps = useWorkspaceRoomsPanelProps({
     t,
     canCreateRooms,
-    canKickMembers: canCreateRooms,
     canManageAudioQuality,
     roomsTree,
     roomSlug,
-    activeChatRoomSlug: chatRoomSlug,
+    chatRoomSlug,
     roomMediaTopologyBySlug,
-    currentUserId: user?.id || "",
+    currentUserId: user?.id || null,
     liveRoomMembersBySlug: roomsPresenceBySlug,
     liveRoomMemberDetailsBySlug: roomsPresenceDetailsBySlug,
     memberPreferencesByUserId,
     voiceMicStateByUserIdInCurrentRoom,
-    voiceCameraEnabledByUserIdInCurrentRoom: effectiveVoiceCameraEnabledByUserIdInCurrentRoom,
+    effectiveVoiceCameraEnabledByUserIdInCurrentRoom,
     voiceAudioOutputMutedByUserIdInCurrentRoom,
     voiceRtcStateByUserIdInCurrentRoom,
     voiceMediaStatusSummaryByUserIdInCurrentRoom,
@@ -1780,122 +1773,56 @@ export function App() {
     onOpenCategorySettingsPopup: openCategorySettingsPopup,
     onOpenChannelSettingsPopup: openChannelSettingsPopup,
     onSaveCategorySettings: saveCategorySettings,
-    onMoveCategory: (direction: "up" | "down") => void moveCategory(direction),
-    onDeleteCategory: () => void deleteCategory(),
+    moveCategory,
+    deleteCategory,
     onSaveChannelSettings: saveChannelSettings,
-    onMoveChannel: (direction: "up" | "down") => void moveChannel(direction),
-    onClearChannelMessages: (room: Room) => void clearChannelMessages(room),
-    onDeleteChannel: (room: Room) => void deleteChannel(room),
+    moveChannel,
+    clearChannelMessages,
+    deleteChannel,
     onToggleCategoryCollapsed: toggleCategoryCollapsed,
     onJoinRoom: joinRoom,
     onOpenRoomChat: openRoomChat,
     onKickRoomMember: kickRoomMember,
     onMoveRoomMember: moveRoomMember,
     onSaveMemberPreference: saveMemberPreference
-  };
+  });
 
-  const chatPanelProps = {
+  const { chatPanelProps, videoWindowsOverlayProps } = useWorkspaceChatVideoProps({
     t,
     locale,
-    roomSlug: chatRoomSlug,
-    roomTitle: activeChatRoom?.title || "",
+    chatRoomSlug,
+    activeChatRoomTitle: activeChatRoom?.title || "",
     messages,
     currentUserId: user?.id || null,
     messagesHasMore,
     loadingOlderMessages,
     chatText,
-    composePreviewImageUrl: pendingChatImageDataUrl,
+    pendingChatImageDataUrl,
     chatLogRef,
-    onLoadOlderMessages: () => void loadOlderMessages(),
-    onSetChatText: setChatText,
-    onChatPaste: handleChatPaste,
-    onChatInputKeyDown: handleChatInputKeyDown,
-    onSendMessage: sendMessage,
+    loadOlderMessages,
+    setChatText,
+    handleChatPaste,
+    handleChatInputKeyDown,
+    sendMessage,
     editingMessageId,
-    showVideoToggle: currentRoomSupportsRtc,
+    currentRoomSupportsRtc,
     videoWindowsVisible,
-    onToggleVideoWindows: () => setVideoWindowsVisible((prev) => !prev),
-    onCancelEdit: () => {
-      setEditingMessageId(null);
-      setChatText("");
-    },
-    onEditMessage: startEditingMessage,
-    onDeleteMessage: deleteOwnMessage
-  };
-
-  const videoWindowsOverlayProps = {
-    t,
-    currentUserId: user?.id || "",
-    localUserLabel: user?.name || t("video.you"),
-    localCameraEnabled: allowVideoStreaming && cameraEnabled,
+    setVideoWindowsVisible,
+    setEditingMessageId,
+    startEditingMessage,
+    deleteOwnMessage,
+    userName: user?.name || "",
+    allowVideoStreaming,
+    cameraEnabled,
     localVideoStream,
     remoteVideoStreamsByUserId,
-    remoteCameraEnabledByUserId: effectiveVoiceCameraEnabledByUserIdInCurrentRoom,
-    remoteLabelsByUserId: remoteVideoLabelsByUserId,
-    screenShareStream: activeScreenShare?.stream || null,
-    screenShareOwnerLabel: activeScreenShare?.ownerLabel || "",
-    screenShareOwnerUserId: activeScreenShare?.ownerUserId || "",
-    screenShareActive: Boolean(activeScreenShare?.stream),
-    minWidth: normalizedServerVideoWindowMinWidth,
-    maxWidth: normalizedServerVideoWindowMaxWidth,
-    visible: currentRoomSupportsRtc && videoWindowsVisible,
-    speakingWindowIds: speakingVideoWindowIds
-  };
-
-  const serverProfileModalNode = (
-    <ServerProfileModal
-      open={appMenuOpen}
-      t={t}
-      canManageUsers={canManageUsers}
-      canPromote={canPromote}
-      canViewTelemetry={canViewTelemetry}
-      serverMenuTab={serverMenuTab}
-      adminUsers={adminUsers}
-      eventLog={eventLog}
-      telemetrySummary={telemetrySummary}
-      callStatus={callStatus}
-      lastCallPeer={lastCallPeer}
-      roomVoiceConnected={roomVoiceConnected}
-      callEventLog={callEventLog}
-      serverAudioQuality={serverAudioQuality}
-      serverAudioQualitySaving={serverAudioQualitySaving}
-      canManageAudioQuality={canManageAudioQuality}
-      serverChatImagePolicy={serverChatImagePolicy}
-      serverVideoEffectType={serverVideoEffectType}
-      serverVideoResolution={serverVideoResolution}
-      serverVideoFps={serverVideoFps}
-      serverScreenShareResolution={serverScreenShareResolution}
-      serverVideoPixelFxStrength={serverVideoPixelFxStrength}
-      serverVideoPixelFxPixelSize={serverVideoPixelFxPixelSize}
-      serverVideoPixelFxGridThickness={serverVideoPixelFxGridThickness}
-      serverVideoAsciiCellSize={serverVideoAsciiCellSize}
-      serverVideoAsciiContrast={serverVideoAsciiContrast}
-      serverVideoAsciiColor={serverVideoAsciiColor}
-      serverVideoWindowMinWidth={normalizedServerVideoWindowMinWidth}
-      serverVideoWindowMaxWidth={normalizedServerVideoWindowMaxWidth}
-      serverVideoPreviewStream={serverVideoPreviewStream}
-      onClose={() => setAppMenuOpen(false)}
-      onSetServerMenuTab={setServerMenuTab}
-      onPromote={(userId) => void promote(userId)}
-      onDemote={(userId) => void demote(userId)}
-      onSetBan={(userId, banned) => void setUserBan(userId, banned)}
-      onSetAccessState={(userId, accessState) => void setUserAccessState(userId, accessState)}
-      onRefreshTelemetry={() => void loadTelemetrySummary()}
-      onSetServerAudioQuality={(value) => void setServerAudioQualityValue(value)}
-      onSetServerVideoEffectType={setServerVideoEffectType}
-      onSetServerVideoResolution={setServerVideoResolution}
-      onSetServerVideoFps={setServerVideoFps}
-      onSetServerScreenShareResolution={setServerScreenShareResolution}
-      onSetServerVideoPixelFxStrength={setServerVideoPixelFxStrength}
-      onSetServerVideoPixelFxPixelSize={setServerVideoPixelFxPixelSize}
-      onSetServerVideoPixelFxGridThickness={setServerVideoPixelFxGridThickness}
-      onSetServerVideoAsciiCellSize={setServerVideoAsciiCellSize}
-      onSetServerVideoAsciiContrast={setServerVideoAsciiContrast}
-      onSetServerVideoAsciiColor={setServerVideoAsciiColor}
-      onSetServerVideoWindowMinWidth={setBoundedServerVideoWindowMinWidth}
-      onSetServerVideoWindowMaxWidth={setBoundedServerVideoWindowMaxWidth}
-    />
-  );
+    effectiveVoiceCameraEnabledByUserIdInCurrentRoom,
+    remoteVideoLabelsByUserId,
+    activeScreenShare,
+    normalizedServerVideoWindowMinWidth,
+    normalizedServerVideoWindowMaxWidth,
+    speakingVideoWindowIds
+  });
 
   if (showDesktopBrowserCompletion) {
     return <DesktopBrowserCompletionGate desktopHandoffError={desktopHandoffError} />;
@@ -1955,17 +1882,75 @@ export function App() {
           onSelectTab={setMobileTab}
           t={t}
           hasUser={Boolean(user)}
+          userDockSharedProps={userDockSharedProps}
           roomsPanelProps={roomsPanelProps}
           chatPanelProps={chatPanelProps}
           videoWindowsOverlayProps={videoWindowsOverlayProps}
-          userDockNode={userDockNode}
-          userDockInlineSettingsNode={userDockInlineSettingsNode}
         />
       ) : authMode !== "loading" ? (
         <GuestLoginGate t={t} onBeginGoogleSso={() => beginSso("google")} />
       ) : null}
 
-      {serverProfileModalNode}
+      <ServerProfileModalContainer
+        open={appMenuOpen}
+        t={t}
+        permissions={{
+          canManageUsers,
+          canPromote,
+          canViewTelemetry,
+          canManageAudioQuality
+        }}
+        state={{
+          serverMenuTab,
+          serverAudioQuality,
+          serverAudioQualitySaving,
+          serverChatImagePolicy,
+          serverVideoEffectType,
+          serverVideoResolution,
+          serverVideoFps,
+          serverScreenShareResolution,
+          serverVideoPixelFxStrength,
+          serverVideoPixelFxPixelSize,
+          serverVideoPixelFxGridThickness,
+          serverVideoAsciiCellSize,
+          serverVideoAsciiContrast,
+          serverVideoAsciiColor,
+          serverVideoWindowMinWidth: normalizedServerVideoWindowMinWidth,
+          serverVideoWindowMaxWidth: normalizedServerVideoWindowMaxWidth
+        }}
+        data={{
+          adminUsers,
+          eventLog,
+          telemetrySummary,
+          callStatus,
+          lastCallPeer,
+          roomVoiceConnected,
+          callEventLog,
+          serverVideoPreviewStream
+        }}
+        actions={{
+          onClose: () => setAppMenuOpen(false),
+          onSetServerMenuTab: setServerMenuTab,
+          onPromote: (userId) => void promote(userId),
+          onDemote: (userId) => void demote(userId),
+          onSetBan: (userId, banned) => void setUserBan(userId, banned),
+          onSetAccessState: (userId, accessState) => void setUserAccessState(userId, accessState),
+          onRefreshTelemetry: () => void loadTelemetrySummary(),
+          onSetServerAudioQuality: (value) => void setServerAudioQualityValue(value),
+          onSetServerVideoEffectType: setServerVideoEffectType,
+          onSetServerVideoResolution: setServerVideoResolution,
+          onSetServerVideoFps: setServerVideoFps,
+          onSetServerScreenShareResolution: setServerScreenShareResolution,
+          onSetServerVideoPixelFxStrength: setServerVideoPixelFxStrength,
+          onSetServerVideoPixelFxPixelSize: setServerVideoPixelFxPixelSize,
+          onSetServerVideoPixelFxGridThickness: setServerVideoPixelFxGridThickness,
+          onSetServerVideoAsciiCellSize: setServerVideoAsciiCellSize,
+          onSetServerVideoAsciiContrast: setServerVideoAsciiContrast,
+          onSetServerVideoAsciiColor: setServerVideoAsciiColor,
+          onSetServerVideoWindowMinWidth: setBoundedServerVideoWindowMinWidth,
+          onSetServerVideoWindowMaxWidth: setBoundedServerVideoWindowMaxWidth
+        }}
+      />
 
       <ToastStack toasts={toasts} />
 

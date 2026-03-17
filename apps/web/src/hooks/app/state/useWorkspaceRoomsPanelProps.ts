@@ -1,0 +1,163 @@
+import type { Room } from "../../../domain";
+import type { RoomsPanelProps } from "../../../components";
+
+type UseWorkspaceRoomsPanelPropsInput = Omit<
+  RoomsPanelProps,
+  | "canKickMembers"
+  | "activeChatRoomSlug"
+  | "currentUserId"
+  | "voiceCameraEnabledByUserIdInCurrentRoom"
+  | "onMoveCategory"
+  | "onDeleteCategory"
+  | "onMoveChannel"
+  | "onClearChannelMessages"
+  | "onDeleteChannel"
+> & {
+  chatRoomSlug: string;
+  currentUserId: string | null;
+  effectiveVoiceCameraEnabledByUserIdInCurrentRoom: RoomsPanelProps["voiceCameraEnabledByUserIdInCurrentRoom"];
+  moveCategory: (direction: "up" | "down") => unknown;
+  deleteCategory: () => unknown;
+  moveChannel: (direction: "up" | "down") => unknown;
+  clearChannelMessages: (room: Room) => unknown;
+  deleteChannel: (room: Room) => unknown;
+};
+
+export function useWorkspaceRoomsPanelProps({
+  t,
+  canCreateRooms,
+  canManageAudioQuality,
+  roomsTree,
+  roomSlug,
+  chatRoomSlug,
+  roomMediaTopologyBySlug,
+  currentUserId,
+  liveRoomMembersBySlug,
+  liveRoomMemberDetailsBySlug,
+  memberPreferencesByUserId,
+  voiceMicStateByUserIdInCurrentRoom,
+  effectiveVoiceCameraEnabledByUserIdInCurrentRoom,
+  voiceAudioOutputMutedByUserIdInCurrentRoom,
+  voiceRtcStateByUserIdInCurrentRoom,
+  voiceMediaStatusSummaryByUserIdInCurrentRoom,
+  collapsedCategoryIds,
+  uncategorizedRooms,
+  newCategorySlug,
+  newCategoryTitle,
+  categoryPopupOpen,
+  newRoomSlug,
+  newRoomTitle,
+  newRoomKind,
+  newRoomCategoryId,
+  channelPopupOpen,
+  categorySettingsPopupOpenId,
+  editingCategoryTitle,
+  channelSettingsPopupOpenId,
+  editingRoomTitle,
+  editingRoomKind,
+  editingRoomCategoryId,
+  editingRoomAudioQualitySetting,
+  categoryPopupRef,
+  channelPopupRef,
+  onSetCategoryPopupOpen,
+  onSetChannelPopupOpen,
+  onSetNewCategorySlug,
+  onSetNewCategoryTitle,
+  onSetNewRoomSlug,
+  onSetNewRoomTitle,
+  onSetNewRoomKind,
+  onSetNewRoomCategoryId,
+  onSetEditingCategoryTitle,
+  onSetEditingRoomTitle,
+  onSetEditingRoomKind,
+  onSetEditingRoomCategoryId,
+  onSetEditingRoomAudioQualitySetting,
+  onCreateCategory,
+  onCreateRoom,
+  onOpenCreateChannelPopup,
+  onOpenCategorySettingsPopup,
+  onOpenChannelSettingsPopup,
+  onSaveCategorySettings,
+  moveCategory,
+  deleteCategory,
+  onSaveChannelSettings,
+  moveChannel,
+  clearChannelMessages,
+  deleteChannel,
+  onToggleCategoryCollapsed,
+  onJoinRoom,
+  onOpenRoomChat,
+  onKickRoomMember,
+  onMoveRoomMember,
+  onSaveMemberPreference
+}: UseWorkspaceRoomsPanelPropsInput): RoomsPanelProps {
+  return {
+    t,
+    canCreateRooms,
+    canKickMembers: canCreateRooms,
+    canManageAudioQuality,
+    roomsTree,
+    roomSlug,
+    activeChatRoomSlug: chatRoomSlug,
+    roomMediaTopologyBySlug,
+    currentUserId: currentUserId || "",
+    liveRoomMembersBySlug,
+    liveRoomMemberDetailsBySlug,
+    memberPreferencesByUserId,
+    voiceMicStateByUserIdInCurrentRoom,
+    voiceCameraEnabledByUserIdInCurrentRoom: effectiveVoiceCameraEnabledByUserIdInCurrentRoom,
+    voiceAudioOutputMutedByUserIdInCurrentRoom,
+    voiceRtcStateByUserIdInCurrentRoom,
+    voiceMediaStatusSummaryByUserIdInCurrentRoom,
+    collapsedCategoryIds,
+    uncategorizedRooms,
+    newCategorySlug,
+    newCategoryTitle,
+    categoryPopupOpen,
+    newRoomSlug,
+    newRoomTitle,
+    newRoomKind,
+    newRoomCategoryId,
+    channelPopupOpen,
+    categorySettingsPopupOpenId,
+    editingCategoryTitle,
+    channelSettingsPopupOpenId,
+    editingRoomTitle,
+    editingRoomKind,
+    editingRoomCategoryId,
+    editingRoomAudioQualitySetting,
+    categoryPopupRef,
+    channelPopupRef,
+    onSetCategoryPopupOpen,
+    onSetChannelPopupOpen,
+    onSetNewCategorySlug,
+    onSetNewCategoryTitle,
+    onSetNewRoomSlug,
+    onSetNewRoomTitle,
+    onSetNewRoomKind,
+    onSetNewRoomCategoryId,
+    onSetEditingCategoryTitle,
+    onSetEditingRoomTitle,
+    onSetEditingRoomKind,
+    onSetEditingRoomCategoryId,
+    onSetEditingRoomAudioQualitySetting,
+    onCreateCategory,
+    onCreateRoom,
+    onOpenCreateChannelPopup,
+    onOpenCategorySettingsPopup,
+    onOpenChannelSettingsPopup,
+    onSaveCategorySettings,
+    onMoveCategory: (direction) => void moveCategory(direction),
+    onDeleteCategory: () => void deleteCategory(),
+    onSaveChannelSettings,
+    onMoveChannel: (direction) => void moveChannel(direction),
+    onClearChannelMessages: (room) => void clearChannelMessages(room),
+    onDeleteChannel: (room) => void deleteChannel(room),
+    onToggleCategoryCollapsed,
+    onJoinRoom,
+    onOpenRoomChat,
+    onKickRoomMember,
+    onMoveRoomMember,
+    onSaveMemberPreference
+  };
+}
