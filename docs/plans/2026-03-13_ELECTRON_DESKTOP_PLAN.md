@@ -504,6 +504,11 @@ Progress note (2026-03-17, runtime transport targeted smoke evidence):
 - Для закрытия runtime-refactor gate отдельно выполнен targeted набор на сервере (`~/srv/boltorezka`): `smoke:realtime`, `smoke:livekit:token-flow`, `smoke:desktop:runtime` — все команды завершились `ok`.
 - `smoke:realtime` прошел с transient retry (`attempt 1/3`, `2/3`) и итогом `ok=true`; `smoke:desktop:runtime` подтвердил desktop markers (`runtime=desktop`, `platform=darwin`, `electronVersion=35.7.5`).
 
+Progress note (2026-03-17, test rollout with server-side desktop build):
+- Выполнен `deploy:test:smoke` для `origin/feature/desktop-unsigned-mode` (SHA `4ca3ddd`) c `ENABLE_DESKTOP_BUILD=1`, `DESKTOP_CHANNEL=test`, `DESKTOP_SIGNING_MODE=unsigned`.
+- Server-first desktop build/publish завершен успешно: обновлены `latest.json` и `mac/latest-mac.yml` для test канала, опубликован артефакт `Boltorezka-mac-arm64.zip`.
+- Postdeploy smoke прошел green, включая `smoke:desktop:update-feed` (`ok`, `channel=test`, `sha=4ca3ddd`) и `smoke:realtime` (`ok=true`, `reconnectOk=true`).
+
 ## 11) Known Follow-ups
 
 - [x] Провести browser-level handoff soak (Chromium/WebKit/Firefox) поверх уже закрытого protocol-level soak и приложить агрегированное evidence к auth runbook.

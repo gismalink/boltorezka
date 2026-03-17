@@ -1562,3 +1562,32 @@
 
 - Runtime transport refactor targeted gate: PASS.
 - Плановый пункт `4.7 / targeted test smoke` закрыт.
+
+## 2026-03-17 - Cycle #52 (test rollout with server-side desktop build)
+
+- Environment: `test` (`https://test.boltorezka.gismalink.art`)
+- Build ref: `origin/feature/desktop-unsigned-mode` (`4ca3ddd`)
+- Rollout command:
+  - `TEST_REF=origin/feature/desktop-unsigned-mode ENABLE_DESKTOP_BUILD=1 DESKTOP_CHANNEL=test DESKTOP_SIGNING_MODE=unsigned DESKTOP_PUBLIC_BASE_URL=https://test.boltorezka.gismalink.art npm run deploy:test:smoke`
+
+### Build/publish stage
+
+- Server-side desktop build: PASS (`apps/desktop-electron`, darwin arm64, ad-hoc signing)
+- Published test artifacts:
+  - `desktop/test/latest.json`
+  - `desktop/test/mac/latest-mac.yml`
+  - `desktop/test/<sha>/Boltorezka-mac-arm64.zip`
+
+### Postdeploy smoke
+
+- `smoke:sso`: PASS
+- `smoke:api`: PASS
+- `smoke:auth:session`: PASS
+- `smoke:web:version-cache`: PASS (`sha=4ca3ddd...`)
+- `smoke:desktop:update-feed`: PASS (`channel=test`, `sha=4ca3ddd...`)
+- `smoke:realtime`: PASS (`ok=true`, `reconnectOk=true`, `callSignalIdempotencyOk=true`)
+
+### Decision
+
+- `deploy:test:smoke` cycle: PASS.
+- Desktop update feed gate восстановлен в green для `test` после включения server-side desktop build/publish.
