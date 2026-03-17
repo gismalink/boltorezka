@@ -88,6 +88,7 @@ type WsMessageControllerOptions = {
     }
   ) => void;
   onSessionMoved?: (payload: { code: string; message: string }) => void;
+  getActiveChatRoomSlug?: () => string;
 };
 
 export class WsMessageController {
@@ -202,6 +203,18 @@ export class WsMessageController {
 
     const payload = message.payload as Record<string, unknown>;
     const senderRequestId = typeof payload.senderRequestId === "string" ? payload.senderRequestId : undefined;
+    const incomingRoomSlug = this.asTrimmedString(payload.roomSlug || payload.room_slug);
+    const activeChatRoomSlug = this.asTrimmedString(this.options.getActiveChatRoomSlug?.());
+    if (incomingRoomSlug && activeChatRoomSlug && incomingRoomSlug !== activeChatRoomSlug) {
+      if (!senderRequestId) {
+        return;
+      }
+
+      this.options.clearPendingRequest(senderRequestId);
+      this.options.markMessageDelivery(senderRequestId, "failed");
+      this.options.setMessages((prev) => prev.filter((item) => item.clientRequestId !== senderRequestId));
+      return;
+    }
 
     if (!senderRequestId) {
       this.options.setMessages((prev) => [...prev, this.buildDeliveredChatMessage(payload)]);

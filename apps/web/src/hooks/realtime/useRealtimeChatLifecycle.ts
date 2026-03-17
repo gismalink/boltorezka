@@ -147,6 +147,7 @@ export function useRealtimeChatLifecycle({
   const onNackRef = useRef(onNack);
   const onScreenShareStateRef = useRef(onScreenShareState);
   const onRoomMediaTopologyRef = useRef(onRoomMediaTopology);
+  const activeChatRoomSlugRef = useRef(chatRoomSlug);
 
   useEffect(() => {
     onCallMicStateRef.current = onCallMicState;
@@ -187,6 +188,10 @@ export function useRealtimeChatLifecycle({
   useEffect(() => {
     onRoomMediaTopologyRef.current = onRoomMediaTopology;
   }, [onRoomMediaTopology]);
+
+  useEffect(() => {
+    activeChatRoomSlugRef.current = chatRoomSlug;
+  }, [chatRoomSlug]);
 
   useEffect(() => {
     roomSlugRef.current = joinedRoomSlug;
@@ -231,7 +236,8 @@ export function useRealtimeChatLifecycle({
       onAck: (...args) => onAckRef.current?.(...args),
       onNack: (...args) => onNackRef.current?.(...args),
       onScreenShareState: (...args) => onScreenShareStateRef.current?.(...args),
-      onSessionMoved: (...args) => onSessionMoved?.(...args)
+      onSessionMoved: (...args) => onSessionMoved?.(...args),
+      getActiveChatRoomSlug: () => activeChatRoomSlugRef.current
     });
 
     const client = new RealtimeClient({

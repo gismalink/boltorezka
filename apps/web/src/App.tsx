@@ -1169,7 +1169,8 @@ export function App() {
 
   const sendMessage = (event: FormEvent) => {
     event.preventDefault();
-    if (!chatRoomSlug) {
+    if (!chatRoomSlug || chatRoomSlug !== roomSlug) {
+      pushToast(t("chat.selectChannelPlaceholder"));
       return;
     }
 
@@ -1209,7 +1210,7 @@ export function App() {
   };
 
   const handleChatPaste = (event: ClipboardEvent<HTMLInputElement>) => {
-    if (!chatRoomSlug) {
+    if (!chatRoomSlug || chatRoomSlug !== roomSlug) {
       return;
     }
 
@@ -1272,6 +1273,11 @@ export function App() {
   };
 
   const startEditingMessage = (messageId: string) => {
+    if (!chatRoomSlug || chatRoomSlug !== roomSlug) {
+      pushToast(t("chat.selectChannelPlaceholder"));
+      return;
+    }
+
     const targetMessage = messages.find((item) => item.id === messageId);
     if (!targetMessage || !canManageOwnMessage(targetMessage)) {
       return;
@@ -1297,6 +1303,11 @@ export function App() {
   }, [chatRoomSlug]);
 
   const deleteOwnMessage = (messageId: string) => {
+    if (!chatRoomSlug || chatRoomSlug !== roomSlug) {
+      pushToast(t("chat.selectChannelPlaceholder"));
+      return;
+    }
+
     const targetMessage = messages.find((item) => item.id === messageId);
     if (!targetMessage || !canManageOwnMessage(targetMessage)) {
       return;
