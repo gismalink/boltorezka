@@ -1593,80 +1593,6 @@ export function App() {
     return () => window.clearInterval(intervalId);
   }, [user]);
 
-  if (showDesktopBrowserCompletion) {
-    return (
-      <main className="app legacy-layout mx-auto grid h-[100dvh] max-h-[100dvh] w-full max-w-[760px] place-items-center p-6">
-        <section className="settings-sheet w-full max-w-[560px] p-6 text-center">
-          <h1 className="text-2xl font-semibold">Авторизация завершена</h1>
-          <p className="mt-3 text-sm opacity-80">
-            {desktopHandoffError
-              ? "Не удалось подтвердить вход в Desktop. Попробуйте открыть приложение еще раз."
-              : "Вы вошли в Boltorezka Desktop. Эту вкладку можно закрыть."}
-          </p>
-          <div className="mt-5 flex justify-center">
-            <button
-              type="button"
-              className="secondary"
-              onClick={() => {
-                const url = new URL(window.location.href);
-                url.searchParams.delete("desktop_handoff");
-                url.searchParams.delete("desktop_handoff_bootstrap");
-                url.searchParams.delete("desktop_handoff_refreshed");
-                url.searchParams.delete("desktop_handoff_sent");
-                url.searchParams.delete("desktop_handoff_attempt");
-                url.searchParams.delete("desktop_handoff_complete");
-                url.searchParams.delete("desktop_handoff_error");
-                window.location.replace(url.toString());
-              }}
-            >
-              Открыть веб-версию
-            </button>
-          </div>
-        </section>
-      </main>
-    );
-  }
-
-  if (user && !canUseService) {
-    const blocked = user.access_state === "blocked";
-    return (
-      <main className="app legacy-layout mx-auto grid h-[100dvh] max-h-[100dvh] w-full max-w-[760px] place-items-center p-6">
-        <section className="settings-sheet w-full max-w-[560px] p-6 text-center">
-          <h1 className="text-2xl font-semibold">
-            {blocked ? t("access.blockedTitle") : t("access.pendingTitle")}
-          </h1>
-          <p className="mt-3 text-sm opacity-80">
-            {blocked ? t("access.blockedMessage") : t("access.pendingMessage")}
-          </p>
-          {!blocked ? (
-            <>
-              <p className="mt-2 text-sm opacity-80">{t("access.pendingQueueHint")}</p>
-              <p className="mt-1 text-xs opacity-70">
-                {t("access.autoRefreshPrefix")} {pendingAccessRefreshInSec} {t("access.autoRefreshSuffix")}
-              </p>
-            </>
-          ) : null}
-          <div className="mt-5 flex justify-center gap-2">
-            <button
-              type="button"
-              className="secondary"
-              onClick={() => window.location.reload()}
-            >
-              {t("access.refresh")}
-            </button>
-            <button
-              type="button"
-              className="secondary"
-              onClick={() => logout()}
-            >
-              {t("access.logout")}
-            </button>
-          </div>
-        </section>
-      </main>
-    );
-  }
-
   useAutoRoomVoiceConnection({
     roomMediaResolved: Boolean(currentRoomSnapshot) || topologySupportsRtc,
     currentRoomSupportsRtc: currentRoomSupportsRtc && !showAppUpdatedOverlay,
@@ -1940,6 +1866,80 @@ export function App() {
       setProfileSaving(false);
     }
   }, [profileNameDraft, pushToast, selectedUiTheme, t, token, user?.id]);
+
+  if (showDesktopBrowserCompletion) {
+    return (
+      <main className="app legacy-layout mx-auto grid h-[100dvh] max-h-[100dvh] w-full max-w-[760px] place-items-center p-6">
+        <section className="settings-sheet w-full max-w-[560px] p-6 text-center">
+          <h1 className="text-2xl font-semibold">Авторизация завершена</h1>
+          <p className="mt-3 text-sm opacity-80">
+            {desktopHandoffError
+              ? "Не удалось подтвердить вход в Desktop. Попробуйте открыть приложение еще раз."
+              : "Вы вошли в Boltorezka Desktop. Эту вкладку можно закрыть."}
+          </p>
+          <div className="mt-5 flex justify-center">
+            <button
+              type="button"
+              className="secondary"
+              onClick={() => {
+                const url = new URL(window.location.href);
+                url.searchParams.delete("desktop_handoff");
+                url.searchParams.delete("desktop_handoff_bootstrap");
+                url.searchParams.delete("desktop_handoff_refreshed");
+                url.searchParams.delete("desktop_handoff_sent");
+                url.searchParams.delete("desktop_handoff_attempt");
+                url.searchParams.delete("desktop_handoff_complete");
+                url.searchParams.delete("desktop_handoff_error");
+                window.location.replace(url.toString());
+              }}
+            >
+              Открыть веб-версию
+            </button>
+          </div>
+        </section>
+      </main>
+    );
+  }
+
+  if (user && !canUseService) {
+    const blocked = user.access_state === "blocked";
+    return (
+      <main className="app legacy-layout mx-auto grid h-[100dvh] max-h-[100dvh] w-full max-w-[760px] place-items-center p-6">
+        <section className="settings-sheet w-full max-w-[560px] p-6 text-center">
+          <h1 className="text-2xl font-semibold">
+            {blocked ? t("access.blockedTitle") : t("access.pendingTitle")}
+          </h1>
+          <p className="mt-3 text-sm opacity-80">
+            {blocked ? t("access.blockedMessage") : t("access.pendingMessage")}
+          </p>
+          {!blocked ? (
+            <>
+              <p className="mt-2 text-sm opacity-80">{t("access.pendingQueueHint")}</p>
+              <p className="mt-1 text-xs opacity-70">
+                {t("access.autoRefreshPrefix")} {pendingAccessRefreshInSec} {t("access.autoRefreshSuffix")}
+              </p>
+            </>
+          ) : null}
+          <div className="mt-5 flex justify-center gap-2">
+            <button
+              type="button"
+              className="secondary"
+              onClick={() => window.location.reload()}
+            >
+              {t("access.refresh")}
+            </button>
+            <button
+              type="button"
+              className="secondary"
+              onClick={() => logout()}
+            >
+              {t("access.logout")}
+            </button>
+          </div>
+        </section>
+      </main>
+    );
+  }
 
   return (
     <main className="app legacy-layout mx-auto grid h-[100dvh] max-h-[100dvh] w-full max-w-[1400px] grid-rows-[auto_1fr] gap-4 overflow-hidden p-4 desktop:gap-6 desktop:p-8">
