@@ -2,6 +2,50 @@
 
 Отдельный журнал результатов тестов/нагрузки.
 
+## 2026-03-17 — Cycle #54 (Signing readiness fallback, windows-only Azure OIDC path)
+
+- Environment: `GitHub Actions` (`desktop-artifacts` workflow, `feature/desktop-unsigned-mode`)
+- Build refs:
+  - `11c63df5a62efc7e7388eecad10e0374b2c25d40` (baseline before fixes)
+  - `2d509ce5d98fffa74b86e9dfcf16696cced9dbce` (renderer build runner hardening)
+  - `9560e39f7bcfa3f69e537e600843b9dbd531d877` (Windows dependency install fix)
+  - `1b811cbaf05bc39303c305ee39f86844d96f8c56` (electron-builder runner hardening)
+
+### Functional gate
+
+- Signed RC dispatch chain: PARTIAL PASS (engineering blockers removed; operational secrets blocker remains)
+  - input set:
+    - `release_channel=test`
+    - `signed=true`
+    - `create_release_draft=false`
+    - `signed_platforms=windows-only`
+    - `windows_signing_provider=azure-oidc`
+  - run evidence:
+    - `https://github.com/gismalink/boltorezka/actions/runs/23208569072` (main baseline) -> FAIL in Windows signed build path (`Build Windows release candidate (Azure signing path)`)
+    - `https://github.com/gismalink/boltorezka/actions/runs/23208784048` (`2d509ce`) -> FAIL on `npm ci` (`EBADPLATFORM dmg-license darwin-only`)
+    - `https://github.com/gismalink/boltorezka/actions/runs/23208881830` (`9560e39`) -> FAIL in Windows signed build path after renderer build completed
+    - `https://github.com/gismalink/boltorezka/actions/runs/23209017455` (`1b811cb`) -> Windows build+pack PASS, fail moved to Azure auth step
+
+### Root cause evidence
+
+- Fixed during this cycle:
+  - Renderer build launcher under Windows shell path resolved via npm execpath (no silent spawn failure).
+  - `dmg-license` moved to `optionalDependencies`, removing Windows `EBADPLATFORM` during `npm --prefix apps/desktop-electron ci`.
+  - Electron-builder launcher under Windows shell path resolved via npm execpath (no silent npx spawn failure).
+- Current blocker (operational readiness):
+  - `Azure login (OIDC for Windows signing)` fails with missing Azure identifiers:
+    - `Login failed with Error: Using auth-type: SERVICE_PRINCIPAL. Not all values are present. Ensure 'client-id' and 'tenant-id' are supplied.`
+
+### Scope covered by this cycle
+
+- Закрыты code-level Windows CI blockers signing pipeline: install/build/pack path для signed RC теперь проходит до Azure login.
+- Подтверждено, что remaining blocker находится в secrets/config readiness, а не в desktop build code path.
+
+### Decision
+
+- Cycle #54: FAIL (expected operational blocker).
+- Next action: заполнить `AZURE_TRUSTED_SIGNING_CLIENT_ID` и `AZURE_TRUSTED_SIGNING_TENANT_ID` (и связанные Trusted Signing secrets), затем повторить signed RC workflow для PASS evidence.
+
 ## 2026-03-16 — Cycle #53 (Server-first unsigned desktop publish, test channel)
 
 - Environment: `test` (`https://test.boltorezka.gismalink.art`, mac-mini)
