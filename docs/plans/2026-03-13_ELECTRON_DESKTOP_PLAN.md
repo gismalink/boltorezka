@@ -154,7 +154,7 @@ Status:
 - [x] Перевести RTC signal URL normalization и realtime WS base на единый resolver.
 - [x] Зафиксировать runtime matrix (`web-dev`, `web-prod`, `desktop-dev`, `desktop-prod`) и инварианты протоколов (`https/wss`) в runbook.
 - [x] Добавить диагностику endpoint resolution в desktop call log (raw/live resolved URL), чтобы ускорить triage RTC инцидентов.
-- [ ] Прогнать targeted test smoke после рефакторинга (`smoke:realtime`, `smoke:livekit:token-flow`, desktop practical media check).
+- [x] Прогнать targeted test smoke после рефакторинга (`smoke:realtime`, `smoke:livekit:token-flow`, desktop practical media check).
 
 Runbook:
 - `docs/runbooks/DESKTOP_RUNTIME_TRANSPORT_RUNBOOK.md`
@@ -498,6 +498,11 @@ Progress note (2026-03-17, runtime transport centralization phase 1 complete):
 - API и SSO logout URL переведены на общий resolver (`apps/web/src/api.ts`, `apps/web/src/services/authController.ts`).
 - В desktop call log добавлены endpoint diagnostics перед LiveKit connect (`transport runtime/api/ws/publicOrigin`) и постоянная пара `livekit signal raw/resolved` для triage инцидентов класса `WS=ok, RTC=fail`.
 - Runtime matrix и protocol invariants зафиксированы в `docs/runbooks/DESKTOP_RUNTIME_TRANSPORT_RUNBOOK.md`.
+
+Progress note (2026-03-17, runtime transport targeted smoke evidence):
+- Выполнен test rollout `origin/feature/desktop-unsigned-mode` на SHA `6ed844e` через `deploy:test:smoke`; deploy-фаза завершена успешно, общий цикл помечен `failed` из-за независимого feed-gate `smoke:desktop:update-feed`.
+- Для закрытия runtime-refactor gate отдельно выполнен targeted набор на сервере (`~/srv/boltorezka`): `smoke:realtime`, `smoke:livekit:token-flow`, `smoke:desktop:runtime` — все команды завершились `ok`.
+- `smoke:realtime` прошел с transient retry (`attempt 1/3`, `2/3`) и итогом `ok=true`; `smoke:desktop:runtime` подтвердил desktop markers (`runtime=desktop`, `platform=darwin`, `electronVersion=35.7.5`).
 
 ## 11) Known Follow-ups
 

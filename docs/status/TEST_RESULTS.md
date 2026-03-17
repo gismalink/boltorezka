@@ -1539,3 +1539,26 @@
 
 - Manual verification: PASS.
 - Баннер доступа к устройствам исчез, медиа-устройства снова работают.
+
+## 2026-03-17 - Cycle #51 (runtime transport centralization targeted smoke)
+
+- Environment: `test` (`https://test.boltorezka.gismalink.art`)
+- Build ref: `origin/feature/desktop-unsigned-mode` (`6ed844e`)
+
+### Rollout + postdeploy status
+
+- `TEST_REF=origin/feature/desktop-unsigned-mode npm run deploy:test:smoke`
+  - deploy phase: PASS
+  - postdeploy aggregate: FAIL (independent gate `smoke:desktop:update-feed` -> `latest.json failed after 3 attempts: fetch failed`)
+
+### Targeted runtime transport gate (server-side)
+
+- Command context: `ssh mac-mini 'cd ~/srv/boltorezka && set -a && source .deploy/smoke-auth.env && set +a && ...'`
+- `smoke:realtime`: PASS (`ok=true`, transient retries on attempts `1/3`, `2/3`)
+- `smoke:livekit:token-flow`: PASS (`ok=true`, `reconnectTokenRotated=true`, `sameRoomAcrossTokens=true`)
+- `smoke:desktop:runtime`: PASS (`runtime=desktop`, `platform=darwin`, `electronVersion=35.7.5`)
+
+### Decision
+
+- Runtime transport refactor targeted gate: PASS.
+- Плановый пункт `4.7 / targeted test smoke` закрыт.
