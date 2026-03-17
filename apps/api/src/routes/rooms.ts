@@ -2,7 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { db } from "../db.js";
 import { broadcastRealtimeEnvelope } from "../realtime-broadcast.js";
-import { loadCurrentUser, requireAuth, requireRole } from "../middleware/auth.js";
+import { loadCurrentUser, requireAuth, requireRole, requireServiceAccess } from "../middleware/auth.js";
 import type { RoomCategoryRow, RoomListRow, RoomMessageRow, RoomRow } from "../db.types.ts";
 import type {
   RoomCategoryCreateResponse,
@@ -72,7 +72,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
   fastify.get(
     "/v1/rooms/tree",
     {
-      preHandler: [requireAuth]
+      preHandler: [requireAuth, requireServiceAccess]
     },
     async (request) => {
       const userId = String(request.user?.sub || "").trim();
@@ -139,7 +139,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
   fastify.get(
     "/v1/rooms",
     {
-      preHandler: [requireAuth]
+      preHandler: [requireAuth, requireServiceAccess]
     },
     async (request) => {
       const userId = String(request.user?.sub || "").trim();
@@ -179,7 +179,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
   fastify.post<{ Body: { slug: string; title: string; position?: number } }>(
     "/v1/room-categories",
     {
-      preHandler: [requireAuth, loadCurrentUser, requireRole(["admin", "super_admin"])]
+      preHandler: [requireAuth, requireServiceAccess, loadCurrentUser, requireRole(["admin", "super_admin"])]
     },
     async (request, reply) => {
       const parsed = createCategorySchema.safeParse(request.body);
@@ -230,7 +230,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
   }>(
     "/v1/room-categories/:categoryId",
     {
-      preHandler: [requireAuth, loadCurrentUser, requireRole(["admin", "super_admin"])]
+      preHandler: [requireAuth, requireServiceAccess, loadCurrentUser, requireRole(["admin", "super_admin"])]
     },
     async (request, reply) => {
       const categoryId = String(request.params.categoryId || "").trim();
@@ -274,7 +274,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
   }>(
     "/v1/room-categories/:categoryId/move",
     {
-      preHandler: [requireAuth, loadCurrentUser, requireRole(["admin", "super_admin"])]
+      preHandler: [requireAuth, requireServiceAccess, loadCurrentUser, requireRole(["admin", "super_admin"])]
     },
     async (request, reply) => {
       const categoryId = String(request.params.categoryId || "").trim();
@@ -354,7 +354,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
   }>(
     "/v1/room-categories/:categoryId",
     {
-      preHandler: [requireAuth, loadCurrentUser, requireRole(["admin", "super_admin"])]
+      preHandler: [requireAuth, requireServiceAccess, loadCurrentUser, requireRole(["admin", "super_admin"])]
     },
     async (request, reply) => {
       const categoryId = String(request.params.categoryId || "").trim();
@@ -412,7 +412,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
   }>(
     "/v1/rooms",
     {
-      preHandler: [requireAuth, loadCurrentUser, requireRole(["admin", "super_admin"])]
+      preHandler: [requireAuth, requireServiceAccess, loadCurrentUser, requireRole(["admin", "super_admin"])]
     },
     async (request, reply) => {
       const parsed = createRoomSchema.safeParse(request.body);
@@ -502,7 +502,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
   }>(
     "/v1/rooms/:roomId",
     {
-      preHandler: [requireAuth, loadCurrentUser, requireRole(["admin", "super_admin"])]
+      preHandler: [requireAuth, requireServiceAccess, loadCurrentUser, requireRole(["admin", "super_admin"])]
     },
     async (request, reply) => {
       const roomId = String(request.params.roomId || "").trim();
@@ -589,7 +589,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
   }>(
     "/v1/rooms/:roomId/move",
     {
-      preHandler: [requireAuth, loadCurrentUser, requireRole(["admin", "super_admin"])]
+      preHandler: [requireAuth, requireServiceAccess, loadCurrentUser, requireRole(["admin", "super_admin"])]
     },
     async (request, reply) => {
       const roomId = String(request.params.roomId || "").trim();
@@ -676,7 +676,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
   }>(
     "/v1/rooms/:roomId",
     {
-      preHandler: [requireAuth, loadCurrentUser, requireRole(["admin", "super_admin"])]
+      preHandler: [requireAuth, requireServiceAccess, loadCurrentUser, requireRole(["admin", "super_admin"])]
     },
     async (request, reply) => {
       const roomId = String(request.params.roomId || "").trim();
@@ -742,7 +742,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
   }>(
     "/v1/rooms/:roomId/messages",
     {
-      preHandler: [requireAuth, loadCurrentUser, requireRole(["admin", "super_admin"])]
+      preHandler: [requireAuth, requireServiceAccess, loadCurrentUser, requireRole(["admin", "super_admin"])]
     },
     async (request, reply) => {
       const roomId = String(request.params.roomId || "").trim();
@@ -803,7 +803,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
   }>(
     "/v1/rooms/:slug/messages",
     {
-      preHandler: [requireAuth]
+      preHandler: [requireAuth, requireServiceAccess]
     },
     async (request, reply) => {
       const userId = String(request.user?.sub || "").trim();

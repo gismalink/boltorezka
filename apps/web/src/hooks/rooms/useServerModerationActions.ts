@@ -5,6 +5,7 @@ import type { RoomAdminController } from "../../services";
 
 type UseServerModerationActionsArgs = {
   token: string;
+  canManageUsers: boolean;
   canPromote: boolean;
   canManageAudioQuality: boolean;
   roomAdminController: RoomAdminController;
@@ -15,6 +16,7 @@ type UseServerModerationActionsArgs = {
 
 export function useServerModerationActions({
   token,
+  canManageUsers,
   canPromote,
   canManageAudioQuality,
   roomAdminController,
@@ -46,6 +48,14 @@ export function useServerModerationActions({
     await roomAdminController.setBan(token, userId, banned);
   }, [canPromote, roomAdminController, token]);
 
+  const setUserAccessState = useCallback(async (userId: string, accessState: "pending" | "active" | "blocked") => {
+    if (!token || !canManageUsers) {
+      return;
+    }
+
+    await roomAdminController.setAccessState(token, userId, accessState);
+  }, [canManageUsers, roomAdminController, token]);
+
   const setServerAudioQualityValue = useCallback(async (value: AudioQuality) => {
     setServerAudioQuality(value);
 
@@ -75,6 +85,7 @@ export function useServerModerationActions({
     promote,
     demote,
     setUserBan,
+    setUserAccessState,
     setServerAudioQualityValue
   };
 }

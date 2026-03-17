@@ -347,6 +347,7 @@ export function App() {
   const userSettingsRef = useRef<HTMLDivElement>(null);
 
   const canCreateRooms = user?.role === "admin" || user?.role === "super_admin";
+  const canManageUsers = canCreateRooms;
   const canPromote = user?.role === "super_admin";
   const canManageAudioQuality = canPromote;
   const canViewTelemetry = canPromote || canCreateRooms;
@@ -1011,7 +1012,7 @@ export function App() {
 
   useAdminUsersSync({
     token,
-    canPromote,
+    canManageUsers,
     pushLog,
     setAdminUsers
   });
@@ -1421,9 +1422,11 @@ export function App() {
     promote,
     demote,
     setUserBan,
+    setUserAccessState,
     setServerAudioQualityValue
   } = useServerModerationActions({
     token,
+    canManageUsers,
     canPromote,
     canManageAudioQuality,
     roomAdminController,
@@ -1616,7 +1619,7 @@ export function App() {
 
   useServerMenuAccessGuard({
     serverMenuTab,
-    canPromote,
+    canManageUsers,
     canViewTelemetry,
     canManageAudioQuality,
     setServerMenuTab
@@ -2115,6 +2118,7 @@ export function App() {
       <ServerProfileModal
         open={appMenuOpen}
         t={t}
+        canManageUsers={canManageUsers}
         canPromote={canPromote}
         canViewTelemetry={canViewTelemetry}
         serverMenuTab={serverMenuTab}
@@ -2147,6 +2151,7 @@ export function App() {
         onPromote={(userId) => void promote(userId)}
         onDemote={(userId) => void demote(userId)}
         onSetBan={(userId, banned) => void setUserBan(userId, banned)}
+        onSetAccessState={(userId, accessState) => void setUserAccessState(userId, accessState)}
         onRefreshTelemetry={() => void loadTelemetrySummary()}
         onSetServerAudioQuality={(value) => void setServerAudioQualityValue(value)}
         onSetServerVideoEffectType={setServerVideoEffectType}

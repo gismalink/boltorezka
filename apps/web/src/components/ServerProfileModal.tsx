@@ -4,10 +4,12 @@ import type { ServerScreenShareResolution, ServerVideoEffectType } from "../hook
 import { RangeSlider } from "./RangeSlider";
 
 type ServerMenuTab = "users" | "events" | "telemetry" | "call" | "sound" | "video" | "chat_images" | "desktop_downloads";
+type UserAccessTab = "active" | "blocked" | "requests" | "bots";
 
 type ServerProfileModalProps = {
   open: boolean;
   t: (key: string) => string;
+  canManageUsers: boolean;
   canPromote: boolean;
   canViewTelemetry: boolean;
   serverMenuTab: ServerMenuTab;
@@ -44,6 +46,7 @@ type ServerProfileModalProps = {
   onPromote: (userId: string) => void;
   onDemote: (userId: string) => void;
   onSetBan: (userId: string, banned: boolean) => void;
+  onSetAccessState: (userId: string, accessState: "pending" | "active" | "blocked") => void;
   onRefreshTelemetry: () => void;
   onSetServerAudioQuality: (value: AudioQuality) => void;
   onSetServerVideoEffectType: (value: ServerVideoEffectType) => void;
@@ -140,6 +143,7 @@ function pickDesktopArtifact(files: DesktopManifestFile[], platform: "windows" |
 export function ServerProfileModal({
   open,
   t,
+  canManageUsers,
   canPromote,
   canViewTelemetry,
   serverMenuTab,
@@ -172,6 +176,7 @@ export function ServerProfileModal({
   onPromote,
   onDemote,
   onSetBan,
+  onSetAccessState,
   onRefreshTelemetry,
   onSetServerAudioQuality,
   onSetServerVideoEffectType,
@@ -191,6 +196,8 @@ export function ServerProfileModal({
   const [desktopManifest, setDesktopManifest] = useState<DesktopManifest | null>(null);
   const [desktopManifestLoading, setDesktopManifestLoading] = useState(false);
   const [desktopManifestError, setDesktopManifestError] = useState("");
+  const [userAccessTab, setUserAccessTab] = useState<UserAccessTab>("active");
+  const [userSearchQuery, setUserSearchQuery] = useState("");
   const totalUsers = adminUsers.length;
   const totalAdmins = adminUsers.filter((item) => item.role === "admin" || item.role === "super_admin").length;
   const totalBanned = adminUsers.filter((item) => item.is_banned).length;
@@ -229,6 +236,29 @@ export function ServerProfileModal({
     }),
     [desktopChannel, desktopManifest, t]
   );
+
+  const normalizedUserSearch = userSearchQuery.trim().toLowerCase();
+
+  const usersByTab = useMemo(() => {
+    const active = adminUsers.filter((item) => !item.is_bot && !item.is_banned && item.access_state === "active");
+    const blocked = adminUsers.filter((item) => !item.is_bot && (item.is_banned || item.access_state === "blocked"));
+    const requests = adminUsers.filter((item) => !item.is_bot && !item.is_banned && item.access_state === "pending");
+    const bots = adminUsers.filter((item) => item.is_bot);
+
+    return { active, blocked, requests, bots };
+  }, [adminUsers]);
+
+  const filteredAdminUsers = useMemo(() => {
+    const source = usersByTab[userAccessTab];
+    if (!normalizedUserSearch) {
+      return source;
+    }
+
+    return source.filter((item) => {
+      const haystack = [item.email, item.name, item.username || "", item.role].join(" ").toLowerCase();
+      return haystack.includes(normalizedUserSearch);
+    });
+  }, [normalizedUserSearch, userAccessTab, usersByTab]);
 
   useEffect(() => {
     const element = previewVideoRef.current;
@@ -311,7 +341,7 @@ export function ServerProfileModal({
       <section className="card voice-preferences-modal user-settings-modal server-profile-modal grid w-full max-w-[980px] min-w-0 gap-4 max-desktop:h-full max-desktop:max-h-none max-desktop:min-h-0 max-desktop:overflow-hidden max-desktop:p-4 desktop:grid-cols-[250px_1fr]">
         <div className="user-settings-sidebar grid min-w-0 content-start gap-2">
           <div className="voice-preferences-kicker">{t("server.title")}</div>
-          {canPromote ? (
+          {canManageUsers ? (
             <button
               type="button"
               className={`secondary user-settings-tab-btn min-h-[42px] justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${serverMenuTab === "users" ? "user-settings-tab-btn-active" : ""}`}
@@ -399,16 +429,60 @@ export function ServerProfileModal({
             </button>
           </div>
 
-          {serverMenuTab === "users" && canPromote ? (
+          {serverMenuTab === "users" && canManageUsers ? (
             <section className="grid gap-3">
               <h3>{t("admin.title")}</h3>
               <p className="muted">Users total: {totalUsers} · Admins: {totalAdmins} · Banned: {totalBanned}</p>
+              <label className="grid gap-1">
+                <span className="muted">{t("admin.searchLabel")}</span>
+                <input
+                  type="search"
+                  value={userSearchQuery}
+                  onChange={(event) => setUserSearchQuery(event.target.value)}
+                  placeholder={t("admin.searchPlaceholder")}
+                />
+              </label>
+              <div className="quality-toggle-group" role="tablist" aria-label={t("admin.userTabs")}> 
+                <button
+                  type="button"
+                  className={`secondary quality-toggle-btn ${userAccessTab === "active" ? "quality-toggle-btn-active" : ""}`}
+                  onClick={() => setUserAccessTab("active")}
+                  aria-selected={userAccessTab === "active"}
+                >
+                  {t("admin.tabActive")} ({usersByTab.active.length})
+                </button>
+                <button
+                  type="button"
+                  className={`secondary quality-toggle-btn ${userAccessTab === "blocked" ? "quality-toggle-btn-active" : ""}`}
+                  onClick={() => setUserAccessTab("blocked")}
+                  aria-selected={userAccessTab === "blocked"}
+                >
+                  {t("admin.tabBlocked")} ({usersByTab.blocked.length})
+                </button>
+                <button
+                  type="button"
+                  className={`secondary quality-toggle-btn ${userAccessTab === "requests" ? "quality-toggle-btn-active" : ""}`}
+                  onClick={() => setUserAccessTab("requests")}
+                  aria-selected={userAccessTab === "requests"}
+                >
+                  {t("admin.tabRequests")} ({usersByTab.requests.length})
+                </button>
+                <button
+                  type="button"
+                  className={`secondary quality-toggle-btn ${userAccessTab === "bots" ? "quality-toggle-btn-active" : ""}`}
+                  onClick={() => setUserAccessTab("bots")}
+                  aria-selected={userAccessTab === "bots"}
+                >
+                  {t("admin.tabBots")} ({usersByTab.bots.length})
+                </button>
+              </div>
               <ul className="admin-list grid gap-2">
-                {adminUsers.map((item) => (
+                {filteredAdminUsers.map((item) => (
                   <li key={item.id} className="admin-row grid min-h-[42px] grid-cols-[minmax(0,1fr)_auto] items-center gap-2 max-desktop:grid-cols-1">
                     <span className="min-w-0 break-words">
                       {item.email} ({item.role})
                       {item.is_banned ? ` · ${t("admin.banned")}` : ""}
+                      {!item.is_banned ? ` · ${t(`admin.access.${item.access_state}`)}` : ""}
                     </span>
                     <div className="row-actions flex flex-wrap items-stretch gap-2">
                       {item.role === "user" ? (
@@ -424,10 +498,24 @@ export function ServerProfileModal({
                           <button className="secondary min-h-[34px]" onClick={() => onSetBan(item.id, true)}>{t("admin.ban")}</button>
                         )
                       ) : null}
+                      {item.role !== "super_admin" && !item.is_banned ? (
+                        <>
+                          {item.access_state !== "active" ? (
+                            <button className="secondary min-h-[34px]" onClick={() => onSetAccessState(item.id, "active")}>{t("admin.approve")}</button>
+                          ) : null}
+                          {item.access_state !== "pending" ? (
+                            <button className="secondary min-h-[34px]" onClick={() => onSetAccessState(item.id, "pending")}>{t("admin.toRequests")}</button>
+                          ) : null}
+                          {item.access_state !== "blocked" ? (
+                            <button className="secondary min-h-[34px]" onClick={() => onSetAccessState(item.id, "blocked")}>{t("admin.blockAccess")}</button>
+                          ) : null}
+                        </>
+                      ) : null}
                     </div>
                   </li>
                 ))}
               </ul>
+              {filteredAdminUsers.length === 0 ? <p className="muted">{t("admin.emptyState")}</p> : null}
             </section>
           ) : null}
 

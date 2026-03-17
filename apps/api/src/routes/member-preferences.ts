@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { db } from "../db.js";
-import { requireAuth } from "../middleware/auth.js";
+import { requireAuth, requireServiceAccess } from "../middleware/auth.js";
 import type { UserMemberPreferenceRow } from "../db.types.ts";
 import { validateTargetUserId, validateTargetUserIdsCsv } from "./member-preferences.validation.js";
 
@@ -14,7 +14,7 @@ export async function memberPreferencesRoutes(fastify: FastifyInstance) {
   fastify.get(
     "/v1/member-preferences",
     {
-      preHandler: [requireAuth]
+      preHandler: [requireAuth, requireServiceAccess]
     },
     async (request, reply) => {
       const viewerUserId = String(request.user?.sub || "").trim();
@@ -63,7 +63,7 @@ export async function memberPreferencesRoutes(fastify: FastifyInstance) {
   }>(
     "/v1/member-preferences/:targetUserId",
     {
-      preHandler: [requireAuth]
+      preHandler: [requireAuth, requireServiceAccess]
     },
     async (request, reply) => {
       const viewerUserId = String(request.user?.sub || "").trim();

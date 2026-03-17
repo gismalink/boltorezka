@@ -13,6 +13,8 @@ export type User = {
   ui_theme: UiTheme;
   role: "user" | "admin" | "super_admin";
   is_banned: boolean;
+  access_state: "pending" | "active" | "blocked";
+  is_bot: boolean;
   created_at: string;
 };
 

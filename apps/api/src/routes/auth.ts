@@ -328,7 +328,7 @@ async function upsertSsoUser(profile: Record<string, unknown> | null | undefined
   const isSuperAdmin = normalizedEmail === config.superAdminEmail;
 
   const existing = await db.query<UserRow>(
-    "SELECT id, email, username, name, ui_theme, role, is_banned, created_at FROM users WHERE email = $1",
+    "SELECT id, email, username, name, ui_theme, role, is_banned, access_state, is_bot, created_at FROM users WHERE email = $1",
     [normalizedEmail]
   );
 
@@ -338,9 +338,10 @@ async function upsertSsoUser(profile: Record<string, unknown> | null | undefined
        SET
          username = COALESCE($4, username),
          name = $2,
-         role = CASE WHEN $3 THEN 'super_admin' ELSE role END
+         role = CASE WHEN $3 THEN 'super_admin' ELSE role END,
+         access_state = CASE WHEN $3 THEN 'active' ELSE access_state END
        WHERE email = $1
-       RETURNING id, email, username, name, ui_theme, role, is_banned, created_at`,
+       RETURNING id, email, username, name, ui_theme, role, is_banned, access_state, is_bot, created_at`,
       [normalizedEmail, displayName, isSuperAdmin, normalizedUsername]
     );
 
@@ -350,10 +351,10 @@ async function upsertSsoUser(profile: Record<string, unknown> | null | undefined
   const newRole = isSuperAdmin ? "super_admin" : "user";
 
   const created = await db.query<UserRow>(
-    `INSERT INTO users (email, password_hash, username, name, role)
-     VALUES ($1, $2, $3, $4, $5)
-     RETURNING id, email, username, name, ui_theme, role, is_banned, created_at`,
-    [normalizedEmail, "__sso_only__", normalizedUsername, displayName, newRole]
+    `INSERT INTO users (email, password_hash, username, name, role, access_state)
+     VALUES ($1, $2, $3, $4, $5, $6)
+     RETURNING id, email, username, name, ui_theme, role, is_banned, access_state, is_bot, created_at`,
+    [normalizedEmail, "__sso_only__", normalizedUsername, displayName, newRole, isSuperAdmin ? "active" : "pending"]
   );
 
   return created.rows[0];
@@ -801,7 +802,7 @@ export async function authRoutes(fastify: FastifyInstance) {
       }
 
       const userResult = await db.query<UserRow>(
-        "SELECT id, email, username, name, ui_theme, role, is_banned, created_at FROM users WHERE id = $1 LIMIT 1",
+        "SELECT id, email, username, name, ui_theme, role, is_banned, access_state, is_bot, created_at FROM users WHERE id = $1 LIMIT 1",
         [handoffUserId]
       );
 
@@ -941,7 +942,7 @@ export async function authRoutes(fastify: FastifyInstance) {
       }
 
       const userResult = await db.query<UserCompactRow>(
-        "SELECT id, email, username, name, ui_theme, role, is_banned FROM users WHERE id = $1",
+        "SELECT id, email, username, name, ui_theme, role, is_banned, access_state, is_bot FROM users WHERE id = $1",
         [userId]
       );
 
@@ -957,6 +958,12 @@ export async function authRoutes(fastify: FastifyInstance) {
         return reply.code(403).send({
           error: "UserBanned",
           message: "User is banned"
+        });
+      }
+      if (user.role !== "admin" && user.role !== "super_admin" && user.access_state !== "active") {
+        return reply.code(403).send({
+          error: user.access_state === "blocked" ? "ServiceAccessBlocked" : "ServiceAccessPending",
+          message: user.access_state === "blocked" ? "Service access is blocked" : "Service access requires admin approval"
         });
       }
       const ticket = randomUUID();
@@ -1028,6 +1035,14 @@ export async function authRoutes(fastify: FastifyInstance) {
         });
       }
 
+      const currentUser = request.currentUser;
+      if (currentUser && currentUser.role !== "admin" && currentUser.role !== "super_admin" && currentUser.access_state !== "active") {
+        return reply.code(403).send({
+          error: currentUser.access_state === "blocked" ? "ServiceAccessBlocked" : "ServiceAccessPending",
+          message: currentUser.access_state === "blocked" ? "Service access is blocked" : "Service access requires admin approval"
+        });
+      }
+
       const roomResult = await db.query<Pick<UserRow, never> & {
         id: string;
         slug: string;
@@ -1066,7 +1081,6 @@ export async function authRoutes(fastify: FastifyInstance) {
         }
       }
 
-      const currentUser = request.currentUser;
       const identity = userId;
       const participantName = String(currentUser?.name || currentUser?.email || identity).trim();
       const issuedAt = new Date().toISOString();
@@ -1130,7 +1144,7 @@ export async function authRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest) => {
       const userId = String(request.user?.sub || "").trim();
       const result = await db.query<UserRow>(
-        "SELECT id, email, username, name, ui_theme, role, is_banned, created_at FROM users WHERE id = $1",
+        "SELECT id, email, username, name, ui_theme, role, is_banned, access_state, is_bot, created_at FROM users WHERE id = $1",
         [userId]
       );
 
@@ -1173,7 +1187,7 @@ export async function authRoutes(fastify: FastifyInstance) {
          SET name = $2,
              ui_theme = COALESCE($3, ui_theme)
          WHERE id = $1
-         RETURNING id, email, username, name, ui_theme, role, is_banned, created_at`,
+         RETURNING id, email, username, name, ui_theme, role, is_banned, access_state, is_bot, created_at`,
         [userId, parsed.data.name, parsed.data.uiTheme ?? null]
       );
 

@@ -232,4 +232,15 @@ export class RoomAdminController {
       this.options.pushLog(`${banned ? "ban" : "unban"} failed: ${(error as Error).message}`);
     }
   }
+
+  async setAccessState(token: string, userId: string, accessState: "pending" | "active" | "blocked") {
+    try {
+      await api.setUserAccessState(token, userId, accessState);
+      const res = await api.adminUsers(token);
+      this.options.setAdminUsers(res.users);
+      this.options.pushLog(`user access state updated: ${accessState}`);
+    } catch (error) {
+      this.options.pushLog(`set access state failed: ${(error as Error).message}`);
+    }
+  }
 }

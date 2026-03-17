@@ -268,6 +268,8 @@ export const api = {
     fetchJson<{ user: User }>(withSuffix(endpoints.adminUsers, userId, "promote"), token, withJsonBody("POST", { role: "admin" })),
   demoteUser: (token: string, userId: string) =>
     fetchJson<{ user: User }>(withSuffix(endpoints.adminUsers, userId, "demote"), token, withJsonBody("POST", { role: "user" })),
+  setUserAccessState: (token: string, userId: string, accessState: "pending" | "active" | "blocked") =>
+    fetchJson<{ user: User }>(withSuffix(endpoints.adminUsers, userId, "access"), token, withJsonBody("POST", { accessState })),
   banUser: (token: string, userId: string) =>
     fetchJson<{ user: User }>(withSuffix(endpoints.adminUsers, userId, "ban"), token, withJsonBody("POST")),
   unbanUser: (token: string, userId: string) =>

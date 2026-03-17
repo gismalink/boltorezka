@@ -17,6 +17,20 @@ function banned(reply: FastifyReply) {
   });
 }
 
+function serviceAccessDenied(reply: FastifyReply, accessState: string) {
+  if (accessState === "blocked") {
+    return reply.code(403).send({
+      error: "ServiceAccessBlocked",
+      message: "Service access is blocked"
+    });
+  }
+
+  return reply.code(403).send({
+    error: "ServiceAccessPending",
+    message: "Service access requires admin approval"
+  });
+}
+
 async function resolveCurrentUser(request: FastifyRequest) {
   const userId = request.user?.sub;
   if (!userId) {
@@ -24,7 +38,7 @@ async function resolveCurrentUser(request: FastifyRequest) {
   }
 
   const result = await db.query<UserRow>(
-    "SELECT id, email, username, name, ui_theme, role, is_banned, created_at FROM users WHERE id = $1",
+    "SELECT id, email, username, name, ui_theme, role, is_banned, access_state, is_bot, created_at FROM users WHERE id = $1",
     [userId]
   );
 
@@ -171,4 +185,20 @@ export function requireRole(roles: string[] | string) {
       });
     }
   };
+}
+
+export async function requireServiceAccess(request: FastifyRequest, reply: FastifyReply) {
+  const user = request.currentUser;
+  if (!user) {
+    return unauthorized(reply);
+  }
+
+  if (user.role === "admin" || user.role === "super_admin") {
+    return;
+  }
+
+  const accessState = String(user.access_state || "pending").trim();
+  if (accessState !== "active") {
+    return serviceAccessDenied(reply, accessState);
+  }
 }
