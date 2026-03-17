@@ -266,8 +266,11 @@ export function ChatPanel({
                 ) : null}
 
                 <div className="chat-bubble w-fit min-w-[120px]">
-                  <div className="chat-meta flex items-baseline justify-between gap-2">
+                  <div className="chat-meta flex items-baseline gap-2">
                     {showAuthor ? <span className="chat-author">{message.user_name}</span> : <span className="chat-author-spacer" aria-hidden="true" />}
+                  </div>
+                  <div className="chat-content-row">
+                    <p className="chat-text">{renderMessageText(message.text)}</p>
                     <span className="chat-time-wrap">
                       <span className="chat-time">{formatMessageTime(message.created_at)}</span>
                       {isOwn && message.deliveryStatus ? (
@@ -277,7 +280,6 @@ export function ChatPanel({
                       ) : null}
                     </span>
                   </div>
-                  <p className="chat-text">{renderMessageText(message.text)}</p>
                   {message.edited_at ? <div className="chat-edited-mark">{t("chat.editedMark")}</div> : null}
                 </div>
               </div>

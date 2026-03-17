@@ -1294,6 +1294,7 @@ pre {
   display: inline-flex;
   align-items: center;
   gap: 4px;
+  flex: 0 0 auto;
 }
 
 .delivery-sending {
@@ -1311,6 +1312,16 @@ pre {
   line-height: 1.32;
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+.chat-content-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.chat-content-row .chat-text {
+  flex: 1 1 auto;
 }
 
 .chat-link {
