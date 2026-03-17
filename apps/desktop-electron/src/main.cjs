@@ -22,6 +22,7 @@ const updateChannel = configuredUpdateChannel === "test" || configuredUpdateChan
 const updateFeedBaseUrl = String(process.env.ELECTRON_UPDATE_FEED_BASE_URL || "").trim().replace(/\/+$/, "");
 const updatePollIntervalMs = Math.max(0, Number(process.env.ELECTRON_UPDATE_POLL_INTERVAL_MS || 20 * 60 * 1000));
 const updateAutoDownload = String(process.env.ELECTRON_UPDATE_AUTO_DOWNLOAD || "0") === "1";
+const updateTraceOut = String(process.env.ELECTRON_DESKTOP_UPDATE_TRACE_OUT || "").trim();
 let mainWindow = null;
 let pendingProtocolUrl = "";
 let updatePollTimer = null;
@@ -41,6 +42,27 @@ const desktopUpdateState = {
 
 function logDesktopUpdate(message) {
   console.log(`[desktop:update] ${message}`);
+}
+
+function writeDesktopUpdateTrace(event, patch = {}) {
+  if (!updateTraceOut) {
+    return;
+  }
+
+  try {
+    fs.mkdirSync(path.dirname(updateTraceOut), { recursive: true });
+    const payload = {
+      ts: new Date().toISOString(),
+      event,
+      channel: updateChannel,
+      isPackaged: app.isPackaged,
+      appVersion: app.getVersion(),
+      ...patch
+    };
+    fs.appendFileSync(updateTraceOut, `${JSON.stringify(payload)}\n`, "utf8");
+  } catch {
+    // Trace logging is best-effort.
+  }
 }
 
 function getFeedPlatformPath() {
@@ -72,6 +94,11 @@ function updateDesktopUpdateState(event, patch = {}) {
   Object.assign(desktopUpdateState, patch, {
     lastEvent: event,
     channel: updateChannel
+  });
+  writeDesktopUpdateTrace(event, {
+    state: {
+      ...desktopUpdateState
+    }
   });
   notifyRendererUpdateStatus(event, patch);
 }
