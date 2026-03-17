@@ -7,7 +7,8 @@
 1. Уточнить scope и критерий готовности.
 2. Внести изменения в API/Web.
 3. Если меняется схема БД:
-   - добавить SQL migration в `infra/postgres/init` или отдельный migration-файл,
+   - добавить versioned SQL migration в `apps/api/migrations` (формат `NNNN_name.sql`),
+   - `infra/postgres/init/001_init.sql` менять только для bootstrap новых окружений,
    - проверить обратную совместимость для `test` rollout,
    - зафиксировать изменение в docs/runbook.
 4. Для web/API совместимости:
