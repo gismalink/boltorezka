@@ -98,7 +98,7 @@ Definition of done:
 
 Definition of done:
 - [ ] Первый production desktop release доступен целевой аудитории.
-- [ ] Подготовлены on-call инструкции и triage flow.
+- [x] Подготовлены on-call инструкции и triage flow.
 
 ## 4) Execution checklist (по потокам)
 
@@ -191,13 +191,13 @@ Desktop smoke (must pass):
 
 Риск: сложность code signing/notarization и задержка релиза.
 - Mitigation:
-- [ ] Вынести signing pipeline в отдельный milestone.
-- [ ] Иметь test channel без blocking прод-пайплайна.
+- [x] Вынести signing pipeline в отдельный milestone.
+- [x] Иметь test channel без blocking прод-пайплайна.
 
 Риск: регрессии безопасности из-за неверной Electron-конфигурации.
 - Mitigation:
-- [ ] Security checklist как hard gate до prod.
-- [ ] Code review правил preload/IPC и запрет broad bridge API.
+- [x] Security checklist как hard gate до prod.
+- [x] Code review правил preload/IPC и запрет broad bridge API.
 
 Риск: незакрытые пункты session/cookie hardening могут всплыть в desktop prod stage.
 - Mitigation:
@@ -510,7 +510,7 @@ Progress note (2026-03-17, plan review + policy sync):
 - Основные открытые блокеры на текущий момент: release-grade signing/notarization evidence, активный desktop download contract (вместо placeholder), 2h standalone stability soak.
 
 Progress note (2026-03-17, unchecked items audit):
-- После выноса Win/Linux backlog и закрытия 2h/CSP + pre-prod package + macOS standalone/matrix пунктов в текущем файле осталось `17` незакрытых пунктов.
+- После выноса Win/Linux backlog и закрытия всех независимых от code-signing пунктов в текущем файле осталось `12` незакрытых пунктов.
 - Из них подтвержденно execution-critical (реально блокируют desktop release readiness): signing/notarization evidence, активный download contract (manifest-driven links вместо placeholder), 2h standalone stability soak, pre-prod approval package refresh.
 - Отдельная группа пунктов остается осознанно deferred/out-of-scope по плану (`v1.1+`, post-signing gates, cross-platform QA expansion).
 - Оценочные сроки в разделе `Примерная оценка сроков` оставлены незакрытыми намеренно как reference, а не как task gate.
@@ -591,6 +591,12 @@ Progress note (2026-03-17, pre-prod package refresh):
 Progress note (2026-03-17, downloaded test desktop validation):
 - Owner подтверждено, что в версии, скачанной из `test`, в реальном использовании работают микрофон, наушники (output) и screen sharing.
 - На основе этого practical evidence (вместе с ранее закрытыми auth/reconnect/smoke гейтами) закрыты пункты `standalone macOS app` и `macOS QA matrix`.
+
+Progress note (2026-03-17, on-call и security gate runbooks):
+- Добавлены русскоязычные runbook-документы:
+	- `docs/runbooks/DESKTOP_ONCALL_TRIAGE_RUNBOOK.md`
+	- `docs/runbooks/DESKTOP_SECURITY_GATE_RUNBOOK.md`
+- На этой базе закрыты независимые от code-signing пункты: `on-call/triage flow`, `security checklist hard gate`, `preload/IPC code review policy`, а также mitigation-пункты про отдельный signing milestone и test channel без blocking prod.
 
 ## 13) Post-merge snapshot (2026-03-15)
 

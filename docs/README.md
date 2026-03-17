@@ -22,6 +22,8 @@
   - [LOG_RETENTION_1DAY_RUNBOOK](runbooks/LOG_RETENTION_1DAY_RUNBOOK.md)
   - [PREPROD_CHECKLIST](runbooks/PREPROD_CHECKLIST.md)
   - [PREPROD_DECISION_PACKAGE](runbooks/PREPROD_DECISION_PACKAGE.md)
+  - [DESKTOP_ONCALL_TRIAGE_RUNBOOK](runbooks/DESKTOP_ONCALL_TRIAGE_RUNBOOK.md)
+  - [DESKTOP_SECURITY_GATE_RUNBOOK](runbooks/DESKTOP_SECURITY_GATE_RUNBOOK.md)
   - [workflow-checklist](runbooks/workflow-checklist.md)
   - [legacy runbooks index](runbooks/legacy/README.md)
 - `contracts/` — HTTP/WS contracts and OpenAPI artifact

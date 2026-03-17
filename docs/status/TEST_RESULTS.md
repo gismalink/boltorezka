@@ -2,6 +2,25 @@
 
 Отдельный журнал результатов тестов/нагрузки.
 
+## 2026-03-17 — Cycle #60 (Desktop non-signing checklist closures)
+
+- Environment: `docs/plans` + `docs/runbooks` (process/documentation evidence cycle)
+- Scope: закрытие desktop-пунктов, не зависящих от Apple/Microsoft signing readiness
+
+### Functional gate
+
+- Non-signing readiness package: PASS
+  - Подготовлен triage/runbook для инцидентов desktop:
+    - `docs/runbooks/DESKTOP_ONCALL_TRIAGE_RUNBOOK.md`
+  - Подготовлен security hard-gate runbook:
+    - `docs/runbooks/DESKTOP_SECURITY_GATE_RUNBOOK.md`
+  - План `docs/plans/2026-03-13_ELECTRON_DESKTOP_PLAN.md` синхронизирован: закрыты независимые пункты (`on-call/triage flow`, `security checklist hard gate`, `preload/IPC review policy`, mitigation про отдельный signing milestone и test-channel без блокировки prod).
+
+### Decision
+
+- Cycle #60: PASS.
+- Все независимые от code-signing организационные/безопасностные desktop-пункты для текущего этапа считаются закрытыми; блокеры release-grade уровня остаются в signing/notarization домене.
+
 ## 2026-03-17 — Cycle #59 (Downloaded test desktop practical media validation)
 
 - Environment: `test` (downloaded standalone desktop build, owner practical usage)
