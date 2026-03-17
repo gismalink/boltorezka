@@ -139,6 +139,34 @@ if [[ -f "$TARGET_DIR/$MAC_ZIP_NAME.blockmap" ]]; then
   cp "$TARGET_DIR/$MAC_ZIP_NAME.blockmap" "$UPDATER_MAC_DIR/"
 fi
 
+APP_UPDATE_FEED_BASE="$PUBLIC_BASE_URL"
+if [[ -z "$APP_UPDATE_FEED_BASE" ]]; then
+  if [[ "$DESKTOP_CHANNEL" == "test" ]]; then
+    APP_UPDATE_FEED_BASE="https://test.boltorezka.gismalink.art"
+  else
+    APP_UPDATE_FEED_BASE="https://boltorezka.gismalink.art"
+  fi
+fi
+APP_UPDATE_FEED_BASE="${APP_UPDATE_FEED_BASE%/}/desktop/$DESKTOP_CHANNEL/mac"
+
+APP_UPDATE_FILE_PATH="$(find "$TARGET_DIR" -type f -path '*/Boltorezka.app/Contents/Resources/app-update.yml' | head -n 1)"
+if [[ -z "$APP_UPDATE_FILE_PATH" ]]; then
+  APP_UPDATE_DIR="$(find "$TARGET_DIR" -type d -path '*/Boltorezka.app/Contents/Resources' | head -n 1)"
+  if [[ -n "$APP_UPDATE_DIR" ]]; then
+    APP_UPDATE_FILE_PATH="$APP_UPDATE_DIR/app-update.yml"
+  fi
+fi
+
+if [[ -n "$APP_UPDATE_FILE_PATH" ]]; then
+  cat > "$APP_UPDATE_FILE_PATH" <<EOF
+provider: generic
+url: $APP_UPDATE_FEED_BASE
+channel: latest
+EOF
+else
+  echo "[desktop-build] warning: failed to locate app resources path for app-update.yml" >&2
+fi
+
 MAC_ZIP_SIZE="$(stat -f %z "$UPDATER_MAC_DIR/$MAC_ZIP_NAME")"
 MAC_ZIP_SHA512="$(shasum -a 512 "$UPDATER_MAC_DIR/$MAC_ZIP_NAME" | awk '{print $1}' | xxd -r -p | base64)"
 
