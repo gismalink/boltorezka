@@ -2,6 +2,36 @@
 
 Отдельный журнал результатов тестов/нагрузки.
 
+## 2026-03-17 — Cycle #56 (Self-signed/pfx signed RC validation PASS)
+
+- Environment: `GitHub Actions` (`desktop-artifacts` workflow, `feature/desktop-unsigned-mode`)
+- Build ref: `b2b131423058589a2fca1f45d68f4b24a7a1c8c3`
+- Run: `https://github.com/gismalink/boltorezka/actions/runs/23209256293`
+
+### Functional gate
+
+- Signed RC dispatch (windows-only, default pfx): PASS
+  - input set:
+    - `release_channel=test`
+    - `signed=true`
+    - `create_release_draft=false`
+    - `signed_platforms=windows-only`
+    - `windows_signing_provider` not passed explicitly (workflow default `pfx`)
+  - workflow result:
+    - `build-windows-latest` -> PASS
+    - `build-macos-latest` -> PASS (unsigned path for this matrix branch)
+    - `github-release-chain` -> PASS
+
+### Scope covered by this cycle
+
+- Подтверждена работоспособность временной self-signed/pfx политики в test CI без Azure OIDC зависимостей.
+- Windows signed RC pipeline operationally green для текущего test-контура.
+
+### Decision
+
+- Cycle #56: PASS.
+- Временный режим self-signed/pfx для test считается validated; trusted-signing readiness остается отдельным следующим этапом для prod-grade требований.
+
 ## 2026-03-17 — Cycle #55 (Policy update: temporary self-signed/pfx mode)
 
 - Environment: `delivery policy` (`test` channel)

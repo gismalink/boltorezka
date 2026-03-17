@@ -280,6 +280,11 @@ Progress note (2026-03-17, temporary self-signed mode):
 - В `desktop-artifacts` default для `windows_signing_provider` переключен на `pfx`; Azure path остается опциональным для следующего этапа trusted-signing readiness.
 - Policy не меняет prod-gate: для production release остается требование release-grade signing/notarization evidence.
 
+Progress note (2026-03-17, self-signed validation):
+- Выполнен verification run `desktop-artifacts` на `feature/desktop-unsigned-mode` (run `23209256293`) c windows-only signed dispatch и default `pfx`.
+- Результат: PASS (`build-windows-latest`, `build-macos-latest`, `github-release-chain`), evidence записан в `docs/status/TEST_RESULTS.md` (Cycle #56).
+- Вывод: временный self-signed/pfx path для test operationally green; trusted-signing для prod остается отдельным release-grade gate.
+
 Progress note (2026-03-15, Windows OIDC signing path):
 - Workflow `.github/workflows/desktop-artifacts.yml` расширен для `windows-only` signed режима до готовности Apple secrets.
 - Добавлен Windows signing provider `azure-oidc` через `azure/login` + `azure/artifact-signing-action` (OIDC), без обязательного `DESKTOP_WIN_CSC_LINK`/`DESKTOP_WIN_CSC_KEY_PASSWORD`.
