@@ -269,7 +269,7 @@ export function ServerProfileModal({
         actions.push({
           key: "promote",
           label: t("admin.promote"),
-          iconClass: "bi-arrow-up-circle",
+          iconClass: "bi-arrow-up-circle-fill",
           primary: true,
           onClick: () => onPromote(item.id)
         });
@@ -277,7 +277,7 @@ export function ServerProfileModal({
         actions.push({
           key: "demote",
           label: t("admin.demote"),
-          iconClass: "bi-arrow-down-circle",
+          iconClass: "bi-arrow-down-circle-fill",
           onClick: () => onDemote(item.id)
         });
       }
@@ -291,7 +291,7 @@ export function ServerProfileModal({
       actions.push({
         key: "unban",
         label: t("admin.unban"),
-        iconClass: "bi-person-check",
+        iconClass: "bi-person-check-fill",
         onClick: () => onSetBan(item.id, false)
       });
       return actions;
@@ -302,7 +302,7 @@ export function ServerProfileModal({
         actions.push({
           key: "approve",
           label: t("admin.approve"),
-          iconClass: "bi-check-circle",
+          iconClass: "bi-check-circle-fill",
           onClick: () => onSetAccessState(item.id, "active")
         });
       }
@@ -310,14 +310,14 @@ export function ServerProfileModal({
         actions.push({
           key: "block",
           label: t("admin.blockAccess"),
-          iconClass: "bi-slash-circle",
+          iconClass: "bi-slash-circle-fill",
           onClick: () => onSetAccessState(item.id, "blocked")
         });
       }
       actions.push({
         key: "ban",
         label: t("admin.ban"),
-        iconClass: "bi-person-x",
+        iconClass: "bi-person-fill-x",
         onClick: () => onSetBan(item.id, true)
       });
       return actions;
@@ -328,7 +328,7 @@ export function ServerProfileModal({
         actions.push({
           key: "approve",
           label: t("admin.approve"),
-          iconClass: "bi-check-circle",
+          iconClass: "bi-check-circle-fill",
           onClick: () => onSetAccessState(item.id, "active")
         });
       }
@@ -336,14 +336,14 @@ export function ServerProfileModal({
         actions.push({
           key: "toRequests",
           label: t("admin.toRequests"),
-          iconClass: "bi-inbox",
+          iconClass: "bi-inbox-fill",
           onClick: () => onSetAccessState(item.id, "pending")
         });
       }
       actions.push({
         key: "ban",
         label: t("admin.ban"),
-        iconClass: "bi-person-x",
+        iconClass: "bi-person-fill-x",
         onClick: () => onSetBan(item.id, true)
       });
       return actions;
@@ -353,7 +353,7 @@ export function ServerProfileModal({
       actions.push({
         key: "toRequests",
         label: t("admin.toRequests"),
-        iconClass: "bi-inbox",
+        iconClass: "bi-inbox-fill",
         onClick: () => onSetAccessState(item.id, "pending")
       });
     }
@@ -361,7 +361,7 @@ export function ServerProfileModal({
       actions.push({
         key: "block",
         label: t("admin.blockAccess"),
-        iconClass: "bi-slash-circle",
+        iconClass: "bi-slash-circle-fill",
         onClick: () => onSetAccessState(item.id, "blocked")
       });
     }
@@ -369,14 +369,14 @@ export function ServerProfileModal({
       actions.push({
         key: "approve",
         label: t("admin.approve"),
-        iconClass: "bi-check-circle",
+        iconClass: "bi-check-circle-fill",
         onClick: () => onSetAccessState(item.id, "active")
       });
     }
     actions.push({
       key: "ban",
       label: t("admin.ban"),
-      iconClass: "bi-person-x",
+      iconClass: "bi-person-fill-x",
       onClick: () => onSetBan(item.id, true)
     });
 
@@ -612,8 +612,8 @@ export function ServerProfileModal({
                         <button
                           key={`${item.id}-${action.key}`}
                           type="button"
-                          className={`${action.primary ? "" : "secondary "}min-h-[34px] min-w-[34px] px-2`}
-                          title={action.label}
+                          className={`${action.primary ? "" : "secondary "}icon-btn tiny admin-action-btn`}
+                          data-tooltip={action.label}
                           aria-label={action.label}
                           onClick={action.onClick}
                         >

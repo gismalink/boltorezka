@@ -614,6 +614,10 @@ textarea:focus-visible {
   font-size: var(--font-size-sm);
 }
 
+.admin-action-btn .bi {
+  font-size: 15px;
+}
+
 .icon-btn.toggle-wide {
   width: calc(var(--icon-size-sm) * 2);
 }
