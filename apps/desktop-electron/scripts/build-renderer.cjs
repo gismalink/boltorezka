@@ -64,6 +64,8 @@ function run() {
   const version = resolveDesktopVersion();
   const buildSha = resolveBuildSha();
   const buildDate = resolveBuildDate();
+  const desktopRoot = path.resolve(__dirname, "..");
+  const webRoot = path.resolve(desktopRoot, "../web");
 
   const env = {
     ...process.env,
@@ -82,12 +84,23 @@ function run() {
   }
   console.log("[desktop:build:renderer] VITE_ASSET_BASE=./");
 
-  const npmCmd = process.platform === "win32" ? "npm.cmd" : "npm";
-  const result = spawnSync(npmCmd, ["--prefix", "../web", "run", "build"], {
-    cwd: path.resolve(__dirname, ".."),
+  const npmExecPath = String(process.env.npm_execpath || "").trim();
+  const npmRunner = npmExecPath ? process.execPath : (process.platform === "win32" ? "npm.cmd" : "npm");
+  const npmArgs = npmExecPath
+    ? [npmExecPath, "--prefix", webRoot, "run", "build"]
+    : ["--prefix", webRoot, "run", "build"];
+
+  console.log(`[desktop:build:renderer] webRoot=${webRoot}`);
+  const result = spawnSync(npmRunner, npmArgs, {
+    cwd: desktopRoot,
     stdio: "inherit",
     env
   });
+
+  if (result.error) {
+    console.error(`[desktop:build:renderer] failed to spawn web build: ${result.error.message}`);
+    process.exit(1);
+  }
 
   if (result.status !== 0) {
     process.exit(result.status || 1);
