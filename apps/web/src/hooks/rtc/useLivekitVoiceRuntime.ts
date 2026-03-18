@@ -23,6 +23,7 @@ import type { CallStatus } from "../../services";
 import { trackClientEvent } from "../../telemetry";
 import { normalizeLivekitSignalUrl, resolveTransportRuntimeSnapshot } from "../../transportRuntime";
 import { RnnoiseAudioProcessor, type RnnoiseSuppressionLevel } from "./rnnoiseAudioProcessor";
+import { RTC_CONFIG } from "./voiceCallConfig";
 import type {
   CallMicStatePayload,
   CallNackPayload,
@@ -255,6 +256,148 @@ const buildRtcConnectErrorMessage = (
 
 const shouldRetryWithRelayOnly = (classified: ClassifiedRtcConnectError): boolean => {
   return classified.category === "ICE_CONNECTIVITY" || classified.category === "TURN_UNREACHABLE";
+};
+
+type RelayRouteInfo = {
+  turnUrl: string;
+  relayProtocol: string;
+};
+
+const waitMs = (ms: number): Promise<void> => new Promise((resolve) => {
+  window.setTimeout(resolve, ms);
+});
+
+const pickPeerConnection = (candidate: unknown): RTCPeerConnection | null => {
+  if (!candidate || typeof candidate !== "object") {
+    return null;
+  }
+
+  const source = candidate as {
+    pc?: unknown;
+    peerConnection?: unknown;
+    _pc?: unknown;
+  };
+
+  if (source.pc instanceof RTCPeerConnection) {
+    return source.pc;
+  }
+  if (source.peerConnection instanceof RTCPeerConnection) {
+    return source.peerConnection;
+  }
+  if (source._pc instanceof RTCPeerConnection) {
+    return source._pc;
+  }
+
+  return null;
+};
+
+const collectRoomPeerConnections = (room: Room): RTCPeerConnection[] => {
+  const engine = room.engine as unknown as {
+    publisher?: unknown;
+    subscriber?: unknown;
+    pcManager?: unknown;
+  };
+
+  const pcManager = engine.pcManager as {
+    publisher?: unknown;
+    subscriber?: unknown;
+    publisherPc?: unknown;
+    subscriberPc?: unknown;
+  } | undefined;
+
+  const candidates: unknown[] = [
+    engine.publisher,
+    engine.subscriber,
+    pcManager,
+    pcManager?.publisher,
+    pcManager?.subscriber,
+    pcManager?.publisherPc,
+    pcManager?.subscriberPc
+  ];
+
+  const seen = new Set<RTCPeerConnection>();
+  for (const candidate of candidates) {
+    const pc = pickPeerConnection(candidate);
+    if (pc) {
+      seen.add(pc);
+    }
+  }
+
+  return Array.from(seen);
+};
+
+const getRelayRouteFromPeerConnection = async (pc: RTCPeerConnection): Promise<RelayRouteInfo | null> => {
+  const stats = await pc.getStats();
+  let selectedLocalCandidateId = "";
+
+  stats.forEach((report) => {
+    if (report.type !== "candidate-pair") {
+      return;
+    }
+
+    const pair = report as {
+      localCandidateId?: string;
+      state?: string;
+      selected?: boolean;
+      nominated?: boolean;
+    };
+
+    if (pair.state === "succeeded" && (pair.selected === true || pair.nominated === true) && pair.localCandidateId) {
+      selectedLocalCandidateId = pair.localCandidateId;
+    }
+  });
+
+  if (!selectedLocalCandidateId) {
+    return null;
+  }
+
+  const localCandidate = stats.get(selectedLocalCandidateId) as {
+    candidateType?: string;
+    url?: string;
+    relayProtocol?: string;
+    protocol?: string;
+  } | undefined;
+
+  if (!localCandidate || localCandidate.candidateType !== "relay") {
+    return null;
+  }
+
+  const turnUrl = String(localCandidate.url || "").trim();
+  if (!turnUrl) {
+    return null;
+  }
+
+  return {
+    turnUrl,
+    relayProtocol: String(localCandidate.relayProtocol || localCandidate.protocol || "unknown")
+  };
+};
+
+const logActiveRelayTurnRoute = (room: Room, pushCallLog: (text: string) => void) => {
+  void (async () => {
+    const peerConnections = collectRoomPeerConnections(room);
+    if (peerConnections.length === 0) {
+      return;
+    }
+
+    for (let attempt = 0; attempt < 6; attempt += 1) {
+      for (const pc of peerConnections) {
+        try {
+          const relayRoute = await getRelayRouteFromPeerConnection(pc);
+          if (relayRoute) {
+            pushCallLog(
+              `livekit relay connected via ${relayRoute.turnUrl} protocol=${relayRoute.relayProtocol}`
+            );
+            return;
+          }
+        } catch {
+          // Stats probing is best-effort and should not affect the call flow.
+        }
+      }
+
+      await waitMs(1500);
+    }
+  })();
 };
 
   const isAutoplayBlockedError = (error: unknown): boolean => {
@@ -1009,7 +1152,9 @@ export function useLivekitVoiceRuntime({
         pushCallLog(`livekit signal raw=${rawSignalUrl || "n/a"}`);
         pushCallLog(`livekit signal resolved=${signalUrl || "n/a"}`);
         try {
-          await room.connect(signalUrl, livekit.token);
+          await room.connect(signalUrl, livekit.token, {
+            rtcConfig: RTC_CONFIG
+          });
         } catch (primaryConnectError) {
           const primaryClassified = classifyRtcConnectError(primaryConnectError);
           if (!shouldRetryWithRelayOnly(primaryClassified)) {
@@ -1021,6 +1166,7 @@ export function useLivekitVoiceRuntime({
           );
           await room.connect(signalUrl, livekit.token, {
             rtcConfig: {
+              ...RTC_CONFIG,
               iceTransportPolicy: "relay"
             }
           });
@@ -1056,6 +1202,7 @@ export function useLivekitVoiceRuntime({
         refreshRemoteStates(room);
         applyAudioOutputSettings();
         pushCallLog(`livekit connected to ${livekit.roomId}`);
+        logActiveRelayTurnRoute(room, pushCallLog);
       } catch (error) {
         cleanupRoom();
         setLocalVoiceMediaStatusSummary("disconnected");
