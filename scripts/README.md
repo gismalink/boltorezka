@@ -28,6 +28,9 @@ This folder contains operational scripts grouped by purpose.
   - `backup-postgres-all.sh` - backup all Postgres DBs (test/prod) to host storage outside Docker.
   - `cleanup-server-logs.sh` - prune operation logs by retention policy.
   - `rotate-turn-credentials.sh` - rotate TURN static credentials in `infra/.env.host` and write rotation marker/history files.
+  - `bootstrap-vps-ssh-key.sh` - interactive SSH key bootstrap for new VPS hosts.
+  - `provision-turn2-vps.sh` - provision dedicated TURN2 server on VPS (Docker + certbot + ufw).
+  - `provision-turn2-vps-native.sh` - provision dedicated TURN2 directly on host (coturn systemd, swap tuning, optional Docker cleanup) for low-memory VPS.
   - `livekit-test-up.sh` - start LiveKit in test profile (`livekit-test`).
   - `livekit-test-check.sh` - check LiveKit test status and logs.
   - `livekit-test-down.sh` - stop LiveKit test service.
