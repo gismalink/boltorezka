@@ -266,6 +266,7 @@ export function VideoWindowsOverlay({
     stream: MediaStream | null;
     mirrored?: boolean;
   } | null>(null);
+  const [fullscreenResolution, setFullscreenResolution] = useState("");
 
   const [layoutsById, setLayoutsById] = useState<Record<string, TileLayout>>({});
   const [zOrderById, setZOrderById] = useState<Record<string, number>>({});
@@ -293,6 +294,29 @@ export function VideoWindowsOverlay({
     });
     return next;
   }, [speakingWindowIds]);
+
+  const updateFullscreenResolution = (element: HTMLVideoElement | null) => {
+    if (!element) {
+      return;
+    }
+
+    const width = Number(element.videoWidth || 0);
+    const height = Number(element.videoHeight || 0);
+    if (width > 0 && height > 0) {
+      setFullscreenResolution(`${width}x${height}`);
+      return;
+    }
+
+    setFullscreenResolution("");
+  };
+
+  useEffect(() => {
+    if (fullscreenScreenShare) {
+      return;
+    }
+
+    setFullscreenResolution("");
+  }, [fullscreenScreenShare]);
 
   useEffect(() => {
     try {
@@ -545,17 +569,22 @@ export function VideoWindowsOverlay({
           <div className="chat-image-modal-panel video-screen-fullscreen-panel" onClick={(event) => event.stopPropagation()}>
             <button
               type="button"
-              className="secondary icon-btn chat-image-modal-close"
+              className="secondary icon-btn chat-image-modal-close video-screen-fullscreen-close"
               onClick={() => setFullscreenScreenShare(null)}
               aria-label="Close fullscreen"
             >
               <i className="bi bi-x-lg" aria-hidden="true" />
             </button>
+            {fullscreenResolution ? (
+              <div className="video-screen-fullscreen-resolution">{fullscreenResolution}</div>
+            ) : null}
             <video
               autoPlay
               playsInline
               muted
               className="chat-image-modal-media video-screen-fullscreen-media"
+              onLoadedMetadata={(event) => updateFullscreenResolution(event.currentTarget)}
+              onResize={(event) => updateFullscreenResolution(event.currentTarget)}
               ref={(element) => {
                 if (!element) {
                   return;
@@ -564,6 +593,7 @@ export function VideoWindowsOverlay({
                   element.srcObject = fullscreenScreenShare.stream;
                   void element.play().catch(() => undefined);
                 }
+                updateFullscreenResolution(element);
               }}
             />
           </div>
