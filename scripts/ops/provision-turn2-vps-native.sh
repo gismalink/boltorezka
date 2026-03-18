@@ -2,7 +2,7 @@
 # Purpose: provision TURN2 directly on VPS host (coturn + systemd), optimized for low-memory nodes.
 set -euo pipefail
 
-SSH_TARGET="${TURN2_SSH_TARGET:-root@72.56.20.97}"
+SSH_TARGET="${TURN2_SSH_TARGET:-root@46.149.71.86}"
 SSH_PORT="${TURN2_SSH_PORT:-22}"
 
 TURN_DOMAIN="${TURN2_DOMAIN:-}"
@@ -11,10 +11,10 @@ TURN_EXTERNAL_IP="${TURN2_EXTERNAL_IP:-}"
 TURN_USERNAME="${TURN2_USERNAME:-}"
 TURN_PASSWORD="${TURN2_PASSWORD:-}"
 TURN_MIN_PORT="${TURN2_MIN_PORT:-49160}"
-TURN_MAX_PORT="${TURN2_MAX_PORT:-49659}"
+TURN_MAX_PORT="${TURN2_MAX_PORT:-49359}"
 ACME_EMAIL="${TURN2_ACME_EMAIL:-}"
 
-TURN2_SWAP_SIZE_GB="${TURN2_SWAP_SIZE_GB:-4}"
+TURN2_SWAP_SIZE_GB="${TURN2_SWAP_SIZE_GB:-1}"
 TURN2_PURGE_DOCKER="${TURN2_PURGE_DOCKER:-1}"
 TURN2_JOURNAL_MAX_USE="${TURN2_JOURNAL_MAX_USE:-64M}"
 TURN2_JOURNAL_RUNTIME_MAX_USE="${TURN2_JOURNAL_RUNTIME_MAX_USE:-32M}"
@@ -50,7 +50,7 @@ set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
 
 apt-get update -y
-apt-get install -y coturn certbot ufw ca-certificates
+apt-get install -y coturn certbot ufw ca-certificates libcap2-bin
 
 # Low-memory protection: configure swap if missing.
 if [[ "${TURN2_SWAP_SIZE_GB}" =~ ^[0-9]+$ ]] && (( TURN2_SWAP_SIZE_GB > 0 )); then
@@ -91,6 +91,7 @@ ufw allow 3478/tcp || true
 ufw allow 3478/udp || true
 ufw allow 443/tcp || true
 ufw allow "${TURN2_MIN_PORT}:${TURN2_MAX_PORT}/udp" || true
+ufw allow "${TURN2_MIN_PORT}:${TURN2_MAX_PORT}/tcp" || true
 yes | ufw enable || true
 
 if [[ ! -f "/etc/letsencrypt/live/${TURN2_DOMAIN}/fullchain.pem" ]]; then
@@ -98,6 +99,12 @@ if [[ ! -f "/etc/letsencrypt/live/${TURN2_DOMAIN}/fullchain.pem" ]]; then
   certbot certonly --standalone --non-interactive --agree-tos -m "${TURN2_ACME_EMAIL}" -d "${TURN2_DOMAIN}"
   ufw delete allow 80/tcp || true
 fi
+
+install -d -m 750 -o root -g turnserver /etc/turnserver/certs
+cp -f "/etc/letsencrypt/live/${TURN2_DOMAIN}/fullchain.pem" /etc/turnserver/certs/fullchain.pem
+cp -f "/etc/letsencrypt/live/${TURN2_DOMAIN}/privkey.pem" /etc/turnserver/certs/privkey.pem
+chown root:turnserver /etc/turnserver/certs/fullchain.pem /etc/turnserver/certs/privkey.pem
+chmod 640 /etc/turnserver/certs/fullchain.pem /etc/turnserver/certs/privkey.pem
 
 mkdir -p /var/log/turnserver
 chown turnserver:turnserver /var/log/turnserver
@@ -114,8 +121,8 @@ lt-cred-mech
 user=${TURN2_USERNAME}:${TURN2_PASSWORD}
 proc-user=turnserver
 proc-group=turnserver
-cert=/etc/letsencrypt/live/${TURN2_DOMAIN}/fullchain.pem
-pkey=/etc/letsencrypt/live/${TURN2_DOMAIN}/privkey.pem
+cert=/etc/turnserver/certs/fullchain.pem
+pkey=/etc/turnserver/certs/privkey.pem
 min-port=${TURN2_MIN_PORT}
 max-port=${TURN2_MAX_PORT}
 no-multicast-peers
@@ -129,12 +136,19 @@ EOF
 
 hook_dir="/etc/letsencrypt/renewal-hooks/deploy"
 mkdir -p "$hook_dir"
-cat >"$hook_dir/turn2-restart-coturn.sh" <<'HOOK'
+cat >"$hook_dir/turn2-restart-coturn.sh" <<HOOK
 #!/usr/bin/env bash
 set -euo pipefail
+install -d -m 750 -o root -g turnserver /etc/turnserver/certs
+cp -f /etc/letsencrypt/live/${TURN2_DOMAIN}/fullchain.pem /etc/turnserver/certs/fullchain.pem
+cp -f /etc/letsencrypt/live/${TURN2_DOMAIN}/privkey.pem /etc/turnserver/certs/privkey.pem
+chown root:turnserver /etc/turnserver/certs/fullchain.pem /etc/turnserver/certs/privkey.pem
+chmod 640 /etc/turnserver/certs/fullchain.pem /etc/turnserver/certs/privkey.pem
 systemctl restart coturn || true
 HOOK
 chmod 755 "$hook_dir/turn2-restart-coturn.sh"
+
+setcap cap_net_bind_service=+ep /usr/bin/turnserver
 
 systemctl enable coturn
 systemctl restart coturn

@@ -2,7 +2,7 @@
 # Purpose: provision a dedicated TURN (coturn) node on a VPS with TLS:443.
 set -euo pipefail
 
-SSH_TARGET="${TURN2_SSH_TARGET:-root@72.56.20.97}"
+SSH_TARGET="${TURN2_SSH_TARGET:-root@46.149.71.86}"
 SSH_PORT="${TURN2_SSH_PORT:-22}"
 PROJECT_DIR="${TURN2_PROJECT_DIR:-/opt/turn2}"
 

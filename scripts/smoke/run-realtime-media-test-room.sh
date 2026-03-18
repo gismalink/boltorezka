@@ -20,6 +20,11 @@ VIDEO_NOISE_FPS="${SMOKE_RTC_VIDEO_NOISE_FPS:-12}"
 DISABLE_MDNS="${SMOKE_RTC_DISABLE_MDNS:-1}"
 MAX_TEST_DURATION_MS=120000
 
+if [[ "${SMOKE_ALLOW_LEGACY_CALL_SIGNAL:-0}" != "1" ]]; then
+  echo "[smoke:realtime:media] requires SMOKE_ALLOW_LEGACY_CALL_SIGNAL=1 (legacy signaling path)" >&2
+  exit 1
+fi
+
 if [[ "$TIMEOUT_MS" =~ ^[0-9]+$ ]] && (( TIMEOUT_MS > MAX_TEST_DURATION_MS )); then
   TIMEOUT_MS="$MAX_TEST_DURATION_MS"
 fi
