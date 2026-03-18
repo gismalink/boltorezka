@@ -253,6 +253,10 @@ const buildRtcConnectErrorMessage = (
   return `${t(keyByCategory[classified.category])} [${classified.code}]`;
 };
 
+const shouldRetryWithRelayOnly = (classified: ClassifiedRtcConnectError): boolean => {
+  return classified.category === "ICE_CONNECTIVITY" || classified.category === "TURN_UNREACHABLE";
+};
+
   const isAutoplayBlockedError = (error: unknown): boolean => {
     if (!error || typeof error !== "object") {
       return false;
@@ -1004,7 +1008,24 @@ export function useLivekitVoiceRuntime({
         pushCallLog(`livekit token trace=${String(livekit.traceId || "").trim() || "n/a"}`);
         pushCallLog(`livekit signal raw=${rawSignalUrl || "n/a"}`);
         pushCallLog(`livekit signal resolved=${signalUrl || "n/a"}`);
-        await room.connect(signalUrl, livekit.token);
+        try {
+          await room.connect(signalUrl, livekit.token);
+        } catch (primaryConnectError) {
+          const primaryClassified = classifyRtcConnectError(primaryConnectError);
+          if (!shouldRetryWithRelayOnly(primaryClassified)) {
+            throw primaryConnectError;
+          }
+
+          pushCallLog(
+            `livekit connect primary failed code=${primaryClassified.code}; retry relay-only for ${roomSlug}`
+          );
+          await room.connect(signalUrl, livekit.token, {
+            rtcConfig: {
+              iceTransportPolicy: "relay"
+            }
+          });
+          pushCallLog(`livekit connect relay-only fallback succeeded for ${roomSlug}`);
+        }
 
         const tracks = await createLocalTracks({
           audio: buildAudioConstraints(),
