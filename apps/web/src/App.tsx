@@ -621,6 +621,7 @@ export function App() {
   });
 
   useVoiceSignalingOrchestrator({
+    roomSlug,
     roomVoiceConnected,
     currentRoomSupportsRtc,
     micMuted,

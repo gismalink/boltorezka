@@ -147,6 +147,9 @@ export function useScreenShareOrchestrator({
       try {
         await stopLocalScreenShare();
       } finally {
+        if (!roomVoiceConnected) {
+          return;
+        }
         try {
           await sendWsEventAwaitAck("screen.share.stop", { roomSlug }, { maxRetries: 1 });
         } catch {
@@ -177,6 +180,10 @@ export function useScreenShareOrchestrator({
         pushToast("Screen share permission denied");
       } else {
         pushToast("Failed to start screen share");
+      }
+
+      if (!roomVoiceConnected || text.includes("NoActiveRoom")) {
+        return;
       }
 
       try {
@@ -214,7 +221,9 @@ export function useScreenShareOrchestrator({
 
     const onEnded = () => {
       void stopLocalScreenShare();
-      void sendWsEventAwaitAck("screen.share.stop", { roomSlug }, { maxRetries: 1 }).catch(() => undefined);
+      if (roomVoiceConnected) {
+        void sendWsEventAwaitAck("screen.share.stop", { roomSlug }, { maxRetries: 1 }).catch(() => undefined);
+      }
     };
 
     track.addEventListener("ended", onEnded);
@@ -229,7 +238,6 @@ export function useScreenShareOrchestrator({
     }
 
     void stopLocalScreenShare();
-    void sendWsEventAwaitAck("screen.share.stop", { roomSlug }, { maxRetries: 1 }).catch(() => undefined);
   }, [isLocalScreenSharing, roomSlug, roomVoiceConnected, sendWsEventAwaitAck, stopLocalScreenShare]);
 
   return {
