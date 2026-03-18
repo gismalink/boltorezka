@@ -23,6 +23,7 @@ import type { CallStatus } from "../../services";
 import { trackClientEvent } from "../../telemetry";
 import { normalizeLivekitSignalUrl, resolveTransportRuntimeSnapshot } from "../../transportRuntime";
 import { RnnoiseAudioProcessor, type RnnoiseSuppressionLevel } from "./rnnoiseAudioProcessor";
+import { RTC_CONFIG } from "./voiceCallConfig";
 import type {
   CallMicStatePayload,
   CallNackPayload,
@@ -1004,7 +1005,9 @@ export function useLivekitVoiceRuntime({
         pushCallLog(`livekit token trace=${String(livekit.traceId || "").trim() || "n/a"}`);
         pushCallLog(`livekit signal raw=${rawSignalUrl || "n/a"}`);
         pushCallLog(`livekit signal resolved=${signalUrl || "n/a"}`);
-        await room.connect(signalUrl, livekit.token);
+        await room.connect(signalUrl, livekit.token, {
+          rtcConfig: RTC_CONFIG
+        });
 
         const tracks = await createLocalTracks({
           audio: buildAudioConstraints(),

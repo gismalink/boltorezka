@@ -44,6 +44,7 @@ type ChatCommonParams = {
   buildChatMessageEnvelope: (...args: any[]) => unknown;
   buildChatEditedEnvelope: (...args: any[]) => unknown;
   buildChatDeletedEnvelope: (...args: any[]) => unknown;
+  buildChatTypingEnvelope?: (...args: any[]) => unknown;
   redisGet: (key: string) => Promise<string | null>;
   redisDel: (key: string) => Promise<number>;
   redisSetEx: (key: string, ttlSeconds: number, value: string) => Promise<string | null>;
@@ -487,4 +488,60 @@ export async function handleChatDelete(params: ChatCommonParams): Promise<void> 
   sendAckWithMetrics(connection, requestId, eventType, {
     messageId: deletedMessage.id
   });
+}
+
+export async function handleChatTyping(params: ChatCommonParams): Promise<void> {
+  const {
+    connection,
+    state,
+    payload,
+    requestId,
+    eventType,
+    getPayloadString,
+    sendNoActiveRoomNack,
+    dbQuery,
+    sendNack,
+    sendValidationNack,
+    broadcastRoom,
+    buildChatTypingEnvelope,
+    sendAckWithMetrics
+  } = params;
+
+  if (!buildChatTypingEnvelope) {
+    sendNack(connection, requestId, eventType, "ServerError", "Typing envelope builder is unavailable");
+    return;
+  }
+
+  const targetRoom = await resolveChatRoom({
+    state,
+    payload,
+    getPayloadString,
+    dbQuery,
+    connection,
+    requestId,
+    eventType,
+    sendNoActiveRoomNack,
+    sendNack
+  });
+  if (!targetRoom) {
+    return;
+  }
+
+  const isTypingRaw = (payload as Record<string, unknown> | undefined)?.isTyping;
+  if (typeof isTypingRaw !== "boolean") {
+    sendValidationNack(connection, requestId, eventType, "isTyping boolean is required");
+    return;
+  }
+
+  const typingPayload = {
+    roomId: targetRoom.roomId,
+    roomSlug: targetRoom.roomSlug,
+    userId: state.userId,
+    userName: state.userName,
+    isTyping: isTypingRaw,
+    ts: new Date().toISOString()
+  };
+
+  broadcastRoom(targetRoom.roomId, buildChatTypingEnvelope(typingPayload), connection);
+  sendAckWithMetrics(connection, requestId, eventType);
 }

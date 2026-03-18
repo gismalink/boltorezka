@@ -10,7 +10,7 @@ import {
   handleScreenShareStart,
   handleScreenShareStop
 } from "./realtime-call-screen.js";
-import { handleChatDelete, handleChatEdit, handleChatSend } from "./realtime-chat.js";
+import { handleChatDelete, handleChatEdit, handleChatSend, handleChatTyping } from "./realtime-chat.js";
 import { isDuplicateCallSignal } from "./realtime-idempotency.js";
 import { closeRealtimeConnection, initializeRealtimeConnection } from "./realtime-lifecycle.js";
 import { createRealtimeMediaStateStore } from "./realtime-media-state.js";
@@ -28,6 +28,7 @@ import {
   buildChatEditedEnvelope,
   buildChatMessageEnvelope,
   buildErrorEnvelope,
+  buildChatTypingEnvelope,
   buildPongEnvelope,
   buildPresenceJoinedEnvelope,
   buildPresenceLeftEnvelope,
@@ -806,6 +807,7 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
                   buildChatMessageEnvelope,
                   buildChatEditedEnvelope,
                   buildChatDeletedEnvelope,
+                  buildChatTypingEnvelope,
                   redisGet: fastify.redis.get.bind(fastify.redis),
                   redisDel: fastify.redis.del.bind(fastify.redis),
                   redisSetEx: fastify.redis.setEx.bind(fastify.redis),
@@ -835,6 +837,7 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
                   buildChatMessageEnvelope,
                   buildChatEditedEnvelope,
                   buildChatDeletedEnvelope,
+                  buildChatTypingEnvelope,
                   redisGet: fastify.redis.get.bind(fastify.redis),
                   redisDel: fastify.redis.del.bind(fastify.redis),
                   redisSetEx: fastify.redis.setEx.bind(fastify.redis),
@@ -863,6 +866,36 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
                   buildChatMessageEnvelope,
                   buildChatEditedEnvelope,
                   buildChatDeletedEnvelope,
+                  buildChatTypingEnvelope,
+                  redisGet: fastify.redis.get.bind(fastify.redis),
+                  redisDel: fastify.redis.del.bind(fastify.redis),
+                  redisSetEx: fastify.redis.setEx.bind(fastify.redis),
+                  dbQuery: db.query.bind(db)
+                });
+                return;
+              }
+
+              case "chat.typing": {
+                await handleChatTyping({
+                  connection,
+                  state,
+                  payload,
+                  requestId,
+                  eventType,
+                  normalizeRequestId,
+                  getPayloadString,
+                  sendNoActiveRoomNack,
+                  sendValidationNack,
+                  sendForbiddenNack,
+                  sendNack,
+                  incrementMetric,
+                  sendJson,
+                  sendAckWithMetrics,
+                  broadcastRoom,
+                  buildChatMessageEnvelope,
+                  buildChatEditedEnvelope,
+                  buildChatDeletedEnvelope,
+                  buildChatTypingEnvelope,
                   redisGet: fastify.redis.get.bind(fastify.redis),
                   redisDel: fastify.redis.del.bind(fastify.redis),
                   redisSetEx: fastify.redis.setEx.bind(fastify.redis),

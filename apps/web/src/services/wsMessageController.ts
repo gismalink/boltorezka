@@ -71,6 +71,16 @@ type WsMessageControllerOptions = {
       clearedAt?: string;
     }
   ) => void;
+  onChatTyping?: (
+    payload: {
+      roomId?: string;
+      roomSlug?: string;
+      userId?: string;
+      userName?: string;
+      isTyping?: boolean;
+      ts?: string;
+    }
+  ) => void;
   onAck?: (
     payload: { requestId: string; eventType: string; meta: Record<string, unknown> }
   ) => void;
@@ -284,6 +294,17 @@ export class WsMessageController {
       roomSlug,
       deletedCount,
       clearedAt
+    });
+  }
+
+  private handleChatTyping(message: WsIncoming): void {
+    this.options.onChatTyping?.({
+      roomId: this.asTrimmedString(message.payload?.roomId) || undefined,
+      roomSlug: this.asTrimmedString(message.payload?.roomSlug) || undefined,
+      userId: this.asTrimmedString(message.payload?.userId) || undefined,
+      userName: this.asTrimmedString(message.payload?.userName) || undefined,
+      isTyping: typeof message.payload?.isTyping === "boolean" ? message.payload.isTyping : undefined,
+      ts: this.asTrimmedString(message.payload?.ts) || undefined
     });
   }
 
@@ -544,6 +565,9 @@ export class WsMessageController {
         return;
       case "chat.cleared":
         this.handleChatCleared(message);
+        return;
+      case "chat.typing":
+        this.handleChatTyping(message);
         return;
       case "screen.share.state":
         this.handleScreenShareState(message);

@@ -14,11 +14,13 @@ type ChatPanelProps = {
   loadingOlderMessages: boolean;
   chatText: string;
   composePreviewImageUrl: string | null;
+  chatImageLimitHint: string;
+  typingUsers: string[];
   chatLogRef: RefObject<HTMLDivElement>;
   onLoadOlderMessages: () => void;
   onSetChatText: (value: string) => void;
-  onChatPaste: (event: ClipboardEvent<HTMLInputElement>) => void;
-  onChatInputKeyDown: (event: KeyboardEvent<HTMLInputElement>) => void;
+  onChatPaste: (event: ClipboardEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
+  onChatInputKeyDown: (event: KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
   onSendMessage: (event: FormEvent) => void;
   editingMessageId: string | null;
   showVideoToggle: boolean;
@@ -40,6 +42,8 @@ export function ChatPanel({
   loadingOlderMessages,
   chatText,
   composePreviewImageUrl,
+  chatImageLimitHint,
+  typingUsers,
   chatLogRef,
   onLoadOlderMessages,
   onSetChatText,
@@ -75,6 +79,16 @@ export function ChatPanel({
   }, [previewImageUrl]);
 
   const composePreviewImage = composePreviewImageUrl;
+  const visibleTypingUsers = typingUsers.slice(0, 2);
+  const typingOverflowCount = Math.max(0, typingUsers.length - visibleTypingUsers.length);
+  const typingUsersLabel = typingOverflowCount > 0
+    ? t("chat.typingUsersOverflow")
+      .replace("{users}", visibleTypingUsers.join(", "))
+      .replace("{count}", String(typingOverflowCount))
+    : visibleTypingUsers.join(", ");
+  const typingLabel = typingUsers.length <= 1
+    ? t("chat.typingSingle").replace("{users}", typingUsersLabel)
+    : t("chat.typingMultiple").replace("{users}", typingUsersLabel);
   const historyButtonLabel = loadingOlderMessages
     ? t("chat.loading")
     : !messagesHasMore
@@ -295,12 +309,13 @@ export function ChatPanel({
           <button type="button" className="secondary tiny" onClick={onCancelEdit}>{t("chat.cancelEdit")}</button>
         </div>
       ) : null}
-      <form className="chat-compose mt-3 flex items-center gap-3" onSubmit={onSendMessage}>
-        <input
+      <form className="chat-compose mt-3 flex items-end gap-3" onSubmit={onSendMessage}>
+        <textarea
           value={chatText}
           onChange={(event) => onSetChatText(event.target.value)}
           onPaste={onChatPaste}
           onKeyDown={onChatInputKeyDown}
+          rows={2}
           placeholder={hasActiveRoom ? t("chat.typePlaceholder") : t("chat.selectChannelPlaceholder")}
           disabled={!hasActiveRoom}
         />
@@ -322,6 +337,17 @@ export function ChatPanel({
         ) : null}
         <button type="submit" disabled={!hasActiveRoom}>{editingMessageId ? t("chat.saveEdit") : t("chat.send")}</button>
       </form>
+      {hasActiveRoom && typingUsers.length > 0 ? (
+        <p className="chat-typing-status" aria-live="polite">
+          <span>{typingLabel}</span>
+          <span className="chat-typing-dots" aria-hidden="true">
+            <span className="chat-typing-dot">.</span>
+            <span className="chat-typing-dot">.</span>
+            <span className="chat-typing-dot">.</span>
+          </span>
+        </p>
+      ) : null}
+      <p className="chat-compose-help muted">{t("chat.composeHint")} {chatImageLimitHint}</p>
       {previewImageUrl ? (
         <div
           className="chat-image-modal-overlay popup-layer-content"

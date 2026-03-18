@@ -108,6 +108,8 @@ const CLIENT_BUILD_SHA = String(import.meta.env.VITE_APP_BUILD_SHA || CLIENT_BUI
 const CLIENT_BUILD_DATE = String(import.meta.env.VITE_APP_BUILD_DATE || "").trim();
 const CLIENT_BUILD_DATE_LABEL = formatBuildDateLabel(CLIENT_BUILD_VERSION, CLIENT_BUILD_DATE);
 const COOKIE_MODE = import.meta.env.VITE_AUTH_COOKIE_MODE === "1";
+const CHAT_TYPING_TTL_MS = 4500;
+const CHAT_TYPING_PING_INTERVAL_MS = 1800;
 
 export function App() {
   const [token, setToken] = useState(() => (COOKIE_MODE ? "" : localStorage.getItem("boltorezka_token") || ""));
@@ -135,6 +137,7 @@ export function App() {
   const [loadingOlderMessages, setLoadingOlderMessages] = useState(false);
   const [chatText, setChatText] = useState("");
   const [pendingChatImageDataUrl, setPendingChatImageDataUrl] = useState<string | null>(null);
+  const [chatTypingByRoomSlug, setChatTypingByRoomSlug] = useState<Record<string, Record<string, { userName: string; expiresAt: number }>>>({});
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [callStatus, setCallStatus] = useState<CallStatus>("idle");
   const [lastCallPeer, setLastCallPeer] = useState("");
@@ -305,6 +308,11 @@ export function App() {
   const lastRoomSlugForScrollRef = useRef(chatRoomSlug);
   const lastMessageIdRef = useRef<string | null>(null);
   const chatLogRef = useRef<HTMLDivElement>(null);
+  const chatTypingStopTimerRef = useRef<number | null>(null);
+  const chatTypingLastSentAtRef = useRef(0);
+  const chatTypingActiveRef = useRef(false);
+  const chatTypingRoomSlugRef = useRef("");
+  const previousChatRoomSlugRef = useRef(chatRoomSlug);
   const autoSsoAttemptedRef = useRef(false);
   const authMenuRef = useRef<HTMLDivElement>(null);
   const profileMenuRef = useRef<HTMLDivElement>(null);
@@ -328,6 +336,13 @@ export function App() {
     const dict = TEXT[lang];
     return (key: string) => dict[key] || key;
   }, [lang]);
+  const maxChatImageKb = Math.max(1, Math.floor(serverChatImagePolicy.maxDataUrlLength / 1024));
+  const chatImageLimitHint = t("chat.imageLimitHint")
+    .replace("{maxSide}", String(serverChatImagePolicy.maxImageSide))
+    .replace("{maxKb}", String(maxChatImageKb));
+  const chatImageTooLargeMessage = t("chat.imageTooLarge")
+    .replace("{maxSide}", String(serverChatImagePolicy.maxImageSide))
+    .replace("{maxKb}", String(maxChatImageKb));
   const {
     desktopUpdateReadyVersion,
     desktopUpdateApplying,
@@ -369,11 +384,78 @@ export function App() {
     realtimeClientRef
   });
 
+  const clearChatTypingStopTimer = useCallback(() => {
+    if (chatTypingStopTimerRef.current !== null) {
+      window.clearTimeout(chatTypingStopTimerRef.current);
+      chatTypingStopTimerRef.current = null;
+    }
+  }, []);
+
+  const sendChatTypingState = useCallback((targetRoomSlug: string, isTyping: boolean) => {
+    const slug = String(targetRoomSlug || "").trim();
+    if (!slug || !user?.id) {
+      return;
+    }
+
+    void sendWsEvent("chat.typing", { roomSlug: slug, isTyping }, { maxRetries: 1 });
+    chatTypingLastSentAtRef.current = Date.now();
+    chatTypingActiveRef.current = isTyping;
+    chatTypingRoomSlugRef.current = isTyping ? slug : "";
+
+    if (!isTyping) {
+      clearChatTypingStopTimer();
+    }
+  }, [clearChatTypingStopTimer, sendWsEvent, user?.id]);
+
+  const scheduleChatTypingStop = useCallback((targetRoomSlug: string) => {
+    clearChatTypingStopTimer();
+    chatTypingStopTimerRef.current = window.setTimeout(() => {
+      sendChatTypingState(targetRoomSlug, false);
+    }, CHAT_TYPING_TTL_MS);
+  }, [clearChatTypingStopTimer, sendChatTypingState]);
+
+  const handleSetChatText = useCallback((value: string) => {
+    setChatText(value);
+
+    if (!chatRoomSlug || !user?.id) {
+      return;
+    }
+
+    const hasText = value.trim().length > 0;
+    if (!hasText) {
+      if (chatTypingActiveRef.current && chatTypingRoomSlugRef.current === chatRoomSlug) {
+        sendChatTypingState(chatRoomSlug, false);
+      }
+      return;
+    }
+
+    const now = Date.now();
+    if (
+      !chatTypingActiveRef.current
+      || chatTypingRoomSlugRef.current !== chatRoomSlug
+      || now - chatTypingLastSentAtRef.current >= CHAT_TYPING_PING_INTERVAL_MS
+    ) {
+      sendChatTypingState(chatRoomSlug, true);
+    }
+
+    scheduleChatTypingStop(chatRoomSlug);
+  }, [chatRoomSlug, scheduleChatTypingStop, sendChatTypingState, user?.id]);
+
   const currentRoomVoiceTargets = useMemo(() => {
     const members = roomsPresenceDetailsBySlug[roomSlug] || [];
     const me = user?.id || "";
     return members.filter((member) => member.userId !== me);
   }, [roomsPresenceDetailsBySlug, roomSlug, user?.id]);
+
+  const activeChatTypingUsers = useMemo(() => {
+    const now = Date.now();
+    const roomTyping = chatTypingByRoomSlug[chatRoomSlug] || {};
+
+    return Object.values(roomTyping)
+      .filter((entry) => entry.expiresAt > now)
+      .map((entry) => entry.userName)
+      .filter((name, index, all) => all.indexOf(name) === index);
+  }, [chatRoomSlug, chatTypingByRoomSlug]);
 
   const { currentRoom: currentRoomSnapshot, currentRoomKind, currentRoomAudioQualityOverride } = useCurrentRoomSnapshot({
     rooms,
@@ -966,6 +1048,7 @@ export function App() {
       realtimeClientRef.current?.dispose();
       realtimeClientRef.current = null;
       setRoomSlug("");
+      setChatTypingByRoomSlug({});
       setSessionMovedOverlayMessage(`${code}: ${message}`);
       pushLog(`session moved: ${code} ${message}`);
     },
@@ -981,8 +1064,96 @@ export function App() {
 
       const deletedCount = Number(payload.deletedCount || 0);
       pushLog(`channel chat cleared by admin (${Number.isFinite(deletedCount) ? deletedCount : 0})`);
+    },
+    onChatTyping: (payload) => {
+      const typingRoomSlug = String(payload.roomSlug || "").trim();
+      const typingUserId = String(payload.userId || "").trim();
+      const typingUserName = String(payload.userName || "").trim();
+
+      if (!typingRoomSlug || !typingUserId || !typingUserName || typingUserId === user?.id) {
+        return;
+      }
+
+      const isTyping = payload.isTyping === true;
+      setChatTypingByRoomSlug((prev) => {
+        const roomTyping = prev[typingRoomSlug] || {};
+
+        if (isTyping) {
+          return {
+            ...prev,
+            [typingRoomSlug]: {
+              ...roomTyping,
+              [typingUserId]: {
+                userName: typingUserName,
+                expiresAt: Date.now() + CHAT_TYPING_TTL_MS
+              }
+            }
+          };
+        }
+
+        if (!(typingUserId in roomTyping)) {
+          return prev;
+        }
+
+        const nextRoomTyping = { ...roomTyping };
+        delete nextRoomTyping[typingUserId];
+
+        if (Object.keys(nextRoomTyping).length === 0) {
+          const next = { ...prev };
+          delete next[typingRoomSlug];
+          return next;
+        }
+
+        return {
+          ...prev,
+          [typingRoomSlug]: nextRoomTyping
+        };
+      });
     }
   });
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      const now = Date.now();
+      setChatTypingByRoomSlug((prev) => {
+        let changed = false;
+        const next: Record<string, Record<string, { userName: string; expiresAt: number }>> = {};
+
+        Object.entries(prev).forEach(([slug, users]) => {
+          const aliveEntries = Object.entries(users).filter(([, entry]) => entry.expiresAt > now);
+          if (aliveEntries.length !== Object.keys(users).length) {
+            changed = true;
+          }
+          if (aliveEntries.length > 0) {
+            next[slug] = Object.fromEntries(aliveEntries);
+          } else if (Object.keys(users).length > 0) {
+            changed = true;
+          }
+        });
+
+        return changed ? next : prev;
+      });
+    }, 1000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, []);
+
+  useEffect(() => {
+    const previousRoomSlug = previousChatRoomSlugRef.current;
+    if (previousRoomSlug && previousRoomSlug !== chatRoomSlug && chatTypingActiveRef.current) {
+      sendChatTypingState(previousRoomSlug, false);
+    }
+    previousChatRoomSlugRef.current = chatRoomSlug;
+  }, [chatRoomSlug, sendChatTypingState]);
+
+  useEffect(() => () => {
+    if (chatTypingActiveRef.current && chatTypingRoomSlugRef.current) {
+      void sendWsEvent("chat.typing", { roomSlug: chatTypingRoomSlugRef.current, isTyping: false }, { maxRetries: 1 });
+    }
+    clearChatTypingStopTimer();
+  }, [clearChatTypingStopTimer, sendWsEvent]);
 
   useAdminUsersSync({
     token,
@@ -1197,6 +1368,7 @@ export function App() {
 
       setChatText("");
       setEditingMessageId(null);
+      sendChatTypingState(chatRoomSlug, false);
       return;
     }
 
@@ -1207,10 +1379,11 @@ export function App() {
     if (result.sent) {
       setChatText("");
       setPendingChatImageDataUrl(null);
+      sendChatTypingState(chatRoomSlug, false);
     }
   };
 
-  const handleChatPaste = (event: ClipboardEvent<HTMLInputElement>) => {
+  const handleChatPaste = (event: ClipboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     if (!chatRoomSlug) {
       return;
     }
@@ -1233,18 +1406,24 @@ export function App() {
         const markdown = `![скриншот](${dataUrl})`;
 
         if (markdown.length > serverChatImagePolicy.maxDataUrlLength) {
-          pushToast(t("chat.imageTooLarge"));
+          pushToast(chatImageTooLargeMessage);
           return;
         }
 
         setPendingChatImageDataUrl(dataUrl);
       } catch {
-        pushToast(t("chat.imageTooLarge"));
+        pushToast(chatImageTooLargeMessage);
       }
     })();
   };
 
-  const handleChatInputKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+  const handleChatInputKeyDown = (event: KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
+      event.preventDefault();
+      event.currentTarget.form?.requestSubmit();
+      return;
+    }
+
     if (event.key !== "ArrowUp") {
       return;
     }
@@ -1813,9 +1992,11 @@ export function App() {
     loadingOlderMessages,
     chatText,
     pendingChatImageDataUrl,
+    chatImageLimitHint,
+    activeChatTypingUsers,
     chatLogRef,
     loadOlderMessages,
-    setChatText,
+    setChatText: handleSetChatText,
     handleChatPaste,
     handleChatInputKeyDown,
     sendMessage,

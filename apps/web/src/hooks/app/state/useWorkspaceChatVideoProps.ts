@@ -13,11 +13,13 @@ type ChatPanelProps = {
   loadingOlderMessages: boolean;
   chatText: string;
   composePreviewImageUrl: string | null;
+  chatImageLimitHint: string;
+  typingUsers: string[];
   chatLogRef: React.RefObject<HTMLDivElement>;
   onLoadOlderMessages: () => void;
   onSetChatText: (value: string) => void;
-  onChatPaste: (event: React.ClipboardEvent<HTMLInputElement>) => void;
-  onChatInputKeyDown: (event: React.KeyboardEvent<HTMLInputElement>) => void;
+  onChatPaste: (event: React.ClipboardEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
+  onChatInputKeyDown: (event: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
   onSendMessage: (event: React.FormEvent) => void;
   editingMessageId: string | null;
   showVideoToggle: boolean;
@@ -58,11 +60,13 @@ type UseWorkspaceChatVideoPropsInput = {
   loadingOlderMessages: boolean;
   chatText: string;
   pendingChatImageDataUrl: string | null;
+  chatImageLimitHint: string;
+  activeChatTypingUsers: string[];
   chatLogRef: React.RefObject<HTMLDivElement>;
   loadOlderMessages: () => void;
   setChatText: (value: string) => void;
-  handleChatPaste: (event: React.ClipboardEvent<HTMLInputElement>) => void;
-  handleChatInputKeyDown: (event: React.KeyboardEvent<HTMLInputElement>) => void;
+  handleChatPaste: (event: React.ClipboardEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
+  handleChatInputKeyDown: (event: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
   sendMessage: (event: React.FormEvent) => void;
   editingMessageId: string | null;
   currentRoomSupportsRtc: boolean;
@@ -101,6 +105,8 @@ export function useWorkspaceChatVideoProps({
   loadingOlderMessages,
   chatText,
   pendingChatImageDataUrl,
+  chatImageLimitHint,
+  activeChatTypingUsers,
   chatLogRef,
   loadOlderMessages,
   setChatText,
@@ -140,6 +146,8 @@ export function useWorkspaceChatVideoProps({
     loadingOlderMessages,
     chatText,
     composePreviewImageUrl: pendingChatImageDataUrl,
+    chatImageLimitHint,
+    typingUsers: activeChatTypingUsers,
     chatLogRef,
     onLoadOlderMessages: () => void loadOlderMessages(),
     onSetChatText: setChatText,
