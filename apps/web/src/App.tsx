@@ -1387,6 +1387,43 @@ export function App() {
     return source;
   }, []);
 
+  const normalizeImageSource = useCallback((value: string) => {
+    const source = String(value || "").trim();
+    if (!source) {
+      return "";
+    }
+
+    if (source.startsWith("data:image/")) {
+      return source.replace(/\s+/g, "");
+    }
+
+    return source;
+  }, []);
+
+  const extractImageSourceFromClipboardText = useCallback((text: string) => {
+    const sourceText = String(text || "");
+    if (!sourceText) {
+      return "";
+    }
+
+    const markdownMatch = sourceText.match(/!\[[^\]]*\]\((data:image\/[a-zA-Z0-9.+-]+;base64,[^)]+|https?:\/\/[^)\s]+)\)/i);
+    if (markdownMatch?.[1]) {
+      return normalizeImageSource(markdownMatch[1]);
+    }
+
+    const dataUrlMatch = sourceText.match(/data:image\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=\r\n]+/i);
+    if (dataUrlMatch?.[0]) {
+      return normalizeImageSource(dataUrlMatch[0]);
+    }
+
+    const httpMatch = sourceText.match(/https?:\/\/[^\s]+/i);
+    if (httpMatch?.[0]) {
+      return normalizeImageSource(httpMatch[0]);
+    }
+
+    return "";
+  }, [normalizeImageSource]);
+
   const sendMessage = (event: FormEvent) => {
     event.preventDefault();
     if (!chatRoomSlug) {
@@ -1421,9 +1458,30 @@ export function App() {
       return;
     }
 
-    const baseText = chatText.trim();
-    const imageMarkdown = pendingChatImageDataUrl ? `![скриншот](${pendingChatImageDataUrl})` : "";
+    let baseText = chatText.trim();
+    const extractedInlineImageSource = !pendingChatImageDataUrl
+      ? extractImageSourceFromClipboardText(baseText)
+      : "";
+    const imageSource = pendingChatImageDataUrl || extractedInlineImageSource;
+
+    if (imageSource.startsWith("data:image/") && imageSource.length > serverChatImagePolicy.maxDataUrlLength) {
+      pushToast(chatImageTooLargeMessage);
+      return;
+    }
+
+    if (extractedInlineImageSource) {
+      baseText = baseText
+        .replace(extractedInlineImageSource, "")
+        .replace(/!\[[^\]]*\]\(\s*\)/g, "")
+        .replace(/\(\s*\)/g, "")
+        .trim();
+    }
+
+    const imageMarkdown = imageSource ? `![скриншот](${imageSource})` : "";
     const outgoingText = [baseText, imageMarkdown].filter(Boolean).join("\n");
+    if (!outgoingText) {
+      return;
+    }
     const result = chatController.sendMessage(outgoingText, chatRoomSlug, user, MAX_CHAT_RETRIES);
     if (result.sent) {
       setChatText("");
@@ -1444,8 +1502,9 @@ export function App() {
         .map((item) => item.getAsFile())
         .find((file): file is File => Boolean(file && file.type.startsWith("image/")));
 
-    const htmlImageSource = extractImageSourceFromClipboardHtml(String(clipboard?.getData("text/html") || ""));
-    const hasImagePayload = Boolean(imageFile || htmlImageSource);
+    const htmlImageSource = normalizeImageSource(extractImageSourceFromClipboardHtml(String(clipboard?.getData("text/html") || "")));
+    const textImageSource = normalizeImageSource(extractImageSourceFromClipboardText(String(clipboard?.getData("text/plain") || "")));
+    const hasImagePayload = Boolean(imageFile || htmlImageSource || textImageSource);
     if (!hasImagePayload) {
       return;
     }
@@ -1470,6 +1529,20 @@ export function App() {
 
         if (/^https?:\/\//i.test(htmlImageSource)) {
           setPendingChatImageDataUrl(htmlImageSource);
+          return;
+        }
+
+        if (textImageSource.startsWith("data:image/")) {
+          const response = await fetch(textImageSource);
+          const blob = await response.blob();
+          const synthesizedFile = new File([blob], "clipboard-image", { type: blob.type || "image/png" });
+          const dataUrl = await compressImageToDataUrl(synthesizedFile);
+          setPendingChatImageDataUrl(dataUrl);
+          return;
+        }
+
+        if (/^https?:\/\//i.test(textImageSource)) {
+          setPendingChatImageDataUrl(textImageSource);
           return;
         }
 
