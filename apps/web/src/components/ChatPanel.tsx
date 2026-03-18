@@ -1,7 +1,16 @@
 import { ClipboardEvent, FormEvent, KeyboardEvent, ReactNode, RefObject, useEffect, useState } from "react";
 import type { Message } from "../domain";
 
-const CHAT_MARKDOWN_IMAGE_PATTERN = /!\[[^\]]*\]\((data:image\/[a-zA-Z0-9.+-]+;base64,[^)\s]+|https?:\/\/[^)\s]+)\)/g;
+const CHAT_MARKDOWN_IMAGE_PATTERN = /!\[[^\]]*\]\(((?:data:image\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=\s]+)|(?:https?:\/\/[^)\s]+))\)/g;
+const CHAT_BARE_DATA_IMAGE_PATTERN = /(data:image\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=\s]+)/gi;
+const CHAT_BARE_BASE64_IMAGE_PATTERN = /\b([A-Za-z0-9+/=]{2048,})\b/g;
+
+const BASE64_IMAGE_PREFIXES: Array<{ prefix: string; mime: string }> = [
+  { prefix: "/9j/", mime: "image/jpeg" },
+  { prefix: "iVBORw0KGgo", mime: "image/png" },
+  { prefix: "R0lGOD", mime: "image/gif" },
+  { prefix: "UklGR", mime: "image/webp" }
+];
 
 type ChatPanelProps = {
   t: (key: string) => string;
@@ -105,11 +114,41 @@ export function ChatPanel({
     });
   };
 
+  const normalizeImageSource = (value: string) => {
+    const source = String(value || "").trim();
+    if (!source) {
+      return "";
+    }
+
+    if (source.startsWith("data:image/")) {
+      return source.replace(/\s+/g, "");
+    }
+
+    return source;
+  };
+
+  const detectBareBase64ImageSource = (value: string) => {
+    const normalized = String(value || "").replace(/\s+/g, "");
+    if (normalized.length < 2048) {
+      return "";
+    }
+
+    for (const item of BASE64_IMAGE_PREFIXES) {
+      if (normalized.startsWith(item.prefix)) {
+        return `data:${item.mime};base64,${normalized}`;
+      }
+    }
+
+    return "";
+  };
+
   const renderMessageText = (value: string): ReactNode[] => {
     const text = String(value || "");
     const urlPattern = /((https?:\/\/|www\.)[^\s<]+)/gi;
     const result: ReactNode[] = [];
     let imageMatch: RegExpExecArray | null;
+    let bareDataImageMatch: RegExpExecArray | null;
+    let bareBase64Match: RegExpExecArray | null;
     let cursor = 0;
     let keyIndex = 0;
 
@@ -164,14 +203,54 @@ export function ChatPanel({
       }
     };
 
+    const imageMatches: Array<{ start: number; end: number; imageUrl: string }> = [];
+
     CHAT_MARKDOWN_IMAGE_PATTERN.lastIndex = 0;
     while ((imageMatch = CHAT_MARKDOWN_IMAGE_PATTERN.exec(text)) !== null) {
       const start = imageMatch.index;
+      const end = start + imageMatch[0].length;
+      const imageUrl = normalizeImageSource(String(imageMatch[1] || ""));
+      if (imageUrl) {
+        imageMatches.push({ start, end, imageUrl });
+      }
+    }
+
+    CHAT_BARE_DATA_IMAGE_PATTERN.lastIndex = 0;
+    while ((bareDataImageMatch = CHAT_BARE_DATA_IMAGE_PATTERN.exec(text)) !== null) {
+      const start = bareDataImageMatch.index;
+      const end = start + bareDataImageMatch[0].length;
+      const imageUrl = normalizeImageSource(String(bareDataImageMatch[1] || ""));
+      if (imageUrl) {
+        imageMatches.push({ start, end, imageUrl });
+      }
+    }
+
+    CHAT_BARE_BASE64_IMAGE_PATTERN.lastIndex = 0;
+    while ((bareBase64Match = CHAT_BARE_BASE64_IMAGE_PATTERN.exec(text)) !== null) {
+      const start = bareBase64Match.index;
+      const end = start + bareBase64Match[0].length;
+      const imageUrl = detectBareBase64ImageSource(String(bareBase64Match[1] || ""));
+      if (imageUrl) {
+        imageMatches.push({ start, end, imageUrl });
+      }
+    }
+
+    imageMatches.sort((left, right) => left.start - right.start || right.end - left.end);
+    const compactedMatches: Array<{ start: number; end: number; imageUrl: string }> = [];
+    for (const match of imageMatches) {
+      const hasOverlap = compactedMatches.some((item) => match.start < item.end && item.start < match.end);
+      if (!hasOverlap) {
+        compactedMatches.push(match);
+      }
+    }
+
+    for (const match of compactedMatches) {
+      const start = match.start;
       if (start > cursor) {
         pushTextWithLinks(text.slice(cursor, start));
       }
 
-      const imageUrl = String(imageMatch[1] || "").trim();
+      const imageUrl = match.imageUrl;
       if (imageUrl) {
         result.push(
           <button
@@ -193,7 +272,7 @@ export function ChatPanel({
         keyIndex += 1;
       }
 
-      cursor = start + imageMatch[0].length;
+      cursor = match.end;
     }
 
     if (cursor < text.length) {
