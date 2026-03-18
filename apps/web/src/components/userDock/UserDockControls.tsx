@@ -14,6 +14,7 @@ type UserDockControlsProps = Pick<
   | "noiseSuppressionEnabled"
   | "cameraEnabled"
   | "micMuted"
+  | "audioMuted"
   | "audioOutputMenuOpen"
   | "voiceSettingsOpen"
   | "voiceSettingsPanel"
@@ -65,6 +66,7 @@ export function UserDockControls({
   noiseSuppressionEnabled,
   cameraEnabled,
   micMuted,
+  audioMuted,
   audioOutputMenuOpen,
   voiceSettingsOpen,
   voiceSettingsPanel,
