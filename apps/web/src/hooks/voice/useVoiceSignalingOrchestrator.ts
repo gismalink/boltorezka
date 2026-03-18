@@ -8,6 +8,7 @@ type SendWsEvent = (
 ) => string | null;
 
 type UseVoiceSignalingOrchestratorArgs = {
+  roomSlug: string;
   roomVoiceConnected: boolean;
   currentRoomSupportsRtc: boolean;
   micMuted: boolean;
@@ -33,6 +34,7 @@ type UseVoiceSignalingOrchestratorArgs = {
 const LOCAL_SPEAKING_THRESHOLD = 0.055;
 
 export function useVoiceSignalingOrchestrator({
+  roomSlug,
   roomVoiceConnected,
   currentRoomSupportsRtc,
   micMuted,
@@ -58,7 +60,8 @@ export function useVoiceSignalingOrchestrator({
   const lastBroadcastMicStateRef = useRef("");
 
   useEffect(() => {
-    if (!roomVoiceConnected || !currentRoomSupportsRtc) {
+    const activeRoomSlug = String(roomSlug || "").trim();
+    if (!activeRoomSlug || !roomVoiceConnected || !currentRoomSupportsRtc) {
       lastBroadcastMicStateRef.current = "";
       return;
     }
@@ -82,10 +85,11 @@ export function useVoiceSignalingOrchestrator({
     if (requestId) {
       lastBroadcastMicStateRef.current = signature;
     }
-  }, [audioMuted, currentRoomSupportsRtc, micMuted, micTestLevel, roomVoiceConnected, sendWsEvent]);
+  }, [audioMuted, currentRoomSupportsRtc, micMuted, micTestLevel, roomSlug, roomVoiceConnected, sendWsEvent]);
 
   useEffect(() => {
-    if (!currentRoomSupportsRtc || !canManageAudioQuality) {
+    const activeRoomSlug = String(roomSlug || "").trim();
+    if (!activeRoomSlug || !roomVoiceConnected || !currentRoomSupportsRtc || !canManageAudioQuality) {
       return;
     }
 
@@ -112,6 +116,8 @@ export function useVoiceSignalingOrchestrator({
     lastBroadcastVideoPolicyRef.current = serialized;
     sendWsEvent("call.video_state", { settings: payload }, { maxRetries: 1 });
   }, [
+    roomSlug,
+    roomVoiceConnected,
     currentRoomSupportsRtc,
     canManageAudioQuality,
     serverVideoEffectType,
