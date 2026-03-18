@@ -85,7 +85,7 @@ function readFloatEnv(name: string, fallback: number, min: number, max: number):
 
 function loadServerChatImagePolicy(): ServerChatImagePolicyResponse {
   return {
-    maxDataUrlLength: readIntEnv("CHAT_IMAGE_MAX_DATA_URL_LENGTH", 28000, 8000, 250000),
+    maxDataUrlLength: readIntEnv("CHAT_IMAGE_MAX_DATA_URL_LENGTH", 102400, 8000, 250000),
     maxImageSide: readIntEnv("CHAT_IMAGE_MAX_SIDE", 1200, 256, 4096),
     jpegQuality: readFloatEnv("CHAT_IMAGE_JPEG_QUALITY", 0.6, 0.3, 0.95)
   };

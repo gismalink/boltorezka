@@ -13,7 +13,6 @@ type ChatPanelProps = {
   loadingOlderMessages: boolean;
   chatText: string;
   composePreviewImageUrl: string | null;
-  chatImageLimitHint: string;
   typingUsers: string[];
   chatLogRef: React.RefObject<HTMLDivElement>;
   onLoadOlderMessages: () => void;
@@ -60,7 +59,6 @@ type UseWorkspaceChatVideoPropsInput = {
   loadingOlderMessages: boolean;
   chatText: string;
   pendingChatImageDataUrl: string | null;
-  chatImageLimitHint: string;
   activeChatTypingUsers: string[];
   chatLogRef: React.RefObject<HTMLDivElement>;
   loadOlderMessages: () => void;
@@ -105,7 +103,6 @@ export function useWorkspaceChatVideoProps({
   loadingOlderMessages,
   chatText,
   pendingChatImageDataUrl,
-  chatImageLimitHint,
   activeChatTypingUsers,
   chatLogRef,
   loadOlderMessages,
@@ -146,7 +143,6 @@ export function useWorkspaceChatVideoProps({
     loadingOlderMessages,
     chatText,
     composePreviewImageUrl: pendingChatImageDataUrl,
-    chatImageLimitHint,
     typingUsers: activeChatTypingUsers,
     chatLogRef,
     onLoadOlderMessages: () => void loadOlderMessages(),

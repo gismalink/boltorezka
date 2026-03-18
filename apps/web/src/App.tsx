@@ -337,9 +337,6 @@ export function App() {
     return (key: string) => dict[key] || key;
   }, [lang]);
   const maxChatImageKb = Math.max(1, Math.floor(serverChatImagePolicy.maxDataUrlLength / 1024));
-  const chatImageLimitHint = t("chat.imageLimitHint")
-    .replace("{maxSide}", String(serverChatImagePolicy.maxImageSide))
-    .replace("{maxKb}", String(maxChatImageKb));
   const chatImageTooLargeMessage = t("chat.imageTooLarge")
     .replace("{maxSide}", String(serverChatImagePolicy.maxImageSide))
     .replace("{maxKb}", String(maxChatImageKb));
@@ -1992,7 +1989,6 @@ export function App() {
     loadingOlderMessages,
     chatText,
     pendingChatImageDataUrl,
-    chatImageLimitHint,
     activeChatTypingUsers,
     chatLogRef,
     loadOlderMessages,

@@ -14,7 +14,6 @@ type ChatPanelProps = {
   loadingOlderMessages: boolean;
   chatText: string;
   composePreviewImageUrl: string | null;
-  chatImageLimitHint: string;
   typingUsers: string[];
   chatLogRef: RefObject<HTMLDivElement>;
   onLoadOlderMessages: () => void;
@@ -42,7 +41,6 @@ export function ChatPanel({
   loadingOlderMessages,
   chatText,
   composePreviewImageUrl,
-  chatImageLimitHint,
   typingUsers,
   chatLogRef,
   onLoadOlderMessages,
@@ -232,6 +230,18 @@ export function ChatPanel({
           <span className="muted">{t("chat.noChannelHint")}</span>
         ) : null}
       </div>
+      <div className="chat-typing-banner" aria-live="polite">
+        {hasActiveRoom && typingUsers.length > 0 ? (
+          <span className="chat-typing-status">
+            <span>{typingLabel}</span>
+            <span className="chat-typing-dots" aria-hidden="true">
+              <span className="chat-typing-dot">.</span>
+              <span className="chat-typing-dot">.</span>
+              <span className="chat-typing-dot">.</span>
+            </span>
+          </span>
+        ) : null}
+      </div>
       <div className="chat-log min-h-0 flex-1" ref={chatLogRef}>
         {messages.map((message, index) => {
           const isOwn = currentUserId === message.user_id;
@@ -337,17 +347,6 @@ export function ChatPanel({
         ) : null}
         <button type="submit" disabled={!hasActiveRoom}>{editingMessageId ? t("chat.saveEdit") : t("chat.send")}</button>
       </form>
-      {hasActiveRoom && typingUsers.length > 0 ? (
-        <p className="chat-typing-status" aria-live="polite">
-          <span>{typingLabel}</span>
-          <span className="chat-typing-dots" aria-hidden="true">
-            <span className="chat-typing-dot">.</span>
-            <span className="chat-typing-dot">.</span>
-            <span className="chat-typing-dot">.</span>
-          </span>
-        </p>
-      ) : null}
-      <p className="chat-compose-help muted">{t("chat.composeHint")} {chatImageLimitHint}</p>
       {previewImageUrl ? (
         <div
           className="chat-image-modal-overlay popup-layer-content"
