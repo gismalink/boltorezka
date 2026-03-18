@@ -14,6 +14,7 @@ COMPOSE_FILE="infra/docker-compose.host.yml"
 ENV_FILE="infra/.env.host"
 HEALTHCHECK_URL="${PROD_HEALTHCHECK_URL:-https://boltorezka.gismalink.art/health}"
 FULL_RECREATE="${FULL_RECREATE:-0}"
+ALLOW_PROD_RELAY_ONLY="${ALLOW_PROD_RELAY_ONLY:-0}"
 EDGE_REPO_DIR="${EDGE_REPO_DIR:-$HOME/srv/edge}"
 EDGE_STATIC_DIR_PROD="${EDGE_STATIC_DIR_PROD:-$EDGE_REPO_DIR/ingress/static/boltorezka/prod}"
 
@@ -36,6 +37,22 @@ fi
 
 if [[ ! -f "$ENV_FILE" ]]; then
   echo "[deploy-prod] missing env file: $ENV_FILE" >&2
+  exit 1
+fi
+
+PROD_ICE_POLICY_RAW="$(grep -E '^PROD_VITE_RTC_ICE_TRANSPORT_POLICY=' "$ENV_FILE" | tail -n 1 | cut -d= -f2- || true)"
+PROD_ICE_POLICY="$(echo "$PROD_ICE_POLICY_RAW" | tr -d '[:space:]\"' | tr '[:upper:]' '[:lower:]')"
+
+if [[ -z "$PROD_ICE_POLICY" ]]; then
+  echo "[deploy-prod] warning: PROD_VITE_RTC_ICE_TRANSPORT_POLICY is not set in $ENV_FILE"
+else
+  echo "[deploy-prod] PROD_VITE_RTC_ICE_TRANSPORT_POLICY=$PROD_ICE_POLICY"
+fi
+
+# Safety gate: relay-only in production is blocked unless explicitly overridden.
+if [[ "$PROD_ICE_POLICY" == "relay" && "$ALLOW_PROD_RELAY_ONLY" != "1" ]]; then
+  echo "[deploy-prod] blocked: relay-only ICE policy in prod requires explicit override" >&2
+  echo "[deploy-prod] to proceed intentionally, run with ALLOW_PROD_RELAY_ONLY=1" >&2
   exit 1
 fi
 

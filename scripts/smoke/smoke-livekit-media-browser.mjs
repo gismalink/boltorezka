@@ -12,6 +12,9 @@ const clientScriptUrl = String(
   || "https://cdn.jsdelivr.net/npm/livekit-client@2.15.8/dist/livekit-client.umd.min.js"
 ).trim();
 const signalUrlOverride = String(process.env.SMOKE_LIVEKIT_MEDIA_SIGNAL_URL || "").trim();
+const rtcIceServersJsonRaw = String(process.env.SMOKE_RTC_ICE_SERVERS_JSON || "").trim();
+const rtcIceTransportPolicyRaw = String(process.env.SMOKE_RTC_ICE_TRANSPORT_POLICY || "all").trim().toLowerCase();
+const rtcIceTransportPolicy = rtcIceTransportPolicyRaw === "relay" ? "relay" : "all";
 
 const bearerA = String(process.env.SMOKE_TEST_BEARER_TOKEN || "").trim();
 const bearerB = String(process.env.SMOKE_TEST_BEARER_TOKEN_SECOND || "").trim();
@@ -25,6 +28,63 @@ if (!roomSlug) {
 if (!bearerA || !bearerB || !bearerC) {
   console.error("[smoke:livekit:media] requires SMOKE_TEST_BEARER_TOKEN, _SECOND, _THIRD");
   process.exit(1);
+}
+
+function normalizeIceServer(value) {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+
+  const rawUrls = value.urls;
+  const urls = Array.isArray(rawUrls)
+    ? rawUrls.map((item) => String(item || "").trim()).filter(Boolean)
+    : [String(rawUrls || "").trim()].filter(Boolean);
+
+  if (urls.length === 0) {
+    return null;
+  }
+
+  const server = { urls };
+  if (value.username !== undefined) {
+    server.username = String(value.username || "").trim();
+  }
+  if (value.credential !== undefined) {
+    server.credential = String(value.credential || "").trim();
+  }
+
+  return server;
+}
+
+function resolveRtcConfig() {
+  if (!rtcIceServersJsonRaw) {
+    return {
+      iceTransportPolicy: rtcIceTransportPolicy
+    };
+  }
+
+  let parsed;
+  try {
+    parsed = JSON.parse(rtcIceServersJsonRaw);
+  } catch (error) {
+    throw new Error(`[smoke:livekit:media] invalid SMOKE_RTC_ICE_SERVERS_JSON: ${error instanceof Error ? error.message : String(error)}`);
+  }
+
+  if (!Array.isArray(parsed)) {
+    throw new Error("[smoke:livekit:media] SMOKE_RTC_ICE_SERVERS_JSON must be a JSON array");
+  }
+
+  const iceServers = parsed
+    .map((value) => normalizeIceServer(value))
+    .filter(Boolean);
+
+  if (iceServers.length === 0) {
+    throw new Error("[smoke:livekit:media] SMOKE_RTC_ICE_SERVERS_JSON has no valid ice servers");
+  }
+
+  return {
+    iceServers,
+    iceTransportPolicy: rtcIceTransportPolicy
+  };
 }
 
 async function mintLivekitToken(bearerToken, label) {
@@ -56,14 +116,14 @@ async function mintLivekitToken(bearerToken, label) {
   return { token, url, identity };
 }
 
-async function setupPeer(page, tokenPayload, peerName) {
+async function setupPeer(page, tokenPayload, peerName, rtcConfig) {
   const connectUrl = signalUrlOverride || tokenPayload.url;
 
   await page.goto("about:blank", { waitUntil: "domcontentloaded", timeout: timeoutMs });
   await page.addScriptTag({ url: clientScriptUrl });
 
   await page.evaluate(
-    async ({ url, token, roomName, name }) => {
+    async ({ url, token, roomName, name, rtcConfig }) => {
       const lk = globalThis.LivekitClient;
       if (!lk || !lk.Room || !lk.RoomEvent) {
         throw new Error("LiveKit client failed to load in browser context");
@@ -121,7 +181,10 @@ async function setupPeer(page, tokenPayload, peerName) {
         });
 
         attachState(room);
-        await room.connect(url, currentToken, { autoSubscribe: true });
+        await room.connect(url, currentToken, {
+          autoSubscribe: true,
+          rtcConfig
+        });
 
         const canvas = document.createElement("canvas");
         canvas.width = 320;
@@ -257,7 +320,8 @@ async function setupPeer(page, tokenPayload, peerName) {
       url: connectUrl,
       token: tokenPayload.token,
       roomName: roomSlug,
-      name: peerName
+      name: peerName,
+      rtcConfig
     }
   );
 }
@@ -283,6 +347,7 @@ async function waitForRemoteTracks(page, minAudio, minVideo, label) {
 }
 
 async function main() {
+  const rtcConfig = resolveRtcConfig();
   const joinA = await mintLivekitToken(bearerA, "peer-a");
   const joinB = await mintLivekitToken(bearerB, "peer-b");
 
@@ -309,6 +374,10 @@ async function main() {
       a: joinA.identity,
       b: joinB.identity,
       c: ""
+    },
+    rtcConfig: {
+      iceTransportPolicy: rtcConfig.iceTransportPolicy,
+      iceServersCount: Array.isArray(rtcConfig.iceServers) ? rtcConfig.iceServers.length : 0
     }
   };
 
@@ -320,8 +389,8 @@ async function main() {
     peers.push({ context: ctxA, page: pageA });
     peers.push({ context: ctxB, page: pageB });
 
-    await setupPeer(pageA, joinA, "peer-a");
-    await setupPeer(pageB, joinB, "peer-b");
+    await setupPeer(pageA, joinA, "peer-a", rtcConfig);
+    await setupPeer(pageB, joinB, "peer-b", rtcConfig);
 
     await waitForRemoteTracks(pageA, 1, 1, "join peer-a");
     await waitForRemoteTracks(pageB, 1, 1, "join peer-b");
@@ -343,7 +412,7 @@ async function main() {
     const pageC = await ctxC.newPage();
     peers.push({ context: ctxC, page: pageC });
 
-    await setupPeer(pageC, joinC, "peer-c");
+    await setupPeer(pageC, joinC, "peer-c", rtcConfig);
 
     await waitForRemoteTracks(pageA, 2, 2, "late-join peer-a");
     await waitForRemoteTracks(pageB, 2, 2, "late-join peer-b");

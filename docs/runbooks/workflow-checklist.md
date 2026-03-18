@@ -51,13 +51,17 @@
 
 ## 5) Merge + release pipeline (чтобы не забыть)
 
-1. Открыть PR `feature/* -> main` с пометкой: test rollout + standard/extended smoke passed.
+1. Открыть PR `feature/* -> main` с пометкой: test rollout + standard smoke + LiveKit checks passed.
 2. Перед merge убедиться, что scope PR не разросся вне текущей задачи.
 3. После merge повторить короткую проверку в `test` уже от `main`:
    - `TEST_REF=origin/main npm run deploy:test:smoke`
-   - extended realtime relay smoke (`SMOKE_CALL_SIGNAL=1`, 2 ws-ticket).
+   - `SMOKE_API_URL=https://test.boltorezka.gismalink.art SMOKE_ROOM_SLUG=test-room npm run smoke:livekit:token-flow`.
+   - `SMOKE_API_URL=https://test.boltorezka.gismalink.art SMOKE_ROOM_SLUG=test-room SMOKE_LIVEKIT_MEDIA_SIGNAL_URL=ws://127.0.0.1:7880 npm run smoke:livekit:media`.
 4. В `prod` идти только по явному подтверждению владельца релиза и только из `main`.
-5. После `prod` повторить post-deploy smoke + extended relay smoke и зафиксировать запись в release log.
+5. После `prod` повторить post-deploy smoke + LiveKit media smoke и зафиксировать запись в release log.
+6. Перед `prod` проверить `infra/.env.host`:
+   - `PROD_VITE_RTC_ICE_TRANSPORT_POLICY` должен быть `all` для стандартного rollout.
+   - `relay` допустим только по явному решению и с фиксированным owner sign-off.
 
 Обязательные gate-ссылки:
 
@@ -79,5 +83,5 @@
    1. rollout target только `origin/main@<sha>`;
    2. `deploy:test:smoke` PASS (`smoke:sso`, `smoke:realtime`, `reconnectOk=true`);
    3. `npm run smoke:web:e2e` PASS;
-   4. extended relay (`SMOKE_CALL_SIGNAL=1`) PASS;
+   4. LiveKit media smoke (`smoke:livekit:token-flow` + `smoke:livekit:media`) PASS;
    5. заполнены `Release Owner` + `Rollback Owner` + rollback ref.
