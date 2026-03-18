@@ -284,8 +284,24 @@ export function ChatPanel({
               <div className={`chat-bubble-wrap grid max-w-[min(92%,820px)] gap-0.5 ${isOwn ? "justify-items-end" : "justify-items-start"}`}>
                 {canManageOwnMessage ? (
                   <div className={`chat-actions-side ${isOwn ? "chat-actions-side-own" : "chat-actions-side-peer"}`}>
-                    <button type="button" className="secondary tiny" onClick={() => onEditMessage(message.id)}>{t("chat.edit")}</button>
-                    <button type="button" className="secondary tiny" onClick={() => onDeleteMessage(message.id)}>{t("chat.delete")}</button>
+                    <button
+                      type="button"
+                      className="secondary tiny icon-btn"
+                      onClick={() => onEditMessage(message.id)}
+                      aria-label={t("chat.edit")}
+                      title={t("chat.edit")}
+                    >
+                      <i className="bi bi-pencil-square" aria-hidden="true" />
+                    </button>
+                    <button
+                      type="button"
+                      className="secondary tiny icon-btn"
+                      onClick={() => onDeleteMessage(message.id)}
+                      aria-label={t("chat.delete")}
+                      title={t("chat.delete")}
+                    >
+                      <i className="bi bi-trash3" aria-hidden="true" />
+                    </button>
                   </div>
                 ) : null}
 

@@ -136,6 +136,14 @@ export function MediaAccessDeniedBanner({ t, onRequestMediaAccess }: { t: Transl
   );
 }
 
+export function RemoteAudioAutoplayBanner({ t }: { t: Translate }) {
+  return (
+    <div className="mic-denied-banner mic-denied-banner-info" role="status" aria-live="polite">
+      <span>{t("rtc.autoplayBlockedHint")}</span>
+    </div>
+  );
+}
+
 export function GuestLoginGate({ t, onBeginGoogleSso }: { t: Translate; onBeginGoogleSso: () => void }) {
   return (
     <section className="grid h-full min-h-0 place-items-center p-2">
@@ -156,10 +164,10 @@ export function GuestLoginGate({ t, onBeginGoogleSso }: { t: Translate; onBeginG
 
 export function AppUpdatedOverlay({ t, onContinue }: { t: Translate; onContinue: () => void }) {
   return (
-    <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/80 p-4" role="dialog" aria-modal="true" aria-live="polite">
-      <div className="w-full max-w-md rounded-2xl border border-white/20 bg-neutral-950/95 p-6 text-center shadow-2xl">
-        <h2 className="text-2xl font-bold tracking-wide text-white">{t("overlay.appUpdatedTitle")}</h2>
-        <p className="mt-3 text-sm leading-relaxed text-white/80">{t("overlay.appUpdatedMessage")}</p>
+    <div className="voice-preferences-overlay fixed inset-0 z-[300] grid place-items-center p-4" role="dialog" aria-modal="true" aria-live="polite">
+      <div className="card voice-preferences-modal w-full max-w-[560px] !h-auto !max-h-[90vh] overflow-auto p-6 text-center">
+        <h2>{t("overlay.appUpdatedTitle")}</h2>
+        <p className="mt-3 muted">{t("overlay.appUpdatedMessage")}</p>
         <button
           type="button"
           className="primary mt-6 inline-flex w-full items-center justify-center"

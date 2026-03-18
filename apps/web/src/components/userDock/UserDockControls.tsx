@@ -14,7 +14,6 @@ type UserDockControlsProps = Pick<
   | "noiseSuppressionEnabled"
   | "cameraEnabled"
   | "micMuted"
-  | "audioMuted"
   | "audioOutputMenuOpen"
   | "voiceSettingsOpen"
   | "voiceSettingsPanel"
@@ -25,7 +24,6 @@ type UserDockControlsProps = Pick<
   | "selectedOutputId"
   | "selectedVideoInputId"
   | "currentInputLabel"
-  | "remoteAudioAutoplayBlocked"
   | "micVolume"
   | "outputVolume"
   | "micTestLevel"
@@ -67,7 +65,6 @@ export function UserDockControls({
   noiseSuppressionEnabled,
   cameraEnabled,
   micMuted,
-  audioMuted,
   audioOutputMenuOpen,
   voiceSettingsOpen,
   voiceSettingsPanel,
@@ -78,7 +75,6 @@ export function UserDockControls({
   selectedOutputId,
   selectedVideoInputId,
   currentInputLabel,
-  remoteAudioAutoplayBlocked,
   micVolume,
   outputVolume,
   micTestLevel,
@@ -191,11 +187,6 @@ export function UserDockControls({
       ) : null}
 
       <section className="card compact user-panel-card flex items-center justify-between gap-3 max-desktop:grid max-desktop:grid-cols-1 max-desktop:gap-0">
-        {remoteAudioAutoplayBlocked && !audioMuted ? (
-          <div className="mb-3 rounded-lg border border-amber-300/50 bg-amber-500/10 px-3 py-2 text-xs text-amber-200" role="status" aria-live="polite">
-            {t("rtc.autoplayBlockedHint")}
-          </div>
-        ) : null}
         <div className={`user-panel-actions user-panel-actions-grid ${mediaControlsLocked ? "user-panel-actions-locked" : ""}`}>
           <div className="voice-settings-anchor relative max-desktop:min-w-0" ref={voiceSettingsAnchorRef}>
             <div className="audio-output-group split-control-group user-panel-split-group inline-flex items-center gap-0">

@@ -19,6 +19,7 @@ import {
   FirstRunIntroOverlay,
   GuestLoginGate,
   MediaAccessDeniedBanner,
+  RemoteAudioAutoplayBanner,
   ServerProfileModalContainer,
   SessionMovedOverlay,
   ToastStack
@@ -1310,31 +1311,81 @@ export function App() {
         image.onload = () => {
           const originalWidth = Math.max(1, Math.round(image.naturalWidth || 1));
           const originalHeight = Math.max(1, Math.round(image.naturalHeight || 1));
-          const maxSide = Math.max(originalWidth, originalHeight);
-          const scale = maxSide > serverChatImagePolicy.maxImageSide
-            ? serverChatImagePolicy.maxImageSide / maxSide
-            : 1;
-          const targetWidth = Math.max(1, Math.round(originalWidth * scale));
-          const targetHeight = Math.max(1, Math.round(originalHeight * scale));
+
           const canvas = document.createElement("canvas");
-          canvas.width = targetWidth;
-          canvas.height = targetHeight;
           const context = canvas.getContext("2d");
           if (!context) {
             reject(new Error("canvas_context_unavailable"));
             return;
           }
 
-          context.drawImage(image, 0, 0, targetWidth, targetHeight);
-          const compressed = canvas.toDataURL("image/jpeg", serverChatImagePolicy.jpegQuality);
-          resolve(compressed);
+          const qualitySteps = [
+            serverChatImagePolicy.jpegQuality,
+            0.82,
+            0.74,
+            0.66,
+            0.58,
+            0.5,
+            0.42,
+            0.35
+          ].filter((value, index, array) => Number.isFinite(value) && value > 0.08 && value <= 1 && array.indexOf(value) === index);
+
+          let bestCompressed = "";
+          for (let scaleStep = 0; scaleStep < 8; scaleStep += 1) {
+            const maxSideLimit = Math.max(64, Math.floor(serverChatImagePolicy.maxImageSide * Math.pow(0.85, scaleStep)));
+            const maxSide = Math.max(originalWidth, originalHeight);
+            const scale = maxSide > maxSideLimit ? maxSideLimit / maxSide : 1;
+            const targetWidth = Math.max(1, Math.round(originalWidth * scale));
+            const targetHeight = Math.max(1, Math.round(originalHeight * scale));
+
+            canvas.width = targetWidth;
+            canvas.height = targetHeight;
+            context.clearRect(0, 0, targetWidth, targetHeight);
+            context.drawImage(image, 0, 0, targetWidth, targetHeight);
+
+            for (const quality of qualitySteps) {
+              const compressed = canvas.toDataURL("image/jpeg", quality);
+              bestCompressed = compressed;
+              if (compressed.length <= serverChatImagePolicy.maxDataUrlLength) {
+                resolve(compressed);
+                return;
+              }
+            }
+          }
+
+          if (bestCompressed.length > 0 && bestCompressed.length <= serverChatImagePolicy.maxDataUrlLength) {
+            resolve(bestCompressed);
+            return;
+          }
+
+          reject(new Error("image_too_large"));
         };
         image.src = source;
       };
 
       reader.readAsDataURL(file);
     });
-  }, [serverChatImagePolicy.jpegQuality, serverChatImagePolicy.maxImageSide]);
+  }, [
+    serverChatImagePolicy.jpegQuality,
+    serverChatImagePolicy.maxDataUrlLength,
+    serverChatImagePolicy.maxImageSide
+  ]);
+
+  const extractImageSourceFromClipboardHtml = useCallback((html: string) => {
+    if (!html) {
+      return "";
+    }
+
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, "text/html");
+    const image = doc.querySelector("img[src]");
+    if (!image) {
+      return "";
+    }
+
+    const source = String(image.getAttribute("src") || "").trim();
+    return source;
+  }, []);
 
   const sendMessage = (event: FormEvent) => {
     event.preventDefault();
@@ -1386,29 +1437,43 @@ export function App() {
       return;
     }
 
-    const items = Array.from(event.clipboardData?.items || []);
-    const imageItem = items.find((item) => item.type.startsWith("image/"));
-    if (!imageItem) {
-      return;
-    }
+    const clipboard = event.clipboardData;
+    const files = Array.from(clipboard?.files || []);
+    const imageFile = files.find((file) => file.type.startsWith("image/"))
+      || Array.from(clipboard?.items || [])
+        .map((item) => item.getAsFile())
+        .find((file): file is File => Boolean(file && file.type.startsWith("image/")));
 
-    const file = imageItem.getAsFile();
-    if (!file) {
+    const htmlImageSource = extractImageSourceFromClipboardHtml(String(clipboard?.getData("text/html") || ""));
+    const hasImagePayload = Boolean(imageFile || htmlImageSource);
+    if (!hasImagePayload) {
       return;
     }
 
     event.preventDefault();
     void (async () => {
       try {
-        const dataUrl = await compressImageToDataUrl(file);
-        const markdown = `![скриншот](${dataUrl})`;
-
-        if (markdown.length > serverChatImagePolicy.maxDataUrlLength) {
-          pushToast(chatImageTooLargeMessage);
+        if (imageFile) {
+          const dataUrl = await compressImageToDataUrl(imageFile);
+          setPendingChatImageDataUrl(dataUrl);
           return;
         }
 
-        setPendingChatImageDataUrl(dataUrl);
+        if (htmlImageSource.startsWith("data:image/")) {
+          const response = await fetch(htmlImageSource);
+          const blob = await response.blob();
+          const synthesizedFile = new File([blob], "clipboard-image", { type: blob.type || "image/png" });
+          const dataUrl = await compressImageToDataUrl(synthesizedFile);
+          setPendingChatImageDataUrl(dataUrl);
+          return;
+        }
+
+        if (/^https?:\/\//i.test(htmlImageSource)) {
+          setPendingChatImageDataUrl(htmlImageSource);
+          return;
+        }
+
+        pushToast(chatImageTooLargeMessage);
       } catch {
         pushToast(chatImageTooLargeMessage);
       }
@@ -2055,6 +2120,10 @@ export function App() {
       <TooltipPortal />
 
       {mediaDevicesState === "denied" ? <MediaAccessDeniedBanner t={t} onRequestMediaAccess={requestMediaAccess} /> : null}
+
+      {remoteAudioAutoplayBlocked && !audioMuted && mediaDevicesState !== "denied" && !(desktopUpdateReadyVersion && !desktopUpdateBannerDismissed)
+        ? <RemoteAudioAutoplayBanner t={t} />
+        : null}
 
       {desktopUpdateReadyVersion && !desktopUpdateBannerDismissed ? (
         <DesktopUpdateBanner

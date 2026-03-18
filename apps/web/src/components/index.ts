@@ -8,6 +8,7 @@ export {
 	FirstRunIntroOverlay,
 	GuestLoginGate,
 	MediaAccessDeniedBanner,
+	RemoteAudioAutoplayBanner,
 	SessionMovedOverlay
 } from "./AppGuardsAndOverlays";
 export { AppWorkspaceContent } from "./AppWorkspaceContent";

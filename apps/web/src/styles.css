@@ -1946,6 +1946,15 @@ pre {
   white-space: nowrap;
 }
 
+.mic-denied-banner.mic-denied-banner-info {
+  border-color: var(--pixel-border);
+  background: color-mix(in srgb, var(--pixel-panel) 90%, var(--pixel-depth-color) 10%);
+  color: var(--pixel-text);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--pixel-neon-cyan) 48%, transparent 52%),
+    3px 3px 0 var(--pixel-hard-shadow);
+}
+
 @media (max-width: 800px) {
   :root {
     --font-size-xs: 13px;
