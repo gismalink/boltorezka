@@ -1,4 +1,5 @@
 export type UserRole = "user" | "admin" | "super_admin";
+export type UserAccessState = "pending" | "active" | "blocked";
 export type UiTheme = "8-neon-bit" | "material-classic";
 
 export type UserRow = {
@@ -9,6 +10,8 @@ export type UserRow = {
   ui_theme: UiTheme;
   role: UserRole;
   is_banned: boolean;
+  access_state: UserAccessState;
+  is_bot: boolean;
   created_at: string;
 };
 
@@ -20,6 +23,8 @@ export type UserCompactRow = {
   ui_theme: UiTheme;
   role: UserRole;
   is_banned: boolean;
+  access_state: UserAccessState;
+  is_bot: boolean;
 };
 
 export type RoomKind = "text" | "text_voice" | "text_voice_video";

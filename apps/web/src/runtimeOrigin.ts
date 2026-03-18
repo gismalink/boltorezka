@@ -11,7 +11,7 @@ function isDesktopFileRuntime(): boolean {
 
 function resolveFallbackDesktopOrigin(): string {
   const appVersion = String(import.meta.env.VITE_APP_VERSION || "").trim().toLowerCase();
-  if (appVersion.includes("-test.")) {
+  if (appVersion.includes("-test")) {
     return "https://test.boltorezka.gismalink.art";
   }
   return "https://boltorezka.gismalink.art";

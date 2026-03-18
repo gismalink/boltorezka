@@ -83,6 +83,16 @@ type UseRealtimeChatLifecycleArgs = {
       clearedAt?: string;
     }
   ) => void;
+  onChatTyping?: (
+    payload: {
+      roomId?: string;
+      roomSlug?: string;
+      userId?: string;
+      userName?: string;
+      isTyping?: boolean;
+      ts?: string;
+    }
+  ) => void;
   onAck?: (
     payload: { requestId: string; eventType: string; meta: Record<string, unknown> }
   ) => void;
@@ -132,6 +142,7 @@ export function useRealtimeChatLifecycle({
   onCallNack,
   onAudioQualityUpdated,
   onChatCleared,
+  onChatTyping,
   onAck,
   onNack,
   onScreenShareState,
@@ -143,10 +154,12 @@ export function useRealtimeChatLifecycle({
   const onCallNackRef = useRef(onCallNack);
   const onAudioQualityUpdatedRef = useRef(onAudioQualityUpdated);
   const onChatClearedRef = useRef(onChatCleared);
+  const onChatTypingRef = useRef(onChatTyping);
   const onAckRef = useRef(onAck);
   const onNackRef = useRef(onNack);
   const onScreenShareStateRef = useRef(onScreenShareState);
   const onRoomMediaTopologyRef = useRef(onRoomMediaTopology);
+  const activeChatRoomSlugRef = useRef(chatRoomSlug);
 
   useEffect(() => {
     onCallMicStateRef.current = onCallMicState;
@@ -173,6 +186,10 @@ export function useRealtimeChatLifecycle({
   }, [onChatCleared]);
 
   useEffect(() => {
+    onChatTypingRef.current = onChatTyping;
+  }, [onChatTyping]);
+
+  useEffect(() => {
     onAckRef.current = onAck;
   }, [onAck]);
 
@@ -187,6 +204,10 @@ export function useRealtimeChatLifecycle({
   useEffect(() => {
     onRoomMediaTopologyRef.current = onRoomMediaTopology;
   }, [onRoomMediaTopology]);
+
+  useEffect(() => {
+    activeChatRoomSlugRef.current = chatRoomSlug;
+  }, [chatRoomSlug]);
 
   useEffect(() => {
     roomSlugRef.current = joinedRoomSlug;
@@ -228,10 +249,12 @@ export function useRealtimeChatLifecycle({
       onCallNack: (...args) => onCallNackRef.current?.(...args),
       onAudioQualityUpdated: (...args) => onAudioQualityUpdatedRef.current?.(...args),
       onChatCleared: (...args) => onChatClearedRef.current?.(...args),
+      onChatTyping: (...args) => onChatTypingRef.current?.(...args),
       onAck: (...args) => onAckRef.current?.(...args),
       onNack: (...args) => onNackRef.current?.(...args),
       onScreenShareState: (...args) => onScreenShareStateRef.current?.(...args),
-      onSessionMoved: (...args) => onSessionMoved?.(...args)
+      onSessionMoved: (...args) => onSessionMoved?.(...args),
+      getActiveChatRoomSlug: () => activeChatRoomSlugRef.current
     });
 
     const client = new RealtimeClient({

@@ -10,14 +10,31 @@ import {
 } from "./services";
 import type { CallStatus } from "./services";
 import {
+  AccessStateGate,
   AppHeader,
-  ChatPanel,
-  RoomsPanel,
-  ServerProfileModal,
-  ToastStack,
-  UserDock,
-  VideoWindowsOverlay
+  AppWorkspacePanels,
+  AppUpdatedOverlay,
+  DesktopBrowserCompletionGate,
+  DesktopUpdateBanner,
+  FirstRunIntroOverlay,
+  GuestLoginGate,
+  MediaAccessDeniedBanner,
+  ServerProfileModalContainer,
+  SessionMovedOverlay,
+  ToastStack
 } from "./components";
+import {
+  DEFAULT_CHAT_IMAGE_DATA_URL_LENGTH,
+  DEFAULT_CHAT_IMAGE_MAX_SIDE,
+  DEFAULT_CHAT_IMAGE_QUALITY,
+  DEFAULT_MIC_VOLUME,
+  DEFAULT_OUTPUT_VOLUME,
+  MAX_CHAT_RETRIES,
+  MESSAGE_EDIT_DELETE_WINDOW_MS,
+  PENDING_ACCESS_AUTO_REFRESH_SEC,
+  ROOM_SLUG_STORAGE_KEY,
+  VERSION_UPDATE_PENDING_KEY
+} from "./constants/appConfig";
 import type { InputProfile, MediaDevicesState } from "./components";
 import {
   useAppUiState,
@@ -26,6 +43,13 @@ import {
   useAppEventLogs,
   useAuthProfileFlow,
   useBuildVersionSync,
+  useDesktopHandoffState,
+  useDesktopUpdateFlow,
+  usePendingAccessAutoRefresh,
+  useWorkspaceRoomsPanelProps,
+  useServerVideoWindowBounds,
+  useWorkspaceChatVideoProps,
+  useWorkspaceUserDockProps,
   useSessionStateLifecycle,
   useMemberPreferencesSync,
   useTelemetryRefresh,
@@ -56,8 +80,8 @@ import {
   useVoiceSignalingOrchestrator,
   useVoiceRoomStateMaps
 } from "./hooks";
-import { getDesktopUpdateBridge } from "./desktopBridge";
-import { detectInitialLang, LANGUAGE_OPTIONS, LOCALE_BY_LANG, TEXT, type Lang } from "./i18n";
+import { detectInitialLang, LOCALE_BY_LANG, TEXT, type Lang } from "./i18n";
+import { DEFAULT_UI_THEME, formatBuildDateLabel, normalizeUiTheme, readNonZeroDefaultVolume } from "./utils/appShell";
 import type {
   AudioQuality,
   ChannelAudioQualitySetting,
@@ -79,67 +103,15 @@ import type {
 } from "./hooks/rtc/voiceCallTypes";
 import type { RnnoiseSuppressionLevel } from "./hooks/rtc/rnnoiseAudioProcessor";
 
-const MAX_CHAT_RETRIES = 3;
-const DEFAULT_CHAT_IMAGE_DATA_URL_LENGTH = 28000;
-const DEFAULT_CHAT_IMAGE_MAX_SIDE = 1200;
-const DEFAULT_CHAT_IMAGE_QUALITY = 0.6;
-const DEFAULT_MIC_VOLUME = 75;
-const DEFAULT_OUTPUT_VOLUME = 70;
-const DEFAULT_UI_THEME: UiTheme = "8-neon-bit";
-const MESSAGE_EDIT_DELETE_WINDOW_MS = 10 * 60 * 1000;
-const ROOM_SLUG_STORAGE_KEY = "boltorezka_room_slug";
-const VERSION_UPDATE_PENDING_KEY = "boltorezka_update_reload_pending";
 const CLIENT_BUILD_VERSION = String(import.meta.env.VITE_APP_VERSION || "").trim();
 const CLIENT_BUILD_SHA = String(import.meta.env.VITE_APP_BUILD_SHA || CLIENT_BUILD_VERSION || "").trim();
 const CLIENT_BUILD_DATE = String(import.meta.env.VITE_APP_BUILD_DATE || "").trim();
-function formatBuildDateLabel(version: string, buildDate: string): string {
-  const normalizedVersion = String(version || "").trim();
-  const match = normalizedVersion.match(/(\d{8})\.(\d{4,6})$/);
-  if (match) {
-    const datePart = match[1];
-    const timePart = match[2];
-    const yy = datePart.slice(2, 4);
-    const mm = datePart.slice(4, 6);
-    const dd = datePart.slice(6, 8);
-    const hh = timePart.slice(0, 2);
-    const min = timePart.slice(2, 4);
-    const sec = timePart.length >= 6 ? timePart.slice(4, 6) : "";
-    return sec ? `v.${yy}.${mm}.${dd}.${hh}.${min}.${sec}` : `v.${yy}.${mm}.${dd}.${hh}.${min}`;
-  }
-
-  const normalizedDate = String(buildDate || "").trim();
-  const dateMatch = normalizedDate.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  if (dateMatch) {
-    return `v.${dateMatch[1].slice(2, 4)}.${dateMatch[2]}.${dateMatch[3]}`;
-  }
-
-  return normalizedDate ? `v.${normalizedDate}` : "";
-}
-
 const CLIENT_BUILD_DATE_LABEL = formatBuildDateLabel(CLIENT_BUILD_VERSION, CLIENT_BUILD_DATE);
 const COOKIE_MODE = import.meta.env.VITE_AUTH_COOKIE_MODE === "1";
-
-function readNonZeroDefaultVolume(storageKey: string, fallback: number): number {
-  const raw = localStorage.getItem(storageKey);
-  if (raw === null || raw.trim() === "") {
-    return fallback;
-  }
-
-  const parsed = Number(raw);
-  if (!Number.isFinite(parsed)) {
-    return fallback;
-  }
-
-  const normalized = Math.max(0, Math.min(100, Math.round(parsed)));
-  return normalized === 0 ? fallback : normalized;
-}
-
-function normalizeUiTheme(value: unknown): UiTheme {
-  return value === "material-classic" ? "material-classic" : DEFAULT_UI_THEME;
-}
+const CHAT_TYPING_TTL_MS = 4500;
+const CHAT_TYPING_PING_INTERVAL_MS = 1800;
 
 export function App() {
-  const desktopUpdateBridge = useMemo(() => getDesktopUpdateBridge(), []);
   const [token, setToken] = useState(() => (COOKIE_MODE ? "" : localStorage.getItem("boltorezka_token") || ""));
   const [user, setUser] = useState<User | null>(null);
   const [authMode, setAuthMode] = useState("loading");
@@ -156,9 +128,7 @@ export function App() {
   const [showAppUpdatedOverlay, setShowAppUpdatedOverlay] = useState(
     () => sessionStorage.getItem(VERSION_UPDATE_PENDING_KEY) === "1"
   );
-  const [desktopUpdateReadyVersion, setDesktopUpdateReadyVersion] = useState("");
-  const [desktopUpdateApplying, setDesktopUpdateApplying] = useState(false);
-  const [desktopUpdateBannerDismissed, setDesktopUpdateBannerDismissed] = useState(false);
+  const [pendingAccessRefreshInSec, setPendingAccessRefreshInSec] = useState(PENDING_ACCESS_AUTO_REFRESH_SEC);
   const [showFirstRunIntro, setShowFirstRunIntro] = useState(false);
   const [sessionMovedOverlayMessage, setSessionMovedOverlayMessage] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
@@ -167,6 +137,7 @@ export function App() {
   const [loadingOlderMessages, setLoadingOlderMessages] = useState(false);
   const [chatText, setChatText] = useState("");
   const [pendingChatImageDataUrl, setPendingChatImageDataUrl] = useState<string | null>(null);
+  const [chatTypingByRoomSlug, setChatTypingByRoomSlug] = useState<Record<string, Record<string, { userName: string; expiresAt: number }>>>({});
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [callStatus, setCallStatus] = useState<CallStatus>("idle");
   const [lastCallPeer, setLastCallPeer] = useState("");
@@ -337,6 +308,11 @@ export function App() {
   const lastRoomSlugForScrollRef = useRef(chatRoomSlug);
   const lastMessageIdRef = useRef<string | null>(null);
   const chatLogRef = useRef<HTMLDivElement>(null);
+  const chatTypingStopTimerRef = useRef<number | null>(null);
+  const chatTypingLastSentAtRef = useRef(0);
+  const chatTypingActiveRef = useRef(false);
+  const chatTypingRoomSlugRef = useRef("");
+  const previousChatRoomSlugRef = useRef(chatRoomSlug);
   const autoSsoAttemptedRef = useRef(false);
   const authMenuRef = useRef<HTMLDivElement>(null);
   const profileMenuRef = useRef<HTMLDivElement>(null);
@@ -347,7 +323,12 @@ export function App() {
   const userSettingsRef = useRef<HTMLDivElement>(null);
 
   const canCreateRooms = user?.role === "admin" || user?.role === "super_admin";
+  const canManageUsers = canCreateRooms;
   const canPromote = user?.role === "super_admin";
+  const canUseService = Boolean(
+    user && (user.role === "admin" || user.role === "super_admin" || user.access_state === "active")
+  );
+  const serviceToken = canUseService ? token : "";
   const canManageAudioQuality = canPromote;
   const canViewTelemetry = canPromote || canCreateRooms;
   const locale = LOCALE_BY_LANG[lang];
@@ -355,6 +336,18 @@ export function App() {
     const dict = TEXT[lang];
     return (key: string) => dict[key] || key;
   }, [lang]);
+  const maxChatImageKb = Math.max(1, Math.floor(serverChatImagePolicy.maxDataUrlLength / 1024));
+  const chatImageTooLargeMessage = t("chat.imageTooLarge")
+    .replace("{maxSide}", String(serverChatImagePolicy.maxImageSide))
+    .replace("{maxKb}", String(maxChatImageKb));
+  const {
+    desktopUpdateReadyVersion,
+    desktopUpdateApplying,
+    desktopUpdateBannerDismissed,
+    dismissDesktopUpdateBanner,
+    applyDesktopUpdate
+  } = useDesktopUpdateFlow({ t, pushToast });
+  const { showDesktopBrowserCompletion, desktopHandoffError } = useDesktopHandoffState(token);
   const { eventLog, callEventLog, pushLog, pushCallLog } = useAppEventLogs(locale);
 
   const { collapsedCategoryIds, toggleCategoryCollapsed } = useCollapsedCategories(roomsTree);
@@ -388,11 +381,78 @@ export function App() {
     realtimeClientRef
   });
 
+  const clearChatTypingStopTimer = useCallback(() => {
+    if (chatTypingStopTimerRef.current !== null) {
+      window.clearTimeout(chatTypingStopTimerRef.current);
+      chatTypingStopTimerRef.current = null;
+    }
+  }, []);
+
+  const sendChatTypingState = useCallback((targetRoomSlug: string, isTyping: boolean) => {
+    const slug = String(targetRoomSlug || "").trim();
+    if (!slug || !user?.id) {
+      return;
+    }
+
+    void sendWsEvent("chat.typing", { roomSlug: slug, isTyping }, { maxRetries: 1 });
+    chatTypingLastSentAtRef.current = Date.now();
+    chatTypingActiveRef.current = isTyping;
+    chatTypingRoomSlugRef.current = isTyping ? slug : "";
+
+    if (!isTyping) {
+      clearChatTypingStopTimer();
+    }
+  }, [clearChatTypingStopTimer, sendWsEvent, user?.id]);
+
+  const scheduleChatTypingStop = useCallback((targetRoomSlug: string) => {
+    clearChatTypingStopTimer();
+    chatTypingStopTimerRef.current = window.setTimeout(() => {
+      sendChatTypingState(targetRoomSlug, false);
+    }, CHAT_TYPING_TTL_MS);
+  }, [clearChatTypingStopTimer, sendChatTypingState]);
+
+  const handleSetChatText = useCallback((value: string) => {
+    setChatText(value);
+
+    if (!chatRoomSlug || !user?.id) {
+      return;
+    }
+
+    const hasText = value.trim().length > 0;
+    if (!hasText) {
+      if (chatTypingActiveRef.current && chatTypingRoomSlugRef.current === chatRoomSlug) {
+        sendChatTypingState(chatRoomSlug, false);
+      }
+      return;
+    }
+
+    const now = Date.now();
+    if (
+      !chatTypingActiveRef.current
+      || chatTypingRoomSlugRef.current !== chatRoomSlug
+      || now - chatTypingLastSentAtRef.current >= CHAT_TYPING_PING_INTERVAL_MS
+    ) {
+      sendChatTypingState(chatRoomSlug, true);
+    }
+
+    scheduleChatTypingStop(chatRoomSlug);
+  }, [chatRoomSlug, scheduleChatTypingStop, sendChatTypingState, user?.id]);
+
   const currentRoomVoiceTargets = useMemo(() => {
     const members = roomsPresenceDetailsBySlug[roomSlug] || [];
     const me = user?.id || "";
     return members.filter((member) => member.userId !== me);
   }, [roomsPresenceDetailsBySlug, roomSlug, user?.id]);
+
+  const activeChatTypingUsers = useMemo(() => {
+    const now = Date.now();
+    const roomTyping = chatTypingByRoomSlug[chatRoomSlug] || {};
+
+    return Object.values(roomTyping)
+      .filter((entry) => entry.expiresAt > now)
+      .map((entry) => entry.userName)
+      .filter((name, index, all) => all.indexOf(name) === index);
+  }, [chatRoomSlug, chatTypingByRoomSlug]);
 
   const { currentRoom: currentRoomSnapshot, currentRoomKind, currentRoomAudioQualityOverride } = useCurrentRoomSnapshot({
     rooms,
@@ -435,7 +495,7 @@ export function App() {
 
   const livekitVoiceRuntime = useLivekitVoiceRuntime({
     t,
-    token,
+    token: serviceToken,
     localUserId: user?.id || "",
     roomSlug,
     allowVideoStreaming,
@@ -505,6 +565,18 @@ export function App() {
       .sort()
       .join("|");
   }, [currentRoomVoiceTargets]);
+
+  const {
+    normalizedMinWidth: normalizedServerVideoWindowMinWidth,
+    normalizedMaxWidth: normalizedServerVideoWindowMaxWidth,
+    setBoundedMinWidth: setBoundedServerVideoWindowMinWidth,
+    setBoundedMaxWidth: setBoundedServerVideoWindowMaxWidth
+  } = useServerVideoWindowBounds({
+    minWidth: serverVideoWindowMinWidth,
+    maxWidth: serverVideoWindowMaxWidth,
+    setMinWidth: setServerVideoWindowMinWidth,
+    setMaxWidth: setServerVideoWindowMaxWidth
+  });
 
   useEffect(() => {
     // Wait until room metadata is resolved; otherwise boot-time fallback to "text"
@@ -633,7 +705,7 @@ export function App() {
     handleIncomingScreenShareState,
     handleToggleScreenShare
   } = useScreenShareOrchestrator({
-    hasSessionToken: Boolean(token),
+    hasSessionToken: Boolean(serviceToken),
     roomSlug,
     currentRoomKind,
     currentRoomSupportsScreenShare,
@@ -874,24 +946,6 @@ export function App() {
     }
   }, [chatRoomSlug, roomSlug]);
 
-  const showDesktopBrowserCompletion = useMemo(() => {
-    if (typeof window === "undefined" || window.boltorezkaDesktop) {
-      return false;
-    }
-
-    const url = new URL(window.location.href);
-    return url.searchParams.get("desktop_handoff_complete") === "1";
-  }, [token]);
-
-  const desktopHandoffError = useMemo(() => {
-    if (typeof window === "undefined" || window.boltorezkaDesktop) {
-      return "";
-    }
-
-    const url = new URL(window.location.href);
-    return String(url.searchParams.get("desktop_handoff_error") || "").trim();
-  }, [token]);
-
   useSessionStateLifecycle({
     token,
     roomAdminController,
@@ -924,7 +978,7 @@ export function App() {
   });
 
   const { loadOlderMessages } = useRealtimeChatLifecycle({
-    token,
+    token: serviceToken,
     reconnectNonce: realtimeReconnectNonce,
     joinedRoomSlug: roomSlug,
     chatRoomSlug,
@@ -992,6 +1046,7 @@ export function App() {
       realtimeClientRef.current?.dispose();
       realtimeClientRef.current = null;
       setRoomSlug("");
+      setChatTypingByRoomSlug({});
       setSessionMovedOverlayMessage(`${code}: ${message}`);
       pushLog(`session moved: ${code} ${message}`);
     },
@@ -1007,12 +1062,100 @@ export function App() {
 
       const deletedCount = Number(payload.deletedCount || 0);
       pushLog(`channel chat cleared by admin (${Number.isFinite(deletedCount) ? deletedCount : 0})`);
+    },
+    onChatTyping: (payload) => {
+      const typingRoomSlug = String(payload.roomSlug || "").trim();
+      const typingUserId = String(payload.userId || "").trim();
+      const typingUserName = String(payload.userName || "").trim();
+
+      if (!typingRoomSlug || !typingUserId || !typingUserName || typingUserId === user?.id) {
+        return;
+      }
+
+      const isTyping = payload.isTyping === true;
+      setChatTypingByRoomSlug((prev) => {
+        const roomTyping = prev[typingRoomSlug] || {};
+
+        if (isTyping) {
+          return {
+            ...prev,
+            [typingRoomSlug]: {
+              ...roomTyping,
+              [typingUserId]: {
+                userName: typingUserName,
+                expiresAt: Date.now() + CHAT_TYPING_TTL_MS
+              }
+            }
+          };
+        }
+
+        if (!(typingUserId in roomTyping)) {
+          return prev;
+        }
+
+        const nextRoomTyping = { ...roomTyping };
+        delete nextRoomTyping[typingUserId];
+
+        if (Object.keys(nextRoomTyping).length === 0) {
+          const next = { ...prev };
+          delete next[typingRoomSlug];
+          return next;
+        }
+
+        return {
+          ...prev,
+          [typingRoomSlug]: nextRoomTyping
+        };
+      });
     }
   });
 
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      const now = Date.now();
+      setChatTypingByRoomSlug((prev) => {
+        let changed = false;
+        const next: Record<string, Record<string, { userName: string; expiresAt: number }>> = {};
+
+        Object.entries(prev).forEach(([slug, users]) => {
+          const aliveEntries = Object.entries(users).filter(([, entry]) => entry.expiresAt > now);
+          if (aliveEntries.length !== Object.keys(users).length) {
+            changed = true;
+          }
+          if (aliveEntries.length > 0) {
+            next[slug] = Object.fromEntries(aliveEntries);
+          } else if (Object.keys(users).length > 0) {
+            changed = true;
+          }
+        });
+
+        return changed ? next : prev;
+      });
+    }, 1000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, []);
+
+  useEffect(() => {
+    const previousRoomSlug = previousChatRoomSlugRef.current;
+    if (previousRoomSlug && previousRoomSlug !== chatRoomSlug && chatTypingActiveRef.current) {
+      sendChatTypingState(previousRoomSlug, false);
+    }
+    previousChatRoomSlugRef.current = chatRoomSlug;
+  }, [chatRoomSlug, sendChatTypingState]);
+
+  useEffect(() => () => {
+    if (chatTypingActiveRef.current && chatTypingRoomSlugRef.current) {
+      void sendWsEvent("chat.typing", { roomSlug: chatTypingRoomSlugRef.current, isTyping: false }, { maxRetries: 1 });
+    }
+    clearChatTypingStopTimer();
+  }, [clearChatTypingStopTimer, sendWsEvent]);
+
   useAdminUsersSync({
     token,
-    canPromote,
+    canManageUsers,
     pushLog,
     setAdminUsers
   });
@@ -1196,6 +1339,7 @@ export function App() {
   const sendMessage = (event: FormEvent) => {
     event.preventDefault();
     if (!chatRoomSlug) {
+      pushToast(t("chat.selectChannelPlaceholder"));
       return;
     }
 
@@ -1209,7 +1353,8 @@ export function App() {
         "chat.edit",
         {
           messageId: editingMessageId,
-          text: nextText
+          text: nextText,
+          roomSlug: chatRoomSlug
         },
         { withIdempotency: true, maxRetries: MAX_CHAT_RETRIES }
       );
@@ -1221,6 +1366,7 @@ export function App() {
 
       setChatText("");
       setEditingMessageId(null);
+      sendChatTypingState(chatRoomSlug, false);
       return;
     }
 
@@ -1231,10 +1377,11 @@ export function App() {
     if (result.sent) {
       setChatText("");
       setPendingChatImageDataUrl(null);
+      sendChatTypingState(chatRoomSlug, false);
     }
   };
 
-  const handleChatPaste = (event: ClipboardEvent<HTMLInputElement>) => {
+  const handleChatPaste = (event: ClipboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     if (!chatRoomSlug) {
       return;
     }
@@ -1257,18 +1404,24 @@ export function App() {
         const markdown = `![скриншот](${dataUrl})`;
 
         if (markdown.length > serverChatImagePolicy.maxDataUrlLength) {
-          pushToast(t("chat.imageTooLarge"));
+          pushToast(chatImageTooLargeMessage);
           return;
         }
 
         setPendingChatImageDataUrl(dataUrl);
       } catch {
-        pushToast(t("chat.imageTooLarge"));
+        pushToast(chatImageTooLargeMessage);
       }
     })();
   };
 
-  const handleChatInputKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+  const handleChatInputKeyDown = (event: KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
+      event.preventDefault();
+      event.currentTarget.form?.requestSubmit();
+      return;
+    }
+
     if (event.key !== "ArrowUp") {
       return;
     }
@@ -1298,6 +1451,11 @@ export function App() {
   };
 
   const startEditingMessage = (messageId: string) => {
+    if (!chatRoomSlug) {
+      pushToast(t("chat.selectChannelPlaceholder"));
+      return;
+    }
+
     const targetMessage = messages.find((item) => item.id === messageId);
     if (!targetMessage || !canManageOwnMessage(targetMessage)) {
       return;
@@ -1323,6 +1481,11 @@ export function App() {
   }, [chatRoomSlug]);
 
   const deleteOwnMessage = (messageId: string) => {
+    if (!chatRoomSlug) {
+      pushToast(t("chat.selectChannelPlaceholder"));
+      return;
+    }
+
     const targetMessage = messages.find((item) => item.id === messageId);
     if (!targetMessage || !canManageOwnMessage(targetMessage)) {
       return;
@@ -1330,7 +1493,10 @@ export function App() {
 
     const requestId = sendWsEvent(
       "chat.delete",
-      { messageId },
+      {
+        messageId,
+        roomSlug: chatRoomSlug
+      },
       { withIdempotency: true, maxRetries: 1 }
     );
 
@@ -1422,9 +1588,11 @@ export function App() {
     promote,
     demote,
     setUserBan,
+    setUserAccessState,
     setServerAudioQualityValue
   } = useServerModerationActions({
     token,
+    canManageUsers,
     canPromote,
     canManageAudioQuality,
     roomAdminController,
@@ -1564,39 +1732,11 @@ export function App() {
     }
   }, [selectedInputProfile]);
 
-  if (showDesktopBrowserCompletion) {
-    return (
-      <main className="app legacy-layout mx-auto grid h-[100dvh] max-h-[100dvh] w-full max-w-[760px] place-items-center p-6">
-        <section className="settings-sheet w-full max-w-[560px] p-6 text-center">
-          <h1 className="text-2xl font-semibold">Авторизация завершена</h1>
-          <p className="mt-3 text-sm opacity-80">
-            {desktopHandoffError
-              ? "Не удалось подтвердить вход в Desktop. Попробуйте открыть приложение еще раз."
-              : "Вы вошли в Boltorezka Desktop. Эту вкладку можно закрыть."}
-          </p>
-          <div className="mt-5 flex justify-center">
-            <button
-              type="button"
-              className="secondary"
-              onClick={() => {
-                const url = new URL(window.location.href);
-                url.searchParams.delete("desktop_handoff");
-                url.searchParams.delete("desktop_handoff_bootstrap");
-                url.searchParams.delete("desktop_handoff_refreshed");
-                url.searchParams.delete("desktop_handoff_sent");
-                url.searchParams.delete("desktop_handoff_attempt");
-                url.searchParams.delete("desktop_handoff_complete");
-                url.searchParams.delete("desktop_handoff_error");
-                window.location.replace(url.toString());
-              }}
-            >
-              Открыть веб-версию
-            </button>
-          </div>
-        </section>
-      </main>
-    );
-  }
+  usePendingAccessAutoRefresh({
+    user,
+    resetValue: PENDING_ACCESS_AUTO_REFRESH_SEC,
+    setPendingAccessRefreshInSec
+  });
 
   useAutoRoomVoiceConnection({
     roomMediaResolved: Boolean(currentRoomSnapshot) || topologySupportsRtc,
@@ -1617,7 +1757,7 @@ export function App() {
 
   useServerMenuAccessGuard({
     serverMenuTab,
-    canPromote,
+    canManageUsers,
     canViewTelemetry,
     canManageAudioQuality,
     setServerMenuTab
@@ -1648,7 +1788,7 @@ export function App() {
     setAudioOutputMenuOpen((value) => !value);
   }, [setAudioOutputMenuOpen, setVoiceSettingsOpen, setVoiceSettingsPanel]);
 
-  const userDockSharedProps = user ? {
+  const userDockSharedProps = useWorkspaceUserDockProps({
     t,
     user,
     currentRoomSupportsRtc,
@@ -1675,14 +1815,11 @@ export function App() {
     userSettingsOpen,
     userSettingsTab,
     voiceSettingsPanel,
-    profileUsername: String(user.username || user.email.split("@")[0] || ""),
     profileNameDraft,
-    profileEmail: user.email,
     profileSaving,
     profileStatusText,
-    selectedLang: lang,
+    lang,
     selectedUiTheme,
-    languageOptions: LANGUAGE_OPTIONS,
     inputOptions,
     outputOptions,
     videoInputOptions,
@@ -1702,142 +1839,43 @@ export function App() {
     audioOutputAnchorRef,
     voiceSettingsAnchorRef,
     userSettingsRef,
-    onToggleMic: handleToggleMic,
-    onToggleAudio: handleToggleAudio,
-    onToggleCamera: handleToggleCamera,
-    onToggleScreenShare: handleToggleScreenShareClick,
-    onToggleNoiseSuppression: handleToggleNoiseSuppression,
-    onSetRnnoiseSuppressionLevel: setRnnoiseSuppressionLevel,
-    onTogglePreRnnEchoCancellation: () => setPreRnnEchoCancellationEnabled((value) => !value),
-    onTogglePreRnnAutoGainControl: () => setPreRnnAutoGainControlEnabled((value) => !value),
+    handleToggleMic,
+    handleToggleAudio,
+    handleToggleCamera,
+    handleToggleScreenShareClick,
+    handleToggleNoiseSuppression,
+    setRnnoiseSuppressionLevel,
+    setPreRnnEchoCancellationEnabled,
+    setPreRnnAutoGainControlEnabled,
     selfMonitorEnabled,
-    onToggleSelfMonitor: () => setSelfMonitorEnabled((value) => !value),
-    onRequestVideoAccess: requestVideoAccess,
-    onToggleVoiceSettings: handleToggleVoiceSettings,
-    onToggleAudioOutput: handleToggleAudioOutput,
-    onOpenUserSettings: openUserSettings,
-    onSetVoiceSettingsOpen: setVoiceSettingsOpen,
-    onSetAudioOutputMenuOpen: setAudioOutputMenuOpen,
-    onSetVoiceSettingsPanel: setVoiceSettingsPanel,
-    onSetUserSettingsOpen: setUserSettingsOpen,
-    onSetUserSettingsTab: setUserSettingsTab,
-    onSetProfileNameDraft: setProfileNameDraft,
-    onSetSelectedLang: setLang,
-    onSetSelectedUiTheme: setSelectedUiTheme,
-    onSaveProfile: saveMyProfile,
-    onSetSelectedInputId: setSelectedInputId,
-    onSetSelectedOutputId: setSelectedOutputId,
-    onSetSelectedVideoInputId: setSelectedVideoInputId,
-    onSetSelectedInputProfile: setSelectedInputProfile,
-    onRefreshDevices: () => refreshDevices(true),
-    onRequestMediaAccess: requestMediaAccess,
-    onSetMicVolume: setMicVolume,
-    onSetOutputVolume: setOutputVolume,
-    onSetServerSoundsMasterVolume: setServerSoundsMasterVolume,
-    onSetServerSoundEnabled: setServerSoundEnabled,
-    onPreviewServerSound: playServerSound,
-    onDisconnectCall: leaveRoom,
+    setSelfMonitorEnabled,
+    requestVideoAccess,
+    handleToggleVoiceSettings,
+    handleToggleAudioOutput,
+    openUserSettings,
+    setVoiceSettingsOpen,
+    setAudioOutputMenuOpen,
+    setVoiceSettingsPanel,
+    setUserSettingsOpen,
+    setUserSettingsTab,
+    setProfileNameDraft,
+    setLang,
+    setSelectedUiTheme,
+    saveMyProfile,
+    setSelectedInputId,
+    setSelectedOutputId,
+    setSelectedVideoInputId,
+    setSelectedInputProfile,
+    refreshDevices,
+    requestMediaAccess,
+    setMicVolume,
+    setOutputVolume,
+    setServerSoundsMasterVolume,
+    setServerSoundEnabled,
+    playServerSound,
+    leaveRoom,
     isMobileViewport
-  } : null;
-
-  const userDockNode = userDockSharedProps ? <UserDock {...userDockSharedProps} inlineSettingsMode={false} /> : null;
-
-  const userDockInlineSettingsNode = userDockSharedProps ? <UserDock {...userDockSharedProps} inlineSettingsMode /> : null;
-
-  useEffect(() => {
-    if (!desktopUpdateBridge) {
-      return;
-    }
-
-    let disposed = false;
-    let downloadRequested = false;
-
-    const requestDesktopUpdateDownload = async () => {
-      if (disposed || downloadRequested) {
-        return;
-      }
-      downloadRequested = true;
-      try {
-        const result = await desktopUpdateBridge.downloadUpdate();
-        if (!result?.ok && String(result?.reason || "") !== "no-available-update") {
-          const reason = String(result?.reason || "").trim();
-          pushToast(reason ? `${t("desktop.updateErrorToast")} (${reason})` : t("desktop.updateErrorToast"));
-        }
-      } catch {
-        pushToast(t("desktop.updateErrorToast"));
-      }
-    };
-
-    desktopUpdateBridge.getStatus()
-      .then((status) => {
-        if (disposed) {
-          return;
-        }
-        if (String(status?.downloadedVersion || "").trim()) {
-          setDesktopUpdateReadyVersion(String(status.downloadedVersion).trim());
-          setDesktopUpdateBannerDismissed(false);
-          return;
-        }
-
-        if (String(status?.availableVersion || "").trim()) {
-          void requestDesktopUpdateDownload();
-        }
-      })
-      .catch(() => {
-        // Update status is best-effort.
-      });
-
-    desktopUpdateBridge.checkForUpdates().catch(() => {
-      // Update check is best-effort.
-    });
-
-    const unsubscribe = desktopUpdateBridge.onStatus((event) => {
-      const eventType = String(event?.event || "").trim();
-      const version = String(event?.version || "").trim();
-      const message = String(event?.message || event?.lastError || "").trim();
-
-      if (eventType === "available" && version) {
-        pushToast(`${t("desktop.updateAvailableToast")} ${version}`);
-        void requestDesktopUpdateDownload();
-      }
-
-      if (eventType === "downloaded" && version) {
-        setDesktopUpdateReadyVersion(version);
-        setDesktopUpdateBannerDismissed(false);
-        pushToast(`${t("desktop.updateDownloadedToast")} ${version}`);
-      }
-
-      if (eventType === "error") {
-        pushToast(message ? `${t("desktop.updateErrorToast")} (${message})` : t("desktop.updateErrorToast"));
-      }
-    });
-
-    return () => {
-      disposed = true;
-      unsubscribe();
-    };
-  }, [desktopUpdateBridge, pushToast, t]);
-
-  const applyDesktopUpdate = useCallback(async () => {
-    if (!desktopUpdateBridge || desktopUpdateApplying) {
-      return;
-    }
-
-    setDesktopUpdateApplying(true);
-    try {
-      const result = await desktopUpdateBridge.applyUpdate();
-      if (!result?.ok) {
-        pushToast(`${t("desktop.updateApplyFailedToast")}: ${String(result?.reason || "unknown")}`);
-        setDesktopUpdateApplying(false);
-        return;
-      }
-
-      pushToast(t("desktop.updateApplyingToast"));
-    } catch {
-      pushToast(t("desktop.updateApplyFailedToast"));
-      setDesktopUpdateApplying(false);
-    }
-  }, [desktopUpdateApplying, desktopUpdateBridge, pushToast, t]);
+  });
 
   const completeFirstRunIntro = useCallback(async () => {
     if (!user?.id) {
@@ -1872,6 +1910,130 @@ export function App() {
     }
   }, [profileNameDraft, pushToast, selectedUiTheme, t, token, user?.id]);
 
+  const roomsPanelProps = useWorkspaceRoomsPanelProps({
+    t,
+    canCreateRooms,
+    canManageAudioQuality,
+    roomsTree,
+    roomSlug,
+    chatRoomSlug,
+    roomMediaTopologyBySlug,
+    currentUserId: user?.id || null,
+    liveRoomMembersBySlug: roomsPresenceBySlug,
+    liveRoomMemberDetailsBySlug: roomsPresenceDetailsBySlug,
+    memberPreferencesByUserId,
+    voiceMicStateByUserIdInCurrentRoom,
+    effectiveVoiceCameraEnabledByUserIdInCurrentRoom,
+    voiceAudioOutputMutedByUserIdInCurrentRoom,
+    voiceRtcStateByUserIdInCurrentRoom,
+    voiceMediaStatusSummaryByUserIdInCurrentRoom,
+    collapsedCategoryIds,
+    uncategorizedRooms,
+    newCategorySlug,
+    newCategoryTitle,
+    categoryPopupOpen,
+    newRoomSlug,
+    newRoomTitle,
+    newRoomKind,
+    newRoomCategoryId,
+    channelPopupOpen,
+    categorySettingsPopupOpenId,
+    editingCategoryTitle,
+    channelSettingsPopupOpenId,
+    editingRoomTitle,
+    editingRoomKind,
+    editingRoomCategoryId,
+    editingRoomAudioQualitySetting,
+    categoryPopupRef,
+    channelPopupRef,
+    onSetCategoryPopupOpen: setCategoryPopupOpen,
+    onSetChannelPopupOpen: setChannelPopupOpen,
+    onSetNewCategorySlug: setNewCategorySlug,
+    onSetNewCategoryTitle: setNewCategoryTitle,
+    onSetNewRoomSlug: setNewRoomSlug,
+    onSetNewRoomTitle: setNewRoomTitle,
+    onSetNewRoomKind: setNewRoomKind,
+    onSetNewRoomCategoryId: setNewRoomCategoryId,
+    onSetEditingCategoryTitle: setEditingCategoryTitle,
+    onSetEditingRoomTitle: setEditingRoomTitle,
+    onSetEditingRoomKind: setEditingRoomKind,
+    onSetEditingRoomCategoryId: setEditingRoomCategoryId,
+    onSetEditingRoomAudioQualitySetting: setEditingRoomAudioQualitySetting,
+    onCreateCategory: createCategory,
+    onCreateRoom: createRoom,
+    onOpenCreateChannelPopup: openCreateChannelPopup,
+    onOpenCategorySettingsPopup: openCategorySettingsPopup,
+    onOpenChannelSettingsPopup: openChannelSettingsPopup,
+    onSaveCategorySettings: saveCategorySettings,
+    moveCategory,
+    deleteCategory,
+    onSaveChannelSettings: saveChannelSettings,
+    moveChannel,
+    clearChannelMessages,
+    deleteChannel,
+    onToggleCategoryCollapsed: toggleCategoryCollapsed,
+    onJoinRoom: joinRoom,
+    onOpenRoomChat: openRoomChat,
+    onKickRoomMember: kickRoomMember,
+    onMoveRoomMember: moveRoomMember,
+    onSaveMemberPreference: saveMemberPreference
+  });
+
+  const { chatPanelProps, videoWindowsOverlayProps } = useWorkspaceChatVideoProps({
+    t,
+    locale,
+    chatRoomSlug,
+    activeChatRoomTitle: activeChatRoom?.title || "",
+    messages,
+    currentUserId: user?.id || null,
+    messagesHasMore,
+    loadingOlderMessages,
+    chatText,
+    pendingChatImageDataUrl,
+    activeChatTypingUsers,
+    chatLogRef,
+    loadOlderMessages,
+    setChatText: handleSetChatText,
+    handleChatPaste,
+    handleChatInputKeyDown,
+    sendMessage,
+    editingMessageId,
+    currentRoomSupportsRtc,
+    videoWindowsVisible,
+    setVideoWindowsVisible,
+    setEditingMessageId,
+    startEditingMessage,
+    deleteOwnMessage,
+    userName: user?.name || "",
+    allowVideoStreaming,
+    cameraEnabled,
+    localVideoStream,
+    remoteVideoStreamsByUserId,
+    effectiveVoiceCameraEnabledByUserIdInCurrentRoom,
+    remoteVideoLabelsByUserId,
+    activeScreenShare,
+    normalizedServerVideoWindowMinWidth,
+    normalizedServerVideoWindowMaxWidth,
+    speakingVideoWindowIds
+  });
+
+  if (showDesktopBrowserCompletion) {
+    return <DesktopBrowserCompletionGate desktopHandoffError={desktopHandoffError} />;
+  }
+
+  if (user && !canUseService) {
+    const blocked = user.access_state === "blocked";
+    return (
+      <AccessStateGate
+        blocked={blocked}
+        pendingAccessRefreshInSec={pendingAccessRefreshInSec}
+        t={t}
+        onRefresh={() => window.location.reload()}
+        onLogout={logout}
+      />
+    );
+  }
+
   return (
     <main className="app legacy-layout mx-auto grid h-[100dvh] max-h-[100dvh] w-full max-w-[1400px] grid-rows-[auto_1fr] gap-4 overflow-hidden p-4 desktop:gap-6 desktop:p-8">
       <AppHeader
@@ -1892,374 +2054,123 @@ export function App() {
       />
       <TooltipPortal />
 
-      {mediaDevicesState === "denied" ? (
-        <div className="mic-denied-banner" role="status" aria-live="polite">
-          <span>{t("mic.deniedBanner")}</span>
-          <button type="button" className="secondary" onClick={requestMediaAccess}>
-            {t("settings.requestMediaAccess")}
-          </button>
-        </div>
-      ) : null}
+      {mediaDevicesState === "denied" ? <MediaAccessDeniedBanner t={t} onRequestMediaAccess={requestMediaAccess} /> : null}
 
       {desktopUpdateReadyVersion && !desktopUpdateBannerDismissed ? (
-        <div className="mic-denied-banner" role="status" aria-live="polite">
-          <span>{`${t("desktop.updateReadyBanner")} ${desktopUpdateReadyVersion}`}</span>
-          <button
-            type="button"
-            className="secondary"
-            disabled={desktopUpdateApplying}
-            onClick={() => {
-              setDesktopUpdateBannerDismissed(true);
-            }}
-          >
-            {t("desktop.updateLater")}
-          </button>
-          <button
-            type="button"
-            className="secondary"
-            disabled={desktopUpdateApplying}
-            onClick={() => {
-              void applyDesktopUpdate();
-            }}
-          >
-            {desktopUpdateApplying ? t("desktop.updateApplying") : t("desktop.updateRestartNow")}
-          </button>
-        </div>
+        <DesktopUpdateBanner
+          t={t}
+          desktopUpdateReadyVersion={desktopUpdateReadyVersion}
+          desktopUpdateApplying={desktopUpdateApplying}
+          onDismiss={dismissDesktopUpdateBanner}
+          onApply={() => {
+            void applyDesktopUpdate();
+          }}
+        />
       ) : null}
 
       {user ? (
-      <>
-      <div className={`workspace ${isMobileViewport ? "workspace-mobile" : ""} grid h-full min-h-0 items-stretch gap-4 desktop:grid-cols-[320px_1fr] desktop:gap-6`}>
-        {(!isMobileViewport || mobileTab === "channels") ? (
-          <aside className="leftcolumn flex min-h-0 flex-col gap-4 overflow-hidden desktop:gap-6">
-            <RoomsPanel
-              t={t}
-              canCreateRooms={canCreateRooms}
-              canKickMembers={canCreateRooms}
-              canManageAudioQuality={canManageAudioQuality}
-              roomsTree={roomsTree}
-              roomSlug={roomSlug}
-              activeChatRoomSlug={chatRoomSlug}
-              roomMediaTopologyBySlug={roomMediaTopologyBySlug}
-              currentUserId={user?.id || ""}
-              liveRoomMembersBySlug={roomsPresenceBySlug}
-              liveRoomMemberDetailsBySlug={roomsPresenceDetailsBySlug}
-              memberPreferencesByUserId={memberPreferencesByUserId}
-              voiceMicStateByUserIdInCurrentRoom={voiceMicStateByUserIdInCurrentRoom}
-              voiceCameraEnabledByUserIdInCurrentRoom={effectiveVoiceCameraEnabledByUserIdInCurrentRoom}
-              voiceAudioOutputMutedByUserIdInCurrentRoom={voiceAudioOutputMutedByUserIdInCurrentRoom}
-              voiceRtcStateByUserIdInCurrentRoom={voiceRtcStateByUserIdInCurrentRoom}
-              voiceMediaStatusSummaryByUserIdInCurrentRoom={voiceMediaStatusSummaryByUserIdInCurrentRoom}
-              collapsedCategoryIds={collapsedCategoryIds}
-              uncategorizedRooms={uncategorizedRooms}
-              newCategorySlug={newCategorySlug}
-              newCategoryTitle={newCategoryTitle}
-              categoryPopupOpen={categoryPopupOpen}
-              newRoomSlug={newRoomSlug}
-              newRoomTitle={newRoomTitle}
-              newRoomKind={newRoomKind}
-              newRoomCategoryId={newRoomCategoryId}
-              channelPopupOpen={channelPopupOpen}
-              categorySettingsPopupOpenId={categorySettingsPopupOpenId}
-              editingCategoryTitle={editingCategoryTitle}
-              channelSettingsPopupOpenId={channelSettingsPopupOpenId}
-              editingRoomTitle={editingRoomTitle}
-              editingRoomKind={editingRoomKind}
-              editingRoomCategoryId={editingRoomCategoryId}
-              editingRoomAudioQualitySetting={editingRoomAudioQualitySetting}
-              categoryPopupRef={categoryPopupRef}
-              channelPopupRef={channelPopupRef}
-              onSetCategoryPopupOpen={setCategoryPopupOpen}
-              onSetChannelPopupOpen={setChannelPopupOpen}
-              onSetNewCategorySlug={setNewCategorySlug}
-              onSetNewCategoryTitle={setNewCategoryTitle}
-              onSetNewRoomSlug={setNewRoomSlug}
-              onSetNewRoomTitle={setNewRoomTitle}
-              onSetNewRoomKind={setNewRoomKind}
-              onSetNewRoomCategoryId={setNewRoomCategoryId}
-              onSetEditingCategoryTitle={setEditingCategoryTitle}
-              onSetEditingRoomTitle={setEditingRoomTitle}
-              onSetEditingRoomKind={setEditingRoomKind}
-              onSetEditingRoomCategoryId={setEditingRoomCategoryId}
-              onSetEditingRoomAudioQualitySetting={setEditingRoomAudioQualitySetting}
-              onCreateCategory={createCategory}
-              onCreateRoom={createRoom}
-              onOpenCreateChannelPopup={openCreateChannelPopup}
-              onOpenCategorySettingsPopup={openCategorySettingsPopup}
-              onOpenChannelSettingsPopup={openChannelSettingsPopup}
-              onSaveCategorySettings={saveCategorySettings}
-              onMoveCategory={(direction) => void moveCategory(direction)}
-              onDeleteCategory={() => void deleteCategory()}
-              onSaveChannelSettings={saveChannelSettings}
-              onMoveChannel={(direction) => void moveChannel(direction)}
-              onClearChannelMessages={(room) => void clearChannelMessages(room)}
-              onDeleteChannel={(room) => void deleteChannel(room)}
-              onToggleCategoryCollapsed={toggleCategoryCollapsed}
-              onJoinRoom={joinRoom}
-              onOpenRoomChat={openRoomChat}
-              onKickRoomMember={kickRoomMember}
-              onMoveRoomMember={moveRoomMember}
-              onSaveMemberPreference={saveMemberPreference}
-            />
-
-            {userDockNode}
-          </aside>
-        ) : null}
-
-        {(!isMobileViewport || mobileTab === "chat") ? (
-          <section className="middlecolumn flex min-h-0 flex-col gap-4 desktop:gap-6">
-            <ChatPanel
-              t={t}
-              locale={locale}
-              roomSlug={chatRoomSlug}
-              roomTitle={activeChatRoom?.title || ""}
-              messages={messages}
-              currentUserId={user?.id || null}
-              messagesHasMore={messagesHasMore}
-              loadingOlderMessages={loadingOlderMessages}
-              chatText={chatText}
-              composePreviewImageUrl={pendingChatImageDataUrl}
-              chatLogRef={chatLogRef}
-              onLoadOlderMessages={() => void loadOlderMessages()}
-              onSetChatText={setChatText}
-              onChatPaste={handleChatPaste}
-              onChatInputKeyDown={handleChatInputKeyDown}
-              onSendMessage={sendMessage}
-              editingMessageId={editingMessageId}
-              showVideoToggle={currentRoomSupportsRtc}
-              videoWindowsVisible={videoWindowsVisible}
-              onToggleVideoWindows={() => setVideoWindowsVisible((prev) => !prev)}
-              onCancelEdit={() => {
-                setEditingMessageId(null);
-                setChatText("");
-              }}
-              onEditMessage={startEditingMessage}
-              onDeleteMessage={deleteOwnMessage}
-            />
-          </section>
-        ) : null}
-
-        <VideoWindowsOverlay
+        <AppWorkspacePanels
+          isMobileViewport={isMobileViewport}
+          mobileTab={mobileTab}
+          onSelectTab={setMobileTab}
           t={t}
-          currentUserId={user?.id || ""}
-          localUserLabel={user?.name || t("video.you")}
-          localCameraEnabled={allowVideoStreaming && cameraEnabled}
-          localVideoStream={localVideoStream}
-          remoteVideoStreamsByUserId={remoteVideoStreamsByUserId}
-          remoteCameraEnabledByUserId={effectiveVoiceCameraEnabledByUserIdInCurrentRoom}
-          remoteLabelsByUserId={remoteVideoLabelsByUserId}
-          screenShareStream={activeScreenShare?.stream || null}
-          screenShareOwnerLabel={activeScreenShare?.ownerLabel || ""}
-          screenShareOwnerUserId={activeScreenShare?.ownerUserId || ""}
-          screenShareActive={Boolean(activeScreenShare?.stream)}
-          minWidth={Math.min(serverVideoWindowMinWidth, serverVideoWindowMaxWidth)}
-          maxWidth={Math.max(serverVideoWindowMinWidth, serverVideoWindowMaxWidth)}
-          visible={currentRoomSupportsRtc && videoWindowsVisible}
-          speakingWindowIds={speakingVideoWindowIds}
+          hasUser={Boolean(user)}
+          userDockSharedProps={userDockSharedProps}
+          roomsPanelProps={roomsPanelProps}
+          chatPanelProps={chatPanelProps}
+          videoWindowsOverlayProps={videoWindowsOverlayProps}
         />
-
-        {isMobileViewport && user && mobileTab === "settings" ? (
-          <aside className="leftcolumn mobile-settings-column flex min-h-0 flex-col gap-4 overflow-hidden desktop:gap-6">
-            {userDockInlineSettingsNode}
-          </aside>
-        ) : null}
-      </div>
-
-      {isMobileViewport ? (
-        <nav className="mobile-tabbar grid grid-cols-3 gap-2" aria-label={t("mobile.tabsAria") }>
-          <button
-            type="button"
-            className={`secondary mobile-tab-btn inline-flex items-center justify-center gap-2 ${mobileTab === "channels" ? "mobile-tab-btn-active" : ""}`}
-            onClick={() => setMobileTab("channels")}
-          >
-            <i className="bi bi-hash" aria-hidden="true" />
-            <span>{t("mobile.tabChannels")}</span>
-          </button>
-          <button
-            type="button"
-            className={`secondary mobile-tab-btn inline-flex items-center justify-center gap-2 ${mobileTab === "chat" ? "mobile-tab-btn-active" : ""}`}
-            onClick={() => setMobileTab("chat")}
-          >
-            <i className="bi bi-chat-dots" aria-hidden="true" />
-            <span>{t("mobile.tabChat")}</span>
-          </button>
-          <button
-            type="button"
-            className={`secondary mobile-tab-btn inline-flex items-center justify-center gap-2 ${mobileTab === "settings" ? "mobile-tab-btn-active" : ""}`}
-            onClick={() => {
-              setMobileTab("settings");
-            }}
-            disabled={!user}
-          >
-            <i className="bi bi-gear" aria-hidden="true" />
-            <span>{t("mobile.tabSettings")}</span>
-          </button>
-        </nav>
-      ) : null}
-      </>
       ) : authMode !== "loading" ? (
-        <section className="grid h-full min-h-0 place-items-center p-2">
-          <div className="card w-full max-w-xl p-8 text-center">
-            <h2 className="text-2xl font-bold text-pixel-text">{t("guest.welcomeTitle")}</h2>
-            <p className="mt-3 text-sm leading-relaxed text-pixel-muted">{t("guest.welcomePromo")}</p>
-            <button
-              type="button"
-              className="mt-6 inline-flex min-h-[42px] items-center justify-center px-5"
-              onClick={() => beginSso("google")}
-            >
-              {t("guest.loginCta")}
-            </button>
-          </div>
-        </section>
+        <GuestLoginGate t={t} onBeginGoogleSso={() => beginSso("google")} />
       ) : null}
 
-      <ServerProfileModal
+      <ServerProfileModalContainer
         open={appMenuOpen}
         t={t}
-        canPromote={canPromote}
-        canViewTelemetry={canViewTelemetry}
-        serverMenuTab={serverMenuTab}
-        adminUsers={adminUsers}
-        eventLog={eventLog}
-        telemetrySummary={telemetrySummary}
-        callStatus={callStatus}
-        lastCallPeer={lastCallPeer}
-        roomVoiceConnected={roomVoiceConnected}
-        callEventLog={callEventLog}
-        serverAudioQuality={serverAudioQuality}
-        serverAudioQualitySaving={serverAudioQualitySaving}
-        canManageAudioQuality={canManageAudioQuality}
-        serverChatImagePolicy={serverChatImagePolicy}
-        serverVideoEffectType={serverVideoEffectType}
-        serverVideoResolution={serverVideoResolution}
-        serverVideoFps={serverVideoFps}
-        serverScreenShareResolution={serverScreenShareResolution}
-        serverVideoPixelFxStrength={serverVideoPixelFxStrength}
-        serverVideoPixelFxPixelSize={serverVideoPixelFxPixelSize}
-        serverVideoPixelFxGridThickness={serverVideoPixelFxGridThickness}
-        serverVideoAsciiCellSize={serverVideoAsciiCellSize}
-        serverVideoAsciiContrast={serverVideoAsciiContrast}
-        serverVideoAsciiColor={serverVideoAsciiColor}
-        serverVideoWindowMinWidth={Math.min(serverVideoWindowMinWidth, serverVideoWindowMaxWidth)}
-        serverVideoWindowMaxWidth={Math.max(serverVideoWindowMinWidth, serverVideoWindowMaxWidth)}
-        serverVideoPreviewStream={serverVideoPreviewStream}
-        onClose={() => setAppMenuOpen(false)}
-        onSetServerMenuTab={setServerMenuTab}
-        onPromote={(userId) => void promote(userId)}
-        onDemote={(userId) => void demote(userId)}
-        onSetBan={(userId, banned) => void setUserBan(userId, banned)}
-        onRefreshTelemetry={() => void loadTelemetrySummary()}
-        onSetServerAudioQuality={(value) => void setServerAudioQualityValue(value)}
-        onSetServerVideoEffectType={setServerVideoEffectType}
-        onSetServerVideoResolution={setServerVideoResolution}
-        onSetServerVideoFps={setServerVideoFps}
-        onSetServerScreenShareResolution={setServerScreenShareResolution}
-        onSetServerVideoPixelFxStrength={setServerVideoPixelFxStrength}
-        onSetServerVideoPixelFxPixelSize={setServerVideoPixelFxPixelSize}
-        onSetServerVideoPixelFxGridThickness={setServerVideoPixelFxGridThickness}
-        onSetServerVideoAsciiCellSize={setServerVideoAsciiCellSize}
-        onSetServerVideoAsciiContrast={setServerVideoAsciiContrast}
-        onSetServerVideoAsciiColor={setServerVideoAsciiColor}
-        onSetServerVideoWindowMinWidth={(value) => {
-          const nextMin = Math.max(80, Math.min(300, Math.round(value)));
-          setServerVideoWindowMinWidth(nextMin);
-          setServerVideoWindowMaxWidth((prev) => Math.max(Math.max(120, Math.min(480, Math.round(prev))), nextMin));
+        permissions={{
+          canManageUsers,
+          canPromote,
+          canViewTelemetry,
+          canManageAudioQuality
         }}
-        onSetServerVideoWindowMaxWidth={(value) => {
-          const nextMax = Math.max(120, Math.min(480, Math.round(value)));
-          setServerVideoWindowMaxWidth(nextMax);
-          setServerVideoWindowMinWidth((prev) => Math.min(Math.max(80, Math.min(300, Math.round(prev))), nextMax));
+        state={{
+          serverMenuTab,
+          serverAudioQuality,
+          serverAudioQualitySaving,
+          serverChatImagePolicy,
+          serverVideoEffectType,
+          serverVideoResolution,
+          serverVideoFps,
+          serverScreenShareResolution,
+          serverVideoPixelFxStrength,
+          serverVideoPixelFxPixelSize,
+          serverVideoPixelFxGridThickness,
+          serverVideoAsciiCellSize,
+          serverVideoAsciiContrast,
+          serverVideoAsciiColor,
+          serverVideoWindowMinWidth: normalizedServerVideoWindowMinWidth,
+          serverVideoWindowMaxWidth: normalizedServerVideoWindowMaxWidth
+        }}
+        data={{
+          adminUsers,
+          eventLog,
+          telemetrySummary,
+          callStatus,
+          lastCallPeer,
+          roomVoiceConnected,
+          callEventLog,
+          serverVideoPreviewStream
+        }}
+        actions={{
+          onClose: () => setAppMenuOpen(false),
+          onSetServerMenuTab: setServerMenuTab,
+          onPromote: (userId) => void promote(userId),
+          onDemote: (userId) => void demote(userId),
+          onSetBan: (userId, banned) => void setUserBan(userId, banned),
+          onSetAccessState: (userId, accessState) => void setUserAccessState(userId, accessState),
+          onRefreshTelemetry: () => void loadTelemetrySummary(),
+          onSetServerAudioQuality: (value) => void setServerAudioQualityValue(value),
+          onSetServerVideoEffectType: setServerVideoEffectType,
+          onSetServerVideoResolution: setServerVideoResolution,
+          onSetServerVideoFps: setServerVideoFps,
+          onSetServerScreenShareResolution: setServerScreenShareResolution,
+          onSetServerVideoPixelFxStrength: setServerVideoPixelFxStrength,
+          onSetServerVideoPixelFxPixelSize: setServerVideoPixelFxPixelSize,
+          onSetServerVideoPixelFxGridThickness: setServerVideoPixelFxGridThickness,
+          onSetServerVideoAsciiCellSize: setServerVideoAsciiCellSize,
+          onSetServerVideoAsciiContrast: setServerVideoAsciiContrast,
+          onSetServerVideoAsciiColor: setServerVideoAsciiColor,
+          onSetServerVideoWindowMinWidth: setBoundedServerVideoWindowMinWidth,
+          onSetServerVideoWindowMaxWidth: setBoundedServerVideoWindowMaxWidth
         }}
       />
 
       <ToastStack toasts={toasts} />
 
-      {showAppUpdatedOverlay ? (
-        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/80 p-4" role="dialog" aria-modal="true" aria-live="polite">
-          <div className="w-full max-w-md rounded-2xl border border-white/20 bg-neutral-950/95 p-6 text-center shadow-2xl">
-            <h2 className="text-2xl font-bold tracking-wide text-white">{t("overlay.appUpdatedTitle")}</h2>
-            <p className="mt-3 text-sm leading-relaxed text-white/80">{t("overlay.appUpdatedMessage")}</p>
-            <button
-              type="button"
-              className="primary mt-6 inline-flex w-full items-center justify-center"
-              onClick={acknowledgeUpdatedApp}
-              autoFocus
-            >
-              {t("overlay.appUpdatedContinue")}
-            </button>
-          </div>
-        </div>
-      ) : null}
+      {showAppUpdatedOverlay ? <AppUpdatedOverlay t={t} onContinue={acknowledgeUpdatedApp} /> : null}
 
       {user && showFirstRunIntro ? (
-        <div className="voice-preferences-overlay fixed inset-0 z-[305] grid place-items-center p-4" role="dialog" aria-modal="true" aria-live="polite">
-          <section className="card voice-preferences-modal w-full max-w-[620px] !h-auto !max-h-[90vh] overflow-auto p-6">
-            <h2>{t("intro.title")}</h2>
-            <p className="muted">{t("intro.description")}</p>
-
-            <div className="mt-5 grid gap-2">
-              <span className="subheading">{t("intro.skinLabel")}</span>
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                <button
-                  type="button"
-                  className={`secondary min-h-[40px] ${selectedUiTheme === "8-neon-bit" ? "user-settings-tab-btn-active" : ""}`}
-                  onClick={() => setSelectedUiTheme("8-neon-bit")}
-                >
-                  {t("settings.theme8NeonBit")}
-                </button>
-                <button
-                  type="button"
-                  className={`secondary min-h-[40px] ${selectedUiTheme === "material-classic" ? "user-settings-tab-btn-active" : ""}`}
-                  onClick={() => setSelectedUiTheme("material-classic")}
-                >
-                  {t("settings.themeMaterialClassic")}
-                </button>
-              </div>
-            </div>
-
-            <label className="mt-5 grid gap-2">
-              <span className="subheading">{t("intro.displayNameLabel")}</span>
-              <input
-                value={profileNameDraft}
-                onChange={(event) => setProfileNameDraft(event.target.value)}
-                placeholder={t("settings.displayName")}
-              />
-            </label>
-
-            <button
-              type="button"
-              className="primary mt-6 inline-flex w-full min-h-[42px] items-center justify-center"
-              disabled={profileSaving}
-              onClick={() => {
-                void completeFirstRunIntro();
-              }}
-            >
-              {profileSaving ? t("settings.saving") : t("intro.continueCta")}
-            </button>
-          </section>
-        </div>
+        <FirstRunIntroOverlay
+          t={t}
+          selectedUiTheme={selectedUiTheme}
+          onSelectTheme={setSelectedUiTheme}
+          profileNameDraft={profileNameDraft}
+          onChangeProfileName={setProfileNameDraft}
+          profileSaving={profileSaving}
+          onContinue={() => {
+            void completeFirstRunIntro();
+          }}
+        />
       ) : null}
 
       {sessionMovedOverlayMessage ? (
-        <div className="voice-preferences-overlay fixed inset-0 z-[310] grid place-items-center p-4" role="dialog" aria-modal="true" aria-live="assertive">
-          <section className="card voice-preferences-modal w-full max-w-[620px] !h-auto !max-h-[90vh] overflow-auto p-6 text-center">
-            <h2>Приложение открыто в другом месте</h2>
-            <p className="mt-3 muted">
-              Эта сессия перенесена в другое окно или вкладку. Работа с каналами здесь остановлена.
-            </p>
-            <p className="mt-2 text-xs muted">{sessionMovedOverlayMessage}</p>
-            <button
-              type="button"
-              className="primary mt-6 inline-flex w-full items-center justify-center"
-              onClick={() => {
-                setSessionMovedOverlayMessage("");
-                window.location.reload();
-              }}
-            >
-              Открыть здесь
-            </button>
-          </section>
-        </div>
+        <SessionMovedOverlay
+          message={sessionMovedOverlayMessage}
+          onReopenHere={() => {
+            setSessionMovedOverlayMessage("");
+            window.location.reload();
+          }}
+        />
       ) : null}
 
     </main>

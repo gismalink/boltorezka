@@ -4,7 +4,7 @@ type ServerMenuTab = "users" | "events" | "telemetry" | "call" | "sound" | "vide
 
 type UseServerMenuAccessGuardArgs = {
   serverMenuTab: ServerMenuTab;
-  canPromote: boolean;
+  canManageUsers: boolean;
   canViewTelemetry: boolean;
   canManageAudioQuality: boolean;
   setServerMenuTab: (value: ServerMenuTab) => void;
@@ -12,13 +12,13 @@ type UseServerMenuAccessGuardArgs = {
 
 export function useServerMenuAccessGuard({
   serverMenuTab,
-  canPromote,
+  canManageUsers,
   canViewTelemetry,
   canManageAudioQuality,
   setServerMenuTab
 }: UseServerMenuAccessGuardArgs) {
   useEffect(() => {
-    if (serverMenuTab === "users" && !canPromote) {
+    if (serverMenuTab === "users" && !canManageUsers) {
       setServerMenuTab("events");
       return;
     }
@@ -36,5 +36,5 @@ export function useServerMenuAccessGuard({
     if (serverMenuTab === "video" && !canManageAudioQuality) {
       setServerMenuTab("events");
     }
-  }, [serverMenuTab, canPromote, canViewTelemetry, canManageAudioQuality, setServerMenuTab]);
+  }, [serverMenuTab, canManageUsers, canViewTelemetry, canManageAudioQuality, setServerMenuTab]);
 }

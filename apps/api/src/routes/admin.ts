@@ -19,6 +19,10 @@ const demoteSchema = z.object({
   role: z.literal("user").default("user")
 });
 
+const accessStateSchema = z.object({
+  accessState: z.enum(["pending", "active", "blocked"])
+});
+
 const audioQualitySchema = z.enum(["retro", "low", "standard", "high"]);
 
 const serverAudioQualitySchema = z.object({
@@ -27,7 +31,7 @@ const serverAudioQualitySchema = z.object({
 
 async function loadUserById(userId: string) {
   const result = await db.query<UserRow>(
-    "SELECT id, email, username, name, ui_theme, role, is_banned, created_at FROM users WHERE id = $1",
+    "SELECT id, email, username, name, ui_theme, role, is_banned, access_state, is_bot, created_at FROM users WHERE id = $1",
     [userId]
   );
   return result.rows[0] || null;
@@ -81,7 +85,7 @@ function readFloatEnv(name: string, fallback: number, min: number, max: number):
 
 function loadServerChatImagePolicy(): ServerChatImagePolicyResponse {
   return {
-    maxDataUrlLength: readIntEnv("CHAT_IMAGE_MAX_DATA_URL_LENGTH", 28000, 8000, 250000),
+    maxDataUrlLength: readIntEnv("CHAT_IMAGE_MAX_DATA_URL_LENGTH", 102400, 8000, 250000),
     maxImageSide: readIntEnv("CHAT_IMAGE_MAX_SIDE", 1200, 256, 4096),
     jpegQuality: readFloatEnv("CHAT_IMAGE_JPEG_QUALITY", 0.6, 0.3, 0.95)
   };
@@ -162,7 +166,7 @@ export async function adminRoutes(fastify: FastifyInstance) {
     },
     async () => {
       const result = await db.query<UserRow>(
-        `SELECT id, email, username, name, ui_theme, role, is_banned, created_at
+        `SELECT id, email, username, name, ui_theme, role, is_banned, access_state, is_bot, created_at
          FROM users
          ORDER BY created_at ASC`
       );
@@ -213,7 +217,7 @@ export async function adminRoutes(fastify: FastifyInstance) {
         `UPDATE users
          SET role = 'admin'
          WHERE id = $1
-         RETURNING id, email, username, name, ui_theme, role, is_banned, created_at`,
+         RETURNING id, email, username, name, ui_theme, role, is_banned, access_state, is_bot, created_at`,
         [userId]
       );
 
@@ -272,7 +276,7 @@ export async function adminRoutes(fastify: FastifyInstance) {
         `UPDATE users
          SET role = 'user'
          WHERE id = $1
-         RETURNING id, email, username, name, ui_theme, role, is_banned, created_at`,
+         RETURNING id, email, username, name, ui_theme, role, is_banned, access_state, is_bot, created_at`,
         [userId]
       );
 
@@ -322,7 +326,7 @@ export async function adminRoutes(fastify: FastifyInstance) {
         `UPDATE users
          SET is_banned = TRUE
          WHERE id = $1
-         RETURNING id, email, username, name, ui_theme, role, is_banned, created_at`,
+         RETURNING id, email, username, name, ui_theme, role, is_banned, access_state, is_bot, created_at`,
         [userId]
       );
 
@@ -357,8 +361,59 @@ export async function adminRoutes(fastify: FastifyInstance) {
         `UPDATE users
          SET is_banned = FALSE
          WHERE id = $1
-         RETURNING id, email, username, name, ui_theme, role, is_banned, created_at`,
+         RETURNING id, email, username, name, ui_theme, role, is_banned, access_state, is_bot, created_at`,
         [userId]
+      );
+
+      const response: PromoteUserResponse = { user: updated.rows[0] };
+      return response;
+    }
+  );
+
+  fastify.post<{ Params: { userId: string }; Body: { accessState?: "pending" | "active" | "blocked" } }>(
+    "/v1/admin/users/:userId/access",
+    {
+      preHandler: [requireAuth, loadCurrentUser, requireRole(["super_admin", "admin"])]
+    },
+    async (request, reply) => {
+      const parsed = accessStateSchema.safeParse(request.body || {});
+      if (!parsed.success) {
+        return reply.code(400).send({
+          error: "ValidationError",
+          issues: parsed.error.flatten()
+        });
+      }
+
+      const userId = validateTargetUserId(request.params.userId);
+      if (!userId) {
+        return reply.code(400).send({
+          error: "ValidationError",
+          message: "userId is required"
+        });
+      }
+
+      const targetUser = await loadUserById(userId);
+      if (!targetUser) {
+        return reply.code(404).send({
+          error: "UserNotFound",
+          message: "Target user does not exist"
+        });
+      }
+
+      const actorRole = String(request.currentUser?.role || "user").trim();
+      if (actorRole !== "super_admin" && targetUser.role === "super_admin") {
+        return reply.code(403).send({
+          error: "ProtectedUser",
+          message: "Super admin access state can be changed only by super admin"
+        });
+      }
+
+      const updated = await db.query<UserRow>(
+        `UPDATE users
+         SET access_state = $2
+         WHERE id = $1
+         RETURNING id, email, username, name, ui_theme, role, is_banned, access_state, is_bot, created_at`,
+        [userId, parsed.data.accessState]
       );
 
       const response: PromoteUserResponse = { user: updated.rows[0] };

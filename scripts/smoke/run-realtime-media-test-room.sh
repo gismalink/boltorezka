@@ -81,12 +81,17 @@ HOST_ICE_TRANSPORT_POLICY_RAW="$(read_env_raw TEST_VITE_RTC_ICE_TRANSPORT_POLICY
 HOST_TURN_USERNAME_RAW="$(read_env_raw TURN_USERNAME "$HOST_ENV_FILE")"
 HOST_TURN_PASSWORD_RAW="$(read_env_raw TURN_PASSWORD "$HOST_ENV_FILE")"
 HOST_TURN_CERT_DOMAIN_RAW="$(read_env_raw TURN_CERT_DOMAIN "$HOST_ENV_FILE")"
+HOST_TURN_TLS_PORT_RAW="$(read_env_raw TURN_TLS_PORT "$HOST_ENV_FILE")"
 
 HOST_ICE_JSON="$(strip_outer_quotes "$HOST_ICE_JSON_RAW")"
 HOST_ICE_TRANSPORT_POLICY="$(strip_outer_quotes "$HOST_ICE_TRANSPORT_POLICY_RAW")"
 HOST_TURN_USERNAME="$(strip_outer_quotes "$HOST_TURN_USERNAME_RAW")"
 HOST_TURN_PASSWORD="$(strip_outer_quotes "$HOST_TURN_PASSWORD_RAW")"
 HOST_TURN_CERT_DOMAIN="$(strip_outer_quotes "$HOST_TURN_CERT_DOMAIN_RAW")"
+HOST_TURN_TLS_PORT="$(strip_outer_quotes "$HOST_TURN_TLS_PORT_RAW")"
+if [[ -z "$HOST_TURN_TLS_PORT" ]]; then
+  HOST_TURN_TLS_PORT="5349"
+fi
 
 # Backward compatibility: older smoke auth files use SMOKE_BEARER_TOKEN names.
 if [[ -z "${SMOKE_TEST_BEARER_TOKEN:-}" && -n "${SMOKE_BEARER_TOKEN:-}" ]]; then
@@ -126,9 +131,10 @@ fi
 if [[ -z "$ICE_JSON" && -n "$HOST_TURN_USERNAME" && -n "$HOST_TURN_PASSWORD" ]]; then
   ICE_JSON="$(jq -cn \
     --arg host "gismalink.art" \
+    --arg tlsPort "$HOST_TURN_TLS_PORT" \
     --arg user "$HOST_TURN_USERNAME" \
     --arg pass "$HOST_TURN_PASSWORD" \
-    '[{urls:["turn:" + $host + ":3478?transport=udp","turns:" + $host + ":5349?transport=tcp"],username:$user,credential:$pass}]')"
+    '[{urls:["turn:" + $host + ":3478?transport=udp","turns:" + $host + ":" + $tlsPort + "?transport=tcp"],username:$user,credential:$pass}]')"
 fi
 
 TURN_HOST_FOR_SMOKE="${HOST_TURN_CERT_DOMAIN:-gismalink.art}"

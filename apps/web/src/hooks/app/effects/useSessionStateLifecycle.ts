@@ -151,9 +151,13 @@ export function useSessionStateLifecycle({
   const bootstrapSessionState = useCallback((nextToken: string) => {
     if (!COOKIE_MODE) localStorage.setItem("boltorezka_token", nextToken);
 
-    api.me(nextToken)
-      .then((res) => setUser(res.user))
-      .catch(async (error) => {
+    const bootstrap = async () => {
+      let sessionUser: User | null = null;
+      try {
+        const me = await api.me(nextToken);
+        sessionUser = me.user;
+        setUser(me.user);
+      } catch (error) {
         if (error instanceof ApiError && error.status === 401) {
           try {
             const refreshed = await api.authRefresh(nextToken);
@@ -162,37 +166,52 @@ export function useSessionStateLifecycle({
               setToken(refreshedToken);
               if (!COOKIE_MODE) localStorage.setItem("boltorezka_token", refreshedToken);
               const me = await api.me(refreshedToken);
+              sessionUser = me.user;
               setUser(me.user);
-              return;
+              nextToken = refreshedToken;
             }
           } catch {
             // Fall through to hard reset when refresh fails.
           }
         }
 
-        setToken("");
-        localStorage.removeItem("boltorezka_token");
-      });
+        if (!sessionUser) {
+          setToken("");
+          localStorage.removeItem("boltorezka_token");
+          return;
+        }
+      }
 
-    api.rooms(nextToken)
-      .then((res) => setRooms(res.rooms))
-      .catch((error) => pushLog(`rooms failed: ${error.message}`));
+      const role = String(sessionUser?.role || "user");
+      const hasServiceAccess = role === "admin" || role === "super_admin" || sessionUser?.access_state === "active";
+      if (!hasServiceAccess) {
+        setRooms([]);
+        setRoomsTree(null);
+        return;
+      }
 
-    api.serverAudioQuality(nextToken)
-      .then((res) => setServerAudioQuality(res.audioQuality))
-      .catch((error) => pushLog(`server audio quality failed: ${error.message}`));
+      api.rooms(nextToken)
+        .then((res) => setRooms(res.rooms))
+        .catch((error) => pushLog(`rooms failed: ${error.message}`));
 
-    api.serverChatImagePolicy(nextToken)
-      .then((res) => {
-        setServerChatImagePolicy({
-          maxDataUrlLength: Math.max(8000, Math.min(250000, Math.round(Number(res.maxDataUrlLength) || defaultChatImageDataUrlLength))),
-          maxImageSide: Math.max(256, Math.min(4096, Math.round(Number(res.maxImageSide) || defaultChatImageMaxSide))),
-          jpegQuality: Math.max(0.3, Math.min(0.95, Number(res.jpegQuality) || defaultChatImageQuality))
-        });
-      })
-      .catch((error) => pushLog(`server chat image policy failed: ${error.message}`));
+      api.serverAudioQuality(nextToken)
+        .then((res) => setServerAudioQuality(res.audioQuality))
+        .catch((error) => pushLog(`server audio quality failed: ${error.message}`));
 
-    void roomAdminController.loadRoomTree(nextToken);
+      api.serverChatImagePolicy(nextToken)
+        .then((res) => {
+          setServerChatImagePolicy({
+            maxDataUrlLength: Math.max(8000, Math.min(250000, Math.round(Number(res.maxDataUrlLength) || defaultChatImageDataUrlLength))),
+            maxImageSide: Math.max(256, Math.min(4096, Math.round(Number(res.maxImageSide) || defaultChatImageMaxSide))),
+            jpegQuality: Math.max(0.3, Math.min(0.95, Number(res.jpegQuality) || defaultChatImageQuality))
+          });
+        })
+        .catch((error) => pushLog(`server chat image policy failed: ${error.message}`));
+
+      void roomAdminController.loadRoomTree(nextToken);
+    };
+
+    void bootstrap();
   }, [
     defaultChatImageDataUrlLength,
     defaultChatImageMaxSide,

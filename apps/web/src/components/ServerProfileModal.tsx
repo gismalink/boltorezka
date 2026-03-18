@@ -1,13 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { AudioQuality, TelemetrySummary, User } from "../domain";
+import { getDesktopUpdateBridge } from "../desktopBridge";
 import type { ServerScreenShareResolution, ServerVideoEffectType } from "../hooks/rtc/voiceCallTypes";
+import { resolvePublicOrigin } from "../runtimeOrigin";
 import { RangeSlider } from "./RangeSlider";
 
 type ServerMenuTab = "users" | "events" | "telemetry" | "call" | "sound" | "video" | "chat_images" | "desktop_downloads";
+type UserAccessTab = "active" | "blocked" | "requests" | "bots";
 
 type ServerProfileModalProps = {
   open: boolean;
   t: (key: string) => string;
+  canManageUsers: boolean;
   canPromote: boolean;
   canViewTelemetry: boolean;
   serverMenuTab: ServerMenuTab;
@@ -44,6 +48,7 @@ type ServerProfileModalProps = {
   onPromote: (userId: string) => void;
   onDemote: (userId: string) => void;
   onSetBan: (userId: string, banned: boolean) => void;
+  onSetAccessState: (userId: string, accessState: "pending" | "active" | "blocked") => void;
   onRefreshTelemetry: () => void;
   onSetServerAudioQuality: (value: AudioQuality) => void;
   onSetServerVideoEffectType: (value: ServerVideoEffectType) => void;
@@ -86,7 +91,8 @@ function encodePathSegments(path: string): string {
 function resolveDesktopArtifactHref(
   artifact: DesktopManifestFile | null,
   channel: "test" | "prod",
-  sha: string
+  sha: string,
+  publicOrigin = ""
 ): string | null {
   if (!artifact) {
     return null;
@@ -99,6 +105,9 @@ function resolveDesktopArtifactHref(
 
   const pathUrl = String(artifact.urlPath || "").trim();
   if (pathUrl) {
+    if (publicOrigin && pathUrl.startsWith("/")) {
+      return `${publicOrigin}${pathUrl}`;
+    }
     return pathUrl;
   }
 
@@ -107,7 +116,29 @@ function resolveDesktopArtifactHref(
     return null;
   }
 
-  return `/desktop/${channel}/${encodeURIComponent(sha)}/${encodePathSegments(relativePath)}`;
+  const relativeUrl = `/desktop/${channel}/${encodeURIComponent(sha)}/${encodePathSegments(relativePath)}`;
+  return publicOrigin ? `${publicOrigin}${relativeUrl}` : relativeUrl;
+}
+
+function normalizeDesktopChannel(value: string): "test" | "prod" {
+  return String(value || "").trim().toLowerCase() === "test" ? "test" : "prod";
+}
+
+function resolveDesktopChannelFromOrigin(origin: string): "test" | "prod" {
+  if (!origin) {
+    return "prod";
+  }
+
+  try {
+    const hostname = new URL(origin).hostname.toLowerCase();
+    return hostname.startsWith("test.") || hostname.includes(".test.") ? "test" : "prod";
+  } catch {
+    return "prod";
+  }
+}
+
+function getFallbackDesktopChannel(channel: "test" | "prod"): "test" | "prod" {
+  return channel === "test" ? "prod" : "test";
 }
 
 function pickDesktopArtifact(files: DesktopManifestFile[], platform: "windows" | "mac" | "linux"): DesktopManifestFile | null {
@@ -140,6 +171,7 @@ function pickDesktopArtifact(files: DesktopManifestFile[], platform: "windows" |
 export function ServerProfileModal({
   open,
   t,
+  canManageUsers,
   canPromote,
   canViewTelemetry,
   serverMenuTab,
@@ -172,6 +204,7 @@ export function ServerProfileModal({
   onPromote,
   onDemote,
   onSetBan,
+  onSetAccessState,
   onRefreshTelemetry,
   onSetServerAudioQuality,
   onSetServerVideoEffectType,
@@ -191,6 +224,10 @@ export function ServerProfileModal({
   const [desktopManifest, setDesktopManifest] = useState<DesktopManifest | null>(null);
   const [desktopManifestLoading, setDesktopManifestLoading] = useState(false);
   const [desktopManifestError, setDesktopManifestError] = useState("");
+  const [desktopBridgeChannel, setDesktopBridgeChannel] = useState<"test" | "prod" | null>(null);
+  const [desktopManifestChannel, setDesktopManifestChannel] = useState<"test" | "prod" | null>(null);
+  const [userAccessTab, setUserAccessTab] = useState<UserAccessTab>("active");
+  const [userSearchQuery, setUserSearchQuery] = useState("");
   const totalUsers = adminUsers.length;
   const totalAdmins = adminUsers.filter((item) => item.role === "admin" || item.role === "super_admin").length;
   const totalBanned = adminUsers.filter((item) => item.is_banned).length;
@@ -199,14 +236,35 @@ export function ServerProfileModal({
     ? (telemetrySummary?.metrics.rnnoise_process_cost_us_sum ?? 0) / rnnoiseProcessSamples / 1000
     : 0;
 
-  const desktopChannel = useMemo<"test" | "prod">(() => {
+  const desktopPublicOrigin = useMemo(() => resolvePublicOrigin(), []);
+
+  const desktopOriginChannel = useMemo<"test" | "prod">(() => {
+    if (desktopPublicOrigin) {
+      return resolveDesktopChannelFromOrigin(desktopPublicOrigin);
+    }
+
     if (typeof window === "undefined") {
       return "prod";
     }
 
     const hostname = window.location.hostname.toLowerCase();
     return hostname.startsWith("test.") || hostname.includes(".test.") ? "test" : "prod";
-  }, []);
+  }, [desktopPublicOrigin]);
+
+  const desktopChannel = useMemo<"test" | "prod">(() => {
+    // On desktop file runtime test/prod host should define the download channel.
+    if (desktopOriginChannel === "test") {
+      return "test";
+    }
+
+    if (desktopBridgeChannel) {
+      return desktopBridgeChannel;
+    }
+
+    return desktopOriginChannel;
+  }, [desktopBridgeChannel, desktopOriginChannel]);
+
+  const effectiveDesktopChannel = desktopManifestChannel || desktopChannel;
 
   const desktopCards = useMemo(
     () => [
@@ -218,8 +276,9 @@ export function ServerProfileModal({
       const artifact = pickDesktopArtifact(files, platform.id);
       const href = resolveDesktopArtifactHref(
         artifact,
-        desktopChannel,
-        String(desktopManifest?.sha || "").trim()
+        effectiveDesktopChannel,
+        String(desktopManifest?.sha || "").trim(),
+        desktopPublicOrigin
       );
       return {
         ...platform,
@@ -227,8 +286,181 @@ export function ServerProfileModal({
         fileName: artifact?.name || ""
       };
     }),
-    [desktopChannel, desktopManifest, t]
+    [desktopManifest, desktopPublicOrigin, effectiveDesktopChannel, t]
   );
+
+  useEffect(() => {
+    if (!open || serverMenuTab !== "desktop_downloads") {
+      return;
+    }
+
+    const desktopUpdate = getDesktopUpdateBridge();
+    if (!desktopUpdate) {
+      return;
+    }
+
+    let disposed = false;
+
+    void desktopUpdate.getStatus()
+      .then((status) => {
+        if (!disposed) {
+          setDesktopBridgeChannel(normalizeDesktopChannel(status.channel));
+        }
+      })
+      .catch(() => {
+        return;
+      });
+
+    return () => {
+      disposed = true;
+    };
+  }, [open, serverMenuTab]);
+
+  const normalizedUserSearch = userSearchQuery.trim().toLowerCase();
+
+  const usersByTab = useMemo(() => {
+    const active = adminUsers.filter((item) => !item.is_bot && !item.is_banned && item.access_state === "active");
+    const blocked = adminUsers.filter((item) => !item.is_bot && (item.is_banned || item.access_state === "blocked"));
+    const requests = adminUsers.filter((item) => !item.is_bot && !item.is_banned && item.access_state === "pending");
+    const bots = adminUsers.filter((item) => item.is_bot);
+
+    return { active, blocked, requests, bots };
+  }, [adminUsers]);
+
+  const filteredAdminUsers = useMemo(() => {
+    const source = usersByTab[userAccessTab];
+    if (!normalizedUserSearch) {
+      return source;
+    }
+
+    return source.filter((item) => {
+      const haystack = [item.email, item.name, item.username || "", item.role].join(" ").toLowerCase();
+      return haystack.includes(normalizedUserSearch);
+    });
+  }, [normalizedUserSearch, userAccessTab, usersByTab]);
+
+  const getUserRowActions = (item: User) => {
+    const actions: Array<{ key: string; label: string; iconClass: string; primary?: boolean; onClick: () => void }> = [];
+    const isProtected = item.role === "super_admin";
+
+    if (canPromote && userAccessTab === "active" && !isProtected) {
+      if (item.role === "user") {
+        actions.push({
+          key: "promote",
+          label: t("admin.promote"),
+          iconClass: "bi-arrow-up-circle-fill",
+          primary: true,
+          onClick: () => onPromote(item.id)
+        });
+      } else if (item.role === "admin") {
+        actions.push({
+          key: "demote",
+          label: t("admin.demote"),
+          iconClass: "bi-arrow-down-circle-fill",
+          onClick: () => onDemote(item.id)
+        });
+      }
+    }
+
+    if (isProtected) {
+      return actions;
+    }
+
+    if (item.is_banned) {
+      actions.push({
+        key: "unban",
+        label: t("admin.unban"),
+        iconClass: "bi-person-check-fill",
+        onClick: () => onSetBan(item.id, false)
+      });
+      return actions;
+    }
+
+    if (userAccessTab === "requests") {
+      if (item.access_state !== "active") {
+        actions.push({
+          key: "approve",
+          label: t("admin.approve"),
+          iconClass: "bi-check-circle-fill",
+          onClick: () => onSetAccessState(item.id, "active")
+        });
+      }
+      if (item.access_state !== "blocked") {
+        actions.push({
+          key: "block",
+          label: t("admin.blockAccess"),
+          iconClass: "bi-slash-circle-fill",
+          onClick: () => onSetAccessState(item.id, "blocked")
+        });
+      }
+      actions.push({
+        key: "ban",
+        label: t("admin.ban"),
+        iconClass: "bi-person-fill-x",
+        onClick: () => onSetBan(item.id, true)
+      });
+      return actions;
+    }
+
+    if (userAccessTab === "blocked") {
+      if (item.access_state === "blocked") {
+        actions.push({
+          key: "approve",
+          label: t("admin.approve"),
+          iconClass: "bi-check-circle-fill",
+          onClick: () => onSetAccessState(item.id, "active")
+        });
+      }
+      if (item.access_state !== "pending") {
+        actions.push({
+          key: "toRequests",
+          label: t("admin.toRequests"),
+          iconClass: "bi-inbox-fill",
+          onClick: () => onSetAccessState(item.id, "pending")
+        });
+      }
+      actions.push({
+        key: "ban",
+        label: t("admin.ban"),
+        iconClass: "bi-person-fill-x",
+        onClick: () => onSetBan(item.id, true)
+      });
+      return actions;
+    }
+
+    if (item.access_state !== "pending") {
+      actions.push({
+        key: "toRequests",
+        label: t("admin.toRequests"),
+        iconClass: "bi-inbox-fill",
+        onClick: () => onSetAccessState(item.id, "pending")
+      });
+    }
+    if (item.access_state !== "blocked") {
+      actions.push({
+        key: "block",
+        label: t("admin.blockAccess"),
+        iconClass: "bi-slash-circle-fill",
+        onClick: () => onSetAccessState(item.id, "blocked")
+      });
+    }
+    if (userAccessTab === "bots" && item.access_state !== "active") {
+      actions.push({
+        key: "approve",
+        label: t("admin.approve"),
+        iconClass: "bi-check-circle-fill",
+        onClick: () => onSetAccessState(item.id, "active")
+      });
+    }
+    actions.push({
+      key: "ban",
+      label: t("admin.ban"),
+      iconClass: "bi-person-fill-x",
+      onClick: () => onSetBan(item.id, true)
+    });
+
+    return actions;
+  };
 
   useEffect(() => {
     const element = previewVideoRef.current;
@@ -255,23 +487,78 @@ export function ServerProfileModal({
     const controller = new AbortController();
     let disposed = false;
 
+    async function fetchDesktopManifestForChannel(channel: "test" | "prod"): Promise<DesktopManifest> {
+      const manifestPath = `/desktop/${channel}/latest.json`;
+      const manifestUrl = desktopPublicOrigin ? `${desktopPublicOrigin}${manifestPath}` : manifestPath;
+      const response = await fetch(manifestUrl, {
+        cache: "no-store",
+        signal: controller.signal
+      });
+
+      if (!response.ok) {
+        throw new Error(`[${channel}] status ${response.status}`);
+      }
+
+      const rawBody = await response.text();
+      let payload: DesktopManifest;
+      try {
+        payload = JSON.parse(rawBody) as DesktopManifest;
+      } catch {
+        const contentType = String(response.headers.get("content-type") || "").toLowerCase();
+        const bodyPreview = rawBody.slice(0, 80).replace(/\s+/g, " ").trim();
+        throw new Error(`[${channel}] invalid json (${contentType || "unknown"}): ${bodyPreview || "empty body"}`);
+      }
+
+      return payload;
+    }
+
     async function loadDesktopManifest() {
       setDesktopManifestLoading(true);
       setDesktopManifestError("");
+      setDesktopManifestChannel(null);
 
       try {
-        const response = await fetch(`/desktop/${desktopChannel}/latest.json`, {
-          cache: "no-store",
-          signal: controller.signal
-        });
-
-        if (!response.ok) {
-          throw new Error(`status ${response.status}`);
+        const channelsToTry: Array<"test" | "prod"> = [desktopChannel];
+        const fallbackChannel = getFallbackDesktopChannel(desktopChannel);
+        if (fallbackChannel !== desktopChannel) {
+          channelsToTry.push(fallbackChannel);
         }
 
-        const payload = (await response.json()) as DesktopManifest;
+        if (desktopOriginChannel !== desktopChannel && desktopOriginChannel !== fallbackChannel) {
+          channelsToTry.push(desktopOriginChannel);
+        }
+
+        const seen = new Set<string>();
+        const uniqueChannels = channelsToTry.filter((channel) => {
+          if (seen.has(channel)) {
+            return false;
+          }
+          seen.add(channel);
+          return true;
+        });
+
+        const errors: string[] = [];
+        let resolved: { payload: DesktopManifest; channel: "test" | "prod" } | null = null;
+
+        for (const channel of uniqueChannels) {
+          try {
+            const payload = await fetchDesktopManifestForChannel(channel);
+            resolved = { payload, channel };
+            break;
+          } catch (error) {
+            errors.push(error instanceof Error ? error.message : `[${channel}] unknown error`);
+          }
+        }
+
+        if (!resolved) {
+          throw new Error(errors.join(" | "));
+        }
+
+        const manifestReportedChannel = normalizeDesktopChannel(String(resolved.payload.channel || ""));
+
         if (!disposed) {
-          setDesktopManifest(payload);
+          setDesktopManifest(resolved.payload);
+          setDesktopManifestChannel(manifestReportedChannel || resolved.channel);
         }
       } catch (error) {
         if (disposed || controller.signal.aborted) {
@@ -293,7 +580,7 @@ export function ServerProfileModal({
       disposed = true;
       controller.abort();
     };
-  }, [desktopChannel, open, serverMenuTab]);
+  }, [desktopChannel, desktopOriginChannel, desktopPublicOrigin, open, serverMenuTab]);
 
   if (!open) {
     return null;
@@ -311,7 +598,7 @@ export function ServerProfileModal({
       <section className="card voice-preferences-modal user-settings-modal server-profile-modal grid w-full max-w-[980px] min-w-0 gap-4 max-desktop:h-full max-desktop:max-h-none max-desktop:min-h-0 max-desktop:overflow-hidden max-desktop:p-4 desktop:grid-cols-[250px_1fr]">
         <div className="user-settings-sidebar grid min-w-0 content-start gap-2">
           <div className="voice-preferences-kicker">{t("server.title")}</div>
-          {canPromote ? (
+          {canManageUsers ? (
             <button
               type="button"
               className={`secondary user-settings-tab-btn min-h-[42px] justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${serverMenuTab === "users" ? "user-settings-tab-btn-active" : ""}`}
@@ -399,35 +686,79 @@ export function ServerProfileModal({
             </button>
           </div>
 
-          {serverMenuTab === "users" && canPromote ? (
+          {serverMenuTab === "users" && canManageUsers ? (
             <section className="grid gap-3">
               <h3>{t("admin.title")}</h3>
               <p className="muted">Users total: {totalUsers} · Admins: {totalAdmins} · Banned: {totalBanned}</p>
+              <label className="grid gap-1">
+                <span className="muted">{t("admin.searchLabel")}</span>
+                <input
+                  type="search"
+                  value={userSearchQuery}
+                  onChange={(event) => setUserSearchQuery(event.target.value)}
+                  placeholder={t("admin.searchPlaceholder")}
+                />
+              </label>
+              <div className="quality-toggle-group" role="tablist" aria-label={t("admin.userTabs")}> 
+                <button
+                  type="button"
+                  className={`secondary quality-toggle-btn ${userAccessTab === "active" ? "quality-toggle-btn-active" : ""}`}
+                  onClick={() => setUserAccessTab("active")}
+                  aria-selected={userAccessTab === "active"}
+                >
+                  {t("admin.tabActive")} ({usersByTab.active.length})
+                </button>
+                <button
+                  type="button"
+                  className={`secondary quality-toggle-btn ${userAccessTab === "blocked" ? "quality-toggle-btn-active" : ""}`}
+                  onClick={() => setUserAccessTab("blocked")}
+                  aria-selected={userAccessTab === "blocked"}
+                >
+                  {t("admin.tabBlocked")} ({usersByTab.blocked.length})
+                </button>
+                <button
+                  type="button"
+                  className={`secondary quality-toggle-btn ${userAccessTab === "requests" ? "quality-toggle-btn-active" : ""}`}
+                  onClick={() => setUserAccessTab("requests")}
+                  aria-selected={userAccessTab === "requests"}
+                >
+                  {t("admin.tabRequests")} ({usersByTab.requests.length})
+                </button>
+                <button
+                  type="button"
+                  className={`secondary quality-toggle-btn ${userAccessTab === "bots" ? "quality-toggle-btn-active" : ""}`}
+                  onClick={() => setUserAccessTab("bots")}
+                  aria-selected={userAccessTab === "bots"}
+                >
+                  {t("admin.tabBots")} ({usersByTab.bots.length})
+                </button>
+              </div>
               <ul className="admin-list grid gap-2">
-                {adminUsers.map((item) => (
+                {filteredAdminUsers.map((item) => (
                   <li key={item.id} className="admin-row grid min-h-[42px] grid-cols-[minmax(0,1fr)_auto] items-center gap-2 max-desktop:grid-cols-1">
                     <span className="min-w-0 break-words">
                       {item.email} ({item.role})
                       {item.is_banned ? ` · ${t("admin.banned")}` : ""}
+                      {!item.is_banned ? ` · ${t(`admin.access.${item.access_state}`)}` : ""}
                     </span>
                     <div className="row-actions flex flex-wrap items-stretch gap-2">
-                      {item.role === "user" ? (
-                        <button className="min-h-[34px]" onClick={() => onPromote(item.id)}>{t("admin.promote")}</button>
-                      ) : null}
-                      {item.role === "admin" ? (
-                        <button className="secondary min-h-[34px]" onClick={() => onDemote(item.id)}>{t("admin.demote")}</button>
-                      ) : null}
-                      {item.role !== "super_admin" ? (
-                        item.is_banned ? (
-                          <button className="secondary min-h-[34px]" onClick={() => onSetBan(item.id, false)}>{t("admin.unban")}</button>
-                        ) : (
-                          <button className="secondary min-h-[34px]" onClick={() => onSetBan(item.id, true)}>{t("admin.ban")}</button>
-                        )
-                      ) : null}
+                      {getUserRowActions(item).map((action) => (
+                        <button
+                          key={`${item.id}-${action.key}`}
+                          type="button"
+                          className={`${action.primary ? "" : "secondary "}icon-btn tiny admin-action-btn`}
+                          data-tooltip={action.label}
+                          aria-label={action.label}
+                          onClick={action.onClick}
+                        >
+                          <i className={`bi ${action.iconClass}`} aria-hidden="true" />
+                        </button>
+                      ))}
                     </div>
                   </li>
                 ))}
               </ul>
+              {filteredAdminUsers.length === 0 ? <p className="muted">{t("admin.emptyState")}</p> : null}
             </section>
           ) : null}
 
@@ -760,11 +1091,11 @@ export function ServerProfileModal({
               <h3>{t("server.desktopTitle")}</h3>
               <p className="muted">{t("server.desktopHint")}</p>
               <p className="muted">
-                {t("server.desktopChannel")}: {desktopManifest?.channel || desktopChannel}
+                {t("server.desktopChannel")}: {desktopManifest?.channel || effectiveDesktopChannel}
                 {desktopManifest?.appVersion ? ` · ${t("server.desktopAppVersion")}: ${desktopManifest.appVersion}` : ""}
                 {desktopManifest?.sha ? ` · ${t("server.desktopVersionSha")}: ${desktopManifest.sha.slice(0, 8)}` : ""}
               </p>
-              {desktopChannel === "test" ? <p className="muted text-xs">{t("server.desktopUnsignedWarning")}</p> : null}
+              {effectiveDesktopChannel === "test" ? <p className="muted text-xs">{t("server.desktopUnsignedWarning")}</p> : null}
               {desktopManifestLoading ? <p className="muted">{t("server.desktopLoading")}</p> : null}
               {desktopManifestError ? <p className="muted">{t("server.desktopError")}: {desktopManifestError}</p> : null}
               <div className="grid gap-3 desktop:grid-cols-3">

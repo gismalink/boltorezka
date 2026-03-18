@@ -7,7 +7,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { config } from "./config.js";
 import { connectRedis, redis } from "./redis.js";
-import { db, ensureSchema } from "./db.js";
+import { db } from "./db.js";
+import { runMigrations } from "./migrations.js";
 import { healthRoutes } from "./routes/health.js";
 import { authRoutes } from "./routes/auth.js";
 import { adminRoutes } from "./routes/admin.js";
@@ -119,7 +120,7 @@ process.on("SIGINT", shutdown);
 process.on("SIGTERM", shutdown);
 
 try {
-  await ensureSchema();
+  await runMigrations();
   await connectRedis();
   await app.listen({
     host: "0.0.0.0",

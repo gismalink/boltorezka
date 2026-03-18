@@ -67,6 +67,13 @@ export type WsIncomingChatDeleteEnvelope = {
   payload?: WsIncomingPayload;
 };
 
+export type WsIncomingChatTypingEnvelope = {
+  type: "chat.typing";
+  requestId?: string;
+  idempotencyKey?: string;
+  payload?: WsIncomingPayload;
+};
+
 export type WsIncomingCallMicStateEnvelope = {
   type: CallMicStateEventType;
   requestId?: string;
@@ -104,6 +111,7 @@ export type WsIncomingKnownEnvelope =
   | WsIncomingChatSendEnvelope
   | WsIncomingChatEditEnvelope
   | WsIncomingChatDeleteEnvelope
+  | WsIncomingChatTypingEnvelope
   | WsIncomingCallMicStateEnvelope
   | WsIncomingCallVideoStateEnvelope
   | WsIncomingScreenShareStartEnvelope
@@ -152,6 +160,15 @@ export type ChatDeletedPayload = {
   roomId: string;
   roomSlug: string | null;
   deletedByUserId: string;
+  ts: string;
+};
+
+export type ChatTypingPayload = {
+  roomId: string;
+  roomSlug: string;
+  userId: string;
+  userName: string;
+  isTyping: boolean;
   ts: string;
 };
 

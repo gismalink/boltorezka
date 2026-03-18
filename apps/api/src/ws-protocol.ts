@@ -6,6 +6,7 @@ import type {
   ChatMessagePayload,
   ChatEditedPayload,
   ChatDeletedPayload,
+  ChatTypingPayload,
   MediaTopology,
   CallInitialStatePayload,
   CallInitialStateParticipantPayload,
@@ -100,6 +101,7 @@ export function asKnownWsIncomingEnvelope(
     case "chat.send":
     case "chat.edit":
     case "chat.delete":
+    case "chat.typing":
     case "call.mic_state":
     case "call.video_state":
     case "screen.share.start":
@@ -376,6 +378,13 @@ export function buildChatEditedEnvelope(payload: ChatEditedPayload): { type: "ch
 export function buildChatDeletedEnvelope(payload: ChatDeletedPayload): { type: "chat.deleted"; payload: ChatDeletedPayload } {
   return {
     type: "chat.deleted",
+    payload
+  };
+}
+
+export function buildChatTypingEnvelope(payload: ChatTypingPayload): { type: "chat.typing"; payload: ChatTypingPayload } {
+  return {
+    type: "chat.typing",
     payload
   };
 }
