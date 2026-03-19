@@ -129,6 +129,7 @@ Scope: переход chat media c inline `data:image/...;base64` на object st
 - Validation note (minio smoke gate): добавлен `smoke:minio:storage` и опциональный postdeploy gate `SMOKE_MINIO_STORAGE=1` с отдельным статусом `SMOKE_MINIO_STORAGE_STATUS` в summary.
 - Validation note (test deploy): деплой `test` + postdeploy smoke прошел на SHA `631ade048b1333b65db8bbbd859689c9475a0e3b` c `SMOKE_CHAT_OBJECT_STORAGE=1` и `SMOKE_MINIO_STORAGE=1`; `smoke:minio:storage` корректно отмечен как `skip` при `TEST_CHAT_STORAGE_PROVIDER=localfs`.
 - Validation note (stage C dry cutover): после фикса `minio-test-init` (retry loop ожидания MinIO) test deploy+smoke прошел на SHA `ad46f8a8593cd9ad49cf2aa1f6f89a0f330bde90` с runtime overrides `TEST_CHAT_STORAGE_PROVIDER=minio`, `SMOKE_CHAT_OBJECT_STORAGE=1`, `SMOKE_MINIO_STORAGE=1`; `smoke:chat:object-storage` и `smoke:minio:storage` -> `ok`.
+- Validation note (provider error metrics gate): добавлены метрики `chat_storage_put_ok`/`chat_storage_put_fail` и postdeploy-проверка их дельты (`SMOKE_CHAT_STORAGE_METRICS=1`, `SMOKE_CHAT_STORAGE_PUT_FAIL_THRESHOLD=0`); в test run на SHA `6eec7a3232a6d157bb65266c21bd9e39fceee8f9` получено `ok_delta=1`, `fail_delta=0`.
 
 ## 10) MinIO rollout plan (draft)
 
@@ -154,7 +155,8 @@ Scope: переход chat media c inline `data:image/...;base64` на object st
 
 - [x] В `test` включить provider=`minio` (runtime override в deploy сессии; постоянная фиксация в `infra/.env.host` pending).
 - [x] Smoke: upload-init -> put -> finalize -> history -> download via API endpoint.
-- [ ] Smoke: orphan cleanup/TTL job и проверка метрик ошибок provider.
+- [ ] Smoke: orphan cleanup/TTL job.
+- [x] Проверка метрик ошибок provider в postdeploy (`chat_storage_put_fail_delta`).
 
 ### 10.5 Stage D - Prod cutover
 
