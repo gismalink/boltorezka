@@ -179,7 +179,15 @@ services:
       - -ec
     command:
       - |
-        mc alias set local http://boltorezka-minio-test:9000 "${TEST_MINIO_ROOT_USER:-minioadmin}" "${TEST_MINIO_ROOT_PASSWORD:-minioadmin}"
+        attempt=1
+        until mc alias set local http://boltorezka-minio-test:9000 "${TEST_MINIO_ROOT_USER:-minioadmin}" "${TEST_MINIO_ROOT_PASSWORD:-minioadmin}"; do
+          if [ "$$attempt" -ge 30 ]; then
+            echo "[minio-test-init] failed to reach MinIO after $${attempt} attempts" >&2
+            exit 1
+          fi
+          attempt=$$((attempt + 1))
+          sleep 2
+        done
         mc mb --ignore-existing "local/${TEST_MINIO_BUCKET:-chat-attachments-test}"
         mc anonymous set none "local/${TEST_MINIO_BUCKET:-chat-attachments-test}"
     networks:
