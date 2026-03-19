@@ -258,7 +258,7 @@ export function RoomsPanel({
                 aria-label={t("rooms.deleteAllDeleted")}
                 data-tooltip={t("rooms.deleteAllDeleted")}
               >
-                <i className="bi bi-trash3" aria-hidden="true" /> {t("rooms.deleteAllDeleted")}
+                <i className="bi bi-trash3" aria-hidden="true" />
               </button>
             </div>
             <ul className="rooms-list">
