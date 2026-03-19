@@ -63,6 +63,7 @@ write_summary() {
   printf 'SMOKE_CHAT_OBJECT_STORAGE_STATUS=%q\n' "$CHAT_OBJECT_STORAGE_STATUS" >>"$SUMMARY_FILE_REL"
   printf 'SMOKE_CHAT_ORPHAN_CLEANUP_STATUS=%q\n' "$CHAT_ORPHAN_CLEANUP_STATUS" >>"$SUMMARY_FILE_REL"
   printf 'SMOKE_MINIO_STORAGE_STATUS=%q\n' "$MINIO_STORAGE_STATUS" >>"$SUMMARY_FILE_REL"
+  printf 'SMOKE_VERSION_CACHE_STATUS=%q\n' "$VERSION_CACHE_STATUS" >>"$SUMMARY_FILE_REL"
   printf 'SMOKE_WEB_CRASH_BOUNDARY_STATUS=%q\n' "$WEB_CRASH_BOUNDARY_STATUS" >>"$SUMMARY_FILE_REL"
   printf 'SMOKE_WEB_RNNOISE_STATUS=%q\n' "$WEB_RNNOISE_STATUS" >>"$SUMMARY_FILE_REL"
   printf 'SMOKE_DESKTOP_UPDATE_FEED_STATUS=%q\n' "$DESKTOP_UPDATE_FEED_STATUS" >>"$SUMMARY_FILE_REL"
@@ -739,21 +740,26 @@ else
   echo "[postdeploy-smoke] cookie-mode smokes skipped (TEST_AUTH_COOKIE_MODE != 1)"
 fi
 
-echo "[postdeploy-smoke] smoke:web:version-cache"
-EXPECTED_BUILD_SHA=""
-if [[ -f ".deploy/last-deploy-test.env" ]]; then
-  set +u
-  source ".deploy/last-deploy-test.env"
-  set -u
-  EXPECTED_BUILD_SHA="${DEPLOY_SHA:-}"
-fi
+if [[ "${SMOKE_WEB_VERSION_CACHE:-1}" == "1" ]]; then
+  echo "[postdeploy-smoke] smoke:web:version-cache"
+  EXPECTED_BUILD_SHA=""
+  if [[ -f ".deploy/last-deploy-test.env" ]]; then
+    set +u
+    source ".deploy/last-deploy-test.env"
+    set -u
+    EXPECTED_BUILD_SHA="${DEPLOY_SHA:-}"
+  fi
 
-if [[ -n "$EXPECTED_BUILD_SHA" ]]; then
-  SMOKE_API_URL="$BASE_URL" SMOKE_WEB_BASE_URL="$WEB_BASE_URL" SMOKE_EXPECT_BUILD_SHA="$EXPECTED_BUILD_SHA" npm run smoke:web:version-cache
+  if [[ -n "$EXPECTED_BUILD_SHA" ]]; then
+    SMOKE_API_URL="$BASE_URL" SMOKE_WEB_BASE_URL="$WEB_BASE_URL" SMOKE_EXPECT_BUILD_SHA="$EXPECTED_BUILD_SHA" npm run smoke:web:version-cache
+  else
+    SMOKE_API_URL="$BASE_URL" SMOKE_WEB_BASE_URL="$WEB_BASE_URL" npm run smoke:web:version-cache
+  fi
+  VERSION_CACHE_STATUS="pass"
 else
-  SMOKE_API_URL="$BASE_URL" SMOKE_WEB_BASE_URL="$WEB_BASE_URL" npm run smoke:web:version-cache
+  echo "[postdeploy-smoke] smoke:web:version-cache skipped (SMOKE_WEB_VERSION_CACHE=0)"
+  VERSION_CACHE_STATUS="skip"
 fi
-VERSION_CACHE_STATUS="pass"
 
 if [[ "${SMOKE_WEB_CRASH_BOUNDARY_BROWSER:-1}" == "1" ]]; then
   if [[ ! -d "node_modules/playwright" ]]; then
