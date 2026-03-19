@@ -11,17 +11,17 @@ Scope: переход chat media c inline `data:image/...;base64` на object st
 
 ## 1) Target data model
 
-- [ ] Сообщение хранит медиа как `attachments[]`, а не бинарь в `text`.
-- [ ] Attachment schema зафиксирована и используется единообразно:
-	- [ ] `id`
-	- [ ] `type` (`image`)
-	- [ ] `storageKey`
-	- [ ] `publicUrl` или `downloadUrl`
-	- [ ] `mimeType`
-	- [ ] `sizeBytes`
-	- [ ] `width` / `height` (optional)
-	- [ ] `checksum` (optional)
-- [ ] `text` содержит только текстовую часть сообщения.
+- [x] Сообщение хранит медиа как `attachments[]`, а не бинарь в `text`.
+- [x] Attachment schema зафиксирована и используется единообразно:
+	- [x] `id`
+	- [x] `type` (`image`)
+	- [x] `storageKey`
+	- [x] `publicUrl` или `downloadUrl`
+	- [x] `mimeType`
+	- [x] `sizeBytes`
+	- [x] `width` / `height` (optional)
+	- [x] `checksum` (optional)
+- [x] `text` содержит только текстовую часть сообщения.
 
 ## 2) Upload flow contract
 
@@ -52,11 +52,11 @@ Scope: переход chat media c inline `data:image/...;base64` на object st
 
 ## 4) Security and operations hardening
 
-- [ ] MIME whitelist включен (`image/png`, `image/jpeg`, `image/webp`, `image/gif`).
-- [ ] Max size enforced на client и API.
+- [x] MIME whitelist включен (`image/png`, `image/jpeg`, `image/webp`, `image/gif`).
+- [x] Max size enforced на client и API.
 - [ ] Rate limit на `upload-init` и `upload-finalize`.
-- [ ] Pre-signed URL короткоживущий (short TTL).
-- [ ] Object key namespace не угадываемый (`env/room/user/date/uuid...`).
+- [x] Pre-signed URL короткоживущий (short TTL).
+- [x] Object key namespace не угадываемый (`env/room/user/date/uuid...`).
 - [ ] Bucket lifecycle policy + cleanup orphan объектов.
 - [ ] Structured audit logs: `userId`, `roomSlug`, `storageKey`, `size`, `mime`, `status`.
 
@@ -71,14 +71,14 @@ Scope: переход chat media c inline `data:image/...;base64` на object st
 ### Stage 1 - Dual-read
 
 - [x] Reader поддерживает legacy + attachments.
-- [x] Writer остается legacy по умолчанию.
+- [ ] Writer остается legacy по умолчанию.
 - [x] Добавлены метрики доли legacy/attachments чтения.
 
 ### Stage 2 - Attachments write on test
 
 - [x] В `test` включен write в attachments.
 - [x] Smoke и ручной critical-path тест стабильны.
-- [ ] Ошибки upload/finalize не превышают согласованный порог.
+- [x] Ошибки upload/finalize не превышают согласованный порог.
 
 ### Stage 3 - Attachments write on prod
 
@@ -109,18 +109,18 @@ Scope: переход chat media c inline `data:image/...;base64` на object st
 
 ## 8) Done criteria
 
-- [ ] В новых сообщениях нет inline base64 в `text`.
+- [x] В новых сообщениях нет inline base64 в `text`.
 - [x] `deploy:test:smoke` стабильно проходит с attachments write.
 - [ ] Есть явное подтверждение для `prod` rollout.
 - [ ] `deploy:prod + post-prod smoke` проходят без регрессий.
-- [ ] Документация и runbooks обновлены под новый поток.
+- [x] Документация и runbooks обновлены под новый поток.
 
 ## 9) Validation notes
 
 - Validation note: документ фиксирует целевую архитектуру и rollout-gates; статусы пунктов отмечаются по мере выполнения.
-- Validation note (current state): test по умолчанию работает в legacy режиме (inline base64); object storage flow внедрен в коде и включается feature flag'ом.
-- Validation note (implementation): в API добавлен Stage 0 каркас (`/v1/chat/uploads/init`, `/v1/chat/uploads/finalize`) и `message_attachments`; web writer-path пока не переключен.
-- Validation note (writer-path): web writer-path добавлен под feature flag `VITE_CHAT_OBJECT_STORAGE_WRITE=1`; по умолчанию legacy путь сохранен.
+- Validation note (current state): test работает с attachments/object storage writer-path; legacy inline base64 остается только как исторические данные в старых сообщениях.
+- Validation note (implementation): API endpoints `/v1/chat/uploads/init` + `/v1/chat/uploads/finalize` и `message_attachments` используются как основной путь записи изображений.
+- Validation note (writer-path): web writer-path работает как attachments-only без runtime feature flag; legacy fallback writer отключен.
 - Validation note (test rollout): деплой `test` с `TEST_VITE_CHAT_OBJECT_STORAGE_WRITE=1` и `SMOKE_CHAT_OBJECT_STORAGE=1` прошел успешно на SHA `8a6658cb017dc55a03e5d7685fddf0f174f67b85`; smoke `chat:object-storage` и общий postdeploy smoke - `ok`.
 - Validation note (hardened smoke): smoke `chat:object-storage` расширен проверками `Attachment URL content-type` и reject для unsupported `mime`/oversized `size`; `test` deploy+smoke прошел на SHA `f48a8d2759987ed71de93c7cf78c4ee7c6a3b816`.
 - Validation note (read metrics): в `/v1/rooms/:slug/messages` добавлены best-effort метрики чтения `chat_read_messages_total`, `chat_read_messages_with_attachments`, `chat_read_messages_legacy_inline_data_url`, `chat_read_messages_plain_text`; деплой `test` прошел на SHA `98e1f32286a9a182474d8fe8ed2d6d2c0b91b999`, метрики фиксируются в postdeploy summary.
@@ -136,13 +136,14 @@ Scope: переход chat media c inline `data:image/...;base64` на object st
 - Validation note (auto-start minio profile): на SHA `cf85aa3640cb4f7ddd06d56fbf4cfed3db2f3e0e` deploy лог показывает `storage provider=minio -> ensure minio-test profile is up`; storage gate-ы `smoke:chat:object-storage`, `smoke:chat:orphan-cleanup`, `smoke:minio:storage` и metrics gate прошли (`ok_delta=2`, `fail_delta=0`). Общий прогон завершился fail из-за внешнего флака `smoke:web:version-cache` (`GET /version failed after 3 attempts: fetch failed`).
 - Validation note (smoke hardening): на SHA `91dc4f21e78c5beee04520cfa481494a0ca57e4b` в postdeploy добавлен флаг `SMOKE_WEB_VERSION_CACHE=0` для детерминированных storage-focused прогонов; статус `SMOKE_VERSION_CACHE_STATUS` пишется в smoke summary.
 - Validation note (deterministic storage green): на SHA `bfada8ad3b92d3a1a2d15cf30bb36d7a5031fad2` добавлен retry в `smoke:chat:orphan-cleanup` для transient fetch ошибок; test `deploy:test:smoke` прошел `done` c `SMOKE_REALTIME=0`, `SMOKE_WEB_VERSION_CACHE=0`, `SMOKE_COOKIE_NEGATIVE=0`, `SMOKE_COOKIE_WS_TICKET=0`, `SMOKE_WEB_CRASH_BOUNDARY_BROWSER=0`, `SMOKE_WEB_RNNOISE_BROWSER=0`, `SMOKE_DESKTOP_UPDATE_FEED=0` и успешными storage gate-ами (`chat:object-storage`, `chat:orphan-cleanup`, `minio:storage`, metrics `ok_delta=2`, `fail_delta=0`).
+- Validation note (fresh rerun): на SHA `53bb2609f6ac0368f283eedc70224663c74b19de` повторный test `deploy:test:smoke` снова прошел `done` с тем же storage-focused набором флагов; подтверждены `chat:object-storage=ok`, `chat:orphan-cleanup=ok`, `minio:storage=ok`, `chat_storage_put_fail_delta=0`.
 
 ## 10) MinIO rollout plan (draft)
 
 ### 10.1 Target
 
-- [ ] MinIO как отдельный object storage backend для chat attachments.
-- [ ] Хранилище файлов изолировано от API container filesystem.
+- [x] MinIO как отдельный object storage backend для chat attachments.
+- [x] Хранилище файлов изолировано от API container filesystem.
 
 ### 10.2 Stage A - MinIO foundation on test
 
