@@ -28,4 +28,8 @@ export type AppConfig = {
   livekitApiKey: string;
   livekitApiSecret: string;
   livekitTokenTtlSec: number;
+  chatUploadMaxSizeBytes: number;
+  chatUploadAllowedMimeTypes: string[];
+  chatUploadInitTtlSec: number;
+  chatObjectStoragePublicBaseUrl: string;
 };

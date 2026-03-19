@@ -16,6 +16,7 @@ import { roomsRoutes } from "./routes/rooms.js";
 import { realtimeRoutes } from "./routes/realtime.js";
 import { telemetryRoutes } from "./routes/telemetry.js";
 import { memberPreferencesRoutes } from "./routes/member-preferences.js";
+import { chatUploadsRoutes } from "./routes/chat-uploads.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -102,6 +103,7 @@ await app.register(healthRoutes);
 await app.register(authRoutes);
 await app.register(adminRoutes);
 await app.register(roomsRoutes);
+await app.register(chatUploadsRoutes);
 await app.register(realtimeRoutes);
 await app.register(telemetryRoutes);
 await app.register(memberPreferencesRoutes);

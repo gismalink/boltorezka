@@ -46,6 +46,7 @@
     "smoke:auth:cookie-mode": "node ./scripts/smoke/smoke-auth-cookie-mode.mjs",
     "smoke:auth:cookie-negative": "node ./scripts/smoke/smoke-auth-cookie-negative.mjs",
     "smoke:auth:cookie-ws-ticket": "node ./scripts/smoke/smoke-auth-cookie-ws-ticket.mjs",
+    "smoke:chat:object-storage": "node ./scripts/smoke/smoke-chat-object-storage.mjs",
     "smoke:sso": "node ./scripts/smoke/smoke-sso-redirect.mjs",
     "smoke:realtime": "node ./scripts/smoke/smoke-realtime.mjs",
     "smoke:livekit:token-flow": "node ./scripts/smoke/smoke-livekit-token-flow.mjs",

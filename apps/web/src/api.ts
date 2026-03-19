@@ -26,6 +26,32 @@ type ApiErrorPayload = {
   [key: string]: unknown;
 };
 
+export type ChatUploadInitResponse = {
+  uploadId: string;
+  storageKey: string;
+  uploadUrl: string;
+  method: "PUT";
+  expiresInSec: number;
+  requiredHeaders: Record<string, string>;
+};
+
+export type ChatUploadFinalizeResponse = {
+  message: RoomMessagesResponse["messages"][number];
+  attachment: {
+    id: string;
+    message_id: string;
+    type: "image";
+    storage_key: string;
+    download_url: string | null;
+    mime_type: string;
+    size_bytes: number;
+    width: number | null;
+    height: number | null;
+    checksum: string | null;
+    created_at: string;
+  };
+};
+
 const CONFIGURED_API_ORIGIN = resolveApiBase();
 
 function withConfiguredApiOrigin(path: string): string {
@@ -142,7 +168,9 @@ const endpoints = {
   adminUsers: "/v1/admin/users",
   adminServerAudioQuality: "/v1/admin/server/audio-quality",
   adminServerChatImagePolicy: "/v1/admin/server/chat-image-policy",
-  memberPreferences: "/v1/member-preferences"
+  memberPreferences: "/v1/member-preferences",
+  chatUploadInit: "/v1/chat/uploads/init",
+  chatUploadFinalize: "/v1/chat/uploads/finalize"
 } as const;
 
 const withId = (basePath: string, id: string) => `${basePath}/${encodeURIComponent(id)}`;
@@ -152,6 +180,20 @@ const withJsonBody = (method: "POST" | "PUT" | "PATCH" | "DELETE", body?: unknow
   method,
   ...(typeof body === "undefined" ? {} : { body: JSON.stringify(body) })
 });
+
+async function uploadBinary(path: string, body: Blob, headers: Record<string, string>) {
+  const response = await fetch(withConfiguredApiOrigin(path), {
+    method: "PUT",
+    credentials: "include",
+    headers,
+    body
+  });
+
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}));
+    throw new ApiError(response.status, payload as ApiErrorPayload);
+  }
+}
 
 export const api = {
   version: () => fetchJson<{ appVersion: string; appBuildSha: string; ts: string }>(
@@ -294,5 +336,32 @@ export const api = {
       `${endpoints.memberPreferences}/${encodeURIComponent(targetUserId)}`,
       token,
       withJsonBody("PUT", input)
-    )
+    ),
+  chatUploadInit: (token: string, input: { roomSlug: string; mimeType: string; sizeBytes: number }) =>
+    fetchJson<ChatUploadInitResponse>(
+      endpoints.chatUploadInit,
+      token,
+      withJsonBody("POST", input)
+    ),
+  uploadChatObject: (uploadUrl: string, body: Blob, headers: Record<string, string>) =>
+    uploadBinary(uploadUrl, body, headers),
+  chatUploadFinalize: (
+    token: string,
+    input: {
+      uploadId: string;
+      roomSlug: string;
+      storageKey: string;
+      mimeType: string;
+      sizeBytes: number;
+      text?: string;
+      downloadUrl?: string;
+      width?: number;
+      height?: number;
+      checksum?: string;
+    }
+  ) => fetchJson<ChatUploadFinalizeResponse>(
+    endpoints.chatUploadFinalize,
+    token,
+    withJsonBody("POST", input)
+  )
 };

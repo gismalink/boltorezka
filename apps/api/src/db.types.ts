@@ -61,6 +61,23 @@ export type RoomMessageRow = {
   created_at: string;
   edited_at?: string | null;
   user_name: string;
+  attachments?: MessageAttachmentRow[];
+};
+
+export type MessageAttachmentType = "image";
+
+export type MessageAttachmentRow = {
+  id: string;
+  message_id: string;
+  type: MessageAttachmentType;
+  storage_key: string;
+  download_url: string | null;
+  mime_type: string;
+  size_bytes: number;
+  width: number | null;
+  height: number | null;
+  checksum: string | null;
+  created_at: string;
 };
 
 export type InsertedMessageRow = {

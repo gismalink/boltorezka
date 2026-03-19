@@ -1,87 +1,123 @@
-# Chat Media Object Storage Migration Plan (2026-03-19)
+# Chat Media Object Storage Checklist
+Date: 2026-03-19
+Scope: переход chat media c inline `data:image/...;base64` на object storage с backward compatibility.
 
-Цель: уйти от inline `data:image/...;base64` в тексте chat-message к хранению медиа в object storage, сохранив backward compatibility.
+## 0) Scope and constraints
 
-## 1) Почему меняем
+- [x] Rollout только через `test` до отдельного подтверждения `prod`.
+- [x] Feature branch обязателен, `prod` только после merge в `main`.
+- [x] Переход выполняется без массовой миграции исторических сообщений на старте.
+- [ ] Для каждого этапа есть rollback path и smoke-подтверждение.
 
-Текущий формат (base64 в message text) прост, но дает технический долг:
-- растут payload в WS/API и размер записи в БД;
-- сложнее кэширование и CDN раздача;
-- нет отдельного жизненного цикла вложений (TTL/GC/аудит);
-- сложнее антивирус/модерация/лимиты по типам файлов.
+## 1) Target data model
 
-## 2) Целевая модель
+- [ ] Сообщение хранит медиа как `attachments[]`, а не бинарь в `text`.
+- [ ] Attachment schema зафиксирована и используется единообразно:
+	- [ ] `id`
+	- [ ] `type` (`image`)
+	- [ ] `storageKey`
+	- [ ] `publicUrl` или `downloadUrl`
+	- [ ] `mimeType`
+	- [ ] `sizeBytes`
+	- [ ] `width` / `height` (optional)
+	- [ ] `checksum` (optional)
+- [ ] `text` содержит только текстовую часть сообщения.
 
-Message хранит attachment metadata, а не бинарь:
-- `id`
-- `type` (`image`)
-- `storageKey`
-- `publicUrl` или `downloadUrl`
-- `mimeType`
-- `sizeBytes`
-- `width` / `height` (опционально)
-- `checksum` (опционально)
+## 2) Upload flow contract
 
-Текст и вложения разделены:
-- `text` — только текст сообщения;
-- `attachments[]` — список медиа.
+### 2.1 Client -> API (init upload)
 
-## 3) Архитектура upload flow
+- [x] Клиент отправляет metadata (`mime`, `size`, `roomSlug`, `userId`).
+- [x] API валидирует права доступа и лимиты.
+- [x] API возвращает `storageKey` + pre-signed URL + TTL.
 
-### 3.1 Client -> API (init upload)
-- Клиент отправляет metadata (mime, size, room, user).
-- API валидирует лимиты и права.
-- API выдает pre-signed URL + `storageKey`.
+### 2.2 Client -> Object Storage (PUT)
 
-### 3.2 Client -> Object Storage
-- Прямая загрузка файла по pre-signed URL.
-- Клиент получает успех/ошибку upload.
+- [x] Клиент загружает файл напрямую в object storage по pre-signed URL.
+- [ ] В клиенте и API зафиксированы одинаковые лимиты mime/size.
 
-### 3.3 Client -> API (finalize)
-- Клиент подтверждает upload (`storageKey`).
-- API создает message с `attachments[]`.
-- WS broadcast рассылает message с attachment metadata.
+### 2.3 Client -> API (finalize)
 
-## 4) Backward compatibility
+- [ ] Клиент подтверждает upload по `storageKey`.
+- [x] API проверяет наличие объекта, размер, mime, ownership.
+- [x] API создает message c `attachments[]`.
+- [x] WS broadcast отправляет только metadata (без inline base64).
 
-Переход без массовой миграции старых сообщений:
-- reader-путь поддерживает legacy markdown/base64;
-- writer-путь для новых сообщений использует только object storage;
-- fallback включен до завершения миграции клиентов.
+## 3) Backward compatibility
 
-## 5) Rollout этапы
+- [ ] Reader поддерживает legacy markdown/base64 сообщения.
+- [ ] Writer-path для новых сообщений может быть переключен на attachments feature flag.
+- [ ] Legacy fallback сохраняется до завершения обновления клиентов.
+- [ ] Формат WS/API payload versioned (или эквивалентный backward-safe контракт).
 
-1. `Stage 0` — подготовка API + storage bucket + signed URL.
-2. `Stage 1` — dual-read (legacy + attachments), write остается legacy.
-3. `Stage 2` — write в attachments для test, метрики и smoke.
-4. `Stage 3` — write в attachments для prod, legacy write off.
-5. `Stage 4` — опциональный cleanup legacy base64 в исторических сообщениях.
+## 4) Security and operations hardening
 
-## 6) Безопасность и эксплуатация
+- [ ] MIME whitelist включен (`image/png`, `image/jpeg`, `image/webp`, `image/gif`).
+- [ ] Max size enforced на client и API.
+- [ ] Rate limit на `upload-init` и `upload-finalize`.
+- [ ] Pre-signed URL короткоживущий (short TTL).
+- [ ] Object key namespace не угадываемый (`env/room/user/date/uuid...`).
+- [ ] Bucket lifecycle policy + cleanup orphan объектов.
+- [ ] Structured audit logs: `userId`, `roomSlug`, `storageKey`, `size`, `mime`, `status`.
 
-Обязательно:
-- whitelist mime (`image/png`, `image/jpeg`, `image/webp`, `image/gif`);
-- max size на API и на client;
-- rate limit upload-init/finalize;
-- short TTL у pre-signed URL;
-- lifecycle policy bucket + GC orphan-объектов;
-- structured audit logs (userId, roomSlug, storageKey, size, mime).
+## 5) Rollout phases
 
-## 7) Тестирование (gate)
+### Stage 0 - Infrastructure and API readiness
 
-Новые smoke для test:
-- upload-init -> PUT -> finalize -> message visible;
-- attachment URL доступен и отдает корректный content-type;
-- rejected mime/size дает ожидаемую ошибку;
-- WS payload не содержит inline base64.
+- [ ] Подготовлен storage bucket и политики доступа.
+- [x] Реализованы API endpoints `upload/init` и `upload/finalize`.
+- [x] Добавлены серверные проверки finalize (object exists + metadata validation).
 
-## 8) SRP в web-client
+### Stage 1 - Dual-read
 
-Разделение ответственности:
-- `chat composer state` (UI state);
-- `chat image parsing/compression` (pure utils/module);
-- `chat upload transport` (API layer);
-- `chat message send` (domain action);
-- `chat message render` (view only).
+- [ ] Reader поддерживает legacy + attachments.
+- [ ] Writer остается legacy по умолчанию.
+- [ ] Добавлены метрики доли legacy/attachments чтения.
 
-Это снижает связность App.tsx и уменьшает риск регрессий paste/send.
+### Stage 2 - Attachments write on test
+
+- [ ] В `test` включен write в attachments.
+- [ ] Smoke и ручной critical-path тест стабильны.
+- [ ] Ошибки upload/finalize не превышают согласованный порог.
+
+### Stage 3 - Attachments write on prod
+
+- [ ] После успешного test-gate включен write в attachments на `prod`.
+- [ ] Legacy write отключен.
+- [ ] Post-deploy smoke и мониторинг окна стабилизации пройдены.
+
+### Stage 4 - Legacy cleanup (optional)
+
+- [ ] Подготовлен план очистки historical inline base64.
+- [ ] Очистка выполнена безопасно и обратимо (batch + verification).
+
+## 6) Test gates (must pass)
+
+- [ ] `upload-init -> PUT -> finalize -> message visible`.
+- [ ] Attachment URL отдает корректный `content-type`.
+- [ ] Rejected mime/size возвращает ожидаемую ошибку.
+- [ ] WS payload не содержит inline base64.
+- [ ] Reconnect/reload не ломает рендер вложений.
+
+## 7) Web SRP checklist
+
+- [ ] `chat composer state` изолирован от transport/storage логики.
+- [x] `chat image parsing/compression` живет в отдельном модуле.
+- [ ] `chat upload transport` выделен в API/domain слой.
+- [ ] `chat message send` не содержит UI-специфичной логики.
+- [ ] `chat message render` работает только с view-model.
+
+## 8) Done criteria
+
+- [ ] В новых сообщениях нет inline base64 в `text`.
+- [ ] `deploy:test:smoke` стабильно проходит с attachments write.
+- [ ] Есть явное подтверждение для `prod` rollout.
+- [ ] `deploy:prod + post-prod smoke` проходят без регрессий.
+- [ ] Документация и runbooks обновлены под новый поток.
+
+## 9) Validation notes
+
+- Validation note: документ фиксирует целевую архитектуру и rollout-gates; статусы пунктов отмечаются по мере выполнения.
+- Validation note (current state): test по умолчанию работает в legacy режиме (inline base64); object storage flow внедрен в коде и включается feature flag'ом.
+- Validation note (implementation): в API добавлен Stage 0 каркас (`/v1/chat/uploads/init`, `/v1/chat/uploads/finalize`) и `message_attachments`; web writer-path пока не переключен.
+- Validation note (writer-path): web writer-path добавлен под feature flag `VITE_CHAT_OBJECT_STORAGE_WRITE=1`; по умолчанию legacy путь сохранен.

@@ -6,6 +6,7 @@ import {
   type KeyboardEvent,
   type SetStateAction
 } from "react";
+import { api } from "../../api";
 import type { Message, MessagesCursor, User } from "../../domain";
 import type { ChatController } from "../../services";
 import {
@@ -30,6 +31,8 @@ type UseChatComposerActionsParams = {
   setMessagesHasMore: (value: boolean) => void;
   setMessagesNextCursor: (cursor: MessagesCursor | null) => void;
   user: User | null;
+  authToken: string;
+  objectStorageWriteEnabled: boolean;
   chatText: string;
   setChatText: (value: string) => void;
   editingMessageId: string | null;
@@ -56,6 +59,8 @@ export function useChatComposerActions({
   setMessagesHasMore,
   setMessagesNextCursor,
   user,
+  authToken,
+  objectStorageWriteEnabled,
   chatText,
   setChatText,
   editingMessageId,
@@ -88,78 +93,120 @@ export function useChatComposerActions({
 
   const sendMessage = useCallback((event: FormEvent) => {
     event.preventDefault();
-    if (!chatRoomSlug) {
-      pushToast(selectChannelPlaceholderMessage);
-      return;
-    }
-
-    if (editingMessageId) {
-      const nextText = chatText.trim();
-      if (!nextText) {
+    void (async () => {
+      if (!chatRoomSlug) {
+        pushToast(selectChannelPlaceholderMessage);
         return;
       }
 
-      const requestId = sendWsEvent(
-        "chat.edit",
-        {
-          messageId: editingMessageId,
-          text: nextText,
-          roomSlug: chatRoomSlug
-        },
-        { withIdempotency: true, maxRetries: maxChatRetries }
-      );
+      if (editingMessageId) {
+        const nextText = chatText.trim();
+        if (!nextText) {
+          return;
+        }
 
-      if (!requestId) {
-        pushToast(serverErrorMessage);
+        const requestId = sendWsEvent(
+          "chat.edit",
+          {
+            messageId: editingMessageId,
+            text: nextText,
+            roomSlug: chatRoomSlug
+          },
+          { withIdempotency: true, maxRetries: maxChatRetries }
+        );
+
+        if (!requestId) {
+          pushToast(serverErrorMessage);
+          return;
+        }
+
+        setChatText("");
+        setEditingMessageId(null);
+        sendChatTypingState(chatRoomSlug, false);
+        return;
+      }
+
+      let baseText = chatText.trim();
+      const extractedInlineImageSource = !pendingChatImageDataUrl
+        ? extractImageSourceFromClipboardText(baseText)
+        : "";
+      const imageSource = pendingChatImageDataUrl || extractedInlineImageSource;
+
+      if (imageSource.startsWith("data:image/") && imageSource.length > serverChatImagePolicy.maxDataUrlLength) {
+        pushToast(chatImageTooLargeMessage);
+        return;
+      }
+
+      if (extractedInlineImageSource) {
+        baseText = baseText
+          .replace(extractedInlineImageSource, "")
+          .replace(/!\[[^\]]*\]\(\s*\)/g, "")
+          .replace(/\(\s*\)/g, "")
+          .trim();
+      }
+
+      if (objectStorageWriteEnabled && imageSource.startsWith("data:image/")) {
+        try {
+          const imageResponse = await fetch(imageSource);
+          const imageBlob = await imageResponse.blob();
+          const mimeType = String(imageBlob.type || "image/jpeg").trim().toLowerCase();
+          const sizeBytes = Number(imageBlob.size || 0);
+          if (!mimeType || sizeBytes <= 0) {
+            pushToast(serverErrorMessage);
+            return;
+          }
+
+          const initUpload = await api.chatUploadInit(authToken, {
+            roomSlug: chatRoomSlug,
+            mimeType,
+            sizeBytes
+          });
+
+          await api.uploadChatObject(initUpload.uploadUrl, imageBlob, initUpload.requiredHeaders || { "content-type": mimeType });
+
+          await api.chatUploadFinalize(authToken, {
+            uploadId: initUpload.uploadId,
+            roomSlug: chatRoomSlug,
+            storageKey: initUpload.storageKey,
+            mimeType,
+            sizeBytes,
+            text: baseText
+          });
+
+          setChatText("");
+          setPendingChatImageDataUrl(null);
+          sendChatTypingState(chatRoomSlug, false);
+          return;
+        } catch {
+          pushToast(serverErrorMessage);
+          return;
+        }
+      }
+
+      const imageMarkdown = imageSource ? `![скриншот](${imageSource})` : "";
+      const outgoingText = [baseText, imageMarkdown].filter(Boolean).join("\n");
+      if (!outgoingText) {
+        return;
+      }
+
+      const result = chatController.sendMessage(outgoingText, chatRoomSlug, user, maxChatRetries);
+      if (!result.sent) {
         return;
       }
 
       setChatText("");
-      setEditingMessageId(null);
+      setPendingChatImageDataUrl(null);
       sendChatTypingState(chatRoomSlug, false);
-      return;
-    }
-
-    let baseText = chatText.trim();
-    const extractedInlineImageSource = !pendingChatImageDataUrl
-      ? extractImageSourceFromClipboardText(baseText)
-      : "";
-    const imageSource = pendingChatImageDataUrl || extractedInlineImageSource;
-
-    if (imageSource.startsWith("data:image/") && imageSource.length > serverChatImagePolicy.maxDataUrlLength) {
-      pushToast(chatImageTooLargeMessage);
-      return;
-    }
-
-    if (extractedInlineImageSource) {
-      baseText = baseText
-        .replace(extractedInlineImageSource, "")
-        .replace(/!\[[^\]]*\]\(\s*\)/g, "")
-        .replace(/\(\s*\)/g, "")
-        .trim();
-    }
-
-    const imageMarkdown = imageSource ? `![скриншот](${imageSource})` : "";
-    const outgoingText = [baseText, imageMarkdown].filter(Boolean).join("\n");
-    if (!outgoingText) {
-      return;
-    }
-
-    const result = chatController.sendMessage(outgoingText, chatRoomSlug, user, maxChatRetries);
-    if (!result.sent) {
-      return;
-    }
-
-    setChatText("");
-    setPendingChatImageDataUrl(null);
-    sendChatTypingState(chatRoomSlug, false);
+    })();
   }, [
+    authToken,
     chatController,
     chatImageTooLargeMessage,
     chatRoomSlug,
     chatText,
     editingMessageId,
     maxChatRetries,
+    objectStorageWriteEnabled,
     pendingChatImageDataUrl,
     pushToast,
     selectChannelPlaceholderMessage,

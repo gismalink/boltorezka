@@ -216,7 +216,8 @@ export async function handleChatSend(
     userName: state.userName,
     text: chatMessage.body,
     createdAt: chatMessage.created_at,
-    senderRequestId: requestId || null
+    senderRequestId: requestId || null,
+    attachments: []
   };
 
   if (idempotencyKey) {

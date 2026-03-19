@@ -1,4 +1,11 @@
-import type { RoomCategoryRow, RoomListRow, RoomMessageRow, RoomRow, UserRow } from "./db.types.ts";
+import type {
+  MessageAttachmentRow,
+  RoomCategoryRow,
+  RoomListRow,
+  RoomMessageRow,
+  RoomRow,
+  UserRow
+} from "./db.types.ts";
 
 export type AudioQuality = "retro" | "low" | "standard" | "high";
 
@@ -89,4 +96,18 @@ export type ServerChatImagePolicyResponse = {
   maxDataUrlLength: number;
   maxImageSide: number;
   jpegQuality: number;
+};
+
+export type ChatUploadInitResponse = {
+  uploadId: string;
+  storageKey: string;
+  uploadUrl: string;
+  method: "PUT";
+  expiresInSec: number;
+  requiredHeaders: Record<string, string>;
+};
+
+export type ChatUploadFinalizeResponse = {
+  message: RoomMessageRow;
+  attachment: MessageAttachmentRow;
 };

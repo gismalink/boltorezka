@@ -126,6 +126,18 @@ export type WsOutgoingEnvelope = {
   payload: Record<string, unknown>;
 };
 
+export type ChatAttachmentPayload = {
+  id: string;
+  type: "image";
+  storageKey: string;
+  downloadUrl: string | null;
+  mimeType: string;
+  sizeBytes: number;
+  width: number | null;
+  height: number | null;
+  checksum: string | null;
+};
+
 export type PresenceUser = {
   userId: string;
   userName: string;
@@ -144,6 +156,7 @@ export type ChatMessagePayload = {
   text: string;
   createdAt: string;
   senderRequestId: string | null;
+  attachments?: ChatAttachmentPayload[];
 };
 
 export type ChatEditedPayload = {

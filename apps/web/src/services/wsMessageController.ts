@@ -138,13 +138,46 @@ export class WsMessageController {
   }
 
   private buildDeliveredChatMessage(payload: Record<string, unknown>, fallbackId?: string): Message {
+    const attachmentsRaw = Array.isArray(payload.attachments)
+      ? payload.attachments
+      : [];
+
+    const attachments = attachmentsRaw
+      .filter((item): item is Record<string, unknown> => Boolean(item && typeof item === "object"))
+      .map((item) => ({
+        id: String(item.id || crypto.randomUUID()),
+        message_id: String(item.messageId || item.message_id || payload.id || fallbackId || ""),
+        type: "image" as const,
+        storage_key: String(item.storageKey || item.storage_key || ""),
+        download_url: item.downloadUrl === null || item.download_url === null
+          ? null
+          : String(item.downloadUrl || item.download_url || ""),
+        mime_type: String(item.mimeType || item.mime_type || ""),
+        size_bytes: Number(item.sizeBytes || item.size_bytes || 0),
+        width: typeof item.width === "number" ? item.width : null,
+        height: typeof item.height === "number" ? item.height : null,
+        checksum: item.checksum === null ? null : String(item.checksum || "") || null,
+        created_at: String(item.createdAt || item.created_at || new Date().toISOString())
+      }))
+      .filter((item) => item.storage_key && item.mime_type && Number.isFinite(item.size_bytes) && item.size_bytes > 0);
+
+    const baseText = String(payload.text || "");
+    const attachmentMarkdown = attachments
+      .map((attachment) => String(attachment.download_url || "").trim())
+      .filter((url) => url.length > 0)
+      .filter((url, index, all) => all.indexOf(url) === index)
+      .filter((url) => !baseText.includes(url))
+      .map((url) => `![скриншот](${url})`)
+      .join("\n");
+
     return {
       id: String(payload.id || fallbackId || crypto.randomUUID()),
       room_id: String(payload.roomId || ""),
       user_id: String(payload.userId || ""),
-      text: String(payload.text || ""),
+      text: [baseText, attachmentMarkdown].filter(Boolean).join("\n"),
       created_at: String(payload.createdAt || new Date().toISOString()),
       user_name: String(payload.userName || "unknown"),
+      attachments,
       deliveryStatus: "delivered"
     };
   }

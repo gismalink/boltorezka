@@ -111,6 +111,7 @@ const CLIENT_BUILD_SHA = String(import.meta.env.VITE_APP_BUILD_SHA || CLIENT_BUI
 const CLIENT_BUILD_DATE = String(import.meta.env.VITE_APP_BUILD_DATE || "").trim();
 const CLIENT_BUILD_DATE_LABEL = formatBuildDateLabel(CLIENT_BUILD_VERSION, CLIENT_BUILD_DATE);
 const COOKIE_MODE = import.meta.env.VITE_AUTH_COOKIE_MODE === "1";
+const CHAT_OBJECT_STORAGE_WRITE_ENABLED = import.meta.env.VITE_CHAT_OBJECT_STORAGE_WRITE === "1";
 const CHAT_TYPING_TTL_MS = 4500;
 const CHAT_TYPING_PING_INTERVAL_MS = 1800;
 
@@ -1160,6 +1161,8 @@ export function App() {
     setMessagesHasMore,
     setMessagesNextCursor,
     user,
+    authToken: token,
+    objectStorageWriteEnabled: CHAT_OBJECT_STORAGE_WRITE_ENABLED,
     chatText,
     setChatText,
     editingMessageId,

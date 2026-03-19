@@ -24,10 +24,35 @@ export class ChatController {
     this.options = options;
   }
 
+  private normalizeMessageForRender(message: Message): Message {
+    const baseText = String(message.text || "").trim();
+    const attachments = Array.isArray(message.attachments) ? message.attachments : [];
+    if (attachments.length === 0) {
+      return message;
+    }
+
+    const attachmentMarkdown = attachments
+      .map((attachment) => String(attachment.download_url || "").trim())
+      .filter((url) => url.length > 0)
+      .filter((url, index, all) => all.indexOf(url) === index)
+      .filter((url) => !baseText.includes(url))
+      .map((url) => `![скриншот](${url})`)
+      .join("\n");
+
+    if (!attachmentMarkdown) {
+      return message;
+    }
+
+    return {
+      ...message,
+      text: [baseText, attachmentMarkdown].filter(Boolean).join("\n")
+    };
+  }
+
   async loadRecentMessages(token: string, roomSlug: string) {
     try {
       const res = await api.roomMessages(token, roomSlug, { limit: 50 });
-      this.options.setMessages(() => res.messages);
+      this.options.setMessages(() => res.messages.map((message) => this.normalizeMessageForRender(message)));
       this.options.setMessagesHasMore(Boolean(res.pagination?.hasMore));
       this.options.setMessagesNextCursor(res.pagination?.nextCursor ?? null);
     } catch (error) {
@@ -54,7 +79,9 @@ export class ChatController {
 
       this.options.setMessages((prev) => {
         const existingIds = new Set(prev.map((item) => item.id));
-        const olderPage = res.messages.filter((item) => !existingIds.has(item.id));
+        const olderPage = res.messages
+          .map((message) => this.normalizeMessageForRender(message))
+          .filter((item) => !existingIds.has(item.id));
         return [...olderPage, ...prev];
       });
 

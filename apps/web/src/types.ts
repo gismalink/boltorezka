@@ -59,8 +59,23 @@ export type Message = {
   created_at: string;
   edited_at?: string | null;
   user_name: string;
+  attachments?: ChatAttachment[];
   clientRequestId?: string;
   deliveryStatus?: "sending" | "delivered" | "failed";
+};
+
+export type ChatAttachment = {
+  id: string;
+  message_id: string;
+  type: "image";
+  storage_key: string;
+  download_url: string | null;
+  mime_type: string;
+  size_bytes: number;
+  width: number | null;
+  height: number | null;
+  checksum: string | null;
+  created_at: string;
 };
 
 export type MessagesCursor = {

@@ -49,6 +49,11 @@ const authSessionCookieSameSite: "Lax" | "Strict" | "None" = authSessionCookieSa
     ? "None"
     : "Lax";
 const authSessionCookieMaxAgeSecRaw = Number.parseInt(String(process.env.AUTH_SESSION_COOKIE_MAX_AGE_SEC || `${60 * 60 * 24 * 30}`), 10);
+const chatUploadMaxSizeBytesRaw = Number.parseInt(String(process.env.CHAT_UPLOAD_MAX_SIZE_BYTES || `${5 * 1024 * 1024}`), 10);
+const chatUploadInitTtlSecRaw = Number.parseInt(String(process.env.CHAT_UPLOAD_INIT_TTL_SEC || "600"), 10);
+const chatUploadAllowedMimeTypes = parseCsv(
+  process.env.CHAT_UPLOAD_ALLOWED_MIME_TYPES || "image/png,image/jpeg,image/webp,image/gif"
+);
 
 export const config: AppConfig = {
   port: Number(process.env.PORT || 8080),
@@ -86,5 +91,15 @@ export const config: AppConfig = {
   livekitApiSecret: String(process.env.LIVEKIT_API_SECRET || "").trim(),
   livekitTokenTtlSec: Number.isFinite(livekitTokenTtlSecRaw) && livekitTokenTtlSecRaw > 0
     ? livekitTokenTtlSecRaw
-    : 1800
+    : 1800,
+  chatUploadMaxSizeBytes: Number.isFinite(chatUploadMaxSizeBytesRaw) && chatUploadMaxSizeBytesRaw > 0
+    ? chatUploadMaxSizeBytesRaw
+    : 5 * 1024 * 1024,
+  chatUploadAllowedMimeTypes: chatUploadAllowedMimeTypes.length > 0
+    ? chatUploadAllowedMimeTypes
+    : ["image/png", "image/jpeg", "image/webp", "image/gif"],
+  chatUploadInitTtlSec: Number.isFinite(chatUploadInitTtlSecRaw) && chatUploadInitTtlSecRaw > 0
+    ? chatUploadInitTtlSecRaw
+    : 600,
+  chatObjectStoragePublicBaseUrl: String(process.env.CHAT_OBJECT_STORAGE_PUBLIC_BASE_URL || "").trim().replace(/\/+$/, "")
 };
