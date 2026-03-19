@@ -142,6 +142,42 @@ services:
     networks:
       - data_test
 
+  boltorezka-minio-test:
+    image: minio/minio:latest
+    container_name: boltorezka-minio-test
+    restart: unless-stopped
+    profiles: ["minio-test"]
+    environment:
+      MINIO_ROOT_USER: ${TEST_MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${TEST_MINIO_ROOT_PASSWORD:-minioadmin}
+    command: server /data --console-address ":9001"
+    ports:
+      - "${TEST_MINIO_API_PORT:-19000}:9000"
+      - "${TEST_MINIO_CONSOLE_PORT:-19001}:9001"
+    volumes:
+      - minio_test_data:/data
+    networks:
+      - data_test
+
+  boltorezka-minio-test-init:
+    image: minio/mc:latest
+    container_name: boltorezka-minio-test-init
+    restart: "no"
+    profiles: ["minio-test"]
+    depends_on:
+      boltorezka-minio-test:
+        condition: service_started
+    entrypoint:
+      - /bin/sh
+      - -ec
+    command:
+      - |
+        mc alias set local http://boltorezka-minio-test:9000 "${TEST_MINIO_ROOT_USER:-minioadmin}" "${TEST_MINIO_ROOT_PASSWORD:-minioadmin}"
+        mc mb --ignore-existing "local/${TEST_MINIO_BUCKET:-chat-attachments-test}"
+        mc anonymous set none "local/${TEST_MINIO_BUCKET:-chat-attachments-test}"
+    networks:
+      - data_test
+
   boltorezka-livekit-test:
     image: livekit/livekit-server:v1.9.12
     container_name: boltorezka-livekit-test
@@ -337,6 +373,7 @@ networks:
 volumes:
   postgres_test_data:
   postgres_prod_data:
+  minio_test_data:
   ingress_caddy_data:
     external: true
     name: edge_caddy_data
