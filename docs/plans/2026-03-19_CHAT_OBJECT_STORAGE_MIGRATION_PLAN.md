@@ -34,11 +34,11 @@ Scope: переход chat media c inline `data:image/...;base64` на object st
 ### 2.2 Client -> Object Storage (PUT)
 
 - [x] Клиент загружает файл напрямую в object storage по pre-signed URL.
-- [ ] В клиенте и API зафиксированы одинаковые лимиты mime/size.
+- [x] В клиенте и API зафиксированы одинаковые лимиты mime/size.
 
 ### 2.3 Client -> API (finalize)
 
-- [ ] Клиент подтверждает upload по `storageKey`.
+- [x] Клиент подтверждает upload по `storageKey`.
 - [x] API проверяет наличие объекта, размер, mime, ownership.
 - [x] API создает message c `attachments[]`.
 - [x] WS broadcast отправляет только metadata (без inline base64).
@@ -70,13 +70,13 @@ Scope: переход chat media c inline `data:image/...;base64` на object st
 
 ### Stage 1 - Dual-read
 
-- [ ] Reader поддерживает legacy + attachments.
-- [ ] Writer остается legacy по умолчанию.
+- [x] Reader поддерживает legacy + attachments.
+- [x] Writer остается legacy по умолчанию.
 - [ ] Добавлены метрики доли legacy/attachments чтения.
 
 ### Stage 2 - Attachments write on test
 
-- [ ] В `test` включен write в attachments.
+- [x] В `test` включен write в attachments.
 - [ ] Smoke и ручной critical-path тест стабильны.
 - [ ] Ошибки upload/finalize не превышают согласованный порог.
 
@@ -93,24 +93,24 @@ Scope: переход chat media c inline `data:image/...;base64` на object st
 
 ## 6) Test gates (must pass)
 
-- [ ] `upload-init -> PUT -> finalize -> message visible`.
+- [x] `upload-init -> PUT -> finalize -> message visible`.
 - [ ] Attachment URL отдает корректный `content-type`.
 - [ ] Rejected mime/size возвращает ожидаемую ошибку.
-- [ ] WS payload не содержит inline base64.
-- [ ] Reconnect/reload не ломает рендер вложений.
+- [x] WS payload не содержит inline base64.
+- [x] Reconnect/reload не ломает рендер вложений.
 
 ## 7) Web SRP checklist
 
 - [ ] `chat composer state` изолирован от transport/storage логики.
 - [x] `chat image parsing/compression` живет в отдельном модуле.
-- [ ] `chat upload transport` выделен в API/domain слой.
+- [x] `chat upload transport` выделен в API/domain слой.
 - [ ] `chat message send` не содержит UI-специфичной логики.
 - [ ] `chat message render` работает только с view-model.
 
 ## 8) Done criteria
 
 - [ ] В новых сообщениях нет inline base64 в `text`.
-- [ ] `deploy:test:smoke` стабильно проходит с attachments write.
+- [x] `deploy:test:smoke` стабильно проходит с attachments write.
 - [ ] Есть явное подтверждение для `prod` rollout.
 - [ ] `deploy:prod + post-prod smoke` проходят без регрессий.
 - [ ] Документация и runbooks обновлены под новый поток.
@@ -121,3 +121,4 @@ Scope: переход chat media c inline `data:image/...;base64` на object st
 - Validation note (current state): test по умолчанию работает в legacy режиме (inline base64); object storage flow внедрен в коде и включается feature flag'ом.
 - Validation note (implementation): в API добавлен Stage 0 каркас (`/v1/chat/uploads/init`, `/v1/chat/uploads/finalize`) и `message_attachments`; web writer-path пока не переключен.
 - Validation note (writer-path): web writer-path добавлен под feature flag `VITE_CHAT_OBJECT_STORAGE_WRITE=1`; по умолчанию legacy путь сохранен.
+- Validation note (test rollout): деплой `test` с `TEST_VITE_CHAT_OBJECT_STORAGE_WRITE=1` и `SMOKE_CHAT_OBJECT_STORAGE=1` прошел успешно на SHA `8a6658cb017dc55a03e5d7685fddf0f174f67b85`; smoke `chat:object-storage` и общий postdeploy smoke - `ok`.
