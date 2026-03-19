@@ -1,7 +1,7 @@
 import { ClipboardEvent, FormEvent, KeyboardEvent, ReactNode, RefObject, useEffect, useState } from "react";
 import type { Message } from "../domain";
 
-const CHAT_MARKDOWN_IMAGE_PATTERN = /!\[[^\]]*\]\(((?:data:image\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=\s]+)|(?:https?:\/\/[^)\s]+))\)/g;
+const CHAT_MARKDOWN_IMAGE_PATTERN = /!\[[^\]]*\]\(((?:data:image\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=\s]+)|(?:https?:\/\/[^)\s]+)|(?:\/[^)\s]+))\)/g;
 const CHAT_BARE_DATA_IMAGE_PATTERN = /(data:image\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=\s]+)/gi;
 const CHAT_BARE_BASE64_IMAGE_PATTERN = /\b([A-Za-z0-9+/=]{2048,})\b/g;
 
