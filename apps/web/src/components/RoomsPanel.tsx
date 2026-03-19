@@ -11,6 +11,8 @@ import type { RoomsPanelProps } from "./types";
 type ConfirmPopupState =
   | { kind: "archive-channel"; room: Room }
   | { kind: "clear-channel"; room: Room }
+  | { kind: "restore-channel"; room: Room }
+  | { kind: "delete-channel-permanent"; room: Room }
   | { kind: "delete-category" }
   | null;
 
@@ -34,6 +36,7 @@ export function RoomsPanel({
   voiceMediaStatusSummaryByUserIdInCurrentRoom,
   collapsedCategoryIds,
   uncategorizedRooms,
+  archivedRooms,
   newCategorySlug,
   newCategoryTitle,
   categoryPopupOpen,
@@ -76,6 +79,8 @@ export function RoomsPanel({
   onMoveChannel,
   onClearChannelMessages,
   onDeleteChannel,
+  onRestoreChannel,
+  onDeleteChannelPermanent,
   onToggleCategoryCollapsed,
   onJoinRoom,
   onOpenRoomChat,
@@ -110,6 +115,18 @@ export function RoomsPanel({
 
     if (confirmPopup.kind === "clear-channel") {
       onClearChannelMessages(confirmPopup.room);
+      setConfirmPopup(null);
+      return;
+    }
+
+    if (confirmPopup.kind === "restore-channel") {
+      onRestoreChannel(confirmPopup.room);
+      setConfirmPopup(null);
+      return;
+    }
+
+    if (confirmPopup.kind === "delete-channel-permanent") {
+      onDeleteChannelPermanent(confirmPopup.room);
       setConfirmPopup(null);
       return;
     }
@@ -225,6 +242,44 @@ export function RoomsPanel({
         ))}
 
         <RoomsUncategorizedBlock t={t} rooms={uncategorizedRooms} renderRoomRow={renderRoomRow} />
+
+        {canCreateRooms && archivedRooms.length > 0 ? (
+          <div className="mt-[var(--space-md)]">
+            <div className="mb-[var(--space-xs)] text-[var(--font-size-sm)] uppercase tracking-[0.04em] text-[var(--pixel-muted)]">
+              {t("rooms.deletedGroup")}
+            </div>
+            <ul className="rooms-list">
+              {archivedRooms.map((room) => (
+                <li key={room.id} className="channel-row grid grid-cols-[1fr_auto] items-center gap-2">
+                  <div className="secondary room-btn room-btn-interactive pointer-events-none opacity-75">
+                    <i className="bi bi-archive" aria-hidden="true" />
+                    <span>{room.title}</span>
+                  </div>
+                  <div className="inline-flex items-center gap-1">
+                    <button
+                      type="button"
+                      className="secondary icon-btn tiny"
+                      aria-label={t("rooms.restoreChannel")}
+                      data-tooltip={t("rooms.restoreChannel")}
+                      onClick={() => setConfirmPopup({ kind: "restore-channel", room })}
+                    >
+                      <i className="bi bi-arrow-counterclockwise" aria-hidden="true" />
+                    </button>
+                    <button
+                      type="button"
+                      className="secondary icon-btn tiny delete-action-btn"
+                      aria-label={t("rooms.deleteChannelPermanent")}
+                      data-tooltip={t("rooms.deleteChannelPermanent")}
+                      onClick={() => setConfirmPopup({ kind: "delete-channel-permanent", room })}
+                    >
+                      <i className="bi bi-trash3-fill" aria-hidden="true" />
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
       </div>
       </section>
 

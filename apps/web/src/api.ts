@@ -162,6 +162,7 @@ const endpoints = {
   wsTicket: "/v1/auth/ws-ticket",
   livekitToken: "/v1/auth/livekit-token",
   rooms: "/v1/rooms",
+  roomsArchived: "/v1/rooms/archived",
   roomsTree: "/v1/rooms/tree",
   roomCategories: "/v1/room-categories",
   telemetrySummary: "/v1/telemetry/summary",
@@ -244,6 +245,7 @@ export const api = {
     input: { roomSlug: string; canPublish?: boolean; canSubscribe?: boolean; canPublishData?: boolean }
   ) => fetchJson<LivekitTokenResponse>(endpoints.livekitToken, token, withJsonBody("POST", input)),
   rooms: (token: string) => fetchJson<{ rooms: Room[] }>(endpoints.rooms, token),
+  archivedRooms: (token: string) => fetchJson<{ rooms: Room[] }>(endpoints.roomsArchived, token),
   roomTree: (token: string) => fetchJson<RoomsTreeResponse>(endpoints.roomsTree, token),
   createCategory: (token: string, input: { slug: string; title: string; position?: number }) =>
     fetchJson<{ category: RoomCategory }>(endpoints.roomCategories, token, withJsonBody("POST", input)),
@@ -275,6 +277,10 @@ export const api = {
     fetchJson<{ room: Room }>(withSuffix(endpoints.rooms, roomId, "move"), token, withJsonBody("POST", { direction })),
   deleteRoom: (token: string, roomId: string) =>
     fetchJson<{ ok: true; roomId: string; archived?: boolean }>(withId(endpoints.rooms, roomId), token, withJsonBody("DELETE")),
+  restoreRoom: (token: string, roomId: string) =>
+    fetchJson<{ ok: true; roomId: string; restored?: boolean }>(withSuffix(endpoints.rooms, roomId, "restore"), token, withJsonBody("POST")),
+  deleteRoomPermanent: (token: string, roomId: string) =>
+    fetchJson<{ ok: true; roomId: string; deleted?: boolean }>(withSuffix(endpoints.rooms, roomId, "permanent"), token, withJsonBody("DELETE")),
   clearRoomMessages: (token: string, roomId: string) =>
     fetchJson<{ ok: true; roomId: string; deletedCount: number }>(withSuffix(endpoints.rooms, roomId, "messages"), token, withJsonBody("DELETE")),
   roomMessages: (

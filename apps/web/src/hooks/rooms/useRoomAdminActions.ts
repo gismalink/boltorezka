@@ -8,6 +8,7 @@ type UseRoomAdminActionsArgs = {
   canManageAudioQuality: boolean;
   roomSlug: string;
   allRooms: Room[];
+  archivedRooms: Room[];
   roomAdminController: RoomAdminController;
   newRoomSlug: string;
   newRoomTitle: string;
@@ -48,6 +49,7 @@ export function useRoomAdminActions({
   canManageAudioQuality,
   roomSlug,
   allRooms,
+  archivedRooms,
   roomAdminController,
   newRoomSlug,
   newRoomTitle,
@@ -273,6 +275,42 @@ export function useRoomAdminActions({
     setMessagesNextCursor
   ]);
 
+  const restoreChannel = useCallback(async (room: Room) => {
+    if (!token) {
+      return;
+    }
+
+    const restored = await roomAdminController.restoreRoom(token, room.id);
+    if (!restored) {
+      return;
+    }
+
+    if (!roomSlug) {
+      joinRoom(room.slug);
+    }
+  }, [token, roomAdminController, roomSlug, joinRoom]);
+
+  const deleteChannelPermanent = useCallback(async (room: Room) => {
+    if (!token) {
+      return;
+    }
+
+    const deleted = await roomAdminController.deleteRoomPermanent(token, room.id);
+    if (!deleted) {
+      return;
+    }
+
+    if (room.slug === roomSlug) {
+      const fallbackRoom = allRooms.find((item) => item.slug === "general")
+        || allRooms[0]
+        || null;
+
+      if (fallbackRoom) {
+        joinRoom(fallbackRoom.slug);
+      }
+    }
+  }, [token, roomAdminController, roomSlug, allRooms, joinRoom, archivedRooms.length]);
+
   return {
     createRoom,
     createCategory,
@@ -285,6 +323,8 @@ export function useRoomAdminActions({
     saveChannelSettings,
     moveChannel,
     deleteChannel,
-    clearChannelMessages
+    clearChannelMessages,
+    restoreChannel,
+    deleteChannelPermanent
   };
 }

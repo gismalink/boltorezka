@@ -58,6 +58,8 @@ Scope: переход chat media c inline `data:image/...;base64` на object st
 - [x] Pre-signed URL короткоживущий (short TTL).
 - [x] Object key namespace не угадываемый (`env/room/user/date/uuid...`).
 - [ ] Bucket lifecycle policy + cleanup orphan объектов.
+	- [x] Автоклинап orphan-объектов добавлен через scheduler job `chat-orphan-cleanup` (interval 6h).
+	- [ ] Bucket lifecycle policy (S3 lifecycle rule) еще не включен отдельно.
 - [x] Structured audit logs: `userId`, `roomSlug`, `storageKey`, `size`, `mime`, `status`.
 
 ## 5) Rollout phases
@@ -139,6 +141,7 @@ Scope: переход chat media c inline `data:image/...;base64` на object st
 - Validation note (fresh rerun): на SHA `53bb2609f6ac0368f283eedc70224663c74b19de` повторный test `deploy:test:smoke` снова прошел `done` с тем же storage-focused набором флагов; подтверждены `chat:object-storage=ok`, `chat:orphan-cleanup=ok`, `minio:storage=ok`, `chat_storage_put_fail_delta=0`.
 - Validation note (rate-limit + audit logs): на SHA `3e13467bf65d6e571b99cf6f868b212bcf8ace19` добавлены rate-limit preHandler'ы для `POST /v1/chat/uploads/init` и `POST /v1/chat/uploads/finalize`, а также structured audit events (`chat.upload.init`, `chat.upload.put`, `chat.upload.finalize`) с полями `userId/roomSlug/storageKey/sizeBytes/mimeType/status`; также добавлен retry-hardening в `smoke:chat:object-storage`. Test `deploy:test:smoke` прошел `done` с storage-focused флагами.
 - Validation note (minio service-account policy): в `minio-test-init` добавено bootstrap-действие: bucket policy `chat-attachments-rw` (ListBucket + Get/Put/DeleteObject на target bucket) и attach к выделенному API user (`TEST_MINIO_API_USER`/`TEST_MINIO_API_PASSWORD`), с fallback на root creds только при отсутствии API user vars.
+- Validation note (automatic orphan cleanup): добавлен ops script `scripts/ops/chat-orphan-cleanup.sh` и scheduler manifest `scripts/ops/scheduler/jobs/chat-orphan-cleanup.env`; регулярный вызов cleanup endpoint теперь выполняется автоматически каждые 6 часов через launchd/scheduler adapter.
 
 ## 10) MinIO rollout plan (draft)
 

@@ -190,6 +190,46 @@ export async function roomsRoutes(fastify: FastifyInstance) {
     }
   );
 
+  fastify.get(
+    "/v1/rooms/archived",
+    {
+      preHandler: [requireAuth, requireServiceAccess, loadCurrentUser, requireRole(["admin", "super_admin"])]
+    },
+    async (request) => {
+      const userId = String(request.user?.sub || "").trim();
+      const result = await db.query<RoomListDbRow>(
+        `SELECT
+           r.id,
+           r.slug,
+           r.title,
+           r.kind,
+           r.audio_quality_override,
+           r.category_id,
+           r.position,
+           r.is_public,
+           r.created_at,
+           ARRAY(
+             SELECT DISTINCT u.name
+             FROM room_members rm
+             JOIN users u ON u.id = rm.user_id
+             WHERE rm.room_id = r.id
+             ORDER BY u.name
+           ) AS member_names,
+           EXISTS(
+             SELECT 1 FROM room_members rm
+             WHERE rm.room_id = r.id AND rm.user_id = $1
+           ) AS is_member
+         FROM rooms r
+         WHERE r.is_archived = TRUE
+         ORDER BY r.created_at DESC, r.title ASC`,
+        [userId]
+      );
+
+      const response: RoomsListResponse = { rooms: result.rows };
+      return response;
+    }
+  );
+
   fastify.post<{ Body: { slug: string; title: string; position?: number } }>(
     "/v1/room-categories",
     {
@@ -748,6 +788,81 @@ export async function roomsRoutes(fastify: FastifyInstance) {
       }
 
       return { ok: true, roomId, archived: true };
+    }
+  );
+
+  fastify.post<{
+    Params: { roomId: string };
+  }>(
+    "/v1/rooms/:roomId/restore",
+    {
+      preHandler: [requireAuth, requireServiceAccess, loadCurrentUser, requireRole(["admin", "super_admin"])]
+    },
+    async (request, reply) => {
+      const roomId = String(request.params.roomId || "").trim();
+      if (!roomId) {
+        return reply.code(400).send({
+          error: "ValidationError",
+          message: "roomId is required"
+        });
+      }
+
+      const restored = await db.query<{ id: string }>(
+        `UPDATE rooms
+         SET is_archived = FALSE
+         WHERE id = $1 AND is_archived = TRUE
+         RETURNING id`,
+        [roomId]
+      );
+
+      if ((restored.rowCount || 0) === 0) {
+        return reply.code(404).send({
+          error: "RoomNotFound",
+          message: "Archived room does not exist"
+        });
+      }
+
+      return { ok: true, roomId, restored: true };
+    }
+  );
+
+  fastify.delete<{
+    Params: { roomId: string };
+  }>(
+    "/v1/rooms/:roomId/permanent",
+    {
+      preHandler: [requireAuth, requireServiceAccess, loadCurrentUser, requireRole(["admin", "super_admin"])]
+    },
+    async (request, reply) => {
+      const roomId = String(request.params.roomId || "").trim();
+      if (!roomId) {
+        return reply.code(400).send({
+          error: "ValidationError",
+          message: "roomId is required"
+        });
+      }
+
+      const state = await db.query<{ is_archived: boolean }>(
+        "SELECT is_archived FROM rooms WHERE id = $1 LIMIT 1",
+        [roomId]
+      );
+
+      if ((state.rowCount || 0) === 0) {
+        return reply.code(404).send({
+          error: "RoomNotFound",
+          message: "Room does not exist"
+        });
+      }
+
+      if (!state.rows[0].is_archived) {
+        return reply.code(409).send({
+          error: "RoomMustBeArchived",
+          message: "Room must be archived before permanent delete"
+        });
+      }
+
+      await db.query("DELETE FROM rooms WHERE id = $1 AND is_archived = TRUE", [roomId]);
+      return { ok: true, roomId, deleted: true };
     }
   );
 

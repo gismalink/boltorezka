@@ -27,6 +27,7 @@ This folder contains operational scripts grouped by purpose.
 - `ops/`:
   - `backup-postgres-all.sh` - backup all Postgres DBs (test/prod) to host storage outside Docker.
   - `cleanup-server-logs.sh` - prune operation logs by retention policy.
+  - `chat-orphan-cleanup.sh` - periodic cleanup of orphan chat attachment objects via admin API.
   - `rotate-turn-credentials.sh` - rotate TURN static credentials in `infra/.env.host` and write rotation marker/history files.
   - `bootstrap-vps-ssh-key.sh` - interactive SSH key bootstrap for new VPS hosts.
   - `provision-turn2-vps.sh` - provision dedicated TURN2 server on VPS (Docker + certbot + ufw).

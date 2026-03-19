@@ -122,6 +122,7 @@ export function App() {
   const [authMode, setAuthMode] = useState("loading");
   const [rooms, setRooms] = useState<Room[]>([]);
   const [roomsTree, setRoomsTree] = useState<RoomsTreeResponse | null>(null);
+  const [archivedRooms, setArchivedRooms] = useState<Room[]>([]);
   const [roomSlug, setRoomSlug] = useState(() => {
     const stored = String(localStorage.getItem(ROOM_SLUG_STORAGE_KEY) || "").trim();
     return stored;
@@ -742,6 +743,7 @@ export function App() {
         },
         setRooms,
         setRoomsTree,
+        setArchivedRooms,
         setAdminUsers
       }),
     [pushLog, pushToast, sendWsEvent]
@@ -907,6 +909,7 @@ export function App() {
     setUser,
     setRooms,
     setRoomsTree,
+    setArchivedRooms,
     setMessages,
     setChatText,
     setPendingChatImageDataUrl,
@@ -1338,13 +1341,16 @@ export function App() {
     saveChannelSettings,
     moveChannel,
     deleteChannel,
-    clearChannelMessages
+    clearChannelMessages,
+    restoreChannel,
+    deleteChannelPermanent
   } = useRoomAdminActions({
     token,
     canCreateRooms,
     canManageAudioQuality,
     roomSlug,
     allRooms,
+    archivedRooms,
     roomAdminController,
     newRoomSlug,
     newRoomTitle,
@@ -1603,6 +1609,7 @@ export function App() {
     voiceMediaStatusSummaryByUserIdInCurrentRoom,
     collapsedCategoryIds,
     uncategorizedRooms,
+    archivedRooms,
     newCategorySlug,
     newCategoryTitle,
     categoryPopupOpen,
@@ -1645,6 +1652,8 @@ export function App() {
     moveChannel,
     clearChannelMessages,
     deleteChannel,
+    restoreChannel,
+    deleteChannelPermanent,
     onToggleCategoryCollapsed: toggleCategoryCollapsed,
     onJoinRoom: joinRoom,
     onOpenRoomChat: openRoomChat,

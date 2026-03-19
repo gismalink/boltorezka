@@ -21,6 +21,7 @@ type RoomAdminControllerOptions = {
   sendRoomJoinEvent: (slug: string) => void;
   setRooms: (rooms: Room[]) => void;
   setRoomsTree: (tree: RoomsTreeResponse | null) => void;
+  setArchivedRooms: (rooms: Room[]) => void;
   setAdminUsers: (users: User[]) => void;
 };
 
@@ -35,8 +36,17 @@ export class RoomAdminController {
     try {
       const tree = await api.roomTree(token);
       this.options.setRoomsTree(tree);
+
+      try {
+        const archived = await api.archivedRooms(token);
+        this.options.setArchivedRooms(archived.rooms);
+      } catch (error) {
+        this.options.pushLog(`archived rooms failed: ${(error as Error).message}`);
+        this.options.setArchivedRooms([]);
+      }
     } catch (error) {
       this.options.pushLog(`room tree failed: ${(error as Error).message}`);
+      this.options.setArchivedRooms([]);
     }
   }
 
@@ -173,6 +183,32 @@ export class RoomAdminController {
       return true;
     } catch (error) {
       this.options.pushLog(`delete channel failed: ${(error as Error).message}`);
+      return false;
+    }
+  }
+
+  async restoreRoom(token: string, roomId: string) {
+    try {
+      await api.restoreRoom(token, roomId);
+      const res = await api.rooms(token);
+      this.options.setRooms(res.rooms);
+      await this.loadRoomTree(token);
+      this.options.pushLog("channel restored");
+      return true;
+    } catch (error) {
+      this.options.pushLog(`restore channel failed: ${(error as Error).message}`);
+      return false;
+    }
+  }
+
+  async deleteRoomPermanent(token: string, roomId: string) {
+    try {
+      await api.deleteRoomPermanent(token, roomId);
+      await this.loadRoomTree(token);
+      this.options.pushLog("channel deleted permanently");
+      return true;
+    } catch (error) {
+      this.options.pushLog(`permanent delete failed: ${(error as Error).message}`);
       return false;
     }
   }

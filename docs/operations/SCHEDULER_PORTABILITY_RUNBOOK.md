@@ -33,6 +33,7 @@ Optional fields:
 
 Current manifests:
 - `scripts/ops/scheduler/jobs/backup-postgres-all.env`
+- `scripts/ops/scheduler/jobs/chat-orphan-cleanup.env`
 - `scripts/ops/scheduler/jobs/cleanup-server-logs.env`
 - `scripts/ops/scheduler/jobs/slo-rolling-gate.env`
 - `scripts/ops/scheduler/jobs/turn-credentials-rotate.env`
@@ -80,6 +81,7 @@ Per job install/update:
 ```bash
 cd ~/srv/boltorezka
 bash ./scripts/ops/scheduler/install-launchd-job.sh backup-postgres-all
+bash ./scripts/ops/scheduler/install-launchd-job.sh chat-orphan-cleanup
 bash ./scripts/ops/scheduler/install-launchd-job.sh cleanup-server-logs
 bash ./scripts/ops/scheduler/install-launchd-job.sh slo-rolling-gate
 bash ./scripts/ops/scheduler/install-launchd-job.sh turn-credentials-rotate
@@ -89,6 +91,7 @@ Verification:
 
 ```bash
 launchctl print "gui/$(id -u)/com.boltorezka.scheduler.backup-postgres-all" | sed -n '1,80p'
+launchctl print "gui/$(id -u)/com.boltorezka.scheduler.chat-orphan-cleanup" | sed -n '1,80p'
 launchctl print "gui/$(id -u)/com.boltorezka.scheduler.cleanup-server-logs" | sed -n '1,80p'
 launchctl print "gui/$(id -u)/com.boltorezka.scheduler.slo-rolling-gate" | sed -n '1,80p'
 launchctl print "gui/$(id -u)/com.boltorezka.scheduler.turn-credentials-rotate" | sed -n '1,80p'

@@ -12,6 +12,8 @@ type UseWorkspaceRoomsPanelPropsInput = Omit<
   | "onMoveChannel"
   | "onClearChannelMessages"
   | "onDeleteChannel"
+  | "onRestoreChannel"
+  | "onDeleteChannelPermanent"
 > & {
   chatRoomSlug: string;
   currentUserId: string | null;
@@ -21,6 +23,8 @@ type UseWorkspaceRoomsPanelPropsInput = Omit<
   moveChannel: (direction: "up" | "down") => unknown;
   clearChannelMessages: (room: Room) => unknown;
   deleteChannel: (room: Room) => unknown;
+  restoreChannel: (room: Room) => unknown;
+  deleteChannelPermanent: (room: Room) => unknown;
 };
 
 export function useWorkspaceRoomsPanelProps({
@@ -42,6 +46,7 @@ export function useWorkspaceRoomsPanelProps({
   voiceMediaStatusSummaryByUserIdInCurrentRoom,
   collapsedCategoryIds,
   uncategorizedRooms,
+  archivedRooms,
   newCategorySlug,
   newCategoryTitle,
   categoryPopupOpen,
@@ -84,6 +89,8 @@ export function useWorkspaceRoomsPanelProps({
   moveChannel,
   clearChannelMessages,
   deleteChannel,
+  restoreChannel,
+  deleteChannelPermanent,
   onToggleCategoryCollapsed,
   onJoinRoom,
   onOpenRoomChat,
@@ -111,6 +118,7 @@ export function useWorkspaceRoomsPanelProps({
     voiceMediaStatusSummaryByUserIdInCurrentRoom,
     collapsedCategoryIds,
     uncategorizedRooms,
+    archivedRooms,
     newCategorySlug,
     newCategoryTitle,
     categoryPopupOpen,
@@ -153,6 +161,8 @@ export function useWorkspaceRoomsPanelProps({
     onMoveChannel: (direction) => void moveChannel(direction),
     onClearChannelMessages: (room) => void clearChannelMessages(room),
     onDeleteChannel: (room) => void deleteChannel(room),
+    onRestoreChannel: (room) => void restoreChannel(room),
+    onDeleteChannelPermanent: (room) => void deleteChannelPermanent(room),
     onToggleCategoryCollapsed,
     onJoinRoom,
     onOpenRoomChat,

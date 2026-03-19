@@ -1,6 +1,11 @@
 import type { TranslateFn } from "../../i18n";
 
-export type RoomsConfirmKind = "archive-channel" | "clear-channel" | "delete-category";
+export type RoomsConfirmKind =
+  | "archive-channel"
+  | "clear-channel"
+  | "delete-category"
+  | "restore-channel"
+  | "delete-channel-permanent";
 
 type RoomsConfirmOverlayProps = {
   t: TranslateFn;
@@ -28,6 +33,10 @@ export function RoomsConfirmOverlay({ t, kind, onClose, onConfirm }: RoomsConfir
         <p className="muted settings-confirm-text">
           {kind === "clear-channel"
             ? t("rooms.confirmClear")
+            : kind === "restore-channel"
+              ? t("rooms.confirmRestoreChannel")
+              : kind === "delete-channel-permanent"
+                ? t("rooms.confirmDeleteChannelPermanent")
             : kind === "archive-channel"
               ? t("rooms.confirmArchiveChannel")
               : t("rooms.confirmDeleteCategory")}
@@ -38,7 +47,7 @@ export function RoomsConfirmOverlay({ t, kind, onClose, onConfirm }: RoomsConfir
           </button>
           <button
             type="button"
-            className={kind === "clear-channel" ? "clear-confirm-btn" : "delete-confirm-btn"}
+            className={kind === "clear-channel" || kind === "restore-channel" ? "clear-confirm-btn" : "delete-confirm-btn"}
             onClick={onConfirm}
           >
             {t("common.yes")}

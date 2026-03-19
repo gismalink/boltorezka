@@ -28,6 +28,7 @@ type UseSessionStateLifecycleArgs = {
   setUser: Dispatch<SetStateAction<User | null>>;
   setRooms: Dispatch<SetStateAction<Room[]>>;
   setRoomsTree: Dispatch<SetStateAction<RoomsTreeResponse | null>>;
+  setArchivedRooms: Dispatch<SetStateAction<Room[]>>;
   setMessages: Dispatch<SetStateAction<Message[]>>;
   setChatText: Dispatch<SetStateAction<string>>;
   setPendingChatImageDataUrl: Dispatch<SetStateAction<string | null>>;
@@ -59,6 +60,7 @@ export function useSessionStateLifecycle({
   setUser,
   setRooms,
   setRoomsTree,
+  setArchivedRooms,
   setMessages,
   setChatText,
   setPendingChatImageDataUrl,
@@ -81,6 +83,7 @@ export function useSessionStateLifecycle({
     setUser(null);
     setRooms([]);
     setRoomsTree(null);
+    setArchivedRooms([]);
     setMessages([]);
     setChatText("");
     setPendingChatImageDataUrl(null);
@@ -110,6 +113,7 @@ export function useSessionStateLifecycle({
     setPendingChatImageDataUrl,
     setRoomMediaTopologyBySlug,
     setRooms,
+    setArchivedRooms,
     setRoomsPresenceBySlug,
     setRoomsPresenceDetailsBySlug,
     setRoomsTree,
@@ -187,6 +191,7 @@ export function useSessionStateLifecycle({
       if (!hasServiceAccess) {
         setRooms([]);
         setRoomsTree(null);
+        setArchivedRooms([]);
         return;
       }
 
@@ -219,6 +224,7 @@ export function useSessionStateLifecycle({
     pushLog,
     roomAdminController,
     setRooms,
+    setArchivedRooms,
     setServerAudioQuality,
     setServerChatImagePolicy,
     setToken,

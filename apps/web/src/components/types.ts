@@ -130,6 +130,7 @@ export type RoomsPanelProps = {
   voiceMediaStatusSummaryByUserIdInCurrentRoom: Record<string, VoiceMediaStatusSummary>;
   collapsedCategoryIds: string[];
   uncategorizedRooms: Room[];
+  archivedRooms: Room[];
   newCategorySlug: string;
   newCategoryTitle: string;
   categoryPopupOpen: boolean;
@@ -172,6 +173,8 @@ export type RoomsPanelProps = {
   onMoveChannel: (direction: "up" | "down") => void;
   onClearChannelMessages: (room: Room) => void;
   onDeleteChannel: (room: Room) => void;
+  onRestoreChannel: (room: Room) => void;
+  onDeleteChannelPermanent: (room: Room) => void;
   onToggleCategoryCollapsed: (categoryId: string) => void;
   onJoinRoom: (slug: string) => void;
   onOpenRoomChat: (slug: string) => void;
