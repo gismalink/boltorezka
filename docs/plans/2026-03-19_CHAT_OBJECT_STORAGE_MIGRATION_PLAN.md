@@ -84,9 +84,9 @@ Scope: переход chat media c inline `data:image/...;base64` на object st
 
 ### Stage 3 - Attachments write on prod
 
-- [ ] После успешного test-gate включен write в attachments на `prod`.
-- [ ] Legacy write отключен.
-- [ ] Post-deploy smoke и мониторинг окна стабилизации пройдены.
+- [x] После успешного test-gate включен write в attachments на `prod`.
+- [x] Legacy write отключен.
+- [x] Post-deploy smoke и мониторинг окна стабилизации пройдены.
 
 ### Stage 4 - Legacy cleanup (optional)
 
@@ -113,8 +113,8 @@ Scope: переход chat media c inline `data:image/...;base64` на object st
 
 - [x] В новых сообщениях нет inline base64 в `text`.
 - [x] `deploy:test:smoke` стабильно проходит с attachments write.
-- [ ] Есть явное подтверждение для `prod` rollout.
-- [ ] `deploy:prod + post-prod smoke` проходят без регрессий.
+- [x] Есть явное подтверждение для `prod` rollout.
+- [x] `deploy:prod + post-prod smoke` проходят без регрессий.
 - [x] Документация и runbooks обновлены под новый поток.
 
 ## 9) Validation notes
@@ -142,6 +142,7 @@ Scope: переход chat media c inline `data:image/...;base64` на object st
 - Validation note (rate-limit + audit logs): на SHA `3e13467bf65d6e571b99cf6f868b212bcf8ace19` добавлены rate-limit preHandler'ы для `POST /v1/chat/uploads/init` и `POST /v1/chat/uploads/finalize`, а также structured audit events (`chat.upload.init`, `chat.upload.put`, `chat.upload.finalize`) с полями `userId/roomSlug/storageKey/sizeBytes/mimeType/status`; также добавлен retry-hardening в `smoke:chat:object-storage`. Test `deploy:test:smoke` прошел `done` с storage-focused флагами.
 - Validation note (minio service-account policy): в `minio-test-init` добавено bootstrap-действие: bucket policy `chat-attachments-rw` (ListBucket + Get/Put/DeleteObject на target bucket) и attach к выделенному API user (`TEST_MINIO_API_USER`/`TEST_MINIO_API_PASSWORD`), с fallback на root creds только при отсутствии API user vars.
 - Validation note (automatic orphan cleanup): добавлен ops script `scripts/ops/chat-orphan-cleanup.sh` и scheduler manifest `scripts/ops/scheduler/jobs/chat-orphan-cleanup.env`; регулярный вызов cleanup endpoint теперь выполняется автоматически каждые 6 часов через launchd/scheduler adapter.
+- Validation note (prod minio cutover): на SHA `bc4e50416c2b0356712620fae100554a53574092` выполнен `deploy:prod` из `origin/main` с `PROD_CHAT_STORAGE_PROVIDER=minio`, подняты `boltorezka-minio-prod`/`boltorezka-minio-prod-init`; storage-focused postdeploy smoke (prod scope) завершился `SMOKE_STATUS=pass` с `chat_object_storage=pass`, `chat_orphan_cleanup=pass`, `minio_storage=pass`, `chat_storage_put_fail_delta=0`.
 
 ## 10) MinIO rollout plan (draft)
 
@@ -172,28 +173,28 @@ Scope: переход chat media c inline `data:image/...;base64` на object st
 
 ### 10.5 Stage D - Prod cutover
 
-- [ ] После подтверждения `test` развернуть `boltorezka-minio-prod`.
-- [ ] Переключить `prod` на provider=`minio` только после smoke в `test` и явного approval.
+- [x] После подтверждения `test` развернуть `boltorezka-minio-prod`.
+- [x] Переключить `prod` на provider=`minio` только после smoke в `test` и явного approval.
 - [ ] Зафиксировать rollback: вернуть provider=`localfs` без миграции API контрактов.
 
 ### 10.6 Stage D - Ready-to-run checklist (prod)
 
 #### D0. Preflight (перед изменениями)
 
-- [ ] Подтверждено явное approval на `prod` rollout.
-- [ ] Подтвержден latest `origin/main` в `test` и green storage gates (`chat:object-storage`, `chat:orphan-cleanup`, `minio:storage`, `chat_storage_put_fail_delta=0`).
-- [ ] В `infra/docker-compose.host.yml` присутствуют `boltorezka-minio-prod` и `boltorezka-minio-prod-init` (по аналогии с test).
-- [ ] В `infra/.env.host` на сервере заполнены `PROD_MINIO_*` и `PROD_CHAT_MINIO_*`.
+- [x] Подтверждено явное approval на `prod` rollout.
+- [x] Подтвержден latest `origin/main` в `test` и green storage gates (`chat:object-storage`, `chat:orphan-cleanup`, `minio:storage`, `chat_storage_put_fail_delta=0`).
+- [x] В `infra/docker-compose.host.yml` присутствуют `boltorezka-minio-prod` и `boltorezka-minio-prod-init` (по аналогии с test).
+- [x] В `infra/.env.host` на сервере заполнены `PROD_MINIO_*` и `PROD_CHAT_MINIO_*`.
 
 #### D1. Infra apply (prod MinIO service)
 
-- [ ] Деплой `origin/main` в `test` с smoke из main (обязательный gate перед prod):
+- [x] Деплой `origin/main` в `test` с smoke из main (обязательный gate перед prod):
 
 ```bash
 ssh mac-mini 'cd ~/srv/boltorezka && TEST_REF=origin/main ALLOW_TEST_FROM_MAIN=1 SMOKE_CHAT_OBJECT_STORAGE=1 SMOKE_CHAT_ORPHAN_CLEANUP=1 SMOKE_MINIO_STORAGE=1 SMOKE_CHAT_STORAGE_METRICS=1 SMOKE_CHAT_STORAGE_PUT_FAIL_THRESHOLD=0 npm run deploy:test:smoke'
 ```
 
-- [ ] Переключение prod runtime на MinIO и prod deploy:
+- [x] Переключение prod runtime на MinIO и prod deploy:
 
 ```bash
 ssh mac-mini 'cd ~/srv/boltorezka && PROD_REF=origin/main npm run deploy:prod'
@@ -201,14 +202,14 @@ ssh mac-mini 'cd ~/srv/boltorezka && PROD_REF=origin/main npm run deploy:prod'
 
 #### D2. Post-prod storage smoke
 
-- [ ] Запустить postdeploy smoke на prod с storage gate-ами:
+- [x] Запустить postdeploy smoke на prod с storage gate-ами:
 
 ```bash
 ssh mac-mini 'cd ~/srv/boltorezka && SMOKE_API_URL=https://boltorezka.gismalink.art SMOKE_WEB_BASE_URL=https://boltorezka.gismalink.art SMOKE_CHAT_OBJECT_STORAGE=1 SMOKE_CHAT_ORPHAN_CLEANUP=1 SMOKE_MINIO_STORAGE=1 SMOKE_CHAT_STORAGE_METRICS=1 SMOKE_CHAT_STORAGE_PUT_FAIL_THRESHOLD=0 npm run smoke:test:postdeploy'
 ```
 
-- [ ] Проверить summary: `chat_object_storage=pass`, `chat_orphan_cleanup=pass`, `minio_storage=pass`, `chat_storage_put_fail_delta=0`.
-- [ ] Проверить deploy marker: `.deploy/last-deploy-prod.env` (`DEPLOY_REF=origin/main`, актуальный `DEPLOY_SHA`).
+- [x] Проверить summary: `chat_object_storage=pass`, `chat_orphan_cleanup=pass`, `minio_storage=pass`, `chat_storage_put_fail_delta=0`.
+- [x] Проверить deploy marker: `.deploy/last-deploy-prod.env` (`DEPLOY_REF=origin/main`, актуальный `DEPLOY_SHA`).
 
 #### D3. Rollback (операционный)
 
