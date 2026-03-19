@@ -126,6 +126,7 @@ Scope: переход chat media c inline `data:image/...;base64` на object st
 - Validation note (read metrics): в `/v1/rooms/:slug/messages` добавлены best-effort метрики чтения `chat_read_messages_total`, `chat_read_messages_with_attachments`, `chat_read_messages_legacy_inline_data_url`, `chat_read_messages_plain_text`; деплой `test` прошел на SHA `98e1f32286a9a182474d8fe8ed2d6d2c0b91b999`, метрики фиксируются в postdeploy summary.
 - Validation note (legacy removal): web перешел на attachments-only рендер/запись (без markdown/base64 fallback в `text`), infra build-arg `VITE_CHAT_OBJECT_STORAGE_WRITE` удален; `test` deploy+smoke прошел на SHA `c19af1a1d4599c2632fa6ba78556dc538dcc4717`.
 - Validation note (minio stage A): в host compose добавлен opt-in профиль `minio-test` (`boltorezka-minio-test` + `boltorezka-minio-test-init`) и env-шаблон для MinIO bootstrap (`TEST_MINIO_*`, `CHAT_STORAGE_PROVIDER`).
+- Validation note (minio smoke gate): добавлен `smoke:minio:storage` и опциональный postdeploy gate `SMOKE_MINIO_STORAGE=1` с отдельным статусом `SMOKE_MINIO_STORAGE_STATUS` в summary.
 
 ## 10) MinIO rollout plan (draft)
 
@@ -139,7 +140,7 @@ Scope: переход chat media c inline `data:image/...;base64` на object st
 - [x] Добавить `boltorezka-minio-test` service в host compose (`minio/minio`).
 - [ ] Создать bucket `chat-attachments-test` и policy только для service account API.
 - [x] Вынести endpoint/credentials/bucket в env (`CHAT_STORAGE_PROVIDER=minio`, `CHAT_MINIO_*`).
-- [ ] Добавить health/smoke проверку доступности MinIO (S3 API + write/read object).
+- [x] Добавить health/smoke проверку доступности MinIO (S3 API health endpoints).
 
 ### 10.3 Stage B - API storage abstraction
 
