@@ -53,6 +53,40 @@ async function fetchJson(path, options = {}) {
     throw new Error(`[smoke:chat:object-storage] upload init failed: ${initRes.response.status} ${JSON.stringify(initRes.payload)}`);
   }
 
+  const rejectedMimeInitRes = await fetchJson("/v1/chat/uploads/init", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      roomSlug,
+      mimeType: "text/plain",
+      sizeBytes: 12
+    })
+  });
+
+  if (rejectedMimeInitRes.response.status !== 400) {
+    throw new Error(`[smoke:chat:object-storage] expected UnsupportedMimeType init=400, got ${rejectedMimeInitRes.response.status}`);
+  }
+
+  const tooLargeInitRes = await fetchJson("/v1/chat/uploads/init", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      roomSlug,
+      mimeType: "image/png",
+      sizeBytes: 1024 * 1024 * 1024
+    })
+  });
+
+  if (tooLargeInitRes.response.status !== 400) {
+    throw new Error(`[smoke:chat:object-storage] expected AttachmentTooLarge init=400, got ${tooLargeInitRes.response.status}`);
+  }
+
   const uploadId = String(initRes.payload?.uploadId ?? "").trim();
   const storageKey = String(initRes.payload?.storageKey ?? "").trim();
   const uploadUrl = String(initRes.payload?.uploadUrl ?? "").trim();
@@ -125,6 +159,31 @@ async function fetchJson(path, options = {}) {
   const imageAttachment = attachments.find((item) => String(item?.type || "") === "image");
   if (!imageAttachment) {
     throw new Error("[smoke:chat:object-storage] image attachment is missing in history payload");
+  }
+
+  const downloadUrl = String(imageAttachment.downloadUrl || "").trim();
+  if (!downloadUrl) {
+    throw new Error("[smoke:chat:object-storage] attachment downloadUrl is missing");
+  }
+
+  const attachmentResponse = await fetch(buildUrl(downloadUrl), {
+    headers: {
+      Authorization: `Bearer ${token}`
+    }
+  });
+
+  if (!attachmentResponse.ok) {
+    throw new Error(`[smoke:chat:object-storage] attachment fetch failed: ${attachmentResponse.status}`);
+  }
+
+  const attachmentContentType = String(attachmentResponse.headers.get("content-type") || "").toLowerCase();
+  if (!attachmentContentType.startsWith("image/png")) {
+    throw new Error(`[smoke:chat:object-storage] unexpected attachment content-type: ${attachmentContentType || "<empty>"}`);
+  }
+
+  const attachmentBinary = Buffer.from(await attachmentResponse.arrayBuffer());
+  if (attachmentBinary.length !== blob.size) {
+    throw new Error(`[smoke:chat:object-storage] attachment size mismatch: expected=${blob.size} actual=${attachmentBinary.length}`);
   }
 
   console.log(`[smoke:chat:object-storage] ok (${baseUrl}) room=${roomSlug} messageId=${messageId} attachmentId=${attachmentId}`);
