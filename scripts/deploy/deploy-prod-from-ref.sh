@@ -18,6 +18,29 @@ ALLOW_PROD_RELAY_ONLY="${ALLOW_PROD_RELAY_ONLY:-0}"
 EDGE_REPO_DIR="${EDGE_REPO_DIR:-$HOME/srv/edge}"
 EDGE_STATIC_DIR_PROD="${EDGE_STATIC_DIR_PROD:-$EDGE_REPO_DIR/ingress/static/boltorezka/prod}"
 
+read_env_value() {
+  local key="$1"
+  local file="$2"
+
+  if [[ ! -f "$file" ]]; then
+    return 0
+  fi
+
+  local raw
+  raw="$(grep -E "^[[:space:]]*${key}=" "$file" | tail -n 1 || true)"
+  if [[ -z "$raw" ]]; then
+    return 0
+  fi
+
+  raw="${raw#*=}"
+  raw="${raw%%[[:space:]]#*}"
+  raw="${raw%\"}"
+  raw="${raw#\"}"
+  raw="${raw%\'}"
+  raw="${raw#\'}"
+  echo "$raw"
+}
+
 cd "$REPO_DIR"
 
 echo "[deploy-prod] repo: $REPO_DIR"
@@ -38,6 +61,11 @@ fi
 if [[ ! -f "$ENV_FILE" ]]; then
   echo "[deploy-prod] missing env file: $ENV_FILE" >&2
   exit 1
+fi
+
+PROD_CHAT_STORAGE_PROVIDER_VALUE="$(read_env_value "PROD_CHAT_STORAGE_PROVIDER" "$ENV_FILE")"
+if [[ -z "$PROD_CHAT_STORAGE_PROVIDER_VALUE" ]]; then
+  PROD_CHAT_STORAGE_PROVIDER_VALUE="localfs"
 fi
 
 PROD_ICE_POLICY_RAW="$(grep -E '^PROD_VITE_RTC_ICE_TRANSPORT_POLICY=' "$ENV_FILE" | tail -n 1 | cut -d= -f2- || true)"
@@ -109,8 +137,17 @@ fi
 
 if [[ "$FULL_RECREATE" == "1" ]]; then
   echo "[deploy-prod] full recreate enabled"
+  if [[ "$PROD_CHAT_STORAGE_PROVIDER_VALUE" == "minio" ]]; then
+    echo "[deploy-prod] storage provider=minio -> ensure minio-prod profile is up"
+    DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" --profile minio-prod up -d boltorezka-minio-prod boltorezka-minio-prod-init
+  fi
   DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" up -d --force-recreate boltorezka-api-prod
 else
+  DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" up -d boltorezka-turn boltorezka-db-prod boltorezka-redis-prod
+  if [[ "$PROD_CHAT_STORAGE_PROVIDER_VALUE" == "minio" ]]; then
+    echo "[deploy-prod] storage provider=minio -> ensure minio-prod profile is up"
+    DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" --profile minio-prod up -d boltorezka-minio-prod boltorezka-minio-prod-init
+  fi
   DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" up -d --no-deps --force-recreate boltorezka-api-prod
 fi
 

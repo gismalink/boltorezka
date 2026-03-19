@@ -9,9 +9,25 @@ SMOKE_HTTP_RETRIES="${SMOKE_HTTP_RETRIES:-8}"
 SMOKE_HTTP_RETRY_DELAY_SEC="${SMOKE_HTTP_RETRY_DELAY_SEC:-2}"
 COMPOSE_FILE="infra/docker-compose.host.yml"
 ENV_FILE="infra/.env.host"
-POSTGRES_SERVICE="${TEST_POSTGRES_SERVICE:-boltorezka-db-test}"
-REDIS_SERVICE="${TEST_REDIS_SERVICE:-boltorezka-redis-test}"
-API_SERVICE="${TEST_API_SERVICE:-boltorezka-api-test}"
+SMOKE_ENV_SCOPE="${SMOKE_ENV_SCOPE:-auto}"
+
+if [[ "$SMOKE_ENV_SCOPE" == "auto" ]]; then
+  if [[ "$BASE_URL" == *"test."* ]]; then
+    SMOKE_ENV_SCOPE="test"
+  else
+    SMOKE_ENV_SCOPE="prod"
+  fi
+fi
+
+if [[ "$SMOKE_ENV_SCOPE" == "prod" ]]; then
+  POSTGRES_SERVICE="${SMOKE_POSTGRES_SERVICE:-${PROD_POSTGRES_SERVICE:-boltorezka-db-prod}}"
+  REDIS_SERVICE="${SMOKE_REDIS_SERVICE:-${PROD_REDIS_SERVICE:-boltorezka-redis-prod}}"
+  API_SERVICE="${SMOKE_API_SERVICE:-${PROD_API_SERVICE:-boltorezka-api-prod}}"
+else
+  POSTGRES_SERVICE="${SMOKE_POSTGRES_SERVICE:-${TEST_POSTGRES_SERVICE:-boltorezka-db-test}}"
+  REDIS_SERVICE="${SMOKE_REDIS_SERVICE:-${TEST_REDIS_SERVICE:-boltorezka-redis-test}}"
+  API_SERVICE="${SMOKE_API_SERVICE:-${TEST_API_SERVICE:-boltorezka-api-test}}"
+fi
 USER_EMAIL="${SMOKE_USER_EMAIL:-smoke-rtc-1@example.test}"
 USER_EMAIL_SECOND="${SMOKE_USER_EMAIL_SECOND:-smoke-rtc-2@example.test}"
 USER_EMAIL_THIRD="${SMOKE_USER_EMAIL_THIRD:-smoke-rtc-3@example.test}"
@@ -112,6 +128,49 @@ if [[ ! -f "$ENV_FILE" ]]; then
   exit 1
 fi
 
+read_env_value() {
+  local key="$1"
+  local file="$2"
+
+  if [[ ! -f "$file" ]]; then
+    return 0
+  fi
+
+  local raw
+  raw="$(grep -E "^[[:space:]]*${key}=" "$file" | tail -n 1 || true)"
+  if [[ -z "$raw" ]]; then
+    return 0
+  fi
+
+  raw="${raw#*=}"
+  raw="${raw%%[[:space:]]#*}"
+  raw="${raw%\"}"
+  raw="${raw#\"}"
+  raw="${raw%\'}"
+  raw="${raw#\'}"
+  echo "$raw"
+}
+
+if [[ "$SMOKE_ENV_SCOPE" == "prod" ]]; then
+  SMOKE_POSTGRES_USER="${SMOKE_POSTGRES_USER:-$(read_env_value "PROD_POSTGRES_USER" "$ENV_FILE") }"
+  SMOKE_POSTGRES_DB="${SMOKE_POSTGRES_DB:-$(read_env_value "PROD_POSTGRES_DB" "$ENV_FILE") }"
+  SMOKE_MINIO_STORAGE_PROVIDER_VALUE="${SMOKE_MINIO_STORAGE_PROVIDER:-$(read_env_value "PROD_CHAT_STORAGE_PROVIDER" "$ENV_FILE") }"
+  SMOKE_MINIO_ENDPOINT_VALUE="${SMOKE_MINIO_ENDPOINT:-$(read_env_value "PROD_CHAT_MINIO_ENDPOINT" "$ENV_FILE") }"
+  SMOKE_MINIO_ENDPOINT_FALLBACK_VALUE="${SMOKE_MINIO_ENDPOINT_FALLBACK:-http://127.0.0.1:${PROD_MINIO_API_PORT:-29000}}"
+else
+  SMOKE_POSTGRES_USER="${SMOKE_POSTGRES_USER:-$(read_env_value "TEST_POSTGRES_USER" "$ENV_FILE") }"
+  SMOKE_POSTGRES_DB="${SMOKE_POSTGRES_DB:-$(read_env_value "TEST_POSTGRES_DB" "$ENV_FILE") }"
+  SMOKE_MINIO_STORAGE_PROVIDER_VALUE="${SMOKE_MINIO_STORAGE_PROVIDER:-$(read_env_value "TEST_CHAT_STORAGE_PROVIDER" "$ENV_FILE") }"
+  SMOKE_MINIO_ENDPOINT_VALUE="${SMOKE_MINIO_ENDPOINT:-$(read_env_value "TEST_CHAT_MINIO_ENDPOINT" "$ENV_FILE") }"
+  SMOKE_MINIO_ENDPOINT_FALLBACK_VALUE="${SMOKE_MINIO_ENDPOINT_FALLBACK:-http://127.0.0.1:${TEST_MINIO_API_PORT:-19000}}"
+fi
+
+SMOKE_POSTGRES_USER="$(echo "${SMOKE_POSTGRES_USER:-}" | xargs)"
+SMOKE_POSTGRES_DB="$(echo "${SMOKE_POSTGRES_DB:-}" | xargs)"
+SMOKE_MINIO_STORAGE_PROVIDER_VALUE="$(echo "${SMOKE_MINIO_STORAGE_PROVIDER_VALUE:-localfs}" | xargs)"
+SMOKE_MINIO_ENDPOINT_VALUE="$(echo "${SMOKE_MINIO_ENDPOINT_VALUE:-}" | xargs)"
+SMOKE_MINIO_ENDPOINT_FALLBACK_VALUE="$(echo "${SMOKE_MINIO_ENDPOINT_FALLBACK_VALUE:-}" | xargs)"
+
 compose() {
   docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" "$@"
 }
@@ -134,12 +193,12 @@ require_test_email() {
 resolve_user_meta_by_email() {
   local email="$1"
 
-  if [[ -z "${TEST_POSTGRES_USER:-}" || -z "${TEST_POSTGRES_DB:-}" ]]; then
-    echo "[postdeploy-smoke] TEST_POSTGRES_USER/TEST_POSTGRES_DB are required" >&2
+  if [[ -z "${SMOKE_POSTGRES_USER:-}" || -z "${SMOKE_POSTGRES_DB:-}" ]]; then
+    echo "[postdeploy-smoke] SMOKE_POSTGRES_USER/SMOKE_POSTGRES_DB are required (scope=$SMOKE_ENV_SCOPE)" >&2
     exit 1
   fi
 
-  compose exec -T "$POSTGRES_SERVICE" psql -U "$TEST_POSTGRES_USER" -d "$TEST_POSTGRES_DB" -tAc "select id::text || '|' || coalesce(role,'user') from users where email='${email}' limit 1;"
+  compose exec -T "$POSTGRES_SERVICE" psql -U "$SMOKE_POSTGRES_USER" -d "$SMOKE_POSTGRES_DB" -tAc "select id::text || '|' || coalesce(role,'user') from users where email='${email}' limit 1;"
 }
 
 base64url() {
@@ -629,9 +688,9 @@ else
 
   if [[ "${SMOKE_MINIO_STORAGE:-0}" == "1" ]]; then
     echo "[postdeploy-smoke] smoke:minio:storage"
-    SMOKE_MINIO_STORAGE_PROVIDER="${TEST_CHAT_STORAGE_PROVIDER:-${CHAT_STORAGE_PROVIDER:-localfs}}" \
-      SMOKE_MINIO_ENDPOINT="${TEST_CHAT_MINIO_ENDPOINT:-${CHAT_MINIO_ENDPOINT:-}}" \
-      SMOKE_MINIO_ENDPOINT_FALLBACK="${SMOKE_MINIO_ENDPOINT_FALLBACK:-http://127.0.0.1:${TEST_MINIO_API_PORT:-19000}}" \
+    SMOKE_MINIO_STORAGE_PROVIDER="${SMOKE_MINIO_STORAGE_PROVIDER_VALUE:-localfs}" \
+      SMOKE_MINIO_ENDPOINT="${SMOKE_MINIO_ENDPOINT_VALUE:-}" \
+      SMOKE_MINIO_ENDPOINT_FALLBACK="${SMOKE_MINIO_ENDPOINT_FALLBACK_VALUE:-}" \
       npm run smoke:minio:storage
     MINIO_STORAGE_STATUS="pass"
   else

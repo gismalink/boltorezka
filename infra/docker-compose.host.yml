@@ -381,6 +381,93 @@ services:
     networks:
       - data_prod
 
+  boltorezka-minio-prod:
+    image: minio/minio:latest
+    container_name: boltorezka-minio-prod
+    restart: unless-stopped
+    profiles: ["minio-prod"]
+    environment:
+      MINIO_ROOT_USER: ${PROD_MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${PROD_MINIO_ROOT_PASSWORD:-minioadmin}
+    command: server /data --console-address ":9001"
+    ports:
+      - "${PROD_MINIO_API_PORT:-29000}:9000"
+      - "${PROD_MINIO_CONSOLE_PORT:-29001}:9001"
+    volumes:
+      - minio_prod_data:/data
+    networks:
+      - data_prod
+
+  boltorezka-minio-prod-init:
+    image: minio/mc:latest
+    container_name: boltorezka-minio-prod-init
+    restart: "no"
+    profiles: ["minio-prod"]
+    depends_on:
+      boltorezka-minio-prod:
+        condition: service_started
+    entrypoint:
+      - /bin/sh
+      - -ec
+    command:
+      - |
+        BUCKET="${PROD_MINIO_BUCKET:-chat-attachments-prod}"
+        API_USER="${PROD_MINIO_API_USER:-${PROD_CHAT_MINIO_ACCESS_KEY:-}}"
+        API_PASSWORD="${PROD_MINIO_API_PASSWORD:-${PROD_CHAT_MINIO_SECRET_KEY:-}}"
+
+        if [ -z "$${API_USER}" ] || [ -z "$${API_PASSWORD}" ]; then
+          API_USER="${PROD_MINIO_ROOT_USER:-minioadmin}"
+          API_PASSWORD="${PROD_MINIO_ROOT_PASSWORD:-minioadmin}"
+          echo "[minio-prod-init] warning: PROD_MINIO_API_USER/PASSWORD are not set; fallback to root credentials" >&2
+        fi
+
+        attempt=1
+        until mc alias set local http://boltorezka-minio-prod:9000 "${PROD_MINIO_ROOT_USER:-minioadmin}" "${PROD_MINIO_ROOT_PASSWORD:-minioadmin}"; do
+          if [ "$$attempt" -ge 30 ]; then
+            echo "[minio-prod-init] failed to reach MinIO after $${attempt} attempts" >&2
+            exit 1
+          fi
+          attempt=$$((attempt + 1))
+          sleep 2
+        done
+
+        mc mb --ignore-existing "local/$${BUCKET}"
+        mc anonymous set none "local/$${BUCKET}"
+
+        cat >/tmp/chat-attachments-rw-policy.json <<EOF
+        {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Action": [
+                "s3:ListBucket"
+              ],
+              "Resource": [
+                "arn:aws:s3:::$${BUCKET}"
+              ]
+            },
+            {
+              "Effect": "Allow",
+              "Action": [
+                "s3:GetObject",
+                "s3:PutObject",
+                "s3:DeleteObject"
+              ],
+              "Resource": [
+                "arn:aws:s3:::$${BUCKET}/*"
+              ]
+            }
+          ]
+        }
+        EOF
+
+        mc admin policy create local chat-attachments-rw /tmp/chat-attachments-rw-policy.json >/dev/null 2>&1 || true
+        mc admin user add local "$${API_USER}" "$${API_PASSWORD}" >/dev/null 2>&1 || true
+        mc admin policy attach local chat-attachments-rw --user "$${API_USER}" >/dev/null 2>&1 || true
+    networks:
+      - data_prod
+
   boltorezka-livekit-prod:
     image: livekit/livekit-server:v1.9.12
     container_name: boltorezka-livekit-prod
@@ -439,6 +526,7 @@ volumes:
   postgres_test_data:
   postgres_prod_data:
   minio_test_data:
+  minio_prod_data:
   ingress_caddy_data:
     external: true
     name: edge_caddy_data

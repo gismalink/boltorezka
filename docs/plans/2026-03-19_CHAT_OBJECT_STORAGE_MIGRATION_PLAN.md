@@ -175,3 +175,51 @@ Scope: переход chat media c inline `data:image/...;base64` на object st
 - [ ] После подтверждения `test` развернуть `boltorezka-minio-prod`.
 - [ ] Переключить `prod` на provider=`minio` только после smoke в `test` и явного approval.
 - [ ] Зафиксировать rollback: вернуть provider=`localfs` без миграции API контрактов.
+
+### 10.6 Stage D - Ready-to-run checklist (prod)
+
+#### D0. Preflight (перед изменениями)
+
+- [ ] Подтверждено явное approval на `prod` rollout.
+- [ ] Подтвержден latest `origin/main` в `test` и green storage gates (`chat:object-storage`, `chat:orphan-cleanup`, `minio:storage`, `chat_storage_put_fail_delta=0`).
+- [ ] В `infra/docker-compose.host.yml` присутствуют `boltorezka-minio-prod` и `boltorezka-minio-prod-init` (по аналогии с test).
+- [ ] В `infra/.env.host` на сервере заполнены `PROD_MINIO_*` и `PROD_CHAT_MINIO_*`.
+
+#### D1. Infra apply (prod MinIO service)
+
+- [ ] Деплой `origin/main` в `test` с smoke из main (обязательный gate перед prod):
+
+```bash
+ssh mac-mini 'cd ~/srv/boltorezka && TEST_REF=origin/main ALLOW_TEST_FROM_MAIN=1 SMOKE_CHAT_OBJECT_STORAGE=1 SMOKE_CHAT_ORPHAN_CLEANUP=1 SMOKE_MINIO_STORAGE=1 SMOKE_CHAT_STORAGE_METRICS=1 SMOKE_CHAT_STORAGE_PUT_FAIL_THRESHOLD=0 npm run deploy:test:smoke'
+```
+
+- [ ] Переключение prod runtime на MinIO и prod deploy:
+
+```bash
+ssh mac-mini 'cd ~/srv/boltorezka && PROD_REF=origin/main npm run deploy:prod'
+```
+
+#### D2. Post-prod storage smoke
+
+- [ ] Запустить postdeploy smoke на prod с storage gate-ами:
+
+```bash
+ssh mac-mini 'cd ~/srv/boltorezka && SMOKE_API_URL=https://boltorezka.gismalink.art SMOKE_WEB_BASE_URL=https://boltorezka.gismalink.art SMOKE_CHAT_OBJECT_STORAGE=1 SMOKE_CHAT_ORPHAN_CLEANUP=1 SMOKE_MINIO_STORAGE=1 SMOKE_CHAT_STORAGE_METRICS=1 SMOKE_CHAT_STORAGE_PUT_FAIL_THRESHOLD=0 npm run smoke:test:postdeploy'
+```
+
+- [ ] Проверить summary: `chat_object_storage=pass`, `chat_orphan_cleanup=pass`, `minio_storage=pass`, `chat_storage_put_fail_delta=0`.
+- [ ] Проверить deploy marker: `.deploy/last-deploy-prod.env` (`DEPLOY_REF=origin/main`, актуальный `DEPLOY_SHA`).
+
+#### D3. Rollback (операционный)
+
+- [ ] Быстрый rollback path документирован и проверен:
+
+```bash
+ssh mac-mini 'cd ~/srv/boltorezka && sed -i "" "s/^PROD_CHAT_STORAGE_PROVIDER=.*/PROD_CHAT_STORAGE_PROVIDER=localfs/" infra/.env.host && PROD_REF=origin/main npm run deploy:prod'
+```
+
+- [ ] После rollback подтверждено: API `health=ok`, сообщения/вложения доступны, storage-specific smoke не показывает регрессий API.
+
+#### D4. Документирование факта выкатки
+
+- [ ] Обновлены статусы разделов `10.5`, `8` и validation notes с SHA и итогами prod smoke.
