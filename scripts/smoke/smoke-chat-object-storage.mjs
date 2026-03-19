@@ -2,6 +2,8 @@
 const baseUrl = (process.env.SMOKE_API_URL ?? "http://localhost:8080").replace(/\/+$/, "");
 const token = String(process.env.SMOKE_TEST_BEARER_TOKEN ?? "").trim();
 const roomSlug = String(process.env.SMOKE_CHAT_OBJECT_STORAGE_ROOM_SLUG ?? "general").trim() || "general";
+const httpRetries = Math.max(1, Number.parseInt(process.env.SMOKE_HTTP_RETRIES ?? "5", 10) || 5);
+const httpRetryDelayMs = Math.max(100, Number.parseInt(process.env.SMOKE_HTTP_RETRY_DELAY_MS ?? "1000", 10) || 1000);
 
 if (!token) {
   console.log("[smoke:chat:object-storage] skipped: SMOKE_TEST_BEARER_TOKEN is not set");
@@ -18,8 +20,36 @@ function buildUrl(path) {
   return `${baseUrl}${path}`;
 }
 
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function fetchWithRetry(path, options = {}) {
+  const url = buildUrl(path);
+  let lastError;
+
+  for (let attempt = 1; attempt <= httpRetries; attempt += 1) {
+    try {
+      const response = await fetch(url, options);
+      if (response.status >= 500 && attempt < httpRetries) {
+        await sleep(httpRetryDelayMs);
+        continue;
+      }
+      return response;
+    } catch (error) {
+      lastError = error;
+      if (attempt >= httpRetries) {
+        throw error;
+      }
+      await sleep(httpRetryDelayMs);
+    }
+  }
+
+  throw lastError ?? new Error(`fetch failed after retries: ${url}`);
+}
+
 async function fetchJson(path, options = {}) {
-  const response = await fetch(buildUrl(path), options);
+  const response = await fetchWithRetry(path, options);
   const text = await response.text();
   let payload;
   try {
@@ -98,7 +128,7 @@ async function fetchJson(path, options = {}) {
     throw new Error(`[smoke:chat:object-storage] upload init contract invalid: ${JSON.stringify(initRes.payload)}`);
   }
 
-  const putResponse = await fetch(buildUrl(uploadUrl), {
+  const putResponse = await fetchWithRetry(uploadUrl, {
     method: "PUT",
     headers: requiredHeaders,
     body: blob
@@ -166,7 +196,7 @@ async function fetchJson(path, options = {}) {
     throw new Error("[smoke:chat:object-storage] attachment downloadUrl is missing");
   }
 
-  const attachmentResponse = await fetch(buildUrl(downloadUrl), {
+  const attachmentResponse = await fetchWithRetry(downloadUrl, {
     headers: {
       Authorization: `Bearer ${token}`
     }

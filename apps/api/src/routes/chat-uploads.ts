@@ -1,5 +1,5 @@
 import { createHash, randomBytes, randomUUID } from "node:crypto";
-import type { FastifyInstance } from "fastify";
+import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
 import { config } from "../config.js";
 import { db } from "../db.js";
@@ -40,6 +40,12 @@ type UploadedObjectRecord = {
   sizeBytes: number;
   checksum: string;
   uploadedAt: string;
+};
+
+type UploadRateLimitPolicy = {
+  namespace: string;
+  max: number;
+  windowSec: number;
 };
 
 const initUploadSchema = z.object({
@@ -108,8 +114,38 @@ function buildDownloadUrl(storageKey: string, explicitDownloadUrl: string | unde
   return `${config.chatObjectStoragePublicBaseUrl}${relativeUrl}`;
 }
 
+function buildUploadAuditContext(request: FastifyRequest, extra: Record<string, unknown> = {}) {
+  const requestId = String(request.id || "").trim() || null;
+  const userId = String(request.user?.sub || "").trim() || null;
+  const ip = String(request.ip || request.headers["x-forwarded-for"] || "unknown")
+    .split(",")[0]
+    .trim() || null;
+  const userAgent = String(request.headers["user-agent"] || "").trim() || null;
+
+  return {
+    requestId,
+    userId,
+    ip,
+    userAgent,
+    ...extra
+  };
+}
+
+function resolveUploadRateLimitSubject(request: FastifyRequest): string {
+  const userId = String(request.user?.sub || "").trim();
+  if (userId) {
+    return `u:${userId}`;
+  }
+
+  const ip = String(request.ip || request.headers["x-forwarded-for"] || "unknown")
+    .split(",")[0]
+    .trim();
+  return `ip:${ip || "unknown"}`;
+}
+
 export async function chatUploadsRoutes(fastify: FastifyInstance) {
   const chatObjectStorage = createChatObjectStorage(config);
+  const UPLOAD_RATE_LIMIT_PREFIX = "chat:upload:rl:";
 
   const incrementStorageMetricBy = async (name: string, value: number) => {
     if (!Number.isFinite(value)) {
@@ -132,6 +168,49 @@ export async function chatUploadsRoutes(fastify: FastifyInstance) {
   const incrementStorageMetric = async (name: string) => {
     await incrementStorageMetricBy(name, 1);
   };
+
+  const makeUploadRateLimiter = (policy: UploadRateLimitPolicy) => {
+    return async (request: FastifyRequest, reply: FastifyReply) => {
+      const nowWindow = Math.floor(Date.now() / 1000 / policy.windowSec);
+      const key = `${UPLOAD_RATE_LIMIT_PREFIX}${policy.namespace}:${resolveUploadRateLimitSubject(request)}:${nowWindow}`;
+
+      const current = await fastify.redis.incr(key);
+      if (current === 1) {
+        await fastify.redis.expire(key, policy.windowSec);
+      }
+
+      if (current > policy.max) {
+        request.log.warn(
+          buildUploadAuditContext(request, {
+            event: "chat.upload.rate_limit.exceeded",
+            namespace: policy.namespace,
+            limit: policy.max,
+            windowSec: policy.windowSec,
+            current
+          }),
+          "chat upload rate limit exceeded"
+        );
+        reply.header("Retry-After", String(policy.windowSec));
+        return reply.code(429).send({
+          error: "RateLimitExceeded",
+          message: `Too many requests for ${policy.namespace}`
+        });
+      }
+
+      return undefined;
+    };
+  };
+
+  const limitUploadInit = makeUploadRateLimiter({
+    namespace: "init",
+    max: 60,
+    windowSec: 60
+  });
+  const limitUploadFinalize = makeUploadRateLimiter({
+    namespace: "finalize",
+    max: 60,
+    windowSec: 60
+  });
 
   fastify.get<{
     Querystring: { key?: string };
@@ -272,9 +351,35 @@ export async function chatUploadsRoutes(fastify: FastifyInstance) {
       try {
         await chatObjectStorage.putObject(reservation.storageKey, body, reservation.mimeType);
         void incrementStorageMetric("chat_storage_put_ok");
+        request.log.info(
+          buildUploadAuditContext(request, {
+            event: "chat.upload.put",
+            status: "ok",
+            provider: config.chatStorageProvider,
+            uploadId,
+            roomSlug: reservation.roomSlug,
+            storageKey: reservation.storageKey,
+            sizeBytes: body.length,
+            mimeType: reservation.mimeType
+          }),
+          "chat upload object stored"
+        );
       } catch (error) {
         void incrementStorageMetric("chat_storage_put_fail");
         request.log.error({ err: error, storageKey: reservation.storageKey }, "chat upload object write failed");
+        request.log.warn(
+          buildUploadAuditContext(request, {
+            event: "chat.upload.put",
+            status: "fail",
+            provider: config.chatStorageProvider,
+            uploadId,
+            roomSlug: reservation.roomSlug,
+            storageKey: reservation.storageKey,
+            sizeBytes: body.length,
+            mimeType: reservation.mimeType
+          }),
+          "chat upload object store failed"
+        );
         return reply.code(500).send({
           error: "UploadStoreFailed",
           message: "Failed to store uploaded object"
@@ -395,9 +500,13 @@ export async function chatUploadsRoutes(fastify: FastifyInstance) {
   fastify.post<{ Body: unknown }>(
     "/v1/chat/uploads/init",
     {
-      preHandler: [requireAuth, requireServiceAccess]
+      preHandler: [requireAuth, requireServiceAccess, limitUploadInit]
     },
     async (request, reply) => {
+      if (reply.sent) {
+        return;
+      }
+
       const parsed = initUploadSchema.safeParse(request.body || {});
       if (!parsed.success) {
         return reply.code(400).send({
@@ -493,6 +602,20 @@ export async function chatUploadsRoutes(fastify: FastifyInstance) {
         }
       };
 
+      request.log.info(
+        buildUploadAuditContext(request, {
+          event: "chat.upload.init",
+          status: "ok",
+          provider: config.chatStorageProvider,
+          uploadId,
+          roomSlug,
+          storageKey,
+          sizeBytes,
+          mimeType
+        }),
+        "chat upload initialized"
+      );
+
       return response;
     }
   );
@@ -500,9 +623,13 @@ export async function chatUploadsRoutes(fastify: FastifyInstance) {
   fastify.post<{ Body: unknown }>(
     "/v1/chat/uploads/finalize",
     {
-      preHandler: [requireAuth, requireServiceAccess]
+      preHandler: [requireAuth, requireServiceAccess, limitUploadFinalize]
     },
     async (request, reply) => {
+      if (reply.sent) {
+        return;
+      }
+
       const parsed = finalizeUploadSchema.safeParse(request.body || {});
       if (!parsed.success) {
         return reply.code(400).send({
@@ -729,6 +856,21 @@ export async function chatUploadsRoutes(fastify: FastifyInstance) {
         message: responseMessage,
         attachment
       };
+
+      request.log.info(
+        buildUploadAuditContext(request, {
+          event: "chat.upload.finalize",
+          status: "ok",
+          provider: config.chatStorageProvider,
+          uploadId,
+          roomSlug: reservation.roomSlug,
+          storageKey: reservation.storageKey,
+          sizeBytes: reservation.sizeBytes,
+          mimeType: reservation.mimeType,
+          messageId: message.id
+        }),
+        "chat upload finalized"
+      );
 
       return response;
     }
