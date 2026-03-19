@@ -32,7 +32,6 @@ type UseChatComposerActionsParams = {
   setMessagesNextCursor: (cursor: MessagesCursor | null) => void;
   user: User | null;
   authToken: string;
-  objectStorageWriteEnabled: boolean;
   chatText: string;
   setChatText: (value: string) => void;
   editingMessageId: string | null;
@@ -60,7 +59,6 @@ export function useChatComposerActions({
   setMessagesNextCursor,
   user,
   authToken,
-  objectStorageWriteEnabled,
   chatText,
   setChatText,
   editingMessageId,
@@ -145,7 +143,7 @@ export function useChatComposerActions({
           .trim();
       }
 
-      if (objectStorageWriteEnabled && imageSource.startsWith("data:image/")) {
+      if (imageSource) {
         try {
           const imageResponse = await fetch(imageSource);
           const imageBlob = await imageResponse.blob();
@@ -183,13 +181,11 @@ export function useChatComposerActions({
         }
       }
 
-      const imageMarkdown = imageSource ? `![скриншот](${imageSource})` : "";
-      const outgoingText = [baseText, imageMarkdown].filter(Boolean).join("\n");
-      if (!outgoingText) {
+      if (!baseText) {
         return;
       }
 
-      const result = chatController.sendMessage(outgoingText, chatRoomSlug, user, maxChatRetries);
+      const result = chatController.sendMessage(baseText, chatRoomSlug, user, maxChatRetries);
       if (!result.sent) {
         return;
       }
@@ -206,7 +202,6 @@ export function useChatComposerActions({
     chatText,
     editingMessageId,
     maxChatRetries,
-    objectStorageWriteEnabled,
     pendingChatImageDataUrl,
     pushToast,
     selectChannelPlaceholderMessage,

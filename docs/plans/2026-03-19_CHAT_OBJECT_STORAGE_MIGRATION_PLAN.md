@@ -46,8 +46,8 @@ Scope: переход chat media c inline `data:image/...;base64` на object st
 ## 3) Backward compatibility
 
 - [ ] Reader поддерживает legacy markdown/base64 сообщения.
-- [ ] Writer-path для новых сообщений может быть переключен на attachments feature flag.
-- [ ] Legacy fallback сохраняется до завершения обновления клиентов.
+- [x] Writer-path для новых сообщений фиксирован на attachments-only (без runtime feature flag).
+- [x] Legacy fallback writer отключен в web-клиенте.
 - [ ] Формат WS/API payload versioned (или эквивалентный backward-safe контракт).
 
 ## 4) Security and operations hardening
@@ -77,7 +77,7 @@ Scope: переход chat media c inline `data:image/...;base64` на object st
 ### Stage 2 - Attachments write on test
 
 - [x] В `test` включен write в attachments.
-- [ ] Smoke и ручной critical-path тест стабильны.
+- [x] Smoke и ручной critical-path тест стабильны.
 - [ ] Ошибки upload/finalize не превышают согласованный порог.
 
 ### Stage 3 - Attachments write on prod
@@ -124,3 +124,36 @@ Scope: переход chat media c inline `data:image/...;base64` на object st
 - Validation note (test rollout): деплой `test` с `TEST_VITE_CHAT_OBJECT_STORAGE_WRITE=1` и `SMOKE_CHAT_OBJECT_STORAGE=1` прошел успешно на SHA `8a6658cb017dc55a03e5d7685fddf0f174f67b85`; smoke `chat:object-storage` и общий postdeploy smoke - `ok`.
 - Validation note (hardened smoke): smoke `chat:object-storage` расширен проверками `Attachment URL content-type` и reject для unsupported `mime`/oversized `size`; `test` deploy+smoke прошел на SHA `f48a8d2759987ed71de93c7cf78c4ee7c6a3b816`.
 - Validation note (read metrics): в `/v1/rooms/:slug/messages` добавлены best-effort метрики чтения `chat_read_messages_total`, `chat_read_messages_with_attachments`, `chat_read_messages_legacy_inline_data_url`, `chat_read_messages_plain_text`; деплой `test` прошел на SHA `98e1f32286a9a182474d8fe8ed2d6d2c0b91b999`, метрики фиксируются в postdeploy summary.
+- Validation note (legacy removal): web перешел на attachments-only рендер/запись (без markdown/base64 fallback в `text`), infra build-arg `VITE_CHAT_OBJECT_STORAGE_WRITE` удален; `test` deploy+smoke прошел на SHA `c19af1a1d4599c2632fa6ba78556dc538dcc4717`.
+
+## 10) MinIO rollout plan (draft)
+
+### 10.1 Target
+
+- [ ] MinIO как отдельный object storage backend для chat attachments.
+- [ ] Хранилище файлов изолировано от API container filesystem.
+
+### 10.2 Stage A - MinIO foundation on test
+
+- [ ] Добавить `boltorezka-minio-test` service в host compose (`minio/minio`).
+- [ ] Создать bucket `chat-attachments-test` и policy только для service account API.
+- [ ] Вынести endpoint/credentials/bucket в env (`CHAT_STORAGE_PROVIDER=minio`, `CHAT_MINIO_*`).
+- [ ] Добавить health/smoke проверку доступности MinIO (S3 API + write/read object).
+
+### 10.3 Stage B - API storage abstraction
+
+- [ ] Ввести `ChatObjectStorage` интерфейс (put/get/stat/delete).
+- [ ] Реализовать `LocalFsChatObjectStorage` (текущий путь) и `MinioChatObjectStorage`.
+- [ ] Переключение provider через config без изменения API контрактов.
+
+### 10.4 Stage C - Test cutover
+
+- [ ] В `test` включить provider=`minio`.
+- [ ] Smoke: upload-init -> put -> finalize -> history -> download via API endpoint.
+- [ ] Smoke: orphan cleanup/TTL job и проверка метрик ошибок provider.
+
+### 10.5 Stage D - Prod cutover
+
+- [ ] После подтверждения `test` развернуть `boltorezka-minio-prod`.
+- [ ] Переключить `prod` на provider=`minio` только после smoke в `test` и явного approval.
+- [ ] Зафиксировать rollback: вернуть provider=`localfs` без миграции API контрактов.
