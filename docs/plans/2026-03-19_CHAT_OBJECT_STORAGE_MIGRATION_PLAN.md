@@ -132,6 +132,7 @@ Scope: переход chat media c inline `data:image/...;base64` на object st
 - Validation note (provider error metrics gate): добавлены метрики `chat_storage_put_ok`/`chat_storage_put_fail` и postdeploy-проверка их дельты (`SMOKE_CHAT_STORAGE_METRICS=1`, `SMOKE_CHAT_STORAGE_PUT_FAIL_THRESHOLD=0`); в test run на SHA `6eec7a3232a6d157bb65266c21bd9e39fceee8f9` получено `ok_delta=1`, `fail_delta=0`.
 - Validation note (orphan cleanup gate): добавлен admin endpoint `POST /v1/admin/chat/uploads/orphan-cleanup` (dry-run/delete) и smoke `smoke:chat:orphan-cleanup`; postdeploy поддерживает отдельный gate `SMOKE_CHAT_ORPHAN_CLEANUP=1` и статус `SMOKE_CHAT_ORPHAN_CLEANUP_STATUS`.
 - Validation note (orphan cleanup validation): test deploy+smoke прошел на SHA `640f64efabbd523551952908c92636eaaad5c41c` с `SMOKE_CHAT_ORPHAN_CLEANUP=1`; `smoke:chat:orphan-cleanup` -> `ok`, postdeploy metrics gate показал `chat_storage_put_ok_delta=2`, `chat_storage_put_fail_delta=0`.
+- Validation note (persistent minio config): test deploy+smoke прошел на SHA `136061f96de387a1339d91d9c9e113eab046da1b` без runtime overrides storage provider (использован persistent `infra/.env.host`), при активном `minio-test` профиле: `smoke:chat:object-storage`, `smoke:chat:orphan-cleanup`, `smoke:minio:storage` -> `ok`, metrics gate `ok_delta=2`, `fail_delta=0`.
 
 ## 10) MinIO rollout plan (draft)
 
@@ -155,7 +156,7 @@ Scope: переход chat media c inline `data:image/...;base64` на object st
 
 ### 10.4 Stage C - Test cutover
 
-- [x] В `test` включить provider=`minio` (runtime override в deploy сессии; постоянная фиксация в `infra/.env.host` pending).
+- [x] В `test` включить provider=`minio` (runtime override в deploy сессии + постоянная фиксация в `infra/.env.host`).
 - [x] Smoke: upload-init -> put -> finalize -> history -> download via API endpoint.
 - [x] Smoke: orphan cleanup/TTL path (admin cleanup endpoint + postdeploy gate).
 - [x] Проверка метрик ошибок provider в postdeploy (`chat_storage_put_fail_delta`).

@@ -17,6 +17,29 @@ FULL_RECREATE="${FULL_RECREATE:-0}"
 EDGE_REPO_DIR="${EDGE_REPO_DIR:-$HOME/srv/edge}"
 EDGE_STATIC_DIR_TEST="${EDGE_STATIC_DIR_TEST:-$EDGE_REPO_DIR/ingress/static/boltorezka/test}"
 
+read_env_value() {
+  local key="$1"
+  local file="$2"
+
+  if [[ ! -f "$file" ]]; then
+    return 0
+  fi
+
+  local raw
+  raw="$(grep -E "^[[:space:]]*${key}=" "$file" | tail -n 1 || true)"
+  if [[ -z "$raw" ]]; then
+    return 0
+  fi
+
+  raw="${raw#*=}"
+  raw="${raw%%[[:space:]]#*}"
+  raw="${raw%\"}"
+  raw="${raw#\"}"
+  raw="${raw%\'}"
+  raw="${raw#\'}"
+  echo "$raw"
+}
+
 if [[ "$GIT_REF" =~ ^(origin/main|main|origin/master|master)$ ]] && [[ "${ALLOW_TEST_FROM_MAIN:-0}" != "1" ]]; then
   echo "[deploy-test] blocked by policy: test deploy should use feature branch ref"
   echo "[deploy-test] set ALLOW_TEST_FROM_MAIN=1 only for explicit exception"
@@ -43,6 +66,11 @@ fi
 if [[ ! -f "$ENV_FILE" ]]; then
   echo "[deploy-test] missing env file: $ENV_FILE"
   exit 1
+fi
+
+TEST_CHAT_STORAGE_PROVIDER_VALUE="$(read_env_value "TEST_CHAT_STORAGE_PROVIDER" "$ENV_FILE")"
+if [[ -z "$TEST_CHAT_STORAGE_PROVIDER_VALUE" ]]; then
+  TEST_CHAT_STORAGE_PROVIDER_VALUE="localfs"
 fi
 
 echo "[deploy-test] deploy mode: api-only + caddy-static-sync (set FULL_RECREATE=1 for full dependency recreate)"
@@ -98,10 +126,18 @@ fi
 
 if [[ "$FULL_RECREATE" == "1" ]]; then
   echo "[deploy-test] full recreate enabled"
+  if [[ "$TEST_CHAT_STORAGE_PROVIDER_VALUE" == "minio" ]]; then
+    echo "[deploy-test] storage provider=minio -> ensure minio-test profile is up"
+    DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" --profile minio-test up -d boltorezka-minio-test boltorezka-minio-test-init
+  fi
   DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" up -d --force-recreate boltorezka-api-test
 else
   # Keep api-only fast path, but make sure core deps (including TURN) are up.
   DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" up -d boltorezka-turn boltorezka-db-test boltorezka-redis-test
+  if [[ "$TEST_CHAT_STORAGE_PROVIDER_VALUE" == "minio" ]]; then
+    echo "[deploy-test] storage provider=minio -> ensure minio-test profile is up"
+    DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" --profile minio-test up -d boltorezka-minio-test boltorezka-minio-test-init
+  fi
   DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" up -d --no-deps --force-recreate boltorezka-api-test
 fi
 
