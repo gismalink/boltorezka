@@ -4,7 +4,7 @@ import { z } from "zod";
 import { config } from "../config.js";
 import { db } from "../db.js";
 import { broadcastRealtimeEnvelope } from "../realtime-broadcast.js";
-import { requireAuth, requireServiceAccess } from "../middleware/auth.js";
+import { loadCurrentUser, requireAuth, requireRole, requireServiceAccess } from "../middleware/auth.js";
 import { buildChatMessageEnvelope } from "../ws-protocol.js";
 import {
   ChatObjectStorageNotFoundError,
@@ -59,6 +59,14 @@ const finalizeUploadSchema = z.object({
   width: z.number().int().positive().optional(),
   height: z.number().int().positive().optional(),
   checksum: z.string().trim().max(512).optional()
+});
+
+const orphanCleanupSchema = z.object({
+  prefix: z.string().trim().min(1).max(512).default("chat/"),
+  olderThanSec: z.number().int().min(0).max(60 * 60 * 24 * 30).default(3600),
+  dryRun: z.boolean().default(true),
+  maxScan: z.number().int().min(1).max(10000).default(1000),
+  maxDelete: z.number().int().min(1).max(1000).default(200)
 });
 
 function normalizeMimeType(value: string): string {
@@ -289,6 +297,98 @@ export async function chatUploadsRoutes(fastify: FastifyInstance) {
       );
 
       return reply.code(204).send();
+    }
+  );
+
+  fastify.post<{ Body: unknown }>(
+    "/v1/admin/chat/uploads/orphan-cleanup",
+    {
+      preHandler: [requireAuth, requireServiceAccess, loadCurrentUser, requireRole(["admin", "super_admin"])]
+    },
+    async (request, reply) => {
+      const parsed = orphanCleanupSchema.safeParse(request.body || {});
+      if (!parsed.success) {
+        return reply.code(400).send({
+          error: "ValidationError",
+          issues: parsed.error.flatten()
+        });
+      }
+
+      const now = Date.now();
+      const olderThanMs = parsed.data.olderThanSec * 1000;
+      const listedObjects = await chatObjectStorage.listObjectsByPrefix(parsed.data.prefix, parsed.data.maxScan);
+
+      const eligibleObjects = listedObjects.filter((item) => {
+        if (!item.lastModifiedAt) {
+          return true;
+        }
+
+        const lastModifiedMs = Date.parse(item.lastModifiedAt);
+        if (!Number.isFinite(lastModifiedMs)) {
+          return true;
+        }
+
+        return now - lastModifiedMs >= olderThanMs;
+      });
+
+      const storageKeys = eligibleObjects.map((item) => item.storageKey);
+      let referencedKeys = new Set<string>();
+      if (storageKeys.length > 0) {
+        const referencedResult = await db.query<{ storage_key: string }>(
+          `SELECT storage_key
+             FROM message_attachments
+            WHERE storage_key = ANY($1::text[])`,
+          [storageKeys]
+        );
+
+        referencedKeys = new Set(
+          referencedResult.rows
+            .map((row) => String(row.storage_key || "").trim())
+            .filter(Boolean)
+        );
+      }
+
+      const orphanKeys = storageKeys.filter((key) => !referencedKeys.has(key));
+      const candidateDeleteKeys = orphanKeys.slice(0, parsed.data.maxDelete);
+
+      const deletedKeys: string[] = [];
+      const failedDeleteKeys: string[] = [];
+
+      if (!parsed.data.dryRun) {
+        for (const storageKey of candidateDeleteKeys) {
+          try {
+            await chatObjectStorage.deleteObject(storageKey);
+            deletedKeys.push(storageKey);
+          } catch (error) {
+            failedDeleteKeys.push(storageKey);
+            request.log.error({ err: error, storageKey }, "chat orphan cleanup delete failed");
+          }
+        }
+
+        if (deletedKeys.length > 0) {
+          void incrementStorageMetricBy("chat_storage_orphan_deleted", deletedKeys.length);
+        }
+        if (failedDeleteKeys.length > 0) {
+          void incrementStorageMetricBy("chat_storage_orphan_delete_fail", failedDeleteKeys.length);
+        }
+      }
+
+      return reply.send({
+        provider: config.chatStorageProvider,
+        dryRun: parsed.data.dryRun,
+        prefix: parsed.data.prefix,
+        olderThanSec: parsed.data.olderThanSec,
+        scannedCount: listedObjects.length,
+        eligibleCount: eligibleObjects.length,
+        referencedCount: referencedKeys.size,
+        orphanCount: orphanKeys.length,
+        deleteLimit: parsed.data.maxDelete,
+        deletedCount: deletedKeys.length,
+        failedDeleteCount: failedDeleteKeys.length,
+        deletedKeys: deletedKeys.slice(0, 20),
+        failedDeleteKeys: failedDeleteKeys.slice(0, 20),
+        sampleOrphanKeys: orphanKeys.slice(0, 20)
+      });
     }
   );
 

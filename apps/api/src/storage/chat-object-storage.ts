@@ -1,5 +1,5 @@
-import { DeleteObjectCommand, GetObjectCommand, HeadObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
-import { mkdir, readFile, stat, unlink, writeFile } from "node:fs/promises";
+import { DeleteObjectCommand, GetObjectCommand, HeadObjectCommand, ListObjectsV2Command, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { mkdir, readdir, readFile, stat, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { Readable } from "node:stream";
 import type { AppConfig } from "../config.types.ts";
@@ -21,11 +21,17 @@ export type ChatObjectContent = {
   mimeType: string | null;
 };
 
+export type ChatObjectListItem = {
+  storageKey: string;
+  lastModifiedAt: string | null;
+};
+
 export interface ChatObjectStorage {
   putObject(storageKey: string, body: Buffer, mimeType: string): Promise<void>;
   statObject(storageKey: string): Promise<ChatObjectStat>;
   getObject(storageKey: string): Promise<ChatObjectContent>;
   deleteObject(storageKey: string): Promise<void>;
+  listObjectsByPrefix(prefix: string, maxKeys: number): Promise<ChatObjectListItem[]>;
 }
 
 function normalizeStorageKey(storageKey: string): string {
@@ -104,6 +110,63 @@ class LocalFsChatObjectStorage implements ChatObjectStorage {
     } catch {
       // Delete is best-effort and idempotent.
     }
+  }
+
+  async listObjectsByPrefix(prefix: string, maxKeys: number): Promise<ChatObjectListItem[]> {
+    const safeMaxKeys = Number.isFinite(maxKeys) ? Math.max(1, Math.min(Math.trunc(maxKeys), 10000)) : 1000;
+    const normalizedPrefix = normalizeStorageKey(prefix);
+    const result: ChatObjectListItem[] = [];
+
+    const walk = async (relativeDir: string): Promise<void> => {
+      if (result.length >= safeMaxKeys) {
+        return;
+      }
+
+      const absoluteDir = path.resolve(this.uploadsRoot, relativeDir);
+      let entries;
+      try {
+        entries = await readdir(absoluteDir, { withFileTypes: true });
+      } catch {
+        return;
+      }
+
+      for (const entry of entries) {
+        if (result.length >= safeMaxKeys) {
+          return;
+        }
+
+        const nextRelativePath = relativeDir ? path.posix.join(relativeDir, entry.name) : entry.name;
+        if (entry.isDirectory()) {
+          await walk(nextRelativePath);
+          continue;
+        }
+
+        if (!entry.isFile()) {
+          continue;
+        }
+
+        const storageKey = normalizeStorageKey(nextRelativePath);
+        if (normalizedPrefix && !storageKey.startsWith(normalizedPrefix)) {
+          continue;
+        }
+
+        let lastModifiedAt: string | null = null;
+        try {
+          const objectStat = await stat(path.resolve(this.uploadsRoot, nextRelativePath));
+          lastModifiedAt = objectStat.mtime.toISOString();
+        } catch {
+          lastModifiedAt = null;
+        }
+
+        result.push({
+          storageKey,
+          lastModifiedAt
+        });
+      }
+    };
+
+    await walk("");
+    return result;
   }
 }
 
@@ -209,6 +272,43 @@ class MinioChatObjectStorage implements ChatObjectStorage {
       Bucket: this.bucket,
       Key: normalizeStorageKey(storageKey)
     }));
+  }
+
+  async listObjectsByPrefix(prefix: string, maxKeys: number): Promise<ChatObjectListItem[]> {
+    const normalizedPrefix = normalizeStorageKey(prefix);
+    const safeMaxKeys = Number.isFinite(maxKeys) ? Math.max(1, Math.min(Math.trunc(maxKeys), 10000)) : 1000;
+    const items: ChatObjectListItem[] = [];
+    let continuationToken: string | undefined;
+
+    while (items.length < safeMaxKeys) {
+      const page = await this.client.send(new ListObjectsV2Command({
+        Bucket: this.bucket,
+        Prefix: normalizedPrefix || undefined,
+        MaxKeys: Math.min(1000, safeMaxKeys - items.length),
+        ContinuationToken: continuationToken
+      }));
+
+      const objects = Array.isArray(page.Contents) ? page.Contents : [];
+      for (const object of objects) {
+        const storageKey = String(object.Key || "").trim();
+        if (!storageKey) {
+          continue;
+        }
+
+        items.push({
+          storageKey,
+          lastModifiedAt: object.LastModified instanceof Date ? object.LastModified.toISOString() : null
+        });
+      }
+
+      if (!page.IsTruncated || !page.NextContinuationToken) {
+        break;
+      }
+
+      continuationToken = page.NextContinuationToken;
+    }
+
+    return items;
   }
 }
 
