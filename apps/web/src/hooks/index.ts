@@ -22,6 +22,7 @@ export { useMicrophoneLevelMeter } from "./media/useMicrophoneLevelMeter";
 export { useMicrophoneSelfMonitor } from "./media/useMicrophoneSelfMonitor";
 export { usePopupOutsideClose } from "./ui/usePopupOutsideClose";
 export { useRealtimeSoundEffects } from "./realtime/useRealtimeSoundEffects";
+export { useChatTypingController } from "./realtime/useChatTypingController";
 export { useRealtimeChatLifecycle } from "./realtime/useRealtimeChatLifecycle";
 export { useRealtimeConnectionReset } from "./realtime/useRealtimeConnectionReset";
 export { useRealtimeIncomingCallState } from "./realtime/useRealtimeIncomingCallState";
