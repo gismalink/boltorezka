@@ -69,6 +69,20 @@ const moveCategorySchema = z.object({
 });
 
 export async function roomsRoutes(fastify: FastifyInstance) {
+  const incrementReadMetricBy = async (name: string, value: number) => {
+    const delta = Number.isFinite(value) ? Math.trunc(value) : 0;
+    if (delta <= 0) {
+      return;
+    }
+
+    try {
+      const day = new Date().toISOString().slice(0, 10);
+      await fastify.redis.hIncrBy(`ws:metrics:${day}`, name, delta);
+    } catch {
+      // Metrics are best-effort and must not affect request flow.
+    }
+  };
+
   fastify.get(
     "/v1/rooms/tree",
     {
@@ -955,6 +969,33 @@ export async function roomsRoutes(fastify: FastifyInstance) {
             : null
         }
       };
+
+      const messagesForMetrics = response.messages;
+      let attachmentsMessages = 0;
+      let legacyInlineMessages = 0;
+      let plainTextMessages = 0;
+
+      for (const message of messagesForMetrics) {
+        const attachments = Array.isArray(message.attachments) ? message.attachments : [];
+        if (attachments.length > 0) {
+          attachmentsMessages += 1;
+          continue;
+        }
+
+        const text = String(message.text || "");
+        if (text.includes("data:image/")) {
+          legacyInlineMessages += 1;
+          continue;
+        }
+
+        plainTextMessages += 1;
+      }
+
+      void incrementReadMetricBy("chat_read_messages_total", messagesForMetrics.length);
+      void incrementReadMetricBy("chat_read_messages_with_attachments", attachmentsMessages);
+      void incrementReadMetricBy("chat_read_messages_legacy_inline_data_url", legacyInlineMessages);
+      void incrementReadMetricBy("chat_read_messages_plain_text", plainTextMessages);
+
       return response;
     }
   );
