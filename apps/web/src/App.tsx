@@ -1406,7 +1406,7 @@ export function App() {
       return "";
     }
 
-    const markdownMatch = sourceText.match(/!\[[^\]]*\]\((data:image\/[a-zA-Z0-9.+-]+;base64,[^)]+|https?:\/\/[^)\s]+)\)/i);
+    const markdownMatch = sourceText.match(/!\[[^\]]*\]\((data:image\/[a-zA-Z0-9.+-]+;base64,[^)]+|https?:\/\/[^)\s]+\.(?:png|jpe?g|gif|webp|bmp|svg)(?:\?[^)\s]*)?)\)/i);
     if (markdownMatch?.[1]) {
       return normalizeImageSource(markdownMatch[1]);
     }
@@ -1414,11 +1414,6 @@ export function App() {
     const dataUrlMatch = sourceText.match(/data:image\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=\r\n]+/i);
     if (dataUrlMatch?.[0]) {
       return normalizeImageSource(dataUrlMatch[0]);
-    }
-
-    const httpMatch = sourceText.match(/https?:\/\/[^\s]+/i);
-    if (httpMatch?.[0]) {
-      return normalizeImageSource(httpMatch[0]);
     }
 
     return "";
