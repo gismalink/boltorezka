@@ -127,6 +127,7 @@ Scope: переход chat media c inline `data:image/...;base64` на object st
 - Validation note (legacy removal): web перешел на attachments-only рендер/запись (без markdown/base64 fallback в `text`), infra build-arg `VITE_CHAT_OBJECT_STORAGE_WRITE` удален; `test` deploy+smoke прошел на SHA `c19af1a1d4599c2632fa6ba78556dc538dcc4717`.
 - Validation note (minio stage A): в host compose добавлен opt-in профиль `minio-test` (`boltorezka-minio-test` + `boltorezka-minio-test-init`) и env-шаблон для MinIO bootstrap (`TEST_MINIO_*`, `CHAT_STORAGE_PROVIDER`).
 - Validation note (minio smoke gate): добавлен `smoke:minio:storage` и опциональный postdeploy gate `SMOKE_MINIO_STORAGE=1` с отдельным статусом `SMOKE_MINIO_STORAGE_STATUS` в summary.
+- Validation note (test deploy): деплой `test` + postdeploy smoke прошел на SHA `631ade048b1333b65db8bbbd859689c9475a0e3b` c `SMOKE_CHAT_OBJECT_STORAGE=1` и `SMOKE_MINIO_STORAGE=1`; `smoke:minio:storage` корректно отмечен как `skip` при `TEST_CHAT_STORAGE_PROVIDER=localfs`.
 
 ## 10) MinIO rollout plan (draft)
 
