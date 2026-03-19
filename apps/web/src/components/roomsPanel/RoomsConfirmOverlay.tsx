@@ -5,7 +5,8 @@ export type RoomsConfirmKind =
   | "clear-channel"
   | "delete-category"
   | "restore-channel"
-  | "delete-channel-permanent";
+  | "delete-channel-permanent"
+  | "delete-all-archived";
 
 type RoomsConfirmOverlayProps = {
   t: TranslateFn;
@@ -37,6 +38,8 @@ export function RoomsConfirmOverlay({ t, kind, onClose, onConfirm }: RoomsConfir
               ? t("rooms.confirmRestoreChannel")
               : kind === "delete-channel-permanent"
                 ? t("rooms.confirmDeleteChannelPermanent")
+              : kind === "delete-all-archived"
+                ? t("rooms.confirmDeleteAllDeleted")
             : kind === "archive-channel"
               ? t("rooms.confirmArchiveChannel")
               : t("rooms.confirmDeleteCategory")}

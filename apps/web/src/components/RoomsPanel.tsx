@@ -13,6 +13,7 @@ type ConfirmPopupState =
   | { kind: "clear-channel"; room: Room }
   | { kind: "restore-channel"; room: Room }
   | { kind: "delete-channel-permanent"; room: Room }
+  | { kind: "delete-all-archived" }
   | { kind: "delete-category" }
   | null;
 
@@ -115,6 +116,19 @@ export function RoomsPanel({
 
     if (confirmPopup.kind === "delete-channel-permanent") {
       onDeleteChannelPermanent(confirmPopup.room);
+      setConfirmPopup(null);
+      return;
+    }
+
+    if (confirmPopup.kind === "delete-all-archived") {
+      const snapshot = [...archivedRooms];
+      const run = async () => {
+        for (const room of snapshot) {
+          await Promise.resolve(onDeleteChannelPermanent(room));
+        }
+      };
+
+      void run();
       setConfirmPopup(null);
       return;
     }
@@ -233,8 +247,19 @@ export function RoomsPanel({
 
         {canCreateRooms && archivedRooms.length > 0 ? (
           <div className="mt-[var(--space-md)]">
-            <div className="mb-[var(--space-xs)] text-[var(--font-size-sm)] uppercase tracking-[0.04em] text-[var(--pixel-muted)]">
-              {t("rooms.deletedGroup")}
+            <div className="mb-[var(--space-xs)] flex items-center justify-between gap-2">
+              <div className="text-[var(--font-size-sm)] uppercase tracking-[0.04em] text-[var(--pixel-muted)]">
+                {t("rooms.deletedGroup")}
+              </div>
+              <button
+                type="button"
+                className="secondary icon-btn tiny delete-action-btn"
+                onClick={() => setConfirmPopup({ kind: "delete-all-archived" })}
+                aria-label={t("rooms.deleteAllDeleted")}
+                data-tooltip={t("rooms.deleteAllDeleted")}
+              >
+                <i className="bi bi-trash3" aria-hidden="true" /> {t("rooms.deleteAllDeleted")}
+              </button>
             </div>
             <ul className="rooms-list">
               {archivedRooms.map((room) => (
