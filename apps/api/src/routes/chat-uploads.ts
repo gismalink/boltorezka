@@ -1,5 +1,5 @@
 import { createHash, randomBytes, randomUUID } from "node:crypto";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
@@ -93,19 +93,81 @@ function buildDownloadUrl(storageKey: string, explicitDownloadUrl: string | unde
     return explicitDownloadUrl;
   }
 
+  const encodedStorageKey = encodeURIComponent(storageKey);
+  const relativeUrl = `/v1/chat/uploads/object?key=${encodedStorageKey}`;
+
   if (!config.chatObjectStoragePublicBaseUrl) {
-    return null;
+    return relativeUrl;
   }
 
-  const encodedKey = storageKey
-    .split("/")
-    .map((part) => encodeURIComponent(part))
-    .join("/");
-
-  return `${config.chatObjectStoragePublicBaseUrl}/${encodedKey}`;
+  return `${config.chatObjectStoragePublicBaseUrl}${relativeUrl}`;
 }
 
 export async function chatUploadsRoutes(fastify: FastifyInstance) {
+  fastify.get<{
+    Querystring: { key?: string };
+  }>(
+    "/v1/chat/uploads/object",
+    {
+      preHandler: [requireAuth, requireServiceAccess]
+    },
+    async (request, reply) => {
+      const encodedKey = String(request.query?.key || "").trim();
+      if (!encodedKey) {
+        return reply.code(400).send({
+          error: "ValidationError",
+          message: "key query parameter is required"
+        });
+      }
+
+      let storageKey = "";
+      try {
+        storageKey = decodeURIComponent(encodedKey);
+      } catch {
+        return reply.code(400).send({
+          error: "ValidationError",
+          message: "key query parameter is invalid"
+        });
+      }
+
+      const attachmentResult = await db.query<{
+        id: string;
+        mime_type: string;
+      }>(
+        `SELECT id, mime_type
+         FROM message_attachments
+         WHERE storage_key = $1
+         LIMIT 1`,
+        [storageKey]
+      );
+
+      if ((attachmentResult.rowCount || 0) === 0) {
+        return reply.code(404).send({
+          error: "AttachmentNotFound",
+          message: "Attachment does not exist"
+        });
+      }
+
+      const objectPath = localObjectPath(storageKey);
+      try {
+        const objectStat = await stat(objectPath);
+        if (!objectStat.isFile()) {
+          throw new Error("not_a_file");
+        }
+      } catch {
+        return reply.code(404).send({
+          error: "AttachmentObjectMissing",
+          message: "Attachment object is missing"
+        });
+      }
+
+      const binary = await readFile(objectPath);
+      reply.header("Cache-Control", "public, max-age=31536000, immutable");
+      reply.header("Content-Type", attachmentResult.rows[0].mime_type || "application/octet-stream");
+      return reply.send(binary);
+    }
+  );
+
   fastify.addContentTypeParser(/^image\//i, { parseAs: "buffer" }, (_request, body, done) => {
     done(null, body);
   });
@@ -431,6 +493,19 @@ export async function chatUploadsRoutes(fastify: FastifyInstance) {
       const currentUser = currentUserResult.rows[0];
       const text = String(parsed.data.text || "").trim();
       const downloadUrl = buildDownloadUrl(reservation.storageKey, parsed.data.downloadUrl);
+
+      const objectPath = localObjectPath(reservation.storageKey);
+      try {
+        const objectStat = await stat(objectPath);
+        if (!objectStat.isFile() || objectStat.size !== reservation.sizeBytes) {
+          throw new Error("object_mismatch");
+        }
+      } catch {
+        return reply.code(400).send({
+          error: "UploadObjectMissing",
+          message: "Uploaded object is missing or corrupted"
+        });
+      }
 
       if (parsed.data.checksum && parsed.data.checksum !== uploadedObject.checksum) {
         return reply.code(400).send({
