@@ -161,7 +161,7 @@ async function fetchJson(path, options = {}) {
     throw new Error("[smoke:chat:object-storage] image attachment is missing in history payload");
   }
 
-  const downloadUrl = String(imageAttachment.downloadUrl || "").trim();
+  const downloadUrl = String(imageAttachment.downloadUrl || imageAttachment.download_url || "").trim();
   if (!downloadUrl) {
     throw new Error("[smoke:chat:object-storage] attachment downloadUrl is missing");
   }
@@ -177,7 +177,8 @@ async function fetchJson(path, options = {}) {
   }
 
   const attachmentContentType = String(attachmentResponse.headers.get("content-type") || "").toLowerCase();
-  if (!attachmentContentType.startsWith("image/png")) {
+  const expectedMimeType = String(imageAttachment.mimeType || imageAttachment.mime_type || "image/png").toLowerCase();
+  if (!attachmentContentType.startsWith(expectedMimeType)) {
     throw new Error(`[smoke:chat:object-storage] unexpected attachment content-type: ${attachmentContentType || "<empty>"}`);
   }
 
