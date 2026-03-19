@@ -72,7 +72,7 @@ Scope: переход chat media c inline `data:image/...;base64` на object st
 
 - [x] Reader поддерживает legacy + attachments.
 - [x] Writer остается legacy по умолчанию.
-- [ ] Добавлены метрики доли legacy/attachments чтения.
+- [x] Добавлены метрики доли legacy/attachments чтения.
 
 ### Stage 2 - Attachments write on test
 
@@ -123,3 +123,4 @@ Scope: переход chat media c inline `data:image/...;base64` на object st
 - Validation note (writer-path): web writer-path добавлен под feature flag `VITE_CHAT_OBJECT_STORAGE_WRITE=1`; по умолчанию legacy путь сохранен.
 - Validation note (test rollout): деплой `test` с `TEST_VITE_CHAT_OBJECT_STORAGE_WRITE=1` и `SMOKE_CHAT_OBJECT_STORAGE=1` прошел успешно на SHA `8a6658cb017dc55a03e5d7685fddf0f174f67b85`; smoke `chat:object-storage` и общий postdeploy smoke - `ok`.
 - Validation note (hardened smoke): smoke `chat:object-storage` расширен проверками `Attachment URL content-type` и reject для unsupported `mime`/oversized `size`; `test` deploy+smoke прошел на SHA `f48a8d2759987ed71de93c7cf78c4ee7c6a3b816`.
+- Validation note (read metrics): в `/v1/rooms/:slug/messages` добавлены best-effort метрики чтения `chat_read_messages_total`, `chat_read_messages_with_attachments`, `chat_read_messages_legacy_inline_data_url`, `chat_read_messages_plain_text`; деплой `test` прошел на SHA `98e1f32286a9a182474d8fe8ed2d6d2c0b91b999`, метрики фиксируются в postdeploy summary.
