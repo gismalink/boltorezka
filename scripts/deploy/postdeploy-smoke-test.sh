@@ -25,6 +25,9 @@ SMOKE_CHAT_SENT_DELTA=0
 SMOKE_CHAT_IDEMPOTENCY_HIT_DELTA=0
 SMOKE_CALL_INITIAL_STATE_SENT_DELTA=0
 SMOKE_CALL_INITIAL_STATE_PARTICIPANTS_DELTA=0
+SMOKE_CHAT_STORAGE_PUT_OK_DELTA=0
+SMOKE_CHAT_STORAGE_PUT_FAIL_DELTA=0
+SMOKE_CHAT_STORAGE_PUT_FAIL_STATUS="skip"
 SMOKE_SUMMARY_TEXT="health=fail mode=unknown sso=fail realtime=fail delta(nack=0,ack=0,chat=0,idem=0,initial_state=0,initial_state_participants=0)"
 API_SMOKE_STATUS="skip"
 CHAT_OBJECT_STORAGE_STATUS="skip"
@@ -67,6 +70,9 @@ write_summary() {
   printf 'SMOKE_CHAT_IDEMPOTENCY_HIT_DELTA=%q\n' "$SMOKE_CHAT_IDEMPOTENCY_HIT_DELTA" >>"$SUMMARY_FILE_REL"
   printf 'SMOKE_CALL_INITIAL_STATE_SENT_DELTA=%q\n' "$SMOKE_CALL_INITIAL_STATE_SENT_DELTA" >>"$SUMMARY_FILE_REL"
   printf 'SMOKE_CALL_INITIAL_STATE_PARTICIPANTS_DELTA=%q\n' "$SMOKE_CALL_INITIAL_STATE_PARTICIPANTS_DELTA" >>"$SUMMARY_FILE_REL"
+  printf 'SMOKE_CHAT_STORAGE_PUT_OK_DELTA=%q\n' "$SMOKE_CHAT_STORAGE_PUT_OK_DELTA" >>"$SUMMARY_FILE_REL"
+  printf 'SMOKE_CHAT_STORAGE_PUT_FAIL_DELTA=%q\n' "$SMOKE_CHAT_STORAGE_PUT_FAIL_DELTA" >>"$SUMMARY_FILE_REL"
+  printf 'SMOKE_CHAT_STORAGE_PUT_FAIL_STATUS=%q\n' "$SMOKE_CHAT_STORAGE_PUT_FAIL_STATUS" >>"$SUMMARY_FILE_REL"
   printf 'SMOKE_EXTENDED_REALTIME_STATUS=%q\n' "$EXTENDED_REALTIME_STATUS" >>"$SUMMARY_FILE_REL"
   printf 'SMOKE_REALTIME_MEDIA_STATUS=%q\n' "$SMOKE_REALTIME_MEDIA_STATUS" >>"$SUMMARY_FILE_REL"
   printf 'SMOKE_LIVEKIT_GATE_STATUS=%q\n' "$SMOKE_LIVEKIT_GATE_STATUS" >>"$SUMMARY_FILE_REL"
@@ -174,6 +180,20 @@ metric_from_hgetall() {
       }
     }
   '
+}
+
+read_ws_metric_current_day() {
+  local key="$1"
+  local day value
+  day="$(date -u +%F)"
+
+  value="$(compose exec -T "$REDIS_SERVICE" redis-cli HGET "ws:metrics:$day" "$key" 2>/dev/null | tr -d '\r' | tail -n1 || true)"
+  if [[ -z "$value" || ! "$value" =~ ^-?[0-9]+$ ]]; then
+    printf '0'
+    return 0
+  fi
+
+  printf '%s' "$value"
 }
 
 parse_media_transport_summary() {
@@ -568,6 +588,9 @@ if [[ "${SMOKE_API:-1}" == "0" ]]; then
   MINIO_STORAGE_STATUS="skip"
   API_AUTH_SESSION_STATUS="skip"
 else
+  CHAT_STORAGE_PUT_OK_BEFORE="$(read_ws_metric_current_day "chat_storage_put_ok")"
+  CHAT_STORAGE_PUT_FAIL_BEFORE="$(read_ws_metric_current_day "chat_storage_put_fail")"
+
   echo "[postdeploy-smoke] smoke:api"
   SMOKE_API_URL="$BASE_URL" npm run smoke:api
   API_SMOKE_STATUS="pass"
@@ -608,6 +631,29 @@ else
     echo "[postdeploy-smoke] smoke:auth:session"
     SMOKE_API_URL="$BASE_URL" npm run smoke:auth:session
     API_AUTH_SESSION_STATUS="pass"
+  fi
+
+  CHAT_STORAGE_PUT_OK_AFTER="$(read_ws_metric_current_day "chat_storage_put_ok")"
+  CHAT_STORAGE_PUT_FAIL_AFTER="$(read_ws_metric_current_day "chat_storage_put_fail")"
+  SMOKE_CHAT_STORAGE_PUT_OK_DELTA=$((CHAT_STORAGE_PUT_OK_AFTER - CHAT_STORAGE_PUT_OK_BEFORE))
+  SMOKE_CHAT_STORAGE_PUT_FAIL_DELTA=$((CHAT_STORAGE_PUT_FAIL_AFTER - CHAT_STORAGE_PUT_FAIL_BEFORE))
+
+  if [[ "${SMOKE_CHAT_STORAGE_METRICS:-1}" == "1" ]]; then
+    SMOKE_CHAT_STORAGE_PUT_FAIL_STATUS="pass"
+    echo "[postdeploy-smoke] chat storage write metrics: ok_delta=${SMOKE_CHAT_STORAGE_PUT_OK_DELTA} fail_delta=${SMOKE_CHAT_STORAGE_PUT_FAIL_DELTA}"
+
+    if (( SMOKE_CHAT_STORAGE_PUT_FAIL_DELTA > ${SMOKE_CHAT_STORAGE_PUT_FAIL_THRESHOLD:-0} )); then
+      SMOKE_CHAT_STORAGE_PUT_FAIL_STATUS="fail"
+      echo "[postdeploy-smoke] chat storage write failure threshold exceeded: ${SMOKE_CHAT_STORAGE_PUT_FAIL_DELTA} > ${SMOKE_CHAT_STORAGE_PUT_FAIL_THRESHOLD:-0}" >&2
+      if [[ "${SMOKE_CHAT_STORAGE_METRICS_STRICT:-1}" == "1" ]]; then
+        exit 1
+      fi
+      SMOKE_CHAT_STORAGE_PUT_FAIL_STATUS="warn"
+      echo "[postdeploy-smoke] continuing because SMOKE_CHAT_STORAGE_METRICS_STRICT=0" >&2
+    fi
+  else
+    SMOKE_CHAT_STORAGE_PUT_FAIL_STATUS="skip"
+    echo "[postdeploy-smoke] chat storage metrics gate skipped (SMOKE_CHAT_STORAGE_METRICS=0)"
   fi
 fi
 
@@ -733,7 +779,7 @@ if [[ "${SMOKE_REALTIME:-1}" == "0" ]]; then
   collect_turn_allocation_failures
   echo "[postdeploy-smoke] realtime smoke skipped (SMOKE_REALTIME=0)"
   SMOKE_STATUS="pass"
-  SMOKE_SUMMARY_TEXT="health=pass mode=sso sso=pass api=$API_SMOKE_STATUS chat_object_storage=$CHAT_OBJECT_STORAGE_STATUS minio_storage=$MINIO_STORAGE_STATUS auth_session=$API_AUTH_SESSION_STATUS cookie_negative=$COOKIE_NEGATIVE_STATUS cookie_ws_ticket=$COOKIE_WS_TICKET_STATUS version_cache=$VERSION_CACHE_STATUS web_crash_boundary=$WEB_CRASH_BOUNDARY_STATUS web_rnnoise=$WEB_RNNOISE_STATUS desktop_update_feed=$DESKTOP_UPDATE_FEED_STATUS livekit_standard=$SMOKE_LIVEKIT_STANDARD_PROFILE_STATUS turn_tls=$SMOKE_TURN_TLS_STATUS turn_rotation=$SMOKE_TURN_ROTATION_STATUS turn_alloc_failures=$SMOKE_TURN_ALLOCATION_FAILURES turn_alloc_status=$SMOKE_TURN_ALLOCATION_STATUS realtime=skip extended_realtime=$EXTENDED_REALTIME_STATUS realtime_media=$SMOKE_REALTIME_MEDIA_STATUS transport=$SMOKE_MEDIA_TRANSPORT_SUMMARY one_way(audio=$SMOKE_ONE_WAY_AUDIO_INCIDENTS,video=$SMOKE_ONE_WAY_VIDEO_INCIDENTS) delta(nack=0,ack=0,chat=0,idem=0,initial_state=0,initial_state_participants=0)"
+  SMOKE_SUMMARY_TEXT="health=pass mode=sso sso=pass api=$API_SMOKE_STATUS chat_object_storage=$CHAT_OBJECT_STORAGE_STATUS minio_storage=$MINIO_STORAGE_STATUS chat_storage_put_ok_delta=$SMOKE_CHAT_STORAGE_PUT_OK_DELTA chat_storage_put_fail_delta=$SMOKE_CHAT_STORAGE_PUT_FAIL_DELTA chat_storage_put_fail_status=$SMOKE_CHAT_STORAGE_PUT_FAIL_STATUS auth_session=$API_AUTH_SESSION_STATUS cookie_negative=$COOKIE_NEGATIVE_STATUS cookie_ws_ticket=$COOKIE_WS_TICKET_STATUS version_cache=$VERSION_CACHE_STATUS web_crash_boundary=$WEB_CRASH_BOUNDARY_STATUS web_rnnoise=$WEB_RNNOISE_STATUS desktop_update_feed=$DESKTOP_UPDATE_FEED_STATUS livekit_standard=$SMOKE_LIVEKIT_STANDARD_PROFILE_STATUS turn_tls=$SMOKE_TURN_TLS_STATUS turn_rotation=$SMOKE_TURN_ROTATION_STATUS turn_alloc_failures=$SMOKE_TURN_ALLOCATION_FAILURES turn_alloc_status=$SMOKE_TURN_ALLOCATION_STATUS realtime=skip extended_realtime=$EXTENDED_REALTIME_STATUS realtime_media=$SMOKE_REALTIME_MEDIA_STATUS transport=$SMOKE_MEDIA_TRANSPORT_SUMMARY one_way(audio=$SMOKE_ONE_WAY_AUDIO_INCIDENTS,video=$SMOKE_ONE_WAY_VIDEO_INCIDENTS) delta(nack=0,ack=0,chat=0,idem=0,initial_state=0,initial_state_participants=0)"
   exit 0
 fi
 
@@ -1076,6 +1122,6 @@ SMOKE_CALL_INITIAL_STATE_PARTICIPANTS_DELTA=$((CALL_INITIAL_STATE_PARTICIPANTS_A
 collect_turn_allocation_failures
 
 SMOKE_STATUS="pass"
-SMOKE_SUMMARY_TEXT="health=pass mode=sso sso=pass api=$API_SMOKE_STATUS chat_object_storage=$CHAT_OBJECT_STORAGE_STATUS minio_storage=$MINIO_STORAGE_STATUS auth_session=$API_AUTH_SESSION_STATUS cookie_negative=$COOKIE_NEGATIVE_STATUS cookie_ws_ticket=$COOKIE_WS_TICKET_STATUS version_cache=$VERSION_CACHE_STATUS web_crash_boundary=$WEB_CRASH_BOUNDARY_STATUS web_rnnoise=$WEB_RNNOISE_STATUS desktop_update_feed=$DESKTOP_UPDATE_FEED_STATUS livekit_standard=$SMOKE_LIVEKIT_STANDARD_PROFILE_STATUS turn_tls=$SMOKE_TURN_TLS_STATUS turn_rotation=$SMOKE_TURN_ROTATION_STATUS turn_alloc_failures=$SMOKE_TURN_ALLOCATION_FAILURES turn_alloc_status=$SMOKE_TURN_ALLOCATION_STATUS realtime=pass extended_realtime=$EXTENDED_REALTIME_STATUS livekit_gate=$SMOKE_LIVEKIT_GATE_STATUS livekit_media=$SMOKE_LIVEKIT_MEDIA_STATUS realtime_media=$SMOKE_REALTIME_MEDIA_STATUS transport=$SMOKE_MEDIA_TRANSPORT_SUMMARY one_way(audio=$SMOKE_ONE_WAY_AUDIO_INCIDENTS,video=$SMOKE_ONE_WAY_VIDEO_INCIDENTS) delta(nack=$SMOKE_NACK_DELTA,ack=$SMOKE_ACK_DELTA,chat=$SMOKE_CHAT_SENT_DELTA,idem=$SMOKE_CHAT_IDEMPOTENCY_HIT_DELTA,initial_state=$SMOKE_CALL_INITIAL_STATE_SENT_DELTA,initial_state_participants=$SMOKE_CALL_INITIAL_STATE_PARTICIPANTS_DELTA)"
+SMOKE_SUMMARY_TEXT="health=pass mode=sso sso=pass api=$API_SMOKE_STATUS chat_object_storage=$CHAT_OBJECT_STORAGE_STATUS minio_storage=$MINIO_STORAGE_STATUS chat_storage_put_ok_delta=$SMOKE_CHAT_STORAGE_PUT_OK_DELTA chat_storage_put_fail_delta=$SMOKE_CHAT_STORAGE_PUT_FAIL_DELTA chat_storage_put_fail_status=$SMOKE_CHAT_STORAGE_PUT_FAIL_STATUS auth_session=$API_AUTH_SESSION_STATUS cookie_negative=$COOKIE_NEGATIVE_STATUS cookie_ws_ticket=$COOKIE_WS_TICKET_STATUS version_cache=$VERSION_CACHE_STATUS web_crash_boundary=$WEB_CRASH_BOUNDARY_STATUS web_rnnoise=$WEB_RNNOISE_STATUS desktop_update_feed=$DESKTOP_UPDATE_FEED_STATUS livekit_standard=$SMOKE_LIVEKIT_STANDARD_PROFILE_STATUS turn_tls=$SMOKE_TURN_TLS_STATUS turn_rotation=$SMOKE_TURN_ROTATION_STATUS turn_alloc_failures=$SMOKE_TURN_ALLOCATION_FAILURES turn_alloc_status=$SMOKE_TURN_ALLOCATION_STATUS realtime=pass extended_realtime=$EXTENDED_REALTIME_STATUS livekit_gate=$SMOKE_LIVEKIT_GATE_STATUS livekit_media=$SMOKE_LIVEKIT_MEDIA_STATUS realtime_media=$SMOKE_REALTIME_MEDIA_STATUS transport=$SMOKE_MEDIA_TRANSPORT_SUMMARY one_way(audio=$SMOKE_ONE_WAY_AUDIO_INCIDENTS,video=$SMOKE_ONE_WAY_VIDEO_INCIDENTS) delta(nack=$SMOKE_NACK_DELTA,ack=$SMOKE_ACK_DELTA,chat=$SMOKE_CHAT_SENT_DELTA,idem=$SMOKE_CHAT_IDEMPOTENCY_HIT_DELTA,initial_state=$SMOKE_CALL_INITIAL_STATE_SENT_DELTA,initial_state_participants=$SMOKE_CALL_INITIAL_STATE_PARTICIPANTS_DELTA)"
 
 echo "[postdeploy-smoke] done"

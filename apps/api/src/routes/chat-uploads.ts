@@ -103,6 +103,28 @@ function buildDownloadUrl(storageKey: string, explicitDownloadUrl: string | unde
 export async function chatUploadsRoutes(fastify: FastifyInstance) {
   const chatObjectStorage = createChatObjectStorage(config);
 
+  const incrementStorageMetricBy = async (name: string, value: number) => {
+    if (!Number.isFinite(value)) {
+      return;
+    }
+
+    const delta = Math.trunc(value);
+    if (delta === 0) {
+      return;
+    }
+
+    const day = new Date().toISOString().slice(0, 10);
+    try {
+      await fastify.redis.hIncrBy(`ws:metrics:${day}`, name, delta);
+    } catch {
+      // Metrics are best-effort and must not affect upload flow.
+    }
+  };
+
+  const incrementStorageMetric = async (name: string) => {
+    await incrementStorageMetricBy(name, 1);
+  };
+
   fastify.get<{
     Querystring: { key?: string };
   }>(
@@ -241,7 +263,9 @@ export async function chatUploadsRoutes(fastify: FastifyInstance) {
 
       try {
         await chatObjectStorage.putObject(reservation.storageKey, body, reservation.mimeType);
+        void incrementStorageMetric("chat_storage_put_ok");
       } catch (error) {
+        void incrementStorageMetric("chat_storage_put_fail");
         request.log.error({ err: error, storageKey: reservation.storageKey }, "chat upload object write failed");
         return reply.code(500).send({
           error: "UploadStoreFailed",
