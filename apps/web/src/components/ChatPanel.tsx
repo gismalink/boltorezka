@@ -1,17 +1,6 @@
 import { ClipboardEvent, FormEvent, KeyboardEvent, ReactNode, RefObject, useEffect, useState } from "react";
 import type { Message } from "../domain";
 
-const CHAT_MARKDOWN_IMAGE_PATTERN = /!\[[^\]]*\]\(((?:data:image\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=\s]+)|(?:https?:\/\/[^)\s]+)|(?:\/[^)\s]+))\)/g;
-const CHAT_BARE_DATA_IMAGE_PATTERN = /(data:image\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=\s]+)/gi;
-const CHAT_BARE_BASE64_IMAGE_PATTERN = /\b([A-Za-z0-9+/=]{2048,})\b/g;
-
-const BASE64_IMAGE_PREFIXES: Array<{ prefix: string; mime: string }> = [
-  { prefix: "/9j/", mime: "image/jpeg" },
-  { prefix: "iVBORw0KGgo", mime: "image/png" },
-  { prefix: "R0lGOD", mime: "image/gif" },
-  { prefix: "UklGR", mime: "image/webp" }
-];
-
 type ChatPanelProps = {
   t: (key: string) => string;
   locale: string;
@@ -114,172 +103,68 @@ export function ChatPanel({
     });
   };
 
-  const normalizeImageSource = (value: string) => {
-    const source = String(value || "").trim();
-    if (!source) {
-      return "";
-    }
-
-    if (source.startsWith("data:image/")) {
-      return source.replace(/\s+/g, "");
-    }
-
-    return source;
-  };
-
-  const detectBareBase64ImageSource = (value: string) => {
-    const normalized = String(value || "").replace(/\s+/g, "");
-    if (normalized.length < 2048) {
-      return "";
-    }
-
-    for (const item of BASE64_IMAGE_PREFIXES) {
-      if (normalized.startsWith(item.prefix)) {
-        return `data:${item.mime};base64,${normalized}`;
-      }
-    }
-
-    return "";
-  };
-
   const renderMessageText = (value: string): ReactNode[] => {
     const text = String(value || "");
     const urlPattern = /((https?:\/\/|www\.)[^\s<]+)/gi;
     const result: ReactNode[] = [];
-    let imageMatch: RegExpExecArray | null;
-    let bareDataImageMatch: RegExpExecArray | null;
-    let bareBase64Match: RegExpExecArray | null;
-    let cursor = 0;
     let keyIndex = 0;
 
-    const pushTextWithLinks = (chunk: string) => {
-      if (!chunk) {
-        return;
+    let textCursor = 0;
+    let linkMatch: RegExpExecArray | null;
+    urlPattern.lastIndex = 0;
+
+    while ((linkMatch = urlPattern.exec(text)) !== null) {
+      const raw = linkMatch[0];
+      const start = linkMatch.index;
+      if (start > textCursor) {
+        result.push(text.slice(textCursor, start));
       }
 
-      let textCursor = 0;
-      let linkMatch: RegExpExecArray | null;
-      urlPattern.lastIndex = 0;
-
-      while ((linkMatch = urlPattern.exec(chunk)) !== null) {
-        const raw = linkMatch[0];
-        const start = linkMatch.index;
-        if (start > textCursor) {
-          result.push(chunk.slice(textCursor, start));
-        }
-
-        let linkText = raw;
-        let trailing = "";
-        while (/[.,!?;:)\]]$/.test(linkText)) {
-          trailing = linkText.slice(-1) + trailing;
-          linkText = linkText.slice(0, -1);
-        }
-
-        if (linkText) {
-          const href = /^https?:\/\//i.test(linkText) ? linkText : `https://${linkText}`;
-          result.push(
-            <a
-              key={`link-${keyIndex}-${start}-${linkText}`}
-              href={href}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="chat-link"
-            >
-              {linkText}
-            </a>
-          );
-          keyIndex += 1;
-        }
-
-        if (trailing) {
-          result.push(trailing);
-        }
-
-        textCursor = start + raw.length;
+      let linkText = raw;
+      let trailing = "";
+      while (/[.,!?;:)\]]$/.test(linkText)) {
+        trailing = linkText.slice(-1) + trailing;
+        linkText = linkText.slice(0, -1);
       }
 
-      if (textCursor < chunk.length) {
-        result.push(chunk.slice(textCursor));
-      }
-    };
-
-    const imageMatches: Array<{ start: number; end: number; imageUrl: string }> = [];
-
-    CHAT_MARKDOWN_IMAGE_PATTERN.lastIndex = 0;
-    while ((imageMatch = CHAT_MARKDOWN_IMAGE_PATTERN.exec(text)) !== null) {
-      const start = imageMatch.index;
-      const end = start + imageMatch[0].length;
-      const imageUrl = normalizeImageSource(String(imageMatch[1] || ""));
-      if (imageUrl) {
-        imageMatches.push({ start, end, imageUrl });
-      }
-    }
-
-    CHAT_BARE_DATA_IMAGE_PATTERN.lastIndex = 0;
-    while ((bareDataImageMatch = CHAT_BARE_DATA_IMAGE_PATTERN.exec(text)) !== null) {
-      const start = bareDataImageMatch.index;
-      const end = start + bareDataImageMatch[0].length;
-      const imageUrl = normalizeImageSource(String(bareDataImageMatch[1] || ""));
-      if (imageUrl) {
-        imageMatches.push({ start, end, imageUrl });
-      }
-    }
-
-    CHAT_BARE_BASE64_IMAGE_PATTERN.lastIndex = 0;
-    while ((bareBase64Match = CHAT_BARE_BASE64_IMAGE_PATTERN.exec(text)) !== null) {
-      const start = bareBase64Match.index;
-      const end = start + bareBase64Match[0].length;
-      const imageUrl = detectBareBase64ImageSource(String(bareBase64Match[1] || ""));
-      if (imageUrl) {
-        imageMatches.push({ start, end, imageUrl });
-      }
-    }
-
-    imageMatches.sort((left, right) => left.start - right.start || right.end - left.end);
-    const compactedMatches: Array<{ start: number; end: number; imageUrl: string }> = [];
-    for (const match of imageMatches) {
-      const hasOverlap = compactedMatches.some((item) => match.start < item.end && item.start < match.end);
-      if (!hasOverlap) {
-        compactedMatches.push(match);
-      }
-    }
-
-    for (const match of compactedMatches) {
-      const start = match.start;
-      if (start > cursor) {
-        pushTextWithLinks(text.slice(cursor, start));
-      }
-
-      const imageUrl = match.imageUrl;
-      if (imageUrl) {
+      if (linkText) {
+        const href = /^https?:\/\//i.test(linkText) ? linkText : `https://${linkText}`;
         result.push(
-          <button
-            key={`img-btn-${keyIndex}-${start}`}
-            type="button"
-            className="chat-inline-image-btn"
-            onClick={() => setPreviewImageUrl(imageUrl)}
-            aria-label={t("chat.openImagePreview")}
-            title={t("chat.openImagePreview")}
+          <a
+            key={`link-${keyIndex}-${start}-${linkText}`}
+            href={href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="chat-link"
           >
-            <img
-              src={imageUrl}
-              alt="chat-image"
-              className="chat-inline-image"
-              loading="lazy"
-            />
-          </button>
+            {linkText}
+          </a>
         );
         keyIndex += 1;
       }
 
-      cursor = match.end;
+      if (trailing) {
+        result.push(trailing);
+      }
+
+      textCursor = start + raw.length;
     }
 
-    if (cursor < text.length) {
-      pushTextWithLinks(text.slice(cursor));
+    if (textCursor < text.length) {
+      result.push(text.slice(textCursor));
     }
 
     return result.length > 0 ? result : [text];
+  };
+
+  const collectAttachmentImageUrls = (message: Message): string[] => {
+    const attachments = Array.isArray(message.attachments) ? message.attachments : [];
+    const urls = attachments
+      .filter((item) => String(item.type || "") === "image")
+      .map((item) => String(item.download_url || "").trim())
+      .filter((url) => url.length > 0);
+
+    return urls.filter((url, index, all) => all.indexOf(url) === index);
   };
 
   return (
@@ -323,6 +208,7 @@ export function ChatPanel({
       </div>
       <div className="chat-log min-h-0 flex-1" ref={chatLogRef}>
         {messages.map((message, index) => {
+          const attachmentImageUrls = collectAttachmentImageUrls(message);
           const isOwn = currentUserId === message.user_id;
           const previousMessage = index > 0 ? messages[index - 1] : null;
           const nextMessage = index + 1 < messages.length ? messages[index + 1] : null;
@@ -401,6 +287,27 @@ export function ChatPanel({
                       ) : null}
                     </span>
                   </div>
+                  {attachmentImageUrls.length > 0 ? (
+                    <div className="chat-attachments-row">
+                      {attachmentImageUrls.map((imageUrl) => (
+                        <button
+                          key={`${message.id}-${imageUrl}`}
+                          type="button"
+                          className="chat-inline-image-btn"
+                          onClick={() => setPreviewImageUrl(imageUrl)}
+                          aria-label={t("chat.openImagePreview")}
+                          title={t("chat.openImagePreview")}
+                        >
+                          <img
+                            src={imageUrl}
+                            alt="chat-image"
+                            className="chat-inline-image"
+                            loading="lazy"
+                          />
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
                   {message.edited_at ? <div className="chat-edited-mark">{t("chat.editedMark")}</div> : null}
                 </div>
               </div>

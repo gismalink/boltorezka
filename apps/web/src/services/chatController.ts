@@ -25,28 +25,7 @@ export class ChatController {
   }
 
   private normalizeMessageForRender(message: Message): Message {
-    const baseText = String(message.text || "").trim();
-    const attachments = Array.isArray(message.attachments) ? message.attachments : [];
-    if (attachments.length === 0) {
-      return message;
-    }
-
-    const attachmentMarkdown = attachments
-      .map((attachment) => String(attachment.download_url || "").trim())
-      .filter((url) => url.length > 0)
-      .filter((url, index, all) => all.indexOf(url) === index)
-      .filter((url) => !baseText.includes(url))
-      .map((url) => `![скриншот](${url})`)
-      .join("\n");
-
-    if (!attachmentMarkdown) {
-      return message;
-    }
-
-    return {
-      ...message,
-      text: [baseText, attachmentMarkdown].filter(Boolean).join("\n")
-    };
+    return message;
   }
 
   async loadRecentMessages(token: string, roomSlug: string) {

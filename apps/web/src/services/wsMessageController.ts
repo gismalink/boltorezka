@@ -161,20 +161,11 @@ export class WsMessageController {
       }))
       .filter((item) => item.storage_key && item.mime_type && Number.isFinite(item.size_bytes) && item.size_bytes > 0);
 
-    const baseText = String(payload.text || "");
-    const attachmentMarkdown = attachments
-      .map((attachment) => String(attachment.download_url || "").trim())
-      .filter((url) => url.length > 0)
-      .filter((url, index, all) => all.indexOf(url) === index)
-      .filter((url) => !baseText.includes(url))
-      .map((url) => `![скриншот](${url})`)
-      .join("\n");
-
     return {
       id: String(payload.id || fallbackId || crypto.randomUUID()),
       room_id: String(payload.roomId || ""),
       user_id: String(payload.userId || ""),
-      text: [baseText, attachmentMarkdown].filter(Boolean).join("\n"),
+      text: String(payload.text || ""),
       created_at: String(payload.createdAt || new Date().toISOString()),
       user_name: String(payload.userName || "unknown"),
       attachments,
