@@ -94,8 +94,8 @@ Scope: переход chat media c inline `data:image/...;base64` на object st
 ## 6) Test gates (must pass)
 
 - [x] `upload-init -> PUT -> finalize -> message visible`.
-- [ ] Attachment URL отдает корректный `content-type`.
-- [ ] Rejected mime/size возвращает ожидаемую ошибку.
+- [x] Attachment URL отдает корректный `content-type`.
+- [x] Rejected mime/size возвращает ожидаемую ошибку.
 - [x] WS payload не содержит inline base64.
 - [x] Reconnect/reload не ломает рендер вложений.
 
@@ -122,3 +122,4 @@ Scope: переход chat media c inline `data:image/...;base64` на object st
 - Validation note (implementation): в API добавлен Stage 0 каркас (`/v1/chat/uploads/init`, `/v1/chat/uploads/finalize`) и `message_attachments`; web writer-path пока не переключен.
 - Validation note (writer-path): web writer-path добавлен под feature flag `VITE_CHAT_OBJECT_STORAGE_WRITE=1`; по умолчанию legacy путь сохранен.
 - Validation note (test rollout): деплой `test` с `TEST_VITE_CHAT_OBJECT_STORAGE_WRITE=1` и `SMOKE_CHAT_OBJECT_STORAGE=1` прошел успешно на SHA `8a6658cb017dc55a03e5d7685fddf0f174f67b85`; smoke `chat:object-storage` и общий postdeploy smoke - `ok`.
+- Validation note (hardened smoke): smoke `chat:object-storage` расширен проверками `Attachment URL content-type` и reject для unsupported `mime`/oversized `size`; `test` deploy+smoke прошел на SHA `f48a8d2759987ed71de93c7cf78c4ee7c6a3b816`.
