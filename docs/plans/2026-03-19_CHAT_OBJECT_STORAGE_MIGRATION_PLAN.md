@@ -138,6 +138,7 @@ Scope: переход chat media c inline `data:image/...;base64` на object st
 - Validation note (deterministic storage green): на SHA `bfada8ad3b92d3a1a2d15cf30bb36d7a5031fad2` добавлен retry в `smoke:chat:orphan-cleanup` для transient fetch ошибок; test `deploy:test:smoke` прошел `done` c `SMOKE_REALTIME=0`, `SMOKE_WEB_VERSION_CACHE=0`, `SMOKE_COOKIE_NEGATIVE=0`, `SMOKE_COOKIE_WS_TICKET=0`, `SMOKE_WEB_CRASH_BOUNDARY_BROWSER=0`, `SMOKE_WEB_RNNOISE_BROWSER=0`, `SMOKE_DESKTOP_UPDATE_FEED=0` и успешными storage gate-ами (`chat:object-storage`, `chat:orphan-cleanup`, `minio:storage`, metrics `ok_delta=2`, `fail_delta=0`).
 - Validation note (fresh rerun): на SHA `53bb2609f6ac0368f283eedc70224663c74b19de` повторный test `deploy:test:smoke` снова прошел `done` с тем же storage-focused набором флагов; подтверждены `chat:object-storage=ok`, `chat:orphan-cleanup=ok`, `minio:storage=ok`, `chat_storage_put_fail_delta=0`.
 - Validation note (rate-limit + audit logs): на SHA `3e13467bf65d6e571b99cf6f868b212bcf8ace19` добавлены rate-limit preHandler'ы для `POST /v1/chat/uploads/init` и `POST /v1/chat/uploads/finalize`, а также structured audit events (`chat.upload.init`, `chat.upload.put`, `chat.upload.finalize`) с полями `userId/roomSlug/storageKey/sizeBytes/mimeType/status`; также добавлен retry-hardening в `smoke:chat:object-storage`. Test `deploy:test:smoke` прошел `done` с storage-focused флагами.
+- Validation note (minio service-account policy): в `minio-test-init` добавено bootstrap-действие: bucket policy `chat-attachments-rw` (ListBucket + Get/Put/DeleteObject на target bucket) и attach к выделенному API user (`TEST_MINIO_API_USER`/`TEST_MINIO_API_PASSWORD`), с fallback на root creds только при отсутствии API user vars.
 
 ## 10) MinIO rollout plan (draft)
 
@@ -149,7 +150,7 @@ Scope: переход chat media c inline `data:image/...;base64` на object st
 ### 10.2 Stage A - MinIO foundation on test
 
 - [x] Добавить `boltorezka-minio-test` service в host compose (`minio/minio`).
-- [ ] Создать bucket `chat-attachments-test` и policy только для service account API.
+- [x] Создать bucket `chat-attachments-test` и policy только для service account API.
 - [x] Вынести endpoint/credentials/bucket в env (`CHAT_STORAGE_PROVIDER=minio`, `CHAT_MINIO_*`).
 - [x] Добавить health/smoke проверку доступности MinIO (S3 API health endpoints).
 

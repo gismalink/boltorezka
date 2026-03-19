@@ -179,6 +179,16 @@ services:
       - -ec
     command:
       - |
+        BUCKET="${TEST_MINIO_BUCKET:-chat-attachments-test}"
+        API_USER="${TEST_MINIO_API_USER:-${TEST_CHAT_MINIO_ACCESS_KEY:-}}"
+        API_PASSWORD="${TEST_MINIO_API_PASSWORD:-${TEST_CHAT_MINIO_SECRET_KEY:-}}"
+
+        if [ -z "$${API_USER}" ] || [ -z "$${API_PASSWORD}" ]; then
+          API_USER="${TEST_MINIO_ROOT_USER:-minioadmin}"
+          API_PASSWORD="${TEST_MINIO_ROOT_PASSWORD:-minioadmin}"
+          echo "[minio-test-init] warning: TEST_MINIO_API_USER/PASSWORD are not set; fallback to root credentials" >&2
+        fi
+
         attempt=1
         until mc alias set local http://boltorezka-minio-test:9000 "${TEST_MINIO_ROOT_USER:-minioadmin}" "${TEST_MINIO_ROOT_PASSWORD:-minioadmin}"; do
           if [ "$$attempt" -ge 30 ]; then
@@ -188,8 +198,41 @@ services:
           attempt=$$((attempt + 1))
           sleep 2
         done
-        mc mb --ignore-existing "local/${TEST_MINIO_BUCKET:-chat-attachments-test}"
-        mc anonymous set none "local/${TEST_MINIO_BUCKET:-chat-attachments-test}"
+
+        mc mb --ignore-existing "local/$${BUCKET}"
+        mc anonymous set none "local/$${BUCKET}"
+
+        cat >/tmp/chat-attachments-rw-policy.json <<EOF
+        {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Action": [
+                "s3:ListBucket"
+              ],
+              "Resource": [
+                "arn:aws:s3:::$${BUCKET}"
+              ]
+            },
+            {
+              "Effect": "Allow",
+              "Action": [
+                "s3:GetObject",
+                "s3:PutObject",
+                "s3:DeleteObject"
+              ],
+              "Resource": [
+                "arn:aws:s3:::$${BUCKET}/*"
+              ]
+            }
+          ]
+        }
+        EOF
+
+        mc admin policy create local chat-attachments-rw /tmp/chat-attachments-rw-policy.json >/dev/null 2>&1 || true
+        mc admin user add local "$${API_USER}" "$${API_PASSWORD}" >/dev/null 2>&1 || true
+        mc admin policy attach local chat-attachments-rw --user "$${API_USER}" >/dev/null 2>&1 || true
     networks:
       - data_test
 
