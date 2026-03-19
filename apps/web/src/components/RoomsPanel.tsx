@@ -90,18 +90,6 @@ export function RoomsPanel({
 }: RoomsPanelProps) {
   const [confirmPopup, setConfirmPopup] = useState<ConfirmPopupState>(null);
 
-  useEffect(() => {
-    if (!channelSettingsPopupOpenId && confirmPopup?.kind !== "delete-category") {
-      setConfirmPopup(null);
-    }
-  }, [channelSettingsPopupOpenId, confirmPopup]);
-
-  useEffect(() => {
-    if (!categorySettingsPopupOpenId && confirmPopup?.kind === "delete-category") {
-      setConfirmPopup(null);
-    }
-  }, [categorySettingsPopupOpenId, confirmPopup]);
-
   const submitConfirmPopup = () => {
     if (!confirmPopup) {
       return;
