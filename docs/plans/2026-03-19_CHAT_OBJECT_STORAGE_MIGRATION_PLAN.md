@@ -128,6 +128,7 @@ Scope: переход chat media c inline `data:image/...;base64` на object st
 - Validation note (minio stage A): в host compose добавлен opt-in профиль `minio-test` (`boltorezka-minio-test` + `boltorezka-minio-test-init`) и env-шаблон для MinIO bootstrap (`TEST_MINIO_*`, `CHAT_STORAGE_PROVIDER`).
 - Validation note (minio smoke gate): добавлен `smoke:minio:storage` и опциональный postdeploy gate `SMOKE_MINIO_STORAGE=1` с отдельным статусом `SMOKE_MINIO_STORAGE_STATUS` в summary.
 - Validation note (test deploy): деплой `test` + postdeploy smoke прошел на SHA `631ade048b1333b65db8bbbd859689c9475a0e3b` c `SMOKE_CHAT_OBJECT_STORAGE=1` и `SMOKE_MINIO_STORAGE=1`; `smoke:minio:storage` корректно отмечен как `skip` при `TEST_CHAT_STORAGE_PROVIDER=localfs`.
+- Validation note (stage C dry cutover): после фикса `minio-test-init` (retry loop ожидания MinIO) test deploy+smoke прошел на SHA `ad46f8a8593cd9ad49cf2aa1f6f89a0f330bde90` с runtime overrides `TEST_CHAT_STORAGE_PROVIDER=minio`, `SMOKE_CHAT_OBJECT_STORAGE=1`, `SMOKE_MINIO_STORAGE=1`; `smoke:chat:object-storage` и `smoke:minio:storage` -> `ok`.
 
 ## 10) MinIO rollout plan (draft)
 
@@ -151,8 +152,8 @@ Scope: переход chat media c inline `data:image/...;base64` на object st
 
 ### 10.4 Stage C - Test cutover
 
-- [ ] В `test` включить provider=`minio`.
-- [ ] Smoke: upload-init -> put -> finalize -> history -> download via API endpoint.
+- [x] В `test` включить provider=`minio` (runtime override в deploy сессии; постоянная фиксация в `infra/.env.host` pending).
+- [x] Smoke: upload-init -> put -> finalize -> history -> download via API endpoint.
 - [ ] Smoke: orphan cleanup/TTL job и проверка метрик ошибок provider.
 
 ### 10.5 Stage D - Prod cutover
