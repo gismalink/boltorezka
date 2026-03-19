@@ -138,14 +138,14 @@ Scope: переход chat media c inline `data:image/...;base64` на object st
 
 - [x] Добавить `boltorezka-minio-test` service в host compose (`minio/minio`).
 - [ ] Создать bucket `chat-attachments-test` и policy только для service account API.
-- [ ] Вынести endpoint/credentials/bucket в env (`CHAT_STORAGE_PROVIDER=minio`, `CHAT_MINIO_*`).
+- [x] Вынести endpoint/credentials/bucket в env (`CHAT_STORAGE_PROVIDER=minio`, `CHAT_MINIO_*`).
 - [ ] Добавить health/smoke проверку доступности MinIO (S3 API + write/read object).
 
 ### 10.3 Stage B - API storage abstraction
 
-- [ ] Ввести `ChatObjectStorage` интерфейс (put/get/stat/delete).
-- [ ] Реализовать `LocalFsChatObjectStorage` (текущий путь) и `MinioChatObjectStorage`.
-- [ ] Переключение provider через config без изменения API контрактов.
+- [x] Ввести `ChatObjectStorage` интерфейс (put/get/stat/delete).
+- [x] Реализовать `LocalFsChatObjectStorage` (текущий путь) и `MinioChatObjectStorage`.
+- [x] Переключение provider через config без изменения API контрактов.
 
 ### 10.4 Stage C - Test cutover
 

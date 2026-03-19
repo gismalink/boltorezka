@@ -31,5 +31,12 @@ export type AppConfig = {
   chatUploadMaxSizeBytes: number;
   chatUploadAllowedMimeTypes: string[];
   chatUploadInitTtlSec: number;
+  chatStorageProvider: "localfs" | "minio";
+  chatMinioEndpoint: string;
+  chatMinioRegion: string;
+  chatMinioAccessKey: string;
+  chatMinioSecretKey: string;
+  chatMinioBucket: string;
+  chatMinioForcePathStyle: boolean;
   chatObjectStoragePublicBaseUrl: string;
 };

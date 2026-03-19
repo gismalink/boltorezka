@@ -54,6 +54,9 @@ const chatUploadInitTtlSecRaw = Number.parseInt(String(process.env.CHAT_UPLOAD_I
 const chatUploadAllowedMimeTypes = parseCsv(
   process.env.CHAT_UPLOAD_ALLOWED_MIME_TYPES || "image/png,image/jpeg,image/webp,image/gif"
 );
+const chatStorageProvider = String(process.env.CHAT_STORAGE_PROVIDER || "localfs").trim().toLowerCase() === "minio"
+  ? "minio"
+  : "localfs";
 
 export const config: AppConfig = {
   port: Number(process.env.PORT || 8080),
@@ -101,5 +104,12 @@ export const config: AppConfig = {
   chatUploadInitTtlSec: Number.isFinite(chatUploadInitTtlSecRaw) && chatUploadInitTtlSecRaw > 0
     ? chatUploadInitTtlSecRaw
     : 600,
+  chatStorageProvider,
+  chatMinioEndpoint: String(process.env.CHAT_MINIO_ENDPOINT || "").trim(),
+  chatMinioRegion: String(process.env.CHAT_MINIO_REGION || "us-east-1").trim() || "us-east-1",
+  chatMinioAccessKey: String(process.env.CHAT_MINIO_ACCESS_KEY || "").trim(),
+  chatMinioSecretKey: String(process.env.CHAT_MINIO_SECRET_KEY || "").trim(),
+  chatMinioBucket: String(process.env.CHAT_MINIO_BUCKET || "").trim(),
+  chatMinioForcePathStyle: parseBoolean(process.env.CHAT_MINIO_FORCE_PATH_STYLE, true),
   chatObjectStoragePublicBaseUrl: String(process.env.CHAT_OBJECT_STORAGE_PUBLIC_BASE_URL || "").trim().replace(/\/+$/, "")
 };

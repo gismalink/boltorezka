@@ -1,6 +1,4 @@
 import { createHash, randomBytes, randomUUID } from "node:crypto";
-import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
-import path from "node:path";
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { config } from "../config.js";
@@ -8,6 +6,10 @@ import { db } from "../db.js";
 import { broadcastRealtimeEnvelope } from "../realtime-broadcast.js";
 import { requireAuth, requireServiceAccess } from "../middleware/auth.js";
 import { buildChatMessageEnvelope } from "../ws-protocol.js";
+import {
+  ChatObjectStorageNotFoundError,
+  createChatObjectStorage
+} from "../storage/chat-object-storage.js";
 import type {
   ChatUploadFinalizeResponse,
   ChatUploadInitResponse
@@ -83,11 +85,6 @@ function buildUploadUrl(uploadId: string, uploadSig: string): string {
   return `/v1/chat/uploads/${encodeURIComponent(uploadId)}?sig=${encodeURIComponent(uploadSig)}`;
 }
 
-function localObjectPath(storageKey: string): string {
-  const normalizedKey = String(storageKey || "").replace(/^\/+/, "").replace(/\.\./g, "");
-  return path.resolve(process.cwd(), "public", "uploads", normalizedKey);
-}
-
 function buildDownloadUrl(storageKey: string, explicitDownloadUrl: string | undefined): string | null {
   if (explicitDownloadUrl) {
     return explicitDownloadUrl;
@@ -104,6 +101,8 @@ function buildDownloadUrl(storageKey: string, explicitDownloadUrl: string | unde
 }
 
 export async function chatUploadsRoutes(fastify: FastifyInstance) {
+  const chatObjectStorage = createChatObjectStorage(config);
+
   fastify.get<{
     Querystring: { key?: string };
   }>(
@@ -148,23 +147,21 @@ export async function chatUploadsRoutes(fastify: FastifyInstance) {
         });
       }
 
-      const objectPath = localObjectPath(storageKey);
       try {
-        const objectStat = await stat(objectPath);
-        if (!objectStat.isFile()) {
-          throw new Error("not_a_file");
+        const object = await chatObjectStorage.getObject(storageKey);
+        reply.header("Cache-Control", "public, max-age=31536000, immutable");
+        reply.header("Content-Type", object.mimeType || attachmentResult.rows[0].mime_type || "application/octet-stream");
+        return reply.send(object.buffer);
+      } catch (error) {
+        if (!(error instanceof ChatObjectStorageNotFoundError)) {
+          request.log.error({ err: error, storageKey }, "chat upload object read failed");
         }
-      } catch {
+
         return reply.code(404).send({
           error: "AttachmentObjectMissing",
           message: "Attachment object is missing"
         });
       }
-
-      const binary = await readFile(objectPath);
-      reply.header("Cache-Control", "public, max-age=31536000, immutable");
-      reply.header("Content-Type", attachmentResult.rows[0].mime_type || "application/octet-stream");
-      return reply.send(binary);
     }
   );
 
@@ -242,17 +239,15 @@ export async function chatUploadsRoutes(fastify: FastifyInstance) {
         });
       }
 
-      const absolutePath = localObjectPath(reservation.storageKey);
-      const uploadsRoot = path.resolve(process.cwd(), "public", "uploads");
-      if (!absolutePath.startsWith(uploadsRoot)) {
-        return reply.code(400).send({
-          error: "UploadPathInvalid",
-          message: "Upload path is invalid"
+      try {
+        await chatObjectStorage.putObject(reservation.storageKey, body, reservation.mimeType);
+      } catch (error) {
+        request.log.error({ err: error, storageKey: reservation.storageKey }, "chat upload object write failed");
+        return reply.code(500).send({
+          error: "UploadStoreFailed",
+          message: "Failed to store uploaded object"
         });
       }
-
-      await mkdir(path.dirname(absolutePath), { recursive: true });
-      await writeFile(absolutePath, body);
 
       const uploadedObject: UploadedObjectRecord = {
         uploadId,
@@ -494,13 +489,23 @@ export async function chatUploadsRoutes(fastify: FastifyInstance) {
       const text = String(parsed.data.text || "").trim();
       const downloadUrl = buildDownloadUrl(reservation.storageKey, parsed.data.downloadUrl);
 
-      const objectPath = localObjectPath(reservation.storageKey);
       try {
-        const objectStat = await stat(objectPath);
-        if (!objectStat.isFile() || objectStat.size !== reservation.sizeBytes) {
-          throw new Error("object_mismatch");
+        const objectStat = await chatObjectStorage.statObject(reservation.storageKey);
+        if (objectStat.sizeBytes !== reservation.sizeBytes) {
+          throw new Error("size_mismatch");
         }
-      } catch {
+
+        if (objectStat.mimeType) {
+          const objectMimeType = normalizeMimeType(objectStat.mimeType).split(";")[0];
+          if (objectMimeType && objectMimeType !== reservation.mimeType) {
+            throw new Error("mime_mismatch");
+          }
+        }
+      } catch (error) {
+        if (!(error instanceof ChatObjectStorageNotFoundError)) {
+          request.log.error({ err: error, storageKey: reservation.storageKey }, "chat upload object stat failed");
+        }
+
         return reply.code(400).send({
           error: "UploadObjectMissing",
           message: "Uploaded object is missing or corrupted"
