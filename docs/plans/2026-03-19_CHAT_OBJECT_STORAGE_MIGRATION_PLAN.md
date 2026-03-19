@@ -133,6 +133,7 @@ Scope: переход chat media c inline `data:image/...;base64` на object st
 - Validation note (orphan cleanup gate): добавлен admin endpoint `POST /v1/admin/chat/uploads/orphan-cleanup` (dry-run/delete) и smoke `smoke:chat:orphan-cleanup`; postdeploy поддерживает отдельный gate `SMOKE_CHAT_ORPHAN_CLEANUP=1` и статус `SMOKE_CHAT_ORPHAN_CLEANUP_STATUS`.
 - Validation note (orphan cleanup validation): test deploy+smoke прошел на SHA `640f64efabbd523551952908c92636eaaad5c41c` с `SMOKE_CHAT_ORPHAN_CLEANUP=1`; `smoke:chat:orphan-cleanup` -> `ok`, postdeploy metrics gate показал `chat_storage_put_ok_delta=2`, `chat_storage_put_fail_delta=0`.
 - Validation note (persistent minio config): test deploy+smoke прошел на SHA `136061f96de387a1339d91d9c9e113eab046da1b` без runtime overrides storage provider (использован persistent `infra/.env.host`), при активном `minio-test` профиле: `smoke:chat:object-storage`, `smoke:chat:orphan-cleanup`, `smoke:minio:storage` -> `ok`, metrics gate `ok_delta=2`, `fail_delta=0`.
+- Validation note (auto-start minio profile): на SHA `cf85aa3640cb4f7ddd06d56fbf4cfed3db2f3e0e` deploy лог показывает `storage provider=minio -> ensure minio-test profile is up`; storage gate-ы `smoke:chat:object-storage`, `smoke:chat:orphan-cleanup`, `smoke:minio:storage` и metrics gate прошли (`ok_delta=2`, `fail_delta=0`). Общий прогон завершился fail из-за внешнего флака `smoke:web:version-cache` (`GET /version failed after 3 attempts: fetch failed`).
 
 ## 10) MinIO rollout plan (draft)
 
