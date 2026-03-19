@@ -16,6 +16,7 @@
 - `app/media/*` - app media lifecycle helpers:
 	- `app/media/useServerVideoPreview.ts`
 - `realtime/*` - websocket lifecycle + realtime UX logic:
+	- `realtime/useChatComposerActions.ts`
 	- `realtime/useRealtimeChatLifecycle.ts`
 	- `realtime/useRealtimeConnectionReset.ts`
 	- `realtime/useRealtimeIncomingCallState.ts`

@@ -1,4 +1,4 @@
-import { ClipboardEvent, FormEvent, KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "./api";
 import { TooltipPortal } from "./TooltipPortal";
 import {
@@ -62,6 +62,7 @@ import {
   usePersistedClientSettings,
   usePopupOutsideClose,
   useRealtimeSoundEffects,
+  useChatComposerActions,
   useChatTypingController,
   useRealtimeChatLifecycle,
   useRealtimeConnectionReset,
@@ -84,12 +85,6 @@ import {
 } from "./hooks";
 import { detectInitialLang, LOCALE_BY_LANG, TEXT, type Lang } from "./i18n";
 import { DEFAULT_UI_THEME, formatBuildDateLabel, normalizeUiTheme, readNonZeroDefaultVolume } from "./utils/appShell";
-import {
-  compressImageToDataUrl,
-  extractImageSourceFromClipboardHtml,
-  extractImageSourceFromClipboardText,
-  normalizeImageSource
-} from "./utils/chatImagePayload";
 import type {
   AudioQuality,
   ChannelAudioQualitySetting,
@@ -119,6 +114,8 @@ const COOKIE_MODE = import.meta.env.VITE_AUTH_COOKIE_MODE === "1";
 const CHAT_TYPING_TTL_MS = 4500;
 const CHAT_TYPING_PING_INTERVAL_MS = 1800;
 
+// App is an orchestration boundary: it wires hooks/controllers and passes state to UI.
+// Parsing, transport rules, and feature workflows should live in dedicated hooks/modules.
 export function App() {
   const [token, setToken] = useState(() => (COOKIE_MODE ? "" : localStorage.getItem("boltorezka_token") || ""));
   const [user, setUser] = useState<User | null>(null);
@@ -339,6 +336,8 @@ export function App() {
     return (key: string) => dict[key] || key;
   }, [lang]);
   const maxChatImageKb = Math.max(1, Math.floor(serverChatImagePolicy.maxDataUrlLength / 1024));
+  const selectChannelPlaceholderMessage = t("chat.selectChannelPlaceholder");
+  const serverErrorMessage = t("toast.serverError");
   const chatImageTooLargeMessage = t("chat.imageTooLarge")
     .replace("{maxSide}", String(serverChatImagePolicy.maxImageSide))
     .replace("{maxKb}", String(maxChatImageKb));
@@ -1146,232 +1145,38 @@ export function App() {
     }
   });
 
-  const canManageOwnMessage = useCallback((message: Message) => {
-    if (!user || message.user_id !== user.id) {
-      return false;
-    }
-
-    const createdAtTs = Number(new Date(message.created_at));
-    if (!Number.isFinite(createdAtTs)) {
-      return false;
-    }
-
-    return Date.now() - createdAtTs <= MESSAGE_EDIT_DELETE_WINDOW_MS;
-  }, [user]);
-
-  const sendMessage = (event: FormEvent) => {
-    event.preventDefault();
-    if (!chatRoomSlug) {
-      pushToast(t("chat.selectChannelPlaceholder"));
-      return;
-    }
-
-    if (editingMessageId) {
-      const nextText = chatText.trim();
-      if (!nextText) {
-        return;
-      }
-
-      const requestId = sendWsEvent(
-        "chat.edit",
-        {
-          messageId: editingMessageId,
-          text: nextText,
-          roomSlug: chatRoomSlug
-        },
-        { withIdempotency: true, maxRetries: MAX_CHAT_RETRIES }
-      );
-
-      if (!requestId) {
-        pushToast(t("toast.serverError"));
-        return;
-      }
-
-      setChatText("");
-      setEditingMessageId(null);
-      sendChatTypingState(chatRoomSlug, false);
-      return;
-    }
-
-    let baseText = chatText.trim();
-    const extractedInlineImageSource = !pendingChatImageDataUrl
-      ? extractImageSourceFromClipboardText(baseText)
-      : "";
-    const imageSource = pendingChatImageDataUrl || extractedInlineImageSource;
-
-    if (imageSource.startsWith("data:image/") && imageSource.length > serverChatImagePolicy.maxDataUrlLength) {
-      pushToast(chatImageTooLargeMessage);
-      return;
-    }
-
-    if (extractedInlineImageSource) {
-      baseText = baseText
-        .replace(extractedInlineImageSource, "")
-        .replace(/!\[[^\]]*\]\(\s*\)/g, "")
-        .replace(/\(\s*\)/g, "")
-        .trim();
-    }
-
-    const imageMarkdown = imageSource ? `![скриншот](${imageSource})` : "";
-    const outgoingText = [baseText, imageMarkdown].filter(Boolean).join("\n");
-    if (!outgoingText) {
-      return;
-    }
-    const result = chatController.sendMessage(outgoingText, chatRoomSlug, user, MAX_CHAT_RETRIES);
-    if (result.sent) {
-      setChatText("");
-      setPendingChatImageDataUrl(null);
-      sendChatTypingState(chatRoomSlug, false);
-    }
-  };
-
-  const handleChatPaste = (event: ClipboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    if (!chatRoomSlug) {
-      return;
-    }
-
-    const clipboard = event.clipboardData;
-    const files = Array.from(clipboard?.files || []);
-    const imageFile = files.find((file) => file.type.startsWith("image/"))
-      || Array.from(clipboard?.items || [])
-        .map((item) => item.getAsFile())
-        .find((file): file is File => Boolean(file && file.type.startsWith("image/")));
-
-    const htmlImageSource = normalizeImageSource(extractImageSourceFromClipboardHtml(String(clipboard?.getData("text/html") || "")));
-    const textImageSource = normalizeImageSource(extractImageSourceFromClipboardText(String(clipboard?.getData("text/plain") || "")));
-    const hasImagePayload = Boolean(imageFile || htmlImageSource || textImageSource);
-    if (!hasImagePayload) {
-      return;
-    }
-
-    event.preventDefault();
-    void (async () => {
-      try {
-        if (imageFile) {
-          const dataUrl = await compressImageToDataUrl(imageFile, serverChatImagePolicy);
-          setPendingChatImageDataUrl(dataUrl);
-          return;
-        }
-
-        if (htmlImageSource.startsWith("data:image/")) {
-          const response = await fetch(htmlImageSource);
-          const blob = await response.blob();
-          const synthesizedFile = new File([blob], "clipboard-image", { type: blob.type || "image/png" });
-          const dataUrl = await compressImageToDataUrl(synthesizedFile, serverChatImagePolicy);
-          setPendingChatImageDataUrl(dataUrl);
-          return;
-        }
-
-        if (/^https?:\/\//i.test(htmlImageSource)) {
-          setPendingChatImageDataUrl(htmlImageSource);
-          return;
-        }
-
-        if (textImageSource.startsWith("data:image/")) {
-          const response = await fetch(textImageSource);
-          const blob = await response.blob();
-          const synthesizedFile = new File([blob], "clipboard-image", { type: blob.type || "image/png" });
-          const dataUrl = await compressImageToDataUrl(synthesizedFile, serverChatImagePolicy);
-          setPendingChatImageDataUrl(dataUrl);
-          return;
-        }
-
-        pushToast(chatImageTooLargeMessage);
-      } catch {
-        pushToast(chatImageTooLargeMessage);
-      }
-    })();
-  };
-
-  const handleChatInputKeyDown = (event: KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
-      event.preventDefault();
-      event.currentTarget.form?.requestSubmit();
-      return;
-    }
-
-    if (event.key !== "ArrowUp") {
-      return;
-    }
-
-    const target = event.currentTarget;
-    const selectionStart = typeof target.selectionStart === "number" ? target.selectionStart : 0;
-    const selectionEnd = typeof target.selectionEnd === "number" ? target.selectionEnd : 0;
-    if (selectionStart !== 0 || selectionEnd !== 0) {
-      return;
-    }
-
-    if (chatText.trim().length > 0) {
-      return;
-    }
-
-    const lastOwn = [...messages]
-      .reverse()
-      .find((message) => message.user_id === user?.id && canManageOwnMessage(message));
-
-    if (!lastOwn) {
-      return;
-    }
-
-    event.preventDefault();
-    setEditingMessageId(lastOwn.id);
-    setChatText(lastOwn.text);
-  };
-
-  const startEditingMessage = (messageId: string) => {
-    if (!chatRoomSlug) {
-      pushToast(t("chat.selectChannelPlaceholder"));
-      return;
-    }
-
-    const targetMessage = messages.find((item) => item.id === messageId);
-    if (!targetMessage || !canManageOwnMessage(targetMessage)) {
-      return;
-    }
-
-    setEditingMessageId(messageId);
-    setChatText(targetMessage.text);
-  };
-
-  const openRoomChat = useCallback((slug: string) => {
-    const normalized = String(slug || "").trim();
-    if (!normalized) {
-      return;
-    }
-
-    if (normalized !== chatRoomSlug) {
-      setMessages([]);
-      setMessagesHasMore(false);
-      setMessagesNextCursor(null);
-    }
-
-    setChatRoomSlug(normalized);
-  }, [chatRoomSlug]);
-
-  const deleteOwnMessage = (messageId: string) => {
-    if (!chatRoomSlug) {
-      pushToast(t("chat.selectChannelPlaceholder"));
-      return;
-    }
-
-    const targetMessage = messages.find((item) => item.id === messageId);
-    if (!targetMessage || !canManageOwnMessage(targetMessage)) {
-      return;
-    }
-
-    const requestId = sendWsEvent(
-      "chat.delete",
-      {
-        messageId,
-        roomSlug: chatRoomSlug
-      },
-      { withIdempotency: true, maxRetries: 1 }
-    );
-
-    if (!requestId) {
-      pushToast(t("toast.serverError"));
-    }
-  };
+  const {
+    sendMessage,
+    handleChatPaste,
+    handleChatInputKeyDown,
+    startEditingMessage,
+    deleteOwnMessage,
+    openRoomChat
+  } = useChatComposerActions({
+    chatRoomSlug,
+    setChatRoomSlug,
+    messages,
+    setMessages,
+    setMessagesHasMore,
+    setMessagesNextCursor,
+    user,
+    chatText,
+    setChatText,
+    editingMessageId,
+    setEditingMessageId,
+    pendingChatImageDataUrl,
+    setPendingChatImageDataUrl,
+    chatController,
+    sendWsEvent,
+    sendChatTypingState,
+    pushToast,
+    selectChannelPlaceholderMessage,
+    serverErrorMessage,
+    maxChatRetries: MAX_CHAT_RETRIES,
+    messageEditDeleteWindowMs: MESSAGE_EDIT_DELETE_WINDOW_MS,
+    serverChatImagePolicy,
+    chatImageTooLargeMessage
+  });
 
   const {
     joinRoom,
