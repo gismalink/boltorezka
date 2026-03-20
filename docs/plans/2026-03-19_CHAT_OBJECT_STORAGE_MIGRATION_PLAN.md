@@ -7,7 +7,7 @@ Scope: переход chat media c inline `data:image/...;base64` на object st
 - [x] Rollout только через `test` до отдельного подтверждения `prod`.
 - [x] Feature branch обязателен, `prod` только после merge в `main`.
 - [x] Переход выполняется без массовой миграции исторических сообщений на старте.
-- [ ] Для каждого этапа есть rollback path и smoke-подтверждение.
+- [x] Для каждого этапа есть rollback path и smoke-подтверждение.
 
 ## 1) Target data model
 
@@ -66,7 +66,7 @@ Scope: переход chat media c inline `data:image/...;base64` на object st
 
 ### Stage 0 - Infrastructure and API readiness
 
-- [ ] Подготовлен storage bucket и политики доступа.
+- [x] Подготовлен storage bucket и политики доступа.
 - [x] Реализованы API endpoints `upload/init` и `upload/finalize`.
 - [x] Добавлены серверные проверки finalize (object exists + metadata validation).
 
@@ -224,4 +224,4 @@ ssh mac-mini 'cd ~/srv/boltorezka && sed -i "" "s/^PROD_CHAT_STORAGE_PROVIDER=.*
 
 #### D4. Документирование факта выкатки
 
-- [ ] Обновлены статусы разделов `10.5`, `8` и validation notes с SHA и итогами prod smoke.
+- [x] Обновлены статусы разделов `10.5`, `8` и validation notes с SHA и итогами prod smoke.
