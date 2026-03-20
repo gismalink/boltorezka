@@ -7,6 +7,7 @@ type ChatPanelProps = {
   locale: string;
   roomSlug: string;
   roomTitle: string;
+  authToken: string;
   messages: Message[];
   currentUserId: string | null;
   messagesHasMore: boolean;
@@ -51,6 +52,7 @@ type VideoWindowsOverlayProps = {
 type UseWorkspaceChatVideoPropsInput = {
   t: Translate;
   locale: string;
+  authToken: string;
   chatRoomSlug: string;
   activeChatRoomTitle: string;
   messages: Message[];
@@ -95,6 +97,7 @@ type UseWorkspaceChatVideoPropsInput = {
 export function useWorkspaceChatVideoProps({
   t,
   locale,
+  authToken,
   chatRoomSlug,
   activeChatRoomTitle,
   messages,
@@ -137,6 +140,7 @@ export function useWorkspaceChatVideoProps({
     locale,
     roomSlug: chatRoomSlug,
     roomTitle: activeChatRoomTitle,
+    authToken,
     messages,
     currentUserId,
     messagesHasMore,

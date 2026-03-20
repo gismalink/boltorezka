@@ -1665,6 +1665,7 @@ export function App() {
   const { chatPanelProps, videoWindowsOverlayProps } = useWorkspaceChatVideoProps({
     t,
     locale,
+    authToken: serviceToken,
     chatRoomSlug,
     activeChatRoomTitle: activeChatRoom?.title || "",
     messages,
