@@ -203,24 +203,22 @@ services:
         mc mb --ignore-existing "local/$${BUCKET}"
         mc anonymous set none "local/$${BUCKET}"
 
-        cat >/tmp/chat-attachments-lifecycle.json <<EOF
-        {
-          "Rules": [
-            {
-              "ID": "abort-incomplete-multipart-uploads",
-              "Status": "Enabled",
-              "Filter": {
-                "Prefix": ""
-              },
-              "AbortIncompleteMultipartUpload": {
-                "DaysAfterInitiation": $${LIFECYCLE_ABORT_DAYS}
-              }
-            }
-          ]
-        }
+        cat >/tmp/chat-attachments-lifecycle.xml <<EOF
+        <LifecycleConfiguration xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
+          <Rule>
+            <ID>abort-incomplete-multipart-uploads</ID>
+            <Status>Enabled</Status>
+            <Filter>
+              <Prefix></Prefix>
+            </Filter>
+            <AbortIncompleteMultipartUpload>
+              <DaysAfterInitiation>$${LIFECYCLE_ABORT_DAYS}</DaysAfterInitiation>
+            </AbortIncompleteMultipartUpload>
+          </Rule>
+        </LifecycleConfiguration>
         EOF
 
-        mc ilm import "local/$${BUCKET}" </tmp/chat-attachments-lifecycle.json
+        mc ilm import "local/$${BUCKET}" </tmp/chat-attachments-lifecycle.xml
 
         cat >/tmp/chat-attachments-rw-policy.json <<EOF
         {
@@ -455,24 +453,22 @@ services:
         mc mb --ignore-existing "local/$${BUCKET}"
         mc anonymous set none "local/$${BUCKET}"
 
-        cat >/tmp/chat-attachments-lifecycle.json <<EOF
-        {
-          "Rules": [
-            {
-              "ID": "abort-incomplete-multipart-uploads",
-              "Status": "Enabled",
-              "Filter": {
-                "Prefix": ""
-              },
-              "AbortIncompleteMultipartUpload": {
-                "DaysAfterInitiation": $${LIFECYCLE_ABORT_DAYS}
-              }
-            }
-          ]
-        }
+        cat >/tmp/chat-attachments-lifecycle.xml <<EOF
+        <LifecycleConfiguration xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
+          <Rule>
+            <ID>abort-incomplete-multipart-uploads</ID>
+            <Status>Enabled</Status>
+            <Filter>
+              <Prefix></Prefix>
+            </Filter>
+            <AbortIncompleteMultipartUpload>
+              <DaysAfterInitiation>$${LIFECYCLE_ABORT_DAYS}</DaysAfterInitiation>
+            </AbortIncompleteMultipartUpload>
+          </Rule>
+        </LifecycleConfiguration>
         EOF
 
-        mc ilm import "local/$${BUCKET}" </tmp/chat-attachments-lifecycle.json
+        mc ilm import "local/$${BUCKET}" </tmp/chat-attachments-lifecycle.xml
 
         cat >/tmp/chat-attachments-rw-policy.json <<EOF
         {
