@@ -102,9 +102,7 @@ WITH candidate AS (
 )
 SELECT
   COUNT(*)::TEXT || '|' ||
-  COALESCE(SUM(text_bytes), 0)::TEXT || '|' ||
-  COALESCE(MIN(id)::TEXT, '') || '|' ||
-  COALESCE(MAX(id)::TEXT, '')
+  COALESCE(SUM(text_bytes), 0)::TEXT
 FROM candidate;
 SQL
   exit 0
