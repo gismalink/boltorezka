@@ -106,8 +106,8 @@ Scope: переход chat media c inline `data:image/...;base64` на object st
 - [ ] `chat composer state` изолирован от transport/storage логики.
 - [x] `chat image parsing/compression` живет в отдельном модуле.
 - [x] `chat upload transport` выделен в API/domain слой.
-- [ ] `chat message send` не содержит UI-специфичной логики.
-- [ ] `chat message render` работает только с view-model.
+- [x] `chat message send` не содержит UI-специфичной логики.
+- [x] `chat message render` работает только с view-model.
 
 ## 8) Done criteria
 
@@ -145,6 +145,7 @@ Scope: переход chat media c inline `data:image/...;base64` на object st
 - Validation note (prod minio cutover): на SHA `bc4e50416c2b0356712620fae100554a53574092` выполнен `deploy:prod` из `origin/main` с `PROD_CHAT_STORAGE_PROVIDER=minio`, подняты `boltorezka-minio-prod`/`boltorezka-minio-prod-init`; storage-focused postdeploy smoke (prod scope) завершился `SMOKE_STATUS=pass` с `chat_object_storage=pass`, `chat_orphan_cleanup=pass`, `minio_storage=pass`, `chat_storage_put_fail_delta=0`.
 - Validation note (prod rollback drill): выполнен операционный цикл `minio -> localfs -> minio` на `origin/main` (локальный rollback на SHA `79bef28fe6d69ea0f4e44043909e95fae5ee38fa`, затем возврат в `minio` на том же SHA); проверены `health=ok` в rollback-точке и финальный storage-focused smoke `SMOKE_STATUS=pass` с `chat_object_storage=pass`, `chat_orphan_cleanup=pass`, `minio_storage=pass`, `chat_storage_put_fail_delta=0`.
 - Validation note (legacy inline cleanup stage 4): добавлен ops script `scripts/ops/chat-legacy-inline-cleanup.sh` с режимами `dry-run|apply|rollback` и backup-таблицей `message_legacy_inline_cleanup_backup`; на test подтвержден reversible flow: `rollback run=legacy-inline-test-20260320-2 -> restored_count=1`, затем `apply run=legacy-inline-test-20260320-3 -> candidate=1 backup=1 updated=1 verify=1|0`, финальный dry-run `0|0`; на prod dry-run `0|0` (legacy inline payloads отсутствуют, cleanup no-op).
+- Validation note (web SRP send/render): send-path вынесен в UI-agnostic сервис `apps/web/src/services/chatMessageSendService.ts` (hook только маппит result -> UI feedback), render-path переведен на view-model mapper `apps/web/src/utils/chatMessageViewModel.ts`, который подготавливает данные перед рендером в `ChatPanel`.
 
 ## 10) MinIO rollout plan (draft)
 

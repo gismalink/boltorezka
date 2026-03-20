@@ -1,5 +1,6 @@
 import { ClipboardEvent, FormEvent, KeyboardEvent, ReactNode, RefObject, useEffect, useMemo, useRef, useState } from "react";
 import type { Message } from "../domain";
+import { buildChatMessageViewModels } from "../utils/chatMessageViewModel";
 
 type ChatPanelProps = {
   t: (key: string) => string;
@@ -107,6 +108,10 @@ export function ChatPanel({
     : !messagesHasMore
       ? t("chat.historyLoaded")
       : t("chat.loadOlder");
+  const messageViewModels = useMemo(
+    () => buildChatMessageViewModels(messages, currentUserId, 10 * 60 * 1000),
+    [messages, currentUserId]
+  );
 
   const formatMessageTime = (value: string) => {
     const date = new Date(value);
@@ -297,16 +302,6 @@ export function ChatPanel({
     return result.length > 0 ? result : [text];
   };
 
-  const collectAttachmentImageUrls = (message: Message): string[] => {
-    const attachments = Array.isArray(message.attachments) ? message.attachments : [];
-    const urls = attachments
-      .filter((item) => String(item.type || "") === "image")
-      .map((item) => String(item.download_url || "").trim())
-      .filter((url) => url.length > 0);
-
-    return urls.filter((url, index, all) => all.indexOf(url) === index);
-  };
-
   return (
     <section className="card middle-card flex min-h-0 flex-1 flex-col overflow-hidden">
       <h2>
@@ -347,40 +342,25 @@ export function ChatPanel({
         ) : null}
       </div>
       <div className="chat-log min-h-0 flex-1" ref={chatLogRef}>
-        {messages.map((message, index) => {
-          const attachmentImageUrls = collectAttachmentImageUrls(message);
-          const isOwn = currentUserId === message.user_id;
-          const previousMessage = index > 0 ? messages[index - 1] : null;
-          const nextMessage = index + 1 < messages.length ? messages[index + 1] : null;
-          const showAuthor = !previousMessage || previousMessage.user_id !== message.user_id;
-          const showAvatar = !isOwn && (!nextMessage || nextMessage.user_id !== message.user_id);
-          const createdAtTs = Number(new Date(message.created_at));
-          const canManageOwnMessage = isOwn && Number.isFinite(createdAtTs) && (Date.now() - createdAtTs) <= 10 * 60 * 1000;
-          const deliveryClass = message.deliveryStatus === "sending"
-            ? "delivery-sending"
-            : message.deliveryStatus === "delivered"
-              ? "delivery-delivered"
-              : message.deliveryStatus === "failed"
-                ? "text-[var(--pixel-danger)]"
-                : "";
-          const deliveryGlyph = message.deliveryStatus === "sending"
-            ? "•"
-            : message.deliveryStatus === "delivered"
-              ? "✓✓"
-              : message.deliveryStatus === "failed"
-                ? "!"
-                : "";
+        {messageViewModels.map((messageVm) => {
+          const attachmentImageUrls = messageVm.attachmentImageUrls;
+          const isOwn = messageVm.isOwn;
+          const showAuthor = messageVm.showAuthor;
+          const showAvatar = messageVm.showAvatar;
+          const canManageOwnMessage = messageVm.canManageOwnMessage;
+          const deliveryClass = messageVm.deliveryClass;
+          const deliveryGlyph = messageVm.deliveryGlyph;
 
           return (
             <article
-              key={message.id}
+              key={messageVm.id}
               className={`chat-message group grid items-end gap-2 ${isOwn ? "chat-message-own grid-cols-1 justify-items-end" : "grid-cols-[34px_minmax(0,1fr)]"}`}
             >
               {!isOwn ? (
                 <div className="chat-avatar-slot inline-flex h-[30px] w-[30px] items-end justify-center" aria-hidden="true">
                   {showAvatar ? (
                     <div className="chat-avatar inline-flex h-[30px] w-[30px] items-center justify-center">
-                      {(message.user_name || "U").charAt(0).toUpperCase()}
+                      {(messageVm.userName || "U").charAt(0).toUpperCase()}
                     </div>
                   ) : null}
                 </div>
@@ -392,7 +372,7 @@ export function ChatPanel({
                     <button
                       type="button"
                       className="secondary tiny icon-btn"
-                      onClick={() => onEditMessage(message.id)}
+                      onClick={() => onEditMessage(messageVm.id)}
                       aria-label={t("chat.edit")}
                       title={t("chat.edit")}
                     >
@@ -401,7 +381,7 @@ export function ChatPanel({
                     <button
                       type="button"
                       className="secondary tiny icon-btn"
-                      onClick={() => onDeleteMessage(message.id)}
+                      onClick={() => onDeleteMessage(messageVm.id)}
                       aria-label={t("chat.delete")}
                       title={t("chat.delete")}
                     >
@@ -413,14 +393,14 @@ export function ChatPanel({
                 <div className="chat-bubble w-fit min-w-[120px]">
                   {showAuthor ? (
                     <div className="chat-meta flex items-baseline gap-2">
-                      <span className="chat-author">{message.user_name}</span>
+                      <span className="chat-author">{messageVm.userName}</span>
                     </div>
                   ) : null}
                   <div className="chat-content-row">
-                    <p className="chat-text">{renderMessageText(message.text)}</p>
+                    <p className="chat-text">{renderMessageText(messageVm.text)}</p>
                     <span className="chat-time-wrap">
-                      <span className="chat-time">{formatMessageTime(message.created_at)}</span>
-                      {isOwn && message.deliveryStatus ? (
+                      <span className="chat-time">{formatMessageTime(messageVm.createdAt)}</span>
+                      {isOwn && deliveryGlyph ? (
                         <span className={`delivery ${deliveryClass}`}>
                           {deliveryGlyph}
                         </span>
@@ -431,7 +411,7 @@ export function ChatPanel({
                     <div className="chat-attachments-row">
                       {attachmentImageUrls.map((imageUrl) => (
                         <button
-                          key={`${message.id}-${imageUrl}`}
+                          key={`${messageVm.id}-${imageUrl}`}
                           type="button"
                           className="chat-inline-image-btn"
                           onClick={() => setPreviewImageUrl(imageUrl)}
@@ -448,7 +428,7 @@ export function ChatPanel({
                       ))}
                     </div>
                   ) : null}
-                  {message.edited_at ? <div className="chat-edited-mark">{t("chat.editedMark")}</div> : null}
+                  {messageVm.editedAt ? <div className="chat-edited-mark">{t("chat.editedMark")}</div> : null}
                 </div>
               </div>
             </article>

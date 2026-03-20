@@ -8,7 +8,7 @@ import {
 } from "react";
 import { api } from "../../api";
 import type { Message, MessagesCursor, User } from "../../domain";
-import type { ChatController } from "../../services";
+import { sendChatMessage, type ChatController } from "../../services";
 import {
   compressImageToDataUrl,
   extractImageSourceFromClipboardHtml,
@@ -92,106 +92,43 @@ export function useChatComposerActions({
   const sendMessage = useCallback((event: FormEvent) => {
     event.preventDefault();
     void (async () => {
-      if (!chatRoomSlug) {
+      const result = await sendChatMessage({
+        authToken,
+        chatRoomSlug,
+        chatText,
+        editingMessageId,
+        pendingChatImageDataUrl,
+        user,
+        maxChatRetries,
+        maxDataUrlLength: serverChatImagePolicy.maxDataUrlLength,
+        chatController,
+        sendWsEvent
+      });
+
+      if (result.kind === "no-room") {
         pushToast(selectChannelPlaceholderMessage);
         return;
       }
 
-      if (editingMessageId) {
-        const nextText = chatText.trim();
-        if (!nextText) {
-          return;
-        }
-
-        const requestId = sendWsEvent(
-          "chat.edit",
-          {
-            messageId: editingMessageId,
-            text: nextText,
-            roomSlug: chatRoomSlug
-          },
-          { withIdempotency: true, maxRetries: maxChatRetries }
-        );
-
-        if (!requestId) {
-          pushToast(serverErrorMessage);
-          return;
-        }
-
-        setChatText("");
-        setEditingMessageId(null);
-        sendChatTypingState(chatRoomSlug, false);
+      if (result.kind === "empty") {
         return;
       }
 
-      let baseText = chatText.trim();
-      const extractedInlineImageSource = !pendingChatImageDataUrl
-        ? extractImageSourceFromClipboardText(baseText)
-        : "";
-      const imageSource = pendingChatImageDataUrl || extractedInlineImageSource;
-
-      if (imageSource.startsWith("data:image/") && imageSource.length > serverChatImagePolicy.maxDataUrlLength) {
+      if (result.kind === "too-large") {
         pushToast(chatImageTooLargeMessage);
         return;
       }
 
-      if (extractedInlineImageSource) {
-        baseText = baseText
-          .replace(extractedInlineImageSource, "")
-          .replace(/!\[[^\]]*\]\(\s*\)/g, "")
-          .replace(/\(\s*\)/g, "")
-          .trim();
-      }
-
-      if (imageSource) {
-        try {
-          const imageResponse = await fetch(imageSource);
-          const imageBlob = await imageResponse.blob();
-          const mimeType = String(imageBlob.type || "image/jpeg").trim().toLowerCase();
-          const sizeBytes = Number(imageBlob.size || 0);
-          if (!mimeType || sizeBytes <= 0) {
-            pushToast(serverErrorMessage);
-            return;
-          }
-
-          const initUpload = await api.chatUploadInit(authToken, {
-            roomSlug: chatRoomSlug,
-            mimeType,
-            sizeBytes
-          });
-
-          await api.uploadChatObject(initUpload.uploadUrl, imageBlob, initUpload.requiredHeaders || { "content-type": mimeType });
-
-          await api.chatUploadFinalize(authToken, {
-            uploadId: initUpload.uploadId,
-            roomSlug: chatRoomSlug,
-            storageKey: initUpload.storageKey,
-            mimeType,
-            sizeBytes,
-            text: baseText
-          });
-
-          setChatText("");
-          setPendingChatImageDataUrl(null);
-          sendChatTypingState(chatRoomSlug, false);
-          return;
-        } catch {
-          pushToast(serverErrorMessage);
-          return;
-        }
-      }
-
-      if (!baseText) {
-        return;
-      }
-
-      const result = chatController.sendMessage(baseText, chatRoomSlug, user, maxChatRetries);
-      if (!result.sent) {
+      if (result.kind === "server-error") {
+        pushToast(serverErrorMessage);
         return;
       }
 
       setChatText("");
       setPendingChatImageDataUrl(null);
+      if (result.mode === "edit") {
+        setEditingMessageId(null);
+      }
       sendChatTypingState(chatRoomSlug, false);
     })();
   }, [
@@ -207,7 +144,7 @@ export function useChatComposerActions({
     selectChannelPlaceholderMessage,
     sendChatTypingState,
     sendWsEvent,
-    serverChatImagePolicy.maxDataUrlLength,
+    serverChatImagePolicy,
     serverErrorMessage,
     setChatText,
     setEditingMessageId,
