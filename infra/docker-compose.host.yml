@@ -180,7 +180,6 @@ services:
     command:
       - |
         BUCKET="${TEST_MINIO_BUCKET:-chat-attachments-test}"
-        LIFECYCLE_ABORT_DAYS="${TEST_MINIO_LIFECYCLE_ABORT_INCOMPLETE_DAYS:-7}"
         API_USER="${TEST_MINIO_API_USER:-${TEST_CHAT_MINIO_ACCESS_KEY:-}}"
         API_PASSWORD="${TEST_MINIO_API_PASSWORD:-${TEST_CHAT_MINIO_SECRET_KEY:-}}"
 
@@ -203,22 +202,7 @@ services:
         mc mb --ignore-existing "local/$${BUCKET}"
         mc anonymous set none "local/$${BUCKET}"
 
-        cat >/tmp/chat-attachments-lifecycle.xml <<EOF
-        <LifecycleConfiguration xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
-          <Rule>
-            <ID>abort-incomplete-multipart-uploads</ID>
-            <Status>Enabled</Status>
-            <Filter>
-              <Prefix></Prefix>
-            </Filter>
-            <AbortIncompleteMultipartUpload>
-              <DaysAfterInitiation>$${LIFECYCLE_ABORT_DAYS}</DaysAfterInitiation>
-            </AbortIncompleteMultipartUpload>
-          </Rule>
-        </LifecycleConfiguration>
-        EOF
-
-        mc ilm import "local/$${BUCKET}" </tmp/chat-attachments-lifecycle.xml
+        mc ilm rule add --expire-delete-marker "local/$${BUCKET}" >/dev/null 2>&1 || true
 
         cat >/tmp/chat-attachments-rw-policy.json <<EOF
         {
@@ -430,7 +414,6 @@ services:
     command:
       - |
         BUCKET="${PROD_MINIO_BUCKET:-chat-attachments-prod}"
-        LIFECYCLE_ABORT_DAYS="${PROD_MINIO_LIFECYCLE_ABORT_INCOMPLETE_DAYS:-7}"
         API_USER="${PROD_MINIO_API_USER:-${PROD_CHAT_MINIO_ACCESS_KEY:-}}"
         API_PASSWORD="${PROD_MINIO_API_PASSWORD:-${PROD_CHAT_MINIO_SECRET_KEY:-}}"
 
@@ -453,22 +436,7 @@ services:
         mc mb --ignore-existing "local/$${BUCKET}"
         mc anonymous set none "local/$${BUCKET}"
 
-        cat >/tmp/chat-attachments-lifecycle.xml <<EOF
-        <LifecycleConfiguration xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
-          <Rule>
-            <ID>abort-incomplete-multipart-uploads</ID>
-            <Status>Enabled</Status>
-            <Filter>
-              <Prefix></Prefix>
-            </Filter>
-            <AbortIncompleteMultipartUpload>
-              <DaysAfterInitiation>$${LIFECYCLE_ABORT_DAYS}</DaysAfterInitiation>
-            </AbortIncompleteMultipartUpload>
-          </Rule>
-        </LifecycleConfiguration>
-        EOF
-
-        mc ilm import "local/$${BUCKET}" </tmp/chat-attachments-lifecycle.xml
+        mc ilm rule add --expire-delete-marker "local/$${BUCKET}" >/dev/null 2>&1 || true
 
         cat >/tmp/chat-attachments-rw-policy.json <<EOF
         {
