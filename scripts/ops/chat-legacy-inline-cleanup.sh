@@ -155,16 +155,14 @@ backup_rows AS (
     cleaned_text
   FROM candidate
   ON CONFLICT (run_id, message_id) DO NOTHING
-  RETURNING message_id
+  RETURNING message_id, cleaned_text
 ),
 updated AS (
   UPDATE messages m
-  SET body = b.cleaned_text,
+  SET body = br.cleaned_text,
       updated_at = NOW()
-  FROM message_legacy_inline_cleanup_backup b
-  JOIN backup_rows br ON br.message_id = b.message_id
-  WHERE b.run_id = :'run_id'
-    AND b.message_id = m.id
+  FROM backup_rows br
+  WHERE br.message_id = m.id
   RETURNING m.id
 )
 SELECT
