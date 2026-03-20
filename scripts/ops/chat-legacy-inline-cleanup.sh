@@ -11,7 +11,7 @@ SCOPE="${LEGACY_INLINE_ENV_SCOPE:-test}"
 ACTION="${LEGACY_INLINE_ACTION:-dry-run}"
 RUN_ID="${LEGACY_INLINE_RUN_ID:-}"
 BATCH_LIMIT="${LEGACY_INLINE_BATCH_LIMIT:-500}"
-BACKUP_TABLE="${LEGACY_INLINE_BACKUP_TABLE:-message_legacy_inline_cleanup_backup}"
+BACKUP_TABLE="message_legacy_inline_cleanup_backup"
 PLACEHOLDER="${LEGACY_INLINE_PLACEHOLDER:-[legacy-inline-image-removed]}"
 
 if [[ "$SCOPE" != "test" && "$SCOPE" != "prod" ]]; then
@@ -96,9 +96,9 @@ SQL
 if [[ "$ACTION" == "dry-run" ]]; then
   psql_exec -tA <<SQL
 WITH candidate AS (
-  SELECT id, octet_length(text) AS text_bytes
+  SELECT id, octet_length(body) AS text_bytes
   FROM messages
-  WHERE text LIKE '%data:image/%'
+  WHERE body LIKE '%data:image/%'
 )
 SELECT
   COUNT(*)::TEXT || '|' ||
@@ -120,10 +120,10 @@ WITH candidate AS (
     room_id,
     user_id,
     created_at,
-    text AS original_text,
+    body AS original_text,
     regexp_replace(
       regexp_replace(
-        text,
+        body,
         '!\[[^\]]*\]\(data:image\/[A-Za-z0-9.+-]+;base64,[^)]*\)',
         :'placeholder',
         'gi'
@@ -133,7 +133,7 @@ WITH candidate AS (
       'gi'
     ) AS cleaned_text
   FROM messages
-  WHERE text LIKE '%data:image/%'
+  WHERE body LIKE '%data:image/%'
   ORDER BY created_at ASC, id ASC
   LIMIT :'batch_limit'
 ),
@@ -161,7 +161,7 @@ backup_rows AS (
 ),
 updated AS (
   UPDATE messages m
-  SET text = b.cleaned_text,
+  SET body = b.cleaned_text,
       updated_at = NOW()
   FROM message_legacy_inline_cleanup_backup b
   WHERE b.run_id = :'run_id'
@@ -178,7 +178,7 @@ SQL
 
   psql_exec -v run_id="$RUN_ID" -tA <<'SQL'
 SELECT
-  COUNT(*)::TEXT || '|' || COALESCE(SUM(CASE WHEN text LIKE '%data:image/%' THEN 1 ELSE 0 END), 0)::TEXT
+  COUNT(*)::TEXT || '|' || COALESCE(SUM(CASE WHEN body LIKE '%data:image/%' THEN 1 ELSE 0 END), 0)::TEXT
 FROM messages
 WHERE id IN (
   SELECT message_id
@@ -194,7 +194,7 @@ psql_exec -v run_id="$RUN_ID" <<'SQL'
 BEGIN;
 WITH restored AS (
   UPDATE messages m
-  SET text = b.original_text,
+  SET body = b.original_text,
       updated_at = NOW()
   FROM message_legacy_inline_cleanup_backup b
   WHERE b.run_id = :'run_id'
@@ -210,5 +210,5 @@ SELECT COUNT(*)
 FROM messages m
 JOIN message_legacy_inline_cleanup_backup b ON b.message_id = m.id
 WHERE b.run_id = :'run_id'
-  AND m.text LIKE '%data:image/%';
+  AND m.body LIKE '%data:image/%';
 SQL
