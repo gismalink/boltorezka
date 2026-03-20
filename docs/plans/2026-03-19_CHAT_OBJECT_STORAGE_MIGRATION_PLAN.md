@@ -90,8 +90,8 @@ Scope: переход chat media c inline `data:image/...;base64` на object st
 
 ### Stage 4 - Legacy cleanup (optional)
 
-- [ ] Подготовлен план очистки historical inline base64.
-- [ ] Очистка выполнена безопасно и обратимо (batch + verification).
+- [x] Подготовлен план очистки historical inline base64.
+- [x] Очистка выполнена безопасно и обратимо (batch + verification).
 
 ## 6) Test gates (must pass)
 
@@ -144,6 +144,7 @@ Scope: переход chat media c inline `data:image/...;base64` на object st
 - Validation note (automatic orphan cleanup): добавлен ops script `scripts/ops/chat-orphan-cleanup.sh` и scheduler manifest `scripts/ops/scheduler/jobs/chat-orphan-cleanup.env`; регулярный вызов cleanup endpoint теперь выполняется автоматически каждые 6 часов через launchd/scheduler adapter.
 - Validation note (prod minio cutover): на SHA `bc4e50416c2b0356712620fae100554a53574092` выполнен `deploy:prod` из `origin/main` с `PROD_CHAT_STORAGE_PROVIDER=minio`, подняты `boltorezka-minio-prod`/`boltorezka-minio-prod-init`; storage-focused postdeploy smoke (prod scope) завершился `SMOKE_STATUS=pass` с `chat_object_storage=pass`, `chat_orphan_cleanup=pass`, `minio_storage=pass`, `chat_storage_put_fail_delta=0`.
 - Validation note (prod rollback drill): выполнен операционный цикл `minio -> localfs -> minio` на `origin/main` (локальный rollback на SHA `79bef28fe6d69ea0f4e44043909e95fae5ee38fa`, затем возврат в `minio` на том же SHA); проверены `health=ok` в rollback-точке и финальный storage-focused smoke `SMOKE_STATUS=pass` с `chat_object_storage=pass`, `chat_orphan_cleanup=pass`, `minio_storage=pass`, `chat_storage_put_fail_delta=0`.
+- Validation note (legacy inline cleanup stage 4): добавлен ops script `scripts/ops/chat-legacy-inline-cleanup.sh` с режимами `dry-run|apply|rollback` и backup-таблицей `message_legacy_inline_cleanup_backup`; на test выполнен apply run `legacy-inline-test-20260320-2` с backup/verification, текущий dry-run `0|0`; на prod dry-run показал `0|0` (legacy inline payloads отсутствуют, cleanup no-op).
 
 ## 10) MinIO rollout plan (draft)
 
