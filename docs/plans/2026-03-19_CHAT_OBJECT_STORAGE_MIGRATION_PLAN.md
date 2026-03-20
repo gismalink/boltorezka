@@ -73,7 +73,7 @@ Scope: переход chat media c inline `data:image/...;base64` на object st
 ### Stage 1 - Dual-read
 
 - [x] Reader поддерживает legacy + attachments.
-- [ ] Writer остается legacy по умолчанию.
+- [x] Writer остается legacy по умолчанию (исторический шаг Stage 1; далее writer переведен на attachments-only).
 - [x] Добавлены метрики доли legacy/attachments чтения.
 
 ### Stage 2 - Attachments write on test
