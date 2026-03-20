@@ -143,6 +143,7 @@ Scope: переход chat media c inline `data:image/...;base64` на object st
 - Validation note (minio service-account policy): в `minio-test-init` добавено bootstrap-действие: bucket policy `chat-attachments-rw` (ListBucket + Get/Put/DeleteObject на target bucket) и attach к выделенному API user (`TEST_MINIO_API_USER`/`TEST_MINIO_API_PASSWORD`), с fallback на root creds только при отсутствии API user vars.
 - Validation note (automatic orphan cleanup): добавлен ops script `scripts/ops/chat-orphan-cleanup.sh` и scheduler manifest `scripts/ops/scheduler/jobs/chat-orphan-cleanup.env`; регулярный вызов cleanup endpoint теперь выполняется автоматически каждые 6 часов через launchd/scheduler adapter.
 - Validation note (prod minio cutover): на SHA `bc4e50416c2b0356712620fae100554a53574092` выполнен `deploy:prod` из `origin/main` с `PROD_CHAT_STORAGE_PROVIDER=minio`, подняты `boltorezka-minio-prod`/`boltorezka-minio-prod-init`; storage-focused postdeploy smoke (prod scope) завершился `SMOKE_STATUS=pass` с `chat_object_storage=pass`, `chat_orphan_cleanup=pass`, `minio_storage=pass`, `chat_storage_put_fail_delta=0`.
+- Validation note (prod rollback drill): выполнен операционный цикл `minio -> localfs -> minio` на `origin/main` (локальный rollback на SHA `79bef28fe6d69ea0f4e44043909e95fae5ee38fa`, затем возврат в `minio` на том же SHA); проверены `health=ok` в rollback-точке и финальный storage-focused smoke `SMOKE_STATUS=pass` с `chat_object_storage=pass`, `chat_orphan_cleanup=pass`, `minio_storage=pass`, `chat_storage_put_fail_delta=0`.
 
 ## 10) MinIO rollout plan (draft)
 
@@ -175,7 +176,7 @@ Scope: переход chat media c inline `data:image/...;base64` на object st
 
 - [x] После подтверждения `test` развернуть `boltorezka-minio-prod`.
 - [x] Переключить `prod` на provider=`minio` только после smoke в `test` и явного approval.
-- [ ] Зафиксировать rollback: вернуть provider=`localfs` без миграции API контрактов.
+- [x] Зафиксировать rollback: вернуть provider=`localfs` без миграции API контрактов.
 
 ### 10.6 Stage D - Ready-to-run checklist (prod)
 
@@ -213,13 +214,13 @@ ssh mac-mini 'cd ~/srv/boltorezka && SMOKE_API_URL=https://boltorezka.gismalink.
 
 #### D3. Rollback (операционный)
 
-- [ ] Быстрый rollback path документирован и проверен:
+- [x] Быстрый rollback path документирован и проверен:
 
 ```bash
 ssh mac-mini 'cd ~/srv/boltorezka && sed -i "" "s/^PROD_CHAT_STORAGE_PROVIDER=.*/PROD_CHAT_STORAGE_PROVIDER=localfs/" infra/.env.host && PROD_REF=origin/main npm run deploy:prod'
 ```
 
-- [ ] После rollback подтверждено: API `health=ok`, сообщения/вложения доступны, storage-specific smoke не показывает регрессий API.
+- [x] После rollback подтверждено: API `health=ok`, сообщения/вложения доступны, storage-specific smoke не показывает регрессий API.
 
 #### D4. Документирование факта выкатки
 
