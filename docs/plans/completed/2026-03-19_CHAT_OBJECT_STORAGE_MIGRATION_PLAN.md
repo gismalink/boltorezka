@@ -45,10 +45,10 @@ Scope: переход chat media c inline `data:image/...;base64` на object st
 
 ## 3) Backward compatibility
 
-- [ ] Reader поддерживает legacy markdown/base64 сообщения.
+- [x] Reader поддерживает legacy markdown/base64 сообщения на переходном этапе; после Stage 4 legacy-cleanup requirement закрыт (prod dry-run `0|0`, legacy payloads отсутствуют).
 - [x] Writer-path для новых сообщений фиксирован на attachments-only (без runtime feature flag).
 - [x] Legacy fallback writer отключен в web-клиенте.
-- [ ] Формат WS/API payload versioned (или эквивалентный backward-safe контракт).
+- [x] Формат WS/API payload backward-safe: `attachments` передаются как опциональные поля без breaking изменения базового message envelope.
 
 ## 4) Security and operations hardening
 
@@ -103,11 +103,13 @@ Scope: переход chat media c inline `data:image/...;base64` на object st
 
 ## 7) Web SRP checklist
 
-- [ ] `chat composer state` изолирован от transport/storage логики.
+- [x] `chat composer state` изолирован от transport/storage логики (send-path вынесен в `chatMessageSendService`, render-path — в `chatMessageViewModel`).
 - [x] `chat image parsing/compression` живет в отдельном модуле.
 - [x] `chat upload transport` выделен в API/domain слой.
 - [x] `chat message send` не содержит UI-специфичной логики.
 - [x] `chat message render` работает только с view-model.
+
+- Validation note (2026-03-21): remaining checklist items синхронизированы с фактическим состоянием migration — legacy cleanup завершен, contract backward-safe, SRP-send/render выделены в отдельные сервисы/mapper.
 
 ## 8) Done criteria
 

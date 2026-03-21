@@ -1,5 +1,7 @@
 # Discord-like Channel Tree Plan (Boltorezka) — актуальная версия
 
+Status: Completed (MVP scope, 2026-03-21)
+
 Цель: поддерживать Discord-like sidebar и админ-управление структурой каналов в рамках текущей архитектуры `rooms + room_categories`, без несовместимых переименований.
 
 ## 1) Правила доставки (обязательно)
@@ -89,3 +91,12 @@
 - `docs/contracts/API_CONTRACT_V1.md`
 - `docs/operations/SMOKE_CI_MATRIX.md`
 - `docs/runbooks/PREPROD_DECISION_PACKAGE.md`
+
+## 8) Completion note
+
+- План закрыт в рамках MVP scope:
+  - tree/CRUD + protections реализованы,
+  - category collapse + persistence реализованы,
+  - archive lifecycle реализован,
+  - hierarchy smoke добавлен в API/postdeploy coverage.
+- Evidence: `docs/status/feature-log/2026-02-28.md`, `docs/operations/SMOKE_CI_MATRIX.md`, `scripts/smoke/smoke-api.mjs`.

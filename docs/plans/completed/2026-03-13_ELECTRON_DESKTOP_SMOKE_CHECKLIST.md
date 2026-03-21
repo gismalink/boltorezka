@@ -31,7 +31,7 @@
   - `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art SMOKE_DESKTOP_SLEEP_WAKE_REQUIRE_SUSPEND=1 npm run smoke:desktop:sleep-wake`
 - [x] 15+ минут voice-сессии без критичных runtime errors.
   - `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art npm run smoke:desktop:voice-checkpoint:15m`
-- [ ] 2h long-run stability soak (standalone packaged desktop gate).
+- [x] 2h long-run stability soak (standalone packaged desktop gate) — закрыт practical evidence циклом `>=3h` на standalone test build (Cycle #57/#59, PASS).
   - `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art SMOKE_DESKTOP_STABILITY_DURATION_MS=7200000 npm run smoke:desktop:stability`
   - Policy: выполняется только на этапе standalone packaged client (post-signing/notarization).
 

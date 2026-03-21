@@ -28,4 +28,4 @@
 ## 5) Exit Criteria
 
 - [ ] Linux ready-state documented в TEST_RESULTS + runbooks.
-- [ ] Основной desktop план не содержит открытых Linux задач.
+- [x] Основной desktop план не содержит открытых Linux задач.

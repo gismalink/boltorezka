@@ -1,5 +1,7 @@
 # TURN2 Enablement Plan (2026-03-19)
 
+Status: In progress (validated baseline, completion gates pending as of 2026-03-21)
+
 Цель: зафиксировать рабочий путь TURN2 в актуальном LiveKit runtime и встроить его в обязательный test gate перед любыми изменениями для production.
 
 ## 1) Зафиксированный факт на текущий момент
@@ -69,3 +71,29 @@ SMOKE_RTC_ICE_TRANSPORT_POLICY=relay \
 SMOKE_RTC_ICE_SERVERS_JSON='[{"urls":["turns:turn2.gismalink.art:443?transport=tcp"],"username":"<turn_user>","credential":"<turn_pass>"}]' \
 npm run smoke:livekit:media
 ```
+
+## 7) Текущий прогресс (2026-03-21)
+
+### 7.1 Закрыто
+
+- [x] Native TURN2 baseline и direct probe подтверждены.
+- [x] LiveKit media smoke поддерживает `SMOKE_RTC_ICE_SERVERS_JSON` и `SMOKE_RTC_ICE_TRANSPORT_POLICY`.
+- [x] Runbook TURN2 обновлен под текущий native baseline.
+- [x] Legacy signaling smoke исключен как источник истины для TURN2 в livekit-only runtime.
+
+Evidence:
+- `docs/status/feature-log/2026-03-19.md`
+- `docs/runbooks/TURN2_VPS_SETUP_RUNBOOK.md`
+- `scripts/smoke/smoke-livekit-media-browser.mjs`
+- `scripts/deploy/postdeploy-smoke-test.sh`
+
+### 7.2 Не закрыто (блокеры completion)
+
+- [ ] Зафиксировать, что в обязательном postdeploy test gate используется именно turn2-only профиль (а не только env override).
+- [ ] Приложить evidence 3 подряд green test циклов именно для turn2-only профиля (`smoke:livekit:token-flow` + `smoke:livekit:media`, `oneWayIncidents.audio=0`, `oneWayIncidents.video=0`).
+- [ ] Формально зафиксировать production rollout-профиль TURN (`turn2 primary + fallback`) в release docs.
+- [ ] Добавить отдельную GO/NO-GO запись по TURN2 enablement.
+
+### 7.3 Completion rule
+
+План переносится в `completed/` только после закрытия всех пунктов раздела 7.2.

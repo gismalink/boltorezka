@@ -1,5 +1,7 @@
 # Boltorezka Test Plan (MVP + Realtime + Load)
 
+Status: Completed (historical execution artifact, archived 2026-03-21)
+
 Дата: 2026-03-02  
 Область: web client + api/realtime in `test` env (`test.boltorezka.gismalink.art`)
 
@@ -150,3 +152,8 @@ ssh mac-mini 'cd ~/srv/boltorezka && docker compose -f infra/docker-compose.host
   - `/v1/auth/mode`: avg `100.54 ms`, p99 `350 ms`, 6k requests.
 - Post-load API log scan (`error|fatal|exception|panic`): no critical matches.
 - Status: cycle #1 accepted, proceed to P2 + W1 in next iteration.
+
+## 11) Archive note
+
+- Документ зафиксировал успешный execution snapshot для соответствующего цикла и далее был поглощен регулярным трекингом в `docs/status/test-results/*`.
+- План закрыт как исторический evidence-документ, не как активный execution backlog.

@@ -1,5 +1,7 @@
 # План Миграции SFU (Decision Package)
 
+Status: Completed (historical decision package, archived 2026-03-21)
+
 Дата: 2026-03-07  
 Дата актуализации: 2026-03-09
 Статус: Stage 0-3 (current SFU profile) завершены в test; LiveKit Stage A-D в работе
@@ -175,3 +177,9 @@ Stage D: Default LiveKit в test -> prod readiness
 - `docs/runbooks/VOICE_BASELINE_RUNBOOK.md`
 - `docs/runbooks/SFU_STAGE1_DARK_LAUNCH_RUNBOOK.md`
 - `docs/status/RTC_STABILITY_ROADMAP.md`
+
+## 12) Archive note
+
+- План закрыт как decision-package документ переходного периода.
+- Итоговый runtime baseline зафиксирован как `livekit-only` в `docs/architecture/PHASE0_MVP_ADR.md` и закрыт чеклистом `docs/plans/completed/2026-03-09_LIVEKIT_FULL_TRANSITION_CHECKLIST.md`.
+- Дальнейший operational tracking ведется через runbooks и `docs/status/test-results/*`.

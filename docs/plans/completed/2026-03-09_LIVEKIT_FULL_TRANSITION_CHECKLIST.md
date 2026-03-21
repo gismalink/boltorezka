@@ -13,12 +13,13 @@ Scope: full runtime transition to LiveKit-only media topology and release closur
 
 ## 2) Release And Ops Closure (migrated from target checklist)
 
-- [ ] Нет критичных инцидентов в последние 48 часов.
-- [ ] Принято явное подтверждение на `prod` rollout.
-- [ ] Smoke `test`/`prod` проходит полностью.
+- [x] Нет критичных инцидентов в последние 48 часов.
+- [x] Принято явное подтверждение на `prod` rollout.
+- [x] Smoke `test`/`prod` проходит полностью.
 
 ## 3) Validation Notes
 
 - Validation note (2026-03-09): legacy `p2p/sfu` topology branches removed from active runtime paths; media topology contract is now `livekit` only.
 - Validation note (2026-03-09): ingress policy uses `/rtc*` signaling with `/rtc/v1* -> /rtc*` bridge for client compatibility; deprecated `/livekit/rtc*` routes explicitly return `404`.
 - Validation note (2026-03-09): release-gate items above are intentionally kept open until production change window decision.
+- Validation note (2026-03-21): release-gate closure зафиксирован по артефактам decision package и migration checklist (`docs/runbooks/PREPROD_DECISION_PACKAGE.md`, `docs/plans/completed/2026-03-08_TARGET_MODEL_CHECKLIST.md`), где эти три пункта уже подтверждены как выполненные.

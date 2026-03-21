@@ -1,5 +1,7 @@
 # Desktop Handoff Deterministic Design (2026-03-14)
 
+Status: Completed (design+implementation evidence closed, archived 2026-03-21)
+
 Цель: убрать timer-based fallback из browser->desktop handoff и заменить его детерминированным протоколом завершения авторизации.
 
 ## 1) Проблема
@@ -124,3 +126,8 @@ Phase 2:
 - Browser никогда не показывает chat UI после desktop login handoff.
 - При 20 последовательных входах нет race/misdirected account.
 - Smoke deterministic handoff PASS на test.
+
+## 9) Archive note
+
+- Документ закрыт как design artifact после внедрения deterministic handoff протокола и подтверждающих test cycles в `docs/status/test-results/*`.
+- Дальнейший operational tracking ведется через test-results и desktop runbooks.

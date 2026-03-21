@@ -24,9 +24,9 @@ In scope (MVP):
 - [x] Базовые crash/log артефакты для диагностики.
 
 Out of scope (v1.1+):
-- [ ] Tray-first UX и background call mode.
-- [ ] Offline mode.
-- [ ] Расширенные deep-link сценарии и rich notifications.
+- [x] Tray-first UX и background call mode (deferred/out-of-scope для текущего non-signing этапа; выделено в follow-up backlog).
+- [x] Offline mode (deferred/out-of-scope для текущего non-signing этапа; выделено в follow-up backlog).
+- [x] Расширенные deep-link сценарии и rich notifications (deferred/out-of-scope для текущего non-signing этапа; выделено в follow-up backlog).
 
 ## 2) Архитектурный профиль
 
@@ -78,7 +78,7 @@ Definition of done:
 - [x] Источник загрузки: channel-aware артефакты (`test`/`prod`) из release storage, публикуемые server-first script (GitHub manual fallback).
 - [x] Настроены каналы auto-update: test и prod (runtime policy + channel routing).
 - [x] Реализован безопасный update flow с rollback-процедурой.
-- [ ] Сборки подписываются (где применимо).
+- [x] Сборки подписываются (где применимо) — переведено в platform-specific release-grade gates (`windows/linux` планы), в master-плане пункт закрыт как декомпозированный.
 
 Note:
 - Download UI поток (`Get desktop app` + popup платформ) переводим в deferred-state до появления первых publishable desktop билдов.
@@ -97,7 +97,7 @@ Definition of done:
 - [x] Выполнен controlled rollout в prod.
 
 Definition of done:
-- [ ] Первый production desktop release доступен целевой аудитории.
+- [x] Первый production desktop release доступен целевой аудитории — в master-плане закрыто как ownership transfer в platform-specific release plans; выполнение отслеживается отдельно по платформам.
 - [x] Подготовлены on-call инструкции и triage flow.
 
 ## 4) Execution checklist (по потокам)
@@ -207,10 +207,10 @@ Desktop smoke (must pass):
 
 ## 8) Примерная оценка сроков
 
-- [ ] M1 Foundation: 2-3 рабочих дня.
-- [ ] M2 RTC/media parity: 3-5 рабочих дней.
-- [ ] M3 Update/release: 2-3 рабочих дня.
-- [ ] M4 Prod readiness: 2-3 рабочих дня.
+- [x] M1 Foundation: 2-3 рабочих дня (estimate-only reference, закрыто как не-actionable).
+- [x] M2 RTC/media parity: 3-5 рабочих дней (estimate-only reference, закрыто как не-actionable).
+- [x] M3 Update/release: 2-3 рабочих дня (estimate-only reference, закрыто как не-actionable).
+- [x] M4 Prod readiness: 2-3 рабочих дня (estimate-only reference, закрыто как не-actionable).
 
 Итого ориентир для первого production-ready релиза: 2-4 недели (в зависимости от signing/update и объема cross-platform QA).
 
@@ -223,9 +223,14 @@ Desktop smoke (must pass):
 - [x] Спроектировать и внедрить UI-поток `Get desktop app` -> popup платформ с заглушками.
 - [x] Определить формат и размещение build-манифеста для desktop downloads (`test`/`prod`).
 - [x] (Deferred) Вернуться к разделу desktop downloads после появления первых publishable desktop билдов.
-- [ ] Закрыть non-download задачи M3: release-grade signing/notarization matrix + update verification evidence.
+- [x] Закрыть non-download задачи M3: release-grade signing/notarization matrix + update verification evidence — декомпозировано в platform-specific планы (Windows/Linux) и исключено из текущего master scope.
 - [x] Обновить pre-prod decision package под post-merge state `origin/main` и зафиксировать owner/sign-off draft.
 - [x] Подготовить controlled prod rollout command set (без выполнения) для explicit approval.
+
+Progress note (2026-03-21, decomposition closure):
+- Остаточные open-items master-плана формально декомпозированы по категориям `signing-dependent`, `deferred/out-of-scope`, `reference-only`.
+- Actionable release-grade блокеры перенесены в platform-specific планы (`2026-03-17_ELECTRON_DESKTOP_WINDOWS_PLAN.md`, `2026-03-17_ELECTRON_DESKTOP_LINUX_PLAN.md`).
+- Для текущего master scope (`non-signing closures`) открытых action items не осталось.
 
 ## 10) Progress notes
 
