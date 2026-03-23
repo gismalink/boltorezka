@@ -7,8 +7,6 @@ on:
         description: 'Enable extended realtime smoke (call-signal + 3-way race)'
         required: false
         default: '0'
-  schedule:
-    - cron: '20 3 * * *'
 
 concurrency:
   group: test-smoke-workflow
