@@ -153,6 +153,7 @@ Draft: Authentik OIDC clients and claims mapping (v1)
 - Обновлены default URL в deploy/ops/smoke скриптах на `https://test.datowave.com` (включая `deploy-test-from-ref.sh`, `deploy-test-and-smoke.sh`, `run-all-smokes.sh`, cookie/desktop smoke scripts).
 - Обновлены scheduler job env defaults (`chat-orphan-cleanup`, `slo-rolling-gate`) и `scripts/README.md` под новый test host.
 - Обновлены operational runbook/checklist под новый test/auth host: `RUNBOOK_TEST_ROLLOUT_QUICKSTART.md`, `RUNBOOK_TEST_DEPLOY.md`, `workflow-checklist.md`, `PREPROD_CHECKLIST.md`.
+- Дополнительно синхронизированы домены в runtime runbook: `DESKTOP_SLEEP_WAKE_RUNBOOK.md`, `LIVEKIT_TEST_FOUNDATION_RUNBOOK.md`, `DESKTOP_SECURITY_GATE_RUNBOOK.md`.
 
 ### 3.6 Re-onboarding пользователей (без миграции БД)
 

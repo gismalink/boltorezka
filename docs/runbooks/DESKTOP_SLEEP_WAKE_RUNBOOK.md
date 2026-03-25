@@ -11,7 +11,7 @@
 ## 2) Quick automated assist (non-strict)
 
 ```bash
-SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art \
+SMOKE_WEB_BASE_URL=https://test.datowave.com \
 SMOKE_DESKTOP_SLEEP_WAKE_WINDOW_MS=30000 \
 npm run smoke:desktop:sleep-wake
 ```
@@ -21,7 +21,7 @@ npm run smoke:desktop:sleep-wake
 ## 3) Evidence-grade run (strict suspend required)
 
 ```bash
-SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art \
+SMOKE_WEB_BASE_URL=https://test.datowave.com \
 SMOKE_DESKTOP_SLEEP_WAKE_WINDOW_MS=45000 \
 SMOKE_DESKTOP_SLEEP_WAKE_SUSPEND_THRESHOLD_MS=5000 \
 SMOKE_DESKTOP_SLEEP_WAKE_REQUIRE_SUSPEND=1 \
@@ -37,7 +37,7 @@ npm run smoke:desktop:sleep-wake
 ## 4) Full chain with sleep/wake (optional)
 
 ```bash
-SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art \
+SMOKE_WEB_BASE_URL=https://test.datowave.com \
 SMOKE_DESKTOP_SOAK_CYCLES=2 \
 SMOKE_DESKTOP_SLEEP_WAKE_WINDOW_MS=45000 \
 SMOKE_DESKTOP_SLEEP_WAKE_REQUIRE_SUSPEND=1 \

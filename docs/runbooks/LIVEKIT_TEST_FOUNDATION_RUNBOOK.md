@@ -67,7 +67,7 @@ TEST_LIVEKIT_TOKEN_TTL_SEC=1800
 Smoke call (requires bearer token):
 
 ```bash
-curl -X POST "https://test.boltorezka.gismalink.art/v1/auth/livekit-token" \
+curl -X POST "https://test.datowave.com/v1/auth/livekit-token" \
   -H "Authorization: Bearer <token>" \
   -H "Content-Type: application/json" \
   --data '{"roomSlug":"test-room"}'
@@ -125,16 +125,16 @@ Use this checklist before deleting `/rtc/v1* -> /rtc*` rewrite rules in edge ing
 
 1. Upgrade `livekit/livekit-server` image in `infra/docker-compose.host.yml` for both `livekit-test` and `livekit-prod` profiles.
 2. In `test`, verify native endpoints (without ingress rewrite fallback):
-  - `https://test.boltorezka.gismalink.art/rtc/v1/validate` returns `401` (not `404`).
-  - `https://test.boltorezka.gismalink.art/rtc/v1` no longer fails with `404` during browser connect.
+  - `https://test.datowave.com/rtc/v1/validate` returns `401` (not `404`).
+  - `https://test.datowave.com/rtc/v1` no longer fails with `404` during browser connect.
 3. Run full `test` gate after upgrade:
   - `TEST_REF=origin/<branch> npm run deploy:test:smoke`.
   - `SMOKE_STATUS=pass`, `SMOKE_LIVEKIT_GATE_STATUS=pass`, `SMOKE_LIVEKIT_MEDIA_STATUS=pass`.
-4. Remove rewrite rules from `edge/ingress/caddy/Caddyfile` for both `test.boltorezka.gismalink.art` and `boltorezka.gismalink.art`.
+4. Remove rewrite rules from `edge/ingress/caddy/Caddyfile` for both `test.datowave.com` and `datowave.com`.
 5. Recreate Caddy container after config update to avoid stale bind-mount inode:
   - `cd ~/srv/edge/ingress && docker compose up -d --force-recreate edge-caddy`.
 6. Re-validate in `prod`:
-  - `https://boltorezka.gismalink.art/rtc/v1/validate` returns `401`.
-  - `https://boltorezka.gismalink.art/version` returns `200`.
+  - `https://datowave.com/rtc/v1/validate` returns `401`.
+  - `https://datowave.com/version` returns `200`.
 
 Rollback rule: if any step fails, re-enable compatibility rewrite and redeploy ingress before continuing rollout.

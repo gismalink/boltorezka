@@ -30,7 +30,7 @@
 Разрешенные внешние origin должны быть явными и минимальными:
 - `https://fonts.googleapis.com`
 - `https://fonts.gstatic.com`
-- app API/runtime origin (`https://test.boltorezka.gismalink.art`, `https://boltorezka.gismalink.art`)
+- app API/runtime origin (`https://test.datowave.com`, `https://datowave.com`)
 
 В renderer source не должно быть неожиданных сторонних script origin.
 
