@@ -1,6 +1,6 @@
 # План: перенос продукта на новый домен (domain cutover)
 Date: 2026-03-22
-Scope: вынести продукт с поддомена/домена `gismalink.art` на новый самостоятельный домен `datowave.com` через greenfield rollout: поднимаем новый контур, делаем redirect со старых адресов на новые, старый проект выключаем после окна совместимости.
+Scope: перенести только boltorezka-контур с `boltorezka.gismalink.art` (и связанных test/auth host в рамках boltorezka) на `datowave.com` через greenfield rollout: поднимаем новый контур, делаем redirect со старых адресов на новые, старый контур boltorezka выключаем после окна совместимости.
 
 ## 0) Цели и ограничения
 
@@ -10,6 +10,7 @@ Scope: вынести продукт с поддомена/домена `gismali
 - Пользовательский опыт не должен ломаться в базовых флоу: открытие ссылок, вход/регистрация, доступ в продукт.
 - Миграция выполняется через GitOps, с обязательным прогоном в `test` до `prod`.
 - `prod`-выкатка только после явного подтверждения.
+- Вне scope: `popn`, `projo` и остальные проекты; они остаются без изменений в рамках этого плана.
 
 ## 1) Что считаем "хвостами" gismalink.art
 
@@ -39,7 +40,7 @@ Scope: вынести продукт с поддомена/домена `gismali
 
 - [x] Зарегистрировать и подтвердить новый домен `datowave.com`.
 - [x] Применить подтвержденные DNS A-записи для `datowave.com` (см. раздел 10.3). Проверено `dig +short A` 2026-03-24.
-- [ ] Подтвердить, что все остальные требуемые service-host из старого контура покрыты правилом suffix replace и добавлены в DNS.
+- [x] Подтверждено (scope boltorezka): требуемые service-host покрыты и добавлены в DNS (`datowave.com`, `test.datowave.com`, `auth.datowave.com`, `test.auth.datowave.com`).
 - [x] Выпустить TLS-сертификаты для нового домена и нужных поддоменов в `test` (`test.datowave.com`, `test.auth.datowave.com`); `prod` host pending.
 - [x] Обновить ingress-конфиги (Caddy/Nginx) под новый host в `test`.
 - [x] Настроить redirect `301/308` со старого домена на новый (без redirect-loop) в `test`.
@@ -56,6 +57,9 @@ Scope: вынести продукт с поддомена/домена `gismali
 - Исправлен OAuth redirect для `test`: API больше не возвращает `test.auth.gismalink.art`, используется `test.auth.datowave.com`.
 - Redirect `test.boltorezka.gismalink.art` -> `test.datowave.com` отдает `308` и сохраняет query string.
 - Добавлен redirect-only домен `test.datute.ru` -> `test.datowave.com` (`308`, path/query сохраняются).
+- Перепроверка DNS от 2026-03-25: в scope этого плана (`boltorezka` cutover) требуемые host подтверждены; `popn`, `projo` и остальные отдельные проекты не входят в этот перенос.
+- HTTPS policy (test): `http://test.datowave.com` и `http://test.auth.datowave.com` принудительно редиректят на HTTPS (`308`).
+- HSTS policy (test): `Strict-Transport-Security` подтвержден на `test.auth.datowave.com`, но не подтвержден на `test.datowave.com`; пункт 3.1 про HSTS остается открытым до унификации.
 
 ### 3.2 Приложение (web/api/realtime)
 
