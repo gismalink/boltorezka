@@ -80,7 +80,10 @@ Backend mapping expectations:
 4. Realtime auth gates:
 - `SMOKE_API_URL=https://test.datowave.com npm run smoke:auth:cookie-ws-ticket`
 
-5. Postdeploy пакет (если был rollout):
+5. Проверка reset/verify/invite ссылок из реальных test-писем:
+- `SMOKE_AUTH_LINK_URLS='<url1>,<url2>' npm run smoke:auth:links`
+
+6. Postdeploy пакет (если был rollout):
 - `SMOKE_API_URL=https://test.datowave.com npm run smoke:test:postdeploy`
 
 ## 7) Acceptance criteria (test)
@@ -90,6 +93,7 @@ Backend mapping expectations:
 - `smoke:auth:session` -> PASS
 - `smoke:auth:cookie-negative` -> PASS
 - `smoke:auth:cookie-ws-ticket` -> PASS
+- `smoke:auth:links` -> PASS (reset/verify/invite ссылки не уходят на legacy host)
 
 ## 8) Roll forward to prod (после отдельного подтверждения)
 

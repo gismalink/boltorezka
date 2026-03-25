@@ -93,7 +93,7 @@ Scope: перенести только boltorezka-контур с `boltorezka.gi
 - [x] Для выбранного IdP подготовить redirect URI/logout URI на новый домен (draft matrix ниже).
 - [ ] Настроить клиенты OIDC (web/desktop) и claims mapping.
 - [x] Проверить сессии: login, refresh, logout, silent renew (минимальный smoke в `test`: login через Google/Yandex подтвержден).
-- [ ] Проверить восстановление пароля/верификацию email (ссылки на новом домене).
+- [ ] Проверить восстановление пароля/верификацию email (ссылки на новом домене; smoke-команда добавлена, execution pending).
 
 Текущий auth-flow и точки интеграции (2026-03-25, `test`):
 - Web/desktop стартуют SSO через `GET /v1/auth/sso/start?provider=<google|yandex>&returnUrl=...` на `test.datowave.com`; redirect идет на `test.auth.datowave.com/auth/<provider>`.
@@ -103,6 +103,7 @@ Scope: перенести только boltorezka-контур с `boltorezka.gi
 - В `test` подтверждены smoke: `smoke:sso`, `smoke:auth:session`, `smoke:auth:cookie-negative`, `smoke:auth:cookie-ws-ticket`.
 - Добавлен runbook настройки Authentik для `test`: `docs/runbooks/AUTHENTIK_TEST_SETUP_RUNBOOK.md`.
 - Добавлен отдельный redirect smoke для `sso/start + sso/logout`: `npm run smoke:sso:routing`.
+- Добавлен smoke для проверки reset/verify/invite ссылок на допустимые host: `npm run smoke:auth:links`.
 
 Draft: Authentik OIDC URI/logout matrix (v1 cutover)
 - Web (`test`):
