@@ -18,7 +18,7 @@ It produces:
 From repo root:
 
 ```bash
-SLO_BASE_URL=https://test.boltorezka.gismalink.art \
+SLO_BASE_URL=https://test.datowave.com \
 SLO_BEARER_TOKEN=<admin-bearer> \
 npm run slo:check
 ```

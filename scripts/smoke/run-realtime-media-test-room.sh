@@ -135,14 +135,14 @@ fi
 
 if [[ -z "$ICE_JSON" && -n "$HOST_TURN_USERNAME" && -n "$HOST_TURN_PASSWORD" ]]; then
   ICE_JSON="$(jq -cn \
-    --arg host "gismalink.art" \
+    --arg host "turns.datowave.com" \
     --arg tlsPort "$HOST_TURN_TLS_PORT" \
     --arg user "$HOST_TURN_USERNAME" \
     --arg pass "$HOST_TURN_PASSWORD" \
     '[{urls:["turn:" + $host + ":3478?transport=udp","turns:" + $host + ":" + $tlsPort + "?transport=tcp"],username:$user,credential:$pass}]')"
 fi
 
-TURN_HOST_FOR_SMOKE="${HOST_TURN_CERT_DOMAIN:-gismalink.art}"
+TURN_HOST_FOR_SMOKE="${HOST_TURN_CERT_DOMAIN:-turns.datowave.com}"
 APPEND_TURN_UDP="${SMOKE_RTC_APPEND_TURN_UDP:-1}"
 if [[ "$APPEND_TURN_UDP" == "1" && -n "$ICE_JSON" ]] && printf '%s' "$ICE_JSON" | jq -e . >/dev/null 2>&1; then
   HAS_TURN_UDP="$(printf '%s' "$ICE_JSON" | jq -r '[.[].urls[]? | select(startswith("turn:") and contains(":3478"))] | length')"

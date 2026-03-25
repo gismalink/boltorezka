@@ -30,13 +30,13 @@ services:
           --tls-listening-port=${TURN_TLS_PORT:-5349} \
           --fingerprint \
           --lt-cred-mech \
-          --realm=${TURN_REALM:-gismalink.art} \
+          --realm=${TURN_REALM:-datowave.com} \
           --external-ip=${TURN_EXTERNAL_IP:-95.165.154.118} \
           $${TURN_LISTEN_IP_ARG} \
           $${TURN_RELAY_IP_ARG} \
           --user="${TURN_USERNAME}:${TURN_PASSWORD}" \
-          --cert=/caddy-data/caddy/certificates/acme-v02.api.letsencrypt.org-directory/${TURN_CERT_DOMAIN:-gismalink.art}/${TURN_CERT_DOMAIN:-gismalink.art}.crt \
-          --pkey=/caddy-data/caddy/certificates/acme-v02.api.letsencrypt.org-directory/${TURN_CERT_DOMAIN:-gismalink.art}/${TURN_CERT_DOMAIN:-gismalink.art}.key \
+          --cert=/caddy-data/caddy/certificates/acme-v02.api.letsencrypt.org-directory/${TURN_CERT_DOMAIN:-datowave.com}/${TURN_CERT_DOMAIN:-datowave.com}.crt \
+          --pkey=/caddy-data/caddy/certificates/acme-v02.api.letsencrypt.org-directory/${TURN_CERT_DOMAIN:-datowave.com}/${TURN_CERT_DOMAIN:-datowave.com}.key \
           --min-port=${TURN_MIN_PORT:-30000} \
           --max-port=${TURN_MAX_PORT:-31000} \
           $${TURN_VERBOSE_ARG}
@@ -334,16 +334,16 @@ services:
       REDIS_URL: redis://boltorezka-redis-prod:6379
       JWT_SECRET: ${PROD_JWT_SECRET}
       JWT_EXPIRES_IN: ${PROD_JWT_EXPIRES_IN:-12h}
-      CORS_ORIGIN: ${PROD_CORS_ORIGIN:-https://boltorezka.gismalink.art}
+      CORS_ORIGIN: ${PROD_CORS_ORIGIN:-https://datowave.com}
       AUTH_MODE: sso
-      AUTH_SSO_BASE_URL: ${PROD_AUTH_SSO_BASE_URL:-https://auth.gismalink.art}
-      ALLOWED_RETURN_HOSTS: ${PROD_ALLOWED_RETURN_HOSTS:-boltorezka.gismalink.art}
+      AUTH_SSO_BASE_URL: ${PROD_AUTH_SSO_BASE_URL:-https://auth.datowave.com}
+      ALLOWED_RETURN_HOSTS: ${PROD_ALLOWED_RETURN_HOSTS:-datowave.com}
       SUPER_ADMIN_EMAIL: ${PROD_SUPER_ADMIN_EMAIL:-gismalink@gmail.com}
       AUTH_COOKIE_MODE: ${PROD_AUTH_COOKIE_MODE:-0}
       AUTH_SESSION_COOKIE_NAME: ${PROD_AUTH_SESSION_COOKIE_NAME:-boltorezka_session}
       AUTH_SESSION_COOKIE_SECURE: ${PROD_AUTH_SESSION_COOKIE_SECURE:-1}
       AUTH_SESSION_COOKIE_SAMESITE: ${PROD_AUTH_SESSION_COOKIE_SAMESITE:-Lax}
-      AUTH_SESSION_COOKIE_DOMAIN: ${PROD_AUTH_SESSION_COOKIE_DOMAIN:-.boltorezka.gismalink.art}
+      AUTH_SESSION_COOKIE_DOMAIN: ${PROD_AUTH_SESSION_COOKIE_DOMAIN:-.datowave.com}
       AUTH_SESSION_COOKIE_PATH: ${PROD_AUTH_SESSION_COOKIE_PATH:-/}
       AUTH_SESSION_COOKIE_MAX_AGE_SEC: ${PROD_AUTH_SESSION_COOKIE_MAX_AGE_SEC:-2592000}
       WS_CALL_DEBUG: ${PROD_WS_CALL_DEBUG:-0}
@@ -351,7 +351,7 @@ services:
       APP_BUILD_SHA: ${PROD_APP_BUILD_SHA:-}
       API_SERVE_STATIC: ${PROD_API_SERVE_STATIC:-0}
       LIVEKIT_ENABLED: ${PROD_LIVEKIT_ENABLED:-1}
-      LIVEKIT_URL: ${PROD_LIVEKIT_URL:-wss://boltorezka.gismalink.art}
+      LIVEKIT_URL: ${PROD_LIVEKIT_URL:-wss://datowave.com}
       LIVEKIT_API_KEY: ${PROD_LIVEKIT_API_KEY:-}
       LIVEKIT_API_SECRET: ${PROD_LIVEKIT_API_SECRET:-}
       LIVEKIT_TOKEN_TTL_SEC: ${PROD_LIVEKIT_TOKEN_TTL_SEC:-1800}

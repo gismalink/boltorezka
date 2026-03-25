@@ -144,7 +144,7 @@ if [[ -z "$APP_UPDATE_FEED_BASE" ]]; then
   if [[ "$DESKTOP_CHANNEL" == "test" ]]; then
     APP_UPDATE_FEED_BASE="https://test.datowave.com"
   else
-    APP_UPDATE_FEED_BASE="https://boltorezka.gismalink.art"
+    APP_UPDATE_FEED_BASE="https://datowave.com"
   fi
 fi
 APP_UPDATE_FEED_BASE="${APP_UPDATE_FEED_BASE%/}/desktop/$DESKTOP_CHANNEL/mac"

@@ -98,7 +98,7 @@ async function fetchWithRetry(url, options = {}, label = "request") {
   const expectedAuthHost = expectedAuthHostFromEnv
     || (expectedHost.endsWith("datowave.com")
       ? (localHostStartsWithTest ? "test.auth.datowave.com" : "auth.datowave.com")
-      : (localHostStartsWithTest ? "test.auth.gismalink.art" : "auth.gismalink.art"));
+      : (localHostStartsWithTest ? "test.auth.datowave.com" : "auth.datowave.com"));
 
   if (locationUrl.host !== expectedAuthHost) {
     throw new Error(`[smoke:sso] redirect host mismatch: expected ${expectedAuthHost}, got ${locationUrl.host}`);

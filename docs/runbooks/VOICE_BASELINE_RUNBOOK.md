@@ -7,14 +7,14 @@
 Проверенный baseline (test/prod, 2026-03-01):
 
 - WebRTC policy: `relay` для нестабильных сетей/мобильных клиентов.
-- TURN server: `turns:gismalink.art:5349?transport=tcp`.
+- TURN server: `turns:turns.datowave.com:5349?transport=tcp`.
 - Realtime WS layer: стабильный обмен `call.mic_state`, `call.video_state` + replay `call.initial_state`.
 - Media signaling/transport: LiveKit (`/rtc`).
 
 Рекомендуемые env для frontend:
 
 - `VITE_RTC_ICE_TRANSPORT_POLICY=relay`
-- `VITE_RTC_ICE_SERVERS_JSON=[{"urls":["turns:gismalink.art:5349?transport=tcp"],"username":"<turn-username>","credential":"<turn-password>"}]`
+- `VITE_RTC_ICE_SERVERS_JSON=[{"urls":["turns:turns.datowave.com:5349?transport=tcp"],"username":"<turn-username>","credential":"<turn-password>"}]`
 
 Примечание: если нужен fallback для локальной/внутренней сети, допустим режим `all`, но baseline для production voice-стабильности — `relay`.
 

@@ -77,7 +77,7 @@
 - Deploy SHA in prod: `36dd4e129b92e7bb0300ff936a8359f6f9be3658`
 - Commands:
   - `ssh mac-mini 'cd ~/srv/boltorezka && PROD_REF=origin/main npm run deploy:prod'`
-  - post-checks: `curl -I https://boltorezka.gismalink.art/health`, `curl https://boltorezka.gismalink.art/v1/auth/mode`
+  - post-checks: `curl -I https://datowave.com/health`, `curl https://datowave.com/v1/auth/mode`
 - Result:
   - health: `200`
   - mode: `sso`
@@ -100,7 +100,7 @@
 - Canonical runbook: `docs/runbooks/VOICE_BASELINE_RUNBOOK.md`
 - Закреплённый baseline:
   - `VITE_RTC_ICE_TRANSPORT_POLICY=relay`
-  - `VITE_RTC_ICE_SERVERS_JSON` с `turns:gismalink.art:5349?transport=tcp`
+  - `VITE_RTC_ICE_SERVERS_JSON` с `turns:turns.datowave.com:5349?transport=tcp`
 - Важное runtime-условие: отправка offer/answer после ICE gathering (или timeout guard).
 
 ### 3.3 Verify pipeline gate
@@ -149,7 +149,7 @@
 - Deploy command (prod path):
   - `bash ./scripts/deploy/deploy-prod-from-ref.sh <known-good-ref> <repo-dir>`
 - Post-rollback mandatory checks:
-  - `curl -I https://boltorezka.gismalink.art/health`
+  - `curl -I https://datowave.com/health`
   - short SSO + room + chat smoke
   - logs review (critical errors)
 

@@ -90,7 +90,7 @@ LiveKit full-transition reference: [../plans/2026-03-09_LIVEKIT_FULL_TRANSITION_
 
 ## 5) Prod verification (после явного разрешения)
 
-1. `curl -I https://boltorezka.gismalink.art/health` -> `200`.
+1. `curl -I https://datowave.com/health` -> `200`.
 2. Проверка SSO redirect на prod домене.
 3. Короткий UI smoke (login -> room -> chat).
 4. Короткий voice smoke по канонике (`docs/runbooks/VOICE_BASELINE_RUNBOOK.md`).

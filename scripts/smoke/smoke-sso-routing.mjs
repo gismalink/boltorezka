@@ -61,7 +61,7 @@ function resolveExpectedAuthHost(expectedHost) {
     return localHostStartsWithTest ? "test.auth.datowave.com" : "auth.datowave.com";
   }
 
-  return localHostStartsWithTest ? "test.auth.gismalink.art" : "auth.gismalink.art";
+  return localHostStartsWithTest ? "test.auth.datowave.com" : "auth.datowave.com";
 }
 
 function assertRedirect({ response, location, expectedHost, expectedPathPrefix, expectedReturnUrl, label }) {

@@ -1091,7 +1091,7 @@ if [[ "${SMOKE_REALTIME_MEDIA:-0}" == "1" ]]; then
   fi
 
   if [[ -n "${TURN_USERNAME:-}" && -n "${TURN_PASSWORD:-}" ]]; then
-    media_turn_domain="${TURN_CERT_DOMAIN:-gismalink.art}"
+    media_turn_domain="${TURN_CERT_DOMAIN:-turns.datowave.com}"
     media_turn_tls_port="${TURN_TLS_PORT:-5349}"
     media_ice_servers_json="[{\"urls\":[\"turn:${media_turn_domain}:3478?transport=udp\",\"turn:${media_turn_domain}:3478?transport=tcp\",\"turns:${media_turn_domain}:${media_turn_tls_port}?transport=tcp\"],\"username\":\"${TURN_USERNAME}\",\"credential\":\"${TURN_PASSWORD}\"}]"
   fi

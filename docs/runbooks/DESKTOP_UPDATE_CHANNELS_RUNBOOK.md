@@ -12,8 +12,8 @@
   - `platform`: `mac`, `win`, `linux`.
 
 Пример:
-- `https://downloads.gismalink.art/boltorezka-desktop/test/mac`
-- `https://downloads.gismalink.art/boltorezka-desktop/prod/win`
+- `https://test.datowave.com/desktop/test/mac`
+- `https://datowave.com/desktop/prod/win`
 
 ## 2) Runtime policy
 

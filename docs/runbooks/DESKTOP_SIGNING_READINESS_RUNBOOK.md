@@ -29,10 +29,10 @@ Primary policy (2026-03-15):
 - `scripts/deploy/build-desktop-server-and-publish.sh`
 
 Пример запуска на сервере:
-- `DESKTOP_CHANNEL=test DESKTOP_PUBLIC_BASE_URL=https://test.boltorezka.gismalink.art ./scripts/deploy/build-desktop-server-and-publish.sh origin/feature/electron-desktop-foundation "$PWD"`
+- `DESKTOP_CHANNEL=test DESKTOP_PUBLIC_BASE_URL=https://test.datowave.com ./scripts/deploy/build-desktop-server-and-publish.sh origin/feature/electron-desktop-foundation "$PWD"`
 
 Временный режим до готовности dev-аккаунтов (test-only):
-- `DESKTOP_CHANNEL=test DESKTOP_SIGNING_MODE=unsigned DESKTOP_PUBLIC_BASE_URL=https://test.boltorezka.gismalink.art ./scripts/deploy/build-desktop-server-and-publish.sh origin/main "$PWD"`
+- `DESKTOP_CHANNEL=test DESKTOP_SIGNING_MODE=unsigned DESKTOP_PUBLIC_BASE_URL=https://test.datowave.com ./scripts/deploy/build-desktop-server-and-publish.sh origin/main "$PWD"`
 - `DESKTOP_SIGNING_MODE=self-signed` допускается только в `test` (использует сертификат из keychain/окружения, если он доступен).
 - Для `prod` разрешен только `DESKTOP_SIGNING_MODE=auto`.
 

@@ -6,9 +6,9 @@ Status: In progress (validated baseline, completion gates pending as of 2026-03-
 
 ## 1) Зафиксированный факт на текущий момент
 
-- TURN2 baseline: `turn2.gismalink.art -> 46.149.71.86`, native `coturn` (systemd), relay range `49160-49359` (200 портов).
+- TURN2 baseline: `turn2.datowave.com -> 46.149.71.86`, native `coturn` (systemd), relay range `49160-49359` (200 портов).
 - Direct TURN probe успешен: `turnutils_uclient` по `turns:443` проходит `allocate/refresh`.
-- LiveKit media smoke с `iceTransportPolicy=relay` и `turn2-only` ICE (`turns:turn2.gismalink.art:443?transport=tcp`) проходит.
+- LiveKit media smoke с `iceTransportPolicy=relay` и `turn2-only` ICE (`turns:turn2.datowave.com:443?transport=tcp`) проходит.
 - Legacy call signaling smoke (`run-realtime-media-test-room.sh`) не является источником истины для TURN2 в livekit-only runtime.
 
 ## 2) Принятое техническое решение
@@ -30,7 +30,7 @@ Status: In progress (validated baseline, completion gates pending as of 2026-03-
 - Требование: smoke выполняется на сервере test окружения и входит в итоговый PASS/FAIL.
 - Минимальный профиль:
   - `SMOKE_RTC_ICE_TRANSPORT_POLICY=relay`
-  - `SMOKE_RTC_ICE_SERVERS_JSON=[{"urls":["turns:turn2.gismalink.art:443?transport=tcp"],"username":"<turn_user>","credential":"<turn_pass>"}]`
+  - `SMOKE_RTC_ICE_SERVERS_JSON=[{"urls":["turns:turn2.datowave.com:443?transport=tcp"],"username":"<turn_user>","credential":"<turn_pass>"}]`
 
 2. Сделать 3 последовательных green прогона в test и зафиксировать evidence.
 - Каждый прогон должен содержать:
@@ -39,7 +39,7 @@ Status: In progress (validated baseline, completion gates pending as of 2026-03-
   - one-way incidents `audio=0`, `video=0`.
 
 3. Зафиксировать rollout-профиль для production.
-- Этап 1: `turn2` primary + `gismalink.art` fallback.
+- Этап 1: `turn2` primary + `turns.datowave.com` fallback.
 - Этап 2 (после стабильной серии): опциональный переход на turn2-only по явному подтверждению owner.
 
 4. Добавить release evidence и GO/NO-GO запись.
@@ -59,16 +59,16 @@ Status: In progress (validated baseline, completion gates pending as of 2026-03-
 Direct TURN probe:
 
 ```bash
-ssh root@46.149.71.86 'turnutils_uclient -v -S -T -u <turn_user> -w "<turn_pass>" -p 443 -n 1 turn2.gismalink.art'
+ssh root@46.149.71.86 'turnutils_uclient -v -S -T -u <turn_user> -w "<turn_pass>" -p 443 -n 1 turn2.datowave.com'
 ```
 
 LiveKit media smoke (turn2-only, relay):
 
 ```bash
-SMOKE_API_URL=https://test.boltorezka.gismalink.art \
+SMOKE_API_URL=https://test.datowave.com \
 SMOKE_ROOM_SLUG=test-room \
 SMOKE_RTC_ICE_TRANSPORT_POLICY=relay \
-SMOKE_RTC_ICE_SERVERS_JSON='[{"urls":["turns:turn2.gismalink.art:443?transport=tcp"],"username":"<turn_user>","credential":"<turn_pass>"}]' \
+SMOKE_RTC_ICE_SERVERS_JSON='[{"urls":["turns:turn2.datowave.com:443?transport=tcp"],"username":"<turn_user>","credential":"<turn_pass>"}]' \
 npm run smoke:livekit:media
 ```
 
