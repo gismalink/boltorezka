@@ -16,11 +16,10 @@ Scope: перенести только boltorezka-контур с `boltorezka.gi
 ## 1) Что считаем "хвостами" gismalink.art
 
 - DNS-записи и TLS-сертификаты старого домена в ingress.
-- Base URL в frontend (`PUBLIC_URL`, API URL, WS URL, invite links).
+- Base URL в frontend (`PUBLIC_URL`, API URL, WS URL).
 - CORS/CSP/Origin allowlist в API и edge.
 - Cookie domain/path/samesite/secure параметры.
 - OAuth redirect/callback/logout URL (если есть внешний IdP).
-- Email-шаблоны (verification/reset/invite) со старыми ссылками.
 - Webhook/callback URL во внешних сервисах.
 - Документация/runbook и smoke-команды со старым доменом.
 - Мониторинг/алерты/дашборды, привязанные к старым host names.
@@ -65,7 +64,7 @@ Scope: перенести только boltorezka-контур с `boltorezka.gi
 ### 3.2 Приложение (web/api/realtime)
 
 - [x] Вынести все доменные URL в централизованную конфигурацию (test подтвержден; prod pending).
-- [x] Переключить frontend URL на `datowave.com` (без app-поддомена), invite URL и deep-link URL на новый домен (test подтвержден; prod pending).
+- [x] Переключить frontend URL на `datowave.com` (без app-поддомена) и deep-link URL на новый домен (test подтвержден; prod pending).
 - [x] Обновить API CORS/CSP/Origin allowlist (test подтвержден; prod pending).
 - [x] Обновить cookie domain и проверить cross-subdomain сценарии (test подтвержден; prod pending).
 - [x] Проверить WS/realtime endpoint на том же типе host, что и до переезда (если раньше было path-based через основной/service host, не вводить новый `api` поддомен) (test подтвержден; prod pending).
@@ -93,7 +92,7 @@ Scope: перенести только boltorezka-контур с `boltorezka.gi
 - [x] Для выбранного IdP подготовить redirect URI/logout URI на новый домен (draft matrix ниже).
 - [ ] Настроить клиенты OIDC (web/desktop) и claims mapping.
 - [x] Проверить сессии: login, refresh, logout, silent renew (минимальный smoke в `test`: login через Google/Yandex подтвержден).
-- [x] Email auth/register/reset/verify исключены из текущего cutover scope (OAuth-only через Google/Yandex); вынести в отдельный план позднее.
+- [x] Email auth/register/reset/verify вынесены в отдельный план: `docs/plans/2026-03-26_EMAIL_AUTH_TRACK.md`.
 
 Текущий auth-flow и точки интеграции (2026-03-25, `test`):
 - Web/desktop стартуют SSO через `GET /v1/auth/sso/start?provider=<google|yandex>&returnUrl=...` на `test.datowave.com`; redirect идет на `test.auth.datowave.com/auth/<provider>`.
@@ -103,7 +102,7 @@ Scope: перенести только boltorezka-контур с `boltorezka.gi
 - В `test` подтверждены smoke: `smoke:sso`, `smoke:auth:session`, `smoke:auth:cookie-negative`, `smoke:auth:cookie-ws-ticket`.
 - Добавлен runbook настройки Authentik для `test`: `docs/runbooks/AUTHENTIK_TEST_SETUP_RUNBOOK.md`.
 - Добавлен отдельный redirect smoke для `sso/start + sso/logout`: `npm run smoke:sso:routing`.
-- Smoke `smoke:auth:links` остается только как optional legacy/precheck и не является блокером текущего OAuth-only cutover.
+- Email-link smoke (`smoke:auth:links`) и весь email auth UI/flow вынесены в отдельный план: `docs/plans/2026-03-26_EMAIL_AUTH_TRACK.md`.
 
 Draft: Authentik OIDC URI/logout matrix (v1 cutover)
 - Web (`test`):
@@ -137,43 +136,10 @@ Draft: Authentik OIDC clients and claims mapping (v1)
   - `sid`/`authMode`/`role` продолжают попадать в локальный JWT API после callback.
   - При отсутствии `roles` применяется default локальная роль (`member`) с явной записью в audit-log.
 
-### 3.8 Authentik rollout + UI + почта (отложенный отдельный трек)
+### 3.8 Отдельный план по email auth
 
-Цель: зафиксировать задачи, которые исключены из текущего OAuth-only cutover и выполняются позже отдельным планом.
-
-- [ ] **3.8.1 Развернуть полноценный Authentik в `test` (GitOps)**
-  - [ ] Отдельный compose/service для Authentik + Postgres + Redis (если требуется) в boltorezka test-контуре.
-  - [ ] Секреты и ключи (`client_secret`, signing key, session secret) заведены в server env без коммита в git.
-  - [ ] Health-check и restart policy подтверждены (`docker compose ps`, `logs --tail=120`).
-  - [ ] Backup/restore и rollback шаги для Authentik добавлены в runbook.
-
-- [ ] **3.8.2 Настроить OIDC clients и claims в живом IdP (`test`)**
-  - [ ] Созданы clients: `boltorezka-web`, `boltorezka-desktop` по matrix из 3.3.
-  - [ ] Claims `sub/email/email_verified/preferred_username/name/auth_time/sid/roles` реально выдаются.
-  - [ ] Проверена роль по умолчанию при отсутствии `roles` + audit-log запись.
-
-- [ ] **3.8.3 Создать необходимый UI/экраны для email auth-флоу (отложено)**
-  - [ ] Экран/entrypoint для `forgot/reset password` в web.
-  - [ ] Экран/entrypoint для `verify email` (статус/повторная отправка).
-  - [ ] Экран/entrypoint для invite acceptance (если flow invite-first).
-  - [ ] Явные user-facing состояния ошибок: expired/invalid token, already used link, provider unavailable.
-
-- [ ] **3.8.4 Поднять почтовый контур для `test` (отложено)**
-  - [ ] Выбран и подключен SMTP/provider для test (`SMTP_HOST/PORT/USER/PASS`, sender).
-  - [ ] Настроены шаблоны писем: verify/reset/invite c `test.datowave.com` ссылками.
-  - [ ] Включен способ получения тестовых писем (mailbox/catcher) для автоматических smoke.
-  - [ ] Зафиксированы SPF/DKIM/DMARC требования и текущий статус (минимум: документировано).
-
-- [ ] **3.8.5 Обязательные e2e smoke для email auth (отложено)**
-  - [ ] `register/login` -> `Complete SSO Session` -> `auth/me` -> `refresh/logout` PASS.
-  - [ ] `forgot password` -> письмо -> переход по реальной ссылке -> смена пароля PASS.
-  - [ ] `verify email` -> письмо -> переход по реальной ссылке -> account status updated PASS.
-  - [ ] `invite` -> письмо -> переход по реальной ссылке -> join/access PASS.
-  - [ ] `smoke:auth:links` (manual или auto precheck) не заменяет реальные email e2e и используется как дополнительный guard.
-
-Статус трека 3.8:
-- Не блокирует текущий OAuth-only cutover.
-- Должен быть вынесен в отдельный план (post-cutover / отдельная фича).
+- [x] Все задачи email auth/register/reset/verify и почтового контура вынесены в отдельный документ: `docs/plans/2026-03-26_EMAIL_AUTH_TRACK.md`.
+- [x] В текущем плане фиксируем только OAuth-only флоу (Google/Yandex).
 
 ### 3.4 Брендинг и контент
 
@@ -198,16 +164,15 @@ Draft: Authentik OIDC clients and claims mapping (v1)
 
 ### 3.6 Re-onboarding пользователей (без миграции БД)
 
-- [x] Подготовить короткую коммуникацию для текущих пользователей (новый домен + как войти).
-- [x] Подготовить OAuth-only коммуникацию для текущих пользователей (вход через Google/Yandex на новом домене).
+- [x] Подготовить OAuth-only коммуникацию для текущих пользователей (новый домен + вход через Google/Yandex).
 - [x] Подтвердить redirect-only политику для старого домена (редирект на уровне ingress, без UI-этапа совместимости).
 - [x] Зафиксировать окно ручной поддержки входа (30 дней, в re-onboarding playbook).
 - [ ] Для 10 текущих пользователей провести ручную верификацию успешного входа.
-- [x] Подготовить post-cutover отчет: invited, activated, pending (template).
+- [x] Подготовить post-cutover отчет: verified users / failed logins / follow-ups (template).
 
 Статус на 2026-03-25 (`test`):
-- Добавлен playbook re-onboarding: `DOMAIN_CUTOVER_REONBOARDING_PLAYBOOK.md` (шаблон сообщения, invite/reset campaign template, daily tracking template, redirect-only policy).
-- Добавлен execution kit: `DOMAIN_CUTOVER_EXECUTION_KIT.md` (invite/reset URL matrix, шаблон кампании на 10 пользователей, manual verification checklist, redirect-map validation task, post-cutover report template).
+- Добавлен playbook re-onboarding: `DOMAIN_CUTOVER_REONBOARDING_PLAYBOOK.md` (OAuth-only сообщение, daily tracking template, redirect-only policy).
+- Добавлен execution kit: `DOMAIN_CUTOVER_EXECUTION_KIT.md` (manual verification checklist, redirect-map validation task, post-cutover report template).
 
 ### 3.7 Redirect-карта старых адресов на новые
 
@@ -216,7 +181,7 @@ Draft: Authentik OIDC clients and claims mapping (v1)
 - [ ] Настроить redirect `301/308` на уровне ingress без redirect-loop.
 - [x] Настроить redirect `301/308` на уровне ingress без redirect-loop (`test`: подтверждено для `test.boltorezka.gismalink.art` и `test.datute.ru`).
 - [ ] Проверить сохранение пути и query params при redirect.
-- [ ] Настроить redirect для auth-роутов и invite-ссылок (где это безопасно).
+- [ ] Настроить redirect для auth-роутов (где это безопасно).
 - [ ] Для auth-host в окно совместимости использовать dual-host (без принудительного redirect со старого auth-домена).
 - [x] Обновить smoke под проверку redirect-карты (`npm run smoke:redirect-map`).
 
@@ -243,7 +208,7 @@ Draft: Authentik OIDC clients and claims mapping (v1)
 ### Stage 0 - Discovery (1-2 дня)
 
 - [ ] Полный аудит упоминаний `gismalink.art` в коде, конфиге, документации, секретах и CI.
-- [ ] Карта зависимостей: DNS, certs, ingress, auth callbacks, email templates.
+- [ ] Карта зависимостей: DNS, certs, ingress, auth callbacks.
 - [ ] Зафиксировать целевой список доменов и поддоменов.
 - [ ] Согласовать cutover window и rollback окно.
 
@@ -262,13 +227,13 @@ Draft: Authentik OIDC clients and claims mapping (v1)
 - [ ] После подтверждения: deploy в `prod` (GitOps only).
 - [ ] Переключить DNS/ingress в `prod` и включить redirect-карту.
 - [ ] Подтвердить redirect-only поведение старого домена в `prod`.
-- [ ] Рассылать invite/reset для текущих пользователей на новый домен.
+- [ ] Выполнить OAuth-only коммуникацию для текущих пользователей на новом домене.
 - [ ] Выполнить post-deploy smoke на `prod` (redirect + auth).
 
 ### Stage 3 - Stabilization (7-14 дней)
 
 - [ ] Мониторинг ошибок/latency/auth-fail на новом домене.
-- [ ] Мониторинг активации текущих пользователей (invited -> activated).
+- [ ] Мониторинг успешных OAuth логинов и отказов (`login_ok`/`login_fail`).
 - [ ] Контроль redirect chains и корректности соответствий host/path.
 - [ ] Удалить legacy-конфиг `gismalink.art` после окна совместимости.
 
@@ -302,8 +267,8 @@ Draft: Authentik OIDC clients and claims mapping (v1)
 
 1. Подтверждено: финальный домен = `datowave.com`; переезд host-ов делаем по правилу suffix replace.
 2. Подтверждено: окно совместимости старого домена = 30 дней.
-3. Формат re-onboarding: invite only или registration + invite.
-4. Нужен ли ребрендинг email sender/domain одновременно с cutover.
+3. Формат re-onboarding: OAuth-only (Google/Yandex) + manual support window.
+4. Email auth/register/reset/verify вынесены в отдельный план: `docs/plans/2026-03-26_EMAIL_AUTH_TRACK.md`.
 5. Подтверждено: стратегия IdP для v1 = Вариант B (Authentik), внедрение через `test` с отдельным smoke перед `prod`.
 6. Подтверждено: для старого домена используется только redirect-only политика.
 7. Финальная redirect-карта для ключевых адресов (включая `service.boltotrezka.gismalink.art` -> `service.datowave.com` и `test.service.boltotrezka.gismalink.art` -> `test.service.datowave.com`).
