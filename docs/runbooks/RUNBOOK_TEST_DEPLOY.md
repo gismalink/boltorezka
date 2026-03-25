@@ -53,7 +53,7 @@ One-command для Boltorezka (deploy + post-deploy smoke):
 3. `docker compose logs --tail=120 <service>` без критических ошибок.
 4. HTTP health endpoint отвечает 200.
 4.1. Version endpoint отвечает 200 и содержит актуальный `appBuildSha`:
-   - `curl https://test.boltorezka.gismalink.art/version`
+   - `curl https://test.datowave.com/version`
 5. WS handshake успешен.
 6. End-to-end smoke:
    - login,
@@ -69,9 +69,10 @@ One-command для Boltorezka (deploy + post-deploy smoke):
 
 1. `GET /v1/auth/mode` возвращает `mode=sso`.
 2. `POST /v1/auth/register` и `POST /v1/auth/login` возвращают `410 SsoOnly`.
-3. Автопроверка: `SMOKE_API_URL=https://test.boltorezka.gismalink.art npm run smoke:sso`.
-4. `GET /v1/auth/sso/start?provider=google&returnUrl=https://test.boltorezka.gismalink.art/` даёт redirect на `test.auth.gismalink.art`.
-5. После SSO login в UI:
+3. Автопроверка: `SMOKE_API_URL=https://test.datowave.com npm run smoke:sso`.
+4. Проверка маршрутизации SSO start/logout: `SMOKE_API_URL=https://test.datowave.com npm run smoke:sso:routing`.
+5. `GET /v1/auth/sso/start?provider=google&returnUrl=https://test.datowave.com/` даёт redirect на `test.auth.datowave.com`.
+6. После SSO login в UI:
    - использовать React UI как default path,
    - `Complete SSO Session` создаёт локальную JWT-сессию,
    - доступен список комнат,
@@ -82,8 +83,8 @@ One-command для Boltorezka (deploy + post-deploy smoke):
 ### Domain checks
 
 - Для `test`:
-   - `curl -I https://test.boltorezka.gismalink.art/health`
-   - `curl https://test.boltorezka.gismalink.art/health`
+   - `curl -I https://test.datowave.com/health`
+   - `curl https://test.datowave.com/health`
 
 - Для `prod` (только после отдельного подтверждения):
    - `curl -I https://boltorezka.gismalink.art/health`
@@ -150,7 +151,7 @@ Rollback выполняется только штатным release-script с з
 ## 10) Latest test evidence (2026-02-28)
 
 - Deploy target: `test`, SHA `729dadf`.
-- SSO smoke: `SMOKE_API_URL=https://test.boltorezka.gismalink.art npm run smoke:sso` -> `ok`.
+- SSO smoke: `SMOKE_API_URL=https://test.datowave.com npm run smoke:sso` -> `ok`.
 - HTTP smoke:
    - `/health` -> `{"status":"ok","checks":{"api":"ok","db":"ok","redis":"ok"}}`
    - `/v1/auth/mode` -> `{"mode":"sso"}`

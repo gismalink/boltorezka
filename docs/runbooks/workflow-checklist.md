@@ -20,12 +20,12 @@
 
 1. Базовая проверка: `npm run check`.
 2. С API smoke: `SMOKE_API=1 npm run check`.
-3. С API+SSO smoke: `SMOKE_API=1 SMOKE_SSO=1 SMOKE_API_URL=https://test.boltorezka.gismalink.art npm run check`.
-4. С полным realtime smoke: `SMOKE_API=1 SMOKE_SSO=1 SMOKE_REALTIME=1 SMOKE_API_URL=https://test.boltorezka.gismalink.art SMOKE_WS_TICKET=<ticket> npm run check`.
+3. С API+SSO smoke: `SMOKE_API=1 SMOKE_SSO=1 SMOKE_API_URL=https://test.datowave.com npm run check`.
+4. С полным realtime smoke: `SMOKE_API=1 SMOKE_SSO=1 SMOKE_REALTIME=1 SMOKE_API_URL=https://test.datowave.com SMOKE_WS_TICKET=<ticket> npm run check`.
 5. Ручной smoke критического сценария:
    - SSO login (Google/Yandex) -> `Complete SSO Session` -> room join -> message send/receive.
 6. Версионный smoke:
-   - `curl https://test.boltorezka.gismalink.art/version` содержит актуальный `appBuildSha`.
+   - `curl https://test.datowave.com/version` содержит актуальный `appBuildSha`.
 
 Правило итераций:
 
@@ -55,8 +55,9 @@
 2. Перед merge убедиться, что scope PR не разросся вне текущей задачи.
 3. После merge повторить короткую проверку в `test` уже от `main`:
    - `TEST_REF=origin/main npm run deploy:test:smoke`
-   - `SMOKE_API_URL=https://test.boltorezka.gismalink.art SMOKE_ROOM_SLUG=test-room npm run smoke:livekit:token-flow`.
-   - `SMOKE_API_URL=https://test.boltorezka.gismalink.art SMOKE_ROOM_SLUG=test-room SMOKE_LIVEKIT_MEDIA_SIGNAL_URL=ws://127.0.0.1:7880 npm run smoke:livekit:media`.
+   - `SMOKE_API_URL=https://test.datowave.com SMOKE_ROOM_SLUG=test-room npm run smoke:livekit:token-flow`.
+   - `SMOKE_API_URL=https://test.datowave.com SMOKE_ROOM_SLUG=test-room SMOKE_LIVEKIT_MEDIA_SIGNAL_URL=ws://127.0.0.1:7880 npm run smoke:livekit:media`.
+   - `SMOKE_API_URL=https://test.datowave.com npm run smoke:sso:routing`.
 4. В `prod` идти только по явному подтверждению владельца релиза и только из `main`.
 5. После `prod` повторить post-deploy smoke + LiveKit media smoke и зафиксировать запись в release log.
 6. Перед `prod` проверить `infra/.env.host`:

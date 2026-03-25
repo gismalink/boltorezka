@@ -13,8 +13,8 @@ LiveKit full-transition reference: [../plans/2026-03-09_LIVEKIT_FULL_TRANSITION_
 
 ## 2) Test env must-pass
 
-1. `https://test.boltorezka.gismalink.art/health` отвечает `200` стабильно.
-2. `SMOKE_API_URL=https://test.boltorezka.gismalink.art npm run smoke:sso` проходит.
+1. `https://test.datowave.com/health` отвечает `200` стабильно.
+2. `SMOKE_API_URL=https://test.datowave.com npm run smoke:sso` проходит.
 3. Local auth отключен (`/v1/auth/register` и `/v1/auth/login` -> `410 SsoOnly`).
 4. UI smoke пройден:
    - SSO login,
@@ -55,14 +55,14 @@ LiveKit full-transition reference: [../plans/2026-03-09_LIVEKIT_FULL_TRANSITION_
    - `TEST_AUTH_COOKIE_MODE=1` зафиксирован в test,
    - `PROD_AUTH_COOKIE_MODE` переключается только после explicit GO.
 2. `AUTH_SSO_BASE_URL`:
-   - test -> `https://test.auth.gismalink.art`
-   - prod -> `https://auth.gismalink.art`
+   - test -> `https://test.auth.datowave.com`
+   - prod -> `https://auth.datowave.com`
 2.1. CORS + credentialed requests:
    - `CORS_ORIGIN` задан явным app origin (без `*` для credentialed режима),
    - web-клиент отправляет auth-запросы с `credentials: include`.
 3. `ALLOWED_RETURN_HOSTS`:
-   - test содержит `test.boltorezka.gismalink.art`
-   - prod содержит `boltorezka.gismalink.art`
+   - test содержит `test.datowave.com`
+   - prod содержит `datowave.com`
 3.1. Cookie policy соответствует окружению:
    - `AUTH_SESSION_COOKIE_DOMAIN`, `AUTH_SESSION_COOKIE_SAMESITE`, `AUTH_SESSION_COOKIE_SECURE` проверены для test/prod.
 4. Edge ingress содержит маршруты для test/prod Boltorezka.
