@@ -93,7 +93,7 @@ Scope: перенести только boltorezka-контур с `boltorezka.gi
 - [x] Для выбранного IdP подготовить redirect URI/logout URI на новый домен (draft matrix ниже).
 - [ ] Настроить клиенты OIDC (web/desktop) и claims mapping.
 - [x] Проверить сессии: login, refresh, logout, silent renew (минимальный smoke в `test`: login через Google/Yandex подтвержден).
-- [ ] Проверить восстановление пароля/верификацию email (ссылки на новом домене; smoke-команда добавлена, execution pending).
+- [x] Email auth/register/reset/verify исключены из текущего cutover scope (OAuth-only через Google/Yandex); вынести в отдельный план позднее.
 
 Текущий auth-flow и точки интеграции (2026-03-25, `test`):
 - Web/desktop стартуют SSO через `GET /v1/auth/sso/start?provider=<google|yandex>&returnUrl=...` на `test.datowave.com`; redirect идет на `test.auth.datowave.com/auth/<provider>`.
@@ -103,7 +103,7 @@ Scope: перенести только boltorezka-контур с `boltorezka.gi
 - В `test` подтверждены smoke: `smoke:sso`, `smoke:auth:session`, `smoke:auth:cookie-negative`, `smoke:auth:cookie-ws-ticket`.
 - Добавлен runbook настройки Authentik для `test`: `docs/runbooks/AUTHENTIK_TEST_SETUP_RUNBOOK.md`.
 - Добавлен отдельный redirect smoke для `sso/start + sso/logout`: `npm run smoke:sso:routing`.
-- Добавлен smoke для проверки reset/verify/invite ссылок на допустимые host: `npm run smoke:auth:links`.
+- Smoke `smoke:auth:links` остается только как optional legacy/precheck и не является блокером текущего OAuth-only cutover.
 
 Draft: Authentik OIDC URI/logout matrix (v1 cutover)
 - Web (`test`):
@@ -137,9 +137,9 @@ Draft: Authentik OIDC clients and claims mapping (v1)
   - `sid`/`authMode`/`role` продолжают попадать в локальный JWT API после callback.
   - При отсутствии `roles` применяется default локальная роль (`member`) с явной записью в audit-log.
 
-### 3.8 Authentik rollout + UI + почта (обязательный execution план)
+### 3.8 Authentik rollout + UI + почта (отложенный отдельный трек)
 
-Цель: исключить фиктивные проверки роутов и проверять только реально развернутые end-to-end флоу.
+Цель: зафиксировать задачи, которые исключены из текущего OAuth-only cutover и выполняются позже отдельным планом.
 
 - [ ] **3.8.1 Развернуть полноценный Authentik в `test` (GitOps)**
   - [ ] Отдельный compose/service для Authentik + Postgres + Redis (если требуется) в boltorezka test-контуре.
@@ -152,28 +152,28 @@ Draft: Authentik OIDC clients and claims mapping (v1)
   - [ ] Claims `sub/email/email_verified/preferred_username/name/auth_time/sid/roles` реально выдаются.
   - [ ] Проверена роль по умолчанию при отсутствии `roles` + audit-log запись.
 
-- [ ] **3.8.3 Создать необходимый UI/экраны для auth-флоу**
+- [ ] **3.8.3 Создать необходимый UI/экраны для email auth-флоу (отложено)**
   - [ ] Экран/entrypoint для `forgot/reset password` в web.
   - [ ] Экран/entrypoint для `verify email` (статус/повторная отправка).
   - [ ] Экран/entrypoint для invite acceptance (если flow invite-first).
   - [ ] Явные user-facing состояния ошибок: expired/invalid token, already used link, provider unavailable.
 
-- [ ] **3.8.4 Поднять почтовый контур для `test`**
+- [ ] **3.8.4 Поднять почтовый контур для `test` (отложено)**
   - [ ] Выбран и подключен SMTP/provider для test (`SMTP_HOST/PORT/USER/PASS`, sender).
   - [ ] Настроены шаблоны писем: verify/reset/invite c `test.datowave.com` ссылками.
   - [ ] Включен способ получения тестовых писем (mailbox/catcher) для автоматических smoke.
   - [ ] Зафиксированы SPF/DKIM/DMARC требования и текущий статус (минимум: документировано).
 
-- [ ] **3.8.5 Обязательные e2e smoke только после 3.8.1-3.8.4**
+- [ ] **3.8.5 Обязательные e2e smoke для email auth (отложено)**
   - [ ] `register/login` -> `Complete SSO Session` -> `auth/me` -> `refresh/logout` PASS.
   - [ ] `forgot password` -> письмо -> переход по реальной ссылке -> смена пароля PASS.
   - [ ] `verify email` -> письмо -> переход по реальной ссылке -> account status updated PASS.
   - [ ] `invite` -> письмо -> переход по реальной ссылке -> join/access PASS.
   - [ ] `smoke:auth:links` (manual или auto precheck) не заменяет реальные email e2e и используется как дополнительный guard.
 
-Gate на выход из auth-трека:
-- До закрытия 3.8.1-3.8.5 любой статус auth считается `execution pending`, даже если redirect/synthetic smoke зелёные.
-- `prod`-шаги по плану остаются заблокированными.
+Статус трека 3.8:
+- Не блокирует текущий OAuth-only cutover.
+- Должен быть вынесен в отдельный план (post-cutover / отдельная фича).
 
 ### 3.4 Брендинг и контент
 
@@ -199,7 +199,7 @@ Gate на выход из auth-трека:
 ### 3.6 Re-onboarding пользователей (без миграции БД)
 
 - [x] Подготовить короткую коммуникацию для текущих пользователей (новый домен + как войти).
-- [x] Подготовить массовые invite/reset ссылки на новый домен (шаблон кампании + валидация ссылок).
+- [x] Подготовить OAuth-only коммуникацию для текущих пользователей (вход через Google/Yandex на новом домене).
 - [x] Подтвердить redirect-only политику для старого домена (редирект на уровне ingress, без UI-этапа совместимости).
 - [x] Зафиксировать окно ручной поддержки входа (30 дней, в re-onboarding playbook).
 - [ ] Для 10 текущих пользователей провести ручную верификацию успешного входа.
@@ -257,7 +257,7 @@ Gate на выход из auth-трека:
 
 ### Stage 2 - Prod cutover
 
-- [ ] Gate перед Stage 2: auth/SSO трек в `test` закрыт полностью, включая execution блока 3.8 (иначе Stage 2 не начинается).
+- [ ] Gate перед Stage 2: auth/SSO OAuth-only трек в `test` закрыт полностью (Google/Yandex login/refresh/logout + `Complete SSO Session`).
 - [ ] Deploy в `test` из целевой ветки + повторный smoke.
 - [ ] После подтверждения: deploy в `prod` (GitOps only).
 - [ ] Переключить DNS/ingress в `prod` и включить redirect-карту.
