@@ -94,7 +94,11 @@ async function fetchWithRetry(url, options = {}, label = "request") {
 
   const locationUrl = new URL(location);
   const localHostStartsWithTest = expectedHost.startsWith("test.");
-  const expectedAuthHost = localHostStartsWithTest ? "test.auth.gismalink.art" : "auth.gismalink.art";
+  const expectedAuthHostFromEnv = String(process.env.SMOKE_EXPECT_AUTH_HOST || "").trim();
+  const expectedAuthHost = expectedAuthHostFromEnv
+    || (expectedHost.endsWith("datowave.com")
+      ? (localHostStartsWithTest ? "test.auth.datowave.com" : "auth.datowave.com")
+      : (localHostStartsWithTest ? "test.auth.gismalink.art" : "auth.gismalink.art"));
 
   if (locationUrl.host !== expectedAuthHost) {
     throw new Error(`[smoke:sso] redirect host mismatch: expected ${expectedAuthHost}, got ${locationUrl.host}`);
