@@ -68,7 +68,7 @@ Scope: перенести только boltorezka-контур с `boltorezka.gi
 - [x] Обновить API CORS/CSP/Origin allowlist (test подтвержден; prod pending).
 - [x] Обновить cookie domain и проверить cross-subdomain сценарии (test подтвержден; prod pending).
 - [x] Проверить WS/realtime endpoint на том же типе host, что и до переезда (если раньше было path-based через основной/service host, не вводить новый `api` поддомен) (test подтвержден; prod pending).
-- [ ] Проверить voice/video signaling и media flow после смены origin.
+- [x] Проверить voice/video signaling и media flow после смены origin (test подтвержден; prod pending).
 
 Статус на 2026-03-25 (`test`):
 - Web runtime использует централизованное определение origin/api/ws через `apps/web/src/runtimeOrigin.ts` и `apps/web/src/transportRuntime.ts`.
@@ -78,7 +78,8 @@ Scope: перенести только boltorezka-контур с `boltorezka.gi
 - Smoke `smoke:sso` на `https://test.datowave.com`: `ok` (`302` на `test.auth.datowave.com`).
 - Smoke `smoke:realtime` с `SMOKE_CALL_SIGNAL=1` и `SMOKE_RECONNECT=1`: `ok` (`callSignalRelayed=true`, `reconnectOk=true`, `mediaTopology=livekit`).
 - Smoke `smoke:livekit:token-flow`: `ok` (join/reconnect/late-join grants подтверждены).
-- Browser smoke `smoke:realtime:media` (с legacy call signaling): `fail` — signaling relay неполный (`offer/answer/ice` не сходится до connected), пункт voice/video/media остается открытым.
+- Browser smoke `smoke:realtime:media` (с legacy call signaling): `ok` (peer connection `connected`, `oneWaySummary` без инцидентов, `renegotiationSummary` в лимитах).
+- Smoke `smoke:test:postdeploy`: `ok` (включая `smoke:web:version-cache`, `smoke:auth:session`, `smoke:realtime`).
 
 ### 3.3 Auth и SSO (Keycloak/Authentik трек)
 
@@ -102,7 +103,7 @@ Scope: перенести только boltorezka-контур с `boltorezka.gi
 
 ### 3.5 Операционка и документация
 
-- [ ] Обновить runbooks и smoke scripts на новый домен.
+- [x] Обновить runbooks и smoke scripts на новый домен (`test` подтвержден; `prod` pending).
 - [ ] Обновить release notes и rollback инструкции.
 - [ ] Добавить post-cutover чеклист с владельцами шагов.
 - [ ] Обновить monitoring/alerts/dashboards по новым host.
