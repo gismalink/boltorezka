@@ -60,6 +60,7 @@ Scope: перенести только boltorezka-контур с `boltorezka.gi
 - Перепроверка DNS от 2026-03-25: в scope этого плана (`boltorezka` cutover) требуемые host подтверждены; `popn`, `projo` и остальные отдельные проекты не входят в этот перенос.
 - HTTPS policy (test): `http://test.datowave.com` и `http://test.auth.datowave.com` принудительно редиректят на HTTPS (`308`).
 - HSTS policy (test): `Strict-Transport-Security` подтвержден на `test.auth.datowave.com`, но не подтвержден на `test.datowave.com`; пункт 3.1 про HSTS остается открытым до унификации.
+- Повторная проверка после GitOps deploy ingress (2026-03-25): ситуация без изменений — `test.auth.datowave.com` отдает HSTS, `test.datowave.com` HSTS не отдает.
 
 ### 3.2 Приложение (web/api/realtime)
 
