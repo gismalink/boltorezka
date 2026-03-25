@@ -2,7 +2,7 @@
 # Purpose: Run periodic chat object-storage orphan cleanup via admin API endpoint.
 set -euo pipefail
 
-CHAT_ORPHAN_BASE_URL="${CHAT_ORPHAN_BASE_URL:-https://test.boltorezka.gismalink.art}"
+CHAT_ORPHAN_BASE_URL="${CHAT_ORPHAN_BASE_URL:-https://test.datowave.com}"
 CHAT_ORPHAN_ENDPOINT="${CHAT_ORPHAN_ENDPOINT:-/v1/admin/chat/uploads/orphan-cleanup}"
 CHAT_ORPHAN_BEARER_TOKEN="${CHAT_ORPHAN_BEARER_TOKEN:-${TEST_SMOKE_TEST_BEARER_TOKEN:-}}"
 CHAT_ORPHAN_BEARER_TOKEN_FILE="${CHAT_ORPHAN_BEARER_TOKEN_FILE:-.deploy/smoke-auth-livekit-gate.env}"

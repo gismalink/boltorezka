@@ -108,6 +108,10 @@ Scope: перенести только boltorezka-контур с `boltorezka.gi
 - [ ] Добавить post-cutover чеклист с владельцами шагов.
 - [ ] Обновить monitoring/alerts/dashboards по новым host.
 
+Статус на 2026-03-25 (`test`):
+- Обновлены default URL в deploy/ops/smoke скриптах на `https://test.datowave.com` (включая `deploy-test-from-ref.sh`, `deploy-test-and-smoke.sh`, `run-all-smokes.sh`, cookie/desktop smoke scripts).
+- Обновлены scheduler job env defaults (`chat-orphan-cleanup`, `slo-rolling-gate`) и `scripts/README.md` под новый test host.
+
 ### 3.6 Re-onboarding пользователей (без миграции БД)
 
 - [ ] Подготовить короткую коммуникацию для текущих пользователей (новый домен + как войти).

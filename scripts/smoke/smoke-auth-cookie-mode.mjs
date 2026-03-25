@@ -18,7 +18,7 @@ import https from 'https';
  * - SameSite/Domain/Secure attribute validation
  */
 
-const BASE_URL = process.env.SMOKE_API_URL || 'https://test.boltorezka.gismalink.art';
+const BASE_URL = process.env.SMOKE_API_URL || 'https://test.datowave.com';
 const SMOKE_TEST_BEARER_TOKEN = process.env.SMOKE_TEST_BEARER_TOKEN || 'test-bearer-token-placeholder';
 const COOKIE_MODE_ENABLED = process.env.TEST_AUTH_COOKIE_MODE === '1' || process.env.AUTH_COOKIE_MODE === '1';
 

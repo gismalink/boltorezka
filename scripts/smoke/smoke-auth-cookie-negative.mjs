@@ -1,7 +1,7 @@
 // Purpose: Negative smoke tests for cookie-mode auth security properties.
 // Tests: invalid cookie → 401, refresh replay → 401, missing cookie → 401.
 // Requires: SMOKE_TEST_BEARER_TOKEN with valid sid claim pointing at test env.
-const baseUrl = (process.env.SMOKE_API_URL ?? 'https://test.boltorezka.gismalink.art').replace(/\/+$/, '');
+const baseUrl = (process.env.SMOKE_API_URL ?? 'https://test.datowave.com').replace(/\/+$/, '');
 const token = String(process.env.SMOKE_TEST_BEARER_TOKEN ?? '').trim();
 const cookieName = process.env.SMOKE_SESSION_COOKIE_NAME ?? 'boltorezka_session_test';
 

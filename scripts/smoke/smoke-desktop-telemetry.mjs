@@ -13,7 +13,7 @@ const appDir = path.resolve(repoDir, "apps/desktop-electron");
 const requireFromDesktop = createRequire(path.join(appDir, "package.json"));
 const electronBinary = requireFromDesktop("electron");
 
-const baseUrl = String(process.env.SMOKE_WEB_BASE_URL || process.env.SMOKE_API_URL || "https://test.boltorezka.gismalink.art").replace(/\/$/, "");
+const baseUrl = String(process.env.SMOKE_WEB_BASE_URL || process.env.SMOKE_API_URL || "https://test.datowave.com").replace(/\/$/, "");
 const timeoutMs = Number(process.env.SMOKE_DESKTOP_TELEMETRY_TIMEOUT_MS || 30000);
 const telemetryUrlPath = "/v1/telemetry/web";
 

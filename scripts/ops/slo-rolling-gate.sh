@@ -2,7 +2,7 @@
 # Purpose: Build rolling 5m/30m SLO signal from telemetry summary counters and emit alert status.
 set -euo pipefail
 
-SLO_BASE_URL="${SLO_BASE_URL:-https://test.boltorezka.gismalink.art}"
+SLO_BASE_URL="${SLO_BASE_URL:-https://test.datowave.com}"
 SLO_BEARER_TOKEN="${SLO_BEARER_TOKEN:-${TEST_SMOKE_TEST_BEARER_TOKEN:-}}"
 SLO_BEARER_TOKEN_FILE="${SLO_BEARER_TOKEN_FILE:-}"
 SLO_BEARER_TOKEN_FILE_KEY="${SLO_BEARER_TOKEN_FILE_KEY:-SMOKE_TEST_BEARER_TOKEN}"

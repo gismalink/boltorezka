@@ -5,7 +5,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
-BASE_URL="${SMOKE_API_URL:-https://test.boltorezka.gismalink.art}"
+BASE_URL="${SMOKE_API_URL:-https://test.datowave.com}"
 ROOM_SLUG="${SMOKE_ROOM_SLUG:-test-room}"
 SETTLE_MS="${SMOKE_RTC_MEDIA_SETTLE_MS:-45000}"
 TIMEOUT_MS="${SMOKE_TIMEOUT_MS:-120000}"

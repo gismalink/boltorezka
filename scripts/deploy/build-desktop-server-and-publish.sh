@@ -142,7 +142,7 @@ fi
 APP_UPDATE_FEED_BASE="$PUBLIC_BASE_URL"
 if [[ -z "$APP_UPDATE_FEED_BASE" ]]; then
   if [[ "$DESKTOP_CHANNEL" == "test" ]]; then
-    APP_UPDATE_FEED_BASE="https://test.boltorezka.gismalink.art"
+    APP_UPDATE_FEED_BASE="https://test.datowave.com"
   else
     APP_UPDATE_FEED_BASE="https://boltorezka.gismalink.art"
   fi

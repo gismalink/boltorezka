@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Purpose: Validate public desktop updater feed endpoints for electron-updater generic provider.
 
-const webBaseUrl = String(process.env.SMOKE_WEB_BASE_URL || "https://test.boltorezka.gismalink.art").replace(/\/+$/, "");
+const webBaseUrl = String(process.env.SMOKE_WEB_BASE_URL || "https://test.datowave.com").replace(/\/+$/, "");
 const channel = String(process.env.SMOKE_DESKTOP_CHANNEL || "test").trim().toLowerCase();
 const timeoutMs = Number(process.env.SMOKE_FETCH_TIMEOUT_MS || 15000);
 const retries = Number(process.env.SMOKE_FETCH_RETRIES || 3);

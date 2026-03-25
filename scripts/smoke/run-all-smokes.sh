@@ -5,7 +5,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
-BASE_URL="${SMOKE_API_URL:-https://test.boltorezka.gismalink.art}"
+BASE_URL="${SMOKE_API_URL:-https://test.datowave.com}"
 WEB_BASE_URL="${SMOKE_WEB_BASE_URL:-$BASE_URL}"
 AUTH_ENV_FILE="${SMOKE_AUTH_ENV_FILE:-.deploy/smoke-auth.env}"
 COMPOSE_FILE="${SMOKE_AUTH_COMPOSE_FILE:-infra/docker-compose.host.yml}"

@@ -6,7 +6,7 @@
 //           then dropped for the actual ws-ticket call to simulate cookie-only auth.
 // Optional: SMOKE_SESSION_COOKIE_NAME — defaults to boltorezka_session_test.
 
-const baseUrl = (process.env.SMOKE_API_URL ?? 'https://test.boltorezka.gismalink.art').replace(/\/+$/, '');
+const baseUrl = (process.env.SMOKE_API_URL ?? 'https://test.datowave.com').replace(/\/+$/, '');
 const token = String(process.env.SMOKE_TEST_BEARER_TOKEN ?? '').trim();
 const cookieName = String(process.env.SMOKE_SESSION_COOKIE_NAME ?? 'boltorezka_session_test').trim();
 

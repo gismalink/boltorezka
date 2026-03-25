@@ -9,7 +9,7 @@ const appDir = path.resolve(repoDir, "apps/desktop-electron");
 const requireFromDesktop = createRequire(path.join(appDir, "package.json"));
 const electronBinary = requireFromDesktop("electron");
 
-const baseUrl = String(process.env.SMOKE_WEB_BASE_URL || process.env.SMOKE_API_URL || "https://test.boltorezka.gismalink.art").replace(/\/$/, "");
+const baseUrl = String(process.env.SMOKE_WEB_BASE_URL || process.env.SMOKE_API_URL || "https://test.datowave.com").replace(/\/$/, "");
 const timeoutMs = Number(process.env.SMOKE_DESKTOP_RECONNECT_TIMEOUT_MS || 40000);
 const offlineWindowMs = Number(process.env.SMOKE_DESKTOP_OFFLINE_WINDOW_MS || 2500);
 const strictMode = String(process.env.SMOKE_DESKTOP_RECONNECT_STRICT || "0") === "1";
