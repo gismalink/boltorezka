@@ -171,8 +171,8 @@ Draft: Authentik OIDC clients and claims mapping (v1)
 
 ### 3.7 Redirect-карта старых адресов на новые
 
-- [ ] Зафиксировать явную таблицу соответствий host/path по правилу: заменить только суффикс `boltotrezka.gismalink.art` на `datowave.com`.
-- [ ] Не создавать новые поддомены при переезде: переносить только те host-ы, которые уже существуют в старом контуре.
+- [x] Зафиксировать явную таблицу соответствий host/path по правилу: заменить только суффикс `boltotrezka.gismalink.art` на `datowave.com` (см. раздел 10.2).
+- [x] Не создавать новые поддомены при переезде: переносить только те host-ы, которые уже существуют в старом контуре (правило зафиксировано в разделе 10.2).
 - [ ] Настроить redirect `301/308` на уровне ingress без redirect-loop.
 - [x] Настроить redirect `301/308` на уровне ingress без redirect-loop (`test`: подтверждено для `test.boltorezka.gismalink.art` и `test.datute.ru`).
 - [ ] Проверить сохранение пути и query params при redirect.
@@ -182,6 +182,7 @@ Draft: Authentik OIDC clients and claims mapping (v1)
 
 Статус на 2026-03-26 (`test`):
 - Добавлен redirect-map smoke: `scripts/smoke/smoke-domain-redirect-map.mjs` + npm команда `smoke:redirect-map`.
+- Добавлена поддержка scope для redirect smoke: `test` (default) и `prod` (`SMOKE_REDIRECT_SCOPE=prod`).
 
 ## 4) Decision memo: Keycloak vs Authentik
 

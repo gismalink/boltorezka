@@ -148,6 +148,10 @@ Desktop update-feed gate (рекомендуется держать включе
 - `curl -sS https://test.datowave.com/desktop/test/mac/latest-mac.yml | head -n 20`
 - `curl -I -sS https://test.datowave.com/desktop/test/mac/Boltorezka-0.2.0-arm64-mac.zip | head -n 8`
 
+7) Redirect map smoke:
+
+- `npm run smoke:redirect-map`
+
 ## Smoke users (test)
 
 Где хранится список пользователей на сервере:

@@ -1,5 +1,5 @@
 // Purpose: Validate legacy->datowave redirect map and ensure path/query are preserved.
-const defaultCases = [
+const testDefaultCases = [
   {
     from: "https://test.boltorezka.gismalink.art/health?smoke=1",
     toHost: "test.datowave.com"
@@ -10,10 +10,18 @@ const defaultCases = [
   }
 ];
 
+const prodDefaultCases = [
+  {
+    from: "https://boltotrezka.gismalink.art/health?smoke=1",
+    toHost: "datowave.com"
+  }
+];
+
 const maxFetchAttempts = Number(process.env.SMOKE_FETCH_RETRIES || 3);
 const retryDelayMs = Number(process.env.SMOKE_FETCH_RETRY_DELAY_MS || 700);
 const fetchTimeoutMs = Number(process.env.SMOKE_FETCH_TIMEOUT_MS || 15000);
 const allowedStatusesRaw = String(process.env.SMOKE_REDIRECT_ALLOWED_STATUSES || "301,308").trim();
+const redirectScope = String(process.env.SMOKE_REDIRECT_SCOPE || "test").trim().toLowerCase();
 const allowedStatuses = new Set(
   allowedStatusesRaw
     .split(",")
@@ -26,10 +34,19 @@ if (!allowedStatuses.size) {
   process.exit(1);
 }
 
+if (!["test", "prod"].includes(redirectScope)) {
+  console.error(`[smoke:redirect-map] invalid SMOKE_REDIRECT_SCOPE: ${redirectScope}`);
+  process.exit(1);
+}
+
+function resolveDefaultCases() {
+  return redirectScope === "prod" ? prodDefaultCases : testDefaultCases;
+}
+
 function parseCases() {
   const raw = String(process.env.SMOKE_REDIRECT_CASES || "").trim();
   if (!raw) {
-    return defaultCases;
+    return resolveDefaultCases();
   }
 
   try {
@@ -123,6 +140,8 @@ async function fetchWithRetry(url, label) {
 
     console.log(`[smoke:redirect-map] ok ${sourceUrl.host} -> ${redirectUrl.host} (${response.status})`);
   }
+
+  console.log(`[smoke:redirect-map] scope=${redirectScope} cases=${cases.length}`);
 })().catch((error) => {
   console.error(error instanceof Error ? error.message : String(error));
   process.exit(1);

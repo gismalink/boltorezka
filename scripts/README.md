@@ -45,6 +45,8 @@ This folder contains operational scripts grouped by purpose.
   - `TEST_REF=origin/feature/<name> npm run deploy:test:smoke`
   - `npm run smoke:test:postdeploy`
   - `SMOKE_WEB_BASE_URL=https://test.datowave.com npm run smoke:desktop:update-feed`
+  - `npm run smoke:redirect-map` (default: test redirect cases)
+  - `SMOKE_REDIRECT_SCOPE=prod npm run smoke:redirect-map` (prod redirect cases)
   - `TEST_REF=origin/feature/<name> npm run deploy:test:livekit`
   - `PROD_REF=origin/main npm run deploy:prod`
   - `DESKTOP_REF=origin/feature/<name> DESKTOP_CHANNEL=test DESKTOP_PUBLIC_BASE_URL=https://test.datowave.com npm run deploy:desktop:server`

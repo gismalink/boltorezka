@@ -85,10 +85,12 @@ One-command для Boltorezka (deploy + post-deploy smoke):
 - Для `test`:
    - `curl -I https://test.datowave.com/health`
    - `curl https://test.datowave.com/health`
+   - `npm run smoke:redirect-map`
 
 - Для `prod` (только после отдельного подтверждения):
    - `curl -I https://boltorezka.gismalink.art/health`
    - `curl https://boltorezka.gismalink.art/health`
+   - `SMOKE_REDIRECT_SCOPE=prod npm run smoke:redirect-map`
 
 ## 5) Rollback criteria
 
