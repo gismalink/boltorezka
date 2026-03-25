@@ -160,7 +160,7 @@ Draft: Authentik OIDC clients and claims mapping (v1)
 
 - [x] Подготовить короткую коммуникацию для текущих пользователей (новый домен + как войти).
 - [x] Подготовить массовые invite/reset ссылки на новый домен (шаблон кампании + валидация ссылок).
-- [ ] Добавить migration banner в старом приложении: "Сайт переехал, авторизуйтесь повторно на новом домене".
+- [x] Добавить migration banner в старом приложении: "Сайт переехал, авторизуйтесь повторно на новом домене" (в web-коде; test evidence pending).
 - [x] Зафиксировать окно ручной поддержки входа (30 дней, в re-onboarding playbook).
 - [ ] Для 10 текущих пользователей провести ручную верификацию успешного входа.
 - [x] Подготовить post-cutover отчет: invited, activated, pending (template).
@@ -168,6 +168,7 @@ Draft: Authentik OIDC clients and claims mapping (v1)
 Статус на 2026-03-25 (`test`):
 - Добавлен playbook re-onboarding: `DOMAIN_CUTOVER_REONBOARDING_PLAYBOOK.md` (шаблон сообщения, invite/reset campaign template, banner copy, daily tracking template).
 - Добавлен execution kit: `DOMAIN_CUTOVER_EXECUTION_KIT.md` (invite/reset URL matrix, шаблон кампании на 10 пользователей, manual verification checklist, migration banner rollout task, post-cutover report template).
+- В web-клиент добавлен runtime migration banner для legacy host `*.gismalink.art` с CTA на `https://datowave.com`.
 
 ### 3.7 Redirect-карта старых адресов на новые
 

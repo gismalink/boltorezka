@@ -5,6 +5,7 @@ export {
 	AppUpdatedOverlay,
 	DesktopBrowserCompletionGate,
 	DesktopUpdateBanner,
+	DomainMigrationBanner,
 	FirstRunIntroOverlay,
 	GuestLoginGate,
 	MediaAccessDeniedBanner,

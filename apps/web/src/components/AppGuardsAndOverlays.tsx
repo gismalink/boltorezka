@@ -144,6 +144,21 @@ export function RemoteAudioAutoplayBanner({ t }: { t: Translate }) {
   );
 }
 
+export function DomainMigrationBanner({ t, targetUrl }: { t: Translate; targetUrl: string }) {
+  return (
+    <div className="mic-denied-banner mic-denied-banner-info" role="status" aria-live="polite">
+      <span>{t("migration.bannerText")}</span>
+      <button
+        type="button"
+        className="secondary"
+        onClick={() => window.location.assign(targetUrl)}
+      >
+        {t("migration.bannerCta")}
+      </button>
+    </div>
+  );
+}
+
 export function GuestLoginGate({ t, onBeginGoogleSso }: { t: Translate; onBeginGoogleSso: () => void }) {
   return (
     <section className="grid h-full min-h-0 place-items-center p-2">
