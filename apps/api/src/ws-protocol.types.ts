@@ -1,6 +1,10 @@
 export type CallMicStateEventType = "call.mic_state";
 export type CallVideoStateEventType = "call.video_state";
-export type CallEventType = CallMicStateEventType | CallVideoStateEventType;
+export type CallOfferEventType = "call.offer";
+export type CallAnswerEventType = "call.answer";
+export type CallIceEventType = "call.ice";
+export type CallSignalEventType = CallOfferEventType | CallAnswerEventType | CallIceEventType;
+export type CallEventType = CallSignalEventType | CallMicStateEventType | CallVideoStateEventType;
 
 export type WsIncomingPayload = Record<string, unknown>;
 
@@ -88,6 +92,27 @@ export type WsIncomingCallVideoStateEnvelope = {
   payload?: WsIncomingPayload;
 };
 
+export type WsIncomingCallOfferEnvelope = {
+  type: CallOfferEventType;
+  requestId?: string;
+  idempotencyKey?: string;
+  payload?: WsIncomingPayload;
+};
+
+export type WsIncomingCallAnswerEnvelope = {
+  type: CallAnswerEventType;
+  requestId?: string;
+  idempotencyKey?: string;
+  payload?: WsIncomingPayload;
+};
+
+export type WsIncomingCallIceEnvelope = {
+  type: CallIceEventType;
+  requestId?: string;
+  idempotencyKey?: string;
+  payload?: WsIncomingPayload;
+};
+
 export type WsIncomingScreenShareStartEnvelope = {
   type: "screen.share.start";
   requestId?: string;
@@ -112,6 +137,9 @@ export type WsIncomingKnownEnvelope =
   | WsIncomingChatEditEnvelope
   | WsIncomingChatDeleteEnvelope
   | WsIncomingChatTypingEnvelope
+  | WsIncomingCallOfferEnvelope
+  | WsIncomingCallAnswerEnvelope
+  | WsIncomingCallIceEnvelope
   | WsIncomingCallMicStateEnvelope
   | WsIncomingCallVideoStateEnvelope
   | WsIncomingScreenShareStartEnvelope
@@ -252,6 +280,10 @@ export type CallMicStateRelayPayload = CallRelayBasePayload & {
 
 export type CallVideoStateRelayPayload = CallRelayBasePayload & {
   settings: Record<string, unknown>;
+};
+
+export type CallSignalRelayPayload = CallRelayBasePayload & {
+  signal: Record<string, unknown>;
 };
 
 export type CallInitialStateParticipantPayload = {

@@ -1,4 +1,5 @@
 import type {
+  CallSignalEventType,
   CallMicStateEventType,
   CallVideoStateEventType,
   PresenceUser,
@@ -102,6 +103,9 @@ export function asKnownWsIncomingEnvelope(
     case "chat.edit":
     case "chat.delete":
     case "chat.typing":
+    case "call.offer":
+    case "call.answer":
+    case "call.ice":
     case "call.mic_state":
     case "call.video_state":
     case "screen.share.start":
@@ -472,6 +476,27 @@ export function buildCallVideoStateRelayEnvelope(
     payload: {
       ...buildCallRelayBasePayload(requestId, sessionId, traceId, fromUserId, fromUserName, roomId, roomSlug, targetUserId),
       settings
+    }
+  };
+}
+
+export function buildCallSignalRelayEnvelope(
+  eventType: CallSignalEventType,
+  requestId: string | null,
+  sessionId: string,
+  traceId: string,
+  fromUserId: string,
+  fromUserName: string,
+  roomId: string,
+  roomSlug: string | null,
+  targetUserId: string | null,
+  signal: Record<string, unknown>
+): WsOutgoingEnvelope {
+  return {
+    type: eventType,
+    payload: {
+      ...buildCallRelayBasePayload(requestId, sessionId, traceId, fromUserId, fromUserName, roomId, roomSlug, targetUserId),
+      signal
     }
   };
 }

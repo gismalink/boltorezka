@@ -22,6 +22,7 @@ import {
   buildRoomsPresenceEnvelope,
   asKnownWsIncomingEnvelope,
   buildCallInitialStateEnvelope,
+  buildCallSignalRelayEnvelope,
   buildCallMicStateRelayEnvelope,
   buildCallVideoStateRelayEnvelope,
   buildChatDeletedEnvelope,
@@ -1004,6 +1005,85 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
                   buildScreenShareStateEnvelope,
                   broadcastRoom
                 });
+                return;
+              }
+
+              case "call.offer":
+              case "call.answer":
+              case "call.ice": {
+                if (await handleCallIdempotency(connection, state, requestId, eventType)) {
+                  return;
+                }
+
+                if (!state.roomId) {
+                  sendNoActiveRoomNack(connection, requestId, eventType);
+                  return;
+                }
+
+                const signalRaw = payload?.signal;
+                if (!signalRaw || typeof signalRaw !== "object" || Array.isArray(signalRaw)) {
+                  sendValidationNack(connection, requestId, eventType, "payload.signal object is required");
+                  return;
+                }
+
+                const targetUserId = normalizeRequestId(getPayloadString(payload, "targetUserId", 128)) || null;
+                const traceId = buildCallTraceId(eventType, requestId, state.sessionId);
+                const relayEnvelope = buildCallSignalRelayEnvelope(
+                  knownMessage.type,
+                  requestId,
+                  state.sessionId,
+                  traceId,
+                  state.userId,
+                  state.userName,
+                  state.roomId,
+                  state.roomSlug,
+                  targetUserId,
+                  signalRaw as Record<string, unknown>
+                );
+
+                logCallDebug("call signaling received", {
+                  eventType,
+                  userId: state.userId,
+                  sessionId: state.sessionId,
+                  traceId,
+                  roomId: state.roomId,
+                  roomSlug: state.roomSlug,
+                  requestId,
+                  targetUserId
+                });
+
+                const relayOutcome = relayToTargetOrRoom({
+                  senderSocket: connection,
+                  roomId: state.roomId,
+                  targetUserId,
+                  relayEnvelope,
+                  getUserRoomSockets,
+                  socketsByRoomId,
+                  sendJson
+                });
+
+                if (!relayOutcome.ok) {
+                  sendTargetNotInRoomNack(connection, requestId, eventType);
+                  void incrementMetric("call_signal_target_miss");
+                  return;
+                }
+
+                const callSignalMetricByType: Record<string, string> = {
+                  "call.offer": "call_offer_received",
+                  "call.answer": "call_answer_received",
+                  "call.ice": "call_ice_received"
+                };
+
+                sendAckWithMetrics(
+                  connection,
+                  requestId,
+                  eventType,
+                  {
+                    relayedTo: relayOutcome.relayedCount,
+                    targetUserId
+                  },
+                  ["call_signal_sent", callSignalMetricByType[eventType] || "call_signal_sent"]
+                );
                 return;
               }
 
