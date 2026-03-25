@@ -47,15 +47,12 @@ Scope:
 - `https` only
 - отсутствуют legacy host `*.gismalink.art`
 
-## 4) Migration banner copy
+## 4) Redirect-only policy for old domain
 
-Текст баннера для старого домена:
-
-"Сайт переехал на новый домен datowave.com. Пожалуйста, авторизуйтесь повторно на новом адресе."
-
-CTA:
-- Кнопка: "Перейти на datowave.com"
-- URL: `https://datowave.com`
+Текущее решение для старого домена:
+- UI-слой старого домена не используется,
+- ingress выполняет прямой redirect на новый домен,
+- проверка осуществляется через redirect smoke (`smoke:redirect-map`).
 
 ## 5) Daily tracking template (invited -> activated)
 

@@ -16,7 +16,6 @@ import {
   AppUpdatedOverlay,
   DesktopBrowserCompletionGate,
   DesktopUpdateBanner,
-  DomainMigrationBanner,
   FirstRunIntroOverlay,
   GuestLoginGate,
   MediaAccessDeniedBanner,
@@ -114,15 +113,10 @@ const CLIENT_BUILD_DATE_LABEL = formatBuildDateLabel(CLIENT_BUILD_VERSION, CLIEN
 const COOKIE_MODE = import.meta.env.VITE_AUTH_COOKIE_MODE === "1";
 const CHAT_TYPING_TTL_MS = 4500;
 const CHAT_TYPING_PING_INTERVAL_MS = 1800;
-const DOMAIN_MIGRATION_TARGET_URL = "https://datowave.com";
 
 // App is an orchestration boundary: it wires hooks/controllers and passes state to UI.
 // Parsing, transport rules, and feature workflows should live in dedicated hooks/modules.
 export function App() {
-  const isLegacyDomainHost = useMemo(() => {
-    const host = window.location.hostname.toLowerCase();
-    return host === "gismalink.art" || host.endsWith(".gismalink.art");
-  }, []);
   const [token, setToken] = useState(() => (COOKIE_MODE ? "" : localStorage.getItem("boltorezka_token") || ""));
   const [user, setUser] = useState<User | null>(null);
   const [authMode, setAuthMode] = useState("loading");
@@ -1743,8 +1737,6 @@ export function App() {
         onOpenUserSettings={() => openUserSettings("profile")}
       />
       <TooltipPortal />
-
-      {isLegacyDomainHost ? <DomainMigrationBanner t={t} targetUrl={DOMAIN_MIGRATION_TARGET_URL} /> : null}
 
       {mediaDevicesState === "denied" ? <MediaAccessDeniedBanner t={t} onRequestMediaAccess={requestMediaAccess} /> : null}
 

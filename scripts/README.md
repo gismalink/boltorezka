@@ -15,6 +15,7 @@ This folder contains operational scripts grouped by purpose.
   - `smoke-api.mjs` - API contract smoke.
   - `smoke-sso-redirect.mjs` - SSO redirect/mode smoke.
   - `smoke-sso-routing.mjs` - SSO start/logout redirect contract smoke.
+  - `smoke-domain-redirect-map.mjs` - legacy->datowave redirect map smoke with path/query checks.
   - `smoke-realtime.mjs` - WS protocol and signaling baseline smoke.
   - `smoke-web-version-cache.mjs` - version/cache compatibility smoke.
   - `smoke-web-static-contract.mjs` - static web contract smoke.

@@ -66,7 +66,7 @@
 - Owner: Support owner
 - Status:
 
-3. Проверка migration banner на старом домене.
+3. Проверка redirect-only поведения старого домена.
 - Owner: Web owner
 - Status:
 

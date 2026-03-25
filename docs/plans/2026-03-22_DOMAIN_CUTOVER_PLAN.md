@@ -160,15 +160,14 @@ Draft: Authentik OIDC clients and claims mapping (v1)
 
 - [x] Подготовить короткую коммуникацию для текущих пользователей (новый домен + как войти).
 - [x] Подготовить массовые invite/reset ссылки на новый домен (шаблон кампании + валидация ссылок).
-- [x] Добавить migration banner в старом приложении: "Сайт переехал, авторизуйтесь повторно на новом домене" (в web-коде; test evidence pending).
+- [x] Подтвердить redirect-only политику для старого домена (редирект на уровне ingress, без UI-этапа совместимости).
 - [x] Зафиксировать окно ручной поддержки входа (30 дней, в re-onboarding playbook).
 - [ ] Для 10 текущих пользователей провести ручную верификацию успешного входа.
 - [x] Подготовить post-cutover отчет: invited, activated, pending (template).
 
 Статус на 2026-03-25 (`test`):
-- Добавлен playbook re-onboarding: `DOMAIN_CUTOVER_REONBOARDING_PLAYBOOK.md` (шаблон сообщения, invite/reset campaign template, banner copy, daily tracking template).
-- Добавлен execution kit: `DOMAIN_CUTOVER_EXECUTION_KIT.md` (invite/reset URL matrix, шаблон кампании на 10 пользователей, manual verification checklist, migration banner rollout task, post-cutover report template).
-- В web-клиент добавлен runtime migration banner для legacy host `*.gismalink.art` с CTA на `https://datowave.com`.
+- Добавлен playbook re-onboarding: `DOMAIN_CUTOVER_REONBOARDING_PLAYBOOK.md` (шаблон сообщения, invite/reset campaign template, daily tracking template, redirect-only policy).
+- Добавлен execution kit: `DOMAIN_CUTOVER_EXECUTION_KIT.md` (invite/reset URL matrix, шаблон кампании на 10 пользователей, manual verification checklist, redirect-map validation task, post-cutover report template).
 
 ### 3.7 Redirect-карта старых адресов на новые
 
@@ -179,7 +178,10 @@ Draft: Authentik OIDC clients and claims mapping (v1)
 - [ ] Проверить сохранение пути и query params при redirect.
 - [ ] Настроить redirect для auth-роутов и invite-ссылок (где это безопасно).
 - [ ] Для auth-host в окно совместимости использовать dual-host (без принудительного redirect со старого auth-домена).
-- [ ] Обновить smoke под проверку redirect-карты.
+- [x] Обновить smoke под проверку redirect-карты (`npm run smoke:redirect-map`).
+
+Статус на 2026-03-26 (`test`):
+- Добавлен redirect-map smoke: `scripts/smoke/smoke-domain-redirect-map.mjs` + npm команда `smoke:redirect-map`.
 
 ## 4) Decision memo: Keycloak vs Authentik
 
@@ -217,7 +219,7 @@ Draft: Authentik OIDC clients and claims mapping (v1)
 - [ ] Deploy в `test` из целевой ветки + повторный smoke.
 - [ ] После подтверждения: deploy в `prod` (GitOps only).
 - [ ] Переключить DNS/ingress в `prod` и включить redirect-карту.
-- [ ] Включить migration banner в старом приложении на весь период совместимости.
+- [ ] Подтвердить redirect-only поведение старого домена в `prod`.
 - [ ] Рассылать invite/reset для текущих пользователей на новый домен.
 - [ ] Выполнить post-deploy smoke на `prod` (redirect + auth).
 
@@ -235,7 +237,7 @@ Draft: Authentik OIDC clients and claims mapping (v1)
 - [x] Login/logout для новых и re-onboarded пользователей (`test`: вход через Google/Yandex подтвержден).
 - [ ] Проверка redirect со старых адресов на новые и отсутствие циклов.
 - [ ] Проверка сохранения path и query params при redirect.
-- [ ] Проверка migration banner на старом домене и корректной ссылки на новый домен.
+- [ ] Проверка redirect-only поведения на старом домене.
 
 ## 7) Rollback
 
@@ -261,7 +263,7 @@ Draft: Authentik OIDC clients and claims mapping (v1)
 3. Формат re-onboarding: invite only или registration + invite.
 4. Нужен ли ребрендинг email sender/domain одновременно с cutover.
 5. Подтверждено: стратегия IdP для v1 = Вариант B (Authentik), внедрение через `test` с отдельным smoke перед `prod`.
-6. Подтверждено: migration banner в старом UI обязателен на период перехода.
+6. Подтверждено: для старого домена используется только redirect-only политика.
 7. Финальная redirect-карта для ключевых адресов (включая `service.boltotrezka.gismalink.art` -> `service.datowave.com` и `test.service.boltotrezka.gismalink.art` -> `test.service.datowave.com`).
 8. Проверить наличие auth-host в старом контуре и включить его в обязательную redirect-карту (`auth.*`, `test.auth.*`).
 

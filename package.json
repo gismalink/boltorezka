@@ -51,6 +51,7 @@
     "smoke:minio:storage": "bash ./scripts/smoke/smoke-minio-storage.sh",
     "smoke:sso": "node ./scripts/smoke/smoke-sso-redirect.mjs",
     "smoke:sso:routing": "node ./scripts/smoke/smoke-sso-routing.mjs",
+    "smoke:redirect-map": "node ./scripts/smoke/smoke-domain-redirect-map.mjs",
     "smoke:realtime": "node ./scripts/smoke/smoke-realtime.mjs",
     "smoke:livekit:token-flow": "node ./scripts/smoke/smoke-livekit-token-flow.mjs",
     "smoke:livekit:media": "node ./scripts/smoke/smoke-livekit-media-browser.mjs",

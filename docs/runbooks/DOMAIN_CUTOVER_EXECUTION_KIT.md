@@ -79,23 +79,21 @@ Completion rule:
 - Шаг считается завершенным при `10/10 pass`.
 - При fail обязательно добавить follow-up задачу и повторную проверку.
 
-## 4) Migration banner rollout task
+## 4) Redirect-map validation task
 
-Текст баннера:
-- "Сайт переехал на новый домен datowave.com. Пожалуйста, авторизуйтесь повторно на новом адресе."
-
-CTA:
-- Label: `Перейти на datowave.com`
-- URL: `https://datowave.com`
+Текущее решение:
+- UI-слой старого домена не используется,
+- старые host-ы сразу редиректятся на `datowave`.
 
 Task steps:
-1. Включить banner на legacy host в `test`.
-2. Проверить:
-- banner виден на старом домене,
-- CTA ведет на `https://datowave.com`,
-- нет redirect-loop.
-3. Зафиксировать evidence (скрин + smoke/ручная проверка).
-4. После test-валидации включить в `prod` по approval.
+1. Прогнать redirect smoke в `test`:
+- `npm run smoke:redirect-map`
+2. Проверить в отчете:
+- статус redirect (`301/308`),
+- сохранение path,
+- сохранение query.
+3. Зафиксировать evidence в release notes/post-cutover checklist.
+4. Повторить проверку для `prod` после explicit approval.
 
 ## 5) Post-cutover report (ready-to-fill)
 
@@ -114,5 +112,5 @@ Task steps:
 1. Заполнить campaign batch template.
 2. Отправить invite/reset в `test` группе.
 3. Пройти manual verification checklist (10 users).
-4. Включить и проверить migration banner в `test`.
+4. Прогнать и подтвердить redirect-map smoke в `test`.
 5. Сформировать post-cutover report draft.
