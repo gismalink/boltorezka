@@ -6,6 +6,7 @@ Scope:
 - `test` и `prod` в рамках Boltorezka.
 - GitOps-only: деплой через git + штатные скрипты.
 - `prod` только из `main` и только по явному подтверждению.
+- До полного закрытия auth/SSO задач в `test` любые шаги по `prod` запрещены.
 
 ## 1) Release notes template
 
@@ -52,6 +53,7 @@ Scope:
 4. Зафиксировать release notes запись (template из раздела 1).
 5. Для `prod`:
 - только после merge в `main`,
+- только после полного закрытия auth/SSO трека в `test`,
 - повторный test smoke от `origin/main`,
 - отдельное explicit подтверждение владельца релиза.
 

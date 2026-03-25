@@ -111,6 +111,7 @@ Rollback выполняется только штатным release-script с з
 Только при выполнении всех условий:
 
 - smoke test в `test` успешен,
+- auth/SSO трек в `test` закрыт полностью,
 - feature merged в `main`,
 - получено явное подтверждение на prod rollout.
 
