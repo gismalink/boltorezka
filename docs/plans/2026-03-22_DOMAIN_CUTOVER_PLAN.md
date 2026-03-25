@@ -55,6 +55,7 @@ Scope: вынести продукт с поддомена/домена `gismali
 - `test.auth.datowave.com` изолирован в стеке boltorezka (`boltorezka-auth-test-datowave` + отдельная test DB).
 - Исправлен OAuth redirect для `test`: API больше не возвращает `test.auth.gismalink.art`, используется `test.auth.datowave.com`.
 - Redirect `test.boltorezka.gismalink.art` -> `test.datowave.com` отдает `308` и сохраняет query string.
+- Добавлен redirect-only домен `test.datute.ru` -> `test.datowave.com` (`308`, path/query сохраняются).
 
 ### 3.2 Приложение (web/api/realtime)
 
@@ -106,6 +107,7 @@ Scope: вынести продукт с поддомена/домена `gismali
 - [ ] Зафиксировать явную таблицу соответствий host/path по правилу: заменить только суффикс `boltotrezka.gismalink.art` на `datowave.com`.
 - [ ] Не создавать новые поддомены при переезде: переносить только те host-ы, которые уже существуют в старом контуре.
 - [ ] Настроить redirect `301/308` на уровне ingress без redirect-loop.
+- [x] Настроить redirect `301/308` на уровне ingress без redirect-loop (`test`: подтверждено для `test.boltorezka.gismalink.art` и `test.datute.ru`).
 - [ ] Проверить сохранение пути и query params при redirect.
 - [ ] Настроить redirect для auth-роутов и invite-ссылок (где это безопасно).
 - [ ] Для auth-host в окно совместимости использовать dual-host (без принудительного redirect со старого auth-домена).
@@ -294,3 +296,18 @@ done
 - `turns.datowave.com` -> `95.165.154.118`
 - `www.datowave.com` -> `95.165.154.118`
 - Статус: совпадает с таблицей 10.3.
+
+### 10.5 Дополнительный redirect-only домен
+
+`datute.ru` используется только как redirect-layer (без самостоятельного app/runtime).
+
+DNS A-записи (2026-03-25):
+- `datute.ru` (`@`) -> `95.165.154.118`
+- `test.datute.ru` -> `95.165.154.118`
+- `www.datute.ru` -> `95.165.154.118`
+
+Ingress правило (test):
+- `https://test.datute.ru/*` -> `https://test.datowave.com/*` (`308`, сохраняются path/query).
+
+Smoke (2026-03-25):
+- `https://test.datute.ru/health?probe=2` -> `308 Location: https://test.datowave.com/health?probe=2`.
