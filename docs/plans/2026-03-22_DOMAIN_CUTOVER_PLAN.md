@@ -75,6 +75,10 @@ Scope: перенести только boltorezka-контур с `boltorezka.gi
 - Desktop fallback origin переключен на `https://test.datowave.com` (`test`) и `https://datowave.com` (`prod`).
 - API env для test переведен на новый домен: `CORS_ORIGIN=https://test.datowave.com`, `AUTH_SSO_BASE_URL=https://test.auth.datowave.com`, `ALLOWED_RETURN_HOSTS=test.datowave.com`, `AUTH_SESSION_COOKIE_DOMAIN=.test.datowave.com`.
 - Realtime signaling в test идет через `LIVEKIT_URL=wss://test.datowave.com` (без отдельного `api` поддомена).
+- Smoke `smoke:sso` на `https://test.datowave.com`: `ok` (`302` на `test.auth.datowave.com`).
+- Smoke `smoke:realtime` с `SMOKE_CALL_SIGNAL=1` и `SMOKE_RECONNECT=1`: `ok` (`callSignalRelayed=true`, `reconnectOk=true`, `mediaTopology=livekit`).
+- Smoke `smoke:livekit:token-flow`: `ok` (join/reconnect/late-join grants подтверждены).
+- Browser smoke `smoke:realtime:media` (с legacy call signaling): `fail` — signaling relay неполный (`offer/answer/ice` не сходится до connected), пункт voice/video/media остается открытым.
 
 ### 3.3 Auth и SSO (Keycloak/Authentik трек)
 
