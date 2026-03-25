@@ -137,6 +137,44 @@ Draft: Authentik OIDC clients and claims mapping (v1)
   - `sid`/`authMode`/`role` продолжают попадать в локальный JWT API после callback.
   - При отсутствии `roles` применяется default локальная роль (`member`) с явной записью в audit-log.
 
+### 3.8 Authentik rollout + UI + почта (обязательный execution план)
+
+Цель: исключить фиктивные проверки роутов и проверять только реально развернутые end-to-end флоу.
+
+- [ ] **3.8.1 Развернуть полноценный Authentik в `test` (GitOps)**
+  - [ ] Отдельный compose/service для Authentik + Postgres + Redis (если требуется) в boltorezka test-контуре.
+  - [ ] Секреты и ключи (`client_secret`, signing key, session secret) заведены в server env без коммита в git.
+  - [ ] Health-check и restart policy подтверждены (`docker compose ps`, `logs --tail=120`).
+  - [ ] Backup/restore и rollback шаги для Authentik добавлены в runbook.
+
+- [ ] **3.8.2 Настроить OIDC clients и claims в живом IdP (`test`)**
+  - [ ] Созданы clients: `boltorezka-web`, `boltorezka-desktop` по matrix из 3.3.
+  - [ ] Claims `sub/email/email_verified/preferred_username/name/auth_time/sid/roles` реально выдаются.
+  - [ ] Проверена роль по умолчанию при отсутствии `roles` + audit-log запись.
+
+- [ ] **3.8.3 Создать необходимый UI/экраны для auth-флоу**
+  - [ ] Экран/entrypoint для `forgot/reset password` в web.
+  - [ ] Экран/entrypoint для `verify email` (статус/повторная отправка).
+  - [ ] Экран/entrypoint для invite acceptance (если flow invite-first).
+  - [ ] Явные user-facing состояния ошибок: expired/invalid token, already used link, provider unavailable.
+
+- [ ] **3.8.4 Поднять почтовый контур для `test`**
+  - [ ] Выбран и подключен SMTP/provider для test (`SMTP_HOST/PORT/USER/PASS`, sender).
+  - [ ] Настроены шаблоны писем: verify/reset/invite c `test.datowave.com` ссылками.
+  - [ ] Включен способ получения тестовых писем (mailbox/catcher) для автоматических smoke.
+  - [ ] Зафиксированы SPF/DKIM/DMARC требования и текущий статус (минимум: документировано).
+
+- [ ] **3.8.5 Обязательные e2e smoke только после 3.8.1-3.8.4**
+  - [ ] `register/login` -> `Complete SSO Session` -> `auth/me` -> `refresh/logout` PASS.
+  - [ ] `forgot password` -> письмо -> переход по реальной ссылке -> смена пароля PASS.
+  - [ ] `verify email` -> письмо -> переход по реальной ссылке -> account status updated PASS.
+  - [ ] `invite` -> письмо -> переход по реальной ссылке -> join/access PASS.
+  - [ ] `smoke:auth:links` (manual или auto precheck) не заменяет реальные email e2e и используется как дополнительный guard.
+
+Gate на выход из auth-трека:
+- До закрытия 3.8.1-3.8.5 любой статус auth считается `execution pending`, даже если redirect/synthetic smoke зелёные.
+- `prod`-шаги по плану остаются заблокированными.
+
 ### 3.4 Брендинг и контент
 
 - [ ] Обновить product name/логотип/метаданные (title, OG tags, favicons).
@@ -219,7 +257,7 @@ Draft: Authentik OIDC clients and claims mapping (v1)
 
 ### Stage 2 - Prod cutover
 
-- [ ] Gate перед Stage 2: auth/SSO трек в `test` закрыт полностью (иначе Stage 2 не начинается).
+- [ ] Gate перед Stage 2: auth/SSO трек в `test` закрыт полностью, включая execution блока 3.8 (иначе Stage 2 не начинается).
 - [ ] Deploy в `test` из целевой ветки + повторный smoke.
 - [ ] После подтверждения: deploy в `prod` (GitOps only).
 - [ ] Переключить DNS/ingress в `prod` и включить redirect-карту.
