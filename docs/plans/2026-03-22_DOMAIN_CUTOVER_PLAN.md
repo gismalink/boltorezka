@@ -1,0 +1,295 @@
+# План: перенос продукта на новый домен (domain cutover)
+Date: 2026-03-22
+Scope: вынести продукт с поддомена/домена `gismalink.art` на новый самостоятельный домен `datowave.com` через greenfield rollout: поднимаем новый контур, делаем redirect со старых адресов на новые, старый проект выключаем после окна совместимости.
+
+## 0) Цели и ограничения
+
+- Новый домен должен стать основным публичным адресом продукта.
+- Старые адреса должны отдавать redirect на соответствующие новые адреса.
+- Миграция пользователей из старой БД не выполняется (переход через re-onboarding).
+- Пользовательский опыт не должен ломаться в базовых флоу: открытие ссылок, вход/регистрация, доступ в продукт.
+- Миграция выполняется через GitOps, с обязательным прогоном в `test` до `prod`.
+- `prod`-выкатка только после явного подтверждения.
+
+## 1) Что считаем "хвостами" gismalink.art
+
+- DNS-записи и TLS-сертификаты старого домена в ingress.
+- Base URL в frontend (`PUBLIC_URL`, API URL, WS URL, invite links).
+- CORS/CSP/Origin allowlist в API и edge.
+- Cookie domain/path/samesite/secure параметры.
+- OAuth redirect/callback/logout URL (если есть внешний IdP).
+- Email-шаблоны (verification/reset/invite) со старыми ссылками.
+- Webhook/callback URL во внешних сервисах.
+- Документация/runbook и smoke-команды со старым доменом.
+- Мониторинг/алерты/дашборды, привязанные к старым host names.
+
+## 2) Стратегия cutover
+
+1. Подготовить dual-domain режим в `test`:
+   - новый домен работает как primary,
+   - старый домен обслуживается как redirect/compat.
+2. Проверить все критические флоу на новом домене.
+3. Выполнить `prod` cutover: DNS + edge + app config.
+4. Держать контролируемый период совместимости (redirect + re-onboarding пользователей + мониторинг).
+5. Финально убрать runtime-зависимости от `gismalink.art`.
+
+## 3) Workstreams
+
+### 3.1 Инфраструктура (DNS/TLS/Ingress)
+
+- [ ] Зарегистрировать и подтвердить новый домен `datowave.com`.
+- [x] Применить подтвержденные DNS A-записи для `datowave.com` (см. раздел 10.3). Проверено `dig +short A` 2026-03-24.
+- [ ] Подтвердить, что все остальные требуемые service-host из старого контура покрыты правилом suffix replace и добавлены в DNS.
+- [ ] Выпустить TLS-сертификаты для нового домена и нужных поддоменов.
+- [ ] Обновить ingress-конфиги (Caddy/Nginx) под новый host.
+- [ ] Настроить redirect `301/308` со старого домена на новый (без redirect-loop).
+- [ ] Обновить HSTS/HTTPS policy под новый домен.
+
+Статус на 2026-03-24:
+- DNS A-записи на `datowave.com` и связанные host уже применены и проверены.
+- Ingress/Caddy еще не переключен на новые host (в конфиге пока `boltorezka.gismalink.art` и `test.boltorezka.gismalink.art`).
+- Host env переменные приложения пока указывают на старые домены (`CORS_ORIGIN`, `AUTH_SSO_BASE_URL`, `ALLOWED_RETURN_HOSTS`, cookie domain).
+
+Статус на 2026-03-25 (`test`):
+- `test.datowave.com` и `test.auth.datowave.com` обслуживаются по TLS, health-check проходит.
+- `test.auth.datowave.com` изолирован в стеке boltorezka (`boltorezka-auth-test-datowave` + отдельная test DB).
+- Исправлен OAuth redirect для `test`: API больше не возвращает `test.auth.gismalink.art`, используется `test.auth.datowave.com`.
+
+### 3.2 Приложение (web/api/realtime)
+
+- [ ] Вынести все доменные URL в централизованную конфигурацию.
+- [ ] Переключить frontend URL на `datowave.com` (без app-поддомена), invite URL и deep-link URL на новый домен.
+- [ ] Обновить API CORS/CSP/Origin allowlist.
+- [ ] Обновить cookie domain и проверить cross-subdomain сценарии.
+- [ ] Проверить WS/realtime endpoint на том же типе host, что и до переезда (если раньше было path-based через основной/service host, не вводить новый `api` поддомен).
+- [ ] Проверить voice/video signaling и media flow после смены origin.
+
+### 3.3 Auth и SSO (Keycloak/Authentik трек)
+
+- [ ] Зафиксировать текущий auth-flow (как есть) и точки интеграции.
+- [x] Для `test.auth.datowave.com` использовать отдельный auth instance (`auth-test-datowave`) и отдельную test БД, без редиректа со старого `test.auth.gismalink.art`.
+- [ ] Выбрать стратегию на v1 cutover:
+  - [ ] Вариант A: без смены IdP, только доменная миграция.
+  - [ ] Вариант B: миграция на Authentik.
+  - [ ] Вариант C: миграция на Keycloak.
+- [ ] Для выбранного IdP подготовить redirect URI/logout URI на новый домен.
+- [ ] Настроить клиенты OIDC (web/desktop) и claims mapping.
+- [x] Проверить сессии: login, refresh, logout, silent renew (минимальный smoke в `test`: login через Google/Yandex подтвержден).
+- [ ] Проверить восстановление пароля/верификацию email (ссылки на новом домене).
+
+### 3.4 Брендинг и контент
+
+- [ ] Обновить product name/логотип/метаданные (title, OG tags, favicons).
+- [ ] Обновить юридические страницы, policy, контакты, email footer.
+- [ ] Обновить тексты onboarding/invite/notification под новый бренд.
+- [ ] Убрать упоминания `gismalink.art` из UI и user-facing сообщений.
+
+### 3.5 Операционка и документация
+
+- [ ] Обновить runbooks и smoke scripts на новый домен.
+- [ ] Обновить release notes и rollback инструкции.
+- [ ] Добавить post-cutover чеклист с владельцами шагов.
+- [ ] Обновить monitoring/alerts/dashboards по новым host.
+
+### 3.6 Re-onboarding пользователей (без миграции БД)
+
+- [ ] Подготовить короткую коммуникацию для текущих пользователей (новый домен + как войти).
+- [ ] Подготовить массовые invite/reset ссылки на новый домен.
+- [ ] Добавить migration banner в старом приложении: "Сайт переехал, авторизуйтесь повторно на новом домене".
+- [ ] Зафиксировать окно ручной поддержки входа (например, 14-30 дней).
+- [ ] Для 10 текущих пользователей провести ручную верификацию успешного входа.
+- [ ] Подготовить post-cutover отчет: invited, activated, pending.
+
+### 3.7 Redirect-карта старых адресов на новые
+
+- [ ] Зафиксировать явную таблицу соответствий host/path по правилу: заменить только суффикс `boltotrezka.gismalink.art` на `datowave.com`.
+- [ ] Не создавать новые поддомены при переезде: переносить только те host-ы, которые уже существуют в старом контуре.
+- [ ] Настроить redirect `301/308` на уровне ingress без redirect-loop.
+- [ ] Проверить сохранение пути и query params при redirect.
+- [ ] Настроить redirect для auth-роутов и invite-ссылок (где это безопасно).
+- [ ] Для auth-host в окно совместимости использовать dual-host (без принудительного redirect со старого auth-домена).
+- [ ] Обновить smoke под проверку redirect-карты.
+
+## 4) Decision memo: Keycloak vs Authentik
+
+Критерии для выбора (оценка перед внедрением):
+- OIDC/SAML поддержка и гибкость policy.
+- Сложность эксплуатации (backup, upgrade, observability).
+- UX admin panel для ежедневных задач.
+- Простота интеграции с текущим backend и desktop/web клиентами.
+- Время внедрения и риск в рамках ближайшего релиза.
+
+Практическая рекомендация:
+- Для быстрого переноса не блокировать cutover заменой IdP.
+- Сначала выполнить доменный перенос + re-onboarding без миграции пользователей.
+- Внедрение Keycloak/Authentik делать отдельным этапом после стабилизации.
+
+## 5) Этапы реализации
+
+### Stage 0 - Discovery (1-2 дня)
+
+- [ ] Полный аудит упоминаний `gismalink.art` в коде, конфиге, документации, секретах и CI.
+- [ ] Карта зависимостей: DNS, certs, ingress, auth callbacks, email templates.
+- [ ] Зафиксировать целевой список доменов и поддоменов.
+- [ ] Согласовать cutover window и rollback окно.
+
+### Stage 1 - Test readiness
+
+- [x] Поднять новый домен в `test`.
+- [x] Проверить сценарий входа новых пользователей в `test` (базовый SSO flow на `test.datowave.com` подтвержден через Google/Yandex).
+- [ ] Включить redirect-карту старый host -> новый host в `test`.
+- [x] Прогнать smoke: redirect -> login/registration -> базовый доступ в продукт (частично, по текущему test-сценарию web+auth).
+- [x] Зафиксировать и устранить дефекты (исправлен old auth redirect host `test.auth.gismalink.art` -> `test.auth.datowave.com`).
+
+### Stage 2 - Prod cutover
+
+- [ ] Deploy в `test` из целевой ветки + повторный smoke.
+- [ ] После подтверждения: deploy в `prod` (GitOps only).
+- [ ] Переключить DNS/ingress в `prod` и включить redirect-карту.
+- [ ] Включить migration banner в старом приложении на весь период совместимости.
+- [ ] Рассылать invite/reset для текущих пользователей на новый домен.
+- [ ] Выполнить post-deploy smoke на `prod` (redirect + auth).
+
+### Stage 3 - Stabilization (7-14 дней)
+
+- [ ] Мониторинг ошибок/latency/auth-fail на новом домене.
+- [ ] Мониторинг активации текущих пользователей (invited -> activated).
+- [ ] Контроль redirect chains и корректности соответствий host/path.
+- [ ] Удалить legacy-конфиг `gismalink.art` после окна совместимости.
+
+## 6) Smoke-check (обязательно)
+
+Минимум для `test` и `prod`:
+- [x] `GET /health` web/api на новом домене (`test` подтвержден).
+- [x] Login/logout для новых и re-onboarded пользователей (`test`: вход через Google/Yandex подтвержден).
+- [ ] Проверка redirect со старых адресов на новые и отсутствие циклов.
+- [ ] Проверка сохранения path и query params при redirect.
+- [ ] Проверка migration banner на старом домене и корректной ссылки на новый домен.
+
+## 7) Rollback
+
+- [ ] Быстрый rollback DNS/ingress на старый primary host.
+- [ ] Откат env-конфигов на предыдущий домен.
+- [ ] Откат auth callback URL (если менялись).
+- [ ] Проверка smoke после rollback.
+- [ ] Запись инцидента в release log.
+
+## 8) Критерии готовности (Definition of Done)
+
+- [ ] Для всех текущих пользователей (10) выполнен re-onboarding на новом домене.
+- [ ] Login re-onboarded users работает на новом домене в `test` и `prod`.
+- [ ] Старые адреса корректно перенаправляют на новые (включая `test`).
+- [ ] Redirect не создает циклов и сохраняет path/query.
+- [ ] Runbooks/smoke/scripts актуализированы.
+- [ ] Есть документированный rollback и результаты smoke.
+
+## 9) Вопросы, которые нужно закрыть до Stage 1
+
+1. Подтверждено: финальный домен = `datowave.com`; переезд host-ов делаем по правилу suffix replace.
+2. Подтверждено: окно совместимости старого домена = 30 дней.
+3. Формат re-onboarding: invite only или registration + invite.
+4. Нужен ли ребрендинг email sender/domain одновременно с cutover.
+5. Подтверждено: migration banner в старом UI обязателен на период перехода.
+6. Финальная redirect-карта для ключевых адресов (включая `service.boltotrezka.gismalink.art` -> `service.datowave.com` и `test.service.boltotrezka.gismalink.art` -> `test.service.datowave.com`).
+8. Проверить наличие auth-host в старом контуре и включить его в обязательную redirect-карту (`auth.*`, `test.auth.*`).
+7. Решение по IdP на ближайший релиз: откладываем на следующий этап или делаем пилот в `test`.
+
+## 10) Подтвержденная схема адресов и redirect (v1)
+
+### 10.1 Новые адреса
+
+- `https://datowave.com` -> основной web (app на корневом домене).
+- Сервисные host-ы сохраняют структуру и меняют только доменный суффикс.
+- Test host-ы сохраняют прежний принцип именования `test.<service>.<domain>`.
+
+### 10.2 Redirect-карта старых адресов
+
+- `https://boltotrezka.gismalink.art` -> `https://datowave.com`.
+- `https://test.service.boltotrezka.gismalink.art` -> `https://test.service.datowave.com`.
+- `https://auth.boltotrezka.gismalink.art` -> `https://auth.datowave.com`.
+- `https://test.auth.boltotrezka.gismalink.art` -> `https://test.auth.datowave.com`.
+- Для auth-host в период совместимости: старый и новый host должны обслуживаться параллельно (без обязательного redirect), чтобы не сломать внешние зависимости старых проектов.
+- Если API исторически не был отдельным host (работал path-based), не добавлять `api.datowave.com` и оставить ту же path-схему на новом домене.
+
+Единое правило переезда host:
+- для любого host вида `<prefix>.boltotrezka.gismalink.art` целевой host = `<prefix>.datowave.com`;
+- для корневого host `boltotrezka.gismalink.art` целевой host = `datowave.com`.
+
+Правило redirect:
+- сохранять path и query params;
+- не менять HTTP method на критичных endpoint при необходимости использовать `308`;
+- исключить redirect-loop на уровне ingress.
+
+### 10.3 Подтвержденные DNS A-записи (от 2026-03-24)
+
+- `datowave.com` (`@`) -> `95.165.154.118`
+- `auth.datowave.com` -> `95.165.154.118`
+- `test.datowave.com` -> `95.165.154.118`
+- `test.auth.datowave.com` -> `95.165.154.118`
+- `turn.datowave.com` -> `95.165.154.118`
+- `turn2.datowave.com` -> `46.149.71.86`
+- `turns.datowave.com` -> `95.165.154.118`
+- `www.datowave.com` -> `95.165.154.118`
+
+Примечание:
+- `turn2.datowave.com` намеренно вынесен на отдельный IP `46.149.71.86`.
+
+### 10.4 Smoke DNS/SSL по подтвержденным host
+
+Проверять после применения DNS и после deploy в `test`/`prod`.
+
+1) Проверка резолва (A):
+
+```bash
+for h in datowave.com auth.datowave.com test.datowave.com test.auth.datowave.com turn.datowave.com turn2.datowave.com turns.datowave.com www.datowave.com; do
+  echo "== $h =="
+  dig +short A "$h"
+done
+```
+
+Ожидаемо:
+- `turn2.datowave.com` -> `46.149.71.86`
+- остальные из списка -> `95.165.154.118`
+
+2) Проверка HTTP/HTTPS ответа:
+
+```bash
+for h in datowave.com auth.datowave.com test.datowave.com test.auth.datowave.com www.datowave.com; do
+  echo "== https://$h =="
+  curl -sSI "https://$h" | sed -n '1,8p'
+done
+```
+
+3) Проверка TLS сертификата (CN/SAN/даты):
+
+```bash
+for h in datowave.com auth.datowave.com test.datowave.com test.auth.datowave.com www.datowave.com; do
+  echo "== cert $h =="
+  echo | openssl s_client -servername "$h" -connect "$h:443" 2>/dev/null | openssl x509 -noout -subject -issuer -dates
+done
+```
+
+4) Проверка TURN host:
+
+```bash
+for h in turn.datowave.com turn2.datowave.com turns.datowave.com; do
+  echo "== $h =="
+  dig +short A "$h"
+done
+```
+
+Критерии успеха:
+- DNS совпадает с таблицей 10.3.
+- На web/auth/test host нет TLS ошибок и сертификат валиден.
+- Для старых адресов работает redirect на новые host с сохранением path/query.
+
+Результат проверки DNS (2026-03-24):
+- `datowave.com` -> `95.165.154.118`
+- `auth.datowave.com` -> `95.165.154.118`
+- `test.datowave.com` -> `95.165.154.118`
+- `test.auth.datowave.com` -> `95.165.154.118`
+- `turn.datowave.com` -> `95.165.154.118`
+- `turn2.datowave.com` -> `46.149.71.86`
+- `turns.datowave.com` -> `95.165.154.118`
+- `www.datowave.com` -> `95.165.154.118`
+- Статус: совпадает с таблицей 10.3.
