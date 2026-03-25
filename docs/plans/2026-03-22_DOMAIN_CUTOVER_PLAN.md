@@ -37,12 +37,12 @@ Scope: вынести продукт с поддомена/домена `gismali
 
 ### 3.1 Инфраструктура (DNS/TLS/Ingress)
 
-- [ ] Зарегистрировать и подтвердить новый домен `datowave.com`.
+- [x] Зарегистрировать и подтвердить новый домен `datowave.com`.
 - [x] Применить подтвержденные DNS A-записи для `datowave.com` (см. раздел 10.3). Проверено `dig +short A` 2026-03-24.
 - [ ] Подтвердить, что все остальные требуемые service-host из старого контура покрыты правилом suffix replace и добавлены в DNS.
-- [ ] Выпустить TLS-сертификаты для нового домена и нужных поддоменов.
-- [ ] Обновить ingress-конфиги (Caddy/Nginx) под новый host.
-- [ ] Настроить redirect `301/308` со старого домена на новый (без redirect-loop).
+- [x] Выпустить TLS-сертификаты для нового домена и нужных поддоменов в `test` (`test.datowave.com`, `test.auth.datowave.com`); `prod` host pending.
+- [x] Обновить ingress-конфиги (Caddy/Nginx) под новый host в `test`.
+- [x] Настроить redirect `301/308` со старого домена на новый (без redirect-loop) в `test`.
 - [ ] Обновить HSTS/HTTPS policy под новый домен.
 
 Статус на 2026-03-24:
@@ -54,6 +54,7 @@ Scope: вынести продукт с поддомена/домена `gismali
 - `test.datowave.com` и `test.auth.datowave.com` обслуживаются по TLS, health-check проходит.
 - `test.auth.datowave.com` изолирован в стеке boltorezka (`boltorezka-auth-test-datowave` + отдельная test DB).
 - Исправлен OAuth redirect для `test`: API больше не возвращает `test.auth.gismalink.art`, используется `test.auth.datowave.com`.
+- Redirect `test.boltorezka.gismalink.art` -> `test.datowave.com` отдает `308` и сохраняет query string.
 
 ### 3.2 Приложение (web/api/realtime)
 
