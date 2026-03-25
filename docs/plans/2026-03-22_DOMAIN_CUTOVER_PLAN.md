@@ -100,6 +100,8 @@ Scope: перенести только boltorezka-контур с `boltorezka.gi
 - После успешного callback API выдает JWT с session claims (`sid`, `authMode`, `role`) и поддерживает ротацию через `POST /v1/auth/refresh`, revoke через `POST /v1/auth/logout`.
 - Realtime интегрирован через `GET /v1/auth/ws-ticket` (short-lived ticket для `/v1/realtime/ws`) и `POST /v1/auth/livekit-token` (grant на room join/publish/subscribe).
 - В `test` подтверждены smoke: `smoke:sso`, `smoke:auth:session`, `smoke:auth:cookie-negative`, `smoke:auth:cookie-ws-ticket`.
+- Добавлен runbook настройки Authentik для `test`: `docs/runbooks/AUTHENTIK_TEST_SETUP_RUNBOOK.md`.
+- Добавлен отдельный redirect smoke для `sso/start + sso/logout`: `npm run smoke:sso:routing`.
 
 Draft: Authentik OIDC URI/logout matrix (v1 cutover)
 - Web (`test`):
