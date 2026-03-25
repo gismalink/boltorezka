@@ -83,7 +83,7 @@ Scope: перенести только boltorezka-контур с `boltorezka.gi
 
 ### 3.3 Auth и SSO (Keycloak/Authentik трек)
 
-- [ ] Зафиксировать текущий auth-flow (как есть) и точки интеграции.
+- [x] Зафиксировать текущий auth-flow (как есть) и точки интеграции (`test` подтвержден; `prod` pending).
 - [x] Для `test.auth.datowave.com` использовать отдельный auth instance (`auth-test-datowave`) и отдельную test БД, без редиректа со старого `test.auth.gismalink.art`.
 - [ ] Выбрать стратегию на v1 cutover:
   - [ ] Вариант A: без смены IdP, только доменная миграция.
@@ -93,6 +93,13 @@ Scope: перенести только boltorezka-контур с `boltorezka.gi
 - [ ] Настроить клиенты OIDC (web/desktop) и claims mapping.
 - [x] Проверить сессии: login, refresh, logout, silent renew (минимальный smoke в `test`: login через Google/Yandex подтвержден).
 - [ ] Проверить восстановление пароля/верификацию email (ссылки на новом домене).
+
+Текущий auth-flow и точки интеграции (2026-03-25, `test`):
+- Web/desktop стартуют SSO через `GET /v1/auth/sso/start?provider=<google|yandex>&returnUrl=...` на `test.datowave.com`; redirect идет на `test.auth.datowave.com/auth/<provider>`.
+- API работает в `sso` mode (`GET /v1/auth/mode`), локальная register/login ветка отключена и возвращает `SsoOnly`.
+- После успешного callback API выдает JWT с session claims (`sid`, `authMode`, `role`) и поддерживает ротацию через `POST /v1/auth/refresh`, revoke через `POST /v1/auth/logout`.
+- Realtime интегрирован через `GET /v1/auth/ws-ticket` (short-lived ticket для `/v1/realtime/ws`) и `POST /v1/auth/livekit-token` (grant на room join/publish/subscribe).
+- В `test` подтверждены smoke: `smoke:sso`, `smoke:auth:session`, `smoke:auth:cookie-negative`, `smoke:auth:cookie-ws-ticket`.
 
 ### 3.4 Брендинг и контент
 
