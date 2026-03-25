@@ -207,10 +207,15 @@ Draft: Authentik OIDC clients and claims mapping (v1)
 
 ### Stage 0 - Discovery (1-2 дня)
 
-- [ ] Полный аудит упоминаний `gismalink.art` в коде, конфиге, документации, секретах и CI.
-- [ ] Карта зависимостей: DNS, certs, ingress, auth callbacks.
-- [ ] Зафиксировать целевой список доменов и поддоменов.
-- [ ] Согласовать cutover window и rollback окно.
+- [x] Полный аудит упоминаний `gismalink.art` в коде, конфиге, документации, секретах и CI.
+- [x] Карта зависимостей: DNS, certs, ingress, auth callbacks.
+- [x] Зафиксировать целевой список доменов и поддоменов.
+- [x] Согласовать cutover window и rollback окно.
+
+Статус Stage 0 на 2026-03-26:
+- Выполнен audit active-контента (`apps/`, `infra/`, `scripts/`, `docs/`, `README.md`, `package.json`), обнаружено 223 упоминания legacy-доменов; большая часть в исторических `docs/status/test-results/*` и completed-планах.
+- В рабочих документах и env-примерах обновлены test/prod host примеры на `datowave.com`.
+- Карта target-host и окна совместимости зафиксированы в разделах 9-10 и в re-onboarding playbook.
 
 ### Stage 1 - Test readiness
 

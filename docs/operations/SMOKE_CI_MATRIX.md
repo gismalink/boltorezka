@@ -9,14 +9,14 @@
 | Typecheck | `npm run check:api-types` | Yes |
 | Verify baseline (quick) | `npm run check:quick` | Yes |
 | API smoke | `SMOKE_API=1 npm run check:quick` | Recommended |
-| API+SSO smoke | `SMOKE_API=1 SMOKE_SSO=1 SMOKE_API_URL=https://test.boltorezka.gismalink.art npm run check:quick` | Recommended |
-| Auth session lifecycle smoke (refresh/logout/revoke) | `SMOKE_TEST_BEARER_TOKEN=<sid-token> SMOKE_API_URL=https://test.boltorezka.gismalink.art npm run smoke:auth:session` | Recommended |
-| RNNoise browser smoke (voice settings on/off) | `SMOKE_TEST_BEARER_TOKEN=<token> SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art npm run smoke:web:rnnoise:browser` | Recommended |
+| API+SSO smoke | `SMOKE_API=1 SMOKE_SSO=1 SMOKE_API_URL=https://test.datowave.com npm run check:quick` | Recommended |
+| Auth session lifecycle smoke (refresh/logout/revoke) | `SMOKE_TEST_BEARER_TOKEN=<sid-token> SMOKE_API_URL=https://test.datowave.com npm run smoke:auth:session` | Recommended |
+| RNNoise browser smoke (voice settings on/off) | `SMOKE_TEST_BEARER_TOKEN=<token> SMOKE_WEB_BASE_URL=https://test.datowave.com npm run smoke:web:rnnoise:browser` | Recommended |
 | Desktop foundation smoke (Electron shell) | `npm run desktop:smoke` | Recommended for desktop feature branches |
-| Desktop runtime smoke (Electron + runtime markers) | `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art npm run smoke:desktop:runtime` | Recommended for desktop feature branches |
-| Desktop reconnect smoke (Electron + network flap + reload) | `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art npm run smoke:desktop:reconnect` | Recommended for desktop feature branches |
-| Desktop telemetry smoke (Electron + runtime labels payload) | `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art npm run smoke:desktop:telemetry` | Recommended for desktop feature branches |
-| Required gate (API+SSO+realtime, при наличии токена) | `SMOKE_TEST_BEARER_TOKEN=<token> SMOKE_API_URL=https://test.boltorezka.gismalink.art npm run check:required` | CI / test gate |
+| Desktop runtime smoke (Electron + runtime markers) | `SMOKE_WEB_BASE_URL=https://test.datowave.com npm run smoke:desktop:runtime` | Recommended for desktop feature branches |
+| Desktop reconnect smoke (Electron + network flap + reload) | `SMOKE_WEB_BASE_URL=https://test.datowave.com npm run smoke:desktop:reconnect` | Recommended for desktop feature branches |
+| Desktop telemetry smoke (Electron + runtime labels payload) | `SMOKE_WEB_BASE_URL=https://test.datowave.com npm run smoke:desktop:telemetry` | Recommended for desktop feature branches |
+| Required gate (API+SSO+realtime, при наличии токена) | `SMOKE_TEST_BEARER_TOKEN=<token> SMOKE_API_URL=https://test.datowave.com npm run check:required` | CI / test gate |
 
 ## 2) Test deploy gate
 
