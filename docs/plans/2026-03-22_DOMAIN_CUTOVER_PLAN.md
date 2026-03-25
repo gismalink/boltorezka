@@ -87,9 +87,9 @@ Scope: перенести только boltorezka-контур с `boltorezka.gi
 - [x] Для `test.auth.datowave.com` использовать отдельный auth instance (`auth-test-datowave`) и отдельную test БД, без редиректа со старого `test.auth.gismalink.art`.
 - [ ] Выбрать стратегию на v1 cutover:
   - [ ] Вариант A: без смены IdP, только доменная миграция.
-  - [ ] Вариант B: миграция на Authentik.
+  - [x] Вариант B: миграция на Authentik (выбрано 2026-03-25).
   - [ ] Вариант C: миграция на Keycloak.
-- [ ] Для выбранного IdP подготовить redirect URI/logout URI на новый домен.
+- [x] Для выбранного IdP подготовить redirect URI/logout URI на новый домен (draft matrix ниже).
 - [ ] Настроить клиенты OIDC (web/desktop) и claims mapping.
 - [x] Проверить сессии: login, refresh, logout, silent renew (минимальный smoke в `test`: login через Google/Yandex подтвержден).
 - [ ] Проверить восстановление пароля/верификацию email (ссылки на новом домене).
@@ -100,6 +100,38 @@ Scope: перенести только boltorezka-контур с `boltorezka.gi
 - После успешного callback API выдает JWT с session claims (`sid`, `authMode`, `role`) и поддерживает ротацию через `POST /v1/auth/refresh`, revoke через `POST /v1/auth/logout`.
 - Realtime интегрирован через `GET /v1/auth/ws-ticket` (short-lived ticket для `/v1/realtime/ws`) и `POST /v1/auth/livekit-token` (grant на room join/publish/subscribe).
 - В `test` подтверждены smoke: `smoke:sso`, `smoke:auth:session`, `smoke:auth:cookie-negative`, `smoke:auth:cookie-ws-ticket`.
+
+Draft: Authentik OIDC URI/logout matrix (v1 cutover)
+- Web (`test`):
+  - Redirect URI: `https://test.auth.datowave.com/auth/callback`
+  - Post logout redirect URI: `https://test.datowave.com/`
+- Web (`prod`):
+  - Redirect URI: `https://auth.datowave.com/auth/callback`
+  - Post logout redirect URI: `https://datowave.com/`
+- Desktop (`test`):
+  - Redirect URI: `boltorezka://auth/callback`
+  - Post logout redirect URI: `https://test.datowave.com/desktop/logout-complete`
+- Desktop (`prod`):
+  - Redirect URI: `boltorezka://auth/callback`
+  - Post logout redirect URI: `https://datowave.com/desktop/logout-complete`
+
+Draft: Authentik OIDC clients and claims mapping (v1)
+- Client `boltorezka-web`:
+  - Grant types: Authorization Code + PKCE.
+  - Redirect URIs: web matrix выше (`test`/`prod`).
+  - Scopes: `openid profile email offline_access`.
+- Client `boltorezka-desktop`:
+  - Grant types: Authorization Code + PKCE.
+  - Redirect URIs: `boltorezka://auth/callback`.
+  - Scopes: `openid profile email offline_access`.
+- Required claims in ID/access token for backend mapping:
+  - `sub` (stable user id), `email`, `email_verified`, `preferred_username`, `name`.
+  - `auth_time`, `sid` для session tracing/logout correlation.
+  - `roles` (или эквивалентная custom claim) для map в локальный `role`.
+- Backend mapping contract:
+  - `authMode` фиксируется как `sso`.
+  - `sid`/`authMode`/`role` продолжают попадать в локальный JWT API после callback.
+  - При отсутствии `roles` применяется default локальная роль (`member`) с явной записью в audit-log.
 
 ### 3.4 Брендинг и контент
 
@@ -218,10 +250,10 @@ Scope: перенести только boltorezka-контур с `boltorezka.gi
 2. Подтверждено: окно совместимости старого домена = 30 дней.
 3. Формат re-onboarding: invite only или registration + invite.
 4. Нужен ли ребрендинг email sender/domain одновременно с cutover.
-5. Подтверждено: migration banner в старом UI обязателен на период перехода.
-6. Финальная redirect-карта для ключевых адресов (включая `service.boltotrezka.gismalink.art` -> `service.datowave.com` и `test.service.boltotrezka.gismalink.art` -> `test.service.datowave.com`).
+5. Подтверждено: стратегия IdP для v1 = Вариант B (Authentik), внедрение через `test` с отдельным smoke перед `prod`.
+6. Подтверждено: migration banner в старом UI обязателен на период перехода.
+7. Финальная redirect-карта для ключевых адресов (включая `service.boltotrezka.gismalink.art` -> `service.datowave.com` и `test.service.boltotrezka.gismalink.art` -> `test.service.datowave.com`).
 8. Проверить наличие auth-host в старом контуре и включить его в обязательную redirect-карту (`auth.*`, `test.auth.*`).
-7. Решение по IdP на ближайший релиз: откладываем на следующий этап или делаем пилот в `test`.
 
 ## 10) Подтвержденная схема адресов и redirect (v1)
 
