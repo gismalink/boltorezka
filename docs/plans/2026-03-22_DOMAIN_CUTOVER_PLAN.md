@@ -145,8 +145,8 @@ Draft: Authentik OIDC clients and claims mapping (v1)
 ### 3.5 Операционка и документация
 
 - [x] Обновить runbooks и smoke scripts на новый домен (`test` подтвержден; `prod` pending).
-- [ ] Обновить release notes и rollback инструкции.
-- [ ] Добавить post-cutover чеклист с владельцами шагов.
+- [x] Обновить release notes и rollback инструкции (runbook template добавлен).
+- [x] Добавить post-cutover чеклист с владельцами шагов.
 - [ ] Обновить monitoring/alerts/dashboards по новым host.
 
 Статус на 2026-03-25 (`test`):
@@ -154,15 +154,19 @@ Draft: Authentik OIDC clients and claims mapping (v1)
 - Обновлены scheduler job env defaults (`chat-orphan-cleanup`, `slo-rolling-gate`) и `scripts/README.md` под новый test host.
 - Обновлены operational runbook/checklist под новый test/auth host: `RUNBOOK_TEST_ROLLOUT_QUICKSTART.md`, `RUNBOOK_TEST_DEPLOY.md`, `workflow-checklist.md`, `PREPROD_CHECKLIST.md`.
 - Дополнительно синхронизированы домены в runtime runbook: `DESKTOP_SLEEP_WAKE_RUNBOOK.md`, `LIVEKIT_TEST_FOUNDATION_RUNBOOK.md`, `DESKTOP_SECURITY_GATE_RUNBOOK.md`.
+- Добавлены domain-cutover шаблоны: `DOMAIN_CUTOVER_RELEASE_ROLLBACK_RUNBOOK.md`, `DOMAIN_CUTOVER_POSTCUTOVER_CHECKLIST.md`.
 
 ### 3.6 Re-onboarding пользователей (без миграции БД)
 
-- [ ] Подготовить короткую коммуникацию для текущих пользователей (новый домен + как войти).
-- [ ] Подготовить массовые invite/reset ссылки на новый домен.
+- [x] Подготовить короткую коммуникацию для текущих пользователей (новый домен + как войти).
+- [x] Подготовить массовые invite/reset ссылки на новый домен (шаблон кампании + валидация ссылок).
 - [ ] Добавить migration banner в старом приложении: "Сайт переехал, авторизуйтесь повторно на новом домене".
-- [ ] Зафиксировать окно ручной поддержки входа (например, 14-30 дней).
+- [x] Зафиксировать окно ручной поддержки входа (30 дней, в re-onboarding playbook).
 - [ ] Для 10 текущих пользователей провести ручную верификацию успешного входа.
 - [ ] Подготовить post-cutover отчет: invited, activated, pending.
+
+Статус на 2026-03-25 (`test`):
+- Добавлен playbook re-onboarding: `DOMAIN_CUTOVER_REONBOARDING_PLAYBOOK.md` (шаблон сообщения, invite/reset campaign template, banner copy, daily tracking template).
 
 ### 3.7 Redirect-карта старых адресов на новые
 
