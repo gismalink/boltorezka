@@ -1,14 +1,41 @@
 // Purpose: Validate reset/verify/invite/auth links use allowed datowave hosts and do not redirect to legacy domains.
 const rawLinks = String(process.env.SMOKE_AUTH_LINK_URLS || "").trim();
+const autoLinksEnabled = String(process.env.SMOKE_AUTH_AUTO_LINKS || "0").trim() === "1";
+const authScope = String(process.env.SMOKE_AUTH_SCOPE || "test").trim().toLowerCase();
+const syntheticToken = String(process.env.SMOKE_AUTH_SYNTHETIC_TOKEN || "smoke-token").trim() || "smoke-token";
+const appBaseUrlRaw = String(process.env.SMOKE_AUTH_APP_BASE_URL || "").trim();
 const allowedHostsRaw = String(process.env.SMOKE_AUTH_ALLOWED_HOSTS || "test.auth.datowave.com,test.datowave.com").trim();
 const allowedStatusesRaw = String(process.env.SMOKE_AUTH_ALLOWED_STATUSES || "200,301,302,303,307,308").trim();
 const maxFetchAttempts = Number(process.env.SMOKE_FETCH_RETRIES || 3);
 const retryDelayMs = Number(process.env.SMOKE_FETCH_RETRY_DELAY_MS || 700);
 const fetchTimeoutMs = Number(process.env.SMOKE_FETCH_TIMEOUT_MS || 15000);
 
+function resolveDefaultAppBaseUrl() {
+  if (authScope === "prod") {
+    return "https://datowave.com";
+  }
+  return "https://test.datowave.com";
+}
+
+function buildSyntheticLinks(baseUrl, token) {
+  const normalizedBase = String(baseUrl).replace(/\/+$/, "");
+  return [
+    `${normalizedBase}/invite/${token}`,
+    `${normalizedBase}/reset-password/${token}`,
+    `${normalizedBase}/verify-email/${token}`
+  ];
+}
+
 function parseLinks(raw) {
   if (!raw) {
-    throw new Error("SMOKE_AUTH_LINK_URLS is required (comma/newline-separated list or JSON array)");
+    if (!autoLinksEnabled) {
+      throw new Error("SMOKE_AUTH_LINK_URLS is required (comma/newline-separated list or JSON array), or set SMOKE_AUTH_AUTO_LINKS=1");
+    }
+
+    const appBaseUrl = appBaseUrlRaw || resolveDefaultAppBaseUrl();
+    const syntheticLinks = buildSyntheticLinks(appBaseUrl, syntheticToken);
+    console.log(`[smoke:auth:links] auto mode: synthetic links from ${appBaseUrl} (scope=${authScope})`);
+    return syntheticLinks;
   }
 
   if (raw.startsWith("[")) {

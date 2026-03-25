@@ -22,7 +22,7 @@ This folder contains operational scripts grouped by purpose.
   - `smoke-web-denied-media.mjs` - denied media state smoke.
   - `smoke-web-denied-media-browser.mjs` - browser denied media smoke.
   - `smoke-web-e2e.sh` - end-to-end browser smoke.
-  - `smoke-auth-link-hosts.mjs` - validate reset/verify/invite links use allowed datowave hosts.
+  - `smoke-auth-link-hosts.mjs` - validate reset/verify/invite links use allowed datowave hosts (manual links or synthetic auto mode).
   - `smoke-auth-bootstrap.sh` - bootstrap test users/tokens for smoke (supports optional third user for 3-way race checks).
 - root scripts:
   - `verify-all.sh` - single local entrypoint for verify + optional smoke toggles.
@@ -49,6 +49,7 @@ This folder contains operational scripts grouped by purpose.
   - `npm run smoke:redirect-map` (default: test redirect cases)
   - `SMOKE_REDIRECT_SCOPE=prod npm run smoke:redirect-map` (prod redirect cases)
   - `SMOKE_AUTH_LINK_URLS='<url1>,<url2>' npm run smoke:auth:links`
+  - `npm run smoke:auth:links:auto` (synthetic invite/reset/verify links on datowave host)
   - `TEST_REF=origin/feature/<name> npm run deploy:test:livekit`
   - `PROD_REF=origin/main npm run deploy:prod`
   - `DESKTOP_REF=origin/feature/<name> DESKTOP_CHANNEL=test DESKTOP_PUBLIC_BASE_URL=https://test.datowave.com npm run deploy:desktop:server`

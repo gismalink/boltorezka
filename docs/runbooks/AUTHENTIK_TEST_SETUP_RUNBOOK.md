@@ -83,6 +83,9 @@ Backend mapping expectations:
 5. Проверка reset/verify/invite ссылок из реальных test-писем:
 - `SMOKE_AUTH_LINK_URLS='<url1>,<url2>' npm run smoke:auth:links`
 
+5a. Быстрый auto precheck без ручного ввода ссылок (synthetic):
+- `npm run smoke:auth:links:auto`
+
 6. Postdeploy пакет (если был rollout):
 - `SMOKE_API_URL=https://test.datowave.com npm run smoke:test:postdeploy`
 
