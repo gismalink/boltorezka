@@ -44,7 +44,7 @@ Scope: перенести только boltorezka-контур с `boltorezka.gi
 - [x] Выпустить TLS-сертификаты для нового домена и нужных поддоменов в `test` (`test.datowave.com`, `test.auth.datowave.com`); `prod` host pending.
 - [x] Обновить ingress-конфиги (Caddy/Nginx) под новый host в `test`.
 - [x] Настроить redirect `301/308` со старого домена на новый (без redirect-loop) в `test`.
-- [ ] Обновить HSTS/HTTPS policy под новый домен.
+- [x] Обновить HSTS/HTTPS policy под новый домен (`test` подтвержден; `prod` при cutover).
 
 Статус на 2026-03-24:
 - DNS A-записи на `datowave.com` и связанные host уже применены и проверены.
@@ -59,8 +59,7 @@ Scope: перенести только boltorezka-контур с `boltorezka.gi
 - Добавлен redirect-only домен `test.datute.ru` -> `test.datowave.com` (`308`, path/query сохраняются).
 - Перепроверка DNS от 2026-03-25: в scope этого плана (`boltorezka` cutover) требуемые host подтверждены; `popn`, `projo` и остальные отдельные проекты не входят в этот перенос.
 - HTTPS policy (test): `http://test.datowave.com` и `http://test.auth.datowave.com` принудительно редиректят на HTTPS (`308`).
-- HSTS policy (test): `Strict-Transport-Security` подтвержден на `test.auth.datowave.com`, но не подтвержден на `test.datowave.com`; пункт 3.1 про HSTS остается открытым до унификации.
-- Повторная проверка после GitOps deploy ingress (2026-03-25): ситуация без изменений — `test.auth.datowave.com` отдает HSTS, `test.datowave.com` HSTS не отдает.
+- HSTS policy (test): `Strict-Transport-Security: max-age=31536000; includeSubDomains` подтвержден на `test.datowave.com` и `test.auth.datowave.com` после перезапуска ingress (`docker compose up -d --force-recreate edge-caddy`).
 
 ### 3.2 Приложение (web/api/realtime)
 
