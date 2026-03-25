@@ -13,9 +13,9 @@
 - Код Boltorezka уже в `main` или нужной feature-ветке.
 - На сервере настроены env для Boltorezka test:
   - `AUTH_MODE=sso`
-  - `AUTH_SSO_BASE_URL=https://test.auth.gismalink.art`
-  - `ALLOWED_RETURN_HOSTS` содержит `test.boltorezka.gismalink.art`
-- DNS `test.boltorezka.gismalink.art` уже указывает на edge.
+  - `AUTH_SSO_BASE_URL=https://test.auth.datowave.com`
+  - `ALLOWED_RETURN_HOSTS` содержит `test.datowave.com`
+- DNS `test.datowave.com` уже указывает на edge.
 - В репозитории на сервере есть:
   - `infra/docker-compose.host.yml`
   - `infra/.env.host` (создан из `infra/.env.host.example`)
@@ -36,7 +36,7 @@
 
 Опционально: включить server-side desktop build+publish в тот же запуск:
 
-- `ssh mac-mini 'cd ~/srv/boltorezka && TEST_REF=origin/main ALLOW_TEST_FROM_MAIN=1 ENABLE_DESKTOP_BUILD=1 DESKTOP_CHANNEL=test DESKTOP_SIGNING_MODE=unsigned DESKTOP_PUBLIC_BASE_URL=https://test.boltorezka.gismalink.art npm run deploy:test:smoke'`
+- `ssh mac-mini 'cd ~/srv/boltorezka && TEST_REF=origin/main ALLOW_TEST_FROM_MAIN=1 ENABLE_DESKTOP_BUILD=1 DESKTOP_CHANNEL=test DESKTOP_SIGNING_MODE=unsigned DESKTOP_PUBLIC_BASE_URL=https://test.datowave.com npm run deploy:test:smoke'`
 
 4) При необходимости повторить post-deploy smoke отдельно:
 
@@ -59,19 +59,19 @@ Desktop update-feed gate (рекомендуется держать включе
 
 1) Обновить smoke users/tokens на сервере:
 
-- `ssh mac-mini 'cd ~/srv/boltorezka && SMOKE_AUTH_COMPOSE_FILE=infra/docker-compose.host.yml SMOKE_AUTH_ENV_FILE=infra/.env.host SMOKE_AUTH_POSTGRES_SERVICE=boltorezka-db-test SMOKE_AUTH_API_SERVICE=boltorezka-api-test SMOKE_API_URL=https://test.boltorezka.gismalink.art bash ./scripts/smoke/smoke-auth-bootstrap.sh'`
+- `ssh mac-mini 'cd ~/srv/boltorezka && SMOKE_AUTH_COMPOSE_FILE=infra/docker-compose.host.yml SMOKE_AUTH_ENV_FILE=infra/.env.host SMOKE_AUTH_POSTGRES_SERVICE=boltorezka-db-test SMOKE_AUTH_API_SERVICE=boltorezka-api-test SMOKE_API_URL=https://test.datowave.com bash ./scripts/smoke/smoke-auth-bootstrap.sh'`
 
 2) Запустить deterministic handoff smoke локально с токеном из серверного env:
 
-- `TOKEN="$(ssh mac-mini "cd ~/srv/boltorezka && set -a && source .deploy/smoke-auth.env && set +a && printf '%s' \"\$SMOKE_TEST_BEARER_TOKEN\"")" && SMOKE_TEST_BEARER_TOKEN="$TOKEN" SMOKE_API_URL=https://test.boltorezka.gismalink.art npm run smoke:desktop:handoff-deterministic`
+- `TOKEN="$(ssh mac-mini "cd ~/srv/boltorezka && set -a && source .deploy/smoke-auth.env && set +a && printf '%s' \"\$SMOKE_TEST_BEARER_TOKEN\"")" && SMOKE_TEST_BEARER_TOKEN="$TOKEN" SMOKE_API_URL=https://test.datowave.com npm run smoke:desktop:handoff-deterministic`
 
 3) При необходимости soak на 20 последовательных циклов:
 
-- `TOKEN="$(ssh mac-mini "cd ~/srv/boltorezka && set -a && source .deploy/smoke-auth.env && set +a && printf '%s' \"\$SMOKE_TEST_BEARER_TOKEN\"")" && SMOKE_TEST_BEARER_TOKEN="$TOKEN" SMOKE_API_URL=https://test.boltorezka.gismalink.art SMOKE_DESKTOP_HANDOFF_SOAK_CYCLES=20 npm run smoke:desktop:handoff:soak`
+- `TOKEN="$(ssh mac-mini "cd ~/srv/boltorezka && set -a && source .deploy/smoke-auth.env && set +a && printf '%s' \"\$SMOKE_TEST_BEARER_TOKEN\"")" && SMOKE_TEST_BEARER_TOKEN="$TOKEN" SMOKE_API_URL=https://test.datowave.com SMOKE_DESKTOP_HANDOFF_SOAK_CYCLES=20 npm run smoke:desktop:handoff:soak`
 
 4) Browser-level soak на трех движках (Chromium/WebKit/Firefox):
 
-- `TOKEN="$(ssh mac-mini "cd ~/srv/boltorezka && set -a && source .deploy/smoke-auth.env && set +a && printf '%s' \"\$SMOKE_TEST_BEARER_TOKEN\"")" && SMOKE_TEST_BEARER_TOKEN="$TOKEN" SMOKE_API_URL=https://test.boltorezka.gismalink.art SMOKE_DESKTOP_HANDOFF_BROWSER_SOAK_CYCLES=20 npm run smoke:desktop:handoff:browser-soak`
+- `TOKEN="$(ssh mac-mini "cd ~/srv/boltorezka && set -a && source .deploy/smoke-auth.env && set +a && printf '%s' \"\$SMOKE_TEST_BEARER_TOKEN\"")" && SMOKE_TEST_BEARER_TOKEN="$TOKEN" SMOKE_API_URL=https://test.datowave.com SMOKE_DESKTOP_HANDOFF_BROWSER_SOAK_CYCLES=20 npm run smoke:desktop:handoff:browser-soak`
 
 Ожидаемый PASS:
 
@@ -86,14 +86,14 @@ Desktop update-feed gate (рекомендуется держать включе
 1) На каждую значимую media-итерацию (test/dev loop):
 
 - Использовать `15-30m` gate:
-  - `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art npm run smoke:desktop:voice-checkpoint:15m`
-  - при необходимости: `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art SMOKE_DESKTOP_STABILITY_DURATION_MS=1800000 npm run smoke:desktop:stability`
+  - `SMOKE_WEB_BASE_URL=https://test.datowave.com npm run smoke:desktop:voice-checkpoint:15m`
+  - при необходимости: `SMOKE_WEB_BASE_URL=https://test.datowave.com SMOKE_DESKTOP_STABILITY_DURATION_MS=1800000 npm run smoke:desktop:stability`
 
 2) `2h` long-run gate выполнять только для standalone packaged desktop клиента
 
 - Условие запуска: post-signing/notarization release candidate.
 - Команда:
-  - `SMOKE_WEB_BASE_URL=https://test.boltorezka.gismalink.art SMOKE_DESKTOP_STABILITY_DURATION_MS=7200000 npm run smoke:desktop:stability`
+  - `SMOKE_WEB_BASE_URL=https://test.datowave.com SMOKE_DESKTOP_STABILITY_DURATION_MS=7200000 npm run smoke:desktop:stability`
 
 3) Для web-hosted desktop shell в активной разработке
 
@@ -116,26 +116,26 @@ Desktop update-feed gate (рекомендуется держать включе
 
 1) Health endpoint:
 
-- `curl -i https://test.boltorezka.gismalink.art/health`
+- `curl -i https://test.datowave.com/health`
 
 2) Auth mode:
 
-- `curl -s https://test.boltorezka.gismalink.art/v1/auth/mode`
+- `curl -s https://test.datowave.com/v1/auth/mode`
 - ожидание: `mode=sso`
 
 3) Local auth disabled:
 
-- `curl -s -X POST https://test.boltorezka.gismalink.art/v1/auth/register -H 'content-type: application/json' -d '{"email":"x@example.com","password":"password123","name":"X"}'`
+- `curl -s -X POST https://test.datowave.com/v1/auth/register -H 'content-type: application/json' -d '{"email":"x@example.com","password":"password123","name":"X"}'`
 - ожидание: `410` / `SsoOnly`
 
 4) SSO redirect endpoint:
 
-- `curl -i 'https://test.boltorezka.gismalink.art/v1/auth/sso/start?provider=google&returnUrl=https://test.boltorezka.gismalink.art/'`
-- ожидание: `302` на `test.auth.gismalink.art`
+- `curl -i 'https://test.datowave.com/v1/auth/sso/start?provider=google&returnUrl=https://test.datowave.com/'`
+- ожидание: `302` на `test.auth.datowave.com`
 
 5) UI smoke:
 
-- открыть `https://test.boltorezka.gismalink.art/`
+- открыть `https://test.datowave.com/`
 - убедиться, что загружается React UI (default path)
 - войти через SSO
 - нажать `Complete SSO Session`
@@ -144,9 +144,9 @@ Desktop update-feed gate (рекомендуется держать включе
 
 6) Desktop update endpoints smoke:
 
-- `curl -sS https://test.boltorezka.gismalink.art/desktop/test/latest.json | head -n 20`
-- `curl -sS https://test.boltorezka.gismalink.art/desktop/test/mac/latest-mac.yml | head -n 20`
-- `curl -I -sS https://test.boltorezka.gismalink.art/desktop/test/mac/Boltorezka-0.2.0-arm64-mac.zip | head -n 8`
+- `curl -sS https://test.datowave.com/desktop/test/latest.json | head -n 20`
+- `curl -sS https://test.datowave.com/desktop/test/mac/latest-mac.yml | head -n 20`
+- `curl -I -sS https://test.datowave.com/desktop/test/mac/Boltorezka-0.2.0-arm64-mac.zip | head -n 8`
 
 ## Smoke users (test)
 
@@ -160,7 +160,7 @@ Desktop update-feed gate (рекомендуется держать включе
 
 - Локальный env-файл на сервере после bootstrap: `~/srv/boltorezka/.deploy/smoke-auth.env`
 - Команда bootstrap для 3-way smoke (создаёт 3-го пользователя и token):
-  - `ssh mac-mini 'cd ~/srv/boltorezka && SMOKE_AUTH_COMPOSE_FILE=infra/docker-compose.host.yml SMOKE_AUTH_ENV_FILE=infra/.env.host SMOKE_AUTH_POSTGRES_SERVICE=boltorezka-db-test SMOKE_AUTH_API_SERVICE=boltorezka-api-test SMOKE_API_URL=https://test.boltorezka.gismalink.art SMOKE_AUTH_USER3_EMAIL=smoke-rtc-3@example.test bash ./scripts/smoke/smoke-auth-bootstrap.sh'`
+  - `ssh mac-mini 'cd ~/srv/boltorezka && SMOKE_AUTH_COMPOSE_FILE=infra/docker-compose.host.yml SMOKE_AUTH_ENV_FILE=infra/.env.host SMOKE_AUTH_POSTGRES_SERVICE=boltorezka-db-test SMOKE_AUTH_API_SERVICE=boltorezka-api-test SMOKE_API_URL=https://test.datowave.com SMOKE_AUTH_USER3_EMAIL=smoke-rtc-3@example.test bash ./scripts/smoke/smoke-auth-bootstrap.sh'`
 
 ## Rollback trigger
 
