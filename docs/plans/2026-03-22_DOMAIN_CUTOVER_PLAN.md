@@ -63,12 +63,18 @@ Scope: перенести только boltorezka-контур с `boltorezka.gi
 
 ### 3.2 Приложение (web/api/realtime)
 
-- [ ] Вынести все доменные URL в централизованную конфигурацию.
-- [ ] Переключить frontend URL на `datowave.com` (без app-поддомена), invite URL и deep-link URL на новый домен.
-- [ ] Обновить API CORS/CSP/Origin allowlist.
-- [ ] Обновить cookie domain и проверить cross-subdomain сценарии.
-- [ ] Проверить WS/realtime endpoint на том же типе host, что и до переезда (если раньше было path-based через основной/service host, не вводить новый `api` поддомен).
+- [x] Вынести все доменные URL в централизованную конфигурацию (test подтвержден; prod pending).
+- [x] Переключить frontend URL на `datowave.com` (без app-поддомена), invite URL и deep-link URL на новый домен (test подтвержден; prod pending).
+- [x] Обновить API CORS/CSP/Origin allowlist (test подтвержден; prod pending).
+- [x] Обновить cookie domain и проверить cross-subdomain сценарии (test подтвержден; prod pending).
+- [x] Проверить WS/realtime endpoint на том же типе host, что и до переезда (если раньше было path-based через основной/service host, не вводить новый `api` поддомен) (test подтвержден; prod pending).
 - [ ] Проверить voice/video signaling и media flow после смены origin.
+
+Статус на 2026-03-25 (`test`):
+- Web runtime использует централизованное определение origin/api/ws через `apps/web/src/runtimeOrigin.ts` и `apps/web/src/transportRuntime.ts`.
+- Desktop fallback origin переключен на `https://test.datowave.com` (`test`) и `https://datowave.com` (`prod`).
+- API env для test переведен на новый домен: `CORS_ORIGIN=https://test.datowave.com`, `AUTH_SSO_BASE_URL=https://test.auth.datowave.com`, `ALLOWED_RETURN_HOSTS=test.datowave.com`, `AUTH_SESSION_COOKIE_DOMAIN=.test.datowave.com`.
+- Realtime signaling в test идет через `LIVEKIT_URL=wss://test.datowave.com` (без отдельного `api` поддомена).
 
 ### 3.3 Auth и SSO (Keycloak/Authentik трек)
 

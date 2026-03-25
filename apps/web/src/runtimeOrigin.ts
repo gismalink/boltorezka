@@ -12,9 +12,9 @@ function isDesktopFileRuntime(): boolean {
 function resolveFallbackDesktopOrigin(): string {
   const appVersion = String(import.meta.env.VITE_APP_VERSION || "").trim().toLowerCase();
   if (appVersion.includes("-test")) {
-    return "https://test.boltorezka.gismalink.art";
+    return "https://test.datowave.com";
   }
-  return "https://boltorezka.gismalink.art";
+  return "https://datowave.com";
 }
 
 export function resolvePublicOrigin(): string {
