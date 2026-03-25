@@ -3,7 +3,7 @@
 set -euo pipefail
 
 REPO_DIR="${1:-$PWD}"
-BASE_URL="${SMOKE_API_URL:-https://test.boltorezka.gismalink.art}"
+BASE_URL="${SMOKE_API_URL:-https://test.datowave.com}"
 WEB_BASE_URL="${SMOKE_WEB_BASE_URL:-$BASE_URL}"
 SMOKE_HTTP_RETRIES="${SMOKE_HTTP_RETRIES:-8}"
 SMOKE_HTTP_RETRY_DELAY_SEC="${SMOKE_HTTP_RETRY_DELAY_SEC:-2}"
