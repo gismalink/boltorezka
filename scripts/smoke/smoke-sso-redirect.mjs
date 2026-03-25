@@ -1,5 +1,5 @@
 // Purpose: Validate SSO redirect contract and provider routing from auth start endpoint.
-const baseUrl = (process.env.SMOKE_API_URL ?? "http://localhost:8080").replace(/\/+$/, "");
+const baseUrl = (process.env.SMOKE_API_URL ?? "https://test.datowave.com").replace(/\/+$/, "");
 const provider = (process.env.SSO_PROVIDER ?? "google").toLowerCase();
 const fetchTimeoutMs = Number(process.env.SMOKE_FETCH_TIMEOUT_MS || 15000);
 const maxFetchAttempts = Number(process.env.SMOKE_FETCH_RETRIES || 3);
