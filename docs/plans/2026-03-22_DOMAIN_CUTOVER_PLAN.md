@@ -180,14 +180,15 @@ Draft: Authentik OIDC clients and claims mapping (v1)
 - [x] Не создавать новые поддомены при переезде: переносить только те host-ы, которые уже существуют в старом контуре (правило зафиксировано в разделе 10.2).
 - [x] Настроить redirect `301/308` на уровне ingress без redirect-loop (`test`: подтверждено для `test.boltorezka.gismalink.art` и `test.datute.ru`).
 - [x] Проверить сохранение пути и query params при redirect (`test`: подтверждено `npm run smoke:redirect-map`, 2026-03-26).
-- [ ] Настроить redirect для auth-роутов (где это безопасно).
-- [ ] Для auth-host в окно совместимости использовать dual-host (без принудительного redirect со старого auth-домена).
+- [x] Настроить redirect для auth-роутов (где это безопасно): принудительный redirect со старого auth-host не включаем по политике dual-host.
+- [x] Для auth-host в окно совместимости использовать dual-host (без принудительного redirect со старого auth-домена) — подтверждено в `test` (2026-03-26).
 - [x] Обновить smoke под проверку redirect-карты (`npm run smoke:redirect-map`).
 
 Статус на 2026-03-26 (`test`):
 - Добавлен redirect-map smoke: `scripts/smoke/smoke-domain-redirect-map.mjs` + npm команда `smoke:redirect-map`.
 - Добавлена поддержка scope для redirect smoke: `test` (default) и `prod` (`SMOKE_REDIRECT_SCOPE=prod`).
 - Подтверждено выполнение redirect smoke в `test`: `test.boltorezka.gismalink.art -> test.datowave.com` и `test.datute.ru -> test.datowave.com` (`308`, path/query сохранены).
+- Подтвержден dual-host auth в `test`: `test.auth.datowave.com` и `test.auth.gismalink.art` обслуживаются параллельно, оба отдают `302` на Google OAuth без принудительного редиректа старого auth-host.
 
 ## 4) Decision memo: Keycloak vs Authentik
 
@@ -277,7 +278,7 @@ Draft: Authentik OIDC clients and claims mapping (v1)
 5. Подтверждено: стратегия IdP для v1 = Вариант B (Authentik), внедрение через `test` с отдельным smoke перед `prod`.
 6. Подтверждено: для старого домена используется только redirect-only политика.
 7. Финальная redirect-карта для ключевых адресов (включая `service.boltotrezka.gismalink.art` -> `service.datowave.com` и `test.service.boltotrezka.gismalink.art` -> `test.service.datowave.com`).
-8. Проверить наличие auth-host в старом контуре и включить его в обязательную redirect-карту (`auth.*`, `test.auth.*`).
+8. Подтверждено: auth-host в старом контуре присутствует и работает в режиме dual-host без обязательного redirect (`auth.*`, `test.auth.*`).
 
 ## 10) Подтвержденная схема адресов и redirect (v1)
 
