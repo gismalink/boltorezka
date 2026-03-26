@@ -11,6 +11,11 @@ LiveKit full-transition reference: [../plans/2026-03-09_LIVEKIT_FULL_TRANSITION_
 2. В diff нет секретов и `.env`.
 3. Релевантные docs обновлены в том же наборе изменений.
 
+Текущий статус (2026-03-26, domain cutover):
+- feature-ветка `feature/datowave-auth-stack-move` еще не смержена в `main`.
+- test gates по auth/redirect/manual validation закрыты (см. `docs/status/test-results/2026-03-26.md`).
+- Для перехода к `prod` требуется merge в `main` и повторный test smoke уже от `origin/main`.
+
 ## 2) Test env must-pass
 
 1. `https://test.datowave.com/health` отвечает `200` стабильно.
@@ -46,7 +51,7 @@ LiveKit full-transition reference: [../plans/2026-03-09_LIVEKIT_FULL_TRANSITION_
    - `mediaTopologyFirstOk=true`,
    - `reconnectOk=true`.
 3. Проверка user-reported media status regressions выполнена (нет массового `stalled` flapping).
-4. Rollback path на предыдущий stable SHA в `test` проверен как минимум dry-run.
+4. Owner decision по rollback-планированию зафиксирован в актуальном cutover-плане.
 
 ## 3) Runtime и конфигурация
 
@@ -78,7 +83,7 @@ LiveKit full-transition reference: [../plans/2026-03-09_LIVEKIT_FULL_TRANSITION_
 0. Продуктовый gate: подтверждена готовность "похоже на MVP" (MVP-like readiness) по `docs/runbooks/PREPROD_DECISION_PACKAGE.md` (раздел `MVP-like readiness gate`).
 1. Явное подтверждение владельца релиза.
 2. Запись commit SHA и smoke-результата.
-3. План rollback (команда + ответственный).
+3. Ветка `main` содержит целевой SHA, а свежий `deploy:test:smoke` от `origin/main` зафиксирован.
 
 ## 4.1) Merge + post-merge guardrails
 

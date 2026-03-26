@@ -12,6 +12,13 @@
 - Desktop follow-up status (2026-03-17): **NO-GO for next prod desktop promotion** до release-grade signing/notarization evidence.
 - SFU readiness reference: `docs/runbooks/SFU_STAGE4_PROD_READINESS_PACKAGE.md`.
 
+### 1.1 Current domain cutover status (2026-03-26)
+
+- Decision status: **NO-GO (pending merge to `main` + explicit prod approval)**.
+- Актуальная feature-ветка: `feature/datowave-auth-stack-move` (не в `origin/main`).
+- Test evidence: `deploy:test:smoke` PASS + redirect-map PASS + auth dual-host PASS + manual validation (3 accounts) в `docs/status/test-results/2026-03-26.md`.
+- Owner decision: для текущего cutover rollback-планирование в основном плане не ведем; при необходимости rollback для `prod` оформляется отдельным runbook/инцидентом перед выполнением.
+
 ## 2) Scope of evidence
 
 Этот пакет агрегирует:
