@@ -178,9 +178,8 @@ Draft: Authentik OIDC clients and claims mapping (v1)
 
 - [x] Зафиксировать явную таблицу соответствий host/path по правилу: заменить только суффикс `boltotrezka.gismalink.art` на `datowave.com` (см. раздел 10.2).
 - [x] Не создавать новые поддомены при переезде: переносить только те host-ы, которые уже существуют в старом контуре (правило зафиксировано в разделе 10.2).
-- [ ] Настроить redirect `301/308` на уровне ingress без redirect-loop.
 - [x] Настроить redirect `301/308` на уровне ingress без redirect-loop (`test`: подтверждено для `test.boltorezka.gismalink.art` и `test.datute.ru`).
-- [ ] Проверить сохранение пути и query params при redirect.
+- [x] Проверить сохранение пути и query params при redirect (`test`: подтверждено `npm run smoke:redirect-map`, 2026-03-26).
 - [ ] Настроить redirect для auth-роутов (где это безопасно).
 - [ ] Для auth-host в окно совместимости использовать dual-host (без принудительного redirect со старого auth-домена).
 - [x] Обновить smoke под проверку redirect-карты (`npm run smoke:redirect-map`).
@@ -188,6 +187,7 @@ Draft: Authentik OIDC clients and claims mapping (v1)
 Статус на 2026-03-26 (`test`):
 - Добавлен redirect-map smoke: `scripts/smoke/smoke-domain-redirect-map.mjs` + npm команда `smoke:redirect-map`.
 - Добавлена поддержка scope для redirect smoke: `test` (default) и `prod` (`SMOKE_REDIRECT_SCOPE=prod`).
+- Подтверждено выполнение redirect smoke в `test`: `test.boltorezka.gismalink.art -> test.datowave.com` и `test.datute.ru -> test.datowave.com` (`308`, path/query сохранены).
 
 ## 4) Decision memo: Keycloak vs Authentik
 
@@ -221,14 +221,14 @@ Draft: Authentik OIDC clients and claims mapping (v1)
 
 - [x] Поднять новый домен в `test`.
 - [x] Проверить сценарий входа новых пользователей в `test` (базовый SSO flow на `test.datowave.com` подтвержден через Google/Yandex).
-- [ ] Включить redirect-карту старый host -> новый host в `test`.
+- [x] Включить redirect-карту старый host -> новый host в `test`.
 - [x] Прогнать smoke: redirect -> login/registration -> базовый доступ в продукт (частично, по текущему test-сценарию web+auth).
 - [x] Зафиксировать и устранить дефекты (исправлен old auth redirect host `test.auth.gismalink.art` -> `test.auth.datowave.com`).
 
 ### Stage 2 - Prod cutover
 
 - [ ] Gate перед Stage 2: auth/SSO OAuth-only трек в `test` закрыт полностью (Google/Yandex login/refresh/logout + `Complete SSO Session`).
-- [ ] Deploy в `test` из целевой ветки + повторный smoke.
+- [x] Deploy в `test` из целевой ветки + повторный smoke (2026-03-26, `feature/datowave-auth-stack-move`, PASS).
 - [ ] После подтверждения: deploy в `prod` (GitOps only).
 - [ ] Переключить DNS/ingress в `prod` и включить redirect-карту.
 - [ ] Подтвердить redirect-only поведение старого домена в `prod`.
@@ -247,9 +247,9 @@ Draft: Authentik OIDC clients and claims mapping (v1)
 Минимум для `test` и `prod`:
 - [x] `GET /health` web/api на новом домене (`test` подтвержден).
 - [x] Login/logout для новых и re-onboarded пользователей (`test`: вход через Google/Yandex подтвержден).
-- [ ] Проверка redirect со старых адресов на новые и отсутствие циклов.
-- [ ] Проверка сохранения path и query params при redirect.
-- [ ] Проверка redirect-only поведения на старом домене.
+- [x] Проверка redirect со старых адресов на новые и отсутствие циклов (`test`: `smoke:redirect-map` PASS, 2026-03-26).
+- [x] Проверка сохранения path и query params при redirect (`test`: `smoke:redirect-map` PASS, 2026-03-26).
+- [x] Проверка redirect-only поведения на старом домене (`test`: `test.boltorezka.gismalink.art` и `test.datute.ru` -> `test.datowave.com`, `308`).
 
 ## 7) Rollback
 
