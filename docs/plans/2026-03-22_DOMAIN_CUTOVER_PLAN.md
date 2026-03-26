@@ -235,6 +235,7 @@ Draft: Authentik OIDC clients and claims mapping (v1)
 
 - [x] Gate перед Stage 2: auth/SSO OAuth-only трек в `test` закрыт полностью (Google/Yandex login/refresh/logout + `Complete SSO Session`) — подтверждено smoke + manual check (3 аккаунта), 2026-03-26.
 - [x] Deploy в `test` из целевой ветки + повторный smoke (2026-03-26, `feature/datowave-auth-stack-move`, PASS).
+- [x] Post-merge guard: повторный deploy+smoke в `test` от `origin/main` выполнен (2026-03-26, SHA `ccdca40`, PASS).
 - [ ] После подтверждения: deploy в `prod` (GitOps only).
 - [ ] Переключить DNS/ingress в `prod` и включить redirect-карту.
 - [ ] Подтвердить redirect-only поведение старого домена в `prod`.

@@ -12,9 +12,9 @@ LiveKit full-transition reference: [../plans/2026-03-09_LIVEKIT_FULL_TRANSITION_
 3. Релевантные docs обновлены в том же наборе изменений.
 
 Текущий статус (2026-03-26, domain cutover):
-- feature-ветка `feature/datowave-auth-stack-move` еще не смержена в `main`.
+- feature-ветка `feature/datowave-auth-stack-move` смержена в `main`.
 - test gates по auth/redirect/manual validation закрыты (см. `docs/status/test-results/2026-03-26.md`).
-- Для перехода к `prod` требуется merge в `main` и повторный test smoke уже от `origin/main`.
+- Обязательный повторный test smoke от `origin/main` выполнен и зафиксирован (SHA `ccdca40`, PASS).
 
 ## 2) Test env must-pass
 
