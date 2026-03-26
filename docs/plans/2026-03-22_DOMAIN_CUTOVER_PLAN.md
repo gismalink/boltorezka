@@ -259,11 +259,8 @@ Draft: Authentik OIDC clients and claims mapping (v1)
 
 ## 7) Rollback
 
-- [ ] Быстрый rollback DNS/ingress на старый primary host.
-- [ ] Откат env-конфигов на предыдущий домен.
-- [ ] Откат auth callback URL (если менялись).
-- [ ] Проверка smoke после rollback.
-- [ ] Запись инцидента в release log.
+Rollback-планирование в рамках этого документа не ведем (решение владельца релиза от 2026-03-26).
+Если потребуется rollback для `prod`, оформим отдельным runbook/инцидентом перед выполнением.
 
 ## 8) Критерии готовности (Definition of Done)
 
@@ -272,7 +269,6 @@ Draft: Authentik OIDC clients and claims mapping (v1)
 - [ ] Старые адреса корректно перенаправляют на новые (включая `test`).
 - [ ] Redirect не создает циклов и сохраняет path/query.
 - [ ] Runbooks/smoke/scripts актуализированы.
-- [ ] Есть документированный rollback и результаты smoke.
 
 ## 9) Вопросы, которые нужно закрыть до Stage 1
 
