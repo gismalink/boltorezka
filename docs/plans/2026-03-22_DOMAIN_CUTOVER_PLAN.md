@@ -143,7 +143,7 @@ Draft: Authentik OIDC clients and claims mapping (v1)
 
 ### 3.4 Брендинг и контент
 
-- [ ] Обновить product name/логотип/метаданные (title, OG tags, favicons).
+- [ ] Обновить product name/логотип/метаданные (title, OG tags, favicons). Новое название "Dato" ()
 - [ ] Обновить юридические страницы, policy, контакты, email footer.
 - [ ] Обновить тексты onboarding/invite/notification под новый бренд.
 - [ ] Убрать упоминания `gismalink.art` из UI и user-facing сообщений.
