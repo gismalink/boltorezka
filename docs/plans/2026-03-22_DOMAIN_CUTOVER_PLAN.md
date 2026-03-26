@@ -167,12 +167,16 @@ Draft: Authentik OIDC clients and claims mapping (v1)
 - [x] Подготовить OAuth-only коммуникацию для текущих пользователей (новый домен + вход через Google/Yandex).
 - [x] Подтвердить redirect-only политику для старого домена (редирект на уровне ingress, без UI-этапа совместимости).
 - [x] Зафиксировать окно ручной поддержки входа (30 дней, в re-onboarding playbook).
-- [ ] Для 10 текущих пользователей провести ручную верификацию успешного входа.
+- [ ] Для 10 текущих пользователей провести ручную верификацию успешного входа (прогресс: 3/10 подтверждены).
 - [x] Подготовить post-cutover отчет: verified users / failed logins / follow-ups (template).
 
 Статус на 2026-03-25 (`test`):
 - Добавлен playbook re-onboarding: `DOMAIN_CUTOVER_REONBOARDING_PLAYBOOK.md` (OAuth-only сообщение, daily tracking template, redirect-only policy).
 - Добавлен execution kit: `DOMAIN_CUTOVER_EXECUTION_KIT.md` (manual verification checklist, redirect-map validation task, post-cutover report template).
+
+Статус на 2026-03-26 (`test`, manual validation):
+- На `https://test.datowave.com/` подтверждены login/logout в одном окне для 3 аккаунтов без инцидентов.
+- Подтвержден сценарий автоматической заявки и ее прием.
 
 ### 3.7 Redirect-карта старых адресов на новые
 
@@ -228,7 +232,7 @@ Draft: Authentik OIDC clients and claims mapping (v1)
 
 ### Stage 2 - Prod cutover
 
-- [ ] Gate перед Stage 2: auth/SSO OAuth-only трек в `test` закрыт полностью (Google/Yandex login/refresh/logout + `Complete SSO Session`).
+- [x] Gate перед Stage 2: auth/SSO OAuth-only трек в `test` закрыт полностью (Google/Yandex login/refresh/logout + `Complete SSO Session`) — подтверждено smoke + manual check (3 аккаунта), 2026-03-26.
 - [x] Deploy в `test` из целевой ветки + повторный smoke (2026-03-26, `feature/datowave-auth-stack-move`, PASS).
 - [ ] После подтверждения: deploy в `prod` (GitOps only).
 - [ ] Переключить DNS/ingress в `prod` и включить redirect-карту.
