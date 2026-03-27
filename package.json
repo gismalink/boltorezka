@@ -43,6 +43,7 @@
     "smoke:desktop:update-feed": "node ./scripts/smoke/smoke-desktop-update-feed.mjs",
     "smoke:api": "node ./scripts/smoke/smoke-api.mjs",
     "smoke:multiserver": "node ./scripts/smoke/smoke-multiserver-invite-ban.mjs",
+    "smoke:multiserver:age-gate": "bash ./scripts/smoke/smoke-multiserver-age-gate.sh \"${REPO_DIR:-$PWD}\"",
     "smoke:auth:session": "node ./scripts/smoke/smoke-auth-session.mjs",
     "smoke:auth:cookie-mode": "node ./scripts/smoke/smoke-auth-cookie-mode.mjs",
     "smoke:auth:cookie-negative": "node ./scripts/smoke/smoke-auth-cookie-negative.mjs",
