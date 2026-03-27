@@ -128,6 +128,7 @@ Scope: закрыть обязательный юридический миним
 - [x] Smoke: все юридические страницы отдают `200` и корректный контент.
 - [x] Smoke: ссылки в footer/auth ведут на `datowave.com` / `test.datowave.com`.
 - [ ] Smoke: нестрого необходимые cookie до consent не устанавливаются.
+- [x] Smoke: legal-страницы поддерживают RU/EN локализацию и ручной selector языка.
 
 Статус Stage C на 2026-03-27 (`test`):
 - Deploy+smoke от `origin/feature/legal-compliance-stage-b` выполнен успешно.
@@ -136,6 +137,8 @@ Scope: закрыть обязательный юридический миним
 - В test bundle подтверждены legal-ссылки (`/privacy`, `/terms`, `/cookies`, `/contacts`) и текст cookie-баннера: "Мы используем cookie, чтобы сайт работал".
 - Добавлены UX-улучшения legal-страниц: кнопки `Назад` и `В приложение`.
 - Локализованы названия legal-разделов и подписи ссылок на русский язык.
+- Добавлена полноценная legal i18n-поддержка (`ru/en`) с selector языка в правом верхнем углу.
+- Подтверждены RU/EN тексты для legal links и cookie banner после test deploy SHA `fe41271`.
 
 ### Stage D - Rollout (`prod`, только после explicit GO)
 
