@@ -261,6 +261,7 @@ Stage 1 note (2026-03-27):
    - bootstrap запись `bossserver | BossServer | is_default=true`.
 - Реализован базовый `ServerService` и добавлены API routes `POST/GET/PATCH /v1/servers*` (`apps/api/src/services/server-service.ts`, `apps/api/src/routes/servers.ts`).
 - Добавлены middleware `requireServerMembership`, `requireNotServiceBanned`, `requireNotServerBanned` в `apps/api/src/middleware/auth.ts`.
+- Backend foundation-срез задеплоен и провалидирован в `test` через `ALLOW_TEST_FROM_MAIN=1 TEST_REF=origin/main npm run deploy:test:smoke` (SHA `66e1bf0`, PASS; realtime/api/web/auth smoke пакет зелёный).
 
 ### Stage 2 - API + auth integration
 
