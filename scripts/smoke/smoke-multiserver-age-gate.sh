@@ -145,6 +145,36 @@ resolve_operable_server_with_room() {
   resolve_operable_server_id "$fallback_token"
 }
 
+resolve_shared_server_with_room() {
+  local owner_user_id="$1"
+  local second_user_id="$2"
+  local fallback_token="$3"
+  local server_id
+
+  server_id="$(compose exec -T "$POSTGRES_SERVICE" psql -U "$SMOKE_POSTGRES_USER" -d "$SMOKE_POSTGRES_DB" -tAc \
+    "select s.id::text
+     from servers s
+     join server_members sm_owner on sm_owner.server_id = s.id
+     join server_members sm_second on sm_second.server_id = s.id
+     where sm_owner.user_id = '${owner_user_id}'
+       and sm_owner.status = 'active'
+       and sm_owner.role in ('owner','admin')
+       and sm_second.user_id = '${second_user_id}'
+       and sm_second.status = 'active'
+       and exists (
+         select 1 from rooms r where r.server_id = s.id and r.is_archived = false
+       )
+     order by s.is_default desc, s.created_at asc
+     limit 1;" | tr -d '[:space:]')"
+
+  if [[ -n "$server_id" ]]; then
+    printf '%s' "$server_id"
+    return 0
+  fi
+
+  resolve_operable_server_with_room "$owner_user_id" "$fallback_token"
+}
+
 create_session_token() {
   local user_id="$1"
   local role="$2"
@@ -197,44 +227,35 @@ fi
 TOKEN_OWNER="$(create_session_token "$USER_ID" "$USER_ROLE" "$JWT_SECRET_CANDIDATE")"
 TOKEN_SECOND="$(create_session_token "$USER_ID_SECOND" "$USER_ROLE_SECOND" "$JWT_SECRET_CANDIDATE")"
 
-SERVER_ID="$(resolve_operable_server_with_room "$USER_ID" "$TOKEN_OWNER")"
+SERVER_ID="$(resolve_shared_server_with_room "$USER_ID" "$USER_ID_SECOND" "$TOKEN_OWNER")"
 if [[ -z "$SERVER_ID" ]]; then
   echo "[smoke:multiserver:age-gate] cannot resolve operable server id" >&2
   exit 1
 fi
 
-INVITE_STATUS="$(curl -sS -o /tmp/smoke-agegate-invite.json -w '%{http_code}' -X POST -H "Authorization: Bearer $TOKEN_OWNER" -H 'Content-Type: application/json' -d '{"ttlHours":1,"maxUses":3}' "$BASE_URL/v1/servers/$SERVER_ID/invites")"
+SECOND_IS_MEMBER="$(compose exec -T "$POSTGRES_SERVICE" psql -U "$SMOKE_POSTGRES_USER" -d "$SMOKE_POSTGRES_DB" -tAc \
+  "select case when exists (
+     select 1 from server_members sm
+     where sm.server_id = '${SERVER_ID}'
+       and sm.user_id = '${USER_ID_SECOND}'
+       and sm.status = 'active'
+   ) then '1' else '0' end;" | tr -d '[:space:]')"
 
-if [[ "$INVITE_STATUS" == "201" ]]; then
+if [[ "$SECOND_IS_MEMBER" != "1" ]]; then
+  INVITE_STATUS="$(curl -sS -o /tmp/smoke-agegate-invite.json -w '%{http_code}' -X POST -H "Authorization: Bearer $TOKEN_OWNER" -H 'Content-Type: application/json' -d '{"ttlHours":1,"maxUses":3}' "$BASE_URL/v1/servers/$SERVER_ID/invites")"
+
+  if [[ "$INVITE_STATUS" != "201" ]]; then
+    echo "[smoke:multiserver:age-gate] invite create failed: status=$INVITE_STATUS" >&2
+    exit 1
+  fi
+
   INVITE_TOKEN="$(cat /tmp/smoke-agegate-invite.json | json_get 'token')"
   if [[ -z "$INVITE_TOKEN" ]]; then
     echo "[smoke:multiserver:age-gate] invite token missing" >&2
     exit 1
   fi
+
   curl -fsS -X POST -H "Authorization: Bearer $TOKEN_SECOND" "$BASE_URL/v1/invites/$INVITE_TOKEN/accept" >/dev/null
-elif [[ "$INVITE_STATUS" == "409" ]]; then
-  INVITE_ERROR="$(node -e 'const fs=require("fs");try{const d=JSON.parse(fs.readFileSync("/tmp/smoke-agegate-invite.json","utf8"));process.stdout.write(String(d.error||""));}catch{process.stdout.write("");}')"
-  if [[ "$INVITE_ERROR" != "ActiveInviteLimitReached" ]]; then
-    echo "[smoke:multiserver:age-gate] invite create failed: status=$INVITE_STATUS error=$INVITE_ERROR" >&2
-    exit 1
-  fi
-
-  MEMBERS_STATUS="$(curl -sS -o /tmp/smoke-agegate-members.json -w '%{http_code}' -H "Authorization: Bearer $TOKEN_OWNER" "$BASE_URL/v1/servers/$SERVER_ID/members")"
-  if [[ "$MEMBERS_STATUS" != "200" ]]; then
-    echo "[smoke:multiserver:age-gate] invite limit reached and members fetch failed: status=$MEMBERS_STATUS" >&2
-    exit 1
-  fi
-
-  SECOND_IS_MEMBER="$(node -e 'const fs=require("fs");const uid=process.argv[1];const d=JSON.parse(fs.readFileSync("/tmp/smoke-agegate-members.json","utf8"));const list=Array.isArray(d.members)?d.members:[];process.stdout.write(list.some((m)=>String(m.userId||"")===uid)?"1":"0");' "$USER_ID_SECOND")"
-  if [[ "$SECOND_IS_MEMBER" != "1" ]]; then
-    echo "[smoke:multiserver:age-gate] invite limit reached and second user is not server member" >&2
-    exit 1
-  fi
-
-  echo "[smoke:multiserver:age-gate] invite limit reached, continue with existing membership"
-else
-  echo "[smoke:multiserver:age-gate] invite create failed: status=$INVITE_STATUS" >&2
-  exit 1
 fi
 
 ROOM_META="$(compose exec -T "$POSTGRES_SERVICE" psql -U "$SMOKE_POSTGRES_USER" -d "$SMOKE_POSTGRES_DB" -tAc \
