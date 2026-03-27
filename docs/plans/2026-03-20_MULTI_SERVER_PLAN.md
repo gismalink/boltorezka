@@ -264,6 +264,8 @@ Stage 1 note (2026-03-27):
 - Backend foundation-срез задеплоен и провалидирован в `test` через `ALLOW_TEST_FROM_MAIN=1 TEST_REF=origin/main npm run deploy:test:smoke` (SHA `66e1bf0`, PASS; realtime/api/web/auth smoke пакет зелёный).
 - Добавлены `InviteService` и `BanService` (`apps/api/src/services/invite-service.ts`, `apps/api/src/services/ban-service.ts`).
 - Добавлены endpoints: `POST /v1/servers/:serverId/invites`, `POST /v1/invites/:token/accept`, `POST /v1/servers/:serverId/bans`, `DELETE /v1/servers/:serverId/bans/:userId`.
+- Добавлены admin endpoints: `POST /v1/admin/service-bans`, `DELETE /v1/admin/service-bans/:userId`.
+- Stage 1/2 API-срез провалидирован в `test` на feature-ветке: `TEST_REF=origin/feature/multiserver-stage1-services npm run deploy:test:smoke` (SHA `8e46c0d`, PASS).
 
 ### Stage 2 - API + auth integration
 
