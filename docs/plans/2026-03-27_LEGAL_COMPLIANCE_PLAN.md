@@ -75,7 +75,7 @@ Scope: закрыть обязательный юридический миним
 ## 5) Места интеграции в продукте
 
 - [x] Footer web-приложения: ссылки на Privacy / Terms / Cookies / Contacts.
-- [ ] Экраны auth/onboarding: компактные ссылки на Privacy + Terms.
+- [x] Экраны auth/onboarding: компактные ссылки на Privacy + Terms.
 - [ ] Письма/уведомления (если есть ссылки): вести на новый домен `datowave.com`.
 
 ## 5.1) Матрица применимости для Datowave/Boltorezka
