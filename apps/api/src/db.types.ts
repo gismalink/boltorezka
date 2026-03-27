@@ -111,6 +111,37 @@ export type ServerMemberRow = {
   joined_at: string;
 };
 
+export type ServerInviteRow = {
+  id: string;
+  server_id: string;
+  token_hash: string;
+  created_by_user_id: string | null;
+  expires_at: string | null;
+  max_uses: number | null;
+  used_count: number;
+  is_revoked: boolean;
+  created_at: string;
+};
+
+export type ServerBanRow = {
+  id: string;
+  server_id: string;
+  user_id: string;
+  reason: string | null;
+  banned_by_user_id: string | null;
+  expires_at: string | null;
+  created_at: string;
+};
+
+export type ServiceBanRow = {
+  id: string;
+  user_id: string;
+  reason: string | null;
+  banned_by_user_id: string | null;
+  expires_at: string | null;
+  created_at: string;
+};
+
 export type ServerSettingsRow = {
   id: boolean;
   audio_quality: AudioQuality;

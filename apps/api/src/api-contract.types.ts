@@ -141,3 +141,28 @@ export type ServerRenameResponse = {
 export type ServerContext = Pick<ServerRow, "id" | "slug" | "name"> & {
   role: ServerMemberRole;
 };
+
+export type InviteCreateResponse = {
+  inviteUrl: string;
+  token: string;
+  expiresAt: string | null;
+};
+
+export type InviteAcceptResponse = {
+  server: ServerContext;
+};
+
+export type ServerBanResponse = {
+  ban: {
+    id: string;
+    serverId: string;
+    userId: string;
+    reason: string | null;
+    expiresAt: string | null;
+    createdAt: string;
+  };
+};
+
+export type ServerBanRevokeResponse = {
+  revoked: boolean;
+};

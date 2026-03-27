@@ -243,8 +243,8 @@ Stage 0 note (2026-03-21): design-пакет закрыт в рамках это
 
 - [x] Миграции БД.
 - [x] `ServerService` (create/list/get/rename).
-- [ ] `InviteService` (create/accept/revoke).
-- [ ] `BanService` (server/service ban apply/revoke/check).
+- [x] `InviteService` (create/accept/revoke).
+- [x] `BanService` (server/service ban apply/revoke/check).
 - [x] Middleware `requireServerMembership`.
 - [x] Middleware `requireNotServiceBanned` и `requireNotServerBanned`.
 - [ ] Идемпотентность чувствительных операций (транзакции, уникальные индексы, race-safe path).
@@ -262,10 +262,12 @@ Stage 1 note (2026-03-27):
 - Реализован базовый `ServerService` и добавлены API routes `POST/GET/PATCH /v1/servers*` (`apps/api/src/services/server-service.ts`, `apps/api/src/routes/servers.ts`).
 - Добавлены middleware `requireServerMembership`, `requireNotServiceBanned`, `requireNotServerBanned` в `apps/api/src/middleware/auth.ts`.
 - Backend foundation-срез задеплоен и провалидирован в `test` через `ALLOW_TEST_FROM_MAIN=1 TEST_REF=origin/main npm run deploy:test:smoke` (SHA `66e1bf0`, PASS; realtime/api/web/auth smoke пакет зелёный).
+- Добавлены `InviteService` и `BanService` (`apps/api/src/services/invite-service.ts`, `apps/api/src/services/ban-service.ts`).
+- Добавлены endpoints: `POST /v1/servers/:serverId/invites`, `POST /v1/invites/:token/accept`, `POST /v1/servers/:serverId/bans`, `DELETE /v1/servers/:serverId/bans/:userId`.
 
 ### Stage 2 - API + auth integration
 
-- [ ] Эндпоинты `/v1/servers*` и `/v1/invites/:token/accept`.
+- [x] Эндпоинты `/v1/servers*` и `/v1/invites/:token/accept`.
 - [ ] Эндпоинты серверных/глобальных банов.
 - [ ] Эндпоинты `GET /v1/admin/servers` и `GET /v1/admin/servers/:serverId/overview`.
 - [ ] Проверка ролей и аудит-логи чувствительных действий.
