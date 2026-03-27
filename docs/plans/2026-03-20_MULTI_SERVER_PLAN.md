@@ -279,7 +279,7 @@ Stage 1 note (2026-03-27):
 - [x] Проверка ролей и аудит-логи чувствительных действий.
 - [x] Ограничение rate limit для invite create/accept.
 - [x] Ограничение количества активных invite ссылок на сервер.
-- [ ] Интеграция с legal Stage E: server-aware код ошибки для 18+ доступа (например, `AgeVerificationRequired`) и аудит age-confirm событий в контексте `server_id`.
+- [x] Интеграция с legal Stage E: server-aware код ошибки для 18+ доступа (например, `AgeVerificationRequired`) и аудит age-confirm событий в контексте `server_id`.
 
 Stage 2 note (2026-03-27):
 - Добавлены admin endpoints `GET /v1/admin/servers` и `GET /v1/admin/servers/:serverId/overview` в `apps/api/src/routes/admin.ts`.
@@ -293,11 +293,20 @@ Stage 2 note (2026-03-27):
    - `POST /v1/servers/:serverId/invites`: `20` запросов/`60s` на субъекта.
    - `POST /v1/invites/:token/accept`: `30` запросов/`60s` на субъекта.
 - Добавлен лимит активных invite ссылок на сервер в `InviteService` (`SERVER_ACTIVE_INVITES_LIMIT`, default `20`) с ошибкой `ActiveInviteLimitReached` (`409`).
+- Добавлена миграция `apps/api/migrations/0008_server_age_confirmations.sql` и сервис `apps/api/src/services/age-verification-service.ts`.
+- Добавлены endpoints age-confirm в server-контексте:
+   - `GET /v1/servers/:serverId/age-confirm` (status)
+   - `POST /v1/servers/:serverId/age-confirm` (confirm + audit `server.age_confirmed`).
+- Добавлен server-aware age-gate (`AgeVerificationRequired`) для NSFW-путей:
+   - `GET /v1/rooms/:slug/messages`
+   - `POST /v1/chat/uploads/init`
+   - WS room join/chat (`realtime.ts`, `realtime-chat.ts`).
+- Изменения провалидированы в `test` на feature-ветке через `TEST_REF=origin/feature/multiserver-stage1-services SMOKE_MULTISERVER=1 npm run deploy:test:smoke` (SHA `02b73aa`, PASS).
 
 ### Stage 3 - Frontend integration
 
 - [ ] Server switcher + current server context.
-- [ ] Header `Bolto // ServerName`.
+- [ ] Header `Dato // ServerName`.
 - [ ] Screen: Create server.
 - [ ] Screen: Members + Invite link.
 - [ ] Empty state / onboarding "Создать первый сервер".
@@ -354,7 +363,7 @@ Stage 2 note (2026-03-27):
 
 - Пользователь может создать сервер и сразу стать `owner`.
 - Пользователь видит список своих серверов и переключается между ними.
-- В шапке показывается `Bolto // ServerName`.
+- В шапке показывается `Dato // ServerName`.
 - Инвайт ссылка создается и позволяет вступить на сервер.
 - Раздельные баны работают корректно: `server_ban` и `service_ban`.
 - Суперадмин имеет два рабочих контура: `Product Management` и `Server Management`.
@@ -366,6 +375,6 @@ Stage 2 note (2026-03-27):
 
 1. Владелец `BossServer` в проде: пользователь `gismalink@gmail.com`.
 2. Лимит серверов на пользователя в v1: 1 бесплатный сервер.
-3. Переименование сервера в v1: разрешено любому участнику сервера.
+3. Переименование сервера в v1: Только владелец сервере.
 4. Публичного каталога серверов нет: вход только по invite; при этом в админке суперадмина нужен список всех серверов.
 5. Удаление сервера: нужно поддержать, приоритет можно отложить на следующий этап после базового rollout.
