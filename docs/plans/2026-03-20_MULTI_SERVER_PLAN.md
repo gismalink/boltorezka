@@ -305,12 +305,20 @@ Stage 2 note (2026-03-27):
 
 ### Stage 3 - Frontend integration
 
-- [ ] Server switcher + current server context.
-- [ ] Header `Dato // ServerName`.
+- [x] Server switcher + current server context.
+- [x] Header `Dato // ServerName`.
 - [ ] Screen: Create server.
 - [ ] Screen: Members + Invite link.
 - [ ] Empty state / onboarding "Создать первый сервер".
 - [ ] Админка суперадмина: `Product Management` + `Server Management`.
+
+Stage 3 note (2026-03-28):
+- В `apps/web/src/api.ts` добавлен клиентский вызов `GET /v1/servers`.
+- В `apps/web/src/App.tsx` добавлены state `servers/currentServerId` + восстановление выбора сервера из localStorage (`boltorezka_current_server_id`).
+- В `apps/web/src/components/AppHeader.tsx` добавлены:
+   - заголовок формата `Dato // ServerName`;
+   - базовый server switcher (select) в desktop header.
+- Изменения провалидированы в `test` на feature-ветке через `TEST_REF=origin/feature/multiserver-stage1-services SMOKE_MULTISERVER=1 npm run deploy:test:smoke` (SHA `6cc4c45`, PASS).
 
 ### Stage 4 - Data cutover
 
