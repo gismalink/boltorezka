@@ -84,6 +84,7 @@ type ServerProfileModalProps = {
   onCopyInviteUrl: () => void;
   onLeaveServer: () => void;
   onRemoveServerMember: (userId: string) => void;
+  onBanServerMember: (userId: string) => void;
   onRefreshTelemetry: () => void;
   onSetServerAudioQuality: (value: AudioQuality) => void;
   onSetServerVideoEffectType: (value: ServerVideoEffectType) => void;
@@ -257,6 +258,7 @@ export function ServerProfileModal({
   onCopyInviteUrl,
   onLeaveServer,
   onRemoveServerMember,
+  onBanServerMember,
   onRefreshTelemetry,
   onSetServerAudioQuality,
   onSetServerVideoEffectType,
@@ -285,9 +287,10 @@ export function ServerProfileModal({
   const totalBanned = adminUsers.filter((item) => item.is_banned).length;
   const showProductManagementTab = canManageServerControlPlane;
   const showServerManagementTab = canManageServerControlPlane;
-  const showLegacyUsersTab = canManageUsers && !canManageServerControlPlane;
+  const showLegacyUsersTab = !canManageServerControlPlane;
   const showServerMembersPanel = serverMenuTab === "users" || serverMenuTab === "server_management";
-  const showAdminUsersPanel = (serverMenuTab === "users" && !canManageServerControlPlane) || serverMenuTab === "product_management";
+  const showAdminUsersPanel = canManageUsers
+    && ((serverMenuTab === "users" && !canManageServerControlPlane) || serverMenuTab === "product_management");
   const rnnoiseProcessSamples = telemetrySummary?.metrics.rnnoise_process_cost_samples ?? 0;
   const rnnoiseProcessAvgMs = rnnoiseProcessSamples > 0
     ? (telemetrySummary?.metrics.rnnoise_process_cost_us_sum ?? 0) / rnnoiseProcessSamples / 1000
@@ -807,13 +810,22 @@ export function ServerProfileModal({
                           {member.userId !== currentUserId
                           && ((currentServerRole === "owner" && member.role !== "owner")
                             || (currentServerRole === "admin" && member.role === "member")) ? (
-                            <button
-                              type="button"
-                              className="secondary"
-                              onClick={() => onRemoveServerMember(member.userId)}
-                            >
-                              {t("server.removeMember")}
-                            </button>
+                            <>
+                              <button
+                                type="button"
+                                className="secondary"
+                                onClick={() => onBanServerMember(member.userId)}
+                              >
+                                {t("server.banMember")}
+                              </button>
+                              <button
+                                type="button"
+                                className="secondary"
+                                onClick={() => onRemoveServerMember(member.userId)}
+                              >
+                                {t("server.removeMember")}
+                              </button>
+                            </>
                           ) : null}
                         </div>
                       </li>

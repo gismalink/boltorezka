@@ -53,6 +53,22 @@ async function ensureUniqueSlug(baseSlug: string): Promise<string> {
   return `${normalizedBase}-${Date.now().toString(36)}`.slice(0, 48);
 }
 
+async function ensureUniqueRoomSlug(client: { query: typeof db.query }, baseSlug: string): Promise<string> {
+  const normalizedBase = baseSlug || "general";
+  let candidate = normalizedBase;
+
+  for (let i = 0; i < 100; i += 1) {
+    const result = await client.query<{ id: string }>("SELECT id FROM rooms WHERE slug = $1 LIMIT 1", [candidate]);
+    if ((result.rowCount || 0) === 0) {
+      return candidate;
+    }
+
+    candidate = `${normalizedBase}-${i + 2}`.slice(0, 48);
+  }
+
+  return `${normalizedBase}-${Date.now().toString(36)}`.slice(0, 48);
+}
+
 async function mapServerByIdForUser(serverId: string, userId: string): Promise<ServerListItem | null> {
   const result = await db.query<ServerListItem>(
     `SELECT
@@ -115,6 +131,24 @@ export async function createServerForUser(input: CreateServerInput): Promise<Ser
       [server.id, ownerUserId]
     );
 
+    const generalRoomSlug = await ensureUniqueRoomSlug(client, "general");
+    const createdRoom = await client.query<{ id: string }>(
+      `INSERT INTO rooms (slug, title, kind, category_id, audio_quality_override, position, is_public, created_by, server_id)
+       VALUES ($1, $2, 'text', NULL, NULL, 0, TRUE, $3, $4)
+       RETURNING id`,
+      [generalRoomSlug, "general", ownerUserId, server.id]
+    );
+
+    const createdRoomId = String(createdRoom.rows[0]?.id || "").trim();
+    if (createdRoomId) {
+      await client.query(
+        `INSERT INTO room_members (room_id, user_id, role)
+         VALUES ($1, $2, 'owner')
+         ON CONFLICT (room_id, user_id) DO NOTHING`,
+        [createdRoomId, ownerUserId]
+      );
+    }
+
     await writeServerAuditEvent({
       client,
       action: "server.created",
@@ -122,7 +156,8 @@ export async function createServerForUser(input: CreateServerInput): Promise<Ser
       actorUserId: ownerUserId,
       meta: {
         slug: server.slug,
-        name: server.name
+        name: server.name,
+        defaultRoomSlug: generalRoomSlug
       }
     });
 

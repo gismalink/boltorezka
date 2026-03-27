@@ -331,6 +331,14 @@ export const api = {
     fetchJson<{ left: boolean }>(withSuffix(endpoints.servers, serverId, "members/me"), token, withJsonBody("DELETE")),
   removeServerMember: (token: string, serverId: string, userId: string) =>
     fetchJson<{ removed: boolean }>(withId(withSuffix(endpoints.servers, serverId, "members"), userId), token, withJsonBody("DELETE")),
+  applyServerBan: (token: string, serverId: string, userId: string, reason?: string) =>
+    fetchJson<{ ban: { id: string; serverId: string; userId: string } }>(
+      withSuffix(endpoints.servers, serverId, "bans"),
+      token,
+      withJsonBody("POST", { userId, ...(reason ? { reason } : {}) })
+    ),
+  revokeServerBan: (token: string, serverId: string, userId: string) =>
+    fetchJson<{ revoked: boolean }>(withId(withSuffix(endpoints.servers, serverId, "bans"), userId), token, withJsonBody("DELETE")),
   createServerInvite: (
     token: string,
     serverId: string,

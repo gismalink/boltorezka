@@ -1252,6 +1252,25 @@ export function App() {
     }
   }, [token, currentServerId, pushToast, t]);
 
+  const handleBanServerMember = useCallback(async (targetUserId: string) => {
+    const tokenValue = String(token || "").trim();
+    const serverId = String(currentServerId || "").trim();
+    const userId = String(targetUserId || "").trim();
+
+    if (!tokenValue || !serverId || !userId) {
+      return;
+    }
+
+    try {
+      await api.applyServerBan(tokenValue, serverId, userId, "manual server moderation");
+      const membersResponse = await api.serverMembers(tokenValue, serverId);
+      setServerMembers(Array.isArray(membersResponse.members) ? membersResponse.members : []);
+      pushToast(t("server.memberBanned"));
+    } catch (error) {
+      pushToast((error as Error).message || t("toast.serverError"));
+    }
+  }, [token, currentServerId, pushToast, t]);
+
   useEffect(() => {
     if (!chatRoomSlug && roomSlug) {
       setChatRoomSlug(roomSlug);
@@ -2209,6 +2228,7 @@ export function App() {
           onCopyInviteUrl: () => void handleCopyInviteUrl(),
           onLeaveServer: () => void handleLeaveCurrentServer(),
           onRemoveServerMember: (userId) => void handleRemoveServerMember(userId),
+          onBanServerMember: (userId) => void handleBanServerMember(userId),
           onRefreshTelemetry: () => void loadTelemetrySummary(),
           onSetServerAudioQuality: (value) => void setServerAudioQualityValue(value),
           onSetServerVideoEffectType: setServerVideoEffectType,

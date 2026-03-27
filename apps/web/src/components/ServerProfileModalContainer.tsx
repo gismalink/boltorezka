@@ -63,6 +63,7 @@ type ServerProfileModalContainerProps = {
     onCopyInviteUrl: ServerProfileModalProps["onCopyInviteUrl"];
     onLeaveServer: ServerProfileModalProps["onLeaveServer"];
     onRemoveServerMember: ServerProfileModalProps["onRemoveServerMember"];
+    onBanServerMember: ServerProfileModalProps["onBanServerMember"];
     onRefreshTelemetry: () => void;
     onSetServerAudioQuality: ServerProfileModalProps["onSetServerAudioQuality"];
     onSetServerVideoEffectType: ServerProfileModalProps["onSetServerVideoEffectType"];
@@ -139,6 +140,7 @@ export function ServerProfileModalContainer({ open, t, permissions, state, data,
       onCopyInviteUrl={actions.onCopyInviteUrl}
       onLeaveServer={actions.onLeaveServer}
       onRemoveServerMember={actions.onRemoveServerMember}
+      onBanServerMember={actions.onBanServerMember}
       onRefreshTelemetry={actions.onRefreshTelemetry}
       onSetServerAudioQuality={actions.onSetServerAudioQuality}
       onSetServerVideoEffectType={actions.onSetServerVideoEffectType}
