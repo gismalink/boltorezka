@@ -511,6 +511,22 @@ export async function roomsRoutes(fastify: FastifyInstance) {
       }
 
       const createdBy = String(request.user?.sub || "").trim();
+      const defaultServerResult = await db.query<{ id: string }>(
+        `SELECT id
+         FROM servers
+         WHERE is_default = TRUE
+         ORDER BY created_at ASC
+         LIMIT 1`
+      );
+
+      const defaultServerId = String(defaultServerResult.rows[0]?.id || "").trim();
+      if (!defaultServerId) {
+        return reply.code(500).send({
+          error: "ServerNotConfigured",
+          message: "Default server is not configured"
+        });
+      }
+
       const position = typeof parsed.data.position === "number"
         ? parsed.data.position
         : Number(
@@ -525,10 +541,10 @@ export async function roomsRoutes(fastify: FastifyInstance) {
           );
 
       const created = await db.query<RoomRow>(
-        `INSERT INTO rooms (slug, title, kind, category_id, audio_quality_override, position, is_public, created_by)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        `INSERT INTO rooms (slug, title, kind, category_id, audio_quality_override, position, is_public, created_by, server_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
          RETURNING id, slug, title, kind, audio_quality_override, category_id, position, is_public, created_at`,
-        [slug, title, kind, category_id, audioQualityOverride, position, is_public, createdBy]
+        [slug, title, kind, category_id, audioQualityOverride, position, is_public, createdBy, defaultServerId]
       );
 
       const room = created.rows[0];
