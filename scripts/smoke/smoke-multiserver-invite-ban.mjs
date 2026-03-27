@@ -31,16 +31,59 @@ function assertOk(response, payload, message) {
   }
 }
 
-(async () => {
-  const { response: defaultServerResponse, payload: defaultServerPayload } = await fetchJson("/v1/servers/default", {
-    headers: authHeader(ownerToken)
+async function resolveOperableServerId(token) {
+  const defaultServer = await fetchJson("/v1/servers/default", {
+    headers: authHeader(token)
   });
-  assertOk(defaultServerResponse, defaultServerPayload, "default server request failed");
 
-  const serverId = String(defaultServerPayload?.server?.id || "").trim();
-  if (!serverId) {
-    throw new Error("default server id is missing");
+  if (defaultServer.response.ok) {
+    const id = String(defaultServer.payload?.server?.id || "").trim();
+    if (id) {
+      return id;
+    }
   }
+
+  const serversResponse = await fetchJson("/v1/servers", {
+    headers: authHeader(token)
+  });
+  assertOk(serversResponse.response, serversResponse.payload, "servers list request failed");
+
+  const servers = Array.isArray(serversResponse.payload?.servers)
+    ? serversResponse.payload.servers
+    : [];
+
+  const operable = servers.find((server) => {
+    const role = String(server?.role || "").trim();
+    return role === "owner" || role === "admin";
+  });
+
+  if (operable?.id) {
+    return String(operable.id).trim();
+  }
+
+  const createServer = await fetchJson("/v1/servers", {
+    method: "POST",
+    headers: {
+      ...authHeader(token),
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ name: `SmokeServer-${Date.now().toString(36)}` })
+  });
+
+  if (createServer.response.ok) {
+    const createdId = String(createServer.payload?.server?.id || "").trim();
+    if (createdId) {
+      return createdId;
+    }
+  }
+
+  throw new Error(
+    `cannot resolve operable server: default_status=${defaultServer.response.status} create_status=${createServer.response.status}`
+  );
+}
+
+(async () => {
+  const serverId = await resolveOperableServerId(ownerToken);
 
   const { response: createInviteResponse, payload: createInvitePayload } = await fetchJson(
     `/v1/servers/${encodeURIComponent(serverId)}/invites`,
