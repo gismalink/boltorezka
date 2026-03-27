@@ -896,7 +896,10 @@ else
 fi
 
 if [[ "${SMOKE_MULTISERVER:-0}" == "1" ]]; then
-  if [[ -z "${SMOKE_TEST_BEARER_TOKEN:-}" || -z "${SMOKE_TEST_BEARER_TOKEN_SECOND:-}" ]]; then
+  if ! mint_fresh_smoke_bearer "smoke:multiserver"; then
+    echo "[postdeploy-smoke] smoke:multiserver skipped (failed to mint fresh primary bearer)"
+    MULTISERVER_SMOKE_STATUS="skip"
+  elif [[ -z "${SMOKE_TEST_BEARER_TOKEN:-}" || -z "${SMOKE_TEST_BEARER_TOKEN_SECOND:-}" ]]; then
     echo "[postdeploy-smoke] smoke:multiserver skipped (missing bearer token pair)"
     MULTISERVER_SMOKE_STATUS="skip"
   else
