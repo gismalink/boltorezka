@@ -82,21 +82,75 @@ async function resolveOperableServerId(token) {
   );
 }
 
-(async () => {
-  const serverId = await resolveOperableServerId(ownerToken);
+async function listOperableServerIds(token) {
+  const serversResponse = await fetchJson("/v1/servers", {
+    headers: authHeader(token)
+  });
+  assertOk(serversResponse.response, serversResponse.payload, "servers list request failed");
 
-  const { response: createInviteResponse, payload: createInvitePayload } = await fetchJson(
-    `/v1/servers/${encodeURIComponent(serverId)}/invites`,
-    {
+  const servers = Array.isArray(serversResponse.payload?.servers)
+    ? serversResponse.payload.servers
+    : [];
+
+  return servers
+    .filter((server) => {
+      const role = String(server?.role || "").trim();
+      return role === "owner" || role === "admin";
+    })
+    .map((server) => String(server?.id || "").trim())
+    .filter((id) => id.length > 0);
+}
+
+async function createInviteWithFallback(token, preferredServerId) {
+  const seen = new Set();
+  const candidates = [];
+
+  if (preferredServerId) {
+    candidates.push(preferredServerId);
+    seen.add(preferredServerId);
+  }
+
+  const operableServers = await listOperableServerIds(token);
+  operableServers.forEach((id) => {
+    if (!seen.has(id)) {
+      candidates.push(id);
+      seen.add(id);
+    }
+  });
+
+  let lastError = null;
+
+  for (const serverId of candidates) {
+    const result = await fetchJson(`/v1/servers/${encodeURIComponent(serverId)}/invites`, {
       method: "POST",
       headers: {
-        ...authHeader(ownerToken),
+        ...authHeader(token),
         "Content-Type": "application/json"
       },
       body: JSON.stringify({ ttlHours: 1, maxUses: 2 })
+    });
+
+    if (result.response.ok) {
+      return {
+        serverId,
+        invitePayload: result.payload
+      };
     }
-  );
-  assertOk(createInviteResponse, createInvitePayload, "create invite failed");
+
+    if (result.response.status === 409 && String(result.payload?.error || "") === "ActiveInviteLimitReached") {
+      lastError = `active invite limit reached on server ${serverId}`;
+      continue;
+    }
+
+    throw new Error(`create invite failed: status=${result.response.status} payload=${JSON.stringify(result.payload)}`);
+  }
+
+  throw new Error(lastError || "create invite failed: no operable servers");
+}
+
+(async () => {
+  const preferredServerId = await resolveOperableServerId(ownerToken);
+  const { serverId, invitePayload: createInvitePayload } = await createInviteWithFallback(ownerToken, preferredServerId);
 
   const inviteToken = String(createInvitePayload?.token || "").trim();
   if (!inviteToken) {
