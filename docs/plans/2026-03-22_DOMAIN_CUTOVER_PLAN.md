@@ -261,6 +261,7 @@ Draft: Authentik OIDC clients and claims mapping (v1)
 - `https://datowave.com/` отвечает `200`; `https://www.datowave.com/` редиректит `308` на `https://datowave.com/`.
 - `https://boltorezka.gismalink.art/` переведен в redirect-only (`308` на `https://datowave.com{uri}` с сохранением path/query).
 - Auth dual-host в `prod` подтвержден: `auth.datowave.com` и `auth.gismalink.art` отдают `302` на Google OAuth.
+- OAuth-only коммуникация: сообщение/playbook готовы, фактическая массовая рассылка остается отдельным шагом владельца релиза.
 
 ### Stage 3 - Stabilization (7-14 дней)
 
@@ -290,6 +291,10 @@ Rollback-планирование в рамках этого документа 
 - [x] Старые адреса корректно перенаправляют на новые (включая `test`).
 - [x] Redirect не создает циклов и сохраняет path/query.
 - [x] Runbooks/smoke/scripts актуализированы.
+
+Статус DoD-пункта login re-onboarded (2026-03-27):
+- `test`: подтверждено (smoke + ручная валидация выборки аккаунтов).
+- `prod`: финальное подтверждение остается после завершения коммуникационного окна и контрольного отчета.
 
 ## 9) Вопросы, которые нужно закрыть до Stage 1
 
