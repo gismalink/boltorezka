@@ -134,6 +134,8 @@ Scope: закрыть обязательный юридический миним
 - Подтверждено `200` для: `/privacy`, `/terms`, `/cookies`, `/contacts` на `https://test.datowave.com`.
 - Подтвержден SSO routing без регресса: `/v1/auth/sso/start` -> `https://test.auth.datowave.com/...` (`302`).
 - В test bundle подтверждены legal-ссылки (`/privacy`, `/terms`, `/cookies`, `/contacts`) и текст cookie-баннера: "Мы используем cookie, чтобы сайт работал".
+- Добавлены UX-улучшения legal-страниц: кнопки `Назад` и `В приложение`.
+- Локализованы названия legal-разделов и подписи ссылок на русский язык.
 
 ### Stage D - Rollout (`prod`, только после explicit GO)
 
