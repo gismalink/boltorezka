@@ -146,11 +146,27 @@ async function resolveOperableServerId(token) {
   });
   assertOk(applyServerBan.response, applyServerBan.payload, "apply server ban failed");
 
-  const secondAfterServerBan = await fetchJson("/v1/servers", {
+  const inviteWhileBanned = await fetchJson(`/v1/servers/${encodeURIComponent(serverId)}/invites`, {
+    method: "POST",
+    headers: {
+      ...authHeader(ownerToken),
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ ttlHours: 1, maxUses: 1 })
+  });
+  assertOk(inviteWhileBanned.response, inviteWhileBanned.payload, "create invite while banned failed");
+
+  const inviteWhileBannedToken = String(inviteWhileBanned.payload?.token || "").trim();
+  if (!inviteWhileBannedToken) {
+    throw new Error("invite token while banned is missing");
+  }
+
+  const acceptWhileBanned = await fetchJson(`/v1/invites/${encodeURIComponent(inviteWhileBannedToken)}/accept`, {
+    method: "POST",
     headers: authHeader(secondToken)
   });
-  if (secondAfterServerBan.response.status !== 403) {
-    throw new Error(`expected 403 after server ban, got ${secondAfterServerBan.response.status}`);
+  if (acceptWhileBanned.response.status !== 403) {
+    throw new Error(`expected 403 for invite accept while server banned, got ${acceptWhileBanned.response.status}`);
   }
 
   const revokeServerBan = await fetchJson(
@@ -176,6 +192,16 @@ async function resolveOperableServerId(token) {
   if (!inviteAfterUnbanToken) {
     throw new Error("invite token after unban is missing");
   }
+
+  const secondAcceptFormerBannedInvite = await fetchJson(`/v1/invites/${encodeURIComponent(inviteWhileBannedToken)}/accept`, {
+    method: "POST",
+    headers: authHeader(secondToken)
+  });
+  assertOk(
+    secondAcceptFormerBannedInvite.response,
+    secondAcceptFormerBannedInvite.payload,
+    "second user invite accept for former-banned token failed"
+  );
 
   const secondAcceptAfterUnban = await fetchJson(`/v1/invites/${encodeURIComponent(inviteAfterUnbanToken)}/accept`, {
     method: "POST",
