@@ -80,6 +80,45 @@ json_get() {
   node -e 'const fs=require("fs");const k=process.argv[1];const d=JSON.parse(fs.readFileSync(0,"utf8"));const v=k.split(".").reduce((a,p)=>a&&a[p],d);if(v===undefined||v===null){process.exit(2)};process.stdout.write(String(v));' "$key"
 }
 
+resolve_operable_server_id() {
+  local token="$1"
+  local status body operable create_name created
+
+  status="$(curl -sS -o /tmp/smoke-default-server.json -w '%{http_code}' -H "Authorization: Bearer $token" "$BASE_URL/v1/servers/default")"
+  if [[ "$status" == "200" ]]; then
+    body="$(cat /tmp/smoke-default-server.json)"
+    printf '%s' "$body" | json_get 'server.id'
+    return 0
+  fi
+
+  status="$(curl -sS -o /tmp/smoke-servers-list.json -w '%{http_code}' -H "Authorization: Bearer $token" "$BASE_URL/v1/servers")"
+  if [[ "$status" != "200" ]]; then
+    echo "[smoke:multiserver:age-gate] servers list failed: status=$status" >&2
+    return 1
+  fi
+
+  operable="$(node -e 'const fs=require("fs");const data=JSON.parse(fs.readFileSync(0,"utf8"));const list=Array.isArray(data.servers)?data.servers:[];const item=list.find((s)=>String(s?.role||"")==="owner"||String(s?.role||"")==="admin");if(item?.id){process.stdout.write(String(item.id));}' < /tmp/smoke-servers-list.json)"
+  if [[ -n "$operable" ]]; then
+    printf '%s' "$operable"
+    return 0
+  fi
+
+  create_name="SmokeAgeGate-$(date +%s)"
+  status="$(curl -sS -o /tmp/smoke-create-server.json -w '%{http_code}' -X POST -H "Authorization: Bearer $token" -H 'Content-Type: application/json' -d "{\"name\":\"$create_name\"}" "$BASE_URL/v1/servers")"
+  if [[ "$status" != "201" ]]; then
+    echo "[smoke:multiserver:age-gate] create server failed: status=$status" >&2
+    return 1
+  fi
+
+  created="$(cat /tmp/smoke-create-server.json | json_get 'server.id')"
+  if [[ -z "$created" ]]; then
+    echo "[smoke:multiserver:age-gate] created server id is empty" >&2
+    return 1
+  fi
+
+  printf '%s' "$created"
+}
+
 create_session_token() {
   local user_id="$1"
   local role="$2"
@@ -132,10 +171,9 @@ fi
 TOKEN_OWNER="$(create_session_token "$USER_ID" "$USER_ROLE" "$JWT_SECRET_CANDIDATE")"
 TOKEN_SECOND="$(create_session_token "$USER_ID_SECOND" "$USER_ROLE_SECOND" "$JWT_SECRET_CANDIDATE")"
 
-DEFAULT_SERVER_JSON="$(curl -fsS -H "Authorization: Bearer $TOKEN_OWNER" "$BASE_URL/v1/servers/default")"
-SERVER_ID="$(printf '%s' "$DEFAULT_SERVER_JSON" | json_get 'server.id')"
+SERVER_ID="$(resolve_operable_server_id "$TOKEN_OWNER")"
 if [[ -z "$SERVER_ID" ]]; then
-  echo "[smoke:multiserver:age-gate] cannot resolve default server id" >&2
+  echo "[smoke:multiserver:age-gate] cannot resolve operable server id" >&2
   exit 1
 fi
 
