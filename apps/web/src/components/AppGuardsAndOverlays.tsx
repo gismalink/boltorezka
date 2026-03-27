@@ -1,4 +1,9 @@
 import type { UiTheme } from "../domain";
+import { LegalLinks } from "./LegalLinks";
+
+function detectUiLang(): "ru" | "en" {
+  return document.documentElement.lang === "en" ? "en" : "ru";
+}
 
 type Translate = (key: string) => string;
 
@@ -145,6 +150,8 @@ export function RemoteAudioAutoplayBanner({ t }: { t: Translate }) {
 }
 
 export function GuestLoginGate({ t, onBeginGoogleSso }: { t: Translate; onBeginGoogleSso: () => void }) {
+  const lang = detectUiLang();
+
   return (
     <section className="grid h-full min-h-0 place-items-center p-2">
       <div className="card w-full max-w-xl p-8 text-center">
@@ -157,6 +164,9 @@ export function GuestLoginGate({ t, onBeginGoogleSso }: { t: Translate; onBeginG
         >
           {t("guest.loginCta")}
         </button>
+        <div className="mt-5 border-t border-white/10 pt-3">
+          <LegalLinks compact lang={lang} />
+        </div>
       </div>
     </section>
   );
@@ -198,6 +208,8 @@ export function FirstRunIntroOverlay({
   profileSaving: boolean;
   onContinue: () => void;
 }) {
+  const lang = detectUiLang();
+
   return (
     <div className="voice-preferences-overlay fixed inset-0 z-[305] grid place-items-center p-4" role="dialog" aria-modal="true" aria-live="polite">
       <section className="card voice-preferences-modal w-full max-w-[620px] !h-auto !max-h-[90vh] overflow-auto p-6">
@@ -241,6 +253,10 @@ export function FirstRunIntroOverlay({
         >
           {profileSaving ? t("settings.saving") : t("intro.continueCta")}
         </button>
+
+        <div className="mt-4 border-t border-white/10 pt-3">
+          <LegalLinks compact lang={lang} />
+        </div>
       </section>
     </div>
   );
