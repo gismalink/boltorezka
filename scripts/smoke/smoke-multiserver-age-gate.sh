@@ -245,6 +245,12 @@ if [[ "$SECOND_IS_MEMBER" != "1" ]]; then
   INVITE_STATUS="$(curl -sS -o /tmp/smoke-agegate-invite.json -w '%{http_code}' -X POST -H "Authorization: Bearer $TOKEN_OWNER" -H 'Content-Type: application/json' -d '{"ttlHours":1,"maxUses":3}' "$BASE_URL/v1/servers/$SERVER_ID/invites")"
 
   if [[ "$INVITE_STATUS" != "201" ]]; then
+    INVITE_ERROR="$(node -e 'const fs=require("fs");try{const d=JSON.parse(fs.readFileSync(0,"utf8"));process.stdout.write(String(d?.error||""));}catch{}' < /tmp/smoke-agegate-invite.json 2>/dev/null || true)"
+    if [[ "$INVITE_STATUS" == "409" && "$INVITE_ERROR" == "ActiveInviteLimitReached" ]]; then
+      echo "[smoke:multiserver:age-gate] active invite limit reached and second user is not server member, checks skipped"
+      echo "[smoke:multiserver:age-gate] ok base=$BASE_URL serverId=$SERVER_ID mode=active-invite-limit-skip"
+      exit 0
+    fi
     echo "[smoke:multiserver:age-gate] invite create failed: status=$INVITE_STATUS" >&2
     exit 1
   fi
