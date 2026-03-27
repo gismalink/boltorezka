@@ -281,6 +281,12 @@ Stage 1 note (2026-03-27):
 - [ ] Ограничение количества активных invite ссылок на сервер.
 - [ ] Интеграция с legal Stage E: server-aware код ошибки для 18+ доступа (например, `AgeVerificationRequired`) и аудит age-confirm событий в контексте `server_id`.
 
+Stage 2 note (2026-03-27):
+- Добавлены admin endpoints `GET /v1/admin/servers` и `GET /v1/admin/servers/:serverId/overview` в `apps/api/src/routes/admin.ts`.
+- `/v1/admin/servers` отдает server list с агрегатами (`membersCount`, `roomsCount`, `messagesCount`, `activeServerBansCount`).
+- `/v1/admin/servers/:serverId/overview` отдает детальный срез метрик по членству/комнатам/сообщениям/invites/bans.
+- Изменения провалидированы в `test` на feature-ветке через `TEST_REF=origin/feature/multiserver-stage1-services SMOKE_MULTISERVER=1 npm run deploy:test:smoke` (SHA `e01b1d9`, PASS).
+
 ### Stage 3 - Frontend integration
 
 - [ ] Server switcher + current server context.
