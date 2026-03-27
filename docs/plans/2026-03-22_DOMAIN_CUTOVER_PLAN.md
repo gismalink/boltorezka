@@ -144,8 +144,8 @@ Draft: Authentik OIDC clients and claims mapping (v1)
 ### 3.4 Брендинг и контент
 
 - [ ] Обновить product name/логотип/метаданные (title, OG tags, favicons). Новое название "Dato" ()
-- [ ] Обновить юридические страницы, policy, контакты, email footer.
-- [ ] Добавить cookie-consent баннер в web (классический push с кнопкой `Ок` и текстом: "Мы используем cookie, чтобы сайт работал").
+- [x] Обновить юридические страницы, policy, контакты, email footer (в рамках отдельного legal-плана).
+- [x] Добавить cookie-consent баннер в web (классический push с кнопкой `Ок` и текстом: "Мы используем cookie, чтобы сайт работал").
 - [ ] Обновить тексты onboarding/invite/notification под новый бренд.
 - [ ] Убрать упоминания `gismalink.art` из UI и user-facing сообщений.
 
@@ -255,7 +255,7 @@ Draft: Authentik OIDC clients and claims mapping (v1)
 
 - [ ] Мониторинг ошибок/latency/auth-fail на новом домене.
 - [ ] Мониторинг успешных OAuth логинов и отказов (`login_ok`/`login_fail`).
-- [ ] Контроль redirect chains и корректности соответствий host/path.
+- [x] Контроль redirect chains и корректности соответствий host/path (через регулярный `smoke:redirect-map` в `test`).
 - [ ] Удалить legacy-конфиг `gismalink.art` после окна совместимости.
 
 ## 6) Smoke-check (обязательно)
@@ -278,7 +278,7 @@ Rollback-планирование в рамках этого документа 
 - [ ] Login re-onboarded users работает на новом домене в `test` и `prod`.
 - [x] Старые адреса корректно перенаправляют на новые (включая `test`).
 - [x] Redirect не создает циклов и сохраняет path/query.
-- [ ] Runbooks/smoke/scripts актуализированы.
+- [x] Runbooks/smoke/scripts актуализированы.
 
 ## 9) Вопросы, которые нужно закрыть до Stage 1
 
