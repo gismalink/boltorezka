@@ -309,7 +309,7 @@ Stage 2 note (2026-03-27):
 - [x] Header `Dato // ServerName`.
 - [x] Screen: Create server.
 - [x] Screen: Members + Invite link.
-- [ ] Empty state / onboarding "Создать первый сервер".
+- [x] Empty state / onboarding "Создать первый сервер".
 - [ ] Админка суперадмина: `Product Management` + `Server Management`.
 
 Stage 3 note (2026-03-28):
@@ -332,6 +332,11 @@ Stage 3 note (2026-03-28):
    - генерация invite (`POST /v1/servers/:serverId/invites`),
    - копирование последней сгенерированной ссылки.
 - Изменения провалидированы в `test` на feature-ветке через `TEST_REF=origin/feature/multiserver-stage1-services SMOKE_MULTISERVER=1 npm run deploy:test:smoke` (SHA `5591081`, PASS).
+- Добавлен onboarding empty state для пользователей без серверов:
+   - guard-компонент `EmptyServerOnboarding` в `apps/web/src/components/AppGuardsAndOverlays.tsx`,
+   - интеграция в `apps/web/src/App.tsx` (рендер вместо workspace при `servers.length === 0` после загрузки),
+   - CTA `Создать первый сервер` использует уже существующий create-server flow.
+- Изменения провалидированы в `test` на feature-ветке через `TEST_REF=origin/feature/multiserver-stage1-services SMOKE_MULTISERVER=1 npm run deploy:test:smoke` (SHA `261a377`, PASS).
 
 ### Stage 4 - Data cutover
 
