@@ -147,6 +147,14 @@ export type ServerMembersResponse = {
   members: ServerMemberItem[];
 };
 
+export type ServerMemberLeaveResponse = {
+  left: boolean;
+};
+
+export type ServerMemberRemoveResponse = {
+  removed: boolean;
+};
+
 export type ServerRenameResponse = {
   server: ServerListItem;
 };

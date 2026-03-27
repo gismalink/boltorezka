@@ -122,6 +122,10 @@ const CHAT_TYPING_TTL_MS = 4500;
 const CHAT_TYPING_PING_INTERVAL_MS = 1800;
 const COOKIE_CONSENT_KEY = "boltorezka_cookie_consent_v1";
 const CURRENT_SERVER_ID_STORAGE_KEY = "boltorezka_current_server_id";
+const getRoomSlugStorageKey = (serverId: string) => {
+  const normalizedServerId = String(serverId || "").trim();
+  return normalizedServerId ? `${ROOM_SLUG_STORAGE_KEY}:${normalizedServerId}` : ROOM_SLUG_STORAGE_KEY;
+};
 
 // App is an orchestration boundary: it wires hooks/controllers and passes state to UI.
 // Parsing, transport rules, and feature workflows should live in dedicated hooks/modules.
@@ -132,14 +136,8 @@ export function App() {
   const [rooms, setRooms] = useState<Room[]>([]);
   const [roomsTree, setRoomsTree] = useState<RoomsTreeResponse | null>(null);
   const [archivedRooms, setArchivedRooms] = useState<Room[]>([]);
-  const [roomSlug, setRoomSlug] = useState(() => {
-    const stored = String(localStorage.getItem(ROOM_SLUG_STORAGE_KEY) || "").trim();
-    return stored;
-  });
-  const [chatRoomSlug, setChatRoomSlug] = useState(() => {
-    const stored = String(localStorage.getItem(ROOM_SLUG_STORAGE_KEY) || "").trim();
-    return stored;
-  });
+  const [roomSlug, setRoomSlug] = useState("");
+  const [chatRoomSlug, setChatRoomSlug] = useState("");
   const [showAppUpdatedOverlay, setShowAppUpdatedOverlay] = useState(
     () => sessionStorage.getItem(VERSION_UPDATE_PENDING_KEY) === "1"
   );
@@ -334,6 +332,7 @@ export function App() {
   } = useAppUiState();
   const { toasts, pushToast } = useToastQueue();
   const realtimeClientRef = useRef<RealtimeClient | null>(null);
+  const currentServerIdRef = useRef(currentServerId);
   const roomSlugRef = useRef(roomSlug);
   const lastRoomSlugForScrollRef = useRef(chatRoomSlug);
   const lastMessageIdRef = useRef<string | null>(null);
@@ -346,6 +345,10 @@ export function App() {
   const audioOutputAnchorRef = useRef<HTMLDivElement>(null);
   const voiceSettingsAnchorRef = useRef<HTMLDivElement>(null);
   const userSettingsRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    currentServerIdRef.current = currentServerId;
+  }, [currentServerId]);
 
   const canCreateRooms = user?.role === "admin" || user?.role === "super_admin";
   const canManageUsers = canCreateRooms;
@@ -770,7 +773,8 @@ export function App() {
         setRooms,
         setRoomsTree,
         setArchivedRooms,
-        setAdminUsers
+        setAdminUsers,
+        getCurrentServerId: () => currentServerIdRef.current
       }),
     [pushLog, pushToast, sendWsEvent]
   );
@@ -909,13 +913,36 @@ export function App() {
   }, [chatRoomSlug]);
 
   useEffect(() => {
-    if (roomSlug) {
-      localStorage.setItem(ROOM_SLUG_STORAGE_KEY, roomSlug);
+    const serverId = String(currentServerId || "").trim();
+    if (!serverId) {
       return;
     }
 
-    localStorage.removeItem(ROOM_SLUG_STORAGE_KEY);
-  }, [roomSlug]);
+    const storageKey = getRoomSlugStorageKey(serverId);
+    if (roomSlug) {
+      localStorage.setItem(storageKey, roomSlug);
+      return;
+    }
+
+    localStorage.removeItem(storageKey);
+  }, [currentServerId, roomSlug]);
+
+  useEffect(() => {
+    const serverId = String(currentServerId || "").trim();
+    if (!serverId) {
+      setRoomSlug("");
+      setChatRoomSlug("");
+      return;
+    }
+
+    const scopedStorageKey = getRoomSlugStorageKey(serverId);
+    const scopedStoredSlug = String(localStorage.getItem(scopedStorageKey) || "").trim();
+    const legacyStoredSlug = String(localStorage.getItem(ROOM_SLUG_STORAGE_KEY) || "").trim();
+    const nextSlug = scopedStoredSlug || legacyStoredSlug;
+
+    setRoomSlug(nextSlug);
+    setChatRoomSlug(nextSlug);
+  }, [currentServerId]);
 
   useEffect(() => {
     if (currentServerId) {
@@ -1181,6 +1208,50 @@ export function App() {
     }
   }, [lastInviteUrl, pushToast, t]);
 
+  const handleLeaveCurrentServer = useCallback(async () => {
+    const tokenValue = String(token || "").trim();
+    const serverId = String(currentServerId || "").trim();
+    if (!tokenValue || !serverId) {
+      return;
+    }
+
+    try {
+      await api.leaveServer(tokenValue, serverId);
+      const listResponse = await api.servers(tokenValue);
+      const list = Array.isArray(listResponse.servers) ? listResponse.servers : [];
+      setServers(list);
+      setCurrentServerId((prev) => {
+        if (prev && list.some((item) => item.id === prev)) {
+          return prev;
+        }
+        return list[0]?.id || "";
+      });
+      setLastInviteUrl("");
+      pushToast(t("server.leaveSuccess"));
+    } catch (error) {
+      pushToast((error as Error).message || t("toast.serverError"));
+    }
+  }, [token, currentServerId, pushToast, t]);
+
+  const handleRemoveServerMember = useCallback(async (targetUserId: string) => {
+    const tokenValue = String(token || "").trim();
+    const serverId = String(currentServerId || "").trim();
+    const userId = String(targetUserId || "").trim();
+
+    if (!tokenValue || !serverId || !userId) {
+      return;
+    }
+
+    try {
+      await api.removeServerMember(tokenValue, serverId, userId);
+      const membersResponse = await api.serverMembers(tokenValue, serverId);
+      setServerMembers(Array.isArray(membersResponse.members) ? membersResponse.members : []);
+      pushToast(t("server.memberRemoved"));
+    } catch (error) {
+      pushToast((error as Error).message || t("toast.serverError"));
+    }
+  }, [token, currentServerId, pushToast, t]);
+
   useEffect(() => {
     if (!chatRoomSlug && roomSlug) {
       setChatRoomSlug(roomSlug);
@@ -1189,6 +1260,7 @@ export function App() {
 
   useSessionStateLifecycle({
     token,
+    currentServerId,
     roomAdminController,
     pushLog,
     realtimeClientRef,
@@ -2112,6 +2184,8 @@ export function App() {
           selectedAdminServerId,
           adminServerOverview,
           adminServerOverviewLoading,
+          currentUserId: user?.id || "",
+          currentServerRole: currentServer?.role || null,
           serverMembers,
           serverMembersLoading,
           lastInviteUrl,
@@ -2133,6 +2207,8 @@ export function App() {
           onSelectAdminServer: setSelectedAdminServerId,
           onCreateServerInvite: () => void handleCreateServerInvite(),
           onCopyInviteUrl: () => void handleCopyInviteUrl(),
+          onLeaveServer: () => void handleLeaveCurrentServer(),
+          onRemoveServerMember: (userId) => void handleRemoveServerMember(userId),
           onRefreshTelemetry: () => void loadTelemetrySummary(),
           onSetServerAudioQuality: (value) => void setServerAudioQualityValue(value),
           onSetServerVideoEffectType: setServerVideoEffectType,

@@ -184,6 +184,15 @@ const endpoints = {
 
 const withId = (basePath: string, id: string) => `${basePath}/${encodeURIComponent(id)}`;
 const withSuffix = (basePath: string, id: string, suffix: string) => `${withId(basePath, id)}/${suffix}`;
+const withServerIdQuery = (path: string, serverId?: string) => {
+  const normalizedServerId = String(serverId || "").trim();
+  if (!normalizedServerId) {
+    return path;
+  }
+
+  const separator = path.includes("?") ? "&" : "?";
+  return `${path}${separator}serverId=${encodeURIComponent(normalizedServerId)}`;
+};
 
 const withJsonBody = (method: "POST" | "PUT" | "PATCH" | "DELETE", body?: unknown): RequestInit => ({
   method,
@@ -252,9 +261,11 @@ export const api = {
     token: string,
     input: { roomSlug: string; canPublish?: boolean; canSubscribe?: boolean; canPublishData?: boolean }
   ) => fetchJson<LivekitTokenResponse>(endpoints.livekitToken, token, withJsonBody("POST", input)),
-  rooms: (token: string) => fetchJson<{ rooms: Room[] }>(endpoints.rooms, token),
-  archivedRooms: (token: string) => fetchJson<{ rooms: Room[] }>(endpoints.roomsArchived, token),
-  roomTree: (token: string) => fetchJson<RoomsTreeResponse>(endpoints.roomsTree, token),
+  rooms: (token: string, serverId?: string) => fetchJson<{ rooms: Room[] }>(withServerIdQuery(endpoints.rooms, serverId), token),
+  archivedRooms: (token: string, serverId?: string) =>
+    fetchJson<{ rooms: Room[] }>(withServerIdQuery(endpoints.roomsArchived, serverId), token),
+  roomTree: (token: string, serverId?: string) =>
+    fetchJson<RoomsTreeResponse>(withServerIdQuery(endpoints.roomsTree, serverId), token),
   createCategory: (token: string, input: { slug: string; title: string; position?: number }) =>
     fetchJson<{ category: RoomCategory }>(endpoints.roomCategories, token, withJsonBody("POST", input)),
   updateCategory: (token: string, categoryId: string, input: { title: string }) =>
@@ -270,6 +281,7 @@ export const api = {
       title: string;
       is_public: boolean;
       kind?: RoomKind;
+      server_id?: string;
       category_id?: string | null;
       audio_quality_override?: AudioQuality | null;
     }
@@ -315,6 +327,10 @@ export const api = {
     fetchJson<ServerCreateResponse>(endpoints.servers, token, withJsonBody("POST", input)),
   serverMembers: (token: string, serverId: string) =>
     fetchJson<ServerMembersResponse>(withSuffix(endpoints.servers, serverId, "members"), token),
+  leaveServer: (token: string, serverId: string) =>
+    fetchJson<{ left: boolean }>(withSuffix(endpoints.servers, serverId, "members/me"), token, withJsonBody("DELETE")),
+  removeServerMember: (token: string, serverId: string, userId: string) =>
+    fetchJson<{ removed: boolean }>(withId(withSuffix(endpoints.servers, serverId, "members"), userId), token, withJsonBody("DELETE")),
   createServerInvite: (
     token: string,
     serverId: string,

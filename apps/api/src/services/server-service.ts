@@ -15,6 +15,17 @@ type RenameServerInput = {
   name: string;
 };
 
+type LeaveServerInput = {
+  serverId: string;
+  userId: string;
+};
+
+type RemoveServerMemberInput = {
+  serverId: string;
+  actorUserId: string;
+  targetUserId: string;
+};
+
 function toSlug(raw: string): string {
   return raw
     .toLowerCase()
@@ -233,4 +244,94 @@ export async function getDefaultServerContextForUser(userId: string): Promise<Se
   );
 
   return result.rows[0] || null;
+}
+
+export async function leaveServerForUser(input: LeaveServerInput): Promise<{ left: boolean }> {
+  const actor = await mapServerByIdForUser(input.serverId, input.userId);
+  if (!actor) {
+    return { left: false };
+  }
+
+  if (actor.role === "owner") {
+    throw new Error("owner_cannot_leave");
+  }
+
+  const updated = await db.query(
+    `UPDATE server_members
+     SET status = 'left'
+     WHERE server_id = $1
+       AND user_id = $2
+       AND status = 'active'`,
+    [input.serverId, input.userId]
+  );
+
+  if ((updated.rowCount || 0) === 0) {
+    return { left: false };
+  }
+
+  await writeServerAuditEvent({
+    action: "server.member.left",
+    serverId: input.serverId,
+    actorUserId: input.userId,
+    targetUserId: input.userId,
+    meta: {
+      role: actor.role
+    }
+  });
+
+  return { left: true };
+}
+
+export async function removeServerMemberForUser(input: RemoveServerMemberInput): Promise<{ removed: boolean }> {
+  const actor = await mapServerByIdForUser(input.serverId, input.actorUserId);
+  if (!actor) {
+    return { removed: false };
+  }
+
+  if (input.actorUserId === input.targetUserId) {
+    throw new Error("use_leave_for_self");
+  }
+
+  const target = await mapServerByIdForUser(input.serverId, input.targetUserId);
+  if (!target) {
+    return { removed: false };
+  }
+
+  if (target.role === "owner") {
+    throw new Error("owner_cannot_be_removed");
+  }
+
+  if (actor.role === "member") {
+    throw new Error("forbidden_role");
+  }
+
+  if (actor.role === "admin" && target.role !== "member") {
+    throw new Error("forbidden_role");
+  }
+
+  const updated = await db.query(
+    `UPDATE server_members
+     SET status = 'removed'
+     WHERE server_id = $1
+       AND user_id = $2
+       AND status = 'active'`,
+    [input.serverId, input.targetUserId]
+  );
+
+  if ((updated.rowCount || 0) === 0) {
+    return { removed: false };
+  }
+
+  await writeServerAuditEvent({
+    action: "server.member.removed",
+    serverId: input.serverId,
+    actorUserId: input.actorUserId,
+    targetUserId: input.targetUserId,
+    meta: {
+      actorRole: actor.role,
+      targetRole: target.role
+    }
+  });
+
+  return { removed: true };
 }

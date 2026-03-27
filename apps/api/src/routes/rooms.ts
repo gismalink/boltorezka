@@ -35,6 +35,7 @@ const createRoomSchema = z.object({
   title: z.string().min(3).max(120),
   is_public: z.boolean().default(true),
   kind: roomKindSchema.default("text"),
+  server_id: z.string().uuid().optional(),
   category_id: z.string().uuid().nullable().optional().default(null),
   audio_quality_override: audioQualitySchema.nullable().optional(),
   position: z.number().int().min(0).optional()
@@ -70,6 +71,29 @@ const moveCategorySchema = z.object({
 });
 
 export async function roomsRoutes(fastify: FastifyInstance) {
+  const resolveAccessibleServerId = async (userId: string, requestedServerId: string): Promise<string | null> => {
+    const normalized = String(requestedServerId || "").trim();
+    if (!normalized) {
+      return null;
+    }
+
+    const membership = await db.query<{ server_id: string }>(
+      `SELECT sm.server_id
+       FROM server_members sm
+       WHERE sm.server_id = $1
+         AND sm.user_id = $2
+         AND sm.status = 'active'
+       LIMIT 1`,
+      [normalized, userId]
+    );
+
+    if ((membership.rowCount || 0) === 0) {
+      return null;
+    }
+
+    return normalized;
+  };
+
   const incrementReadMetricBy = async (name: string, value: number) => {
     const delta = Number.isFinite(value) ? Math.trunc(value) : 0;
     if (delta <= 0) {
@@ -84,18 +108,38 @@ export async function roomsRoutes(fastify: FastifyInstance) {
     }
   };
 
-  fastify.get(
+  fastify.get<{ Querystring: { serverId?: string } }>(
     "/v1/rooms/tree",
     {
       preHandler: [requireAuth, requireServiceAccess]
     },
     async (request) => {
       const userId = String(request.user?.sub || "").trim();
+      const requestedServerId = String(request.query.serverId || "").trim();
+      const activeServerId = requestedServerId
+        ? await resolveAccessibleServerId(userId, requestedServerId)
+        : null;
+
+      if (requestedServerId && !activeServerId) {
+        const response: RoomsTreeResponse = {
+          categories: [],
+          uncategorized: []
+        };
+        return response;
+      }
+
       const categoriesResult = await db.query<RoomCategoryRow>(
         `SELECT id, slug, title, position, created_at
          FROM room_categories
          ORDER BY position ASC, created_at ASC`
       );
+
+      const roomFilters = ["r.is_archived = FALSE"];
+      const roomParams: string[] = [userId];
+      if (activeServerId) {
+        roomParams.push(activeServerId);
+        roomFilters.push(`r.server_id = $${roomParams.length}`);
+      }
 
       const channelsResult = await db.query<RoomListDbRow>(
         `SELECT
@@ -120,9 +164,9 @@ export async function roomsRoutes(fastify: FastifyInstance) {
              WHERE rm.room_id = r.id AND rm.user_id = $1
            ) AS is_member
          FROM rooms r
-         WHERE r.is_archived = FALSE
+         WHERE ${roomFilters.join(" AND ")}
          ORDER BY r.category_id NULLS FIRST, r.position ASC, r.created_at ASC`,
-        [userId]
+        roomParams
       );
 
       const byCategory = new Map<string, RoomListDbRow[]>();
@@ -151,13 +195,30 @@ export async function roomsRoutes(fastify: FastifyInstance) {
     }
   );
 
-  fastify.get(
+  fastify.get<{ Querystring: { serverId?: string } }>(
     "/v1/rooms",
     {
       preHandler: [requireAuth, requireServiceAccess]
     },
     async (request) => {
       const userId = String(request.user?.sub || "").trim();
+      const requestedServerId = String(request.query.serverId || "").trim();
+      const activeServerId = requestedServerId
+        ? await resolveAccessibleServerId(userId, requestedServerId)
+        : null;
+
+      if (requestedServerId && !activeServerId) {
+        const response: RoomsListResponse = { rooms: [] };
+        return response;
+      }
+
+      const roomFilters = ["r.is_archived = FALSE"];
+      const roomParams: string[] = [userId];
+      if (activeServerId) {
+        roomParams.push(activeServerId);
+        roomFilters.push(`r.server_id = $${roomParams.length}`);
+      }
+
       const result = await db.query<RoomListDbRow>(
         `SELECT
            r.id,
@@ -181,9 +242,9 @@ export async function roomsRoutes(fastify: FastifyInstance) {
              WHERE rm.room_id = r.id AND rm.user_id = $1
            ) AS is_member
          FROM rooms r
-         WHERE r.is_archived = FALSE
+         WHERE ${roomFilters.join(" AND ")}
          ORDER BY category_id NULLS FIRST, position ASC, created_at ASC`,
-        [userId]
+        roomParams
       );
 
       const response: RoomsListResponse = { rooms: result.rows };
@@ -191,13 +252,30 @@ export async function roomsRoutes(fastify: FastifyInstance) {
     }
   );
 
-  fastify.get(
+  fastify.get<{ Querystring: { serverId?: string } }>(
     "/v1/rooms/archived",
     {
       preHandler: [requireAuth, requireServiceAccess, loadCurrentUser, requireRole(["admin", "super_admin"])]
     },
     async (request) => {
       const userId = String(request.user?.sub || "").trim();
+      const requestedServerId = String(request.query.serverId || "").trim();
+      const activeServerId = requestedServerId
+        ? await resolveAccessibleServerId(userId, requestedServerId)
+        : null;
+
+      if (requestedServerId && !activeServerId) {
+        const response: RoomsListResponse = { rooms: [] };
+        return response;
+      }
+
+      const roomFilters = ["r.is_archived = TRUE"];
+      const roomParams: string[] = [userId];
+      if (activeServerId) {
+        roomParams.push(activeServerId);
+        roomFilters.push(`r.server_id = $${roomParams.length}`);
+      }
+
       const result = await db.query<RoomListDbRow>(
         `SELECT
            r.id,
@@ -221,9 +299,9 @@ export async function roomsRoutes(fastify: FastifyInstance) {
              WHERE rm.room_id = r.id AND rm.user_id = $1
            ) AS is_member
          FROM rooms r
-         WHERE r.is_archived = TRUE
+         WHERE ${roomFilters.join(" AND ")}
          ORDER BY r.created_at DESC, r.title ASC`,
-        [userId]
+        roomParams
       );
 
       const response: RoomsListResponse = { rooms: result.rows };
@@ -460,6 +538,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
       title: string;
       is_public?: boolean;
       kind?: "text" | "text_voice" | "text_voice_video";
+      server_id?: string;
       category_id?: string | null;
       audio_quality_override?: "retro" | "low" | "standard" | "high" | null;
       position?: number;
@@ -512,20 +591,35 @@ export async function roomsRoutes(fastify: FastifyInstance) {
       }
 
       const createdBy = String(request.user?.sub || "").trim();
-      const defaultServerResult = await db.query<{ id: string }>(
-        `SELECT id
-         FROM servers
-         WHERE is_default = TRUE
-         ORDER BY created_at ASC
-         LIMIT 1`
-      );
+      const requestedServerId = String(parsed.data.server_id || "").trim();
+      let targetServerId = "";
 
-      const defaultServerId = String(defaultServerResult.rows[0]?.id || "").trim();
-      if (!defaultServerId) {
-        return reply.code(500).send({
-          error: "ServerNotConfigured",
-          message: "Default server is not configured"
-        });
+      if (requestedServerId) {
+        const accessibleServerId = await resolveAccessibleServerId(createdBy, requestedServerId);
+        if (!accessibleServerId) {
+          return reply.code(403).send({
+            error: "not_server_member",
+            message: "You are not a member of this server"
+          });
+        }
+
+        targetServerId = accessibleServerId;
+      } else {
+        const defaultServerResult = await db.query<{ id: string }>(
+          `SELECT id
+           FROM servers
+           WHERE is_default = TRUE
+           ORDER BY created_at ASC
+           LIMIT 1`
+        );
+
+        targetServerId = String(defaultServerResult.rows[0]?.id || "").trim();
+        if (!targetServerId) {
+          return reply.code(500).send({
+            error: "ServerNotConfigured",
+            message: "Default server is not configured"
+          });
+        }
       }
 
       const position = typeof parsed.data.position === "number"
@@ -545,7 +639,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
         `INSERT INTO rooms (slug, title, kind, category_id, audio_quality_override, position, is_public, created_by, server_id)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
          RETURNING id, slug, title, kind, audio_quality_override, category_id, position, is_public, created_at`,
-        [slug, title, kind, category_id, audioQualityOverride, position, is_public, createdBy, defaultServerId]
+        [slug, title, kind, category_id, audioQualityOverride, position, is_public, createdBy, targetServerId]
       );
 
       const room = created.rows[0];

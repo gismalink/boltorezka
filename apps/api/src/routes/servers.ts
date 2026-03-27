@@ -12,8 +12,10 @@ import {
   createServerForUser,
   getDefaultServerContextForUser,
   getServerForUser,
+  leaveServerForUser,
   listServerMembers,
   listUserServers,
+  removeServerMemberForUser,
   renameServerForUser
 } from "../services/server-service.js";
 import { createServerInvite } from "../services/invite-service.js";
@@ -28,6 +30,8 @@ import type {
   ServerBanResponse,
   ServerBanRevokeResponse,
   ServerGetResponse,
+  ServerMemberLeaveResponse,
+  ServerMemberRemoveResponse,
   ServerMembersResponse,
   ServerRenameResponse,
   ServersListResponse
@@ -155,6 +159,112 @@ export async function serversRoutes(fastify: FastifyInstance) {
         members
       };
       return response;
+    }
+  );
+
+  fastify.delete<{ Params: { serverId: string } }>(
+    "/v1/servers/:serverId/members/me",
+    {
+      preHandler: [
+        requireAuth,
+        requireServiceAccess,
+        requireNotServiceBanned,
+        loadCurrentUser,
+        requireServerMembership,
+        requireNotServerBanned
+      ]
+    },
+    async (request, reply) => {
+      const serverId = String(request.params.serverId || "").trim();
+      const userId = String(request.currentUser?.id || "").trim();
+
+      try {
+        const result = await leaveServerForUser({
+          serverId,
+          userId
+        });
+
+        if (!result.left) {
+          return reply.code(404).send({
+            error: "ServerMemberNotFound",
+            message: "Server member not found"
+          });
+        }
+
+        const response: ServerMemberLeaveResponse = { left: true };
+        return response;
+      } catch (error) {
+        const message = String((error as Error)?.message || "");
+        if (message === "owner_cannot_leave") {
+          return reply.code(409).send({
+            error: "OwnerCannotLeave",
+            message: "Owner cannot leave server"
+          });
+        }
+
+        throw error;
+      }
+    }
+  );
+
+  fastify.delete<{ Params: { serverId: string; userId: string } }>(
+    "/v1/servers/:serverId/members/:userId",
+    {
+      preHandler: [
+        requireAuth,
+        requireServiceAccess,
+        requireNotServiceBanned,
+        loadCurrentUser,
+        requireServerMembership,
+        requireNotServerBanned
+      ]
+    },
+    async (request, reply) => {
+      const serverId = String(request.params.serverId || "").trim();
+      const actorUserId = String(request.currentUser?.id || "").trim();
+      const targetUserId = String(request.params.userId || "").trim();
+
+      try {
+        const result = await removeServerMemberForUser({
+          serverId,
+          actorUserId,
+          targetUserId
+        });
+
+        if (!result.removed) {
+          return reply.code(404).send({
+            error: "ServerMemberNotFound",
+            message: "Server member not found"
+          });
+        }
+
+        const response: ServerMemberRemoveResponse = { removed: true };
+        return response;
+      } catch (error) {
+        const message = String((error as Error)?.message || "");
+        if (message === "forbidden_role") {
+          return reply.code(403).send({
+            error: "forbidden_role",
+            message: "Insufficient server role"
+          });
+        }
+
+        if (message === "owner_cannot_be_removed") {
+          return reply.code(409).send({
+            error: "OwnerCannotBeRemoved",
+            message: "Owner cannot be removed"
+          });
+        }
+
+        if (message === "use_leave_for_self") {
+          return reply.code(409).send({
+            error: "UseLeaveForSelf",
+            message: "Use leave endpoint to remove self"
+          });
+        }
+
+        throw error;
+      }
     }
   );
 

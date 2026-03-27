@@ -23,6 +23,7 @@ type RoomAdminControllerOptions = {
   setRoomsTree: (tree: RoomsTreeResponse | null) => void;
   setArchivedRooms: (rooms: Room[]) => void;
   setAdminUsers: (users: User[]) => void;
+  getCurrentServerId?: () => string;
 };
 
 export class RoomAdminController {
@@ -32,13 +33,25 @@ export class RoomAdminController {
     this.options = options;
   }
 
+  private getCurrentServerId(): string | undefined {
+    const value = String(this.options.getCurrentServerId?.() || "").trim();
+    return value || undefined;
+  }
+
   async loadRoomTree(token: string) {
     try {
-      const tree = await api.roomTree(token);
+      const serverId = this.getCurrentServerId();
+      if (!serverId) {
+        this.options.setRoomsTree(null);
+        this.options.setArchivedRooms([]);
+        return;
+      }
+
+      const tree = await api.roomTree(token, serverId);
       this.options.setRoomsTree(tree);
 
       try {
-        const archived = await api.archivedRooms(token);
+        const archived = await api.archivedRooms(token, serverId);
         this.options.setArchivedRooms(archived.rooms);
       } catch (error) {
         this.options.pushLog(`archived rooms failed: ${(error as Error).message}`);
@@ -91,7 +104,7 @@ export class RoomAdminController {
   async deleteCategory(token: string, categoryId: string) {
     try {
       await api.deleteCategory(token, categoryId);
-      const res = await api.rooms(token);
+      const res = await api.rooms(token, this.getCurrentServerId());
       this.options.setRooms(res.rooms);
       await this.loadRoomTree(token);
       this.options.pushLog("category deleted");
@@ -116,10 +129,11 @@ export class RoomAdminController {
         title,
         is_public: true,
         kind: options.kind,
+        server_id: this.getCurrentServerId(),
         category_id: options.categoryId,
         audio_quality_override: options.audioQualityOverride
       });
-      const res = await api.rooms(token);
+      const res = await api.rooms(token, this.getCurrentServerId());
       this.options.setRooms(res.rooms);
       await this.loadRoomTree(token);
       this.options.pushLog(`room created: ${slug}`);
@@ -150,7 +164,7 @@ export class RoomAdminController {
         audio_quality_override: options.audioQualityOverride
       });
 
-      const res = await api.rooms(token);
+      const res = await api.rooms(token, this.getCurrentServerId());
       this.options.setRooms(res.rooms);
       await this.loadRoomTree(token);
       this.options.pushLog("channel updated");
@@ -176,7 +190,7 @@ export class RoomAdminController {
   async deleteRoom(token: string, roomId: string) {
     try {
       await api.deleteRoom(token, roomId);
-      const res = await api.rooms(token);
+      const res = await api.rooms(token, this.getCurrentServerId());
       this.options.setRooms(res.rooms);
       await this.loadRoomTree(token);
       this.options.pushLog("channel archived");
@@ -190,7 +204,7 @@ export class RoomAdminController {
   async restoreRoom(token: string, roomId: string) {
     try {
       await api.restoreRoom(token, roomId);
-      const res = await api.rooms(token);
+      const res = await api.rooms(token, this.getCurrentServerId());
       this.options.setRooms(res.rooms);
       await this.loadRoomTree(token);
       this.options.pushLog("channel restored");

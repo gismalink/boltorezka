@@ -4,6 +4,7 @@ import type {
   AdminServerOverview,
   AudioQuality,
   ServerMemberItem,
+  ServerMemberRole,
   TelemetrySummary,
   User
 } from "../domain";
@@ -39,6 +40,8 @@ type ServerProfileModalProps = {
   selectedAdminServerId: string;
   adminServerOverview: AdminServerOverview | null;
   adminServerOverviewLoading: boolean;
+  currentUserId: string;
+  currentServerRole: ServerMemberRole | null;
   serverMembers: ServerMemberItem[];
   serverMembersLoading: boolean;
   lastInviteUrl: string;
@@ -79,6 +82,8 @@ type ServerProfileModalProps = {
   onSelectAdminServer: (serverId: string) => void;
   onCreateServerInvite: () => void;
   onCopyInviteUrl: () => void;
+  onLeaveServer: () => void;
+  onRemoveServerMember: (userId: string) => void;
   onRefreshTelemetry: () => void;
   onSetServerAudioQuality: (value: AudioQuality) => void;
   onSetServerVideoEffectType: (value: ServerVideoEffectType) => void;
@@ -212,6 +217,8 @@ export function ServerProfileModal({
   selectedAdminServerId,
   adminServerOverview,
   adminServerOverviewLoading,
+  currentUserId,
+  currentServerRole,
   serverMembers,
   serverMembersLoading,
   lastInviteUrl,
@@ -248,6 +255,8 @@ export function ServerProfileModal({
   onSelectAdminServer,
   onCreateServerInvite,
   onCopyInviteUrl,
+  onLeaveServer,
+  onRemoveServerMember,
   onRefreshTelemetry,
   onSetServerAudioQuality,
   onSetServerVideoEffectType,
@@ -789,6 +798,24 @@ export function ServerProfileModal({
                         <span className="min-w-0 break-words">
                           {member.name} · {member.email} ({member.role})
                         </span>
+                        <div className="flex flex-wrap items-center justify-end gap-2">
+                          {member.userId === currentUserId && member.role !== "owner" ? (
+                            <button type="button" className="secondary" onClick={onLeaveServer}>
+                              {t("server.leave")}
+                            </button>
+                          ) : null}
+                          {member.userId !== currentUserId
+                          && ((currentServerRole === "owner" && member.role !== "owner")
+                            || (currentServerRole === "admin" && member.role === "member")) ? (
+                            <button
+                              type="button"
+                              className="secondary"
+                              onClick={() => onRemoveServerMember(member.userId)}
+                            >
+                              {t("server.removeMember")}
+                            </button>
+                          ) : null}
+                        </div>
                       </li>
                     ))}
                   </ul>

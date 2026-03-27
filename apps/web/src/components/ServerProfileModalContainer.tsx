@@ -38,6 +38,8 @@ type ServerProfileModalContainerProps = {
     selectedAdminServerId: ServerProfileModalProps["selectedAdminServerId"];
     adminServerOverview: ServerProfileModalProps["adminServerOverview"];
     adminServerOverviewLoading: ServerProfileModalProps["adminServerOverviewLoading"];
+    currentUserId: string;
+    currentServerRole: ServerProfileModalProps["currentServerRole"];
     serverMembers: ServerProfileModalProps["serverMembers"];
     serverMembersLoading: boolean;
     lastInviteUrl: string;
@@ -59,6 +61,8 @@ type ServerProfileModalContainerProps = {
     onSelectAdminServer: ServerProfileModalProps["onSelectAdminServer"];
     onCreateServerInvite: ServerProfileModalProps["onCreateServerInvite"];
     onCopyInviteUrl: ServerProfileModalProps["onCopyInviteUrl"];
+    onLeaveServer: ServerProfileModalProps["onLeaveServer"];
+    onRemoveServerMember: ServerProfileModalProps["onRemoveServerMember"];
     onRefreshTelemetry: () => void;
     onSetServerAudioQuality: ServerProfileModalProps["onSetServerAudioQuality"];
     onSetServerVideoEffectType: ServerProfileModalProps["onSetServerVideoEffectType"];
@@ -95,6 +99,8 @@ export function ServerProfileModalContainer({ open, t, permissions, state, data,
       selectedAdminServerId={data.selectedAdminServerId}
       adminServerOverview={data.adminServerOverview}
       adminServerOverviewLoading={data.adminServerOverviewLoading}
+      currentUserId={data.currentUserId}
+      currentServerRole={data.currentServerRole}
       serverMembers={data.serverMembers}
       serverMembersLoading={data.serverMembersLoading}
       lastInviteUrl={data.lastInviteUrl}
@@ -131,6 +137,8 @@ export function ServerProfileModalContainer({ open, t, permissions, state, data,
       onSelectAdminServer={actions.onSelectAdminServer}
       onCreateServerInvite={actions.onCreateServerInvite}
       onCopyInviteUrl={actions.onCopyInviteUrl}
+      onLeaveServer={actions.onLeaveServer}
+      onRemoveServerMember={actions.onRemoveServerMember}
       onRefreshTelemetry={actions.onRefreshTelemetry}
       onSetServerAudioQuality={actions.onSetServerAudioQuality}
       onSetServerVideoEffectType={actions.onSetServerVideoEffectType}
