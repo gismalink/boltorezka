@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { AudioQuality, TelemetrySummary, User } from "../domain";
+import type { AudioQuality, ServerMemberItem, TelemetrySummary, User } from "../domain";
 import { getDesktopUpdateBridge } from "../desktopBridge";
 import type { ServerScreenShareResolution, ServerVideoEffectType } from "../hooks/rtc/voiceCallTypes";
 import { resolvePublicOrigin } from "../runtimeOrigin";
@@ -16,6 +16,10 @@ type ServerProfileModalProps = {
   canViewTelemetry: boolean;
   serverMenuTab: ServerMenuTab;
   adminUsers: User[];
+  serverMembers: ServerMemberItem[];
+  serverMembersLoading: boolean;
+  lastInviteUrl: string;
+  creatingInvite: boolean;
   eventLog: string[];
   telemetrySummary: TelemetrySummary | null;
   callStatus: string;
@@ -49,6 +53,8 @@ type ServerProfileModalProps = {
   onDemote: (userId: string) => void;
   onSetBan: (userId: string, banned: boolean) => void;
   onSetAccessState: (userId: string, accessState: "pending" | "active" | "blocked") => void;
+  onCreateServerInvite: () => void;
+  onCopyInviteUrl: () => void;
   onRefreshTelemetry: () => void;
   onSetServerAudioQuality: (value: AudioQuality) => void;
   onSetServerVideoEffectType: (value: ServerVideoEffectType) => void;
@@ -176,6 +182,10 @@ export function ServerProfileModal({
   canViewTelemetry,
   serverMenuTab,
   adminUsers,
+  serverMembers,
+  serverMembersLoading,
+  lastInviteUrl,
+  creatingInvite,
   eventLog,
   telemetrySummary,
   callStatus,
@@ -205,6 +215,8 @@ export function ServerProfileModal({
   onDemote,
   onSetBan,
   onSetAccessState,
+  onCreateServerInvite,
+  onCopyInviteUrl,
   onRefreshTelemetry,
   onSetServerAudioQuality,
   onSetServerVideoEffectType,
@@ -686,8 +698,46 @@ export function ServerProfileModal({
             </button>
           </div>
 
-          {serverMenuTab === "users" && canManageUsers ? (
+          {serverMenuTab === "users" ? (
             <section className="grid gap-3">
+              <h3>{t("server.membersTitle")}</h3>
+              <p className="muted">
+                {serverMembersLoading
+                  ? t("server.membersLoading")
+                  : `${t("server.membersCount")}: ${serverMembers.length}`}
+              </p>
+              <div className="grid gap-2">
+                <label className="grid gap-1">
+                  <span className="muted">{t("server.inviteTitle")}</span>
+                  <input
+                    type="text"
+                    readOnly
+                    value={lastInviteUrl}
+                    placeholder={t("server.invitePlaceholder")}
+                  />
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  <button type="button" onClick={onCreateServerInvite} disabled={creatingInvite}>
+                    {creatingInvite ? t("server.inviteCreateLoading") : t("server.inviteCreate")}
+                  </button>
+                  <button type="button" className="secondary" onClick={onCopyInviteUrl} disabled={!lastInviteUrl}>
+                    {t("server.inviteCopy")}
+                  </button>
+                </div>
+              </div>
+              <ul className="admin-list grid gap-2">
+                {serverMembers.map((member) => (
+                  <li key={member.userId} className="admin-row grid min-h-[42px] grid-cols-[minmax(0,1fr)_auto] items-center gap-2 max-desktop:grid-cols-1">
+                    <span className="min-w-0 break-words">
+                      {member.name} · {member.email} ({member.role})
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              {!serverMembersLoading && serverMembers.length === 0 ? <p className="muted">{t("server.membersEmpty")}</p> : null}
+
+              {canManageUsers ? (
+                <>
               <h3>{t("admin.title")}</h3>
               <p className="muted">Users total: {totalUsers} · Admins: {totalAdmins} · Banned: {totalBanned}</p>
               <label className="grid gap-1">
@@ -759,6 +809,8 @@ export function ServerProfileModal({
                 ))}
               </ul>
               {filteredAdminUsers.length === 0 ? <p className="muted">{t("admin.emptyState")}</p> : null}
+                </>
+              ) : null}
             </section>
           ) : null}
 

@@ -97,6 +97,7 @@ import type {
   Room,
   RoomKind,
   RoomsTreeResponse,
+  ServerMemberItem,
   ServerListItem,
   TelemetrySummary,
   UiTheme,
@@ -161,6 +162,10 @@ export function App() {
   const [servers, setServers] = useState<ServerListItem[]>([]);
   const [currentServerId, setCurrentServerId] = useState(() => String(localStorage.getItem(CURRENT_SERVER_ID_STORAGE_KEY) || "").trim());
   const [creatingServer, setCreatingServer] = useState(false);
+  const [serverMembers, setServerMembers] = useState<ServerMemberItem[]>([]);
+  const [serverMembersLoading, setServerMembersLoading] = useState(false);
+  const [lastInviteUrl, setLastInviteUrl] = useState("");
+  const [creatingInvite, setCreatingInvite] = useState(false);
   const [telemetrySummary, setTelemetrySummary] = useState<TelemetrySummary | null>(null);
   const [wsState, setWsState] = useState<"disconnected" | "connecting" | "connected">(
     "disconnected"
@@ -959,6 +964,42 @@ export function App() {
     [servers, currentServerId]
   );
 
+  useEffect(() => {
+    const tokenValue = String(token || "").trim();
+    const serverId = String(currentServerId || "").trim();
+
+    if (!tokenValue || !serverId || !user) {
+      setServerMembers([]);
+      return;
+    }
+
+    let cancelled = false;
+    setServerMembersLoading(true);
+    api.serverMembers(tokenValue, serverId)
+      .then((response) => {
+        if (cancelled) {
+          return;
+        }
+        setServerMembers(Array.isArray(response.members) ? response.members : []);
+      })
+      .catch((error) => {
+        if (cancelled) {
+          return;
+        }
+        pushLog(`server members failed: ${(error as Error).message}`);
+        setServerMembers([]);
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setServerMembersLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [token, currentServerId, user, pushLog]);
+
   const handleCreateServer = useCallback(async (name: string) => {
     const tokenValue = String(token || "").trim();
     const trimmedName = String(name || "").trim();
@@ -985,6 +1026,44 @@ export function App() {
       setCreatingServer(false);
     }
   }, [token, pushToast, t]);
+
+  const handleCreateServerInvite = useCallback(async () => {
+    const tokenValue = String(token || "").trim();
+    const serverId = String(currentServerId || "").trim();
+
+    if (!tokenValue || !serverId || creatingInvite) {
+      return;
+    }
+
+    setCreatingInvite(true);
+    try {
+      const result = await api.createServerInvite(tokenValue, serverId);
+      const invitePath = String(result.inviteUrl || "").trim();
+      const absoluteInviteUrl = invitePath.startsWith("/")
+        ? `${window.location.origin}${invitePath}`
+        : invitePath;
+      setLastInviteUrl(absoluteInviteUrl);
+      pushToast(t("server.inviteCreated"));
+    } catch (error) {
+      pushToast((error as Error).message || t("toast.serverError"));
+    } finally {
+      setCreatingInvite(false);
+    }
+  }, [token, currentServerId, creatingInvite, pushToast, t]);
+
+  const handleCopyInviteUrl = useCallback(async () => {
+    const value = String(lastInviteUrl || "").trim();
+    if (!value) {
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(value);
+      pushToast(t("server.inviteCopied"));
+    } catch {
+      pushToast(t("server.inviteCopyFailed"));
+    }
+  }, [lastInviteUrl, pushToast, t]);
 
   useEffect(() => {
     if (!chatRoomSlug && roomSlug) {
@@ -1902,6 +1981,9 @@ export function App() {
         }}
         data={{
           adminUsers,
+          serverMembers,
+          serverMembersLoading,
+          lastInviteUrl,
           eventLog,
           telemetrySummary,
           callStatus,
@@ -1917,6 +1999,8 @@ export function App() {
           onDemote: (userId) => void demote(userId),
           onSetBan: (userId, banned) => void setUserBan(userId, banned),
           onSetAccessState: (userId, accessState) => void setUserAccessState(userId, accessState),
+          onCreateServerInvite: () => void handleCreateServerInvite(),
+          onCopyInviteUrl: () => void handleCopyInviteUrl(),
           onRefreshTelemetry: () => void loadTelemetrySummary(),
           onSetServerAudioQuality: (value) => void setServerAudioQualityValue(value),
           onSetServerVideoEffectType: setServerVideoEffectType,
@@ -1931,6 +2015,9 @@ export function App() {
           onSetServerVideoAsciiColor: setServerVideoAsciiColor,
           onSetServerVideoWindowMinWidth: setBoundedServerVideoWindowMinWidth,
           onSetServerVideoWindowMaxWidth: setBoundedServerVideoWindowMaxWidth
+        }}
+        meta={{
+          creatingInvite
         }}
       />
 

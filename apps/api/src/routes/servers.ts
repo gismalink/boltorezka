@@ -12,6 +12,7 @@ import {
   createServerForUser,
   getDefaultServerContextForUser,
   getServerForUser,
+  listServerMembers,
   listUserServers,
   renameServerForUser
 } from "../services/server-service.js";
@@ -27,6 +28,7 @@ import type {
   ServerBanResponse,
   ServerBanRevokeResponse,
   ServerGetResponse,
+  ServerMembersResponse,
   ServerRenameResponse,
   ServersListResponse
 } from "../api-contract.types.ts";
@@ -129,6 +131,29 @@ export async function serversRoutes(fastify: FastifyInstance) {
       }
 
       const response: ServerGetResponse = { server };
+      return response;
+    }
+  );
+
+  fastify.get<{ Params: { serverId: string } }>(
+    "/v1/servers/:serverId/members",
+    {
+      preHandler: [
+        requireAuth,
+        requireServiceAccess,
+        requireNotServiceBanned,
+        loadCurrentUser,
+        requireServerMembership,
+        requireNotServerBanned
+      ]
+    },
+    async (request) => {
+      const serverId = String(request.params.serverId || "").trim();
+      const members = await listServerMembers(serverId);
+      const response: ServerMembersResponse = {
+        serverId,
+        members
+      };
       return response;
     }
   );

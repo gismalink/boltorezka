@@ -11,6 +11,8 @@ import type {
   ServerAudioQualityResponse,
   ServerChatImagePolicyResponse,
   ServerCreateResponse,
+  ServerMembersResponse,
+  InviteCreateResponse,
   TelemetrySummary,
   ServerListItem,
   User,
@@ -308,6 +310,13 @@ export const api = {
   servers: (token: string) => fetchJson<{ servers: ServerListItem[] }>(endpoints.servers, token),
   createServer: (token: string, input: { name: string }) =>
     fetchJson<ServerCreateResponse>(endpoints.servers, token, withJsonBody("POST", input)),
+  serverMembers: (token: string, serverId: string) =>
+    fetchJson<ServerMembersResponse>(withSuffix(endpoints.servers, serverId, "members"), token),
+  createServerInvite: (
+    token: string,
+    serverId: string,
+    input: { ttlHours?: number; maxUses?: number } = {}
+  ) => fetchJson<InviteCreateResponse>(withSuffix(endpoints.servers, serverId, "invites"), token, withJsonBody("POST", input)),
   serverAudioQuality: (token: string) => fetchJson<ServerAudioQualityResponse>(endpoints.adminServerAudioQuality, token),
   serverChatImagePolicy: (token: string) =>
     fetchJson<ServerChatImagePolicyResponse>(endpoints.adminServerChatImagePolicy, token),

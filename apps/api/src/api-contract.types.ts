@@ -134,6 +134,19 @@ export type ServerGetResponse = {
   server: ServerListItem;
 };
 
+export type ServerMemberItem = {
+  userId: string;
+  email: string;
+  name: string;
+  role: ServerMemberRole;
+  status: "active";
+};
+
+export type ServerMembersResponse = {
+  serverId: string;
+  members: ServerMemberItem[];
+};
+
 export type ServerRenameResponse = {
   server: ServerListItem;
 };

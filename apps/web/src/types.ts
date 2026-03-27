@@ -165,3 +165,22 @@ export type ServerListItem = {
 export type ServerCreateResponse = {
   server: ServerListItem;
 };
+
+export type ServerMemberItem = {
+  userId: string;
+  email: string;
+  name: string;
+  role: ServerMemberRole;
+  status: "active";
+};
+
+export type ServerMembersResponse = {
+  serverId: string;
+  members: ServerMemberItem[];
+};
+
+export type InviteCreateResponse = {
+  inviteUrl: string;
+  token: string;
+  expiresAt: string | null;
+};

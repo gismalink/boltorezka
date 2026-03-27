@@ -1,5 +1,5 @@
 import { db } from "../db.js";
-import type { ServerListItem, ServerContext } from "../api-contract.types.ts";
+import type { ServerListItem, ServerContext, ServerMemberItem } from "../api-contract.types.ts";
 import type { ServerMemberRole, UserRole } from "../db.types.ts";
 import { writeServerAuditEvent } from "./server-audit-service.js";
 
@@ -157,6 +157,32 @@ export async function listUserServers(userId: string): Promise<ServerListItem[]>
 
 export async function getServerForUser(serverId: string, userId: string): Promise<ServerListItem | null> {
   return mapServerByIdForUser(serverId, userId);
+}
+
+export async function listServerMembers(serverId: string): Promise<ServerMemberItem[]> {
+  const result = await db.query<ServerMemberItem>(
+    `SELECT
+       sm.user_id AS "userId",
+       u.email,
+       u.name,
+       sm.role,
+       sm.status
+     FROM server_members sm
+     JOIN users u ON u.id = sm.user_id
+     WHERE sm.server_id = $1
+       AND sm.status = 'active'
+     ORDER BY
+       CASE sm.role
+         WHEN 'owner' THEN 0
+         WHEN 'admin' THEN 1
+         ELSE 2
+       END,
+       u.name ASC,
+       u.email ASC`,
+    [serverId]
+  );
+
+  return result.rows;
 }
 
 export async function renameServerForUser(input: RenameServerInput): Promise<ServerListItem | null> {

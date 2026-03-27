@@ -32,6 +32,9 @@ type ServerProfileModalContainerProps = {
   };
   data: {
     adminUsers: ServerProfileModalProps["adminUsers"];
+    serverMembers: ServerProfileModalProps["serverMembers"];
+    serverMembersLoading: boolean;
+    lastInviteUrl: string;
     eventLog: string[];
     telemetrySummary: ServerProfileModalProps["telemetrySummary"];
     callStatus: string;
@@ -47,6 +50,8 @@ type ServerProfileModalContainerProps = {
     onDemote: ServerProfileModalProps["onDemote"];
     onSetBan: ServerProfileModalProps["onSetBan"];
     onSetAccessState: ServerProfileModalProps["onSetAccessState"];
+    onCreateServerInvite: ServerProfileModalProps["onCreateServerInvite"];
+    onCopyInviteUrl: ServerProfileModalProps["onCopyInviteUrl"];
     onRefreshTelemetry: () => void;
     onSetServerAudioQuality: ServerProfileModalProps["onSetServerAudioQuality"];
     onSetServerVideoEffectType: ServerProfileModalProps["onSetServerVideoEffectType"];
@@ -62,9 +67,12 @@ type ServerProfileModalContainerProps = {
     onSetServerVideoWindowMinWidth: ServerProfileModalProps["onSetServerVideoWindowMinWidth"];
     onSetServerVideoWindowMaxWidth: ServerProfileModalProps["onSetServerVideoWindowMaxWidth"];
   };
+  meta: {
+    creatingInvite: boolean;
+  };
 };
 
-export function ServerProfileModalContainer({ open, t, permissions, state, data, actions }: ServerProfileModalContainerProps) {
+export function ServerProfileModalContainer({ open, t, permissions, state, data, actions, meta }: ServerProfileModalContainerProps) {
   return (
     <ServerProfileModal
       open={open}
@@ -74,6 +82,10 @@ export function ServerProfileModalContainer({ open, t, permissions, state, data,
       canViewTelemetry={permissions.canViewTelemetry}
       serverMenuTab={state.serverMenuTab}
       adminUsers={data.adminUsers}
+      serverMembers={data.serverMembers}
+      serverMembersLoading={data.serverMembersLoading}
+      lastInviteUrl={data.lastInviteUrl}
+      creatingInvite={meta.creatingInvite}
       eventLog={data.eventLog}
       telemetrySummary={data.telemetrySummary}
       callStatus={data.callStatus}
@@ -103,6 +115,8 @@ export function ServerProfileModalContainer({ open, t, permissions, state, data,
       onDemote={actions.onDemote}
       onSetBan={actions.onSetBan}
       onSetAccessState={actions.onSetAccessState}
+      onCreateServerInvite={actions.onCreateServerInvite}
+      onCopyInviteUrl={actions.onCopyInviteUrl}
       onRefreshTelemetry={actions.onRefreshTelemetry}
       onSetServerAudioQuality={actions.onSetServerAudioQuality}
       onSetServerVideoEffectType={actions.onSetServerVideoEffectType}
