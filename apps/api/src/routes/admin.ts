@@ -6,6 +6,8 @@ import { loadCurrentUser, requireAuth, requireRole } from "../middleware/auth.js
 import { applyServiceBan, revokeServiceBan } from "../services/ban-service.js";
 import type { ServerSettingsRow, UserRow } from "../db.types.ts";
 import type {
+  AdminServerOverviewResponse,
+  AdminServersResponse,
   AdminUsersResponse,
   PromoteUserResponse,
   ServiceBanResponse,
@@ -181,6 +183,242 @@ export async function adminRoutes(fastify: FastifyInstance) {
       );
 
       const response: AdminUsersResponse = { users: result.rows };
+      return response;
+    }
+  );
+
+  fastify.get(
+    "/v1/admin/servers",
+    {
+      preHandler: [requireAuth, loadCurrentUser, requireRole(["super_admin", "admin"])]
+    },
+    async () => {
+      const result = await db.query<{
+        id: string;
+        slug: string;
+        name: string;
+        isDefault: boolean;
+        ownerUserId: string | null;
+        ownerName: string | null;
+        membersCount: number;
+        roomsCount: number;
+        messagesCount: number;
+        activeServerBansCount: number;
+        createdAt: string;
+        updatedAt: string;
+      }>(
+        `SELECT
+           s.id,
+           s.slug,
+           s.name,
+           s.is_default AS "isDefault",
+           s.owner_user_id AS "ownerUserId",
+           owner_user.name AS "ownerName",
+           COALESCE(members_stats.members_count, 0)::int AS "membersCount",
+           COALESCE(rooms_stats.rooms_count, 0)::int AS "roomsCount",
+           COALESCE(messages_stats.messages_count, 0)::int AS "messagesCount",
+           COALESCE(bans_stats.active_bans_count, 0)::int AS "activeServerBansCount",
+           s.created_at AS "createdAt",
+           s.updated_at AS "updatedAt"
+         FROM servers s
+         LEFT JOIN users owner_user ON owner_user.id = s.owner_user_id
+         LEFT JOIN (
+           SELECT server_id, COUNT(*) AS members_count
+           FROM server_members
+           WHERE status = 'active'
+           GROUP BY server_id
+         ) members_stats ON members_stats.server_id = s.id
+         LEFT JOIN (
+           SELECT server_id, COUNT(*) AS rooms_count
+           FROM rooms
+           GROUP BY server_id
+         ) rooms_stats ON rooms_stats.server_id = s.id
+         LEFT JOIN (
+           SELECT r.server_id, COUNT(*) AS messages_count
+           FROM messages m
+           JOIN rooms r ON r.id = m.room_id
+           GROUP BY r.server_id
+         ) messages_stats ON messages_stats.server_id = s.id
+         LEFT JOIN (
+           SELECT server_id, COUNT(*) AS active_bans_count
+           FROM server_bans
+           WHERE expires_at IS NULL OR expires_at > NOW()
+           GROUP BY server_id
+         ) bans_stats ON bans_stats.server_id = s.id
+         ORDER BY s.is_default DESC, s.created_at ASC`
+      );
+
+      const response: AdminServersResponse = { servers: result.rows };
+      return response;
+    }
+  );
+
+  fastify.get<{ Params: { serverId: string } }>(
+    "/v1/admin/servers/:serverId/overview",
+    {
+      preHandler: [requireAuth, loadCurrentUser, requireRole(["super_admin", "admin"])]
+    },
+    async (request, reply) => {
+      const serverId = String(request.params.serverId || "").trim();
+      if (!serverId) {
+        return reply.code(400).send({
+          error: "ValidationError",
+          message: "serverId is required"
+        });
+      }
+
+      const base = await db.query<{
+        id: string;
+        slug: string;
+        name: string;
+        isDefault: boolean;
+        ownerUserId: string | null;
+        ownerName: string | null;
+        createdAt: string;
+        updatedAt: string;
+      }>(
+        `SELECT
+           s.id,
+           s.slug,
+           s.name,
+           s.is_default AS "isDefault",
+           s.owner_user_id AS "ownerUserId",
+           owner_user.name AS "ownerName",
+           s.created_at AS "createdAt",
+           s.updated_at AS "updatedAt"
+         FROM servers s
+         LEFT JOIN users owner_user ON owner_user.id = s.owner_user_id
+         WHERE s.id = $1
+         LIMIT 1`,
+        [serverId]
+      );
+
+      const server = base.rows[0];
+      if (!server) {
+        return reply.code(404).send({
+          error: "ServerNotFound",
+          message: "Server not found"
+        });
+      }
+
+      const membersStats = await db.query<{
+        total: number;
+        active: number;
+        invited: number;
+        removed: number;
+        left: number;
+        owners: number;
+        admins: number;
+      }>(
+        `SELECT
+           COUNT(*)::int AS total,
+           COUNT(*) FILTER (WHERE status = 'active')::int AS active,
+           COUNT(*) FILTER (WHERE status = 'invited')::int AS invited,
+           COUNT(*) FILTER (WHERE status = 'removed')::int AS removed,
+           COUNT(*) FILTER (WHERE status = 'left')::int AS left,
+           COUNT(*) FILTER (WHERE role = 'owner' AND status = 'active')::int AS owners,
+           COUNT(*) FILTER (WHERE role = 'admin' AND status = 'active')::int AS admins
+         FROM server_members
+         WHERE server_id = $1`,
+        [serverId]
+      );
+
+      const roomsStats = await db.query<{
+        total: number;
+        nsfw: number;
+        archived: number;
+      }>(
+        `SELECT
+           COUNT(*)::int AS total,
+           COUNT(*) FILTER (WHERE nsfw = TRUE)::int AS nsfw,
+           COUNT(*) FILTER (WHERE is_archived = TRUE)::int AS archived
+         FROM rooms
+         WHERE server_id = $1`,
+        [serverId]
+      );
+
+      const messagesStats = await db.query<{ total: number }>(
+        `SELECT COUNT(m.id)::int AS total
+         FROM messages m
+         JOIN rooms r ON r.id = m.room_id
+         WHERE r.server_id = $1`,
+        [serverId]
+      );
+
+      const invitesStats = await db.query<{
+        total: number;
+        active: number;
+        revoked: number;
+        expired: number;
+      }>(
+        `SELECT
+           COUNT(*)::int AS total,
+           COUNT(*) FILTER (
+             WHERE is_revoked = FALSE
+               AND (expires_at IS NULL OR expires_at > NOW())
+               AND (max_uses IS NULL OR used_count < max_uses)
+           )::int AS active,
+           COUNT(*) FILTER (WHERE is_revoked = TRUE)::int AS revoked,
+           COUNT(*) FILTER (WHERE expires_at IS NOT NULL AND expires_at <= NOW())::int AS expired
+         FROM server_invites
+         WHERE server_id = $1`,
+        [serverId]
+      );
+
+      const bansStats = await db.query<{
+        total: number;
+        active: number;
+      }>(
+        `SELECT
+           COUNT(*)::int AS total,
+           COUNT(*) FILTER (WHERE expires_at IS NULL OR expires_at > NOW())::int AS active
+         FROM server_bans
+         WHERE server_id = $1`,
+        [serverId]
+      );
+
+      const response: AdminServerOverviewResponse = {
+        server: {
+          id: server.id,
+          slug: server.slug,
+          name: server.name,
+          isDefault: server.isDefault,
+          ownerUserId: server.ownerUserId,
+          ownerName: server.ownerName,
+          createdAt: server.createdAt,
+          updatedAt: server.updatedAt,
+          metrics: {
+            members: membersStats.rows[0] || {
+              total: 0,
+              active: 0,
+              invited: 0,
+              removed: 0,
+              left: 0,
+              owners: 0,
+              admins: 0
+            },
+            rooms: roomsStats.rows[0] || {
+              total: 0,
+              nsfw: 0,
+              archived: 0
+            },
+            messages: {
+              total: Number(messagesStats.rows[0]?.total || 0)
+            },
+            invites: invitesStats.rows[0] || {
+              total: 0,
+              active: 0,
+              revoked: 0,
+              expired: 0
+            },
+            serverBans: bansStats.rows[0] || {
+              total: 0,
+              active: 0
+            }
+          }
+        }
+      };
+
       return response;
     }
   );

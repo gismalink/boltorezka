@@ -180,3 +180,66 @@ export type ServiceBanResponse = {
 export type ServiceBanRevokeResponse = {
   revoked: boolean;
 };
+
+export type AdminServerListItem = {
+  id: string;
+  slug: string;
+  name: string;
+  isDefault: boolean;
+  ownerUserId: string | null;
+  ownerName: string | null;
+  membersCount: number;
+  roomsCount: number;
+  messagesCount: number;
+  activeServerBansCount: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type AdminServersResponse = {
+  servers: AdminServerListItem[];
+};
+
+export type AdminServerOverview = {
+  id: string;
+  slug: string;
+  name: string;
+  isDefault: boolean;
+  ownerUserId: string | null;
+  ownerName: string | null;
+  createdAt: string;
+  updatedAt: string;
+  metrics: {
+    members: {
+      total: number;
+      active: number;
+      invited: number;
+      removed: number;
+      left: number;
+      owners: number;
+      admins: number;
+    };
+    rooms: {
+      total: number;
+      nsfw: number;
+      archived: number;
+    };
+    messages: {
+      total: number;
+    };
+    invites: {
+      total: number;
+      active: number;
+      revoked: number;
+      expired: number;
+    };
+    serverBans: {
+      total: number;
+      active: number;
+    };
+  };
+};
+
+export type AdminServerOverviewResponse = {
+  server: AdminServerOverview;
+};
