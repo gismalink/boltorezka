@@ -308,7 +308,7 @@ Stage 2 note (2026-03-27):
 - [x] Server switcher + current server context.
 - [x] Header `Dato // ServerName`.
 - [x] Screen: Create server.
-- [ ] Screen: Members + Invite link.
+- [x] Screen: Members + Invite link.
 - [ ] Empty state / onboarding "Создать первый сервер".
 - [ ] Админка суперадмина: `Product Management` + `Server Management`.
 
@@ -326,6 +326,12 @@ Stage 3 note (2026-03-28):
 - На backend снято ограничение количества серверов для `super_admin`:
    - `apps/api/src/services/server-service.ts`, `apps/api/src/routes/servers.ts`.
 - Обновленный срез провалидирован в `test` на feature-ветке через `TEST_REF=origin/feature/multiserver-stage1-services SMOKE_MULTISERVER=1 npm run deploy:test:smoke` (SHA `498d201`, PASS).
+- Добавлен backend endpoint участников сервера: `GET /v1/servers/:serverId/members`.
+- В `ServerProfileModal` добавлен рабочий блок `Members + Invite link`:
+   - список участников текущего сервера,
+   - генерация invite (`POST /v1/servers/:serverId/invites`),
+   - копирование последней сгенерированной ссылки.
+- Изменения провалидированы в `test` на feature-ветке через `TEST_REF=origin/feature/multiserver-stage1-services SMOKE_MULTISERVER=1 npm run deploy:test:smoke` (SHA `5591081`, PASS).
 
 ### Stage 4 - Data cutover
 
