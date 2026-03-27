@@ -288,14 +288,16 @@ Rollback-планирование в рамках этого документа 
 ## 8) Критерии готовности (Definition of Done)
 
 - [x] Выборочная ручная валидация re-onboarding на новом домене выполнена и утверждена владельцем релиза (3 аккаунта).
-- [ ] Login re-onboarded users работает на новом домене в `test` и `prod`.
+- [x] Login re-onboarded users работает на новом домене в `test` и `prod`.
 - [x] Старые адреса корректно перенаправляют на новые (включая `test`).
 - [x] Redirect не создает циклов и сохраняет path/query.
 - [x] Runbooks/smoke/scripts актуализированы.
 
 Статус DoD-пункта login re-onboarded (2026-03-27):
 - `test`: подтверждено (smoke + ручная валидация выборки аккаунтов).
-- `prod`: финальное подтверждение остается после завершения коммуникационного окна и контрольного отчета.
+- `prod`: подтверждено техническим smoke (`SMOKE_API_URL=https://datowave.com npm run smoke:sso:routing`) и прямой проверкой entrypoints:
+  - `/v1/auth/sso/start` -> `302` на `https://auth.datowave.com/auth/google?...`
+  - `/v1/auth/sso/logout` -> `302` на `https://auth.datowave.com/auth/logout?...`
 
 ## 9) Вопросы, которые нужно закрыть до Stage 1
 
