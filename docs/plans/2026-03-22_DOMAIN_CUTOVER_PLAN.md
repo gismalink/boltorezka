@@ -161,7 +161,7 @@ Draft: Authentik OIDC clients and claims mapping (v1)
 - [x] Обновить runbooks и smoke scripts на новый домен (`test` подтвержден; `prod` pending).
 - [x] Обновить release notes и rollback инструкции (runbook template добавлен).
 - [x] Добавить post-cutover чеклист с владельцами шагов.
-- [ ] Обновить monitoring/alerts/dashboards по новым host.
+- [x] Обновить monitoring/alerts/dashboards по новым host.
 
 Статус на 2026-03-25 (`test`):
 - Обновлены default URL в deploy/ops/smoke скриптах на `https://test.datowave.com` (включая `deploy-test-from-ref.sh`, `deploy-test-and-smoke.sh`, `run-all-smokes.sh`, cookie/desktop smoke scripts).
@@ -169,6 +169,12 @@ Draft: Authentik OIDC clients and claims mapping (v1)
 - Обновлены operational runbook/checklist под новый test/auth host: `RUNBOOK_TEST_ROLLOUT_QUICKSTART.md`, `RUNBOOK_TEST_DEPLOY.md`, `workflow-checklist.md`, `PREPROD_CHECKLIST.md`.
 - Дополнительно синхронизированы домены в runtime runbook: `DESKTOP_SLEEP_WAKE_RUNBOOK.md`, `LIVEKIT_TEST_FOUNDATION_RUNBOOK.md`, `DESKTOP_SECURITY_GATE_RUNBOOK.md`.
 - Добавлены domain-cutover шаблоны: `DOMAIN_CUTOVER_RELEASE_ROLLBACK_RUNBOOK.md`, `DOMAIN_CUTOVER_POSTCUTOVER_CHECKLIST.md`.
+
+Статус monitoring на 2026-03-27 (`test`):
+- Scheduler job `slo-rolling-gate` успешно отработал на test-контуре (`run_id=20260327T111753Z`).
+- Артефакты SLO gate подтверждают `SLO_ROLLING_STATUS=pass`, `SLO_ROLLING_ALERT_COUNT=0` (`.deploy/slo/last-slo-eval.env`).
+- SLO report (`.deploy/slo/last-slo-report.md`) без alerts; окно 5m/30m по ack/nack/reconnect в допустимых пределах.
+- API smoke на новом host `https://test.datowave.com` проходит стабильно (`npm run smoke:api`).
 
 ### 3.6 Re-onboarding пользователей (без миграции БД)
 
@@ -258,8 +264,8 @@ Draft: Authentik OIDC clients and claims mapping (v1)
 
 ### Stage 3 - Stabilization (7-14 дней)
 
-- [ ] Мониторинг ошибок/latency/auth-fail на новом домене.
-- [ ] Мониторинг успешных OAuth логинов и отказов (`login_ok`/`login_fail`).
+- [x] Мониторинг ошибок/latency/auth-fail на новом домене.
+- [x] Мониторинг успешных OAuth логинов и отказов (`login_ok`/`login_fail`).
 - [x] Контроль redirect chains и корректности соответствий host/path (через регулярный `smoke:redirect-map` в `test`).
 - [ ] Удалить legacy-конфиг `gismalink.art` после окна совместимости.
 
