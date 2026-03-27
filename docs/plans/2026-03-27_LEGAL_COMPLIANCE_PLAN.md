@@ -186,32 +186,40 @@ Smoke/acceptance для NSFW age-gate:
 
 ### Stage E - NSFW 18+ access gate (`test` -> `prod`)
 
-- [ ] Реализовать `nsfw=true` на уровне server/room + backend enforcement.
-- [ ] Реализовать age-gate UI (`Мне есть 18` / `Назад`) при первой попытке входа в 18+ пространство.
-- [ ] Обновить тексты Terms/Privacy/Contacts под модель 18+ ограничений и обращений.
-- [ ] Прогнать smoke в `test` по NSFW-сценариям и зафиксировать PASS.
-- [ ] После explicit GO включить в `prod` и зафиксировать короткий post-deploy smoke.
+Зависимость от multi-server:
+- До внедрения сущности `servers/server_id` в runtime часть задач Stage E частично заблокирована.
+- Канонический источник зависимости: `docs/plans/2026-03-20_MULTI_SERVER_PLAN.md` (Stage 1-4).
+- Исполнение Stage E делим на две фазы: `E0` (можно делать сейчас) и `E1` (после multi-server foundation).
+
+- [ ] Stage E0 (unblock now): внедрить room-level `nsfw` + age-gate для текущего single-server контура (`BossServer`), без server switcher.
+- [ ] Stage E0: обновить тексты Terms/Privacy/Contacts под модель 18+ ограничений и обращений.
+- [ ] Stage E0: прогнать smoke в `test` по NSFW room-сценариям и зафиксировать PASS.
+- [ ] Stage E1 (after multi-server Stage 1+): перевести enforcement на server+room context с обязательным `server_id` и anti-leak проверками.
+- [ ] Stage E1: после explicit GO включить в `prod` и зафиксировать короткий post-deploy smoke.
 
 #### Stage E.1 - Декомпозиция по файлам (implementation map)
 
 Backend (API):
-- [ ] `apps/api/src/routes/rooms.ts`: добавить/проверить поле `nsfw` в create/update/read контрактах комнат и в выборках дерева комнат.
+- [ ] `apps/api/src/routes/rooms.ts`: добавить/проверить поле `nsfw` в create/update/read контрактах комнат и в выборках дерева комнат (E0).
 - [ ] `apps/api/src/api-contract.types.ts`: расширить типы `RoomRow`/`RoomListRow` полем `nsfw`.
-- [ ] `apps/api/src/middleware/auth.ts` (или отдельный middleware файл): добавить guard для 18+ доступа (например, `requireAgeGateForNsfw`) с `403 AgeVerificationRequired`.
-- [ ] Применить guard ко всем путям входа в room runtime (join/open by slug/direct link/invite path), чтобы исключить обход через API.
+- [ ] `apps/api/src/middleware/auth.ts` (или отдельный middleware файл): добавить guard для 18+ доступа (например, `requireAgeGateForNsfw`) с `403 AgeVerificationRequired` (E0).
+- [ ] Применить guard ко всем путям входа в room runtime (join/open by slug/direct link/invite path), чтобы исключить обход через API (E0).
 - [ ] Добавить запись события age-confirm в audit/metrics (минимум: `userId`, `roomId|roomSlug`, `policyVersion`, `timestamp`, `source`).
+- [ ] После multi-server Stage 1-4: расширить guard и audit до `server_id` контекста (E1).
 
 Frontend (Web):
 - [ ] `apps/web/src/components/roomsPanel/RoomRow.tsx`: при попытке входа в `nsfw=true` запускать age-gate вместо прямого join.
 - [ ] `apps/web/src/components/roomsPanel/RoomsConfirmOverlay.tsx` (или отдельный overlay): добавить вариант подтверждения `Мне есть 18` / `Назад`.
 - [ ] `apps/web/src/hooks/rooms/useRoomPresenceActions.ts`: не вызывать `joinRoom` для `nsfw=true` без подтверждения age-gate.
-- [ ] `apps/web/src/hooks/rooms/useRoomsDerived.ts` и связанные селекторы: скрыть/ограничить preview 18+ пространств до подтверждения (по выбранной policy).
-- [ ] Обработать deep-link сценарий: переход в `nsfw=true` room всегда проходит через age-gate.
+- [ ] `apps/web/src/hooks/rooms/useRoomsDerived.ts` и связанные селекторы: скрыть/ограничить preview 18+ пространств до подтверждения (по выбранной policy) (E0).
+- [ ] Обработать deep-link сценарий: переход в `nsfw=true` room всегда проходит через age-gate (E0).
+- [ ] После внедрения server switcher: добавить server-aware проверку для переходов между серверами и комнатами (E1).
 
 Smoke и тест-контур:
 - [ ] Добавить smoke-скрипт `scripts/smoke/smoke-nsfw-age-gate.mjs` (или расширить существующие web smoke) с кейсами deny/allow/reload/deep-link.
 - [ ] Включить новый smoke в `deploy:test:smoke` профиль (минимум как optional gate на этапе внедрения, затем как required).
 - [ ] Зафиксировать test evidence в `docs/status/test-results/<date>.md`.
+- [ ] После multi-server cutover: добавить test-кейс no-leak между серверами для `nsfw=true` пространств (E1).
 
 Документация и policy:
 - [ ] Обновить legal тексты (`/privacy`, `/terms`, `/contacts`) и добавить ссылку/правило для 18+ контента.
