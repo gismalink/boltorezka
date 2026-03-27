@@ -150,7 +150,7 @@ Scope: закрыть обязательный юридический миним
 
 ## 7) Артефакты и связки
 
-- Основной cutover: `docs/plans/2026-03-22_DOMAIN_CUTOVER_PLAN.md`.
+- Основной cutover: `docs/plans/completed/2026-03-22_DOMAIN_CUTOVER_PLAN.md`.
 - Этот документ: `docs/plans/2026-03-27_LEGAL_COMPLIANCE_PLAN.md`.
 - Результаты smoke/релиза: `docs/status/test-results/` (новая запись по дате).
 

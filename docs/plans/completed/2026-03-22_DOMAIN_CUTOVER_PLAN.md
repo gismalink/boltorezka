@@ -1,4 +1,5 @@
 # План: перенос продукта на новый домен (domain cutover)
+Status: Completed (domain cutover closure + legacy cleanup, archived 2026-03-27)
 Date: 2026-03-22
 Scope: перенести только boltorezka-контур с `boltorezka.gismalink.art` (и связанных test/auth host в рамках boltorezka) на `datowave.com` через greenfield rollout: поднимаем новый контур, делаем redirect со старых адресов на новые, старый контур boltorezka выключаем после окна совместимости.
 

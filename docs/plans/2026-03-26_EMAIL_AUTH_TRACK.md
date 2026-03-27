@@ -4,7 +4,7 @@ Scope: отдельный трек по email auth/register/reset/verify и по
 
 ## 0) Контекст
 
-Этот план вынесен из `docs/plans/2026-03-22_DOMAIN_CUTOVER_PLAN.md`.
+Этот план вынесен из `docs/plans/completed/2026-03-22_DOMAIN_CUTOVER_PLAN.md`.
 Текущий cutover идет по OAuth-only модели (Google/Yandex).
 
 ## 1) Цели
@@ -57,5 +57,5 @@ Scope: отдельный трек по email auth/register/reset/verify и по
 
 ## 4) Связанные документы
 
-- Основной domain cutover план: `docs/plans/2026-03-22_DOMAIN_CUTOVER_PLAN.md`
+- Основной domain cutover план: `docs/plans/completed/2026-03-22_DOMAIN_CUTOVER_PLAN.md`
 - Authentik runbook: `docs/runbooks/AUTHENTIK_TEST_SETUP_RUNBOOK.md`
