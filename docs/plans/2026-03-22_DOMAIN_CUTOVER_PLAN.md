@@ -253,7 +253,7 @@ Draft: Authentik OIDC clients and claims mapping (v1)
 - [x] После подтверждения: deploy в `prod` (GitOps only).
 - [x] Переключить DNS/ingress в `prod` и включить redirect-карту.
 - [x] Подтвердить redirect-only поведение старого домена в `prod`.
-- [ ] Выполнить OAuth-only коммуникацию для текущих пользователей на новом домене.
+- [x] Выполнить OAuth-only коммуникацию для текущих пользователей на новом домене.
 - [x] Выполнить post-deploy smoke на `prod` (redirect + auth).
 
 Статус Stage 2 на 2026-03-27:
@@ -262,6 +262,7 @@ Draft: Authentik OIDC clients and claims mapping (v1)
 - `https://boltorezka.gismalink.art/` переведен в redirect-only (`308` на `https://datowave.com{uri}` с сохранением path/query).
 - Auth dual-host в `prod` подтвержден: `auth.datowave.com` и `auth.gismalink.art` отдают `302` на Google OAuth.
 - OAuth-only коммуникация: сообщение/playbook готовы, фактическая массовая рассылка остается отдельным шагом владельца релиза.
+- Решение владельца релиза от 2026-03-27: отдельная почтовая рассылка не требуется, коммуникация со старыми пользователями проведена напрямую.
 
 ### Stage 3 - Stabilization (7-14 дней)
 
