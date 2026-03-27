@@ -29,6 +29,11 @@ type InviteRow = {
   is_revoked: boolean;
 };
 
+type MembershipRow = {
+  role: ServerMemberRole;
+  status: string;
+};
+
 function hashToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");
 }
@@ -129,6 +134,37 @@ export async function acceptServerInvite(input: AcceptInviteInput): Promise<Serv
 
     if ((serverBanResult.rowCount || 0) > 0) {
       throw new Error("server_banned");
+    }
+
+    const existingMembershipResult = await client.query<MembershipRow>(
+      `SELECT role, status
+       FROM server_members
+       WHERE server_id = $1
+         AND user_id = $2
+       FOR UPDATE`,
+      [invite.server_id, input.userId]
+    );
+
+    const existingMembership = existingMembershipResult.rows[0] || null;
+    if (existingMembership && existingMembership.status === "active") {
+      const contextResult = await client.query<ServerContext>(
+        `SELECT s.id, s.slug, s.name, sm.role
+         FROM servers s
+         JOIN server_members sm ON sm.server_id = s.id
+         WHERE s.id = $1
+           AND sm.user_id = $2
+           AND sm.status = 'active'
+         LIMIT 1`,
+        [invite.server_id, input.userId]
+      );
+
+      const context = contextResult.rows[0];
+      if (!context) {
+        throw new Error("invite_accept_failed");
+      }
+
+      await client.query("COMMIT");
+      return context;
     }
 
     await client.query(

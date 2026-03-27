@@ -247,7 +247,7 @@ Stage 0 note (2026-03-21): design-пакет закрыт в рамках это
 - [x] `BanService` (server/service ban apply/revoke/check).
 - [x] Middleware `requireServerMembership`.
 - [x] Middleware `requireNotServiceBanned` и `requireNotServerBanned`.
-- [ ] Идемпотентность чувствительных операций (транзакции, уникальные индексы, race-safe path).
+- [x] Идемпотентность чувствительных операций (транзакции, уникальные индексы, race-safe path).
 
 Stage 1 note (2026-03-27):
 - Подготовлена миграция `apps/api/migrations/0006_multi_server_foundation.sql`:
@@ -266,6 +266,8 @@ Stage 1 note (2026-03-27):
 - Добавлены endpoints: `POST /v1/servers/:serverId/invites`, `POST /v1/invites/:token/accept`, `POST /v1/servers/:serverId/bans`, `DELETE /v1/servers/:serverId/bans/:userId`.
 - Добавлены admin endpoints: `POST /v1/admin/service-bans`, `DELETE /v1/admin/service-bans/:userId`.
 - Stage 1/2 API-срез провалидирован в `test` на feature-ветке: `TEST_REF=origin/feature/multiserver-stage1-services npm run deploy:test:smoke` (SHA `8e46c0d`, PASS).
+- `acceptServerInvite` сделан идемпотентным для already-active membership (повторный accept не расходует invite `used_count`).
+- Добавлен smoke сценарий `smoke:multiserver` (invite idempotency + server/service ban enforcement), с опциональным запуском в postdeploy (`SMOKE_MULTISERVER=1`).
 
 ### Stage 2 - API + auth integration
 
