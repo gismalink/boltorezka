@@ -1,5 +1,5 @@
 import type { RedisClientType } from "redis";
-import type { UserRow } from "./db.types.ts";
+import type { ServerMemberRole, UserRow } from "./db.types.ts";
 
 type AppRedisClient = ReturnType<typeof import("redis").createClient>;
 
@@ -11,6 +11,12 @@ declare module "fastify" {
 
 	interface FastifyRequest {
 		currentUser?: UserRow;
+		currentServer?: {
+			id: string;
+			slug: string;
+			name: string;
+			role: ServerMemberRole;
+		};
 	}
 }
 

@@ -242,11 +242,11 @@ Stage 0 note (2026-03-21): design-пакет закрыт в рамках это
 ### Stage 1 - Backend foundation
 
 - [x] Миграции БД.
-- [ ] `ServerService` (create/list/get/rename).
+- [x] `ServerService` (create/list/get/rename).
 - [ ] `InviteService` (create/accept/revoke).
 - [ ] `BanService` (server/service ban apply/revoke/check).
-- [ ] Middleware `requireServerMembership`.
-- [ ] Middleware `requireNotServiceBanned` и `requireNotServerBanned`.
+- [x] Middleware `requireServerMembership`.
+- [x] Middleware `requireNotServiceBanned` и `requireNotServerBanned`.
 - [ ] Идемпотентность чувствительных операций (транзакции, уникальные индексы, race-safe path).
 
 Stage 1 note (2026-03-27):
@@ -259,6 +259,8 @@ Stage 1 note (2026-03-27):
    - таблицы: `servers`, `server_members`, `server_invites`, `server_bans`, `service_bans`;
    - колонки `rooms.server_id`, `rooms.nsfw`;
    - bootstrap запись `bossserver | BossServer | is_default=true`.
+- Реализован базовый `ServerService` и добавлены API routes `POST/GET/PATCH /v1/servers*` (`apps/api/src/services/server-service.ts`, `apps/api/src/routes/servers.ts`).
+- Добавлены middleware `requireServerMembership`, `requireNotServiceBanned`, `requireNotServerBanned` в `apps/api/src/middleware/auth.ts`.
 
 ### Stage 2 - API + auth integration
 

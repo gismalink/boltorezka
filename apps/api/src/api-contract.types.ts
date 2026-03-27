@@ -4,6 +4,8 @@ import type {
   RoomListRow,
   RoomMessageRow,
   RoomRow,
+  ServerMemberRole,
+  ServerRow,
   UserRow
 } from "./db.types.ts";
 
@@ -110,4 +112,32 @@ export type ChatUploadInitResponse = {
 export type ChatUploadFinalizeResponse = {
   message: RoomMessageRow;
   attachment: MessageAttachmentRow;
+};
+
+export type ServerListItem = {
+  id: string;
+  slug: string;
+  name: string;
+  role: ServerMemberRole;
+  membersCount: number;
+};
+
+export type ServersListResponse = {
+  servers: ServerListItem[];
+};
+
+export type ServerCreateResponse = {
+  server: ServerListItem;
+};
+
+export type ServerGetResponse = {
+  server: ServerListItem;
+};
+
+export type ServerRenameResponse = {
+  server: ServerListItem;
+};
+
+export type ServerContext = Pick<ServerRow, "id" | "slug" | "name"> & {
+  role: ServerMemberRole;
 };

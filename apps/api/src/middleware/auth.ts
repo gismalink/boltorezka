@@ -1,6 +1,6 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { db } from "../db.js";
-import type { UserRow } from "../db.types.ts";
+import type { ServerMemberRole, UserRow } from "../db.types.ts";
 import { config } from "../config.js";
 
 function unauthorized(reply: FastifyReply) {
@@ -31,6 +31,27 @@ function serviceAccessDenied(reply: FastifyReply, accessState: string) {
   });
 }
 
+function serviceBanned(reply: FastifyReply) {
+  return reply.code(403).send({
+    error: "service_banned",
+    message: "User is banned in service"
+  });
+}
+
+function serverBanned(reply: FastifyReply) {
+  return reply.code(403).send({
+    error: "server_banned",
+    message: "User is banned on this server"
+  });
+}
+
+function serverMembershipDenied(reply: FastifyReply) {
+  return reply.code(403).send({
+    error: "not_server_member",
+    message: "User is not a server member"
+  });
+}
+
 async function resolveCurrentUser(request: FastifyRequest) {
   const userId = request.user?.sub;
   if (!userId) {
@@ -43,6 +64,61 @@ async function resolveCurrentUser(request: FastifyRequest) {
   );
 
   if (result.rowCount === 0) {
+    return null;
+  }
+
+  return result.rows[0];
+}
+
+function getRequestServerId(request: FastifyRequest): string | null {
+  const paramsServerId = String((request.params as { serverId?: unknown } | undefined)?.serverId || "").trim();
+  if (paramsServerId) {
+    return paramsServerId;
+  }
+
+  const queryServerId = String((request.query as { serverId?: unknown } | undefined)?.serverId || "").trim();
+  if (queryServerId) {
+    return queryServerId;
+  }
+
+  const headerServerId = String(request.headers["x-server-id"] || "").trim();
+  if (headerServerId) {
+    return headerServerId;
+  }
+
+  return null;
+}
+
+async function resolveDefaultServerId(): Promise<string | null> {
+  const result = await db.query<{ id: string }>(
+    `SELECT id
+     FROM servers
+     WHERE is_default = TRUE
+     ORDER BY created_at ASC
+     LIMIT 1`
+  );
+
+  return String(result.rows[0]?.id || "").trim() || null;
+}
+
+async function resolveServerMembership(userId: string, serverId: string) {
+  const result = await db.query<{
+    id: string;
+    slug: string;
+    name: string;
+    role: ServerMemberRole;
+    status: string;
+  }>(
+    `SELECT s.id, s.slug, s.name, sm.role, sm.status
+     FROM server_members sm
+     JOIN servers s ON s.id = sm.server_id
+     WHERE sm.server_id = $1
+       AND sm.user_id = $2
+     LIMIT 1`,
+    [serverId, userId]
+  );
+
+  if ((result.rowCount || 0) === 0) {
     return null;
   }
 
@@ -200,5 +276,83 @@ export async function requireServiceAccess(request: FastifyRequest, reply: Fasti
   const accessState = String(user.access_state || "pending").trim();
   if (accessState !== "active") {
     return serviceAccessDenied(reply, accessState);
+  }
+}
+
+export async function requireNotServiceBanned(request: FastifyRequest, reply: FastifyReply) {
+  const user = request.currentUser;
+  if (!user) {
+    return unauthorized(reply);
+  }
+
+  const result = await db.query<{ id: string }>(
+    `SELECT id
+     FROM service_bans
+     WHERE user_id = $1
+       AND (expires_at IS NULL OR expires_at > NOW())
+     LIMIT 1`,
+    [user.id]
+  );
+
+  if ((result.rowCount || 0) > 0) {
+    return serviceBanned(reply);
+  }
+}
+
+export async function requireServerMembership(request: FastifyRequest, reply: FastifyReply) {
+  const user = request.currentUser;
+  if (!user) {
+    return unauthorized(reply);
+  }
+
+  const requestedServerId = getRequestServerId(request);
+  const serverId = requestedServerId || await resolveDefaultServerId();
+  if (!serverId) {
+    return reply.code(500).send({
+      error: "ServerNotConfigured",
+      message: "Default server is not configured"
+    });
+  }
+
+  const membership = await resolveServerMembership(user.id, serverId);
+  if (!membership || String(membership.status || "") !== "active") {
+    return serverMembershipDenied(reply);
+  }
+
+  request.currentServer = {
+    id: membership.id,
+    slug: membership.slug,
+    name: membership.name,
+    role: membership.role
+  };
+}
+
+export async function requireNotServerBanned(request: FastifyRequest, reply: FastifyReply) {
+  const user = request.currentUser;
+  const server = request.currentServer;
+
+  if (!user) {
+    return unauthorized(reply);
+  }
+
+  if (!server) {
+    return reply.code(500).send({
+      error: "ServerContextMissing",
+      message: "Server context was not resolved"
+    });
+  }
+
+  const result = await db.query<{ id: string }>(
+    `SELECT id
+     FROM server_bans
+     WHERE server_id = $1
+       AND user_id = $2
+       AND (expires_at IS NULL OR expires_at > NOW())
+     LIMIT 1`,
+    [server.id, user.id]
+  );
+
+  if ((result.rowCount || 0) > 0) {
+    return serverBanned(reply);
   }
 }

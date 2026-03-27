@@ -90,6 +90,27 @@ export type InsertedMessageRow = {
 
 export type AudioQuality = "retro" | "low" | "standard" | "high";
 
+export type ServerMemberRole = "owner" | "admin" | "member";
+export type ServerMemberStatus = "active" | "invited" | "left" | "removed";
+
+export type ServerRow = {
+  id: string;
+  slug: string;
+  name: string;
+  owner_user_id: string;
+  is_default: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ServerMemberRow = {
+  server_id: string;
+  user_id: string;
+  role: ServerMemberRole;
+  status: ServerMemberStatus;
+  joined_at: string;
+};
+
 export type ServerSettingsRow = {
   id: boolean;
   audio_quality: AudioQuality;
