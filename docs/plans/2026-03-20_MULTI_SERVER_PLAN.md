@@ -268,6 +268,8 @@ Stage 1 note (2026-03-27):
 - Stage 1/2 API-срез провалидирован в `test` на feature-ветке: `TEST_REF=origin/feature/multiserver-stage1-services npm run deploy:test:smoke` (SHA `8e46c0d`, PASS).
 - `acceptServerInvite` сделан идемпотентным для already-active membership (повторный accept не расходует invite `used_count`).
 - Добавлен smoke сценарий `smoke:multiserver` (invite idempotency + server/service ban enforcement), с опциональным запуском в postdeploy (`SMOKE_MULTISERVER=1`).
+- `smoke:multiserver` стабилизирован для test gate: fresh bearer перед запуском, fallback на operable server и pre-cleanup stale ban state.
+- Повторный test gate на feature-ветке с включенным `SMOKE_MULTISERVER=1` прошел: SHA `fcd7f62`, `PASS`.
 
 ### Stage 2 - API + auth integration
 
