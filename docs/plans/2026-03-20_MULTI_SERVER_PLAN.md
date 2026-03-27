@@ -310,7 +310,7 @@ Stage 2 note (2026-03-27):
 - [x] Screen: Create server.
 - [x] Screen: Members + Invite link.
 - [x] Empty state / onboarding "Создать первый сервер".
-- [ ] Админка суперадмина: `Product Management` + `Server Management`.
+- [x] Админка суперадмина: `Product Management` + `Server Management`.
 
 Stage 3 note (2026-03-28):
 - В `apps/web/src/api.ts` добавлен клиентский вызов `GET /v1/servers`.
@@ -337,6 +337,11 @@ Stage 3 note (2026-03-28):
    - интеграция в `apps/web/src/App.tsx` (рендер вместо workspace при `servers.length === 0` после загрузки),
    - CTA `Создать первый сервер` использует уже существующий create-server flow.
 - Изменения провалидированы в `test` на feature-ветке через `TEST_REF=origin/feature/multiserver-stage1-services SMOKE_MULTISERVER=1 npm run deploy:test:smoke` (SHA `261a377`, PASS).
+- Добавлено разделение admin control plane для `super_admin`:
+   - отдельные вкладки `Product Management` и `Server Management` в `ServerProfileModal`,
+   - client API для `GET /v1/admin/servers` и `GET /v1/admin/servers/:serverId/overview`,
+   - server management overview (owner/members/rooms/messages/invites/bans) в UI.
+- Изменения провалидированы в `test` на feature-ветке через `TEST_REF=origin/feature/multiserver-stage1-services SMOKE_MULTISERVER=1 npm run deploy:test:smoke` (SHA `ed785b0`, PASS).
 
 ### Stage 4 - Data cutover
 
