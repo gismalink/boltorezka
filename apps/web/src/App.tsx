@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { api } from "./api";
+import { ApiError, api } from "./api";
 import { TooltipPortal } from "./TooltipPortal";
 import {
   AuthController,
@@ -160,6 +160,7 @@ export function App() {
   const [roomMediaTopologyBySlug, setRoomMediaTopologyBySlug] = useState<Record<string, "livekit">>({});
   const [servers, setServers] = useState<ServerListItem[]>([]);
   const [currentServerId, setCurrentServerId] = useState(() => String(localStorage.getItem(CURRENT_SERVER_ID_STORAGE_KEY) || "").trim());
+  const [creatingServer, setCreatingServer] = useState(false);
   const [telemetrySummary, setTelemetrySummary] = useState<TelemetrySummary | null>(null);
   const [wsState, setWsState] = useState<"disconnected" | "connecting" | "connected">(
     "disconnected"
@@ -929,13 +930,15 @@ export function App() {
 
         const ids = new Set(list.map((item) => item.id));
         const persistedId = String(localStorage.getItem(CURRENT_SERVER_ID_STORAGE_KEY) || "").trim();
-        const selected = ids.has(currentServerId)
-          ? currentServerId
-          : ids.has(persistedId)
-            ? persistedId
-            : list[0]?.id || "";
+        setCurrentServerId((prev) => {
+          const selected = ids.has(prev)
+            ? prev
+            : ids.has(persistedId)
+              ? persistedId
+              : list[0]?.id || "";
 
-        setCurrentServerId(selected);
+          return selected;
+        });
       })
       .catch((error) => {
         if (cancelled) {
@@ -949,12 +952,39 @@ export function App() {
     return () => {
       cancelled = true;
     };
-  }, [token, user, currentServerId, pushLog]);
+  }, [token, user, pushLog]);
 
   const currentServer = useMemo(
     () => servers.find((item) => item.id === currentServerId) || null,
     [servers, currentServerId]
   );
+
+  const handleCreateServer = useCallback(async (name: string) => {
+    const tokenValue = String(token || "").trim();
+    const trimmedName = String(name || "").trim();
+
+    if (!tokenValue || !trimmedName) {
+      return;
+    }
+
+    setCreatingServer(true);
+    try {
+      const created = await api.createServer(tokenValue, { name: trimmedName });
+      const listResponse = await api.servers(tokenValue);
+      const list = Array.isArray(listResponse.servers) ? listResponse.servers : [];
+      setServers(list);
+      setCurrentServerId(created.server.id);
+      pushToast(t("server.createSuccess"));
+    } catch (error) {
+      if (error instanceof ApiError && error.code === "ServerLimitReached") {
+        pushToast(t("server.createLimitReached"));
+      } else {
+        pushToast((error as Error).message || t("toast.serverError"));
+      }
+    } finally {
+      setCreatingServer(false);
+    }
+  }, [token, pushToast, t]);
 
   useEffect(() => {
     if (!chatRoomSlug && roomSlug) {
@@ -1791,6 +1821,7 @@ export function App() {
         currentServerName={currentServer?.name || null}
         servers={servers}
         currentServerId={currentServerId}
+        creatingServer={creatingServer}
         buildDateLabel={CLIENT_BUILD_DATE_LABEL}
         appMenuOpen={appMenuOpen}
         authMenuOpen={authMenuOpen}
@@ -1804,6 +1835,7 @@ export function App() {
         onLogout={logout}
         onOpenUserSettings={() => openUserSettings("profile")}
         onChangeCurrentServer={(serverId) => setCurrentServerId(serverId)}
+        onCreateServer={handleCreateServer}
       />
       <TooltipPortal />
 

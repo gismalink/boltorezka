@@ -161,3 +161,7 @@ export type ServerListItem = {
   role: ServerMemberRole;
   membersCount: number;
 };
+
+export type ServerCreateResponse = {
+  server: ServerListItem;
+};

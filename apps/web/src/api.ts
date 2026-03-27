@@ -10,6 +10,7 @@ import type {
   RoomsTreeResponse,
   ServerAudioQualityResponse,
   ServerChatImagePolicyResponse,
+  ServerCreateResponse,
   TelemetrySummary,
   ServerListItem,
   User,
@@ -305,6 +306,8 @@ export const api = {
   },
   telemetrySummary: (token: string) => fetchJson<TelemetrySummary>(endpoints.telemetrySummary, token),
   servers: (token: string) => fetchJson<{ servers: ServerListItem[] }>(endpoints.servers, token),
+  createServer: (token: string, input: { name: string }) =>
+    fetchJson<ServerCreateResponse>(endpoints.servers, token, withJsonBody("POST", input)),
   serverAudioQuality: (token: string) => fetchJson<ServerAudioQualityResponse>(endpoints.adminServerAudioQuality, token),
   serverChatImagePolicy: (token: string) =>
     fetchJson<ServerChatImagePolicyResponse>(endpoints.adminServerChatImagePolicy, token),

@@ -1,11 +1,12 @@
 import { db } from "../db.js";
 import type { ServerListItem, ServerContext } from "../api-contract.types.ts";
-import type { ServerMemberRole } from "../db.types.ts";
+import type { ServerMemberRole, UserRole } from "../db.types.ts";
 import { writeServerAuditEvent } from "./server-audit-service.js";
 
 type CreateServerInput = {
   name: string;
   ownerUserId: string;
+  creatorRole: UserRole;
 };
 
 type RenameServerInput = {
@@ -68,15 +69,18 @@ async function mapServerByIdForUser(serverId: string, userId: string): Promise<S
 export async function createServerForUser(input: CreateServerInput): Promise<ServerListItem> {
   const ownerUserId = String(input.ownerUserId || "").trim();
   const trimmedName = String(input.name || "").trim();
+  const creatorRole: UserRole = input.creatorRole;
 
-  const ownerServers = await db.query<{ count: string }>(
-    "SELECT COUNT(*)::text AS count FROM servers WHERE owner_user_id = $1",
-    [ownerUserId]
-  );
+  if (creatorRole !== "super_admin") {
+    const ownerServers = await db.query<{ count: string }>(
+      "SELECT COUNT(*)::text AS count FROM servers WHERE owner_user_id = $1",
+      [ownerUserId]
+    );
 
-  const ownedCount = Number(ownerServers.rows[0]?.count || "0");
-  if (ownedCount >= 1) {
-    throw new Error("server_limit_reached");
+    const ownedCount = Number(ownerServers.rows[0]?.count || "0");
+    if (ownedCount >= 1) {
+      throw new Error("server_limit_reached");
+    }
   }
 
   const uniqueSlug = await ensureUniqueSlug(toSlug(trimmedName) || "server");

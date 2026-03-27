@@ -1,4 +1,4 @@
-import type { RefObject } from "react";
+import { useRef, useState, type RefObject } from "react";
 import type { ServerListItem, User } from "../domain";
 import { PopupPortal } from "./PopupPortal";
 
@@ -19,7 +19,9 @@ type AppHeaderProps = {
   currentServerName: string | null;
   servers: ServerListItem[];
   currentServerId: string;
+  creatingServer: boolean;
   onChangeCurrentServer: (serverId: string) => void;
+  onCreateServer: (name: string) => Promise<void>;
   buildDateLabel?: string;
 };
 
@@ -40,11 +42,27 @@ export function AppHeader({
   currentServerName,
   servers,
   currentServerId,
+  creatingServer,
   onChangeCurrentServer,
+  onCreateServer,
   buildDateLabel,
 }: AppHeaderProps) {
+  const [createServerOpen, setCreateServerOpen] = useState(false);
+  const [newServerName, setNewServerName] = useState("");
+  const createServerRef = useRef<HTMLDivElement>(null);
   const menuGlyph = String(currentServerName || "").trim().slice(0, 1).toUpperCase() || "D";
   const serverTitle = String(currentServerName || "").trim() || t("server.noActive");
+
+  const submitCreateServer = async () => {
+    const name = String(newServerName || "").trim();
+    if (!name || creatingServer) {
+      return;
+    }
+
+    await onCreateServer(name);
+    setCreateServerOpen(false);
+    setNewServerName("");
+  };
 
   return (
     <header className="app-header flex items-center justify-between gap-4 desktop:gap-6">
@@ -87,6 +105,35 @@ export function AppHeader({
                 ))}
               </select>
             </label>
+            <div className="hidden desktop:block" ref={createServerRef}>
+              <button
+                type="button"
+                className="secondary"
+                aria-label={t("server.createAria")}
+                onClick={() => setCreateServerOpen((value) => !value)}
+              >
+                {t("server.create")}
+              </button>
+              <PopupPortal open={createServerOpen} anchorRef={createServerRef} className="profile-popup" placement="bottom-end">
+                <div className="grid gap-2 min-w-[260px]">
+                  <label className="text-sm text-pixel-text/80" htmlFor="create-server-name-input">{t("server.createTitle")}</label>
+                  <input
+                    id="create-server-name-input"
+                    className="secondary"
+                    value={newServerName}
+                    maxLength={64}
+                    onChange={(event) => setNewServerName(event.target.value)}
+                    placeholder={t("server.createPlaceholder")}
+                  />
+                  <div className="flex gap-2 justify-end">
+                    <button type="button" className="secondary" onClick={() => setCreateServerOpen(false)}>{t("server.createCancel")}</button>
+                    <button type="button" onClick={() => { void submitCreateServer(); }} disabled={creatingServer || newServerName.trim().length < 3}>
+                      {creatingServer ? t("server.createLoading") : t("server.createSubmit")}
+                    </button>
+                  </div>
+                </div>
+              </PopupPortal>
+            </div>
             <span className="user-chip hidden max-w-[220px] truncate font-semibold text-pixel-text desktop:inline">{user.name}</span>
             <div className="profile-menu" ref={profileMenuRef}>
               <button

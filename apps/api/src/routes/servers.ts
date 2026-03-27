@@ -73,11 +73,13 @@ export async function serversRoutes(fastify: FastifyInstance) {
       }
 
       const userId = String(request.currentUser?.id || "").trim();
+      const userRole = request.currentUser?.role || "user";
 
       try {
         const server = await createServerForUser({
           name: parsed.data.name,
-          ownerUserId: userId
+          ownerUserId: userId,
+          creatorRole: userRole
         });
 
         const response: ServerCreateResponse = { server };
