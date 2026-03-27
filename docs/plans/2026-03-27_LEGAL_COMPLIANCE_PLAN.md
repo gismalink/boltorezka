@@ -125,9 +125,15 @@ Scope: закрыть обязательный юридический миним
 
 - [ ] Smoke: новый пользователь видит баннер -> жмет `Ок` -> баннер не мешает login.
 - [ ] Smoke: после reload баннер не появляется повторно (если consent уже сохранен).
-- [ ] Smoke: все юридические страницы отдают `200` и корректный контент.
-- [ ] Smoke: ссылки в footer/auth ведут на `datowave.com` / `test.datowave.com`.
+- [x] Smoke: все юридические страницы отдают `200` и корректный контент.
+- [x] Smoke: ссылки в footer/auth ведут на `datowave.com` / `test.datowave.com`.
 - [ ] Smoke: нестрого необходимые cookie до consent не устанавливаются.
+
+Статус Stage C на 2026-03-27 (`test`):
+- Deploy+smoke от `origin/feature/legal-compliance-stage-b` выполнен успешно.
+- Подтверждено `200` для: `/privacy`, `/terms`, `/cookies`, `/contacts` на `https://test.datowave.com`.
+- Подтвержден SSO routing без регресса: `/v1/auth/sso/start` -> `https://test.auth.datowave.com/...` (`302`).
+- В test bundle подтверждены legal-ссылки (`/privacy`, `/terms`, `/cookies`, `/contacts`) и текст cookie-баннера: "Мы используем cookie, чтобы сайт работал".
 
 ### Stage D - Rollout (`prod`, только после explicit GO)
 
