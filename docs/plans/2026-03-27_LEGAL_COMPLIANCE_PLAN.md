@@ -76,7 +76,7 @@ Scope: закрыть обязательный юридический миним
 
 - [x] Footer web-приложения: ссылки на Privacy / Terms / Cookies / Contacts.
 - [x] Экраны auth/onboarding: компактные ссылки на Privacy + Terms.
-- [ ] Письма/уведомления (если есть ссылки): вести на новый домен `datowave.com`.
+- [x] Письма/уведомления (если есть ссылки): вести на новый домен `datowave.com`.
 
 ## 5.1) Матрица применимости для Datowave/Boltorezka
 
@@ -140,6 +140,7 @@ Scope: закрыть обязательный юридический миним
 - Добавлена полноценная legal i18n-поддержка (`ru/en`) с selector языка в правом верхнем углу.
 - Подтверждены RU/EN тексты для legal links и cookie banner после test deploy SHA `fe41271`.
 - Добавлена кнопка `Настройки cookie / Cookie settings` (footer + legal page), которая сбрасывает consent-флаг и повторно показывает баннер.
+- По текущему scope `apps/*`/`scripts/*` legacy-ссылки в mail/notification шаблонах не обнаружены; рабочие примеры URL используют `datowave.com`.
 
 ### Stage D - Rollout (`prod`, только после explicit GO)
 
