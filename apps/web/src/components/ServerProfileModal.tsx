@@ -1,11 +1,28 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { AudioQuality, ServerMemberItem, TelemetrySummary, User } from "../domain";
+import type {
+  AdminServerListItem,
+  AdminServerOverview,
+  AudioQuality,
+  ServerMemberItem,
+  TelemetrySummary,
+  User
+} from "../domain";
 import { getDesktopUpdateBridge } from "../desktopBridge";
 import type { ServerScreenShareResolution, ServerVideoEffectType } from "../hooks/rtc/voiceCallTypes";
 import { resolvePublicOrigin } from "../runtimeOrigin";
 import { RangeSlider } from "./RangeSlider";
 
-type ServerMenuTab = "users" | "events" | "telemetry" | "call" | "sound" | "video" | "chat_images" | "desktop_downloads";
+type ServerMenuTab =
+  | "users"
+  | "product_management"
+  | "server_management"
+  | "events"
+  | "telemetry"
+  | "call"
+  | "sound"
+  | "video"
+  | "chat_images"
+  | "desktop_downloads";
 type UserAccessTab = "active" | "blocked" | "requests" | "bots";
 
 type ServerProfileModalProps = {
@@ -13,9 +30,15 @@ type ServerProfileModalProps = {
   t: (key: string) => string;
   canManageUsers: boolean;
   canPromote: boolean;
+  canManageServerControlPlane: boolean;
   canViewTelemetry: boolean;
   serverMenuTab: ServerMenuTab;
   adminUsers: User[];
+  adminServers: AdminServerListItem[];
+  adminServersLoading: boolean;
+  selectedAdminServerId: string;
+  adminServerOverview: AdminServerOverview | null;
+  adminServerOverviewLoading: boolean;
   serverMembers: ServerMemberItem[];
   serverMembersLoading: boolean;
   lastInviteUrl: string;
@@ -53,6 +76,7 @@ type ServerProfileModalProps = {
   onDemote: (userId: string) => void;
   onSetBan: (userId: string, banned: boolean) => void;
   onSetAccessState: (userId: string, accessState: "pending" | "active" | "blocked") => void;
+  onSelectAdminServer: (serverId: string) => void;
   onCreateServerInvite: () => void;
   onCopyInviteUrl: () => void;
   onRefreshTelemetry: () => void;
@@ -179,9 +203,15 @@ export function ServerProfileModal({
   t,
   canManageUsers,
   canPromote,
+  canManageServerControlPlane,
   canViewTelemetry,
   serverMenuTab,
   adminUsers,
+  adminServers,
+  adminServersLoading,
+  selectedAdminServerId,
+  adminServerOverview,
+  adminServerOverviewLoading,
   serverMembers,
   serverMembersLoading,
   lastInviteUrl,
@@ -215,6 +245,7 @@ export function ServerProfileModal({
   onDemote,
   onSetBan,
   onSetAccessState,
+  onSelectAdminServer,
   onCreateServerInvite,
   onCopyInviteUrl,
   onRefreshTelemetry,
@@ -243,6 +274,11 @@ export function ServerProfileModal({
   const totalUsers = adminUsers.length;
   const totalAdmins = adminUsers.filter((item) => item.role === "admin" || item.role === "super_admin").length;
   const totalBanned = adminUsers.filter((item) => item.is_banned).length;
+  const showProductManagementTab = canManageServerControlPlane;
+  const showServerManagementTab = canManageServerControlPlane;
+  const showLegacyUsersTab = canManageUsers && !canManageServerControlPlane;
+  const showServerMembersPanel = serverMenuTab === "users" || serverMenuTab === "server_management";
+  const showAdminUsersPanel = (serverMenuTab === "users" && !canManageServerControlPlane) || serverMenuTab === "product_management";
   const rnnoiseProcessSamples = telemetrySummary?.metrics.rnnoise_process_cost_samples ?? 0;
   const rnnoiseProcessAvgMs = rnnoiseProcessSamples > 0
     ? (telemetrySummary?.metrics.rnnoise_process_cost_us_sum ?? 0) / rnnoiseProcessSamples / 1000
@@ -610,13 +646,31 @@ export function ServerProfileModal({
       <section className="card voice-preferences-modal user-settings-modal server-profile-modal grid w-full max-w-[980px] min-w-0 gap-4 max-desktop:h-full max-desktop:max-h-none max-desktop:min-h-0 max-desktop:overflow-hidden max-desktop:p-4 desktop:grid-cols-[250px_1fr]">
         <div className="user-settings-sidebar grid min-w-0 content-start gap-2">
           <div className="voice-preferences-kicker">{t("server.title")}</div>
-          {canManageUsers ? (
+          {showLegacyUsersTab ? (
             <button
               type="button"
               className={`secondary user-settings-tab-btn min-h-[42px] justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${serverMenuTab === "users" ? "user-settings-tab-btn-active" : ""}`}
               onClick={() => onSetServerMenuTab("users")}
             >
               {t("server.tabUsers")}
+            </button>
+          ) : null}
+          {showProductManagementTab ? (
+            <button
+              type="button"
+              className={`secondary user-settings-tab-btn min-h-[42px] justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${serverMenuTab === "product_management" ? "user-settings-tab-btn-active" : ""}`}
+              onClick={() => onSetServerMenuTab("product_management")}
+            >
+              {t("server.tabProductManagement")}
+            </button>
+          ) : null}
+          {showServerManagementTab ? (
+            <button
+              type="button"
+              className={`secondary user-settings-tab-btn min-h-[42px] justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${serverMenuTab === "server_management" ? "user-settings-tab-btn-active" : ""}`}
+              onClick={() => onSetServerMenuTab("server_management")}
+            >
+              {t("server.tabServerManagement")}
             </button>
           ) : null}
           <button
@@ -680,6 +734,8 @@ export function ServerProfileModal({
           <div className="voice-preferences-head flex items-center justify-between gap-3">
             <h2 className="mt-[var(--space-xxs)]">
               {serverMenuTab === "users" ? t("server.tabUsers") : null}
+              {serverMenuTab === "product_management" ? t("server.tabProductManagement") : null}
+              {serverMenuTab === "server_management" ? t("server.tabServerManagement") : null}
               {serverMenuTab === "events" ? t("server.tabEvents") : null}
               {serverMenuTab === "telemetry" ? t("server.tabTelemetry") : null}
               {serverMenuTab === "call" ? t("server.tabCall") : null}
@@ -698,45 +754,88 @@ export function ServerProfileModal({
             </button>
           </div>
 
-          {serverMenuTab === "users" ? (
+          {showServerMembersPanel || showAdminUsersPanel ? (
             <section className="grid gap-3">
-              <h3>{t("server.membersTitle")}</h3>
-              <p className="muted">
-                {serverMembersLoading
-                  ? t("server.membersLoading")
-                  : `${t("server.membersCount")}: ${serverMembers.length}`}
-              </p>
-              <div className="grid gap-2">
-                <label className="grid gap-1">
-                  <span className="muted">{t("server.inviteTitle")}</span>
-                  <input
-                    type="text"
-                    readOnly
-                    value={lastInviteUrl}
-                    placeholder={t("server.invitePlaceholder")}
-                  />
-                </label>
-                <div className="flex flex-wrap gap-2">
-                  <button type="button" onClick={onCreateServerInvite} disabled={creatingInvite}>
-                    {creatingInvite ? t("server.inviteCreateLoading") : t("server.inviteCreate")}
-                  </button>
-                  <button type="button" className="secondary" onClick={onCopyInviteUrl} disabled={!lastInviteUrl}>
-                    {t("server.inviteCopy")}
-                  </button>
-                </div>
-              </div>
-              <ul className="admin-list grid gap-2">
-                {serverMembers.map((member) => (
-                  <li key={member.userId} className="admin-row grid min-h-[42px] grid-cols-[minmax(0,1fr)_auto] items-center gap-2 max-desktop:grid-cols-1">
-                    <span className="min-w-0 break-words">
-                      {member.name} · {member.email} ({member.role})
-                    </span>
-                  </li>
-                ))}
-              </ul>
-              {!serverMembersLoading && serverMembers.length === 0 ? <p className="muted">{t("server.membersEmpty")}</p> : null}
+              {showServerMembersPanel ? (
+                <>
+                  <h3>{t("server.membersTitle")}</h3>
+                  <p className="muted">
+                    {serverMembersLoading
+                      ? t("server.membersLoading")
+                      : `${t("server.membersCount")}: ${serverMembers.length}`}
+                  </p>
+                  <div className="grid gap-2">
+                    <label className="grid gap-1">
+                      <span className="muted">{t("server.inviteTitle")}</span>
+                      <input
+                        type="text"
+                        readOnly
+                        value={lastInviteUrl}
+                        placeholder={t("server.invitePlaceholder")}
+                      />
+                    </label>
+                    <div className="flex flex-wrap gap-2">
+                      <button type="button" onClick={onCreateServerInvite} disabled={creatingInvite}>
+                        {creatingInvite ? t("server.inviteCreateLoading") : t("server.inviteCreate")}
+                      </button>
+                      <button type="button" className="secondary" onClick={onCopyInviteUrl} disabled={!lastInviteUrl}>
+                        {t("server.inviteCopy")}
+                      </button>
+                    </div>
+                  </div>
+                  <ul className="admin-list grid gap-2">
+                    {serverMembers.map((member) => (
+                      <li key={member.userId} className="admin-row grid min-h-[42px] grid-cols-[minmax(0,1fr)_auto] items-center gap-2 max-desktop:grid-cols-1">
+                        <span className="min-w-0 break-words">
+                          {member.name} · {member.email} ({member.role})
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                  {!serverMembersLoading && serverMembers.length === 0 ? <p className="muted">{t("server.membersEmpty")}</p> : null}
 
-              {canManageUsers ? (
+                  {showServerManagementTab ? (
+                    <>
+                      <h3>{t("server.managementTitle")}</h3>
+                      <p className="muted">
+                        {adminServersLoading
+                          ? t("server.managementLoading")
+                          : `${t("server.managementServersCount")}: ${adminServers.length}`}
+                      </p>
+                      <label className="grid gap-1">
+                        <span className="muted">{t("server.managementServerSelect")}</span>
+                        <select
+                          value={selectedAdminServerId}
+                          onChange={(event) => onSelectAdminServer(event.target.value)}
+                          disabled={adminServersLoading || adminServers.length === 0}
+                        >
+                          {adminServers.map((server) => (
+                            <option key={server.id} value={server.id}>
+                              {server.name} ({server.slug})
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+
+                      {adminServerOverviewLoading ? <p className="muted">{t("server.managementOverviewLoading")}</p> : null}
+                      {!adminServerOverviewLoading && !adminServerOverview ? <p className="muted">{t("server.managementEmpty")}</p> : null}
+
+                      {adminServerOverview ? (
+                        <div className="grid gap-1">
+                          <div>{t("server.managementOwner")}: {adminServerOverview.ownerName || "-"}</div>
+                          <div>{t("server.managementMembers")}: {adminServerOverview.metrics.members.active} / {adminServerOverview.metrics.members.total}</div>
+                          <div>{t("server.managementRooms")}: {adminServerOverview.metrics.rooms.total}</div>
+                          <div>{t("server.managementMessages")}: {adminServerOverview.metrics.messages.total}</div>
+                          <div>{t("server.managementInvites")}: {adminServerOverview.metrics.invites.active} / {adminServerOverview.metrics.invites.total}</div>
+                          <div>{t("server.managementBans")}: {adminServerOverview.metrics.serverBans.active} / {adminServerOverview.metrics.serverBans.total}</div>
+                        </div>
+                      ) : null}
+                    </>
+                  ) : null}
+                </>
+              ) : null}
+
+              {showAdminUsersPanel ? (
                 <>
               <h3>{t("admin.title")}</h3>
               <p className="muted">Users total: {totalUsers} · Admins: {totalAdmins} · Banned: {totalBanned}</p>

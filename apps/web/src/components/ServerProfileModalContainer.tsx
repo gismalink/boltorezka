@@ -9,6 +9,7 @@ type ServerProfileModalContainerProps = {
   permissions: {
     canManageUsers: boolean;
     canPromote: boolean;
+    canManageServerControlPlane: boolean;
     canViewTelemetry: boolean;
     canManageAudioQuality: boolean;
   };
@@ -32,6 +33,11 @@ type ServerProfileModalContainerProps = {
   };
   data: {
     adminUsers: ServerProfileModalProps["adminUsers"];
+    adminServers: ServerProfileModalProps["adminServers"];
+    adminServersLoading: ServerProfileModalProps["adminServersLoading"];
+    selectedAdminServerId: ServerProfileModalProps["selectedAdminServerId"];
+    adminServerOverview: ServerProfileModalProps["adminServerOverview"];
+    adminServerOverviewLoading: ServerProfileModalProps["adminServerOverviewLoading"];
     serverMembers: ServerProfileModalProps["serverMembers"];
     serverMembersLoading: boolean;
     lastInviteUrl: string;
@@ -50,6 +56,7 @@ type ServerProfileModalContainerProps = {
     onDemote: ServerProfileModalProps["onDemote"];
     onSetBan: ServerProfileModalProps["onSetBan"];
     onSetAccessState: ServerProfileModalProps["onSetAccessState"];
+    onSelectAdminServer: ServerProfileModalProps["onSelectAdminServer"];
     onCreateServerInvite: ServerProfileModalProps["onCreateServerInvite"];
     onCopyInviteUrl: ServerProfileModalProps["onCopyInviteUrl"];
     onRefreshTelemetry: () => void;
@@ -79,9 +86,15 @@ export function ServerProfileModalContainer({ open, t, permissions, state, data,
       t={t}
       canManageUsers={permissions.canManageUsers}
       canPromote={permissions.canPromote}
+      canManageServerControlPlane={permissions.canManageServerControlPlane}
       canViewTelemetry={permissions.canViewTelemetry}
       serverMenuTab={state.serverMenuTab}
       adminUsers={data.adminUsers}
+      adminServers={data.adminServers}
+      adminServersLoading={data.adminServersLoading}
+      selectedAdminServerId={data.selectedAdminServerId}
+      adminServerOverview={data.adminServerOverview}
+      adminServerOverviewLoading={data.adminServerOverviewLoading}
       serverMembers={data.serverMembers}
       serverMembersLoading={data.serverMembersLoading}
       lastInviteUrl={data.lastInviteUrl}
@@ -115,6 +128,7 @@ export function ServerProfileModalContainer({ open, t, permissions, state, data,
       onDemote={actions.onDemote}
       onSetBan={actions.onSetBan}
       onSetAccessState={actions.onSetAccessState}
+      onSelectAdminServer={actions.onSelectAdminServer}
       onCreateServerInvite={actions.onCreateServerInvite}
       onCopyInviteUrl={actions.onCopyInviteUrl}
       onRefreshTelemetry={actions.onRefreshTelemetry}

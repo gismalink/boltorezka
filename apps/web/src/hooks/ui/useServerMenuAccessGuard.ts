@@ -1,10 +1,21 @@
 import { useEffect } from "react";
 
-type ServerMenuTab = "users" | "events" | "telemetry" | "call" | "sound" | "video" | "chat_images" | "desktop_downloads";
+type ServerMenuTab =
+  | "users"
+  | "product_management"
+  | "server_management"
+  | "events"
+  | "telemetry"
+  | "call"
+  | "sound"
+  | "video"
+  | "chat_images"
+  | "desktop_downloads";
 
 type UseServerMenuAccessGuardArgs = {
   serverMenuTab: ServerMenuTab;
   canManageUsers: boolean;
+  canManageServerControlPlane: boolean;
   canViewTelemetry: boolean;
   canManageAudioQuality: boolean;
   setServerMenuTab: (value: ServerMenuTab) => void;
@@ -13,6 +24,7 @@ type UseServerMenuAccessGuardArgs = {
 export function useServerMenuAccessGuard({
   serverMenuTab,
   canManageUsers,
+  canManageServerControlPlane,
   canViewTelemetry,
   canManageAudioQuality,
   setServerMenuTab
@@ -20,6 +32,11 @@ export function useServerMenuAccessGuard({
   useEffect(() => {
     if (serverMenuTab === "users" && !canManageUsers) {
       setServerMenuTab("events");
+      return;
+    }
+
+    if ((serverMenuTab === "product_management" || serverMenuTab === "server_management") && !canManageServerControlPlane) {
+      setServerMenuTab(canManageUsers ? "users" : "events");
       return;
     }
 
@@ -36,5 +53,12 @@ export function useServerMenuAccessGuard({
     if (serverMenuTab === "video" && !canManageAudioQuality) {
       setServerMenuTab("events");
     }
-  }, [serverMenuTab, canManageUsers, canViewTelemetry, canManageAudioQuality, setServerMenuTab]);
+  }, [
+    serverMenuTab,
+    canManageUsers,
+    canManageServerControlPlane,
+    canViewTelemetry,
+    canManageAudioQuality,
+    setServerMenuTab
+  ]);
 }

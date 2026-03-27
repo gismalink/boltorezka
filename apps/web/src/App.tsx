@@ -89,6 +89,8 @@ import {
 import { detectInitialLang, LOCALE_BY_LANG, TEXT, type Lang } from "./i18n";
 import { DEFAULT_UI_THEME, formatBuildDateLabel, normalizeUiTheme, readNonZeroDefaultVolume } from "./utils/appShell";
 import type {
+  AdminServerListItem,
+  AdminServerOverview,
   AudioQuality,
   ChannelAudioQualitySetting,
   Message,
@@ -173,6 +175,11 @@ export function App() {
     "disconnected"
   );
   const [adminUsers, setAdminUsers] = useState<User[]>([]);
+  const [adminServers, setAdminServers] = useState<AdminServerListItem[]>([]);
+  const [adminServersLoading, setAdminServersLoading] = useState(false);
+  const [selectedAdminServerId, setSelectedAdminServerId] = useState("");
+  const [adminServerOverview, setAdminServerOverview] = useState<AdminServerOverview | null>(null);
+  const [adminServerOverviewLoading, setAdminServerOverviewLoading] = useState(false);
   const [newRoomSlug, setNewRoomSlug] = useState("");
   const [newRoomTitle, setNewRoomTitle] = useState("");
   const [newRoomKind, setNewRoomKind] = useState<RoomKind>("text");
@@ -348,6 +355,7 @@ export function App() {
   );
   const serviceToken = canUseService ? token : "";
   const canManageAudioQuality = canPromote;
+  const canManageServerControlPlane = canPromote;
   const canViewTelemetry = canPromote || canCreateRooms;
   const locale = LOCALE_BY_LANG[lang];
   const t = useMemo(() => {
@@ -1009,6 +1017,105 @@ export function App() {
     };
   }, [token, currentServerId, user, pushLog]);
 
+  useEffect(() => {
+    const tokenValue = String(token || "").trim();
+
+    if (!tokenValue || !canManageServerControlPlane) {
+      setAdminServers([]);
+      setSelectedAdminServerId("");
+      setAdminServerOverview(null);
+      setAdminServersLoading(false);
+      setAdminServerOverviewLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setAdminServersLoading(true);
+
+    api.adminServers(tokenValue)
+      .then((response) => {
+        if (cancelled) {
+          return;
+        }
+
+        const list = Array.isArray(response.servers) ? response.servers : [];
+        setAdminServers(list);
+
+        const ids = new Set(list.map((item) => item.id));
+        const preferredId = String(currentServerId || "").trim();
+
+        setSelectedAdminServerId((prev) => {
+          if (ids.has(prev)) {
+            return prev;
+          }
+
+          if (preferredId && ids.has(preferredId)) {
+            return preferredId;
+          }
+
+          return list[0]?.id || "";
+        });
+      })
+      .catch((error) => {
+        if (cancelled) {
+          return;
+        }
+
+        pushLog(`admin servers failed: ${(error as Error).message}`);
+        setAdminServers([]);
+        setSelectedAdminServerId("");
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setAdminServersLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [token, canManageServerControlPlane, currentServerId, pushLog]);
+
+  useEffect(() => {
+    const tokenValue = String(token || "").trim();
+    const serverId = String(selectedAdminServerId || "").trim();
+
+    if (!tokenValue || !serverId || !canManageServerControlPlane) {
+      setAdminServerOverview(null);
+      setAdminServerOverviewLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setAdminServerOverviewLoading(true);
+
+    api.adminServerOverview(tokenValue, serverId)
+      .then((response) => {
+        if (cancelled) {
+          return;
+        }
+
+        setAdminServerOverview(response.server || null);
+      })
+      .catch((error) => {
+        if (cancelled) {
+          return;
+        }
+
+        pushLog(`admin server overview failed: ${(error as Error).message}`);
+        setAdminServerOverview(null);
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setAdminServerOverviewLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [token, selectedAdminServerId, canManageServerControlPlane, pushLog]);
+
   const handleCreateServer = useCallback(async (name: string) => {
     const tokenValue = String(token || "").trim();
     const trimmedName = String(name || "").trim();
@@ -1621,6 +1728,7 @@ export function App() {
   useServerMenuAccessGuard({
     serverMenuTab,
     canManageUsers,
+    canManageServerControlPlane,
     canViewTelemetry,
     canManageAudioQuality,
     setServerMenuTab
@@ -1975,6 +2083,7 @@ export function App() {
         permissions={{
           canManageUsers,
           canPromote,
+          canManageServerControlPlane,
           canViewTelemetry,
           canManageAudioQuality
         }}
@@ -1998,6 +2107,11 @@ export function App() {
         }}
         data={{
           adminUsers,
+          adminServers,
+          adminServersLoading,
+          selectedAdminServerId,
+          adminServerOverview,
+          adminServerOverviewLoading,
           serverMembers,
           serverMembersLoading,
           lastInviteUrl,
@@ -2016,6 +2130,7 @@ export function App() {
           onDemote: (userId) => void demote(userId),
           onSetBan: (userId, banned) => void setUserBan(userId, banned),
           onSetAccessState: (userId, accessState) => void setUserAccessState(userId, accessState),
+          onSelectAdminServer: setSelectedAdminServerId,
           onCreateServerInvite: () => void handleCreateServerInvite(),
           onCopyInviteUrl: () => void handleCopyInviteUrl(),
           onRefreshTelemetry: () => void loadTelemetrySummary(),

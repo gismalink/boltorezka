@@ -1,5 +1,7 @@
 import type {
   AudioQuality,
+  AdminServerOverviewResponse,
+  AdminServersResponse,
   AuthModeResponse,
   MessagesCursor,
   LivekitTokenResponse,
@@ -172,6 +174,7 @@ const endpoints = {
   telemetrySummary: "/v1/telemetry/summary",
   servers: "/v1/servers",
   adminUsers: "/v1/admin/users",
+  adminServers: "/v1/admin/servers",
   adminServerAudioQuality: "/v1/admin/server/audio-quality",
   adminServerChatImagePolicy: "/v1/admin/server/chat-image-policy",
   memberPreferences: "/v1/member-preferences",
@@ -327,6 +330,9 @@ export const api = {
       withJsonBody("PUT", { audioQuality })
     ),
   adminUsers: (token: string) => fetchJson<{ users: User[] }>(endpoints.adminUsers, token),
+  adminServers: (token: string) => fetchJson<AdminServersResponse>(endpoints.adminServers, token),
+  adminServerOverview: (token: string, serverId: string) =>
+    fetchJson<AdminServerOverviewResponse>(withSuffix(endpoints.adminServers, serverId, "overview"), token),
   promoteUser: (token: string, userId: string) =>
     fetchJson<{ user: User }>(withSuffix(endpoints.adminUsers, userId, "promote"), token, withJsonBody("POST", { role: "admin" })),
   demoteUser: (token: string, userId: string) =>
