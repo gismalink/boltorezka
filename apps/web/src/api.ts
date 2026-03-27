@@ -11,6 +11,7 @@ import type {
   ServerAudioQualityResponse,
   ServerChatImagePolicyResponse,
   TelemetrySummary,
+  ServerListItem,
   User,
   RoomMemberPreference
 } from "./domain";
@@ -166,6 +167,7 @@ const endpoints = {
   roomsTree: "/v1/rooms/tree",
   roomCategories: "/v1/room-categories",
   telemetrySummary: "/v1/telemetry/summary",
+  servers: "/v1/servers",
   adminUsers: "/v1/admin/users",
   adminServerAudioQuality: "/v1/admin/server/audio-quality",
   adminServerChatImagePolicy: "/v1/admin/server/chat-image-policy",
@@ -302,6 +304,7 @@ export const api = {
     );
   },
   telemetrySummary: (token: string) => fetchJson<TelemetrySummary>(endpoints.telemetrySummary, token),
+  servers: (token: string) => fetchJson<{ servers: ServerListItem[] }>(endpoints.servers, token),
   serverAudioQuality: (token: string) => fetchJson<ServerAudioQualityResponse>(endpoints.adminServerAudioQuality, token),
   serverChatImagePolicy: (token: string) =>
     fetchJson<ServerChatImagePolicyResponse>(endpoints.adminServerChatImagePolicy, token),

@@ -16,6 +16,9 @@ const TEXT_BASE: Record<Lang, Record<string, string>> = {
   ru: {
     "app.title": "Dato",
     "server.menuAria": "Меню сервера",
+    "server.switcher": "Сервер",
+    "server.switcherAria": "Выбор сервера",
+    "server.noActive": "Сервер не выбран",
     "server.title": "Профиль сервера",
     "server.tabUsers": "Управление пользователями",
     "server.tabEvents": "Лог",
@@ -391,6 +394,9 @@ const TEXT_BASE: Record<Lang, Record<string, string>> = {
   en: {
     "app.title": "Dato",
     "server.menuAria": "Server menu",
+    "server.switcher": "Server",
+    "server.switcherAria": "Server switcher",
+    "server.noActive": "No server selected",
     "server.title": "Server profile",
     "server.tabUsers": "User management",
     "server.tabEvents": "Log",

@@ -97,6 +97,7 @@ import type {
   Room,
   RoomKind,
   RoomsTreeResponse,
+  ServerListItem,
   TelemetrySummary,
   UiTheme,
   User
@@ -116,6 +117,7 @@ const COOKIE_MODE = import.meta.env.VITE_AUTH_COOKIE_MODE === "1";
 const CHAT_TYPING_TTL_MS = 4500;
 const CHAT_TYPING_PING_INTERVAL_MS = 1800;
 const COOKIE_CONSENT_KEY = "boltorezka_cookie_consent_v1";
+const CURRENT_SERVER_ID_STORAGE_KEY = "boltorezka_current_server_id";
 
 // App is an orchestration boundary: it wires hooks/controllers and passes state to UI.
 // Parsing, transport rules, and feature workflows should live in dedicated hooks/modules.
@@ -156,6 +158,8 @@ export function App() {
   const [roomsPresenceDetailsBySlug, setRoomsPresenceDetailsBySlug] = useState<Record<string, PresenceMember[]>>({});
   const [memberPreferencesByUserId, setMemberPreferencesByUserId] = useState<Record<string, RoomMemberPreference>>({});
   const [roomMediaTopologyBySlug, setRoomMediaTopologyBySlug] = useState<Record<string, "livekit">>({});
+  const [servers, setServers] = useState<ServerListItem[]>([]);
+  const [currentServerId, setCurrentServerId] = useState(() => String(localStorage.getItem(CURRENT_SERVER_ID_STORAGE_KEY) || "").trim());
   const [telemetrySummary, setTelemetrySummary] = useState<TelemetrySummary | null>(null);
   const [wsState, setWsState] = useState<"disconnected" | "connecting" | "connected">(
     "disconnected"
@@ -896,6 +900,61 @@ export function App() {
 
     localStorage.removeItem(ROOM_SLUG_STORAGE_KEY);
   }, [roomSlug]);
+
+  useEffect(() => {
+    if (currentServerId) {
+      localStorage.setItem(CURRENT_SERVER_ID_STORAGE_KEY, currentServerId);
+      return;
+    }
+
+    localStorage.removeItem(CURRENT_SERVER_ID_STORAGE_KEY);
+  }, [currentServerId]);
+
+  useEffect(() => {
+    if (!token || !user) {
+      setServers([]);
+      setCurrentServerId("");
+      return;
+    }
+
+    let cancelled = false;
+    api.servers(token)
+      .then((response) => {
+        if (cancelled) {
+          return;
+        }
+
+        const list = Array.isArray(response.servers) ? response.servers : [];
+        setServers(list);
+
+        const ids = new Set(list.map((item) => item.id));
+        const persistedId = String(localStorage.getItem(CURRENT_SERVER_ID_STORAGE_KEY) || "").trim();
+        const selected = ids.has(currentServerId)
+          ? currentServerId
+          : ids.has(persistedId)
+            ? persistedId
+            : list[0]?.id || "";
+
+        setCurrentServerId(selected);
+      })
+      .catch((error) => {
+        if (cancelled) {
+          return;
+        }
+        pushLog(`servers failed: ${(error as Error).message}`);
+        setServers([]);
+        setCurrentServerId("");
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [token, user, currentServerId, pushLog]);
+
+  const currentServer = useMemo(
+    () => servers.find((item) => item.id === currentServerId) || null,
+    [servers, currentServerId]
+  );
 
   useEffect(() => {
     if (!chatRoomSlug && roomSlug) {
@@ -1729,6 +1788,9 @@ export function App() {
       <AppHeader
         t={t}
         user={user}
+        currentServerName={currentServer?.name || null}
+        servers={servers}
+        currentServerId={currentServerId}
         buildDateLabel={CLIENT_BUILD_DATE_LABEL}
         appMenuOpen={appMenuOpen}
         authMenuOpen={authMenuOpen}
@@ -1741,6 +1803,7 @@ export function App() {
         onBeginSso={beginSso}
         onLogout={logout}
         onOpenUserSettings={() => openUserSettings("profile")}
+        onChangeCurrentServer={(serverId) => setCurrentServerId(serverId)}
       />
       <TooltipPortal />
 

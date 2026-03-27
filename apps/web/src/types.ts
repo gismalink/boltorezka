@@ -151,3 +151,13 @@ export type ServerChatImagePolicyResponse = {
   maxImageSide: number;
   jpegQuality: number;
 };
+
+export type ServerMemberRole = "owner" | "admin" | "member";
+
+export type ServerListItem = {
+  id: string;
+  slug: string;
+  name: string;
+  role: ServerMemberRole;
+  membersCount: number;
+};

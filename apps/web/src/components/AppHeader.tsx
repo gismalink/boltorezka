@@ -1,5 +1,5 @@
 import type { RefObject } from "react";
-import type { User } from "../domain";
+import type { ServerListItem, User } from "../domain";
 import { PopupPortal } from "./PopupPortal";
 
 type AppHeaderProps = {
@@ -16,6 +16,10 @@ type AppHeaderProps = {
   onBeginSso: (provider: "google" | "yandex") => void;
   onLogout: () => void;
   onOpenUserSettings: () => void;
+  currentServerName: string | null;
+  servers: ServerListItem[];
+  currentServerId: string;
+  onChangeCurrentServer: (serverId: string) => void;
   buildDateLabel?: string;
 };
 
@@ -33,8 +37,15 @@ export function AppHeader({
   onBeginSso,
   onLogout,
   onOpenUserSettings,
+  currentServerName,
+  servers,
+  currentServerId,
+  onChangeCurrentServer,
   buildDateLabel,
 }: AppHeaderProps) {
+  const menuGlyph = String(currentServerName || "").trim().slice(0, 1).toUpperCase() || "D";
+  const serverTitle = String(currentServerName || "").trim() || t("server.noActive");
+
   return (
     <header className="app-header flex items-center justify-between gap-4 desktop:gap-6">
       <div className="header-brand flex items-center gap-3 desktop:gap-4">
@@ -46,11 +57,13 @@ export function AppHeader({
             aria-label={t("server.menuAria")}
             aria-expanded={appMenuOpen}
           >
-            B
+            {menuGlyph}
           </button>
         </div>
         <div className="title-block flex min-w-0 flex-col">
-          <h1 className="app-title font-heading text-[22px] leading-none text-pixel-text desktop:text-[28px]">{t("app.title")}</h1>
+          <h1 className="app-title font-heading text-[22px] leading-none text-pixel-text desktop:text-[28px]">
+            {`${t("app.title")} // ${serverTitle}`}
+          </h1>
           {buildDateLabel ? (
             <div className="logo-version" aria-label={`Build version ${buildDateLabel}`}>
               {buildDateLabel}
@@ -61,6 +74,19 @@ export function AppHeader({
       <div className="header-actions flex items-center gap-3 desktop:gap-4">
         {user ? (
           <>
+            <label className="hidden desktop:flex items-center gap-2 text-sm text-pixel-text/80">
+              <span>{t("server.switcher")}</span>
+              <select
+                className="secondary min-w-[180px]"
+                aria-label={t("server.switcherAria")}
+                value={currentServerId}
+                onChange={(event) => onChangeCurrentServer(event.target.value)}
+              >
+                {servers.map((server) => (
+                  <option key={server.id} value={server.id}>{server.name}</option>
+                ))}
+              </select>
+            </label>
             <span className="user-chip hidden max-w-[220px] truncate font-semibold text-pixel-text desktop:inline">{user.name}</span>
             <div className="profile-menu" ref={profileMenuRef}>
               <button
