@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { UiTheme } from "../domain";
 import { LegalLinks } from "./LegalLinks";
 
@@ -167,6 +168,56 @@ export function GuestLoginGate({ t, onBeginGoogleSso }: { t: Translate; onBeginG
         <div className="mt-5 border-t border-white/10 pt-3">
           <LegalLinks compact lang={lang} />
         </div>
+      </div>
+    </section>
+  );
+}
+
+export function EmptyServerOnboarding({
+  t,
+  creatingServer,
+  onCreateServer
+}: {
+  t: Translate;
+  creatingServer: boolean;
+  onCreateServer: (name: string) => Promise<void>;
+}) {
+  const [serverName, setServerName] = useState("");
+
+  const submit = async () => {
+    const trimmed = String(serverName || "").trim();
+    if (!trimmed || creatingServer) {
+      return;
+    }
+
+    await onCreateServer(trimmed);
+    setServerName("");
+  };
+
+  return (
+    <section className="grid h-full min-h-0 place-items-center p-2">
+      <div className="card w-full max-w-xl p-8 text-center">
+        <h2 className="text-2xl font-bold text-pixel-text">{t("server.onboardingTitle")}</h2>
+        <p className="mt-3 text-sm leading-relaxed text-pixel-muted">{t("server.onboardingHint")}</p>
+        <label className="mt-5 grid gap-2 text-left">
+          <span className="muted">{t("server.createTitle")}</span>
+          <input
+            value={serverName}
+            maxLength={64}
+            onChange={(event) => setServerName(event.target.value)}
+            placeholder={t("server.createPlaceholder")}
+          />
+        </label>
+        <button
+          type="button"
+          className="mt-6 inline-flex min-h-[42px] items-center justify-center px-5"
+          onClick={() => {
+            void submit();
+          }}
+          disabled={creatingServer || serverName.trim().length < 3}
+        >
+          {creatingServer ? t("server.createLoading") : t("server.onboardingCta")}
+        </button>
       </div>
     </section>
   );

@@ -17,6 +17,7 @@ import {
   CookieConsentBanner,
   DesktopBrowserCompletionGate,
   DesktopUpdateBanner,
+  EmptyServerOnboarding,
   FirstRunIntroOverlay,
   GuestLoginGate,
   LegalLinks,
@@ -160,6 +161,7 @@ export function App() {
   const [memberPreferencesByUserId, setMemberPreferencesByUserId] = useState<Record<string, RoomMemberPreference>>({});
   const [roomMediaTopologyBySlug, setRoomMediaTopologyBySlug] = useState<Record<string, "livekit">>({});
   const [servers, setServers] = useState<ServerListItem[]>([]);
+  const [serversLoading, setServersLoading] = useState(false);
   const [currentServerId, setCurrentServerId] = useState(() => String(localStorage.getItem(CURRENT_SERVER_ID_STORAGE_KEY) || "").trim());
   const [creatingServer, setCreatingServer] = useState(false);
   const [serverMembers, setServerMembers] = useState<ServerMemberItem[]>([]);
@@ -919,11 +921,13 @@ export function App() {
   useEffect(() => {
     if (!token || !user) {
       setServers([]);
+      setServersLoading(false);
       setCurrentServerId("");
       return;
     }
 
     let cancelled = false;
+    setServersLoading(true);
     api.servers(token)
       .then((response) => {
         if (cancelled) {
@@ -952,6 +956,11 @@ export function App() {
         pushLog(`servers failed: ${(error as Error).message}`);
         setServers([]);
         setCurrentServerId("");
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setServersLoading(false);
+        }
       });
 
     return () => {
@@ -1937,6 +1946,13 @@ export function App() {
       ) : null}
 
       {user ? (
+        !serversLoading && servers.length === 0 ? (
+          <EmptyServerOnboarding
+            t={t}
+            creatingServer={creatingServer}
+            onCreateServer={handleCreateServer}
+          />
+        ) : (
         <AppWorkspacePanels
           isMobileViewport={isMobileViewport}
           mobileTab={mobileTab}
@@ -1948,6 +1964,7 @@ export function App() {
           chatPanelProps={chatPanelProps}
           videoWindowsOverlayProps={videoWindowsOverlayProps}
         />
+        )
       ) : authMode !== "loading" ? (
         <GuestLoginGate t={t} onBeginGoogleSso={() => beginSso("google")} />
       ) : null}
