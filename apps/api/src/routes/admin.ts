@@ -3,10 +3,13 @@ import { z } from "zod";
 import { db } from "../db.js";
 import { broadcastRealtimeEnvelope } from "../realtime-broadcast.js";
 import { loadCurrentUser, requireAuth, requireRole } from "../middleware/auth.js";
+import { applyServiceBan, revokeServiceBan } from "../services/ban-service.js";
 import type { ServerSettingsRow, UserRow } from "../db.types.ts";
 import type {
   AdminUsersResponse,
   PromoteUserResponse,
+  ServiceBanResponse,
+  ServiceBanRevokeResponse,
   ServerAudioQualityResponse,
   ServerChatImagePolicyResponse
 } from "../api-contract.types.ts";
@@ -27,6 +30,12 @@ const audioQualitySchema = z.enum(["retro", "low", "standard", "high"]);
 
 const serverAudioQualitySchema = z.object({
   audioQuality: audioQualitySchema
+});
+
+const serviceBanSchema = z.object({
+  userId: z.string().trim().uuid(),
+  reason: z.string().trim().min(1).max(500).optional(),
+  expiresAt: z.string().datetime().optional()
 });
 
 async function loadUserById(userId: string) {
@@ -418,6 +427,100 @@ export async function adminRoutes(fastify: FastifyInstance) {
 
       const response: PromoteUserResponse = { user: updated.rows[0] };
       return response;
+    }
+  );
+
+  fastify.post<{ Body: { userId: string; reason?: string; expiresAt?: string } }>(
+    "/v1/admin/service-bans",
+    {
+      preHandler: [requireAuth, loadCurrentUser, requireRole(["super_admin"])]
+    },
+    async (request, reply) => {
+      const parsed = serviceBanSchema.safeParse(request.body || {});
+      if (!parsed.success) {
+        return reply.code(400).send({
+          error: "ValidationError",
+          issues: parsed.error.flatten()
+        });
+      }
+
+      const actorUserId = String(request.currentUser?.id || "").trim();
+
+      try {
+        const ban = await applyServiceBan({
+          actorUserId,
+          targetUserId: parsed.data.userId,
+          reason: parsed.data.reason,
+          expiresAt: parsed.data.expiresAt
+        });
+
+        const response: ServiceBanResponse = {
+          ban: {
+            id: ban.id,
+            userId: ban.user_id,
+            reason: ban.reason,
+            expiresAt: ban.expires_at,
+            createdAt: ban.created_at
+          }
+        };
+
+        return reply.code(201).send(response);
+      } catch (error) {
+        const message = String((error as Error)?.message || "");
+        if (message === "invalid_action") {
+          return reply.code(400).send({
+            error: "InvalidAction",
+            message: "Invalid action"
+          });
+        }
+
+        if (message === "invalid_expires_at") {
+          return reply.code(400).send({
+            error: "ValidationError",
+            message: "expiresAt must be valid ISO datetime"
+          });
+        }
+
+        throw error;
+      }
+    }
+  );
+
+  fastify.delete<{ Params: { userId: string } }>(
+    "/v1/admin/service-bans/:userId",
+    {
+      preHandler: [requireAuth, loadCurrentUser, requireRole(["super_admin"])]
+    },
+    async (request, reply) => {
+      const targetUserId = validateTargetUserId(request.params.userId);
+      if (!targetUserId) {
+        return reply.code(400).send({
+          error: "ValidationError",
+          message: "userId is required"
+        });
+      }
+
+      const actorUserId = String(request.currentUser?.id || "").trim();
+
+      try {
+        const revoked = await revokeServiceBan({
+          actorUserId,
+          targetUserId
+        });
+
+        const response: ServiceBanRevokeResponse = { revoked };
+        return reply.code(200).send(response);
+      } catch (error) {
+        const message = String((error as Error)?.message || "");
+        if (message === "invalid_action") {
+          return reply.code(400).send({
+            error: "InvalidAction",
+            message: "Invalid action"
+          });
+        }
+
+        throw error;
+      }
     }
   );
 }

@@ -166,3 +166,17 @@ export type ServerBanResponse = {
 export type ServerBanRevokeResponse = {
   revoked: boolean;
 };
+
+export type ServiceBanResponse = {
+  ban: {
+    id: string;
+    userId: string;
+    reason: string | null;
+    expiresAt: string | null;
+    createdAt: string;
+  };
+};
+
+export type ServiceBanRevokeResponse = {
+  revoked: boolean;
+};

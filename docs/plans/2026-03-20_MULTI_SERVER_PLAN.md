@@ -268,7 +268,7 @@ Stage 1 note (2026-03-27):
 ### Stage 2 - API + auth integration
 
 - [x] Эндпоинты `/v1/servers*` и `/v1/invites/:token/accept`.
-- [ ] Эндпоинты серверных/глобальных банов.
+- [x] Эндпоинты серверных/глобальных банов.
 - [ ] Эндпоинты `GET /v1/admin/servers` и `GET /v1/admin/servers/:serverId/overview`.
 - [ ] Проверка ролей и аудит-логи чувствительных действий.
 - [ ] Ограничение rate limit для invite create/accept.
