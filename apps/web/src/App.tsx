@@ -14,10 +14,12 @@ import {
   AppHeader,
   AppWorkspacePanels,
   AppUpdatedOverlay,
+  CookieConsentBanner,
   DesktopBrowserCompletionGate,
   DesktopUpdateBanner,
   FirstRunIntroOverlay,
   GuestLoginGate,
+  LegalLinks,
   MediaAccessDeniedBanner,
   RemoteAudioAutoplayBanner,
   ServerProfileModalContainer,
@@ -113,6 +115,7 @@ const CLIENT_BUILD_DATE_LABEL = formatBuildDateLabel(CLIENT_BUILD_VERSION, CLIEN
 const COOKIE_MODE = import.meta.env.VITE_AUTH_COOKIE_MODE === "1";
 const CHAT_TYPING_TTL_MS = 4500;
 const CHAT_TYPING_PING_INTERVAL_MS = 1800;
+const COOKIE_CONSENT_KEY = "boltorezka_cookie_consent_v1";
 
 // App is an orchestration boundary: it wires hooks/controllers and passes state to UI.
 // Parsing, transport rules, and feature workflows should live in dedicated hooks/modules.
@@ -133,6 +136,9 @@ export function App() {
   });
   const [showAppUpdatedOverlay, setShowAppUpdatedOverlay] = useState(
     () => sessionStorage.getItem(VERSION_UPDATE_PENDING_KEY) === "1"
+  );
+  const [cookieConsentAccepted, setCookieConsentAccepted] = useState(
+    () => localStorage.getItem(COOKIE_CONSENT_KEY) === "1"
   );
   const [pendingAccessRefreshInSec, setPendingAccessRefreshInSec] = useState(PENDING_ACCESS_AUTO_REFRESH_SEC);
   const [showFirstRunIntro, setShowFirstRunIntro] = useState(false);
@@ -1860,6 +1866,22 @@ export function App() {
           }}
         />
       ) : null}
+
+      <footer className="pointer-events-none fixed inset-x-0 bottom-1 z-[150] px-3">
+        <div className="mx-auto w-fit rounded-full border border-white/15 bg-black/35 px-4 py-1 backdrop-blur">
+          <div className="pointer-events-auto">
+            <LegalLinks compact />
+          </div>
+        </div>
+      </footer>
+
+      <CookieConsentBanner
+        visible={!cookieConsentAccepted}
+        onAccept={() => {
+          localStorage.setItem(COOKIE_CONSENT_KEY, "1");
+          setCookieConsentAccepted(true);
+        }}
+      />
 
     </main>
   );

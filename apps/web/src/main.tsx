@@ -2,6 +2,7 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App";
 import { ErrorBoundary } from "./ErrorBoundary";
+import { LegalStandalonePage } from "./LegalStandalonePage";
 import { getDesktopBridgeInfo } from "./desktopBridge";
 import { trackClientEvent } from "./telemetry";
 import "bootstrap-icons/font/bootstrap-icons.css";
@@ -22,6 +23,12 @@ document.title = isDesktop
   : isTestHost ? "Boltorezka (test)" : "Boltorezka";
 
 const searchParams = new URLSearchParams(window.location.search);
+const legalRoutes = new Set(["/privacy", "/terms", "/cookies", "/contacts"]);
+const currentPathname = window.location.pathname.toLowerCase();
+const normalizedPathname = currentPathname.endsWith("/") && currentPathname.length > 1
+  ? currentPathname.slice(0, -1)
+  : currentPathname;
+const isLegalRoute = legalRoutes.has(normalizedPathname);
 if (isDesktop) {
   const smokeWindow = window as Window & {
     __boltorezkaDesktopSmokeTrack?: () => void;
@@ -42,7 +49,7 @@ if (isDesktop) {
 createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <ErrorBoundary>
-      <App />
+      {isLegalRoute ? <LegalStandalonePage /> : <App />}
     </ErrorBoundary>
   </React.StrictMode>
 );

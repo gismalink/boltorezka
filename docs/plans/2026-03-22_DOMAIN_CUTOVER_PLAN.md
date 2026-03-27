@@ -145,8 +145,11 @@ Draft: Authentik OIDC clients and claims mapping (v1)
 
 - [ ] Обновить product name/логотип/метаданные (title, OG tags, favicons). Новое название "Dato" ()
 - [ ] Обновить юридические страницы, policy, контакты, email footer.
+- [ ] Добавить cookie-consent баннер в web (классический push с кнопкой `Ок` и текстом: "Мы используем cookie, чтобы сайт работал").
 - [ ] Обновить тексты onboarding/invite/notification под новый бренд.
 - [ ] Убрать упоминания `gismalink.art` из UI и user-facing сообщений.
+
+Юридический трек вынесен в отдельный план: `docs/plans/2026-03-27_LEGAL_COMPLIANCE_PLAN.md`.
 
 ### 3.5 Операционка и документация
 
@@ -236,11 +239,17 @@ Draft: Authentik OIDC clients and claims mapping (v1)
 - [x] Gate перед Stage 2: auth/SSO OAuth-only трек в `test` закрыт полностью (Google/Yandex login/refresh/logout + `Complete SSO Session`) — подтверждено smoke + manual check (3 аккаунта), 2026-03-26.
 - [x] Deploy в `test` из целевой ветки + повторный smoke (2026-03-26, `feature/datowave-auth-stack-move`, PASS).
 - [x] Post-merge guard: повторный deploy+smoke в `test` от `origin/main` выполнен (2026-03-26, SHA `ccdca40`, PASS).
-- [ ] После подтверждения: deploy в `prod` (GitOps only).
-- [ ] Переключить DNS/ingress в `prod` и включить redirect-карту.
-- [ ] Подтвердить redirect-only поведение старого домена в `prod`.
+- [x] После подтверждения: deploy в `prod` (GitOps only).
+- [x] Переключить DNS/ingress в `prod` и включить redirect-карту.
+- [x] Подтвердить redirect-only поведение старого домена в `prod`.
 - [ ] Выполнить OAuth-only коммуникацию для текущих пользователей на новом домене.
-- [ ] Выполнить post-deploy smoke на `prod` (redirect + auth).
+- [x] Выполнить post-deploy smoke на `prod` (redirect + auth).
+
+Статус Stage 2 на 2026-03-27:
+- Выполнен rollout через GitOps из `main` в `edge` (SHA `50ba845`, 2026-03-27).
+- `https://datowave.com/` отвечает `200`; `https://www.datowave.com/` редиректит `308` на `https://datowave.com/`.
+- `https://boltorezka.gismalink.art/` переведен в redirect-only (`308` на `https://datowave.com{uri}` с сохранением path/query).
+- Auth dual-host в `prod` подтвержден: `auth.datowave.com` и `auth.gismalink.art` отдают `302` на Google OAuth.
 
 ### Stage 3 - Stabilization (7-14 дней)
 
@@ -267,8 +276,8 @@ Rollback-планирование в рамках этого документа 
 
 - [x] Выборочная ручная валидация re-onboarding на новом домене выполнена и утверждена владельцем релиза (3 аккаунта).
 - [ ] Login re-onboarded users работает на новом домене в `test` и `prod`.
-- [ ] Старые адреса корректно перенаправляют на новые (включая `test`).
-- [ ] Redirect не создает циклов и сохраняет path/query.
+- [x] Старые адреса корректно перенаправляют на новые (включая `test`).
+- [x] Redirect не создает циклов и сохраняет path/query.
 - [ ] Runbooks/smoke/scripts актуализированы.
 
 ## 9) Вопросы, которые нужно закрыть до Stage 1
