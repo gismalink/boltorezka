@@ -203,15 +203,39 @@ if [[ -z "$SERVER_ID" ]]; then
   exit 1
 fi
 
-INVITE_JSON="$(curl -fsS -X POST -H "Authorization: Bearer $TOKEN_OWNER" -H 'Content-Type: application/json' \
-  -d '{"ttlHours":1,"maxUses":3}' "$BASE_URL/v1/servers/$SERVER_ID/invites")"
-INVITE_TOKEN="$(printf '%s' "$INVITE_JSON" | json_get 'token')"
-if [[ -z "$INVITE_TOKEN" ]]; then
-  echo "[smoke:multiserver:age-gate] invite token missing" >&2
+INVITE_STATUS="$(curl -sS -o /tmp/smoke-agegate-invite.json -w '%{http_code}' -X POST -H "Authorization: Bearer $TOKEN_OWNER" -H 'Content-Type: application/json' -d '{"ttlHours":1,"maxUses":3}' "$BASE_URL/v1/servers/$SERVER_ID/invites")"
+
+if [[ "$INVITE_STATUS" == "201" ]]; then
+  INVITE_TOKEN="$(cat /tmp/smoke-agegate-invite.json | json_get 'token')"
+  if [[ -z "$INVITE_TOKEN" ]]; then
+    echo "[smoke:multiserver:age-gate] invite token missing" >&2
+    exit 1
+  fi
+  curl -fsS -X POST -H "Authorization: Bearer $TOKEN_SECOND" "$BASE_URL/v1/invites/$INVITE_TOKEN/accept" >/dev/null
+elif [[ "$INVITE_STATUS" == "409" ]]; then
+  INVITE_ERROR="$(node -e 'const fs=require("fs");try{const d=JSON.parse(fs.readFileSync("/tmp/smoke-agegate-invite.json","utf8"));process.stdout.write(String(d.error||""));}catch{process.stdout.write("");}')"
+  if [[ "$INVITE_ERROR" != "ActiveInviteLimitReached" ]]; then
+    echo "[smoke:multiserver:age-gate] invite create failed: status=$INVITE_STATUS error=$INVITE_ERROR" >&2
+    exit 1
+  fi
+
+  MEMBERS_STATUS="$(curl -sS -o /tmp/smoke-agegate-members.json -w '%{http_code}' -H "Authorization: Bearer $TOKEN_OWNER" "$BASE_URL/v1/servers/$SERVER_ID/members")"
+  if [[ "$MEMBERS_STATUS" != "200" ]]; then
+    echo "[smoke:multiserver:age-gate] invite limit reached and members fetch failed: status=$MEMBERS_STATUS" >&2
+    exit 1
+  fi
+
+  SECOND_IS_MEMBER="$(node -e 'const fs=require("fs");const uid=process.argv[1];const d=JSON.parse(fs.readFileSync("/tmp/smoke-agegate-members.json","utf8"));const list=Array.isArray(d.members)?d.members:[];process.stdout.write(list.some((m)=>String(m.userId||"")===uid)?"1":"0");' "$USER_ID_SECOND")"
+  if [[ "$SECOND_IS_MEMBER" != "1" ]]; then
+    echo "[smoke:multiserver:age-gate] invite limit reached and second user is not server member" >&2
+    exit 1
+  fi
+
+  echo "[smoke:multiserver:age-gate] invite limit reached, continue with existing membership"
+else
+  echo "[smoke:multiserver:age-gate] invite create failed: status=$INVITE_STATUS" >&2
   exit 1
 fi
-
-curl -fsS -X POST -H "Authorization: Bearer $TOKEN_SECOND" "$BASE_URL/v1/invites/$INVITE_TOKEN/accept" >/dev/null
 
 ROOM_META="$(compose exec -T "$POSTGRES_SERVICE" psql -U "$SMOKE_POSTGRES_USER" -d "$SMOKE_POSTGRES_DB" -tAc \
   "select slug || '|' || case when nsfw then '1' else '0' end from rooms where server_id='${SERVER_ID}' and is_archived=false order by created_at asc limit 1;" | tr -d '[:space:]')"
