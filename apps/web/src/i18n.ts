@@ -14,7 +14,7 @@ export const LANGUAGE_OPTIONS: Array<{ value: Lang; label: string }> = [
 
 const TEXT_BASE: Record<Lang, Record<string, string>> = {
   ru: {
-    "app.title": "Boltorezka",
+    "app.title": "Dato",
     "server.menuAria": "Меню сервера",
     "server.title": "Профиль сервера",
     "server.tabUsers": "Управление пользователями",
@@ -79,7 +79,7 @@ const TEXT_BASE: Record<Lang, Record<string, string>> = {
     "server.desktopPlatformMac": "macOS",
     "server.desktopPlatformWindows": "Windows",
     "server.desktopPlatformLinux": "Linux",
-    "guest.welcomeTitle": "Добро пожаловать в Boltorezka",
+    "guest.welcomeTitle": "Добро пожаловать в Dato",
     "guest.welcomePromo": "Общайтесь в реальном времени: голос, чат и совместные активности в одном приложении.",
     "guest.loginCta": "Авторизоваться",
     "intro.title": "Первая настройка",
@@ -389,7 +389,7 @@ const TEXT_BASE: Record<Lang, Record<string, string>> = {
     "device.systemDefault": "Системное устройство"
   },
   en: {
-    "app.title": "Boltorezka",
+    "app.title": "Dato",
     "server.menuAria": "Server menu",
     "server.title": "Server profile",
     "server.tabUsers": "User management",
@@ -454,7 +454,7 @@ const TEXT_BASE: Record<Lang, Record<string, string>> = {
     "server.desktopPlatformMac": "macOS",
     "server.desktopPlatformWindows": "Windows",
     "server.desktopPlatformLinux": "Linux",
-    "guest.welcomeTitle": "Welcome to Boltorezka",
+    "guest.welcomeTitle": "Welcome to Dato",
     "guest.welcomePromo": "Realtime communication with voice, chat, and shared activities in one app.",
     "guest.loginCta": "Sign in",
     "intro.title": "First-time setup",

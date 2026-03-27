@@ -22,7 +22,7 @@ export function DesktopBrowserCompletionGate({ desktopHandoffError }: { desktopH
         <p className="mt-3 text-sm opacity-80">
           {desktopHandoffError
             ? "Не удалось подтвердить вход в Desktop. Попробуйте открыть приложение еще раз."
-            : "Вы вошли в Boltorezka Desktop. Эту вкладку можно закрыть."}
+            : "Вы вошли в Dato Desktop. Эту вкладку можно закрыть."}
         </p>
         <div className="mt-5 flex justify-center">
           <button

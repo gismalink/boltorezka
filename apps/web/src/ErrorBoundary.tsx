@@ -41,7 +41,7 @@ export class ErrorBoundary extends Component<Props, State> {
       return (
         <div className="app" data-testid="error-boundary-fallback">
           <div className="card stack">
-            <h1 className="app-title">Boltorezka</h1>
+            <h1 className="app-title">Dato</h1>
             <p>UI crashed unexpectedly. Please reload and try again.</p>
             {this.state.errorMessage ? (
               <p className="muted" style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
