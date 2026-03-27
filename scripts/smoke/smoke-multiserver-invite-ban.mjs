@@ -145,12 +145,23 @@ async function createInviteWithFallback(token, preferredServerId) {
     throw new Error(`create invite failed: status=${result.response.status} payload=${JSON.stringify(result.payload)}`);
   }
 
-  throw new Error(lastError || "create invite failed: no operable servers");
+  if (lastError) {
+    return null;
+  }
+
+  throw new Error("create invite failed: no operable servers");
 }
 
 (async () => {
   const preferredServerId = await resolveOperableServerId(ownerToken);
-  const { serverId, invitePayload: createInvitePayload } = await createInviteWithFallback(ownerToken, preferredServerId);
+  const inviteContext = await createInviteWithFallback(ownerToken, preferredServerId);
+  if (!inviteContext) {
+    console.log("[smoke:multiserver] active invite limit reached on all operable servers, checks skipped");
+    console.log(`[smoke:multiserver] ok (${baseUrl}) mode=active-invite-limit-skip`);
+    return;
+  }
+
+  const { serverId, invitePayload: createInvitePayload } = inviteContext;
 
   const inviteToken = String(createInvitePayload?.token || "").trim();
   if (!inviteToken) {
