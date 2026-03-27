@@ -1,6 +1,7 @@
 import { db } from "../db.js";
 import type { ServerListItem, ServerContext } from "../api-contract.types.ts";
 import type { ServerMemberRole } from "../db.types.ts";
+import { writeServerAuditEvent } from "./server-audit-service.js";
 
 type CreateServerInput = {
   name: string;
@@ -99,6 +100,17 @@ export async function createServerForUser(input: CreateServerInput): Promise<Ser
       [server.id, ownerUserId]
     );
 
+    await writeServerAuditEvent({
+      client,
+      action: "server.created",
+      serverId: server.id,
+      actorUserId: ownerUserId,
+      meta: {
+        slug: server.slug,
+        name: server.name
+      }
+    });
+
     await client.query("COMMIT");
 
     return {
@@ -149,18 +161,30 @@ export async function renameServerForUser(input: RenameServerInput): Promise<Ser
     return null;
   }
 
-  const allowedRoles = new Set<ServerMemberRole>(["owner", "admin", "member"]);
+  const allowedRoles = new Set<ServerMemberRole>(["owner", "admin"]);
   if (!allowedRoles.has(server.role)) {
     throw new Error("forbidden_role");
   }
 
   const trimmedName = String(input.name || "").trim();
+  const previousName = server.name;
   await db.query(
     `UPDATE servers
      SET name = $2, updated_at = NOW()
      WHERE id = $1`,
     [input.serverId, trimmedName]
   );
+
+  await writeServerAuditEvent({
+    action: "server.renamed",
+    serverId: input.serverId,
+    actorUserId: input.actorUserId,
+    meta: {
+      previousName,
+      nextName: trimmedName,
+      actorRole: server.role
+    }
+  });
 
   return mapServerByIdForUser(input.serverId, input.actorUserId);
 }

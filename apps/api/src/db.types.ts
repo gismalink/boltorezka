@@ -142,6 +142,16 @@ export type ServiceBanRow = {
   created_at: string;
 };
 
+export type ServerAuditLogRow = {
+  id: string;
+  server_id: string | null;
+  actor_user_id: string | null;
+  target_user_id: string | null;
+  action: string;
+  meta: Record<string, unknown>;
+  created_at: string;
+};
+
 export type ServerSettingsRow = {
   id: boolean;
   audio_quality: AudioQuality;

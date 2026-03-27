@@ -2,6 +2,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { db } from "../db.js";
 import type { ServerContext } from "../api-contract.types.ts";
 import type { ServerMemberRole } from "../db.types.ts";
+import { writeServerAuditEvent } from "./server-audit-service.js";
 
 type CreateInviteInput = {
   serverId: string;
@@ -84,6 +85,16 @@ export async function createServerInvite(input: CreateInviteInput): Promise<Invi
     [input.serverId, tokenHash, input.actorUserId, expiresAt, maxUses]
   );
 
+  await writeServerAuditEvent({
+    action: "server.invite.created",
+    serverId: input.serverId,
+    actorUserId: input.actorUserId,
+    meta: {
+      ttlHours: typeof input.ttlHours === "number" ? input.ttlHours : null,
+      maxUses
+    }
+  });
+
   return {
     token,
     expiresAt
@@ -163,6 +174,17 @@ export async function acceptServerInvite(input: AcceptInviteInput): Promise<Serv
         throw new Error("invite_accept_failed");
       }
 
+      await writeServerAuditEvent({
+        client,
+        action: "server.invite.accepted_idempotent",
+        serverId: invite.server_id,
+        actorUserId: input.userId,
+        targetUserId: input.userId,
+        meta: {
+          inviteId: invite.id
+        }
+      });
+
       await client.query("COMMIT");
       return context;
     }
@@ -202,6 +224,17 @@ export async function acceptServerInvite(input: AcceptInviteInput): Promise<Serv
     if (!context) {
       throw new Error("invite_accept_failed");
     }
+
+    await writeServerAuditEvent({
+      client,
+      action: "server.invite.accepted",
+      serverId: invite.server_id,
+      actorUserId: input.userId,
+      targetUserId: input.userId,
+      meta: {
+        inviteId: invite.id
+      }
+    });
 
     await client.query("COMMIT");
     return context;

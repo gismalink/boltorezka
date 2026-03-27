@@ -1,5 +1,6 @@
 import { db } from "../db.js";
 import type { ServerBanRow, ServerMemberRole, ServiceBanRow } from "../db.types.ts";
+import { writeServerAuditEvent } from "./server-audit-service.js";
 
 type BaseBanInput = {
   actorUserId: string;
@@ -88,6 +89,18 @@ export async function applyServerBan(input: ServerBanInput): Promise<ServerBanRo
     [input.serverId, input.targetUserId]
   );
 
+  await writeServerAuditEvent({
+    action: "server.ban.applied",
+    serverId: input.serverId,
+    actorUserId: input.actorUserId,
+    targetUserId: input.targetUserId,
+    meta: {
+      reason,
+      expiresAt,
+      banId: result.rows[0]?.id || null
+    }
+  });
+
   return result.rows[0];
 }
 
@@ -103,6 +116,16 @@ export async function revokeServerBan(input: Pick<ServerBanInput, "serverId" | "
        AND user_id = $2`,
     [input.serverId, input.targetUserId]
   );
+
+  await writeServerAuditEvent({
+    action: "server.ban.revoked",
+    serverId: input.serverId,
+    actorUserId: input.actorUserId,
+    targetUserId: input.targetUserId,
+    meta: {
+      revoked: (result.rowCount || 0) > 0
+    }
+  });
 
   return (result.rowCount || 0) > 0;
 }
@@ -128,6 +151,17 @@ export async function applyServiceBan(input: BaseBanInput): Promise<ServiceBanRo
     [input.targetUserId, reason, input.actorUserId, expiresAt]
   );
 
+  await writeServerAuditEvent({
+    action: "service.ban.applied",
+    actorUserId: input.actorUserId,
+    targetUserId: input.targetUserId,
+    meta: {
+      reason,
+      expiresAt,
+      banId: result.rows[0]?.id || null
+    }
+  });
+
   return result.rows[0];
 }
 
@@ -141,6 +175,15 @@ export async function revokeServiceBan(input: Pick<BaseBanInput, "actorUserId" |
      WHERE user_id = $1`,
     [input.targetUserId]
   );
+
+  await writeServerAuditEvent({
+    action: "service.ban.revoked",
+    actorUserId: input.actorUserId,
+    targetUserId: input.targetUserId,
+    meta: {
+      revoked: (result.rowCount || 0) > 0
+    }
+  });
 
   return (result.rowCount || 0) > 0;
 }
