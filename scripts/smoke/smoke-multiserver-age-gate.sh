@@ -119,6 +119,32 @@ resolve_operable_server_id() {
   printf '%s' "$created"
 }
 
+resolve_operable_server_with_room() {
+  local user_id="$1"
+  local fallback_token="$2"
+  local server_id
+
+  server_id="$(compose exec -T "$POSTGRES_SERVICE" psql -U "$SMOKE_POSTGRES_USER" -d "$SMOKE_POSTGRES_DB" -tAc \
+    "select s.id::text
+     from servers s
+     join server_members sm on sm.server_id = s.id
+     where sm.user_id = '${user_id}'
+       and sm.status = 'active'
+       and sm.role in ('owner','admin')
+       and exists (
+         select 1 from rooms r where r.server_id = s.id and r.is_archived = false
+       )
+     order by s.is_default desc, s.created_at asc
+     limit 1;" | tr -d '[:space:]')"
+
+  if [[ -n "$server_id" ]]; then
+    printf '%s' "$server_id"
+    return 0
+  fi
+
+  resolve_operable_server_id "$fallback_token"
+}
+
 create_session_token() {
   local user_id="$1"
   local role="$2"
@@ -171,7 +197,7 @@ fi
 TOKEN_OWNER="$(create_session_token "$USER_ID" "$USER_ROLE" "$JWT_SECRET_CANDIDATE")"
 TOKEN_SECOND="$(create_session_token "$USER_ID_SECOND" "$USER_ROLE_SECOND" "$JWT_SECRET_CANDIDATE")"
 
-SERVER_ID="$(resolve_operable_server_id "$TOKEN_OWNER")"
+SERVER_ID="$(resolve_operable_server_with_room "$USER_ID" "$TOKEN_OWNER")"
 if [[ -z "$SERVER_ID" ]]; then
   echo "[smoke:multiserver:age-gate] cannot resolve operable server id" >&2
   exit 1
