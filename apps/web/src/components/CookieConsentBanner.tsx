@@ -15,7 +15,7 @@ export function CookieConsentBanner({ visible, onAccept }: CookieConsentBannerPr
           Мы используем cookie, чтобы сайт работал. Подробнее в
           {" "}
           <a href="/cookies" className="underline underline-offset-2 hover:text-white">
-            Cookie Notice
+            Политике cookie
           </a>
           .
         </p>

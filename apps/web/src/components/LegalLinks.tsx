@@ -3,10 +3,26 @@ type LegalLinksProps = {
 };
 
 const legalLinks = [
-  { href: "/privacy", label: "Privacy" },
-  { href: "/terms", label: "Terms" },
-  { href: "/cookies", label: "Cookies" },
-  { href: "/contacts", label: "Contacts" }
+  {
+    href: "/privacy",
+    label: "Политика конфиденциальности",
+    compactLabel: "Конфиденциальность"
+  },
+  {
+    href: "/terms",
+    label: "Пользовательское соглашение",
+    compactLabel: "Соглашение"
+  },
+  {
+    href: "/cookies",
+    label: "Политика cookie",
+    compactLabel: "Cookie"
+  },
+  {
+    href: "/contacts",
+    label: "Юридические контакты",
+    compactLabel: "Контакты"
+  }
 ];
 
 export function LegalLinks({ compact = false }: LegalLinksProps) {
@@ -16,7 +32,7 @@ export function LegalLinks({ compact = false }: LegalLinksProps) {
         {legalLinks.map((link) => (
           <li key={link.href}>
             <a href={link.href} className="underline-offset-2 hover:text-white hover:underline">
-              {link.label}
+              {compact ? link.compactLabel : link.label}
             </a>
           </li>
         ))}

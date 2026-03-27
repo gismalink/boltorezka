@@ -12,7 +12,7 @@ type LegalPageData = {
 
 const LEGAL_PAGES: Record<string, LegalPageData> = {
   "/privacy": {
-    title: "Privacy Policy",
+    title: "Политика конфиденциальности",
     subtitle: "Политика обработки персональных данных",
     sections: [
       {
@@ -42,7 +42,7 @@ const LEGAL_PAGES: Record<string, LegalPageData> = {
     ]
   },
   "/terms": {
-    title: "Terms of Service",
+    title: "Пользовательское соглашение",
     subtitle: "Условия использования",
     sections: [
       {
@@ -64,7 +64,7 @@ const LEGAL_PAGES: Record<string, LegalPageData> = {
     ]
   },
   "/cookies": {
-    title: "Cookie Notice",
+    title: "Политика cookie",
     subtitle: "Использование cookie",
     sections: [
       {
@@ -86,7 +86,7 @@ const LEGAL_PAGES: Record<string, LegalPageData> = {
     ]
   },
   "/contacts": {
-    title: "Contacts / Legal",
+    title: "Юридические контакты",
     subtitle: "Контакты по вопросам данных и права",
     sections: [
       {
@@ -124,13 +124,36 @@ export function LegalStandalonePage() {
     return null;
   }
 
+  const handleGoBack = () => {
+    if (window.history.length > 1) {
+      window.history.back();
+      return;
+    }
+    window.location.assign("/");
+  };
+
   return (
     <main className="app legacy-layout mx-auto min-h-[100dvh] w-full max-w-[980px] px-4 py-6 desktop:px-8 desktop:py-10">
       <article className="card mx-auto w-full p-6 desktop:p-8">
         <header>
+          <div className="mb-4 flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              className="secondary min-h-[36px] px-3"
+              onClick={handleGoBack}
+            >
+              Назад
+            </button>
+            <a
+              href="/"
+              className="secondary inline-flex min-h-[36px] items-center px-3"
+            >
+              В приложение
+            </a>
+          </div>
           <h1 className="text-3xl font-bold text-pixel-text">{page.title}</h1>
           <p className="mt-2 text-sm text-pixel-muted">{page.subtitle}</p>
-          <p className="mt-2 text-xs text-pixel-muted">Effective date: 2026-03-27</p>
+          <p className="mt-2 text-xs text-pixel-muted">Дата вступления в силу: 2026-03-27</p>
         </header>
 
         <div className="mt-6 grid gap-6">
