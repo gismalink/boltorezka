@@ -271,6 +271,10 @@ Draft: Authentik OIDC clients and claims mapping (v1)
 - [x] Контроль redirect chains и корректности соответствий host/path (через регулярный `smoke:redirect-map` в `test`).
 - [ ] Удалить legacy-конфиг `gismalink.art` после окна совместимости.
 
+Статус пункта legacy cleanup (2026-03-27):
+- `blocked` до завершения согласованного окна совместимости (30 дней).
+- Условие закрытия: по окончании окна удалить/деактивировать legacy `gismalink.art` runtime-конфиг и зафиксировать короткий post-change smoke.
+
 ## 6) Smoke-check (обязательно)
 
 Минимум для `test` и `prod`:
