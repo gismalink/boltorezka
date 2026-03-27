@@ -192,6 +192,32 @@ Smoke/acceptance для NSFW age-gate:
 - [ ] Прогнать smoke в `test` по NSFW-сценариям и зафиксировать PASS.
 - [ ] После explicit GO включить в `prod` и зафиксировать короткий post-deploy smoke.
 
+#### Stage E.1 - Декомпозиция по файлам (implementation map)
+
+Backend (API):
+- [ ] `apps/api/src/routes/rooms.ts`: добавить/проверить поле `nsfw` в create/update/read контрактах комнат и в выборках дерева комнат.
+- [ ] `apps/api/src/api-contract.types.ts`: расширить типы `RoomRow`/`RoomListRow` полем `nsfw`.
+- [ ] `apps/api/src/middleware/auth.ts` (или отдельный middleware файл): добавить guard для 18+ доступа (например, `requireAgeGateForNsfw`) с `403 AgeVerificationRequired`.
+- [ ] Применить guard ко всем путям входа в room runtime (join/open by slug/direct link/invite path), чтобы исключить обход через API.
+- [ ] Добавить запись события age-confirm в audit/metrics (минимум: `userId`, `roomId|roomSlug`, `policyVersion`, `timestamp`, `source`).
+
+Frontend (Web):
+- [ ] `apps/web/src/components/roomsPanel/RoomRow.tsx`: при попытке входа в `nsfw=true` запускать age-gate вместо прямого join.
+- [ ] `apps/web/src/components/roomsPanel/RoomsConfirmOverlay.tsx` (или отдельный overlay): добавить вариант подтверждения `Мне есть 18` / `Назад`.
+- [ ] `apps/web/src/hooks/rooms/useRoomPresenceActions.ts`: не вызывать `joinRoom` для `nsfw=true` без подтверждения age-gate.
+- [ ] `apps/web/src/hooks/rooms/useRoomsDerived.ts` и связанные селекторы: скрыть/ограничить preview 18+ пространств до подтверждения (по выбранной policy).
+- [ ] Обработать deep-link сценарий: переход в `nsfw=true` room всегда проходит через age-gate.
+
+Smoke и тест-контур:
+- [ ] Добавить smoke-скрипт `scripts/smoke/smoke-nsfw-age-gate.mjs` (или расширить существующие web smoke) с кейсами deny/allow/reload/deep-link.
+- [ ] Включить новый smoke в `deploy:test:smoke` профиль (минимум как optional gate на этапе внедрения, затем как required).
+- [ ] Зафиксировать test evidence в `docs/status/test-results/<date>.md`.
+
+Документация и policy:
+- [ ] Обновить legal тексты (`/privacy`, `/terms`, `/contacts`) и добавить ссылку/правило для 18+ контента.
+- [ ] Зафиксировать `AGE_POLICY_VERSION` и changelog policy-версии в legal-пакете.
+- [ ] Добавить короткий runbook для саппорта: обработка обращений/ошибочного допуска по 18+.
+
 ## 7) Артефакты и связки
 
 - Основной cutover: `docs/plans/completed/2026-03-22_DOMAIN_CUTOVER_PLAN.md`.
