@@ -4,6 +4,11 @@ import type { ServerContext } from "../api-contract.types.ts";
 import type { ServerMemberRole } from "../db.types.ts";
 import { writeServerAuditEvent } from "./server-audit-service.js";
 
+const ACTIVE_SERVER_INVITES_LIMIT = Math.max(
+  1,
+  Number.parseInt(String(process.env.SERVER_ACTIVE_INVITES_LIMIT || "20"), 10) || 20
+);
+
 type CreateInviteInput = {
   serverId: string;
   actorUserId: string;
@@ -70,6 +75,21 @@ export async function createServerInvite(input: CreateInviteInput): Promise<Invi
   const actorRole = await getServerRole(input.serverId, input.actorUserId);
   if (actorRole !== "owner" && actorRole !== "admin") {
     throw new Error("forbidden_role");
+  }
+
+  const activeInvitesResult = await db.query<{ count: string }>(
+    `SELECT COUNT(*)::text AS count
+     FROM server_invites
+     WHERE server_id = $1
+       AND is_revoked = FALSE
+       AND (expires_at IS NULL OR expires_at > NOW())
+       AND (max_uses IS NULL OR used_count < max_uses)`,
+    [input.serverId]
+  );
+
+  const activeInvitesCount = Number(activeInvitesResult.rows[0]?.count || "0");
+  if (activeInvitesCount >= ACTIVE_SERVER_INVITES_LIMIT) {
+    throw new Error("active_invite_limit_reached");
   }
 
   const token = generateToken();

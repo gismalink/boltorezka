@@ -277,8 +277,8 @@ Stage 1 note (2026-03-27):
 - [x] Эндпоинты серверных/глобальных банов.
 - [x] Эндпоинты `GET /v1/admin/servers` и `GET /v1/admin/servers/:serverId/overview`.
 - [x] Проверка ролей и аудит-логи чувствительных действий.
-- [ ] Ограничение rate limit для invite create/accept.
-- [ ] Ограничение количества активных invite ссылок на сервер.
+- [x] Ограничение rate limit для invite create/accept.
+- [x] Ограничение количества активных invite ссылок на сервер.
 - [ ] Интеграция с legal Stage E: server-aware код ошибки для 18+ доступа (например, `AgeVerificationRequired`) и аудит age-confirm событий в контексте `server_id`.
 
 Stage 2 note (2026-03-27):
@@ -289,6 +289,10 @@ Stage 2 note (2026-03-27):
 - Добавлена миграция `apps/api/migrations/0007_server_audit_log.sql` и сервис аудита `apps/api/src/services/server-audit-service.ts`.
 - Audit events пишутся для чувствительных действий: `server.created`, `server.renamed`, `server.invite.created`, `server.invite.accepted(_idempotent)`, `server.ban.applied/revoked`, `service.ban.applied/revoked`.
 - Усилен role-check rename сервера: `PATCH /v1/servers/:serverId` теперь только для `owner/admin` (role `member` больше не допускается).
+- Добавлен Redis rate limit для invite операций:
+   - `POST /v1/servers/:serverId/invites`: `20` запросов/`60s` на субъекта.
+   - `POST /v1/invites/:token/accept`: `30` запросов/`60s` на субъекта.
+- Добавлен лимит активных invite ссылок на сервер в `InviteService` (`SERVER_ACTIVE_INVITES_LIMIT`, default `20`) с ошибкой `ActiveInviteLimitReached` (`409`).
 
 ### Stage 3 - Frontend integration
 

@@ -17,6 +17,7 @@ import {
 } from "../services/server-service.js";
 import { createServerInvite } from "../services/invite-service.js";
 import { applyServerBan, revokeServerBan } from "../services/ban-service.js";
+import { makeRateLimiter } from "../middleware/rate-limit.js";
 import type {
   InviteCreateResponse,
   ServerCreateResponse,
@@ -47,6 +48,13 @@ const createServerBanSchema = z.object({
 });
 
 export async function serversRoutes(fastify: FastifyInstance) {
+  const limitInviteCreate = makeRateLimiter({
+    namespace: "server.invite.create",
+    max: 20,
+    windowSec: 60,
+    message: "Too many invite create attempts"
+  });
+
   fastify.post<{ Body: { name: string } }>(
     "/v1/servers",
     {
@@ -195,7 +203,8 @@ export async function serversRoutes(fastify: FastifyInstance) {
         requireNotServiceBanned,
         loadCurrentUser,
         requireServerMembership,
-        requireNotServerBanned
+        requireNotServerBanned,
+        limitInviteCreate
       ]
     },
     async (request, reply) => {
@@ -232,6 +241,13 @@ export async function serversRoutes(fastify: FastifyInstance) {
           return reply.code(403).send({
             error: "forbidden_role",
             message: "Insufficient server role"
+          });
+        }
+
+        if (message === "active_invite_limit_reached") {
+          return reply.code(409).send({
+            error: "ActiveInviteLimitReached",
+            message: "Active invite links limit reached for this server"
           });
         }
 

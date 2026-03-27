@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { loadCurrentUser, requireAuth, requireNotServiceBanned, requireServiceAccess } from "../middleware/auth.js";
+import { makeRateLimiter } from "../middleware/rate-limit.js";
 import { acceptServerInvite } from "../services/invite-service.js";
 import type { InviteAcceptResponse } from "../api-contract.types.ts";
 
@@ -9,10 +10,17 @@ const acceptInviteSchema = z.object({
 });
 
 export async function invitesRoutes(fastify: FastifyInstance) {
+  const limitInviteAccept = makeRateLimiter({
+    namespace: "server.invite.accept",
+    max: 30,
+    windowSec: 60,
+    message: "Too many invite accept attempts"
+  });
+
   fastify.post<{ Params: { token: string } }>(
     "/v1/invites/:token/accept",
     {
-      preHandler: [requireAuth, requireServiceAccess, requireNotServiceBanned, loadCurrentUser]
+      preHandler: [requireAuth, requireServiceAccess, requireNotServiceBanned, loadCurrentUser, limitInviteAccept]
     },
     async (request, reply) => {
       const parsed = acceptInviteSchema.safeParse({ token: request.params.token });
