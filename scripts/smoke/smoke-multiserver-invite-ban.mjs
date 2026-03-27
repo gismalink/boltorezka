@@ -130,6 +130,31 @@ async function resolveOperableServerId(token) {
     throw new Error("second user id is missing");
   }
 
+  const preCleanupServerBan = await fetchJson(
+    `/v1/servers/${encodeURIComponent(serverId)}/bans/${encodeURIComponent(secondUserId)}`,
+    {
+      method: "DELETE",
+      headers: authHeader(ownerToken)
+    }
+  );
+  if (!preCleanupServerBan.response.ok) {
+    throw new Error(
+      `pre-cleanup server ban revoke failed: status=${preCleanupServerBan.response.status} payload=${JSON.stringify(preCleanupServerBan.payload)}`
+    );
+  }
+
+  if (adminToken) {
+    const preCleanupServiceBan = await fetchJson(`/v1/admin/service-bans/${encodeURIComponent(secondUserId)}`, {
+      method: "DELETE",
+      headers: authHeader(adminToken)
+    });
+    if (!preCleanupServiceBan.response.ok) {
+      throw new Error(
+        `pre-cleanup service ban revoke failed: status=${preCleanupServiceBan.response.status} payload=${JSON.stringify(preCleanupServiceBan.payload)}`
+      );
+    }
+  }
+
   const secondAcceptResponse = await fetchJson(`/v1/invites/${encodeURIComponent(inviteToken)}/accept`, {
     method: "POST",
     headers: authHeader(secondToken)
