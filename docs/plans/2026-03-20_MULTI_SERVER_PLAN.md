@@ -249,6 +249,13 @@ Stage 0 note (2026-03-21): design-пакет закрыт в рамках это
 - [ ] Middleware `requireNotServiceBanned` и `requireNotServerBanned`.
 - [ ] Идемпотентность чувствительных операций (транзакции, уникальные индексы, race-safe path).
 
+Stage 1 note (2026-03-27):
+- Подготовлена миграция `apps/api/migrations/0006_multi_server_foundation.sql`:
+   - таблицы `servers`, `server_members`, `server_invites`, `server_bans`, `service_bans`;
+   - поля `rooms.server_id` и `rooms.nsfw` + индексы;
+   - bootstrap `BossServer` и backfill текущих `rooms`/`server_members`.
+- До отметки `[x]` по пункту `Миграции БД` нужно применить миграцию в `test` и зафиксировать smoke/evidence.
+
 ### Stage 2 - API + auth integration
 
 - [ ] Эндпоинты `/v1/servers*` и `/v1/invites/:token/accept`.
