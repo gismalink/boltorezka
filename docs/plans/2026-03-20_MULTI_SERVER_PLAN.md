@@ -276,7 +276,7 @@ Stage 1 note (2026-03-27):
 - [x] Эндпоинты `/v1/servers*` и `/v1/invites/:token/accept`.
 - [x] Эндпоинты серверных/глобальных банов.
 - [x] Эндпоинты `GET /v1/admin/servers` и `GET /v1/admin/servers/:serverId/overview`.
-- [ ] Проверка ролей и аудит-логи чувствительных действий.
+- [x] Проверка ролей и аудит-логи чувствительных действий.
 - [ ] Ограничение rate limit для invite create/accept.
 - [ ] Ограничение количества активных invite ссылок на сервер.
 - [ ] Интеграция с legal Stage E: server-aware код ошибки для 18+ доступа (например, `AgeVerificationRequired`) и аудит age-confirm событий в контексте `server_id`.
@@ -286,6 +286,9 @@ Stage 2 note (2026-03-27):
 - `/v1/admin/servers` отдает server list с агрегатами (`membersCount`, `roomsCount`, `messagesCount`, `activeServerBansCount`).
 - `/v1/admin/servers/:serverId/overview` отдает детальный срез метрик по членству/комнатам/сообщениям/invites/bans.
 - Изменения провалидированы в `test` на feature-ветке через `TEST_REF=origin/feature/multiserver-stage1-services SMOKE_MULTISERVER=1 npm run deploy:test:smoke` (SHA `e01b1d9`, PASS).
+- Добавлена миграция `apps/api/migrations/0007_server_audit_log.sql` и сервис аудита `apps/api/src/services/server-audit-service.ts`.
+- Audit events пишутся для чувствительных действий: `server.created`, `server.renamed`, `server.invite.created`, `server.invite.accepted(_idempotent)`, `server.ban.applied/revoked`, `service.ban.applied/revoked`.
+- Усилен role-check rename сервера: `PATCH /v1/servers/:serverId` теперь только для `owner/admin` (role `member` больше не допускается).
 
 ### Stage 3 - Frontend integration
 
