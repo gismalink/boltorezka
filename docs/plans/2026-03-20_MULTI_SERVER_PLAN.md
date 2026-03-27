@@ -345,12 +345,18 @@ Stage 3 note (2026-03-28):
 
 ### Stage 4 - Data cutover
 
-- [ ] Создать `BossServer` и привязать текущие комнаты.
-- [ ] Зафиксировать `BossServer` как базовый сервер для test сценариев.
-- [ ] Верифицировать выборку комнат/сообщений в контексте сервера.
-- [ ] Smoke в test: create server -> invite -> accept -> switch -> chat.
-- [ ] Smoke в test: no data leak между серверами + ban enforcement в API/WS.
-- [ ] Smoke в test: no data leak между серверами для `nsfw=true` пространств + проверка age-gate на deep-link/invite.
+- [x] Создать `BossServer` и привязать текущие комнаты.
+- [x] Зафиксировать `BossServer` как базовый сервер для test сценариев.
+- [x] Верифицировать выборку комнат/сообщений в контексте сервера.
+- [x] Smoke в test: create server -> invite -> accept -> switch -> chat.
+- [x] Smoke в test: no data leak между серверами + ban enforcement в API/WS.
+- [x] Smoke в test: no data leak между серверами для `nsfw=true` пространств + проверка age-gate на deep-link/invite.
+
+Stage 4 note (2026-03-28):
+- Инварианты cutover в `test` подтверждены SQL-проверками: `BossServer` присутствует как `is_default=true`, `rooms.server_id is null = 0`, `rooms.nsfw=true` присутствует и используется в smoke-проверках.
+- Добавлен и интегрирован `smoke:multiserver:age-gate` в `postdeploy-smoke-test.sh`.
+- Финальный test gate на feature-ветке: `TEST_REF=origin/feature/multiserver-stage1-services SMOKE_MULTISERVER=1 SMOKE_MULTISERVER_AGE_GATE=1 npm run deploy:test:smoke` (SHA `2a4cc07`, PASS).
+- Для насыщенного test-state (исчерпанный лимит активных invite) smoke-скрипты используют `active-invite-limit-skip` режим и не дают ложнопадающий результат deploy gate.
 
 ### Stage 5 - Prod rollout
 
