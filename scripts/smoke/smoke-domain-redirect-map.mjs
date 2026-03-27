@@ -12,7 +12,7 @@ const testDefaultCases = [
 
 const prodDefaultCases = [
   {
-    from: "https://boltotrezka.gismalink.art/health?smoke=1",
+    from: "https://boltorezka.gismalink.art/health?smoke=1",
     toHost: "datowave.com"
   }
 ];

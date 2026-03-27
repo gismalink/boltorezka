@@ -331,7 +331,7 @@ export function LegalStandalonePage() {
                 setCookieConsentAccepted(false);
               }}
             >
-              {lang === "ru" ? "Настройки cookie" : "Cookie settings"}
+              {lang === "ru" ? "Сбросить настройки" : "Reset settings"}
             </button>
           </div>
         </div>

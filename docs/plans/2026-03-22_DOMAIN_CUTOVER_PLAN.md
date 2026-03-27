@@ -269,11 +269,12 @@ Draft: Authentik OIDC clients and claims mapping (v1)
 - [x] Мониторинг ошибок/latency/auth-fail на новом домене.
 - [x] Мониторинг успешных OAuth логинов и отказов (`login_ok`/`login_fail`).
 - [x] Контроль redirect chains и корректности соответствий host/path (через регулярный `smoke:redirect-map` в `test`).
-- [ ] Удалить legacy-конфиг `gismalink.art` после окна совместимости.
+- [x] Удалить legacy-конфиг `gismalink.art` после окна совместимости.
 
 Статус пункта legacy cleanup (2026-03-27):
-- `blocked` до завершения согласованного окна совместимости (30 дней).
-- Условие закрытия: по окончании окна удалить/деактивировать legacy `gismalink.art` runtime-конфиг и зафиксировать короткий post-change smoke.
+- `done` (2026-03-27): окно совместимости отменено решением владельца релиза, cleanup выполнен.
+- Post-change smoke: `smoke:sso:routing` PASS, `smoke:redirect-map` PASS (prod), `smoke:web:static` PASS, `edge/scripts/test-smoke.sh --local prod` PASS.
+- Runbook: `docs/runbooks/DOMAIN_CUTOVER_COMPAT_WINDOW_CLOSE_CHECKLIST.md`.
 
 ## 6) Smoke-check (обязательно)
 
