@@ -4,6 +4,7 @@ import { db } from "../db.js";
 import { broadcastRealtimeEnvelope } from "../realtime-broadcast.js";
 import { loadCurrentUser, requireAuth, requireRole, requireServiceAccess } from "../middleware/auth.js";
 import type { RoomCategoryRow, RoomListRow, RoomMessageRow, RoomRow } from "../db.types.ts";
+import { isServerAgeConfirmed } from "../services/age-verification-service.js";
 import type {
   RoomCategoryCreateResponse,
   RoomCreateResponse,
@@ -981,7 +982,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
       }
 
       const roomResult = await db.query<RoomRow>(
-        "SELECT id, slug, title, kind, audio_quality_override, category_id, position, is_public FROM rooms WHERE slug = $1 AND is_archived = FALSE",
+        "SELECT id, slug, title, kind, audio_quality_override, category_id, server_id, nsfw, position, is_public FROM rooms WHERE slug = $1 AND is_archived = FALSE",
         [slug]
       );
 
@@ -993,6 +994,19 @@ export async function roomsRoutes(fastify: FastifyInstance) {
       }
 
       const room = roomResult.rows[0];
+
+      if (room.nsfw === true) {
+        const serverId = String(room.server_id || "").trim();
+        const confirmed = serverId ? await isServerAgeConfirmed(serverId, userId) : false;
+        if (!confirmed) {
+          return reply.code(403).send({
+            error: "AgeVerificationRequired",
+            message: "Age verification is required for NSFW access",
+            serverId,
+            roomSlug: room.slug
+          });
+        }
+      }
 
       if (!room.is_public) {
         const membership = await db.query(

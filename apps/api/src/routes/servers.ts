@@ -18,8 +18,11 @@ import {
 import { createServerInvite } from "../services/invite-service.js";
 import { applyServerBan, revokeServerBan } from "../services/ban-service.js";
 import { makeRateLimiter } from "../middleware/rate-limit.js";
+import { confirmServerAge, getServerAgeConfirmation } from "../services/age-verification-service.js";
 import type {
   InviteCreateResponse,
+  ServerAgeConfirmResponse,
+  ServerAgeStatusResponse,
   ServerCreateResponse,
   ServerBanResponse,
   ServerBanRevokeResponse,
@@ -191,6 +194,66 @@ export async function serversRoutes(fastify: FastifyInstance) {
       }
 
       return { server };
+    }
+  );
+
+  fastify.get<{ Params: { serverId: string } }>(
+    "/v1/servers/:serverId/age-confirm",
+    {
+      preHandler: [
+        requireAuth,
+        requireServiceAccess,
+        requireNotServiceBanned,
+        loadCurrentUser,
+        requireServerMembership,
+        requireNotServerBanned
+      ]
+    },
+    async (request) => {
+      const serverId = String(request.params.serverId || "").trim();
+      const userId = String(request.currentUser?.id || "").trim();
+      const confirmation = await getServerAgeConfirmation(serverId, userId);
+
+      const response: ServerAgeStatusResponse = {
+        serverId,
+        confirmed: Boolean(confirmation),
+        confirmedAt: confirmation?.confirmedAt || null
+      };
+
+      return response;
+    }
+  );
+
+  fastify.post<{ Params: { serverId: string }; Body: { source?: string } }>(
+    "/v1/servers/:serverId/age-confirm",
+    {
+      preHandler: [
+        requireAuth,
+        requireServiceAccess,
+        requireNotServiceBanned,
+        loadCurrentUser,
+        requireServerMembership,
+        requireNotServerBanned
+      ]
+    },
+    async (request) => {
+      const serverId = String(request.params.serverId || "").trim();
+      const userId = String(request.currentUser?.id || "").trim();
+      const source = String((request.body as { source?: unknown } | undefined)?.source || "").trim() || "explicit-ui";
+
+      const confirmation = await confirmServerAge({
+        serverId,
+        userId,
+        source
+      });
+
+      const response: ServerAgeConfirmResponse = {
+        ok: true,
+        serverId,
+        confirmedAt: confirmation.confirmedAt
+      };
+
+      return response;
     }
   );
 

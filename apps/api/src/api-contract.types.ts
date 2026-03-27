@@ -243,3 +243,15 @@ export type AdminServerOverview = {
 export type AdminServerOverviewResponse = {
   server: AdminServerOverview;
 };
+
+export type ServerAgeConfirmResponse = {
+  ok: true;
+  serverId: string;
+  confirmedAt: string;
+};
+
+export type ServerAgeStatusResponse = {
+  serverId: string;
+  confirmed: boolean;
+  confirmedAt: string | null;
+};

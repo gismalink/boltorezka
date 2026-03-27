@@ -44,6 +44,8 @@ export type RoomRow = {
   kind: RoomKind;
   audio_quality_override?: AudioQuality | null;
   category_id: string | null;
+  server_id?: string;
+  nsfw?: boolean;
   position: number;
   is_public: boolean;
   created_at?: string;
@@ -150,6 +152,15 @@ export type ServerAuditLogRow = {
   action: string;
   meta: Record<string, unknown>;
   created_at: string;
+};
+
+export type ServerAgeConfirmationRow = {
+  server_id: string;
+  user_id: string;
+  source: string | null;
+  confirmed_at: string;
+  created_at: string;
+  updated_at: string;
 };
 
 export type ServerSettingsRow = {

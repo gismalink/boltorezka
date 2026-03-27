@@ -1,4 +1,5 @@
 import type { WebSocket } from "ws";
+import { isServerAgeConfirmed } from "../services/age-verification-service.js";
 
 type SocketState = {
   userId: string;
@@ -84,8 +85,8 @@ async function resolveChatRoom(
     };
   }
 
-  const roomResult = await dbQuery<{ id: string; slug: string; is_public: boolean }>(
-    `SELECT id, slug, is_public
+  const roomResult = await dbQuery<{ id: string; slug: string; is_public: boolean; server_id: string | null; nsfw: boolean | null }>(
+    `SELECT id, slug, is_public, server_id, nsfw
      FROM rooms
      WHERE slug = $1 AND is_archived = FALSE
      LIMIT 1`,
@@ -98,6 +99,15 @@ async function resolveChatRoom(
   }
 
   const room = roomResult.rows[0];
+  if (room.nsfw === true) {
+    const serverId = String(room.server_id || "").trim();
+    const confirmed = serverId ? await isServerAgeConfirmed(serverId, state.userId) : false;
+    if (!confirmed) {
+      sendNack(connection, requestId, eventType, "AgeVerificationRequired", "Age verification is required for NSFW access");
+      return null;
+    }
+  }
+
   if (!room.is_public) {
     const membership = await dbQuery(
       `SELECT 1
