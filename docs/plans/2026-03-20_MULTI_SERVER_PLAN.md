@@ -307,7 +307,7 @@ Stage 2 note (2026-03-27):
 
 - [x] Server switcher + current server context.
 - [x] Header `Dato // ServerName`.
-- [ ] Screen: Create server.
+- [x] Screen: Create server.
 - [ ] Screen: Members + Invite link.
 - [ ] Empty state / onboarding "Создать первый сервер".
 - [ ] Админка суперадмина: `Product Management` + `Server Management`.
@@ -319,6 +319,13 @@ Stage 3 note (2026-03-28):
    - заголовок формата `Dato // ServerName`;
    - базовый server switcher (select) в desktop header.
 - Изменения провалидированы в `test` на feature-ветке через `TEST_REF=origin/feature/multiserver-stage1-services SMOKE_MULTISERVER=1 npm run deploy:test:smoke` (SHA `6cc4c45`, PASS).
+- Добавлен базовый create-server flow в frontend:
+   - API client `POST /v1/servers` (`apps/web/src/api.ts`),
+   - create popup в header (`apps/web/src/components/AppHeader.tsx`),
+   - состояние создания/обновления server list (`apps/web/src/App.tsx`).
+- На backend снято ограничение количества серверов для `super_admin`:
+   - `apps/api/src/services/server-service.ts`, `apps/api/src/routes/servers.ts`.
+- Обновленный срез провалидирован в `test` на feature-ветке через `TEST_REF=origin/feature/multiserver-stage1-services SMOKE_MULTISERVER=1 npm run deploy:test:smoke` (SHA `498d201`, PASS).
 
 ### Stage 4 - Data cutover
 
@@ -345,6 +352,8 @@ Stage 3 note (2026-03-28):
 ## 7) Что еще нужно добавить (рекомендации)
 
 1. Удаление сервера (с ограничениями и подтверждением).
+   - должно быть мягким, как у комнат на сервере. 
+   - у супер админа есть корзина в списке серверов, из которой их можно восстановить
 2. Роли finer-grained:
    - управление комнатами,
    - управление правами участников,
@@ -382,7 +391,7 @@ Stage 3 note (2026-03-28):
 ## 9) Зафиксированные решения
 
 1. Владелец `BossServer` в проде: пользователь `gismalink@gmail.com`.
-2. Лимит серверов на пользователя в v1: 1 бесплатный сервер.
+2. Лимит серверов на пользователя в v1: 1 бесплатный сервер; для `super_admin` лимит не ограничен.
 3. Переименование сервера в v1: Только владелец сервере.
 4. Публичного каталога серверов нет: вход только по invite; при этом в админке суперадмина нужен список всех серверов.
 5. Удаление сервера: нужно поддержать, приоритет можно отложить на следующий этап после базового rollout.
