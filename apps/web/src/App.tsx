@@ -1870,12 +1870,13 @@ export function App() {
       <footer className="pointer-events-none fixed inset-x-0 bottom-1 z-[150] px-3">
         <div className="mx-auto w-fit rounded-full border border-white/15 bg-black/35 px-4 py-1 backdrop-blur">
           <div className="pointer-events-auto">
-            <LegalLinks compact />
+            <LegalLinks compact lang={lang} />
           </div>
         </div>
       </footer>
 
       <CookieConsentBanner
+        lang={lang}
         visible={!cookieConsentAccepted}
         onAccept={() => {
           localStorage.setItem(COOKIE_CONSENT_KEY, "1");
