@@ -241,7 +241,7 @@ Stage 0 note (2026-03-21): design-пакет закрыт в рамках это
 
 ### Stage 1 - Backend foundation
 
-- [ ] Миграции БД.
+- [x] Миграции БД.
 - [ ] `ServerService` (create/list/get/rename).
 - [ ] `InviteService` (create/accept/revoke).
 - [ ] `BanService` (server/service ban apply/revoke/check).
@@ -254,7 +254,11 @@ Stage 1 note (2026-03-27):
    - таблицы `servers`, `server_members`, `server_invites`, `server_bans`, `service_bans`;
    - поля `rooms.server_id` и `rooms.nsfw` + индексы;
    - bootstrap `BossServer` и backfill текущих `rooms`/`server_members`.
-- До отметки `[x]` по пункту `Миграции БД` нужно применить миграцию в `test` и зафиксировать smoke/evidence.
+- Миграция применена в `test` через `ALLOW_TEST_FROM_MAIN=1 TEST_REF=origin/main npm run deploy:test:smoke` (SHA `3fd0dd3`, PASS).
+- SQL-проверки в `boltorezka-db-test` подтверждают:
+   - таблицы: `servers`, `server_members`, `server_invites`, `server_bans`, `service_bans`;
+   - колонки `rooms.server_id`, `rooms.nsfw`;
+   - bootstrap запись `bossserver | BossServer | is_default=true`.
 
 ### Stage 2 - API + auth integration
 
