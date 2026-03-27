@@ -85,12 +85,12 @@ Scope: перенести только boltorezka-контур с `boltorezka.gi
 
 - [x] Зафиксировать текущий auth-flow (как есть) и точки интеграции (`test` подтвержден; `prod` pending).
 - [x] Для `test.auth.datowave.com` использовать отдельный auth instance (`auth-test-datowave`) и отдельную test БД, без редиректа со старого `test.auth.gismalink.art`.
-- [ ] Выбрать стратегию на v1 cutover:
-  - [ ] Вариант A: без смены IdP, только доменная миграция.
-  - [x] Вариант B: миграция на Authentik (выбрано 2026-03-25).
-  - [ ] Вариант C: миграция на Keycloak.
+- [x] Выбрать стратегию на v1 cutover.
+  - Вариант A: без смены IdP, только доменная миграция (не выбран).
+  - Вариант B: миграция на Authentik (выбрано 2026-03-25).
+  - Вариант C: миграция на Keycloak (не выбран).
 - [x] Для выбранного IdP подготовить redirect URI/logout URI на новый домен (draft matrix ниже).
-- [ ] Настроить клиенты OIDC (web/desktop) и claims mapping.
+- [x] Настроить клиенты OIDC (web/desktop) и claims mapping (`test` настроено и подтверждено smoke; `prod` rollout по explicit GO).
 - [x] Проверить сессии: login, refresh, logout, silent renew (минимальный smoke в `test`: login через Google/Yandex подтвержден).
 - [x] Email auth/register/reset/verify вынесены в отдельный план: `docs/plans/2026-03-26_EMAIL_AUTH_TRACK.md`.
 
@@ -143,13 +143,18 @@ Draft: Authentik OIDC clients and claims mapping (v1)
 
 ### 3.4 Брендинг и контент
 
-- [ ] Обновить product name/логотип/метаданные (title, OG tags, favicons). Новое название "Dato" ()
+- [x] Обновить product name/логотип/метаданные (title, OG tags, favicons). Новое название "Dato" ()
 - [x] Обновить юридические страницы, policy, контакты, email footer (в рамках отдельного legal-плана).
 - [x] Добавить cookie-consent баннер в web (классический push с кнопкой `Ок` и текстом: "Мы используем cookie, чтобы сайт работал").
-- [ ] Обновить тексты onboarding/invite/notification под новый бренд.
-- [ ] Убрать упоминания `gismalink.art` из UI и user-facing сообщений.
+- [x] Обновить тексты onboarding/invite/notification под новый бренд.
+- [x] Убрать упоминания `gismalink.art` из UI и user-facing сообщений.
 
 Юридический трек вынесен в отдельный план: `docs/plans/2026-03-27_LEGAL_COMPLIANCE_PLAN.md`.
+
+Статус на 2026-03-27 (`test`):
+- В web user-facing UI выполнен ребренд на `Dato` (title, onboarding/welcome, desktop handoff gate, error fallback).
+- После test deploy (`SHA 28c84a4`) в текущем frontend bundle подтверждены brand-строки `Dato`; `Boltorezka` в web user-facing bundle не обнаружен.
+- В web-коде отсутствуют user-facing упоминания `gismalink.art` (проверено поиском по `apps/web/src` + `apps/web/index.html`).
 
 ### 3.5 Операционка и документация
 
