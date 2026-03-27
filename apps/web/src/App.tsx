@@ -1869,8 +1869,18 @@ export function App() {
 
       <footer className="pointer-events-none fixed inset-x-0 bottom-1 z-[150] px-3">
         <div className="mx-auto w-fit rounded-full border border-white/15 bg-black/35 px-4 py-1 backdrop-blur">
-          <div className="pointer-events-auto">
+          <div className="pointer-events-auto flex items-center gap-3">
             <LegalLinks compact lang={lang} />
+            <button
+              type="button"
+              className="text-xs text-white/70 underline decoration-white/40 underline-offset-2 transition hover:text-white"
+              onClick={() => {
+                localStorage.removeItem(COOKIE_CONSENT_KEY);
+                setCookieConsentAccepted(false);
+              }}
+            >
+              {lang === "ru" ? "Настройки cookie" : "Cookie settings"}
+            </button>
           </div>
         </div>
       </footer>

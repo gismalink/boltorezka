@@ -322,6 +322,18 @@ export function LegalStandalonePage() {
 
         <div className="mt-8 border-t border-white/10 pt-4">
           <LegalLinks lang={lang} />
+          <div className="mt-3 text-center">
+            <button
+              type="button"
+              className="text-xs text-pixel-muted underline decoration-current/40 underline-offset-2 transition hover:text-pixel-text"
+              onClick={() => {
+                localStorage.removeItem(COOKIE_CONSENT_KEY);
+                setCookieConsentAccepted(false);
+              }}
+            >
+              {lang === "ru" ? "Настройки cookie" : "Cookie settings"}
+            </button>
+          </div>
         </div>
       </article>
 
