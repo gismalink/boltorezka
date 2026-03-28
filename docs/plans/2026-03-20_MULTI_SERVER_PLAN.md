@@ -422,6 +422,14 @@ Stage 5 note (2026-03-29):
    - `smoke:multiserver:role-matrix`: `ok`.
 - Для финального ручного подтверждения UX age-gate (оверлей + отсутствие ложного RTC join/sound) требуется ручной прогон в BossServer комнате `18plus`.
 
+Stage 5 note (2026-03-29, после merge в main):
+- Выполнен merge `feature/multiserver-stage1-services` -> `main` (commit `1b25863`) и push в origin/main.
+- Выполнен test gate из main с policy-exception флагом:
+   - `ALLOW_TEST_FROM_MAIN=1 TEST_REF=origin/main SMOKE_MULTISERVER=1 SMOKE_MULTISERVER_AGE_GATE=1 npm run deploy:test:smoke`.
+   - Applied SHA: `1b25863814095e88944422e2c1ff85628783e4d5`.
+   - Result: `PASS`.
+- Ключевые smoke проверки после merge в main: `smoke:api`, `smoke:web:version-cache`, `smoke:web:rnnoise:browser`, `smoke:multiserver`, `smoke:multiserver:age-gate` (`no-room-skip`), `smoke:multiserver:role-matrix`, `smoke:realtime`.
+
 ### Stage 6 - Stabilization (сразу после релиза)
 
 - [x] Owner transfer и защита от "server without owner".
