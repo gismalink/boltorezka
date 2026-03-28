@@ -42,8 +42,12 @@ type ServerProfileModalProps = {
   adminServerOverviewLoading: boolean;
   currentUserId: string;
   currentServerRole: ServerMemberRole | null;
+  currentServerName: string;
   serverMembers: ServerMemberItem[];
   serverMembersLoading: boolean;
+  serverAgeLoading: boolean;
+  serverAgeConfirmedAt: string | null;
+  serverAgeConfirming: boolean;
   lastInviteUrl: string;
   creatingInvite: boolean;
   eventLog: string[];
@@ -82,6 +86,8 @@ type ServerProfileModalProps = {
   onSelectAdminServer: (serverId: string) => void;
   onCreateServerInvite: () => void;
   onCopyInviteUrl: () => void;
+  onRenameCurrentServer: (name: string) => void;
+  onConfirmServerAge: () => void;
   onLeaveServer: () => void;
   onRemoveServerMember: (userId: string) => void;
   onBanServerMember: (userId: string) => void;
@@ -222,8 +228,12 @@ export function ServerProfileModal({
   adminServerOverviewLoading,
   currentUserId,
   currentServerRole,
+  currentServerName,
   serverMembers,
   serverMembersLoading,
+  serverAgeLoading,
+  serverAgeConfirmedAt,
+  serverAgeConfirming,
   lastInviteUrl,
   creatingInvite,
   eventLog,
@@ -258,6 +268,8 @@ export function ServerProfileModal({
   onSelectAdminServer,
   onCreateServerInvite,
   onCopyInviteUrl,
+  onRenameCurrentServer,
+  onConfirmServerAge,
   onLeaveServer,
   onRemoveServerMember,
   onBanServerMember,
@@ -286,6 +298,7 @@ export function ServerProfileModal({
   const [desktopManifestChannel, setDesktopManifestChannel] = useState<"test" | "prod" | null>(null);
   const [userAccessTab, setUserAccessTab] = useState<UserAccessTab>("active");
   const [userSearchQuery, setUserSearchQuery] = useState("");
+  const [renameServerName, setRenameServerName] = useState("");
   const totalUsers = adminUsers.length;
   const totalAdmins = adminUsers.filter((item) => item.role === "admin" || item.role === "super_admin").length;
   const totalBanned = adminUsers.filter((item) => item.is_banned).length;
@@ -352,6 +365,10 @@ export function ServerProfileModal({
     }),
     [desktopManifest, desktopPublicOrigin, effectiveDesktopChannel, t]
   );
+
+  useEffect(() => {
+    setRenameServerName(String(currentServerName || "").trim());
+  }, [currentServerName]);
 
   useEffect(() => {
     if (!open || serverMenuTab !== "desktop_downloads") {
@@ -796,6 +813,45 @@ export function ServerProfileModal({
                       </button>
                       <button type="button" className="secondary" onClick={onCopyInviteUrl} disabled={!lastInviteUrl}>
                         {t("server.inviteCopy")}
+                      </button>
+                    </div>
+                  </div>
+                  {(currentServerRole === "owner" || currentServerRole === "admin") ? (
+                    <div className="grid gap-2">
+                      <h4>{t("server.renameTitle")}</h4>
+                      <label className="grid gap-1">
+                        <span className="muted">{t("server.renameLabel")}</span>
+                        <input
+                          type="text"
+                          value={renameServerName}
+                          maxLength={64}
+                          onChange={(event) => setRenameServerName(event.target.value)}
+                          placeholder={t("server.renamePlaceholder")}
+                        />
+                      </label>
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={() => onRenameCurrentServer(renameServerName)}
+                          disabled={renameServerName.trim().length < 3}
+                        >
+                          {t("server.renameAction")}
+                        </button>
+                      </div>
+                    </div>
+                  ) : null}
+                  <div className="grid gap-2">
+                    <h4>{t("server.ageConfirmTitle")}</h4>
+                    <p className="muted">
+                      {serverAgeLoading
+                        ? t("server.ageConfirmLoading")
+                        : serverAgeConfirmedAt
+                          ? `${t("server.ageConfirmConfirmedAt")}: ${new Date(serverAgeConfirmedAt).toLocaleString()}`
+                          : t("server.ageConfirmNotConfirmed")}
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      <button type="button" onClick={onConfirmServerAge} disabled={serverAgeConfirming}>
+                        {serverAgeConfirming ? t("server.ageConfirmActionLoading") : t("server.ageConfirmAction")}
                       </button>
                     </div>
                   </div>

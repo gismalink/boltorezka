@@ -166,6 +166,10 @@ export type ServerCreateResponse = {
   server: ServerListItem;
 };
 
+export type ServerRenameResponse = {
+  server: ServerListItem;
+};
+
 export type ServerMemberItem = {
   userId: string;
   email: string;
@@ -178,6 +182,18 @@ export type ServerMemberItem = {
 export type ServerMembersResponse = {
   serverId: string;
   members: ServerMemberItem[];
+};
+
+export type ServerAgeStatusResponse = {
+  serverId: string;
+  confirmed: boolean;
+  confirmedAt: string | null;
+};
+
+export type ServerAgeConfirmResponse = {
+  ok: boolean;
+  serverId: string;
+  confirmedAt: string;
 };
 
 export type InviteCreateResponse = {

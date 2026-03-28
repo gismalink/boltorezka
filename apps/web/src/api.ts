@@ -13,7 +13,10 @@ import type {
   ServerAudioQualityResponse,
   ServerChatImagePolicyResponse,
   ServerCreateResponse,
+  ServerRenameResponse,
   ServerMembersResponse,
+  ServerAgeStatusResponse,
+  ServerAgeConfirmResponse,
   InviteAcceptResponse,
   InviteCreateResponse,
   TelemetrySummary,
@@ -326,8 +329,18 @@ export const api = {
   servers: (token: string) => fetchJson<{ servers: ServerListItem[] }>(endpoints.servers, token),
   createServer: (token: string, input: { name: string }) =>
     fetchJson<ServerCreateResponse>(endpoints.servers, token, withJsonBody("POST", input)),
+  renameServer: (token: string, serverId: string, input: { name: string }) =>
+    fetchJson<ServerRenameResponse>(withId(endpoints.servers, serverId), token, withJsonBody("PATCH", input)),
   serverMembers: (token: string, serverId: string) =>
     fetchJson<ServerMembersResponse>(withSuffix(endpoints.servers, serverId, "members"), token),
+  serverAgeStatus: (token: string, serverId: string) =>
+    fetchJson<ServerAgeStatusResponse>(withSuffix(endpoints.servers, serverId, "age-confirm"), token),
+  confirmServerAge: (token: string, serverId: string, source = "server-menu") =>
+    fetchJson<ServerAgeConfirmResponse>(
+      withSuffix(endpoints.servers, serverId, "age-confirm"),
+      token,
+      withJsonBody("POST", { source })
+    ),
   leaveServer: (token: string, serverId: string) =>
     fetchJson<{ left: boolean }>(withSuffix(endpoints.servers, serverId, "members/me"), token, withJsonBody("DELETE")),
   removeServerMember: (token: string, serverId: string, userId: string) =>

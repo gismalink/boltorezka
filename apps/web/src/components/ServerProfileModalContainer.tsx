@@ -40,8 +40,12 @@ type ServerProfileModalContainerProps = {
     adminServerOverviewLoading: ServerProfileModalProps["adminServerOverviewLoading"];
     currentUserId: string;
     currentServerRole: ServerProfileModalProps["currentServerRole"];
+    currentServerName: string;
     serverMembers: ServerProfileModalProps["serverMembers"];
     serverMembersLoading: boolean;
+    serverAgeLoading: boolean;
+    serverAgeConfirmedAt: string | null;
+    serverAgeConfirming: boolean;
     lastInviteUrl: string;
     eventLog: string[];
     telemetrySummary: ServerProfileModalProps["telemetrySummary"];
@@ -61,6 +65,8 @@ type ServerProfileModalContainerProps = {
     onSelectAdminServer: ServerProfileModalProps["onSelectAdminServer"];
     onCreateServerInvite: ServerProfileModalProps["onCreateServerInvite"];
     onCopyInviteUrl: ServerProfileModalProps["onCopyInviteUrl"];
+    onRenameCurrentServer: ServerProfileModalProps["onRenameCurrentServer"];
+    onConfirmServerAge: ServerProfileModalProps["onConfirmServerAge"];
     onLeaveServer: ServerProfileModalProps["onLeaveServer"];
     onRemoveServerMember: ServerProfileModalProps["onRemoveServerMember"];
     onBanServerMember: ServerProfileModalProps["onBanServerMember"];
@@ -104,8 +110,12 @@ export function ServerProfileModalContainer({ open, t, permissions, state, data,
       adminServerOverviewLoading={data.adminServerOverviewLoading}
       currentUserId={data.currentUserId}
       currentServerRole={data.currentServerRole}
+      currentServerName={data.currentServerName}
       serverMembers={data.serverMembers}
       serverMembersLoading={data.serverMembersLoading}
+      serverAgeLoading={data.serverAgeLoading}
+      serverAgeConfirmedAt={data.serverAgeConfirmedAt}
+      serverAgeConfirming={data.serverAgeConfirming}
       lastInviteUrl={data.lastInviteUrl}
       creatingInvite={meta.creatingInvite}
       eventLog={data.eventLog}
@@ -140,6 +150,8 @@ export function ServerProfileModalContainer({ open, t, permissions, state, data,
       onSelectAdminServer={actions.onSelectAdminServer}
       onCreateServerInvite={actions.onCreateServerInvite}
       onCopyInviteUrl={actions.onCopyInviteUrl}
+      onRenameCurrentServer={actions.onRenameCurrentServer}
+      onConfirmServerAge={actions.onConfirmServerAge}
       onLeaveServer={actions.onLeaveServer}
       onRemoveServerMember={actions.onRemoveServerMember}
       onBanServerMember={actions.onBanServerMember}

@@ -186,6 +186,9 @@ export function App() {
   const [serverMembersLoading, setServerMembersLoading] = useState(false);
   const [lastInviteUrl, setLastInviteUrl] = useState("");
   const [creatingInvite, setCreatingInvite] = useState(false);
+  const [serverAgeLoading, setServerAgeLoading] = useState(false);
+  const [serverAgeConfirmedAt, setServerAgeConfirmedAt] = useState<string | null>(null);
+  const [serverAgeConfirming, setServerAgeConfirming] = useState(false);
   const [pendingInviteToken, setPendingInviteToken] = useState(() =>
     typeof window === "undefined" ? "" : extractInviteTokenFromPath(window.location.pathname)
   );
@@ -1041,6 +1044,46 @@ export function App() {
   }, [token, user, pendingInviteToken, pushToast, t]);
 
   useEffect(() => {
+    const tokenValue = String(token || "").trim();
+    const serverId = String(currentServerId || "").trim();
+
+    if (!tokenValue || !serverId || !user) {
+      setServerAgeConfirmedAt(null);
+      setServerAgeLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setServerAgeLoading(true);
+
+    api.serverAgeStatus(tokenValue, serverId)
+      .then((response) => {
+        if (cancelled) {
+          return;
+        }
+
+        setServerAgeConfirmedAt(response.confirmed ? response.confirmedAt || null : null);
+      })
+      .catch((error) => {
+        if (cancelled) {
+          return;
+        }
+
+        pushLog(`server age status failed: ${(error as Error).message}`);
+        setServerAgeConfirmedAt(null);
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setServerAgeLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [token, currentServerId, user, pushLog]);
+
+  useEffect(() => {
     if (currentServerId) {
       localStorage.setItem(CURRENT_SERVER_ID_STORAGE_KEY, currentServerId);
       return;
@@ -1289,6 +1332,44 @@ export function App() {
       setCreatingInvite(false);
     }
   }, [token, currentServerId, creatingInvite, pushToast, t]);
+
+  const handleRenameCurrentServer = useCallback(async (nextName: string) => {
+    const tokenValue = String(token || "").trim();
+    const serverId = String(currentServerId || "").trim();
+    const trimmedName = String(nextName || "").trim();
+
+    if (!tokenValue || !serverId || !trimmedName) {
+      return;
+    }
+
+    try {
+      const response = await api.renameServer(tokenValue, serverId, { name: trimmedName });
+      setServers((prev) => prev.map((item) => (item.id === serverId ? response.server : item)));
+      pushToast(t("server.renameSuccess"));
+    } catch (error) {
+      pushToast((error as Error).message || t("toast.serverError"));
+    }
+  }, [token, currentServerId, pushToast, t]);
+
+  const handleConfirmServerAge = useCallback(async () => {
+    const tokenValue = String(token || "").trim();
+    const serverId = String(currentServerId || "").trim();
+
+    if (!tokenValue || !serverId || serverAgeConfirming) {
+      return;
+    }
+
+    setServerAgeConfirming(true);
+    try {
+      const response = await api.confirmServerAge(tokenValue, serverId);
+      setServerAgeConfirmedAt(response.confirmedAt || null);
+      pushToast(t("server.ageConfirmSuccess"));
+    } catch (error) {
+      pushToast((error as Error).message || t("toast.serverError"));
+    } finally {
+      setServerAgeConfirming(false);
+    }
+  }, [token, currentServerId, serverAgeConfirming, pushToast, t]);
 
   const handleCopyInviteUrl = useCallback(async () => {
     const value = String(lastInviteUrl || "").trim();
@@ -2353,8 +2434,12 @@ export function App() {
           adminServerOverviewLoading,
           currentUserId: user?.id || "",
           currentServerRole: currentServer?.role || null,
+          currentServerName: currentServer?.name || "",
           serverMembers,
           serverMembersLoading,
+          serverAgeLoading,
+          serverAgeConfirmedAt,
+          serverAgeConfirming,
           lastInviteUrl,
           eventLog,
           telemetrySummary,
@@ -2374,6 +2459,8 @@ export function App() {
           onSelectAdminServer: setSelectedAdminServerId,
           onCreateServerInvite: () => void handleCreateServerInvite(),
           onCopyInviteUrl: () => void handleCopyInviteUrl(),
+          onRenameCurrentServer: (name) => void handleRenameCurrentServer(name),
+          onConfirmServerAge: () => void handleConfirmServerAge(),
           onLeaveServer: () => void handleLeaveCurrentServer(),
           onRemoveServerMember: (userId) => void handleRemoveServerMember(userId),
           onBanServerMember: (userId) => void handleBanServerMember(userId),
