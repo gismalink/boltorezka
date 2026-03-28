@@ -41,6 +41,7 @@ type ServerProfileModalContainerProps = {
     currentUserId: string;
     currentServerRole: ServerProfileModalProps["currentServerRole"];
     currentServerName: string;
+    hasCurrentServer: boolean;
     serverMembers: ServerProfileModalProps["serverMembers"];
     serverMembersLoading: boolean;
     serverAgeLoading: boolean;
@@ -112,6 +113,7 @@ export function ServerProfileModalContainer({ open, t, permissions, state, data,
       currentUserId={data.currentUserId}
       currentServerRole={data.currentServerRole}
       currentServerName={data.currentServerName}
+      hasCurrentServer={data.hasCurrentServer}
       serverMembers={data.serverMembers}
       serverMembersLoading={data.serverMembersLoading}
       serverAgeLoading={data.serverAgeLoading}

@@ -2082,6 +2082,8 @@ export function App() {
     canManageServerControlPlane,
     canViewTelemetry,
     canManageAudioQuality,
+    canManageChatImages: canPromote,
+    hasCurrentServer: Boolean(currentServer?.id),
     setServerMenuTab
   });
 
@@ -2474,6 +2476,7 @@ export function App() {
           currentUserId: user?.id || "",
           currentServerRole: currentServer?.role || null,
           currentServerName: currentServer?.name || "",
+          hasCurrentServer: Boolean(currentServer?.id),
           serverMembers,
           serverMembersLoading,
           serverAgeLoading,

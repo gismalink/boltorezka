@@ -60,6 +60,7 @@ type ServerProfileModalProps = {
   canPromote: boolean;
   canManageServerControlPlane: boolean;
   canViewTelemetry: boolean;
+  hasCurrentServer: boolean;
   serverMenuTab: ServerMenuTab;
   adminUsers: User[];
   adminServers: AdminServerListItem[];
@@ -247,6 +248,7 @@ export function ServerProfileModal({
   canPromote,
   canManageServerControlPlane,
   canViewTelemetry,
+  hasCurrentServer,
   serverMenuTab,
   adminUsers,
   adminServers,
@@ -818,6 +820,7 @@ export function ServerProfileModal({
             <button
               type="button"
               className={`secondary user-settings-tab-btn min-h-[42px] justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${serverMenuTab === "server_management" ? "user-settings-tab-btn-active" : ""}`}
+              disabled={!hasCurrentServer}
               onClick={() => onSetServerMenuTab("server_management")}
             >
               {t("server.tabServerManagement")}
@@ -848,13 +851,15 @@ export function ServerProfileModal({
               {t("server.tabVideo")}
             </button>
           ) : null}
-          <button
-            type="button"
-            className={`secondary user-settings-tab-btn min-h-[42px] justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${serverMenuTab === "chat_images" ? "user-settings-tab-btn-active" : ""}`}
-            onClick={() => onSetServerMenuTab("chat_images")}
-          >
-            {t("server.tabChatImages")}
-          </button>
+          {canPromote ? (
+            <button
+              type="button"
+              className={`secondary user-settings-tab-btn min-h-[42px] justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${serverMenuTab === "chat_images" ? "user-settings-tab-btn-active" : ""}`}
+              onClick={() => onSetServerMenuTab("chat_images")}
+            >
+              {t("server.tabChatImages")}
+            </button>
+          ) : null}
           <button
             type="button"
             className={`secondary user-settings-tab-btn min-h-[42px] justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${serverMenuTab === "desktop_downloads" ? "user-settings-tab-btn-active" : ""}`}
@@ -1099,7 +1104,7 @@ export function ServerProfileModal({
                     >
                       {adminServers.map((server) => (
                         <option key={server.id} value={server.id}>
-                          {server.name} ({server.slug})
+                          {server.name}
                         </option>
                       ))}
                     </select>
@@ -1467,7 +1472,7 @@ export function ServerProfileModal({
             </section>
           ) : null}
 
-          {serverMenuTab === "chat_images" ? (
+          {serverMenuTab === "chat_images" && canPromote ? (
             <section className="grid gap-3">
               <h3>{t("server.chatImagesTitle")}</h3>
               <p className="muted">{t("server.chatImagesHint")}</p>

@@ -51,7 +51,7 @@ export function AppHeader({
   const [newServerName, setNewServerName] = useState("");
   const createServerRef = useRef<HTMLDivElement>(null);
   const menuGlyph = String(currentServerName || "").trim().slice(0, 1).toUpperCase() || "D";
-  const serverTitle = String(currentServerName || "").trim() || t("server.noActive");
+  const serverTitle = String(currentServerName || "").trim();
 
   const submitCreateServer = async () => {
     const name = String(newServerName || "").trim();
@@ -80,7 +80,7 @@ export function AppHeader({
         </div>
         <div className="title-block flex min-w-0 flex-col">
           <h1 className="app-title font-heading text-[22px] leading-none text-pixel-text desktop:text-[28px]">
-            {`${t("app.title")} // ${serverTitle}`}
+            {serverTitle ? `${t("app.title")} // ${serverTitle}` : t("app.title")}
           </h1>
           {buildDateLabel ? (
             <div className="logo-version" aria-label={`Build version ${buildDateLabel}`}>

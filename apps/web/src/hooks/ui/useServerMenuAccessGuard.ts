@@ -16,6 +16,8 @@ type UseServerMenuAccessGuardArgs = {
   canManageServerControlPlane: boolean;
   canViewTelemetry: boolean;
   canManageAudioQuality: boolean;
+  canManageChatImages: boolean;
+  hasCurrentServer: boolean;
   setServerMenuTab: (value: ServerMenuTab) => void;
 };
 
@@ -25,6 +27,8 @@ export function useServerMenuAccessGuard({
   canManageServerControlPlane,
   canViewTelemetry,
   canManageAudioQuality,
+  canManageChatImages,
+  hasCurrentServer,
   setServerMenuTab
 }: UseServerMenuAccessGuardArgs) {
   useEffect(() => {
@@ -45,6 +49,16 @@ export function useServerMenuAccessGuard({
 
     if (serverMenuTab === "video" && !canManageAudioQuality) {
       setServerMenuTab("observability");
+      return;
+    }
+
+    if (serverMenuTab === "chat_images" && !canManageChatImages) {
+      setServerMenuTab("observability");
+      return;
+    }
+
+    if (serverMenuTab === "server_management" && !hasCurrentServer) {
+      setServerMenuTab("observability");
     }
   }, [
     serverMenuTab,
@@ -52,6 +66,8 @@ export function useServerMenuAccessGuard({
     canManageServerControlPlane,
     canViewTelemetry,
     canManageAudioQuality,
+    canManageChatImages,
+    hasCurrentServer,
     setServerMenuTab
   ]);
 }

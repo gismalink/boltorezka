@@ -199,6 +199,7 @@ export function EmptyServerOnboarding({
       <div className="card w-full max-w-xl p-8 text-center">
         <h2 className="text-2xl font-bold text-pixel-text">{t("server.onboardingTitle")}</h2>
         <p className="mt-3 text-sm leading-relaxed text-pixel-muted">{t("server.onboardingHint")}</p>
+        <p className="mt-2 text-xs leading-relaxed text-pixel-muted/85">{t("server.onboardingSubHint")}</p>
         <label className="mt-5 grid gap-2 text-left">
           <span className="muted">{t("server.createTitle")}</span>
           <input
