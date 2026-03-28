@@ -16,7 +16,11 @@ type UserDockSettingsOverlayProps = Pick<
   | "profileEmail"
   | "profileSaving"
   | "profileStatusText"
+  | "serverAgeLoading"
+  | "serverAgeConfirmedAt"
+  | "serverAgeConfirming"
   | "onSaveProfile"
+  | "onConfirmServerAge"
   | "onSetProfileNameDraft"
   | "selectedLang"
   | "selectedUiTheme"
@@ -77,7 +81,11 @@ export function UserDockSettingsOverlay({
   profileEmail,
   profileSaving,
   profileStatusText,
+  serverAgeLoading,
+  serverAgeConfirmedAt,
+  serverAgeConfirming,
   onSaveProfile,
+  onConfirmServerAge,
   onSetProfileNameDraft,
   selectedLang,
   selectedUiTheme,
@@ -208,6 +216,19 @@ export function UserDockSettingsOverlay({
                     <option value="material-classic">{t("settings.themeMaterialClassic")}</option>
                   </select>
                 </label>
+                <div className="grid gap-[var(--space-md)]">
+                  <span className="subheading">{t("settings.ageConfirmTitle")}</span>
+                  <p className="muted">
+                    {serverAgeLoading
+                      ? t("settings.ageConfirmLoading")
+                      : serverAgeConfirmedAt
+                        ? `${t("settings.ageConfirmConfirmedAt")}: ${new Date(serverAgeConfirmedAt).toLocaleString()}`
+                        : t("settings.ageConfirmNotConfirmed")}
+                  </p>
+                  <button type="button" className="secondary" onClick={onConfirmServerAge} disabled={serverAgeConfirming}>
+                    {serverAgeConfirming ? t("settings.ageConfirmActionLoading") : t("settings.ageConfirmAction")}
+                  </button>
+                </div>
               </div>
 
               {profileStatusText ? <p className="muted media-devices-warning">{profileStatusText}</p> : null}

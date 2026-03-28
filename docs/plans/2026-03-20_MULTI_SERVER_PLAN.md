@@ -414,7 +414,7 @@ Stage 5 note (2026-03-28):
 ### Stage 6 - Stabilization (сразу после релиза)
 
 - [x] Owner transfer и защита от "server without owner".
-- [ ] Membership lifecycle: `leave`, `kick`, `rejoin`.
+- [ ] Membership lifecycle: `leave`, `kick`, `rejoin` (частично: `leave` и `rejoin` подтверждены вручную; `kick` остается открытым).
 - [x] Admin control plane для суперадмина (глобальный список серверов, service ban/unban, переход в server management).
 - [ ] Закрыть зависимость legal Stage E: перевести room-level age-gate в полноценный server+room режим и зафиксировать это в legal плане.
 
@@ -427,7 +427,10 @@ Stage 6 note (2026-03-28):
 - Добавлен UI для server rename и server age-confirm (status + confirm action) в `ServerProfileModal`.
 - Изменения провалидированы в `test` через `TEST_REF=origin/feature/multiserver-stage1-services SMOKE_MULTISERVER=1 SMOKE_MULTISERVER_AGE_GATE=1 npm run deploy:test:smoke` (SHA `e6ae8a6`, PASS).
 - Повторная валидация расширенного UI-среза (rename + age-confirm) прошла в `test` через тот же gate (SHA `96d70ed`, PASS).
-- `Membership lifecycle` частично закрыт: `leave` и `kick/remove` реализованы; `rejoin` остается как отдельная задача.
+- `Membership lifecycle` частично закрыт: `leave`, `kick/remove`, `rejoin` реализованы; для полного закрытия нужен финальный ручной чек `kick` в end-to-end сценарии.
+- Ручная проверка (2026-03-28): вход по invite на сервер и последующий `leave` отработали успешно.
+- Ручная проверка (2026-03-28): после `leave` повторный вход по invite (`rejoin`) отрабатывает успешно.
+- Ручная проверка (2026-03-28): создание и удаление серверов выполняются корректно.
 
 ## 7) Что еще нужно добавить (рекомендации)
 

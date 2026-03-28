@@ -225,7 +225,12 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
 
   const canJoinRoom = async (roomSlug: string, userId: string): Promise<CanJoinRoomResult> => {
     const room = await db.query<RoomRow>(
-      "SELECT id, slug, title, kind, is_public, server_id, nsfw FROM rooms WHERE slug = $1 AND is_archived = FALSE",
+      `SELECT r.id, r.slug, r.title, r.kind, r.is_public, r.server_id, r.nsfw
+       FROM rooms r
+       LEFT JOIN servers s ON s.id = r.server_id
+       WHERE r.slug = $1
+         AND r.is_archived = FALSE
+         AND (r.server_id IS NULL OR (s.is_archived = FALSE AND s.is_blocked = FALSE))`,
       [roomSlug]
     );
 

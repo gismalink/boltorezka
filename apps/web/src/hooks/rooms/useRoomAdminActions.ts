@@ -19,6 +19,7 @@ type UseRoomAdminActionsArgs = {
   editingRoomTitle: string;
   editingRoomKind: RoomKind;
   editingRoomCategoryId: string;
+  editingRoomNsfw: boolean;
   editingRoomAudioQualitySetting: ChannelAudioQualitySetting;
   channelSettingsPopupOpenId: string | null;
   setNewRoomTitle: (value: string) => void;
@@ -29,6 +30,7 @@ type UseRoomAdminActionsArgs = {
   setEditingRoomTitle: (value: string) => void;
   setEditingRoomKind: (value: RoomKind) => void;
   setEditingRoomCategoryId: (value: string) => void;
+  setEditingRoomNsfw: (value: boolean) => void;
   setEditingRoomAudioQualitySetting: (value: ChannelAudioQualitySetting) => void;
   setChannelSettingsPopupOpenId: (value: string | null) => void;
   setEditingCategoryTitle: (value: string) => void;
@@ -56,6 +58,7 @@ export function useRoomAdminActions({
   editingRoomTitle,
   editingRoomKind,
   editingRoomCategoryId,
+  editingRoomNsfw,
   editingRoomAudioQualitySetting,
   channelSettingsPopupOpenId,
   setNewRoomTitle,
@@ -66,6 +69,7 @@ export function useRoomAdminActions({
   setEditingRoomTitle,
   setEditingRoomKind,
   setEditingRoomCategoryId,
+  setEditingRoomNsfw,
   setEditingRoomAudioQualitySetting,
   setChannelSettingsPopupOpenId,
   setEditingCategoryTitle,
@@ -82,6 +86,7 @@ export function useRoomAdminActions({
     const created = await roomAdminController.createRoom(token, newRoomTitle, {
       kind: newRoomKind,
       categoryId: newRoomCategoryId === "none" ? null : newRoomCategoryId,
+      nsfw: false,
       audioQualityOverride: canManageAudioQuality
         ? null
         : undefined
@@ -129,12 +134,14 @@ export function useRoomAdminActions({
     setEditingRoomTitle(room.title);
     setEditingRoomKind(room.kind);
     setEditingRoomCategoryId(room.category_id || "none");
+    setEditingRoomNsfw(Boolean(room.nsfw));
     setEditingRoomAudioQualitySetting(room.audio_quality_override ?? "server_default");
     setChannelSettingsPopupOpenId(room.id);
   }, [
     setEditingRoomTitle,
     setEditingRoomKind,
     setEditingRoomCategoryId,
+    setEditingRoomNsfw,
     setEditingRoomAudioQualitySetting,
     setChannelSettingsPopupOpenId
   ]);
@@ -185,6 +192,7 @@ export function useRoomAdminActions({
       title: editingRoomTitle,
       kind: editingRoomKind,
       categoryId: editingRoomCategoryId === "none" ? null : editingRoomCategoryId,
+      nsfw: editingRoomNsfw,
       audioQualityOverride: canManageAudioQuality
         ? (editingRoomAudioQualitySetting === "server_default" ? null : editingRoomAudioQualitySetting)
         : undefined
@@ -200,6 +208,7 @@ export function useRoomAdminActions({
     editingRoomTitle,
     editingRoomKind,
     editingRoomCategoryId,
+    editingRoomNsfw,
     editingRoomAudioQualitySetting,
     canManageAudioQuality,
     setChannelSettingsPopupOpenId

@@ -64,6 +64,7 @@ async function getServerRole(serverId: string, userId: string): Promise<ServerMe
      JOIN servers s ON s.id = sm.server_id
      WHERE sm.server_id = $1
        AND s.is_archived = FALSE
+       AND s.is_blocked = FALSE
        AND sm.user_id = $2
        AND status = 'active'
      LIMIT 1`,
@@ -238,6 +239,7 @@ export async function acceptServerInvite(input: AcceptInviteInput): Promise<Serv
        JOIN server_members sm ON sm.server_id = s.id
        WHERE s.id = $1
          AND s.is_archived = FALSE
+         AND s.is_blocked = FALSE
          AND sm.user_id = $2
          AND sm.status = 'active'
        LIMIT 1`,

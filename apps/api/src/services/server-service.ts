@@ -96,6 +96,7 @@ async function mapServerByIdForUser(serverId: string, userId: string): Promise<S
      JOIN server_members sm ON sm.server_id = s.id
      WHERE s.id = $1
        AND s.is_archived = FALSE
+       AND s.is_blocked = FALSE
        AND sm.user_id = $2
        AND sm.status = 'active'
      LIMIT 1`,
@@ -206,6 +207,7 @@ export async function listUserServers(userId: string): Promise<ServerListItem[]>
      JOIN servers s ON s.id = sm.server_id
      WHERE sm.user_id = $1
        AND s.is_archived = FALSE
+       AND s.is_blocked = FALSE
        AND sm.status = 'active'
      ORDER BY s.is_default DESC, s.created_at ASC`,
     [userId]
@@ -292,6 +294,7 @@ export async function getDefaultServerContextForUser(userId: string): Promise<Se
      JOIN server_members sm ON sm.server_id = s.id
      WHERE s.is_default = TRUE
        AND s.is_archived = FALSE
+       AND s.is_blocked = FALSE
        AND sm.user_id = $1
        AND sm.status = 'active'
      ORDER BY s.created_at ASC

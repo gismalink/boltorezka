@@ -216,6 +216,7 @@ export type AdminServerListItem = {
   slug: string;
   name: string;
   isDefault: boolean;
+  isBlocked: boolean;
   ownerUserId: string | null;
   ownerName: string | null;
   membersCount: number;

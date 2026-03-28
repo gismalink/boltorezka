@@ -110,7 +110,7 @@ export class RoomAdminController {
   async createRoom(
     token: string,
     titleInput: string,
-    options: { kind: RoomKind; categoryId: string | null; audioQualityOverride?: AudioQuality | null }
+    options: { kind: RoomKind; categoryId: string | null; nsfw?: boolean; audioQualityOverride?: AudioQuality | null }
   ) {
     try {
       const title = titleInput.trim();
@@ -120,6 +120,7 @@ export class RoomAdminController {
         kind: options.kind,
         server_id: this.getCurrentServerId(),
         category_id: options.categoryId,
+        nsfw: Boolean(options.nsfw),
         audio_quality_override: options.audioQualityOverride
       });
       const res = await api.rooms(token, this.getCurrentServerId());
@@ -142,6 +143,7 @@ export class RoomAdminController {
       title: string;
       kind: RoomKind;
       categoryId: string | null;
+      nsfw?: boolean;
       audioQualityOverride?: AudioQuality | null;
     }
   ) {
@@ -150,6 +152,7 @@ export class RoomAdminController {
         title: options.title.trim(),
         kind: options.kind,
         category_id: options.categoryId,
+        nsfw: Boolean(options.nsfw),
         audio_quality_override: options.audioQualityOverride
       });
 

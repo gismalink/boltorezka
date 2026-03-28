@@ -543,9 +543,12 @@ export async function chatUploadsRoutes(fastify: FastifyInstance) {
       }
 
       const roomResult = await db.query<RoomRow>(
-        `SELECT id, slug, title, kind, audio_quality_override, category_id, position, is_public, server_id, nsfw
-         FROM rooms
-         WHERE slug = $1 AND is_archived = FALSE
+        `SELECT r.id, r.slug, r.title, r.kind, r.audio_quality_override, r.category_id, r.position, r.is_public, r.server_id, r.nsfw
+         FROM rooms r
+         LEFT JOIN servers s ON s.id = r.server_id
+         WHERE r.slug = $1
+           AND r.is_archived = FALSE
+           AND (r.server_id IS NULL OR (s.is_archived = FALSE AND s.is_blocked = FALSE))
          LIMIT 1`,
         [roomSlug]
       );

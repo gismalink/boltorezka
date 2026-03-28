@@ -288,6 +288,7 @@ export const api = {
       kind?: RoomKind;
       server_id?: string;
       category_id?: string | null;
+      nsfw?: boolean;
       audio_quality_override?: AudioQuality | null;
     }
   ) =>
@@ -295,7 +296,13 @@ export const api = {
   updateRoom: (
     token: string,
     roomId: string,
-    input: { title: string; kind: RoomKind; category_id: string | null; audio_quality_override?: AudioQuality | null }
+    input: {
+      title: string;
+      kind: RoomKind;
+      category_id: string | null;
+      nsfw?: boolean;
+      audio_quality_override?: AudioQuality | null;
+    }
   ) =>
     fetchJson<{ room: Room }>(withId(endpoints.rooms, roomId), token, withJsonBody("PATCH", input)),
   moveRoom: (token: string, roomId: string, direction: "up" | "down") =>
@@ -378,6 +385,14 @@ export const api = {
   adminServers: (token: string) => fetchJson<AdminServersResponse>(endpoints.adminServers, token),
   adminServerOverview: (token: string, serverId: string) =>
     fetchJson<AdminServerOverviewResponse>(withSuffix(endpoints.adminServers, serverId, "overview"), token),
+  adminSetServerBlocked: (token: string, serverId: string, blocked: boolean) =>
+    fetchJson<{ serverId: string; isBlocked: boolean }>(
+      withSuffix(endpoints.adminServers, serverId, "block"),
+      token,
+      withJsonBody("POST", { blocked })
+    ),
+  adminDeleteServer: (token: string, serverId: string) =>
+    fetchJson<{ deleted: boolean }>(withId(endpoints.adminServers, serverId), token, withJsonBody("DELETE")),
   promoteUser: (token: string, userId: string) =>
     fetchJson<{ user: User }>(withSuffix(endpoints.adminUsers, userId, "promote"), token, withJsonBody("POST", { role: "admin" })),
   demoteUser: (token: string, userId: string) =>

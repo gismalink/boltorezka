@@ -34,6 +34,9 @@ export function UserDock({
   profileEmail,
   profileSaving,
   profileStatusText,
+  serverAgeLoading,
+  serverAgeConfirmedAt,
+  serverAgeConfirming,
   selectedLang,
   selectedUiTheme,
   languageOptions,
@@ -77,6 +80,7 @@ export function UserDock({
   onSetSelectedLang,
   onSetSelectedUiTheme,
   onSaveProfile,
+  onConfirmServerAge,
   onSetSelectedInputId,
   onSetSelectedOutputId,
   onSetSelectedVideoInputId,
@@ -173,7 +177,11 @@ export function UserDock({
         profileEmail={profileEmail}
         profileSaving={profileSaving}
         profileStatusText={profileStatusText}
+        serverAgeLoading={serverAgeLoading}
+        serverAgeConfirmedAt={serverAgeConfirmedAt}
+        serverAgeConfirming={serverAgeConfirming}
         onSaveProfile={onSaveProfile}
+        onConfirmServerAge={onConfirmServerAge}
         onSetProfileNameDraft={onSetProfileNameDraft}
         selectedLang={selectedLang}
         selectedUiTheme={selectedUiTheme}

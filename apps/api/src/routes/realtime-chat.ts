@@ -86,9 +86,12 @@ async function resolveChatRoom(
   }
 
   const roomResult = await dbQuery<{ id: string; slug: string; is_public: boolean; server_id: string | null; nsfw: boolean | null }>(
-    `SELECT id, slug, is_public, server_id, nsfw
-     FROM rooms
-     WHERE slug = $1 AND is_archived = FALSE
+    `SELECT r.id, r.slug, r.is_public, r.server_id, r.nsfw
+     FROM rooms r
+     LEFT JOIN servers s ON s.id = r.server_id
+     WHERE r.slug = $1
+       AND r.is_archived = FALSE
+       AND (r.server_id IS NULL OR (s.is_archived = FALSE AND s.is_blocked = FALSE))
      LIMIT 1`,
     [targetRoomSlug]
   );

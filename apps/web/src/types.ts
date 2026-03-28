@@ -37,6 +37,7 @@ export type Room = {
   slug: string;
   title: string;
   kind: RoomKind;
+  nsfw?: boolean;
   audio_quality_override?: AudioQuality | null;
   category_id: string | null;
   position: number;
@@ -220,6 +221,7 @@ export type AdminServerListItem = {
   slug: string;
   name: string;
   isDefault: boolean;
+  isBlocked: boolean;
   ownerUserId: string | null;
   ownerName: string | null;
   membersCount: number;

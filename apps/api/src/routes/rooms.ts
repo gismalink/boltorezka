@@ -38,6 +38,7 @@ const createRoomSchema = z.object({
   kind: roomKindSchema.default("text"),
   server_id: z.string().uuid().optional(),
   category_id: z.string().uuid().nullable().optional().default(null),
+  nsfw: z.boolean().optional().default(false),
   audio_quality_override: audioQualitySchema.nullable().optional(),
   position: z.number().int().min(0).optional()
 });
@@ -46,6 +47,7 @@ const updateRoomSchema = z.object({
   title: z.string().min(3).max(120),
   kind: roomKindSchema,
   category_id: z.string().uuid().nullable(),
+  nsfw: z.boolean().optional(),
   audio_quality_override: audioQualitySchema.nullable().optional()
 });
 
@@ -129,7 +131,10 @@ export async function roomsRoutes(fastify: FastifyInstance) {
     const membership = await db.query<{ server_id: string }>(
       `SELECT sm.server_id
        FROM server_members sm
+       JOIN servers s ON s.id = sm.server_id
        WHERE sm.server_id = $1
+         AND s.is_archived = FALSE
+         AND s.is_blocked = FALSE
          AND sm.user_id = $2
          AND sm.status = 'active'
        LIMIT 1`,
@@ -193,6 +198,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
           `SELECT id
            FROM servers
            WHERE is_default = TRUE
+               AND is_blocked = FALSE
            ORDER BY created_at ASC
            LIMIT 1`
         );
@@ -231,6 +237,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
            r.slug,
            r.title,
            r.kind,
+           r.nsfw,
            r.audio_quality_override,
            r.category_id,
            r.position,
@@ -309,6 +316,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
            r.slug,
            r.title,
            r.kind,
+           r.nsfw,
            r.audio_quality_override,
            r.category_id,
            r.position,
@@ -366,6 +374,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
            r.slug,
            r.title,
            r.kind,
+           r.nsfw,
            r.audio_quality_override,
            r.category_id,
            r.position,
@@ -427,6 +436,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
           `SELECT id
            FROM servers
            WHERE is_default = TRUE
+               AND is_blocked = FALSE
            ORDER BY created_at ASC
            LIMIT 1`
         );
@@ -725,6 +735,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
       kind?: "text" | "text_voice" | "text_voice_video";
       server_id?: string;
       category_id?: string | null;
+      nsfw?: boolean;
       audio_quality_override?: "retro" | "low" | "standard" | "high" | null;
       position?: number;
     }
@@ -743,7 +754,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
         });
       }
 
-      const { title, is_public, kind, category_id } = parsed.data;
+      const { title, is_public, kind, category_id, nsfw } = parsed.data;
       const hasAudioQualityOverride = Object.prototype.hasOwnProperty.call(parsed.data, "audio_quality_override");
       const isSuperAdmin = request.currentUser?.role === "super_admin";
       if (hasAudioQualityOverride && !isSuperAdmin) {
@@ -778,6 +789,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
           `SELECT id
            FROM servers
            WHERE is_default = TRUE
+               AND is_blocked = FALSE
            ORDER BY created_at ASC
            LIMIT 1`
         );
@@ -843,10 +855,10 @@ export async function roomsRoutes(fastify: FastifyInstance) {
           );
 
       const created = await db.query<RoomRow>(
-        `INSERT INTO rooms (slug, title, kind, category_id, audio_quality_override, position, is_public, created_by, server_id)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-         RETURNING id, slug, title, kind, audio_quality_override, category_id, position, is_public, created_at`,
-        [slug, title, kind, category_id, audioQualityOverride, position, is_public, createdBy, targetServerId]
+        `INSERT INTO rooms (slug, title, kind, category_id, nsfw, audio_quality_override, position, is_public, created_by, server_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+         RETURNING id, slug, title, kind, nsfw, audio_quality_override, category_id, position, is_public, created_at`,
+        [slug, title, kind, category_id, nsfw, audioQualityOverride, position, is_public, createdBy, targetServerId]
       );
 
       const room = created.rows[0];
@@ -869,6 +881,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
       title: string;
       kind: "text" | "text_voice" | "text_voice_video" | "voice";
       category_id: string | null;
+      nsfw?: boolean;
       audio_quality_override?: "retro" | "low" | "standard" | "high" | null;
     };
   }>(
@@ -893,8 +906,9 @@ export async function roomsRoutes(fastify: FastifyInstance) {
         });
       }
 
-      const { title, kind, category_id } = parsed.data;
+      const { title, kind, category_id, nsfw } = parsed.data;
       const actorRole = String(request.currentUser?.role || "user").trim();
+      const hasNsfw = Object.prototype.hasOwnProperty.call(parsed.data, "nsfw");
       const hasAudioQualityOverride = Object.prototype.hasOwnProperty.call(parsed.data, "audio_quality_override");
 
       if (hasAudioQualityOverride && actorRole !== "super_admin") {
@@ -943,10 +957,11 @@ export async function roomsRoutes(fastify: FastifyInstance) {
          SET title = $2,
              kind = $3,
              category_id = $4,
-             audio_quality_override = CASE WHEN $5::boolean THEN $6::text ELSE audio_quality_override END
+             nsfw = CASE WHEN $5::boolean THEN $6::boolean ELSE nsfw END,
+             audio_quality_override = CASE WHEN $7::boolean THEN $8::text ELSE audio_quality_override END
          WHERE id = $1
-         RETURNING id, slug, title, kind, audio_quality_override, category_id, position, is_public, created_at`,
-        [roomId, title.trim(), kind, category_id, hasAudioQualityOverride, audioQualityOverride]
+         RETURNING id, slug, title, kind, nsfw, audio_quality_override, category_id, position, is_public, created_at`,
+        [roomId, title.trim(), kind, category_id, hasNsfw, Boolean(nsfw), hasAudioQualityOverride, audioQualityOverride]
       );
 
       if ((updated.rowCount || 0) === 0) {
@@ -1001,7 +1016,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
       }
 
       const currentResult = await db.query<RoomRow>(
-        `SELECT id, slug, title, kind, audio_quality_override, category_id, position, is_public, created_at
+        `SELECT id, slug, title, kind, nsfw, audio_quality_override, category_id, position, is_public, created_at
          FROM rooms
          WHERE id = $1 AND is_archived = FALSE`,
         [roomId]
@@ -1053,7 +1068,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
       );
 
       const updated = await db.query<RoomRow>(
-        `SELECT id, slug, title, kind, audio_quality_override, category_id, position, is_public, created_at
+        `SELECT id, slug, title, kind, nsfw, audio_quality_override, category_id, position, is_public, created_at
          FROM rooms
          WHERE id = $1`,
         [current.id]
@@ -1303,7 +1318,12 @@ export async function roomsRoutes(fastify: FastifyInstance) {
       }
 
       const roomResult = await db.query<RoomRow>(
-        "SELECT id, slug, title, kind, audio_quality_override, category_id, server_id, nsfw, position, is_public FROM rooms WHERE slug = $1 AND is_archived = FALSE",
+        `SELECT r.id, r.slug, r.title, r.kind, r.audio_quality_override, r.category_id, r.server_id, r.nsfw, r.position, r.is_public
+         FROM rooms r
+         LEFT JOIN servers s ON s.id = r.server_id
+         WHERE r.slug = $1
+           AND r.is_archived = FALSE
+           AND (r.server_id IS NULL OR (s.is_archived = FALSE AND s.is_blocked = FALSE))`,
         [slug]
       );
 

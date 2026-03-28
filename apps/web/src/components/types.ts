@@ -50,6 +50,9 @@ export type UserDockProps = {
   profileEmail: string;
   profileSaving: boolean;
   profileStatusText: string;
+  serverAgeLoading: boolean;
+  serverAgeConfirmedAt: string | null;
+  serverAgeConfirming: boolean;
   selectedLang: Lang;
   selectedUiTheme: UiTheme;
   languageOptions: Array<{ value: Lang; label: string }>;
@@ -93,6 +96,7 @@ export type UserDockProps = {
   onSetSelectedLang: (value: Lang) => void;
   onSetSelectedUiTheme: (value: UiTheme) => void;
   onSaveProfile: (event: FormEvent) => void;
+  onConfirmServerAge: () => void;
   onSetSelectedInputId: (value: string) => void;
   onSetSelectedOutputId: (value: string) => void;
   onSetSelectedVideoInputId: (value: string) => void;
@@ -145,6 +149,7 @@ export type RoomsPanelProps = {
   editingRoomTitle: string;
   editingRoomKind: RoomKind;
   editingRoomCategoryId: string;
+  editingRoomNsfw: boolean;
   editingRoomAudioQualitySetting: ChannelAudioQualitySetting;
   categoryPopupRef: RefObject<HTMLDivElement>;
   channelPopupRef: RefObject<HTMLDivElement>;
@@ -160,6 +165,7 @@ export type RoomsPanelProps = {
   onSetEditingRoomTitle: (value: string) => void;
   onSetEditingRoomKind: (value: RoomKind) => void;
   onSetEditingRoomCategoryId: (value: string) => void;
+  onSetEditingRoomNsfw: (value: boolean) => void;
   onSetEditingRoomAudioQualitySetting: (value: ChannelAudioQualitySetting) => void;
   onCreateCategory: (event: FormEvent) => void;
   onCreateRoom: (event: FormEvent) => void;

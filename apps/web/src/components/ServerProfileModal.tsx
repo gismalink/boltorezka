@@ -76,9 +76,6 @@ type ServerProfileModalProps = {
   servers: ServerListItem[];
   serverMembers: ServerMemberItem[];
   serverMembersLoading: boolean;
-  serverAgeLoading: boolean;
-  serverAgeConfirmedAt: string | null;
-  serverAgeConfirming: boolean;
   lastInviteUrl: string;
   creatingInvite: boolean;
   eventLog: string[];
@@ -115,11 +112,12 @@ type ServerProfileModalProps = {
   onSetBan: (userId: string, banned: boolean) => void;
   onSetAccessState: (userId: string, accessState: "pending" | "active" | "blocked") => void;
   onSelectAdminServer: (serverId: string) => void;
+  onToggleAdminServerBlocked: (serverId: string, blocked: boolean) => void;
+  onDeleteAdminServer: (serverId: string) => void;
   onCreateServerInvite: () => void;
   onCopyInviteUrl: () => void;
   onChangeCurrentServer: (serverId: string) => void;
   onRenameCurrentServer: (name: string) => void;
-  onConfirmServerAge: () => void;
   onLeaveServer: () => void;
   onDeleteServer: () => void;
   onRemoveServerMember: (userId: string) => void;
@@ -267,9 +265,6 @@ export function ServerProfileModal({
   servers,
   serverMembers,
   serverMembersLoading,
-  serverAgeLoading,
-  serverAgeConfirmedAt,
-  serverAgeConfirming,
   lastInviteUrl,
   creatingInvite,
   eventLog,
@@ -302,11 +297,12 @@ export function ServerProfileModal({
   onSetBan,
   onSetAccessState,
   onSelectAdminServer,
+  onToggleAdminServerBlocked,
+  onDeleteAdminServer,
   onCreateServerInvite,
   onCopyInviteUrl,
   onChangeCurrentServer,
   onRenameCurrentServer,
-  onConfirmServerAge,
   onLeaveServer,
   onDeleteServer,
   onRemoveServerMember,
@@ -484,6 +480,40 @@ export function ServerProfileModal({
       return haystack.includes(normalizedUserSearch);
     });
   }, [normalizedUserSearch, userAccessTab, usersByTab]);
+
+  const serverManagementOptions = useMemo(
+    () => (
+      canManageServerControlPlane && adminServers.length > 0
+        ? adminServers.map((server) => ({ id: server.id, name: server.name }))
+        : servers.map((server) => ({ id: server.id, name: server.name }))
+    ),
+    [adminServers, canManageServerControlPlane, servers]
+  );
+
+  const selectedServerManagementId = useMemo(() => {
+    const fallbackId = serverManagementOptions[0]?.id || "";
+    if (!fallbackId) {
+      return "";
+    }
+
+    if (serverManagementOptions.some((server) => server.id === currentServerId)) {
+      return currentServerId;
+    }
+
+    return fallbackId;
+  }, [currentServerId, serverManagementOptions]);
+
+  useEffect(() => {
+    if (!open || serverMenuTab !== "server_management") {
+      return;
+    }
+
+    if (!selectedServerManagementId || selectedServerManagementId === currentServerId) {
+      return;
+    }
+
+    onChangeCurrentServer(selectedServerManagementId);
+  }, [currentServerId, onChangeCurrentServer, open, selectedServerManagementId, serverMenuTab]);
 
   const getUserRowActions = (item: User) => {
     const actions: IconAction[] = [];
@@ -922,11 +952,11 @@ export function ServerProfileModal({
                   <label className="grid gap-1">
                     <span className="muted">{t("server.managementServerSelect")}</span>
                     <select
-                      value={currentServerId}
+                      value={selectedServerManagementId}
                       onChange={(event) => onChangeCurrentServer(event.target.value)}
-                      disabled={servers.length === 0}
+                      disabled={serverManagementOptions.length === 0}
                     >
-                      {servers.map((server) => (
+                      {serverManagementOptions.map((server) => (
                         <option key={server.id} value={server.id}>{server.name}</option>
                       ))}
                     </select>
@@ -979,21 +1009,6 @@ export function ServerProfileModal({
                       </div>
                     </div>
                   ) : null}
-                  <div className="grid gap-2">
-                    <h4>{t("server.ageConfirmTitle")}</h4>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="muted">
-                        {serverAgeLoading
-                          ? t("server.ageConfirmLoading")
-                          : serverAgeConfirmedAt
-                            ? `${t("server.ageConfirmConfirmedAt")}: ${new Date(serverAgeConfirmedAt).toLocaleString()}`
-                            : t("server.ageConfirmNotConfirmed")}
-                      </p>
-                      <button type="button" onClick={onConfirmServerAge} disabled={serverAgeConfirming}>
-                        {serverAgeConfirming ? t("server.ageConfirmActionLoading") : t("server.ageConfirmAction")}
-                      </button>
-                    </div>
-                  </div>
                   <div className="flex flex-wrap items-center gap-2">
                     <button type="button" className="secondary" onClick={onLeaveServer}>
                       {t("server.leave")}
@@ -1130,20 +1145,60 @@ export function ServerProfileModal({
                       ? t("server.managementLoading")
                       : `${t("server.managementServersCount")}: ${adminServers.length}`}
                   </p>
-                  <label className="grid gap-1">
-                    <span className="muted">{t("server.managementServerSelect")}</span>
-                    <select
-                      value={selectedAdminServerId}
-                      onChange={(event) => onSelectAdminServer(event.target.value)}
-                      disabled={adminServersLoading || adminServers.length === 0}
-                    >
-                      {adminServers.map((server) => (
-                        <option key={server.id} value={server.id}>
-                          {server.name}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+                  <ul className="admin-list grid gap-2">
+                    {adminServers.map((server) => {
+                      const isSelected = selectedAdminServerId === server.id;
+                      return (
+                        <li
+                          key={server.id}
+                          className={`admin-row grid min-h-[42px] grid-cols-[minmax(0,1fr)_auto] items-center gap-2 max-desktop:grid-cols-1 ${isSelected ? "bg-black/15" : ""}`}
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => onSelectAdminServer(server.id)}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter" || event.key === " ") {
+                              event.preventDefault();
+                              onSelectAdminServer(server.id);
+                            }
+                          }}
+                        >
+                          <span className="min-w-0 break-words">
+                            {server.name}
+                            {server.isDefault ? <span className="role-badge ml-2">{t("server.managementDefaultBadge")}</span> : null}
+                            {server.isBlocked ? <span className="role-badge ml-2">{t("server.managementBlockedBadge")}</span> : null}
+                          </span>
+                          <div className="row-actions flex flex-wrap items-stretch justify-end gap-2">
+                            <button
+                              type="button"
+                              className="secondary icon-btn tiny admin-action-btn"
+                              data-tooltip={server.isBlocked ? t("server.managementUnblock") : t("server.managementBlock")}
+                              aria-label={server.isBlocked ? t("server.managementUnblock") : t("server.managementBlock")}
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                onToggleAdminServerBlocked(server.id, !server.isBlocked);
+                              }}
+                              disabled={server.isDefault}
+                            >
+                              <i className={`bi ${server.isBlocked ? "bi-shield-check" : "bi-slash-circle-fill"}`} aria-hidden="true" />
+                            </button>
+                            <button
+                              type="button"
+                              className="secondary icon-btn tiny admin-action-btn"
+                              data-tooltip={t("server.managementDelete")}
+                              aria-label={t("server.managementDelete")}
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                onDeleteAdminServer(server.id);
+                              }}
+                              disabled={server.isDefault}
+                            >
+                              <i className="bi bi-trash3" aria-hidden="true" />
+                            </button>
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
 
                   {adminServerOverviewLoading ? <p className="muted">{t("server.managementOverviewLoading")}</p> : null}
                   {!adminServerOverviewLoading && !adminServerOverview ? <p className="muted">{t("server.managementEmpty")}</p> : null}

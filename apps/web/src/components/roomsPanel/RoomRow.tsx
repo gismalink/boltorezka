@@ -29,10 +29,12 @@ type RoomRowProps = Pick<
   | "editingRoomTitle"
   | "editingRoomKind"
   | "editingRoomCategoryId"
+  | "editingRoomNsfw"
   | "editingRoomAudioQualitySetting"
   | "onSetEditingRoomTitle"
   | "onSetEditingRoomKind"
   | "onSetEditingRoomCategoryId"
+  | "onSetEditingRoomNsfw"
   | "onSetEditingRoomAudioQualitySetting"
   | "onSaveChannelSettings"
   | "onMoveChannel"
@@ -68,10 +70,12 @@ export function RoomRow({
   editingRoomTitle,
   editingRoomKind,
   editingRoomCategoryId,
+  editingRoomNsfw,
   editingRoomAudioQualitySetting,
   onSetEditingRoomTitle,
   onSetEditingRoomKind,
   onSetEditingRoomCategoryId,
+  onSetEditingRoomNsfw,
   onSetEditingRoomAudioQualitySetting,
   onSaveChannelSettings,
   onMoveChannel,
@@ -264,6 +268,17 @@ export function RoomRow({
                       <option key={category.id} value={category.id}>{category.title}</option>
                     ))}
                   </select>
+                </div>
+                <div className="grid gap-1">
+                  <label className="inline-flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={editingRoomNsfw}
+                      onChange={(event) => onSetEditingRoomNsfw(event.target.checked)}
+                    />
+                    <span>{t("rooms.channelNsfw")}</span>
+                  </label>
+                  <span className="muted">{t("rooms.channelNsfwHint")}</span>
                 </div>
                 {canManageAudioQuality ? (
                   <div className="grid gap-2">

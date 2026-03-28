@@ -4,6 +4,7 @@ import { db } from "../db.js";
 import { broadcastRealtimeEnvelope } from "../realtime-broadcast.js";
 import { loadCurrentUser, requireAuth, requireRole } from "../middleware/auth.js";
 import { applyServiceBan, revokeServiceBan } from "../services/ban-service.js";
+import { writeServerAuditEvent } from "../services/server-audit-service.js";
 import type { ServerSettingsRow, UserRow } from "../db.types.ts";
 import type {
   AdminServerOverviewResponse,
@@ -38,6 +39,10 @@ const serviceBanSchema = z.object({
   userId: z.string().trim().uuid(),
   reason: z.string().trim().min(1).max(500).optional(),
   expiresAt: z.string().datetime().optional()
+});
+
+const serverBlockSchema = z.object({
+  blocked: z.boolean()
 });
 
 async function loadUserById(userId: string) {
@@ -198,6 +203,7 @@ export async function adminRoutes(fastify: FastifyInstance) {
         slug: string;
         name: string;
         isDefault: boolean;
+        isBlocked: boolean;
         ownerUserId: string | null;
         ownerName: string | null;
         membersCount: number;
@@ -212,6 +218,7 @@ export async function adminRoutes(fastify: FastifyInstance) {
            s.slug,
            s.name,
            s.is_default AS "isDefault",
+           s.is_blocked AS "isBlocked",
            s.owner_user_id AS "ownerUserId",
            owner_user.name AS "ownerName",
            COALESCE(members_stats.members_count, 0)::int AS "membersCount",
@@ -251,6 +258,163 @@ export async function adminRoutes(fastify: FastifyInstance) {
 
       const response: AdminServersResponse = { servers: result.rows };
       return response;
+    }
+  );
+
+  fastify.post<{ Params: { serverId: string }; Body: { blocked: boolean } }>(
+    "/v1/admin/servers/:serverId/block",
+    {
+      preHandler: [requireAuth, loadCurrentUser, requireRole(["super_admin"])]
+    },
+    async (request, reply) => {
+      const serverId = String(request.params.serverId || "").trim();
+      if (!serverId) {
+        return reply.code(400).send({
+          error: "ValidationError",
+          message: "serverId is required"
+        });
+      }
+
+      const parsed = serverBlockSchema.safeParse(request.body || {});
+      if (!parsed.success) {
+        return reply.code(400).send({
+          error: "ValidationError",
+          issues: parsed.error.flatten()
+        });
+      }
+
+      const state = await db.query<{ is_default: boolean }>(
+        `SELECT is_default
+         FROM servers
+         WHERE id = $1
+           AND is_archived = FALSE
+         LIMIT 1`,
+        [serverId]
+      );
+
+      if ((state.rowCount || 0) === 0) {
+        return reply.code(404).send({
+          error: "ServerNotFound",
+          message: "Server not found"
+        });
+      }
+
+      if (state.rows[0]?.is_default) {
+        return reply.code(400).send({
+          error: "DefaultServerCannotBeBlocked",
+          message: "Default server cannot be blocked"
+        });
+      }
+
+      const blocked = Boolean(parsed.data.blocked);
+      await db.query(
+        `UPDATE servers
+         SET is_blocked = $2,
+             updated_at = NOW()
+         WHERE id = $1`,
+        [serverId, blocked]
+      );
+
+      await writeServerAuditEvent({
+        action: blocked ? "server.blocked" : "server.unblocked",
+        serverId,
+        actorUserId: String(request.currentUser?.id || "").trim(),
+        meta: {
+          blocked
+        }
+      });
+
+      return {
+        serverId,
+        isBlocked: blocked
+      };
+    }
+  );
+
+  fastify.delete<{ Params: { serverId: string } }>(
+    "/v1/admin/servers/:serverId",
+    {
+      preHandler: [requireAuth, loadCurrentUser, requireRole(["super_admin"])]
+    },
+    async (request, reply) => {
+      const serverId = String(request.params.serverId || "").trim();
+      if (!serverId) {
+        return reply.code(400).send({
+          error: "ValidationError",
+          message: "serverId is required"
+        });
+      }
+
+      const state = await db.query<{ is_default: boolean; is_archived: boolean }>(
+        `SELECT is_default, is_archived
+         FROM servers
+         WHERE id = $1
+         LIMIT 1`,
+        [serverId]
+      );
+
+      if ((state.rowCount || 0) === 0 || state.rows[0]?.is_archived) {
+        return reply.code(404).send({
+          error: "ServerNotFound",
+          message: "Server not found"
+        });
+      }
+
+      if (state.rows[0]?.is_default) {
+        return reply.code(400).send({
+          error: "DefaultServerCannotBeDeleted",
+          message: "Default server cannot be deleted"
+        });
+      }
+
+      const client = await db.connect();
+      try {
+        await client.query("BEGIN");
+
+        const archived = await client.query(
+          `UPDATE servers
+           SET is_archived = TRUE,
+               updated_at = NOW()
+           WHERE id = $1
+             AND is_archived = FALSE`,
+          [serverId]
+        );
+
+        if ((archived.rowCount || 0) === 0) {
+          await client.query("ROLLBACK");
+          return reply.code(404).send({
+            error: "ServerNotFound",
+            message: "Server not found"
+          });
+        }
+
+        await client.query(
+          `UPDATE server_members
+           SET status = 'removed'
+           WHERE server_id = $1
+             AND status = 'active'`,
+          [serverId]
+        );
+
+        await writeServerAuditEvent({
+          client,
+          action: "server.deleted",
+          serverId,
+          actorUserId: String(request.currentUser?.id || "").trim(),
+          meta: {
+            actorRole: "super_admin"
+          }
+        });
+
+        await client.query("COMMIT");
+      } catch (error) {
+        await client.query("ROLLBACK");
+        throw error;
+      } finally {
+        client.release();
+      }
+
+      return { deleted: true };
     }
   );
 

@@ -37,12 +37,12 @@ import {
   MAX_CHAT_RETRIES,
   MESSAGE_EDIT_DELETE_WINDOW_MS,
   PENDING_ACCESS_AUTO_REFRESH_SEC,
-  ROOM_SLUG_STORAGE_KEY,
   VERSION_UPDATE_PENDING_KEY
 } from "./constants/appConfig";
 import type { InputProfile, MediaDevicesState } from "./components";
 import {
   useAppUiState,
+  useAppShellLifecycleEffects,
   useAdminUsersSync,
   useAutoRoomVoiceConnection,
   useAppEventLogs,
@@ -50,13 +50,16 @@ import {
   useBuildVersionSync,
   useDesktopHandoffState,
   useDesktopUpdateFlow,
+  useInviteAcceptanceFlow,
   usePendingAccessAutoRefresh,
+  useOnboardingOverlayActions,
+  useRoomSlugPersistence,
+  useServerDataSync,
   useWorkspaceRoomsPanelProps,
   useServerVideoWindowBounds,
   useWorkspaceChatVideoProps,
-  useWorkspaceUserDockProps,
+  useWorkspaceUserDockController,
   useSessionStateLifecycle,
-  useMemberPreferencesSync,
   useTelemetryRefresh,
   useCollapsedCategories,
   useCurrentRoomSnapshot,
@@ -75,7 +78,10 @@ import {
   useWsEventAcks,
   useRoomAdminActions,
   useRoomMediaCapabilities,
+  useRoomMemberPreferencesOrchestrator,
   useRoomPresenceActions,
+  useRoomSelectionGuard,
+  useServerProfileActions,
   useServerModerationActions,
   useRoomsDerived,
   useScreenWakeLock,
@@ -85,7 +91,8 @@ import {
   useToastQueue,
   useLivekitVoiceRuntime,
   useVoiceSignalingOrchestrator,
-  useVoiceRoomStateMaps
+  useVoiceRoomStateMaps,
+  useVoiceUiLifecycleEffects
 } from "./hooks";
 import { detectInitialLang, LOCALE_BY_LANG, TEXT, type Lang } from "./i18n";
 import { DEFAULT_UI_THEME, formatBuildDateLabel, normalizeUiTheme, readNonZeroDefaultVolume } from "./utils/appShell";
@@ -123,31 +130,11 @@ const CHAT_TYPING_TTL_MS = 4500;
 const CHAT_TYPING_PING_INTERVAL_MS = 1800;
 const COOKIE_CONSENT_KEY = "boltorezka_cookie_consent_v1";
 const CURRENT_SERVER_ID_STORAGE_KEY = "boltorezka_current_server_id";
-const getRoomSlugStorageKey = (serverId: string) => {
-  const normalizedServerId = String(serverId || "").trim();
-  return normalizedServerId ? `${ROOM_SLUG_STORAGE_KEY}:${normalizedServerId}` : ROOM_SLUG_STORAGE_KEY;
-};
+const ROOM_SLUG_STORAGE_KEY = "boltorezka_room_slug";
 
-function extractInviteTokenFromPath(pathname: string): string {
-  const normalizedPathname = String(pathname || "").trim();
-  if (!normalizedPathname) {
-    return "";
-  }
-
-  const parts = normalizedPathname.split("/").filter((item) => item.length > 0);
-  if (parts.length < 2 || parts[0].toLowerCase() !== "invite") {
-    return "";
-  }
-
-  try {
-    return decodeURIComponent(parts.slice(1).join("/")).trim();
-  } catch {
-    return parts.slice(1).join("/").trim();
-  }
-}
-
-// App is an orchestration boundary: it wires hooks/controllers and passes state to UI.
-// Parsing, transport rules, and feature workflows should live in dedicated hooks/modules.
+// IMPORTANT: `App` is an orchestration boundary only.
+// Do not add new business logic, parsing, transport rules, or large feature workflows here.
+// Put feature logic into dedicated hooks/services/components and keep this file as glue code.
 export function App() {
   const [token, setToken] = useState(() => (COOKIE_MODE ? "" : localStorage.getItem("boltorezka_token") || ""));
   const [user, setUser] = useState<User | null>(null);
@@ -190,9 +177,7 @@ export function App() {
   const [serverAgeLoading, setServerAgeLoading] = useState(false);
   const [serverAgeConfirmedAt, setServerAgeConfirmedAt] = useState<string | null>(null);
   const [serverAgeConfirming, setServerAgeConfirming] = useState(false);
-  const [pendingInviteToken, setPendingInviteToken] = useState(() =>
-    typeof window === "undefined" ? "" : extractInviteTokenFromPath(window.location.pathname)
-  );
+  const [pendingInviteToken, setPendingInviteToken] = useState("");
   const [inviteAccepting, setInviteAccepting] = useState(false);
   const [telemetrySummary, setTelemetrySummary] = useState<TelemetrySummary | null>(null);
   const [wsState, setWsState] = useState<"disconnected" | "connecting" | "connected">(
@@ -218,6 +203,7 @@ export function App() {
   const [editingRoomTitle, setEditingRoomTitle] = useState("");
   const [editingRoomKind, setEditingRoomKind] = useState<RoomKind>("text");
   const [editingRoomCategoryId, setEditingRoomCategoryId] = useState<string>("none");
+  const [editingRoomNsfw, setEditingRoomNsfw] = useState(false);
   const [editingRoomAudioQualitySetting, setEditingRoomAudioQualitySetting] = useState<ChannelAudioQualitySetting>("server_default");
   const [micMuted, setMicMuted] = useState<boolean>(() => localStorage.getItem("boltorezka_mic_muted") !== "0");
   const [audioMuted, setAudioMuted] = useState<boolean>(() => localStorage.getItem("boltorezka_audio_muted") === "1");
@@ -364,7 +350,6 @@ export function App() {
   const lastMessageIdRef = useRef<string | null>(null);
   const chatLogRef = useRef<HTMLDivElement>(null);
   const autoSsoAttemptedRef = useRef(false);
-  const inviteAcceptAttemptedTokenRef = useRef("");
   const authMenuRef = useRef<HTMLDivElement>(null);
   const profileMenuRef = useRef<HTMLDivElement>(null);
   const categoryPopupRef = useRef<HTMLDivElement>(null);
@@ -903,645 +888,161 @@ export function App() {
     onProfileSaved: () => setRealtimeReconnectNonce((value) => value + 1)
   });
 
-  useEffect(() => {
-    localStorage.setItem("boltorezka_lang", lang);
-    document.documentElement.lang = lang;
-  }, [lang]);
+  useAppShellLifecycleEffects({
+    lang,
+    selectedUiTheme,
+    user,
+    chatRoomSlug,
+    setIsMobileViewport,
+    setProfileNameDraft,
+    setSelectedUiTheme,
+    setProfileStatusText,
+    setShowFirstRunIntro,
+    setEditingMessageId,
+    setPendingChatImageDataUrl
+  });
 
-  useEffect(() => {
-    document.documentElement.setAttribute("data-ui-theme", selectedUiTheme);
-    localStorage.setItem("boltorezka_ui_theme", selectedUiTheme);
-  }, [selectedUiTheme]);
+  useRoomSlugPersistence({
+    currentServerId,
+    roomSlug,
+    roomSlugStorageKey: ROOM_SLUG_STORAGE_KEY,
+    setRoomSlug,
+    setChatRoomSlug
+  });
 
-  useEffect(() => {
-    const mediaQuery = window.matchMedia("(max-width: 800px)");
-    const apply = (matches: boolean) => {
-      setIsMobileViewport(matches);
-    };
+  useInviteAcceptanceFlow({
+    token,
+    hasUser: Boolean(user),
+    pendingInviteToken,
+    setPendingInviteToken,
+    setInviteAccepting,
+    setServers,
+    setCurrentServerId,
+    pushToast,
+    t
+  });
 
-    apply(mediaQuery.matches);
-
-    const handler = (event: MediaQueryListEvent) => apply(event.matches);
-    mediaQuery.addEventListener("change", handler);
-    return () => {
-      mediaQuery.removeEventListener("change", handler);
-    };
-  }, []);
-
-  useEffect(() => {
-    setProfileNameDraft(user?.name || "");
-    setSelectedUiTheme(normalizeUiTheme(user?.ui_theme));
-    setProfileStatusText("");
-  }, [user]);
-
-  useEffect(() => {
-    if (!user?.id) {
-      setShowFirstRunIntro(false);
-      return;
-    }
-
-    const storageKey = `boltorezka_intro_v1_seen:${user.id}`;
-    const alreadySeen = localStorage.getItem(storageKey) === "1";
-    setShowFirstRunIntro(!alreadySeen);
-  }, [user?.id]);
-
-  useEffect(() => {
-    setEditingMessageId(null);
-    setPendingChatImageDataUrl(null);
-  }, [chatRoomSlug]);
-
-  useEffect(() => {
-    const serverId = String(currentServerId || "").trim();
-    if (!serverId) {
-      return;
-    }
-
-    const storageKey = getRoomSlugStorageKey(serverId);
-    if (roomSlug) {
-      localStorage.setItem(storageKey, roomSlug);
-      return;
-    }
-
-    localStorage.removeItem(storageKey);
-  }, [currentServerId, roomSlug]);
-
-  useEffect(() => {
-    const serverId = String(currentServerId || "").trim();
-    if (!serverId) {
-      setRoomSlug("");
-      setChatRoomSlug("");
-      return;
-    }
-
-    const scopedStorageKey = getRoomSlugStorageKey(serverId);
-    const scopedStoredSlug = String(localStorage.getItem(scopedStorageKey) || "").trim();
-    const legacyStoredSlug = String(localStorage.getItem(ROOM_SLUG_STORAGE_KEY) || "").trim();
-    const nextSlug = scopedStoredSlug || legacyStoredSlug;
-
-    setRoomSlug(nextSlug);
-    setChatRoomSlug(nextSlug);
-  }, [currentServerId]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") {
-      return;
-    }
-
-    const inviteToken = extractInviteTokenFromPath(window.location.pathname);
-    setPendingInviteToken(inviteToken);
-  }, []);
-
-  useEffect(() => {
-    const tokenValue = String(token || "").trim();
-    const inviteToken = String(pendingInviteToken || "").trim();
-
-    if (!tokenValue || !user || !inviteToken) {
-      return;
-    }
-
-    if (inviteAcceptAttemptedTokenRef.current === inviteToken) {
-      return;
-    }
-
-    inviteAcceptAttemptedTokenRef.current = inviteToken;
-    setInviteAccepting(true);
-
-    api.acceptServerInvite(tokenValue, inviteToken)
-      .then(async (result) => {
-        const acceptedServerId = String(result.server?.id || "").trim();
-        const listResponse = await api.servers(tokenValue);
-        const list = Array.isArray(listResponse.servers) ? listResponse.servers : [];
-        setServers(list);
-
-        if (acceptedServerId) {
-          setCurrentServerId(acceptedServerId);
-        } else {
-          setCurrentServerId((prev) => {
-            if (prev && list.some((item) => item.id === prev)) {
-              return prev;
-            }
-            return list[0]?.id || "";
-          });
-        }
-
-        if (typeof window !== "undefined" && extractInviteTokenFromPath(window.location.pathname)) {
-          window.history.replaceState({}, "", "/");
-        }
-
-        setPendingInviteToken("");
-        pushToast(t("server.inviteAcceptSuccess"));
-      })
-      .catch((error) => {
-        let message = (error as Error).message || t("toast.serverError");
-
-        if (error instanceof ApiError) {
-          if (error.code === "InviteNotFound") {
-            message = t("server.inviteAcceptNotFound");
-          } else if (error.code === "InviteUnavailable") {
-            message = t("server.inviteAcceptUnavailable");
-          } else if (error.code === "server_banned") {
-            message = t("server.inviteAcceptServerBanned");
-          }
-        }
-
-        pushToast(message);
-        if (typeof window !== "undefined" && extractInviteTokenFromPath(window.location.pathname)) {
-          window.history.replaceState({}, "", "/");
-        }
-        setPendingInviteToken("");
-      })
-      .finally(() => {
-        setInviteAccepting(false);
-      });
-  }, [token, user, pendingInviteToken, pushToast, t]);
-
-  useEffect(() => {
-    const tokenValue = String(token || "").trim();
-    const serverId = String(currentServerId || "").trim();
-
-    if (!tokenValue || !serverId || !user) {
-      setServerAgeConfirmedAt(null);
-      setServerAgeLoading(false);
-      return;
-    }
-
-    let cancelled = false;
-    setServerAgeLoading(true);
-
-    api.serverAgeStatus(tokenValue, serverId)
-      .then((response) => {
-        if (cancelled) {
-          return;
-        }
-
-        setServerAgeConfirmedAt(response.confirmed ? response.confirmedAt || null : null);
-      })
-      .catch((error) => {
-        if (cancelled) {
-          return;
-        }
-
-        pushLog(`server age status failed: ${(error as Error).message}`);
-        setServerAgeConfirmedAt(null);
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setServerAgeLoading(false);
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [token, currentServerId, user, pushLog]);
-
-  useEffect(() => {
-    if (currentServerId) {
-      localStorage.setItem(CURRENT_SERVER_ID_STORAGE_KEY, currentServerId);
-      return;
-    }
-
-    localStorage.removeItem(CURRENT_SERVER_ID_STORAGE_KEY);
-  }, [currentServerId]);
-
-  useEffect(() => {
-    if (!token || !user) {
-      setServers([]);
-      setServersLoading(false);
-      setCurrentServerId("");
-      return;
-    }
-
-    let cancelled = false;
-    setServersLoading(true);
-    api.servers(token)
-      .then((response) => {
-        if (cancelled) {
-          return;
-        }
-
-        const list = Array.isArray(response.servers) ? response.servers : [];
-        setServers(list);
-
-        const ids = new Set(list.map((item) => item.id));
-        const persistedId = String(localStorage.getItem(CURRENT_SERVER_ID_STORAGE_KEY) || "").trim();
-        setCurrentServerId((prev) => {
-          const selected = ids.has(prev)
-            ? prev
-            : ids.has(persistedId)
-              ? persistedId
-              : list[0]?.id || "";
-
-          return selected;
-        });
-      })
-      .catch((error) => {
-        if (cancelled) {
-          return;
-        }
-        pushLog(`servers failed: ${(error as Error).message}`);
-        setServers([]);
-        setCurrentServerId("");
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setServersLoading(false);
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [token, user, pushLog]);
+  useServerDataSync({
+    token,
+    hasUser: Boolean(user),
+    currentServerId,
+    selectedAdminServerId,
+    canManageServerControlPlane,
+    currentServerIdStorageKey: CURRENT_SERVER_ID_STORAGE_KEY,
+    setServerAgeConfirmedAt,
+    setServerAgeLoading,
+    setServers,
+    setServersLoading,
+    setCurrentServerId,
+    setServerMembers,
+    setServerMembersLoading,
+    setAdminServers,
+    setSelectedAdminServerId,
+    setAdminServerOverview,
+    setAdminServersLoading,
+    setAdminServerOverviewLoading,
+    pushLog
+  });
 
   const currentServer = useMemo(
     () => servers.find((item) => item.id === currentServerId) || null,
     [servers, currentServerId]
   );
 
-  useEffect(() => {
+  const {
+    handleCreateServer,
+    handleCreateServerInvite,
+    handleRenameCurrentServer,
+    handleConfirmServerAge,
+    handleCopyInviteUrl,
+    handleServerChange,
+    handleLeaveCurrentServer,
+    handleDeleteCurrentServer,
+    handleRemoveServerMember,
+    handleBanServerMember,
+    handleUnbanServerMember,
+    handleTransferServerOwnership
+  } = useServerProfileActions({
+    token,
+    currentServerId,
+    creatingInvite,
+    serverAgeConfirming,
+    lastInviteUrl,
+    setCreatingServer,
+    setServers,
+    setCurrentServerId,
+    setCreatingInvite,
+    setLastInviteUrl,
+    setServerAgeConfirming,
+    setServerAgeConfirmedAt,
+    setServerMembers,
+    pushToast,
+    t
+  });
+
+  const handleToggleAdminServerBlocked = useCallback(async (serverId: string, blocked: boolean) => {
     const tokenValue = String(token || "").trim();
-    const serverId = String(currentServerId || "").trim();
+    const targetServerId = String(serverId || "").trim();
 
-    if (!tokenValue || !serverId || !user) {
-      setServerMembers([]);
-      return;
-    }
-
-    let cancelled = false;
-    setServerMembersLoading(true);
-    api.serverMembers(tokenValue, serverId)
-      .then((response) => {
-        if (cancelled) {
-          return;
-        }
-        setServerMembers(Array.isArray(response.members) ? response.members : []);
-      })
-      .catch((error) => {
-        if (cancelled) {
-          return;
-        }
-        pushLog(`server members failed: ${(error as Error).message}`);
-        setServerMembers([]);
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setServerMembersLoading(false);
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [token, currentServerId, user, pushLog]);
-
-  useEffect(() => {
-    const tokenValue = String(token || "").trim();
-
-    if (!tokenValue || !canManageServerControlPlane) {
-      setAdminServers([]);
-      setSelectedAdminServerId("");
-      setAdminServerOverview(null);
-      setAdminServersLoading(false);
-      setAdminServerOverviewLoading(false);
-      return;
-    }
-
-    let cancelled = false;
-    setAdminServersLoading(true);
-
-    api.adminServers(tokenValue)
-      .then((response) => {
-        if (cancelled) {
-          return;
-        }
-
-        const list = Array.isArray(response.servers) ? response.servers : [];
-        setAdminServers(list);
-
-        const ids = new Set(list.map((item) => item.id));
-        const preferredId = String(currentServerId || "").trim();
-
-        setSelectedAdminServerId((prev) => {
-          if (ids.has(prev)) {
-            return prev;
-          }
-
-          if (preferredId && ids.has(preferredId)) {
-            return preferredId;
-          }
-
-          return list[0]?.id || "";
-        });
-      })
-      .catch((error) => {
-        if (cancelled) {
-          return;
-        }
-
-        pushLog(`admin servers failed: ${(error as Error).message}`);
-        setAdminServers([]);
-        setSelectedAdminServerId("");
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setAdminServersLoading(false);
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [token, canManageServerControlPlane, currentServerId, pushLog]);
-
-  useEffect(() => {
-    const tokenValue = String(token || "").trim();
-    const serverId = String(selectedAdminServerId || "").trim();
-
-    if (!tokenValue || !serverId || !canManageServerControlPlane) {
-      setAdminServerOverview(null);
-      setAdminServerOverviewLoading(false);
-      return;
-    }
-
-    let cancelled = false;
-    setAdminServerOverviewLoading(true);
-
-    api.adminServerOverview(tokenValue, serverId)
-      .then((response) => {
-        if (cancelled) {
-          return;
-        }
-
-        setAdminServerOverview(response.server || null);
-      })
-      .catch((error) => {
-        if (cancelled) {
-          return;
-        }
-
-        pushLog(`admin server overview failed: ${(error as Error).message}`);
-        setAdminServerOverview(null);
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setAdminServerOverviewLoading(false);
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [token, selectedAdminServerId, canManageServerControlPlane, pushLog]);
-
-  const handleCreateServer = useCallback(async (name: string) => {
-    const tokenValue = String(token || "").trim();
-    const trimmedName = String(name || "").trim();
-
-    if (!tokenValue || !trimmedName) {
-      return;
-    }
-
-    setCreatingServer(true);
-    try {
-      const created = await api.createServer(tokenValue, { name: trimmedName });
-      const listResponse = await api.servers(tokenValue);
-      const list = Array.isArray(listResponse.servers) ? listResponse.servers : [];
-      setServers(list);
-      setCurrentServerId(created.server.id);
-      pushToast(t("server.createSuccess"));
-    } catch (error) {
-      if (error instanceof ApiError && error.code === "ServerLimitReached") {
-        pushToast(t("server.createLimitReached"));
-      } else {
-        pushToast((error as Error).message || t("toast.serverError"));
-      }
-    } finally {
-      setCreatingServer(false);
-    }
-  }, [token, pushToast, t]);
-
-  const handleCreateServerInvite = useCallback(async () => {
-    const tokenValue = String(token || "").trim();
-    const serverId = String(currentServerId || "").trim();
-
-    if (!tokenValue || !serverId || creatingInvite) {
-      return;
-    }
-
-    setCreatingInvite(true);
-    try {
-      const result = await api.createServerInvite(tokenValue, serverId);
-      const invitePath = String(result.inviteUrl || "").trim();
-      const absoluteInviteUrl = invitePath.startsWith("/")
-        ? `${window.location.origin}${invitePath}`
-        : invitePath;
-      setLastInviteUrl(absoluteInviteUrl);
-      pushToast(t("server.inviteCreated"));
-    } catch (error) {
-      pushToast((error as Error).message || t("toast.serverError"));
-    } finally {
-      setCreatingInvite(false);
-    }
-  }, [token, currentServerId, creatingInvite, pushToast, t]);
-
-  const handleRenameCurrentServer = useCallback(async (nextName: string) => {
-    const tokenValue = String(token || "").trim();
-    const serverId = String(currentServerId || "").trim();
-    const trimmedName = String(nextName || "").trim();
-
-    if (!tokenValue || !serverId || !trimmedName) {
+    if (!tokenValue || !targetServerId) {
       return;
     }
 
     try {
-      const response = await api.renameServer(tokenValue, serverId, { name: trimmedName });
-      setServers((prev) => prev.map((item) => (item.id === serverId ? response.server : item)));
-      pushToast(t("server.renameSuccess"));
-    } catch (error) {
-      pushToast((error as Error).message || t("toast.serverError"));
-    }
-  }, [token, currentServerId, pushToast, t]);
-
-  const handleConfirmServerAge = useCallback(async () => {
-    const tokenValue = String(token || "").trim();
-    const serverId = String(currentServerId || "").trim();
-
-    if (!tokenValue || !serverId || serverAgeConfirming) {
-      return;
-    }
-
-    setServerAgeConfirming(true);
-    try {
-      const response = await api.confirmServerAge(tokenValue, serverId);
-      setServerAgeConfirmedAt(response.confirmedAt || null);
-      pushToast(t("server.ageConfirmSuccess"));
-    } catch (error) {
-      pushToast((error as Error).message || t("toast.serverError"));
-    } finally {
-      setServerAgeConfirming(false);
-    }
-  }, [token, currentServerId, serverAgeConfirming, pushToast, t]);
-
-  const handleCopyInviteUrl = useCallback(async () => {
-    const value = String(lastInviteUrl || "").trim();
-    if (!value) {
-      return;
-    }
-
-    try {
-      await navigator.clipboard.writeText(value);
-      pushToast(t("server.inviteCopied"));
-    } catch {
-      pushToast(t("server.inviteCopyFailed"));
-    }
-  }, [lastInviteUrl, pushToast, t]);
-
-  const handleLeaveCurrentServer = useCallback(async () => {
-    const tokenValue = String(token || "").trim();
-    const serverId = String(currentServerId || "").trim();
-    if (!tokenValue || !serverId) {
-      return;
-    }
-
-    try {
-      await api.leaveServer(tokenValue, serverId);
-      const listResponse = await api.servers(tokenValue);
-      const list = Array.isArray(listResponse.servers) ? listResponse.servers : [];
-      setServers(list);
-      setCurrentServerId((prev) => {
-        if (prev && list.some((item) => item.id === prev)) {
-          return prev;
-        }
-        return list[0]?.id || "";
-      });
-      setLastInviteUrl("");
-      pushToast(t("server.leaveSuccess"));
-    } catch (error) {
-      pushToast((error as Error).message || t("toast.serverError"));
-    }
-  }, [token, currentServerId, pushToast, t]);
-
-  const handleDeleteCurrentServer = useCallback(async () => {
-    const tokenValue = String(token || "").trim();
-    const serverId = String(currentServerId || "").trim();
-
-    if (!tokenValue || !serverId) {
-      return;
-    }
-
-    try {
-      await api.deleteServer(tokenValue, serverId);
+      await api.adminSetServerBlocked(tokenValue, targetServerId, blocked);
+      setAdminServers((prev) => prev.map((item) => (
+        item.id === targetServerId
+          ? { ...item, isBlocked: blocked }
+          : item
+      )));
 
       const listResponse = await api.servers(tokenValue);
       const list = Array.isArray(listResponse.servers) ? listResponse.servers : [];
       setServers(list);
       setCurrentServerId((prev) => {
-        if (prev && list.some((item) => item.id === prev)) {
-          return prev;
-        }
-        return list[0]?.id || "";
+        const preferredId = prev === targetServerId && blocked ? "" : prev;
+        return list.some((item) => item.id === preferredId) ? preferredId : (list[0]?.id || "");
       });
-      setLastInviteUrl("");
-      pushToast(t("server.deleteSuccess"));
+      pushToast(blocked ? t("server.managementBlock") : t("server.managementUnblock"));
     } catch (error) {
-      if (error instanceof ApiError) {
-        if (error.code === "forbidden_role") {
-          pushToast(t("server.deleteForbidden"));
-          return;
-        }
-
-        if (error.code === "DefaultServerCannotBeDeleted") {
-          pushToast(t("server.deleteDefaultForbidden"));
-          return;
-        }
-      }
-
       pushToast((error as Error).message || t("toast.serverError"));
     }
-  }, [token, currentServerId, pushToast, t]);
+  }, [pushToast, setAdminServers, t, token]);
 
-  const handleRemoveServerMember = useCallback(async (targetUserId: string) => {
+  const handleDeleteAdminServer = useCallback(async (serverId: string) => {
     const tokenValue = String(token || "").trim();
-    const serverId = String(currentServerId || "").trim();
-    const userId = String(targetUserId || "").trim();
+    const targetServerId = String(serverId || "").trim();
 
-    if (!tokenValue || !serverId || !userId) {
+    if (!tokenValue || !targetServerId) {
       return;
     }
 
     try {
-      await api.removeServerMember(tokenValue, serverId, userId);
-      const membersResponse = await api.serverMembers(tokenValue, serverId);
-      setServerMembers(Array.isArray(membersResponse.members) ? membersResponse.members : []);
-      pushToast(t("server.memberRemoved"));
-    } catch (error) {
-      pushToast((error as Error).message || t("toast.serverError"));
-    }
-  }, [token, currentServerId, pushToast, t]);
+      await api.adminDeleteServer(tokenValue, targetServerId);
 
-  const handleBanServerMember = useCallback(async (targetUserId: string) => {
-    const tokenValue = String(token || "").trim();
-    const serverId = String(currentServerId || "").trim();
-    const userId = String(targetUserId || "").trim();
-
-    if (!tokenValue || !serverId || !userId) {
-      return;
-    }
-
-    try {
-      await api.applyServerBan(tokenValue, serverId, userId, "manual server moderation");
-      const membersResponse = await api.serverMembers(tokenValue, serverId);
-      setServerMembers(Array.isArray(membersResponse.members) ? membersResponse.members : []);
-      pushToast(t("server.memberBanned"));
-    } catch (error) {
-      pushToast((error as Error).message || t("toast.serverError"));
-    }
-  }, [token, currentServerId, pushToast, t]);
-
-  const handleUnbanServerMember = useCallback(async (targetUserId: string) => {
-    const tokenValue = String(token || "").trim();
-    const serverId = String(currentServerId || "").trim();
-    const userId = String(targetUserId || "").trim();
-
-    if (!tokenValue || !serverId || !userId) {
-      return;
-    }
-
-    try {
-      await api.revokeServerBan(tokenValue, serverId, userId);
-      const membersResponse = await api.serverMembers(tokenValue, serverId);
-      setServerMembers(Array.isArray(membersResponse.members) ? membersResponse.members : []);
-      pushToast(t("server.memberUnbanned"));
-    } catch (error) {
-      pushToast((error as Error).message || t("toast.serverError"));
-    }
-  }, [token, currentServerId, pushToast, t]);
-
-  const handleTransferServerOwnership = useCallback(async (targetUserId: string) => {
-    const tokenValue = String(token || "").trim();
-    const serverId = String(currentServerId || "").trim();
-    const userId = String(targetUserId || "").trim();
-
-    if (!tokenValue || !serverId || !userId) {
-      return;
-    }
-
-    try {
-      await api.transferServerOwnership(tokenValue, serverId, userId);
-
-      const [membersResponse, serversResponse] = await Promise.all([
-        api.serverMembers(tokenValue, serverId),
+      const [adminServersResponse, serversResponse] = await Promise.all([
+        api.adminServers(tokenValue),
         api.servers(tokenValue)
       ]);
 
-      setServerMembers(Array.isArray(membersResponse.members) ? membersResponse.members : []);
-      setServers(Array.isArray(serversResponse.servers) ? serversResponse.servers : []);
-      pushToast(t("server.ownerTransferred"));
+      const adminList = Array.isArray(adminServersResponse.servers) ? adminServersResponse.servers : [];
+      const userList = Array.isArray(serversResponse.servers) ? serversResponse.servers : [];
+
+      setAdminServers(adminList);
+      setServers(userList);
+      setSelectedAdminServerId((prev) => {
+        const preferredId = prev === targetServerId ? "" : prev;
+        return adminList.some((item) => item.id === preferredId) ? preferredId : (adminList[0]?.id || "");
+      });
+      setCurrentServerId((prev) => {
+        const preferredId = prev === targetServerId ? "" : prev;
+        return userList.some((item) => item.id === preferredId) ? preferredId : (userList[0]?.id || "");
+      });
+      pushToast(t("server.deleteSuccess"));
     } catch (error) {
       pushToast((error as Error).message || t("toast.serverError"));
     }
-  }, [token, currentServerId, pushToast, t]);
+  }, [pushToast, t, token]);
 
   useEffect(() => {
     if (!chatRoomSlug && roomSlug) {
@@ -1707,16 +1208,14 @@ export function App() {
     playServerSound
   });
 
-  useEffect(() => {
-    if (!roomSlug) {
-      return;
-    }
-
-    const roomTopology = roomMediaTopologyBySlug[roomSlug];
-    if (roomTopology === "livekit") {
-      pushCallLog(`media topology for ${roomSlug}: ${roomTopology}`);
-    }
-  }, [roomSlug, roomMediaTopologyBySlug, pushCallLog]);
+  useVoiceUiLifecycleEffects({
+    userSettingsOpen,
+    userSettingsTab,
+    setSelfMonitorEnabled,
+    roomSlug,
+    roomMediaTopologyBySlug,
+    pushCallLog
+  });
 
   const { refreshDevices, requestMediaAccess, requestVideoAccess } = useMediaDevicePreferences({
     t,
@@ -1760,14 +1259,6 @@ export function App() {
     t,
     pushToast
   });
-
-  useEffect(() => {
-    if (userSettingsOpen && userSettingsTab === "sound") {
-      return;
-    }
-
-    setSelfMonitorEnabled(false);
-  }, [userSettingsOpen, userSettingsTab]);
 
   usePopupOutsideClose({
     isAnyPopupOpen: Boolean(
@@ -1853,65 +1344,14 @@ export function App() {
     setChatRoomSlug
   });
 
-  const handleToggleMic = useCallback(() => {
-    setMicMuted((value) => {
-      const nextMuted = !value;
-      if (!nextMuted) {
-        setAudioMuted(false);
-      }
-      return nextMuted;
-    });
-  }, []);
-
-  const handleToggleAudio = useCallback(() => {
-    setAudioMuted((value) => {
-      const nextMuted = !value;
-      if (nextMuted) {
-        setMicMuted(true);
-      }
-      return nextMuted;
-    });
-  }, []);
-
-  const saveMemberPreference = useCallback(async (targetUserId: string, input: { volume: number; note: string }) => {
-    if (!token || !targetUserId) {
-      return;
-    }
-
-    const nextPreference: RoomMemberPreference = {
-      targetUserId,
-      volume: Math.max(0, Math.min(100, Math.round(Number(input.volume) || 0))),
-      note: String(input.note || "").trim().slice(0, 32),
-      updatedAt: new Date().toISOString()
-    };
-
-    setMemberPreferencesByUserId((prev) => ({
-      ...prev,
-      [targetUserId]: nextPreference
-    }));
-
-    try {
-      const response = await api.upsertMemberPreference(token, targetUserId, {
-        volume: nextPreference.volume,
-        note: nextPreference.note
-      });
-
-      setMemberPreferencesByUserId((prev) => ({
-        ...prev,
-        [targetUserId]: response.preference
-      }));
-    } catch (error) {
-      pushLog(`member preference save failed: ${(error as Error).message}`);
-      pushToast(t("toast.serverError"));
-    }
-  }, [pushLog, pushToast, t, token]);
-
-  useMemberPreferencesSync({
+  const { saveMemberPreference } = useRoomMemberPreferencesOrchestrator({
     token,
     currentUserId: user?.id || "",
     roomsPresenceDetailsBySlug,
     setMemberPreferencesByUserId,
-    pushLog
+    pushLog,
+    pushToast,
+    t
   });
 
   const {
@@ -1946,41 +1386,13 @@ export function App() {
     [allRooms, chatRoomSlug]
   );
 
-  useEffect(() => {
-    if (allRooms.length === 0) {
-      return;
-    }
-
-    if (roomSlug) {
-      const joinedRoomExists = allRooms.some((room) => room.slug === roomSlug);
-      if (!joinedRoomExists) {
-        setRoomSlug("");
-      }
-    }
-
-    if (chatRoomSlug) {
-      const chatRoomExists = allRooms.some((room) => room.slug === chatRoomSlug);
-      if (!chatRoomExists) {
-        setChatRoomSlug("");
-      }
-    }
-  }, [allRooms, roomSlug, chatRoomSlug]);
-
-  useEffect(() => {
-    if (chatRoomSlug) {
-      return;
-    }
-
-    if (roomSlug) {
-      setChatRoomSlug(roomSlug);
-      return;
-    }
-
-    const firstRoom = allRooms[0];
-    if (firstRoom?.slug) {
-      setChatRoomSlug(firstRoom.slug);
-    }
-  }, [allRooms, chatRoomSlug, roomSlug]);
+  useRoomSelectionGuard({
+    allRooms,
+    roomSlug,
+    chatRoomSlug,
+    setRoomSlug,
+    setChatRoomSlug
+  });
 
   const {
     createRoom,
@@ -2014,6 +1426,7 @@ export function App() {
     editingRoomTitle,
     editingRoomKind,
     editingRoomCategoryId,
+    editingRoomNsfw,
     editingRoomAudioQualitySetting,
     channelSettingsPopupOpenId,
     setNewRoomTitle,
@@ -2024,6 +1437,7 @@ export function App() {
     setEditingRoomTitle,
     setEditingRoomKind,
     setEditingRoomCategoryId,
+    setEditingRoomNsfw,
     setEditingRoomAudioQualitySetting,
     setChannelSettingsPopupOpenId,
     setEditingCategoryTitle,
@@ -2033,33 +1447,6 @@ export function App() {
     setMessagesNextCursor,
     joinRoom
   });
-
-  const inputOptions = inputDevices.length > 0 ? inputDevices : [{ id: "default", label: t("device.systemDefault") }];
-  const outputOptions = outputDevices.length > 0 ? outputDevices : [{ id: "default", label: t("device.systemDefault") }];
-  const videoInputOptions = videoInputDevices.length > 0 ? videoInputDevices : [{ id: "default", label: t("video.systemCamera") }];
-  const currentInputLabel = inputOptions.find((device) => device.id === selectedInputId)?.label ?? inputOptions[0]?.label ?? t("device.systemDefault");
-  const inputProfileLabel = selectedInputProfile === "noise_reduction"
-    ? t("settings.voiceIsolation")
-    : selectedInputProfile === "studio"
-      ? t("settings.studio")
-      : t("settings.custom");
-  const noiseSuppressionEnabled = selectedInputProfile === "noise_reduction";
-
-  const handleToggleNoiseSuppression = useCallback(() => {
-    setSelectedInputProfile((current) => {
-      const next = current === "noise_reduction" ? "custom" : "noise_reduction";
-      if (next !== "noise_reduction") {
-        setRnnoiseRuntimeStatus("inactive");
-      }
-      return next;
-    });
-  }, []);
-
-  useEffect(() => {
-    if (selectedInputProfile !== "noise_reduction") {
-      setRnnoiseRuntimeStatus("inactive");
-    }
-  }, [selectedInputProfile]);
 
   usePendingAccessAutoRefresh({
     user,
@@ -2079,10 +1466,20 @@ export function App() {
     disconnectRoom
   });
 
-  const acknowledgeUpdatedApp = useCallback(() => {
-    sessionStorage.removeItem(VERSION_UPDATE_PENDING_KEY);
-    setShowAppUpdatedOverlay(false);
-  }, []);
+  const { acknowledgeUpdatedApp, completeFirstRunIntro } = useOnboardingOverlayActions({
+    token,
+    user,
+    profileNameDraft,
+    selectedUiTheme,
+    versionUpdatePendingKey: VERSION_UPDATE_PENDING_KEY,
+    setProfileSaving,
+    setProfileStatusText,
+    setUser,
+    setShowFirstRunIntro,
+    setShowAppUpdatedOverlay,
+    pushToast,
+    t
+  });
 
   useServerMenuAccessGuard({
     serverMenuTab,
@@ -2097,32 +1494,18 @@ export function App() {
 
   useScreenWakeLock(Boolean(user && roomSlug && currentRoomSupportsRtc && roomVoiceConnected));
 
-  const handleToggleCamera = useCallback(() => {
-    if (allowVideoStreaming && !cameraEnabled) {
-      requestVideoAccess();
-    }
-    setCameraEnabled((value) => !value);
-  }, [allowVideoStreaming, cameraEnabled, requestVideoAccess]);
-
-  const handleToggleScreenShareClick = useCallback(() => {
-    void handleToggleScreenShare();
-  }, [handleToggleScreenShare]);
-
-  const handleToggleVoiceSettings = useCallback(() => {
-    setAudioOutputMenuOpen(false);
-    setVoiceSettingsPanel(null);
-    setVoiceSettingsOpen((value) => !value);
-  }, [setAudioOutputMenuOpen, setVoiceSettingsOpen, setVoiceSettingsPanel]);
-
-  const handleToggleAudioOutput = useCallback(() => {
-    setVoiceSettingsOpen(false);
-    setVoiceSettingsPanel(null);
-    setAudioOutputMenuOpen((value) => !value);
-  }, [setAudioOutputMenuOpen, setVoiceSettingsOpen, setVoiceSettingsPanel]);
-
-  const userDockSharedProps = useWorkspaceUserDockProps({
+  const userDockSharedProps = useWorkspaceUserDockController({
     t,
     user,
+    inputDevices,
+    outputDevices,
+    videoInputDevices,
+    allowVideoStreaming,
+    handleToggleScreenShare,
+    setMicMuted,
+    setAudioMuted,
+    setCameraEnabled,
+    setRnnoiseRuntimeStatus,
     currentRoomSupportsRtc,
     currentRoomSupportsVideo,
     currentRoomTitle: currentRoom?.title || "",
@@ -2134,7 +1517,6 @@ export function App() {
     screenShareActive: Boolean(currentRoomScreenShareOwner.userId),
     screenShareOwnedByCurrentUser: isCurrentUserScreenShareOwner,
     canStartScreenShare: canToggleScreenShare,
-    noiseSuppressionEnabled,
     rnnoiseSuppressionLevel,
     rnnoiseRuntimeStatus,
     preRnnEchoCancellationEnabled,
@@ -2150,17 +1532,15 @@ export function App() {
     profileNameDraft,
     profileSaving,
     profileStatusText,
+    serverAgeLoading,
+    serverAgeConfirmedAt,
+    serverAgeConfirming,
     lang,
     selectedUiTheme,
-    inputOptions,
-    outputOptions,
-    videoInputOptions,
     selectedInputId,
     selectedOutputId,
     selectedVideoInputId,
     selectedInputProfile,
-    inputProfileLabel,
-    currentInputLabel,
     micVolume,
     outputVolume,
     serverSoundsMasterVolume: serverSoundSettings.masterVolume,
@@ -2171,19 +1551,12 @@ export function App() {
     audioOutputAnchorRef,
     voiceSettingsAnchorRef,
     userSettingsRef,
-    handleToggleMic,
-    handleToggleAudio,
-    handleToggleCamera,
-    handleToggleScreenShareClick,
-    handleToggleNoiseSuppression,
     setRnnoiseSuppressionLevel,
     setPreRnnEchoCancellationEnabled,
     setPreRnnAutoGainControlEnabled,
     selfMonitorEnabled,
     setSelfMonitorEnabled,
     requestVideoAccess,
-    handleToggleVoiceSettings,
-    handleToggleAudioOutput,
     openUserSettings,
     setVoiceSettingsOpen,
     setAudioOutputMenuOpen,
@@ -2194,6 +1567,7 @@ export function App() {
     setLang,
     setSelectedUiTheme,
     saveMyProfile,
+    confirmServerAge: () => void handleConfirmServerAge(),
     setSelectedInputId,
     setSelectedOutputId,
     setSelectedVideoInputId,
@@ -2208,39 +1582,6 @@ export function App() {
     leaveRoom,
     isMobileViewport
   });
-
-  const completeFirstRunIntro = useCallback(async () => {
-    if (!user?.id) {
-      return;
-    }
-
-    const trimmedName = profileNameDraft.trim();
-    if (!trimmedName) {
-      pushToast(t("profile.saveError"));
-      return;
-    }
-
-    setProfileSaving(true);
-    setProfileStatusText("");
-    try {
-      const response = await api.updateMe(token, {
-        name: trimmedName,
-        uiTheme: selectedUiTheme
-      });
-      if (response.user) {
-        setUser(response.user);
-      }
-      localStorage.setItem(`boltorezka_intro_v1_seen:${user.id}`, "1");
-      setShowFirstRunIntro(false);
-      pushToast(t("profile.saveSuccess"));
-    } catch (error) {
-      const message = (error as Error).message || t("profile.saveError");
-      setProfileStatusText(message);
-      pushToast(message);
-    } finally {
-      setProfileSaving(false);
-    }
-  }, [profileNameDraft, pushToast, selectedUiTheme, t, token, user?.id]);
 
   const roomsPanelProps = useWorkspaceRoomsPanelProps({
     t,
@@ -2276,6 +1617,7 @@ export function App() {
     editingRoomTitle,
     editingRoomKind,
     editingRoomCategoryId,
+    editingRoomNsfw,
     editingRoomAudioQualitySetting,
     categoryPopupRef,
     channelPopupRef,
@@ -2291,6 +1633,7 @@ export function App() {
     onSetEditingRoomTitle: setEditingRoomTitle,
     onSetEditingRoomKind: setEditingRoomKind,
     onSetEditingRoomCategoryId: setEditingRoomCategoryId,
+    onSetEditingRoomNsfw: setEditingRoomNsfw,
     onSetEditingRoomAudioQualitySetting: setEditingRoomAudioQualitySetting,
     onCreateCategory: createCategory,
     onCreateRoom: createRoom,
@@ -2497,9 +1840,6 @@ export function App() {
           hasCurrentServer: Boolean(currentServer?.id),
           serverMembers,
           serverMembersLoading,
-          serverAgeLoading,
-          serverAgeConfirmedAt,
-          serverAgeConfirming,
           lastInviteUrl,
           eventLog,
           telemetrySummary,
@@ -2517,11 +1857,15 @@ export function App() {
           onSetBan: (userId, banned) => void setUserBan(userId, banned),
           onSetAccessState: (userId, accessState) => void setUserAccessState(userId, accessState),
           onSelectAdminServer: setSelectedAdminServerId,
+          onToggleAdminServerBlocked: (serverId, blocked) => void handleToggleAdminServerBlocked(serverId, blocked),
+          onDeleteAdminServer: (serverId) => void handleDeleteAdminServer(serverId),
           onCreateServerInvite: () => void handleCreateServerInvite(),
           onCopyInviteUrl: () => void handleCopyInviteUrl(),
-          onChangeCurrentServer: (serverId) => handleServerChange(serverId),
+          onChangeCurrentServer: (serverId) => {
+            handleServerChange(serverId);
+            setSelectedAdminServerId(serverId);
+          },
           onRenameCurrentServer: (name) => void handleRenameCurrentServer(name),
-          onConfirmServerAge: () => void handleConfirmServerAge(),
           onLeaveServer: () => void handleLeaveCurrentServer(),
           onDeleteServer: () => void handleDeleteCurrentServer(),
           onRemoveServerMember: (userId) => void handleRemoveServerMember(userId),
