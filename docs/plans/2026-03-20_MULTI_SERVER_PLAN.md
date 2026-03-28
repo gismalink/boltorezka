@@ -370,6 +370,13 @@ Stage 3 note (2026-03-28):
    - фильтрация архивных серверов добавлена в membership/default/admin/invite выборки;
    - UI-кнопка `Удалить сервер` теперь вызывает API, с обработкой ролей и запрета удаления default server.
 - Изменения провалидированы в `test` на feature-ветке через `TEST_REF=origin/feature/multiserver-stage1-services SMOKE_MULTISERVER=1 SMOKE_MULTISERVER_AGE_GATE=1 npm run deploy:test:smoke` (SHA `918cd0f`, PASS).
+- Доработан доступ/UX server profile по дополнительному фидбеку:
+   - вкладка `Картинки чата` ограничена ролью `super_admin`;
+   - в server list для product management удален дублирующий формат `name (slug)`;
+   - в header убран текст `// No server selected` (без выбранного сервера показывается только `Dato`);
+   - вкладка `Этот сервер` блокируется без выбранного сервера + guard возвращает на `Наблюдаемость`;
+   - onboarding для состояния без серверов расширен до сценария "Приветствие и выбор" (invite или создание сервера).
+- Изменения провалидированы в `test` на feature-ветке через `TEST_REF=origin/feature/multiserver-stage1-services SMOKE_MULTISERVER=1 SMOKE_MULTISERVER_AGE_GATE=1 npm run deploy:test:smoke` (SHA `69cf604`, PASS).
 
 ### Stage 4 - Data cutover
 
