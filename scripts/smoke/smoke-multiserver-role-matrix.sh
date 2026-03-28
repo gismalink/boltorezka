@@ -101,8 +101,7 @@ SELECT \
   CASE WHEN bool_or(ensure_exec.helper_user_id IS NOT NULL) THEN '1' ELSE '0' END \
 FROM ensure_exec \
 JOIN server_members sm ON sm.user_id = ensure_exec.user_id \
-WHERE ensure_exec.user_id IS NOT NULL \
-  AND sm.status = 'active'; \
+WHERE ensure_exec.user_id IS NOT NULL; \
 ROLLBACK;"
 
 RAW_OUTPUT="$(compose exec -T "$POSTGRES_SERVICE" psql -v ON_ERROR_STOP=1 -U "$SMOKE_POSTGRES_USER" -d "$SMOKE_POSTGRES_DB" -tA -c "$SQL_QUERY" | tr -d '\r')"
