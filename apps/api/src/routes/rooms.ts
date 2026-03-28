@@ -158,6 +158,23 @@ export async function roomsRoutes(fastify: FastifyInstance) {
   };
 
   const resolveDefaultMemberServerId = async (userId: string): Promise<string | null> => {
+    const defaultResult = await db.query<{ server_id: string }>(
+      `SELECT sm.server_id
+       FROM server_members sm
+       JOIN servers s ON s.id = sm.server_id
+       WHERE sm.user_id = $1
+         AND sm.status = 'active'
+         AND s.is_archived = FALSE
+         AND s.is_default = TRUE
+       LIMIT 1`,
+      [userId]
+    );
+
+    const defaultServerId = String(defaultResult.rows[0]?.server_id || "").trim();
+    if (defaultServerId) {
+      return defaultServerId;
+    }
+
     const result = await db.query<{ server_id: string }>(
       `SELECT sm.server_id
        FROM server_members sm
@@ -165,7 +182,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
        WHERE sm.user_id = $1
          AND sm.status = 'active'
          AND s.is_archived = FALSE
-       ORDER BY s.is_default DESC, sm.joined_at ASC
+       ORDER BY sm.joined_at ASC
        LIMIT 1`,
       [userId]
     );
