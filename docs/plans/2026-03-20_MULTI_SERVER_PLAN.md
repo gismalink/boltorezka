@@ -342,6 +342,11 @@ Stage 3 note (2026-03-28):
    - client API для `GET /v1/admin/servers` и `GET /v1/admin/servers/:serverId/overview`,
    - server management overview (owner/members/rooms/messages/invites/bans) в UI.
 - Изменения провалидированы в `test` на feature-ветке через `TEST_REF=origin/feature/multiserver-stage1-services SMOKE_MULTISERVER=1 npm run deploy:test:smoke` (SHA `ed785b0`, PASS).
+- Добавлен web flow принятия инвайта по deep-link `/invite/:token`:
+   - клиентский вызов `POST /v1/invites/:token/accept`,
+   - авто-переключение на принятый сервер,
+   - очистка URL после обработки invite.
+- Изменения провалидированы в `test` на feature-ветке через `TEST_REF=origin/feature/multiserver-stage1-services SMOKE_MULTISERVER=1 SMOKE_MULTISERVER_AGE_GATE=1 npm run deploy:test:smoke` (SHA `0572285`, PASS).
 
 ### Stage 4 - Data cutover
 
