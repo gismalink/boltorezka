@@ -6,7 +6,7 @@ import type { UiTheme } from "../../../domain";
 import type { VoiceSettingsPanel } from "../../../components";
 import type { RnnoiseSuppressionLevel } from "../../rtc/rnnoiseAudioProcessor";
 
-type UseWorkspaceUserDockPropsInput = {
+export type UseWorkspaceUserDockPropsInput = {
   t: UserDockProps["t"];
   user: UserDockProps["user"] | null;
   currentRoomSupportsRtc: boolean;
@@ -36,6 +36,9 @@ type UseWorkspaceUserDockPropsInput = {
   profileNameDraft: string;
   profileSaving: boolean;
   profileStatusText: string;
+  serverAgeLoading: boolean;
+  serverAgeConfirmedAt: string | null;
+  serverAgeConfirming: boolean;
   lang: Lang;
   selectedUiTheme: UiTheme;
   inputOptions: UserDockProps["inputOptions"];
@@ -80,6 +83,7 @@ type UseWorkspaceUserDockPropsInput = {
   setLang: (value: Lang) => void;
   setSelectedUiTheme: (value: UiTheme) => void;
   saveMyProfile: UserDockProps["onSaveProfile"];
+  confirmServerAge: UserDockProps["onConfirmServerAge"];
   setSelectedInputId: (value: string) => void;
   setSelectedOutputId: (value: string) => void;
   setSelectedVideoInputId: (value: string) => void;
@@ -125,6 +129,9 @@ export function useWorkspaceUserDockProps({
   profileNameDraft,
   profileSaving,
   profileStatusText,
+  serverAgeLoading,
+  serverAgeConfirmedAt,
+  serverAgeConfirming,
   lang,
   selectedUiTheme,
   inputOptions,
@@ -169,6 +176,7 @@ export function useWorkspaceUserDockProps({
   setLang,
   setSelectedUiTheme,
   saveMyProfile,
+  confirmServerAge,
   setSelectedInputId,
   setSelectedOutputId,
   setSelectedVideoInputId,
@@ -220,6 +228,9 @@ export function useWorkspaceUserDockProps({
       profileEmail: user.email,
       profileSaving,
       profileStatusText,
+      serverAgeLoading,
+      serverAgeConfirmedAt,
+      serverAgeConfirming,
       selectedLang: lang,
       selectedUiTheme,
       languageOptions: LANGUAGE_OPTIONS,
@@ -265,6 +276,7 @@ export function useWorkspaceUserDockProps({
       onSetSelectedLang: setLang,
       onSetSelectedUiTheme: setSelectedUiTheme,
       onSaveProfile: saveMyProfile,
+      onConfirmServerAge: confirmServerAge,
       onSetSelectedInputId: setSelectedInputId,
       onSetSelectedOutputId: setSelectedOutputId,
       onSetSelectedVideoInputId: setSelectedVideoInputId,
@@ -319,6 +331,9 @@ export function useWorkspaceUserDockProps({
     profileNameDraft,
     profileSaving,
     profileStatusText,
+    serverAgeLoading,
+    serverAgeConfirmedAt,
+    serverAgeConfirming,
     refreshDevices,
     remoteAudioAutoplayBlocked,
     requestMediaAccess,
@@ -365,6 +380,7 @@ export function useWorkspaceUserDockProps({
     voiceSettingsAnchorRef,
     voiceSettingsOpen,
     voiceSettingsPanel,
-    saveMyProfile
+    saveMyProfile,
+    confirmServerAge
   ]);
 }

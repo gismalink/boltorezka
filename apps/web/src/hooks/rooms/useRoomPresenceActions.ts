@@ -16,6 +16,7 @@ type UseRoomPresenceActionsArgs = {
   pushToast: (message: string) => void;
   pushLog: (text: string) => void;
   t: (key: string) => string;
+  onAgeVerificationRequired: (slug: string) => void;
   setRoomSlug: Dispatch<SetStateAction<string>>;
   setChatRoomSlug: Dispatch<SetStateAction<string>>;
 };
@@ -29,13 +30,34 @@ export function useRoomPresenceActions({
   pushToast,
   pushLog,
   t,
+  onAgeVerificationRequired,
   setRoomSlug,
   setChatRoomSlug
 }: UseRoomPresenceActionsArgs) {
   const joinRoom = useCallback((slug: string) => {
-    roomAdminController.joinRoom(slug);
-    setChatRoomSlug(slug);
-  }, [roomAdminController, setChatRoomSlug]);
+    const targetSlug = String(slug || "").trim();
+    if (!targetSlug) {
+      return;
+    }
+
+    void (async () => {
+      try {
+        await roomAdminController.joinRoom(targetSlug);
+        setChatRoomSlug(targetSlug);
+      } catch (error) {
+        const message = String((error as Error)?.message || "");
+        pushLog(`join room failed: #${targetSlug} ${message}`);
+
+        if (message.includes(":AgeVerificationRequired:")) {
+          onAgeVerificationRequired(targetSlug);
+          pushToast(t("rooms.ageGateOverlayHint"));
+          return;
+        }
+
+        pushToast(t("toast.serverError"));
+      }
+    })();
+  }, [onAgeVerificationRequired, pushLog, pushToast, roomAdminController, setChatRoomSlug, t]);
 
   const leaveRoom = useCallback(() => {
     if (!roomSlug) {

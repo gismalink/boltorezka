@@ -1,5 +1,7 @@
+import { useRef, useState } from "react";
 import type { UiTheme } from "../domain";
 import { LegalLinks } from "./LegalLinks";
+import { PopupPortal } from "./PopupPortal";
 
 function detectUiLang(): "ru" | "en" {
   return document.documentElement.lang === "en" ? "en" : "ru";
@@ -149,24 +151,107 @@ export function RemoteAudioAutoplayBanner({ t }: { t: Translate }) {
   );
 }
 
-export function GuestLoginGate({ t, onBeginGoogleSso }: { t: Translate; onBeginGoogleSso: () => void }) {
+export function GuestLoginGate({ t, onBeginSso }: { t: Translate; onBeginSso: (provider: "google" | "yandex") => void }) {
   const lang = detectUiLang();
+  const [authMenuOpen, setAuthMenuOpen] = useState(false);
+  const authMenuRef = useRef<HTMLDivElement>(null);
 
   return (
     <section className="grid h-full min-h-0 place-items-center p-2">
       <div className="card w-full max-w-xl p-8 text-center">
         <h2 className="text-2xl font-bold text-pixel-text">{t("guest.welcomeTitle")}</h2>
         <p className="mt-3 text-sm leading-relaxed text-pixel-muted">{t("guest.welcomePromo")}</p>
-        <button
-          type="button"
-          className="mt-6 inline-flex min-h-[42px] items-center justify-center px-5"
-          onClick={onBeginGoogleSso}
-        >
-          {t("guest.loginCta")}
-        </button>
+        <div className="mt-6 inline-grid" ref={authMenuRef}>
+          <button
+            type="button"
+            className="inline-flex min-h-[42px] items-center justify-center px-5"
+            onClick={() => setAuthMenuOpen((value) => !value)}
+            aria-expanded={authMenuOpen}
+            aria-label={t("auth.login")}
+          >
+            {t("guest.loginCta")}
+          </button>
+          <PopupPortal open={authMenuOpen} anchorRef={authMenuRef} className="auth-popup" placement="bottom-end">
+            <div className="grid gap-2">
+              <button
+                type="button"
+                className="provider-btn w-full flex items-center justify-start gap-3"
+                onClick={() => {
+                  setAuthMenuOpen(false);
+                  onBeginSso("google");
+                }}
+              >
+                <span className="provider-icon provider-google inline-flex h-5 w-5 items-center justify-center">G</span>
+                {t("auth.google")}
+              </button>
+              <button
+                type="button"
+                className="provider-btn w-full flex items-center justify-start gap-3"
+                onClick={() => {
+                  setAuthMenuOpen(false);
+                  onBeginSso("yandex");
+                }}
+              >
+                <span className="provider-icon provider-yandex inline-flex h-5 w-5 items-center justify-center">Я</span>
+                {t("auth.yandex")}
+              </button>
+            </div>
+          </PopupPortal>
+        </div>
         <div className="mt-5 border-t border-white/10 pt-3">
           <LegalLinks compact lang={lang} />
         </div>
+      </div>
+    </section>
+  );
+}
+
+export function EmptyServerOnboarding({
+  t,
+  creatingServer,
+  onCreateServer
+}: {
+  t: Translate;
+  creatingServer: boolean;
+  onCreateServer: (name: string) => Promise<void>;
+}) {
+  const [serverName, setServerName] = useState("");
+
+  const submit = async () => {
+    const trimmed = String(serverName || "").trim();
+    if (!trimmed || creatingServer) {
+      return;
+    }
+
+    await onCreateServer(trimmed);
+    setServerName("");
+  };
+
+  return (
+    <section className="grid h-full min-h-0 place-items-center p-2">
+      <div className="card w-full max-w-xl p-8 text-center">
+        <h2 className="text-2xl font-bold text-pixel-text">{t("server.onboardingTitle")}</h2>
+        <p className="mt-3 text-sm leading-relaxed text-pixel-muted">{t("server.onboardingHint")}</p>
+        <p className="mt-2 text-xs leading-relaxed text-pixel-muted/85">{t("server.onboardingSubHint")}</p>
+        <label className="mt-5 grid gap-2 text-left">
+          <span className="muted">{t("server.createTitle")}</span>
+          <input
+            value={serverName}
+            maxLength={64}
+            onChange={(event) => setServerName(event.target.value)}
+            placeholder={t("server.createPlaceholder")}
+          />
+        </label>
+        <button
+          type="button"
+          className="mt-6 inline-flex min-h-[42px] items-center justify-center px-5"
+          onClick={() => {
+            void submit();
+          }}
+          disabled={creatingServer || serverName.trim().length < 3}
+        >
+          {creatingServer ? t("server.createLoading") : t("server.onboardingCta")}
+        </button>
       </div>
     </section>
   );
@@ -278,6 +363,55 @@ export function SessionMovedOverlay({ message, onReopenHere }: { message: string
         >
           Открыть здесь
         </button>
+      </section>
+    </div>
+  );
+}
+
+export function AgeVerificationRequiredOverlay({
+  t,
+  roomSlug,
+  confirming,
+  onOpenAgeSettings,
+  onConfirmAgeAndRetry,
+  onClose
+}: {
+  t: Translate;
+  roomSlug: string;
+  confirming: boolean;
+  onOpenAgeSettings: () => void;
+  onConfirmAgeAndRetry: () => void;
+  onClose: () => void;
+}) {
+  return (
+    <div className="voice-preferences-overlay fixed inset-0 z-[315] grid place-items-center p-4" role="dialog" aria-modal="true" aria-live="assertive">
+      <section className="card voice-preferences-modal w-full max-w-[620px] !h-auto !max-h-[90vh] overflow-auto p-6 text-center">
+        <h2>{t("rooms.ageGateOverlayTitle")}</h2>
+        <p className="mt-3 muted">{t("rooms.ageGateOverlayHint").replace("{room}", roomSlug)}</p>
+        <div className="mt-6 grid gap-2">
+          <button
+            type="button"
+            className="secondary"
+            onClick={onOpenAgeSettings}
+          >
+            {t("rooms.ageGateOverlayOpenProfile")}
+          </button>
+          <button
+            type="button"
+            className="primary"
+            disabled={confirming}
+            onClick={onConfirmAgeAndRetry}
+          >
+            {confirming ? t("settings.ageConfirmActionLoading") : t("rooms.ageGateOverlayConfirmAndRetry")}
+          </button>
+          <button
+            type="button"
+            className="secondary"
+            onClick={onClose}
+          >
+            {t("common.no")}
+          </button>
+        </div>
       </section>
     </div>
   );

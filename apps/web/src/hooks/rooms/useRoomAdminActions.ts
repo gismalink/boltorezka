@@ -10,29 +10,27 @@ type UseRoomAdminActionsArgs = {
   allRooms: Room[];
   archivedRooms: Room[];
   roomAdminController: RoomAdminController;
-  newRoomSlug: string;
   newRoomTitle: string;
   newRoomKind: RoomKind;
   newRoomCategoryId: string;
-  newCategorySlug: string;
   newCategoryTitle: string;
   editingCategoryTitle: string;
   categorySettingsPopupOpenId: string | null;
   editingRoomTitle: string;
   editingRoomKind: RoomKind;
   editingRoomCategoryId: string;
+  editingRoomNsfw: boolean;
   editingRoomAudioQualitySetting: ChannelAudioQualitySetting;
   channelSettingsPopupOpenId: string | null;
-  setNewRoomSlug: (value: string) => void;
   setNewRoomTitle: (value: string) => void;
   setChannelPopupOpen: (value: boolean) => void;
-  setNewCategorySlug: (value: string) => void;
   setNewCategoryTitle: (value: string) => void;
   setCategoryPopupOpen: (value: boolean) => void;
   setNewRoomCategoryId: (value: string) => void;
   setEditingRoomTitle: (value: string) => void;
   setEditingRoomKind: (value: RoomKind) => void;
   setEditingRoomCategoryId: (value: string) => void;
+  setEditingRoomNsfw: (value: boolean) => void;
   setEditingRoomAudioQualitySetting: (value: ChannelAudioQualitySetting) => void;
   setChannelSettingsPopupOpenId: (value: string | null) => void;
   setEditingCategoryTitle: (value: string) => void;
@@ -51,29 +49,27 @@ export function useRoomAdminActions({
   allRooms,
   archivedRooms,
   roomAdminController,
-  newRoomSlug,
   newRoomTitle,
   newRoomKind,
   newRoomCategoryId,
-  newCategorySlug,
   newCategoryTitle,
   editingCategoryTitle,
   categorySettingsPopupOpenId,
   editingRoomTitle,
   editingRoomKind,
   editingRoomCategoryId,
+  editingRoomNsfw,
   editingRoomAudioQualitySetting,
   channelSettingsPopupOpenId,
-  setNewRoomSlug,
   setNewRoomTitle,
   setChannelPopupOpen,
-  setNewCategorySlug,
   setNewCategoryTitle,
   setCategoryPopupOpen,
   setNewRoomCategoryId,
   setEditingRoomTitle,
   setEditingRoomKind,
   setEditingRoomCategoryId,
+  setEditingRoomNsfw,
   setEditingRoomAudioQualitySetting,
   setChannelSettingsPopupOpenId,
   setEditingCategoryTitle,
@@ -87,15 +83,15 @@ export function useRoomAdminActions({
     event.preventDefault();
     if (!token || !canCreateRooms) return;
 
-    const created = await roomAdminController.createRoom(token, newRoomSlug, newRoomTitle, {
+    const created = await roomAdminController.createRoom(token, newRoomTitle, {
       kind: newRoomKind,
       categoryId: newRoomCategoryId === "none" ? null : newRoomCategoryId,
+      nsfw: false,
       audioQualityOverride: canManageAudioQuality
         ? null
         : undefined
     });
     if (created) {
-      setNewRoomSlug("");
       setNewRoomTitle("");
       setChannelPopupOpen(false);
     }
@@ -103,12 +99,10 @@ export function useRoomAdminActions({
     token,
     canCreateRooms,
     roomAdminController,
-    newRoomSlug,
     newRoomTitle,
     newRoomKind,
     newRoomCategoryId,
     canManageAudioQuality,
-    setNewRoomSlug,
     setNewRoomTitle,
     setChannelPopupOpen
   ]);
@@ -117,9 +111,8 @@ export function useRoomAdminActions({
     event.preventDefault();
     if (!token || !canCreateRooms) return;
 
-    const created = await roomAdminController.createCategory(token, newCategorySlug, newCategoryTitle);
+    const created = await roomAdminController.createCategory(token, newCategoryTitle);
     if (created) {
-      setNewCategorySlug("");
       setNewCategoryTitle("");
       setCategoryPopupOpen(false);
     }
@@ -127,9 +120,7 @@ export function useRoomAdminActions({
     token,
     canCreateRooms,
     roomAdminController,
-    newCategorySlug,
     newCategoryTitle,
-    setNewCategorySlug,
     setNewCategoryTitle,
     setCategoryPopupOpen
   ]);
@@ -143,12 +134,14 @@ export function useRoomAdminActions({
     setEditingRoomTitle(room.title);
     setEditingRoomKind(room.kind);
     setEditingRoomCategoryId(room.category_id || "none");
+    setEditingRoomNsfw(Boolean(room.nsfw));
     setEditingRoomAudioQualitySetting(room.audio_quality_override ?? "server_default");
     setChannelSettingsPopupOpenId(room.id);
   }, [
     setEditingRoomTitle,
     setEditingRoomKind,
     setEditingRoomCategoryId,
+    setEditingRoomNsfw,
     setEditingRoomAudioQualitySetting,
     setChannelSettingsPopupOpenId
   ]);
@@ -199,6 +192,7 @@ export function useRoomAdminActions({
       title: editingRoomTitle,
       kind: editingRoomKind,
       categoryId: editingRoomCategoryId === "none" ? null : editingRoomCategoryId,
+      nsfw: editingRoomNsfw,
       audioQualityOverride: canManageAudioQuality
         ? (editingRoomAudioQualitySetting === "server_default" ? null : editingRoomAudioQualitySetting)
         : undefined
@@ -214,6 +208,7 @@ export function useRoomAdminActions({
     editingRoomTitle,
     editingRoomKind,
     editingRoomCategoryId,
+    editingRoomNsfw,
     editingRoomAudioQualitySetting,
     canManageAudioQuality,
     setChannelSettingsPopupOpenId

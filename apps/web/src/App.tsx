@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { api } from "./api";
+import { ApiError, api } from "./api";
 import { TooltipPortal } from "./TooltipPortal";
 import {
   AuthController,
@@ -11,12 +11,14 @@ import {
 import type { CallStatus } from "./services";
 import {
   AccessStateGate,
+  AgeVerificationRequiredOverlay,
   AppHeader,
   AppWorkspacePanels,
   AppUpdatedOverlay,
   CookieConsentBanner,
   DesktopBrowserCompletionGate,
   DesktopUpdateBanner,
+  EmptyServerOnboarding,
   FirstRunIntroOverlay,
   GuestLoginGate,
   LegalLinks,
@@ -24,7 +26,8 @@ import {
   RemoteAudioAutoplayBanner,
   ServerProfileModalContainer,
   SessionMovedOverlay,
-  ToastStack
+  ToastStack,
+  UserDock
 } from "./components";
 import {
   DEFAULT_CHAT_IMAGE_DATA_URL_LENGTH,
@@ -35,12 +38,12 @@ import {
   MAX_CHAT_RETRIES,
   MESSAGE_EDIT_DELETE_WINDOW_MS,
   PENDING_ACCESS_AUTO_REFRESH_SEC,
-  ROOM_SLUG_STORAGE_KEY,
   VERSION_UPDATE_PENDING_KEY
 } from "./constants/appConfig";
 import type { InputProfile, MediaDevicesState } from "./components";
 import {
   useAppUiState,
+  useAppShellLifecycleEffects,
   useAdminUsersSync,
   useAutoRoomVoiceConnection,
   useAppEventLogs,
@@ -48,13 +51,16 @@ import {
   useBuildVersionSync,
   useDesktopHandoffState,
   useDesktopUpdateFlow,
+  useInviteAcceptanceFlow,
   usePendingAccessAutoRefresh,
+  useOnboardingOverlayActions,
+  useRoomSlugPersistence,
+  useServerDataSync,
   useWorkspaceRoomsPanelProps,
   useServerVideoWindowBounds,
   useWorkspaceChatVideoProps,
-  useWorkspaceUserDockProps,
+  useWorkspaceUserDockController,
   useSessionStateLifecycle,
-  useMemberPreferencesSync,
   useTelemetryRefresh,
   useCollapsedCategories,
   useCurrentRoomSnapshot,
@@ -73,7 +79,10 @@ import {
   useWsEventAcks,
   useRoomAdminActions,
   useRoomMediaCapabilities,
+  useRoomMemberPreferencesOrchestrator,
   useRoomPresenceActions,
+  useRoomSelectionGuard,
+  useServerProfileActions,
   useServerModerationActions,
   useRoomsDerived,
   useScreenWakeLock,
@@ -83,11 +92,14 @@ import {
   useToastQueue,
   useLivekitVoiceRuntime,
   useVoiceSignalingOrchestrator,
-  useVoiceRoomStateMaps
+  useVoiceRoomStateMaps,
+  useVoiceUiLifecycleEffects
 } from "./hooks";
 import { detectInitialLang, LOCALE_BY_LANG, TEXT, type Lang } from "./i18n";
 import { DEFAULT_UI_THEME, formatBuildDateLabel, normalizeUiTheme, readNonZeroDefaultVolume } from "./utils/appShell";
 import type {
+  AdminServerListItem,
+  AdminServerOverview,
   AudioQuality,
   ChannelAudioQualitySetting,
   Message,
@@ -97,6 +109,8 @@ import type {
   Room,
   RoomKind,
   RoomsTreeResponse,
+  ServerMemberItem,
+  ServerListItem,
   TelemetrySummary,
   UiTheme,
   User
@@ -116,9 +130,12 @@ const COOKIE_MODE = import.meta.env.VITE_AUTH_COOKIE_MODE === "1";
 const CHAT_TYPING_TTL_MS = 4500;
 const CHAT_TYPING_PING_INTERVAL_MS = 1800;
 const COOKIE_CONSENT_KEY = "boltorezka_cookie_consent_v1";
+const CURRENT_SERVER_ID_STORAGE_KEY = "boltorezka_current_server_id";
+const ROOM_SLUG_STORAGE_KEY = "boltorezka_room_slug";
 
-// App is an orchestration boundary: it wires hooks/controllers and passes state to UI.
-// Parsing, transport rules, and feature workflows should live in dedicated hooks/modules.
+// IMPORTANT: `App` is an orchestration boundary only.
+// Do not add new business logic, parsing, transport rules, or large feature workflows here.
+// Put feature logic into dedicated hooks/services/components and keep this file as glue code.
 export function App() {
   const [token, setToken] = useState(() => (COOKIE_MODE ? "" : localStorage.getItem("boltorezka_token") || ""));
   const [user, setUser] = useState<User | null>(null);
@@ -126,14 +143,8 @@ export function App() {
   const [rooms, setRooms] = useState<Room[]>([]);
   const [roomsTree, setRoomsTree] = useState<RoomsTreeResponse | null>(null);
   const [archivedRooms, setArchivedRooms] = useState<Room[]>([]);
-  const [roomSlug, setRoomSlug] = useState(() => {
-    const stored = String(localStorage.getItem(ROOM_SLUG_STORAGE_KEY) || "").trim();
-    return stored;
-  });
-  const [chatRoomSlug, setChatRoomSlug] = useState(() => {
-    const stored = String(localStorage.getItem(ROOM_SLUG_STORAGE_KEY) || "").trim();
-    return stored;
-  });
+  const [roomSlug, setRoomSlug] = useState("");
+  const [chatRoomSlug, setChatRoomSlug] = useState("");
   const [showAppUpdatedOverlay, setShowAppUpdatedOverlay] = useState(
     () => sessionStorage.getItem(VERSION_UPDATE_PENDING_KEY) === "1"
   );
@@ -156,11 +167,30 @@ export function App() {
   const [roomsPresenceDetailsBySlug, setRoomsPresenceDetailsBySlug] = useState<Record<string, PresenceMember[]>>({});
   const [memberPreferencesByUserId, setMemberPreferencesByUserId] = useState<Record<string, RoomMemberPreference>>({});
   const [roomMediaTopologyBySlug, setRoomMediaTopologyBySlug] = useState<Record<string, "livekit">>({});
+  const [servers, setServers] = useState<ServerListItem[]>([]);
+  const [serversLoading, setServersLoading] = useState(false);
+  const [currentServerId, setCurrentServerId] = useState(() => String(localStorage.getItem(CURRENT_SERVER_ID_STORAGE_KEY) || "").trim());
+  const [creatingServer, setCreatingServer] = useState(false);
+  const [serverMembers, setServerMembers] = useState<ServerMemberItem[]>([]);
+  const [serverMembersLoading, setServerMembersLoading] = useState(false);
+  const [lastInviteUrl, setLastInviteUrl] = useState("");
+  const [creatingInvite, setCreatingInvite] = useState(false);
+  const [serverAgeLoading, setServerAgeLoading] = useState(false);
+  const [serverAgeConfirmedAt, setServerAgeConfirmedAt] = useState<string | null>(null);
+  const [serverAgeConfirming, setServerAgeConfirming] = useState(false);
+  const [ageGateBlockedRoomSlug, setAgeGateBlockedRoomSlug] = useState("");
+  const [pendingInviteToken, setPendingInviteToken] = useState("");
+  const [inviteAccepting, setInviteAccepting] = useState(false);
   const [telemetrySummary, setTelemetrySummary] = useState<TelemetrySummary | null>(null);
   const [wsState, setWsState] = useState<"disconnected" | "connecting" | "connected">(
     "disconnected"
   );
   const [adminUsers, setAdminUsers] = useState<User[]>([]);
+  const [adminServers, setAdminServers] = useState<AdminServerListItem[]>([]);
+  const [adminServersLoading, setAdminServersLoading] = useState(false);
+  const [selectedAdminServerId, setSelectedAdminServerId] = useState("");
+  const [adminServerOverview, setAdminServerOverview] = useState<AdminServerOverview | null>(null);
+  const [adminServerOverviewLoading, setAdminServerOverviewLoading] = useState(false);
   const [newRoomSlug, setNewRoomSlug] = useState("");
   const [newRoomTitle, setNewRoomTitle] = useState("");
   const [newRoomKind, setNewRoomKind] = useState<RoomKind>("text");
@@ -175,6 +205,7 @@ export function App() {
   const [editingRoomTitle, setEditingRoomTitle] = useState("");
   const [editingRoomKind, setEditingRoomKind] = useState<RoomKind>("text");
   const [editingRoomCategoryId, setEditingRoomCategoryId] = useState<string>("none");
+  const [editingRoomNsfw, setEditingRoomNsfw] = useState(false);
   const [editingRoomAudioQualitySetting, setEditingRoomAudioQualitySetting] = useState<ChannelAudioQualitySetting>("server_default");
   const [micMuted, setMicMuted] = useState<boolean>(() => localStorage.getItem("boltorezka_mic_muted") !== "0");
   const [audioMuted, setAudioMuted] = useState<boolean>(() => localStorage.getItem("boltorezka_audio_muted") === "1");
@@ -315,6 +346,7 @@ export function App() {
   } = useAppUiState();
   const { toasts, pushToast } = useToastQueue();
   const realtimeClientRef = useRef<RealtimeClient | null>(null);
+  const currentServerIdRef = useRef(currentServerId);
   const roomSlugRef = useRef(roomSlug);
   const lastRoomSlugForScrollRef = useRef(chatRoomSlug);
   const lastMessageIdRef = useRef<string | null>(null);
@@ -328,14 +360,30 @@ export function App() {
   const voiceSettingsAnchorRef = useRef<HTMLDivElement>(null);
   const userSettingsRef = useRef<HTMLDivElement>(null);
 
-  const canCreateRooms = user?.role === "admin" || user?.role === "super_admin";
-  const canManageUsers = canCreateRooms;
+  useEffect(() => {
+    currentServerIdRef.current = currentServerId;
+  }, [currentServerId]);
+
+  const currentServerRole = useMemo(
+    () => servers.find((item) => item.id === currentServerId)?.role || null,
+    [servers, currentServerId]
+  );
+  const canCreateRooms = Boolean(
+    user && (
+      user.role === "admin"
+      || user.role === "super_admin"
+      || currentServerRole === "owner"
+      || currentServerRole === "admin"
+    )
+  );
+  const canManageUsers = user?.role === "admin" || user?.role === "super_admin";
   const canPromote = user?.role === "super_admin";
   const canUseService = Boolean(
     user && (user.role === "admin" || user.role === "super_admin" || user.access_state === "active")
   );
   const serviceToken = canUseService ? token : "";
   const canManageAudioQuality = canPromote;
+  const canManageServerControlPlane = canPromote;
   const canViewTelemetry = canPromote || canCreateRooms;
   const locale = LOCALE_BY_LANG[lang];
   const t = useMemo(() => {
@@ -745,14 +793,15 @@ export function App() {
         setMessagesHasMore,
         setMessagesNextCursor,
         sendRoomJoinEvent: (slug) => {
-          void sendWsEvent("room.join", { roomSlug: slug }, { maxRetries: 1 });
+          return sendWsEventAwaitAck("room.join", { roomSlug: slug }, { maxRetries: 1 });
         },
         setRooms,
         setRoomsTree,
         setArchivedRooms,
-        setAdminUsers
+        setAdminUsers,
+        getCurrentServerId: () => currentServerIdRef.current
       }),
-    [pushLog, pushToast, sendWsEvent]
+    [pushLog, pushToast, sendWsEventAwaitAck]
   );
 
   const loadTelemetrySummary = useCallback(async () => {
@@ -841,61 +890,161 @@ export function App() {
     onProfileSaved: () => setRealtimeReconnectNonce((value) => value + 1)
   });
 
-  useEffect(() => {
-    localStorage.setItem("boltorezka_lang", lang);
-    document.documentElement.lang = lang;
-  }, [lang]);
+  useAppShellLifecycleEffects({
+    lang,
+    selectedUiTheme,
+    user,
+    chatRoomSlug,
+    setIsMobileViewport,
+    setProfileNameDraft,
+    setSelectedUiTheme,
+    setProfileStatusText,
+    setShowFirstRunIntro,
+    setEditingMessageId,
+    setPendingChatImageDataUrl
+  });
 
-  useEffect(() => {
-    document.documentElement.setAttribute("data-ui-theme", selectedUiTheme);
-    localStorage.setItem("boltorezka_ui_theme", selectedUiTheme);
-  }, [selectedUiTheme]);
+  useRoomSlugPersistence({
+    currentServerId,
+    roomSlug,
+    roomSlugStorageKey: ROOM_SLUG_STORAGE_KEY,
+    setRoomSlug,
+    setChatRoomSlug
+  });
 
-  useEffect(() => {
-    const mediaQuery = window.matchMedia("(max-width: 800px)");
-    const apply = (matches: boolean) => {
-      setIsMobileViewport(matches);
-    };
+  useInviteAcceptanceFlow({
+    token,
+    hasUser: Boolean(user),
+    pendingInviteToken,
+    setPendingInviteToken,
+    setInviteAccepting,
+    setServers,
+    setCurrentServerId,
+    pushToast,
+    t
+  });
 
-    apply(mediaQuery.matches);
+  useServerDataSync({
+    token,
+    hasUser: Boolean(user),
+    currentServerId,
+    selectedAdminServerId,
+    canManageServerControlPlane,
+    currentServerIdStorageKey: CURRENT_SERVER_ID_STORAGE_KEY,
+    setServerAgeConfirmedAt,
+    setServerAgeLoading,
+    setServers,
+    setServersLoading,
+    setCurrentServerId,
+    setServerMembers,
+    setServerMembersLoading,
+    setAdminServers,
+    setSelectedAdminServerId,
+    setAdminServerOverview,
+    setAdminServersLoading,
+    setAdminServerOverviewLoading,
+    pushLog
+  });
 
-    const handler = (event: MediaQueryListEvent) => apply(event.matches);
-    mediaQuery.addEventListener("change", handler);
-    return () => {
-      mediaQuery.removeEventListener("change", handler);
-    };
-  }, []);
+  const currentServer = useMemo(
+    () => servers.find((item) => item.id === currentServerId) || null,
+    [servers, currentServerId]
+  );
 
-  useEffect(() => {
-    setProfileNameDraft(user?.name || "");
-    setSelectedUiTheme(normalizeUiTheme(user?.ui_theme));
-    setProfileStatusText("");
-  }, [user]);
+  const {
+    handleCreateServer,
+    handleCreateServerInvite,
+    handleRenameCurrentServer,
+    handleConfirmServerAge,
+    handleCopyInviteUrl,
+    handleServerChange,
+    handleLeaveCurrentServer,
+    handleDeleteCurrentServer,
+    handleRemoveServerMember,
+    handleBanServerMember,
+    handleUnbanServerMember,
+    handleTransferServerOwnership
+  } = useServerProfileActions({
+    token,
+    currentServerId,
+    creatingInvite,
+    serverAgeConfirming,
+    lastInviteUrl,
+    setCreatingServer,
+    setServers,
+    setCurrentServerId,
+    setCreatingInvite,
+    setLastInviteUrl,
+    setServerAgeConfirming,
+    setServerAgeConfirmedAt,
+    setServerMembers,
+    pushToast,
+    t
+  });
 
-  useEffect(() => {
-    if (!user?.id) {
-      setShowFirstRunIntro(false);
+  const handleToggleAdminServerBlocked = useCallback(async (serverId: string, blocked: boolean) => {
+    const tokenValue = String(token || "").trim();
+    const targetServerId = String(serverId || "").trim();
+
+    if (!tokenValue || !targetServerId) {
       return;
     }
 
-    const storageKey = `boltorezka_intro_v1_seen:${user.id}`;
-    const alreadySeen = localStorage.getItem(storageKey) === "1";
-    setShowFirstRunIntro(!alreadySeen);
-  }, [user?.id]);
+    try {
+      await api.adminSetServerBlocked(tokenValue, targetServerId, blocked);
+      setAdminServers((prev) => prev.map((item) => (
+        item.id === targetServerId
+          ? { ...item, isBlocked: blocked }
+          : item
+      )));
 
-  useEffect(() => {
-    setEditingMessageId(null);
-    setPendingChatImageDataUrl(null);
-  }, [chatRoomSlug]);
+      const listResponse = await api.servers(tokenValue);
+      const list = Array.isArray(listResponse.servers) ? listResponse.servers : [];
+      setServers(list);
+      setCurrentServerId((prev) => {
+        const preferredId = prev === targetServerId && blocked ? "" : prev;
+        return list.some((item) => item.id === preferredId) ? preferredId : (list[0]?.id || "");
+      });
+      pushToast(blocked ? t("server.managementBlock") : t("server.managementUnblock"));
+    } catch (error) {
+      pushToast((error as Error).message || t("toast.serverError"));
+    }
+  }, [pushToast, setAdminServers, t, token]);
 
-  useEffect(() => {
-    if (roomSlug) {
-      localStorage.setItem(ROOM_SLUG_STORAGE_KEY, roomSlug);
+  const handleDeleteAdminServer = useCallback(async (serverId: string) => {
+    const tokenValue = String(token || "").trim();
+    const targetServerId = String(serverId || "").trim();
+
+    if (!tokenValue || !targetServerId) {
       return;
     }
 
-    localStorage.removeItem(ROOM_SLUG_STORAGE_KEY);
-  }, [roomSlug]);
+    try {
+      await api.adminDeleteServer(tokenValue, targetServerId);
+
+      const [adminServersResponse, serversResponse] = await Promise.all([
+        api.adminServers(tokenValue),
+        api.servers(tokenValue)
+      ]);
+
+      const adminList = Array.isArray(adminServersResponse.servers) ? adminServersResponse.servers : [];
+      const userList = Array.isArray(serversResponse.servers) ? serversResponse.servers : [];
+
+      setAdminServers(adminList);
+      setServers(userList);
+      setSelectedAdminServerId((prev) => {
+        const preferredId = prev === targetServerId ? "" : prev;
+        return adminList.some((item) => item.id === preferredId) ? preferredId : (adminList[0]?.id || "");
+      });
+      setCurrentServerId((prev) => {
+        const preferredId = prev === targetServerId ? "" : prev;
+        return userList.some((item) => item.id === preferredId) ? preferredId : (userList[0]?.id || "");
+      });
+      pushToast(t("server.deleteSuccess"));
+    } catch (error) {
+      pushToast((error as Error).message || t("toast.serverError"));
+    }
+  }, [pushToast, t, token]);
 
   useEffect(() => {
     if (!chatRoomSlug && roomSlug) {
@@ -905,6 +1054,7 @@ export function App() {
 
   useSessionStateLifecycle({
     token,
+    currentServerId,
     roomAdminController,
     pushLog,
     realtimeClientRef,
@@ -1060,16 +1210,14 @@ export function App() {
     playServerSound
   });
 
-  useEffect(() => {
-    if (!roomSlug) {
-      return;
-    }
-
-    const roomTopology = roomMediaTopologyBySlug[roomSlug];
-    if (roomTopology === "livekit") {
-      pushCallLog(`media topology for ${roomSlug}: ${roomTopology}`);
-    }
-  }, [roomSlug, roomMediaTopologyBySlug, pushCallLog]);
+  useVoiceUiLifecycleEffects({
+    userSettingsOpen,
+    userSettingsTab,
+    setSelfMonitorEnabled,
+    roomSlug,
+    roomMediaTopologyBySlug,
+    pushCallLog
+  });
 
   const { refreshDevices, requestMediaAccess, requestVideoAccess } = useMediaDevicePreferences({
     t,
@@ -1113,14 +1261,6 @@ export function App() {
     t,
     pushToast
   });
-
-  useEffect(() => {
-    if (userSettingsOpen && userSettingsTab === "sound") {
-      return;
-    }
-
-    setSelfMonitorEnabled(false);
-  }, [userSettingsOpen, userSettingsTab]);
 
   usePopupOutsideClose({
     isAnyPopupOpen: Boolean(
@@ -1202,69 +1342,21 @@ export function App() {
     pushToast,
     pushLog,
     t,
+    onAgeVerificationRequired: (slug) => {
+      setAgeGateBlockedRoomSlug(slug);
+    },
     setRoomSlug,
     setChatRoomSlug
   });
 
-  const handleToggleMic = useCallback(() => {
-    setMicMuted((value) => {
-      const nextMuted = !value;
-      if (!nextMuted) {
-        setAudioMuted(false);
-      }
-      return nextMuted;
-    });
-  }, []);
-
-  const handleToggleAudio = useCallback(() => {
-    setAudioMuted((value) => {
-      const nextMuted = !value;
-      if (nextMuted) {
-        setMicMuted(true);
-      }
-      return nextMuted;
-    });
-  }, []);
-
-  const saveMemberPreference = useCallback(async (targetUserId: string, input: { volume: number; note: string }) => {
-    if (!token || !targetUserId) {
-      return;
-    }
-
-    const nextPreference: RoomMemberPreference = {
-      targetUserId,
-      volume: Math.max(0, Math.min(100, Math.round(Number(input.volume) || 0))),
-      note: String(input.note || "").trim().slice(0, 32),
-      updatedAt: new Date().toISOString()
-    };
-
-    setMemberPreferencesByUserId((prev) => ({
-      ...prev,
-      [targetUserId]: nextPreference
-    }));
-
-    try {
-      const response = await api.upsertMemberPreference(token, targetUserId, {
-        volume: nextPreference.volume,
-        note: nextPreference.note
-      });
-
-      setMemberPreferencesByUserId((prev) => ({
-        ...prev,
-        [targetUserId]: response.preference
-      }));
-    } catch (error) {
-      pushLog(`member preference save failed: ${(error as Error).message}`);
-      pushToast(t("toast.serverError"));
-    }
-  }, [pushLog, pushToast, t, token]);
-
-  useMemberPreferencesSync({
+  const { saveMemberPreference } = useRoomMemberPreferencesOrchestrator({
     token,
     currentUserId: user?.id || "",
     roomsPresenceDetailsBySlug,
     setMemberPreferencesByUserId,
-    pushLog
+    pushLog,
+    pushToast,
+    t
   });
 
   const {
@@ -1299,41 +1391,13 @@ export function App() {
     [allRooms, chatRoomSlug]
   );
 
-  useEffect(() => {
-    if (allRooms.length === 0) {
-      return;
-    }
-
-    if (roomSlug) {
-      const joinedRoomExists = allRooms.some((room) => room.slug === roomSlug);
-      if (!joinedRoomExists) {
-        setRoomSlug("");
-      }
-    }
-
-    if (chatRoomSlug) {
-      const chatRoomExists = allRooms.some((room) => room.slug === chatRoomSlug);
-      if (!chatRoomExists) {
-        setChatRoomSlug("");
-      }
-    }
-  }, [allRooms, roomSlug, chatRoomSlug]);
-
-  useEffect(() => {
-    if (chatRoomSlug) {
-      return;
-    }
-
-    if (roomSlug) {
-      setChatRoomSlug(roomSlug);
-      return;
-    }
-
-    const firstRoom = allRooms[0];
-    if (firstRoom?.slug) {
-      setChatRoomSlug(firstRoom.slug);
-    }
-  }, [allRooms, chatRoomSlug, roomSlug]);
+  useRoomSelectionGuard({
+    allRooms,
+    roomSlug,
+    chatRoomSlug,
+    setRoomSlug,
+    setChatRoomSlug
+  });
 
   const {
     createRoom,
@@ -1358,29 +1422,27 @@ export function App() {
     allRooms,
     archivedRooms,
     roomAdminController,
-    newRoomSlug,
     newRoomTitle,
     newRoomKind,
     newRoomCategoryId,
-    newCategorySlug,
     newCategoryTitle,
     editingCategoryTitle,
     categorySettingsPopupOpenId,
     editingRoomTitle,
     editingRoomKind,
     editingRoomCategoryId,
+    editingRoomNsfw,
     editingRoomAudioQualitySetting,
     channelSettingsPopupOpenId,
-    setNewRoomSlug,
     setNewRoomTitle,
     setChannelPopupOpen,
-    setNewCategorySlug,
     setNewCategoryTitle,
     setCategoryPopupOpen,
     setNewRoomCategoryId,
     setEditingRoomTitle,
     setEditingRoomKind,
     setEditingRoomCategoryId,
+    setEditingRoomNsfw,
     setEditingRoomAudioQualitySetting,
     setChannelSettingsPopupOpenId,
     setEditingCategoryTitle,
@@ -1390,33 +1452,6 @@ export function App() {
     setMessagesNextCursor,
     joinRoom
   });
-
-  const inputOptions = inputDevices.length > 0 ? inputDevices : [{ id: "default", label: t("device.systemDefault") }];
-  const outputOptions = outputDevices.length > 0 ? outputDevices : [{ id: "default", label: t("device.systemDefault") }];
-  const videoInputOptions = videoInputDevices.length > 0 ? videoInputDevices : [{ id: "default", label: t("video.systemCamera") }];
-  const currentInputLabel = inputOptions.find((device) => device.id === selectedInputId)?.label ?? inputOptions[0]?.label ?? t("device.systemDefault");
-  const inputProfileLabel = selectedInputProfile === "noise_reduction"
-    ? t("settings.voiceIsolation")
-    : selectedInputProfile === "studio"
-      ? t("settings.studio")
-      : t("settings.custom");
-  const noiseSuppressionEnabled = selectedInputProfile === "noise_reduction";
-
-  const handleToggleNoiseSuppression = useCallback(() => {
-    setSelectedInputProfile((current) => {
-      const next = current === "noise_reduction" ? "custom" : "noise_reduction";
-      if (next !== "noise_reduction") {
-        setRnnoiseRuntimeStatus("inactive");
-      }
-      return next;
-    });
-  }, []);
-
-  useEffect(() => {
-    if (selectedInputProfile !== "noise_reduction") {
-      setRnnoiseRuntimeStatus("inactive");
-    }
-  }, [selectedInputProfile]);
 
   usePendingAccessAutoRefresh({
     user,
@@ -1436,47 +1471,46 @@ export function App() {
     disconnectRoom
   });
 
-  const acknowledgeUpdatedApp = useCallback(() => {
-    sessionStorage.removeItem(VERSION_UPDATE_PENDING_KEY);
-    setShowAppUpdatedOverlay(false);
-  }, []);
+  const { acknowledgeUpdatedApp, completeFirstRunIntro } = useOnboardingOverlayActions({
+    token,
+    user,
+    profileNameDraft,
+    selectedUiTheme,
+    versionUpdatePendingKey: VERSION_UPDATE_PENDING_KEY,
+    setProfileSaving,
+    setProfileStatusText,
+    setUser,
+    setShowFirstRunIntro,
+    setShowAppUpdatedOverlay,
+    pushToast,
+    t
+  });
 
   useServerMenuAccessGuard({
     serverMenuTab,
     canManageUsers,
+    canManageServerControlPlane,
     canViewTelemetry,
     canManageAudioQuality,
+    canManageChatImages: canPromote,
+    hasCurrentServer: Boolean(currentServer?.id),
     setServerMenuTab
   });
 
   useScreenWakeLock(Boolean(user && roomSlug && currentRoomSupportsRtc && roomVoiceConnected));
 
-  const handleToggleCamera = useCallback(() => {
-    if (allowVideoStreaming && !cameraEnabled) {
-      requestVideoAccess();
-    }
-    setCameraEnabled((value) => !value);
-  }, [allowVideoStreaming, cameraEnabled, requestVideoAccess]);
-
-  const handleToggleScreenShareClick = useCallback(() => {
-    void handleToggleScreenShare();
-  }, [handleToggleScreenShare]);
-
-  const handleToggleVoiceSettings = useCallback(() => {
-    setAudioOutputMenuOpen(false);
-    setVoiceSettingsPanel(null);
-    setVoiceSettingsOpen((value) => !value);
-  }, [setAudioOutputMenuOpen, setVoiceSettingsOpen, setVoiceSettingsPanel]);
-
-  const handleToggleAudioOutput = useCallback(() => {
-    setVoiceSettingsOpen(false);
-    setVoiceSettingsPanel(null);
-    setAudioOutputMenuOpen((value) => !value);
-  }, [setAudioOutputMenuOpen, setVoiceSettingsOpen, setVoiceSettingsPanel]);
-
-  const userDockSharedProps = useWorkspaceUserDockProps({
+  const userDockSharedProps = useWorkspaceUserDockController({
     t,
     user,
+    inputDevices,
+    outputDevices,
+    videoInputDevices,
+    allowVideoStreaming,
+    handleToggleScreenShare,
+    setMicMuted,
+    setAudioMuted,
+    setCameraEnabled,
+    setRnnoiseRuntimeStatus,
     currentRoomSupportsRtc,
     currentRoomSupportsVideo,
     currentRoomTitle: currentRoom?.title || "",
@@ -1488,7 +1522,6 @@ export function App() {
     screenShareActive: Boolean(currentRoomScreenShareOwner.userId),
     screenShareOwnedByCurrentUser: isCurrentUserScreenShareOwner,
     canStartScreenShare: canToggleScreenShare,
-    noiseSuppressionEnabled,
     rnnoiseSuppressionLevel,
     rnnoiseRuntimeStatus,
     preRnnEchoCancellationEnabled,
@@ -1504,17 +1537,15 @@ export function App() {
     profileNameDraft,
     profileSaving,
     profileStatusText,
+    serverAgeLoading,
+    serverAgeConfirmedAt,
+    serverAgeConfirming,
     lang,
     selectedUiTheme,
-    inputOptions,
-    outputOptions,
-    videoInputOptions,
     selectedInputId,
     selectedOutputId,
     selectedVideoInputId,
     selectedInputProfile,
-    inputProfileLabel,
-    currentInputLabel,
     micVolume,
     outputVolume,
     serverSoundsMasterVolume: serverSoundSettings.masterVolume,
@@ -1525,19 +1556,12 @@ export function App() {
     audioOutputAnchorRef,
     voiceSettingsAnchorRef,
     userSettingsRef,
-    handleToggleMic,
-    handleToggleAudio,
-    handleToggleCamera,
-    handleToggleScreenShareClick,
-    handleToggleNoiseSuppression,
     setRnnoiseSuppressionLevel,
     setPreRnnEchoCancellationEnabled,
     setPreRnnAutoGainControlEnabled,
     selfMonitorEnabled,
     setSelfMonitorEnabled,
     requestVideoAccess,
-    handleToggleVoiceSettings,
-    handleToggleAudioOutput,
     openUserSettings,
     setVoiceSettingsOpen,
     setAudioOutputMenuOpen,
@@ -1548,6 +1572,7 @@ export function App() {
     setLang,
     setSelectedUiTheme,
     saveMyProfile,
+    confirmServerAge: () => void handleConfirmServerAge(),
     setSelectedInputId,
     setSelectedOutputId,
     setSelectedVideoInputId,
@@ -1562,39 +1587,6 @@ export function App() {
     leaveRoom,
     isMobileViewport
   });
-
-  const completeFirstRunIntro = useCallback(async () => {
-    if (!user?.id) {
-      return;
-    }
-
-    const trimmedName = profileNameDraft.trim();
-    if (!trimmedName) {
-      pushToast(t("profile.saveError"));
-      return;
-    }
-
-    setProfileSaving(true);
-    setProfileStatusText("");
-    try {
-      const response = await api.updateMe(token, {
-        name: trimmedName,
-        uiTheme: selectedUiTheme
-      });
-      if (response.user) {
-        setUser(response.user);
-      }
-      localStorage.setItem(`boltorezka_intro_v1_seen:${user.id}`, "1");
-      setShowFirstRunIntro(false);
-      pushToast(t("profile.saveSuccess"));
-    } catch (error) {
-      const message = (error as Error).message || t("profile.saveError");
-      setProfileStatusText(message);
-      pushToast(message);
-    } finally {
-      setProfileSaving(false);
-    }
-  }, [profileNameDraft, pushToast, selectedUiTheme, t, token, user?.id]);
 
   const roomsPanelProps = useWorkspaceRoomsPanelProps({
     t,
@@ -1630,6 +1622,7 @@ export function App() {
     editingRoomTitle,
     editingRoomKind,
     editingRoomCategoryId,
+    editingRoomNsfw,
     editingRoomAudioQualitySetting,
     categoryPopupRef,
     channelPopupRef,
@@ -1645,6 +1638,7 @@ export function App() {
     onSetEditingRoomTitle: setEditingRoomTitle,
     onSetEditingRoomKind: setEditingRoomKind,
     onSetEditingRoomCategoryId: setEditingRoomCategoryId,
+    onSetEditingRoomNsfw: setEditingRoomNsfw,
     onSetEditingRoomAudioQualitySetting: setEditingRoomAudioQualitySetting,
     onCreateCategory: createCategory,
     onCreateRoom: createRoom,
@@ -1711,6 +1705,8 @@ export function App() {
     return <DesktopBrowserCompletionGate desktopHandoffError={desktopHandoffError} />;
   }
 
+  const showEmptyServerOnboarding = Boolean(user) && !serversLoading && servers.length === 0;
+
   if (user && !canUseService) {
     const blocked = user.access_state === "blocked";
     return (
@@ -1729,6 +1725,10 @@ export function App() {
       <AppHeader
         t={t}
         user={user}
+        currentServerName={currentServer?.name || null}
+        servers={servers}
+        currentServerId={currentServerId}
+        creatingServer={creatingServer}
         buildDateLabel={CLIENT_BUILD_DATE_LABEL}
         appMenuOpen={appMenuOpen}
         authMenuOpen={authMenuOpen}
@@ -1741,6 +1741,8 @@ export function App() {
         onBeginSso={beginSso}
         onLogout={logout}
         onOpenUserSettings={() => openUserSettings("profile")}
+        onChangeCurrentServer={(serverId) => setCurrentServerId(serverId)}
+        onCreateServer={handleCreateServer}
       />
       <TooltipPortal />
 
@@ -1763,6 +1765,13 @@ export function App() {
       ) : null}
 
       {user ? (
+        showEmptyServerOnboarding ? (
+          <EmptyServerOnboarding
+            t={t}
+            creatingServer={creatingServer}
+            onCreateServer={handleCreateServer}
+          />
+        ) : (
         <AppWorkspacePanels
           isMobileViewport={isMobileViewport}
           mobileTab={mobileTab}
@@ -1774,8 +1783,23 @@ export function App() {
           chatPanelProps={chatPanelProps}
           videoWindowsOverlayProps={videoWindowsOverlayProps}
         />
+        )
       ) : authMode !== "loading" ? (
-        <GuestLoginGate t={t} onBeginGoogleSso={() => beginSso("google")} />
+        <GuestLoginGate t={t} onBeginSso={beginSso} />
+      ) : null}
+
+      {showEmptyServerOnboarding && userSettingsOpen && userDockSharedProps ? (
+        <div className="no-server-user-settings-host">
+          <UserDock {...userDockSharedProps} inlineSettingsMode={false} />
+        </div>
+      ) : null}
+
+      {inviteAccepting ? (
+        <div className="fixed inset-x-0 top-24 z-[160] flex justify-center px-4">
+          <div className="rounded-xl border border-white/20 bg-black/75 px-4 py-2 text-sm text-pixel-text backdrop-blur">
+            {t("server.inviteAccepting")}
+          </div>
+        </div>
       ) : null}
 
       <ServerProfileModalContainer
@@ -1784,6 +1808,7 @@ export function App() {
         permissions={{
           canManageUsers,
           canPromote,
+          canManageServerControlPlane,
           canViewTelemetry,
           canManageAudioQuality
         }}
@@ -1807,6 +1832,20 @@ export function App() {
         }}
         data={{
           adminUsers,
+          adminServers,
+          adminServersLoading,
+          selectedAdminServerId,
+          adminServerOverview,
+          adminServerOverviewLoading,
+          currentUserId: user?.id || "",
+          currentServerRole: currentServer?.role || null,
+          currentServerName: currentServer?.name || "",
+          currentServerId,
+          servers,
+          hasCurrentServer: Boolean(currentServer?.id),
+          serverMembers,
+          serverMembersLoading,
+          lastInviteUrl,
           eventLog,
           telemetrySummary,
           callStatus,
@@ -1822,6 +1861,22 @@ export function App() {
           onDemote: (userId) => void demote(userId),
           onSetBan: (userId, banned) => void setUserBan(userId, banned),
           onSetAccessState: (userId, accessState) => void setUserAccessState(userId, accessState),
+          onSelectAdminServer: setSelectedAdminServerId,
+          onToggleAdminServerBlocked: (serverId, blocked) => void handleToggleAdminServerBlocked(serverId, blocked),
+          onDeleteAdminServer: (serverId) => void handleDeleteAdminServer(serverId),
+          onCreateServerInvite: () => void handleCreateServerInvite(),
+          onCopyInviteUrl: () => void handleCopyInviteUrl(),
+          onChangeCurrentServer: (serverId) => {
+            handleServerChange(serverId);
+            setSelectedAdminServerId(serverId);
+          },
+          onRenameCurrentServer: (name) => void handleRenameCurrentServer(name),
+          onLeaveServer: () => void handleLeaveCurrentServer(),
+          onDeleteServer: () => void handleDeleteCurrentServer(),
+          onRemoveServerMember: (userId) => void handleRemoveServerMember(userId),
+          onBanServerMember: (userId) => void handleBanServerMember(userId),
+          onUnbanServerMember: (userId) => void handleUnbanServerMember(userId),
+          onTransferServerOwnership: (userId) => void handleTransferServerOwnership(userId),
           onRefreshTelemetry: () => void loadTelemetrySummary(),
           onSetServerAudioQuality: (value) => void setServerAudioQualityValue(value),
           onSetServerVideoEffectType: setServerVideoEffectType,
@@ -1836,6 +1891,9 @@ export function App() {
           onSetServerVideoAsciiColor: setServerVideoAsciiColor,
           onSetServerVideoWindowMinWidth: setBoundedServerVideoWindowMinWidth,
           onSetServerVideoWindowMaxWidth: setBoundedServerVideoWindowMaxWidth
+        }}
+        meta={{
+          creatingInvite
         }}
       />
 
@@ -1864,6 +1922,24 @@ export function App() {
             setSessionMovedOverlayMessage("");
             window.location.reload();
           }}
+        />
+      ) : null}
+
+      {ageGateBlockedRoomSlug ? (
+        <AgeVerificationRequiredOverlay
+          t={t}
+          roomSlug={ageGateBlockedRoomSlug}
+          confirming={serverAgeConfirming}
+          onOpenAgeSettings={() => openUserSettings("profile")}
+          onConfirmAgeAndRetry={() => {
+            const blockedRoomSlug = ageGateBlockedRoomSlug;
+            void (async () => {
+              await handleConfirmServerAge();
+              setAgeGateBlockedRoomSlug("");
+              joinRoom(blockedRoomSlug);
+            })();
+          }}
+          onClose={() => setAgeGateBlockedRoomSlug("")}
         />
       ) : null}
 

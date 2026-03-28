@@ -94,6 +94,8 @@ async function resolveDefaultServerId(): Promise<string | null> {
     `SELECT id
      FROM servers
      WHERE is_default = TRUE
+       AND is_archived = FALSE
+       AND is_blocked = FALSE
      ORDER BY created_at ASC
      LIMIT 1`
   );
@@ -113,6 +115,8 @@ async function resolveServerMembership(userId: string, serverId: string) {
      FROM server_members sm
      JOIN servers s ON s.id = sm.server_id
      WHERE sm.server_id = $1
+       AND s.is_archived = FALSE
+       AND s.is_blocked = FALSE
        AND sm.user_id = $2
      LIMIT 1`,
     [serverId, userId]

@@ -2,6 +2,7 @@ import type { FastifyInstance, FastifyRequest } from "fastify";
 import type { RawData, WebSocket } from "ws";
 import { db } from "../db.js";
 import { config } from "../config.js";
+import { isServerAgeConfirmed } from "../services/age-verification-service.js";
 import { registerRealtimeSocket, unregisterRealtimeSocket } from "../realtime-broadcast.js";
 import { normalizeRequestId, sendAck, sendJson, sendNack } from "./realtime-io.js";
 import {
@@ -58,7 +59,7 @@ type WsTicketClaims = {
 
 type CanJoinRoomResult =
   | { ok: true; room: RoomRow }
-  | { ok: false; reason: "RoomNotFound" | "Forbidden" };
+  | { ok: false; reason: "RoomNotFound" | "Forbidden" | "AgeVerificationRequired" };
 
 type MediaTopology = "livekit";
 
@@ -224,7 +225,12 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
 
   const canJoinRoom = async (roomSlug: string, userId: string): Promise<CanJoinRoomResult> => {
     const room = await db.query<RoomRow>(
-      "SELECT id, slug, title, kind, is_public FROM rooms WHERE slug = $1 AND is_archived = FALSE",
+      `SELECT r.id, r.slug, r.title, r.kind, r.is_public, r.server_id, r.nsfw
+       FROM rooms r
+       LEFT JOIN servers s ON s.id = r.server_id
+       WHERE r.slug = $1
+         AND r.is_archived = FALSE
+         AND (r.server_id IS NULL OR (s.is_archived = FALSE AND s.is_blocked = FALSE))`,
       [roomSlug]
     );
 
@@ -233,6 +239,14 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
     }
 
     const selectedRoom = room.rows[0];
+
+    if (selectedRoom.nsfw === true) {
+      const serverId = String(selectedRoom.server_id || "").trim();
+      const confirmed = serverId ? await isServerAgeConfirmed(serverId, userId) : false;
+      if (!confirmed) {
+        return { ok: false, reason: "AgeVerificationRequired" };
+      }
+    }
 
     if (!selectedRoom.is_public) {
       const membership = await db.query(
@@ -328,7 +342,7 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
     socket: WebSocket,
     requestId: string | null,
     eventType: string,
-    reason: "RoomNotFound" | "Forbidden"
+    reason: "RoomNotFound" | "Forbidden" | "AgeVerificationRequired"
   ) => {
     sendNack(socket, requestId, eventType, reason, "Cannot join room");
     void incrementMetric("nack_sent");

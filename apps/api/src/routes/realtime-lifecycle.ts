@@ -13,7 +13,7 @@ export async function initializeRealtimeConnection(params: {
   userName: string;
   socketState: WeakMap<WebSocket, any>;
   attachUserSocket: (userId: string, socket: WebSocket) => void;
-  registerRealtimeSocket: (socket: WebSocket) => void;
+  registerRealtimeSocket: (socket: WebSocket, userId?: string) => void;
   redisHSet: (key: string, value: Record<string, string>) => Promise<unknown>;
   redisExpire: (key: string, seconds: number) => Promise<unknown>;
   sendJson: (socket: WebSocket, payload: unknown) => void;
@@ -46,7 +46,7 @@ export async function initializeRealtimeConnection(params: {
   });
 
   attachUserSocket(userId, connection);
-  registerRealtimeSocket(connection);
+  registerRealtimeSocket(connection, userId);
 
   await redisHSet(`presence:user:${userId}`, {
     online: "1",

@@ -52,6 +52,7 @@ export function RoomsPanel({
   editingRoomTitle,
   editingRoomKind,
   editingRoomCategoryId,
+  editingRoomNsfw,
   editingRoomAudioQualitySetting,
   categoryPopupRef,
   channelPopupRef,
@@ -67,6 +68,7 @@ export function RoomsPanel({
   onSetEditingRoomTitle,
   onSetEditingRoomKind,
   onSetEditingRoomCategoryId,
+  onSetEditingRoomNsfw,
   onSetEditingRoomAudioQualitySetting,
   onCreateCategory,
   onCreateRoom,
@@ -172,10 +174,12 @@ export function RoomsPanel({
       editingRoomTitle={editingRoomTitle}
       editingRoomKind={editingRoomKind}
       editingRoomCategoryId={editingRoomCategoryId}
+      editingRoomNsfw={editingRoomNsfw}
       editingRoomAudioQualitySetting={editingRoomAudioQualitySetting}
       onSetEditingRoomTitle={onSetEditingRoomTitle}
       onSetEditingRoomKind={onSetEditingRoomKind}
       onSetEditingRoomCategoryId={onSetEditingRoomCategoryId}
+      onSetEditingRoomNsfw={onSetEditingRoomNsfw}
       onSetEditingRoomAudioQualitySetting={onSetEditingRoomAudioQualitySetting}
       onSaveChannelSettings={onSaveChannelSettings}
       onMoveChannel={onMoveChannel}
@@ -201,10 +205,8 @@ export function RoomsPanel({
         t={t}
         canCreateRooms={canCreateRooms}
         roomsTree={roomsTree}
-        newCategorySlug={newCategorySlug}
         newCategoryTitle={newCategoryTitle}
         categoryPopupOpen={categoryPopupOpen}
-        newRoomSlug={newRoomSlug}
         newRoomTitle={newRoomTitle}
         newRoomKind={newRoomKind}
         newRoomCategoryId={newRoomCategoryId}
@@ -213,9 +215,7 @@ export function RoomsPanel({
         channelPopupRef={channelPopupRef}
         onSetCategoryPopupOpen={onSetCategoryPopupOpen}
         onSetChannelPopupOpen={onSetChannelPopupOpen}
-        onSetNewCategorySlug={onSetNewCategorySlug}
         onSetNewCategoryTitle={onSetNewCategoryTitle}
-        onSetNewRoomSlug={onSetNewRoomSlug}
         onSetNewRoomTitle={onSetNewRoomTitle}
         onSetNewRoomKind={onSetNewRoomKind}
         onSetNewRoomCategoryId={onSetNewRoomCategoryId}

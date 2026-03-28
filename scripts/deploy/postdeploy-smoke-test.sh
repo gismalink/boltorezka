@@ -54,6 +54,9 @@ VERSION_CACHE_STATUS="skip"
 WEB_CRASH_BOUNDARY_STATUS="skip"
 WEB_RNNOISE_STATUS="skip"
 DESKTOP_UPDATE_FEED_STATUS="skip"
+MULTISERVER_SMOKE_STATUS="skip"
+MULTISERVER_AGE_GATE_STATUS="skip"
+MULTISERVER_ROLE_MATRIX_STATUS="skip"
 EXTENDED_REALTIME_STATUS="skip"
 SMOKE_REALTIME_MEDIA_STATUS="skip"
 SMOKE_LIVEKIT_GATE_STATUS="skip"
@@ -83,6 +86,9 @@ write_summary() {
   printf 'SMOKE_WEB_CRASH_BOUNDARY_STATUS=%q\n' "$WEB_CRASH_BOUNDARY_STATUS" >>"$SUMMARY_FILE_REL"
   printf 'SMOKE_WEB_RNNOISE_STATUS=%q\n' "$WEB_RNNOISE_STATUS" >>"$SUMMARY_FILE_REL"
   printf 'SMOKE_DESKTOP_UPDATE_FEED_STATUS=%q\n' "$DESKTOP_UPDATE_FEED_STATUS" >>"$SUMMARY_FILE_REL"
+  printf 'SMOKE_MULTISERVER_STATUS=%q\n' "$MULTISERVER_SMOKE_STATUS" >>"$SUMMARY_FILE_REL"
+  printf 'SMOKE_MULTISERVER_AGE_GATE_STATUS=%q\n' "$MULTISERVER_AGE_GATE_STATUS" >>"$SUMMARY_FILE_REL"
+  printf 'SMOKE_MULTISERVER_ROLE_MATRIX_STATUS=%q\n' "$MULTISERVER_ROLE_MATRIX_STATUS" >>"$SUMMARY_FILE_REL"
   printf 'SMOKE_NACK_DELTA=%q\n' "$SMOKE_NACK_DELTA" >>"$SUMMARY_FILE_REL"
   printf 'SMOKE_ACK_DELTA=%q\n' "$SMOKE_ACK_DELTA" >>"$SUMMARY_FILE_REL"
   printf 'SMOKE_CHAT_SENT_DELTA=%q\n' "$SMOKE_CHAT_SENT_DELTA" >>"$SUMMARY_FILE_REL"
@@ -221,6 +227,37 @@ make_hs256_jwt() {
   unsigned="$(printf '%s' "$header" | base64url).$(printf '%s' "$payload" | base64url)"
   signature="$(printf '%s' "$unsigned" | openssl dgst -sha256 -hmac "$secret" -binary | base64url)"
   printf '%s.%s' "$unsigned" "$signature"
+}
+
+mint_smoke_bearer_for_email() {
+  local email="$1"
+  local target_var="$2"
+
+  if [[ -n "${!target_var:-}" ]]; then
+    return 0
+  fi
+
+  if [[ -z "$email" || -z "${JWT_SECRET_CANDIDATE:-}" ]]; then
+    return 0
+  fi
+
+  local user_meta user_id user_role session_id bearer auth_payload
+  user_meta="$(resolve_user_meta_by_email "$email")"
+  if [[ -z "$user_meta" ]]; then
+    return 0
+  fi
+
+  user_id="${user_meta%%|*}"
+  user_role="${user_meta##*|}"
+  if [[ -z "$user_id" || -z "$user_role" ]]; then
+    return 0
+  fi
+
+  session_id="$(uuidgen | tr '[:upper:]' '[:lower:]')"
+  bearer="$(make_hs256_jwt "$JWT_SECRET_CANDIDATE" "$user_id" "$user_role" "$session_id" "sso")"
+  auth_payload="$(printf '{"userId":"%s","authMode":"sso","issuedAt":"%s","rotatedFrom":null}' "$user_id" "$(date -u +%Y-%m-%dT%H:%M:%SZ)")"
+  compose exec -T "$REDIS_SERVICE" redis-cli SETEX "auth:session:$session_id" "${SMOKE_AUTH_SESSION_TTL_SEC:-2592000}" "$auth_payload" >/dev/null
+  export "$target_var=$bearer"
 }
 
 metric_from_hgetall() {
@@ -643,6 +680,11 @@ if [[ -z "${SMOKE_TEST_BEARER_TOKEN:-}" ]]; then
   fi
 fi
 
+if [[ -n "${JWT_SECRET_CANDIDATE:-}" ]]; then
+  mint_smoke_bearer_for_email "$USER_EMAIL_SECOND" SMOKE_TEST_BEARER_TOKEN_SECOND
+  mint_smoke_bearer_for_email "${SMOKE_USER_EMAIL_ADMIN:-}" SMOKE_TEST_BEARER_TOKEN_ADMIN
+fi
+
 if [[ "${SMOKE_API:-1}" == "0" ]]; then
   echo "[postdeploy-smoke] smoke:api skipped (SMOKE_API=0)"
   API_SMOKE_STATUS="skip"
@@ -857,11 +899,56 @@ else
   DESKTOP_UPDATE_FEED_STATUS="skip"
 fi
 
+if [[ "${SMOKE_MULTISERVER:-0}" == "1" ]]; then
+  if ! SMOKE_TEST_BEARER_TOKEN="$(mint_fresh_smoke_bearer "smoke:multiserver")"; then
+    echo "[postdeploy-smoke] smoke:multiserver skipped (failed to mint fresh primary bearer)"
+    MULTISERVER_SMOKE_STATUS="skip"
+  elif [[ -z "${SMOKE_TEST_BEARER_TOKEN:-}" || -z "${SMOKE_TEST_BEARER_TOKEN_SECOND:-}" ]]; then
+    echo "[postdeploy-smoke] smoke:multiserver skipped (missing bearer token pair)"
+    MULTISERVER_SMOKE_STATUS="skip"
+  else
+    echo "[postdeploy-smoke] smoke:multiserver"
+    SMOKE_API_URL="$BASE_URL" \
+      SMOKE_TEST_BEARER_TOKEN="${SMOKE_TEST_BEARER_TOKEN:-}" \
+      SMOKE_TEST_BEARER_TOKEN_SECOND="${SMOKE_TEST_BEARER_TOKEN_SECOND:-}" \
+      SMOKE_TEST_BEARER_TOKEN_ADMIN="${SMOKE_TEST_BEARER_TOKEN_ADMIN:-}" \
+      npm run smoke:multiserver
+    MULTISERVER_SMOKE_STATUS="pass"
+
+    if [[ "${SMOKE_MULTISERVER_AGE_GATE:-1}" == "1" ]]; then
+      echo "[postdeploy-smoke] smoke:multiserver:age-gate"
+      SMOKE_API_URL="$BASE_URL" \
+        SMOKE_ENV_SCOPE="$SMOKE_ENV_SCOPE" \
+        SMOKE_USER_EMAIL="$USER_EMAIL" \
+        SMOKE_USER_EMAIL_SECOND="$USER_EMAIL_SECOND" \
+        npm run smoke:multiserver:age-gate
+      MULTISERVER_AGE_GATE_STATUS="pass"
+    else
+      echo "[postdeploy-smoke] smoke:multiserver:age-gate skipped (SMOKE_MULTISERVER_AGE_GATE=0)"
+      MULTISERVER_AGE_GATE_STATUS="skip"
+    fi
+
+    if [[ "${SMOKE_MULTISERVER_ROLE_MATRIX:-1}" == "1" ]]; then
+      echo "[postdeploy-smoke] smoke:multiserver:role-matrix"
+      SMOKE_ENV_SCOPE="$SMOKE_ENV_SCOPE" npm run smoke:multiserver:role-matrix
+      MULTISERVER_ROLE_MATRIX_STATUS="pass"
+    else
+      echo "[postdeploy-smoke] smoke:multiserver:role-matrix skipped (SMOKE_MULTISERVER_ROLE_MATRIX=0)"
+      MULTISERVER_ROLE_MATRIX_STATUS="skip"
+    fi
+  fi
+else
+  echo "[postdeploy-smoke] smoke:multiserver skipped (SMOKE_MULTISERVER=0)"
+  MULTISERVER_SMOKE_STATUS="skip"
+  MULTISERVER_AGE_GATE_STATUS="skip"
+  MULTISERVER_ROLE_MATRIX_STATUS="skip"
+fi
+
 if [[ "${SMOKE_REALTIME:-1}" == "0" ]]; then
   collect_turn_allocation_failures
   echo "[postdeploy-smoke] realtime smoke skipped (SMOKE_REALTIME=0)"
   SMOKE_STATUS="pass"
-  SMOKE_SUMMARY_TEXT="health=pass mode=sso sso=pass api=$API_SMOKE_STATUS chat_object_storage=$CHAT_OBJECT_STORAGE_STATUS chat_orphan_cleanup=$CHAT_ORPHAN_CLEANUP_STATUS minio_storage=$MINIO_STORAGE_STATUS chat_storage_put_ok_delta=$SMOKE_CHAT_STORAGE_PUT_OK_DELTA chat_storage_put_fail_delta=$SMOKE_CHAT_STORAGE_PUT_FAIL_DELTA chat_storage_put_fail_status=$SMOKE_CHAT_STORAGE_PUT_FAIL_STATUS auth_session=$API_AUTH_SESSION_STATUS cookie_negative=$COOKIE_NEGATIVE_STATUS cookie_ws_ticket=$COOKIE_WS_TICKET_STATUS version_cache=$VERSION_CACHE_STATUS web_crash_boundary=$WEB_CRASH_BOUNDARY_STATUS web_rnnoise=$WEB_RNNOISE_STATUS desktop_update_feed=$DESKTOP_UPDATE_FEED_STATUS livekit_standard=$SMOKE_LIVEKIT_STANDARD_PROFILE_STATUS turn_tls=$SMOKE_TURN_TLS_STATUS turn_rotation=$SMOKE_TURN_ROTATION_STATUS turn_alloc_failures=$SMOKE_TURN_ALLOCATION_FAILURES turn_alloc_status=$SMOKE_TURN_ALLOCATION_STATUS realtime=skip extended_realtime=$EXTENDED_REALTIME_STATUS realtime_media=$SMOKE_REALTIME_MEDIA_STATUS transport=$SMOKE_MEDIA_TRANSPORT_SUMMARY one_way(audio=$SMOKE_ONE_WAY_AUDIO_INCIDENTS,video=$SMOKE_ONE_WAY_VIDEO_INCIDENTS) delta(nack=0,ack=0,chat=0,idem=0,initial_state=0,initial_state_participants=0)"
+  SMOKE_SUMMARY_TEXT="health=pass mode=sso sso=pass api=$API_SMOKE_STATUS multiserver=$MULTISERVER_SMOKE_STATUS multiserver_age_gate=$MULTISERVER_AGE_GATE_STATUS multiserver_role_matrix=$MULTISERVER_ROLE_MATRIX_STATUS chat_object_storage=$CHAT_OBJECT_STORAGE_STATUS chat_orphan_cleanup=$CHAT_ORPHAN_CLEANUP_STATUS minio_storage=$MINIO_STORAGE_STATUS chat_storage_put_ok_delta=$SMOKE_CHAT_STORAGE_PUT_OK_DELTA chat_storage_put_fail_delta=$SMOKE_CHAT_STORAGE_PUT_FAIL_DELTA chat_storage_put_fail_status=$SMOKE_CHAT_STORAGE_PUT_FAIL_STATUS auth_session=$API_AUTH_SESSION_STATUS cookie_negative=$COOKIE_NEGATIVE_STATUS cookie_ws_ticket=$COOKIE_WS_TICKET_STATUS version_cache=$VERSION_CACHE_STATUS web_crash_boundary=$WEB_CRASH_BOUNDARY_STATUS web_rnnoise=$WEB_RNNOISE_STATUS desktop_update_feed=$DESKTOP_UPDATE_FEED_STATUS livekit_standard=$SMOKE_LIVEKIT_STANDARD_PROFILE_STATUS turn_tls=$SMOKE_TURN_TLS_STATUS turn_rotation=$SMOKE_TURN_ROTATION_STATUS turn_alloc_failures=$SMOKE_TURN_ALLOCATION_FAILURES turn_alloc_status=$SMOKE_TURN_ALLOCATION_STATUS realtime=skip extended_realtime=$EXTENDED_REALTIME_STATUS realtime_media=$SMOKE_REALTIME_MEDIA_STATUS transport=$SMOKE_MEDIA_TRANSPORT_SUMMARY one_way(audio=$SMOKE_ONE_WAY_AUDIO_INCIDENTS,video=$SMOKE_ONE_WAY_VIDEO_INCIDENTS) delta(nack=0,ack=0,chat=0,idem=0,initial_state=0,initial_state_participants=0)"
   exit 0
 fi
 
@@ -1204,6 +1291,6 @@ SMOKE_CALL_INITIAL_STATE_PARTICIPANTS_DELTA=$((CALL_INITIAL_STATE_PARTICIPANTS_A
 collect_turn_allocation_failures
 
 SMOKE_STATUS="pass"
-SMOKE_SUMMARY_TEXT="health=pass mode=sso sso=pass api=$API_SMOKE_STATUS chat_object_storage=$CHAT_OBJECT_STORAGE_STATUS chat_orphan_cleanup=$CHAT_ORPHAN_CLEANUP_STATUS minio_storage=$MINIO_STORAGE_STATUS chat_storage_put_ok_delta=$SMOKE_CHAT_STORAGE_PUT_OK_DELTA chat_storage_put_fail_delta=$SMOKE_CHAT_STORAGE_PUT_FAIL_DELTA chat_storage_put_fail_status=$SMOKE_CHAT_STORAGE_PUT_FAIL_STATUS auth_session=$API_AUTH_SESSION_STATUS cookie_negative=$COOKIE_NEGATIVE_STATUS cookie_ws_ticket=$COOKIE_WS_TICKET_STATUS version_cache=$VERSION_CACHE_STATUS web_crash_boundary=$WEB_CRASH_BOUNDARY_STATUS web_rnnoise=$WEB_RNNOISE_STATUS desktop_update_feed=$DESKTOP_UPDATE_FEED_STATUS livekit_standard=$SMOKE_LIVEKIT_STANDARD_PROFILE_STATUS turn_tls=$SMOKE_TURN_TLS_STATUS turn_rotation=$SMOKE_TURN_ROTATION_STATUS turn_alloc_failures=$SMOKE_TURN_ALLOCATION_FAILURES turn_alloc_status=$SMOKE_TURN_ALLOCATION_STATUS realtime=pass extended_realtime=$EXTENDED_REALTIME_STATUS livekit_gate=$SMOKE_LIVEKIT_GATE_STATUS livekit_media=$SMOKE_LIVEKIT_MEDIA_STATUS realtime_media=$SMOKE_REALTIME_MEDIA_STATUS transport=$SMOKE_MEDIA_TRANSPORT_SUMMARY one_way(audio=$SMOKE_ONE_WAY_AUDIO_INCIDENTS,video=$SMOKE_ONE_WAY_VIDEO_INCIDENTS) delta(nack=$SMOKE_NACK_DELTA,ack=$SMOKE_ACK_DELTA,chat=$SMOKE_CHAT_SENT_DELTA,idem=$SMOKE_CHAT_IDEMPOTENCY_HIT_DELTA,initial_state=$SMOKE_CALL_INITIAL_STATE_SENT_DELTA,initial_state_participants=$SMOKE_CALL_INITIAL_STATE_PARTICIPANTS_DELTA)"
+SMOKE_SUMMARY_TEXT="health=pass mode=sso sso=pass api=$API_SMOKE_STATUS chat_object_storage=$CHAT_OBJECT_STORAGE_STATUS chat_orphan_cleanup=$CHAT_ORPHAN_CLEANUP_STATUS minio_storage=$MINIO_STORAGE_STATUS chat_storage_put_ok_delta=$SMOKE_CHAT_STORAGE_PUT_OK_DELTA chat_storage_put_fail_delta=$SMOKE_CHAT_STORAGE_PUT_FAIL_DELTA chat_storage_put_fail_status=$SMOKE_CHAT_STORAGE_PUT_FAIL_STATUS auth_session=$API_AUTH_SESSION_STATUS cookie_negative=$COOKIE_NEGATIVE_STATUS cookie_ws_ticket=$COOKIE_WS_TICKET_STATUS version_cache=$VERSION_CACHE_STATUS web_crash_boundary=$WEB_CRASH_BOUNDARY_STATUS web_rnnoise=$WEB_RNNOISE_STATUS desktop_update_feed=$DESKTOP_UPDATE_FEED_STATUS multiserver=$MULTISERVER_SMOKE_STATUS multiserver_age_gate=$MULTISERVER_AGE_GATE_STATUS multiserver_role_matrix=$MULTISERVER_ROLE_MATRIX_STATUS livekit_standard=$SMOKE_LIVEKIT_STANDARD_PROFILE_STATUS turn_tls=$SMOKE_TURN_TLS_STATUS turn_rotation=$SMOKE_TURN_ROTATION_STATUS turn_alloc_failures=$SMOKE_TURN_ALLOCATION_FAILURES turn_alloc_status=$SMOKE_TURN_ALLOCATION_STATUS realtime=pass extended_realtime=$EXTENDED_REALTIME_STATUS livekit_gate=$SMOKE_LIVEKIT_GATE_STATUS livekit_media=$SMOKE_LIVEKIT_MEDIA_STATUS realtime_media=$SMOKE_REALTIME_MEDIA_STATUS transport=$SMOKE_MEDIA_TRANSPORT_SUMMARY one_way(audio=$SMOKE_ONE_WAY_AUDIO_INCIDENTS,video=$SMOKE_ONE_WAY_VIDEO_INCIDENTS) delta(nack=$SMOKE_NACK_DELTA,ack=$SMOKE_ACK_DELTA,chat=$SMOKE_CHAT_SENT_DELTA,idem=$SMOKE_CHAT_IDEMPOTENCY_HIT_DELTA,initial_state=$SMOKE_CALL_INITIAL_STATE_SENT_DELTA,initial_state_participants=$SMOKE_CALL_INITIAL_STATE_PARTICIPANTS_DELTA)"
 
 echo "[postdeploy-smoke] done"

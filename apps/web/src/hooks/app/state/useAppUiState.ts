@@ -1,7 +1,15 @@
 import { useState } from "react";
 import type { VoiceSettingsPanel } from "../../../components";
 
-export type AppServerMenuTab = "users" | "events" | "telemetry" | "call" | "sound" | "video" | "chat_images" | "desktop_downloads";
+export type AppServerMenuTab =
+  | "users"
+  | "product_management"
+  | "server_management"
+  | "observability"
+  | "sound"
+  | "video"
+  | "chat_images"
+  | "desktop_downloads";
 export type AppMobileTab = "channels" | "chat" | "settings";
 
 export function useAppUiState() {
@@ -13,7 +21,7 @@ export function useAppUiState() {
   const [authMenuOpen, setAuthMenuOpen] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [appMenuOpen, setAppMenuOpen] = useState(false);
-  const [serverMenuTab, setServerMenuTab] = useState<AppServerMenuTab>("events");
+  const [serverMenuTab, setServerMenuTab] = useState<AppServerMenuTab>("observability");
   const [isMobileViewport, setIsMobileViewport] = useState(false);
   const [mobileTab, setMobileTab] = useState<AppMobileTab>("channels");
   const [videoWindowsVisible, setVideoWindowsVisible] = useState(true);

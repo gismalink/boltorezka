@@ -10,6 +10,7 @@ import {
   ChatObjectStorageNotFoundError,
   createChatObjectStorage
 } from "../storage/chat-object-storage.js";
+import { isServerAgeConfirmed } from "../services/age-verification-service.js";
 import type {
   ChatUploadFinalizeResponse,
   ChatUploadInitResponse
@@ -542,9 +543,12 @@ export async function chatUploadsRoutes(fastify: FastifyInstance) {
       }
 
       const roomResult = await db.query<RoomRow>(
-        `SELECT id, slug, title, kind, audio_quality_override, category_id, position, is_public
-         FROM rooms
-         WHERE slug = $1 AND is_archived = FALSE
+        `SELECT r.id, r.slug, r.title, r.kind, r.audio_quality_override, r.category_id, r.position, r.is_public, r.server_id, r.nsfw
+         FROM rooms r
+         LEFT JOIN servers s ON s.id = r.server_id
+         WHERE r.slug = $1
+           AND r.is_archived = FALSE
+           AND (r.server_id IS NULL OR (s.is_archived = FALSE AND s.is_blocked = FALSE))
          LIMIT 1`,
         [roomSlug]
       );
@@ -557,6 +561,17 @@ export async function chatUploadsRoutes(fastify: FastifyInstance) {
       }
 
       const room = roomResult.rows[0];
+      if (room.nsfw === true) {
+        const serverId = String(room.server_id || "").trim();
+        const confirmed = serverId ? await isServerAgeConfirmed(serverId, userId) : false;
+        if (!confirmed) {
+          return reply.code(403).send({
+            error: "AgeVerificationRequired",
+            message: "Age verification is required for NSFW access"
+          });
+        }
+      }
+
       if (!room.is_public) {
         const membership = await db.query(
           `SELECT 1 FROM room_members WHERE room_id = $1 AND user_id = $2 LIMIT 1`,

@@ -1,16 +1,6 @@
 import { api } from "../api";
 import type { AudioQuality, Message, MessagesCursor, Room, RoomKind, RoomsTreeResponse, User } from "../domain";
 
-const normalizeSlugInput = (value: string) => {
-  return String(value || "")
-    .trim()
-    .toLowerCase()
-    .replace(/[\s_]+/g, "-")
-    .replace(/[^a-z0-9-]/g, "")
-    .replace(/-+/g, "-")
-    .replace(/^-+|-+$/g, "");
-};
-
 type RoomAdminControllerOptions = {
   pushLog: (text: string) => void;
   pushToast?: (text: string) => void;
@@ -18,11 +8,12 @@ type RoomAdminControllerOptions = {
   setMessages: (updater: (prev: Message[]) => Message[]) => void;
   setMessagesHasMore: (value: boolean) => void;
   setMessagesNextCursor: (cursor: MessagesCursor | null) => void;
-  sendRoomJoinEvent: (slug: string) => void;
+  sendRoomJoinEvent: (slug: string) => Promise<void>;
   setRooms: (rooms: Room[]) => void;
   setRoomsTree: (tree: RoomsTreeResponse | null) => void;
   setArchivedRooms: (rooms: Room[]) => void;
   setAdminUsers: (users: User[]) => void;
+  getCurrentServerId?: () => string;
 };
 
 export class RoomAdminController {
@@ -32,13 +23,25 @@ export class RoomAdminController {
     this.options = options;
   }
 
+  private getCurrentServerId(): string | undefined {
+    const value = String(this.options.getCurrentServerId?.() || "").trim();
+    return value || undefined;
+  }
+
   async loadRoomTree(token: string) {
     try {
-      const tree = await api.roomTree(token);
+      const serverId = this.getCurrentServerId();
+      if (!serverId) {
+        this.options.setRoomsTree(null);
+        this.options.setArchivedRooms([]);
+        return;
+      }
+
+      const tree = await api.roomTree(token, serverId);
       this.options.setRoomsTree(tree);
 
       try {
-        const archived = await api.archivedRooms(token);
+        const archived = await api.archivedRooms(token, serverId);
         this.options.setArchivedRooms(archived.rooms);
       } catch (error) {
         this.options.pushLog(`archived rooms failed: ${(error as Error).message}`);
@@ -50,13 +53,15 @@ export class RoomAdminController {
     }
   }
 
-  async createCategory(token: string, slugInput: string, titleInput: string) {
+  async createCategory(token: string, titleInput: string) {
     try {
-      const slug = normalizeSlugInput(slugInput);
       const title = titleInput.trim();
-      await api.createCategory(token, { slug, title });
+      const response = await api.createCategory(token, {
+        title,
+        server_id: this.getCurrentServerId()
+      });
       await this.loadRoomTree(token);
-      this.options.pushLog(`category created: ${slug}`);
+      this.options.pushLog(`category created: ${response.category.slug}`);
       return true;
     } catch (error) {
       this.options.pushLog(`create category failed: ${(error as Error).message}`);
@@ -91,7 +96,7 @@ export class RoomAdminController {
   async deleteCategory(token: string, categoryId: string) {
     try {
       await api.deleteCategory(token, categoryId);
-      const res = await api.rooms(token);
+      const res = await api.rooms(token, this.getCurrentServerId());
       this.options.setRooms(res.rooms);
       await this.loadRoomTree(token);
       this.options.pushLog("category deleted");
@@ -104,25 +109,24 @@ export class RoomAdminController {
 
   async createRoom(
     token: string,
-    slugInput: string,
     titleInput: string,
-    options: { kind: RoomKind; categoryId: string | null; audioQualityOverride?: AudioQuality | null }
+    options: { kind: RoomKind; categoryId: string | null; nsfw?: boolean; audioQualityOverride?: AudioQuality | null }
   ) {
     try {
-      const slug = normalizeSlugInput(slugInput);
       const title = titleInput.trim();
-      await api.createRoom(token, {
-        slug,
+      const response = await api.createRoom(token, {
         title,
         is_public: true,
         kind: options.kind,
+        server_id: this.getCurrentServerId(),
         category_id: options.categoryId,
+        nsfw: Boolean(options.nsfw),
         audio_quality_override: options.audioQualityOverride
       });
-      const res = await api.rooms(token);
+      const res = await api.rooms(token, this.getCurrentServerId());
       this.options.setRooms(res.rooms);
       await this.loadRoomTree(token);
-      this.options.pushLog(`room created: ${slug}`);
+      this.options.pushLog(`room created: ${response.room.slug}`);
       return true;
     } catch (error) {
       const reason = (error as Error).message;
@@ -139,6 +143,7 @@ export class RoomAdminController {
       title: string;
       kind: RoomKind;
       categoryId: string | null;
+      nsfw?: boolean;
       audioQualityOverride?: AudioQuality | null;
     }
   ) {
@@ -147,10 +152,11 @@ export class RoomAdminController {
         title: options.title.trim(),
         kind: options.kind,
         category_id: options.categoryId,
+        nsfw: Boolean(options.nsfw),
         audio_quality_override: options.audioQualityOverride
       });
 
-      const res = await api.rooms(token);
+      const res = await api.rooms(token, this.getCurrentServerId());
       this.options.setRooms(res.rooms);
       await this.loadRoomTree(token);
       this.options.pushLog("channel updated");
@@ -176,7 +182,7 @@ export class RoomAdminController {
   async deleteRoom(token: string, roomId: string) {
     try {
       await api.deleteRoom(token, roomId);
-      const res = await api.rooms(token);
+      const res = await api.rooms(token, this.getCurrentServerId());
       this.options.setRooms(res.rooms);
       await this.loadRoomTree(token);
       this.options.pushLog("channel archived");
@@ -190,7 +196,7 @@ export class RoomAdminController {
   async restoreRoom(token: string, roomId: string) {
     try {
       await api.restoreRoom(token, roomId);
-      const res = await api.rooms(token);
+      const res = await api.rooms(token, this.getCurrentServerId());
       this.options.setRooms(res.rooms);
       await this.loadRoomTree(token);
       this.options.pushLog("channel restored");
@@ -224,12 +230,12 @@ export class RoomAdminController {
     }
   }
 
-  joinRoom(slug: string) {
+  async joinRoom(slug: string) {
+    await this.options.sendRoomJoinEvent(slug);
     this.options.setRoomSlug(slug);
     this.options.setMessages(() => []);
     this.options.setMessagesHasMore(false);
     this.options.setMessagesNextCursor(null);
-    this.options.sendRoomJoinEvent(slug);
   }
 
   async promote(token: string, userId: string) {

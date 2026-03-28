@@ -44,6 +44,8 @@ export type RoomRow = {
   kind: RoomKind;
   audio_quality_override?: AudioQuality | null;
   category_id: string | null;
+  server_id?: string;
+  nsfw?: boolean;
   position: number;
   is_public: boolean;
   created_at?: string;
@@ -109,6 +111,56 @@ export type ServerMemberRow = {
   role: ServerMemberRole;
   status: ServerMemberStatus;
   joined_at: string;
+};
+
+export type ServerInviteRow = {
+  id: string;
+  server_id: string;
+  token_hash: string;
+  created_by_user_id: string | null;
+  expires_at: string | null;
+  max_uses: number | null;
+  used_count: number;
+  is_revoked: boolean;
+  created_at: string;
+};
+
+export type ServerBanRow = {
+  id: string;
+  server_id: string;
+  user_id: string;
+  reason: string | null;
+  banned_by_user_id: string | null;
+  expires_at: string | null;
+  created_at: string;
+};
+
+export type ServiceBanRow = {
+  id: string;
+  user_id: string;
+  reason: string | null;
+  banned_by_user_id: string | null;
+  expires_at: string | null;
+  created_at: string;
+};
+
+export type ServerAuditLogRow = {
+  id: string;
+  server_id: string | null;
+  actor_user_id: string | null;
+  target_user_id: string | null;
+  action: string;
+  meta: Record<string, unknown>;
+  created_at: string;
+};
+
+export type ServerAgeConfirmationRow = {
+  server_id: string;
+  user_id: string;
+  source: string | null;
+  confirmed_at: string;
+  created_at: string;
+  updated_at: string;
 };
 
 export type ServerSettingsRow = {

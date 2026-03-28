@@ -29,10 +29,12 @@ type RoomRowProps = Pick<
   | "editingRoomTitle"
   | "editingRoomKind"
   | "editingRoomCategoryId"
+  | "editingRoomNsfw"
   | "editingRoomAudioQualitySetting"
   | "onSetEditingRoomTitle"
   | "onSetEditingRoomKind"
   | "onSetEditingRoomCategoryId"
+  | "onSetEditingRoomNsfw"
   | "onSetEditingRoomAudioQualitySetting"
   | "onSaveChannelSettings"
   | "onMoveChannel"
@@ -68,10 +70,12 @@ export function RoomRow({
   editingRoomTitle,
   editingRoomKind,
   editingRoomCategoryId,
+  editingRoomNsfw,
   editingRoomAudioQualitySetting,
   onSetEditingRoomTitle,
   onSetEditingRoomKind,
   onSetEditingRoomCategoryId,
+  onSetEditingRoomNsfw,
   onSetEditingRoomAudioQualitySetting,
   onSaveChannelSettings,
   onMoveChannel,
@@ -251,7 +255,31 @@ export function RoomRow({
             <div>
               <form className="grid gap-4" onSubmit={onSaveChannelSettings}>
                 <h3 className="subheading">{t("rooms.channelSettings")}</h3>
-                <input value={editingRoomTitle} onChange={(event) => onSetEditingRoomTitle(event.target.value)} placeholder={t("rooms.channelTitle")} />
+                <div className="row items-center gap-2">
+                  <input
+                    value={editingRoomTitle}
+                    onChange={(event) => onSetEditingRoomTitle(event.target.value)}
+                    placeholder={t("rooms.channelTitle")}
+                  />
+                  <button
+                    type="button"
+                    className="secondary icon-btn tiny"
+                    onClick={() => onMoveChannel("up")}
+                    aria-label={t("rooms.up")}
+                    data-tooltip={t("rooms.up")}
+                  >
+                    <i className="bi bi-arrow-up" aria-hidden="true" />
+                  </button>
+                  <button
+                    type="button"
+                    className="secondary icon-btn tiny"
+                    onClick={() => onMoveChannel("down")}
+                    aria-label={t("rooms.down")}
+                    data-tooltip={t("rooms.down")}
+                  >
+                    <i className="bi bi-arrow-down" aria-hidden="true" />
+                  </button>
+                </div>
                 <div className="grid gap-3 desktop:grid-cols-2">
                   <select value={editingRoomKind} onChange={(event) => onSetEditingRoomKind(event.target.value as RoomKind)}>
                     <option value="text">{t("rooms.text")}</option>
@@ -264,6 +292,19 @@ export function RoomRow({
                       <option key={category.id} value={category.id}>{category.title}</option>
                     ))}
                   </select>
+                </div>
+                <div className="row items-center justify-between gap-3">
+                  <span>{t("rooms.channelNsfw")}</span>
+                  <button
+                    type="button"
+                    className={`ui-switch ${editingRoomNsfw ? "ui-switch-on" : ""}`}
+                    role="switch"
+                    aria-checked={editingRoomNsfw}
+                    aria-label={t("rooms.channelNsfw")}
+                    onClick={() => onSetEditingRoomNsfw(!editingRoomNsfw)}
+                  >
+                    <span className="ui-switch-thumb" aria-hidden="true" />
+                  </button>
                 </div>
                 {canManageAudioQuality ? (
                   <div className="grid gap-2">
@@ -312,14 +353,6 @@ export function RoomRow({
                     </div>
                   </div>
                 ) : null}
-                <div className="flex flex-wrap items-center gap-3">
-                  <button type="button" className="secondary" onClick={() => onMoveChannel("up")}>
-                    <i className="bi bi-arrow-up" aria-hidden="true" /> {t("rooms.up")}
-                  </button>
-                  <button type="button" className="secondary" onClick={() => onMoveChannel("down")}>
-                    <i className="bi bi-arrow-down" aria-hidden="true" /> {t("rooms.down")}
-                  </button>
-                </div>
                 <button type="submit" className="icon-action"><i className="bi bi-check2" aria-hidden="true" /> {t("rooms.save")}</button>
                 <button
                   type="button"

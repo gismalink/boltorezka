@@ -18,6 +18,7 @@ const COOKIE_MODE = import.meta.env.VITE_AUTH_COOKIE_MODE === "1";
 
 type UseSessionStateLifecycleArgs = {
   token: string;
+  currentServerId: string;
   roomAdminController: RoomAdminController;
   pushLog: (text: string) => void;
   realtimeClientRef: MutableRefObject<RealtimeClient | null>;
@@ -50,6 +51,7 @@ type UseSessionStateLifecycleArgs = {
 
 export function useSessionStateLifecycle({
   token,
+  currentServerId,
   roomAdminController,
   pushLog,
   realtimeClientRef,
@@ -195,7 +197,15 @@ export function useSessionStateLifecycle({
         return;
       }
 
-      api.rooms(nextToken)
+      const activeServerId = String(currentServerId || "").trim();
+      if (!activeServerId) {
+        setRooms([]);
+        setRoomsTree(null);
+        setArchivedRooms([]);
+        return;
+      }
+
+      api.rooms(nextToken, activeServerId)
         .then((res) => setRooms(res.rooms))
         .catch((error) => pushLog(`rooms failed: ${error.message}`));
 
@@ -228,7 +238,8 @@ export function useSessionStateLifecycle({
     setServerAudioQuality,
     setServerChatImagePolicy,
     setToken,
-    setUser
+    setUser,
+    currentServerId
   ]);
 
   useEffect(() => {

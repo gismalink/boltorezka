@@ -9,6 +9,7 @@ type ServerProfileModalContainerProps = {
   permissions: {
     canManageUsers: boolean;
     canPromote: boolean;
+    canManageServerControlPlane: boolean;
     canViewTelemetry: boolean;
     canManageAudioQuality: boolean;
   };
@@ -32,6 +33,20 @@ type ServerProfileModalContainerProps = {
   };
   data: {
     adminUsers: ServerProfileModalProps["adminUsers"];
+    adminServers: ServerProfileModalProps["adminServers"];
+    adminServersLoading: ServerProfileModalProps["adminServersLoading"];
+    selectedAdminServerId: ServerProfileModalProps["selectedAdminServerId"];
+    adminServerOverview: ServerProfileModalProps["adminServerOverview"];
+    adminServerOverviewLoading: ServerProfileModalProps["adminServerOverviewLoading"];
+    currentUserId: string;
+    currentServerRole: ServerProfileModalProps["currentServerRole"];
+    currentServerName: string;
+    currentServerId: string;
+    servers: ServerProfileModalProps["servers"];
+    hasCurrentServer: boolean;
+    serverMembers: ServerProfileModalProps["serverMembers"];
+    serverMembersLoading: boolean;
+    lastInviteUrl: string;
     eventLog: string[];
     telemetrySummary: ServerProfileModalProps["telemetrySummary"];
     callStatus: string;
@@ -47,6 +62,19 @@ type ServerProfileModalContainerProps = {
     onDemote: ServerProfileModalProps["onDemote"];
     onSetBan: ServerProfileModalProps["onSetBan"];
     onSetAccessState: ServerProfileModalProps["onSetAccessState"];
+    onSelectAdminServer: ServerProfileModalProps["onSelectAdminServer"];
+    onToggleAdminServerBlocked: ServerProfileModalProps["onToggleAdminServerBlocked"];
+    onDeleteAdminServer: ServerProfileModalProps["onDeleteAdminServer"];
+    onCreateServerInvite: ServerProfileModalProps["onCreateServerInvite"];
+    onCopyInviteUrl: ServerProfileModalProps["onCopyInviteUrl"];
+    onChangeCurrentServer: ServerProfileModalProps["onChangeCurrentServer"];
+    onRenameCurrentServer: ServerProfileModalProps["onRenameCurrentServer"];
+    onLeaveServer: ServerProfileModalProps["onLeaveServer"];
+    onDeleteServer: ServerProfileModalProps["onDeleteServer"];
+    onRemoveServerMember: ServerProfileModalProps["onRemoveServerMember"];
+    onBanServerMember: ServerProfileModalProps["onBanServerMember"];
+    onUnbanServerMember: ServerProfileModalProps["onUnbanServerMember"];
+    onTransferServerOwnership: ServerProfileModalProps["onTransferServerOwnership"];
     onRefreshTelemetry: () => void;
     onSetServerAudioQuality: ServerProfileModalProps["onSetServerAudioQuality"];
     onSetServerVideoEffectType: ServerProfileModalProps["onSetServerVideoEffectType"];
@@ -62,18 +90,37 @@ type ServerProfileModalContainerProps = {
     onSetServerVideoWindowMinWidth: ServerProfileModalProps["onSetServerVideoWindowMinWidth"];
     onSetServerVideoWindowMaxWidth: ServerProfileModalProps["onSetServerVideoWindowMaxWidth"];
   };
+  meta: {
+    creatingInvite: boolean;
+  };
 };
 
-export function ServerProfileModalContainer({ open, t, permissions, state, data, actions }: ServerProfileModalContainerProps) {
+export function ServerProfileModalContainer({ open, t, permissions, state, data, actions, meta }: ServerProfileModalContainerProps) {
   return (
     <ServerProfileModal
       open={open}
       t={t}
       canManageUsers={permissions.canManageUsers}
       canPromote={permissions.canPromote}
+      canManageServerControlPlane={permissions.canManageServerControlPlane}
       canViewTelemetry={permissions.canViewTelemetry}
       serverMenuTab={state.serverMenuTab}
       adminUsers={data.adminUsers}
+      adminServers={data.adminServers}
+      adminServersLoading={data.adminServersLoading}
+      selectedAdminServerId={data.selectedAdminServerId}
+      adminServerOverview={data.adminServerOverview}
+      adminServerOverviewLoading={data.adminServerOverviewLoading}
+      currentUserId={data.currentUserId}
+      currentServerRole={data.currentServerRole}
+      currentServerName={data.currentServerName}
+      currentServerId={data.currentServerId}
+      servers={data.servers}
+      hasCurrentServer={data.hasCurrentServer}
+      serverMembers={data.serverMembers}
+      serverMembersLoading={data.serverMembersLoading}
+      lastInviteUrl={data.lastInviteUrl}
+      creatingInvite={meta.creatingInvite}
       eventLog={data.eventLog}
       telemetrySummary={data.telemetrySummary}
       callStatus={data.callStatus}
@@ -103,6 +150,19 @@ export function ServerProfileModalContainer({ open, t, permissions, state, data,
       onDemote={actions.onDemote}
       onSetBan={actions.onSetBan}
       onSetAccessState={actions.onSetAccessState}
+      onSelectAdminServer={actions.onSelectAdminServer}
+      onToggleAdminServerBlocked={actions.onToggleAdminServerBlocked}
+      onDeleteAdminServer={actions.onDeleteAdminServer}
+      onCreateServerInvite={actions.onCreateServerInvite}
+      onCopyInviteUrl={actions.onCopyInviteUrl}
+      onChangeCurrentServer={actions.onChangeCurrentServer}
+      onRenameCurrentServer={actions.onRenameCurrentServer}
+      onLeaveServer={actions.onLeaveServer}
+      onDeleteServer={actions.onDeleteServer}
+      onRemoveServerMember={actions.onRemoveServerMember}
+      onBanServerMember={actions.onBanServerMember}
+      onUnbanServerMember={actions.onUnbanServerMember}
+      onTransferServerOwnership={actions.onTransferServerOwnership}
       onRefreshTelemetry={actions.onRefreshTelemetry}
       onSetServerAudioQuality={actions.onSetServerAudioQuality}
       onSetServerVideoEffectType={actions.onSetServerVideoEffectType}

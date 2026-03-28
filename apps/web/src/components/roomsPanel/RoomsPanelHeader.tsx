@@ -7,10 +7,8 @@ type RoomsPanelHeaderProps = Pick<
   | "t"
   | "canCreateRooms"
   | "roomsTree"
-  | "newCategorySlug"
   | "newCategoryTitle"
   | "categoryPopupOpen"
-  | "newRoomSlug"
   | "newRoomTitle"
   | "newRoomKind"
   | "newRoomCategoryId"
@@ -19,9 +17,7 @@ type RoomsPanelHeaderProps = Pick<
   | "channelPopupRef"
   | "onSetCategoryPopupOpen"
   | "onSetChannelPopupOpen"
-  | "onSetNewCategorySlug"
   | "onSetNewCategoryTitle"
-  | "onSetNewRoomSlug"
   | "onSetNewRoomTitle"
   | "onSetNewRoomKind"
   | "onSetNewRoomCategoryId"
@@ -33,10 +29,8 @@ export function RoomsPanelHeader({
   t,
   canCreateRooms,
   roomsTree,
-  newCategorySlug,
   newCategoryTitle,
   categoryPopupOpen,
-  newRoomSlug,
   newRoomTitle,
   newRoomKind,
   newRoomCategoryId,
@@ -45,9 +39,7 @@ export function RoomsPanelHeader({
   channelPopupRef,
   onSetCategoryPopupOpen,
   onSetChannelPopupOpen,
-  onSetNewCategorySlug,
   onSetNewCategoryTitle,
-  onSetNewRoomSlug,
   onSetNewRoomTitle,
   onSetNewRoomKind,
   onSetNewRoomCategoryId,
@@ -77,7 +69,6 @@ export function RoomsPanelHeader({
                 <div>
                   <form className="grid gap-4" onSubmit={onCreateCategory}>
                     <h3 className="subheading">{t("rooms.createCategoryTitle")}</h3>
-                    <input value={newCategorySlug} onChange={(event) => onSetNewCategorySlug(event.target.value)} placeholder={t("rooms.categorySlug")} />
                     <input value={newCategoryTitle} onChange={(event) => onSetNewCategoryTitle(event.target.value)} placeholder={t("rooms.categoryTitle")} />
                     <button type="submit" className="icon-action"><i className="bi bi-check2" aria-hidden="true" /> {t("rooms.save")}</button>
                   </form>
@@ -102,7 +93,6 @@ export function RoomsPanelHeader({
                 <div>
                   <form className="grid gap-4" onSubmit={onCreateRoom}>
                     <h3 className="subheading">{t("rooms.createChannelTitle")}</h3>
-                    <input value={newRoomSlug} onChange={(event) => onSetNewRoomSlug(event.target.value)} placeholder={t("rooms.channelSlug")} />
                     <input value={newRoomTitle} onChange={(event) => onSetNewRoomTitle(event.target.value)} placeholder={t("rooms.channelTitle")} />
                     <div className="grid gap-3 desktop:grid-cols-2">
                       <select value={newRoomKind} onChange={(event) => onSetNewRoomKind(event.target.value as RoomKind)}>

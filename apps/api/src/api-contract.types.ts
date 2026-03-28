@@ -134,10 +134,155 @@ export type ServerGetResponse = {
   server: ServerListItem;
 };
 
+export type ServerMemberItem = {
+  userId: string;
+  email: string;
+  name: string;
+  role: ServerMemberRole;
+  status: "active";
+  isServerBanned: boolean;
+};
+
+export type ServerMembersResponse = {
+  serverId: string;
+  members: ServerMemberItem[];
+};
+
+export type ServerMemberLeaveResponse = {
+  left: boolean;
+};
+
+export type ServerMemberRemoveResponse = {
+  removed: boolean;
+};
+
+export type ServerOwnerTransferResponse = {
+  transferred: boolean;
+};
+
 export type ServerRenameResponse = {
   server: ServerListItem;
 };
 
+export type ServerDeleteResponse = {
+  deleted: boolean;
+};
+
 export type ServerContext = Pick<ServerRow, "id" | "slug" | "name"> & {
   role: ServerMemberRole;
+};
+
+export type InviteCreateResponse = {
+  inviteUrl: string;
+  token: string;
+  expiresAt: string | null;
+};
+
+export type InviteAcceptResponse = {
+  server: ServerContext;
+};
+
+export type ServerBanResponse = {
+  ban: {
+    id: string;
+    serverId: string;
+    userId: string;
+    reason: string | null;
+    expiresAt: string | null;
+    createdAt: string;
+  };
+};
+
+export type ServerBanRevokeResponse = {
+  revoked: boolean;
+};
+
+export type ServiceBanResponse = {
+  ban: {
+    id: string;
+    userId: string;
+    reason: string | null;
+    expiresAt: string | null;
+    createdAt: string;
+  };
+};
+
+export type ServiceBanRevokeResponse = {
+  revoked: boolean;
+};
+
+export type AdminServerListItem = {
+  id: string;
+  slug: string;
+  name: string;
+  isDefault: boolean;
+  isBlocked: boolean;
+  ownerUserId: string | null;
+  ownerName: string | null;
+  membersCount: number;
+  roomsCount: number;
+  messagesCount: number;
+  activeServerBansCount: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type AdminServersResponse = {
+  servers: AdminServerListItem[];
+};
+
+export type AdminServerOverview = {
+  id: string;
+  slug: string;
+  name: string;
+  isDefault: boolean;
+  ownerUserId: string | null;
+  ownerName: string | null;
+  createdAt: string;
+  updatedAt: string;
+  metrics: {
+    members: {
+      total: number;
+      active: number;
+      invited: number;
+      removed: number;
+      left: number;
+      owners: number;
+      admins: number;
+    };
+    rooms: {
+      total: number;
+      nsfw: number;
+      archived: number;
+    };
+    messages: {
+      total: number;
+    };
+    invites: {
+      total: number;
+      active: number;
+      revoked: number;
+      expired: number;
+    };
+    serverBans: {
+      total: number;
+      active: number;
+    };
+  };
+};
+
+export type AdminServerOverviewResponse = {
+  server: AdminServerOverview;
+};
+
+export type ServerAgeConfirmResponse = {
+  ok: true;
+  serverId: string;
+  confirmedAt: string;
+};
+
+export type ServerAgeStatusResponse = {
+  serverId: string;
+  confirmed: boolean;
+  confirmedAt: string | null;
 };

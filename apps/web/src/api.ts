@@ -1,5 +1,7 @@
 import type {
   AudioQuality,
+  AdminServerOverviewResponse,
+  AdminServersResponse,
   AuthModeResponse,
   MessagesCursor,
   LivekitTokenResponse,
@@ -10,7 +12,16 @@ import type {
   RoomsTreeResponse,
   ServerAudioQualityResponse,
   ServerChatImagePolicyResponse,
+  ServerCreateResponse,
+  ServerDeleteResponse,
+  ServerRenameResponse,
+  ServerMembersResponse,
+  ServerAgeStatusResponse,
+  ServerAgeConfirmResponse,
+  InviteAcceptResponse,
+  InviteCreateResponse,
   TelemetrySummary,
+  ServerListItem,
   User,
   RoomMemberPreference
 } from "./domain";
@@ -166,7 +177,9 @@ const endpoints = {
   roomsTree: "/v1/rooms/tree",
   roomCategories: "/v1/room-categories",
   telemetrySummary: "/v1/telemetry/summary",
+  servers: "/v1/servers",
   adminUsers: "/v1/admin/users",
+  adminServers: "/v1/admin/servers",
   adminServerAudioQuality: "/v1/admin/server/audio-quality",
   adminServerChatImagePolicy: "/v1/admin/server/chat-image-policy",
   memberPreferences: "/v1/member-preferences",
@@ -176,6 +189,15 @@ const endpoints = {
 
 const withId = (basePath: string, id: string) => `${basePath}/${encodeURIComponent(id)}`;
 const withSuffix = (basePath: string, id: string, suffix: string) => `${withId(basePath, id)}/${suffix}`;
+const withServerIdQuery = (path: string, serverId?: string) => {
+  const normalizedServerId = String(serverId || "").trim();
+  if (!normalizedServerId) {
+    return path;
+  }
+
+  const separator = path.includes("?") ? "&" : "?";
+  return `${path}${separator}serverId=${encodeURIComponent(normalizedServerId)}`;
+};
 
 const withJsonBody = (method: "POST" | "PUT" | "PATCH" | "DELETE", body?: unknown): RequestInit => ({
   method,
@@ -244,10 +266,12 @@ export const api = {
     token: string,
     input: { roomSlug: string; canPublish?: boolean; canSubscribe?: boolean; canPublishData?: boolean }
   ) => fetchJson<LivekitTokenResponse>(endpoints.livekitToken, token, withJsonBody("POST", input)),
-  rooms: (token: string) => fetchJson<{ rooms: Room[] }>(endpoints.rooms, token),
-  archivedRooms: (token: string) => fetchJson<{ rooms: Room[] }>(endpoints.roomsArchived, token),
-  roomTree: (token: string) => fetchJson<RoomsTreeResponse>(endpoints.roomsTree, token),
-  createCategory: (token: string, input: { slug: string; title: string; position?: number }) =>
+  rooms: (token: string, serverId?: string) => fetchJson<{ rooms: Room[] }>(withServerIdQuery(endpoints.rooms, serverId), token),
+  archivedRooms: (token: string, serverId?: string) =>
+    fetchJson<{ rooms: Room[] }>(withServerIdQuery(endpoints.roomsArchived, serverId), token),
+  roomTree: (token: string, serverId?: string) =>
+    fetchJson<RoomsTreeResponse>(withServerIdQuery(endpoints.roomsTree, serverId), token),
+  createCategory: (token: string, input: { slug?: string; title: string; server_id?: string; position?: number }) =>
     fetchJson<{ category: RoomCategory }>(endpoints.roomCategories, token, withJsonBody("POST", input)),
   updateCategory: (token: string, categoryId: string, input: { title: string }) =>
     fetchJson<{ category: RoomCategory }>(withId(endpoints.roomCategories, categoryId), token, withJsonBody("PATCH", input)),
@@ -258,11 +282,13 @@ export const api = {
   createRoom: (
     token: string,
     input: {
-      slug: string;
+      slug?: string;
       title: string;
       is_public: boolean;
       kind?: RoomKind;
+      server_id?: string;
       category_id?: string | null;
+      nsfw?: boolean;
       audio_quality_override?: AudioQuality | null;
     }
   ) =>
@@ -270,7 +296,13 @@ export const api = {
   updateRoom: (
     token: string,
     roomId: string,
-    input: { title: string; kind: RoomKind; category_id: string | null; audio_quality_override?: AudioQuality | null }
+    input: {
+      title: string;
+      kind: RoomKind;
+      category_id: string | null;
+      nsfw?: boolean;
+      audio_quality_override?: AudioQuality | null;
+    }
   ) =>
     fetchJson<{ room: Room }>(withId(endpoints.rooms, roomId), token, withJsonBody("PATCH", input)),
   moveRoom: (token: string, roomId: string, direction: "up" | "down") =>
@@ -302,6 +334,44 @@ export const api = {
     );
   },
   telemetrySummary: (token: string) => fetchJson<TelemetrySummary>(endpoints.telemetrySummary, token),
+  servers: (token: string) => fetchJson<{ servers: ServerListItem[] }>(endpoints.servers, token),
+  createServer: (token: string, input: { name: string }) =>
+    fetchJson<ServerCreateResponse>(endpoints.servers, token, withJsonBody("POST", input)),
+  renameServer: (token: string, serverId: string, input: { name: string }) =>
+    fetchJson<ServerRenameResponse>(withId(endpoints.servers, serverId), token, withJsonBody("PATCH", input)),
+  deleteServer: (token: string, serverId: string) =>
+    fetchJson<ServerDeleteResponse>(withId(endpoints.servers, serverId), token, withJsonBody("DELETE")),
+  serverMembers: (token: string, serverId: string) =>
+    fetchJson<ServerMembersResponse>(withSuffix(endpoints.servers, serverId, "members"), token),
+  serverAgeStatus: (token: string, serverId: string) =>
+    fetchJson<ServerAgeStatusResponse>(withSuffix(endpoints.servers, serverId, "age-confirm"), token),
+  confirmServerAge: (token: string, serverId: string, source = "server-menu") =>
+    fetchJson<ServerAgeConfirmResponse>(
+      withSuffix(endpoints.servers, serverId, "age-confirm"),
+      token,
+      withJsonBody("POST", { source })
+    ),
+  leaveServer: (token: string, serverId: string) =>
+    fetchJson<{ left: boolean }>(withSuffix(endpoints.servers, serverId, "members/me"), token, withJsonBody("DELETE")),
+  removeServerMember: (token: string, serverId: string, userId: string) =>
+    fetchJson<{ removed: boolean }>(withId(withSuffix(endpoints.servers, serverId, "members"), userId), token, withJsonBody("DELETE")),
+  transferServerOwnership: (token: string, serverId: string, userId: string) =>
+    fetchJson<{ transferred: boolean }>(withSuffix(endpoints.servers, serverId, "owner"), token, withJsonBody("POST", { userId })),
+  applyServerBan: (token: string, serverId: string, userId: string, reason?: string) =>
+    fetchJson<{ ban: { id: string; serverId: string; userId: string } }>(
+      withSuffix(endpoints.servers, serverId, "bans"),
+      token,
+      withJsonBody("POST", { userId, ...(reason ? { reason } : {}) })
+    ),
+  revokeServerBan: (token: string, serverId: string, userId: string) =>
+    fetchJson<{ revoked: boolean }>(withId(withSuffix(endpoints.servers, serverId, "bans"), userId), token, withJsonBody("DELETE")),
+  createServerInvite: (
+    token: string,
+    serverId: string,
+    input: { ttlHours?: number; maxUses?: number } = {}
+  ) => fetchJson<InviteCreateResponse>(withSuffix(endpoints.servers, serverId, "invites"), token, withJsonBody("POST", input)),
+  acceptServerInvite: (token: string, inviteToken: string) =>
+    fetchJson<InviteAcceptResponse>(`/v1/invites/${encodeURIComponent(inviteToken)}/accept`, token, withJsonBody("POST")),
   serverAudioQuality: (token: string) => fetchJson<ServerAudioQualityResponse>(endpoints.adminServerAudioQuality, token),
   serverChatImagePolicy: (token: string) =>
     fetchJson<ServerChatImagePolicyResponse>(endpoints.adminServerChatImagePolicy, token),
@@ -312,6 +382,17 @@ export const api = {
       withJsonBody("PUT", { audioQuality })
     ),
   adminUsers: (token: string) => fetchJson<{ users: User[] }>(endpoints.adminUsers, token),
+  adminServers: (token: string) => fetchJson<AdminServersResponse>(endpoints.adminServers, token),
+  adminServerOverview: (token: string, serverId: string) =>
+    fetchJson<AdminServerOverviewResponse>(withSuffix(endpoints.adminServers, serverId, "overview"), token),
+  adminSetServerBlocked: (token: string, serverId: string, blocked: boolean) =>
+    fetchJson<{ serverId: string; isBlocked: boolean }>(
+      withSuffix(endpoints.adminServers, serverId, "block"),
+      token,
+      withJsonBody("POST", { blocked })
+    ),
+  adminDeleteServer: (token: string, serverId: string) =>
+    fetchJson<{ deleted: boolean }>(withId(endpoints.adminServers, serverId), token, withJsonBody("DELETE")),
   promoteUser: (token: string, userId: string) =>
     fetchJson<{ user: User }>(withSuffix(endpoints.adminUsers, userId, "promote"), token, withJsonBody("POST", { role: "admin" })),
   demoteUser: (token: string, userId: string) =>
