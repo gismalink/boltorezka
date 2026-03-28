@@ -78,7 +78,7 @@ export function AppHeader({
             {menuGlyph}
           </button>
         </div>
-        <div className="title-block flex min-w-0 flex-col">
+        <div className={`title-block server-title-hover-root flex min-w-0 flex-col ${createServerOpen ? "server-title-hover-root-open" : ""}`}>
           <h1 className="app-title font-heading text-[22px] leading-none text-pixel-text desktop:text-[28px]">
             {serverTitle ? `${t("app.title")} // ${serverTitle}` : t("app.title")}
           </h1>
@@ -87,53 +87,57 @@ export function AppHeader({
               {buildDateLabel}
             </div>
           ) : null}
+          {user ? (
+            <div className="server-title-hover-panel hidden desktop:grid gap-2">
+              <label className="grid gap-1 text-sm text-pixel-text/80">
+                <span>{t("server.switcher")}</span>
+                <select
+                  className="secondary min-w-[220px]"
+                  aria-label={t("server.switcherAria")}
+                  value={currentServerId}
+                  onChange={(event) => onChangeCurrentServer(event.target.value)}
+                >
+                  {servers.map((server) => (
+                    <option key={server.id} value={server.id}>{server.name}</option>
+                  ))}
+                </select>
+              </label>
+              <div className="grid gap-2" ref={createServerRef}>
+                <button
+                  type="button"
+                  className="secondary"
+                  aria-label={t("server.createAria")}
+                  onClick={() => setCreateServerOpen((value) => !value)}
+                >
+                  {t("server.create")}
+                </button>
+                <PopupPortal open={createServerOpen} anchorRef={createServerRef} className="profile-popup" placement="bottom-start">
+                  <div className="grid gap-2 min-w-[260px]">
+                    <label className="text-sm text-pixel-text/80" htmlFor="create-server-name-input">{t("server.createTitle")}</label>
+                    <input
+                      id="create-server-name-input"
+                      className="secondary"
+                      value={newServerName}
+                      maxLength={64}
+                      onChange={(event) => setNewServerName(event.target.value)}
+                      placeholder={t("server.createPlaceholder")}
+                    />
+                    <div className="flex gap-2 justify-end">
+                      <button type="button" className="secondary" onClick={() => setCreateServerOpen(false)}>{t("server.createCancel")}</button>
+                      <button type="button" onClick={() => { void submitCreateServer(); }} disabled={creatingServer || newServerName.trim().length < 3}>
+                        {creatingServer ? t("server.createLoading") : t("server.createSubmit")}
+                      </button>
+                    </div>
+                  </div>
+                </PopupPortal>
+              </div>
+            </div>
+          ) : null}
         </div>
       </div>
       <div className="header-actions flex items-center gap-3 desktop:gap-4">
         {user ? (
           <>
-            <label className="hidden desktop:flex items-center gap-2 text-sm text-pixel-text/80">
-              <span>{t("server.switcher")}</span>
-              <select
-                className="secondary min-w-[180px]"
-                aria-label={t("server.switcherAria")}
-                value={currentServerId}
-                onChange={(event) => onChangeCurrentServer(event.target.value)}
-              >
-                {servers.map((server) => (
-                  <option key={server.id} value={server.id}>{server.name}</option>
-                ))}
-              </select>
-            </label>
-            <div className="hidden desktop:block" ref={createServerRef}>
-              <button
-                type="button"
-                className="secondary"
-                aria-label={t("server.createAria")}
-                onClick={() => setCreateServerOpen((value) => !value)}
-              >
-                {t("server.create")}
-              </button>
-              <PopupPortal open={createServerOpen} anchorRef={createServerRef} className="profile-popup" placement="bottom-end">
-                <div className="grid gap-2 min-w-[260px]">
-                  <label className="text-sm text-pixel-text/80" htmlFor="create-server-name-input">{t("server.createTitle")}</label>
-                  <input
-                    id="create-server-name-input"
-                    className="secondary"
-                    value={newServerName}
-                    maxLength={64}
-                    onChange={(event) => setNewServerName(event.target.value)}
-                    placeholder={t("server.createPlaceholder")}
-                  />
-                  <div className="flex gap-2 justify-end">
-                    <button type="button" className="secondary" onClick={() => setCreateServerOpen(false)}>{t("server.createCancel")}</button>
-                    <button type="button" onClick={() => { void submitCreateServer(); }} disabled={creatingServer || newServerName.trim().length < 3}>
-                      {creatingServer ? t("server.createLoading") : t("server.createSubmit")}
-                    </button>
-                  </div>
-                </div>
-              </PopupPortal>
-            </div>
             <span className="user-chip hidden max-w-[220px] truncate font-semibold text-pixel-text desktop:inline">{user.name}</span>
             <div className="profile-menu" ref={profileMenuRef}>
               <button

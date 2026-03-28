@@ -850,6 +850,41 @@ pre {
   font-family: "Noto Sans Mono", "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 }
 
+.server-title-hover-root {
+  position: relative;
+}
+
+.server-title-hover-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  min-width: 260px;
+  padding: var(--space-md);
+  background: var(--pixel-panel);
+  border: var(--border-strong) solid var(--pixel-border);
+  border-radius: var(--radius-surface);
+  z-index: 75;
+  box-shadow:
+    0 0 0 2px var(--pixel-bg),
+    4px 4px 0 var(--pixel-hard-shadow),
+    -2px -2px 0 var(--pixel-neon-cyan),
+    2px -2px 0 var(--pixel-neon-pink);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(-4px);
+  transition: opacity 120ms ease, transform 120ms ease, visibility 120ms ease;
+}
+
+.server-title-hover-root:hover .server-title-hover-panel,
+.server-title-hover-root:focus-within .server-title-hover-panel,
+.server-title-hover-root.server-title-hover-root-open .server-title-hover-panel {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
 .app-menu-btn {
   padding: 0 var(--space-sm);
 }
