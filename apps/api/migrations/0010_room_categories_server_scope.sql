@@ -23,7 +23,7 @@ SET server_id = COALESCE(
     WHERE sm.user_id = rc.created_by
       AND sm.status = 'active'
       AND s.is_archived = FALSE
-    ORDER BY s.is_default DESC, sm.created_at ASC
+    ORDER BY s.is_default DESC, sm.joined_at ASC
     LIMIT 1
   ),
   (SELECT default_server_id FROM fallback),

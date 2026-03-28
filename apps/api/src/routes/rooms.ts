@@ -165,7 +165,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
        WHERE sm.user_id = $1
          AND sm.status = 'active'
          AND s.is_archived = FALSE
-       ORDER BY s.is_default DESC, sm.created_at ASC
+       ORDER BY s.is_default DESC, sm.joined_at ASC
        LIMIT 1`,
       [userId]
     );
