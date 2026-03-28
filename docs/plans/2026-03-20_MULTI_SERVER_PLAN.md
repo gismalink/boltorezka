@@ -360,16 +360,29 @@ Stage 4 note (2026-03-28):
 
 ### Stage 5 - Prod rollout
 
-- [ ] Deploy в `test` + smoke.
+- [x] Deploy в `test` + smoke.
 - [ ] Ручная проверка критического сценария (owner/admin/member).
 - [ ] Только после явного подтверждения: deploy в `prod`.
 
+Stage 5 note (2026-03-28):
+- Выполнен повторный test gate на feature-ветке:
+   - `TEST_REF=origin/feature/multiserver-stage1-services SMOKE_MULTISERVER=1 SMOKE_MULTISERVER_AGE_GATE=1 npm run deploy:test:smoke`.
+   - Applied SHA: `9b8b610`.
+   - Result: `PASS` (`smoke:multiserver`, `smoke:multiserver:age-gate`, `smoke:multiserver:role-matrix`, `smoke:realtime`).
+- В рамках этого же прохода подтвержден backend owner-transfer endpoint: `POST /v1/servers/:serverId/owner`.
+
 ### Stage 6 - Stabilization (сразу после релиза)
 
-- [ ] Owner transfer и защита от "server without owner".
+- [x] Owner transfer и защита от "server without owner".
 - [ ] Membership lifecycle: `leave`, `kick`, `rejoin`.
-- [ ] Admin control plane для суперадмина (глобальный список серверов, service ban/unban, переход в server management).
+- [x] Admin control plane для суперадмина (глобальный список серверов, service ban/unban, переход в server management).
 - [ ] Закрыть зависимость legal Stage E: перевести room-level age-gate в полноценный server+room режим и зафиксировать это в legal плане.
+
+Stage 6 note (2026-03-28):
+- Добавлен backend endpoint передачи владения сервером: `POST /v1/servers/:serverId/owner`.
+- Правила owner safety сохранены: владелец не может уйти с сервера (`owner_cannot_leave`) и не может быть удален (`owner_cannot_be_removed`) без передачи владения.
+- Ownership transfer выполняется транзакционно с аудит-событием `server.owner.transferred`.
+- `Membership lifecycle` частично закрыт: `leave` и `kick/remove` реализованы; `rejoin` остается как отдельная задача.
 
 ## 7) Что еще нужно добавить (рекомендации)
 
