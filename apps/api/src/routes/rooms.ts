@@ -184,9 +184,21 @@ export async function roomsRoutes(fastify: FastifyInstance) {
     async (request) => {
       const userId = String(request.user?.sub || "").trim();
       const requestedServerId = String(request.query.serverId || "").trim();
-      const activeServerId = requestedServerId
+      let activeServerId = requestedServerId
         ? await resolveAccessibleServerId(userId, requestedServerId)
         : null;
+
+      if (!requestedServerId) {
+        const defaultServer = await db.query<{ id: string }>(
+          `SELECT id
+           FROM servers
+           WHERE is_default = TRUE
+           ORDER BY created_at ASC
+           LIMIT 1`
+        );
+
+        activeServerId = String(defaultServer.rows[0]?.id || "").trim() || null;
+      }
 
       if (requestedServerId && !activeServerId) {
         const response: RoomsTreeResponse = {
