@@ -98,7 +98,7 @@ SELECT \
   (coalesce(bool_or(sm.role = 'member'), FALSE)::int)::text || '|' || \
   coalesce(array_to_string(array_agg(DISTINCT sm.role ORDER BY sm.role), ','), '') || '|' || \
   MAX(ensure_exec.admin_rows)::text || '|' || MAX(ensure_exec.member_rows)::text || '|' || \
-  CASE WHEN MAX(ensure_exec.helper_user_id) IS NULL THEN '0' ELSE '1' END \
+  CASE WHEN bool_or(ensure_exec.helper_user_id IS NOT NULL) THEN '1' ELSE '0' END \
 FROM ensure_exec \
 JOIN server_members sm ON sm.user_id = ensure_exec.user_id \
 WHERE ensure_exec.user_id IS NOT NULL \
