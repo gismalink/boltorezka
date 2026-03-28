@@ -185,6 +185,15 @@ export type InviteCreateResponse = {
   expiresAt: string | null;
 };
 
+export type InviteAcceptResponse = {
+  server: {
+    id: string;
+    slug: string;
+    name: string;
+    role: ServerMemberRole;
+  };
+};
+
 export type AdminServerListItem = {
   id: string;
   slug: string;

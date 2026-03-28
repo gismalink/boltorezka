@@ -127,6 +127,24 @@ const getRoomSlugStorageKey = (serverId: string) => {
   return normalizedServerId ? `${ROOM_SLUG_STORAGE_KEY}:${normalizedServerId}` : ROOM_SLUG_STORAGE_KEY;
 };
 
+function extractInviteTokenFromPath(pathname: string): string {
+  const normalizedPathname = String(pathname || "").trim();
+  if (!normalizedPathname) {
+    return "";
+  }
+
+  const parts = normalizedPathname.split("/").filter((item) => item.length > 0);
+  if (parts.length < 2 || parts[0].toLowerCase() !== "invite") {
+    return "";
+  }
+
+  try {
+    return decodeURIComponent(parts.slice(1).join("/")).trim();
+  } catch {
+    return parts.slice(1).join("/").trim();
+  }
+}
+
 // App is an orchestration boundary: it wires hooks/controllers and passes state to UI.
 // Parsing, transport rules, and feature workflows should live in dedicated hooks/modules.
 export function App() {
@@ -168,6 +186,10 @@ export function App() {
   const [serverMembersLoading, setServerMembersLoading] = useState(false);
   const [lastInviteUrl, setLastInviteUrl] = useState("");
   const [creatingInvite, setCreatingInvite] = useState(false);
+  const [pendingInviteToken, setPendingInviteToken] = useState(() =>
+    typeof window === "undefined" ? "" : extractInviteTokenFromPath(window.location.pathname)
+  );
+  const [inviteAccepting, setInviteAccepting] = useState(false);
   const [telemetrySummary, setTelemetrySummary] = useState<TelemetrySummary | null>(null);
   const [wsState, setWsState] = useState<"disconnected" | "connecting" | "connected">(
     "disconnected"
@@ -338,6 +360,7 @@ export function App() {
   const lastMessageIdRef = useRef<string | null>(null);
   const chatLogRef = useRef<HTMLDivElement>(null);
   const autoSsoAttemptedRef = useRef(false);
+  const inviteAcceptAttemptedTokenRef = useRef("");
   const authMenuRef = useRef<HTMLDivElement>(null);
   const profileMenuRef = useRef<HTMLDivElement>(null);
   const categoryPopupRef = useRef<HTMLDivElement>(null);
@@ -943,6 +966,79 @@ export function App() {
     setRoomSlug(nextSlug);
     setChatRoomSlug(nextSlug);
   }, [currentServerId]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const inviteToken = extractInviteTokenFromPath(window.location.pathname);
+    setPendingInviteToken(inviteToken);
+  }, []);
+
+  useEffect(() => {
+    const tokenValue = String(token || "").trim();
+    const inviteToken = String(pendingInviteToken || "").trim();
+
+    if (!tokenValue || !user || !inviteToken) {
+      return;
+    }
+
+    if (inviteAcceptAttemptedTokenRef.current === inviteToken) {
+      return;
+    }
+
+    inviteAcceptAttemptedTokenRef.current = inviteToken;
+    setInviteAccepting(true);
+
+    api.acceptServerInvite(tokenValue, inviteToken)
+      .then(async (result) => {
+        const acceptedServerId = String(result.server?.id || "").trim();
+        const listResponse = await api.servers(tokenValue);
+        const list = Array.isArray(listResponse.servers) ? listResponse.servers : [];
+        setServers(list);
+
+        if (acceptedServerId) {
+          setCurrentServerId(acceptedServerId);
+        } else {
+          setCurrentServerId((prev) => {
+            if (prev && list.some((item) => item.id === prev)) {
+              return prev;
+            }
+            return list[0]?.id || "";
+          });
+        }
+
+        if (typeof window !== "undefined" && extractInviteTokenFromPath(window.location.pathname)) {
+          window.history.replaceState({}, "", "/");
+        }
+
+        setPendingInviteToken("");
+        pushToast(t("server.inviteAcceptSuccess"));
+      })
+      .catch((error) => {
+        let message = (error as Error).message || t("toast.serverError");
+
+        if (error instanceof ApiError) {
+          if (error.code === "InviteNotFound") {
+            message = t("server.inviteAcceptNotFound");
+          } else if (error.code === "InviteUnavailable") {
+            message = t("server.inviteAcceptUnavailable");
+          } else if (error.code === "server_banned") {
+            message = t("server.inviteAcceptServerBanned");
+          }
+        }
+
+        pushToast(message);
+        if (typeof window !== "undefined" && extractInviteTokenFromPath(window.location.pathname)) {
+          window.history.replaceState({}, "", "/");
+        }
+        setPendingInviteToken("");
+      })
+      .finally(() => {
+        setInviteAccepting(false);
+      });
+  }, [token, user, pendingInviteToken, pushToast, t]);
 
   useEffect(() => {
     if (currentServerId) {
@@ -2166,6 +2262,14 @@ export function App() {
         )
       ) : authMode !== "loading" ? (
         <GuestLoginGate t={t} onBeginGoogleSso={() => beginSso("google")} />
+      ) : null}
+
+      {inviteAccepting ? (
+        <div className="fixed inset-x-0 top-24 z-[160] flex justify-center px-4">
+          <div className="rounded-xl border border-white/20 bg-black/75 px-4 py-2 text-sm text-pixel-text backdrop-blur">
+            {t("server.inviteAccepting")}
+          </div>
+        </div>
       ) : null}
 
       <ServerProfileModalContainer
