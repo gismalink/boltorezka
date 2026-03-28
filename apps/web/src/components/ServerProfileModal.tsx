@@ -337,6 +337,7 @@ export function ServerProfileModal({
   const totalBanned = adminUsers.filter((item) => item.is_banned).length;
   const showProductManagementTab = canManageServerControlPlane;
   const showServerManagementTab = true;
+  const showObservabilityTab = hasCurrentServer;
   const showLegacyUsersTab = !canManageServerControlPlane && canManageUsers;
   const showServerMembersPanel = serverMenuTab === "users" || serverMenuTab === "server_management";
   const showAdminUsersPanel = canManageUsers
@@ -826,13 +827,15 @@ export function ServerProfileModal({
               {t("server.tabServerManagement")}
             </button>
           ) : null}
-          <button
-            type="button"
-            className={`secondary user-settings-tab-btn min-h-[42px] justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${serverMenuTab === "observability" ? "user-settings-tab-btn-active" : ""}`}
-            onClick={() => onSetServerMenuTab("observability")}
-          >
-            {t("server.tabObservability")}
-          </button>
+          {showObservabilityTab ? (
+            <button
+              type="button"
+              className={`secondary user-settings-tab-btn min-h-[42px] justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${serverMenuTab === "observability" ? "user-settings-tab-btn-active" : ""}`}
+              onClick={() => onSetServerMenuTab("observability")}
+            >
+              {t("server.tabObservability")}
+            </button>
+          ) : null}
           {canManageAudioQuality ? (
             <button
               type="button"
@@ -875,7 +878,7 @@ export function ServerProfileModal({
               {serverMenuTab === "users" ? t("server.tabUsers") : null}
               {serverMenuTab === "product_management" ? t("server.tabProductManagement") : null}
               {serverMenuTab === "server_management" ? t("server.tabServerManagement") : null}
-              {serverMenuTab === "observability" ? t("server.tabObservability") : null}
+              {serverMenuTab === "observability" && showObservabilityTab ? t("server.tabObservability") : null}
               {serverMenuTab === "sound" ? t("server.tabSound") : null}
               {serverMenuTab === "video" ? t("server.tabVideo") : null}
               {serverMenuTab === "chat_images" ? t("server.tabChatImages") : null}
@@ -1128,7 +1131,7 @@ export function ServerProfileModal({
             </section>
           ) : null}
 
-          {serverMenuTab === "observability" ? (
+          {serverMenuTab === "observability" && showObservabilityTab ? (
             <section className="grid min-h-0 gap-3">
               <div className="quality-toggle-group" role="tablist" aria-label={t("server.observabilityTabs")}>
                 <button

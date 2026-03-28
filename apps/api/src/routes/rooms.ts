@@ -546,7 +546,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
   }>(
     "/v1/rooms",
     {
-      preHandler: [requireAuth, requireServiceAccess, loadCurrentUser, requireRole(["admin", "super_admin"])]
+      preHandler: [requireAuth, requireServiceAccess, loadCurrentUser]
     },
     async (request, reply) => {
       const parsed = createRoomSchema.safeParse(request.body);
@@ -620,6 +620,31 @@ export async function roomsRoutes(fastify: FastifyInstance) {
             message: "Default server is not configured"
           });
         }
+      }
+
+      const globalRole = String(request.currentUser?.role || "user").trim();
+      let canCreateRoom = globalRole === "admin" || globalRole === "super_admin";
+
+      if (!canCreateRoom) {
+        const membership = await db.query<{ role: string }>(
+          `SELECT role
+           FROM server_members
+           WHERE server_id = $1
+             AND user_id = $2
+             AND status = 'active'
+           LIMIT 1`,
+          [targetServerId, createdBy]
+        );
+
+        const serverRole = String(membership.rows[0]?.role || "").trim();
+        canCreateRoom = serverRole === "owner" || serverRole === "admin";
+      }
+
+      if (!canCreateRoom) {
+        return reply.code(403).send({
+          error: "forbidden_role",
+          message: "Insufficient permissions to create room in this server"
+        });
       }
 
       const position = typeof parsed.data.position === "number"

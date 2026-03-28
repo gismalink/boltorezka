@@ -58,7 +58,12 @@ export function useServerMenuAccessGuard({
     }
 
     if (serverMenuTab === "server_management" && !hasCurrentServer) {
-      setServerMenuTab("observability");
+      setServerMenuTab("desktop_downloads");
+      return;
+    }
+
+    if (serverMenuTab === "observability" && !hasCurrentServer) {
+      setServerMenuTab("desktop_downloads");
     }
   }, [
     serverMenuTab,

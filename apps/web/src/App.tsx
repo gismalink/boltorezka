@@ -376,8 +376,19 @@ export function App() {
     currentServerIdRef.current = currentServerId;
   }, [currentServerId]);
 
-  const canCreateRooms = user?.role === "admin" || user?.role === "super_admin";
-  const canManageUsers = canCreateRooms;
+  const currentServerRole = useMemo(
+    () => servers.find((item) => item.id === currentServerId)?.role || null,
+    [servers, currentServerId]
+  );
+  const canCreateRooms = Boolean(
+    user && (
+      user.role === "admin"
+      || user.role === "super_admin"
+      || currentServerRole === "owner"
+      || currentServerRole === "admin"
+    )
+  );
+  const canManageUsers = user?.role === "admin" || user?.role === "super_admin";
   const canPromote = user?.role === "super_admin";
   const canUseService = Boolean(
     user && (user.role === "admin" || user.role === "super_admin" || user.access_state === "active")
