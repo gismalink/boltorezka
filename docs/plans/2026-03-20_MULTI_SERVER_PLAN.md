@@ -357,6 +357,13 @@ Stage 3 note (2026-03-28):
    - вкладка `Управление серверами` переименована в `Этот сервер`;
    - action-кнопки в строке участников унифицированы с паттерном product management.
 - Изменения провалидированы в `test` на feature-ветке через `TEST_REF=origin/feature/multiserver-stage1-services SMOKE_MULTISERVER=1 SMOKE_MULTISERVER_AGE_GATE=1 npm run deploy:test:smoke` (SHA `391d4d5`, PASS).
+- Доработан UX server profile по фидбеку:
+   - default role в списках людей скрыта, роли выше отображаются badge;
+   - раздел observability переименован в `Наблюдаемость`;
+   - исправлен рендер `Управление продуктом -> Сервера` (табы и контент не исчезают);
+   - в `Этот сервер` кнопки, связанные с полями, выровнены в одну строку;
+   - вкладка `Этот сервер` доступна обычному пользователю, добавлены кнопки `Покинуть сервер` и `Удалить сервер`.
+- Изменения провалидированы в `test` на feature-ветке через `TEST_REF=origin/feature/multiserver-stage1-services SMOKE_MULTISERVER=1 SMOKE_MULTISERVER_AGE_GATE=1 npm run deploy:test:smoke` (SHA `ea1cb3c`, PASS).
 
 ### Stage 4 - Data cutover
 
