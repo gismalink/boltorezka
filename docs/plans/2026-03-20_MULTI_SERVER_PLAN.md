@@ -411,6 +411,17 @@ Stage 5 note (2026-03-28):
    - Result: `PASS` (`smoke:multiserver`, `smoke:multiserver:age-gate`, `smoke:multiserver:role-matrix`, `smoke:realtime`).
 - В рамках этого же прохода подтвержден backend owner-transfer endpoint: `POST /v1/servers/:serverId/owner`.
 
+Stage 5 note (2026-03-29):
+- Применен test deploy с фиксом UX/контроля входа в 18+ комнаты на feature-ветке:
+   - `TEST_REF=origin/feature/multiserver-stage1-services SMOKE_MULTISERVER=1 SMOKE_MULTISERVER_AGE_GATE=1 npm run deploy:test:smoke`.
+   - Applied SHA: `4af7202`.
+- Деплой применился успешно, но полный postdeploy smoke зафлапал на browser-check `smoke:web:rnnoise:browser` из-за сетевого таймаута к `https://test.datowave.com`.
+- Повторный `smoke:test:postdeploy` подтвердил тот же flaky timeout в `smoke:web:rnnoise:browser`; при этом API/auth/web-version/sso проверки проходят.
+- Целевые multi-server проверки после деплоя:
+   - `smoke:multiserver:age-gate`: `ok` в режиме `no-room-skip` (для выбранного smoke server нет комнаты, сценарий корректно пропущен).
+   - `smoke:multiserver:role-matrix`: `ok`.
+- Для финального ручного подтверждения UX age-gate (оверлей + отсутствие ложного RTC join/sound) требуется ручной прогон в BossServer комнате `18plus`.
+
 ### Stage 6 - Stabilization (сразу после релиза)
 
 - [x] Owner transfer и защита от "server without owner".
