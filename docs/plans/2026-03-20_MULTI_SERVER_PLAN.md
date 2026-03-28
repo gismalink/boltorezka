@@ -351,6 +351,12 @@ Stage 3 note (2026-03-28):
    - переименование текущего сервера (`PATCH /v1/servers/:serverId`),
    - показ статуса age-confirm и действие подтверждения (`GET/POST /v1/servers/:serverId/age-confirm`).
 - Изменения провалидированы в `test` на feature-ветке через `TEST_REF=origin/feature/multiserver-stage1-services SMOKE_MULTISERVER=1 SMOKE_MULTISERVER_AGE_GATE=1 npm run deploy:test:smoke` (SHA `96d70ed`, PASS).
+- Реструктурирован server profile UI по админским контурам:
+   - вкладки `Лог`, `Сигналинг`, `Телеметрия` объединены в единую страницу с внутренними табами;
+   - server control plane список перенесен в `Управление продуктом` с табами `Пользователи`/`Сервера`;
+   - вкладка `Управление серверами` переименована в `Этот сервер`;
+   - action-кнопки в строке участников унифицированы с паттерном product management.
+- Изменения провалидированы в `test` на feature-ветке через `TEST_REF=origin/feature/multiserver-stage1-services SMOKE_MULTISERVER=1 SMOKE_MULTISERVER_AGE_GATE=1 npm run deploy:test:smoke` (SHA `391d4d5`, PASS).
 
 ### Stage 4 - Data cutover
 
