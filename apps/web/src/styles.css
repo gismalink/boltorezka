@@ -668,6 +668,19 @@ textarea:focus-visible {
   font-size: 15px;
 }
 
+.role-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 20px;
+  padding: 0 8px;
+  border: var(--border-strong) solid var(--pixel-neon-cyan);
+  background: color-mix(in srgb, var(--pixel-neon-cyan) 18%, var(--pixel-panel) 82%);
+  font-size: calc(var(--font-size-sm) - 0.12rem);
+  letter-spacing: 0.02em;
+  line-height: 1;
+}
+
 .icon-btn.toggle-wide {
   width: calc(var(--icon-size-sm) * 2);
 }

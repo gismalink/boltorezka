@@ -33,7 +33,7 @@ export function useServerMenuAccessGuard({
       return;
     }
 
-    if ((serverMenuTab === "product_management" || serverMenuTab === "server_management") && !canManageServerControlPlane) {
+    if (serverMenuTab === "product_management" && !canManageServerControlPlane) {
       setServerMenuTab(canManageUsers ? "users" : "observability");
       return;
     }

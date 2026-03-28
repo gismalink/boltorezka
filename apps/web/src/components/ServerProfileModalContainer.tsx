@@ -68,6 +68,7 @@ type ServerProfileModalContainerProps = {
     onRenameCurrentServer: ServerProfileModalProps["onRenameCurrentServer"];
     onConfirmServerAge: ServerProfileModalProps["onConfirmServerAge"];
     onLeaveServer: ServerProfileModalProps["onLeaveServer"];
+    onDeleteServer: ServerProfileModalProps["onDeleteServer"];
     onRemoveServerMember: ServerProfileModalProps["onRemoveServerMember"];
     onBanServerMember: ServerProfileModalProps["onBanServerMember"];
     onUnbanServerMember: ServerProfileModalProps["onUnbanServerMember"];
@@ -153,6 +154,7 @@ export function ServerProfileModalContainer({ open, t, permissions, state, data,
       onRenameCurrentServer={actions.onRenameCurrentServer}
       onConfirmServerAge={actions.onConfirmServerAge}
       onLeaveServer={actions.onLeaveServer}
+      onDeleteServer={actions.onDeleteServer}
       onRemoveServerMember={actions.onRemoveServerMember}
       onBanServerMember={actions.onBanServerMember}
       onUnbanServerMember={actions.onUnbanServerMember}

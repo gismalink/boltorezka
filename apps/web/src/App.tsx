@@ -1410,6 +1410,11 @@ export function App() {
     }
   }, [token, currentServerId, pushToast, t]);
 
+  const handleDeleteCurrentServer = useCallback(() => {
+    // Delete server endpoint is not implemented yet on API side.
+    pushToast(t("server.deleteUnavailable"));
+  }, [pushToast, t]);
+
   const handleRemoveServerMember = useCallback(async (targetUserId: string) => {
     const tokenValue = String(token || "").trim();
     const serverId = String(currentServerId || "").trim();
@@ -2462,6 +2467,7 @@ export function App() {
           onRenameCurrentServer: (name) => void handleRenameCurrentServer(name),
           onConfirmServerAge: () => void handleConfirmServerAge(),
           onLeaveServer: () => void handleLeaveCurrentServer(),
+          onDeleteServer: () => void handleDeleteCurrentServer(),
           onRemoveServerMember: (userId) => void handleRemoveServerMember(userId),
           onBanServerMember: (userId) => void handleBanServerMember(userId),
           onUnbanServerMember: (userId) => void handleUnbanServerMember(userId),

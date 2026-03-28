@@ -34,6 +34,11 @@ type IconAction = {
   onClick: () => void;
 };
 
+type RoleBadge = {
+  key: string;
+  label: string;
+};
+
 function ActionIconButton({ action }: { action: IconAction }) {
   return (
     <button
@@ -111,6 +116,7 @@ type ServerProfileModalProps = {
   onRenameCurrentServer: (name: string) => void;
   onConfirmServerAge: () => void;
   onLeaveServer: () => void;
+  onDeleteServer: () => void;
   onRemoveServerMember: (userId: string) => void;
   onBanServerMember: (userId: string) => void;
   onUnbanServerMember: (userId: string) => void;
@@ -293,6 +299,7 @@ export function ServerProfileModal({
   onRenameCurrentServer,
   onConfirmServerAge,
   onLeaveServer,
+  onDeleteServer,
   onRemoveServerMember,
   onBanServerMember,
   onUnbanServerMember,
@@ -327,8 +334,8 @@ export function ServerProfileModal({
   const totalAdmins = adminUsers.filter((item) => item.role === "admin" || item.role === "super_admin").length;
   const totalBanned = adminUsers.filter((item) => item.is_banned).length;
   const showProductManagementTab = canManageServerControlPlane;
-  const showServerManagementTab = canManageServerControlPlane;
-  const showLegacyUsersTab = !canManageServerControlPlane;
+  const showServerManagementTab = true;
+  const showLegacyUsersTab = !canManageServerControlPlane && canManageUsers;
   const showServerMembersPanel = serverMenuTab === "users" || serverMenuTab === "server_management";
   const showAdminUsersPanel = canManageUsers
     && ((serverMenuTab === "users" && !canManageServerControlPlane)
@@ -336,6 +343,7 @@ export function ServerProfileModal({
   const showAdminServersPanel = canManageServerControlPlane
     && serverMenuTab === "product_management"
     && productManagementTab === "servers";
+  const showProductManagementPanel = serverMenuTab === "product_management" && canManageServerControlPlane;
   const rnnoiseProcessSamples = telemetrySummary?.metrics.rnnoise_process_cost_samples ?? 0;
   const rnnoiseProcessAvgMs = rnnoiseProcessSamples > 0
     ? (telemetrySummary?.metrics.rnnoise_process_cost_us_sum ?? 0) / rnnoiseProcessSamples / 1000
@@ -632,6 +640,26 @@ export function ServerProfileModal({
     return actions;
   };
 
+  const getUserRoleBadges = (item: User): RoleBadge[] => {
+    if (item.role === "super_admin") {
+      return [{ key: "super_admin", label: t("roles.superAdmin") }];
+    }
+    if (item.role === "admin") {
+      return [{ key: "admin", label: t("roles.admin") }];
+    }
+    return [];
+  };
+
+  const getServerMemberRoleBadges = (member: ServerMemberItem): RoleBadge[] => {
+    if (member.role === "owner") {
+      return [{ key: "owner", label: t("roles.owner") }];
+    }
+    if (member.role === "admin") {
+      return [{ key: "admin", label: t("roles.admin") }];
+    }
+    return [];
+  };
+
   useEffect(() => {
     const element = previewVideoRef.current;
     if (!element) {
@@ -858,7 +886,7 @@ export function ServerProfileModal({
             </button>
           </div>
 
-          {showServerMembersPanel || showAdminUsersPanel ? (
+          {showServerMembersPanel || showAdminUsersPanel || showAdminServersPanel || showProductManagementPanel ? (
             <section className="grid gap-3">
               {showServerMembersPanel ? (
                 <>
@@ -869,16 +897,16 @@ export function ServerProfileModal({
                       : `${t("server.membersCount")}: ${serverMembers.length}`}
                   </p>
                   <div className="grid gap-2">
-                    <label className="grid gap-1">
-                      <span className="muted">{t("server.inviteTitle")}</span>
-                      <input
-                        type="text"
-                        readOnly
-                        value={lastInviteUrl}
-                        placeholder={t("server.invitePlaceholder")}
-                      />
-                    </label>
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap items-end gap-2">
+                      <label className="grid min-w-[260px] flex-1 gap-1">
+                        <span className="muted">{t("server.inviteTitle")}</span>
+                        <input
+                          type="text"
+                          readOnly
+                          value={lastInviteUrl}
+                          placeholder={t("server.invitePlaceholder")}
+                        />
+                      </label>
                       <button type="button" onClick={onCreateServerInvite} disabled={creatingInvite}>
                         {creatingInvite ? t("server.inviteCreateLoading") : t("server.inviteCreate")}
                       </button>
@@ -890,17 +918,17 @@ export function ServerProfileModal({
                   {(currentServerRole === "owner" || currentServerRole === "admin") ? (
                     <div className="grid gap-2">
                       <h4>{t("server.renameTitle")}</h4>
-                      <label className="grid gap-1">
-                        <span className="muted">{t("server.renameLabel")}</span>
-                        <input
-                          type="text"
-                          value={renameServerName}
-                          maxLength={64}
-                          onChange={(event) => setRenameServerName(event.target.value)}
-                          placeholder={t("server.renamePlaceholder")}
-                        />
-                      </label>
-                      <div className="flex flex-wrap gap-2">
+                      <div className="flex flex-wrap items-end gap-2">
+                        <label className="grid min-w-[260px] flex-1 gap-1">
+                          <span className="muted">{t("server.renameLabel")}</span>
+                          <input
+                            type="text"
+                            value={renameServerName}
+                            maxLength={64}
+                            onChange={(event) => setRenameServerName(event.target.value)}
+                            placeholder={t("server.renamePlaceholder")}
+                          />
+                        </label>
                         <button
                           type="button"
                           onClick={() => onRenameCurrentServer(renameServerName)}
@@ -913,24 +941,39 @@ export function ServerProfileModal({
                   ) : null}
                   <div className="grid gap-2">
                     <h4>{t("server.ageConfirmTitle")}</h4>
-                    <p className="muted">
-                      {serverAgeLoading
-                        ? t("server.ageConfirmLoading")
-                        : serverAgeConfirmedAt
-                          ? `${t("server.ageConfirmConfirmedAt")}: ${new Date(serverAgeConfirmedAt).toLocaleString()}`
-                          : t("server.ageConfirmNotConfirmed")}
-                    </p>
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="muted">
+                        {serverAgeLoading
+                          ? t("server.ageConfirmLoading")
+                          : serverAgeConfirmedAt
+                            ? `${t("server.ageConfirmConfirmedAt")}: ${new Date(serverAgeConfirmedAt).toLocaleString()}`
+                            : t("server.ageConfirmNotConfirmed")}
+                      </p>
                       <button type="button" onClick={onConfirmServerAge} disabled={serverAgeConfirming}>
                         {serverAgeConfirming ? t("server.ageConfirmActionLoading") : t("server.ageConfirmAction")}
                       </button>
                     </div>
                   </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button type="button" className="secondary" onClick={onLeaveServer}>
+                      {t("server.leave")}
+                    </button>
+                    <button type="button" className="secondary" onClick={onDeleteServer}>
+                      {t("server.deleteServer")}
+                    </button>
+                  </div>
                   <ul className="admin-list grid gap-2">
                     {serverMembers.map((member) => (
                       <li key={member.userId} className="admin-row grid min-h-[42px] grid-cols-[minmax(0,1fr)_auto] items-center gap-2 max-desktop:grid-cols-1">
                         <span className="min-w-0 break-words">
-                          {member.name} · {member.email} ({member.role})
+                          {member.name} · {member.email}
+                          {getServerMemberRoleBadges(member).length > 0 ? (
+                            <span className="inline-flex flex-wrap items-center gap-1 pl-2">
+                              {getServerMemberRoleBadges(member).map((badge) => (
+                                <span key={`${member.userId}-${badge.key}`} className="role-badge">{badge.label}</span>
+                              ))}
+                            </span>
+                          ) : null}
                         </span>
                         <div className="row-actions flex flex-wrap items-stretch justify-end gap-2">
                           {getServerMemberRowActions(member).map((action) => (
@@ -1016,7 +1059,14 @@ export function ServerProfileModal({
                 {filteredAdminUsers.map((item) => (
                   <li key={item.id} className="admin-row grid min-h-[42px] grid-cols-[minmax(0,1fr)_auto] items-center gap-2 max-desktop:grid-cols-1">
                     <span className="min-w-0 break-words">
-                      {item.email} ({item.role})
+                      {item.email}
+                      {getUserRoleBadges(item).length > 0 ? (
+                        <span className="inline-flex flex-wrap items-center gap-1 pl-2">
+                          {getUserRoleBadges(item).map((badge) => (
+                            <span key={`${item.id}-${badge.key}`} className="role-badge">{badge.label}</span>
+                          ))}
+                        </span>
+                      ) : null}
                       {item.is_banned ? ` · ${t("admin.banned")}` : ""}
                       {!item.is_banned ? ` · ${t(`admin.access.${item.access_state}`)}` : ""}
                     </span>
