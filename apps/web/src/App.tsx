@@ -25,7 +25,8 @@ import {
   RemoteAudioAutoplayBanner,
   ServerProfileModalContainer,
   SessionMovedOverlay,
-  ToastStack
+  ToastStack,
+  UserDock
 } from "./components";
 import {
   DEFAULT_CHAT_IMAGE_DATA_URL_LENGTH,
@@ -2356,6 +2357,8 @@ export function App() {
     return <DesktopBrowserCompletionGate desktopHandoffError={desktopHandoffError} />;
   }
 
+  const showEmptyServerOnboarding = Boolean(user) && !serversLoading && servers.length === 0;
+
   if (user && !canUseService) {
     const blocked = user.access_state === "blocked";
     return (
@@ -2414,7 +2417,7 @@ export function App() {
       ) : null}
 
       {user ? (
-        !serversLoading && servers.length === 0 && !userSettingsOpen ? (
+        showEmptyServerOnboarding ? (
           <EmptyServerOnboarding
             t={t}
             creatingServer={creatingServer}
@@ -2435,6 +2438,12 @@ export function App() {
         )
       ) : authMode !== "loading" ? (
         <GuestLoginGate t={t} onBeginSso={beginSso} />
+      ) : null}
+
+      {showEmptyServerOnboarding && userSettingsOpen && userDockSharedProps ? (
+        <div className="no-server-user-settings-host">
+          <UserDock {...userDockSharedProps} inlineSettingsMode={false} />
+        </div>
       ) : null}
 
       {inviteAccepting ? (

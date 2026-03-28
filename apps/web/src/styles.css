@@ -901,6 +901,10 @@ pre {
   padding: 0 var(--space-sm);
 }
 
+.no-server-user-settings-host .user-dock {
+  display: none;
+}
+
 .workspace {
   min-height: 0;
   height: 100%;
