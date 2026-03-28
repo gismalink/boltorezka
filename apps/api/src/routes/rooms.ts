@@ -157,39 +157,6 @@ export async function roomsRoutes(fastify: FastifyInstance) {
     }
   };
 
-  const resolveDefaultMemberServerId = async (userId: string): Promise<string | null> => {
-    const defaultResult = await db.query<{ server_id: string }>(
-      `SELECT sm.server_id
-       FROM server_members sm
-       JOIN servers s ON s.id = sm.server_id
-       WHERE sm.user_id = $1
-         AND sm.status = 'active'
-         AND s.is_archived = FALSE
-         AND s.is_default = TRUE
-       LIMIT 1`,
-      [userId]
-    );
-
-    const defaultServerId = String(defaultResult.rows[0]?.server_id || "").trim();
-    if (defaultServerId) {
-      return defaultServerId;
-    }
-
-    const result = await db.query<{ server_id: string }>(
-      `SELECT sm.server_id
-       FROM server_members sm
-       JOIN servers s ON s.id = sm.server_id
-       WHERE sm.user_id = $1
-         AND sm.status = 'active'
-         AND s.is_archived = FALSE
-       ORDER BY sm.joined_at ASC
-       LIMIT 1`,
-      [userId]
-    );
-
-    return String(result.rows[0]?.server_id || "").trim() || null;
-  };
-
   const canManageServerRooms = async (userId: string, serverId: string, globalRole: string): Promise<boolean> => {
     if (globalRole === "admin" || globalRole === "super_admin") {
       return true;
@@ -444,14 +411,21 @@ export async function roomsRoutes(fastify: FastifyInstance) {
         }
         targetServerId = accessibleServerId;
       } else {
-        const fallbackServerId = await resolveDefaultMemberServerId(createdBy);
-        targetServerId = String(fallbackServerId || "").trim();
+        const defaultServerResult = await db.query<{ id: string }>(
+          `SELECT id
+           FROM servers
+           WHERE is_default = TRUE
+           ORDER BY created_at ASC
+           LIMIT 1`
+        );
+
+        targetServerId = String(defaultServerResult.rows[0]?.id || "").trim();
       }
 
       if (!targetServerId) {
-        return reply.code(403).send({
-          error: "not_server_member",
-          message: "You are not a member of any active server"
+        return reply.code(500).send({
+          error: "ServerNotConfigured",
+          message: "Default server is not configured"
         });
       }
 
