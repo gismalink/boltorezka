@@ -1,16 +1,6 @@
 import { api } from "../api";
 import type { AudioQuality, Message, MessagesCursor, Room, RoomKind, RoomsTreeResponse, User } from "../domain";
 
-const normalizeSlugInput = (value: string) => {
-  return String(value || "")
-    .trim()
-    .toLowerCase()
-    .replace(/[\s_]+/g, "-")
-    .replace(/[^a-z0-9-]/g, "")
-    .replace(/-+/g, "-")
-    .replace(/^-+|-+$/g, "");
-};
-
 type RoomAdminControllerOptions = {
   pushLog: (text: string) => void;
   pushToast?: (text: string) => void;
@@ -63,13 +53,12 @@ export class RoomAdminController {
     }
   }
 
-  async createCategory(token: string, slugInput: string, titleInput: string) {
+  async createCategory(token: string, titleInput: string) {
     try {
-      const slug = normalizeSlugInput(slugInput);
       const title = titleInput.trim();
-      await api.createCategory(token, { slug, title });
+      const response = await api.createCategory(token, { title });
       await this.loadRoomTree(token);
-      this.options.pushLog(`category created: ${slug}`);
+      this.options.pushLog(`category created: ${response.category.slug}`);
       return true;
     } catch (error) {
       this.options.pushLog(`create category failed: ${(error as Error).message}`);
@@ -117,15 +106,12 @@ export class RoomAdminController {
 
   async createRoom(
     token: string,
-    slugInput: string,
     titleInput: string,
     options: { kind: RoomKind; categoryId: string | null; audioQualityOverride?: AudioQuality | null }
   ) {
     try {
-      const slug = normalizeSlugInput(slugInput);
       const title = titleInput.trim();
-      await api.createRoom(token, {
-        slug,
+      const response = await api.createRoom(token, {
         title,
         is_public: true,
         kind: options.kind,
@@ -136,7 +122,7 @@ export class RoomAdminController {
       const res = await api.rooms(token, this.getCurrentServerId());
       this.options.setRooms(res.rooms);
       await this.loadRoomTree(token);
-      this.options.pushLog(`room created: ${slug}`);
+      this.options.pushLog(`room created: ${response.room.slug}`);
       return true;
     } catch (error) {
       const reason = (error as Error).message;

@@ -10,11 +10,9 @@ type UseRoomAdminActionsArgs = {
   allRooms: Room[];
   archivedRooms: Room[];
   roomAdminController: RoomAdminController;
-  newRoomSlug: string;
   newRoomTitle: string;
   newRoomKind: RoomKind;
   newRoomCategoryId: string;
-  newCategorySlug: string;
   newCategoryTitle: string;
   editingCategoryTitle: string;
   categorySettingsPopupOpenId: string | null;
@@ -23,10 +21,8 @@ type UseRoomAdminActionsArgs = {
   editingRoomCategoryId: string;
   editingRoomAudioQualitySetting: ChannelAudioQualitySetting;
   channelSettingsPopupOpenId: string | null;
-  setNewRoomSlug: (value: string) => void;
   setNewRoomTitle: (value: string) => void;
   setChannelPopupOpen: (value: boolean) => void;
-  setNewCategorySlug: (value: string) => void;
   setNewCategoryTitle: (value: string) => void;
   setCategoryPopupOpen: (value: boolean) => void;
   setNewRoomCategoryId: (value: string) => void;
@@ -51,11 +47,9 @@ export function useRoomAdminActions({
   allRooms,
   archivedRooms,
   roomAdminController,
-  newRoomSlug,
   newRoomTitle,
   newRoomKind,
   newRoomCategoryId,
-  newCategorySlug,
   newCategoryTitle,
   editingCategoryTitle,
   categorySettingsPopupOpenId,
@@ -64,10 +58,8 @@ export function useRoomAdminActions({
   editingRoomCategoryId,
   editingRoomAudioQualitySetting,
   channelSettingsPopupOpenId,
-  setNewRoomSlug,
   setNewRoomTitle,
   setChannelPopupOpen,
-  setNewCategorySlug,
   setNewCategoryTitle,
   setCategoryPopupOpen,
   setNewRoomCategoryId,
@@ -87,7 +79,7 @@ export function useRoomAdminActions({
     event.preventDefault();
     if (!token || !canCreateRooms) return;
 
-    const created = await roomAdminController.createRoom(token, newRoomSlug, newRoomTitle, {
+    const created = await roomAdminController.createRoom(token, newRoomTitle, {
       kind: newRoomKind,
       categoryId: newRoomCategoryId === "none" ? null : newRoomCategoryId,
       audioQualityOverride: canManageAudioQuality
@@ -95,7 +87,6 @@ export function useRoomAdminActions({
         : undefined
     });
     if (created) {
-      setNewRoomSlug("");
       setNewRoomTitle("");
       setChannelPopupOpen(false);
     }
@@ -103,12 +94,10 @@ export function useRoomAdminActions({
     token,
     canCreateRooms,
     roomAdminController,
-    newRoomSlug,
     newRoomTitle,
     newRoomKind,
     newRoomCategoryId,
     canManageAudioQuality,
-    setNewRoomSlug,
     setNewRoomTitle,
     setChannelPopupOpen
   ]);
@@ -117,9 +106,8 @@ export function useRoomAdminActions({
     event.preventDefault();
     if (!token || !canCreateRooms) return;
 
-    const created = await roomAdminController.createCategory(token, newCategorySlug, newCategoryTitle);
+    const created = await roomAdminController.createCategory(token, newCategoryTitle);
     if (created) {
-      setNewCategorySlug("");
       setNewCategoryTitle("");
       setCategoryPopupOpen(false);
     }
@@ -127,9 +115,7 @@ export function useRoomAdminActions({
     token,
     canCreateRooms,
     roomAdminController,
-    newCategorySlug,
     newCategoryTitle,
-    setNewCategorySlug,
     setNewCategoryTitle,
     setCategoryPopupOpen
   ]);

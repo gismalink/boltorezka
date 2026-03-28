@@ -31,7 +31,8 @@ const createRoomSchema = z.object({
     .string()
     .min(3)
     .max(48)
-    .regex(/^[a-z0-9-]+$/),
+    .regex(/^[a-z0-9-]+$/)
+    .optional(),
   title: z.string().min(3).max(120),
   is_public: z.boolean().default(true),
   kind: roomKindSchema.default("text"),
@@ -57,10 +58,54 @@ const createCategorySchema = z.object({
     .string()
     .min(3)
     .max(48)
-    .regex(/^[a-z0-9-]+$/),
+    .regex(/^[a-z0-9-]+$/)
+    .optional(),
   title: z.string().min(2).max(120),
   position: z.number().int().min(0).optional()
 });
+
+function toSlug(raw: string): string {
+  return raw
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 48);
+}
+
+async function ensureUniqueCategorySlug(baseSlug: string): Promise<string> {
+  const normalizedBase = baseSlug || "category";
+  let candidate = normalizedBase;
+
+  for (let i = 0; i < 100; i += 1) {
+    const result = await db.query<{ id: string }>("SELECT id FROM room_categories WHERE slug = $1 LIMIT 1", [candidate]);
+    if ((result.rowCount || 0) === 0) {
+      return candidate;
+    }
+
+    candidate = `${normalizedBase}-${i + 2}`.slice(0, 48);
+  }
+
+  return `${normalizedBase}-${Date.now().toString(36)}`.slice(0, 48);
+}
+
+async function ensureUniqueRoomSlug(baseSlug: string): Promise<string> {
+  const normalizedBase = baseSlug || "room";
+  let candidate = normalizedBase;
+
+  for (let i = 0; i < 100; i += 1) {
+    const result = await db.query<{ id: string }>("SELECT id FROM rooms WHERE slug = $1 LIMIT 1", [candidate]);
+    if ((result.rowCount || 0) === 0) {
+      return candidate;
+    }
+
+    candidate = `${normalizedBase}-${i + 2}`.slice(0, 48);
+  }
+
+  return `${normalizedBase}-${Date.now().toString(36)}`.slice(0, 48);
+}
 
 const updateCategorySchema = z.object({
   title: z.string().min(2).max(120)
@@ -324,16 +369,10 @@ export async function roomsRoutes(fastify: FastifyInstance) {
         });
       }
 
-      const { slug, title } = parsed.data;
+      const { title } = parsed.data;
       const createdBy = String(request.user?.sub || "").trim();
-      const existing = await db.query("SELECT id FROM room_categories WHERE slug = $1", [slug]);
-
-      if ((existing.rowCount || 0) > 0) {
-        return reply.code(409).send({
-          error: "Conflict",
-          message: "Category slug already exists"
-        });
-      }
+      const requestedSlug = String(parsed.data.slug || "").trim();
+      const slug = await ensureUniqueCategorySlug(requestedSlug || toSlug(title) || "category");
 
       const position = typeof parsed.data.position === "number"
         ? parsed.data.position
@@ -558,7 +597,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
         });
       }
 
-      const { slug, title, is_public, kind, category_id } = parsed.data;
+      const { title, is_public, kind, category_id } = parsed.data;
       const hasAudioQualityOverride = Object.prototype.hasOwnProperty.call(parsed.data, "audio_quality_override");
       const isSuperAdmin = request.currentUser?.role === "super_admin";
       if (hasAudioQualityOverride && !isSuperAdmin) {
@@ -581,14 +620,8 @@ export async function roomsRoutes(fastify: FastifyInstance) {
         }
       }
 
-      const existing = await db.query("SELECT id FROM rooms WHERE slug = $1", [slug]);
-
-      if ((existing.rowCount || 0) > 0) {
-        return reply.code(409).send({
-          error: "Conflict",
-          message: "Room slug already exists"
-        });
-      }
+      const requestedSlug = String(parsed.data.slug || "").trim();
+      const slug = await ensureUniqueRoomSlug(requestedSlug || toSlug(title) || "room");
 
       const createdBy = String(request.user?.sub || "").trim();
       const requestedServerId = String(parsed.data.server_id || "").trim();

@@ -201,10 +201,8 @@ export function RoomsPanel({
         t={t}
         canCreateRooms={canCreateRooms}
         roomsTree={roomsTree}
-        newCategorySlug={newCategorySlug}
         newCategoryTitle={newCategoryTitle}
         categoryPopupOpen={categoryPopupOpen}
-        newRoomSlug={newRoomSlug}
         newRoomTitle={newRoomTitle}
         newRoomKind={newRoomKind}
         newRoomCategoryId={newRoomCategoryId}
@@ -213,9 +211,7 @@ export function RoomsPanel({
         channelPopupRef={channelPopupRef}
         onSetCategoryPopupOpen={onSetCategoryPopupOpen}
         onSetChannelPopupOpen={onSetChannelPopupOpen}
-        onSetNewCategorySlug={onSetNewCategorySlug}
         onSetNewCategoryTitle={onSetNewCategoryTitle}
-        onSetNewRoomSlug={onSetNewRoomSlug}
         onSetNewRoomTitle={onSetNewRoomTitle}
         onSetNewRoomKind={onSetNewRoomKind}
         onSetNewRoomCategoryId={onSetNewRoomCategoryId}
