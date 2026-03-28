@@ -364,6 +364,12 @@ Stage 3 note (2026-03-28):
    - в `Этот сервер` кнопки, связанные с полями, выровнены в одну строку;
    - вкладка `Этот сервер` доступна обычному пользователю, добавлены кнопки `Покинуть сервер` и `Удалить сервер`.
 - Изменения провалидированы в `test` на feature-ветке через `TEST_REF=origin/feature/multiserver-stage1-services SMOKE_MULTISERVER=1 SMOKE_MULTISERVER_AGE_GATE=1 npm run deploy:test:smoke` (SHA `ea1cb3c`, PASS).
+- Добавлен backend/server flow для `Удалить сервер`:
+   - endpoint `DELETE /v1/servers/:serverId` (soft-delete через `servers.is_archived = TRUE`);
+   - миграция `0009_servers_archive_soft_delete.sql`;
+   - фильтрация архивных серверов добавлена в membership/default/admin/invite выборки;
+   - UI-кнопка `Удалить сервер` теперь вызывает API, с обработкой ролей и запрета удаления default server.
+- Изменения провалидированы в `test` на feature-ветке через `TEST_REF=origin/feature/multiserver-stage1-services SMOKE_MULTISERVER=1 SMOKE_MULTISERVER_AGE_GATE=1 npm run deploy:test:smoke` (SHA `918cd0f`, PASS).
 
 ### Stage 4 - Data cutover
 
