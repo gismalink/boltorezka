@@ -172,6 +172,7 @@ export type ServerMemberItem = {
   name: string;
   role: ServerMemberRole;
   status: "active";
+  isServerBanned: boolean;
 };
 
 export type ServerMembersResponse = {

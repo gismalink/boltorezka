@@ -85,6 +85,8 @@ type ServerProfileModalProps = {
   onLeaveServer: () => void;
   onRemoveServerMember: (userId: string) => void;
   onBanServerMember: (userId: string) => void;
+  onUnbanServerMember: (userId: string) => void;
+  onTransferServerOwnership: (userId: string) => void;
   onRefreshTelemetry: () => void;
   onSetServerAudioQuality: (value: AudioQuality) => void;
   onSetServerVideoEffectType: (value: ServerVideoEffectType) => void;
@@ -259,6 +261,8 @@ export function ServerProfileModal({
   onLeaveServer,
   onRemoveServerMember,
   onBanServerMember,
+  onUnbanServerMember,
+  onTransferServerOwnership,
   onRefreshTelemetry,
   onSetServerAudioQuality,
   onSetServerVideoEffectType,
@@ -811,13 +815,23 @@ export function ServerProfileModal({
                           && ((currentServerRole === "owner" && member.role !== "owner")
                             || (currentServerRole === "admin" && member.role === "member")) ? (
                             <>
-                              <button
-                                type="button"
-                                className="secondary"
-                                onClick={() => onBanServerMember(member.userId)}
-                              >
-                                {t("server.banMember")}
-                              </button>
+                              {member.isServerBanned ? (
+                                <button
+                                  type="button"
+                                  className="secondary"
+                                  onClick={() => onUnbanServerMember(member.userId)}
+                                >
+                                  {t("server.unbanMember")}
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  className="secondary"
+                                  onClick={() => onBanServerMember(member.userId)}
+                                >
+                                  {t("server.banMember")}
+                                </button>
+                              )}
                               <button
                                 type="button"
                                 className="secondary"
@@ -826,6 +840,17 @@ export function ServerProfileModal({
                                 {t("server.removeMember")}
                               </button>
                             </>
+                          ) : null}
+                          {member.userId !== currentUserId
+                          && currentServerRole === "owner"
+                          && member.role !== "owner" ? (
+                            <button
+                              type="button"
+                              className="secondary"
+                              onClick={() => onTransferServerOwnership(member.userId)}
+                            >
+                              {t("server.transferOwnership")}
+                            </button>
                           ) : null}
                         </div>
                       </li>

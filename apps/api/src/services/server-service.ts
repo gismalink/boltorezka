@@ -218,7 +218,14 @@ export async function listServerMembers(serverId: string): Promise<ServerMemberI
        u.email,
        u.name,
        sm.role,
-       sm.status
+       sm.status,
+       EXISTS (
+         SELECT 1
+         FROM server_bans sb
+         WHERE sb.server_id = sm.server_id
+           AND sb.user_id = sm.user_id
+           AND (sb.expires_at IS NULL OR sb.expires_at > NOW())
+       ) AS "isServerBanned"
      FROM server_members sm
      JOIN users u ON u.id = sm.user_id
      WHERE sm.server_id = $1

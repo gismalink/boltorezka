@@ -332,6 +332,8 @@ export const api = {
     fetchJson<{ left: boolean }>(withSuffix(endpoints.servers, serverId, "members/me"), token, withJsonBody("DELETE")),
   removeServerMember: (token: string, serverId: string, userId: string) =>
     fetchJson<{ removed: boolean }>(withId(withSuffix(endpoints.servers, serverId, "members"), userId), token, withJsonBody("DELETE")),
+  transferServerOwnership: (token: string, serverId: string, userId: string) =>
+    fetchJson<{ transferred: boolean }>(withSuffix(endpoints.servers, serverId, "owner"), token, withJsonBody("POST", { userId })),
   applyServerBan: (token: string, serverId: string, userId: string, reason?: string) =>
     fetchJson<{ ban: { id: string; serverId: string; userId: string } }>(
       withSuffix(endpoints.servers, serverId, "bans"),

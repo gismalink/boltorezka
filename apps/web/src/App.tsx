@@ -1367,6 +1367,50 @@ export function App() {
     }
   }, [token, currentServerId, pushToast, t]);
 
+  const handleUnbanServerMember = useCallback(async (targetUserId: string) => {
+    const tokenValue = String(token || "").trim();
+    const serverId = String(currentServerId || "").trim();
+    const userId = String(targetUserId || "").trim();
+
+    if (!tokenValue || !serverId || !userId) {
+      return;
+    }
+
+    try {
+      await api.revokeServerBan(tokenValue, serverId, userId);
+      const membersResponse = await api.serverMembers(tokenValue, serverId);
+      setServerMembers(Array.isArray(membersResponse.members) ? membersResponse.members : []);
+      pushToast(t("server.memberUnbanned"));
+    } catch (error) {
+      pushToast((error as Error).message || t("toast.serverError"));
+    }
+  }, [token, currentServerId, pushToast, t]);
+
+  const handleTransferServerOwnership = useCallback(async (targetUserId: string) => {
+    const tokenValue = String(token || "").trim();
+    const serverId = String(currentServerId || "").trim();
+    const userId = String(targetUserId || "").trim();
+
+    if (!tokenValue || !serverId || !userId) {
+      return;
+    }
+
+    try {
+      await api.transferServerOwnership(tokenValue, serverId, userId);
+
+      const [membersResponse, serversResponse] = await Promise.all([
+        api.serverMembers(tokenValue, serverId),
+        api.servers(tokenValue)
+      ]);
+
+      setServerMembers(Array.isArray(membersResponse.members) ? membersResponse.members : []);
+      setServers(Array.isArray(serversResponse.servers) ? serversResponse.servers : []);
+      pushToast(t("server.ownerTransferred"));
+    } catch (error) {
+      pushToast((error as Error).message || t("toast.serverError"));
+    }
+  }, [token, currentServerId, pushToast, t]);
+
   useEffect(() => {
     if (!chatRoomSlug && roomSlug) {
       setChatRoomSlug(roomSlug);
@@ -2333,6 +2377,8 @@ export function App() {
           onLeaveServer: () => void handleLeaveCurrentServer(),
           onRemoveServerMember: (userId) => void handleRemoveServerMember(userId),
           onBanServerMember: (userId) => void handleBanServerMember(userId),
+          onUnbanServerMember: (userId) => void handleUnbanServerMember(userId),
+          onTransferServerOwnership: (userId) => void handleTransferServerOwnership(userId),
           onRefreshTelemetry: () => void loadTelemetrySummary(),
           onSetServerAudioQuality: (value) => void setServerAudioQualityValue(value),
           onSetServerVideoEffectType: setServerVideoEffectType,
