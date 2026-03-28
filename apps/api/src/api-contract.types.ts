@@ -155,6 +155,10 @@ export type ServerMemberRemoveResponse = {
   removed: boolean;
 };
 
+export type ServerOwnerTransferResponse = {
+  transferred: boolean;
+};
+
 export type ServerRenameResponse = {
   server: ServerListItem;
 };

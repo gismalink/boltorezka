@@ -16,7 +16,8 @@ import {
   listServerMembers,
   listUserServers,
   removeServerMemberForUser,
-  renameServerForUser
+  renameServerForUser,
+  transferServerOwnershipForUser
 } from "../services/server-service.js";
 import { createServerInvite } from "../services/invite-service.js";
 import { applyServerBan, revokeServerBan } from "../services/ban-service.js";
@@ -32,6 +33,7 @@ import type {
   ServerGetResponse,
   ServerMemberLeaveResponse,
   ServerMemberRemoveResponse,
+  ServerOwnerTransferResponse,
   ServerMembersResponse,
   ServerRenameResponse,
   ServersListResponse
@@ -54,6 +56,10 @@ const createServerBanSchema = z.object({
   userId: z.string().trim().uuid(),
   reason: z.string().trim().min(1).max(500).optional(),
   expiresAt: z.string().datetime().optional()
+});
+
+const transferServerOwnerSchema = z.object({
+  userId: z.string().trim().uuid()
 });
 
 export async function serversRoutes(fastify: FastifyInstance) {
@@ -260,6 +266,82 @@ export async function serversRoutes(fastify: FastifyInstance) {
           return reply.code(409).send({
             error: "UseLeaveForSelf",
             message: "Use leave endpoint to remove self"
+          });
+        }
+
+        throw error;
+      }
+    }
+  );
+
+  fastify.post<{ Params: { serverId: string }; Body: { userId: string } }>(
+    "/v1/servers/:serverId/owner",
+    {
+      preHandler: [
+        requireAuth,
+        requireServiceAccess,
+        requireNotServiceBanned,
+        loadCurrentUser,
+        requireServerMembership,
+        requireNotServerBanned
+      ]
+    },
+    async (request, reply) => {
+      const parsed = transferServerOwnerSchema.safeParse(request.body || {});
+      if (!parsed.success) {
+        return reply.code(400).send({
+          error: "ValidationError",
+          issues: parsed.error.flatten()
+        });
+      }
+
+      const serverId = String(request.params.serverId || "").trim();
+      const actorUserId = String(request.currentUser?.id || "").trim();
+      const targetUserId = String(parsed.data.userId || "").trim();
+
+      try {
+        const result = await transferServerOwnershipForUser({
+          serverId,
+          actorUserId,
+          targetUserId
+        });
+
+        if (!result.transferred) {
+          return reply.code(404).send({
+            error: "ServerNotFound",
+            message: "Server not found"
+          });
+        }
+
+        const response: ServerOwnerTransferResponse = { transferred: true };
+        return response;
+      } catch (error) {
+        const message = String((error as Error)?.message || "");
+        if (message === "forbidden_role") {
+          return reply.code(403).send({
+            error: "forbidden_role",
+            message: "Insufficient server role"
+          });
+        }
+
+        if (message === "target_not_member") {
+          return reply.code(404).send({
+            error: "ServerMemberNotFound",
+            message: "Target user is not an active server member"
+          });
+        }
+
+        if (message === "transfer_to_self") {
+          return reply.code(409).send({
+            error: "OwnerTransferToSelf",
+            message: "Owner transfer target must be another member"
+          });
+        }
+
+        if (message === "owner_changed") {
+          return reply.code(409).send({
+            error: "OwnerChanged",
+            message: "Server owner changed, retry operation"
           });
         }
 

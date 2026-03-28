@@ -26,6 +26,12 @@ type RemoveServerMemberInput = {
   targetUserId: string;
 };
 
+type TransferServerOwnershipInput = {
+  serverId: string;
+  actorUserId: string;
+  targetUserId: string;
+};
+
 function toSlug(raw: string): string {
   return raw
     .toLowerCase()
@@ -369,4 +375,82 @@ export async function removeServerMemberForUser(input: RemoveServerMemberInput):
   });
 
   return { removed: true };
+}
+
+export async function transferServerOwnershipForUser(
+  input: TransferServerOwnershipInput
+): Promise<{ transferred: boolean }> {
+  const actor = await mapServerByIdForUser(input.serverId, input.actorUserId);
+  if (!actor) {
+    return { transferred: false };
+  }
+
+  if (actor.role !== "owner") {
+    throw new Error("forbidden_role");
+  }
+
+  if (input.actorUserId === input.targetUserId) {
+    throw new Error("transfer_to_self");
+  }
+
+  const target = await mapServerByIdForUser(input.serverId, input.targetUserId);
+  if (!target) {
+    throw new Error("target_not_member");
+  }
+
+  const client = await db.connect();
+  try {
+    await client.query("BEGIN");
+
+    const ownerUpdate = await client.query(
+      `UPDATE servers
+       SET owner_user_id = $2,
+           updated_at = NOW()
+       WHERE id = $1
+         AND owner_user_id = $3`,
+      [input.serverId, input.targetUserId, input.actorUserId]
+    );
+
+    if ((ownerUpdate.rowCount || 0) === 0) {
+      throw new Error("owner_changed");
+    }
+
+    await client.query(
+      `UPDATE server_members
+       SET role = 'admin',
+           status = 'active'
+       WHERE server_id = $1
+         AND user_id = $2`,
+      [input.serverId, input.actorUserId]
+    );
+
+    await client.query(
+      `INSERT INTO server_members (server_id, user_id, role, status)
+       VALUES ($1, $2, 'owner', 'active')
+       ON CONFLICT (server_id, user_id)
+       DO UPDATE SET role = 'owner', status = 'active'`,
+      [input.serverId, input.targetUserId]
+    );
+
+    await writeServerAuditEvent({
+      client,
+      action: "server.owner.transferred",
+      serverId: input.serverId,
+      actorUserId: input.actorUserId,
+      targetUserId: input.targetUserId,
+      meta: {
+        previousOwnerUserId: input.actorUserId,
+        nextOwnerUserId: input.targetUserId,
+        previousTargetRole: target.role
+      }
+    });
+
+    await client.query("COMMIT");
+    return { transferred: true };
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
 }
