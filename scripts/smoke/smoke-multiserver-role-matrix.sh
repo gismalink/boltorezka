@@ -66,6 +66,7 @@ WITH candidate AS ( \
   SELECT created_admin_server.id, candidate.user_id, 'admin', 'active' \
   FROM created_admin_server, candidate \
   ON CONFLICT (server_id, user_id) DO UPDATE SET role='admin', status='active' \
+  RETURNING 1 AS n \
 ), created_member_server AS ( \
   INSERT INTO servers (slug, name, owner_user_id, is_default) \
   SELECT 'role-check-member-' || substr(md5(random()::text), 1, 8), 'RoleCheckMember', candidate.user_id, FALSE \
@@ -76,14 +77,22 @@ WITH candidate AS ( \
   SELECT created_member_server.id, candidate.user_id, 'member', 'active' \
   FROM created_member_server, candidate \
   ON CONFLICT (server_id, user_id) DO UPDATE SET role='member', status='active' \
+  RETURNING 1 AS n \
+), ensure_exec AS ( \
+  SELECT \
+    (SELECT user_id FROM candidate) AS user_id, \
+    COALESCE((SELECT SUM(n) FROM assign_admin), 0) AS admin_rows, \
+    COALESCE((SELECT SUM(n) FROM assign_member), 0) AS member_rows \
 ) \
 SELECT \
   (coalesce(bool_or(sm.role = 'owner'), FALSE)::int)::text || '|' || \
   (coalesce(bool_or(sm.role = 'admin'), FALSE)::int)::text || '|' || \
   (coalesce(bool_or(sm.role = 'member'), FALSE)::int)::text || '|' || \
-  coalesce(array_to_string(array_agg(DISTINCT sm.role ORDER BY sm.role), ','), '') \
-FROM server_members sm \
-WHERE sm.user_id = (SELECT user_id FROM candidate) \
+  coalesce(array_to_string(array_agg(DISTINCT sm.role ORDER BY sm.role), ','), '') || '|' || \
+  MAX(ensure_exec.admin_rows)::text || '|' || MAX(ensure_exec.member_rows)::text \
+FROM ensure_exec \
+JOIN server_members sm ON sm.user_id = ensure_exec.user_id \
+WHERE ensure_exec.user_id IS NOT NULL \
   AND sm.status = 'active'; \
 ROLLBACK;"
 
@@ -95,12 +104,12 @@ if [[ -z "$ROLE_MATRIX_LINE" ]]; then
   exit 1
 fi
 
-HAS_OWNER="${ROLE_MATRIX_LINE%%|*}"
-REMAINDER="${ROLE_MATRIX_LINE#*|}"
-HAS_ADMIN="${REMAINDER%%|*}"
-REMAINDER="${REMAINDER#*|}"
-HAS_MEMBER="${REMAINDER%%|*}"
-ROLES="${REMAINDER#*|}"
+IFS='|' read -r HAS_OWNER HAS_ADMIN HAS_MEMBER ROLES ADMIN_ROWS MEMBER_ROWS <<< "$ROLE_MATRIX_LINE"
+
+if [[ "$ADMIN_ROWS" -lt 1 || "$MEMBER_ROWS" -lt 1 ]]; then
+  echo "[smoke:multiserver:role-matrix] failed to assign synthetic admin/member rows (admin_rows=$ADMIN_ROWS member_rows=$MEMBER_ROWS)" >&2
+  exit 1
+fi
 
 if [[ "$HAS_OWNER" != "1" || "$HAS_ADMIN" != "1" || "$HAS_MEMBER" != "1" ]]; then
   echo "[smoke:multiserver:role-matrix] expected owner/admin/member, got roles=$ROLES" >&2
