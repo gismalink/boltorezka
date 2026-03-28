@@ -68,21 +68,30 @@ WITH candidate AS ( \
 SELECT candidate.user_id AS candidate_user_id, helper_user.user_id AS helper_user_id \
 FROM candidate \
 CROSS JOIN helper_user; \
-CREATE TEMP TABLE role_matrix_owner_server ON COMMIT DROP AS \
-INSERT INTO servers (slug, name, owner_user_id, is_default) \
-SELECT 'role-check-owner-' || substr(md5(random()::text), 1, 8), 'RoleCheckOwner', role_matrix_ctx.candidate_user_id, FALSE \
-FROM role_matrix_ctx \
-RETURNING id; \
-CREATE TEMP TABLE role_matrix_admin_server ON COMMIT DROP AS \
-INSERT INTO servers (slug, name, owner_user_id, is_default) \
-SELECT 'role-check-admin-' || substr(md5(random()::text), 1, 8), 'RoleCheckAdmin', role_matrix_ctx.helper_user_id, FALSE \
-FROM role_matrix_ctx \
-RETURNING id; \
-CREATE TEMP TABLE role_matrix_member_server ON COMMIT DROP AS \
-INSERT INTO servers (slug, name, owner_user_id, is_default) \
-SELECT 'role-check-member-' || substr(md5(random()::text), 1, 8), 'RoleCheckMember', role_matrix_ctx.helper_user_id, FALSE \
-FROM role_matrix_ctx \
-RETURNING id; \
+CREATE TEMP TABLE role_matrix_owner_server (id uuid) ON COMMIT DROP; \
+WITH created AS ( \
+  INSERT INTO servers (slug, name, owner_user_id, is_default) \
+  SELECT 'role-check-owner-' || substr(md5(random()::text), 1, 8), 'RoleCheckOwner', role_matrix_ctx.candidate_user_id, FALSE \
+  FROM role_matrix_ctx \
+  RETURNING id \
+) \
+INSERT INTO role_matrix_owner_server(id) SELECT id FROM created; \
+CREATE TEMP TABLE role_matrix_admin_server (id uuid) ON COMMIT DROP; \
+WITH created AS ( \
+  INSERT INTO servers (slug, name, owner_user_id, is_default) \
+  SELECT 'role-check-admin-' || substr(md5(random()::text), 1, 8), 'RoleCheckAdmin', role_matrix_ctx.helper_user_id, FALSE \
+  FROM role_matrix_ctx \
+  RETURNING id \
+) \
+INSERT INTO role_matrix_admin_server(id) SELECT id FROM created; \
+CREATE TEMP TABLE role_matrix_member_server (id uuid) ON COMMIT DROP; \
+WITH created AS ( \
+  INSERT INTO servers (slug, name, owner_user_id, is_default) \
+  SELECT 'role-check-member-' || substr(md5(random()::text), 1, 8), 'RoleCheckMember', role_matrix_ctx.helper_user_id, FALSE \
+  FROM role_matrix_ctx \
+  RETURNING id \
+) \
+INSERT INTO role_matrix_member_server(id) SELECT id FROM created; \
 INSERT INTO server_members (server_id, user_id, role, status) \
 SELECT role_matrix_owner_server.id, role_matrix_ctx.candidate_user_id, 'owner', 'active' \
 FROM role_matrix_owner_server, role_matrix_ctx \
