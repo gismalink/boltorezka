@@ -11,6 +11,7 @@ import {
 import type { CallStatus } from "./services";
 import {
   AccessStateGate,
+  AgeVerificationRequiredOverlay,
   AppHeader,
   AppWorkspacePanels,
   AppUpdatedOverlay,
@@ -177,6 +178,7 @@ export function App() {
   const [serverAgeLoading, setServerAgeLoading] = useState(false);
   const [serverAgeConfirmedAt, setServerAgeConfirmedAt] = useState<string | null>(null);
   const [serverAgeConfirming, setServerAgeConfirming] = useState(false);
+  const [ageGateBlockedRoomSlug, setAgeGateBlockedRoomSlug] = useState("");
   const [pendingInviteToken, setPendingInviteToken] = useState("");
   const [inviteAccepting, setInviteAccepting] = useState(false);
   const [telemetrySummary, setTelemetrySummary] = useState<TelemetrySummary | null>(null);
@@ -791,7 +793,7 @@ export function App() {
         setMessagesHasMore,
         setMessagesNextCursor,
         sendRoomJoinEvent: (slug) => {
-          void sendWsEvent("room.join", { roomSlug: slug }, { maxRetries: 1 });
+          return sendWsEventAwaitAck("room.join", { roomSlug: slug }, { maxRetries: 1 });
         },
         setRooms,
         setRoomsTree,
@@ -799,7 +801,7 @@ export function App() {
         setAdminUsers,
         getCurrentServerId: () => currentServerIdRef.current
       }),
-    [pushLog, pushToast, sendWsEvent]
+    [pushLog, pushToast, sendWsEventAwaitAck]
   );
 
   const loadTelemetrySummary = useCallback(async () => {
@@ -1340,6 +1342,9 @@ export function App() {
     pushToast,
     pushLog,
     t,
+    onAgeVerificationRequired: (slug) => {
+      setAgeGateBlockedRoomSlug(slug);
+    },
     setRoomSlug,
     setChatRoomSlug
   });
@@ -1917,6 +1922,24 @@ export function App() {
             setSessionMovedOverlayMessage("");
             window.location.reload();
           }}
+        />
+      ) : null}
+
+      {ageGateBlockedRoomSlug ? (
+        <AgeVerificationRequiredOverlay
+          t={t}
+          roomSlug={ageGateBlockedRoomSlug}
+          confirming={serverAgeConfirming}
+          onOpenAgeSettings={() => openUserSettings("profile")}
+          onConfirmAgeAndRetry={() => {
+            const blockedRoomSlug = ageGateBlockedRoomSlug;
+            void (async () => {
+              await handleConfirmServerAge();
+              setAgeGateBlockedRoomSlug("");
+              joinRoom(blockedRoomSlug);
+            })();
+          }}
+          onClose={() => setAgeGateBlockedRoomSlug("")}
         />
       ) : null}
 

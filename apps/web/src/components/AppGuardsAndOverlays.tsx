@@ -367,3 +367,52 @@ export function SessionMovedOverlay({ message, onReopenHere }: { message: string
     </div>
   );
 }
+
+export function AgeVerificationRequiredOverlay({
+  t,
+  roomSlug,
+  confirming,
+  onOpenAgeSettings,
+  onConfirmAgeAndRetry,
+  onClose
+}: {
+  t: Translate;
+  roomSlug: string;
+  confirming: boolean;
+  onOpenAgeSettings: () => void;
+  onConfirmAgeAndRetry: () => void;
+  onClose: () => void;
+}) {
+  return (
+    <div className="voice-preferences-overlay fixed inset-0 z-[315] grid place-items-center p-4" role="dialog" aria-modal="true" aria-live="assertive">
+      <section className="card voice-preferences-modal w-full max-w-[620px] !h-auto !max-h-[90vh] overflow-auto p-6 text-center">
+        <h2>{t("rooms.ageGateOverlayTitle")}</h2>
+        <p className="mt-3 muted">{t("rooms.ageGateOverlayHint").replace("{room}", roomSlug)}</p>
+        <div className="mt-6 grid gap-2">
+          <button
+            type="button"
+            className="secondary"
+            onClick={onOpenAgeSettings}
+          >
+            {t("rooms.ageGateOverlayOpenProfile")}
+          </button>
+          <button
+            type="button"
+            className="primary"
+            disabled={confirming}
+            onClick={onConfirmAgeAndRetry}
+          >
+            {confirming ? t("settings.ageConfirmActionLoading") : t("rooms.ageGateOverlayConfirmAndRetry")}
+          </button>
+          <button
+            type="button"
+            className="secondary"
+            onClick={onClose}
+          >
+            {t("common.no")}
+          </button>
+        </div>
+      </section>
+    </div>
+  );
+}

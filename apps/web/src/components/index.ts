@@ -2,6 +2,7 @@ export { AppHeader } from "./AppHeader";
 export { AppWorkspacePanels } from "./AppWorkspacePanels";
 export {
 	AccessStateGate,
+	AgeVerificationRequiredOverlay,
 	AppUpdatedOverlay,
 	DesktopBrowserCompletionGate,
 	DesktopUpdateBanner,

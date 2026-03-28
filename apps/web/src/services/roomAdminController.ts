@@ -8,7 +8,7 @@ type RoomAdminControllerOptions = {
   setMessages: (updater: (prev: Message[]) => Message[]) => void;
   setMessagesHasMore: (value: boolean) => void;
   setMessagesNextCursor: (cursor: MessagesCursor | null) => void;
-  sendRoomJoinEvent: (slug: string) => void;
+  sendRoomJoinEvent: (slug: string) => Promise<void>;
   setRooms: (rooms: Room[]) => void;
   setRoomsTree: (tree: RoomsTreeResponse | null) => void;
   setArchivedRooms: (rooms: Room[]) => void;
@@ -230,12 +230,12 @@ export class RoomAdminController {
     }
   }
 
-  joinRoom(slug: string) {
+  async joinRoom(slug: string) {
+    await this.options.sendRoomJoinEvent(slug);
     this.options.setRoomSlug(slug);
     this.options.setMessages(() => []);
     this.options.setMessagesHasMore(false);
     this.options.setMessagesNextCursor(null);
-    this.options.sendRoomJoinEvent(slug);
   }
 
   async promote(token: string, userId: string) {
