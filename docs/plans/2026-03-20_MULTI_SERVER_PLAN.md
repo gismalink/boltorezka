@@ -387,6 +387,9 @@ Stage 6 note (2026-03-28):
 - Добавлен backend endpoint передачи владения сервером: `POST /v1/servers/:serverId/owner`.
 - Правила owner safety сохранены: владелец не может уйти с сервера (`owner_cannot_leave`) и не может быть удален (`owner_cannot_be_removed`) без передачи владения.
 - Ownership transfer выполняется транзакционно с аудит-событием `server.owner.transferred`.
+- Добавлен UI для owner transfer и server unban в списке участников (`ServerProfileModal`).
+- Список участников расширен флагом `isServerBanned`, чтобы UI корректно показывал действие `Забанить/Снять бан`.
+- Изменения провалидированы в `test` через `TEST_REF=origin/feature/multiserver-stage1-services SMOKE_MULTISERVER=1 SMOKE_MULTISERVER_AGE_GATE=1 npm run deploy:test:smoke` (SHA `e6ae8a6`, PASS).
 - `Membership lifecycle` частично закрыт: `leave` и `kick/remove` реализованы; `rejoin` остается как отдельная задача.
 
 ## 7) Что еще нужно добавить (рекомендации)
