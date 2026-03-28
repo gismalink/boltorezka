@@ -13,6 +13,7 @@ import type {
   ServerAudioQualityResponse,
   ServerChatImagePolicyResponse,
   ServerCreateResponse,
+  ServerDeleteResponse,
   ServerRenameResponse,
   ServerMembersResponse,
   ServerAgeStatusResponse,
@@ -331,6 +332,8 @@ export const api = {
     fetchJson<ServerCreateResponse>(endpoints.servers, token, withJsonBody("POST", input)),
   renameServer: (token: string, serverId: string, input: { name: string }) =>
     fetchJson<ServerRenameResponse>(withId(endpoints.servers, serverId), token, withJsonBody("PATCH", input)),
+  deleteServer: (token: string, serverId: string) =>
+    fetchJson<ServerDeleteResponse>(withId(endpoints.servers, serverId), token, withJsonBody("DELETE")),
   serverMembers: (token: string, serverId: string) =>
     fetchJson<ServerMembersResponse>(withSuffix(endpoints.servers, serverId, "members"), token),
   serverAgeStatus: (token: string, serverId: string) =>

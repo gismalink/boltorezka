@@ -1410,10 +1410,44 @@ export function App() {
     }
   }, [token, currentServerId, pushToast, t]);
 
-  const handleDeleteCurrentServer = useCallback(() => {
-    // Delete server endpoint is not implemented yet on API side.
-    pushToast(t("server.deleteUnavailable"));
-  }, [pushToast, t]);
+  const handleDeleteCurrentServer = useCallback(async () => {
+    const tokenValue = String(token || "").trim();
+    const serverId = String(currentServerId || "").trim();
+
+    if (!tokenValue || !serverId) {
+      return;
+    }
+
+    try {
+      await api.deleteServer(tokenValue, serverId);
+
+      const listResponse = await api.servers(tokenValue);
+      const list = Array.isArray(listResponse.servers) ? listResponse.servers : [];
+      setServers(list);
+      setCurrentServerId((prev) => {
+        if (prev && list.some((item) => item.id === prev)) {
+          return prev;
+        }
+        return list[0]?.id || "";
+      });
+      setLastInviteUrl("");
+      pushToast(t("server.deleteSuccess"));
+    } catch (error) {
+      if (error instanceof ApiError) {
+        if (error.code === "forbidden_role") {
+          pushToast(t("server.deleteForbidden"));
+          return;
+        }
+
+        if (error.code === "DefaultServerCannotBeDeleted") {
+          pushToast(t("server.deleteDefaultForbidden"));
+          return;
+        }
+      }
+
+      pushToast((error as Error).message || t("toast.serverError"));
+    }
+  }, [token, currentServerId, pushToast, t]);
 
   const handleRemoveServerMember = useCallback(async (targetUserId: string) => {
     const tokenValue = String(token || "").trim();

@@ -10,6 +10,7 @@ import {
 } from "../middleware/auth.js";
 import {
   createServerForUser,
+  deleteServerForUser,
   getDefaultServerContextForUser,
   getServerForUser,
   leaveServerForUser,
@@ -28,6 +29,7 @@ import type {
   ServerAgeConfirmResponse,
   ServerAgeStatusResponse,
   ServerCreateResponse,
+  ServerDeleteResponse,
   ServerBanResponse,
   ServerBanRevokeResponse,
   ServerGetResponse,
@@ -389,6 +391,58 @@ export async function serversRoutes(fastify: FastifyInstance) {
           return reply.code(403).send({
             error: "forbidden_role",
             message: "Insufficient server role"
+          });
+        }
+
+        throw error;
+      }
+    }
+  );
+
+  fastify.delete<{ Params: { serverId: string } }>(
+    "/v1/servers/:serverId",
+    {
+      preHandler: [
+        requireAuth,
+        requireServiceAccess,
+        requireNotServiceBanned,
+        loadCurrentUser,
+        requireServerMembership,
+        requireNotServerBanned
+      ]
+    },
+    async (request, reply) => {
+      const serverId = String(request.params.serverId || "").trim();
+      const actorUserId = String(request.currentUser?.id || "").trim();
+
+      try {
+        const result = await deleteServerForUser({
+          serverId,
+          actorUserId
+        });
+
+        if (!result.deleted) {
+          return reply.code(404).send({
+            error: "ServerNotFound",
+            message: "Server not found"
+          });
+        }
+
+        const response: ServerDeleteResponse = { deleted: true };
+        return response;
+      } catch (error) {
+        const message = String((error as Error)?.message || "");
+        if (message === "forbidden_role") {
+          return reply.code(403).send({
+            error: "forbidden_role",
+            message: "Insufficient server role"
+          });
+        }
+
+        if (message === "default_server_cannot_be_deleted") {
+          return reply.code(409).send({
+            error: "DefaultServerCannotBeDeleted",
+            message: "Default server cannot be deleted"
           });
         }
 

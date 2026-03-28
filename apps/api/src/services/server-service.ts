@@ -32,6 +32,11 @@ type TransferServerOwnershipInput = {
   targetUserId: string;
 };
 
+type DeleteServerInput = {
+  serverId: string;
+  actorUserId: string;
+};
+
 function toSlug(raw: string): string {
   return raw
     .toLowerCase()
@@ -48,7 +53,7 @@ async function ensureUniqueSlug(baseSlug: string): Promise<string> {
   let candidate = normalizedBase;
 
   for (let i = 0; i < 100; i += 1) {
-    const result = await db.query<{ id: string }>("SELECT id FROM servers WHERE slug = $1 LIMIT 1", [candidate]);
+    const result = await db.query<{ id: string }>("SELECT id FROM servers WHERE slug = $1 AND is_archived = FALSE LIMIT 1", [candidate]);
     if ((result.rowCount || 0) === 0) {
       return candidate;
     }
@@ -90,6 +95,7 @@ async function mapServerByIdForUser(serverId: string, userId: string): Promise<S
      FROM servers s
      JOIN server_members sm ON sm.server_id = s.id
      WHERE s.id = $1
+       AND s.is_archived = FALSE
        AND sm.user_id = $2
        AND sm.status = 'active'
      LIMIT 1`,
@@ -106,7 +112,7 @@ export async function createServerForUser(input: CreateServerInput): Promise<Ser
 
   if (creatorRole !== "super_admin") {
     const ownerServers = await db.query<{ count: string }>(
-      "SELECT COUNT(*)::text AS count FROM servers WHERE owner_user_id = $1",
+      "SELECT COUNT(*)::text AS count FROM servers WHERE owner_user_id = $1 AND is_archived = FALSE",
       [ownerUserId]
     );
 
@@ -199,6 +205,7 @@ export async function listUserServers(userId: string): Promise<ServerListItem[]>
      FROM server_members sm
      JOIN servers s ON s.id = sm.server_id
      WHERE sm.user_id = $1
+       AND s.is_archived = FALSE
        AND sm.status = 'active'
      ORDER BY s.is_default DESC, s.created_at ASC`,
     [userId]
@@ -284,6 +291,7 @@ export async function getDefaultServerContextForUser(userId: string): Promise<Se
      FROM servers s
      JOIN server_members sm ON sm.server_id = s.id
      WHERE s.is_default = TRUE
+       AND s.is_archived = FALSE
        AND sm.user_id = $1
        AND sm.status = 'active'
      ORDER BY s.created_at ASC
@@ -454,6 +462,80 @@ export async function transferServerOwnershipForUser(
 
     await client.query("COMMIT");
     return { transferred: true };
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+export async function deleteServerForUser(input: DeleteServerInput): Promise<{ deleted: boolean }> {
+  const actor = await mapServerByIdForUser(input.serverId, input.actorUserId);
+  if (!actor) {
+    return { deleted: false };
+  }
+
+  if (actor.role !== "owner") {
+    throw new Error("forbidden_role");
+  }
+
+  const serverState = await db.query<{ is_default: boolean; is_archived: boolean }>(
+    `SELECT is_default, is_archived
+     FROM servers
+     WHERE id = $1
+     LIMIT 1`,
+    [input.serverId]
+  );
+
+  const state = serverState.rows[0];
+  if (!state || state.is_archived) {
+    return { deleted: false };
+  }
+
+  if (state.is_default) {
+    throw new Error("default_server_cannot_be_deleted");
+  }
+
+  const client = await db.connect();
+  try {
+    await client.query("BEGIN");
+
+    const archived = await client.query(
+      `UPDATE servers
+       SET is_archived = TRUE,
+           updated_at = NOW()
+       WHERE id = $1
+         AND is_archived = FALSE`,
+      [input.serverId]
+    );
+
+    if ((archived.rowCount || 0) === 0) {
+      await client.query("ROLLBACK");
+      return { deleted: false };
+    }
+
+    const membershipUpdate = await client.query(
+      `UPDATE server_members
+       SET status = 'removed'
+       WHERE server_id = $1
+         AND status = 'active'`,
+      [input.serverId]
+    );
+
+    await writeServerAuditEvent({
+      client,
+      action: "server.deleted",
+      serverId: input.serverId,
+      actorUserId: input.actorUserId,
+      meta: {
+        actorRole: actor.role,
+        affectedActiveMembers: Number(membershipUpdate.rowCount || 0)
+      }
+    });
+
+    await client.query("COMMIT");
+    return { deleted: true };
   } catch (error) {
     await client.query("ROLLBACK");
     throw error;

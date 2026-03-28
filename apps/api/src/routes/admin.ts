@@ -245,6 +245,7 @@ export async function adminRoutes(fastify: FastifyInstance) {
            WHERE expires_at IS NULL OR expires_at > NOW()
            GROUP BY server_id
          ) bans_stats ON bans_stats.server_id = s.id
+         WHERE s.is_archived = FALSE
          ORDER BY s.is_default DESC, s.created_at ASC`
       );
 
@@ -289,6 +290,7 @@ export async function adminRoutes(fastify: FastifyInstance) {
          FROM servers s
          LEFT JOIN users owner_user ON owner_user.id = s.owner_user_id
          WHERE s.id = $1
+           AND s.is_archived = FALSE
          LIMIT 1`,
         [serverId]
       );

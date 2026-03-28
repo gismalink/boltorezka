@@ -60,9 +60,11 @@ function toExpiresAt(ttlHours?: number): string | null {
 async function getServerRole(serverId: string, userId: string): Promise<ServerMemberRole | null> {
   const membership = await db.query<{ role: ServerMemberRole }>(
     `SELECT role
-     FROM server_members
-     WHERE server_id = $1
-       AND user_id = $2
+     FROM server_members sm
+     JOIN servers s ON s.id = sm.server_id
+     WHERE sm.server_id = $1
+       AND s.is_archived = FALSE
+       AND sm.user_id = $2
        AND status = 'active'
      LIMIT 1`,
     [serverId, userId]
@@ -183,6 +185,7 @@ export async function acceptServerInvite(input: AcceptInviteInput): Promise<Serv
          FROM servers s
          JOIN server_members sm ON sm.server_id = s.id
          WHERE s.id = $1
+           AND s.is_archived = FALSE
            AND sm.user_id = $2
            AND sm.status = 'active'
          LIMIT 1`,
@@ -234,6 +237,7 @@ export async function acceptServerInvite(input: AcceptInviteInput): Promise<Serv
        FROM servers s
        JOIN server_members sm ON sm.server_id = s.id
        WHERE s.id = $1
+         AND s.is_archived = FALSE
          AND sm.user_id = $2
          AND sm.status = 'active'
        LIMIT 1`,

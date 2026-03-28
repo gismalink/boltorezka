@@ -164,6 +164,10 @@ export type ServerRenameResponse = {
   server: ServerListItem;
 };
 
+export type ServerDeleteResponse = {
+  deleted: boolean;
+};
+
 export type ServerContext = Pick<ServerRow, "id" | "slug" | "name"> & {
   role: ServerMemberRole;
 };

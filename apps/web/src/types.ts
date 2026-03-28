@@ -170,6 +170,10 @@ export type ServerRenameResponse = {
   server: ServerListItem;
 };
 
+export type ServerDeleteResponse = {
+  deleted: boolean;
+};
+
 export type ServerMemberItem = {
   userId: string;
   email: string;
