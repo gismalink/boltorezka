@@ -20,6 +20,7 @@ import {
   renameServerForUser,
   transferServerOwnershipForUser
 } from "../services/server-service.js";
+import { disconnectRealtimeSocketsForUser } from "../realtime-broadcast.js";
 import { createServerInvite } from "../services/invite-service.js";
 import { applyServerBan, revokeServerBan } from "../services/ban-service.js";
 import { makeRateLimiter } from "../middleware/rate-limit.js";
@@ -245,6 +246,8 @@ export async function serversRoutes(fastify: FastifyInstance) {
             message: "Server member not found"
           });
         }
+
+        disconnectRealtimeSocketsForUser(targetUserId, 4009, "Removed from server");
 
         const response: ServerMemberRemoveResponse = { removed: true };
         return response;
