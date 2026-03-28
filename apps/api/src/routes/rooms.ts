@@ -61,6 +61,7 @@ const createCategorySchema = z.object({
     .regex(/^[a-z0-9-]+$/)
     .optional(),
   title: z.string().min(2).max(120),
+  server_id: z.string().uuid().optional(),
   position: z.number().int().min(0).optional()
 });
 
@@ -75,12 +76,15 @@ function toSlug(raw: string): string {
     .slice(0, 48);
 }
 
-async function ensureUniqueCategorySlug(baseSlug: string): Promise<string> {
+async function ensureUniqueCategorySlug(baseSlug: string, serverId: string): Promise<string> {
   const normalizedBase = baseSlug || "category";
   let candidate = normalizedBase;
 
   for (let i = 0; i < 100; i += 1) {
-    const result = await db.query<{ id: string }>("SELECT id FROM room_categories WHERE slug = $1 LIMIT 1", [candidate]);
+    const result = await db.query<{ id: string }>(
+      "SELECT id FROM room_categories WHERE server_id = $1 AND slug = $2 LIMIT 1",
+      [serverId, candidate]
+    );
     if ((result.rowCount || 0) === 0) {
       return candidate;
     }
@@ -153,6 +157,41 @@ export async function roomsRoutes(fastify: FastifyInstance) {
     }
   };
 
+  const resolveDefaultMemberServerId = async (userId: string): Promise<string | null> => {
+    const result = await db.query<{ server_id: string }>(
+      `SELECT sm.server_id
+       FROM server_members sm
+       JOIN servers s ON s.id = sm.server_id
+       WHERE sm.user_id = $1
+         AND sm.status = 'active'
+         AND s.is_archived = FALSE
+       ORDER BY s.is_default DESC, sm.created_at ASC
+       LIMIT 1`,
+      [userId]
+    );
+
+    return String(result.rows[0]?.server_id || "").trim() || null;
+  };
+
+  const canManageServerRooms = async (userId: string, serverId: string, globalRole: string): Promise<boolean> => {
+    if (globalRole === "admin" || globalRole === "super_admin") {
+      return true;
+    }
+
+    const membership = await db.query<{ role: string }>(
+      `SELECT role
+       FROM server_members
+       WHERE server_id = $1
+         AND user_id = $2
+         AND status = 'active'
+       LIMIT 1`,
+      [serverId, userId]
+    );
+
+    const serverRole = String(membership.rows[0]?.role || "").trim();
+    return serverRole === "owner" || serverRole === "admin";
+  };
+
   fastify.get<{ Querystring: { serverId?: string } }>(
     "/v1/rooms/tree",
     {
@@ -173,11 +212,15 @@ export async function roomsRoutes(fastify: FastifyInstance) {
         return response;
       }
 
-      const categoriesResult = await db.query<RoomCategoryRow>(
-        `SELECT id, slug, title, position, created_at
-         FROM room_categories
-         ORDER BY position ASC, created_at ASC`
-      );
+      const categoriesResult = activeServerId
+        ? await db.query<RoomCategoryRow>(
+            `SELECT id, slug, title, position, created_at
+             FROM room_categories
+             WHERE server_id = $1
+             ORDER BY position ASC, created_at ASC`,
+            [activeServerId]
+          )
+        : { rows: [], rowCount: 0 };
 
       const roomFilters = ["r.is_archived = FALSE"];
       const roomParams: string[] = [userId];
@@ -354,10 +397,10 @@ export async function roomsRoutes(fastify: FastifyInstance) {
     }
   );
 
-  fastify.post<{ Body: { slug: string; title: string; position?: number } }>(
+  fastify.post<{ Body: { slug?: string; title: string; server_id?: string; position?: number } }>(
     "/v1/room-categories",
     {
-      preHandler: [requireAuth, requireServiceAccess, loadCurrentUser, requireRole(["admin", "super_admin"])]
+      preHandler: [requireAuth, requireServiceAccess, loadCurrentUser]
     },
     async (request, reply) => {
       const parsed = createCategorySchema.safeParse(request.body);
@@ -371,24 +414,58 @@ export async function roomsRoutes(fastify: FastifyInstance) {
 
       const { title } = parsed.data;
       const createdBy = String(request.user?.sub || "").trim();
+      const requestedServerId = String(parsed.data.server_id || "").trim();
+      let targetServerId = "";
+
+      if (requestedServerId) {
+        const accessibleServerId = await resolveAccessibleServerId(createdBy, requestedServerId);
+        if (!accessibleServerId) {
+          return reply.code(403).send({
+            error: "not_server_member",
+            message: "You are not a member of this server"
+          });
+        }
+        targetServerId = accessibleServerId;
+      } else {
+        const fallbackServerId = await resolveDefaultMemberServerId(createdBy);
+        targetServerId = String(fallbackServerId || "").trim();
+      }
+
+      if (!targetServerId) {
+        return reply.code(403).send({
+          error: "not_server_member",
+          message: "You are not a member of any active server"
+        });
+      }
+
+      const globalRole = String(request.currentUser?.role || "user").trim();
+      const allowed = await canManageServerRooms(createdBy, targetServerId, globalRole);
+      if (!allowed) {
+        return reply.code(403).send({
+          error: "forbidden_role",
+          message: "Insufficient permissions to manage categories in this server"
+        });
+      }
+
       const requestedSlug = String(parsed.data.slug || "").trim();
-      const slug = await ensureUniqueCategorySlug(requestedSlug || toSlug(title) || "category");
+      const slug = await ensureUniqueCategorySlug(requestedSlug || toSlug(title) || "category", targetServerId);
 
       const position = typeof parsed.data.position === "number"
         ? parsed.data.position
         : Number(
             (
               await db.query<{ next_position: number }>(
-                "SELECT COALESCE(MAX(position), -1) + 1 AS next_position FROM room_categories"
+                "SELECT COALESCE(MAX(position), -1) + 1 AS next_position FROM room_categories WHERE server_id = $1",
+                [targetServerId]
               )
             ).rows[0]?.next_position || 0
           );
 
       const created = await db.query<RoomCategoryRow>(
-        `INSERT INTO room_categories (slug, title, position, created_by)
-         VALUES ($1, $2, $3, $4)
+        `INSERT INTO room_categories (slug, title, position, created_by, server_id)
+         VALUES ($1, $2, $3, $4, $5)
          RETURNING id, slug, title, position, created_at`,
-        [slug, title, position, createdBy]
+        [slug, title, position, createdBy, targetServerId]
       );
 
       const response: RoomCategoryCreateResponse = { category: created.rows[0] };
@@ -402,7 +479,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
   }>(
     "/v1/room-categories/:categoryId",
     {
-      preHandler: [requireAuth, requireServiceAccess, loadCurrentUser, requireRole(["admin", "super_admin"])]
+      preHandler: [requireAuth, requireServiceAccess, loadCurrentUser]
     },
     async (request, reply) => {
       const categoryId = String(request.params.categoryId || "").trim();
@@ -418,6 +495,32 @@ export async function roomsRoutes(fastify: FastifyInstance) {
         return reply.code(400).send({
           error: "ValidationError",
           issues: parsed.error.flatten()
+        });
+      }
+
+      const actorId = String(request.user?.sub || "").trim();
+      const globalRole = String(request.currentUser?.role || "user").trim();
+      const existing = await db.query<{ id: string; server_id: string }>(
+        `SELECT id, server_id
+         FROM room_categories
+         WHERE id = $1
+         LIMIT 1`,
+        [categoryId]
+      );
+
+      if ((existing.rowCount || 0) === 0) {
+        return reply.code(404).send({
+          error: "CategoryNotFound",
+          message: "Category does not exist"
+        });
+      }
+
+      const categoryServerId = String(existing.rows[0]?.server_id || "").trim();
+      const allowed = await canManageServerRooms(actorId, categoryServerId, globalRole);
+      if (!allowed) {
+        return reply.code(403).send({
+          error: "forbidden_role",
+          message: "Insufficient permissions to manage categories in this server"
         });
       }
 
@@ -446,7 +549,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
   }>(
     "/v1/room-categories/:categoryId/move",
     {
-      preHandler: [requireAuth, requireServiceAccess, loadCurrentUser, requireRole(["admin", "super_admin"])]
+      preHandler: [requireAuth, requireServiceAccess, loadCurrentUser]
     },
     async (request, reply) => {
       const categoryId = String(request.params.categoryId || "").trim();
@@ -465,8 +568,11 @@ export async function roomsRoutes(fastify: FastifyInstance) {
         });
       }
 
-      const currentResult = await db.query<RoomCategoryRow>(
-        `SELECT id, slug, title, position, created_at
+      const actorId = String(request.user?.sub || "").trim();
+      const globalRole = String(request.currentUser?.role || "user").trim();
+
+      const currentResult = await db.query<RoomCategoryRow & { server_id: string }>(
+        `SELECT id, slug, title, position, created_at, server_id
          FROM room_categories
          WHERE id = $1`,
         [categoryId]
@@ -480,18 +586,28 @@ export async function roomsRoutes(fastify: FastifyInstance) {
       }
 
       const current = currentResult.rows[0];
+      const allowed = await canManageServerRooms(actorId, String(current.server_id || "").trim(), globalRole);
+      if (!allowed) {
+        return reply.code(403).send({
+          error: "forbidden_role",
+          message: "Insufficient permissions to manage categories in this server"
+        });
+      }
+
       const direction = parsed.data.direction;
       const neighborQuery = direction === "up"
         ? `SELECT id, position FROM room_categories
-           WHERE position < $1
+           WHERE server_id = $2
+             AND position < $1
            ORDER BY position DESC
            LIMIT 1`
         : `SELECT id, position FROM room_categories
-           WHERE position > $1
+           WHERE server_id = $2
+             AND position > $1
            ORDER BY position ASC
            LIMIT 1`;
 
-      const neighborResult = await db.query<{ id: string; position: number }>(neighborQuery, [current.position]);
+      const neighborResult = await db.query<{ id: string; position: number }>(neighborQuery, [current.position, current.server_id]);
 
       if ((neighborResult.rowCount || 0) === 0) {
         return { category: current };
@@ -526,7 +642,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
   }>(
     "/v1/room-categories/:categoryId",
     {
-      preHandler: [requireAuth, requireServiceAccess, loadCurrentUser, requireRole(["admin", "super_admin"])]
+      preHandler: [requireAuth, requireServiceAccess, loadCurrentUser]
     },
     async (request, reply) => {
       const categoryId = String(request.params.categoryId || "").trim();
@@ -534,6 +650,33 @@ export async function roomsRoutes(fastify: FastifyInstance) {
         return reply.code(400).send({
           error: "ValidationError",
           message: "categoryId is required"
+        });
+      }
+
+      const actorId = String(request.user?.sub || "").trim();
+      const globalRole = String(request.currentUser?.role || "user").trim();
+
+      const categoryRef = await db.query<{ id: string; server_id: string }>(
+        `SELECT id, server_id
+         FROM room_categories
+         WHERE id = $1
+         LIMIT 1`,
+        [categoryId]
+      );
+
+      if ((categoryRef.rowCount || 0) === 0) {
+        return reply.code(404).send({
+          error: "CategoryNotFound",
+          message: "Category does not exist"
+        });
+      }
+
+      const categoryServerId = String(categoryRef.rows[0]?.server_id || "").trim();
+      const allowed = await canManageServerRooms(actorId, categoryServerId, globalRole);
+      if (!allowed) {
+        return reply.code(403).send({
+          error: "forbidden_role",
+          message: "Insufficient permissions to manage categories in this server"
         });
       }
 
@@ -610,16 +753,6 @@ export async function roomsRoutes(fastify: FastifyInstance) {
         ? (parsed.data.audio_quality_override ?? null)
         : null;
 
-      if (category_id) {
-        const category = await db.query("SELECT id FROM room_categories WHERE id = $1", [category_id]);
-        if ((category.rowCount || 0) === 0) {
-          return reply.code(400).send({
-            error: "ValidationError",
-            message: "category_id does not exist"
-          });
-        }
-      }
-
       const requestedSlug = String(parsed.data.slug || "").trim();
       const slug = await ensureUniqueRoomSlug(requestedSlug || toSlug(title) || "room");
 
@@ -678,6 +811,19 @@ export async function roomsRoutes(fastify: FastifyInstance) {
           error: "forbidden_role",
           message: "Insufficient permissions to create room in this server"
         });
+      }
+
+      if (category_id) {
+        const category = await db.query<{ id: string }>(
+          "SELECT id FROM room_categories WHERE id = $1 AND server_id = $2",
+          [category_id, targetServerId]
+        );
+        if ((category.rowCount || 0) === 0) {
+          return reply.code(400).send({
+            error: "ValidationError",
+            message: "category_id does not exist in selected server"
+          });
+        }
       }
 
       const position = typeof parsed.data.position === "number"
@@ -759,12 +905,32 @@ export async function roomsRoutes(fastify: FastifyInstance) {
         ? (parsed.data.audio_quality_override ?? null)
         : undefined;
 
+      const targetRoom = await db.query<{ id: string; server_id: string }>(
+        `SELECT id, server_id
+         FROM rooms
+         WHERE id = $1
+         LIMIT 1`,
+        [roomId]
+      );
+
+      if ((targetRoom.rowCount || 0) === 0) {
+        return reply.code(404).send({
+          error: "RoomNotFound",
+          message: "Room does not exist"
+        });
+      }
+
+      const targetServerId = String(targetRoom.rows[0]?.server_id || "").trim();
+
       if (category_id) {
-        const category = await db.query("SELECT id FROM room_categories WHERE id = $1", [category_id]);
+        const category = await db.query<{ id: string }>(
+          "SELECT id FROM room_categories WHERE id = $1 AND server_id = $2",
+          [category_id, targetServerId]
+        );
         if ((category.rowCount || 0) === 0) {
           return reply.code(400).send({
             error: "ValidationError",
-            message: "category_id does not exist"
+            message: "category_id does not exist in room server"
           });
         }
       }

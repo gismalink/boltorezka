@@ -56,7 +56,10 @@ export class RoomAdminController {
   async createCategory(token: string, titleInput: string) {
     try {
       const title = titleInput.trim();
-      const response = await api.createCategory(token, { title });
+      const response = await api.createCategory(token, {
+        title,
+        server_id: this.getCurrentServerId()
+      });
       await this.loadRoomTree(token);
       this.options.pushLog(`category created: ${response.category.slug}`);
       return true;

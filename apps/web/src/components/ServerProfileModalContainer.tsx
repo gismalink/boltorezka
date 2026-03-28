@@ -41,6 +41,8 @@ type ServerProfileModalContainerProps = {
     currentUserId: string;
     currentServerRole: ServerProfileModalProps["currentServerRole"];
     currentServerName: string;
+    currentServerId: string;
+    servers: ServerProfileModalProps["servers"];
     hasCurrentServer: boolean;
     serverMembers: ServerProfileModalProps["serverMembers"];
     serverMembersLoading: boolean;
@@ -66,6 +68,7 @@ type ServerProfileModalContainerProps = {
     onSelectAdminServer: ServerProfileModalProps["onSelectAdminServer"];
     onCreateServerInvite: ServerProfileModalProps["onCreateServerInvite"];
     onCopyInviteUrl: ServerProfileModalProps["onCopyInviteUrl"];
+    onChangeCurrentServer: ServerProfileModalProps["onChangeCurrentServer"];
     onRenameCurrentServer: ServerProfileModalProps["onRenameCurrentServer"];
     onConfirmServerAge: ServerProfileModalProps["onConfirmServerAge"];
     onLeaveServer: ServerProfileModalProps["onLeaveServer"];
@@ -113,6 +116,8 @@ export function ServerProfileModalContainer({ open, t, permissions, state, data,
       currentUserId={data.currentUserId}
       currentServerRole={data.currentServerRole}
       currentServerName={data.currentServerName}
+      currentServerId={data.currentServerId}
+      servers={data.servers}
       hasCurrentServer={data.hasCurrentServer}
       serverMembers={data.serverMembers}
       serverMembersLoading={data.serverMembersLoading}
@@ -153,6 +158,7 @@ export function ServerProfileModalContainer({ open, t, permissions, state, data,
       onSelectAdminServer={actions.onSelectAdminServer}
       onCreateServerInvite={actions.onCreateServerInvite}
       onCopyInviteUrl={actions.onCopyInviteUrl}
+      onChangeCurrentServer={actions.onChangeCurrentServer}
       onRenameCurrentServer={actions.onRenameCurrentServer}
       onConfirmServerAge={actions.onConfirmServerAge}
       onLeaveServer={actions.onLeaveServer}

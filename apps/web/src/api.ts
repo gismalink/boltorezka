@@ -271,7 +271,7 @@ export const api = {
     fetchJson<{ rooms: Room[] }>(withServerIdQuery(endpoints.roomsArchived, serverId), token),
   roomTree: (token: string, serverId?: string) =>
     fetchJson<RoomsTreeResponse>(withServerIdQuery(endpoints.roomsTree, serverId), token),
-  createCategory: (token: string, input: { slug?: string; title: string; position?: number }) =>
+  createCategory: (token: string, input: { slug?: string; title: string; server_id?: string; position?: number }) =>
     fetchJson<{ category: RoomCategory }>(endpoints.roomCategories, token, withJsonBody("POST", input)),
   updateCategory: (token: string, categoryId: string, input: { title: string }) =>
     fetchJson<{ category: RoomCategory }>(withId(endpoints.roomCategories, categoryId), token, withJsonBody("PATCH", input)),

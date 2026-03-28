@@ -2414,7 +2414,7 @@ export function App() {
       ) : null}
 
       {user ? (
-        !serversLoading && servers.length === 0 ? (
+        !serversLoading && servers.length === 0 && !userSettingsOpen ? (
           <EmptyServerOnboarding
             t={t}
             creatingServer={creatingServer}
@@ -2434,7 +2434,7 @@ export function App() {
         />
         )
       ) : authMode !== "loading" ? (
-        <GuestLoginGate t={t} onBeginGoogleSso={() => beginSso("google")} />
+        <GuestLoginGate t={t} onBeginSso={beginSso} />
       ) : null}
 
       {inviteAccepting ? (
@@ -2483,6 +2483,8 @@ export function App() {
           currentUserId: user?.id || "",
           currentServerRole: currentServer?.role || null,
           currentServerName: currentServer?.name || "",
+          currentServerId,
+          servers,
           hasCurrentServer: Boolean(currentServer?.id),
           serverMembers,
           serverMembersLoading,
@@ -2508,6 +2510,7 @@ export function App() {
           onSelectAdminServer: setSelectedAdminServerId,
           onCreateServerInvite: () => void handleCreateServerInvite(),
           onCopyInviteUrl: () => void handleCopyInviteUrl(),
+          onChangeCurrentServer: (serverId) => handleServerChange(serverId),
           onRenameCurrentServer: (name) => void handleRenameCurrentServer(name),
           onConfirmServerAge: () => void handleConfirmServerAge(),
           onLeaveServer: () => void handleLeaveCurrentServer(),

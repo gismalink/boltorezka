@@ -3,6 +3,7 @@ import type {
   AdminServerListItem,
   AdminServerOverview,
   AudioQuality,
+  ServerListItem,
   ServerMemberItem,
   ServerMemberRole,
   TelemetrySummary,
@@ -71,6 +72,8 @@ type ServerProfileModalProps = {
   currentUserId: string;
   currentServerRole: ServerMemberRole | null;
   currentServerName: string;
+  currentServerId: string;
+  servers: ServerListItem[];
   serverMembers: ServerMemberItem[];
   serverMembersLoading: boolean;
   serverAgeLoading: boolean;
@@ -114,6 +117,7 @@ type ServerProfileModalProps = {
   onSelectAdminServer: (serverId: string) => void;
   onCreateServerInvite: () => void;
   onCopyInviteUrl: () => void;
+  onChangeCurrentServer: (serverId: string) => void;
   onRenameCurrentServer: (name: string) => void;
   onConfirmServerAge: () => void;
   onLeaveServer: () => void;
@@ -259,6 +263,8 @@ export function ServerProfileModal({
   currentUserId,
   currentServerRole,
   currentServerName,
+  currentServerId,
+  servers,
   serverMembers,
   serverMembersLoading,
   serverAgeLoading,
@@ -298,6 +304,7 @@ export function ServerProfileModal({
   onSelectAdminServer,
   onCreateServerInvite,
   onCopyInviteUrl,
+  onChangeCurrentServer,
   onRenameCurrentServer,
   onConfirmServerAge,
   onLeaveServer,
@@ -332,6 +339,8 @@ export function ServerProfileModal({
   const [observabilityTab, setObservabilityTab] = useState<ObservabilityTab>("log");
   const [userSearchQuery, setUserSearchQuery] = useState("");
   const [renameServerName, setRenameServerName] = useState("");
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [deleteConfirmNameInput, setDeleteConfirmNameInput] = useState("");
   const totalUsers = adminUsers.length;
   const totalAdmins = adminUsers.filter((item) => item.role === "admin" || item.role === "super_admin").length;
   const totalBanned = adminUsers.filter((item) => item.is_banned).length;
@@ -408,6 +417,17 @@ export function ServerProfileModal({
   useEffect(() => {
     setRenameServerName(String(currentServerName || "").trim());
   }, [currentServerName]);
+
+  useEffect(() => {
+    if (!open) {
+      setDeleteConfirmOpen(false);
+      setDeleteConfirmNameInput("");
+    }
+  }, [open]);
+
+  const canConfirmServerDelete =
+    deleteConfirmNameInput.trim().length > 0
+    && deleteConfirmNameInput.trim() === String(currentServerName || "").trim();
 
   useEffect(() => {
     if (!canViewTelemetry && observabilityTab === "telemetry") {
@@ -899,6 +919,18 @@ export function ServerProfileModal({
               {showServerMembersPanel ? (
                 <>
                   <h3>{t("server.membersTitle")}</h3>
+                  <label className="grid gap-1">
+                    <span className="muted">{t("server.managementServerSelect")}</span>
+                    <select
+                      value={currentServerId}
+                      onChange={(event) => onChangeCurrentServer(event.target.value)}
+                      disabled={servers.length === 0}
+                    >
+                      {servers.map((server) => (
+                        <option key={server.id} value={server.id}>{server.name}</option>
+                      ))}
+                    </select>
+                  </label>
                   <p className="muted">
                     {serverMembersLoading
                       ? t("server.membersLoading")
@@ -966,7 +998,7 @@ export function ServerProfileModal({
                     <button type="button" className="secondary" onClick={onLeaveServer}>
                       {t("server.leave")}
                     </button>
-                    <button type="button" className="secondary" onClick={onDeleteServer}>
+                    <button type="button" className="secondary" onClick={() => setDeleteConfirmOpen(true)}>
                       {t("server.deleteServer")}
                     </button>
                   </div>
@@ -1539,6 +1571,48 @@ export function ServerProfileModal({
           ) : null}
         </div>
       </section>
+
+      {deleteConfirmOpen ? (
+        <div className="fixed inset-0 z-[170] flex items-center justify-center bg-black/65 px-4" role="dialog" aria-modal="true">
+          <div className="card compact grid w-full max-w-[540px] gap-3 p-4">
+            <h3>{t("server.deleteConfirmTitle")}</h3>
+            <p className="muted">{t("server.deleteConfirmWarning")}</p>
+            <p className="muted">{`${t("server.deleteConfirmTypeLabel")}: ${currentServerName || "-"}`}</p>
+            <label className="grid gap-1">
+              <span className="muted">{t("server.deleteConfirmInputLabel")}</span>
+              <input
+                type="text"
+                value={deleteConfirmNameInput}
+                onChange={(event) => setDeleteConfirmNameInput(event.target.value)}
+                placeholder={currentServerName || ""}
+              />
+            </label>
+            <div className="flex flex-wrap justify-end gap-2">
+              <button
+                type="button"
+                className="secondary"
+                onClick={() => {
+                  setDeleteConfirmOpen(false);
+                  setDeleteConfirmNameInput("");
+                }}
+              >
+                {t("server.deleteConfirmCancel")}
+              </button>
+              <button
+                type="button"
+                disabled={!canConfirmServerDelete}
+                onClick={() => {
+                  onDeleteServer();
+                  setDeleteConfirmOpen(false);
+                  setDeleteConfirmNameInput("");
+                }}
+              >
+                {t("server.deleteConfirmAction")}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
