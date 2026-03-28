@@ -347,6 +347,10 @@ Stage 3 note (2026-03-28):
    - авто-переключение на принятый сервер,
    - очистка URL после обработки invite.
 - Изменения провалидированы в `test` на feature-ветке через `TEST_REF=origin/feature/multiserver-stage1-services SMOKE_MULTISERVER=1 SMOKE_MULTISERVER_AGE_GATE=1 npm run deploy:test:smoke` (SHA `0572285`, PASS).
+- Добавлен UI для server rename и server age-confirm в `ServerProfileModal`:
+   - переименование текущего сервера (`PATCH /v1/servers/:serverId`),
+   - показ статуса age-confirm и действие подтверждения (`GET/POST /v1/servers/:serverId/age-confirm`).
+- Изменения провалидированы в `test` на feature-ветке через `TEST_REF=origin/feature/multiserver-stage1-services SMOKE_MULTISERVER=1 SMOKE_MULTISERVER_AGE_GATE=1 npm run deploy:test:smoke` (SHA `96d70ed`, PASS).
 
 ### Stage 4 - Data cutover
 
@@ -389,7 +393,9 @@ Stage 6 note (2026-03-28):
 - Ownership transfer выполняется транзакционно с аудит-событием `server.owner.transferred`.
 - Добавлен UI для owner transfer и server unban в списке участников (`ServerProfileModal`).
 - Список участников расширен флагом `isServerBanned`, чтобы UI корректно показывал действие `Забанить/Снять бан`.
+- Добавлен UI для server rename и server age-confirm (status + confirm action) в `ServerProfileModal`.
 - Изменения провалидированы в `test` через `TEST_REF=origin/feature/multiserver-stage1-services SMOKE_MULTISERVER=1 SMOKE_MULTISERVER_AGE_GATE=1 npm run deploy:test:smoke` (SHA `e6ae8a6`, PASS).
+- Повторная валидация расширенного UI-среза (rename + age-confirm) прошла в `test` через тот же gate (SHA `96d70ed`, PASS).
 - `Membership lifecycle` частично закрыт: `leave` и `kick/remove` реализованы; `rejoin` остается как отдельная задача.
 
 ## 7) Что еще нужно добавить (рекомендации)
