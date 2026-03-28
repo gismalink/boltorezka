@@ -50,6 +50,7 @@ compose() {
 cd "$REPO_DIR"
 
 SQL_QUERY="BEGIN; \
+CREATE TEMP TABLE role_matrix_ctx ON COMMIT DROP AS \
 WITH candidate AS ( \
   SELECT sm.user_id \
   FROM server_members sm \
@@ -63,57 +64,57 @@ WITH candidate AS ( \
     AND sm.user_id <> candidate.user_id \
   ORDER BY sm.joined_at ASC \
   LIMIT 1 \
-), created_owner_server AS ( \
-  INSERT INTO servers (slug, name, owner_user_id, is_default) \
-  SELECT 'role-check-owner-' || substr(md5(random()::text), 1, 8), 'RoleCheckOwner', candidate.user_id, FALSE \
-  FROM candidate \
-  RETURNING id \
-), assign_owner AS ( \
-  INSERT INTO server_members (server_id, user_id, role, status) \
-  SELECT created_owner_server.id, candidate.user_id, 'owner', 'active' \
-  FROM created_owner_server, candidate \
-  ON CONFLICT (server_id, user_id) DO UPDATE SET role='owner', status='active' \
-  RETURNING 1 AS n \
-), created_admin_server AS ( \
-  INSERT INTO servers (slug, name, owner_user_id, is_default) \
-  SELECT 'role-check-admin-' || substr(md5(random()::text), 1, 8), 'RoleCheckAdmin', helper_user.user_id, FALSE \
-  FROM helper_user \
-  RETURNING id \
-), assign_admin AS ( \
-  INSERT INTO server_members (server_id, user_id, role, status) \
-  SELECT created_admin_server.id, candidate.user_id, 'admin', 'active' \
-  FROM created_admin_server, candidate \
-  ON CONFLICT (server_id, user_id) DO UPDATE SET role='admin', status='active' \
-  RETURNING 1 AS n \
-), created_member_server AS ( \
-  INSERT INTO servers (slug, name, owner_user_id, is_default) \
-  SELECT 'role-check-member-' || substr(md5(random()::text), 1, 8), 'RoleCheckMember', helper_user.user_id, FALSE \
-  FROM helper_user \
-  RETURNING id \
-), assign_member AS ( \
-  INSERT INTO server_members (server_id, user_id, role, status) \
-  SELECT created_member_server.id, candidate.user_id, 'member', 'active' \
-  FROM created_member_server, candidate \
-  ON CONFLICT (server_id, user_id) DO UPDATE SET role='member', status='active' \
-  RETURNING 1 AS n \
-), ensure_exec AS ( \
-  SELECT \
-    (SELECT user_id FROM candidate) AS user_id, \
-    (SELECT user_id FROM helper_user) AS helper_user_id, \
-    COALESCE((SELECT SUM(n) FROM assign_owner), 0) AS owner_rows, \
-    COALESCE((SELECT SUM(n) FROM assign_admin), 0) AS admin_rows, \
-    COALESCE((SELECT SUM(n) FROM assign_member), 0) AS member_rows \
 ) \
+SELECT candidate.user_id AS candidate_user_id, helper_user.user_id AS helper_user_id \
+FROM candidate \
+CROSS JOIN helper_user; \
+CREATE TEMP TABLE role_matrix_owner_server ON COMMIT DROP AS \
+INSERT INTO servers (slug, name, owner_user_id, is_default) \
+SELECT 'role-check-owner-' || substr(md5(random()::text), 1, 8), 'RoleCheckOwner', role_matrix_ctx.candidate_user_id, FALSE \
+FROM role_matrix_ctx \
+RETURNING id; \
+CREATE TEMP TABLE role_matrix_admin_server ON COMMIT DROP AS \
+INSERT INTO servers (slug, name, owner_user_id, is_default) \
+SELECT 'role-check-admin-' || substr(md5(random()::text), 1, 8), 'RoleCheckAdmin', role_matrix_ctx.helper_user_id, FALSE \
+FROM role_matrix_ctx \
+RETURNING id; \
+CREATE TEMP TABLE role_matrix_member_server ON COMMIT DROP AS \
+INSERT INTO servers (slug, name, owner_user_id, is_default) \
+SELECT 'role-check-member-' || substr(md5(random()::text), 1, 8), 'RoleCheckMember', role_matrix_ctx.helper_user_id, FALSE \
+FROM role_matrix_ctx \
+RETURNING id; \
+INSERT INTO server_members (server_id, user_id, role, status) \
+SELECT role_matrix_owner_server.id, role_matrix_ctx.candidate_user_id, 'owner', 'active' \
+FROM role_matrix_owner_server, role_matrix_ctx \
+ON CONFLICT (server_id, user_id) DO UPDATE SET role='owner', status='active'; \
+INSERT INTO server_members (server_id, user_id, role, status) \
+SELECT role_matrix_admin_server.id, role_matrix_ctx.candidate_user_id, 'admin', 'active' \
+FROM role_matrix_admin_server, role_matrix_ctx \
+ON CONFLICT (server_id, user_id) DO UPDATE SET role='admin', status='active'; \
+INSERT INTO server_members (server_id, user_id, role, status) \
+SELECT role_matrix_member_server.id, role_matrix_ctx.candidate_user_id, 'member', 'active' \
+FROM role_matrix_member_server, role_matrix_ctx \
+ON CONFLICT (server_id, user_id) DO UPDATE SET role='member', status='active'; \
 SELECT \
   (coalesce(bool_or(sm.role = 'owner'), FALSE)::int)::text || '|' || \
   (coalesce(bool_or(sm.role = 'admin'), FALSE)::int)::text || '|' || \
   (coalesce(bool_or(sm.role = 'member'), FALSE)::int)::text || '|' || \
   coalesce(array_to_string(array_agg(DISTINCT sm.role ORDER BY sm.role), ','), '') || '|' || \
-  MAX(ensure_exec.owner_rows)::text || '|' || MAX(ensure_exec.admin_rows)::text || '|' || MAX(ensure_exec.member_rows)::text || '|' || \
-  CASE WHEN bool_or(ensure_exec.helper_user_id IS NOT NULL) THEN '1' ELSE '0' END \
-FROM ensure_exec \
-JOIN server_members sm ON sm.user_id = ensure_exec.user_id \
-WHERE ensure_exec.user_id IS NOT NULL; \
+  coalesce((SELECT COUNT(*)::text FROM server_members m \
+    WHERE m.user_id = (SELECT candidate_user_id FROM role_matrix_ctx LIMIT 1) \
+      AND m.server_id IN (SELECT id FROM role_matrix_owner_server) \
+      AND m.role = 'owner'), '0') || '|' || \
+  coalesce((SELECT COUNT(*)::text FROM server_members m \
+    WHERE m.user_id = (SELECT candidate_user_id FROM role_matrix_ctx LIMIT 1) \
+      AND m.server_id IN (SELECT id FROM role_matrix_admin_server) \
+      AND m.role = 'admin'), '0') || '|' || \
+  coalesce((SELECT COUNT(*)::text FROM server_members m \
+    WHERE m.user_id = (SELECT candidate_user_id FROM role_matrix_ctx LIMIT 1) \
+      AND m.server_id IN (SELECT id FROM role_matrix_member_server) \
+      AND m.role = 'member'), '0') || '|' || \
+  (SELECT COUNT(*)::text FROM role_matrix_ctx) \
+FROM server_members sm \
+WHERE sm.user_id = (SELECT candidate_user_id FROM role_matrix_ctx LIMIT 1); \
 ROLLBACK;"
 
 RAW_OUTPUT="$(compose exec -T "$POSTGRES_SERVICE" psql -v ON_ERROR_STOP=1 -U "$SMOKE_POSTGRES_USER" -d "$SMOKE_POSTGRES_DB" -tA -c "$SQL_QUERY" | tr -d '\r')"
