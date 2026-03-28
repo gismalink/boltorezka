@@ -377,6 +377,11 @@ Stage 3 note (2026-03-28):
    - вкладка `Этот сервер` блокируется без выбранного сервера + guard возвращает на `Наблюдаемость`;
    - onboarding для состояния без серверов расширен до сценария "Приветствие и выбор" (invite или создание сервера).
 - Изменения провалидированы в `test` на feature-ветке через `TEST_REF=origin/feature/multiserver-stage1-services SMOKE_MULTISERVER=1 SMOKE_MULTISERVER_AGE_GATE=1 npm run deploy:test:smoke` (SHA `69cf604`, PASS).
+- Дополнительно по фидбеку прав доступа:
+   - вкладка `Наблюдаемость` скрыта/недоступна при отсутствии выбранного сервера;
+   - `canCreateRooms` в web учитывает роль пользователя в текущем сервере (`owner/admin`), а не только global role;
+   - backend `POST /v1/rooms` допускает создание комнат для `owner/admin` текущего сервера (без требования global `admin/super_admin`).
+- Изменения провалидированы в `test` на feature-ветке через `TEST_REF=origin/feature/multiserver-stage1-services SMOKE_MULTISERVER=1 SMOKE_MULTISERVER_AGE_GATE=1 npm run deploy:test:smoke` (SHA `0b99f9f`, PASS).
 
 ### Stage 4 - Data cutover
 
