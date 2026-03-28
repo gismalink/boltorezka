@@ -4,9 +4,7 @@ type ServerMenuTab =
   | "users"
   | "product_management"
   | "server_management"
-  | "events"
-  | "telemetry"
-  | "call"
+  | "observability"
   | "sound"
   | "video"
   | "chat_images"
@@ -31,27 +29,22 @@ export function useServerMenuAccessGuard({
 }: UseServerMenuAccessGuardArgs) {
   useEffect(() => {
     if (serverMenuTab === "users" && !canManageUsers) {
-      setServerMenuTab("events");
+      setServerMenuTab("observability");
       return;
     }
 
     if ((serverMenuTab === "product_management" || serverMenuTab === "server_management") && !canManageServerControlPlane) {
-      setServerMenuTab(canManageUsers ? "users" : "events");
-      return;
-    }
-
-    if (serverMenuTab === "telemetry" && !canViewTelemetry) {
-      setServerMenuTab("events");
+      setServerMenuTab(canManageUsers ? "users" : "observability");
       return;
     }
 
     if (serverMenuTab === "sound" && !canManageAudioQuality) {
-      setServerMenuTab("events");
+      setServerMenuTab("observability");
       return;
     }
 
     if (serverMenuTab === "video" && !canManageAudioQuality) {
-      setServerMenuTab("events");
+      setServerMenuTab("observability");
     }
   }, [
     serverMenuTab,

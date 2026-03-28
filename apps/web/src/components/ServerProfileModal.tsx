@@ -17,14 +17,36 @@ type ServerMenuTab =
   | "users"
   | "product_management"
   | "server_management"
-  | "events"
-  | "telemetry"
-  | "call"
+  | "observability"
   | "sound"
   | "video"
   | "chat_images"
   | "desktop_downloads";
 type UserAccessTab = "active" | "blocked" | "requests" | "bots";
+type ProductManagementTab = "users" | "servers";
+type ObservabilityTab = "log" | "signaling" | "telemetry";
+
+type IconAction = {
+  key: string;
+  label: string;
+  iconClass: string;
+  primary?: boolean;
+  onClick: () => void;
+};
+
+function ActionIconButton({ action }: { action: IconAction }) {
+  return (
+    <button
+      type="button"
+      className={`${action.primary ? "" : "secondary "}icon-btn tiny admin-action-btn`}
+      data-tooltip={action.label}
+      aria-label={action.label}
+      onClick={action.onClick}
+    >
+      <i className={`bi ${action.iconClass}`} aria-hidden="true" />
+    </button>
+  );
+}
 
 type ServerProfileModalProps = {
   open: boolean;
@@ -297,6 +319,8 @@ export function ServerProfileModal({
   const [desktopBridgeChannel, setDesktopBridgeChannel] = useState<"test" | "prod" | null>(null);
   const [desktopManifestChannel, setDesktopManifestChannel] = useState<"test" | "prod" | null>(null);
   const [userAccessTab, setUserAccessTab] = useState<UserAccessTab>("active");
+  const [productManagementTab, setProductManagementTab] = useState<ProductManagementTab>("users");
+  const [observabilityTab, setObservabilityTab] = useState<ObservabilityTab>("log");
   const [userSearchQuery, setUserSearchQuery] = useState("");
   const [renameServerName, setRenameServerName] = useState("");
   const totalUsers = adminUsers.length;
@@ -307,7 +331,11 @@ export function ServerProfileModal({
   const showLegacyUsersTab = !canManageServerControlPlane;
   const showServerMembersPanel = serverMenuTab === "users" || serverMenuTab === "server_management";
   const showAdminUsersPanel = canManageUsers
-    && ((serverMenuTab === "users" && !canManageServerControlPlane) || serverMenuTab === "product_management");
+    && ((serverMenuTab === "users" && !canManageServerControlPlane)
+      || (serverMenuTab === "product_management" && productManagementTab === "users"));
+  const showAdminServersPanel = canManageServerControlPlane
+    && serverMenuTab === "product_management"
+    && productManagementTab === "servers";
   const rnnoiseProcessSamples = telemetrySummary?.metrics.rnnoise_process_cost_samples ?? 0;
   const rnnoiseProcessAvgMs = rnnoiseProcessSamples > 0
     ? (telemetrySummary?.metrics.rnnoise_process_cost_us_sum ?? 0) / rnnoiseProcessSamples / 1000
@@ -371,6 +399,12 @@ export function ServerProfileModal({
   }, [currentServerName]);
 
   useEffect(() => {
+    if (!canViewTelemetry && observabilityTab === "telemetry") {
+      setObservabilityTab("log");
+    }
+  }, [canViewTelemetry, observabilityTab]);
+
+  useEffect(() => {
     if (!open || serverMenuTab !== "desktop_downloads") {
       return;
     }
@@ -421,7 +455,7 @@ export function ServerProfileModal({
   }, [normalizedUserSearch, userAccessTab, usersByTab]);
 
   const getUserRowActions = (item: User) => {
-    const actions: Array<{ key: string; label: string; iconClass: string; primary?: boolean; onClick: () => void }> = [];
+    const actions: IconAction[] = [];
     const isProtected = item.role === "super_admin";
 
     if (canPromote && userAccessTab === "active" && !isProtected) {
@@ -539,6 +573,61 @@ export function ServerProfileModal({
       iconClass: "bi-person-fill-x",
       onClick: () => onSetBan(item.id, true)
     });
+
+    return actions;
+  };
+
+  const getServerMemberRowActions = (member: ServerMemberItem): IconAction[] => {
+    const actions: IconAction[] = [];
+
+    if (member.userId === currentUserId && member.role !== "owner") {
+      actions.push({
+        key: "leave",
+        label: t("server.leave"),
+        iconClass: "bi-box-arrow-right",
+        onClick: onLeaveServer
+      });
+      return actions;
+    }
+
+    const canModerateMember = member.userId !== currentUserId
+      && ((currentServerRole === "owner" && member.role !== "owner")
+        || (currentServerRole === "admin" && member.role === "member"));
+
+    if (canModerateMember) {
+      if (member.isServerBanned) {
+        actions.push({
+          key: "unban",
+          label: t("server.unbanMember"),
+          iconClass: "bi-person-check-fill",
+          onClick: () => onUnbanServerMember(member.userId)
+        });
+      } else {
+        actions.push({
+          key: "ban",
+          label: t("server.banMember"),
+          iconClass: "bi-person-fill-x",
+          onClick: () => onBanServerMember(member.userId)
+        });
+      }
+
+      actions.push({
+        key: "remove",
+        label: t("server.removeMember"),
+        iconClass: "bi-person-dash-fill",
+        onClick: () => onRemoveServerMember(member.userId)
+      });
+    }
+
+    if (member.userId !== currentUserId && currentServerRole === "owner" && member.role !== "owner") {
+      actions.push({
+        key: "transfer",
+        label: t("server.transferOwnership"),
+        iconClass: "bi-arrow-left-right",
+        primary: true,
+        onClick: () => onTransferServerOwnership(member.userId)
+      });
+    }
 
     return actions;
   };
@@ -708,26 +797,10 @@ export function ServerProfileModal({
           ) : null}
           <button
             type="button"
-            className={`secondary user-settings-tab-btn min-h-[42px] justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${serverMenuTab === "events" ? "user-settings-tab-btn-active" : ""}`}
-            onClick={() => onSetServerMenuTab("events")}
+            className={`secondary user-settings-tab-btn min-h-[42px] justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${serverMenuTab === "observability" ? "user-settings-tab-btn-active" : ""}`}
+            onClick={() => onSetServerMenuTab("observability")}
           >
-            {t("server.tabEvents")}
-          </button>
-          {canViewTelemetry ? (
-            <button
-              type="button"
-              className={`secondary user-settings-tab-btn min-h-[42px] justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${serverMenuTab === "telemetry" ? "user-settings-tab-btn-active" : ""}`}
-              onClick={() => onSetServerMenuTab("telemetry")}
-            >
-              {t("server.tabTelemetry")}
-            </button>
-          ) : null}
-          <button
-            type="button"
-            className={`secondary user-settings-tab-btn min-h-[42px] justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${serverMenuTab === "call" ? "user-settings-tab-btn-active" : ""}`}
-            onClick={() => onSetServerMenuTab("call")}
-          >
-            {t("server.tabCall")}
+            {t("server.tabObservability")}
           </button>
           {canManageAudioQuality ? (
             <button
@@ -769,9 +842,7 @@ export function ServerProfileModal({
               {serverMenuTab === "users" ? t("server.tabUsers") : null}
               {serverMenuTab === "product_management" ? t("server.tabProductManagement") : null}
               {serverMenuTab === "server_management" ? t("server.tabServerManagement") : null}
-              {serverMenuTab === "events" ? t("server.tabEvents") : null}
-              {serverMenuTab === "telemetry" ? t("server.tabTelemetry") : null}
-              {serverMenuTab === "call" ? t("server.tabCall") : null}
+              {serverMenuTab === "observability" ? t("server.tabObservability") : null}
               {serverMenuTab === "sound" ? t("server.tabSound") : null}
               {serverMenuTab === "video" ? t("server.tabVideo") : null}
               {serverMenuTab === "chat_images" ? t("server.tabChatImages") : null}
@@ -861,98 +932,37 @@ export function ServerProfileModal({
                         <span className="min-w-0 break-words">
                           {member.name} · {member.email} ({member.role})
                         </span>
-                        <div className="flex flex-wrap items-center justify-end gap-2">
-                          {member.userId === currentUserId && member.role !== "owner" ? (
-                            <button type="button" className="secondary" onClick={onLeaveServer}>
-                              {t("server.leave")}
-                            </button>
-                          ) : null}
-                          {member.userId !== currentUserId
-                          && ((currentServerRole === "owner" && member.role !== "owner")
-                            || (currentServerRole === "admin" && member.role === "member")) ? (
-                            <>
-                              {member.isServerBanned ? (
-                                <button
-                                  type="button"
-                                  className="secondary"
-                                  onClick={() => onUnbanServerMember(member.userId)}
-                                >
-                                  {t("server.unbanMember")}
-                                </button>
-                              ) : (
-                                <button
-                                  type="button"
-                                  className="secondary"
-                                  onClick={() => onBanServerMember(member.userId)}
-                                >
-                                  {t("server.banMember")}
-                                </button>
-                              )}
-                              <button
-                                type="button"
-                                className="secondary"
-                                onClick={() => onRemoveServerMember(member.userId)}
-                              >
-                                {t("server.removeMember")}
-                              </button>
-                            </>
-                          ) : null}
-                          {member.userId !== currentUserId
-                          && currentServerRole === "owner"
-                          && member.role !== "owner" ? (
-                            <button
-                              type="button"
-                              className="secondary"
-                              onClick={() => onTransferServerOwnership(member.userId)}
-                            >
-                              {t("server.transferOwnership")}
-                            </button>
-                          ) : null}
+                        <div className="row-actions flex flex-wrap items-stretch justify-end gap-2">
+                          {getServerMemberRowActions(member).map((action) => (
+                            <ActionIconButton key={`${member.userId}-${action.key}`} action={action} />
+                          ))}
                         </div>
                       </li>
                     ))}
                   </ul>
                   {!serverMembersLoading && serverMembers.length === 0 ? <p className="muted">{t("server.membersEmpty")}</p> : null}
-
-                  {showServerManagementTab ? (
-                    <>
-                      <h3>{t("server.managementTitle")}</h3>
-                      <p className="muted">
-                        {adminServersLoading
-                          ? t("server.managementLoading")
-                          : `${t("server.managementServersCount")}: ${adminServers.length}`}
-                      </p>
-                      <label className="grid gap-1">
-                        <span className="muted">{t("server.managementServerSelect")}</span>
-                        <select
-                          value={selectedAdminServerId}
-                          onChange={(event) => onSelectAdminServer(event.target.value)}
-                          disabled={adminServersLoading || adminServers.length === 0}
-                        >
-                          {adminServers.map((server) => (
-                            <option key={server.id} value={server.id}>
-                              {server.name} ({server.slug})
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-
-                      {adminServerOverviewLoading ? <p className="muted">{t("server.managementOverviewLoading")}</p> : null}
-                      {!adminServerOverviewLoading && !adminServerOverview ? <p className="muted">{t("server.managementEmpty")}</p> : null}
-
-                      {adminServerOverview ? (
-                        <div className="grid gap-1">
-                          <div>{t("server.managementOwner")}: {adminServerOverview.ownerName || "-"}</div>
-                          <div>{t("server.managementMembers")}: {adminServerOverview.metrics.members.active} / {adminServerOverview.metrics.members.total}</div>
-                          <div>{t("server.managementRooms")}: {adminServerOverview.metrics.rooms.total}</div>
-                          <div>{t("server.managementMessages")}: {adminServerOverview.metrics.messages.total}</div>
-                          <div>{t("server.managementInvites")}: {adminServerOverview.metrics.invites.active} / {adminServerOverview.metrics.invites.total}</div>
-                          <div>{t("server.managementBans")}: {adminServerOverview.metrics.serverBans.active} / {adminServerOverview.metrics.serverBans.total}</div>
-                        </div>
-                      ) : null}
-                    </>
-                  ) : null}
                 </>
+              ) : null}
+
+              {serverMenuTab === "product_management" && canManageServerControlPlane ? (
+                <div className="quality-toggle-group" role="tablist" aria-label={t("server.productTabs")}>
+                  <button
+                    type="button"
+                    className={`secondary quality-toggle-btn ${productManagementTab === "users" ? "quality-toggle-btn-active" : ""}`}
+                    onClick={() => setProductManagementTab("users")}
+                    aria-selected={productManagementTab === "users"}
+                  >
+                    {t("server.productTabUsers")}
+                  </button>
+                  <button
+                    type="button"
+                    className={`secondary quality-toggle-btn ${productManagementTab === "servers" ? "quality-toggle-btn-active" : ""}`}
+                    onClick={() => setProductManagementTab("servers")}
+                    aria-selected={productManagementTab === "servers"}
+                  >
+                    {t("server.productTabServers")}
+                  </button>
+                </div>
               ) : null}
 
               {showAdminUsersPanel ? (
@@ -1012,16 +1022,7 @@ export function ServerProfileModal({
                     </span>
                     <div className="row-actions flex flex-wrap items-stretch gap-2">
                       {getUserRowActions(item).map((action) => (
-                        <button
-                          key={`${item.id}-${action.key}`}
-                          type="button"
-                          className={`${action.primary ? "" : "secondary "}icon-btn tiny admin-action-btn`}
-                          data-tooltip={action.label}
-                          aria-label={action.label}
-                          onClick={action.onClick}
-                        >
-                          <i className={`bi ${action.iconClass}`} aria-hidden="true" />
-                        </button>
+                        <ActionIconButton key={`${item.id}-${action.key}`} action={action} />
                       ))}
                     </div>
                   </li>
@@ -1030,53 +1031,125 @@ export function ServerProfileModal({
               {filteredAdminUsers.length === 0 ? <p className="muted">{t("admin.emptyState")}</p> : null}
                 </>
               ) : null}
+
+              {showAdminServersPanel ? (
+                <>
+                  <h3>{t("server.managementTitle")}</h3>
+                  <p className="muted">
+                    {adminServersLoading
+                      ? t("server.managementLoading")
+                      : `${t("server.managementServersCount")}: ${adminServers.length}`}
+                  </p>
+                  <label className="grid gap-1">
+                    <span className="muted">{t("server.managementServerSelect")}</span>
+                    <select
+                      value={selectedAdminServerId}
+                      onChange={(event) => onSelectAdminServer(event.target.value)}
+                      disabled={adminServersLoading || adminServers.length === 0}
+                    >
+                      {adminServers.map((server) => (
+                        <option key={server.id} value={server.id}>
+                          {server.name} ({server.slug})
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  {adminServerOverviewLoading ? <p className="muted">{t("server.managementOverviewLoading")}</p> : null}
+                  {!adminServerOverviewLoading && !adminServerOverview ? <p className="muted">{t("server.managementEmpty")}</p> : null}
+
+                  {adminServerOverview ? (
+                    <div className="grid gap-1">
+                      <div>{t("server.managementOwner")}: {adminServerOverview.ownerName || "-"}</div>
+                      <div>{t("server.managementMembers")}: {adminServerOverview.metrics.members.active} / {adminServerOverview.metrics.members.total}</div>
+                      <div>{t("server.managementRooms")}: {adminServerOverview.metrics.rooms.total}</div>
+                      <div>{t("server.managementMessages")}: {adminServerOverview.metrics.messages.total}</div>
+                      <div>{t("server.managementInvites")}: {adminServerOverview.metrics.invites.active} / {adminServerOverview.metrics.invites.total}</div>
+                      <div>{t("server.managementBans")}: {adminServerOverview.metrics.serverBans.active} / {adminServerOverview.metrics.serverBans.total}</div>
+                    </div>
+                  ) : null}
+                </>
+              ) : null}
             </section>
           ) : null}
 
-          {serverMenuTab === "events" ? (
-            <section className="grid min-h-0 flex-1 grid-rows-[auto_minmax(0,1fr)] gap-3">
-              <h3>{t("events.title")}</h3>
-              <div className="log h-full max-h-none overflow-auto">
-                {eventLog.map((line, index) => (
-                  <div key={`${line}-${index}`}>{line}</div>
-                ))}
+          {serverMenuTab === "observability" ? (
+            <section className="grid min-h-0 gap-3">
+              <div className="quality-toggle-group" role="tablist" aria-label={t("server.observabilityTabs")}>
+                <button
+                  type="button"
+                  className={`secondary quality-toggle-btn ${observabilityTab === "log" ? "quality-toggle-btn-active" : ""}`}
+                  onClick={() => setObservabilityTab("log")}
+                  aria-selected={observabilityTab === "log"}
+                >
+                  {t("server.observabilityTabLog")}
+                </button>
+                <button
+                  type="button"
+                  className={`secondary quality-toggle-btn ${observabilityTab === "signaling" ? "quality-toggle-btn-active" : ""}`}
+                  onClick={() => setObservabilityTab("signaling")}
+                  aria-selected={observabilityTab === "signaling"}
+                >
+                  {t("server.observabilityTabSignaling")}
+                </button>
+                {canViewTelemetry ? (
+                  <button
+                    type="button"
+                    className={`secondary quality-toggle-btn ${observabilityTab === "telemetry" ? "quality-toggle-btn-active" : ""}`}
+                    onClick={() => setObservabilityTab("telemetry")}
+                    aria-selected={observabilityTab === "telemetry"}
+                  >
+                    {t("server.observabilityTabTelemetry")}
+                  </button>
+                ) : null}
               </div>
-            </section>
-          ) : null}
 
-          {serverMenuTab === "telemetry" && canViewTelemetry ? (
-            <section className="grid gap-3">
-              <h3>{t("telemetry.title")}</h3>
-              <p className="muted">{t("telemetry.day")}: {telemetrySummary?.day || "-"}</p>
-              <div className="grid gap-1">
-                <div>ack_sent: {telemetrySummary?.metrics.ack_sent ?? 0}</div>
-                <div>nack_sent: {telemetrySummary?.metrics.nack_sent ?? 0}</div>
-                <div>chat_sent: {telemetrySummary?.metrics.chat_sent ?? 0}</div>
-                <div>chat_idempotency_hit: {telemetrySummary?.metrics.chat_idempotency_hit ?? 0}</div>
-                <div>telemetry_web_event: {telemetrySummary?.metrics.telemetry_web_event ?? 0}</div>
-                <div>rnnoise_toggle_on: {telemetrySummary?.metrics.rnnoise_toggle_on ?? 0}</div>
-                <div>rnnoise_toggle_off: {telemetrySummary?.metrics.rnnoise_toggle_off ?? 0}</div>
-                <div>rnnoise_init_error: {telemetrySummary?.metrics.rnnoise_init_error ?? 0}</div>
-                <div>rnnoise_fallback_unavailable: {telemetrySummary?.metrics.rnnoise_fallback_unavailable ?? 0}</div>
-                <div>rnnoise_process_cost_samples: {rnnoiseProcessSamples}</div>
-                <div>rnnoise_process_avg_ms: {rnnoiseProcessAvgMs.toFixed(3)}</div>
-              </div>
-              <button onClick={onRefreshTelemetry}>{t("telemetry.refresh")}</button>
-            </section>
-          ) : null}
+              {observabilityTab === "log" ? (
+                <div className="grid min-h-0 flex-1 grid-rows-[auto_minmax(0,1fr)] gap-3">
+                  <h3>{t("events.title")}</h3>
+                  <div className="log h-full max-h-none overflow-auto">
+                    {eventLog.map((line, index) => (
+                      <div key={`${line}-${index}`}>{line}</div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
 
-          {serverMenuTab === "call" ? (
-            <section className="signaling-panel grid min-h-0 flex-1 grid-rows-[auto_auto_auto_minmax(0,1fr)] gap-3">
-              <h3>{t("call.title")}</h3>
-              <p className="muted">{t("call.status")}: {callStatus}{lastCallPeer ? ` (${lastCallPeer})` : ""}</p>
-              <p className="muted">
-                {roomVoiceConnected ? t("call.autoConnected") : t("call.autoWaiting")}
-              </p>
-              <div className="log call-log h-full max-h-none overflow-auto">
-                {callEventLog.map((line, index) => (
-                  <div key={`${line}-${index}`}>{line}</div>
-                ))}
-              </div>
+              {observabilityTab === "telemetry" && canViewTelemetry ? (
+                <div className="grid gap-3">
+                  <h3>{t("telemetry.title")}</h3>
+                  <p className="muted">{t("telemetry.day")}: {telemetrySummary?.day || "-"}</p>
+                  <div className="grid gap-1">
+                    <div>ack_sent: {telemetrySummary?.metrics.ack_sent ?? 0}</div>
+                    <div>nack_sent: {telemetrySummary?.metrics.nack_sent ?? 0}</div>
+                    <div>chat_sent: {telemetrySummary?.metrics.chat_sent ?? 0}</div>
+                    <div>chat_idempotency_hit: {telemetrySummary?.metrics.chat_idempotency_hit ?? 0}</div>
+                    <div>telemetry_web_event: {telemetrySummary?.metrics.telemetry_web_event ?? 0}</div>
+                    <div>rnnoise_toggle_on: {telemetrySummary?.metrics.rnnoise_toggle_on ?? 0}</div>
+                    <div>rnnoise_toggle_off: {telemetrySummary?.metrics.rnnoise_toggle_off ?? 0}</div>
+                    <div>rnnoise_init_error: {telemetrySummary?.metrics.rnnoise_init_error ?? 0}</div>
+                    <div>rnnoise_fallback_unavailable: {telemetrySummary?.metrics.rnnoise_fallback_unavailable ?? 0}</div>
+                    <div>rnnoise_process_cost_samples: {rnnoiseProcessSamples}</div>
+                    <div>rnnoise_process_avg_ms: {rnnoiseProcessAvgMs.toFixed(3)}</div>
+                  </div>
+                  <button onClick={onRefreshTelemetry}>{t("telemetry.refresh")}</button>
+                </div>
+              ) : null}
+
+              {observabilityTab === "signaling" ? (
+                <div className="signaling-panel grid min-h-0 flex-1 grid-rows-[auto_auto_auto_minmax(0,1fr)] gap-3">
+                  <h3>{t("call.title")}</h3>
+                  <p className="muted">{t("call.status")}: {callStatus}{lastCallPeer ? ` (${lastCallPeer})` : ""}</p>
+                  <p className="muted">
+                    {roomVoiceConnected ? t("call.autoConnected") : t("call.autoWaiting")}
+                  </p>
+                  <div className="log call-log h-full max-h-none overflow-auto">
+                    {callEventLog.map((line, index) => (
+                      <div key={`${line}-${index}`}>{line}</div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
             </section>
           ) : null}
 
