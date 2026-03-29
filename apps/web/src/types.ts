@@ -15,6 +15,8 @@ export type User = {
   is_banned: boolean;
   access_state: "pending" | "active" | "blocked";
   is_bot: boolean;
+  deleted_at?: string | null;
+  purge_scheduled_at?: string | null;
   created_at: string;
 };
 

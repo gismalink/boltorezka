@@ -5,6 +5,7 @@ export {
 	AgeVerificationRequiredOverlay,
 	AppUpdatedOverlay,
 	DesktopBrowserCompletionGate,
+	DeletedAccountGate,
 	DesktopUpdateBanner,
 	EmptyServerOnboarding,
 	FirstRunIntroOverlay,

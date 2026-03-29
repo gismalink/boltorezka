@@ -16,6 +16,7 @@ import {
   AppWorkspacePanels,
   AppUpdatedOverlay,
   CookieConsentBanner,
+  DeletedAccountGate,
   DesktopBrowserCompletionGate,
   DesktopUpdateBanner,
   EmptyServerOnboarding,
@@ -215,6 +216,10 @@ export function App() {
   );
   const [profileNameDraft, setProfileNameDraft] = useState("");
   const [profileStatusText, setProfileStatusText] = useState("");
+  const [deleteAccountPending, setDeleteAccountPending] = useState(false);
+  const [deleteAccountStatusText, setDeleteAccountStatusText] = useState("");
+  const [deletedAccountInfo, setDeletedAccountInfo] = useState<{ daysRemaining: number; purgeScheduledAt: string | null } | null>(null);
+  const [restoreDeletedAccountPending, setRestoreDeletedAccountPending] = useState(false);
   const [rnnoiseRuntimeStatus, setRnnoiseRuntimeStatus] = useState<"inactive" | "active" | "unavailable" | "error">("inactive");
   const [profileSaving, setProfileSaving] = useState(false);
   const [inputDevices, setInputDevices] = useState<Array<{ id: string; label: string }>>([]);
@@ -778,7 +783,8 @@ export function App() {
       new AuthController({
         pushLog,
         setToken,
-        setUser
+        setUser,
+        setDeletedAccountInfo
       }),
     [pushLog]
   );
@@ -889,6 +895,59 @@ export function App() {
     pushToast,
     onProfileSaved: () => setRealtimeReconnectNonce((value) => value + 1)
   });
+
+  const restoreDeletedAccount = useCallback(async () => {
+    if (restoreDeletedAccountPending) {
+      return;
+    }
+
+    setRestoreDeletedAccountPending(true);
+    try {
+      const response = await api.restoreDeletedSsoAccount();
+      const restoredToken = String(response.token || "").trim();
+      if (!response.authenticated || !restoredToken || !response.user) {
+        throw new Error(t("account.restoreError"));
+      }
+
+      setDeletedAccountInfo(null);
+      setDeleteAccountStatusText("");
+      setToken(restoredToken);
+      setUser(response.user);
+      pushToast(t("account.restoreSuccess"));
+    } catch (error) {
+      const message = (error as Error).message || t("account.restoreError");
+      pushToast(message);
+    } finally {
+      setRestoreDeletedAccountPending(false);
+    }
+  }, [pushToast, restoreDeletedAccountPending, setToken, t]);
+
+  const handleDeleteAccount = useCallback(async () => {
+    if (!token || deleteAccountPending) {
+      return;
+    }
+
+    setDeleteAccountPending(true);
+    setDeleteAccountStatusText("");
+    try {
+      const response = await api.deleteMe(token);
+      setDeletedAccountInfo({
+        daysRemaining: Math.max(0, Number(response.daysRemaining ?? 30) || 30),
+        purgeScheduledAt: response.purgeScheduledAt || null
+      });
+      setUser(null);
+      setToken("");
+      localStorage.removeItem("boltorezka_token");
+      setDeleteAccountStatusText(t("settings.accountDeleteSuccess"));
+      pushToast(t("settings.accountDeleteSuccess"));
+    } catch (error) {
+      const message = (error as Error).message || t("settings.accountDeleteError");
+      setDeleteAccountStatusText(message);
+      pushToast(message);
+    } finally {
+      setDeleteAccountPending(false);
+    }
+  }, [deleteAccountPending, pushToast, t, token]);
 
   useAppShellLifecycleEffects({
     lang,
@@ -1082,7 +1141,8 @@ export function App() {
     setTelemetrySummary,
     setServerAudioQuality,
     setServerAudioQualitySaving,
-    setServerChatImagePolicy
+    setServerChatImagePolicy,
+    setDeletedAccountInfo
   });
 
   const { loadOlderMessages } = useRealtimeChatLifecycle({
@@ -1364,6 +1424,7 @@ export function App() {
     demote,
     setUserBan,
     setUserAccessState,
+    forceDeleteUserNow,
     setServerAudioQualityValue
   } = useServerModerationActions({
     token,
@@ -1537,6 +1598,8 @@ export function App() {
     profileNameDraft,
     profileSaving,
     profileStatusText,
+    deleteAccountPending,
+    deleteAccountStatusText,
     serverAgeLoading,
     serverAgeConfirmedAt,
     serverAgeConfirming,
@@ -1572,6 +1635,7 @@ export function App() {
     setLang,
     setSelectedUiTheme,
     saveMyProfile,
+    deleteAccount: () => void handleDeleteAccount(),
     confirmServerAge: () => void handleConfirmServerAge(),
     setSelectedInputId,
     setSelectedOutputId,
@@ -1703,6 +1767,20 @@ export function App() {
 
   if (showDesktopBrowserCompletion) {
     return <DesktopBrowserCompletionGate desktopHandoffError={desktopHandoffError} />;
+  }
+
+  if (!user && deletedAccountInfo) {
+    return (
+      <DeletedAccountGate
+        t={t}
+        daysRemaining={deletedAccountInfo.daysRemaining}
+        restoring={restoreDeletedAccountPending}
+        onRestore={() => {
+          void restoreDeletedAccount();
+        }}
+        onLogout={logout}
+      />
+    );
   }
 
   const showEmptyServerOnboarding = Boolean(user) && !serversLoading && servers.length === 0;
@@ -1861,6 +1939,7 @@ export function App() {
           onDemote: (userId) => void demote(userId),
           onSetBan: (userId, banned) => void setUserBan(userId, banned),
           onSetAccessState: (userId, accessState) => void setUserAccessState(userId, accessState),
+          onForceDeleteUser: (userId) => void forceDeleteUserNow(userId),
           onSelectAdminServer: setSelectedAdminServerId,
           onToggleAdminServerBlocked: (serverId, blocked) => void handleToggleAdminServerBlocked(serverId, blocked),
           onDeleteAdminServer: (serverId) => void handleDeleteAdminServer(serverId),

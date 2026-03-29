@@ -1,7 +1,13 @@
 import { api } from "../api";
+import { ApiError } from "../api";
 import { trackClientEvent } from "../telemetry";
 import type { User } from "../domain";
 import { resolveDesktopSsoReturnUrl, resolveSsoLogoutUrl, resolveSsoStartUrl } from "../transportRuntime";
+
+type DeletedAccountInfo = {
+  daysRemaining: number;
+  purgeScheduledAt: string | null;
+};
 
 function resolveCurrentReturnUrl() {
   if (typeof window === "undefined") {
@@ -45,6 +51,7 @@ type AuthControllerOptions = {
   pushLog: (text: string) => void;
   setToken: (token: string) => void;
   setUser: (user: User | null) => void;
+  setDeletedAccountInfo?: (value: DeletedAccountInfo | null) => void;
 };
 
 export class AuthController {
@@ -72,9 +79,17 @@ export class AuthController {
 
       this.options.setToken(res.token);
       this.options.setUser(res.user);
+      this.options.setDeletedAccountInfo?.(null);
       this.options.pushLog("sso session established");
       trackClientEvent("auth.sso.complete.success", { userId: res.user?.id || null }, res.token);
     } catch (error) {
+      if (error instanceof ApiError && error.code === "AccountDeleted") {
+        const daysRemaining = Math.max(0, Number(error.payload.daysRemaining ?? 30) || 30);
+        const purgeScheduledAt = typeof error.payload.purgeScheduledAt === "string"
+          ? error.payload.purgeScheduledAt
+          : null;
+        this.options.setDeletedAccountInfo?.({ daysRemaining, purgeScheduledAt });
+      }
       this.options.pushLog(`sso failed: ${(error as Error).message}`);
     }
   }
@@ -121,6 +136,7 @@ export class AuthController {
 
     this.options.setToken(response.token);
     this.options.setUser(response.user);
+    this.options.setDeletedAccountInfo?.(null);
     this.options.pushLog("desktop handoff session established");
   }
 

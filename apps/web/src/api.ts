@@ -163,6 +163,7 @@ const endpoints = {
   version: "/version",
   authMode: "/v1/auth/mode",
   ssoSession: "/v1/auth/sso/session",
+  ssoRestore: "/v1/auth/sso/restore",
   authRefresh: "/v1/auth/refresh",
   authLogout: "/v1/auth/logout",
   authDesktopHandoff: "/v1/auth/desktop-handoff",
@@ -231,6 +232,11 @@ export const api = {
   ),
   authMode: () => fetchJson<AuthModeResponse>(endpoints.authMode),
   ssoSession: () => fetchJson<{ authenticated: boolean; token: string | null; user: User | null }>(endpoints.ssoSession),
+  restoreDeletedSsoAccount: () => fetchJson<{ authenticated: boolean; restored: boolean; token: string | null; user: User | null }>(
+    endpoints.ssoRestore,
+    undefined,
+    withJsonBody("POST")
+  ),
   authRefresh: (token: string) => fetchJson<{ token: string; user: User | null }>(endpoints.authRefresh, token, withJsonBody("POST")),
   authLogout: (token: string) => fetchJson<{ ok: true }>(endpoints.authLogout, token, withJsonBody("POST")),
   desktopHandoffAttemptCreate: (token: string) =>
@@ -261,6 +267,8 @@ export const api = {
   me: (token: string) => fetchJson<{ user: User | null }>(endpoints.me, token),
   updateMe: (token: string, input: { name: string; uiTheme?: "8-neon-bit" | "material-classic" }) =>
     fetchJson<{ user: User | null }>(endpoints.me, token, withJsonBody("PATCH", input)),
+  deleteMe: (token: string) =>
+    fetchJson<{ ok: true; purgeScheduledAt: string | null; daysRemaining: number }>(endpoints.me, token, withJsonBody("DELETE")),
   wsTicket: (token: string) => fetchJson<{ ticket: string; expiresInSec: number }>(endpoints.wsTicket, token),
   livekitToken: (
     token: string,
@@ -403,6 +411,8 @@ export const api = {
     fetchJson<{ user: User }>(withSuffix(endpoints.adminUsers, userId, "ban"), token, withJsonBody("POST")),
   unbanUser: (token: string, userId: string) =>
     fetchJson<{ user: User }>(withSuffix(endpoints.adminUsers, userId, "unban"), token, withJsonBody("POST")),
+  forceDeleteUserNow: (token: string, userId: string) =>
+    fetchJson<{ deleted: boolean }>(withSuffix(endpoints.adminUsers, userId, "force-delete"), token, withJsonBody("DELETE")),
   memberPreferences: (token: string, targetUserIds: string[]) => {
     const normalizedIds = Array.from(new Set(
       targetUserIds

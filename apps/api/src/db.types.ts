@@ -12,6 +12,8 @@ export type UserRow = {
   is_banned: boolean;
   access_state: UserAccessState;
   is_bot: boolean;
+  deleted_at?: string | null;
+  purge_scheduled_at?: string | null;
   created_at: string;
 };
 
@@ -25,6 +27,8 @@ export type UserCompactRow = {
   is_banned: boolean;
   access_state: UserAccessState;
   is_bot: boolean;
+  deleted_at?: string | null;
+  purge_scheduled_at?: string | null;
 };
 
 export type RoomKind = "text" | "text_voice" | "text_voice_video";

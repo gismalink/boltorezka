@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { UserDockProps } from "../types";
 import { RangeSlider } from "../RangeSlider";
 
@@ -16,10 +17,13 @@ type UserDockSettingsOverlayProps = Pick<
   | "profileEmail"
   | "profileSaving"
   | "profileStatusText"
+  | "deleteAccountPending"
+  | "deleteAccountStatusText"
   | "serverAgeLoading"
   | "serverAgeConfirmedAt"
   | "serverAgeConfirming"
   | "onSaveProfile"
+  | "onDeleteAccount"
   | "onConfirmServerAge"
   | "onSetProfileNameDraft"
   | "selectedLang"
@@ -81,10 +85,13 @@ export function UserDockSettingsOverlay({
   profileEmail,
   profileSaving,
   profileStatusText,
+  deleteAccountPending,
+  deleteAccountStatusText,
   serverAgeLoading,
   serverAgeConfirmedAt,
   serverAgeConfirming,
   onSaveProfile,
+  onDeleteAccount,
   onConfirmServerAge,
   onSetProfileNameDraft,
   selectedLang,
@@ -130,6 +137,8 @@ export function UserDockSettingsOverlay({
   modalBarCount,
   modalActiveBars
 }: UserDockSettingsOverlayProps) {
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+
   if (!userSettingsOpen && !inlineSettingsMode) {
     return null;
   }
@@ -229,13 +238,54 @@ export function UserDockSettingsOverlay({
                     {serverAgeConfirming ? t("settings.ageConfirmActionLoading") : t("settings.ageConfirmAction")}
                   </button>
                 </div>
+                <div className="grid gap-[var(--space-md)]">
+                  <span className="subheading">{t("settings.accountDeleteTitle")}</span>
+                  <p className="muted">{t("settings.accountDeleteHint")}</p>
+                  <button
+                    type="button"
+                    className="secondary"
+                    disabled={deleteAccountPending}
+                    onClick={() => setDeleteConfirmOpen(true)}
+                  >
+                    {deleteAccountPending ? t("settings.accountDeletePending") : t("settings.accountDeleteAction")}
+                  </button>
+                </div>
               </div>
 
               {profileStatusText ? <p className="muted media-devices-warning">{profileStatusText}</p> : null}
+              {deleteAccountStatusText ? <p className="muted media-devices-warning">{deleteAccountStatusText}</p> : null}
 
               <button type="submit" disabled={profileSaving}>
                 {profileSaving ? t("settings.saving") : t("settings.save")}
               </button>
+
+              {deleteConfirmOpen ? (
+                <div className="card grid gap-3 p-4">
+                  <h4>{t("settings.accountDeleteConfirmTitle")}</h4>
+                  <p className="muted">{t("settings.accountDeleteConfirmBody")}</p>
+                  <div className="flex flex-wrap justify-end gap-2">
+                    <button
+                      type="button"
+                      className="secondary"
+                      onClick={() => setDeleteConfirmOpen(false)}
+                      disabled={deleteAccountPending}
+                    >
+                      {t("settings.accountDeleteConfirmCancel")}
+                    </button>
+                    <button
+                      type="button"
+                      className="secondary"
+                      onClick={() => {
+                        setDeleteConfirmOpen(false);
+                        onDeleteAccount();
+                      }}
+                      disabled={deleteAccountPending}
+                    >
+                      {deleteAccountPending ? t("settings.accountDeletePending") : t("settings.accountDeleteConfirmAction")}
+                    </button>
+                  </div>
+                </div>
+              ) : null}
             </form>
           ) : userSettingsTab === "sound" ? (
             <>

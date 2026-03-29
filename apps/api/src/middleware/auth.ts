@@ -17,6 +17,30 @@ function banned(reply: FastifyReply) {
   });
 }
 
+function computeDaysRemaining(purgeScheduledAt: string | null | undefined): number {
+  if (!purgeScheduledAt) {
+    return 30;
+  }
+
+  const purgeTs = Date.parse(purgeScheduledAt);
+  if (!Number.isFinite(purgeTs)) {
+    return 30;
+  }
+
+  const deltaMs = purgeTs - Date.now();
+  const days = Math.ceil(deltaMs / (24 * 60 * 60 * 1000));
+  return Math.max(0, days);
+}
+
+function accountDeleted(reply: FastifyReply, purgeScheduledAt: string | null | undefined) {
+  return reply.code(403).send({
+    error: "AccountDeleted",
+    message: "Account is scheduled for deletion",
+    purgeScheduledAt: purgeScheduledAt || null,
+    daysRemaining: computeDaysRemaining(purgeScheduledAt)
+  });
+}
+
 function serviceAccessDenied(reply: FastifyReply, accessState: string) {
   if (accessState === "blocked") {
     return reply.code(403).send({
@@ -59,7 +83,7 @@ async function resolveCurrentUser(request: FastifyRequest) {
   }
 
   const result = await db.query<UserRow>(
-    "SELECT id, email, username, name, ui_theme, role, is_banned, access_state, is_bot, created_at FROM users WHERE id = $1",
+    "SELECT id, email, username, name, ui_theme, role, is_banned, access_state, is_bot, deleted_at, purge_scheduled_at, created_at FROM users WHERE id = $1",
     [userId]
   );
 
@@ -211,6 +235,9 @@ export async function requireAuth(request: FastifyRequest, reply: FastifyReply) 
     if (request.currentUser.is_banned) {
       return banned(reply);
     }
+    if (request.currentUser.deleted_at) {
+      return accountDeleted(reply, request.currentUser.purge_scheduled_at || null);
+    }
     return;
   }
 
@@ -223,6 +250,10 @@ export async function requireAuth(request: FastifyRequest, reply: FastifyReply) 
     return banned(reply);
   }
 
+  if (user.deleted_at) {
+    return accountDeleted(reply, user.purge_scheduled_at || null);
+  }
+
   request.currentUser = user;
 }
 
@@ -230,6 +261,9 @@ export async function loadCurrentUser(request: FastifyRequest, reply: FastifyRep
   if (request.currentUser) {
     if (request.currentUser.is_banned) {
       return banned(reply);
+    }
+    if (request.currentUser.deleted_at) {
+      return accountDeleted(reply, request.currentUser.purge_scheduled_at || null);
     }
     return;
   }
@@ -247,6 +281,10 @@ export async function loadCurrentUser(request: FastifyRequest, reply: FastifyRep
 
   if (user.is_banned) {
     return banned(reply);
+  }
+
+  if (user.deleted_at) {
+    return accountDeleted(reply, user.purge_scheduled_at || null);
   }
 
   request.currentUser = user;

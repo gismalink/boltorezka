@@ -50,6 +50,8 @@ export type UserDockProps = {
   profileEmail: string;
   profileSaving: boolean;
   profileStatusText: string;
+  deleteAccountPending: boolean;
+  deleteAccountStatusText: string;
   serverAgeLoading: boolean;
   serverAgeConfirmedAt: string | null;
   serverAgeConfirming: boolean;
@@ -96,6 +98,7 @@ export type UserDockProps = {
   onSetSelectedLang: (value: Lang) => void;
   onSetSelectedUiTheme: (value: UiTheme) => void;
   onSaveProfile: (event: FormEvent) => void;
+  onDeleteAccount: () => void;
   onConfirmServerAge: () => void;
   onSetSelectedInputId: (value: string) => void;
   onSetSelectedOutputId: (value: string) => void;

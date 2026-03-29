@@ -285,4 +285,17 @@ export class RoomAdminController {
       this.options.pushLog(`set access state failed: ${(error as Error).message}`);
     }
   }
+
+  async forceDeleteUserNow(token: string, userId: string) {
+    try {
+      await api.forceDeleteUserNow(token, userId);
+      const res = await api.adminUsers(token);
+      this.options.setAdminUsers(res.users);
+      this.options.pushLog("user force deleted");
+      return true;
+    } catch (error) {
+      this.options.pushLog(`force delete failed: ${(error as Error).message}`);
+      return false;
+    }
+  }
 }

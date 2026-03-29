@@ -36,6 +36,8 @@ export type UseWorkspaceUserDockPropsInput = {
   profileNameDraft: string;
   profileSaving: boolean;
   profileStatusText: string;
+  deleteAccountPending: boolean;
+  deleteAccountStatusText: string;
   serverAgeLoading: boolean;
   serverAgeConfirmedAt: string | null;
   serverAgeConfirming: boolean;
@@ -83,6 +85,7 @@ export type UseWorkspaceUserDockPropsInput = {
   setLang: (value: Lang) => void;
   setSelectedUiTheme: (value: UiTheme) => void;
   saveMyProfile: UserDockProps["onSaveProfile"];
+  deleteAccount: UserDockProps["onDeleteAccount"];
   confirmServerAge: UserDockProps["onConfirmServerAge"];
   setSelectedInputId: (value: string) => void;
   setSelectedOutputId: (value: string) => void;
@@ -129,6 +132,8 @@ export function useWorkspaceUserDockProps({
   profileNameDraft,
   profileSaving,
   profileStatusText,
+  deleteAccountPending,
+  deleteAccountStatusText,
   serverAgeLoading,
   serverAgeConfirmedAt,
   serverAgeConfirming,
@@ -176,6 +181,7 @@ export function useWorkspaceUserDockProps({
   setLang,
   setSelectedUiTheme,
   saveMyProfile,
+  deleteAccount,
   confirmServerAge,
   setSelectedInputId,
   setSelectedOutputId,
@@ -228,6 +234,8 @@ export function useWorkspaceUserDockProps({
       profileEmail: user.email,
       profileSaving,
       profileStatusText,
+      deleteAccountPending,
+      deleteAccountStatusText,
       serverAgeLoading,
       serverAgeConfirmedAt,
       serverAgeConfirming,
@@ -276,6 +284,7 @@ export function useWorkspaceUserDockProps({
       onSetSelectedLang: setLang,
       onSetSelectedUiTheme: setSelectedUiTheme,
       onSaveProfile: saveMyProfile,
+      onDeleteAccount: deleteAccount,
       onConfirmServerAge: confirmServerAge,
       onSetSelectedInputId: setSelectedInputId,
       onSetSelectedOutputId: setSelectedOutputId,
@@ -331,6 +340,8 @@ export function useWorkspaceUserDockProps({
     profileNameDraft,
     profileSaving,
     profileStatusText,
+    deleteAccountPending,
+    deleteAccountStatusText,
     serverAgeLoading,
     serverAgeConfirmedAt,
     serverAgeConfirming,
@@ -381,6 +392,7 @@ export function useWorkspaceUserDockProps({
     voiceSettingsOpen,
     voiceSettingsPanel,
     saveMyProfile,
+    deleteAccount,
     confirmServerAge
   ]);
 }

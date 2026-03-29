@@ -96,6 +96,48 @@ export function AccessStateGate({
   );
 }
 
+export function DeletedAccountGate({
+  t,
+  daysRemaining,
+  restoring,
+  onRestore,
+  onLogout
+}: {
+  t: Translate;
+  daysRemaining: number;
+  restoring: boolean;
+  onRestore: () => void;
+  onLogout: () => void;
+}) {
+  return (
+    <main className="app legacy-layout mx-auto grid h-[100dvh] max-h-[100dvh] w-full max-w-[760px] place-items-center p-6">
+      <section className="settings-sheet w-full max-w-[560px] p-6 text-center">
+        <h1 className="text-2xl font-semibold">{t("account.deletedTitle")}</h1>
+        <p className="mt-3 text-sm opacity-80">
+          {t("account.deletedMessagePrefix")} {daysRemaining} {t("account.deletedMessageSuffix")}
+        </p>
+        <div className="mt-5 flex justify-center gap-2">
+          <button
+            type="button"
+            className="secondary"
+            disabled={restoring}
+            onClick={onRestore}
+          >
+            {restoring ? t("account.restoring") : t("account.restore")}
+          </button>
+          <button
+            type="button"
+            className="secondary"
+            onClick={onLogout}
+          >
+            {t("access.logout")}
+          </button>
+        </div>
+      </section>
+    </main>
+  );
+}
+
 export function DesktopUpdateBanner({
   t,
   desktopUpdateReadyVersion,

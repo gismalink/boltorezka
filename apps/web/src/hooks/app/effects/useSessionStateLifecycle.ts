@@ -47,7 +47,20 @@ type UseSessionStateLifecycleArgs = {
   setServerAudioQuality: Dispatch<SetStateAction<AudioQuality>>;
   setServerAudioQualitySaving: Dispatch<SetStateAction<boolean>>;
   setServerChatImagePolicy: Dispatch<SetStateAction<{ maxDataUrlLength: number; maxImageSide: number; jpegQuality: number }>>;
+  setDeletedAccountInfo: Dispatch<SetStateAction<{ daysRemaining: number; purgeScheduledAt: string | null } | null>>;
 };
+
+function resolveDeletedAccountInfo(error: unknown): { daysRemaining: number; purgeScheduledAt: string | null } | null {
+  if (!(error instanceof ApiError) || error.code !== "AccountDeleted") {
+    return null;
+  }
+
+  const daysRemaining = Math.max(0, Number(error.payload.daysRemaining ?? 30) || 30);
+  const purgeScheduledAt = typeof error.payload.purgeScheduledAt === "string"
+    ? error.payload.purgeScheduledAt
+    : null;
+  return { daysRemaining, purgeScheduledAt };
+}
 
 export function useSessionStateLifecycle({
   token,
@@ -79,7 +92,8 @@ export function useSessionStateLifecycle({
   setTelemetrySummary,
   setServerAudioQuality,
   setServerAudioQualitySaving,
-  setServerChatImagePolicy
+  setServerChatImagePolicy,
+  setDeletedAccountInfo
 }: UseSessionStateLifecycleArgs) {
   const resetSessionState = useCallback(() => {
     setUser(null);
@@ -139,12 +153,22 @@ export function useSessionStateLifecycle({
         if (jwt) {
           if (COOKIE_MODE) localStorage.removeItem("boltorezka_token");
           setToken(jwt);
+          setDeletedAccountInfo(null);
           // bootstrapSessionState fires automatically via the token useEffect
         } else {
           resetSessionState();
         }
       })
       .catch((error) => {
+        const deletedInfo = resolveDeletedAccountInfo(error);
+        if (deletedInfo) {
+          setDeletedAccountInfo(deletedInfo);
+          setToken("");
+          localStorage.removeItem("boltorezka_token");
+          resetSessionState();
+          return;
+        }
+
         if (error instanceof ApiError && error.status === 401) {
           resetSessionState();
           return;
@@ -152,7 +176,7 @@ export function useSessionStateLifecycle({
         pushLog(`cookie-session bootstrap failed: ${error.message}`);
         resetSessionState();
       });
-  }, [pushLog, resetSessionState, setToken]);
+  }, [pushLog, resetSessionState, setDeletedAccountInfo, setToken]);
 
   const bootstrapSessionState = useCallback((nextToken: string) => {
     if (!COOKIE_MODE) localStorage.setItem("boltorezka_token", nextToken);
@@ -163,6 +187,7 @@ export function useSessionStateLifecycle({
         const me = await api.me(nextToken);
         sessionUser = me.user;
         setUser(me.user);
+        setDeletedAccountInfo(null);
       } catch (error) {
         if (error instanceof ApiError && error.status === 401) {
           try {
@@ -174,11 +199,29 @@ export function useSessionStateLifecycle({
               const me = await api.me(refreshedToken);
               sessionUser = me.user;
               setUser(me.user);
+              setDeletedAccountInfo(null);
               nextToken = refreshedToken;
             }
-          } catch {
+          } catch (refreshError) {
+            const deletedInfo = resolveDeletedAccountInfo(refreshError);
+            if (deletedInfo) {
+              setDeletedAccountInfo(deletedInfo);
+              setToken("");
+              localStorage.removeItem("boltorezka_token");
+              resetSessionState();
+              return;
+            }
             // Fall through to hard reset when refresh fails.
           }
+        }
+
+        const deletedInfo = resolveDeletedAccountInfo(error);
+        if (deletedInfo) {
+          setDeletedAccountInfo(deletedInfo);
+          setToken("");
+          localStorage.removeItem("boltorezka_token");
+          resetSessionState();
+          return;
         }
 
         if (!sessionUser) {
@@ -237,6 +280,7 @@ export function useSessionStateLifecycle({
     setArchivedRooms,
     setServerAudioQuality,
     setServerChatImagePolicy,
+    setDeletedAccountInfo,
     setToken,
     setUser,
     currentServerId

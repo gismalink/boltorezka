@@ -34,6 +34,8 @@ export function UserDock({
   profileEmail,
   profileSaving,
   profileStatusText,
+  deleteAccountPending,
+  deleteAccountStatusText,
   serverAgeLoading,
   serverAgeConfirmedAt,
   serverAgeConfirming,
@@ -80,6 +82,7 @@ export function UserDock({
   onSetSelectedLang,
   onSetSelectedUiTheme,
   onSaveProfile,
+  onDeleteAccount,
   onConfirmServerAge,
   onSetSelectedInputId,
   onSetSelectedOutputId,
@@ -177,10 +180,13 @@ export function UserDock({
         profileEmail={profileEmail}
         profileSaving={profileSaving}
         profileStatusText={profileStatusText}
+        deleteAccountPending={deleteAccountPending}
+        deleteAccountStatusText={deleteAccountStatusText}
         serverAgeLoading={serverAgeLoading}
         serverAgeConfirmedAt={serverAgeConfirmedAt}
         serverAgeConfirming={serverAgeConfirming}
         onSaveProfile={onSaveProfile}
+        onDeleteAccount={onDeleteAccount}
         onConfirmServerAge={onConfirmServerAge}
         onSetProfileNameDraft={onSetProfileNameDraft}
         selectedLang={selectedLang}

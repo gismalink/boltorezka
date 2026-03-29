@@ -40,6 +40,7 @@ const AUTH_DESKTOP_HANDOFF_PREFIX = "auth:desktop-handoff:";
 const AUTH_DESKTOP_HANDOFF_TTL_SEC = 120;
 const AUTH_DESKTOP_HANDOFF_ATTEMPT_PREFIX = "auth:desktop-handoff-attempt:";
 const AUTH_RATE_LIMIT_PREFIX = "auth:rl:";
+const ACCOUNT_DELETE_GRACE_DAYS = 30;
 
 type AuthRateLimitPolicy = {
   namespace: string;
@@ -53,6 +54,46 @@ type DesktopHandoffAttemptState = {
   createdAt: string;
   completedAt: string | null;
 };
+
+type AccountDeletionState = {
+  purgeScheduledAt: string | null;
+  daysRemaining: number;
+};
+
+function buildAccountDeletionState(user: Pick<UserRow, "deleted_at" | "purge_scheduled_at">): AccountDeletionState {
+  const purgeScheduledAt = user.purge_scheduled_at || null;
+  if (!purgeScheduledAt) {
+    return {
+      purgeScheduledAt: null,
+      daysRemaining: ACCOUNT_DELETE_GRACE_DAYS
+    };
+  }
+
+  const purgeTs = Date.parse(purgeScheduledAt);
+  if (!Number.isFinite(purgeTs)) {
+    return {
+      purgeScheduledAt,
+      daysRemaining: ACCOUNT_DELETE_GRACE_DAYS
+    };
+  }
+
+  const deltaMs = purgeTs - Date.now();
+  return {
+    purgeScheduledAt,
+    daysRemaining: Math.max(0, Math.ceil(deltaMs / (24 * 60 * 60 * 1000)))
+  };
+}
+
+function sendAccountDeleted(reply: FastifyReply, user: Pick<UserRow, "deleted_at" | "purge_scheduled_at">) {
+  const deletionState = buildAccountDeletionState(user);
+  return reply.code(403).send({
+    authenticated: false,
+    error: "AccountDeleted",
+    message: "Account is scheduled for deletion",
+    purgeScheduledAt: deletionState.purgeScheduledAt,
+    daysRemaining: deletionState.daysRemaining
+  });
+}
 
 function buildAuthAuditContext(request: FastifyRequest, extra: Record<string, unknown> = {}) {
   const requestId = String(request.id || "").trim() || null;
@@ -338,7 +379,7 @@ async function upsertSsoUser(profile: Record<string, unknown> | null | undefined
   const shouldForceActiveAccess = isSuperAdmin || isSmokeRtcBot;
 
   const existing = await db.query<UserRow>(
-    "SELECT id, email, username, name, ui_theme, role, is_banned, access_state, is_bot, created_at FROM users WHERE email = $1",
+    "SELECT id, email, username, name, ui_theme, role, is_banned, access_state, is_bot, deleted_at, purge_scheduled_at, created_at FROM users WHERE email = $1",
     [normalizedEmail]
   );
 
@@ -359,7 +400,7 @@ async function upsertSsoUser(profile: Record<string, unknown> | null | undefined
          access_state = CASE WHEN $6 THEN 'active' ELSE access_state END,
          is_bot = CASE WHEN $5 THEN TRUE ELSE is_bot END
        WHERE email = $1
-       RETURNING id, email, username, name, ui_theme, role, is_banned, access_state, is_bot, created_at`,
+      RETURNING id, email, username, name, ui_theme, role, is_banned, access_state, is_bot, deleted_at, purge_scheduled_at, created_at`,
       [
         normalizedEmail,
         displayName,
@@ -379,7 +420,7 @@ async function upsertSsoUser(profile: Record<string, unknown> | null | undefined
   const created = await db.query<UserRow>(
     `INSERT INTO users (email, password_hash, username, name, role, access_state, is_bot)
      VALUES ($1, $2, $3, $4, $5, $6, $7)
-     RETURNING id, email, username, name, ui_theme, role, is_banned, access_state, is_bot, created_at`,
+    RETURNING id, email, username, name, ui_theme, role, is_banned, access_state, is_bot, deleted_at, purge_scheduled_at, created_at`,
     [
       normalizedEmail,
       "__sso_only__",
@@ -443,6 +484,11 @@ export async function authRoutes(fastify: FastifyInstance) {
   const limitDesktopHandoffAttemptComplete = makeAuthRateLimiter({
     namespace: "desktop-handoff-attempt-complete",
     max: 40,
+    windowSec: 60
+  });
+  const limitSsoRestore = makeAuthRateLimiter({
+    namespace: "sso-restore",
+    max: 20,
     windowSec: 60
   });
 
@@ -527,6 +573,10 @@ export async function authRoutes(fastify: FastifyInstance) {
         });
       }
 
+      if (localUser.deleted_at) {
+        return sendAccountDeleted(reply, localUser);
+      }
+
       const { token } = await issueAuthSessionToken(fastify, localUser, "sso");
       if (config.authCookieMode) {
         appendSetCookie(reply, buildSessionCookieValue(token));
@@ -565,6 +615,82 @@ export async function authRoutes(fastify: FastifyInstance) {
           },
           "sso session exchange failed"
         );
+        return reply.code(503).send({
+          authenticated: false,
+          error: "SsoUnavailable",
+          message: "Central SSO is temporarily unavailable"
+        });
+      }
+    }
+  );
+
+  fastify.post(
+    "/v1/auth/sso/restore",
+    {
+      preHandler: [limitSsoRestore]
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const currentUserResult = await proxyAuthGetJson(request, "/auth/current-user");
+        const normalizedEmail = String(currentUserResult.data?.user?.email || "")
+          .trim()
+          .toLowerCase();
+
+        if (!normalizedEmail) {
+          return reply.code(401).send({
+            error: "Unauthorized",
+            message: "SSO authentication is required to restore account"
+          });
+        }
+
+        const result = await db.query<UserRow>(
+          `UPDATE users
+           SET deleted_at = NULL,
+               purge_scheduled_at = NULL
+           WHERE email = $1
+           RETURNING id, email, username, name, ui_theme, role, is_banned, access_state, is_bot, deleted_at, purge_scheduled_at, created_at`,
+          [normalizedEmail]
+        );
+
+        if ((result.rowCount || 0) === 0) {
+          return reply.code(404).send({
+            error: "AccountNotFound",
+            message: "Local account not found"
+          });
+        }
+
+        const localUser = result.rows[0];
+        if (localUser.is_banned) {
+          return reply.code(403).send({
+            authenticated: false,
+            error: "UserBanned",
+            message: "User is banned"
+          });
+        }
+
+        const { token } = await issueAuthSessionToken(fastify, localUser, "sso");
+        if (config.authCookieMode) {
+          appendSetCookie(reply, buildSessionCookieValue(token));
+        }
+
+        return {
+          authenticated: true,
+          restored: true,
+          token,
+          user: localUser
+        };
+      } catch (error) {
+        fastify.log.error(
+          {
+            err: error,
+            ...buildAuthAuditContext(request, {
+              event: "auth.restore.exchange_failed",
+              flow: "sso-restore"
+            })
+          },
+          "sso restore failed"
+        );
+
         return reply.code(503).send({
           authenticated: false,
           error: "SsoUnavailable",
@@ -836,7 +962,7 @@ export async function authRoutes(fastify: FastifyInstance) {
       }
 
       const userResult = await db.query<UserRow>(
-        "SELECT id, email, username, name, ui_theme, role, is_banned, access_state, is_bot, created_at FROM users WHERE id = $1 LIMIT 1",
+        "SELECT id, email, username, name, ui_theme, role, is_banned, access_state, is_bot, deleted_at, purge_scheduled_at, created_at FROM users WHERE id = $1 LIMIT 1",
         [handoffUserId]
       );
 
@@ -853,6 +979,10 @@ export async function authRoutes(fastify: FastifyInstance) {
           error: "UserBanned",
           message: "User is banned"
         });
+      }
+
+      if (user.deleted_at) {
+        return sendAccountDeleted(reply, user);
       }
 
       const { token } = await issueAuthSessionToken(fastify, user, "sso");
@@ -976,7 +1106,7 @@ export async function authRoutes(fastify: FastifyInstance) {
       }
 
       const userResult = await db.query<UserCompactRow>(
-        "SELECT id, email, username, name, ui_theme, role, is_banned, access_state, is_bot FROM users WHERE id = $1",
+        "SELECT id, email, username, name, ui_theme, role, is_banned, access_state, is_bot, deleted_at, purge_scheduled_at FROM users WHERE id = $1",
         [userId]
       );
 
@@ -993,6 +1123,9 @@ export async function authRoutes(fastify: FastifyInstance) {
           error: "UserBanned",
           message: "User is banned"
         });
+      }
+      if (user.deleted_at) {
+        return sendAccountDeleted(reply, user);
       }
       if (user.role !== "admin" && user.role !== "super_admin" && user.access_state !== "active") {
         return reply.code(403).send({
@@ -1178,7 +1311,7 @@ export async function authRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest) => {
       const userId = String(request.user?.sub || "").trim();
       const result = await db.query<UserRow>(
-        "SELECT id, email, username, name, ui_theme, role, is_banned, access_state, is_bot, created_at FROM users WHERE id = $1",
+        "SELECT id, email, username, name, ui_theme, role, is_banned, access_state, is_bot, deleted_at, purge_scheduled_at, created_at FROM users WHERE id = $1",
         [userId]
       );
 
@@ -1221,7 +1354,7 @@ export async function authRoutes(fastify: FastifyInstance) {
          SET name = $2,
              ui_theme = COALESCE($3, ui_theme)
          WHERE id = $1
-         RETURNING id, email, username, name, ui_theme, role, is_banned, access_state, is_bot, created_at`,
+         RETURNING id, email, username, name, ui_theme, role, is_banned, access_state, is_bot, deleted_at, purge_scheduled_at, created_at`,
         [userId, parsed.data.name, parsed.data.uiTheme ?? null]
       );
 
@@ -1232,6 +1365,53 @@ export async function authRoutes(fastify: FastifyInstance) {
 
       const response: MeResponse = { user: updated.rows[0] };
       return response;
+    }
+  );
+
+  fastify.delete(
+    "/v1/auth/me",
+    {
+      preHandler: [requireAuth]
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const userId = String(request.user?.sub || "").trim();
+      if (!userId) {
+        return reply.code(401).send({
+          error: "Unauthorized",
+          message: "Valid bearer token is required"
+        });
+      }
+
+      const updated = await db.query<UserRow>(
+        `UPDATE users
+         SET deleted_at = NOW(),
+             purge_scheduled_at = NOW() + INTERVAL '30 days'
+         WHERE id = $1
+         RETURNING id, email, username, name, ui_theme, role, is_banned, access_state, is_bot, deleted_at, purge_scheduled_at, created_at`,
+        [userId]
+      );
+
+      if ((updated.rowCount || 0) === 0) {
+        return reply.code(404).send({
+          error: "UserNotFound",
+          message: "User does not exist"
+        });
+      }
+
+      const sessionId = String(request.user?.sid || "").trim();
+      if (sessionId) {
+        await fastify.redis.del(`${AUTH_SESSION_PREFIX}${sessionId}`);
+      }
+      if (config.authCookieMode) {
+        appendSetCookie(reply, buildSessionCookieClearValue());
+      }
+
+      const deletionState = buildAccountDeletionState(updated.rows[0]);
+      return {
+        ok: true,
+        purgeScheduledAt: deletionState.purgeScheduledAt,
+        daysRemaining: deletionState.daysRemaining
+      };
     }
   );
 }

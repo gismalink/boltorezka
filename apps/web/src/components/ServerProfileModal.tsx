@@ -23,7 +23,7 @@ type ServerMenuTab =
   | "video"
   | "chat_images"
   | "desktop_downloads";
-type UserAccessTab = "active" | "blocked" | "requests" | "bots";
+type UserAccessTab = "active" | "blocked" | "requests" | "bots" | "deleted";
 type ProductManagementTab = "users" | "servers";
 type ObservabilityTab = "log" | "signaling" | "telemetry";
 
@@ -111,6 +111,7 @@ type ServerProfileModalProps = {
   onDemote: (userId: string) => void;
   onSetBan: (userId: string, banned: boolean) => void;
   onSetAccessState: (userId: string, accessState: "pending" | "active" | "blocked") => void;
+  onForceDeleteUser: (userId: string) => void;
   onSelectAdminServer: (serverId: string) => void;
   onToggleAdminServerBlocked: (serverId: string, blocked: boolean) => void;
   onDeleteAdminServer: (serverId: string) => void;
@@ -296,6 +297,7 @@ export function ServerProfileModal({
   onDemote,
   onSetBan,
   onSetAccessState,
+  onForceDeleteUser,
   onSelectAdminServer,
   onToggleAdminServerBlocked,
   onDeleteAdminServer,
@@ -340,6 +342,7 @@ export function ServerProfileModal({
   const totalUsers = adminUsers.length;
   const totalAdmins = adminUsers.filter((item) => item.role === "admin" || item.role === "super_admin").length;
   const totalBanned = adminUsers.filter((item) => item.is_banned).length;
+  const totalDeleted = adminUsers.filter((item) => Boolean(item.deleted_at)).length;
   const showProductManagementTab = canManageServerControlPlane;
   const showServerManagementTab = true;
   const showObservabilityTab = hasCurrentServer;
@@ -461,12 +464,13 @@ export function ServerProfileModal({
   const normalizedUserSearch = userSearchQuery.trim().toLowerCase();
 
   const usersByTab = useMemo(() => {
-    const active = adminUsers.filter((item) => !item.is_bot && !item.is_banned && item.access_state === "active");
-    const blocked = adminUsers.filter((item) => !item.is_bot && (item.is_banned || item.access_state === "blocked"));
-    const requests = adminUsers.filter((item) => !item.is_bot && !item.is_banned && item.access_state === "pending");
-    const bots = adminUsers.filter((item) => item.is_bot);
+    const deleted = adminUsers.filter((item) => !item.is_bot && Boolean(item.deleted_at));
+    const active = adminUsers.filter((item) => !item.is_bot && !item.deleted_at && !item.is_banned && item.access_state === "active");
+    const blocked = adminUsers.filter((item) => !item.is_bot && !item.deleted_at && (item.is_banned || item.access_state === "blocked"));
+    const requests = adminUsers.filter((item) => !item.is_bot && !item.deleted_at && !item.is_banned && item.access_state === "pending");
+    const bots = adminUsers.filter((item) => item.is_bot && !item.deleted_at);
 
-    return { active, blocked, requests, bots };
+    return { active, blocked, requests, bots, deleted };
   }, [adminUsers]);
 
   const filteredAdminUsers = useMemo(() => {
@@ -518,6 +522,24 @@ export function ServerProfileModal({
   const getUserRowActions = (item: User) => {
     const actions: IconAction[] = [];
     const isProtected = item.role === "super_admin";
+
+    if (userAccessTab === "deleted") {
+      return actions;
+    }
+
+    if (canPromote && !isProtected && item.id !== currentUserId) {
+      actions.push({
+        key: "force-delete",
+        label: t("admin.forceDeleteNow"),
+        iconClass: "bi-trash3-fill",
+        onClick: () => {
+          const confirmed = window.confirm(t("admin.forceDeleteNowConfirm"));
+          if (confirmed) {
+            onForceDeleteUser(item.id);
+          }
+        }
+      });
+    }
 
     if (canPromote && userAccessTab === "active" && !isProtected) {
       if (item.role === "user") {
@@ -1066,7 +1088,7 @@ export function ServerProfileModal({
               {showAdminUsersPanel ? (
                 <>
               <h3>{t("admin.title")}</h3>
-              <p className="muted">Users total: {totalUsers} · Admins: {totalAdmins} · Banned: {totalBanned}</p>
+              <p className="muted">Users total: {totalUsers} · Admins: {totalAdmins} · Banned: {totalBanned} · Deleted: {totalDeleted}</p>
               <label className="grid gap-1">
                 <span className="muted">{t("admin.searchLabel")}</span>
                 <input
@@ -1109,6 +1131,14 @@ export function ServerProfileModal({
                 >
                   {t("admin.tabBots")} ({usersByTab.bots.length})
                 </button>
+                <button
+                  type="button"
+                  className={`secondary quality-toggle-btn ${userAccessTab === "deleted" ? "quality-toggle-btn-active" : ""}`}
+                  onClick={() => setUserAccessTab("deleted")}
+                  aria-selected={userAccessTab === "deleted"}
+                >
+                  {t("admin.tabDeleted")} ({usersByTab.deleted.length})
+                </button>
               </div>
               <ul className="admin-list grid gap-2">
                 {filteredAdminUsers.map((item) => (
@@ -1123,7 +1153,8 @@ export function ServerProfileModal({
                         </span>
                       ) : null}
                       {item.is_banned ? ` · ${t("admin.banned")}` : ""}
-                      {!item.is_banned ? ` · ${t(`admin.access.${item.access_state}`)}` : ""}
+                      {item.deleted_at ? ` · ${t("admin.deletedPending")}` : ""}
+                      {!item.is_banned && !item.deleted_at ? ` · ${t(`admin.access.${item.access_state}`)}` : ""}
                     </span>
                     <div className="row-actions flex flex-wrap items-stretch gap-2">
                       {getUserRowActions(item).map((action) => (
