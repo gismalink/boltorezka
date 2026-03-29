@@ -1,7 +1,6 @@
 import { type DragEvent, useEffect, useRef, useState } from "react";
 import type { ChannelAudioQualitySetting, Room, RoomKind, RoomMemberPreference } from "../../domain";
-import { PopupPortal } from "../PopupPortal";
-import { RangeSlider } from "../RangeSlider";
+import { PopupPortal, RangeSlider } from "../uicomponents";
 import type { RoomsPanelProps } from "../types";
 import type { RoomMember } from "./roomMembers";
 

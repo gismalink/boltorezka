@@ -1,6 +1,6 @@
 import { useRef, useState, type RefObject } from "react";
 import type { ServerListItem, User } from "../domain";
-import { PopupPortal } from "./PopupPortal";
+import { PopupPortal } from "./uicomponents";
 
 type AppHeaderProps = {
   t: (key: string) => string;

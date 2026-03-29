@@ -1,5 +1,5 @@
 import type { RoomKind } from "../../domain";
-import { PopupPortal } from "../PopupPortal";
+import { PopupPortal } from "../uicomponents";
 import type { RoomsPanelProps } from "../types";
 
 type RoomsPanelHeaderProps = Pick<

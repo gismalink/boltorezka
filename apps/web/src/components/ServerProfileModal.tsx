@@ -12,7 +12,7 @@ import type {
 import { getDesktopUpdateBridge } from "../desktopBridge";
 import type { ServerScreenShareResolution, ServerVideoEffectType } from "../hooks/rtc/voiceCallTypes";
 import { resolvePublicOrigin } from "../runtimeOrigin";
-import { RangeSlider } from "./RangeSlider";
+import { RangeSlider } from "./uicomponents";
 
 type ServerMenuTab =
   | "users"

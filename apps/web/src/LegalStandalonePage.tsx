@@ -231,6 +231,8 @@ const LEGAL_PAGES: Record<Lang, Record<string, LegalPageData>> = {
 };
 
 export function LegalStandalonePage() {
+  const searchParams = new URLSearchParams(window.location.search);
+  const isEmbedded = searchParams.get("embed") === "1";
   const [lang, setLang] = useState<Lang>(() => detectInitialLang());
   const [cookieConsentAccepted, setCookieConsentAccepted] = useState<boolean>(() => {
     return localStorage.getItem(COOKIE_CONSENT_KEY) === "1";
@@ -272,21 +274,23 @@ export function LegalStandalonePage() {
       <article className="card mx-auto w-full p-6 desktop:p-8">
         <header>
           <div className="mb-4 flex flex-wrap items-center gap-2">
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                className="secondary min-h-[36px] px-3"
-                onClick={handleGoBack}
-              >
-                {page.backLabel}
-              </button>
-              <a
-                href="/"
-                className="secondary inline-flex min-h-[36px] items-center px-3"
-              >
-                {page.toAppLabel}
-              </a>
-            </div>
+            {!isEmbedded ? (
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  className="secondary min-h-[36px] px-3"
+                  onClick={handleGoBack}
+                >
+                  {page.backLabel}
+                </button>
+                <a
+                  href="/"
+                  className="secondary inline-flex min-h-[36px] items-center px-3"
+                >
+                  {page.toAppLabel}
+                </a>
+              </div>
+            ) : null}
             <label className="ml-auto inline-flex items-center gap-2 text-xs text-pixel-muted">
               <span>{page.languageLabel}</span>
               <select
@@ -320,31 +324,35 @@ export function LegalStandalonePage() {
           ))}
         </div>
 
-        <div className="mt-8 border-t border-white/10 pt-4">
-          <LegalLinks lang={lang} />
-          <div className="mt-3 text-center">
-            <button
-              type="button"
-              className="text-xs text-pixel-muted underline decoration-current/40 underline-offset-2 transition hover:text-pixel-text"
-              onClick={() => {
-                localStorage.removeItem(COOKIE_CONSENT_KEY);
-                setCookieConsentAccepted(false);
-              }}
-            >
-              {lang === "ru" ? "Сбросить настройки" : "Reset settings"}
-            </button>
+        {!isEmbedded ? (
+          <div className="mt-8 border-t border-white/10 pt-4">
+            <LegalLinks lang={lang} />
+            <div className="mt-3 text-center">
+              <button
+                type="button"
+                className="text-xs text-pixel-muted underline decoration-current/40 underline-offset-2 transition hover:text-pixel-text"
+                onClick={() => {
+                  localStorage.removeItem(COOKIE_CONSENT_KEY);
+                  setCookieConsentAccepted(false);
+                }}
+              >
+                {lang === "ru" ? "Сбросить настройки" : "Reset settings"}
+              </button>
+            </div>
           </div>
-        </div>
+        ) : null}
       </article>
 
-      <CookieConsentBanner
-        lang={lang}
-        visible={!cookieConsentAccepted}
-        onAccept={() => {
-          localStorage.setItem(COOKIE_CONSENT_KEY, "1");
-          setCookieConsentAccepted(true);
-        }}
-      />
+      {!isEmbedded ? (
+        <CookieConsentBanner
+          lang={lang}
+          visible={!cookieConsentAccepted}
+          onAccept={() => {
+            localStorage.setItem(COOKIE_CONSENT_KEY, "1");
+            setCookieConsentAccepted(true);
+          }}
+        />
+      ) : null}
     </main>
   );
 }

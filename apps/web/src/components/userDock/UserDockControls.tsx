@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { PopupPortal } from "../PopupPortal";
-import { RangeSlider } from "../RangeSlider";
+import { PopupPortal, RangeSlider } from "../uicomponents";
 import type { UserDockProps } from "../types";
 
 type UserDockControlsProps = Pick<

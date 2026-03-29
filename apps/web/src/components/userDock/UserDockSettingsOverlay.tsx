@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { UserDockProps } from "../types";
-import { RangeSlider } from "../RangeSlider";
+import { RangeSlider } from "../uicomponents";
 
 type UserDockSettingsOverlayProps = Pick<
   UserDockProps,

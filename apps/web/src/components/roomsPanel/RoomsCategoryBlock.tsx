@@ -1,6 +1,6 @@
 import { useRef } from "react";
 import type { Room, RoomCategory } from "../../domain";
-import { PopupPortal } from "../PopupPortal";
+import { PopupPortal } from "../uicomponents";
 import type { RoomsPanelProps } from "../types";
 
 type RoomsCategoryBlockProps = Pick<

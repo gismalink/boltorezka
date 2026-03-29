@@ -1,6 +1,7 @@
 import { useRef, useState, type MouseEvent } from "react";
 import { LegalLinks } from "./LegalLinks";
-import { PopupPortal } from "./PopupPortal";
+import { PixelCheckbox } from "./uicomponents";
+import { PopupPortal } from "./uicomponents";
 
 function detectUiLang(): "ru" | "en" {
   return document.documentElement.lang === "en" ? "en" : "ru";
@@ -356,16 +357,12 @@ export function FirstRunIntroOverlay({
         </label>
 
         <div className="mt-5 grid gap-2">
-          <label className="intro-consent-item">
-            <input
-              type="checkbox"
-              checked={termsAccepted}
-              onChange={(event) => setTermsAccepted(event.target.checked)}
-              className="intro-consent-native"
-              aria-label={t("intro.acceptTermsPrefix")}
-            />
-            <span aria-hidden="true" className="intro-consent-box" />
-            <span className="muted text-sm">
+          <PixelCheckbox
+            checked={termsAccepted}
+            onChange={setTermsAccepted}
+            ariaLabel={t("intro.acceptTermsPrefix")}
+            label={(
+              <span className="muted text-sm">
               {t("intro.acceptTermsPrefix")}{" "}
               <a
                 href="/terms"
@@ -374,18 +371,15 @@ export function FirstRunIntroOverlay({
               >
                 {t("intro.termsLink")}
               </a>
-            </span>
-          </label>
-          <label className="intro-consent-item">
-            <input
-              type="checkbox"
-              checked={privacyAccepted}
-              onChange={(event) => setPrivacyAccepted(event.target.checked)}
-              className="intro-consent-native"
-              aria-label={t("intro.acceptPrivacyPrefix")}
-            />
-            <span aria-hidden="true" className="intro-consent-box" />
-            <span className="muted text-sm">
+              </span>
+            )}
+          />
+          <PixelCheckbox
+            checked={privacyAccepted}
+            onChange={setPrivacyAccepted}
+            ariaLabel={t("intro.acceptPrivacyPrefix")}
+            label={(
+              <span className="muted text-sm">
               {t("intro.acceptPrivacyPrefix")}{" "}
               <a
                 href="/privacy"
@@ -394,8 +388,9 @@ export function FirstRunIntroOverlay({
               >
                 {t("intro.privacyLink")}
               </a>
-            </span>
-          </label>
+              </span>
+            )}
+          />
         </div>
 
         <button
@@ -425,7 +420,7 @@ export function FirstRunIntroOverlay({
             </div>
             <iframe
               title={legalDoc === "terms" ? t("intro.termsLink") : t("intro.privacyLink")}
-              src={legalDoc === "terms" ? "/terms" : "/privacy"}
+              src={legalDoc === "terms" ? "/terms?embed=1" : "/privacy?embed=1"}
               className="h-[58vh] w-full rounded border border-white/15 bg-black/30"
             />
           </section>
