@@ -1,5 +1,5 @@
 import type { RoomKind } from "../../domain";
-import { PopupPortal } from "../uicomponents";
+import { Button, PopupPortal } from "../uicomponents";
 import type { RoomsPanelProps } from "../types";
 
 type RoomsPanelHeaderProps = Pick<
@@ -53,7 +53,7 @@ export function RoomsPanelHeader({
         {canCreateRooms ? (
           <>
             <div className="popup-anchor" ref={categoryPopupRef}>
-              <button
+              <Button
                 type="button"
                 className="secondary icon-btn"
                 aria-label={t("rooms.createCategory")}
@@ -64,20 +64,20 @@ export function RoomsPanelHeader({
                 }}
               >
                 <i className="bi bi-folder-plus" aria-hidden="true" />
-              </button>
+              </Button>
               <PopupPortal open={categoryPopupOpen} anchorRef={categoryPopupRef} className="settings-popup" placement="bottom-end">
                 <div>
                   <form className="grid gap-4" onSubmit={onCreateCategory}>
                     <h3 className="subheading">{t("rooms.createCategoryTitle")}</h3>
                     <input value={newCategoryTitle} onChange={(event) => onSetNewCategoryTitle(event.target.value)} placeholder={t("rooms.categoryTitle")} />
-                    <button type="submit" className="icon-action"><i className="bi bi-check2" aria-hidden="true" /> {t("rooms.save")}</button>
+                    <Button type="submit" className="icon-action"><i className="bi bi-check2" aria-hidden="true" /> {t("rooms.save")}</Button>
                   </form>
                 </div>
               </PopupPortal>
             </div>
 
             <div className="popup-anchor" ref={channelPopupRef}>
-              <button
+              <Button
                 type="button"
                 className="secondary icon-btn"
                 aria-label={t("rooms.createChannel")}
@@ -88,7 +88,7 @@ export function RoomsPanelHeader({
                 }}
               >
                 <i className="bi bi-plus-lg" aria-hidden="true" />
-              </button>
+              </Button>
               <PopupPortal open={channelPopupOpen} anchorRef={channelPopupRef} className="settings-popup" placement="bottom-end">
                 <div>
                   <form className="grid gap-4" onSubmit={onCreateRoom}>
@@ -107,7 +107,7 @@ export function RoomsPanelHeader({
                         ))}
                       </select>
                     </div>
-                    <button type="submit" className="icon-action"><i className="bi bi-check2" aria-hidden="true" /> {t("rooms.save")}</button>
+                    <Button type="submit" className="icon-action"><i className="bi bi-check2" aria-hidden="true" /> {t("rooms.save")}</Button>
                   </form>
                 </div>
               </PopupPortal>

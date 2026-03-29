@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { Button } from "./uicomponents";
 
 type Translate = (key: string) => string;
 
@@ -17,23 +18,23 @@ function MobileTabBar({
 }) {
   return (
     <nav className="mobile-tabbar grid grid-cols-3 gap-2" aria-label={t("mobile.tabsAria") }>
-      <button
+      <Button
         type="button"
         className={`secondary mobile-tab-btn inline-flex items-center justify-center gap-2 ${mobileTab === "channels" ? "mobile-tab-btn-active" : ""}`}
         onClick={() => onSelectTab("channels")}
       >
         <i className="bi bi-hash" aria-hidden="true" />
         <span>{t("mobile.tabChannels")}</span>
-      </button>
-      <button
+      </Button>
+      <Button
         type="button"
         className={`secondary mobile-tab-btn inline-flex items-center justify-center gap-2 ${mobileTab === "chat" ? "mobile-tab-btn-active" : ""}`}
         onClick={() => onSelectTab("chat")}
       >
         <i className="bi bi-chat-dots" aria-hidden="true" />
         <span>{t("mobile.tabChat")}</span>
-      </button>
-      <button
+      </Button>
+      <Button
         type="button"
         className={`secondary mobile-tab-btn inline-flex items-center justify-center gap-2 ${mobileTab === "settings" ? "mobile-tab-btn-active" : ""}`}
         onClick={() => onSelectTab("settings")}
@@ -41,7 +42,7 @@ function MobileTabBar({
       >
         <i className="bi bi-gear" aria-hidden="true" />
         <span>{t("mobile.tabSettings")}</span>
-      </button>
+      </Button>
     </nav>
   );
 }

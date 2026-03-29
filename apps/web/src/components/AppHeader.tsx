@@ -1,6 +1,6 @@
 import { useRef, useState, type RefObject } from "react";
 import type { ServerListItem, User } from "../domain";
-import { PopupPortal } from "./uicomponents";
+import { Button, PopupPortal } from "./uicomponents";
 
 type AppHeaderProps = {
   t: (key: string) => string;
@@ -70,7 +70,7 @@ export function AppHeader({
     <header className="app-header flex items-center justify-between gap-4 desktop:gap-6">
       <div className="header-brand flex items-center gap-3 desktop:gap-4">
         <div className="app-menu">
-          <button
+          <Button
             type="button"
             className="secondary app-menu-btn relative inline-flex min-h-10 min-w-10 items-center justify-center px-2.5 font-bold"
             onClick={onToggleAppMenu}
@@ -83,7 +83,7 @@ export function AppHeader({
                 {pendingJoinRequestsCount > 99 ? "99+" : pendingJoinRequestsCount}
               </span>
             ) : null}
-          </button>
+          </Button>
         </div>
         <div className={`title-block server-title-hover-root flex min-w-0 flex-col ${createServerOpen ? "server-title-hover-root-open" : ""}`}>
           <h1 className="app-title font-heading text-[22px] leading-none text-pixel-text desktop:text-[28px]">
@@ -110,14 +110,14 @@ export function AppHeader({
                 </select>
               </label>
               <div className="grid gap-2" ref={createServerRef}>
-                <button
+                <Button
                   type="button"
                   className="secondary"
                   aria-label={t("server.createAria")}
                   onClick={() => setCreateServerOpen((value) => !value)}
                 >
                   {t("server.create")}
-                </button>
+                </Button>
                 <PopupPortal open={createServerOpen} anchorRef={createServerRef} className="profile-popup" placement="bottom-start">
                   <div className="grid gap-2 min-w-[260px]">
                     <label className="text-sm text-pixel-text/80" htmlFor="create-server-name-input">{t("server.createTitle")}</label>
@@ -130,10 +130,10 @@ export function AppHeader({
                       placeholder={t("server.createPlaceholder")}
                     />
                     <div className="flex gap-2 justify-end">
-                      <button type="button" className="secondary" onClick={() => setCreateServerOpen(false)}>{t("server.createCancel")}</button>
-                      <button type="button" onClick={() => { void submitCreateServer(); }} disabled={creatingServer || newServerName.trim().length < 3}>
+                      <Button type="button" className="secondary" onClick={() => setCreateServerOpen(false)}>{t("server.createCancel")}</Button>
+                      <Button type="button" onClick={() => { void submitCreateServer(); }} disabled={creatingServer || newServerName.trim().length < 3}>
                         {creatingServer ? t("server.createLoading") : t("server.createSubmit")}
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 </PopupPortal>
@@ -147,37 +147,37 @@ export function AppHeader({
           <>
             <span className="user-chip hidden max-w-[220px] truncate font-semibold text-pixel-text desktop:inline">{user.name}</span>
             <div className="profile-menu" ref={profileMenuRef}>
-              <button
+              <Button
                 type="button"
                 className="secondary profile-icon inline-flex h-10 w-10 items-center justify-center"
                 onClick={onToggleProfileMenu}
                 aria-label={t("profile.menuAria")}
               >
                 <i className="bi bi-person-circle" aria-hidden="true" />
-              </button>
+              </Button>
               <PopupPortal open={profileMenuOpen} anchorRef={profileMenuRef} className="profile-popup" placement="bottom-end">
                 <div>
-                  <button type="button" className="secondary w-full text-left" onClick={onOpenUserSettings}>{t("profile.openSettings")}</button>
-                  <button type="button" onClick={onLogout}>{t("auth.logout")}</button>
+                  <Button type="button" className="secondary w-full text-left" onClick={onOpenUserSettings}>{t("profile.openSettings")}</Button>
+                  <Button type="button" onClick={onLogout}>{t("auth.logout")}</Button>
                 </div>
               </PopupPortal>
             </div>
           </>
         ) : (
           <div className="auth-menu" ref={authMenuRef}>
-            <button type="button" className="min-w-[112px]" onClick={onToggleAuthMenu}>
+            <Button type="button" className="min-w-[112px]" onClick={onToggleAuthMenu}>
               {t("auth.login")}
-            </button>
+            </Button>
             <PopupPortal open={authMenuOpen} anchorRef={authMenuRef} className="auth-popup" placement="bottom-end">
               <div className="grid gap-2">
-                <button type="button" className="provider-btn w-full flex items-center justify-start gap-3" onClick={() => onBeginSso("google")}> 
+                <Button type="button" className="provider-btn w-full flex items-center justify-start gap-3" onClick={() => onBeginSso("google")}> 
                   <span className="provider-icon provider-google inline-flex h-5 w-5 items-center justify-center">G</span>
                   {t("auth.google")}
-                </button>
-                <button type="button" className="provider-btn w-full flex items-center justify-start gap-3" onClick={() => onBeginSso("yandex")}>
+                </Button>
+                <Button type="button" className="provider-btn w-full flex items-center justify-start gap-3" onClick={() => onBeginSso("yandex")}>
                   <span className="provider-icon provider-yandex inline-flex h-5 w-5 items-center justify-center">Я</span>
                   {t("auth.yandex")}
-                </button>
+                </Button>
               </div>
             </PopupPortal>
           </div>

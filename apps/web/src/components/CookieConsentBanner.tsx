@@ -1,4 +1,5 @@
 import type { Lang } from "../i18n";
+import { Button } from "./uicomponents";
 
 type CookieConsentBannerProps = {
   visible: boolean;
@@ -37,13 +38,13 @@ export function CookieConsentBanner({ visible, onAccept, lang = "ru" }: CookieCo
           </a>
           .
         </p>
-        <button
+        <Button
           type="button"
           className="secondary min-h-[40px] min-w-[88px]"
           onClick={onAccept}
         >
           {text.accept}
-        </button>
+        </Button>
       </div>
     </div>
   );

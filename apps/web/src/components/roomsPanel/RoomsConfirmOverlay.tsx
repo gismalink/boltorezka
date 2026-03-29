@@ -1,4 +1,5 @@
 import type { TranslateFn } from "../../i18n";
+import { Button } from "../uicomponents";
 
 export type RoomsConfirmKind =
   | "archive-channel"
@@ -45,16 +46,16 @@ export function RoomsConfirmOverlay({ t, kind, onClose, onConfirm }: RoomsConfir
               : t("rooms.confirmDeleteCategory")}
         </p>
         <div className="delete-confirm-actions flex flex-wrap items-center gap-3">
-          <button type="button" className="secondary" onClick={onClose}>
+          <Button type="button" className="secondary" onClick={onClose}>
             {t("common.no")}
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
             className={kind === "clear-channel" || kind === "restore-channel" ? "clear-confirm-btn" : "delete-confirm-btn"}
             onClick={onConfirm}
           >
             {t("common.yes")}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

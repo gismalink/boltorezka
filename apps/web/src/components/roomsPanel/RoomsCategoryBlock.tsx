@@ -1,6 +1,6 @@
 import { useRef } from "react";
 import type { Room, RoomCategory } from "../../domain";
-import { PopupPortal } from "../uicomponents";
+import { Button, PopupPortal } from "../uicomponents";
 import type { RoomsPanelProps } from "../types";
 
 type RoomsCategoryBlockProps = Pick<
@@ -44,7 +44,7 @@ export function RoomsCategoryBlock({
   return (
     <div className="mt-[var(--space-md)]">
       <div className="category-title-row flex items-center justify-between gap-2">
-        <button
+        <Button
           type="button"
           className="secondary inline-flex items-center gap-[var(--space-xs)] border-0 bg-transparent p-0 shadow-none hover:translate-x-0 hover:translate-y-0 hover:shadow-none active:translate-x-0 active:translate-y-0 active:shadow-none focus-visible:shadow-none"
           onClick={() => onToggleCategoryCollapsed(category.id)}
@@ -52,10 +52,10 @@ export function RoomsCategoryBlock({
         >
           <i className={`bi ${isCollapsed ? "bi-chevron-right" : "bi-chevron-down"}`} aria-hidden="true" />
           <span className="text-[var(--font-size-sm)] uppercase tracking-[0.04em] text-[var(--pixel-muted)]">{category.title}</span>
-        </button>
+        </Button>
         {canCreateRooms ? (
           <div className="category-actions inline-flex items-center gap-1">
-            <button
+            <Button
               type="button"
               className="secondary icon-btn tiny category-action-btn"
               aria-label={t("rooms.createChannel")}
@@ -63,9 +63,9 @@ export function RoomsCategoryBlock({
               onClick={() => onOpenCreateChannelPopup(category.id)}
             >
               <i className="bi bi-plus-lg" aria-hidden="true" />
-            </button>
+            </Button>
             <div className="category-settings-anchor" ref={categorySettingsAnchorRef}>
-              <button
+              <Button
                 type="button"
                 className="secondary icon-btn tiny category-action-btn"
                 aria-label={t("rooms.configCategory")}
@@ -73,7 +73,7 @@ export function RoomsCategoryBlock({
                 onClick={() => onOpenCategorySettingsPopup(category.id, category.title)}
               >
                 <i className="bi bi-gear" aria-hidden="true" />
-              </button>
+              </Button>
               <PopupPortal
                 open={categorySettingsPopupOpenId === category.id}
                 anchorRef={categorySettingsAnchorRef}
@@ -85,21 +85,21 @@ export function RoomsCategoryBlock({
                     <h3 className="subheading">{t("rooms.categorySettings")}</h3>
                     <input value={editingCategoryTitle} onChange={(event) => onSetEditingCategoryTitle(event.target.value)} placeholder={t("rooms.categoryTitle")} />
                     <div className="flex flex-wrap items-center gap-3">
-                      <button type="button" className="secondary" onClick={() => onMoveCategory("up")}>
+                      <Button type="button" className="secondary" onClick={() => onMoveCategory("up")}>
                         <i className="bi bi-arrow-up" aria-hidden="true" /> {t("rooms.up")}
-                      </button>
-                      <button type="button" className="secondary" onClick={() => onMoveCategory("down")}>
+                      </Button>
+                      <Button type="button" className="secondary" onClick={() => onMoveCategory("down")}>
                         <i className="bi bi-arrow-down" aria-hidden="true" /> {t("rooms.down")}
-                      </button>
+                      </Button>
                     </div>
-                    <button type="submit" className="icon-action"><i className="bi bi-check2" aria-hidden="true" /> {t("rooms.save")}</button>
-                    <button
+                    <Button type="submit" className="icon-action"><i className="bi bi-check2" aria-hidden="true" /> {t("rooms.save")}</Button>
+                    <Button
                       type="button"
                       className="secondary delete-action-btn"
                       onClick={onRequestDeleteCategory}
                     >
                       <i className="bi bi-trash3" aria-hidden="true" /> {t("rooms.deleteCategory")}
-                    </button>
+                    </Button>
                   </form>
                 </div>
               </PopupPortal>

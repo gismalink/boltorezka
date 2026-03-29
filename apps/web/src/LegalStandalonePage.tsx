@@ -1,6 +1,7 @@
 import { CookieConsentBanner } from "./components/CookieConsentBanner";
 import { LegalLinks } from "./components/LegalLinks";
 import { useEffect, useMemo, useState } from "react";
+import { Button, PixelCheckbox } from "./components/uicomponents";
 import { detectInitialLang, LANGUAGE_OPTIONS, type Lang } from "./i18n";
 
 const COOKIE_CONSENT_KEY = "boltorezka_cookie_consent_v1";
@@ -358,13 +359,15 @@ export function LegalStandalonePage() {
         {acceptanceKey ? (
           <div className="mt-6 rounded border border-white/12 bg-black/15 p-3 text-sm text-pixel-text">
             {!acceptedAt ? (
-              <label className="inline-flex cursor-pointer items-center gap-2">
-                <input type="checkbox" onChange={(event) => {
-                  if (event.target.checked) {
+              <PixelCheckbox
+                checked={false}
+                onChange={(checked) => {
+                  if (checked) {
                     acceptDocument();
                   }
-                }} />
-                <span>
+                }}
+                label={
+                  <span>
                   {lang === "ru"
                     ? (acceptanceKey === "terms"
                       ? "Подтверждаю принятие пользовательского соглашения"
@@ -372,8 +375,9 @@ export function LegalStandalonePage() {
                     : (acceptanceKey === "terms"
                       ? "I accept the Terms of Service"
                       : "I accept the Privacy Policy")}
-                </span>
-              </label>
+                  </span>
+                }
+              />
             ) : (
               <p className="text-pixel-muted">
                 {lang === "ru" ? `Принято: ${acceptedAtLabel}` : `Accepted on: ${acceptedAtLabel}`}
@@ -387,7 +391,7 @@ export function LegalStandalonePage() {
             <LegalLinks lang={lang} />
             {isCookiesPage ? (
               <div className="mt-3 text-center">
-                <button
+                <Button
                   type="button"
                   className="text-xs text-pixel-muted underline decoration-current/40 underline-offset-2 transition hover:text-pixel-text"
                   onClick={() => {
@@ -396,7 +400,7 @@ export function LegalStandalonePage() {
                   }}
                 >
                   {lang === "ru" ? "Сбросить настройки" : "Reset settings"}
-                </button>
+                </Button>
               </div>
             ) : null}
           </div>

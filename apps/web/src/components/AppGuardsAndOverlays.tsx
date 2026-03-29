@@ -1,7 +1,6 @@
 import { useRef, useState, type MouseEvent } from "react";
 import { LegalLinks } from "./LegalLinks";
-import { PixelCheckbox } from "./uicomponents";
-import { PopupPortal } from "./uicomponents";
+import { Button, PixelCheckbox, PopupPortal } from "./uicomponents";
 
 function detectUiLang(): "ru" | "en" {
   return document.documentElement.lang === "en" ? "en" : "ru";
@@ -32,13 +31,13 @@ export function DesktopBrowserCompletionGate({ desktopHandoffError }: { desktopH
             : "Вы вошли в Dato Desktop. Эту вкладку можно закрыть."}
         </p>
         <div className="mt-5 flex justify-center">
-          <button
+          <Button
             type="button"
             className="secondary"
             onClick={handleOpenWebVersion}
           >
             Открыть веб-версию
-          </button>
+          </Button>
         </div>
       </section>
     </main>
@@ -76,20 +75,20 @@ export function AccessStateGate({
           </>
         ) : null}
         <div className="mt-5 flex justify-center gap-2">
-          <button
+          <Button
             type="button"
             className="secondary"
             onClick={onRefresh}
           >
             {t("access.refresh")}
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
             className="secondary"
             onClick={onLogout}
           >
             {t("access.logout")}
-          </button>
+          </Button>
         </div>
       </section>
     </main>
@@ -117,21 +116,21 @@ export function DeletedAccountGate({
           {t("account.deletedMessagePrefix")} {daysRemaining} {t("account.deletedMessageSuffix")}
         </p>
         <div className="mt-5 flex justify-center gap-2">
-          <button
+          <Button
             type="button"
             className="secondary"
             disabled={restoring}
             onClick={onRestore}
           >
             {restoring ? t("account.restoring") : t("account.restore")}
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
             className="secondary"
             onClick={onLogout}
           >
             {t("access.logout")}
-          </button>
+          </Button>
         </div>
       </section>
     </main>
@@ -154,22 +153,22 @@ export function DesktopUpdateBanner({
   return (
     <div className="mic-denied-banner" role="status" aria-live="polite">
       <span>{`${t("desktop.updateReadyBanner")} ${desktopUpdateReadyVersion}`}</span>
-      <button
+      <Button
         type="button"
         className="secondary"
         disabled={desktopUpdateApplying}
         onClick={onDismiss}
       >
         {t("desktop.updateLater")}
-      </button>
-      <button
+      </Button>
+      <Button
         type="button"
         className="secondary"
         disabled={desktopUpdateApplying}
         onClick={onApply}
       >
         {desktopUpdateApplying ? t("desktop.updateApplying") : t("desktop.updateRestartNow")}
-      </button>
+      </Button>
     </div>
   );
 }
@@ -178,9 +177,9 @@ export function MediaAccessDeniedBanner({ t, onRequestMediaAccess }: { t: Transl
   return (
     <div className="mic-denied-banner" role="status" aria-live="polite">
       <span>{t("mic.deniedBanner")}</span>
-      <button type="button" className="secondary" onClick={onRequestMediaAccess}>
+      <Button type="button" className="secondary" onClick={onRequestMediaAccess}>
         {t("settings.requestMediaAccess")}
-      </button>
+      </Button>
     </div>
   );
 }
@@ -204,7 +203,7 @@ export function GuestLoginGate({ t, onBeginSso }: { t: Translate; onBeginSso: (p
         <h2 className="text-2xl font-bold text-pixel-text">{t("guest.welcomeTitle")}</h2>
         <p className="mt-3 text-sm leading-relaxed text-pixel-muted">{t("guest.welcomePromo")}</p>
         <div className="mt-6 inline-grid" ref={authMenuRef}>
-          <button
+          <Button
             type="button"
             className="inline-flex min-h-[42px] items-center justify-center px-5"
             onClick={() => setAuthMenuOpen((value) => !value)}
@@ -212,10 +211,10 @@ export function GuestLoginGate({ t, onBeginSso }: { t: Translate; onBeginSso: (p
             aria-label={t("auth.login")}
           >
             {t("guest.loginCta")}
-          </button>
+          </Button>
           <PopupPortal open={authMenuOpen} anchorRef={authMenuRef} className="auth-popup" placement="bottom-end">
             <div className="grid gap-2">
-              <button
+              <Button
                 type="button"
                 className="provider-btn w-full flex items-center justify-start gap-3"
                 onClick={() => {
@@ -225,8 +224,8 @@ export function GuestLoginGate({ t, onBeginSso }: { t: Translate; onBeginSso: (p
               >
                 <span className="provider-icon provider-google inline-flex h-5 w-5 items-center justify-center">G</span>
                 {t("auth.google")}
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
                 className="provider-btn w-full flex items-center justify-start gap-3"
                 onClick={() => {
@@ -236,7 +235,7 @@ export function GuestLoginGate({ t, onBeginSso }: { t: Translate; onBeginSso: (p
               >
                 <span className="provider-icon provider-yandex inline-flex h-5 w-5 items-center justify-center">Я</span>
                 {t("auth.yandex")}
-              </button>
+              </Button>
             </div>
           </PopupPortal>
         </div>
@@ -284,7 +283,7 @@ export function EmptyServerOnboarding({
             placeholder={t("server.createPlaceholder")}
           />
         </label>
-        <button
+        <Button
           type="button"
           className="mt-6 inline-flex min-h-[42px] items-center justify-center px-5"
           onClick={() => {
@@ -293,7 +292,7 @@ export function EmptyServerOnboarding({
           disabled={creatingServer || serverName.trim().length < 3}
         >
           {creatingServer ? t("server.createLoading") : t("server.onboardingCta")}
-        </button>
+        </Button>
       </div>
     </section>
   );
@@ -305,14 +304,14 @@ export function AppUpdatedOverlay({ t, onContinue }: { t: Translate; onContinue:
       <div className="card voice-preferences-modal w-full max-w-[560px] !h-auto !max-h-[90vh] overflow-auto p-6 text-center">
         <h2>{t("overlay.appUpdatedTitle")}</h2>
         <p className="mt-3 muted">{t("overlay.appUpdatedMessage")}</p>
-        <button
+        <Button
           type="button"
           className="primary mt-6 inline-flex w-full items-center justify-center"
           onClick={onContinue}
           autoFocus
         >
           {t("overlay.appUpdatedContinue")}
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -393,14 +392,15 @@ export function FirstRunIntroOverlay({
           />
         </div>
 
-        <button
+        <Button
           type="button"
           className="primary mt-6 inline-flex min-h-[42px] min-w-[280px] desktop:min-w-[240px] items-center justify-center px-6"
           disabled={profileSaving || !termsAccepted || !privacyAccepted}
+          disabledReason={!profileSaving && (!termsAccepted || !privacyAccepted) ? t("intro.continueDisabledReason") : undefined}
           onClick={onContinue}
         >
           {profileSaving ? t("settings.saving") : t("intro.continueCta")}
-        </button>
+        </Button>
       </section>
 
       {legalDoc ? (
@@ -410,13 +410,13 @@ export function FirstRunIntroOverlay({
               <h3 className="text-base font-semibold">
                 {legalDoc === "terms" ? t("intro.termsLink") : t("intro.privacyLink")}
               </h3>
-              <button
+              <Button
                 type="button"
                 className="secondary"
                 onClick={() => setLegalDoc(null)}
               >
                 {t("intro.legalClose")}
-              </button>
+              </Button>
             </div>
             <iframe
               title={legalDoc === "terms" ? t("intro.termsLink") : t("intro.privacyLink")}
@@ -439,13 +439,13 @@ export function SessionMovedOverlay({ message, onReopenHere }: { message: string
           Эта сессия перенесена в другое окно или вкладку. Работа с каналами здесь остановлена.
         </p>
         <p className="mt-2 text-xs muted">{message}</p>
-        <button
+        <Button
           type="button"
           className="primary mt-6 inline-flex w-full items-center justify-center"
           onClick={onReopenHere}
         >
           Открыть здесь
-        </button>
+        </Button>
       </section>
     </div>
   );
@@ -472,28 +472,28 @@ export function AgeVerificationRequiredOverlay({
         <h2>{t("rooms.ageGateOverlayTitle")}</h2>
         <p className="mt-3 muted">{t("rooms.ageGateOverlayHint").replace("{room}", roomSlug)}</p>
         <div className="mt-6 grid gap-2">
-          <button
+          <Button
             type="button"
             className="secondary"
             onClick={onOpenAgeSettings}
           >
             {t("rooms.ageGateOverlayOpenProfile")}
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
             className="primary"
             disabled={confirming}
             onClick={onConfirmAgeAndRetry}
           >
             {confirming ? t("settings.ageConfirmActionLoading") : t("rooms.ageGateOverlayConfirmAndRetry")}
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
             className="secondary"
             onClick={onClose}
           >
             {t("common.no")}
-          </button>
+          </Button>
         </div>
       </section>
     </div>

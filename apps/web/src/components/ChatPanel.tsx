@@ -1,5 +1,6 @@
 import { ClipboardEvent, FormEvent, KeyboardEvent, ReactNode, RefObject, useEffect, useMemo, useRef, useState } from "react";
 import type { Message } from "../domain";
+import { Button } from "./uicomponents";
 import { buildChatMessageViewModels } from "../utils/chatMessageViewModel";
 
 type ChatPanelProps = {
@@ -308,22 +309,22 @@ export function ChatPanel({
         {t("chat.title")} ({hasActiveRoom ? roomTitle || roomSlug : t("chat.noChannel")})
       </h2>
       <div className="mb-3 flex flex-wrap items-center gap-3">
-        <button
+        <Button
           type="button"
           className="secondary"
           onClick={onLoadOlderMessages}
           disabled={!hasActiveRoom || !messagesHasMore || loadingOlderMessages}
         >
           {historyButtonLabel}
-        </button>
+        </Button>
         {showVideoToggle ? (
-          <button
+          <Button
             type="button"
             className="secondary ml-auto"
             onClick={onToggleVideoWindows}
           >
             {videoWindowsVisible ? t("chat.hideAllVideos") : t("chat.showAllVideos")}
-          </button>
+          </Button>
         ) : null}
         {!hasActiveRoom ? (
           <span className="muted">{t("chat.noChannelHint")}</span>
@@ -369,7 +370,7 @@ export function ChatPanel({
               <div className={`chat-bubble-wrap grid max-w-[min(92%,820px)] gap-0.5 ${isOwn ? "justify-items-end" : "justify-items-start"}`}>
                 {canManageOwnMessage ? (
                   <div className={`chat-actions-side ${isOwn ? "chat-actions-side-own" : "chat-actions-side-peer"}`}>
-                    <button
+                    <Button
                       type="button"
                       className="secondary tiny icon-btn"
                       onClick={() => onEditMessage(messageVm.id)}
@@ -377,8 +378,8 @@ export function ChatPanel({
                       title={t("chat.edit")}
                     >
                       <i className="bi bi-pencil-square" aria-hidden="true" />
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       type="button"
                       className="secondary tiny icon-btn"
                       onClick={() => onDeleteMessage(messageVm.id)}
@@ -386,7 +387,7 @@ export function ChatPanel({
                       title={t("chat.delete")}
                     >
                       <i className="bi bi-trash3" aria-hidden="true" />
-                    </button>
+                    </Button>
                   </div>
                 ) : null}
 
@@ -410,7 +411,7 @@ export function ChatPanel({
                   {attachmentImageUrls.length > 0 ? (
                     <div className="chat-attachments-row">
                       {attachmentImageUrls.map((imageUrl) => (
-                        <button
+                        <Button
                           key={`${messageVm.id}-${imageUrl}`}
                           type="button"
                           className="chat-inline-image-btn"
@@ -424,7 +425,7 @@ export function ChatPanel({
                             className="chat-inline-image"
                             loading="lazy"
                           />
-                        </button>
+                        </Button>
                       ))}
                     </div>
                   ) : null}
@@ -438,7 +439,7 @@ export function ChatPanel({
       {editingMessageId ? (
         <div className="chat-edit-banner mb-2 flex items-center justify-between gap-3">
           <span>{t("chat.editingNow")}</span>
-          <button type="button" className="secondary tiny" onClick={onCancelEdit}>{t("chat.cancelEdit")}</button>
+          <Button type="button" className="secondary tiny" onClick={onCancelEdit}>{t("chat.cancelEdit")}</Button>
         </div>
       ) : null}
       <form className="chat-compose mt-3 flex items-end gap-3" onSubmit={onSendMessage}>
@@ -452,7 +453,7 @@ export function ChatPanel({
           disabled={!hasActiveRoom}
         />
         {composePreviewImage ? (
-          <button
+          <Button
             type="button"
             className="chat-compose-thumb-btn"
             onClick={() => setPreviewImageUrl(composePreviewImage)}
@@ -465,9 +466,9 @@ export function ChatPanel({
               className="chat-compose-thumb"
               loading="lazy"
             />
-          </button>
+          </Button>
         ) : null}
-        <button type="submit" disabled={!hasActiveRoom}>{editingMessageId ? t("chat.saveEdit") : t("chat.send")}</button>
+        <Button type="submit" disabled={!hasActiveRoom}>{editingMessageId ? t("chat.saveEdit") : t("chat.send")}</Button>
       </form>
       {previewImageUrl ? (
         <div
@@ -478,13 +479,13 @@ export function ChatPanel({
           onClick={() => setPreviewImageUrl(null)}
         >
           <div className="chat-image-modal-card" onClick={(event) => event.stopPropagation()}>
-            <button
+            <Button
               type="button"
               className="secondary tiny chat-image-modal-close"
               onClick={() => setPreviewImageUrl(null)}
             >
               {t("chat.closeImagePreview")}
-            </button>
+            </Button>
             <img
               src={resolveAttachmentImageUrl(previewImageUrl)}
               alt="chat-image-preview"

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import type { Room } from "../domain";
+import { Button } from "./uicomponents";
 import { RoomsCategoryBlock } from "./roomsPanel/RoomsCategoryBlock";
 import { RoomRow } from "./roomsPanel/RoomRow";
 import { RoomsConfirmOverlay } from "./roomsPanel/RoomsConfirmOverlay";
@@ -251,7 +252,7 @@ export function RoomsPanel({
               <div className="text-[var(--font-size-sm)] uppercase tracking-[0.04em] text-[var(--pixel-muted)]">
                 {t("rooms.deletedGroup")}
               </div>
-              <button
+              <Button
                 type="button"
                 className="secondary icon-btn tiny delete-action-btn"
                 onClick={() => setConfirmPopup({ kind: "delete-all-archived" })}
@@ -259,7 +260,7 @@ export function RoomsPanel({
                 data-tooltip={t("rooms.deleteAllDeleted")}
               >
                 <i className="bi bi-trash3" aria-hidden="true" />
-              </button>
+              </Button>
             </div>
             <ul className="rooms-list">
               {archivedRooms.map((room) => (
@@ -269,7 +270,7 @@ export function RoomsPanel({
                     <span>{room.title}</span>
                   </div>
                   <div className="inline-flex items-center gap-1">
-                    <button
+                    <Button
                       type="button"
                       className="secondary icon-btn tiny"
                       aria-label={t("rooms.restoreChannel")}
@@ -277,8 +278,8 @@ export function RoomsPanel({
                       onClick={() => setConfirmPopup({ kind: "restore-channel", room })}
                     >
                       <i className="bi bi-arrow-counterclockwise" aria-hidden="true" />
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       type="button"
                       className="secondary icon-btn tiny delete-action-btn"
                       aria-label={t("rooms.deleteChannelPermanent")}
@@ -286,7 +287,7 @@ export function RoomsPanel({
                       onClick={() => setConfirmPopup({ kind: "delete-channel-permanent", room })}
                     >
                       <i className="bi bi-trash3-fill" aria-hidden="true" />
-                    </button>
+                    </Button>
                   </div>
                 </li>
               ))}

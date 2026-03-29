@@ -1,4 +1,5 @@
 import { Component, ErrorInfo, ReactNode } from "react";
+import { Button } from "./components/uicomponents";
 
 type Props = {
   children: ReactNode;
@@ -54,9 +55,9 @@ export class ErrorBoundary extends Component<Props, State> {
               </pre>
             ) : null}
             <div className="row">
-              <button type="button" onClick={this.handleReload}>
+              <Button type="button" onClick={this.handleReload}>
                 Reload UI
-              </button>
+              </Button>
             </div>
           </div>
         </div>

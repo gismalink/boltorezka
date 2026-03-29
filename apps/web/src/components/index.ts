@@ -18,7 +18,7 @@ export { AppWorkspaceContent } from "./AppWorkspaceContent";
 export { ChatPanel } from "./ChatPanel";
 export { CookieConsentBanner } from "./CookieConsentBanner";
 export { LegalLinks } from "./LegalLinks";
-export { PopupPortal, PixelCheckbox, RangeSlider } from "./uicomponents";
+export { Button, PopupPortal, PixelCheckbox, RangeSlider } from "./uicomponents";
 export { RoomsPanel } from "./RoomsPanel";
 export { ServerProfileModal } from "./ServerProfileModal";
 export { ServerProfileModalContainer } from "./ServerProfileModalContainer";
