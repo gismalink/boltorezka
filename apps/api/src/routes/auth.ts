@@ -329,10 +329,9 @@ async function upsertSsoUser(profile: Record<string, unknown> | null | undefined
     throw new Error("SSO profile does not contain email");
   }
 
-  const normalizedUsername =
-    String(profile?.username || "").trim() || normalizedEmail.split("@")[0] || null;
-  const displayName =
-    String(profile?.username || "").trim() || normalizedEmail.split("@")[0] || "SSO User";
+  const emailLocalPart = normalizedEmail.split("@")[0] || "";
+  const normalizedUsername = emailLocalPart || null;
+  const displayName = emailLocalPart || "SSO User";
   const isSuperAdmin = normalizedEmail === config.superAdminEmail;
   const isSmokeRtcBot = /^smoke-rtc-\d+@example\.test$/.test(normalizedEmail);
   const isPrimarySmokeAdmin = normalizedEmail === "smoke-rtc-1@example.test";
@@ -347,8 +346,11 @@ async function upsertSsoUser(profile: Record<string, unknown> | null | undefined
     const updated = await db.query<UserRow>(
       `UPDATE users
        SET
-         username = COALESCE($4, username),
-         name = $2,
+         username = COALESCE(username, $4),
+         name = CASE
+           WHEN name IS NULL OR BTRIM(name) = '' THEN $2
+           ELSE name
+         END,
          role = CASE
            WHEN $3 THEN 'super_admin'
            WHEN $7 THEN 'admin'
