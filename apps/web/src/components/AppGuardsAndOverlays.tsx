@@ -343,12 +343,12 @@ export function FirstRunIntroOverlay({
 
   return (
     <div className="voice-preferences-overlay fixed inset-0 z-[305] grid place-items-center p-4" role="dialog" aria-modal="true" aria-live="polite">
-      <section className="card voice-preferences-modal w-full max-w-[620px] !h-auto !max-h-[90vh] overflow-auto p-6">
-        <h2>{t("intro.title")}</h2>
-        <p className="muted">{t("intro.description")}</p>
+      <section className="card voice-preferences-modal w-full max-w-[560px] desktop:max-w-[420px] !h-auto !max-h-[90vh] overflow-auto p-6 text-center">
+        <h2 className="text-[34px] leading-none">{t("intro.title")}</h2>
+        <p className="mt-4 muted">{t("intro.description")}</p>
 
-        <label className="mt-5 grid gap-2">
-          <span className="subheading">{t("intro.displayNameLabel")}</span>
+        <label className="mt-6 mx-auto grid w-full max-w-[340px] desktop:max-w-[300px] gap-2">
+          <span className="subheading text-center">{t("intro.displayNameLabel")}</span>
           <input
             value={profileNameDraft}
             onChange={(event) => onChangeProfileName(event.target.value)}
@@ -356,7 +356,7 @@ export function FirstRunIntroOverlay({
           />
         </label>
 
-        <div className="mt-5 grid gap-2">
+        <div className="mt-5 grid justify-items-center gap-2">
           <PixelCheckbox
             checked={termsAccepted}
             onChange={setTermsAccepted}
@@ -395,7 +395,7 @@ export function FirstRunIntroOverlay({
 
         <button
           type="button"
-          className="primary mt-6 inline-flex w-full min-h-[42px] items-center justify-center"
+          className="primary mt-6 inline-flex min-h-[42px] min-w-[280px] desktop:min-w-[240px] items-center justify-center px-6"
           disabled={profileSaving || !termsAccepted || !privacyAccepted}
           onClick={onContinue}
         >
