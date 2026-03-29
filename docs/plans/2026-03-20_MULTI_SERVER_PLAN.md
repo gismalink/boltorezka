@@ -401,8 +401,8 @@ Stage 4 note (2026-03-28):
 ### Stage 5 - Prod rollout
 
 - [x] Deploy в `test` + smoke.
-- [ ] Ручная проверка критического сценария (owner/admin/member).
-- [ ] Только после явного подтверждения: deploy в `prod`.
+- [x] Ручная проверка критического сценария (owner/admin/member).
+- [x] Только после явного подтверждения: deploy в `prod`.
 
 Stage 5 note (2026-03-28):
 - Выполнен повторный test gate на feature-ветке:
@@ -429,6 +429,13 @@ Stage 5 note (2026-03-29, после merge в main):
    - Applied SHA: `1b25863814095e88944422e2c1ff85628783e4d5`.
    - Result: `PASS`.
 - Ключевые smoke проверки после merge в main: `smoke:api`, `smoke:web:version-cache`, `smoke:web:rnnoise:browser`, `smoke:multiserver`, `smoke:multiserver:age-gate` (`no-room-skip`), `smoke:multiserver:role-matrix`, `smoke:realtime`.
+
+Stage 5 note (2026-03-29, финал):
+- Ручная проверка критического сценария подтверждена: owner/admin/member flow и UX age-gate в BossServer (`18plus`) отрабатывают корректно.
+- Прод-деплой выполнен после явного подтверждения пользователя:
+   - `PROD_REF=origin/main npm run deploy:prod`.
+   - Applied SHA: `5e784846b3025ac75d7af7391e46d6c7caead722`.
+   - Post-deploy checks: `docker compose ps` (prod API `Up`), `curl -I https://datowave.com` (`200`), `curl -I https://www.datowave.com` (`308` -> apex).
 
 ### Stage 6 - Stabilization (сразу после релиза)
 
