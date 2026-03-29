@@ -1,5 +1,4 @@
 import { useRef, useState } from "react";
-import type { UiTheme } from "../domain";
 import { LegalLinks } from "./LegalLinks";
 import { PopupPortal } from "./PopupPortal";
 
@@ -320,48 +319,26 @@ export function AppUpdatedOverlay({ t, onContinue }: { t: Translate; onContinue:
 
 export function FirstRunIntroOverlay({
   t,
-  selectedUiTheme,
-  onSelectTheme,
   profileNameDraft,
   onChangeProfileName,
   profileSaving,
   onContinue
 }: {
   t: Translate;
-  selectedUiTheme: UiTheme;
-  onSelectTheme: (theme: UiTheme) => void;
   profileNameDraft: string;
   onChangeProfileName: (value: string) => void;
   profileSaving: boolean;
   onContinue: () => void;
 }) {
-  const lang = detectUiLang();
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [privacyAccepted, setPrivacyAccepted] = useState(false);
+  const [legalDoc, setLegalDoc] = useState<"terms" | "privacy" | null>(null);
 
   return (
     <div className="voice-preferences-overlay fixed inset-0 z-[305] grid place-items-center p-4" role="dialog" aria-modal="true" aria-live="polite">
       <section className="card voice-preferences-modal w-full max-w-[620px] !h-auto !max-h-[90vh] overflow-auto p-6">
         <h2>{t("intro.title")}</h2>
         <p className="muted">{t("intro.description")}</p>
-
-        <div className="mt-5 grid gap-2">
-          <span className="subheading">{t("intro.skinLabel")}</span>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            <button
-              type="button"
-              className={`secondary min-h-[40px] ${selectedUiTheme === "8-neon-bit" ? "user-settings-tab-btn-active" : ""}`}
-              onClick={() => onSelectTheme("8-neon-bit")}
-            >
-              {t("settings.theme8NeonBit")}
-            </button>
-            <button
-              type="button"
-              className={`secondary min-h-[40px] ${selectedUiTheme === "material-classic" ? "user-settings-tab-btn-active" : ""}`}
-              onClick={() => onSelectTheme("material-classic")}
-            >
-              {t("settings.themeMaterialClassic")}
-            </button>
-          </div>
-        </div>
 
         <label className="mt-5 grid gap-2">
           <span className="subheading">{t("intro.displayNameLabel")}</span>
@@ -372,19 +349,78 @@ export function FirstRunIntroOverlay({
           />
         </label>
 
+        <div className="mt-5 grid gap-2">
+          <label className="voice-sound-checkbox flex items-center justify-between gap-3">
+            <span className="muted text-sm">
+              {t("intro.acceptTermsPrefix")}{" "}
+              <button
+                type="button"
+                className="underline underline-offset-2 hover:text-white"
+                onClick={() => setLegalDoc("terms")}
+              >
+                {t("intro.termsLink")}
+              </button>
+            </span>
+            <input
+              type="checkbox"
+              checked={termsAccepted}
+              onChange={(event) => setTermsAccepted(event.target.checked)}
+              aria-label={t("intro.acceptTermsPrefix")}
+            />
+          </label>
+          <label className="voice-sound-checkbox flex items-center justify-between gap-3">
+            <span className="muted text-sm">
+              {t("intro.acceptPrivacyPrefix")}{" "}
+              <button
+                type="button"
+                className="underline underline-offset-2 hover:text-white"
+                onClick={() => setLegalDoc("privacy")}
+              >
+                {t("intro.privacyLink")}
+              </button>
+            </span>
+            <input
+              type="checkbox"
+              checked={privacyAccepted}
+              onChange={(event) => setPrivacyAccepted(event.target.checked)}
+              aria-label={t("intro.acceptPrivacyPrefix")}
+            />
+          </label>
+        </div>
+
         <button
           type="button"
           className="primary mt-6 inline-flex w-full min-h-[42px] items-center justify-center"
-          disabled={profileSaving}
+          disabled={profileSaving || !termsAccepted || !privacyAccepted}
           onClick={onContinue}
         >
           {profileSaving ? t("settings.saving") : t("intro.continueCta")}
         </button>
-
-        <div className="mt-4 border-t border-white/10 pt-3">
-          <LegalLinks compact lang={lang} />
-        </div>
       </section>
+
+      {legalDoc ? (
+        <div className="fixed inset-0 z-[306] grid place-items-center bg-black/65 p-4" role="dialog" aria-modal="true">
+          <section className="card w-full max-w-[760px] p-4 sm:p-5">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <h3 className="text-base font-semibold">
+                {legalDoc === "terms" ? t("intro.termsLink") : t("intro.privacyLink")}
+              </h3>
+              <button
+                type="button"
+                className="secondary"
+                onClick={() => setLegalDoc(null)}
+              >
+                {t("intro.legalClose")}
+              </button>
+            </div>
+            <iframe
+              title={legalDoc === "terms" ? t("intro.termsLink") : t("intro.privacyLink")}
+              src={legalDoc === "terms" ? "/terms" : "/privacy"}
+              className="h-[58vh] w-full rounded border border-white/15 bg-black/30"
+            />
+          </section>
+        </div>
+      ) : null}
     </div>
   );
 }

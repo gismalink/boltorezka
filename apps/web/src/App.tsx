@@ -1985,8 +1985,6 @@ export function App() {
       {user && showFirstRunIntro ? (
         <FirstRunIntroOverlay
           t={t}
-          selectedUiTheme={selectedUiTheme}
-          onSelectTheme={setSelectedUiTheme}
           profileNameDraft={profileNameDraft}
           onChangeProfileName={setProfileNameDraft}
           profileSaving={profileSaving}
