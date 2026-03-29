@@ -486,6 +486,7 @@ export function ServerProfileModal({
       return haystack.includes(normalizedUserSearch);
     });
   }, [normalizedUserSearch, userAccessTab, usersByTab]);
+  const pendingAccessRequestsCount = usersByTab.requests.length;
 
   const serverManagementOptions = useMemo(
     () => (
@@ -899,7 +900,14 @@ export function ServerProfileModal({
               className={`secondary user-settings-tab-btn min-h-[42px] justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${serverMenuTab === "product_management" ? "user-settings-tab-btn-active" : ""}`}
               onClick={() => onSetServerMenuTab("product_management")}
             >
-              {t("server.tabProductManagement")}
+              <span className="inline-flex items-center gap-2">
+                <span>{t("server.tabProductManagement")}</span>
+                {pendingAccessRequestsCount > 0 ? (
+                  <span className="tab-notification-badge" aria-label={t("admin.pendingRequestsCounterAria").replace("{count}", String(pendingAccessRequestsCount))}>
+                    {pendingAccessRequestsCount > 99 ? "99+" : pendingAccessRequestsCount}
+                  </span>
+                ) : null}
+              </span>
             </button>
           ) : null}
           {showServerManagementTab ? (

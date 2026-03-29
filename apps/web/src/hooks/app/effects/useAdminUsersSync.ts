@@ -15,8 +15,28 @@ export function useAdminUsersSync({ token, canManageUsers, pushLog, setAdminUser
       return;
     }
 
-    api.adminUsers(token)
-      .then((res) => setAdminUsers(res.users))
-      .catch((error) => pushLog(`admin users failed: ${error.message}`));
+    let disposed = false;
+
+    const syncAdminUsers = () => {
+      api.adminUsers(token)
+        .then((res) => {
+          if (!disposed) {
+            setAdminUsers(res.users);
+          }
+        })
+        .catch((error) => {
+          if (!disposed) {
+            pushLog(`admin users failed: ${error.message}`);
+          }
+        });
+    };
+
+    syncAdminUsers();
+    const intervalId = window.setInterval(syncAdminUsers, 15000);
+
+    return () => {
+      disposed = true;
+      window.clearInterval(intervalId);
+    };
   }, [token, canManageUsers, pushLog, setAdminUsers]);
 }

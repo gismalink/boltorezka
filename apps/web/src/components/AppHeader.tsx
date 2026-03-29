@@ -23,6 +23,7 @@ type AppHeaderProps = {
   onChangeCurrentServer: (serverId: string) => void;
   onCreateServer: (name: string) => Promise<void>;
   buildDateLabel?: string;
+  pendingJoinRequestsCount?: number;
 };
 
 export function AppHeader({
@@ -46,6 +47,7 @@ export function AppHeader({
   onChangeCurrentServer,
   onCreateServer,
   buildDateLabel,
+  pendingJoinRequestsCount = 0,
 }: AppHeaderProps) {
   const [createServerOpen, setCreateServerOpen] = useState(false);
   const [newServerName, setNewServerName] = useState("");
@@ -70,12 +72,17 @@ export function AppHeader({
         <div className="app-menu">
           <button
             type="button"
-            className="secondary app-menu-btn inline-flex min-h-10 min-w-10 items-center justify-center px-2.5 font-bold"
+            className="secondary app-menu-btn relative inline-flex min-h-10 min-w-10 items-center justify-center px-2.5 font-bold"
             onClick={onToggleAppMenu}
             aria-label={t("server.menuAria")}
             aria-expanded={appMenuOpen}
           >
             {menuGlyph}
+            {pendingJoinRequestsCount > 0 ? (
+              <span className="menu-notification-badge" aria-hidden="true">
+                {pendingJoinRequestsCount > 99 ? "99+" : pendingJoinRequestsCount}
+              </span>
+            ) : null}
           </button>
         </div>
         <div className={`title-block server-title-hover-root flex min-w-0 flex-col ${createServerOpen ? "server-title-hover-root-open" : ""}`}>

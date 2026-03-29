@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useRef, useState, type MouseEvent } from "react";
 import { LegalLinks } from "./LegalLinks";
 import { PopupPortal } from "./PopupPortal";
 
@@ -334,6 +334,12 @@ export function FirstRunIntroOverlay({
   const [privacyAccepted, setPrivacyAccepted] = useState(false);
   const [legalDoc, setLegalDoc] = useState<"terms" | "privacy" | null>(null);
 
+  const openLegalDoc = (doc: "terms" | "privacy") => (event: MouseEvent<HTMLAnchorElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setLegalDoc(doc);
+  };
+
   return (
     <div className="voice-preferences-overlay fixed inset-0 z-[305] grid place-items-center p-4" role="dialog" aria-modal="true" aria-live="polite">
       <section className="card voice-preferences-modal w-full max-w-[620px] !h-auto !max-h-[90vh] overflow-auto p-6">
@@ -350,41 +356,45 @@ export function FirstRunIntroOverlay({
         </label>
 
         <div className="mt-5 grid gap-2">
-          <label className="voice-sound-checkbox flex items-center justify-between gap-3">
-            <span className="muted text-sm">
-              {t("intro.acceptTermsPrefix")}{" "}
-              <button
-                type="button"
-                className="underline underline-offset-2 hover:text-white"
-                onClick={() => setLegalDoc("terms")}
-              >
-                {t("intro.termsLink")}
-              </button>
-            </span>
+          <label className="intro-consent-item">
             <input
               type="checkbox"
               checked={termsAccepted}
               onChange={(event) => setTermsAccepted(event.target.checked)}
+              className="intro-consent-native"
               aria-label={t("intro.acceptTermsPrefix")}
             />
-          </label>
-          <label className="voice-sound-checkbox flex items-center justify-between gap-3">
+            <span aria-hidden="true" className="intro-consent-box" />
             <span className="muted text-sm">
-              {t("intro.acceptPrivacyPrefix")}{" "}
-              <button
-                type="button"
+              {t("intro.acceptTermsPrefix")}{" "}
+              <a
+                href="/terms"
                 className="underline underline-offset-2 hover:text-white"
-                onClick={() => setLegalDoc("privacy")}
+                onClick={openLegalDoc("terms")}
               >
-                {t("intro.privacyLink")}
-              </button>
+                {t("intro.termsLink")}
+              </a>
             </span>
+          </label>
+          <label className="intro-consent-item">
             <input
               type="checkbox"
               checked={privacyAccepted}
               onChange={(event) => setPrivacyAccepted(event.target.checked)}
+              className="intro-consent-native"
               aria-label={t("intro.acceptPrivacyPrefix")}
             />
+            <span aria-hidden="true" className="intro-consent-box" />
+            <span className="muted text-sm">
+              {t("intro.acceptPrivacyPrefix")}{" "}
+              <a
+                href="/privacy"
+                className="underline underline-offset-2 hover:text-white"
+                onClick={openLegalDoc("privacy")}
+              >
+                {t("intro.privacyLink")}
+              </a>
+            </span>
           </label>
         </div>
 
