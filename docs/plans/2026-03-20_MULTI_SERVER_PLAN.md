@@ -440,9 +440,9 @@ Stage 5 note (2026-03-29, финал):
 ### Stage 6 - Stabilization (сразу после релиза)
 
 - [x] Owner transfer и защита от "server without owner".
-- [ ] Membership lifecycle: `leave`, `kick`, `rejoin` (частично: `leave` и `rejoin` подтверждены вручную; `kick` остается открытым).
+- [x] Membership lifecycle: `leave`, `kick`, `rejoin`.
 - [x] Admin control plane для суперадмина (глобальный список серверов, service ban/unban, переход в server management).
-- [ ] Закрыть зависимость legal Stage E: перевести room-level age-gate в полноценный server+room режим и зафиксировать это в legal плане.
+- [x] Закрыть зависимость legal Stage E: перевести room-level age-gate в полноценный server+room режим и зафиксировать это в legal плане.
 
 Stage 6 note (2026-03-28):
 - Добавлен backend endpoint передачи владения сервером: `POST /v1/servers/:serverId/owner`.
@@ -457,6 +457,8 @@ Stage 6 note (2026-03-28):
 - Ручная проверка (2026-03-28): вход по invite на сервер и последующий `leave` отработали успешно.
 - Ручная проверка (2026-03-28): после `leave` повторный вход по invite (`rejoin`) отрабатывает успешно.
 - Ручная проверка (2026-03-28): создание и удаление серверов выполняются корректно.
+- Ручная проверка (2026-03-29): сценарий `kick` подтвержден, `Membership lifecycle` закрыт.
+- Ссылка на фиксацию technical Stage E в legal плане: `docs/plans/2026-03-27_LEGAL_COMPLIANCE_PLAN.md` (Stage E status от 2026-03-29).
 
 ## 7) Что еще нужно добавить (рекомендации)
 

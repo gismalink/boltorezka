@@ -194,32 +194,38 @@ Smoke/acceptance для NSFW age-gate:
 - [ ] Stage E0 (unblock now): внедрить room-level `nsfw` + age-gate для текущего single-server контура (`BossServer`), без server switcher.
 - [ ] Stage E0: обновить тексты Terms/Privacy/Contacts под модель 18+ ограничений и обращений.
 - [ ] Stage E0: прогнать smoke в `test` по NSFW room-сценариям и зафиксировать PASS.
-- [ ] Stage E1 (after multi-server Stage 1+): перевести enforcement на server+room context с обязательным `server_id` и anti-leak проверками.
-- [ ] Stage E1: после explicit GO включить в `prod` и зафиксировать короткий post-deploy smoke.
+- [x] Stage E1 (after multi-server Stage 1+): перевести enforcement на server+room context с обязательным `server_id` и anti-leak проверками.
+- [x] Stage E1: после explicit GO включить в `prod` и зафиксировать короткий post-deploy smoke.
+
+Статус Stage E на 2026-03-29 (технический контур):
+- Server+room enforcement включен: `nsfw` + `AgeVerificationRequired` проверяются в HTTP/WS путях (`rooms`, `realtime`, `realtime-chat`, `chat-uploads`) с server-aware age-confirm (`/v1/servers/:serverId/age-confirm`).
+- В `test` smoke контур подключен и проходит через `smoke:multiserver:age-gate` (включен в `postdeploy-smoke-test.sh`), evidence: `docs/status/test-results/2026-03-27.md`, `docs/status/test-results/2026-03-28.md`.
+- После explicit GO выполнен `prod` deploy/smoke из `origin/main` (см. release/log notes 2026-03-29).
+- Открытыми остаются policy/legal-артефакты Stage E (в т.ч. `AGE_POLICY_VERSION` и обновления legal текстов).
 
 #### Stage E.1 - Декомпозиция по файлам (implementation map)
 
 Backend (API):
-- [ ] `apps/api/src/routes/rooms.ts`: добавить/проверить поле `nsfw` в create/update/read контрактах комнат и в выборках дерева комнат (E0).
-- [ ] `apps/api/src/api-contract.types.ts`: расширить типы `RoomRow`/`RoomListRow` полем `nsfw`.
+- [x] `apps/api/src/routes/rooms.ts`: добавить/проверить поле `nsfw` в create/update/read контрактах комнат и в выборках дерева комнат (E0).
+- [x] `apps/api/src/api-contract.types.ts`: расширить типы `RoomRow`/`RoomListRow` полем `nsfw`.
 - [ ] `apps/api/src/middleware/auth.ts` (или отдельный middleware файл): добавить guard для 18+ доступа (например, `requireAgeGateForNsfw`) с `403 AgeVerificationRequired` (E0).
-- [ ] Применить guard ко всем путям входа в room runtime (join/open by slug/direct link/invite path), чтобы исключить обход через API (E0).
+- [x] Применить guard ко всем путям входа в room runtime (join/open by slug/direct link/invite path), чтобы исключить обход через API (E0).
 - [ ] Добавить запись события age-confirm в audit/metrics (минимум: `userId`, `roomId|roomSlug`, `policyVersion`, `timestamp`, `source`).
-- [ ] После multi-server Stage 1-4: расширить guard и audit до `server_id` контекста (E1).
+- [x] После multi-server Stage 1-4: расширить guard и audit до `server_id` контекста (E1).
 
 Frontend (Web):
-- [ ] `apps/web/src/components/roomsPanel/RoomRow.tsx`: при попытке входа в `nsfw=true` запускать age-gate вместо прямого join.
+- [x] `apps/web/src/components/roomsPanel/RoomRow.tsx`: при попытке входа в `nsfw=true` запускать age-gate вместо прямого join.
 - [ ] `apps/web/src/components/roomsPanel/RoomsConfirmOverlay.tsx` (или отдельный overlay): добавить вариант подтверждения `Мне есть 18` / `Назад`.
-- [ ] `apps/web/src/hooks/rooms/useRoomPresenceActions.ts`: не вызывать `joinRoom` для `nsfw=true` без подтверждения age-gate.
+- [x] `apps/web/src/hooks/rooms/useRoomPresenceActions.ts`: не вызывать `joinRoom` для `nsfw=true` без подтверждения age-gate.
 - [ ] `apps/web/src/hooks/rooms/useRoomsDerived.ts` и связанные селекторы: скрыть/ограничить preview 18+ пространств до подтверждения (по выбранной policy) (E0).
 - [ ] Обработать deep-link сценарий: переход в `nsfw=true` room всегда проходит через age-gate (E0).
 - [ ] После внедрения server switcher: добавить server-aware проверку для переходов между серверами и комнатами (E1).
 
 Smoke и тест-контур:
-- [ ] Добавить smoke-скрипт `scripts/smoke/smoke-nsfw-age-gate.mjs` (или расширить существующие web smoke) с кейсами deny/allow/reload/deep-link.
-- [ ] Включить новый smoke в `deploy:test:smoke` профиль (минимум как optional gate на этапе внедрения, затем как required).
-- [ ] Зафиксировать test evidence в `docs/status/test-results/<date>.md`.
-- [ ] После multi-server cutover: добавить test-кейс no-leak между серверами для `nsfw=true` пространств (E1).
+- [x] Добавить/расширить smoke-скрипт age-gate с кейсами deny/allow/reload/deep-link (реализовано через `scripts/smoke/smoke-multiserver-age-gate.sh`).
+- [x] Включить новый smoke в `deploy:test:smoke` профиль (минимум как optional gate на этапе внедрения, затем как required).
+- [x] Зафиксировать test evidence в `docs/status/test-results/<date>.md`.
+- [x] После multi-server cutover: добавить test-кейс no-leak между серверами для `nsfw=true` пространств (E1).
 
 Документация и policy:
 - [ ] Обновить legal тексты (`/privacy`, `/terms`, `/contacts`) и добавить ссылку/правило для 18+ контента.
@@ -241,5 +247,5 @@ Smoke и тест-контур:
 - [ ] По 152-ФЗ закрыты организационные меры (ответственный, политика, процедуры, проверка/подача уведомления РКН).
 - [x] `test` smoke по legal-пакету PASS.
 - [x] После explicit GO выполнен `prod` smoke и зафиксирован PASS.
-- [ ] Для `nsfw=true` включен backend age-gate и подтверждено отсутствие обхода через direct-link/API.
+- [x] Для `nsfw=true` включен backend age-gate и подтверждено отсутствие обхода через direct-link/API.
 - [ ] Зафиксированы policy/version и журналы age-confirm событий для аудита.
