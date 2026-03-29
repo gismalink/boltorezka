@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { detectInitialLang, LANGUAGE_OPTIONS, type Lang } from "./i18n";
 
 const COOKIE_CONSENT_KEY = "boltorezka_cookie_consent_v1";
+const LEGAL_ACCEPTANCE_KEY = "boltorezka_legal_acceptance_v1";
 
 type LegalPageData = {
   title: string;
@@ -233,12 +234,40 @@ const LEGAL_PAGES: Record<Lang, Record<string, LegalPageData>> = {
 export function LegalStandalonePage() {
   const searchParams = new URLSearchParams(window.location.search);
   const isEmbedded = searchParams.get("embed") === "1";
+  const pathname = window.location.pathname.toLowerCase();
+  const normalizedPathname = pathname.endsWith("/") ? pathname.slice(0, -1) : pathname;
+  const acceptanceKey = normalizedPathname === "/terms"
+    ? "terms"
+    : normalizedPathname === "/privacy"
+      ? "privacy"
+      : null;
+  const isCookiesPage = normalizedPathname === "/cookies";
   const [lang, setLang] = useState<Lang>(() => detectInitialLang());
   const [cookieConsentAccepted, setCookieConsentAccepted] = useState<boolean>(() => {
     return localStorage.getItem(COOKIE_CONSENT_KEY) === "1";
   });
+  const [acceptedAtByDoc, setAcceptedAtByDoc] = useState<Record<string, string>>(() => {
+    try {
+      const raw = localStorage.getItem(LEGAL_ACCEPTANCE_KEY);
+      if (!raw) {
+        return {};
+      }
+      const parsed = JSON.parse(raw) as Record<string, unknown>;
+      if (!parsed || typeof parsed !== "object") {
+        return {};
+      }
+      const normalized: Record<string, string> = {};
+      Object.entries(parsed).forEach(([key, value]) => {
+        if (typeof value === "string" && value.trim().length > 0) {
+          normalized[key] = value;
+        }
+      });
+      return normalized;
+    } catch {
+      return {};
+    }
+  });
 
-  const pathname = window.location.pathname.toLowerCase();
   const page = useMemo<LegalPageData | null>(() => {
     if (LEGAL_PAGES[lang][pathname]) {
       return LEGAL_PAGES[lang][pathname];
@@ -261,12 +290,21 @@ export function LegalStandalonePage() {
     return null;
   }
 
-  const handleGoBack = () => {
-    if (window.history.length > 1) {
-      window.history.back();
+  const acceptedAt = acceptanceKey ? acceptedAtByDoc[acceptanceKey] || "" : "";
+  const acceptedAtLabel = acceptedAt
+    ? new Date(acceptedAt).toLocaleString(lang === "ru" ? "ru-RU" : "en-US")
+    : "";
+
+  const acceptDocument = () => {
+    if (!acceptanceKey || acceptedAt) {
       return;
     }
-    window.location.assign("/");
+    const acceptedAtIso = new Date().toISOString();
+    setAcceptedAtByDoc((prev) => {
+      const next = { ...prev, [acceptanceKey]: acceptedAtIso };
+      localStorage.setItem(LEGAL_ACCEPTANCE_KEY, JSON.stringify(next));
+      return next;
+    });
   };
 
   return (
@@ -276,13 +314,6 @@ export function LegalStandalonePage() {
           <div className="mb-4 flex flex-wrap items-center gap-2">
             {!isEmbedded ? (
               <div className="flex flex-wrap items-center gap-2">
-                <button
-                  type="button"
-                  className="secondary min-h-[36px] px-3"
-                  onClick={handleGoBack}
-                >
-                  {page.backLabel}
-                </button>
                 <a
                   href="/"
                   className="secondary inline-flex min-h-[36px] items-center px-3"
@@ -324,21 +355,50 @@ export function LegalStandalonePage() {
           ))}
         </div>
 
+        {acceptanceKey ? (
+          <div className="mt-6 rounded border border-white/12 bg-black/15 p-3 text-sm text-pixel-text">
+            {!acceptedAt ? (
+              <label className="inline-flex cursor-pointer items-center gap-2">
+                <input type="checkbox" onChange={(event) => {
+                  if (event.target.checked) {
+                    acceptDocument();
+                  }
+                }} />
+                <span>
+                  {lang === "ru"
+                    ? (acceptanceKey === "terms"
+                      ? "Подтверждаю принятие пользовательского соглашения"
+                      : "Подтверждаю принятие политики конфиденциальности")
+                    : (acceptanceKey === "terms"
+                      ? "I accept the Terms of Service"
+                      : "I accept the Privacy Policy")}
+                </span>
+              </label>
+            ) : (
+              <p className="text-pixel-muted">
+                {lang === "ru" ? `Принято: ${acceptedAtLabel}` : `Accepted on: ${acceptedAtLabel}`}
+              </p>
+            )}
+          </div>
+        ) : null}
+
         {!isEmbedded ? (
           <div className="mt-8 border-t border-white/10 pt-4">
             <LegalLinks lang={lang} />
-            <div className="mt-3 text-center">
-              <button
-                type="button"
-                className="text-xs text-pixel-muted underline decoration-current/40 underline-offset-2 transition hover:text-pixel-text"
-                onClick={() => {
-                  localStorage.removeItem(COOKIE_CONSENT_KEY);
-                  setCookieConsentAccepted(false);
-                }}
-              >
-                {lang === "ru" ? "Сбросить настройки" : "Reset settings"}
-              </button>
-            </div>
+            {isCookiesPage ? (
+              <div className="mt-3 text-center">
+                <button
+                  type="button"
+                  className="text-xs text-pixel-muted underline decoration-current/40 underline-offset-2 transition hover:text-pixel-text"
+                  onClick={() => {
+                    localStorage.removeItem(COOKIE_CONSENT_KEY);
+                    setCookieConsentAccepted(false);
+                  }}
+                >
+                  {lang === "ru" ? "Сбросить настройки" : "Reset settings"}
+                </button>
+              </div>
+            ) : null}
           </div>
         ) : null}
       </article>
