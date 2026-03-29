@@ -27,7 +27,7 @@ export function Button({
   }
 
   return (
-    <span className="ui-btn-disabled-anchor inline-flex" data-tooltip={tooltipText}>
+    <span className={`ui-btn-disabled-anchor ${className}`.trim()} data-tooltip={tooltipText}>
       {buttonNode}
     </span>
   );

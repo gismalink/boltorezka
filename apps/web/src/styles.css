@@ -722,6 +722,12 @@ textarea:focus-visible {
 }
 
 .ui-btn-disabled-anchor {
+  display: inline-flex;
+  align-items: stretch;
+  max-width: 100%;
+}
+
+.ui-btn-disabled-anchor > .ui-btn {
   max-width: 100%;
 }
 
