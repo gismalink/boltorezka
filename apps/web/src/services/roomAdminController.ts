@@ -286,6 +286,19 @@ export class RoomAdminController {
     }
   }
 
+  async deleteUser(token: string, userId: string) {
+    try {
+      await api.deleteUser(token, userId);
+      const res = await api.adminUsers(token);
+      this.options.setAdminUsers(res.users);
+      this.options.pushLog("user scheduled for deletion");
+      return true;
+    } catch (error) {
+      this.options.pushLog(`delete user failed: ${(error as Error).message}`);
+      return false;
+    }
+  }
+
   async forceDeleteUserNow(token: string, userId: string) {
     try {
       await api.forceDeleteUserNow(token, userId);

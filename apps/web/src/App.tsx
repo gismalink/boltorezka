@@ -1424,6 +1424,7 @@ export function App() {
     demote,
     setUserBan,
     setUserAccessState,
+    deleteUser,
     forceDeleteUserNow,
     setServerAudioQualityValue
   } = useServerModerationActions({
@@ -1939,6 +1940,7 @@ export function App() {
           onDemote: (userId) => void demote(userId),
           onSetBan: (userId, banned) => void setUserBan(userId, banned),
           onSetAccessState: (userId, accessState) => void setUserAccessState(userId, accessState),
+          onSoftDeleteUser: (userId) => void deleteUser(userId),
           onForceDeleteUser: (userId) => void forceDeleteUserNow(userId),
           onSelectAdminServer: setSelectedAdminServerId,
           onToggleAdminServerBlocked: (serverId, blocked) => void handleToggleAdminServerBlocked(serverId, blocked),

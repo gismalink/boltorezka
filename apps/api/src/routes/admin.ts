@@ -834,6 +834,57 @@ export async function adminRoutes(fastify: FastifyInstance) {
     }
   );
 
+  fastify.post<{ Params: { userId: string } }>(
+    "/v1/admin/users/:userId/delete",
+    {
+      preHandler: [requireAuth, loadCurrentUser, requireRole(["super_admin"])]
+    },
+    async (request, reply) => {
+      const userId = validateTargetUserId(request.params.userId);
+      if (!userId) {
+        return reply.code(400).send({
+          error: "ValidationError",
+          message: "userId is required"
+        });
+      }
+
+      const actorId = String(request.currentUser?.id || "").trim();
+      if (actorId && actorId === userId) {
+        return reply.code(400).send({
+          error: "InvalidAction",
+          message: "Self-delete is not allowed"
+        });
+      }
+
+      const targetUser = await loadUserById(userId);
+      if (!targetUser) {
+        return reply.code(404).send({
+          error: "UserNotFound",
+          message: "Target user does not exist"
+        });
+      }
+
+      if (targetUser.role === "super_admin") {
+        return reply.code(403).send({
+          error: "ProtectedUser",
+          message: "Super admin cannot be deleted"
+        });
+      }
+
+      const updated = await db.query<UserRow>(
+        `UPDATE users
+         SET deleted_at = COALESCE(deleted_at, NOW()),
+             purge_scheduled_at = COALESCE(purge_scheduled_at, NOW() + INTERVAL '30 days')
+         WHERE id = $1
+         RETURNING id, email, username, name, ui_theme, role, is_banned, access_state, is_bot, deleted_at, purge_scheduled_at, created_at`,
+        [userId]
+      );
+
+      const response: PromoteUserResponse = { user: updated.rows[0] };
+      return response;
+    }
+  );
+
   fastify.delete<{ Params: { userId: string } }>(
     "/v1/admin/users/:userId/force-delete",
     {

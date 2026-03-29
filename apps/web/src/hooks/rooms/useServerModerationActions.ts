@@ -56,6 +56,14 @@ export function useServerModerationActions({
     await roomAdminController.setAccessState(token, userId, accessState);
   }, [canManageUsers, roomAdminController, token]);
 
+  const deleteUser = useCallback(async (userId: string) => {
+    if (!token || !canPromote) {
+      return;
+    }
+
+    await roomAdminController.deleteUser(token, userId);
+  }, [canPromote, roomAdminController, token]);
+
   const forceDeleteUserNow = useCallback(async (userId: string) => {
     if (!token || !canPromote) {
       return;
@@ -94,6 +102,7 @@ export function useServerModerationActions({
     demote,
     setUserBan,
     setUserAccessState,
+    deleteUser,
     forceDeleteUserNow,
     setServerAudioQualityValue
   };

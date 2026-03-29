@@ -62,6 +62,7 @@ type ServerProfileModalContainerProps = {
     onDemote: ServerProfileModalProps["onDemote"];
     onSetBan: ServerProfileModalProps["onSetBan"];
     onSetAccessState: ServerProfileModalProps["onSetAccessState"];
+    onSoftDeleteUser: ServerProfileModalProps["onSoftDeleteUser"];
     onForceDeleteUser: ServerProfileModalProps["onForceDeleteUser"];
     onSelectAdminServer: ServerProfileModalProps["onSelectAdminServer"];
     onToggleAdminServerBlocked: ServerProfileModalProps["onToggleAdminServerBlocked"];
@@ -151,6 +152,7 @@ export function ServerProfileModalContainer({ open, t, permissions, state, data,
       onDemote={actions.onDemote}
       onSetBan={actions.onSetBan}
       onSetAccessState={actions.onSetAccessState}
+      onSoftDeleteUser={actions.onSoftDeleteUser}
       onForceDeleteUser={actions.onForceDeleteUser}
       onSelectAdminServer={actions.onSelectAdminServer}
       onToggleAdminServerBlocked={actions.onToggleAdminServerBlocked}

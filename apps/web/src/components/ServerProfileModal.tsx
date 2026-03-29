@@ -111,6 +111,7 @@ type ServerProfileModalProps = {
   onDemote: (userId: string) => void;
   onSetBan: (userId: string, banned: boolean) => void;
   onSetAccessState: (userId: string, accessState: "pending" | "active" | "blocked") => void;
+  onSoftDeleteUser: (userId: string) => void;
   onForceDeleteUser: (userId: string) => void;
   onSelectAdminServer: (serverId: string) => void;
   onToggleAdminServerBlocked: (serverId: string, blocked: boolean) => void;
@@ -297,6 +298,7 @@ export function ServerProfileModal({
   onDemote,
   onSetBan,
   onSetAccessState,
+  onSoftDeleteUser,
   onForceDeleteUser,
   onSelectAdminServer,
   onToggleAdminServerBlocked,
@@ -523,11 +525,11 @@ export function ServerProfileModal({
     const actions: IconAction[] = [];
     const isProtected = item.role === "super_admin";
 
-    if (userAccessTab === "deleted") {
+    if (isProtected) {
       return actions;
     }
 
-    if (canPromote && !isProtected && item.id !== currentUserId) {
+    if (canPromote && item.id !== currentUserId && userAccessTab === "deleted") {
       actions.push({
         key: "force-delete",
         label: t("admin.forceDeleteNow"),
@@ -536,6 +538,21 @@ export function ServerProfileModal({
           const confirmed = window.confirm(t("admin.forceDeleteNowConfirm"));
           if (confirmed) {
             onForceDeleteUser(item.id);
+          }
+        }
+      });
+      return actions;
+    }
+
+    if (canPromote && item.id !== currentUserId) {
+      actions.push({
+        key: "delete",
+        label: t("admin.delete"),
+        iconClass: "bi-trash3",
+        onClick: () => {
+          const confirmed = window.confirm(t("admin.deleteConfirm"));
+          if (confirmed) {
+            onSoftDeleteUser(item.id);
           }
         }
       });
@@ -558,10 +575,6 @@ export function ServerProfileModal({
           onClick: () => onDemote(item.id)
         });
       }
-    }
-
-    if (isProtected) {
-      return actions;
     }
 
     if (item.is_banned) {

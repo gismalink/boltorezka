@@ -411,6 +411,8 @@ export const api = {
     fetchJson<{ user: User }>(withSuffix(endpoints.adminUsers, userId, "ban"), token, withJsonBody("POST")),
   unbanUser: (token: string, userId: string) =>
     fetchJson<{ user: User }>(withSuffix(endpoints.adminUsers, userId, "unban"), token, withJsonBody("POST")),
+  deleteUser: (token: string, userId: string) =>
+    fetchJson<{ user: User }>(withSuffix(endpoints.adminUsers, userId, "delete"), token, withJsonBody("POST")),
   forceDeleteUserNow: (token: string, userId: string) =>
     fetchJson<{ deleted: boolean }>(withSuffix(endpoints.adminUsers, userId, "force-delete"), token, withJsonBody("DELETE")),
   memberPreferences: (token: string, targetUserIds: string[]) => {

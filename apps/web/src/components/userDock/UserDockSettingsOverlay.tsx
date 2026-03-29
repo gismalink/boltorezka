@@ -238,18 +238,6 @@ export function UserDockSettingsOverlay({
                     {serverAgeConfirming ? t("settings.ageConfirmActionLoading") : t("settings.ageConfirmAction")}
                   </button>
                 </div>
-                <div className="grid gap-[var(--space-md)]">
-                  <span className="subheading">{t("settings.accountDeleteTitle")}</span>
-                  <p className="muted">{t("settings.accountDeleteHint")}</p>
-                  <button
-                    type="button"
-                    className="secondary"
-                    disabled={deleteAccountPending}
-                    onClick={() => setDeleteConfirmOpen(true)}
-                  >
-                    {deleteAccountPending ? t("settings.accountDeletePending") : t("settings.accountDeleteAction")}
-                  </button>
-                </div>
               </div>
 
               {profileStatusText ? <p className="muted media-devices-warning">{profileStatusText}</p> : null}
@@ -259,33 +247,18 @@ export function UserDockSettingsOverlay({
                 {profileSaving ? t("settings.saving") : t("settings.save")}
               </button>
 
-              {deleteConfirmOpen ? (
-                <div className="card grid gap-3 p-4">
-                  <h4>{t("settings.accountDeleteConfirmTitle")}</h4>
-                  <p className="muted">{t("settings.accountDeleteConfirmBody")}</p>
-                  <div className="flex flex-wrap justify-end gap-2">
-                    <button
-                      type="button"
-                      className="secondary"
-                      onClick={() => setDeleteConfirmOpen(false)}
-                      disabled={deleteAccountPending}
-                    >
-                      {t("settings.accountDeleteConfirmCancel")}
-                    </button>
-                    <button
-                      type="button"
-                      className="secondary"
-                      onClick={() => {
-                        setDeleteConfirmOpen(false);
-                        onDeleteAccount();
-                      }}
-                      disabled={deleteAccountPending}
-                    >
-                      {deleteAccountPending ? t("settings.accountDeletePending") : t("settings.accountDeleteConfirmAction")}
-                    </button>
-                  </div>
-                </div>
-              ) : null}
+              <div className="mt-3 grid gap-[var(--space-md)] border-t border-white/15 pt-4">
+                <span className="subheading">{t("settings.accountDeleteTitle")}</span>
+                <p className="muted">{t("settings.accountDeleteHint")}</p>
+                <button
+                  type="button"
+                  className="secondary"
+                  disabled={deleteAccountPending}
+                  onClick={() => setDeleteConfirmOpen(true)}
+                >
+                  {deleteAccountPending ? t("settings.accountDeletePending") : t("settings.accountDeleteAction")}
+                </button>
+              </div>
             </form>
           ) : userSettingsTab === "sound" ? (
             <>
@@ -609,6 +582,43 @@ export function UserDockSettingsOverlay({
               </label>
             </section>
           )}
+
+          {userSettingsTab === "profile" && deleteConfirmOpen ? (
+            <div
+              className="fixed inset-0 z-[120] grid place-items-center bg-black/50 p-4"
+              onMouseDown={(event) => {
+                if (event.target === event.currentTarget) {
+                  setDeleteConfirmOpen(false);
+                }
+              }}
+            >
+              <section className="card w-full max-w-[520px] p-5" role="dialog" aria-modal="true" aria-labelledby="delete-account-title">
+                <h4 id="delete-account-title">{t("settings.accountDeleteConfirmTitle")}</h4>
+                <p className="muted mt-2">{t("settings.accountDeleteConfirmBody")}</p>
+                <div className="mt-4 flex flex-wrap justify-end gap-2">
+                  <button
+                    type="button"
+                    className="secondary"
+                    onClick={() => setDeleteConfirmOpen(false)}
+                    disabled={deleteAccountPending}
+                  >
+                    {t("settings.accountDeleteConfirmCancel")}
+                  </button>
+                  <button
+                    type="button"
+                    className="secondary"
+                    onClick={() => {
+                      setDeleteConfirmOpen(false);
+                      onDeleteAccount();
+                    }}
+                    disabled={deleteAccountPending}
+                  >
+                    {deleteAccountPending ? t("settings.accountDeletePending") : t("settings.accountDeleteConfirmAction")}
+                  </button>
+                </div>
+              </section>
+            </div>
+          ) : null}
         </div>
       </section>
     </div>
