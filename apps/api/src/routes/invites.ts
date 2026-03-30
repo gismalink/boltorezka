@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { loadCurrentUser, requireAuth, requireNotServiceBanned, requireServiceAccess } from "../middleware/auth.js";
+import { loadCurrentUser, requireAuth, requireNotServiceBanned } from "../middleware/auth.js";
 import { makeRateLimiter } from "../middleware/rate-limit.js";
 import { acceptServerInvite } from "../services/invite-service.js";
 import type { InviteAcceptResponse } from "../api-contract.types.ts";
@@ -20,7 +20,7 @@ export async function invitesRoutes(fastify: FastifyInstance) {
   fastify.post<{ Params: { token: string } }>(
     "/v1/invites/:token/accept",
     {
-      preHandler: [requireAuth, requireServiceAccess, requireNotServiceBanned, loadCurrentUser, limitInviteAccept]
+      preHandler: [requireAuth, requireNotServiceBanned, loadCurrentUser, limitInviteAccept]
     },
     async (request, reply) => {
       const parsed = acceptInviteSchema.safeParse({ token: request.params.token });

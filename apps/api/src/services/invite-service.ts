@@ -8,6 +8,10 @@ const ACTIVE_SERVER_INVITES_LIMIT = Math.max(
   1,
   Number.parseInt(String(process.env.SERVER_ACTIVE_INVITES_LIMIT || "20"), 10) || 20
 );
+const DEFAULT_SERVER_INVITE_TTL_HOURS = Math.max(
+  1,
+  Number.parseInt(String(process.env.SERVER_INVITE_DEFAULT_TTL_HOURS || "24"), 10) || 24
+);
 
 type CreateInviteInput = {
   serverId: string;
@@ -76,7 +80,7 @@ async function getServerRole(serverId: string, userId: string): Promise<ServerMe
 
 export async function createServerInvite(input: CreateInviteInput): Promise<InviteCreateResult> {
   const actorRole = await getServerRole(input.serverId, input.actorUserId);
-  if (actorRole !== "owner" && actorRole !== "admin") {
+  if (!actorRole) {
     throw new Error("forbidden_role");
   }
 
@@ -97,7 +101,7 @@ export async function createServerInvite(input: CreateInviteInput): Promise<Invi
 
   const token = generateToken();
   const tokenHash = hashToken(token);
-  const expiresAt = toExpiresAt(input.ttlHours);
+  const expiresAt = toExpiresAt(input.ttlHours ?? DEFAULT_SERVER_INVITE_TTL_HOURS);
   const maxUses = typeof input.maxUses === "number" && Number.isFinite(input.maxUses) && input.maxUses > 0
     ? Math.floor(input.maxUses)
     : null;
@@ -231,6 +235,15 @@ export async function acceptServerInvite(input: AcceptInviteInput): Promise<Serv
            ELSE 'member'
          END`,
       [invite.server_id, input.userId]
+    );
+
+    // Joining via a valid invite auto-approves pending service access.
+    await client.query(
+      `UPDATE users
+       SET access_state = 'active'
+       WHERE id = $1
+         AND access_state = 'pending'`,
+      [input.userId]
     );
 
     const contextResult = await client.query<ServerContext>(
