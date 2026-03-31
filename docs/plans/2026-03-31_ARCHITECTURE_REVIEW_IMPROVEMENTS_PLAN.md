@@ -68,7 +68,8 @@ Progress note:
 - Девятнадцатый инкремент декомпозиции `realtime` выполнен: chat dispatch (`chat.send`/`chat.edit`/`chat.delete`/`chat.typing`) вынесен в `routes/realtime-chat-events.ts`.
 - Двадцатый инкремент декомпозиции `realtime` выполнен: room moderation dispatch (`room.kick`/`room.move_member`) вынесен в `routes/realtime-room-moderation-events.ts`.
 - Двадцать первый инкремент декомпозиции `realtime` выполнен: message dispatcher (`parse -> known event switch -> per-event handlers`) вынесен в `routes/realtime-message-handler.ts`.
-- Текущий результат по размеру: `routes/auth.ts` ~931 строк, `routes/realtime.ts` ~397 строк.
+- Двадцать второй инкремент декомпозиции `realtime` выполнен: non-text channel eviction helper вынесен в `routes/realtime-room-eviction.ts`.
+- Текущий результат по размеру: `routes/auth.ts` ~931 строк, `routes/realtime.ts` ~354 строки.
 - `npm -s run check:api-types`, `npm -s run web:build` и `npm -s run smoke:web:denied-media` проходят после выноса.
 
 ### 2.3 Auth storage hardening (cookie-first)

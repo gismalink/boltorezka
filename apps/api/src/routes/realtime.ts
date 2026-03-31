@@ -14,6 +14,7 @@ import { createRealtimeMetrics } from "./realtime-metrics.js";
 import { createRealtimeMessageHandler } from "./realtime-message-handler.js";
 import { createRealtimeNackSenders } from "./realtime-nacks.js";
 import { createRealtimePermissionHelpers } from "./realtime-permissions.js";
+import { createRealtimeRoomEvictionHandler } from "./realtime-room-eviction.js";
 import { createRealtimeRoomModerationEventHandlers } from "./realtime-room-moderation-events.js";
 import { createRealtimeRoomEventHandlers } from "./realtime-room-events.js";
 import { buildRealtimeScreenShareStateStore } from "./realtime-screen-share-state.js";
@@ -127,63 +128,19 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
     getRoomPresence,
     broadcastRoom
   });
-
-
-  const evictUserFromOtherNonTextChannels = (userId: string, keepSocket: WebSocket) => {
-    const userSockets = socketsByUserId.get(userId);
-    if (!userSockets) {
-      return;
-    }
-
-    let didChange = false;
-
-    for (const socket of userSockets) {
-      if (socket === keepSocket) {
-        continue;
-      }
-
-      const state = socketState.get(socket);
-      if (!state || !state.roomId || !state.roomSlug || !state.roomKind || state.roomKind === "text") {
-        continue;
-      }
-
-      const previousRoomId = state.roomId;
-      const previousRoomSlug = state.roomSlug;
-
-      detachRoomSocket(previousRoomId, socket);
-      clearCanonicalMediaState(previousRoomId, state.userId);
-      state.roomId = null;
-      state.roomSlug = null;
-      state.roomKind = null;
-
-      sendJson(socket, buildRoomLeftEnvelope(previousRoomId, previousRoomSlug));
-      sendJson(
-        socket,
-        buildErrorEnvelope(
-          "ChannelSessionMoved",
-          "You were disconnected from this channel because your account joined another channel elsewhere",
-          "topology"
-        )
-      );
-
-      broadcastRoom(
-        previousRoomId,
-        buildPresenceLeftEnvelope(
-          state.userId,
-          state.userName,
-          previousRoomSlug,
-          getRoomPresence(previousRoomId).length
-        ),
-        socket
-      );
-
-      didChange = true;
-    }
-
-    if (didChange) {
-      broadcastAllRoomsPresence();
-    }
-  };
+  const { evictUserFromOtherNonTextChannels } = createRealtimeRoomEvictionHandler({
+    socketsByUserId,
+    socketState,
+    detachRoomSocket,
+    clearCanonicalMediaState,
+    sendJson,
+    buildRoomLeftEnvelope,
+    buildErrorEnvelope,
+    broadcastRoom,
+    buildPresenceLeftEnvelope,
+    getRoomPresence,
+    broadcastAllRoomsPresence
+  });
 
   const { handleRoomJoinEvent, handleRoomLeaveEvent } = createRealtimeRoomEventHandlers({
     sendJson,
