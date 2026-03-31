@@ -63,6 +63,20 @@ async function establishSessionAndRoom(page) {
       return { ok: false, stage: "handoff_exchange", status: exchange.status };
     }
 
+    const me = await req("/v1/auth/me", {
+      method: "GET"
+    });
+    if (!me.ok || !me.payload?.user?.id) {
+      return { ok: false, stage: "auth_me", status: me.status };
+    }
+
+    const userId = String(me.payload.user.id || "").trim();
+    if (userId) {
+      localStorage.setItem(`boltorezka_intro_v1_seen:${userId}`, "1");
+    }
+
+    sessionStorage.removeItem("boltorezka_update_reload_pending");
+
     localStorage.setItem("boltorezka_room_slug", slug);
     return { ok: true };
   }, { token: bearer, slug: roomSlug });
@@ -148,10 +162,18 @@ async function main() {
     await page.waitForSelector(".voice-mini-popup", { timeout: timeoutMs });
     const outputOptionsCount = await selectFirstDeviceOption(page);
 
-    // Open/select camera device.
-    await clickButton(page, ".camera-anchor .split-caret-btn", "camera-caret");
-    await page.waitForSelector(".voice-mini-popup", { timeout: timeoutMs });
-    const cameraOptionsCount = await selectFirstDeviceOption(page);
+    // Open/select camera device when camera controls are available in current runtime.
+    let cameraOptionsCount = -1;
+    let cameraStep = "skipped_disabled";
+    const cameraCaret = page.locator(".camera-anchor .split-caret-btn").first();
+    await cameraCaret.waitFor({ state: "visible", timeout: timeoutMs });
+    const cameraEnabled = await cameraCaret.isEnabled();
+    if (cameraEnabled) {
+      await clickButton(page, ".camera-anchor .split-caret-btn", "camera-caret");
+      await page.waitForSelector(".voice-mini-popup", { timeout: timeoutMs });
+      cameraOptionsCount = await selectFirstDeviceOption(page);
+      cameraStep = "executed";
+    }
 
     const finalState = await readLocalState(page);
 
@@ -172,7 +194,8 @@ async function main() {
     console.log(`- audioStateTransition: ${initial.audioMuted || "<null>"} -> ${afterAudioToggle.audioMuted || "<null>"}`);
     console.log(`- inputOptionsCount: ${inputOptionsCount}`);
     console.log(`- outputOptionsCount: ${outputOptionsCount}`);
-    console.log(`- cameraOptionsCount: ${cameraOptionsCount}`);
+    console.log(`- cameraStep: ${cameraStep}`);
+    console.log(`- cameraOptionsCount: ${cameraOptionsCount >= 0 ? cameraOptionsCount : "<skipped>"}`);
     console.log(`- selectedInputId: ${finalState.selectedInputId || "<empty>"}`);
     console.log(`- selectedOutputId: ${finalState.selectedOutputId || "<empty>"}`);
     console.log(`- selectedVideoInputId: ${finalState.selectedVideoInputId || "<empty>"}`);
