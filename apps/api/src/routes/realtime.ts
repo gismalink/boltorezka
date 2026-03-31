@@ -18,7 +18,7 @@ import { handleRoomKick, handleRoomMoveMember } from "./realtime-moderation.js";
 import { createRealtimeMetrics } from "./realtime-metrics.js";
 import { createRealtimeNackSenders } from "./realtime-nacks.js";
 import { createRealtimePermissionHelpers } from "./realtime-permissions.js";
-import { canJoinRoom } from "./realtime-room-join.js";
+import { createRealtimeRoomEventHandlers } from "./realtime-room-events.js";
 import { buildRealtimeScreenShareStateStore } from "./realtime-screen-share-state.js";
 import { createRealtimeRoomStateStore } from "./realtime-room-state.js";
 import { buildErrorCorrelationMeta, relayToTargetOrRoom } from "./realtime-relay.js";
@@ -199,6 +199,31 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
     }
   };
 
+  const { handleRoomJoinEvent, handleRoomLeaveEvent } = createRealtimeRoomEventHandlers({
+    sendJson,
+    sendValidationNack,
+    sendJoinDeniedNack,
+    sendNoActiveRoomNack,
+    sendAckWithMetrics,
+    buildCallTraceId,
+    resolveRoomMediaTopology,
+    consumeRecentReconnectMark,
+    markRecentRoomDetach,
+    attachRoomSocket,
+    detachRoomSocket,
+    clearCanonicalMediaState,
+    clearRoomScreenShareOwnerIfMatches,
+    broadcastRoom,
+    broadcastAllRoomsPresence,
+    getRoomPresence,
+    getCallInitialStateParticipants,
+    getCallInitialStateLagStats,
+    incrementMetric,
+    incrementMetricBy,
+    buildScreenShareStateEnvelope,
+    evictUserFromOtherNonTextChannels
+  });
+
   fastify.get(
     "/v1/realtime/ws",
     {
@@ -291,194 +316,12 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
               }
 
               case "room.join": {
-                const roomSlug = getPayloadString(payload, "roomSlug", 80);
-
-                if (!roomSlug) {
-                  sendValidationNack(connection, requestId, eventType, "roomSlug is required");
-                  return;
-                }
-
-                const joinResult = await canJoinRoom(roomSlug, state.userId);
-                const traceId = buildCallTraceId(eventType, requestId, state.sessionId);
-
-                if (!joinResult.ok) {
-                  sendJoinDeniedNack(connection, requestId, eventType, joinResult.reason);
-                  return;
-                }
-
-                if (state.roomId) {
-                  markRecentRoomDetach(state.roomId, state.userId);
-                  detachRoomSocket(state.roomId, connection);
-                  clearCanonicalMediaState(state.roomId, state.userId);
-                  broadcastRoom(
-                    state.roomId,
-                    buildPresenceLeftEnvelope(
-                      state.userId,
-                      state.userName,
-                      state.roomSlug,
-                      0,
-                      {
-                        requestId,
-                        sessionId: state.sessionId,
-                        traceId
-                      }
-                    ),
-                    connection
-                  );
-                  broadcastAllRoomsPresence();
-                }
-
-                if (joinResult.room.kind !== "text") {
-                  evictUserFromOtherNonTextChannels(state.userId, connection);
-                }
-
-                const roomMediaTopology = resolveRoomMediaTopology(joinResult.room.slug, state.userId);
-                const reconnected = consumeRecentReconnectMark(joinResult.room.id, state.userId);
-                state.roomId = joinResult.room.id;
-                state.roomSlug = joinResult.room.slug;
-                state.roomKind = joinResult.room.kind;
-                attachRoomSocket(joinResult.room.id, connection);
-
-                if (reconnected) {
-                  void incrementMetric("call_reconnect_joined");
-                }
-
-                sendJson(
-                  connection,
-                  buildRoomJoinedEnvelope(
-                    joinResult.room.id,
-                    joinResult.room.slug,
-                    joinResult.room.title,
-                    roomMediaTopology,
-                    {
-                      requestId,
-                      sessionId: state.sessionId,
-                      traceId
-                    },
-                    reconnected
-                  )
-                );
-
-                sendAckWithMetrics(
-                  connection,
-                  requestId,
-                  eventType,
-                  {
-                    roomId: joinResult.room.id,
-                    roomSlug: joinResult.room.slug,
-                    mediaTopology: roomMediaTopology,
-                    sessionId: state.sessionId,
-                    traceId,
-                    reconnect: reconnected
-                  }
-                );
-
-                sendJson(connection, buildScreenShareStateEnvelope(joinResult.room.id, joinResult.room.slug));
-
-                sendJson(
-                  connection,
-                  buildRoomPresenceEnvelope(
-                    joinResult.room.id,
-                    joinResult.room.slug,
-                    getRoomPresence(joinResult.room.id),
-                    roomMediaTopology,
-                    {
-                      requestId,
-                      sessionId: state.sessionId,
-                      traceId
-                    }
-                  )
-                );
-
-                if (config.rtcFeatureInitialStateReplay) {
-                  const initialStateParticipants = getCallInitialStateParticipants(joinResult.room.id);
-                  const initialStateLagStats = getCallInitialStateLagStats(joinResult.room.id);
-                  sendJson(
-                    connection,
-                    buildCallInitialStateEnvelope(
-                      joinResult.room.id,
-                      joinResult.room.slug,
-                      initialStateParticipants
-                    )
-                  );
-                  void incrementMetric("call_initial_state_sent");
-                  void incrementMetricBy("call_initial_state_participants_total", initialStateParticipants.length);
-                  void incrementMetricBy("call_initial_state_lag_ms_total", initialStateLagStats.totalLagMs);
-                  void incrementMetricBy("call_initial_state_lag_samples", initialStateLagStats.count);
-                }
-
-                broadcastRoom(
-                  joinResult.room.id,
-                  buildPresenceJoinedEnvelope(
-                    state.userId,
-                    state.userName,
-                    joinResult.room.slug,
-                    getRoomPresence(joinResult.room.id).length,
-                    {
-                      requestId,
-                      sessionId: state.sessionId,
-                      traceId
-                    }
-                  ),
-                  connection
-                );
-
-                broadcastAllRoomsPresence();
-
+                await handleRoomJoinEvent(connection, state, payload, requestId, eventType);
                 return;
               }
 
               case "room.leave": {
-                if (!state.roomId || !state.roomSlug) {
-                  sendNoActiveRoomNack(connection, requestId, eventType);
-                  return;
-                }
-                const traceId = buildCallTraceId(eventType, requestId, state.sessionId);
-
-                const previousRoomId = state.roomId;
-                const previousRoomSlug = state.roomSlug;
-
-                markRecentRoomDetach(previousRoomId, state.userId);
-                detachRoomSocket(previousRoomId, connection);
-                clearCanonicalMediaState(previousRoomId, state.userId);
-                clearRoomScreenShareOwnerIfMatches(previousRoomId, state.userId, previousRoomSlug);
-                state.roomId = null;
-                state.roomSlug = null;
-                state.roomKind = null;
-
-                sendJson(
-                  connection,
-                  buildRoomLeftEnvelope(previousRoomId, previousRoomSlug, {
-                    requestId,
-                    sessionId: state.sessionId,
-                    traceId
-                  })
-                );
-                sendAckWithMetrics(connection, requestId, eventType, {
-                  roomId: previousRoomId,
-                  roomSlug: previousRoomSlug,
-                  sessionId: state.sessionId,
-                  traceId
-                });
-
-                broadcastRoom(
-                  previousRoomId,
-                  buildPresenceLeftEnvelope(
-                    state.userId,
-                    state.userName,
-                    previousRoomSlug,
-                    getRoomPresence(previousRoomId).length,
-                    {
-                      requestId,
-                      sessionId: state.sessionId,
-                      traceId
-                    }
-                  ),
-                  connection
-                );
-
-                broadcastAllRoomsPresence();
-
+                handleRoomLeaveEvent(connection, state, requestId, eventType);
                 return;
               }
 
