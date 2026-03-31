@@ -10,10 +10,10 @@ import { createRealtimeChatEventHandlers } from "./realtime-chat-events.js";
 import { createRealtimeCallHelpers } from "./realtime-call-helpers.js";
 import { closeRealtimeConnection } from "./realtime-lifecycle.js";
 import { createRealtimeMediaStateStore } from "./realtime-media-state.js";
-import { handleRoomKick, handleRoomMoveMember } from "./realtime-moderation.js";
 import { createRealtimeMetrics } from "./realtime-metrics.js";
 import { createRealtimeNackSenders } from "./realtime-nacks.js";
 import { createRealtimePermissionHelpers } from "./realtime-permissions.js";
+import { createRealtimeRoomModerationEventHandlers } from "./realtime-room-moderation-events.js";
 import { createRealtimeRoomEventHandlers } from "./realtime-room-events.js";
 import { buildRealtimeScreenShareStateStore } from "./realtime-screen-share-state.js";
 import { createRealtimeRoomStateStore } from "./realtime-room-state.js";
@@ -279,6 +279,41 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
     redisSetEx: fastify.redis.setEx.bind(fastify.redis),
     dbQuery: db.query.bind(db)
   });
+  const { handleRoomKickEvent, handleRoomMoveMemberEvent } = createRealtimeRoomModerationEventHandlers({
+    normalizeRequestId,
+    getPayloadString,
+    isUserModerator,
+    sendValidationNack,
+    sendForbiddenNack,
+    sendNack,
+    sendTargetNotInRoomNack,
+    incrementMetric,
+    sendAckWithMetrics,
+    dbQuery: db.query.bind(db),
+    getUserRoomSockets,
+    socketState,
+    markRecentRoomDetach,
+    detachRoomSocket,
+    clearCanonicalMediaState,
+    clearRoomScreenShareOwnerIfMatches,
+    sendJson,
+    buildRoomLeftEnvelope,
+    buildErrorEnvelope,
+    broadcastRoom,
+    buildPresenceLeftEnvelope,
+    buildPresenceJoinedEnvelope,
+    getRoomPresence,
+    broadcastAllRoomsPresence,
+    resolveRoomMediaTopology,
+    getCallInitialStateParticipants,
+    rtcFeatureInitialStateReplay: config.rtcFeatureInitialStateReplay,
+    incrementMetricBy,
+    attachRoomSocket,
+    buildRoomJoinedEnvelope,
+    buildRoomPresenceEnvelope,
+    buildScreenShareStateEnvelope,
+    buildCallInitialStateEnvelope
+  });
 
   fastify.get(
     "/v1/realtime/ws",
@@ -345,90 +380,12 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
               }
 
               case "room.kick": {
-                await handleRoomKick({
-                  connection,
-                  state,
-                  payload,
-                  requestId,
-                  eventType,
-                  normalizeRequestId,
-                  getPayloadString,
-                  isUserModerator,
-                  sendValidationNack,
-                  sendForbiddenNack,
-                  sendNack,
-                  sendTargetNotInRoomNack,
-                  incrementMetric,
-                  sendAckWithMetrics,
-                  dbQuery: db.query.bind(db),
-                  getUserRoomSockets,
-                  socketState,
-                  markRecentRoomDetach,
-                  detachRoomSocket,
-                  clearCanonicalMediaState,
-                  clearRoomScreenShareOwnerIfMatches,
-                  sendJson,
-                  buildRoomLeftEnvelope,
-                  buildErrorEnvelope,
-                  broadcastRoom,
-                  buildPresenceLeftEnvelope,
-                  buildPresenceJoinedEnvelope,
-                  getRoomPresence,
-                  broadcastAllRoomsPresence,
-                  resolveRoomMediaTopology,
-                  getCallInitialStateParticipants,
-                  rtcFeatureInitialStateReplay: config.rtcFeatureInitialStateReplay,
-                  incrementMetricBy,
-                  attachRoomSocket,
-                  buildRoomJoinedEnvelope,
-                  buildRoomPresenceEnvelope,
-                  buildScreenShareStateEnvelope,
-                  buildCallInitialStateEnvelope
-                });
+                await handleRoomKickEvent(connection, state, payload, requestId, eventType);
                 return;
               }
 
               case "room.move_member": {
-                await handleRoomMoveMember({
-                  connection,
-                  state,
-                  payload,
-                  requestId,
-                  eventType,
-                  normalizeRequestId,
-                  getPayloadString,
-                  isUserModerator,
-                  sendValidationNack,
-                  sendForbiddenNack,
-                  sendNack,
-                  sendTargetNotInRoomNack,
-                  incrementMetric,
-                  sendAckWithMetrics,
-                  dbQuery: db.query.bind(db),
-                  getUserRoomSockets,
-                  socketState,
-                  markRecentRoomDetach,
-                  detachRoomSocket,
-                  clearCanonicalMediaState,
-                  clearRoomScreenShareOwnerIfMatches,
-                  sendJson,
-                  buildRoomLeftEnvelope,
-                  buildErrorEnvelope,
-                  broadcastRoom,
-                  buildPresenceLeftEnvelope,
-                  buildPresenceJoinedEnvelope,
-                  getRoomPresence,
-                  broadcastAllRoomsPresence,
-                  resolveRoomMediaTopology,
-                  getCallInitialStateParticipants,
-                  rtcFeatureInitialStateReplay: config.rtcFeatureInitialStateReplay,
-                  incrementMetricBy,
-                  attachRoomSocket,
-                  buildRoomJoinedEnvelope,
-                  buildRoomPresenceEnvelope,
-                  buildScreenShareStateEnvelope,
-                  buildCallInitialStateEnvelope
-                });
+                await handleRoomMoveMemberEvent(connection, state, payload, requestId, eventType);
                 return;
               }
 
