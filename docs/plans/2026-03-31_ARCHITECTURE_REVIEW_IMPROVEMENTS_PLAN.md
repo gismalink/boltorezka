@@ -71,7 +71,8 @@ Progress note:
 - Двадцать второй инкремент декомпозиции `realtime` выполнен: non-text channel eviction helper вынесен в `routes/realtime-room-eviction.ts`.
 - Двадцать третий инкремент декомпозиции `auth` выполнен: desktop handoff route cluster вынесен в `routes/auth-desktop-handoff-routes.ts`.
 - Двадцать четвертый инкремент декомпозиции `auth` выполнен: profile route cluster (`/v1/auth/me` GET/PATCH/DELETE) вынесен в `routes/auth-profile-routes.ts`.
-- Текущий результат по размеру: `routes/auth.ts` ~578 строк, `routes/realtime.ts` ~354 строки.
+- Двадцать пятый инкремент декомпозиции `auth` выполнен: livekit-token route cluster вынесен в `routes/auth-livekit-routes.ts`.
+- Текущий результат по размеру: `routes/auth.ts` ~436 строк, `routes/realtime.ts` ~354 строки.
 - `npm -s run check:api-types`, `npm -s run web:build` и `npm -s run smoke:web:denied-media` проходят после выноса.
 
 ### 2.3 Auth storage hardening (cookie-first)
