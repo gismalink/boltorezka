@@ -95,6 +95,7 @@ import {
   useToastQueue,
   useLivekitVoiceRuntime,
   useVoiceSignalingOrchestrator,
+  useVoiceParticipantsDerived,
   useVoiceRoomStateMaps,
   useVoiceUiLifecycleEffects
 } from "./hooks";
@@ -533,11 +534,17 @@ export function App() {
     typingPingIntervalMs: CHAT_TYPING_PING_INTERVAL_MS
   });
 
-  const currentRoomVoiceTargets = useMemo(() => {
-    const members = roomsPresenceDetailsBySlug[roomSlug] || [];
-    const me = user?.id || "";
-    return members.filter((member) => member.userId !== me);
-  }, [roomsPresenceDetailsBySlug, roomSlug, user?.id]);
+  const {
+    currentRoomVoiceTargets,
+    memberVolumeByUserId,
+    remoteVideoLabelsByUserId,
+    videoPolicyAudienceKey
+  } = useVoiceParticipantsDerived({
+    roomsPresenceDetailsBySlug,
+    roomSlug,
+    currentUserId: user?.id || "",
+    memberPreferencesByUserId
+  });
 
   const { currentRoom: currentRoomSnapshot, currentRoomKind, currentRoomAudioQualityOverride } = useCurrentRoomSnapshot({
     rooms,
@@ -552,14 +559,6 @@ export function App() {
   const currentRoomSupportsVideo = roomMediaCapabilities.supportsCamera;
   const allowVideoStreaming = roomMediaCapabilities.supportsCamera || topologySupportsRtc;
   const currentRoomSupportsScreenShare = roomMediaCapabilities.supportsScreenShare || topologySupportsRtc;
-  const memberVolumeByUserId = useMemo(() => {
-    const volumes: Record<string, number> = {};
-    Object.entries(memberPreferencesByUserId).forEach(([userId, preference]) => {
-      volumes[userId] = Number(preference?.volume ?? 100);
-    });
-    return volumes;
-  }, [memberPreferencesByUserId]);
-
   const { handleRnnoiseStatusChange, handleRnnoiseFallback } = useRnnoiseRuntimeHandlers({
     selectedInputProfile,
     setSelectedInputProfile,
@@ -624,22 +623,6 @@ export function App() {
     handleCallNack
   } = livekitVoiceRuntime;
   void _handleIncomingRtcMicState;
-
-  const remoteVideoLabelsByUserId = useMemo(() => {
-    const labels: Record<string, string> = {};
-    currentRoomVoiceTargets.forEach((member) => {
-      labels[member.userId] = member.userName || member.userId;
-    });
-    return labels;
-  }, [currentRoomVoiceTargets]);
-
-  const videoPolicyAudienceKey = useMemo(() => {
-    return currentRoomVoiceTargets
-      .map((member) => String(member.userId || "").trim())
-      .filter((userId) => userId.length > 0)
-      .sort()
-      .join("|");
-  }, [currentRoomVoiceTargets]);
 
   const {
     normalizedMinWidth: normalizedServerVideoWindowMinWidth,

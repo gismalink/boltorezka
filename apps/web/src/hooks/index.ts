@@ -60,4 +60,5 @@ export { useLivekitVoiceRuntime } from "./rtc/useLivekitVoiceRuntime";
 export { useVoiceSignalingOrchestrator } from "./voice/useVoiceSignalingOrchestrator";
 export { useWorkspaceVoiceControlActions } from "./voice/useWorkspaceVoiceControlActions";
 export { useVoiceRoomStateMaps } from "./voice/useVoiceRoomStateMaps";
+export { useVoiceParticipantsDerived } from "./voice/useVoiceParticipantsDerived";
 export { useVoiceUiLifecycleEffects } from "./voice/useVoiceUiLifecycleEffects";

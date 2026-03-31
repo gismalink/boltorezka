@@ -37,7 +37,8 @@ Progress note:
 - Вынесены RNNoise runtime handlers в `hooks/media/useRnnoiseRuntimeHandlers.ts`.
 - Вынесена сборка `auth/room/chat` controllers + telemetry loader в `hooks/app/state/useAppControllers.ts`.
 - Вынесен room/category editor state cluster в `hooks/rooms/useRoomEditorState.ts`.
-- Cumulative: `App.tsx` сокращен с 2101 до 1993 строк; web build + denied-media smoke проходят после каждого инкремента.
+- Двадцать девятый инкремент декомпозиции `web` выполнен: voice participants derived cluster (`currentRoomVoiceTargets`, `memberVolumeByUserId`, `remoteVideoLabelsByUserId`, `videoPolicyAudienceKey`) вынесен в `hooks/voice/useVoiceParticipantsDerived.ts`.
+- Cumulative: `App.tsx` сокращен с 2101 до 1976 строк; web build + denied-media smoke проходят после каждого инкремента.
 
 ### 2.2 API route decomposition
 
