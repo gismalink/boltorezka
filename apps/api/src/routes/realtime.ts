@@ -13,7 +13,7 @@ import {
 import { createRealtimeCallSignalingHandler } from "./realtime-call-signaling.js";
 import { handleChatDelete, handleChatEdit, handleChatSend, handleChatTyping } from "./realtime-chat.js";
 import { createRealtimeCallHelpers } from "./realtime-call-helpers.js";
-import { closeRealtimeConnection, initializeRealtimeConnection } from "./realtime-lifecycle.js";
+import { closeRealtimeConnection } from "./realtime-lifecycle.js";
 import { createRealtimeMediaStateStore } from "./realtime-media-state.js";
 import { handleRoomKick, handleRoomMoveMember } from "./realtime-moderation.js";
 import { createRealtimeMetrics } from "./realtime-metrics.js";
@@ -23,6 +23,7 @@ import { createRealtimeRoomEventHandlers } from "./realtime-room-events.js";
 import { buildRealtimeScreenShareStateStore } from "./realtime-screen-share-state.js";
 import { createRealtimeRoomStateStore } from "./realtime-room-state.js";
 import { relayToTargetOrRoom } from "./realtime-relay.js";
+import { consumeWsTicketAndInitializeConnection } from "./realtime-ws-auth.js";
 import {
   buildRoomsPresenceEnvelope,
   asKnownWsIncomingEnvelope,
@@ -40,7 +41,6 @@ import {
   buildRoomJoinedEnvelope,
   buildRoomLeftEnvelope,
   buildRoomPresenceEnvelope,
-  buildServerReadyEnvelope,
   getPayloadString,
   parseWsIncomingEnvelope
 } from "../ws-protocol.js";
@@ -51,13 +51,6 @@ type SocketState = {
   roomId: string | null;
   roomSlug: string | null;
   roomKind: "text" | "text_voice" | "text_voice_video" | null;
-};
-
-type WsTicketClaims = {
-  userId?: string;
-  userName?: string;
-  name?: string;
-  email?: string;
 };
 
 type MediaTopology = "livekit";
@@ -245,59 +238,22 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
     },
     async (connection: WebSocket, request: FastifyRequest) => {
       try {
-        const url = new URL(request.url, "http://localhost");
-        const ticket = url.searchParams.get("ticket");
-
-        if (!ticket) {
-          sendJson(connection, buildErrorEnvelope("MissingTicket", "ticket query param is required", "auth"));
-          connection.close(4001, "Missing ticket");
-          return;
-        }
-
-        const ticketKey = `ws:ticket:${ticket}`;
-        const ticketPayload = await fastify.redis.get(ticketKey);
-
-        if (!ticketPayload) {
-          sendJson(connection, buildErrorEnvelope("InvalidTicket", "WebSocket ticket is invalid or expired", "auth"));
-          connection.close(4002, "Invalid ticket");
-          return;
-        }
-
-        await fastify.redis.del(ticketKey);
-
-        let claims: WsTicketClaims;
-        try {
-          claims = JSON.parse(ticketPayload);
-        } catch {
-          sendJson(connection, buildErrorEnvelope("InvalidTicket", "Ticket payload is corrupted", "auth"));
-          connection.close(4003, "Invalid ticket");
-          return;
-        }
-
-        const userId = claims.userId;
-
-        if (!userId) {
-          sendJson(connection, buildErrorEnvelope("InvalidTicket", "Ticket subject is missing", "auth"));
-          connection.close(4004, "Invalid ticket");
-          return;
-        }
-
-        const userName = claims.userName || claims.name || claims.email || "unknown";
-
-        await initializeRealtimeConnection({
+        const initialized = await consumeWsTicketAndInitializeConnection({
           connection,
-          userId,
-          userName,
+          request,
           socketState,
           attachUserSocket,
           registerRealtimeSocket,
+          getAllRoomsPresence,
+          redisGet: fastify.redis.get.bind(fastify.redis),
+          redisDel: fastify.redis.del.bind(fastify.redis),
           redisHSet: fastify.redis.hSet.bind(fastify.redis),
-          redisExpire: fastify.redis.expire.bind(fastify.redis),
-          sendJson,
-          buildServerReadyEnvelope,
-          buildRoomsPresenceEnvelope,
-          getAllRoomsPresence
+          redisExpire: fastify.redis.expire.bind(fastify.redis)
         });
+
+        if (!initialized) {
+          return;
+        }
 
         connection.on("message", async (raw: RawData) => {
           try {
