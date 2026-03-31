@@ -18,6 +18,7 @@ import { handleRoomKick, handleRoomMoveMember } from "./realtime-moderation.js";
 import { createRealtimeMetrics } from "./realtime-metrics.js";
 import { createRealtimeNackSenders } from "./realtime-nacks.js";
 import { canJoinRoom } from "./realtime-room-join.js";
+import { buildRealtimeScreenShareStateStore } from "./realtime-screen-share-state.js";
 import { createRealtimeRoomStateStore } from "./realtime-room-state.js";
 import { buildErrorCorrelationMeta, relayToTargetOrRoom } from "./realtime-relay.js";
 import {
@@ -62,7 +63,6 @@ type MediaTopology = "livekit";
 
 export async function realtimeRoutes(fastify: FastifyInstance) {
   const socketState = new WeakMap<WebSocket, SocketState>();
-  const screenShareOwnerByRoomId = new Map<string, string>();
   const wsCallDebugEnabled = process.env.WS_CALL_DEBUG === "1";
 
   const logCallDebug = (message: string, meta: Record<string, unknown> = {}) => {
@@ -122,35 +122,14 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
     getCallInitialStateParticipants,
     getCallInitialStateLagStats
   } = createRealtimeMediaStateStore(getRoomPresence);
-
-  const buildScreenShareStateEnvelope = (roomId: string, roomSlug: string | null) => {
-    const ownerUserId = screenShareOwnerByRoomId.get(roomId) || null;
-    const ownerUserName = ownerUserId
-      ? (getRoomPresence(roomId).find((item) => item.userId === ownerUserId)?.userName || null)
-      : null;
-
-    return {
-      type: "screen.share.state",
-      payload: {
-        roomId,
-        roomSlug,
-        active: Boolean(ownerUserId),
-        ownerUserId,
-        ownerUserName,
-        ts: new Date().toISOString()
-      }
-    };
-  };
-
-  const clearRoomScreenShareOwnerIfMatches = (roomId: string, userId: string, roomSlug: string | null) => {
-    const currentOwnerUserId = screenShareOwnerByRoomId.get(roomId) || null;
-    if (!currentOwnerUserId || currentOwnerUserId !== userId) {
-      return;
-    }
-
-    screenShareOwnerByRoomId.delete(roomId);
-    broadcastRoom(roomId, buildScreenShareStateEnvelope(roomId, roomSlug));
-  };
+  const {
+    screenShareOwnerByRoomId,
+    buildScreenShareStateEnvelope,
+    clearRoomScreenShareOwnerIfMatches
+  } = buildRealtimeScreenShareStateStore({
+    getRoomPresence,
+    broadcastRoom
+  });
 
 
   const evictUserFromOtherNonTextChannels = (userId: string, keepSocket: WebSocket) => {

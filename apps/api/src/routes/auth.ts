@@ -12,9 +12,13 @@ import {
   buildAuthAuditContext,
   buildSessionCookieClearValue,
   buildSessionCookieValue,
-  makeAuthRateLimiter,
-  sendAccountDeleted
+  makeAuthRateLimiter
 } from "./auth.helpers.js";
+import {
+  enforceCompactUserAccess,
+  enforceServiceAccess,
+  enforceUserLifecycleAccess
+} from "./auth-access.js";
 import { deleteAuthSession, issueAuthSessionToken } from "./auth-session.js";
 import { proxyAuthGetJson, resolveSafeReturnUrl } from "./auth-sso.js";
 import { upsertSsoUser } from "./auth-user-upsert.js";
@@ -185,16 +189,8 @@ export async function authRoutes(fastify: FastifyInstance) {
 
       const localUser = await upsertSsoUser(ssoUser);
 
-      if (localUser.is_banned) {
-        return reply.code(403).send({
-          authenticated: false,
-          error: "UserBanned",
-          message: "User is banned"
-        });
-      }
-
-      if (localUser.deleted_at) {
-        return sendAccountDeleted(reply, localUser);
+      if (!enforceUserLifecycleAccess(reply, localUser)) {
+        return;
       }
 
       const { token } = await issueAuthSessionToken(fastify, localUser, "sso");
@@ -280,12 +276,8 @@ export async function authRoutes(fastify: FastifyInstance) {
         }
 
         const localUser = result.rows[0];
-        if (localUser.is_banned) {
-          return reply.code(403).send({
-            authenticated: false,
-            error: "UserBanned",
-            message: "User is banned"
-          });
+        if (!enforceUserLifecycleAccess(reply, localUser)) {
+          return;
         }
 
         const { token } = await issueAuthSessionToken(fastify, localUser, "sso");
@@ -536,15 +528,8 @@ export async function authRoutes(fastify: FastifyInstance) {
       }
 
       const user = userResult.rows[0];
-      if (user.is_banned) {
-        return reply.code(403).send({
-          error: "UserBanned",
-          message: "User is banned"
-        });
-      }
-
-      if (user.deleted_at) {
-        return sendAccountDeleted(reply, user);
+      if (!enforceUserLifecycleAccess(reply, user)) {
+        return;
       }
 
       const { token } = await issueAuthSessionToken(fastify, user, "sso");
@@ -680,20 +665,8 @@ export async function authRoutes(fastify: FastifyInstance) {
       }
 
       const user = userResult.rows[0];
-      if (user.is_banned) {
-        return reply.code(403).send({
-          error: "UserBanned",
-          message: "User is banned"
-        });
-      }
-      if (user.deleted_at) {
-        return sendAccountDeleted(reply, user);
-      }
-      if (user.role !== "admin" && user.role !== "super_admin" && user.access_state !== "active") {
-        return reply.code(403).send({
-          error: user.access_state === "blocked" ? "ServiceAccessBlocked" : "ServiceAccessPending",
-          message: user.access_state === "blocked" ? "Service access is blocked" : "Service access requires admin approval"
-        });
+      if (!enforceCompactUserAccess(reply, user)) {
+        return;
       }
       const response: WsTicketResponse = await issueWsTicket(fastify.redis, user);
 
@@ -747,11 +720,8 @@ export async function authRoutes(fastify: FastifyInstance) {
       }
 
       const currentUser = request.currentUser;
-      if (currentUser && currentUser.role !== "admin" && currentUser.role !== "super_admin" && currentUser.access_state !== "active") {
-        return reply.code(403).send({
-          error: currentUser.access_state === "blocked" ? "ServiceAccessBlocked" : "ServiceAccessPending",
-          message: currentUser.access_state === "blocked" ? "Service access is blocked" : "Service access requires admin approval"
-        });
+      if (currentUser && !enforceServiceAccess(reply, currentUser)) {
+        return;
       }
 
       const roomResult = await db.query<Pick<UserRow, never> & {

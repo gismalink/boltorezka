@@ -57,7 +57,9 @@ Progress note:
 - Восьмой инкремент декомпозиции `auth` выполнен: ws-ticket issue helper вынесен в `routes/auth-ws-ticket.ts`.
 - Девятый инкремент декомпозиции `realtime` выполнен: room join policy вынесена в `routes/realtime-room-join.ts` (`canJoinRoom`).
 - Десятый инкремент декомпозиции `realtime` выполнен: NACK/error senders вынесены в `routes/realtime-nacks.ts`.
-- Текущий результат по размеру: `routes/auth.ts` ~961 строк, `routes/realtime.ts` ~1047 строк.
+- Одиннадцатый инкремент декомпозиции `auth` выполнен: access policy checks (banned/deleted/service access) вынесены в `routes/auth-access.ts`.
+- Двенадцатый инкремент декомпозиции `realtime` выполнен: screen-share state helpers вынесены в `routes/realtime-screen-share-state.ts`.
+- Текущий результат по размеру: `routes/auth.ts` ~931 строк, `routes/realtime.ts` ~1026 строк.
 - `npm run check:api-types` проходит после выноса.
 
 ### 2.3 Auth storage hardening (cookie-first)
