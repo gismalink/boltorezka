@@ -16,6 +16,7 @@ import { closeRealtimeConnection, initializeRealtimeConnection } from "./realtim
 import { createRealtimeMediaStateStore } from "./realtime-media-state.js";
 import { handleRoomKick, handleRoomMoveMember } from "./realtime-moderation.js";
 import { createRealtimeMetrics } from "./realtime-metrics.js";
+import { createRealtimeNackSenders } from "./realtime-nacks.js";
 import { canJoinRoom } from "./realtime-room-join.js";
 import { createRealtimeRoomStateStore } from "./realtime-room-state.js";
 import { buildErrorCorrelationMeta, relayToTargetOrRoom } from "./realtime-relay.js";
@@ -79,6 +80,16 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
   };
 
   const { incrementMetric, incrementMetricBy } = createRealtimeMetrics(fastify);
+  const {
+    sendNoActiveRoomNack,
+    sendTargetNotInRoomNack,
+    sendValidationNack,
+    sendInvalidEnvelopeError,
+    sendUnknownEventNack
+  } = createRealtimeNackSenders({
+    socketState,
+    incrementMetric
+  });
 
   function resolveRoomMediaTopology(_roomSlug: string, _userId: string | null = null): MediaTopology {
     return "livekit";
@@ -196,72 +207,6 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
     if (didChange) {
       broadcastAllRoomsPresence();
     }
-  };
-
-  const sendNoActiveRoomNack = (
-    socket: WebSocket,
-    requestId: string | null,
-    eventType: string,
-    meta: Record<string, unknown> = {}
-  ) => {
-    sendNack(
-      socket,
-      requestId,
-      eventType,
-      "NoActiveRoom",
-      "Join a room first",
-      buildErrorCorrelationMeta(socket, socketState, meta)
-    );
-    void incrementMetric("nack_sent");
-  };
-
-  const sendTargetNotInRoomNack = (
-    socket: WebSocket,
-    requestId: string | null,
-    eventType: string,
-    meta: Record<string, unknown> = {}
-  ) => {
-    sendNack(
-      socket,
-      requestId,
-      eventType,
-      "TargetNotInRoom",
-      "Target user is offline or not in this room",
-      buildErrorCorrelationMeta(socket, socketState, meta)
-    );
-    void incrementMetric("nack_sent");
-  };
-
-  const sendValidationNack = (
-    socket: WebSocket,
-    requestId: string | null,
-    eventType: string,
-    message: string,
-    meta: Record<string, unknown> = {}
-  ) => {
-    sendNack(
-      socket,
-      requestId,
-      eventType,
-      "ValidationError",
-      message,
-      buildErrorCorrelationMeta(socket, socketState, meta)
-    );
-    void incrementMetric("nack_sent");
-  };
-
-  const sendInvalidEnvelopeError = (socket: WebSocket) => {
-    sendJson(socket, buildErrorEnvelope("ValidationError", "Invalid ws envelope", "transport"));
-    void incrementMetric("nack_sent");
-  };
-
-  const sendUnknownEventNack = (
-    socket: WebSocket,
-    requestId: string | null,
-    eventType: string
-  ) => {
-    sendNack(socket, requestId, eventType, "UnknownEvent", "Unsupported event type");
-    void incrementMetric("nack_sent");
   };
 
   const sendJoinDeniedNack = (
