@@ -9,6 +9,7 @@ export { useAppUiState, type AppMobileTab, type AppServerMenuTab } from "./app/s
 export { useAppEntryGates } from "./app/state/useAppEntryGates";
 export { useAppMainSectionProps } from "./app/state/useAppMainSectionProps";
 export { useAppPermissionsAndLocale } from "./app/state/useAppPermissionsAndLocale";
+export { useAppRoomsAndServerDerived } from "./app/state/useAppRoomsAndServerDerived";
 export { useAppShellLayoutProps } from "./app/state/useAppShellLayoutProps";
 export { useAppShellOverlaysProps } from "./app/state/useAppShellOverlaysProps";
 export { useAppTopChromeProps } from "./app/state/useAppTopChromeProps";

@@ -24,6 +24,7 @@ import {
   useAppUiState,
   useAppEntryGates,
   useAppPermissionsAndLocale,
+  useAppRoomsAndServerDerived,
   useAppShellLayoutProps,
   useAppUserMediaState,
   useAppControllers,
@@ -752,11 +753,6 @@ export function App() {
     pushLog
   });
 
-  const currentServer = useMemo(
-    () => servers.find((item) => item.id === currentServerId) || null,
-    [servers, currentServerId]
-  );
-
   const {
     handleCreateServer,
     handleCreateServerInvite,
@@ -800,12 +796,6 @@ export function App() {
     pushToast,
     t
   });
-
-  useEffect(() => {
-    if (!chatRoomSlug && roomSlug) {
-      setChatRoomSlug(roomSlug);
-    }
-  }, [chatRoomSlug, roomSlug]);
 
   useSessionStateLifecycle({
     token,
@@ -1112,11 +1102,14 @@ export function App() {
     rooms,
     roomSlug
   });
-
-  const activeChatRoom = useMemo(
-    () => allRooms.find((room) => room.slug === chatRoomSlug) || null,
-    [allRooms, chatRoomSlug]
-  );
+  const { currentServer, activeChatRoom } = useAppRoomsAndServerDerived({
+    servers,
+    currentServerId,
+    allRooms,
+    chatRoomSlug,
+    roomSlug,
+    setChatRoomSlug
+  });
 
   useRoomSelectionGuard({
     allRooms,
