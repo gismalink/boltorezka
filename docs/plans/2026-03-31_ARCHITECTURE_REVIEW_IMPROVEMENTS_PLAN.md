@@ -40,7 +40,7 @@ Scope: стабилизация архитектурных границ web/api/
 
 - [x] Перевести web контур на primary cookie mode (`HttpOnly`, `Secure`, `SameSite`) как дефолтный runtime путь.
 - [x] Ограничить localStorage bearer режим как временный fallback только для controlled окружений.
-- [ ] Удалить legacy bearer-only ветки после прохождения test smoke и ручного login/logout regression.
+- [x] Удалить legacy bearer-only ветки после прохождения test smoke и ручного login/logout regression.
 
 Progress note:
 
@@ -51,7 +51,7 @@ Progress note:
 - Runtime ветка `if (!AUTH_COOKIE_MODE) ...` в session lifecycle удалена; bootstrap auth теперь server-session first.
 - Test deploy на `origin/feature/cookie-primary-hardening` (SHA `43d88bf1f9fce2e9c9846a3fdc4204d4a19b46d5`) прошел: `npm run deploy:test:smoke` -> PASS.
 - Server web e2e smoke с явным base URL прошел: `SMOKE_API_URL=https://test.datowave.com SMOKE_WEB_BASE_URL=https://test.datowave.com npm run smoke:web:e2e` -> PASS, включая `smoke:web:denied-media` после синхронизации маркеров.
-- Для формального закрытия подпункта остается только ручной login/logout regression note (test UI).
+- Ручной regression (test UI): login/logout в одной вкладке для трех аккаунтов выполнен без проблем; явных регрессий cookie-first auth flow не выявлено.
 
 ### 2.4 Release quality gates
 
@@ -107,7 +107,7 @@ Action items:
 
 ## 4) Acceptance criteria
 
-- [ ] Web auth bootstrap работает в cookie-first режиме в `test` без регрессий SSO flow.
+- [x] Web auth bootstrap работает в cookie-first режиме в `test` без регрессий SSO flow.
 - [ ] `npm run check:required` включает web gate (и desktop gate для desktop release path).
 - [ ] Крупные orchestration файлы разнесены по feature модулям, публичные API модулей зафиксированы.
 - [ ] Docs index не содержит битых ссылок на планы.
