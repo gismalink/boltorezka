@@ -52,7 +52,8 @@ Progress note:
 - Сороковой инкремент декомпозиции `web` выполнен: user/media/server AV state cluster вынесен из `App.tsx` в `hooks/app/state/useAppUserMediaState.ts`.
 - Сорок первый инкремент декомпозиции `web` выполнен: core app/realtime/server/admin state cluster вынесен из `App.tsx` в `hooks/app/state/useAppCoreState.ts`.
 - Сорок второй инкремент декомпозиции `web` выполнен: permissions/locale/pending-requests notifications cluster (`can*`, `serviceToken`, `locale`, `t`, toast+Notification effect) вынесен из `App.tsx` в `hooks/app/state/useAppPermissionsAndLocale.ts`.
-- Cumulative: `App.tsx` сокращен с 2101 до 1631 строк; web build + denied-media smoke проходят после каждого инкремента.
+- Сорок третий инкремент декомпозиции `web` выполнен: props assembly для realtime lifecycle (`useRealtimeChatLifecycle` + merge callback `onRoomMediaTopology`) вынесен из `App.tsx` в `hooks/app/state/useRealtimeChatLifecycleProps.ts`.
+- Cumulative: `App.tsx` сокращен с 2101 до 1622 строк; web build + denied-media smoke проходят после каждого инкремента.
 
 ### 2.2 API route decomposition
 

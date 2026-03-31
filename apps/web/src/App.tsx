@@ -60,6 +60,7 @@ import {
   useChatComposerActions,
   useChatTypingController,
   useRealtimeChatLifecycle,
+  useRealtimeChatLifecycleProps,
   useRealtimeConnectionReset,
   useRealtimeIncomingCallState,
   useRealtimeLifecycleCallbacks,
@@ -862,10 +863,10 @@ export function App() {
     applyRemoteTypingPayload
   });
 
-  const { loadOlderMessages } = useRealtimeChatLifecycle({
-    token: serviceToken,
+  const realtimeChatLifecycleProps = useRealtimeChatLifecycleProps({
+    serviceToken,
     reconnectNonce: realtimeReconnectNonce,
-    joinedRoomSlug: roomSlug,
+    roomSlug,
     chatRoomSlug,
     messages,
     messagesNextCursor,
@@ -878,37 +879,27 @@ export function App() {
     lastMessageIdRef,
     setWsState,
     setMessages,
-    setJoinedRoomSlug: setRoomSlug,
-    onRoomMediaTopology: ({ roomSlug: nextRoomSlug, mediaTopology }) => {
-      setRoomMediaTopologyBySlug((prev) => {
-        if (prev[nextRoomSlug] === mediaTopology) {
-          return prev;
-        }
-
-        return {
-          ...prev,
-          [nextRoomSlug]: mediaTopology
-        };
-      });
-    },
+    setRoomSlug,
+    setRoomMediaTopologyBySlug,
     setRoomsPresenceBySlug,
     setRoomsPresenceDetailsBySlug,
     pushLog,
     pushCallLog,
     pushToast,
     markMessageDelivery,
-    onCallMicState: handleIncomingMicState,
-    onCallVideoState: handleIncomingVideoState,
-    onCallInitialState: handleIncomingInitialCallState,
-    onCallNack: handleCallNack,
-    onAudioQualityUpdated: handleAudioQualityUpdated,
-    onAck: handleWsAck,
-    onNack: handleWsNack,
-    onScreenShareState: handleIncomingScreenShareState,
-    onSessionMoved: handleSessionMoved,
-    onChatCleared: handleChatCleared,
-    onChatTyping: handleChatTyping
+    handleIncomingMicState,
+    handleIncomingVideoState,
+    handleIncomingInitialCallState,
+    handleCallNack,
+    handleAudioQualityUpdated,
+    handleWsAck,
+    handleWsNack,
+    handleIncomingScreenShareState,
+    handleSessionMoved,
+    handleChatCleared,
+    handleChatTyping
   });
+  const { loadOlderMessages } = useRealtimeChatLifecycle(realtimeChatLifecycleProps);
 
   useAdminUsersSync({
     token,
