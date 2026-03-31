@@ -30,6 +30,11 @@ Scope: стабилизация архитектурных границ web/api/
 - [ ] Свести `App` к wiring-композиции (state ownership внутри доменных hooks/contexts).
 - [ ] Зафиксировать целевой лимит сложности на модуль: до 300-400 строк на feature orchestrator.
 
+Progress note:
+
+- Первый инкремент выноса admin-orchestration выполнен: admin server handlers (`block/unblock`, `delete`) вынесены из `App.tsx` в `hooks/rooms/useAdminServerActions.ts`.
+- `App.tsx` уменьшен с 2101 до 2051 строк без изменения поведения (web build и type checks проходят).
+
 ### 2.2 API route decomposition
 
 - [ ] Разделить крупные маршруты auth/realtime на bounded modules (`session`, `sso`, `desktop-handoff`, `presence`, `call-signaling`, `chat-realtime`).
@@ -108,10 +113,10 @@ Action items:
 ## 4) Acceptance criteria
 
 - [x] Web auth bootstrap работает в cookie-first режиме в `test` без регрессий SSO flow.
-- [ ] `npm run check:required` включает web gate (и desktop gate для desktop release path).
+- [x] `npm run check:required` включает web gate (и desktop gate для desktop release path).
 - [ ] Крупные orchestration файлы разнесены по feature модулям, публичные API модулей зафиксированы.
-- [ ] Docs index не содержит битых ссылок на планы.
-- [ ] По realtime transport есть зафиксированное ADR-решение и критерии пересмотра (с измеримыми триггерами).
+- [x] Docs index не содержит битых ссылок на планы.
+- [x] По realtime transport есть зафиксированное ADR-решение и критерии пересмотра (с измеримыми триггерами).
 
 ## 5) Ограничения выполнения
 

@@ -45,6 +45,7 @@ export { useRoomMemberPreferencesOrchestrator } from "./rooms/useRoomMemberPrefe
 export { useRoomSelectionGuard } from "./rooms/useRoomSelectionGuard";
 export { useServerProfileActions, selectExistingServerId } from "./rooms/useServerProfileActions";
 export { useServerModerationActions } from "./rooms/useServerModerationActions";
+export { useAdminServerActions } from "./rooms/useAdminServerActions";
 export { useRoomsDerived } from "./rooms/useRoomsDerived";
 export { useScreenWakeLock } from "./ui/useScreenWakeLock";
 export { useServerVideoPreview } from "./app/media/useServerVideoPreview";

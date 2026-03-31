@@ -85,6 +85,7 @@ import {
   useRoomSelectionGuard,
   useServerProfileActions,
   useServerModerationActions,
+  useAdminServerActions,
   useRoomsDerived,
   useScreenWakeLock,
   useServerVideoPreview,
@@ -1097,69 +1098,18 @@ export function App() {
     t
   });
 
-  const handleToggleAdminServerBlocked = useCallback(async (serverId: string, blocked: boolean) => {
-    const tokenValue = String(token || "").trim();
-    const targetServerId = String(serverId || "").trim();
-
-    if (!tokenValue || !targetServerId) {
-      return;
-    }
-
-    try {
-      await api.adminSetServerBlocked(tokenValue, targetServerId, blocked);
-      setAdminServers((prev) => prev.map((item) => (
-        item.id === targetServerId
-          ? { ...item, isBlocked: blocked }
-          : item
-      )));
-
-      const listResponse = await api.servers(tokenValue);
-      const list = Array.isArray(listResponse.servers) ? listResponse.servers : [];
-      setServers(list);
-      setCurrentServerId((prev) => {
-        const preferredId = prev === targetServerId && blocked ? "" : prev;
-        return list.some((item) => item.id === preferredId) ? preferredId : (list[0]?.id || "");
-      });
-      pushToast(blocked ? t("server.managementBlock") : t("server.managementUnblock"));
-    } catch (error) {
-      pushToast((error as Error).message || t("toast.serverError"));
-    }
-  }, [pushToast, setAdminServers, t, token]);
-
-  const handleDeleteAdminServer = useCallback(async (serverId: string) => {
-    const tokenValue = String(token || "").trim();
-    const targetServerId = String(serverId || "").trim();
-
-    if (!tokenValue || !targetServerId) {
-      return;
-    }
-
-    try {
-      await api.adminDeleteServer(tokenValue, targetServerId);
-
-      const [adminServersResponse, serversResponse] = await Promise.all([
-        api.adminServers(tokenValue),
-        api.servers(tokenValue)
-      ]);
-
-      const adminList = Array.isArray(adminServersResponse.servers) ? adminServersResponse.servers : [];
-      const userList = Array.isArray(serversResponse.servers) ? serversResponse.servers : [];
-
-      setAdminServers(adminList);
-      setServers(userList);
-      setSelectedAdminServerId((prev) => {
-        const preferredId = prev === targetServerId ? "" : prev;
-        return adminList.some((item) => item.id === preferredId) ? preferredId : (adminList[0]?.id || "");
-      });
-      setCurrentServerId((prev) => {
-        const preferredId = prev === targetServerId ? "" : prev;
-        return userList.some((item) => item.id === preferredId) ? preferredId : (userList[0]?.id || "");
-      });
-      pushToast(t("server.deleteSuccess"));
-    } catch (error) {
-      pushToast((error as Error).message || t("toast.serverError"));
-    }
-  }, [pushToast, t, token]);
+  const {
+    handleToggleAdminServerBlocked,
+    handleDeleteAdminServer
+  } = useAdminServerActions({
+    token,
+    setAdminServers,
+    setServers,
+    setSelectedAdminServerId,
+    setCurrentServerId,
+    pushToast,
+    t
+  });
 
   useEffect(() => {
     if (!chatRoomSlug && roomSlug) {
