@@ -6,10 +6,7 @@ import {
 } from "./services";
 import type { CallStatus } from "./services";
 import {
-  AppMainSection,
-  AppShellOverlays,
-  AppTopChrome,
-  AppWorkspacePanels
+  AppShellLayout
 } from "./components";
 import {
   DEFAULT_CHAT_IMAGE_DATA_URL_LENGTH,
@@ -26,6 +23,7 @@ import type { InputProfile, MediaDevicesState } from "./components";
 import {
   useAppUiState,
   useAppEntryGates,
+  useAppShellLayoutProps,
   useAppControllers,
   useAppShellLifecycleEffects,
   useAdminUsersSync,
@@ -1726,89 +1724,88 @@ export function App() {
     return entryGate;
   }
 
-  return (
-    <main className="app legacy-layout mx-auto grid h-[100dvh] max-h-[100dvh] w-full max-w-[1400px] grid-rows-[auto_1fr] gap-4 overflow-hidden p-4 desktop:gap-6 desktop:p-8">
-      <AppTopChrome
-        t={t}
-        user={user}
-        currentServerName={currentServer?.name || null}
-        servers={servers}
-        currentServerId={currentServerId}
-        creatingServer={creatingServer}
-        buildDateLabel={CLIENT_BUILD_DATE_LABEL}
-        pendingJoinRequestsCount={pendingJoinRequestsCount}
-        appMenuOpen={appMenuOpen}
-        authMenuOpen={authMenuOpen}
-        profileMenuOpen={profileMenuOpen}
-        authMenuRef={authMenuRef}
-        profileMenuRef={profileMenuRef}
-        onToggleAppMenu={() => setAppMenuOpen((value) => !value)}
-        onToggleAuthMenu={() => setAuthMenuOpen((value) => !value)}
-        onToggleProfileMenu={() => setProfileMenuOpen((value) => !value)}
-        onBeginSso={beginSso}
-        onLogout={logout}
-        onOpenUserSettings={() => openUserSettings("profile")}
-        onChangeCurrentServer={(serverId) => setCurrentServerId(serverId)}
-        onCreateServer={handleCreateServer}
-        mediaDevicesState={mediaDevicesState}
-        onRequestMediaAccess={requestMediaAccess}
-        remoteAudioAutoplayBlocked={remoteAudioAutoplayBlocked}
-        audioMuted={audioMuted}
-        desktopUpdateReadyVersion={desktopUpdateReadyVersion}
-        desktopUpdateBannerDismissed={desktopUpdateBannerDismissed}
-        desktopUpdateApplying={desktopUpdateApplying}
-        onDismissDesktopUpdateBanner={dismissDesktopUpdateBanner}
-        onApplyDesktopUpdate={applyDesktopUpdate}
-      />
+  const {
+    appTopChromeProps,
+    appMainSectionProps,
+    appShellOverlaysProps
+  } = useAppShellLayoutProps({
+    topChrome: {
+      t,
+      user,
+      currentServerName: currentServer?.name || null,
+      servers,
+      currentServerId,
+      creatingServer,
+      buildDateLabel: CLIENT_BUILD_DATE_LABEL,
+      pendingJoinRequestsCount,
+      appMenuOpen,
+      authMenuOpen,
+      profileMenuOpen,
+      authMenuRef,
+      profileMenuRef,
+      onBeginSso: beginSso,
+      onLogout: logout,
+      onOpenUserSettings: () => openUserSettings("profile"),
+      onChangeCurrentServer: (serverId) => setCurrentServerId(serverId),
+      onCreateServer: handleCreateServer,
+      mediaDevicesState,
+      onRequestMediaAccess: requestMediaAccess,
+      remoteAudioAutoplayBlocked,
+      audioMuted,
+      desktopUpdateReadyVersion,
+      desktopUpdateBannerDismissed,
+      desktopUpdateApplying,
+      onDismissDesktopUpdateBanner: dismissDesktopUpdateBanner,
+      onApplyDesktopUpdate: applyDesktopUpdate,
+      setAppMenuOpen,
+      setAuthMenuOpen,
+      setProfileMenuOpen
+    },
+    mainSection: {
+      t,
+      user,
+      authMode,
+      beginSso,
+      showEmptyServerOnboarding,
+      creatingServer,
+      onCreateServer: handleCreateServer,
+      isMobileViewport,
+      mobileTab,
+      onSelectMobileTab: setMobileTab,
+      userDockSharedProps,
+      roomsPanelProps,
+      chatPanelProps,
+      videoWindowsOverlayProps,
+      userSettingsOpen,
+      inviteAccepting,
+      appMenuOpen,
+      serverProfileModalProps
+    },
+    overlays: {
+      toasts,
+      showAppUpdatedOverlay,
+      t,
+      acknowledgeUpdatedApp,
+      user,
+      showFirstRunIntro,
+      profileNameDraft,
+      setProfileNameDraft,
+      profileSaving,
+      completeFirstRunIntro,
+      sessionMovedOverlayMessage,
+      setSessionMovedOverlayMessage,
+      ageGateBlockedRoomSlug,
+      serverAgeConfirming,
+      openUserSettings,
+      handleConfirmServerAge,
+      setAgeGateBlockedRoomSlug,
+      joinRoom,
+      lang,
+      cookieConsentAccepted,
+      cookieConsentKey: COOKIE_CONSENT_KEY,
+      setCookieConsentAccepted
+    }
+  });
 
-      <AppMainSection
-        t={t}
-        user={user}
-        authMode={authMode}
-        beginSso={beginSso}
-        showEmptyServerOnboarding={showEmptyServerOnboarding}
-        creatingServer={creatingServer}
-        onCreateServer={handleCreateServer}
-        isMobileViewport={isMobileViewport}
-        mobileTab={mobileTab}
-        onSelectMobileTab={setMobileTab}
-        userDockSharedProps={userDockSharedProps}
-        roomsPanelProps={roomsPanelProps}
-        chatPanelProps={chatPanelProps}
-        videoWindowsOverlayProps={videoWindowsOverlayProps}
-        userSettingsOpen={userSettingsOpen}
-        inviteAccepting={inviteAccepting}
-        appMenuOpen={appMenuOpen}
-        serverProfileModalProps={serverProfileModalProps}
-      />
-
-      <AppShellOverlays
-        toasts={toasts}
-        showAppUpdatedOverlay={showAppUpdatedOverlay}
-        t={t}
-        acknowledgeUpdatedApp={acknowledgeUpdatedApp}
-        user={user}
-        showFirstRunIntro={showFirstRunIntro}
-        profileNameDraft={profileNameDraft}
-        setProfileNameDraft={setProfileNameDraft}
-        profileSaving={profileSaving}
-        completeFirstRunIntro={completeFirstRunIntro}
-        sessionMovedOverlayMessage={sessionMovedOverlayMessage}
-        setSessionMovedOverlayMessage={setSessionMovedOverlayMessage}
-        ageGateBlockedRoomSlug={ageGateBlockedRoomSlug}
-        serverAgeConfirming={serverAgeConfirming}
-        openUserSettings={openUserSettings}
-        handleConfirmServerAge={handleConfirmServerAge}
-        setAgeGateBlockedRoomSlug={setAgeGateBlockedRoomSlug}
-        joinRoom={joinRoom}
-        lang={lang}
-        cookieConsentAccepted={cookieConsentAccepted}
-        onAcceptCookieConsent={() => {
-          localStorage.setItem(COOKIE_CONSENT_KEY, "1");
-          setCookieConsentAccepted(true);
-        }}
-      />
-
-    </main>
-  );
+  return <AppShellLayout topChromeProps={appTopChromeProps} mainSectionProps={appMainSectionProps} shellOverlaysProps={appShellOverlaysProps} />;
 }
