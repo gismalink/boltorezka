@@ -19,11 +19,12 @@ import {
   PENDING_ACCESS_AUTO_REFRESH_SEC,
   VERSION_UPDATE_PENDING_KEY
 } from "./constants/appConfig";
-import type { InputProfile, MediaDevicesState } from "./components";
 import {
+  useAppCoreState,
   useAppUiState,
   useAppEntryGates,
   useAppShellLayoutProps,
+  useAppUserMediaState,
   useAppControllers,
   useAppShellLifecycleEffects,
   useAdminUsersSync,
@@ -86,33 +87,9 @@ import {
   useVoiceRoomStateMaps,
   useVoiceUiLifecycleEffects
 } from "./hooks";
-import { detectInitialLang, LOCALE_BY_LANG, TEXT, type Lang } from "./i18n";
-import { DEFAULT_UI_THEME, formatBuildDateLabel, normalizeUiTheme, readNonZeroDefaultVolume } from "./utils/appShell";
-import { readPersistedBearerToken } from "./utils/authStorage";
-import type {
-  AdminServerListItem,
-  AdminServerOverview,
-  AudioQuality,
-  ChannelAudioQualitySetting,
-  Message,
-  MessagesCursor,
-  PresenceMember,
-  RoomMemberPreference,
-  Room,
-  RoomKind,
-  RoomsTreeResponse,
-  ServerMemberItem,
-  ServerListItem,
-  TelemetrySummary,
-  UiTheme,
-  User
-} from "./domain";
-import type {
-  ServerScreenShareResolution,
-  ServerVideoEffectType,
-  ServerVideoResolution
-} from "./hooks/rtc/voiceCallTypes";
-import type { RnnoiseSuppressionLevel } from "./hooks/rtc/rnnoiseAudioProcessor";
+import { LOCALE_BY_LANG, TEXT } from "./i18n";
+import { formatBuildDateLabel } from "./utils/appShell";
+import type { Message, RoomKind } from "./domain";
 
 const CLIENT_BUILD_VERSION = String(import.meta.env.VITE_APP_VERSION || "").trim();
 const CLIENT_BUILD_SHA = String(import.meta.env.VITE_APP_BUILD_SHA || CLIENT_BUILD_VERSION || "").trim();
@@ -128,60 +105,61 @@ const ROOM_SLUG_STORAGE_KEY = "boltorezka_room_slug";
 // Do not add new business logic, parsing, transport rules, or large feature workflows here.
 // Put feature logic into dedicated hooks/services/components and keep this file as glue code.
 export function App() {
-  const [token, setToken] = useState(() => readPersistedBearerToken());
-  const [user, setUser] = useState<User | null>(null);
-  const [authMode, setAuthMode] = useState("loading");
-  const [rooms, setRooms] = useState<Room[]>([]);
-  const [roomsTree, setRoomsTree] = useState<RoomsTreeResponse | null>(null);
-  const [archivedRooms, setArchivedRooms] = useState<Room[]>([]);
-  const [roomSlug, setRoomSlug] = useState("");
-  const [chatRoomSlug, setChatRoomSlug] = useState("");
-  const [showAppUpdatedOverlay, setShowAppUpdatedOverlay] = useState(
-    () => sessionStorage.getItem(VERSION_UPDATE_PENDING_KEY) === "1"
-  );
-  const [cookieConsentAccepted, setCookieConsentAccepted] = useState(
-    () => localStorage.getItem(COOKIE_CONSENT_KEY) === "1"
-  );
-  const [pendingAccessRefreshInSec, setPendingAccessRefreshInSec] = useState(PENDING_ACCESS_AUTO_REFRESH_SEC);
-  const [showFirstRunIntro, setShowFirstRunIntro] = useState(false);
-  const [sessionMovedOverlayMessage, setSessionMovedOverlayMessage] = useState("");
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [messagesHasMore, setMessagesHasMore] = useState(false);
-  const [messagesNextCursor, setMessagesNextCursor] = useState<MessagesCursor | null>(null);
-  const [loadingOlderMessages, setLoadingOlderMessages] = useState(false);
-  const [chatText, setChatText] = useState("");
-  const [pendingChatImageDataUrl, setPendingChatImageDataUrl] = useState<string | null>(null);
-  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
-  const [callStatus, setCallStatus] = useState<CallStatus>("idle");
-  const [lastCallPeer, setLastCallPeer] = useState("");
-  const [roomsPresenceBySlug, setRoomsPresenceBySlug] = useState<Record<string, string[]>>({});
-  const [roomsPresenceDetailsBySlug, setRoomsPresenceDetailsBySlug] = useState<Record<string, PresenceMember[]>>({});
-  const [memberPreferencesByUserId, setMemberPreferencesByUserId] = useState<Record<string, RoomMemberPreference>>({});
-  const [roomMediaTopologyBySlug, setRoomMediaTopologyBySlug] = useState<Record<string, "livekit">>({});
-  const [servers, setServers] = useState<ServerListItem[]>([]);
-  const [serversLoading, setServersLoading] = useState(false);
-  const [currentServerId, setCurrentServerId] = useState(() => String(localStorage.getItem(CURRENT_SERVER_ID_STORAGE_KEY) || "").trim());
-  const [creatingServer, setCreatingServer] = useState(false);
-  const [serverMembers, setServerMembers] = useState<ServerMemberItem[]>([]);
-  const [serverMembersLoading, setServerMembersLoading] = useState(false);
-  const [lastInviteUrl, setLastInviteUrl] = useState("");
-  const [creatingInvite, setCreatingInvite] = useState(false);
-  const [serverAgeLoading, setServerAgeLoading] = useState(false);
-  const [serverAgeConfirmedAt, setServerAgeConfirmedAt] = useState<string | null>(null);
-  const [serverAgeConfirming, setServerAgeConfirming] = useState(false);
-  const [ageGateBlockedRoomSlug, setAgeGateBlockedRoomSlug] = useState("");
-  const [pendingInviteToken, setPendingInviteToken] = useState("");
-  const [inviteAccepting, setInviteAccepting] = useState(false);
-  const [telemetrySummary, setTelemetrySummary] = useState<TelemetrySummary | null>(null);
-  const [wsState, setWsState] = useState<"disconnected" | "connecting" | "connected">(
-    "disconnected"
-  );
-  const [adminUsers, setAdminUsers] = useState<User[]>([]);
-  const [adminServers, setAdminServers] = useState<AdminServerListItem[]>([]);
-  const [adminServersLoading, setAdminServersLoading] = useState(false);
-  const [selectedAdminServerId, setSelectedAdminServerId] = useState("");
-  const [adminServerOverview, setAdminServerOverview] = useState<AdminServerOverview | null>(null);
-  const [adminServerOverviewLoading, setAdminServerOverviewLoading] = useState(false);
+  const {
+    token, setToken,
+    user, setUser,
+    authMode, setAuthMode,
+    rooms, setRooms,
+    roomsTree, setRoomsTree,
+    archivedRooms, setArchivedRooms,
+    roomSlug, setRoomSlug,
+    chatRoomSlug, setChatRoomSlug,
+    showAppUpdatedOverlay, setShowAppUpdatedOverlay,
+    cookieConsentAccepted, setCookieConsentAccepted,
+    pendingAccessRefreshInSec, setPendingAccessRefreshInSec,
+    showFirstRunIntro, setShowFirstRunIntro,
+    sessionMovedOverlayMessage, setSessionMovedOverlayMessage,
+    messages, setMessages,
+    messagesHasMore, setMessagesHasMore,
+    messagesNextCursor, setMessagesNextCursor,
+    loadingOlderMessages, setLoadingOlderMessages,
+    chatText, setChatText,
+    pendingChatImageDataUrl, setPendingChatImageDataUrl,
+    editingMessageId, setEditingMessageId,
+    callStatus, setCallStatus,
+    lastCallPeer, setLastCallPeer,
+    roomsPresenceBySlug, setRoomsPresenceBySlug,
+    roomsPresenceDetailsBySlug, setRoomsPresenceDetailsBySlug,
+    memberPreferencesByUserId, setMemberPreferencesByUserId,
+    roomMediaTopologyBySlug, setRoomMediaTopologyBySlug,
+    servers, setServers,
+    serversLoading, setServersLoading,
+    currentServerId, setCurrentServerId,
+    creatingServer, setCreatingServer,
+    serverMembers, setServerMembers,
+    serverMembersLoading, setServerMembersLoading,
+    lastInviteUrl, setLastInviteUrl,
+    creatingInvite, setCreatingInvite,
+    serverAgeLoading, setServerAgeLoading,
+    serverAgeConfirmedAt, setServerAgeConfirmedAt,
+    serverAgeConfirming, setServerAgeConfirming,
+    ageGateBlockedRoomSlug, setAgeGateBlockedRoomSlug,
+    pendingInviteToken, setPendingInviteToken,
+    inviteAccepting, setInviteAccepting,
+    telemetrySummary, setTelemetrySummary,
+    wsState, setWsState,
+    adminUsers, setAdminUsers,
+    adminServers, setAdminServers,
+    adminServersLoading, setAdminServersLoading,
+    selectedAdminServerId, setSelectedAdminServerId,
+    adminServerOverview, setAdminServerOverview,
+    adminServerOverviewLoading, setAdminServerOverviewLoading
+  } = useAppCoreState({
+    versionUpdatePendingKey: VERSION_UPDATE_PENDING_KEY,
+    cookieConsentKey: COOKIE_CONSENT_KEY,
+    currentServerIdStorageKey: CURRENT_SERVER_ID_STORAGE_KEY,
+    pendingAccessAutoRefreshSec: PENDING_ACCESS_AUTO_REFRESH_SEC
+  });
   const {
     newRoomSlug, setNewRoomSlug,
     newRoomTitle, setNewRoomTitle,
@@ -201,120 +179,56 @@ export function App() {
     editingRoomAudioQualitySetting,
     setEditingRoomAudioQualitySetting
   } = useRoomEditorState();
-  const [micMuted, setMicMuted] = useState<boolean>(() => localStorage.getItem("boltorezka_mic_muted") !== "0");
-  const [audioMuted, setAudioMuted] = useState<boolean>(() => localStorage.getItem("boltorezka_audio_muted") === "1");
-  const [lang, setLang] = useState<Lang>(() => detectInitialLang());
-  const [selectedUiTheme, setSelectedUiTheme] = useState<UiTheme>(() =>
-    normalizeUiTheme(localStorage.getItem("boltorezka_ui_theme"))
-  );
-  const [profileNameDraft, setProfileNameDraft] = useState("");
-  const [profileStatusText, setProfileStatusText] = useState("");
-  const [deleteAccountPending, setDeleteAccountPending] = useState(false);
-  const [deleteAccountStatusText, setDeleteAccountStatusText] = useState("");
-  const [deletedAccountInfo, setDeletedAccountInfo] = useState<{ daysRemaining: number; purgeScheduledAt: string | null } | null>(null);
-  const [restoreDeletedAccountPending, setRestoreDeletedAccountPending] = useState(false);
-  const [rnnoiseRuntimeStatus, setRnnoiseRuntimeStatus] = useState<"inactive" | "active" | "unavailable" | "error">("inactive");
-  const [profileSaving, setProfileSaving] = useState(false);
-  const [inputDevices, setInputDevices] = useState<Array<{ id: string; label: string }>>([]);
-  const [outputDevices, setOutputDevices] = useState<Array<{ id: string; label: string }>>([]);
-  const [videoInputDevices, setVideoInputDevices] = useState<Array<{ id: string; label: string }>>([]);
-  const [selectedInputId, setSelectedInputId] = useState<string>(() => localStorage.getItem("boltorezka_selected_input_id") || "default");
-  const [selectedOutputId, setSelectedOutputId] = useState<string>(() => localStorage.getItem("boltorezka_selected_output_id") || "default");
-  const [selectedVideoInputId, setSelectedVideoInputId] = useState<string>(() => localStorage.getItem("boltorezka_selected_video_input_id") || "default");
-  const [cameraEnabled, setCameraEnabled] = useState<boolean>(() => localStorage.getItem("boltorezka_camera_enabled") === "1");
-  const [screenShareOwnerByRoomSlug, setScreenShareOwnerByRoomSlug] = useState<Record<string, { userId: string | null; userName: string | null }>>({});
-  const [voiceCameraEnabledByUserIdInCurrentRoom, setVoiceCameraEnabledByUserIdInCurrentRoom] = useState<Record<string, boolean>>({});
-  const [voiceInitialMicStateByUserIdInCurrentRoom, setVoiceInitialMicStateByUserIdInCurrentRoom] = useState<Record<string, "muted" | "silent" | "speaking">>({});
-  const [voiceInitialAudioOutputMutedByUserIdInCurrentRoom, setVoiceInitialAudioOutputMutedByUserIdInCurrentRoom] = useState<Record<string, boolean>>({});
-  const [selectedInputProfile, setSelectedInputProfile] = useState<InputProfile>(() => {
-    const value = String(localStorage.getItem("boltorezka_selected_input_profile") || "").trim();
-    if (value === "noise_reduction" || value === "custom") {
-      return value;
-    }
-    return "custom";
-  });
-  const [rnnoiseSuppressionLevel, setRnnoiseSuppressionLevel] = useState<RnnoiseSuppressionLevel>(() => {
-    const value = String(localStorage.getItem("boltorezka_rnnoise_level") || "").trim();
-    if (value === "none" || value === "soft" || value === "medium" || value === "strong") {
-      return value;
-    }
-    return "medium";
-  });
-  const [preRnnEchoCancellationEnabled, setPreRnnEchoCancellationEnabled] = useState<boolean>(() => localStorage.getItem("boltorezka_pre_rnn_echo_cancellation") !== "0");
-  const [preRnnAutoGainControlEnabled, setPreRnnAutoGainControlEnabled] = useState<boolean>(() => localStorage.getItem("boltorezka_pre_rnn_agc") !== "0");
-  const [selfMonitorEnabled, setSelfMonitorEnabled] = useState<boolean>(() => localStorage.getItem("boltorezka_self_monitor") === "1");
-  const [mediaDevicesState, setMediaDevicesState] = useState<MediaDevicesState>("ready");
-  const [mediaDevicesHint, setMediaDevicesHint] = useState("");
-  const [micVolume, setMicVolume] = useState<number>(() => readNonZeroDefaultVolume("boltorezka_mic_volume", DEFAULT_MIC_VOLUME));
-  const [outputVolume, setOutputVolume] = useState<number>(() => readNonZeroDefaultVolume("boltorezka_output_volume", DEFAULT_OUTPUT_VOLUME));
-  const [micTestLevel, setMicTestLevel] = useState(0);
-  const [serverAudioQuality, setServerAudioQuality] = useState<AudioQuality>("standard");
-  const [serverAudioQualitySaving, setServerAudioQualitySaving] = useState(false);
-  const [serverChatImagePolicy, setServerChatImagePolicy] = useState({
-    maxDataUrlLength: DEFAULT_CHAT_IMAGE_DATA_URL_LENGTH,
-    maxImageSide: DEFAULT_CHAT_IMAGE_MAX_SIDE,
-    jpegQuality: DEFAULT_CHAT_IMAGE_QUALITY
-  });
-  const [serverVideoEffectType, setServerVideoEffectType] = useState<ServerVideoEffectType>(() => {
-    const value = localStorage.getItem("boltorezka_server_video_effect_type");
-    if (value === "none" || value === "pixel8" || value === "ascii") {
-      return value;
-    }
-    return "none";
-  });
-  const [serverVideoResolution, setServerVideoResolution] = useState<ServerVideoResolution>(() => {
-    const value = localStorage.getItem("boltorezka_server_video_resolution");
-    if (value === "160x120" || value === "320x240" || value === "640x480") {
-      return value;
-    }
-    return "320x240";
-  });
-  const [serverVideoFps, setServerVideoFps] = useState<10 | 15 | 24 | 30>(() => {
-    const value = Number(localStorage.getItem("boltorezka_server_video_fps"));
-    if (value === 10 || value === 15 || value === 24 || value === 30) {
-      return value;
-    }
-    return 15;
-  });
-  const [serverScreenShareResolution, setServerScreenShareResolution] = useState<ServerScreenShareResolution>(() => {
-    const value = localStorage.getItem("boltorezka_server_screen_share_resolution");
-    if (value === "hd" || value === "fullhd" || value === "max") {
-      return value;
-    }
-    return "fullhd";
-  });
-  const [serverVideoPixelFxStrength, setServerVideoPixelFxStrength] = useState(() => {
-    const value = Number(localStorage.getItem("boltorezka_server_video_fx_strength"));
-    return Number.isFinite(value) ? Math.max(0, Math.min(100, value)) : 85;
-  });
-  const [serverVideoPixelFxPixelSize, setServerVideoPixelFxPixelSize] = useState(() => {
-    const value = Number(localStorage.getItem("boltorezka_server_video_fx_pixel_size"));
-    return Number.isFinite(value) ? Math.max(2, Math.min(10, value)) : 5;
-  });
-  const [serverVideoPixelFxGridThickness, setServerVideoPixelFxGridThickness] = useState(() => {
-    const value = Number(localStorage.getItem("boltorezka_server_video_fx_grid_thickness"));
-    return Number.isFinite(value) ? Math.max(1, Math.min(4, Math.round(value))) : 1;
-  });
-  const [serverVideoAsciiCellSize, setServerVideoAsciiCellSize] = useState(() => {
-    const value = Number(localStorage.getItem("boltorezka_server_video_ascii_cell_size"));
-    return Number.isFinite(value) ? Math.max(4, Math.min(16, Math.round(value))) : 8;
-  });
-  const [serverVideoAsciiContrast, setServerVideoAsciiContrast] = useState(() => {
-    const value = Number(localStorage.getItem("boltorezka_server_video_ascii_contrast"));
-    return Number.isFinite(value) ? Math.max(60, Math.min(200, Math.round(value))) : 120;
-  });
-  const [serverVideoAsciiColor, setServerVideoAsciiColor] = useState(() => {
-    const value = String(localStorage.getItem("boltorezka_server_video_ascii_color") || "").trim();
-    return /^#[0-9a-fA-F]{6}$/.test(value) ? value : "#eaffff";
-  });
-  const [serverVideoWindowMinWidth, setServerVideoWindowMinWidth] = useState(() => {
-    const value = Number(localStorage.getItem("boltorezka_server_video_window_min_width"));
-    return Number.isFinite(value) ? Math.max(80, Math.min(300, Math.round(value))) : 100;
-  });
-  const [serverVideoWindowMaxWidth, setServerVideoWindowMaxWidth] = useState(() => {
-    const value = Number(localStorage.getItem("boltorezka_server_video_window_max_width"));
-    return Number.isFinite(value) ? Math.max(120, Math.min(480, Math.round(value))) : 320;
-  });
+  const {
+    micMuted, setMicMuted,
+    audioMuted, setAudioMuted,
+    lang, setLang,
+    selectedUiTheme, setSelectedUiTheme,
+    profileNameDraft, setProfileNameDraft,
+    profileStatusText, setProfileStatusText,
+    deleteAccountPending, setDeleteAccountPending,
+    deleteAccountStatusText, setDeleteAccountStatusText,
+    deletedAccountInfo, setDeletedAccountInfo,
+    restoreDeletedAccountPending, setRestoreDeletedAccountPending,
+    rnnoiseRuntimeStatus, setRnnoiseRuntimeStatus,
+    profileSaving, setProfileSaving,
+    inputDevices, setInputDevices,
+    outputDevices, setOutputDevices,
+    videoInputDevices, setVideoInputDevices,
+    selectedInputId, setSelectedInputId,
+    selectedOutputId, setSelectedOutputId,
+    selectedVideoInputId, setSelectedVideoInputId,
+    cameraEnabled, setCameraEnabled,
+    screenShareOwnerByRoomSlug, setScreenShareOwnerByRoomSlug,
+    voiceCameraEnabledByUserIdInCurrentRoom, setVoiceCameraEnabledByUserIdInCurrentRoom,
+    voiceInitialMicStateByUserIdInCurrentRoom, setVoiceInitialMicStateByUserIdInCurrentRoom,
+    voiceInitialAudioOutputMutedByUserIdInCurrentRoom, setVoiceInitialAudioOutputMutedByUserIdInCurrentRoom,
+    selectedInputProfile, setSelectedInputProfile,
+    rnnoiseSuppressionLevel, setRnnoiseSuppressionLevel,
+    preRnnEchoCancellationEnabled, setPreRnnEchoCancellationEnabled,
+    preRnnAutoGainControlEnabled, setPreRnnAutoGainControlEnabled,
+    selfMonitorEnabled, setSelfMonitorEnabled,
+    mediaDevicesState, setMediaDevicesState,
+    mediaDevicesHint, setMediaDevicesHint,
+    micVolume, setMicVolume,
+    outputVolume, setOutputVolume,
+    micTestLevel, setMicTestLevel,
+    serverAudioQuality, setServerAudioQuality,
+    serverAudioQualitySaving, setServerAudioQualitySaving,
+    serverChatImagePolicy, setServerChatImagePolicy,
+    serverVideoEffectType, setServerVideoEffectType,
+    serverVideoResolution, setServerVideoResolution,
+    serverVideoFps, setServerVideoFps,
+    serverScreenShareResolution, setServerScreenShareResolution,
+    serverVideoPixelFxStrength, setServerVideoPixelFxStrength,
+    serverVideoPixelFxPixelSize, setServerVideoPixelFxPixelSize,
+    serverVideoPixelFxGridThickness, setServerVideoPixelFxGridThickness,
+    serverVideoAsciiCellSize, setServerVideoAsciiCellSize,
+    serverVideoAsciiContrast, setServerVideoAsciiContrast,
+    serverVideoAsciiColor, setServerVideoAsciiColor,
+    serverVideoWindowMinWidth, setServerVideoWindowMinWidth,
+    serverVideoWindowMaxWidth, setServerVideoWindowMaxWidth
+  } = useAppUserMediaState();
   const [realtimeReconnectNonce, setRealtimeReconnectNonce] = useState(0);
   const {
     audioOutputMenuOpen, setAudioOutputMenuOpen,

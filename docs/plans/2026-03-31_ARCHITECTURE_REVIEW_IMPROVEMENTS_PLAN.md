@@ -49,7 +49,9 @@ Progress note:
 - Тридцать седьмой инкремент декомпозиции `web` выполнен: shell wiring сведён к composable units (`components/AppShellLayout.tsx` + `hooks/app/state/useAppShellLayoutProps.ts` + props hooks для top/main/overlays).
 - Тридцать восьмой инкремент декомпозиции `web` выполнен: room voice lifecycle effects (video reset + per-room voice maps reset) вынесены из `App.tsx` в `hooks/voice/useVoiceRoomLifecycleEffects.ts`.
 - Тридцать девятый инкремент декомпозиции `web` выполнен: state/setter пары в крупных destructuring-блоках (`useRoomEditorState`, `useAppUiState`) приведены к compact pair-format (`value, setValue`) для снижения шума и сохранения читаемости.
-- Cumulative: `App.tsx` сокращен с 2101 до 1778 строк; web build + denied-media smoke проходят после каждого инкремента.
+- Сороковой инкремент декомпозиции `web` выполнен: user/media/server AV state cluster вынесен из `App.tsx` в `hooks/app/state/useAppUserMediaState.ts`.
+- Сорок первый инкремент декомпозиции `web` выполнен: core app/realtime/server/admin state cluster вынесен из `App.tsx` в `hooks/app/state/useAppCoreState.ts`.
+- Cumulative: `App.tsx` сокращен с 2101 до 1692 строк; web build + denied-media smoke проходят после каждого инкремента.
 
 ### 2.2 API route decomposition
 
