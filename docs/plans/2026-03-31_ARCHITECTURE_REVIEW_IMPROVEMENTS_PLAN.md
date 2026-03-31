@@ -73,7 +73,8 @@ Progress note:
 - Двадцать четвертый инкремент декомпозиции `auth` выполнен: profile route cluster (`/v1/auth/me` GET/PATCH/DELETE) вынесен в `routes/auth-profile-routes.ts`.
 - Двадцать пятый инкремент декомпозиции `auth` выполнен: livekit-token route cluster вынесен в `routes/auth-livekit-routes.ts`.
 - Двадцать шестой инкремент декомпозиции `auth` выполнен: session/ws-ticket route cluster (`/v1/auth/refresh`, `/v1/auth/logout`, `/v1/auth/ws-ticket`) вынесен в `routes/auth-session-routes.ts`.
-- Текущий результат по размеру: `routes/auth.ts` ~314 строк, `routes/realtime.ts` ~354 строки.
+- Двадцать седьмой инкремент декомпозиции `auth` выполнен: SSO route cluster (`/v1/auth/sso/start`, `/v1/auth/sso/logout`, `/v1/auth/sso/session`, `/v1/auth/sso/restore`) вынесен в `routes/auth-sso-routes.ts`.
+- Текущий результат по размеру: `routes/auth.ts` ~115 строк, `routes/realtime.ts` ~354 строки.
 - `npm -s run check:api-types`, `npm -s run web:build` и `npm -s run smoke:web:denied-media` проходят после выноса.
 
 ### 2.3 Auth storage hardening (cookie-first)
