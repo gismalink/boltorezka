@@ -51,6 +51,7 @@ Progress note:
 - Второй инкремент декомпозиции `realtime` выполнен: ws-metrics helper вынесен из `routes/realtime.ts` в `routes/realtime-metrics.ts`.
 - Третий инкремент декомпозиции `auth` выполнен: session token lifecycle helper вынесен в `routes/auth-session.ts` (`issueAuthSessionToken`, `deleteAuthSession`).
 - Четвертый инкремент декомпозиции `auth` выполнен: SSO utility helpers вынесены в `routes/auth-sso.ts` (`resolveSafeReturnUrl`, `proxyAuthGetJson`).
+- Пятый инкремент декомпозиции `auth` выполнен: профильный upsert helper вынесен в `routes/auth-user-upsert.ts` (`upsertSsoUser`).
 - `npm run check:api-types` проходит после выноса.
 
 ### 2.3 Auth storage hardening (cookie-first)
