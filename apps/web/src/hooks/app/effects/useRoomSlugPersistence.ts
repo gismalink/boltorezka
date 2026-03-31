@@ -1,4 +1,4 @@
-import { useEffect, type Dispatch, type SetStateAction } from "react";
+import { useEffect, useRef, type Dispatch, type SetStateAction } from "react";
 
 const getRoomSlugStorageKey = (serverId: string, roomSlugStorageKey: string) => {
   const normalizedServerId = String(serverId || "").trim();
@@ -20,35 +20,39 @@ export function useRoomSlugPersistence({
   setRoomSlug,
   setChatRoomSlug
 }: UseRoomSlugPersistenceArgs) {
+  const skipNextPersistRef = useRef(false);
+
   useEffect(() => {
     const serverId = String(currentServerId || "").trim();
     if (!serverId) {
       return;
     }
 
-    const storageKey = getRoomSlugStorageKey(serverId, roomSlugStorageKey);
-    if (roomSlug) {
-      localStorage.setItem(storageKey, roomSlug);
+    if (skipNextPersistRef.current) {
+      skipNextPersistRef.current = false;
       return;
     }
 
-    localStorage.removeItem(storageKey);
+    const storageKey = getRoomSlugStorageKey(serverId, roomSlugStorageKey);
+    if (!roomSlug) {
+      return;
+    }
+
+    localStorage.setItem(storageKey, roomSlug);
   }, [currentServerId, roomSlug, roomSlugStorageKey]);
 
   useEffect(() => {
     const serverId = String(currentServerId || "").trim();
+    skipNextPersistRef.current = true;
+
     if (!serverId) {
       setRoomSlug("");
       setChatRoomSlug("");
       return;
     }
 
-    const scopedStorageKey = getRoomSlugStorageKey(serverId, roomSlugStorageKey);
-    const scopedStoredSlug = String(localStorage.getItem(scopedStorageKey) || "").trim();
-    const legacyStoredSlug = String(localStorage.getItem(roomSlugStorageKey) || "").trim();
-    const nextSlug = scopedStoredSlug || legacyStoredSlug;
-
-    setRoomSlug(nextSlug);
-    setChatRoomSlug(nextSlug);
+    // Selecting a server should not auto-enter any room on that server.
+    setRoomSlug("");
+    setChatRoomSlug("");
   }, [currentServerId, roomSlugStorageKey, setRoomSlug, setChatRoomSlug]);
 }
