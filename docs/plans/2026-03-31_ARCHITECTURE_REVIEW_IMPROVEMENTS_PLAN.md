@@ -40,7 +40,8 @@ Progress note:
 - Двадцать девятый инкремент декомпозиции `web` выполнен: voice participants derived cluster (`currentRoomVoiceTargets`, `memberVolumeByUserId`, `remoteVideoLabelsByUserId`, `videoPolicyAudienceKey`) вынесен в `hooks/voice/useVoiceParticipantsDerived.ts`.
 - Тридцатый инкремент декомпозиции `web` выполнен: voice UI maps cluster (`speakingVideoWindowIds`, `effectiveVoiceCameraEnabledByUserIdInCurrentRoom`, `voiceMediaStatusSummaryByUserIdInCurrentRoom`) вынесен в `hooks/voice/useVoiceMediaUiMaps.ts`.
 - Тридцать первый инкремент декомпозиции `web` выполнен: inline realtime lifecycle callbacks (`onSessionMoved`, `onChatCleared`, `onChatTyping`) вынесены в `hooks/realtime/useRealtimeLifecycleCallbacks.ts`.
-- Cumulative: `App.tsx` сокращен с 2101 до 1915 строк; web build + denied-media smoke проходят после каждого инкремента.
+- Тридцать второй инкремент декомпозиции `web` выполнен: props assembly для `ServerProfileModalContainer` (`permissions/state/data/actions/meta`) вынесен в `hooks/app/state/useServerProfileModalProps.ts`.
+- Cumulative: `App.tsx` сокращен с 2101 до 1911 строк; web build + denied-media smoke проходят после каждого инкремента.
 
 ### 2.2 API route decomposition
 

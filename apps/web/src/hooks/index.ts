@@ -23,6 +23,7 @@ export { useWorkspaceChatVideoProps } from "./app/state/useWorkspaceChatVideoPro
 export { useWorkspaceRoomsPanelProps } from "./app/state/useWorkspaceRoomsPanelProps";
 export { useWorkspaceUserDockController } from "./app/state/useWorkspaceUserDockController";
 export { useWorkspaceUserDockProps } from "./app/state/useWorkspaceUserDockProps";
+export { useServerProfileModalProps } from "./app/state/useServerProfileModalProps";
 export { useServerVideoWindowBounds } from "./app/state/useServerVideoWindowBounds";
 export { usePersistedClientSettings } from "./app/effects/usePersistedClientSettings";
 export { useMediaDevicePreferences } from "./media/useMediaDevicePreferences";

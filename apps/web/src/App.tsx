@@ -65,6 +65,7 @@ import {
   useCollapsedCategories,
   useCurrentRoomSnapshot,
   useMediaDevicePreferences,
+  useServerProfileModalProps,
   useRnnoiseRuntimeHandlers,
   useMicrophoneLevelMeter,
   useMicrophoneSelfMonitor,
@@ -1597,6 +1598,88 @@ export function App() {
     onSaveMemberPreference: saveMemberPreference
   });
 
+  const serverProfileModalProps = useServerProfileModalProps({
+    canManageUsers,
+    canPromote,
+    canManageServerControlPlane,
+    canViewTelemetry,
+    canManageAudioQuality,
+    serverMenuTab,
+    serverAudioQuality,
+    serverAudioQualitySaving,
+    serverChatImagePolicy,
+    serverVideoEffectType,
+    serverVideoResolution,
+    serverVideoFps,
+    serverScreenShareResolution,
+    serverVideoPixelFxStrength,
+    serverVideoPixelFxPixelSize,
+    serverVideoPixelFxGridThickness,
+    serverVideoAsciiCellSize,
+    serverVideoAsciiContrast,
+    serverVideoAsciiColor,
+    normalizedServerVideoWindowMinWidth,
+    normalizedServerVideoWindowMaxWidth,
+    adminUsers,
+    adminServers,
+    adminServersLoading,
+    selectedAdminServerId,
+    adminServerOverview,
+    adminServerOverviewLoading,
+    currentUserId: user?.id || "",
+    currentServerRole: currentServer?.role || null,
+    currentServerName: currentServer?.name || "",
+    currentServerId,
+    servers,
+    hasCurrentServer: Boolean(currentServer?.id),
+    serverMembers,
+    serverMembersLoading,
+    lastInviteUrl,
+    eventLog,
+    telemetrySummary,
+    callStatus,
+    lastCallPeer,
+    roomVoiceConnected,
+    callEventLog,
+    serverVideoPreviewStream,
+    setAppMenuOpen,
+    setServerMenuTab,
+    promote,
+    demote,
+    setUserBan,
+    setUserAccessState,
+    deleteUser,
+    forceDeleteUserNow,
+    setSelectedAdminServerId,
+    handleToggleAdminServerBlocked,
+    handleDeleteAdminServer,
+    handleCreateServerInvite,
+    handleCopyInviteUrl,
+    handleServerChange,
+    handleRenameCurrentServer,
+    handleLeaveCurrentServer,
+    handleDeleteCurrentServer,
+    handleRemoveServerMember,
+    handleBanServerMember,
+    handleUnbanServerMember,
+    handleTransferServerOwnership,
+    loadTelemetrySummary,
+    setServerAudioQualityValue,
+    setServerVideoEffectType,
+    setServerVideoResolution,
+    setServerVideoFps,
+    setServerScreenShareResolution,
+    setServerVideoPixelFxStrength,
+    setServerVideoPixelFxPixelSize,
+    setServerVideoPixelFxGridThickness,
+    setServerVideoAsciiCellSize,
+    setServerVideoAsciiContrast,
+    setServerVideoAsciiColor,
+    setBoundedServerVideoWindowMinWidth,
+    setBoundedServerVideoWindowMaxWidth,
+    creatingInvite
+  });
+
   const { chatPanelProps, videoWindowsOverlayProps } = useWorkspaceChatVideoProps({
     t,
     locale,
@@ -1755,98 +1838,11 @@ export function App() {
       <ServerProfileModalContainer
         open={appMenuOpen}
         t={t}
-        permissions={{
-          canManageUsers,
-          canPromote,
-          canManageServerControlPlane,
-          canViewTelemetry,
-          canManageAudioQuality
-        }}
-        state={{
-          serverMenuTab,
-          serverAudioQuality,
-          serverAudioQualitySaving,
-          serverChatImagePolicy,
-          serverVideoEffectType,
-          serverVideoResolution,
-          serverVideoFps,
-          serverScreenShareResolution,
-          serverVideoPixelFxStrength,
-          serverVideoPixelFxPixelSize,
-          serverVideoPixelFxGridThickness,
-          serverVideoAsciiCellSize,
-          serverVideoAsciiContrast,
-          serverVideoAsciiColor,
-          serverVideoWindowMinWidth: normalizedServerVideoWindowMinWidth,
-          serverVideoWindowMaxWidth: normalizedServerVideoWindowMaxWidth
-        }}
-        data={{
-          adminUsers,
-          adminServers,
-          adminServersLoading,
-          selectedAdminServerId,
-          adminServerOverview,
-          adminServerOverviewLoading,
-          currentUserId: user?.id || "",
-          currentServerRole: currentServer?.role || null,
-          currentServerName: currentServer?.name || "",
-          currentServerId,
-          servers,
-          hasCurrentServer: Boolean(currentServer?.id),
-          serverMembers,
-          serverMembersLoading,
-          lastInviteUrl,
-          eventLog,
-          telemetrySummary,
-          callStatus,
-          lastCallPeer,
-          roomVoiceConnected,
-          callEventLog,
-          serverVideoPreviewStream
-        }}
-        actions={{
-          onClose: () => setAppMenuOpen(false),
-          onSetServerMenuTab: setServerMenuTab,
-          onPromote: (userId) => void promote(userId),
-          onDemote: (userId) => void demote(userId),
-          onSetBan: (userId, banned) => void setUserBan(userId, banned),
-          onSetAccessState: (userId, accessState) => void setUserAccessState(userId, accessState),
-          onSoftDeleteUser: (userId) => void deleteUser(userId),
-          onForceDeleteUser: (userId) => void forceDeleteUserNow(userId),
-          onSelectAdminServer: setSelectedAdminServerId,
-          onToggleAdminServerBlocked: (serverId, blocked) => void handleToggleAdminServerBlocked(serverId, blocked),
-          onDeleteAdminServer: (serverId) => void handleDeleteAdminServer(serverId),
-          onCreateServerInvite: () => void handleCreateServerInvite(),
-          onCopyInviteUrl: () => void handleCopyInviteUrl(),
-          onChangeCurrentServer: (serverId) => {
-            handleServerChange(serverId);
-            setSelectedAdminServerId(serverId);
-          },
-          onRenameCurrentServer: (name) => void handleRenameCurrentServer(name),
-          onLeaveServer: () => void handleLeaveCurrentServer(),
-          onDeleteServer: () => void handleDeleteCurrentServer(),
-          onRemoveServerMember: (userId) => void handleRemoveServerMember(userId),
-          onBanServerMember: (userId) => void handleBanServerMember(userId),
-          onUnbanServerMember: (userId) => void handleUnbanServerMember(userId),
-          onTransferServerOwnership: (userId) => void handleTransferServerOwnership(userId),
-          onRefreshTelemetry: () => void loadTelemetrySummary(),
-          onSetServerAudioQuality: (value) => void setServerAudioQualityValue(value),
-          onSetServerVideoEffectType: setServerVideoEffectType,
-          onSetServerVideoResolution: setServerVideoResolution,
-          onSetServerVideoFps: setServerVideoFps,
-          onSetServerScreenShareResolution: setServerScreenShareResolution,
-          onSetServerVideoPixelFxStrength: setServerVideoPixelFxStrength,
-          onSetServerVideoPixelFxPixelSize: setServerVideoPixelFxPixelSize,
-          onSetServerVideoPixelFxGridThickness: setServerVideoPixelFxGridThickness,
-          onSetServerVideoAsciiCellSize: setServerVideoAsciiCellSize,
-          onSetServerVideoAsciiContrast: setServerVideoAsciiContrast,
-          onSetServerVideoAsciiColor: setServerVideoAsciiColor,
-          onSetServerVideoWindowMinWidth: setBoundedServerVideoWindowMinWidth,
-          onSetServerVideoWindowMaxWidth: setBoundedServerVideoWindowMaxWidth
-        }}
-        meta={{
-          creatingInvite
-        }}
+        permissions={serverProfileModalProps.permissions}
+        state={serverProfileModalProps.state}
+        data={serverProfileModalProps.data}
+        actions={serverProfileModalProps.actions}
+        meta={serverProfileModalProps.meta}
       />
 
       <ToastStack toasts={toasts} />
