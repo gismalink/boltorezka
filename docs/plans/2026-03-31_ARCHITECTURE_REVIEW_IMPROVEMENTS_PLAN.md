@@ -42,7 +42,8 @@ Progress note:
 - Тридцать первый инкремент декомпозиции `web` выполнен: inline realtime lifecycle callbacks (`onSessionMoved`, `onChatCleared`, `onChatTyping`) вынесены в `hooks/realtime/useRealtimeLifecycleCallbacks.ts`.
 - Тридцать второй инкремент декомпозиции `web` выполнен: props assembly для `ServerProfileModalContainer` (`permissions/state/data/actions/meta`) вынесен в `hooks/app/state/useServerProfileModalProps.ts`.
 - Тридцать третий инкремент декомпозиции `web` выполнен: ранние gate-return ветки (`DesktopBrowserCompletion`, `DeletedAccount`, `AccessState`) вынесены в `hooks/app/state/useAppEntryGates.tsx`.
-- Cumulative: `App.tsx` сокращен с 2101 до 1901 строк; web build + denied-media smoke проходят после каждого инкремента.
+- Тридцать четвертый инкремент декомпозиции `web` выполнен: блок глобальных оверлеев/футера/cookie вынесен из `App.tsx` в `components/AppShellOverlays.tsx`.
+- Cumulative: `App.tsx` сокращен с 2101 до 1868 строк; web build + denied-media smoke проходят после каждого инкремента.
 
 ### 2.2 API route decomposition
 

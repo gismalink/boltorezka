@@ -1,4 +1,5 @@
 export { AppHeader } from "./AppHeader";
+export { AppShellOverlays } from "./AppShellOverlays";
 export { AppWorkspacePanels } from "./AppWorkspacePanels";
 export {
 	AccessStateGate,

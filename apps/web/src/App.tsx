@@ -10,6 +10,7 @@ import {
   AccessStateGate,
   AgeVerificationRequiredOverlay,
   AppHeader,
+  AppShellOverlays,
   AppWorkspacePanels,
   AppUpdatedOverlay,
   CookieConsentBanner,
@@ -1835,62 +1836,28 @@ export function App() {
         meta={serverProfileModalProps.meta}
       />
 
-      <ToastStack toasts={toasts} />
-
-      {showAppUpdatedOverlay ? <AppUpdatedOverlay t={t} onContinue={acknowledgeUpdatedApp} /> : null}
-
-      {user && showFirstRunIntro ? (
-        <FirstRunIntroOverlay
-          t={t}
-          profileNameDraft={profileNameDraft}
-          onChangeProfileName={setProfileNameDraft}
-          profileSaving={profileSaving}
-          onContinue={() => {
-            void completeFirstRunIntro();
-          }}
-        />
-      ) : null}
-
-      {sessionMovedOverlayMessage ? (
-        <SessionMovedOverlay
-          message={sessionMovedOverlayMessage}
-          onReopenHere={() => {
-            setSessionMovedOverlayMessage("");
-            window.location.reload();
-          }}
-        />
-      ) : null}
-
-      {ageGateBlockedRoomSlug ? (
-        <AgeVerificationRequiredOverlay
-          t={t}
-          roomSlug={ageGateBlockedRoomSlug}
-          confirming={serverAgeConfirming}
-          onOpenAgeSettings={() => openUserSettings("profile")}
-          onConfirmAgeAndRetry={() => {
-            const blockedRoomSlug = ageGateBlockedRoomSlug;
-            void (async () => {
-              await handleConfirmServerAge();
-              setAgeGateBlockedRoomSlug("");
-              joinRoom(blockedRoomSlug);
-            })();
-          }}
-          onClose={() => setAgeGateBlockedRoomSlug("")}
-        />
-      ) : null}
-
-      <footer className="pointer-events-none fixed inset-x-0 bottom-1 z-[150] px-3">
-        <div className="mx-auto w-fit rounded-full border border-white/15 bg-black/35 px-4 py-1 backdrop-blur">
-          <div className="pointer-events-auto">
-            <LegalLinks compact lang={lang} />
-          </div>
-        </div>
-      </footer>
-
-      <CookieConsentBanner
+      <AppShellOverlays
+        toasts={toasts}
+        showAppUpdatedOverlay={showAppUpdatedOverlay}
+        t={t}
+        acknowledgeUpdatedApp={acknowledgeUpdatedApp}
+        user={user}
+        showFirstRunIntro={showFirstRunIntro}
+        profileNameDraft={profileNameDraft}
+        setProfileNameDraft={setProfileNameDraft}
+        profileSaving={profileSaving}
+        completeFirstRunIntro={completeFirstRunIntro}
+        sessionMovedOverlayMessage={sessionMovedOverlayMessage}
+        setSessionMovedOverlayMessage={setSessionMovedOverlayMessage}
+        ageGateBlockedRoomSlug={ageGateBlockedRoomSlug}
+        serverAgeConfirming={serverAgeConfirming}
+        openUserSettings={openUserSettings}
+        handleConfirmServerAge={handleConfirmServerAge}
+        setAgeGateBlockedRoomSlug={setAgeGateBlockedRoomSlug}
+        joinRoom={joinRoom}
         lang={lang}
-        visible={!cookieConsentAccepted}
-        onAccept={() => {
+        cookieConsentAccepted={cookieConsentAccepted}
+        onAcceptCookieConsent={() => {
           localStorage.setItem(COOKIE_CONSENT_KEY, "1");
           setCookieConsentAccepted(true);
         }}
