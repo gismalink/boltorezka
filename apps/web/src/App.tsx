@@ -76,6 +76,7 @@ import {
   useRealtimeChatLifecycle,
   useRealtimeConnectionReset,
   useRealtimeIncomingCallState,
+  useRealtimeLifecycleCallbacks,
   useScreenShareOrchestrator,
   useWsEventAcks,
   useRoomAdminActions,
@@ -1035,6 +1036,28 @@ export function App() {
     setDeletedAccountInfo
   });
 
+  const {
+    handleSessionMoved,
+    handleChatCleared,
+    handleChatTyping
+  } = useRealtimeLifecycleCallbacks({
+    chatRoomSlug,
+    roomSlugRef,
+    realtimeClientRef,
+    disconnectRoom,
+    playServerSound,
+    setRoomsPresenceBySlug,
+    setRoomsPresenceDetailsBySlug,
+    setRoomSlug,
+    setChatTypingByRoomSlug,
+    setSessionMovedOverlayMessage,
+    pushLog,
+    setMessages,
+    setMessagesHasMore,
+    setMessagesNextCursor,
+    applyRemoteTypingPayload
+  });
+
   const { loadOlderMessages } = useRealtimeChatLifecycle({
     token: serviceToken,
     reconnectNonce: realtimeReconnectNonce,
@@ -1078,52 +1101,9 @@ export function App() {
     onAck: handleWsAck,
     onNack: handleWsNack,
     onScreenShareState: handleIncomingScreenShareState,
-    onSessionMoved: ({ code, message }) => {
-      const activeSlug = String(roomSlugRef.current || "").trim();
-      if (activeSlug) {
-        void playServerSound("self_disconnected");
-        setRoomsPresenceBySlug((prev) => {
-          if (!(activeSlug in prev)) {
-            return prev;
-          }
-          const next = { ...prev };
-          delete next[activeSlug];
-          return next;
-        });
-        setRoomsPresenceDetailsBySlug((prev) => {
-          if (!(activeSlug in prev)) {
-            return prev;
-          }
-          const next = { ...prev };
-          delete next[activeSlug];
-          return next;
-        });
-      }
-
-      disconnectRoom();
-      realtimeClientRef.current?.dispose();
-      realtimeClientRef.current = null;
-      setRoomSlug("");
-      setChatTypingByRoomSlug({});
-      setSessionMovedOverlayMessage(`${code}: ${message}`);
-      pushLog(`session moved: ${code} ${message}`);
-    },
-    onChatCleared: (payload) => {
-      const targetRoomSlug = String(payload.roomSlug || "").trim();
-      if (!targetRoomSlug || targetRoomSlug !== chatRoomSlug) {
-        return;
-      }
-
-      setMessages([]);
-      setMessagesHasMore(false);
-      setMessagesNextCursor(null);
-
-      const deletedCount = Number(payload.deletedCount || 0);
-      pushLog(`channel chat cleared by admin (${Number.isFinite(deletedCount) ? deletedCount : 0})`);
-    },
-    onChatTyping: (payload) => {
-      applyRemoteTypingPayload(payload);
-    }
+    onSessionMoved: handleSessionMoved,
+    onChatCleared: handleChatCleared,
+    onChatTyping: handleChatTyping
   });
 
   useAdminUsersSync({

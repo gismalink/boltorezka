@@ -38,6 +38,7 @@ export { useChatTypingController } from "./realtime/useChatTypingController";
 export { useRealtimeChatLifecycle } from "./realtime/useRealtimeChatLifecycle";
 export { useRealtimeConnectionReset } from "./realtime/useRealtimeConnectionReset";
 export { useRealtimeIncomingCallState } from "./realtime/useRealtimeIncomingCallState";
+export { useRealtimeLifecycleCallbacks } from "./realtime/useRealtimeLifecycleCallbacks";
 export { useScreenShareOrchestrator } from "./realtime/useScreenShareOrchestrator";
 export { useWsEventAcks } from "./realtime/useWsEventAcks";
 export { useRoomAdminActions } from "./rooms/useRoomAdminActions";
