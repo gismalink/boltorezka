@@ -1358,6 +1358,21 @@ export function useLivekitVoiceRuntime({
     }
 
     try {
+      const restartableAudioTrack = currentAudioTrack as LocalAudioTrack & {
+        restartTrack?: (options?: unknown) => Promise<void>;
+      };
+      if (typeof restartableAudioTrack.restartTrack === "function") {
+        await restartableAudioTrack.restartTrack(buildAudioConstraints());
+        await applyNoiseSuppressionProcessor(restartableAudioTrack);
+        if (micMuted) {
+          await restartableAudioTrack.mute();
+        } else {
+          await restartableAudioTrack.unmute();
+        }
+        lastAppliedMicConfigRef.current = nextMicConfigKey;
+        return;
+      }
+
       const replacementTracks = await createLocalTracks({
         audio: buildAudioConstraints(),
         video: false
@@ -1405,6 +1420,17 @@ export function useLivekitVoiceRuntime({
     }
 
     try {
+      const restartableVideoTrack = currentVideoTrack as LocalTrack & {
+        restartTrack?: (options?: unknown) => Promise<void>;
+        mediaStreamTrack: MediaStreamTrack;
+      };
+      if (typeof restartableVideoTrack.restartTrack === "function") {
+        await restartableVideoTrack.restartTrack(buildCameraVideoOptions());
+        setLocalVideoStream(new MediaStream([restartableVideoTrack.mediaStreamTrack]));
+        lastAppliedCameraConfigRef.current = nextCameraConfigKey;
+        return;
+      }
+
       const replacementTracks = await createLocalTracks({
         audio: false,
         video: buildCameraVideoOptions()
