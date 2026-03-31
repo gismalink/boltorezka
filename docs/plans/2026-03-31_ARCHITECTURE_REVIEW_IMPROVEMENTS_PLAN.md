@@ -49,7 +49,9 @@ Progress note:
 - Required gate дополнен conditional cookie-mode smoke (`smoke:auth:cookie-mode`) при активном cookie режиме.
 - Host compose build args расширены: `TEST_VITE_AUTH_BEARER_STORAGE` / `PROD_VITE_AUTH_BEARER_STORAGE` (default `memory`).
 - Runtime ветка `if (!AUTH_COOKIE_MODE) ...` в session lifecycle удалена; bootstrap auth теперь server-session first.
-- Для финального закрытия подпункта с legacy bearer-only path требуется закрепить test smoke + ручной logout regression evidence.
+- Test deploy на `origin/feature/cookie-primary-hardening` (SHA `43d88bf1f9fce2e9c9846a3fdc4204d4a19b46d5`) прошел: `npm run deploy:test:smoke` -> PASS.
+- Server web e2e smoke с явным base URL прошел: `SMOKE_API_URL=https://test.datowave.com SMOKE_WEB_BASE_URL=https://test.datowave.com npm run smoke:web:e2e` -> PASS, включая `smoke:web:denied-media` после синхронизации маркеров.
+- Для формального закрытия подпункта остается только ручной login/logout regression note (test UI).
 
 ### 2.4 Release quality gates
 
