@@ -59,6 +59,51 @@ function pickPreferredMobileOutput(outputs: DeviceOption[]): string | null {
   return null;
 }
 
+function buildDeviceOptions(
+  devices: MediaDeviceInfo[],
+  kind: MediaDeviceKind,
+  fallbackLabel: string,
+  prefix: string
+): DeviceOption[] {
+  const filtered = devices.filter((item) => {
+    if (item.kind !== kind) {
+      return false;
+    }
+
+    const id = String(item.deviceId || "").trim();
+    if (!id) {
+      return false;
+    }
+
+    // Virtual routing aliases are confusing in selector UI and duplicate real devices.
+    if (id === "default" || id === "communications") {
+      return false;
+    }
+
+    return true;
+  });
+
+  const uniqueById = new Map<string, DeviceOption>();
+  filtered.forEach((item, index) => {
+    const id = String(item.deviceId || "").trim();
+    if (!id || uniqueById.has(id)) {
+      return;
+    }
+
+    uniqueById.set(id, {
+      id,
+      label: String(item.label || "").trim() || `${fallbackLabel} ${index + 1}`
+    });
+  });
+
+  const options = Array.from(uniqueById.values());
+  if (options.length > 0) {
+    return options;
+  }
+
+  return [{ id: FALLBACK_DEVICE_ID, label: prefix }];
+}
+
 export function useMediaDevicePreferences({
   t,
   selectedInputId,
@@ -183,28 +228,13 @@ export function useMediaDevicePreferences({
       const devices = await enumerateWithRetry();
       const rawInputs = devices.filter((item) => item.kind === "audioinput");
       const rawOutputs = devices.filter((item) => item.kind === "audiooutput");
-      const inputs = devices
-        .filter((item) => item.kind === "audioinput")
-        .map((item, index) => ({
-          id: item.deviceId || `input-${index}`,
-          label: item.label || `${t("settings.microphone")} ${index + 1}`
-        }));
-      const outputs = devices
-        .filter((item) => item.kind === "audiooutput")
-        .map((item, index) => ({
-          id: item.deviceId || `output-${index}`,
-          label: item.label || `${t("settings.outputDevice")} ${index + 1}`
-        }));
-      const videoInputs = devices
-        .filter((item) => item.kind === "videoinput")
-        .map((item, index) => ({
-          id: item.deviceId || `video-${index}`,
-          label: item.label || `${t("video.cameraDevice")} ${index + 1}`
-        }));
+      const inputs = buildDeviceOptions(devices, "audioinput", t("settings.microphone"), t("device.systemDefault"));
+      const outputs = buildDeviceOptions(devices, "audiooutput", t("settings.outputDevice"), t("device.systemDefault"));
+      const videoInputs = buildDeviceOptions(devices, "videoinput", t("video.cameraDevice"), t("video.systemCamera"));
 
       setInputDevices(inputs);
       setOutputDevices(outputs);
-      setVideoInputDevices(videoInputs.length > 0 ? videoInputs : [{ id: FALLBACK_DEVICE_ID, label: t("video.systemCamera") }]);
+      setVideoInputDevices(videoInputs);
 
       if (!mobileOutputDefaultAppliedRef.current && isMobileChromeBrowser()) {
         mobileOutputDefaultAppliedRef.current = true;
@@ -218,7 +248,7 @@ export function useMediaDevicePreferences({
         }
       }
 
-      const hasNoAudioDevices = inputs.length === 0 && outputs.length === 0;
+      const hasNoAudioDevices = rawInputs.length === 0 && rawOutputs.length === 0;
       const inputLabelsHidden = rawInputs.length > 0 && rawInputs.every((item) => !String(item.label || "").trim());
       const outputLabelsHidden = rawOutputs.length > 0 && rawOutputs.every((item) => !String(item.label || "").trim());
       const shouldRetryAfterPermission = hasNoAudioDevices || inputLabelsHidden || outputLabelsHidden;
@@ -228,33 +258,21 @@ export function useMediaDevicePreferences({
         const permissionGranted = await requestMicPermission();
         if (permissionGranted) {
           const devicesAfterPermission = await enumerateWithRetry();
-          const refreshedInputs = devicesAfterPermission
-            .filter((item) => item.kind === "audioinput")
-            .map((item, index) => ({
-              id: item.deviceId || `input-${index}`,
-              label: item.label || `${t("settings.microphone")} ${index + 1}`
-            }));
-          const refreshedOutputs = devicesAfterPermission
-            .filter((item) => item.kind === "audiooutput")
-            .map((item, index) => ({
-              id: item.deviceId || `output-${index}`,
-              label: item.label || `${t("settings.outputDevice")} ${index + 1}`
-            }));
-          const refreshedVideoInputs = devicesAfterPermission
-            .filter((item) => item.kind === "videoinput")
-            .map((item, index) => ({
-              id: item.deviceId || `video-${index}`,
-              label: item.label || `${t("video.cameraDevice")} ${index + 1}`
-            }));
+          const refreshedInputs = buildDeviceOptions(devicesAfterPermission, "audioinput", t("settings.microphone"), t("device.systemDefault"));
+          const refreshedOutputs = buildDeviceOptions(devicesAfterPermission, "audiooutput", t("settings.outputDevice"), t("device.systemDefault"));
+          const refreshedVideoInputs = buildDeviceOptions(devicesAfterPermission, "videoinput", t("video.cameraDevice"), t("video.systemCamera"));
 
-          setInputDevices(refreshedInputs.length > 0 ? refreshedInputs : [{ id: FALLBACK_DEVICE_ID, label: t("device.systemDefault") }]);
-          setOutputDevices(refreshedOutputs.length > 0 ? refreshedOutputs : [{ id: FALLBACK_DEVICE_ID, label: t("device.systemDefault") }]);
-          setVideoInputDevices(refreshedVideoInputs.length > 0 ? refreshedVideoInputs : [{ id: FALLBACK_DEVICE_ID, label: t("video.systemCamera") }]);
+          setInputDevices(refreshedInputs);
+          setOutputDevices(refreshedOutputs);
+          setVideoInputDevices(refreshedVideoInputs);
 
-          if (refreshedInputs.length > 0 && !refreshedInputs.some((item) => item.id === selectedInputId)) {
+          const refreshedRawInputs = devicesAfterPermission.filter((item) => item.kind === "audioinput");
+          const refreshedRawOutputs = devicesAfterPermission.filter((item) => item.kind === "audiooutput");
+
+          if (refreshedRawInputs.length > 0 && !refreshedInputs.some((item) => item.id === selectedInputId)) {
             setSelectedInputId(refreshedInputs[0].id);
           }
-          if (refreshedOutputs.length > 0 && !refreshedOutputs.some((item) => item.id === selectedOutputId)) {
+          if (refreshedRawOutputs.length > 0 && !refreshedOutputs.some((item) => item.id === selectedOutputId)) {
             setSelectedOutputId(refreshedOutputs[0].id);
           }
           if (refreshedVideoInputs.length > 0 && !refreshedVideoInputs.some((item) => item.id === selectedVideoInputId)) {

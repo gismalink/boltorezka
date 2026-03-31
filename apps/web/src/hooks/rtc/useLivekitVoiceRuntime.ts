@@ -477,6 +477,7 @@ export function useLivekitVoiceRuntime({
   const connectInFlightRef = useRef<Promise<void> | null>(null);
   const disconnectRequestedRef = useRef(false);
   const lastAppliedMicConfigRef = useRef("");
+  const lastAppliedCameraConfigRef = useRef("");
   const lastRnnoiseTelemetryStatusRef = useRef("");
 
   const trackRnnoiseStatus = useCallback((
@@ -571,6 +572,11 @@ export function useLivekitVoiceRuntime({
       frameRate: { ideal: videoFps }
     };
   }, [videoFps, videoResolution]);
+
+  const buildCameraConfigKey = useCallback(() => {
+    const deviceId = selectedVideoInputId && selectedVideoInputId !== "default" ? selectedVideoInputId : "default";
+    return `${deviceId}:${videoResolution}:${videoFps}`;
+  }, [selectedVideoInputId, videoFps, videoResolution]);
 
   const buildScreenShareOptions = useCallback((): ScreenShareCaptureOptions => {
     const targetResolution = parseScreenShareResolution(screenShareResolution);
@@ -912,6 +918,7 @@ export function useLivekitVoiceRuntime({
     setCallStatus("idle");
     setLastCallPeer("");
     lastAppliedMicConfigRef.current = "";
+    lastAppliedCameraConfigRef.current = "";
   }, [releaseRnnoiseProcessor, setCallStatus, setLastCallPeer]);
 
   const publishMissingVideoTrack = useCallback(async () => {
@@ -939,13 +946,15 @@ export function useLivekitVoiceRuntime({
     await room.localParticipant.publishTrack(localVideoTrack);
     localTracksRef.current.set(Track.Source.Camera, localVideoTrack);
     setLocalVideoStream(new MediaStream([localVideoTrack.mediaStreamTrack]));
-  }, [allowVideoStreaming, buildCameraVideoOptions, videoStreamingEnabled]);
+    lastAppliedCameraConfigRef.current = buildCameraConfigKey();
+  }, [allowVideoStreaming, buildCameraConfigKey, buildCameraVideoOptions, videoStreamingEnabled]);
 
   const unpublishVideoTrack = useCallback(() => {
     const room = roomRef.current;
     const localVideoTrack = localTracksRef.current.get(Track.Source.Camera);
     if (!localVideoTrack) {
       setLocalVideoStream(null);
+      lastAppliedCameraConfigRef.current = "";
       return;
     }
 
@@ -953,6 +962,7 @@ export function useLivekitVoiceRuntime({
     localVideoTrack.stop();
     localTracksRef.current.delete(Track.Source.Camera);
     setLocalVideoStream(null);
+    lastAppliedCameraConfigRef.current = "";
   }, []);
 
   const stopLocalScreenShare = useCallback(async () => {
@@ -1198,6 +1208,7 @@ export function useLivekitVoiceRuntime({
         const localVideoTrack = localTracksRef.current.get(Track.Source.Camera);
         setLocalVideoStream(localVideoTrack ? new MediaStream([localVideoTrack.mediaStreamTrack]) : null);
         lastAppliedMicConfigRef.current = buildMicConfigKey();
+        lastAppliedCameraConfigRef.current = buildCameraConfigKey();
 
         refreshRemoteStates(room);
         applyAudioOutputSettings();
@@ -1244,6 +1255,7 @@ export function useLivekitVoiceRuntime({
     roomVoiceTargets,
     roomSlug,
     buildAudioConstraints,
+    buildCameraConfigKey,
     buildCameraVideoOptions,
     buildMicConfigKey,
     selectedInputId,
@@ -1375,6 +1387,48 @@ export function useLivekitVoiceRuntime({
   useEffect(() => {
     void switchMicrophoneInput();
   }, [switchMicrophoneInput]);
+
+  const switchCameraInput = useCallback(async () => {
+    if (!roomVoiceConnected || !allowVideoStreaming || !videoStreamingEnabled) {
+      return;
+    }
+
+    const room = roomRef.current;
+    const currentVideoTrack = localTracksRef.current.get(Track.Source.Camera);
+    if (!room || !currentVideoTrack) {
+      return;
+    }
+
+    const nextCameraConfigKey = buildCameraConfigKey();
+    if (lastAppliedCameraConfigRef.current === nextCameraConfigKey) {
+      return;
+    }
+
+    try {
+      const replacementTracks = await createLocalTracks({
+        audio: false,
+        video: buildCameraVideoOptions()
+      });
+      const replacementVideoTrack = replacementTracks.find((track) => track.kind === Track.Kind.Video);
+      if (!replacementVideoTrack) {
+        replacementTracks.forEach((track) => track.stop());
+        return;
+      }
+
+      room.localParticipant.unpublishTrack(currentVideoTrack);
+      currentVideoTrack.stop();
+      await room.localParticipant.publishTrack(replacementVideoTrack);
+      localTracksRef.current.set(Track.Source.Camera, replacementVideoTrack);
+      setLocalVideoStream(new MediaStream([replacementVideoTrack.mediaStreamTrack]));
+      lastAppliedCameraConfigRef.current = nextCameraConfigKey;
+    } catch (error) {
+      pushCallLog(`livekit camera device switch failed: ${error instanceof Error ? error.message : "unknown error"}`);
+    }
+  }, [allowVideoStreaming, buildCameraConfigKey, buildCameraVideoOptions, pushCallLog, roomVoiceConnected, videoStreamingEnabled]);
+
+  useEffect(() => {
+    void switchCameraInput();
+  }, [switchCameraInput]);
 
   useEffect(() => {
     if (!roomVoiceConnected || !allowVideoStreaming || !videoStreamingEnabled) {
