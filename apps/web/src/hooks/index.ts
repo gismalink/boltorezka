@@ -5,6 +5,7 @@ export { useAppShellLifecycleEffects } from "./app/effects/useAppShellLifecycleE
 export { useAppEventLogs } from "./app/state/useAppEventLogs";
 export { useAppControllers } from "./app/state/useAppControllers";
 export { useAppUiState, type AppMobileTab, type AppServerMenuTab } from "./app/state/useAppUiState";
+export { useAppEntryGates } from "./app/state/useAppEntryGates";
 export { useAutoRoomVoiceConnection } from "./voice/useAutoRoomVoiceConnection";
 export { useBuildVersionSync } from "./app/effects/useBuildVersionSync";
 export { useDesktopUpdateFlow } from "./app/effects/useDesktopUpdateFlow";

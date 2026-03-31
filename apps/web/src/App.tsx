@@ -41,6 +41,7 @@ import {
 import type { InputProfile, MediaDevicesState } from "./components";
 import {
   useAppUiState,
+  useAppEntryGates,
   useAppControllers,
   useAppShellLifecycleEffects,
   useAdminUsersSync,
@@ -1719,37 +1720,26 @@ export function App() {
     speakingVideoWindowIds
   });
 
-  if (showDesktopBrowserCompletion) {
-    return <DesktopBrowserCompletionGate desktopHandoffError={desktopHandoffError} />;
-  }
+  const {
+    entryGate,
+    showEmptyServerOnboarding
+  } = useAppEntryGates({
+    showDesktopBrowserCompletion,
+    desktopHandoffError,
+    user,
+    deletedAccountInfo,
+    restoreDeletedAccountPending,
+    restoreDeletedAccount,
+    logout,
+    t,
+    canUseService,
+    pendingAccessRefreshInSec,
+    serversLoading,
+    serversCount: servers.length
+  });
 
-  if (!user && deletedAccountInfo) {
-    return (
-      <DeletedAccountGate
-        t={t}
-        daysRemaining={deletedAccountInfo.daysRemaining}
-        restoring={restoreDeletedAccountPending}
-        onRestore={() => {
-          void restoreDeletedAccount();
-        }}
-        onLogout={logout}
-      />
-    );
-  }
-
-  const showEmptyServerOnboarding = Boolean(user) && !serversLoading && servers.length === 0;
-
-  if (user && !canUseService) {
-    const blocked = user.access_state === "blocked";
-    return (
-      <AccessStateGate
-        blocked={blocked}
-        pendingAccessRefreshInSec={pendingAccessRefreshInSec}
-        t={t}
-        onRefresh={() => window.location.reload()}
-        onLogout={logout}
-      />
-    );
+  if (entryGate) {
+    return entryGate;
   }
 
   return (
