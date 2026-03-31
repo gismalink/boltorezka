@@ -18,6 +18,7 @@ import {
 import { deleteAuthSession, issueAuthSessionToken } from "./auth-session.js";
 import { proxyAuthGetJson, resolveSafeReturnUrl } from "./auth-sso.js";
 import { upsertSsoUser } from "./auth-user-upsert.js";
+import { resolveLivekitClientUrl } from "./auth-livekit.js";
 import type {
   AuthModeResponse,
   LivekitTokenResponse,
@@ -55,48 +56,6 @@ type DesktopHandoffAttemptState = {
   createdAt: string;
   completedAt: string | null;
 };
-
-function resolveLivekitClientUrl(request: FastifyRequest): string {
-  const raw = String(config.livekitUrl || "").trim();
-  if (!raw) {
-    return raw;
-  }
-
-  try {
-    const parsed = new URL(raw);
-    const forwardedProto = String(request.headers["x-forwarded-proto"] || "").trim().toLowerCase();
-    const forwardedHostRaw = String(request.headers["x-forwarded-host"] || "").trim();
-    const requestHostRaw = String(request.headers.host || "").trim();
-    const sourceHost = (forwardedHostRaw || requestHostRaw).split(",")[0]?.trim() || "";
-    const normalizedHost = sourceHost.includes(":") ? sourceHost.split(":")[0] : sourceHost;
-    const requestProto = forwardedProto || String((request as { protocol?: string }).protocol || "").trim().toLowerCase();
-    const isHttps = requestProto === "https";
-    const isIpHost = /^\d{1,3}(?:\.\d{1,3}){3}$/.test(parsed.hostname);
-    const isLegacyLivekitHost = parsed.hostname === "test.boltorezka.gismalink.art"
-      || parsed.hostname === "boltorezka.gismalink.art";
-
-    // If config still points to legacy host, prefer current ingress host from forwarded headers.
-    if (normalizedHost && isLegacyLivekitHost) {
-      parsed.hostname = normalizedHost;
-      parsed.port = "";
-    }
-
-    if (isHttps && isIpHost) {
-      if (normalizedHost) {
-        parsed.hostname = normalizedHost;
-        parsed.port = "";
-      }
-    }
-
-    if (isHttps && parsed.protocol === "ws:") {
-      parsed.protocol = "wss:";
-    }
-
-    return parsed.toString();
-  } catch {
-    return raw;
-  }
-}
 
 export async function authRoutes(fastify: FastifyInstance) {
   const limitSsoStart = makeAuthRateLimiter({
