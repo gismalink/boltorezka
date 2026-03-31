@@ -4,12 +4,7 @@ import { db } from "../db.js";
 import { config } from "../config.js";
 import { registerRealtimeSocket, unregisterRealtimeSocket } from "../realtime-broadcast.js";
 import { normalizeRequestId, sendJson, sendNack } from "./realtime-io.js";
-import {
-  handleCallMicState,
-  handleCallVideoState,
-  handleScreenShareStart,
-  handleScreenShareStop
-} from "./realtime-call-screen.js";
+import { createRealtimeCallMediaEventHandlers } from "./realtime-call-media-events.js";
 import { createRealtimeCallSignalingHandler } from "./realtime-call-signaling.js";
 import { handleChatDelete, handleChatEdit, handleChatSend, handleChatTyping } from "./realtime-chat.js";
 import { createRealtimeCallHelpers } from "./realtime-call-helpers.js";
@@ -229,6 +224,35 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
     getUserRoomSockets,
     socketsByRoomId,
     sendJson
+  });
+  const {
+    handleScreenShareStartEvent,
+    handleScreenShareStopEvent,
+    handleCallMicStateEvent,
+    handleCallVideoStateEvent
+  } = createRealtimeCallMediaEventHandlers({
+    handleCallIdempotency,
+    sendNoActiveRoomNack,
+    sendValidationNack,
+    sendForbiddenNack,
+    sendNack,
+    sendTargetNotInRoomNack,
+    sendAckWithMetrics,
+    incrementMetric,
+    logCallDebug,
+    normalizeRequestId,
+    getPayloadString,
+    setCanonicalMediaState,
+    buildCallTraceId,
+    buildCallMicStateRelayEnvelope,
+    buildCallVideoStateRelayEnvelope,
+    relayToTargetOrRoom,
+    getUserRoomSockets,
+    socketsByRoomId,
+    sendJson,
+    screenShareOwnerByRoomId,
+    buildScreenShareStateEnvelope,
+    broadcastRoom
   });
 
   fastify.get(
@@ -502,105 +526,17 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
               }
 
               case "screen.share.start": {
-                handleScreenShareStart({
-                  connection,
-                  state,
-                  payload,
-                  requestId,
-                  eventType,
-                  sendNoActiveRoomNack,
-                  sendValidationNack,
-                  sendForbiddenNack,
-                  sendNack,
-                  sendTargetNotInRoomNack,
-                  sendAckWithMetrics,
-                  incrementMetric,
-                  logCallDebug,
-                  normalizeRequestId,
-                  getPayloadString,
-                  setCanonicalMediaState,
-                  buildCallTraceId,
-                  knownMessageType: knownMessage.type,
-                  buildCallMicStateRelayEnvelope,
-                  buildCallVideoStateRelayEnvelope,
-                  relayToTargetOrRoom,
-                  getUserRoomSockets,
-                  socketsByRoomId,
-                  sendJson,
-                  screenShareOwnerByRoomId,
-                  buildScreenShareStateEnvelope,
-                  broadcastRoom
-                });
+                handleScreenShareStartEvent(connection, state, payload, requestId, eventType, knownMessage.type);
                 return;
               }
 
               case "screen.share.stop": {
-                handleScreenShareStop({
-                  connection,
-                  state,
-                  payload,
-                  requestId,
-                  eventType,
-                  sendNoActiveRoomNack,
-                  sendValidationNack,
-                  sendForbiddenNack,
-                  sendNack,
-                  sendTargetNotInRoomNack,
-                  sendAckWithMetrics,
-                  incrementMetric,
-                  logCallDebug,
-                  normalizeRequestId,
-                  getPayloadString,
-                  setCanonicalMediaState,
-                  buildCallTraceId,
-                  knownMessageType: knownMessage.type,
-                  buildCallMicStateRelayEnvelope,
-                  buildCallVideoStateRelayEnvelope,
-                  relayToTargetOrRoom,
-                  getUserRoomSockets,
-                  socketsByRoomId,
-                  sendJson,
-                  screenShareOwnerByRoomId,
-                  buildScreenShareStateEnvelope,
-                  broadcastRoom
-                });
+                handleScreenShareStopEvent(connection, state, payload, requestId, eventType, knownMessage.type);
                 return;
               }
 
               case "call.mic_state": {
-                if (await handleCallIdempotency(connection, state, requestId, eventType)) {
-                  return;
-                }
-
-                handleCallMicState({
-                  connection,
-                  state,
-                  payload,
-                  requestId,
-                  eventType,
-                  sendNoActiveRoomNack,
-                  sendValidationNack,
-                  sendForbiddenNack,
-                  sendNack,
-                  sendTargetNotInRoomNack,
-                  sendAckWithMetrics,
-                  incrementMetric,
-                  logCallDebug,
-                  normalizeRequestId,
-                  getPayloadString,
-                  setCanonicalMediaState,
-                  buildCallTraceId,
-                  knownMessageType: knownMessage.type,
-                  buildCallMicStateRelayEnvelope,
-                  buildCallVideoStateRelayEnvelope,
-                  relayToTargetOrRoom,
-                  getUserRoomSockets,
-                  socketsByRoomId,
-                  sendJson,
-                  screenShareOwnerByRoomId,
-                  buildScreenShareStateEnvelope,
-                  broadcastRoom
-                });
+                await handleCallMicStateEvent(connection, state, payload, requestId, eventType, knownMessage.type);
                 return;
               }
 
@@ -619,39 +555,7 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
               }
 
               case "call.video_state": {
-                if (await handleCallIdempotency(connection, state, requestId, eventType)) {
-                  return;
-                }
-
-                handleCallVideoState({
-                  connection,
-                  state,
-                  payload,
-                  requestId,
-                  eventType,
-                  sendNoActiveRoomNack,
-                  sendValidationNack,
-                  sendForbiddenNack,
-                  sendNack,
-                  sendTargetNotInRoomNack,
-                  sendAckWithMetrics,
-                  incrementMetric,
-                  logCallDebug,
-                  normalizeRequestId,
-                  getPayloadString,
-                  setCanonicalMediaState,
-                  buildCallTraceId,
-                  knownMessageType: knownMessage.type,
-                  buildCallMicStateRelayEnvelope,
-                  buildCallVideoStateRelayEnvelope,
-                  relayToTargetOrRoom,
-                  getUserRoomSockets,
-                  socketsByRoomId,
-                  sendJson,
-                  screenShareOwnerByRoomId,
-                  buildScreenShareStateEnvelope,
-                  broadcastRoom
-                });
+                await handleCallVideoStateEvent(connection, state, payload, requestId, eventType, knownMessage.type);
                 return;
               }
             }

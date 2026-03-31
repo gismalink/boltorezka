@@ -64,7 +64,8 @@ Progress note:
 - Пятнадцатый инкремент декомпозиции `realtime` выполнен: room join/leave handlers вынесены в `routes/realtime-room-events.ts`.
 - Шестнадцатый инкремент декомпозиции `realtime` выполнен: call signaling (`call.offer`/`call.answer`/`call.ice`) вынесен в `routes/realtime-call-signaling.ts`.
 - Семнадцатый инкремент декомпозиции `realtime` выполнен: ws ticket auth + connection initialization вынесены в `routes/realtime-ws-auth.ts`.
-- Текущий результат по размеру: `routes/auth.ts` ~931 строк, `routes/realtime.ts` ~693 строки.
+- Восемнадцатый инкремент декомпозиции `realtime` выполнен: media/screen dispatch (`screen.share.*`, `call.mic_state`, `call.video_state`) вынесен в `routes/realtime-call-media-events.ts`.
+- Текущий результат по размеру: `routes/auth.ts` ~931 строк, `routes/realtime.ts` ~597 строк.
 - `npm -s run check:api-types`, `npm -s run web:build` и `npm -s run smoke:web:denied-media` проходят после выноса.
 
 ### 2.3 Auth storage hardening (cookie-first)
