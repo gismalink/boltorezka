@@ -38,7 +38,8 @@ Progress note:
 - Вынесена сборка `auth/room/chat` controllers + telemetry loader в `hooks/app/state/useAppControllers.ts`.
 - Вынесен room/category editor state cluster в `hooks/rooms/useRoomEditorState.ts`.
 - Двадцать девятый инкремент декомпозиции `web` выполнен: voice participants derived cluster (`currentRoomVoiceTargets`, `memberVolumeByUserId`, `remoteVideoLabelsByUserId`, `videoPolicyAudienceKey`) вынесен в `hooks/voice/useVoiceParticipantsDerived.ts`.
-- Cumulative: `App.tsx` сокращен с 2101 до 1976 строк; web build + denied-media smoke проходят после каждого инкремента.
+- Тридцатый инкремент декомпозиции `web` выполнен: voice UI maps cluster (`speakingVideoWindowIds`, `effectiveVoiceCameraEnabledByUserIdInCurrentRoom`, `voiceMediaStatusSummaryByUserIdInCurrentRoom`) вынесен в `hooks/voice/useVoiceMediaUiMaps.ts`.
+- Cumulative: `App.tsx` сокращен с 2101 до 1935 строк; web build + denied-media smoke проходят после каждого инкремента.
 
 ### 2.2 API route decomposition
 

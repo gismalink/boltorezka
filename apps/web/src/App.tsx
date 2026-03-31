@@ -94,6 +94,7 @@ import {
   useServerMenuAccessGuard,
   useToastQueue,
   useLivekitVoiceRuntime,
+  useVoiceMediaUiMaps,
   useVoiceSignalingOrchestrator,
   useVoiceParticipantsDerived,
   useVoiceRoomStateMaps,
@@ -739,22 +740,6 @@ export function App() {
     initialAudioOutputMutedByUserIdInCurrentRoom: voiceInitialAudioOutputMutedByUserIdInCurrentRoom
   });
 
-  const speakingVideoWindowIds = useMemo(() => {
-    const ids = new Set<string>();
-
-    remoteSpeakingPeerUserIds
-      .map((userId) => String(userId || "").trim())
-      .filter((userId) => userId.length > 0)
-      .forEach((userId) => ids.add(userId));
-
-    const localUserId = String(user?.id || "").trim();
-    if (localUserId && voiceMicStateByUserIdInCurrentRoom[localUserId] === "speaking") {
-      ids.add("local");
-    }
-
-    return Array.from(ids);
-  }, [remoteSpeakingPeerUserIds, user?.id, voiceMicStateByUserIdInCurrentRoom]);
-
   const {
     currentRoomScreenShareOwner,
     isCurrentUserScreenShareOwner,
@@ -784,48 +769,22 @@ export function App() {
     sendWsEventAwaitAck
   });
 
-  const effectiveVoiceCameraEnabledByUserIdInCurrentRoom = useMemo(() => {
-    const map: Record<string, boolean> = {};
-    const activeTargetIds = new Set(
-      currentRoomVoiceTargets
-        .map((member) => String(member.userId || "").trim())
-        .filter((userId) => userId.length > 0)
-    );
-
-    // Keep camera status strictly scoped to current room participants and active RTC peers.
-    activeTargetIds.forEach((userId) => {
-      const hasRemoteStream = Object.prototype.hasOwnProperty.call(remoteVideoStreamsByUserId, userId);
-      // LiveKit-only path: remote camera visibility follows subscribed remote video tracks.
-      map[userId] = hasRemoteStream;
-    });
-
-    const localUserId = String(user?.id || "").trim();
-    if (localUserId) {
-      map[localUserId] = Boolean(roomVoiceConnected && allowVideoStreaming && cameraEnabled);
-    }
-
-    return map;
-  }, [
-    remoteVideoStreamsByUserId,
+  const {
+    speakingVideoWindowIds,
+    effectiveVoiceCameraEnabledByUserIdInCurrentRoom,
+    voiceMediaStatusSummaryByUserIdInCurrentRoom
+  } = useVoiceMediaUiMaps({
     currentRoomVoiceTargets,
-    user?.id,
+    remoteSpeakingPeerUserIds,
+    currentUserId: user?.id || "",
+    voiceMicStateByUserIdInCurrentRoom,
+    remoteVideoStreamsByUserId,
     roomVoiceConnected,
     allowVideoStreaming,
-    cameraEnabled
-  ]);
-
-  const voiceMediaStatusSummaryByUserIdInCurrentRoom = useMemo(() => {
-    const map = {
-      ...voiceMediaStatusByPeerUserId
-    };
-
-    const localUserId = String(user?.id || "").trim();
-    if (localUserId) {
-      map[localUserId] = localVoiceMediaStatusSummary;
-    }
-
-    return map;
-  }, [voiceMediaStatusByPeerUserId, user?.id, localVoiceMediaStatusSummary]);
+    cameraEnabled,
+    voiceMediaStatusByPeerUserId,
+    localVoiceMediaStatusSummary
+  });
 
   const {
     authController,
