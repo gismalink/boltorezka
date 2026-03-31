@@ -32,8 +32,12 @@ Scope: стабилизация архитектурных границ web/api/
 
 Progress note:
 
-- Первый инкремент выноса admin-orchestration выполнен: admin server handlers (`block/unblock`, `delete`) вынесены из `App.tsx` в `hooks/rooms/useAdminServerActions.ts`.
-- `App.tsx` уменьшен с 2101 до 2051 строк без изменения поведения (web build и type checks проходят).
+- Вынесены admin server handlers (`block/unblock`, `delete`) из `App.tsx` в `hooks/rooms/useAdminServerActions.ts`.
+- Вынесены deleted-account actions (`restore/delete`) в `hooks/auth/useDeletedAccountActions.ts`.
+- Вынесены RNNoise runtime handlers в `hooks/media/useRnnoiseRuntimeHandlers.ts`.
+- Вынесена сборка `auth/room/chat` controllers + telemetry loader в `hooks/app/state/useAppControllers.ts`.
+- Вынесен room/category editor state cluster в `hooks/rooms/useRoomEditorState.ts`.
+- Cumulative: `App.tsx` сокращен с 2101 до 1993 строк; web build + denied-media smoke проходят после каждого инкремента.
 
 ### 2.2 API route decomposition
 

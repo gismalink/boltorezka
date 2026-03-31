@@ -1,11 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ApiError, api } from "./api";
+import { ApiError } from "./api";
 import { TooltipPortal } from "./TooltipPortal";
 import {
-  AuthController,
-  ChatController,
   RealtimeClient,
-  RoomAdminController,
   WsMessageController
 } from "./services";
 import type { CallStatus } from "./services";
@@ -44,11 +41,13 @@ import {
 import type { InputProfile, MediaDevicesState } from "./components";
 import {
   useAppUiState,
+  useAppControllers,
   useAppShellLifecycleEffects,
   useAdminUsersSync,
   useAutoRoomVoiceConnection,
   useAppEventLogs,
   useAuthProfileFlow,
+  useDeletedAccountActions,
   useBuildVersionSync,
   useDesktopHandoffState,
   useDesktopUpdateFlow,
@@ -66,6 +65,7 @@ import {
   useCollapsedCategories,
   useCurrentRoomSnapshot,
   useMediaDevicePreferences,
+  useRnnoiseRuntimeHandlers,
   useMicrophoneLevelMeter,
   useMicrophoneSelfMonitor,
   usePersistedClientSettings,
@@ -80,6 +80,7 @@ import {
   useWsEventAcks,
   useRoomAdminActions,
   useRoomMediaCapabilities,
+  useRoomEditorState,
   useRoomMemberPreferencesOrchestrator,
   useRoomPresenceActions,
   useRoomSelectionGuard,
@@ -99,7 +100,7 @@ import {
 } from "./hooks";
 import { detectInitialLang, LOCALE_BY_LANG, TEXT, type Lang } from "./i18n";
 import { DEFAULT_UI_THEME, formatBuildDateLabel, normalizeUiTheme, readNonZeroDefaultVolume } from "./utils/appShell";
-import { clearPersistedBearerToken, readPersistedBearerToken } from "./utils/authStorage";
+import { readPersistedBearerToken } from "./utils/authStorage";
 import type {
   AdminServerListItem,
   AdminServerOverview,
@@ -193,22 +194,40 @@ export function App() {
   const [selectedAdminServerId, setSelectedAdminServerId] = useState("");
   const [adminServerOverview, setAdminServerOverview] = useState<AdminServerOverview | null>(null);
   const [adminServerOverviewLoading, setAdminServerOverviewLoading] = useState(false);
-  const [newRoomSlug, setNewRoomSlug] = useState("");
-  const [newRoomTitle, setNewRoomTitle] = useState("");
-  const [newRoomKind, setNewRoomKind] = useState<RoomKind>("text");
-  const [newRoomCategoryId, setNewRoomCategoryId] = useState<string>("none");
-  const [newCategorySlug, setNewCategorySlug] = useState("");
-  const [newCategoryTitle, setNewCategoryTitle] = useState("");
-  const [categoryPopupOpen, setCategoryPopupOpen] = useState(false);
-  const [channelPopupOpen, setChannelPopupOpen] = useState(false);
-  const [categorySettingsPopupOpenId, setCategorySettingsPopupOpenId] = useState<string | null>(null);
-  const [editingCategoryTitle, setEditingCategoryTitle] = useState("");
-  const [channelSettingsPopupOpenId, setChannelSettingsPopupOpenId] = useState<string | null>(null);
-  const [editingRoomTitle, setEditingRoomTitle] = useState("");
-  const [editingRoomKind, setEditingRoomKind] = useState<RoomKind>("text");
-  const [editingRoomCategoryId, setEditingRoomCategoryId] = useState<string>("none");
-  const [editingRoomNsfw, setEditingRoomNsfw] = useState(false);
-  const [editingRoomAudioQualitySetting, setEditingRoomAudioQualitySetting] = useState<ChannelAudioQualitySetting>("server_default");
+  const {
+    newRoomSlug,
+    setNewRoomSlug,
+    newRoomTitle,
+    setNewRoomTitle,
+    newRoomKind,
+    setNewRoomKind,
+    newRoomCategoryId,
+    setNewRoomCategoryId,
+    newCategorySlug,
+    setNewCategorySlug,
+    newCategoryTitle,
+    setNewCategoryTitle,
+    categoryPopupOpen,
+    setCategoryPopupOpen,
+    channelPopupOpen,
+    setChannelPopupOpen,
+    categorySettingsPopupOpenId,
+    setCategorySettingsPopupOpenId,
+    editingCategoryTitle,
+    setEditingCategoryTitle,
+    channelSettingsPopupOpenId,
+    setChannelSettingsPopupOpenId,
+    editingRoomTitle,
+    setEditingRoomTitle,
+    editingRoomKind,
+    setEditingRoomKind,
+    editingRoomCategoryId,
+    setEditingRoomCategoryId,
+    editingRoomNsfw,
+    setEditingRoomNsfw,
+    editingRoomAudioQualitySetting,
+    setEditingRoomAudioQualitySetting
+  } = useRoomEditorState();
   const [micMuted, setMicMuted] = useState<boolean>(() => localStorage.getItem("boltorezka_mic_muted") !== "0");
   const [audioMuted, setAudioMuted] = useState<boolean>(() => localStorage.getItem("boltorezka_audio_muted") === "1");
   const [lang, setLang] = useState<Lang>(() => detectInitialLang());
@@ -541,23 +560,13 @@ export function App() {
     return volumes;
   }, [memberPreferencesByUserId]);
 
-  const handleRnnoiseStatusChange = useCallback((status: "inactive" | "active" | "unavailable" | "error") => {
-    setRnnoiseRuntimeStatus(selectedInputProfile === "noise_reduction" ? status : "inactive");
-  }, [selectedInputProfile]);
-
-  const handleRnnoiseFallback = useCallback((reason: "unavailable" | "error") => {
-    if (selectedInputProfile !== "noise_reduction") {
-      return;
-    }
-
-    setSelectedInputProfile("custom");
-    setRnnoiseRuntimeStatus("inactive");
-    if (reason === "unavailable") {
-      pushToast(t("settings.rnnFallbackUnavailable"));
-    } else {
-      pushToast(t("settings.rnnFallbackError"));
-    }
-  }, [pushToast, selectedInputProfile, t]);
+  const { handleRnnoiseStatusChange, handleRnnoiseFallback } = useRnnoiseRuntimeHandlers({
+    selectedInputProfile,
+    setSelectedInputProfile,
+    setRnnoiseRuntimeStatus,
+    pushToast,
+    t
+  });
 
   const livekitVoiceRuntime = useLivekitVoiceRuntime({
     t,
@@ -835,64 +844,33 @@ export function App() {
     return map;
   }, [voiceMediaStatusByPeerUserId, user?.id, localVoiceMediaStatusSummary]);
 
-  const authController = useMemo(
-    () =>
-      new AuthController({
-        pushLog,
-        setToken,
-        setUser,
-        setDeletedAccountInfo
-      }),
-    [pushLog]
-  );
-
-  const roomAdminController = useMemo(
-    () =>
-      new RoomAdminController({
-        pushLog,
-        pushToast,
-        setRoomSlug,
-        setMessages,
-        setMessagesHasMore,
-        setMessagesNextCursor,
-        sendRoomJoinEvent: (slug) => {
-          return sendWsEventAwaitAck("room.join", { roomSlug: slug }, { maxRetries: 1 });
-        },
-        setRooms,
-        setRoomsTree,
-        setArchivedRooms,
-        setAdminUsers,
-        getCurrentServerId: () => currentServerIdRef.current
-      }),
-    [pushLog, pushToast, sendWsEventAwaitAck]
-  );
-
-  const loadTelemetrySummary = useCallback(async () => {
-    if (!token || !canViewTelemetry) {
-      return;
-    }
-
-    try {
-      const summary = await api.telemetrySummary(token);
-      setTelemetrySummary(summary);
-    } catch (error) {
-      pushLog(`telemetry summary failed: ${(error as Error).message}`);
-    }
-  }, [token, canViewTelemetry, pushLog]);
-
-  const chatController = useMemo(
-    () =>
-      new ChatController({
-        pushLog,
-        setMessages,
-        setMessagesHasMore,
-        setMessagesNextCursor,
-        setLoadingOlderMessages,
-        sendWsEvent,
-        loadTelemetrySummary
-      }),
-    [pushLog, sendWsEvent, loadTelemetrySummary]
-  );
+  const {
+    authController,
+    roomAdminController,
+    loadTelemetrySummary,
+    chatController
+  } = useAppControllers({
+    token,
+    canViewTelemetry,
+    pushLog,
+    pushToast,
+    sendWsEvent,
+    sendRoomJoinEvent: (slug) => sendWsEventAwaitAck("room.join", { roomSlug: slug }, { maxRetries: 1 }),
+    currentServerIdRef,
+    setToken,
+    setUser,
+    setDeletedAccountInfo,
+    setRoomSlug,
+    setMessages,
+    setMessagesHasMore,
+    setMessagesNextCursor,
+    setRooms,
+    setRoomsTree,
+    setArchivedRooms,
+    setAdminUsers,
+    setLoadingOlderMessages,
+    setTelemetrySummary
+  });
 
   const {
     handleIncomingVideoState,
@@ -953,58 +931,22 @@ export function App() {
     onProfileSaved: () => setRealtimeReconnectNonce((value) => value + 1)
   });
 
-  const restoreDeletedAccount = useCallback(async () => {
-    if (restoreDeletedAccountPending) {
-      return;
-    }
-
-    setRestoreDeletedAccountPending(true);
-    try {
-      const response = await api.restoreDeletedSsoAccount();
-      const restoredToken = String(response.token || "").trim();
-      if (!response.authenticated || !restoredToken || !response.user) {
-        throw new Error(t("account.restoreError"));
-      }
-
-      setDeletedAccountInfo(null);
-      setDeleteAccountStatusText("");
-      setToken(restoredToken);
-      setUser(response.user);
-      pushToast(t("account.restoreSuccess"));
-    } catch (error) {
-      const message = (error as Error).message || t("account.restoreError");
-      pushToast(message);
-    } finally {
-      setRestoreDeletedAccountPending(false);
-    }
-  }, [pushToast, restoreDeletedAccountPending, setToken, t]);
-
-  const handleDeleteAccount = useCallback(async () => {
-    if (!token || deleteAccountPending) {
-      return;
-    }
-
-    setDeleteAccountPending(true);
-    setDeleteAccountStatusText("");
-    try {
-      const response = await api.deleteMe(token);
-      setDeletedAccountInfo({
-        daysRemaining: Math.max(0, Number(response.daysRemaining ?? 30) || 30),
-        purgeScheduledAt: response.purgeScheduledAt || null
-      });
-      setUser(null);
-      setToken("");
-      clearPersistedBearerToken();
-      setDeleteAccountStatusText(t("settings.accountDeleteSuccess"));
-      pushToast(t("settings.accountDeleteSuccess"));
-    } catch (error) {
-      const message = (error as Error).message || t("settings.accountDeleteError");
-      setDeleteAccountStatusText(message);
-      pushToast(message);
-    } finally {
-      setDeleteAccountPending(false);
-    }
-  }, [deleteAccountPending, pushToast, t, token]);
+  const {
+    restoreDeletedAccount,
+    handleDeleteAccount
+  } = useDeletedAccountActions({
+    token,
+    deleteAccountPending,
+    restoreDeletedAccountPending,
+    setDeleteAccountPending,
+    setRestoreDeletedAccountPending,
+    setDeleteAccountStatusText,
+    setDeletedAccountInfo,
+    setToken,
+    setUser,
+    pushToast,
+    t
+  });
 
   useAppShellLifecycleEffects({
     lang,
