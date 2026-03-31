@@ -45,6 +45,12 @@ Progress note:
 - [ ] Вынести cross-cutting concerns в middleware/services: rate-limit, envelope/ack helpers, audit events.
 - [ ] Добавить контрактные тесты на public handler boundaries после декомпозиции.
 
+Progress note:
+
+- Первый инкремент декомпозиции `auth` выполнен: cross-cutting helpers вынесены из `routes/auth.ts` в `routes/auth.helpers.ts` (cookie utils, audit context, account-deleted helpers, auth rate-limit middleware factory).
+- Второй инкремент декомпозиции `realtime` выполнен: ws-metrics helper вынесен из `routes/realtime.ts` в `routes/realtime-metrics.ts`.
+- `npm run check:api-types` проходит после выноса.
+
 ### 2.3 Auth storage hardening (cookie-first)
 
 - [x] Перевести web контур на primary cookie mode (`HttpOnly`, `Secure`, `SameSite`) как дефолтный runtime путь.

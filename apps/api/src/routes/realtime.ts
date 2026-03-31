@@ -16,6 +16,7 @@ import { isDuplicateCallSignal } from "./realtime-idempotency.js";
 import { closeRealtimeConnection, initializeRealtimeConnection } from "./realtime-lifecycle.js";
 import { createRealtimeMediaStateStore } from "./realtime-media-state.js";
 import { handleRoomKick, handleRoomMoveMember } from "./realtime-moderation.js";
+import { createRealtimeMetrics } from "./realtime-metrics.js";
 import { createRealtimeRoomStateStore } from "./realtime-room-state.js";
 import { buildErrorCorrelationMeta, relayToTargetOrRoom } from "./realtime-relay.js";
 import type { RoomRow } from "../db.types.ts";
@@ -82,28 +83,7 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
     );
   };
 
-  const incrementMetric = async (name: string) => {
-    try {
-      const day = new Date().toISOString().slice(0, 10);
-      await fastify.redis.hIncrBy(`ws:metrics:${day}`, name, 1);
-    } catch {
-      return;
-    }
-  };
-
-  const incrementMetricBy = async (name: string, value: number) => {
-    const delta = Number.isFinite(value) ? Math.max(0, Math.floor(value)) : 0;
-    if (delta <= 0) {
-      return;
-    }
-
-    try {
-      const day = new Date().toISOString().slice(0, 10);
-      await fastify.redis.hIncrBy(`ws:metrics:${day}`, name, delta);
-    } catch {
-      return;
-    }
-  };
+  const { incrementMetric, incrementMetricBy } = createRealtimeMetrics(fastify);
 
   function resolveRoomMediaTopology(_roomSlug: string, _userId: string | null = null): MediaTopology {
     return "livekit";

@@ -6,6 +6,15 @@ import { db } from "../db.js";
 import { requireAuth } from "../middleware/auth.js";
 import { config } from "../config.js";
 import type { UserCompactRow, UserRow } from "../db.types.ts";
+import {
+  appendSetCookie,
+  buildAccountDeletionState,
+  buildAuthAuditContext,
+  buildSessionCookieClearValue,
+  buildSessionCookieValue,
+  makeAuthRateLimiter,
+  sendAccountDeleted
+} from "./auth.helpers.js";
 import type {
   AuthModeResponse,
   LivekitTokenResponse,
@@ -39,14 +48,6 @@ const AUTH_SESSION_TTL_SEC = 60 * 60 * 24 * 30;
 const AUTH_DESKTOP_HANDOFF_PREFIX = "auth:desktop-handoff:";
 const AUTH_DESKTOP_HANDOFF_TTL_SEC = 120;
 const AUTH_DESKTOP_HANDOFF_ATTEMPT_PREFIX = "auth:desktop-handoff-attempt:";
-const AUTH_RATE_LIMIT_PREFIX = "auth:rl:";
-const ACCOUNT_DELETE_GRACE_DAYS = 30;
-
-type AuthRateLimitPolicy = {
-  namespace: string;
-  max: number;
-  windowSec: number;
-};
 
 type DesktopHandoffAttemptState = {
   status: "pending" | "completed";
@@ -54,165 +55,6 @@ type DesktopHandoffAttemptState = {
   createdAt: string;
   completedAt: string | null;
 };
-
-type AccountDeletionState = {
-  purgeScheduledAt: string | null;
-  daysRemaining: number;
-};
-
-function buildAccountDeletionState(user: Pick<UserRow, "deleted_at" | "purge_scheduled_at">): AccountDeletionState {
-  const purgeScheduledAt = user.purge_scheduled_at || null;
-  if (!purgeScheduledAt) {
-    return {
-      purgeScheduledAt: null,
-      daysRemaining: ACCOUNT_DELETE_GRACE_DAYS
-    };
-  }
-
-  const purgeTs = Date.parse(purgeScheduledAt);
-  if (!Number.isFinite(purgeTs)) {
-    return {
-      purgeScheduledAt,
-      daysRemaining: ACCOUNT_DELETE_GRACE_DAYS
-    };
-  }
-
-  const deltaMs = purgeTs - Date.now();
-  return {
-    purgeScheduledAt,
-    daysRemaining: Math.max(0, Math.ceil(deltaMs / (24 * 60 * 60 * 1000)))
-  };
-}
-
-function sendAccountDeleted(reply: FastifyReply, user: Pick<UserRow, "deleted_at" | "purge_scheduled_at">) {
-  const deletionState = buildAccountDeletionState(user);
-  return reply.code(403).send({
-    authenticated: false,
-    error: "AccountDeleted",
-    message: "Account is scheduled for deletion",
-    purgeScheduledAt: deletionState.purgeScheduledAt,
-    daysRemaining: deletionState.daysRemaining
-  });
-}
-
-function buildAuthAuditContext(request: FastifyRequest, extra: Record<string, unknown> = {}) {
-  const requestId = String(request.id || "").trim() || null;
-  const userId = String(request.user?.sub || request.currentUser?.id || "").trim() || null;
-  const sessionId = String(request.user?.sid || "").trim() || null;
-  const ip = String(request.ip || request.headers["x-forwarded-for"] || "unknown")
-    .split(",")[0]
-    .trim() || null;
-  const userAgent = String(request.headers["user-agent"] || "").trim() || null;
-
-  return {
-    requestId,
-    userId,
-    sessionId,
-    ip,
-    userAgent,
-    ...extra
-  };
-}
-
-function resolveRateLimitSubject(request: FastifyRequest): string {
-  const userId = String(request.user?.sub || "").trim();
-  if (userId) {
-    return `u:${userId}`;
-  }
-
-  const ip = String(request.ip || request.headers["x-forwarded-for"] || "unknown")
-    .split(",")[0]
-    .trim();
-  return `ip:${ip || "unknown"}`;
-}
-
-function makeAuthRateLimiter(policy: AuthRateLimitPolicy) {
-  return async (request: FastifyRequest, reply: FastifyReply) => {
-    const nowWindow = Math.floor(Date.now() / 1000 / policy.windowSec);
-    const key = `${AUTH_RATE_LIMIT_PREFIX}${policy.namespace}:${resolveRateLimitSubject(request)}:${nowWindow}`;
-
-    const current = await request.server.redis.incr(key);
-    if (current === 1) {
-      await request.server.redis.expire(key, policy.windowSec);
-    }
-
-    if (current > policy.max) {
-      request.server.log.warn(
-        buildAuthAuditContext(request, {
-          event: "auth.rate_limit.exceeded",
-          namespace: policy.namespace,
-          limit: policy.max,
-          windowSec: policy.windowSec,
-          current
-        }),
-        "auth rate limit exceeded"
-      );
-      reply.header("Retry-After", String(policy.windowSec));
-      return reply.code(429).send({
-        error: "RateLimitExceeded",
-        message: `Too many requests for ${policy.namespace}`
-      });
-    }
-
-    return undefined;
-  };
-}
-
-function appendSetCookie(reply: FastifyReply, value: string) {
-  const current = reply.getHeader("set-cookie");
-  if (!current) {
-    reply.header("set-cookie", value);
-    return;
-  }
-
-  if (Array.isArray(current)) {
-    reply.header("set-cookie", [...current.map((item) => String(item)), value]);
-    return;
-  }
-
-  reply.header("set-cookie", [String(current), value]);
-}
-
-function buildSessionCookieValue(token: string) {
-  const parts = [
-    `${config.authSessionCookieName}=${encodeURIComponent(token)}`,
-    `Path=${config.authSessionCookiePath}`,
-    `Max-Age=${config.authSessionCookieMaxAgeSec}`,
-    "HttpOnly",
-    `SameSite=${config.authSessionCookieSameSite}`
-  ];
-
-  if (config.authSessionCookieDomain) {
-    parts.push(`Domain=${config.authSessionCookieDomain}`);
-  }
-
-  if (config.authSessionCookieSecure) {
-    parts.push("Secure");
-  }
-
-  return parts.join("; ");
-}
-
-function buildSessionCookieClearValue() {
-  const parts = [
-    `${config.authSessionCookieName}=`,
-    `Path=${config.authSessionCookiePath}`,
-    "Max-Age=0",
-    "Expires=Thu, 01 Jan 1970 00:00:00 GMT",
-    "HttpOnly",
-    `SameSite=${config.authSessionCookieSameSite}`
-  ];
-
-  if (config.authSessionCookieDomain) {
-    parts.push(`Domain=${config.authSessionCookieDomain}`);
-  }
-
-  if (config.authSessionCookieSecure) {
-    parts.push("Secure");
-  }
-
-  return parts.join("; ");
-}
 
 async function issueAuthSessionToken(
   fastify: FastifyInstance,
