@@ -80,6 +80,25 @@ One-command для Boltorezka (deploy + post-deploy smoke):
    - сообщения видны в обеих вкладках в realtime,
    - статус доставки сообщения меняется `sending -> delivered`.
 
+### Cookie-primary regression checklist (test)
+
+Выполнять при изменениях auth/session storage и перед закрытием cookie-hardening задач:
+
+1. Убедиться, что в test включен cookie mode:
+   - `TEST_AUTH_COOKIE_MODE=1`
+   - `TEST_VITE_AUTH_BEARER_STORAGE=memory`
+2. Required gate:
+   - `SMOKE_API_URL=https://test.datowave.com SMOKE_TEST_BEARER_TOKEN=<token> npm run check:required`
+3. Cookie-mode smoke (в required gate запускается автоматически при cookie mode, можно прогнать явно):
+   - `SMOKE_API_URL=https://test.datowave.com TEST_AUTH_COOKIE_MODE=1 npm run smoke:auth:cookie-mode`
+4. Ручная проверка login/logout на web:
+   - login через SSO,
+   - hard reload страницы,
+   - logout,
+   - убедиться, что нет silent re-auth после logout redirect.
+5. Зафиксировать evidence:
+   - `SMOKE_STATUS`, `SMOKE_AUTH_SESSION_STATUS`, `SMOKE_SUMMARY_TEXT` из `.deploy/last-smoke-summary.env`.
+
 ### Domain checks
 
 - Для `test`:

@@ -5,6 +5,9 @@ set -euo pipefail
 echo "[verify] docker compose config"
 docker compose config -q
 
+echo "[verify] docs links"
+node ./scripts/verify-doc-links.mjs
+
 echo "[verify] api health (best-effort local)"
 if curl -fsS "${SMOKE_API_URL:-http://localhost:8080}/health" >/dev/null 2>&1; then
   echo "[verify] local api is reachable"

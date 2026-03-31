@@ -50,6 +50,9 @@ Current CI command:
 
 - `SMOKE_REQUIRE_INITIAL_STATE_REPLAY=1 npm run check:required`
 - optional extended mode: `SMOKE_CALL_SIGNAL=1` (wired via `TEST_SMOKE_EXTENDED_RTC=1` or manual workflow input `extended_rtc=1`)
+- optional strict web e2e mode in required gate: `SMOKE_WEB_E2E_REQUIRED=1`
+- desktop release branch profile: `CHECK_REQUIRED_PROFILE=desktop npm run check:required`
+- cookie-mode profile in required gate: при `TEST_AUTH_COOKIE_MODE=1` автоматически выполняется `npm run smoke:auth:cookie-mode`
 
 Policy:
 
@@ -100,3 +103,15 @@ Policy:
 - Rolling SLO monitor gate (`npm run slo:check`) and thresholds are defined in `docs/operations/SLO_ROLLING_ALERTS.md`.
 - `prod` gate: deferred until MVP-like readiness policy is explicitly satisfied.
 - `prod` rollout allowed only from `main` and only by explicit confirmation.
+
+## 6) Change -> Required gates
+
+| Change type | Required gates | Notes |
+|---|---|---|
+| API auth/session changes (`/v1/auth/*`, session storage, cookie mode) | `npm run check:required` + `npm run smoke:auth:session` | For cookie-mode changes include `npm run smoke:auth:cookie-mode` on `test`. |
+| Realtime protocol/handlers (`ws`, `ack/nack`, relay/idempotency) | `npm run check:required` + extended realtime (`SMOKE_CALL_SIGNAL=1`) | For signaling-heavy changes run postdeploy smoke from `test` contour. |
+| Web shell/UI lifecycle changes (auth bootstrap, rooms/chat critical path) | `npm run check:required` + `npm run smoke:web:e2e` | Minimum e2e path: login -> room join -> message send. |
+| Frontend versioning/cache behavior | `npm run smoke:web:version-cache` | Must verify `index.html` no-store and build-sha compatibility. |
+| Desktop runtime/integration changes | `npm run check:required` + `npm run desktop:smoke:full` | For reconnect/telemetry changes add `npm run desktop:smoke:m2`. |
+| Docs/plans/runbooks updates | `npm run check:docs-links` | Required for any docs-only PR touching markdown links. |
+

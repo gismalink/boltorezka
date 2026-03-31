@@ -42,6 +42,7 @@ const parseBoolean = (value: unknown, defaultValue: boolean): boolean => {
 const authMode = (process.env.AUTH_MODE || "sso").toLowerCase() === "local" ? "local" : "sso";
 const livekitEnabledRaw = parseBoolean(process.env.LIVEKIT_ENABLED, true);
 const livekitTokenTtlSecRaw = Number.parseInt(String(process.env.LIVEKIT_TOKEN_TTL_SEC || "1800"), 10);
+const authSsoRequestTimeoutMsRaw = Number.parseInt(String(process.env.AUTH_SSO_REQUEST_TIMEOUT_MS || "5000"), 10);
 const authSessionCookieSameSiteRaw = String(process.env.AUTH_SESSION_COOKIE_SAMESITE || "Lax").trim().toLowerCase();
 const authSessionCookieSameSite: "Lax" | "Strict" | "None" = authSessionCookieSameSiteRaw === "strict"
   ? "Strict"
@@ -70,6 +71,9 @@ export const config: AppConfig = {
     /\/+$/,
     ""
   ),
+  authSsoRequestTimeoutMs: Number.isFinite(authSsoRequestTimeoutMsRaw) && authSsoRequestTimeoutMsRaw > 0
+    ? authSsoRequestTimeoutMsRaw
+    : 5000,
   authCookieMode: parseBoolean(process.env.AUTH_COOKIE_MODE, false),
   authSessionCookieName: String(process.env.AUTH_SESSION_COOKIE_NAME || "boltorezka_session").trim() || "boltorezka_session",
   authSessionCookieSecure: parseBoolean(process.env.AUTH_SESSION_COOKIE_SECURE, true),

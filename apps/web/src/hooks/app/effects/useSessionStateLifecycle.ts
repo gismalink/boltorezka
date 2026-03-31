@@ -1,5 +1,10 @@
 import { useCallback, useEffect, type Dispatch, type MutableRefObject, type SetStateAction } from "react";
 import { ApiError, api } from "../../../api";
+import {
+  clearPersistedBearerToken,
+  persistBearerToken,
+  readPersistedBearerToken
+} from "../../../utils/authStorage";
 import type {
   AudioQuality,
   Message,
@@ -12,9 +17,8 @@ import type {
 } from "../../../domain";
 import type { RealtimeClient, RoomAdminController } from "../../../services";
 
-// When built with VITE_AUTH_COOKIE_MODE=1 the HttpOnly cookie is the primary
-// session mechanism. localStorage is not used for token persistence.
-const COOKIE_MODE = import.meta.env.VITE_AUTH_COOKIE_MODE === "1";
+// Primary mode is cookie + in-memory token. localStorage bearer persistence is
+// allowed only in explicitly enabled legacy mode.
 
 type UseSessionStateLifecycleArgs = {
   token: string;
@@ -151,7 +155,7 @@ export function useSessionStateLifecycle({
       .then(({ token: refreshedToken }) => {
         const jwt = String(refreshedToken || "").trim();
         if (jwt) {
-          if (COOKIE_MODE) localStorage.removeItem("boltorezka_token");
+          clearPersistedBearerToken();
           setToken(jwt);
           setDeletedAccountInfo(null);
           // bootstrapSessionState fires automatically via the token useEffect
@@ -164,7 +168,7 @@ export function useSessionStateLifecycle({
         if (deletedInfo) {
           setDeletedAccountInfo(deletedInfo);
           setToken("");
-          localStorage.removeItem("boltorezka_token");
+          clearPersistedBearerToken();
           resetSessionState();
           return;
         }
@@ -179,7 +183,7 @@ export function useSessionStateLifecycle({
   }, [pushLog, resetSessionState, setDeletedAccountInfo, setToken]);
 
   const bootstrapSessionState = useCallback((nextToken: string) => {
-    if (!COOKIE_MODE) localStorage.setItem("boltorezka_token", nextToken);
+    persistBearerToken(nextToken);
 
     const bootstrap = async () => {
       let sessionUser: User | null = null;
@@ -195,7 +199,7 @@ export function useSessionStateLifecycle({
             const refreshedToken = String(refreshed.token || "").trim();
             if (refreshedToken) {
               setToken(refreshedToken);
-              if (!COOKIE_MODE) localStorage.setItem("boltorezka_token", refreshedToken);
+              persistBearerToken(refreshedToken);
               const me = await api.me(refreshedToken);
               sessionUser = me.user;
               setUser(me.user);
@@ -207,7 +211,7 @@ export function useSessionStateLifecycle({
             if (deletedInfo) {
               setDeletedAccountInfo(deletedInfo);
               setToken("");
-              localStorage.removeItem("boltorezka_token");
+              clearPersistedBearerToken();
               resetSessionState();
               return;
             }
@@ -219,14 +223,14 @@ export function useSessionStateLifecycle({
         if (deletedInfo) {
           setDeletedAccountInfo(deletedInfo);
           setToken("");
-          localStorage.removeItem("boltorezka_token");
+          clearPersistedBearerToken();
           resetSessionState();
           return;
         }
 
         if (!sessionUser) {
           setToken("");
-          localStorage.removeItem("boltorezka_token");
+          clearPersistedBearerToken();
           return;
         }
       }
@@ -288,14 +292,13 @@ export function useSessionStateLifecycle({
 
   useEffect(() => {
     if (!token) {
-      if (!COOKIE_MODE) {
-        const persistedToken = localStorage.getItem("boltorezka_token");
-        if (persistedToken) {
-          setToken(persistedToken);
-          bootstrapSessionState(persistedToken);
-          return;
-        }
+      const persistedToken = readPersistedBearerToken();
+      if (persistedToken) {
+        setToken(persistedToken);
+        bootstrapSessionState(persistedToken);
+        return;
       }
+
       bootstrapCookieSessionState();
       return;
     }

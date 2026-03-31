@@ -98,6 +98,7 @@ import {
 } from "./hooks";
 import { detectInitialLang, LOCALE_BY_LANG, TEXT, type Lang } from "./i18n";
 import { DEFAULT_UI_THEME, formatBuildDateLabel, normalizeUiTheme, readNonZeroDefaultVolume } from "./utils/appShell";
+import { clearPersistedBearerToken, readPersistedBearerToken } from "./utils/authStorage";
 import type {
   AdminServerListItem,
   AdminServerOverview,
@@ -127,7 +128,6 @@ const CLIENT_BUILD_VERSION = String(import.meta.env.VITE_APP_VERSION || "").trim
 const CLIENT_BUILD_SHA = String(import.meta.env.VITE_APP_BUILD_SHA || CLIENT_BUILD_VERSION || "").trim();
 const CLIENT_BUILD_DATE = String(import.meta.env.VITE_APP_BUILD_DATE || "").trim();
 const CLIENT_BUILD_DATE_LABEL = formatBuildDateLabel(CLIENT_BUILD_VERSION, CLIENT_BUILD_DATE);
-const COOKIE_MODE = import.meta.env.VITE_AUTH_COOKIE_MODE === "1";
 const CHAT_TYPING_TTL_MS = 4500;
 const CHAT_TYPING_PING_INTERVAL_MS = 1800;
 const COOKIE_CONSENT_KEY = "boltorezka_cookie_consent_v1";
@@ -138,7 +138,7 @@ const ROOM_SLUG_STORAGE_KEY = "boltorezka_room_slug";
 // Do not add new business logic, parsing, transport rules, or large feature workflows here.
 // Put feature logic into dedicated hooks/services/components and keep this file as glue code.
 export function App() {
-  const [token, setToken] = useState(() => (COOKIE_MODE ? "" : localStorage.getItem("boltorezka_token") || ""));
+  const [token, setToken] = useState(() => readPersistedBearerToken());
   const [user, setUser] = useState<User | null>(null);
   const [authMode, setAuthMode] = useState("loading");
   const [rooms, setRooms] = useState<Room[]>([]);
@@ -993,7 +993,7 @@ export function App() {
       });
       setUser(null);
       setToken("");
-      localStorage.removeItem("boltorezka_token");
+      clearPersistedBearerToken();
       setDeleteAccountStatusText(t("settings.accountDeleteSuccess"));
       pushToast(t("settings.accountDeleteSuccess"));
     } catch (error) {

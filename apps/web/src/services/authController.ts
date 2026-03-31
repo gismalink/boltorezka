@@ -3,6 +3,7 @@ import { ApiError } from "../api";
 import { trackClientEvent } from "../telemetry";
 import type { User } from "../domain";
 import { resolveDesktopSsoReturnUrl, resolveSsoLogoutUrl, resolveSsoStartUrl } from "../transportRuntime";
+import { clearPersistedBearerToken } from "../utils/authStorage";
 
 type DeletedAccountInfo = {
   daysRemaining: number;
@@ -152,7 +153,7 @@ export class AuthController {
     } catch {
       // Best-effort: proceed with logout even if the API call fails.
     }
-    localStorage.removeItem("boltorezka_token");
+    clearPersistedBearerToken();
     this.options.setToken("");
     this.options.setUser(null);
 

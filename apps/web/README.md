@@ -29,6 +29,10 @@ Frontend package на `React + TypeScript + Vite`.
 
 ## WebRTC env (optional)
 
+- `VITE_AUTH_BEARER_STORAGE` — bearer token storage mode:
+  - `memory` (default, recommended, cookie-first compatible)
+  - `localstorage` (legacy fallback for controlled/test environments)
+
 - `VITE_RTC_ICE_SERVERS_JSON` — JSON array of ICE servers for STUN/TURN.
 - `VITE_RTC_ICE_TRANSPORT_POLICY` — `all` or `relay`.
 - `VITE_RTC_RECONNECT_MAX_ATTEMPTS` — max auto-reconnect tries for active call session.

@@ -9,6 +9,7 @@ export type AppConfig = {
   corsOrigin: string;
   authMode: AuthMode;
   authSsoBaseUrl: string;
+  authSsoRequestTimeoutMs: number;
   authCookieMode: boolean;
   authSessionCookieName: string;
   authSessionCookieSecure: boolean;

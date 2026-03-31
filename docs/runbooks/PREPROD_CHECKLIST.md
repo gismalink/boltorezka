@@ -3,7 +3,7 @@
 Чеклист перед запросом на rollout в `prod`.
 
 Decision package (обязательно к заполнению перед `prod`): [PREPROD_DECISION_PACKAGE.md](PREPROD_DECISION_PACKAGE.md)
-LiveKit full-transition reference: [../plans/2026-03-09_LIVEKIT_FULL_TRANSITION_CHECKLIST.md](../plans/2026-03-09_LIVEKIT_FULL_TRANSITION_CHECKLIST.md)
+LiveKit full-transition reference: [../plans/completed/2026-03-09_LIVEKIT_FULL_TRANSITION_CHECKLIST.md](../plans/completed/2026-03-09_LIVEKIT_FULL_TRANSITION_CHECKLIST.md)
 
 ## 1) Branch и Git
 
@@ -58,6 +58,8 @@ LiveKit full-transition reference: [../plans/2026-03-09_LIVEKIT_FULL_TRANSITION_
 1. `AUTH_MODE=sso` в test/prod окружениях.
 1.1. Cookie-mode rollout discipline:
    - `TEST_AUTH_COOKIE_MODE=1` зафиксирован в test,
+   - web bearer storage в test: `VITE_AUTH_BEARER_STORAGE=memory` (default),
+   - `PROD_VITE_AUTH_BEARER_STORAGE` держим `memory` до отдельного explicit решения,
    - `PROD_AUTH_COOKIE_MODE` переключается только после explicit GO.
 2. `AUTH_SSO_BASE_URL`:
    - test -> `https://test.auth.datowave.com`

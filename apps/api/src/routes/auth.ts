@@ -324,16 +324,26 @@ function resolveSafeReturnUrl(value: unknown, request: FastifyRequest): string {
 
 async function proxyAuthGetJson(request: FastifyRequest, path: string) {
   const url = `${config.authSsoBaseUrl}${path}`;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => {
+    controller.abort();
+  }, config.authSsoRequestTimeoutMs);
 
-  const response = await fetch(url, {
-    method: "GET",
-    headers: {
-      cookie: request.headers.cookie || "",
-      accept: "application/json",
-      "user-agent": String(request.headers["user-agent"] || "")
-    },
-    redirect: "manual"
-  });
+  let response;
+  try {
+    response = await fetch(url, {
+      method: "GET",
+      headers: {
+        cookie: request.headers.cookie || "",
+        accept: "application/json",
+        "user-agent": String(request.headers["user-agent"] || "")
+      },
+      redirect: "manual",
+      signal: controller.signal
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
 
   const contentType = response.headers.get("content-type") || "";
   const bodyText = await response.text();
