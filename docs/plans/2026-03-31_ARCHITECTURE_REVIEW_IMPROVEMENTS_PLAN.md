@@ -47,7 +47,8 @@ Progress note:
 - Static smoke `smoke:web:denied-media` синхронизирован с новым app-shell placement (`App.tsx`/`AppTopChrome.tsx`) без ослабления проверки denied-banner guard.
 - Тридцать шестой инкремент декомпозиции `web` выполнен: центральный main-section блок (`workspace/onboarding/guest`, invite индикатор, `ServerProfileModalContainer`) вынесен из `App.tsx` в `components/AppMainSection.tsx`.
 - Тридцать седьмой инкремент декомпозиции `web` выполнен: shell wiring сведён к composable units (`components/AppShellLayout.tsx` + `hooks/app/state/useAppShellLayoutProps.ts` + props hooks для top/main/overlays).
-- Cumulative: `App.tsx` сокращен с 2101 до 1811 строк; web build + denied-media smoke проходят после каждого инкремента.
+- Тридцать восьмой инкремент декомпозиции `web` выполнен: room voice lifecycle effects (video reset + per-room voice maps reset) вынесены из `App.tsx` в `hooks/voice/useVoiceRoomLifecycleEffects.ts`.
+- Cumulative: `App.tsx` сокращен с 2101 до 1804 строк; web build + denied-media smoke проходят после каждого инкремента.
 
 ### 2.2 API route decomposition
 
