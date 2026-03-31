@@ -53,6 +53,9 @@ Progress note:
 - Четвертый инкремент декомпозиции `auth` выполнен: SSO utility helpers вынесены в `routes/auth-sso.ts` (`resolveSafeReturnUrl`, `proxyAuthGetJson`).
 - Пятый инкремент декомпозиции `auth` выполнен: профильный upsert helper вынесен в `routes/auth-user-upsert.ts` (`upsertSsoUser`).
 - Шестой инкремент декомпозиции `auth` выполнен: livekit URL resolver вынесен в `routes/auth-livekit.ts`.
+- Седьмой инкремент декомпозиции `auth` выполнен: desktop handoff state/code store вынесен в `routes/auth-desktop-handoff-store.ts`.
+- Восьмой инкремент декомпозиции `auth` выполнен: ws-ticket issue helper вынесен в `routes/auth-ws-ticket.ts`.
+- Текущий результат по размеру: `routes/auth.ts` уменьшен до ~961 строк.
 - `npm run check:api-types` проходит после выноса.
 
 ### 2.3 Auth storage hardening (cookie-first)

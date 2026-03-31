@@ -19,6 +19,15 @@ import { deleteAuthSession, issueAuthSessionToken } from "./auth-session.js";
 import { proxyAuthGetJson, resolveSafeReturnUrl } from "./auth-sso.js";
 import { upsertSsoUser } from "./auth-user-upsert.js";
 import { resolveLivekitClientUrl } from "./auth-livekit.js";
+import {
+  completeDesktopHandoffAttempt,
+  consumeDesktopHandoffCode,
+  createDesktopHandoffAttempt,
+  desktopHandoffTtlSec,
+  issueDesktopHandoffCode,
+  readDesktopHandoffAttempt
+} from "./auth-desktop-handoff-store.js";
+import { issueWsTicket } from "./auth-ws-ticket.js";
 import type {
   AuthModeResponse,
   LivekitTokenResponse,
@@ -45,17 +54,6 @@ const desktopHandoffExchangeSchema = z.object({
 const desktopHandoffAttemptIdSchema = z.object({
   attemptId: z.string().uuid()
 });
-
-const AUTH_DESKTOP_HANDOFF_PREFIX = "auth:desktop-handoff:";
-const AUTH_DESKTOP_HANDOFF_TTL_SEC = 120;
-const AUTH_DESKTOP_HANDOFF_ATTEMPT_PREFIX = "auth:desktop-handoff-attempt:";
-
-type DesktopHandoffAttemptState = {
-  status: "pending" | "completed";
-  userId: string;
-  createdAt: string;
-  completedAt: string | null;
-};
 
 export async function authRoutes(fastify: FastifyInstance) {
   const limitSsoStart = makeAuthRateLimiter({
@@ -336,34 +334,22 @@ export async function authRoutes(fastify: FastifyInstance) {
         });
       }
 
-      const attemptId = randomUUID();
-      const state: DesktopHandoffAttemptState = {
-        status: "pending",
-        userId,
-        createdAt: new Date().toISOString(),
-        completedAt: null
-      };
-
-      await fastify.redis.setEx(
-        `${AUTH_DESKTOP_HANDOFF_ATTEMPT_PREFIX}${attemptId}`,
-        AUTH_DESKTOP_HANDOFF_TTL_SEC,
-        JSON.stringify(state)
-      );
+      const attempt = await createDesktopHandoffAttempt(fastify.redis, userId);
 
       fastify.log.info(
         buildAuthAuditContext(request, {
           event: "auth.desktop_handoff.attempt_created",
           userId,
-          attemptId,
-          ttlSec: AUTH_DESKTOP_HANDOFF_TTL_SEC
+          attemptId: attempt.attemptId,
+          ttlSec: attempt.expiresInSec
         }),
         "desktop handoff attempt created"
       );
 
       return {
         ok: true,
-        attemptId,
-        expiresInSec: AUTH_DESKTOP_HANDOFF_TTL_SEC
+        attemptId: attempt.attemptId,
+        expiresInSec: attempt.expiresInSec
       };
     }
   );
@@ -385,30 +371,22 @@ export async function authRoutes(fastify: FastifyInstance) {
         });
       }
 
-      const key = `${AUTH_DESKTOP_HANDOFF_ATTEMPT_PREFIX}${parsed.data.attemptId}`;
-      const raw = await fastify.redis.get(key);
-      if (!raw) {
+      const state = await readDesktopHandoffAttempt(fastify.redis, parsed.data.attemptId);
+      if (!state) {
         return {
           status: "expired"
         };
       }
 
-      try {
-        const state = JSON.parse(raw) as DesktopHandoffAttemptState;
-        if (state.status === "completed") {
-          return {
-            status: "completed"
-          };
-        }
-
+      if (state.status === "completed") {
         return {
-          status: "pending"
-        };
-      } catch {
-        return {
-          status: "expired"
+          status: "completed"
         };
       }
+
+      return {
+        status: "pending"
+      };
     }
   );
 
@@ -434,26 +412,11 @@ export async function authRoutes(fastify: FastifyInstance) {
         });
       }
 
-      const key = `${AUTH_DESKTOP_HANDOFF_ATTEMPT_PREFIX}${parsed.data.attemptId}`;
-      const raw = await fastify.redis.get(key);
-      if (!raw) {
+      const state = await readDesktopHandoffAttempt(fastify.redis, parsed.data.attemptId);
+      if (!state) {
         return reply.code(404).send({
           error: "DesktopHandoffAttemptExpired",
           message: "Desktop handoff attempt is expired or invalid"
-        });
-      }
-
-      let state: DesktopHandoffAttemptState | null = null;
-      try {
-        state = JSON.parse(raw) as DesktopHandoffAttemptState;
-      } catch {
-        state = null;
-      }
-
-      if (!state || !state.userId) {
-        return reply.code(400).send({
-          error: "DesktopHandoffAttemptInvalid",
-          message: "Desktop handoff attempt payload is invalid"
         });
       }
 
@@ -471,20 +434,16 @@ export async function authRoutes(fastify: FastifyInstance) {
         };
       }
 
-      const ttlSec = await fastify.redis.ttl(key);
-      if (ttlSec <= 0) {
+      const completionStatus = await completeDesktopHandoffAttempt(
+        fastify.redis,
+        parsed.data.attemptId,
+        state
+      );
+      if (completionStatus === "expired") {
         return {
           status: "expired"
         };
       }
-
-      const nextState: DesktopHandoffAttemptState = {
-        ...state,
-        status: "completed",
-        completedAt: new Date().toISOString()
-      };
-
-      await fastify.redis.setEx(key, ttlSec, JSON.stringify(nextState));
 
       fastify.log.info(
         buildAuthAuditContext(request, {
@@ -516,29 +475,21 @@ export async function authRoutes(fastify: FastifyInstance) {
         });
       }
 
-      const code = randomUUID();
-      await fastify.redis.setEx(
-        `${AUTH_DESKTOP_HANDOFF_PREFIX}${code}`,
-        AUTH_DESKTOP_HANDOFF_TTL_SEC,
-        JSON.stringify({
-          userId,
-          issuedAt: new Date().toISOString()
-        })
-      );
+      const handoffCode = await issueDesktopHandoffCode(fastify.redis, userId);
 
       fastify.log.info(
         buildAuthAuditContext(request, {
           event: "auth.desktop_handoff.issued",
           userId,
-          ttlSec: AUTH_DESKTOP_HANDOFF_TTL_SEC
+          ttlSec: handoffCode.expiresInSec
         }),
         "desktop handoff code issued"
       );
 
       return {
         ok: true,
-        code,
-        expiresInSec: AUTH_DESKTOP_HANDOFF_TTL_SEC
+        code: handoffCode.code,
+        expiresInSec: handoffCode.expiresInSec
       };
     }
   );
@@ -557,26 +508,15 @@ export async function authRoutes(fastify: FastifyInstance) {
         });
       }
 
-      const key = `${AUTH_DESKTOP_HANDOFF_PREFIX}${parsed.data.code}`;
-      const raw = await fastify.redis.get(key);
-      if (!raw) {
+      const consumed = await consumeDesktopHandoffCode(fastify.redis, parsed.data.code);
+      if (consumed.status === "missing") {
         return reply.code(404).send({
           error: "DesktopHandoffExpired",
           message: "Desktop handoff code is expired or invalid"
         });
       }
 
-      await fastify.redis.del(key);
-
-      let handoffUserId = "";
-      try {
-        const payload = JSON.parse(raw) as { userId?: string };
-        handoffUserId = String(payload.userId || "").trim();
-      } catch {
-        handoffUserId = "";
-      }
-
-      if (!handoffUserId) {
+      if (consumed.status === "invalid") {
         return reply.code(400).send({
           error: "DesktopHandoffInvalid",
           message: "Desktop handoff payload is invalid"
@@ -585,7 +525,7 @@ export async function authRoutes(fastify: FastifyInstance) {
 
       const userResult = await db.query<UserRow>(
         "SELECT id, email, username, name, ui_theme, role, is_banned, access_state, is_bot, deleted_at, purge_scheduled_at, created_at FROM users WHERE id = $1 LIMIT 1",
-        [handoffUserId]
+        [consumed.userId]
       );
 
       if ((userResult.rowCount || 0) === 0) {
@@ -755,30 +695,12 @@ export async function authRoutes(fastify: FastifyInstance) {
           message: user.access_state === "blocked" ? "Service access is blocked" : "Service access requires admin approval"
         });
       }
-      const ticket = randomUUID();
-      const expiresInSec = 45;
-
-      await fastify.redis.setEx(
-        `ws:ticket:${ticket}`,
-        expiresInSec,
-        JSON.stringify({
-          userId: user.id,
-          userName: user.name || user.email || "unknown",
-          email: user.email,
-          role: user.role || "user",
-          issuedAt: new Date().toISOString()
-        })
-      );
-
-      const response: WsTicketResponse = {
-        ticket,
-        expiresInSec
-      };
+      const response: WsTicketResponse = await issueWsTicket(fastify.redis, user);
 
       fastify.log.info(
         buildAuthAuditContext(request, {
           event: "auth.ws_ticket.issued",
-          ticketTtlSec: expiresInSec,
+          ticketTtlSec: response.expiresInSec,
           authMode: "sso"
         }),
         "ws ticket issued"
