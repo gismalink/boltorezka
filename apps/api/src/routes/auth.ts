@@ -15,6 +15,7 @@ import {
   makeAuthRateLimiter,
   sendAccountDeleted
 } from "./auth.helpers.js";
+import { deleteAuthSession, issueAuthSessionToken } from "./auth-session.js";
 import type {
   AuthModeResponse,
   LivekitTokenResponse,
@@ -43,8 +44,6 @@ const desktopHandoffAttemptIdSchema = z.object({
 });
 
 const safeHostSet = new Set(config.allowedReturnHosts);
-const AUTH_SESSION_PREFIX = "auth:session:";
-const AUTH_SESSION_TTL_SEC = 60 * 60 * 24 * 30;
 const AUTH_DESKTOP_HANDOFF_PREFIX = "auth:desktop-handoff:";
 const AUTH_DESKTOP_HANDOFF_TTL_SEC = 120;
 const AUTH_DESKTOP_HANDOFF_ATTEMPT_PREFIX = "auth:desktop-handoff-attempt:";
@@ -55,46 +54,6 @@ type DesktopHandoffAttemptState = {
   createdAt: string;
   completedAt: string | null;
 };
-
-async function issueAuthSessionToken(
-  fastify: FastifyInstance,
-  user: UserRow,
-  authMode: "sso" = "sso",
-  previousSessionId: string | null = null
-) {
-  const sessionId = randomUUID();
-
-  await fastify.redis.setEx(
-    `${AUTH_SESSION_PREFIX}${sessionId}`,
-    AUTH_SESSION_TTL_SEC,
-    JSON.stringify({
-      userId: user.id,
-      authMode,
-      issuedAt: new Date().toISOString(),
-      rotatedFrom: previousSessionId || null
-    })
-  );
-
-  if (previousSessionId && previousSessionId !== sessionId) {
-    await fastify.redis.del(`${AUTH_SESSION_PREFIX}${previousSessionId}`);
-  }
-
-  const token = await fastify.jwt.sign(
-    {
-      sub: user.id,
-      sid: sessionId,
-      email: user.email,
-      name: user.name,
-      role: user.role,
-      authMode
-    },
-    {
-      expiresIn: fastify.jwtExpiresIn
-    }
-  );
-
-  return { token, sessionId };
-}
 
 function resolveLivekitClientUrl(request: FastifyRequest): string {
   const raw = String(config.livekitUrl || "").trim();
@@ -923,7 +882,7 @@ export async function authRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest, reply: FastifyReply) => {
       const sessionId = String(request.user?.sid || "").trim();
       if (sessionId) {
-        await fastify.redis.del(`${AUTH_SESSION_PREFIX}${sessionId}`);
+        await deleteAuthSession(fastify, sessionId);
       }
 
       if (config.authCookieMode) {
@@ -1252,7 +1211,7 @@ export async function authRoutes(fastify: FastifyInstance) {
 
       const sessionId = String(request.user?.sid || "").trim();
       if (sessionId) {
-        await fastify.redis.del(`${AUTH_SESSION_PREFIX}${sessionId}`);
+        await deleteAuthSession(fastify, sessionId);
       }
       if (config.authCookieMode) {
         appendSetCookie(reply, buildSessionCookieClearValue());

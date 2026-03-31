@@ -49,6 +49,7 @@ Progress note:
 
 - Первый инкремент декомпозиции `auth` выполнен: cross-cutting helpers вынесены из `routes/auth.ts` в `routes/auth.helpers.ts` (cookie utils, audit context, account-deleted helpers, auth rate-limit middleware factory).
 - Второй инкремент декомпозиции `realtime` выполнен: ws-metrics helper вынесен из `routes/realtime.ts` в `routes/realtime-metrics.ts`.
+- Третий инкремент декомпозиции `auth` выполнен: session token lifecycle helper вынесен в `routes/auth-session.ts` (`issueAuthSessionToken`, `deleteAuthSession`).
 - `npm run check:api-types` проходит после выноса.
 
 ### 2.3 Auth storage hardening (cookie-first)
