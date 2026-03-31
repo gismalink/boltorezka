@@ -5,12 +5,14 @@ import { resolve } from "node:path";
 
 const root = process.cwd();
 const appPath = resolve(root, "apps/web/src/App.tsx");
+const appTopChromePath = resolve(root, "apps/web/src/components/AppTopChrome.tsx");
 const userDockPath = resolve(root, "apps/web/src/components/UserDock.tsx");
 const userDockControlsPath = resolve(root, "apps/web/src/components/userDock/UserDockControls.tsx");
 const appGuardsPath = resolve(root, "apps/web/src/components/AppGuardsAndOverlays.tsx");
 const mediaHookPath = resolve(root, "apps/web/src/hooks/media/useMediaDevicePreferences.ts");
 
 const appSource = readFileSync(appPath, "utf8");
+const appTopChromeSource = readFileSync(appTopChromePath, "utf8");
 const userDockSource = readFileSync(userDockPath, "utf8");
 const userDockControlsSource = readFileSync(userDockControlsPath, "utf8");
 const appGuardsSource = readFileSync(appGuardsPath, "utf8");
@@ -18,8 +20,10 @@ const mediaHookSource = readFileSync(mediaHookPath, "utf8");
 
 const checks = [
   {
-    name: "denied banner render guard in App.tsx",
-    ok: appSource.includes('mediaDevicesState === "denied"') && appSource.includes("MediaAccessDeniedBanner")
+    name: "denied banner render guard in app shell",
+    ok:
+      (appSource.includes('mediaDevicesState === "denied"') && appSource.includes("MediaAccessDeniedBanner"))
+      || (appTopChromeSource.includes('mediaDevicesState === "denied"') && appTopChromeSource.includes("MediaAccessDeniedBanner"))
   },
   {
     name: "banner contains request access CTA",

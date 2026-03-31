@@ -1,31 +1,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ApiError } from "./api";
-import { TooltipPortal } from "./TooltipPortal";
 import {
   RealtimeClient,
   WsMessageController
 } from "./services";
 import type { CallStatus } from "./services";
 import {
-  AccessStateGate,
-  AgeVerificationRequiredOverlay,
-  AppHeader,
   AppShellOverlays,
+  AppTopChrome,
   AppWorkspacePanels,
-  AppUpdatedOverlay,
-  CookieConsentBanner,
-  DeletedAccountGate,
-  DesktopBrowserCompletionGate,
-  DesktopUpdateBanner,
   EmptyServerOnboarding,
-  FirstRunIntroOverlay,
   GuestLoginGate,
-  LegalLinks,
-  MediaAccessDeniedBanner,
-  RemoteAudioAutoplayBanner,
   ServerProfileModalContainer,
-  SessionMovedOverlay,
-  ToastStack,
   UserDock
 } from "./components";
 import {
@@ -1745,7 +1731,7 @@ export function App() {
 
   return (
     <main className="app legacy-layout mx-auto grid h-[100dvh] max-h-[100dvh] w-full max-w-[1400px] grid-rows-[auto_1fr] gap-4 overflow-hidden p-4 desktop:gap-6 desktop:p-8">
-      <AppHeader
+      <AppTopChrome
         t={t}
         user={user}
         currentServerName={currentServer?.name || null}
@@ -1767,26 +1753,16 @@ export function App() {
         onOpenUserSettings={() => openUserSettings("profile")}
         onChangeCurrentServer={(serverId) => setCurrentServerId(serverId)}
         onCreateServer={handleCreateServer}
+        mediaDevicesState={mediaDevicesState}
+        onRequestMediaAccess={requestMediaAccess}
+        remoteAudioAutoplayBlocked={remoteAudioAutoplayBlocked}
+        audioMuted={audioMuted}
+        desktopUpdateReadyVersion={desktopUpdateReadyVersion}
+        desktopUpdateBannerDismissed={desktopUpdateBannerDismissed}
+        desktopUpdateApplying={desktopUpdateApplying}
+        onDismissDesktopUpdateBanner={dismissDesktopUpdateBanner}
+        onApplyDesktopUpdate={applyDesktopUpdate}
       />
-      <TooltipPortal />
-
-      {mediaDevicesState === "denied" ? <MediaAccessDeniedBanner t={t} onRequestMediaAccess={requestMediaAccess} /> : null}
-
-      {remoteAudioAutoplayBlocked && !audioMuted && mediaDevicesState !== "denied" && !(desktopUpdateReadyVersion && !desktopUpdateBannerDismissed)
-        ? <RemoteAudioAutoplayBanner t={t} />
-        : null}
-
-      {desktopUpdateReadyVersion && !desktopUpdateBannerDismissed ? (
-        <DesktopUpdateBanner
-          t={t}
-          desktopUpdateReadyVersion={desktopUpdateReadyVersion}
-          desktopUpdateApplying={desktopUpdateApplying}
-          onDismiss={dismissDesktopUpdateBanner}
-          onApply={() => {
-            void applyDesktopUpdate();
-          }}
-        />
-      ) : null}
 
       {user ? (
         showEmptyServerOnboarding ? (

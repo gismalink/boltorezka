@@ -1,5 +1,6 @@
 export { AppHeader } from "./AppHeader";
 export { AppShellOverlays } from "./AppShellOverlays";
+export { AppTopChrome } from "./AppTopChrome";
 export { AppWorkspacePanels } from "./AppWorkspacePanels";
 export {
 	AccessStateGate,
