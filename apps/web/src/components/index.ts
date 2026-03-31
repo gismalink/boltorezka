@@ -1,4 +1,5 @@
 export { AppHeader } from "./AppHeader";
+export { AppMainSection } from "./AppMainSection";
 export { AppShellOverlays } from "./AppShellOverlays";
 export { AppTopChrome } from "./AppTopChrome";
 export { AppWorkspacePanels } from "./AppWorkspacePanels";

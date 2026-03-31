@@ -6,13 +6,10 @@ import {
 } from "./services";
 import type { CallStatus } from "./services";
 import {
+  AppMainSection,
   AppShellOverlays,
   AppTopChrome,
-  AppWorkspacePanels,
-  EmptyServerOnboarding,
-  GuestLoginGate,
-  ServerProfileModalContainer,
-  UserDock
+  AppWorkspacePanels
 } from "./components";
 import {
   DEFAULT_CHAT_IMAGE_DATA_URL_LENGTH,
@@ -1764,52 +1761,25 @@ export function App() {
         onApplyDesktopUpdate={applyDesktopUpdate}
       />
 
-      {user ? (
-        showEmptyServerOnboarding ? (
-          <EmptyServerOnboarding
-            t={t}
-            creatingServer={creatingServer}
-            onCreateServer={handleCreateServer}
-          />
-        ) : (
-        <AppWorkspacePanels
-          isMobileViewport={isMobileViewport}
-          mobileTab={mobileTab}
-          onSelectTab={setMobileTab}
-          t={t}
-          hasUser={Boolean(user)}
-          userDockSharedProps={userDockSharedProps}
-          roomsPanelProps={roomsPanelProps}
-          chatPanelProps={chatPanelProps}
-          videoWindowsOverlayProps={videoWindowsOverlayProps}
-        />
-        )
-      ) : authMode !== "loading" ? (
-        <GuestLoginGate t={t} onBeginSso={beginSso} />
-      ) : null}
-
-      {showEmptyServerOnboarding && userSettingsOpen && userDockSharedProps ? (
-        <div className="no-server-user-settings-host">
-          <UserDock {...userDockSharedProps} inlineSettingsMode={false} />
-        </div>
-      ) : null}
-
-      {inviteAccepting ? (
-        <div className="fixed inset-x-0 top-24 z-[160] flex justify-center px-4">
-          <div className="rounded-xl border border-white/20 bg-black/75 px-4 py-2 text-sm text-pixel-text backdrop-blur">
-            {t("server.inviteAccepting")}
-          </div>
-        </div>
-      ) : null}
-
-      <ServerProfileModalContainer
-        open={appMenuOpen}
+      <AppMainSection
         t={t}
-        permissions={serverProfileModalProps.permissions}
-        state={serverProfileModalProps.state}
-        data={serverProfileModalProps.data}
-        actions={serverProfileModalProps.actions}
-        meta={serverProfileModalProps.meta}
+        user={user}
+        authMode={authMode}
+        beginSso={beginSso}
+        showEmptyServerOnboarding={showEmptyServerOnboarding}
+        creatingServer={creatingServer}
+        onCreateServer={handleCreateServer}
+        isMobileViewport={isMobileViewport}
+        mobileTab={mobileTab}
+        onSelectMobileTab={setMobileTab}
+        userDockSharedProps={userDockSharedProps}
+        roomsPanelProps={roomsPanelProps}
+        chatPanelProps={chatPanelProps}
+        videoWindowsOverlayProps={videoWindowsOverlayProps}
+        userSettingsOpen={userSettingsOpen}
+        inviteAccepting={inviteAccepting}
+        appMenuOpen={appMenuOpen}
+        serverProfileModalProps={serverProfileModalProps}
       />
 
       <AppShellOverlays

@@ -45,7 +45,8 @@ Progress note:
 - Тридцать четвертый инкремент декомпозиции `web` выполнен: блок глобальных оверлеев/футера/cookie вынесен из `App.tsx` в `components/AppShellOverlays.tsx`.
 - Тридцать пятый инкремент декомпозиции `web` выполнен: верхний app chrome (header/tooltip/status banners) вынесен из `App.tsx` в `components/AppTopChrome.tsx`.
 - Static smoke `smoke:web:denied-media` синхронизирован с новым app-shell placement (`App.tsx`/`AppTopChrome.tsx`) без ослабления проверки denied-banner guard.
-- Cumulative: `App.tsx` сокращен с 2101 до 1844 строк; web build + denied-media smoke проходят после каждого инкремента.
+- Тридцать шестой инкремент декомпозиции `web` выполнен: центральный main-section блок (`workspace/onboarding/guest`, invite индикатор, `ServerProfileModalContainer`) вынесен из `App.tsx` в `components/AppMainSection.tsx`.
+- Cumulative: `App.tsx` сокращен с 2101 до 1814 строк; web build + denied-media smoke проходят после каждого инкремента.
 
 ### 2.2 API route decomposition
 
