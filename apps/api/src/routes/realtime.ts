@@ -3,7 +3,7 @@ import type { RawData, WebSocket } from "ws";
 import { db } from "../db.js";
 import { config } from "../config.js";
 import { registerRealtimeSocket, unregisterRealtimeSocket } from "../realtime-broadcast.js";
-import { normalizeRequestId, sendAck, sendJson, sendNack } from "./realtime-io.js";
+import { normalizeRequestId, sendJson, sendNack } from "./realtime-io.js";
 import {
   handleCallMicState,
   handleCallVideoState,
@@ -11,7 +11,7 @@ import {
   handleScreenShareStop
 } from "./realtime-call-screen.js";
 import { handleChatDelete, handleChatEdit, handleChatSend, handleChatTyping } from "./realtime-chat.js";
-import { isDuplicateCallSignal } from "./realtime-idempotency.js";
+import { createRealtimeCallHelpers } from "./realtime-call-helpers.js";
 import { closeRealtimeConnection, initializeRealtimeConnection } from "./realtime-lifecycle.js";
 import { createRealtimeMediaStateStore } from "./realtime-media-state.js";
 import { handleRoomKick, handleRoomMoveMember } from "./realtime-moderation.js";
@@ -91,6 +91,11 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
     socketState,
     incrementMetric
   });
+  const {
+    sendAckWithMetrics,
+    handleCallIdempotency,
+    buildCallTraceId
+  } = createRealtimeCallHelpers(fastify.redis, incrementMetric);
   const {
     sendJoinDeniedNack,
     sendForbiddenNack,
@@ -192,72 +197,6 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
     if (didChange) {
       broadcastAllRoomsPresence();
     }
-  };
-
-  const sendAckWithMetrics = (
-    socket: WebSocket,
-    requestId: string | null,
-    eventType: string,
-    meta: Record<string, unknown> = {},
-    additionalMetrics: string[] = []
-  ) => {
-    sendAck(socket, requestId, eventType, meta);
-    void incrementMetric("ack_sent");
-    for (const metricName of additionalMetrics) {
-      void incrementMetric(metricName);
-    }
-  };
-
-  const handleCallIdempotency = async (
-    socket: WebSocket,
-    state: SocketState,
-    requestId: string | null,
-    eventType: string
-  ): Promise<boolean> => {
-    if (!requestId) {
-      return false;
-    }
-
-    try {
-      const isDuplicate = await isDuplicateCallSignal(
-        fastify.redis,
-        state.userId,
-        eventType,
-        requestId
-      );
-
-      if (!isDuplicate) {
-        return false;
-      }
-
-      sendAckWithMetrics(
-        socket,
-        requestId,
-        eventType,
-        {
-          duplicate: true,
-          idempotencyKey: requestId
-        },
-        ["call_idempotency_hit"]
-      );
-
-      return true;
-    } catch {
-      // Fail-open: idempotency storage outage should not break realtime signaling.
-      return false;
-    }
-  };
-
-  const buildCallTraceId = (
-    eventType: string,
-    requestId: string | null,
-    sessionId: string
-  ): string => {
-    if (requestId) {
-      return `${eventType}:${sessionId}:${requestId}`;
-    }
-
-    return `${eventType}:${sessionId}:${Date.now()}`;
   };
 
   fastify.get(
