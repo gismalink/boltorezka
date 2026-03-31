@@ -17,6 +17,7 @@ import { createRealtimeMediaStateStore } from "./realtime-media-state.js";
 import { handleRoomKick, handleRoomMoveMember } from "./realtime-moderation.js";
 import { createRealtimeMetrics } from "./realtime-metrics.js";
 import { createRealtimeNackSenders } from "./realtime-nacks.js";
+import { createRealtimePermissionHelpers } from "./realtime-permissions.js";
 import { canJoinRoom } from "./realtime-room-join.js";
 import { buildRealtimeScreenShareStateStore } from "./realtime-screen-share-state.js";
 import { createRealtimeRoomStateStore } from "./realtime-room-state.js";
@@ -90,6 +91,11 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
     socketState,
     incrementMetric
   });
+  const {
+    sendJoinDeniedNack,
+    sendForbiddenNack,
+    isUserModerator
+  } = createRealtimePermissionHelpers(incrementMetric);
 
   function resolveRoomMediaTopology(_roomSlug: string, _userId: string | null = null): MediaTopology {
     return "livekit";
@@ -186,32 +192,6 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
     if (didChange) {
       broadcastAllRoomsPresence();
     }
-  };
-
-  const sendJoinDeniedNack = (
-    socket: WebSocket,
-    requestId: string | null,
-    eventType: string,
-    reason: "RoomNotFound" | "Forbidden" | "AgeVerificationRequired"
-  ) => {
-    sendNack(socket, requestId, eventType, reason, "Cannot join room");
-    void incrementMetric("nack_sent");
-  };
-
-  const sendForbiddenNack = (
-    socket: WebSocket,
-    requestId: string | null,
-    eventType: string,
-    message = "Insufficient permissions"
-  ) => {
-    sendNack(socket, requestId, eventType, "Forbidden", message);
-    void incrementMetric("nack_sent");
-  };
-
-  const isUserModerator = async (userId: string) => {
-    const result = await db.query<{ role: string }>("SELECT role FROM users WHERE id = $1", [userId]);
-    const role = String(result.rows[0]?.role || "").trim();
-    return role === "admin" || role === "super_admin";
   };
 
   const sendAckWithMetrics = (

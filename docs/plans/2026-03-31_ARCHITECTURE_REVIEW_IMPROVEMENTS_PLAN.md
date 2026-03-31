@@ -59,7 +59,8 @@ Progress note:
 - Десятый инкремент декомпозиции `realtime` выполнен: NACK/error senders вынесены в `routes/realtime-nacks.ts`.
 - Одиннадцатый инкремент декомпозиции `auth` выполнен: access policy checks (banned/deleted/service access) вынесены в `routes/auth-access.ts`.
 - Двенадцатый инкремент декомпозиции `realtime` выполнен: screen-share state helpers вынесены в `routes/realtime-screen-share-state.ts`.
-- Текущий результат по размеру: `routes/auth.ts` ~931 строк, `routes/realtime.ts` ~1026 строк.
+- Тринадцатый инкремент декомпозиции `realtime` выполнен: permission helpers (moderator check, forbidden/join-denied nack) вынесены в `routes/realtime-permissions.ts`.
+- Текущий результат по размеру: `routes/auth.ts` ~931 строк, `routes/realtime.ts` ~1006 строк.
 - `npm run check:api-types` проходит после выноса.
 
 ### 2.3 Auth storage hardening (cookie-first)
