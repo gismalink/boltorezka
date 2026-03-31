@@ -65,7 +65,8 @@ Progress note:
 - Шестнадцатый инкремент декомпозиции `realtime` выполнен: call signaling (`call.offer`/`call.answer`/`call.ice`) вынесен в `routes/realtime-call-signaling.ts`.
 - Семнадцатый инкремент декомпозиции `realtime` выполнен: ws ticket auth + connection initialization вынесены в `routes/realtime-ws-auth.ts`.
 - Восемнадцатый инкремент декомпозиции `realtime` выполнен: media/screen dispatch (`screen.share.*`, `call.mic_state`, `call.video_state`) вынесен в `routes/realtime-call-media-events.ts`.
-- Текущий результат по размеру: `routes/auth.ts` ~931 строк, `routes/realtime.ts` ~597 строк.
+- Девятнадцатый инкремент декомпозиции `realtime` выполнен: chat dispatch (`chat.send`/`chat.edit`/`chat.delete`/`chat.typing`) вынесен в `routes/realtime-chat-events.ts`.
+- Текущий результат по размеру: `routes/auth.ts` ~931 строк, `routes/realtime.ts` ~531 строка.
 - `npm -s run check:api-types`, `npm -s run web:build` и `npm -s run smoke:web:denied-media` проходят после выноса.
 
 ### 2.3 Auth storage hardening (cookie-first)

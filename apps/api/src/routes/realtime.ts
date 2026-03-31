@@ -6,7 +6,7 @@ import { registerRealtimeSocket, unregisterRealtimeSocket } from "../realtime-br
 import { normalizeRequestId, sendJson, sendNack } from "./realtime-io.js";
 import { createRealtimeCallMediaEventHandlers } from "./realtime-call-media-events.js";
 import { createRealtimeCallSignalingHandler } from "./realtime-call-signaling.js";
-import { handleChatDelete, handleChatEdit, handleChatSend, handleChatTyping } from "./realtime-chat.js";
+import { createRealtimeChatEventHandlers } from "./realtime-chat-events.js";
 import { createRealtimeCallHelpers } from "./realtime-call-helpers.js";
 import { closeRealtimeConnection } from "./realtime-lifecycle.js";
 import { createRealtimeMediaStateStore } from "./realtime-media-state.js";
@@ -254,6 +254,31 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
     buildScreenShareStateEnvelope,
     broadcastRoom
   });
+  const {
+    handleChatSendEvent,
+    handleChatEditEvent,
+    handleChatDeleteEvent,
+    handleChatTypingEvent
+  } = createRealtimeChatEventHandlers({
+    normalizeRequestId,
+    getPayloadString,
+    sendNoActiveRoomNack,
+    sendValidationNack,
+    sendForbiddenNack,
+    sendNack,
+    incrementMetric,
+    sendJson,
+    sendAckWithMetrics,
+    broadcastRoom,
+    buildChatMessageEnvelope,
+    buildChatEditedEnvelope,
+    buildChatDeletedEnvelope,
+    buildChatTypingEnvelope,
+    redisGet: fastify.redis.get.bind(fastify.redis),
+    redisDel: fastify.redis.del.bind(fastify.redis),
+    redisSetEx: fastify.redis.setEx.bind(fastify.redis),
+    dbQuery: db.query.bind(db)
+  });
 
   fastify.get(
     "/v1/realtime/ws",
@@ -408,120 +433,29 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
               }
 
               case "chat.send": {
-                await handleChatSend({
+                await handleChatSendEvent(
                   connection,
                   state,
                   payload,
                   requestId,
                   eventType,
-                  incomingIdempotencyKey: knownMessage.idempotencyKey,
-                  normalizeRequestId,
-                  getPayloadString,
-                  sendNoActiveRoomNack,
-                  sendValidationNack,
-                  sendForbiddenNack,
-                  sendNack,
-                  incrementMetric,
-                  sendJson,
-                  sendAckWithMetrics,
-                  broadcastRoom,
-                  buildChatMessageEnvelope,
-                  buildChatEditedEnvelope,
-                  buildChatDeletedEnvelope,
-                  buildChatTypingEnvelope,
-                  redisGet: fastify.redis.get.bind(fastify.redis),
-                  redisDel: fastify.redis.del.bind(fastify.redis),
-                  redisSetEx: fastify.redis.setEx.bind(fastify.redis),
-                  dbQuery: db.query.bind(db)
-                });
-
+                  knownMessage.idempotencyKey
+                );
                 return;
               }
 
               case "chat.edit": {
-                await handleChatEdit({
-                  connection,
-                  state,
-                  payload,
-                  requestId,
-                  eventType,
-                  normalizeRequestId,
-                  getPayloadString,
-                  sendNoActiveRoomNack,
-                  sendValidationNack,
-                  sendForbiddenNack,
-                  sendNack,
-                  incrementMetric,
-                  sendJson,
-                  sendAckWithMetrics,
-                  broadcastRoom,
-                  buildChatMessageEnvelope,
-                  buildChatEditedEnvelope,
-                  buildChatDeletedEnvelope,
-                  buildChatTypingEnvelope,
-                  redisGet: fastify.redis.get.bind(fastify.redis),
-                  redisDel: fastify.redis.del.bind(fastify.redis),
-                  redisSetEx: fastify.redis.setEx.bind(fastify.redis),
-                  dbQuery: db.query.bind(db)
-                });
+                await handleChatEditEvent(connection, state, payload, requestId, eventType);
                 return;
               }
 
               case "chat.delete": {
-                await handleChatDelete({
-                  connection,
-                  state,
-                  payload,
-                  requestId,
-                  eventType,
-                  normalizeRequestId,
-                  getPayloadString,
-                  sendNoActiveRoomNack,
-                  sendValidationNack,
-                  sendForbiddenNack,
-                  sendNack,
-                  incrementMetric,
-                  sendJson,
-                  sendAckWithMetrics,
-                  broadcastRoom,
-                  buildChatMessageEnvelope,
-                  buildChatEditedEnvelope,
-                  buildChatDeletedEnvelope,
-                  buildChatTypingEnvelope,
-                  redisGet: fastify.redis.get.bind(fastify.redis),
-                  redisDel: fastify.redis.del.bind(fastify.redis),
-                  redisSetEx: fastify.redis.setEx.bind(fastify.redis),
-                  dbQuery: db.query.bind(db)
-                });
+                await handleChatDeleteEvent(connection, state, payload, requestId, eventType);
                 return;
               }
 
               case "chat.typing": {
-                await handleChatTyping({
-                  connection,
-                  state,
-                  payload,
-                  requestId,
-                  eventType,
-                  normalizeRequestId,
-                  getPayloadString,
-                  sendNoActiveRoomNack,
-                  sendValidationNack,
-                  sendForbiddenNack,
-                  sendNack,
-                  incrementMetric,
-                  sendJson,
-                  sendAckWithMetrics,
-                  broadcastRoom,
-                  buildChatMessageEnvelope,
-                  buildChatEditedEnvelope,
-                  buildChatDeletedEnvelope,
-                  buildChatTypingEnvelope,
-                  redisGet: fastify.redis.get.bind(fastify.redis),
-                  redisDel: fastify.redis.del.bind(fastify.redis),
-                  redisSetEx: fastify.redis.setEx.bind(fastify.redis),
-                  dbQuery: db.query.bind(db)
-                });
+                await handleChatTypingEvent(connection, state, payload, requestId, eventType);
                 return;
               }
 
