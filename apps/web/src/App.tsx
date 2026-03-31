@@ -23,6 +23,7 @@ import {
   useAppCoreState,
   useAppUiState,
   useAppEntryGates,
+  useAppPermissionsAndLocale,
   useAppShellLayoutProps,
   useAppUserMediaState,
   useAppControllers,
@@ -87,7 +88,6 @@ import {
   useVoiceRoomStateMaps,
   useVoiceUiLifecycleEffects
 } from "./hooks";
-import { LOCALE_BY_LANG, TEXT } from "./i18n";
 import { formatBuildDateLabel } from "./utils/appShell";
 import type { Message, RoomKind } from "./domain";
 
@@ -260,93 +260,32 @@ export function App() {
   const audioOutputAnchorRef = useRef<HTMLDivElement>(null);
   const voiceSettingsAnchorRef = useRef<HTMLDivElement>(null);
   const userSettingsRef = useRef<HTMLDivElement>(null);
-  const previousPendingRequestsCountRef = useRef<number | null>(null);
 
   useEffect(() => {
     currentServerIdRef.current = currentServerId;
   }, [currentServerId]);
 
-  const currentServerRole = useMemo(
-    () => servers.find((item) => item.id === currentServerId)?.role || null,
-    [servers, currentServerId]
-  );
-  const canCreateRooms = Boolean(
-    user && (
-      user.role === "admin"
-      || user.role === "super_admin"
-      || currentServerRole === "owner"
-      || currentServerRole === "admin"
-    )
-  );
-  const canManageUsers = user?.role === "admin" || user?.role === "super_admin";
-  const canPromote = user?.role === "super_admin";
-  const canUseService = Boolean(
-    user && (user.role === "admin" || user.role === "super_admin" || user.access_state === "active")
-  );
-  const serviceToken = canUseService ? token : "";
-  const canManageAudioQuality = canPromote;
-  const canManageServerControlPlane = canPromote;
-  const canViewTelemetry = canPromote || canCreateRooms;
-  const pendingJoinRequestsCount = useMemo(() => {
-    if (!canPromote) {
-      return 0;
-    }
-
-    return adminUsers.filter((item) => !item.is_bot && !item.deleted_at && !item.is_banned && item.access_state === "pending").length;
-  }, [adminUsers, canPromote]);
-  const locale = LOCALE_BY_LANG[lang];
-  const t = useMemo(() => {
-    const dict = TEXT[lang];
-    return (key: string) => dict[key] || key;
-  }, [lang]);
-
-  useEffect(() => {
-    if (!canPromote) {
-      previousPendingRequestsCountRef.current = null;
-      return;
-    }
-
-    const previousCount = previousPendingRequestsCountRef.current;
-    if (previousCount === null) {
-      previousPendingRequestsCountRef.current = pendingJoinRequestsCount;
-      return;
-    }
-
-    if (pendingJoinRequestsCount > previousCount) {
-      const newRequestsCount = pendingJoinRequestsCount - previousCount;
-      const toastText = t("admin.pendingRequestsToast")
-        .replace("{new}", String(newRequestsCount))
-        .replace("{total}", String(pendingJoinRequestsCount));
-
-      pushToast(toastText);
-
-      if (typeof window !== "undefined" && "Notification" in window) {
-        const notificationTitle = t("admin.pendingRequestsNotificationTitle");
-        const notificationBody = t("admin.pendingRequestsNotificationBody")
-          .replace("{new}", String(newRequestsCount))
-          .replace("{total}", String(pendingJoinRequestsCount));
-
-        const showNotification = () => {
-          new Notification(notificationTitle, {
-            body: notificationBody,
-            tag: "dato-pending-join-requests"
-          });
-        };
-
-        if (Notification.permission === "granted") {
-          showNotification();
-        } else if (Notification.permission === "default") {
-          void Notification.requestPermission().then((permission) => {
-            if (permission === "granted") {
-              showNotification();
-            }
-          });
-        }
-      }
-    }
-
-    previousPendingRequestsCountRef.current = pendingJoinRequestsCount;
-  }, [canPromote, pendingJoinRequestsCount, pushToast, t]);
+  const {
+    canCreateRooms,
+    canManageUsers,
+    canPromote,
+    canUseService,
+    serviceToken,
+    canManageAudioQuality,
+    canManageServerControlPlane,
+    canViewTelemetry,
+    pendingJoinRequestsCount,
+    locale,
+    t
+  } = useAppPermissionsAndLocale({
+    token,
+    user,
+    servers,
+    currentServerId,
+    adminUsers,
+    lang,
+    pushToast
+  });
   const maxChatImageKb = Math.max(1, Math.floor(serverChatImagePolicy.maxDataUrlLength / 1024));
   const selectChannelPlaceholderMessage = t("chat.selectChannelPlaceholder");
   const serverErrorMessage = t("toast.serverError");
