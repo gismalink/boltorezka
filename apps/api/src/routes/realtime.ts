@@ -1,5 +1,5 @@
 import type { FastifyInstance, FastifyRequest } from "fastify";
-import type { RawData, WebSocket } from "ws";
+import type { WebSocket } from "ws";
 import { db } from "../db.js";
 import { config } from "../config.js";
 import { registerRealtimeSocket, unregisterRealtimeSocket } from "../realtime-broadcast.js";
@@ -11,6 +11,7 @@ import { createRealtimeCallHelpers } from "./realtime-call-helpers.js";
 import { closeRealtimeConnection } from "./realtime-lifecycle.js";
 import { createRealtimeMediaStateStore } from "./realtime-media-state.js";
 import { createRealtimeMetrics } from "./realtime-metrics.js";
+import { createRealtimeMessageHandler } from "./realtime-message-handler.js";
 import { createRealtimeNackSenders } from "./realtime-nacks.js";
 import { createRealtimePermissionHelpers } from "./realtime-permissions.js";
 import { createRealtimeRoomModerationEventHandlers } from "./realtime-room-moderation-events.js";
@@ -21,7 +22,6 @@ import { relayToTargetOrRoom } from "./realtime-relay.js";
 import { consumeWsTicketAndInitializeConnection } from "./realtime-ws-auth.js";
 import {
   buildRoomsPresenceEnvelope,
-  asKnownWsIncomingEnvelope,
   buildCallInitialStateEnvelope,
   buildCallMicStateRelayEnvelope,
   buildCallVideoStateRelayEnvelope,
@@ -30,14 +30,12 @@ import {
   buildChatMessageEnvelope,
   buildErrorEnvelope,
   buildChatTypingEnvelope,
-  buildPongEnvelope,
   buildPresenceJoinedEnvelope,
   buildPresenceLeftEnvelope,
   buildRoomJoinedEnvelope,
   buildRoomLeftEnvelope,
   buildRoomPresenceEnvelope,
-  getPayloadString,
-  parseWsIncomingEnvelope
+  getPayloadString
 } from "../ws-protocol.js";
 type SocketState = {
   sessionId: string;
@@ -314,6 +312,30 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
     buildScreenShareStateEnvelope,
     buildCallInitialStateEnvelope
   });
+  const { handleMessage } = createRealtimeMessageHandler({
+    socketState,
+    normalizeRequestId,
+    sendJson,
+    sendInvalidEnvelopeError,
+    sendUnknownEventNack,
+    sendAckWithMetrics,
+    handleRoomJoinEvent,
+    handleRoomLeaveEvent,
+    handleRoomKickEvent,
+    handleRoomMoveMemberEvent,
+    handleChatSendEvent,
+    handleChatEditEvent,
+    handleChatDeleteEvent,
+    handleChatTypingEvent,
+    handleScreenShareStartEvent,
+    handleScreenShareStopEvent,
+    handleCallMicStateEvent,
+    handleCallSignalingEvent,
+    handleCallVideoStateEvent,
+    logWsError: (error) => {
+      fastify.log.error(error, "ws message handling failed");
+    }
+  });
 
   fastify.get(
     "/v1/realtime/ws",
@@ -339,121 +361,8 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
           return;
         }
 
-        connection.on("message", async (raw: RawData) => {
-          try {
-            const message = parseWsIncomingEnvelope(raw);
-            if (!message) {
-              sendInvalidEnvelopeError(connection);
-              return;
-            }
-
-            const state = socketState.get(connection);
-            const requestId = normalizeRequestId(message.requestId);
-            const eventType = message.type;
-            const payload = message.payload;
-            const knownMessage = asKnownWsIncomingEnvelope(message);
-
-            if (!state) {
-              return;
-            }
-
-            if (!knownMessage) {
-              sendUnknownEventNack(connection, requestId, eventType);
-              return;
-            }
-
-            switch (knownMessage.type) {
-              case "ping": {
-                sendJson(connection, buildPongEnvelope());
-                sendAckWithMetrics(connection, requestId, eventType);
-                return;
-              }
-
-              case "room.join": {
-                await handleRoomJoinEvent(connection, state, payload, requestId, eventType);
-                return;
-              }
-
-              case "room.leave": {
-                handleRoomLeaveEvent(connection, state, requestId, eventType);
-                return;
-              }
-
-              case "room.kick": {
-                await handleRoomKickEvent(connection, state, payload, requestId, eventType);
-                return;
-              }
-
-              case "room.move_member": {
-                await handleRoomMoveMemberEvent(connection, state, payload, requestId, eventType);
-                return;
-              }
-
-              case "chat.send": {
-                await handleChatSendEvent(
-                  connection,
-                  state,
-                  payload,
-                  requestId,
-                  eventType,
-                  knownMessage.idempotencyKey
-                );
-                return;
-              }
-
-              case "chat.edit": {
-                await handleChatEditEvent(connection, state, payload, requestId, eventType);
-                return;
-              }
-
-              case "chat.delete": {
-                await handleChatDeleteEvent(connection, state, payload, requestId, eventType);
-                return;
-              }
-
-              case "chat.typing": {
-                await handleChatTypingEvent(connection, state, payload, requestId, eventType);
-                return;
-              }
-
-              case "screen.share.start": {
-                handleScreenShareStartEvent(connection, state, payload, requestId, eventType, knownMessage.type);
-                return;
-              }
-
-              case "screen.share.stop": {
-                handleScreenShareStopEvent(connection, state, payload, requestId, eventType, knownMessage.type);
-                return;
-              }
-
-              case "call.mic_state": {
-                await handleCallMicStateEvent(connection, state, payload, requestId, eventType, knownMessage.type);
-                return;
-              }
-
-              case "call.offer":
-              case "call.answer":
-              case "call.ice": {
-                await handleCallSignalingEvent(
-                  connection,
-                  state,
-                  payload,
-                  requestId,
-                  eventType,
-                  knownMessage.type
-                );
-                return;
-              }
-
-              case "call.video_state": {
-                await handleCallVideoStateEvent(connection, state, payload, requestId, eventType, knownMessage.type);
-                return;
-              }
-            }
-          } catch (error) {
-            fastify.log.error(error, "ws message handling failed");
-            sendJson(connection, buildErrorEnvelope("ServerError", "Failed to process event"));
-          }
+        connection.on("message", async (raw) => {
+          await handleMessage(connection, raw);
         });
 
         connection.on("close", async () => {
