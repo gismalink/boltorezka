@@ -64,6 +64,7 @@ export { useAppWorkspaceLifecycleGuardsRuntime } from "./app/effects/useAppWorks
 export { useInviteAcceptanceFlow } from "./app/effects/useInviteAcceptanceFlow";
 export { useMemberPreferencesSync } from "./app/effects/useMemberPreferencesSync";
 export { useOnboardingOverlayActions } from "./app/effects/useOnboardingOverlayActions";
+export { useOnboardingOverlayActionsInput } from "./app/state/useOnboardingOverlayActionsInput";
 export { usePendingAccessAutoRefresh } from "./app/effects/usePendingAccessAutoRefresh";
 export { useRoomSlugPersistence } from "./app/effects/useRoomSlugPersistence";
 export { useServerDataSync } from "./app/effects/useServerDataSync";

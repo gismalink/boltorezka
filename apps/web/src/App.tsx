@@ -48,6 +48,7 @@ import {
   useAppEventLogs,
   useBuildVersionSync,
   useOnboardingOverlayActions,
+  useOnboardingOverlayActionsInput,
   useAppWorkspaceSupportRuntime,
   useAppWorkspaceSupportRuntimeInput,
   useAppRealtimeTransportRuntimeInput,
@@ -816,7 +817,7 @@ export function App() {
     roomSlug
   }));
 
-  const { acknowledgeUpdatedApp, completeFirstRunIntro } = useOnboardingOverlayActions({
+  const { acknowledgeUpdatedApp, completeFirstRunIntro } = useOnboardingOverlayActions(useOnboardingOverlayActionsInput({
     token,
     user,
     profileNameDraft,
@@ -829,7 +830,7 @@ export function App() {
     setShowAppUpdatedOverlay,
     pushToast,
     t
-  });
+  }));
 
   const userDockSharedProps = useAppUserDockSharedProps({
     t,
