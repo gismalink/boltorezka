@@ -232,6 +232,56 @@
     0 4px 12px rgba(15, 23, 42, 0.08);
 }
 
+[data-ui-theme="aka-dis"] button,
+[data-ui-theme="aka-dis"] input,
+[data-ui-theme="aka-dis"] select,
+[data-ui-theme="aka-dis"] textarea,
+[data-ui-theme="aka-dis"] .card,
+[data-ui-theme="aka-dis"] .video-window,
+[data-ui-theme="aka-dis"] .range-slider-thumb-value {
+  border-radius: 10px;
+  box-shadow:
+    0 1px 2px rgba(10, 11, 13, 0.35),
+    0 6px 16px rgba(10, 11, 13, 0.25);
+}
+
+[data-ui-theme="material-classic"] button {
+  transition: transform 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.08),
+    0 4px 12px rgba(15, 23, 42, 0.08);
+}
+
+[data-ui-theme="aka-dis"] button {
+  transition: transform 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
+  box-shadow:
+    0 1px 2px rgba(10, 11, 13, 0.35),
+    0 6px 16px rgba(10, 11, 13, 0.25);
+}
+
+[data-ui-theme="material-classic"] button:hover,
+[data-ui-theme="aka-dis"] button:hover {
+  transform: translateY(-1px);
+}
+
+[data-ui-theme="material-classic"] button:active,
+[data-ui-theme="aka-dis"] button:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 3px rgba(10, 11, 13, 0.2);
+}
+
+[data-ui-theme="material-classic"] button:focus-visible,
+[data-ui-theme="material-classic"] input:focus-visible,
+[data-ui-theme="material-classic"] select:focus-visible,
+[data-ui-theme="material-classic"] textarea:focus-visible,
+[data-ui-theme="aka-dis"] button:focus-visible,
+[data-ui-theme="aka-dis"] input:focus-visible,
+[data-ui-theme="aka-dis"] select:focus-visible,
+[data-ui-theme="aka-dis"] textarea:focus-visible {
+  outline-color: var(--pixel-accent);
+  border-color: var(--pixel-accent);
+}
+
 [data-ui-theme="material-classic"] .quality-toggle-btn-active,
 [data-ui-theme="material-classic"] .user-settings-tab-btn-active {
   box-shadow:
@@ -527,7 +577,7 @@ body,
 body {
   margin: 0;
   overflow: hidden;
-  font-family: "Noto Sans Mono", "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-family: inherit;
   background:
     radial-gradient(1200px 700px at 50% 40%, rgba(207, 74, 134, 0.11), rgba(0, 0, 0, 0) 60%),
     radial-gradient(900px 600px at 55% 55%, rgba(53, 230, 255, 0.09), rgba(0, 0, 0, 0) 62%),
