@@ -27,6 +27,7 @@ export { useAppPermissionsAndLocale } from "./app/state/useAppPermissionsAndLoca
 export { useAppPermissionsIdentityRuntime } from "./app/state/useAppPermissionsIdentityRuntime";
 export { useAppPermissionsIdentityRuntimeInput } from "./app/state/useAppPermissionsIdentityRuntimeInput";
 export { useAppRefsAndAdaptersRuntime } from "./app/state/useAppRefsAndAdaptersRuntime";
+export { useAppRefsAndAdaptersRuntimeInput } from "./app/state/useAppRefsAndAdaptersRuntimeInput";
 export { useAppVoiceMediaRuntime } from "./app/state/useAppVoiceMediaRuntime";
 export { useAppVoiceMediaRuntimeInput } from "./app/state/useAppVoiceMediaRuntimeInput";
 export { useAppOverlaysSectionInput } from "./app/state/useAppOverlaysSectionInput";

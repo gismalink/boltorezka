@@ -26,6 +26,7 @@ import {
   useAppPermissionsIdentityRuntime,
   useAppPermissionsIdentityRuntimeInput,
   useAppRefsAndAdaptersRuntime,
+  useAppRefsAndAdaptersRuntimeInput,
   useAppRoomsRuntime,
   useAppRoomsRuntimeInput,
   useAppShellRuntime,
@@ -259,14 +260,14 @@ export function App() {
     serverErrorMessage,
     chatImageTooLargeMessage,
     markMessageDelivery
-  } = useAppRefsAndAdaptersRuntime({
+  } = useAppRefsAndAdaptersRuntime(useAppRefsAndAdaptersRuntimeInput({
     currentServerId,
     roomSlug,
     chatRoomSlug,
     t,
     chatImagePolicy: serverChatImagePolicy,
     setMessages
-  });
+  }));
   const { eventLog, callEventLog, pushLog, pushCallLog } = useAppEventLogs(locale);
 
   const { collapsedCategoryIds, toggleCategoryCollapsed } = useCollapsedCategories(roomsTree);
