@@ -1,10 +1,6 @@
 import { useRef } from "react";
-import {
-  RealtimeClient
-} from "./services";
-import {
-  AppShellLayout
-} from "./components";
+import { RealtimeClient } from "./services";
+import { AppShellLayout } from "./components";
 import {
   DEFAULT_CHAT_IMAGE_DATA_URL_LENGTH,
   DEFAULT_CHAT_IMAGE_MAX_SIDE,
@@ -16,10 +12,12 @@ import {
 } from "./constants/appConfig";
 import {
   useAppCoreState,
+  useAppCoreStateInput,
   useAppUiState,
   useAppAuthWorkspaceRuntime,
   useAppAuthWorkspaceRuntimeInput,
   useAppEntryGatesState,
+  useAppEntryGatesStateInput,
   useAppRealtimeTransportRuntime,
   useAppVoiceMediaRuntime,
   useAppVoiceMediaRuntimeInput,
@@ -34,6 +32,7 @@ import {
   useAppWorkspaceActionsRuntime,
   useAppWorkspaceActionsRuntimeInput,
   useAppUserDockSharedProps,
+  useAppUserDockSharedPropsInput,
   useAppUserMediaState,
   useAppWorkspacePanelsRuntime,
   useAppWorkspacePanelsRuntimeInput,
@@ -122,12 +121,12 @@ export function App() {
     selectedAdminServerId, setSelectedAdminServerId,
     adminServerOverview, setAdminServerOverview,
     adminServerOverviewLoading, setAdminServerOverviewLoading
-  } = useAppCoreState({
+  } = useAppCoreState(useAppCoreStateInput({
     versionUpdatePendingKey: VERSION_UPDATE_PENDING_KEY,
     cookieConsentKey: COOKIE_CONSENT_KEY,
     currentServerIdStorageKey: CURRENT_SERVER_ID_STORAGE_KEY,
     pendingAccessAutoRefreshSec: PENDING_ACCESS_AUTO_REFRESH_SEC
-  });
+  }));
   const {
     newRoomSlug, setNewRoomSlug,
     newRoomTitle, setNewRoomTitle,
@@ -233,13 +232,7 @@ export function App() {
     hasUser,
     hasServiceToken
   } = useAppPermissionsIdentityRuntime(useAppPermissionsIdentityRuntimeInput({
-    token,
-    user,
-    servers,
-    currentServerId,
-    adminUsers,
-    lang,
-    pushToast
+    token, user, servers, currentServerId, adminUsers, lang, pushToast
   }));
 
   const {
@@ -263,14 +256,22 @@ export function App() {
     chatImageTooLargeMessage,
     markMessageDelivery
   } = useAppRefsAndAdaptersRuntime(useAppRefsAndAdaptersRuntimeInput({
-    currentServerId,
-    roomSlug,
-    chatRoomSlug,
-    t,
+    currentServerId, roomSlug, chatRoomSlug, t, 
     chatImagePolicy: serverChatImagePolicy,
     setMessages
   }));
   const { eventLog, callEventLog, pushLog, pushCallLog } = useAppEventLogs(locale);
+
+  const runtimeInputCommon = {
+    t,
+    token,
+    user,
+    roomSlug,
+    chatRoomSlug,
+    currentServerId,
+    pushToast,
+    pushLog
+  };
 
   const { collapsedCategoryIds, toggleCategoryCollapsed } = useCollapsedCategories(roomsTree);
   const {
@@ -578,9 +579,8 @@ export function App() {
 
   const { refreshDevices, requestMediaAccess, requestVideoAccess } = useAppWorkspaceSupportRuntime(
     useAppWorkspaceSupportRuntimeInput({
-      token,
+      ...runtimeInputCommon,
       canManageUsers,
-      pushLog,
       setAdminUsers,
       canViewTelemetry,
       wsState,
@@ -592,15 +592,12 @@ export function App() {
       setScreenShareOwnerByRoomSlug,
       setVoiceInitialMicStateByUserIdInCurrentRoom,
       setVoiceInitialAudioOutputMutedByUserIdInCurrentRoom,
-      roomSlug,
-      user,
       messages,
       playServerSound,
       userSettingsOpen,
       userSettingsTab,
       setSelfMonitorEnabled,
       pushCallLog,
-      t,
       selectedInputId,
       selectedOutputId,
       selectedVideoInputId,
@@ -618,7 +615,6 @@ export function App() {
       roomVoiceConnected,
       voiceSettingsOpen,
       voiceSettingsPanel,
-      pushToast,
       setMicTestLevel,
       selfMonitorEnabled,
       selectedInputProfile,
@@ -714,24 +710,18 @@ export function App() {
     restoreChannel,
     deleteChannelPermanent
   } = useAppWorkspaceActionsRuntime(useAppWorkspaceActionsRuntimeInput({
-    roomSlug,
+    ...runtimeInputCommon,
     canCreateRooms,
     roomAdminController,
     disconnectRoom,
     sendWsEvent,
-    pushToast,
-    pushLog,
-    t,
     setAgeGateBlockedRoomSlug,
     setRoomSlug,
     setChatRoomSlug,
-    chatRoomSlug,
     messages,
     setMessages,
     setMessagesHasMore,
     setMessagesNextCursor,
-    user,
-    token,
     chatText,
     setChatText,
     editingMessageId,
@@ -754,7 +744,6 @@ export function App() {
     canManageAudioQuality,
     setServerAudioQuality,
     setServerAudioQualitySaving,
-    currentServerId,
     creatingInvite,
     serverAgeConfirming,
     lastInviteUrl,
@@ -832,7 +821,7 @@ export function App() {
     t
   }));
 
-  const userDockSharedProps = useAppUserDockSharedProps({
+  const userDockSharedProps = useAppUserDockSharedProps(useAppUserDockSharedPropsInput({
     t,
     user,
     inputDevices,
@@ -921,7 +910,7 @@ export function App() {
     playServerSound,
     leaveRoom,
     isMobileViewport
-  });
+  }));
 
   const {
     roomsPanelProps,
@@ -1110,7 +1099,7 @@ export function App() {
   const {
     entryGate,
     showEmptyServerOnboarding
-  } = useAppEntryGatesState({
+  } = useAppEntryGatesState(useAppEntryGatesStateInput({
     showDesktopBrowserCompletion,
     desktopHandoffError,
     user,
@@ -1123,7 +1112,7 @@ export function App() {
     pendingAccessRefreshInSec,
     serversLoading,
     servers
-  });
+  }));
 
   if (entryGate) {
     return entryGate;
