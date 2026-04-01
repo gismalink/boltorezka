@@ -921,7 +921,16 @@ export function ServerProfileModal({
         }
       }}
     >
-      <section className="card voice-preferences-modal user-settings-modal server-profile-modal grid w-full max-w-[980px] min-w-0 gap-4 max-desktop:h-full max-desktop:max-h-none max-desktop:min-h-0 max-desktop:overflow-hidden max-desktop:p-4 desktop:grid-cols-[250px_1fr]">
+      <div className="server-profile-modal-shell">
+        <button
+          type="button"
+          className="secondary icon-btn server-profile-modal-close"
+          onClick={onClose}
+          aria-label={t("settings.closeVoiceAria")}
+        >
+          <i className="bi bi-x-lg" aria-hidden="true" />
+        </button>
+        <section className="card voice-preferences-modal user-settings-modal server-profile-modal grid w-full max-w-[980px] min-w-0 gap-4 max-desktop:h-full max-desktop:max-h-none max-desktop:min-h-0 max-desktop:overflow-hidden max-desktop:p-4 desktop:grid-cols-[250px_1fr]">
         <div className="user-settings-sidebar grid min-w-0 content-start gap-2">
           <div className="voice-preferences-kicker">{t("server.title")}</div>
           <label className="desktop:hidden grid gap-1">
@@ -1036,14 +1045,6 @@ export function ServerProfileModal({
               {serverMenuTab === "desktop_downloads" ? t("server.tabDesktopApp") : null}
               {serverMenuTab === "documents_rules" ? t("server.tabDocumentsRules") : null}
             </h2>
-            <button
-              type="button"
-              className="secondary icon-btn"
-              onClick={onClose}
-              aria-label={t("settings.closeVoiceAria")}
-            >
-              <i className="bi bi-x-lg" aria-hidden="true" />
-            </button>
           </div>
 
           {showServerMembersPanel || showAdminUsersPanel || showAdminServersPanel || showProductManagementPanel ? (
@@ -1787,7 +1788,8 @@ export function ServerProfileModal({
             </section>
           ) : null}
         </div>
-      </section>
+        </section>
+      </div>
 
       {deleteConfirmOpen ? (
         <div className="fixed inset-0 z-[170] flex items-center justify-center bg-black/65 px-4" role="dialog" aria-modal="true">
