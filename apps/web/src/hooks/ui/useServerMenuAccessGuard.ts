@@ -8,7 +8,8 @@ type ServerMenuTab =
   | "sound"
   | "video"
   | "chat_images"
-  | "desktop_downloads";
+  | "desktop_downloads"
+  | "documents_rules";
 
 type UseServerMenuAccessGuardArgs = {
   serverMenuTab: ServerMenuTab;

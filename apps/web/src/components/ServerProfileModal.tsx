@@ -22,10 +22,12 @@ type ServerMenuTab =
   | "sound"
   | "video"
   | "chat_images"
-  | "desktop_downloads";
+  | "desktop_downloads"
+  | "documents_rules";
 type UserAccessTab = "active" | "blocked" | "requests" | "bots" | "deleted";
 type ProductManagementTab = "users" | "servers";
 type ObservabilityTab = "log" | "signaling" | "telemetry";
+type DocumentsRulesTab = "documents" | "rules";
 
 type IconAction = {
   key: string;
@@ -352,6 +354,7 @@ export function ServerProfileModal({
   const [userAccessTab, setUserAccessTab] = useState<UserAccessTab>("active");
   const [productManagementTab, setProductManagementTab] = useState<ProductManagementTab>("users");
   const [observabilityTab, setObservabilityTab] = useState<ObservabilityTab>("log");
+  const [documentsRulesTab, setDocumentsRulesTab] = useState<DocumentsRulesTab>("documents");
   const [userSearchQuery, setUserSearchQuery] = useState("");
   const [renameServerName, setRenameServerName] = useState("");
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -978,6 +981,13 @@ export function ServerProfileModal({
           >
             {t("server.tabDesktopApp")}
           </button>
+          <button
+            type="button"
+            className={`secondary user-settings-tab-btn min-h-[42px] justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${serverMenuTab === "documents_rules" ? "user-settings-tab-btn-active" : ""}`}
+            onClick={() => onSetServerMenuTab("documents_rules")}
+          >
+            {t("server.tabDocumentsRules")}
+          </button>
         </div>
 
         <div className="user-settings-content grid min-h-0 min-w-0 content-start gap-4 overflow-auto overflow-x-hidden pr-0">
@@ -991,6 +1001,7 @@ export function ServerProfileModal({
               {serverMenuTab === "video" ? t("server.tabVideo") : null}
               {serverMenuTab === "chat_images" ? t("server.tabChatImages") : null}
               {serverMenuTab === "desktop_downloads" ? t("server.tabDesktopApp") : null}
+              {serverMenuTab === "documents_rules" ? t("server.tabDocumentsRules") : null}
             </h2>
             <button
               type="button"
@@ -1690,6 +1701,56 @@ export function ServerProfileModal({
                   </div>
                 ))}
               </div>
+            </section>
+          ) : null}
+
+          {serverMenuTab === "documents_rules" ? (
+            <section className="grid min-h-0 gap-3">
+              <div className="quality-toggle-group" role="tablist" aria-label={t("server.documentsRulesTabs")}>
+                <button
+                  type="button"
+                  className={`secondary quality-toggle-btn ${documentsRulesTab === "documents" ? "quality-toggle-btn-active" : ""}`}
+                  onClick={() => setDocumentsRulesTab("documents")}
+                  aria-selected={documentsRulesTab === "documents"}
+                >
+                  {t("server.documentsTabDocuments")}
+                </button>
+                <button
+                  type="button"
+                  className={`secondary quality-toggle-btn ${documentsRulesTab === "rules" ? "quality-toggle-btn-active" : ""}`}
+                  onClick={() => setDocumentsRulesTab("rules")}
+                  aria-selected={documentsRulesTab === "rules"}
+                >
+                  {t("server.documentsTabRules")}
+                </button>
+              </div>
+
+              {documentsRulesTab === "documents" ? (
+                <div className="grid gap-3">
+                  <h3>{t("server.documentsTitle")}</h3>
+                  <p className="muted">{t("server.documentsHint")}</p>
+                  <nav aria-label={t("server.documentsTitle")}> 
+                    <ul className="grid gap-2 text-sm">
+                      <li><a href="/privacy" className="underline underline-offset-2 hover:text-white">{t("server.documentPrivacy")}</a></li>
+                      <li><a href="/terms" className="underline underline-offset-2 hover:text-white">{t("server.documentTerms")}</a></li>
+                      <li><a href="/cookies" className="underline underline-offset-2 hover:text-white">{t("server.documentCookies")}</a></li>
+                      <li><a href="/contacts" className="underline underline-offset-2 hover:text-white">{t("server.documentContacts")}</a></li>
+                    </ul>
+                  </nav>
+                </div>
+              ) : null}
+
+              {documentsRulesTab === "rules" ? (
+                <div className="grid gap-3">
+                  <h3>{t("server.rulesTitle")}</h3>
+                  <p className="muted">{t("server.rulesHint")}</p>
+                  <ul className="grid gap-2 list-disc pl-5">
+                    <li>{t("server.rulesItemRespect")}</li>
+                    <li>{t("server.rulesItemContent")}</li>
+                    <li>{t("server.rulesItemPrivacy")}</li>
+                  </ul>
+                </div>
+              ) : null}
             </section>
           ) : null}
         </div>

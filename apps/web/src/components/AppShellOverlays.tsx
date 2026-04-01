@@ -110,7 +110,7 @@ export function AppShellOverlays({
         />
       ) : null}
 
-      <footer className="pointer-events-none fixed inset-x-0 bottom-1 z-[150] px-3">
+      <footer className="pointer-events-none fixed inset-x-0 bottom-1 z-[150] hidden px-3 desktop:block">
         <div className="mx-auto w-fit rounded-full border border-white/15 bg-black/35 px-4 py-1 backdrop-blur">
           <div className="pointer-events-auto">
             <LegalLinks compact lang={lang} />

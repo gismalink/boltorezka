@@ -709,6 +709,55 @@ h3 {
   text-shadow: var(--heading-shadow);
 }
 
+.legal-doc-inline-link {
+  color: color-mix(in srgb, var(--pixel-text) 86%, var(--pixel-muted) 14%);
+}
+
+.legal-doc-inline-link:hover {
+  color: var(--pixel-text);
+}
+
+.legal-doc-modal-backdrop {
+  background: var(--overlay-backdrop-bg);
+}
+
+.legal-doc-modal-sheet {
+  border-color: color-mix(in srgb, var(--pixel-border) 76%, transparent 24%);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--pixel-panel) 90%, #000 10%) 0%, color-mix(in srgb, var(--pixel-panel-2) 92%, #000 8%) 100%);
+}
+
+.legal-doc-modal-frame {
+  border: var(--border-thin) solid color-mix(in srgb, var(--pixel-border) 72%, transparent 28%);
+  background: color-mix(in srgb, var(--pixel-panel-2) 82%, #000 18%);
+}
+
+[data-ui-theme="material-classic"] .legal-doc-modal-sheet {
+  background: linear-gradient(180deg, #ffffff 0%, #f6f8fc 100%);
+}
+
+[data-ui-theme="material-classic"] .legal-doc-modal-frame {
+  background: #f8fbff;
+}
+
+[data-ui-theme="aka-dis"] .legal-doc-modal-sheet {
+  background: linear-gradient(180deg, #252830 0%, #1c1f25 100%);
+}
+
+[data-ui-theme="aka-dis"] .legal-doc-modal-frame {
+  background: #16181d;
+}
+
+[data-ui-theme="alpha-strike"] .legal-doc-modal-sheet {
+  background:
+    radial-gradient(900px 420px at -8% -20%, rgba(223, 28, 39, 0.15), rgba(20, 20, 24, 0) 54%),
+    linear-gradient(180deg, #1c1c22 0%, #131318 100%);
+}
+
+[data-ui-theme="alpha-strike"] .legal-doc-modal-frame {
+  background: #101016;
+}
+
 button,
 input,
 select,
