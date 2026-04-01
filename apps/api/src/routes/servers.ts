@@ -500,7 +500,7 @@ export async function serversRoutes(fastify: FastifyInstance) {
     }
   );
 
-  fastify.post<{ Params: { serverId: string }; Body: { source?: string } }>(
+  fastify.post<{ Params: { serverId: string }; Body: { source?: string; revoke?: boolean } }>(
     "/v1/servers/:serverId/age-confirm",
     {
       preHandler: [
@@ -515,7 +515,26 @@ export async function serversRoutes(fastify: FastifyInstance) {
     async (request) => {
       const serverId = String(request.params.serverId || "").trim();
       const userId = String(request.currentUser?.id || "").trim();
-      const source = String((request.body as { source?: unknown } | undefined)?.source || "").trim() || "explicit-ui";
+      const payload = (request.body as { source?: unknown; revoke?: unknown } | undefined) || {};
+      const source = String(payload.source || "").trim() || "explicit-ui";
+      const revokeRequested = payload.revoke === true;
+
+      if (revokeRequested) {
+        await revokeServerAgeConfirmation({
+          serverId,
+          userId,
+          source
+        });
+
+        const revokeResponse: ServerAgeConfirmResponse = {
+          ok: true,
+          serverId,
+          confirmed: false,
+          confirmedAt: null
+        };
+
+        return revokeResponse;
+      }
 
       const confirmation = await confirmServerAge({
         serverId,

@@ -12,7 +12,7 @@ import {
 } from "./auth.helpers.js";
 import { deleteAuthSession } from "./auth-session.js";
 
-const uiThemeSchema = z.enum(["8-neon-bit", "material-classic"]);
+const uiThemeSchema = z.enum(["8-neon-bit", "material-classic", "aka-dis"]);
 const updateProfileSchema = z.object({
   name: z.string().trim().min(1).max(80),
   uiTheme: uiThemeSchema.optional()

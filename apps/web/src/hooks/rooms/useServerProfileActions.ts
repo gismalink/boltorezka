@@ -159,6 +159,32 @@ export function useServerProfileActions({
     }
   }, [lastInviteUrl, pushToast, t]);
 
+  const handleCreateServerInviteAndCopy = useCallback(async () => {
+    const tokenValue = String(token || "").trim();
+    const serverId = String(currentServerId || "").trim();
+
+    if (!tokenValue || !serverId || creatingInvite) {
+      return;
+    }
+
+    setCreatingInvite(true);
+    try {
+      const result = await api.createServerInvite(tokenValue, serverId);
+      const invitePath = String(result.inviteUrl || "").trim();
+      const absoluteInviteUrl = invitePath.startsWith("/")
+        ? `${window.location.origin}${invitePath}`
+        : invitePath;
+
+      setLastInviteUrl(absoluteInviteUrl);
+      await navigator.clipboard.writeText(absoluteInviteUrl);
+      pushToast(t("server.inviteCopied"));
+    } catch (error) {
+      pushToast((error as Error).message || t("server.inviteCopyFailed"));
+    } finally {
+      setCreatingInvite(false);
+    }
+  }, [creatingInvite, currentServerId, pushToast, setCreatingInvite, setLastInviteUrl, t, token]);
+
   const handleServerChange = useCallback((serverId: string) => {
     const nextServerId = String(serverId || "").trim();
     setCurrentServerId(nextServerId);
@@ -300,6 +326,7 @@ export function useServerProfileActions({
     handleRenameCurrentServer,
     handleConfirmServerAge,
     handleCopyInviteUrl,
+    handleCreateServerInviteAndCopy,
     handleServerChange,
     handleLeaveCurrentServer,
     handleDeleteCurrentServer,

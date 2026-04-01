@@ -364,7 +364,7 @@ export const api = {
     fetchJson<ServerAgeConfirmResponse>(
       withSuffix(endpoints.servers, serverId, "age-confirm"),
       token,
-      withJsonBody("DELETE", { source })
+      withJsonBody("POST", { source, revoke: true })
     ),
   leaveServer: (token: string, serverId: string) =>
     fetchJson<{ left: boolean }>(withSuffix(endpoints.servers, serverId, "members/me"), token, withJsonBody("DELETE")),

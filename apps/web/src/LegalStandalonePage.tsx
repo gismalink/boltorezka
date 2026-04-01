@@ -116,7 +116,7 @@ const LEGAL_PAGES: Record<Lang, Record<string, LegalPageData>> = {
         {
           heading: "Канал для обращений",
           items: [
-            "По вопросам персональных данных и юридическим запросам: legal@datowave.com.",
+            "По вопросам персональных данных и юридическим запросам: gismalink@gmail.com.",
             "Запросы на доступ/исправление/удаление данных обрабатываются через этот канал.",
             "Рекомендуемый срок первичного ответа: до 10 рабочих дней."
           ]
@@ -222,7 +222,7 @@ const LEGAL_PAGES: Record<Lang, Record<string, LegalPageData>> = {
         {
           heading: "Request channel",
           items: [
-            "For personal data and legal requests: legal@datowave.com.",
+            "For personal data and legal requests: gismalink@gmail.com.",
             "Requests for access/correction/deletion are handled through this channel.",
             "Recommended first response time: up to 10 business days."
           ]

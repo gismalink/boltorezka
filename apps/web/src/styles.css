@@ -1510,6 +1510,17 @@ pre {
     0 0 0 1px color-mix(in srgb, var(--pixel-neon-cyan) 70%, transparent 30%);
 }
 
+[data-ui-theme="aka-dis"] .room-btn-active,
+[data-ui-theme="aka-dis"] .room-btn-active:hover,
+[data-ui-theme="aka-dis"] .room-btn-active:focus-visible,
+[data-ui-theme="aka-dis"] .room-btn-active:active {
+  border-color: color-mix(in srgb, var(--pixel-neon-cyan) 56%, var(--pixel-border) 44%);
+  background: color-mix(in srgb, var(--pixel-panel) 58%, var(--pixel-neon-cyan) 42%);
+  box-shadow:
+    inset 4px 0 0 var(--pixel-accent),
+    0 0 0 1px color-mix(in srgb, var(--pixel-neon-cyan) 62%, transparent 38%);
+}
+
 .channel-member-avatar {
   width: 18px;
   height: 18px;

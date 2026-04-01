@@ -20,8 +20,10 @@ type AppHeaderProps = {
   servers: ServerListItem[];
   currentServerId: string;
   creatingServer: boolean;
+  creatingInvite: boolean;
   onChangeCurrentServer: (serverId: string) => void;
   onCreateServer: (name: string) => Promise<void>;
+  onCreateServerInviteAndCopy: () => Promise<void>;
   buildDateLabel?: string;
   pendingJoinRequestsCount?: number;
 };
@@ -44,8 +46,10 @@ export function AppHeader({
   servers,
   currentServerId,
   creatingServer,
+  creatingInvite,
   onChangeCurrentServer,
   onCreateServer,
+  onCreateServerInviteAndCopy,
   buildDateLabel,
   pendingJoinRequestsCount = 0,
 }: AppHeaderProps) {
@@ -109,6 +113,14 @@ export function AppHeader({
                   ))}
                 </select>
               </label>
+              <Button
+                type="button"
+                className="secondary"
+                onClick={() => { void onCreateServerInviteAndCopy(); }}
+                disabled={creatingInvite || !currentServerId}
+              >
+                {creatingInvite ? t("server.inviteCreateLoading") : t("server.inviteQuick")}
+              </Button>
               <div className="grid gap-2" ref={createServerRef}>
                 <Button
                   type="button"

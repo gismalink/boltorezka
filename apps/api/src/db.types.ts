@@ -1,6 +1,6 @@
 export type UserRole = "user" | "admin" | "super_admin";
 export type UserAccessState = "pending" | "active" | "blocked";
-export type UiTheme = "8-neon-bit" | "material-classic";
+export type UiTheme = "8-neon-bit" | "material-classic" | "aka-dis";
 
 export type UserRow = {
   id: string;

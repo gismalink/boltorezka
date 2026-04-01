@@ -16,6 +16,7 @@ type AppTopChromeProps = {
   servers: ServerListItem[];
   currentServerId: string;
   creatingServer: boolean;
+  creatingInvite: boolean;
   buildDateLabel: string;
   pendingJoinRequestsCount: number;
   appMenuOpen: boolean;
@@ -31,6 +32,7 @@ type AppTopChromeProps = {
   onOpenUserSettings: () => void;
   onChangeCurrentServer: (serverId: string) => void;
   onCreateServer: (name: string) => Promise<void>;
+  onCreateServerInviteAndCopy: () => Promise<void>;
   mediaDevicesState: "ready" | "unsupported" | "denied" | "error";
   onRequestMediaAccess: () => void;
   remoteAudioAutoplayBlocked: boolean;
@@ -49,6 +51,7 @@ export function AppTopChrome({
   servers,
   currentServerId,
   creatingServer,
+  creatingInvite,
   buildDateLabel,
   pendingJoinRequestsCount,
   appMenuOpen,
@@ -64,6 +67,7 @@ export function AppTopChrome({
   onOpenUserSettings,
   onChangeCurrentServer,
   onCreateServer,
+  onCreateServerInviteAndCopy,
   mediaDevicesState,
   onRequestMediaAccess,
   remoteAudioAutoplayBlocked,
@@ -83,6 +87,7 @@ export function AppTopChrome({
         servers={servers}
         currentServerId={currentServerId}
         creatingServer={creatingServer}
+        creatingInvite={creatingInvite}
         buildDateLabel={buildDateLabel}
         pendingJoinRequestsCount={pendingJoinRequestsCount}
         appMenuOpen={appMenuOpen}
@@ -98,6 +103,7 @@ export function AppTopChrome({
         onOpenUserSettings={onOpenUserSettings}
         onChangeCurrentServer={onChangeCurrentServer}
         onCreateServer={onCreateServer}
+        onCreateServerInviteAndCopy={onCreateServerInviteAndCopy}
       />
       <TooltipPortal />
 

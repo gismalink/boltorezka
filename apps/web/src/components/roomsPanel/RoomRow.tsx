@@ -375,7 +375,7 @@ export function RoomRow({
       </div>
 
       {roomMembers.length > 0 ? (
-        <ul className="col-span-full m-0 list-none grid gap-0.5 pl-[var(--space-xl)] pt-[2px]">
+        <ul className="col-span-full m-0 list-none grid gap-0.5 pl-[calc(var(--space-xl)*2)] pt-[2px]">
           {roomMembers.map((member) => {
             const isCurrentUser = Boolean(
               normalizedCurrentUserId && member.userId && member.userId === normalizedCurrentUserId

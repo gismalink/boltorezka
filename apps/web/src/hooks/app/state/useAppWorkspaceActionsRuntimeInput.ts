@@ -74,6 +74,7 @@ export function useAppWorkspaceActionsRuntimeInput(params: Record<string, unknow
           currentServerId: p.currentServerId,
           creatingInvite: p.creatingInvite,
           serverAgeConfirming: p.serverAgeConfirming,
+          serverAgeConfirmedAt: p.serverAgeConfirmedAt,
           lastInviteUrl: p.lastInviteUrl,
           setCreatingServer: p.setCreatingServer,
           setServers: p.setServers,
