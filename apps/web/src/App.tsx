@@ -29,8 +29,8 @@ import {
   useAppPermissionsAndLocale,
   useAppRoomsPanelProps,
   useAppRoomsAndServerDerived,
+  useAppShellCompositionProps,
   useAppServerProfileModalProps,
-  useAppShellLayoutProps,
   useAppTopChromeSectionInput,
   useAppUserDockSharedProps,
   useAppUserMediaState,
@@ -1611,7 +1611,7 @@ export function App() {
     appTopChromeProps,
     appMainSectionProps,
     appShellOverlaysProps
-  } = useAppShellLayoutProps({
+  } = useAppShellCompositionProps({
     topChrome: topChromeSectionInput,
     mainSection: mainSectionInput,
     overlays: overlaysSectionInput

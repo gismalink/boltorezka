@@ -15,6 +15,7 @@ export { useAppPermissionsAndLocale } from "./app/state/useAppPermissionsAndLoca
 export { useAppOverlaysSectionInput } from "./app/state/useAppOverlaysSectionInput";
 export { useAppRoomsPanelProps } from "./app/state/useAppRoomsPanelProps";
 export { useAppRoomsAndServerDerived } from "./app/state/useAppRoomsAndServerDerived";
+export { useAppShellCompositionProps } from "./app/state/useAppShellCompositionProps";
 export { useAppServerProfileModalProps } from "./app/state/useAppServerProfileModalProps";
 export { useAppShellLayoutProps } from "./app/state/useAppShellLayoutProps";
 export { useAppShellOverlaysProps } from "./app/state/useAppShellOverlaysProps";
