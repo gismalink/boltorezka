@@ -586,7 +586,7 @@ export function App() {
     creatingInvite, serverAgeConfirming, serverAgeConfirmedAt, lastInviteUrl,
     setCreatingServer, setServers, setCurrentServerId,
     setCreatingInvite, setLastInviteUrl,
-    setServerAgeConfirmedAt, setServerMembers, setAdminServers,
+    setServerAgeConfirming, setServerAgeConfirmedAt, setServerMembers, setAdminServers,
     setSelectedAdminServerId,
     allRooms, archivedRooms,
     newRoomTitle, newRoomKind, newRoomCategoryId, newCategoryTitle,
