@@ -67,6 +67,8 @@ Progress note:
 - Пятьдесят пятый инкремент декомпозиции `web` выполнен: popup outside-close orchestration (`isAnyPopupOpen` + `onCloseAll`) вынесен из `App.tsx` в `hooks/app/effects/useAppPopupOutsideClose.ts`.
 - Пятьдесят шестой инкремент декомпозиции `web` выполнен: media runtime cluster (`useMediaDevicePreferences` + `useMicrophoneLevelMeter` + `useMicrophoneSelfMonitor`) вынесен из `App.tsx` в `hooks/app/effects/useAppMediaDeviceRuntime.ts`.
 - Пятьдесят седьмой инкремент декомпозиции `web` выполнен: room/chat actions orchestration (`useRoomPresenceActions` + `useChatComposerActions`) вынесен из `App.tsx` в `hooks/app/state/useAppRoomChatActions.ts`.
+- Пятьдесят восьмой инкремент декомпозиции `web` выполнен: server/admin actions orchestration (`useServerProfileActions` + `useAdminServerActions`) вынесен из `App.tsx` в `hooks/app/state/useAppServerAdminActions.ts`.
+- Пятьдесят девятый инкремент декомпозиции `web` выполнен: moderation/preference actions orchestration (`useServerModerationActions` + `useRoomMemberPreferencesOrchestrator`) вынесен из `App.tsx` в `hooks/app/state/useAppModerationActions.ts`.
 - Cumulative: `App.tsx` сокращен с 2101 до 1596 строк; web build + denied-media smoke проходят после каждого инкремента.
 
 ### 2.2 API route decomposition

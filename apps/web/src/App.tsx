@@ -26,11 +26,13 @@ import {
   useAppEntryGatesState,
   useAppMediaDeviceRuntime,
   useAppMainSectionInput,
+  useAppModerationActions,
   useAppOverlaysSectionInput,
   useAppPermissionsAndLocale,
   useAppRoomChatActions,
   useAppRoomsPanelProps,
   useAppRoomsAndServerDerived,
+  useAppServerAdminActions,
   useAppShellCompositionProps,
   useAppServerProfileModalProps,
   useAppTopChromeSectionInput,
@@ -71,11 +73,7 @@ import {
   useRoomAdminActions,
   useRoomMediaCapabilities,
   useRoomEditorState,
-  useRoomMemberPreferencesOrchestrator,
   useRoomSelectionGuard,
-  useServerProfileActions,
-  useServerModerationActions,
-  useAdminServerActions,
   useRoomsDerived,
   useScreenWakeLock,
   useServerVideoPreview,
@@ -765,36 +763,36 @@ export function App() {
     handleRemoveServerMember,
     handleBanServerMember,
     handleUnbanServerMember,
-    handleTransferServerOwnership
-  } = useServerProfileActions({
-    token,
-    currentServerId,
-    creatingInvite,
-    serverAgeConfirming,
-    lastInviteUrl,
-    setCreatingServer,
-    setServers,
-    setCurrentServerId,
-    setCreatingInvite,
-    setLastInviteUrl,
-    setServerAgeConfirming,
-    setServerAgeConfirmedAt,
-    setServerMembers,
-    pushToast,
-    t
-  });
-
-  const {
+    handleTransferServerOwnership,
     handleToggleAdminServerBlocked,
     handleDeleteAdminServer
-  } = useAdminServerActions({
-    token,
-    setAdminServers,
-    setServers,
-    setSelectedAdminServerId,
-    setCurrentServerId,
-    pushToast,
-    t
+  } = useAppServerAdminActions({
+    serverProfile: {
+      token,
+      currentServerId,
+      creatingInvite,
+      serverAgeConfirming,
+      lastInviteUrl,
+      setCreatingServer,
+      setServers,
+      setCurrentServerId,
+      setCreatingInvite,
+      setLastInviteUrl,
+      setServerAgeConfirming,
+      setServerAgeConfirmedAt,
+      setServerMembers,
+      pushToast,
+      t
+    },
+    adminServer: {
+      token,
+      setAdminServers,
+      setServers,
+      setSelectedAdminServerId,
+      setCurrentServerId,
+      pushToast,
+      t
+    }
   });
 
   useSessionStateLifecycle({
@@ -1043,17 +1041,8 @@ export function App() {
     }
   });
 
-  const { saveMemberPreference } = useRoomMemberPreferencesOrchestrator({
-    token,
-    currentUserId: user?.id || "",
-    roomsPresenceDetailsBySlug,
-    setMemberPreferencesByUserId,
-    pushLog,
-    pushToast,
-    t
-  });
-
   const {
+    saveMemberPreference,
     promote,
     demote,
     setUserBan,
@@ -1061,15 +1050,26 @@ export function App() {
     deleteUser,
     forceDeleteUserNow,
     setServerAudioQualityValue
-  } = useServerModerationActions({
-    token,
-    canManageUsers,
-    canPromote,
-    canManageAudioQuality,
-    roomAdminController,
-    pushLog,
-    setServerAudioQuality,
-    setServerAudioQualitySaving
+  } = useAppModerationActions({
+    memberPreferences: {
+      token,
+      currentUserId: user?.id || "",
+      roomsPresenceDetailsBySlug,
+      setMemberPreferencesByUserId,
+      pushLog,
+      pushToast,
+      t
+    },
+    serverModeration: {
+      token,
+      canManageUsers,
+      canPromote,
+      canManageAudioQuality,
+      roomAdminController,
+      pushLog,
+      setServerAudioQuality,
+      setServerAudioQualitySaving
+    }
   });
 
   const {
