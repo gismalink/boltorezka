@@ -57,7 +57,14 @@ type UseAppVoiceMediaRuntimeInput = {
   >;
   voiceMediaUiMaps: Omit<
     Parameters<typeof useVoiceMediaUiMaps>[0],
-    "currentRoomVoiceTargets" | "remoteVideoStreamsByUserId" | "roomVoiceConnected" | "allowVideoStreaming" | "voiceMediaStatusByPeerUserId" | "localVoiceMediaStatusSummary"
+    | "currentRoomVoiceTargets"
+    | "remoteSpeakingPeerUserIds"
+    | "voiceMicStateByUserIdInCurrentRoom"
+    | "remoteVideoStreamsByUserId"
+    | "roomVoiceConnected"
+    | "allowVideoStreaming"
+    | "voiceMediaStatusByPeerUserId"
+    | "localVoiceMediaStatusSummary"
   >;
 };
 
@@ -203,6 +210,8 @@ export function useAppVoiceMediaRuntime({
   } = useVoiceMediaUiMaps({
     ...voiceMediaUiMaps,
     currentRoomVoiceTargets,
+    remoteSpeakingPeerUserIds,
+    voiceMicStateByUserIdInCurrentRoom,
     remoteVideoStreamsByUserId,
     roomVoiceConnected,
     allowVideoStreaming,

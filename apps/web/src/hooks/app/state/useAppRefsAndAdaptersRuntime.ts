@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { Dispatch, RefObject, SetStateAction } from "react";
+import type { Dispatch, MutableRefObject, SetStateAction } from "react";
 import type { Message } from "../../../domain";
 
 type UseAppRefsAndAdaptersRuntimeInput = {
@@ -17,19 +17,19 @@ type UseAppRefsAndAdaptersRuntimeInput = {
 type UseAppRefsAndAdaptersRuntimeResult = {
   realtimeReconnectNonce: number;
   bumpRealtimeReconnectNonce: () => void;
-  currentServerIdRef: RefObject<string>;
-  roomSlugRef: RefObject<string>;
-  lastRoomSlugForScrollRef: RefObject<string>;
-  lastMessageIdRef: RefObject<string | null>;
-  chatLogRef: RefObject<HTMLDivElement>;
-  autoSsoAttemptedRef: RefObject<boolean>;
-  authMenuRef: RefObject<HTMLDivElement>;
-  profileMenuRef: RefObject<HTMLDivElement>;
-  categoryPopupRef: RefObject<HTMLDivElement>;
-  channelPopupRef: RefObject<HTMLDivElement>;
-  audioOutputAnchorRef: RefObject<HTMLDivElement>;
-  voiceSettingsAnchorRef: RefObject<HTMLDivElement>;
-  userSettingsRef: RefObject<HTMLDivElement>;
+  currentServerIdRef: MutableRefObject<string>;
+  roomSlugRef: MutableRefObject<string>;
+  lastRoomSlugForScrollRef: MutableRefObject<string>;
+  lastMessageIdRef: MutableRefObject<string | null>;
+  chatLogRef: MutableRefObject<HTMLDivElement | null>;
+  autoSsoAttemptedRef: MutableRefObject<boolean>;
+  authMenuRef: MutableRefObject<HTMLDivElement | null>;
+  profileMenuRef: MutableRefObject<HTMLDivElement | null>;
+  categoryPopupRef: MutableRefObject<HTMLDivElement | null>;
+  channelPopupRef: MutableRefObject<HTMLDivElement | null>;
+  audioOutputAnchorRef: MutableRefObject<HTMLDivElement | null>;
+  voiceSettingsAnchorRef: MutableRefObject<HTMLDivElement | null>;
+  userSettingsRef: MutableRefObject<HTMLDivElement | null>;
   maxChatImageKb: number;
   selectChannelPlaceholderMessage: string;
   serverErrorMessage: string;

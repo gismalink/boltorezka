@@ -1,10 +1,7 @@
 import { useCallback, useMemo, useRef } from "react";
-import { ApiError } from "./api";
 import {
-  RealtimeClient,
-  WsMessageController
+  RealtimeClient
 } from "./services";
-import type { CallStatus } from "./services";
 import {
   AppShellLayout
 } from "./components";
@@ -12,8 +9,6 @@ import {
   DEFAULT_CHAT_IMAGE_DATA_URL_LENGTH,
   DEFAULT_CHAT_IMAGE_MAX_SIDE,
   DEFAULT_CHAT_IMAGE_QUALITY,
-  DEFAULT_MIC_VOLUME,
-  DEFAULT_OUTPUT_VOLUME,
   MAX_CHAT_RETRIES,
   MESSAGE_EDIT_DELETE_WINDOW_MS,
   PENDING_ACCESS_AUTO_REFRESH_SEC,
@@ -24,11 +19,6 @@ import {
   useAppUiState,
   useAppAuthWorkspaceRuntime,
   useAppEntryGatesState,
-  useAppMediaDeviceRuntime,
-  useAppMainSectionInput,
-  useAppModerationActions,
-  useAppOverlaysSectionInput,
-  useAppRealtimeChatRuntime,
   useAppRealtimeTransportRuntime,
   useAppVoiceMediaRuntime,
   useAppPermissionsAndLocale,
@@ -48,29 +38,14 @@ import {
   useOnboardingOverlayActions,
   useRoomSlugPersistence,
   useServerDataSync,
-  useServerVideoWindowBounds,
   useAppWorkspaceSupportRuntime,
   useCollapsedCategories,
-  useCurrentRoomSnapshot,
-  useRnnoiseRuntimeHandlers,
-  usePersistedClientSettings,
-  useRealtimeSoundEffects,
-  useScreenShareOrchestrator,
-  useRoomMediaCapabilities,
   useRoomEditorState,
-  useServerVideoPreview,
   useServerSounds,
   useToastQueue,
-  useLivekitVoiceRuntime,
-  useVoiceMediaUiMaps,
-  useVoiceRoomLifecycleEffects,
-  useVoiceSignalingOrchestrator,
-  useVoiceParticipantsDerived,
-  useVoiceRoomStateMaps,
-  useVoiceUiLifecycleEffects
+  
 } from "./hooks";
 import { formatBuildDateLabel } from "./utils/appShell";
-import type { RoomKind } from "./domain";
 
 const CLIENT_BUILD_VERSION = String(import.meta.env.VITE_APP_VERSION || "").trim();
 const CLIENT_BUILD_SHA = String(import.meta.env.VITE_APP_BUILD_SHA || CLIENT_BUILD_VERSION || "").trim();
@@ -483,15 +458,14 @@ export function App() {
       sendWsEventAwaitAck
     },
     voiceMediaUiMaps: {
-      remoteSpeakingPeerUserIds,
       currentUserId: user?.id || "",
-      voiceMicStateByUserIdInCurrentRoom,
       cameraEnabled
     }
   });
 
   const {
     authController,
+    chatController,
     roomAdminController,
     loadTelemetrySummary,
     loadOlderMessages,
