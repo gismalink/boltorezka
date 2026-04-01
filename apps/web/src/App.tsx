@@ -42,6 +42,7 @@ import {
   useAppInviteServerSyncRuntime,
   useAppInviteServerSyncRuntimeInput,
   useAppShellRoomRuntimeEffects,
+  useAppShellRoomRuntimeEffectsInput,
   useAppEventLogs,
   useBuildVersionSync,
   useOnboardingOverlayActions,
@@ -529,28 +530,24 @@ export function App() {
     setToken
   }));
 
-  useAppShellRoomRuntimeEffects({
-    shellLifecycle: {
-      lang,
-      selectedUiTheme,
-      user,
-      chatRoomSlug,
-      setIsMobileViewport,
-      setProfileNameDraft,
-      setSelectedUiTheme,
-      setProfileStatusText,
-      setShowFirstRunIntro,
-      setEditingMessageId,
-      setPendingChatImageDataUrl
-    },
-    roomSlugPersistence: {
-      currentServerId,
-      roomSlug,
-      roomSlugStorageKey: ROOM_SLUG_STORAGE_KEY,
-      setRoomSlug,
-      setChatRoomSlug
-    }
-  });
+  useAppShellRoomRuntimeEffects(useAppShellRoomRuntimeEffectsInput({
+    lang,
+    selectedUiTheme,
+    user,
+    chatRoomSlug,
+    setIsMobileViewport,
+    setProfileNameDraft,
+    setSelectedUiTheme,
+    setProfileStatusText,
+    setShowFirstRunIntro,
+    setEditingMessageId,
+    setPendingChatImageDataUrl,
+    currentServerId,
+    roomSlug,
+    roomSlugStorageKey: ROOM_SLUG_STORAGE_KEY,
+    setRoomSlug,
+    setChatRoomSlug
+  }));
 
   useAppInviteServerSyncRuntime(useAppInviteServerSyncRuntimeInput({
     token,

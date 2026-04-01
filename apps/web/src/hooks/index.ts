@@ -12,6 +12,7 @@ export { useAppEventLogs } from "./app/state/useAppEventLogs";
 export { useAppControllers } from "./app/state/useAppControllers";
 export { useAppControllersRuntimeInput } from "./app/state/useAppControllersRuntimeInput";
 export { useAppInviteServerSyncRuntimeInput } from "./app/state/useAppInviteServerSyncRuntimeInput";
+export { useAppShellRoomRuntimeEffectsInput } from "./app/state/useAppShellRoomRuntimeEffectsInput";
 export { useAppChatVideoProps } from "./app/state/useAppChatVideoProps";
 export { useAppCoreState } from "./app/state/useAppCoreState";
 export { useAppUiState, type AppMobileTab, type AppServerMenuTab } from "./app/state/useAppUiState";
