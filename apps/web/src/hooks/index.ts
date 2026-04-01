@@ -16,6 +16,7 @@ export { useAppRoomsAndServerDerived } from "./app/state/useAppRoomsAndServerDer
 export { useAppServerProfileModalProps } from "./app/state/useAppServerProfileModalProps";
 export { useAppShellLayoutProps } from "./app/state/useAppShellLayoutProps";
 export { useAppShellOverlaysProps } from "./app/state/useAppShellOverlaysProps";
+export { useAppTopChromeSectionInput } from "./app/state/useAppTopChromeSectionInput";
 export { useAppTopChromeProps } from "./app/state/useAppTopChromeProps";
 export { useAppUserDockSharedProps } from "./app/state/useAppUserDockSharedProps";
 export { useAppUserMediaState } from "./app/state/useAppUserMediaState";
