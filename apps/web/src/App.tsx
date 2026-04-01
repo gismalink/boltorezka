@@ -24,6 +24,7 @@ import {
   useAppVoiceMediaRuntime,
   useAppVoiceMediaRuntimeInput,
   useAppPermissionsIdentityRuntime,
+  useAppPermissionsIdentityRuntimeInput,
   useAppRefsAndAdaptersRuntime,
   useAppRoomsRuntime,
   useAppRoomsRuntimeInput,
@@ -228,7 +229,7 @@ export function App() {
     currentUserName,
     hasUser,
     hasServiceToken
-  } = useAppPermissionsIdentityRuntime({
+  } = useAppPermissionsIdentityRuntime(useAppPermissionsIdentityRuntimeInput({
     token,
     user,
     servers,
@@ -236,7 +237,7 @@ export function App() {
     adminUsers,
     lang,
     pushToast
-  });
+  }));
 
   const {
     realtimeReconnectNonce,

@@ -25,6 +25,7 @@ export { useAppAuthWorkspaceRuntimeInput } from "./app/state/useAppAuthWorkspace
 export { useAppModerationActions } from "./app/state/useAppModerationActions";
 export { useAppPermissionsAndLocale } from "./app/state/useAppPermissionsAndLocale";
 export { useAppPermissionsIdentityRuntime } from "./app/state/useAppPermissionsIdentityRuntime";
+export { useAppPermissionsIdentityRuntimeInput } from "./app/state/useAppPermissionsIdentityRuntimeInput";
 export { useAppRefsAndAdaptersRuntime } from "./app/state/useAppRefsAndAdaptersRuntime";
 export { useAppVoiceMediaRuntime } from "./app/state/useAppVoiceMediaRuntime";
 export { useAppVoiceMediaRuntimeInput } from "./app/state/useAppVoiceMediaRuntimeInput";
