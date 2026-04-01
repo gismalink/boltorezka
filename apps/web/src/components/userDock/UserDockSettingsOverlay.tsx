@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { UserDockProps } from "../types";
 import { RangeSlider } from "../uicomponents";
 
@@ -139,6 +139,7 @@ export function UserDockSettingsOverlay({
   modalBarCount,
   modalActiveBars
 }: UserDockSettingsOverlayProps) {
+  const profileNameInputRef = useRef<HTMLInputElement>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [isEditingName, setIsEditingName] = useState(false);
   const [profileNameInitialValue, setProfileNameInitialValue] = useState(profileNameDraft);
@@ -232,6 +233,7 @@ export function UserDockSettingsOverlay({
                         onMouseDown={(event) => event.preventDefault()}
                         onClick={() => {
                           onSetProfileNameDraft(profileNameInitialValue);
+                          profileNameInputRef.current?.blur();
                           setIsEditingName(false);
                         }}
                         disabled={profileSaving}
@@ -240,6 +242,7 @@ export function UserDockSettingsOverlay({
                       </button>
                     ) : null}
                     <input
+                      ref={profileNameInputRef}
                       value={profileNameDraft}
                       onFocus={() => {
                         setProfileNameInitialValue(profileNameDraft);
@@ -258,6 +261,7 @@ export function UserDockSettingsOverlay({
                         onClick={() => {
                           void onApplyProfileName();
                           setProfileNameInitialValue(profileNameDraft);
+                          profileNameInputRef.current?.blur();
                           setIsEditingName(false);
                         }}
                         disabled={profileSaving || !nameChanged || normalizedDraftName.length === 0}
