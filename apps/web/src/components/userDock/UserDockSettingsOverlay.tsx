@@ -220,9 +220,10 @@ export function UserDockSettingsOverlay({
                 </label>
                 <label className="grid gap-[var(--space-md)]">
                   <span className="subheading">{t("settings.theme")}</span>
-                  <select value={selectedUiTheme} onChange={(event) => onSetSelectedUiTheme(event.target.value as "8-neon-bit" | "material-classic") }>
+                  <select value={selectedUiTheme} onChange={(event) => onSetSelectedUiTheme(event.target.value as typeof selectedUiTheme) }>
                     <option value="8-neon-bit">{t("settings.theme8NeonBit")}</option>
                     <option value="material-classic">{t("settings.themeMaterialClassic")}</option>
+                    <option value="aka-dis">{t("settings.themeAkaDis")}</option>
                   </select>
                 </label>
                 <div className="grid gap-[var(--space-md)]">

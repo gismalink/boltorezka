@@ -22,6 +22,7 @@ import type {
   InviteCreateResponse,
   TelemetrySummary,
   ServerListItem,
+  UiTheme,
   User,
   RoomMemberPreference
 } from "./domain";
@@ -265,7 +266,7 @@ export const api = {
       withJsonBody("POST", { code })
     ),
   me: (token: string) => fetchJson<{ user: User | null }>(endpoints.me, token),
-  updateMe: (token: string, input: { name: string; uiTheme?: "8-neon-bit" | "material-classic" }) =>
+  updateMe: (token: string, input: { name: string; uiTheme?: UiTheme }) =>
     fetchJson<{ user: User | null }>(endpoints.me, token, withJsonBody("PATCH", input)),
   deleteMe: (token: string) =>
     fetchJson<{ ok: true; purgeScheduledAt: string | null; daysRemaining: number }>(endpoints.me, token, withJsonBody("DELETE")),

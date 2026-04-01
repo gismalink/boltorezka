@@ -1,7 +1,7 @@
 import { FormEvent, type MutableRefObject, useEffect } from "react";
 import { api } from "../../api";
 import type { AuthController } from "../../services";
-import type { User } from "../../domain";
+import type { UiTheme, User } from "../../domain";
 import type { VoiceSettingsPanel } from "../../components";
 
 type UseAuthProfileFlowArgs = {
@@ -10,7 +10,7 @@ type UseAuthProfileFlowArgs = {
   authMode: string;
   autoSsoAttemptedRef: MutableRefObject<boolean>;
   profileNameDraft: string;
-  selectedUiTheme: "8-neon-bit" | "material-classic";
+  selectedUiTheme: UiTheme;
   t: (key: string) => string;
   setAuthMode: (value: string) => void;
   setAuthMenuOpen: (value: boolean) => void;

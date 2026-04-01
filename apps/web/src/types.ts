@@ -3,7 +3,7 @@ export type AuthModeResponse = {
   ssoBaseUrl: string;
 };
 
-export type UiTheme = "8-neon-bit" | "material-classic";
+export type UiTheme = "8-neon-bit" | "material-classic" | "aka-dis";
 
 export type User = {
   id: string;
