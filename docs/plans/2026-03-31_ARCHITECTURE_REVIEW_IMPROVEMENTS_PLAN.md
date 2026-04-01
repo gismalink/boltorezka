@@ -82,7 +82,9 @@ Progress note:
 - Семидесятый инкремент декомпозиции `web` выполнен: controllers runtime (`useAppControllers` + `useRealtimeIncomingCallState` + `useSessionStateLifecycle` + `useAppRealtimeChatRuntime`) вынесен из `App.tsx` в `hooks/app/effects/useAppControllersRuntime.ts`.
 - Семьдесят первый инкремент декомпозиции `web` выполнен: voice/media runtime (`useVoiceParticipantsDerived` + `useCurrentRoomSnapshot` + `useRoomMediaCapabilities` + `useLivekitVoiceRuntime` + `useScreenShareOrchestrator` + `useVoiceMediaUiMaps` + related AV effects) вынесен из `App.tsx` в `hooks/app/state/useAppVoiceMediaRuntime.ts`.
 - Семьдесят второй инкремент декомпозиции `web` выполнен: top-level refs/state adapters (`realtimeReconnectNonce`, app refs cluster, localized chat image/message adapters, `markMessageDelivery`) вынесены из `App.tsx` в `hooks/app/state/useAppRefsAndAdaptersRuntime.ts`.
-- Cumulative: `App.tsx` сокращен с 2101 до 1482 строк; web build + denied-media smoke проходят после каждого инкремента.
+- Семьдесят третий инкремент стабилизации `web` выполнен: App wiring очищен от повторяющихся user/session adapters (`currentUserId`, `hasUser`, `hasServiceToken`) и неиспользуемых react imports, что снизило шум orchestration-слоя без изменения поведения.
+- Семьдесят четвертый инкремент стабилизации `web` выполнен: устранен test type drift для `PresenceMember` в `hooks/app/effects/useMemberPreferencesSync.test.ts` (добавлено обязательное `userName` в fixtures).
+- Cumulative: `App.tsx` сокращен с 2101 до 1462 строк; web build + denied-media smoke проходят после каждого инкремента.
 
 ### 2.2 API route decomposition
 

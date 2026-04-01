@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef } from "react";
+import { useRef } from "react";
 import {
   RealtimeClient
 } from "./services";
@@ -224,6 +224,12 @@ export function App() {
     lang,
     pushToast
   });
+  const currentUserId = user?.id || "";
+  const currentUserIdOrNull = user?.id || null;
+  const currentUserName = user?.name || "";
+  const hasUser = Boolean(user);
+  const hasServiceToken = Boolean(serviceToken);
+
   const {
     realtimeReconnectNonce,
     bumpRealtimeReconnectNonce,
@@ -325,7 +331,7 @@ export function App() {
     voiceParticipants: {
       roomsPresenceDetailsBySlug,
       roomSlug,
-      currentUserId: user?.id || "",
+      currentUserId,
       memberPreferencesByUserId
     },
     roomSnapshot: {
@@ -345,7 +351,7 @@ export function App() {
     livekitRuntime: {
       t,
       token: serviceToken,
-      localUserId: user?.id || "",
+      localUserId: currentUserId,
       roomSlug,
       videoStreamingEnabled: cameraEnabled,
       videoResolution: serverVideoResolution,
@@ -439,7 +445,7 @@ export function App() {
       serverVideoAsciiColor
     },
     voiceRoomStateMaps: {
-      userId: user?.id || "",
+      userId: currentUserId,
       micMuted,
       micTestLevel,
       audioMuted,
@@ -448,9 +454,9 @@ export function App() {
       initialAudioOutputMutedByUserIdInCurrentRoom: voiceInitialAudioOutputMutedByUserIdInCurrentRoom
     },
     screenShare: {
-      hasSessionToken: Boolean(serviceToken),
-      userId: user?.id || "",
-      userName: user?.name || "",
+      hasSessionToken,
+      userId: currentUserId,
+      userName: currentUserName,
       t,
       pushToast,
       screenShareOwnerByRoomSlug,
@@ -458,7 +464,7 @@ export function App() {
       sendWsEventAwaitAck
     },
     voiceMediaUiMaps: {
-      currentUserId: user?.id || "",
+      currentUserId,
       cameraEnabled
     }
   });
@@ -683,7 +689,7 @@ export function App() {
 
   useInviteAcceptanceFlow({
     token,
-    hasUser: Boolean(user),
+    hasUser,
     pendingInviteToken,
     setPendingInviteToken,
     setInviteAccepting,
@@ -695,7 +701,7 @@ export function App() {
 
   useServerDataSync({
     token,
-    hasUser: Boolean(user),
+    hasUser,
     currentServerId,
     selectedAdminServerId,
     canManageServerControlPlane,
@@ -769,7 +775,7 @@ export function App() {
       setSelectedInputId,
       setSelectedOutputId,
       setSelectedVideoInputId,
-      hasUser: Boolean(user),
+      hasUser,
       roomVoiceConnected,
       voiceSettingsOpen,
       voiceSettingsPanel: voiceSettingsPanel || "",
@@ -929,7 +935,7 @@ export function App() {
     moderation: {
       memberPreferences: {
         token,
-        currentUserId: user?.id || "",
+        currentUserId,
         roomsPresenceDetailsBySlug,
         setMemberPreferencesByUserId,
         pushLog,
@@ -1164,7 +1170,7 @@ export function App() {
       roomSlug,
       chatRoomSlug,
       roomMediaTopologyBySlug,
-      currentUserId: user?.id || null,
+      currentUserId: currentUserIdOrNull,
       liveRoomMembersBySlug: roomsPresenceBySlug,
       liveRoomMemberDetailsBySlug: roomsPresenceDetailsBySlug,
       memberPreferencesByUserId,

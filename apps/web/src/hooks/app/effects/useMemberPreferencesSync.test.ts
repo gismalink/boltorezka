@@ -6,13 +6,13 @@ describe("deriveMemberPreferenceTargetUserIds", () => {
     const result = deriveMemberPreferenceTargetUserIds(
       {
         general: [
-          { userId: " u-1 " } as { userId: string },
-          { userId: "u-2" } as { userId: string },
-          { userId: "" } as { userId: string }
+          { userId: " u-1 ", userName: "u-1" },
+          { userId: "u-2", userName: "u-2" },
+          { userId: "", userName: "" }
         ],
         support: [
-          { userId: "u-2" } as { userId: string },
-          { userId: "u-3" } as { userId: string }
+          { userId: "u-2", userName: "u-2" },
+          { userId: "u-3", userName: "u-3" }
         ]
       },
       "u-1"
@@ -24,7 +24,7 @@ describe("deriveMemberPreferenceTargetUserIds", () => {
   it("returns empty when there are no eligible targets", () => {
     const result = deriveMemberPreferenceTargetUserIds(
       {
-        general: [{ userId: "self" } as { userId: string }]
+        general: [{ userId: "self", userName: "self" }]
       },
       "self"
     );
