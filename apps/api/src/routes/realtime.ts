@@ -1,14 +1,13 @@
-import type { FastifyInstance, FastifyRequest } from "fastify";
+import type { FastifyInstance } from "fastify";
 import type { WebSocket } from "ws";
 import { db } from "../db.js";
 import { config } from "../config.js";
-import { registerRealtimeSocket, unregisterRealtimeSocket } from "../realtime-broadcast.js";
+import { createRealtimeAuditLogger } from "./realtime-audit.js";
 import { normalizeRequestId, sendJson, sendNack } from "./realtime-io.js";
 import { createRealtimeCallMediaEventHandlers } from "./realtime-call-media-events.js";
 import { createRealtimeCallSignalingHandler } from "./realtime-call-signaling.js";
 import { createRealtimeChatEventHandlers } from "./realtime-chat-events.js";
 import { createRealtimeCallHelpers } from "./realtime-call-helpers.js";
-import { closeRealtimeConnection } from "./realtime-lifecycle.js";
 import { createRealtimeMediaStateStore } from "./realtime-media-state.js";
 import { createRealtimeMetrics } from "./realtime-metrics.js";
 import { createRealtimeMessageHandler } from "./realtime-message-handler.js";
@@ -20,7 +19,7 @@ import { createRealtimeRoomEventHandlers } from "./realtime-room-events.js";
 import { buildRealtimeScreenShareStateStore } from "./realtime-screen-share-state.js";
 import { createRealtimeRoomStateStore } from "./realtime-room-state.js";
 import { relayToTargetOrRoom } from "./realtime-relay.js";
-import { consumeWsTicketAndInitializeConnection } from "./realtime-ws-auth.js";
+import { registerRealtimeWsRoute } from "./realtime-ws-route.js";
 import {
   buildRoomsPresenceEnvelope,
   buildCallInitialStateEnvelope,
@@ -51,21 +50,7 @@ type MediaTopology = "livekit";
 
 export async function realtimeRoutes(fastify: FastifyInstance) {
   const socketState = new WeakMap<WebSocket, SocketState>();
-  const wsCallDebugEnabled = process.env.WS_CALL_DEBUG === "1";
-
-  const logCallDebug = (message: string, meta: Record<string, unknown> = {}) => {
-    if (!wsCallDebugEnabled) {
-      return;
-    }
-
-    fastify.log.info(
-      {
-        scope: "ws-call",
-        ...meta
-      },
-      message
-    );
-  };
+  const { logCallDebug, logWsConnectionFailed, logWsMessageHandlingFailed } = createRealtimeAuditLogger(fastify);
 
   const { incrementMetric, incrementMetricBy } = createRealtimeMetrics(fastify);
   const {
@@ -289,66 +274,23 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
     handleCallMicStateEvent,
     handleCallSignalingEvent,
     handleCallVideoStateEvent,
-    logWsError: (error) => {
-      fastify.log.error(error, "ws message handling failed");
-    }
+    logWsError: logWsMessageHandlingFailed
   });
 
-  fastify.get(
-    "/v1/realtime/ws",
-    {
-      websocket: true
-    },
-    async (connection: WebSocket, request: FastifyRequest) => {
-      try {
-        const initialized = await consumeWsTicketAndInitializeConnection({
-          connection,
-          request,
-          socketState,
-          attachUserSocket,
-          registerRealtimeSocket,
-          getAllRoomsPresence,
-          redisGet: fastify.redis.get.bind(fastify.redis),
-          redisDel: fastify.redis.del.bind(fastify.redis),
-          redisHSet: fastify.redis.hSet.bind(fastify.redis),
-          redisExpire: fastify.redis.expire.bind(fastify.redis)
-        });
-
-        if (!initialized) {
-          return;
-        }
-
-        connection.on("message", async (raw) => {
-          await handleMessage(connection, raw);
-        });
-
-        connection.on("close", async () => {
-          await closeRealtimeConnection({
-            connection,
-            socketState,
-            unregisterRealtimeSocket,
-            detachUserSocket,
-            markRecentRoomDetach,
-            detachRoomSocket,
-            clearCanonicalMediaState,
-            clearRoomScreenShareOwnerIfMatches,
-            broadcastRoom,
-            buildPresenceLeftEnvelope,
-            getRoomPresence,
-            broadcastAllRoomsPresence,
-            socketsByUserId,
-            redisHSet: fastify.redis.hSet.bind(fastify.redis),
-            redisExpire: fastify.redis.expire.bind(fastify.redis)
-          });
-        });
-      } catch (error) {
-        fastify.log.error(error, "ws connection failed");
-        try {
-          connection.close(1011, "Internal error");
-        } catch {
-          return;
-        }
-      }
-    }
-  );
+  registerRealtimeWsRoute(fastify, {
+    socketState,
+    attachUserSocket,
+    getAllRoomsPresence,
+    handleMessage,
+    detachUserSocket,
+    markRecentRoomDetach,
+    detachRoomSocket,
+    clearCanonicalMediaState,
+    clearRoomScreenShareOwnerIfMatches,
+    broadcastRoom,
+    getRoomPresence,
+    broadcastAllRoomsPresence,
+    socketsByUserId,
+    logWsConnectionFailed
+  });
 }

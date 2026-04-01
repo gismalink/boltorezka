@@ -110,9 +110,9 @@ Progress note:
 
 ### 2.2 API route decomposition
 
-- [ ] Разделить крупные маршруты auth/realtime на bounded modules (`session`, `sso`, `desktop-handoff`, `presence`, `call-signaling`, `chat-realtime`) — почти завершено; остаток: финальная усадка/упрощение `routes/realtime.ts` как агрегатора.
-- [ ] Вынести cross-cutting concerns в middleware/services: rate-limit, envelope/ack helpers, audit events.
-- [ ] Добавить контрактные тесты на public handler boundaries после декомпозиции.
+- [x] Разделить крупные маршруты auth/realtime на bounded modules (`session`, `sso`, `desktop-handoff`, `presence`, `call-signaling`, `chat-realtime`) — финальная усадка `routes/realtime.ts` как агрегатора завершена.
+- [x] Вынести cross-cutting concerns в middleware/services: rate-limit, envelope/ack helpers, audit events.
+- [x] Добавить контрактные тесты на public handler boundaries после декомпозиции.
 
 Progress note:
 
@@ -144,7 +144,10 @@ Progress note:
 - Двадцать шестой инкремент декомпозиции `auth` выполнен: session/ws-ticket route cluster (`/v1/auth/refresh`, `/v1/auth/logout`, `/v1/auth/ws-ticket`) вынесен в `routes/auth-session-routes.ts`.
 - Двадцать седьмой инкремент декомпозиции `auth` выполнен: SSO route cluster (`/v1/auth/sso/start`, `/v1/auth/sso/logout`, `/v1/auth/sso/session`, `/v1/auth/sso/restore`) вынесен в `routes/auth-sso-routes.ts`.
 - Двадцать восьмой инкремент декомпозиции `auth` выполнен: базовые core routes (`/v1/auth/mode`, `register`, `login`) и фабрика rate-limiters вынесены в `routes/auth-core-routes.ts` и `routes/auth-rate-limiters.ts`.
-- Текущий результат по размеру: `routes/auth.ts` ~50 строк, `routes/realtime.ts` ~354 строки.
+- Двадцать девятый инкремент декомпозиции `realtime` выполнен: websocket route registration вынесена в `routes/realtime-ws-route.ts`, `routes/realtime.ts` оставлен как агрегатор wiring.
+- Тридцатый инкремент стабилизации `realtime` выполнен: ws audit logging вынесен в `routes/realtime-audit.ts` (debug call logs + ws connection/message failure events).
+- Добавлены boundary contract tests после декомпозиции: `routes/auth-session-routes.contract.test.ts` (unauthorized boundaries для `/v1/auth/refresh|logout|ws-ticket`) и `routes/realtime-ws-auth.contract.test.ts` (missing/invalid ws ticket boundary semantics).
+- Текущий результат по размеру: `routes/auth.ts` ~50 строк, `routes/realtime.ts` ~296 строк.
 - `npm -s run check:api-types`, `npm -s run web:build` и `npm -s run smoke:web:denied-media` проходят после выноса.
 
 ### 2.3 Auth storage hardening (cookie-first)
