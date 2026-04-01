@@ -3,6 +3,7 @@ export { useDeletedAccountActions } from "./auth/useDeletedAccountActions";
 export { useAdminUsersSync } from "./app/effects/useAdminUsersSync";
 export { useAppShellLifecycleEffects } from "./app/effects/useAppShellLifecycleEffects";
 export { useAppPopupOutsideClose } from "./app/effects/useAppPopupOutsideClose";
+export { useAppRealtimeChatRuntime } from "./app/effects/useAppRealtimeChatRuntime";
 export { useAppEventLogs } from "./app/state/useAppEventLogs";
 export { useAppControllers } from "./app/state/useAppControllers";
 export { useAppChatVideoProps } from "./app/state/useAppChatVideoProps";
