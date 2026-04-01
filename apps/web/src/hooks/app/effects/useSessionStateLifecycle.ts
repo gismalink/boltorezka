@@ -1,4 +1,4 @@
-import { useCallback, useEffect, type Dispatch, type MutableRefObject, type SetStateAction } from "react";
+import { useCallback, useEffect, useRef, type Dispatch, type MutableRefObject, type SetStateAction } from "react";
 import { ApiError, api } from "../../../api";
 import {
   clearPersistedBearerToken,
@@ -99,6 +99,8 @@ export function useSessionStateLifecycle({
   setServerChatImagePolicy,
   setDeletedAccountInfo
 }: UseSessionStateLifecycleArgs) {
+  const cookieBootstrapBlockedUntilRef = useRef(0);
+
   const resetSessionState = useCallback(() => {
     setUser(null);
     setRooms([]);
@@ -151,10 +153,15 @@ export function useSessionStateLifecycle({
   // to obtain a real JWT, then put it in state — this re-establishes the full
   // bearer flow so all existing !token guards across the app work correctly.
   const bootstrapCookieSessionState = useCallback(() => {
+    if (Date.now() < cookieBootstrapBlockedUntilRef.current) {
+      return;
+    }
+
     api.authRefresh("")
       .then(({ token: refreshedToken }) => {
         const jwt = String(refreshedToken || "").trim();
         if (jwt) {
+          cookieBootstrapBlockedUntilRef.current = 0;
           clearPersistedBearerToken();
           setToken(jwt);
           setDeletedAccountInfo(null);
@@ -177,8 +184,16 @@ export function useSessionStateLifecycle({
           resetSessionState();
           return;
         }
+
+        if (error instanceof ApiError && error.status === 429) {
+          cookieBootstrapBlockedUntilRef.current = Date.now() + 15000;
+          pushLog("cookie-session bootstrap throttled (429), retry deferred for 15s");
+          return;
+        }
+
+        cookieBootstrapBlockedUntilRef.current = Date.now() + 5000;
         pushLog(`cookie-session bootstrap failed: ${error.message}`);
-        resetSessionState();
+        // Keep state as-is on transient failures and retry later.
       });
   }, [pushLog, resetSessionState, setDeletedAccountInfo, setToken]);
 
@@ -321,18 +336,24 @@ export function useSessionStateLifecycle({
   ]);
 
   useEffect(() => {
-    if (!token) {
-      const persistedToken = readPersistedBearerToken();
-      if (persistedToken) {
-        setToken(persistedToken);
-        bootstrapSessionState(persistedToken);
-        return;
-      }
+    if (token) {
+      return;
+    }
 
-      bootstrapCookieSessionState();
+    const persistedToken = readPersistedBearerToken();
+    if (persistedToken) {
+      setToken(persistedToken);
+      return;
+    }
+
+    bootstrapCookieSessionState();
+  }, [bootstrapCookieSessionState, setToken, token]);
+
+  useEffect(() => {
+    if (!token) {
       return;
     }
 
     bootstrapSessionState(token);
-  }, [bootstrapCookieSessionState, bootstrapSessionState, setToken, token]);
+  }, [bootstrapSessionState, token]);
 }
