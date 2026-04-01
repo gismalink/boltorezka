@@ -10,7 +10,9 @@ export { useAppUiState, type AppMobileTab, type AppServerMenuTab } from "./app/s
 export { useAppEntryGates } from "./app/state/useAppEntryGates";
 export { useAppEntryGatesState } from "./app/state/useAppEntryGatesState";
 export { useAppMainSectionProps } from "./app/state/useAppMainSectionProps";
+export { useAppMainSectionInput } from "./app/state/useAppMainSectionInput";
 export { useAppPermissionsAndLocale } from "./app/state/useAppPermissionsAndLocale";
+export { useAppOverlaysSectionInput } from "./app/state/useAppOverlaysSectionInput";
 export { useAppRoomsPanelProps } from "./app/state/useAppRoomsPanelProps";
 export { useAppRoomsAndServerDerived } from "./app/state/useAppRoomsAndServerDerived";
 export { useAppServerProfileModalProps } from "./app/state/useAppServerProfileModalProps";

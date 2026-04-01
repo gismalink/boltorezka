@@ -60,7 +60,9 @@ Progress note:
 - Сорок восьмой инкремент декомпозиции `web` выполнен: app-level server profile modal props adapter (derived `currentUserId/currentServerRole/currentServerName/hasCurrentServer`) вынесен из `App.tsx` в `hooks/app/state/useAppServerProfileModalProps.ts`.
 - Сорок девятый инкремент декомпозиции `web` выполнен: app-level entry gates state adapter (`servers` -> `serversCount`) вынесен из `App.tsx` в `hooks/app/state/useAppEntryGatesState.tsx`.
 - Пятидесятый инкремент декомпозиции `web` выполнен: app-level top chrome section adapter (`currentServer/openProfileSettings/setCurrentServerId` mapping) вынесен из `App.tsx` в `hooks/app/state/useAppTopChromeSectionInput.ts`.
-- Cumulative: `App.tsx` сокращен с 2101 до 1615 строк; web build + denied-media smoke проходят после каждого инкремента.
+- Пятьдесят первый инкремент декомпозиции `web` выполнен: app-level main section input adapter (`handleCreateServer/setMobileTab` -> shell main section contract) вынесен из `App.tsx` в `hooks/app/state/useAppMainSectionInput.ts`.
+- Пятьдесят второй инкремент декомпозиции `web` выполнен: app-level overlays section input adapter (`App` overlays wiring -> shell overlays contract) вынесен из `App.tsx` в `hooks/app/state/useAppOverlaysSectionInput.ts`.
+- Cumulative: `App.tsx` сокращен с 2101 до 1621 строк; web build + denied-media smoke проходят после каждого инкремента.
 
 ### 2.2 API route decomposition
 

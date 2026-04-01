@@ -24,6 +24,8 @@ import {
   useAppChatVideoProps,
   useAppUiState,
   useAppEntryGatesState,
+  useAppMainSectionInput,
+  useAppOverlaysSectionInput,
   useAppPermissionsAndLocale,
   useAppRoomsPanelProps,
   useAppRoomsAndServerDerived,
@@ -1559,56 +1561,60 @@ export function App() {
     setProfileMenuOpen
   });
 
+  const mainSectionInput = useAppMainSectionInput({
+    t,
+    user,
+    authMode,
+    beginSso,
+    showEmptyServerOnboarding,
+    creatingServer,
+    handleCreateServer,
+    isMobileViewport,
+    mobileTab,
+    setMobileTab,
+    userDockSharedProps,
+    roomsPanelProps,
+    chatPanelProps,
+    videoWindowsOverlayProps,
+    userSettingsOpen,
+    inviteAccepting,
+    appMenuOpen,
+    serverProfileModalProps
+  });
+
+  const overlaysSectionInput = useAppOverlaysSectionInput({
+    toasts,
+    showAppUpdatedOverlay,
+    t,
+    acknowledgeUpdatedApp,
+    user,
+    showFirstRunIntro,
+    profileNameDraft,
+    setProfileNameDraft,
+    profileSaving,
+    completeFirstRunIntro,
+    sessionMovedOverlayMessage,
+    setSessionMovedOverlayMessage,
+    ageGateBlockedRoomSlug,
+    serverAgeConfirming,
+    openUserSettings,
+    handleConfirmServerAge,
+    setAgeGateBlockedRoomSlug,
+    joinRoom,
+    lang,
+    cookieConsentAccepted,
+    cookieConsentKey: COOKIE_CONSENT_KEY,
+    setCookieConsentAccepted
+  });
+
   const {
     appTopChromeProps,
     appMainSectionProps,
     appShellOverlaysProps
   } = useAppShellLayoutProps({
     topChrome: topChromeSectionInput,
-    mainSection: {
-      t,
-      user,
-      authMode,
-      beginSso,
-      showEmptyServerOnboarding,
-      creatingServer,
-      onCreateServer: handleCreateServer,
-      isMobileViewport,
-      mobileTab,
-      onSelectMobileTab: setMobileTab,
-      userDockSharedProps,
-      roomsPanelProps,
-      chatPanelProps,
-      videoWindowsOverlayProps,
-      userSettingsOpen,
-      inviteAccepting,
-      appMenuOpen,
-      serverProfileModalProps
-    },
-    overlays: {
-      toasts,
-      showAppUpdatedOverlay,
-      t,
-      acknowledgeUpdatedApp,
-      user,
-      showFirstRunIntro,
-      profileNameDraft,
-      setProfileNameDraft,
-      profileSaving,
-      completeFirstRunIntro,
-      sessionMovedOverlayMessage,
-      setSessionMovedOverlayMessage,
-      ageGateBlockedRoomSlug,
-      serverAgeConfirming,
-      openUserSettings,
-      handleConfirmServerAge,
-      setAgeGateBlockedRoomSlug,
-      joinRoom,
-      lang,
-      cookieConsentAccepted,
-      cookieConsentKey: COOKIE_CONSENT_KEY,
-      setCookieConsentAccepted
-    }
+    mainSection: mainSectionInput,
+    overlays: overlaysSectionInput
   });
 
   return <AppShellLayout topChromeProps={appTopChromeProps} mainSectionProps={appMainSectionProps} shellOverlaysProps={appShellOverlaysProps} />;
