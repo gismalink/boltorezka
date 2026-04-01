@@ -134,7 +134,6 @@ export function UserDock({
           selectedOutputId={selectedOutputId}
           selectedVideoInputId={selectedVideoInputId}
           currentInputLabel={currentInputLabel}
-          remoteAudioAutoplayBlocked={remoteAudioAutoplayBlocked}
           micVolume={micVolume}
           outputVolume={outputVolume}
           micTestLevel={micTestLevel}
