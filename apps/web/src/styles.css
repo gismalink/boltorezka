@@ -2443,6 +2443,13 @@ pre {
   width: min(1100px, 100%);
 }
 
+.server-profile-modal-close {
+  position: fixed;
+  top: max(12px, env(safe-area-inset-top));
+  right: max(12px, env(safe-area-inset-right));
+  z-index: 41;
+}
+
 .user-settings-tab-btn-active {
   border-color: var(--pixel-neon-cyan);
   box-shadow: 0 0 0 1px var(--pixel-neon-cyan), 2px 2px 0 var(--pixel-hard-shadow);

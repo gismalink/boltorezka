@@ -249,7 +249,8 @@ export function UserDockSettingsOverlay({
                         setIsEditingName(true);
                       }}
                       onBlur={() => {
-                        setTimeout(() => setIsEditingName(false), 100);
+                        onSetProfileNameDraft(profileNameInitialValue);
+                        setIsEditingName(false);
                       }}
                       onChange={(event) => onSetProfileNameDraft(event.target.value)}
                     />
