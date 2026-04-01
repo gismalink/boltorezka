@@ -55,7 +55,8 @@ export function useRealtimeSoundEffects({
   }, [playServerSound, roomSlug]);
 
   useEffect(() => {
-    const currentMembers = roomsPresenceDetailsBySlug[roomSlug] || [];
+    const presenceBySlug = roomsPresenceDetailsBySlug || {};
+    const currentMembers = presenceBySlug[roomSlug] || [];
     const currentIds = currentMembers
       .map((member) => String(member.userId || "").trim())
       .filter((memberId) => memberId.length > 0);
