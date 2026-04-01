@@ -35,6 +35,7 @@ import {
   useAppWorkspacePanelsRuntime,
   useAppWorkspacePanelsRuntimeInput,
   useAppWorkspaceLifecycleGuardsRuntime,
+  useAppWorkspaceLifecycleGuardsRuntimeInput,
   useAppControllersRuntime,
   useAppControllersRuntimeInput,
   useAppInviteServerSyncRuntime,
@@ -812,35 +813,26 @@ export function App() {
     setCategorySettingsPopupOpenId
   }));
 
-  useAppWorkspaceLifecycleGuardsRuntime({
-    pendingAccessAutoRefresh: {
-      user,
-      resetValue: PENDING_ACCESS_AUTO_REFRESH_SEC,
-      setPendingAccessRefreshInSec
-    },
-    autoRoomVoiceConnection: {
-      roomMediaResolved: Boolean(currentRoomSnapshot) || topologySupportsRtc,
-      currentRoomSupportsRtc: currentRoomSupportsRtc && !showAppUpdatedOverlay,
-      roomVoiceTargetsCount: currentRoomVoiceTargets.length,
-      roomVoiceConnected,
-      // Keep RTC transport attached while user stays in a voice-enabled room.
-      // This avoids false "no RTC" states during presence churn and multi-client switches.
-      keepConnectedWithoutTargets: true,
-      connectRoom,
-      disconnectRoom
-    },
-    serverMenuAccessGuard: {
-      serverMenuTab,
-      canManageUsers,
-      canManageServerControlPlane,
-      canViewTelemetry,
-      canManageAudioQuality,
-      canManageChatImages: canPromote,
-      hasCurrentServer: Boolean(currentServer?.id),
-      setServerMenuTab
-    },
-    screenWakeLockEnabled: Boolean(user && roomSlug && currentRoomSupportsRtc && roomVoiceConnected)
-  });
+  useAppWorkspaceLifecycleGuardsRuntime(useAppWorkspaceLifecycleGuardsRuntimeInput({
+    user,
+    pendingAccessAutoRefreshSec: PENDING_ACCESS_AUTO_REFRESH_SEC,
+    setPendingAccessRefreshInSec,
+    roomMediaResolved: Boolean(currentRoomSnapshot) || topologySupportsRtc,
+    currentRoomSupportsRtc: currentRoomSupportsRtc && !showAppUpdatedOverlay,
+    currentRoomVoiceTargets,
+    roomVoiceConnected,
+    connectRoom,
+    disconnectRoom,
+    serverMenuTab,
+    canManageUsers,
+    canManageServerControlPlane,
+    canViewTelemetry,
+    canManageAudioQuality,
+    canPromote,
+    currentServer,
+    setServerMenuTab,
+    roomSlug
+  }));
 
   const { acknowledgeUpdatedApp, completeFirstRunIntro } = useOnboardingOverlayActions({
     token,

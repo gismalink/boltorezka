@@ -43,6 +43,7 @@ export { useAppWorkspaceActionsRuntimeInput } from "./app/state/useAppWorkspaceA
 export { useAppWorkspacePanelsRuntime } from "./app/state/useAppWorkspacePanelsRuntime";
 export { useAppWorkspacePanelsRuntimeInput } from "./app/state/useAppWorkspacePanelsRuntimeInput";
 export { useAppWorkspaceSupportRuntimeInput } from "./app/state/useAppWorkspaceSupportRuntimeInput";
+export { useAppWorkspaceLifecycleGuardsRuntimeInput } from "./app/state/useAppWorkspaceLifecycleGuardsRuntimeInput";
 export { useAppShellLayoutProps } from "./app/state/useAppShellLayoutProps";
 export { useAppShellOverlaysProps } from "./app/state/useAppShellOverlaysProps";
 export { useAppTopChromeSectionInput } from "./app/state/useAppTopChromeSectionInput";
