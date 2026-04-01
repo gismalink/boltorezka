@@ -160,7 +160,13 @@ export function UserDockSettingsOverlay({
 
   return (
     <div className={`voice-preferences-overlay fixed inset-0 z-[60] flex items-center justify-center p-[var(--space-3xl)] ${inlineSettingsMode ? "inline-settings-mode" : ""} ${inlineSettingsMode ? "contents" : ""}`}>
-      <section className="card voice-preferences-modal user-settings-modal grid w-full max-w-[980px] min-w-0 gap-4 max-desktop:h-full max-desktop:max-h-none max-desktop:min-h-0 max-desktop:overflow-hidden max-desktop:p-4 desktop:grid-cols-[250px_1fr]" ref={userSettingsRef}>
+      <div className="user-settings-modal-shell">
+        {!inlineSettingsMode ? (
+          <button type="button" className="secondary icon-btn user-settings-modal-close" onClick={() => onSetUserSettingsOpen(false)} aria-label={t("settings.closeVoiceAria")}>
+            <i className="bi bi-x-lg" aria-hidden="true" />
+          </button>
+        ) : null}
+        <section className="card voice-preferences-modal user-settings-modal grid w-full max-w-[980px] min-w-0 gap-4 max-desktop:h-full max-desktop:max-h-none max-desktop:min-h-0 max-desktop:overflow-hidden max-desktop:p-4 desktop:grid-cols-[250px_1fr]" ref={userSettingsRef}>
         <div className="user-settings-sidebar grid min-w-0 content-start gap-3">
           <div className="voice-preferences-kicker">{t("settings.title")}</div>
           <label className="desktop:hidden grid gap-1">
@@ -208,11 +214,6 @@ export function UserDockSettingsOverlay({
         <div className="user-settings-content grid min-h-0 min-w-0 content-start gap-4 overflow-auto overflow-x-hidden pr-0">
           <div className="voice-preferences-head flex items-center justify-between gap-2">
             <h2 className="mt-[var(--space-xxs)]">{userSettingsTab === "profile" ? t("settings.tabProfile") : userSettingsTab === "sound" ? t("settings.tabSound") : userSettingsTab === "camera" ? t("settings.tabCamera") : t("settings.tabServerSounds")}</h2>
-            {!inlineSettingsMode ? (
-              <button type="button" className="secondary icon-btn" onClick={() => onSetUserSettingsOpen(false)} aria-label={t("settings.closeVoiceAria")}>
-                <i className="bi bi-x-lg" aria-hidden="true" />
-              </button>
-            ) : null}
           </div>
 
           {userSettingsTab === "profile" ? (
@@ -698,7 +699,8 @@ export function UserDockSettingsOverlay({
             </div>
           ) : null}
         </div>
-      </section>
+        </section>
+      </div>
     </div>
   );
 }
