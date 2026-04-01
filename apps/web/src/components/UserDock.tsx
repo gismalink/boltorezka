@@ -81,7 +81,8 @@ export function UserDock({
   onSetProfileNameDraft,
   onSetSelectedLang,
   onSetSelectedUiTheme,
-  onSaveProfile,
+  onApplyProfileName,
+  onApplyProfileTheme,
   onDeleteAccount,
   onConfirmServerAge,
   onSetSelectedInputId,
@@ -184,7 +185,8 @@ export function UserDock({
         serverAgeLoading={serverAgeLoading}
         serverAgeConfirmedAt={serverAgeConfirmedAt}
         serverAgeConfirming={serverAgeConfirming}
-        onSaveProfile={onSaveProfile}
+        onApplyProfileName={onApplyProfileName}
+        onApplyProfileTheme={onApplyProfileTheme}
         onDeleteAccount={onDeleteAccount}
         onConfirmServerAge={onConfirmServerAge}
         onSetProfileNameDraft={onSetProfileNameDraft}

@@ -2618,7 +2618,7 @@ pre {
     left: var(--space-lg);
     right: var(--space-lg);
     bottom: max(var(--space-lg), env(safe-area-inset-bottom));
-    z-index: 70;
+    z-index: 30;
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: var(--space-sm);

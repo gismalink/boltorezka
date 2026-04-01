@@ -84,7 +84,8 @@ export type UseWorkspaceUserDockPropsInput = {
   setProfileNameDraft: (value: string) => void;
   setLang: (value: Lang) => void;
   setSelectedUiTheme: (value: UiTheme) => void;
-  saveMyProfile: UserDockProps["onSaveProfile"];
+  applyProfileName: UserDockProps["onApplyProfileName"];
+  applyProfileTheme: UserDockProps["onApplyProfileTheme"];
   deleteAccount: UserDockProps["onDeleteAccount"];
   confirmServerAge: UserDockProps["onConfirmServerAge"];
   setSelectedInputId: (value: string) => void;
@@ -180,7 +181,8 @@ export function useWorkspaceUserDockProps({
   setProfileNameDraft,
   setLang,
   setSelectedUiTheme,
-  saveMyProfile,
+  applyProfileName,
+  applyProfileTheme,
   deleteAccount,
   confirmServerAge,
   setSelectedInputId,
@@ -283,7 +285,8 @@ export function useWorkspaceUserDockProps({
       onSetProfileNameDraft: setProfileNameDraft,
       onSetSelectedLang: setLang,
       onSetSelectedUiTheme: setSelectedUiTheme,
-      onSaveProfile: saveMyProfile,
+      onApplyProfileName: applyProfileName,
+      onApplyProfileTheme: applyProfileTheme,
       onDeleteAccount: deleteAccount,
       onConfirmServerAge: confirmServerAge,
       onSetSelectedInputId: setSelectedInputId,
@@ -391,7 +394,8 @@ export function useWorkspaceUserDockProps({
     voiceSettingsAnchorRef,
     voiceSettingsOpen,
     voiceSettingsPanel,
-    saveMyProfile,
+    applyProfileName,
+    applyProfileTheme,
     deleteAccount,
     confirmServerAge
   ]);

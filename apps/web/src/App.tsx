@@ -398,7 +398,7 @@ export function App() {
     dismissDesktopUpdateBanner, applyDesktopUpdate,
     showDesktopBrowserCompletion, desktopHandoffError,
     beginSso, logout, openUserSettings,
-    saveMyProfile, restoreDeletedAccount, handleDeleteAccount
+    applyProfileName, applyProfileTheme, restoreDeletedAccount, handleDeleteAccount
   } = useAppAuthWorkspaceRuntime(useAppAuthWorkspaceRuntimeInput({
     t, pushToast, token,
     authController,
@@ -683,7 +683,8 @@ export function App() {
     setProfileNameDraft,
     setLang,
     setSelectedUiTheme,
-    saveMyProfile,
+    applyProfileName,
+    applyProfileTheme,
     handleDeleteAccount,
     handleConfirmServerAge,
     setSelectedInputId,

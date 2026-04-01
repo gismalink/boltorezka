@@ -1,4 +1,4 @@
-import type { FormEvent, RefObject } from "react";
+import type { RefObject } from "react";
 import type { Lang, TranslateFn } from "../i18n";
 import type { ChannelAudioQualitySetting, PresenceMember, Room, RoomKind, RoomMemberPreference, RoomsTreeResponse, UiTheme, User } from "../domain";
 import type { VoiceMediaStatusSummary } from "../hooks/rtc/voiceCallTypes";
@@ -97,7 +97,8 @@ export type UserDockProps = {
   onSetProfileNameDraft: (value: string) => void;
   onSetSelectedLang: (value: Lang) => void;
   onSetSelectedUiTheme: (value: UiTheme) => void;
-  onSaveProfile: (event: FormEvent) => void;
+  onApplyProfileName: () => Promise<void>;
+  onApplyProfileTheme: (value: UiTheme) => Promise<void>;
   onDeleteAccount: () => void;
   onConfirmServerAge: () => void;
   onSetSelectedInputId: (value: string) => void;

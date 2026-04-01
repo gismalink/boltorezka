@@ -505,6 +505,27 @@ export function ServerProfileModal({
     });
   }, [normalizedUserSearch, userAccessTab, usersByTab]);
   const pendingAccessRequestsCount = usersByTab.requests.length;
+  const serverMenuOptions = [
+    showLegacyUsersTab ? { value: "users" as const, label: t("server.tabUsers"), disabled: false } : null,
+    showProductManagementTab
+      ? {
+          value: "product_management" as const,
+          label: pendingAccessRequestsCount > 0
+            ? `${t("server.tabProductManagement")} (${pendingAccessRequestsCount > 99 ? "99+" : pendingAccessRequestsCount})`
+            : t("server.tabProductManagement"),
+          disabled: false
+        }
+      : null,
+    showServerManagementTab
+      ? { value: "server_management" as const, label: t("server.tabServerManagement"), disabled: !hasCurrentServer }
+      : null,
+    showObservabilityTab ? { value: "observability" as const, label: t("server.tabObservability"), disabled: false } : null,
+    canManageAudioQuality ? { value: "sound" as const, label: t("server.tabSound"), disabled: false } : null,
+    canManageAudioQuality ? { value: "video" as const, label: t("server.tabVideo"), disabled: false } : null,
+    canPromote ? { value: "chat_images" as const, label: t("server.tabChatImages"), disabled: false } : null,
+    { value: "desktop_downloads" as const, label: t("server.tabDesktopApp"), disabled: false },
+    { value: "documents_rules" as const, label: t("server.tabDocumentsRules"), disabled: false }
+  ].filter((option): option is { value: ServerMenuTab; label: string; disabled: boolean } => Boolean(option));
 
   const serverManagementOptions = useMemo(
     () => (
@@ -903,91 +924,103 @@ export function ServerProfileModal({
       <section className="card voice-preferences-modal user-settings-modal server-profile-modal grid w-full max-w-[980px] min-w-0 gap-4 max-desktop:h-full max-desktop:max-h-none max-desktop:min-h-0 max-desktop:overflow-hidden max-desktop:p-4 desktop:grid-cols-[250px_1fr]">
         <div className="user-settings-sidebar grid min-w-0 content-start gap-2">
           <div className="voice-preferences-kicker">{t("server.title")}</div>
-          {showLegacyUsersTab ? (
+          <label className="desktop:hidden grid gap-1">
+            <span className="muted">{t("server.title")}</span>
+            <select value={serverMenuTab} onChange={(event) => onSetServerMenuTab(event.target.value as ServerMenuTab)}>
+              {serverMenuOptions.map((option) => (
+                <option key={option.value} value={option.value} disabled={option.disabled}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <div className="hidden desktop:grid min-w-0 content-start gap-2">
+            {showLegacyUsersTab ? (
+              <button
+                type="button"
+                className={`secondary user-settings-tab-btn min-h-[42px] justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${serverMenuTab === "users" ? "user-settings-tab-btn-active" : ""}`}
+                onClick={() => onSetServerMenuTab("users")}
+              >
+                {t("server.tabUsers")}
+              </button>
+            ) : null}
+            {showProductManagementTab ? (
+              <button
+                type="button"
+                className={`secondary user-settings-tab-btn min-h-[42px] justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${serverMenuTab === "product_management" ? "user-settings-tab-btn-active" : ""}`}
+                onClick={() => onSetServerMenuTab("product_management")}
+              >
+                <span className="inline-flex items-center gap-2">
+                  <span>{t("server.tabProductManagement")}</span>
+                  {pendingAccessRequestsCount > 0 ? (
+                    <span className="tab-notification-badge" aria-label={t("admin.pendingRequestsCounterAria").replace("{count}", String(pendingAccessRequestsCount))}>
+                      {pendingAccessRequestsCount > 99 ? "99+" : pendingAccessRequestsCount}
+                    </span>
+                  ) : null}
+                </span>
+              </button>
+            ) : null}
+            {showServerManagementTab ? (
+              <button
+                type="button"
+                className={`secondary user-settings-tab-btn min-h-[42px] justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${serverMenuTab === "server_management" ? "user-settings-tab-btn-active" : ""}`}
+                disabled={!hasCurrentServer}
+                onClick={() => onSetServerMenuTab("server_management")}
+              >
+                {t("server.tabServerManagement")}
+              </button>
+            ) : null}
+            {showObservabilityTab ? (
+              <button
+                type="button"
+                className={`secondary user-settings-tab-btn min-h-[42px] justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${serverMenuTab === "observability" ? "user-settings-tab-btn-active" : ""}`}
+                onClick={() => onSetServerMenuTab("observability")}
+              >
+                {t("server.tabObservability")}
+              </button>
+            ) : null}
+            {canManageAudioQuality ? (
+              <button
+                type="button"
+                className={`secondary user-settings-tab-btn min-h-[42px] justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${serverMenuTab === "sound" ? "user-settings-tab-btn-active" : ""}`}
+                onClick={() => onSetServerMenuTab("sound")}
+              >
+                {t("server.tabSound")}
+              </button>
+            ) : null}
+            {canManageAudioQuality ? (
+              <button
+                type="button"
+                className={`secondary user-settings-tab-btn min-h-[42px] justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${serverMenuTab === "video" ? "user-settings-tab-btn-active" : ""}`}
+                onClick={() => onSetServerMenuTab("video")}
+              >
+                {t("server.tabVideo")}
+              </button>
+            ) : null}
+            {canPromote ? (
+              <button
+                type="button"
+                className={`secondary user-settings-tab-btn min-h-[42px] justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${serverMenuTab === "chat_images" ? "user-settings-tab-btn-active" : ""}`}
+                onClick={() => onSetServerMenuTab("chat_images")}
+              >
+                {t("server.tabChatImages")}
+              </button>
+            ) : null}
             <button
               type="button"
-              className={`secondary user-settings-tab-btn min-h-[42px] justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${serverMenuTab === "users" ? "user-settings-tab-btn-active" : ""}`}
-              onClick={() => onSetServerMenuTab("users")}
+              className={`secondary user-settings-tab-btn min-h-[42px] justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${serverMenuTab === "desktop_downloads" ? "user-settings-tab-btn-active" : ""}`}
+              onClick={() => onSetServerMenuTab("desktop_downloads")}
             >
-              {t("server.tabUsers")}
+              {t("server.tabDesktopApp")}
             </button>
-          ) : null}
-          {showProductManagementTab ? (
             <button
               type="button"
-              className={`secondary user-settings-tab-btn min-h-[42px] justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${serverMenuTab === "product_management" ? "user-settings-tab-btn-active" : ""}`}
-              onClick={() => onSetServerMenuTab("product_management")}
+              className={`secondary user-settings-tab-btn min-h-[42px] justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${serverMenuTab === "documents_rules" ? "user-settings-tab-btn-active" : ""}`}
+              onClick={() => onSetServerMenuTab("documents_rules")}
             >
-              <span className="inline-flex items-center gap-2">
-                <span>{t("server.tabProductManagement")}</span>
-                {pendingAccessRequestsCount > 0 ? (
-                  <span className="tab-notification-badge" aria-label={t("admin.pendingRequestsCounterAria").replace("{count}", String(pendingAccessRequestsCount))}>
-                    {pendingAccessRequestsCount > 99 ? "99+" : pendingAccessRequestsCount}
-                  </span>
-                ) : null}
-              </span>
+              {t("server.tabDocumentsRules")}
             </button>
-          ) : null}
-          {showServerManagementTab ? (
-            <button
-              type="button"
-              className={`secondary user-settings-tab-btn min-h-[42px] justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${serverMenuTab === "server_management" ? "user-settings-tab-btn-active" : ""}`}
-              disabled={!hasCurrentServer}
-              onClick={() => onSetServerMenuTab("server_management")}
-            >
-              {t("server.tabServerManagement")}
-            </button>
-          ) : null}
-          {showObservabilityTab ? (
-            <button
-              type="button"
-              className={`secondary user-settings-tab-btn min-h-[42px] justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${serverMenuTab === "observability" ? "user-settings-tab-btn-active" : ""}`}
-              onClick={() => onSetServerMenuTab("observability")}
-            >
-              {t("server.tabObservability")}
-            </button>
-          ) : null}
-          {canManageAudioQuality ? (
-            <button
-              type="button"
-              className={`secondary user-settings-tab-btn min-h-[42px] justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${serverMenuTab === "sound" ? "user-settings-tab-btn-active" : ""}`}
-              onClick={() => onSetServerMenuTab("sound")}
-            >
-              {t("server.tabSound")}
-            </button>
-          ) : null}
-          {canManageAudioQuality ? (
-            <button
-              type="button"
-              className={`secondary user-settings-tab-btn min-h-[42px] justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${serverMenuTab === "video" ? "user-settings-tab-btn-active" : ""}`}
-              onClick={() => onSetServerMenuTab("video")}
-            >
-              {t("server.tabVideo")}
-            </button>
-          ) : null}
-          {canPromote ? (
-            <button
-              type="button"
-              className={`secondary user-settings-tab-btn min-h-[42px] justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${serverMenuTab === "chat_images" ? "user-settings-tab-btn-active" : ""}`}
-              onClick={() => onSetServerMenuTab("chat_images")}
-            >
-              {t("server.tabChatImages")}
-            </button>
-          ) : null}
-          <button
-            type="button"
-            className={`secondary user-settings-tab-btn min-h-[42px] justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${serverMenuTab === "desktop_downloads" ? "user-settings-tab-btn-active" : ""}`}
-            onClick={() => onSetServerMenuTab("desktop_downloads")}
-          >
-            {t("server.tabDesktopApp")}
-          </button>
-          <button
-            type="button"
-            className={`secondary user-settings-tab-btn min-h-[42px] justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${serverMenuTab === "documents_rules" ? "user-settings-tab-btn-active" : ""}`}
-            onClick={() => onSetServerMenuTab("documents_rules")}
-          >
-            {t("server.tabDocumentsRules")}
-          </button>
+          </div>
         </div>
 
         <div className="user-settings-content grid min-h-0 min-w-0 content-start gap-4 overflow-auto overflow-x-hidden pr-0">
