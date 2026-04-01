@@ -1,13 +1,11 @@
-import { useMemo } from "react";
 import { useAppWorkspacePanelsRuntime } from "./useAppWorkspacePanelsRuntime";
 
 type WorkspacePanelsRuntimeInput = Parameters<typeof useAppWorkspacePanelsRuntime>[0];
 
 export function useAppWorkspacePanelsRuntimeInput(params: Record<string, unknown>): WorkspacePanelsRuntimeInput {
-  return useMemo(() => {
-    const p = params as any;
+  const p = params as any;
 
-    return {
+  return {
       roomsPanel: {
         t: p.t,
         canCreateRooms: p.canCreateRooms,
@@ -197,6 +195,5 @@ export function useAppWorkspacePanelsRuntimeInput(params: Record<string, unknown
         normalizedServerVideoWindowMaxWidth: p.normalizedServerVideoWindowMaxWidth,
         speakingVideoWindowIds: p.speakingVideoWindowIds
       }
-    };
-  }, [params]);
+  };
 }

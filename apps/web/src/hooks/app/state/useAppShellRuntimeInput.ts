@@ -1,13 +1,11 @@
-import { useMemo } from "react";
 import { useAppShellRuntime } from "./useAppShellRuntime";
 
 type AppShellRuntimeInput = Parameters<typeof useAppShellRuntime>[0];
 
 export function useAppShellRuntimeInput(params: Record<string, unknown>): AppShellRuntimeInput {
-  return useMemo(() => {
-    const p = params as any;
+  const p = params as any;
 
-    return {
+  return {
       topChrome: {
         t: p.t,
         user: p.user,
@@ -84,6 +82,5 @@ export function useAppShellRuntimeInput(params: Record<string, unknown>): AppShe
         cookieConsentKey: p.cookieConsentKey,
         setCookieConsentAccepted: p.setCookieConsentAccepted
       }
-    };
-  }, [params]);
+  };
 }

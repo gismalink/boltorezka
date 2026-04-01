@@ -1,13 +1,11 @@
-import { useMemo } from "react";
 import { useAppWorkspaceActionsRuntime } from "./useAppWorkspaceActionsRuntime";
 
 type WorkspaceActionsRuntimeInput = Parameters<typeof useAppWorkspaceActionsRuntime>[0];
 
 export function useAppWorkspaceActionsRuntimeInput(params: Record<string, unknown>): WorkspaceActionsRuntimeInput {
-  return useMemo(() => {
-    const p = params as any;
+  const p = params as any;
 
-    return {
+  return {
       roomChat: {
         roomPresence: {
           roomSlug: p.roomSlug,
@@ -135,6 +133,5 @@ export function useAppWorkspaceActionsRuntimeInput(params: Record<string, unknow
         setMessagesHasMore: p.setMessagesHasMore,
         setMessagesNextCursor: p.setMessagesNextCursor
       }
-    };
-  }, [params]);
+  };
 }
