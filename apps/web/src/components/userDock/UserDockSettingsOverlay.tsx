@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { UserDockProps } from "../types";
 import { RangeSlider } from "../uicomponents";
 
@@ -22,7 +22,6 @@ type UserDockSettingsOverlayProps = Pick<
   | "serverAgeLoading"
   | "serverAgeConfirmedAt"
   | "serverAgeConfirming"
-  | "onSaveProfile"
   | "onDeleteAccount"
   | "onConfirmServerAge"
   | "onSetProfileNameDraft"
@@ -31,6 +30,8 @@ type UserDockSettingsOverlayProps = Pick<
   | "languageOptions"
   | "onSetSelectedLang"
   | "onSetSelectedUiTheme"
+  | "onApplyProfileName"
+  | "onApplyProfileTheme"
   | "inputOptions"
   | "outputOptions"
   | "selectedInputId"
@@ -90,7 +91,6 @@ export function UserDockSettingsOverlay({
   serverAgeLoading,
   serverAgeConfirmedAt,
   serverAgeConfirming,
-  onSaveProfile,
   onDeleteAccount,
   onConfirmServerAge,
   onSetProfileNameDraft,
@@ -99,6 +99,8 @@ export function UserDockSettingsOverlay({
   languageOptions,
   onSetSelectedLang,
   onSetSelectedUiTheme,
+  onApplyProfileName,
+  onApplyProfileTheme,
   inputOptions,
   outputOptions,
   selectedInputId,
@@ -137,7 +139,20 @@ export function UserDockSettingsOverlay({
   modalBarCount,
   modalActiveBars
 }: UserDockSettingsOverlayProps) {
+  const profileNameInputRef = useRef<HTMLInputElement>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [profileNameInitialValue, setProfileNameInitialValue] = useState(profileNameDraft);
+
+  const normalizedInitialName = profileNameInitialValue.trim();
+  const normalizedDraftName = profileNameDraft.trim();
+  const nameChanged = normalizedDraftName !== normalizedInitialName;
+  const userSettingsTabOptions = [
+    { value: "profile" as const, label: t("settings.tabProfile") },
+    { value: "sound" as const, label: t("settings.tabSound") },
+    { value: "camera" as const, label: t("settings.tabCamera") },
+    { value: "server_sounds" as const, label: t("settings.tabServerSounds") }
+  ];
 
   if (!userSettingsOpen && !inlineSettingsMode) {
     return null;
@@ -148,7 +163,17 @@ export function UserDockSettingsOverlay({
       <section className="card voice-preferences-modal user-settings-modal grid w-full max-w-[980px] min-w-0 gap-4 max-desktop:h-full max-desktop:max-h-none max-desktop:min-h-0 max-desktop:overflow-hidden max-desktop:p-4 desktop:grid-cols-[250px_1fr]" ref={userSettingsRef}>
         <div className="user-settings-sidebar grid min-w-0 content-start gap-3">
           <div className="voice-preferences-kicker">{t("settings.title")}</div>
-          <div className="user-settings-tab-group grid min-w-0 gap-2 max-desktop:grid-cols-2 max-desktop:gap-2">
+          <label className="desktop:hidden grid gap-1">
+            <span className="muted">{t("settings.title")}</span>
+            <select value={userSettingsTab} onChange={(event) => onSetUserSettingsTab(event.target.value as typeof userSettingsTab)}>
+              {userSettingsTabOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <div className="user-settings-tab-group hidden min-w-0 gap-2 desktop:grid">
             <button
               type="button"
               className={`secondary user-settings-tab-btn justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${userSettingsTab === "profile" ? "user-settings-tab-btn-active" : ""}`}
@@ -191,7 +216,7 @@ export function UserDockSettingsOverlay({
           </div>
 
           {userSettingsTab === "profile" ? (
-            <form className="grid gap-4" onSubmit={onSaveProfile}>
+            <div className="grid gap-4">
               <div className="grid gap-3">
                 <h3 className="subheading">{t("settings.profileSection")}</h3>
                 <label className="grid gap-[var(--space-md)]">
@@ -200,7 +225,51 @@ export function UserDockSettingsOverlay({
                 </label>
                 <label className="grid gap-[var(--space-md)]">
                   <span className="subheading">{t("settings.displayName")}</span>
-                  <input value={profileNameDraft} onChange={(event) => onSetProfileNameDraft(event.target.value)} />
+                  <div className="flex items-center gap-2">
+                    {isEditingName ? (
+                      <button
+                        type="button"
+                        className="secondary whitespace-nowrap"
+                        onMouseDown={(event) => event.preventDefault()}
+                        onClick={() => {
+                          onSetProfileNameDraft(profileNameInitialValue);
+                          profileNameInputRef.current?.blur();
+                          setIsEditingName(false);
+                        }}
+                        disabled={profileSaving}
+                      >
+                        {t("settings.cancel")}
+                      </button>
+                    ) : null}
+                    <input
+                      ref={profileNameInputRef}
+                      value={profileNameDraft}
+                      onFocus={() => {
+                        setProfileNameInitialValue(profileNameDraft);
+                        setIsEditingName(true);
+                      }}
+                      onBlur={() => {
+                        setTimeout(() => setIsEditingName(false), 100);
+                      }}
+                      onChange={(event) => onSetProfileNameDraft(event.target.value)}
+                    />
+                    {isEditingName ? (
+                      <button
+                        type="button"
+                        className="whitespace-nowrap"
+                        onMouseDown={(event) => event.preventDefault()}
+                        onClick={() => {
+                          void onApplyProfileName();
+                          setProfileNameInitialValue(profileNameDraft);
+                          profileNameInputRef.current?.blur();
+                          setIsEditingName(false);
+                        }}
+                        disabled={profileSaving || !nameChanged || normalizedDraftName.length === 0}
+                      >
+                        {profileSaving ? t("settings.saving") : t("settings.apply")}
+                      </button>
+                    ) : null}
+                  </div>
                 </label>
                 <label className="grid gap-[var(--space-md)]">
                   <span className="subheading">{t("settings.email")}</span>
@@ -221,10 +290,18 @@ export function UserDockSettingsOverlay({
                   </label>
                   <label className="grid gap-[var(--space-md)]">
                     <span className="subheading">{t("settings.theme")}</span>
-                    <select value={selectedUiTheme} onChange={(event) => onSetSelectedUiTheme(event.target.value as typeof selectedUiTheme) }>
+                    <select
+                      value={selectedUiTheme}
+                      onChange={(event) => {
+                        const nextTheme = event.target.value as typeof selectedUiTheme;
+                        onSetSelectedUiTheme(nextTheme);
+                        void onApplyProfileTheme(nextTheme);
+                      }}
+                    >
                       <option value="8-neon-bit">{t("settings.theme8NeonBit")}</option>
                       <option value="material-classic">{t("settings.themeMaterialClassic")}</option>
                       <option value="aka-dis">{t("settings.themeAkaDis")}</option>
+                      <option value="alpha-strike">{t("settings.themeAlphaStrike")}</option>
                     </select>
                   </label>
                 </div>
@@ -249,10 +326,6 @@ export function UserDockSettingsOverlay({
               {profileStatusText ? <p className="muted media-devices-warning">{profileStatusText}</p> : null}
               {deleteAccountStatusText ? <p className="muted media-devices-warning">{deleteAccountStatusText}</p> : null}
 
-              <button type="submit" disabled={profileSaving}>
-                {profileSaving ? t("settings.saving") : t("settings.save")}
-              </button>
-
               <div className="mt-3 grid gap-[var(--space-md)] border-t border-white/15 pt-4">
                 <button
                   type="button"
@@ -263,7 +336,7 @@ export function UserDockSettingsOverlay({
                   {deleteAccountPending ? t("settings.accountDeletePending") : t("settings.accountDeleteAction")}
                 </button>
               </div>
-            </form>
+            </div>
           ) : userSettingsTab === "sound" ? (
             <>
               <div className="flex flex-wrap items-center gap-3">

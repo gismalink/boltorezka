@@ -162,8 +162,14 @@ export function useServerProfileActions({
   const handleCreateServerInviteAndCopy = useCallback(async () => {
     const tokenValue = String(token || "").trim();
     const serverId = String(currentServerId || "").trim();
+    const cachedInviteUrl = String(lastInviteUrl || "").trim();
 
     if (!tokenValue || !serverId || creatingInvite) {
+      return;
+    }
+
+    if (cachedInviteUrl) {
+      await handleCopyInviteUrl();
       return;
     }
 
@@ -183,7 +189,7 @@ export function useServerProfileActions({
     } finally {
       setCreatingInvite(false);
     }
-  }, [creatingInvite, currentServerId, pushToast, setCreatingInvite, setLastInviteUrl, t, token]);
+  }, [creatingInvite, currentServerId, handleCopyInviteUrl, lastInviteUrl, pushToast, setCreatingInvite, setLastInviteUrl, t, token]);
 
   const handleServerChange = useCallback((serverId: string) => {
     const nextServerId = String(serverId || "").trim();

@@ -1,4 +1,5 @@
 import { useRef, useState, type MouseEvent } from "react";
+import type { UiTheme } from "../domain";
 import { LegalLinks } from "./LegalLinks";
 import { Button, PixelCheckbox, PopupPortal } from "./uicomponents";
 
@@ -320,13 +321,17 @@ export function AppUpdatedOverlay({ t, onContinue }: { t: Translate; onContinue:
 export function FirstRunIntroOverlay({
   t,
   profileNameDraft,
+  selectedUiTheme,
   onChangeProfileName,
+  onChangeTheme,
   profileSaving,
   onContinue
 }: {
   t: Translate;
   profileNameDraft: string;
+  selectedUiTheme: UiTheme;
   onChangeProfileName: (value: string) => void;
+  onChangeTheme: (value: UiTheme) => void;
   profileSaving: boolean;
   onContinue: () => void;
 }) {
@@ -355,6 +360,19 @@ export function FirstRunIntroOverlay({
           />
         </label>
 
+        <label className="mt-3 mx-auto grid w-full max-w-[340px] desktop:max-w-[300px] gap-2">
+          <span className="subheading text-center">{t("intro.skinLabel")}</span>
+          <select
+            value={selectedUiTheme}
+            onChange={(event) => onChangeTheme(event.target.value as UiTheme)}
+          >
+            <option value="8-neon-bit">{t("settings.theme8NeonBit")}</option>
+            <option value="material-classic">{t("settings.themeMaterialClassic")}</option>
+            <option value="aka-dis">{t("settings.themeAkaDis")}</option>
+            <option value="alpha-strike">{t("settings.themeAlphaStrike")}</option>
+          </select>
+        </label>
+
         <div className="mt-5 grid justify-items-center gap-2">
           <PixelCheckbox
             checked={termsAccepted}
@@ -365,7 +383,7 @@ export function FirstRunIntroOverlay({
               {t("intro.acceptTermsPrefix")}{" "}
               <a
                 href="/terms"
-                className="underline underline-offset-2 hover:text-white"
+                className="legal-doc-inline-link underline underline-offset-2"
                 onClick={openLegalDoc("terms")}
               >
                 {t("intro.termsLink")}
@@ -382,7 +400,7 @@ export function FirstRunIntroOverlay({
               {t("intro.acceptPrivacyPrefix")}{" "}
               <a
                 href="/privacy"
-                className="underline underline-offset-2 hover:text-white"
+                className="legal-doc-inline-link underline underline-offset-2"
                 onClick={openLegalDoc("privacy")}
               >
                 {t("intro.privacyLink")}
@@ -404,8 +422,8 @@ export function FirstRunIntroOverlay({
       </section>
 
       {legalDoc ? (
-        <div className="fixed inset-0 z-[306] grid place-items-center bg-black/65 p-4" role="dialog" aria-modal="true">
-          <section className="card w-full max-w-[760px] p-4 sm:p-5">
+        <div className="legal-doc-modal-backdrop fixed inset-0 z-[306] grid place-items-center p-4" role="dialog" aria-modal="true">
+          <section className="legal-doc-modal-sheet card w-full max-w-[760px] p-4 sm:p-5">
             <div className="mb-3 flex items-center justify-between gap-3">
               <h3 className="text-base font-semibold">
                 {legalDoc === "terms" ? t("intro.termsLink") : t("intro.privacyLink")}
@@ -421,7 +439,7 @@ export function FirstRunIntroOverlay({
             <iframe
               title={legalDoc === "terms" ? t("intro.termsLink") : t("intro.privacyLink")}
               src={legalDoc === "terms" ? "/terms?embed=1" : "/privacy?embed=1"}
-              className="h-[58vh] w-full rounded border border-white/15 bg-black/30"
+              className="legal-doc-modal-frame h-[58vh] w-full rounded"
             />
           </section>
         </div>

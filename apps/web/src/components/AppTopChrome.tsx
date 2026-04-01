@@ -17,6 +17,7 @@ type AppTopChromeProps = {
   currentServerId: string;
   creatingServer: boolean;
   creatingInvite: boolean;
+  lastInviteUrl: string;
   buildDateLabel: string;
   pendingJoinRequestsCount: number;
   appMenuOpen: boolean;
@@ -52,6 +53,7 @@ export function AppTopChrome({
   currentServerId,
   creatingServer,
   creatingInvite,
+  lastInviteUrl,
   buildDateLabel,
   pendingJoinRequestsCount,
   appMenuOpen,
@@ -88,6 +90,7 @@ export function AppTopChrome({
         currentServerId={currentServerId}
         creatingServer={creatingServer}
         creatingInvite={creatingInvite}
+        lastInviteUrl={lastInviteUrl}
         buildDateLabel={buildDateLabel}
         pendingJoinRequestsCount={pendingJoinRequestsCount}
         appMenuOpen={appMenuOpen}

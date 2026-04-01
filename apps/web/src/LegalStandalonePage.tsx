@@ -3,6 +3,7 @@ import { LegalLinks } from "./components/LegalLinks";
 import { useEffect, useMemo, useState } from "react";
 import { Button, PixelCheckbox } from "./components/uicomponents";
 import { detectInitialLang, LANGUAGE_OPTIONS, type Lang } from "./i18n";
+import { normalizeUiTheme } from "./utils/appShell";
 
 const COOKIE_CONSENT_KEY = "boltorezka_cookie_consent_v1";
 const LEGAL_ACCEPTANCE_KEY = "boltorezka_legal_acceptance_v1";
@@ -244,6 +245,7 @@ export function LegalStandalonePage() {
       : null;
   const isCookiesPage = normalizedPathname === "/cookies";
   const [lang, setLang] = useState<Lang>(() => detectInitialLang());
+  const [selectedUiTheme] = useState(() => normalizeUiTheme(localStorage.getItem("boltorezka_ui_theme")));
   const [cookieConsentAccepted, setCookieConsentAccepted] = useState<boolean>(() => {
     return localStorage.getItem(COOKIE_CONSENT_KEY) === "1";
   });
@@ -281,6 +283,10 @@ export function LegalStandalonePage() {
     localStorage.setItem("boltorezka_lang", lang);
     document.documentElement.lang = lang;
   }, [lang]);
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-ui-theme", selectedUiTheme);
+  }, [selectedUiTheme]);
 
   useEffect(() => {
     document.title = page ? `${page.title} | Datowave` : "Datowave";
@@ -321,6 +327,18 @@ export function LegalStandalonePage() {
                 >
                   {page.toAppLabel}
                 </a>
+                {isCookiesPage ? (
+                  <Button
+                    type="button"
+                    className="secondary inline-flex min-h-[36px] items-center px-3 text-xs"
+                    onClick={() => {
+                      localStorage.removeItem(COOKIE_CONSENT_KEY);
+                      setCookieConsentAccepted(false);
+                    }}
+                  >
+                    {lang === "ru" ? "Сбросить настройки" : "Reset settings"}
+                  </Button>
+                ) : null}
               </div>
             ) : null}
             <label className="ml-auto inline-flex items-center gap-2 text-xs text-pixel-muted">
@@ -341,6 +359,12 @@ export function LegalStandalonePage() {
           <h1 className="text-3xl font-bold text-pixel-text">{page.title}</h1>
           <p className="mt-2 text-sm text-pixel-muted">{page.subtitle}</p>
           <p className="mt-2 text-xs text-pixel-muted">{page.effectiveDateLabel}</p>
+
+          {!isEmbedded ? (
+            <div className="mt-5 border-t border-white/10 pt-4">
+              <LegalLinks lang={lang} />
+            </div>
+          ) : null}
         </header>
 
         <div className="mt-6 grid gap-6">
@@ -386,25 +410,6 @@ export function LegalStandalonePage() {
           </div>
         ) : null}
 
-        {!isEmbedded ? (
-          <div className="mt-8 border-t border-white/10 pt-4">
-            <LegalLinks lang={lang} />
-            {isCookiesPage ? (
-              <div className="mt-3 text-center">
-                <Button
-                  type="button"
-                  className="text-xs text-pixel-muted underline decoration-current/40 underline-offset-2 transition hover:text-pixel-text"
-                  onClick={() => {
-                    localStorage.removeItem(COOKIE_CONSENT_KEY);
-                    setCookieConsentAccepted(false);
-                  }}
-                >
-                  {lang === "ru" ? "Сбросить настройки" : "Reset settings"}
-                </Button>
-              </div>
-            ) : null}
-          </div>
-        ) : null}
       </article>
 
       {!isEmbedded ? (

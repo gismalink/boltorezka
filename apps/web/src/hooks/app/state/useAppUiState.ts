@@ -9,7 +9,8 @@ export type AppServerMenuTab =
   | "sound"
   | "video"
   | "chat_images"
-  | "desktop_downloads";
+  | "desktop_downloads"
+  | "documents_rules";
 export type AppMobileTab = "channels" | "chat" | "settings";
 
 export function useAppUiState() {

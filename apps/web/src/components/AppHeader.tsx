@@ -21,6 +21,7 @@ type AppHeaderProps = {
   currentServerId: string;
   creatingServer: boolean;
   creatingInvite: boolean;
+  lastInviteUrl: string;
   onChangeCurrentServer: (serverId: string) => void;
   onCreateServer: (name: string) => Promise<void>;
   onCreateServerInviteAndCopy: () => Promise<void>;
@@ -47,6 +48,7 @@ export function AppHeader({
   currentServerId,
   creatingServer,
   creatingInvite,
+  lastInviteUrl,
   onChangeCurrentServer,
   onCreateServer,
   onCreateServerInviteAndCopy,
@@ -58,6 +60,7 @@ export function AppHeader({
   const createServerRef = useRef<HTMLDivElement>(null);
   const menuGlyph = String(currentServerName || "").trim().slice(0, 1).toUpperCase() || "D";
   const serverTitle = String(currentServerName || "").trim();
+  const cachedInviteUrl = String(lastInviteUrl || "").trim();
 
   const submitCreateServer = async () => {
     const name = String(newServerName || "").trim();
@@ -119,8 +122,25 @@ export function AppHeader({
                 onClick={() => { void onCreateServerInviteAndCopy(); }}
                 disabled={creatingInvite || !currentServerId}
               >
-                {creatingInvite ? t("server.inviteCreateLoading") : t("server.inviteQuick")}
+                {creatingInvite
+                  ? t("server.inviteCreateLoading")
+                  : cachedInviteUrl
+                    ? t("server.inviteCopiedAction")
+                    : t("server.inviteQuick")}
               </Button>
+              {cachedInviteUrl ? (
+                <a
+                  href={cachedInviteUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-xs text-pixel-text/70 break-all"
+                  title={cachedInviteUrl}
+                >
+                  {cachedInviteUrl}
+                </a>
+              ) : (
+                <p className="text-xs text-pixel-text/60">{t("server.inviteQuickHint")}</p>
+              )}
               <div className="grid gap-2" ref={createServerRef}>
                 <Button
                   type="button"

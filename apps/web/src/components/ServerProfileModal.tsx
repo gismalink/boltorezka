@@ -22,10 +22,12 @@ type ServerMenuTab =
   | "sound"
   | "video"
   | "chat_images"
-  | "desktop_downloads";
+  | "desktop_downloads"
+  | "documents_rules";
 type UserAccessTab = "active" | "blocked" | "requests" | "bots" | "deleted";
 type ProductManagementTab = "users" | "servers";
 type ObservabilityTab = "log" | "signaling" | "telemetry";
+type DocumentsRulesTab = "documents" | "rules";
 
 type IconAction = {
   key: string;
@@ -39,6 +41,21 @@ type RoleBadge = {
   key: string;
   label: string;
 };
+
+function resolveDisplayName(name: string | null | undefined, username: string | null | undefined, email: string): string {
+  const normalizedName = String(name || "").trim();
+  if (normalizedName) {
+    return normalizedName;
+  }
+
+  const normalizedUsername = String(username || "").trim();
+  if (normalizedUsername) {
+    return normalizedUsername;
+  }
+
+  const localPart = String(email || "").split("@")[0] || "";
+  return localPart.trim() || email;
+}
 
 function ActionIconButton({ action }: { action: IconAction }) {
   return (
@@ -337,6 +354,7 @@ export function ServerProfileModal({
   const [userAccessTab, setUserAccessTab] = useState<UserAccessTab>("active");
   const [productManagementTab, setProductManagementTab] = useState<ProductManagementTab>("users");
   const [observabilityTab, setObservabilityTab] = useState<ObservabilityTab>("log");
+  const [documentsRulesTab, setDocumentsRulesTab] = useState<DocumentsRulesTab>("documents");
   const [userSearchQuery, setUserSearchQuery] = useState("");
   const [renameServerName, setRenameServerName] = useState("");
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -487,6 +505,27 @@ export function ServerProfileModal({
     });
   }, [normalizedUserSearch, userAccessTab, usersByTab]);
   const pendingAccessRequestsCount = usersByTab.requests.length;
+  const serverMenuOptions = [
+    showLegacyUsersTab ? { value: "users" as const, label: t("server.tabUsers"), disabled: false } : null,
+    showProductManagementTab
+      ? {
+          value: "product_management" as const,
+          label: pendingAccessRequestsCount > 0
+            ? `${t("server.tabProductManagement")} (${pendingAccessRequestsCount > 99 ? "99+" : pendingAccessRequestsCount})`
+            : t("server.tabProductManagement"),
+          disabled: false
+        }
+      : null,
+    showServerManagementTab
+      ? { value: "server_management" as const, label: t("server.tabServerManagement"), disabled: !hasCurrentServer }
+      : null,
+    showObservabilityTab ? { value: "observability" as const, label: t("server.tabObservability"), disabled: false } : null,
+    canManageAudioQuality ? { value: "sound" as const, label: t("server.tabSound"), disabled: false } : null,
+    canManageAudioQuality ? { value: "video" as const, label: t("server.tabVideo"), disabled: false } : null,
+    canPromote ? { value: "chat_images" as const, label: t("server.tabChatImages"), disabled: false } : null,
+    { value: "desktop_downloads" as const, label: t("server.tabDesktopApp"), disabled: false },
+    { value: "documents_rules" as const, label: t("server.tabDocumentsRules"), disabled: false }
+  ].filter((option): option is { value: ServerMenuTab; label: string; disabled: boolean } => Boolean(option));
 
   const serverManagementOptions = useMemo(
     () => (
@@ -885,84 +924,103 @@ export function ServerProfileModal({
       <section className="card voice-preferences-modal user-settings-modal server-profile-modal grid w-full max-w-[980px] min-w-0 gap-4 max-desktop:h-full max-desktop:max-h-none max-desktop:min-h-0 max-desktop:overflow-hidden max-desktop:p-4 desktop:grid-cols-[250px_1fr]">
         <div className="user-settings-sidebar grid min-w-0 content-start gap-2">
           <div className="voice-preferences-kicker">{t("server.title")}</div>
-          {showLegacyUsersTab ? (
+          <label className="desktop:hidden grid gap-1">
+            <span className="muted">{t("server.title")}</span>
+            <select value={serverMenuTab} onChange={(event) => onSetServerMenuTab(event.target.value as ServerMenuTab)}>
+              {serverMenuOptions.map((option) => (
+                <option key={option.value} value={option.value} disabled={option.disabled}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <div className="hidden desktop:grid min-w-0 content-start gap-2">
+            {showLegacyUsersTab ? (
+              <button
+                type="button"
+                className={`secondary user-settings-tab-btn min-h-[42px] justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${serverMenuTab === "users" ? "user-settings-tab-btn-active" : ""}`}
+                onClick={() => onSetServerMenuTab("users")}
+              >
+                {t("server.tabUsers")}
+              </button>
+            ) : null}
+            {showProductManagementTab ? (
+              <button
+                type="button"
+                className={`secondary user-settings-tab-btn min-h-[42px] justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${serverMenuTab === "product_management" ? "user-settings-tab-btn-active" : ""}`}
+                onClick={() => onSetServerMenuTab("product_management")}
+              >
+                <span className="inline-flex items-center gap-2">
+                  <span>{t("server.tabProductManagement")}</span>
+                  {pendingAccessRequestsCount > 0 ? (
+                    <span className="tab-notification-badge" aria-label={t("admin.pendingRequestsCounterAria").replace("{count}", String(pendingAccessRequestsCount))}>
+                      {pendingAccessRequestsCount > 99 ? "99+" : pendingAccessRequestsCount}
+                    </span>
+                  ) : null}
+                </span>
+              </button>
+            ) : null}
+            {showServerManagementTab ? (
+              <button
+                type="button"
+                className={`secondary user-settings-tab-btn min-h-[42px] justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${serverMenuTab === "server_management" ? "user-settings-tab-btn-active" : ""}`}
+                disabled={!hasCurrentServer}
+                onClick={() => onSetServerMenuTab("server_management")}
+              >
+                {t("server.tabServerManagement")}
+              </button>
+            ) : null}
+            {showObservabilityTab ? (
+              <button
+                type="button"
+                className={`secondary user-settings-tab-btn min-h-[42px] justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${serverMenuTab === "observability" ? "user-settings-tab-btn-active" : ""}`}
+                onClick={() => onSetServerMenuTab("observability")}
+              >
+                {t("server.tabObservability")}
+              </button>
+            ) : null}
+            {canManageAudioQuality ? (
+              <button
+                type="button"
+                className={`secondary user-settings-tab-btn min-h-[42px] justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${serverMenuTab === "sound" ? "user-settings-tab-btn-active" : ""}`}
+                onClick={() => onSetServerMenuTab("sound")}
+              >
+                {t("server.tabSound")}
+              </button>
+            ) : null}
+            {canManageAudioQuality ? (
+              <button
+                type="button"
+                className={`secondary user-settings-tab-btn min-h-[42px] justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${serverMenuTab === "video" ? "user-settings-tab-btn-active" : ""}`}
+                onClick={() => onSetServerMenuTab("video")}
+              >
+                {t("server.tabVideo")}
+              </button>
+            ) : null}
+            {canPromote ? (
+              <button
+                type="button"
+                className={`secondary user-settings-tab-btn min-h-[42px] justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${serverMenuTab === "chat_images" ? "user-settings-tab-btn-active" : ""}`}
+                onClick={() => onSetServerMenuTab("chat_images")}
+              >
+                {t("server.tabChatImages")}
+              </button>
+            ) : null}
             <button
               type="button"
-              className={`secondary user-settings-tab-btn min-h-[42px] justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${serverMenuTab === "users" ? "user-settings-tab-btn-active" : ""}`}
-              onClick={() => onSetServerMenuTab("users")}
+              className={`secondary user-settings-tab-btn min-h-[42px] justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${serverMenuTab === "desktop_downloads" ? "user-settings-tab-btn-active" : ""}`}
+              onClick={() => onSetServerMenuTab("desktop_downloads")}
             >
-              {t("server.tabUsers")}
+              {t("server.tabDesktopApp")}
             </button>
-          ) : null}
-          {showProductManagementTab ? (
             <button
               type="button"
-              className={`secondary user-settings-tab-btn min-h-[42px] justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${serverMenuTab === "product_management" ? "user-settings-tab-btn-active" : ""}`}
-              onClick={() => onSetServerMenuTab("product_management")}
+              className={`secondary user-settings-tab-btn min-h-[42px] justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${serverMenuTab === "documents_rules" ? "user-settings-tab-btn-active" : ""}`}
+              onClick={() => onSetServerMenuTab("documents_rules")}
             >
-              <span className="inline-flex items-center gap-2">
-                <span>{t("server.tabProductManagement")}</span>
-                {pendingAccessRequestsCount > 0 ? (
-                  <span className="tab-notification-badge" aria-label={t("admin.pendingRequestsCounterAria").replace("{count}", String(pendingAccessRequestsCount))}>
-                    {pendingAccessRequestsCount > 99 ? "99+" : pendingAccessRequestsCount}
-                  </span>
-                ) : null}
-              </span>
+              {t("server.tabDocumentsRules")}
             </button>
-          ) : null}
-          {showServerManagementTab ? (
-            <button
-              type="button"
-              className={`secondary user-settings-tab-btn min-h-[42px] justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${serverMenuTab === "server_management" ? "user-settings-tab-btn-active" : ""}`}
-              disabled={!hasCurrentServer}
-              onClick={() => onSetServerMenuTab("server_management")}
-            >
-              {t("server.tabServerManagement")}
-            </button>
-          ) : null}
-          {showObservabilityTab ? (
-            <button
-              type="button"
-              className={`secondary user-settings-tab-btn min-h-[42px] justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${serverMenuTab === "observability" ? "user-settings-tab-btn-active" : ""}`}
-              onClick={() => onSetServerMenuTab("observability")}
-            >
-              {t("server.tabObservability")}
-            </button>
-          ) : null}
-          {canManageAudioQuality ? (
-            <button
-              type="button"
-              className={`secondary user-settings-tab-btn min-h-[42px] justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${serverMenuTab === "sound" ? "user-settings-tab-btn-active" : ""}`}
-              onClick={() => onSetServerMenuTab("sound")}
-            >
-              {t("server.tabSound")}
-            </button>
-          ) : null}
-          {canManageAudioQuality ? (
-            <button
-              type="button"
-              className={`secondary user-settings-tab-btn min-h-[42px] justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${serverMenuTab === "video" ? "user-settings-tab-btn-active" : ""}`}
-              onClick={() => onSetServerMenuTab("video")}
-            >
-              {t("server.tabVideo")}
-            </button>
-          ) : null}
-          {canPromote ? (
-            <button
-              type="button"
-              className={`secondary user-settings-tab-btn min-h-[42px] justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${serverMenuTab === "chat_images" ? "user-settings-tab-btn-active" : ""}`}
-              onClick={() => onSetServerMenuTab("chat_images")}
-            >
-              {t("server.tabChatImages")}
-            </button>
-          ) : null}
-          <button
-            type="button"
-            className={`secondary user-settings-tab-btn min-h-[42px] justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${serverMenuTab === "desktop_downloads" ? "user-settings-tab-btn-active" : ""}`}
-            onClick={() => onSetServerMenuTab("desktop_downloads")}
-          >
-            {t("server.tabDesktopApp")}
-          </button>
+          </div>
         </div>
 
         <div className="user-settings-content grid min-h-0 min-w-0 content-start gap-4 overflow-auto overflow-x-hidden pr-0">
@@ -976,6 +1034,7 @@ export function ServerProfileModal({
               {serverMenuTab === "video" ? t("server.tabVideo") : null}
               {serverMenuTab === "chat_images" ? t("server.tabChatImages") : null}
               {serverMenuTab === "desktop_downloads" ? t("server.tabDesktopApp") : null}
+              {serverMenuTab === "documents_rules" ? t("server.tabDocumentsRules") : null}
             </h2>
             <button
               type="button"
@@ -1065,7 +1124,7 @@ export function ServerProfileModal({
                     {serverMembers.map((member) => (
                       <li key={member.userId} className="admin-row grid min-h-[42px] grid-cols-[minmax(0,1fr)_auto] items-center gap-2 max-desktop:grid-cols-1">
                         <span className="min-w-0 break-words">
-                          {member.name} · {member.email}
+                          {resolveDisplayName(member.name, null, member.email)}
                           {getServerMemberRoleBadges(member).length > 0 ? (
                             <span className="inline-flex flex-wrap items-center gap-1 pl-2">
                               {getServerMemberRoleBadges(member).map((badge) => (
@@ -1166,7 +1225,7 @@ export function ServerProfileModal({
                 {filteredAdminUsers.map((item) => (
                   <li key={item.id} className="admin-row grid min-h-[42px] grid-cols-[minmax(0,1fr)_auto] items-center gap-2 max-desktop:grid-cols-1">
                     <span className="min-w-0 break-words">
-                      {item.email}
+                      {resolveDisplayName(item.name, item.username, item.email)}
                       {getUserRoleBadges(item).length > 0 ? (
                         <span className="inline-flex flex-wrap items-center gap-1 pl-2">
                           {getUserRoleBadges(item).map((badge) => (
@@ -1675,6 +1734,56 @@ export function ServerProfileModal({
                   </div>
                 ))}
               </div>
+            </section>
+          ) : null}
+
+          {serverMenuTab === "documents_rules" ? (
+            <section className="grid min-h-0 gap-3">
+              <div className="quality-toggle-group" role="tablist" aria-label={t("server.documentsRulesTabs")}>
+                <button
+                  type="button"
+                  className={`secondary quality-toggle-btn ${documentsRulesTab === "documents" ? "quality-toggle-btn-active" : ""}`}
+                  onClick={() => setDocumentsRulesTab("documents")}
+                  aria-selected={documentsRulesTab === "documents"}
+                >
+                  {t("server.documentsTabDocuments")}
+                </button>
+                <button
+                  type="button"
+                  className={`secondary quality-toggle-btn ${documentsRulesTab === "rules" ? "quality-toggle-btn-active" : ""}`}
+                  onClick={() => setDocumentsRulesTab("rules")}
+                  aria-selected={documentsRulesTab === "rules"}
+                >
+                  {t("server.documentsTabRules")}
+                </button>
+              </div>
+
+              {documentsRulesTab === "documents" ? (
+                <div className="grid gap-3">
+                  <h3>{t("server.documentsTitle")}</h3>
+                  <p className="muted">{t("server.documentsHint")}</p>
+                  <nav aria-label={t("server.documentsTitle")}> 
+                    <ul className="grid gap-2 text-sm">
+                      <li><a href="/privacy" className="underline underline-offset-2 hover:text-white">{t("server.documentPrivacy")}</a></li>
+                      <li><a href="/terms" className="underline underline-offset-2 hover:text-white">{t("server.documentTerms")}</a></li>
+                      <li><a href="/cookies" className="underline underline-offset-2 hover:text-white">{t("server.documentCookies")}</a></li>
+                      <li><a href="/contacts" className="underline underline-offset-2 hover:text-white">{t("server.documentContacts")}</a></li>
+                    </ul>
+                  </nav>
+                </div>
+              ) : null}
+
+              {documentsRulesTab === "rules" ? (
+                <div className="grid gap-3">
+                  <h3>{t("server.rulesTitle")}</h3>
+                  <p className="muted">{t("server.rulesHint")}</p>
+                  <ul className="grid gap-2 list-disc pl-5">
+                    <li>{t("server.rulesItemRespect")}</li>
+                    <li>{t("server.rulesItemContent")}</li>
+                    <li>{t("server.rulesItemPrivacy")}</li>
+                  </ul>
+                </div>
+              ) : null}
             </section>
           ) : null}
         </div>

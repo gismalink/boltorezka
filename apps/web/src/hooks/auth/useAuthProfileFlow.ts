@@ -1,4 +1,4 @@
-import { FormEvent, type MutableRefObject, useEffect } from "react";
+import { useEffect, type MutableRefObject } from "react";
 import { api } from "../../api";
 import type { AuthController } from "../../services";
 import type { UiTheme, User } from "../../domain";
@@ -178,8 +178,7 @@ export function useAuthProfileFlow({
     setUserSettingsOpen(true);
   };
 
-  const saveMyProfile = async (event: FormEvent) => {
-    event.preventDefault();
+  const updateProfile = async (nextTheme?: UiTheme) => {
     const trimmedName = profileNameDraft.trim();
     if (!trimmedName) {
       setProfileStatusText(t("profile.saveError"));
@@ -192,14 +191,13 @@ export function useAuthProfileFlow({
     try {
       const response = await api.updateMe(token, {
         name: trimmedName,
-        uiTheme: selectedUiTheme
+        uiTheme: nextTheme ?? selectedUiTheme
       });
       if (response.user) {
         setUser(response.user);
       }
       onProfileSaved?.();
       setProfileStatusText(t("profile.saveSuccess"));
-      pushToast(t("profile.saveSuccess"));
     } catch (error) {
       const message = (error as Error).message || t("profile.saveError");
       setProfileStatusText(message);
@@ -209,10 +207,19 @@ export function useAuthProfileFlow({
     }
   };
 
+  const applyProfileName = async () => {
+    await updateProfile();
+  };
+
+  const applyProfileTheme = async (nextTheme: UiTheme) => {
+    await updateProfile(nextTheme);
+  };
+
   return {
     beginSso,
     logout,
     openUserSettings,
-    saveMyProfile
+    applyProfileName,
+    applyProfileTheme
   };
 }

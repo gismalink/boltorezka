@@ -398,7 +398,7 @@ export function App() {
     dismissDesktopUpdateBanner, applyDesktopUpdate,
     showDesktopBrowserCompletion, desktopHandoffError,
     beginSso, logout, openUserSettings,
-    saveMyProfile, restoreDeletedAccount, handleDeleteAccount
+    applyProfileName, applyProfileTheme, restoreDeletedAccount, handleDeleteAccount
   } = useAppAuthWorkspaceRuntime(useAppAuthWorkspaceRuntimeInput({
     t, pushToast, token,
     authController,
@@ -683,7 +683,8 @@ export function App() {
     setProfileNameDraft,
     setLang,
     setSelectedUiTheme,
-    saveMyProfile,
+    applyProfileName,
+    applyProfileTheme,
     handleDeleteAccount,
     handleConfirmServerAge,
     setSelectedInputId,
@@ -882,23 +883,20 @@ export function App() {
     servers
   }));
 
-  if (entryGate) {
-    return entryGate;
-  }
-
   const {
     appTopChromeProps, appMainSectionProps,
     appShellOverlaysProps
   } = useAppShellRuntime(useAppShellRuntimeInput({
     t, user,
     currentServer, servers, currentServerId,
-    creatingServer, creatingInvite,
+    creatingServer, creatingInvite, lastInviteUrl,
     buildDateLabel: CLIENT_BUILD_DATE_LABEL,
     pendingJoinRequestsCount,
     appMenuOpen, authMenuOpen, profileMenuOpen,
     authMenuRef, profileMenuRef,
     beginSso, logout,
     openProfileSettings: () => openUserSettings("profile"),
+    handleServerChange,
     setCurrentServerId,
     handleCreateServer, handleCreateServerInviteAndCopy,
     mediaDevicesState, requestMediaAccess,
@@ -924,6 +922,7 @@ export function App() {
     showAppUpdatedOverlay, acknowledgeUpdatedApp,
     showFirstRunIntro,
     profileNameDraft, setProfileNameDraft,
+    selectedUiTheme, setSelectedUiTheme,
     profileSaving,
     completeFirstRunIntro,
     sessionMovedOverlayMessage, setSessionMovedOverlayMessage,
@@ -937,6 +936,10 @@ export function App() {
     cookieConsentKey: COOKIE_CONSENT_KEY,
     setCookieConsentAccepted
   }));
+
+  if (entryGate) {
+    return entryGate;
+  }
 
   return <AppShellLayout topChromeProps={appTopChromeProps} mainSectionProps={appMainSectionProps} shellOverlaysProps={appShellOverlaysProps} />;
 }

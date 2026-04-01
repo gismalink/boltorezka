@@ -42,5 +42,5 @@ export function readNonZeroDefaultVolume(storageKey: string, fallback: number): 
 }
 
 export function normalizeUiTheme(value: unknown): UiTheme {
-  return value === "material-classic" || value === "aka-dis" ? value : DEFAULT_UI_THEME;
+  return value === "material-classic" || value === "aka-dis" || value === "alpha-strike" ? value : DEFAULT_UI_THEME;
 }
