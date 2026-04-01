@@ -102,7 +102,8 @@ Progress note:
 - Девяностый инкремент декомпозиции `web` выполнен: input builder для shell room runtime effects вынесен в `hooks/app/state/useAppShellRoomRuntimeEffectsInput.ts`.
 - Девяносто первый инкремент декомпозиции `web` выполнен: input builder для permissions identity runtime вынесен в `hooks/app/state/useAppPermissionsIdentityRuntimeInput.ts`.
 - Девяносто второй инкремент декомпозиции `web` выполнен: input builder для refs/adapters runtime вынесен в `hooks/app/state/useAppRefsAndAdaptersRuntimeInput.ts`.
-- Cumulative: `App.tsx` сокращен с 2101 до 1204 строк; web build + denied-media smoke проходят после каждого инкремента.
+- Девяносто третий инкремент декомпозиции `web` выполнен: input builder для realtime transport runtime вынесен в `hooks/app/state/useAppRealtimeTransportRuntimeInput.ts`.
+- Cumulative: `App.tsx` сокращен с 2101 до 1201 строк; web build + denied-media smoke проходят после каждого инкремента.
 
 ### 2.2 API route decomposition
 

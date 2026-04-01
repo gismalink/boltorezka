@@ -50,6 +50,7 @@ import {
   useOnboardingOverlayActions,
   useAppWorkspaceSupportRuntime,
   useAppWorkspaceSupportRuntimeInput,
+  useAppRealtimeTransportRuntimeInput,
   useCollapsedCategories,
   useRoomEditorState,
   useServerSounds,
@@ -290,18 +291,14 @@ export function App() {
     handleSetChatText,
     sendChatTypingState,
     applyRemoteTypingPayload
-  } = useAppRealtimeTransportRuntime({
-    wsAcks: {
-      realtimeClientRef
-    },
-    chatTyping: {
-      chatRoomSlug,
-      userId: user?.id,
-      setChatText,
-      typingTtlMs: CHAT_TYPING_TTL_MS,
-      typingPingIntervalMs: CHAT_TYPING_PING_INTERVAL_MS
-    }
-  });
+  } = useAppRealtimeTransportRuntime(useAppRealtimeTransportRuntimeInput({
+    realtimeClientRef,
+    chatRoomSlug,
+    user,
+    setChatText,
+    typingTtlMs: CHAT_TYPING_TTL_MS,
+    typingPingIntervalMs: CHAT_TYPING_PING_INTERVAL_MS
+  }));
 
   const {
     currentRoomVoiceTargets,

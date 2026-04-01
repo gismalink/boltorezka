@@ -32,6 +32,7 @@ export { useAppVoiceMediaRuntime } from "./app/state/useAppVoiceMediaRuntime";
 export { useAppVoiceMediaRuntimeInput } from "./app/state/useAppVoiceMediaRuntimeInput";
 export { useAppOverlaysSectionInput } from "./app/state/useAppOverlaysSectionInput";
 export { useAppRealtimeTransportRuntime } from "./app/state/useAppRealtimeTransportRuntime";
+export { useAppRealtimeTransportRuntimeInput } from "./app/state/useAppRealtimeTransportRuntimeInput";
 export { useAppRoomsRuntime } from "./app/state/useAppRoomsRuntime";
 export { useAppRoomsRuntimeInput } from "./app/state/useAppRoomsRuntimeInput";
 export { useAppRoomsPanelProps } from "./app/state/useAppRoomsPanelProps";
