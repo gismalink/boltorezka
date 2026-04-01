@@ -31,13 +31,11 @@ import {
   useAppWorkspacePanelsRuntime,
   useAppWorkspaceLifecycleGuardsRuntime,
   useAppControllersRuntime,
-  useAppShellLifecycleEffects,
+  useAppInviteServerSyncRuntime,
+  useAppShellRoomRuntimeEffects,
   useAppEventLogs,
   useBuildVersionSync,
-  useInviteAcceptanceFlow,
   useOnboardingOverlayActions,
-  useRoomSlugPersistence,
-  useServerDataSync,
   useAppWorkspaceSupportRuntime,
   useCollapsedCategories,
   useRoomEditorState,
@@ -664,60 +662,62 @@ export function App() {
     }
   });
 
-  useAppShellLifecycleEffects({
-    lang,
-    selectedUiTheme,
-    user,
-    chatRoomSlug,
-    setIsMobileViewport,
-    setProfileNameDraft,
-    setSelectedUiTheme,
-    setProfileStatusText,
-    setShowFirstRunIntro,
-    setEditingMessageId,
-    setPendingChatImageDataUrl
+  useAppShellRoomRuntimeEffects({
+    shellLifecycle: {
+      lang,
+      selectedUiTheme,
+      user,
+      chatRoomSlug,
+      setIsMobileViewport,
+      setProfileNameDraft,
+      setSelectedUiTheme,
+      setProfileStatusText,
+      setShowFirstRunIntro,
+      setEditingMessageId,
+      setPendingChatImageDataUrl
+    },
+    roomSlugPersistence: {
+      currentServerId,
+      roomSlug,
+      roomSlugStorageKey: ROOM_SLUG_STORAGE_KEY,
+      setRoomSlug,
+      setChatRoomSlug
+    }
   });
 
-  useRoomSlugPersistence({
-    currentServerId,
-    roomSlug,
-    roomSlugStorageKey: ROOM_SLUG_STORAGE_KEY,
-    setRoomSlug,
-    setChatRoomSlug
-  });
-
-  useInviteAcceptanceFlow({
-    token,
-    hasUser,
-    pendingInviteToken,
-    setPendingInviteToken,
-    setInviteAccepting,
-    setServers,
-    setCurrentServerId,
-    pushToast,
-    t
-  });
-
-  useServerDataSync({
-    token,
-    hasUser,
-    currentServerId,
-    selectedAdminServerId,
-    canManageServerControlPlane,
-    currentServerIdStorageKey: CURRENT_SERVER_ID_STORAGE_KEY,
-    setServerAgeConfirmedAt,
-    setServerAgeLoading,
-    setServers,
-    setServersLoading,
-    setCurrentServerId,
-    setServerMembers,
-    setServerMembersLoading,
-    setAdminServers,
-    setSelectedAdminServerId,
-    setAdminServerOverview,
-    setAdminServersLoading,
-    setAdminServerOverviewLoading,
-    pushLog
+  useAppInviteServerSyncRuntime({
+    inviteAcceptance: {
+      token,
+      hasUser,
+      pendingInviteToken,
+      setPendingInviteToken,
+      setInviteAccepting,
+      setServers,
+      setCurrentServerId,
+      pushToast,
+      t
+    },
+    serverDataSync: {
+      token,
+      hasUser,
+      currentServerId,
+      selectedAdminServerId,
+      canManageServerControlPlane,
+      currentServerIdStorageKey: CURRENT_SERVER_ID_STORAGE_KEY,
+      setServerAgeConfirmedAt,
+      setServerAgeLoading,
+      setServers,
+      setServersLoading,
+      setCurrentServerId,
+      setServerMembers,
+      setServerMembersLoading,
+      setAdminServers,
+      setSelectedAdminServerId,
+      setAdminServerOverview,
+      setAdminServersLoading,
+      setAdminServerOverviewLoading,
+      pushLog
+    }
   });
 
   const { refreshDevices, requestMediaAccess, requestVideoAccess } = useAppWorkspaceSupportRuntime({
