@@ -26,9 +26,9 @@ Scope: стабилизация архитектурных границ web/api/
 
 ### 2.1 Web composition boundaries
 
-- [ ] Разделить текущий orchestration слой на feature facades: `auth`, `rooms`, `chat`, `voice`, `admin`.
-- [ ] Свести `App` к wiring-композиции (state ownership внутри доменных hooks/contexts).
-- [ ] Зафиксировать целевой лимит сложности на модуль: до 300-400 строк на feature orchestrator.
+- [x] Разделить текущий orchestration слой на feature facades: `auth`, `rooms`, `chat`, `voice`, `admin`.
+- [x] Свести `App` к wiring-композиции (state ownership внутри доменных hooks/contexts).
+- [x] Зафиксировать целевой лимит сложности на модуль: до 300-400 строк на feature orchestrator.
 
 Progress note:
 
@@ -105,6 +105,7 @@ Progress note:
 - Девяносто третий инкремент декомпозиции `web` выполнен: input builder для realtime transport runtime вынесен в `hooks/app/state/useAppRealtimeTransportRuntimeInput.ts`.
 - Девяносто четвертый инкремент декомпозиции `web` выполнен: input builder для onboarding overlay actions вынесен в `hooks/app/state/useOnboardingOverlayActionsInput.ts`.
 - Девяносто пятый инкремент декомпозиции `web` выполнен: закрыты оставшиеся app-level input builders (`useAppCoreStateInput`, `useAppUserDockSharedPropsInput`, `useAppEntryGatesStateInput`) и начат sub-bundling для крупных runtime input-вызовов через `runtimeInputCommon` (workspace support/actions).
+- Status check (2026-04-01): `App.tsx` = 1191 lines, feature orchestrators в пределах целевого лимита (`useAppVoiceMediaRuntime.ts` = 257 lines; остальные app-level orchestrators существенно меньше 300 lines).
 - Cumulative: `App.tsx` сокращен с 2101 до 1191 строки; web build + denied-media smoke проходят после каждого инкремента.
 
 ### 2.2 API route decomposition
@@ -219,7 +220,7 @@ Action items:
 
 - [x] Web auth bootstrap работает в cookie-first режиме в `test` без регрессий SSO flow.
 - [x] `npm run check:required` включает web gate (и desktop gate для desktop release path).
-- [ ] Крупные orchestration файлы разнесены по feature модулям, публичные API модулей зафиксированы.
+- [x] Крупные orchestration файлы разнесены по feature модулям, публичные API модулей зафиксированы.
 - [x] Docs index не содержит битых ссылок на планы.
 - [x] По realtime transport есть зафиксированное ADR-решение и критерии пересмотра (с измеримыми триггерами).
 
