@@ -88,7 +88,10 @@ Progress note:
 - Семьдесят шестой инкремент декомпозиции `web` выполнен: permissions/locale + identity/session adapters объединены в `hooks/app/state/useAppPermissionsIdentityRuntime.ts`, что убрало дублирующийся glue-код из `App.tsx`.
 - Семьдесят седьмой инкремент декомпозиции `web` выполнен: invite acceptance + server data sync объединены в composition runtime `hooks/app/effects/useAppInviteServerSyncRuntime.ts`.
 - Семьдесят восьмой инкремент декомпозиции `web` выполнен: shell lifecycle + room slug persistence объединены в composition runtime `hooks/app/effects/useAppShellRoomRuntimeEffects.ts`.
-- Cumulative: `App.tsx` сокращен с 2101 до 1459 строк; web build + denied-media smoke проходят после каждого инкремента.
+- Семьдесят девятый инкремент декомпозиции `web` выполнен: input builder для workspace actions runtime вынесен в `hooks/app/state/useAppWorkspaceActionsRuntimeInput.ts`.
+- Восьмидесятый инкремент декомпозиции `web` выполнен: input builder для workspace panels runtime вынесен в `hooks/app/state/useAppWorkspacePanelsRuntimeInput.ts`.
+- Восемьдесят первый инкремент декомпозиции `web` выполнен: input builder для shell runtime вынесен в `hooks/app/state/useAppShellRuntimeInput.ts`.
+- Cumulative: `App.tsx` сокращен с 2101 до 1388 строк; web build + denied-media smoke проходят после каждого инкремента.
 
 ### 2.2 API route decomposition
 
