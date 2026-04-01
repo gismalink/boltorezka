@@ -21,7 +21,7 @@ import {
   useAppEntryGatesState,
   useAppRealtimeTransportRuntime,
   useAppVoiceMediaRuntime,
-  useAppPermissionsAndLocale,
+  useAppPermissionsIdentityRuntime,
   useAppRefsAndAdaptersRuntime,
   useAppRoomsRuntime,
   useAppShellRuntime,
@@ -42,8 +42,7 @@ import {
   useCollapsedCategories,
   useRoomEditorState,
   useServerSounds,
-  useToastQueue,
-  
+  useToastQueue
 } from "./hooks";
 import { formatBuildDateLabel } from "./utils/appShell";
 
@@ -214,8 +213,13 @@ export function App() {
     canViewTelemetry,
     pendingJoinRequestsCount,
     locale,
-    t
-  } = useAppPermissionsAndLocale({
+    t,
+    currentUserId,
+    currentUserIdOrNull,
+    currentUserName,
+    hasUser,
+    hasServiceToken
+  } = useAppPermissionsIdentityRuntime({
     token,
     user,
     servers,
@@ -224,11 +228,6 @@ export function App() {
     lang,
     pushToast
   });
-  const currentUserId = user?.id || "";
-  const currentUserIdOrNull = user?.id || null;
-  const currentUserName = user?.name || "";
-  const hasUser = Boolean(user);
-  const hasServiceToken = Boolean(serviceToken);
 
   const {
     realtimeReconnectNonce,
@@ -528,14 +527,14 @@ export function App() {
       setRoomsTree
     },
     sessionStateLifecycle: {
-      token,
+      token, setToken,
       currentServerId,
       pushLog,
       realtimeClientRef,
       defaultChatImageDataUrlLength: DEFAULT_CHAT_IMAGE_DATA_URL_LENGTH,
       defaultChatImageMaxSide: DEFAULT_CHAT_IMAGE_MAX_SIDE,
       defaultChatImageQuality: DEFAULT_CHAT_IMAGE_QUALITY,
-      setToken,
+      
       setUser,
       setRooms,
       setRoomsTree,

@@ -85,7 +85,8 @@ Progress note:
 - Семьдесят третий инкремент стабилизации `web` выполнен: App wiring очищен от повторяющихся user/session adapters (`currentUserId`, `hasUser`, `hasServiceToken`) и неиспользуемых react imports, что снизило шум orchestration-слоя без изменения поведения.
 - Семьдесят четвертый инкремент стабилизации `web` выполнен: устранен test type drift для `PresenceMember` в `hooks/app/effects/useMemberPreferencesSync.test.ts` (добавлено обязательное `userName` в fixtures).
 - Семьдесят пятый инкремент стабилизации `web` выполнен: устранен wiring-regression в `App.tsx` (screenShare runtime: `hasSessionToken` восстановлен через `hasServiceToken`) после изменений в orchestration adapters.
-- Cumulative: `App.tsx` сокращен с 2101 до 1460 строк; web build + denied-media smoke проходят после каждого инкремента.
+- Семьдесят шестой инкремент декомпозиции `web` выполнен: permissions/locale + identity/session adapters объединены в `hooks/app/state/useAppPermissionsIdentityRuntime.ts`, что убрало дублирующийся glue-код из `App.tsx`.
+- Cumulative: `App.tsx` сокращен с 2101 до 1459 строк; web build + denied-media smoke проходят после каждого инкремента.
 
 ### 2.2 API route decomposition
 
