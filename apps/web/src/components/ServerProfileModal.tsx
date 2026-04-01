@@ -40,6 +40,21 @@ type RoleBadge = {
   label: string;
 };
 
+function resolveDisplayName(name: string | null | undefined, username: string | null | undefined, email: string): string {
+  const normalizedName = String(name || "").trim();
+  if (normalizedName) {
+    return normalizedName;
+  }
+
+  const normalizedUsername = String(username || "").trim();
+  if (normalizedUsername) {
+    return normalizedUsername;
+  }
+
+  const localPart = String(email || "").split("@")[0] || "";
+  return localPart.trim() || email;
+}
+
 function ActionIconButton({ action }: { action: IconAction }) {
   return (
     <button
@@ -1065,7 +1080,7 @@ export function ServerProfileModal({
                     {serverMembers.map((member) => (
                       <li key={member.userId} className="admin-row grid min-h-[42px] grid-cols-[minmax(0,1fr)_auto] items-center gap-2 max-desktop:grid-cols-1">
                         <span className="min-w-0 break-words">
-                          {member.name} · {member.email}
+                          {resolveDisplayName(member.name, null, member.email)}
                           {getServerMemberRoleBadges(member).length > 0 ? (
                             <span className="inline-flex flex-wrap items-center gap-1 pl-2">
                               {getServerMemberRoleBadges(member).map((badge) => (
@@ -1166,7 +1181,7 @@ export function ServerProfileModal({
                 {filteredAdminUsers.map((item) => (
                   <li key={item.id} className="admin-row grid min-h-[42px] grid-cols-[minmax(0,1fr)_auto] items-center gap-2 max-desktop:grid-cols-1">
                     <span className="min-w-0 break-words">
-                      {item.email}
+                      {resolveDisplayName(item.name, item.username, item.email)}
                       {getUserRoleBadges(item).length > 0 ? (
                         <span className="inline-flex flex-wrap items-center gap-1 pl-2">
                           {getUserRoleBadges(item).map((badge) => (
