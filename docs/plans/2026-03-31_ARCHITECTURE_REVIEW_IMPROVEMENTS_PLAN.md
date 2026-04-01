@@ -56,7 +56,10 @@ Progress note:
 - Сорок четвертый инкремент декомпозиции `web` выполнен: derived state cluster (`currentServer`, `activeChatRoom`) + chat room slug sync effect вынесен из `App.tsx` в `hooks/app/state/useAppRoomsAndServerDerived.ts`.
 - Сорок пятый инкремент декомпозиции `web` выполнен: app-level rooms panel props adapter (`set*/create*/open*/save*` -> `onSet*/onCreate*/onOpen*/onSave*`) вынесен из `App.tsx` в `hooks/app/state/useAppRoomsPanelProps.ts`.
 - Сорок шестой инкремент декомпозиции `web` выполнен: app-level chat/video props adapter (`serviceToken/user/activeChatRoom/handleSetChatText` -> workspace chat/video contract) вынесен из `App.tsx` в `hooks/app/state/useAppChatVideoProps.ts`.
-- Cumulative: `App.tsx` сокращен с 2101 до 1614 строк; web build + denied-media smoke проходят после каждого инкремента.
+- Сорок седьмой инкремент декомпозиции `web` выполнен: app-level user dock shared props adapter (derived `currentRoomTitle/screenShareActive/serverSoundSettings` + action aliases) вынесен из `App.tsx` в `hooks/app/state/useAppUserDockSharedProps.ts`.
+- Сорок восьмой инкремент декомпозиции `web` выполнен: app-level server profile modal props adapter (derived `currentUserId/currentServerRole/currentServerName/hasCurrentServer`) вынесен из `App.tsx` в `hooks/app/state/useAppServerProfileModalProps.ts`.
+- Сорок девятый инкремент декомпозиции `web` выполнен: app-level entry gates state adapter (`servers` -> `serversCount`) вынесен из `App.tsx` в `hooks/app/state/useAppEntryGatesState.tsx`.
+- Cumulative: `App.tsx` сокращен с 2101 до 1612 строк; web build + denied-media smoke проходят после каждого инкремента.
 
 ### 2.2 API route decomposition
 

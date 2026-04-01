@@ -23,11 +23,13 @@ import {
   useAppCoreState,
   useAppChatVideoProps,
   useAppUiState,
-  useAppEntryGates,
+  useAppEntryGatesState,
   useAppPermissionsAndLocale,
   useAppRoomsPanelProps,
   useAppRoomsAndServerDerived,
+  useAppServerProfileModalProps,
   useAppShellLayoutProps,
+  useAppUserDockSharedProps,
   useAppUserMediaState,
   useAppControllers,
   useAppShellLifecycleEffects,
@@ -45,7 +47,6 @@ import {
   useRoomSlugPersistence,
   useServerDataSync,
   useServerVideoWindowBounds,
-  useWorkspaceUserDockController,
   useSessionStateLifecycle,
   useTelemetryRefresh,
   useCollapsedCategories,
@@ -1219,7 +1220,7 @@ export function App() {
 
   useScreenWakeLock(Boolean(user && roomSlug && currentRoomSupportsRtc && roomVoiceConnected));
 
-  const userDockSharedProps = useWorkspaceUserDockController({
+  const userDockSharedProps = useAppUserDockSharedProps({
     t,
     user,
     inputDevices,
@@ -1231,15 +1232,15 @@ export function App() {
     setAudioMuted,
     setCameraEnabled,
     setRnnoiseRuntimeStatus,
+    currentRoom,
     currentRoomSupportsRtc,
     currentRoomSupportsVideo,
-    currentRoomTitle: currentRoom?.title || "",
     callStatus,
     localVoiceMediaStatusSummary,
     lastCallPeer,
     roomVoiceConnected,
     remoteAudioAutoplayBlocked,
-    screenShareActive: Boolean(currentRoomScreenShareOwner.userId),
+    currentRoomScreenShareOwner,
     screenShareOwnedByCurrentUser: isCurrentUserScreenShareOwner,
     canStartScreenShare: canToggleScreenShare,
     rnnoiseSuppressionLevel,
@@ -1270,8 +1271,7 @@ export function App() {
     selectedInputProfile,
     micVolume,
     outputVolume,
-    serverSoundsMasterVolume: serverSoundSettings.masterVolume,
-    serverSoundsEnabled: serverSoundSettings.enabledByEvent,
+    serverSoundSettings,
     micTestLevel,
     mediaDevicesState,
     mediaDevicesHint,
@@ -1294,8 +1294,8 @@ export function App() {
     setLang,
     setSelectedUiTheme,
     saveMyProfile,
-    deleteAccount: () => void handleDeleteAccount(),
-    confirmServerAge: () => void handleConfirmServerAge(),
+    handleDeleteAccount,
+    handleConfirmServerAge,
     setSelectedInputId,
     setSelectedOutputId,
     setSelectedVideoInputId,
@@ -1385,7 +1385,9 @@ export function App() {
     onSaveMemberPreference: saveMemberPreference
   });
 
-  const serverProfileModalProps = useServerProfileModalProps({
+  const serverProfileModalProps = useAppServerProfileModalProps({
+    user,
+    currentServer,
     canManageUsers,
     canPromote,
     canManageServerControlPlane,
@@ -1413,12 +1415,8 @@ export function App() {
     selectedAdminServerId,
     adminServerOverview,
     adminServerOverviewLoading,
-    currentUserId: user?.id || "",
-    currentServerRole: currentServer?.role || null,
-    currentServerName: currentServer?.name || "",
     currentServerId,
     servers,
-    hasCurrentServer: Boolean(currentServer?.id),
     serverMembers,
     serverMembersLoading,
     lastInviteUrl,
@@ -1508,7 +1506,7 @@ export function App() {
   const {
     entryGate,
     showEmptyServerOnboarding
-  } = useAppEntryGates({
+  } = useAppEntryGatesState({
     showDesktopBrowserCompletion,
     desktopHandoffError,
     user,
@@ -1520,7 +1518,7 @@ export function App() {
     canUseService,
     pendingAccessRefreshInSec,
     serversLoading,
-    serversCount: servers.length
+    servers
   });
 
   if (entryGate) {
