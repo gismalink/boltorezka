@@ -187,12 +187,14 @@ export function useSessionStateLifecycle({
 
     const bootstrap = async () => {
       let sessionUser: User | null = null;
+      let bootstrapError: unknown = null;
       try {
         const me = await api.me(nextToken);
         sessionUser = me.user;
         setUser(me.user);
         setDeletedAccountInfo(null);
       } catch (error) {
+        bootstrapError = error;
         if (error instanceof ApiError && error.status === 401) {
           try {
             const refreshed = await api.authRefresh(nextToken);
@@ -215,7 +217,29 @@ export function useSessionStateLifecycle({
               resetSessionState();
               return;
             }
-            // Fall through to hard reset when refresh fails.
+
+            // Bearer can expire earlier than HttpOnly cookie in cookie-mode.
+            // Try cookie-backed refresh before declaring the session invalid.
+            if (refreshError instanceof ApiError && refreshError.status === 401) {
+              try {
+                const cookieRefreshed = await api.authRefresh("");
+                const cookieToken = String(cookieRefreshed.token || "").trim();
+                if (cookieToken) {
+                  setToken(cookieToken);
+                  clearPersistedBearerToken();
+                  persistBearerToken(cookieToken);
+                  const me = await api.me(cookieToken);
+                  sessionUser = me.user;
+                  setUser(me.user);
+                  setDeletedAccountInfo(null);
+                  nextToken = cookieToken;
+                }
+              } catch (cookieRefreshError) {
+                bootstrapError = cookieRefreshError;
+              }
+            } else {
+              bootstrapError = refreshError;
+            }
           }
         }
 
@@ -229,8 +253,14 @@ export function useSessionStateLifecycle({
         }
 
         if (!sessionUser) {
-          setToken("");
-          clearPersistedBearerToken();
+          if (bootstrapError instanceof ApiError && bootstrapError.status === 401) {
+            setToken("");
+            clearPersistedBearerToken();
+            resetSessionState();
+            return;
+          }
+
+          pushLog(`session bootstrap skipped hard logout: ${(bootstrapError as Error)?.message || "transient failure"}`);
           return;
         }
       }
