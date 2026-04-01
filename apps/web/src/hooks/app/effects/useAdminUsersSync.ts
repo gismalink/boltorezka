@@ -2,6 +2,8 @@ import { useEffect, type Dispatch, type SetStateAction } from "react";
 import { api } from "../../../api";
 import type { User } from "../../../domain";
 
+const ADMIN_USERS_SYNC_INTERVAL_MS = 30000;
+
 type UseAdminUsersSyncArgs = {
   token: string;
   canManageUsers: boolean;
@@ -32,7 +34,7 @@ export function useAdminUsersSync({ token, canManageUsers, pushLog, setAdminUser
     };
 
     syncAdminUsers();
-    const intervalId = window.setInterval(syncAdminUsers, 15000);
+    const intervalId = window.setInterval(syncAdminUsers, ADMIN_USERS_SYNC_INTERVAL_MS);
 
     return () => {
       disposed = true;
