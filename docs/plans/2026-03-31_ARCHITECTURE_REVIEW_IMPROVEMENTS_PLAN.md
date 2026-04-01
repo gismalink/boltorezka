@@ -73,7 +73,8 @@ Progress note:
 - Шестьдесят первый инкремент декомпозиции `web` выполнен: room admin actions runtime (`useRoomAdminActions`) вынесен из `App.tsx` в `hooks/app/state/useAppRoomAdminRuntime.ts`.
 - Шестьдесят второй инкремент декомпозиции `web` выполнен: workspace panels runtime (`useAppRoomsPanelProps` + `useAppServerProfileModalProps` + `useAppChatVideoProps`) вынесен из `App.tsx` в `hooks/app/state/useAppWorkspacePanelsRuntime.ts`.
 - Шестьдесят третий инкремент декомпозиции `web` выполнен: app shell sections runtime (`useAppTopChromeSectionInput` + `useAppMainSectionInput` + `useAppOverlaysSectionInput` + `useAppShellCompositionProps`) вынесен из `App.tsx` в `hooks/app/state/useAppShellRuntime.ts`.
-- Cumulative: `App.tsx` сокращен с 2101 до 1583 строк; web build + denied-media smoke проходят после каждого инкремента.
+- Шестьдесят четвертый инкремент декомпозиции `web` выполнен: workspace actions runtime (`useAppRoomChatActions` + `useAppModerationActions` + `useAppServerAdminActions` + `useAppRoomAdminRuntime`) вынесен из `App.tsx` в `hooks/app/state/useAppWorkspaceActionsRuntime.ts`.
+- Cumulative: `App.tsx` сокращен с 2101 до 1576 строк; web build + denied-media smoke проходят после каждого инкремента.
 
 ### 2.2 API route decomposition
 

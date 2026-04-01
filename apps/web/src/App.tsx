@@ -29,11 +29,9 @@ import {
   useAppOverlaysSectionInput,
   useAppRealtimeChatRuntime,
   useAppPermissionsAndLocale,
-  useAppRoomAdminRuntime,
-  useAppRoomChatActions,
   useAppRoomsAndServerDerived,
   useAppShellRuntime,
-  useAppServerAdminActions,
+  useAppWorkspaceActionsRuntime,
   useAppUserDockSharedProps,
   useAppUserMediaState,
   useAppWorkspacePanelsRuntime,
@@ -746,50 +744,6 @@ export function App() {
     pushLog
   });
 
-  const {
-    handleCreateServer,
-    handleCreateServerInvite,
-    handleRenameCurrentServer,
-    handleConfirmServerAge,
-    handleCopyInviteUrl,
-    handleServerChange,
-    handleLeaveCurrentServer,
-    handleDeleteCurrentServer,
-    handleRemoveServerMember,
-    handleBanServerMember,
-    handleUnbanServerMember,
-    handleTransferServerOwnership,
-    handleToggleAdminServerBlocked,
-    handleDeleteAdminServer
-  } = useAppServerAdminActions({
-    serverProfile: {
-      token,
-      currentServerId,
-      creatingInvite,
-      serverAgeConfirming,
-      lastInviteUrl,
-      setCreatingServer,
-      setServers,
-      setCurrentServerId,
-      setCreatingInvite,
-      setLastInviteUrl,
-      setServerAgeConfirming,
-      setServerAgeConfirmedAt,
-      setServerMembers,
-      pushToast,
-      t
-    },
-    adminServer: {
-      token,
-      setAdminServers,
-      setServers,
-      setSelectedAdminServerId,
-      setCurrentServerId,
-      pushToast,
-      t
-    }
-  });
-
   useSessionStateLifecycle({
     token,
     currentServerId,
@@ -977,90 +931,6 @@ export function App() {
   });
 
   const {
-    joinRoom,
-    leaveRoom,
-    kickRoomMember,
-    moveRoomMember,
-    sendMessage,
-    handleChatPaste,
-    handleChatInputKeyDown,
-    startEditingMessage,
-    deleteOwnMessage,
-    openRoomChat
-  } = useAppRoomChatActions({
-    roomPresence: {
-      roomSlug,
-      canCreateRooms,
-      roomAdminController,
-      disconnectRoom,
-      sendWsEvent,
-      pushToast,
-      pushLog,
-      t,
-      setAgeGateBlockedRoomSlug,
-      setRoomSlug,
-      setChatRoomSlug
-    },
-    chatComposer: {
-      chatRoomSlug,
-      setChatRoomSlug,
-      messages,
-      setMessages,
-      setMessagesHasMore,
-      setMessagesNextCursor,
-      user,
-      authToken: token,
-      chatText,
-      setChatText,
-      editingMessageId,
-      setEditingMessageId,
-      pendingChatImageDataUrl,
-      setPendingChatImageDataUrl,
-      chatController,
-      sendWsEvent,
-      sendChatTypingState,
-      pushToast,
-      selectChannelPlaceholderMessage,
-      serverErrorMessage,
-      maxChatRetries: MAX_CHAT_RETRIES,
-      messageEditDeleteWindowMs: MESSAGE_EDIT_DELETE_WINDOW_MS,
-      serverChatImagePolicy,
-      chatImageTooLargeMessage
-    }
-  });
-
-  const {
-    saveMemberPreference,
-    promote,
-    demote,
-    setUserBan,
-    setUserAccessState,
-    deleteUser,
-    forceDeleteUserNow,
-    setServerAudioQualityValue
-  } = useAppModerationActions({
-    memberPreferences: {
-      token,
-      currentUserId: user?.id || "",
-      roomsPresenceDetailsBySlug,
-      setMemberPreferencesByUserId,
-      pushLog,
-      pushToast,
-      t
-    },
-    serverModeration: {
-      token,
-      canManageUsers,
-      canPromote,
-      canManageAudioQuality,
-      roomAdminController,
-      pushLog,
-      setServerAudioQuality,
-      setServerAudioQualitySaving
-    }
-  });
-
-  const {
     uncategorizedRooms,
     allRooms,
     currentRoom
@@ -1087,6 +957,38 @@ export function App() {
   });
 
   const {
+    joinRoom,
+    leaveRoom,
+    kickRoomMember,
+    moveRoomMember,
+    sendMessage,
+    handleChatPaste,
+    handleChatInputKeyDown,
+    startEditingMessage,
+    deleteOwnMessage,
+    openRoomChat,
+    saveMemberPreference,
+    promote,
+    demote,
+    setUserBan,
+    setUserAccessState,
+    deleteUser,
+    forceDeleteUserNow,
+    setServerAudioQualityValue,
+    handleCreateServer,
+    handleCreateServerInvite,
+    handleRenameCurrentServer,
+    handleConfirmServerAge,
+    handleCopyInviteUrl,
+    handleServerChange,
+    handleLeaveCurrentServer,
+    handleDeleteCurrentServer,
+    handleRemoveServerMember,
+    handleBanServerMember,
+    handleUnbanServerMember,
+    handleTransferServerOwnership,
+    handleToggleAdminServerBlocked,
+    handleDeleteAdminServer,
     createRoom,
     createCategory,
     openCreateChannelPopup,
@@ -1101,43 +1003,134 @@ export function App() {
     clearChannelMessages,
     restoreChannel,
     deleteChannelPermanent
-  } = useAppRoomAdminRuntime({
-    token,
-    canCreateRooms,
-    canManageAudioQuality,
-    roomSlug,
-    allRooms,
-    archivedRooms,
-    roomAdminController,
-    newRoomTitle,
-    newRoomKind,
-    newRoomCategoryId,
-    newCategoryTitle,
-    editingCategoryTitle,
-    categorySettingsPopupOpenId,
-    editingRoomTitle,
-    editingRoomKind,
-    editingRoomCategoryId,
-    editingRoomNsfw,
-    editingRoomAudioQualitySetting,
-    channelSettingsPopupOpenId,
-    setNewRoomTitle,
-    setChannelPopupOpen,
-    setNewCategoryTitle,
-    setCategoryPopupOpen,
-    setNewRoomCategoryId,
-    setEditingRoomTitle,
-    setEditingRoomKind,
-    setEditingRoomCategoryId,
-    setEditingRoomNsfw,
-    setEditingRoomAudioQualitySetting,
-    setChannelSettingsPopupOpenId,
-    setEditingCategoryTitle,
-    setCategorySettingsPopupOpenId,
-    setMessages,
-    setMessagesHasMore,
-    setMessagesNextCursor,
-    joinRoom
+  } = useAppWorkspaceActionsRuntime({
+    roomChat: {
+      roomPresence: {
+        roomSlug,
+        canCreateRooms,
+        roomAdminController,
+        disconnectRoom,
+        sendWsEvent,
+        pushToast,
+        pushLog,
+        t,
+        setAgeGateBlockedRoomSlug,
+        setRoomSlug,
+        setChatRoomSlug
+      },
+      chatComposer: {
+        chatRoomSlug,
+        setChatRoomSlug,
+        messages,
+        setMessages,
+        setMessagesHasMore,
+        setMessagesNextCursor,
+        user,
+        authToken: token,
+        chatText,
+        setChatText,
+        editingMessageId,
+        setEditingMessageId,
+        pendingChatImageDataUrl,
+        setPendingChatImageDataUrl,
+        chatController,
+        sendWsEvent,
+        sendChatTypingState,
+        pushToast,
+        selectChannelPlaceholderMessage,
+        serverErrorMessage,
+        maxChatRetries: MAX_CHAT_RETRIES,
+        messageEditDeleteWindowMs: MESSAGE_EDIT_DELETE_WINDOW_MS,
+        serverChatImagePolicy,
+        chatImageTooLargeMessage
+      }
+    },
+    moderation: {
+      memberPreferences: {
+        token,
+        currentUserId: user?.id || "",
+        roomsPresenceDetailsBySlug,
+        setMemberPreferencesByUserId,
+        pushLog,
+        pushToast,
+        t
+      },
+      serverModeration: {
+        token,
+        canManageUsers,
+        canPromote,
+        canManageAudioQuality,
+        roomAdminController,
+        pushLog,
+        setServerAudioQuality,
+        setServerAudioQualitySaving
+      }
+    },
+    serverAdmin: {
+      serverProfile: {
+        token,
+        currentServerId,
+        creatingInvite,
+        serverAgeConfirming,
+        lastInviteUrl,
+        setCreatingServer,
+        setServers,
+        setCurrentServerId,
+        setCreatingInvite,
+        setLastInviteUrl,
+        setServerAgeConfirming,
+        setServerAgeConfirmedAt,
+        setServerMembers,
+        pushToast,
+        t
+      },
+      adminServer: {
+        token,
+        setAdminServers,
+        setServers,
+        setSelectedAdminServerId,
+        setCurrentServerId,
+        pushToast,
+        t
+      }
+    },
+    roomAdmin: {
+      token,
+      canCreateRooms,
+      canManageAudioQuality,
+      roomSlug,
+      allRooms,
+      archivedRooms,
+      roomAdminController,
+      newRoomTitle,
+      newRoomKind,
+      newRoomCategoryId,
+      newCategoryTitle,
+      editingCategoryTitle,
+      categorySettingsPopupOpenId,
+      editingRoomTitle,
+      editingRoomKind,
+      editingRoomCategoryId,
+      editingRoomNsfw,
+      editingRoomAudioQualitySetting,
+      channelSettingsPopupOpenId,
+      setNewRoomTitle,
+      setChannelPopupOpen,
+      setNewCategoryTitle,
+      setCategoryPopupOpen,
+      setNewRoomCategoryId,
+      setEditingRoomTitle,
+      setEditingRoomKind,
+      setEditingRoomCategoryId,
+      setEditingRoomNsfw,
+      setEditingRoomAudioQualitySetting,
+      setChannelSettingsPopupOpenId,
+      setEditingCategoryTitle,
+      setCategorySettingsPopupOpenId,
+      setMessages,
+      setMessagesHasMore,
+      setMessagesNextCursor
+    }
   });
 
   usePendingAccessAutoRefresh({

@@ -24,6 +24,7 @@ export { useAppShellCompositionProps } from "./app/state/useAppShellCompositionP
 export { useAppShellRuntime } from "./app/state/useAppShellRuntime";
 export { useAppServerAdminActions } from "./app/state/useAppServerAdminActions";
 export { useAppServerProfileModalProps } from "./app/state/useAppServerProfileModalProps";
+export { useAppWorkspaceActionsRuntime } from "./app/state/useAppWorkspaceActionsRuntime";
 export { useAppWorkspacePanelsRuntime } from "./app/state/useAppWorkspacePanelsRuntime";
 export { useAppShellLayoutProps } from "./app/state/useAppShellLayoutProps";
 export { useAppShellOverlaysProps } from "./app/state/useAppShellOverlaysProps";
