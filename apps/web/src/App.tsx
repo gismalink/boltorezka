@@ -37,8 +37,6 @@ import {
   useAppWorkspacePanelsRuntime,
   useAppControllers,
   useAppShellLifecycleEffects,
-  useAppPopupOutsideClose,
-  useAdminUsersSync,
   useAutoRoomVoiceConnection,
   useAppEventLogs,
   useAuthProfileFlow,
@@ -53,14 +51,13 @@ import {
   useServerDataSync,
   useServerVideoWindowBounds,
   useSessionStateLifecycle,
-  useTelemetryRefresh,
+  useAppWorkspaceSupportRuntime,
   useCollapsedCategories,
   useCurrentRoomSnapshot,
   useRnnoiseRuntimeHandlers,
   usePersistedClientSettings,
   useRealtimeSoundEffects,
   useChatTypingController,
-  useRealtimeConnectionReset,
   useRealtimeIncomingCallState,
   useScreenShareOrchestrator,
   useWsEventAcks,
@@ -831,103 +828,99 @@ export function App() {
     }
   });
 
-  useAdminUsersSync({
-    token,
-    canManageUsers,
-    pushLog,
-    setAdminUsers
-  });
-
-  useTelemetryRefresh({
-    token,
-    canViewTelemetry,
-    wsState,
-    setTelemetrySummary,
-    loadTelemetrySummary
-  });
-
-  useRealtimeConnectionReset({
-    wsState,
-    setRoomsPresenceBySlug,
-    setRoomsPresenceDetailsBySlug,
-    setRoomMediaTopologyBySlug,
-    setScreenShareOwnerByRoomSlug,
-    setVoiceInitialMicStateByUserIdInCurrentRoom,
-    setVoiceInitialAudioOutputMutedByUserIdInCurrentRoom
-  });
-
-  useRealtimeSoundEffects({
-    wsState,
-    roomsPresenceDetailsBySlug,
-    roomSlug,
-    userId: user?.id,
-    messages,
-    playServerSound
-  });
-
-  useVoiceUiLifecycleEffects({
-    userSettingsOpen,
-    userSettingsTab,
-    setSelfMonitorEnabled,
-    roomSlug,
-    roomMediaTopologyBySlug,
-    pushCallLog
-  });
-
-  const { refreshDevices, requestMediaAccess, requestVideoAccess } = useAppMediaDeviceRuntime({
-    t,
-    selectedInputId,
-    selectedOutputId,
-    selectedVideoInputId,
-    micVolume,
-    outputVolume,
-    setInputDevices,
-    setOutputDevices,
-    setVideoInputDevices,
-    setMediaDevicesState,
-    setMediaDevicesHint,
-    setSelectedInputId,
-    setSelectedOutputId,
-    setSelectedVideoInputId,
-    hasUser: Boolean(user),
-    roomVoiceConnected,
-    voiceSettingsOpen,
-    voiceSettingsPanel: voiceSettingsPanel || "",
-    userSettingsOpen,
-    userSettingsTab,
-    pushToast,
-    setMicTestLevel,
-    selfMonitorEnabled,
-    selectedInputProfile,
-    rnnoiseSuppressionLevel
-  });
-
-  useAppPopupOutsideClose({
-    profileMenuOpen,
-    authMenuOpen,
-    categoryPopupOpen,
-    channelPopupOpen,
-    channelSettingsPopupOpenId,
-    categorySettingsPopupOpenId,
-    audioOutputMenuOpen,
-    voiceSettingsOpen,
-    userSettingsOpen,
-    setProfileMenuOpen,
-    setAuthMenuOpen,
-    setCategoryPopupOpen,
-    setChannelPopupOpen,
-    setChannelSettingsPopupOpenId,
-    setCategorySettingsPopupOpenId,
-    setAudioOutputMenuOpen,
-    setVoiceSettingsOpen,
-    setUserSettingsOpen,
-    profileMenuRef,
-    authMenuRef,
-    categoryPopupRef,
-    channelPopupRef,
-    audioOutputAnchorRef,
-    voiceSettingsAnchorRef,
-    userSettingsRef
+  const { refreshDevices, requestMediaAccess, requestVideoAccess } = useAppWorkspaceSupportRuntime({
+    adminUsersSync: {
+      token,
+      canManageUsers,
+      pushLog,
+      setAdminUsers
+    },
+    telemetryRefresh: {
+      token,
+      canViewTelemetry,
+      wsState,
+      setTelemetrySummary,
+      loadTelemetrySummary
+    },
+    realtimeConnectionReset: {
+      wsState,
+      setRoomsPresenceBySlug,
+      setRoomsPresenceDetailsBySlug,
+      setRoomMediaTopologyBySlug,
+      setScreenShareOwnerByRoomSlug,
+      setVoiceInitialMicStateByUserIdInCurrentRoom,
+      setVoiceInitialAudioOutputMutedByUserIdInCurrentRoom
+    },
+    realtimeSoundEffects: {
+      wsState,
+      roomsPresenceDetailsBySlug,
+      roomSlug,
+      userId: user?.id,
+      messages,
+      playServerSound
+    },
+    voiceUiLifecycle: {
+      userSettingsOpen,
+      userSettingsTab,
+      setSelfMonitorEnabled,
+      roomSlug,
+      roomMediaTopologyBySlug,
+      pushCallLog
+    },
+    mediaDeviceRuntime: {
+      t,
+      selectedInputId,
+      selectedOutputId,
+      selectedVideoInputId,
+      micVolume,
+      outputVolume,
+      setInputDevices,
+      setOutputDevices,
+      setVideoInputDevices,
+      setMediaDevicesState,
+      setMediaDevicesHint,
+      setSelectedInputId,
+      setSelectedOutputId,
+      setSelectedVideoInputId,
+      hasUser: Boolean(user),
+      roomVoiceConnected,
+      voiceSettingsOpen,
+      voiceSettingsPanel: voiceSettingsPanel || "",
+      userSettingsOpen,
+      userSettingsTab,
+      pushToast,
+      setMicTestLevel,
+      selfMonitorEnabled,
+      selectedInputProfile,
+      rnnoiseSuppressionLevel
+    },
+    popupOutsideClose: {
+      profileMenuOpen,
+      authMenuOpen,
+      categoryPopupOpen,
+      channelPopupOpen,
+      channelSettingsPopupOpenId,
+      categorySettingsPopupOpenId,
+      audioOutputMenuOpen,
+      voiceSettingsOpen,
+      userSettingsOpen,
+      setProfileMenuOpen,
+      setAuthMenuOpen,
+      setCategoryPopupOpen,
+      setChannelPopupOpen,
+      setChannelSettingsPopupOpenId,
+      setCategorySettingsPopupOpenId,
+      setAudioOutputMenuOpen,
+      setVoiceSettingsOpen,
+      setUserSettingsOpen,
+      profileMenuRef,
+      authMenuRef,
+      categoryPopupRef,
+      channelPopupRef,
+      audioOutputAnchorRef,
+      voiceSettingsAnchorRef,
+      userSettingsRef
+    }
   });
 
   const {
