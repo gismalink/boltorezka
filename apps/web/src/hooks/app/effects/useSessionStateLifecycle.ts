@@ -101,7 +101,7 @@ export function useSessionStateLifecycle({
 }: UseSessionStateLifecycleArgs) {
   const cookieBootstrapBlockedUntilRef = useRef(0);
   const sessionBootstrapInFlightRef = useRef(false);
-  const sessionBootstrapLastTokenRef = useRef("");
+  const sessionBootstrapLastKeyRef = useRef("");
   const sessionBootstrapLastAttemptAtRef = useRef(0);
 
   const resetSessionState = useCallback(() => {
@@ -206,20 +206,23 @@ export function useSessionStateLifecycle({
       return;
     }
 
+    const activeServerId = String(currentServerId || "").trim();
+    const bootstrapKey = `${normalizedToken}:${activeServerId || "no-server"}`;
+
     if (sessionBootstrapInFlightRef.current) {
       return;
     }
 
     const now = Date.now();
     if (
-      sessionBootstrapLastTokenRef.current === normalizedToken
+      sessionBootstrapLastKeyRef.current === bootstrapKey
       && (now - sessionBootstrapLastAttemptAtRef.current) < 15000
     ) {
       return;
     }
 
     sessionBootstrapInFlightRef.current = true;
-    sessionBootstrapLastTokenRef.current = normalizedToken;
+    sessionBootstrapLastKeyRef.current = bootstrapKey;
     sessionBootstrapLastAttemptAtRef.current = now;
     persistBearerToken(nextToken);
 
