@@ -100,6 +100,9 @@ export function useSessionStateLifecycle({
   setDeletedAccountInfo
 }: UseSessionStateLifecycleArgs) {
   const cookieBootstrapBlockedUntilRef = useRef(0);
+  const sessionBootstrapInFlightRef = useRef(false);
+  const sessionBootstrapLastTokenRef = useRef("");
+  const sessionBootstrapLastAttemptAtRef = useRef(0);
 
   const resetSessionState = useCallback(() => {
     setUser(null);
@@ -198,124 +201,148 @@ export function useSessionStateLifecycle({
   }, [pushLog, resetSessionState, setDeletedAccountInfo, setToken]);
 
   const bootstrapSessionState = useCallback((nextToken: string) => {
+    const normalizedToken = String(nextToken || "").trim();
+    if (!normalizedToken) {
+      return;
+    }
+
+    if (sessionBootstrapInFlightRef.current) {
+      return;
+    }
+
+    const now = Date.now();
+    if (
+      sessionBootstrapLastTokenRef.current === normalizedToken
+      && (now - sessionBootstrapLastAttemptAtRef.current) < 15000
+    ) {
+      return;
+    }
+
+    sessionBootstrapInFlightRef.current = true;
+    sessionBootstrapLastTokenRef.current = normalizedToken;
+    sessionBootstrapLastAttemptAtRef.current = now;
     persistBearerToken(nextToken);
 
     const bootstrap = async () => {
-      let sessionUser: User | null = null;
-      let bootstrapError: unknown = null;
       try {
-        const me = await api.me(nextToken);
-        sessionUser = me.user;
-        setUser(me.user);
-        setDeletedAccountInfo(null);
-      } catch (error) {
-        bootstrapError = error;
-        if (error instanceof ApiError && error.status === 401) {
-          try {
-            const refreshed = await api.authRefresh(nextToken);
-            const refreshedToken = String(refreshed.token || "").trim();
-            if (refreshedToken) {
-              setToken(refreshedToken);
-              persistBearerToken(refreshedToken);
-              const me = await api.me(refreshedToken);
-              sessionUser = me.user;
-              setUser(me.user);
-              setDeletedAccountInfo(null);
-              nextToken = refreshedToken;
-            }
-          } catch (refreshError) {
-            const deletedInfo = resolveDeletedAccountInfo(refreshError);
-            if (deletedInfo) {
-              setDeletedAccountInfo(deletedInfo);
-              setToken("");
-              clearPersistedBearerToken();
-              resetSessionState();
-              return;
-            }
-
-            // Bearer can expire earlier than HttpOnly cookie in cookie-mode.
-            // Try cookie-backed refresh before declaring the session invalid.
-            if (refreshError instanceof ApiError && refreshError.status === 401) {
-              try {
-                const cookieRefreshed = await api.authRefresh("");
-                const cookieToken = String(cookieRefreshed.token || "").trim();
-                if (cookieToken) {
-                  setToken(cookieToken);
-                  clearPersistedBearerToken();
-                  persistBearerToken(cookieToken);
-                  const me = await api.me(cookieToken);
-                  sessionUser = me.user;
-                  setUser(me.user);
-                  setDeletedAccountInfo(null);
-                  nextToken = cookieToken;
-                }
-              } catch (cookieRefreshError) {
-                bootstrapError = cookieRefreshError;
+        let sessionUser: User | null = null;
+        let bootstrapError: unknown = null;
+        try {
+          const me = await api.me(nextToken);
+          sessionUser = me.user;
+          setUser(me.user);
+          setDeletedAccountInfo(null);
+        } catch (error) {
+          bootstrapError = error;
+          if (error instanceof ApiError && error.status === 401) {
+            try {
+              const refreshed = await api.authRefresh(nextToken);
+              const refreshedToken = String(refreshed.token || "").trim();
+              if (refreshedToken) {
+                setToken(refreshedToken);
+                persistBearerToken(refreshedToken);
+                const me = await api.me(refreshedToken);
+                sessionUser = me.user;
+                setUser(me.user);
+                setDeletedAccountInfo(null);
+                nextToken = refreshedToken;
               }
-            } else {
-              bootstrapError = refreshError;
+            } catch (refreshError) {
+              const deletedInfo = resolveDeletedAccountInfo(refreshError);
+              if (deletedInfo) {
+                setDeletedAccountInfo(deletedInfo);
+                setToken("");
+                clearPersistedBearerToken();
+                resetSessionState();
+                return;
+              }
+
+              // Bearer can expire earlier than HttpOnly cookie in cookie-mode.
+              // Try cookie-backed refresh before declaring the session invalid.
+              if (refreshError instanceof ApiError && refreshError.status === 401) {
+                try {
+                  const cookieRefreshed = await api.authRefresh("");
+                  const cookieToken = String(cookieRefreshed.token || "").trim();
+                  if (cookieToken) {
+                    setToken(cookieToken);
+                    clearPersistedBearerToken();
+                    persistBearerToken(cookieToken);
+                    const me = await api.me(cookieToken);
+                    sessionUser = me.user;
+                    setUser(me.user);
+                    setDeletedAccountInfo(null);
+                    nextToken = cookieToken;
+                  }
+                } catch (cookieRefreshError) {
+                  bootstrapError = cookieRefreshError;
+                }
+              } else {
+                bootstrapError = refreshError;
+              }
             }
           }
-        }
 
-        const deletedInfo = resolveDeletedAccountInfo(error);
-        if (deletedInfo) {
-          setDeletedAccountInfo(deletedInfo);
-          setToken("");
-          clearPersistedBearerToken();
-          resetSessionState();
-          return;
-        }
-
-        if (!sessionUser) {
-          if (bootstrapError instanceof ApiError && bootstrapError.status === 401) {
+          const deletedInfo = resolveDeletedAccountInfo(error);
+          if (deletedInfo) {
+            setDeletedAccountInfo(deletedInfo);
             setToken("");
             clearPersistedBearerToken();
             resetSessionState();
             return;
           }
 
-          pushLog(`session bootstrap skipped hard logout: ${(bootstrapError as Error)?.message || "transient failure"}`);
+          if (!sessionUser) {
+            if (bootstrapError instanceof ApiError && bootstrapError.status === 401) {
+              setToken("");
+              clearPersistedBearerToken();
+              resetSessionState();
+              return;
+            }
+
+            pushLog(`session bootstrap skipped hard logout: ${(bootstrapError as Error)?.message || "transient failure"}`);
+            return;
+          }
+        }
+
+        const role = String(sessionUser?.role || "user");
+        const hasServiceAccess = role === "admin" || role === "super_admin" || sessionUser?.access_state === "active";
+        if (!hasServiceAccess) {
+          setRooms([]);
+          setRoomsTree(null);
+          setArchivedRooms([]);
           return;
         }
+
+        const activeServerId = String(currentServerId || "").trim();
+        if (!activeServerId) {
+          setRooms([]);
+          setRoomsTree(null);
+          setArchivedRooms([]);
+          return;
+        }
+
+        api.rooms(nextToken, activeServerId)
+          .then((res) => setRooms(res.rooms))
+          .catch((error) => pushLog(`rooms failed: ${error.message}`));
+
+        api.serverAudioQuality(nextToken)
+          .then((res) => setServerAudioQuality(res.audioQuality))
+          .catch((error) => pushLog(`server audio quality failed: ${error.message}`));
+
+        api.serverChatImagePolicy(nextToken)
+          .then((res) => {
+            setServerChatImagePolicy({
+              maxDataUrlLength: Math.max(8000, Math.min(250000, Math.round(Number(res.maxDataUrlLength) || defaultChatImageDataUrlLength))),
+              maxImageSide: Math.max(256, Math.min(4096, Math.round(Number(res.maxImageSide) || defaultChatImageMaxSide))),
+              jpegQuality: Math.max(0.3, Math.min(0.95, Number(res.jpegQuality) || defaultChatImageQuality))
+            });
+          })
+          .catch((error) => pushLog(`server chat image policy failed: ${error.message}`));
+
+        void roomAdminController.loadRoomTree(nextToken);
+      } finally {
+        sessionBootstrapInFlightRef.current = false;
       }
-
-      const role = String(sessionUser?.role || "user");
-      const hasServiceAccess = role === "admin" || role === "super_admin" || sessionUser?.access_state === "active";
-      if (!hasServiceAccess) {
-        setRooms([]);
-        setRoomsTree(null);
-        setArchivedRooms([]);
-        return;
-      }
-
-      const activeServerId = String(currentServerId || "").trim();
-      if (!activeServerId) {
-        setRooms([]);
-        setRoomsTree(null);
-        setArchivedRooms([]);
-        return;
-      }
-
-      api.rooms(nextToken, activeServerId)
-        .then((res) => setRooms(res.rooms))
-        .catch((error) => pushLog(`rooms failed: ${error.message}`));
-
-      api.serverAudioQuality(nextToken)
-        .then((res) => setServerAudioQuality(res.audioQuality))
-        .catch((error) => pushLog(`server audio quality failed: ${error.message}`));
-
-      api.serverChatImagePolicy(nextToken)
-        .then((res) => {
-          setServerChatImagePolicy({
-            maxDataUrlLength: Math.max(8000, Math.min(250000, Math.round(Number(res.maxDataUrlLength) || defaultChatImageDataUrlLength))),
-            maxImageSide: Math.max(256, Math.min(4096, Math.round(Number(res.maxImageSide) || defaultChatImageMaxSide))),
-            jpegQuality: Math.max(0.3, Math.min(0.95, Number(res.jpegQuality) || defaultChatImageQuality))
-          });
-        })
-        .catch((error) => pushLog(`server chat image policy failed: ${error.message}`));
-
-      void roomAdminController.loadRoomTree(nextToken);
     };
 
     void bootstrap();
