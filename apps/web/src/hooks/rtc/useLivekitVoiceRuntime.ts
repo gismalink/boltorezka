@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   createLocalTracks,
   createLocalScreenTracks,
+  setLogLevel,
   type LocalAudioTrack,
   type ScreenShareCaptureOptions,
   Participant,
@@ -96,6 +97,28 @@ type LivekitRuntimeApi = {
 const EMPTY_HANDLER = () => {};
 type MediaTrackConstraintsWithVolume = MediaTrackConstraints & { volume?: number };
 type EventEmitterLike = { setMaxListeners?: (count: number) => void };
+
+let livekitLogConfigured = false;
+
+function configureLivekitLogLevel() {
+  if (livekitLogConfigured) {
+    return;
+  }
+
+  livekitLogConfigured = true;
+  let debugEnabled = false;
+  if (typeof window !== "undefined") {
+    try {
+      debugEnabled = window.localStorage.getItem("boltorezka_voice_debug") === "1";
+    } catch {
+      debugEnabled = false;
+    }
+  }
+
+  setLogLevel(debugEnabled ? "info" : "error");
+}
+
+configureLivekitLogLevel();
 
 function parseResolution(value: ServerVideoResolution): { width: number; height: number } {
   const [rawWidth, rawHeight] = String(value).split("x");
