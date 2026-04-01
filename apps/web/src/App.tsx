@@ -28,6 +28,7 @@ import {
   useAppMainSectionInput,
   useAppOverlaysSectionInput,
   useAppPermissionsAndLocale,
+  useAppRoomChatActions,
   useAppRoomsPanelProps,
   useAppRoomsAndServerDerived,
   useAppShellCompositionProps,
@@ -59,7 +60,6 @@ import {
   useRnnoiseRuntimeHandlers,
   usePersistedClientSettings,
   useRealtimeSoundEffects,
-  useChatComposerActions,
   useChatTypingController,
   useRealtimeChatLifecycle,
   useRealtimeChatLifecycleProps,
@@ -72,7 +72,6 @@ import {
   useRoomMediaCapabilities,
   useRoomEditorState,
   useRoomMemberPreferencesOrchestrator,
-  useRoomPresenceActions,
   useRoomSelectionGuard,
   useServerProfileActions,
   useServerModerationActions,
@@ -992,58 +991,56 @@ export function App() {
   });
 
   const {
+    joinRoom,
+    leaveRoom,
+    kickRoomMember,
+    moveRoomMember,
     sendMessage,
     handleChatPaste,
     handleChatInputKeyDown,
     startEditingMessage,
     deleteOwnMessage,
     openRoomChat
-  } = useChatComposerActions({
-    chatRoomSlug,
-    setChatRoomSlug,
-    messages,
-    setMessages,
-    setMessagesHasMore,
-    setMessagesNextCursor,
-    user,
-    authToken: token,
-    chatText,
-    setChatText,
-    editingMessageId,
-    setEditingMessageId,
-    pendingChatImageDataUrl,
-    setPendingChatImageDataUrl,
-    chatController,
-    sendWsEvent,
-    sendChatTypingState,
-    pushToast,
-    selectChannelPlaceholderMessage,
-    serverErrorMessage,
-    maxChatRetries: MAX_CHAT_RETRIES,
-    messageEditDeleteWindowMs: MESSAGE_EDIT_DELETE_WINDOW_MS,
-    serverChatImagePolicy,
-    chatImageTooLargeMessage
-  });
-
-  const {
-    joinRoom,
-    leaveRoom,
-    kickRoomMember,
-    moveRoomMember
-  } = useRoomPresenceActions({
-    roomSlug,
-    canCreateRooms,
-    roomAdminController,
-    disconnectRoom,
-    sendWsEvent,
-    pushToast,
-    pushLog,
-    t,
-    onAgeVerificationRequired: (slug) => {
-      setAgeGateBlockedRoomSlug(slug);
+  } = useAppRoomChatActions({
+    roomPresence: {
+      roomSlug,
+      canCreateRooms,
+      roomAdminController,
+      disconnectRoom,
+      sendWsEvent,
+      pushToast,
+      pushLog,
+      t,
+      setAgeGateBlockedRoomSlug,
+      setRoomSlug,
+      setChatRoomSlug
     },
-    setRoomSlug,
-    setChatRoomSlug
+    chatComposer: {
+      chatRoomSlug,
+      setChatRoomSlug,
+      messages,
+      setMessages,
+      setMessagesHasMore,
+      setMessagesNextCursor,
+      user,
+      authToken: token,
+      chatText,
+      setChatText,
+      editingMessageId,
+      setEditingMessageId,
+      pendingChatImageDataUrl,
+      setPendingChatImageDataUrl,
+      chatController,
+      sendWsEvent,
+      sendChatTypingState,
+      pushToast,
+      selectChannelPlaceholderMessage,
+      serverErrorMessage,
+      maxChatRetries: MAX_CHAT_RETRIES,
+      messageEditDeleteWindowMs: MESSAGE_EDIT_DELETE_WINDOW_MS,
+      serverChatImagePolicy,
+      chatImageTooLargeMessage
+    }
   });
 
   const { saveMemberPreference } = useRoomMemberPreferencesOrchestrator({
