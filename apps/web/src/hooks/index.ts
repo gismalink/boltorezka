@@ -11,6 +11,7 @@ export { useAppWorkspaceSupportRuntime } from "./app/effects/useAppWorkspaceSupp
 export { useAppEventLogs } from "./app/state/useAppEventLogs";
 export { useAppControllers } from "./app/state/useAppControllers";
 export { useAppControllersRuntimeInput } from "./app/state/useAppControllersRuntimeInput";
+export { useAppInviteServerSyncRuntimeInput } from "./app/state/useAppInviteServerSyncRuntimeInput";
 export { useAppChatVideoProps } from "./app/state/useAppChatVideoProps";
 export { useAppCoreState } from "./app/state/useAppCoreState";
 export { useAppUiState, type AppMobileTab, type AppServerMenuTab } from "./app/state/useAppUiState";

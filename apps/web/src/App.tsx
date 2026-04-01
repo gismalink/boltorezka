@@ -40,6 +40,7 @@ import {
   useAppControllersRuntime,
   useAppControllersRuntimeInput,
   useAppInviteServerSyncRuntime,
+  useAppInviteServerSyncRuntimeInput,
   useAppShellRoomRuntimeEffects,
   useAppEventLogs,
   useBuildVersionSync,
@@ -551,40 +552,32 @@ export function App() {
     }
   });
 
-  useAppInviteServerSyncRuntime({
-    inviteAcceptance: {
-      token,
-      hasUser,
-      pendingInviteToken,
-      setPendingInviteToken,
-      setInviteAccepting,
-      setServers,
-      setCurrentServerId,
-      pushToast,
-      t
-    },
-    serverDataSync: {
-      token,
-      hasUser,
-      currentServerId,
-      selectedAdminServerId,
-      canManageServerControlPlane,
-      currentServerIdStorageKey: CURRENT_SERVER_ID_STORAGE_KEY,
-      setServerAgeConfirmedAt,
-      setServerAgeLoading,
-      setServers,
-      setServersLoading,
-      setCurrentServerId,
-      setServerMembers,
-      setServerMembersLoading,
-      setAdminServers,
-      setSelectedAdminServerId,
-      setAdminServerOverview,
-      setAdminServersLoading,
-      setAdminServerOverviewLoading,
-      pushLog
-    }
-  });
+  useAppInviteServerSyncRuntime(useAppInviteServerSyncRuntimeInput({
+    token,
+    hasUser,
+    pendingInviteToken,
+    setPendingInviteToken,
+    setInviteAccepting,
+    setServers,
+    setCurrentServerId,
+    pushToast,
+    t,
+    currentServerId,
+    selectedAdminServerId,
+    canManageServerControlPlane,
+    currentServerIdStorageKey: CURRENT_SERVER_ID_STORAGE_KEY,
+    setServerAgeConfirmedAt,
+    setServerAgeLoading,
+    setServersLoading,
+    setServerMembers,
+    setServerMembersLoading,
+    setAdminServers,
+    setSelectedAdminServerId,
+    setAdminServerOverview,
+    setAdminServersLoading,
+    setAdminServerOverviewLoading,
+    pushLog
+  }));
 
   const { refreshDevices, requestMediaAccess, requestVideoAccess } = useAppWorkspaceSupportRuntime(
     useAppWorkspaceSupportRuntimeInput({
