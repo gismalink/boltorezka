@@ -882,10 +882,6 @@ export function App() {
     servers
   }));
 
-  if (entryGate) {
-    return entryGate;
-  }
-
   const {
     appTopChromeProps, appMainSectionProps,
     appShellOverlaysProps
@@ -937,6 +933,10 @@ export function App() {
     cookieConsentKey: COOKIE_CONSENT_KEY,
     setCookieConsentAccepted
   }));
+
+  if (entryGate) {
+    return entryGate;
+  }
 
   return <AppShellLayout topChromeProps={appTopChromeProps} mainSectionProps={appMainSectionProps} shellOverlaysProps={appShellOverlaysProps} />;
 }
