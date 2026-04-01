@@ -1,6 +1,7 @@
 import { useCallback, type Dispatch, type MutableRefObject, type SetStateAction } from "react";
-import type { Message, PresenceMember } from "../../domain";
+import type { Message, MessagesCursor, PresenceMember } from "../../domain";
 import type { RealtimeClient } from "../../services";
+import type { ChatTypingByRoom } from "./useChatTypingController";
 
 type UseRealtimeLifecycleCallbacksArgs = {
   chatRoomSlug: string;
@@ -11,12 +12,12 @@ type UseRealtimeLifecycleCallbacksArgs = {
   setRoomsPresenceBySlug: Dispatch<SetStateAction<Record<string, string[]>>>;
   setRoomsPresenceDetailsBySlug: Dispatch<SetStateAction<Record<string, PresenceMember[]>>>;
   setRoomSlug: (slug: string) => void;
-  setChatTypingByRoomSlug: Dispatch<SetStateAction<Record<string, Record<string, string>>>>;
+  setChatTypingByRoomSlug: Dispatch<SetStateAction<ChatTypingByRoom>>;
   setSessionMovedOverlayMessage: (value: string) => void;
   pushLog: (text: string) => void;
   setMessages: Dispatch<SetStateAction<Message[]>>;
   setMessagesHasMore: (value: boolean) => void;
-  setMessagesNextCursor: (value: { createdAt: string; id: string } | null) => void;
+  setMessagesNextCursor: Dispatch<SetStateAction<MessagesCursor | null>>;
   applyRemoteTypingPayload: (payload: {
     roomId?: string;
     roomSlug?: string;

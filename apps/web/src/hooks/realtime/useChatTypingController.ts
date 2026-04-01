@@ -5,7 +5,7 @@ type ChatTypingEntry = {
   expiresAt: number;
 };
 
-type ChatTypingByRoom = Record<string, Record<string, ChatTypingEntry>>;
+export type ChatTypingByRoom = Record<string, Record<string, ChatTypingEntry>>;
 
 type SendWsEventFn = (
   eventType: string,

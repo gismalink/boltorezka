@@ -1,3 +1,4 @@
+import type { FormEvent } from "react";
 import type { RoomKind } from "../../../domain";
 import { useWorkspaceRoomsPanelProps } from "./useWorkspaceRoomsPanelProps";
 
@@ -41,13 +42,13 @@ type UseAppRoomsPanelPropsInput = Omit<
   setEditingRoomCategoryId: (value: string) => void;
   setEditingRoomNsfw: (value: boolean) => void;
   setEditingRoomAudioQualitySetting: (value: WorkspaceRoomsPanelInput["editingRoomAudioQualitySetting"]) => void;
-  createCategory: () => void;
-  createRoom: () => void;
+  createCategory: (event: FormEvent) => void;
+  createRoom: (event: FormEvent) => void;
   openCreateChannelPopup: (categoryId?: string) => void;
-  openCategorySettingsPopup: (categoryId: string) => void;
-  openChannelSettingsPopup: (roomId: string) => void;
-  saveCategorySettings: () => void;
-  saveChannelSettings: () => void;
+  openCategorySettingsPopup: (categoryId: string, categoryTitle: string) => void;
+  openChannelSettingsPopup: WorkspaceRoomsPanelInput["onOpenChannelSettingsPopup"];
+  saveCategorySettings: (event: FormEvent) => void;
+  saveChannelSettings: (event: FormEvent) => void;
 };
 
 export function useAppRoomsPanelProps({
