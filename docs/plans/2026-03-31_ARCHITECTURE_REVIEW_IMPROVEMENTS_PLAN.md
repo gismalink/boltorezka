@@ -75,7 +75,8 @@ Progress note:
 - Шестьдесят третий инкремент декомпозиции `web` выполнен: app shell sections runtime (`useAppTopChromeSectionInput` + `useAppMainSectionInput` + `useAppOverlaysSectionInput` + `useAppShellCompositionProps`) вынесен из `App.tsx` в `hooks/app/state/useAppShellRuntime.ts`.
 - Шестьдесят четвертый инкремент декомпозиции `web` выполнен: workspace actions runtime (`useAppRoomChatActions` + `useAppModerationActions` + `useAppServerAdminActions` + `useAppRoomAdminRuntime`) вынесен из `App.tsx` в `hooks/app/state/useAppWorkspaceActionsRuntime.ts`.
 - Шестьдесят пятый инкремент декомпозиции `web` выполнен: workspace support runtime (`useAdminUsersSync` + `useTelemetryRefresh` + `useRealtimeConnectionReset` + `useRealtimeSoundEffects` + `useVoiceUiLifecycleEffects` + `useAppMediaDeviceRuntime` + `useAppPopupOutsideClose`) вынесен из `App.tsx` в `hooks/app/effects/useAppWorkspaceSupportRuntime.ts`.
-- Cumulative: `App.tsx` сокращен с 2101 до 1569 строк; web build + denied-media smoke проходят после каждого инкремента.
+- Шестьдесят шестой инкремент декомпозиции `web` выполнен: workspace lifecycle guards runtime (`usePendingAccessAutoRefresh` + `useAutoRoomVoiceConnection` + `useServerMenuAccessGuard` + `useScreenWakeLock`) вынесен из `App.tsx` в `hooks/app/effects/useAppWorkspaceLifecycleGuardsRuntime.ts`.
+- Cumulative: `App.tsx` сокращен с 2101 до 1565 строк; web build + denied-media smoke проходят после каждого инкремента.
 
 ### 2.2 API route decomposition
 

@@ -37,6 +37,7 @@ export { useAutoRoomVoiceConnection } from "./voice/useAutoRoomVoiceConnection";
 export { useBuildVersionSync } from "./app/effects/useBuildVersionSync";
 export { useDesktopUpdateFlow } from "./app/effects/useDesktopUpdateFlow";
 export { useAppMediaDeviceRuntime } from "./app/effects/useAppMediaDeviceRuntime";
+export { useAppWorkspaceLifecycleGuardsRuntime } from "./app/effects/useAppWorkspaceLifecycleGuardsRuntime";
 export { useInviteAcceptanceFlow } from "./app/effects/useInviteAcceptanceFlow";
 export { useMemberPreferencesSync } from "./app/effects/useMemberPreferencesSync";
 export { useOnboardingOverlayActions } from "./app/effects/useOnboardingOverlayActions";
