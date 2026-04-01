@@ -225,6 +225,7 @@ export function UserDockSettingsOverlay({
                       <option value="8-neon-bit">{t("settings.theme8NeonBit")}</option>
                       <option value="material-classic">{t("settings.themeMaterialClassic")}</option>
                       <option value="aka-dis">{t("settings.themeAkaDis")}</option>
+                      <option value="alpha-strike">{t("settings.themeAlphaStrike")}</option>
                     </select>
                   </label>
                 </div>

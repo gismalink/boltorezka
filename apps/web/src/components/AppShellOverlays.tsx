@@ -9,7 +9,7 @@ import { LegalLinks } from "./LegalLinks";
 import { ToastStack } from "./ToastStack";
 import type { AppToast } from "../hooks";
 import type { Lang, TranslateFn } from "../i18n";
-import type { User } from "../domain";
+import type { UiTheme, User } from "../domain";
 
 type AppShellOverlaysProps = {
   toasts: AppToast[];
@@ -19,7 +19,9 @@ type AppShellOverlaysProps = {
   user: User | null;
   showFirstRunIntro: boolean;
   profileNameDraft: string;
+  selectedUiTheme: UiTheme;
   setProfileNameDraft: (value: string) => void;
+  setSelectedUiTheme: (value: UiTheme) => void;
   profileSaving: boolean;
   completeFirstRunIntro: () => Promise<void>;
   sessionMovedOverlayMessage: string;
@@ -43,7 +45,9 @@ export function AppShellOverlays({
   user,
   showFirstRunIntro,
   profileNameDraft,
+  selectedUiTheme,
   setProfileNameDraft,
+  setSelectedUiTheme,
   profileSaving,
   completeFirstRunIntro,
   sessionMovedOverlayMessage,
@@ -68,7 +72,9 @@ export function AppShellOverlays({
         <FirstRunIntroOverlay
           t={t}
           profileNameDraft={profileNameDraft}
+          selectedUiTheme={selectedUiTheme}
           onChangeProfileName={setProfileNameDraft}
+          onChangeTheme={setSelectedUiTheme}
           profileSaving={profileSaving}
           onContinue={() => {
             void completeFirstRunIntro();

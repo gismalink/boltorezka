@@ -1,4 +1,5 @@
 import { useRef, useState, type MouseEvent } from "react";
+import type { UiTheme } from "../domain";
 import { LegalLinks } from "./LegalLinks";
 import { Button, PixelCheckbox, PopupPortal } from "./uicomponents";
 
@@ -320,13 +321,17 @@ export function AppUpdatedOverlay({ t, onContinue }: { t: Translate; onContinue:
 export function FirstRunIntroOverlay({
   t,
   profileNameDraft,
+  selectedUiTheme,
   onChangeProfileName,
+  onChangeTheme,
   profileSaving,
   onContinue
 }: {
   t: Translate;
   profileNameDraft: string;
+  selectedUiTheme: UiTheme;
   onChangeProfileName: (value: string) => void;
+  onChangeTheme: (value: UiTheme) => void;
   profileSaving: boolean;
   onContinue: () => void;
 }) {
@@ -353,6 +358,19 @@ export function FirstRunIntroOverlay({
             onChange={(event) => onChangeProfileName(event.target.value)}
             placeholder={t("settings.displayName")}
           />
+        </label>
+
+        <label className="mt-3 mx-auto grid w-full max-w-[340px] desktop:max-w-[300px] gap-2">
+          <span className="subheading text-center">{t("intro.skinLabel")}</span>
+          <select
+            value={selectedUiTheme}
+            onChange={(event) => onChangeTheme(event.target.value as UiTheme)}
+          >
+            <option value="8-neon-bit">{t("settings.theme8NeonBit")}</option>
+            <option value="material-classic">{t("settings.themeMaterialClassic")}</option>
+            <option value="aka-dis">{t("settings.themeAkaDis")}</option>
+            <option value="alpha-strike">{t("settings.themeAlphaStrike")}</option>
+          </select>
         </label>
 
         <div className="mt-5 grid justify-items-center gap-2">

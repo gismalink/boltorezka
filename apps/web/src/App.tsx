@@ -921,6 +921,7 @@ export function App() {
     showAppUpdatedOverlay, acknowledgeUpdatedApp,
     showFirstRunIntro,
     profileNameDraft, setProfileNameDraft,
+    selectedUiTheme, setSelectedUiTheme,
     profileSaving,
     completeFirstRunIntro,
     sessionMovedOverlayMessage, setSessionMovedOverlayMessage,
