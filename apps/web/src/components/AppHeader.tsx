@@ -138,17 +138,15 @@ export function AppHeader({
                 >
                   {cachedInviteUrl}
                 </a>
-              ) : (
-                <p className="text-xs text-pixel-text/60">{t("server.inviteQuickHint")}</p>
-              )}
-              <div className="grid gap-2" ref={createServerRef}>
+              ) : null}
+              <div className="mt-1 grid gap-2 border-t border-white/15 pt-2" ref={createServerRef}>
                 <Button
                   type="button"
                   className="secondary"
                   aria-label={t("server.createAria")}
                   onClick={() => setCreateServerOpen((value) => !value)}
                 >
-                  {t("server.create")}
+                  {t("server.createOwn")}
                 </Button>
                 <PopupPortal open={createServerOpen} anchorRef={createServerRef} className="profile-popup" placement="bottom-start">
                   <div className="grid gap-2 min-w-[260px]">
