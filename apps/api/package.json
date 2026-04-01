@@ -11,12 +11,16 @@
     "dev": "tsx watch src/index.ts",
     "migrate": "tsx src/migrate.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "tsx --test src/**/*.test.ts src/*.test.ts"
+    "test": "tsx --test src/**/*.test.ts src/*.test.ts",
+    "spike:socketio:server": "tsx src/spikes/socketio-poc/server.ts",
+    "spike:socketio:client": "tsx src/spikes/socketio-poc/client.ts"
   },
   "devDependencies": {
     "@types/node": "^22.13.10",
     "@types/pg": "^8.16.0",
     "@types/ws": "^8.18.1",
+    "socket.io": "^4.8.3",
+    "socket.io-client": "^4.8.3",
     "tsx": "^4.20.5",
     "typescript": "^5.8.2"
   },

@@ -204,6 +204,10 @@ Action items:
 - [x] Добавить decision matrix с метриками: reliability, latency, migration effort, test rewrite cost.
 - [ ] Подготовить ограниченный spike (не в prod path): Socket.IO POC для `ping`, `room.join`, `chat.send` и сравнить с текущим протоколом.
 
+Progress note:
+
+- Стартован isolated Socket.IO POC (non-prod path): `apps/api/src/spikes/socketio-poc/server.ts` + `apps/api/src/spikes/socketio-poc/client.ts` + `apps/api/src/spikes/socketio-poc/README.md`; добавлены scripts `spike:socketio:server`/`spike:socketio:client`.
+
 ### 2.7 SSO proxy timeout policy
 
 - [x] Добавить timeout/abort policy для SSO proxy fetch на backend.
