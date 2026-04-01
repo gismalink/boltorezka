@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useCallback, useRef } from "react";
 import { RealtimeClient } from "./services";
 import { AppShellLayout } from "./components";
 import {
@@ -400,6 +400,10 @@ export function App() {
     sendWsEventAwaitAck
   }));
 
+  const sendRoomJoinEvent = useCallback((slug: string) => {
+    return sendWsEventAwaitAck("room.join", { roomSlug: slug }, { maxRetries: 1 });
+  }, [sendWsEventAwaitAck]);
+
   const {
     authController,
     chatController,
@@ -416,7 +420,7 @@ export function App() {
     pushLog,
     pushToast,
     sendWsEvent,
-    sendRoomJoinEvent: (slug: string) => sendWsEventAwaitAck("room.join", { roomSlug: slug }, { maxRetries: 1 }),
+    sendRoomJoinEvent,
     currentServerIdRef,
     setToken,
     setUser,
