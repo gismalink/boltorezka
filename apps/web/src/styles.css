@@ -2,63 +2,63 @@
 
 :root {
   color-scheme: dark;
-  font-family: "Nunito Sans", "Noto Sans", "Segoe UI", sans-serif;
-  background: #1e1f22;
-  color: #f2f3f5;
-  --pixel-bg: #1e1f22;
-  --pixel-panel: #2b2d31;
-  --pixel-panel-2: #313338;
-  --pixel-border: #3f4147;
-  --pixel-text: #f2f3f5;
-  --pixel-muted: #b5bac1;
-  --pixel-accent: #5865f2;
-  --pixel-danger: #ed4245;
-  --pixel-neon-cyan: #5865f2;
-  --pixel-neon-pink: #949cf7;
-  --pixel-neon-gold: #f0b132;
-  --pixel-shadow: #1a1b1e;
-  --pixel-hard-shadow: #111214;
-  --pixel-inset-stroke: #404249;
-  --scrollbar-thumb-bg: #4e5058;
-  --scrollbar-thumb-border: #2b2d31;
-  --scrollbar-track-bg: #1a1b1e;
-  --heading-color: #f2f3f5;
-  --heading-shadow: none;
-  --app-title-color: #f2f3f5;
-  --app-title-shadow: none;
-  --radius-control: 8px;
-  --radius-surface: 12px;
-  --radius-bubble: 12px;
+  font-family: "Press Start 2P", "VT323", "Courier New", monospace;
+  background: #07060a;
+  color: #ffffff;
+  --pixel-bg: #07060a;
+  --pixel-panel: #2d0f27;
+  --pixel-panel-2: #38002e;
+  --pixel-border: #cf4a86;
+  --pixel-text: #ffffff;
+  --pixel-muted: #d5a2be;
+  --pixel-accent: #35e6ff;
+  --pixel-danger: #ff5f9e;
+  --pixel-neon-cyan: #35e6ff;
+  --pixel-neon-pink: #cf4a86;
+  --pixel-neon-gold: #e57f12;
+  --pixel-shadow: #140812;
+  --pixel-hard-shadow: #07060a;
+  --pixel-inset-stroke: #0b1430;
+  --scrollbar-thumb-bg: #cf4a86;
+  --scrollbar-thumb-border: #140812;
+  --scrollbar-track-bg: #140812;
+  --heading-color: #eaffff;
+  --heading-shadow: 1px 1px 0 var(--pixel-hard-shadow), -1px 0 0 var(--pixel-neon-cyan);
+  --app-title-color: #eff8ff;
+  --app-title-shadow: 2px 2px 0 var(--pixel-hard-shadow), -2px 0 0 var(--pixel-neon-cyan), 2px 0 0 var(--pixel-neon-pink);
+  --radius-control: 0;
+  --radius-surface: 0;
+  --radius-bubble: 0;
   --pixel-depth-color: #000;
-  --pixel-inset-stroke-strong: #4a4d56;
-  --chat-author-color: #ffffff;
-  --chat-time-color: #949ba4;
-  --delivery-sending-color: #f0b132;
-  --delivery-delivered-color: #a7afff;
-  --status-disconnected-color: #ed4245;
-  --status-stalled-color: #f0b132;
-  --confirm-clear-bg: #3a3e77;
-  --confirm-clear-text: #f5f7ff;
-  --confirm-delete-bg: #4f2c32;
-  --confirm-delete-text: #ffd7d8;
-  --voice-row-active-bg: #404eed;
-  --voice-level-bg: #5865f2;
+  --pixel-inset-stroke-strong: #0e1938;
+  --chat-author-color: #72c1ff;
+  --chat-time-color: color-mix(in srgb, #cfe6ff 48%, #7f9dbd 52%);
+  --delivery-sending-color: #ffd166;
+  --delivery-delivered-color: #d4f0ff;
+  --status-disconnected-color: #ff6f8a;
+  --status-stalled-color: #ff9a9a;
+  --confirm-clear-bg: #24325a;
+  --confirm-clear-text: #e8f3ff;
+  --confirm-delete-bg: #5a1f2c;
+  --confirm-delete-text: #ffe8ef;
+  --voice-row-active-bg: #4a133b;
+  --voice-level-bg: #7a2b5f;
   --voice-overlay-bg:
-    linear-gradient(0deg, rgba(88, 101, 242, 0.14), rgba(88, 101, 242, 0.06)),
-    rgba(17, 18, 20, 0.7);
-  --danger-btn-bg: #51353a;
-  --danger-banner-bg: #4d2d31;
-  --danger-banner-text: #ffd7d8;
+    linear-gradient(0deg, rgba(0, 233, 255, 0.08), rgba(255, 79, 216, 0.08)),
+    rgba(0, 0, 0, 0.62);
+  --danger-btn-bg: #4a1d2a;
+  --danger-banner-bg: color-mix(in srgb, var(--pixel-panel) 86%, #000 14%);
+  --danger-banner-text: #ffd9e8;
   --provider-google-bg: #ea4335;
   --provider-yandex-bg: #ff0000;
   --provider-text-color: #ffffff;
-  --overlay-backdrop-bg: rgba(10, 10, 12, 0.78);
-  --video-grid-line-color: rgba(255, 255, 255, 0.05);
-  --slider-fill-hi-1: #7983f5;
-  --slider-fill-hi-2: #5865f2;
-  --slider-track-low-2: #24262b;
-  --slider-thumb-hi: #c8ceff;
-  --room-btn-depth-mix: color-mix(in srgb, var(--pixel-panel-2) 88%, var(--pixel-depth-color) 12%);
+  --overlay-backdrop-bg: rgba(0, 0, 0, 0.75);
+  --video-grid-line-color: rgba(0, 0, 0, 0.14);
+  --slider-fill-hi-1: #ffffff;
+  --slider-fill-hi-2: #9ad3ff;
+  --slider-track-low-2: #061a2b;
+  --slider-thumb-hi: #bce7ff;
+  --room-btn-depth-mix: color-mix(in srgb, var(--pixel-panel-2) 82%, var(--pixel-depth-color) 18%);
 
   --space-xxs: 2px;
   --space-xs: 4px;
@@ -86,61 +86,61 @@
 [data-ui-theme="material-classic"] {
   color-scheme: light;
   font-family: "Nunito Sans", "Noto Sans", "Segoe UI", sans-serif;
-  background: #f3f4f6;
-  color: #2e3338;
-  --pixel-bg: #f3f4f6;
+  background: #f2f4f8;
+  color: #1f2937;
+  --pixel-bg: #f2f4f8;
   --pixel-panel: #ffffff;
-  --pixel-panel-2: #f5f6f7;
-  --pixel-border: #d7d9dc;
-  --pixel-text: #2e3338;
-  --pixel-muted: #666f78;
-  --pixel-accent: #5865f2;
-  --pixel-danger: #d83c3e;
-  --pixel-neon-cyan: #5865f2;
-  --pixel-neon-pink: #7d84f6;
-  --pixel-neon-gold: #c8911f;
-  --pixel-shadow: #c3c8ce;
-  --pixel-hard-shadow: rgba(46, 51, 56, 0.14);
-  --pixel-inset-stroke: #dfe3e8;
-  --scrollbar-thumb-bg: #c2c7cc;
-  --scrollbar-thumb-border: #eceef0;
-  --scrollbar-track-bg: #eceef0;
-  --heading-color: #2e3338;
+  --pixel-panel-2: #f8fafc;
+  --pixel-border: #cbd5e1;
+  --pixel-text: #1f2937;
+  --pixel-muted: #5f6b7a;
+  --pixel-accent: #2563eb;
+  --pixel-danger: #dc2626;
+  --pixel-neon-cyan: #2563eb;
+  --pixel-neon-pink: #64748b;
+  --pixel-neon-gold: #ca8a04;
+  --pixel-shadow: #94a3b8;
+  --pixel-hard-shadow: rgba(15, 23, 42, 0.12);
+  --pixel-inset-stroke: #d4deeb;
+  --scrollbar-thumb-bg: #9aa8bc;
+  --scrollbar-thumb-border: #e2e8f0;
+  --scrollbar-track-bg: #e8edf5;
+  --heading-color: #1f2937;
   --heading-shadow: none;
-  --app-title-color: #2e3338;
+  --app-title-color: #1f2937;
   --app-title-shadow: none;
   --radius-control: 10px;
   --radius-surface: 12px;
   --radius-bubble: 12px;
-  --pixel-depth-color: #c3c8ce;
-  --pixel-inset-stroke-strong: #d5dae0;
-  --chat-author-color: #1f2225;
-  --chat-time-color: #666f78;
-  --delivery-sending-color: #b98316;
-  --delivery-delivered-color: #4d59d8;
-  --status-disconnected-color: #d83c3e;
-  --status-stalled-color: #b98316;
-  --confirm-clear-bg: #e7eaff;
-  --confirm-clear-text: #2f3db5;
-  --confirm-delete-bg: #fde8e8;
-  --confirm-delete-text: #8f2223;
-  --voice-row-active-bg: #e3e6ff;
-  --voice-level-bg: #d5dbff;
+  --pixel-depth-color: #94a3b8;
+  --pixel-inset-stroke-strong: #c8d4e4;
+  --chat-author-color: #1d4ed8;
+  --chat-time-color: #64748b;
+  --delivery-sending-color: #a16207;
+  --delivery-delivered-color: #1d4ed8;
+  --status-disconnected-color: #dc2626;
+  --status-stalled-color: #b45309;
+  --confirm-clear-bg: #e7eef9;
+  --confirm-clear-text: #1e3a8a;
+  --confirm-delete-bg: #fee2e2;
+  --confirm-delete-text: #991b1b;
+  --voice-row-active-bg: #dbeafe;
+  --voice-level-bg: #c7d2fe;
   --voice-overlay-bg:
-    linear-gradient(0deg, rgba(88, 101, 242, 0.11), rgba(88, 101, 242, 0.05)),
-    rgba(46, 51, 56, 0.16);
-  --danger-btn-bg: #fde8e8;
-  --danger-banner-bg: #feeff0;
-  --danger-banner-text: #962a2c;
+    linear-gradient(0deg, rgba(59, 130, 246, 0.12), rgba(148, 163, 184, 0.08)),
+    rgba(15, 23, 42, 0.28);
+  --danger-btn-bg: #fee2e2;
+  --danger-banner-bg: #fff1f2;
+  --danger-banner-text: #9f1239;
   --provider-google-bg: #ea4335;
   --provider-yandex-bg: #ff0000;
   --provider-text-color: #ffffff;
-  --overlay-backdrop-bg: rgba(46, 51, 56, 0.46);
-  --video-grid-line-color: rgba(46, 51, 56, 0.12);
-  --slider-fill-hi-1: #dfe3ff;
-  --slider-fill-hi-2: #b8bfff;
-  --slider-track-low-2: #e7eaee;
-  --slider-thumb-hi: #f0f2ff;
+  --overlay-backdrop-bg: rgba(15, 23, 42, 0.46);
+  --video-grid-line-color: rgba(15, 23, 42, 0.12);
+  --slider-fill-hi-1: #dbeafe;
+  --slider-fill-hi-2: #bfdbfe;
+  --slider-track-low-2: #dbe6f2;
+  --slider-thumb-hi: #eaf3ff;
   --room-btn-depth-mix: color-mix(in srgb, var(--pixel-panel-2) 92%, var(--pixel-depth-color) 8%);
 }
 
@@ -207,9 +207,9 @@
 
 [data-ui-theme="material-classic"] body {
   background:
-    radial-gradient(1000px 600px at 25% -8%, rgba(88, 101, 242, 0.12), rgba(255, 255, 255, 0) 58%),
-    radial-gradient(1000px 700px at 100% 100%, rgba(88, 101, 242, 0.08), rgba(255, 255, 255, 0) 62%),
-    linear-gradient(180deg, #f8f9fb 0%, #f1f3f6 100%);
+    radial-gradient(1000px 600px at 25% -8%, rgba(37, 99, 235, 0.14), rgba(255, 255, 255, 0) 58%),
+    radial-gradient(1000px 700px at 100% 100%, rgba(100, 116, 139, 0.12), rgba(255, 255, 255, 0) 62%),
+    linear-gradient(180deg, #f7f9fd 0%, #eef3f9 100%);
 }
 
 [data-ui-theme="aka-dis"] body {
@@ -235,8 +235,8 @@
 [data-ui-theme="material-classic"] .quality-toggle-btn-active,
 [data-ui-theme="material-classic"] .user-settings-tab-btn-active {
   box-shadow:
-    0 0 0 2px color-mix(in srgb, var(--pixel-neon-cyan) 24%, transparent 76%),
-    0 8px 18px rgba(88, 101, 242, 0.2);
+    0 0 0 2px color-mix(in srgb, var(--pixel-neon-cyan) 20%, transparent 80%),
+    0 8px 18px rgba(37, 99, 235, 0.18);
 }
 
 [data-ui-theme="aka-dis"] .quality-toggle-btn-active,
@@ -990,32 +990,32 @@ pre {
 [data-ui-theme="material-classic"] .range-slider-input::-webkit-slider-runnable-track {
   border: var(--border-thin) solid color-mix(in srgb, var(--pixel-border) 82%, transparent 18%);
   background:
-    linear-gradient(90deg, #7d86f8, #5865f2) 0 0 / var(--range-progress) 100% no-repeat,
-    linear-gradient(90deg, #eef0f3, #e2e5e9);
+    linear-gradient(90deg, #3b82f6, #2563eb) 0 0 / var(--range-progress) 100% no-repeat,
+    linear-gradient(90deg, #ecf1f8, #dde6f1);
   box-shadow:
     inset 0 0 0 1px var(--pixel-inset-stroke),
-    0 1px 2px rgba(46, 51, 56, 0.1);
+    0 1px 2px rgba(15, 23, 42, 0.1);
 }
 
 [data-ui-theme="material-classic"] .range-slider-input::-moz-range-track {
   border: var(--border-thin) solid color-mix(in srgb, var(--pixel-border) 82%, transparent 18%);
-  background: linear-gradient(90deg, #eef0f3, #e2e5e9);
+  background: linear-gradient(90deg, #ecf1f8, #dde6f1);
   box-shadow:
     inset 0 0 0 1px var(--pixel-inset-stroke),
-    0 1px 2px rgba(46, 51, 56, 0.1);
+    0 1px 2px rgba(15, 23, 42, 0.1);
 }
 
 [data-ui-theme="material-classic"] .range-slider-input::-moz-range-progress {
   border: var(--border-thin) solid color-mix(in srgb, var(--pixel-border) 82%, transparent 18%);
-  background: linear-gradient(90deg, #7d86f8, #5865f2);
+  background: linear-gradient(90deg, #3b82f6, #2563eb);
 }
 
 [data-ui-theme="material-classic"] .range-slider-thumb-value {
-  border-color: #5865f2;
-  background: #f7f8ff;
+  border-color: #2563eb;
+  background: #f8fbff;
   box-shadow:
-    0 0 0 1px #c4cafe,
-    0 2px 6px rgba(88, 101, 242, 0.18);
+    0 0 0 1px #93c5fd,
+    0 2px 6px rgba(37, 99, 235, 0.18);
 }
 
 [data-ui-theme="aka-dis"] .range-slider-input::-webkit-slider-runnable-track {
