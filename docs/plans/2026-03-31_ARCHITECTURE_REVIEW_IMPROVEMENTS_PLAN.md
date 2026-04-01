@@ -76,7 +76,10 @@ Progress note:
 - Шестьдесят четвертый инкремент декомпозиции `web` выполнен: workspace actions runtime (`useAppRoomChatActions` + `useAppModerationActions` + `useAppServerAdminActions` + `useAppRoomAdminRuntime`) вынесен из `App.tsx` в `hooks/app/state/useAppWorkspaceActionsRuntime.ts`.
 - Шестьдесят пятый инкремент декомпозиции `web` выполнен: workspace support runtime (`useAdminUsersSync` + `useTelemetryRefresh` + `useRealtimeConnectionReset` + `useRealtimeSoundEffects` + `useVoiceUiLifecycleEffects` + `useAppMediaDeviceRuntime` + `useAppPopupOutsideClose`) вынесен из `App.tsx` в `hooks/app/effects/useAppWorkspaceSupportRuntime.ts`.
 - Шестьдесят шестой инкремент декомпозиции `web` выполнен: workspace lifecycle guards runtime (`usePendingAccessAutoRefresh` + `useAutoRoomVoiceConnection` + `useServerMenuAccessGuard` + `useScreenWakeLock`) вынесен из `App.tsx` в `hooks/app/effects/useAppWorkspaceLifecycleGuardsRuntime.ts`.
-- Cumulative: `App.tsx` сокращен с 2101 до 1565 строк; web build + denied-media smoke проходят после каждого инкремента.
+- Шестьдесят седьмой инкремент декомпозиции `web` выполнен: rooms runtime (`useRoomsDerived` + `useAppRoomsAndServerDerived` + `useRoomSelectionGuard`) вынесен из `App.tsx` в `hooks/app/state/useAppRoomsRuntime.ts`.
+- Шестьдесят восьмой инкремент декомпозиции `web` выполнен: realtime transport runtime (`useWsEventAcks` + `useChatTypingController`) вынесен из `App.tsx` в `hooks/app/state/useAppRealtimeTransportRuntime.ts`.
+- Шестьдесят девятый инкремент декомпозиции `web` выполнен: auth workspace runtime (`useDesktopUpdateFlow` + `useDesktopHandoffState` + `useAuthProfileFlow` + `useDeletedAccountActions`) вынесен из `App.tsx` в `hooks/app/state/useAppAuthWorkspaceRuntime.ts`.
+- Cumulative: `App.tsx` сокращен с 2101 до 1563 строк; web build + denied-media smoke проходят после каждого инкремента.
 
 ### 2.2 API route decomposition
 

@@ -22,14 +22,16 @@ import {
 import {
   useAppCoreState,
   useAppUiState,
+  useAppAuthWorkspaceRuntime,
   useAppEntryGatesState,
   useAppMediaDeviceRuntime,
   useAppMainSectionInput,
   useAppModerationActions,
   useAppOverlaysSectionInput,
   useAppRealtimeChatRuntime,
+  useAppRealtimeTransportRuntime,
   useAppPermissionsAndLocale,
-  useAppRoomsAndServerDerived,
+  useAppRoomsRuntime,
   useAppShellRuntime,
   useAppWorkspaceActionsRuntime,
   useAppUserDockSharedProps,
@@ -39,11 +41,7 @@ import {
   useAppControllers,
   useAppShellLifecycleEffects,
   useAppEventLogs,
-  useAuthProfileFlow,
-  useDeletedAccountActions,
   useBuildVersionSync,
-  useDesktopHandoffState,
-  useDesktopUpdateFlow,
   useInviteAcceptanceFlow,
   useOnboardingOverlayActions,
   useRoomSlugPersistence,
@@ -56,14 +54,10 @@ import {
   useRnnoiseRuntimeHandlers,
   usePersistedClientSettings,
   useRealtimeSoundEffects,
-  useChatTypingController,
   useRealtimeIncomingCallState,
   useScreenShareOrchestrator,
-  useWsEventAcks,
   useRoomMediaCapabilities,
   useRoomEditorState,
-  useRoomSelectionGuard,
-  useRoomsDerived,
   useServerVideoPreview,
   useServerSounds,
   useToastQueue,
@@ -279,14 +273,6 @@ export function App() {
   const chatImageTooLargeMessage = t("chat.imageTooLarge")
     .replace("{maxSide}", String(serverChatImagePolicy.maxImageSide))
     .replace("{maxKb}", String(maxChatImageKb));
-  const {
-    desktopUpdateReadyVersion,
-    desktopUpdateApplying,
-    desktopUpdateBannerDismissed,
-    dismissDesktopUpdateBanner,
-    applyDesktopUpdate
-  } = useDesktopUpdateFlow({ t, pushToast });
-  const { showDesktopBrowserCompletion, desktopHandoffError } = useDesktopHandoffState(token);
   const { eventLog, callEventLog, pushLog, pushCallLog } = useAppEventLogs(locale);
 
   const { collapsedCategoryIds, toggleCategoryCollapsed } = useCollapsedCategories(roomsTree);
@@ -315,24 +301,23 @@ export function App() {
     sendWsEvent,
     sendWsEventAwaitAck,
     handleWsAck,
-    handleWsNack
-  } = useWsEventAcks({
-    realtimeClientRef
-  });
-
-  const {
+    handleWsNack,
     setChatTypingByRoomSlug,
     activeChatTypingUsers,
     handleSetChatText,
     sendChatTypingState,
     applyRemoteTypingPayload
-  } = useChatTypingController({
-    chatRoomSlug,
-    userId: user?.id,
-    sendWsEvent,
-    setChatText,
-    typingTtlMs: CHAT_TYPING_TTL_MS,
-    typingPingIntervalMs: CHAT_TYPING_PING_INTERVAL_MS
+  } = useAppRealtimeTransportRuntime({
+    wsAcks: {
+      realtimeClientRef
+    },
+    chatTyping: {
+      chatRoomSlug,
+      userId: user?.id,
+      setChatText,
+      typingTtlMs: CHAT_TYPING_TTL_MS,
+      typingPingIntervalMs: CHAT_TYPING_PING_INTERVAL_MS
+    }
   });
 
   const {
@@ -638,48 +623,60 @@ export function App() {
   });
 
   const {
+    desktopUpdateReadyVersion,
+    desktopUpdateApplying,
+    desktopUpdateBannerDismissed,
+    dismissDesktopUpdateBanner,
+    applyDesktopUpdate,
+    showDesktopBrowserCompletion,
+    desktopHandoffError,
     beginSso,
     logout,
     openUserSettings,
-    saveMyProfile
-  } = useAuthProfileFlow({
-    authController,
-    token,
-    authMode,
-    autoSsoAttemptedRef,
-    profileNameDraft,
-    selectedUiTheme,
-    t,
-    setAuthMode,
-    setAuthMenuOpen,
-    setProfileMenuOpen,
-    setAudioOutputMenuOpen,
-    setVoiceSettingsOpen,
-    setVoiceSettingsPanel,
-    setUserSettingsTab,
-    setUserSettingsOpen,
-    setProfileSaving,
-    setProfileStatusText,
-    setUser,
-    pushToast,
-    onProfileSaved: () => setRealtimeReconnectNonce((value) => value + 1)
-  });
-
-  const {
+    saveMyProfile,
     restoreDeletedAccount,
     handleDeleteAccount
-  } = useDeletedAccountActions({
-    token,
-    deleteAccountPending,
-    restoreDeletedAccountPending,
-    setDeleteAccountPending,
-    setRestoreDeletedAccountPending,
-    setDeleteAccountStatusText,
-    setDeletedAccountInfo,
-    setToken,
-    setUser,
-    pushToast,
-    t
+  } = useAppAuthWorkspaceRuntime({
+    desktopUpdate: {
+      t,
+      pushToast
+    },
+    desktopHandoffToken: token,
+    authProfile: {
+      authController,
+      token,
+      authMode,
+      autoSsoAttemptedRef,
+      profileNameDraft,
+      selectedUiTheme,
+      t,
+      setAuthMode,
+      setAuthMenuOpen,
+      setProfileMenuOpen,
+      setAudioOutputMenuOpen,
+      setVoiceSettingsOpen,
+      setVoiceSettingsPanel,
+      setUserSettingsTab,
+      setUserSettingsOpen,
+      setProfileSaving,
+      setProfileStatusText,
+      setUser,
+      pushToast,
+      onProfileSaved: () => setRealtimeReconnectNonce((value) => value + 1)
+    },
+    deletedAccount: {
+      token,
+      deleteAccountPending,
+      restoreDeletedAccountPending,
+      setDeleteAccountPending,
+      setRestoreDeletedAccountPending,
+      setDeleteAccountStatusText,
+      setDeletedAccountInfo,
+      setToken,
+      setUser,
+      pushToast,
+      t
+    }
   });
 
   useAppShellLifecycleEffects({
@@ -923,27 +920,28 @@ export function App() {
   const {
     uncategorizedRooms,
     allRooms,
-    currentRoom
-  } = useRoomsDerived({
-    roomsTree,
-    rooms,
-    roomSlug
-  });
-  const { currentServer, activeChatRoom } = useAppRoomsAndServerDerived({
-    servers,
-    currentServerId,
-    allRooms,
-    chatRoomSlug,
-    roomSlug,
-    setChatRoomSlug
-  });
-
-  useRoomSelectionGuard({
-    allRooms,
-    roomSlug,
-    chatRoomSlug,
-    setRoomSlug,
-    setChatRoomSlug
+    currentRoom,
+    currentServer,
+    activeChatRoom
+  } = useAppRoomsRuntime({
+    roomsDerived: {
+      roomsTree,
+      rooms,
+      roomSlug
+    },
+    roomsAndServerDerived: {
+      servers,
+      currentServerId,
+      chatRoomSlug,
+      roomSlug,
+      setChatRoomSlug
+    },
+    roomSelectionGuard: {
+      roomSlug,
+      chatRoomSlug,
+      setRoomSlug,
+      setChatRoomSlug
+    }
   });
 
   const {
