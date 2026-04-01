@@ -357,8 +357,11 @@ export function ServerProfileModal({
   const [documentsRulesTab, setDocumentsRulesTab] = useState<DocumentsRulesTab>("documents");
   const [userSearchQuery, setUserSearchQuery] = useState("");
   const [renameServerName, setRenameServerName] = useState("");
+  const [renameServerInitialValue, setRenameServerInitialValue] = useState("");
+  const [isEditingServerName, setIsEditingServerName] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deleteConfirmNameInput, setDeleteConfirmNameInput] = useState("");
+  const renameServerInputRef = useRef<HTMLInputElement>(null);
   const totalUsers = adminUsers.length;
   const totalAdmins = adminUsers.filter((item) => item.role === "admin" || item.role === "super_admin").length;
   const totalBanned = adminUsers.filter((item) => item.is_banned).length;
@@ -434,7 +437,10 @@ export function ServerProfileModal({
   );
 
   useEffect(() => {
-    setRenameServerName(String(currentServerName || "").trim());
+    const nextName = String(currentServerName || "").trim();
+    setRenameServerName(nextName);
+    setRenameServerInitialValue(nextName);
+    setIsEditingServerName(false);
   }, [currentServerName]);
 
   useEffect(() => {
@@ -447,6 +453,9 @@ export function ServerProfileModal({
   const canConfirmServerDelete =
     deleteConfirmNameInput.trim().length > 0
     && deleteConfirmNameInput.trim() === String(currentServerName || "").trim();
+  const normalizedRenameInitialName = renameServerInitialValue.trim();
+  const normalizedRenameDraftName = renameServerName.trim();
+  const renameServerChanged = normalizedRenameDraftName !== normalizedRenameInitialName;
 
   useEffect(() => {
     if (!canViewTelemetry && observabilityTab === "telemetry") {
@@ -1093,23 +1102,55 @@ export function ServerProfileModal({
                     <div className="grid gap-2">
                       <h4>{t("server.renameTitle")}</h4>
                       <div className="flex flex-wrap items-end gap-2">
+                        {isEditingServerName ? (
+                          <button
+                            type="button"
+                            className="secondary whitespace-nowrap"
+                            onMouseDown={(event) => event.preventDefault()}
+                            onClick={() => {
+                              setRenameServerName(renameServerInitialValue);
+                              renameServerInputRef.current?.blur();
+                              setIsEditingServerName(false);
+                            }}
+                          >
+                            {t("settings.cancel")}
+                          </button>
+                        ) : null}
                         <label className="grid min-w-[260px] flex-1 gap-1">
                           <span className="muted">{t("server.renameLabel")}</span>
                           <input
+                            ref={renameServerInputRef}
                             type="text"
                             value={renameServerName}
                             maxLength={64}
+                            onFocus={() => {
+                              setRenameServerInitialValue(renameServerName);
+                              setIsEditingServerName(true);
+                            }}
+                            onBlur={() => {
+                              setRenameServerName(renameServerInitialValue);
+                              setIsEditingServerName(false);
+                            }}
                             onChange={(event) => setRenameServerName(event.target.value)}
                             placeholder={t("server.renamePlaceholder")}
                           />
                         </label>
-                        <button
-                          type="button"
-                          onClick={() => onRenameCurrentServer(renameServerName)}
-                          disabled={renameServerName.trim().length < 3}
-                        >
-                          {t("server.renameAction")}
-                        </button>
+                        {isEditingServerName ? (
+                          <button
+                            type="button"
+                            className="whitespace-nowrap"
+                            onMouseDown={(event) => event.preventDefault()}
+                            onClick={() => {
+                              onRenameCurrentServer(renameServerName);
+                              setRenameServerInitialValue(renameServerName);
+                              renameServerInputRef.current?.blur();
+                              setIsEditingServerName(false);
+                            }}
+                            disabled={normalizedRenameDraftName.length < 3 || !renameServerChanged}
+                          >
+                            {t("settings.apply")}
+                          </button>
+                        ) : null}
                       </div>
                     </div>
                   ) : null}
@@ -1117,9 +1158,11 @@ export function ServerProfileModal({
                     <button type="button" className="secondary" onClick={onLeaveServer}>
                       {t("server.leave")}
                     </button>
-                    <button type="button" className="secondary" onClick={() => setDeleteConfirmOpen(true)}>
-                      {t("server.deleteServer")}
-                    </button>
+                    {currentServerRole === "owner" ? (
+                      <button type="button" className="secondary" onClick={() => setDeleteConfirmOpen(true)}>
+                        {t("server.deleteServer")}
+                      </button>
+                    ) : null}
                   </div>
                   <ul className="admin-list grid gap-2">
                     {serverMembers.map((member) => (
@@ -1234,9 +1277,13 @@ export function ServerProfileModal({
                           ))}
                         </span>
                       ) : null}
-                      {item.is_banned ? ` · ${t("admin.banned")}` : ""}
-                      {item.deleted_at ? ` · ${t("admin.deletedPending")}` : ""}
-                      {!item.is_banned && !item.deleted_at ? ` · ${t(`admin.access.${item.access_state}`)}` : ""}
+                      {serverMenuTab !== "product_management" ? (
+                        <>
+                          {item.is_banned ? ` · ${t("admin.banned")}` : ""}
+                          {item.deleted_at ? ` · ${t("admin.deletedPending")}` : ""}
+                          {!item.is_banned && !item.deleted_at ? ` · ${t(`admin.access.${item.access_state}`)}` : ""}
+                        </>
+                      ) : null}
                     </span>
                     <div className="row-actions flex flex-wrap items-stretch gap-2">
                       {getUserRowActions(item).map((action) => (
