@@ -4,6 +4,7 @@ export { useAdminUsersSync } from "./app/effects/useAdminUsersSync";
 export { useAppShellLifecycleEffects } from "./app/effects/useAppShellLifecycleEffects";
 export { useAppEventLogs } from "./app/state/useAppEventLogs";
 export { useAppControllers } from "./app/state/useAppControllers";
+export { useAppChatVideoProps } from "./app/state/useAppChatVideoProps";
 export { useAppCoreState } from "./app/state/useAppCoreState";
 export { useAppUiState, type AppMobileTab, type AppServerMenuTab } from "./app/state/useAppUiState";
 export { useAppEntryGates } from "./app/state/useAppEntryGates";

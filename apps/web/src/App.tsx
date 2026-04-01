@@ -21,6 +21,7 @@ import {
 } from "./constants/appConfig";
 import {
   useAppCoreState,
+  useAppChatVideoProps,
   useAppUiState,
   useAppEntryGates,
   useAppPermissionsAndLocale,
@@ -44,7 +45,6 @@ import {
   useRoomSlugPersistence,
   useServerDataSync,
   useServerVideoWindowBounds,
-  useWorkspaceChatVideoProps,
   useWorkspaceUserDockController,
   useSessionStateLifecycle,
   useTelemetryRefresh,
@@ -1467,14 +1467,14 @@ export function App() {
     creatingInvite
   });
 
-  const { chatPanelProps, videoWindowsOverlayProps } = useWorkspaceChatVideoProps({
+  const { chatPanelProps, videoWindowsOverlayProps } = useAppChatVideoProps({
     t,
     locale,
-    authToken: serviceToken,
+    serviceToken,
     chatRoomSlug,
-    activeChatRoomTitle: activeChatRoom?.title || "",
+    activeChatRoom,
     messages,
-    currentUserId: user?.id || null,
+    user,
     messagesHasMore,
     loadingOlderMessages,
     chatText,
@@ -1482,7 +1482,7 @@ export function App() {
     activeChatTypingUsers,
     chatLogRef,
     loadOlderMessages,
-    setChatText: handleSetChatText,
+    handleSetChatText,
     handleChatPaste,
     handleChatInputKeyDown,
     sendMessage,
@@ -1493,7 +1493,6 @@ export function App() {
     setEditingMessageId,
     startEditingMessage,
     deleteOwnMessage,
-    userName: user?.name || "",
     allowVideoStreaming,
     cameraEnabled,
     localVideoStream,
