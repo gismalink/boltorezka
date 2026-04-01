@@ -4,10 +4,13 @@ type AppVoiceMediaRuntimeInput = Parameters<typeof useAppVoiceMediaRuntime>[0];
 
 export function useAppVoiceMediaRuntimeInput(params: Record<string, unknown>): AppVoiceMediaRuntimeInput {
   const p = params as any;
+  const roomsPresenceDetailsBySlug = p.roomsPresenceDetailsBySlug || {};
+  const roomMediaTopologyBySlug = p.roomMediaTopologyBySlug || {};
+  const screenShareOwnerByRoomSlug = p.screenShareOwnerByRoomSlug || {};
 
   return {
     voiceParticipants: {
-      roomsPresenceDetailsBySlug: p.roomsPresenceDetailsBySlug,
+      roomsPresenceDetailsBySlug,
       roomSlug: p.roomSlug,
       currentUserId: p.currentUserId,
       memberPreferencesByUserId: p.memberPreferencesByUserId
@@ -16,7 +19,7 @@ export function useAppVoiceMediaRuntimeInput(params: Record<string, unknown>): A
       rooms: p.rooms,
       roomsTree: p.roomsTree,
       roomSlug: p.roomSlug,
-      roomMediaTopologyBySlug: p.roomMediaTopologyBySlug,
+      roomMediaTopologyBySlug,
       serverAudioQuality: p.serverAudioQuality
     },
     rnnoiseRuntime: {
@@ -137,7 +140,7 @@ export function useAppVoiceMediaRuntimeInput(params: Record<string, unknown>): A
       userName: p.currentUserName,
       t: p.t,
       pushToast: p.pushToast,
-      screenShareOwnerByRoomSlug: p.screenShareOwnerByRoomSlug,
+      screenShareOwnerByRoomSlug,
       setScreenShareOwnerByRoomSlug: p.setScreenShareOwnerByRoomSlug,
       sendWsEventAwaitAck: p.sendWsEventAwaitAck
     },

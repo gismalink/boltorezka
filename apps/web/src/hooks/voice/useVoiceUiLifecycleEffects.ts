@@ -30,7 +30,8 @@ export function useVoiceUiLifecycleEffects({
       return;
     }
 
-    const roomTopology = roomMediaTopologyBySlug[roomSlug];
+    const topologyBySlug = roomMediaTopologyBySlug || {};
+    const roomTopology = topologyBySlug[roomSlug];
     if (roomTopology === "livekit") {
       pushCallLog(`media topology for ${roomSlug}: ${roomTopology}`);
     }

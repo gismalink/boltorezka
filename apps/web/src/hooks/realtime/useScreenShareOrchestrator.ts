@@ -60,7 +60,8 @@ export function useScreenShareOrchestrator({
   sendWsEventAwaitAck
 }: UseScreenShareOrchestratorArgs) {
   const currentRoomScreenShareOwner = useMemo(() => {
-    return screenShareOwnerByRoomSlug[roomSlug] || { userId: null, userName: null };
+    const screenShareByRoomSlug = screenShareOwnerByRoomSlug || {};
+    return screenShareByRoomSlug[roomSlug] || { userId: null, userName: null };
   }, [screenShareOwnerByRoomSlug, roomSlug]);
 
   const normalizedCurrentUserId = useMemo(() => String(userId || "").trim(), [userId]);

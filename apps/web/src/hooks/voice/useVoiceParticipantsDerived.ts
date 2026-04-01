@@ -15,7 +15,8 @@ export function useVoiceParticipantsDerived({
   memberPreferencesByUserId
 }: UseVoiceParticipantsDerivedArgs) {
   const currentRoomVoiceTargets = useMemo(() => {
-    const members = roomsPresenceDetailsBySlug[roomSlug] || [];
+    const presenceBySlug = roomsPresenceDetailsBySlug || {};
+    const members = presenceBySlug[roomSlug] || [];
     return members.filter((member) => member.userId !== currentUserId);
   }, [roomsPresenceDetailsBySlug, roomSlug, currentUserId]);
 

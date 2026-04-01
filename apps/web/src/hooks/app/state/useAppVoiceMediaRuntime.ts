@@ -97,7 +97,8 @@ export function useAppVoiceMediaRuntime({
 
   const effectiveAudioQuality = currentRoomAudioQualityOverride ?? roomSnapshot.serverAudioQuality;
   const roomMediaCapabilities = useRoomMediaCapabilities(currentRoomKind);
-  const currentRoomTopology = roomSnapshot.roomSlug ? roomSnapshot.roomMediaTopologyBySlug[roomSnapshot.roomSlug] : undefined;
+  const roomTopologyBySlug = roomSnapshot.roomMediaTopologyBySlug || {};
+  const currentRoomTopology = roomSnapshot.roomSlug ? roomTopologyBySlug[roomSnapshot.roomSlug] : undefined;
   const topologySupportsRtc = currentRoomTopology === "livekit";
   const currentRoomSupportsRtc = roomMediaCapabilities.supportsVoice || topologySupportsRtc;
   const currentRoomSupportsVideo = roomMediaCapabilities.supportsCamera;
