@@ -24,6 +24,7 @@ import {
   useAppChatVideoProps,
   useAppUiState,
   useAppEntryGatesState,
+  useAppMediaDeviceRuntime,
   useAppMainSectionInput,
   useAppOverlaysSectionInput,
   useAppPermissionsAndLocale,
@@ -55,11 +56,7 @@ import {
   useTelemetryRefresh,
   useCollapsedCategories,
   useCurrentRoomSnapshot,
-  useMediaDevicePreferences,
-  useServerProfileModalProps,
   useRnnoiseRuntimeHandlers,
-  useMicrophoneLevelMeter,
-  useMicrophoneSelfMonitor,
   usePersistedClientSettings,
   useRealtimeSoundEffects,
   useChatComposerActions,
@@ -938,7 +935,7 @@ export function App() {
     pushCallLog
   });
 
-  const { refreshDevices, requestMediaAccess, requestVideoAccess } = useMediaDevicePreferences({
+  const { refreshDevices, requestMediaAccess, requestVideoAccess } = useAppMediaDeviceRuntime({
     t,
     selectedInputId,
     selectedOutputId,
@@ -952,33 +949,18 @@ export function App() {
     setMediaDevicesHint,
     setSelectedInputId,
     setSelectedOutputId,
-    setSelectedVideoInputId
-  });
-
-  const shouldRunMicrophoneMeter = Boolean(user)
-    && (
-      roomVoiceConnected
-      || voiceSettingsOpen
-      || voiceSettingsPanel === "input_device"
-      || (userSettingsOpen && userSettingsTab === "sound")
-    );
-
-  useMicrophoneLevelMeter({
-    running: shouldRunMicrophoneMeter,
-    selectedInputId,
-    t,
+    setSelectedVideoInputId,
+    hasUser: Boolean(user),
+    roomVoiceConnected,
+    voiceSettingsOpen,
+    voiceSettingsPanel: voiceSettingsPanel || "",
+    userSettingsOpen,
+    userSettingsTab,
     pushToast,
-    setLevel: setMicTestLevel
-  });
-
-  useMicrophoneSelfMonitor({
-    enabled: selfMonitorEnabled,
-    selectedInputId,
+    setMicTestLevel,
+    selfMonitorEnabled,
     selectedInputProfile,
-    rnnoiseSuppressionLevel,
-    micVolume,
-    t,
-    pushToast
+    rnnoiseSuppressionLevel
   });
 
   useAppPopupOutsideClose({

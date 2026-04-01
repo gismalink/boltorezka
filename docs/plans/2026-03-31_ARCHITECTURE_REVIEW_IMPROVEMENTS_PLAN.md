@@ -65,7 +65,8 @@ Progress note:
 - Пятьдесят третий инкремент декомпозиции `web` выполнен: shell composition wrapper (`useAppShellCompositionProps`) вынесен из `App.tsx` в `hooks/app/state/useAppShellCompositionProps.ts`.
 - Пятьдесят четвертый инкремент стабилизации `web` выполнен: после проверки VS Code Problems выровнены тип-контракты adapters/realtime callbacks (`useAppRoomsPanelProps`, `useRealtimeLifecycleCallbacks`, `useChatTypingController`) без изменения runtime-поведения.
 - Пятьдесят пятый инкремент декомпозиции `web` выполнен: popup outside-close orchestration (`isAnyPopupOpen` + `onCloseAll`) вынесен из `App.tsx` в `hooks/app/effects/useAppPopupOutsideClose.ts`.
-- Cumulative: `App.tsx` сокращен с 2101 до 1617 строк; web build + denied-media smoke проходят после каждого инкремента.
+- Пятьдесят шестой инкремент декомпозиции `web` выполнен: media runtime cluster (`useMediaDevicePreferences` + `useMicrophoneLevelMeter` + `useMicrophoneSelfMonitor`) вынесен из `App.tsx` в `hooks/app/effects/useAppMediaDeviceRuntime.ts`.
+- Cumulative: `App.tsx` сокращен с 2101 до 1599 строк; web build + denied-media smoke проходят после каждого инкремента.
 
 ### 2.2 API route decomposition
 

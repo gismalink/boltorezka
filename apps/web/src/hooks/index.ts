@@ -27,6 +27,7 @@ export { useAppUserMediaState } from "./app/state/useAppUserMediaState";
 export { useAutoRoomVoiceConnection } from "./voice/useAutoRoomVoiceConnection";
 export { useBuildVersionSync } from "./app/effects/useBuildVersionSync";
 export { useDesktopUpdateFlow } from "./app/effects/useDesktopUpdateFlow";
+export { useAppMediaDeviceRuntime } from "./app/effects/useAppMediaDeviceRuntime";
 export { useInviteAcceptanceFlow } from "./app/effects/useInviteAcceptanceFlow";
 export { useMemberPreferencesSync } from "./app/effects/useMemberPreferencesSync";
 export { useOnboardingOverlayActions } from "./app/effects/useOnboardingOverlayActions";
