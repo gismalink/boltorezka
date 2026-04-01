@@ -3,6 +3,7 @@ import { LegalLinks } from "./components/LegalLinks";
 import { useEffect, useMemo, useState } from "react";
 import { Button, PixelCheckbox } from "./components/uicomponents";
 import { detectInitialLang, LANGUAGE_OPTIONS, type Lang } from "./i18n";
+import { normalizeUiTheme } from "./utils/appShell";
 
 const COOKIE_CONSENT_KEY = "boltorezka_cookie_consent_v1";
 const LEGAL_ACCEPTANCE_KEY = "boltorezka_legal_acceptance_v1";
@@ -244,6 +245,7 @@ export function LegalStandalonePage() {
       : null;
   const isCookiesPage = normalizedPathname === "/cookies";
   const [lang, setLang] = useState<Lang>(() => detectInitialLang());
+  const [selectedUiTheme] = useState(() => normalizeUiTheme(localStorage.getItem("boltorezka_ui_theme")));
   const [cookieConsentAccepted, setCookieConsentAccepted] = useState<boolean>(() => {
     return localStorage.getItem(COOKIE_CONSENT_KEY) === "1";
   });
@@ -281,6 +283,10 @@ export function LegalStandalonePage() {
     localStorage.setItem("boltorezka_lang", lang);
     document.documentElement.lang = lang;
   }, [lang]);
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-ui-theme", selectedUiTheme);
+  }, [selectedUiTheme]);
 
   useEffect(() => {
     document.title = page ? `${page.title} | Datowave` : "Datowave";
