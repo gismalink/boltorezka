@@ -584,6 +584,7 @@ export function App() {
       setAdminUsers,
       canViewTelemetry,
       wsState,
+      roomsPresenceDetailsBySlug,
       setTelemetrySummary,
       loadTelemetrySummary,
       setRoomsPresenceBySlug,
