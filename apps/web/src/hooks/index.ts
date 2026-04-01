@@ -2,6 +2,7 @@ export { useAuthProfileFlow } from "./auth/useAuthProfileFlow";
 export { useDeletedAccountActions } from "./auth/useDeletedAccountActions";
 export { useAdminUsersSync } from "./app/effects/useAdminUsersSync";
 export { useAppShellLifecycleEffects } from "./app/effects/useAppShellLifecycleEffects";
+export { useAppPopupOutsideClose } from "./app/effects/useAppPopupOutsideClose";
 export { useAppEventLogs } from "./app/state/useAppEventLogs";
 export { useAppControllers } from "./app/state/useAppControllers";
 export { useAppChatVideoProps } from "./app/state/useAppChatVideoProps";

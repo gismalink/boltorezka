@@ -36,6 +36,7 @@ import {
   useAppUserMediaState,
   useAppControllers,
   useAppShellLifecycleEffects,
+  useAppPopupOutsideClose,
   useAdminUsersSync,
   useAutoRoomVoiceConnection,
   useAppEventLogs,
@@ -60,7 +61,6 @@ import {
   useMicrophoneLevelMeter,
   useMicrophoneSelfMonitor,
   usePersistedClientSettings,
-  usePopupOutsideClose,
   useRealtimeSoundEffects,
   useChatComposerActions,
   useChatTypingController,
@@ -981,36 +981,32 @@ export function App() {
     pushToast
   });
 
-  usePopupOutsideClose({
-    isAnyPopupOpen: Boolean(
-      profileMenuOpen
-      || authMenuOpen
-      || categoryPopupOpen
-      || channelPopupOpen
-      || channelSettingsPopupOpenId
-      || categorySettingsPopupOpenId
-      || audioOutputMenuOpen
-      || voiceSettingsOpen
-      || userSettingsOpen
-    ),
+  useAppPopupOutsideClose({
+    profileMenuOpen,
+    authMenuOpen,
+    categoryPopupOpen,
+    channelPopupOpen,
+    channelSettingsPopupOpenId,
+    categorySettingsPopupOpenId,
+    audioOutputMenuOpen,
+    voiceSettingsOpen,
+    userSettingsOpen,
+    setProfileMenuOpen,
+    setAuthMenuOpen,
+    setCategoryPopupOpen,
+    setChannelPopupOpen,
+    setChannelSettingsPopupOpenId,
+    setCategorySettingsPopupOpenId,
+    setAudioOutputMenuOpen,
+    setVoiceSettingsOpen,
+    setUserSettingsOpen,
     profileMenuRef,
     authMenuRef,
     categoryPopupRef,
     channelPopupRef,
     audioOutputAnchorRef,
     voiceSettingsAnchorRef,
-    userSettingsRef,
-    onCloseAll: () => {
-      setProfileMenuOpen(false);
-      setAuthMenuOpen(false);
-      setCategoryPopupOpen(false);
-      setChannelPopupOpen(false);
-      setChannelSettingsPopupOpenId(null);
-      setCategorySettingsPopupOpenId(null);
-      setAudioOutputMenuOpen(false);
-      setVoiceSettingsOpen(false);
-      setUserSettingsOpen(false);
-    }
+    userSettingsRef
   });
 
   const {
