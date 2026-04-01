@@ -26,6 +26,7 @@ import {
   useAppPermissionsIdentityRuntime,
   useAppRefsAndAdaptersRuntime,
   useAppRoomsRuntime,
+  useAppRoomsRuntimeInput,
   useAppShellRuntime,
   useAppShellRuntimeInput,
   useAppWorkspaceActionsRuntime,
@@ -664,24 +665,16 @@ export function App() {
     currentRoom,
     currentServer,
     activeChatRoom
-  } = useAppRoomsRuntime({
-    roomsDerived: {
-      roomsTree,
-      rooms,
-      roomSlug
-    },
-    roomsAndServerDerived: {
-      servers,
-      currentServerId,
-      chatRoomSlug,
-      roomSlug,
-      setChatRoomSlug
-    },
-    roomSelectionGuard: {
-      roomSlug, setRoomSlug,
-      chatRoomSlug, setChatRoomSlug
-    }
-  });
+  } = useAppRoomsRuntime(useAppRoomsRuntimeInput({
+    roomsTree,
+    rooms,
+    roomSlug,
+    servers,
+    currentServerId,
+    chatRoomSlug,
+    setRoomSlug,
+    setChatRoomSlug
+  }));
 
   const {
     joinRoom,

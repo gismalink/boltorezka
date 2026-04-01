@@ -97,7 +97,8 @@ Progress note:
 - Восемьдесят пятый инкремент декомпозиции `web` выполнен: input builder для workspace support runtime вынесен в `hooks/app/state/useAppWorkspaceSupportRuntimeInput.ts`.
 - Восемьдесят шестой инкремент декомпозиции `web` выполнен: input builder для voice/media runtime вынесен в `hooks/app/state/useAppVoiceMediaRuntimeInput.ts`.
 - Восемьдесят седьмой инкремент декомпозиции `web` выполнен: input builder для workspace lifecycle guards runtime вынесен в `hooks/app/state/useAppWorkspaceLifecycleGuardsRuntimeInput.ts`.
-- Cumulative: `App.tsx` сокращен с 2101 до 1219 строк; web build + denied-media smoke проходят после каждого инкремента.
+- Восемьдесят восьмой инкремент декомпозиции `web` выполнен: input builder для rooms runtime вынесен в `hooks/app/state/useAppRoomsRuntimeInput.ts`.
+- Cumulative: `App.tsx` сокращен с 2101 до 1212 строк; web build + denied-media smoke проходят после каждого инкремента.
 
 ### 2.2 API route decomposition
 
