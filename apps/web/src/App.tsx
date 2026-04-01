@@ -18,6 +18,7 @@ import {
   useAppCoreState,
   useAppUiState,
   useAppAuthWorkspaceRuntime,
+  useAppAuthWorkspaceRuntimeInput,
   useAppEntryGatesState,
   useAppRealtimeTransportRuntime,
   useAppVoiceMediaRuntime,
@@ -41,6 +42,7 @@ import {
   useBuildVersionSync,
   useOnboardingOverlayActions,
   useAppWorkspaceSupportRuntime,
+  useAppWorkspaceSupportRuntimeInput,
   useCollapsedCategories,
   useRoomEditorState,
   useServerSounds,
@@ -571,48 +573,35 @@ export function App() {
     saveMyProfile,
     restoreDeletedAccount,
     handleDeleteAccount
-  } = useAppAuthWorkspaceRuntime({
-    desktopUpdate: {
-      t,
-      pushToast
-    },
-    desktopHandoffToken: token,
-    authProfile: {
-      authController,
-      token,
-      authMode,
-      autoSsoAttemptedRef,
-      profileNameDraft,
-      selectedUiTheme,
-      t,
-      setAuthMode,
-      setAuthMenuOpen,
-      setProfileMenuOpen,
-      setAudioOutputMenuOpen,
-      setVoiceSettingsOpen,
-      setVoiceSettingsPanel,
-      setUserSettingsTab,
-      setUserSettingsOpen,
-      setProfileSaving,
-      setProfileStatusText,
-      setUser,
-      pushToast,
-      onProfileSaved: bumpRealtimeReconnectNonce
-    },
-    deletedAccount: {
-      token,
-      deleteAccountPending,
-      restoreDeletedAccountPending,
-      setDeleteAccountPending,
-      setRestoreDeletedAccountPending,
-      setDeleteAccountStatusText,
-      setDeletedAccountInfo,
-      setToken,
-      setUser,
-      pushToast,
-      t
-    }
-  });
+  } = useAppAuthWorkspaceRuntime(useAppAuthWorkspaceRuntimeInput({
+    t,
+    pushToast,
+    token,
+    authController,
+    authMode,
+    autoSsoAttemptedRef,
+    profileNameDraft,
+    selectedUiTheme,
+    setAuthMode,
+    setAuthMenuOpen,
+    setProfileMenuOpen,
+    setAudioOutputMenuOpen,
+    setVoiceSettingsOpen,
+    setVoiceSettingsPanel,
+    setUserSettingsTab,
+    setUserSettingsOpen,
+    setProfileSaving,
+    setProfileStatusText,
+    setUser,
+    bumpRealtimeReconnectNonce,
+    deleteAccountPending,
+    restoreDeletedAccountPending,
+    setDeleteAccountPending,
+    setRestoreDeletedAccountPending,
+    setDeleteAccountStatusText,
+    setDeletedAccountInfo,
+    setToken
+  }));
 
   useAppShellRoomRuntimeEffects({
     shellLifecycle: {
@@ -672,46 +661,30 @@ export function App() {
     }
   });
 
-  const { refreshDevices, requestMediaAccess, requestVideoAccess } = useAppWorkspaceSupportRuntime({
-    adminUsersSync: {
+  const { refreshDevices, requestMediaAccess, requestVideoAccess } = useAppWorkspaceSupportRuntime(
+    useAppWorkspaceSupportRuntimeInput({
       token,
       canManageUsers,
       pushLog,
-      setAdminUsers
-    },
-    telemetryRefresh: {
-      token,
+      setAdminUsers,
       canViewTelemetry,
       wsState,
       setTelemetrySummary,
-      loadTelemetrySummary
-    },
-    realtimeConnectionReset: {
-      wsState,
+      loadTelemetrySummary,
       setRoomsPresenceBySlug,
       setRoomsPresenceDetailsBySlug,
       setRoomMediaTopologyBySlug,
       setScreenShareOwnerByRoomSlug,
       setVoiceInitialMicStateByUserIdInCurrentRoom,
-      setVoiceInitialAudioOutputMutedByUserIdInCurrentRoom
-    },
-    realtimeSoundEffects: {
-      wsState,
-      roomsPresenceDetailsBySlug,
+      setVoiceInitialAudioOutputMutedByUserIdInCurrentRoom,
       roomSlug,
-      userId: user?.id,
+      user,
       messages,
-      playServerSound
-    },
-    voiceUiLifecycle: {
+      playServerSound,
       userSettingsOpen,
       userSettingsTab,
       setSelfMonitorEnabled,
-      roomSlug,
-      roomMediaTopologyBySlug,
-      pushCallLog
-    },
-    mediaDeviceRuntime: {
+      pushCallLog,
       t,
       selectedInputId,
       selectedOutputId,
@@ -729,16 +702,12 @@ export function App() {
       hasUser,
       roomVoiceConnected,
       voiceSettingsOpen,
-      voiceSettingsPanel: voiceSettingsPanel || "",
-      userSettingsOpen,
-      userSettingsTab,
+      voiceSettingsPanel,
       pushToast,
       setMicTestLevel,
       selfMonitorEnabled,
       selectedInputProfile,
-      rnnoiseSuppressionLevel
-    },
-    popupOutsideClose: {
+      rnnoiseSuppressionLevel,
       profileMenuOpen,
       authMenuOpen,
       categoryPopupOpen,
@@ -746,8 +715,6 @@ export function App() {
       channelSettingsPopupOpenId,
       categorySettingsPopupOpenId,
       audioOutputMenuOpen,
-      voiceSettingsOpen,
-      userSettingsOpen,
       setProfileMenuOpen,
       setAuthMenuOpen,
       setCategoryPopupOpen,
@@ -764,8 +731,8 @@ export function App() {
       audioOutputAnchorRef,
       voiceSettingsAnchorRef,
       userSettingsRef
-    }
-  });
+    })
+  );
 
   const {
     uncategorizedRooms,

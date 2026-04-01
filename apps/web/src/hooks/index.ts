@@ -19,6 +19,7 @@ export { useAppEntryGatesState } from "./app/state/useAppEntryGatesState";
 export { useAppMainSectionProps } from "./app/state/useAppMainSectionProps";
 export { useAppMainSectionInput } from "./app/state/useAppMainSectionInput";
 export { useAppAuthWorkspaceRuntime } from "./app/state/useAppAuthWorkspaceRuntime";
+export { useAppAuthWorkspaceRuntimeInput } from "./app/state/useAppAuthWorkspaceRuntimeInput";
 export { useAppModerationActions } from "./app/state/useAppModerationActions";
 export { useAppPermissionsAndLocale } from "./app/state/useAppPermissionsAndLocale";
 export { useAppPermissionsIdentityRuntime } from "./app/state/useAppPermissionsIdentityRuntime";
@@ -40,6 +41,7 @@ export { useAppWorkspaceActionsRuntime } from "./app/state/useAppWorkspaceAction
 export { useAppWorkspaceActionsRuntimeInput } from "./app/state/useAppWorkspaceActionsRuntimeInput";
 export { useAppWorkspacePanelsRuntime } from "./app/state/useAppWorkspacePanelsRuntime";
 export { useAppWorkspacePanelsRuntimeInput } from "./app/state/useAppWorkspacePanelsRuntimeInput";
+export { useAppWorkspaceSupportRuntimeInput } from "./app/state/useAppWorkspaceSupportRuntimeInput";
 export { useAppShellLayoutProps } from "./app/state/useAppShellLayoutProps";
 export { useAppShellOverlaysProps } from "./app/state/useAppShellOverlaysProps";
 export { useAppTopChromeSectionInput } from "./app/state/useAppTopChromeSectionInput";
