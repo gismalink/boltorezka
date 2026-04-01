@@ -30,6 +30,7 @@ import {
   useAppOverlaysSectionInput,
   useAppRealtimeChatRuntime,
   useAppRealtimeTransportRuntime,
+  useAppVoiceMediaRuntime,
   useAppPermissionsAndLocale,
   useAppRoomsRuntime,
   useAppShellRuntime,
@@ -320,245 +321,180 @@ export function App() {
 
   const {
     currentRoomVoiceTargets,
-    memberVolumeByUserId,
     remoteVideoLabelsByUserId,
-    videoPolicyAudienceKey
-  } = useVoiceParticipantsDerived({
-    roomsPresenceDetailsBySlug,
-    roomSlug,
-    currentUserId: user?.id || "",
-    memberPreferencesByUserId
-  });
-
-  const { currentRoom: currentRoomSnapshot, currentRoomKind, currentRoomAudioQualityOverride } = useCurrentRoomSnapshot({
-    rooms,
-    roomsTree,
-    roomSlug
-  });
-  const effectiveAudioQuality = currentRoomAudioQualityOverride ?? serverAudioQuality;
-  const roomMediaCapabilities = useRoomMediaCapabilities(currentRoomKind);
-  const currentRoomTopology = roomSlug ? roomMediaTopologyBySlug[roomSlug] : undefined;
-  const topologySupportsRtc = currentRoomTopology === "livekit";
-  const currentRoomSupportsRtc = roomMediaCapabilities.supportsVoice || topologySupportsRtc;
-  const currentRoomSupportsVideo = roomMediaCapabilities.supportsCamera;
-  const allowVideoStreaming = roomMediaCapabilities.supportsCamera || topologySupportsRtc;
-  const currentRoomSupportsScreenShare = roomMediaCapabilities.supportsScreenShare || topologySupportsRtc;
-  const { handleRnnoiseStatusChange, handleRnnoiseFallback } = useRnnoiseRuntimeHandlers({
-    selectedInputProfile,
-    setSelectedInputProfile,
-    setRnnoiseRuntimeStatus,
-    pushToast,
-    t
-  });
-
-  const livekitVoiceRuntime = useLivekitVoiceRuntime({
-    t,
-    token: serviceToken,
-    localUserId: user?.id || "",
-    roomSlug,
+    currentRoomSnapshot,
+    topologySupportsRtc,
+    currentRoomSupportsRtc,
+    currentRoomSupportsVideo,
     allowVideoStreaming,
-    videoStreamingEnabled: cameraEnabled,
-    videoResolution: serverVideoResolution,
-    videoFps: serverVideoFps,
-    screenShareResolution: serverScreenShareResolution,
-    audioQuality: effectiveAudioQuality,
-    roomVoiceTargets: currentRoomVoiceTargets,
-    selectedInputId,
-    selectedInputProfile,
-    rnnoiseSuppressionLevel,
-    preRnnEchoCancellationEnabled,
-    preRnnAutoGainControlEnabled,
-    selectedOutputId,
-    memberVolumeByUserId,
-    selectedVideoInputId,
-    micVolume,
-    micMuted,
-    audioMuted,
-    outputVolume,
-    pushToast,
-    pushCallLog,
-    onRnnoiseStatusChange: handleRnnoiseStatusChange,
-    onRnnoiseFallback: handleRnnoiseFallback,
-    setCallStatus,
-    setLastCallPeer
-  });
-
-  const {
     roomVoiceConnected,
     remoteAudioAutoplayBlocked,
-    connectedPeerUserIds,
-    connectingPeerUserIds,
-    remoteMutedPeerUserIds,
-    remoteSpeakingPeerUserIds,
-    remoteAudioMutedPeerUserIds,
-    voiceMediaStatusByPeerUserId,
     localVoiceMediaStatusSummary,
     localVideoStream,
     remoteVideoStreamsByUserId,
-    localScreenShareStream,
-    remoteScreenShareStreamsByUserId,
-    isLocalScreenSharing,
-    startLocalScreenShare,
-    stopLocalScreenShare,
     connectRoom,
     disconnectRoom,
-    handleIncomingMicState: _handleIncomingRtcMicState,
-    handleIncomingVideoState: handleIncomingRtcVideoState,
-    handleCallNack
-  } = livekitVoiceRuntime;
-  void _handleIncomingRtcMicState;
-
-  const {
-    normalizedMinWidth: normalizedServerVideoWindowMinWidth,
-    normalizedMaxWidth: normalizedServerVideoWindowMaxWidth,
-    setBoundedMinWidth: setBoundedServerVideoWindowMinWidth,
-    setBoundedMaxWidth: setBoundedServerVideoWindowMaxWidth
-  } = useServerVideoWindowBounds({
-    minWidth: serverVideoWindowMinWidth,
-    maxWidth: serverVideoWindowMaxWidth,
-    setMinWidth: setServerVideoWindowMinWidth,
-    setMaxWidth: setServerVideoWindowMaxWidth
-  });
-
-  useVoiceRoomLifecycleEffects({
-    roomSlug,
-    currentRoomSnapshot,
-    allowVideoStreaming,
-    setCameraEnabled,
-    setVideoWindowsVisible,
-    setVoiceCameraEnabledByUserIdInCurrentRoom,
-    setVoiceInitialMicStateByUserIdInCurrentRoom,
-    setVoiceInitialAudioOutputMutedByUserIdInCurrentRoom
-  });
-
-  usePersistedClientSettings({
-    selectedInputProfile,
-    rnnoiseSuppressionLevel,
-    preRnnEchoCancellationEnabled,
-    preRnnAutoGainControlEnabled,
-    selfMonitorEnabled,
-    micMuted,
-    audioMuted,
-    cameraEnabled,
-    serverVideoEffectType,
-    serverVideoResolution,
-    serverVideoFps,
-    serverScreenShareResolution,
-    serverVideoPixelFxStrength,
-    serverVideoPixelFxPixelSize,
-    serverVideoPixelFxGridThickness,
-    serverVideoAsciiCellSize,
-    serverVideoAsciiContrast,
-    serverVideoAsciiColor,
-    serverVideoWindowMinWidth,
-    serverVideoWindowMaxWidth
-  });
-
-  useVoiceSignalingOrchestrator({
-    roomSlug,
-    roomVoiceConnected,
-    currentRoomSupportsRtc,
-    micMuted,
-    micTestLevel,
-    audioMuted,
-    canManageAudioQuality,
-    videoPolicyAudienceKey,
-    serverVideoEffectType,
-    serverVideoResolution,
-    serverVideoFps,
-    serverScreenShareResolution,
-    serverVideoPixelFxStrength,
-    serverVideoPixelFxPixelSize,
-    serverVideoPixelFxGridThickness,
-    serverVideoAsciiCellSize,
-    serverVideoAsciiContrast,
-    serverVideoAsciiColor,
-    serverVideoWindowMinWidth,
-    serverVideoWindowMaxWidth,
-    sendWsEvent
-  });
-
-  const serverVideoPreviewStream = useServerVideoPreview({
-    appMenuOpen,
-    serverMenuTab,
-    canManageAudioQuality,
-    selectedVideoInputId,
-    serverVideoResolution,
-    serverVideoFps,
-    serverVideoEffectType,
-    serverVideoPixelFxStrength,
-    serverVideoPixelFxPixelSize,
-    serverVideoPixelFxGridThickness,
-    serverVideoAsciiCellSize,
-    serverVideoAsciiContrast,
-    serverVideoAsciiColor
-  });
-
-  const {
+    handleIncomingRtcVideoState,
+    handleCallNack,
+    normalizedServerVideoWindowMinWidth,
+    normalizedServerVideoWindowMaxWidth,
+    setBoundedServerVideoWindowMinWidth,
+    setBoundedServerVideoWindowMaxWidth,
     voiceMicStateByUserIdInCurrentRoom,
     voiceAudioOutputMutedByUserIdInCurrentRoom,
-    voiceRtcStateByUserIdInCurrentRoom
-  } = useVoiceRoomStateMaps({
-    userId: user?.id || "",
-    roomVoiceConnected,
-    micMuted,
-    micTestLevel,
-    audioMuted,
-    callStatus,
-    roomVoiceTargetsCount: currentRoomVoiceTargets.length,
-    connectingPeerUserIds,
-    connectedPeerUserIds,
-    remoteMutedPeerUserIds,
-    remoteSpeakingPeerUserIds,
-    remoteAudioMutedPeerUserIds,
-    initialMicStateByUserIdInCurrentRoom: voiceInitialMicStateByUserIdInCurrentRoom,
-    initialAudioOutputMutedByUserIdInCurrentRoom: voiceInitialAudioOutputMutedByUserIdInCurrentRoom
-  });
-
-  const {
+    voiceRtcStateByUserIdInCurrentRoom,
     currentRoomScreenShareOwner,
     isCurrentUserScreenShareOwner,
     canToggleScreenShare,
     activeScreenShare,
     handleIncomingScreenShareState,
-    handleToggleScreenShare
-  } = useScreenShareOrchestrator({
-    hasSessionToken: Boolean(serviceToken),
-    roomSlug,
-    currentRoomKind,
-    currentRoomSupportsScreenShare,
-    roomVoiceConnected,
-    connectRoom,
-    userId: user?.id || "",
-    userName: user?.name || "",
-    t,
-    pushToast,
-    screenShareOwnerByRoomSlug,
-    setScreenShareOwnerByRoomSlug,
-    isLocalScreenSharing,
-    localScreenShareStream,
-    remoteScreenShareStreamsByUserId,
-    remoteVideoLabelsByUserId,
-    startLocalScreenShare,
-    stopLocalScreenShare,
-    sendWsEventAwaitAck
-  });
-
-  const {
+    handleToggleScreenShare,
     speakingVideoWindowIds,
     effectiveVoiceCameraEnabledByUserIdInCurrentRoom,
-    voiceMediaStatusSummaryByUserIdInCurrentRoom
-  } = useVoiceMediaUiMaps({
-    currentRoomVoiceTargets,
-    remoteSpeakingPeerUserIds,
-    currentUserId: user?.id || "",
-    voiceMicStateByUserIdInCurrentRoom,
-    remoteVideoStreamsByUserId,
-    roomVoiceConnected,
-    allowVideoStreaming,
-    cameraEnabled,
-    voiceMediaStatusByPeerUserId,
-    localVoiceMediaStatusSummary
+    voiceMediaStatusSummaryByUserIdInCurrentRoom,
+    serverVideoPreviewStream
+  } = useAppVoiceMediaRuntime({
+    voiceParticipants: {
+      roomsPresenceDetailsBySlug,
+      roomSlug,
+      currentUserId: user?.id || "",
+      memberPreferencesByUserId
+    },
+    roomSnapshot: {
+      rooms,
+      roomsTree,
+      roomSlug,
+      roomMediaTopologyBySlug,
+      serverAudioQuality
+    },
+    rnnoiseRuntime: {
+      selectedInputProfile,
+      setSelectedInputProfile,
+      setRnnoiseRuntimeStatus,
+      pushToast,
+      t
+    },
+    livekitRuntime: {
+      t,
+      token: serviceToken,
+      localUserId: user?.id || "",
+      roomSlug,
+      videoStreamingEnabled: cameraEnabled,
+      videoResolution: serverVideoResolution,
+      videoFps: serverVideoFps,
+      screenShareResolution: serverScreenShareResolution,
+      selectedInputId,
+      selectedInputProfile,
+      rnnoiseSuppressionLevel,
+      preRnnEchoCancellationEnabled,
+      preRnnAutoGainControlEnabled,
+      selectedOutputId,
+      selectedVideoInputId,
+      micVolume,
+      micMuted,
+      audioMuted,
+      outputVolume,
+      pushToast,
+      pushCallLog,
+      setCallStatus,
+      setLastCallPeer
+    },
+    serverVideoWindowBounds: {
+      minWidth: serverVideoWindowMinWidth,
+      maxWidth: serverVideoWindowMaxWidth,
+      setMinWidth: setServerVideoWindowMinWidth,
+      setMaxWidth: setServerVideoWindowMaxWidth
+    },
+    voiceRoomLifecycle: {
+      roomSlug,
+      setCameraEnabled,
+      setVideoWindowsVisible,
+      setVoiceCameraEnabledByUserIdInCurrentRoom,
+      setVoiceInitialMicStateByUserIdInCurrentRoom,
+      setVoiceInitialAudioOutputMutedByUserIdInCurrentRoom
+    },
+    persistedClientSettings: {
+      selectedInputProfile,
+      rnnoiseSuppressionLevel,
+      preRnnEchoCancellationEnabled,
+      preRnnAutoGainControlEnabled,
+      selfMonitorEnabled,
+      micMuted,
+      audioMuted,
+      cameraEnabled,
+      serverVideoEffectType,
+      serverVideoResolution,
+      serverVideoFps,
+      serverScreenShareResolution,
+      serverVideoPixelFxStrength,
+      serverVideoPixelFxPixelSize,
+      serverVideoPixelFxGridThickness,
+      serverVideoAsciiCellSize,
+      serverVideoAsciiContrast,
+      serverVideoAsciiColor,
+      serverVideoWindowMinWidth,
+      serverVideoWindowMaxWidth
+    },
+    voiceSignaling: {
+      roomSlug,
+      micMuted,
+      micTestLevel,
+      audioMuted,
+      canManageAudioQuality,
+      serverVideoEffectType,
+      serverVideoResolution,
+      serverVideoFps,
+      serverScreenShareResolution,
+      serverVideoPixelFxStrength,
+      serverVideoPixelFxPixelSize,
+      serverVideoPixelFxGridThickness,
+      serverVideoAsciiCellSize,
+      serverVideoAsciiContrast,
+      serverVideoAsciiColor,
+      serverVideoWindowMinWidth,
+      serverVideoWindowMaxWidth,
+      sendWsEvent
+    },
+    serverVideoPreview: {
+      appMenuOpen,
+      serverMenuTab,
+      canManageAudioQuality,
+      selectedVideoInputId,
+      serverVideoResolution,
+      serverVideoFps,
+      serverVideoEffectType,
+      serverVideoPixelFxStrength,
+      serverVideoPixelFxPixelSize,
+      serverVideoPixelFxGridThickness,
+      serverVideoAsciiCellSize,
+      serverVideoAsciiContrast,
+      serverVideoAsciiColor
+    },
+    voiceRoomStateMaps: {
+      userId: user?.id || "",
+      micMuted,
+      micTestLevel,
+      audioMuted,
+      callStatus,
+      initialMicStateByUserIdInCurrentRoom: voiceInitialMicStateByUserIdInCurrentRoom,
+      initialAudioOutputMutedByUserIdInCurrentRoom: voiceInitialAudioOutputMutedByUserIdInCurrentRoom
+    },
+    screenShare: {
+      hasSessionToken: Boolean(serviceToken),
+      userId: user?.id || "",
+      userName: user?.name || "",
+      t,
+      pushToast,
+      screenShareOwnerByRoomSlug,
+      setScreenShareOwnerByRoomSlug,
+      sendWsEventAwaitAck
+    },
+    voiceMediaUiMaps: {
+      remoteSpeakingPeerUserIds,
+      currentUserId: user?.id || "",
+      voiceMicStateByUserIdInCurrentRoom,
+      cameraEnabled
+    }
   });
 
   const {

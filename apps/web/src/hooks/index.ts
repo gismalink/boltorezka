@@ -18,6 +18,7 @@ export { useAppMainSectionInput } from "./app/state/useAppMainSectionInput";
 export { useAppAuthWorkspaceRuntime } from "./app/state/useAppAuthWorkspaceRuntime";
 export { useAppModerationActions } from "./app/state/useAppModerationActions";
 export { useAppPermissionsAndLocale } from "./app/state/useAppPermissionsAndLocale";
+export { useAppVoiceMediaRuntime } from "./app/state/useAppVoiceMediaRuntime";
 export { useAppOverlaysSectionInput } from "./app/state/useAppOverlaysSectionInput";
 export { useAppRealtimeTransportRuntime } from "./app/state/useAppRealtimeTransportRuntime";
 export { useAppRoomsRuntime } from "./app/state/useAppRoomsRuntime";
