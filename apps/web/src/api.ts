@@ -360,6 +360,12 @@ export const api = {
       token,
       withJsonBody("POST", { source })
     ),
+  revokeServerAge: (token: string, serverId: string, source = "server-menu") =>
+    fetchJson<ServerAgeConfirmResponse>(
+      withSuffix(endpoints.servers, serverId, "age-confirm"),
+      token,
+      withJsonBody("DELETE", { source })
+    ),
   leaveServer: (token: string, serverId: string) =>
     fetchJson<{ left: boolean }>(withSuffix(endpoints.servers, serverId, "members/me"), token, withJsonBody("DELETE")),
   removeServerMember: (token: string, serverId: string, userId: string) =>

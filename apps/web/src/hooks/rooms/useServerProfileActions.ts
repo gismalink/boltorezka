@@ -16,6 +16,7 @@ type UseServerProfileActionsArgs = {
   currentServerId: string;
   creatingInvite: boolean;
   serverAgeConfirming: boolean;
+  serverAgeConfirmedAt: string | null;
   lastInviteUrl: string;
   setCreatingServer: Dispatch<SetStateAction<boolean>>;
   setServers: Dispatch<SetStateAction<ServerListItem[]>>;
@@ -34,6 +35,7 @@ export function useServerProfileActions({
   currentServerId,
   creatingInvite,
   serverAgeConfirming,
+  serverAgeConfirmedAt,
   lastInviteUrl,
   setCreatingServer,
   setServers,
@@ -130,15 +132,18 @@ export function useServerProfileActions({
 
     setServerAgeConfirming(true);
     try {
-      const response = await api.confirmServerAge(tokenValue, serverId);
+      const isConfirmed = Boolean(serverAgeConfirmedAt);
+      const response = isConfirmed
+        ? await api.revokeServerAge(tokenValue, serverId)
+        : await api.confirmServerAge(tokenValue, serverId);
       setServerAgeConfirmedAt(response.confirmedAt || null);
-      pushToast(t("server.ageConfirmSuccess"));
+      pushToast(t(isConfirmed ? "server.ageConfirmRevoked" : "server.ageConfirmSuccess"));
     } catch (error) {
       pushToast((error as Error).message || t("toast.serverError"));
     } finally {
       setServerAgeConfirming(false);
     }
-  }, [currentServerId, pushToast, serverAgeConfirming, setServerAgeConfirmedAt, setServerAgeConfirming, t, token]);
+  }, [currentServerId, pushToast, serverAgeConfirming, serverAgeConfirmedAt, setServerAgeConfirmedAt, setServerAgeConfirming, t, token]);
 
   const handleCopyInviteUrl = useCallback(async () => {
     const value = String(lastInviteUrl || "").trim();

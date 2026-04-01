@@ -200,7 +200,8 @@ export type ServerAgeStatusResponse = {
 export type ServerAgeConfirmResponse = {
   ok: boolean;
   serverId: string;
-  confirmedAt: string;
+  confirmed: boolean;
+  confirmedAt: string | null;
 };
 
 export type InviteCreateResponse = {

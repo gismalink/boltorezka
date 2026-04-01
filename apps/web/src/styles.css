@@ -577,7 +577,7 @@ body,
 body {
   margin: 0;
   overflow: hidden;
-  font-family: inherit;
+  font-family: "Noto Sans Mono", "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
   background:
     radial-gradient(1200px 700px at 50% 40%, rgba(207, 74, 134, 0.11), rgba(0, 0, 0, 0) 60%),
     radial-gradient(900px 600px at 55% 55%, rgba(53, 230, 255, 0.09), rgba(0, 0, 0, 0) 62%),
@@ -589,6 +589,11 @@ body {
       #140812 2px,
       #140812 4px
     );
+}
+
+[data-ui-theme="material-classic"] body,
+[data-ui-theme="aka-dis"] body {
+  font-family: "Nunito Sans", "Noto Sans", "Segoe UI", sans-serif;
 }
 
 h1,

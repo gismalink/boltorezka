@@ -24,7 +24,7 @@ import { disconnectRealtimeSocketsForUser } from "../realtime-broadcast.js";
 import { createServerInvite } from "../services/invite-service.js";
 import { applyServerBan, revokeServerBan } from "../services/ban-service.js";
 import { makeRateLimiter } from "../middleware/rate-limit.js";
-import { confirmServerAge, getServerAgeConfirmation } from "../services/age-verification-service.js";
+import { confirmServerAge, getServerAgeConfirmation, revokeServerAgeConfirmation } from "../services/age-verification-service.js";
 import type {
   InviteCreateResponse,
   ServerAgeConfirmResponse,
@@ -526,7 +526,42 @@ export async function serversRoutes(fastify: FastifyInstance) {
       const response: ServerAgeConfirmResponse = {
         ok: true,
         serverId,
+        confirmed: true,
         confirmedAt: confirmation.confirmedAt
+      };
+
+      return response;
+    }
+  );
+
+  fastify.delete<{ Params: { serverId: string }; Body: { source?: string } }>(
+    "/v1/servers/:serverId/age-confirm",
+    {
+      preHandler: [
+        requireAuth,
+        requireServiceAccess,
+        requireNotServiceBanned,
+        loadCurrentUser,
+        requireServerMembership,
+        requireNotServerBanned
+      ]
+    },
+    async (request) => {
+      const serverId = String(request.params.serverId || "").trim();
+      const userId = String(request.currentUser?.id || "").trim();
+      const source = String((request.body as { source?: unknown } | undefined)?.source || "").trim() || "explicit-ui";
+
+      await revokeServerAgeConfirmation({
+        serverId,
+        userId,
+        source
+      });
+
+      const response: ServerAgeConfirmResponse = {
+        ok: true,
+        serverId,
+        confirmed: false,
+        confirmedAt: null
       };
 
       return response;

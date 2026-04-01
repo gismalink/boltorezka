@@ -210,24 +210,25 @@ export function UserDockSettingsOverlay({
                   <span className="subheading">ID</span>
                   <input className="profile-readonly-input" value={user.id} disabled aria-disabled="true" />
                 </label>
-                <label className="grid gap-[var(--space-md)]">
-                  <span className="subheading">{t("settings.language")}</span>
-                  <select value={selectedLang} onChange={(event) => onSetSelectedLang(event.target.value as "ru" | "en") }>
-                    {languageOptions.map((option) => (
-                      <option key={option.value} value={option.value}>{option.label}</option>
-                    ))}
-                  </select>
-                </label>
-                <label className="grid gap-[var(--space-md)]">
-                  <span className="subheading">{t("settings.theme")}</span>
-                  <select value={selectedUiTheme} onChange={(event) => onSetSelectedUiTheme(event.target.value as typeof selectedUiTheme) }>
-                    <option value="8-neon-bit">{t("settings.theme8NeonBit")}</option>
-                    <option value="material-classic">{t("settings.themeMaterialClassic")}</option>
-                    <option value="aka-dis">{t("settings.themeAkaDis")}</option>
-                  </select>
-                </label>
+                <div className="grid gap-[var(--space-md)] desktop:grid-cols-2">
+                  <label className="grid gap-[var(--space-md)]">
+                    <span className="subheading">{t("settings.language")}</span>
+                    <select value={selectedLang} onChange={(event) => onSetSelectedLang(event.target.value as "ru" | "en") }>
+                      {languageOptions.map((option) => (
+                        <option key={option.value} value={option.value}>{option.label}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="grid gap-[var(--space-md)]">
+                    <span className="subheading">{t("settings.theme")}</span>
+                    <select value={selectedUiTheme} onChange={(event) => onSetSelectedUiTheme(event.target.value as typeof selectedUiTheme) }>
+                      <option value="8-neon-bit">{t("settings.theme8NeonBit")}</option>
+                      <option value="material-classic">{t("settings.themeMaterialClassic")}</option>
+                      <option value="aka-dis">{t("settings.themeAkaDis")}</option>
+                    </select>
+                  </label>
+                </div>
                 <div className="grid gap-[var(--space-md)]">
-                  <span className="subheading">{t("settings.ageConfirmTitle")}</span>
                   <p className="muted">
                     {serverAgeLoading
                       ? t("settings.ageConfirmLoading")
@@ -236,7 +237,11 @@ export function UserDockSettingsOverlay({
                         : t("settings.ageConfirmNotConfirmed")}
                   </p>
                   <button type="button" className="secondary" onClick={onConfirmServerAge} disabled={serverAgeConfirming}>
-                    {serverAgeConfirming ? t("settings.ageConfirmActionLoading") : t("settings.ageConfirmAction")}
+                    {serverAgeConfirming
+                      ? t("settings.ageConfirmActionLoading")
+                      : serverAgeConfirmedAt
+                        ? t("settings.ageConfirmRevokeAction")
+                        : t("settings.ageConfirmAction")}
                   </button>
                 </div>
               </div>
@@ -249,8 +254,6 @@ export function UserDockSettingsOverlay({
               </button>
 
               <div className="mt-3 grid gap-[var(--space-md)] border-t border-white/15 pt-4">
-                <span className="subheading">{t("settings.accountDeleteTitle")}</span>
-                <p className="muted">{t("settings.accountDeleteHint")}</p>
                 <button
                   type="button"
                   className="secondary"

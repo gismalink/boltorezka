@@ -278,7 +278,8 @@ export type AdminServerOverviewResponse = {
 export type ServerAgeConfirmResponse = {
   ok: true;
   serverId: string;
-  confirmedAt: string;
+  confirmed: boolean;
+  confirmedAt: string | null;
 };
 
 export type ServerAgeStatusResponse = {

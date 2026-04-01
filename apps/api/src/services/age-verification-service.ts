@@ -86,3 +86,24 @@ export async function confirmServerAge(input: ConfirmServerAgeInput): Promise<Se
     confirmedAt: row.confirmed_at
   };
 }
+
+export async function revokeServerAgeConfirmation(input: ConfirmServerAgeInput): Promise<void> {
+  const source = normalizeSource(input.source);
+
+  await db.query(
+    `DELETE FROM server_age_confirmations
+     WHERE server_id = $1
+       AND user_id = $2`,
+    [input.serverId, input.userId]
+  );
+
+  await writeServerAuditEvent({
+    action: "server.age_confirmation_revoked",
+    serverId: input.serverId,
+    actorUserId: input.userId,
+    targetUserId: input.userId,
+    meta: {
+      source
+    }
+  });
+}
