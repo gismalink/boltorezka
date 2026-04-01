@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef } from "react";
 import { ApiError } from "./api";
 import {
   RealtimeClient,
@@ -32,6 +32,7 @@ import {
   useAppRealtimeTransportRuntime,
   useAppVoiceMediaRuntime,
   useAppPermissionsAndLocale,
+  useAppRefsAndAdaptersRuntime,
   useAppRoomsRuntime,
   useAppShellRuntime,
   useAppWorkspaceActionsRuntime,
@@ -69,7 +70,7 @@ import {
   useVoiceUiLifecycleEffects
 } from "./hooks";
 import { formatBuildDateLabel } from "./utils/appShell";
-import type { Message, RoomKind } from "./domain";
+import type { RoomKind } from "./domain";
 
 const CLIENT_BUILD_VERSION = String(import.meta.env.VITE_APP_VERSION || "").trim();
 const CLIENT_BUILD_SHA = String(import.meta.env.VITE_APP_BUILD_SHA || CLIENT_BUILD_VERSION || "").trim();
@@ -209,7 +210,6 @@ export function App() {
     serverVideoWindowMinWidth, setServerVideoWindowMinWidth,
     serverVideoWindowMaxWidth, setServerVideoWindowMaxWidth
   } = useAppUserMediaState();
-  const [realtimeReconnectNonce, setRealtimeReconnectNonce] = useState(0);
   const {
     audioOutputMenuOpen, setAudioOutputMenuOpen,
     voiceSettingsOpen, setVoiceSettingsOpen,
@@ -227,23 +227,6 @@ export function App() {
   } = useAppUiState();
   const { toasts, pushToast } = useToastQueue();
   const realtimeClientRef = useRef<RealtimeClient | null>(null);
-  const currentServerIdRef = useRef(currentServerId);
-  const roomSlugRef = useRef(roomSlug);
-  const lastRoomSlugForScrollRef = useRef(chatRoomSlug);
-  const lastMessageIdRef = useRef<string | null>(null);
-  const chatLogRef = useRef<HTMLDivElement>(null);
-  const autoSsoAttemptedRef = useRef(false);
-  const authMenuRef = useRef<HTMLDivElement>(null);
-  const profileMenuRef = useRef<HTMLDivElement>(null);
-  const categoryPopupRef = useRef<HTMLDivElement>(null);
-  const channelPopupRef = useRef<HTMLDivElement>(null);
-  const audioOutputAnchorRef = useRef<HTMLDivElement>(null);
-  const voiceSettingsAnchorRef = useRef<HTMLDivElement>(null);
-  const userSettingsRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    currentServerIdRef.current = currentServerId;
-  }, [currentServerId]);
 
   const {
     canCreateRooms,
@@ -266,12 +249,34 @@ export function App() {
     lang,
     pushToast
   });
-  const maxChatImageKb = Math.max(1, Math.floor(serverChatImagePolicy.maxDataUrlLength / 1024));
-  const selectChannelPlaceholderMessage = t("chat.selectChannelPlaceholder");
-  const serverErrorMessage = t("toast.serverError");
-  const chatImageTooLargeMessage = t("chat.imageTooLarge")
-    .replace("{maxSide}", String(serverChatImagePolicy.maxImageSide))
-    .replace("{maxKb}", String(maxChatImageKb));
+  const {
+    realtimeReconnectNonce,
+    bumpRealtimeReconnectNonce,
+    currentServerIdRef,
+    roomSlugRef,
+    lastRoomSlugForScrollRef,
+    lastMessageIdRef,
+    chatLogRef,
+    autoSsoAttemptedRef,
+    authMenuRef,
+    profileMenuRef,
+    categoryPopupRef,
+    channelPopupRef,
+    audioOutputAnchorRef,
+    voiceSettingsAnchorRef,
+    userSettingsRef,
+    selectChannelPlaceholderMessage,
+    serverErrorMessage,
+    chatImageTooLargeMessage,
+    markMessageDelivery
+  } = useAppRefsAndAdaptersRuntime({
+    currentServerId,
+    roomSlug,
+    chatRoomSlug,
+    t,
+    chatImagePolicy: serverChatImagePolicy,
+    setMessages
+  });
   const { eventLog, callEventLog, pushLog, pushCallLog } = useAppEventLogs(locale);
 
   const { collapsedCategoryIds, toggleCategoryCollapsed } = useCollapsedCategories(roomsTree);
@@ -283,18 +288,6 @@ export function App() {
   } = useServerSounds();
 
   useBuildVersionSync(CLIENT_BUILD_SHA);
-
-  const markMessageDelivery = (
-    requestId: string,
-    status: "sending" | "delivered" | "failed",
-    patch: Partial<Message> = {}
-  ) => {
-    setMessages((prev) =>
-      prev.map((item) =>
-        item.clientRequestId === requestId ? { ...item, deliveryStatus: status, ...patch } : item
-      )
-    );
-  };
 
   const {
     sendWsEvent,
@@ -675,7 +668,7 @@ export function App() {
       setProfileStatusText,
       setUser,
       pushToast,
-      onProfileSaved: () => setRealtimeReconnectNonce((value) => value + 1)
+      onProfileSaved: bumpRealtimeReconnectNonce
     },
     deletedAccount: {
       token,

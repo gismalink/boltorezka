@@ -81,7 +81,8 @@ Progress note:
 - Шестьдесят девятый инкремент декомпозиции `web` выполнен: auth workspace runtime (`useDesktopUpdateFlow` + `useDesktopHandoffState` + `useAuthProfileFlow` + `useDeletedAccountActions`) вынесен из `App.tsx` в `hooks/app/state/useAppAuthWorkspaceRuntime.ts`.
 - Семидесятый инкремент декомпозиции `web` выполнен: controllers runtime (`useAppControllers` + `useRealtimeIncomingCallState` + `useSessionStateLifecycle` + `useAppRealtimeChatRuntime`) вынесен из `App.tsx` в `hooks/app/effects/useAppControllersRuntime.ts`.
 - Семьдесят первый инкремент декомпозиции `web` выполнен: voice/media runtime (`useVoiceParticipantsDerived` + `useCurrentRoomSnapshot` + `useRoomMediaCapabilities` + `useLivekitVoiceRuntime` + `useScreenShareOrchestrator` + `useVoiceMediaUiMaps` + related AV effects) вынесен из `App.tsx` в `hooks/app/state/useAppVoiceMediaRuntime.ts`.
-- Cumulative: `App.tsx` сокращен с 2101 до 1489 строк; web build + denied-media smoke проходят после каждого инкремента.
+- Семьдесят второй инкремент декомпозиции `web` выполнен: top-level refs/state adapters (`realtimeReconnectNonce`, app refs cluster, localized chat image/message adapters, `markMessageDelivery`) вынесены из `App.tsx` в `hooks/app/state/useAppRefsAndAdaptersRuntime.ts`.
+- Cumulative: `App.tsx` сокращен с 2101 до 1482 строк; web build + denied-media smoke проходят после каждого инкремента.
 
 ### 2.2 API route decomposition
 
