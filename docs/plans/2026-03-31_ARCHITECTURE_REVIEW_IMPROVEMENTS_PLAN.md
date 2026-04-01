@@ -92,7 +92,8 @@ Progress note:
 - Восьмидесятый инкремент декомпозиции `web` выполнен: input builder для workspace panels runtime вынесен в `hooks/app/state/useAppWorkspacePanelsRuntimeInput.ts`.
 - Восемьдесят первый инкремент декомпозиции `web` выполнен: input builder для shell runtime вынесен в `hooks/app/state/useAppShellRuntimeInput.ts`.
 - Восемьдесят второй инкремент стабилизации `web` выполнен: builder hooks (`useAppWorkspaceActionsRuntimeInput`, `useAppWorkspacePanelsRuntimeInput`, `useAppShellRuntimeInput`) упрощены — удалены лишние `useMemo([params])` обертки без изменения runtime-поведения.
-- Cumulative: `App.tsx` сокращен с 2101 до 1388 строк; web build + denied-media smoke проходят после каждого инкремента.
+- Восемьдесят третий инкремент декомпозиции `web` выполнен: input builder для controllers runtime вынесен в `hooks/app/state/useAppControllersRuntimeInput.ts`.
+- Cumulative: `App.tsx` сокращен с 2101 до 1337 строк; web build + denied-media smoke проходят после каждого инкремента.
 
 ### 2.2 API route decomposition
 
