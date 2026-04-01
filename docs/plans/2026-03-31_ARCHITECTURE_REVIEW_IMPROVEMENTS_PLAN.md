@@ -207,6 +207,8 @@ Action items:
 Progress note:
 
 - Стартован isolated Socket.IO POC (non-prod path): `apps/api/src/spikes/socketio-poc/server.ts` + `apps/api/src/spikes/socketio-poc/client.ts` + `apps/api/src/spikes/socketio-poc/README.md`; добавлены scripts `spike:socketio:server`/`spike:socketio:client`.
+- Добавлен native WS companion POC + unified compare runner: `native-ws-server.ts`, `native-ws-client.ts`, `compare.ts`, scripts `spike:ws:server`, `spike:ws:client`, `spike:compare`.
+- Результат локального замера `npm --prefix apps/api run spike:compare`: Socket.IO vs native WS (ms, delta = socket.io - native ws) — `pingAck -0.05`, `roomJoinAckPeerA +0.02`, `roomJoinAckPeerB +0.19`, `chatSendAck -0.09`, `chatReceivePeerB -0.08`.
 
 ### 2.7 SSO proxy timeout policy
 
