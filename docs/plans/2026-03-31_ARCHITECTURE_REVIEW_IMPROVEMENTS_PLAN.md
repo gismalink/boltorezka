@@ -202,13 +202,17 @@ Action items:
 
 - [x] Зафиксировать ADR по realtime transport выбору (native WS now, Socket.IO reconsider triggers).
 - [x] Добавить decision matrix с метриками: reliability, latency, migration effort, test rewrite cost.
-- [ ] Подготовить ограниченный spike (не в prod path): Socket.IO POC для `ping`, `room.join`, `chat.send` и сравнить с текущим протоколом.
+- [x] Подготовить ограниченный spike (не в prod path): Socket.IO POC для `ping`, `room.join`, `chat.send` и сравнить с текущим протоколом.
 
 Progress note:
 
 - Стартован isolated Socket.IO POC (non-prod path): `apps/api/src/spikes/socketio-poc/server.ts` + `apps/api/src/spikes/socketio-poc/client.ts` + `apps/api/src/spikes/socketio-poc/README.md`; добавлены scripts `spike:socketio:server`/`spike:socketio:client`.
 - Добавлен native WS companion POC + unified compare runner: `native-ws-server.ts`, `native-ws-client.ts`, `compare.ts`, scripts `spike:ws:server`, `spike:ws:client`, `spike:compare`.
 - Результат локального замера `npm --prefix apps/api run spike:compare`: Socket.IO vs native WS (ms, delta = socket.io - native ws) — `pingAck -0.05`, `roomJoinAckPeerA +0.02`, `roomJoinAckPeerB +0.19`, `chatSendAck -0.09`, `chatReceivePeerB -0.08`.
+- Результат многократного замера `SPIKE_COMPARE_RUNS=30 npm --prefix apps/api run spike:compare` (delta = socket.io - native ws):
+	- avg: `pingAck -0.10`, `roomJoinAckPeerA +0.03`, `roomJoinAckPeerB +0.20`, `chatSendAck -0.14`, `chatReceivePeerB -0.10`.
+	- p50: `pingAck -0.13`, `roomJoinAckPeerA +0.03`, `roomJoinAckPeerB +0.20`, `chatSendAck -0.13`, `chatReceivePeerB -0.09`.
+	- p95: `pingAck +0.13`, `roomJoinAckPeerA +0.19`, `roomJoinAckPeerB +0.26`, `chatSendAck +0.03`, `chatReceivePeerB +0.10`.
 
 ### 2.7 SSO proxy timeout policy
 

@@ -4,6 +4,8 @@ import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 
 type ScenarioSummary = {
+  baseUrl?: string;
+  roomSlug?: string;
   transport: string;
   pingAckMs: number;
   roomJoinAckMs: {
@@ -15,6 +17,35 @@ type ScenarioSummary = {
     receiveMsOnPeerB: number;
     messageId: string | null;
   };
+};
+
+type DeltaMetrics = {
+  pingAck: number;
+  roomJoinAckPeerA: number;
+  roomJoinAckPeerB: number;
+  chatSendAck: number;
+  chatReceivePeerB: number;
+};
+
+type ComparisonSample = {
+  socketio: ScenarioSummary;
+  nativeWs: ScenarioSummary;
+  deltaMs: DeltaMetrics;
+};
+
+type NumericMetric = keyof DeltaMetrics;
+
+type AggregatedMetric = {
+  avg: number;
+  p50: number;
+  p95: number;
+  min: number;
+  max: number;
+};
+
+type MultiRunSummary = {
+  runs: number;
+  metrics: Record<NumericMetric, AggregatedMetric>;
 };
 
 const currentFile = fileURLToPath(import.meta.url);
@@ -133,6 +164,60 @@ function toFixed(value: number): number {
   return Number(value.toFixed(2));
 }
 
+function toDelta(socketioSummary: ScenarioSummary, nativeWsSummary: ScenarioSummary): DeltaMetrics {
+  return {
+    pingAck: toFixed(socketioSummary.pingAckMs - nativeWsSummary.pingAckMs),
+    roomJoinAckPeerA: toFixed(socketioSummary.roomJoinAckMs.peerA - nativeWsSummary.roomJoinAckMs.peerA),
+    roomJoinAckPeerB: toFixed(socketioSummary.roomJoinAckMs.peerB - nativeWsSummary.roomJoinAckMs.peerB),
+    chatSendAck: toFixed(socketioSummary.chat.sendAckMs - nativeWsSummary.chat.sendAckMs),
+    chatReceivePeerB: toFixed(socketioSummary.chat.receiveMsOnPeerB - nativeWsSummary.chat.receiveMsOnPeerB)
+  };
+}
+
+function percentile(sortedValues: number[], p: number): number {
+  if (sortedValues.length === 0) {
+    return 0;
+  }
+
+  const index = Math.min(sortedValues.length - 1, Math.max(0, Math.ceil(p * sortedValues.length) - 1));
+  return sortedValues[index] ?? 0;
+}
+
+function summarizeMetric(values: number[]): AggregatedMetric {
+  const sorted = [...values].sort((a, b) => a - b);
+  const sum = sorted.reduce((acc, value) => acc + value, 0);
+
+  return {
+    avg: toFixed(sum / sorted.length),
+    p50: toFixed(percentile(sorted, 0.5)),
+    p95: toFixed(percentile(sorted, 0.95)),
+    min: toFixed(sorted[0] ?? 0),
+    max: toFixed(sorted[sorted.length - 1] ?? 0)
+  };
+}
+
+function aggregateSamples(samples: ComparisonSample[]): MultiRunSummary {
+  const metricKeys: NumericMetric[] = [
+    "pingAck",
+    "roomJoinAckPeerA",
+    "roomJoinAckPeerB",
+    "chatSendAck",
+    "chatReceivePeerB"
+  ];
+
+  const metrics = Object.fromEntries(
+    metricKeys.map((key) => [
+      key,
+      summarizeMetric(samples.map((sample) => sample.deltaMs[key]))
+    ])
+  ) as Record<NumericMetric, AggregatedMetric>;
+
+  return {
+    runs: samples.length,
+    metrics
+  };
+}
+
 async function runScenario(
   serverScript: string,
   serverEnv: Record<string, string>,
@@ -152,33 +237,41 @@ async function runScenario(
 }
 
 async function main() {
-  const socketioSummary = await runScenario(
-    "spike:socketio:server",
-    { SOCKETIO_POC_PORT: "3199" },
-    "[socketio-poc] listening on :3199",
-    "spike:socketio:client",
-    { SOCKETIO_POC_URL: "http://127.0.0.1:3199" }
-  );
+  const runs = Number.parseInt(String(process.env.SPIKE_COMPARE_RUNS || "1"), 10);
+  const normalizedRuns = Number.isFinite(runs) && runs > 0 ? runs : 1;
+  const samples: ComparisonSample[] = [];
 
-  const nativeWsSummary = await runScenario(
-    "spike:ws:server",
-    { NATIVE_WS_POC_PORT: "3200" },
-    "[native-ws-poc] listening on :3200",
-    "spike:ws:client",
-    { NATIVE_WS_POC_URL: "ws://127.0.0.1:3200/ws" }
-  );
+  for (let index = 0; index < normalizedRuns; index += 1) {
+    const socketioSummary = await runScenario(
+      "spike:socketio:server",
+      { SOCKETIO_POC_PORT: "3199" },
+      "[socketio-poc] listening on :3199",
+      "spike:socketio:client",
+      { SOCKETIO_POC_URL: "http://127.0.0.1:3199" }
+    );
 
-  const comparison = {
-    socketio: socketioSummary,
-    nativeWs: nativeWsSummary,
-    deltaMs: {
-      pingAck: toFixed(socketioSummary.pingAckMs - nativeWsSummary.pingAckMs),
-      roomJoinAckPeerA: toFixed(socketioSummary.roomJoinAckMs.peerA - nativeWsSummary.roomJoinAckMs.peerA),
-      roomJoinAckPeerB: toFixed(socketioSummary.roomJoinAckMs.peerB - nativeWsSummary.roomJoinAckMs.peerB),
-      chatSendAck: toFixed(socketioSummary.chat.sendAckMs - nativeWsSummary.chat.sendAckMs),
-      chatReceivePeerB: toFixed(socketioSummary.chat.receiveMsOnPeerB - nativeWsSummary.chat.receiveMsOnPeerB)
-    }
-  };
+    const nativeWsSummary = await runScenario(
+      "spike:ws:server",
+      { NATIVE_WS_POC_PORT: "3200" },
+      "[native-ws-poc] listening on :3200",
+      "spike:ws:client",
+      { NATIVE_WS_POC_URL: "ws://127.0.0.1:3200/ws" }
+    );
+
+    samples.push({
+      socketio: socketioSummary,
+      nativeWs: nativeWsSummary,
+      deltaMs: toDelta(socketioSummary, nativeWsSummary)
+    });
+  }
+
+  const comparison = normalizedRuns === 1
+    ? samples[0]
+    : {
+        runs: normalizedRuns,
+        last: samples[samples.length - 1],
+        aggregateDeltaMs: aggregateSamples(samples)
+      };
 
   // eslint-disable-next-line no-console
   console.log(JSON.stringify(comparison, null, 2));

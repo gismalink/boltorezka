@@ -32,6 +32,12 @@ npm --prefix apps/api run spike:ws:client
 npm --prefix apps/api run spike:compare
 ```
 
+5. Для многократного сравнения (p50/p95/avg по delta):
+
+```bash
+SPIKE_COMPARE_RUNS=30 npm --prefix apps/api run spike:compare
+```
+
 ## Переменные
 
 - `SOCKETIO_POC_PORT` (default `3199`)
@@ -40,6 +46,7 @@ npm --prefix apps/api run spike:compare
 - `NATIVE_WS_POC_PORT` (default `3200`)
 - `NATIVE_WS_POC_URL` (default `ws://127.0.0.1:3200/ws`)
 - `NATIVE_WS_POC_ROOM` (default `poc-room`)
+- `SPIKE_COMPARE_RUNS` (default `1`)
 
 ## Что фиксируем для сравнения
 
