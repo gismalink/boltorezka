@@ -70,6 +70,8 @@ Progress note:
 - Пятьдесят восьмой инкремент декомпозиции `web` выполнен: server/admin actions orchestration (`useServerProfileActions` + `useAdminServerActions`) вынесен из `App.tsx` в `hooks/app/state/useAppServerAdminActions.ts`.
 - Пятьдесят девятый инкремент декомпозиции `web` выполнен: moderation/preference actions orchestration (`useServerModerationActions` + `useRoomMemberPreferencesOrchestrator`) вынесен из `App.tsx` в `hooks/app/state/useAppModerationActions.ts`.
 - Шестидесятый инкремент декомпозиции `web` выполнен: realtime runtime cluster (`useRealtimeLifecycleCallbacks` + `useRealtimeChatLifecycleProps` + `useRealtimeChatLifecycle`) вынесен из `App.tsx` в `hooks/app/effects/useAppRealtimeChatRuntime.ts`.
+- Шестьдесят первый инкремент декомпозиции `web` выполнен: room admin actions runtime (`useRoomAdminActions`) вынесен из `App.tsx` в `hooks/app/state/useAppRoomAdminRuntime.ts`.
+- Шестьдесят второй инкремент декомпозиции `web` выполнен: workspace panels runtime (`useAppRoomsPanelProps` + `useAppServerProfileModalProps` + `useAppChatVideoProps`) вынесен из `App.tsx` в `hooks/app/state/useAppWorkspacePanelsRuntime.ts`.
 - Cumulative: `App.tsx` сокращен с 2101 до 1587 строк; web build + denied-media smoke проходят после каждого инкремента.
 
 ### 2.2 API route decomposition

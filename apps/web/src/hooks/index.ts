@@ -18,10 +18,12 @@ export { useAppPermissionsAndLocale } from "./app/state/useAppPermissionsAndLoca
 export { useAppOverlaysSectionInput } from "./app/state/useAppOverlaysSectionInput";
 export { useAppRoomsPanelProps } from "./app/state/useAppRoomsPanelProps";
 export { useAppRoomChatActions } from "./app/state/useAppRoomChatActions";
+export { useAppRoomAdminRuntime } from "./app/state/useAppRoomAdminRuntime";
 export { useAppRoomsAndServerDerived } from "./app/state/useAppRoomsAndServerDerived";
 export { useAppShellCompositionProps } from "./app/state/useAppShellCompositionProps";
 export { useAppServerAdminActions } from "./app/state/useAppServerAdminActions";
 export { useAppServerProfileModalProps } from "./app/state/useAppServerProfileModalProps";
+export { useAppWorkspacePanelsRuntime } from "./app/state/useAppWorkspacePanelsRuntime";
 export { useAppShellLayoutProps } from "./app/state/useAppShellLayoutProps";
 export { useAppShellOverlaysProps } from "./app/state/useAppShellOverlaysProps";
 export { useAppTopChromeSectionInput } from "./app/state/useAppTopChromeSectionInput";
