@@ -1015,7 +1015,8 @@ export function ServerProfileModal({
                         <span className="muted">{t("server.inviteTitle")}</span>
                         <input
                           type="text"
-                          readOnly
+                          disabled
+                          aria-disabled="true"
                           value={lastInviteUrl}
                           placeholder={t("server.invitePlaceholder")}
                         />

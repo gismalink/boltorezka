@@ -196,7 +196,7 @@ export function UserDockSettingsOverlay({
                 <h3 className="subheading">{t("settings.profileSection")}</h3>
                 <label className="grid gap-[var(--space-md)]">
                   <span className="subheading">{t("settings.username")}</span>
-                  <input className="profile-readonly-input" value={profileUsername} readOnly aria-readonly="true" />
+                  <input className="profile-readonly-input" value={profileUsername} disabled aria-disabled="true" />
                 </label>
                 <label className="grid gap-[var(--space-md)]">
                   <span className="subheading">{t("settings.displayName")}</span>
@@ -204,11 +204,11 @@ export function UserDockSettingsOverlay({
                 </label>
                 <label className="grid gap-[var(--space-md)]">
                   <span className="subheading">{t("settings.email")}</span>
-                  <input className="profile-readonly-input" value={profileEmail} readOnly aria-readonly="true" />
+                  <input className="profile-readonly-input" value={profileEmail} disabled aria-disabled="true" />
                 </label>
                 <label className="grid gap-[var(--space-md)]">
                   <span className="subheading">ID</span>
-                  <input className="profile-readonly-input" value={user.id} readOnly aria-readonly="true" />
+                  <input className="profile-readonly-input" value={user.id} disabled aria-disabled="true" />
                 </label>
                 <label className="grid gap-[var(--space-md)]">
                   <span className="subheading">{t("settings.language")}</span>

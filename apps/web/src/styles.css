@@ -623,6 +623,13 @@ textarea {
   box-sizing: border-box;
 }
 
+input:disabled,
+select:disabled,
+textarea:disabled {
+  opacity: 0.72;
+  cursor: not-allowed;
+}
+
 .range-slider-wrap {
   width: 100%;
 }
