@@ -84,7 +84,8 @@ Progress note:
 - Семьдесят второй инкремент декомпозиции `web` выполнен: top-level refs/state adapters (`realtimeReconnectNonce`, app refs cluster, localized chat image/message adapters, `markMessageDelivery`) вынесены из `App.tsx` в `hooks/app/state/useAppRefsAndAdaptersRuntime.ts`.
 - Семьдесят третий инкремент стабилизации `web` выполнен: App wiring очищен от повторяющихся user/session adapters (`currentUserId`, `hasUser`, `hasServiceToken`) и неиспользуемых react imports, что снизило шум orchestration-слоя без изменения поведения.
 - Семьдесят четвертый инкремент стабилизации `web` выполнен: устранен test type drift для `PresenceMember` в `hooks/app/effects/useMemberPreferencesSync.test.ts` (добавлено обязательное `userName` в fixtures).
-- Cumulative: `App.tsx` сокращен с 2101 до 1462 строк; web build + denied-media smoke проходят после каждого инкремента.
+- Семьдесят пятый инкремент стабилизации `web` выполнен: устранен wiring-regression в `App.tsx` (screenShare runtime: `hasSessionToken` восстановлен через `hasServiceToken`) после изменений в orchestration adapters.
+- Cumulative: `App.tsx` сокращен с 2101 до 1460 строк; web build + denied-media smoke проходят после каждого инкремента.
 
 ### 2.2 API route decomposition
 

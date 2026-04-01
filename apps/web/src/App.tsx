@@ -454,7 +454,7 @@ export function App() {
       initialAudioOutputMutedByUserIdInCurrentRoom: voiceInitialAudioOutputMutedByUserIdInCurrentRoom
     },
     screenShare: {
-      hasSessionToken,
+      hasSessionToken: hasServiceToken,
       userId: currentUserId,
       userName: currentUserName,
       t,
@@ -836,10 +836,8 @@ export function App() {
       setChatRoomSlug
     },
     roomSelectionGuard: {
-      roomSlug,
-      chatRoomSlug,
-      setRoomSlug,
-      setChatRoomSlug
+      roomSlug, setRoomSlug,
+      chatRoomSlug, setChatRoomSlug
     }
   });
 
