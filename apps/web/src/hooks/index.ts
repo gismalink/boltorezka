@@ -21,6 +21,7 @@ export { useAppRoomChatActions } from "./app/state/useAppRoomChatActions";
 export { useAppRoomAdminRuntime } from "./app/state/useAppRoomAdminRuntime";
 export { useAppRoomsAndServerDerived } from "./app/state/useAppRoomsAndServerDerived";
 export { useAppShellCompositionProps } from "./app/state/useAppShellCompositionProps";
+export { useAppShellRuntime } from "./app/state/useAppShellRuntime";
 export { useAppServerAdminActions } from "./app/state/useAppServerAdminActions";
 export { useAppServerProfileModalProps } from "./app/state/useAppServerProfileModalProps";
 export { useAppWorkspacePanelsRuntime } from "./app/state/useAppWorkspacePanelsRuntime";
