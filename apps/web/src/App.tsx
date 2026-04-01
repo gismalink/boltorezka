@@ -583,7 +583,7 @@ export function App() {
     setMemberPreferencesByUserId,
     canManageUsers, canPromote, canManageAudioQuality,
     setServerAudioQuality, setServerAudioQualitySaving,
-    creatingInvite, serverAgeConfirming, lastInviteUrl,
+    creatingInvite, serverAgeConfirming, serverAgeConfirmedAt, lastInviteUrl,
     setCreatingServer, setServers, setCurrentServerId,
     setCreatingInvite, setLastInviteUrl,
     setServerAgeConfirmedAt, setServerMembers, setAdminServers,
