@@ -403,7 +403,7 @@ export function RoomRow({
                 <h3 className="subheading">{t("rooms.channelSettings")}</h3>
                 <div className="grid gap-1.5">
                   <span className="subheading">{t("rooms.channelTitle")}</span>
-                  <div className="row items-center gap-2">
+                  <div className="row items-center gap-2 channel-settings-title-row">
                     {isEditingChannelTitle ? (
                       <button
                         type="button"
@@ -418,6 +418,7 @@ export function RoomRow({
                       </button>
                     ) : null}
                     <input
+                      className="channel-settings-title-input"
                       value={editingRoomTitle}
                       onFocus={() => {
                         setEditingChannelTitleInitialValue(editingRoomTitle);
@@ -476,31 +477,33 @@ export function RoomRow({
                     ))}
                   </select>
                 </div>
-                <div className="row items-center justify-between gap-3">
-                  <span>{t("rooms.channelNsfw")}</span>
-                  <button
-                    type="button"
-                    className={`ui-switch ${editingRoomNsfw ? "ui-switch-on" : ""}`}
-                    role="switch"
-                    aria-checked={editingRoomNsfw}
-                    aria-label={t("rooms.channelNsfw")}
-                    onClick={() => onSetEditingRoomNsfw(!editingRoomNsfw)}
-                  >
-                    <span className="ui-switch-thumb" aria-hidden="true" />
-                  </button>
-                </div>
-                <div className="row items-center justify-between gap-3">
-                  <span>{t("rooms.channelHidden")}</span>
-                  <button
-                    type="button"
-                    className={`ui-switch ${editingRoomHidden ? "ui-switch-on" : ""}`}
-                    role="switch"
-                    aria-checked={editingRoomHidden}
-                    aria-label={t("rooms.channelHidden")}
-                    onClick={() => onSetEditingRoomHidden(!editingRoomHidden)}
-                  >
-                    <span className="ui-switch-thumb" aria-hidden="true" />
-                  </button>
+                <div className="channel-settings-toggles-row">
+                  <div className="row items-center justify-between gap-3 channel-settings-toggle-item">
+                    <span>{t("rooms.channelNsfw")}</span>
+                    <button
+                      type="button"
+                      className={`ui-switch ${editingRoomNsfw ? "ui-switch-on" : ""}`}
+                      role="switch"
+                      aria-checked={editingRoomNsfw}
+                      aria-label={t("rooms.channelNsfw")}
+                      onClick={() => onSetEditingRoomNsfw(!editingRoomNsfw)}
+                    >
+                      <span className="ui-switch-thumb" aria-hidden="true" />
+                    </button>
+                  </div>
+                  <div className="row items-center justify-between gap-3 channel-settings-toggle-item">
+                    <span>{t("rooms.channelHidden")}</span>
+                    <button
+                      type="button"
+                      className={`ui-switch ${editingRoomHidden ? "ui-switch-on" : ""}`}
+                      role="switch"
+                      aria-checked={editingRoomHidden}
+                      aria-label={t("rooms.channelHidden")}
+                      onClick={() => onSetEditingRoomHidden(!editingRoomHidden)}
+                    >
+                      <span className="ui-switch-thumb" aria-hidden="true" />
+                    </button>
+                  </div>
                 </div>
                 {canManageAudioQuality ? (
                   <div className="grid gap-2">
@@ -550,7 +553,7 @@ export function RoomRow({
                   </div>
                 ) : null}
                 <button type="submit" className="icon-action"><i className="bi bi-check2" aria-hidden="true" /> {t("rooms.save")}</button>
-                <div className="row flex-wrap items-center gap-2">
+                <div className="row items-center gap-2 channel-settings-actions-row">
                   <button
                     type="button"
                     className="secondary clear-action-btn"
