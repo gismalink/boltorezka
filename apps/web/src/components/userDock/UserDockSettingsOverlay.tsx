@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import type { UserDockProps } from "../types";
 import { RangeSlider } from "../uicomponents";
+import { formatPushToTalkHotkey, normalizePushToTalkHotkey } from "../../utils/pushToTalk";
 
 type UserDockSettingsOverlayProps = Pick<
   UserDockProps,
@@ -44,6 +45,10 @@ type UserDockSettingsOverlayProps = Pick<
   | "outputVolume"
   | "onSetMicVolume"
   | "onSetOutputVolume"
+  | "walkieTalkieEnabled"
+  | "walkieTalkieHotkey"
+  | "onSetWalkieTalkieEnabled"
+  | "onSetWalkieTalkieHotkey"
   | "selectedVideoInputId"
   | "videoInputOptions"
   | "onSetSelectedVideoInputId"
@@ -113,6 +118,10 @@ export function UserDockSettingsOverlay({
   outputVolume,
   onSetMicVolume,
   onSetOutputVolume,
+  walkieTalkieEnabled,
+  walkieTalkieHotkey,
+  onSetWalkieTalkieEnabled,
+  onSetWalkieTalkieHotkey,
   selectedVideoInputId,
   videoInputOptions,
   onSetSelectedVideoInputId,
@@ -143,6 +152,7 @@ export function UserDockSettingsOverlay({
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [isEditingName, setIsEditingName] = useState(false);
   const [profileNameInitialValue, setProfileNameInitialValue] = useState(profileNameDraft);
+  const walkieTalkieHotkeyLabel = formatPushToTalkHotkey(walkieTalkieHotkey);
 
   const normalizedInitialName = profileNameInitialValue.trim();
   const normalizedDraftName = profileNameDraft.trim();
@@ -403,6 +413,42 @@ export function UserDockSettingsOverlay({
                     />
                   ))}
                 </div>
+              </div>
+
+              <div className="voice-divider" />
+
+              <div className="grid gap-2">
+                <div className="voice-sound-checkbox flex items-center justify-between gap-3">
+                  <span>{t("settings.walkieTalkieMode")}</span>
+                  <button
+                    type="button"
+                    className={`ui-switch ${walkieTalkieEnabled ? "ui-switch-on" : ""}`}
+                    role="switch"
+                    aria-checked={walkieTalkieEnabled}
+                    aria-label={t("settings.walkieTalkieMode")}
+                    onClick={() => onSetWalkieTalkieEnabled(!walkieTalkieEnabled)}
+                  >
+                    <span className="ui-switch-thumb" aria-hidden="true" />
+                  </button>
+                </div>
+
+                {walkieTalkieEnabled ? (
+                  <label className="grid gap-2">
+                    <span className="subheading">{t("settings.walkieTalkieHotkey")}</span>
+                    <input
+                      type="text"
+                      value={walkieTalkieHotkeyLabel}
+                      readOnly
+                      onKeyDown={(event) => {
+                        event.preventDefault();
+                        onSetWalkieTalkieHotkey(normalizePushToTalkHotkey(event.code));
+                      }}
+                      onFocus={(event) => event.currentTarget.select()}
+                      aria-label={t("settings.walkieTalkieHotkey")}
+                    />
+                    <p className="muted media-devices-warning">{t("settings.walkieTalkieHotkeyHint")}</p>
+                  </label>
+                ) : null}
               </div>
 
               <div className="voice-divider" />

@@ -11,6 +11,8 @@ export type User = {
   username: string | null;
   name: string;
   ui_theme: UiTheme;
+  walkie_talkie_enabled?: boolean;
+  walkie_talkie_hotkey?: string;
   role: "user" | "admin" | "super_admin";
   is_banned: boolean;
   access_state: "pending" | "active" | "blocked";

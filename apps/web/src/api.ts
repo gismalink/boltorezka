@@ -266,7 +266,15 @@ export const api = {
       withJsonBody("POST", { code })
     ),
   me: (token: string) => fetchJson<{ user: User | null }>(endpoints.me, token),
-  updateMe: (token: string, input: { name: string; uiTheme?: UiTheme }) =>
+  updateMe: (
+    token: string,
+    input: {
+      name: string;
+      uiTheme?: UiTheme;
+      walkieTalkieEnabled?: boolean;
+      walkieTalkieHotkey?: string;
+    }
+  ) =>
     fetchJson<{ user: User | null }>(endpoints.me, token, withJsonBody("PATCH", input)),
   deleteMe: (token: string) =>
     fetchJson<{ ok: true; purgeScheduledAt: string | null; daysRemaining: number }>(endpoints.me, token, withJsonBody("DELETE")),

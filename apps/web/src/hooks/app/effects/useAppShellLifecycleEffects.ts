@@ -1,6 +1,7 @@
 import { useEffect, type Dispatch, type SetStateAction } from "react";
 import { normalizeUiTheme } from "../../../utils/appShell";
 import type { UiTheme, User } from "../../../domain";
+import { normalizePushToTalkHotkey } from "../../../utils/pushToTalk";
 
 type UseAppShellLifecycleEffectsArgs = {
   lang: string;
@@ -11,6 +12,8 @@ type UseAppShellLifecycleEffectsArgs = {
   setProfileNameDraft: Dispatch<SetStateAction<string>>;
   setSelectedUiTheme: Dispatch<SetStateAction<UiTheme>>;
   setProfileStatusText: Dispatch<SetStateAction<string>>;
+  setWalkieTalkieEnabled: Dispatch<SetStateAction<boolean>>;
+  setWalkieTalkieHotkey: Dispatch<SetStateAction<string>>;
   setShowFirstRunIntro: Dispatch<SetStateAction<boolean>>;
   setEditingMessageId: Dispatch<SetStateAction<string | null>>;
   setPendingChatImageDataUrl: Dispatch<SetStateAction<string | null>>;
@@ -25,6 +28,8 @@ export function useAppShellLifecycleEffects({
   setProfileNameDraft,
   setSelectedUiTheme,
   setProfileStatusText,
+  setWalkieTalkieEnabled,
+  setWalkieTalkieHotkey,
   setShowFirstRunIntro,
   setEditingMessageId,
   setPendingChatImageDataUrl
@@ -57,8 +62,21 @@ export function useAppShellLifecycleEffects({
   useEffect(() => {
     setProfileNameDraft(user?.name || "");
     setSelectedUiTheme(normalizeUiTheme(user?.ui_theme));
+    if (typeof user?.walkie_talkie_enabled === "boolean") {
+      setWalkieTalkieEnabled(user.walkie_talkie_enabled);
+    }
+    if (typeof user?.walkie_talkie_hotkey === "string") {
+      setWalkieTalkieHotkey(normalizePushToTalkHotkey(user.walkie_talkie_hotkey));
+    }
     setProfileStatusText("");
-  }, [user, setProfileNameDraft, setSelectedUiTheme, setProfileStatusText]);
+  }, [
+    user,
+    setProfileNameDraft,
+    setSelectedUiTheme,
+    setProfileStatusText,
+    setWalkieTalkieEnabled,
+    setWalkieTalkieHotkey
+  ]);
 
   useEffect(() => {
     if (!user?.id) {

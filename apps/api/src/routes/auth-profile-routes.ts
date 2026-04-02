@@ -15,7 +15,9 @@ import { deleteAuthSession } from "./auth-session.js";
 const uiThemeSchema = z.enum(["8-neon-bit", "material-classic", "aka-dis", "alpha-strike"]);
 const updateProfileSchema = z.object({
   name: z.string().trim().min(1).max(80),
-  uiTheme: uiThemeSchema.optional()
+  uiTheme: uiThemeSchema.optional(),
+  walkieTalkieEnabled: z.boolean().optional(),
+  walkieTalkieHotkey: z.string().trim().min(1).max(64).optional()
 });
 
 export function registerAuthProfileRoutes(fastify: FastifyInstance) {
@@ -27,7 +29,7 @@ export function registerAuthProfileRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest) => {
       const userId = String(request.user?.sub || "").trim();
       const result = await db.query<UserRow>(
-        "SELECT id, email, username, name, ui_theme, role, is_banned, access_state, is_bot, deleted_at, purge_scheduled_at, created_at FROM users WHERE id = $1",
+        "SELECT id, email, username, name, ui_theme, walkie_talkie_enabled, walkie_talkie_hotkey, role, is_banned, access_state, is_bot, deleted_at, purge_scheduled_at, created_at FROM users WHERE id = $1",
         [userId]
       );
 
@@ -68,10 +70,18 @@ export function registerAuthProfileRoutes(fastify: FastifyInstance) {
       const updated = await db.query<UserRow>(
         `UPDATE users
          SET name = $2,
-             ui_theme = COALESCE($3, ui_theme)
+             ui_theme = COALESCE($3, ui_theme),
+             walkie_talkie_enabled = COALESCE($4, walkie_talkie_enabled),
+             walkie_talkie_hotkey = COALESCE(NULLIF(BTRIM($5), ''), walkie_talkie_hotkey)
          WHERE id = $1
-         RETURNING id, email, username, name, ui_theme, role, is_banned, access_state, is_bot, deleted_at, purge_scheduled_at, created_at`,
-        [userId, parsed.data.name, parsed.data.uiTheme ?? null]
+         RETURNING id, email, username, name, ui_theme, walkie_talkie_enabled, walkie_talkie_hotkey, role, is_banned, access_state, is_bot, deleted_at, purge_scheduled_at, created_at`,
+        [
+          userId,
+          parsed.data.name,
+          parsed.data.uiTheme ?? null,
+          parsed.data.walkieTalkieEnabled ?? null,
+          parsed.data.walkieTalkieHotkey ?? null
+        ]
       );
 
       if (updated.rowCount === 0) {
@@ -103,7 +113,7 @@ export function registerAuthProfileRoutes(fastify: FastifyInstance) {
          SET deleted_at = NOW(),
              purge_scheduled_at = NOW() + INTERVAL '30 days'
          WHERE id = $1
-         RETURNING id, email, username, name, ui_theme, role, is_banned, access_state, is_bot, deleted_at, purge_scheduled_at, created_at`,
+         RETURNING id, email, username, name, ui_theme, walkie_talkie_enabled, walkie_talkie_hotkey, role, is_banned, access_state, is_bot, deleted_at, purge_scheduled_at, created_at`,
         [userId]
       );
 

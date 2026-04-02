@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { PopupPortal, RangeSlider } from "../uicomponents";
 import type { UserDockProps } from "../types";
+import { formatPushToTalkHotkey, normalizePushToTalkHotkey } from "../../utils/pushToTalk";
 
 type UserDockControlsProps = Pick<
   UserDockProps,
@@ -25,6 +26,8 @@ type UserDockControlsProps = Pick<
   | "selectedVideoInputId"
   | "currentInputLabel"
   | "micVolume"
+  | "walkieTalkieEnabled"
+  | "walkieTalkieHotkey"
   | "outputVolume"
   | "micTestLevel"
   | "mediaDevicesState"
@@ -46,6 +49,8 @@ type UserDockControlsProps = Pick<
   | "onSetSelectedVideoInputId"
   | "onRequestVideoAccess"
   | "onSetMicVolume"
+  | "onSetWalkieTalkieEnabled"
+  | "onSetWalkieTalkieHotkey"
   | "onSetOutputVolume"
   | "onDisconnectCall"
   | "isMobileViewport"
@@ -77,6 +82,8 @@ export function UserDockControls({
   selectedVideoInputId,
   currentInputLabel,
   micVolume,
+  walkieTalkieEnabled,
+  walkieTalkieHotkey,
   outputVolume,
   micTestLevel,
   audioOutputAnchorRef,
@@ -97,6 +104,8 @@ export function UserDockControls({
   onSetSelectedVideoInputId,
   onRequestVideoAccess,
   onSetMicVolume,
+  onSetWalkieTalkieEnabled,
+  onSetWalkieTalkieHotkey,
   onSetOutputVolume,
   onDisconnectCall,
   isMobileViewport,
@@ -122,6 +131,7 @@ export function UserDockControls({
       : t("rtc.screenShare");
   const miniBarCount = 20;
   const miniActiveBars = Math.min(miniBarCount, Math.round(micTestLevel * miniBarCount));
+  const walkieTalkieHotkeyLabel = formatPushToTalkHotkey(walkieTalkieHotkey);
 
   useEffect(() => {
     if (!cameraMenuOpen) {
@@ -262,6 +272,38 @@ export function UserDockControls({
                     />
                   ))}
                 </div>
+
+                <div className="voice-sound-checkbox mt-[var(--space-xl)] flex items-center justify-between gap-3">
+                  <span>{t("settings.walkieTalkieMode")}</span>
+                  <button
+                    type="button"
+                    className={`ui-switch ${walkieTalkieEnabled ? "ui-switch-on" : ""}`}
+                    role="switch"
+                    aria-checked={walkieTalkieEnabled}
+                    aria-label={t("settings.walkieTalkieMode")}
+                    onClick={() => onSetWalkieTalkieEnabled(!walkieTalkieEnabled)}
+                  >
+                    <span className="ui-switch-thumb" aria-hidden="true" />
+                  </button>
+                </div>
+
+                {walkieTalkieEnabled ? (
+                  <label className="grid gap-2">
+                    <span className="subheading">{t("settings.walkieTalkieHotkey")}</span>
+                    <input
+                      type="text"
+                      value={walkieTalkieHotkeyLabel}
+                      readOnly
+                      onKeyDown={(event) => {
+                        event.preventDefault();
+                        onSetWalkieTalkieHotkey(normalizePushToTalkHotkey(event.code));
+                      }}
+                      onFocus={(event) => event.currentTarget.select()}
+                      aria-label={t("settings.walkieTalkieHotkey")}
+                    />
+                    <p className="muted media-devices-warning">{t("settings.walkieTalkieHotkeyHint")}</p>
+                  </label>
+                ) : null}
 
                 <button
                   type="button"

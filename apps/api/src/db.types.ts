@@ -8,6 +8,8 @@ export type UserRow = {
   username: string | null;
   name: string;
   ui_theme: UiTheme;
+  walkie_talkie_enabled?: boolean;
+  walkie_talkie_hotkey?: string;
   role: UserRole;
   is_banned: boolean;
   access_state: UserAccessState;
@@ -23,6 +25,8 @@ export type UserCompactRow = {
   username: string | null;
   name: string;
   ui_theme: UiTheme;
+  walkie_talkie_enabled?: boolean;
+  walkie_talkie_hotkey?: string;
   role: UserRole;
   is_banned: boolean;
   access_state: UserAccessState;

@@ -6,6 +6,7 @@ import { detectInitialLang, type Lang } from "../../../i18n";
 import type { RnnoiseSuppressionLevel } from "../../rtc/rnnoiseAudioProcessor";
 import type { ServerScreenShareResolution, ServerVideoEffectType, ServerVideoResolution } from "../../rtc/voiceCallTypes";
 import { normalizeUiTheme, readNonZeroDefaultVolume } from "../../../utils/appShell";
+import { DEFAULT_PUSH_TO_TALK_HOTKEY, normalizePushToTalkHotkey } from "../../../utils/pushToTalk";
 
 export function useAppUserMediaState() {
   const [micMuted, setMicMuted] = useState<boolean>(() => localStorage.getItem("boltorezka_mic_muted") !== "0");
@@ -52,6 +53,10 @@ export function useAppUserMediaState() {
   const [preRnnEchoCancellationEnabled, setPreRnnEchoCancellationEnabled] = useState<boolean>(() => localStorage.getItem("boltorezka_pre_rnn_echo_cancellation") !== "0");
   const [preRnnAutoGainControlEnabled, setPreRnnAutoGainControlEnabled] = useState<boolean>(() => localStorage.getItem("boltorezka_pre_rnn_agc") !== "0");
   const [selfMonitorEnabled, setSelfMonitorEnabled] = useState<boolean>(() => localStorage.getItem("boltorezka_self_monitor") === "1");
+  const [walkieTalkieEnabled, setWalkieTalkieEnabled] = useState<boolean>(() => localStorage.getItem("boltorezka_walkie_talkie_enabled") === "1");
+  const [walkieTalkieHotkey, setWalkieTalkieHotkey] = useState<string>(() =>
+    normalizePushToTalkHotkey(localStorage.getItem("boltorezka_walkie_talkie_hotkey") || DEFAULT_PUSH_TO_TALK_HOTKEY)
+  );
 
   const [mediaDevicesState, setMediaDevicesState] = useState<MediaDevicesState>("ready");
   const [mediaDevicesHint, setMediaDevicesHint] = useState("");
@@ -156,6 +161,8 @@ export function useAppUserMediaState() {
     preRnnEchoCancellationEnabled, setPreRnnEchoCancellationEnabled,
     preRnnAutoGainControlEnabled, setPreRnnAutoGainControlEnabled,
     selfMonitorEnabled, setSelfMonitorEnabled,
+    walkieTalkieEnabled, setWalkieTalkieEnabled,
+    walkieTalkieHotkey, setWalkieTalkieHotkey,
     mediaDevicesState, setMediaDevicesState,
     mediaDevicesHint, setMediaDevicesHint,
     micVolume, setMicVolume,

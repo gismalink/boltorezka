@@ -178,7 +178,7 @@ export function useAuthProfileFlow({
     setUserSettingsOpen(true);
   };
 
-  const updateProfile = async (nextTheme?: UiTheme) => {
+  const updateProfile = async (nextTheme?: UiTheme, shouldNotifyProfileSaved = true) => {
     const trimmedName = profileNameDraft.trim();
     if (!trimmedName) {
       setProfileStatusText(t("profile.saveError"));
@@ -196,7 +196,9 @@ export function useAuthProfileFlow({
       if (response.user) {
         setUser(response.user);
       }
-      onProfileSaved?.();
+      if (shouldNotifyProfileSaved) {
+        onProfileSaved?.();
+      }
       setProfileStatusText(t("profile.saveSuccess"));
     } catch (error) {
       const message = (error as Error).message || t("profile.saveError");
@@ -208,11 +210,11 @@ export function useAuthProfileFlow({
   };
 
   const applyProfileName = async () => {
-    await updateProfile();
+    await updateProfile(undefined, true);
   };
 
   const applyProfileTheme = async (nextTheme: UiTheme) => {
-    await updateProfile(nextTheme);
+    await updateProfile(nextTheme, false);
   };
 
   return {

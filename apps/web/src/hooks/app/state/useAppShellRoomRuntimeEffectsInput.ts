@@ -15,6 +15,8 @@ export function useAppShellRoomRuntimeEffectsInput(params: Record<string, unknow
       setProfileNameDraft: p.setProfileNameDraft,
       setSelectedUiTheme: p.setSelectedUiTheme,
       setProfileStatusText: p.setProfileStatusText,
+      setWalkieTalkieEnabled: p.setWalkieTalkieEnabled,
+      setWalkieTalkieHotkey: p.setWalkieTalkieHotkey,
       setShowFirstRunIntro: p.setShowFirstRunIntro,
       setEditingMessageId: p.setEditingMessageId,
       setPendingChatImageDataUrl: p.setPendingChatImageDataUrl

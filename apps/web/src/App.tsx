@@ -54,7 +54,8 @@ import {
   useCollapsedCategories,
   useRoomEditorState,
   useServerSounds,
-  useToastQueue
+  useToastQueue,
+  useWalkieTalkieRuntime
 } from "./hooks";
 import { formatBuildDateLabel } from "./utils/appShell";
 
@@ -150,6 +151,8 @@ export function App() {
     preRnnEchoCancellationEnabled, setPreRnnEchoCancellationEnabled,
     preRnnAutoGainControlEnabled, setPreRnnAutoGainControlEnabled,
     selfMonitorEnabled, setSelfMonitorEnabled,
+    walkieTalkieEnabled, setWalkieTalkieEnabled,
+    walkieTalkieHotkey, setWalkieTalkieHotkey,
     mediaDevicesState, setMediaDevicesState,
     mediaDevicesHint, setMediaDevicesHint,
     micVolume, setMicVolume,
@@ -232,6 +235,15 @@ export function App() {
   } = useServerSounds();
 
   useBuildVersionSync(CLIENT_BUILD_SHA);
+  const { walkieTalkieHotkeyNormalized } = useWalkieTalkieRuntime({
+    token,
+    user,
+    selectedUiTheme,
+    walkieTalkieEnabled,
+    walkieTalkieHotkey,
+    setMicMuted,
+    setUser
+  });
 
   const {
     sendWsEvent, sendWsEventAwaitAck,
@@ -300,6 +312,8 @@ export function App() {
     preRnnAutoGainControlEnabled,
     selectedOutputId, selectedVideoInputId,
     micVolume, micMuted, audioMuted, outputVolume,
+    walkieTalkieEnabled,
+    walkieTalkieHotkey: walkieTalkieHotkeyNormalized,
     pushCallLog,
     setCallStatus,
     setLastCallPeer,
@@ -432,6 +446,8 @@ export function App() {
     setProfileNameDraft,
     setSelectedUiTheme,
     setProfileStatusText,
+    setWalkieTalkieEnabled,
+    setWalkieTalkieHotkey,
     setShowFirstRunIntro,
     setEditingMessageId,
     setPendingChatImageDataUrl,
@@ -672,6 +688,10 @@ export function App() {
     setPreRnnEchoCancellationEnabled,
     setPreRnnAutoGainControlEnabled,
     selfMonitorEnabled,
+    walkieTalkieEnabled,
+    walkieTalkieHotkey: walkieTalkieHotkeyNormalized,
+    setWalkieTalkieEnabled,
+    setWalkieTalkieHotkey,
     setSelfMonitorEnabled,
     requestVideoAccess,
     openUserSettings,

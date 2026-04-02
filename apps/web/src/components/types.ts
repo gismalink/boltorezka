@@ -36,6 +36,8 @@ export type UserDockProps = {
   preRnnEchoCancellationEnabled: boolean;
   preRnnAutoGainControlEnabled: boolean;
   selfMonitorEnabled: boolean;
+  walkieTalkieEnabled: boolean;
+  walkieTalkieHotkey: string;
   currentRoomSupportsVideo: boolean;
   cameraEnabled: boolean;
   micMuted: boolean;
@@ -86,6 +88,8 @@ export type UserDockProps = {
   onTogglePreRnnEchoCancellation: () => void;
   onTogglePreRnnAutoGainControl: () => void;
   onToggleSelfMonitor: () => void;
+  onSetWalkieTalkieEnabled: (value: boolean) => void;
+  onSetWalkieTalkieHotkey: (value: string) => void;
   onToggleVoiceSettings: () => void;
   onToggleAudioOutput: () => void;
   onOpenUserSettings: (tab: "profile" | "sound" | "camera") => void;
