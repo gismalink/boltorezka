@@ -62,6 +62,7 @@ export function useWorkspaceRoomsPanelProps({
   editingRoomKind,
   editingRoomCategoryId,
   editingRoomNsfw,
+  editingRoomHidden,
   editingRoomAudioQualitySetting,
   categoryPopupRef,
   channelPopupRef,
@@ -78,6 +79,7 @@ export function useWorkspaceRoomsPanelProps({
   onSetEditingRoomKind,
   onSetEditingRoomCategoryId,
   onSetEditingRoomNsfw,
+  onSetEditingRoomHidden,
   onSetEditingRoomAudioQualitySetting,
   onCreateCategory,
   onCreateRoom,
@@ -98,7 +100,11 @@ export function useWorkspaceRoomsPanelProps({
   onOpenRoomChat,
   onKickRoomMember,
   onMoveRoomMember,
-  onSaveMemberPreference
+  onSaveMemberPreference,
+  onLoadServerMemberProfile,
+  onLoadServerRoles,
+  onSetServerMemberCustomRoles,
+  onSetServerMemberHiddenRoomAccess
 }: UseWorkspaceRoomsPanelPropsInput): RoomsPanelProps {
   return {
     t,
@@ -136,6 +142,7 @@ export function useWorkspaceRoomsPanelProps({
     editingRoomKind,
     editingRoomCategoryId,
     editingRoomNsfw,
+    editingRoomHidden,
     editingRoomAudioQualitySetting,
     categoryPopupRef,
     channelPopupRef,
@@ -152,6 +159,7 @@ export function useWorkspaceRoomsPanelProps({
     onSetEditingRoomKind,
     onSetEditingRoomCategoryId,
     onSetEditingRoomNsfw,
+    onSetEditingRoomHidden,
     onSetEditingRoomAudioQualitySetting,
     onCreateCategory,
     onCreateRoom,
@@ -172,6 +180,10 @@ export function useWorkspaceRoomsPanelProps({
     onOpenRoomChat,
     onKickRoomMember,
     onMoveRoomMember,
-    onSaveMemberPreference
+    onSaveMemberPreference,
+    onLoadServerMemberProfile,
+    onLoadServerRoles,
+    onSetServerMemberCustomRoles,
+    onSetServerMemberHiddenRoomAccess
   };
 }

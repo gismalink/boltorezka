@@ -104,6 +104,15 @@ function buildDeviceOptions(
   return [{ id: FALLBACK_DEVICE_ID, label: prefix }];
 }
 
+function resolveMissingDeviceSelection(currentSelectedId: string, options: DeviceOption[]): string {
+  if (options.some((item) => item.id === currentSelectedId)) {
+    return currentSelectedId;
+  }
+
+  // Prefer browser/system routing defaults when current physical device disappears.
+  return FALLBACK_DEVICE_ID;
+}
+
 export function useMediaDevicePreferences({
   t,
   selectedInputId,
@@ -269,14 +278,19 @@ export function useMediaDevicePreferences({
           const refreshedRawInputs = devicesAfterPermission.filter((item) => item.kind === "audioinput");
           const refreshedRawOutputs = devicesAfterPermission.filter((item) => item.kind === "audiooutput");
 
-          if (refreshedRawInputs.length > 0 && !refreshedInputs.some((item) => item.id === selectedInputId)) {
-            setSelectedInputId(refreshedInputs[0].id);
+          const nextInputId = resolveMissingDeviceSelection(selectedInputId, refreshedInputs);
+          if (nextInputId !== selectedInputId) {
+            setSelectedInputId(nextInputId);
           }
-          if (refreshedRawOutputs.length > 0 && !refreshedOutputs.some((item) => item.id === selectedOutputId)) {
-            setSelectedOutputId(refreshedOutputs[0].id);
+
+          const nextOutputId = resolveMissingDeviceSelection(selectedOutputId, refreshedOutputs);
+          if (nextOutputId !== selectedOutputId) {
+            setSelectedOutputId(nextOutputId);
           }
-          if (refreshedVideoInputs.length > 0 && !refreshedVideoInputs.some((item) => item.id === selectedVideoInputId)) {
-            setSelectedVideoInputId(refreshedVideoInputs[0].id);
+
+          const nextVideoInputId = resolveMissingDeviceSelection(selectedVideoInputId, refreshedVideoInputs);
+          if (nextVideoInputId !== selectedVideoInputId) {
+            setSelectedVideoInputId(nextVideoInputId);
           }
 
           setMediaDevicesState("ready");
@@ -309,14 +323,19 @@ export function useMediaDevicePreferences({
         setMediaDevicesHint("");
       }
 
-      if (inputs.length > 0 && !inputs.some((item) => item.id === selectedInputId)) {
-        setSelectedInputId(inputs[0].id);
+      const nextInputId = resolveMissingDeviceSelection(selectedInputId, inputs);
+      if (nextInputId !== selectedInputId) {
+        setSelectedInputId(nextInputId);
       }
-      if (outputs.length > 0 && !outputs.some((item) => item.id === selectedOutputId)) {
-        setSelectedOutputId(outputs[0].id);
+
+      const nextOutputId = resolveMissingDeviceSelection(selectedOutputId, outputs);
+      if (nextOutputId !== selectedOutputId) {
+        setSelectedOutputId(nextOutputId);
       }
-      if (videoInputs.length > 0 && !videoInputs.some((item) => item.id === selectedVideoInputId)) {
-        setSelectedVideoInputId(videoInputs[0].id);
+
+      const nextVideoInputId = resolveMissingDeviceSelection(selectedVideoInputId, videoInputs);
+      if (nextVideoInputId !== selectedVideoInputId) {
+        setSelectedVideoInputId(nextVideoInputId);
       }
     } catch (error) {
       const errorName = (error as { name?: string })?.name || "";

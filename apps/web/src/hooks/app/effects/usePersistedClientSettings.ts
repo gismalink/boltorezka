@@ -6,6 +6,8 @@ type UsePersistedClientSettingsArgs = {
   preRnnEchoCancellationEnabled: boolean;
   preRnnAutoGainControlEnabled: boolean;
   selfMonitorEnabled: boolean;
+  walkieTalkieEnabled: boolean;
+  walkieTalkieHotkey: string;
   micMuted: boolean;
   audioMuted: boolean;
   cameraEnabled: boolean;
@@ -29,6 +31,8 @@ export function usePersistedClientSettings({
   preRnnEchoCancellationEnabled,
   preRnnAutoGainControlEnabled,
   selfMonitorEnabled,
+  walkieTalkieEnabled,
+  walkieTalkieHotkey,
   micMuted,
   audioMuted,
   cameraEnabled,
@@ -64,6 +68,14 @@ export function usePersistedClientSettings({
   useEffect(() => {
     localStorage.setItem("boltorezka_self_monitor", selfMonitorEnabled ? "1" : "0");
   }, [selfMonitorEnabled]);
+
+  useEffect(() => {
+    localStorage.setItem("boltorezka_walkie_talkie_enabled", walkieTalkieEnabled ? "1" : "0");
+  }, [walkieTalkieEnabled]);
+
+  useEffect(() => {
+    localStorage.setItem("boltorezka_walkie_talkie_hotkey", walkieTalkieHotkey);
+  }, [walkieTalkieHotkey]);
 
   useEffect(() => {
     localStorage.setItem("boltorezka_audio_muted", audioMuted ? "1" : "0");

@@ -17,7 +17,7 @@ type ModerationSharedParams = {
   eventType: string;
   normalizeRequestId: (value: unknown) => string | null;
   getPayloadString: (payload: any, key: string, maxLength?: number) => string | null;
-  isUserModerator: (userId: string) => Promise<boolean>;
+  isUserModerator: (userId: string, roomSlug?: string | null) => Promise<boolean>;
   sendValidationNack: (
     socket: WebSocket,
     requestId: string | null,
@@ -128,7 +128,7 @@ export async function handleRoomKick(params: ModerationSharedParams): Promise<vo
     return;
   }
 
-  const canModerate = await isUserModerator(state.userId);
+  const canModerate = await isUserModerator(state.userId, roomSlug);
   if (!canModerate) {
     sendForbiddenNack(connection, requestId, eventType);
     return;
@@ -188,6 +188,24 @@ export async function handleRoomKick(params: ModerationSharedParams): Promise<vo
       getRoomPresence(targetRoom.id).length
     )
   );
+
+  await dbQuery(
+    `DELETE FROM room_members rm
+     USING rooms r
+     WHERE rm.room_id = $1
+       AND rm.user_id = $2
+       AND rm.role = 'member'
+       AND r.id = rm.room_id
+       AND r.is_hidden = TRUE
+       AND NOT EXISTS (
+         SELECT 1
+         FROM room_visibility_grants rvg
+         WHERE rvg.room_id = rm.room_id
+           AND rvg.user_id = rm.user_id
+       )`,
+    [targetRoom.id, targetUserId]
+  );
+
   broadcastAllRoomsPresence();
 
   sendAckWithMetrics(connection, requestId, eventType, {
@@ -251,14 +269,14 @@ export async function handleRoomMoveMember(params: ModerationSharedParams): Prom
     return;
   }
 
-  const canModerate = await isUserModerator(state.userId);
+  const canModerate = await isUserModerator(state.userId, fromRoomSlug);
   if (!canModerate) {
     sendForbiddenNack(connection, requestId, eventType);
     return;
   }
 
   const roomsResult = await dbQuery<RoomRow>(
-    `SELECT id, slug, title, kind, is_public
+    `SELECT id, slug, title, kind, is_public, is_hidden
      FROM rooms
      WHERE slug IN ($1, $2) AND is_archived = FALSE`,
     [fromRoomSlug, toRoomSlug]
@@ -341,6 +359,23 @@ export async function handleRoomMoveMember(params: ModerationSharedParams): Prom
       toRoom.slug,
       getRoomPresence(toRoom.id).length
     )
+  );
+
+  await dbQuery(
+    `DELETE FROM room_members rm
+     USING rooms r
+     WHERE rm.room_id = $1
+       AND rm.user_id = $2
+       AND rm.role = 'member'
+       AND r.id = rm.room_id
+       AND r.is_hidden = TRUE
+       AND NOT EXISTS (
+         SELECT 1
+         FROM room_visibility_grants rvg
+         WHERE rvg.room_id = rm.room_id
+           AND rvg.user_id = rm.user_id
+       )`,
+    [fromRoom.id, targetUserId]
   );
 
   broadcastAllRoomsPresence();

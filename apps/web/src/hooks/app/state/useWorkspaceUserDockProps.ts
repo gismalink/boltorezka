@@ -25,6 +25,8 @@ export type UseWorkspaceUserDockPropsInput = {
   rnnoiseRuntimeStatus: UserDockProps["rnnoiseRuntimeStatus"];
   preRnnEchoCancellationEnabled: boolean;
   preRnnAutoGainControlEnabled: boolean;
+  walkieTalkieEnabled: boolean;
+  walkieTalkieHotkey: string;
   cameraEnabled: boolean;
   micMuted: boolean;
   audioMuted: boolean;
@@ -70,6 +72,8 @@ export type UseWorkspaceUserDockPropsInput = {
   setRnnoiseSuppressionLevel: (value: RnnoiseSuppressionLevel) => void;
   setPreRnnEchoCancellationEnabled: React.Dispatch<React.SetStateAction<boolean>>;
   setPreRnnAutoGainControlEnabled: React.Dispatch<React.SetStateAction<boolean>>;
+  setWalkieTalkieEnabled: React.Dispatch<React.SetStateAction<boolean>>;
+  setWalkieTalkieHotkey: React.Dispatch<React.SetStateAction<string>>;
   selfMonitorEnabled: boolean;
   setSelfMonitorEnabled: React.Dispatch<React.SetStateAction<boolean>>;
   requestVideoAccess: () => void;
@@ -122,6 +126,8 @@ export function useWorkspaceUserDockProps({
   rnnoiseRuntimeStatus,
   preRnnEchoCancellationEnabled,
   preRnnAutoGainControlEnabled,
+  walkieTalkieEnabled,
+  walkieTalkieHotkey,
   cameraEnabled,
   micMuted,
   audioMuted,
@@ -167,6 +173,8 @@ export function useWorkspaceUserDockProps({
   setRnnoiseSuppressionLevel,
   setPreRnnEchoCancellationEnabled,
   setPreRnnAutoGainControlEnabled,
+  setWalkieTalkieEnabled,
+  setWalkieTalkieHotkey,
   selfMonitorEnabled,
   setSelfMonitorEnabled,
   requestVideoAccess,
@@ -223,6 +231,8 @@ export function useWorkspaceUserDockProps({
       rnnoiseRuntimeStatus,
       preRnnEchoCancellationEnabled,
       preRnnAutoGainControlEnabled,
+      walkieTalkieEnabled,
+      walkieTalkieHotkey,
       cameraEnabled,
       micMuted,
       audioMuted,
@@ -271,6 +281,8 @@ export function useWorkspaceUserDockProps({
       onSetRnnoiseSuppressionLevel: setRnnoiseSuppressionLevel,
       onTogglePreRnnEchoCancellation: () => setPreRnnEchoCancellationEnabled((value) => !value),
       onTogglePreRnnAutoGainControl: () => setPreRnnAutoGainControlEnabled((value) => !value),
+      onSetWalkieTalkieEnabled: setWalkieTalkieEnabled,
+      onSetWalkieTalkieHotkey: setWalkieTalkieHotkey,
       selfMonitorEnabled,
       onToggleSelfMonitor: () => setSelfMonitorEnabled((value) => !value),
       onRequestVideoAccess: requestVideoAccess,
@@ -340,6 +352,8 @@ export function useWorkspaceUserDockProps({
     playServerSound,
     preRnnAutoGainControlEnabled,
     preRnnEchoCancellationEnabled,
+    walkieTalkieEnabled,
+    walkieTalkieHotkey,
     profileNameDraft,
     profileSaving,
     profileStatusText,
@@ -371,6 +385,8 @@ export function useWorkspaceUserDockProps({
     setOutputVolume,
     setPreRnnAutoGainControlEnabled,
     setPreRnnEchoCancellationEnabled,
+    setWalkieTalkieEnabled,
+    setWalkieTalkieHotkey,
     setProfileNameDraft,
     setRnnoiseSuppressionLevel,
     setSelectedInputId,

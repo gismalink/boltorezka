@@ -140,7 +140,34 @@ export type ServerMemberItem = {
   name: string;
   role: ServerMemberRole;
   status: "active";
+  joinedAt: string;
+  customRoles: Array<{ id: string; name: string }>;
   isServerBanned: boolean;
+};
+
+export type ServerRoleItem = {
+  id: string;
+  name: string;
+  isBase: boolean;
+};
+
+export type ServerRolesResponse = {
+  serverId: string;
+  roles: ServerRoleItem[];
+};
+
+export type ServerMemberProfileResponse = {
+  serverId: string;
+  member: {
+    userId: string;
+    name: string;
+    email: string;
+    joinedAt: string;
+    role: ServerMemberRole;
+    customRoles: Array<{ id: string; name: string }>;
+    hiddenRoomAccess: Array<{ roomId: string; roomSlug: string; roomTitle: string }>;
+    hiddenRoomsAvailable: Array<{ roomId: string; roomSlug: string; roomTitle: string; hasAccess: boolean }>;
+  };
 };
 
 export type ServerMembersResponse = {

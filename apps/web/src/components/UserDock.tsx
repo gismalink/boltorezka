@@ -21,6 +21,8 @@ export function UserDock({
   preRnnEchoCancellationEnabled,
   preRnnAutoGainControlEnabled,
   selfMonitorEnabled,
+  walkieTalkieEnabled,
+  walkieTalkieHotkey,
   cameraEnabled,
   micMuted,
   audioMuted,
@@ -70,6 +72,8 @@ export function UserDock({
   onTogglePreRnnEchoCancellation,
   onTogglePreRnnAutoGainControl,
   onToggleSelfMonitor,
+  onSetWalkieTalkieEnabled,
+  onSetWalkieTalkieHotkey,
   onToggleVoiceSettings,
   onToggleAudioOutput,
   onOpenUserSettings,
@@ -136,6 +140,8 @@ export function UserDock({
           selectedVideoInputId={selectedVideoInputId}
           currentInputLabel={currentInputLabel}
           micVolume={micVolume}
+          walkieTalkieEnabled={walkieTalkieEnabled}
+          walkieTalkieHotkey={walkieTalkieHotkey}
           outputVolume={outputVolume}
           micTestLevel={micTestLevel}
           mediaDevicesState={mediaDevicesState}
@@ -157,6 +163,8 @@ export function UserDock({
           onSetSelectedVideoInputId={onSetSelectedVideoInputId}
           onRequestVideoAccess={onRequestVideoAccess}
           onSetMicVolume={onSetMicVolume}
+          onSetWalkieTalkieEnabled={onSetWalkieTalkieEnabled}
+          onSetWalkieTalkieHotkey={onSetWalkieTalkieHotkey}
           onSetOutputVolume={onSetOutputVolume}
           onDisconnectCall={onDisconnectCall}
           isMobileViewport={isMobileViewport}
@@ -225,6 +233,10 @@ export function UserDock({
         preRnnEchoCancellationEnabled={preRnnEchoCancellationEnabled}
         preRnnAutoGainControlEnabled={preRnnAutoGainControlEnabled}
         selfMonitorEnabled={selfMonitorEnabled}
+        walkieTalkieEnabled={walkieTalkieEnabled}
+        walkieTalkieHotkey={walkieTalkieHotkey}
+        onSetWalkieTalkieEnabled={onSetWalkieTalkieEnabled}
+        onSetWalkieTalkieHotkey={onSetWalkieTalkieHotkey}
         onToggleSelfMonitor={onToggleSelfMonitor}
         onToggleNoiseSuppression={onToggleNoiseSuppression}
         onSetRnnoiseSuppressionLevel={onSetRnnoiseSuppressionLevel}

@@ -54,7 +54,8 @@ import {
   useCollapsedCategories,
   useRoomEditorState,
   useServerSounds,
-  useToastQueue
+  useToastQueue,
+  useWalkieTalkieRuntime
 } from "./hooks";
 import { formatBuildDateLabel } from "./utils/appShell";
 
@@ -119,6 +120,7 @@ export function App() {
     editingRoomTitle, setEditingRoomTitle, editingRoomKind, setEditingRoomKind,
     editingRoomCategoryId, setEditingRoomCategoryId,
     editingRoomNsfw, setEditingRoomNsfw,
+    editingRoomHidden, setEditingRoomHidden,
     editingRoomAudioQualitySetting, setEditingRoomAudioQualitySetting
   } = useRoomEditorState();
   const {
@@ -150,6 +152,8 @@ export function App() {
     preRnnEchoCancellationEnabled, setPreRnnEchoCancellationEnabled,
     preRnnAutoGainControlEnabled, setPreRnnAutoGainControlEnabled,
     selfMonitorEnabled, setSelfMonitorEnabled,
+    walkieTalkieEnabled, setWalkieTalkieEnabled,
+    walkieTalkieHotkey, setWalkieTalkieHotkey,
     mediaDevicesState, setMediaDevicesState,
     mediaDevicesHint, setMediaDevicesHint,
     micVolume, setMicVolume,
@@ -232,6 +236,15 @@ export function App() {
   } = useServerSounds();
 
   useBuildVersionSync(CLIENT_BUILD_SHA);
+  const { walkieTalkieHotkeyNormalized } = useWalkieTalkieRuntime({
+    token,
+    user,
+    selectedUiTheme,
+    walkieTalkieEnabled,
+    walkieTalkieHotkey,
+    setMicMuted,
+    setUser
+  });
 
   const {
     sendWsEvent, sendWsEventAwaitAck,
@@ -300,6 +313,8 @@ export function App() {
     preRnnAutoGainControlEnabled,
     selectedOutputId, selectedVideoInputId,
     micVolume, micMuted, audioMuted, outputVolume,
+    walkieTalkieEnabled,
+    walkieTalkieHotkey: walkieTalkieHotkeyNormalized,
     pushCallLog,
     setCallStatus,
     setLastCallPeer,
@@ -432,6 +447,8 @@ export function App() {
     setProfileNameDraft,
     setSelectedUiTheme,
     setProfileStatusText,
+    setWalkieTalkieEnabled,
+    setWalkieTalkieHotkey,
     setShowFirstRunIntro,
     setEditingMessageId,
     setPendingChatImageDataUrl,
@@ -557,6 +574,13 @@ export function App() {
     handleServerChange, handleLeaveCurrentServer, handleDeleteCurrentServer,
     handleRemoveServerMember, handleBanServerMember, handleUnbanServerMember,
     handleTransferServerOwnership,
+    loadServerMemberProfile,
+    loadServerRoles,
+    handleCreateServerRole,
+    handleRenameServerRole,
+    handleDeleteServerRole,
+    handleSetServerMemberCustomRoles,
+    handleSetServerMemberHiddenRoomAccess,
     handleToggleAdminServerBlocked,
     handleDeleteAdminServer,
     createRoom, createCategory,
@@ -592,12 +616,12 @@ export function App() {
     newRoomTitle, newRoomKind, newRoomCategoryId, newCategoryTitle,
     editingCategoryTitle, categorySettingsPopupOpenId,
     editingRoomTitle, editingRoomKind, editingRoomCategoryId,
-    editingRoomNsfw, editingRoomAudioQualitySetting,
+    editingRoomNsfw, editingRoomHidden, editingRoomAudioQualitySetting,
     channelSettingsPopupOpenId,
     setNewRoomTitle, setChannelPopupOpen,
     setNewCategoryTitle, setCategoryPopupOpen, setNewRoomCategoryId,
     setEditingRoomTitle, setEditingRoomKind, setEditingRoomCategoryId,
-    setEditingRoomNsfw, setEditingRoomAudioQualitySetting,
+    setEditingRoomNsfw, setEditingRoomHidden, setEditingRoomAudioQualitySetting,
     setChannelSettingsPopupOpenId, setEditingCategoryTitle,
     setCategorySettingsPopupOpenId
   }));
@@ -672,6 +696,10 @@ export function App() {
     setPreRnnEchoCancellationEnabled,
     setPreRnnAutoGainControlEnabled,
     selfMonitorEnabled,
+    walkieTalkieEnabled,
+    walkieTalkieHotkey: walkieTalkieHotkeyNormalized,
+    setWalkieTalkieEnabled,
+    setWalkieTalkieHotkey,
     setSelfMonitorEnabled,
     requestVideoAccess,
     openUserSettings,
@@ -742,6 +770,7 @@ export function App() {
     editingRoomKind,
     editingRoomCategoryId,
     editingRoomNsfw,
+    editingRoomHidden,
     editingRoomAudioQualitySetting,
     categoryPopupRef,
     channelPopupRef,
@@ -758,6 +787,7 @@ export function App() {
     setEditingRoomKind,
     setEditingRoomCategoryId,
     setEditingRoomNsfw,
+    setEditingRoomHidden,
     setEditingRoomAudioQualitySetting,
     createCategory,
     createRoom,
@@ -839,6 +869,13 @@ export function App() {
     handleRemoveServerMember,
     handleBanServerMember,
     handleUnbanServerMember, handleTransferServerOwnership,
+    loadServerMemberProfile,
+    loadServerRoles,
+    handleCreateServerRole,
+    handleRenameServerRole,
+    handleDeleteServerRole,
+    handleSetServerMemberCustomRoles,
+    handleSetServerMemberHiddenRoomAccess,
     loadTelemetrySummary,
     setServerAudioQualityValue,
     setServerVideoEffectType, setServerVideoResolution, setServerVideoFps,

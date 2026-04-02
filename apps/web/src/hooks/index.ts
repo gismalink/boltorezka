@@ -73,6 +73,7 @@ export { useRoomSlugPersistence } from "./app/effects/useRoomSlugPersistence";
 export { useServerDataSync } from "./app/effects/useServerDataSync";
 export { useSessionStateLifecycle } from "./app/effects/useSessionStateLifecycle";
 export { useTelemetryRefresh } from "./app/effects/useTelemetryRefresh";
+export { useWalkieTalkieRuntime } from "./app/effects/useWalkieTalkieRuntime";
 export { useCollapsedCategories } from "./rooms/useCollapsedCategories";
 export { useCurrentRoomSnapshot } from "./app/state/useCurrentRoomSnapshot";
 export { useDesktopHandoffState } from "./app/state/useDesktopHandoffState";

@@ -1,5 +1,6 @@
 import type { WebSocket } from "ws";
 import { config } from "../config.js";
+import { db } from "../db.js";
 import type {
   CallInitialStateParticipantPayload,
   MediaTopology,
@@ -254,6 +255,26 @@ export function createRealtimeRoomEventHandlers(deps: RoomEventHandlerDeps) {
     state.roomId = null;
     state.roomSlug = null;
     state.roomKind = null;
+
+    // Hidden-room forced moves use temporary membership so the room disappears again after leave.
+    void db.query(
+      `DELETE FROM room_members rm
+       USING rooms r
+       WHERE rm.room_id = $1
+         AND rm.user_id = $2
+         AND rm.role = 'member'
+         AND r.id = rm.room_id
+         AND r.is_hidden = TRUE
+         AND NOT EXISTS (
+           SELECT 1
+           FROM room_visibility_grants rvg
+           WHERE rvg.room_id = rm.room_id
+             AND rvg.user_id = rm.user_id
+         )`,
+      [previousRoomId, state.userId]
+    ).catch(() => {
+      // Best effort cleanup; leave flow must not fail on this.
+    });
 
     sendJson(
       connection,

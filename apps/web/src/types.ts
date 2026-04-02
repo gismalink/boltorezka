@@ -11,6 +11,8 @@ export type User = {
   username: string | null;
   name: string;
   ui_theme: UiTheme;
+  walkie_talkie_enabled?: boolean;
+  walkie_talkie_hotkey?: string;
   role: "user" | "admin" | "super_admin";
   is_banned: boolean;
   access_state: "pending" | "active" | "blocked";
@@ -39,6 +41,7 @@ export type Room = {
   slug: string;
   title: string;
   kind: RoomKind;
+  is_hidden?: boolean;
   nsfw?: boolean;
   audio_quality_override?: AudioQuality | null;
   category_id: string | null;
@@ -183,7 +186,34 @@ export type ServerMemberItem = {
   name: string;
   role: ServerMemberRole;
   status: "active";
+  joinedAt: string;
+  customRoles: Array<{ id: string; name: string }>;
   isServerBanned: boolean;
+};
+
+export type ServerRoleItem = {
+  id: string;
+  name: string;
+  isBase: boolean;
+};
+
+export type ServerRolesResponse = {
+  serverId: string;
+  roles: ServerRoleItem[];
+};
+
+export type ServerMemberProfileResponse = {
+  serverId: string;
+  member: {
+    userId: string;
+    name: string;
+    email: string;
+    joinedAt: string;
+    role: ServerMemberRole;
+    customRoles: Array<{ id: string; name: string }>;
+    hiddenRoomAccess: Array<{ roomId: string; roomSlug: string; roomTitle: string }>;
+    hiddenRoomsAvailable: Array<{ roomId: string; roomSlug: string; roomTitle: string; hasAccess: boolean }>;
+  };
 };
 
 export type ServerMembersResponse = {

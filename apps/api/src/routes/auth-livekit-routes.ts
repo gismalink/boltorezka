@@ -64,8 +64,9 @@ export function registerAuthLivekitRoutes(fastify: FastifyInstance) {
         slug: string;
         title: string;
         is_public: boolean;
+        is_hidden: boolean;
       }>(
-        `SELECT id, slug, title, is_public
+        `SELECT id, slug, title, is_public, is_hidden
          FROM rooms
          WHERE slug = $1 AND is_archived = FALSE
          LIMIT 1`,
@@ -80,6 +81,27 @@ export function registerAuthLivekitRoutes(fastify: FastifyInstance) {
       }
 
       const room = roomResult.rows[0];
+      if (room.is_hidden) {
+        const visibilityResult = await db.query<{ has_access: boolean }>(
+          `SELECT EXISTS(
+             SELECT 1 FROM room_visibility_grants
+             WHERE room_id = $1 AND user_id = $2
+           )
+           OR EXISTS(
+             SELECT 1 FROM room_members
+             WHERE room_id = $1 AND user_id = $2
+           ) AS has_access`,
+          [room.id, userId]
+        );
+
+        if (!visibilityResult.rows[0]?.has_access) {
+          return reply.code(403).send({
+            error: "Forbidden",
+            message: "Room visibility access is required"
+          });
+        }
+      }
+
       if (!room.is_public) {
         const memberResult = await db.query<{ is_member: boolean }>(
           `SELECT EXISTS(

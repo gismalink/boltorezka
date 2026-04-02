@@ -17,6 +17,7 @@ export function useRoomEditorState() {
   const [editingRoomKind, setEditingRoomKind] = useState<RoomKind>("text");
   const [editingRoomCategoryId, setEditingRoomCategoryId] = useState<string>("none");
   const [editingRoomNsfw, setEditingRoomNsfw] = useState(false);
+  const [editingRoomHidden, setEditingRoomHidden] = useState(false);
   const [editingRoomAudioQualitySetting, setEditingRoomAudioQualitySetting] = useState<ChannelAudioQualitySetting>("server_default");
 
   return {
@@ -50,6 +51,8 @@ export function useRoomEditorState() {
     setEditingRoomCategoryId,
     editingRoomNsfw,
     setEditingRoomNsfw,
+    editingRoomHidden,
+    setEditingRoomHidden,
     editingRoomAudioQualitySetting,
     setEditingRoomAudioQualitySetting
   };

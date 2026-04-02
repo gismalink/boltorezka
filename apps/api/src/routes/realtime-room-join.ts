@@ -8,7 +8,7 @@ export type CanJoinRoomResult =
 
 export async function canJoinRoom(roomSlug: string, userId: string): Promise<CanJoinRoomResult> {
   const room = await db.query<RoomRow>(
-    `SELECT r.id, r.slug, r.title, r.kind, r.is_public, r.server_id, r.nsfw
+    `SELECT r.id, r.slug, r.title, r.kind, r.is_public, r.is_hidden, r.server_id, r.nsfw
      FROM rooms r
      LEFT JOIN servers s ON s.id = r.server_id
      WHERE r.slug = $1
@@ -28,6 +28,28 @@ export async function canJoinRoom(roomSlug: string, userId: string): Promise<Can
     const confirmed = serverId ? await isServerAgeConfirmed(serverId, userId) : false;
     if (!confirmed) {
       return { ok: false, reason: "AgeVerificationRequired" };
+    }
+  }
+
+  if (selectedRoom.is_hidden) {
+    const visibilityGrant = await db.query(
+      `SELECT 1
+       WHERE EXISTS (
+         SELECT 1
+         FROM room_visibility_grants
+         WHERE room_id = $1 AND user_id = $2
+       )
+       OR EXISTS (
+         SELECT 1
+         FROM room_members
+         WHERE room_id = $1 AND user_id = $2
+       )
+       LIMIT 1`,
+      [selectedRoom.id, userId]
+    );
+
+    if ((visibilityGrant.rowCount || 0) === 0) {
+      return { ok: false, reason: "Forbidden" };
     }
   }
 

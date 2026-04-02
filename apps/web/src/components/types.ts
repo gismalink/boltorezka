@@ -36,6 +36,8 @@ export type UserDockProps = {
   preRnnEchoCancellationEnabled: boolean;
   preRnnAutoGainControlEnabled: boolean;
   selfMonitorEnabled: boolean;
+  walkieTalkieEnabled: boolean;
+  walkieTalkieHotkey: string;
   currentRoomSupportsVideo: boolean;
   cameraEnabled: boolean;
   micMuted: boolean;
@@ -86,6 +88,8 @@ export type UserDockProps = {
   onTogglePreRnnEchoCancellation: () => void;
   onTogglePreRnnAutoGainControl: () => void;
   onToggleSelfMonitor: () => void;
+  onSetWalkieTalkieEnabled: (value: boolean) => void;
+  onSetWalkieTalkieHotkey: (value: string) => void;
   onToggleVoiceSettings: () => void;
   onToggleAudioOutput: () => void;
   onOpenUserSettings: (tab: "profile" | "sound" | "camera") => void;
@@ -154,6 +158,7 @@ export type RoomsPanelProps = {
   editingRoomKind: RoomKind;
   editingRoomCategoryId: string;
   editingRoomNsfw: boolean;
+  editingRoomHidden: boolean;
   editingRoomAudioQualitySetting: ChannelAudioQualitySetting;
   categoryPopupRef: RefObject<HTMLDivElement>;
   channelPopupRef: RefObject<HTMLDivElement>;
@@ -170,6 +175,7 @@ export type RoomsPanelProps = {
   onSetEditingRoomKind: (value: RoomKind) => void;
   onSetEditingRoomCategoryId: (value: string) => void;
   onSetEditingRoomNsfw: (value: boolean) => void;
+  onSetEditingRoomHidden: (value: boolean) => void;
   onSetEditingRoomAudioQualitySetting: (value: ChannelAudioQualitySetting) => void;
   onCreateCategory: (event: FormEvent) => void;
   onCreateRoom: (event: FormEvent) => void;
@@ -191,4 +197,17 @@ export type RoomsPanelProps = {
   onKickRoomMember: (roomSlug: string, userId: string, userName: string) => void;
   onMoveRoomMember: (fromRoomSlug: string, toRoomSlug: string, userId: string, userName: string) => void;
   onSaveMemberPreference: (targetUserId: string, input: { volume: number; note: string }) => Promise<void>;
+  onLoadServerMemberProfile: (userId: string) => Promise<{
+    userId: string;
+    name: string;
+    email: string;
+    joinedAt: string;
+    role: "owner" | "admin" | "member";
+    customRoles: Array<{ id: string; name: string }>;
+    hiddenRoomAccess: Array<{ roomId: string; roomSlug: string; roomTitle: string }>;
+    hiddenRoomsAvailable: Array<{ roomId: string; roomSlug: string; roomTitle: string; hasAccess: boolean }>;
+  } | null>;
+  onLoadServerRoles: () => Promise<Array<{ id: string; name: string; isBase: boolean }>>;
+  onSetServerMemberCustomRoles: (userId: string, roleIds: string[]) => Promise<boolean>;
+  onSetServerMemberHiddenRoomAccess: (userId: string, roomIds: string[]) => Promise<boolean>;
 };

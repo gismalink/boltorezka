@@ -54,6 +54,7 @@ export function RoomsPanel({
   editingRoomKind,
   editingRoomCategoryId,
   editingRoomNsfw,
+  editingRoomHidden,
   editingRoomAudioQualitySetting,
   categoryPopupRef,
   channelPopupRef,
@@ -70,6 +71,7 @@ export function RoomsPanel({
   onSetEditingRoomKind,
   onSetEditingRoomCategoryId,
   onSetEditingRoomNsfw,
+  onSetEditingRoomHidden,
   onSetEditingRoomAudioQualitySetting,
   onCreateCategory,
   onCreateRoom,
@@ -90,7 +92,11 @@ export function RoomsPanel({
   onOpenRoomChat,
   onKickRoomMember,
   onMoveRoomMember,
-  onSaveMemberPreference
+  onSaveMemberPreference,
+  onLoadServerMemberProfile,
+  onLoadServerRoles,
+  onSetServerMemberCustomRoles,
+  onSetServerMemberHiddenRoomAccess
 }: RoomsPanelProps) {
   const [confirmPopup, setConfirmPopup] = useState<ConfirmPopupState>(null);
 
@@ -176,11 +182,13 @@ export function RoomsPanel({
       editingRoomKind={editingRoomKind}
       editingRoomCategoryId={editingRoomCategoryId}
       editingRoomNsfw={editingRoomNsfw}
+      editingRoomHidden={editingRoomHidden}
       editingRoomAudioQualitySetting={editingRoomAudioQualitySetting}
       onSetEditingRoomTitle={onSetEditingRoomTitle}
       onSetEditingRoomKind={onSetEditingRoomKind}
       onSetEditingRoomCategoryId={onSetEditingRoomCategoryId}
       onSetEditingRoomNsfw={onSetEditingRoomNsfw}
+      onSetEditingRoomHidden={onSetEditingRoomHidden}
       onSetEditingRoomAudioQualitySetting={onSetEditingRoomAudioQualitySetting}
       onSaveChannelSettings={onSaveChannelSettings}
       onMoveChannel={onMoveChannel}
@@ -190,6 +198,10 @@ export function RoomsPanel({
       onKickRoomMember={onKickRoomMember}
       onMoveRoomMember={onMoveRoomMember}
       onSaveMemberPreference={onSaveMemberPreference}
+      onLoadServerMemberProfile={onLoadServerMemberProfile}
+      onLoadServerRoles={onLoadServerRoles}
+      onSetServerMemberCustomRoles={onSetServerMemberCustomRoles}
+      onSetServerMemberHiddenRoomAccess={onSetServerMemberHiddenRoomAccess}
       memberPreferencesByUserId={memberPreferencesByUserId}
       room={room}
       roomMembers={mapRoomMembersForSlug(liveRoomMemberDetailsBySlug, liveRoomMembersBySlug, room.slug)}

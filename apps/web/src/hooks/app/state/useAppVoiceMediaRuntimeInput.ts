@@ -74,6 +74,8 @@ export function useAppVoiceMediaRuntimeInput(params: Record<string, unknown>): A
       preRnnEchoCancellationEnabled: p.preRnnEchoCancellationEnabled,
       preRnnAutoGainControlEnabled: p.preRnnAutoGainControlEnabled,
       selfMonitorEnabled: p.selfMonitorEnabled,
+      walkieTalkieEnabled: p.walkieTalkieEnabled,
+      walkieTalkieHotkey: p.walkieTalkieHotkey,
       micMuted: p.micMuted,
       audioMuted: p.audioMuted,
       cameraEnabled: p.cameraEnabled,

@@ -1921,6 +1921,58 @@ pre {
   max-width: min(92vw, 560px);
 }
 
+.channel-settings-title-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex-wrap: nowrap;
+}
+
+.channel-settings-title-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: auto;
+}
+
+.channel-settings-toggles-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-sm);
+}
+
+.channel-settings-toggle-item {
+  min-width: 0;
+}
+
+.channel-settings-actions-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex-wrap: nowrap;
+}
+
+.channel-settings-actions-row .clear-action-btn,
+.channel-settings-actions-row .delete-action-btn {
+  margin-top: 0;
+  width: auto;
+  flex: 1 1 0;
+}
+
+@media (max-width: 720px) {
+  .channel-settings-toggles-row {
+    grid-template-columns: 1fr;
+  }
+
+  .channel-settings-actions-row {
+    flex-wrap: wrap;
+  }
+
+  .channel-settings-actions-row .clear-action-btn,
+  .channel-settings-actions-row .delete-action-btn {
+    flex-basis: 100%;
+  }
+}
+
 .chat-log {
   max-height: none;
   overflow: auto;
@@ -2315,7 +2367,18 @@ pre {
 
 .voice-settings-popup {
   min-width: 260px;
+  width: min(320px, 92vw);
+  max-width: 92vw;
   padding: var(--space-lg);
+}
+
+.voice-hotkey-field {
+  min-width: 0;
+}
+
+.voice-hotkey-input {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .voice-menu-row-active,

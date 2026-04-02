@@ -1,4 +1,5 @@
 import { ClipboardEvent, FormEvent, KeyboardEvent, ReactNode, RefObject, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import type { Message } from "../domain";
 import { Button } from "./uicomponents";
 import { buildChatMessageViewModels } from "../utils/chatMessageViewModel";
@@ -470,30 +471,34 @@ export function ChatPanel({
         ) : null}
         <Button type="submit" disabled={!hasActiveRoom}>{editingMessageId ? t("chat.saveEdit") : t("chat.send")}</Button>
       </form>
-      {previewImageUrl ? (
-        <div
-          className="chat-image-modal-overlay popup-layer-content"
-          role="dialog"
-          aria-modal="true"
-          aria-label={t("chat.imagePreviewTitle")}
-          onClick={() => setPreviewImageUrl(null)}
-        >
-          <div className="chat-image-modal-card" onClick={(event) => event.stopPropagation()}>
-            <Button
-              type="button"
-              className="secondary tiny chat-image-modal-close"
-              onClick={() => setPreviewImageUrl(null)}
-            >
-              {t("chat.closeImagePreview")}
-            </Button>
-            <img
-              src={resolveAttachmentImageUrl(previewImageUrl)}
-              alt="chat-image-preview"
-              className="chat-image-modal-media"
-            />
+      {previewImageUrl && typeof document !== "undefined"
+        ? createPortal(
+          <div
+            className="chat-image-modal-overlay"
+            role="dialog"
+            aria-modal="true"
+            aria-label={t("chat.imagePreviewTitle")}
+            onClick={() => setPreviewImageUrl(null)}
+          >
+            <div className="chat-image-modal-card" onClick={(event) => event.stopPropagation()}>
+              <Button
+                type="button"
+                className="secondary tiny chat-image-modal-close"
+                onClick={() => setPreviewImageUrl(null)}
+              >
+                {t("chat.closeImagePreview")}
+              </Button>
+              <img
+                src={resolveAttachmentImageUrl(previewImageUrl)}
+                alt="chat-image-preview"
+                className="chat-image-modal-media"
+              />
+            </div>
           </div>
-        </div>
-      ) : null}
+          ,
+          document.body
+        )
+        : null}
     </section>
   );
 }

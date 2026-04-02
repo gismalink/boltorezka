@@ -8,6 +8,8 @@ export type UserRow = {
   username: string | null;
   name: string;
   ui_theme: UiTheme;
+  walkie_talkie_enabled?: boolean;
+  walkie_talkie_hotkey?: string;
   role: UserRole;
   is_banned: boolean;
   access_state: UserAccessState;
@@ -23,6 +25,8 @@ export type UserCompactRow = {
   username: string | null;
   name: string;
   ui_theme: UiTheme;
+  walkie_talkie_enabled?: boolean;
+  walkie_talkie_hotkey?: string;
   role: UserRole;
   is_banned: boolean;
   access_state: UserAccessState;
@@ -46,6 +50,7 @@ export type RoomRow = {
   slug: string;
   title: string;
   kind: RoomKind;
+  is_hidden?: boolean;
   audio_quality_override?: AudioQuality | null;
   category_id: string | null;
   server_id?: string;
@@ -115,6 +120,7 @@ export type ServerMemberRow = {
   role: ServerMemberRole;
   status: ServerMemberStatus;
   joined_at: string;
+  custom_role_ids?: string[];
 };
 
 export type ServerInviteRow = {

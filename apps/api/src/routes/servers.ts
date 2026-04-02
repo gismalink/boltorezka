@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
+import { db } from "../db.js";
 import {
   loadCurrentUser,
   requireAuth,
@@ -36,8 +37,10 @@ import type {
   ServerGetResponse,
   ServerMemberLeaveResponse,
   ServerMemberRemoveResponse,
+  ServerMemberProfileResponse,
   ServerOwnerTransferResponse,
   ServerMembersResponse,
+  ServerRolesResponse,
   ServerRenameResponse,
   ServersListResponse
 } from "../api-contract.types.ts";
@@ -65,6 +68,18 @@ const transferServerOwnerSchema = z.object({
   userId: z.string().trim().uuid()
 });
 
+const serverRoleUpsertSchema = z.object({
+  name: z.string().trim().min(2).max(64)
+});
+
+const serverMemberCustomRolesSchema = z.object({
+  roleIds: z.array(z.string().uuid()).max(100)
+});
+
+const serverMemberHiddenAccessSchema = z.object({
+  roomIds: z.array(z.string().uuid()).max(500)
+});
+
 export async function serversRoutes(fastify: FastifyInstance) {
   const limitInviteCreate = makeRateLimiter({
     namespace: "server.invite.create",
@@ -72,6 +87,23 @@ export async function serversRoutes(fastify: FastifyInstance) {
     windowSec: 60,
     message: "Too many invite create attempts"
   });
+
+  const baseServerRoles = ["member", "admin", "owner"] as const;
+
+  const canManageServerMeta = (role: string) => role === "owner" || role === "admin";
+
+  const requireServerMetaManage = (request: Parameters<typeof requireAuth>[0], reply: Parameters<typeof requireAuth>[1]) => {
+    const role = String(request.currentServer?.role || "").trim();
+    if (canManageServerMeta(role)) {
+      return true;
+    }
+
+    reply.code(403).send({
+      error: "forbidden_role",
+      message: "Insufficient server role"
+    });
+    return false;
+  };
 
   fastify.post<{ Body: { name: string } }>(
     "/v1/servers",
@@ -168,6 +200,247 @@ export async function serversRoutes(fastify: FastifyInstance) {
         members
       };
       return response;
+    }
+  );
+
+  fastify.get<{ Params: { serverId: string; userId: string } }>(
+    "/v1/servers/:serverId/members/:userId/profile",
+    {
+      preHandler: [
+        requireAuth,
+        requireServiceAccess,
+        requireNotServiceBanned,
+        loadCurrentUser,
+        requireServerMembership,
+        requireNotServerBanned
+      ]
+    },
+    async (request, reply) => {
+      const serverId = String(request.params.serverId || "").trim();
+      const userId = String(request.params.userId || "").trim();
+
+      const memberResult = await db.query<{
+        userId: string;
+        name: string;
+        email: string;
+        joinedAt: string;
+        role: "owner" | "admin" | "member";
+      }>(
+        `SELECT sm.user_id AS "userId", u.name, u.email, sm.joined_at AS "joinedAt", sm.role
+         FROM server_members sm
+         JOIN users u ON u.id = sm.user_id
+         WHERE sm.server_id = $1
+           AND sm.user_id = $2
+           AND sm.status = 'active'
+         LIMIT 1`,
+        [serverId, userId]
+      );
+
+      if ((memberResult.rowCount || 0) === 0) {
+        return reply.code(404).send({
+          error: "ServerMemberNotFound",
+          message: "Server member not found"
+        });
+      }
+
+      const customRolesResult = await db.query<{ id: string; name: string }>(
+        `SELECT scr.id, scr.name
+         FROM server_member_custom_roles smcr
+         JOIN server_custom_roles scr ON scr.id = smcr.role_id
+         WHERE smcr.server_id = $1
+           AND smcr.user_id = $2
+         ORDER BY scr.name ASC`,
+        [serverId, userId]
+      );
+
+      const hiddenAccessResult = await db.query<{ roomId: string; roomSlug: string; roomTitle: string }>(
+        `SELECT r.id AS "roomId", r.slug AS "roomSlug", r.title AS "roomTitle"
+         FROM room_visibility_grants rvg
+         JOIN rooms r ON r.id = rvg.room_id
+         WHERE r.server_id = $1
+           AND r.is_archived = FALSE
+           AND r.is_hidden = TRUE
+           AND rvg.user_id = $2
+         ORDER BY r.title ASC`,
+        [serverId, userId]
+      );
+
+      const hiddenRoomsAvailableResult = await db.query<{
+        roomId: string;
+        roomSlug: string;
+        roomTitle: string;
+        hasAccess: boolean;
+      }>(
+        `SELECT
+           r.id AS "roomId",
+           r.slug AS "roomSlug",
+           r.title AS "roomTitle",
+           EXISTS (
+             SELECT 1
+             FROM room_visibility_grants rvg
+             WHERE rvg.room_id = r.id
+               AND rvg.user_id = $2
+           ) AS "hasAccess"
+         FROM rooms r
+         WHERE r.server_id = $1
+           AND r.is_archived = FALSE
+           AND r.is_hidden = TRUE
+         ORDER BY r.title ASC`,
+        [serverId, userId]
+      );
+
+      const response: ServerMemberProfileResponse = {
+        serverId,
+        member: {
+          ...memberResult.rows[0],
+          customRoles: customRolesResult.rows,
+          hiddenRoomAccess: hiddenAccessResult.rows,
+          hiddenRoomsAvailable: hiddenRoomsAvailableResult.rows
+        }
+      };
+
+      return response;
+    }
+  );
+
+  fastify.put<{ Params: { serverId: string; userId: string }; Body: { roleIds: string[] } }>(
+    "/v1/servers/:serverId/members/:userId/custom-roles",
+    {
+      preHandler: [
+        requireAuth,
+        requireServiceAccess,
+        requireNotServiceBanned,
+        loadCurrentUser,
+        requireServerMembership,
+        requireNotServerBanned
+      ]
+    },
+    async (request, reply) => {
+      if (!requireServerMetaManage(request, reply)) {
+        return;
+      }
+
+      const parsed = serverMemberCustomRolesSchema.safeParse(request.body || {});
+      if (!parsed.success) {
+        return reply.code(400).send({
+          error: "ValidationError",
+          issues: parsed.error.flatten()
+        });
+      }
+
+      const serverId = String(request.params.serverId || "").trim();
+      const userId = String(request.params.userId || "").trim();
+      const roleIds = Array.from(new Set(parsed.data.roleIds.map((value) => String(value || "").trim()).filter(Boolean)));
+
+      const roleCheck = await db.query<{ id: string }>(
+        `SELECT id
+         FROM server_custom_roles
+         WHERE server_id = $1
+           AND id = ANY($2::uuid[])`,
+        [serverId, roleIds]
+      );
+
+      if (roleCheck.rows.length !== roleIds.length) {
+        return reply.code(400).send({
+          error: "ValidationError",
+          message: "Some roleIds are invalid for this server"
+        });
+      }
+
+      await db.query(
+        `DELETE FROM server_member_custom_roles
+         WHERE server_id = $1
+           AND user_id = $2`,
+        [serverId, userId]
+      );
+
+      for (const roleId of roleIds) {
+        await db.query(
+          `INSERT INTO server_member_custom_roles (server_id, user_id, role_id)
+           VALUES ($1, $2, $3)
+           ON CONFLICT (server_id, user_id, role_id) DO NOTHING`,
+          [serverId, userId, roleId]
+        );
+      }
+
+      return { ok: true, serverId, userId, roleIds };
+    }
+  );
+
+  fastify.put<{ Params: { serverId: string; userId: string }; Body: { roomIds: string[] } }>(
+    "/v1/servers/:serverId/members/:userId/hidden-room-access",
+    {
+      preHandler: [
+        requireAuth,
+        requireServiceAccess,
+        requireNotServiceBanned,
+        loadCurrentUser,
+        requireServerMembership,
+        requireNotServerBanned
+      ]
+    },
+    async (request, reply) => {
+      if (!requireServerMetaManage(request, reply)) {
+        return;
+      }
+
+      const parsed = serverMemberHiddenAccessSchema.safeParse(request.body || {});
+      if (!parsed.success) {
+        return reply.code(400).send({
+          error: "ValidationError",
+          issues: parsed.error.flatten()
+        });
+      }
+
+      const serverId = String(request.params.serverId || "").trim();
+      const userId = String(request.params.userId || "").trim();
+      const roomIds = Array.from(new Set(parsed.data.roomIds.map((value) => String(value || "").trim()).filter(Boolean)));
+
+      const roomCheck = await db.query<{ id: string }>(
+        `SELECT id
+         FROM rooms
+         WHERE server_id = $1
+           AND is_archived = FALSE
+           AND is_hidden = TRUE
+           AND id = ANY($2::uuid[])`,
+        [serverId, roomIds]
+      );
+
+      if (roomCheck.rows.length !== roomIds.length) {
+        return reply.code(400).send({
+          error: "ValidationError",
+          message: "Some roomIds are invalid hidden rooms for this server"
+        });
+      }
+
+      await db.query(
+        `DELETE FROM room_visibility_grants rvg
+         USING rooms r
+         WHERE rvg.room_id = r.id
+           AND r.server_id = $1
+           AND r.is_hidden = TRUE
+           AND rvg.user_id = $2`,
+        [serverId, userId]
+      );
+
+      const actorId = String(request.currentUser?.id || "").trim() || null;
+      for (const roomId of roomIds) {
+        await db.query(
+          `INSERT INTO room_visibility_grants (room_id, user_id, granted_by)
+           VALUES ($1, $2, $3)
+           ON CONFLICT (room_id, user_id) DO UPDATE SET granted_by = EXCLUDED.granted_by`,
+          [roomId, userId, actorId]
+        );
+
+        await db.query(
+          `INSERT INTO room_members (room_id, user_id, role)
+           VALUES ($1, $2, 'member')
+           ON CONFLICT (room_id, user_id) DO NOTHING`,
+          [roomId, userId]
+        );
+      }
+
+      return { ok: true, serverId, userId, roomIds };
     }
   );
 
@@ -773,6 +1046,165 @@ export async function serversRoutes(fastify: FastifyInstance) {
 
         throw error;
       }
+    }
+  );
+
+  fastify.get<{ Params: { serverId: string } }>(
+    "/v1/servers/:serverId/roles",
+    {
+      preHandler: [
+        requireAuth,
+        requireServiceAccess,
+        requireNotServiceBanned,
+        loadCurrentUser,
+        requireServerMembership,
+        requireNotServerBanned
+      ]
+    },
+    async (request) => {
+      const serverId = String(request.params.serverId || "").trim();
+      const customRoles = await db.query<{ id: string; name: string }>(
+        `SELECT id, name
+         FROM server_custom_roles
+         WHERE server_id = $1
+         ORDER BY name ASC`,
+        [serverId]
+      );
+
+      const response: ServerRolesResponse = {
+        serverId,
+        roles: [
+          ...baseServerRoles.map((name) => ({ id: `base:${name}`, name, isBase: true })),
+          ...customRoles.rows.map((role) => ({ ...role, isBase: false }))
+        ]
+      };
+
+      return response;
+    }
+  );
+
+  fastify.post<{ Params: { serverId: string }; Body: { name: string } }>(
+    "/v1/servers/:serverId/roles",
+    {
+      preHandler: [
+        requireAuth,
+        requireServiceAccess,
+        requireNotServiceBanned,
+        loadCurrentUser,
+        requireServerMembership,
+        requireNotServerBanned
+      ]
+    },
+    async (request, reply) => {
+      if (!requireServerMetaManage(request, reply)) {
+        return;
+      }
+
+      const parsed = serverRoleUpsertSchema.safeParse(request.body || {});
+      if (!parsed.success) {
+        return reply.code(400).send({
+          error: "ValidationError",
+          issues: parsed.error.flatten()
+        });
+      }
+
+      const serverId = String(request.params.serverId || "").trim();
+      const actorId = String(request.currentUser?.id || "").trim() || null;
+
+      const inserted = await db.query<{ id: string; name: string }>(
+        `INSERT INTO server_custom_roles (server_id, name, created_by_user_id)
+         VALUES ($1, $2, $3)
+         RETURNING id, name`,
+        [serverId, parsed.data.name, actorId]
+      );
+
+      return reply.code(201).send({ role: inserted.rows[0] });
+    }
+  );
+
+  fastify.patch<{ Params: { serverId: string; roleId: string }; Body: { name: string } }>(
+    "/v1/servers/:serverId/roles/:roleId",
+    {
+      preHandler: [
+        requireAuth,
+        requireServiceAccess,
+        requireNotServiceBanned,
+        loadCurrentUser,
+        requireServerMembership,
+        requireNotServerBanned
+      ]
+    },
+    async (request, reply) => {
+      if (!requireServerMetaManage(request, reply)) {
+        return;
+      }
+
+      const parsed = serverRoleUpsertSchema.safeParse(request.body || {});
+      if (!parsed.success) {
+        return reply.code(400).send({
+          error: "ValidationError",
+          issues: parsed.error.flatten()
+        });
+      }
+
+      const serverId = String(request.params.serverId || "").trim();
+      const roleId = String(request.params.roleId || "").trim();
+      const updated = await db.query<{ id: string; name: string }>(
+        `UPDATE server_custom_roles
+         SET name = $3,
+             updated_at = NOW()
+         WHERE id = $1
+           AND server_id = $2
+         RETURNING id, name`,
+        [roleId, serverId, parsed.data.name]
+      );
+
+      if ((updated.rowCount || 0) === 0) {
+        return reply.code(404).send({
+          error: "RoleNotFound",
+          message: "Server role not found"
+        });
+      }
+
+      return { role: updated.rows[0] };
+    }
+  );
+
+  fastify.delete<{ Params: { serverId: string; roleId: string } }>(
+    "/v1/servers/:serverId/roles/:roleId",
+    {
+      preHandler: [
+        requireAuth,
+        requireServiceAccess,
+        requireNotServiceBanned,
+        loadCurrentUser,
+        requireServerMembership,
+        requireNotServerBanned
+      ]
+    },
+    async (request, reply) => {
+      if (!requireServerMetaManage(request, reply)) {
+        return;
+      }
+
+      const serverId = String(request.params.serverId || "").trim();
+      const roleId = String(request.params.roleId || "").trim();
+      const deleted = await db.query<{ id: string }>(
+        `DELETE FROM server_custom_roles
+         WHERE id = $1
+           AND server_id = $2
+         RETURNING id`,
+        [roleId, serverId]
+      );
+
+      if ((deleted.rowCount || 0) === 0) {
+        return reply.code(404).send({
+          error: "RoleNotFound",
+          message: "Server role not found"
+        });
+      }
+
+      return { deleted: true, roleId };
     }
   );
 }

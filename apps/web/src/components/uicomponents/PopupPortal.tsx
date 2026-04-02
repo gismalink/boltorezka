@@ -11,6 +11,7 @@ type PopupPortalProps = {
   className?: string;
   placement?: AnyPopupPlacement;
   offset?: number;
+  disableFlip?: boolean;
   children: ReactNode;
 };
 
@@ -29,6 +30,7 @@ export function PopupPortal({
   className = "",
   placement = "bottom-end",
   offset = 6,
+  disableFlip = false,
   children
 }: PopupPortalProps) {
   const root = useMemo(() => {
@@ -73,10 +75,12 @@ export function PopupPortal({
     let left = 0;
 
     if (isSidePlacement) {
-      if (side === "right" && !hasRoomRight && hasRoomLeft) {
-        side = "left";
-      } else if (side === "left" && !hasRoomLeft && hasRoomRight) {
-        side = "right";
+      if (!disableFlip) {
+        if (side === "right" && !hasRoomRight && hasRoomLeft) {
+          side = "left";
+        } else if (side === "left" && !hasRoomLeft && hasRoomRight) {
+          side = "right";
+        }
       }
 
       left = side === "right"
@@ -87,10 +91,12 @@ export function PopupPortal({
         ? anchorRect.top
         : anchorRect.bottom - popupRect.height;
     } else {
-      if (vertical === "bottom" && !hasRoomBelow && hasRoomAbove) {
-        vertical = "top";
-      } else if (vertical === "top" && !hasRoomAbove && hasRoomBelow) {
-        vertical = "bottom";
+      if (!disableFlip) {
+        if (vertical === "bottom" && !hasRoomBelow && hasRoomAbove) {
+          vertical = "top";
+        } else if (vertical === "top" && !hasRoomAbove && hasRoomBelow) {
+          vertical = "bottom";
+        }
       }
 
       top = vertical === "bottom"
@@ -104,12 +110,14 @@ export function PopupPortal({
       const overflowsRight = left + popupRect.width > window.innerWidth - VIEWPORT_MARGIN;
       const overflowsLeft = left < VIEWPORT_MARGIN;
 
-      if (horizontal === "start" && overflowsRight) {
-        horizontal = "end";
-        left = anchorRect.right - popupRect.width;
-      } else if (horizontal === "end" && overflowsLeft) {
-        horizontal = "start";
-        left = anchorRect.left;
+      if (!disableFlip) {
+        if (horizontal === "start" && overflowsRight) {
+          horizontal = "end";
+          left = anchorRect.right - popupRect.width;
+        } else if (horizontal === "end" && overflowsLeft) {
+          horizontal = "start";
+          left = anchorRect.left;
+        }
       }
     }
 
