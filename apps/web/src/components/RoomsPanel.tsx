@@ -54,6 +54,7 @@ export function RoomsPanel({
   editingRoomKind,
   editingRoomCategoryId,
   editingRoomNsfw,
+  editingRoomHidden,
   editingRoomAudioQualitySetting,
   categoryPopupRef,
   channelPopupRef,
@@ -70,6 +71,7 @@ export function RoomsPanel({
   onSetEditingRoomKind,
   onSetEditingRoomCategoryId,
   onSetEditingRoomNsfw,
+  onSetEditingRoomHidden,
   onSetEditingRoomAudioQualitySetting,
   onCreateCategory,
   onCreateRoom,
@@ -180,11 +182,13 @@ export function RoomsPanel({
       editingRoomKind={editingRoomKind}
       editingRoomCategoryId={editingRoomCategoryId}
       editingRoomNsfw={editingRoomNsfw}
+      editingRoomHidden={editingRoomHidden}
       editingRoomAudioQualitySetting={editingRoomAudioQualitySetting}
       onSetEditingRoomTitle={onSetEditingRoomTitle}
       onSetEditingRoomKind={onSetEditingRoomKind}
       onSetEditingRoomCategoryId={onSetEditingRoomCategoryId}
       onSetEditingRoomNsfw={onSetEditingRoomNsfw}
+      onSetEditingRoomHidden={onSetEditingRoomHidden}
       onSetEditingRoomAudioQualitySetting={onSetEditingRoomAudioQualitySetting}
       onSaveChannelSettings={onSaveChannelSettings}
       onMoveChannel={onMoveChannel}

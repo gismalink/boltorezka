@@ -1,6 +1,6 @@
 import { type DragEvent, useEffect, useRef, useState } from "react";
 import type { ChannelAudioQualitySetting, Room, RoomKind, RoomMemberPreference } from "../../domain";
-import { PopupPortal, RangeSlider } from "../uicomponents";
+import { PixelCheckbox, PopupPortal, RangeSlider } from "../uicomponents";
 import type { RoomsPanelProps } from "../types";
 import type { RoomMember } from "./roomMembers";
 
@@ -40,11 +40,13 @@ type RoomRowProps = Pick<
   | "editingRoomKind"
   | "editingRoomCategoryId"
   | "editingRoomNsfw"
+  | "editingRoomHidden"
   | "editingRoomAudioQualitySetting"
   | "onSetEditingRoomTitle"
   | "onSetEditingRoomKind"
   | "onSetEditingRoomCategoryId"
   | "onSetEditingRoomNsfw"
+  | "onSetEditingRoomHidden"
   | "onSetEditingRoomAudioQualitySetting"
   | "onSaveChannelSettings"
   | "onMoveChannel"
@@ -85,11 +87,13 @@ export function RoomRow({
   editingRoomKind,
   editingRoomCategoryId,
   editingRoomNsfw,
+  editingRoomHidden,
   editingRoomAudioQualitySetting,
   onSetEditingRoomTitle,
   onSetEditingRoomKind,
   onSetEditingRoomCategoryId,
   onSetEditingRoomNsfw,
+  onSetEditingRoomHidden,
   onSetEditingRoomAudioQualitySetting,
   onSaveChannelSettings,
   onMoveChannel,
@@ -121,6 +125,8 @@ export function RoomRow({
   const [memberProfileModalData, setMemberProfileModalData] = useState<ServerMemberProfileDetails | null>(null);
   const [memberRoleSelectorOpen, setMemberRoleSelectorOpen] = useState(false);
   const [memberHiddenRoomsSelectorOpen, setMemberHiddenRoomsSelectorOpen] = useState(false);
+  const [isEditingChannelTitle, setIsEditingChannelTitle] = useState(false);
+  const [editingChannelTitleInitialValue, setEditingChannelTitleInitialValue] = useState("");
   const [serverRoles, setServerRoles] = useState<Array<{ id: string; name: string; isBase: boolean }>>([]);
   const [serverRolesLoading, setServerRolesLoading] = useState(false);
   const [memberPreferenceDrafts, setMemberPreferenceDrafts] = useState<Record<string, { volume: number; note: string }>>({});
@@ -137,7 +143,11 @@ export function RoomRow({
       if (!target) {
         return;
       }
-      if (target.closest(".channel-member-settings-anchor") || target.closest(".channel-member-settings-popup")) {
+      if (
+        target.closest(".channel-member-settings-anchor")
+        || target.closest(".channel-member-settings-popup")
+        || target.closest(".voice-submenu-popup")
+      ) {
         return;
       }
       setMemberMenuOpenKey(null);
@@ -190,6 +200,16 @@ export function RoomRow({
     };
   }, [canKickMembers, memberMenuUserId, onLoadServerRoles]);
 
+  useEffect(() => {
+    if (channelSettingsPopupOpenId !== room.id) {
+      setIsEditingChannelTitle(false);
+      return;
+    }
+
+    setEditingChannelTitleInitialValue(editingRoomTitle);
+    setIsEditingChannelTitle(false);
+  }, [channelSettingsPopupOpenId, editingRoomTitle, room.id]);
+
   const closeMemberMenu = () => {
     setMemberMenuOpenKey(null);
     setMemberMenuUserId(null);
@@ -207,6 +227,8 @@ export function RoomRow({
     volumeValue: number,
     noteValue: string
   ) => {
+    setMemberRoleSelectorOpen(false);
+    setMemberHiddenRoomsSelectorOpen(false);
     setMemberPreferenceDrafts((prev) => ({
       ...prev,
       [userId]: {
@@ -379,30 +401,67 @@ export function RoomRow({
             <div>
               <form className="grid gap-4" onSubmit={onSaveChannelSettings}>
                 <h3 className="subheading">{t("rooms.channelSettings")}</h3>
-                <div className="row items-center gap-2">
-                  <input
-                    value={editingRoomTitle}
-                    onChange={(event) => onSetEditingRoomTitle(event.target.value)}
-                    placeholder={t("rooms.channelTitle")}
-                  />
-                  <button
-                    type="button"
-                    className="secondary icon-btn tiny"
-                    onClick={() => onMoveChannel("up")}
-                    aria-label={t("rooms.up")}
-                    data-tooltip={t("rooms.up")}
-                  >
-                    <i className="bi bi-arrow-up" aria-hidden="true" />
-                  </button>
-                  <button
-                    type="button"
-                    className="secondary icon-btn tiny"
-                    onClick={() => onMoveChannel("down")}
-                    aria-label={t("rooms.down")}
-                    data-tooltip={t("rooms.down")}
-                  >
-                    <i className="bi bi-arrow-down" aria-hidden="true" />
-                  </button>
+                <div className="grid gap-1.5">
+                  <span className="subheading">{t("rooms.channelTitle")}</span>
+                  <div className="row items-center gap-2">
+                    {isEditingChannelTitle ? (
+                      <button
+                        type="button"
+                        className="secondary whitespace-nowrap"
+                        onMouseDown={(event) => event.preventDefault()}
+                        onClick={() => {
+                          onSetEditingRoomTitle(editingChannelTitleInitialValue);
+                          setIsEditingChannelTitle(false);
+                        }}
+                      >
+                        {t("settings.cancel")}
+                      </button>
+                    ) : null}
+                    <input
+                      value={editingRoomTitle}
+                      onFocus={() => {
+                        setEditingChannelTitleInitialValue(editingRoomTitle);
+                        setIsEditingChannelTitle(true);
+                      }}
+                      onBlur={() => {
+                        onSetEditingRoomTitle(editingChannelTitleInitialValue);
+                        setIsEditingChannelTitle(false);
+                      }}
+                      onChange={(event) => onSetEditingRoomTitle(event.target.value)}
+                      placeholder={t("rooms.channelTitle")}
+                    />
+                    {isEditingChannelTitle ? (
+                      <button
+                        type="button"
+                        className="whitespace-nowrap"
+                        onMouseDown={(event) => event.preventDefault()}
+                        onClick={() => {
+                          setEditingChannelTitleInitialValue(editingRoomTitle);
+                          setIsEditingChannelTitle(false);
+                        }}
+                      >
+                        {t("settings.apply")}
+                      </button>
+                    ) : null}
+                    <button
+                      type="button"
+                      className="secondary icon-btn tiny"
+                      onClick={() => onMoveChannel("up")}
+                      aria-label={t("rooms.up")}
+                      data-tooltip={t("rooms.up")}
+                    >
+                      <i className="bi bi-arrow-up" aria-hidden="true" />
+                    </button>
+                    <button
+                      type="button"
+                      className="secondary icon-btn tiny"
+                      onClick={() => onMoveChannel("down")}
+                      aria-label={t("rooms.down")}
+                      data-tooltip={t("rooms.down")}
+                    >
+                      <i className="bi bi-arrow-down" aria-hidden="true" />
+                    </button>
+                  </div>
                 </div>
                 <div className="grid gap-3 desktop:grid-cols-2">
                   <select value={editingRoomKind} onChange={(event) => onSetEditingRoomKind(event.target.value as RoomKind)}>
@@ -426,6 +485,19 @@ export function RoomRow({
                     aria-checked={editingRoomNsfw}
                     aria-label={t("rooms.channelNsfw")}
                     onClick={() => onSetEditingRoomNsfw(!editingRoomNsfw)}
+                  >
+                    <span className="ui-switch-thumb" aria-hidden="true" />
+                  </button>
+                </div>
+                <div className="row items-center justify-between gap-3">
+                  <span>{t("rooms.channelHidden")}</span>
+                  <button
+                    type="button"
+                    className={`ui-switch ${editingRoomHidden ? "ui-switch-on" : ""}`}
+                    role="switch"
+                    aria-checked={editingRoomHidden}
+                    aria-label={t("rooms.channelHidden")}
+                    onClick={() => onSetEditingRoomHidden(!editingRoomHidden)}
                   >
                     <span className="ui-switch-thumb" aria-hidden="true" />
                   </button>
@@ -478,20 +550,22 @@ export function RoomRow({
                   </div>
                 ) : null}
                 <button type="submit" className="icon-action"><i className="bi bi-check2" aria-hidden="true" /> {t("rooms.save")}</button>
-                <button
-                  type="button"
-                  className="secondary clear-action-btn"
-                  onClick={() => onRequestClearChannel(room)}
-                >
-                  <i className="bi bi-eraser" aria-hidden="true" /> {t("rooms.clearChat")}
-                </button>
-                <button
-                  type="button"
-                  className="secondary delete-action-btn"
-                  onClick={() => onRequestArchiveChannel(room)}
-                >
-                  <i className="bi bi-archive" aria-hidden="true" /> {t("rooms.archiveChannel")}
-                </button>
+                <div className="row flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    className="secondary clear-action-btn"
+                    onClick={() => onRequestClearChannel(room)}
+                  >
+                    <i className="bi bi-eraser" aria-hidden="true" /> {t("rooms.clearChat")}
+                  </button>
+                  <button
+                    type="button"
+                    className="secondary delete-action-btn"
+                    onClick={() => onRequestArchiveChannel(room)}
+                  >
+                    <i className="bi bi-archive" aria-hidden="true" /> {t("rooms.archiveChannel")}
+                  </button>
+                </div>
               </form>
             </div>
           </PopupPortal>
@@ -593,10 +667,8 @@ export function RoomRow({
             const noteValue = String(memberDraft?.note ?? memberPreference?.note ?? "");
             const menuKey = `${room.slug}:${member.userId || member.userName}`;
             const canManageMember = Boolean(member.userId) && !isCurrentUser;
-            const selectedCustomRoleId = memberMenuProfile?.customRoles[0]?.id || "";
-            const selectedCustomRoleName = selectedCustomRoleId
-              ? (serverRoles.find((role) => role.id === selectedCustomRoleId)?.name || "")
-              : "";
+            const selectedCustomRoleIds = memberMenuProfile?.customRoles.map((role) => role.id) || [];
+            const selectedCustomRoleNames = memberMenuProfile?.customRoles.map((role) => role.name).filter(Boolean) || [];
             const hiddenRoomsAvailable = memberMenuProfile?.hiddenRoomsAvailable || [];
             const hiddenRoomsGrantedCount = memberMenuProfile?.hiddenRoomAccess.length || 0;
 
@@ -778,7 +850,9 @@ export function RoomRow({
                                 <span className="min-w-0">
                                   <span className="voice-menu-title block">{t("server.contextServerRoles")}</span>
                                   <span className="voice-menu-subtitle block">
-                                    {selectedCustomRoleName || t("server.roleNoCustom")}
+                                    {selectedCustomRoleNames.length > 0
+                                      ? selectedCustomRoleNames.join(", ")
+                                      : t("server.roleNoCustom")}
                                   </span>
                                 </span>
                                 <i className={`bi ${memberRoleSelectorOpen ? "bi-chevron-up" : "bi-chevron-down"}`} aria-hidden="true" />
@@ -793,53 +867,35 @@ export function RoomRow({
                                 <div className="grid gap-2">
                                   {serverRolesLoading ? <p className="muted">{t("server.rolesLoading")}</p> : null}
                                   <div className="device-list mt-1 grid gap-1.5">
-                                    <button
-                                      type="button"
-                                      className={`secondary device-item radio-item flex items-center justify-between gap-4 text-left ${selectedCustomRoleId ? "" : "device-item-active"}`}
-                                      onClick={async () => {
-                                        const current = memberMenuProfile;
-                                        if (!current || current.userId !== member.userId) {
-                                          return;
-                                        }
-                                        const ok = await onSetServerMemberCustomRoles(current.userId, []);
-                                        if (!ok) {
-                                          return;
-                                        }
-                                        const refreshed = await onLoadServerMemberProfile(current.userId);
-                                        if (refreshed) {
-                                          setMemberMenuProfile(refreshed);
-                                        }
-                                        setMemberRoleSelectorOpen(false);
-                                      }}
-                                    >
-                                      <span>{t("server.roleNoCustom")}</span>
-                                      <i className={`bi ${selectedCustomRoleId ? "bi-circle" : "bi-record-circle-fill"}`} aria-hidden="true" />
-                                    </button>
-                                    {serverRoles.filter((role) => !role.isBase).map((role) => (
-                                      <button
-                                        key={role.id}
-                                        type="button"
-                                        className={`secondary device-item radio-item flex items-center justify-between gap-4 text-left ${selectedCustomRoleId === role.id ? "device-item-active" : ""}`}
-                                        onClick={async () => {
-                                          const current = memberMenuProfile;
-                                          if (!current || current.userId !== member.userId) {
-                                            return;
-                                          }
-                                          const ok = await onSetServerMemberCustomRoles(current.userId, [role.id]);
-                                          if (!ok) {
-                                            return;
-                                          }
-                                          const refreshed = await onLoadServerMemberProfile(current.userId);
-                                          if (refreshed) {
-                                            setMemberMenuProfile(refreshed);
-                                          }
-                                          setMemberRoleSelectorOpen(false);
-                                        }}
-                                      >
-                                        <span>{role.name}</span>
-                                        <i className={`bi ${selectedCustomRoleId === role.id ? "bi-record-circle-fill" : "bi-circle"}`} aria-hidden="true" />
-                                      </button>
-                                    ))}
+                                    {serverRoles.filter((role) => !role.isBase).map((role) => {
+                                      const checked = selectedCustomRoleIds.includes(role.id);
+                                      return (
+                                        <PixelCheckbox
+                                          key={role.id}
+                                          checked={checked}
+                                          onChange={async (nextChecked) => {
+                                            const current = memberMenuProfile;
+                                            if (!current || current.userId !== member.userId) {
+                                              return;
+                                            }
+                                            const currentIds = current.customRoles.map((item) => item.id);
+                                            const nextRoleIds = nextChecked
+                                              ? Array.from(new Set([...currentIds, role.id]))
+                                              : currentIds.filter((item) => item !== role.id);
+                                            const ok = await onSetServerMemberCustomRoles(current.userId, nextRoleIds);
+                                            if (!ok) {
+                                              return;
+                                            }
+                                            const refreshed = await onLoadServerMemberProfile(current.userId);
+                                            if (refreshed) {
+                                              setMemberMenuProfile(refreshed);
+                                            }
+                                          }}
+                                          label={role.name}
+                                          className={`secondary device-item text-left ${checked ? "device-item-active" : ""}`}
+                                        />
+                                      );
+                                    })}
                                   </div>
                                 </div>
                               </PopupPortal>

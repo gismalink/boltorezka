@@ -143,6 +143,7 @@ export class RoomAdminController {
       title: string;
       kind: RoomKind;
       categoryId: string | null;
+      isHidden?: boolean;
       nsfw?: boolean;
       audioQualityOverride?: AudioQuality | null;
     }
@@ -152,6 +153,7 @@ export class RoomAdminController {
         title: options.title.trim(),
         kind: options.kind,
         category_id: options.categoryId,
+        is_hidden: Boolean(options.isHidden),
         nsfw: Boolean(options.nsfw),
         audio_quality_override: options.audioQualityOverride
       });

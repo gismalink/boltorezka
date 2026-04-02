@@ -158,6 +158,7 @@ export type RoomsPanelProps = {
   editingRoomKind: RoomKind;
   editingRoomCategoryId: string;
   editingRoomNsfw: boolean;
+  editingRoomHidden: boolean;
   editingRoomAudioQualitySetting: ChannelAudioQualitySetting;
   categoryPopupRef: RefObject<HTMLDivElement>;
   channelPopupRef: RefObject<HTMLDivElement>;
@@ -174,6 +175,7 @@ export type RoomsPanelProps = {
   onSetEditingRoomKind: (value: RoomKind) => void;
   onSetEditingRoomCategoryId: (value: string) => void;
   onSetEditingRoomNsfw: (value: boolean) => void;
+  onSetEditingRoomHidden: (value: boolean) => void;
   onSetEditingRoomAudioQualitySetting: (value: ChannelAudioQualitySetting) => void;
   onCreateCategory: (event: FormEvent) => void;
   onCreateRoom: (event: FormEvent) => void;

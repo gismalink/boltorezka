@@ -19,6 +19,7 @@ type UseAppRoomsPanelPropsInput = Omit<
   | "onSetEditingRoomKind"
   | "onSetEditingRoomCategoryId"
   | "onSetEditingRoomNsfw"
+  | "onSetEditingRoomHidden"
   | "onSetEditingRoomAudioQualitySetting"
   | "onCreateCategory"
   | "onCreateRoom"
@@ -41,6 +42,7 @@ type UseAppRoomsPanelPropsInput = Omit<
   setEditingRoomKind: (value: RoomKind) => void;
   setEditingRoomCategoryId: (value: string) => void;
   setEditingRoomNsfw: (value: boolean) => void;
+  setEditingRoomHidden: (value: boolean) => void;
   setEditingRoomAudioQualitySetting: (value: WorkspaceRoomsPanelInput["editingRoomAudioQualitySetting"]) => void;
   createCategory: (event: FormEvent) => void;
   createRoom: (event: FormEvent) => void;
@@ -65,6 +67,7 @@ export function useAppRoomsPanelProps({
   setEditingRoomKind,
   setEditingRoomCategoryId,
   setEditingRoomNsfw,
+  setEditingRoomHidden,
   setEditingRoomAudioQualitySetting,
   createCategory,
   createRoom,
@@ -90,6 +93,7 @@ export function useAppRoomsPanelProps({
     onSetEditingRoomKind: setEditingRoomKind,
     onSetEditingRoomCategoryId: setEditingRoomCategoryId,
     onSetEditingRoomNsfw: setEditingRoomNsfw,
+    onSetEditingRoomHidden: setEditingRoomHidden,
     onSetEditingRoomAudioQualitySetting: setEditingRoomAudioQualitySetting,
     onCreateCategory: createCategory,
     onCreateRoom: createRoom,

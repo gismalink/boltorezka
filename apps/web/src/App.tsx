@@ -120,6 +120,7 @@ export function App() {
     editingRoomTitle, setEditingRoomTitle, editingRoomKind, setEditingRoomKind,
     editingRoomCategoryId, setEditingRoomCategoryId,
     editingRoomNsfw, setEditingRoomNsfw,
+    editingRoomHidden, setEditingRoomHidden,
     editingRoomAudioQualitySetting, setEditingRoomAudioQualitySetting
   } = useRoomEditorState();
   const {
@@ -615,12 +616,12 @@ export function App() {
     newRoomTitle, newRoomKind, newRoomCategoryId, newCategoryTitle,
     editingCategoryTitle, categorySettingsPopupOpenId,
     editingRoomTitle, editingRoomKind, editingRoomCategoryId,
-    editingRoomNsfw, editingRoomAudioQualitySetting,
+    editingRoomNsfw, editingRoomHidden, editingRoomAudioQualitySetting,
     channelSettingsPopupOpenId,
     setNewRoomTitle, setChannelPopupOpen,
     setNewCategoryTitle, setCategoryPopupOpen, setNewRoomCategoryId,
     setEditingRoomTitle, setEditingRoomKind, setEditingRoomCategoryId,
-    setEditingRoomNsfw, setEditingRoomAudioQualitySetting,
+    setEditingRoomNsfw, setEditingRoomHidden, setEditingRoomAudioQualitySetting,
     setChannelSettingsPopupOpenId, setEditingCategoryTitle,
     setCategorySettingsPopupOpenId
   }));
@@ -769,6 +770,7 @@ export function App() {
     editingRoomKind,
     editingRoomCategoryId,
     editingRoomNsfw,
+    editingRoomHidden,
     editingRoomAudioQualitySetting,
     categoryPopupRef,
     channelPopupRef,
@@ -785,6 +787,7 @@ export function App() {
     setEditingRoomKind,
     setEditingRoomCategoryId,
     setEditingRoomNsfw,
+    setEditingRoomHidden,
     setEditingRoomAudioQualitySetting,
     createCategory,
     createRoom,
