@@ -98,7 +98,11 @@ export function useWorkspaceRoomsPanelProps({
   onOpenRoomChat,
   onKickRoomMember,
   onMoveRoomMember,
-  onSaveMemberPreference
+  onSaveMemberPreference,
+  onLoadServerMemberProfile,
+  onLoadServerRoles,
+  onSetServerMemberCustomRoles,
+  onSetServerMemberHiddenRoomAccess
 }: UseWorkspaceRoomsPanelPropsInput): RoomsPanelProps {
   return {
     t,
@@ -172,6 +176,10 @@ export function useWorkspaceRoomsPanelProps({
     onOpenRoomChat,
     onKickRoomMember,
     onMoveRoomMember,
-    onSaveMemberPreference
+    onSaveMemberPreference,
+    onLoadServerMemberProfile,
+    onLoadServerRoles,
+    onSetServerMemberCustomRoles,
+    onSetServerMemberHiddenRoomAccess
   };
 }

@@ -471,16 +471,17 @@ export function UserDockSettingsOverlay({
                   <span>{t("settings.useRnn")}</span>
                   <button
                     type="button"
-                    className={`ui-switch ${noiseSuppressionEnabled ? "ui-switch-on" : ""}`}
+                    className="ui-switch"
                     role="switch"
-                    aria-checked={noiseSuppressionEnabled}
+                    aria-checked={false}
                     aria-label={t("settings.useRnn")}
-                    data-tooltip={noiseSuppressionEnabled ? t("rtc.noiseReductionOn") : t("rtc.noiseReductionOff")}
-                    onClick={onToggleNoiseSuppression}
+                    data-tooltip={t("settings.rnnTemporarilyDisabled")}
+                    disabled
                   >
                     <span className="ui-switch-thumb" aria-hidden="true" />
                   </button>
                 </div>
+                <p className="muted media-devices-warning">{t("settings.rnnTemporarilyDisabled")}</p>
                 <p className="muted media-devices-warning">{t("settings.rnnClientHint")}</p>
                 {noiseSuppressionEnabled ? (
                   <>

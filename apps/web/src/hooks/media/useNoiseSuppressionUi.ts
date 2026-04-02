@@ -13,20 +13,21 @@ export function useNoiseSuppressionUi({
   setRnnoiseRuntimeStatus
 }: UseNoiseSuppressionUiArgs) {
   const handleToggleNoiseSuppression = useCallback(() => {
-    setSelectedInputProfile((current) => {
-      const next = current === "noise_reduction" ? "custom" : "noise_reduction";
-      if (next !== "noise_reduction") {
-        setRnnoiseRuntimeStatus("inactive");
-      }
-      return next;
-    });
+    setSelectedInputProfile("custom");
+    setRnnoiseRuntimeStatus("inactive");
   }, [setSelectedInputProfile, setRnnoiseRuntimeStatus]);
 
   useEffect(() => {
+    if (selectedInputProfile === "noise_reduction") {
+      setSelectedInputProfile("custom");
+      setRnnoiseRuntimeStatus("inactive");
+      return;
+    }
+
     if (selectedInputProfile !== "noise_reduction") {
       setRnnoiseRuntimeStatus("inactive");
     }
-  }, [selectedInputProfile, setRnnoiseRuntimeStatus]);
+  }, [selectedInputProfile, setRnnoiseRuntimeStatus, setSelectedInputProfile]);
 
   return {
     handleToggleNoiseSuppression

@@ -77,7 +77,11 @@ export function useAppWorkspacePanelsRuntimeInput(params: Record<string, unknown
         onOpenRoomChat: p.openRoomChat,
         onKickRoomMember: p.kickRoomMember,
         onMoveRoomMember: p.moveRoomMember,
-        onSaveMemberPreference: p.saveMemberPreference
+        onSaveMemberPreference: p.saveMemberPreference,
+        onLoadServerMemberProfile: p.loadServerMemberProfile,
+        onLoadServerRoles: p.loadServerRoles,
+        onSetServerMemberCustomRoles: p.handleSetServerMemberCustomRoles,
+        onSetServerMemberHiddenRoomAccess: p.handleSetServerMemberHiddenRoomAccess
       },
       serverProfileModal: {
         user: p.user,

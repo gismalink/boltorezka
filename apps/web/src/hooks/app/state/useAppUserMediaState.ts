@@ -38,7 +38,7 @@ export function useAppUserMediaState() {
 
   const [selectedInputProfile, setSelectedInputProfile] = useState<InputProfile>(() => {
     const value = String(localStorage.getItem("boltorezka_selected_input_profile") || "").trim();
-    if (value === "noise_reduction" || value === "custom") {
+    if (value === "studio" || value === "custom") {
       return value;
     }
     return "custom";
