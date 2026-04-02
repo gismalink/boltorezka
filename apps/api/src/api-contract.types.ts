@@ -136,6 +136,64 @@ export type TopicMessageCreateResponse = {
   message: RoomMessageRow;
 };
 
+export type TopicMessageUpdateResponse = {
+  room: RoomRow;
+  topic: {
+    id: string;
+    roomId: string;
+    slug: string;
+  };
+  message: RoomMessageRow;
+};
+
+export type TopicMessageDeleteResponse = {
+  room: RoomRow;
+  topic: {
+    id: string;
+    roomId: string;
+    slug: string;
+  };
+  messageId: string;
+  deletedAt: string;
+};
+
+export type TopicMessageReplyResponse = {
+  room: RoomRow;
+  topic: {
+    id: string;
+    roomId: string;
+    slug: string;
+    title: string;
+    archivedAt: string | null;
+  };
+  message: RoomMessageRow;
+  parentMessageId: string;
+};
+
+export type TopicMessagePinResponse = {
+  room: RoomRow;
+  topic: {
+    id: string;
+    roomId: string;
+    slug: string;
+  };
+  messageId: string;
+  pinned: boolean;
+};
+
+export type TopicMessageReactionResponse = {
+  room: RoomRow;
+  topic: {
+    id: string;
+    roomId: string;
+    slug: string;
+  };
+  messageId: string;
+  emoji: string;
+  userId: string;
+  active: boolean;
+};
+
 export type AdminUsersResponse = {
   users: UserRow[];
 };

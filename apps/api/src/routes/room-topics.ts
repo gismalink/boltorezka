@@ -2,7 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { loadCurrentUser, requireAuth, requireServiceAccess } from "../middleware/auth.js";
 import { broadcastRealtimeEnvelope } from "../realtime-broadcast.js";
-import { buildChatMessageEnvelope } from "../ws-protocol.js";
+import { buildChatDeletedEnvelope, buildChatEditedEnvelope, buildChatMessageEnvelope } from "../ws-protocol.js";
 import {
   createRoomTopic,
   listRoomTopics,
@@ -11,12 +11,22 @@ import {
 } from "../services/room-topics-service.js";
 import {
   createTopicMessage,
-  listTopicMessages
+  deleteTopicMessage,
+  editTopicMessage,
+  listTopicMessages,
+  replyTopicMessage,
+  setTopicMessagePinned,
+  setTopicMessageReaction
 } from "../services/room-topic-messages-service.js";
 import type {
   RoomTopicResponse,
   RoomTopicsListResponse,
   TopicMessageCreateResponse,
+  TopicMessageDeleteResponse,
+  TopicMessagePinResponse,
+  TopicMessageReactionResponse,
+  TopicMessageReplyResponse,
+  TopicMessageUpdateResponse,
   TopicMessagesResponse
 } from "../api-contract.types.ts";
 
@@ -26,6 +36,10 @@ const roomParamsSchema = z.object({
 
 const topicParamsSchema = z.object({
   topicId: z.string().uuid()
+});
+
+const messageParamsSchema = z.object({
+  messageId: z.string().uuid()
 });
 
 const createTopicSchema = z.object({
@@ -58,6 +72,19 @@ const createTopicMessageSchema = z.object({
   text: z.string().trim().min(1).max(4000)
 });
 
+const reactionParamsSchema = z.object({
+  messageId: z.string().uuid(),
+  emoji: z.string().trim().min(1).max(32)
+});
+
+const editMessageSchema = z.object({
+  text: z.string().trim().min(1).max(4000)
+});
+
+const reactionBodySchema = z.object({
+  emoji: z.string().trim().min(1).max(32)
+});
+
 function sendDomainError(reply: { code: (statusCode: number) => { send: (payload: unknown) => unknown } }, error: unknown) {
   const message = String((error as Error)?.message || "");
 
@@ -86,6 +113,34 @@ function sendDomainError(reply: { code: (statusCode: number) => { send: (payload
     return reply.code(404).send({
       error: "UserNotFound",
       message: "User does not exist"
+    });
+  }
+
+  if (message === "message_not_found") {
+    return reply.code(404).send({
+      error: "MessageNotFound",
+      message: "Message does not exist"
+    });
+  }
+
+  if (message === "forbidden_message_owner") {
+    return reply.code(403).send({
+      error: "Forbidden",
+      message: "You can modify only your own messages"
+    });
+  }
+
+  if (message === "message_edit_window_expired") {
+    return reply.code(409).send({
+      error: "EditWindowExpired",
+      message: "Message edit/delete window has expired"
+    });
+  }
+
+  if (message === "validation_error") {
+    return reply.code(400).send({
+      error: "ValidationError",
+      message: "Validation failed"
     });
   }
 
@@ -439,6 +494,414 @@ export async function roomTopicsRoutes(fastify: FastifyInstance) {
           return handled;
         }
 
+        throw error;
+      }
+    }
+  );
+
+  fastify.patch<{ Params: { messageId: string }; Body: unknown }>(
+    "/v1/messages/:messageId",
+    {
+      preHandler: [requireAuth, requireServiceAccess, loadCurrentUser]
+    },
+    async (request, reply) => {
+      const parsedParams = messageParamsSchema.safeParse(request.params);
+      if (!parsedParams.success) {
+        return reply.code(400).send({ error: "ValidationError", issues: parsedParams.error.flatten() });
+      }
+
+      const parsedBody = editMessageSchema.safeParse(request.body || {});
+      if (!parsedBody.success) {
+        return reply.code(400).send({ error: "ValidationError", issues: parsedBody.error.flatten() });
+      }
+
+      const userId = String(request.currentUser?.id || "").trim();
+
+      try {
+        const result = await editTopicMessage({
+          messageId: parsedParams.data.messageId,
+          userId,
+          text: parsedBody.data.text
+        });
+
+        broadcastRealtimeEnvelope(buildChatEditedEnvelope({
+          id: result.message.id,
+          roomId: result.message.room_id,
+          roomSlug: result.room.slug,
+          topicId: result.topic.id,
+          topicSlug: result.topic.slug,
+          text: result.message.text,
+          editedAt: String(result.message.edited_at || new Date().toISOString()),
+          editedByUserId: userId
+        }));
+
+        const response: TopicMessageUpdateResponse = {
+          room: result.room,
+          topic: {
+            id: result.topic.id,
+            roomId: result.room.id,
+            slug: result.topic.slug
+          },
+          message: result.message
+        };
+
+        return reply.code(200).send(response);
+      } catch (error) {
+        const handled = sendDomainError(reply, error);
+        if (handled) {
+          return handled;
+        }
+        throw error;
+      }
+    }
+  );
+
+  fastify.delete<{ Params: { messageId: string } }>(
+    "/v1/messages/:messageId",
+    {
+      preHandler: [requireAuth, requireServiceAccess, loadCurrentUser]
+    },
+    async (request, reply) => {
+      const parsedParams = messageParamsSchema.safeParse(request.params);
+      if (!parsedParams.success) {
+        return reply.code(400).send({ error: "ValidationError", issues: parsedParams.error.flatten() });
+      }
+
+      const userId = String(request.currentUser?.id || "").trim();
+
+      try {
+        const result = await deleteTopicMessage({
+          messageId: parsedParams.data.messageId,
+          userId
+        });
+
+        broadcastRealtimeEnvelope(buildChatDeletedEnvelope({
+          id: result.messageId,
+          roomId: result.room.id,
+          roomSlug: result.room.slug,
+          topicId: result.topic.id,
+          topicSlug: result.topic.slug,
+          deletedByUserId: userId,
+          ts: result.deletedAt
+        }));
+
+        const response: TopicMessageDeleteResponse = {
+          room: result.room,
+          topic: {
+            id: result.topic.id,
+            roomId: result.room.id,
+            slug: result.topic.slug
+          },
+          messageId: result.messageId,
+          deletedAt: result.deletedAt
+        };
+
+        return reply.code(200).send(response);
+      } catch (error) {
+        const handled = sendDomainError(reply, error);
+        if (handled) {
+          return handled;
+        }
+        throw error;
+      }
+    }
+  );
+
+  fastify.post<{ Params: { messageId: string }; Body: unknown }>(
+    "/v1/messages/:messageId/reply",
+    {
+      preHandler: [requireAuth, requireServiceAccess, loadCurrentUser]
+    },
+    async (request, reply) => {
+      const parsedParams = messageParamsSchema.safeParse(request.params);
+      if (!parsedParams.success) {
+        return reply.code(400).send({ error: "ValidationError", issues: parsedParams.error.flatten() });
+      }
+
+      const parsedBody = editMessageSchema.safeParse(request.body || {});
+      if (!parsedBody.success) {
+        return reply.code(400).send({ error: "ValidationError", issues: parsedBody.error.flatten() });
+      }
+
+      const userId = String(request.currentUser?.id || "").trim();
+
+      try {
+        const result = await replyTopicMessage({
+          messageId: parsedParams.data.messageId,
+          userId,
+          text: parsedBody.data.text
+        });
+
+        broadcastRealtimeEnvelope(buildChatMessageEnvelope({
+          id: result.message.id,
+          roomId: result.message.room_id,
+          roomSlug: result.room.slug,
+          topicId: result.topic.id,
+          topicSlug: result.topic.slug,
+          userId: result.message.user_id,
+          userName: result.message.user_name,
+          text: result.message.text,
+          createdAt: result.message.created_at,
+          senderRequestId: null,
+          attachments: []
+        }));
+
+        const response: TopicMessageReplyResponse = {
+          room: result.room,
+          topic: {
+            id: result.topic.id,
+            roomId: result.room.id,
+            slug: result.topic.slug,
+            title: result.topic.title,
+            archivedAt: result.topic.archivedAt
+          },
+          message: result.message,
+          parentMessageId: result.parentMessageId
+        };
+
+        return reply.code(201).send(response);
+      } catch (error) {
+        const handled = sendDomainError(reply, error);
+        if (handled) {
+          return handled;
+        }
+        throw error;
+      }
+    }
+  );
+
+  fastify.post<{ Params: { messageId: string } }>(
+    "/v1/messages/:messageId/pin",
+    {
+      preHandler: [requireAuth, requireServiceAccess, loadCurrentUser]
+    },
+    async (request, reply) => {
+      const parsedParams = messageParamsSchema.safeParse(request.params);
+      if (!parsedParams.success) {
+        return reply.code(400).send({ error: "ValidationError", issues: parsedParams.error.flatten() });
+      }
+
+      const userId = String(request.currentUser?.id || "").trim();
+
+      try {
+        const result = await setTopicMessagePinned({
+          messageId: parsedParams.data.messageId,
+          userId,
+          pinned: true
+        });
+
+        broadcastRealtimeEnvelope({
+          type: "chat.message.pinned",
+          payload: {
+            roomId: result.room.id,
+            roomSlug: result.room.slug,
+            topicId: result.topic.id,
+            topicSlug: result.topic.slug,
+            messageId: result.messageId,
+            pinned: true,
+            pinnedByUserId: userId,
+            ts: new Date().toISOString()
+          }
+        });
+
+        const response: TopicMessagePinResponse = {
+          room: result.room,
+          topic: {
+            id: result.topic.id,
+            roomId: result.room.id,
+            slug: result.topic.slug
+          },
+          messageId: result.messageId,
+          pinned: result.pinned
+        };
+
+        return reply.code(200).send(response);
+      } catch (error) {
+        const handled = sendDomainError(reply, error);
+        if (handled) {
+          return handled;
+        }
+        throw error;
+      }
+    }
+  );
+
+  fastify.delete<{ Params: { messageId: string } }>(
+    "/v1/messages/:messageId/pin",
+    {
+      preHandler: [requireAuth, requireServiceAccess, loadCurrentUser]
+    },
+    async (request, reply) => {
+      const parsedParams = messageParamsSchema.safeParse(request.params);
+      if (!parsedParams.success) {
+        return reply.code(400).send({ error: "ValidationError", issues: parsedParams.error.flatten() });
+      }
+
+      const userId = String(request.currentUser?.id || "").trim();
+
+      try {
+        const result = await setTopicMessagePinned({
+          messageId: parsedParams.data.messageId,
+          userId,
+          pinned: false
+        });
+
+        broadcastRealtimeEnvelope({
+          type: "chat.message.unpinned",
+          payload: {
+            roomId: result.room.id,
+            roomSlug: result.room.slug,
+            topicId: result.topic.id,
+            topicSlug: result.topic.slug,
+            messageId: result.messageId,
+            pinned: false,
+            unpinnedByUserId: userId,
+            ts: new Date().toISOString()
+          }
+        });
+
+        const response: TopicMessagePinResponse = {
+          room: result.room,
+          topic: {
+            id: result.topic.id,
+            roomId: result.room.id,
+            slug: result.topic.slug
+          },
+          messageId: result.messageId,
+          pinned: result.pinned
+        };
+
+        return reply.code(200).send(response);
+      } catch (error) {
+        const handled = sendDomainError(reply, error);
+        if (handled) {
+          return handled;
+        }
+        throw error;
+      }
+    }
+  );
+
+  fastify.post<{ Params: { messageId: string }; Body: unknown }>(
+    "/v1/messages/:messageId/reactions",
+    {
+      preHandler: [requireAuth, requireServiceAccess, loadCurrentUser]
+    },
+    async (request, reply) => {
+      const parsedParams = messageParamsSchema.safeParse(request.params);
+      if (!parsedParams.success) {
+        return reply.code(400).send({ error: "ValidationError", issues: parsedParams.error.flatten() });
+      }
+
+      const parsedBody = reactionBodySchema.safeParse(request.body || {});
+      if (!parsedBody.success) {
+        return reply.code(400).send({ error: "ValidationError", issues: parsedBody.error.flatten() });
+      }
+
+      const userId = String(request.currentUser?.id || "").trim();
+
+      try {
+        const result = await setTopicMessageReaction({
+          messageId: parsedParams.data.messageId,
+          userId,
+          emoji: parsedBody.data.emoji,
+          active: true
+        });
+
+        broadcastRealtimeEnvelope({
+          type: "chat.message.reaction.changed",
+          payload: {
+            roomId: result.room.id,
+            roomSlug: result.room.slug,
+            topicId: result.topic.id,
+            topicSlug: result.topic.slug,
+            messageId: result.messageId,
+            emoji: result.emoji,
+            userId: result.userId,
+            active: true,
+            ts: new Date().toISOString()
+          }
+        });
+
+        const response: TopicMessageReactionResponse = {
+          room: result.room,
+          topic: {
+            id: result.topic.id,
+            roomId: result.room.id,
+            slug: result.topic.slug
+          },
+          messageId: result.messageId,
+          emoji: result.emoji,
+          userId: result.userId,
+          active: result.active
+        };
+
+        return reply.code(201).send(response);
+      } catch (error) {
+        const handled = sendDomainError(reply, error);
+        if (handled) {
+          return handled;
+        }
+        throw error;
+      }
+    }
+  );
+
+  fastify.delete<{ Params: { messageId: string; emoji: string } }>(
+    "/v1/messages/:messageId/reactions/:emoji",
+    {
+      preHandler: [requireAuth, requireServiceAccess, loadCurrentUser]
+    },
+    async (request, reply) => {
+      const parsedParams = reactionParamsSchema.safeParse(request.params);
+      if (!parsedParams.success) {
+        return reply.code(400).send({ error: "ValidationError", issues: parsedParams.error.flatten() });
+      }
+
+      const userId = String(request.currentUser?.id || "").trim();
+
+      try {
+        const result = await setTopicMessageReaction({
+          messageId: parsedParams.data.messageId,
+          userId,
+          emoji: parsedParams.data.emoji,
+          active: false
+        });
+
+        broadcastRealtimeEnvelope({
+          type: "chat.message.reaction.changed",
+          payload: {
+            roomId: result.room.id,
+            roomSlug: result.room.slug,
+            topicId: result.topic.id,
+            topicSlug: result.topic.slug,
+            messageId: result.messageId,
+            emoji: result.emoji,
+            userId: result.userId,
+            active: false,
+            ts: new Date().toISOString()
+          }
+        });
+
+        const response: TopicMessageReactionResponse = {
+          room: result.room,
+          topic: {
+            id: result.topic.id,
+            roomId: result.room.id,
+            slug: result.topic.slug
+          },
+          messageId: result.messageId,
+          emoji: result.emoji,
+          userId: result.userId,
+          active: result.active
+        };
+
+        return reply.code(200).send(response);
+      } catch (error) {
+        const handled = sendDomainError(reply, error);
+        if (handled) {
+          return handled;
+        }
         throw error;
       }
     }

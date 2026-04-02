@@ -193,6 +193,8 @@ export type ChatEditedPayload = {
   id: string;
   roomId: string;
   roomSlug: string | null;
+  topicId?: string | null;
+  topicSlug?: string | null;
   text: string;
   editedAt: string;
   editedByUserId: string;
@@ -202,6 +204,8 @@ export type ChatDeletedPayload = {
   id: string;
   roomId: string;
   roomSlug: string | null;
+  topicId?: string | null;
+  topicSlug?: string | null;
   deletedByUserId: string;
   ts: string;
 };
