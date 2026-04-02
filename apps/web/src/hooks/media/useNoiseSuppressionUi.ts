@@ -24,9 +24,7 @@ export function useNoiseSuppressionUi({
       return;
     }
 
-    if (selectedInputProfile !== "noise_reduction") {
-      setRnnoiseRuntimeStatus("inactive");
-    }
+    setRnnoiseRuntimeStatus("inactive");
   }, [selectedInputProfile, setRnnoiseRuntimeStatus, setSelectedInputProfile]);
 
   return {
