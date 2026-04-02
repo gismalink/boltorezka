@@ -9,6 +9,7 @@ Scope: единая модель комнатного чата с темами, 
 - 2026-04-03: Stage 1 стартовал: добавлена migration foundation `apps/api/migrations/0018_room_chat_topics_foundation.sql`.
 - 2026-04-03: Stage 1 стартовал: добавлен backend service baseline `apps/api/src/services/room-topics-service.ts`.
 - 2026-04-03: Stage 2 стартовал: реализованы API endpoints тем (`GET/POST /v1/rooms/:roomId/topics`, `PATCH /v1/topics/:topicId`, `POST /v1/topics/:topicId/archive`, `POST /v1/topics/:topicId/unarchive`).
+- 2026-04-03: Stage 2 расширен: реализованы topic-aware message endpoints (`GET/POST /v1/topics/:topicId/messages`) и прокинут `topicId/topicSlug` в realtime `chat.message` payload.
 
 ## 0) Контекст
 

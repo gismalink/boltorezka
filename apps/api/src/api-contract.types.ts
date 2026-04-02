@@ -103,6 +103,39 @@ export type RoomTopicResponse = {
   topic: RoomTopicItem;
 };
 
+export type TopicMessagesResponse = {
+  room: RoomRow;
+  topic: {
+    id: string;
+    roomId: string;
+    slug: string;
+    title: string;
+    archivedAt: string | null;
+    createdAt: string;
+    updatedAt: string;
+  };
+  messages: RoomMessageRow[];
+  pagination: {
+    hasMore: boolean;
+    nextCursor: {
+      beforeCreatedAt: string;
+      beforeId: string;
+    } | null;
+  };
+};
+
+export type TopicMessageCreateResponse = {
+  room: RoomRow;
+  topic: {
+    id: string;
+    roomId: string;
+    slug: string;
+    title: string;
+    archivedAt: string | null;
+  };
+  message: RoomMessageRow;
+};
+
 export type AdminUsersResponse = {
   users: UserRow[];
 };

@@ -1,13 +1,24 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { loadCurrentUser, requireAuth, requireServiceAccess } from "../middleware/auth.js";
+import { broadcastRealtimeEnvelope } from "../realtime-broadcast.js";
+import { buildChatMessageEnvelope } from "../ws-protocol.js";
 import {
   createRoomTopic,
   listRoomTopics,
   setRoomTopicArchived,
   updateRoomTopic
 } from "../services/room-topics-service.js";
-import type { RoomTopicResponse, RoomTopicsListResponse } from "../api-contract.types.ts";
+import {
+  createTopicMessage,
+  listTopicMessages
+} from "../services/room-topic-messages-service.js";
+import type {
+  RoomTopicResponse,
+  RoomTopicsListResponse,
+  TopicMessageCreateResponse,
+  TopicMessagesResponse
+} from "../api-contract.types.ts";
 
 const roomParamsSchema = z.object({
   roomId: z.string().uuid()
@@ -37,6 +48,16 @@ const updateTopicSchema = z.object({
   message: "At least one field is required"
 });
 
+const topicMessagesQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(100).optional(),
+  beforeCreatedAt: z.string().trim().optional(),
+  beforeId: z.string().trim().optional()
+});
+
+const createTopicMessageSchema = z.object({
+  text: z.string().trim().min(1).max(4000)
+});
+
 function sendDomainError(reply: { code: (statusCode: number) => { send: (payload: unknown) => unknown } }, error: unknown) {
   const message = String((error as Error)?.message || "");
 
@@ -51,6 +72,20 @@ function sendDomainError(reply: { code: (statusCode: number) => { send: (payload
     return reply.code(403).send({
       error: "Forbidden",
       message: "You do not have access to this resource"
+    });
+  }
+
+  if (message === "topic_archived") {
+    return reply.code(409).send({
+      error: "TopicArchived",
+      message: "Topic is archived"
+    });
+  }
+
+  if (message === "user_not_found") {
+    return reply.code(404).send({
+      error: "UserNotFound",
+      message: "User does not exist"
     });
   }
 
@@ -243,6 +278,161 @@ export async function roomTopicsRoutes(fastify: FastifyInstance) {
 
         const response: RoomTopicResponse = { topic };
         return reply.code(200).send(response);
+      } catch (error) {
+        const handled = sendDomainError(reply, error);
+        if (handled) {
+          return handled;
+        }
+
+        throw error;
+      }
+    }
+  );
+
+  fastify.get<{ Params: { topicId: string }; Querystring: unknown }>(
+    "/v1/topics/:topicId/messages",
+    {
+      preHandler: [requireAuth, requireServiceAccess, loadCurrentUser]
+    },
+    async (request, reply) => {
+      const parsedParams = topicParamsSchema.safeParse(request.params);
+      if (!parsedParams.success) {
+        return reply.code(400).send({
+          error: "ValidationError",
+          issues: parsedParams.error.flatten()
+        });
+      }
+
+      const parsedQuery = topicMessagesQuerySchema.safeParse(request.query || {});
+      if (!parsedQuery.success) {
+        return reply.code(400).send({
+          error: "ValidationError",
+          issues: parsedQuery.error.flatten()
+        });
+      }
+
+      const beforeCreatedAtRaw = String(parsedQuery.data.beforeCreatedAt || "").trim();
+      const beforeIdRaw = String(parsedQuery.data.beforeId || "").trim();
+      let beforeCreatedAt: string | null = null;
+      let beforeId: string | null = null;
+
+      if (beforeCreatedAtRaw || beforeIdRaw) {
+        if (!beforeCreatedAtRaw || !beforeIdRaw) {
+          return reply.code(400).send({
+            error: "ValidationError",
+            message: "beforeCreatedAt and beforeId must be provided together"
+          });
+        }
+
+        const beforeDate = new Date(beforeCreatedAtRaw);
+        if (Number.isNaN(beforeDate.getTime())) {
+          return reply.code(400).send({
+            error: "ValidationError",
+            message: "beforeCreatedAt must be a valid ISO datetime"
+          });
+        }
+
+        beforeCreatedAt = beforeDate.toISOString();
+        beforeId = beforeIdRaw;
+      }
+
+      const userId = String(request.currentUser?.id || "").trim();
+      const limit = parsedQuery.data.limit ?? 50;
+
+      try {
+        const result = await listTopicMessages({
+          topicId: parsedParams.data.topicId,
+          userId,
+          limit,
+          beforeCreatedAt,
+          beforeId
+        });
+
+        const response: TopicMessagesResponse = {
+          room: result.room,
+          topic: {
+            id: result.topic.id,
+            roomId: result.topic.room_id,
+            slug: result.topic.slug,
+            title: result.topic.title,
+            archivedAt: result.topic.archived_at,
+            createdAt: result.topic.created_at,
+            updatedAt: result.topic.updated_at
+          },
+          messages: result.messages,
+          pagination: result.pagination
+        };
+
+        return reply.code(200).send(response);
+      } catch (error) {
+        const handled = sendDomainError(reply, error);
+        if (handled) {
+          return handled;
+        }
+
+        throw error;
+      }
+    }
+  );
+
+  fastify.post<{ Params: { topicId: string }; Body: unknown }>(
+    "/v1/topics/:topicId/messages",
+    {
+      preHandler: [requireAuth, requireServiceAccess, loadCurrentUser]
+    },
+    async (request, reply) => {
+      const parsedParams = topicParamsSchema.safeParse(request.params);
+      if (!parsedParams.success) {
+        return reply.code(400).send({
+          error: "ValidationError",
+          issues: parsedParams.error.flatten()
+        });
+      }
+
+      const parsedBody = createTopicMessageSchema.safeParse(request.body || {});
+      if (!parsedBody.success) {
+        return reply.code(400).send({
+          error: "ValidationError",
+          issues: parsedBody.error.flatten()
+        });
+      }
+
+      const userId = String(request.currentUser?.id || "").trim();
+
+      try {
+        const result = await createTopicMessage({
+          topicId: parsedParams.data.topicId,
+          userId,
+          text: parsedBody.data.text
+        });
+
+        broadcastRealtimeEnvelope(buildChatMessageEnvelope({
+          id: result.message.id,
+          roomId: result.message.room_id,
+          roomSlug: result.room.slug,
+          topicId: result.topic.id,
+          topicSlug: result.topic.slug,
+          userId: result.message.user_id,
+          userName: result.message.user_name,
+          text: result.message.text,
+          createdAt: result.message.created_at,
+          senderRequestId: null,
+          attachments: []
+        }));
+
+        const response: TopicMessageCreateResponse = {
+          room: result.room,
+          topic: {
+            id: result.topic.id,
+            roomId: result.topic.room_id,
+            slug: result.topic.slug,
+            title: result.topic.title,
+            archivedAt: result.topic.archived_at
+          },
+          message: result.message
+        };
+
+        return reply.code(201).send(response);
       } catch (error) {
         const handled = sendDomainError(reply, error);
         if (handled) {

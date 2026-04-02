@@ -179,6 +179,8 @@ export type ChatMessagePayload = {
   id: string;
   roomId: string;
   roomSlug: string | null;
+  topicId?: string | null;
+  topicSlug?: string | null;
   userId: string;
   userName: string;
   text: string;
