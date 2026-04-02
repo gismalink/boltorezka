@@ -228,6 +228,17 @@ export async function listServerMembers(serverId: string): Promise<ServerMemberI
        u.name,
        sm.role,
        sm.status,
+       sm.joined_at AS "joinedAt",
+       COALESCE((
+         SELECT json_agg(
+           json_build_object('id', scr.id, 'name', scr.name)
+           ORDER BY scr.name ASC
+         )
+         FROM server_member_custom_roles smcr
+         JOIN server_custom_roles scr ON scr.id = smcr.role_id
+         WHERE smcr.server_id = sm.server_id
+           AND smcr.user_id = sm.user_id
+       ), '[]'::json) AS "customRoles",
        EXISTS (
          SELECT 1
          FROM server_bans sb

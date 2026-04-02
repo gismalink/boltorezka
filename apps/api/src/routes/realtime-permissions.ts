@@ -25,10 +25,33 @@ export function createRealtimePermissionHelpers(incrementMetric: IncrementMetric
     void incrementMetric("nack_sent");
   };
 
-  const isUserModerator = async (userId: string) => {
-    const result = await db.query<{ role: string }>("SELECT role FROM users WHERE id = $1", [userId]);
-    const role = String(result.rows[0]?.role || "").trim();
-    return role === "admin" || role === "super_admin";
+  const isUserModerator = async (userId: string, roomSlug?: string | null) => {
+    const normalizedRoomSlug = String(roomSlug || "").trim();
+    const globalResult = await db.query<{ role: string }>("SELECT role FROM users WHERE id = $1", [userId]);
+    const globalRole = String(globalResult.rows[0]?.role || "").trim();
+    if (globalRole === "admin" || globalRole === "super_admin") {
+      return true;
+    }
+
+    if (!normalizedRoomSlug) {
+      return false;
+    }
+
+    const roomModeratorResult = await db.query<{ is_moderator: boolean }>(
+      `SELECT EXISTS (
+         SELECT 1
+         FROM rooms r
+         JOIN server_members sm ON sm.server_id = r.server_id
+         WHERE r.slug = $2
+           AND r.is_archived = FALSE
+           AND sm.user_id = $1
+           AND sm.status = 'active'
+           AND sm.role IN ('owner', 'admin')
+       ) AS is_moderator`,
+      [userId, normalizedRoomSlug]
+    );
+
+    return Boolean(roomModeratorResult.rows[0]?.is_moderator);
   };
 
   return {

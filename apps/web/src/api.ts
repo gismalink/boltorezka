@@ -16,6 +16,8 @@ import type {
   ServerDeleteResponse,
   ServerRenameResponse,
   ServerMembersResponse,
+  ServerMemberProfileResponse,
+  ServerRolesResponse,
   ServerAgeStatusResponse,
   ServerAgeConfirmResponse,
   InviteAcceptResponse,
@@ -302,6 +304,7 @@ export const api = {
       slug?: string;
       title: string;
       is_public: boolean;
+      is_hidden?: boolean;
       kind?: RoomKind;
       server_id?: string;
       category_id?: string | null;
@@ -317,6 +320,7 @@ export const api = {
       title: string;
       kind: RoomKind;
       category_id: string | null;
+      is_hidden?: boolean;
       nsfw?: boolean;
       audio_quality_override?: AudioQuality | null;
     }
@@ -360,6 +364,40 @@ export const api = {
     fetchJson<ServerDeleteResponse>(withId(endpoints.servers, serverId), token, withJsonBody("DELETE")),
   serverMembers: (token: string, serverId: string) =>
     fetchJson<ServerMembersResponse>(withSuffix(endpoints.servers, serverId, "members"), token),
+  serverMemberProfile: (token: string, serverId: string, userId: string) =>
+    fetchJson<ServerMemberProfileResponse>(withId(withSuffix(endpoints.servers, serverId, "members"), userId) + "/profile", token),
+  serverRoles: (token: string, serverId: string) =>
+    fetchJson<ServerRolesResponse>(withSuffix(endpoints.servers, serverId, "roles"), token),
+  createServerRole: (token: string, serverId: string, name: string) =>
+    fetchJson<{ role: { id: string; name: string } }>(
+      withSuffix(endpoints.servers, serverId, "roles"),
+      token,
+      withJsonBody("POST", { name })
+    ),
+  renameServerRole: (token: string, serverId: string, roleId: string, name: string) =>
+    fetchJson<{ role: { id: string; name: string } }>(
+      withId(withSuffix(endpoints.servers, serverId, "roles"), roleId),
+      token,
+      withJsonBody("PATCH", { name })
+    ),
+  deleteServerRole: (token: string, serverId: string, roleId: string) =>
+    fetchJson<{ deleted: boolean; roleId: string }>(
+      withId(withSuffix(endpoints.servers, serverId, "roles"), roleId),
+      token,
+      withJsonBody("DELETE")
+    ),
+  setServerMemberCustomRoles: (token: string, serverId: string, userId: string, roleIds: string[]) =>
+    fetchJson<{ ok: true; serverId: string; userId: string; roleIds: string[] }>(
+      `${withId(withSuffix(endpoints.servers, serverId, "members"), userId)}/custom-roles`,
+      token,
+      withJsonBody("PUT", { roleIds })
+    ),
+  setServerMemberHiddenRoomAccess: (token: string, serverId: string, userId: string, roomIds: string[]) =>
+    fetchJson<{ ok: true; serverId: string; userId: string; roomIds: string[] }>(
+      `${withId(withSuffix(endpoints.servers, serverId, "members"), userId)}/hidden-room-access`,
+      token,
+      withJsonBody("PUT", { roomIds })
+    ),
   serverAgeStatus: (token: string, serverId: string) =>
     fetchJson<ServerAgeStatusResponse>(withSuffix(endpoints.servers, serverId, "age-confirm"), token),
   confirmServerAge: (token: string, serverId: string, source = "server-menu") =>

@@ -326,6 +326,134 @@ export function useServerProfileActions({
     }
   }, [currentServerId, pushToast, refreshServerMembers, setServers, t, token]);
 
+  const loadServerMemberProfile = useCallback(async (targetUserId: string) => {
+    const tokenValue = String(token || "").trim();
+    const serverId = String(currentServerId || "").trim();
+    const userId = String(targetUserId || "").trim();
+
+    if (!tokenValue || !serverId || !userId) {
+      return null;
+    }
+
+    try {
+      const response = await api.serverMemberProfile(tokenValue, serverId, userId);
+      return response.member;
+    } catch (error) {
+      pushToast((error as Error).message || t("toast.serverError"));
+      return null;
+    }
+  }, [currentServerId, pushToast, t, token]);
+
+  const loadServerRoles = useCallback(async () => {
+    const tokenValue = String(token || "").trim();
+    const serverId = String(currentServerId || "").trim();
+
+    if (!tokenValue || !serverId) {
+      return [] as Array<{ id: string; name: string; isBase: boolean }>;
+    }
+
+    try {
+      const response = await api.serverRoles(tokenValue, serverId);
+      return Array.isArray(response.roles) ? response.roles : [];
+    } catch (error) {
+      pushToast((error as Error).message || t("toast.serverError"));
+      return [] as Array<{ id: string; name: string; isBase: boolean }>;
+    }
+  }, [currentServerId, pushToast, t, token]);
+
+  const handleCreateServerRole = useCallback(async (name: string) => {
+    const tokenValue = String(token || "").trim();
+    const serverId = String(currentServerId || "").trim();
+    const trimmedName = String(name || "").trim();
+    if (!tokenValue || !serverId || !trimmedName) {
+      return false;
+    }
+
+    try {
+      await api.createServerRole(tokenValue, serverId, trimmedName);
+      pushToast(t("server.roleSaved"));
+      return true;
+    } catch (error) {
+      pushToast((error as Error).message || t("toast.serverError"));
+      return false;
+    }
+  }, [currentServerId, pushToast, t, token]);
+
+  const handleRenameServerRole = useCallback(async (roleId: string, name: string) => {
+    const tokenValue = String(token || "").trim();
+    const serverId = String(currentServerId || "").trim();
+    const trimmedName = String(name || "").trim();
+    const normalizedRoleId = String(roleId || "").trim();
+    if (!tokenValue || !serverId || !trimmedName || !normalizedRoleId) {
+      return false;
+    }
+
+    try {
+      await api.renameServerRole(tokenValue, serverId, normalizedRoleId, trimmedName);
+      pushToast(t("server.roleSaved"));
+      return true;
+    } catch (error) {
+      pushToast((error as Error).message || t("toast.serverError"));
+      return false;
+    }
+  }, [currentServerId, pushToast, t, token]);
+
+  const handleDeleteServerRole = useCallback(async (roleId: string) => {
+    const tokenValue = String(token || "").trim();
+    const serverId = String(currentServerId || "").trim();
+    const normalizedRoleId = String(roleId || "").trim();
+    if (!tokenValue || !serverId || !normalizedRoleId) {
+      return false;
+    }
+
+    try {
+      await api.deleteServerRole(tokenValue, serverId, normalizedRoleId);
+      pushToast(t("server.roleDeleted"));
+      return true;
+    } catch (error) {
+      pushToast((error as Error).message || t("toast.serverError"));
+      return false;
+    }
+  }, [currentServerId, pushToast, t, token]);
+
+  const handleSetServerMemberCustomRoles = useCallback(async (targetUserId: string, roleIds: string[]) => {
+    const tokenValue = String(token || "").trim();
+    const serverId = String(currentServerId || "").trim();
+    const userId = String(targetUserId || "").trim();
+
+    if (!tokenValue || !serverId || !userId) {
+      return false;
+    }
+
+    try {
+      await api.setServerMemberCustomRoles(tokenValue, serverId, userId, roleIds);
+      await refreshServerMembers(tokenValue, serverId);
+      return true;
+    } catch (error) {
+      pushToast((error as Error).message || t("toast.serverError"));
+      return false;
+    }
+  }, [currentServerId, pushToast, refreshServerMembers, t, token]);
+
+  const handleSetServerMemberHiddenRoomAccess = useCallback(async (targetUserId: string, roomIds: string[]) => {
+    const tokenValue = String(token || "").trim();
+    const serverId = String(currentServerId || "").trim();
+    const userId = String(targetUserId || "").trim();
+
+    if (!tokenValue || !serverId || !userId) {
+      return false;
+    }
+
+    try {
+      await api.setServerMemberHiddenRoomAccess(tokenValue, serverId, userId, roomIds);
+      await refreshServerMembers(tokenValue, serverId);
+      return true;
+    } catch (error) {
+      pushToast((error as Error).message || t("toast.serverError"));
+      return false;
+    }
+  }, [currentServerId, pushToast, refreshServerMembers, t, token]);
+
   return {
     handleCreateServer,
     handleCreateServerInvite,
@@ -339,6 +467,13 @@ export function useServerProfileActions({
     handleRemoveServerMember,
     handleBanServerMember,
     handleUnbanServerMember,
-    handleTransferServerOwnership
+    handleTransferServerOwnership,
+    loadServerMemberProfile,
+    loadServerRoles,
+    handleCreateServerRole,
+    handleRenameServerRole,
+    handleDeleteServerRole,
+    handleSetServerMemberCustomRoles,
+    handleSetServerMemberHiddenRoomAccess
   };
 }

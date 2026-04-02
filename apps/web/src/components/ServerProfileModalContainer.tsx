@@ -77,6 +77,13 @@ type ServerProfileModalContainerProps = {
     onBanServerMember: ServerProfileModalProps["onBanServerMember"];
     onUnbanServerMember: ServerProfileModalProps["onUnbanServerMember"];
     onTransferServerOwnership: ServerProfileModalProps["onTransferServerOwnership"];
+    onLoadServerMemberProfile: ServerProfileModalProps["onLoadServerMemberProfile"];
+    onLoadServerRoles: ServerProfileModalProps["onLoadServerRoles"];
+    onCreateServerRole: ServerProfileModalProps["onCreateServerRole"];
+    onRenameServerRole: ServerProfileModalProps["onRenameServerRole"];
+    onDeleteServerRole: ServerProfileModalProps["onDeleteServerRole"];
+    onSetServerMemberCustomRoles: ServerProfileModalProps["onSetServerMemberCustomRoles"];
+    onSetServerMemberHiddenRoomAccess: ServerProfileModalProps["onSetServerMemberHiddenRoomAccess"];
     onRefreshTelemetry: () => void;
     onSetServerAudioQuality: ServerProfileModalProps["onSetServerAudioQuality"];
     onSetServerVideoEffectType: ServerProfileModalProps["onSetServerVideoEffectType"];
@@ -167,6 +174,13 @@ export function ServerProfileModalContainer({ open, t, permissions, state, data,
       onBanServerMember={actions.onBanServerMember}
       onUnbanServerMember={actions.onUnbanServerMember}
       onTransferServerOwnership={actions.onTransferServerOwnership}
+      onLoadServerMemberProfile={actions.onLoadServerMemberProfile}
+      onLoadServerRoles={actions.onLoadServerRoles}
+      onCreateServerRole={actions.onCreateServerRole}
+      onRenameServerRole={actions.onRenameServerRole}
+      onDeleteServerRole={actions.onDeleteServerRole}
+      onSetServerMemberCustomRoles={actions.onSetServerMemberCustomRoles}
+      onSetServerMemberHiddenRoomAccess={actions.onSetServerMemberHiddenRoomAccess}
       onRefreshTelemetry={actions.onRefreshTelemetry}
       onSetServerAudioQuality={actions.onSetServerAudioQuality}
       onSetServerVideoEffectType={actions.onSetServerVideoEffectType}

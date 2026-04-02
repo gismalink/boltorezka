@@ -2315,7 +2315,18 @@ pre {
 
 .voice-settings-popup {
   min-width: 260px;
+  width: min(320px, 92vw);
+  max-width: 92vw;
   padding: var(--space-lg);
+}
+
+.voice-hotkey-field {
+  min-width: 0;
+}
+
+.voice-hotkey-input {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .voice-menu-row-active,

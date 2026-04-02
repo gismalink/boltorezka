@@ -36,6 +36,7 @@ const createRoomSchema = z.object({
   title: z.string().min(3).max(120),
   is_public: z.boolean().default(true),
   kind: roomKindSchema.default("text"),
+  is_hidden: z.boolean().default(false),
   server_id: z.string().uuid().optional(),
   category_id: z.string().uuid().nullable().optional().default(null),
   nsfw: z.boolean().optional().default(false),
@@ -47,8 +48,13 @@ const updateRoomSchema = z.object({
   title: z.string().min(3).max(120),
   kind: roomKindSchema,
   category_id: z.string().uuid().nullable(),
+  is_hidden: z.boolean().optional(),
   nsfw: z.boolean().optional(),
   audio_quality_override: audioQualitySchema.nullable().optional()
+});
+
+const roomVisibilityGrantSchema = z.object({
+  user_id: z.string().uuid()
 });
 
 const moveRoomSchema = z.object({
@@ -224,7 +230,15 @@ export async function roomsRoutes(fastify: FastifyInstance) {
           )
         : { rows: [], rowCount: 0 };
 
-      const roomFilters = ["r.is_archived = FALSE"];
+      const roomFilters = [
+        "r.is_archived = FALSE",
+        `(r.is_hidden = FALSE OR EXISTS (
+          SELECT 1
+          FROM room_visibility_grants rvg
+          WHERE rvg.room_id = r.id
+            AND rvg.user_id = $1
+        ))`
+      ];
       const roomParams: string[] = [userId];
       if (activeServerId) {
         roomParams.push(activeServerId);
@@ -242,6 +256,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
            r.category_id,
            r.position,
            r.is_public,
+           r.is_hidden,
            r.created_at,
            ARRAY(
              SELECT DISTINCT u.name
@@ -303,7 +318,15 @@ export async function roomsRoutes(fastify: FastifyInstance) {
         return response;
       }
 
-      const roomFilters = ["r.is_archived = FALSE"];
+      const roomFilters = [
+        "r.is_archived = FALSE",
+        `(r.is_hidden = FALSE OR EXISTS (
+          SELECT 1
+          FROM room_visibility_grants rvg
+          WHERE rvg.room_id = r.id
+            AND rvg.user_id = $1
+        ))`
+      ];
       const roomParams: string[] = [userId];
       if (activeServerId) {
         roomParams.push(activeServerId);
@@ -321,6 +344,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
            r.category_id,
            r.position,
            r.is_public,
+           r.is_hidden,
            r.created_at,
            ARRAY(
              SELECT DISTINCT u.name
@@ -361,7 +385,15 @@ export async function roomsRoutes(fastify: FastifyInstance) {
         return response;
       }
 
-      const roomFilters = ["r.is_archived = TRUE"];
+      const roomFilters = [
+        "r.is_archived = TRUE",
+        `(r.is_hidden = FALSE OR EXISTS (
+          SELECT 1
+          FROM room_visibility_grants rvg
+          WHERE rvg.room_id = r.id
+            AND rvg.user_id = $1
+        ))`
+      ];
       const roomParams: string[] = [userId];
       if (activeServerId) {
         roomParams.push(activeServerId);
@@ -379,6 +411,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
            r.category_id,
            r.position,
            r.is_public,
+           r.is_hidden,
            r.created_at,
            ARRAY(
              SELECT DISTINCT u.name
@@ -732,6 +765,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
       slug: string;
       title: string;
       is_public?: boolean;
+      is_hidden?: boolean;
       kind?: "text" | "text_voice" | "text_voice_video";
       server_id?: string;
       category_id?: string | null;
@@ -754,7 +788,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
         });
       }
 
-      const { title, is_public, kind, category_id, nsfw } = parsed.data;
+      const { title, is_public, is_hidden, kind, category_id, nsfw } = parsed.data;
       const hasAudioQualityOverride = Object.prototype.hasOwnProperty.call(parsed.data, "audio_quality_override");
       const isSuperAdmin = request.currentUser?.role === "super_admin";
       if (hasAudioQualityOverride && !isSuperAdmin) {
@@ -855,10 +889,10 @@ export async function roomsRoutes(fastify: FastifyInstance) {
           );
 
       const created = await db.query<RoomRow>(
-        `INSERT INTO rooms (slug, title, kind, category_id, nsfw, audio_quality_override, position, is_public, created_by, server_id)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-         RETURNING id, slug, title, kind, nsfw, audio_quality_override, category_id, position, is_public, created_at`,
-        [slug, title, kind, category_id, nsfw, audioQualityOverride, position, is_public, createdBy, targetServerId]
+        `INSERT INTO rooms (slug, title, kind, category_id, nsfw, audio_quality_override, position, is_public, is_hidden, created_by, server_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+         RETURNING id, slug, title, kind, nsfw, audio_quality_override, category_id, position, is_public, is_hidden, created_at`,
+        [slug, title, kind, category_id, nsfw, audioQualityOverride, position, is_public, is_hidden, createdBy, targetServerId]
       );
 
       const room = created.rows[0];
@@ -869,6 +903,15 @@ export async function roomsRoutes(fastify: FastifyInstance) {
          ON CONFLICT (room_id, user_id) DO NOTHING`,
         [room.id, createdBy]
       );
+
+      if (room.is_hidden) {
+        await db.query(
+          `INSERT INTO room_visibility_grants (room_id, user_id, granted_by)
+           VALUES ($1, $2, $3)
+           ON CONFLICT (room_id, user_id) DO NOTHING`,
+          [room.id, createdBy, createdBy]
+        );
+      }
 
       const response: RoomCreateResponse = { room };
       return reply.code(201).send(response);
@@ -881,6 +924,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
       title: string;
       kind: "text" | "text_voice" | "text_voice_video" | "voice";
       category_id: string | null;
+      is_hidden?: boolean;
       nsfw?: boolean;
       audio_quality_override?: "retro" | "low" | "standard" | "high" | null;
     };
@@ -907,6 +951,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
       }
 
       const { title, kind, category_id, nsfw } = parsed.data;
+      const hasIsHidden = Object.prototype.hasOwnProperty.call(parsed.data, "is_hidden");
       const actorRole = String(request.currentUser?.role || "user").trim();
       const hasNsfw = Object.prototype.hasOwnProperty.call(parsed.data, "nsfw");
       const hasAudioQualityOverride = Object.prototype.hasOwnProperty.call(parsed.data, "audio_quality_override");
@@ -958,10 +1003,22 @@ export async function roomsRoutes(fastify: FastifyInstance) {
              kind = $3,
              category_id = $4,
              nsfw = CASE WHEN $5::boolean THEN $6::boolean ELSE nsfw END,
-             audio_quality_override = CASE WHEN $7::boolean THEN $8::text ELSE audio_quality_override END
+             audio_quality_override = CASE WHEN $7::boolean THEN $8::text ELSE audio_quality_override END,
+             is_hidden = CASE WHEN $9::boolean THEN $10::boolean ELSE is_hidden END
          WHERE id = $1
-         RETURNING id, slug, title, kind, nsfw, audio_quality_override, category_id, position, is_public, created_at`,
-        [roomId, title.trim(), kind, category_id, hasNsfw, Boolean(nsfw), hasAudioQualityOverride, audioQualityOverride]
+         RETURNING id, slug, title, kind, nsfw, audio_quality_override, category_id, position, is_public, is_hidden, created_at`,
+        [
+          roomId,
+          title.trim(),
+          kind,
+          category_id,
+          hasNsfw,
+          Boolean(nsfw),
+          hasAudioQualityOverride,
+          audioQualityOverride,
+          hasIsHidden,
+          Boolean(parsed.data.is_hidden)
+        ]
       );
 
       if ((updated.rowCount || 0) === 0) {
@@ -972,6 +1029,16 @@ export async function roomsRoutes(fastify: FastifyInstance) {
       }
 
       const room = updated.rows[0];
+      if (room.is_hidden) {
+        const actorId = String(request.user?.sub || "").trim();
+        await db.query(
+          `INSERT INTO room_visibility_grants (room_id, user_id, granted_by)
+           VALUES ($1, $2, $3)
+           ON CONFLICT (room_id, user_id) DO NOTHING`,
+          [room.id, actorId, actorId]
+        );
+      }
+
       if (hasAudioQualityOverride) {
         broadcastRealtimeEnvelope({
           type: "audio.quality.updated",
@@ -1016,7 +1083,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
       }
 
       const currentResult = await db.query<RoomRow>(
-        `SELECT id, slug, title, kind, nsfw, audio_quality_override, category_id, position, is_public, created_at
+        `SELECT id, slug, title, kind, nsfw, audio_quality_override, category_id, position, is_public, is_hidden, created_at
          FROM rooms
          WHERE id = $1 AND is_archived = FALSE`,
         [roomId]
@@ -1068,7 +1135,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
       );
 
       const updated = await db.query<RoomRow>(
-        `SELECT id, slug, title, kind, nsfw, audio_quality_override, category_id, position, is_public, created_at
+        `SELECT id, slug, title, kind, nsfw, audio_quality_override, category_id, position, is_public, is_hidden, created_at
          FROM rooms
          WHERE id = $1`,
         [current.id]
@@ -1318,7 +1385,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
       }
 
       const roomResult = await db.query<RoomRow>(
-        `SELECT r.id, r.slug, r.title, r.kind, r.audio_quality_override, r.category_id, r.server_id, r.nsfw, r.position, r.is_public
+        `SELECT r.id, r.slug, r.title, r.kind, r.audio_quality_override, r.category_id, r.server_id, r.nsfw, r.position, r.is_public, r.is_hidden
          FROM rooms r
          LEFT JOIN servers s ON s.id = r.server_id
          WHERE r.slug = $1
@@ -1335,6 +1402,31 @@ export async function roomsRoutes(fastify: FastifyInstance) {
       }
 
       const room = roomResult.rows[0];
+
+      if (room.is_hidden) {
+        const visibilityGrant = await db.query(
+          `SELECT 1
+           WHERE EXISTS (
+             SELECT 1
+             FROM room_visibility_grants
+             WHERE room_id = $1 AND user_id = $2
+           )
+           OR EXISTS (
+             SELECT 1
+             FROM room_members
+             WHERE room_id = $1 AND user_id = $2
+           )
+           LIMIT 1`,
+          [room.id, userId]
+        );
+
+        if ((visibilityGrant.rowCount || 0) === 0) {
+          return reply.code(403).send({
+            error: "Forbidden",
+            message: "You cannot access this room"
+          });
+        }
+      }
 
       if (room.nsfw === true) {
         const serverId = String(room.server_id || "").trim();
@@ -1483,6 +1575,193 @@ export async function roomsRoutes(fastify: FastifyInstance) {
       void incrementReadMetricBy("chat_read_messages_plain_text", plainTextMessages);
 
       return response;
+    }
+  );
+
+  fastify.get<{
+    Params: { roomId: string };
+  }>(
+    "/v1/rooms/:roomId/visibility-grants",
+    {
+      preHandler: [requireAuth, requireServiceAccess, loadCurrentUser]
+    },
+    async (request, reply) => {
+      const roomId = String(request.params.roomId || "").trim();
+      const actorId = String(request.user?.sub || "").trim();
+      const globalRole = String(request.currentUser?.role || "user").trim();
+
+      if (!roomId) {
+        return reply.code(400).send({
+          error: "ValidationError",
+          message: "roomId is required"
+        });
+      }
+
+      const roomResult = await db.query<{ id: string; server_id: string }>(
+        "SELECT id, server_id FROM rooms WHERE id = $1 LIMIT 1",
+        [roomId]
+      );
+
+      if ((roomResult.rowCount || 0) === 0) {
+        return reply.code(404).send({
+          error: "RoomNotFound",
+          message: "Room does not exist"
+        });
+      }
+
+      const allowed = await canManageServerRooms(actorId, String(roomResult.rows[0]?.server_id || "").trim(), globalRole);
+      if (!allowed) {
+        return reply.code(403).send({
+          error: "forbidden_role",
+          message: "Insufficient permissions to manage room visibility"
+        });
+      }
+
+      const grants = await db.query<{ user_id: string; name: string; email: string; created_at: string }>(
+        `SELECT rvg.user_id, u.name, u.email, rvg.created_at
+         FROM room_visibility_grants rvg
+         JOIN users u ON u.id = rvg.user_id
+         WHERE rvg.room_id = $1
+         ORDER BY u.name ASC`,
+        [roomId]
+      );
+
+      return { grants: grants.rows };
+    }
+  );
+
+  fastify.post<{
+    Params: { roomId: string };
+    Body: { user_id: string };
+  }>(
+    "/v1/rooms/:roomId/visibility-grants",
+    {
+      preHandler: [requireAuth, requireServiceAccess, loadCurrentUser]
+    },
+    async (request, reply) => {
+      const roomId = String(request.params.roomId || "").trim();
+      const actorId = String(request.user?.sub || "").trim();
+      const globalRole = String(request.currentUser?.role || "user").trim();
+      const parsed = roomVisibilityGrantSchema.safeParse(request.body || {});
+
+      if (!roomId) {
+        return reply.code(400).send({
+          error: "ValidationError",
+          message: "roomId is required"
+        });
+      }
+
+      if (!parsed.success) {
+        return reply.code(400).send({
+          error: "ValidationError",
+          issues: parsed.error.flatten()
+        });
+      }
+
+      const targetUserId = String(parsed.data.user_id || "").trim();
+      const roomResult = await db.query<{ id: string; server_id: string; is_hidden: boolean }>(
+        "SELECT id, server_id, is_hidden FROM rooms WHERE id = $1 LIMIT 1",
+        [roomId]
+      );
+
+      if ((roomResult.rowCount || 0) === 0) {
+        return reply.code(404).send({
+          error: "RoomNotFound",
+          message: "Room does not exist"
+        });
+      }
+
+      const room = roomResult.rows[0];
+      const allowed = await canManageServerRooms(actorId, String(room.server_id || "").trim(), globalRole);
+      if (!allowed) {
+        return reply.code(403).send({
+          error: "forbidden_role",
+          message: "Insufficient permissions to manage room visibility"
+        });
+      }
+
+      await db.query(
+        `INSERT INTO room_visibility_grants (room_id, user_id, granted_by)
+         VALUES ($1, $2, $3)
+         ON CONFLICT (room_id, user_id) DO UPDATE SET granted_by = EXCLUDED.granted_by`,
+        [room.id, targetUserId, actorId]
+      );
+
+      if (room.is_hidden) {
+        await db.query(
+          `INSERT INTO room_members (room_id, user_id, role)
+           VALUES ($1, $2, 'member')
+           ON CONFLICT (room_id, user_id) DO NOTHING`,
+          [room.id, targetUserId]
+        );
+      }
+
+      return { ok: true, roomId: room.id, userId: targetUserId };
+    }
+  );
+
+  fastify.delete<{
+    Params: { roomId: string; userId: string };
+  }>(
+    "/v1/rooms/:roomId/visibility-grants/:userId",
+    {
+      preHandler: [requireAuth, requireServiceAccess, loadCurrentUser]
+    },
+    async (request, reply) => {
+      const roomId = String(request.params.roomId || "").trim();
+      const targetUserId = String(request.params.userId || "").trim();
+      const actorId = String(request.user?.sub || "").trim();
+      const globalRole = String(request.currentUser?.role || "user").trim();
+
+      if (!roomId || !targetUserId) {
+        return reply.code(400).send({
+          error: "ValidationError",
+          message: "roomId and userId are required"
+        });
+      }
+
+      const roomResult = await db.query<{ id: string; server_id: string }>(
+        "SELECT id, server_id FROM rooms WHERE id = $1 LIMIT 1",
+        [roomId]
+      );
+
+      if ((roomResult.rowCount || 0) === 0) {
+        return reply.code(404).send({
+          error: "RoomNotFound",
+          message: "Room does not exist"
+        });
+      }
+
+      const room = roomResult.rows[0];
+      const allowed = await canManageServerRooms(actorId, String(room.server_id || "").trim(), globalRole);
+      if (!allowed) {
+        return reply.code(403).send({
+          error: "forbidden_role",
+          message: "Insufficient permissions to manage room visibility"
+        });
+      }
+
+      await db.query(
+        `DELETE FROM room_visibility_grants
+         WHERE room_id = $1 AND user_id = $2`,
+        [room.id, targetUserId]
+      );
+
+      await db.query(
+        `DELETE FROM room_members
+         WHERE room_id = $1
+           AND user_id = $2
+           AND role = 'member'
+           AND NOT EXISTS (
+             SELECT 1
+             FROM room_visibility_grants
+             WHERE room_id = $1
+               AND user_id = $2
+           )`,
+        [room.id, targetUserId]
+      );
+
+      return { ok: true, roomId: room.id, userId: targetUserId };
     }
   );
 }

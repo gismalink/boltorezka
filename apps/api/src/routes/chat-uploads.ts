@@ -543,7 +543,7 @@ export async function chatUploadsRoutes(fastify: FastifyInstance) {
       }
 
       const roomResult = await db.query<RoomRow>(
-        `SELECT r.id, r.slug, r.title, r.kind, r.audio_quality_override, r.category_id, r.position, r.is_public, r.server_id, r.nsfw
+        `SELECT r.id, r.slug, r.title, r.kind, r.audio_quality_override, r.category_id, r.position, r.is_public, r.is_hidden, r.server_id, r.nsfw
          FROM rooms r
          LEFT JOIN servers s ON s.id = r.server_id
          WHERE r.slug = $1
@@ -568,6 +568,29 @@ export async function chatUploadsRoutes(fastify: FastifyInstance) {
           return reply.code(403).send({
             error: "AgeVerificationRequired",
             message: "Age verification is required for NSFW access"
+          });
+        }
+      }
+
+      if (room.is_hidden) {
+        const visibilityGrant = await db.query(
+          `SELECT 1
+           WHERE EXISTS (
+             SELECT 1 FROM room_visibility_grants
+             WHERE room_id = $1 AND user_id = $2
+           )
+           OR EXISTS (
+             SELECT 1 FROM room_members
+             WHERE room_id = $1 AND user_id = $2
+           )
+           LIMIT 1`,
+          [room.id, userId]
+        );
+
+        if ((visibilityGrant.rowCount || 0) === 0) {
+          return reply.code(403).send({
+            error: "Forbidden",
+            message: "You cannot access this room"
           });
         }
       }

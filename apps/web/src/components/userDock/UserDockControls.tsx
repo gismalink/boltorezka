@@ -230,6 +230,7 @@ export function UserDockControls({
               anchorRef={voiceSettingsAnchorRef}
               className="settings-popup voice-settings-popup"
               placement="top-end"
+              disableFlip
             >
               <div className="grid gap-3">
                 <div className="voice-menu-items grid gap-2">
@@ -288,9 +289,10 @@ export function UserDockControls({
                 </div>
 
                 {walkieTalkieEnabled ? (
-                  <label className="grid gap-2">
+                  <label className="grid min-w-0 gap-2 voice-hotkey-field">
                     <span className="subheading">{t("settings.walkieTalkieHotkey")}</span>
                     <input
+                      className="voice-hotkey-input"
                       type="text"
                       value={walkieTalkieHotkeyLabel}
                       readOnly

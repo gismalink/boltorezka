@@ -85,8 +85,8 @@ async function resolveChatRoom(
     };
   }
 
-  const roomResult = await dbQuery<{ id: string; slug: string; is_public: boolean; server_id: string | null; nsfw: boolean | null }>(
-    `SELECT r.id, r.slug, r.is_public, r.server_id, r.nsfw
+  const roomResult = await dbQuery<{ id: string; slug: string; is_public: boolean; is_hidden: boolean; server_id: string | null; nsfw: boolean | null }>(
+    `SELECT r.id, r.slug, r.is_public, r.is_hidden, r.server_id, r.nsfw
      FROM rooms r
      LEFT JOIN servers s ON s.id = r.server_id
      WHERE r.slug = $1
@@ -107,6 +107,29 @@ async function resolveChatRoom(
     const confirmed = serverId ? await isServerAgeConfirmed(serverId, state.userId) : false;
     if (!confirmed) {
       sendNack(connection, requestId, eventType, "AgeVerificationRequired", "Age verification is required for NSFW access");
+      return null;
+    }
+  }
+
+  if (room.is_hidden) {
+    const hiddenAccess = await dbQuery(
+      `SELECT EXISTS(
+         SELECT 1
+         FROM room_visibility_grants
+         WHERE room_id = $1 AND user_id = $2
+       )
+       OR EXISTS(
+         SELECT 1
+         FROM room_members
+         WHERE room_id = $1 AND user_id = $2
+       ) AS has_access`,
+      [room.id, state.userId]
+    );
+
+    const hasHiddenAccess = Boolean((hiddenAccess.rows[0] as { has_access?: boolean } | undefined)?.has_access);
+    const isCurrentActiveRoom = state.roomId === room.id && state.roomSlug === room.slug;
+    if (!hasHiddenAccess && !isCurrentActiveRoom) {
+      sendNack(connection, requestId, eventType, "Forbidden", "You cannot access this room");
       return null;
     }
   }

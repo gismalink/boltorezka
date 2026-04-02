@@ -16,6 +16,7 @@ import { RangeSlider } from "./uicomponents";
 
 type ServerMenuTab =
   | "users"
+  | "roles"
   | "product_management"
   | "server_management"
   | "observability"
@@ -40,6 +41,17 @@ type IconAction = {
 type RoleBadge = {
   key: string;
   label: string;
+};
+
+type ServerMemberProfileDetails = {
+  userId: string;
+  name: string;
+  email: string;
+  joinedAt: string;
+  role: ServerMemberRole;
+  customRoles: Array<{ id: string; name: string }>;
+  hiddenRoomAccess: Array<{ roomId: string; roomSlug: string; roomTitle: string }>;
+  hiddenRoomsAvailable: Array<{ roomId: string; roomSlug: string; roomTitle: string; hasAccess: boolean }>;
 };
 
 function resolveDisplayName(name: string | null | undefined, username: string | null | undefined, email: string): string {
@@ -143,6 +155,13 @@ type ServerProfileModalProps = {
   onBanServerMember: (userId: string) => void;
   onUnbanServerMember: (userId: string) => void;
   onTransferServerOwnership: (userId: string) => void;
+  onLoadServerMemberProfile: (userId: string) => Promise<ServerMemberProfileDetails | null>;
+  onLoadServerRoles: () => Promise<Array<{ id: string; name: string; isBase: boolean }>>;
+  onCreateServerRole: (name: string) => Promise<boolean>;
+  onRenameServerRole: (roleId: string, name: string) => Promise<boolean>;
+  onDeleteServerRole: (roleId: string) => Promise<boolean>;
+  onSetServerMemberCustomRoles: (userId: string, roleIds: string[]) => Promise<boolean>;
+  onSetServerMemberHiddenRoomAccess: (userId: string, roomIds: string[]) => Promise<boolean>;
   onRefreshTelemetry: () => void;
   onSetServerAudioQuality: (value: AudioQuality) => void;
   onSetServerVideoEffectType: (value: ServerVideoEffectType) => void;
@@ -330,6 +349,13 @@ export function ServerProfileModal({
   onBanServerMember,
   onUnbanServerMember,
   onTransferServerOwnership,
+  onLoadServerMemberProfile,
+  onLoadServerRoles,
+  onCreateServerRole,
+  onRenameServerRole,
+  onDeleteServerRole,
+  onSetServerMemberCustomRoles,
+  onSetServerMemberHiddenRoomAccess,
   onRefreshTelemetry,
   onSetServerAudioQuality,
   onSetServerVideoEffectType,
@@ -355,6 +381,14 @@ export function ServerProfileModal({
   const [productManagementTab, setProductManagementTab] = useState<ProductManagementTab>("users");
   const [observabilityTab, setObservabilityTab] = useState<ObservabilityTab>("log");
   const [documentsRulesTab, setDocumentsRulesTab] = useState<DocumentsRulesTab>("documents");
+  const [serverRoles, setServerRoles] = useState<Array<{ id: string; name: string; isBase: boolean }>>([]);
+  const [rolesLoading, setRolesLoading] = useState(false);
+  const [newRoleName, setNewRoleName] = useState("");
+  const [editingRoleId, setEditingRoleId] = useState<string | null>(null);
+  const [editingRoleName, setEditingRoleName] = useState("");
+  const [memberContextMenu, setMemberContextMenu] = useState<{ userId: string; x: number; y: number } | null>(null);
+  const [memberContextProfile, setMemberContextProfile] = useState<ServerMemberProfileDetails | null>(null);
+  const [memberProfileModalOpen, setMemberProfileModalOpen] = useState(false);
   const [userSearchQuery, setUserSearchQuery] = useState("");
   const [renameServerName, setRenameServerName] = useState("");
   const [renameServerInitialValue, setRenameServerInitialValue] = useState("");
@@ -371,6 +405,7 @@ export function ServerProfileModal({
   const showObservabilityTab = hasCurrentServer;
   const showLegacyUsersTab = !canManageServerControlPlane && canManageUsers;
   const showServerMembersPanel = serverMenuTab === "users" || serverMenuTab === "server_management";
+  const canManageServerMeta = currentServerRole === "owner" || currentServerRole === "admin";
   const showAdminUsersPanel = canManageUsers
     && ((serverMenuTab === "users" && !canManageServerControlPlane)
       || (serverMenuTab === "product_management" && productManagementTab === "users"));
@@ -382,6 +417,14 @@ export function ServerProfileModal({
   const rnnoiseProcessAvgMs = rnnoiseProcessSamples > 0
     ? (telemetrySummary?.metrics.rnnoise_process_cost_us_sum ?? 0) / rnnoiseProcessSamples / 1000
     : 0;
+
+  const formatJoinedDate = (value: string) => {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return value;
+    }
+    return date.toLocaleDateString();
+  };
 
   const desktopPublicOrigin = useMemo(() => resolvePublicOrigin(), []);
 
@@ -442,6 +485,40 @@ export function ServerProfileModal({
     setRenameServerInitialValue(nextName);
     setIsEditingServerName(false);
   }, [currentServerName]);
+
+  useEffect(() => {
+    if (!open || !hasCurrentServer || (serverMenuTab !== "roles" && !memberContextMenu)) {
+      return;
+    }
+
+    let disposed = false;
+    setRolesLoading(true);
+    void onLoadServerRoles()
+      .then((roles) => {
+        if (!disposed) {
+          setServerRoles(Array.isArray(roles) ? roles : []);
+        }
+      })
+      .finally(() => {
+        if (!disposed) {
+          setRolesLoading(false);
+        }
+      });
+
+    return () => {
+      disposed = true;
+    };
+  }, [hasCurrentServer, memberContextMenu, onLoadServerRoles, open, serverMenuTab]);
+
+  useEffect(() => {
+    if (!memberContextMenu) {
+      return;
+    }
+
+    const close = () => setMemberContextMenu(null);
+    window.addEventListener("pointerdown", close);
+    return () => window.removeEventListener("pointerdown", close);
+  }, [memberContextMenu]);
 
   useEffect(() => {
     if (!open) {
@@ -516,6 +593,7 @@ export function ServerProfileModal({
   const pendingAccessRequestsCount = usersByTab.requests.length;
   const serverMenuOptions = [
     showLegacyUsersTab ? { value: "users" as const, label: t("server.tabUsers"), disabled: false } : null,
+    { value: "roles" as const, label: t("server.tabRoles"), disabled: !hasCurrentServer },
     showProductManagementTab
       ? {
           value: "product_management" as const,
@@ -788,13 +866,17 @@ export function ServerProfileModal({
   };
 
   const getServerMemberRoleBadges = (member: ServerMemberItem): RoleBadge[] => {
+    const customBadges = Array.isArray(member.customRoles)
+      ? member.customRoles.map((role) => ({ key: `custom-${role.id}`, label: role.name }))
+      : [];
+
     if (member.role === "owner") {
-      return [{ key: "owner", label: t("roles.owner") }];
+      return [{ key: "owner", label: t("roles.owner") }, ...customBadges];
     }
     if (member.role === "admin") {
-      return [{ key: "admin", label: t("roles.admin") }];
+      return [{ key: "admin", label: t("roles.admin") }, ...customBadges];
     }
-    return [];
+    return customBadges;
   };
 
   useEffect(() => {
@@ -962,6 +1044,14 @@ export function ServerProfileModal({
                 {t("server.tabUsers")}
               </button>
             ) : null}
+            <button
+              type="button"
+              className={`secondary user-settings-tab-btn min-h-[42px] justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${serverMenuTab === "roles" ? "user-settings-tab-btn-active" : ""}`}
+              disabled={!hasCurrentServer}
+              onClick={() => onSetServerMenuTab("roles")}
+            >
+              {t("server.tabRoles")}
+            </button>
             {showProductManagementTab ? (
               <button
                 type="button"
@@ -1045,6 +1135,7 @@ export function ServerProfileModal({
           <div className="voice-preferences-head flex items-center justify-between gap-3">
             <h2 className="mt-[var(--space-xxs)]">
               {serverMenuTab === "users" ? t("server.tabUsers") : null}
+              {serverMenuTab === "roles" ? t("server.tabRoles") : null}
               {serverMenuTab === "product_management" ? t("server.tabProductManagement") : null}
               {serverMenuTab === "server_management" ? t("server.tabServerManagement") : null}
               {serverMenuTab === "observability" && showObservabilityTab ? t("server.tabObservability") : null}
@@ -1166,7 +1257,24 @@ export function ServerProfileModal({
                   </div>
                   <ul className="admin-list grid gap-2">
                     {serverMembers.map((member) => (
-                      <li key={member.userId} className="admin-row grid min-h-[42px] grid-cols-[minmax(0,1fr)_auto] items-center gap-2 max-desktop:grid-cols-1">
+                      <li
+                        key={member.userId}
+                        className="admin-row grid min-h-[42px] grid-cols-[minmax(0,1fr)_auto] items-center gap-2 max-desktop:grid-cols-1"
+                        onContextMenu={(event) => {
+                          event.preventDefault();
+                          const nextPosition = {
+                            userId: member.userId,
+                            x: event.clientX,
+                            y: event.clientY
+                          };
+                          setMemberContextMenu(nextPosition);
+                          void onLoadServerMemberProfile(member.userId).then((profile) => {
+                            if (profile && profile.userId === nextPosition.userId) {
+                              setMemberContextProfile(profile);
+                            }
+                          });
+                        }}
+                      >
                         <span className="min-w-0 break-words">
                           {resolveDisplayName(member.name, null, member.email)}
                           {getServerMemberRoleBadges(member).length > 0 ? (
@@ -1375,6 +1483,122 @@ export function ServerProfileModal({
                   ) : null}
                 </>
               ) : null}
+            </section>
+          ) : null}
+
+          {serverMenuTab === "roles" ? (
+            <section className="grid gap-3">
+              <h3>{t("server.rolesTitle")}</h3>
+              <p className="muted">{rolesLoading ? t("server.rolesLoading") : t("server.rolesHint")}</p>
+              {canManageServerMeta ? (
+                <div className="flex flex-wrap items-end gap-2">
+                  <label className="grid min-w-[260px] flex-1 gap-1">
+                    <span className="muted">{t("server.roleCreateLabel")}</span>
+                    <input
+                      value={newRoleName}
+                      maxLength={64}
+                      onChange={(event) => setNewRoleName(event.target.value)}
+                      placeholder={t("server.roleCreatePlaceholder")}
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const ok = await onCreateServerRole(newRoleName.trim());
+                      if (ok) {
+                        setNewRoleName("");
+                        const next = await onLoadServerRoles();
+                        setServerRoles(next);
+                      }
+                    }}
+                    disabled={newRoleName.trim().length < 2}
+                  >
+                    {t("server.roleCreate")}
+                  </button>
+                </div>
+              ) : null}
+              <ul className="admin-list grid gap-2">
+                {serverRoles.map((role) => (
+                  <li key={role.id} className="admin-row grid min-h-[42px] grid-cols-[minmax(0,1fr)_auto] items-center gap-2 max-desktop:grid-cols-1">
+                    {editingRoleId === role.id ? (
+                      <input
+                        value={editingRoleName}
+                        maxLength={64}
+                        onChange={(event) => setEditingRoleName(event.target.value)}
+                      />
+                    ) : (
+                      <span className="min-w-0 break-words">
+                        {role.name}
+                        {role.isBase ? <span className="role-badge ml-2">{t("server.roleBaseBadge")}</span> : null}
+                      </span>
+                    )}
+                    {canManageServerMeta && !role.isBase ? (
+                      <div className="row-actions flex flex-wrap items-stretch justify-end gap-2">
+                        {editingRoleId === role.id ? (
+                          <>
+                            <button
+                              type="button"
+                              className="secondary icon-btn tiny admin-action-btn"
+                              onClick={() => {
+                                setEditingRoleId(null);
+                                setEditingRoleName("");
+                              }}
+                              aria-label={t("settings.cancel")}
+                            >
+                              <i className="bi bi-x-lg" aria-hidden="true" />
+                            </button>
+                            <button
+                              type="button"
+                              className="icon-btn tiny admin-action-btn"
+                              onClick={async () => {
+                                const ok = await onRenameServerRole(role.id, editingRoleName.trim());
+                                if (ok) {
+                                  setEditingRoleId(null);
+                                  setEditingRoleName("");
+                                  const next = await onLoadServerRoles();
+                                  setServerRoles(next);
+                                }
+                              }}
+                              disabled={editingRoleName.trim().length < 2}
+                              aria-label={t("rooms.save")}
+                            >
+                              <i className="bi bi-check2" aria-hidden="true" />
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button
+                              type="button"
+                              className="secondary icon-btn tiny admin-action-btn"
+                              onClick={() => {
+                                setEditingRoleId(role.id);
+                                setEditingRoleName(role.name);
+                              }}
+                              aria-label={t("server.roleRename")}
+                            >
+                              <i className="bi bi-pencil-square" aria-hidden="true" />
+                            </button>
+                            <button
+                              type="button"
+                              className="secondary icon-btn tiny admin-action-btn"
+                              onClick={async () => {
+                                const ok = await onDeleteServerRole(role.id);
+                                if (ok) {
+                                  const next = await onLoadServerRoles();
+                                  setServerRoles(next);
+                                }
+                              }}
+                              aria-label={t("server.roleDelete")}
+                            >
+                              <i className="bi bi-trash3" aria-hidden="true" />
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
             </section>
           ) : null}
 
@@ -1837,6 +2061,119 @@ export function ServerProfileModal({
         </div>
         </section>
       </div>
+
+      {memberContextMenu ? (
+        <div
+          className="settings-popup fixed z-[180] grid min-w-[280px] gap-3"
+          style={{ left: memberContextMenu.x, top: memberContextMenu.y }}
+          onPointerDown={(event) => event.stopPropagation()}
+        >
+          <button
+            type="button"
+            className="secondary"
+            onClick={async () => {
+              const profile = memberContextProfile || await onLoadServerMemberProfile(memberContextMenu.userId);
+              if (!profile) {
+                return;
+              }
+              setMemberContextProfile(profile);
+              setMemberProfileModalOpen(true);
+              setMemberContextMenu(null);
+            }}
+          >
+            {t("server.contextProfile")}
+          </button>
+
+          {canManageServerMeta ? (
+            <>
+              <details>
+                <summary>{t("server.contextServerRoles")}</summary>
+                <div className="mt-2 grid gap-2">
+                  {serverRoles.filter((role) => !role.isBase).map((role) => {
+                    const checked = Boolean(memberContextProfile?.customRoles.some((item) => item.id === role.id));
+                    return (
+                      <label key={role.id} className="row items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={async () => {
+                            const current = memberContextProfile;
+                            if (!current) {
+                              return;
+                            }
+                            const nextRoleIds = checked
+                              ? current.customRoles.filter((item) => item.id !== role.id).map((item) => item.id)
+                              : [...current.customRoles.map((item) => item.id), role.id];
+                            const ok = await onSetServerMemberCustomRoles(current.userId, nextRoleIds);
+                            if (!ok) {
+                              return;
+                            }
+                            const refreshed = await onLoadServerMemberProfile(current.userId);
+                            if (refreshed) {
+                              setMemberContextProfile(refreshed);
+                            }
+                          }}
+                        />
+                        <span>{role.name}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </details>
+
+              <details>
+                <summary>{t("server.contextHiddenChats")}</summary>
+                <div className="mt-2 grid gap-2">
+                  {(memberContextProfile?.hiddenRoomsAvailable || []).map((room) => (
+                    <label key={room.roomId} className="row items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={room.hasAccess}
+                        onChange={async () => {
+                          const current = memberContextProfile;
+                          if (!current) {
+                            return;
+                          }
+                          const nextRoomIds = room.hasAccess
+                            ? current.hiddenRoomsAvailable.filter((item) => item.roomId !== room.roomId && item.hasAccess).map((item) => item.roomId)
+                            : [...current.hiddenRoomsAvailable.filter((item) => item.hasAccess).map((item) => item.roomId), room.roomId];
+                          const ok = await onSetServerMemberHiddenRoomAccess(current.userId, nextRoomIds);
+                          if (!ok) {
+                            return;
+                          }
+                          const refreshed = await onLoadServerMemberProfile(current.userId);
+                          if (refreshed) {
+                            setMemberContextProfile(refreshed);
+                          }
+                        }}
+                      />
+                      <span>#{room.roomTitle}</span>
+                    </label>
+                  ))}
+                </div>
+              </details>
+            </>
+          ) : null}
+        </div>
+      ) : null}
+
+      {memberProfileModalOpen && memberContextProfile ? (
+        <div className="fixed inset-0 z-[185] flex items-center justify-center bg-black/65 px-4" role="dialog" aria-modal="true">
+          <div className="card compact grid w-full max-w-[460px] gap-3 p-4">
+            <h3>{t("server.contextProfile")}</h3>
+            <div><strong>{t("server.profileName")}: </strong>{memberContextProfile.name}</div>
+            <div><strong>Email: </strong>{memberContextProfile.email}</div>
+            <div><strong>{t("server.profileJoinedAt")}: </strong>{formatJoinedDate(memberContextProfile.joinedAt)}</div>
+            <button
+              type="button"
+              className="secondary"
+              onClick={() => setMemberProfileModalOpen(false)}
+            >
+              {t("settings.closeVoiceAria")}
+            </button>
+          </div>
+        </div>
+      ) : null}
 
       {deleteConfirmOpen ? (
         <div className="fixed inset-0 z-[170] flex items-center justify-center bg-black/65 px-4" role="dialog" aria-modal="true">

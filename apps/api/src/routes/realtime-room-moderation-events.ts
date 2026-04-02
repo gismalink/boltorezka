@@ -13,7 +13,7 @@ type SocketState = {
 type RoomModerationEventDeps = {
   normalizeRequestId: (value: unknown) => string | null;
   getPayloadString: (payload: WsIncomingPayload | undefined, key: string, maxLength?: number) => string | null;
-  isUserModerator: (userId: string) => Promise<boolean>;
+  isUserModerator: (userId: string, roomSlug?: string | null) => Promise<boolean>;
   sendValidationNack: (socket: WebSocket, requestId: string | null, eventType: string, message: string) => void;
   sendForbiddenNack: (socket: WebSocket, requestId: string | null, eventType: string, message?: string) => void;
   sendNack: (

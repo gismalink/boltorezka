@@ -71,6 +71,22 @@ type UseServerProfileModalPropsInput = {
   handleBanServerMember: (userId: string) => Promise<void>;
   handleUnbanServerMember: (userId: string) => Promise<void>;
   handleTransferServerOwnership: (userId: string) => Promise<void>;
+  loadServerMemberProfile: (userId: string) => Promise<{
+    userId: string;
+    name: string;
+    email: string;
+    joinedAt: string;
+    role: "owner" | "admin" | "member";
+    customRoles: Array<{ id: string; name: string }>;
+    hiddenRoomAccess: Array<{ roomId: string; roomSlug: string; roomTitle: string }>;
+    hiddenRoomsAvailable: Array<{ roomId: string; roomSlug: string; roomTitle: string; hasAccess: boolean }>;
+  } | null>;
+  loadServerRoles: () => Promise<Array<{ id: string; name: string; isBase: boolean }>>;
+  handleCreateServerRole: (name: string) => Promise<boolean>;
+  handleRenameServerRole: (roleId: string, name: string) => Promise<boolean>;
+  handleDeleteServerRole: (roleId: string) => Promise<boolean>;
+  handleSetServerMemberCustomRoles: (userId: string, roleIds: string[]) => Promise<boolean>;
+  handleSetServerMemberHiddenRoomAccess: (userId: string, roomIds: string[]) => Promise<boolean>;
   loadTelemetrySummary: () => Promise<void>;
   setServerAudioQualityValue: (value: ServerProfileModalContainerProps["state"]["serverAudioQuality"]) => Promise<void>;
   setServerVideoEffectType: ServerProfileModalContainerProps["actions"]["onSetServerVideoEffectType"];
@@ -153,6 +169,13 @@ export function useServerProfileModalProps({
   handleBanServerMember,
   handleUnbanServerMember,
   handleTransferServerOwnership,
+  loadServerMemberProfile,
+  loadServerRoles,
+  handleCreateServerRole,
+  handleRenameServerRole,
+  handleDeleteServerRole,
+  handleSetServerMemberCustomRoles,
+  handleSetServerMemberHiddenRoomAccess,
   loadTelemetrySummary,
   setServerAudioQualityValue,
   setServerVideoEffectType,
@@ -288,6 +311,13 @@ export function useServerProfileModalProps({
     onBanServerMember: (userId) => void handleBanServerMember(userId),
     onUnbanServerMember: (userId) => void handleUnbanServerMember(userId),
     onTransferServerOwnership: (userId) => void handleTransferServerOwnership(userId),
+    onLoadServerMemberProfile: (userId) => loadServerMemberProfile(userId),
+    onLoadServerRoles: () => loadServerRoles(),
+    onCreateServerRole: (name) => handleCreateServerRole(name),
+    onRenameServerRole: (roleId, name) => handleRenameServerRole(roleId, name),
+    onDeleteServerRole: (roleId) => handleDeleteServerRole(roleId),
+    onSetServerMemberCustomRoles: (userId, roleIds) => handleSetServerMemberCustomRoles(userId, roleIds),
+    onSetServerMemberHiddenRoomAccess: (userId, roomIds) => handleSetServerMemberHiddenRoomAccess(userId, roomIds),
     onRefreshTelemetry: () => void loadTelemetrySummary(),
     onSetServerAudioQuality: (value) => void setServerAudioQualityValue(value),
     onSetServerVideoEffectType: setServerVideoEffectType,
@@ -324,6 +354,13 @@ export function useServerProfileModalProps({
     handleBanServerMember,
     handleUnbanServerMember,
     handleTransferServerOwnership,
+    loadServerMemberProfile,
+    loadServerRoles,
+    handleCreateServerRole,
+    handleRenameServerRole,
+    handleDeleteServerRole,
+    handleSetServerMemberCustomRoles,
+    handleSetServerMemberHiddenRoomAccess,
     loadTelemetrySummary,
     setServerAudioQualityValue,
     setServerVideoEffectType,
