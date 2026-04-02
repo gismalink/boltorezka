@@ -6,6 +6,8 @@ Scope: единая модель комнатного чата с темами, 
 
 - 2026-04-03: Stage 0 стартовал в ветке `feature/room-chat-topics-v1`.
 - 2026-04-03: Зафиксирован ADR v1: `docs/architecture/2026-04-03_ADR_ROOM_CHAT_TOPICS_V1.md`.
+- 2026-04-03: Stage 1 стартовал: добавлена migration foundation `apps/api/migrations/0018_room_chat_topics_foundation.sql`.
+- 2026-04-03: Stage 1 стартовал: добавлен backend service baseline `apps/api/src/services/room-topics-service.ts`.
 
 ## 0) Контекст
 
@@ -205,7 +207,7 @@ Scope: единая модель комнатного чата с темами, 
 
 ### Stage 1 - Backend foundation
 
-- [ ] Миграции под topics/messages/reactions/pins/reads/settings.
+- [x] Миграции под topics/messages/reactions/pins/reads/settings.
 - [ ] Services: TopicService, MessageService, SearchService, NotificationSettingsService.
 - [ ] Permission checks и audit.
 

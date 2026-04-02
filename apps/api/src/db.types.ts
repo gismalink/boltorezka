@@ -67,6 +67,7 @@ export type RoomListRow = RoomRow & {
 export type RoomMessageRow = {
   id: string;
   room_id: string;
+  topic_id?: string | null;
   user_id: string;
   text: string;
   created_at: string;
@@ -94,8 +95,59 @@ export type MessageAttachmentRow = {
 export type InsertedMessageRow = {
   id: string;
   room_id: string;
+  topic_id?: string | null;
   user_id: string;
   body: string;
+  created_at: string;
+};
+
+export type RoomTopicRow = {
+  id: string;
+  room_id: string;
+  slug: string;
+  title: string;
+  created_by: string | null;
+  position: number;
+  is_pinned: boolean;
+  archived_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type RoomReadRow = {
+  user_id: string;
+  room_id: string;
+  topic_id: string;
+  last_read_message_id: string | null;
+  last_read_at: string;
+};
+
+export type RoomNotificationMode = "all" | "mentions" | "none";
+export type RoomNotificationScopeType = "server" | "room" | "topic";
+
+export type RoomNotificationSettingsRow = {
+  id: string;
+  user_id: string;
+  scope_type: RoomNotificationScopeType;
+  server_id: string | null;
+  room_id: string | null;
+  topic_id: string | null;
+  mode: RoomNotificationMode;
+  mute_until: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ModerationAuditLogRow = {
+  id: string;
+  action: string;
+  actor_user_id: string | null;
+  target_user_id: string | null;
+  server_id: string | null;
+  room_id: string | null;
+  topic_id: string | null;
+  message_id: string | null;
+  meta: Record<string, unknown>;
   created_at: string;
 };
 
