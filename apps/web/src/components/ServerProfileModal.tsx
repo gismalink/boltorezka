@@ -527,6 +527,16 @@ export function ServerProfileModal({
     }
   }, [open]);
 
+  const openServerMemberContextMenu = (userId: string, x: number, y: number) => {
+    const nextPosition = { userId, x, y };
+    setMemberContextMenu(nextPosition);
+    void onLoadServerMemberProfile(userId).then((profile) => {
+      if (profile && profile.userId === nextPosition.userId) {
+        setMemberContextProfile(profile);
+      }
+    });
+  };
+
   const canConfirmServerDelete =
     deleteConfirmNameInput.trim().length > 0
     && deleteConfirmNameInput.trim() === String(currentServerName || "").trim();
@@ -1255,24 +1265,38 @@ export function ServerProfileModal({
                       </button>
                     ) : null}
                   </div>
-                  <ul className="admin-list grid gap-2">
+                  <ul
+                    className="admin-list grid gap-2"
+                    onContextMenuCapture={(event) => {
+                      const target = event.target;
+                      if (!(target instanceof HTMLElement)) {
+                        return;
+                      }
+
+                      const row = target.closest("[data-server-member-user-id]");
+                      if (!(row instanceof HTMLElement)) {
+                        return;
+                      }
+
+                      const userId = row.dataset.serverMemberUserId;
+                      if (!userId) {
+                        return;
+                      }
+
+                      event.preventDefault();
+                      event.stopPropagation();
+                      openServerMemberContextMenu(userId, event.clientX, event.clientY);
+                    }}
+                  >
                     {serverMembers.map((member) => (
                       <li
                         key={member.userId}
+                        data-server-member-user-id={member.userId}
                         className="admin-row grid min-h-[42px] grid-cols-[minmax(0,1fr)_auto] items-center gap-2 max-desktop:grid-cols-1"
                         onContextMenu={(event) => {
                           event.preventDefault();
-                          const nextPosition = {
-                            userId: member.userId,
-                            x: event.clientX,
-                            y: event.clientY
-                          };
-                          setMemberContextMenu(nextPosition);
-                          void onLoadServerMemberProfile(member.userId).then((profile) => {
-                            if (profile && profile.userId === nextPosition.userId) {
-                              setMemberContextProfile(profile);
-                            }
-                          });
+                          event.stopPropagation();
+                          openServerMemberContextMenu(member.userId, event.clientX, event.clientY);
                         }}
                       >
                         <span className="min-w-0 break-words">

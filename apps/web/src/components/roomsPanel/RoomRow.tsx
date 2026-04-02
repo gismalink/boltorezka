@@ -120,13 +120,38 @@ export function RoomRow({
   }, []);
 
   const startDragMember = (event: DragEvent, userId: string, userName: string) => {
-    event.dataTransfer.setData("application/x-boltorezka-member", JSON.stringify({
+    const payload = JSON.stringify({
       userId,
       userName,
       fromRoomSlug: room.slug
-    }));
+    });
+    event.dataTransfer.setData("application/x-boltorezka-member", payload);
+    // Safari may ignore custom MIME types during dragover, keep plain-text fallback.
+    event.dataTransfer.setData("text/plain", payload);
     event.dataTransfer.setData("application/x-boltorezka-member-from-room", room.slug);
     event.dataTransfer.effectAllowed = "move";
+  };
+
+  const resolveMemberDragPayload = (event: DragEvent): { userId: string; userName: string; fromRoomSlug: string } | null => {
+    const payload =
+      event.dataTransfer.getData("application/x-boltorezka-member")
+      || event.dataTransfer.getData("text/plain");
+    if (!payload) {
+      return null;
+    }
+
+    try {
+      const parsed = JSON.parse(payload) as { userId?: string; userName?: string; fromRoomSlug?: string };
+      const userId = String(parsed.userId || "").trim();
+      const userName = String(parsed.userName || "").trim();
+      const fromRoomSlug = String(parsed.fromRoomSlug || "").trim();
+      if (!userId || !fromRoomSlug) {
+        return null;
+      }
+      return { userId, userName, fromRoomSlug };
+    } catch {
+      return null;
+    }
   };
 
   const resolveDragSourceRoom = (event: DragEvent): string => {
@@ -151,12 +176,12 @@ export function RoomRow({
       return;
     }
 
-    const hasPayload = Array.from(event.dataTransfer.types).includes("application/x-boltorezka-member");
-    if (!hasPayload) {
+    const payload = resolveMemberDragPayload(event);
+    if (!payload) {
       return;
     }
 
-    const fromRoomSlug = resolveDragSourceRoom(event);
+    const fromRoomSlug = resolveDragSourceRoom(event) || payload.fromRoomSlug;
     if (!fromRoomSlug || fromRoomSlug === room.slug) {
       return;
     }
@@ -174,25 +199,17 @@ export function RoomRow({
       return;
     }
 
-    const payload = event.dataTransfer.getData("application/x-boltorezka-member");
+    const payload = resolveMemberDragPayload(event);
     if (!payload) {
       return;
     }
 
-    try {
-      const parsed = JSON.parse(payload) as { userId?: string; userName?: string; fromRoomSlug?: string };
-      const targetUserId = String(parsed.userId || "").trim();
-      const targetUserName = String(parsed.userName || "").trim();
-      const fromRoomSlug = String(parsed.fromRoomSlug || "").trim();
-
-      if (!targetUserId || !fromRoomSlug || fromRoomSlug === room.slug) {
-        return;
-      }
-
-      onMoveRoomMember(fromRoomSlug, room.slug, targetUserId, targetUserName || targetUserId);
-    } catch {
+    const fromRoomSlug = resolveDragSourceRoom(event) || payload.fromRoomSlug;
+    if (!payload.userId || !fromRoomSlug || fromRoomSlug === room.slug) {
       return;
     }
+
+    onMoveRoomMember(fromRoomSlug, room.slug, payload.userId, payload.userName || payload.userId);
   };
 
   return (
