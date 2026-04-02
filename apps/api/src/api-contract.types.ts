@@ -82,6 +82,27 @@ export type RoomMessagesResponse = {
   };
 };
 
+export type RoomTopicItem = {
+  id: string;
+  roomId: string;
+  slug: string;
+  title: string;
+  position: number;
+  isPinned: boolean;
+  archivedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  unreadCount: number;
+};
+
+export type RoomTopicsListResponse = {
+  topics: RoomTopicItem[];
+};
+
+export type RoomTopicResponse = {
+  topic: RoomTopicItem;
+};
+
 export type AdminUsersResponse = {
   users: UserRow[];
 };

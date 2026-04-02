@@ -8,6 +8,7 @@ Scope: единая модель комнатного чата с темами, 
 - 2026-04-03: Зафиксирован ADR v1: `docs/architecture/2026-04-03_ADR_ROOM_CHAT_TOPICS_V1.md`.
 - 2026-04-03: Stage 1 стартовал: добавлена migration foundation `apps/api/migrations/0018_room_chat_topics_foundation.sql`.
 - 2026-04-03: Stage 1 стартовал: добавлен backend service baseline `apps/api/src/services/room-topics-service.ts`.
+- 2026-04-03: Stage 2 стартовал: реализованы API endpoints тем (`GET/POST /v1/rooms/:roomId/topics`, `PATCH /v1/topics/:topicId`, `POST /v1/topics/:topicId/archive`, `POST /v1/topics/:topicId/unarchive`).
 
 ## 0) Контекст
 
@@ -213,7 +214,7 @@ Scope: единая модель комнатного чата с темами, 
 
 ### Stage 2 - API
 
-- [ ] CRUD тем.
+- [x] CRUD тем.
 - [ ] CRUD сообщений + reply/pin/reaction.
 - [ ] Search API.
 - [ ] Notification settings API.
