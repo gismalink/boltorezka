@@ -132,6 +132,13 @@ export function RoomRow({
     event.dataTransfer.effectAllowed = "move";
   };
 
+  const hasMemberDragPayload = (event: DragEvent): boolean => {
+    const types = Array.from(event.dataTransfer.types || []);
+    return types.includes("application/x-boltorezka-member")
+      || types.includes("application/x-boltorezka-member-from-room")
+      || types.includes("text/plain");
+  };
+
   const resolveMemberDragPayload = (event: DragEvent): { userId: string; userName: string; fromRoomSlug: string } | null => {
     const payload =
       event.dataTransfer.getData("application/x-boltorezka-member")
@@ -176,18 +183,18 @@ export function RoomRow({
       return;
     }
 
-    const payload = resolveMemberDragPayload(event);
-    if (!payload) {
-      return;
-    }
-
-    const fromRoomSlug = resolveDragSourceRoom(event) || payload.fromRoomSlug;
-    if (!fromRoomSlug || fromRoomSlug === room.slug) {
+    if (!hasMemberDragPayload(event)) {
       return;
     }
 
     event.preventDefault();
     event.dataTransfer.dropEffect = "move";
+
+    const fromRoomSlug = resolveDragSourceRoom(event);
+    if (fromRoomSlug && fromRoomSlug === room.slug) {
+      return;
+    }
+
     setDropTargetActive(true);
   };
 
@@ -496,6 +503,25 @@ export function RoomRow({
                     return;
                   }
                   startDragMember(event, member.userId, member.userName);
+                }}
+                onContextMenu={(event) => {
+                  if (!canManageMember || !member.userId) {
+                    return;
+                  }
+
+                  event.preventDefault();
+                  event.stopPropagation();
+
+                  setMemberPreferenceDrafts((prev) => ({
+                    ...prev,
+                    [member.userId as string]: {
+                      volume: volumeValue,
+                      note: noteValue
+                    }
+                  }));
+                  memberMenuAnchorRef.current = (event.currentTarget.querySelector(".channel-member-settings-anchor") as HTMLElement | null)
+                    || event.currentTarget;
+                  setMemberMenuOpenKey(menuKey);
                 }}
               >
                 <span className="channel-member-avatar">{(member.userName || "U").charAt(0).toUpperCase()}</span>
