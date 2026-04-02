@@ -90,7 +90,11 @@ export function RoomsPanel({
   onOpenRoomChat,
   onKickRoomMember,
   onMoveRoomMember,
-  onSaveMemberPreference
+  onSaveMemberPreference,
+  onLoadServerMemberProfile,
+  onLoadServerRoles,
+  onSetServerMemberCustomRoles,
+  onSetServerMemberHiddenRoomAccess
 }: RoomsPanelProps) {
   const [confirmPopup, setConfirmPopup] = useState<ConfirmPopupState>(null);
 
@@ -190,6 +194,10 @@ export function RoomsPanel({
       onKickRoomMember={onKickRoomMember}
       onMoveRoomMember={onMoveRoomMember}
       onSaveMemberPreference={onSaveMemberPreference}
+      onLoadServerMemberProfile={onLoadServerMemberProfile}
+      onLoadServerRoles={onLoadServerRoles}
+      onSetServerMemberCustomRoles={onSetServerMemberCustomRoles}
+      onSetServerMemberHiddenRoomAccess={onSetServerMemberHiddenRoomAccess}
       memberPreferencesByUserId={memberPreferencesByUserId}
       room={room}
       roomMembers={mapRoomMembersForSlug(liveRoomMemberDetailsBySlug, liveRoomMembersBySlug, room.slug)}
