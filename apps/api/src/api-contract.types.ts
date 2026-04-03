@@ -194,6 +194,32 @@ export type TopicMessageReactionResponse = {
   active: boolean;
 };
 
+export type SearchMessagesResponse = {
+  messages: Array<{
+    id: string;
+    roomId: string;
+    roomSlug: string;
+    roomTitle: string;
+    topicId: string | null;
+    topicSlug: string | null;
+    topicTitle: string | null;
+    userId: string;
+    userName: string;
+    text: string;
+    createdAt: string;
+    editedAt: string | null;
+    hasAttachments: boolean;
+    attachmentCount: number;
+  }>;
+  pagination: {
+    hasMore: boolean;
+    nextCursor: {
+      beforeCreatedAt: string;
+      beforeId: string;
+    } | null;
+  };
+};
+
 export type AdminUsersResponse = {
   users: UserRow[];
 };

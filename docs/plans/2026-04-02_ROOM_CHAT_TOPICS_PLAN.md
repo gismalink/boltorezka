@@ -11,6 +11,7 @@ Scope: единая модель комнатного чата с темами, 
 - 2026-04-03: Stage 2 стартовал: реализованы API endpoints тем (`GET/POST /v1/rooms/:roomId/topics`, `PATCH /v1/topics/:topicId`, `POST /v1/topics/:topicId/archive`, `POST /v1/topics/:topicId/unarchive`).
 - 2026-04-03: Stage 2 расширен: реализованы topic-aware message endpoints (`GET/POST /v1/topics/:topicId/messages`) и прокинут `topicId/topicSlug` в realtime `chat.message` payload.
 - 2026-04-03: Stage 2 расширен: добавлены endpoints `PATCH/DELETE /v1/messages/:messageId`, `POST /v1/messages/:messageId/reply`, `POST/DELETE /v1/messages/:messageId/pin`, `POST/DELETE /v1/messages/:messageId/reactions/*`.
+- 2026-04-03: Stage 2 расширен: реализован `GET /v1/search/messages` со scope `all|server|room|topic` и фильтрами author/date/attachments/mentions.
 
 ## 0) Контекст
 
@@ -218,7 +219,7 @@ Scope: единая модель комнатного чата с темами, 
 
 - [x] CRUD тем.
 - [x] CRUD сообщений + reply/pin/reaction.
-- [ ] Search API.
+- [x] Search API.
 - [ ] Notification settings API.
 
 ### Stage 3 - Frontend
