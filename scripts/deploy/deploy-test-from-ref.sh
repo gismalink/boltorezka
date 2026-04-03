@@ -133,7 +133,9 @@ if [[ "$FULL_RECREATE" == "1" ]]; then
   DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" up -d --force-recreate boltorezka-api-test
 else
   # Keep api-only fast path, but make sure core deps (including TURN) are up.
-  DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" up -d --force-recreate boltorezka-turn boltorezka-db-test boltorezka-redis-test
+  DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" up -d --no-recreate boltorezka-db-test boltorezka-redis-test
+  DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" rm -f -s boltorezka-turn >/dev/null 2>&1 || true
+  DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" up -d boltorezka-turn
   if [[ "$TEST_CHAT_STORAGE_PROVIDER_VALUE" == "minio" ]]; then
     echo "[deploy-test] storage provider=minio -> ensure minio-test profile is up"
     DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" --profile minio-test up -d boltorezka-minio-test boltorezka-minio-test-init
