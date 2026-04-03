@@ -87,9 +87,6 @@ export function ChatPanel({
   onClearPendingAttachment,
   editingMessageId,
   replyingToMessage,
-  showVideoToggle,
-  videoWindowsVisible,
-  onToggleVideoWindows,
   onCancelEdit,
   onCancelReply,
   onEditMessage,
@@ -172,6 +169,7 @@ export function ChatPanel({
   const topicPaletteInputRef = useRef<HTMLInputElement | null>(null);
   const topicCreatePopupRef = useRef<HTMLDivElement | null>(null);
   const attachmentInputRef = useRef<HTMLInputElement | null>(null);
+  const chatTopAutoloadTsRef = useRef(0);
   const notifiedInboxEventIdsRef = useRef<Set<string>>(new Set());
   const notificationPermissionRequestedRef = useRef(false);
   const desktopNotificationBridgeRef = useRef(getDesktopNotificationBridge());
@@ -442,6 +440,38 @@ export function ChatPanel({
     };
   }, [topicCreateOpen]);
 
+  useEffect(() => {
+    const chatLogNode = chatLogRef.current;
+    if (!chatLogNode || !hasActiveRoom) {
+      return;
+    }
+
+    const maybeLoadOlder = () => {
+      if (loadingOlderMessages || !messagesHasMore) {
+        return;
+      }
+
+      if (chatLogNode.scrollTop > 16) {
+        return;
+      }
+
+      const now = Date.now();
+      if (now - chatTopAutoloadTsRef.current < 350) {
+        return;
+      }
+
+      chatTopAutoloadTsRef.current = now;
+      onLoadOlderMessages();
+    };
+
+    chatLogNode.addEventListener("scroll", maybeLoadOlder, { passive: true });
+    maybeLoadOlder();
+
+    return () => {
+      chatLogNode.removeEventListener("scroll", maybeLoadOlder);
+    };
+  }, [chatLogRef, hasActiveRoom, loadingOlderMessages, messagesHasMore, onLoadOlderMessages]);
+
   const composePreviewImage = composePreviewImageUrl;
   const hasTopics = topics.length > 0;
   const visibleTypingUsers = typingUsers.slice(0, 2);
@@ -454,11 +484,6 @@ export function ChatPanel({
   const typingLabel = typingUsers.length <= 1
     ? t("chat.typingSingle").replace("{users}", typingUsersLabel)
     : t("chat.typingMultiple").replace("{users}", typingUsersLabel);
-  const historyButtonLabel = loadingOlderMessages
-    ? t("chat.loading")
-    : !messagesHasMore
-      ? t("chat.historyLoaded")
-      : t("chat.loadOlder");
   const handleCreateTopic = async () => {
     const title = newTopicTitle.trim();
     if (!title || creatingTopic) {
@@ -1856,6 +1881,7 @@ export function ChatPanel({
                       type="button"
                       className={`secondary tiny chat-topic-tab ${isActiveTab ? "chat-topic-tab-active" : ""}`}
                       onClick={() => onSelectTopic(topic.id)}
+                      onContextMenu={(event) => event.preventDefault()}
                       role="tab"
                       aria-selected={isActiveTab}
                       aria-label={topic.title}
@@ -1874,6 +1900,7 @@ export function ChatPanel({
                   type="button"
                   className="secondary tiny chat-topic-tab"
                   onClick={openTopicPalette}
+                  onContextMenu={(event) => event.preventDefault()}
                   aria-haspopup="dialog"
                   aria-expanded={topicPaletteOpen}
                   aria-controls="chat-topic-palette-dialog"
@@ -1893,23 +1920,6 @@ export function ChatPanel({
         </div>
       ) : null}
       <div className="mb-3 flex flex-wrap items-center gap-3">
-        <Button
-          type="button"
-          className="secondary"
-          onClick={onLoadOlderMessages}
-          disabled={!hasActiveRoom || !messagesHasMore || loadingOlderMessages}
-        >
-          {historyButtonLabel}
-        </Button>
-        {showVideoToggle ? (
-          <Button
-            type="button"
-            className="secondary ml-auto"
-            onClick={onToggleVideoWindows}
-          >
-            {videoWindowsVisible ? t("chat.hideAllVideos") : t("chat.showAllVideos")}
-          </Button>
-        ) : null}
         {!hasActiveRoom ? (
           <span className="muted">{t("chat.noChannelHint")}</span>
         ) : null}
