@@ -876,7 +876,7 @@ else
   WEB_CRASH_BOUNDARY_STATUS="skip"
 fi
 
-if [[ "${SMOKE_WEB_RNNOISE_BROWSER:-1}" != "1" ]]; then
+if [[ "${SMOKE_WEB_RNNOISE_BROWSER:-0}" != "1" ]]; then
   echo "[postdeploy-smoke] smoke:web:rnnoise:browser skipped (SMOKE_WEB_RNNOISE_BROWSER=0)"
   WEB_RNNOISE_STATUS="skip"
 elif [[ -z "${SMOKE_TEST_BEARER_TOKEN:-}" ]]; then
