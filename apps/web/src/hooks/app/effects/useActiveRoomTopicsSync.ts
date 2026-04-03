@@ -16,7 +16,6 @@ export function useActiveRoomTopicsSync({
   token,
   activeChatRoomId,
   activeChatRoomSlug,
-  activeChatTopicId,
   setActiveChatTopicId,
   setChatTopics,
   pushLog
@@ -32,7 +31,6 @@ export function useActiveRoomTopicsSync({
     }
 
     let cancelled = false;
-    setActiveChatTopicId(null);
 
     api.roomTopics(tokenValue, roomId)
       .then((response) => {
@@ -43,15 +41,16 @@ export function useActiveRoomTopicsSync({
         const topics = Array.isArray(response.topics) ? response.topics : [];
         setChatTopics(topics);
 
-        const preferred = String(activeChatTopicId || "").trim();
-        const stillExists = preferred && topics.some((topic) => topic.id === preferred);
-        if (stillExists) {
-          setActiveChatTopicId(preferred);
-          return;
-        }
+        setActiveChatTopicId((prev) => {
+          const preferred = String(prev || "").trim();
+          const stillExists = preferred && topics.some((topic) => topic.id === preferred);
+          if (stillExists) {
+            return preferred;
+          }
 
-        const firstActiveTopic = topics.find((topic) => !topic.archivedAt) || topics[0] || null;
-        setActiveChatTopicId(firstActiveTopic?.id || null);
+          const firstActiveTopic = topics.find((topic) => !topic.archivedAt) || topics[0] || null;
+          return firstActiveTopic?.id || null;
+        });
       })
       .catch((error) => {
         if (cancelled) {
@@ -70,7 +69,6 @@ export function useActiveRoomTopicsSync({
     token,
     activeChatRoomId,
     activeChatRoomSlug,
-    activeChatTopicId,
     pushLog,
     setActiveChatTopicId,
     setChatTopics

@@ -273,6 +273,8 @@ export function useRealtimeChatLifecycle({
   onScreenShareState,
   onSessionMoved
 }: UseRealtimeChatLifecycleArgs) {
+  const shouldStickToBottomRef = useRef(true);
+
   const onCallMicStateRef = useRef(onCallMicState);
   const onCallVideoStateRef = useRef(onCallVideoState);
   const onCallInitialStateRef = useRef(onCallInitialState);
@@ -504,11 +506,30 @@ export function useRealtimeChatLifecycle({
       return;
     }
 
+    const updateStickToBottom = () => {
+      const distanceToBottom = chatLogElement.scrollHeight - chatLogElement.scrollTop - chatLogElement.clientHeight;
+      shouldStickToBottomRef.current = distanceToBottom <= 80;
+    };
+
+    updateStickToBottom();
+    chatLogElement.addEventListener("scroll", updateStickToBottom, { passive: true });
+    return () => {
+      chatLogElement.removeEventListener("scroll", updateStickToBottom);
+    };
+  }, [chatLogRef, chatRoomSlug]);
+
+  useEffect(() => {
+    const chatLogElement = chatLogRef.current;
+    if (!chatLogElement) {
+      return;
+    }
+
     const latestMessageId = messages.length > 0 ? messages[messages.length - 1].id : null;
     const roomChanged = lastRoomSlugForScrollRef.current !== chatRoomSlug;
     const latestMessageChanged = latestMessageId !== lastMessageIdRef.current;
+    const shouldAutoScroll = roomChanged || (latestMessageChanged && shouldStickToBottomRef.current);
 
-    if (roomChanged || latestMessageChanged) {
+    if (shouldAutoScroll) {
       chatLogElement.scrollTop = chatLogElement.scrollHeight;
     }
 
