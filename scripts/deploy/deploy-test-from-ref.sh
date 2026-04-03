@@ -17,6 +17,8 @@ FULL_RECREATE="${FULL_RECREATE:-0}"
 DEPLOY_FORCE_RECREATE_API="${DEPLOY_FORCE_RECREATE_API:-0}"
 DEPLOY_RECREATE_TURN="${DEPLOY_RECREATE_TURN:-0}"
 DEPLOY_MINIO_INIT_FAST="${DEPLOY_MINIO_INIT_FAST:-0}"
+DEPLOY_SMART_SKIP_BUILD="${DEPLOY_SMART_SKIP_BUILD:-1}"
+DEPLOY_FORCE_BUILD="${DEPLOY_FORCE_BUILD:-0}"
 EDGE_REPO_DIR="${EDGE_REPO_DIR:-$HOME/srv/edge}"
 EDGE_STATIC_DIR_TEST="${EDGE_STATIC_DIR_TEST:-$EDGE_REPO_DIR/ingress/static/boltorezka/test}"
 
@@ -41,6 +43,36 @@ read_env_value() {
   raw="${raw%\'}"
   raw="${raw#\'}"
   echo "$raw"
+}
+
+image_exists() {
+  local image_name="$1"
+  docker image inspect "$image_name" >/dev/null 2>&1
+}
+
+has_build_relevant_changes() {
+  local from_sha="$1"
+  local to_sha="$2"
+
+  if [[ -z "$from_sha" || -z "$to_sha" ]]; then
+    return 0
+  fi
+
+  if [[ "$from_sha" == "$to_sha" ]]; then
+    return 1
+  fi
+
+  local changed
+  changed="$(git diff --name-only "$from_sha" "$to_sha" -- \
+    apps/api \
+    apps/web \
+    infra/docker-compose.host.yml \
+    package.json \
+    package-lock.json \
+    Dockerfile \
+    2>/dev/null || true)"
+
+  [[ -n "$changed" ]]
 }
 
 if [[ "$GIT_REF" =~ ^(origin/main|main|origin/master|master)$ ]] && [[ "${ALLOW_TEST_FROM_MAIN:-0}" != "1" ]]; then
@@ -78,6 +110,7 @@ fi
 
 echo "[deploy-test] deploy mode: api-only + caddy-static-sync (set FULL_RECREATE=1 for full dependency recreate)"
 echo "[deploy-test] fast-path flags: force_api_recreate=$DEPLOY_FORCE_RECREATE_API recreate_turn=$DEPLOY_RECREATE_TURN minio_init_fast=$DEPLOY_MINIO_INIT_FAST"
+echo "[deploy-test] build flags: smart_skip=$DEPLOY_SMART_SKIP_BUILD force_build=$DEPLOY_FORCE_BUILD"
 TMP_DOCKER_CONFIG="$(mktemp -d)"
 TMP_DEPLOY_ENV="$(mktemp)"
 TMP_WEB_DIST_DIR="$(mktemp -d)"
@@ -109,7 +142,31 @@ cat >"$TMP_DOCKER_CONFIG/config.json" <<'JSON'
 }
 JSON
 
-DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" build boltorezka-api-test
+SHOULD_BUILD_API=1
+BUILD_DECISION_REASON="default"
+
+if [[ "$DEPLOY_FORCE_BUILD" == "1" ]]; then
+  SHOULD_BUILD_API=1
+  BUILD_DECISION_REASON="forced"
+elif [[ "$DEPLOY_SMART_SKIP_BUILD" == "1" ]]; then
+  if ! image_exists "boltorezka-api:test"; then
+    SHOULD_BUILD_API=1
+    BUILD_DECISION_REASON="image-missing"
+  elif has_build_relevant_changes "$PREV_DEPLOY_SHA" "$RESOLVED_SHA"; then
+    SHOULD_BUILD_API=1
+    BUILD_DECISION_REASON="relevant-diff"
+  else
+    SHOULD_BUILD_API=0
+    BUILD_DECISION_REASON="no-relevant-diff"
+  fi
+fi
+
+if [[ "$SHOULD_BUILD_API" == "1" ]]; then
+  echo "[deploy-test] build boltorezka-api:test (${BUILD_DECISION_REASON})"
+  DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" build boltorezka-api-test
+else
+  echo "[deploy-test] skip build boltorezka-api:test (${BUILD_DECISION_REASON})"
+fi
 
 if [[ -d "$EDGE_REPO_DIR/ingress" ]]; then
   echo "[deploy-test] sync static bundle -> $EDGE_STATIC_DIR_TEST"
