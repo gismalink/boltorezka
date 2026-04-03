@@ -245,8 +245,8 @@ export async function listRoomTopics(roomId: string, userId: string): Promise<To
              AND m.user_id <> $2
              AND m.created_at > COALESCE(rr.last_read_at, to_timestamp(0))
              AND (
-               (NULLIF(BTRIM(au.name), '') IS NOT NULL AND POSITION(LOWER(CONCAT('@', au.name)) IN LOWER(m.text)) > 0)
-               OR (NULLIF(BTRIM(au.username), '') IS NOT NULL AND POSITION(LOWER(CONCAT('@', au.username)) IN LOWER(m.text)) > 0)
+               (NULLIF(BTRIM(au.name), '') IS NOT NULL AND POSITION(LOWER(CONCAT('@', au.name)) IN LOWER(m.body)) > 0)
+               OR (NULLIF(BTRIM(au.username), '') IS NOT NULL AND POSITION(LOWER(CONCAT('@', au.username)) IN LOWER(m.body)) > 0)
              )
          )
        ) AS mention_unread_count
