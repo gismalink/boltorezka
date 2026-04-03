@@ -231,6 +231,7 @@ export function useRealtimeChatLifecycle({
   reconnectNonce,
   joinedRoomSlug,
   chatRoomSlug,
+  activeTopicId,
   messages,
   messagesNextCursor,
   loadingOlderMessages,
