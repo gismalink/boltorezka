@@ -1559,6 +1559,10 @@ pre {
   gap: var(--space-xs);
 }
 
+.chat-topic-context-rename-row {
+  flex-wrap: nowrap;
+}
+
 .chat-topic-context-rename-actions {
   display: flex;
   gap: var(--space-xs);
@@ -1569,6 +1573,12 @@ pre {
   gap: var(--space-xs);
   padding-top: var(--space-2xs);
   border-top: var(--border-thin) solid color-mix(in srgb, var(--pixel-border) 78%, transparent 22%);
+}
+
+.chat-topic-context-mute-row {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  padding-bottom: 2px;
 }
 
 .chat-hotkeys-hint {

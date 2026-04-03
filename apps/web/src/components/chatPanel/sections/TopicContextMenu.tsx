@@ -6,13 +6,15 @@ type TopicContextMenuProps = {
   y: number;
   archived: boolean;
   saving: boolean;
-  renameOpen: boolean;
   renameValue: string;
   onRenameValueChange: (value: string) => void;
-  onRunAction: (action: "read" | "edit" | "archive" | "delete") => Promise<void>;
-  onSetTopicMute: (muteUntil: string | null) => Promise<void>;
-  buildMuteUntilIso: (hours: number | "forever") => string;
-  onCloseRename: () => void;
+  renameEditing: boolean;
+  onStartRename: () => void;
+  onApplyRename: () => Promise<void>;
+  onCancelRename: () => void;
+  onRunAction: (action: "read" | "archive" | "delete") => Promise<void>;
+  activeMutePreset: "1h" | "8h" | "24h" | "forever" | "off" | null;
+  onSetTopicMutePreset: (preset: "1h" | "8h" | "24h" | "forever" | "off") => Promise<void>;
 };
 
 export function TopicContextMenu({
@@ -21,13 +23,15 @@ export function TopicContextMenu({
   y,
   archived,
   saving,
-  renameOpen,
   renameValue,
   onRenameValueChange,
+  renameEditing,
+  onStartRename,
+  onApplyRename,
+  onCancelRename,
   onRunAction,
-  onSetTopicMute,
-  buildMuteUntilIso,
-  onCloseRename
+  activeMutePreset,
+  onSetTopicMutePreset
 }: TopicContextMenuProps) {
   return (
     <div
@@ -38,48 +42,56 @@ export function TopicContextMenu({
       <Button type="button" className="secondary tiny" role="menuitem" onClick={() => void onRunAction("read")}>
         {t("chat.markTopicRead")}
       </Button>
-      <Button type="button" className="secondary tiny" role="menuitem" onClick={() => void onRunAction("edit")}>
-        {t("chat.editTopic")}
-      </Button>
-      {renameOpen ? (
-        <div className="chat-topic-context-rename-block">
+      <div className="chat-topic-context-rename-block">
+        <div className="row items-center gap-2 chat-topic-context-rename-row">
+          {renameEditing ? (
+            <Button
+              type="button"
+              className="secondary whitespace-nowrap"
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={onCancelRename}
+              disabled={saving}
+            >
+              {t("settings.cancel")}
+            </Button>
+          ) : null}
           <input
             type="text"
-            className="chat-topic-create-input"
+            className="channel-settings-title-input"
             value={renameValue}
+            onFocus={onStartRename}
+            onBlur={onCancelRename}
             onChange={(event) => onRenameValueChange(event.target.value)}
             placeholder={t("chat.editTopicPlaceholder")}
             disabled={saving}
             aria-label={t("chat.editTopicPlaceholder")}
           />
-          <div className="chat-topic-context-rename-actions">
+          {renameEditing ? (
             <Button
               type="button"
-              className="secondary tiny"
+              className="whitespace-nowrap"
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => void onApplyRename()}
               disabled={saving || renameValue.trim().length === 0}
-              onClick={() => void onRunAction("edit")}
             >
-              {saving ? t("chat.loading") : t("chat.editTopicSave")}
+              {t("settings.apply")}
             </Button>
-            <Button type="button" className="secondary tiny" onClick={onCloseRename} disabled={saving}>
-              {t("chat.editTopicCancel")}
-            </Button>
-          </div>
+          ) : null}
         </div>
-      ) : null}
+      </div>
       <Button type="button" className="secondary tiny" role="menuitem" onClick={() => void onRunAction("archive")}>
         {archived ? t("chat.unarchiveTopic") : t("chat.archiveTopic")}
       </Button>
       <div className="chat-topic-context-section">
         <span className="chat-topic-label">{t("chat.notificationMute")}</span>
-        <div className="quality-toggle-group" role="group" aria-label={t("chat.notificationMute")}>
-          <Button type="button" className="secondary quality-toggle-btn" onClick={() => void onSetTopicMute(buildMuteUntilIso(1))} disabled={saving}>1h</Button>
-          <Button type="button" className="secondary quality-toggle-btn" onClick={() => void onSetTopicMute(buildMuteUntilIso(8))} disabled={saving}>8h</Button>
-          <Button type="button" className="secondary quality-toggle-btn" onClick={() => void onSetTopicMute(buildMuteUntilIso(24))} disabled={saving}>24h</Button>
-          <Button type="button" className="secondary quality-toggle-btn" onClick={() => void onSetTopicMute(buildMuteUntilIso("forever"))} disabled={saving}>
+        <div className="quality-toggle-group chat-topic-context-mute-row" role="group" aria-label={t("chat.notificationMute")}>
+          <Button type="button" className={`secondary quality-toggle-btn ${activeMutePreset === "1h" ? "quality-toggle-btn-active" : ""}`} onClick={() => void onSetTopicMutePreset("1h")} disabled={saving}>1h</Button>
+          <Button type="button" className={`secondary quality-toggle-btn ${activeMutePreset === "8h" ? "quality-toggle-btn-active" : ""}`} onClick={() => void onSetTopicMutePreset("8h")} disabled={saving}>8h</Button>
+          <Button type="button" className={`secondary quality-toggle-btn ${activeMutePreset === "24h" ? "quality-toggle-btn-active" : ""}`} onClick={() => void onSetTopicMutePreset("24h")} disabled={saving}>24h</Button>
+          <Button type="button" className={`secondary quality-toggle-btn ${activeMutePreset === "forever" ? "quality-toggle-btn-active" : ""}`} onClick={() => void onSetTopicMutePreset("forever")} disabled={saving}>
             {t("chat.notificationMuteForever")}
           </Button>
-          <Button type="button" className="secondary quality-toggle-btn" onClick={() => void onSetTopicMute(null)} disabled={saving}>
+          <Button type="button" className={`secondary quality-toggle-btn ${activeMutePreset === "off" ? "quality-toggle-btn-active" : ""}`} onClick={() => void onSetTopicMutePreset("off")} disabled={saving}>
             {t("chat.notificationUnmute")}
           </Button>
         </div>

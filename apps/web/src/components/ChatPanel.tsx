@@ -12,6 +12,8 @@ import { NotificationPanel } from "./chatPanel/sections/NotificationPanel";
 import { TopicToolbar } from "./chatPanel/sections/TopicToolbar";
 import { SearchPanel } from "./chatPanel/sections/SearchPanel";
 import { TopicContextMenu } from "./chatPanel/sections/TopicContextMenu";
+import { ChatMessageTimeline } from "./chatPanel/sections/ChatMessageTimeline";
+import { ChatComposerSection } from "./chatPanel/sections/ChatComposerSection";
 
 type ChatPanelProps = {
   t: (key: string) => string;
@@ -167,7 +169,11 @@ export function ChatPanel({
   } | null>(null);
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
   const [contextMenuMessageId, setContextMenuMessageId] = useState<string | null>(null);
-  const [topicContextMenu, setTopicContextMenu] = useState<{ topicId: string; x: number; y: number; renameOpen: boolean } | null>(null);
+  const [topicContextMenu, setTopicContextMenu] = useState<{ topicId: string; x: number; y: number } | null>(null);
+  const [editingTopicTitleDraftInitial, setEditingTopicTitleDraftInitial] = useState("");
+  const [isEditingTopicTitleInline, setIsEditingTopicTitleInline] = useState(false);
+  const [topicDeleteConfirm, setTopicDeleteConfirm] = useState<{ topicId: string; title: string } | null>(null);
+  const [topicMutePresetById, setTopicMutePresetById] = useState<Record<string, "1h" | "8h" | "24h" | "forever" | "off">>({});
   const [hotkeyStatusText, setHotkeyStatusText] = useState("");
   const [resolvedAttachmentImageUrls, setResolvedAttachmentImageUrls] = useState<Record<string, string>>({});
   const resolvedAttachmentImageUrlsRef = useRef<Record<string, string>>({});
@@ -1737,10 +1743,14 @@ export function ChatPanel({
   const openTopicContextMenu = (topicId: string, event: MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
     event.stopPropagation();
-    setTopicContextMenu({ topicId, x: event.clientX, y: event.clientY, renameOpen: false });
+    const targetTopic = topics.find((topic) => topic.id === topicId);
+    setEditingTopicTitle(String(targetTopic?.title || ""));
+    setEditingTopicTitleDraftInitial(String(targetTopic?.title || ""));
+    setIsEditingTopicTitleInline(false);
+    setTopicContextMenu({ topicId, x: event.clientX, y: event.clientY });
   };
 
-  const runTopicMenuAction = async (action: "read" | "edit" | "archive" | "delete") => {
+  const runTopicMenuAction = async (action: "read" | "archive" | "delete") => {
     const targetTopicId = String(topicContextMenu?.topicId || "").trim();
     if (!targetTopicId) {
       setTopicContextMenu(null);
@@ -1759,44 +1769,8 @@ export function ChatPanel({
       return;
     }
 
-    if (action === "edit") {
-      if (!topicContextMenu?.renameOpen) {
-        onSelectTopic(targetTopic.id);
-        setEditingTopicTitle(targetTopic.title);
-        setEditingTopicStatusText("");
-        setTopicContextMenu((prev) => (prev ? { ...prev, renameOpen: true } : prev));
-        return;
-      }
-
-      const trimmedTitle = editingTopicTitle.trim();
-      if (!trimmedTitle || editingTopicSaving) {
-        return;
-      }
-
-      setEditingTopicSaving(true);
-      setEditingTopicStatusText("");
-      try {
-        await onUpdateTopic(targetTopic.id, trimmedTitle);
-        setEditingTopicTitle("");
-        setEditingTopicStatusText(t("chat.editTopicSuccess"));
-      } catch {
-        setEditingTopicStatusText(t("chat.editTopicError"));
-      } finally {
-        setEditingTopicSaving(false);
-      }
-      setTopicContextMenu(null);
-      return;
-    }
-
     if (action === "delete") {
-      if (window.confirm(t("chat.deleteTopicConfirm"))) {
-        try {
-          await onDeleteTopic(targetTopic.id);
-          setEditingTopicStatusText(t("chat.deleteTopicSuccess"));
-        } catch {
-          setEditingTopicStatusText(t("chat.deleteTopicError"));
-        }
-      }
+      setTopicDeleteConfirm({ topicId: targetTopic.id, title: targetTopic.title });
       setTopicContextMenu(null);
       return;
     }
@@ -1816,6 +1790,62 @@ export function ChatPanel({
       setArchivingTopicId(null);
       setTopicContextMenu(null);
     }
+  };
+
+  const applyTopicRename = async () => {
+    const targetTopicId = String(topicContextMenu?.topicId || "").trim();
+    const trimmedTitle = editingTopicTitle.trim();
+    if (!targetTopicId || !trimmedTitle || editingTopicSaving) {
+      return;
+    }
+
+    setEditingTopicSaving(true);
+    setEditingTopicStatusText("");
+    try {
+      await onUpdateTopic(targetTopicId, trimmedTitle);
+      setEditingTopicTitleDraftInitial(trimmedTitle);
+      setIsEditingTopicTitleInline(false);
+      setEditingTopicStatusText(t("chat.editTopicSuccess"));
+    } catch {
+      setEditingTopicStatusText(t("chat.editTopicError"));
+    } finally {
+      setEditingTopicSaving(false);
+    }
+  };
+
+  const confirmDeleteTopic = async () => {
+    const topicId = String(topicDeleteConfirm?.topicId || "").trim();
+    if (!topicId || editingTopicSaving) {
+      return;
+    }
+
+    setEditingTopicSaving(true);
+    try {
+      await onDeleteTopic(topicId);
+      setEditingTopicStatusText(t("chat.deleteTopicSuccess"));
+    } catch {
+      setEditingTopicStatusText(t("chat.deleteTopicError"));
+    } finally {
+      setEditingTopicSaving(false);
+      setTopicDeleteConfirm(null);
+    }
+  };
+
+  const setTopicMutePreset = async (preset: "1h" | "8h" | "24h" | "forever" | "off") => {
+    const targetTopicId = String(topicContextMenu?.topicId || "").trim();
+    if (!targetTopicId) {
+      return;
+    }
+
+    const muteUntil = preset === "off"
+      ? null
+      : preset === "forever"
+        ? buildMuteUntilIso("forever")
+        : buildMuteUntilIso(Number(preset.replace("h", "")));
+
+    await updateTopicMuteSettings(targetTopicId, muteUntil);
+    setTopicMutePresetById((prev) => ({ ...prev, [targetTopicId]: preset }));
+    setTopicContextMenu(null);
   };
 
   const topicPaletteListboxId = "chat-topic-palette-listbox";
@@ -1982,424 +2012,55 @@ export function ChatPanel({
           </span>
         ) : null}
       </div>
-      <div className="chat-log min-h-0 flex-1" ref={chatLogRef}>
-        {loadingOlderMessages ? <div className="chat-history-loading muted">{t("chat.loading")}</div> : null}
-        {hasActiveRoom && !hasTopics ? (
-          <div className="chat-empty-state">
-            <p className="chat-empty-state-title">{t("chat.emptyTopicsTitle")}</p>
-            <p className="chat-empty-state-hint">{t("chat.emptyTopicsHint")}</p>
-          </div>
-        ) : hasActiveRoom && hasTopics && activeTopicId && messageViewModels.length === 0 && !loadingOlderMessages ? (
-          <div className="chat-empty-state">
-            <p className="chat-empty-state-title">{t("chat.emptyMessagesTitle")}</p>
-            <p className="chat-empty-state-hint">{t("chat.emptyMessagesHint")}</p>
-          </div>
-        ) : null}
-        {messageViewModels.map((messageVm) => {
-          const attachmentImageUrls = messageVm.attachmentImageUrls;
-          const attachmentFiles = messageVm.attachmentFiles;
-          const isOwn = messageVm.isOwn;
-          const showAuthor = messageVm.showAuthor;
-          const showAvatar = messageVm.showAvatar;
-          const canManageOwnMessage = messageVm.canManageOwnMessage;
-          const deliveryClass = messageVm.deliveryClass;
-          const deliveryGlyph = messageVm.deliveryGlyph;
-          const isPinned = Boolean(pinnedByMessageId[messageVm.id]);
-          const hasThumbsUp = Boolean(thumbsUpByMessageId[messageVm.id]);
-          const linkPreview = extractFirstLinkPreview(messageVm.text);
-
-          return (
-            <article
-              key={messageVm.id}
-              data-message-id={messageVm.id}
-              className={`chat-message group grid items-end gap-2 ${isOwn ? "chat-message-own grid-cols-1 justify-items-end" : "grid-cols-[34px_minmax(0,1fr)]"}`}
-            >
-              {!isOwn ? (
-                <div className="chat-avatar-slot inline-flex h-[30px] w-[30px] items-end justify-center" aria-hidden="true">
-                  {showAvatar ? (
-                    <div className="chat-avatar inline-flex h-[30px] w-[30px] items-center justify-center">
-                      {(messageVm.userName || "U").charAt(0).toUpperCase()}
-                    </div>
-                  ) : null}
-                </div>
-              ) : null}
-
-              <div className={`chat-bubble-wrap grid max-w-[min(92%,820px)] gap-0.5 ${isOwn ? "justify-items-end" : "justify-items-start"}`}>
-                {hasActiveRoom ? (
-                  <div className={`chat-actions-side ${isOwn ? "chat-actions-side-own" : "chat-actions-side-peer"}`}>
-                    <Button
-                      type="button"
-                      className="secondary tiny icon-btn chat-context-menu-toggle"
-                      onClick={() => setContextMenuMessageId((prev) => (prev === messageVm.id ? null : messageVm.id))}
-                      aria-label={t("chat.messageActions")}
-                      title={t("chat.messageActions")}
-                      aria-haspopup="menu"
-                      aria-expanded={contextMenuMessageId === messageVm.id}
-                      aria-controls={`chat-message-menu-${messageVm.id}`}
-                    >
-                      <i className="bi bi-three-dots" aria-hidden="true" />
-                    </Button>
-                    {contextMenuMessageId === messageVm.id ? (
-                      <div className="chat-context-menu" id={`chat-message-menu-${messageVm.id}`} role="menu" aria-label={t("chat.messageActions")}>
-                        <Button
-                          type="button"
-                          className="secondary tiny"
-                          role="menuitem"
-                          onClick={() => {
-                            onReplyMessage(messageVm.id);
-                            closeContextMenu();
-                          }}
-                        >
-                          {t("chat.reply")}
-                        </Button>
-                        <Button
-                          type="button"
-                          className="secondary tiny"
-                          role="menuitem"
-                          onClick={() => {
-                            insertMentionToComposer(messageVm.userName);
-                            closeContextMenu();
-                          }}
-                        >
-                          {t("chat.mention")}
-                        </Button>
-                        <Button
-                          type="button"
-                          className="secondary tiny"
-                          role="menuitem"
-                          onClick={() => {
-                            insertQuoteToComposer(messageVm.userName, messageVm.text);
-                            closeContextMenu();
-                          }}
-                        >
-                          {t("chat.quote")}
-                        </Button>
-                        <Button
-                          type="button"
-                          className="secondary tiny"
-                          role="menuitem"
-                          onClick={() => {
-                            void markTopicUnreadFromMessage(messageVm.id);
-                            closeContextMenu();
-                          }}
-                          disabled={!activeTopicId || markReadSaving}
-                        >
-                          {t("chat.markUnreadFromHere")}
-                        </Button>
-                        <Button
-                          type="button"
-                          className="secondary tiny"
-                          role="menuitem"
-                          onClick={() => {
-                            onTogglePinMessage(messageVm.id);
-                            closeContextMenu();
-                          }}
-                        >
-                          {isPinned ? t("chat.unpin") : t("chat.pin")}
-                        </Button>
-                        <Button
-                          type="button"
-                          className="secondary tiny"
-                          role="menuitem"
-                          onClick={() => {
-                            onToggleThumbsUpReaction(messageVm.id);
-                            closeContextMenu();
-                          }}
-                        >
-                          {t("chat.react")}
-                        </Button>
-                        {canManageOwnMessage ? (
-                          <>
-                            <Button
-                              type="button"
-                              className="secondary tiny"
-                              role="menuitem"
-                              onClick={() => {
-                                onEditMessage(messageVm.id);
-                                closeContextMenu();
-                              }}
-                            >
-                              {t("chat.edit")}
-                            </Button>
-                            <Button
-                              type="button"
-                              className="secondary tiny"
-                              role="menuitem"
-                              onClick={() => {
-                                onDeleteMessage(messageVm.id);
-                                closeContextMenu();
-                              }}
-                            >
-                              {t("chat.delete")}
-                            </Button>
-                          </>
-                        ) : null}
-                      </div>
-                    ) : null}
-                    <Button
-                      type="button"
-                      className="secondary tiny icon-btn"
-                      onClick={() => onReplyMessage(messageVm.id)}
-                      aria-label={t("chat.reply")}
-                      title={t("chat.reply")}
-                    >
-                      <i className="bi bi-reply" aria-hidden="true" />
-                    </Button>
-                    <Button
-                      type="button"
-                      className="secondary tiny icon-btn"
-                      onClick={() => insertMentionToComposer(messageVm.userName)}
-                      aria-label={t("chat.mention")}
-                      title={t("chat.mention")}
-                    >
-                      <i className="bi bi-at" aria-hidden="true" />
-                    </Button>
-                    <Button
-                      type="button"
-                      className="secondary tiny icon-btn"
-                      onClick={() => insertQuoteToComposer(messageVm.userName, messageVm.text)}
-                      aria-label={t("chat.quote")}
-                      title={t("chat.quote")}
-                    >
-                      <i className="bi bi-blockquote-left" aria-hidden="true" />
-                    </Button>
-                    <Button
-                      type="button"
-                      className="secondary tiny icon-btn"
-                      onClick={() => void markTopicUnreadFromMessage(messageVm.id)}
-                      aria-label={t("chat.markUnreadFromHere")}
-                      title={t("chat.markUnreadFromHere")}
-                      disabled={!activeTopicId || markReadSaving}
-                    >
-                      <i className="bi bi-envelope-open" aria-hidden="true" />
-                    </Button>
-                    {!isOwn ? (
-                      <Button
-                        type="button"
-                        className="secondary tiny icon-btn"
-                        onClick={() => onReportMessage(messageVm.id)}
-                        aria-label={t("chat.reportMessage")}
-                        title={t("chat.reportMessage")}
-                      >
-                        <i className="bi bi-flag" aria-hidden="true" />
-                      </Button>
-                    ) : null}
-                    <Button
-                      type="button"
-                      className="secondary tiny icon-btn"
-                      onClick={() => onTogglePinMessage(messageVm.id)}
-                      aria-label={isPinned ? t("chat.unpin") : t("chat.pin")}
-                      title={isPinned ? t("chat.unpin") : t("chat.pin")}
-                    >
-                      <i className={`bi ${isPinned ? "bi-pin-angle-fill" : "bi-pin-angle"}`} aria-hidden="true" />
-                    </Button>
-                    <Button
-                      type="button"
-                      className="secondary tiny icon-btn"
-                      onClick={() => onToggleThumbsUpReaction(messageVm.id)}
-                      aria-label={t("chat.react")}
-                      title={t("chat.react")}
-                    >
-                      <i className={`bi ${hasThumbsUp ? "bi-hand-thumbs-up-fill" : "bi-hand-thumbs-up"}`} aria-hidden="true" />
-                    </Button>
-                    {canManageOwnMessage ? (
-                      <>
-                        <Button
-                          type="button"
-                          className="secondary tiny icon-btn"
-                          onClick={() => onEditMessage(messageVm.id)}
-                          aria-label={t("chat.edit")}
-                          title={t("chat.edit")}
-                        >
-                          <i className="bi bi-pencil-square" aria-hidden="true" />
-                        </Button>
-                        <Button
-                          type="button"
-                          className="secondary tiny icon-btn"
-                          onClick={() => onDeleteMessage(messageVm.id)}
-                          aria-label={t("chat.delete")}
-                          title={t("chat.delete")}
-                        >
-                          <i className="bi bi-trash3" aria-hidden="true" />
-                        </Button>
-                      </>
-                    ) : null}
-                  </div>
-                ) : null}
-
-                <div className="chat-bubble w-fit min-w-[120px]">
-                  {showAuthor ? (
-                    <div className="chat-meta flex items-baseline gap-2">
-                      <span className="chat-author">{messageVm.userName}</span>
-                    </div>
-                  ) : null}
-                  <div className="chat-content-row">
-                    {messageVm.replyPreview ? (
-                      <div className="chat-inline-reply">
-                        <span className="chat-inline-reply-author">{messageVm.replyPreview.userName}</span>
-                        <span className="chat-inline-reply-text">{String(messageVm.replyPreview.text || "").replace(/\s+/g, " ").trim().slice(0, 120)}</span>
-                      </div>
-                    ) : null}
-                    <p className="chat-text">{renderMessageText(messageVm.text)}</p>
-                    <span className="chat-time-wrap">
-                      <span className="chat-time">{formatMessageTime(messageVm.createdAt)}</span>
-                      {isOwn && deliveryGlyph ? (
-                        <span className={`delivery ${deliveryClass}`}>
-                          {deliveryGlyph}
-                        </span>
-                      ) : null}
-                    </span>
-                  </div>
-                  {linkPreview ? (
-                    <a
-                      href={linkPreview.href}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="chat-link-preview"
-                    >
-                      <span className="chat-link-preview-host">{linkPreview.host}</span>
-                      <span className="chat-link-preview-path">{linkPreview.path}</span>
-                      <span className="chat-link-preview-open">{t("chat.openLink")}</span>
-                    </a>
-                  ) : null}
-                  {attachmentImageUrls.length > 0 ? (
-                    <div className="chat-attachments-row">
-                      {attachmentImageUrls.map((imageUrl) => (
-                        <Button
-                          key={`${messageVm.id}-${imageUrl}`}
-                          type="button"
-                          className="chat-inline-image-btn"
-                          onClick={() => setPreviewImageUrl(imageUrl)}
-                          aria-label={t("chat.openImagePreview")}
-                          title={t("chat.openImagePreview")}
-                        >
-                          <img
-                            src={resolveAttachmentImageUrl(imageUrl)}
-                            alt="chat-image"
-                            className="chat-inline-image"
-                            loading="lazy"
-                          />
-                        </Button>
-                      ))}
-                    </div>
-                  ) : null}
-                  {attachmentFiles.length > 0 ? (
-                    <div className="chat-attachments-row">
-                      {attachmentFiles.map((attachment) => (
-                        <a
-                          key={`${messageVm.id}-${attachment.id}`}
-                          href={attachment.downloadUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="chat-attachment-file"
-                        >
-                          <span className="chat-attachment-file-title">
-                            {attachment.type === "audio" ? t("chat.attachmentAudio") : t("chat.attachmentDocument")}
-                          </span>
-                          <span className="chat-attachment-file-meta">
-                            {attachment.mimeType}
-                            {" · "}
-                            {formatAttachmentSize(attachment.sizeBytes)}
-                          </span>
-                        </a>
-                      ))}
-                    </div>
-                  ) : null}
-                  {isPinned || hasThumbsUp ? (
-                    <div className="chat-reactions-row">
-                      {isPinned ? <span className="chat-reaction-chip">{t("chat.pin")}</span> : null}
-                      {hasThumbsUp ? <span className="chat-reaction-chip">👍</span> : null}
-                    </div>
-                  ) : null}
-                  {messageVm.editedAt ? <div className="chat-edited-mark">{t("chat.editedMark")}</div> : null}
-                </div>
-              </div>
-            </article>
-          );
-        })}
-      </div>
-      {editingMessageId ? (
-        <div className="chat-edit-banner mb-2 flex items-center justify-between gap-3">
-          <span>{t("chat.editingNow")}</span>
-          <Button type="button" className="secondary tiny" onClick={onCancelEdit}>{t("chat.cancelEdit")}</Button>
-        </div>
-      ) : null}
-      {replyingToMessage ? (
-        <div className="chat-reply-banner mb-2 flex items-center justify-between gap-3">
-          <span>
-            {t("chat.replyingTo")}
-            {" "}
-            <strong>{replyingToMessage.userName}</strong>
-            {": "}
-            {String(replyingToMessage.text || "").replace(/\s+/g, " ").trim().slice(0, 120)}
-          </span>
-          <Button type="button" className="secondary tiny" onClick={onCancelReply}>{t("chat.cancelReply")}</Button>
-        </div>
-      ) : null}
-      <form className="chat-compose mt-3 flex items-end gap-3" onSubmit={onSendMessage}>
-        <input
-          ref={attachmentInputRef}
-          type="file"
-          className="hidden"
-          onChange={(event) => {
-            const file = event.currentTarget.files?.[0] || null;
-            onSelectAttachmentFile(file);
-            event.currentTarget.value = "";
-          }}
-          accept="image/*,audio/*,.pdf,.txt,.csv,.zip"
-        />
-        <Button
-          type="button"
-          className="secondary"
-          onClick={() => attachmentInputRef.current?.click()}
-          disabled={!hasActiveRoom || activeTopicIsArchived}
-          aria-label={t("chat.attach")}
-          title={t("chat.attach")}
-        >
-          <i className="bi bi-paperclip" aria-hidden="true" />
-        </Button>
-        <textarea
-          value={chatText}
-          onChange={(event) => onSetChatText(event.target.value)}
-          onPaste={onChatPaste}
-          onKeyDown={onChatInputKeyDown}
-          rows={2}
-          placeholder={hasActiveRoom ? (activeTopicIsArchived ? t("chat.topicArchivedReadOnly") : t("chat.typePlaceholder")) : t("chat.selectChannelPlaceholder")}
-          disabled={!hasActiveRoom || activeTopicIsArchived}
-          aria-label={t("chat.composeAria")}
-        />
-        {composePreviewImage ? (
-          <Button
-            type="button"
-            className="chat-compose-thumb-btn"
-            onClick={() => setPreviewImageUrl(composePreviewImage)}
-            aria-label={t("chat.openImagePreview")}
-            title={t("chat.openImagePreview")}
-          >
-            <img
-              src={composePreviewImage}
-              alt="chat-compose-image"
-              className="chat-compose-thumb"
-              loading="lazy"
-            />
-          </Button>
-        ) : null}
-        {composePendingAttachmentName ? (
-          <div className="chat-compose-attachment-pill" title={composePendingAttachmentName}>
-            <span className="chat-compose-attachment-name">{composePendingAttachmentName}</span>
-            <Button
-              type="button"
-              className="secondary tiny"
-              onClick={onClearPendingAttachment}
-              aria-label={t("chat.clearAttachment")}
-              title={t("chat.clearAttachment")}
-            >
-              ×
-            </Button>
-          </div>
-        ) : null}
-        <Button type="submit" disabled={!hasActiveRoom || activeTopicIsArchived}>{editingMessageId ? t("chat.saveEdit") : t("chat.send")}</Button>
-      </form>
+      <ChatMessageTimeline
+        t={t}
+        hasActiveRoom={hasActiveRoom}
+        hasTopics={hasTopics}
+        activeTopicId={activeTopicId}
+        loadingOlderMessages={loadingOlderMessages}
+        chatLogRef={chatLogRef}
+        messageViewModels={messageViewModels}
+        pinnedByMessageId={pinnedByMessageId}
+        thumbsUpByMessageId={thumbsUpByMessageId}
+        contextMenuMessageId={contextMenuMessageId}
+        setContextMenuMessageId={setContextMenuMessageId}
+        onReplyMessage={onReplyMessage}
+        onEditMessage={onEditMessage}
+        onDeleteMessage={onDeleteMessage}
+        onReportMessage={onReportMessage}
+        onTogglePinMessage={onTogglePinMessage}
+        onToggleThumbsUpReaction={onToggleThumbsUpReaction}
+        insertMentionToComposer={insertMentionToComposer}
+        insertQuoteToComposer={insertQuoteToComposer}
+        markTopicUnreadFromMessage={markTopicUnreadFromMessage}
+        markReadSaving={markReadSaving}
+        formatMessageTime={formatMessageTime}
+        renderMessageText={renderMessageText}
+        extractFirstLinkPreview={extractFirstLinkPreview}
+        resolveAttachmentImageUrl={resolveAttachmentImageUrl}
+        formatAttachmentSize={formatAttachmentSize}
+        setPreviewImageUrl={setPreviewImageUrl}
+      />
+      <ChatComposerSection
+        t={t}
+        hasActiveRoom={hasActiveRoom}
+        activeTopicIsArchived={activeTopicIsArchived}
+        editingMessageId={editingMessageId}
+        replyingToMessage={replyingToMessage}
+        onCancelEdit={onCancelEdit}
+        onCancelReply={onCancelReply}
+        onSendMessage={onSendMessage}
+        onSelectAttachmentFile={onSelectAttachmentFile}
+        onClearPendingAttachment={onClearPendingAttachment}
+        onSetChatText={onSetChatText}
+        onChatPaste={onChatPaste}
+        onChatInputKeyDown={onChatInputKeyDown}
+        chatText={chatText}
+        composePreviewImage={composePreviewImage}
+        composePendingAttachmentName={composePendingAttachmentName}
+        setPreviewImageUrl={setPreviewImageUrl}
+        attachmentInputRef={attachmentInputRef}
+      />
       {previewImageUrl && typeof document !== "undefined"
         ? createPortal(
           <div
@@ -2504,24 +2165,52 @@ export function ChatPanel({
             y={topicContextMenu.y}
             archived={Boolean(topics.find((topic) => topic.id === topicContextMenu.topicId)?.archivedAt)}
             saving={editingTopicSaving || Boolean(archivingTopicId) || notificationSaving}
-            renameOpen={Boolean(topicContextMenu.renameOpen)}
             renameValue={editingTopicTitle}
             onRenameValueChange={setEditingTopicTitle}
+            renameEditing={isEditingTopicTitleInline}
+            onStartRename={() => {
+              setEditingTopicTitleDraftInitial(editingTopicTitle);
+              setIsEditingTopicTitleInline(true);
+            }}
+            onApplyRename={applyTopicRename}
+            onCancelRename={() => {
+              setEditingTopicTitle(editingTopicTitleDraftInitial);
+              setIsEditingTopicTitleInline(false);
+            }}
             onRunAction={runTopicMenuAction}
-            onSetTopicMute={async (muteUntil) => {
-              const targetTopicId = String(topicContextMenu.topicId || "").trim();
-              if (!targetTopicId) {
-                return;
-              }
-              await updateTopicMuteSettings(targetTopicId, muteUntil);
-              setTopicContextMenu(null);
-            }}
-            buildMuteUntilIso={buildMuteUntilIso}
-            onCloseRename={() => {
-              setEditingTopicTitle("");
-              setTopicContextMenu((prev) => (prev ? { ...prev, renameOpen: false } : prev));
-            }}
+            activeMutePreset={topicMutePresetById[String(topicContextMenu.topicId || "").trim()] || null}
+            onSetTopicMutePreset={setTopicMutePreset}
           />,
+          document.body
+        )
+        : null}
+      {topicDeleteConfirm && typeof document !== "undefined"
+        ? createPortal(
+          <div
+            className="settings-confirm-overlay popup-layer-content fixed inset-0 z-[60] grid place-items-center bg-black/60 p-4"
+            onMouseDown={(event) => {
+              if (event.target === event.currentTarget) {
+                setTopicDeleteConfirm(null);
+              }
+            }}
+          >
+            <div className="card compact settings-confirm-modal popup-layer-content w-full max-w-[420px]">
+              <h3 className="subheading settings-confirm-title">{t("chat.deleteTopic")}</h3>
+              <p className="muted settings-confirm-text">
+                {t("chat.deleteTopicConfirm")}
+                {" "}
+                <strong>{topicDeleteConfirm.title}</strong>
+              </p>
+              <div className="delete-confirm-actions flex flex-wrap items-center gap-3">
+                <Button type="button" className="secondary" onClick={() => setTopicDeleteConfirm(null)} disabled={editingTopicSaving}>
+                  {t("common.no")}
+                </Button>
+                <Button type="button" className="delete-confirm-btn" onClick={() => void confirmDeleteTopic()} disabled={editingTopicSaving}>
+                  {t("common.yes")}
+                </Button>
+              </div>
+            </div>
+          </div>,
           document.body
         )
         : null}
