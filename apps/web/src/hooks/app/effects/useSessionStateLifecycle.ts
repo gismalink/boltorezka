@@ -100,6 +100,8 @@ export function useSessionStateLifecycle({
   setDeletedAccountInfo
 }: UseSessionStateLifecycleArgs) {
   const cookieBootstrapBlockedUntilRef = useRef(0);
+  const cookieBootstrapInFlightRef = useRef(false);
+  const cookieBootstrapLastAttemptAtRef = useRef(0);
   const sessionBootstrapInFlightRef = useRef(false);
   const sessionBootstrapLastKeyRef = useRef("");
   const sessionBootstrapLastAttemptAtRef = useRef(0);
@@ -156,9 +158,21 @@ export function useSessionStateLifecycle({
   // to obtain a real JWT, then put it in state — this re-establishes the full
   // bearer flow so all existing !token guards across the app work correctly.
   const bootstrapCookieSessionState = useCallback(() => {
+    if (cookieBootstrapInFlightRef.current) {
+      return;
+    }
+
+    const now = Date.now();
+    if ((now - cookieBootstrapLastAttemptAtRef.current) < 3000) {
+      return;
+    }
+
     if (Date.now() < cookieBootstrapBlockedUntilRef.current) {
       return;
     }
+
+    cookieBootstrapInFlightRef.current = true;
+    cookieBootstrapLastAttemptAtRef.current = now;
 
     api.authRefresh("")
       .then(({ token: refreshedToken }) => {
@@ -170,6 +184,8 @@ export function useSessionStateLifecycle({
           setDeletedAccountInfo(null);
           // bootstrapSessionState fires automatically via the token useEffect
         } else {
+          // Anonymous state is normal: avoid immediate repeated bootstrap hits.
+          cookieBootstrapBlockedUntilRef.current = Date.now() + 15000;
           resetSessionState();
         }
       })
@@ -184,6 +200,8 @@ export function useSessionStateLifecycle({
         }
 
         if (error instanceof ApiError && error.status === 401) {
+          // Expected for signed-out users; keep a calm retry cadence.
+          cookieBootstrapBlockedUntilRef.current = Date.now() + 15000;
           resetSessionState();
           return;
         }
@@ -197,6 +215,9 @@ export function useSessionStateLifecycle({
         cookieBootstrapBlockedUntilRef.current = Date.now() + 5000;
         pushLog(`cookie-session bootstrap failed: ${error.message}`);
         // Keep state as-is on transient failures and retry later.
+      })
+      .finally(() => {
+        cookieBootstrapInFlightRef.current = false;
       });
   }, [pushLog, resetSessionState, setDeletedAccountInfo, setToken]);
 
