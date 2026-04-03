@@ -4,8 +4,13 @@ import { createPortal } from "react-dom";
 import type { Message, RoomTopic } from "../domain";
 import { api } from "../api";
 import { getDesktopNotificationBridge } from "../desktopBridge";
-import { Button, PopupPortal } from "./uicomponents";
+import { Button } from "./uicomponents";
 import { buildChatMessageViewModels } from "../utils/chatMessageViewModel";
+import { useChatTopLazyLoad } from "./chatPanel/hooks/useChatTopLazyLoad";
+import { TopicTabsHeader } from "./chatPanel/sections/TopicTabsHeader";
+import { NotificationPanel } from "./chatPanel/sections/NotificationPanel";
+import { TopicToolbar } from "./chatPanel/sections/TopicToolbar";
+import { SearchPanel } from "./chatPanel/sections/SearchPanel";
 
 type ChatPanelProps = {
   t: (key: string) => string;
@@ -170,8 +175,6 @@ export function ChatPanel({
   const topicPaletteInputRef = useRef<HTMLInputElement | null>(null);
   const topicCreatePopupRef = useRef<HTMLDivElement | null>(null);
   const attachmentInputRef = useRef<HTMLInputElement | null>(null);
-  const chatTopAutoloadTsRef = useRef(0);
-  const chatLastScrollTopRef = useRef(0);
   const notifiedInboxEventIdsRef = useRef<Set<string>>(new Set());
   const notificationPermissionRequestedRef = useRef(false);
   const desktopNotificationBridgeRef = useRef(getDesktopNotificationBridge());
@@ -469,50 +472,13 @@ export function ChatPanel({
     };
   }, [topicCreateOpen]);
 
-  useEffect(() => {
-    const chatLogNode = chatLogRef.current;
-    if (!chatLogNode || !hasActiveRoom) {
-      return;
-    }
-
-    chatLastScrollTopRef.current = chatLogNode.scrollTop;
-
-    const maybeLoadOlder = (event: Event) => {
-      if (!event.isTrusted) {
-        return;
-      }
-
-      const currentTop = chatLogNode.scrollTop;
-      const isScrollingUp = currentTop <= chatLastScrollTopRef.current;
-      chatLastScrollTopRef.current = currentTop;
-
-      if (!isScrollingUp) {
-        return;
-      }
-
-      if (loadingOlderMessages || !messagesHasMore) {
-        return;
-      }
-
-      if (currentTop > 16) {
-        return;
-      }
-
-      const now = Date.now();
-      if (now - chatTopAutoloadTsRef.current < 800) {
-        return;
-      }
-
-      chatTopAutoloadTsRef.current = now;
-      onLoadOlderMessages();
-    };
-
-    chatLogNode.addEventListener("scroll", maybeLoadOlder, { passive: true });
-
-    return () => {
-      chatLogNode.removeEventListener("scroll", maybeLoadOlder);
-    };
-  }, [chatLogRef, hasActiveRoom, loadingOlderMessages, messagesHasMore, onLoadOlderMessages]);
+  useChatTopLazyLoad({
+    chatLogRef,
+    hasActiveRoom,
+    loadingOlderMessages,
+    messagesHasMore,
+    onLoadOlderMessages
+  });
 
   const composePreviewImage = composePreviewImageUrl;
   const hasTopics = topics.length > 0;
@@ -1907,105 +1873,27 @@ export function ChatPanel({
 
   return (
     <section className="card middle-card flex min-h-0 flex-1 flex-col overflow-hidden">
-      <div className="chat-title-row">
-        <h2 className="chat-title-main">
-          {t("chat.title")} ({hasActiveRoom ? roomTitle || roomSlug : t("chat.noChannel")})
-        </h2>
-        {hasActiveRoom ? (
-          <div className="chat-topic-tabs-row" aria-label={t("chat.topicLabel")}>
-            <div className="popup-anchor chat-topic-create-anchor" ref={topicCreatePopupRef}>
-              <Button
-                type="button"
-                className="secondary tiny icon-btn chat-topic-create-toggle"
-                onClick={() => setTopicCreateOpen((prev) => !prev)}
-                data-tooltip={t("chat.createTopicTooltip")}
-                aria-label={t("chat.createTopicTooltip")}
-                aria-expanded={topicCreateOpen}
-                aria-controls="chat-topic-create-popup"
-              >
-                +
-              </Button>
-              <PopupPortal
-                open={topicCreateOpen}
-                anchorRef={topicCreatePopupRef}
-                className="settings-popup chat-topic-create-popup"
-                placement="bottom-start"
-              >
-                <form id="chat-topic-create-popup" className="chat-topic-create-popup-form" onSubmit={handleCreateTopicSubmit}>
-                  <h3 className="subheading">{t("chat.createTopic")}</h3>
-                  <input
-                    type="text"
-                    className="chat-topic-create-input"
-                    value={newTopicTitle}
-                    onChange={(event) => setNewTopicTitle(event.target.value)}
-                    placeholder={t("chat.newTopicPlaceholder")}
-                    disabled={creatingTopic}
-                    aria-label={t("chat.newTopicAria")}
-                    autoFocus
-                  />
-                  <div className="chat-topic-create-popup-actions">
-                    <Button type="submit" className="icon-action" disabled={creatingTopic || newTopicTitle.trim().length === 0}>
-                      {creatingTopic ? t("chat.loading") : t("chat.createTopic")}
-                    </Button>
-                    <Button
-                      type="button"
-                      className="secondary tiny"
-                      disabled={creatingTopic}
-                      onClick={() => {
-                        setNewTopicTitle("");
-                        setTopicCreateOpen(false);
-                      }}
-                    >
-                      {t("chat.editTopicCancel")}
-                    </Button>
-                  </div>
-                </form>
-              </PopupPortal>
-            </div>
-            <div className="chat-topic-tabs-scroll" role="tablist" aria-label={t("chat.topicSelectAria")}>
-              {sortedTopics.length > 0 ? (
-                sortedTopics.map((topic) => {
-                  const unreadCount = getTopicUnreadCount(topic);
-                  const isActiveTab = String(topic.id || "").trim() === String(activeTopicId || "").trim();
-
-                  return (
-                    <Button
-                      key={topic.id}
-                      type="button"
-                      className={`secondary tiny chat-topic-tab ${isActiveTab ? "chat-topic-tab-active" : ""}`}
-                      onClick={() => onSelectTopic(topic.id)}
-                      onContextMenu={(event) => openTopicContextMenu(topic.id, event)}
-                      role="tab"
-                      aria-selected={isActiveTab}
-                      aria-label={topic.title}
-                    >
-                      {topic.isPinned ? `${t("chat.topicPinnedBadge")} ` : ""}
-                      {topic.title}
-                      {unreadCount > 0 ? <span className="chat-topic-tab-unread">{unreadCount}</span> : null}
-                    </Button>
-                  );
-                })
-              ) : (
-                <span className="muted">{t("chat.topicFilterEmpty")}</span>
-              )}
-              {hasTopics ? (
-                <Button
-                  type="button"
-                  className="secondary tiny chat-topic-tab"
-                  onClick={openTopicPalette}
-                  onContextMenu={(event) => event.preventDefault()}
-                  aria-haspopup="dialog"
-                  aria-expanded={topicPaletteOpen}
-                  aria-controls="chat-topic-palette-dialog"
-                  aria-label={t("chat.topicPaletteOpen")}
-                >
-                  ...
-                </Button>
-              ) : null}
-            </div>
-          </div>
-        ) : null}
-      </div>
+      <TopicTabsHeader
+        t={t}
+        hasActiveRoom={hasActiveRoom}
+        roomTitle={roomTitle}
+        roomSlug={roomSlug}
+        hasTopics={hasTopics}
+        topicCreatePopupRef={topicCreatePopupRef}
+        topicCreateOpen={topicCreateOpen}
+        setTopicCreateOpen={setTopicCreateOpen}
+        newTopicTitle={newTopicTitle}
+        setNewTopicTitle={setNewTopicTitle}
+        creatingTopic={creatingTopic}
+        handleCreateTopicSubmit={handleCreateTopicSubmit}
+        sortedTopics={sortedTopics}
+        getTopicUnreadCount={getTopicUnreadCount}
+        activeTopicId={activeTopicId}
+        onSelectTopic={onSelectTopic}
+        openTopicContextMenu={openTopicContextMenu}
+        openTopicPalette={openTopicPalette}
+        topicPaletteOpen={topicPaletteOpen}
+      />
       {hasActiveRoom ? (
         <div className="chat-hotkeys-hint muted" aria-live="polite">
           {t("chat.hotkeysHint")}
@@ -2018,298 +1906,83 @@ export function ChatPanel({
         ) : null}
       </div>
       {hasActiveRoom ? (
-        <div className="chat-notification-panel mb-3">
-          <div className="chat-notification-row">
-            <span className="chat-topic-label">{t("chat.notificationTitle")}</span>
-            <select
-              aria-label={t("chat.notificationScopeAria")}
-              value={notificationScope}
-              onChange={(event) => setNotificationScope(event.target.value as "server" | "topic" | "room")}
-              disabled={notificationSaving}
-            >
-              <option value="server">{t("chat.notificationScopeServer")}</option>
-              <option value="topic">{t("chat.notificationScopeTopic")}</option>
-              <option value="room">{t("chat.notificationScopeRoom")}</option>
-            </select>
-            <select
-              aria-label={t("chat.notificationModeAria")}
-              value={notificationMode}
-              onChange={(event) => setNotificationMode(event.target.value as "all" | "mentions" | "none")}
-              disabled={notificationSaving}
-            >
-              <option value="all">{t("chat.notificationModeAll")}</option>
-              <option value="mentions">{t("chat.notificationModeMentions")}</option>
-              <option value="none">{t("chat.notificationModeNone")}</option>
-            </select>
-            <Button
-              type="button"
-              className="secondary"
-              onClick={() => void updateNotificationSettings(null)}
-              disabled={notificationSaving}
-            >
-              {notificationSaving ? t("chat.loading") : t("chat.notificationSave")}
-            </Button>
-          </div>
-          <div className="chat-notification-row chat-notification-mute-row">
-            <span className="chat-topic-label">{t("chat.notificationMute")}</span>
-            <Button type="button" className="secondary tiny" onClick={() => void updateNotificationSettings(buildMuteUntilIso(1))} disabled={notificationSaving}>1h</Button>
-            <Button type="button" className="secondary tiny" onClick={() => void updateNotificationSettings(buildMuteUntilIso(8))} disabled={notificationSaving}>8h</Button>
-            <Button type="button" className="secondary tiny" onClick={() => void updateNotificationSettings(buildMuteUntilIso(24))} disabled={notificationSaving}>24h</Button>
-            <Button type="button" className="secondary tiny" onClick={() => void updateNotificationSettings(buildMuteUntilIso("forever"))} disabled={notificationSaving}>{t("chat.notificationMuteForever")}</Button>
-            <Button type="button" className="secondary tiny" onClick={() => void updateNotificationSettings(null)} disabled={notificationSaving}>{t("chat.notificationUnmute")}</Button>
-          </div>
-          <div className="chat-notification-row chat-inbox-actions-row">
-            <span className="chat-topic-label">{t("chat.inboxTitle")}</span>
-            <Button type="button" className="secondary tiny" onClick={() => void loadInbox()} disabled={inboxLoading}>
-              {inboxLoading ? t("chat.loading") : t("chat.inboxRefresh")}
-            </Button>
-            <Button type="button" className="secondary tiny" onClick={() => void markInboxAllRead()} disabled={inboxLoading || inboxItems.length === 0}>
-              {t("chat.inboxMarkAllRead")}
-            </Button>
-          </div>
-          {inboxItems.length > 0 ? (
-            <div className="chat-inbox-list">
-              {inboxItems.map((item) => (
-                <article key={item.id} className={`chat-inbox-item ${item.readAt ? "" : "chat-inbox-item-unread"}`}>
-                  <div className="chat-inbox-item-head">
-                    <strong>{item.title}</strong>
-                    <span>{formatMessageTime(item.createdAt)}</span>
-                  </div>
-                  <p className="chat-inbox-item-body">{item.body}</p>
-                  <div className="chat-inbox-item-actions">
-                    {item.priority === "critical" ? <span className="chat-inbox-priority">{t("chat.inboxCritical")}</span> : null}
-                    <Button type="button" className="secondary tiny" onClick={() => void openInboxItem(item.id)}>
-                      {t("chat.inboxOpen")}
-                    </Button>
-                    {!item.readAt ? (
-                      <Button type="button" className="secondary tiny" onClick={() => void markInboxItemRead(item.id)}>
-                        {t("chat.inboxMarkRead")}
-                      </Button>
-                    ) : null}
-                  </div>
-                </article>
-              ))}
-            </div>
-          ) : (
-            <div className="chat-notification-status">{t("chat.inboxEmpty")}</div>
-          )}
-          {notificationStatusText ? <div className="chat-notification-status" role="status" aria-live="polite">{notificationStatusText}</div> : null}
-        </div>
+        <NotificationPanel
+          t={t}
+          notificationScope={notificationScope}
+          setNotificationScope={setNotificationScope}
+          notificationMode={notificationMode}
+          setNotificationMode={setNotificationMode}
+          notificationSaving={notificationSaving}
+          updateNotificationSettings={updateNotificationSettings}
+          buildMuteUntilIso={buildMuteUntilIso}
+          inboxLoading={inboxLoading}
+          inboxItems={inboxItems}
+          loadInbox={loadInbox}
+          markInboxAllRead={markInboxAllRead}
+          openInboxItem={openInboxItem}
+          markInboxItemRead={markInboxItemRead}
+          formatMessageTime={formatMessageTime}
+          notificationStatusText={notificationStatusText}
+        />
       ) : null}
       {hasActiveRoom ? (
-        <div className="chat-topic-row mb-3 flex flex-wrap items-center gap-2">
-          <span className="chat-topic-unread-counter">{t("chat.unreadCounter").replace("{count}", String(roomUnreadCount))}</span>
-          <select
-            aria-label={t("chat.topicFilterAria")}
-            value={topicFilterMode}
-            onChange={(event) => setTopicFilterMode(event.target.value as "all" | "active" | "unread" | "my" | "mentions" | "pinned" | "archived")}
-            disabled={!hasTopics}
-          >
-            <option value="all">{t("chat.topicFilterAll")}</option>
-            <option value="active">{t("chat.topicFilterActive")}</option>
-            <option value="unread">{t("chat.topicFilterUnread")}</option>
-            <option value="my">{t("chat.topicFilterMy")}</option>
-            <option value="mentions">{t("chat.topicFilterMentions")}</option>
-            <option value="pinned">{t("chat.topicFilterPinned")}</option>
-            <option value="archived">{t("chat.topicFilterArchived")}</option>
-          </select>
-          <Button
-            type="button"
-            className="secondary tiny"
-            onClick={() => void markTopicRead(String(activeTopicId || ""), activeTopicLastMessageId)}
-            disabled={!activeTopicId || activeTopicUnreadCount === 0 || markReadSaving}
-          >
-            {t("chat.markTopicRead")}
-          </Button>
-          <Button
-            type="button"
-            className="secondary tiny"
-            onClick={() => void markRoomRead()}
-            disabled={roomUnreadCount === 0 || markReadSaving}
-          >
-            {t("chat.markRoomRead")}
-          </Button>
-          {activeTopicId ? (
-            <>
-              {editingTopicId === activeTopicId ? (
-                <>
-                  <input
-                    type="text"
-                    className="chat-topic-create-input"
-                    value={editingTopicTitle}
-                    onChange={(event) => setEditingTopicTitle(event.target.value)}
-                    placeholder={t("chat.editTopicPlaceholder")}
-                    disabled={editingTopicSaving}
-                    aria-label={t("chat.editTopicPlaceholder")}
-                  />
-                  <Button
-                    type="button"
-                    className="secondary tiny"
-                    disabled={editingTopicSaving || editingTopicTitle.trim().length === 0}
-                    onClick={() => void handleSaveEditTopic()}
-                  >
-                    {editingTopicSaving ? t("chat.loading") : t("chat.editTopicSave")}
-                  </Button>
-                  <Button type="button" className="secondary tiny" onClick={handleCancelEditTopic} disabled={editingTopicSaving}>
-                    {t("chat.editTopicCancel")}
-                  </Button>
-                </>
-              ) : (
-                <Button type="button" className="secondary tiny" onClick={handleStartEditTopic}>
-                  {t("chat.editTopic")}
-                </Button>
-              )}
-              <Button
-                type="button"
-                className="secondary tiny"
-                onClick={() => void handleArchiveTopic()}
-                disabled={Boolean(archivingTopicId)}
-              >
-                {activeTopicIsArchived ? t("chat.unarchiveTopic") : t("chat.archiveTopic")}
-              </Button>
-              {activeTopicIsArchived ? <span className="chat-topic-archived-badge">{t("chat.topicArchivedBadge")}</span> : null}
-            </>
-          ) : null}
-          {markReadStatusText ? <div className="chat-topic-read-status" role="status" aria-live="polite">{markReadStatusText}</div> : null}
-          {editingTopicStatusText ? <div className="chat-topic-read-status" role="status" aria-live="polite">{editingTopicStatusText}</div> : null}
-        </div>
+        <TopicToolbar
+          t={t}
+          hasTopics={hasTopics}
+          roomUnreadCount={roomUnreadCount}
+          topicFilterMode={topicFilterMode}
+          setTopicFilterMode={setTopicFilterMode}
+          activeTopicId={activeTopicId}
+          activeTopicUnreadCount={activeTopicUnreadCount}
+          activeTopicLastMessageId={activeTopicLastMessageId}
+          markReadSaving={markReadSaving}
+          markTopicRead={markTopicRead}
+          markRoomRead={markRoomRead}
+          editingTopicId={editingTopicId}
+          editingTopicTitle={editingTopicTitle}
+          setEditingTopicTitle={setEditingTopicTitle}
+          editingTopicSaving={editingTopicSaving}
+          handleSaveEditTopic={handleSaveEditTopic}
+          handleCancelEditTopic={handleCancelEditTopic}
+          handleStartEditTopic={handleStartEditTopic}
+          handleArchiveTopic={handleArchiveTopic}
+          archivingTopicId={archivingTopicId}
+          activeTopicIsArchived={activeTopicIsArchived}
+          markReadStatusText={markReadStatusText}
+          editingTopicStatusText={editingTopicStatusText}
+        />
       ) : null}
       {hasActiveRoom ? (
-        <div className="chat-search-panel mb-3">
-          <div className="chat-search-controls">
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(event) => setSearchQuery(event.target.value)}
-              placeholder={t("chat.searchPlaceholder")}
-              disabled={searching}
-              aria-label={t("chat.searchQueryAria")}
-            />
-            <select
-              aria-label={t("chat.searchScopeAria")}
-              value={searchScope}
-              onChange={(event) => setSearchScope(event.target.value as "all" | "server" | "room" | "topic")}
-              disabled={searching}
-            >
-              <option value="topic">{t("chat.searchScopeTopic")}</option>
-              <option value="room">{t("chat.searchScopeRoom")}</option>
-              <option value="server">{t("chat.searchScopeServer")}</option>
-              <option value="all">{t("chat.searchScopeAll")}</option>
-            </select>
-            <Button
-              type="button"
-              className="secondary"
-              onClick={() => void handleSearchMessages()}
-              disabled={searching || searchQuery.trim().length === 0}
-            >
-              {searching ? t("chat.loading") : t("chat.searchAction")}
-            </Button>
-          </div>
-          <div className="chat-search-filters">
-            <label>
-              <input
-                type="checkbox"
-                checked={searchHasMention}
-                onChange={(event) => setSearchHasMention(event.target.checked)}
-                disabled={searching}
-              />
-              <span>{t("chat.searchFilterMentions")}</span>
-            </label>
-            <label>
-              <input
-                type="checkbox"
-                checked={searchHasAttachment}
-                onChange={(event) => setSearchHasAttachment(event.target.checked)}
-                disabled={searching}
-              />
-              <span>{t("chat.searchFilterAttachments")}</span>
-            </label>
-            <label className="chat-search-filter-field">
-              <span>{t("chat.searchFilterAttachmentType")}</span>
-              <select
-                value={searchAttachmentType}
-                onChange={(event) => setSearchAttachmentType(event.target.value as "" | "image")}
-                aria-label={t("chat.searchFilterAttachmentTypeAria")}
-                disabled={searching}
-              >
-                <option value="">{t("chat.searchFilterAttachmentTypeAny")}</option>
-                <option value="image">{t("chat.searchFilterAttachmentTypeImage")}</option>
-              </select>
-            </label>
-            <label>
-              <input
-                type="checkbox"
-                checked={searchHasLink}
-                onChange={(event) => setSearchHasLink(event.target.checked)}
-                disabled={searching}
-              />
-              <span>{t("chat.searchFilterLinks")}</span>
-            </label>
-            <label className="chat-search-filter-field">
-              <span>{t("chat.searchFilterAuthor")}</span>
-              <input
-                type="text"
-                value={searchAuthorId}
-                onChange={(event) => setSearchAuthorId(event.target.value)}
-                placeholder={t("chat.searchFilterAuthorPlaceholder")}
-                aria-label={t("chat.searchFilterAuthorAria")}
-                disabled={searching}
-              />
-            </label>
-            <label className="chat-search-filter-field">
-              <span>{t("chat.searchFilterFrom")}</span>
-              <input
-                type="datetime-local"
-                value={searchFrom}
-                onChange={(event) => setSearchFrom(event.target.value)}
-                aria-label={t("chat.searchFilterFromAria")}
-                disabled={searching}
-              />
-            </label>
-            <label className="chat-search-filter-field">
-              <span>{t("chat.searchFilterTo")}</span>
-              <input
-                type="datetime-local"
-                value={searchTo}
-                onChange={(event) => setSearchTo(event.target.value)}
-                aria-label={t("chat.searchFilterToAria")}
-                disabled={searching}
-              />
-            </label>
-          </div>
-          {searchJumpStatusText ? <div className="chat-search-more-hint">{searchJumpStatusText}</div> : null}
-          {searchError ? <div className="chat-search-error">{searchError}</div> : null}
-          {searchResults.length > 0 ? (
-            <div className="chat-search-results">
-              {searchResults.map((item) => (
-                <article key={item.id} className="chat-search-result-item">
-                  <div className="chat-search-result-meta">
-                    <span>{item.userName}</span>
-                    <span>{item.topicTitle || item.roomTitle}</span>
-                    <span>{formatMessageTime(item.createdAt)}</span>
-                  </div>
-                  <p className="chat-search-result-text">{item.text}</p>
-                  {item.hasAttachments ? <span className="chat-search-result-attachments">{t("chat.searchHasAttachmentsBadge")}</span> : null}
-                  <Button
-                    type="button"
-                    className="secondary tiny chat-search-result-jump"
-                    onClick={() => {
-                      setSearchJumpStatusText("");
-                      setSearchJumpTarget({
-                        messageId: item.id,
-                        roomSlug: item.roomSlug,
-                        topicId: item.topicId || null
-                      });
-                    }}
-                  >
-                    {t("chat.searchJumpToMessage")}
-                  </Button>
-                </article>
-              ))}
-              {searchResultsHasMore ? <div className="chat-search-more-hint">{t("chat.searchMoreHint")}</div> : null}
-            </div>
-          ) : null}
-        </div>
+        <SearchPanel
+          t={t}
+          searching={searching}
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          searchScope={searchScope}
+          setSearchScope={setSearchScope}
+          handleSearchMessages={handleSearchMessages}
+          searchHasMention={searchHasMention}
+          setSearchHasMention={setSearchHasMention}
+          searchHasAttachment={searchHasAttachment}
+          setSearchHasAttachment={setSearchHasAttachment}
+          searchAttachmentType={searchAttachmentType}
+          setSearchAttachmentType={setSearchAttachmentType}
+          searchHasLink={searchHasLink}
+          setSearchHasLink={setSearchHasLink}
+          searchAuthorId={searchAuthorId}
+          setSearchAuthorId={setSearchAuthorId}
+          searchFrom={searchFrom}
+          setSearchFrom={setSearchFrom}
+          searchTo={searchTo}
+          setSearchTo={setSearchTo}
+          searchJumpStatusText={searchJumpStatusText}
+          searchError={searchError}
+          searchResults={searchResults}
+          searchResultsHasMore={searchResultsHasMore}
+          formatMessageTime={formatMessageTime}
+          setSearchJumpStatusText={setSearchJumpStatusText}
+          setSearchJumpTarget={(value) => setSearchJumpTarget(value)}
+        />
       ) : null}
       <div className="chat-typing-banner" aria-live="polite">
         {hasActiveRoom && typingUsers.length > 0 ? (
