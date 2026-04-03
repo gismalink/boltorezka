@@ -2,6 +2,8 @@
 
 Матрица обязательных проверок для `test` gate и pre-prod decision пакета.
 
+Статусы smoke-команд (active/canary/retired): `docs/operations/SMOKE_REGISTRY.md`.
+
 ## 1) Local developer checks
 
 | Stage | Command | Required |
