@@ -1480,6 +1480,21 @@ pre {
   font-weight: 700;
 }
 
+.chat-topic-create-popup {
+  min-width: 300px;
+}
+
+.chat-topic-create-popup-form {
+  display: grid;
+  gap: var(--space-sm);
+}
+
+.chat-topic-create-popup-actions {
+  display: flex;
+  gap: var(--space-xs);
+  justify-content: flex-end;
+}
+
 .chat-topic-tabs-scroll {
   display: flex;
   align-items: center;

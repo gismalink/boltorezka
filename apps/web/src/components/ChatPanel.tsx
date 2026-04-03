@@ -4,7 +4,7 @@ import { createPortal } from "react-dom";
 import type { Message, RoomTopic } from "../domain";
 import { api } from "../api";
 import { getDesktopNotificationBridge } from "../desktopBridge";
-import { Button } from "./uicomponents";
+import { Button, PopupPortal } from "./uicomponents";
 import { buildChatMessageViewModels } from "../utils/chatMessageViewModel";
 
 type ChatPanelProps = {
@@ -171,6 +171,7 @@ export function ChatPanel({
   const [resolvedAttachmentImageUrls, setResolvedAttachmentImageUrls] = useState<Record<string, string>>({});
   const resolvedAttachmentImageUrlsRef = useRef<Record<string, string>>({});
   const topicPaletteInputRef = useRef<HTMLInputElement | null>(null);
+  const topicCreatePopupRef = useRef<HTMLDivElement | null>(null);
   const attachmentInputRef = useRef<HTMLInputElement | null>(null);
   const notifiedInboxEventIdsRef = useRef<Set<string>>(new Set());
   const notificationPermissionRequestedRef = useRef(false);
@@ -409,6 +410,39 @@ export function ChatPanel({
     };
   }, [topicPaletteOpen, topics, activeTopicId]);
 
+  useEffect(() => {
+    if (!topicCreateOpen) {
+      return;
+    }
+
+    const onPointerDown = (event: globalThis.PointerEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (!target) {
+        setTopicCreateOpen(false);
+        return;
+      }
+
+      if (target.closest(".chat-topic-create-anchor") || target.closest(".chat-topic-create-popup")) {
+        return;
+      }
+
+      setTopicCreateOpen(false);
+    };
+
+    const onKeyDown = (event: globalThis.KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setTopicCreateOpen(false);
+      }
+    };
+
+    window.addEventListener("pointerdown", onPointerDown);
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("pointerdown", onPointerDown);
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [topicCreateOpen]);
+
   const composePreviewImage = composePreviewImageUrl;
   const hasTopics = topics.length > 0;
   const visibleTypingUsers = typingUsers.slice(0, 2);
@@ -440,6 +474,11 @@ export function ChatPanel({
     } finally {
       setCreatingTopic(false);
     }
+  };
+
+  const handleCreateTopicSubmit = (event: FormEvent) => {
+    event.preventDefault();
+    void handleCreateTopic();
   };
 
   const handleSearchMessages = async () => {
@@ -1757,18 +1796,58 @@ export function ChatPanel({
         </h2>
         {hasActiveRoom ? (
           <div className="chat-topic-tabs-row" aria-label={t("chat.topicLabel")}>
-            <Button
-              type="button"
-              className="secondary tiny icon-btn chat-topic-create-toggle"
-              onClick={() => setTopicCreateOpen((prev) => !prev)}
-              title={t("chat.createTopic")}
-              aria-label={t("chat.createTopic")}
-            >
-              +
-            </Button>
+            <div className="popup-anchor chat-topic-create-anchor" ref={topicCreatePopupRef}>
+              <Button
+                type="button"
+                className="secondary tiny icon-btn chat-topic-create-toggle"
+                onClick={() => setTopicCreateOpen((prev) => !prev)}
+                data-tooltip={t("chat.createTopic")}
+                aria-label={t("chat.createTopic")}
+                aria-expanded={topicCreateOpen}
+                aria-controls="chat-topic-create-popup"
+              >
+                +
+              </Button>
+              <PopupPortal
+                open={topicCreateOpen}
+                anchorRef={topicCreatePopupRef}
+                className="settings-popup chat-topic-create-popup"
+                placement="bottom-start"
+              >
+                <form id="chat-topic-create-popup" className="chat-topic-create-popup-form" onSubmit={handleCreateTopicSubmit}>
+                  <h3 className="subheading">{t("chat.createTopic")}</h3>
+                  <input
+                    type="text"
+                    className="chat-topic-create-input"
+                    value={newTopicTitle}
+                    onChange={(event) => setNewTopicTitle(event.target.value)}
+                    placeholder={t("chat.newTopicPlaceholder")}
+                    disabled={creatingTopic}
+                    aria-label={t("chat.newTopicAria")}
+                    autoFocus
+                  />
+                  <div className="chat-topic-create-popup-actions">
+                    <Button type="submit" className="icon-action" disabled={creatingTopic || newTopicTitle.trim().length === 0}>
+                      {creatingTopic ? t("chat.loading") : t("chat.createTopic")}
+                    </Button>
+                    <Button
+                      type="button"
+                      className="secondary tiny"
+                      disabled={creatingTopic}
+                      onClick={() => {
+                        setNewTopicTitle("");
+                        setTopicCreateOpen(false);
+                      }}
+                    >
+                      {t("chat.editTopicCancel")}
+                    </Button>
+                  </div>
+                </form>
+              </PopupPortal>
+            </div>
             <div className="chat-topic-tabs-scroll" role="tablist" aria-label={t("chat.topicSelectAria")}>
-              {topicsForSelector.length > 0 ? (
-                topicsForSelector.map((topic) => {
+              {sortedTopics.length > 0 ? (
+                sortedTopics.map((topic) => {
                   const unreadCount = getTopicUnreadCount(topic);
                   const isActiveTab = topic.id === activeTopicId;
 
@@ -1994,39 +2073,6 @@ export function ChatPanel({
                 {activeTopicIsArchived ? t("chat.unarchiveTopic") : t("chat.archiveTopic")}
               </Button>
               {activeTopicIsArchived ? <span className="chat-topic-archived-badge">{t("chat.topicArchivedBadge")}</span> : null}
-            </>
-          ) : null}
-          {topicCreateOpen ? (
-            <>
-              <input
-                type="text"
-                className="chat-topic-create-input"
-                value={newTopicTitle}
-                onChange={(event) => setNewTopicTitle(event.target.value)}
-                placeholder={t("chat.newTopicPlaceholder")}
-                disabled={creatingTopic}
-                aria-label={t("chat.newTopicAria")}
-                autoFocus
-              />
-              <Button
-                type="button"
-                className="secondary"
-                disabled={creatingTopic || newTopicTitle.trim().length === 0}
-                onClick={() => void handleCreateTopic()}
-              >
-                {creatingTopic ? t("chat.loading") : t("chat.createTopic")}
-              </Button>
-              <Button
-                type="button"
-                className="secondary tiny"
-                disabled={creatingTopic}
-                onClick={() => {
-                  setNewTopicTitle("");
-                  setTopicCreateOpen(false);
-                }}
-              >
-                {t("chat.editTopicCancel")}
-              </Button>
             </>
           ) : null}
           {markReadStatusText ? <div className="chat-topic-read-status" role="status" aria-live="polite">{markReadStatusText}</div> : null}
