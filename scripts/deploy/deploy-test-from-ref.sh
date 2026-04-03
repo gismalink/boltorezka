@@ -14,6 +14,9 @@ COMPOSE_FILE="infra/docker-compose.host.yml"
 ENV_FILE="infra/.env.host"
 HEALTHCHECK_URL="${TEST_HEALTHCHECK_URL:-https://test.datowave.com/health}"
 FULL_RECREATE="${FULL_RECREATE:-0}"
+DEPLOY_FORCE_RECREATE_API="${DEPLOY_FORCE_RECREATE_API:-0}"
+DEPLOY_RECREATE_TURN="${DEPLOY_RECREATE_TURN:-0}"
+DEPLOY_MINIO_INIT_FAST="${DEPLOY_MINIO_INIT_FAST:-0}"
 EDGE_REPO_DIR="${EDGE_REPO_DIR:-$HOME/srv/edge}"
 EDGE_STATIC_DIR_TEST="${EDGE_STATIC_DIR_TEST:-$EDGE_REPO_DIR/ingress/static/boltorezka/test}"
 
@@ -74,6 +77,7 @@ if [[ -z "$TEST_CHAT_STORAGE_PROVIDER_VALUE" ]]; then
 fi
 
 echo "[deploy-test] deploy mode: api-only + caddy-static-sync (set FULL_RECREATE=1 for full dependency recreate)"
+echo "[deploy-test] fast-path flags: force_api_recreate=$DEPLOY_FORCE_RECREATE_API recreate_turn=$DEPLOY_RECREATE_TURN minio_init_fast=$DEPLOY_MINIO_INIT_FAST"
 TMP_DOCKER_CONFIG="$(mktemp -d)"
 TMP_DEPLOY_ENV="$(mktemp)"
 TMP_WEB_DIST_DIR="$(mktemp -d)"
@@ -134,13 +138,24 @@ if [[ "$FULL_RECREATE" == "1" ]]; then
 else
   # Keep api-only fast path, but make sure core deps (including TURN) are up.
   DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" up -d --no-recreate boltorezka-db-test boltorezka-redis-test
-  DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" rm -f -s boltorezka-turn >/dev/null 2>&1 || true
-  DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" up -d boltorezka-turn
+  if [[ "$DEPLOY_RECREATE_TURN" == "1" ]]; then
+    DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" rm -f -s boltorezka-turn >/dev/null 2>&1 || true
+    DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" up -d boltorezka-turn
+  else
+    DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" up -d --no-recreate boltorezka-turn
+  fi
   if [[ "$TEST_CHAT_STORAGE_PROVIDER_VALUE" == "minio" ]]; then
     echo "[deploy-test] storage provider=minio -> ensure minio-test profile is up"
-    DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" --profile minio-test up -d boltorezka-minio-test boltorezka-minio-test-init
+    DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" --profile minio-test up -d boltorezka-minio-test
+    if [[ "$DEPLOY_MINIO_INIT_FAST" == "1" ]]; then
+      DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" --profile minio-test up -d boltorezka-minio-test-init
+    fi
   fi
-  DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" up -d --no-deps --force-recreate boltorezka-api-test
+  if [[ "$DEPLOY_FORCE_RECREATE_API" == "1" ]]; then
+    DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" up -d --no-deps --force-recreate boltorezka-api-test
+  else
+    DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" up -d --no-deps boltorezka-api-test
+  fi
 fi
 
 echo "[deploy-test] wait api health"
