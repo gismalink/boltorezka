@@ -1,5 +1,5 @@
 // Purpose: presentation-only chat panel with message timeline, composer, and message-level UI actions.
-import { ClipboardEvent, FormEvent, KeyboardEvent, ReactNode, RefObject, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ClipboardEvent, FormEvent, KeyboardEvent, MouseEvent, ReactNode, RefObject, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { Message, RoomTopic } from "../domain";
 import { api } from "../api";
@@ -163,6 +163,7 @@ export function ChatPanel({
   } | null>(null);
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
   const [contextMenuMessageId, setContextMenuMessageId] = useState<string | null>(null);
+  const [topicContextMenu, setTopicContextMenu] = useState<{ topicId: string; x: number; y: number } | null>(null);
   const [hotkeyStatusText, setHotkeyStatusText] = useState("");
   const [resolvedAttachmentImageUrls, setResolvedAttachmentImageUrls] = useState<Record<string, string>>({});
   const resolvedAttachmentImageUrlsRef = useRef<Record<string, string>>({});
@@ -170,6 +171,7 @@ export function ChatPanel({
   const topicCreatePopupRef = useRef<HTMLDivElement | null>(null);
   const attachmentInputRef = useRef<HTMLInputElement | null>(null);
   const chatTopAutoloadTsRef = useRef(0);
+  const chatLastScrollTopRef = useRef(0);
   const notifiedInboxEventIdsRef = useRef<Set<string>>(new Set());
   const notificationPermissionRequestedRef = useRef(false);
   const desktopNotificationBridgeRef = useRef(getDesktopNotificationBridge());
@@ -376,6 +378,33 @@ export function ChatPanel({
   }, [contextMenuMessageId]);
 
   useEffect(() => {
+    if (!topicContextMenu) {
+      return;
+    }
+
+    const onPointerDown = (event: globalThis.PointerEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (!target || target.closest(".chat-topic-context-menu")) {
+        return;
+      }
+      setTopicContextMenu(null);
+    };
+
+    const onKeyDown = (event: globalThis.KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setTopicContextMenu(null);
+      }
+    };
+
+    window.addEventListener("pointerdown", onPointerDown);
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("pointerdown", onPointerDown);
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [topicContextMenu]);
+
+  useEffect(() => {
     if (!topicPaletteOpen) {
       return;
     }
@@ -446,17 +475,31 @@ export function ChatPanel({
       return;
     }
 
-    const maybeLoadOlder = () => {
+    chatLastScrollTopRef.current = chatLogNode.scrollTop;
+
+    const maybeLoadOlder = (event: Event) => {
+      if (!event.isTrusted) {
+        return;
+      }
+
+      const currentTop = chatLogNode.scrollTop;
+      const isScrollingUp = currentTop <= chatLastScrollTopRef.current;
+      chatLastScrollTopRef.current = currentTop;
+
+      if (!isScrollingUp) {
+        return;
+      }
+
       if (loadingOlderMessages || !messagesHasMore) {
         return;
       }
 
-      if (chatLogNode.scrollTop > 16) {
+      if (currentTop > 16) {
         return;
       }
 
       const now = Date.now();
-      if (now - chatTopAutoloadTsRef.current < 350) {
+      if (now - chatTopAutoloadTsRef.current < 800) {
         return;
       }
 
@@ -465,7 +508,6 @@ export function ChatPanel({
     };
 
     chatLogNode.addEventListener("scroll", maybeLoadOlder, { passive: true });
-    maybeLoadOlder();
 
     return () => {
       chatLogNode.removeEventListener("scroll", maybeLoadOlder);
@@ -1762,6 +1804,57 @@ export function ChatPanel({
     setContextMenuMessageId(null);
   };
 
+  const openTopicContextMenu = (topicId: string, event: MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setTopicContextMenu({ topicId, x: event.clientX, y: event.clientY });
+  };
+
+  const runTopicMenuAction = async (action: "read" | "edit" | "archive") => {
+    const targetTopicId = String(topicContextMenu?.topicId || "").trim();
+    if (!targetTopicId) {
+      setTopicContextMenu(null);
+      return;
+    }
+
+    const targetTopic = topics.find((topic) => topic.id === targetTopicId);
+    if (!targetTopic) {
+      setTopicContextMenu(null);
+      return;
+    }
+
+    if (action === "read") {
+      await markTopicRead(targetTopic.id);
+      setTopicContextMenu(null);
+      return;
+    }
+
+    if (action === "edit") {
+      onSelectTopic(targetTopic.id);
+      setEditingTopicId(targetTopic.id);
+      setEditingTopicTitle(targetTopic.title);
+      setEditingTopicStatusText("");
+      setTopicContextMenu(null);
+      return;
+    }
+
+    setArchivingTopicId(targetTopic.id);
+    try {
+      if (targetTopic.archivedAt) {
+        await onUnarchiveTopic(targetTopic.id);
+        setEditingTopicStatusText(t("chat.unarchiveTopicSuccess"));
+      } else {
+        await onArchiveTopic(targetTopic.id);
+        setEditingTopicStatusText(t("chat.archiveTopicSuccess"));
+      }
+    } catch {
+      setEditingTopicStatusText(targetTopic.archivedAt ? t("chat.unarchiveTopicError") : t("chat.archiveTopicError"));
+    } finally {
+      setArchivingTopicId(null);
+      setTopicContextMenu(null);
+    }
+  };
+
   const topicPaletteListboxId = "chat-topic-palette-listbox";
 
   const closeTopicPalette = () => {
@@ -1881,7 +1974,7 @@ export function ChatPanel({
                       type="button"
                       className={`secondary tiny chat-topic-tab ${isActiveTab ? "chat-topic-tab-active" : ""}`}
                       onClick={() => onSelectTopic(topic.id)}
-                      onContextMenu={(event) => event.preventDefault()}
+                      onContextMenu={(event) => openTopicContextMenu(topic.id, event)}
                       role="tab"
                       aria-selected={isActiveTab}
                       aria-label={topic.title}
@@ -2231,6 +2324,7 @@ export function ChatPanel({
         ) : null}
       </div>
       <div className="chat-log min-h-0 flex-1" ref={chatLogRef}>
+        {loadingOlderMessages ? <div className="chat-history-loading muted">{t("chat.loading")}</div> : null}
         {hasActiveRoom && !hasTopics ? (
           <div className="chat-empty-state">
             <p className="chat-empty-state-title">{t("chat.emptyTopicsTitle")}</p>
@@ -2739,6 +2833,26 @@ export function ChatPanel({
                 )}
               </div>
             </section>
+          </div>,
+          document.body
+        )
+        : null}
+      {topicContextMenu && typeof document !== "undefined"
+        ? createPortal(
+          <div
+            className="chat-topic-context-menu"
+            role="menu"
+            style={{ left: `${topicContextMenu.x}px`, top: `${topicContextMenu.y}px` }}
+          >
+            <Button type="button" className="secondary tiny" role="menuitem" onClick={() => void runTopicMenuAction("read")}>
+              {t("chat.markTopicRead")}
+            </Button>
+            <Button type="button" className="secondary tiny" role="menuitem" onClick={() => void runTopicMenuAction("edit")}>
+              {t("chat.editTopic")}
+            </Button>
+            <Button type="button" className="secondary tiny" role="menuitem" onClick={() => void runTopicMenuAction("archive")}>
+              {topics.find((topic) => topic.id === topicContextMenu.topicId)?.archivedAt ? t("chat.unarchiveTopic") : t("chat.archiveTopic")}
+            </Button>
           </div>,
           document.body
         )
