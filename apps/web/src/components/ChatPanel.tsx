@@ -105,6 +105,7 @@ export function ChatPanel({
   onUnarchiveTopic
 }: ChatPanelProps) {
   const [newTopicTitle, setNewTopicTitle] = useState("");
+  const [topicCreateOpen, setTopicCreateOpen] = useState(false);
   const [creatingTopic, setCreatingTopic] = useState(false);
   const [editingTopicId, setEditingTopicId] = useState<string | null>(null);
   const [editingTopicTitle, setEditingTopicTitle] = useState("");
@@ -435,6 +436,7 @@ export function ChatPanel({
     try {
       await onCreateTopic(title);
       setNewTopicTitle("");
+      setTopicCreateOpen(false);
     } finally {
       setCreatingTopic(false);
     }
@@ -1749,9 +1751,50 @@ export function ChatPanel({
 
   return (
     <section className="card middle-card flex min-h-0 flex-1 flex-col overflow-hidden">
-      <h2>
-        {t("chat.title")} ({hasActiveRoom ? roomTitle || roomSlug : t("chat.noChannel")})
-      </h2>
+      <div className="chat-title-row">
+        <h2 className="chat-title-main">
+          {t("chat.title")} ({hasActiveRoom ? roomTitle || roomSlug : t("chat.noChannel")})
+        </h2>
+        {hasActiveRoom ? (
+          <div className="chat-topic-tabs-row" aria-label={t("chat.topicLabel")}>
+            <Button
+              type="button"
+              className="secondary tiny icon-btn chat-topic-create-toggle"
+              onClick={() => setTopicCreateOpen((prev) => !prev)}
+              title={t("chat.createTopic")}
+              aria-label={t("chat.createTopic")}
+            >
+              +
+            </Button>
+            <div className="chat-topic-tabs-scroll" role="tablist" aria-label={t("chat.topicSelectAria")}>
+              {topicsForSelector.length > 0 ? (
+                topicsForSelector.map((topic) => {
+                  const unreadCount = getTopicUnreadCount(topic);
+                  const isActiveTab = topic.id === activeTopicId;
+
+                  return (
+                    <Button
+                      key={topic.id}
+                      type="button"
+                      className={`secondary tiny chat-topic-tab ${isActiveTab ? "chat-topic-tab-active" : ""}`}
+                      onClick={() => onSelectTopic(topic.id)}
+                      role="tab"
+                      aria-selected={isActiveTab}
+                      aria-label={topic.title}
+                    >
+                      {topic.isPinned ? `${t("chat.topicPinnedBadge")} ` : ""}
+                      {topic.title}
+                      {unreadCount > 0 ? <span className="chat-topic-tab-unread">{unreadCount}</span> : null}
+                    </Button>
+                  );
+                })
+              ) : (
+                <span className="muted">{t("chat.topicFilterEmpty")}</span>
+              )}
+            </div>
+          </div>
+        ) : null}
+      </div>
       {hasActiveRoom ? (
         <div className="chat-hotkeys-hint muted" aria-live="polite">
           {t("chat.hotkeysHint")}
@@ -1870,7 +1913,6 @@ export function ChatPanel({
       ) : null}
       {hasActiveRoom ? (
         <div className="chat-topic-row mb-3 flex flex-wrap items-center gap-2">
-          <span className="chat-topic-label">{t("chat.topicLabel")}</span>
           <span className="chat-topic-unread-counter">{t("chat.unreadCounter").replace("{count}", String(roomUnreadCount))}</span>
           <select
             aria-label={t("chat.topicFilterAria")}
@@ -1885,25 +1927,6 @@ export function ChatPanel({
             <option value="mentions">{t("chat.topicFilterMentions")}</option>
             <option value="pinned">{t("chat.topicFilterPinned")}</option>
             <option value="archived">{t("chat.topicFilterArchived")}</option>
-          </select>
-          <select
-            aria-label={t("chat.topicSelectAria")}
-            className="flex-1 min-w-[160px]"
-            value={activeTopicId || ""}
-            onChange={(event) => onSelectTopic(event.target.value)}
-            disabled={!hasTopics}
-          >
-            {topicsForSelector.length > 0 ? (
-              topicsForSelector.map((topic) => (
-                <option key={topic.id} value={topic.id}>
-                  {topic.isPinned ? `${t("chat.topicPinnedBadge")} ` : ""}
-                  {topic.title}
-                  {getTopicUnreadCount(topic) > 0 ? ` (${getTopicUnreadCount(topic)})` : ""}
-                </option>
-              ))
-            ) : (
-              <option value="">{t("chat.topicFilterEmpty")}</option>
-            )}
           </select>
           <Button
             type="button"
@@ -1973,23 +1996,39 @@ export function ChatPanel({
               {activeTopicIsArchived ? <span className="chat-topic-archived-badge">{t("chat.topicArchivedBadge")}</span> : null}
             </>
           ) : null}
-          <input
-            type="text"
-            className="chat-topic-create-input"
-            value={newTopicTitle}
-            onChange={(event) => setNewTopicTitle(event.target.value)}
-            placeholder={t("chat.newTopicPlaceholder")}
-            disabled={creatingTopic}
-            aria-label={t("chat.newTopicAria")}
-          />
-          <Button
-            type="button"
-            className="secondary"
-            disabled={creatingTopic || newTopicTitle.trim().length === 0}
-            onClick={() => void handleCreateTopic()}
-          >
-            {creatingTopic ? t("chat.loading") : t("chat.createTopic")}
-          </Button>
+          {topicCreateOpen ? (
+            <>
+              <input
+                type="text"
+                className="chat-topic-create-input"
+                value={newTopicTitle}
+                onChange={(event) => setNewTopicTitle(event.target.value)}
+                placeholder={t("chat.newTopicPlaceholder")}
+                disabled={creatingTopic}
+                aria-label={t("chat.newTopicAria")}
+                autoFocus
+              />
+              <Button
+                type="button"
+                className="secondary"
+                disabled={creatingTopic || newTopicTitle.trim().length === 0}
+                onClick={() => void handleCreateTopic()}
+              >
+                {creatingTopic ? t("chat.loading") : t("chat.createTopic")}
+              </Button>
+              <Button
+                type="button"
+                className="secondary tiny"
+                disabled={creatingTopic}
+                onClick={() => {
+                  setNewTopicTitle("");
+                  setTopicCreateOpen(false);
+                }}
+              >
+                {t("chat.editTopicCancel")}
+              </Button>
+            </>
+          ) : null}
           {markReadStatusText ? <div className="chat-topic-read-status" role="status" aria-live="polite">{markReadStatusText}</div> : null}
           {editingTopicStatusText ? <div className="chat-topic-read-status" role="status" aria-live="polite">{editingTopicStatusText}</div> : null}
         </div>

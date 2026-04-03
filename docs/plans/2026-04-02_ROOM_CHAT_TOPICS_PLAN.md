@@ -74,8 +74,11 @@ Scope: единая модель комнатного чата с темами, 
 - 2026-04-03: Stage 2/3 расширен: политики вложений усилены (тип+размер на upload init/finalize), `message_attachments.type` расширен до `image|document|audio`, web chat отображает document/audio вложения как downloadable элементы.
 - 2026-04-03: Stage 3 расширен: в composer добавлен file picker для вложений (image/document/audio) с policy-aware ошибками по размеру/типу, inline удалением выбранного файла и поддержкой upload в topic-режиме.
 - 2026-04-03: Stage 2/3 расширен: добавлен server-level mute/timeout (`POST/DELETE /v1/servers/:serverId/mutes*`) с enforcement в send transport (WS/topic/upload), audit/inbox событиями и единым `ServerMemberMuted` отказом.
-- 2026-04-03: Stage 4 проверка запущена в test через GitOps (`deploy-test-and-smoke`), деплой успешен, но postdeploy gate упал на внешнем TURN TLS check (`gismalink.art:5349`), rollout помечен fail до стабилизации gate/переопределения smoke-профиля.
+- 2026-04-03: Stage 4 проверка запущена в test через GitOps (`deploy-test-and-smoke`), деплой успешен, но postdeploy gate упал на внешнем TURN TLS check (`TURN_CERT_DOMAIN:5349` из server env), rollout помечен fail до стабилизации gate/переопределения smoke-профиля.
 - 2026-04-03: В test раскатан `origin/feature/room-chat-topics-v1` на SHA `77b3822`; последние локальные изменения ветки еще не зафиксированы в git ref и не проверены в test.
+- 2026-04-03: В test повторно раскатана актуальная ветка на SHA `d6ba606`; фиксирован web runtime crash (`activeTopicId is not defined`) и обновлен realtime smoke на поддержку `chat.message.created`.
+- 2026-04-03: Postdeploy smoke в non-strict режиме (`SMOKE_TURN_TLS_STRICT=0`) прошел до конца (`SMOKE_STATUS=pass`), но строгий gate `deploy-test-and-smoke` все еще падает на внешнем TURN TLS check (`TURN_CERT_DOMAIN:5349`).
+- 2026-04-03: Stage 4 повторно проверен в test на SHA `bd6439c`; `deploy-test-and-smoke` завершен успешно (`[deploy-test-smoke] done`), strict TURN TLS gate пройден, RNNoise gate скипнут по новой default-policy (`SMOKE_WEB_RNNOISE_BROWSER=0`).
 
 ## 0) Контекст
 
@@ -297,7 +300,7 @@ Scope: единая модель комнатного чата с темами, 
 
 ### Stage 4 - Test rollout
 
-- [ ] Deploy в test.
+- [x] Deploy в test.
 - [ ] Smoke: create topic -> send -> reply -> mention -> pin.
 - [ ] Smoke: search по теме и комнате.
 - [ ] Smoke: mute работает, критичные упоминания приходят по policy.
