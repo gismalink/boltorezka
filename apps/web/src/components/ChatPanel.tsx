@@ -129,7 +129,6 @@ export function ChatPanel({
   const [searchError, setSearchError] = useState("");
   const [notificationScope, setNotificationScope] = useState<"server" | "topic" | "room">("topic");
   const [notificationMode, setNotificationMode] = useState<"all" | "mentions" | "none">("all");
-  const [notificationAllowCriticalMentions, setNotificationAllowCriticalMentions] = useState(true);
   const [notificationSaving, setNotificationSaving] = useState(false);
   const [notificationStatusText, setNotificationStatusText] = useState("");
   const [inboxLoading, setInboxLoading] = useState(false);
@@ -562,7 +561,7 @@ export function ChatPanel({
         roomId: scopeType === "room" ? roomId : undefined,
         topicId: scopeType === "topic" ? String(activeTopicId || "") : undefined,
         mode: notificationMode,
-        allowCriticalMentions: notificationAllowCriticalMentions,
+        allowCriticalMentions: true,
         muteUntil
       });
       setNotificationStatusText(t("chat.notificationSaved"));
@@ -1801,8 +1800,8 @@ export function ChatPanel({
                 type="button"
                 className="secondary tiny icon-btn chat-topic-create-toggle"
                 onClick={() => setTopicCreateOpen((prev) => !prev)}
-                data-tooltip={t("chat.createTopic")}
-                aria-label={t("chat.createTopic")}
+                data-tooltip={t("chat.createTopicTooltip")}
+                aria-label={t("chat.createTopicTooltip")}
                 aria-expanded={topicCreateOpen}
                 aria-controls="chat-topic-create-popup"
               >
@@ -1849,7 +1848,7 @@ export function ChatPanel({
               {sortedTopics.length > 0 ? (
                 sortedTopics.map((topic) => {
                   const unreadCount = getTopicUnreadCount(topic);
-                  const isActiveTab = topic.id === activeTopicId;
+                  const isActiveTab = String(topic.id || "").trim() === String(activeTopicId || "").trim();
 
                   return (
                     <Button
@@ -1870,6 +1869,19 @@ export function ChatPanel({
               ) : (
                 <span className="muted">{t("chat.topicFilterEmpty")}</span>
               )}
+              {hasTopics ? (
+                <Button
+                  type="button"
+                  className="secondary tiny chat-topic-tab"
+                  onClick={openTopicPalette}
+                  aria-haspopup="dialog"
+                  aria-expanded={topicPaletteOpen}
+                  aria-controls="chat-topic-palette-dialog"
+                  aria-label={t("chat.topicPaletteOpen")}
+                >
+                  ...
+                </Button>
+              ) : null}
             </div>
           </div>
         ) : null}
@@ -1943,15 +1955,6 @@ export function ChatPanel({
             <Button type="button" className="secondary tiny" onClick={() => void updateNotificationSettings(buildMuteUntilIso("forever"))} disabled={notificationSaving}>{t("chat.notificationMuteForever")}</Button>
             <Button type="button" className="secondary tiny" onClick={() => void updateNotificationSettings(null)} disabled={notificationSaving}>{t("chat.notificationUnmute")}</Button>
           </div>
-          <label className="chat-notification-row chat-notification-exception-row">
-            <input
-              type="checkbox"
-              checked={notificationAllowCriticalMentions}
-              onChange={(event) => setNotificationAllowCriticalMentions(event.target.checked)}
-              disabled={notificationSaving}
-            />
-            <span>{t("chat.notificationCriticalMentionsException")}</span>
-          </label>
           <div className="chat-notification-row chat-inbox-actions-row">
             <span className="chat-topic-label">{t("chat.inboxTitle")}</span>
             <Button type="button" className="secondary tiny" onClick={() => void loadInbox()} disabled={inboxLoading}>
@@ -2022,17 +2025,6 @@ export function ChatPanel({
             disabled={roomUnreadCount === 0 || markReadSaving}
           >
             {t("chat.markRoomRead")}
-          </Button>
-          <Button
-            type="button"
-            className="secondary tiny"
-            onClick={openTopicPalette}
-            disabled={!hasTopics}
-            aria-haspopup="dialog"
-            aria-expanded={topicPaletteOpen}
-            aria-controls="chat-topic-palette-dialog"
-          >
-            {t("chat.topicPaletteOpen")}
           </Button>
           {activeTopicId ? (
             <>

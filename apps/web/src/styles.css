@@ -1510,6 +1510,8 @@ pre {
 
 .chat-topic-tab-active {
   border-color: var(--pixel-accent);
+  background: color-mix(in srgb, var(--pixel-accent) 20%, var(--pixel-panel) 80%);
+  color: var(--pixel-text-bright);
   box-shadow: inset 0 0 0 1px var(--pixel-accent);
 }
 

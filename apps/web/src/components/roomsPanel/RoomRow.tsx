@@ -367,6 +367,13 @@ export function RoomRow({
 
           onOpenRoomChat(room.slug);
         }}
+        onContextMenu={(event) => {
+          if (!canCreateRooms) {
+            return;
+          }
+          event.preventDefault();
+          onOpenChannelSettingsPopup(room);
+        }}
       >
         <i className={`bi ${ROOM_KIND_ICON_CLASS[room.kind]}`} aria-hidden="true" />
         <span>{room.title}</span>
@@ -389,11 +396,11 @@ export function RoomRow({
           <button
             type="button"
             className="secondary icon-btn tiny channel-action-btn"
-            data-tooltip={t("rooms.configChannel")}
-            aria-label={t("rooms.configChannel")}
+            data-tooltip={t("rooms.roomContextMenu")}
+            aria-label={t("rooms.roomContextMenu")}
             onClick={() => onOpenChannelSettingsPopup(room)}
           >
-            <i className="bi bi-gear" aria-hidden="true" />
+            <i className="bi bi-three-dots" aria-hidden="true" />
           </button>
           <PopupPortal
             open={channelSettingsPopupOpenId === room.id}
@@ -560,6 +567,13 @@ export function RoomRow({
                   <button
                     type="button"
                     className="secondary clear-action-btn"
+                    onClick={() => onOpenRoomChat(room.slug)}
+                  >
+                    <i className="bi bi-book" aria-hidden="true" /> {t("rooms.markAsRead")}
+                  </button>
+                  <button
+                    type="button"
+                    className="secondary clear-action-btn"
                     onClick={() => onRequestClearChannel(room)}
                   >
                     <i className="bi bi-eraser" aria-hidden="true" /> {t("rooms.clearChat")}
@@ -569,7 +583,7 @@ export function RoomRow({
                     className="secondary delete-action-btn"
                     onClick={() => onRequestArchiveChannel(room)}
                   >
-                    <i className="bi bi-archive" aria-hidden="true" /> {t("rooms.archiveChannel")}
+                    <i className="bi bi-archive" aria-hidden="true" /> {t("rooms.deleteChannel")}
                   </button>
                 </div>
               </form>
