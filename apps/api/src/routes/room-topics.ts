@@ -14,6 +14,7 @@ import {
   deleteTopicMessage,
   editTopicMessage,
   listTopicMessages,
+  markTopicRead,
   replyTopicMessage,
   setTopicMessagePinned,
   setTopicMessageReaction
@@ -27,7 +28,8 @@ import type {
   TopicMessageReactionResponse,
   TopicMessageReplyResponse,
   TopicMessageUpdateResponse,
-  TopicMessagesResponse
+  TopicMessagesResponse,
+  TopicReadResponse
 } from "../api-contract.types.ts";
 
 const roomParamsSchema = z.object({
@@ -83,6 +85,10 @@ const editMessageSchema = z.object({
 
 const reactionBodySchema = z.object({
   emoji: z.string().trim().min(1).max(32)
+});
+
+const markTopicReadSchema = z.object({
+  lastReadMessageId: z.string().uuid().optional()
 });
 
 function sendDomainError(reply: { code: (statusCode: number) => { send: (payload: unknown) => unknown } }, error: unknown) {
@@ -894,6 +900,59 @@ export async function roomTopicsRoutes(fastify: FastifyInstance) {
           emoji: result.emoji,
           userId: result.userId,
           active: result.active
+        };
+
+        return reply.code(200).send(response);
+      } catch (error) {
+        const handled = sendDomainError(reply, error);
+        if (handled) {
+          return handled;
+        }
+        throw error;
+      }
+    }
+  );
+
+  fastify.post<{ Params: { topicId: string }; Body: unknown }>(
+    "/v1/topics/:topicId/read",
+    {
+      preHandler: [requireAuth, requireServiceAccess, loadCurrentUser]
+    },
+    async (request, reply) => {
+      const parsedParams = topicParamsSchema.safeParse(request.params);
+      if (!parsedParams.success) {
+        return reply.code(400).send({ error: "ValidationError", issues: parsedParams.error.flatten() });
+      }
+
+      const parsedBody = markTopicReadSchema.safeParse(request.body || {});
+      if (!parsedBody.success) {
+        return reply.code(400).send({ error: "ValidationError", issues: parsedBody.error.flatten() });
+      }
+
+      const userId = String(request.currentUser?.id || "").trim();
+
+      try {
+        const read = await markTopicRead({
+          topicId: parsedParams.data.topicId,
+          userId,
+          lastReadMessageId: parsedBody.data.lastReadMessageId || null
+        });
+
+        broadcastRealtimeEnvelope({
+          type: "chat.topic.read",
+          payload: {
+            roomId: read.roomId,
+            topicId: read.topicId,
+            userId,
+            lastReadMessageId: read.lastReadMessageId,
+            lastReadAt: read.lastReadAt
+          }
+        });
+
+        const response: TopicReadResponse = {
+          topicId: read.topicId,
+          lastReadMessageId: read.lastReadMessageId,
+          lastReadAt: read.lastReadAt
         };
 
         return reply.code(200).send(response);

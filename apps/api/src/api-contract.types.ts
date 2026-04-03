@@ -220,6 +220,27 @@ export type SearchMessagesResponse = {
   };
 };
 
+export type NotificationSettingsResponse = {
+  settings: {
+    id: string;
+    userId: string;
+    scopeType: "server" | "room" | "topic";
+    serverId: string | null;
+    roomId: string | null;
+    topicId: string | null;
+    mode: "all" | "mentions" | "none";
+    muteUntil: string | null;
+    createdAt: string;
+    updatedAt: string;
+  };
+};
+
+export type TopicReadResponse = {
+  topicId: string;
+  lastReadMessageId: string | null;
+  lastReadAt: string;
+};
+
 export type AdminUsersResponse = {
   users: UserRow[];
 };

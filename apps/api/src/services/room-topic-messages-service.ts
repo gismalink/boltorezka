@@ -688,3 +688,51 @@ export async function setTopicMessageReaction(input: {
     active: input.active
   };
 }
+
+export async function markTopicRead(input: {
+  topicId: string;
+  userId: string;
+  lastReadMessageId?: string | null;
+}): Promise<{
+  roomId: string;
+  topicId: string;
+  lastReadMessageId: string | null;
+  lastReadAt: string;
+}> {
+  const topic = await loadTopicWithRoom(input.topicId);
+  await ensureTopicReadAccess(topic, input.userId);
+
+  if (input.lastReadMessageId) {
+    const messageCheck = await db.query(
+      `SELECT 1
+       FROM messages
+       WHERE id = $1
+         AND topic_id = $2
+       LIMIT 1`,
+      [input.lastReadMessageId, input.topicId]
+    );
+
+    if ((messageCheck.rowCount || 0) === 0) {
+      throw new Error("message_not_found");
+    }
+  }
+
+  const upserted = await db.query<{ last_read_message_id: string | null; last_read_at: string }>(
+    `INSERT INTO room_reads (user_id, room_id, topic_id, last_read_message_id, last_read_at)
+     VALUES ($1, $2, $3, $4, NOW())
+     ON CONFLICT (user_id, topic_id)
+     DO UPDATE SET
+       room_id = EXCLUDED.room_id,
+       last_read_message_id = EXCLUDED.last_read_message_id,
+       last_read_at = NOW()
+     RETURNING last_read_message_id, last_read_at`,
+    [input.userId, topic.room_id, input.topicId, input.lastReadMessageId || null]
+  );
+
+  return {
+    roomId: topic.room_id,
+    topicId: input.topicId,
+    lastReadMessageId: upserted.rows[0]?.last_read_message_id || null,
+    lastReadAt: String(upserted.rows[0]?.last_read_at || new Date().toISOString())
+  };
+}
