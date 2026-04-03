@@ -11,7 +11,7 @@
 | API smoke | `SMOKE_API=1 npm run check:quick` | Recommended |
 | API+SSO smoke | `SMOKE_API=1 SMOKE_SSO=1 SMOKE_API_URL=https://test.datowave.com npm run check:quick` | Recommended |
 | Auth session lifecycle smoke (refresh/logout/revoke) | `SMOKE_TEST_BEARER_TOKEN=<sid-token> SMOKE_API_URL=https://test.datowave.com npm run smoke:auth:session` | Recommended |
-| RNNoise browser smoke (voice settings on/off) | `SMOKE_TEST_BEARER_TOKEN=<token> SMOKE_WEB_BASE_URL=https://test.datowave.com npm run smoke:web:rnnoise:browser` | Recommended |
+| RNNoise browser smoke (voice settings on/off) | `SMOKE_TEST_BEARER_TOKEN=<token> SMOKE_WEB_BASE_URL=https://test.datowave.com npm run smoke:web:rnnoise:browser` | Optional canary (feature currently disabled by default) |
 | Desktop foundation smoke (Electron shell) | `npm run desktop:smoke` | Recommended for desktop feature branches |
 | Desktop runtime smoke (Electron + runtime markers) | `SMOKE_WEB_BASE_URL=https://test.datowave.com npm run smoke:desktop:runtime` | Recommended for desktop feature branches |
 | Desktop reconnect smoke (Electron + network flap + reload) | `SMOKE_WEB_BASE_URL=https://test.datowave.com npm run smoke:desktop:reconnect` | Recommended for desktop feature branches |
@@ -24,7 +24,7 @@
 |---|---|---|
 | Deploy + postdeploy smoke | `TEST_REF=origin/<branch_or_main> npm run deploy:test:smoke` | Yes |
 | API/Web contract smoke in postdeploy | included in `deploy:test:smoke` (`smoke:sso` + `smoke:api` + `smoke:auth:session` + `smoke:web:version-cache` + `smoke:realtime`), bearer auto-generated server-side from smoke user + JWT secret (`JWT_SECRET`/`TEST_JWT_SECRET`/api container env fallback); `smoke:auth:session` runs as `skip`, if token has no `sid` claim | Yes |
-| RNNoise browser gate in postdeploy | included in `deploy:test:smoke` as `smoke:web:rnnoise:browser`; summary field `web_rnnoise` (`pass/skip`) | Yes for RNNoise canary |
+| RNNoise browser gate in postdeploy | included in `deploy:test:smoke` as `smoke:web:rnnoise:browser`; summary field `web_rnnoise` (`pass/skip`), default `skip` (`SMOKE_WEB_RNNOISE_BROWSER=0`) | Optional canary (`SMOKE_WEB_RNNOISE_BROWSER=1`) |
 | Browser media transport + one-way gate (LiveKit profile) | included in `deploy:test:livekit` via `SMOKE_REALTIME_MEDIA=1` and `SMOKE_FAIL_ON_ONE_WAY=1`; strict mode default: `SMOKE_REALTIME_MEDIA_STRICT=1`; transient retry enabled by default (`SMOKE_REALTIME_MEDIA_RETRIES=2`, `SMOKE_REALTIME_MEDIA_RETRY_DELAY_SEC=5`), websocket readiness timeout increased (`SMOKE_RTC_WS_READY_TIMEOUT_MS=35000`), anti-loop thresholds enabled by default (`SMOKE_RTC_MAX_RELAYED_OFFERS=40`, `SMOKE_RTC_MAX_RELAYED_ANSWERS=40`, `SMOKE_RTC_MAX_RENEGOTIATION_EVENTS=80`), emergency bypass only: `SMOKE_REALTIME_MEDIA_STRICT=0` | Yes |
 | TURN TLS handshake gate | included in postdeploy smoke (`SMOKE_TURN_TLS_STATUS`), strict by default (`SMOKE_TURN_TLS_STRICT=1`) | Yes |
 | TURN allocation failures metric | included in postdeploy smoke summary (`SMOKE_TURN_ALLOCATION_FAILURES`, `SMOKE_TURN_ALLOCATION_STATUS`) from TURN logs (`Cannot create socket`/`error 508` patterns); optional strict threshold `SMOKE_TURN_ALLOCATION_FAIL_THRESHOLD` | Yes |
