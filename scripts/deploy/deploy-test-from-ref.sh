@@ -83,6 +83,15 @@ fi
 
 cd "$REPO_DIR"
 
+LAST_DEPLOY_FILE=".deploy/last-deploy-test.env"
+PREV_DEPLOY_SHA=""
+if [[ -f "$LAST_DEPLOY_FILE" ]]; then
+  set +u
+  source "$LAST_DEPLOY_FILE"
+  set -u
+  PREV_DEPLOY_SHA="${DEPLOY_SHA:-}"
+fi
+
 echo "[deploy-test] repo: $REPO_DIR"
 echo "[deploy-test] fetch ref: $GIT_REF"
 git fetch --all --tags --prune
