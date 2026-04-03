@@ -1545,18 +1545,30 @@ pre {
   position: fixed;
   z-index: 1200;
   display: grid;
-  gap: var(--space-2xs);
-  min-width: 200px;
-  padding: var(--space-xs);
-  border: var(--border-thin) solid color-mix(in srgb, var(--pixel-neon-cyan) 70%, var(--pixel-border) 30%);
-  background: color-mix(in srgb, var(--pixel-panel) 90%, #000 10%);
-  box-shadow: 2px 2px 0 var(--pixel-hard-shadow);
-  transform: translate(4px, 4px);
+  gap: var(--space-xs);
+  min-width: min(360px, 92vw);
 }
 
 .chat-topic-context-menu .ui-btn {
   width: 100%;
   text-align: left;
+}
+
+.chat-topic-context-rename-block {
+  display: grid;
+  gap: var(--space-xs);
+}
+
+.chat-topic-context-rename-actions {
+  display: flex;
+  gap: var(--space-xs);
+}
+
+.chat-topic-context-section {
+  display: grid;
+  gap: var(--space-xs);
+  padding-top: var(--space-2xs);
+  border-top: var(--border-thin) solid color-mix(in srgb, var(--pixel-border) 78%, transparent 22%);
 }
 
 .chat-hotkeys-hint {

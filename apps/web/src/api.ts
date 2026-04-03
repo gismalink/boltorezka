@@ -396,6 +396,12 @@ export const api = {
       token,
       withJsonBody("POST")
     ),
+  deleteTopic: (token: string, topicId: string) =>
+    fetchJson<{ topicId: string; roomId: string; roomSlug: string; deletedMessagesCount: number; deletedAt: string }>(
+      withId(endpoints.topics, topicId),
+      token,
+      withJsonBody("DELETE")
+    ),
   topicMessages: (
     token: string,
     topicId: string,

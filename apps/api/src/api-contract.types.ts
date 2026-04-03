@@ -105,6 +105,14 @@ export type RoomTopicResponse = {
   topic: RoomTopicItem;
 };
 
+export type RoomTopicDeleteResponse = {
+  topicId: string;
+  roomId: string;
+  roomSlug: string;
+  deletedMessagesCount: number;
+  deletedAt: string;
+};
+
 export type TopicMessagesResponse = {
   room: RoomRow;
   topic: {

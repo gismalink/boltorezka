@@ -12,18 +12,7 @@ type TopicToolbarProps = {
   markReadSaving: boolean;
   markTopicRead: (topicId: string, lastReadMessageId?: string) => Promise<void>;
   markRoomRead: () => Promise<void>;
-  editingTopicId: string | null;
-  editingTopicTitle: string;
-  setEditingTopicTitle: (value: string) => void;
-  editingTopicSaving: boolean;
-  handleSaveEditTopic: () => Promise<void>;
-  handleCancelEditTopic: () => void;
-  handleStartEditTopic: () => void;
-  handleArchiveTopic: () => Promise<void>;
-  archivingTopicId: string | null;
-  activeTopicIsArchived: boolean;
   markReadStatusText: string;
-  editingTopicStatusText: string;
 };
 
 export function TopicToolbar({
@@ -38,18 +27,7 @@ export function TopicToolbar({
   markReadSaving,
   markTopicRead,
   markRoomRead,
-  editingTopicId,
-  editingTopicTitle,
-  setEditingTopicTitle,
-  editingTopicSaving,
-  handleSaveEditTopic,
-  handleCancelEditTopic,
-  handleStartEditTopic,
-  handleArchiveTopic,
-  archivingTopicId,
-  activeTopicIsArchived,
-  markReadStatusText,
-  editingTopicStatusText
+  markReadStatusText
 }: TopicToolbarProps) {
   return (
     <div className="chat-topic-row mb-3 flex flex-wrap items-center gap-2">
@@ -84,49 +62,7 @@ export function TopicToolbar({
       >
         {t("chat.markRoomRead")}
       </Button>
-      {activeTopicId ? (
-        <>
-          {editingTopicId === activeTopicId ? (
-            <>
-              <input
-                type="text"
-                className="chat-topic-create-input"
-                value={editingTopicTitle}
-                onChange={(event) => setEditingTopicTitle(event.target.value)}
-                placeholder={t("chat.editTopicPlaceholder")}
-                disabled={editingTopicSaving}
-                aria-label={t("chat.editTopicPlaceholder")}
-              />
-              <Button
-                type="button"
-                className="secondary tiny"
-                disabled={editingTopicSaving || editingTopicTitle.trim().length === 0}
-                onClick={() => void handleSaveEditTopic()}
-              >
-                {editingTopicSaving ? t("chat.loading") : t("chat.editTopicSave")}
-              </Button>
-              <Button type="button" className="secondary tiny" onClick={handleCancelEditTopic} disabled={editingTopicSaving}>
-                {t("chat.editTopicCancel")}
-              </Button>
-            </>
-          ) : (
-            <Button type="button" className="secondary tiny" onClick={handleStartEditTopic}>
-              {t("chat.editTopic")}
-            </Button>
-          )}
-          <Button
-            type="button"
-            className="secondary tiny"
-            onClick={() => void handleArchiveTopic()}
-            disabled={Boolean(archivingTopicId)}
-          >
-            {activeTopicIsArchived ? t("chat.unarchiveTopic") : t("chat.archiveTopic")}
-          </Button>
-          {activeTopicIsArchived ? <span className="chat-topic-archived-badge">{t("chat.topicArchivedBadge")}</span> : null}
-        </>
-      ) : null}
       {markReadStatusText ? <div className="chat-topic-read-status" role="status" aria-live="polite">{markReadStatusText}</div> : null}
-      {editingTopicStatusText ? <div className="chat-topic-read-status" role="status" aria-live="polite">{editingTopicStatusText}</div> : null}
     </div>
   );
 }

@@ -39,6 +39,11 @@ type ArchiveRoomTopicInput = {
   archived: boolean;
 };
 
+type DeleteRoomTopicInput = {
+  topicId: string;
+  actorUserId: string;
+};
+
 type RoomAccessRow = {
   id: string;
   server_id: string | null;
@@ -356,4 +361,60 @@ export async function setRoomTopicArchived(input: ArchiveRoomTopicInput): Promis
   }
 
   return mapTopic(updated);
+}
+
+export async function deleteRoomTopicWithMessages(input: DeleteRoomTopicInput): Promise<{ topic: TopicListItem; deletedMessagesCount: number }> {
+  const topicResult = await db.query<RoomTopicRow>(
+    `SELECT id, room_id, slug, title, created_by, position, is_pinned, archived_at, created_at, updated_at
+     FROM room_topics
+     WHERE id = $1
+     LIMIT 1`,
+    [input.topicId]
+  );
+
+  const topic = topicResult.rows[0];
+  if (!topic) {
+    throw new Error("topic_not_found");
+  }
+
+  await ensureManageAccess(topic.room_id, input.actorUserId);
+
+  const client = await db.connect();
+  try {
+    await client.query("BEGIN");
+
+    const deletedMessages = await client.query<{ deleted_count: string }>(
+      `WITH deleted AS (
+         DELETE FROM messages
+         WHERE topic_id = $1
+         RETURNING 1
+       )
+       SELECT COUNT(*)::text AS deleted_count FROM deleted`,
+      [input.topicId]
+    );
+
+    const deletedTopic = await client.query<RoomTopicRow>(
+      `DELETE FROM room_topics
+       WHERE id = $1
+       RETURNING id, room_id, slug, title, created_by, position, is_pinned, archived_at, created_at, updated_at`,
+      [input.topicId]
+    );
+
+    const removedTopic = deletedTopic.rows[0];
+    if (!removedTopic) {
+      throw new Error("topic_delete_failed");
+    }
+
+    await client.query("COMMIT");
+
+    return {
+      topic: mapTopic(removedTopic),
+      deletedMessagesCount: Number(deletedMessages.rows[0]?.deleted_count || 0)
+    };
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
 }

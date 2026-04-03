@@ -20,7 +20,6 @@ type NotificationPanelProps = {
   setNotificationMode: (value: "all" | "mentions" | "none") => void;
   notificationSaving: boolean;
   updateNotificationSettings: (muteUntil: string | null) => Promise<void>;
-  buildMuteUntilIso: (hours: number | "forever") => string;
   inboxLoading: boolean;
   inboxItems: InboxItem[];
   loadInbox: () => Promise<void>;
@@ -39,7 +38,6 @@ export function NotificationPanel({
   setNotificationMode,
   notificationSaving,
   updateNotificationSettings,
-  buildMuteUntilIso,
   inboxLoading,
   inboxItems,
   loadInbox,
@@ -81,14 +79,6 @@ export function NotificationPanel({
         >
           {notificationSaving ? t("chat.loading") : t("chat.notificationSave")}
         </Button>
-      </div>
-      <div className="chat-notification-row chat-notification-mute-row">
-        <span className="chat-topic-label">{t("chat.notificationMute")}</span>
-        <Button type="button" className="secondary tiny" onClick={() => void updateNotificationSettings(buildMuteUntilIso(1))} disabled={notificationSaving}>1h</Button>
-        <Button type="button" className="secondary tiny" onClick={() => void updateNotificationSettings(buildMuteUntilIso(8))} disabled={notificationSaving}>8h</Button>
-        <Button type="button" className="secondary tiny" onClick={() => void updateNotificationSettings(buildMuteUntilIso(24))} disabled={notificationSaving}>24h</Button>
-        <Button type="button" className="secondary tiny" onClick={() => void updateNotificationSettings(buildMuteUntilIso("forever"))} disabled={notificationSaving}>{t("chat.notificationMuteForever")}</Button>
-        <Button type="button" className="secondary tiny" onClick={() => void updateNotificationSettings(null)} disabled={notificationSaving}>{t("chat.notificationUnmute")}</Button>
       </div>
       <div className="chat-notification-row chat-inbox-actions-row">
         <span className="chat-topic-label">{t("chat.inboxTitle")}</span>

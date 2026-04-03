@@ -625,7 +625,7 @@ export function App() {
     t
   });
 
-  const { updateTopic, archiveTopic, unarchiveTopic } = useTopicMutationsAction({
+  const { updateTopic, archiveTopic, unarchiveTopic, deleteTopic } = useTopicMutationsAction({
     token,
     setChatTopics
   });
@@ -966,7 +966,7 @@ export function App() {
     activeChatRoom,
     chatTopics,
     activeChatTopicId, setActiveChatTopicId,
-    createTopic, updateTopic, archiveTopic, unarchiveTopic,
+    createTopic, updateTopic, archiveTopic, unarchiveTopic, deleteTopic,
     messages, messagesHasMore, loadingOlderMessages,
     chatText, pendingChatImageDataUrl,
     pendingChatAttachmentFile,

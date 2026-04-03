@@ -51,6 +51,7 @@ type ChatPanelProps = {
   onUpdateTopic: (topicId: string, title: string) => Promise<void>;
   onArchiveTopic: (topicId: string) => Promise<void>;
   onUnarchiveTopic: (topicId: string) => Promise<void>;
+  onDeleteTopic: (topicId: string) => Promise<void>;
 };
 
 type VideoWindowsOverlayProps = {
@@ -120,6 +121,7 @@ type UseWorkspaceChatVideoPropsInput = {
   updateTopic: (topicId: string, title: string) => Promise<void>;
   archiveTopic: (topicId: string) => Promise<void>;
   unarchiveTopic: (topicId: string) => Promise<void>;
+  deleteTopic: (topicId: string) => Promise<void>;
   userName: string;
   allowVideoStreaming: boolean;
   cameraEnabled: boolean;
@@ -187,6 +189,7 @@ export function useWorkspaceChatVideoProps({
   updateTopic,
   archiveTopic,
   unarchiveTopic,
+  deleteTopic,
   userName,
   allowVideoStreaming,
   cameraEnabled,
@@ -267,7 +270,8 @@ export function useWorkspaceChatVideoProps({
     onToggleThumbsUpReaction: toggleThumbsUpReaction,
     onUpdateTopic: updateTopic,
     onArchiveTopic: archiveTopic,
-    onUnarchiveTopic: unarchiveTopic
+    onUnarchiveTopic: unarchiveTopic,
+    onDeleteTopic: deleteTopic
   };
 
   const videoWindowsOverlayProps: VideoWindowsOverlayProps = {

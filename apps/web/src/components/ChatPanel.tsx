@@ -11,6 +11,7 @@ import { TopicTabsHeader } from "./chatPanel/sections/TopicTabsHeader";
 import { NotificationPanel } from "./chatPanel/sections/NotificationPanel";
 import { TopicToolbar } from "./chatPanel/sections/TopicToolbar";
 import { SearchPanel } from "./chatPanel/sections/SearchPanel";
+import { TopicContextMenu } from "./chatPanel/sections/TopicContextMenu";
 
 type ChatPanelProps = {
   t: (key: string) => string;
@@ -59,17 +60,15 @@ type ChatPanelProps = {
   onUpdateTopic: (topicId: string, title: string) => Promise<void>;
   onArchiveTopic: (topicId: string) => Promise<void>;
   onUnarchiveTopic: (topicId: string) => Promise<void>;
+  onDeleteTopic: (topicId: string) => Promise<void>;
 };
 
 export function ChatPanel({
   t,
   locale,
   currentServerId,
-  roomSlug,
-  roomId,
-  roomTitle,
-  topics,
-  activeTopicId,
+  roomSlug, roomId, roomTitle,
+  topics,  activeTopicId,
   authToken,
   messages,
   currentUserId,
@@ -104,12 +103,12 @@ export function ChatPanel({
   onToggleThumbsUpReaction,
   onUpdateTopic,
   onArchiveTopic,
-  onUnarchiveTopic
+  onUnarchiveTopic,
+  onDeleteTopic
 }: ChatPanelProps) {
   const [newTopicTitle, setNewTopicTitle] = useState("");
   const [topicCreateOpen, setTopicCreateOpen] = useState(false);
   const [creatingTopic, setCreatingTopic] = useState(false);
-  const [editingTopicId, setEditingTopicId] = useState<string | null>(null);
   const [editingTopicTitle, setEditingTopicTitle] = useState("");
   const [editingTopicSaving, setEditingTopicSaving] = useState(false);
   const [editingTopicStatusText, setEditingTopicStatusText] = useState("");
@@ -168,7 +167,7 @@ export function ChatPanel({
   } | null>(null);
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
   const [contextMenuMessageId, setContextMenuMessageId] = useState<string | null>(null);
-  const [topicContextMenu, setTopicContextMenu] = useState<{ topicId: string; x: number; y: number } | null>(null);
+  const [topicContextMenu, setTopicContextMenu] = useState<{ topicId: string; x: number; y: number; renameOpen: boolean } | null>(null);
   const [hotkeyStatusText, setHotkeyStatusText] = useState("");
   const [resolvedAttachmentImageUrls, setResolvedAttachmentImageUrls] = useState<Record<string, string>>({});
   const resolvedAttachmentImageUrlsRef = useRef<Record<string, string>>({});
@@ -1224,61 +1223,26 @@ export function ChatPanel({
   const activeTopic = useMemo(() => topics.find((topic) => topic.id === activeTopicId) ?? null, [topics, activeTopicId]);
   const activeTopicIsArchived = Boolean(activeTopic?.archivedAt);
 
-  const handleStartEditTopic = () => {
-    if (!activeTopic) {
+  const updateTopicMuteSettings = async (topicId: string, muteUntil: string | null) => {
+    if (!authToken || notificationSaving || !topicId) {
       return;
     }
 
-    setEditingTopicId(activeTopic.id);
-    setEditingTopicTitle(activeTopic.title);
-    setEditingTopicStatusText("");
-  };
-
-  const handleCancelEditTopic = () => {
-    setEditingTopicId(null);
-    setEditingTopicTitle("");
-    setEditingTopicStatusText("");
-  };
-
-  const handleSaveEditTopic = async () => {
-    const targetId = String(editingTopicId || "").trim();
-    const trimmedTitle = editingTopicTitle.trim();
-    if (!targetId || !trimmedTitle || editingTopicSaving) {
-      return;
-    }
-
-    setEditingTopicSaving(true);
+    setNotificationSaving(true);
     setEditingTopicStatusText("");
     try {
-      await onUpdateTopic(targetId, trimmedTitle);
-      setEditingTopicId(null);
-      setEditingTopicTitle("");
-      setEditingTopicStatusText(t("chat.editTopicSuccess"));
+      await api.updateNotificationSettings(authToken, {
+        scopeType: "topic",
+        topicId,
+        mode: notificationMode,
+        allowCriticalMentions: true,
+        muteUntil
+      });
+      setEditingTopicStatusText(t("chat.notificationSaved"));
     } catch {
-      setEditingTopicStatusText(t("chat.editTopicError"));
+      setEditingTopicStatusText(t("chat.notificationSaveError"));
     } finally {
-      setEditingTopicSaving(false);
-    }
-  };
-
-  const handleArchiveTopic = async () => {
-    if (!activeTopic || archivingTopicId) {
-      return;
-    }
-
-    setArchivingTopicId(activeTopic.id);
-    try {
-      if (activeTopic.archivedAt) {
-        await onUnarchiveTopic(activeTopic.id);
-        setEditingTopicStatusText(t("chat.unarchiveTopicSuccess"));
-      } else {
-        await onArchiveTopic(activeTopic.id);
-        setEditingTopicStatusText(t("chat.archiveTopicSuccess"));
-      }
-    } catch {
-      setEditingTopicStatusText(activeTopic.archivedAt ? t("chat.unarchiveTopicError") : t("chat.archiveTopicError"));
-    } finally {
-      setArchivingTopicId(null);
+      setNotificationSaving(false);
     }
   };
 
@@ -1773,10 +1737,10 @@ export function ChatPanel({
   const openTopicContextMenu = (topicId: string, event: MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
     event.stopPropagation();
-    setTopicContextMenu({ topicId, x: event.clientX, y: event.clientY });
+    setTopicContextMenu({ topicId, x: event.clientX, y: event.clientY, renameOpen: false });
   };
 
-  const runTopicMenuAction = async (action: "read" | "edit" | "archive") => {
+  const runTopicMenuAction = async (action: "read" | "edit" | "archive" | "delete") => {
     const targetTopicId = String(topicContextMenu?.topicId || "").trim();
     if (!targetTopicId) {
       setTopicContextMenu(null);
@@ -1796,10 +1760,43 @@ export function ChatPanel({
     }
 
     if (action === "edit") {
-      onSelectTopic(targetTopic.id);
-      setEditingTopicId(targetTopic.id);
-      setEditingTopicTitle(targetTopic.title);
+      if (!topicContextMenu?.renameOpen) {
+        onSelectTopic(targetTopic.id);
+        setEditingTopicTitle(targetTopic.title);
+        setEditingTopicStatusText("");
+        setTopicContextMenu((prev) => (prev ? { ...prev, renameOpen: true } : prev));
+        return;
+      }
+
+      const trimmedTitle = editingTopicTitle.trim();
+      if (!trimmedTitle || editingTopicSaving) {
+        return;
+      }
+
+      setEditingTopicSaving(true);
       setEditingTopicStatusText("");
+      try {
+        await onUpdateTopic(targetTopic.id, trimmedTitle);
+        setEditingTopicTitle("");
+        setEditingTopicStatusText(t("chat.editTopicSuccess"));
+      } catch {
+        setEditingTopicStatusText(t("chat.editTopicError"));
+      } finally {
+        setEditingTopicSaving(false);
+      }
+      setTopicContextMenu(null);
+      return;
+    }
+
+    if (action === "delete") {
+      if (window.confirm(t("chat.deleteTopicConfirm"))) {
+        try {
+          await onDeleteTopic(targetTopic.id);
+          setEditingTopicStatusText(t("chat.deleteTopicSuccess"));
+        } catch {
+          setEditingTopicStatusText(t("chat.deleteTopicError"));
+        }
+      }
       setTopicContextMenu(null);
       return;
     }
@@ -1914,7 +1911,6 @@ export function ChatPanel({
           setNotificationMode={setNotificationMode}
           notificationSaving={notificationSaving}
           updateNotificationSettings={updateNotificationSettings}
-          buildMuteUntilIso={buildMuteUntilIso}
           inboxLoading={inboxLoading}
           inboxItems={inboxItems}
           loadInbox={loadInbox}
@@ -1938,20 +1934,10 @@ export function ChatPanel({
           markReadSaving={markReadSaving}
           markTopicRead={markTopicRead}
           markRoomRead={markRoomRead}
-          editingTopicId={editingTopicId}
-          editingTopicTitle={editingTopicTitle}
-          setEditingTopicTitle={setEditingTopicTitle}
-          editingTopicSaving={editingTopicSaving}
-          handleSaveEditTopic={handleSaveEditTopic}
-          handleCancelEditTopic={handleCancelEditTopic}
-          handleStartEditTopic={handleStartEditTopic}
-          handleArchiveTopic={handleArchiveTopic}
-          archivingTopicId={archivingTopicId}
-          activeTopicIsArchived={activeTopicIsArchived}
           markReadStatusText={markReadStatusText}
-          editingTopicStatusText={editingTopicStatusText}
         />
       ) : null}
+      {editingTopicStatusText ? <div className="chat-topic-read-status mb-2" role="status" aria-live="polite">{editingTopicStatusText}</div> : null}
       {hasActiveRoom ? (
         <SearchPanel
           t={t}
@@ -2366,7 +2352,7 @@ export function ChatPanel({
           type="button"
           className="secondary"
           onClick={() => attachmentInputRef.current?.click()}
-          disabled={!hasActiveRoom}
+          disabled={!hasActiveRoom || activeTopicIsArchived}
           aria-label={t("chat.attach")}
           title={t("chat.attach")}
         >
@@ -2378,8 +2364,8 @@ export function ChatPanel({
           onPaste={onChatPaste}
           onKeyDown={onChatInputKeyDown}
           rows={2}
-          placeholder={hasActiveRoom ? t("chat.typePlaceholder") : t("chat.selectChannelPlaceholder")}
-          disabled={!hasActiveRoom}
+          placeholder={hasActiveRoom ? (activeTopicIsArchived ? t("chat.topicArchivedReadOnly") : t("chat.typePlaceholder")) : t("chat.selectChannelPlaceholder")}
+          disabled={!hasActiveRoom || activeTopicIsArchived}
           aria-label={t("chat.composeAria")}
         />
         {composePreviewImage ? (
@@ -2412,7 +2398,7 @@ export function ChatPanel({
             </Button>
           </div>
         ) : null}
-        <Button type="submit" disabled={!hasActiveRoom}>{editingMessageId ? t("chat.saveEdit") : t("chat.send")}</Button>
+        <Button type="submit" disabled={!hasActiveRoom || activeTopicIsArchived}>{editingMessageId ? t("chat.saveEdit") : t("chat.send")}</Button>
       </form>
       {previewImageUrl && typeof document !== "undefined"
         ? createPortal(
@@ -2512,21 +2498,30 @@ export function ChatPanel({
         : null}
       {topicContextMenu && typeof document !== "undefined"
         ? createPortal(
-          <div
-            className="chat-topic-context-menu"
-            role="menu"
-            style={{ left: `${topicContextMenu.x}px`, top: `${topicContextMenu.y}px` }}
-          >
-            <Button type="button" className="secondary tiny" role="menuitem" onClick={() => void runTopicMenuAction("read")}>
-              {t("chat.markTopicRead")}
-            </Button>
-            <Button type="button" className="secondary tiny" role="menuitem" onClick={() => void runTopicMenuAction("edit")}>
-              {t("chat.editTopic")}
-            </Button>
-            <Button type="button" className="secondary tiny" role="menuitem" onClick={() => void runTopicMenuAction("archive")}>
-              {topics.find((topic) => topic.id === topicContextMenu.topicId)?.archivedAt ? t("chat.unarchiveTopic") : t("chat.archiveTopic")}
-            </Button>
-          </div>,
+          <TopicContextMenu
+            t={t}
+            x={topicContextMenu.x}
+            y={topicContextMenu.y}
+            archived={Boolean(topics.find((topic) => topic.id === topicContextMenu.topicId)?.archivedAt)}
+            saving={editingTopicSaving || Boolean(archivingTopicId) || notificationSaving}
+            renameOpen={Boolean(topicContextMenu.renameOpen)}
+            renameValue={editingTopicTitle}
+            onRenameValueChange={setEditingTopicTitle}
+            onRunAction={runTopicMenuAction}
+            onSetTopicMute={async (muteUntil) => {
+              const targetTopicId = String(topicContextMenu.topicId || "").trim();
+              if (!targetTopicId) {
+                return;
+              }
+              await updateTopicMuteSettings(targetTopicId, muteUntil);
+              setTopicContextMenu(null);
+            }}
+            buildMuteUntilIso={buildMuteUntilIso}
+            onCloseRename={() => {
+              setEditingTopicTitle("");
+              setTopicContextMenu((prev) => (prev ? { ...prev, renameOpen: false } : prev));
+            }}
+          />,
           document.body
         )
         : null}

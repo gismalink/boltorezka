@@ -44,9 +44,20 @@ export function useTopicMutationsAction({ token, setChatTopics }: UseTopicMutati
     );
   }, [token, setChatTopics]);
 
+  const deleteTopic = useCallback(async (topicId: string) => {
+    const normalizedToken = String(token || "").trim();
+    if (!normalizedToken || !topicId) {
+      return;
+    }
+
+    await api.deleteTopic(normalizedToken, topicId);
+    setChatTopics((prev) => prev.filter((topic) => topic.id !== topicId));
+  }, [token, setChatTopics]);
+
   return {
     updateTopic,
     archiveTopic,
-    unarchiveTopic
+    unarchiveTopic,
+    deleteTopic
   };
 }

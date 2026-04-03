@@ -6,6 +6,7 @@ import { broadcastRealtimeEnvelope } from "../realtime-broadcast.js";
 import { buildChatDeletedEnvelope, buildChatEditedEnvelope, buildChatMessageEnvelope } from "../ws-protocol.js";
 import {
   createRoomTopic,
+  deleteRoomTopicWithMessages,
   listRoomTopics,
   setRoomTopicArchived,
   updateRoomTopic
@@ -27,6 +28,7 @@ import {
   emitReplyInboxEvent
 } from "../services/notification-inbox-service.js";
 import type {
+  RoomTopicDeleteResponse,
   RoomTopicResponse,
   RoomTopicsListResponse,
   TopicMessageCreateResponse,
@@ -445,6 +447,62 @@ export async function roomTopicsRoutes(fastify: FastifyInstance) {
         });
 
         const response: RoomTopicResponse = { topic };
+        return reply.code(200).send(response);
+      } catch (error) {
+        const handled = sendDomainError(reply, error);
+        if (handled) {
+          return handled;
+        }
+
+        throw error;
+      }
+    }
+  );
+
+  fastify.delete<{ Params: { topicId: string } }>(
+    "/v1/topics/:topicId",
+    {
+      preHandler: [requireAuth, requireServiceAccess, loadCurrentUser]
+    },
+    async (request, reply) => {
+      const parsedParams = topicParamsSchema.safeParse(request.params);
+      if (!parsedParams.success) {
+        return reply.code(400).send({
+          error: "ValidationError",
+          issues: parsedParams.error.flatten()
+        });
+      }
+
+      const userId = String(request.currentUser?.id || "").trim();
+
+      try {
+        const deleted = await deleteRoomTopicWithMessages({
+          topicId: parsedParams.data.topicId,
+          actorUserId: userId
+        });
+
+        const roomSlug = String((await resolveRoomSlug(deleted.topic.roomId)) || "");
+        const deletedAt = new Date().toISOString();
+
+        broadcastRealtimeEnvelope({
+          type: "chat.topic.deleted",
+          payload: {
+            roomId: deleted.topic.roomId,
+            roomSlug,
+            topicId: deleted.topic.id,
+            actorUserId: userId,
+            deletedMessagesCount: deleted.deletedMessagesCount,
+            ts: deletedAt
+          }
+        });
+
+        const response: RoomTopicDeleteResponse = {
+          topicId: deleted.topic.id,
+          roomId: deleted.topic.roomId,
+          roomSlug,
+          deletedMessagesCount: deleted.deletedMessagesCount,
+          deletedAt
+        };
         return reply.code(200).send(response);
       } catch (error) {
         const handled = sendDomainError(reply, error);

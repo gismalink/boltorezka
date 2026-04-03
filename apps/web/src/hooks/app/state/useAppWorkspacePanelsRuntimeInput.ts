@@ -220,6 +220,7 @@ export function useAppWorkspacePanelsRuntimeInput(params: Record<string, unknown
         updateTopic: p.updateTopic,
         archiveTopic: p.archiveTopic,
         unarchiveTopic: p.unarchiveTopic,
+        deleteTopic: p.deleteTopic,
         allowVideoStreaming: p.allowVideoStreaming,
         cameraEnabled: p.cameraEnabled,
         localVideoStream: p.localVideoStream,
