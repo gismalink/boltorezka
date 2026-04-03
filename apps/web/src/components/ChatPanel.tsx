@@ -1,19 +1,17 @@
 // Purpose: presentation-only chat panel with message timeline, composer, and message-level UI actions.
-import { ClipboardEvent, FormEvent, KeyboardEvent, MouseEvent, ReactNode, RefObject, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
+import { ClipboardEvent, FormEvent, KeyboardEvent, MouseEvent, RefObject, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Message, RoomTopic } from "../domain";
 import { api } from "../api";
 import { getDesktopNotificationBridge } from "../desktopBridge";
-import { Button } from "./uicomponents";
 import { buildChatMessageViewModels } from "../utils/chatMessageViewModel";
 import { useChatTopLazyLoad } from "./chatPanel/hooks/useChatTopLazyLoad";
 import { TopicTabsHeader } from "./chatPanel/sections/TopicTabsHeader";
 import { NotificationPanel } from "./chatPanel/sections/NotificationPanel";
 import { TopicToolbar } from "./chatPanel/sections/TopicToolbar";
 import { SearchPanel } from "./chatPanel/sections/SearchPanel";
-import { TopicContextMenu } from "./chatPanel/sections/TopicContextMenu";
 import { ChatMessageTimeline } from "./chatPanel/sections/ChatMessageTimeline";
 import { ChatComposerSection } from "./chatPanel/sections/ChatComposerSection";
+import { ChatPanelOverlays } from "./chatPanel/sections/ChatPanelOverlays";
 
 type ChatPanelProps = {
   t: (key: string) => string;
@@ -1508,200 +1506,6 @@ export function ChatPanel({
     return `${(normalized / (1024 * 1024)).toFixed(1)} MB`;
   };
 
-  const renderMessageText = (value: string): ReactNode[] => {
-    const text = String(value || "");
-    const urlPattern = /((https?:\/\/|www\.)[^\s<]+)/gi;
-    const mentionPattern = /(^|\s)(@[\p{L}\p{N}._-]{2,32})/gu;
-    const result: ReactNode[] = [];
-    let keyIndex = 0;
-
-    let textCursor = 0;
-    let linkMatch: RegExpExecArray | null;
-    urlPattern.lastIndex = 0;
-
-    while ((linkMatch = urlPattern.exec(text)) !== null) {
-      const raw = linkMatch[0];
-      const start = linkMatch.index;
-      if (start > textCursor) {
-        result.push(text.slice(textCursor, start));
-      }
-
-      let linkText = raw;
-      let trailing = "";
-      while (/[.,!?;:)\]]$/.test(linkText)) {
-        trailing = linkText.slice(-1) + trailing;
-        linkText = linkText.slice(0, -1);
-      }
-
-      if (linkText) {
-        const href = /^https?:\/\//i.test(linkText) ? linkText : `https://${linkText}`;
-        result.push(
-          <a
-            key={`link-${keyIndex}-${start}-${linkText}`}
-            href={href}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="chat-link"
-          >
-            {linkText}
-          </a>
-        );
-        keyIndex += 1;
-      }
-
-      if (trailing) {
-        result.push(trailing);
-      }
-
-      textCursor = start + raw.length;
-    }
-
-    if (textCursor < text.length) {
-      result.push(text.slice(textCursor));
-    }
-
-    const withMentions: ReactNode[] = [];
-    let mentionKeyIndex = 0;
-
-    const pushSegmentWithMentions = (segment: string) => {
-      if (!segment) {
-        return;
-      }
-
-      let cursor = 0;
-      let mentionMatch: RegExpExecArray | null;
-      mentionPattern.lastIndex = 0;
-
-      while ((mentionMatch = mentionPattern.exec(segment)) !== null) {
-        const leading = mentionMatch[1] || "";
-        const mention = mentionMatch[2] || "";
-        const absoluteStart = mentionMatch.index + leading.length;
-
-        if (absoluteStart > cursor) {
-          withMentions.push(segment.slice(cursor, absoluteStart));
-        }
-
-        withMentions.push(
-          <span key={`mention-${mentionKeyIndex}-${absoluteStart}`} className="chat-mention">
-            {mention}
-          </span>
-        );
-        mentionKeyIndex += 1;
-        cursor = absoluteStart + mention.length;
-      }
-
-      if (cursor < segment.length) {
-        withMentions.push(segment.slice(cursor));
-      }
-    };
-
-    (result.length > 0 ? result : [text]).forEach((chunk) => {
-      if (typeof chunk === "string") {
-        pushSegmentWithMentions(chunk);
-        return;
-      }
-
-      withMentions.push(chunk);
-    });
-
-    const withFormatting: ReactNode[] = [];
-    let formatKeyIndex = 0;
-    const formattingPattern = /(\*\*[^*\n]+\*\*|\*[^*\n]+\*|`[^`\n]+`|\|\|[^|\n]+\|\|)/g;
-
-    const pushSegmentWithFormatting = (segment: string) => {
-      if (!segment) {
-        return;
-      }
-
-      let cursor = 0;
-      formattingPattern.lastIndex = 0;
-      let formatMatch: RegExpExecArray | null;
-
-      while ((formatMatch = formattingPattern.exec(segment)) !== null) {
-        const token = formatMatch[0] || "";
-        const start = formatMatch.index;
-        if (start > cursor) {
-          withFormatting.push(segment.slice(cursor, start));
-        }
-
-        if (token.startsWith("**") && token.endsWith("**")) {
-          withFormatting.push(
-            <strong key={`fmt-bold-${formatKeyIndex}-${start}`} className="chat-format-bold">
-              {token.slice(2, -2)}
-            </strong>
-          );
-        } else if (token.startsWith("*") && token.endsWith("*")) {
-          withFormatting.push(
-            <em key={`fmt-italic-${formatKeyIndex}-${start}`} className="chat-format-italic">
-              {token.slice(1, -1)}
-            </em>
-          );
-        } else if (token.startsWith("`") && token.endsWith("`")) {
-          withFormatting.push(
-            <code key={`fmt-code-${formatKeyIndex}-${start}`} className="chat-format-code">
-              {token.slice(1, -1)}
-            </code>
-          );
-        } else if (token.startsWith("||") && token.endsWith("||")) {
-          withFormatting.push(
-            <span key={`fmt-spoiler-${formatKeyIndex}-${start}`} className="chat-format-spoiler">
-              {token.slice(2, -2)}
-            </span>
-          );
-        } else {
-          withFormatting.push(token);
-        }
-
-        formatKeyIndex += 1;
-        cursor = start + token.length;
-      }
-
-      if (cursor < segment.length) {
-        withFormatting.push(segment.slice(cursor));
-      }
-    };
-
-    (withMentions.length > 0 ? withMentions : [text]).forEach((chunk) => {
-      if (typeof chunk === "string") {
-        pushSegmentWithFormatting(chunk);
-        return;
-      }
-
-      withFormatting.push(chunk);
-    });
-
-    return withFormatting.length > 0 ? withFormatting : [text];
-  };
-
-  const extractFirstLinkPreview = (value: string): { href: string; host: string; path: string } | null => {
-    const text = String(value || "");
-    const match = text.match(/((https?:\/\/|www\.)[^\s<]+)/i);
-    if (!match || !match[0]) {
-      return null;
-    }
-
-    let raw = match[0];
-    while (/[.,!?;:)\]]$/.test(raw)) {
-      raw = raw.slice(0, -1);
-    }
-    if (!raw) {
-      return null;
-    }
-
-    const href = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
-    try {
-      const parsed = new URL(href);
-      const normalizedPath = `${parsed.pathname || "/"}${parsed.search || ""}`;
-      return {
-        href,
-        host: parsed.host,
-        path: normalizedPath.length > 72 ? `${normalizedPath.slice(0, 69)}...` : normalizedPath
-      };
-    } catch {
-      return null;
-    }
-  };
-
   const insertMentionToComposer = (userName: string) => {
     const normalizedUserName = String(userName || "").trim();
     if (!normalizedUserName) {
@@ -2035,8 +1839,6 @@ export function ChatPanel({
         markTopicUnreadFromMessage={markTopicUnreadFromMessage}
         markReadSaving={markReadSaving}
         formatMessageTime={formatMessageTime}
-        renderMessageText={renderMessageText}
-        extractFirstLinkPreview={extractFirstLinkPreview}
         resolveAttachmentImageUrl={resolveAttachmentImageUrl}
         formatAttachmentSize={formatAttachmentSize}
         setPreviewImageUrl={setPreviewImageUrl}
@@ -2061,159 +1863,48 @@ export function ChatPanel({
         setPreviewImageUrl={setPreviewImageUrl}
         attachmentInputRef={attachmentInputRef}
       />
-      {previewImageUrl && typeof document !== "undefined"
-        ? createPortal(
-          <div
-            className="chat-image-modal-overlay"
-            role="dialog"
-            aria-modal="true"
-            aria-label={t("chat.imagePreviewTitle")}
-            onClick={() => setPreviewImageUrl(null)}
-          >
-            <div className="chat-image-modal-card" onClick={(event) => event.stopPropagation()}>
-              <Button
-                type="button"
-                className="secondary tiny chat-image-modal-close"
-                onClick={() => setPreviewImageUrl(null)}
-              >
-                {t("chat.closeImagePreview")}
-              </Button>
-              <img
-                src={resolveAttachmentImageUrl(previewImageUrl)}
-                alt="chat-image-preview"
-                className="chat-image-modal-media"
-              />
-            </div>
-          </div>
-          ,
-          document.body
-        )
-        : null}
-      {topicPaletteOpen && typeof document !== "undefined"
-        ? createPortal(
-          <div
-            className="chat-topic-palette-overlay"
-            id="chat-topic-palette-dialog"
-            role="dialog"
-            aria-modal="true"
-            aria-label={t("chat.topicPaletteTitle")}
-            onClick={closeTopicPalette}
-          >
-            <section
-              className="chat-topic-palette-card"
-              onClick={(event) => event.stopPropagation()}
-            >
-              <div className="chat-topic-palette-head">
-                <h3>{t("chat.topicPaletteTitle")}</h3>
-                <Button type="button" className="secondary tiny" onClick={closeTopicPalette}>
-                  {t("chat.editTopicCancel")}
-                </Button>
-              </div>
-              <input
-                ref={topicPaletteInputRef}
-                type="search"
-                value={topicPaletteQuery}
-                onChange={(event) => setTopicPaletteQuery(event.target.value)}
-                onKeyDown={handleTopicPaletteKeyDown}
-                placeholder={t("chat.topicPalettePlaceholder")}
-                className="chat-topic-palette-input"
-                aria-label={t("chat.topicPalettePlaceholder")}
-                aria-controls={topicPaletteListboxId}
-                aria-activedescendant={filteredTopicsForPalette[topicPaletteSelectedIndex] ? `chat-topic-option-${filteredTopicsForPalette[topicPaletteSelectedIndex].id}` : undefined}
-              />
-              <div id={topicPaletteListboxId} className="chat-topic-palette-list" role="listbox" aria-label={t("chat.topicPaletteResultsAria")}>
-                {filteredTopicsForPalette.length === 0 ? (
-                  <div className="chat-topic-palette-empty">{t("chat.topicPaletteEmpty")}</div>
-                ) : (
-                  filteredTopicsForPalette.map((topic, index) => {
-                    const isActive = topic.id === activeTopicId;
-                    const unread = getTopicUnreadCount(topic);
-                    const selected = index === topicPaletteSelectedIndex;
-
-                    return (
-                      <Button
-                        key={topic.id}
-                        id={`chat-topic-option-${topic.id}`}
-                        type="button"
-                        className={`secondary chat-topic-palette-item ${selected ? "chat-topic-palette-item-selected" : ""}`}
-                        role="option"
-                        aria-selected={selected}
-                        aria-current={isActive ? "true" : undefined}
-                        onMouseEnter={() => setTopicPaletteSelectedIndex(index)}
-                        onClick={() => selectTopicFromPalette(topic.id)}
-                      >
-                        <span className="chat-topic-palette-item-title-wrap">
-                          {topic.isPinned ? <span className="chat-topic-palette-item-pin">{t("chat.topicPinnedBadge")}</span> : null}
-                          <span className="chat-topic-palette-item-title">{topic.title}</span>
-                        </span>
-                        {unread > 0 ? <span className="chat-topic-palette-item-unread">{unread}</span> : null}
-                      </Button>
-                    );
-                  })
-                )}
-              </div>
-            </section>
-          </div>,
-          document.body
-        )
-        : null}
-      {topicContextMenu && typeof document !== "undefined"
-        ? createPortal(
-          <TopicContextMenu
-            t={t}
-            x={topicContextMenu.x}
-            y={topicContextMenu.y}
-            archived={Boolean(topics.find((topic) => topic.id === topicContextMenu.topicId)?.archivedAt)}
-            saving={editingTopicSaving || Boolean(archivingTopicId) || notificationSaving}
-            renameValue={editingTopicTitle}
-            onRenameValueChange={setEditingTopicTitle}
-            renameEditing={isEditingTopicTitleInline}
-            onStartRename={() => {
-              setEditingTopicTitleDraftInitial(editingTopicTitle);
-              setIsEditingTopicTitleInline(true);
-            }}
-            onApplyRename={applyTopicRename}
-            onCancelRename={() => {
-              setEditingTopicTitle(editingTopicTitleDraftInitial);
-              setIsEditingTopicTitleInline(false);
-            }}
-            onRunAction={runTopicMenuAction}
-            activeMutePreset={topicMutePresetById[String(topicContextMenu.topicId || "").trim()] || null}
-            onSetTopicMutePreset={setTopicMutePreset}
-          />,
-          document.body
-        )
-        : null}
-      {topicDeleteConfirm && typeof document !== "undefined"
-        ? createPortal(
-          <div
-            className="settings-confirm-overlay popup-layer-content fixed inset-0 z-[60] grid place-items-center bg-black/60 p-4"
-            onMouseDown={(event) => {
-              if (event.target === event.currentTarget) {
-                setTopicDeleteConfirm(null);
-              }
-            }}
-          >
-            <div className="card compact settings-confirm-modal popup-layer-content w-full max-w-[420px]">
-              <h3 className="subheading settings-confirm-title">{t("chat.deleteTopic")}</h3>
-              <p className="muted settings-confirm-text">
-                {t("chat.deleteTopicConfirm")}
-                {" "}
-                <strong>{topicDeleteConfirm.title}</strong>
-              </p>
-              <div className="delete-confirm-actions flex flex-wrap items-center gap-3">
-                <Button type="button" className="secondary" onClick={() => setTopicDeleteConfirm(null)} disabled={editingTopicSaving}>
-                  {t("common.no")}
-                </Button>
-                <Button type="button" className="delete-confirm-btn" onClick={() => void confirmDeleteTopic()} disabled={editingTopicSaving}>
-                  {t("common.yes")}
-                </Button>
-              </div>
-            </div>
-          </div>,
-          document.body
-        )
-        : null}
+      <ChatPanelOverlays
+        t={t}
+        previewImageUrl={previewImageUrl}
+        setPreviewImageUrl={setPreviewImageUrl}
+        resolveAttachmentImageUrl={resolveAttachmentImageUrl}
+        topicPaletteOpen={topicPaletteOpen}
+        closeTopicPalette={closeTopicPalette}
+        topicPaletteQuery={topicPaletteQuery}
+        setTopicPaletteQuery={setTopicPaletteQuery}
+        handleTopicPaletteKeyDown={handleTopicPaletteKeyDown}
+        topicPaletteInputRef={topicPaletteInputRef}
+        topicPaletteListboxId={topicPaletteListboxId}
+        filteredTopicsForPalette={filteredTopicsForPalette}
+        topicPaletteSelectedIndex={topicPaletteSelectedIndex}
+        activeTopicId={activeTopicId}
+        getTopicUnreadCount={getTopicUnreadCount}
+        setTopicPaletteSelectedIndex={setTopicPaletteSelectedIndex}
+        selectTopicFromPalette={selectTopicFromPalette}
+        topicContextMenu={topicContextMenu}
+        topics={topics}
+        editingTopicSaving={editingTopicSaving}
+        archivingTopicId={archivingTopicId}
+        notificationSaving={notificationSaving}
+        editingTopicTitle={editingTopicTitle}
+        setEditingTopicTitle={setEditingTopicTitle}
+        isEditingTopicTitleInline={isEditingTopicTitleInline}
+        onStartTopicRenameInline={() => {
+          setEditingTopicTitleDraftInitial(editingTopicTitle);
+          setIsEditingTopicTitleInline(true);
+        }}
+        onCancelTopicRenameInline={() => {
+          setEditingTopicTitle(editingTopicTitleDraftInitial);
+          setIsEditingTopicTitleInline(false);
+        }}
+        applyTopicRename={applyTopicRename}
+        runTopicMenuAction={runTopicMenuAction}
+        topicMutePresetById={topicMutePresetById}
+        setTopicMutePreset={setTopicMutePreset}
+        topicDeleteConfirm={topicDeleteConfirm}
+        setTopicDeleteConfirm={setTopicDeleteConfirm}
+        confirmDeleteTopic={confirmDeleteTopic}
+      />
     </section>
   );
 }

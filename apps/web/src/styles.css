@@ -1546,10 +1546,11 @@ pre {
   z-index: 1200;
   display: grid;
   gap: var(--space-xs);
-  min-width: min(360px, 92vw);
+  min-width: min(460px, 94vw);
+  max-width: min(560px, 94vw);
 }
 
-.chat-topic-context-menu .ui-btn {
+.chat-topic-context-menu > .ui-btn {
   width: 100%;
   text-align: left;
 }
@@ -1560,7 +1561,19 @@ pre {
 }
 
 .chat-topic-context-rename-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
   flex-wrap: nowrap;
+}
+
+.chat-topic-context-rename-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.chat-topic-context-rename-btn {
+  flex: 0 0 auto;
 }
 
 .chat-topic-context-rename-actions {

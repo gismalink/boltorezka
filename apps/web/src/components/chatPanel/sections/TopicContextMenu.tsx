@@ -37,27 +37,20 @@ export function TopicContextMenu({
     <div
       className="floating-popup settings-popup chat-topic-context-menu"
       role="menu"
-      style={{ left: `${x}px`, top: `${y}px` }}
+      style={{
+        left: `${Math.max(12, x)}px`,
+        top: `${Math.max(12, y)}px`,
+        transform: "translate(calc(-100% - 8px), 8px)"
+      }}
     >
       <Button type="button" className="secondary tiny" role="menuitem" onClick={() => void onRunAction("read")}>
         {t("chat.markTopicRead")}
       </Button>
       <div className="chat-topic-context-rename-block">
-        <div className="row items-center gap-2 chat-topic-context-rename-row">
-          {renameEditing ? (
-            <Button
-              type="button"
-              className="secondary whitespace-nowrap"
-              onMouseDown={(event) => event.preventDefault()}
-              onClick={onCancelRename}
-              disabled={saving}
-            >
-              {t("settings.cancel")}
-            </Button>
-          ) : null}
+        <div className="chat-topic-context-rename-row">
           <input
             type="text"
-            className="channel-settings-title-input"
+            className="channel-settings-title-input chat-topic-context-rename-input"
             value={renameValue}
             onFocus={onStartRename}
             onBlur={onCancelRename}
@@ -67,15 +60,26 @@ export function TopicContextMenu({
             aria-label={t("chat.editTopicPlaceholder")}
           />
           {renameEditing ? (
-            <Button
-              type="button"
-              className="whitespace-nowrap"
-              onMouseDown={(event) => event.preventDefault()}
-              onClick={() => void onApplyRename()}
-              disabled={saving || renameValue.trim().length === 0}
-            >
-              {t("settings.apply")}
-            </Button>
+            <>
+              <Button
+                type="button"
+                className="secondary tiny whitespace-nowrap chat-topic-context-rename-btn"
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={onCancelRename}
+                disabled={saving}
+              >
+                {t("settings.cancel")}
+              </Button>
+              <Button
+                type="button"
+                className="tiny whitespace-nowrap chat-topic-context-rename-btn"
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => void onApplyRename()}
+                disabled={saving || renameValue.trim().length === 0}
+              >
+                {t("settings.apply")}
+              </Button>
+            </>
           ) : null}
         </div>
       </div>
