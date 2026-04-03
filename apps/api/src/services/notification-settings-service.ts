@@ -11,6 +11,7 @@ export type UpsertNotificationSettingsInput = {
   topicId?: string;
   mode: NotificationMode;
   muteUntil?: string | null;
+  allowCriticalMentions?: boolean;
 };
 
 export type NotificationSettingsItem = {
@@ -22,6 +23,7 @@ export type NotificationSettingsItem = {
   topicId: string | null;
   mode: NotificationMode;
   muteUntil: string | null;
+  allowCriticalMentions: boolean;
   createdAt: string;
   updatedAt: string;
 };
@@ -126,12 +128,13 @@ export async function upsertNotificationSettings(input: UpsertNotificationSettin
     }
 
     const upserted = await db.query<NotificationSettingsItem>(
-      `INSERT INTO room_notification_settings (user_id, scope_type, server_id, mode, mute_until)
-       VALUES ($1, 'server', $2, $3, $4)
+      `INSERT INTO room_notification_settings (user_id, scope_type, server_id, mode, mute_until, allow_critical_mentions)
+       VALUES ($1, 'server', $2, $3, $4, $5)
        ON CONFLICT (user_id, server_id) WHERE scope_type = 'server'
        DO UPDATE SET
          mode = EXCLUDED.mode,
          mute_until = EXCLUDED.mute_until,
+         allow_critical_mentions = EXCLUDED.allow_critical_mentions,
          updated_at = NOW()
        RETURNING
          id,
@@ -142,9 +145,10 @@ export async function upsertNotificationSettings(input: UpsertNotificationSettin
          topic_id AS "topicId",
          mode,
          mute_until AS "muteUntil",
+        allow_critical_mentions AS "allowCriticalMentions",
          created_at AS "createdAt",
          updated_at AS "updatedAt"`,
-      [input.userId, input.serverId, input.mode, input.muteUntil || null]
+      [input.userId, input.serverId, input.mode, input.muteUntil || null, input.allowCriticalMentions !== false]
     );
 
     return upserted.rows[0];
@@ -161,12 +165,13 @@ export async function upsertNotificationSettings(input: UpsertNotificationSettin
     }
 
     const upserted = await db.query<NotificationSettingsItem>(
-      `INSERT INTO room_notification_settings (user_id, scope_type, room_id, mode, mute_until)
-       VALUES ($1, 'room', $2, $3, $4)
+      `INSERT INTO room_notification_settings (user_id, scope_type, room_id, mode, mute_until, allow_critical_mentions)
+       VALUES ($1, 'room', $2, $3, $4, $5)
        ON CONFLICT (user_id, room_id) WHERE scope_type = 'room'
        DO UPDATE SET
          mode = EXCLUDED.mode,
          mute_until = EXCLUDED.mute_until,
+         allow_critical_mentions = EXCLUDED.allow_critical_mentions,
          updated_at = NOW()
        RETURNING
          id,
@@ -177,9 +182,10 @@ export async function upsertNotificationSettings(input: UpsertNotificationSettin
          topic_id AS "topicId",
          mode,
          mute_until AS "muteUntil",
+        allow_critical_mentions AS "allowCriticalMentions",
          created_at AS "createdAt",
          updated_at AS "updatedAt"`,
-      [input.userId, input.roomId, input.mode, input.muteUntil || null]
+      [input.userId, input.roomId, input.mode, input.muteUntil || null, input.allowCriticalMentions !== false]
     );
 
     return upserted.rows[0];
@@ -200,12 +206,13 @@ export async function upsertNotificationSettings(input: UpsertNotificationSettin
   }
 
   const upserted = await db.query<NotificationSettingsItem>(
-    `INSERT INTO room_notification_settings (user_id, scope_type, topic_id, mode, mute_until)
-     VALUES ($1, 'topic', $2, $3, $4)
+    `INSERT INTO room_notification_settings (user_id, scope_type, topic_id, mode, mute_until, allow_critical_mentions)
+     VALUES ($1, 'topic', $2, $3, $4, $5)
      ON CONFLICT (user_id, topic_id) WHERE scope_type = 'topic'
      DO UPDATE SET
        mode = EXCLUDED.mode,
        mute_until = EXCLUDED.mute_until,
+       allow_critical_mentions = EXCLUDED.allow_critical_mentions,
        updated_at = NOW()
      RETURNING
        id,
@@ -216,9 +223,10 @@ export async function upsertNotificationSettings(input: UpsertNotificationSettin
        topic_id AS "topicId",
        mode,
        mute_until AS "muteUntil",
+       allow_critical_mentions AS "allowCriticalMentions",
        created_at AS "createdAt",
        updated_at AS "updatedAt"`,
-    [input.userId, input.topicId, input.mode, input.muteUntil || null]
+     [input.userId, input.topicId, input.mode, input.muteUntil || null, input.allowCriticalMentions !== false]
   );
 
   return upserted.rows[0];

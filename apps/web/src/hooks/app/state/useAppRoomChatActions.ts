@@ -1,3 +1,4 @@
+// Purpose: compose room presence actions with chat composer actions for app-level runtime wiring.
 import { useChatComposerActions } from "../../realtime/useChatComposerActions";
 import { useRoomPresenceActions } from "../../rooms/useRoomPresenceActions";
 
@@ -32,8 +33,20 @@ export function useAppRoomChatActions({ roomPresence, chatComposer }: UseAppRoom
     handleChatPaste,
     handleChatInputKeyDown,
     startEditingMessage,
+    replyToMessage,
+    cancelReply,
     deleteOwnMessage,
-    openRoomChat
+    openRoomChat,
+    pinnedByMessageId,
+    thumbsUpByMessageId,
+    togglePinMessage,
+    toggleThumbsUpReaction,
+    reportMessage,
+    pendingChatAttachmentFile,
+    selectAttachmentFile,
+    clearPendingAttachment,
+    applyRemotePinState,
+    applyRemoteThumbsUpReactionState
   } = useChatComposerActions(chatComposer);
 
   return {
@@ -45,7 +58,19 @@ export function useAppRoomChatActions({ roomPresence, chatComposer }: UseAppRoom
     handleChatPaste,
     handleChatInputKeyDown,
     startEditingMessage,
+    replyToMessage,
+    cancelReply,
     deleteOwnMessage,
-    openRoomChat
+    openRoomChat,
+    pinnedByMessageId,
+    thumbsUpByMessageId,
+    togglePinMessage,
+    toggleThumbsUpReaction,
+    reportMessage,
+    pendingChatAttachmentFile,
+    selectAttachmentFile,
+    clearPendingAttachment,
+    applyRemotePinState,
+    applyRemoteThumbsUpReactionState
   };
 }

@@ -156,7 +156,7 @@ export type WsOutgoingEnvelope = {
 
 export type ChatAttachmentPayload = {
   id: string;
-  type: "image";
+  type: "image" | "document" | "audio";
   storageKey: string;
   downloadUrl: string | null;
   mimeType: string;
@@ -181,6 +181,10 @@ export type ChatMessagePayload = {
   roomSlug: string | null;
   topicId?: string | null;
   topicSlug?: string | null;
+  replyToMessageId?: string | null;
+  replyToUserId?: string | null;
+  replyToUserName?: string | null;
+  replyToText?: string | null;
   userId: string;
   userName: string;
   text: string;

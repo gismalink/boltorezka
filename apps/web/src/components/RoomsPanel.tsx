@@ -27,6 +27,8 @@ export function RoomsPanel({
   roomSlug,
   activeChatRoomSlug,
   roomMediaTopologyBySlug,
+  roomUnreadBySlug,
+  serverUnreadCount,
   currentUserId,
   liveRoomMembersBySlug,
   liveRoomMemberDetailsBySlug,
@@ -204,6 +206,7 @@ export function RoomsPanel({
       onSetServerMemberHiddenRoomAccess={onSetServerMemberHiddenRoomAccess}
       memberPreferencesByUserId={memberPreferencesByUserId}
       room={room}
+      roomUnreadCount={Math.max(0, Number(roomUnreadBySlug[room.slug] || 0))}
       roomMembers={mapRoomMembersForSlug(liveRoomMemberDetailsBySlug, liveRoomMembersBySlug, room.slug)}
       normalizedCurrentUserId={normalizedCurrentUserId}
       onRequestClearChannel={(targetRoom) => setConfirmPopup({ kind: "clear-channel", room: targetRoom })}
@@ -235,6 +238,11 @@ export function RoomsPanel({
         onCreateCategory={onCreateCategory}
         onCreateRoom={onCreateRoom}
       />
+      {serverUnreadCount > 0 ? (
+        <div className="rooms-unread-summary">
+          {t("rooms.unreadSummary").replace("{count}", String(serverUnreadCount))}
+        </div>
+      ) : null}
       <div className="rooms-scroll min-h-0 flex-1 overflow-y-auto">
         {(roomsTree?.categories || []).map((category) => (
           <RoomsCategoryBlock

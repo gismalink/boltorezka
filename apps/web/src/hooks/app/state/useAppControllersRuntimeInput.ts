@@ -2,8 +2,22 @@ import { useAppControllersRuntime } from "../effects/useAppControllersRuntime";
 
 type AppControllersRuntimeInput = Parameters<typeof useAppControllersRuntime>[0];
 
+function buildRoomSlugById(rooms: Array<{ id?: unknown; slug?: unknown }>): Record<string, string> {
+  return rooms.reduce<Record<string, string>>((acc, room) => {
+    const roomId = String(room?.id || "").trim();
+    const roomSlug = String(room?.slug || "").trim();
+    if (!roomId || !roomSlug) {
+      return acc;
+    }
+
+    acc[roomId] = roomSlug;
+    return acc;
+  }, {});
+}
+
 export function useAppControllersRuntimeInput(params: Record<string, unknown>): AppControllersRuntimeInput {
   const p = params as any;
+  const roomSlugById = p.roomSlugById || buildRoomSlugById(Array.isArray(p.rooms) ? p.rooms : []);
 
   return {
     controllers: {
@@ -101,13 +115,21 @@ export function useAppControllersRuntimeInput(params: Record<string, unknown>): 
         setMessages: p.setMessages,
         setMessagesHasMore: p.setMessagesHasMore,
         setMessagesNextCursor: p.setMessagesNextCursor,
-        applyRemoteTypingPayload: p.applyRemoteTypingPayload
+        setChatTopics: p.setChatTopics,
+        setRoomUnreadBySlug: p.setRoomUnreadBySlug,
+        roomSlugById,
+        activeTopicId: p.activeChatTopicId,
+        currentUserId: p.currentUserId,
+        applyRemoteTypingPayload: p.applyRemoteTypingPayload,
+        applyRemotePinState: p.applyRemotePinState,
+        applyRemoteThumbsUpReactionState: p.applyRemoteThumbsUpReactionState
       },
       realtimeChatLifecycleProps: {
         serviceToken: p.serviceToken,
         reconnectNonce: p.realtimeReconnectNonce,
         roomSlug: p.roomSlug,
         chatRoomSlug: p.chatRoomSlug,
+        activeTopicId: p.activeChatTopicId,
         messages: p.messages,
         messagesNextCursor: p.messagesNextCursor,
         loadingOlderMessages: p.loadingOlderMessages,

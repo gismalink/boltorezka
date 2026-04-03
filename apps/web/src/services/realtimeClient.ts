@@ -11,6 +11,7 @@ type PendingRequest = {
   envelope: WsOutgoing;
   retries: number;
   maxRetries: number;
+  createdAt: string;
 };
 
 type RealtimeClientOptions = {
@@ -39,8 +40,104 @@ export class RealtimeClient {
   private pendingRequests = new Map<string, PendingRequest>();
   private ackTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
+  private static readonly PERSISTED_PENDING_KEY = "boltorezka:ws:pending:chat-send:v1";
+  private static readonly PERSISTED_PENDING_LIMIT = 100;
+  private static readonly PERSISTED_PENDING_TTL_MS = 24 * 60 * 60 * 1000;
+
   constructor(options: RealtimeClientOptions) {
     this.options = options;
+    this.hydratePersistedPendingRequests();
+  }
+
+  private canUseStorage(): boolean {
+    return typeof window !== "undefined" && Boolean(window.localStorage);
+  }
+
+  private persistPendingRequests() {
+    if (!this.canUseStorage()) {
+      return;
+    }
+
+    try {
+      const snapshot = Array.from(this.pendingRequests.entries())
+        .filter(([, pending]) => pending.eventType === "chat.send")
+        .slice(-RealtimeClient.PERSISTED_PENDING_LIMIT)
+        .map(([requestId, pending]) => ({
+          requestId,
+          eventType: pending.eventType,
+          envelope: pending.envelope,
+          retries: pending.retries,
+          maxRetries: pending.maxRetries,
+          createdAt: pending.createdAt
+        }));
+
+      if (snapshot.length === 0) {
+        window.localStorage.removeItem(RealtimeClient.PERSISTED_PENDING_KEY);
+        return;
+      }
+
+      window.localStorage.setItem(RealtimeClient.PERSISTED_PENDING_KEY, JSON.stringify(snapshot));
+    } catch {
+      // Persistence is best-effort.
+    }
+  }
+
+  private hydratePersistedPendingRequests() {
+    if (!this.canUseStorage()) {
+      return;
+    }
+
+    try {
+      const raw = window.localStorage.getItem(RealtimeClient.PERSISTED_PENDING_KEY);
+      if (!raw) {
+        return;
+      }
+
+      const parsed = JSON.parse(raw) as Array<{
+        requestId?: unknown;
+        eventType?: unknown;
+        envelope?: unknown;
+        retries?: unknown;
+        maxRetries?: unknown;
+        createdAt?: unknown;
+      }>;
+
+      if (!Array.isArray(parsed)) {
+        window.localStorage.removeItem(RealtimeClient.PERSISTED_PENDING_KEY);
+        return;
+      }
+
+      const now = Date.now();
+      for (const item of parsed) {
+        const requestId = typeof item.requestId === "string" ? item.requestId : "";
+        const eventType = typeof item.eventType === "string" ? item.eventType : "";
+        const createdAt = typeof item.createdAt === "string" ? item.createdAt : "";
+        const createdTs = new Date(createdAt).getTime();
+        const envelope = (item.envelope && typeof item.envelope === "object")
+          ? item.envelope as WsOutgoing
+          : null;
+
+        if (!requestId || eventType !== "chat.send" || !envelope) {
+          continue;
+        }
+
+        if (!Number.isFinite(createdTs) || now - createdTs > RealtimeClient.PERSISTED_PENDING_TTL_MS) {
+          continue;
+        }
+
+        this.pendingRequests.set(requestId, {
+          eventType,
+          envelope,
+          retries: Number.isFinite(Number(item.retries)) ? Math.max(0, Number(item.retries)) : 0,
+          maxRetries: Number.isFinite(Number(item.maxRetries)) ? Math.max(0, Number(item.maxRetries)) : 0,
+          createdAt
+        });
+      }
+
+      this.persistPendingRequests();
+    } catch {
+      // Hydration failures should not break realtime boot.
+    }
   }
 
   connect(token: string) {
@@ -88,8 +185,10 @@ export class RealtimeClient {
         eventType,
         envelope,
         retries: 0,
-        maxRetries: options.maxRetries ?? 0
+        maxRetries: options.maxRetries ?? 0,
+        createdAt: new Date().toISOString()
       });
+      this.persistPendingRequests();
     }
 
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
@@ -208,6 +307,7 @@ export class RealtimeClient {
 
       if (pending.retries >= pending.maxRetries) {
         this.pendingRequests.delete(requestId);
+        this.persistPendingRequests();
         this.clearAckTimer(requestId);
         this.options.onRequestFailed?.(requestId, pending.eventType, pending.retries);
         this.options.onLog(`ws request failed after retries: ${pending.eventType}`);
@@ -226,6 +326,7 @@ export class RealtimeClient {
 
   clearPendingRequest(requestId: string) {
     this.pendingRequests.delete(requestId);
+    this.persistPendingRequests();
     this.clearAckTimer(requestId);
   }
 

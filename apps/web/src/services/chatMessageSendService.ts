@@ -12,9 +12,12 @@ type SendWsEventFn = (
 type SendChatMessageParams = {
   authToken: string;
   chatRoomSlug: string;
+  activeTopicId: string | null;
+  replyingToMessageId: string | null;
   chatText: string;
   editingMessageId: string | null;
   pendingChatImageDataUrl: string | null;
+  pendingChatAttachmentFile: File | null;
   user: User | null;
   maxChatRetries: number;
   maxDataUrlLength: number;
@@ -26,16 +29,22 @@ export type SendChatMessageResult =
   | { kind: "no-room" }
   | { kind: "empty" }
   | { kind: "too-large" }
+  | { kind: "attachment-too-large" }
+  | { kind: "attachment-unsupported-type" }
+  | { kind: "topic-image-unsupported" }
   | { kind: "server-error" }
-  | { kind: "sent"; mode: "edit" | "upload" | "text" };
+  | { kind: "sent"; mode: "edit" | "upload" | "text" | "reply" };
 
 export async function sendChatMessage(params: SendChatMessageParams): Promise<SendChatMessageResult> {
   const {
     authToken,
     chatRoomSlug,
+    activeTopicId,
+    replyingToMessageId,
     chatText,
     editingMessageId,
     pendingChatImageDataUrl,
+    pendingChatAttachmentFile,
     user,
     maxChatRetries,
     maxDataUrlLength,
@@ -51,6 +60,15 @@ export async function sendChatMessage(params: SendChatMessageParams): Promise<Se
     const nextText = chatText.trim();
     if (!nextText) {
       return { kind: "empty" };
+    }
+
+    if (activeTopicId) {
+      try {
+        await api.editMessage(authToken, editingMessageId, { text: nextText });
+        return { kind: "sent", mode: "edit" };
+      } catch {
+        return { kind: "server-error" };
+      }
     }
 
     const requestId = sendWsEvent(
@@ -100,6 +118,7 @@ export async function sendChatMessage(params: SendChatMessageParams): Promise<Se
 
       const initUpload = await api.chatUploadInit(authToken, {
         roomSlug: chatRoomSlug,
+        topicId: activeTopicId || undefined,
         mimeType,
         sizeBytes
       });
@@ -109,6 +128,7 @@ export async function sendChatMessage(params: SendChatMessageParams): Promise<Se
       await api.chatUploadFinalize(authToken, {
         uploadId: initUpload.uploadId,
         roomSlug: chatRoomSlug,
+        topicId: activeTopicId || undefined,
         storageKey: initUpload.storageKey,
         mimeType,
         sizeBytes,
@@ -116,13 +136,78 @@ export async function sendChatMessage(params: SendChatMessageParams): Promise<Se
       });
 
       return { kind: "sent", mode: "upload" };
-    } catch {
+    } catch (error) {
+      const code = String((error as { code?: string } | null)?.code || "").trim();
+      if (code === "UnsupportedMimeType") {
+        return { kind: "attachment-unsupported-type" };
+      }
+
+      if (code === "AttachmentTooLarge") {
+        return { kind: "attachment-too-large" };
+      }
+
+      return { kind: "server-error" };
+    }
+  }
+
+  if (pendingChatAttachmentFile) {
+    try {
+      const mimeType = String(pendingChatAttachmentFile.type || "application/octet-stream").trim().toLowerCase();
+      const sizeBytes = Number(pendingChatAttachmentFile.size || 0);
+      if (!mimeType || sizeBytes <= 0) {
+        return { kind: "server-error" };
+      }
+
+      const initUpload = await api.chatUploadInit(authToken, {
+        roomSlug: chatRoomSlug,
+        topicId: activeTopicId || undefined,
+        mimeType,
+        sizeBytes
+      });
+
+      await api.uploadChatObject(initUpload.uploadUrl, pendingChatAttachmentFile, initUpload.requiredHeaders || { "content-type": mimeType });
+
+      await api.chatUploadFinalize(authToken, {
+        uploadId: initUpload.uploadId,
+        roomSlug: chatRoomSlug,
+        topicId: activeTopicId || undefined,
+        storageKey: initUpload.storageKey,
+        mimeType,
+        sizeBytes,
+        text: baseText
+      });
+
+      return { kind: "sent", mode: "upload" };
+    } catch (error) {
+      const code = String((error as { code?: string } | null)?.code || "").trim();
+      if (code === "UnsupportedMimeType") {
+        return { kind: "attachment-unsupported-type" };
+      }
+
+      if (code === "AttachmentTooLarge") {
+        return { kind: "attachment-too-large" };
+      }
+
       return { kind: "server-error" };
     }
   }
 
   if (!baseText) {
     return { kind: "empty" };
+  }
+
+  if (activeTopicId) {
+    try {
+      if (replyingToMessageId) {
+        await api.replyMessage(authToken, replyingToMessageId, { text: baseText });
+        return { kind: "sent", mode: "reply" };
+      }
+
+      await api.createTopicMessage(authToken, activeTopicId, { text: baseText });
+      return { kind: "sent", mode: "text" };
+    } catch {
+      return { kind: "server-error" };
+    }
   }
 
   const result = chatController.sendMessage(baseText, chatRoomSlug, user, maxChatRetries);

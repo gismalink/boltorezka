@@ -22,6 +22,7 @@ export function useAppWorkspaceActionsRuntimeInput(params: Record<string, unknow
         },
         chatComposer: {
           chatRoomSlug: p.chatRoomSlug,
+          activeTopicId: p.activeChatTopicId,
           setChatRoomSlug: p.setChatRoomSlug,
           messages: p.messages,
           setMessages: p.setMessages,
@@ -33,6 +34,8 @@ export function useAppWorkspaceActionsRuntimeInput(params: Record<string, unknow
           setChatText: p.setChatText,
           editingMessageId: p.editingMessageId,
           setEditingMessageId: p.setEditingMessageId,
+          replyingToMessageId: p.replyingToMessageId,
+          setReplyingToMessageId: p.setReplyingToMessageId,
           pendingChatImageDataUrl: p.pendingChatImageDataUrl,
           setPendingChatImageDataUrl: p.setPendingChatImageDataUrl,
           chatController: p.chatController,
@@ -44,7 +47,13 @@ export function useAppWorkspaceActionsRuntimeInput(params: Record<string, unknow
           maxChatRetries: p.maxChatRetries,
           messageEditDeleteWindowMs: p.messageEditDeleteWindowMs,
           serverChatImagePolicy: p.serverChatImagePolicy,
-          chatImageTooLargeMessage: p.chatImageTooLargeMessage
+          chatImageTooLargeMessage: p.chatImageTooLargeMessage,
+          topicImageUploadUnsupportedMessage: p.t("chat.topicImageUploadUnsupported"),
+          topicOnlyActionMessage: p.t("chat.topicOnlyAction"),
+          reportMessageSentMessage: p.t("chat.reportMessageSent"),
+          reportMessageExistsMessage: p.t("chat.reportMessageExists"),
+          attachmentTooLargeMessage: p.t("chat.attachmentTooLarge"),
+          attachmentUnsupportedTypeMessage: p.t("chat.attachmentUnsupportedType")
         }
       },
       moderation: {

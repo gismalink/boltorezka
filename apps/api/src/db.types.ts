@@ -51,6 +51,8 @@ export type RoomRow = {
   title: string;
   kind: RoomKind;
   is_hidden?: boolean;
+  is_readonly?: boolean;
+  slowmode_seconds?: number;
   audio_quality_override?: AudioQuality | null;
   category_id: string | null;
   server_id?: string;
@@ -68,6 +70,10 @@ export type RoomMessageRow = {
   id: string;
   room_id: string;
   topic_id?: string | null;
+  reply_to_message_id?: string | null;
+  reply_to_user_id?: string | null;
+  reply_to_user_name?: string | null;
+  reply_to_text?: string | null;
   user_id: string;
   text: string;
   created_at: string;
@@ -76,7 +82,7 @@ export type RoomMessageRow = {
   attachments?: MessageAttachmentRow[];
 };
 
-export type MessageAttachmentType = "image";
+export type MessageAttachmentType = "image" | "document" | "audio";
 
 export type MessageAttachmentRow = {
   id: string;
@@ -134,6 +140,7 @@ export type RoomNotificationSettingsRow = {
   topic_id: string | null;
   mode: RoomNotificationMode;
   mute_until: string | null;
+  allow_critical_mentions: boolean;
   created_at: string;
   updated_at: string;
 };
@@ -193,6 +200,16 @@ export type ServerBanRow = {
   user_id: string;
   reason: string | null;
   banned_by_user_id: string | null;
+  expires_at: string | null;
+  created_at: string;
+};
+
+export type ServerMuteRow = {
+  id: string;
+  server_id: string;
+  user_id: string;
+  reason: string | null;
+  muted_by_user_id: string | null;
   expires_at: string | null;
   created_at: string;
 };

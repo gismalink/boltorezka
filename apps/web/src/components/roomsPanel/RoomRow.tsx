@@ -63,6 +63,7 @@ type RoomRowProps = Pick<
   | "memberPreferencesByUserId"
 > & {
   room: Room;
+  roomUnreadCount: number;
   roomMembers: RoomMember[];
   normalizedCurrentUserId: string;
   onRequestClearChannel: (room: Room) => void;
@@ -109,6 +110,7 @@ export function RoomRow({
   onSetServerMemberHiddenRoomAccess,
   memberPreferencesByUserId,
   room,
+  roomUnreadCount,
   roomMembers,
   normalizedCurrentUserId,
   onRequestClearChannel,
@@ -368,6 +370,7 @@ export function RoomRow({
       >
         <i className={`bi ${ROOM_KIND_ICON_CLASS[room.kind]}`} aria-hidden="true" />
         <span>{room.title}</span>
+        {roomUnreadCount > 0 ? <span className="room-unread-badge">{roomUnreadCount}</span> : null}
       </button>
       <div className="inline-flex items-center gap-1">
       {roomSupportsRtc ? (

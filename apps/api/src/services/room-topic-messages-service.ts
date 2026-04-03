@@ -1,4 +1,7 @@
+// Purpose: topic-scoped message lifecycle (list/create/edit/delete/reply/pin/reaction/read) with access control.
 import { db } from "../db.js";
+import { redis } from "../redis.js";
+import { resolveActiveServerMute } from "./server-mute-service.js";
 import type { RoomMessageRow, RoomRow, RoomTopicRow } from "../db.types.ts";
 
 type TopicWithRoomRow = {
@@ -19,11 +22,14 @@ type TopicWithRoomRow = {
   room_position: number;
   room_is_public: boolean;
   room_is_hidden: boolean;
+  room_is_readonly: boolean;
+  room_slowmode_seconds: number;
 };
 
 type MessageContextRow = TopicWithRoomRow & {
   message_id: string;
   message_user_id: string;
+  message_user_name: string;
   message_body: string;
   message_created_at: string;
   message_updated_at: string | null;
@@ -88,7 +94,9 @@ function mapRoom(topicRoom: TopicWithRoomRow): RoomRow {
     nsfw: topicRoom.room_nsfw || false,
     position: topicRoom.room_position,
     is_public: topicRoom.room_is_public,
-    is_hidden: topicRoom.room_is_hidden
+    is_hidden: topicRoom.room_is_hidden,
+    is_readonly: topicRoom.room_is_readonly,
+    slowmode_seconds: topicRoom.room_slowmode_seconds
   };
 }
 
@@ -111,7 +119,9 @@ async function loadTopicWithRoom(topicId: string): Promise<TopicWithRoomRow> {
        r.nsfw AS room_nsfw,
        r.position AS room_position,
        r.is_public AS room_is_public,
-       r.is_hidden AS room_is_hidden
+       r.is_hidden AS room_is_hidden,
+       r.is_readonly AS room_is_readonly,
+       r.slowmode_seconds AS room_slowmode_seconds
      FROM room_topics rt
      JOIN rooms r ON r.id = rt.room_id
      WHERE rt.id = $1
@@ -186,11 +196,53 @@ async function canModerateMessage(topic: TopicWithRoomRow, userId: string): Prom
   return isServerModerator(serverId, userId);
 }
 
+async function canBypassRoomSendPolicy(topic: TopicWithRoomRow, userId: string): Promise<boolean> {
+  if (await isGlobalModerator(userId)) {
+    return true;
+  }
+
+  const serverId = String(topic.room_server_id || "").trim();
+  if (!serverId) {
+    return false;
+  }
+
+  return isServerModerator(serverId, userId);
+}
+
+async function ensureTopicSendAllowed(topic: TopicWithRoomRow, userId: string): Promise<void> {
+  const canBypass = await canBypassRoomSendPolicy(topic, userId);
+  const serverId = String(topic.room_server_id || "").trim();
+  if (serverId && !canBypass) {
+    const muteState = await resolveActiveServerMute(serverId, userId);
+    if (muteState.isMuted) {
+      throw new Error("server_member_muted");
+    }
+  }
+  if (topic.room_is_readonly && !canBypass) {
+    throw new Error("room_readonly");
+  }
+
+  const slowmodeSeconds = Number(topic.room_slowmode_seconds || 0);
+  if (slowmodeSeconds <= 0 || canBypass) {
+    return;
+  }
+
+  const key = `room:slowmode:${topic.room_id}:${userId}`;
+  const cooldownRaw = await redis.get(key);
+  if (cooldownRaw) {
+    const retryAfterSec = Math.max(1, Number.parseInt(cooldownRaw, 10) || slowmodeSeconds);
+    throw new Error(`room_slowmode_active:${retryAfterSec}`);
+  }
+
+  await redis.setEx(key, slowmodeSeconds, String(slowmodeSeconds));
+}
+
 async function loadMessageContext(messageId: string): Promise<MessageContextRow> {
   const messageResult = await db.query<MessageContextRow>(
     `SELECT
        m.id AS message_id,
        m.user_id AS message_user_id,
+      um.name AS message_user_name,
        m.body AS message_body,
        m.created_at AS message_created_at,
        m.updated_at AS message_updated_at,
@@ -210,8 +262,11 @@ async function loadMessageContext(messageId: string): Promise<MessageContextRow>
        r.nsfw AS room_nsfw,
        r.position AS room_position,
        r.is_public AS room_is_public,
-       r.is_hidden AS room_is_hidden
+       r.is_hidden AS room_is_hidden,
+       r.is_readonly AS room_is_readonly,
+       r.slowmode_seconds AS room_slowmode_seconds
      FROM messages m
+    JOIN users um ON um.id = m.user_id
      JOIN room_topics rt ON rt.id = m.topic_id
      JOIN rooms r ON r.id = m.room_id
      WHERE m.id = $1
@@ -282,6 +337,9 @@ export async function listTopicMessages(input: {
              WHERE ma.message_id = m.id
            ), '[]'::json) AS attachments
          FROM messages m
+         LEFT JOIN room_message_replies rmr ON rmr.message_id = m.id
+         LEFT JOIN messages pm ON pm.id = rmr.parent_message_id
+         LEFT JOIN users pu ON pu.id = pm.user_id
          JOIN users u ON u.id = m.user_id
          WHERE m.topic_id = $1
            AND (m.created_at, m.id) < ($2::timestamptz, $3)
@@ -294,6 +352,10 @@ export async function listTopicMessages(input: {
            m.id,
            m.room_id,
            m.topic_id,
+           rmr.parent_message_id AS reply_to_message_id,
+           pm.user_id AS reply_to_user_id,
+           pu.name AS reply_to_user_name,
+           pm.body AS reply_to_text,
            m.user_id,
            m.body AS text,
            m.created_at,
@@ -320,6 +382,9 @@ export async function listTopicMessages(input: {
              WHERE ma.message_id = m.id
            ), '[]'::json) AS attachments
          FROM messages m
+         LEFT JOIN room_message_replies rmr ON rmr.message_id = m.id
+         LEFT JOIN messages pm ON pm.id = rmr.parent_message_id
+         LEFT JOIN users pu ON pu.id = pm.user_id
          JOIN users u ON u.id = m.user_id
          WHERE m.topic_id = $1
          ORDER BY m.created_at DESC, m.id DESC
@@ -366,6 +431,7 @@ export async function createTopicMessage(input: {
 }> {
   const topic = await loadTopicWithRoom(input.topicId);
   await ensureTopicReadAccess(topic, input.userId);
+  await ensureTopicSendAllowed(topic, input.userId);
 
   if (topic.topic_archived_at) {
     throw new Error("topic_archived");
@@ -527,6 +593,7 @@ export async function replyTopicMessage(input: {
 }> {
   const context = await loadMessageContext(input.messageId);
   await ensureTopicReadAccess(context, input.userId);
+  await ensureTopicSendAllowed(context, input.userId);
 
   if (context.topic_archived_at) {
     throw new Error("topic_archived");
@@ -578,6 +645,10 @@ export async function replyTopicMessage(input: {
         id: row.id,
         room_id: row.room_id,
         topic_id: row.topic_id,
+        reply_to_message_id: input.messageId,
+        reply_to_user_id: context.message_user_id,
+        reply_to_user_name: context.message_user_name,
+        reply_to_text: context.message_body,
         user_id: row.user_id,
         text: row.body,
         created_at: row.created_at,
@@ -603,6 +674,7 @@ export async function setTopicMessagePinned(input: {
   room: RoomRow;
   topic: { id: string; slug: string };
   messageId: string;
+  messageAuthorUserId: string;
   pinned: boolean;
 }> {
   const context = await loadMessageContext(input.messageId);
@@ -634,6 +706,7 @@ export async function setTopicMessagePinned(input: {
       slug: context.topic_slug
     },
     messageId: input.messageId,
+    messageAuthorUserId: context.message_user_id,
     pinned: input.pinned
   };
 }
@@ -687,6 +760,92 @@ export async function setTopicMessageReaction(input: {
     userId: input.userId,
     active: input.active
   };
+}
+
+export async function createTopicMessageReport(input: {
+  messageId: string;
+  userId: string;
+  reason: string;
+  details?: string;
+}): Promise<{
+  reportId: string;
+  messageId: string;
+}> {
+  const context = await loadMessageContext(input.messageId);
+  await ensureTopicReadAccess(context, input.userId);
+
+  if (context.message_user_id === input.userId) {
+    throw new Error("cannot_report_own_message");
+  }
+
+  const normalizedReason = input.reason.trim().slice(0, 160);
+  const normalizedDetails = typeof input.details === "string"
+    ? input.details.trim().slice(0, 2000)
+    : "";
+
+  try {
+    const inserted = await db.query<{ id: string }>(
+      `INSERT INTO room_message_reports (
+         message_id,
+         topic_id,
+         room_id,
+         server_id,
+         reporter_user_id,
+         reason,
+         details
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       RETURNING id`,
+      [
+        input.messageId,
+        context.topic_id,
+        context.room_id,
+        context.room_server_id,
+        input.userId,
+        normalizedReason,
+        normalizedDetails || null
+      ]
+    );
+
+    await db.query(
+      `INSERT INTO moderation_audit_log (
+         action,
+         actor_user_id,
+         target_user_id,
+         server_id,
+         room_id,
+         topic_id,
+         message_id,
+         meta
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb)`,
+      [
+        "message_reported",
+        input.userId,
+        context.message_user_id,
+        context.room_server_id,
+        context.room_id,
+        context.topic_id,
+        input.messageId,
+        JSON.stringify({
+          reason: normalizedReason,
+          details: normalizedDetails || null
+        })
+      ]
+    );
+
+    return {
+      reportId: String(inserted.rows[0]?.id || "").trim(),
+      messageId: input.messageId
+    };
+  } catch (error) {
+    const code = String((error as { code?: string } | null)?.code || "").trim();
+    if (code === "23505") {
+      throw new Error("message_report_exists");
+    }
+
+    throw error;
+  }
 }
 
 export async function markTopicRead(input: {

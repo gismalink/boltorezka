@@ -2,6 +2,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { db } from "../db.js";
 import type { ServerContext } from "../api-contract.types.ts";
 import type { ServerMemberRole } from "../db.types.ts";
+import { resolveEffectiveServerPermissions } from "./server-permissions-service.js";
 import { writeServerAuditEvent } from "./server-audit-service.js";
 
 const ACTIVE_SERVER_INVITES_LIMIT = Math.max(
@@ -81,6 +82,16 @@ async function getServerRole(serverId: string, userId: string): Promise<ServerMe
 export async function createServerInvite(input: CreateInviteInput): Promise<InviteCreateResult> {
   const actorRole = await getServerRole(input.serverId, input.actorUserId);
   if (!actorRole) {
+    throw new Error("forbidden_role");
+  }
+
+  const resolved = await resolveEffectiveServerPermissions({
+    serverId: input.serverId,
+    userId: input.actorUserId,
+    serverRole: actorRole
+  });
+
+  if (!resolved.permissions.manageInvites) {
     throw new Error("forbidden_role");
   }
 

@@ -1,5 +1,6 @@
 import type { WebSocket } from "ws";
 import { isServerAgeConfirmed } from "../services/age-verification-service.js";
+import { resolveActiveServerMute } from "../services/server-mute-service.js";
 
 type SocketState = {
   userId: string;
@@ -11,7 +12,48 @@ type SocketState = {
 type ResolvedChatRoom = {
   roomId: string;
   roomSlug: string;
+  serverId: string | null;
+  isReadonly: boolean;
+  slowmodeSeconds: number;
 };
+
+async function canBypassRoomSendPolicy(
+  dbQuery: ChatCommonParams["dbQuery"],
+  userId: string,
+  serverId: string | null
+): Promise<boolean> {
+  const globalRoleResult = await dbQuery<{ role: string }>(
+    `SELECT role
+     FROM users
+     WHERE id = $1
+       AND is_banned = FALSE
+     LIMIT 1`,
+    [userId]
+  );
+
+  const globalRole = String(globalRoleResult.rows[0]?.role || "").trim();
+  if (globalRole === "admin" || globalRole === "super_admin") {
+    return true;
+  }
+
+  const normalizedServerId = String(serverId || "").trim();
+  if (!normalizedServerId) {
+    return false;
+  }
+
+  const membership = await dbQuery<{ role: string }>(
+    `SELECT role
+     FROM server_members
+     WHERE server_id = $1
+       AND user_id = $2
+       AND status = 'active'
+     LIMIT 1`,
+    [normalizedServerId, userId]
+  );
+
+  const serverRole = String(membership.rows[0]?.role || "").trim();
+  return serverRole === "owner" || serverRole === "admin";
+}
 
 type ChatCommonParams = {
   connection: WebSocket;
@@ -79,14 +121,47 @@ async function resolveChatRoom(
       return null;
     }
 
+    const roomById = await dbQuery<{
+      id: string;
+      slug: string;
+      server_id: string | null;
+      is_readonly: boolean;
+      slowmode_seconds: number;
+    }>(
+      `SELECT id, slug, server_id, is_readonly, slowmode_seconds
+       FROM rooms
+       WHERE id = $1
+         AND is_archived = FALSE
+       LIMIT 1`,
+      [state.roomId]
+    );
+
+    const room = roomById.rows[0];
+    if (!room) {
+      sendNack(connection, requestId, eventType, "RoomNotFound", "Room does not exist");
+      return null;
+    }
+
     return {
-      roomId: state.roomId,
-      roomSlug: state.roomSlug
+      roomId: room.id,
+      roomSlug: room.slug,
+      serverId: room.server_id,
+      isReadonly: Boolean(room.is_readonly),
+      slowmodeSeconds: Number(room.slowmode_seconds || 0)
     };
   }
 
-  const roomResult = await dbQuery<{ id: string; slug: string; is_public: boolean; is_hidden: boolean; server_id: string | null; nsfw: boolean | null }>(
-    `SELECT r.id, r.slug, r.is_public, r.is_hidden, r.server_id, r.nsfw
+  const roomResult = await dbQuery<{
+    id: string;
+    slug: string;
+    is_public: boolean;
+    is_hidden: boolean;
+    server_id: string | null;
+    nsfw: boolean | null;
+    is_readonly: boolean;
+    slowmode_seconds: number;
+  }>(
+    `SELECT r.id, r.slug, r.is_public, r.is_hidden, r.server_id, r.nsfw, r.is_readonly, r.slowmode_seconds
      FROM rooms r
      LEFT JOIN servers s ON s.id = r.server_id
      WHERE r.slug = $1
@@ -151,7 +226,10 @@ async function resolveChatRoom(
 
   return {
     roomId: room.id,
-    roomSlug: room.slug
+    roomSlug: room.slug,
+    serverId: room.server_id,
+    isReadonly: Boolean(room.is_readonly),
+    slowmodeSeconds: Number(room.slowmode_seconds || 0)
   };
 }
 
@@ -199,6 +277,37 @@ export async function handleChatSend(
   if (!text) {
     sendValidationNack(connection, requestId, eventType, "Message text is required");
     return;
+  }
+
+  const canBypassPolicies = await canBypassRoomSendPolicy(dbQuery, state.userId, targetRoom.serverId);
+  if (!canBypassPolicies && targetRoom.serverId) {
+    const muteState = await resolveActiveServerMute(targetRoom.serverId, state.userId);
+    if (muteState.isMuted) {
+      sendNack(connection, requestId, eventType, "ServerMemberMuted", "You are muted in this server", {
+        mutedUntil: muteState.expiresAt,
+        retryAfterSec: muteState.retryAfterSec
+      });
+      return;
+    }
+  }
+
+  if (targetRoom.isReadonly && !canBypassPolicies) {
+    sendNack(connection, requestId, eventType, "RoomReadOnly", "Room is read-only");
+    return;
+  }
+
+  if (targetRoom.slowmodeSeconds > 0 && !canBypassPolicies) {
+    const slowmodeKey = `room:slowmode:${targetRoom.roomId}:${state.userId}`;
+    const cooldownRaw = await redisGet(slowmodeKey);
+    if (cooldownRaw) {
+      const retryAfterSec = Math.max(1, Number.parseInt(cooldownRaw, 10) || targetRoom.slowmodeSeconds);
+      sendNack(connection, requestId, eventType, "SlowmodeActive", "Slowmode is active", {
+        retryAfterSec
+      });
+      return;
+    }
+
+    await redisSetEx(slowmodeKey, targetRoom.slowmodeSeconds, String(targetRoom.slowmodeSeconds));
   }
 
   const idempotencyKey = normalizeRequestId(incomingIdempotencyKey) || requestId;

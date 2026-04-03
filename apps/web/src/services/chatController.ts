@@ -28,9 +28,11 @@ export class ChatController {
     return message;
   }
 
-  async loadRecentMessages(token: string, roomSlug: string) {
+  async loadRecentMessages(token: string, roomSlug: string, topicId: string | null = null) {
     try {
-      const res = await api.roomMessages(token, roomSlug, { limit: 50 });
+      const res = topicId
+        ? await api.topicMessages(token, topicId, { limit: 50 })
+        : await api.roomMessages(token, roomSlug, { limit: 50 });
       this.options.setMessages(() => res.messages.map((message) => this.normalizeMessageForRender(message)));
       this.options.setMessagesHasMore(Boolean(res.pagination?.hasMore));
       this.options.setMessagesNextCursor(res.pagination?.nextCursor ?? null);
@@ -42,6 +44,7 @@ export class ChatController {
   async loadOlderMessages(
     token: string,
     roomSlug: string,
+    topicId: string | null,
     messagesNextCursor: MessagesCursor,
     loadingOlderMessages: boolean
   ) {
@@ -51,10 +54,15 @@ export class ChatController {
 
     this.options.setLoadingOlderMessages(true);
     try {
-      const res = await api.roomMessages(token, roomSlug, {
-        limit: 50,
-        cursor: messagesNextCursor
-      });
+      const res = topicId
+        ? await api.topicMessages(token, topicId, {
+          limit: 50,
+          cursor: messagesNextCursor
+        })
+        : await api.roomMessages(token, roomSlug, {
+          limit: 50,
+          cursor: messagesNextCursor
+        });
 
       this.options.setMessages((prev) => {
         const existingIds = new Set(prev.map((item) => item.id));

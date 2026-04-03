@@ -131,6 +131,8 @@ export type RoomsPanelProps = {
   roomSlug: string;
   activeChatRoomSlug: string;
   roomMediaTopologyBySlug: Record<string, "livekit">;
+  roomUnreadBySlug: Record<string, number>;
+  serverUnreadCount: number;
   currentUserId: string;
   liveRoomMembersBySlug: Record<string, string[]>;
   liveRoomMemberDetailsBySlug: Record<string, PresenceMember[]>;

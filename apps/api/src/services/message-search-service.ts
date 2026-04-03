@@ -16,6 +16,8 @@ export type SearchMessagesInput = {
   topicId?: string;
   authorId?: string;
   hasAttachment?: boolean;
+  attachmentType?: "image";
+  hasLink?: boolean;
   hasMention?: boolean;
   from?: string;
   to?: string;
@@ -107,6 +109,20 @@ export async function searchMessages(input: SearchMessagesInput): Promise<Search
         ? `EXISTS (SELECT 1 FROM message_attachments ma WHERE ma.message_id = m.id)`
         : `NOT EXISTS (SELECT 1 FROM message_attachments ma WHERE ma.message_id = m.id)`
     );
+  }
+
+  if (input.attachmentType) {
+    where.push(
+      `EXISTS (
+        SELECT 1 FROM message_attachments ma
+        WHERE ma.message_id = m.id
+          AND ma.type = ${bind(input.attachmentType)}
+      )`
+    );
+  }
+
+  if (typeof input.hasLink === "boolean") {
+    where.push(input.hasLink ? `m.body ~* '(https?://|www\\.)'` : `m.body !~* '(https?://|www\\.)'`);
   }
 
   if (input.from) {

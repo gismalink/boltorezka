@@ -13,3 +13,35 @@ export const ROOM_SLUG_STORAGE_KEY = "boltorezka_room_slug";
 export const VERSION_UPDATE_PENDING_KEY = "boltorezka_update_reload_pending";
 
 export const PENDING_ACCESS_AUTO_REFRESH_SEC = 20;
+
+function readPositiveIntFromEnv(name: keyof ImportMetaEnv, fallback: number): number {
+	const raw = Number(import.meta.env[name] || "");
+	if (!Number.isFinite(raw)) {
+		return fallback;
+	}
+
+	const normalized = Math.floor(raw);
+	return normalized > 0 ? normalized : fallback;
+}
+
+export const ROOM_UNREAD_BACKGROUND_REFRESH_MS = readPositiveIntFromEnv(
+	"VITE_ROOM_UNREAD_BACKGROUND_REFRESH_MS",
+	45_000
+);
+export const ROOM_UNREAD_BACKGROUND_MAX_REFRESH_MS = readPositiveIntFromEnv(
+	"VITE_ROOM_UNREAD_BACKGROUND_MAX_REFRESH_MS",
+	5 * 60_000
+);
+export const ROOM_UNREAD_BACKGROUND_JITTER_MS = readPositiveIntFromEnv(
+	"VITE_ROOM_UNREAD_BACKGROUND_JITTER_MS",
+	4_000
+);
+export const ROOM_UNREAD_MAX_CONCURRENCY = Math.max(
+	1,
+	readPositiveIntFromEnv("VITE_ROOM_UNREAD_MAX_CONCURRENCY", 4)
+);
+export const ROOM_UNREAD_CACHE_TTL_MS = readPositiveIntFromEnv("VITE_ROOM_UNREAD_CACHE_TTL_MS", 20_000);
+export const ROOM_UNREAD_METRICS_SUMMARY_EVERY = Math.max(
+	1,
+	readPositiveIntFromEnv("VITE_ROOM_UNREAD_METRICS_SUMMARY_EVERY", 6)
+);

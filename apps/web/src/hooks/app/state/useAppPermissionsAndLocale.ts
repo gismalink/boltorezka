@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { api } from "../../../api";
 import type { ServerListItem, User } from "../../../domain";
 import { LOCALE_BY_LANG, TEXT, type Lang } from "../../../i18n";
 
@@ -22,12 +23,18 @@ export function useAppPermissionsAndLocale({
   pushToast
 }: UseAppPermissionsAndLocaleInput) {
   const previousPendingRequestsCountRef = useRef<number | null>(null);
+  const [resolvedServerPermissions, setResolvedServerPermissions] = useState<{
+    manageRooms: boolean;
+    viewTelemetry: boolean;
+    manageGlobalUsers: boolean;
+    manageServiceControlPlane: boolean;
+  } | null>(null);
 
   const currentServerRole = useMemo(
     () => servers.find((item) => item.id === currentServerId)?.role || null,
     [servers, currentServerId]
   );
-  const canCreateRooms = Boolean(
+  const fallbackCanCreateRooms = Boolean(
     user && (
       user.role === "admin"
       || user.role === "super_admin"
@@ -35,15 +42,18 @@ export function useAppPermissionsAndLocale({
       || currentServerRole === "admin"
     )
   );
-  const canManageUsers = user?.role === "admin" || user?.role === "super_admin";
-  const canPromote = user?.role === "super_admin";
+  const fallbackCanManageUsers = user?.role === "admin" || user?.role === "super_admin";
+  const fallbackCanPromote = user?.role === "super_admin";
+  const canCreateRooms = resolvedServerPermissions?.manageRooms ?? fallbackCanCreateRooms;
+  const canManageUsers = resolvedServerPermissions?.manageGlobalUsers ?? fallbackCanManageUsers;
+  const canPromote = resolvedServerPermissions?.manageServiceControlPlane ?? fallbackCanPromote;
   const canUseService = Boolean(
     user && (user.role === "admin" || user.role === "super_admin" || user.access_state === "active")
   );
   const serviceToken = canUseService ? token : "";
   const canManageAudioQuality = canPromote;
   const canManageServerControlPlane = canPromote;
-  const canViewTelemetry = canPromote || canCreateRooms;
+  const canViewTelemetry = resolvedServerPermissions?.viewTelemetry ?? (canPromote || canCreateRooms);
   const pendingJoinRequestsCount = useMemo(() => {
     if (!canPromote) {
       return 0;
@@ -56,6 +66,40 @@ export function useAppPermissionsAndLocale({
     const dict = TEXT[lang];
     return (key: string) => dict[key] || key;
   }, [lang]);
+
+  useEffect(() => {
+    const userId = String(user?.id || "").trim();
+    const serverId = String(currentServerId || "").trim();
+    if (!token || !userId || !serverId) {
+      setResolvedServerPermissions(null);
+      return;
+    }
+
+    let cancelled = false;
+    void (async () => {
+      try {
+        const response = await api.serverPermissions(token, serverId);
+        if (cancelled) {
+          return;
+        }
+
+        setResolvedServerPermissions({
+          manageRooms: response.permissions.manageRooms,
+          viewTelemetry: response.permissions.viewTelemetry,
+          manageGlobalUsers: response.permissions.manageGlobalUsers,
+          manageServiceControlPlane: response.permissions.manageServiceControlPlane
+        });
+      } catch {
+        if (!cancelled) {
+          setResolvedServerPermissions(null);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [token, user?.id, currentServerId]);
 
   useEffect(() => {
     if (!canPromote) {

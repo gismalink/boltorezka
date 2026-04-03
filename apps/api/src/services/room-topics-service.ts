@@ -4,6 +4,7 @@ import type { RoomTopicRow, UserRole } from "../db.types.ts";
 export type TopicListItem = {
   id: string;
   roomId: string;
+  createdBy: string | null;
   slug: string;
   title: string;
   position: number;
@@ -12,6 +13,7 @@ export type TopicListItem = {
   createdAt: string;
   updatedAt: string;
   unreadCount: number;
+  mentionUnreadCount: number;
 };
 
 type CreateRoomTopicInput = {
@@ -193,10 +195,11 @@ async function ensureUniqueTopicSlug(roomId: string, rawSlug: string): Promise<s
   return `${base}-${Date.now().toString(36)}`.slice(0, 64);
 }
 
-function mapTopic(row: RoomTopicRow & { unread_count?: string | number | null }): TopicListItem {
+function mapTopic(row: RoomTopicRow & { unread_count?: string | number | null; mention_unread_count?: string | number | null }): TopicListItem {
   return {
     id: row.id,
     roomId: row.room_id,
+    createdBy: row.created_by,
     slug: row.slug,
     title: row.title,
     position: row.position,
@@ -204,19 +207,21 @@ function mapTopic(row: RoomTopicRow & { unread_count?: string | number | null })
     archivedAt: row.archived_at,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
-    unreadCount: Number(row.unread_count || 0)
+    unreadCount: Number(row.unread_count || 0),
+    mentionUnreadCount: Number(row.mention_unread_count || 0)
   };
 }
 
 export async function listRoomTopics(roomId: string, userId: string): Promise<TopicListItem[]> {
   await ensureReadAccess(roomId, userId);
 
-  const result = await db.query<RoomTopicRow & { unread_count: string }>(
+  const result = await db.query<RoomTopicRow & { unread_count: string; mention_unread_count: string }>(
     `SELECT
        rt.id,
        rt.room_id,
        rt.slug,
        rt.title,
+       rt.created_by,
        rt.position,
        rt.is_pinned,
        rt.archived_at,
@@ -230,9 +235,24 @@ export async function listRoomTopics(roomId: string, userId: string): Promise<To
            WHERE m.topic_id = rt.id
              AND m.created_at > COALESCE(rr.last_read_at, to_timestamp(0))
          )
-       ) AS unread_count
+       ) AS unread_count,
+       GREATEST(
+         0,
+         (
+           SELECT COUNT(*)::int
+           FROM messages m
+           WHERE m.topic_id = rt.id
+             AND m.user_id <> $2
+             AND m.created_at > COALESCE(rr.last_read_at, to_timestamp(0))
+             AND (
+               (NULLIF(BTRIM(au.name), '') IS NOT NULL AND POSITION(LOWER(CONCAT('@', au.name)) IN LOWER(m.text)) > 0)
+               OR (NULLIF(BTRIM(au.username), '') IS NOT NULL AND POSITION(LOWER(CONCAT('@', au.username)) IN LOWER(m.text)) > 0)
+             )
+         )
+       ) AS mention_unread_count
      FROM room_topics rt
      LEFT JOIN room_reads rr ON rr.topic_id = rt.id AND rr.user_id = $2
+     LEFT JOIN users au ON au.id = $2
      WHERE rt.room_id = $1
      ORDER BY rt.is_pinned DESC, rt.position ASC, rt.created_at DESC`,
     [roomId, userId]

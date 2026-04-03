@@ -1,7 +1,7 @@
 const path = require("path");
 const fs = require("fs");
 const { pathToFileURL } = require("url");
-const { app, BrowserWindow, shell, desktopCapturer, ipcMain } = require("electron");
+const { app, BrowserWindow, shell, desktopCapturer, ipcMain, Notification } = require("electron");
 
 let autoUpdater = null;
 try {
@@ -241,6 +241,55 @@ function registerUpdateIpcHandlers() {
       ok: true,
       state: { ...desktopUpdateState }
     };
+  });
+}
+
+function registerNotificationIpcHandlers() {
+  ipcMain.handle("desktop:notifications:show", async (_event, payload) => {
+    if (!Notification || !Notification.isSupported()) {
+      return { ok: false, reason: "unsupported" };
+    }
+
+    const title = String(payload?.title || "").trim();
+    const body = String(payload?.body || "").trim();
+    const eventId = String(payload?.eventId || "").trim();
+    if (!title) {
+      return { ok: false, reason: "validation_error" };
+    }
+
+    try {
+      const nativeNotification = new Notification({
+        title,
+        body,
+        silent: false,
+        urgency: "normal"
+      });
+
+      nativeNotification.on("click", () => {
+        try {
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            if (mainWindow.isMinimized()) {
+              mainWindow.restore();
+            }
+            mainWindow.focus();
+            mainWindow.webContents.send("desktop:notification-open", {
+              eventId,
+              at: new Date().toISOString()
+            });
+          }
+        } catch {
+          // Notification click routing is best-effort.
+        }
+      });
+
+      nativeNotification.show();
+      return { ok: true };
+    } catch (error) {
+      return {
+        ok: false,
+        reason: error instanceof Error ? error.message : "unknown_error"
+      };
+    }
   });
 }
 
@@ -713,6 +762,7 @@ app.on("open-url", (event, url) => {
 
 app.whenReady().then(() => {
   registerUpdateIpcHandlers();
+  registerNotificationIpcHandlers();
   mainWindow = createMainWindow();
   startAutoUpdateOrchestration();
 

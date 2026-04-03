@@ -12,6 +12,8 @@ const searchMessagesQuerySchema = z.object({
   topicId: z.string().uuid().optional(),
   authorId: z.string().uuid().optional(),
   hasAttachment: z.coerce.boolean().optional(),
+  attachmentType: z.enum(["image"]).optional(),
+  hasLink: z.coerce.boolean().optional(),
   hasMention: z.coerce.boolean().optional(),
   from: z.string().datetime().optional(),
   to: z.string().datetime().optional(),
@@ -52,6 +54,13 @@ export async function searchRoutes(fastify: FastifyInstance) {
         });
       }
 
+      if (parsedQuery.data.attachmentType && parsedQuery.data.hasAttachment === false) {
+        return reply.code(400).send({
+          error: "ValidationError",
+          message: "attachmentType cannot be combined with hasAttachment=false"
+        });
+      }
+
       try {
         const result = await searchMessages({
           userId,
@@ -62,6 +71,8 @@ export async function searchRoutes(fastify: FastifyInstance) {
           topicId: parsedQuery.data.topicId,
           authorId: parsedQuery.data.authorId,
           hasAttachment: parsedQuery.data.hasAttachment,
+          attachmentType: parsedQuery.data.attachmentType,
+          hasLink: parsedQuery.data.hasLink,
           hasMention: parsedQuery.data.hasMention,
           from: parsedQuery.data.from,
           to: parsedQuery.data.to,

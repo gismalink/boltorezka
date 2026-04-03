@@ -1,5 +1,6 @@
 import type { WebSocket } from "ws";
 import { db } from "../db.js";
+import { resolveEffectiveServerPermissions } from "../services/server-permissions-service.js";
 import { sendNack } from "./realtime-io.js";
 
 type IncrementMetricFn = (name: string) => Promise<unknown>;
@@ -27,31 +28,29 @@ export function createRealtimePermissionHelpers(incrementMetric: IncrementMetric
 
   const isUserModerator = async (userId: string, roomSlug?: string | null) => {
     const normalizedRoomSlug = String(roomSlug || "").trim();
-    const globalResult = await db.query<{ role: string }>("SELECT role FROM users WHERE id = $1", [userId]);
-    const globalRole = String(globalResult.rows[0]?.role || "").trim();
-    if (globalRole === "admin" || globalRole === "super_admin") {
-      return true;
-    }
-
     if (!normalizedRoomSlug) {
       return false;
     }
 
-    const roomModeratorResult = await db.query<{ is_moderator: boolean }>(
-      `SELECT EXISTS (
-         SELECT 1
-         FROM rooms r
-         JOIN server_members sm ON sm.server_id = r.server_id
-         WHERE r.slug = $2
-           AND r.is_archived = FALSE
-           AND sm.user_id = $1
-           AND sm.status = 'active'
-           AND sm.role IN ('owner', 'admin')
-       ) AS is_moderator`,
-      [userId, normalizedRoomSlug]
+    const roomResult = await db.query<{ server_id: string | null }>(
+      `SELECT server_id
+       FROM rooms
+       WHERE slug = $1
+         AND is_archived = FALSE
+       LIMIT 1`,
+      [normalizedRoomSlug]
     );
+    const serverId = String(roomResult.rows[0]?.server_id || "").trim();
+    if (!serverId) {
+      return false;
+    }
 
-    return Boolean(roomModeratorResult.rows[0]?.is_moderator);
+    const resolved = await resolveEffectiveServerPermissions({
+      serverId,
+      userId
+    });
+
+    return resolved.permissions.moderateMembers;
   };
 
   return {

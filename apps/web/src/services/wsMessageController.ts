@@ -1,5 +1,5 @@
 import type { Dispatch, SetStateAction } from "react";
-import type { Message, PresenceMember, WsIncoming } from "../domain";
+import type { Message, PresenceMember, RoomTopic, WsIncoming } from "../domain";
 import { RTC_FEATURE_INITIAL_STATE_REPLAY } from "../hooks/rtc/voiceCallConfig";
 
 type WsMessageControllerOptions = {
@@ -81,6 +81,119 @@ type WsMessageControllerOptions = {
       ts?: string;
     }
   ) => void;
+  onChatMessagePinned?: (
+    payload: {
+      roomId?: string;
+      roomSlug?: string;
+      topicId?: string;
+      topicSlug?: string;
+      messageId?: string;
+      pinned?: boolean;
+      pinnedByUserId?: string;
+      ts?: string;
+    }
+  ) => void;
+  onChatMessageUnpinned?: (
+    payload: {
+      roomId?: string;
+      roomSlug?: string;
+      topicId?: string;
+      topicSlug?: string;
+      messageId?: string;
+      pinned?: boolean;
+      unpinnedByUserId?: string;
+      ts?: string;
+    }
+  ) => void;
+  onChatMessageReactionChanged?: (
+    payload: {
+      roomId?: string;
+      roomSlug?: string;
+      topicId?: string;
+      topicSlug?: string;
+      messageId?: string;
+      emoji?: string;
+      userId?: string;
+      active?: boolean;
+      ts?: string;
+    }
+  ) => void;
+  onChatMessageReceived?: (
+    payload: {
+      roomId?: string;
+      roomSlug?: string;
+      topicId?: string;
+      topicSlug?: string;
+      messageId?: string;
+      userId?: string;
+      userName?: string;
+      createdAt?: string;
+      senderRequestId?: string;
+    }
+  ) => void;
+  onChatTopicRead?: (
+    payload: {
+      roomId?: string;
+      topicId?: string;
+      userId?: string;
+      lastReadMessageId?: string;
+      lastReadAt?: string;
+    }
+  ) => void;
+  onChatTopicCreated?: (
+    payload: {
+      roomId?: string;
+      roomSlug?: string;
+      topic?: RoomTopic;
+      actorUserId?: string;
+      ts?: string;
+    }
+  ) => void;
+  onChatTopicUpdated?: (
+    payload: {
+      roomId?: string;
+      roomSlug?: string;
+      topic?: RoomTopic;
+      actorUserId?: string;
+      ts?: string;
+    }
+  ) => void;
+  onChatTopicArchived?: (
+    payload: {
+      roomId?: string;
+      roomSlug?: string;
+      topic?: RoomTopic;
+      actorUserId?: string;
+      ts?: string;
+    }
+  ) => void;
+  onChatTopicUnarchived?: (
+    payload: {
+      roomId?: string;
+      roomSlug?: string;
+      topic?: RoomTopic;
+      actorUserId?: string;
+      ts?: string;
+    }
+  ) => void;
+  onNotificationSettingsUpdated?: (
+    payload: {
+      settings?: {
+        id: string;
+        userId: string;
+        scopeType: "server" | "room" | "topic";
+        serverId: string | null;
+        roomId: string | null;
+        topicId: string | null;
+        mode: "all" | "mentions" | "none";
+        muteUntil: string | null;
+        allowCriticalMentions: boolean;
+        createdAt: string;
+        updatedAt: string;
+      };
+      ts?: string;
+    }
+  ) => void;
   onAck?: (
     payload: { requestId: string; eventType: string; meta: Record<string, unknown> }
   ) => void;
@@ -99,6 +212,7 @@ type WsMessageControllerOptions = {
   ) => void;
   onSessionMoved?: (payload: { code: string; message: string }) => void;
   getActiveChatRoomSlug?: () => string;
+  getActiveTopicId?: () => string | null;
 };
 
 export class WsMessageController {
@@ -144,26 +258,54 @@ export class WsMessageController {
 
     const attachments = attachmentsRaw
       .filter((item): item is Record<string, unknown> => Boolean(item && typeof item === "object"))
-      .map((item) => ({
-        id: String(item.id || crypto.randomUUID()),
-        message_id: String(item.messageId || item.message_id || payload.id || fallbackId || ""),
-        type: "image" as const,
-        storage_key: String(item.storageKey || item.storage_key || ""),
-        download_url: item.downloadUrl === null || item.download_url === null
-          ? null
-          : String(item.downloadUrl || item.download_url || ""),
-        mime_type: String(item.mimeType || item.mime_type || ""),
-        size_bytes: Number(item.sizeBytes || item.size_bytes || 0),
-        width: typeof item.width === "number" ? item.width : null,
-        height: typeof item.height === "number" ? item.height : null,
-        checksum: item.checksum === null ? null : String(item.checksum || "") || null,
-        created_at: String(item.createdAt || item.created_at || new Date().toISOString())
-      }))
+      .map((item) => {
+        const attachmentType = String(item.type || "").trim().toLowerCase();
+        return {
+          id: String(item.id || crypto.randomUUID()),
+          message_id: String(item.messageId || item.message_id || payload.id || fallbackId || ""),
+          type: attachmentType === "audio" || attachmentType === "document" ? attachmentType : "image",
+          storage_key: String(item.storageKey || item.storage_key || ""),
+          download_url: item.downloadUrl === null || item.download_url === null
+            ? null
+            : String(item.downloadUrl || item.download_url || ""),
+          mime_type: String(item.mimeType || item.mime_type || ""),
+          size_bytes: Number(item.sizeBytes || item.size_bytes || 0),
+          width: typeof item.width === "number" ? item.width : null,
+          height: typeof item.height === "number" ? item.height : null,
+          checksum: item.checksum === null ? null : String(item.checksum || "") || null,
+          created_at: String(item.createdAt || item.created_at || new Date().toISOString())
+        };
+      })
       .filter((item) => item.storage_key && item.mime_type && Number.isFinite(item.size_bytes) && item.size_bytes > 0);
 
     return {
       id: String(payload.id || fallbackId || crypto.randomUUID()),
       room_id: String(payload.roomId || ""),
+      topic_id: typeof payload.topicId === "string"
+        ? payload.topicId
+        : payload.topicId === null
+          ? null
+          : null,
+      reply_to_message_id: typeof payload.replyToMessageId === "string"
+        ? payload.replyToMessageId
+        : payload.replyToMessageId === null
+          ? null
+          : null,
+      reply_to_user_id: typeof payload.replyToUserId === "string"
+        ? payload.replyToUserId
+        : payload.replyToUserId === null
+          ? null
+          : null,
+      reply_to_user_name: typeof payload.replyToUserName === "string"
+        ? payload.replyToUserName
+        : payload.replyToUserName === null
+          ? null
+          : null,
+      reply_to_text: typeof payload.replyToText === "string"
+        ? payload.replyToText
+        : payload.replyToText === null
+          ? null
+          : null,
       user_id: String(payload.userId || ""),
       text: String(payload.text || ""),
       created_at: String(payload.createdAt || new Date().toISOString()),
@@ -238,7 +380,20 @@ export class WsMessageController {
     const payload = message.payload as Record<string, unknown>;
     const senderRequestId = typeof payload.senderRequestId === "string" ? payload.senderRequestId : undefined;
     const incomingRoomSlug = this.asTrimmedString(payload.roomSlug || payload.room_slug);
+    const incomingTopicId = this.asTrimmedString(payload.topicId || payload.topic_id);
+    this.options.onChatMessageReceived?.({
+      roomId: this.asTrimmedString(payload.roomId || payload.room_id) || undefined,
+      roomSlug: incomingRoomSlug || undefined,
+      topicId: incomingTopicId || undefined,
+      topicSlug: this.asTrimmedString(payload.topicSlug || payload.topic_slug) || undefined,
+      messageId: this.asTrimmedString(payload.id) || undefined,
+      userId: this.asTrimmedString(payload.userId || payload.user_id) || undefined,
+      userName: this.asTrimmedString(payload.userName || payload.user_name) || undefined,
+      createdAt: this.asTrimmedString(payload.createdAt || payload.created_at) || undefined,
+      senderRequestId
+    });
     const activeChatRoomSlug = this.asTrimmedString(this.options.getActiveChatRoomSlug?.());
+    const activeTopicId = this.asTrimmedString(this.options.getActiveTopicId?.());
     if (incomingRoomSlug && activeChatRoomSlug && incomingRoomSlug !== activeChatRoomSlug) {
       if (!senderRequestId) {
         return;
@@ -250,8 +405,21 @@ export class WsMessageController {
       return;
     }
 
+    if (activeTopicId) {
+      if (!incomingTopicId || incomingTopicId !== activeTopicId) {
+        return;
+      }
+    }
+
     if (!senderRequestId) {
-      this.options.setMessages((prev) => [...prev, this.buildDeliveredChatMessage(payload)]);
+      const delivered = this.buildDeliveredChatMessage(payload);
+      this.options.setMessages((prev) => {
+        if (prev.some((item) => item.id === delivered.id)) {
+          return prev;
+        }
+
+        return [...prev, delivered];
+      });
       return;
     }
 
@@ -328,6 +496,158 @@ export class WsMessageController {
       userId: this.asTrimmedString(message.payload?.userId) || undefined,
       userName: this.asTrimmedString(message.payload?.userName) || undefined,
       isTyping: typeof message.payload?.isTyping === "boolean" ? message.payload.isTyping : undefined,
+      ts: this.asTrimmedString(message.payload?.ts) || undefined
+    });
+  }
+
+  private handleChatMessagePinned(message: WsIncoming): void {
+    this.options.onChatMessagePinned?.({
+      roomId: this.asTrimmedString(message.payload?.roomId) || undefined,
+      roomSlug: this.asTrimmedString(message.payload?.roomSlug) || undefined,
+      topicId: this.asTrimmedString(message.payload?.topicId) || undefined,
+      topicSlug: this.asTrimmedString(message.payload?.topicSlug) || undefined,
+      messageId: this.asTrimmedString(message.payload?.messageId) || undefined,
+      pinned: typeof message.payload?.pinned === "boolean" ? message.payload.pinned : undefined,
+      pinnedByUserId: this.asTrimmedString(message.payload?.pinnedByUserId) || undefined,
+      ts: this.asTrimmedString(message.payload?.ts) || undefined
+    });
+  }
+
+  private handleChatMessageUnpinned(message: WsIncoming): void {
+    this.options.onChatMessageUnpinned?.({
+      roomId: this.asTrimmedString(message.payload?.roomId) || undefined,
+      roomSlug: this.asTrimmedString(message.payload?.roomSlug) || undefined,
+      topicId: this.asTrimmedString(message.payload?.topicId) || undefined,
+      topicSlug: this.asTrimmedString(message.payload?.topicSlug) || undefined,
+      messageId: this.asTrimmedString(message.payload?.messageId) || undefined,
+      pinned: typeof message.payload?.pinned === "boolean" ? message.payload.pinned : undefined,
+      unpinnedByUserId: this.asTrimmedString(message.payload?.unpinnedByUserId) || undefined,
+      ts: this.asTrimmedString(message.payload?.ts) || undefined
+    });
+  }
+
+  private handleChatMessageReactionChanged(message: WsIncoming): void {
+    this.options.onChatMessageReactionChanged?.({
+      roomId: this.asTrimmedString(message.payload?.roomId) || undefined,
+      roomSlug: this.asTrimmedString(message.payload?.roomSlug) || undefined,
+      topicId: this.asTrimmedString(message.payload?.topicId) || undefined,
+      topicSlug: this.asTrimmedString(message.payload?.topicSlug) || undefined,
+      messageId: this.asTrimmedString(message.payload?.messageId) || undefined,
+      emoji: this.asTrimmedString(message.payload?.emoji) || undefined,
+      userId: this.asTrimmedString(message.payload?.userId) || undefined,
+      active: typeof message.payload?.active === "boolean" ? message.payload.active : undefined,
+      ts: this.asTrimmedString(message.payload?.ts) || undefined
+    });
+  }
+
+  private handleChatTopicRead(message: WsIncoming): void {
+    this.options.onChatTopicRead?.({
+      roomId: this.asTrimmedString(message.payload?.roomId) || undefined,
+      topicId: this.asTrimmedString(message.payload?.topicId) || undefined,
+      userId: this.asTrimmedString(message.payload?.userId) || undefined,
+      lastReadMessageId: this.asTrimmedString(message.payload?.lastReadMessageId) || undefined,
+      lastReadAt: this.asTrimmedString(message.payload?.lastReadAt) || undefined
+    });
+  }
+
+  private toTopicPayload(raw: unknown): RoomTopic | undefined {
+    if (!raw || typeof raw !== "object") {
+      return undefined;
+    }
+
+    const topic = raw as Record<string, unknown>;
+    const id = this.asTrimmedString(topic.id);
+    const roomId = this.asTrimmedString(topic.roomId);
+    if (!id || !roomId) {
+      return undefined;
+    }
+
+    return {
+      id,
+      roomId,
+      createdBy: typeof topic.createdBy === "string" ? topic.createdBy : null,
+      slug: this.asTrimmedString(topic.slug),
+      title: String(topic.title || "").trim(),
+      position: Number(topic.position || 0),
+      isPinned: Boolean(topic.isPinned),
+      archivedAt: typeof topic.archivedAt === "string" ? topic.archivedAt : null,
+      createdAt: String(topic.createdAt || new Date().toISOString()),
+      updatedAt: String(topic.updatedAt || new Date().toISOString()),
+      unreadCount: Number(topic.unreadCount || 0),
+      mentionUnreadCount: Number(topic.mentionUnreadCount || 0)
+    };
+  }
+
+  private handleChatTopicCreated(message: WsIncoming): void {
+    this.options.onChatTopicCreated?.({
+      roomId: this.asTrimmedString(message.payload?.roomId) || undefined,
+      roomSlug: this.asTrimmedString(message.payload?.roomSlug) || undefined,
+      topic: this.toTopicPayload(message.payload?.topic),
+      actorUserId: this.asTrimmedString(message.payload?.actorUserId) || undefined,
+      ts: this.asTrimmedString(message.payload?.ts) || undefined
+    });
+  }
+
+  private handleChatTopicUpdated(message: WsIncoming): void {
+    this.options.onChatTopicUpdated?.({
+      roomId: this.asTrimmedString(message.payload?.roomId) || undefined,
+      roomSlug: this.asTrimmedString(message.payload?.roomSlug) || undefined,
+      topic: this.toTopicPayload(message.payload?.topic),
+      actorUserId: this.asTrimmedString(message.payload?.actorUserId) || undefined,
+      ts: this.asTrimmedString(message.payload?.ts) || undefined
+    });
+  }
+
+  private handleChatTopicArchived(message: WsIncoming): void {
+    this.options.onChatTopicArchived?.({
+      roomId: this.asTrimmedString(message.payload?.roomId) || undefined,
+      roomSlug: this.asTrimmedString(message.payload?.roomSlug) || undefined,
+      topic: this.toTopicPayload(message.payload?.topic),
+      actorUserId: this.asTrimmedString(message.payload?.actorUserId) || undefined,
+      ts: this.asTrimmedString(message.payload?.ts) || undefined
+    });
+  }
+
+  private handleChatTopicUnarchived(message: WsIncoming): void {
+    this.options.onChatTopicUnarchived?.({
+      roomId: this.asTrimmedString(message.payload?.roomId) || undefined,
+      roomSlug: this.asTrimmedString(message.payload?.roomSlug) || undefined,
+      topic: this.toTopicPayload(message.payload?.topic),
+      actorUserId: this.asTrimmedString(message.payload?.actorUserId) || undefined,
+      ts: this.asTrimmedString(message.payload?.ts) || undefined
+    });
+  }
+
+  private handleNotificationSettingsUpdated(message: WsIncoming): void {
+    const settingsRaw = message.payload?.settings;
+    if (!settingsRaw || typeof settingsRaw !== "object") {
+      return;
+    }
+
+    const settings = settingsRaw as Record<string, unknown>;
+    const id = this.asTrimmedString(settings.id);
+    const userId = this.asTrimmedString(settings.userId);
+    const scopeType = this.asTrimmedString(settings.scopeType) as "server" | "room" | "topic";
+    const mode = this.asTrimmedString(settings.mode) as "all" | "mentions" | "none";
+
+    if (!id || !userId || !scopeType || !mode) {
+      return;
+    }
+
+    this.options.onNotificationSettingsUpdated?.({
+      settings: {
+        id,
+        userId,
+        scopeType,
+        serverId: typeof settings.serverId === "string" ? settings.serverId : null,
+        roomId: typeof settings.roomId === "string" ? settings.roomId : null,
+        topicId: typeof settings.topicId === "string" ? settings.topicId : null,
+        mode,
+        muteUntil: typeof settings.muteUntil === "string" ? settings.muteUntil : null,
+        allowCriticalMentions: settings.allowCriticalMentions !== false,
+        createdAt: String(settings.createdAt || new Date().toISOString()),
+        updatedAt: String(settings.updatedAt || new Date().toISOString())
+      },
       ts: this.asTrimmedString(message.payload?.ts) || undefined
     });
   }
@@ -579,12 +899,15 @@ export class WsMessageController {
         this.handleNack(message);
         return;
       case "chat.message":
+      case "chat.message.created":
         this.handleChatMessage(message);
         return;
       case "chat.edited":
+      case "chat.message.updated":
         this.handleChatEdited(message);
         return;
       case "chat.deleted":
+      case "chat.message.deleted":
         this.handleChatDeleted(message);
         return;
       case "chat.cleared":
@@ -592,6 +915,33 @@ export class WsMessageController {
         return;
       case "chat.typing":
         this.handleChatTyping(message);
+        return;
+      case "chat.message.pinned":
+        this.handleChatMessagePinned(message);
+        return;
+      case "chat.message.unpinned":
+        this.handleChatMessageUnpinned(message);
+        return;
+      case "chat.message.reaction.changed":
+        this.handleChatMessageReactionChanged(message);
+        return;
+      case "chat.topic.read":
+        this.handleChatTopicRead(message);
+        return;
+      case "chat.topic.created":
+        this.handleChatTopicCreated(message);
+        return;
+      case "chat.topic.updated":
+        this.handleChatTopicUpdated(message);
+        return;
+      case "chat.topic.archived":
+        this.handleChatTopicArchived(message);
+        return;
+      case "chat.topic.unarchived":
+        this.handleChatTopicUnarchived(message);
+        return;
+      case "chat.notification.settings.updated":
+        this.handleNotificationSettingsUpdated(message);
         return;
       case "screen.share.state":
         this.handleScreenShareState(message);

@@ -12,7 +12,18 @@ export type ChatMessageViewModel = {
   canManageOwnMessage: boolean;
   deliveryClass: string;
   deliveryGlyph: string;
+  replyPreview: {
+    userName: string;
+    text: string;
+  } | null;
   attachmentImageUrls: string[];
+  attachmentFiles: Array<{
+    id: string;
+    type: "document" | "audio";
+    downloadUrl: string;
+    mimeType: string;
+    sizeBytes: number;
+  }>;
 };
 
 function toDeliveryPresentation(status: Message["deliveryStatus"]): { cssClass: string; glyph: string } {
@@ -39,6 +50,26 @@ function collectAttachmentImageUrls(message: Message): string[] {
     .filter((url) => url.length > 0);
 
   return urls.filter((url, index, all) => all.indexOf(url) === index);
+}
+
+function collectAttachmentFiles(message: Message): Array<{
+  id: string;
+  type: "document" | "audio";
+  downloadUrl: string;
+  mimeType: string;
+  sizeBytes: number;
+}> {
+  const attachments = Array.isArray(message.attachments) ? message.attachments : [];
+  return attachments
+    .filter((item) => item.type === "document" || item.type === "audio")
+    .map((item) => ({
+      id: item.id,
+      type: item.type,
+      downloadUrl: String(item.download_url || "").trim(),
+      mimeType: String(item.mime_type || "").trim(),
+      sizeBytes: Number(item.size_bytes || 0)
+    }))
+    .filter((item) => item.downloadUrl.length > 0 && Number.isFinite(item.sizeBytes) && item.sizeBytes > 0);
 }
 
 export function buildChatMessageViewModels(
@@ -68,7 +99,14 @@ export function buildChatMessageViewModels(
       canManageOwnMessage,
       deliveryClass: deliveryPresentation.cssClass,
       deliveryGlyph: deliveryPresentation.glyph,
-      attachmentImageUrls: collectAttachmentImageUrls(message)
+      replyPreview: message.reply_to_message_id
+        ? {
+          userName: String(message.reply_to_user_name || "Unknown"),
+          text: String(message.reply_to_text || "")
+        }
+        : null,
+      attachmentImageUrls: collectAttachmentImageUrls(message),
+      attachmentFiles: collectAttachmentFiles(message)
     };
   });
 }

@@ -40,4 +40,8 @@ export type AppConfig = {
   chatMinioBucket: string;
   chatMinioForcePathStyle: boolean;
   chatObjectStoragePublicBaseUrl: string;
+  webPushEnabled: boolean;
+  webPushSubject: string;
+  webPushPublicKey: string;
+  webPushPrivateKey: string;
 };

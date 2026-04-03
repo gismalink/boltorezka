@@ -1,4 +1,11 @@
-import { useCallback, useRef } from "react";
+// =============================================================================
+// ORCHESTRATION-ONLY FILE
+// `App` wires hooks and passes props. It must stay business-logic free.
+// If feature behavior is needed, implement it in hooks/services/components first.
+// Do not add parsing, transport rules, or workflow logic here.
+// =============================================================================
+
+import { useRef } from "react";
 import { RealtimeClient } from "./services";
 import { AppShellLayout } from "./components";
 import {
@@ -55,7 +62,15 @@ import {
   useRoomEditorState,
   useServerSounds,
   useToastQueue,
-  useWalkieTalkieRuntime
+  useWalkieTalkieRuntime,
+  useActiveRoomTopicsSync,
+  useCreateTopicAction,
+  useServerRoomUnreadCounters,
+  useChatDraftsByScope,
+  useTopicMutationsAction,
+  useRemoteMessageActionsBridge,
+  useBindRemoteMessageActionsBridge,
+  useSendRoomJoinEventAction
 } from "./hooks";
 import { formatBuildDateLabel } from "./utils/appShell";
 
@@ -69,24 +84,23 @@ const COOKIE_CONSENT_KEY = "boltorezka_cookie_consent_v1";
 const CURRENT_SERVER_ID_STORAGE_KEY = "boltorezka_current_server_id";
 const ROOM_SLUG_STORAGE_KEY = "boltorezka_room_slug";
 
-// IMPORTANT: `App` is an orchestration boundary only.
-// Do not add new business logic, parsing, transport rules, or large feature workflows here.
-// Put feature logic into dedicated hooks/services/components and keep this file as glue code.
 export function App() {
   const {
     token, setToken, user, setUser,
     authMode, setAuthMode,
     rooms, setRooms, roomsTree, setRoomsTree, archivedRooms, setArchivedRooms,
     roomSlug, setRoomSlug, chatRoomSlug, setChatRoomSlug,
+    roomUnreadBySlug, setRoomUnreadBySlug,
     showAppUpdatedOverlay, setShowAppUpdatedOverlay,
     cookieConsentAccepted, setCookieConsentAccepted,
     pendingAccessRefreshInSec, setPendingAccessRefreshInSec,
     showFirstRunIntro, setShowFirstRunIntro,
     sessionMovedOverlayMessage, setSessionMovedOverlayMessage,
-    messages, setMessages, messagesHasMore, setMessagesHasMore, messagesNextCursor, setMessagesNextCursor,
+    messages, setMessages, chatTopics, setChatTopics, activeChatTopicId, setActiveChatTopicId,
+    messagesHasMore, setMessagesHasMore, messagesNextCursor, setMessagesNextCursor,
     loadingOlderMessages, setLoadingOlderMessages,
     chatText, setChatText, pendingChatImageDataUrl, setPendingChatImageDataUrl,
-    editingMessageId, setEditingMessageId,
+    editingMessageId, setEditingMessageId, replyingToMessageId, setReplyingToMessageId,
     callStatus, setCallStatus, lastCallPeer, setLastCallPeer,
     roomsPresenceBySlug, setRoomsPresenceBySlug, roomsPresenceDetailsBySlug, setRoomsPresenceDetailsBySlug,
     memberPreferencesByUserId, setMemberPreferencesByUserId,
@@ -190,6 +204,12 @@ export function App() {
   } = useAppUiState();
   const { toasts, pushToast } = useToastQueue();
   const realtimeClientRef = useRef<RealtimeClient | null>(null);
+  const {
+    applyRemotePinState,
+    applyRemoteThumbsUpReactionState,
+    bindRemotePinHandler,
+    bindRemoteThumbsUpHandler
+  } = useRemoteMessageActionsBridge();
 
   const {
     canCreateRooms, canManageUsers, canPromote,
@@ -341,9 +361,7 @@ export function App() {
     sendWsEventAwaitAck
   }));
 
-  const sendRoomJoinEvent = useCallback((slug: string) => {
-    return sendWsEventAwaitAck("room.join", { roomSlug: slug }, { maxRetries: 1 });
-  }, [sendWsEventAwaitAck]);
+  const sendRoomJoinEvent = useSendRoomJoinEventAction({ sendWsEventAwaitAck });
 
   const {
     authController, chatController, roomAdminController,
@@ -392,10 +410,17 @@ export function App() {
     playServerSound,
     setChatTypingByRoomSlug,
     setSessionMovedOverlayMessage,
+    setChatTopics,
+    setRoomUnreadBySlug,
     applyRemoteTypingPayload,
+    applyRemotePinState,
+    applyRemoteThumbsUpReactionState,
+    currentUserId,
     serviceToken,
     realtimeReconnectNonce,
     roomSlug,
+    rooms,
+    activeChatTopicId,
     messages,
     loadingOlderMessages,
     chatLogRef, lastRoomSlugForScrollRef, lastMessageIdRef,
@@ -559,11 +584,61 @@ export function App() {
     setRoomSlug, setChatRoomSlug
   }));
 
+  const { serverUnreadCount } = useServerRoomUnreadCounters({
+    token,
+    currentServerId,
+    allRooms,
+    chatRoomSlug,
+    chatTopics,
+    roomUnreadBySlug,
+    setRoomUnreadBySlug,
+    pushLog
+  });
+
+  useChatDraftsByScope({
+    userId: currentUserIdOrNull,
+    serverId: currentServerId,
+    roomSlug: chatRoomSlug,
+    topicId: activeChatTopicId,
+    chatText,
+    editingMessageId,
+    setChatText
+  });
+
+  useActiveRoomTopicsSync({
+    token,
+    activeChatRoomId: String(activeChatRoom?.id || "").trim(),
+    activeChatRoomSlug: chatRoomSlug,
+    activeChatTopicId,
+    setActiveChatTopicId,
+    setChatTopics,
+    pushLog
+  });
+
+  const createTopic = useCreateTopicAction({
+    token,
+    activeChatRoomId: String(activeChatRoom?.id || "").trim(),
+    setChatTopics,
+    setActiveChatTopicId,
+    pushToast,
+    pushLog,
+    t
+  });
+
+  const { updateTopic, archiveTopic, unarchiveTopic } = useTopicMutationsAction({
+    token,
+    setChatTopics
+  });
+
   const {
     joinRoom, leaveRoom,
     kickRoomMember, moveRoomMember,
     sendMessage, handleChatPaste, handleChatInputKeyDown,
-    startEditingMessage, deleteOwnMessage, openRoomChat,
+    pendingChatAttachmentFile, selectAttachmentFile, clearPendingAttachment,
+    startEditingMessage, replyToMessage, cancelReply, deleteOwnMessage, reportMessage, openRoomChat,
+    pinnedByMessageId, thumbsUpByMessageId, togglePinMessage, toggleThumbsUpReaction,
+    applyRemotePinState: applyRemotePinStateFromActions,
+    applyRemoteThumbsUpReactionState: applyRemoteThumbsUpReactionStateFromActions,
     saveMemberPreference,
     promote, demote,
     setUserBan, setUserAccessState,
@@ -597,6 +672,8 @@ export function App() {
     messages, setMessages, setMessagesHasMore, setMessagesNextCursor,
     chatText, setChatText,
     editingMessageId, setEditingMessageId,
+    replyingToMessageId, setReplyingToMessageId,
+    activeChatTopicId,
     pendingChatImageDataUrl, setPendingChatImageDataUrl,
     chatController, sendChatTypingState,
     selectChannelPlaceholderMessage, serverErrorMessage,
@@ -625,6 +702,13 @@ export function App() {
     setChannelSettingsPopupOpenId, setEditingCategoryTitle,
     setCategorySettingsPopupOpenId
   }));
+
+  useBindRemoteMessageActionsBridge({
+    bindRemotePinHandler,
+    bindRemoteThumbsUpHandler,
+    applyRemotePinStateFromActions,
+    applyRemoteThumbsUpReactionStateFromActions
+  });
 
   useAppWorkspaceLifecycleGuardsRuntime(useAppWorkspaceLifecycleGuardsRuntimeInput({
     user,
@@ -709,20 +793,14 @@ export function App() {
     setUserSettingsOpen,
     setUserSettingsTab,
     setProfileNameDraft,
-    setLang,
-    setSelectedUiTheme,
-    applyProfileName,
-    applyProfileTheme,
-    handleDeleteAccount,
-    handleConfirmServerAge,
-    setSelectedInputId,
-    setSelectedOutputId,
-    setSelectedVideoInputId,
-    setSelectedInputProfile,
+    setLang, setSelectedUiTheme,
+    applyProfileName, applyProfileTheme,
+    handleDeleteAccount, handleConfirmServerAge,
+    setSelectedInputId, setSelectedOutputId,
+    setSelectedVideoInputId, setSelectedInputProfile,
     refreshDevices,
     requestMediaAccess,
-    setMicVolume,
-    setOutputVolume,
+    setMicVolume, setOutputVolume,
     setServerSoundsMasterVolume,
     setServerSoundEnabled,
     playServerSound,
@@ -743,6 +821,8 @@ export function App() {
     roomSlug,
     chatRoomSlug,
     roomMediaTopologyBySlug,
+    roomUnreadBySlug,
+    serverUnreadCount,
     currentUserIdOrNull,
     roomsPresenceBySlug,
     roomsPresenceDetailsBySlug,
@@ -851,8 +931,7 @@ export function App() {
     serverVideoPreviewStream,
     setAppMenuOpen,
     setServerMenuTab,
-    promote,
-    demote,
+    promote, demote,
     setUserBan,
     setUserAccessState,
     deleteUser,
@@ -885,18 +964,24 @@ export function App() {
     setBoundedServerVideoWindowMinWidth, setBoundedServerVideoWindowMaxWidth,
     creatingInvite, locale, serviceToken,
     activeChatRoom,
+    chatTopics,
+    activeChatTopicId, setActiveChatTopicId,
+    createTopic, updateTopic, archiveTopic, unarchiveTopic,
     messages, messagesHasMore, loadingOlderMessages,
     chatText, pendingChatImageDataUrl,
+    pendingChatAttachmentFile,
     activeChatTypingUsers,
     chatLogRef,
     loadOlderMessages,
     handleSetChatText, handleChatPaste, handleChatInputKeyDown,
     sendMessage,
-    editingMessageId,
+    selectAttachmentFile, clearPendingAttachment,
+    editingMessageId, replyingToMessageId,
     currentRoomSupportsRtc,
     videoWindowsVisible, setVideoWindowsVisible,
-    setEditingMessageId,
-    startEditingMessage, deleteOwnMessage,
+    setEditingMessageId, setReplyingToMessageId,
+    startEditingMessage, replyToMessage, cancelReply, deleteOwnMessage, reportMessage,
+    pinnedByMessageId, thumbsUpByMessageId, togglePinMessage, toggleThumbsUpReaction,
     allowVideoStreaming, cameraEnabled,
     localVideoStream,
     remoteVideoStreamsByUserId,

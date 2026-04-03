@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { loadCurrentUser, requireAuth, requireServiceAccess } from "../middleware/auth.js";
+import { broadcastRealtimeEnvelopeToUser } from "../realtime-broadcast.js";
 import { upsertNotificationSettings } from "../services/notification-settings-service.js";
 import type { NotificationSettingsResponse } from "../api-contract.types.ts";
 
@@ -10,7 +11,8 @@ const patchNotificationSettingsSchema = z.object({
   roomId: z.string().uuid().optional(),
   topicId: z.string().uuid().optional(),
   mode: z.enum(["all", "mentions", "none"]),
-  muteUntil: z.string().datetime().nullable().optional()
+  muteUntil: z.string().datetime().nullable().optional(),
+  allowCriticalMentions: z.boolean().optional()
 });
 
 export async function notificationSettingsRoutes(fastify: FastifyInstance) {
@@ -38,7 +40,16 @@ export async function notificationSettingsRoutes(fastify: FastifyInstance) {
           roomId: parsed.data.roomId,
           topicId: parsed.data.topicId,
           mode: parsed.data.mode,
-          muteUntil: parsed.data.muteUntil ?? null
+          muteUntil: parsed.data.muteUntil ?? null,
+          allowCriticalMentions: parsed.data.allowCriticalMentions ?? true
+        });
+
+        broadcastRealtimeEnvelopeToUser(userId, {
+          type: "chat.notification.settings.updated",
+          payload: {
+            settings,
+            ts: new Date().toISOString()
+          }
         });
 
         const response: NotificationSettingsResponse = { settings };
