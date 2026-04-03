@@ -800,8 +800,12 @@ async function runRealtimeSmoke() {
 
   await waitForEvent(
     events,
-    (item) => item?.type === "chat.message" && item?.payload?.senderRequestId === requestChat1,
-    "chat.message for first chat.send"
+    (item) => {
+      const type = String(item?.type || "");
+      const isChatMessage = type === "chat.message" || type === "chat.message.created";
+      return isChatMessage && item?.payload?.senderRequestId === requestChat1;
+    },
+    "chat.message(.created) for first chat.send"
   );
 
   const requestChat2 = `chat2-${Date.now()}`;
