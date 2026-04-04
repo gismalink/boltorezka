@@ -24,7 +24,7 @@ export function RoomsUncategorizedBlock({
     <div className="mt-[var(--space-md)]">
       <button
         type="button"
-        className="mb-[var(--space-xs)] flex w-full items-center justify-between gap-2 rounded-[var(--radius-sm)] px-1.5 py-1 text-left hover:bg-[var(--pixel-panel)]/55"
+        className="mb-[var(--space-xs)] flex w-full items-center justify-between gap-2 rounded-[var(--radius-sm)] border-0 bg-transparent px-1.5 py-1 text-left shadow-none hover:bg-[var(--pixel-panel)]/55 hover:translate-x-0 hover:translate-y-0 hover:shadow-none active:translate-x-0 active:translate-y-0 active:shadow-none focus-visible:shadow-none"
         onClick={onToggleCollapsed}
         aria-expanded={!collapsed}
       >

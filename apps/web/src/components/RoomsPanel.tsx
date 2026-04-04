@@ -174,27 +174,58 @@ export function RoomsPanel({
   const normalizedCurrentUserId = String(currentUserId || "").trim();
 
   const onlineOutsideRooms = useMemo(() => {
-    const nextById = new Map<string, { userId: string; userName: string }>();
-
-    const outsideMembers = Array.isArray(liveRoomMemberDetailsBySlug?.[OUTSIDE_ROOMS_PRESENCE_KEY])
-      ? liveRoomMemberDetailsBySlug[OUTSIDE_ROOMS_PRESENCE_KEY]
-      : [];
-
-    outsideMembers.forEach((member) => {
-      const userId = String(member.userId || "").trim();
-      const userName = String(member.userName || member.userId || "").trim();
-      if (!userName) {
-        return;
+    const knownRoomSlugs = new Set<string>();
+    (roomsTree?.categories || []).forEach((category) => {
+      const categoryRooms = Array.isArray((category as { channels?: Room[] }).channels)
+        ? (category as { channels?: Room[] }).channels || []
+        : Array.isArray((category as { rooms?: Room[] }).rooms)
+          ? (category as { rooms?: Room[] }).rooms || []
+          : [];
+      categoryRooms.forEach((room) => {
+        const slug = String(room.slug || "").trim();
+        if (slug) {
+          knownRoomSlugs.add(slug);
+        }
+      });
+    });
+    uncategorizedRooms.forEach((room) => {
+      const slug = String(room.slug || "").trim();
+      if (slug) {
+        knownRoomSlugs.add(slug);
       }
-
-      const key = userId || userName.toLowerCase();
-      if (!nextById.has(key)) {
-        nextById.set(key, { userId, userName });
+    });
+    archivedRooms.forEach((room) => {
+      const slug = String(room.slug || "").trim();
+      if (slug) {
+        knownRoomSlugs.add(slug);
       }
     });
 
+    const nextById = new Map<string, { userId: string; userName: string }>();
+
+    Object.entries(liveRoomMemberDetailsBySlug || {}).forEach(([slugRaw, members]) => {
+      const slug = String(slugRaw || "").trim();
+      const isOutsideBucket = slug === OUTSIDE_ROOMS_PRESENCE_KEY || !knownRoomSlugs.has(slug);
+      if (!isOutsideBucket) {
+        return;
+      }
+
+      (Array.isArray(members) ? members : []).forEach((member) => {
+        const userId = String(member.userId || "").trim();
+        const userName = String(member.userName || member.userId || "").trim();
+        if (!userName) {
+          return;
+        }
+
+        const key = userId || userName.toLowerCase();
+        if (!nextById.has(key)) {
+          nextById.set(key, { userId, userName });
+        }
+      });
+    });
+
     return Array.from(nextById.values()).sort((a, b) => a.userName.localeCompare(b.userName));
-  }, [liveRoomMemberDetailsBySlug]);
+  }, [roomsTree, uncategorizedRooms, archivedRooms, liveRoomMemberDetailsBySlug]);
 
   const renderRoomRow = (room: Room) => (
     <RoomRow
@@ -310,7 +341,7 @@ export function RoomsPanel({
           <div className="mt-[var(--space-md)]">
             <button
               type="button"
-              className="mb-[var(--space-xs)] flex w-full items-center justify-between gap-2 rounded-[var(--radius-sm)] px-1.5 py-1 text-left hover:bg-[var(--pixel-panel)]/55"
+              className="mb-[var(--space-xs)] flex w-full items-center justify-between gap-2 rounded-[var(--radius-sm)] border-0 bg-transparent px-1.5 py-1 text-left shadow-none hover:bg-[var(--pixel-panel)]/55 hover:translate-x-0 hover:translate-y-0 hover:shadow-none active:translate-x-0 active:translate-y-0 active:shadow-none focus-visible:shadow-none"
               onClick={() => setOutsideRoomsCollapsed((prev) => !prev)}
               aria-expanded={!outsideRoomsCollapsed}
             >
@@ -342,7 +373,7 @@ export function RoomsPanel({
             <div className="mb-[var(--space-xs)] flex items-center justify-between gap-2 rounded-[var(--radius-sm)] px-1.5 py-1 hover:bg-[var(--pixel-panel)]/55">
               <button
                 type="button"
-                className="inline-flex items-center gap-[var(--space-xs)] text-[var(--font-size-sm)] uppercase tracking-[0.04em] text-[var(--pixel-muted)]"
+                className="inline-flex items-center gap-[var(--space-xs)] border-0 bg-transparent p-0 text-[var(--font-size-sm)] uppercase tracking-[0.04em] text-[var(--pixel-muted)] shadow-none hover:translate-x-0 hover:translate-y-0 hover:shadow-none active:translate-x-0 active:translate-y-0 active:shadow-none focus-visible:shadow-none"
                 onClick={() => setArchivedCollapsed((prev) => !prev)}
                 aria-expanded={!archivedCollapsed}
               >
