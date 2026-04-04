@@ -13,6 +13,7 @@ import { useMessageContextMenu } from "./chatPanel/hooks/useMessageContextMenu";
 import { useChatPanelUiInteractions } from "./chatPanel/hooks/useChatPanelUiInteractions";
 import { useChatPanelComposerHelpers } from "./chatPanel/hooks/useChatPanelComposerHelpers";
 import { useChatPanelTopicCreate } from "./chatPanel/hooks/useChatPanelTopicCreate";
+import { useChatPanelTypingBanner } from "./chatPanel/hooks/useChatPanelTypingBanner";
 import { TopicTabsHeader } from "./chatPanel/sections/TopicTabsHeader";
 import { SearchPanel } from "./chatPanel/sections/SearchPanel";
 import { ChatMessageTimeline } from "./chatPanel/sections/ChatMessageTimeline";
@@ -278,16 +279,13 @@ export function ChatPanel({
 
   const composePreviewImage = composePreviewImageUrl;
   const hasTopics = topics.length > 0;
-  const visibleTypingUsers = typingUsers.slice(0, 2);
-  const typingOverflowCount = Math.max(0, typingUsers.length - visibleTypingUsers.length);
-  const typingUsersLabel = typingOverflowCount > 0
-    ? t("chat.typingUsersOverflow")
-      .replace("{users}", visibleTypingUsers.join(", "))
-      .replace("{count}", String(typingOverflowCount))
-    : visibleTypingUsers.join(", ");
-  const typingLabel = typingUsers.length <= 1
-    ? t("chat.typingSingle").replace("{users}", typingUsersLabel)
-    : t("chat.typingMultiple").replace("{users}", typingUsersLabel);
+  const {
+    hasTypingUsers,
+    typingLabel
+  } = useChatPanelTypingBanner({
+    t,
+    typingUsers
+  });
 
   const {
     formatMessageTime,
@@ -400,7 +398,7 @@ export function ChatPanel({
         />
       ) : null}
       <div className="chat-typing-banner" aria-live="polite">
-        {hasActiveRoom && typingUsers.length > 0 ? (
+        {hasActiveRoom && hasTypingUsers ? (
           <span className="chat-typing-status">
             <span>{typingLabel}</span>
             <span className="chat-typing-dots" aria-hidden="true">
