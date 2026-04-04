@@ -455,9 +455,9 @@ function RoomRowInner({
         <i className={`bi ${ROOM_KIND_ICON_CLASS[room.kind]}`} aria-hidden="true" />
         <span>{room.title}</span>
       </button>
-      <div className={`channel-right-zone ${roomChatActive || channelSettingsPopupOpenId === room.id ? "channel-right-zone-open" : ""}`}>
+      <div className={`channel-right-zone ${roomChatActive ? "channel-right-zone-chat-active" : ""} ${channelSettingsPopupOpenId === room.id ? "channel-right-zone-open" : ""}`}>
       {roomUnreadCount > 0 ? <span className={`room-unread-badge room-row-unread ${isRoomUnreadMuted ? "room-unread-badge-muted" : ""}`}>{roomUnreadCount}</span> : null}
-      <div className={`channel-row-actions inline-flex items-center gap-1 ${roomChatActive || channelSettingsPopupOpenId === room.id ? "channel-row-actions-open" : ""}`}>
+      <div className={`channel-row-actions inline-flex items-center gap-1 ${roomChatActive ? "channel-row-actions-chat-active" : ""} ${channelSettingsPopupOpenId === room.id ? "channel-row-actions-open" : ""}`}>
       {roomSupportsRtc ? (
         <button
           type="button"

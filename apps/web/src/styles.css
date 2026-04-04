@@ -2094,11 +2094,16 @@ pre {
 
 .channel-right-zone {
   --channel-actions-width: 56px;
+  --channel-chat-active-width: 26px;
   margin-left: auto;
   position: relative;
   display: inline-flex;
   align-items: center;
   min-width: 0;
+}
+
+.channel-right-zone-chat-active .room-row-unread {
+  transform: translateX(calc(-1 * (var(--channel-chat-active-width) + var(--space-xs))));
 }
 
 .room-row-unread {
@@ -2116,6 +2121,12 @@ pre {
   opacity: 0;
   pointer-events: none;
   transition: width 0.16s ease, opacity 0.12s ease;
+}
+
+.channel-row-actions-chat-active {
+  width: var(--channel-chat-active-width);
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .channel-row-actions .channel-action-btn,
