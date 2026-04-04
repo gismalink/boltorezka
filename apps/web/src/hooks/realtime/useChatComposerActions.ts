@@ -462,14 +462,13 @@ export function useChatComposerActions({
 
     startTransition(() => {
       if (normalized !== chatRoomSlug) {
-        setMessages([]);
         setMessagesHasMore(false);
         setMessagesNextCursor(null);
       }
 
       setChatRoomSlug(normalized);
     });
-  }, [chatRoomSlug, setChatRoomSlug, setMessages, setMessagesHasMore, setMessagesNextCursor]);
+  }, [chatRoomSlug, setChatRoomSlug, setMessagesHasMore, setMessagesNextCursor]);
 
   const togglePinMessage = useCallback((messageId: string) => {
     if (!activeTopicId) {
