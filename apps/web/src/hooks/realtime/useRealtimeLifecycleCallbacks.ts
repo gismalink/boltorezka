@@ -34,7 +34,6 @@ type UseRealtimeLifecycleCallbacksArgs = {
   }) => void;
   applyRemotePinState: (messageId: string, pinned: boolean) => void;
   applyRemoteMessageReactionState: (messageId: string, emoji: string, active: boolean, actorUserId?: string) => void;
-  applyRemoteThumbsUpReactionState: (messageId: string, active: boolean) => void;
 };
 
 export function useRealtimeLifecycleCallbacks({
@@ -59,8 +58,7 @@ export function useRealtimeLifecycleCallbacks({
   currentUserId,
   applyRemoteTypingPayload,
   applyRemotePinState,
-  applyRemoteMessageReactionState,
-  applyRemoteThumbsUpReactionState
+  applyRemoteMessageReactionState
 }: UseRealtimeLifecycleCallbacksArgs) {
   const handleSessionMoved = useCallback(({ code, message }: { code: string; message: string }) => {
     const activeSlug = String(roomSlugRef.current || "").trim();
@@ -173,14 +171,7 @@ export function useRealtimeLifecycleCallbacks({
     }
 
     applyRemoteMessageReactionState(targetMessageId, emoji, payload.active === true, actorUserId || undefined);
-
-    // Keep backward compatibility for old thumbs-up-only consumers.
-    if (emoji !== "👍") {
-      return;
-    }
-
-    applyRemoteThumbsUpReactionState(targetMessageId, payload.active === true);
-  }, [applyRemoteMessageReactionState, applyRemoteThumbsUpReactionState, chatRoomSlug]);
+  }, [applyRemoteMessageReactionState, chatRoomSlug]);
 
   const handleChatMessageReceived = useCallback((payload: {
     roomSlug?: string;

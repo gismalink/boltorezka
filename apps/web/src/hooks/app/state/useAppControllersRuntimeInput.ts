@@ -122,8 +122,7 @@ export function useAppControllersRuntimeInput(params: Record<string, unknown>): 
         currentUserId: p.currentUserId,
         applyRemoteTypingPayload: p.applyRemoteTypingPayload,
         applyRemotePinState: p.applyRemotePinState,
-        applyRemoteMessageReactionState: p.applyRemoteMessageReactionState,
-        applyRemoteThumbsUpReactionState: p.applyRemoteThumbsUpReactionState
+        applyRemoteMessageReactionState: p.applyRemoteMessageReactionState
       },
       realtimeChatLifecycleProps: {
         serviceToken: p.serviceToken,

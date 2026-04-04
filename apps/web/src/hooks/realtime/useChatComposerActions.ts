@@ -546,10 +546,6 @@ export function useChatComposerActions({
     })();
   }, [activeTopicId, authToken, pushToast, reactionsByMessageId, serverErrorMessage, topicOnlyActionMessage]);
 
-  const toggleThumbsUpReaction = useCallback((messageId: string) => {
-    toggleMessageReaction(messageId, "👍");
-  }, [toggleMessageReaction]);
-
   const reportMessage = useCallback((messageId: string) => {
     if (!activeTopicId) {
       pushToast(topicOnlyActionMessage);
@@ -628,14 +624,6 @@ export function useChatComposerActions({
     });
   }, [user?.id]);
 
-  const applyRemoteThumbsUpReactionState = useCallback((messageId: string, active: boolean, actorUserId?: string) => {
-    applyRemoteMessageReactionState(messageId, "👍", active, actorUserId);
-  }, [applyRemoteMessageReactionState]);
-
-  const thumbsUpByMessageId = Object.fromEntries(
-    Object.entries(reactionsByMessageId).map(([messageId, reactions]) => [messageId, Boolean(reactions["👍"]?.reacted)])
-  ) as Record<string, boolean>;
-
   return {
     sendMessage,
     handleChatPaste,
@@ -647,16 +635,13 @@ export function useChatComposerActions({
     openRoomChat,
     pinnedByMessageId,
     reactionsByMessageId,
-    thumbsUpByMessageId,
     togglePinMessage,
     toggleMessageReaction,
-    toggleThumbsUpReaction,
     reportMessage,
     pendingChatAttachmentFile,
     selectAttachmentFile,
     clearPendingAttachment,
     applyRemotePinState,
-    applyRemoteMessageReactionState,
-    applyRemoteThumbsUpReactionState
+    applyRemoteMessageReactionState
   };
 }

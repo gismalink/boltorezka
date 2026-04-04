@@ -207,10 +207,8 @@ export function App() {
   const {
     applyRemotePinState,
     applyRemoteMessageReactionState,
-    applyRemoteThumbsUpReactionState,
     bindRemotePinHandler,
-    bindRemoteMessageReactionHandler,
-    bindRemoteThumbsUpHandler
+    bindRemoteMessageReactionHandler
   } = useRemoteMessageActionsBridge();
 
   const {
@@ -417,7 +415,6 @@ export function App() {
     applyRemoteTypingPayload,
     applyRemotePinState,
     applyRemoteMessageReactionState,
-    applyRemoteThumbsUpReactionState,
     currentUserId,
     serviceToken,
     realtimeReconnectNonce,
@@ -643,7 +640,6 @@ export function App() {
     pinnedByMessageId, reactionsByMessageId, togglePinMessage, toggleMessageReaction,
     applyRemotePinState: applyRemotePinStateFromActions,
     applyRemoteMessageReactionState: applyRemoteMessageReactionStateFromActions,
-    applyRemoteThumbsUpReactionState: applyRemoteThumbsUpReactionStateFromActions,
     saveMemberPreference,
     promote, demote,
     setUserBan, setUserAccessState,
@@ -711,10 +707,8 @@ export function App() {
   useBindRemoteMessageActionsBridge({
     bindRemotePinHandler,
     bindRemoteMessageReactionHandler,
-    bindRemoteThumbsUpHandler,
     applyRemotePinStateFromActions,
-    applyRemoteMessageReactionStateFromActions,
-    applyRemoteThumbsUpReactionStateFromActions
+    applyRemoteMessageReactionStateFromActions
   });
 
   useAppWorkspaceLifecycleGuardsRuntime(useAppWorkspaceLifecycleGuardsRuntimeInput({
