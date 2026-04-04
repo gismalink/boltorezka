@@ -2009,6 +2009,43 @@ pre {
   transition: opacity 0.12s ease;
 }
 
+.category-main-btn {
+  flex: 1 1 auto;
+  min-width: 0;
+  justify-content: flex-start;
+}
+
+.category-right-zone {
+  --category-actions-width: 56px;
+  margin-left: auto;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.category-group-unread {
+  margin-left: 0;
+  transition: transform 0.16s ease;
+}
+
+.category-actions {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transition: width 0.16s ease, opacity 0.12s ease;
+}
+
+.category-actions .category-action-btn {
+  opacity: 1;
+  pointer-events: auto;
+}
+
 .channel-chat-open-btn {
   opacity: 0;
   pointer-events: none;
@@ -2020,6 +2057,18 @@ pre {
 .category-settings-popup .category-action-btn {
   opacity: 1;
   pointer-events: auto;
+}
+
+.category-title-row:hover .category-actions,
+.category-title-row:focus-within .category-actions {
+  width: var(--category-actions-width);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.category-title-row:hover .category-group-unread,
+.category-title-row:focus-within .category-group-unread {
+  transform: translateX(calc(-1 * (var(--category-actions-width) + var(--space-xs))));
 }
 
 .category-settings-anchor,

@@ -19,6 +19,7 @@ type RoomsCategoryBlockProps = Pick<
 > & {
   category: RoomCategory & { channels: Room[] };
   unreadCount: number;
+  isUnreadMuted: boolean;
   renderRoomRow: (room: Room) => JSX.Element;
   onRequestDeleteCategory: () => void;
 };
@@ -36,6 +37,7 @@ function RoomsCategoryBlockInner({
   onSaveCategorySettings,
   onMoveCategory,
   unreadCount,
+  isUnreadMuted,
   category,
   renderRoomRow,
   onRequestDeleteCategory
@@ -45,20 +47,23 @@ function RoomsCategoryBlockInner({
 
   return (
     <div className="mt-[var(--space-md)]">
-      <div className="category-title-row mb-[var(--space-xs)] flex items-center justify-between gap-2 rounded-[var(--radius-sm)] px-1.5 py-1 hover:bg-[var(--pixel-panel)]/55">
+      <div className="category-title-row mb-[var(--space-xs)] flex items-center gap-2 rounded-[var(--radius-sm)] px-1.5 py-1 hover:bg-[var(--pixel-panel)]/55">
         <Button
           type="button"
-          className="secondary inline-flex items-center gap-[var(--space-xs)] border-0 bg-transparent p-0 shadow-none hover:translate-x-0 hover:translate-y-0 hover:shadow-none active:translate-x-0 active:translate-y-0 active:shadow-none focus-visible:shadow-none"
+          className="secondary category-main-btn inline-flex items-center gap-[var(--space-xs)] border-0 bg-transparent p-0 shadow-none hover:translate-x-0 hover:translate-y-0 hover:shadow-none active:translate-x-0 active:translate-y-0 active:shadow-none focus-visible:shadow-none"
           onClick={() => onToggleCategoryCollapsed(category.id)}
           aria-label={isCollapsed ? t("rooms.expandCategory") : t("rooms.collapseCategory")}
         >
           <i className={`bi ${isCollapsed ? "bi-chevron-right" : "bi-chevron-down"}`} aria-hidden="true" />
-          <span className="text-[var(--font-size-sm)] uppercase tracking-[0.04em] text-[var(--pixel-muted)]">{category.title}</span>
-          {unreadCount > 0 ? <span className="room-unread-badge">{unreadCount}</span> : null}
-          <span className="rounded-full border border-[var(--pixel-border)] px-2 py-0.5 text-[11px] text-[var(--pixel-muted)]">
+          <span className="category-rooms-count rounded-full border border-[var(--pixel-border)] px-2 py-0.5 text-[11px] text-[var(--pixel-muted)]">
             {category.channels.length}
           </span>
+          <span className="text-[var(--font-size-sm)] uppercase tracking-[0.04em] text-[var(--pixel-muted)]">{category.title}</span>
         </Button>
+        <div className="category-right-zone">
+          {unreadCount > 0 ? (
+            <span className={`room-unread-badge category-group-unread ${isUnreadMuted ? "room-unread-badge-muted" : ""}`}>{unreadCount}</span>
+          ) : null}
         {canCreateRooms ? (
           <div className="category-actions inline-flex items-center gap-1">
             <Button
@@ -112,6 +117,7 @@ function RoomsCategoryBlockInner({
             </div>
           </div>
         ) : null}
+        </div>
       </div>
       {!isCollapsed ? (
         <ul className="rooms-list">

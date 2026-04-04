@@ -375,6 +375,15 @@ export function RoomsPanel({
             onSaveCategorySettings={onSaveCategorySettings}
             onMoveCategory={onMoveCategory}
             unreadCount={Math.max(0, Number(categoryUnreadById[category.id] || 0))}
+            isUnreadMuted={
+              Array.isArray(category.channels)
+              && category.channels.length > 0
+              && category.channels.every((room) => {
+                const roomId = String(room.id || "").trim();
+                const preset = roomMutePresetByRoomId[roomId];
+                return preset != null && preset !== "off";
+              })
+            }
             category={category}
             renderRoomRow={renderRoomRow}
             onRequestDeleteCategory={onRequestDeleteCategory}
