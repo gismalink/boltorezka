@@ -92,7 +92,6 @@ export function useActiveRoomTopicsSync({
     token,
     activeChatRoomId,
     activeChatRoomSlug,
-    activeChatTopicId,
     pushLog,
     setActiveChatTopicId,
     setChatTopics

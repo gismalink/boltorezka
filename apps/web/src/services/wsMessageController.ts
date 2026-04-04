@@ -236,11 +236,14 @@ export class WsMessageController {
   private toPresenceMember(item: { userId?: string; userName?: string } | null | undefined): PresenceMember | null {
     const userId = this.asTrimmedString(item?.userId);
     const userName = this.asTrimmedString(item?.userName);
-    if (!userId || !userName) {
+    if (!userId && !userName) {
       return null;
     }
 
-    return { userId, userName };
+    return {
+      userId: userId || userName,
+      userName: userName || userId
+    };
   }
 
   private mapPresenceMembers(rawUsers: unknown): PresenceMember[] {

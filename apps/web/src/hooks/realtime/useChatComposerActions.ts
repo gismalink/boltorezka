@@ -1,5 +1,6 @@
 // Purpose: keep composer behavior/state transitions in one hook (send/edit/delete/reply/paste/typing).
 import {
+  startTransition,
   useCallback,
   useEffect,
   useState,
@@ -422,13 +423,15 @@ export function useChatComposerActions({
       return;
     }
 
-    if (normalized !== chatRoomSlug) {
-      setMessages([]);
-      setMessagesHasMore(false);
-      setMessagesNextCursor(null);
-    }
+    startTransition(() => {
+      if (normalized !== chatRoomSlug) {
+        setMessages([]);
+        setMessagesHasMore(false);
+        setMessagesNextCursor(null);
+      }
 
-    setChatRoomSlug(normalized);
+      setChatRoomSlug(normalized);
+    });
   }, [chatRoomSlug, setChatRoomSlug, setMessages, setMessagesHasMore, setMessagesNextCursor]);
 
   const togglePinMessage = useCallback((messageId: string) => {
