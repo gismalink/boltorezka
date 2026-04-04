@@ -10,6 +10,8 @@ import { mapRoomMembersForSlug } from "./roomsPanel/roomMembers";
 import type { RoomsPanelProps } from "./types";
 
 const OUTSIDE_ROOMS_PRESENCE_KEY = "__outside_rooms__";
+const ROOMS_PANEL_GROUPS_STORAGE_KEY = "boltorezka_rooms_panel_groups";
+const ROOMS_PANEL_MUTE_PRESETS_STORAGE_KEY = "boltorezka_room_mute_presets";
 
 type ConfirmPopupState =
   | { kind: "archive-channel"; room: Room }
@@ -106,9 +108,66 @@ export function RoomsPanel({
   onSetRoomNotificationMutePreset
 }: RoomsPanelProps) {
   const [confirmPopup, setConfirmPopup] = useState<ConfirmPopupState>(null);
-  const [uncategorizedCollapsed, setUncategorizedCollapsed] = useState(false);
-  const [outsideRoomsCollapsed, setOutsideRoomsCollapsed] = useState(false);
-  const [archivedCollapsed, setArchivedCollapsed] = useState(false);
+  const [uncategorizedCollapsed, setUncategorizedCollapsed] = useState<boolean>(() => {
+    try {
+      const parsed = JSON.parse(String(localStorage.getItem(ROOMS_PANEL_GROUPS_STORAGE_KEY) || "{}")) as {
+        uncategorizedCollapsed?: boolean;
+      };
+      return Boolean(parsed.uncategorizedCollapsed);
+    } catch {
+      return false;
+    }
+  });
+  const [outsideRoomsCollapsed, setOutsideRoomsCollapsed] = useState<boolean>(() => {
+    try {
+      const parsed = JSON.parse(String(localStorage.getItem(ROOMS_PANEL_GROUPS_STORAGE_KEY) || "{}")) as {
+        outsideRoomsCollapsed?: boolean;
+      };
+      return Boolean(parsed.outsideRoomsCollapsed);
+    } catch {
+      return false;
+    }
+  });
+  const [archivedCollapsed, setArchivedCollapsed] = useState<boolean>(() => {
+    try {
+      const parsed = JSON.parse(String(localStorage.getItem(ROOMS_PANEL_GROUPS_STORAGE_KEY) || "{}")) as {
+        archivedCollapsed?: boolean;
+      };
+      return Boolean(parsed.archivedCollapsed);
+    } catch {
+      return false;
+    }
+  });
+  const [roomMutePresetByRoomId, setRoomMutePresetByRoomId] = useState<Record<string, "1h" | "8h" | "24h" | "forever" | "off">>(() => {
+    try {
+      const parsed = JSON.parse(String(localStorage.getItem(ROOMS_PANEL_MUTE_PRESETS_STORAGE_KEY) || "{}")) as Record<string, unknown>;
+      return Object.entries(parsed).reduce<Record<string, "1h" | "8h" | "24h" | "forever" | "off">>((acc, [roomId, value]) => {
+        const normalizedRoomId = String(roomId || "").trim();
+        const normalized = String(value || "").trim() as "1h" | "8h" | "24h" | "forever" | "off";
+        if (!normalizedRoomId) {
+          return acc;
+        }
+        if (normalized === "1h" || normalized === "8h" || normalized === "24h" || normalized === "forever" || normalized === "off") {
+          acc[normalizedRoomId] = normalized;
+        }
+        return acc;
+      }, {});
+    } catch {
+      return {};
+    }
+  });
+
+  useEffect(() => {
+    localStorage.setItem(ROOMS_PANEL_GROUPS_STORAGE_KEY, JSON.stringify({
+      uncategorizedCollapsed,
+      outsideRoomsCollapsed,
+      archivedCollapsed
+    }));
+  }, [uncategorizedCollapsed, outsideRoomsCollapsed, archivedCollapsed]);
+
+  useEffect(() => {
+    localStorage.setItem(ROOMS_PANEL_MUTE_PRESETS_STORAGE_KEY, JSON.stringify(roomMutePresetByRoomId));
+  }, [roomMutePresetByRoomId]);
 
   const submitConfirmPopup = () => {
     if (!confirmPopup) {
@@ -201,6 +260,37 @@ export function RoomsPanel({
       }
     });
 
+    const knownRoomUserIds = new Set<string>();
+    const knownRoomUserNames = new Set<string>();
+    Object.entries(liveRoomMemberDetailsBySlug || {}).forEach(([slugRaw, members]) => {
+      const slug = String(slugRaw || "").trim();
+      if (!slug || slug === OUTSIDE_ROOMS_PRESENCE_KEY || !knownRoomSlugs.has(slug)) {
+        return;
+      }
+      (Array.isArray(members) ? members : []).forEach((member) => {
+        const userId = String(member.userId || "").trim();
+        const userName = String(member.userName || member.userId || "").trim().toLowerCase();
+        if (userId) {
+          knownRoomUserIds.add(userId);
+        }
+        if (userName) {
+          knownRoomUserNames.add(userName);
+        }
+      });
+    });
+    Object.entries(liveRoomMembersBySlug || {}).forEach(([slugRaw, members]) => {
+      const slug = String(slugRaw || "").trim();
+      if (!slug || slug === OUTSIDE_ROOMS_PRESENCE_KEY || !knownRoomSlugs.has(slug)) {
+        return;
+      }
+      (Array.isArray(members) ? members : []).forEach((memberName) => {
+        const normalizedName = String(memberName || "").trim().toLowerCase();
+        if (normalizedName) {
+          knownRoomUserNames.add(normalizedName);
+        }
+      });
+    });
+
     const nextById = new Map<string, { userId: string; userName: string }>();
     const knownUserIds = new Set<string>();
     const knownUserNames = new Set<string>();
@@ -213,6 +303,10 @@ export function RoomsPanel({
       }
 
       const normalizedUserName = userName.toLowerCase();
+      if ((userId && knownRoomUserIds.has(userId)) || knownRoomUserNames.has(normalizedUserName)) {
+        return;
+      }
+
       const hasById = userId ? knownUserIds.has(userId) : false;
       const hasByName = knownUserNames.has(normalizedUserName);
       if (hasById || hasByName) {
@@ -259,6 +353,78 @@ export function RoomsPanel({
     return Array.from(nextById.values()).sort((a, b) => a.userName.localeCompare(b.userName));
   }, [roomsTree, uncategorizedRooms, archivedRooms, liveRoomMemberDetailsBySlug, liveRoomMembersBySlug]);
 
+  const knownRoomSlugs = useMemo(() => {
+    const next = new Set<string>();
+    (roomsTree?.categories || []).forEach((category) => {
+      const categoryRooms = Array.isArray((category as { channels?: Room[] }).channels)
+        ? (category as { channels?: Room[] }).channels || []
+        : Array.isArray((category as { rooms?: Room[] }).rooms)
+          ? (category as { rooms?: Room[] }).rooms || []
+          : [];
+      categoryRooms.forEach((room) => {
+        const slug = String(room.slug || "").trim();
+        if (slug) {
+          next.add(slug);
+        }
+      });
+    });
+    uncategorizedRooms.forEach((room) => {
+      const slug = String(room.slug || "").trim();
+      if (slug) {
+        next.add(slug);
+      }
+    });
+    archivedRooms.forEach((room) => {
+      const slug = String(room.slug || "").trim();
+      if (slug) {
+        next.add(slug);
+      }
+    });
+    return next;
+  }, [roomsTree, uncategorizedRooms, archivedRooms]);
+
+  const uncategorizedUnreadCount = useMemo(() => {
+    return uncategorizedRooms.reduce((sum, room) => {
+      const slug = String(room.slug || "").trim();
+      if (!slug) {
+        return sum;
+      }
+      return sum + Math.max(0, Number(roomUnreadBySlug[slug] || 0));
+    }, 0);
+  }, [uncategorizedRooms, roomUnreadBySlug]);
+
+  const outsideRoomsUnreadCount = useMemo(() => {
+    return Object.entries(roomUnreadBySlug).reduce((sum, [slugRaw, unreadRaw]) => {
+      const slug = String(slugRaw || "").trim();
+      if (!slug) {
+        return sum;
+      }
+      if (slug !== OUTSIDE_ROOMS_PRESENCE_KEY && knownRoomSlugs.has(slug)) {
+        return sum;
+      }
+      return sum + Math.max(0, Number(unreadRaw || 0));
+    }, 0);
+  }, [roomUnreadBySlug, knownRoomSlugs]);
+
+  const categoryUnreadById = useMemo(() => {
+    const next: Record<string, number> = {};
+    (roomsTree?.categories || []).forEach((category) => {
+      const categoryRooms = Array.isArray((category as { channels?: Room[] }).channels)
+        ? (category as { channels?: Room[] }).channels || []
+        : Array.isArray((category as { rooms?: Room[] }).rooms)
+          ? (category as { rooms?: Room[] }).rooms || []
+          : [];
+      next[category.id] = categoryRooms.reduce((sum, room) => {
+        const slug = String(room.slug || "").trim();
+        if (!slug) {
+          return sum;
+        }
+        return sum + Math.max(0, Number(roomUnreadBySlug[slug] || 0));
+      }, 0);
+    });
+    return next;
+  }, [roomsTree, roomUnreadBySlug]);
+
   const renderRoomRow = (room: Room) => (
     <RoomRow
       t={t}
@@ -304,6 +470,21 @@ export function RoomsPanel({
       memberPreferencesByUserId={memberPreferencesByUserId}
       room={room}
       roomUnreadCount={Math.max(0, Number(roomUnreadBySlug[room.slug] || 0))}
+      isRoomUnreadMuted={(() => {
+        const preset = roomMutePresetByRoomId[String(room.id || "").trim()];
+        return preset != null && preset !== "off";
+      })()}
+      roomMutePresetValue={roomMutePresetByRoomId[String(room.id || "").trim()] || null}
+      onRoomMutePresetChange={(roomId, preset) => {
+        const normalizedRoomId = String(roomId || "").trim();
+        if (!normalizedRoomId) {
+          return;
+        }
+        setRoomMutePresetByRoomId((prev) => ({
+          ...prev,
+          [normalizedRoomId]: preset
+        }));
+      }}
       roomMembers={mapRoomMembersForSlug(liveRoomMemberDetailsBySlug, liveRoomMembersBySlug, room.slug)}
       normalizedCurrentUserId={normalizedCurrentUserId}
       onRequestClearChannel={(targetRoom) => setConfirmPopup({ kind: "clear-channel", room: targetRoom })}
@@ -355,6 +536,7 @@ export function RoomsPanel({
             onSetEditingCategoryTitle={onSetEditingCategoryTitle}
             onSaveCategorySettings={onSaveCategorySettings}
             onMoveCategory={onMoveCategory}
+            unreadCount={Math.max(0, Number(categoryUnreadById[category.id] || 0))}
             category={category}
             renderRoomRow={renderRoomRow}
             onRequestDeleteCategory={() => setConfirmPopup({ kind: "delete-category" })}
@@ -366,6 +548,7 @@ export function RoomsPanel({
           rooms={uncategorizedRooms}
           collapsed={uncategorizedCollapsed}
           onToggleCollapsed={() => setUncategorizedCollapsed((prev) => !prev)}
+          unreadCount={uncategorizedUnreadCount}
           renderRoomRow={renderRoomRow}
         />
 
@@ -379,6 +562,9 @@ export function RoomsPanel({
             >
               <i className={`bi ${outsideRoomsCollapsed ? "bi-chevron-right" : "bi-chevron-down"}`} aria-hidden="true" />
               <span className="text-[var(--font-size-sm)] uppercase tracking-[0.04em] text-[var(--pixel-muted)]">{t("rooms.onlineOutsideRooms")}</span>
+              {outsideRoomsUnreadCount > 0 ? (
+                <span className="room-unread-badge">{outsideRoomsUnreadCount}</span>
+              ) : null}
               <span className="rounded-full border border-[var(--pixel-border)] px-2 py-0.5 text-[11px] text-[var(--pixel-muted)]">
                 {onlineOutsideRooms.length}
               </span>

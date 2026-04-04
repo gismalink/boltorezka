@@ -67,6 +67,9 @@ type RoomRowProps = Pick<
 > & {
   room: Room;
   roomUnreadCount: number;
+  isRoomUnreadMuted: boolean;
+  roomMutePresetValue: "1h" | "8h" | "24h" | "forever" | "off" | null;
+  onRoomMutePresetChange: (roomId: string, preset: "1h" | "8h" | "24h" | "forever" | "off") => void;
   roomMembers: RoomMember[];
   normalizedCurrentUserId: string;
   onRequestClearChannel: (room: Room) => void;
@@ -117,6 +120,9 @@ export function RoomRow({
   memberPreferencesByUserId,
   room,
   roomUnreadCount,
+  isRoomUnreadMuted,
+  roomMutePresetValue,
+  onRoomMutePresetChange,
   roomMembers,
   normalizedCurrentUserId,
   onRequestClearChannel,
@@ -214,6 +220,10 @@ export function RoomRow({
   }, [canKickMembers, memberMenuUserId, onLoadServerRoles]);
 
   useEffect(() => {
+    setRoomMutePreset(roomMutePresetValue);
+  }, [roomMutePresetValue]);
+
+  useEffect(() => {
     if (channelSettingsPopupOpenId !== room.id) {
       setIsEditingChannelTitle(false);
       setRoomMuteStatusText("");
@@ -260,6 +270,7 @@ export function RoomRow({
     try {
         await onSetRoomNotificationMutePreset(room.id, nextPreset);
         setRoomMutePreset(nextPreset);
+        onRoomMutePresetChange(room.id, nextPreset);
       setRoomMuteStatusText(t("chat.notificationSaved"));
     } catch {
       setRoomMuteStatusText(t("chat.notificationSaveError"));
@@ -451,7 +462,7 @@ export function RoomRow({
       >
         <i className={`bi ${ROOM_KIND_ICON_CLASS[room.kind]}`} aria-hidden="true" />
         <span>{room.title}</span>
-        {roomUnreadCount > 0 ? <span className="room-unread-badge">{roomUnreadCount}</span> : null}
+        {roomUnreadCount > 0 ? <span className={`room-unread-badge ${isRoomUnreadMuted ? "room-unread-badge-muted" : ""}`}>{roomUnreadCount}</span> : null}
       </button>
       <div className="inline-flex items-center gap-1">
       {roomSupportsRtc ? (

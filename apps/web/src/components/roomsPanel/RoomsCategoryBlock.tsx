@@ -18,6 +18,7 @@ type RoomsCategoryBlockProps = Pick<
   | "onMoveCategory"
 > & {
   category: RoomCategory & { channels: Room[] };
+  unreadCount: number;
   renderRoomRow: (room: Room) => JSX.Element;
   onRequestDeleteCategory: () => void;
 };
@@ -34,6 +35,7 @@ export function RoomsCategoryBlock({
   onSetEditingCategoryTitle,
   onSaveCategorySettings,
   onMoveCategory,
+  unreadCount,
   category,
   renderRoomRow,
   onRequestDeleteCategory
@@ -52,6 +54,7 @@ export function RoomsCategoryBlock({
         >
           <i className={`bi ${isCollapsed ? "bi-chevron-right" : "bi-chevron-down"}`} aria-hidden="true" />
           <span className="text-[var(--font-size-sm)] uppercase tracking-[0.04em] text-[var(--pixel-muted)]">{category.title}</span>
+          {unreadCount > 0 ? <span className="room-unread-badge">{unreadCount}</span> : null}
           <span className="rounded-full border border-[var(--pixel-border)] px-2 py-0.5 text-[11px] text-[var(--pixel-muted)]">
             {category.channels.length}
           </span>

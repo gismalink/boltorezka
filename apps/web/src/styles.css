@@ -1840,6 +1840,11 @@ pre {
   text-align: center;
 }
 
+.room-unread-badge-muted {
+  background: color-mix(in srgb, var(--pixel-muted) 40%, transparent 60%);
+  color: var(--pixel-muted);
+}
+
 .chat-typing-status {
   margin: 0;
   display: inline-flex;
