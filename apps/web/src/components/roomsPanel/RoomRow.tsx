@@ -1,4 +1,4 @@
-import { type DragEvent, type FormEvent, useEffect, useRef, useState } from "react";
+import { memo, type DragEvent, type FormEvent, useEffect, useRef, useState } from "react";
 import type { ChannelAudioQualitySetting, Room, RoomKind, RoomMemberPreference } from "../../domain";
 import { PopupPortal } from "../uicomponents";
 import type { RoomsPanelProps } from "../types";
@@ -68,7 +68,7 @@ type RoomRowProps = Pick<
   onRequestArchiveChannel: (room: Room) => void;
 };
 
-export function RoomRow({
+function RoomRowInner({
   t,
   canCreateRooms,
   canKickMembers,
@@ -986,3 +986,5 @@ export function RoomRow({
     </>
   );
 }
+
+export const RoomRow = memo(RoomRowInner);
