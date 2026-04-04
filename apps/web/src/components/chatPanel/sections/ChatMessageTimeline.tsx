@@ -28,6 +28,8 @@ type ChatMessageTimelineProps = {
   resolveAttachmentImageUrl: (url: string) => string;
   formatAttachmentSize: (bytes: number) => string;
   setPreviewImageUrl: (value: string | null) => void;
+  unreadDividerMessageId: string | null;
+  unreadDividerVisible: boolean;
 };
 
 const renderMessageText = (value: string): ReactNode[] => {
@@ -249,7 +251,9 @@ export function ChatMessageTimeline({
   formatMessageTime,
   resolveAttachmentImageUrl,
   formatAttachmentSize,
-  setPreviewImageUrl
+  setPreviewImageUrl,
+  unreadDividerMessageId,
+  unreadDividerVisible
 }: ChatMessageTimelineProps) {
   const closeContextMenu = () => {
     setContextMenuMessageId(null);
@@ -283,8 +287,13 @@ export function ChatMessageTimeline({
         const linkPreview = extractFirstLinkPreview(messageVm.text);
 
         return (
+          <div key={messageVm.id}>
+          {unreadDividerMessageId === messageVm.id ? (
+            <div className={`chat-unread-divider ${unreadDividerVisible ? "chat-unread-divider-visible" : ""}`}>
+              ----непрочитанные---
+            </div>
+          ) : null}
           <article
-            key={messageVm.id}
             data-message-id={messageVm.id}
             className={`chat-message group grid items-end gap-2 ${isOwn ? "chat-message-own grid-cols-1 justify-items-end" : "grid-cols-[34px_minmax(0,1fr)]"}`}
           >
@@ -589,6 +598,7 @@ export function ChatMessageTimeline({
               </div>
             </div>
           </article>
+          </div>
         );
       })}
     </div>

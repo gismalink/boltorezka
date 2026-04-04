@@ -1541,6 +1541,21 @@ pre {
   background: color-mix(in srgb, var(--pixel-panel) 88%, #000 12%);
 }
 
+.chat-unread-divider {
+  margin: 8px 34px 6px;
+  text-align: center;
+  font-size: calc(var(--font-size-sm) - 0.08rem);
+  letter-spacing: 0.04em;
+  color: color-mix(in srgb, var(--pixel-neon-gold) 78%, var(--pixel-text) 22%);
+  opacity: 0;
+  transition: opacity 1s ease;
+  pointer-events: none;
+}
+
+.chat-unread-divider-visible {
+  opacity: 0.95;
+}
+
 .chat-topic-context-menu {
   position: fixed;
   z-index: 1200;

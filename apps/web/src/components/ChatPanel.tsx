@@ -169,6 +169,13 @@ export function ChatPanel({
   const [isEditingTopicTitleInline, setIsEditingTopicTitleInline] = useState(false);
   const [topicDeleteConfirm, setTopicDeleteConfirm] = useState<{ topicId: string; title: string } | null>(null);
   const autoMarkReadInFlightRef = useRef<Record<string, number>>({});
+  const unreadDividerFadeTimerRef = useRef<number | null>(null);
+  const unreadDividerScrolledTopicRef = useRef<string>("");
+  const [entryUnreadDivider, setEntryUnreadDivider] = useState<{
+    topicId: string;
+    messageId: string;
+    visible: boolean;
+  } | null>(null);
   const [topicMutePresetById, setTopicMutePresetById] = useState<Record<string, "1h" | "8h" | "24h" | "forever" | "off">>({});
   const [hotkeyStatusText, setHotkeyStatusText] = useState("");
   const [resolvedAttachmentImageUrls, setResolvedAttachmentImageUrls] = useState<Record<string, string>>({});
@@ -1165,6 +1172,104 @@ export function ChatPanel({
   };
 
   useEffect(() => {
+    const normalizedTopicId = String(activeTopicId || "").trim();
+    if (!normalizedTopicId) {
+      setEntryUnreadDivider(null);
+      unreadDividerScrolledTopicRef.current = "";
+      if (unreadDividerFadeTimerRef.current) {
+        window.clearTimeout(unreadDividerFadeTimerRef.current);
+        unreadDividerFadeTimerRef.current = null;
+      }
+      return;
+    }
+
+    if (entryUnreadDivider?.topicId === normalizedTopicId && entryUnreadDivider.messageId) {
+      return;
+    }
+
+    const activeTopic = topics.find((topic) => String(topic.id || "").trim() === normalizedTopicId);
+    const unreadCount = Math.max(0, Number(activeTopic?.unreadCount || 0));
+    if (!activeTopic || unreadCount <= 0 || messages.length === 0) {
+      setEntryUnreadDivider(null);
+      unreadDividerScrolledTopicRef.current = "";
+      return;
+    }
+
+    const dividerIndex = Math.max(0, Math.min(messages.length - 1, messages.length - unreadCount));
+    const dividerMessageId = String(messages[dividerIndex]?.id || "").trim();
+    if (!dividerMessageId) {
+      setEntryUnreadDivider(null);
+      unreadDividerScrolledTopicRef.current = "";
+      return;
+    }
+
+    setEntryUnreadDivider({
+      topicId: normalizedTopicId,
+      messageId: dividerMessageId,
+      visible: true
+    });
+    unreadDividerScrolledTopicRef.current = "";
+
+    if (unreadDividerFadeTimerRef.current) {
+      window.clearTimeout(unreadDividerFadeTimerRef.current);
+    }
+    unreadDividerFadeTimerRef.current = window.setTimeout(() => {
+      setEntryUnreadDivider((prev) => {
+        if (!prev || prev.topicId !== normalizedTopicId) {
+          return prev;
+        }
+
+        return {
+          ...prev,
+          visible: false
+        };
+      });
+      unreadDividerFadeTimerRef.current = null;
+    }, 3200);
+  }, [activeTopicId, entryUnreadDivider?.messageId, entryUnreadDivider?.topicId, messages, topics]);
+
+  useEffect(() => {
+    if (!entryUnreadDivider?.visible) {
+      return;
+    }
+
+    const normalizedTopicId = String(activeTopicId || "").trim();
+    if (!normalizedTopicId || entryUnreadDivider.topicId !== normalizedTopicId) {
+      return;
+    }
+
+    if (unreadDividerScrolledTopicRef.current === normalizedTopicId) {
+      return;
+    }
+
+    const container = chatLogRef.current;
+    if (!container) {
+      return;
+    }
+
+    const selectorMessageId = (typeof CSS !== "undefined" && typeof CSS.escape === "function")
+      ? CSS.escape(entryUnreadDivider.messageId)
+      : entryUnreadDivider.messageId;
+    const target = container.querySelector<HTMLElement>(`[data-message-id="${selectorMessageId}"]`);
+    if (!target) {
+      return;
+    }
+
+    unreadDividerScrolledTopicRef.current = normalizedTopicId;
+    window.requestAnimationFrame(() => {
+      target.scrollIntoView({ block: "center", behavior: "smooth" });
+    });
+  }, [activeTopicId, chatLogRef, entryUnreadDivider]);
+
+  useEffect(() => {
+    return () => {
+      if (unreadDividerFadeTimerRef.current) {
+        window.clearTimeout(unreadDividerFadeTimerRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
     const normalizedToken = String(authToken || "").trim();
     const normalizedTopicId = String(activeTopicId || "").trim();
     const normalizedRoomId = String(roomId || "").trim();
@@ -1832,6 +1937,8 @@ export function ChatPanel({
         resolveAttachmentImageUrl={resolveAttachmentImageUrl}
         formatAttachmentSize={formatAttachmentSize}
         setPreviewImageUrl={setPreviewImageUrl}
+        unreadDividerMessageId={entryUnreadDivider?.messageId || null}
+        unreadDividerVisible={Boolean(entryUnreadDivider?.visible && entryUnreadDivider?.topicId === String(activeTopicId || "").trim())}
       />
       <ChatComposerSection
         t={t}
