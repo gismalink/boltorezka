@@ -2210,7 +2210,7 @@ pre {
 }
 
 .channel-row-actions-chat-active.channel-row-actions-actions-two {
-  width: 52px;
+  width: 24px;
 }
 
 .channel-row-main:hover .channel-row-actions,
@@ -2248,7 +2248,7 @@ pre {
 }
 
 .channel-right-zone-chat-active.channel-right-zone-actions-two .room-row-unread {
-  transform: translateX(-56px);
+  transform: translateX(-28px);
 }
 
 .channel-row-main-actions-one:hover .room-row-unread,
@@ -2552,7 +2552,6 @@ pre {
 }
 
 .channel-row-main:hover .channel-action-btn,
-.channel-row-actions-chat-active .channel-action-btn,
 .channel-row-actions-open .channel-action-btn {
   opacity: 1;
   pointer-events: auto;
