@@ -42,7 +42,10 @@ export function useChatPanelInboxNotifications({
   const inboxItemsRef = useRef(inboxItems);
   const activeRoomSlugRef = useRef(roomSlug);
   const activeTopicIdRef = useRef(activeTopicId);
+  const onJumpToMessageRef = useRef(onJumpToMessage);
+  const onResetJumpStatusRef = useRef(onResetJumpStatus);
   const notifiedInboxEventIdsRef = useRef<Set<string>>(new Set());
+  const pollUnreadInFlightRef = useRef(false);
 
   useEffect(() => {
     inboxItemsRef.current = inboxItems;
@@ -52,6 +55,11 @@ export function useChatPanelInboxNotifications({
     activeRoomSlugRef.current = roomSlug;
     activeTopicIdRef.current = activeTopicId;
   }, [roomSlug, activeTopicId]);
+
+  useEffect(() => {
+    onJumpToMessageRef.current = onJumpToMessage;
+    onResetJumpStatusRef.current = onResetJumpStatus;
+  }, [onJumpToMessage, onResetJumpStatus]);
 
   useEffect(() => {
     try {
@@ -165,15 +173,15 @@ export function useChatPanelInboxNotifications({
       return;
     }
 
-    onResetJumpStatus();
-    onJumpToMessage({
+    onResetJumpStatusRef.current();
+    onJumpToMessageRef.current({
       messageId: targetMessageId,
       roomSlug: targetRoomSlug,
       topicId: item.topicId || null,
       includeHistoryLoad: false
     });
     void markInboxItemRead(item.id);
-  }, [authToken, markInboxItemRead, onJumpToMessage, onResetJumpStatus]);
+  }, [authToken, markInboxItemRead]);
 
   const persistNotifiedInboxEvents = useCallback(() => {
     try {
@@ -370,6 +378,11 @@ export function useChatPanelInboxNotifications({
     };
 
     const pollUnreadInbox = async (initial: boolean) => {
+      if (pollUnreadInFlightRef.current) {
+        return;
+      }
+
+      pollUnreadInFlightRef.current = true;
       try {
         const response = await api.notificationInbox(authToken, {
           limit: 20,
@@ -447,6 +460,8 @@ export function useChatPanelInboxNotifications({
         persistNotifiedInboxEvents();
       } catch {
         // Background inbox poll failures are non-blocking.
+      } finally {
+        pollUnreadInFlightRef.current = false;
       }
     };
 
