@@ -2552,7 +2552,8 @@ pre {
 }
 
 .channel-row-main:hover .channel-action-btn,
-.room-btn-active + .channel-settings-anchor .channel-action-btn {
+.channel-row-actions-chat-active .channel-action-btn,
+.channel-row-actions-open .channel-action-btn {
   opacity: 1;
   pointer-events: auto;
 }
