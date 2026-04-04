@@ -423,7 +423,7 @@ function RoomRowInner({
   return (
     <>
     <div
-      className={`rooms-row-shell channel-row relative grid grid-cols-[1fr_auto] items-center gap-2 ${dropTargetActive ? "channel-row-drop-target" : ""}`}
+      className={`rooms-row-shell channel-row relative flex items-center ${dropTargetActive ? "channel-row-drop-target" : ""}`}
       onDragOver={onRoomDragOver}
       onDragEnter={onRoomDragOver}
       onDragLeave={() => setDropTargetActive(false)}
@@ -850,7 +850,7 @@ function RoomRowInner({
             return (
               <li
                 key={`${room.id}-${member.userId || member.userName}`}
-                className={`room-member-row-shell channel-member-item grid min-h-[22px] grid-cols-[auto_1fr_auto_auto] items-center gap-1.5 ${isCurrentUser ? "channel-member-item-current" : ""} ${isVoiceActive ? "channel-member-item-voice-active" : ""} ${canKickMembers && canManageMember ? "channel-member-item-draggable" : ""}`}
+                className={`room-member-row-shell channel-member-item relative min-h-[22px] ${isCurrentUser ? "channel-member-item-current" : ""} ${isVoiceActive ? "channel-member-item-voice-active" : ""} ${canKickMembers && canManageMember ? "channel-member-item-draggable" : ""}`}
                 draggable={Boolean(canKickMembers && canManageMember)}
                 onDragStart={(event) => {
                   if (!member.userId) {
@@ -875,35 +875,37 @@ function RoomRowInner({
                   );
                 }}
               >
-                <span className="channel-member-avatar">{(member.userName || "U").charAt(0).toUpperCase()}</span>
-                <span className="channel-member-name">{member.userName}</span>
-                <span className="channel-member-icons" aria-hidden="true">
-                  {roomHasVoiceState && !isCurrentUser ? (
-                    <span className="channel-member-status-icon-anchor" data-tooltip={connectionTooltip}>
-                      <i className={`bi ${mediaStatusIconClass} ${mediaStatusClass}`} />
-                    </span>
-                  ) : null}
-                  {roomSupportsRtc ? (
-                    <span className="channel-member-status-icon-anchor" data-tooltip={isCurrentUser ? selfMicTooltip : micTooltip}>
-                      <i className={`bi ${micIconClass} channel-member-mic-icon ${micIconStateClass}`} />
-                    </span>
-                  ) : null}
-                  {roomSupportsRtc ? (
-                    <span className="channel-member-status-icon-anchor" data-tooltip={isCurrentUser ? selfAudioTooltip : audioTooltip}>
-                      <i className={`bi bi-headphones channel-member-audio-icon ${isAudioOutputMuted ? "channel-member-audio-icon-muted" : ""}`} />
-                    </span>
-                  ) : null}
-                  {isCameraEnabled ? (
-                    <span className="channel-member-status-icon-anchor" data-tooltip={isCurrentUser ? selfCameraTooltip : cameraTooltip}>
-                      <i className="bi bi-camera-video-fill channel-member-camera-icon" />
-                    </span>
-                  ) : null}
-                  {isScreenSharing ? (
-                    <span className="channel-member-status-icon-anchor" data-tooltip={t("rtc.screenShare")}>
-                      <i className="bi bi-display channel-member-camera-icon" />
-                    </span>
-                  ) : null}
-                </span>
+                <div className={`channel-member-main grid min-h-[22px] grid-cols-[auto_1fr_auto] items-center gap-1.5 ${canManageMember ? "channel-member-main-with-settings" : ""}`}>
+                  <span className="channel-member-avatar">{(member.userName || "U").charAt(0).toUpperCase()}</span>
+                  <span className="channel-member-name">{member.userName}</span>
+                  <span className="channel-member-icons" aria-hidden="true">
+                    {roomHasVoiceState && !isCurrentUser ? (
+                      <span className="channel-member-status-icon-anchor" data-tooltip={connectionTooltip}>
+                        <i className={`bi ${mediaStatusIconClass} ${mediaStatusClass}`} />
+                      </span>
+                    ) : null}
+                    {roomSupportsRtc ? (
+                      <span className="channel-member-status-icon-anchor" data-tooltip={isCurrentUser ? selfMicTooltip : micTooltip}>
+                        <i className={`bi ${micIconClass} channel-member-mic-icon ${micIconStateClass}`} />
+                      </span>
+                    ) : null}
+                    {roomSupportsRtc ? (
+                      <span className="channel-member-status-icon-anchor" data-tooltip={isCurrentUser ? selfAudioTooltip : audioTooltip}>
+                        <i className={`bi bi-headphones channel-member-audio-icon ${isAudioOutputMuted ? "channel-member-audio-icon-muted" : ""}`} />
+                      </span>
+                    ) : null}
+                    {isCameraEnabled ? (
+                      <span className="channel-member-status-icon-anchor" data-tooltip={isCurrentUser ? selfCameraTooltip : cameraTooltip}>
+                        <i className="bi bi-camera-video-fill channel-member-camera-icon" />
+                      </span>
+                    ) : null}
+                    {isScreenSharing ? (
+                      <span className="channel-member-status-icon-anchor" data-tooltip={t("rtc.screenShare")}>
+                        <i className="bi bi-display channel-member-camera-icon" />
+                      </span>
+                    ) : null}
+                  </span>
+                </div>
                 {canManageMember ? (
                   <div className={`channel-member-settings-anchor relative ${(memberMenuOpenKey === menuKey && member.userId && memberMenuUserId === member.userId) ? "channel-member-settings-anchor-open" : ""}`}>
                     <button
