@@ -130,7 +130,6 @@ export type RoomsPanelProps = {
   roomsTree: RoomsTreeResponse | null;
   roomSlug: string;
   activeChatRoomSlug: string;
-  roomMediaTopologyBySlug: Record<string, "livekit">;
   screenShareOwnerByRoomSlug: Record<string, { userId: string | null; userName: string | null }>;
   roomUnreadBySlug: Record<string, number>;
   serverUnreadCount: number;
@@ -147,10 +146,8 @@ export type RoomsPanelProps = {
   collapsedCategoryIds: string[];
   uncategorizedRooms: Room[];
   archivedRooms: Room[];
-  newCategorySlug: string;
   newCategoryTitle: string;
   categoryPopupOpen: boolean;
-  newRoomSlug: string;
   newRoomTitle: string;
   newRoomKind: RoomKind;
   newRoomCategoryId: string;

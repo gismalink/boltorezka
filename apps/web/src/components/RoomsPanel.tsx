@@ -28,7 +28,6 @@ export function RoomsPanel({
   roomsTree,
   roomSlug,
   activeChatRoomSlug,
-  roomMediaTopologyBySlug,
   screenShareOwnerByRoomSlug,
   roomUnreadBySlug,
   serverUnreadCount,
@@ -45,10 +44,8 @@ export function RoomsPanel({
   collapsedCategoryIds,
   uncategorizedRooms,
   archivedRooms,
-  newCategorySlug,
   newCategoryTitle,
   categoryPopupOpen,
-  newRoomSlug,
   newRoomTitle,
   newRoomKind,
   newRoomCategoryId,
@@ -122,30 +119,6 @@ export function RoomsPanel({
       return;
     }
 
-    if (confirmPopup.kind === "delete-category") {
-      onDeleteCategory();
-      setConfirmPopup(null);
-      return;
-    }
-
-    if (confirmPopup.kind === "clear-channel") {
-      onClearChannelMessages(confirmPopup.room);
-      setConfirmPopup(null);
-      return;
-    }
-
-    if (confirmPopup.kind === "restore-channel") {
-      onRestoreChannel(confirmPopup.room);
-      setConfirmPopup(null);
-      return;
-    }
-
-    if (confirmPopup.kind === "delete-channel-permanent") {
-      onDeleteChannelPermanent(confirmPopup.room);
-      setConfirmPopup(null);
-      return;
-    }
-
     if (confirmPopup.kind === "delete-all-archived") {
       const snapshot = [...archivedRooms];
       const run = async () => {
@@ -159,7 +132,26 @@ export function RoomsPanel({
       return;
     }
 
-    onDeleteChannel(confirmPopup.room);
+    switch (confirmPopup.kind) {
+      case "delete-category":
+        onDeleteCategory();
+        break;
+      case "clear-channel":
+        onClearChannelMessages(confirmPopup.room);
+        break;
+      case "restore-channel":
+        onRestoreChannel(confirmPopup.room);
+        break;
+      case "delete-channel-permanent":
+        onDeleteChannelPermanent(confirmPopup.room);
+        break;
+      case "archive-channel":
+        onDeleteChannel(confirmPopup.room);
+        break;
+      default:
+        break;
+    }
+
     setConfirmPopup(null);
   }, [archivedRooms, confirmPopup, onClearChannelMessages, onDeleteCategory, onDeleteChannel, onDeleteChannelPermanent, onRestoreChannel]);
 
@@ -223,6 +215,14 @@ export function RoomsPanel({
     setConfirmPopup({ kind: "delete-channel-permanent", room });
   }, []);
 
+  const onRequestClearChannel = useCallback((room: Room) => {
+    setConfirmPopup({ kind: "clear-channel", room });
+  }, []);
+
+  const onRequestArchiveChannel = useCallback((room: Room) => {
+    setConfirmPopup({ kind: "archive-channel", room });
+  }, []);
+
   const renderRoomRow = useCallback((room: Room) => (
     <RoomRow
       t={t}
@@ -276,8 +276,8 @@ export function RoomsPanel({
       onRoomMutePresetChange={onRoomMutePresetChange}
       roomMembers={roomMembersBySlug[room.slug] || []}
       normalizedCurrentUserId={normalizedCurrentUserId}
-      onRequestClearChannel={(targetRoom) => setConfirmPopup({ kind: "clear-channel", room: targetRoom })}
-      onRequestArchiveChannel={(targetRoom) => setConfirmPopup({ kind: "archive-channel", room: targetRoom })}
+      onRequestClearChannel={onRequestClearChannel}
+      onRequestArchiveChannel={onRequestArchiveChannel}
     />
   ), [
     t,
@@ -325,7 +325,9 @@ export function RoomsPanel({
     roomMutePresetByRoomId,
     onRoomMutePresetChange,
     roomMembersBySlug,
-    normalizedCurrentUserId
+    normalizedCurrentUserId,
+    onRequestClearChannel,
+    onRequestArchiveChannel
   ]);
 
   return (

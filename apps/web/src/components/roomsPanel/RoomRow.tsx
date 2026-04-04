@@ -1,19 +1,11 @@
 import { type DragEvent, type FormEvent, useEffect, useRef, useState } from "react";
 import type { ChannelAudioQualitySetting, Room, RoomKind, RoomMemberPreference } from "../../domain";
-import { PixelCheckbox, PopupPortal, RangeSlider } from "../uicomponents";
+import { PopupPortal } from "../uicomponents";
 import type { RoomsPanelProps } from "../types";
 import type { RoomMember } from "./roomMembers";
-
-type ServerMemberProfileDetails = {
-  userId: string;
-  name: string;
-  email: string;
-  joinedAt: string;
-  role: "owner" | "admin" | "member";
-  customRoles: Array<{ id: string; name: string }>;
-  hiddenRoomAccess: Array<{ roomId: string; roomSlug: string; roomTitle: string }>;
-  hiddenRoomsAvailable: Array<{ roomId: string; roomSlug: string; roomTitle: string; hasAccess: boolean }>;
-};
+import { RoomMemberSettingsPopup } from "./RoomMemberSettingsPopup";
+import { RoomMemberProfileModal } from "./RoomMemberProfileModal";
+import type { ServerMemberProfileDetails } from "./roomMemberSettingsTypes";
 
 const ROOM_KIND_ICON_CLASS: Record<RoomKind, string> = {
   text: "bi-hash",
@@ -938,227 +930,41 @@ export function RoomRow({
                       <i className="bi bi-gear" aria-hidden="true" />
                     </button>
                     {memberMenuOpenKey === menuKey && member.userId && memberMenuUserId === member.userId ? (
-                      <PopupPortal
+                      <RoomMemberSettingsPopup
+                        t={t}
                         open
                         anchorRef={memberMenuAnchorRef as { current: HTMLElement | null }}
-                        className="settings-popup channel-member-settings-popup"
-                        placement="bottom-end"
-                      >
-                        <div className="grid gap-3">
-                          <div className="subheading">{member.userName}</div>
-                          <label className="slider-label grid gap-1.5">
-                            {t("rooms.personalVolume")}: {volumeValue}%
-                            <RangeSlider
-                              min={0}
-                              max={100}
-                              value={volumeValue}
-                              valueSuffix="%"
-                              onChange={(nextValue) => {
-                                const nextVolume = Math.max(0, Math.min(100, Number(nextValue) || 0));
-                                setMemberPreferenceDrafts((prev) => ({
-                                  ...prev,
-                                  [member.userId as string]: {
-                                    volume: nextVolume,
-                                    note: noteValue
-                                  }
-                                }));
-                              }}
-                            />
-                          </label>
-                          <label className="grid gap-1.5">
-                            <span className="row items-center justify-between gap-2">
-                              <span className="subheading">{t("rooms.memberNote")}</span>
-                              <button
-                                type="button"
-                                className="secondary icon-btn tiny"
-                                aria-label={t("rooms.save")}
-                                data-tooltip={t("rooms.save")}
-                                onClick={() => {
-                                  void onSaveMemberPreference(member.userId as string, {
-                                    volume: volumeValue,
-                                    note: noteValue
-                                  });
-                                }}
-                              >
-                                <i className="bi bi-check2" aria-hidden="true" />
-                              </button>
-                            </span>
-                            <input
-                              type="text"
-                              maxLength={32}
-                              value={noteValue}
-                              onChange={(event) => {
-                                const nextNote = event.target.value.slice(0, 32);
-                                setMemberPreferenceDrafts((prev) => ({
-                                  ...prev,
-                                  [member.userId as string]: {
-                                    volume: volumeValue,
-                                    note: nextNote
-                                  }
-                                }));
-                              }}
-                              placeholder={t("rooms.memberNotePlaceholder")}
-                            />
-                          </label>
-                          <button
-                            type="button"
-                            className="secondary flex w-full items-center justify-between gap-3 text-left"
-                            onClick={async () => {
-                              const current = memberMenuProfile;
-                              if (current && current.userId === member.userId) {
-                                setMemberProfileModalData(current);
-                                setMemberProfileModalOpen(true);
-                                closeMemberMenu();
-                                return;
-                              }
-                              const profile = await onLoadServerMemberProfile(member.userId as string);
-                              if (!profile) {
-                                return;
-                              }
-                              setMemberProfileModalData(profile);
-                              setMemberProfileModalOpen(true);
-                              closeMemberMenu();
-                            }}
-                          >
-                            <span>{t("server.contextProfile")}</span>
-                            <i className="bi bi-person-vcard" aria-hidden="true" />
-                          </button>
-                          {canKickMembers ? (
-                            <>
-                              <button
-                                ref={(element) => {
-                                  memberRoleAnchorRef.current = element;
-                                }}
-                                type="button"
-                                className={`secondary flex w-full items-center justify-between gap-4 text-left ${memberRoleSelectorOpen ? "voice-menu-row-active" : ""}`}
-                                onClick={() => setMemberRoleSelectorOpen((current) => !current)}
-                              >
-                                <span className="min-w-0">
-                                  <span className="voice-menu-title block">{t("server.contextServerRoles")}</span>
-                                  <span className="voice-menu-subtitle block">
-                                    {selectedCustomRoleNames.length > 0
-                                      ? selectedCustomRoleNames.join(", ")
-                                      : t("server.roleNoCustom")}
-                                  </span>
-                                </span>
-                                <i className={`bi ${memberRoleSelectorOpen ? "bi-chevron-up" : "bi-chevron-down"}`} aria-hidden="true" />
-                              </button>
-                              <PopupPortal
-                                open={memberRoleSelectorOpen}
-                                anchorRef={memberRoleAnchorRef as { current: HTMLElement | null }}
-                                className="settings-popup voice-submenu-popup"
-                                placement="right-start"
-                                offset={8}
-                              >
-                                <div className="grid gap-2">
-                                  {serverRolesLoading ? <p className="muted">{t("server.rolesLoading")}</p> : null}
-                                  <div className="device-list mt-1 grid gap-1.5">
-                                    {serverRoles.filter((role) => !role.isBase).map((role) => {
-                                      const checked = selectedCustomRoleIds.includes(role.id);
-                                      return (
-                                        <PixelCheckbox
-                                          key={role.id}
-                                          checked={checked}
-                                          onChange={async (nextChecked) => {
-                                            const current = memberMenuProfile;
-                                            if (!current || current.userId !== member.userId) {
-                                              return;
-                                            }
-                                            const currentIds = current.customRoles.map((item) => item.id);
-                                            const nextRoleIds = nextChecked
-                                              ? Array.from(new Set([...currentIds, role.id]))
-                                              : currentIds.filter((item) => item !== role.id);
-                                            const ok = await onSetServerMemberCustomRoles(current.userId, nextRoleIds);
-                                            if (!ok) {
-                                              return;
-                                            }
-                                            const refreshed = await onLoadServerMemberProfile(current.userId);
-                                            if (refreshed) {
-                                              setMemberMenuProfile(refreshed);
-                                            }
-                                          }}
-                                          label={role.name}
-                                          className={`secondary device-item text-left ${checked ? "device-item-active" : ""}`}
-                                        />
-                                      );
-                                    })}
-                                  </div>
-                                </div>
-                              </PopupPortal>
-                            </>
-                          ) : null}
-                          {canKickMembers && hiddenRoomsAvailable.length > 0 ? (
-                            <>
-                              <button
-                                ref={(element) => {
-                                  memberHiddenRoomsAnchorRef.current = element;
-                                }}
-                                type="button"
-                                className={`secondary flex w-full items-center justify-between gap-4 text-left ${memberHiddenRoomsSelectorOpen ? "voice-menu-row-active" : ""}`}
-                                onClick={() => setMemberHiddenRoomsSelectorOpen((current) => !current)}
-                              >
-                                <span className="min-w-0">
-                                  <span className="voice-menu-title block">{t("server.contextHiddenChats")}</span>
-                                  <span className="voice-menu-subtitle block">{hiddenRoomsGrantedCount}/{hiddenRoomsAvailable.length}</span>
-                                </span>
-                                <i className={`bi ${memberHiddenRoomsSelectorOpen ? "bi-chevron-up" : "bi-chevron-down"}`} aria-hidden="true" />
-                              </button>
-                              <PopupPortal
-                                open={memberHiddenRoomsSelectorOpen}
-                                anchorRef={memberHiddenRoomsAnchorRef as { current: HTMLElement | null }}
-                                className="settings-popup voice-submenu-popup"
-                                placement="right-start"
-                                offset={8}
-                              >
-                                <div className="device-list mt-1 grid max-h-[260px] gap-1.5 overflow-auto pr-1">
-                                  {hiddenRoomsAvailable.map((roomAccess) => {
-                                    const checked = Boolean(memberMenuProfile?.hiddenRoomAccess.some((item) => item.roomId === roomAccess.roomId));
-                                    return (
-                                      <button
-                                        key={roomAccess.roomId}
-                                        type="button"
-                                        className={`secondary device-item radio-item flex items-center justify-between gap-4 text-left ${checked ? "device-item-active" : ""}`}
-                                        onClick={async () => {
-                                          const current = memberMenuProfile;
-                                          if (!current || current.userId !== member.userId) {
-                                            return;
-                                          }
-                                          const nextRoomIds = checked
-                                            ? current.hiddenRoomAccess.filter((item) => item.roomId !== roomAccess.roomId).map((item) => item.roomId)
-                                            : [...current.hiddenRoomAccess.map((item) => item.roomId), roomAccess.roomId];
-                                          const ok = await onSetServerMemberHiddenRoomAccess(current.userId, nextRoomIds);
-                                          if (!ok) {
-                                            return;
-                                          }
-                                          const refreshed = await onLoadServerMemberProfile(current.userId);
-                                          if (refreshed) {
-                                            setMemberMenuProfile(refreshed);
-                                          }
-                                        }}
-                                      >
-                                        <span>{roomAccess.roomTitle}</span>
-                                        <i className={`bi ${checked ? "bi-record-circle-fill" : "bi-circle"}`} aria-hidden="true" />
-                                      </button>
-                                    );
-                                  })}
-                                </div>
-                              </PopupPortal>
-                            </>
-                          ) : null}
-                          {canKickMembers ? (
-                            <button
-                              type="button"
-                              className="secondary delete-action-btn"
-                              onClick={() => {
-                                onKickRoomMember(room.slug, member.userId as string, member.userName);
-                                closeMemberMenu();
-                              }}
-                            >
-                              <i className="bi bi-person-x" aria-hidden="true" /> {t("rooms.kickFromChannel")}
-                            </button>
-                          ) : null}
-                        </div>
-                      </PopupPortal>
+                        memberUserId={member.userId}
+                        memberUserName={member.userName}
+                        roomSlug={room.slug}
+                        volumeValue={volumeValue}
+                        noteValue={noteValue}
+                        memberMenuProfile={memberMenuProfile}
+                        setMemberMenuProfile={setMemberMenuProfile}
+                        setMemberProfileModalData={setMemberProfileModalData}
+                        setMemberProfileModalOpen={setMemberProfileModalOpen}
+                        setMemberPreferenceDraft={(nextDraft) => {
+                          setMemberPreferenceDrafts((prev) => ({
+                            ...prev,
+                            [member.userId]: nextDraft
+                          }));
+                        }}
+                        onSaveMemberPreference={onSaveMemberPreference}
+                        onLoadServerMemberProfile={onLoadServerMemberProfile}
+                        onSetServerMemberCustomRoles={onSetServerMemberCustomRoles}
+                        onSetServerMemberHiddenRoomAccess={onSetServerMemberHiddenRoomAccess}
+                        onKickRoomMember={onKickRoomMember}
+                        canKickMembers={canKickMembers}
+                        closeMemberMenu={closeMemberMenu}
+                        memberRoleSelectorOpen={memberRoleSelectorOpen}
+                        setMemberRoleSelectorOpen={setMemberRoleSelectorOpen}
+                        memberHiddenRoomsSelectorOpen={memberHiddenRoomsSelectorOpen}
+                        setMemberHiddenRoomsSelectorOpen={setMemberHiddenRoomsSelectorOpen}
+                        memberRoleAnchorRef={memberRoleAnchorRef as { current: HTMLElement | null }}
+                        memberHiddenRoomsAnchorRef={memberHiddenRoomsAnchorRef as { current: HTMLElement | null }}
+                        serverRoles={serverRoles}
+                        serverRolesLoading={serverRolesLoading}
+                      />
                     ) : null}
                   </div>
                 ) : null}
@@ -1168,25 +974,15 @@ export function RoomRow({
         </ul>
       ) : null}
     </div>
-    {memberProfileModalOpen && memberProfileModalData ? (
-      <div className="fixed inset-0 z-[185] flex items-center justify-center bg-black/65 px-4" role="dialog" aria-modal="true">
-        <div className="card compact grid w-full max-w-[460px] gap-3 p-4">
-          <h3>{t("rooms.memberProfileTitle")}</h3>
-          <div><strong>{t("server.profileName")}: </strong>{memberProfileModalData.name}</div>
-          <div><strong>Email: </strong>{memberProfileModalData.email}</div>
-          <button
-            type="button"
-            className="secondary"
-            onClick={() => {
-              setMemberProfileModalOpen(false);
-              setMemberProfileModalData(null);
-            }}
-          >
-            {t("settings.closeVoiceAria")}
-          </button>
-        </div>
-      </div>
-    ) : null}
+    <RoomMemberProfileModal
+      t={t}
+      open={memberProfileModalOpen}
+      data={memberProfileModalData}
+      onClose={() => {
+        setMemberProfileModalOpen(false);
+        setMemberProfileModalData(null);
+      }}
+    />
     </>
   );
 }
