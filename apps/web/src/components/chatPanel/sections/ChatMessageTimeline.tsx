@@ -257,6 +257,8 @@ export function ChatMessageTimeline({
   unreadDividerMessageId,
   unreadDividerVisible
 }: ChatMessageTimelineProps) {
+  const safeReactionsByMessageId = reactionsByMessageId || {};
+  const safeThumbsUpByMessageId = thumbsUpByMessageId || {};
   const quickReactionOptions = ["👍", "❤️", "😂", "🔥", "👏", "🎉", "🤯", "😢"];
   const viewportWidth = typeof window !== "undefined" ? window.innerWidth : 1280;
   const viewportHeight = typeof window !== "undefined" ? window.innerHeight : 720;
@@ -299,8 +301,8 @@ export function ChatMessageTimeline({
         const deliveryClass = messageVm.deliveryClass;
         const deliveryGlyph = messageVm.deliveryGlyph;
         const isPinned = Boolean(pinnedByMessageId[messageVm.id]);
-        const hasThumbsUp = Boolean(thumbsUpByMessageId[messageVm.id]);
-        const messageReactions = reactionsByMessageId[messageVm.id] || {};
+        const hasThumbsUp = Boolean(safeThumbsUpByMessageId[messageVm.id]);
+        const messageReactions = safeReactionsByMessageId[messageVm.id] || {};
         const mergedReactions = Object.entries(messageReactions)
           .filter(([, value]) => Number(value?.count || 0) > 0)
           .map(([emoji, value]) => ({
