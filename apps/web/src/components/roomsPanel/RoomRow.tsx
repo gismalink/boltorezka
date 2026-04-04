@@ -146,11 +146,15 @@ function RoomRowInner({
   const roomHasChatAction = roomSupportsRtc;
   const roomHasSettingsAction = canCreateRooms;
   const roomActionButtonsCount = (roomHasChatAction ? 1 : 0) + (roomHasSettingsAction ? 1 : 0);
-  const roomActionWidth = roomActionButtonsCount > 1 ? 56 : roomActionButtonsCount === 1 ? 26 : 0;
-  const roomChatActiveWidth = roomHasChatAction ? 26 : 0;
+  const roomActionWidth = roomActionButtonsCount > 1 ? 52 : roomActionButtonsCount === 1 ? 24 : 0;
+  const roomActionShift = roomActionButtonsCount > 0 ? roomActionWidth + 4 : 0;
+  const roomChatActiveWidth = roomHasChatAction ? 24 : 0;
+  const roomChatActiveShift = roomHasChatAction ? roomChatActiveWidth + 4 : 0;
   const roomActionVars = {
     "--channel-actions-width": `${roomActionWidth}px`,
-    "--channel-chat-active-width": `${roomChatActiveWidth}px`
+    "--channel-actions-shift": `${roomActionShift}px`,
+    "--channel-chat-active-width": `${roomChatActiveWidth}px`,
+    "--channel-chat-active-shift": `${roomChatActiveShift}px`
   } as CSSProperties;
   const roomMainButtonPaddingRight = roomActionButtonsCount > 0
     ? `calc(var(--space-md) + ${roomActionWidth + 16}px)`
