@@ -262,10 +262,14 @@ export class WsMessageController {
       .filter((item): item is Record<string, unknown> => Boolean(item && typeof item === "object"))
       .map((item) => {
         const attachmentType = String(item.type || "").trim().toLowerCase();
+        const normalizedAttachmentType: "image" | "document" | "audio" =
+          attachmentType === "audio" || attachmentType === "document"
+            ? attachmentType
+            : "image";
         return {
           id: String(item.id || crypto.randomUUID()),
           message_id: String(item.messageId || item.message_id || payload.id || fallbackId || ""),
-          type: attachmentType === "audio" || attachmentType === "document" ? attachmentType : "image",
+          type: normalizedAttachmentType,
           storage_key: String(item.storageKey || item.storage_key || ""),
           download_url: item.downloadUrl === null || item.download_url === null
             ? null

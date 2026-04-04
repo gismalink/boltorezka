@@ -160,6 +160,7 @@ export function ChatPanel({
     messageId: string;
     roomSlug: string;
     topicId: string | null;
+    includeHistoryLoad?: boolean;
   } | null>(null);
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
   const [contextMenuMessageId, setContextMenuMessageId] = useState<string | null>(null);
@@ -244,6 +245,7 @@ export function ChatPanel({
 
     const targetRoomSlug = String(searchJumpTarget.roomSlug || "").trim();
     const targetTopicId = String(searchJumpTarget.topicId || "").trim();
+    const shouldLoadHistory = searchJumpTarget.includeHistoryLoad !== false;
     const targetMessageId = String(searchJumpTarget.messageId || "").trim();
     if (!targetRoomSlug || !targetMessageId) {
       setSearchJumpTarget(null);
@@ -263,6 +265,12 @@ export function ChatPanel({
       targetNode.scrollIntoView({ behavior: "smooth", block: "center" });
       targetNode.classList.add("chat-message-jump-target");
       window.setTimeout(() => targetNode.classList.remove("chat-message-jump-target"), 1600);
+      setSearchJumpTarget(null);
+      setSearchJumpStatusText("");
+      return;
+    }
+
+    if (!shouldLoadHistory) {
       setSearchJumpTarget(null);
       setSearchJumpStatusText("");
       return;
@@ -670,9 +678,10 @@ export function ChatPanel({
     setSearchJumpTarget({
       messageId: targetMessageId,
       roomSlug: targetRoomSlug,
-      topicId: item.topicId || null
+      topicId: item.topicId || null,
+      includeHistoryLoad: false
     });
-    await markInboxItemRead(item.id);
+    void markInboxItemRead(item.id);
   }, [authToken, markInboxItemRead]);
 
   const persistNotifiedInboxEvents = useCallback(() => {

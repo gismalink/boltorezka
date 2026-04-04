@@ -224,8 +224,28 @@ export function RoomsPanel({
       });
     });
 
+    Object.entries(liveRoomMembersBySlug || {}).forEach(([slugRaw, memberNames]) => {
+      const slug = String(slugRaw || "").trim();
+      const isOutsideBucket = slug === OUTSIDE_ROOMS_PRESENCE_KEY || !knownRoomSlugs.has(slug);
+      if (!isOutsideBucket) {
+        return;
+      }
+
+      (Array.isArray(memberNames) ? memberNames : []).forEach((nameRaw) => {
+        const userName = String(nameRaw || "").trim();
+        if (!userName) {
+          return;
+        }
+
+        const key = userName.toLowerCase();
+        if (!nextById.has(key)) {
+          nextById.set(key, { userId: "", userName });
+        }
+      });
+    });
+
     return Array.from(nextById.values()).sort((a, b) => a.userName.localeCompare(b.userName));
-  }, [roomsTree, uncategorizedRooms, archivedRooms, liveRoomMemberDetailsBySlug]);
+  }, [roomsTree, uncategorizedRooms, archivedRooms, liveRoomMemberDetailsBySlug, liveRoomMembersBySlug]);
 
   const renderRoomRow = (room: Room) => (
     <RoomRow

@@ -1,4 +1,4 @@
-import { KeyboardEvent, RefObject } from "react";
+import { KeyboardEvent, Ref } from "react";
 import { createPortal } from "react-dom";
 import type { RoomTopic } from "../../../domain";
 import { Button } from "../../uicomponents";
@@ -14,7 +14,7 @@ type ChatPanelOverlaysProps = {
   topicPaletteQuery: string;
   setTopicPaletteQuery: (value: string) => void;
   handleTopicPaletteKeyDown: (event: KeyboardEvent<HTMLInputElement>) => void;
-  topicPaletteInputRef: RefObject<HTMLInputElement | null>;
+  topicPaletteInputRef: Ref<HTMLInputElement>;
   topicPaletteListboxId: string;
   filteredTopicsForPalette: RoomTopic[];
   topicPaletteSelectedIndex: number;
