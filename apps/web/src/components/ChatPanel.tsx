@@ -168,6 +168,7 @@ export function ChatPanel({
   const [editingTopicTitleDraftInitial, setEditingTopicTitleDraftInitial] = useState("");
   const [isEditingTopicTitleInline, setIsEditingTopicTitleInline] = useState(false);
   const [topicDeleteConfirm, setTopicDeleteConfirm] = useState<{ topicId: string; title: string } | null>(null);
+  const autoMarkReadInFlightRef = useRef<Record<string, number>>({});
   const [topicMutePresetById, setTopicMutePresetById] = useState<Record<string, "1h" | "8h" | "24h" | "forever" | "off">>({});
   const [hotkeyStatusText, setHotkeyStatusText] = useState("");
   const [resolvedAttachmentImageUrls, setResolvedAttachmentImageUrls] = useState<Record<string, string>>({});
@@ -1162,6 +1163,62 @@ export function ChatPanel({
       setMarkReadSaving(false);
     }
   };
+
+  useEffect(() => {
+    const normalizedToken = String(authToken || "").trim();
+    const normalizedTopicId = String(activeTopicId || "").trim();
+    const normalizedRoomId = String(roomId || "").trim();
+    if (!normalizedToken || !normalizedTopicId || !normalizedRoomId) {
+      return;
+    }
+
+    const topic = topics.find((item) => String(item.id || "").trim() === normalizedTopicId);
+    if (!topic) {
+      return;
+    }
+
+    const topicRoomId = String(topic.roomId || "").trim();
+    if (!topicRoomId || topicRoomId !== normalizedRoomId) {
+      return;
+    }
+
+    const topicUnread = Math.max(0, Number(topic.unreadCount || 0));
+    if (topicUnread === 0) {
+      return;
+    }
+
+    const inflightUnread = autoMarkReadInFlightRef.current[normalizedTopicId] || 0;
+    if (inflightUnread >= topicUnread) {
+      return;
+    }
+
+    autoMarkReadInFlightRef.current[normalizedTopicId] = topicUnread;
+    let disposed = false;
+
+    void api.markTopicRead(normalizedToken, normalizedTopicId)
+      .then(() => {
+        if (disposed) {
+          return;
+        }
+
+        setTopicUnreadOverrideById((prev) => ({
+          ...prev,
+          [normalizedTopicId]: {
+            unreadCount: 0,
+            sourceUnreadCount: topicUnread
+          }
+        }));
+      })
+      .finally(() => {
+        if (autoMarkReadInFlightRef.current[normalizedTopicId] === topicUnread) {
+          delete autoMarkReadInFlightRef.current[normalizedTopicId];
+        }
+      });
+
+    return () => {
+      disposed = true;
+    };
+  }, [activeTopicId, authToken, roomId, topics]);
 
   const filteredTopicsForPalette = useMemo(() => {
     const query = topicPaletteQuery.trim().toLowerCase();
