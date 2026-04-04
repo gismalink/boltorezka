@@ -2017,9 +2017,13 @@ pre {
 }
 
 .category-title-row,
-.channel-row,
+.channel-row-main,
 .channel-member-item {
   overflow: hidden;
+}
+
+.category-title-row {
+  position: relative;
 }
 
 .room-member-row-shell {
@@ -2180,14 +2184,14 @@ pre {
   pointer-events: auto;
 }
 
-.channel-row:hover .channel-row-actions,
+.channel-row-main:hover .channel-row-actions,
 .channel-row-actions-open {
   width: var(--channel-actions-width);
   opacity: 1;
   pointer-events: auto;
 }
 
-.channel-row:hover .room-row-unread,
+.channel-row-main:hover .room-row-unread,
 .channel-right-zone-open .room-row-unread {
   transform: translateX(calc(-1 * (var(--channel-actions-width) + var(--space-xs))));
 }
@@ -2482,13 +2486,13 @@ pre {
   background: color-mix(in srgb, var(--pixel-panel) 70%, var(--pixel-neon-cyan) 30%);
 }
 
-.channel-row:hover .channel-action-btn,
+.channel-row-main:hover .channel-action-btn,
 .room-btn-active + .channel-settings-anchor .channel-action-btn {
   opacity: 1;
   pointer-events: auto;
 }
 
-.channel-row:hover .channel-chat-open-btn,
+.channel-row-main:hover .channel-chat-open-btn,
 .channel-chat-open-btn-active {
   opacity: 1;
   pointer-events: auto;

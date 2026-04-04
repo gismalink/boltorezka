@@ -423,12 +423,13 @@ function RoomRowInner({
   return (
     <>
     <div
-      className={`rooms-row-shell channel-row relative flex items-center ${dropTargetActive ? "channel-row-drop-target" : ""}`}
+      className={`rooms-row-shell channel-row relative flex flex-col items-stretch ${dropTargetActive ? "channel-row-drop-target" : ""}`}
       onDragOver={onRoomDragOver}
       onDragEnter={onRoomDragOver}
       onDragLeave={() => setDropTargetActive(false)}
       onDrop={onRoomDrop}
     >
+      <div className="channel-row-main relative flex items-center">
       <button
         className={`secondary room-btn room-main-btn ${roomIsActive ? "room-btn-active" : "room-btn-interactive"} ${dropTargetActive ? "room-btn-drop-target" : ""}`}
         onClick={() => {
@@ -744,9 +745,10 @@ function RoomRowInner({
         ) : null}
       </div>
       </div>
+      </div>
 
       {roomMembers.length > 0 ? (
-        <ul className="col-span-full m-0 list-none grid gap-0.5 pl-[calc(var(--space-xl)*2)] pt-[2px]">
+        <ul className="channel-members-list m-0 list-none grid gap-0.5 pl-[calc(var(--space-xl)*2)] pt-[2px]">
           {roomMembers.map((member) => {
             const isCurrentUser = Boolean(
               normalizedCurrentUserId && member.userId && member.userId === normalizedCurrentUserId
