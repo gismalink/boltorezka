@@ -6,7 +6,6 @@ import { getDesktopNotificationBridge } from "../desktopBridge";
 import { buildChatMessageViewModels } from "../utils/chatMessageViewModel";
 import { useChatTopLazyLoad } from "./chatPanel/hooks/useChatTopLazyLoad";
 import { TopicTabsHeader } from "./chatPanel/sections/TopicTabsHeader";
-import { NotificationPanel } from "./chatPanel/sections/NotificationPanel";
 import { SearchPanel } from "./chatPanel/sections/SearchPanel";
 import { ChatMessageTimeline } from "./chatPanel/sections/ChatMessageTimeline";
 import { ChatComposerSection } from "./chatPanel/sections/ChatComposerSection";
@@ -127,10 +126,8 @@ export function ChatPanel({
   const [searchTo, setSearchTo] = useState("");
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState("");
-  const [notificationScope, setNotificationScope] = useState<"server" | "topic" | "room">("topic");
   const [notificationMode, setNotificationMode] = useState<"all" | "mentions" | "none">("all");
   const [notificationSaving, setNotificationSaving] = useState(false);
-  const [notificationStatusText, setNotificationStatusText] = useState("");
   const [inboxLoading, setInboxLoading] = useState(false);
   const [inboxItems, setInboxItems] = useState<Array<{
     id: string;
@@ -202,12 +199,6 @@ export function ChatPanel({
       // Local storage hydration is best-effort.
     }
   }, []);
-
-  useEffect(() => {
-    if (!activeTopicId && notificationScope === "topic") {
-      setNotificationScope("room");
-    }
-  }, [activeTopicId, notificationScope]);
 
   useEffect(() => {
     if (!searchJumpTarget) {
@@ -569,41 +560,6 @@ export function ChatPanel({
       setSearchError(t("chat.searchError"));
     } finally {
       setSearching(false);
-    }
-  };
-
-  const updateNotificationSettings = async (muteUntil: string | null) => {
-    if (!authToken || notificationSaving) {
-      return;
-    }
-
-    const scopeType = notificationScope;
-    if (scopeType === "topic" && !activeTopicId) {
-      setNotificationStatusText(t("chat.notificationScopeUnavailable"));
-      return;
-    }
-    if (scopeType === "server" && !String(currentServerId || "").trim()) {
-      setNotificationStatusText(t("chat.notificationServerScopeUnavailable"));
-      return;
-    }
-
-    setNotificationSaving(true);
-    setNotificationStatusText("");
-    try {
-      await api.updateNotificationSettings(authToken, {
-        scopeType,
-        serverId: scopeType === "server" ? String(currentServerId || "") : undefined,
-        roomId: scopeType === "room" ? roomId : undefined,
-        topicId: scopeType === "topic" ? String(activeTopicId || "") : undefined,
-        mode: notificationMode,
-        allowCriticalMentions: true,
-        muteUntil
-      });
-      setNotificationStatusText(t("chat.notificationSaved"));
-    } catch {
-      setNotificationStatusText(t("chat.notificationSaveError"));
-    } finally {
-      setNotificationSaving(false);
     }
   };
 
@@ -1723,25 +1679,6 @@ export function ChatPanel({
           <span className="muted">{t("chat.noChannelHint")}</span>
         ) : null}
       </div>
-      {hasActiveRoom ? (
-        <NotificationPanel
-          t={t}
-          notificationScope={notificationScope}
-          setNotificationScope={setNotificationScope}
-          notificationMode={notificationMode}
-          setNotificationMode={setNotificationMode}
-          notificationSaving={notificationSaving}
-          updateNotificationSettings={updateNotificationSettings}
-          inboxLoading={inboxLoading}
-          inboxItems={inboxItems}
-          loadInbox={loadInbox}
-          markInboxAllRead={markInboxAllRead}
-          openInboxItem={openInboxItem}
-          markInboxItemRead={markInboxItemRead}
-          formatMessageTime={formatMessageTime}
-          notificationStatusText={notificationStatusText}
-        />
-      ) : null}
       {editingTopicStatusText ? <div className="chat-topic-read-status mb-2" role="status" aria-live="polite">{editingTopicStatusText}</div> : null}
       {hasActiveRoom ? (
         <SearchPanel
