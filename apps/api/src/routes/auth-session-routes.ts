@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { db } from "../db.js";
-import { loadCurrentUser, requireAuth, requireNotServerBanned, requireServerMembership } from "../middleware/auth.js";
+import { requireAuth } from "../middleware/auth.js";
 import { config } from "../config.js";
 import type { UserCompactRow } from "../db.types.ts";
 import { appendSetCookie, buildAuthAuditContext, buildSessionCookieClearValue, buildSessionCookieValue } from "./auth.helpers.js";
@@ -102,7 +102,7 @@ export function registerAuthSessionRoutes(fastify: FastifyInstance, deps: AuthSe
   fastify.get(
     "/v1/auth/ws-ticket",
     {
-      preHandler: [requireAuth, loadCurrentUser, requireServerMembership, requireNotServerBanned, limitWsTicket]
+      preHandler: [requireAuth, limitWsTicket]
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const userId = String(request.user?.sub || "").trim();
@@ -129,10 +129,29 @@ export function registerAuthSessionRoutes(fastify: FastifyInstance, deps: AuthSe
       if (!enforceCompactUserAccess(reply, user)) {
         return;
       }
+      const requestedServerId = String((request.query as { serverId?: unknown } | undefined)?.serverId || "").trim();
+      let resolvedServerId: string | null = null;
+
+      if (requestedServerId) {
+        const membership = await db.query<{ server_id: string }>(
+          `SELECT sm.server_id
+           FROM server_members sm
+           JOIN servers s ON s.id = sm.server_id
+           WHERE sm.server_id = $1
+             AND sm.user_id = $2
+             AND sm.status = 'active'
+             AND s.is_archived = FALSE
+             AND s.is_blocked = FALSE
+           LIMIT 1`,
+          [requestedServerId, user.id]
+        );
+        resolvedServerId = String(membership.rows[0]?.server_id || "").trim() || null;
+      }
+
       const response: WsTicketResponse = await issueWsTicket(
         fastify.redis,
         user,
-        String(request.currentServer?.id || "").trim() || null
+        resolvedServerId
       );
 
       fastify.log.info(
