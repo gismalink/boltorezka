@@ -41,6 +41,7 @@ type SocketState = {
   sessionId: string;
   userId: string;
   userName: string;
+  currentServerId: string | null;
   roomId: string | null;
   roomSlug: string | null;
   roomKind: "text" | "text_voice" | "text_voice_video" | null;

@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { db } from "../db.js";
-import { requireAuth } from "../middleware/auth.js";
+import { loadCurrentUser, requireAuth, requireNotServerBanned, requireServerMembership } from "../middleware/auth.js";
 import { config } from "../config.js";
 import type { UserCompactRow } from "../db.types.ts";
 import { appendSetCookie, buildAuthAuditContext, buildSessionCookieClearValue, buildSessionCookieValue } from "./auth.helpers.js";
@@ -102,7 +102,7 @@ export function registerAuthSessionRoutes(fastify: FastifyInstance, deps: AuthSe
   fastify.get(
     "/v1/auth/ws-ticket",
     {
-      preHandler: [requireAuth, limitWsTicket]
+      preHandler: [requireAuth, loadCurrentUser, requireServerMembership, requireNotServerBanned, limitWsTicket]
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const userId = String(request.user?.sub || "").trim();
@@ -129,7 +129,11 @@ export function registerAuthSessionRoutes(fastify: FastifyInstance, deps: AuthSe
       if (!enforceCompactUserAccess(reply, user)) {
         return;
       }
-      const response: WsTicketResponse = await issueWsTicket(fastify.redis, user);
+      const response: WsTicketResponse = await issueWsTicket(
+        fastify.redis,
+        user,
+        String(request.currentServer?.id || "").trim() || null
+      );
 
       fastify.log.info(
         buildAuthAuditContext(request, {

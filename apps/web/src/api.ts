@@ -296,7 +296,8 @@ export const api = {
     fetchJson<{ user: User | null }>(endpoints.me, token, withJsonBody("PATCH", input)),
   deleteMe: (token: string) =>
     fetchJson<{ ok: true; purgeScheduledAt: string | null; daysRemaining: number }>(endpoints.me, token, withJsonBody("DELETE")),
-  wsTicket: (token: string) => fetchJson<{ ticket: string; expiresInSec: number }>(endpoints.wsTicket, token),
+  wsTicket: (token: string, serverId?: string) =>
+    fetchJson<{ ticket: string; expiresInSec: number }>(withServerIdQuery(endpoints.wsTicket, serverId), token),
   livekitToken: (
     token: string,
     input: { roomSlug: string; canPublish?: boolean; canSubscribe?: boolean; canPublishData?: boolean }

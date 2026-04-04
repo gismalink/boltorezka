@@ -3,6 +3,7 @@ import type { WebSocket } from "ws";
 type RoomSocketState = {
   userId: string;
   userName: string;
+  currentServerId: string | null;
   roomId: string | null;
   roomSlug: string | null;
 };
@@ -108,26 +109,48 @@ export function createRealtimeRoomStateStore(params: {
     return users;
   };
 
-  const getAllRoomsPresence = (forUserId: string | null = null) => {
+  const getAllRoomsPresence = (forUserId: string | null = null, forServerId: string | null = null) => {
+    const normalizedServerId = String(forServerId || "").trim() || null;
     const result: Array<{
       roomId: string;
       roomSlug: string;
       users: Array<{ userId: string; userName: string }>;
       mediaTopology: MediaTopology;
     }> = [];
+    const usersInRoomsByServer = new Set<string>();
+
+    const userServerKey = (userId: string, serverId: string | null): string => {
+      const normalizedUserId = String(userId || "").trim();
+      const normalized = String(serverId || "").trim() || "__no_server__";
+      return `${normalized}::${normalizedUserId}`;
+    };
 
     for (const [roomId, roomSockets] of socketsByRoomId.entries()) {
       let roomSlug: string | null = null;
+      let roomServerId: string | null = null;
       for (const socket of roomSockets) {
         const state = socketState.get(socket);
         if (state?.roomSlug) {
           roomSlug = state.roomSlug;
+          roomServerId = String(state.currentServerId || "").trim() || null;
           break;
         }
       }
 
-      if (!roomSlug) {
+      if (!roomSlug || (normalizedServerId && roomServerId && roomServerId !== normalizedServerId)) {
         continue;
+      }
+
+      for (const socket of roomSockets) {
+        const state = socketState.get(socket);
+        if (!state) {
+          continue;
+        }
+        const socketServerId = String(state.currentServerId || "").trim() || null;
+        if (roomServerId && socketServerId && socketServerId !== roomServerId) {
+          continue;
+        }
+        usersInRoomsByServer.add(userServerKey(state.userId, socketServerId || roomServerId));
       }
 
       result.push({
@@ -138,25 +161,21 @@ export function createRealtimeRoomStateStore(params: {
       });
     }
 
-    const usersInRooms = new Set<string>();
-    for (const roomSockets of socketsByRoomId.values()) {
-      for (const socket of roomSockets) {
-        const state = socketState.get(socket);
-        if (state) {
-          usersInRooms.add(state.userId);
-        }
-      }
-    }
-
     const outsideUsers: RoomPresenceUser[] = [];
     const outsideSeen = new Set<string>();
     for (const userSockets of socketsByUserId.values()) {
       for (const socket of userSockets) {
         const state = socketState.get(socket);
-        if (!state || usersInRooms.has(state.userId) || outsideSeen.has(state.userId)) {
+        const socketServerId = String(state?.currentServerId || "").trim() || null;
+        if (
+          !state
+          || (normalizedServerId && socketServerId !== normalizedServerId)
+          || usersInRoomsByServer.has(userServerKey(state.userId, socketServerId))
+          || outsideSeen.has(userServerKey(state.userId, socketServerId))
+        ) {
           continue;
         }
-        outsideSeen.add(state.userId);
+        outsideSeen.add(userServerKey(state.userId, socketServerId));
         outsideUsers.push({ userId: state.userId, userName: state.userName });
       }
     }
@@ -183,7 +202,9 @@ export function createRealtimeRoomStateStore(params: {
         }
         seen.add(socket);
         const state = socketState.get(socket);
-        const envelope = buildRoomsPresenceEnvelope(getAllRoomsPresence(state?.userId || null));
+        const envelope = buildRoomsPresenceEnvelope(
+          getAllRoomsPresence(state?.userId || null, state?.currentServerId || null)
+        );
         sendJson(socket, envelope);
       }
     }

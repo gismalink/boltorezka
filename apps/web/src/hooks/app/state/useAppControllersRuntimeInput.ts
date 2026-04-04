@@ -126,6 +126,7 @@ export function useAppControllersRuntimeInput(params: Record<string, unknown>): 
       },
       realtimeChatLifecycleProps: {
         serviceToken: p.serviceToken,
+        currentServerId: p.currentServerId,
         reconnectNonce: p.realtimeReconnectNonce,
         roomSlug: p.roomSlug,
         chatRoomSlug: p.chatRoomSlug,

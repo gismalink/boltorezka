@@ -7,6 +7,7 @@ import type { ChatController } from "../../services";
 
 type UseRealtimeChatLifecycleArgs = {
   token: string;
+  currentServerId?: string;
   reconnectNonce: number;
   joinedRoomSlug: string;
   chatRoomSlug: string;
@@ -228,6 +229,7 @@ type UseRealtimeChatLifecycleArgs = {
 
 export function useRealtimeChatLifecycle({
   token,
+  currentServerId,
   reconnectNonce,
   joinedRoomSlug,
   chatRoomSlug,
@@ -452,7 +454,7 @@ export function useRealtimeChatLifecycle({
 
     const client = new RealtimeClient({
       getTicket: async (authToken) => {
-        const response = await api.wsTicket(authToken);
+        const response = await api.wsTicket(authToken, currentServerId);
         return response.ticket;
       },
       onWsStateChange: setWsState,
@@ -493,7 +495,7 @@ export function useRealtimeChatLifecycle({
         realtimeClientRef.current = null;
       }
     };
-  }, [token, reconnectNonce]);
+  }, [token, currentServerId, reconnectNonce]);
 
   useEffect(() => {
     if (!token || !chatRoomSlug) return;

@@ -4,6 +4,7 @@ import type { ChatController, RealtimeClient } from "../../../services";
 
 type UseRealtimeChatLifecyclePropsInput = {
   serviceToken: string;
+  currentServerId: string;
   reconnectNonce: number;
   roomSlug: string;
   chatRoomSlug: string;
@@ -203,6 +204,7 @@ type UseRealtimeChatLifecyclePropsInput = {
 
 export function useRealtimeChatLifecycleProps({
   serviceToken,
+  currentServerId,
   reconnectNonce,
   roomSlug,
   chatRoomSlug,
@@ -266,6 +268,7 @@ export function useRealtimeChatLifecycleProps({
 
   return useMemo(() => ({
     token: serviceToken,
+    currentServerId,
     reconnectNonce,
     joinedRoomSlug: roomSlug,
     chatRoomSlug,
@@ -312,6 +315,7 @@ export function useRealtimeChatLifecycleProps({
     onNotificationSettingsUpdated: handleNotificationSettingsUpdated
   }), [
     serviceToken,
+    currentServerId,
     reconnectNonce,
     roomSlug,
     chatRoomSlug,
