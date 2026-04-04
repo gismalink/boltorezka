@@ -276,6 +276,7 @@ export function useRealtimeChatLifecycle({
   onSessionMoved
 }: UseRealtimeChatLifecycleArgs) {
   const shouldStickToBottomRef = useRef(true);
+  const lastConversationKeyForScrollRef = useRef("");
 
   const onCallMicStateRef = useRef(onCallMicState);
   const onCallVideoStateRef = useRef(onCallVideoState);
@@ -526,9 +527,19 @@ export function useRealtimeChatLifecycle({
       return;
     }
 
+    const conversationKey = `${chatRoomSlug}::${String(activeTopicId || "")}`;
     const latestMessageId = messages.length > 0 ? messages[messages.length - 1].id : null;
     const roomChanged = lastRoomSlugForScrollRef.current !== chatRoomSlug;
+    const conversationChanged = lastConversationKeyForScrollRef.current !== conversationKey;
     const latestMessageChanged = latestMessageId !== lastMessageIdRef.current;
+
+    if (conversationChanged) {
+      lastConversationKeyForScrollRef.current = conversationKey;
+      lastRoomSlugForScrollRef.current = chatRoomSlug;
+      lastMessageIdRef.current = latestMessageId;
+      return;
+    }
+
     const shouldAutoScroll = roomChanged || (latestMessageChanged && shouldStickToBottomRef.current);
 
     if (shouldAutoScroll) {
@@ -537,7 +548,7 @@ export function useRealtimeChatLifecycle({
 
     lastRoomSlugForScrollRef.current = chatRoomSlug;
     lastMessageIdRef.current = latestMessageId;
-  }, [messages, chatRoomSlug]);
+  }, [messages, chatRoomSlug, activeTopicId]);
 
   const loadOlderMessages = useCallback(async () => {
     if (!token || !chatRoomSlug || !messagesNextCursor || loadingOlderMessages) {
