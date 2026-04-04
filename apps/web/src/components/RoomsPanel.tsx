@@ -202,6 +202,32 @@ export function RoomsPanel({
     });
 
     const nextById = new Map<string, { userId: string; userName: string }>();
+    const knownUserIds = new Set<string>();
+    const knownUserNames = new Set<string>();
+
+    const addOutsideMember = (input: { userId?: string | null; userName?: string | null }) => {
+      const userId = String(input.userId || "").trim();
+      const userName = String(input.userName || input.userId || "").trim();
+      if (!userName) {
+        return;
+      }
+
+      const normalizedUserName = userName.toLowerCase();
+      const hasById = userId ? knownUserIds.has(userId) : false;
+      const hasByName = knownUserNames.has(normalizedUserName);
+      if (hasById || hasByName) {
+        if (hasByName && userId) {
+          knownUserIds.add(userId);
+        }
+        return;
+      }
+
+      if (userId) {
+        knownUserIds.add(userId);
+      }
+      knownUserNames.add(normalizedUserName);
+      nextById.set(userId || normalizedUserName, { userId, userName });
+    };
 
     Object.entries(liveRoomMemberDetailsBySlug || {}).forEach(([slugRaw, members]) => {
       const slug = String(slugRaw || "").trim();
@@ -211,16 +237,10 @@ export function RoomsPanel({
       }
 
       (Array.isArray(members) ? members : []).forEach((member) => {
-        const userId = String(member.userId || "").trim();
-        const userName = String(member.userName || member.userId || "").trim();
-        if (!userName) {
-          return;
-        }
-
-        const key = userId || userName.toLowerCase();
-        if (!nextById.has(key)) {
-          nextById.set(key, { userId, userName });
-        }
+        addOutsideMember({
+          userId: member.userId,
+          userName: member.userName
+        });
       });
     });
 
@@ -232,15 +252,7 @@ export function RoomsPanel({
       }
 
       (Array.isArray(memberNames) ? memberNames : []).forEach((nameRaw) => {
-        const userName = String(nameRaw || "").trim();
-        if (!userName) {
-          return;
-        }
-
-        const key = userName.toLowerCase();
-        if (!nextById.has(key)) {
-          nextById.set(key, { userId: "", userName });
-        }
+        addOutsideMember({ userName: String(nameRaw || "").trim() });
       });
     });
 
@@ -361,14 +373,12 @@ export function RoomsPanel({
           <div className="mt-[var(--space-md)]">
             <button
               type="button"
-              className="mb-[var(--space-xs)] flex w-full items-center justify-between gap-2 rounded-[var(--radius-sm)] border-0 bg-transparent px-1.5 py-1 text-left shadow-none hover:bg-[var(--pixel-panel)]/55 hover:translate-x-0 hover:translate-y-0 hover:shadow-none active:translate-x-0 active:translate-y-0 active:shadow-none focus-visible:shadow-none"
+              className="mb-[var(--space-xs)] inline-flex w-full items-center gap-[var(--space-xs)] rounded-[var(--radius-sm)] border-0 bg-transparent px-1.5 py-1 text-left shadow-none hover:bg-[var(--pixel-panel)]/55 hover:translate-x-0 hover:translate-y-0 hover:shadow-none active:translate-x-0 active:translate-y-0 active:shadow-none focus-visible:shadow-none"
               onClick={() => setOutsideRoomsCollapsed((prev) => !prev)}
               aria-expanded={!outsideRoomsCollapsed}
             >
-              <div className="inline-flex items-center gap-[var(--space-xs)] text-[var(--font-size-sm)] uppercase tracking-[0.04em] text-[var(--pixel-muted)]">
-                <i className={`bi ${outsideRoomsCollapsed ? "bi-chevron-right" : "bi-chevron-down"}`} aria-hidden="true" />
-                <span>{t("rooms.onlineOutsideRooms")}</span>
-              </div>
+              <i className={`bi ${outsideRoomsCollapsed ? "bi-chevron-right" : "bi-chevron-down"}`} aria-hidden="true" />
+              <span className="text-[var(--font-size-sm)] uppercase tracking-[0.04em] text-[var(--pixel-muted)]">{t("rooms.onlineOutsideRooms")}</span>
               <span className="rounded-full border border-[var(--pixel-border)] px-2 py-0.5 text-[11px] text-[var(--pixel-muted)]">
                 {onlineOutsideRooms.length}
               </span>
