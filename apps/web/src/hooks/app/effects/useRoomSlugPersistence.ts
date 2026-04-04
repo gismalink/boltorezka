@@ -8,6 +8,7 @@ const getRoomSlugStorageKey = (serverId: string, roomSlugStorageKey: string) => 
 type UseRoomSlugPersistenceArgs = {
   currentServerId: string;
   roomSlug: string;
+  chatRoomSlug: string;
   roomSlugStorageKey: string;
   setRoomSlug: Dispatch<SetStateAction<string>>;
   setChatRoomSlug: Dispatch<SetStateAction<string>>;
@@ -16,6 +17,7 @@ type UseRoomSlugPersistenceArgs = {
 export function useRoomSlugPersistence({
   currentServerId,
   roomSlug,
+  chatRoomSlug,
   roomSlugStorageKey,
   setRoomSlug,
   setChatRoomSlug
@@ -34,12 +36,13 @@ export function useRoomSlugPersistence({
     }
 
     const storageKey = getRoomSlugStorageKey(serverId, roomSlugStorageKey);
-    if (!roomSlug) {
+    const nextChatSlug = String(chatRoomSlug || roomSlug || "").trim();
+    if (!nextChatSlug) {
       return;
     }
 
-    localStorage.setItem(storageKey, roomSlug);
-  }, [currentServerId, roomSlug, roomSlugStorageKey]);
+    sessionStorage.setItem(storageKey, nextChatSlug);
+  }, [currentServerId, roomSlug, chatRoomSlug, roomSlugStorageKey]);
 
   useEffect(() => {
     const serverId = String(currentServerId || "").trim();
@@ -51,8 +54,11 @@ export function useRoomSlugPersistence({
       return;
     }
 
-    // Selecting a server should not auto-enter any room on that server.
+    const storageKey = getRoomSlugStorageKey(serverId, roomSlugStorageKey);
+    const savedChatSlug = String(sessionStorage.getItem(storageKey) || "").trim();
+    const defaultChatSlug = savedChatSlug || "general";
+
     setRoomSlug("");
-    setChatRoomSlug("");
+    setChatRoomSlug(defaultChatSlug);
   }, [currentServerId, roomSlugStorageKey, setRoomSlug, setChatRoomSlug]);
 }

@@ -30,9 +30,11 @@ type RoomRowProps = Pick<
   | "roomsTree"
   | "roomSlug"
   | "activeChatRoomSlug"
+  | "screenShareOwnerByRoomSlug"
   | "voiceMicStateByUserIdInCurrentRoom"
   | "voiceCameraEnabledByUserIdInCurrentRoom"
   | "voiceAudioOutputMutedByUserIdInCurrentRoom"
+  | "audioMuted"
   | "voiceRtcStateByUserIdInCurrentRoom"
   | "voiceMediaStatusSummaryByUserIdInCurrentRoom"
   | "channelSettingsPopupOpenId"
@@ -79,9 +81,11 @@ export function RoomRow({
   roomsTree,
   roomSlug,
   activeChatRoomSlug,
+  screenShareOwnerByRoomSlug,
   voiceMicStateByUserIdInCurrentRoom,
   voiceCameraEnabledByUserIdInCurrentRoom,
   voiceAudioOutputMutedByUserIdInCurrentRoom,
+  audioMuted,
   voiceRtcStateByUserIdInCurrentRoom,
   voiceMediaStatusSummaryByUserIdInCurrentRoom,
   channelSettingsPopupOpenId,
@@ -141,6 +145,7 @@ export function RoomRow({
   const roomSettingsAutosaveTimerRef = useRef<number | null>(null);
   const roomSupportsRtc = room.kind !== "text";
   const roomSupportsVideo = room.kind === "text_voice_video";
+  const roomScreenShareOwnerId = String(screenShareOwnerByRoomSlug[room.slug]?.userId || "").trim();
   const roomHasVoiceState = roomSupportsRtc && room.slug === roomSlug;
   const roomChatActive = activeChatRoomSlug === room.slug;
   const roomIsActive = roomSlug === room.slug || (!roomSupportsRtc && roomChatActive);
@@ -389,7 +394,25 @@ export function RoomRow({
       return;
     }
 
-    onMoveRoomMember(fromRoomSlug, room.slug, payload.userId, payload.userName || payload.userId);
+    void (async () => {
+      if (room.is_hidden) {
+        try {
+          const profile = await onLoadServerMemberProfile(payload.userId);
+          const currentRoomIds = Array.isArray(profile?.hiddenRoomAccess)
+            ? profile.hiddenRoomAccess.map((item) => item.roomId)
+            : [];
+          const nextRoomIds = Array.from(new Set([...currentRoomIds, room.id]));
+          const granted = await onSetServerMemberHiddenRoomAccess(payload.userId, nextRoomIds);
+          if (!granted) {
+            return;
+          }
+        } catch {
+          return;
+        }
+      }
+
+      onMoveRoomMember(fromRoomSlug, room.slug, payload.userId, payload.userName || payload.userId);
+    })();
   };
 
   return (
@@ -435,7 +458,12 @@ export function RoomRow({
           className={`secondary icon-btn tiny channel-chat-open-btn ${roomChatActive ? "channel-chat-open-btn-active" : ""}`}
           data-tooltip={t("rooms.openChat")}
           aria-label={t("rooms.openChat")}
-          onClick={() => onOpenRoomChat(room.slug)}
+          onClick={() => {
+            onOpenRoomChat(room.slug);
+            if (roomSlug !== room.slug) {
+              onJoinRoom(room.slug);
+            }
+          }}
         >
           <i className="bi bi-chat-dots" aria-hidden="true" />
         </button>
@@ -734,9 +762,12 @@ export function RoomRow({
               ? Boolean(voiceCameraEnabledByUserIdInCurrentRoom[member.userId])
               : false;
             const isVoiceActive = micState === "speaking";
-            const isAudioOutputMuted = roomHasVoiceState && member.userId
-              ? Boolean(voiceAudioOutputMutedByUserIdInCurrentRoom[member.userId])
-              : false;
+            const isAudioOutputMuted = isCurrentUser
+              ? Boolean(audioMuted)
+              : roomHasVoiceState && member.userId
+                ? Boolean(voiceAudioOutputMutedByUserIdInCurrentRoom[member.userId])
+                : false;
+            const isScreenSharing = Boolean(member.userId) && String(member.userId || "").trim() === roomScreenShareOwnerId;
             const rtcState = roomHasVoiceState && member.userId
               ? (voiceRtcStateByUserIdInCurrentRoom[member.userId] || "disconnected")
               : "disconnected";
@@ -869,6 +900,11 @@ export function RoomRow({
                   {isCameraEnabled ? (
                     <span className="channel-member-status-icon-anchor" data-tooltip={isCurrentUser ? selfCameraTooltip : cameraTooltip}>
                       <i className="bi bi-camera-video-fill channel-member-camera-icon" />
+                    </span>
+                  ) : null}
+                  {isScreenSharing ? (
+                    <span className="channel-member-status-icon-anchor" data-tooltip={t("rtc.screenShare")}>
+                      <i className="bi bi-display channel-member-camera-icon" />
                     </span>
                   ) : null}
                 </span>

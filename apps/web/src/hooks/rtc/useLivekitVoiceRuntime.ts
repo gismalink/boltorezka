@@ -1310,6 +1310,31 @@ export function useLivekitVoiceRuntime({
     applyAudioOutputSettings();
   }, [applyAudioOutputSettings]);
 
+  useEffect(() => {
+    const reapplyAfterResume = () => {
+      applyAudioOutputSettings();
+      if (!audioMuted) {
+        retryBlockedRemoteAudioPlayback();
+      }
+    };
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        reapplyAfterResume();
+      }
+    };
+
+    window.addEventListener("focus", reapplyAfterResume);
+    window.addEventListener("pageshow", reapplyAfterResume);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+
+    return () => {
+      window.removeEventListener("focus", reapplyAfterResume);
+      window.removeEventListener("pageshow", reapplyAfterResume);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
+  }, [applyAudioOutputSettings, audioMuted, retryBlockedRemoteAudioPlayback]);
+
     useEffect(() => {
       const unlockPlayback = () => {
         if (hasUserInteractionRef.current) {

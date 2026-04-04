@@ -88,6 +88,56 @@ export function useVoiceSignalingOrchestrator({
   }, [audioMuted, currentRoomSupportsRtc, micMuted, micTestLevel, roomSlug, roomVoiceConnected, sendWsEvent]);
 
   useEffect(() => {
+    const rebroadcastMicState = () => {
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") {
+        return;
+      }
+
+      const activeRoomSlug = String(roomSlug || "").trim();
+      if (!activeRoomSlug || !roomVoiceConnected || !currentRoomSupportsRtc) {
+        return;
+      }
+
+      const speaking = !micMuted && micTestLevel >= LOCAL_SPEAKING_THRESHOLD;
+      const requestId = sendWsEvent(
+        "call.mic_state",
+        {
+          muted: micMuted,
+          speaking,
+          audioMuted
+        },
+        { maxRetries: 1 }
+      );
+
+      if (requestId) {
+        lastBroadcastMicStateRef.current = `${micMuted ? 1 : 0}:${speaking ? 1 : 0}:${audioMuted ? 1 : 0}`;
+      }
+    };
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        lastBroadcastMicStateRef.current = "";
+        rebroadcastMicState();
+      }
+    };
+
+    const onFocus = () => {
+      lastBroadcastMicStateRef.current = "";
+      rebroadcastMicState();
+    };
+
+    window.addEventListener("focus", onFocus);
+    window.addEventListener("pageshow", onFocus);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      window.removeEventListener("pageshow", onFocus);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
+  }, [audioMuted, currentRoomSupportsRtc, micMuted, micTestLevel, roomSlug, roomVoiceConnected, sendWsEvent]);
+
+  useEffect(() => {
     const activeRoomSlug = String(roomSlug || "").trim();
     if (!activeRoomSlug || !roomVoiceConnected || !currentRoomSupportsRtc || !canManageAudioQuality) {
       return;

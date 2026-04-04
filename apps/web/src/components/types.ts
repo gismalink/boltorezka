@@ -131,6 +131,7 @@ export type RoomsPanelProps = {
   roomSlug: string;
   activeChatRoomSlug: string;
   roomMediaTopologyBySlug: Record<string, "livekit">;
+  screenShareOwnerByRoomSlug: Record<string, { userId: string | null; userName: string | null }>;
   roomUnreadBySlug: Record<string, number>;
   serverUnreadCount: number;
   currentUserId: string;
@@ -140,6 +141,7 @@ export type RoomsPanelProps = {
   voiceMicStateByUserIdInCurrentRoom: Record<string, "muted" | "silent" | "speaking">;
   voiceCameraEnabledByUserIdInCurrentRoom: Record<string, boolean>;
   voiceAudioOutputMutedByUserIdInCurrentRoom: Record<string, boolean>;
+  audioMuted: boolean;
   voiceRtcStateByUserIdInCurrentRoom: Record<string, "disconnected" | "connecting" | "connected">;
   voiceMediaStatusSummaryByUserIdInCurrentRoom: Record<string, VoiceMediaStatusSummary>;
   collapsedCategoryIds: string[];

@@ -31,6 +31,7 @@ export function useAppWorkspaceSupportRuntimeInput(params: Record<string, unknow
     realtimeSoundEffects: {
       wsState: p.wsState,
       roomsPresenceDetailsBySlug: p.roomsPresenceDetailsBySlug,
+      screenShareOwnerByRoomSlug: p.screenShareOwnerByRoomSlug,
       roomSlug: p.roomSlug,
       userId: p.user?.id,
       messages: p.messages,

@@ -7,6 +7,7 @@ type RealtimeWsState = "disconnected" | "connecting" | "connected";
 type UseRealtimeSoundEffectsParams = {
   wsState: RealtimeWsState;
   roomsPresenceDetailsBySlug: Record<string, PresenceMember[]>;
+  screenShareOwnerByRoomSlug: Record<string, { userId: string | null; userName: string | null }>;
   roomSlug: string;
   userId?: string | null;
   messages: Message[];
@@ -17,6 +18,7 @@ type UseRealtimeSoundEffectsParams = {
 export function useRealtimeSoundEffects({
   wsState,
   roomsPresenceDetailsBySlug,
+  screenShareOwnerByRoomSlug,
   roomSlug,
   userId,
   messages,
@@ -29,6 +31,43 @@ export function useRealtimeSoundEffects({
   const presenceSoundInitializedRef = useRef(false);
   const previousPresenceIdsRef = useRef<string[]>([]);
   const previousChatMessageIdRef = useRef<string | null>(null);
+  const previousScreenShareOwnerIdRef = useRef<string>("");
+  const screenShareSoundInitializedRef = useRef(false);
+
+  const playStreamSignal = (kind: "start" | "stop") => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const AudioContextCtor = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!AudioContextCtor) {
+      return;
+    }
+
+    try {
+      const audioContext = new AudioContextCtor();
+      const oscillator = audioContext.createOscillator();
+      const gain = audioContext.createGain();
+
+      oscillator.type = kind === "start" ? "triangle" : "sine";
+      oscillator.frequency.setValueAtTime(kind === "start" ? 1046 : 392, audioContext.currentTime);
+
+      gain.gain.setValueAtTime(0.0001, audioContext.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.06, audioContext.currentTime + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + 0.14);
+
+      oscillator.connect(gain);
+      gain.connect(audioContext.destination);
+      oscillator.start();
+      oscillator.stop(audioContext.currentTime + 0.16);
+
+      window.setTimeout(() => {
+        void audioContext.close();
+      }, 220);
+    } catch {
+      // Non-critical UX sound.
+    }
+  };
 
   useEffect(() => {
     const prevState = previousWsStateRef.current;
@@ -90,6 +129,25 @@ export function useRealtimeSoundEffects({
 
     previousPresenceIdsRef.current = currentIds;
   }, [playServerSound, roomSlug, roomsPresenceDetailsBySlug, userId]);
+
+  useEffect(() => {
+    const currentOwnerId = String(screenShareOwnerByRoomSlug[roomSlug]?.userId || "").trim();
+
+    if (!screenShareSoundInitializedRef.current) {
+      screenShareSoundInitializedRef.current = true;
+      previousScreenShareOwnerIdRef.current = currentOwnerId;
+      return;
+    }
+
+    const previousOwnerId = previousScreenShareOwnerIdRef.current;
+    if (!previousOwnerId && currentOwnerId) {
+      playStreamSignal("start");
+    } else if (previousOwnerId && !currentOwnerId) {
+      playStreamSignal("stop");
+    }
+
+    previousScreenShareOwnerIdRef.current = currentOwnerId;
+  }, [roomSlug, screenShareOwnerByRoomSlug]);
 
   useEffect(() => {
     const latest = messages.length > 0 ? messages[messages.length - 1] : null;

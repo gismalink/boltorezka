@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { Room } from "../domain";
 import { Button } from "./uicomponents";
 import { RoomsCategoryBlock } from "./roomsPanel/RoomsCategoryBlock";
@@ -27,6 +27,7 @@ export function RoomsPanel({
   roomSlug,
   activeChatRoomSlug,
   roomMediaTopologyBySlug,
+  screenShareOwnerByRoomSlug,
   roomUnreadBySlug,
   serverUnreadCount,
   currentUserId,
@@ -36,6 +37,7 @@ export function RoomsPanel({
   voiceMicStateByUserIdInCurrentRoom,
   voiceCameraEnabledByUserIdInCurrentRoom,
   voiceAudioOutputMutedByUserIdInCurrentRoom,
+  audioMuted,
   voiceRtcStateByUserIdInCurrentRoom,
   voiceMediaStatusSummaryByUserIdInCurrentRoom,
   collapsedCategoryIds,
@@ -166,6 +168,57 @@ export function RoomsPanel({
 
   const normalizedCurrentUserId = String(currentUserId || "").trim();
 
+  const onlineOutsideRooms = useMemo(() => {
+    const knownRoomSlugs = new Set<string>();
+
+    (roomsTree?.categories || []).forEach((category) => {
+      (category.rooms || []).forEach((room) => {
+        const slug = String(room.slug || "").trim();
+        if (slug) {
+          knownRoomSlugs.add(slug);
+        }
+      });
+    });
+
+    uncategorizedRooms.forEach((room) => {
+      const slug = String(room.slug || "").trim();
+      if (slug) {
+        knownRoomSlugs.add(slug);
+      }
+    });
+
+    archivedRooms.forEach((room) => {
+      const slug = String(room.slug || "").trim();
+      if (slug) {
+        knownRoomSlugs.add(slug);
+      }
+    });
+
+    const nextById = new Map<string, { userId: string; userName: string }>();
+
+    Object.entries(liveRoomMemberDetailsBySlug || {}).forEach(([slugRaw, members]) => {
+      const slug = String(slugRaw || "").trim();
+      if (!slug || knownRoomSlugs.has(slug)) {
+        return;
+      }
+
+      (Array.isArray(members) ? members : []).forEach((member) => {
+        const userId = String(member.userId || "").trim();
+        const userName = String(member.userName || member.userId || "").trim();
+        if (!userName) {
+          return;
+        }
+
+        const key = userId || userName.toLowerCase();
+        if (!nextById.has(key)) {
+          nextById.set(key, { userId, userName });
+        }
+      });
+    });
+
+    return Array.from(nextById.values()).sort((a, b) => a.userName.localeCompare(b.userName));
+  }, [roomsTree, uncategorizedRooms, archivedRooms, liveRoomMemberDetailsBySlug]);
+
   const renderRoomRow = (room: Room) => (
     <RoomRow
       t={t}
@@ -175,9 +228,11 @@ export function RoomsPanel({
       roomsTree={roomsTree}
       roomSlug={roomSlug}
       activeChatRoomSlug={activeChatRoomSlug}
+      screenShareOwnerByRoomSlug={screenShareOwnerByRoomSlug}
       voiceMicStateByUserIdInCurrentRoom={voiceMicStateByUserIdInCurrentRoom}
       voiceCameraEnabledByUserIdInCurrentRoom={voiceCameraEnabledByUserIdInCurrentRoom}
       voiceAudioOutputMutedByUserIdInCurrentRoom={voiceAudioOutputMutedByUserIdInCurrentRoom}
+      audioMuted={audioMuted}
       voiceRtcStateByUserIdInCurrentRoom={voiceRtcStateByUserIdInCurrentRoom}
       voiceMediaStatusSummaryByUserIdInCurrentRoom={voiceMediaStatusSummaryByUserIdInCurrentRoom}
       channelSettingsPopupOpenId={channelSettingsPopupOpenId}
@@ -267,6 +322,24 @@ export function RoomsPanel({
         ))}
 
         <RoomsUncategorizedBlock t={t} rooms={uncategorizedRooms} renderRoomRow={renderRoomRow} />
+
+        {onlineOutsideRooms.length > 0 ? (
+          <div className="mt-[var(--space-md)]">
+            <div className="mb-[var(--space-xs)] text-[var(--font-size-sm)] uppercase tracking-[0.04em] text-[var(--pixel-muted)]">
+              {t("rooms.onlineOutsideRooms")}
+            </div>
+            <ul className="rooms-list">
+              {onlineOutsideRooms.map((member) => (
+                <li key={`outside-online:${member.userId || member.userName}`} className="channel-row grid grid-cols-[1fr] items-center gap-2">
+                  <div className="secondary room-btn room-btn-interactive pointer-events-none opacity-85">
+                    <i className="bi bi-circle-fill text-[10px] text-[var(--pixel-accent)]" aria-hidden="true" />
+                    <span>{member.userName}</span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
 
         {canCreateRooms && archivedRooms.length > 0 ? (
           <div className="mt-[var(--space-md)]">
