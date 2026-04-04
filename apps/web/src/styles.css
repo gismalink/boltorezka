@@ -2071,6 +2071,17 @@ pre {
   transition: opacity 0.12s ease;
 }
 
+.channel-chat-open-btn,
+.channel-chat-open-btn:hover,
+.channel-chat-open-btn:focus-visible,
+.channel-chat-open-btn:active,
+.channel-chat-open-btn-active,
+.channel-chat-open-btn-active:hover,
+.channel-chat-open-btn-active:focus-visible,
+.channel-chat-open-btn-active:active {
+  transform: none;
+}
+
 .category-title-row:hover .category-action-btn,
 .category-settings-popup .category-action-btn {
   opacity: 1;
