@@ -2,6 +2,8 @@ import type { Dispatch, SetStateAction } from "react";
 import type { Message, PresenceMember, RoomTopic, WsIncoming } from "../domain";
 import { RTC_FEATURE_INITIAL_STATE_REPLAY } from "../hooks/rtc/voiceCallConfig";
 
+const OUTSIDE_ROOMS_PRESENCE_KEY = "__outside_rooms__";
+
 type WsMessageControllerOptions = {
   clearPendingRequest: (requestId: string) => void;
   markMessageDelivery: (
@@ -826,22 +828,20 @@ export class WsMessageController {
       [roomSlug]: users
     }));
   }
-
   private handleRoomsPresence(message: WsIncoming): void {
     const rooms = Array.isArray(message.payload?.rooms) ? message.payload.rooms : [];
     const next: Record<string, string[]> = {};
     const detailsNext: Record<string, PresenceMember[]> = {};
 
     rooms.forEach((room: { roomSlug?: string; users?: Array<{ userId?: string; userName?: string }> }) => {
-      const roomSlug = this.asTrimmedString(room?.roomSlug);
-      if (!roomSlug) {
-        return;
-      }
+      const roomSlug = this.asTrimmedString(room?.roomSlug) || OUTSIDE_ROOMS_PRESENCE_KEY;
 
-      this.options.onRoomMediaTopology?.({
-        roomSlug,
-        mediaTopology: this.asMediaTopology((room as { mediaTopology?: unknown }).mediaTopology)
-      });
+      if (roomSlug !== OUTSIDE_ROOMS_PRESENCE_KEY) {
+        this.options.onRoomMediaTopology?.({
+          roomSlug,
+          mediaTopology: this.asMediaTopology((room as { mediaTopology?: unknown }).mediaTopology)
+        });
+      }
 
       const users = this.mapPresenceMembers(room?.users);
       next[roomSlug] = users.map((item) => item.userName);

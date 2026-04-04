@@ -253,11 +253,13 @@ export function RoomRow({
       return;
     }
 
+      const nextPreset = roomMutePreset === preset ? "off" : preset;
+
     setRoomMuteSaving(true);
     setRoomMuteStatusText("");
     try {
-      await onSetRoomNotificationMutePreset(room.id, preset);
-      setRoomMutePreset(preset);
+        await onSetRoomNotificationMutePreset(room.id, nextPreset);
+        setRoomMutePreset(nextPreset);
       setRoomMuteStatusText(t("chat.notificationSaved"));
     } catch {
       setRoomMuteStatusText(t("chat.notificationSaveError"));
@@ -460,9 +462,6 @@ export function RoomRow({
           aria-label={t("rooms.openChat")}
           onClick={() => {
             onOpenRoomChat(room.slug);
-            if (roomSlug !== room.slug) {
-              onJoinRoom(room.slug);
-            }
           }}
         >
           <i className="bi bi-chat-dots" aria-hidden="true" />
@@ -707,14 +706,6 @@ export function RoomRow({
                       disabled={roomMuteSaving}
                     >
                       {t("chat.notificationMuteForever")}
-                    </button>
-                    <button
-                      type="button"
-                      className={`secondary quality-toggle-btn ${roomMutePreset === "off" ? "quality-toggle-btn-active" : ""}`}
-                      onClick={() => void applyRoomMutePreset("off")}
-                      disabled={roomMuteSaving}
-                    >
-                      {t("chat.notificationUnmute")}
                     </button>
                   </div>
                   {roomMuteStatusText ? <div className="chat-topic-read-status" role="status" aria-live="polite">{roomMuteStatusText}</div> : null}

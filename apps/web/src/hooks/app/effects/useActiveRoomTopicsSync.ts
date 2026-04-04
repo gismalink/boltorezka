@@ -1,4 +1,4 @@
-import { useEffect, type Dispatch, type SetStateAction } from "react";
+import { useEffect, useRef, type Dispatch, type SetStateAction } from "react";
 import { api } from "../../../api";
 import type { RoomTopic } from "../../../domain";
 
@@ -16,13 +16,30 @@ export function useActiveRoomTopicsSync({
   token,
   activeChatRoomId,
   activeChatRoomSlug,
+  activeChatTopicId,
   setActiveChatTopicId,
   setChatTopics,
   pushLog
 }: UseActiveRoomTopicsSyncArgs) {
+  const topicIdByRoomSlugRef = useRef<Record<string, string>>({});
+
+  useEffect(() => {
+    const roomSlug = String(activeChatRoomSlug || "").trim();
+    const topicId = String(activeChatTopicId || "").trim();
+    if (!roomSlug || !topicId) {
+      return;
+    }
+
+    topicIdByRoomSlugRef.current = {
+      ...topicIdByRoomSlugRef.current,
+      [roomSlug]: topicId
+    };
+  }, [activeChatRoomSlug, activeChatTopicId]);
+
   useEffect(() => {
     const tokenValue = String(token || "").trim();
     const roomId = String(activeChatRoomId || "").trim();
+    const roomSlug = String(activeChatRoomSlug || "").trim();
 
     if (!tokenValue || !roomId) {
       setChatTopics([]);
@@ -48,6 +65,12 @@ export function useActiveRoomTopicsSync({
             return preferred;
           }
 
+          const rememberedTopicId = String(topicIdByRoomSlugRef.current[roomSlug] || "").trim();
+          const rememberedStillExists = rememberedTopicId && topics.some((topic) => topic.id === rememberedTopicId);
+          if (rememberedStillExists) {
+            return rememberedTopicId;
+          }
+
           const firstActiveTopic = topics.find((topic) => !topic.archivedAt) || topics[0] || null;
           return firstActiveTopic?.id || null;
         });
@@ -69,6 +92,7 @@ export function useActiveRoomTopicsSync({
     token,
     activeChatRoomId,
     activeChatRoomSlug,
+    activeChatTopicId,
     pushLog,
     setActiveChatTopicId,
     setChatTopics

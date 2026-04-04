@@ -43,7 +43,7 @@ export function RoomsCategoryBlock({
 
   return (
     <div className="mt-[var(--space-md)]">
-      <div className="category-title-row flex items-center justify-between gap-2">
+      <div className="category-title-row mb-[var(--space-xs)] flex items-center justify-between gap-2 rounded-[var(--radius-sm)] px-1.5 py-1 hover:bg-[var(--pixel-panel)]/55">
         <Button
           type="button"
           className="secondary inline-flex items-center gap-[var(--space-xs)] border-0 bg-transparent p-0 shadow-none hover:translate-x-0 hover:translate-y-0 hover:shadow-none active:translate-x-0 active:translate-y-0 active:shadow-none focus-visible:shadow-none"
@@ -52,6 +52,9 @@ export function RoomsCategoryBlock({
         >
           <i className={`bi ${isCollapsed ? "bi-chevron-right" : "bi-chevron-down"}`} aria-hidden="true" />
           <span className="text-[var(--font-size-sm)] uppercase tracking-[0.04em] text-[var(--pixel-muted)]">{category.title}</span>
+          <span className="rounded-full border border-[var(--pixel-border)] px-2 py-0.5 text-[11px] text-[var(--pixel-muted)]">
+            {category.channels.length}
+          </span>
         </Button>
         {canCreateRooms ? (
           <div className="category-actions inline-flex items-center gap-1">

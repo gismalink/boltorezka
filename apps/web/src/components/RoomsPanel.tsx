@@ -9,6 +9,8 @@ import { RoomsUncategorizedBlock } from "./roomsPanel/RoomsUncategorizedBlock";
 import { mapRoomMembersForSlug } from "./roomsPanel/roomMembers";
 import type { RoomsPanelProps } from "./types";
 
+const OUTSIDE_ROOMS_PRESENCE_KEY = "__outside_rooms__";
+
 type ConfirmPopupState =
   | { kind: "archive-channel"; room: Room }
   | { kind: "clear-channel"; room: Room }
@@ -104,6 +106,9 @@ export function RoomsPanel({
   onSetRoomNotificationMutePreset
 }: RoomsPanelProps) {
   const [confirmPopup, setConfirmPopup] = useState<ConfirmPopupState>(null);
+  const [uncategorizedCollapsed, setUncategorizedCollapsed] = useState(false);
+  const [outsideRoomsCollapsed, setOutsideRoomsCollapsed] = useState(false);
+  const [archivedCollapsed, setArchivedCollapsed] = useState(false);
 
   const submitConfirmPopup = () => {
     if (!confirmPopup) {
@@ -169,55 +174,27 @@ export function RoomsPanel({
   const normalizedCurrentUserId = String(currentUserId || "").trim();
 
   const onlineOutsideRooms = useMemo(() => {
-    const knownRoomSlugs = new Set<string>();
-
-    (roomsTree?.categories || []).forEach((category) => {
-      (category.rooms || []).forEach((room) => {
-        const slug = String(room.slug || "").trim();
-        if (slug) {
-          knownRoomSlugs.add(slug);
-        }
-      });
-    });
-
-    uncategorizedRooms.forEach((room) => {
-      const slug = String(room.slug || "").trim();
-      if (slug) {
-        knownRoomSlugs.add(slug);
-      }
-    });
-
-    archivedRooms.forEach((room) => {
-      const slug = String(room.slug || "").trim();
-      if (slug) {
-        knownRoomSlugs.add(slug);
-      }
-    });
-
     const nextById = new Map<string, { userId: string; userName: string }>();
 
-    Object.entries(liveRoomMemberDetailsBySlug || {}).forEach(([slugRaw, members]) => {
-      const slug = String(slugRaw || "").trim();
-      if (!slug || knownRoomSlugs.has(slug)) {
+    const outsideMembers = Array.isArray(liveRoomMemberDetailsBySlug?.[OUTSIDE_ROOMS_PRESENCE_KEY])
+      ? liveRoomMemberDetailsBySlug[OUTSIDE_ROOMS_PRESENCE_KEY]
+      : [];
+
+    outsideMembers.forEach((member) => {
+      const userId = String(member.userId || "").trim();
+      const userName = String(member.userName || member.userId || "").trim();
+      if (!userName) {
         return;
       }
 
-      (Array.isArray(members) ? members : []).forEach((member) => {
-        const userId = String(member.userId || "").trim();
-        const userName = String(member.userName || member.userId || "").trim();
-        if (!userName) {
-          return;
-        }
-
-        const key = userId || userName.toLowerCase();
-        if (!nextById.has(key)) {
-          nextById.set(key, { userId, userName });
-        }
-      });
+      const key = userId || userName.toLowerCase();
+      if (!nextById.has(key)) {
+        nextById.set(key, { userId, userName });
+      }
     });
 
     return Array.from(nextById.values()).sort((a, b) => a.userName.localeCompare(b.userName));
-  }, [roomsTree, uncategorizedRooms, archivedRooms, liveRoomMemberDetailsBySlug]);
+  }, [liveRoomMemberDetailsBySlug]);
 
   const renderRoomRow = (room: Room) => (
     <RoomRow
@@ -321,72 +298,104 @@ export function RoomsPanel({
           />
         ))}
 
-        <RoomsUncategorizedBlock t={t} rooms={uncategorizedRooms} renderRoomRow={renderRoomRow} />
+        <RoomsUncategorizedBlock
+          t={t}
+          rooms={uncategorizedRooms}
+          collapsed={uncategorizedCollapsed}
+          onToggleCollapsed={() => setUncategorizedCollapsed((prev) => !prev)}
+          renderRoomRow={renderRoomRow}
+        />
 
         {onlineOutsideRooms.length > 0 ? (
           <div className="mt-[var(--space-md)]">
-            <div className="mb-[var(--space-xs)] text-[var(--font-size-sm)] uppercase tracking-[0.04em] text-[var(--pixel-muted)]">
-              {t("rooms.onlineOutsideRooms")}
-            </div>
-            <ul className="rooms-list">
-              {onlineOutsideRooms.map((member) => (
-                <li key={`outside-online:${member.userId || member.userName}`} className="channel-row grid grid-cols-[1fr] items-center gap-2">
-                  <div className="secondary room-btn room-btn-interactive pointer-events-none opacity-85">
-                    <i className="bi bi-circle-fill text-[10px] text-[var(--pixel-accent)]" aria-hidden="true" />
-                    <span>{member.userName}</span>
-                  </div>
-                </li>
-              ))}
-            </ul>
+            <button
+              type="button"
+              className="mb-[var(--space-xs)] flex w-full items-center justify-between gap-2 rounded-[var(--radius-sm)] px-1.5 py-1 text-left hover:bg-[var(--pixel-panel)]/55"
+              onClick={() => setOutsideRoomsCollapsed((prev) => !prev)}
+              aria-expanded={!outsideRoomsCollapsed}
+            >
+              <div className="inline-flex items-center gap-[var(--space-xs)] text-[var(--font-size-sm)] uppercase tracking-[0.04em] text-[var(--pixel-muted)]">
+                <i className={`bi ${outsideRoomsCollapsed ? "bi-chevron-right" : "bi-chevron-down"}`} aria-hidden="true" />
+                <span>{t("rooms.onlineOutsideRooms")}</span>
+              </div>
+              <span className="rounded-full border border-[var(--pixel-border)] px-2 py-0.5 text-[11px] text-[var(--pixel-muted)]">
+                {onlineOutsideRooms.length}
+              </span>
+            </button>
+            {!outsideRoomsCollapsed ? (
+              <ul className="rooms-list">
+                {onlineOutsideRooms.map((member) => (
+                  <li key={`outside-online:${member.userId || member.userName}`} className="channel-row grid grid-cols-[1fr] items-center gap-2">
+                    <div className="secondary room-btn room-btn-interactive pointer-events-none opacity-85">
+                      <i className="bi bi-circle-fill text-[10px] text-[var(--pixel-accent)]" aria-hidden="true" />
+                      <span>{member.userName}</span>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
           </div>
         ) : null}
 
         {canCreateRooms && archivedRooms.length > 0 ? (
           <div className="mt-[var(--space-md)]">
-            <div className="mb-[var(--space-xs)] flex items-center justify-between gap-2">
-              <div className="text-[var(--font-size-sm)] uppercase tracking-[0.04em] text-[var(--pixel-muted)]">
-                {t("rooms.deletedGroup")}
-              </div>
-              <Button
+            <div className="mb-[var(--space-xs)] flex items-center justify-between gap-2 rounded-[var(--radius-sm)] px-1.5 py-1 hover:bg-[var(--pixel-panel)]/55">
+              <button
                 type="button"
-                className="secondary icon-btn tiny delete-action-btn"
-                onClick={() => setConfirmPopup({ kind: "delete-all-archived" })}
-                aria-label={t("rooms.deleteAllDeleted")}
-                data-tooltip={t("rooms.deleteAllDeleted")}
+                className="inline-flex items-center gap-[var(--space-xs)] text-[var(--font-size-sm)] uppercase tracking-[0.04em] text-[var(--pixel-muted)]"
+                onClick={() => setArchivedCollapsed((prev) => !prev)}
+                aria-expanded={!archivedCollapsed}
               >
-                <i className="bi bi-trash3" aria-hidden="true" />
-              </Button>
+                <i className={`bi ${archivedCollapsed ? "bi-chevron-right" : "bi-chevron-down"}`} aria-hidden="true" />
+                <span>{t("rooms.deletedGroup")}</span>
+                <span className="rounded-full border border-[var(--pixel-border)] px-2 py-0.5 text-[11px] text-[var(--pixel-muted)]">
+                  {archivedRooms.length}
+                </span>
+              </button>
+              <div>
+                <Button
+                  type="button"
+                  className="secondary icon-btn tiny delete-action-btn"
+                  onClick={() => setConfirmPopup({ kind: "delete-all-archived" })}
+                  aria-label={t("rooms.deleteAllDeleted")}
+                  data-tooltip={t("rooms.deleteAllDeleted")}
+                >
+                  <i className="bi bi-trash3" aria-hidden="true" />
+                </Button>
+              </div>
             </div>
-            <ul className="rooms-list">
-              {archivedRooms.map((room) => (
-                <li key={room.id} className="channel-row grid grid-cols-[1fr_auto] items-center gap-2">
-                  <div className="secondary room-btn room-btn-interactive pointer-events-none opacity-75">
-                    <i className="bi bi-archive" aria-hidden="true" />
-                    <span>{room.title}</span>
-                  </div>
-                  <div className="inline-flex items-center gap-1">
-                    <Button
-                      type="button"
-                      className="secondary icon-btn tiny"
-                      aria-label={t("rooms.restoreChannel")}
-                      data-tooltip={t("rooms.restoreChannel")}
-                      onClick={() => setConfirmPopup({ kind: "restore-channel", room })}
-                    >
-                      <i className="bi bi-arrow-counterclockwise" aria-hidden="true" />
-                    </Button>
-                    <Button
-                      type="button"
-                      className="secondary icon-btn tiny delete-action-btn"
-                      aria-label={t("rooms.deleteChannelPermanent")}
-                      data-tooltip={t("rooms.deleteChannelPermanent")}
-                      onClick={() => setConfirmPopup({ kind: "delete-channel-permanent", room })}
-                    >
-                      <i className="bi bi-trash3-fill" aria-hidden="true" />
-                    </Button>
-                  </div>
-                </li>
-              ))}
-            </ul>
+            {!archivedCollapsed ? (
+              <ul className="rooms-list">
+                {archivedRooms.map((room) => (
+                  <li key={room.id} className="channel-row grid grid-cols-[1fr_auto] items-center gap-2">
+                    <div className="secondary room-btn room-btn-interactive pointer-events-none opacity-75">
+                      <i className="bi bi-archive" aria-hidden="true" />
+                      <span>{room.title}</span>
+                    </div>
+                    <div className="inline-flex items-center gap-1">
+                      <Button
+                        type="button"
+                        className="secondary icon-btn tiny"
+                        aria-label={t("rooms.restoreChannel")}
+                        data-tooltip={t("rooms.restoreChannel")}
+                        onClick={() => setConfirmPopup({ kind: "restore-channel", room })}
+                      >
+                        <i className="bi bi-arrow-counterclockwise" aria-hidden="true" />
+                      </Button>
+                      <Button
+                        type="button"
+                        className="secondary icon-btn tiny delete-action-btn"
+                        aria-label={t("rooms.deleteChannelPermanent")}
+                        data-tooltip={t("rooms.deleteChannelPermanent")}
+                        onClick={() => setConfirmPopup({ kind: "delete-channel-permanent", room })}
+                      >
+                        <i className="bi bi-trash3-fill" aria-hidden="true" />
+                      </Button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
           </div>
         ) : null}
       </div>

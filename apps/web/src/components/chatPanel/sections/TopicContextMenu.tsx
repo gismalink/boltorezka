@@ -95,9 +95,6 @@ export function TopicContextMenu({
           <Button type="button" className={`secondary quality-toggle-btn ${activeMutePreset === "forever" ? "quality-toggle-btn-active" : ""}`} onClick={() => void onSetTopicMutePreset("forever")} disabled={saving}>
             {t("chat.notificationMuteForever")}
           </Button>
-          <Button type="button" className={`secondary quality-toggle-btn ${activeMutePreset === "off" ? "quality-toggle-btn-active" : ""}`} onClick={() => void onSetTopicMutePreset("off")} disabled={saving}>
-            {t("chat.notificationUnmute")}
-          </Button>
         </div>
       </div>
       <Button type="button" className="secondary tiny delete-action-btn" role="menuitem" onClick={() => void onRunAction("delete")}>

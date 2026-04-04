@@ -1584,14 +1584,17 @@ export function ChatPanel({
       return;
     }
 
-    const muteUntil = preset === "off"
+    const activePreset = topicMutePresetById[targetTopicId] || null;
+    const nextPreset = activePreset === preset ? "off" : preset;
+
+    const muteUntil = nextPreset === "off"
       ? null
-      : preset === "forever"
+      : nextPreset === "forever"
         ? buildMuteUntilIso("forever")
-        : buildMuteUntilIso(Number(preset.replace("h", "")));
+        : buildMuteUntilIso(Number(nextPreset.replace("h", "")));
 
     await updateTopicMuteSettings(targetTopicId, muteUntil);
-    setTopicMutePresetById((prev) => ({ ...prev, [targetTopicId]: preset }));
+    setTopicMutePresetById((prev) => ({ ...prev, [targetTopicId]: nextPreset }));
     setTopicContextMenu(null);
   };
 
