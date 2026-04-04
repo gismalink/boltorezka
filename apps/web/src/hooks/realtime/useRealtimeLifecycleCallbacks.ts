@@ -33,6 +33,7 @@ type UseRealtimeLifecycleCallbacksArgs = {
     ts?: string;
   }) => void;
   applyRemotePinState: (messageId: string, pinned: boolean) => void;
+  applyRemoteMessageReactionState: (messageId: string, emoji: string, active: boolean, actorUserId?: string) => void;
   applyRemoteThumbsUpReactionState: (messageId: string, active: boolean) => void;
 };
 
@@ -58,6 +59,7 @@ export function useRealtimeLifecycleCallbacks({
   currentUserId,
   applyRemoteTypingPayload,
   applyRemotePinState,
+  applyRemoteMessageReactionState,
   applyRemoteThumbsUpReactionState
 }: UseRealtimeLifecycleCallbacksArgs) {
   const handleSessionMoved = useCallback(({ code, message }: { code: string; message: string }) => {
@@ -160,16 +162,25 @@ export function useRealtimeLifecycleCallbacks({
     messageId?: string;
     emoji?: string;
     active?: boolean;
+    userId?: string;
   }) => {
     const targetRoomSlug = String(payload.roomSlug || "").trim();
     const targetMessageId = String(payload.messageId || "").trim();
     const emoji = String(payload.emoji || "").trim();
-    if (!targetRoomSlug || targetRoomSlug !== chatRoomSlug || !targetMessageId || emoji !== "👍") {
+    const actorUserId = String(payload.userId || "").trim();
+    if (!targetRoomSlug || targetRoomSlug !== chatRoomSlug || !targetMessageId || !emoji) {
+      return;
+    }
+
+    applyRemoteMessageReactionState(targetMessageId, emoji, payload.active === true, actorUserId || undefined);
+
+    // Keep backward compatibility for old thumbs-up-only consumers.
+    if (emoji !== "👍") {
       return;
     }
 
     applyRemoteThumbsUpReactionState(targetMessageId, payload.active === true);
-  }, [applyRemoteThumbsUpReactionState, chatRoomSlug]);
+  }, [applyRemoteMessageReactionState, applyRemoteThumbsUpReactionState, chatRoomSlug]);
 
   const handleChatMessageReceived = useCallback((payload: {
     roomSlug?: string;

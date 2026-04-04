@@ -99,7 +99,9 @@ export function useChatComposerActions({
   attachmentUnsupportedTypeMessage
 }: UseChatComposerActionsParams) {
   const [pinnedByMessageId, setPinnedByMessageId] = useState<Record<string, boolean>>({});
-  const [thumbsUpByMessageId, setThumbsUpByMessageId] = useState<Record<string, boolean>>({});
+  const [reactionsByMessageId, setReactionsByMessageId] = useState<
+    Record<string, Record<string, { count: number; reacted: boolean }>>
+  >({});
   const [pendingChatAttachmentFile, setPendingChatAttachmentFile] = useState<File | null>(null);
 
   useEffect(() => {
@@ -114,14 +116,49 @@ export function useChatComposerActions({
       });
       return next;
     });
+  }, [messages]);
 
-    setThumbsUpByMessageId((prev) => {
-      const next: Record<string, boolean> = {};
-      Object.entries(prev).forEach(([messageId, active]) => {
-        if (existingIds.has(messageId) && active) {
-          next[messageId] = true;
+  useEffect(() => {
+    setReactionsByMessageId((prev) => {
+      const next: Record<string, Record<string, { count: number; reacted: boolean }>> = {};
+
+      messages.forEach((message) => {
+        const messageId = String(message.id || "").trim();
+        if (!messageId) {
+          return;
+        }
+
+        const serverReactions = Array.isArray(message.reactions) ? message.reactions : null;
+        if (!serverReactions) {
+          if (prev[messageId]) {
+            next[messageId] = prev[messageId];
+          }
+          return;
+        }
+
+        const normalized: Record<string, { count: number; reacted: boolean }> = {};
+        serverReactions.forEach((reaction) => {
+          const emoji = String(reaction?.emoji || "").trim();
+          if (!emoji) {
+            return;
+          }
+
+          const count = Math.max(0, Number(reaction?.count || 0));
+          if (count <= 0) {
+            return;
+          }
+
+          normalized[emoji] = {
+            count,
+            reacted: Boolean(reaction?.reacted)
+          };
+        });
+
+        if (Object.keys(normalized).length > 0) {
+          next[messageId] = normalized;
         }
       });
+
       return next;
     });
   }, [messages]);
@@ -457,28 +494,61 @@ export function useChatComposerActions({
     })();
   }, [activeTopicId, authToken, pinnedByMessageId, pushToast, serverErrorMessage, topicOnlyActionMessage]);
 
-  const toggleThumbsUpReaction = useCallback((messageId: string) => {
+  const toggleMessageReaction = useCallback((messageId: string, emoji: string = "👍") => {
     if (!activeTopicId) {
       pushToast(topicOnlyActionMessage);
       return;
     }
 
-    const currentlyActive = Boolean(thumbsUpByMessageId[messageId]);
+    const normalizedMessageId = String(messageId || "").trim();
+    const normalizedEmoji = String(emoji || "").trim();
+    if (!normalizedMessageId || !normalizedEmoji) {
+      return;
+    }
+
+    const currentlyActive = Boolean(reactionsByMessageId[normalizedMessageId]?.[normalizedEmoji]?.reacted);
     void (async () => {
       try {
         if (currentlyActive) {
-          await api.removeMessageReaction(authToken, messageId, "👍");
-          setThumbsUpByMessageId((prev) => ({ ...prev, [messageId]: false }));
-          return;
+          await api.removeMessageReaction(authToken, normalizedMessageId, normalizedEmoji);
+        } else {
+          await api.addMessageReaction(authToken, normalizedMessageId, normalizedEmoji);
         }
 
-        await api.addMessageReaction(authToken, messageId, "👍");
-        setThumbsUpByMessageId((prev) => ({ ...prev, [messageId]: true }));
+        setReactionsByMessageId((prev) => {
+          const messageReactions = { ...(prev[normalizedMessageId] || {}) };
+          const current = messageReactions[normalizedEmoji] || { count: 0, reacted: false };
+          const nextCount = currentlyActive
+            ? Math.max(0, current.count - 1)
+            : current.count + 1;
+
+          if (nextCount <= 0) {
+            delete messageReactions[normalizedEmoji];
+          } else {
+            messageReactions[normalizedEmoji] = {
+              count: nextCount,
+              reacted: !currentlyActive
+            };
+          }
+
+          const next = { ...prev };
+          if (Object.keys(messageReactions).length === 0) {
+            delete next[normalizedMessageId];
+          } else {
+            next[normalizedMessageId] = messageReactions;
+          }
+
+          return next;
+        });
       } catch {
         pushToast(serverErrorMessage);
       }
     })();
-  }, [activeTopicId, authToken, pushToast, serverErrorMessage, thumbsUpByMessageId, topicOnlyActionMessage]);
+  }, [activeTopicId, authToken, pushToast, reactionsByMessageId, serverErrorMessage, topicOnlyActionMessage]);
+
+  const toggleThumbsUpReaction = useCallback((messageId: string) => {
+    toggleMessageReaction(messageId, "👍");
+  }, [toggleMessageReaction]);
 
   const reportMessage = useCallback((messageId: string) => {
     if (!activeTopicId) {
@@ -516,17 +586,55 @@ export function useChatComposerActions({
     }));
   }, []);
 
-  const applyRemoteThumbsUpReactionState = useCallback((messageId: string, active: boolean) => {
+  const applyRemoteMessageReactionState = useCallback((messageId: string, emoji: string, active: boolean, actorUserId?: string) => {
     const normalizedId = String(messageId || "").trim();
-    if (!normalizedId) {
+    const normalizedEmoji = String(emoji || "").trim();
+    if (!normalizedId || !normalizedEmoji) {
       return;
     }
 
-    setThumbsUpByMessageId((prev) => ({
-      ...prev,
-      [normalizedId]: Boolean(active)
-    }));
-  }, []);
+    const currentUserId = String(user?.id || "").trim();
+    const normalizedActorUserId = String(actorUserId || "").trim();
+    const actorIsCurrentUser = Boolean(currentUserId && normalizedActorUserId && normalizedActorUserId === currentUserId);
+
+    setReactionsByMessageId((prev) => {
+      const messageReactions = { ...(prev[normalizedId] || {}) };
+      const current = messageReactions[normalizedEmoji] || { count: 0, reacted: false };
+      const shouldSkipOwnEchoDelta = actorIsCurrentUser && current.reacted === active;
+      const nextCount = shouldSkipOwnEchoDelta
+        ? current.count
+        : active
+          ? current.count + 1
+          : Math.max(0, current.count - 1);
+      const nextReacted = actorIsCurrentUser ? active : current.reacted;
+
+      if (nextCount <= 0) {
+        delete messageReactions[normalizedEmoji];
+      } else {
+        messageReactions[normalizedEmoji] = {
+          count: nextCount,
+          reacted: nextReacted
+        };
+      }
+
+      const next = { ...prev };
+      if (Object.keys(messageReactions).length === 0) {
+        delete next[normalizedId];
+      } else {
+        next[normalizedId] = messageReactions;
+      }
+
+      return next;
+    });
+  }, [user?.id]);
+
+  const applyRemoteThumbsUpReactionState = useCallback((messageId: string, active: boolean, actorUserId?: string) => {
+    applyRemoteMessageReactionState(messageId, "👍", active, actorUserId);
+  }, [applyRemoteMessageReactionState]);
+
+  const thumbsUpByMessageId = Object.fromEntries(
+    Object.entries(reactionsByMessageId).map(([messageId, reactions]) => [messageId, Boolean(reactions["👍"]?.reacted)])
+  ) as Record<string, boolean>;
 
   return {
     sendMessage,
@@ -538,14 +646,17 @@ export function useChatComposerActions({
     deleteOwnMessage,
     openRoomChat,
     pinnedByMessageId,
+    reactionsByMessageId,
     thumbsUpByMessageId,
     togglePinMessage,
+    toggleMessageReaction,
     toggleThumbsUpReaction,
     reportMessage,
     pendingChatAttachmentFile,
     selectAttachmentFile,
     clearPendingAttachment,
     applyRemotePinState,
+    applyRemoteMessageReactionState,
     applyRemoteThumbsUpReactionState
   };
 }

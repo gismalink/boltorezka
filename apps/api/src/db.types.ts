@@ -80,6 +80,11 @@ export type RoomMessageRow = {
   edited_at?: string | null;
   user_name: string;
   attachments?: MessageAttachmentRow[];
+  reactions?: Array<{
+    emoji: string;
+    count: number;
+    reacted: boolean;
+  }>;
 };
 
 export type MessageAttachmentType = "image" | "document" | "audio";

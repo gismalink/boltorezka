@@ -54,8 +54,10 @@ type ChatPanelProps = {
   onReplyMessage: (messageId: string) => void;
   pinnedByMessageId: Record<string, boolean>;
   thumbsUpByMessageId: Record<string, boolean>;
+  reactionsByMessageId: Record<string, Record<string, { count: number; reacted: boolean }>>;
   onTogglePinMessage: (messageId: string) => void;
   onToggleThumbsUpReaction: (messageId: string) => void;
+  onToggleMessageReaction: (messageId: string, emoji: string) => void;
   onUpdateTopic: (topicId: string, title: string) => Promise<void>;
   onArchiveTopic: (topicId: string) => Promise<void>;
   onUnarchiveTopic: (topicId: string) => Promise<void>;
@@ -98,8 +100,10 @@ export function ChatPanel({
   onReplyMessage,
   pinnedByMessageId,
   thumbsUpByMessageId,
+  reactionsByMessageId,
   onTogglePinMessage,
   onToggleThumbsUpReaction,
+  onToggleMessageReaction,
   onUpdateTopic,
   onArchiveTopic,
   onUnarchiveTopic,
@@ -196,15 +200,8 @@ export function ChatPanel({
 
   const {
     messageContextMenu,
-    setMessageContextMenu,
-    extraReactionsByMessageId,
-    toggleMessageReaction
-  } = useMessageContextMenu({
-    messages,
-    authToken,
-    activeTopicId,
-    onToggleThumbsUpReaction
-  });
+    setMessageContextMenu
+  } = useMessageContextMenu();
 
   useEffect(() => {
     inboxItemsRef.current = inboxItems;
@@ -1967,6 +1964,7 @@ export function ChatPanel({
         messageViewModels={messageViewModels}
         pinnedByMessageId={pinnedByMessageId}
         thumbsUpByMessageId={thumbsUpByMessageId}
+        reactionsByMessageId={reactionsByMessageId}
         messageContextMenu={messageContextMenu}
         setMessageContextMenu={setMessageContextMenu}
         onReplyMessage={onReplyMessage}
@@ -1974,8 +1972,7 @@ export function ChatPanel({
         onDeleteMessage={onDeleteMessage}
         onReportMessage={onReportMessage}
         onTogglePinMessage={onTogglePinMessage}
-        onToggleMessageReaction={toggleMessageReaction}
-        extraReactionsByMessageId={extraReactionsByMessageId}
+        onToggleMessageReaction={onToggleMessageReaction}
         insertMentionToComposer={insertMentionToComposer}
         insertQuoteToComposer={insertQuoteToComposer}
         markTopicUnreadFromMessage={markTopicUnreadFromMessage}

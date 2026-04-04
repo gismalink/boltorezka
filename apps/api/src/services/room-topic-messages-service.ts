@@ -336,6 +336,25 @@ export async function listTopicMessages(input: {
              FROM message_attachments ma
              WHERE ma.message_id = m.id
            ), '[]'::json) AS attachments
+           ,COALESCE((
+             SELECT json_agg(
+               json_build_object(
+                 'emoji', mr.emoji,
+                 'count', mr.count,
+                 'reacted', mr.reacted
+               )
+               ORDER BY mr.count DESC, mr.emoji ASC
+             )
+             FROM (
+               SELECT
+                 r.emoji,
+                 COUNT(*)::int AS count,
+                 BOOL_OR(r.user_id = $5) AS reacted
+               FROM room_message_reactions r
+               WHERE r.message_id = m.id
+               GROUP BY r.emoji
+             ) mr
+           ), '[]'::json) AS reactions
          FROM messages m
          LEFT JOIN room_message_replies rmr ON rmr.message_id = m.id
          LEFT JOIN messages pm ON pm.id = rmr.parent_message_id
@@ -345,7 +364,7 @@ export async function listTopicMessages(input: {
            AND (m.created_at, m.id) < ($2::timestamptz, $3)
          ORDER BY m.created_at DESC, m.id DESC
          LIMIT $4`,
-        [input.topicId, input.beforeCreatedAt, input.beforeId, input.limit + 1]
+        [input.topicId, input.beforeCreatedAt, input.beforeId, input.limit + 1, input.userId]
       )
     : await db.query<RoomMessageRow>(
         `SELECT
@@ -381,6 +400,25 @@ export async function listTopicMessages(input: {
              FROM message_attachments ma
              WHERE ma.message_id = m.id
            ), '[]'::json) AS attachments
+           ,COALESCE((
+             SELECT json_agg(
+               json_build_object(
+                 'emoji', mr.emoji,
+                 'count', mr.count,
+                 'reacted', mr.reacted
+               )
+               ORDER BY mr.count DESC, mr.emoji ASC
+             )
+             FROM (
+               SELECT
+                 r.emoji,
+                 COUNT(*)::int AS count,
+                 BOOL_OR(r.user_id = $3) AS reacted
+               FROM room_message_reactions r
+               WHERE r.message_id = m.id
+               GROUP BY r.emoji
+             ) mr
+           ), '[]'::json) AS reactions
          FROM messages m
          LEFT JOIN room_message_replies rmr ON rmr.message_id = m.id
          LEFT JOIN messages pm ON pm.id = rmr.parent_message_id
@@ -389,7 +427,7 @@ export async function listTopicMessages(input: {
          WHERE m.topic_id = $1
          ORDER BY m.created_at DESC, m.id DESC
          LIMIT $2`,
-        [input.topicId, input.limit + 1]
+        [input.topicId, input.limit + 1, input.userId]
       );
 
   const hasMore = messagesResult.rows.length > input.limit;

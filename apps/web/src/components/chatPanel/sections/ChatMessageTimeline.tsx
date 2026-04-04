@@ -12,7 +12,7 @@ type ChatMessageTimelineProps = {
   messageViewModels: ChatMessageViewModel[];
   pinnedByMessageId: Record<string, boolean>;
   thumbsUpByMessageId: Record<string, boolean>;
-  extraReactionsByMessageId: Record<string, string[]>;
+  reactionsByMessageId: Record<string, Record<string, { count: number; reacted: boolean }>>;
   messageContextMenu: { messageId: string; x: number; y: number } | null;
   setMessageContextMenu: (value: { messageId: string; x: number; y: number } | null) => void;
   onReplyMessage: (messageId: string) => void;
@@ -237,7 +237,7 @@ export function ChatMessageTimeline({
   messageViewModels,
   pinnedByMessageId,
   thumbsUpByMessageId,
-  extraReactionsByMessageId,
+  reactionsByMessageId,
   messageContextMenu,
   setMessageContextMenu,
   onReplyMessage,
@@ -300,9 +300,14 @@ export function ChatMessageTimeline({
         const deliveryGlyph = messageVm.deliveryGlyph;
         const isPinned = Boolean(pinnedByMessageId[messageVm.id]);
         const hasThumbsUp = Boolean(thumbsUpByMessageId[messageVm.id]);
-        const extraReactions = Array.isArray(extraReactionsByMessageId[messageVm.id])
-          ? extraReactionsByMessageId[messageVm.id]
-          : [];
+        const messageReactions = reactionsByMessageId[messageVm.id] || {};
+        const mergedReactions = Object.entries(messageReactions)
+          .filter(([, value]) => Number(value?.count || 0) > 0)
+          .map(([emoji, value]) => ({
+            emoji,
+            count: Number(value.count || 0),
+            reacted: Boolean(value.reacted)
+          }));
         const linkPreview = extractFirstLinkPreview(messageVm.text);
         const contextMenuOpen = messageContextMenu?.messageId === messageVm.id;
         const contextMenuX = messageContextMenu
@@ -317,11 +322,6 @@ export function ChatMessageTimeline({
         const reactionMenuY = messageContextMenu
           ? Math.max(10, Math.min(messageContextMenu.y - 52, viewportHeight - 80))
           : 10;
-        const mergedReactions = [
-          ...(hasThumbsUp ? ["👍"] : []),
-          ...extraReactions.filter((emoji) => emoji !== "👍")
-        ];
-
         return (
           <div key={messageVm.id}>
           {unreadDividerMessageId === messageVm.id ? (
@@ -426,7 +426,19 @@ export function ChatMessageTimeline({
                 {isPinned || mergedReactions.length > 0 ? (
                   <div className="chat-reactions-row">
                     {isPinned ? <span className="chat-reaction-chip">{t("chat.pin")}</span> : null}
-                    {mergedReactions.map((emoji) => <span key={`${messageVm.id}-${emoji}`} className="chat-reaction-chip">{emoji}</span>)}
+                    {mergedReactions.map((reaction) => (
+                      <button
+                        key={`${messageVm.id}-${reaction.emoji}`}
+                        type="button"
+                        className={`chat-reaction-chip chat-reaction-chip-button ${reaction.reacted ? "chat-reaction-chip-active" : ""}`}
+                        onClick={() => onToggleMessageReaction(messageVm.id, reaction.emoji)}
+                        aria-label={`${t("chat.react")}: ${reaction.emoji}`}
+                        title={`${t("chat.react")}: ${reaction.emoji}`}
+                      >
+                        <span>{reaction.emoji}</span>
+                        {reaction.count > 1 ? <span>{reaction.count}</span> : null}
+                      </button>
+                    ))}
                   </div>
                 ) : null}
                 {messageVm.editedAt ? <div className="chat-edited-mark">{t("chat.editedMark")}</div> : null}
@@ -443,7 +455,7 @@ export function ChatMessageTimeline({
                     {quickReactionOptions.map((emoji) => {
                       const active = emoji === "👍"
                         ? hasThumbsUp
-                        : extraReactions.includes(emoji);
+                        : Boolean(messageReactions[emoji]?.reacted);
                       return (
                         <button
                           key={`${messageVm.id}-quick-${emoji}`}

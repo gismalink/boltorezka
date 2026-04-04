@@ -38,14 +38,17 @@ export function useAppRoomChatActions({ roomPresence, chatComposer }: UseAppRoom
     deleteOwnMessage,
     openRoomChat,
     pinnedByMessageId,
+    reactionsByMessageId,
     thumbsUpByMessageId,
     togglePinMessage,
+    toggleMessageReaction,
     toggleThumbsUpReaction,
     reportMessage,
     pendingChatAttachmentFile,
     selectAttachmentFile,
     clearPendingAttachment,
     applyRemotePinState,
+    applyRemoteMessageReactionState,
     applyRemoteThumbsUpReactionState
   } = useChatComposerActions(chatComposer);
 
@@ -63,14 +66,17 @@ export function useAppRoomChatActions({ roomPresence, chatComposer }: UseAppRoom
     deleteOwnMessage,
     openRoomChat,
     pinnedByMessageId,
+    reactionsByMessageId,
     thumbsUpByMessageId,
     togglePinMessage,
+    toggleMessageReaction,
     toggleThumbsUpReaction,
     reportMessage,
     pendingChatAttachmentFile,
     selectAttachmentFile,
     clearPendingAttachment,
     applyRemotePinState,
+    applyRemoteMessageReactionState,
     applyRemoteThumbsUpReactionState
   };
 }

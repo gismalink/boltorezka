@@ -206,8 +206,10 @@ export function App() {
   const realtimeClientRef = useRef<RealtimeClient | null>(null);
   const {
     applyRemotePinState,
+    applyRemoteMessageReactionState,
     applyRemoteThumbsUpReactionState,
     bindRemotePinHandler,
+    bindRemoteMessageReactionHandler,
     bindRemoteThumbsUpHandler
   } = useRemoteMessageActionsBridge();
 
@@ -414,6 +416,7 @@ export function App() {
     setRoomUnreadBySlug,
     applyRemoteTypingPayload,
     applyRemotePinState,
+    applyRemoteMessageReactionState,
     applyRemoteThumbsUpReactionState,
     currentUserId,
     serviceToken,
@@ -637,8 +640,9 @@ export function App() {
     sendMessage, handleChatPaste, handleChatInputKeyDown,
     pendingChatAttachmentFile, selectAttachmentFile, clearPendingAttachment,
     startEditingMessage, replyToMessage, cancelReply, deleteOwnMessage, reportMessage, openRoomChat,
-    pinnedByMessageId, thumbsUpByMessageId, togglePinMessage, toggleThumbsUpReaction,
+    pinnedByMessageId, reactionsByMessageId, thumbsUpByMessageId, togglePinMessage, toggleMessageReaction, toggleThumbsUpReaction,
     applyRemotePinState: applyRemotePinStateFromActions,
+    applyRemoteMessageReactionState: applyRemoteMessageReactionStateFromActions,
     applyRemoteThumbsUpReactionState: applyRemoteThumbsUpReactionStateFromActions,
     saveMemberPreference,
     promote, demote,
@@ -706,8 +710,10 @@ export function App() {
 
   useBindRemoteMessageActionsBridge({
     bindRemotePinHandler,
+    bindRemoteMessageReactionHandler,
     bindRemoteThumbsUpHandler,
     applyRemotePinStateFromActions,
+    applyRemoteMessageReactionStateFromActions,
     applyRemoteThumbsUpReactionStateFromActions
   });
 
@@ -985,7 +991,7 @@ export function App() {
     videoWindowsVisible, setVideoWindowsVisible,
     setEditingMessageId, setReplyingToMessageId,
     startEditingMessage, replyToMessage, cancelReply, deleteOwnMessage, reportMessage,
-    pinnedByMessageId, thumbsUpByMessageId, togglePinMessage, toggleThumbsUpReaction,
+    pinnedByMessageId, reactionsByMessageId, thumbsUpByMessageId, togglePinMessage, toggleMessageReaction, toggleThumbsUpReaction,
     allowVideoStreaming, cameraEnabled,
     localVideoStream,
     remoteVideoStreamsByUserId,

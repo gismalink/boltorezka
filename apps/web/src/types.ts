@@ -73,6 +73,11 @@ export type Message = {
   edited_at?: string | null;
   user_name: string;
   attachments?: ChatAttachment[];
+  reactions?: Array<{
+    emoji: string;
+    count: number;
+    reacted: boolean;
+  }>;
   clientRequestId?: string;
   deliveryStatus?: "sending" | "delivered" | "failed";
 };

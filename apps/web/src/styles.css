@@ -2852,6 +2852,16 @@ pre {
   font-size: calc(var(--font-size-sm) - 0.16rem);
 }
 
+.chat-reaction-chip-button {
+  appearance: none;
+  cursor: pointer;
+}
+
+.chat-reaction-chip-active {
+  border-color: color-mix(in srgb, var(--pixel-neon-cyan) 78%, var(--pixel-border) 22%);
+  background: color-mix(in srgb, var(--pixel-neon-cyan) 22%, var(--pixel-panel-2) 78%);
+}
+
 .chat-search-panel {
   display: grid;
   gap: 8px;

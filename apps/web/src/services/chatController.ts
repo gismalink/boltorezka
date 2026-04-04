@@ -19,6 +19,7 @@ type ChatControllerOptions = {
 
 export class ChatController {
   private readonly options: ChatControllerOptions;
+  private recentMessagesRequestId = 0;
 
   constructor(options: ChatControllerOptions) {
     this.options = options;
@@ -29,14 +30,24 @@ export class ChatController {
   }
 
   async loadRecentMessages(token: string, roomSlug: string, topicId: string | null = null) {
+    const requestId = ++this.recentMessagesRequestId;
     try {
       const res = topicId
         ? await api.topicMessages(token, topicId, { limit: 50 })
         : await api.roomMessages(token, roomSlug, { limit: 50 });
+
+      if (requestId !== this.recentMessagesRequestId) {
+        return;
+      }
+
       this.options.setMessages(() => res.messages.map((message) => this.normalizeMessageForRender(message)));
       this.options.setMessagesHasMore(Boolean(res.pagination?.hasMore));
       this.options.setMessagesNextCursor(res.pagination?.nextCursor ?? null);
     } catch (error) {
+      if (requestId !== this.recentMessagesRequestId) {
+        return;
+      }
+
       this.options.pushLog(`history failed: ${(error as Error).message}`);
     }
   }
