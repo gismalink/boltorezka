@@ -44,13 +44,15 @@ function RoomsCategoryBlockInner({
 }: RoomsCategoryBlockProps) {
   const categorySettingsAnchorRef = useRef<HTMLDivElement>(null);
   const isCollapsed = collapsedCategoryIds.includes(category.id);
+  const categoryActionsVariant = canCreateRooms ? "two" : "none";
+  const categoryActionsOpen = categorySettingsPopupOpenId === category.id;
 
   return (
     <div className="mt-[var(--space-md)]">
-      <div className="rooms-row-shell category-title-row mb-[var(--space-xs)] flex items-center gap-2 rounded-[var(--radius-sm)] py-1 hover:bg-[var(--pixel-panel)]/55">
+      <div className={`rooms-row-shell category-title-row category-title-row-actions-${categoryActionsVariant} mb-[var(--space-xs)] flex items-center gap-2 rounded-[var(--radius-sm)] py-1 hover:bg-[var(--pixel-panel)]/55`}>
         <Button
           type="button"
-          className="secondary category-main-btn inline-flex items-center gap-[var(--space-xs)] border-0 bg-transparent p-0 shadow-none hover:translate-x-0 hover:translate-y-0 hover:shadow-none active:translate-x-0 active:translate-y-0 active:shadow-none focus-visible:shadow-none"
+          className={`secondary category-main-btn category-main-btn-actions-${categoryActionsVariant} inline-flex items-center gap-[var(--space-xs)] border-0 bg-transparent p-0 shadow-none hover:translate-x-0 hover:translate-y-0 hover:shadow-none active:translate-x-0 active:translate-y-0 active:shadow-none focus-visible:shadow-none`}
           onClick={() => onToggleCategoryCollapsed(category.id)}
           aria-label={isCollapsed ? t("rooms.expandCategory") : t("rooms.collapseCategory")}
         >
@@ -60,7 +62,7 @@ function RoomsCategoryBlockInner({
           </span>
           <span className="text-[var(--font-size-sm)] uppercase tracking-[0.04em] text-[var(--pixel-muted)]">{category.title}</span>
         </Button>
-        <div className="category-right-zone">
+        <div className={`category-right-zone category-right-zone-actions-${categoryActionsVariant} ${categoryActionsOpen ? "category-right-zone-open" : ""}`}>
           {unreadCountMuted > 0 ? (
             <span className="room-unread-badge category-group-unread room-unread-badge-muted">{unreadCountMuted}</span>
           ) : null}
@@ -68,7 +70,7 @@ function RoomsCategoryBlockInner({
             <span className="room-unread-badge category-group-unread">{unreadCountUnmuted}</span>
           ) : null}
         {canCreateRooms ? (
-          <div className="category-actions inline-flex items-center gap-1">
+          <div className={`category-actions category-actions-actions-${categoryActionsVariant} inline-flex items-center gap-1 ${categoryActionsOpen ? "category-actions-open" : ""}`}>
             <Button
               type="button"
               className="secondary icon-btn tiny category-action-btn"

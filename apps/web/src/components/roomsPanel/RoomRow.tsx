@@ -848,6 +848,7 @@ function RoomRowInner({
             const noteValue = String(memberDraft?.note ?? memberPreference?.note ?? "");
             const menuKey = `${room.slug}:${member.userId || member.userName}`;
             const canManageMember = Boolean(member.userId) && !isCurrentUser;
+            const memberActionsVariant = canManageMember ? "one" : "none";
             const selectedCustomRoleIds = memberMenuProfile?.customRoles.map((role) => role.id) || [];
             const selectedCustomRoleNames = memberMenuProfile?.customRoles.map((role) => role.name).filter(Boolean) || [];
             const hiddenRoomsAvailable = memberMenuProfile?.hiddenRoomsAvailable || [];
@@ -881,7 +882,7 @@ function RoomRowInner({
                   );
                 }}
               >
-                <div className={`channel-member-main grid min-h-[22px] grid-cols-[auto_1fr_auto] items-center gap-1.5 ${canManageMember ? "channel-member-main-with-settings" : ""}`}>
+                <div className={`channel-member-main channel-member-main-actions-${memberActionsVariant} grid min-h-[22px] grid-cols-[auto_1fr_auto] items-center gap-1.5`}>
                   <span className="channel-member-avatar">{(member.userName || "U").charAt(0).toUpperCase()}</span>
                   <span className="channel-member-name">{member.userName}</span>
                   <span className="channel-member-icons" aria-hidden="true">
@@ -913,7 +914,7 @@ function RoomRowInner({
                   </span>
                 </div>
                 {canManageMember ? (
-                  <div className={`channel-member-settings-anchor relative ${(memberMenuOpenKey === menuKey && member.userId && memberMenuUserId === member.userId) ? "channel-member-settings-anchor-open" : ""}`}>
+                  <div className={`channel-member-settings-anchor channel-member-settings-anchor-actions-${memberActionsVariant} relative ${(memberMenuOpenKey === menuKey && member.userId && memberMenuUserId === member.userId) ? "channel-member-settings-anchor-open" : ""}`}>
                     <button
                       type="button"
                       className="secondary icon-btn tiny channel-member-settings-btn"
