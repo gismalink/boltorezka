@@ -516,6 +516,7 @@ export function App() {
       setRoomsPresenceBySlug,
       setRoomsPresenceDetailsBySlug,
       setRoomMediaTopologyBySlug,
+      screenShareOwnerByRoomSlug,
       setScreenShareOwnerByRoomSlug,
       setVoiceInitialMicStateByUserIdInCurrentRoom,
       setVoiceInitialAudioOutputMutedByUserIdInCurrentRoom,
