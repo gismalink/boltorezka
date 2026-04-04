@@ -9,7 +9,6 @@ import { RoomsOutsideOnlineBlock } from "./roomsPanel/RoomsOutsideOnlineBlock";
 import { RoomsArchivedBlock } from "./roomsPanel/RoomsArchivedBlock";
 import { useRoomsPanelDerivedData } from "./roomsPanel/useRoomsPanelDerivedData";
 import { useRoomsPanelPersistentState } from "./roomsPanel/useRoomsPanelPersistentState";
-import { mapRoomMembersForSlug } from "./roomsPanel/roomMembers";
 import type { RoomsPanelProps } from "./types";
 
 type ConfirmPopupState =
@@ -183,6 +182,7 @@ export function RoomsPanel({
 
   const {
     onlineOutsideRooms,
+    roomMembersBySlug,
     uncategorizedUnreadCount,
     outsideRoomsUnreadCount,
     categoryUnreadById
@@ -274,7 +274,7 @@ export function RoomsPanel({
       })()}
       roomMutePresetValue={roomMutePresetByRoomId[String(room.id || "").trim()] || null}
       onRoomMutePresetChange={onRoomMutePresetChange}
-      roomMembers={mapRoomMembersForSlug(liveRoomMemberDetailsBySlug, liveRoomMembersBySlug, room.slug)}
+      roomMembers={roomMembersBySlug[room.slug] || []}
       normalizedCurrentUserId={normalizedCurrentUserId}
       onRequestClearChannel={(targetRoom) => setConfirmPopup({ kind: "clear-channel", room: targetRoom })}
       onRequestArchiveChannel={(targetRoom) => setConfirmPopup({ kind: "archive-channel", room: targetRoom })}
@@ -324,8 +324,7 @@ export function RoomsPanel({
     roomUnreadBySlug,
     roomMutePresetByRoomId,
     onRoomMutePresetChange,
-    liveRoomMemberDetailsBySlug,
-    liveRoomMembersBySlug,
+    roomMembersBySlug,
     normalizedCurrentUserId
   ]);
 

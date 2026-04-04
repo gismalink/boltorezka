@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import type { PresenceMember, Room, RoomsTreeResponse } from "../../domain";
+import { mapRoomMembersForSlug, type RoomMember } from "./roomMembers";
 
 const OUTSIDE_ROOMS_PRESENCE_KEY = "__outside_rooms__";
 
@@ -145,6 +146,11 @@ export function useRoomsPanelDerivedData({
 
     const onlineOutsideRooms = Array.from(outsideByKey.values()).sort((a, b) => a.userName.localeCompare(b.userName));
 
+    const roomMembersBySlug: Record<string, RoomMember[]> = {};
+    knownRoomSlugs.forEach((slug) => {
+      roomMembersBySlug[slug] = mapRoomMembersForSlug(liveRoomMemberDetailsBySlug, liveRoomMembersBySlug, slug);
+    });
+
     const uncategorizedUnreadCount = uncategorizedRooms.reduce((sum, room) => {
       const slug = String(room.slug || "").trim();
       if (!slug) {
@@ -182,6 +188,7 @@ export function useRoomsPanelDerivedData({
 
     return {
       onlineOutsideRooms,
+      roomMembersBySlug,
       uncategorizedUnreadCount,
       outsideRoomsUnreadCount,
       categoryUnreadById
