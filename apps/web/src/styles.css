@@ -2226,7 +2226,7 @@ pre {
   transform: translateY(-50%);
   display: inline-flex;
   align-items: center;
-  gap: var(--space-xs);
+  gap: 0;
 }
 
 .channel-member-right-group .channel-member-icons {
@@ -2236,7 +2236,7 @@ pre {
 .channel-member-right-group-actions-one:hover .channel-member-icons,
 .channel-member-right-group-open.channel-member-right-group-actions-one .channel-member-icons,
 .channel-member-item:hover .channel-member-right-group-actions-one .channel-member-icons {
-  transform: translateX(-22px);
+  transform: translateX(-16px);
 }
 
 .channel-row-actions .channel-action-btn,
@@ -2543,6 +2543,7 @@ pre {
 
 .channel-member-settings-anchor {
   position: relative;
+  margin-left: 0;
   width: 0;
   overflow: hidden;
   opacity: 0;
@@ -2557,6 +2558,7 @@ pre {
 .channel-member-settings-anchor-open,
 .channel-member-item:hover .channel-member-settings-anchor-actions-one {
   width: 22px;
+  margin-left: 2px;
   opacity: 1;
   pointer-events: auto;
 }
