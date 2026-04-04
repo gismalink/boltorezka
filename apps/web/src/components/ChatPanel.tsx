@@ -168,7 +168,7 @@ export function ChatPanel({
   const [editingTopicTitleDraftInitial, setEditingTopicTitleDraftInitial] = useState("");
   const [isEditingTopicTitleInline, setIsEditingTopicTitleInline] = useState(false);
   const [topicDeleteConfirm, setTopicDeleteConfirm] = useState<{ topicId: string; title: string } | null>(null);
-  const autoMarkReadInFlightRef = useRef<Record<string, string>>({});
+  const autoMarkReadInFlightRef = useRef<Record<string, number>>({});
   const entryUnreadCountByTopicRef = useRef<Record<string, number>>({});
   const unreadEntryTopicRef = useRef<string>("");
   const unreadBackfillAttemptsByTopicRef = useRef<Record<string, number>>({});
@@ -1325,30 +1325,31 @@ export function ChatPanel({
     }
 
     const topic = topics.find((item) => String(item.id || "").trim() === normalizedTopicId);
-    if (topic) {
-      const topicRoomId = String(topic.roomId || "").trim();
-      if (!topicRoomId || topicRoomId !== normalizedRoomId) {
-        return;
-      }
-    }
-
-    const latestMessageId = String(messages[messages.length - 1]?.id || "").trim();
-    const markKey = `${normalizedTopicId}:${latestMessageId || "none"}`;
-    if (autoMarkReadInFlightRef.current[normalizedTopicId] === markKey) {
+    if (!topic) {
       return;
     }
 
-    const sourceUnreadCount = topic ? Math.max(0, Number(topic.unreadCount || 0)) : 0;
-    autoMarkReadInFlightRef.current[normalizedTopicId] = markKey;
+    const topicRoomId = String(topic.roomId || "").trim();
+    if (!topicRoomId || topicRoomId !== normalizedRoomId) {
+      return;
+    }
+
+    const topicUnread = Math.max(0, Number(topic.unreadCount || 0));
+    if (topicUnread === 0) {
+      return;
+    }
+
+    const inflightUnread = autoMarkReadInFlightRef.current[normalizedTopicId] || 0;
+    if (inflightUnread >= topicUnread) {
+      return;
+    }
+
+    autoMarkReadInFlightRef.current[normalizedTopicId] = topicUnread;
     let disposed = false;
 
-    void api.markTopicRead(
-      normalizedToken,
-      normalizedTopicId,
-      latestMessageId ? { lastReadMessageId: latestMessageId } : {}
-    )
+    void api.markTopicRead(normalizedToken, normalizedTopicId)
       .then(() => {
-        if (disposed || !topic) {
+        if (disposed) {
           return;
         }
 
@@ -1356,12 +1357,12 @@ export function ChatPanel({
           ...prev,
           [normalizedTopicId]: {
             unreadCount: 0,
-            sourceUnreadCount
+            sourceUnreadCount: topicUnread
           }
         }));
       })
       .finally(() => {
-        if (autoMarkReadInFlightRef.current[normalizedTopicId] === markKey) {
+        if (autoMarkReadInFlightRef.current[normalizedTopicId] === topicUnread) {
           delete autoMarkReadInFlightRef.current[normalizedTopicId];
         }
       });
@@ -1369,7 +1370,7 @@ export function ChatPanel({
     return () => {
       disposed = true;
     };
-  }, [activeTopicId, authToken, messages, roomId, topics]);
+  }, [activeTopicId, authToken, roomId, topics]);
 
   const filteredTopicsForPalette = useMemo(() => {
     const query = topicPaletteQuery.trim().toLowerCase();
