@@ -1,5 +1,5 @@
 // Purpose: presentation-only chat panel with message timeline, composer, and message-level UI actions.
-import { ClipboardEvent, FormEvent, KeyboardEvent, RefObject, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ClipboardEvent, FormEvent, KeyboardEvent, RefObject, useEffect, useMemo, useRef, useState } from "react";
 import type { Message, RoomTopic } from "../domain";
 import { buildChatMessageViewModels } from "../utils/chatMessageViewModel";
 import { useChatPanelInboxNotifications } from "./chatPanel/hooks/useChatPanelInboxNotifications";
@@ -10,6 +10,8 @@ import { useChatPanelTopicActions } from "./chatPanel/hooks/useChatPanelTopicAct
 import { useChatTopLazyLoad } from "./chatPanel/hooks/useChatTopLazyLoad";
 import { useChatPanelSearch } from "./chatPanel/hooks/useChatPanelSearch";
 import { useMessageContextMenu } from "./chatPanel/hooks/useMessageContextMenu";
+import { useChatPanelUiInteractions } from "./chatPanel/hooks/useChatPanelUiInteractions";
+import { useChatPanelComposerHelpers } from "./chatPanel/hooks/useChatPanelComposerHelpers";
 import { TopicTabsHeader } from "./chatPanel/sections/TopicTabsHeader";
 import { SearchPanel } from "./chatPanel/sections/SearchPanel";
 import { ChatMessageTimeline } from "./chatPanel/sections/ChatMessageTimeline";
@@ -119,7 +121,6 @@ export function ChatPanel({
   const [notificationMode, setNotificationMode] = useState<"all" | "mentions" | "none">("all");
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
   const [hotkeyStatusText, setHotkeyStatusText] = useState("");
-  const topicPaletteInputRef = useRef<HTMLInputElement | null>(null);
   const topicCreatePopupRef = useRef<HTMLDivElement | null>(null);
   const attachmentInputRef = useRef<HTMLInputElement | null>(null);
   const hasActiveRoom = Boolean(roomSlug);
@@ -252,59 +253,6 @@ export function ChatPanel({
   });
 
   useEffect(() => {
-    setHotkeyStatusText("");
-  }, [activeTopicId, roomSlug]);
-
-  useEffect(() => {
-    if (!previewImageUrl) {
-      return;
-    }
-
-    const onKeyDown = (event: globalThis.KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setPreviewImageUrl(null);
-      }
-    };
-
-    window.addEventListener("keydown", onKeyDown);
-    return () => {
-      window.removeEventListener("keydown", onKeyDown);
-    };
-  }, [previewImageUrl]);
-
-  useEffect(() => {
-    if (!topicPaletteOpen) {
-      return;
-    }
-
-    setTopicPaletteQuery("");
-    const topicsForInitialSelection = [...topics].sort((a, b) => {
-      const pinnedDiff = Number(Boolean(b.isPinned)) - Number(Boolean(a.isPinned));
-      if (pinnedDiff !== 0) {
-        return pinnedDiff;
-      }
-
-      const positionDiff = Number(a.position || 0) - Number(b.position || 0);
-      if (positionDiff !== 0) {
-        return positionDiff;
-      }
-
-      return String(a.title || "").localeCompare(String(b.title || ""));
-    });
-    const activeIndex = topicsForInitialSelection.findIndex((topic) => topic.id === activeTopicId);
-    setTopicPaletteSelectedIndex(activeIndex >= 0 ? activeIndex : 0);
-
-    const timerId = window.setTimeout(() => {
-      topicPaletteInputRef.current?.focus();
-      topicPaletteInputRef.current?.select();
-    }, 0);
-
-    return () => {
-      window.clearTimeout(timerId);
-    };
-  }, [topicPaletteOpen, topics, activeTopicId]);
-
-  useEffect(() => {
     if (!topicCreateOpen) {
       return;
     }
@@ -345,6 +293,14 @@ export function ChatPanel({
     onLoadOlderMessages
   });
 
+  const activeTopic = useMemo(() => topics.find((topic) => topic.id === activeTopicId) ?? null, [topics, activeTopicId]);
+  const activeTopicIsArchived = Boolean(activeTopic?.archivedAt);
+
+  const messageViewModels = useMemo(
+    () => buildChatMessageViewModels(messages, currentUserId, 10 * 60 * 1000),
+    [messages, currentUserId]
+  );
+
   const composePreviewImage = composePreviewImageUrl;
   const hasTopics = topics.length > 0;
   const visibleTypingUsers = typingUsers.slice(0, 2);
@@ -357,6 +313,48 @@ export function ChatPanel({
   const typingLabel = typingUsers.length <= 1
     ? t("chat.typingSingle").replace("{users}", typingUsersLabel)
     : t("chat.typingMultiple").replace("{users}", typingUsersLabel);
+
+  const {
+    formatMessageTime,
+    formatAttachmentSize,
+    insertMentionToComposer,
+    insertQuoteToComposer
+  } = useChatPanelComposerHelpers({
+    locale,
+    chatText,
+    onSetChatText
+  });
+
+  const {
+    topicPaletteInputRef,
+    openTopicPalette,
+    closeTopicPalette,
+    selectTopicFromPalette,
+    handleTopicPaletteKeyDown
+  } = useChatPanelUiInteractions({
+    t,
+    hasActiveRoom,
+    hasTopics,
+    roomSlug,
+    activeTopicId,
+    topics,
+    filteredTopicsForPalette,
+    topicPaletteOpen,
+    setTopicPaletteOpen,
+    topicPaletteQuery,
+    setTopicPaletteQuery,
+    topicPaletteSelectedIndex,
+    setTopicPaletteSelectedIndex,
+    setHotkeyStatusText,
+    previewImageUrl,
+    setPreviewImageUrl,
+    messageViewModels,
+    onSelectTopic,
+    onReplyMessage,
+    onEditMessage,
+    markRoomRead
+  });
+
   const handleCreateTopic = async () => {
     const title = newTopicTitle.trim();
     if (!title || creatingTopic) {
@@ -378,242 +376,7 @@ export function ChatPanel({
     void handleCreateTopic();
   };
 
-  useEffect(() => {
-    if (filteredTopicsForPalette.length === 0) {
-      setTopicPaletteSelectedIndex(0);
-      return;
-    }
-
-    setTopicPaletteSelectedIndex((prev) => {
-      if (prev < 0) {
-        return 0;
-      }
-      if (prev >= filteredTopicsForPalette.length) {
-        return filteredTopicsForPalette.length - 1;
-      }
-      return prev;
-    });
-  }, [filteredTopicsForPalette]);
-
-  const activeTopic = useMemo(() => topics.find((topic) => topic.id === activeTopicId) ?? null, [topics, activeTopicId]);
-  const activeTopicIsArchived = Boolean(activeTopic?.archivedAt);
-
-  const messageViewModels = useMemo(
-    () => buildChatMessageViewModels(messages, currentUserId, 10 * 60 * 1000),
-    [messages, currentUserId]
-  );
-
-  const latestMessageIdForHotkeys = messageViewModels.length > 0
-    ? messageViewModels[messageViewModels.length - 1]?.id || null
-    : null;
-
-  const latestOwnManageableMessageIdForHotkeys = useMemo(() => {
-    for (let index = messageViewModels.length - 1; index >= 0; index -= 1) {
-      const candidate = messageViewModels[index];
-      if (candidate?.canManageOwnMessage) {
-        return candidate.id;
-      }
-    }
-    return null;
-  }, [messageViewModels]);
-
-  useEffect(() => {
-    const hasOpenOverlay = Boolean(previewImageUrl || topicPaletteOpen);
-    if (!hasActiveRoom || hasOpenOverlay) {
-      return;
-    }
-
-    const isEditableTarget = (target: EventTarget | null): boolean => {
-      const element = target as HTMLElement | null;
-      if (!element) {
-        return false;
-      }
-
-      const tagName = element.tagName.toLowerCase();
-      if (tagName === "input" || tagName === "textarea" || tagName === "select") {
-        return true;
-      }
-
-      if (element.isContentEditable || element.closest("[contenteditable='true']")) {
-        return true;
-      }
-
-      return false;
-    };
-
-    const onKeyDown = (event: globalThis.KeyboardEvent) => {
-      if (isEditableTarget(event.target)) {
-        return;
-      }
-
-      const key = event.key.toLowerCase();
-
-      if ((event.metaKey || event.ctrlKey) && key === "k") {
-        event.preventDefault();
-        openTopicPalette();
-        setHotkeyStatusText(t("chat.hotkeyTopicSwitch"));
-        return;
-      }
-
-      if (event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) {
-        return;
-      }
-
-      if (key === "t") {
-        event.preventDefault();
-        openTopicPalette();
-        setHotkeyStatusText(t("chat.hotkeyTopicSwitch"));
-        return;
-      }
-
-      if (key === "r" && latestMessageIdForHotkeys) {
-        event.preventDefault();
-        onReplyMessage(latestMessageIdForHotkeys);
-        setHotkeyStatusText(t("chat.hotkeyReply"));
-        return;
-      }
-
-      if (key === "e" && latestOwnManageableMessageIdForHotkeys) {
-        event.preventDefault();
-        onEditMessage(latestOwnManageableMessageIdForHotkeys);
-        setHotkeyStatusText(t("chat.hotkeyEdit"));
-        return;
-      }
-
-      if (key === "m") {
-        event.preventDefault();
-        void markRoomRead();
-        setHotkeyStatusText(t("chat.hotkeyMarkRead"));
-      }
-    };
-
-    window.addEventListener("keydown", onKeyDown);
-    return () => {
-      window.removeEventListener("keydown", onKeyDown);
-    };
-  }, [
-    hasActiveRoom,
-    latestMessageIdForHotkeys,
-    latestOwnManageableMessageIdForHotkeys,
-    onEditMessage,
-    onReplyMessage,
-    previewImageUrl,
-    t,
-    topicPaletteOpen
-  ]);
-
-  const formatMessageTime = (value: string) => {
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) {
-      return "";
-    }
-
-    return date.toLocaleTimeString(locale, {
-      hour: "2-digit",
-      minute: "2-digit"
-    });
-  };
-
-  const formatAttachmentSize = (bytes: number): string => {
-    const normalized = Number(bytes || 0);
-    if (!Number.isFinite(normalized) || normalized <= 0) {
-      return "0 B";
-    }
-
-    if (normalized < 1024) {
-      return `${Math.round(normalized)} B`;
-    }
-
-    if (normalized < 1024 * 1024) {
-      return `${(normalized / 1024).toFixed(1)} KB`;
-    }
-
-    return `${(normalized / (1024 * 1024)).toFixed(1)} MB`;
-  };
-
-  const insertMentionToComposer = (userName: string) => {
-    const normalizedUserName = String(userName || "").trim();
-    if (!normalizedUserName) {
-      return;
-    }
-
-    const current = String(chatText || "");
-    const separator = current.length === 0 || /\s$/.test(current) ? "" : " ";
-    onSetChatText(`${current}${separator}@${normalizedUserName} `);
-  };
-
-  const insertQuoteToComposer = (userName: string, text: string) => {
-    const normalizedText = String(text || "").replace(/\r/g, "").trim();
-    if (!normalizedText) {
-      return;
-    }
-
-    const normalizedUserName = String(userName || "").trim();
-    const quoteSource = normalizedText.length > 280 ? `${normalizedText.slice(0, 277)}...` : normalizedText;
-    const quotedLines = quoteSource
-      .split("\n")
-      .slice(0, 4)
-      .map((line) => `> ${String(line || "").trim() || "..."}`)
-      .join("\n");
-
-    const quoteBlock = normalizedUserName
-      ? `@${normalizedUserName}:\n${quotedLines}\n`
-      : `${quotedLines}\n`;
-
-    const current = String(chatText || "");
-    const separator = current.trim().length > 0 ? "\n\n" : "";
-    onSetChatText(`${current}${separator}${quoteBlock}`);
-  };
-
   const topicPaletteListboxId = "chat-topic-palette-listbox";
-
-  const closeTopicPalette = () => {
-    setTopicPaletteOpen(false);
-  };
-
-  const openTopicPalette = () => {
-    if (!hasTopics) {
-      return;
-    }
-    setTopicPaletteOpen(true);
-  };
-
-  const selectTopicFromPalette = (topicId: string) => {
-    onSelectTopic(topicId);
-    setTopicPaletteOpen(false);
-  };
-
-  const handleTopicPaletteKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === "ArrowDown") {
-      event.preventDefault();
-      if (filteredTopicsForPalette.length > 0) {
-        setTopicPaletteSelectedIndex((prev) => Math.min(filteredTopicsForPalette.length - 1, prev + 1));
-      }
-      return;
-    }
-
-    if (event.key === "ArrowUp") {
-      event.preventDefault();
-      if (filteredTopicsForPalette.length > 0) {
-        setTopicPaletteSelectedIndex((prev) => Math.max(0, prev - 1));
-      }
-      return;
-    }
-
-    if (event.key === "Enter") {
-      event.preventDefault();
-      const selected = filteredTopicsForPalette[topicPaletteSelectedIndex];
-      if (selected) {
-        selectTopicFromPalette(selected.id);
-      }
-      return;
-    }
-
-    if (event.key === "Escape") {
-      event.preventDefault();
-      closeTopicPalette();
-    }
-  };
 
   return (
     <section className="card middle-card flex min-h-0 flex-1 flex-col overflow-hidden">
