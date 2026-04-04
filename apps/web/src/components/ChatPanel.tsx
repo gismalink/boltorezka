@@ -1309,6 +1309,30 @@ export function ChatPanel({
   }, [activeTopicId, chatLogRef, entryUnreadDivider]);
 
   useEffect(() => {
+    const container = chatLogRef.current;
+    if (!container) {
+      return;
+    }
+
+    const normalizedTopicId = String(activeTopicId || "").trim();
+    const lockAutoScroll = Boolean(
+      entryUnreadDivider?.visible
+      && normalizedTopicId
+      && entryUnreadDivider.topicId === normalizedTopicId
+    );
+
+    if (lockAutoScroll) {
+      container.dataset.unreadDividerVisible = "1";
+    } else {
+      delete container.dataset.unreadDividerVisible;
+    }
+
+    return () => {
+      delete container.dataset.unreadDividerVisible;
+    };
+  }, [activeTopicId, chatLogRef, entryUnreadDivider?.topicId, entryUnreadDivider?.visible]);
+
+  useEffect(() => {
     return () => {
       if (unreadDividerFadeTimerRef.current) {
         window.clearTimeout(unreadDividerFadeTimerRef.current);

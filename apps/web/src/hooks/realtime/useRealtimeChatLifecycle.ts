@@ -540,6 +540,13 @@ export function useRealtimeChatLifecycle({
       return;
     }
 
+    const unreadDividerLockActive = chatLogElement.dataset.unreadDividerVisible === "1";
+    if (unreadDividerLockActive && latestMessageChanged) {
+      lastRoomSlugForScrollRef.current = chatRoomSlug;
+      lastMessageIdRef.current = latestMessageId;
+      return;
+    }
+
     const shouldAutoScroll = roomChanged || (latestMessageChanged && shouldStickToBottomRef.current);
 
     if (shouldAutoScroll) {
