@@ -177,7 +177,19 @@ export function ChatPanel({
   const notifiedInboxEventIdsRef = useRef<Set<string>>(new Set());
   const notificationPermissionRequestedRef = useRef(false);
   const desktopNotificationBridgeRef = useRef(getDesktopNotificationBridge());
+  const inboxItemsRef = useRef(inboxItems);
+  const activeRoomSlugRef = useRef(roomSlug);
+  const activeTopicIdRef = useRef(activeTopicId);
   const hasActiveRoom = Boolean(roomSlug);
+
+  useEffect(() => {
+    inboxItemsRef.current = inboxItems;
+  }, [inboxItems]);
+
+  useEffect(() => {
+    activeRoomSlugRef.current = roomSlug;
+    activeTopicIdRef.current = activeTopicId;
+  }, [roomSlug, activeTopicId]);
 
   useEffect(() => {
     try {
@@ -621,7 +633,7 @@ export function ChatPanel({
   }, [authToken]);
 
   const openInboxItem = useCallback(async (eventId: string) => {
-    let item = inboxItems.find((entry) => entry.id === eventId);
+    let item = inboxItemsRef.current.find((entry) => entry.id === eventId);
     if (!item && authToken) {
       try {
         const response = await api.notificationInbox(authToken, { limit: 50 });
@@ -636,6 +648,7 @@ export function ChatPanel({
           roomSlug: String(entry.payload?.roomSlug || "").trim(),
           priority: entry.priority
         }));
+        inboxItemsRef.current = nextItems;
         setInboxItems(nextItems);
         item = nextItems.find((entry) => entry.id === eventId);
       } catch {
@@ -660,7 +673,7 @@ export function ChatPanel({
       topicId: item.topicId || null
     });
     await markInboxItemRead(item.id);
-  }, [authToken, inboxItems, markInboxItemRead]);
+  }, [authToken, markInboxItemRead]);
 
   const persistNotifiedInboxEvents = useCallback(() => {
     try {
@@ -903,9 +916,9 @@ export function ChatPanel({
             return false;
           }
 
-          const sameRoom = String(item.roomSlug || "").trim() === String(roomSlug || "").trim();
+          const sameRoom = String(item.roomSlug || "").trim() === String(activeRoomSlugRef.current || "").trim();
           const itemTopicId = String(item.topicId || "").trim();
-          const sameTopic = !itemTopicId || itemTopicId === String(activeTopicId || "").trim();
+          const sameTopic = !itemTopicId || itemTopicId === String(activeTopicIdRef.current || "").trim();
           return sameRoom && sameTopic;
         };
 
@@ -947,7 +960,7 @@ export function ChatPanel({
       cancelled = true;
       window.clearInterval(timerId);
     };
-  }, [authToken, activeTopicId, openInboxItem, persistNotifiedInboxEvents, roomSlug]);
+  }, [authToken, openInboxItem, persistNotifiedInboxEvents]);
 
   const buildMuteUntilIso = (hours: number | "forever"): string => {
     const now = new Date();
