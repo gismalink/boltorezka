@@ -1,5 +1,5 @@
 // Purpose: presentation-only chat panel with message timeline, composer, and message-level UI actions.
-import { ClipboardEvent, FormEvent, KeyboardEvent, RefObject, useEffect, useMemo, useRef, useState } from "react";
+import { ClipboardEvent, FormEvent, KeyboardEvent, RefObject, useMemo, useRef, useState } from "react";
 import type { Message, RoomTopic } from "../domain";
 import { buildChatMessageViewModels } from "../utils/chatMessageViewModel";
 import { useChatPanelInboxNotifications } from "./chatPanel/hooks/useChatPanelInboxNotifications";
@@ -12,6 +12,7 @@ import { useChatPanelSearch } from "./chatPanel/hooks/useChatPanelSearch";
 import { useMessageContextMenu } from "./chatPanel/hooks/useMessageContextMenu";
 import { useChatPanelUiInteractions } from "./chatPanel/hooks/useChatPanelUiInteractions";
 import { useChatPanelComposerHelpers } from "./chatPanel/hooks/useChatPanelComposerHelpers";
+import { useChatPanelTopicCreate } from "./chatPanel/hooks/useChatPanelTopicCreate";
 import { TopicTabsHeader } from "./chatPanel/sections/TopicTabsHeader";
 import { SearchPanel } from "./chatPanel/sections/SearchPanel";
 import { ChatMessageTimeline } from "./chatPanel/sections/ChatMessageTimeline";
@@ -111,9 +112,6 @@ export function ChatPanel({
   onUnarchiveTopic,
   onDeleteTopic
 }: ChatPanelProps) {
-  const [newTopicTitle, setNewTopicTitle] = useState("");
-  const [topicCreateOpen, setTopicCreateOpen] = useState(false);
-  const [creatingTopic, setCreatingTopic] = useState(false);
   const [topicFilterMode] = useState<"all" | "active" | "unread" | "my" | "mentions" | "pinned" | "archived">("all");
   const [topicPaletteOpen, setTopicPaletteOpen] = useState(false);
   const [topicPaletteQuery, setTopicPaletteQuery] = useState("");
@@ -121,9 +119,20 @@ export function ChatPanel({
   const [notificationMode, setNotificationMode] = useState<"all" | "mentions" | "none">("all");
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
   const [hotkeyStatusText, setHotkeyStatusText] = useState("");
-  const topicCreatePopupRef = useRef<HTMLDivElement | null>(null);
   const attachmentInputRef = useRef<HTMLInputElement | null>(null);
   const hasActiveRoom = Boolean(roomSlug);
+
+  const {
+    topicCreatePopupRef,
+    newTopicTitle,
+    setNewTopicTitle,
+    topicCreateOpen,
+    setTopicCreateOpen,
+    creatingTopic,
+    handleCreateTopicSubmit
+  } = useChatPanelTopicCreate({
+    onCreateTopic
+  });
 
   const {
     messageContextMenu,
@@ -241,7 +250,6 @@ export function ChatPanel({
 
   const {
     sortedTopics,
-    topicsForSelector,
     filteredTopicsForPalette
   } = useChatPanelTopicLists({
     topics,
@@ -251,39 +259,6 @@ export function ChatPanel({
     getTopicUnreadCount,
     topicPaletteQuery
   });
-
-  useEffect(() => {
-    if (!topicCreateOpen) {
-      return;
-    }
-
-    const onPointerDown = (event: globalThis.PointerEvent) => {
-      const target = event.target as HTMLElement | null;
-      if (!target) {
-        setTopicCreateOpen(false);
-        return;
-      }
-
-      if (target.closest(".chat-topic-create-anchor") || target.closest(".chat-topic-create-popup")) {
-        return;
-      }
-
-      setTopicCreateOpen(false);
-    };
-
-    const onKeyDown = (event: globalThis.KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setTopicCreateOpen(false);
-      }
-    };
-
-    window.addEventListener("pointerdown", onPointerDown);
-    window.addEventListener("keydown", onKeyDown);
-    return () => {
-      window.removeEventListener("pointerdown", onPointerDown);
-      window.removeEventListener("keydown", onKeyDown);
-    };
-  }, [topicCreateOpen]);
 
   useChatTopLazyLoad({
     chatLogRef,
@@ -354,27 +329,6 @@ export function ChatPanel({
     onEditMessage,
     markRoomRead
   });
-
-  const handleCreateTopic = async () => {
-    const title = newTopicTitle.trim();
-    if (!title || creatingTopic) {
-      return;
-    }
-
-    setCreatingTopic(true);
-    try {
-      await onCreateTopic(title);
-      setNewTopicTitle("");
-      setTopicCreateOpen(false);
-    } finally {
-      setCreatingTopic(false);
-    }
-  };
-
-  const handleCreateTopicSubmit = (event: FormEvent) => {
-    event.preventDefault();
-    void handleCreateTopic();
-  };
 
   const topicPaletteListboxId = "chat-topic-palette-listbox";
 
