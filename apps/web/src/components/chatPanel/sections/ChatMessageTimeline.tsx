@@ -258,6 +258,8 @@ export function ChatMessageTimeline({
   unreadDividerVisible
 }: ChatMessageTimelineProps) {
   const quickReactionOptions = ["👍", "❤️", "😂", "🔥", "👏", "🎉", "🤯", "😢"];
+  const viewportWidth = typeof window !== "undefined" ? window.innerWidth : 1280;
+  const viewportHeight = typeof window !== "undefined" ? window.innerHeight : 720;
 
   const closeContextMenu = () => {
     setMessageContextMenu(null);
@@ -303,6 +305,18 @@ export function ChatMessageTimeline({
           : [];
         const linkPreview = extractFirstLinkPreview(messageVm.text);
         const contextMenuOpen = messageContextMenu?.messageId === messageVm.id;
+        const contextMenuX = messageContextMenu
+          ? Math.max(10, Math.min(messageContextMenu.x, viewportWidth - 216))
+          : 10;
+        const contextMenuY = messageContextMenu
+          ? Math.max(10, Math.min(messageContextMenu.y, viewportHeight - 330))
+          : 10;
+        const reactionMenuX = messageContextMenu
+          ? Math.max(10, Math.min(messageContextMenu.x, viewportWidth - 360))
+          : 10;
+        const reactionMenuY = messageContextMenu
+          ? Math.max(10, Math.min(messageContextMenu.y - 52, viewportHeight - 80))
+          : 10;
         const mergedReactions = [
           ...(hasThumbsUp ? ["👍"] : []),
           ...extraReactions.filter((emoji) => emoji !== "👍")
@@ -422,7 +436,7 @@ export function ChatMessageTimeline({
                 <>
                   <div
                     className="chat-message-reaction-menu"
-                    style={{ left: `${messageContextMenu?.x || 0}px`, top: `${(messageContextMenu?.y || 0) - 52}px` }}
+                    style={{ left: `${reactionMenuX}px`, top: `${reactionMenuY}px` }}
                     role="toolbar"
                     aria-label={t("chat.react")}
                   >
@@ -450,7 +464,7 @@ export function ChatMessageTimeline({
                     id={`chat-message-menu-${messageVm.id}`}
                     role="menu"
                     aria-label={t("chat.messageActions")}
-                    style={{ left: `${messageContextMenu?.x || 0}px`, top: `${messageContextMenu?.y || 0}px` }}
+                    style={{ left: `${contextMenuX}px`, top: `${contextMenuY}px` }}
                   >
                     <Button
                       type="button"
