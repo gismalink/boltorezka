@@ -849,6 +849,7 @@ function RoomRowInner({
             const menuKey = `${room.slug}:${member.userId || member.userName}`;
             const canManageMember = Boolean(member.userId) && !isCurrentUser;
             const memberActionsVariant = canManageMember ? "one" : "none";
+            const memberSettingsOpen = memberMenuOpenKey === menuKey && Boolean(member.userId) && memberMenuUserId === member.userId;
             const selectedCustomRoleIds = memberMenuProfile?.customRoles.map((role) => role.id) || [];
             const selectedCustomRoleNames = memberMenuProfile?.customRoles.map((role) => role.name).filter(Boolean) || [];
             const hiddenRoomsAvailable = memberMenuProfile?.hiddenRoomsAvailable || [];
@@ -882,9 +883,11 @@ function RoomRowInner({
                   );
                 }}
               >
-                <div className={`channel-member-main channel-member-main-actions-${memberActionsVariant} grid min-h-[22px] grid-cols-[auto_1fr_auto] items-center gap-1.5`}>
+                <div className={`channel-member-main channel-member-main-actions-${memberActionsVariant} grid min-h-[22px] grid-cols-[auto_1fr] items-center gap-1.5`}>
                   <span className="channel-member-avatar">{(member.userName || "U").charAt(0).toUpperCase()}</span>
                   <span className="channel-member-name">{member.userName}</span>
+                </div>
+                <div className={`channel-member-right-group channel-member-right-group-actions-${memberActionsVariant} ${memberSettingsOpen ? "channel-member-right-group-open" : ""}`}>
                   <span className="channel-member-icons" aria-hidden="true">
                     {roomHasVoiceState && !isCurrentUser ? (
                       <span className="channel-member-status-icon-anchor" data-tooltip={connectionTooltip}>
@@ -912,9 +915,8 @@ function RoomRowInner({
                       </span>
                     ) : null}
                   </span>
-                </div>
-                {canManageMember ? (
-                  <div className={`channel-member-settings-anchor channel-member-settings-anchor-actions-${memberActionsVariant} relative ${(memberMenuOpenKey === menuKey && member.userId && memberMenuUserId === member.userId) ? "channel-member-settings-anchor-open" : ""}`}>
+                  {canManageMember ? (
+                  <div className={`channel-member-settings-anchor channel-member-settings-anchor-actions-${memberActionsVariant} relative ${memberSettingsOpen ? "channel-member-settings-anchor-open" : ""}`}>
                     <button
                       type="button"
                       className="secondary icon-btn tiny channel-member-settings-btn"
@@ -940,7 +942,7 @@ function RoomRowInner({
                     >
                       <i className="bi bi-gear" aria-hidden="true" />
                     </button>
-                    {memberMenuOpenKey === menuKey && member.userId && memberMenuUserId === member.userId ? (
+                    {memberSettingsOpen ? (
                       <RoomMemberSettingsPopup
                         t={t}
                         open
@@ -979,6 +981,7 @@ function RoomRowInner({
                     ) : null}
                   </div>
                 ) : null}
+                </div>
               </li>
             );
           })}

@@ -2212,11 +2212,31 @@ pre {
 }
 
 .channel-member-main-actions-none {
-  padding-right: 0;
+  padding-right: 56px;
 }
 
 .channel-member-main-actions-one {
-  padding-right: calc(var(--icon-size-sm) + var(--space-xs));
+  padding-right: 84px;
+}
+
+.channel-member-right-group {
+  position: absolute;
+  right: var(--space-sm);
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.channel-member-right-group .channel-member-icons {
+  transition: transform 0.16s ease;
+}
+
+.channel-member-right-group-actions-one:hover .channel-member-icons,
+.channel-member-right-group-open.channel-member-right-group-actions-one .channel-member-icons,
+.channel-member-item:hover .channel-member-right-group-actions-one .channel-member-icons {
+  transform: translateX(-26px);
 }
 
 .channel-row-actions .channel-action-btn,
@@ -2522,10 +2542,7 @@ pre {
 }
 
 .channel-member-settings-anchor {
-  position: absolute;
-  right: var(--space-sm);
-  top: 50%;
-  transform: translateY(-50%);
+  position: relative;
   width: 0;
   overflow: hidden;
   opacity: 0;

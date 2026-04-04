@@ -354,14 +354,21 @@ export function useServerRoomUnreadCounters({
       return;
     }
 
-    const unreadCount = chatTopics.reduce((sum, topic) => sum + Math.max(0, Number(topic.unreadCount || 0)), 0);
     const activeRoomId = roomIdBySlug[normalizedSlug];
-    if (activeRoomId) {
-      unreadCacheRef.current.set(activeRoomId, {
-        unreadCount,
-        ts: Date.now()
-      });
+    if (!activeRoomId) {
+      return;
     }
+
+    const topicsBelongToActiveRoom = chatTopics.every((topic) => String(topic.roomId || "").trim() === activeRoomId);
+    if (!topicsBelongToActiveRoom) {
+      return;
+    }
+
+    const unreadCount = chatTopics.reduce((sum, topic) => sum + Math.max(0, Number(topic.unreadCount || 0)), 0);
+    unreadCacheRef.current.set(activeRoomId, {
+      unreadCount,
+      ts: Date.now()
+    });
 
     setRoomUnreadBySlug((prev) => {
       if ((prev[normalizedSlug] || 0) === unreadCount) {
