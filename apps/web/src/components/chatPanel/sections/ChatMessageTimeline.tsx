@@ -11,7 +11,6 @@ type ChatMessageTimelineProps = {
   chatLogRef: RefObject<HTMLDivElement>;
   messageViewModels: ChatMessageViewModel[];
   pinnedByMessageId: Record<string, boolean>;
-  thumbsUpByMessageId: Record<string, boolean>;
   reactionsByMessageId: Record<string, Record<string, { count: number; reacted: boolean }>>;
   messageContextMenu: { messageId: string; x: number; y: number } | null;
   setMessageContextMenu: (value: { messageId: string; x: number; y: number } | null) => void;
@@ -236,7 +235,6 @@ export function ChatMessageTimeline({
   chatLogRef,
   messageViewModels,
   pinnedByMessageId,
-  thumbsUpByMessageId,
   reactionsByMessageId,
   messageContextMenu,
   setMessageContextMenu,
@@ -258,7 +256,6 @@ export function ChatMessageTimeline({
   unreadDividerVisible
 }: ChatMessageTimelineProps) {
   const safeReactionsByMessageId = reactionsByMessageId || {};
-  const safeThumbsUpByMessageId = thumbsUpByMessageId || {};
   const quickReactionOptions = ["👍", "❤️", "😂", "🔥", "👏", "🎉", "🤯", "😢"];
   const viewportWidth = typeof window !== "undefined" ? window.innerWidth : 1280;
   const viewportHeight = typeof window !== "undefined" ? window.innerHeight : 720;
@@ -301,7 +298,6 @@ export function ChatMessageTimeline({
         const deliveryClass = messageVm.deliveryClass;
         const deliveryGlyph = messageVm.deliveryGlyph;
         const isPinned = Boolean(pinnedByMessageId[messageVm.id]);
-        const hasThumbsUp = Boolean(safeThumbsUpByMessageId[messageVm.id]);
         const messageReactions = safeReactionsByMessageId[messageVm.id] || {};
         const mergedReactions = Object.entries(messageReactions)
           .filter(([, value]) => Number(value?.count || 0) > 0)
@@ -455,9 +451,7 @@ export function ChatMessageTimeline({
                     aria-label={t("chat.react")}
                   >
                     {quickReactionOptions.map((emoji) => {
-                      const active = emoji === "👍"
-                        ? hasThumbsUp
-                        : Boolean(messageReactions[emoji]?.reacted);
+                      const active = Boolean(messageReactions[emoji]?.reacted);
                       return (
                         <button
                           key={`${messageVm.id}-quick-${emoji}`}

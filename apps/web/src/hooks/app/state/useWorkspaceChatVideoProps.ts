@@ -45,7 +45,6 @@ type ChatPanelProps = {
   onReportMessage: (messageId: string) => void;
   onReplyMessage: (messageId: string) => void;
   pinnedByMessageId: Record<string, boolean>;
-  thumbsUpByMessageId: Record<string, boolean>;
   reactionsByMessageId: Record<string, Record<string, { count: number; reacted: boolean }>>;
   onTogglePinMessage: (messageId: string) => void;
   onToggleMessageReaction: (messageId: string, emoji: string) => void;
@@ -116,10 +115,8 @@ type UseWorkspaceChatVideoPropsInput = {
   deleteOwnMessage: (messageId: string) => void;
   reportMessage: (messageId: string) => void;
   pinnedByMessageId: Record<string, boolean>;
-  thumbsUpByMessageId: Record<string, boolean>;
   reactionsByMessageId: Record<string, Record<string, { count: number; reacted: boolean }>>;
   togglePinMessage: (messageId: string) => void;
-  toggleThumbsUpReaction: (messageId: string) => void;
   toggleMessageReaction: (messageId: string, emoji: string) => void;
   updateTopic: (topicId: string, title: string) => Promise<void>;
   archiveTopic: (topicId: string) => Promise<void>;
@@ -186,10 +183,8 @@ export function useWorkspaceChatVideoProps({
   deleteOwnMessage,
   reportMessage,
   pinnedByMessageId,
-  thumbsUpByMessageId,
   reactionsByMessageId,
   togglePinMessage,
-  toggleThumbsUpReaction,
   toggleMessageReaction,
   updateTopic,
   archiveTopic,
@@ -270,7 +265,6 @@ export function useWorkspaceChatVideoProps({
     onReportMessage: reportMessage,
     onReplyMessage: replyToMessage,
     pinnedByMessageId,
-    thumbsUpByMessageId,
     reactionsByMessageId,
     onTogglePinMessage: togglePinMessage,
     onToggleMessageReaction: toggleMessageReaction,

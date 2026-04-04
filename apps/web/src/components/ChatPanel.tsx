@@ -57,7 +57,6 @@ type ChatPanelProps = {
   onReportMessage: (messageId: string) => void;
   onReplyMessage: (messageId: string) => void;
   pinnedByMessageId: Record<string, boolean>;
-  thumbsUpByMessageId: Record<string, boolean>;
   reactionsByMessageId: Record<string, Record<string, { count: number; reacted: boolean }>>;
   onTogglePinMessage: (messageId: string) => void;
   onToggleMessageReaction: (messageId: string, emoji: string) => void;
@@ -102,7 +101,6 @@ export function ChatPanel({
   onReportMessage,
   onReplyMessage,
   pinnedByMessageId,
-  thumbsUpByMessageId,
   reactionsByMessageId,
   onTogglePinMessage,
   onToggleMessageReaction,
@@ -705,7 +703,6 @@ export function ChatPanel({
         chatLogRef={chatLogRef}
         messageViewModels={messageViewModels}
         pinnedByMessageId={pinnedByMessageId}
-        thumbsUpByMessageId={thumbsUpByMessageId}
         reactionsByMessageId={reactionsByMessageId}
         messageContextMenu={messageContextMenu}
         setMessageContextMenu={setMessageContextMenu}
