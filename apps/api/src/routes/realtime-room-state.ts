@@ -138,6 +138,38 @@ export function createRealtimeRoomStateStore(params: {
       });
     }
 
+    const usersInRooms = new Set<string>();
+    for (const roomSockets of socketsByRoomId.values()) {
+      for (const socket of roomSockets) {
+        const state = socketState.get(socket);
+        if (state) {
+          usersInRooms.add(state.userId);
+        }
+      }
+    }
+
+    const outsideUsers: RoomPresenceUser[] = [];
+    const outsideSeen = new Set<string>();
+    for (const userSockets of socketsByUserId.values()) {
+      for (const socket of userSockets) {
+        const state = socketState.get(socket);
+        if (!state || usersInRooms.has(state.userId) || outsideSeen.has(state.userId)) {
+          continue;
+        }
+        outsideSeen.add(state.userId);
+        outsideUsers.push({ userId: state.userId, userName: state.userName });
+      }
+    }
+
+    if (outsideUsers.length > 0) {
+      result.push({
+        roomId: "",
+        roomSlug: "",
+        users: outsideUsers,
+        mediaTopology: "livekit" as MediaTopology
+      });
+    }
+
     return result;
   };
 
