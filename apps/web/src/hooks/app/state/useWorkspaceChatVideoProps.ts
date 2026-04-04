@@ -48,7 +48,6 @@ type ChatPanelProps = {
   thumbsUpByMessageId: Record<string, boolean>;
   reactionsByMessageId: Record<string, Record<string, { count: number; reacted: boolean }>>;
   onTogglePinMessage: (messageId: string) => void;
-  onToggleThumbsUpReaction: (messageId: string) => void;
   onToggleMessageReaction: (messageId: string, emoji: string) => void;
   onUpdateTopic: (topicId: string, title: string) => Promise<void>;
   onArchiveTopic: (topicId: string) => Promise<void>;
@@ -274,7 +273,6 @@ export function useWorkspaceChatVideoProps({
     thumbsUpByMessageId,
     reactionsByMessageId,
     onTogglePinMessage: togglePinMessage,
-    onToggleThumbsUpReaction: toggleThumbsUpReaction,
     onToggleMessageReaction: toggleMessageReaction,
     onUpdateTopic: updateTopic,
     onArchiveTopic: archiveTopic,

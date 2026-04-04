@@ -1,12 +1,12 @@
 // Purpose: presentation-only chat panel with message timeline, composer, and message-level UI actions.
-import { ClipboardEvent, FormEvent, KeyboardEvent, MouseEvent, RefObject, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ClipboardEvent, FormEvent, KeyboardEvent, RefObject, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Message, RoomTopic } from "../domain";
-import { api } from "../api";
 import { buildChatMessageViewModels } from "../utils/chatMessageViewModel";
 import { useChatPanelInboxNotifications } from "./chatPanel/hooks/useChatPanelInboxNotifications";
 import { useChatPanelAttachmentImages } from "./chatPanel/hooks/useChatPanelAttachmentImages";
 import { useChatPanelReadState } from "./chatPanel/hooks/useChatPanelReadState";
 import { useChatPanelTopicLists } from "./chatPanel/hooks/useChatPanelTopicLists";
+import { useChatPanelTopicActions } from "./chatPanel/hooks/useChatPanelTopicActions";
 import { useChatTopLazyLoad } from "./chatPanel/hooks/useChatTopLazyLoad";
 import { useChatPanelSearch } from "./chatPanel/hooks/useChatPanelSearch";
 import { useMessageContextMenu } from "./chatPanel/hooks/useMessageContextMenu";
@@ -60,7 +60,6 @@ type ChatPanelProps = {
   thumbsUpByMessageId: Record<string, boolean>;
   reactionsByMessageId: Record<string, Record<string, { count: number; reacted: boolean }>>;
   onTogglePinMessage: (messageId: string) => void;
-  onToggleThumbsUpReaction: (messageId: string) => void;
   onToggleMessageReaction: (messageId: string, emoji: string) => void;
   onUpdateTopic: (topicId: string, title: string) => Promise<void>;
   onArchiveTopic: (topicId: string) => Promise<void>;
@@ -106,7 +105,6 @@ export function ChatPanel({
   thumbsUpByMessageId,
   reactionsByMessageId,
   onTogglePinMessage,
-  onToggleThumbsUpReaction,
   onToggleMessageReaction,
   onUpdateTopic,
   onArchiveTopic,
@@ -116,22 +114,12 @@ export function ChatPanel({
   const [newTopicTitle, setNewTopicTitle] = useState("");
   const [topicCreateOpen, setTopicCreateOpen] = useState(false);
   const [creatingTopic, setCreatingTopic] = useState(false);
-  const [editingTopicTitle, setEditingTopicTitle] = useState("");
-  const [editingTopicSaving, setEditingTopicSaving] = useState(false);
-  const [editingTopicStatusText, setEditingTopicStatusText] = useState("");
-  const [archivingTopicId, setArchivingTopicId] = useState<string | null>(null);
   const [topicFilterMode] = useState<"all" | "active" | "unread" | "my" | "mentions" | "pinned" | "archived">("all");
   const [topicPaletteOpen, setTopicPaletteOpen] = useState(false);
   const [topicPaletteQuery, setTopicPaletteQuery] = useState("");
   const [topicPaletteSelectedIndex, setTopicPaletteSelectedIndex] = useState(0);
   const [notificationMode, setNotificationMode] = useState<"all" | "mentions" | "none">("all");
-  const [notificationSaving, setNotificationSaving] = useState(false);
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
-  const [topicContextMenu, setTopicContextMenu] = useState<{ topicId: string; x: number; y: number } | null>(null);
-  const [editingTopicTitleDraftInitial, setEditingTopicTitleDraftInitial] = useState("");
-  const [isEditingTopicTitleInline, setIsEditingTopicTitleInline] = useState(false);
-  const [topicDeleteConfirm, setTopicDeleteConfirm] = useState<{ topicId: string; title: string } | null>(null);
-  const [topicMutePresetById, setTopicMutePresetById] = useState<Record<string, "1h" | "8h" | "24h" | "forever" | "off">>({});
   const [hotkeyStatusText, setHotkeyStatusText] = useState("");
   const topicPaletteInputRef = useRef<HTMLInputElement | null>(null);
   const topicCreatePopupRef = useRef<HTMLDivElement | null>(null);
@@ -197,7 +185,6 @@ export function ChatPanel({
     getTopicUnreadCount,
     markReadSaving,
     markReadStatusText,
-    setMarkReadStatusText,
     markTopicRead,
     markRoomRead,
     markTopicUnreadFromMessage,
@@ -213,6 +200,39 @@ export function ChatPanel({
     messagesHasMore,
     onLoadOlderMessages,
     chatLogRef
+  });
+
+  const {
+    topicContextMenu,
+    editingTopicTitle,
+    setEditingTopicTitle,
+    editingTopicTitleDraftInitial,
+    setEditingTopicTitleDraftInitial,
+    isEditingTopicTitleInline,
+    setIsEditingTopicTitleInline,
+    editingTopicSaving,
+    editingTopicStatusText,
+    setEditingTopicStatusText,
+    archivingTopicId,
+    notificationSaving,
+    topicMutePresetById,
+    topicDeleteConfirm,
+    setTopicDeleteConfirm,
+    openTopicContextMenu,
+    runTopicMenuAction,
+    applyTopicRename,
+    confirmDeleteTopic,
+    setTopicMutePreset
+  } = useChatPanelTopicActions({
+    t,
+    authToken,
+    topics,
+    notificationMode,
+    markTopicRead,
+    onUpdateTopic,
+    onArchiveTopic,
+    onUnarchiveTopic,
+    onDeleteTopic
   });
 
   const { resolveAttachmentImageUrl } = useChatPanelAttachmentImages({
@@ -253,33 +273,6 @@ export function ChatPanel({
       window.removeEventListener("keydown", onKeyDown);
     };
   }, [previewImageUrl]);
-
-  useEffect(() => {
-    if (!topicContextMenu) {
-      return;
-    }
-
-    const onPointerDown = (event: globalThis.PointerEvent) => {
-      const target = event.target as HTMLElement | null;
-      if (!target || target.closest(".chat-topic-context-menu")) {
-        return;
-      }
-      setTopicContextMenu(null);
-    };
-
-    const onKeyDown = (event: globalThis.KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setTopicContextMenu(null);
-      }
-    };
-
-    window.addEventListener("pointerdown", onPointerDown);
-    window.addEventListener("keydown", onKeyDown);
-    return () => {
-      window.removeEventListener("pointerdown", onPointerDown);
-      window.removeEventListener("keydown", onKeyDown);
-    };
-  }, [topicContextMenu]);
 
   useEffect(() => {
     if (!topicPaletteOpen) {
@@ -387,18 +380,6 @@ export function ChatPanel({
     void handleCreateTopic();
   };
 
-  const buildMuteUntilIso = (hours: number | "forever"): string => {
-    const now = new Date();
-    if (hours === "forever") {
-      const forever = new Date(now);
-      forever.setFullYear(forever.getFullYear() + 20);
-      return forever.toISOString();
-    }
-
-    const next = new Date(now.getTime() + hours * 60 * 60 * 1000);
-    return next.toISOString();
-  };
-
   useEffect(() => {
     if (filteredTopicsForPalette.length === 0) {
       setTopicPaletteSelectedIndex(0);
@@ -418,29 +399,6 @@ export function ChatPanel({
 
   const activeTopic = useMemo(() => topics.find((topic) => topic.id === activeTopicId) ?? null, [topics, activeTopicId]);
   const activeTopicIsArchived = Boolean(activeTopic?.archivedAt);
-
-  const updateTopicMuteSettings = async (topicId: string, muteUntil: string | null) => {
-    if (!authToken || notificationSaving || !topicId) {
-      return;
-    }
-
-    setNotificationSaving(true);
-    setEditingTopicStatusText("");
-    try {
-      await api.updateNotificationSettings(authToken, {
-        scopeType: "topic",
-        topicId,
-        mode: notificationMode,
-        allowCriticalMentions: true,
-        muteUntil
-      });
-      setEditingTopicStatusText(t("chat.notificationSaved"));
-    } catch {
-      setEditingTopicStatusText(t("chat.notificationSaveError"));
-    } finally {
-      setNotificationSaving(false);
-    }
-  };
 
   const messageViewModels = useMemo(
     () => buildChatMessageViewModels(messages, currentUserId, 10 * 60 * 1000),
@@ -607,117 +565,6 @@ export function ChatPanel({
     const current = String(chatText || "");
     const separator = current.trim().length > 0 ? "\n\n" : "";
     onSetChatText(`${current}${separator}${quoteBlock}`);
-  };
-
-  const openTopicContextMenu = (topicId: string, event: MouseEvent<HTMLButtonElement>) => {
-    event.preventDefault();
-    event.stopPropagation();
-    const targetTopic = topics.find((topic) => topic.id === topicId);
-    setEditingTopicTitle(String(targetTopic?.title || ""));
-    setEditingTopicTitleDraftInitial(String(targetTopic?.title || ""));
-    setIsEditingTopicTitleInline(false);
-    setTopicContextMenu({ topicId, x: event.clientX, y: event.clientY });
-  };
-
-  const runTopicMenuAction = async (action: "read" | "archive" | "delete") => {
-    const targetTopicId = String(topicContextMenu?.topicId || "").trim();
-    if (!targetTopicId) {
-      setTopicContextMenu(null);
-      return;
-    }
-
-    const targetTopic = topics.find((topic) => topic.id === targetTopicId);
-    if (!targetTopic) {
-      setTopicContextMenu(null);
-      return;
-    }
-
-    if (action === "read") {
-      await markTopicRead(targetTopic.id);
-      setTopicContextMenu(null);
-      return;
-    }
-
-    if (action === "delete") {
-      setTopicDeleteConfirm({ topicId: targetTopic.id, title: targetTopic.title });
-      setTopicContextMenu(null);
-      return;
-    }
-
-    setArchivingTopicId(targetTopic.id);
-    try {
-      if (targetTopic.archivedAt) {
-        await onUnarchiveTopic(targetTopic.id);
-        setEditingTopicStatusText(t("chat.unarchiveTopicSuccess"));
-      } else {
-        await onArchiveTopic(targetTopic.id);
-        setEditingTopicStatusText(t("chat.archiveTopicSuccess"));
-      }
-    } catch {
-      setEditingTopicStatusText(targetTopic.archivedAt ? t("chat.unarchiveTopicError") : t("chat.archiveTopicError"));
-    } finally {
-      setArchivingTopicId(null);
-      setTopicContextMenu(null);
-    }
-  };
-
-  const applyTopicRename = async () => {
-    const targetTopicId = String(topicContextMenu?.topicId || "").trim();
-    const trimmedTitle = editingTopicTitle.trim();
-    if (!targetTopicId || !trimmedTitle || editingTopicSaving) {
-      return;
-    }
-
-    setEditingTopicSaving(true);
-    setEditingTopicStatusText("");
-    try {
-      await onUpdateTopic(targetTopicId, trimmedTitle);
-      setEditingTopicTitleDraftInitial(trimmedTitle);
-      setIsEditingTopicTitleInline(false);
-      setEditingTopicStatusText(t("chat.editTopicSuccess"));
-    } catch {
-      setEditingTopicStatusText(t("chat.editTopicError"));
-    } finally {
-      setEditingTopicSaving(false);
-    }
-  };
-
-  const confirmDeleteTopic = async () => {
-    const topicId = String(topicDeleteConfirm?.topicId || "").trim();
-    if (!topicId || editingTopicSaving) {
-      return;
-    }
-
-    setEditingTopicSaving(true);
-    try {
-      await onDeleteTopic(topicId);
-      setEditingTopicStatusText(t("chat.deleteTopicSuccess"));
-    } catch {
-      setEditingTopicStatusText(t("chat.deleteTopicError"));
-    } finally {
-      setEditingTopicSaving(false);
-      setTopicDeleteConfirm(null);
-    }
-  };
-
-  const setTopicMutePreset = async (preset: "1h" | "8h" | "24h" | "forever" | "off") => {
-    const targetTopicId = String(topicContextMenu?.topicId || "").trim();
-    if (!targetTopicId) {
-      return;
-    }
-
-    const activePreset = topicMutePresetById[targetTopicId] || null;
-    const nextPreset = activePreset === preset ? "off" : preset;
-
-    const muteUntil = nextPreset === "off"
-      ? null
-      : nextPreset === "forever"
-        ? buildMuteUntilIso("forever")
-        : buildMuteUntilIso(Number(nextPreset.replace("h", "")));
-
-    await updateTopicMuteSettings(targetTopicId, muteUntil);
-    setTopicMutePresetById((prev) => ({ ...prev, [targetTopicId]: nextPreset }));
-    setTopicContextMenu(null);
   };
 
   const topicPaletteListboxId = "chat-topic-palette-listbox";
