@@ -163,7 +163,8 @@ export function ChatPanel({
     includeHistoryLoad?: boolean;
   } | null>(null);
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
-  const [contextMenuMessageId, setContextMenuMessageId] = useState<string | null>(null);
+  const [messageContextMenu, setMessageContextMenu] = useState<{ messageId: string; x: number; y: number } | null>(null);
+  const [extraReactionsByMessageId, setExtraReactionsByMessageId] = useState<Record<string, string[]>>({});
   const [topicContextMenu, setTopicContextMenu] = useState<{ topicId: string; x: number; y: number } | null>(null);
   const [editingTopicTitleDraftInitial, setEditingTopicTitleDraftInitial] = useState("");
   const [isEditingTopicTitleInline, setIsEditingTopicTitleInline] = useState(false);
@@ -372,27 +373,27 @@ export function ChatPanel({
   }, [previewImageUrl]);
 
   useEffect(() => {
-    if (!contextMenuMessageId) {
+    if (!messageContextMenu) {
       return;
     }
 
     const onPointerDown = (event: globalThis.PointerEvent) => {
       const target = event.target as HTMLElement | null;
       if (!target) {
-        setContextMenuMessageId(null);
+        setMessageContextMenu(null);
         return;
       }
 
-      if (target.closest(".chat-context-menu") || target.closest(".chat-context-menu-toggle")) {
+      if (target.closest(".chat-message-context-menu") || target.closest(".chat-message-reaction-menu")) {
         return;
       }
 
-      setContextMenuMessageId(null);
+      setMessageContextMenu(null);
     };
 
     const onKeyDown = (event: globalThis.KeyboardEvent) => {
       if (event.key === "Escape") {
-        setContextMenuMessageId(null);
+        setMessageContextMenu(null);
       }
     };
 
@@ -402,7 +403,38 @@ export function ChatPanel({
       window.removeEventListener("pointerdown", onPointerDown);
       window.removeEventListener("keydown", onKeyDown);
     };
-  }, [contextMenuMessageId]);
+  }, [messageContextMenu]);
+
+  useEffect(() => {
+    const existingIds = new Set(messages.map((item) => String(item.id || "").trim()).filter(Boolean));
+    setExtraReactionsByMessageId((prev) => {
+      const next: Record<string, string[]> = {};
+      let changed = false;
+
+      Object.entries(prev).forEach(([messageId, reactions]) => {
+        if (!existingIds.has(messageId)) {
+          changed = true;
+          return;
+        }
+
+        const normalized = Array.from(new Set((Array.isArray(reactions) ? reactions : [])
+          .map((item) => String(item || "").trim())
+          .filter((item) => item && item !== "👍")));
+        if (normalized.length > 0) {
+          next[messageId] = normalized;
+        }
+        if (normalized.length !== reactions.length) {
+          changed = true;
+        }
+      });
+
+      if (!changed && Object.keys(next).length === Object.keys(prev).length) {
+        return prev;
+      }
+
+      return next;
+    });
+  }, [messages]);
 
   useEffect(() => {
     if (!topicContextMenu) {
@@ -1174,6 +1206,55 @@ export function ChatPanel({
     }
   };
 
+  const toggleMessageReaction = async (messageId: string, emoji: string) => {
+    const normalizedMessageId = String(messageId || "").trim();
+    const normalizedEmoji = String(emoji || "").trim();
+    if (!normalizedMessageId || !normalizedEmoji) {
+      return;
+    }
+
+    if (normalizedEmoji === "👍") {
+      onToggleThumbsUpReaction(normalizedMessageId);
+      return;
+    }
+
+    const normalizedToken = String(authToken || "").trim();
+    if (!normalizedToken || !activeTopicId) {
+      return;
+    }
+
+    const isActive = Boolean(extraReactionsByMessageId[normalizedMessageId]?.includes(normalizedEmoji));
+    try {
+      if (isActive) {
+        await api.removeMessageReaction(normalizedToken, normalizedMessageId, normalizedEmoji);
+      } else {
+        await api.addMessageReaction(normalizedToken, normalizedMessageId, normalizedEmoji);
+      }
+
+      setExtraReactionsByMessageId((prev) => {
+        const current = Array.isArray(prev[normalizedMessageId]) ? prev[normalizedMessageId] : [];
+        const set = new Set(current);
+        if (isActive) {
+          set.delete(normalizedEmoji);
+        } else {
+          set.add(normalizedEmoji);
+        }
+
+        const next = { ...prev };
+        const list = Array.from(set);
+        if (list.length === 0) {
+          delete next[normalizedMessageId];
+        } else {
+          next[normalizedMessageId] = list;
+        }
+
+        return next;
+      });
+    } catch {
+      // Keep UI stable even if reaction request fails.
+    }
+  };
+
   useEffect(() => {
     const normalizedTopicId = String(activeTopicId || "").trim();
     if (!normalizedTopicId) {
@@ -1739,7 +1820,7 @@ export function ChatPanel({
   };
 
   const closeContextMenu = () => {
-    setContextMenuMessageId(null);
+    setMessageContextMenu(null);
   };
 
   const openTopicContextMenu = (topicId: string, event: MouseEvent<HTMLButtonElement>) => {
@@ -1992,14 +2073,15 @@ export function ChatPanel({
         messageViewModels={messageViewModels}
         pinnedByMessageId={pinnedByMessageId}
         thumbsUpByMessageId={thumbsUpByMessageId}
-        contextMenuMessageId={contextMenuMessageId}
-        setContextMenuMessageId={setContextMenuMessageId}
+        messageContextMenu={messageContextMenu}
+        setMessageContextMenu={setMessageContextMenu}
         onReplyMessage={onReplyMessage}
         onEditMessage={onEditMessage}
         onDeleteMessage={onDeleteMessage}
         onReportMessage={onReportMessage}
         onTogglePinMessage={onTogglePinMessage}
-        onToggleThumbsUpReaction={onToggleThumbsUpReaction}
+        onToggleMessageReaction={toggleMessageReaction}
+        extraReactionsByMessageId={extraReactionsByMessageId}
         insertMentionToComposer={insertMentionToComposer}
         insertQuoteToComposer={insertQuoteToComposer}
         markTopicUnreadFromMessage={markTopicUnreadFromMessage}

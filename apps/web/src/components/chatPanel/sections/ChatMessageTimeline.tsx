@@ -1,4 +1,4 @@
-import { type ReactNode, type RefObject } from "react";
+import { type MouseEvent as ReactMouseEvent, type ReactNode, type RefObject } from "react";
 import type { ChatMessageViewModel } from "../../../utils/chatMessageViewModel";
 import { Button } from "../../uicomponents";
 
@@ -12,14 +12,15 @@ type ChatMessageTimelineProps = {
   messageViewModels: ChatMessageViewModel[];
   pinnedByMessageId: Record<string, boolean>;
   thumbsUpByMessageId: Record<string, boolean>;
-  contextMenuMessageId: string | null;
-  setContextMenuMessageId: (value: string | null | ((prev: string | null) => string | null)) => void;
+  extraReactionsByMessageId: Record<string, string[]>;
+  messageContextMenu: { messageId: string; x: number; y: number } | null;
+  setMessageContextMenu: (value: { messageId: string; x: number; y: number } | null) => void;
   onReplyMessage: (messageId: string) => void;
   onEditMessage: (messageId: string) => void;
   onDeleteMessage: (messageId: string) => void;
   onReportMessage: (messageId: string) => void;
   onTogglePinMessage: (messageId: string) => void;
-  onToggleThumbsUpReaction: (messageId: string) => void;
+  onToggleMessageReaction: (messageId: string, emoji: string) => void;
   insertMentionToComposer: (userName: string) => void;
   insertQuoteToComposer: (userName: string, text: string) => void;
   markTopicUnreadFromMessage: (messageId: string) => Promise<void>;
@@ -236,14 +237,15 @@ export function ChatMessageTimeline({
   messageViewModels,
   pinnedByMessageId,
   thumbsUpByMessageId,
-  contextMenuMessageId,
-  setContextMenuMessageId,
+  extraReactionsByMessageId,
+  messageContextMenu,
+  setMessageContextMenu,
   onReplyMessage,
   onEditMessage,
   onDeleteMessage,
   onReportMessage,
   onTogglePinMessage,
-  onToggleThumbsUpReaction,
+  onToggleMessageReaction,
   insertMentionToComposer,
   insertQuoteToComposer,
   markTopicUnreadFromMessage,
@@ -255,8 +257,20 @@ export function ChatMessageTimeline({
   unreadDividerMessageId,
   unreadDividerVisible
 }: ChatMessageTimelineProps) {
+  const quickReactionOptions = ["👍", "❤️", "😂", "🔥", "👏", "🎉", "🤯", "😢"];
+
   const closeContextMenu = () => {
-    setContextMenuMessageId(null);
+    setMessageContextMenu(null);
+  };
+
+  const openContextMenu = (event: ReactMouseEvent, messageId: string) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setMessageContextMenu({
+      messageId,
+      x: event.clientX,
+      y: event.clientY
+    });
   };
 
   return (
@@ -284,7 +298,15 @@ export function ChatMessageTimeline({
         const deliveryGlyph = messageVm.deliveryGlyph;
         const isPinned = Boolean(pinnedByMessageId[messageVm.id]);
         const hasThumbsUp = Boolean(thumbsUpByMessageId[messageVm.id]);
+        const extraReactions = Array.isArray(extraReactionsByMessageId[messageVm.id])
+          ? extraReactionsByMessageId[messageVm.id]
+          : [];
         const linkPreview = extractFirstLinkPreview(messageVm.text);
+        const contextMenuOpen = messageContextMenu?.messageId === messageVm.id;
+        const mergedReactions = [
+          ...(hasThumbsUp ? ["👍"] : []),
+          ...extraReactions.filter((emoji) => emoji !== "👍")
+        ];
 
         return (
           <div key={messageVm.id}>
@@ -296,6 +318,7 @@ export function ChatMessageTimeline({
           <article
             data-message-id={messageVm.id}
             className={`chat-message group grid items-end gap-2 ${isOwn ? "chat-message-own grid-cols-1 justify-items-end" : "grid-cols-[34px_minmax(0,1fr)]"}`}
+            onContextMenu={(event) => openContextMenu(event, messageVm.id)}
           >
             {!isOwn ? (
               <div className="chat-avatar-slot inline-flex h-[30px] w-[30px] items-end justify-center" aria-hidden="true">
@@ -308,208 +331,6 @@ export function ChatMessageTimeline({
             ) : null}
 
             <div className={`chat-bubble-wrap grid max-w-[min(92%,820px)] gap-0.5 ${isOwn ? "justify-items-end" : "justify-items-start"}`}>
-              {hasActiveRoom ? (
-                <div className={`chat-actions-side ${isOwn ? "chat-actions-side-own" : "chat-actions-side-peer"}`}>
-                  <Button
-                    type="button"
-                    className="secondary tiny icon-btn chat-context-menu-toggle"
-                    onClick={() => setContextMenuMessageId((prev) => (prev === messageVm.id ? null : messageVm.id))}
-                    aria-label={t("chat.messageActions")}
-                    title={t("chat.messageActions")}
-                    aria-haspopup="menu"
-                    aria-expanded={contextMenuMessageId === messageVm.id}
-                    aria-controls={`chat-message-menu-${messageVm.id}`}
-                  >
-                    <i className="bi bi-three-dots" aria-hidden="true" />
-                  </Button>
-                  {contextMenuMessageId === messageVm.id ? (
-                    <div className="chat-context-menu" id={`chat-message-menu-${messageVm.id}`} role="menu" aria-label={t("chat.messageActions")}>
-                      <Button
-                        type="button"
-                        className="secondary tiny"
-                        role="menuitem"
-                        onClick={() => {
-                          onReplyMessage(messageVm.id);
-                          closeContextMenu();
-                        }}
-                      >
-                        {t("chat.reply")}
-                      </Button>
-                      <Button
-                        type="button"
-                        className="secondary tiny"
-                        role="menuitem"
-                        onClick={() => {
-                          insertMentionToComposer(messageVm.userName);
-                          closeContextMenu();
-                        }}
-                      >
-                        {t("chat.mention")}
-                      </Button>
-                      <Button
-                        type="button"
-                        className="secondary tiny"
-                        role="menuitem"
-                        onClick={() => {
-                          insertQuoteToComposer(messageVm.userName, messageVm.text);
-                          closeContextMenu();
-                        }}
-                      >
-                        {t("chat.quote")}
-                      </Button>
-                      <Button
-                        type="button"
-                        className="secondary tiny"
-                        role="menuitem"
-                        onClick={() => {
-                          void markTopicUnreadFromMessage(messageVm.id);
-                          closeContextMenu();
-                        }}
-                        disabled={!activeTopicId || markReadSaving}
-                      >
-                        {t("chat.markUnreadFromHere")}
-                      </Button>
-                      <Button
-                        type="button"
-                        className="secondary tiny"
-                        role="menuitem"
-                        onClick={() => {
-                          onTogglePinMessage(messageVm.id);
-                          closeContextMenu();
-                        }}
-                      >
-                        {isPinned ? t("chat.unpin") : t("chat.pin")}
-                      </Button>
-                      <Button
-                        type="button"
-                        className="secondary tiny"
-                        role="menuitem"
-                        onClick={() => {
-                          onToggleThumbsUpReaction(messageVm.id);
-                          closeContextMenu();
-                        }}
-                      >
-                        {t("chat.react")}
-                      </Button>
-                      {canManageOwnMessage ? (
-                        <>
-                          <Button
-                            type="button"
-                            className="secondary tiny"
-                            role="menuitem"
-                            onClick={() => {
-                              onEditMessage(messageVm.id);
-                              closeContextMenu();
-                            }}
-                          >
-                            {t("chat.edit")}
-                          </Button>
-                          <Button
-                            type="button"
-                            className="secondary tiny"
-                            role="menuitem"
-                            onClick={() => {
-                              onDeleteMessage(messageVm.id);
-                              closeContextMenu();
-                            }}
-                          >
-                            {t("chat.delete")}
-                          </Button>
-                        </>
-                      ) : null}
-                    </div>
-                  ) : null}
-                  <Button
-                    type="button"
-                    className="secondary tiny icon-btn"
-                    onClick={() => onReplyMessage(messageVm.id)}
-                    aria-label={t("chat.reply")}
-                    title={t("chat.reply")}
-                  >
-                    <i className="bi bi-reply" aria-hidden="true" />
-                  </Button>
-                  <Button
-                    type="button"
-                    className="secondary tiny icon-btn"
-                    onClick={() => insertMentionToComposer(messageVm.userName)}
-                    aria-label={t("chat.mention")}
-                    title={t("chat.mention")}
-                  >
-                    <i className="bi bi-at" aria-hidden="true" />
-                  </Button>
-                  <Button
-                    type="button"
-                    className="secondary tiny icon-btn"
-                    onClick={() => insertQuoteToComposer(messageVm.userName, messageVm.text)}
-                    aria-label={t("chat.quote")}
-                    title={t("chat.quote")}
-                  >
-                    <i className="bi bi-blockquote-left" aria-hidden="true" />
-                  </Button>
-                  <Button
-                    type="button"
-                    className="secondary tiny icon-btn"
-                    onClick={() => void markTopicUnreadFromMessage(messageVm.id)}
-                    aria-label={t("chat.markUnreadFromHere")}
-                    title={t("chat.markUnreadFromHere")}
-                    disabled={!activeTopicId || markReadSaving}
-                  >
-                    <i className="bi bi-envelope-open" aria-hidden="true" />
-                  </Button>
-                  {!isOwn ? (
-                    <Button
-                      type="button"
-                      className="secondary tiny icon-btn"
-                      onClick={() => onReportMessage(messageVm.id)}
-                      aria-label={t("chat.reportMessage")}
-                      title={t("chat.reportMessage")}
-                    >
-                      <i className="bi bi-flag" aria-hidden="true" />
-                    </Button>
-                  ) : null}
-                  <Button
-                    type="button"
-                    className="secondary tiny icon-btn"
-                    onClick={() => onTogglePinMessage(messageVm.id)}
-                    aria-label={isPinned ? t("chat.unpin") : t("chat.pin")}
-                    title={isPinned ? t("chat.unpin") : t("chat.pin")}
-                  >
-                    <i className={`bi ${isPinned ? "bi-pin-angle-fill" : "bi-pin-angle"}`} aria-hidden="true" />
-                  </Button>
-                  <Button
-                    type="button"
-                    className="secondary tiny icon-btn"
-                    onClick={() => onToggleThumbsUpReaction(messageVm.id)}
-                    aria-label={t("chat.react")}
-                    title={t("chat.react")}
-                  >
-                    <i className={`bi ${hasThumbsUp ? "bi-hand-thumbs-up-fill" : "bi-hand-thumbs-up"}`} aria-hidden="true" />
-                  </Button>
-                  {canManageOwnMessage ? (
-                    <>
-                      <Button
-                        type="button"
-                        className="secondary tiny icon-btn"
-                        onClick={() => onEditMessage(messageVm.id)}
-                        aria-label={t("chat.edit")}
-                        title={t("chat.edit")}
-                      >
-                        <i className="bi bi-pencil-square" aria-hidden="true" />
-                      </Button>
-                      <Button
-                        type="button"
-                        className="secondary tiny icon-btn"
-                        onClick={() => onDeleteMessage(messageVm.id)}
-                        aria-label={t("chat.delete")}
-                        title={t("chat.delete")}
-                      >
-                        <i className="bi bi-trash3" aria-hidden="true" />
-                      </Button>
-                    </>
-                  ) : null}
-                </div>
-              ) : null}
-
               <div className="chat-bubble w-fit min-w-[120px]">
                 {showAuthor ? (
                   <div className="chat-meta flex items-baseline gap-2">
@@ -588,14 +409,147 @@ export function ChatMessageTimeline({
                     ))}
                   </div>
                 ) : null}
-                {isPinned || hasThumbsUp ? (
+                {isPinned || mergedReactions.length > 0 ? (
                   <div className="chat-reactions-row">
                     {isPinned ? <span className="chat-reaction-chip">{t("chat.pin")}</span> : null}
-                    {hasThumbsUp ? <span className="chat-reaction-chip">👍</span> : null}
+                    {mergedReactions.map((emoji) => <span key={`${messageVm.id}-${emoji}`} className="chat-reaction-chip">{emoji}</span>)}
                   </div>
                 ) : null}
                 {messageVm.editedAt ? <div className="chat-edited-mark">{t("chat.editedMark")}</div> : null}
               </div>
+
+              {hasActiveRoom && contextMenuOpen ? (
+                <>
+                  <div
+                    className="chat-message-reaction-menu"
+                    style={{ left: `${messageContextMenu?.x || 0}px`, top: `${(messageContextMenu?.y || 0) - 52}px` }}
+                    role="toolbar"
+                    aria-label={t("chat.react")}
+                  >
+                    {quickReactionOptions.map((emoji) => {
+                      const active = emoji === "👍"
+                        ? hasThumbsUp
+                        : extraReactions.includes(emoji);
+                      return (
+                        <button
+                          key={`${messageVm.id}-quick-${emoji}`}
+                          type="button"
+                          className={`chat-quick-reaction-btn ${active ? "chat-quick-reaction-btn-active" : ""}`}
+                          onClick={() => {
+                            onToggleMessageReaction(messageVm.id, emoji);
+                            closeContextMenu();
+                          }}
+                        >
+                          {emoji}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <div
+                    className="chat-message-context-menu"
+                    id={`chat-message-menu-${messageVm.id}`}
+                    role="menu"
+                    aria-label={t("chat.messageActions")}
+                    style={{ left: `${messageContextMenu?.x || 0}px`, top: `${messageContextMenu?.y || 0}px` }}
+                  >
+                    <Button
+                      type="button"
+                      className="secondary tiny"
+                      role="menuitem"
+                      onClick={() => {
+                        onReplyMessage(messageVm.id);
+                        closeContextMenu();
+                      }}
+                    >
+                      {t("chat.reply")}
+                    </Button>
+                    <Button
+                      type="button"
+                      className="secondary tiny"
+                      role="menuitem"
+                      onClick={() => {
+                        insertMentionToComposer(messageVm.userName);
+                        closeContextMenu();
+                      }}
+                    >
+                      {t("chat.mention")}
+                    </Button>
+                    <Button
+                      type="button"
+                      className="secondary tiny"
+                      role="menuitem"
+                      onClick={() => {
+                        insertQuoteToComposer(messageVm.userName, messageVm.text);
+                        closeContextMenu();
+                      }}
+                    >
+                      {t("chat.quote")}
+                    </Button>
+                    <Button
+                      type="button"
+                      className="secondary tiny"
+                      role="menuitem"
+                      onClick={() => {
+                        void markTopicUnreadFromMessage(messageVm.id);
+                        closeContextMenu();
+                      }}
+                      disabled={!activeTopicId || markReadSaving}
+                    >
+                      {t("chat.markUnreadFromHere")}
+                    </Button>
+                    <Button
+                      type="button"
+                      className="secondary tiny"
+                      role="menuitem"
+                      onClick={() => {
+                        onTogglePinMessage(messageVm.id);
+                        closeContextMenu();
+                      }}
+                    >
+                      {isPinned ? t("chat.unpin") : t("chat.pin")}
+                    </Button>
+                    {!isOwn ? (
+                      <Button
+                        type="button"
+                        className="secondary tiny"
+                        role="menuitem"
+                        onClick={() => {
+                          onReportMessage(messageVm.id);
+                          closeContextMenu();
+                        }}
+                      >
+                        {t("chat.reportMessage")}
+                      </Button>
+                    ) : null}
+                    {canManageOwnMessage ? (
+                      <>
+                        <Button
+                          type="button"
+                          className="secondary tiny"
+                          role="menuitem"
+                          onClick={() => {
+                            onEditMessage(messageVm.id);
+                            closeContextMenu();
+                          }}
+                        >
+                          {t("chat.edit")}
+                        </Button>
+                        <Button
+                          type="button"
+                          className="secondary tiny"
+                          role="menuitem"
+                          onClick={() => {
+                            onDeleteMessage(messageVm.id);
+                            closeContextMenu();
+                          }}
+                        >
+                          {t("chat.delete")}
+                        </Button>
+                      </>
+                    ) : null}
+                  </div>
+                </>
+              ) : null}
             </div>
           </article>
           </div>
