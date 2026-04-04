@@ -814,6 +814,7 @@ export function App() {
     chatPanelProps,
     videoWindowsOverlayProps
   } = useAppWorkspacePanelsRuntime(useAppWorkspacePanelsRuntimeInput({
+    token,
     t,
     canCreateRooms,
     canManageAudioQuality,

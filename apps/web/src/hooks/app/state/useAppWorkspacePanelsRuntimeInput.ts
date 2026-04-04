@@ -1,4 +1,5 @@
 import { useAppWorkspacePanelsRuntime } from "./useAppWorkspacePanelsRuntime";
+import { api } from "../../../api";
 
 type WorkspacePanelsRuntimeInput = Parameters<typeof useAppWorkspacePanelsRuntime>[0];
 
@@ -85,7 +86,40 @@ export function useAppWorkspacePanelsRuntimeInput(params: Record<string, unknown
         onLoadServerMemberProfile: p.loadServerMemberProfile,
         onLoadServerRoles: p.loadServerRoles,
         onSetServerMemberCustomRoles: p.handleSetServerMemberCustomRoles,
-        onSetServerMemberHiddenRoomAccess: p.handleSetServerMemberHiddenRoomAccess
+        onSetServerMemberHiddenRoomAccess: p.handleSetServerMemberHiddenRoomAccess,
+        onSetRoomNotificationMutePreset: async (roomId: string, preset: "1h" | "8h" | "24h" | "forever" | "off") => {
+          const token = String(p.token || "").trim();
+          const normalizedRoomId = String(roomId || "").trim();
+          if (!token || !normalizedRoomId) {
+            return;
+          }
+
+          const buildMuteUntilIso = (hours: number | "forever"): string => {
+            const now = new Date();
+            if (hours === "forever") {
+              const forever = new Date(now);
+              forever.setFullYear(forever.getFullYear() + 20);
+              return forever.toISOString();
+            }
+
+            const next = new Date(now.getTime() + hours * 60 * 60 * 1000);
+            return next.toISOString();
+          };
+
+          const muteUntil = preset === "off"
+            ? null
+            : preset === "forever"
+              ? buildMuteUntilIso("forever")
+              : buildMuteUntilIso(Number(preset.replace("h", "")));
+
+          await api.updateNotificationSettings(token, {
+            scopeType: "room",
+            roomId: normalizedRoomId,
+            mode: "all",
+            allowCriticalMentions: true,
+            muteUntil
+          });
+        }
       },
       serverProfileModal: {
         user: p.user,

@@ -7,7 +7,6 @@ import { buildChatMessageViewModels } from "../utils/chatMessageViewModel";
 import { useChatTopLazyLoad } from "./chatPanel/hooks/useChatTopLazyLoad";
 import { TopicTabsHeader } from "./chatPanel/sections/TopicTabsHeader";
 import { NotificationPanel } from "./chatPanel/sections/NotificationPanel";
-import { TopicToolbar } from "./chatPanel/sections/TopicToolbar";
 import { SearchPanel } from "./chatPanel/sections/SearchPanel";
 import { ChatMessageTimeline } from "./chatPanel/sections/ChatMessageTimeline";
 import { ChatComposerSection } from "./chatPanel/sections/ChatComposerSection";
@@ -113,7 +112,7 @@ export function ChatPanel({
   const [editingTopicSaving, setEditingTopicSaving] = useState(false);
   const [editingTopicStatusText, setEditingTopicStatusText] = useState("");
   const [archivingTopicId, setArchivingTopicId] = useState<string | null>(null);
-  const [topicFilterMode, setTopicFilterMode] = useState<"all" | "active" | "unread" | "my" | "mentions" | "pinned" | "archived">("all");
+  const [topicFilterMode] = useState<"all" | "active" | "unread" | "my" | "mentions" | "pinned" | "archived">("all");
   const [topicPaletteOpen, setTopicPaletteOpen] = useState(false);
   const [topicPaletteQuery, setTopicPaletteQuery] = useState("");
   const [topicPaletteSelectedIndex, setTopicPaletteSelectedIndex] = useState(0);
@@ -1015,11 +1014,6 @@ export function ChatPanel({
     return Math.max(0, Number(topic.unreadCount || 0));
   };
 
-  const roomUnreadCount = useMemo(
-    () => topics.reduce((sum, topic) => sum + getTopicUnreadCount(topic), 0),
-    [topics, topicUnreadOverrideById]
-  );
-
   const sortedTopics = useMemo(() => {
     return [...topics].sort((a, b) => {
       const pinnedDiff = Number(Boolean(b.isPinned)) - Number(Boolean(a.isPinned));
@@ -1191,11 +1185,6 @@ export function ChatPanel({
     }
   };
 
-  const activeTopicUnreadCount = useMemo(() => {
-    const activeTopic = topics.find((topic) => topic.id === activeTopicId);
-    return activeTopic ? getTopicUnreadCount(activeTopic) : 0;
-  }, [activeTopicId, topics, topicUnreadOverrideById]);
-
   const filteredTopicsForPalette = useMemo(() => {
     const query = topicPaletteQuery.trim().toLowerCase();
     if (!query) {
@@ -1221,8 +1210,6 @@ export function ChatPanel({
       return prev;
     });
   }, [filteredTopicsForPalette]);
-
-  const activeTopicLastMessageId = messages.length > 0 ? messages[messages.length - 1]?.id : undefined;
 
   const activeTopic = useMemo(() => topics.find((topic) => topic.id === activeTopicId) ?? null, [topics, activeTopicId]);
   const activeTopicIsArchived = Boolean(activeTopic?.archivedAt);
@@ -1753,22 +1740,6 @@ export function ChatPanel({
           markInboxItemRead={markInboxItemRead}
           formatMessageTime={formatMessageTime}
           notificationStatusText={notificationStatusText}
-        />
-      ) : null}
-      {hasActiveRoom ? (
-        <TopicToolbar
-          t={t}
-          hasTopics={hasTopics}
-          roomUnreadCount={roomUnreadCount}
-          topicFilterMode={topicFilterMode}
-          setTopicFilterMode={setTopicFilterMode}
-          activeTopicId={activeTopicId}
-          activeTopicUnreadCount={activeTopicUnreadCount}
-          activeTopicLastMessageId={activeTopicLastMessageId}
-          markReadSaving={markReadSaving}
-          markTopicRead={markTopicRead}
-          markRoomRead={markRoomRead}
-          markReadStatusText={markReadStatusText}
         />
       ) : null}
       {editingTopicStatusText ? <div className="chat-topic-read-status mb-2" role="status" aria-live="polite">{editingTopicStatusText}</div> : null}

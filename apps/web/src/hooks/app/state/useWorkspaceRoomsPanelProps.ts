@@ -106,7 +106,8 @@ export function useWorkspaceRoomsPanelProps({
   onLoadServerMemberProfile,
   onLoadServerRoles,
   onSetServerMemberCustomRoles,
-  onSetServerMemberHiddenRoomAccess
+  onSetServerMemberHiddenRoomAccess,
+  onSetRoomNotificationMutePreset
 }: UseWorkspaceRoomsPanelPropsInput): RoomsPanelProps {
   return {
     t,
@@ -188,6 +189,7 @@ export function useWorkspaceRoomsPanelProps({
     onLoadServerMemberProfile,
     onLoadServerRoles,
     onSetServerMemberCustomRoles,
-    onSetServerMemberHiddenRoomAccess
+    onSetServerMemberHiddenRoomAccess,
+    onSetRoomNotificationMutePreset
   };
 }

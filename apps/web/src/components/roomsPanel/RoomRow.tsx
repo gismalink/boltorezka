@@ -60,6 +60,7 @@ type RoomRowProps = Pick<
   | "onLoadServerRoles"
   | "onSetServerMemberCustomRoles"
   | "onSetServerMemberHiddenRoomAccess"
+  | "onSetRoomNotificationMutePreset"
   | "memberPreferencesByUserId"
 > & {
   room: Room;
@@ -108,6 +109,7 @@ export function RoomRow({
   onLoadServerRoles,
   onSetServerMemberCustomRoles,
   onSetServerMemberHiddenRoomAccess,
+  onSetRoomNotificationMutePreset,
   memberPreferencesByUserId,
   room,
   roomUnreadCount,
@@ -133,6 +135,9 @@ export function RoomRow({
   const [serverRolesLoading, setServerRolesLoading] = useState(false);
   const [memberPreferenceDrafts, setMemberPreferenceDrafts] = useState<Record<string, { volume: number; note: string }>>({});
   const [dropTargetActive, setDropTargetActive] = useState(false);
+  const [roomMutePreset, setRoomMutePreset] = useState<"1h" | "8h" | "24h" | "forever" | "off" | null>(null);
+  const [roomMuteSaving, setRoomMuteSaving] = useState(false);
+  const [roomMuteStatusText, setRoomMuteStatusText] = useState("");
   const roomSupportsRtc = room.kind !== "text";
   const roomSupportsVideo = room.kind === "text_voice_video";
   const roomHasVoiceState = roomSupportsRtc && room.slug === roomSlug;
@@ -205,12 +210,31 @@ export function RoomRow({
   useEffect(() => {
     if (channelSettingsPopupOpenId !== room.id) {
       setIsEditingChannelTitle(false);
+      setRoomMuteStatusText("");
       return;
     }
 
     setEditingChannelTitleInitialValue(editingRoomTitle);
     setIsEditingChannelTitle(false);
   }, [channelSettingsPopupOpenId, editingRoomTitle, room.id]);
+
+  const applyRoomMutePreset = async (preset: "1h" | "8h" | "24h" | "forever" | "off") => {
+    if (roomMuteSaving) {
+      return;
+    }
+
+    setRoomMuteSaving(true);
+    setRoomMuteStatusText("");
+    try {
+      await onSetRoomNotificationMutePreset(room.id, preset);
+      setRoomMutePreset(preset);
+      setRoomMuteStatusText(t("chat.notificationSaved"));
+    } catch {
+      setRoomMuteStatusText(t("chat.notificationSaveError"));
+    } finally {
+      setRoomMuteSaving(false);
+    }
+  };
 
   const closeMemberMenu = () => {
     setMemberMenuOpenKey(null);
@@ -562,6 +586,52 @@ export function RoomRow({
                     </div>
                   </div>
                 ) : null}
+                <div className="grid gap-2">
+                  <span>{t("chat.notificationMute")}</span>
+                  <div className="quality-toggle-group chat-topic-context-mute-row" role="group" aria-label={t("chat.notificationMute")}>
+                    <button
+                      type="button"
+                      className={`secondary quality-toggle-btn ${roomMutePreset === "1h" ? "quality-toggle-btn-active" : ""}`}
+                      onClick={() => void applyRoomMutePreset("1h")}
+                      disabled={roomMuteSaving}
+                    >
+                      1h
+                    </button>
+                    <button
+                      type="button"
+                      className={`secondary quality-toggle-btn ${roomMutePreset === "8h" ? "quality-toggle-btn-active" : ""}`}
+                      onClick={() => void applyRoomMutePreset("8h")}
+                      disabled={roomMuteSaving}
+                    >
+                      8h
+                    </button>
+                    <button
+                      type="button"
+                      className={`secondary quality-toggle-btn ${roomMutePreset === "24h" ? "quality-toggle-btn-active" : ""}`}
+                      onClick={() => void applyRoomMutePreset("24h")}
+                      disabled={roomMuteSaving}
+                    >
+                      24h
+                    </button>
+                    <button
+                      type="button"
+                      className={`secondary quality-toggle-btn ${roomMutePreset === "forever" ? "quality-toggle-btn-active" : ""}`}
+                      onClick={() => void applyRoomMutePreset("forever")}
+                      disabled={roomMuteSaving}
+                    >
+                      {t("chat.notificationMuteForever")}
+                    </button>
+                    <button
+                      type="button"
+                      className={`secondary quality-toggle-btn ${roomMutePreset === "off" ? "quality-toggle-btn-active" : ""}`}
+                      onClick={() => void applyRoomMutePreset("off")}
+                      disabled={roomMuteSaving}
+                    >
+                      {t("chat.notificationUnmute")}
+                    </button>
+                  </div>
+                  {roomMuteStatusText ? <div className="chat-topic-read-status" role="status" aria-live="polite">{roomMuteStatusText}</div> : null}
+                </div>
                 <button type="submit" className="icon-action"><i className="bi bi-check2" aria-hidden="true" /> {t("rooms.save")}</button>
                 <div className="row items-center gap-2 channel-settings-actions-row">
                   <button

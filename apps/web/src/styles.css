@@ -2876,6 +2876,16 @@ pre {
   gap: var(--space-md);
 }
 
+.settings-confirm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: var(--space-md);
+  background: color-mix(in srgb, #000 60%, transparent 40%);
+}
+
 .settings-confirm-title,
 .settings-confirm-text {
   margin: 0;

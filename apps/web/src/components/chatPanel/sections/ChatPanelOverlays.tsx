@@ -198,14 +198,14 @@ export function ChatPanelOverlays({
       {topicDeleteConfirm && typeof document !== "undefined"
         ? createPortal(
           <div
-            className="settings-confirm-overlay popup-layer-content fixed inset-0 z-[60] grid place-items-center bg-black/60 p-4"
+            className="settings-confirm-overlay"
             onMouseDown={(event) => {
               if (event.target === event.currentTarget) {
                 setTopicDeleteConfirm(null);
               }
             }}
           >
-            <div className="card compact settings-confirm-modal popup-layer-content w-full max-w-[420px]">
+            <div className="card compact settings-confirm-modal w-full max-w-[420px]">
               <h3 className="subheading settings-confirm-title">{t("chat.deleteTopic")}</h3>
               <p className="muted settings-confirm-text">
                 {t("chat.deleteTopicConfirm")}

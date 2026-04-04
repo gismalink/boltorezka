@@ -23,14 +23,14 @@ export function RoomsConfirmOverlay({ t, kind, onClose, onConfirm }: RoomsConfir
 
   return (
     <div
-      className="settings-confirm-overlay popup-layer-content fixed inset-0 z-[60] grid place-items-center bg-black/60 p-4"
+      className="settings-confirm-overlay"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) {
           onClose();
         }
       }}
     >
-      <div className="card compact settings-confirm-modal popup-layer-content w-full max-w-[420px]">
+      <div className="card compact settings-confirm-modal w-full max-w-[420px]">
         <h3 className="subheading settings-confirm-title">{t("rooms.confirmTitle")}</h3>
         <p className="muted settings-confirm-text">
           {kind === "clear-channel"

@@ -98,7 +98,8 @@ export function RoomsPanel({
   onLoadServerMemberProfile,
   onLoadServerRoles,
   onSetServerMemberCustomRoles,
-  onSetServerMemberHiddenRoomAccess
+  onSetServerMemberHiddenRoomAccess,
+  onSetRoomNotificationMutePreset
 }: RoomsPanelProps) {
   const [confirmPopup, setConfirmPopup] = useState<ConfirmPopupState>(null);
 
@@ -204,6 +205,7 @@ export function RoomsPanel({
       onLoadServerRoles={onLoadServerRoles}
       onSetServerMemberCustomRoles={onSetServerMemberCustomRoles}
       onSetServerMemberHiddenRoomAccess={onSetServerMemberHiddenRoomAccess}
+      onSetRoomNotificationMutePreset={onSetRoomNotificationMutePreset}
       memberPreferencesByUserId={memberPreferencesByUserId}
       room={room}
       roomUnreadCount={Math.max(0, Number(roomUnreadBySlug[room.slug] || 0))}

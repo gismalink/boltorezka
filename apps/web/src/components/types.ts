@@ -1,4 +1,4 @@
-import type { RefObject } from "react";
+import type { FormEvent, RefObject } from "react";
 import type { Lang, TranslateFn } from "../i18n";
 import type { ChannelAudioQualitySetting, PresenceMember, Room, RoomKind, RoomMemberPreference, RoomsTreeResponse, UiTheme, User } from "../domain";
 import type { VoiceMediaStatusSummary } from "../hooks/rtc/voiceCallTypes";
@@ -212,4 +212,5 @@ export type RoomsPanelProps = {
   onLoadServerRoles: () => Promise<Array<{ id: string; name: string; isBase: boolean }>>;
   onSetServerMemberCustomRoles: (userId: string, roleIds: string[]) => Promise<boolean>;
   onSetServerMemberHiddenRoomAccess: (userId: string, roomIds: string[]) => Promise<boolean>;
+  onSetRoomNotificationMutePreset: (roomId: string, preset: "1h" | "8h" | "24h" | "forever" | "off") => Promise<void>;
 };
