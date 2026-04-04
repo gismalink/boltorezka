@@ -1,5 +1,6 @@
 import { useCallback, useMemo, type Dispatch, type MutableRefObject, type RefObject, type SetStateAction } from "react";
 import type { Message, MessagesCursor, PresenceMember } from "../../../domain";
+import type { RoomTopic } from "../../../types";
 import type { ChatController, RealtimeClient } from "../../../services";
 
 type UseRealtimeChatLifecyclePropsInput = {
