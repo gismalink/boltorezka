@@ -168,7 +168,10 @@ export function ChatPanel({
   const [editingTopicTitleDraftInitial, setEditingTopicTitleDraftInitial] = useState("");
   const [isEditingTopicTitleInline, setIsEditingTopicTitleInline] = useState(false);
   const [topicDeleteConfirm, setTopicDeleteConfirm] = useState<{ topicId: string; title: string } | null>(null);
-  const autoMarkReadInFlightRef = useRef<Record<string, number>>({});
+  const autoMarkReadInFlightRef = useRef<Record<string, string>>({});
+  const entryUnreadCountByTopicRef = useRef<Record<string, number>>({});
+  const unreadEntryTopicRef = useRef<string>("");
+  const unreadBackfillAttemptsByTopicRef = useRef<Record<string, number>>({});
   const unreadDividerFadeTimerRef = useRef<number | null>(null);
   const unreadDividerScrolledTopicRef = useRef<string>("");
   const [entryUnreadDivider, setEntryUnreadDivider] = useState<{
@@ -1174,6 +1177,51 @@ export function ChatPanel({
   useEffect(() => {
     const normalizedTopicId = String(activeTopicId || "").trim();
     if (!normalizedTopicId) {
+      unreadEntryTopicRef.current = "";
+      return;
+    }
+
+    if (unreadEntryTopicRef.current === normalizedTopicId) {
+      return;
+    }
+
+    unreadEntryTopicRef.current = normalizedTopicId;
+    unreadDividerScrolledTopicRef.current = "";
+    unreadBackfillAttemptsByTopicRef.current[normalizedTopicId] = 0;
+
+    const activeTopic = topics.find((topic) => String(topic.id || "").trim() === normalizedTopicId);
+    entryUnreadCountByTopicRef.current[normalizedTopicId] = activeTopic ? getTopicUnreadCount(activeTopic) : 0;
+
+    setEntryUnreadDivider(null);
+    if (unreadDividerFadeTimerRef.current) {
+      window.clearTimeout(unreadDividerFadeTimerRef.current);
+      unreadDividerFadeTimerRef.current = null;
+    }
+  }, [activeTopicId, topics, getTopicUnreadCount]);
+
+  useEffect(() => {
+    const normalizedTopicId = String(activeTopicId || "").trim();
+    if (!normalizedTopicId || loadingOlderMessages || !messagesHasMore) {
+      return;
+    }
+
+    const entryUnreadCount = Math.max(0, Number(entryUnreadCountByTopicRef.current[normalizedTopicId] || 0));
+    if (entryUnreadCount <= 0 || messages.length > entryUnreadCount) {
+      return;
+    }
+
+    const attempts = Math.max(0, Number(unreadBackfillAttemptsByTopicRef.current[normalizedTopicId] || 0));
+    if (attempts >= 12) {
+      return;
+    }
+
+    unreadBackfillAttemptsByTopicRef.current[normalizedTopicId] = attempts + 1;
+    onLoadOlderMessages();
+  }, [activeTopicId, loadingOlderMessages, messages.length, messagesHasMore, onLoadOlderMessages]);
+
+  useEffect(() => {
+    const normalizedTopicId = String(activeTopicId || "").trim();
+    if (!normalizedTopicId) {
       setEntryUnreadDivider(null);
       unreadDividerScrolledTopicRef.current = "";
       if (unreadDividerFadeTimerRef.current) {
@@ -1187,15 +1235,14 @@ export function ChatPanel({
       return;
     }
 
-    const activeTopic = topics.find((topic) => String(topic.id || "").trim() === normalizedTopicId);
-    const unreadCount = Math.max(0, Number(activeTopic?.unreadCount || 0));
-    if (!activeTopic || unreadCount <= 0 || messages.length === 0) {
+    const entryUnreadCount = Math.max(0, Number(entryUnreadCountByTopicRef.current[normalizedTopicId] || 0));
+    if (entryUnreadCount <= 0 || messages.length === 0) {
       setEntryUnreadDivider(null);
       unreadDividerScrolledTopicRef.current = "";
       return;
     }
 
-    const dividerIndex = Math.max(0, Math.min(messages.length - 1, messages.length - unreadCount));
+    const dividerIndex = Math.max(0, Math.min(messages.length - 1, messages.length - entryUnreadCount));
     const dividerMessageId = String(messages[dividerIndex]?.id || "").trim();
     if (!dividerMessageId) {
       setEntryUnreadDivider(null);
@@ -1278,31 +1325,30 @@ export function ChatPanel({
     }
 
     const topic = topics.find((item) => String(item.id || "").trim() === normalizedTopicId);
-    if (!topic) {
+    if (topic) {
+      const topicRoomId = String(topic.roomId || "").trim();
+      if (!topicRoomId || topicRoomId !== normalizedRoomId) {
+        return;
+      }
+    }
+
+    const latestMessageId = String(messages[messages.length - 1]?.id || "").trim();
+    const markKey = `${normalizedTopicId}:${latestMessageId || "none"}`;
+    if (autoMarkReadInFlightRef.current[normalizedTopicId] === markKey) {
       return;
     }
 
-    const topicRoomId = String(topic.roomId || "").trim();
-    if (!topicRoomId || topicRoomId !== normalizedRoomId) {
-      return;
-    }
-
-    const topicUnread = Math.max(0, Number(topic.unreadCount || 0));
-    if (topicUnread === 0) {
-      return;
-    }
-
-    const inflightUnread = autoMarkReadInFlightRef.current[normalizedTopicId] || 0;
-    if (inflightUnread >= topicUnread) {
-      return;
-    }
-
-    autoMarkReadInFlightRef.current[normalizedTopicId] = topicUnread;
+    const sourceUnreadCount = topic ? Math.max(0, Number(topic.unreadCount || 0)) : 0;
+    autoMarkReadInFlightRef.current[normalizedTopicId] = markKey;
     let disposed = false;
 
-    void api.markTopicRead(normalizedToken, normalizedTopicId)
+    void api.markTopicRead(
+      normalizedToken,
+      normalizedTopicId,
+      latestMessageId ? { lastReadMessageId: latestMessageId } : {}
+    )
       .then(() => {
-        if (disposed) {
+        if (disposed || !topic) {
           return;
         }
 
@@ -1310,12 +1356,12 @@ export function ChatPanel({
           ...prev,
           [normalizedTopicId]: {
             unreadCount: 0,
-            sourceUnreadCount: topicUnread
+            sourceUnreadCount
           }
         }));
       })
       .finally(() => {
-        if (autoMarkReadInFlightRef.current[normalizedTopicId] === topicUnread) {
+        if (autoMarkReadInFlightRef.current[normalizedTopicId] === markKey) {
           delete autoMarkReadInFlightRef.current[normalizedTopicId];
         }
       });
@@ -1323,7 +1369,7 @@ export function ChatPanel({
     return () => {
       disposed = true;
     };
-  }, [activeTopicId, authToken, roomId, topics]);
+  }, [activeTopicId, authToken, messages, roomId, topics]);
 
   const filteredTopicsForPalette = useMemo(() => {
     const query = topicPaletteQuery.trim().toLowerCase();
