@@ -2029,6 +2029,10 @@ pre {
   transition: transform 0.16s ease;
 }
 
+.category-right-zone .category-group-unread + .category-group-unread {
+  margin-left: var(--space-xs);
+}
+
 .category-actions {
   position: absolute;
   right: 0;
@@ -2047,28 +2051,74 @@ pre {
 }
 
 .channel-chat-open-btn {
-  opacity: 0;
-  pointer-events: none;
+  opacity: 1;
+  pointer-events: auto;
   transition: opacity 0.12s ease;
 }
 
 .category-title-row:hover .category-action-btn,
-.category-title-row:focus-within .category-action-btn,
 .category-settings-popup .category-action-btn {
   opacity: 1;
   pointer-events: auto;
 }
 
-.category-title-row:hover .category-actions,
-.category-title-row:focus-within .category-actions {
+.category-title-row:hover .category-actions {
   width: var(--category-actions-width);
   opacity: 1;
   pointer-events: auto;
 }
 
-.category-title-row:hover .category-group-unread,
-.category-title-row:focus-within .category-group-unread {
+.category-title-row:hover .category-group-unread {
   transform: translateX(calc(-1 * (var(--category-actions-width) + var(--space-xs))));
+}
+
+.room-main-btn {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.channel-right-zone {
+  --channel-actions-width: 56px;
+  margin-left: auto;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.room-row-unread {
+  margin-left: 0;
+  transition: transform 0.16s ease;
+}
+
+.channel-row-actions {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transition: width 0.16s ease, opacity 0.12s ease;
+}
+
+.channel-row-actions .channel-action-btn,
+.channel-row-actions .channel-chat-open-btn {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.channel-row:hover .channel-row-actions,
+.channel-row-actions-open {
+  width: var(--channel-actions-width);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.channel-row:hover .room-row-unread,
+.channel-right-zone-open .room-row-unread {
+  transform: translateX(calc(-1 * (var(--channel-actions-width) + var(--space-xs))));
 }
 
 .category-settings-anchor,
@@ -2343,14 +2393,12 @@ pre {
 }
 
 .channel-row:hover .channel-action-btn,
-.channel-row:focus-within .channel-action-btn,
 .room-btn-active + .channel-settings-anchor .channel-action-btn {
   opacity: 1;
   pointer-events: auto;
 }
 
 .channel-row:hover .channel-chat-open-btn,
-.channel-row:focus-within .channel-chat-open-btn,
 .channel-chat-open-btn-active {
   opacity: 1;
   pointer-events: auto;

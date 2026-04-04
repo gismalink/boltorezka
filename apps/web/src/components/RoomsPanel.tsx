@@ -374,16 +374,32 @@ export function RoomsPanel({
             onSetEditingCategoryTitle={onSetEditingCategoryTitle}
             onSaveCategorySettings={onSaveCategorySettings}
             onMoveCategory={onMoveCategory}
-            unreadCount={Math.max(0, Number(categoryUnreadById[category.id] || 0))}
-            isUnreadMuted={
-              Array.isArray(category.channels)
-              && category.channels.length > 0
-              && category.channels.every((room) => {
-                const roomId = String(room.id || "").trim();
-                const preset = roomMutePresetByRoomId[roomId];
-                return preset != null && preset !== "off";
-              })
-            }
+            unreadCountMuted={(Array.isArray(category.channels) ? category.channels : []).reduce((sum, room) => {
+              const slug = String(room.slug || "").trim();
+              if (!slug) {
+                return sum;
+              }
+              const roomId = String(room.id || "").trim();
+              const preset = roomMutePresetByRoomId[roomId];
+              const unread = Math.max(0, Number(roomUnreadBySlug[slug] || 0));
+              if (preset != null && preset !== "off") {
+                return sum + unread;
+              }
+              return sum;
+            }, 0)}
+            unreadCountUnmuted={(Array.isArray(category.channels) ? category.channels : []).reduce((sum, room) => {
+              const slug = String(room.slug || "").trim();
+              if (!slug) {
+                return sum;
+              }
+              const roomId = String(room.id || "").trim();
+              const preset = roomMutePresetByRoomId[roomId];
+              const unread = Math.max(0, Number(roomUnreadBySlug[slug] || 0));
+              if (preset == null || preset === "off") {
+                return sum + unread;
+              }
+              return sum;
+            }, 0)}
             category={category}
             renderRoomRow={renderRoomRow}
             onRequestDeleteCategory={onRequestDeleteCategory}

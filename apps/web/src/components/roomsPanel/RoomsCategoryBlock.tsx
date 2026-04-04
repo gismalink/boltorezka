@@ -18,8 +18,8 @@ type RoomsCategoryBlockProps = Pick<
   | "onMoveCategory"
 > & {
   category: RoomCategory & { channels: Room[] };
-  unreadCount: number;
-  isUnreadMuted: boolean;
+  unreadCountUnmuted: number;
+  unreadCountMuted: number;
   renderRoomRow: (room: Room) => JSX.Element;
   onRequestDeleteCategory: () => void;
 };
@@ -36,8 +36,8 @@ function RoomsCategoryBlockInner({
   onSetEditingCategoryTitle,
   onSaveCategorySettings,
   onMoveCategory,
-  unreadCount,
-  isUnreadMuted,
+  unreadCountUnmuted,
+  unreadCountMuted,
   category,
   renderRoomRow,
   onRequestDeleteCategory
@@ -61,8 +61,11 @@ function RoomsCategoryBlockInner({
           <span className="text-[var(--font-size-sm)] uppercase tracking-[0.04em] text-[var(--pixel-muted)]">{category.title}</span>
         </Button>
         <div className="category-right-zone">
-          {unreadCount > 0 ? (
-            <span className={`room-unread-badge category-group-unread ${isUnreadMuted ? "room-unread-badge-muted" : ""}`}>{unreadCount}</span>
+          {unreadCountMuted > 0 ? (
+            <span className="room-unread-badge category-group-unread room-unread-badge-muted">{unreadCountMuted}</span>
+          ) : null}
+          {unreadCountUnmuted > 0 ? (
+            <span className="room-unread-badge category-group-unread">{unreadCountUnmuted}</span>
           ) : null}
         {canCreateRooms ? (
           <div className="category-actions inline-flex items-center gap-1">

@@ -430,7 +430,7 @@ function RoomRowInner({
       onDrop={onRoomDrop}
     >
       <button
-        className={`secondary room-btn ${roomIsActive ? "room-btn-active" : "room-btn-interactive"} ${dropTargetActive ? "room-btn-drop-target" : ""}`}
+        className={`secondary room-btn room-main-btn ${roomIsActive ? "room-btn-active" : "room-btn-interactive"} ${dropTargetActive ? "room-btn-drop-target" : ""}`}
         onClick={() => {
           if (!roomSupportsRtc) {
             onOpenRoomChat(room.slug);
@@ -454,9 +454,10 @@ function RoomRowInner({
       >
         <i className={`bi ${ROOM_KIND_ICON_CLASS[room.kind]}`} aria-hidden="true" />
         <span>{room.title}</span>
-        {roomUnreadCount > 0 ? <span className={`room-unread-badge ${isRoomUnreadMuted ? "room-unread-badge-muted" : ""}`}>{roomUnreadCount}</span> : null}
       </button>
-      <div className="inline-flex items-center gap-1">
+      <div className={`channel-right-zone ${roomChatActive || channelSettingsPopupOpenId === room.id ? "channel-right-zone-open" : ""}`}>
+      {roomUnreadCount > 0 ? <span className={`room-unread-badge room-row-unread ${isRoomUnreadMuted ? "room-unread-badge-muted" : ""}`}>{roomUnreadCount}</span> : null}
+      <div className={`channel-row-actions inline-flex items-center gap-1 ${roomChatActive || channelSettingsPopupOpenId === room.id ? "channel-row-actions-open" : ""}`}>
       {roomSupportsRtc ? (
         <button
           type="button"
@@ -740,7 +741,8 @@ function RoomRowInner({
             </div>
           </PopupPortal>
         </div>
-      ) : null}
+        ) : null}
+      </div>
       </div>
 
       {roomMembers.length > 0 ? (
