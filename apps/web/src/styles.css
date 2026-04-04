@@ -2148,10 +2148,6 @@ pre {
   pointer-events: none;
 }
 
-.channel-right-zone-chat-active .room-row-unread {
-  transform: translateX(-28px);
-}
-
 .room-row-unread {
   margin-left: 0;
   transition: transform 0.16s ease;
@@ -2170,7 +2166,6 @@ pre {
 }
 
 .channel-row-actions-chat-active {
-  width: 24px;
   opacity: 1;
   pointer-events: auto;
 }
@@ -2180,16 +2175,11 @@ pre {
 }
 
 .channel-row-actions-actions-one {
-  width: 24px;
+  width: 0;
 }
 
 .channel-row-actions-actions-two {
-  width: 52px;
-}
-
-.channel-row-actions .channel-chat-open-btn,
-.channel-row-actions .channel-action-btn {
-  pointer-events: auto;
+  width: 0;
 }
 
 .channel-member-main {
@@ -2204,6 +2194,23 @@ pre {
 .channel-row-actions .channel-chat-open-btn {
   opacity: 1;
   pointer-events: auto;
+}
+
+.channel-row-actions .channel-action-btn {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.channel-row-actions-chat-active.channel-row-actions-actions-none {
+  width: 0;
+}
+
+.channel-row-actions-chat-active.channel-row-actions-actions-one {
+  width: 24px;
+}
+
+.channel-row-actions-chat-active.channel-row-actions-actions-two {
+  width: 52px;
 }
 
 .channel-row-main:hover .channel-row-actions,
@@ -2230,6 +2237,18 @@ pre {
 .channel-row-main:hover .room-row-unread,
 .channel-right-zone-open .room-row-unread {
   transform: none;
+}
+
+.channel-right-zone-chat-active.channel-right-zone-actions-none .room-row-unread {
+  transform: none;
+}
+
+.channel-right-zone-chat-active.channel-right-zone-actions-one .room-row-unread {
+  transform: translateX(-28px);
+}
+
+.channel-right-zone-chat-active.channel-right-zone-actions-two .room-row-unread {
+  transform: translateX(-56px);
 }
 
 .channel-row-main-actions-one:hover .room-row-unread,
