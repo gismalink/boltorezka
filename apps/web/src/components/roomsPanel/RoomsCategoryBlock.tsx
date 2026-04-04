@@ -47,7 +47,7 @@ function RoomsCategoryBlockInner({
 
   return (
     <div className="mt-[var(--space-md)]">
-      <div className="category-title-row mb-[var(--space-xs)] flex items-center gap-2 rounded-[var(--radius-sm)] px-1.5 py-1 hover:bg-[var(--pixel-panel)]/55">
+      <div className="rooms-row-shell category-title-row mb-[var(--space-xs)] flex items-center gap-2 rounded-[var(--radius-sm)] py-1 hover:bg-[var(--pixel-panel)]/55">
         <Button
           type="button"
           className="secondary category-main-btn inline-flex items-center gap-[var(--space-xs)] border-0 bg-transparent p-0 shadow-none hover:translate-x-0 hover:translate-y-0 hover:shadow-none active:translate-x-0 active:translate-y-0 active:shadow-none focus-visible:shadow-none"

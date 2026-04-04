@@ -2009,6 +2009,21 @@ pre {
   transition: opacity 0.12s ease;
 }
 
+.rooms-row-shell {
+  width: 100%;
+  box-sizing: border-box;
+  padding-left: var(--space-sm);
+  padding-right: var(--space-sm);
+}
+
+.room-member-row-shell {
+  width: 100%;
+  box-sizing: border-box;
+  padding-left: var(--space-sm);
+  padding-right: var(--space-sm);
+  border-radius: var(--radius-sm);
+}
+
 .category-main-btn {
   flex: 1 1 auto;
   min-width: 0;
@@ -2346,10 +2361,25 @@ pre {
 }
 
 .channel-member-settings-btn {
-  opacity: 0;
-  pointer-events: none;
+  opacity: 1;
+  pointer-events: auto;
   min-height: 22px;
   min-width: 22px;
+}
+
+.channel-member-settings-anchor {
+  width: 0;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transition: width 0.16s ease, opacity 0.12s ease;
+}
+
+.channel-member-settings-anchor-open,
+.channel-member-item:hover .channel-member-settings-anchor {
+  width: 22px;
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .channel-member-item:hover .channel-member-kick-btn,
@@ -2359,7 +2389,7 @@ pre {
 }
 
 .channel-member-item:hover .channel-member-settings-btn,
-.channel-member-item:focus-within .channel-member-settings-btn {
+.channel-member-settings-anchor-open .channel-member-settings-btn {
   opacity: 1;
   pointer-events: auto;
 }

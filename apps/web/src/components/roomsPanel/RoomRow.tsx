@@ -423,7 +423,7 @@ function RoomRowInner({
   return (
     <>
     <div
-      className={`channel-row relative grid grid-cols-[1fr_auto] items-center gap-2 ${dropTargetActive ? "channel-row-drop-target" : ""}`}
+      className={`rooms-row-shell channel-row relative grid grid-cols-[1fr_auto] items-center gap-2 ${dropTargetActive ? "channel-row-drop-target" : ""}`}
       onDragOver={onRoomDragOver}
       onDragEnter={onRoomDragOver}
       onDragLeave={() => setDropTargetActive(false)}
@@ -850,7 +850,7 @@ function RoomRowInner({
             return (
               <li
                 key={`${room.id}-${member.userId || member.userName}`}
-                className={`channel-member-item grid min-h-[22px] grid-cols-[auto_1fr_auto_auto] items-center gap-1.5 ${isCurrentUser ? "channel-member-item-current" : ""} ${isVoiceActive ? "channel-member-item-voice-active" : ""} ${canKickMembers && canManageMember ? "channel-member-item-draggable" : ""}`}
+                className={`room-member-row-shell channel-member-item grid min-h-[22px] grid-cols-[auto_1fr_auto_auto] items-center gap-1.5 ${isCurrentUser ? "channel-member-item-current" : ""} ${isVoiceActive ? "channel-member-item-voice-active" : ""} ${canKickMembers && canManageMember ? "channel-member-item-draggable" : ""}`}
                 draggable={Boolean(canKickMembers && canManageMember)}
                 onDragStart={(event) => {
                   if (!member.userId) {
@@ -905,7 +905,7 @@ function RoomRowInner({
                   ) : null}
                 </span>
                 {canManageMember ? (
-                  <div className="channel-member-settings-anchor relative">
+                  <div className={`channel-member-settings-anchor relative ${(memberMenuOpenKey === menuKey && member.userId && memberMenuUserId === member.userId) ? "channel-member-settings-anchor-open" : ""}`}>
                     <button
                       type="button"
                       className="secondary icon-btn tiny channel-member-settings-btn"
