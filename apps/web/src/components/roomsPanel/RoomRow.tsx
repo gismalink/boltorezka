@@ -1,4 +1,4 @@
-import { memo, type CSSProperties, type DragEvent, type FormEvent, useEffect, useRef, useState } from "react";
+import { memo, type DragEvent, type FormEvent, useEffect, useRef, useState } from "react";
 import type { ChannelAudioQualitySetting, Room, RoomKind, RoomMemberPreference } from "../../domain";
 import { PopupPortal } from "../uicomponents";
 import type { RoomsPanelProps } from "../types";
@@ -146,19 +146,7 @@ function RoomRowInner({
   const roomHasChatAction = roomSupportsRtc;
   const roomHasSettingsAction = canCreateRooms;
   const roomActionButtonsCount = (roomHasChatAction ? 1 : 0) + (roomHasSettingsAction ? 1 : 0);
-  const roomActionWidth = roomActionButtonsCount > 1 ? 52 : roomActionButtonsCount === 1 ? 24 : 0;
-  const roomActionShift = roomActionButtonsCount > 0 ? roomActionWidth + 4 : 0;
-  const roomChatActiveWidth = roomHasChatAction ? 24 : 0;
-  const roomChatActiveShift = roomHasChatAction ? roomChatActiveWidth + 4 : 0;
-  const roomActionVars = {
-    "--channel-actions-width": `${roomActionWidth}px`,
-    "--channel-actions-shift": `${roomActionShift}px`,
-    "--channel-chat-active-width": `${roomChatActiveWidth}px`,
-    "--channel-chat-active-shift": `${roomChatActiveShift}px`
-  } as CSSProperties;
-  const roomMainButtonPaddingRight = roomActionButtonsCount > 0
-    ? `calc(var(--space-md) + ${roomActionWidth + 16}px)`
-    : "var(--space-md)";
+  const roomActionsVariant = roomActionButtonsCount > 1 ? "two" : roomActionButtonsCount === 1 ? "one" : "none";
   const roomScreenShareOwnerId = String(screenShareOwnerByRoomSlug[room.slug]?.userId || "").trim();
   const roomHasVoiceState = roomSupportsRtc && room.slug === roomSlug;
   const roomChatActive = activeChatRoomSlug === room.slug;
@@ -445,10 +433,9 @@ function RoomRowInner({
       onDragLeave={() => setDropTargetActive(false)}
       onDrop={onRoomDrop}
     >
-      <div className="channel-row-main relative flex items-center" style={roomActionVars}>
+      <div className={`channel-row-main channel-row-main-actions-${roomActionsVariant} relative flex items-center`}>
       <button
-        className={`secondary room-btn room-main-btn ${roomIsActive ? "room-btn-active" : "room-btn-interactive"} ${dropTargetActive ? "room-btn-drop-target" : ""}`}
-        style={{ paddingRight: roomMainButtonPaddingRight }}
+        className={`secondary room-btn room-main-btn room-main-btn-actions-${roomActionsVariant} ${roomIsActive ? "room-btn-active" : "room-btn-interactive"} ${dropTargetActive ? "room-btn-drop-target" : ""}`}
         onClick={() => {
           if (!roomSupportsRtc) {
             onOpenRoomChat(room.slug);
@@ -473,9 +460,9 @@ function RoomRowInner({
         <i className={`bi ${ROOM_KIND_ICON_CLASS[room.kind]}`} aria-hidden="true" />
         <span>{room.title}</span>
       </button>
-      <div className={`channel-right-zone ${roomChatActive && roomHasChatAction ? "channel-right-zone-chat-active" : ""} ${channelSettingsPopupOpenId === room.id ? "channel-right-zone-open" : ""}`}>
+      <div className={`channel-right-zone channel-right-zone-actions-${roomActionsVariant} ${roomChatActive && roomHasChatAction ? "channel-right-zone-chat-active" : ""} ${channelSettingsPopupOpenId === room.id ? "channel-right-zone-open" : ""}`}>
       {roomUnreadCount > 0 ? <span className={`room-unread-badge room-row-unread ${isRoomUnreadMuted ? "room-unread-badge-muted" : ""}`}>{roomUnreadCount}</span> : null}
-      <div className={`channel-row-actions inline-flex items-center gap-1 ${roomChatActive && roomHasChatAction ? "channel-row-actions-chat-active" : ""} ${channelSettingsPopupOpenId === room.id ? "channel-row-actions-open" : ""}`}>
+      <div className={`channel-row-actions channel-row-actions-actions-${roomActionsVariant} inline-flex items-center gap-1 ${roomChatActive && roomHasChatAction ? "channel-row-actions-chat-active" : ""} ${channelSettingsPopupOpenId === room.id ? "channel-row-actions-open" : ""}`}>
       {roomSupportsRtc ? (
         <button
           type="button"

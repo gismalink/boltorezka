@@ -2125,11 +2125,19 @@ pre {
   padding-right: calc(var(--space-md) + 72px);
 }
 
+.room-main-btn-actions-none {
+  padding-right: var(--space-md);
+}
+
+.room-main-btn-actions-one {
+  padding-right: calc(var(--space-md) + 40px);
+}
+
+.room-main-btn-actions-two {
+  padding-right: calc(var(--space-md) + 68px);
+}
+
 .channel-right-zone {
-  --channel-actions-width: 56px;
-  --channel-actions-shift: 60px;
-  --channel-chat-active-width: 26px;
-  --channel-chat-active-shift: 30px;
   position: absolute;
   right: var(--space-sm);
   top: 50%;
@@ -2141,7 +2149,7 @@ pre {
 }
 
 .channel-right-zone-chat-active .room-row-unread {
-  transform: translateX(calc(-1 * var(--channel-chat-active-shift)));
+  transform: translateX(-28px);
 }
 
 .room-row-unread {
@@ -2162,9 +2170,21 @@ pre {
 }
 
 .channel-row-actions-chat-active {
-  width: var(--channel-chat-active-width);
+  width: 24px;
   opacity: 1;
   pointer-events: auto;
+}
+
+.channel-row-actions-actions-none {
+  width: 0;
+}
+
+.channel-row-actions-actions-one {
+  width: 24px;
+}
+
+.channel-row-actions-actions-two {
+  width: 52px;
 }
 
 .channel-row-actions .channel-chat-open-btn,
@@ -2188,14 +2208,38 @@ pre {
 
 .channel-row-main:hover .channel-row-actions,
 .channel-row-actions-open {
-  width: var(--channel-actions-width);
   opacity: 1;
   pointer-events: auto;
 }
 
+.channel-row-main-actions-none:hover .channel-row-actions-actions-none,
+.channel-row-actions-open.channel-row-actions-actions-none {
+  width: 0;
+}
+
+.channel-row-main-actions-one:hover .channel-row-actions-actions-one,
+.channel-row-actions-open.channel-row-actions-actions-one {
+  width: 24px;
+}
+
+.channel-row-main-actions-two:hover .channel-row-actions-actions-two,
+.channel-row-actions-open.channel-row-actions-actions-two {
+  width: 52px;
+}
+
 .channel-row-main:hover .room-row-unread,
 .channel-right-zone-open .room-row-unread {
-  transform: translateX(calc(-1 * var(--channel-actions-shift)));
+  transform: none;
+}
+
+.channel-row-main-actions-one:hover .room-row-unread,
+.channel-right-zone-actions-one.channel-right-zone-open .room-row-unread {
+  transform: translateX(-28px);
+}
+
+.channel-row-main-actions-two:hover .room-row-unread,
+.channel-right-zone-actions-two.channel-right-zone-open .room-row-unread {
+  transform: translateX(-56px);
 }
 
 .category-settings-anchor,
