@@ -1,3 +1,4 @@
+import { memo } from "react";
 import type { Room } from "../../domain";
 import type { TranslateFn } from "../../i18n";
 
@@ -10,7 +11,7 @@ type RoomsUncategorizedBlockProps = {
   renderRoomRow: (room: Room) => JSX.Element;
 };
 
-export function RoomsUncategorizedBlock({
+function RoomsUncategorizedBlockInner({
   t,
   rooms,
   unreadCount,
@@ -47,3 +48,5 @@ export function RoomsUncategorizedBlock({
     </div>
   );
 }
+
+export const RoomsUncategorizedBlock = memo(RoomsUncategorizedBlockInner);

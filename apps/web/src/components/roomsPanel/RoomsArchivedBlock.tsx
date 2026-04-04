@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { Button } from "../uicomponents";
 import type { Room } from "../../domain";
 
@@ -15,7 +16,7 @@ type RoomsArchivedBlockProps = {
   onDeleteRoomPermanent: (room: Room) => void;
 };
 
-export function RoomsArchivedBlock({
+function RoomsArchivedBlockInner({
   canCreateRooms,
   title,
   restoreLabel,
@@ -94,3 +95,5 @@ export function RoomsArchivedBlock({
     </div>
   );
 }
+
+export const RoomsArchivedBlock = memo(RoomsArchivedBlockInner);

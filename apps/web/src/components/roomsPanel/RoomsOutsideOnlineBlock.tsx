@@ -1,3 +1,5 @@
+import { memo } from "react";
+
 type OutsideOnlineMember = {
   userId: string;
   userName: string;
@@ -12,7 +14,7 @@ type RoomsOutsideOnlineBlockProps = {
   onToggleCollapsed: () => void;
 };
 
-export function RoomsOutsideOnlineBlock({
+function RoomsOutsideOnlineBlockInner({
   title,
   collapsed,
   outsideOnlineCount,
@@ -56,3 +58,5 @@ export function RoomsOutsideOnlineBlock({
     </div>
   );
 }
+
+export const RoomsOutsideOnlineBlock = memo(RoomsOutsideOnlineBlockInner);

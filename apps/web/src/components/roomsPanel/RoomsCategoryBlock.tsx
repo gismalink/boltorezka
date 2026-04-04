@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { memo, useRef } from "react";
 import type { Room, RoomCategory } from "../../domain";
 import { Button, PopupPortal } from "../uicomponents";
 import type { RoomsPanelProps } from "../types";
@@ -23,7 +23,7 @@ type RoomsCategoryBlockProps = Pick<
   onRequestDeleteCategory: () => void;
 };
 
-export function RoomsCategoryBlock({
+function RoomsCategoryBlockInner({
   t,
   canCreateRooms,
   collapsedCategoryIds,
@@ -123,3 +123,5 @@ export function RoomsCategoryBlock({
     </div>
   );
 }
+
+export const RoomsCategoryBlock = memo(RoomsCategoryBlockInner);

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { Room } from "../domain";
 import { RoomsCategoryBlock } from "./roomsPanel/RoomsCategoryBlock";
 import { RoomRow } from "./roomsPanel/RoomRow";
@@ -118,7 +118,7 @@ export function RoomsPanel({
     onRoomMutePresetChange
   } = useRoomsPanelPersistentState();
 
-  const submitConfirmPopup = () => {
+  const submitConfirmPopup = useCallback(() => {
     if (!confirmPopup) {
       return;
     }
@@ -162,7 +162,7 @@ export function RoomsPanel({
 
     onDeleteChannel(confirmPopup.room);
     setConfirmPopup(null);
-  };
+  }, [archivedRooms, confirmPopup, onClearChannelMessages, onDeleteCategory, onDeleteChannel, onDeleteChannelPermanent, onRestoreChannel]);
 
   useEffect(() => {
     if (!confirmPopup) {
@@ -195,7 +195,35 @@ export function RoomsPanel({
     liveRoomMemberDetailsBySlug
   });
 
-  const renderRoomRow = (room: Room) => (
+  const onRequestDeleteCategory = useCallback(() => {
+    setConfirmPopup({ kind: "delete-category" });
+  }, []);
+
+  const onToggleUncategorizedCollapsed = useCallback(() => {
+    setUncategorizedCollapsed((prev) => !prev);
+  }, [setUncategorizedCollapsed]);
+
+  const onToggleOutsideRoomsCollapsed = useCallback(() => {
+    setOutsideRoomsCollapsed((prev) => !prev);
+  }, [setOutsideRoomsCollapsed]);
+
+  const onToggleArchivedCollapsed = useCallback(() => {
+    setArchivedCollapsed((prev) => !prev);
+  }, [setArchivedCollapsed]);
+
+  const onRequestDeleteAllArchived = useCallback(() => {
+    setConfirmPopup({ kind: "delete-all-archived" });
+  }, []);
+
+  const onRequestRestoreArchivedRoom = useCallback((room: Room) => {
+    setConfirmPopup({ kind: "restore-channel", room });
+  }, []);
+
+  const onRequestDeleteArchivedRoomPermanent = useCallback((room: Room) => {
+    setConfirmPopup({ kind: "delete-channel-permanent", room });
+  }, []);
+
+  const renderRoomRow = useCallback((room: Room) => (
     <RoomRow
       t={t}
       canCreateRooms={canCreateRooms}
@@ -251,7 +279,55 @@ export function RoomsPanel({
       onRequestClearChannel={(targetRoom) => setConfirmPopup({ kind: "clear-channel", room: targetRoom })}
       onRequestArchiveChannel={(targetRoom) => setConfirmPopup({ kind: "archive-channel", room: targetRoom })}
     />
-  );
+  ), [
+    t,
+    canCreateRooms,
+    canKickMembers,
+    canManageAudioQuality,
+    roomsTree,
+    roomSlug,
+    activeChatRoomSlug,
+    screenShareOwnerByRoomSlug,
+    voiceMicStateByUserIdInCurrentRoom,
+    voiceCameraEnabledByUserIdInCurrentRoom,
+    voiceAudioOutputMutedByUserIdInCurrentRoom,
+    audioMuted,
+    voiceRtcStateByUserIdInCurrentRoom,
+    voiceMediaStatusSummaryByUserIdInCurrentRoom,
+    channelSettingsPopupOpenId,
+    editingRoomTitle,
+    editingRoomKind,
+    editingRoomCategoryId,
+    editingRoomNsfw,
+    editingRoomHidden,
+    editingRoomAudioQualitySetting,
+    onSetEditingRoomTitle,
+    onSetEditingRoomKind,
+    onSetEditingRoomCategoryId,
+    onSetEditingRoomNsfw,
+    onSetEditingRoomHidden,
+    onSetEditingRoomAudioQualitySetting,
+    onSaveChannelSettings,
+    onMoveChannel,
+    onOpenChannelSettingsPopup,
+    onJoinRoom,
+    onOpenRoomChat,
+    onKickRoomMember,
+    onMoveRoomMember,
+    onSaveMemberPreference,
+    onLoadServerMemberProfile,
+    onLoadServerRoles,
+    onSetServerMemberCustomRoles,
+    onSetServerMemberHiddenRoomAccess,
+    onSetRoomNotificationMutePreset,
+    memberPreferencesByUserId,
+    roomUnreadBySlug,
+    roomMutePresetByRoomId,
+    onRoomMutePresetChange,
+    liveRoomMemberDetailsBySlug,
+    liveRoomMembersBySlug,
+    normalizedCurrentUserId
+  ]);
 
   return (
     <>
@@ -300,7 +376,7 @@ export function RoomsPanel({
             unreadCount={Math.max(0, Number(categoryUnreadById[category.id] || 0))}
             category={category}
             renderRoomRow={renderRoomRow}
-            onRequestDeleteCategory={() => setConfirmPopup({ kind: "delete-category" })}
+            onRequestDeleteCategory={onRequestDeleteCategory}
           />
         ))}
 
@@ -308,7 +384,7 @@ export function RoomsPanel({
           t={t}
           rooms={uncategorizedRooms}
           collapsed={uncategorizedCollapsed}
-          onToggleCollapsed={() => setUncategorizedCollapsed((prev) => !prev)}
+          onToggleCollapsed={onToggleUncategorizedCollapsed}
           unreadCount={uncategorizedUnreadCount}
           renderRoomRow={renderRoomRow}
         />
@@ -319,7 +395,7 @@ export function RoomsPanel({
           outsideOnlineCount={onlineOutsideRooms.length}
           unreadCount={outsideRoomsUnreadCount}
           members={onlineOutsideRooms}
-          onToggleCollapsed={() => setOutsideRoomsCollapsed((prev) => !prev)}
+          onToggleCollapsed={onToggleOutsideRoomsCollapsed}
         />
 
         <RoomsArchivedBlock
@@ -330,10 +406,10 @@ export function RoomsPanel({
           deleteAllLabel={t("rooms.deleteAllDeleted")}
           archivedRooms={archivedRooms}
           collapsed={archivedCollapsed}
-          onToggleCollapsed={() => setArchivedCollapsed((prev) => !prev)}
-          onDeleteAll={() => setConfirmPopup({ kind: "delete-all-archived" })}
-          onRestoreRoom={(room) => setConfirmPopup({ kind: "restore-channel", room })}
-          onDeleteRoomPermanent={(room) => setConfirmPopup({ kind: "delete-channel-permanent", room })}
+          onToggleCollapsed={onToggleArchivedCollapsed}
+          onDeleteAll={onRequestDeleteAllArchived}
+          onRestoreRoom={onRequestRestoreArchivedRoom}
+          onDeleteRoomPermanent={onRequestDeleteArchivedRoomPermanent}
         />
       </div>
       </section>
