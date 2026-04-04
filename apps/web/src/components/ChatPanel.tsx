@@ -1717,10 +1717,6 @@ export function ChatPanel({
     onSetChatText(`${current}${separator}${quoteBlock}`);
   };
 
-  const closeContextMenu = () => {
-    setMessageContextMenu(null);
-  };
-
   const openTopicContextMenu = (topicId: string, event: MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
     event.stopPropagation();

@@ -667,36 +667,6 @@
     opacity: 1;
     pointer-events: auto;
   }
-
-  .chat-actions-side {
-    position: static;
-    top: auto;
-    transform: none;
-    opacity: 1;
-    pointer-events: auto;
-    margin-bottom: 4px;
-  }
-
-  .chat-actions-side-own,
-  .chat-actions-side-peer {
-    right: auto;
-    left: auto;
-  }
-
-  .chat-actions-side .icon-btn:not(.chat-context-menu-toggle) {
-    display: none;
-  }
-
-  .chat-context-menu {
-    left: 0;
-    right: auto;
-    max-width: min(82vw, 260px);
-  }
-
-  .chat-message-own .chat-context-menu {
-    left: auto;
-    right: 0;
-  }
 }
 
 html,
@@ -1706,31 +1676,6 @@ pre {
   letter-spacing: 0.04em;
   background: var(--pixel-warn-bg, rgba(255, 170, 0, 0.15));
   color: var(--pixel-warn, #c80);
-}
-
-.chat-actions-side {
-  position: relative;
-}
-
-.chat-context-menu {
-  position: absolute;
-  top: calc(100% + 4px);
-  right: 0;
-  z-index: 20;
-  min-width: 168px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 8px;
-  border: 1px solid var(--pixel-border);
-  border-radius: 8px;
-  background: var(--pixel-panel-solid, rgba(20, 20, 20, 0.94));
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.3);
-}
-
-.chat-context-menu .btn {
-  width: 100%;
-  justify-content: flex-start;
 }
 
 .chat-topic-palette-overlay {
