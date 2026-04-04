@@ -41,9 +41,15 @@ export function useActiveRoomTopicsSync({
     const roomId = String(activeChatRoomId || "").trim();
     const roomSlug = String(activeChatRoomSlug || "").trim();
 
-    if (!tokenValue || !roomId) {
+    if (!tokenValue || !roomSlug) {
       setChatTopics([]);
       setActiveChatTopicId(null);
+      return;
+    }
+
+    // During room switch there may be a brief render where roomId is not yet resolved.
+    // Keep the previous topics/topic selection to avoid flashing an empty timeline.
+    if (!roomId) {
       return;
     }
 
@@ -81,8 +87,7 @@ export function useActiveRoomTopicsSync({
         }
 
         pushLog(`topics failed: ${(error as Error).message}`);
-        setChatTopics([]);
-        setActiveChatTopicId(null);
+        // Keep current topics/topic on transient failures; next successful sync will refresh state.
       });
 
     return () => {
