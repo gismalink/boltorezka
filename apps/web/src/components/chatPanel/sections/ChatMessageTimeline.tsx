@@ -25,7 +25,7 @@ type ChatMessageTimelineProps = {
   onTogglePinMessage: (messageId: string) => void;
   onToggleMessageReaction: (messageId: string, emoji: string) => void;
   insertMentionToComposer: (userName: string) => void;
-  insertQuoteToComposer: (userName: string, text: string) => void;
+  insertQuoteToComposer: (userName: string, text: string, selectedText: string) => void;
   markTopicUnreadFromMessage: (messageId: string) => Promise<void>;
   markReadSaving: boolean;
   formatMessageTime: (value: string) => string;
@@ -359,6 +359,40 @@ export function ChatMessageTimeline({
     closeContextMenu();
   };
 
+  const resolveMessageIdFromSelectionNode = (node: Node | null): string | null => {
+    if (!node) {
+      return null;
+    }
+
+    const element = node instanceof Element ? node : node.parentElement;
+    if (!element) {
+      return null;
+    }
+
+    const messageElement = element.closest("[data-message-id]");
+    return messageElement ? String(messageElement.getAttribute("data-message-id") || "").trim() || null : null;
+  };
+
+  const getSelectedQuoteTextForMessage = (messageId: string): string => {
+    if (typeof window === "undefined") {
+      return "";
+    }
+
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
+      return "";
+    }
+
+    const anchorMessageId = resolveMessageIdFromSelectionNode(selection.anchorNode);
+    const focusMessageId = resolveMessageIdFromSelectionNode(selection.focusNode);
+    if (!anchorMessageId || !focusMessageId || anchorMessageId !== messageId || focusMessageId !== messageId) {
+      return "";
+    }
+
+    const normalized = selection.toString().replace(/\s+/g, " ").trim();
+    return normalized.length > 280 ? `${normalized.slice(0, 277)}...` : normalized;
+  };
+
   return (
     <div className="chat-log min-h-0 flex-1" ref={chatLogRef}>
       {loadingOlderMessages ? <div className="chat-history-loading muted">{t("chat.loading")}</div> : null}
@@ -405,6 +439,7 @@ export function ChatMessageTimeline({
         const reactionMenuY = messageContextMenu
           ? Math.max(10, Math.min(messageContextMenu.y - 52, viewportHeight - 80))
           : 10;
+        const selectedQuoteText = contextMenuOpen ? getSelectedQuoteTextForMessage(messageVm.id) : "";
         return (
           <div key={messageVm.id}>
           {unreadDividerMessageId === messageVm.id ? (
@@ -587,9 +622,11 @@ export function ChatMessageTimeline({
                       className="secondary tiny"
                       role="menuitem"
                       onClick={() => {
-                        insertQuoteToComposer(messageVm.userName, messageVm.text);
+                        insertQuoteToComposer(messageVm.userName, messageVm.text, selectedQuoteText);
                         closeContextMenu();
                       }}
+                      disabled={!selectedQuoteText}
+                      title={selectedQuoteText ? t("chat.quote") : t("chat.quoteSelectHint")}
                     >
                       {t("chat.quote")}
                     </Button>

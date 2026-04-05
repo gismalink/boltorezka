@@ -7,8 +7,10 @@ type ChatComposerSectionProps = {
   activeTopicIsArchived: boolean;
   editingMessageId: string | null;
   replyingToMessage: { id: string; userName: string; text: string } | null;
+  quotedMessage: { userName: string; text: string } | null;
   onCancelEdit: () => void;
   onCancelReply: () => void;
+  onCancelQuote: () => void;
   onSendMessage: (event: FormEvent) => void;
   onSelectAttachmentFile: (file: File | null) => void;
   onClearPendingAttachment: () => void;
@@ -28,8 +30,10 @@ export function ChatComposerSection({
   activeTopicIsArchived,
   editingMessageId,
   replyingToMessage,
+  quotedMessage,
   onCancelEdit,
   onCancelReply,
+  onCancelQuote,
   onSendMessage,
   onSelectAttachmentFile,
   onClearPendingAttachment,
@@ -45,7 +49,7 @@ export function ChatComposerSection({
   const messageInputRef = useRef<HTMLTextAreaElement | null>(null);
 
   useEffect(() => {
-    if (!replyingToMessage || !hasActiveRoom || activeTopicIsArchived) {
+    if ((!replyingToMessage && !quotedMessage) || !hasActiveRoom || activeTopicIsArchived) {
       return;
     }
 
@@ -63,7 +67,7 @@ export function ChatComposerSection({
     return () => {
       window.cancelAnimationFrame(frameId);
     };
-  }, [replyingToMessage?.id, hasActiveRoom, activeTopicIsArchived]);
+  }, [replyingToMessage?.id, quotedMessage?.text, hasActiveRoom, activeTopicIsArchived]);
 
   return (
     <>
@@ -106,6 +110,18 @@ export function ChatComposerSection({
                 {String(replyingToMessage.text || "").replace(/\s+/g, " ").trim().slice(0, 120)}
               </span>
               <Button type="button" className="secondary tiny" onClick={onCancelReply}>{t("chat.cancelReply")}</Button>
+            </div>
+          ) : null}
+          {quotedMessage ? (
+            <div className="chat-reply-banner chat-compose-context-banner flex items-center justify-between gap-3">
+              <span>
+                {t("chat.replyingToQuote")}
+                {" "}
+                <strong>{quotedMessage.userName}</strong>
+                {": "}
+                {String(quotedMessage.text || "").replace(/\s+/g, " ").trim().slice(0, 120)}
+              </span>
+              <Button type="button" className="secondary tiny" onClick={onCancelQuote}>{t("chat.cancelQuote")}</Button>
             </div>
           ) : null}
           <textarea

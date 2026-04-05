@@ -1,5 +1,5 @@
 // Purpose: presentation-only chat panel with message timeline, composer, and message-level UI actions.
-import { ClipboardEvent, FormEvent, KeyboardEvent, RefObject, useEffect, useMemo, useRef, useState } from "react";
+import { ClipboardEvent, FormEvent, KeyboardEvent, RefObject, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Message, RoomTopic } from "../domain";
 import { buildChatMessageViewModels } from "../utils/chatMessageViewModel";
 import { CHAT_MEMORY_METRICS_ENABLED, CHAT_MEMORY_METRICS_EVERY } from "../constants/appConfig";
@@ -120,6 +120,7 @@ export function ChatPanel({
   const [topicPaletteSelectedIndex, setTopicPaletteSelectedIndex] = useState(0);
   const [notificationMode, setNotificationMode] = useState<"all" | "mentions" | "none">("all");
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
+  const [quotedMessage, setQuotedMessage] = useState<{ userName: string; text: string } | null>(null);
   const [hotkeyStatusText, setHotkeyStatusText] = useState("");
   const attachmentInputRef = useRef<HTMLInputElement | null>(null);
   const messageVmBuildMsRef = useRef(0);
@@ -347,6 +348,40 @@ export function ChatPanel({
     onSetChatText
   });
 
+  const handleInsertQuoteToComposer = useCallback((userName: string, _messageText: string, selectedText: string) => {
+    const normalizedQuote = String(selectedText || "").replace(/\s+/g, " ").trim();
+    if (!normalizedQuote) {
+      return;
+    }
+
+    if (editingMessageId) {
+      onCancelEdit();
+    }
+    if (replyingToMessage) {
+      onCancelReply();
+    }
+
+    setQuotedMessage({
+      userName: String(userName || "").trim() || "Unknown",
+      text: normalizedQuote
+    });
+    insertQuoteToComposer(userName, normalizedQuote);
+  }, [editingMessageId, insertQuoteToComposer, onCancelEdit, onCancelReply, replyingToMessage]);
+
+  const cancelQuote = useCallback(() => {
+    setQuotedMessage(null);
+  }, []);
+
+  useEffect(() => {
+    if (!quotedMessage) {
+      return;
+    }
+
+    if (!chatText.trim()) {
+      setQuotedMessage(null);
+    }
+  }, [chatText, quotedMessage]);
+
   const {
     topicPaletteInputRef,
     openTopicPalette,
@@ -477,7 +512,7 @@ export function ChatPanel({
         onTogglePinMessage={onTogglePinMessage}
         onToggleMessageReaction={onToggleMessageReaction}
         insertMentionToComposer={insertMentionToComposer}
-        insertQuoteToComposer={insertQuoteToComposer}
+        insertQuoteToComposer={handleInsertQuoteToComposer}
         markTopicUnreadFromMessage={markTopicUnreadFromMessage}
         markReadSaving={markReadSaving}
         formatMessageTime={formatMessageTime}
@@ -493,8 +528,10 @@ export function ChatPanel({
         activeTopicIsArchived={activeTopicIsArchived}
         editingMessageId={editingMessageId}
         replyingToMessage={replyingToMessage}
+        quotedMessage={quotedMessage}
         onCancelEdit={onCancelEdit}
         onCancelReply={onCancelReply}
+        onCancelQuote={cancelQuote}
         onSendMessage={onSendMessage}
         onSelectAttachmentFile={onSelectAttachmentFile}
         onClearPendingAttachment={onClearPendingAttachment}

@@ -51,13 +51,12 @@ export function useChatPanelComposerHelpers({
     onSetChatText(`${current}${separator}@${normalizedUserName} `);
   }, [chatText, onSetChatText]);
 
-  const insertQuoteToComposer = useCallback((userName: string, text: string) => {
+  const insertQuoteToComposer = useCallback((_userName: string, text: string) => {
     const normalizedText = String(text || "").replace(/\r/g, "").trim();
     if (!normalizedText) {
       return;
     }
 
-    const normalizedUserName = String(userName || "").trim();
     const quoteSource = normalizedText.length > 280 ? `${normalizedText.slice(0, 277)}...` : normalizedText;
     const quotedLines = quoteSource
       .split("\n")
@@ -65,13 +64,9 @@ export function useChatPanelComposerHelpers({
       .map((line) => `> ${String(line || "").trim() || "..."}`)
       .join("\n");
 
-    const quoteBlock = normalizedUserName
-      ? `@${normalizedUserName}:\n${quotedLines}\n`
-      : `${quotedLines}\n`;
-
     const current = String(chatText || "");
     const separator = current.trim().length > 0 ? "\n\n" : "";
-    onSetChatText(`${current}${separator}${quoteBlock}`);
+    onSetChatText(`${current}${separator}${quotedLines}\n`);
   }, [chatText, onSetChatText]);
 
   return {
