@@ -127,7 +127,7 @@ export function useChatPanelSearch({
       window.setTimeout(() => {
         targetNode.classList.remove("chat-message-jump-target");
         targetNode.classList.remove("chat-message-jump-target-mention");
-      }, searchHasMention ? 2600 : 1600);
+      }, searchHasMention ? 3000 : 2200);
       setSearchJumpTarget(null);
       setSearchJumpStatusText("");
       return;

@@ -25,6 +25,13 @@ type ChatMessageTimelineProps = {
   onTogglePinMessage: (messageId: string) => void;
   onToggleMessageReaction: (messageId: string, emoji: string) => void;
   insertMentionToComposer: (userName: string) => void;
+  mentionCandidates: Array<{
+    key: string;
+    kind: "user" | "tag" | "all";
+    handle: string;
+    label: string;
+    userId?: string;
+  }>;
   insertQuoteToComposer: (userName: string, text: string, selectedText: string) => void;
   markTopicUnreadFromMessage: (messageId: string) => Promise<void>;
   markReadSaving: boolean;
@@ -36,7 +43,11 @@ type ChatMessageTimelineProps = {
   unreadDividerVisible: boolean;
 };
 
-const renderMessageText = (value: string): ReactNode[] => {
+const renderMessageText = (
+  value: string,
+  resolveMentionUser: (handle: string) => { label: string; handle: string; userId?: string } | null,
+  onMentionClick: (input: { label: string; handle: string; userId?: string }) => void
+): ReactNode[] => {
   const text = String(value || "");
   const urlPattern = /((https?:\/\/|www\.)[^\s<]+)/gi;
   const mentionPattern = /(^|\s)(@[\p{L}\p{N}._-]{2,32})/gu;
@@ -110,9 +121,32 @@ const renderMessageText = (value: string): ReactNode[] => {
       }
 
       withMentions.push(
-        <span key={`mention-${mentionKeyIndex}-${absoluteStart}`} className="chat-mention">
-          {mention}
-        </span>
+        (() => {
+          const normalizedHandle = mention.slice(1).toLowerCase();
+          const mentionUser = resolveMentionUser(normalizedHandle);
+          if (mentionUser) {
+            return (
+              <button
+                key={`mention-${mentionKeyIndex}-${absoluteStart}`}
+                type="button"
+                className="chat-mention chat-mention-btn"
+                onClick={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  onMentionClick(mentionUser);
+                }}
+              >
+                {mention}
+              </button>
+            );
+          }
+
+          return (
+            <span key={`mention-${mentionKeyIndex}-${absoluteStart}`} className="chat-mention">
+              {mention}
+            </span>
+          );
+        })()
       );
       mentionKeyIndex += 1;
       cursor = absoluteStart + mention.length;
@@ -249,6 +283,7 @@ export function ChatMessageTimeline({
   onTogglePinMessage,
   onToggleMessageReaction,
   insertMentionToComposer,
+  mentionCandidates,
   insertQuoteToComposer,
   markTopicUnreadFromMessage,
   markReadSaving,
@@ -260,10 +295,35 @@ export function ChatMessageTimeline({
   unreadDividerVisible
 }: ChatMessageTimelineProps) {
   const [renderedMessagesCount, setRenderedMessagesCount] = useState(INITIAL_TIMELINE_RENDER_COUNT);
+  const [selectedMentionProfile, setSelectedMentionProfile] = useState<{ label: string; handle: string; userId?: string } | null>(null);
   const safeReactionsByMessageId = reactionsByMessageId || {};
   const quickReactionOptions = ["👍", "❤️", "😂", "🔥", "👏", "🎉", "🤯", "😢"];
   const viewportWidth = typeof window !== "undefined" ? window.innerWidth : 1280;
   const viewportHeight = typeof window !== "undefined" ? window.innerHeight : 720;
+
+  const mentionUsersByHandle = useMemo(() => {
+    const byHandle = new Map<string, { label: string; handle: string; userId?: string }>();
+
+    (Array.isArray(mentionCandidates) ? mentionCandidates : []).forEach((candidate) => {
+      if (candidate.kind !== "user") {
+        return;
+      }
+
+      const handle = String(candidate.handle || "").trim().toLowerCase();
+      const label = String(candidate.label || "").trim();
+      if (!handle || !label || byHandle.has(handle)) {
+        return;
+      }
+
+      byHandle.set(handle, {
+        label,
+        handle,
+        userId: String(candidate.userId || "").trim() || undefined
+      });
+    });
+
+    return byHandle;
+  }, [mentionCandidates]);
 
   useEffect(() => {
     setRenderedMessagesCount(INITIAL_TIMELINE_RENDER_COUNT);
@@ -477,7 +537,13 @@ export function ChatMessageTimeline({
                       <span className="chat-inline-reply-text">{String(messageVm.replyPreview.text || "").replace(/\s+/g, " ").trim().slice(0, 120)}</span>
                     </div>
                   ) : null}
-                  <p className="chat-text">{renderMessageText(messageVm.text)}</p>
+                  <p className="chat-text">
+                    {renderMessageText(
+                      messageVm.text,
+                      (handle) => mentionUsersByHandle.get(handle) || null,
+                      (input) => setSelectedMentionProfile(input)
+                    )}
+                  </p>
                   <span className="chat-time-wrap">
                     <span className="chat-time">{formatMessageTime(messageVm.createdAt)}</span>
                     {isOwn && deliveryGlyph ? (
@@ -700,6 +766,24 @@ export function ChatMessageTimeline({
           </div>
         );
       })}
+      {selectedMentionProfile ? (
+        <div className="fixed inset-0 z-[185] flex items-center justify-center bg-black/65 px-4" role="dialog" aria-modal="true">
+          <div className="card compact relative grid w-full max-w-[460px] gap-3 p-4">
+            <button
+              type="button"
+              className="secondary icon-btn tiny mention-profile-close"
+              onClick={() => setSelectedMentionProfile(null)}
+              aria-label={t("settings.cancel")}
+            >
+              <i className="bi bi-x-lg" aria-hidden="true" />
+            </button>
+            <h3>{t("rooms.memberProfileTitle")}</h3>
+            <div><strong>{t("server.profileName")}: </strong>{selectedMentionProfile.label}</div>
+            <div><strong>Handle: </strong>@{selectedMentionProfile.handle}</div>
+            {selectedMentionProfile.userId ? <div><strong>ID: </strong>{selectedMentionProfile.userId}</div> : null}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

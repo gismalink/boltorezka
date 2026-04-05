@@ -587,6 +587,7 @@ export function ChatPanel({
         onTogglePinMessage={onTogglePinMessage}
         onToggleMessageReaction={onToggleMessageReaction}
         insertMentionToComposer={insertMentionToComposer}
+        mentionCandidates={resolvedMentionCandidates}
         insertQuoteToComposer={handleInsertQuoteToComposer}
         markTopicUnreadFromMessage={markTopicUnreadFromMessage}
         markReadSaving={markReadSaving}

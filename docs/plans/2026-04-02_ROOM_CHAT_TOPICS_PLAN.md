@@ -303,7 +303,7 @@ Scope: единая модель комнатного чата с темами, 
 
 - [x] Deploy в test.
 - [x] Smoke: create topic -> send -> reply -> mention -> pin.
-- [ ] Smoke: search по теме и комнате.
+- [x] Smoke: search по теме и комнате.
 - [ ] Smoke: mute работает, критичные упоминания приходят по policy.
 - [ ] Smoke: unread/read корректны после reconnect.
 

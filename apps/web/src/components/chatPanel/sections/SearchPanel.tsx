@@ -86,6 +86,7 @@ export function SearchPanel({
       roomSlug: item.roomSlug,
       topicId: item.topicId || null
     });
+    onClose();
   };
 
   const imageOnlyActive = searchHasAttachment && searchAttachmentType === "image";

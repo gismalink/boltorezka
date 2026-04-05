@@ -3203,6 +3203,29 @@ pre {
   text-shadow: 0 0 8px color-mix(in srgb, var(--pixel-neon-gold) 32%, transparent 68%);
 }
 
+.chat-mention-btn {
+  appearance: none;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
+  line-height: inherit;
+}
+
+.chat-mention-btn:hover,
+.chat-mention-btn:focus-visible {
+  color: color-mix(in srgb, var(--pixel-neon-gold) 76%, #fff 24%);
+  outline: none;
+}
+
+.mention-profile-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+}
+
 .chat-format-bold {
   font-weight: 700;
 }
@@ -3252,13 +3275,26 @@ pre {
 .chat-message-jump-target {
   outline: 2px solid color-mix(in srgb, var(--pixel-neon-cyan) 78%, var(--pixel-border) 22%);
   outline-offset: 3px;
+  animation: chat-jump-pulse 1.05s ease-out 2;
 }
 
 .chat-message-jump-target-mention {
-  animation: chat-mention-jump-pulse 1.9s ease-out 1;
+  animation: chat-mention-jump-pulse 1.2s ease-out 2;
   box-shadow:
     0 0 0 2px color-mix(in srgb, #ff4f78 72%, transparent 28%),
     0 0 0 6px color-mix(in srgb, #ff4f78 24%, transparent 76%);
+}
+
+@keyframes chat-jump-pulse {
+  0% {
+    outline-color: color-mix(in srgb, var(--pixel-neon-cyan) 92%, var(--pixel-border) 8%);
+  }
+  50% {
+    outline-color: color-mix(in srgb, var(--pixel-neon-cyan) 42%, var(--pixel-border) 58%);
+  }
+  100% {
+    outline-color: color-mix(in srgb, var(--pixel-neon-cyan) 78%, var(--pixel-border) 22%);
+  }
 }
 
 @keyframes chat-mention-jump-pulse {
