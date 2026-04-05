@@ -15,6 +15,7 @@ import { useChatPanelUiInteractions } from "./chatPanel/hooks/useChatPanelUiInte
 import { useChatPanelComposerHelpers } from "./chatPanel/hooks/useChatPanelComposerHelpers";
 import { useChatPanelTopicCreate } from "./chatPanel/hooks/useChatPanelTopicCreate";
 import { useChatPanelTypingBanner } from "./chatPanel/hooks/useChatPanelTypingBanner";
+import { useChatPanelSearchOverlay } from "./chatPanel/hooks/useChatPanelSearchOverlay";
 import { TopicTabsHeader } from "./chatPanel/sections/TopicTabsHeader";
 import { SearchPanel } from "./chatPanel/sections/SearchPanel";
 import { ChatMessageTimeline } from "./chatPanel/sections/ChatMessageTimeline";
@@ -477,30 +478,72 @@ export function ChatPanel({
   });
 
   const topicPaletteListboxId = "chat-topic-palette-listbox";
+  const {
+    searchPanelOpen,
+    closeSearchPanel,
+    toggleSearchPanel
+  } = useChatPanelSearchOverlay({ hasActiveRoom });
 
   return (
-    <section className="card middle-card flex min-h-0 flex-1 flex-col overflow-hidden">
-      <TopicTabsHeader
-        t={t}
-        hasActiveRoom={hasActiveRoom}
-        roomTitle={roomTitle}
-        roomSlug={roomSlug}
-        hasTopics={hasTopics}
-        topicCreatePopupRef={topicCreatePopupRef}
-        topicCreateOpen={topicCreateOpen}
-        setTopicCreateOpen={setTopicCreateOpen}
-        newTopicTitle={newTopicTitle}
-        setNewTopicTitle={setNewTopicTitle}
-        creatingTopic={creatingTopic}
-        handleCreateTopicSubmit={handleCreateTopicSubmit}
-        sortedTopics={sortedTopics}
-        getTopicUnreadCount={getTopicUnreadCount}
-        activeTopicId={activeTopicId}
-        onSelectTopic={onSelectTopic}
-        openTopicContextMenu={openTopicContextMenu}
-        openTopicPalette={openTopicPalette}
-        topicPaletteOpen={topicPaletteOpen}
-      />
+    <section className="card middle-card relative flex min-h-0 flex-1 flex-col overflow-hidden">
+      <div className="chat-header-stack">
+        <TopicTabsHeader
+          t={t}
+          hasActiveRoom={hasActiveRoom}
+          roomTitle={roomTitle}
+          roomSlug={roomSlug}
+          hasTopics={hasTopics}
+          topicCreatePopupRef={topicCreatePopupRef}
+          topicCreateOpen={topicCreateOpen}
+          setTopicCreateOpen={setTopicCreateOpen}
+          newTopicTitle={newTopicTitle}
+          setNewTopicTitle={setNewTopicTitle}
+          creatingTopic={creatingTopic}
+          handleCreateTopicSubmit={handleCreateTopicSubmit}
+          sortedTopics={sortedTopics}
+          getTopicUnreadCount={getTopicUnreadCount}
+          activeTopicId={activeTopicId}
+          onSelectTopic={onSelectTopic}
+          openTopicContextMenu={openTopicContextMenu}
+          openTopicPalette={openTopicPalette}
+          topicPaletteOpen={topicPaletteOpen}
+          searchPanelOpen={searchPanelOpen}
+          onToggleSearchPanel={toggleSearchPanel}
+        />
+        {hasActiveRoom && searchPanelOpen ? (
+          <SearchPanel
+            t={t}
+            searching={searching}
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+            searchScope={searchScope}
+            setSearchScope={setSearchScope}
+            handleSearchMessages={handleSearchMessages}
+            searchHasMention={searchHasMention}
+            setSearchHasMention={setSearchHasMention}
+            searchHasAttachment={searchHasAttachment}
+            setSearchHasAttachment={setSearchHasAttachment}
+            searchAttachmentType={searchAttachmentType}
+            setSearchAttachmentType={setSearchAttachmentType}
+            searchHasLink={searchHasLink}
+            setSearchHasLink={setSearchHasLink}
+            searchAuthorId={searchAuthorId}
+            setSearchAuthorId={setSearchAuthorId}
+            searchFrom={searchFrom}
+            setSearchFrom={setSearchFrom}
+            searchTo={searchTo}
+            setSearchTo={setSearchTo}
+            searchJumpStatusText={searchJumpStatusText}
+            searchError={searchError}
+            searchResults={searchResults}
+            searchResultsHasMore={searchResultsHasMore}
+            formatMessageTime={formatMessageTime}
+            setSearchJumpStatusText={setSearchJumpStatusText}
+            setSearchJumpTarget={(value) => setSearchJumpTarget(value)}
+            onClose={closeSearchPanel}
+          />
+        ) : null}
+      </div>
       {hasActiveRoom ? (
         <div className="chat-hotkeys-hint muted" aria-live="polite">
           {t("chat.hotkeysHint")}
@@ -513,38 +556,6 @@ export function ChatPanel({
         ) : null}
       </div>
       {editingTopicStatusText ? <div className="chat-topic-read-status mb-2" role="status" aria-live="polite">{editingTopicStatusText}</div> : null}
-      {hasActiveRoom ? (
-        <SearchPanel
-          t={t}
-          searching={searching}
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-          searchScope={searchScope}
-          setSearchScope={setSearchScope}
-          handleSearchMessages={handleSearchMessages}
-          searchHasMention={searchHasMention}
-          setSearchHasMention={setSearchHasMention}
-          searchHasAttachment={searchHasAttachment}
-          setSearchHasAttachment={setSearchHasAttachment}
-          searchAttachmentType={searchAttachmentType}
-          setSearchAttachmentType={setSearchAttachmentType}
-          searchHasLink={searchHasLink}
-          setSearchHasLink={setSearchHasLink}
-          searchAuthorId={searchAuthorId}
-          setSearchAuthorId={setSearchAuthorId}
-          searchFrom={searchFrom}
-          setSearchFrom={setSearchFrom}
-          searchTo={searchTo}
-          setSearchTo={setSearchTo}
-          searchJumpStatusText={searchJumpStatusText}
-          searchError={searchError}
-          searchResults={searchResults}
-          searchResultsHasMore={searchResultsHasMore}
-          formatMessageTime={formatMessageTime}
-          setSearchJumpStatusText={setSearchJumpStatusText}
-          setSearchJumpTarget={(value) => setSearchJumpTarget(value)}
-        />
-      ) : null}
       <div className="chat-typing-banner" aria-live="polite">
         {hasActiveRoom && hasTypingUsers ? (
           <span className="chat-typing-status">

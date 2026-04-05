@@ -79,6 +79,7 @@ Scope: единая модель комнатного чата с темами, 
 - 2026-04-03: В test повторно раскатана актуальная ветка на SHA `d6ba606`; фиксирован web runtime crash (`activeTopicId is not defined`) и обновлен realtime smoke на поддержку `chat.message.created`.
 - 2026-04-03: Postdeploy smoke в non-strict режиме (`SMOKE_TURN_TLS_STRICT=0`) прошел до конца (`SMOKE_STATUS=pass`), но строгий gate `deploy-test-and-smoke` все еще падает на внешнем TURN TLS check (`TURN_CERT_DOMAIN:5349`).
 - 2026-04-03: Stage 4 повторно проверен в test на SHA `bd6439c`; `deploy-test-and-smoke` завершен успешно (`[deploy-test-smoke] done`), strict TURN TLS gate пройден, RNNoise gate скипнут по новой default-policy (`SMOKE_WEB_RNNOISE_BROWSER=0`).
+- 2026-04-05: UX note в backlog: действие pin пока оставлено как визуальная метка на сообщении; требуется отдельный UX-инкремент для явного pinned-flow (пин-лист/быстрый переход/контекст).
 
 ## 0) Контекст
 

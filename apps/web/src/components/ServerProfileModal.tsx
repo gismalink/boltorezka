@@ -1015,7 +1015,7 @@ export function ServerProfileModal({
 
   return (
     <div
-      className="voice-preferences-overlay fixed inset-0 z-40 grid place-items-center overflow-y-auto p-4"
+      className="voice-preferences-overlay server-scroll-overlay fixed inset-0 z-40 grid place-items-center overflow-y-auto p-4"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) {
           onClose();
@@ -1141,7 +1141,7 @@ export function ServerProfileModal({
           </div>
         </div>
 
-        <div className="user-settings-content grid min-h-0 min-w-0 content-start gap-4 overflow-auto overflow-x-hidden pr-0">
+        <div className="user-settings-content server-scroll-pane grid min-h-0 min-w-0 content-start gap-4 overflow-auto overflow-x-hidden pr-0">
           <div className="voice-preferences-head flex items-center justify-between gap-3">
             <h2 className="mt-[var(--space-xxs)]">
               {serverMenuTab === "users" ? t("server.tabUsers") : null}
@@ -1660,7 +1660,7 @@ export function ServerProfileModal({
               {observabilityTab === "log" ? (
                 <div className="grid min-h-0 flex-1 grid-rows-[auto_minmax(0,1fr)] gap-3">
                   <h3>{t("events.title")}</h3>
-                  <div className="log h-full max-h-none overflow-auto">
+                  <div className="log server-scroll-log h-full max-h-none overflow-auto">
                     {eventLog.map((line, index) => (
                       <div key={`${line}-${index}`}>{line}</div>
                     ))}
@@ -1696,7 +1696,7 @@ export function ServerProfileModal({
                   <p className="muted">
                     {roomVoiceConnected ? t("call.autoConnected") : t("call.autoWaiting")}
                   </p>
-                  <div className="log call-log h-full max-h-none overflow-auto">
+                  <div className="log call-log server-scroll-log h-full max-h-none overflow-auto">
                     {callEventLog.map((line, index) => (
                       <div key={`${line}-${index}`}>{line}</div>
                     ))}

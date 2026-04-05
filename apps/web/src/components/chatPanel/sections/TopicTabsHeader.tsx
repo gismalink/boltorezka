@@ -22,6 +22,8 @@ type TopicTabsHeaderProps = {
   openTopicContextMenu: (topicId: string, event: MouseEvent<HTMLButtonElement>) => void;
   openTopicPalette: () => void;
   topicPaletteOpen: boolean;
+  searchPanelOpen: boolean;
+  onToggleSearchPanel: () => void;
 };
 
 export function TopicTabsHeader({
@@ -43,7 +45,9 @@ export function TopicTabsHeader({
   onSelectTopic,
   openTopicContextMenu,
   openTopicPalette,
-  topicPaletteOpen
+  topicPaletteOpen,
+  searchPanelOpen,
+  onToggleSearchPanel
 }: TopicTabsHeaderProps) {
   return (
     <div className="chat-title-row">
@@ -141,6 +145,18 @@ export function TopicTabsHeader({
                 ...
               </Button>
             ) : null}
+            <Button
+              type="button"
+              className={`secondary tiny icon-btn chat-topic-tab chat-search-toggle-btn ${searchPanelOpen ? "chat-search-toggle-btn-active" : ""}`}
+              onClick={onToggleSearchPanel}
+              onContextMenu={(event) => event.preventDefault()}
+              aria-expanded={searchPanelOpen}
+              aria-controls="chat-search-panel"
+              data-tooltip={searchPanelOpen ? t("chat.searchCloseTooltip") : t("chat.searchOpenTooltip")}
+              aria-label={searchPanelOpen ? t("chat.searchCloseTooltip") : t("chat.searchOpenTooltip")}
+            >
+              <i className="bi bi-search" aria-hidden="true" />
+            </Button>
           </div>
         </div>
       ) : null}

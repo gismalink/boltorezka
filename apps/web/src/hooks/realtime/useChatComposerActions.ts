@@ -591,6 +591,13 @@ export function useChatComposerActions({
         setReactionsByMessageId((prev) => {
           const messageReactions = { ...(prev[normalizedMessageId] || {}) };
           const current = messageReactions[normalizedEmoji] || { count: 0, reacted: false };
+
+          // Realtime echo may already apply this exact toggle before the API call resolves.
+          // In that case, keep the state as-is to avoid local double counting.
+          if (current.reacted === !currentlyActive) {
+            return prev;
+          }
+
           const nextCount = currentlyActive
             ? Math.max(0, current.count - 1)
             : current.count + 1;
