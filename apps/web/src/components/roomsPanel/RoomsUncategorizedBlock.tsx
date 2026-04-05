@@ -34,12 +34,12 @@ function RoomsUncategorizedBlockInner({
         aria-expanded={!collapsed}
       >
         <i className={`bi ${collapsed ? "bi-chevron-right" : "bi-chevron-down"}`} aria-hidden="true" />
-        <span className="text-[var(--font-size-sm)] uppercase tracking-[0.04em] text-[var(--pixel-muted)]">{t("rooms.uncategorized")}</span>
-        {mentionCount > 0 ? <span className="room-mention-badge room-row-unread">@</span> : null}
-        {unreadCount > 0 ? <span className="room-unread-badge">{unreadCount}</span> : null}
         <span className="rounded-full border border-[var(--pixel-border)] px-2 py-0.5 text-[11px] text-[var(--pixel-muted)]">
           {rooms.length}
         </span>
+        <span className="text-[var(--font-size-sm)] uppercase tracking-[0.04em] text-[var(--pixel-muted)]">{t("rooms.uncategorized")}</span>
+        {mentionCount > 0 ? <span className="room-mention-badge room-row-unread">@</span> : null}
+        {unreadCount > 0 ? <span className="room-unread-badge">{unreadCount}</span> : null}
       </button>
       {!collapsed ? (
         <ul className="rooms-list">
