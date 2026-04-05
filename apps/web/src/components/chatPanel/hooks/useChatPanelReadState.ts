@@ -33,7 +33,6 @@ export function useChatPanelReadState({
   const [entryUnreadDivider, setEntryUnreadDivider] = useState<{
     topicId: string;
     messageId: string;
-    visible: boolean;
   } | null>(null);
 
   const autoMarkReadInFlightRef = useRef<Record<string, number>>({});
@@ -275,14 +274,13 @@ export function useChatPanelReadState({
 
     setEntryUnreadDivider({
       topicId: normalizedTopicId,
-      messageId: dividerMessageId,
-      visible: true
+      messageId: dividerMessageId
     });
     unreadDividerScrolledTopicRef.current = "";
   }, [activeTopicId, entryUnreadDivider?.messageId, entryUnreadDivider?.topicId, messages]);
 
   useEffect(() => {
-    if (!entryUnreadDivider?.visible) {
+    if (!entryUnreadDivider?.messageId) {
       return;
     }
 
@@ -322,7 +320,7 @@ export function useChatPanelReadState({
 
     const normalizedTopicId = String(activeTopicId || "").trim();
     const lockAutoScroll = Boolean(
-      entryUnreadDivider?.visible
+      entryUnreadDivider?.messageId
       && normalizedTopicId
       && entryUnreadDivider.topicId === normalizedTopicId
       && unreadDividerScrolledTopicRef.current !== normalizedTopicId
@@ -337,7 +335,7 @@ export function useChatPanelReadState({
     return () => {
       delete container.dataset.unreadDividerVisible;
     };
-  }, [activeTopicId, chatLogRef, entryUnreadDivider?.topicId, entryUnreadDivider?.visible]);
+  }, [activeTopicId, chatLogRef, entryUnreadDivider?.topicId, entryUnreadDivider?.messageId]);
 
   useEffect(() => {
     return () => {
