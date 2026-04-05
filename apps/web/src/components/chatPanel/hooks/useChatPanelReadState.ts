@@ -188,9 +188,12 @@ export function useChatPanelReadState({
   useEffect(() => {
     const normalizedRoomId = String(roomId || "").trim();
     if (!normalizedRoomId) {
-      entryUnreadRoomIdRef.current = "";
-      unreadEntryTopicRef.current = "";
-      setEntryUnreadDivider(null);
+      // Ignore transient room-id gaps during reconnect/rejoin to avoid flicker.
+      return;
+    }
+
+    if (!entryUnreadRoomIdRef.current) {
+      entryUnreadRoomIdRef.current = normalizedRoomId;
       return;
     }
 
