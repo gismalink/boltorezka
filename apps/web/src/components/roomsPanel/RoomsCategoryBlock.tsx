@@ -18,6 +18,7 @@ type RoomsCategoryBlockProps = Pick<
   | "onMoveCategory"
 > & {
   category: RoomCategory & { channels: Room[] };
+  mentionCount: number;
   unreadCountUnmuted: number;
   unreadCountMuted: number;
   renderRoomRow: (room: Room) => JSX.Element;
@@ -36,6 +37,7 @@ function RoomsCategoryBlockInner({
   onSetEditingCategoryTitle,
   onSaveCategorySettings,
   onMoveCategory,
+  mentionCount,
   unreadCountUnmuted,
   unreadCountMuted,
   category,
@@ -63,6 +65,9 @@ function RoomsCategoryBlockInner({
           <span className="text-[var(--font-size-sm)] uppercase tracking-[0.04em] text-[var(--pixel-muted)]">{category.title}</span>
         </Button>
         <div className={`category-right-zone category-right-zone-actions-${categoryActionsVariant} ${categoryActionsOpen ? "category-right-zone-open" : ""}`}>
+          {mentionCount > 0 ? (
+            <span className="room-mention-badge category-group-mention room-row-unread" data-tooltip={t("chat.topicFilterMentions")}>@</span>
+          ) : null}
           {unreadCountMuted > 0 ? (
             <span className="room-unread-badge category-group-unread room-unread-badge-muted">{unreadCountMuted}</span>
           ) : null}

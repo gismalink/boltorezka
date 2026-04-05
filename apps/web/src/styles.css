@@ -2993,7 +2993,7 @@ pre {
 .chat-search-controls {
   display: grid;
   gap: 8px;
-  grid-template-columns: minmax(0, 1fr) minmax(140px, 180px) auto auto;
+  grid-template-columns: minmax(0, 1fr) minmax(140px, 180px) auto;
 }
 
 .chat-search-scope-select {
@@ -3061,8 +3061,15 @@ pre {
   display: grid;
   gap: 4px;
 }
-.chat-search-result-jump {
-  justify-self: start;
+
+.chat-search-result-item-clickable {
+  cursor: pointer;
+}
+
+.chat-search-result-item-clickable:hover,
+.chat-search-result-item-clickable:focus-visible {
+  border-color: color-mix(in srgb, var(--pixel-neon-cyan) 74%, var(--pixel-border) 26%);
+  background: color-mix(in srgb, var(--pixel-neon-cyan) 10%, var(--pixel-panel-2) 90%);
 }
 
 .chat-search-result-meta {
@@ -3243,6 +3250,26 @@ pre {
 .chat-message-jump-target {
   outline: 2px solid color-mix(in srgb, var(--pixel-neon-cyan) 78%, var(--pixel-border) 22%);
   outline-offset: 3px;
+}
+
+.chat-message-jump-target-mention {
+  animation: chat-mention-jump-pulse 1.9s ease-out 1;
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, #ff4f78 72%, transparent 28%),
+    0 0 0 6px color-mix(in srgb, #ff4f78 24%, transparent 76%);
+}
+
+@keyframes chat-mention-jump-pulse {
+  0% {
+    box-shadow:
+      0 0 0 0 color-mix(in srgb, #ff4f78 74%, transparent 26%),
+      0 0 0 0 color-mix(in srgb, #ff4f78 30%, transparent 70%);
+  }
+  100% {
+    box-shadow:
+      0 0 0 2px color-mix(in srgb, #ff4f78 72%, transparent 28%),
+      0 0 0 6px color-mix(in srgb, #ff4f78 24%, transparent 76%);
+  }
 }
 
 .chat-message-context-menu {

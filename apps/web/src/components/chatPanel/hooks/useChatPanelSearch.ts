@@ -1,4 +1,4 @@
-import { useEffect, useState, type Dispatch, type SetStateAction } from "react";
+import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import { api } from "../../../api";
 import type { RoomTopic } from "../../../domain";
 
@@ -68,6 +68,7 @@ export function useChatPanelSearch({
   const [searchResultsHasMore, setSearchResultsHasMore] = useState(false);
   const [searchJumpStatusText, setSearchJumpStatusText] = useState("");
   const [searchJumpTarget, setSearchJumpTarget] = useState<SearchJumpTarget>(null);
+  const searchRequestSeqRef = useRef(0);
 
   useEffect(() => {
     if (!searchJumpTarget) {
@@ -120,7 +121,13 @@ export function useChatPanelSearch({
     if (targetNode) {
       targetNode.scrollIntoView({ behavior: "smooth", block: "center" });
       targetNode.classList.add("chat-message-jump-target");
-      window.setTimeout(() => targetNode.classList.remove("chat-message-jump-target"), 1600);
+      if (searchHasMention) {
+        targetNode.classList.add("chat-message-jump-target-mention");
+      }
+      window.setTimeout(() => {
+        targetNode.classList.remove("chat-message-jump-target");
+        targetNode.classList.remove("chat-message-jump-target-mention");
+      }, searchHasMention ? 2600 : 1600);
       setSearchJumpTarget(null);
       setSearchJumpStatusText("");
       return;
@@ -148,16 +155,19 @@ export function useChatPanelSearch({
     activeTopicId,
     loadingOlderMessages,
     messagesHasMore,
+    searchHasMention,
     onLoadOlderMessages,
     t
   ]);
 
-  const handleSearchMessages = async () => {
+  const handleSearchMessages = useCallback(async () => {
     const q = searchQuery.trim();
-    if (!q || searching || !authToken) {
+    if (!q || !authToken) {
       return;
     }
 
+    const requestSeq = searchRequestSeqRef.current + 1;
+    searchRequestSeqRef.current = requestSeq;
     setSearching(true);
     setSearchError("");
     try {
@@ -187,6 +197,10 @@ export function useChatPanelSearch({
         limit: 25
       });
 
+      if (requestSeq !== searchRequestSeqRef.current) {
+        return;
+      }
+
       setSearchResults(response.messages.map((item) => ({
         id: item.id,
         roomSlug: item.roomSlug,
@@ -200,13 +214,63 @@ export function useChatPanelSearch({
       })));
       setSearchResultsHasMore(Boolean(response.pagination?.hasMore));
     } catch {
+      if (requestSeq !== searchRequestSeqRef.current) {
+        return;
+      }
+
       setSearchResults([]);
       setSearchResultsHasMore(false);
       setSearchError(t("chat.searchError"));
     } finally {
-      setSearching(false);
+      if (requestSeq === searchRequestSeqRef.current) {
+        setSearching(false);
+      }
     }
-  };
+  }, [
+    activeTopicId,
+    authToken,
+    currentServerId,
+    roomId,
+    searchAttachmentType,
+    searchAuthorId,
+    searchFrom,
+    searchHasAttachment,
+    searchHasLink,
+    searchHasMention,
+    searchQuery,
+    searchScope,
+    searchTo,
+    t
+  ]);
+
+  useEffect(() => {
+    const q = searchQuery.trim();
+    if (!q) {
+      setSearchResults([]);
+      setSearchResultsHasMore(false);
+      setSearchError("");
+      setSearching(false);
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      void handleSearchMessages();
+    }, 260);
+
+    return () => window.clearTimeout(timer);
+  }, [
+    authToken,
+    handleSearchMessages,
+    searchAttachmentType,
+    searchAuthorId,
+    searchFrom,
+    searchHasAttachment,
+    searchHasLink,
+    searchHasMention,
+    searchQuery,
+    searchScope,
+    searchTo
+  ]);
 
   return {
     searching,

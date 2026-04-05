@@ -377,6 +377,13 @@ export function RoomsPanel({
             onSetEditingCategoryTitle={onSetEditingCategoryTitle}
             onSaveCategorySettings={onSaveCategorySettings}
             onMoveCategory={onMoveCategory}
+            mentionCount={(Array.isArray(category.channels) ? category.channels : []).reduce((sum, room) => {
+              const slug = String(room.slug || "").trim();
+              if (!slug) {
+                return sum;
+              }
+              return sum + Math.max(0, Number(roomMentionUnreadBySlug[slug] || 0));
+            }, 0)}
             unreadCountMuted={(Array.isArray(category.channels) ? category.channels : []).reduce((sum, room) => {
               const slug = String(room.slug || "").trim();
               if (!slug) {
@@ -415,6 +422,13 @@ export function RoomsPanel({
           collapsed={uncategorizedCollapsed}
           onToggleCollapsed={onToggleUncategorizedCollapsed}
           unreadCount={uncategorizedUnreadCount}
+          mentionCount={uncategorizedRooms.reduce((sum, room) => {
+            const slug = String(room.slug || "").trim();
+            if (!slug) {
+              return sum;
+            }
+            return sum + Math.max(0, Number(roomMentionUnreadBySlug[slug] || 0));
+          }, 0)}
           renderRoomRow={renderRoomRow}
         />
 

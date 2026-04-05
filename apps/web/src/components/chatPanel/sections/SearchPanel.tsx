@@ -79,12 +79,13 @@ export function SearchPanel({
   const [showAuthorFilter, setShowAuthorFilter] = useState(Boolean(searchAuthorId));
   const [showDateFilters, setShowDateFilters] = useState(Boolean(searchFrom || searchTo));
 
-  const runSearch = () => {
-    if (searchQuery.trim().length === 0 || searching) {
-      return;
-    }
-
-    void handleSearchMessages();
+  const jumpToResult = (item: SearchResultItem) => {
+    setSearchJumpStatusText("");
+    setSearchJumpTarget({
+      messageId: item.id,
+      roomSlug: item.roomSlug,
+      topicId: item.topicId || null
+    });
   };
 
   const imageOnlyActive = searchHasAttachment && searchAttachmentType === "image";
@@ -100,7 +101,7 @@ export function SearchPanel({
           onKeyDown={(event) => {
             if (event.key === "Enter") {
               event.preventDefault();
-              runSearch();
+              void handleSearchMessages();
             }
           }}
           placeholder={t("chat.searchPlaceholder")}
@@ -118,16 +119,6 @@ export function SearchPanel({
           <option value="server">{t("chat.searchScopeServer")}</option>
           <option value="room">{t("chat.searchScopeRoom")}</option>
         </select>
-        <Button
-          type="button"
-          className="secondary tiny icon-btn"
-          onClick={runSearch}
-          disabled={searching || searchQuery.trim().length === 0}
-          data-tooltip={searching ? t("chat.loading") : t("chat.searchAction")}
-          aria-label={searching ? t("chat.loading") : t("chat.searchAction")}
-        >
-          <i className={`bi ${searching ? "bi-hourglass-split" : "bi-search"}`} aria-hidden="true" />
-        </Button>
         <Button
           type="button"
           className="secondary tiny icon-btn"
@@ -269,7 +260,19 @@ export function SearchPanel({
       {searchResults.length > 0 ? (
         <div className="chat-search-results">
           {searchResults.map((item) => (
-            <article key={item.id} className="chat-search-result-item">
+            <article
+              key={item.id}
+              className="chat-search-result-item chat-search-result-item-clickable"
+              onClick={() => jumpToResult(item)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  jumpToResult(item);
+                }
+              }}
+            >
               <div className="chat-search-result-meta">
                 <span>{item.userName}</span>
                 <span>{formatMessageTime(item.createdAt)}</span>
@@ -279,20 +282,6 @@ export function SearchPanel({
               </div>
               <p className="chat-search-result-text">{item.text}</p>
               {item.hasAttachments ? <span className="chat-search-result-attachments">{t("chat.searchHasAttachmentsBadge")}</span> : null}
-              <Button
-                type="button"
-                className="secondary tiny chat-search-result-jump"
-                onClick={() => {
-                  setSearchJumpStatusText("");
-                  setSearchJumpTarget({
-                    messageId: item.id,
-                    roomSlug: item.roomSlug,
-                    topicId: item.topicId || null
-                  });
-                }}
-              >
-                {t("chat.searchJumpToMessage")}
-              </Button>
             </article>
           ))}
           {searchResultsHasMore ? <div className="chat-search-more-hint">{t("chat.searchMoreHint")}</div> : null}
