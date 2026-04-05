@@ -1,4 +1,4 @@
-import { type ClipboardEvent, type FormEvent, type KeyboardEvent, type RefObject } from "react";
+import { useEffect, useRef, type ClipboardEvent, type FormEvent, type KeyboardEvent, type RefObject } from "react";
 import { Button } from "../../uicomponents";
 
 type ChatComposerSectionProps = {
@@ -42,26 +42,31 @@ export function ChatComposerSection({
   setPreviewImageUrl,
   attachmentInputRef
 }: ChatComposerSectionProps) {
+  const messageInputRef = useRef<HTMLTextAreaElement | null>(null);
+
+  useEffect(() => {
+    if (!replyingToMessage || !hasActiveRoom || activeTopicIsArchived) {
+      return;
+    }
+
+    const frameId = window.requestAnimationFrame(() => {
+      const input = messageInputRef.current;
+      if (!input) {
+        return;
+      }
+
+      input.focus();
+      const caretPosition = input.value.length;
+      input.setSelectionRange(caretPosition, caretPosition);
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+    };
+  }, [replyingToMessage?.id, hasActiveRoom, activeTopicIsArchived]);
+
   return (
     <>
-      {editingMessageId ? (
-        <div className="chat-edit-banner mb-2 flex items-center justify-between gap-3">
-          <span>{t("chat.editingNow")}</span>
-          <Button type="button" className="secondary tiny" onClick={onCancelEdit}>{t("chat.cancelEdit")}</Button>
-        </div>
-      ) : null}
-      {replyingToMessage ? (
-        <div className="chat-reply-banner mb-2 flex items-center justify-between gap-3">
-          <span>
-            {t("chat.replyingTo")}
-            {" "}
-            <strong>{replyingToMessage.userName}</strong>
-            {": "}
-            {String(replyingToMessage.text || "").replace(/\s+/g, " ").trim().slice(0, 120)}
-          </span>
-          <Button type="button" className="secondary tiny" onClick={onCancelReply}>{t("chat.cancelReply")}</Button>
-        </div>
-      ) : null}
       <form className="chat-compose mt-3 flex items-end gap-3" onSubmit={onSendMessage}>
         <input
           ref={attachmentInputRef}
@@ -84,16 +89,37 @@ export function ChatComposerSection({
         >
           <i className="bi bi-paperclip" aria-hidden="true" />
         </Button>
-        <textarea
-          value={chatText}
-          onChange={(event) => onSetChatText(event.target.value)}
-          onPaste={onChatPaste}
-          onKeyDown={onChatInputKeyDown}
-          rows={2}
-          placeholder={hasActiveRoom ? (activeTopicIsArchived ? t("chat.topicArchivedReadOnly") : t("chat.typePlaceholder")) : t("chat.selectChannelPlaceholder")}
-          disabled={!hasActiveRoom || activeTopicIsArchived}
-          aria-label={t("chat.composeAria")}
-        />
+        <div className="chat-compose-input-stack">
+          {editingMessageId ? (
+            <div className="chat-edit-banner chat-compose-context-banner flex items-center justify-between gap-3">
+              <span>{t("chat.editingNow")}</span>
+              <Button type="button" className="secondary tiny" onClick={onCancelEdit}>{t("chat.cancelEdit")}</Button>
+            </div>
+          ) : null}
+          {replyingToMessage ? (
+            <div className="chat-reply-banner chat-compose-context-banner flex items-center justify-between gap-3">
+              <span>
+                {t("chat.replyingTo")}
+                {" "}
+                <strong>{replyingToMessage.userName}</strong>
+                {": "}
+                {String(replyingToMessage.text || "").replace(/\s+/g, " ").trim().slice(0, 120)}
+              </span>
+              <Button type="button" className="secondary tiny" onClick={onCancelReply}>{t("chat.cancelReply")}</Button>
+            </div>
+          ) : null}
+          <textarea
+            ref={messageInputRef}
+            value={chatText}
+            onChange={(event) => onSetChatText(event.target.value)}
+            onPaste={onChatPaste}
+            onKeyDown={onChatInputKeyDown}
+            rows={2}
+            placeholder={hasActiveRoom ? (activeTopicIsArchived ? t("chat.topicArchivedReadOnly") : t("chat.typePlaceholder")) : t("chat.selectChannelPlaceholder")}
+            disabled={!hasActiveRoom || activeTopicIsArchived}
+            aria-label={t("chat.composeAria")}
+          />
+        </div>
         {composePreviewImage ? (
           <Button
             type="button"

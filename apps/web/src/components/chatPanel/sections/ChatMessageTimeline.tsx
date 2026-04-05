@@ -1,6 +1,10 @@
-import { type MouseEvent as ReactMouseEvent, type ReactNode, type RefObject } from "react";
+import { useEffect, useMemo, useState, type MouseEvent as ReactMouseEvent, type ReactNode, type RefObject } from "react";
 import type { ChatMessageViewModel } from "../../../utils/chatMessageViewModel";
 import { Button } from "../../uicomponents";
+
+const INITIAL_TIMELINE_RENDER_COUNT = 180;
+const TIMELINE_RENDER_INCREMENT = 120;
+const TIMELINE_EXPAND_SCROLL_TOP_THRESHOLD = 220;
 
 type ChatMessageTimelineProps = {
   t: (key: string) => string;
@@ -255,10 +259,74 @@ export function ChatMessageTimeline({
   unreadDividerMessageId,
   unreadDividerVisible
 }: ChatMessageTimelineProps) {
+  const [renderedMessagesCount, setRenderedMessagesCount] = useState(INITIAL_TIMELINE_RENDER_COUNT);
   const safeReactionsByMessageId = reactionsByMessageId || {};
   const quickReactionOptions = ["👍", "❤️", "😂", "🔥", "👏", "🎉", "🤯", "😢"];
   const viewportWidth = typeof window !== "undefined" ? window.innerWidth : 1280;
   const viewportHeight = typeof window !== "undefined" ? window.innerHeight : 720;
+
+  useEffect(() => {
+    setRenderedMessagesCount(INITIAL_TIMELINE_RENDER_COUNT);
+  }, [activeTopicId]);
+
+  const unreadDividerIndex = useMemo(() => {
+    if (!unreadDividerVisible || !unreadDividerMessageId) {
+      return -1;
+    }
+
+    return messageViewModels.findIndex((messageVm) => messageVm.id === unreadDividerMessageId);
+  }, [messageViewModels, unreadDividerMessageId, unreadDividerVisible]);
+
+  const windowStartIndex = useMemo(() => {
+    const baseStart = Math.max(0, messageViewModels.length - renderedMessagesCount);
+    if (unreadDividerIndex >= 0) {
+      return Math.min(baseStart, unreadDividerIndex);
+    }
+
+    return baseStart;
+  }, [messageViewModels.length, renderedMessagesCount, unreadDividerIndex]);
+
+  const visibleMessageViewModels = useMemo(
+    () => messageViewModels.slice(windowStartIndex),
+    [messageViewModels, windowStartIndex]
+  );
+
+  useEffect(() => {
+    const chatLogNode = chatLogRef.current;
+    if (!chatLogNode) {
+      return;
+    }
+
+    const maybeExpandRenderedWindow = () => {
+      if (chatLogNode.scrollTop > TIMELINE_EXPAND_SCROLL_TOP_THRESHOLD) {
+        return;
+      }
+
+      setRenderedMessagesCount((prev) => {
+        if (prev >= messageViewModels.length) {
+          return prev;
+        }
+
+        const previousScrollHeight = chatLogNode.scrollHeight;
+        const next = Math.min(messageViewModels.length, prev + TIMELINE_RENDER_INCREMENT);
+        window.requestAnimationFrame(() => {
+          const nextScrollHeight = chatLogNode.scrollHeight;
+          const delta = nextScrollHeight - previousScrollHeight;
+          if (delta > 0) {
+            chatLogNode.scrollTop += delta;
+          }
+        });
+        return next;
+      });
+    };
+
+    chatLogNode.addEventListener("scroll", maybeExpandRenderedWindow, { passive: true });
+    maybeExpandRenderedWindow();
+
+    return () => {
+      chatLogNode.removeEventListener("scroll", maybeExpandRenderedWindow);
+    };
+  }, [chatLogRef, messageViewModels.length]);
 
   const closeContextMenu = () => {
     setMessageContextMenu(null);
@@ -272,6 +340,23 @@ export function ChatMessageTimeline({
       x: event.clientX,
       y: event.clientY
     });
+  };
+
+  const shouldIgnoreMessageDoubleClick = (target: EventTarget | null): boolean => {
+    if (!(target instanceof Element)) {
+      return false;
+    }
+
+    return Boolean(target.closest("a, button, input, textarea, select, label"));
+  };
+
+  const handleMessageDoubleClick = (event: ReactMouseEvent, messageId: string) => {
+    if (event.button !== 0 || shouldIgnoreMessageDoubleClick(event.target)) {
+      return;
+    }
+
+    onReplyMessage(messageId);
+    closeContextMenu();
   };
 
   return (
@@ -288,7 +373,7 @@ export function ChatMessageTimeline({
           <p className="chat-empty-state-hint">{t("chat.emptyMessagesHint")}</p>
         </div>
       ) : null}
-      {messageViewModels.map((messageVm) => {
+      {visibleMessageViewModels.map((messageVm) => {
         const attachmentImageUrls = messageVm.attachmentImageUrls;
         const attachmentFiles = messageVm.attachmentFiles;
         const isOwn = messageVm.isOwn;
@@ -331,6 +416,7 @@ export function ChatMessageTimeline({
             data-message-id={messageVm.id}
             className={`chat-message group grid items-end gap-2 ${isOwn ? "chat-message-own grid-cols-1 justify-items-end" : "grid-cols-[34px_minmax(0,1fr)]"}`}
             onContextMenu={(event) => openContextMenu(event, messageVm.id)}
+            onDoubleClick={(event) => handleMessageDoubleClick(event, messageVm.id)}
           >
             {!isOwn ? (
               <div className="chat-avatar-slot inline-flex h-[30px] w-[30px] items-end justify-center" aria-hidden="true">

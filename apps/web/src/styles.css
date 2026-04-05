@@ -1596,6 +1596,17 @@ pre {
   min-width: 0;
 }
 
+.chat-compose-input-stack {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: var(--space-2xs);
+}
+
+.chat-compose-context-banner {
+  margin-bottom: 0;
+}
+
 .chat-compose textarea {
   flex: 1;
   min-width: 0;
@@ -3824,6 +3835,10 @@ pre {
   .workspace-mobile .chat-compose {
     flex-wrap: wrap;
     gap: var(--space-xs);
+  }
+
+  .workspace-mobile .chat-compose-input-stack {
+    width: 100%;
   }
 
   .workspace-mobile .chat-compose textarea {

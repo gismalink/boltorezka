@@ -1,5 +1,6 @@
 import { api } from "../api";
 import type { Message, MessagesCursor, User } from "../domain";
+import { trimMessagesInMemory } from "./chatMemory";
 
 type WsSender = (
   eventType: string,
@@ -40,7 +41,9 @@ export class ChatController {
         return;
       }
 
-      this.options.setMessages(() => res.messages.map((message) => this.normalizeMessageForRender(message)));
+      this.options.setMessages(() => trimMessagesInMemory(
+        res.messages.map((message) => this.normalizeMessageForRender(message))
+      ));
       this.options.setMessagesHasMore(Boolean(res.pagination?.hasMore));
       this.options.setMessagesNextCursor(res.pagination?.nextCursor ?? null);
     } catch (error) {
@@ -80,7 +83,7 @@ export class ChatController {
         const olderPage = res.messages
           .map((message) => this.normalizeMessageForRender(message))
           .filter((item) => !existingIds.has(item.id));
-        return [...olderPage, ...prev];
+        return trimMessagesInMemory([...olderPage, ...prev]);
       });
 
       this.options.setMessagesHasMore(Boolean(res.pagination?.hasMore));
@@ -112,7 +115,7 @@ export class ChatController {
       return { sent: false as const };
     }
 
-    this.options.setMessages((prev) => [
+    this.options.setMessages((prev) => trimMessagesInMemory([
       ...prev,
       {
         id: requestId,
@@ -124,7 +127,7 @@ export class ChatController {
         clientRequestId: requestId,
         deliveryStatus: "sending" as const
       }
-    ]);
+    ]));
 
     void this.options.loadTelemetrySummary();
     return { sent: true as const };

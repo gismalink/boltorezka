@@ -24,6 +24,15 @@ function readPositiveIntFromEnv(name: keyof ImportMetaEnv, fallback: number): nu
 	return normalized > 0 ? normalized : fallback;
 }
 
+function readBooleanFlagFromEnv(name: keyof ImportMetaEnv, fallback: boolean): boolean {
+	const raw = String(import.meta.env[name] || "").trim().toLowerCase();
+	if (!raw) {
+		return fallback;
+	}
+
+	return raw === "1" || raw === "true" || raw === "yes";
+}
+
 export const ROOM_UNREAD_BACKGROUND_REFRESH_MS = readPositiveIntFromEnv(
 	"VITE_ROOM_UNREAD_BACKGROUND_REFRESH_MS",
 	45_000
@@ -44,4 +53,15 @@ export const ROOM_UNREAD_CACHE_TTL_MS = readPositiveIntFromEnv("VITE_ROOM_UNREAD
 export const ROOM_UNREAD_METRICS_SUMMARY_EVERY = Math.max(
 	1,
 	readPositiveIntFromEnv("VITE_ROOM_UNREAD_METRICS_SUMMARY_EVERY", 6)
+);
+
+export const CHAT_MESSAGES_IN_MEMORY_LIMIT = Math.max(
+	200,
+	readPositiveIntFromEnv("VITE_CHAT_MESSAGES_IN_MEMORY_LIMIT", 450)
+);
+
+export const CHAT_MEMORY_METRICS_ENABLED = readBooleanFlagFromEnv("VITE_CHAT_MEMORY_METRICS_ENABLED", false);
+export const CHAT_MEMORY_METRICS_EVERY = Math.max(
+	1,
+	readPositiveIntFromEnv("VITE_CHAT_MEMORY_METRICS_EVERY", 20)
 );

@@ -1,6 +1,7 @@
 import type { Dispatch, SetStateAction } from "react";
 import type { Message, PresenceMember, RoomTopic, WsIncoming } from "../domain";
 import { RTC_FEATURE_INITIAL_STATE_REPLAY } from "../hooks/rtc/voiceCallConfig";
+import { trimMessagesInMemory } from "./chatMemory";
 
 const OUTSIDE_ROOMS_PRESENCE_KEY = "__outside_rooms__";
 
@@ -427,7 +428,7 @@ export class WsMessageController {
           return prev;
         }
 
-        return [...prev, delivered];
+        return trimMessagesInMemory([...prev, delivered]);
       });
       return;
     }
@@ -451,7 +452,7 @@ export class WsMessageController {
         next.push(this.buildDeliveredChatMessage(payload));
       }
 
-      return next;
+      return trimMessagesInMemory(next);
     });
   }
 

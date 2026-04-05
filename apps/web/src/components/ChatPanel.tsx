@@ -1,7 +1,8 @@
 // Purpose: presentation-only chat panel with message timeline, composer, and message-level UI actions.
-import { ClipboardEvent, FormEvent, KeyboardEvent, RefObject, useMemo, useRef, useState } from "react";
+import { ClipboardEvent, FormEvent, KeyboardEvent, RefObject, useEffect, useMemo, useRef, useState } from "react";
 import type { Message, RoomTopic } from "../domain";
 import { buildChatMessageViewModels } from "../utils/chatMessageViewModel";
+import { CHAT_MEMORY_METRICS_ENABLED, CHAT_MEMORY_METRICS_EVERY } from "../constants/appConfig";
 import { useChatPanelInboxNotifications } from "./chatPanel/hooks/useChatPanelInboxNotifications";
 import { useChatPanelAttachmentImages } from "./chatPanel/hooks/useChatPanelAttachmentImages";
 import { useChatPanelReadState } from "./chatPanel/hooks/useChatPanelReadState";
@@ -121,6 +122,8 @@ export function ChatPanel({
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
   const [hotkeyStatusText, setHotkeyStatusText] = useState("");
   const attachmentInputRef = useRef<HTMLInputElement | null>(null);
+  const messageVmBuildMsRef = useRef(0);
+  const metricsSamplesRef = useRef(0);
   const hasActiveRoom = Boolean(roomSlug);
 
   const {
@@ -272,10 +275,56 @@ export function ChatPanel({
   const activeTopic = useMemo(() => topics.find((topic) => topic.id === activeTopicId) ?? null, [topics, activeTopicId]);
   const activeTopicIsArchived = Boolean(activeTopic?.archivedAt);
 
-  const messageViewModels = useMemo(
-    () => buildChatMessageViewModels(messages, currentUserId, 10 * 60 * 1000),
-    [messages, currentUserId]
+  const messageViewModels = useMemo(() => {
+    const startedAt = typeof performance !== "undefined" ? performance.now() : 0;
+    const built = buildChatMessageViewModels(messages, currentUserId, 10 * 60 * 1000);
+    const finishedAt = typeof performance !== "undefined" ? performance.now() : startedAt;
+    messageVmBuildMsRef.current = Math.max(0, finishedAt - startedAt);
+    return built;
+  }, [messages, currentUserId]);
+
+  const pinnedMessagesCount = useMemo(
+    () => Object.keys(pinnedByMessageId || {}).length,
+    [pinnedByMessageId]
   );
+  const reactionMessageBucketsCount = useMemo(
+    () => Object.keys(reactionsByMessageId || {}).length,
+    [reactionsByMessageId]
+  );
+
+  useEffect(() => {
+    if (!CHAT_MEMORY_METRICS_ENABLED) {
+      return;
+    }
+
+    metricsSamplesRef.current += 1;
+    if (metricsSamplesRef.current % CHAT_MEMORY_METRICS_EVERY !== 0) {
+      return;
+    }
+
+    const perfWithMemory = performance as Performance & {
+      memory?: {
+        usedJSHeapSize?: number;
+        totalJSHeapSize?: number;
+      };
+    };
+
+    const usedHeapBytes = Number(perfWithMemory.memory?.usedJSHeapSize || 0);
+    const totalHeapBytes = Number(perfWithMemory.memory?.totalJSHeapSize || 0);
+    const usedHeapMb = usedHeapBytes > 0 ? (usedHeapBytes / (1024 * 1024)).toFixed(1) : "n/a";
+    const totalHeapMb = totalHeapBytes > 0 ? (totalHeapBytes / (1024 * 1024)).toFixed(1) : "n/a";
+
+    console.info(
+      `[chat-metrics] room=${roomSlug || "-"} topic=${activeTopicId || "-"} msgs=${messages.length} vms=${messageViewModels.length} pinned=${pinnedMessagesCount} reactedBuckets=${reactionMessageBucketsCount} vmBuildMs=${messageVmBuildMsRef.current.toFixed(2)} heapMB=${usedHeapMb}/${totalHeapMb}`
+    );
+  }, [
+    activeTopicId,
+    messageViewModels.length,
+    messages.length,
+    pinnedMessagesCount,
+    reactionMessageBucketsCount,
+    roomSlug
+  ]);
 
   const composePreviewImage = composePreviewImageUrl;
   const hasTopics = topics.length > 0;
