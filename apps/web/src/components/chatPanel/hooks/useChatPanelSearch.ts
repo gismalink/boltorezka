@@ -2,7 +2,7 @@ import { useEffect, useState, type Dispatch, type SetStateAction } from "react";
 import { api } from "../../../api";
 import type { RoomTopic } from "../../../domain";
 
-type SearchScope = "all" | "server" | "room" | "topic";
+type SearchScope = "all" | "server" | "room";
 type SearchAttachmentType = "" | "image";
 
 type SearchResult = {
@@ -54,7 +54,7 @@ export function useChatPanelSearch({
   onLoadOlderMessages
 }: UseChatPanelSearchArgs) {
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchScope, setSearchScope] = useState<SearchScope>("topic");
+  const [searchScope, setSearchScope] = useState<SearchScope>("all");
   const [searchHasMention, setSearchHasMention] = useState(false);
   const [searchHasAttachment, setSearchHasAttachment] = useState(false);
   const [searchAttachmentType, setSearchAttachmentType] = useState<SearchAttachmentType>("");
@@ -177,7 +177,6 @@ export function useChatPanelSearch({
         scope: normalizedScope,
         serverId: normalizedScope === "server" ? String(currentServerId || "").trim() || undefined : undefined,
         roomId: normalizedScope === "room" ? String(roomId || "").trim() || undefined : undefined,
-        topicId: normalizedScope === "topic" ? String(activeTopicId || "").trim() || undefined : undefined,
         hasMention: searchHasMention ? true : undefined,
         hasAttachment: searchHasAttachment ? true : undefined,
         attachmentType: searchAttachmentType || undefined,

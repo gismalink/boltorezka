@@ -2993,7 +2993,11 @@ pre {
 .chat-search-controls {
   display: grid;
   gap: 8px;
-  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-columns: minmax(0, 1fr) minmax(140px, 180px) auto auto;
+}
+
+.chat-search-scope-select {
+  min-width: 0;
 }
 
 .chat-search-filters {
@@ -3066,6 +3070,11 @@ pre {
   flex-wrap: wrap;
   gap: 8px;
   color: var(--pixel-muted);
+  font-size: calc(var(--font-size-sm) - 0.16rem);
+}
+
+.chat-search-result-location {
+  color: var(--pixel-neon-cyan);
   font-size: calc(var(--font-size-sm) - 0.16rem);
 }
 
@@ -3942,7 +3951,11 @@ pre {
   }
 
   .workspace-mobile .chat-search-controls {
-    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .workspace-mobile .chat-search-scope-select {
+    grid-column: 1 / -1;
   }
 
   .workspace-mobile .chat-search-filter-row {

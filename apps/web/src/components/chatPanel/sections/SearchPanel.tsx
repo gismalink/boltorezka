@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Button } from "../../uicomponents";
 
 type SearchResultItem = {
@@ -18,8 +18,8 @@ type SearchPanelProps = {
   searching: boolean;
   searchQuery: string;
   setSearchQuery: (value: string) => void;
-  searchScope: "all" | "server" | "room" | "topic";
-  setSearchScope: (value: "all" | "server" | "room" | "topic") => void;
+  searchScope: "all" | "server" | "room";
+  setSearchScope: (value: "all" | "server" | "room") => void;
   handleSearchMessages: () => Promise<void>;
   searchHasMention: boolean;
   setSearchHasMention: (value: boolean) => void;
@@ -79,26 +79,6 @@ export function SearchPanel({
   const [showAuthorFilter, setShowAuthorFilter] = useState(Boolean(searchAuthorId));
   const [showDateFilters, setShowDateFilters] = useState(Boolean(searchFrom || searchTo));
 
-  const scopeOrder: Array<"topic" | "room" | "server" | "all"> = ["topic", "room", "server", "all"];
-  const scopeLabel = useMemo(() => {
-    if (searchScope === "room") {
-      return t("chat.searchScopeRoom");
-    }
-    if (searchScope === "server") {
-      return t("chat.searchScopeServer");
-    }
-    if (searchScope === "all") {
-      return t("chat.searchScopeAll");
-    }
-    return t("chat.searchScopeTopic");
-  }, [searchScope, t]);
-
-  const toggleScope = () => {
-    const currentIndex = scopeOrder.indexOf(searchScope);
-    const next = scopeOrder[(currentIndex + 1) % scopeOrder.length];
-    setSearchScope(next);
-  };
-
   const runSearch = () => {
     if (searchQuery.trim().length === 0 || searching) {
       return;
@@ -127,6 +107,17 @@ export function SearchPanel({
           disabled={searching}
           aria-label={t("chat.searchQueryAria")}
         />
+        <select
+          className="chat-search-scope-select"
+          value={searchScope}
+          onChange={(event) => setSearchScope(event.target.value as "all" | "server" | "room")}
+          aria-label={t("chat.searchScopeAria")}
+          disabled={searching}
+        >
+          <option value="all">{t("chat.searchScopeAll")}</option>
+          <option value="server">{t("chat.searchScopeServer")}</option>
+          <option value="room">{t("chat.searchScopeRoom")}</option>
+        </select>
         <Button
           type="button"
           className="secondary tiny icon-btn"
@@ -148,16 +139,6 @@ export function SearchPanel({
         </Button>
       </div>
       <div className="chat-search-filters" role="toolbar" aria-label={t("chat.searchScopeAria")}>
-        <button
-          type="button"
-          className={`chat-search-filter-toggle ${searchScope !== "topic" ? "chat-search-filter-toggle-active" : ""}`}
-          onClick={toggleScope}
-          disabled={searching}
-          data-tooltip={`${t("chat.searchScopeAria")}: ${scopeLabel}`}
-          aria-label={`${t("chat.searchScopeAria")}: ${scopeLabel}`}
-        >
-          <i className="bi bi-bullseye" aria-hidden="true" />
-        </button>
         <button
           type="button"
           className={`chat-search-filter-toggle ${searchHasMention ? "chat-search-filter-toggle-active" : ""}`}
@@ -291,8 +272,10 @@ export function SearchPanel({
             <article key={item.id} className="chat-search-result-item">
               <div className="chat-search-result-meta">
                 <span>{item.userName}</span>
-                <span>{item.topicTitle || item.roomTitle}</span>
                 <span>{formatMessageTime(item.createdAt)}</span>
+              </div>
+              <div className="chat-search-result-location">
+                {t("chat.searchResultLocationPrefix")} {item.roomTitle}{item.topicTitle ? ` / ${item.topicTitle}` : ""}
               </div>
               <p className="chat-search-result-text">{item.text}</p>
               {item.hasAttachments ? <span className="chat-search-result-attachments">{t("chat.searchHasAttachmentsBadge")}</span> : null}
