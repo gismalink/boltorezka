@@ -258,8 +258,12 @@ export function useChatPanelReadState({
 
     const entryUnreadCount = Math.max(0, Number(entryUnreadCountByTopicRef.current[normalizedTopicId] || 0));
     if (entryUnreadCount <= 0 || messages.length === 0) {
-      setEntryUnreadDivider(null);
-      unreadDividerScrolledTopicRef.current = "";
+      return;
+    }
+
+    const hasEnoughMessagesForExactDivider = messages.length > entryUnreadCount;
+    const noMoreHistoryToLoad = !messagesHasMore;
+    if (!hasEnoughMessagesForExactDivider && !noMoreHistoryToLoad) {
       return;
     }
 
@@ -276,7 +280,7 @@ export function useChatPanelReadState({
       messageId: dividerMessageId
     });
     unreadDividerScrolledTopicRef.current = "";
-  }, [activeTopicId, entryUnreadDivider?.messageId, entryUnreadDivider?.topicId, messages]);
+  }, [activeTopicId, entryUnreadDivider?.messageId, entryUnreadDivider?.topicId, messages, messagesHasMore]);
 
   useEffect(() => {
     if (!entryUnreadDivider?.messageId) {
