@@ -172,6 +172,33 @@ export function RoomsPanel({
   }, [confirmPopup]);
 
   const normalizedCurrentUserId = String(currentUserId || "").trim();
+  const normalizedActiveChatRoomSlug = String(activeChatRoomSlug || "").trim();
+
+  const getVisibleRoomUnreadCount = useCallback((roomSlugValue: string) => {
+    const normalizedSlug = String(roomSlugValue || "").trim();
+    if (!normalizedSlug) {
+      return 0;
+    }
+
+    if (normalizedActiveChatRoomSlug && normalizedSlug === normalizedActiveChatRoomSlug) {
+      return 0;
+    }
+
+    return Math.max(0, Number(roomUnreadBySlug[normalizedSlug] || 0));
+  }, [normalizedActiveChatRoomSlug, roomUnreadBySlug]);
+
+  const getVisibleRoomMentionUnreadCount = useCallback((roomSlugValue: string) => {
+    const normalizedSlug = String(roomSlugValue || "").trim();
+    if (!normalizedSlug) {
+      return 0;
+    }
+
+    if (normalizedActiveChatRoomSlug && normalizedSlug === normalizedActiveChatRoomSlug) {
+      return 0;
+    }
+
+    return Math.max(0, Number(roomMentionUnreadBySlug[normalizedSlug] || 0));
+  }, [normalizedActiveChatRoomSlug, roomMentionUnreadBySlug]);
 
   const {
     onlineOutsideRooms,
@@ -268,8 +295,8 @@ export function RoomsPanel({
       onSetRoomNotificationMutePreset={onSetRoomNotificationMutePreset}
       memberPreferencesByUserId={memberPreferencesByUserId}
       room={room}
-      roomUnreadCount={Math.max(0, Number(roomUnreadBySlug[room.slug] || 0))}
-      roomMentionUnreadCount={Math.max(0, Number(roomMentionUnreadBySlug[room.slug] || 0))}
+      roomUnreadCount={getVisibleRoomUnreadCount(room.slug)}
+      roomMentionUnreadCount={getVisibleRoomMentionUnreadCount(room.slug)}
       isRoomUnreadMuted={(() => {
         const preset = roomMutePresetByRoomId[String(room.id || "").trim()];
         return preset != null && preset !== "off";
@@ -323,8 +350,8 @@ export function RoomsPanel({
     onSetServerMemberHiddenRoomAccess,
     onSetRoomNotificationMutePreset,
     memberPreferencesByUserId,
-    roomUnreadBySlug,
-    roomMentionUnreadBySlug,
+    getVisibleRoomUnreadCount,
+    getVisibleRoomMentionUnreadCount,
     roomMutePresetByRoomId,
     onRoomMutePresetChange,
     roomMembersBySlug,
@@ -357,9 +384,9 @@ export function RoomsPanel({
         onCreateCategory={onCreateCategory}
         onCreateRoom={onCreateRoom}
       />
-      {serverUnreadCount > 0 ? (
+      {Math.max(0, serverUnreadCount - getVisibleRoomUnreadCount(normalizedActiveChatRoomSlug)) > 0 ? (
         <div className="rooms-unread-summary">
-          {t("rooms.unreadSummary").replace("{count}", String(serverUnreadCount))}
+          {t("rooms.unreadSummary").replace("{count}", String(Math.max(0, serverUnreadCount - getVisibleRoomUnreadCount(normalizedActiveChatRoomSlug))))}
         </div>
       ) : null}
       <div className="rooms-scroll min-h-0 flex-1 overflow-y-auto">
@@ -382,7 +409,7 @@ export function RoomsPanel({
               if (!slug) {
                 return sum;
               }
-              return sum + Math.max(0, Number(roomMentionUnreadBySlug[slug] || 0));
+              return sum + getVisibleRoomMentionUnreadCount(slug);
             }, 0)}
             unreadCountMuted={(Array.isArray(category.channels) ? category.channels : []).reduce((sum, room) => {
               const slug = String(room.slug || "").trim();
@@ -391,7 +418,7 @@ export function RoomsPanel({
               }
               const roomId = String(room.id || "").trim();
               const preset = roomMutePresetByRoomId[roomId];
-              const unread = Math.max(0, Number(roomUnreadBySlug[slug] || 0));
+              const unread = getVisibleRoomUnreadCount(slug);
               if (preset != null && preset !== "off") {
                 return sum + unread;
               }
@@ -404,7 +431,7 @@ export function RoomsPanel({
               }
               const roomId = String(room.id || "").trim();
               const preset = roomMutePresetByRoomId[roomId];
-              const unread = Math.max(0, Number(roomUnreadBySlug[slug] || 0));
+              const unread = getVisibleRoomUnreadCount(slug);
               if (preset == null || preset === "off") {
                 return sum + unread;
               }
@@ -421,13 +448,19 @@ export function RoomsPanel({
           rooms={uncategorizedRooms}
           collapsed={uncategorizedCollapsed}
           onToggleCollapsed={onToggleUncategorizedCollapsed}
-          unreadCount={uncategorizedUnreadCount}
+          unreadCount={uncategorizedRooms.reduce((sum, room) => {
+            const slug = String(room.slug || "").trim();
+            if (!slug) {
+              return sum;
+            }
+            return sum + getVisibleRoomUnreadCount(slug);
+          }, 0)}
           mentionCount={uncategorizedRooms.reduce((sum, room) => {
             const slug = String(room.slug || "").trim();
             if (!slug) {
               return sum;
             }
-            return sum + Math.max(0, Number(roomMentionUnreadBySlug[slug] || 0));
+            return sum + getVisibleRoomMentionUnreadCount(slug);
           }, 0)}
           renderRoomRow={renderRoomRow}
         />
