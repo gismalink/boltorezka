@@ -276,9 +276,8 @@ export function SearchPanel({
               <div className="chat-search-result-meta">
                 <span>{item.userName}</span>
                 <span>{formatMessageTime(item.createdAt)}</span>
-              </div>
-              <div className="chat-search-result-location">
-                {t("chat.searchResultLocationPrefix")} {item.roomTitle}{item.topicTitle ? ` / ${item.topicTitle}` : ""}
+                <span>{item.roomTitle}</span>
+                <span>{item.topicTitle || "-"}</span>
               </div>
               <p className="chat-search-result-text">{item.text}</p>
               {item.hasAttachments ? <span className="chat-search-result-attachments">{t("chat.searchHasAttachmentsBadge")}</span> : null}

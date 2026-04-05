@@ -3073,16 +3073,18 @@ pre {
 }
 
 .chat-search-result-meta {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) auto minmax(0, 1fr) minmax(0, 1fr);
   gap: 8px;
+  align-items: center;
   color: var(--pixel-muted);
   font-size: calc(var(--font-size-sm) - 0.16rem);
 }
 
-.chat-search-result-location {
-  color: var(--pixel-neon-cyan);
-  font-size: calc(var(--font-size-sm) - 0.16rem);
+.chat-search-result-meta > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .chat-search-result-text {
