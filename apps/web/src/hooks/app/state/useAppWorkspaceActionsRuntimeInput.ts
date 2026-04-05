@@ -2,6 +2,94 @@ import { useAppWorkspaceActionsRuntime } from "./useAppWorkspaceActionsRuntime";
 
 type WorkspaceActionsRuntimeInput = Parameters<typeof useAppWorkspaceActionsRuntime>[0];
 
+function toMentionHandle(raw: string): string {
+  return String(raw || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "_")
+    .replace(/[^\p{L}\p{N}._-]/gu, "")
+    .replace(/_{2,}/g, "_")
+    .replace(/^[_\.\-]+|[_\.\-]+$/g, "")
+    .slice(0, 32);
+}
+
+function buildMentionCandidatesFromServerMembers(serverMembers: unknown[]): Array<{
+  key: string;
+  kind: "user" | "tag" | "all";
+  handle: string;
+  label: string;
+  userId?: string;
+  userIds?: string[];
+}> {
+  const members = Array.isArray(serverMembers) ? serverMembers : [];
+  const userCandidates: Array<{
+    key: string;
+    kind: "user";
+    handle: string;
+    label: string;
+    userId: string;
+  }> = [];
+  const roleMap = new Map<string, { handle: string; label: string; userIds: Set<string> }>();
+
+  members.forEach((member) => {
+    const userId = String((member as { userId?: string } | null)?.userId || "").trim();
+    const userName = String((member as { name?: string } | null)?.name || "").trim();
+    const userHandle = toMentionHandle(userName);
+    if (userId && userName && userHandle) {
+      userCandidates.push({
+        key: `user:${userId}`,
+        kind: "user",
+        handle: userHandle,
+        label: userName,
+        userId
+      });
+    }
+
+    const customRoles = Array.isArray((member as { customRoles?: unknown[] } | null)?.customRoles)
+      ? ((member as { customRoles?: unknown[] }).customRoles || [])
+      : [];
+
+    customRoles.forEach((role) => {
+      const roleLabel = String((role as { name?: string } | null)?.name || "").trim();
+      const roleHandle = toMentionHandle(roleLabel);
+      if (!roleLabel || !roleHandle || !userId) {
+        return;
+      }
+
+      const roleKey = `tag:${roleHandle}`;
+      const existing = roleMap.get(roleKey) || {
+        handle: roleHandle,
+        label: roleLabel,
+        userIds: new Set<string>()
+      };
+      existing.userIds.add(userId);
+      roleMap.set(roleKey, existing);
+    });
+  });
+
+  const tagCandidates = Array.from(roleMap.entries())
+    .map(([key, value]) => ({
+      key,
+      kind: "tag" as const,
+      handle: value.handle,
+      label: `@${value.handle}`,
+      userIds: Array.from(value.userIds)
+    }))
+    .filter((item) => item.userIds.length > 0)
+    .sort((left, right) => left.label.localeCompare(right.label));
+
+  return [
+    {
+      key: "all",
+      kind: "all",
+      handle: "all",
+      label: "@all"
+    },
+    ...tagCandidates,
+    ...userCandidates
+  ];
+}
+
 export function useAppWorkspaceActionsRuntimeInput(params: Record<string, unknown>): WorkspaceActionsRuntimeInput {
   const p = params as any;
 
@@ -54,13 +142,7 @@ export function useAppWorkspaceActionsRuntimeInput(params: Record<string, unknow
           reportMessageExistsMessage: p.t("chat.reportMessageExists"),
           attachmentTooLargeMessage: p.t("chat.attachmentTooLarge"),
           attachmentUnsupportedTypeMessage: p.t("chat.attachmentUnsupportedType"),
-          mentionCandidates: Array.isArray(p.serverMembers)
-            ? p.serverMembers.map((member: { userId?: string; name?: string }) => ({
-              userId: String(member?.userId || "").trim(),
-              name: String(member?.name || "").trim(),
-              username: null
-            })).filter((candidate: { userId: string; name: string }) => Boolean(candidate.userId && candidate.name))
-            : []
+          mentionCandidates: buildMentionCandidatesFromServerMembers(Array.isArray(p.serverMembers) ? p.serverMembers : [])
         }
       },
       moderation: {

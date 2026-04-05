@@ -2,9 +2,11 @@ import { useEffect, useMemo, useRef, useState, type ClipboardEvent, type FormEve
 import { Button } from "../../uicomponents";
 
 type MentionCandidate = {
-  userId: string;
-  name: string;
-  username: string | null;
+  key: string;
+  kind: "user" | "tag" | "all";
+  handle: string;
+  label: string;
+  subtitle?: string | null;
 };
 
 type MentionContext = {
@@ -95,16 +97,19 @@ export function ChatComposerSection({
     const normalizedQuery = String(mentionContext.query || "").trim().toLowerCase();
     const deduped = new Map<string, MentionCandidate>();
     (Array.isArray(mentionCandidates) ? mentionCandidates : []).forEach((candidate) => {
-      const userId = String(candidate.userId || "").trim();
-      const name = String(candidate.name || "").trim();
-      if (!userId || !name || deduped.has(userId)) {
+      const key = String(candidate.key || "").trim();
+      const handle = String(candidate.handle || "").trim().toLowerCase();
+      const label = String(candidate.label || "").trim();
+      if (!key || !handle || !label || deduped.has(key)) {
         return;
       }
 
-      deduped.set(userId, {
-        userId,
-        name,
-        username: String(candidate.username || "").trim() || null
+      deduped.set(key, {
+        ...candidate,
+        key,
+        handle,
+        label,
+        subtitle: String(candidate.subtitle || "").trim() || null
       });
     });
 
@@ -113,23 +118,30 @@ export function ChatComposerSection({
         return true;
       }
 
-      const name = candidate.name.toLowerCase();
-      const username = String(candidate.username || "").toLowerCase();
-      return name.includes(normalizedQuery) || (username ? username.includes(normalizedQuery) : false);
+      const handle = candidate.handle.toLowerCase();
+      const label = candidate.label.toLowerCase();
+      const subtitle = String(candidate.subtitle || "").toLowerCase();
+      return handle.includes(normalizedQuery) || label.includes(normalizedQuery) || subtitle.includes(normalizedQuery);
     });
 
     filtered.sort((left, right) => {
       if (!normalizedQuery) {
-        return left.name.localeCompare(right.name);
+        const leftRank = left.kind === "all" ? 0 : left.kind === "tag" ? 1 : 2;
+        const rightRank = right.kind === "all" ? 0 : right.kind === "tag" ? 1 : 2;
+        if (leftRank !== rightRank) {
+          return leftRank - rightRank;
+        }
+
+        return left.label.localeCompare(right.label);
       }
 
-      const leftStarts = left.name.toLowerCase().startsWith(normalizedQuery) || String(left.username || "").toLowerCase().startsWith(normalizedQuery);
-      const rightStarts = right.name.toLowerCase().startsWith(normalizedQuery) || String(right.username || "").toLowerCase().startsWith(normalizedQuery);
+      const leftStarts = left.handle.startsWith(normalizedQuery) || left.label.toLowerCase().startsWith(normalizedQuery);
+      const rightStarts = right.handle.startsWith(normalizedQuery) || right.label.toLowerCase().startsWith(normalizedQuery);
       if (leftStarts !== rightStarts) {
         return leftStarts ? -1 : 1;
       }
 
-      return left.name.localeCompare(right.name);
+      return left.label.localeCompare(right.label);
     });
 
     return filtered.slice(0, 8);
@@ -159,7 +171,7 @@ export function ChatComposerSection({
     const currentValue = String(input.value || "");
     const beforeMention = currentValue.slice(0, mentionContext.start);
     const afterMention = currentValue.slice(mentionContext.end);
-    const insertedMention = `@${candidate.name} `;
+    const insertedMention = `@${candidate.handle} `;
     const nextValue = `${beforeMention}${insertedMention}${afterMention}`;
     const nextCaret = beforeMention.length + insertedMention.length;
 
@@ -271,17 +283,18 @@ export function ChatComposerSection({
               <Button type="button" className="secondary tiny" onClick={onCancelQuote}>{t("chat.cancelQuote")}</Button>
             </div>
           ) : null}
-          <textarea
-            ref={messageInputRef}
-            value={chatText}
-            onChange={(event) => {
-              const target = event.target;
-              onSetChatText(target.value);
-              const caret = typeof target.selectionStart === "number" ? target.selectionStart : target.value.length;
-              updateMentionContext(target.value, caret);
-            }}
-            onPaste={onChatPaste}
-            onKeyDown={(event) => {
+          <div className="chat-compose-editor-shell">
+            <textarea
+              ref={messageInputRef}
+              value={chatText}
+              onChange={(event) => {
+                const target = event.target;
+                onSetChatText(target.value);
+                const caret = typeof target.selectionStart === "number" ? target.selectionStart : target.value.length;
+                updateMentionContext(target.value, caret);
+              }}
+              onPaste={onChatPaste}
+              onKeyDown={(event) => {
               if (mentionPickerOpen && mentionSuggestions.length > 0) {
                 if (event.key === "ArrowDown") {
                   event.preventDefault();
@@ -311,54 +324,56 @@ export function ChatComposerSection({
                 return;
               }
 
-              onChatInputKeyDown(event);
+                onChatInputKeyDown(event);
 
-              if (event.defaultPrevented) {
-                return;
-              }
-
-              window.requestAnimationFrame(() => {
-                const input = messageInputRef.current;
-                if (!input) {
+                if (event.defaultPrevented) {
                   return;
                 }
 
-                const caret = typeof input.selectionStart === "number" ? input.selectionStart : input.value.length;
-                updateMentionContext(input.value, caret);
-              });
-            }}
-            onClick={(event) => {
-              const target = event.currentTarget;
-              const caret = typeof target.selectionStart === "number" ? target.selectionStart : target.value.length;
-              updateMentionContext(target.value, caret);
-            }}
-            rows={2}
-            placeholder={hasActiveRoom ? (activeTopicIsArchived ? t("chat.topicArchivedReadOnly") : t("chat.typePlaceholder")) : t("chat.selectChannelPlaceholder")}
-            disabled={!hasActiveRoom || activeTopicIsArchived}
-            aria-label={t("chat.composeAria")}
-          />
-          {mentionPickerOpen ? (
-            <div className="chat-mention-picker" role="listbox" aria-label={t("chat.mentionSuggestionsAria")}>
-              {mentionSuggestions.length > 0 ? mentionSuggestions.map((candidate, index) => (
-                <button
-                  key={candidate.userId}
-                  type="button"
-                  className={`chat-mention-picker-item ${index === mentionSelectedIndex ? "chat-mention-picker-item-active" : ""}`}
-                  role="option"
-                  aria-selected={index === mentionSelectedIndex}
-                  onMouseDown={(event) => {
-                    event.preventDefault();
-                    applyMentionCandidate(candidate);
-                  }}
-                >
-                  <span className="chat-mention-picker-name">{candidate.name}</span>
-                  {candidate.username ? <span className="chat-mention-picker-username">@{candidate.username}</span> : null}
-                </button>
-              )) : (
-                <div className="chat-mention-picker-empty">{t("chat.mentionNoMatches")}</div>
-              )}
-            </div>
-          ) : null}
+                window.requestAnimationFrame(() => {
+                  const input = messageInputRef.current;
+                  if (!input) {
+                    return;
+                  }
+
+                  const caret = typeof input.selectionStart === "number" ? input.selectionStart : input.value.length;
+                  updateMentionContext(input.value, caret);
+                });
+              }}
+              onClick={(event) => {
+                const target = event.currentTarget;
+                const caret = typeof target.selectionStart === "number" ? target.selectionStart : target.value.length;
+                updateMentionContext(target.value, caret);
+              }}
+              rows={2}
+              placeholder={hasActiveRoom ? (activeTopicIsArchived ? t("chat.topicArchivedReadOnly") : t("chat.typePlaceholder")) : t("chat.selectChannelPlaceholder")}
+              disabled={!hasActiveRoom || activeTopicIsArchived}
+              aria-label={t("chat.composeAria")}
+            />
+            {mentionPickerOpen ? (
+              <div className="chat-mention-picker" role="listbox" aria-label={t("chat.mentionSuggestionsAria")}>
+                {mentionSuggestions.length > 0 ? mentionSuggestions.map((candidate, index) => (
+                  <button
+                    key={candidate.key}
+                    type="button"
+                    className={`chat-mention-picker-item ${index === mentionSelectedIndex ? "chat-mention-picker-item-active" : ""}`}
+                    role="option"
+                    aria-selected={index === mentionSelectedIndex}
+                    onMouseDown={(event) => {
+                      event.preventDefault();
+                      applyMentionCandidate(candidate);
+                    }}
+                  >
+                    <span className="chat-mention-picker-name">{candidate.label}</span>
+                    <span className="chat-mention-picker-username">@{candidate.handle}</span>
+                    {candidate.subtitle ? <span className="chat-mention-picker-subtitle">{candidate.subtitle}</span> : null}
+                  </button>
+                )) : (
+                  <div className="chat-mention-picker-empty">{t("chat.mentionNoMatches")}</div>
+                )}
+              </div>
+            ) : null}
+          </div>
         </div>
         {composePreviewImage ? (
           <Button

@@ -61,12 +61,21 @@ type UseChatComposerActionsParams = {
   reportMessageExistsMessage: string;
   attachmentTooLargeMessage: string;
   attachmentUnsupportedTypeMessage: string;
-  mentionCandidates: Array<{ userId: string; name: string; username?: string | null }>;
+  mentionCandidates: Array<{
+    key: string;
+    kind: "user" | "tag" | "all";
+    handle: string;
+    label: string;
+    userId?: string;
+    userIds?: string[];
+  }>;
 };
+
+type MentionCandidate = UseChatComposerActionsParams["mentionCandidates"][number];
 
 function resolveMentionUserIdsFromText(
   text: string,
-  candidates: Array<{ userId: string; name: string; username?: string | null }>
+  candidates: MentionCandidate[]
 ): string[] {
   const normalizedText = String(text || "");
   if (!normalizedText.trim()) {
@@ -87,27 +96,42 @@ function resolveMentionUserIdsFromText(
     return [];
   }
 
-  const mentionedUserIds: string[] = [];
+  const mentionedUserIds = new Set<string>();
   const seen = new Set<string>();
   candidates.forEach((candidate) => {
-    const userId = String(candidate.userId || "").trim();
-    if (!userId || seen.has(userId)) {
+    const handle = String(candidate.handle || "").trim().toLowerCase();
+    if (!handle || !handles.has(handle)) {
       return;
     }
 
-    const nameHandle = String(candidate.name || "").trim().toLowerCase();
-    const usernameHandle = String(candidate.username || "").trim().toLowerCase();
-    if (!nameHandle && !usernameHandle) {
+    if (candidate.kind === "all") {
       return;
     }
 
-    if (handles.has(nameHandle) || (usernameHandle && handles.has(usernameHandle))) {
+    if (candidate.kind === "user") {
+      const userId = String(candidate.userId || "").trim();
+      if (!userId || seen.has(userId)) {
+        return;
+      }
+
       seen.add(userId);
-      mentionedUserIds.push(userId);
+      mentionedUserIds.add(userId);
+      return;
     }
+
+    const targetUserIds = Array.isArray(candidate.userIds) ? candidate.userIds : [];
+    targetUserIds.forEach((value) => {
+      const userId = String(value || "").trim();
+      if (!userId || seen.has(userId)) {
+        return;
+      }
+
+      seen.add(userId);
+      mentionedUserIds.add(userId);
+    });
   });
 
-  return mentionedUserIds;
+  return Array.from(mentionedUserIds);
 }
 
 export function useChatComposerActions({

@@ -3,6 +3,27 @@ import type { Message, RoomTopic, ServerMemberItem } from "../../../domain";
 
 type Translate = (key: string) => string;
 
+type MentionCandidate = {
+  key: string;
+  kind: "user" | "tag" | "all";
+  handle: string;
+  label: string;
+  userId?: string;
+  userIds?: string[];
+  subtitle?: string | null;
+};
+
+function toMentionHandle(raw: string): string {
+  return String(raw || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "_")
+    .replace(/[^\p{L}\p{N}._-]/gu, "")
+    .replace(/_{2,}/g, "_")
+    .replace(/^[_\.\-]+|[_\.\-]+$/g, "")
+    .slice(0, 32);
+}
+
 type ChatPanelProps = {
   t: Translate;
   locale: string;
@@ -51,7 +72,7 @@ type ChatPanelProps = {
   onArchiveTopic: (topicId: string) => Promise<void>;
   onUnarchiveTopic: (topicId: string) => Promise<void>;
   onDeleteTopic: (topicId: string) => Promise<void>;
-  mentionCandidates: Array<{ userId: string; name: string; username: string | null }>;
+  mentionCandidates: MentionCandidate[];
 };
 
 type VideoWindowsOverlayProps = {
@@ -207,6 +228,69 @@ export function useWorkspaceChatVideoProps({
   chatPanelProps: ChatPanelProps;
   videoWindowsOverlayProps: VideoWindowsOverlayProps;
 } {
+  const mentionCandidates: MentionCandidate[] = (() => {
+    const members = Array.isArray(serverMembers) ? serverMembers : [];
+    const userCandidates: MentionCandidate[] = [];
+    const roleMap = new Map<string, { handle: string; label: string; userIds: Set<string> }>();
+
+    members.forEach((member) => {
+      const userId = String(member.userId || "").trim();
+      const userName = String(member.name || "").trim();
+      const userHandle = toMentionHandle(userName);
+      if (userId && userName && userHandle) {
+        userCandidates.push({
+          key: `user:${userId}`,
+          kind: "user",
+          handle: userHandle,
+          label: userName,
+          userId
+        });
+      }
+
+      const customRoles = Array.isArray(member.customRoles) ? member.customRoles : [];
+      customRoles.forEach((role) => {
+        const roleLabel = String(role?.name || "").trim();
+        const roleHandle = toMentionHandle(roleLabel);
+        if (!roleLabel || !roleHandle || !userId) {
+          return;
+        }
+
+        const roleKey = `tag:${roleHandle}`;
+        const existing = roleMap.get(roleKey) || {
+          handle: roleHandle,
+          label: roleLabel,
+          userIds: new Set<string>()
+        };
+        existing.userIds.add(userId);
+        roleMap.set(roleKey, existing);
+      });
+    });
+
+    const tagCandidates = Array.from(roleMap.entries())
+      .map(([key, value]) => ({
+        key,
+        kind: "tag" as const,
+        handle: value.handle,
+        label: `@${value.handle}`,
+        userIds: Array.from(value.userIds),
+        subtitle: `${value.label} (${value.userIds.size})`
+      }))
+      .filter((candidate) => candidate.userIds.length > 0)
+      .sort((left, right) => left.label.localeCompare(right.label));
+
+    return [
+      {
+        key: "all",
+        kind: "all",
+        handle: "all",
+        label: "@all",
+        subtitle: t("chat.mentionAllUsers")
+      },
+      ...tagCandidates,
+      ...userCandidates
+    ];
+  })();
+
   const chatPanelProps: ChatPanelProps = {
     t,
     locale,
@@ -274,11 +358,7 @@ export function useWorkspaceChatVideoProps({
     onArchiveTopic: archiveTopic,
     onUnarchiveTopic: unarchiveTopic,
     onDeleteTopic: deleteTopic,
-    mentionCandidates: (Array.isArray(serverMembers) ? serverMembers : []).map((member) => ({
-      userId: String(member.userId || "").trim(),
-      name: String(member.name || "").trim(),
-      username: null
-    })).filter((candidate) => Boolean(candidate.userId && candidate.name))
+    mentionCandidates
   };
 
   const videoWindowsOverlayProps: VideoWindowsOverlayProps = {

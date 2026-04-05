@@ -21,6 +21,27 @@ import { ChatMessageTimeline } from "./chatPanel/sections/ChatMessageTimeline";
 import { ChatComposerSection } from "./chatPanel/sections/ChatComposerSection";
 import { ChatPanelOverlays } from "./chatPanel/sections/ChatPanelOverlays";
 
+type MentionCandidate = {
+  key: string;
+  kind: "user" | "tag" | "all";
+  handle: string;
+  label: string;
+  userId?: string;
+  userIds?: string[];
+  subtitle?: string | null;
+};
+
+function toMentionHandle(raw: string): string {
+  return String(raw || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "_")
+    .replace(/[^\p{L}\p{N}._-]/gu, "")
+    .replace(/_{2,}/g, "_")
+    .replace(/^[_\.\-]+|[_\.\-]+$/g, "")
+    .slice(0, 32);
+}
+
 type ChatPanelProps = {
   t: (key: string) => string;
   locale: string;
@@ -69,7 +90,7 @@ type ChatPanelProps = {
   onArchiveTopic: (topicId: string) => Promise<void>;
   onUnarchiveTopic: (topicId: string) => Promise<void>;
   onDeleteTopic: (topicId: string) => Promise<void>;
-  mentionCandidates: Array<{ userId: string; name: string; username: string | null }>;
+  mentionCandidates: MentionCandidate[];
 };
 
 export function ChatPanel({
@@ -287,37 +308,44 @@ export function ChatPanel({
   }, [messages, currentUserId]);
 
   const resolvedMentionCandidates = useMemo(() => {
-    const byUserId = new Map<string, { userId: string; name: string; username: string | null }>();
+    const byKey = new Map<string, MentionCandidate>();
 
     (Array.isArray(mentionCandidates) ? mentionCandidates : []).forEach((candidate) => {
-      const userId = String(candidate.userId || "").trim();
-      const name = String(candidate.name || "").trim();
-      if (!userId || !name) {
+      const key = String(candidate.key || "").trim();
+      const handle = String(candidate.handle || "").trim().toLowerCase();
+      const label = String(candidate.label || "").trim();
+      if (!key || !handle || !label) {
         return;
       }
 
-      byUserId.set(userId, {
-        userId,
-        name,
-        username: String(candidate.username || "").trim() || null
+      byKey.set(key, {
+        ...candidate,
+        key,
+        handle,
+        label,
+        subtitle: String(candidate.subtitle || "").trim() || null
       });
     });
 
     messages.forEach((message) => {
       const userId = String(message.user_id || "").trim();
-      const name = String(message.user_name || "").trim();
-      if (!userId || !name || byUserId.has(userId)) {
+      const label = String(message.user_name || "").trim();
+      const handle = toMentionHandle(label);
+      const key = `user:${userId}`;
+      if (!userId || !label || !handle || byKey.has(key)) {
         return;
       }
 
-      byUserId.set(userId, {
-        userId,
-        name,
-        username: null
+      byKey.set(key, {
+        key,
+        kind: "user",
+        handle,
+        label,
+        userId
       });
     });
 
-    return Array.from(byUserId.values());
+    return Array.from(byKey.values());
   }, [mentionCandidates, messages]);
 
   const pinnedMessagesCount = useMemo(
