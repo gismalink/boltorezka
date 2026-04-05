@@ -224,8 +224,6 @@ export function useChatPanelReadState({
 
     const activeTopic = topics.find((topic) => String(topic.id || "").trim() === normalizedTopicId);
     entryUnreadCountByTopicRef.current[normalizedTopicId] = activeTopic ? getTopicUnreadCount(activeTopic) : 0;
-
-    setEntryUnreadDivider(null);
   }, [activeTopicId, topics, getTopicUnreadCount]);
 
   useEffect(() => {
@@ -251,8 +249,6 @@ export function useChatPanelReadState({
   useEffect(() => {
     const normalizedTopicId = String(activeTopicId || "").trim();
     if (!normalizedTopicId) {
-      setEntryUnreadDivider(null);
-      unreadDividerScrolledTopicRef.current = "";
       return;
     }
 

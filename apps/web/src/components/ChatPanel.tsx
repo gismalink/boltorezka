@@ -596,7 +596,7 @@ export function ChatPanel({
         formatAttachmentSize={formatAttachmentSize}
         setPreviewImageUrl={setPreviewImageUrl}
         unreadDividerMessageId={entryUnreadDivider?.messageId || null}
-        unreadDividerVisible={Boolean(entryUnreadDivider?.messageId && entryUnreadDivider?.topicId === String(activeTopicId || "").trim())}
+        unreadDividerVisible={Boolean(entryUnreadDivider?.messageId)}
       />
       <ChatComposerSection
         t={t}
