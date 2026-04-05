@@ -245,19 +245,17 @@ export async function listRoomTopics(roomId: string, userId: string): Promise<To
          0,
          (
            SELECT COUNT(*)::int
-           FROM messages m
-           WHERE m.topic_id = rt.id
-             AND m.user_id <> $2
-             AND m.created_at > COALESCE(rr.last_read_at, to_timestamp(0))
-             AND (
-               (NULLIF(BTRIM(au.name), '') IS NOT NULL AND POSITION(LOWER(CONCAT('@', au.name)) IN LOWER(m.body)) > 0)
-               OR (NULLIF(BTRIM(au.username), '') IS NOT NULL AND POSITION(LOWER(CONCAT('@', au.username)) IN LOWER(m.body)) > 0)
-             )
+           FROM notification_inbox ni
+           WHERE ni.user_id = $2
+             AND ni.event_type = 'mention_me'
+             AND ni.room_id = rt.room_id
+             AND ni.topic_id = rt.id
+             AND ni.read_at IS NULL
+             AND ni.created_at > COALESCE(rr.last_read_at, to_timestamp(0))
          )
        ) AS mention_unread_count
      FROM room_topics rt
      LEFT JOIN room_reads rr ON rr.topic_id = rt.id AND rr.user_id = $2
-     LEFT JOIN users au ON au.id = $2
      WHERE rt.room_id = $1
      ORDER BY rt.is_pinned DESC, rt.position ASC, rt.created_at DESC`,
     [roomId, userId]

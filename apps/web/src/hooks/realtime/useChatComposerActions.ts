@@ -61,7 +61,54 @@ type UseChatComposerActionsParams = {
   reportMessageExistsMessage: string;
   attachmentTooLargeMessage: string;
   attachmentUnsupportedTypeMessage: string;
+  mentionCandidates: Array<{ userId: string; name: string; username?: string | null }>;
 };
+
+function resolveMentionUserIdsFromText(
+  text: string,
+  candidates: Array<{ userId: string; name: string; username?: string | null }>
+): string[] {
+  const normalizedText = String(text || "");
+  if (!normalizedText.trim()) {
+    return [];
+  }
+
+  const handlePattern = /@([\p{L}\p{N}._-]{2,32})/gu;
+  const handles = new Set<string>();
+  let match: RegExpExecArray | null;
+  while ((match = handlePattern.exec(normalizedText)) !== null) {
+    const handle = String(match[1] || "").trim().toLowerCase();
+    if (handle && handle !== "all" && handle !== "here") {
+      handles.add(handle);
+    }
+  }
+
+  if (handles.size === 0) {
+    return [];
+  }
+
+  const mentionedUserIds: string[] = [];
+  const seen = new Set<string>();
+  candidates.forEach((candidate) => {
+    const userId = String(candidate.userId || "").trim();
+    if (!userId || seen.has(userId)) {
+      return;
+    }
+
+    const nameHandle = String(candidate.name || "").trim().toLowerCase();
+    const usernameHandle = String(candidate.username || "").trim().toLowerCase();
+    if (!nameHandle && !usernameHandle) {
+      return;
+    }
+
+    if (handles.has(nameHandle) || (usernameHandle && handles.has(usernameHandle))) {
+      seen.add(userId);
+      mentionedUserIds.push(userId);
+    }
+  });
+
+  return mentionedUserIds;
+}
 
 export function useChatComposerActions({
   chatRoomSlug,
@@ -96,7 +143,8 @@ export function useChatComposerActions({
   reportMessageSentMessage,
   reportMessageExistsMessage,
   attachmentTooLargeMessage,
-  attachmentUnsupportedTypeMessage
+  attachmentUnsupportedTypeMessage,
+  mentionCandidates
 }: UseChatComposerActionsParams) {
   const [pinnedByMessageId, setPinnedByMessageId] = useState<Record<string, boolean>>({});
   const [reactionsByMessageId, setReactionsByMessageId] = useState<
@@ -184,6 +232,7 @@ export function useChatComposerActions({
         activeTopicId,
         replyingToMessageId,
         chatText,
+        mentionUserIds: resolveMentionUserIdsFromText(chatText, mentionCandidates),
         editingMessageId,
         pendingChatImageDataUrl,
         pendingChatAttachmentFile,
@@ -246,6 +295,7 @@ export function useChatComposerActions({
     attachmentTooLargeMessage,
     attachmentUnsupportedTypeMessage,
     topicImageUploadUnsupportedMessage,
+    mentionCandidates,
     activeTopicId,
     replyingToMessageId,
     chatRoomSlug,

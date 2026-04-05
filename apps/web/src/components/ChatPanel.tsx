@@ -69,6 +69,7 @@ type ChatPanelProps = {
   onArchiveTopic: (topicId: string) => Promise<void>;
   onUnarchiveTopic: (topicId: string) => Promise<void>;
   onDeleteTopic: (topicId: string) => Promise<void>;
+  mentionCandidates: Array<{ userId: string; name: string; username: string | null }>;
 };
 
 export function ChatPanel({
@@ -112,7 +113,8 @@ export function ChatPanel({
   onUpdateTopic,
   onArchiveTopic,
   onUnarchiveTopic,
-  onDeleteTopic
+  onDeleteTopic,
+  mentionCandidates
 }: ChatPanelProps) {
   const [topicFilterMode] = useState<"all" | "active" | "unread" | "my" | "mentions" | "pinned" | "archived">("all");
   const [topicPaletteOpen, setTopicPaletteOpen] = useState(false);
@@ -283,6 +285,40 @@ export function ChatPanel({
     messageVmBuildMsRef.current = Math.max(0, finishedAt - startedAt);
     return built;
   }, [messages, currentUserId]);
+
+  const resolvedMentionCandidates = useMemo(() => {
+    const byUserId = new Map<string, { userId: string; name: string; username: string | null }>();
+
+    (Array.isArray(mentionCandidates) ? mentionCandidates : []).forEach((candidate) => {
+      const userId = String(candidate.userId || "").trim();
+      const name = String(candidate.name || "").trim();
+      if (!userId || !name) {
+        return;
+      }
+
+      byUserId.set(userId, {
+        userId,
+        name,
+        username: String(candidate.username || "").trim() || null
+      });
+    });
+
+    messages.forEach((message) => {
+      const userId = String(message.user_id || "").trim();
+      const name = String(message.user_name || "").trim();
+      if (!userId || !name || byUserId.has(userId)) {
+        return;
+      }
+
+      byUserId.set(userId, {
+        userId,
+        name,
+        username: null
+      });
+    });
+
+    return Array.from(byUserId.values());
+  }, [mentionCandidates, messages]);
 
   const pinnedMessagesCount = useMemo(
     () => Object.keys(pinnedByMessageId || {}).length,
@@ -539,6 +575,7 @@ export function ChatPanel({
         onChatPaste={onChatPaste}
         onChatInputKeyDown={onChatInputKeyDown}
         chatText={chatText}
+        mentionCandidates={resolvedMentionCandidates}
         composePreviewImage={composePreviewImage}
         composePendingAttachmentName={composePendingAttachmentName}
         setPreviewImageUrl={setPreviewImageUrl}

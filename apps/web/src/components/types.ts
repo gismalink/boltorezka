@@ -132,6 +132,7 @@ export type RoomsPanelProps = {
   activeChatRoomSlug: string;
   screenShareOwnerByRoomSlug: Record<string, { userId: string | null; userName: string | null }>;
   roomUnreadBySlug: Record<string, number>;
+  roomMentionUnreadBySlug: Record<string, number>;
   serverUnreadCount: number;
   currentUserId: string;
   liveRoomMembersBySlug: Record<string, string[]>;

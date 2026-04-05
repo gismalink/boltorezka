@@ -15,6 +15,7 @@ type SendChatMessageParams = {
   activeTopicId: string | null;
   replyingToMessageId: string | null;
   chatText: string;
+  mentionUserIds: string[];
   editingMessageId: string | null;
   pendingChatImageDataUrl: string | null;
   pendingChatAttachmentFile: File | null;
@@ -42,6 +43,7 @@ export async function sendChatMessage(params: SendChatMessageParams): Promise<Se
     activeTopicId,
     replyingToMessageId,
     chatText,
+    mentionUserIds,
     editingMessageId,
     pendingChatImageDataUrl,
     pendingChatAttachmentFile,
@@ -132,7 +134,8 @@ export async function sendChatMessage(params: SendChatMessageParams): Promise<Se
         storageKey: initUpload.storageKey,
         mimeType,
         sizeBytes,
-        text: baseText
+        text: baseText,
+        mentionUserIds
       });
 
       return { kind: "sent", mode: "upload" };
@@ -174,7 +177,8 @@ export async function sendChatMessage(params: SendChatMessageParams): Promise<Se
         storageKey: initUpload.storageKey,
         mimeType,
         sizeBytes,
-        text: baseText
+        text: baseText,
+        mentionUserIds
       });
 
       return { kind: "sent", mode: "upload" };
@@ -199,11 +203,11 @@ export async function sendChatMessage(params: SendChatMessageParams): Promise<Se
   if (activeTopicId) {
     try {
       if (replyingToMessageId) {
-        await api.replyMessage(authToken, replyingToMessageId, { text: baseText });
+        await api.replyMessage(authToken, replyingToMessageId, { text: baseText, mentionUserIds });
         return { kind: "sent", mode: "reply" };
       }
 
-      await api.createTopicMessage(authToken, activeTopicId, { text: baseText });
+      await api.createTopicMessage(authToken, activeTopicId, { text: baseText, mentionUserIds });
       return { kind: "sent", mode: "text" };
     } catch {
       return { kind: "server-error" };

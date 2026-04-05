@@ -80,8 +80,11 @@ const topicMessagesQuerySchema = z.object({
   beforeId: z.string().trim().optional()
 });
 
+const mentionUserIdsSchema = z.array(z.string().uuid()).max(100).optional();
+
 const createTopicMessageSchema = z.object({
-  text: z.string().trim().min(1).max(4000)
+  text: z.string().trim().min(1).max(4000),
+  mentionUserIds: mentionUserIdsSchema
 });
 
 const reactionParamsSchema = z.object({
@@ -90,7 +93,8 @@ const reactionParamsSchema = z.object({
 });
 
 const editMessageSchema = z.object({
-  text: z.string().trim().min(1).max(4000)
+  text: z.string().trim().min(1).max(4000),
+  mentionUserIds: mentionUserIdsSchema
 });
 
 const reactionBodySchema = z.object({
@@ -658,7 +662,8 @@ export async function roomTopicsRoutes(fastify: FastifyInstance) {
           topicId: result.topic.id,
           topicSlug: result.topic.slug,
           messageId: result.message.id,
-          text: result.message.text
+          text: result.message.text,
+          mentionUserIds: parsedBody.data.mentionUserIds
         });
 
         const response: TopicMessageCreateResponse = {
@@ -856,7 +861,8 @@ export async function roomTopicsRoutes(fastify: FastifyInstance) {
           topicId: result.topic.id,
           topicSlug: result.topic.slug,
           messageId: result.message.id,
-          text: result.message.text
+          text: result.message.text,
+          mentionUserIds: parsedBody.data.mentionUserIds
         });
 
         const response: TopicMessageReplyResponse = {

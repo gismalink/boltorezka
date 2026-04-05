@@ -30,6 +30,7 @@ export function RoomsPanel({
   activeChatRoomSlug,
   screenShareOwnerByRoomSlug,
   roomUnreadBySlug,
+  roomMentionUnreadBySlug,
   serverUnreadCount,
   currentUserId,
   liveRoomMembersBySlug,
@@ -268,6 +269,7 @@ export function RoomsPanel({
       memberPreferencesByUserId={memberPreferencesByUserId}
       room={room}
       roomUnreadCount={Math.max(0, Number(roomUnreadBySlug[room.slug] || 0))}
+      roomMentionUnreadCount={Math.max(0, Number(roomMentionUnreadBySlug[room.slug] || 0))}
       isRoomUnreadMuted={(() => {
         const preset = roomMutePresetByRoomId[String(room.id || "").trim()];
         return preset != null && preset !== "off";
@@ -322,6 +324,7 @@ export function RoomsPanel({
     onSetRoomNotificationMutePreset,
     memberPreferencesByUserId,
     roomUnreadBySlug,
+    roomMentionUnreadBySlug,
     roomMutePresetByRoomId,
     onRoomMutePresetChange,
     roomMembersBySlug,

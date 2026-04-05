@@ -1,6 +1,5 @@
 // Purpose: map app/runtime chat state into presentational props for ChatPanel and VideoWindowsOverlay.
-import type { Message } from "../../../domain";
-import type { RoomTopic } from "../../../domain";
+import type { Message, RoomTopic, ServerMemberItem } from "../../../domain";
 
 type Translate = (key: string) => string;
 
@@ -52,6 +51,7 @@ type ChatPanelProps = {
   onArchiveTopic: (topicId: string) => Promise<void>;
   onUnarchiveTopic: (topicId: string) => Promise<void>;
   onDeleteTopic: (topicId: string) => Promise<void>;
+  mentionCandidates: Array<{ userId: string; name: string; username: string | null }>;
 };
 
 type VideoWindowsOverlayProps = {
@@ -86,6 +86,7 @@ type UseWorkspaceChatVideoPropsInput = {
   setActiveChatTopicId: React.Dispatch<React.SetStateAction<string | null>>;
   createTopic: (title: string) => Promise<void>;
   messages: Message[];
+  serverMembers: ServerMemberItem[];
   currentUserId: string | null;
   messagesHasMore: boolean;
   loadingOlderMessages: boolean;
@@ -154,6 +155,7 @@ export function useWorkspaceChatVideoProps({
   setActiveChatTopicId,
   createTopic,
   messages,
+  serverMembers,
   currentUserId,
   messagesHasMore,
   loadingOlderMessages,
@@ -271,7 +273,12 @@ export function useWorkspaceChatVideoProps({
     onUpdateTopic: updateTopic,
     onArchiveTopic: archiveTopic,
     onUnarchiveTopic: unarchiveTopic,
-    onDeleteTopic: deleteTopic
+    onDeleteTopic: deleteTopic,
+    mentionCandidates: (Array.isArray(serverMembers) ? serverMembers : []).map((member) => ({
+      userId: String(member.userId || "").trim(),
+      name: String(member.name || "").trim(),
+      username: null
+    })).filter((candidate) => Boolean(candidate.userId && candidate.name))
   };
 
   const videoWindowsOverlayProps: VideoWindowsOverlayProps = {

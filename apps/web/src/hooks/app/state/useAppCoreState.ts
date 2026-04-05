@@ -39,6 +39,7 @@ export function useAppCoreState({
   const [roomSlug, setRoomSlug] = useState("");
   const [chatRoomSlug, setChatRoomSlug] = useState("");
   const [roomUnreadBySlug, setRoomUnreadBySlug] = useState<Record<string, number>>({});
+  const [roomMentionUnreadBySlug, setRoomMentionUnreadBySlug] = useState<Record<string, number>>({});
   const [showAppUpdatedOverlay, setShowAppUpdatedOverlay] = useState(
     () => sessionStorage.getItem(versionUpdatePendingKey) === "1"
   );
@@ -97,6 +98,7 @@ export function useAppCoreState({
     roomSlug, setRoomSlug,
     chatRoomSlug, setChatRoomSlug,
     roomUnreadBySlug, setRoomUnreadBySlug,
+    roomMentionUnreadBySlug, setRoomMentionUnreadBySlug,
     showAppUpdatedOverlay, setShowAppUpdatedOverlay,
     cookieConsentAccepted, setCookieConsentAccepted,
     pendingAccessRefreshInSec, setPendingAccessRefreshInSec,

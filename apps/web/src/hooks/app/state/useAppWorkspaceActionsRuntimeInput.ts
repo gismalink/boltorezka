@@ -53,7 +53,14 @@ export function useAppWorkspaceActionsRuntimeInput(params: Record<string, unknow
           reportMessageSentMessage: p.t("chat.reportMessageSent"),
           reportMessageExistsMessage: p.t("chat.reportMessageExists"),
           attachmentTooLargeMessage: p.t("chat.attachmentTooLarge"),
-          attachmentUnsupportedTypeMessage: p.t("chat.attachmentUnsupportedType")
+          attachmentUnsupportedTypeMessage: p.t("chat.attachmentUnsupportedType"),
+          mentionCandidates: Array.isArray(p.serverMembers)
+            ? p.serverMembers.map((member: { userId?: string; name?: string }) => ({
+              userId: String(member?.userId || "").trim(),
+              name: String(member?.name || "").trim(),
+              username: null
+            })).filter((candidate: { userId: string; name: string }) => Boolean(candidate.userId && candidate.name))
+            : []
         }
       },
       moderation: {

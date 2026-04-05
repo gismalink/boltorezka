@@ -421,7 +421,7 @@ export const api = {
       token
     );
   },
-  createTopicMessage: (token: string, topicId: string, input: { text: string }) =>
+  createTopicMessage: (token: string, topicId: string, input: { text: string; mentionUserIds?: string[] }) =>
     fetchJson<{ message: Message }>(withSuffix(endpoints.topics, topicId, "messages"), token, withJsonBody("POST", input)),
   markTopicRead: (token: string, topicId: string, input: { lastReadMessageId?: string } = {}) =>
     fetchJson<TopicReadResponse>(
@@ -433,7 +433,7 @@ export const api = {
     fetchJson<{ message: Message }>(`/v1/messages/${encodeURIComponent(messageId)}`, token, withJsonBody("PATCH", input)),
   deleteMessage: (token: string, messageId: string) =>
     fetchJson<{ messageId: string }>(`/v1/messages/${encodeURIComponent(messageId)}`, token, withJsonBody("DELETE")),
-  replyMessage: (token: string, messageId: string, input: { text: string }) =>
+  replyMessage: (token: string, messageId: string, input: { text: string; mentionUserIds?: string[] }) =>
     fetchJson<{ message: Message; parentMessageId: string }>(
       `/v1/messages/${encodeURIComponent(messageId)}/reply`,
       token,
@@ -788,6 +788,7 @@ export const api = {
       mimeType: string;
       sizeBytes: number;
       text?: string;
+      mentionUserIds?: string[];
       downloadUrl?: string;
       width?: number;
       height?: number;

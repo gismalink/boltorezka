@@ -59,6 +59,7 @@ type RoomRowProps = Pick<
 > & {
   room: Room;
   roomUnreadCount: number;
+  roomMentionUnreadCount: number;
   isRoomUnreadMuted: boolean;
   roomMutePresetValue: "1h" | "8h" | "24h" | "forever" | "off" | null;
   onRoomMutePresetChange: (roomId: string, preset: "1h" | "8h" | "24h" | "forever" | "off") => void;
@@ -112,6 +113,7 @@ function RoomRowInner({
   memberPreferencesByUserId,
   room,
   roomUnreadCount,
+  roomMentionUnreadCount,
   isRoomUnreadMuted,
   roomMutePresetValue,
   onRoomMutePresetChange,
@@ -461,6 +463,7 @@ function RoomRowInner({
         <span>{room.title}</span>
       </button>
       <div className={`channel-right-zone channel-right-zone-actions-${roomActionsVariant} ${roomChatActive && roomActionButtonsCount > 0 ? "channel-right-zone-chat-active" : ""} ${channelSettingsPopupOpenId === room.id ? "channel-right-zone-open" : ""}`}>
+      {roomMentionUnreadCount > 0 ? <span className="room-mention-badge room-row-unread">@</span> : null}
       {roomUnreadCount > 0 ? <span className={`room-unread-badge room-row-unread ${isRoomUnreadMuted ? "room-unread-badge-muted" : ""}`}>{roomUnreadCount}</span> : null}
       <div className={`channel-row-actions channel-row-actions-actions-${roomActionsVariant} inline-flex items-center gap-1 ${roomChatActive && roomActionButtonsCount > 0 ? "channel-row-actions-chat-active" : ""} ${channelSettingsPopupOpenId === room.id ? "channel-row-actions-open" : ""}`}>
       {roomSupportsRtc ? (

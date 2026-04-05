@@ -13,6 +13,7 @@ import type { Room, RoomTopic } from "../../../domain";
 type RoomUnreadCountItem = {
   roomId: string;
   unreadCount: number;
+  mentionUnreadCount: number;
 };
 
 type RoomUnreadFetchMetrics = {
@@ -24,6 +25,7 @@ type RoomUnreadFetchMetrics = {
 
 type RoomUnreadCacheEntry = {
   unreadCount: number;
+  mentionUnreadCount: number;
   ts: number;
 };
 
@@ -71,7 +73,8 @@ async function fetchRoomUnreadCounts(
         status: "fulfilled",
         value: {
           roomId,
-          unreadCount: cached.unreadCount
+          unreadCount: cached.unreadCount,
+          mentionUnreadCount: cached.mentionUnreadCount
         }
       };
       return;
@@ -85,10 +88,13 @@ async function fetchRoomUnreadCounts(
     const batchSettled = await Promise.allSettled(
       batch.map(async ({ roomId }) => {
         const response = await api.roomTopics(token, roomId);
-        const unreadCount = (Array.isArray(response.topics) ? response.topics : [])
+        const topics = Array.isArray(response.topics) ? response.topics : [];
+        const unreadCount = topics
           .reduce((sum, topic) => sum + Math.max(0, Number(topic.unreadCount || 0)), 0);
-        cache?.set(roomId, { unreadCount, ts: Date.now() });
-        return { roomId, unreadCount };
+        const mentionUnreadCount = topics
+          .reduce((sum, topic) => sum + Math.max(0, Number(topic.mentionUnreadCount || 0)), 0);
+        cache?.set(roomId, { unreadCount, mentionUnreadCount, ts: Date.now() });
+        return { roomId, unreadCount, mentionUnreadCount };
       })
     );
 
@@ -120,6 +126,8 @@ type UseServerRoomUnreadCountersArgs = {
   chatTopics: RoomTopic[];
   roomUnreadBySlug: Record<string, number>;
   setRoomUnreadBySlug: Dispatch<SetStateAction<Record<string, number>>>;
+  roomMentionUnreadBySlug: Record<string, number>;
+  setRoomMentionUnreadBySlug: Dispatch<SetStateAction<Record<string, number>>>;
   pushLog: (text: string) => void;
 };
 
@@ -131,6 +139,8 @@ export function useServerRoomUnreadCounters({
   chatTopics,
   roomUnreadBySlug,
   setRoomUnreadBySlug,
+  roomMentionUnreadBySlug,
+  setRoomMentionUnreadBySlug,
   pushLog
 }: UseServerRoomUnreadCountersArgs) {
   const unreadCacheRef = useRef<Map<string, RoomUnreadCacheEntry>>(new Map());
@@ -175,6 +185,7 @@ export function useServerRoomUnreadCounters({
     const normalizedServerId = String(currentServerId || "").trim();
     if (!normalizedToken || !normalizedServerId) {
       setRoomUnreadBySlug({});
+      setRoomMentionUnreadBySlug({});
       return;
     }
 
@@ -184,6 +195,7 @@ export function useServerRoomUnreadCounters({
 
     if (roomList.length === 0) {
       setRoomUnreadBySlug({});
+      setRoomMentionUnreadBySlug({});
       return;
     }
 
@@ -202,6 +214,7 @@ export function useServerRoomUnreadCounters({
       }
 
       const next: Record<string, number> = {};
+      const nextMention: Record<string, number> = {};
       settled.forEach((entry, index) => {
         const targetRoom = roomList[index];
         if (!targetRoom?.slug) {
@@ -210,13 +223,16 @@ export function useServerRoomUnreadCounters({
 
         if (entry.status === "fulfilled") {
           next[targetRoom.slug] = entry.value.unreadCount;
+          nextMention[targetRoom.slug] = entry.value.mentionUnreadCount;
           return;
         }
 
         next[targetRoom.slug] = 0;
+        nextMention[targetRoom.slug] = 0;
       });
 
       setRoomUnreadBySlug(next);
+      setRoomMentionUnreadBySlug(nextMention);
 
       const failedCount = settled.filter((item) => item.status === "rejected").length;
       pushLog(
@@ -233,7 +249,7 @@ export function useServerRoomUnreadCounters({
     return () => {
       cancelled = true;
     };
-  }, [token, currentServerId, allRooms, setRoomUnreadBySlug, pushLog]);
+  }, [token, currentServerId, allRooms, setRoomUnreadBySlug, setRoomMentionUnreadBySlug, pushLog]);
 
   const roomIdBySlug = useMemo(() => {
     return allRooms.reduce<Record<string, string>>((acc, room) => {
@@ -261,10 +277,16 @@ export function useServerRoomUnreadCounters({
       }
     });
 
+    Object.entries(roomMentionUnreadBySlug).forEach(([slug, mentionUnreadCount]) => {
+      if (Math.max(0, Number(mentionUnreadCount || 0)) > 0) {
+        slugsToRefresh.add(String(slug || "").trim());
+      }
+    });
+
     return Array.from(slugsToRefresh)
       .map((slug) => roomIdBySlug[slug])
       .filter((roomId): roomId is string => Boolean(roomId));
-  }, [chatRoomSlug, roomIdBySlug, roomUnreadBySlug]);
+  }, [chatRoomSlug, roomIdBySlug, roomUnreadBySlug, roomMentionUnreadBySlug]);
 
   useEffect(() => {
     const normalizedToken = String(token || "").trim();
@@ -320,6 +342,23 @@ export function useServerRoomUnreadCounters({
         return next;
       });
 
+      setRoomMentionUnreadBySlug((prev) => {
+        const next = { ...prev };
+        settled.forEach((entry) => {
+          if (entry.status !== "fulfilled") {
+            return;
+          }
+
+          const targetSlug = slugById[entry.value.roomId];
+          if (!targetSlug) {
+            return;
+          }
+
+          next[targetSlug] = entry.value.mentionUnreadCount;
+        });
+        return next;
+      });
+
       const failedCount = settled.filter((entry) => entry.status === "rejected").length;
       const allFailed = failedCount === settled.length && settled.length > 0;
       failureStreak = allFailed ? failureStreak + 1 : 0;
@@ -346,7 +385,7 @@ export function useServerRoomUnreadCounters({
         window.clearTimeout(timerId);
       }
     };
-  }, [token, currentServerId, refreshRoomIds, roomIdBySlug, setRoomUnreadBySlug, pushLog]);
+  }, [token, currentServerId, refreshRoomIds, roomIdBySlug, setRoomUnreadBySlug, setRoomMentionUnreadBySlug, pushLog]);
 
   useEffect(() => {
     const normalizedSlug = String(chatRoomSlug || "").trim();
@@ -365,8 +404,10 @@ export function useServerRoomUnreadCounters({
     }
 
     const unreadCount = chatTopics.reduce((sum, topic) => sum + Math.max(0, Number(topic.unreadCount || 0)), 0);
+    const mentionUnreadCount = chatTopics.reduce((sum, topic) => sum + Math.max(0, Number(topic.mentionUnreadCount || 0)), 0);
     unreadCacheRef.current.set(activeRoomId, {
       unreadCount,
+      mentionUnreadCount,
       ts: Date.now()
     });
 
@@ -380,7 +421,17 @@ export function useServerRoomUnreadCounters({
         [normalizedSlug]: unreadCount
       };
     });
-  }, [chatRoomSlug, chatTopics, roomIdBySlug, setRoomUnreadBySlug]);
+    setRoomMentionUnreadBySlug((prev) => {
+      if ((prev[normalizedSlug] || 0) === mentionUnreadCount) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        [normalizedSlug]: mentionUnreadCount
+      };
+    });
+  }, [chatRoomSlug, chatTopics, roomIdBySlug, setRoomUnreadBySlug, setRoomMentionUnreadBySlug]);
 
   const serverUnreadCount = useMemo(
     () => Object.values(roomUnreadBySlug).reduce((sum, value) => sum + Math.max(0, Number(value || 0)), 0),

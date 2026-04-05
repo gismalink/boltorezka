@@ -91,6 +91,7 @@ export function App() {
     rooms, setRooms, roomsTree, setRoomsTree, archivedRooms, setArchivedRooms,
     roomSlug, setRoomSlug, chatRoomSlug, setChatRoomSlug,
     roomUnreadBySlug, setRoomUnreadBySlug,
+    roomMentionUnreadBySlug, setRoomMentionUnreadBySlug,
     showAppUpdatedOverlay, setShowAppUpdatedOverlay,
     cookieConsentAccepted, setCookieConsentAccepted,
     pendingAccessRefreshInSec, setPendingAccessRefreshInSec,
@@ -593,6 +594,8 @@ export function App() {
     chatTopics,
     roomUnreadBySlug,
     setRoomUnreadBySlug,
+    roomMentionUnreadBySlug,
+    setRoomMentionUnreadBySlug,
     pushLog
   });
 
@@ -681,6 +684,7 @@ export function App() {
     maxChatRetries: MAX_CHAT_RETRIES,
     messageEditDeleteWindowMs: MESSAGE_EDIT_DELETE_WINDOW_MS,
     serverChatImagePolicy, chatImageTooLargeMessage,
+    serverMembers,
     currentUserId, roomsPresenceDetailsBySlug,
     setMemberPreferencesByUserId,
     canManageUsers, canPromote, canManageAudioQuality,
@@ -825,6 +829,7 @@ export function App() {
     roomMediaTopologyBySlug,
     screenShareOwnerByRoomSlug,
     roomUnreadBySlug,
+    roomMentionUnreadBySlug,
     serverUnreadCount,
     currentUserIdOrNull,
     roomsPresenceBySlug,

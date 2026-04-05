@@ -1616,6 +1616,57 @@ pre {
   resize: vertical;
 }
 
+.chat-mention-picker {
+  display: grid;
+  gap: 2px;
+  max-height: 200px;
+  overflow-y: auto;
+  border: var(--border-thin) solid color-mix(in srgb, var(--pixel-neon-cyan) 62%, var(--pixel-border) 38%);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--pixel-panel) 92%, #000 8%);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--pixel-neon-cyan) 28%, transparent 72%);
+  padding: 4px;
+}
+
+.chat-mention-picker-item {
+  width: 100%;
+  border: 0;
+  border-radius: 6px;
+  padding: 6px 8px;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--pixel-text);
+  background: transparent;
+}
+
+.chat-mention-picker-item:hover,
+.chat-mention-picker-item-active {
+  background: color-mix(in srgb, var(--pixel-neon-cyan) 22%, transparent 78%);
+  color: var(--pixel-text-bright);
+}
+
+.chat-mention-picker-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chat-mention-picker-username {
+  color: var(--pixel-muted);
+  font-size: calc(var(--font-size-sm) - 0.08rem);
+  white-space: nowrap;
+}
+
+.chat-mention-picker-empty {
+  color: var(--pixel-muted);
+  font-size: calc(var(--font-size-sm) - 0.08rem);
+  padding: 6px 8px;
+}
+
 .chat-typing-banner {
   min-height: 22px;
   margin-top: -4px;
@@ -1815,6 +1866,22 @@ pre {
   font-size: 11px;
   line-height: 20px;
   text-align: center;
+}
+
+.room-mention-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, #ff4f78 78%, #ffcc3a 22%);
+  color: #22030b;
+  font-size: 11px;
+  line-height: 20px;
+  font-weight: 800;
+  box-shadow: 0 0 0 1px color-mix(in srgb, #ff4f78 72%, transparent 28%);
 }
 
 .room-unread-badge-muted {
@@ -2146,6 +2213,7 @@ pre {
   transform: translateY(-50%);
   display: inline-flex;
   align-items: center;
+  gap: 4px;
   min-width: 0;
   pointer-events: none;
 }
@@ -2270,7 +2338,7 @@ pre {
 }
 
 .channel-right-zone-chat-active.channel-right-zone-actions-one .room-row-unread {
-  transform: translateX(-28px);
+  transform: translateX(-48px);
 }
 
 .channel-right-zone-chat-active.channel-right-zone-actions-two .room-row-unread {
@@ -2279,7 +2347,7 @@ pre {
 
 .channel-row-main-actions-one:hover .room-row-unread,
 .channel-right-zone-actions-one.channel-right-zone-open .room-row-unread {
-  transform: translateX(-28px);
+  transform: translateX(-48px);
 }
 
 .channel-row-main-actions-two:hover .room-row-unread,

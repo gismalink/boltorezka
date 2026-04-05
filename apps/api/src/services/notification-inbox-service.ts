@@ -170,6 +170,27 @@ function parseMentionHandles(text: string): { mentionsAll: boolean; handles: Set
   return { mentionsAll, handles };
 }
 
+function normalizeMentionUserIds(input: unknown): string[] {
+  if (!Array.isArray(input)) {
+    return [];
+  }
+
+  const seen = new Set<string>();
+  const ids: string[] = [];
+
+  input.forEach((value) => {
+    const normalized = String(value || "").trim();
+    if (!normalized || seen.has(normalized)) {
+      return;
+    }
+
+    seen.add(normalized);
+    ids.push(normalized);
+  });
+
+  return ids;
+}
+
 async function resolveRoomAudience(roomId: string, actorUserId: string): Promise<Array<{ userId: string; name: string; username: string | null }>> {
   const result = await db.query<{ user_id: string; name: string; username: string | null }>(
     `SELECT DISTINCT rm.user_id, u.name, u.username
@@ -354,9 +375,11 @@ export async function emitMentionInboxEvents(input: {
   topicSlug: string | null;
   messageId: string;
   text: string;
+  mentionUserIds?: string[];
 }) {
+  const explicitMentionUserIds = normalizeMentionUserIds(input.mentionUserIds);
   const parsed = parseMentionHandles(input.text);
-  if (!parsed.mentionsAll && parsed.handles.size === 0) {
+  if (explicitMentionUserIds.length === 0 && !parsed.mentionsAll && parsed.handles.size === 0) {
     return;
   }
 
@@ -365,13 +388,27 @@ export async function emitMentionInboxEvents(input: {
     return;
   }
 
+  const audienceByUserId = new Map<string, { userId: string; name: string; username: string | null }>();
+  audience.forEach((entry) => {
+    audienceByUserId.set(entry.userId, entry);
+  });
+
+  const targetedMentionUserIds = new Set<string>();
+  explicitMentionUserIds.forEach((userId) => {
+    if (audienceByUserId.has(userId)) {
+      targetedMentionUserIds.add(userId);
+    }
+  });
+
   const serverId = await resolveRoomServerId(input.roomId);
   const body = String(input.text || "").trim().slice(0, 240) || "Mention";
 
   for (const user of audience) {
     const loweredName = user.name.trim().toLowerCase();
     const loweredUsername = String(user.username || "").trim().toLowerCase();
-    const directMentioned = parsed.handles.has(loweredName) || (loweredUsername && parsed.handles.has(loweredUsername));
+    const directMentioned = targetedMentionUserIds.has(user.userId)
+      || parsed.handles.has(loweredName)
+      || (loweredUsername && parsed.handles.has(loweredUsername));
     const isCritical = parsed.mentionsAll;
     if (!directMentioned && !isCritical) {
       continue;
@@ -388,12 +425,6 @@ export async function emitMentionInboxEvents(input: {
     }
 
     if (settings.mode === "mentions" || settings.mode === "all") {
-      const muted = isMutedNow(settings.muteUntil);
-      const bypassMute = isCritical && settings.allowCriticalMentions;
-      if (muted && !bypassMute) {
-        continue;
-      }
-
       await insertInboxEvent({
         userId: user.userId,
         eventType: "mention_me",
