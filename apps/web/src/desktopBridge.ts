@@ -54,8 +54,30 @@ export type DesktopUpdateBridge = {
   onStatus: (listener: (event: DesktopUpdateStatusEvent) => void) => () => void;
 };
 
+type DesktopNotificationOpenPayload = {
+  eventId?: string;
+  at?: string;
+};
+
+type DesktopNotificationShowPayload = {
+  eventId?: string;
+  title: string;
+  body?: string;
+};
+
+type DesktopNotificationActionResult = {
+  ok: boolean;
+  reason?: string;
+};
+
+export type DesktopNotificationBridge = {
+  show: (payload: DesktopNotificationShowPayload) => Promise<DesktopNotificationActionResult>;
+  onOpen: (listener: (payload: DesktopNotificationOpenPayload) => void) => () => void;
+};
+
 type DesktopBridgeWithUpdate = DesktopBridgeInfo & {
   update?: DesktopUpdateBridge;
+  notifications?: DesktopNotificationBridge;
 };
 
 export function getDesktopBridgeInfo(): DesktopBridgeInfo | null {
@@ -91,4 +113,21 @@ export function getDesktopUpdateBridge(): DesktopUpdateBridge | null {
   }
 
   return updateBridge;
+}
+
+export function getDesktopNotificationBridge(): DesktopNotificationBridge | null {
+  const bridge = (window as Window & { boltorezkaDesktop?: DesktopBridgeWithUpdate }).boltorezkaDesktop;
+  if (!bridge?.notifications) {
+    return null;
+  }
+
+  const notificationBridge = bridge.notifications;
+  if (
+    typeof notificationBridge.show !== "function"
+    || typeof notificationBridge.onOpen !== "function"
+  ) {
+    return null;
+  }
+
+  return notificationBridge;
 }

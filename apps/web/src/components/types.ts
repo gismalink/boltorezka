@@ -1,4 +1,4 @@
-import type { RefObject } from "react";
+import type { FormEvent, RefObject } from "react";
 import type { Lang, TranslateFn } from "../i18n";
 import type { ChannelAudioQualitySetting, PresenceMember, Room, RoomKind, RoomMemberPreference, RoomsTreeResponse, UiTheme, User } from "../domain";
 import type { VoiceMediaStatusSummary } from "../hooks/rtc/voiceCallTypes";
@@ -130,7 +130,10 @@ export type RoomsPanelProps = {
   roomsTree: RoomsTreeResponse | null;
   roomSlug: string;
   activeChatRoomSlug: string;
-  roomMediaTopologyBySlug: Record<string, "livekit">;
+  screenShareOwnerByRoomSlug: Record<string, { userId: string | null; userName: string | null }>;
+  roomUnreadBySlug: Record<string, number>;
+  roomMentionUnreadBySlug: Record<string, number>;
+  serverUnreadCount: number;
   currentUserId: string;
   liveRoomMembersBySlug: Record<string, string[]>;
   liveRoomMemberDetailsBySlug: Record<string, PresenceMember[]>;
@@ -138,15 +141,14 @@ export type RoomsPanelProps = {
   voiceMicStateByUserIdInCurrentRoom: Record<string, "muted" | "silent" | "speaking">;
   voiceCameraEnabledByUserIdInCurrentRoom: Record<string, boolean>;
   voiceAudioOutputMutedByUserIdInCurrentRoom: Record<string, boolean>;
+  audioMuted: boolean;
   voiceRtcStateByUserIdInCurrentRoom: Record<string, "disconnected" | "connecting" | "connected">;
   voiceMediaStatusSummaryByUserIdInCurrentRoom: Record<string, VoiceMediaStatusSummary>;
   collapsedCategoryIds: string[];
   uncategorizedRooms: Room[];
   archivedRooms: Room[];
-  newCategorySlug: string;
   newCategoryTitle: string;
   categoryPopupOpen: boolean;
-  newRoomSlug: string;
   newRoomTitle: string;
   newRoomKind: RoomKind;
   newRoomCategoryId: string;
@@ -210,4 +212,5 @@ export type RoomsPanelProps = {
   onLoadServerRoles: () => Promise<Array<{ id: string; name: string; isBase: boolean }>>;
   onSetServerMemberCustomRoles: (userId: string, roleIds: string[]) => Promise<boolean>;
   onSetServerMemberHiddenRoomAccess: (userId: string, roomIds: string[]) => Promise<boolean>;
+  onSetRoomNotificationMutePreset: (roomId: string, preset: "1h" | "8h" | "24h" | "forever" | "off") => Promise<void>;
 };

@@ -5,11 +5,11 @@ type UseWorkspaceChatVideoPropsInput = Parameters<typeof useWorkspaceChatVideoPr
 
 type UseAppChatVideoPropsInput = Omit<
   UseWorkspaceChatVideoPropsInput,
-  "authToken" | "activeChatRoomTitle" | "currentUserId" | "setChatText" | "userName"
+  "authToken" | "activeChatRoomId" | "activeChatRoomTitle" | "currentUserId" | "setChatText" | "userName"
 > & {
   serviceToken: string;
   user: User | null;
-  activeChatRoom: { title?: string } | null;
+  activeChatRoom: { id?: string; title?: string } | null;
   handleSetChatText: (value: string) => void;
 };
 
@@ -23,6 +23,7 @@ export function useAppChatVideoProps({
   return useWorkspaceChatVideoProps({
     ...rest,
     authToken: serviceToken,
+    activeChatRoomId: String(activeChatRoom?.id || ""),
     activeChatRoomTitle: activeChatRoom?.title || "",
     currentUserId: user?.id || null,
     setChatText: handleSetChatText,

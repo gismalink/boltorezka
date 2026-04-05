@@ -9,12 +9,14 @@ type WsTicketClaims = {
   userName?: string;
   name?: string;
   email?: string;
+  serverId?: string | null;
 };
 
 type SocketState = {
   sessionId: string;
   userId: string;
   userName: string;
+  currentServerId: string | null;
   roomId: string | null;
   roomSlug: string | null;
   roomKind: "text" | "text_voice" | "text_voice_video" | null;
@@ -26,7 +28,7 @@ type ConsumeWsTicketDeps = {
   socketState: WeakMap<WebSocket, SocketState>;
   attachUserSocket: (userId: string, socket: WebSocket) => void;
   registerRealtimeSocket: (socket: WebSocket, userId?: string) => void;
-  getAllRoomsPresence: (forUserId: string | null) => unknown;
+  getAllRoomsPresence: (forUserId: string | null, forServerId?: string | null) => unknown;
   redisGet: (key: string) => Promise<string | null>;
   redisDel: (key: string) => Promise<number>;
   redisHSet: (key: string, values: Record<string, string>) => Promise<number>;
@@ -84,11 +86,13 @@ export async function consumeWsTicketAndInitializeConnection(deps: ConsumeWsTick
   }
 
   const userName = claims.userName || claims.name || claims.email || "unknown";
+  const currentServerId = String(claims.serverId || "").trim() || null;
 
   await initializeRealtimeConnection({
     connection,
     userId,
     userName,
+    currentServerId,
     socketState,
     attachUserSocket,
     registerRealtimeSocket,

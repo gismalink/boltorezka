@@ -17,6 +17,8 @@ export type User = {
   is_banned: boolean;
   access_state: "pending" | "active" | "blocked";
   is_bot: boolean;
+  is_readonly?: boolean;
+  slowmode_seconds?: number;
   deleted_at?: string | null;
   purge_scheduled_at?: string | null;
   created_at: string;
@@ -60,20 +62,44 @@ export type RoomsTreeResponse = {
 export type Message = {
   id: string;
   room_id: string;
+  topic_id?: string | null;
+  reply_to_message_id?: string | null;
+  reply_to_user_id?: string | null;
+  reply_to_user_name?: string | null;
+  reply_to_text?: string | null;
   user_id: string;
   text: string;
   created_at: string;
   edited_at?: string | null;
   user_name: string;
   attachments?: ChatAttachment[];
+  reactions?: Array<{
+    emoji: string;
+    count: number;
+    reacted: boolean;
+  }>;
   clientRequestId?: string;
   deliveryStatus?: "sending" | "delivered" | "failed";
 };
 
+
+export type ServerAuditListResponse = {
+  serverId: string;
+  entries: Array<{
+    id: string;
+    action: string;
+    actorUserId: string | null;
+    actorUserName: string | null;
+    targetUserId: string | null;
+    targetUserName: string | null;
+    meta: Record<string, unknown>;
+    createdAt: string;
+  }>;
+};
 export type ChatAttachment = {
   id: string;
   message_id: string;
-  type: "image";
+  type: "image" | "document" | "audio";
   storage_key: string;
   download_url: string | null;
   mime_type: string;
@@ -108,6 +134,154 @@ export type RoomMessagesResponse = {
     hasMore: boolean;
     nextCursor: MessagesCursor | null;
   };
+};
+
+export type RoomTopic = {
+  id: string;
+  roomId: string;
+  createdBy: string | null;
+  slug: string;
+  title: string;
+  position: number;
+  isPinned: boolean;
+  archivedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  unreadCount: number;
+  mentionUnreadCount: number;
+};
+
+export type RoomTopicsListResponse = {
+  topics: RoomTopic[];
+};
+
+export type TopicMessagesResponse = {
+  room: Room;
+  topic: {
+    id: string;
+    roomId: string;
+    slug: string;
+    title: string;
+    archivedAt: string | null;
+    createdAt: string;
+    updatedAt: string;
+  };
+  messages: Message[];
+  pagination: {
+    hasMore: boolean;
+    nextCursor: MessagesCursor | null;
+  };
+};
+
+export type MessageSearchScope = "all" | "server" | "room" | "topic";
+
+export type MessageSearchItem = {
+  id: string;
+  roomId: string;
+  roomSlug: string;
+  roomTitle: string;
+  topicId: string | null;
+  topicSlug: string | null;
+  topicTitle: string | null;
+  userId: string;
+  userName: string;
+  text: string;
+  createdAt: string;
+  editedAt: string | null;
+  hasAttachments: boolean;
+  attachmentCount: number;
+  attachmentType?: "image";
+};
+
+export type SearchMessagesResponse = {
+  messages: MessageSearchItem[];
+  pagination: {
+    hasMore: boolean;
+    nextCursor: {
+      beforeCreatedAt: string;
+      beforeId: string;
+    } | null;
+  };
+};
+
+export type TopicMessageReportResponse = {
+  ok: true;
+  reportId: string;
+  messageId: string;
+};
+
+export type NotificationSettingsResponse = {
+  settings: {
+    id: string;
+    userId: string;
+    scopeType: "server" | "room" | "topic";
+    serverId: string | null;
+    roomId: string | null;
+    topicId: string | null;
+    mode: "all" | "mentions" | "none";
+    muteUntil: string | null;
+    allowCriticalMentions: boolean;
+    createdAt: string;
+    updatedAt: string;
+  };
+};
+
+export type NotificationInboxItem = {
+  id: string;
+  userId: string;
+  eventType: "reply_to_me" | "mention_me" | "message_pinned" | "moderation_action";
+  priority: "normal" | "critical";
+  serverId: string | null;
+  roomId: string | null;
+  topicId: string | null;
+  messageId: string | null;
+  actorUserId: string | null;
+  title: string;
+  body: string;
+  payload: Record<string, unknown>;
+  createdAt: string;
+  readAt: string | null;
+};
+
+export type NotificationInboxListResponse = {
+  items: NotificationInboxItem[];
+  pagination: {
+    hasMore: boolean;
+    nextCursor: {
+      beforeCreatedAt: string;
+      beforeId: string;
+    } | null;
+  };
+};
+
+export type NotificationInboxReadResponse = {
+  eventId: string;
+  read: boolean;
+};
+
+export type NotificationInboxReadAllResponse = {
+  updated: number;
+};
+
+export type NotificationInboxClaimResponse = {
+  eventId: string;
+  claimed: boolean;
+  ttlSec: number;
+};
+
+export type NotificationPushPublicKeyResponse = {
+  enabled: boolean;
+  publicKey: string | null;
+};
+
+export type NotificationPushSubscriptionResponse = {
+  ok: boolean;
+};
+
+export type TopicReadResponse = {
+  topicId: string;
+  lastReadMessageId: string | null;
+  lastReadAt: string;
 };
 
 export type WsIncoming = {
@@ -200,6 +374,26 @@ export type ServerRoleItem = {
 export type ServerRolesResponse = {
   serverId: string;
   roles: ServerRoleItem[];
+};
+
+export type ServerPermissionsResponse = {
+  serverId: string;
+  globalRole: "user" | "admin" | "super_admin";
+  serverRole: ServerMemberRole;
+  customRoles: Array<{ id: string; name: string }>;
+  customBadges: Array<{ id: string; name: string }>;
+  permissions: {
+    manageRooms: boolean;
+    manageTopics: boolean;
+    moderateMembers: boolean;
+    manageInvites: boolean;
+    manageRoles: boolean;
+    viewModerationAudit: boolean;
+    manageServer: boolean;
+    manageGlobalUsers: boolean;
+    manageServiceControlPlane: boolean;
+    viewTelemetry: boolean;
+  };
 };
 
 export type ServerMemberProfileResponse = {

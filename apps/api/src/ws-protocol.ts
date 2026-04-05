@@ -363,25 +363,25 @@ export function buildPresenceLeftEnvelope(
 
 /**
  * @param {ChatMessagePayload} payload
- * @returns {{ type: "chat.message", payload: ChatMessagePayload }}
+ * @returns {{ type: "chat.message.created", payload: ChatMessagePayload }}
  */
-export function buildChatMessageEnvelope(payload: ChatMessagePayload): { type: "chat.message"; payload: ChatMessagePayload } {
+export function buildChatMessageEnvelope(payload: ChatMessagePayload): { type: "chat.message.created"; payload: ChatMessagePayload } {
   return {
-    type: "chat.message",
+    type: "chat.message.created",
     payload
   };
 }
 
-export function buildChatEditedEnvelope(payload: ChatEditedPayload): { type: "chat.edited"; payload: ChatEditedPayload } {
+export function buildChatEditedEnvelope(payload: ChatEditedPayload): { type: "chat.message.updated"; payload: ChatEditedPayload } {
   return {
-    type: "chat.edited",
+    type: "chat.message.updated",
     payload
   };
 }
 
-export function buildChatDeletedEnvelope(payload: ChatDeletedPayload): { type: "chat.deleted"; payload: ChatDeletedPayload } {
+export function buildChatDeletedEnvelope(payload: ChatDeletedPayload): { type: "chat.message.deleted"; payload: ChatDeletedPayload } {
   return {
-    type: "chat.deleted",
+    type: "chat.message.deleted",
     payload
   };
 }

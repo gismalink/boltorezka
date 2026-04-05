@@ -53,11 +53,18 @@ const authSessionCookieMaxAgeSecRaw = Number.parseInt(String(process.env.AUTH_SE
 const chatUploadMaxSizeBytesRaw = Number.parseInt(String(process.env.CHAT_UPLOAD_MAX_SIZE_BYTES || `${5 * 1024 * 1024}`), 10);
 const chatUploadInitTtlSecRaw = Number.parseInt(String(process.env.CHAT_UPLOAD_INIT_TTL_SEC || "600"), 10);
 const chatUploadAllowedMimeTypes = parseCsv(
-  process.env.CHAT_UPLOAD_ALLOWED_MIME_TYPES || "image/png,image/jpeg,image/webp,image/gif"
+  process.env.CHAT_UPLOAD_ALLOWED_MIME_TYPES
+  || "image/png,image/jpeg,image/webp,image/gif,application/pdf,text/plain,text/csv,application/zip,audio/mpeg,audio/wav,audio/ogg,audio/mp4"
 );
 const chatStorageProvider = String(process.env.CHAT_STORAGE_PROVIDER || "localfs").trim().toLowerCase() === "minio"
   ? "minio"
   : "localfs";
+const webPushPublicKey = String(process.env.WEB_PUSH_PUBLIC_KEY || "").trim();
+const webPushPrivateKey = String(process.env.WEB_PUSH_PRIVATE_KEY || "").trim();
+const webPushSubject = String(process.env.WEB_PUSH_SUBJECT || "mailto:ops@boltorezka.local").trim() || "mailto:ops@boltorezka.local";
+const webPushEnabled = parseBoolean(process.env.WEB_PUSH_ENABLED, false)
+  && Boolean(webPushPublicKey)
+  && Boolean(webPushPrivateKey);
 
 export const config: AppConfig = {
   port: Number(process.env.PORT || 8080),
@@ -104,7 +111,20 @@ export const config: AppConfig = {
     : 5 * 1024 * 1024,
   chatUploadAllowedMimeTypes: chatUploadAllowedMimeTypes.length > 0
     ? chatUploadAllowedMimeTypes
-    : ["image/png", "image/jpeg", "image/webp", "image/gif"],
+    : [
+      "image/png",
+      "image/jpeg",
+      "image/webp",
+      "image/gif",
+      "application/pdf",
+      "text/plain",
+      "text/csv",
+      "application/zip",
+      "audio/mpeg",
+      "audio/wav",
+      "audio/ogg",
+      "audio/mp4"
+    ],
   chatUploadInitTtlSec: Number.isFinite(chatUploadInitTtlSecRaw) && chatUploadInitTtlSecRaw > 0
     ? chatUploadInitTtlSecRaw
     : 600,
@@ -115,5 +135,9 @@ export const config: AppConfig = {
   chatMinioSecretKey: String(process.env.CHAT_MINIO_SECRET_KEY || "").trim(),
   chatMinioBucket: String(process.env.CHAT_MINIO_BUCKET || "").trim(),
   chatMinioForcePathStyle: parseBoolean(process.env.CHAT_MINIO_FORCE_PATH_STYLE, true),
-  chatObjectStoragePublicBaseUrl: String(process.env.CHAT_OBJECT_STORAGE_PUBLIC_BASE_URL || "").trim().replace(/\/+$/, "")
+  chatObjectStoragePublicBaseUrl: String(process.env.CHAT_OBJECT_STORAGE_PUBLIC_BASE_URL || "").trim().replace(/\/+$/, ""),
+  webPushEnabled,
+  webPushSubject,
+  webPushPublicKey,
+  webPushPrivateKey
 };

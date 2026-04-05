@@ -3,7 +3,7 @@ name: boltorezka
 services:
   boltorezka-turn:
     image: coturn/coturn:4.6.3
-    container_name: boltorezka-turn
+    container_name: boltorezka-turn-test-n-prod
     restart: unless-stopped
     user: "0:0"
     command:
@@ -52,7 +52,7 @@ services:
       - edge_public
 
   boltorezka-auth-test-datowave:
-    image: gismalink-auth:local
+    image: datowave-auth:test-n-prod
     container_name: boltorezka-auth-test-datowave
     restart: unless-stopped
     env_file:
@@ -563,4 +563,4 @@ volumes:
     name: auth_auth_test_datowave_data
   ingress_caddy_data:
     external: true
-    name: edge_caddy_data
+    name: ingress_caddy_data

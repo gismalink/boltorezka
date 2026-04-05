@@ -1,4 +1,5 @@
 import { useAppWorkspacePanelsRuntime } from "./useAppWorkspacePanelsRuntime";
+import { api } from "../../../api";
 
 type WorkspacePanelsRuntimeInput = Parameters<typeof useAppWorkspacePanelsRuntime>[0];
 
@@ -14,6 +15,10 @@ export function useAppWorkspacePanelsRuntimeInput(params: Record<string, unknown
         roomSlug: p.roomSlug,
         chatRoomSlug: p.chatRoomSlug,
         roomMediaTopologyBySlug: p.roomMediaTopologyBySlug,
+        screenShareOwnerByRoomSlug: p.screenShareOwnerByRoomSlug,
+        roomUnreadBySlug: p.roomUnreadBySlug,
+        roomMentionUnreadBySlug: p.roomMentionUnreadBySlug,
+        serverUnreadCount: p.serverUnreadCount,
         currentUserId: p.currentUserIdOrNull,
         liveRoomMembersBySlug: p.roomsPresenceBySlug,
         liveRoomMemberDetailsBySlug: p.roomsPresenceDetailsBySlug,
@@ -21,6 +26,7 @@ export function useAppWorkspacePanelsRuntimeInput(params: Record<string, unknown
         voiceMicStateByUserIdInCurrentRoom: p.voiceMicStateByUserIdInCurrentRoom,
         effectiveVoiceCameraEnabledByUserIdInCurrentRoom: p.effectiveVoiceCameraEnabledByUserIdInCurrentRoom,
         voiceAudioOutputMutedByUserIdInCurrentRoom: p.voiceAudioOutputMutedByUserIdInCurrentRoom,
+        audioMuted: p.audioMuted,
         voiceRtcStateByUserIdInCurrentRoom: p.voiceRtcStateByUserIdInCurrentRoom,
         voiceMediaStatusSummaryByUserIdInCurrentRoom: p.voiceMediaStatusSummaryByUserIdInCurrentRoom,
         collapsedCategoryIds: p.collapsedCategoryIds,
@@ -83,7 +89,40 @@ export function useAppWorkspacePanelsRuntimeInput(params: Record<string, unknown
         onLoadServerMemberProfile: p.loadServerMemberProfile,
         onLoadServerRoles: p.loadServerRoles,
         onSetServerMemberCustomRoles: p.handleSetServerMemberCustomRoles,
-        onSetServerMemberHiddenRoomAccess: p.handleSetServerMemberHiddenRoomAccess
+        onSetServerMemberHiddenRoomAccess: p.handleSetServerMemberHiddenRoomAccess,
+        onSetRoomNotificationMutePreset: async (roomId: string, preset: "1h" | "8h" | "24h" | "forever" | "off") => {
+          const token = String(p.token || "").trim();
+          const normalizedRoomId = String(roomId || "").trim();
+          if (!token || !normalizedRoomId) {
+            return;
+          }
+
+          const buildMuteUntilIso = (hours: number | "forever"): string => {
+            const now = new Date();
+            if (hours === "forever") {
+              const forever = new Date(now);
+              forever.setFullYear(forever.getFullYear() + 20);
+              return forever.toISOString();
+            }
+
+            const next = new Date(now.getTime() + hours * 60 * 60 * 1000);
+            return next.toISOString();
+          };
+
+          const muteUntil = preset === "off"
+            ? null
+            : preset === "forever"
+              ? buildMuteUntilIso("forever")
+              : buildMuteUntilIso(Number(preset.replace("h", "")));
+
+          await api.updateNotificationSettings(token, {
+            scopeType: "room",
+            roomId: normalizedRoomId,
+            mode: "all",
+            allowCriticalMentions: true,
+            muteUntil
+          });
+        }
       },
       serverProfileModal: {
         user: p.user,
@@ -174,29 +213,52 @@ export function useAppWorkspacePanelsRuntimeInput(params: Record<string, unknown
       chatVideo: {
         t: p.t,
         locale: p.locale,
+        currentServerId: p.currentServerId,
         serviceToken: p.serviceToken,
         chatRoomSlug: p.chatRoomSlug,
         activeChatRoom: p.activeChatRoom,
+        chatTopics: p.chatTopics,
+        activeChatTopicId: p.activeChatTopicId,
+        setActiveChatTopicId: p.setActiveChatTopicId,
+        createTopic: p.createTopic,
         messages: p.messages,
+        serverMembers: p.serverMembers,
         user: p.user,
         messagesHasMore: p.messagesHasMore,
         loadingOlderMessages: p.loadingOlderMessages,
         chatText: p.chatText,
         pendingChatImageDataUrl: p.pendingChatImageDataUrl,
+        pendingChatAttachmentFile: p.pendingChatAttachmentFile,
         activeChatTypingUsers: p.activeChatTypingUsers,
         chatLogRef: p.chatLogRef,
         loadOlderMessages: p.loadOlderMessages,
         handleSetChatText: p.handleSetChatText,
+        openRoomChat: p.openRoomChat,
         handleChatPaste: p.handleChatPaste,
         handleChatInputKeyDown: p.handleChatInputKeyDown,
         sendMessage: p.sendMessage,
+        selectAttachmentFile: p.selectAttachmentFile,
+        clearPendingAttachment: p.clearPendingAttachment,
         editingMessageId: p.editingMessageId,
+        replyingToMessageId: p.replyingToMessageId,
         currentRoomSupportsRtc: p.currentRoomSupportsRtc,
         videoWindowsVisible: p.videoWindowsVisible,
         setVideoWindowsVisible: p.setVideoWindowsVisible,
         setEditingMessageId: p.setEditingMessageId,
+        setReplyingToMessageId: p.setReplyingToMessageId,
         startEditingMessage: p.startEditingMessage,
+        replyToMessage: p.replyToMessage,
+        cancelReply: p.cancelReply,
         deleteOwnMessage: p.deleteOwnMessage,
+        reportMessage: p.reportMessage,
+        pinnedByMessageId: p.pinnedByMessageId,
+        reactionsByMessageId: p.reactionsByMessageId,
+        togglePinMessage: p.togglePinMessage,
+        toggleMessageReaction: p.toggleMessageReaction,
+        updateTopic: p.updateTopic,
+        archiveTopic: p.archiveTopic,
+        unarchiveTopic: p.unarchiveTopic,
+        deleteTopic: p.deleteTopic,
         allowVideoStreaming: p.allowVideoStreaming,
         cameraEnabled: p.cameraEnabled,
         localVideoStream: p.localVideoStream,

@@ -82,6 +82,234 @@ export type RoomMessagesResponse = {
   };
 };
 
+export type RoomTopicItem = {
+  id: string;
+  roomId: string;
+  createdBy: string | null;
+  slug: string;
+  title: string;
+  position: number;
+  isPinned: boolean;
+  archivedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  unreadCount: number;
+  mentionUnreadCount: number;
+};
+
+export type RoomTopicsListResponse = {
+  topics: RoomTopicItem[];
+};
+
+export type RoomTopicResponse = {
+  topic: RoomTopicItem;
+};
+
+export type RoomTopicDeleteResponse = {
+  topicId: string;
+  roomId: string;
+  roomSlug: string;
+  deletedMessagesCount: number;
+  deletedAt: string;
+};
+
+export type TopicMessagesResponse = {
+  room: RoomRow;
+  topic: {
+    id: string;
+    roomId: string;
+    slug: string;
+    title: string;
+    archivedAt: string | null;
+    createdAt: string;
+    updatedAt: string;
+  };
+  messages: RoomMessageRow[];
+  pagination: {
+    hasMore: boolean;
+    nextCursor: {
+      beforeCreatedAt: string;
+      beforeId: string;
+    } | null;
+  };
+};
+
+export type TopicMessageCreateResponse = {
+  room: RoomRow;
+  topic: {
+    id: string;
+    roomId: string;
+    slug: string;
+    title: string;
+    archivedAt: string | null;
+  };
+  message: RoomMessageRow;
+};
+
+export type TopicMessageUpdateResponse = {
+  room: RoomRow;
+  topic: {
+    id: string;
+    roomId: string;
+    slug: string;
+  };
+  message: RoomMessageRow;
+};
+
+export type TopicMessageDeleteResponse = {
+  room: RoomRow;
+  topic: {
+    id: string;
+    roomId: string;
+    slug: string;
+  };
+  messageId: string;
+  deletedAt: string;
+};
+
+export type TopicMessageReplyResponse = {
+  room: RoomRow;
+  topic: {
+    id: string;
+    roomId: string;
+    slug: string;
+    title: string;
+    archivedAt: string | null;
+  };
+  message: RoomMessageRow;
+  parentMessageId: string;
+};
+
+export type TopicMessagePinResponse = {
+  room: RoomRow;
+  topic: {
+    id: string;
+    roomId: string;
+    slug: string;
+  };
+  messageId: string;
+  pinned: boolean;
+};
+
+export type TopicMessageReactionResponse = {
+  room: RoomRow;
+  topic: {
+    id: string;
+    roomId: string;
+    slug: string;
+  };
+  messageId: string;
+  emoji: string;
+  userId: string;
+  active: boolean;
+};
+
+export type TopicMessageReportResponse = {
+  ok: true;
+  reportId: string;
+  messageId: string;
+};
+
+export type SearchMessagesResponse = {
+  messages: Array<{
+    id: string;
+    roomId: string;
+    roomSlug: string;
+    roomTitle: string;
+    topicId: string | null;
+    topicSlug: string | null;
+    topicTitle: string | null;
+    userId: string;
+    userName: string;
+    text: string;
+    createdAt: string;
+    editedAt: string | null;
+    hasAttachments: boolean;
+    attachmentCount: number;
+  }>;
+  pagination: {
+    hasMore: boolean;
+    nextCursor: {
+      beforeCreatedAt: string;
+      beforeId: string;
+    } | null;
+  };
+};
+
+export type NotificationSettingsResponse = {
+  settings: {
+    id: string;
+    userId: string;
+    scopeType: "server" | "room" | "topic";
+    serverId: string | null;
+    roomId: string | null;
+    topicId: string | null;
+    mode: "all" | "mentions" | "none";
+    muteUntil: string | null;
+    allowCriticalMentions: boolean;
+    createdAt: string;
+    updatedAt: string;
+  };
+};
+
+export type NotificationInboxItem = {
+  id: string;
+  userId: string;
+  eventType: "reply_to_me" | "mention_me" | "message_pinned" | "moderation_action";
+  priority: "normal" | "critical";
+  serverId: string | null;
+  roomId: string | null;
+  topicId: string | null;
+  messageId: string | null;
+  actorUserId: string | null;
+  title: string;
+  body: string;
+  payload: Record<string, unknown>;
+  createdAt: string;
+  readAt: string | null;
+};
+
+export type NotificationInboxListResponse = {
+  items: NotificationInboxItem[];
+  pagination: {
+    hasMore: boolean;
+    nextCursor: {
+      beforeCreatedAt: string;
+      beforeId: string;
+    } | null;
+  };
+};
+
+export type NotificationInboxReadResponse = {
+  eventId: string;
+  read: boolean;
+};
+
+export type NotificationInboxReadAllResponse = {
+  updated: number;
+};
+
+export type NotificationInboxClaimResponse = {
+  eventId: string;
+  claimed: boolean;
+  ttlSec: number;
+};
+
+export type NotificationPushPublicKeyResponse = {
+  enabled: boolean;
+  publicKey: string | null;
+};
+
+export type NotificationPushSubscriptionResponse = {
+  ok: boolean;
+};
+
+export type TopicReadResponse = {
+  topicId: string;
+  lastReadMessageId: string | null;
+  lastReadAt: string;
+};
+
 export type AdminUsersResponse = {
   users: UserRow[];
 };
@@ -156,6 +384,40 @@ export type ServerRolesResponse = {
   roles: ServerRoleItem[];
 };
 
+export type ServerPermissionsResponse = {
+  serverId: string;
+  globalRole: UserRow["role"];
+  serverRole: ServerMemberRole;
+  customRoles: Array<{ id: string; name: string }>;
+  customBadges: Array<{ id: string; name: string }>;
+  permissions: {
+    manageRooms: boolean;
+    manageTopics: boolean;
+    moderateMembers: boolean;
+    manageInvites: boolean;
+    manageRoles: boolean;
+    viewModerationAudit: boolean;
+    manageServer: boolean;
+    manageGlobalUsers: boolean;
+    manageServiceControlPlane: boolean;
+    viewTelemetry: boolean;
+  };
+};
+
+export type ServerAuditListResponse = {
+  serverId: string;
+  entries: Array<{
+    id: string;
+    action: string;
+    actorUserId: string | null;
+    actorUserName: string | null;
+    targetUserId: string | null;
+    targetUserName: string | null;
+    meta: Record<string, unknown>;
+    createdAt: string;
+  }>;
+};
+
 export type ServerMemberProfileResponse = {
   serverId: string;
   member: {
@@ -221,6 +483,21 @@ export type ServerBanResponse = {
 };
 
 export type ServerBanRevokeResponse = {
+  revoked: boolean;
+};
+
+export type ServerMuteResponse = {
+  mute: {
+    id: string;
+    serverId: string;
+    userId: string;
+    reason: string | null;
+    expiresAt: string | null;
+    createdAt: string;
+  };
+};
+
+export type ServerMuteRevokeResponse = {
   revoked: boolean;
 };
 

@@ -1,6 +1,8 @@
 import { db } from "../db.js";
 import type { ServerBanRow, ServerMemberRole, ServiceBanRow } from "../db.types.ts";
 import { writeServerAuditEvent } from "./server-audit-service.js";
+import { emitModerationInboxEvent } from "./notification-inbox-service.js";
+import { resolveEffectiveServerPermissions } from "./server-permissions-service.js";
 
 type BaseBanInput = {
   actorUserId: string;
@@ -25,6 +27,15 @@ async function getServerRole(serverId: string, userId: string): Promise<ServerMe
   );
 
   return membership.rows[0]?.role || null;
+}
+
+async function resolveUserName(userId: string): Promise<string> {
+  const result = await db.query<{ name: string }>(
+    `SELECT name FROM users WHERE id = $1 LIMIT 1`,
+    [userId]
+  );
+
+  return String(result.rows[0]?.name || "Moderator").trim() || "Moderator";
 }
 
 function normalizeReason(reason?: string | null): string | null {
@@ -52,7 +63,17 @@ export async function applyServerBan(input: ServerBanInput): Promise<ServerBanRo
   }
 
   const actorRole = await getServerRole(input.serverId, input.actorUserId);
-  if (actorRole !== "owner" && actorRole !== "admin") {
+  if (!actorRole) {
+    throw new Error("forbidden_role");
+  }
+
+  const actorPermissions = await resolveEffectiveServerPermissions({
+    serverId: input.serverId,
+    userId: input.actorUserId,
+    serverRole: actorRole
+  });
+
+  if (!actorPermissions.permissions.moderateMembers) {
     throw new Error("forbidden_role");
   }
 
@@ -61,7 +82,7 @@ export async function applyServerBan(input: ServerBanInput): Promise<ServerBanRo
     throw new Error("protected_user");
   }
 
-  if (actorRole === "admin" && targetRole === "admin") {
+  if ((actorRole === "admin" || actorRole === "member") && targetRole === "admin") {
     throw new Error("protected_user");
   }
 
@@ -101,12 +122,35 @@ export async function applyServerBan(input: ServerBanInput): Promise<ServerBanRo
     }
   });
 
+  const actorName = await resolveUserName(input.actorUserId);
+  void emitModerationInboxEvent({
+    actorUserId: input.actorUserId,
+    actorUserName: actorName,
+    targetUserId: input.targetUserId,
+    action: "server.ban.applied",
+    title: "You were banned from a server",
+    body: reason
+      ? `Reason: ${reason}`
+      : "A moderator banned you from a server",
+    serverId: input.serverId
+  });
+
   return result.rows[0];
 }
 
 export async function revokeServerBan(input: Pick<ServerBanInput, "serverId" | "actorUserId" | "targetUserId">): Promise<boolean> {
   const actorRole = await getServerRole(input.serverId, input.actorUserId);
-  if (actorRole !== "owner" && actorRole !== "admin") {
+  if (!actorRole) {
+    throw new Error("forbidden_role");
+  }
+
+  const actorPermissions = await resolveEffectiveServerPermissions({
+    serverId: input.serverId,
+    userId: input.actorUserId,
+    serverRole: actorRole
+  });
+
+  if (!actorPermissions.permissions.moderateMembers) {
     throw new Error("forbidden_role");
   }
 
@@ -126,6 +170,19 @@ export async function revokeServerBan(input: Pick<ServerBanInput, "serverId" | "
       revoked: (result.rowCount || 0) > 0
     }
   });
+
+  if ((result.rowCount || 0) > 0) {
+    const actorName = await resolveUserName(input.actorUserId);
+    void emitModerationInboxEvent({
+      actorUserId: input.actorUserId,
+      actorUserName: actorName,
+      targetUserId: input.targetUserId,
+      action: "server.ban.revoked",
+      title: "Your server ban was revoked",
+      body: "A moderator revoked your server ban",
+      serverId: input.serverId
+    });
+  }
 
   return (result.rowCount || 0) > 0;
 }
@@ -162,6 +219,18 @@ export async function applyServiceBan(input: BaseBanInput): Promise<ServiceBanRo
     }
   });
 
+  const actorName = await resolveUserName(input.actorUserId);
+  void emitModerationInboxEvent({
+    actorUserId: input.actorUserId,
+    actorUserName: actorName,
+    targetUserId: input.targetUserId,
+    action: "service.ban.applied",
+    title: "Your account was restricted",
+    body: reason
+      ? `Reason: ${reason}`
+      : "A moderator applied a service-level restriction"
+  });
+
   return result.rows[0];
 }
 
@@ -184,6 +253,18 @@ export async function revokeServiceBan(input: Pick<BaseBanInput, "actorUserId" |
       revoked: (result.rowCount || 0) > 0
     }
   });
+
+  if ((result.rowCount || 0) > 0) {
+    const actorName = await resolveUserName(input.actorUserId);
+    void emitModerationInboxEvent({
+      actorUserId: input.actorUserId,
+      actorUserName: actorName,
+      targetUserId: input.targetUserId,
+      action: "service.ban.revoked",
+      title: "Your account restriction was removed",
+      body: "A moderator removed a service-level restriction"
+    });
+  }
 
   return (result.rowCount || 0) > 0;
 }

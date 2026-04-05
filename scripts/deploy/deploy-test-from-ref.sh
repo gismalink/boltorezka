@@ -14,6 +14,11 @@ COMPOSE_FILE="infra/docker-compose.host.yml"
 ENV_FILE="infra/.env.host"
 HEALTHCHECK_URL="${TEST_HEALTHCHECK_URL:-https://test.datowave.com/health}"
 FULL_RECREATE="${FULL_RECREATE:-0}"
+DEPLOY_FORCE_RECREATE_API="${DEPLOY_FORCE_RECREATE_API:-0}"
+DEPLOY_RECREATE_TURN="${DEPLOY_RECREATE_TURN:-0}"
+DEPLOY_MINIO_INIT_FAST="${DEPLOY_MINIO_INIT_FAST:-0}"
+DEPLOY_SMART_SKIP_BUILD="${DEPLOY_SMART_SKIP_BUILD:-1}"
+DEPLOY_FORCE_BUILD="${DEPLOY_FORCE_BUILD:-0}"
 EDGE_REPO_DIR="${EDGE_REPO_DIR:-$HOME/srv/edge}"
 EDGE_STATIC_DIR_TEST="${EDGE_STATIC_DIR_TEST:-$EDGE_REPO_DIR/ingress/static/boltorezka/test}"
 
@@ -40,6 +45,36 @@ read_env_value() {
   echo "$raw"
 }
 
+image_exists() {
+  local image_name="$1"
+  docker image inspect "$image_name" >/dev/null 2>&1
+}
+
+has_build_relevant_changes() {
+  local from_sha="$1"
+  local to_sha="$2"
+
+  if [[ -z "$from_sha" || -z "$to_sha" ]]; then
+    return 0
+  fi
+
+  if [[ "$from_sha" == "$to_sha" ]]; then
+    return 1
+  fi
+
+  local changed
+  changed="$(git diff --name-only "$from_sha" "$to_sha" -- \
+    apps/api \
+    apps/web \
+    infra/docker-compose.host.yml \
+    package.json \
+    package-lock.json \
+    Dockerfile \
+    2>/dev/null || true)"
+
+  [[ -n "$changed" ]]
+}
+
 if [[ "$GIT_REF" =~ ^(origin/main|main|origin/master|master)$ ]] && [[ "${ALLOW_TEST_FROM_MAIN:-0}" != "1" ]]; then
   echo "[deploy-test] blocked by policy: test deploy should use feature branch ref"
   echo "[deploy-test] set ALLOW_TEST_FROM_MAIN=1 only for explicit exception"
@@ -47,6 +82,15 @@ if [[ "$GIT_REF" =~ ^(origin/main|main|origin/master|master)$ ]] && [[ "${ALLOW_
 fi
 
 cd "$REPO_DIR"
+
+LAST_DEPLOY_FILE=".deploy/last-deploy-test.env"
+PREV_DEPLOY_SHA=""
+if [[ -f "$LAST_DEPLOY_FILE" ]]; then
+  set +u
+  source "$LAST_DEPLOY_FILE"
+  set -u
+  PREV_DEPLOY_SHA="${DEPLOY_SHA:-}"
+fi
 
 echo "[deploy-test] repo: $REPO_DIR"
 echo "[deploy-test] fetch ref: $GIT_REF"
@@ -74,6 +118,8 @@ if [[ -z "$TEST_CHAT_STORAGE_PROVIDER_VALUE" ]]; then
 fi
 
 echo "[deploy-test] deploy mode: api-only + caddy-static-sync (set FULL_RECREATE=1 for full dependency recreate)"
+echo "[deploy-test] fast-path flags: force_api_recreate=$DEPLOY_FORCE_RECREATE_API recreate_turn=$DEPLOY_RECREATE_TURN minio_init_fast=$DEPLOY_MINIO_INIT_FAST"
+echo "[deploy-test] build flags: smart_skip=$DEPLOY_SMART_SKIP_BUILD force_build=$DEPLOY_FORCE_BUILD"
 TMP_DOCKER_CONFIG="$(mktemp -d)"
 TMP_DEPLOY_ENV="$(mktemp)"
 TMP_WEB_DIST_DIR="$(mktemp -d)"
@@ -105,7 +151,31 @@ cat >"$TMP_DOCKER_CONFIG/config.json" <<'JSON'
 }
 JSON
 
-DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" build boltorezka-api-test
+SHOULD_BUILD_API=1
+BUILD_DECISION_REASON="default"
+
+if [[ "$DEPLOY_FORCE_BUILD" == "1" ]]; then
+  SHOULD_BUILD_API=1
+  BUILD_DECISION_REASON="forced"
+elif [[ "$DEPLOY_SMART_SKIP_BUILD" == "1" ]]; then
+  if ! image_exists "boltorezka-api:test"; then
+    SHOULD_BUILD_API=1
+    BUILD_DECISION_REASON="image-missing"
+  elif has_build_relevant_changes "$PREV_DEPLOY_SHA" "$RESOLVED_SHA"; then
+    SHOULD_BUILD_API=1
+    BUILD_DECISION_REASON="relevant-diff"
+  else
+    SHOULD_BUILD_API=0
+    BUILD_DECISION_REASON="no-relevant-diff"
+  fi
+fi
+
+if [[ "$SHOULD_BUILD_API" == "1" ]]; then
+  echo "[deploy-test] build boltorezka-api:test (${BUILD_DECISION_REASON})"
+  DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" build boltorezka-api-test
+else
+  echo "[deploy-test] skip build boltorezka-api:test (${BUILD_DECISION_REASON})"
+fi
 
 if [[ -d "$EDGE_REPO_DIR/ingress" ]]; then
   echo "[deploy-test] sync static bundle -> $EDGE_STATIC_DIR_TEST"
@@ -133,12 +203,25 @@ if [[ "$FULL_RECREATE" == "1" ]]; then
   DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" up -d --force-recreate boltorezka-api-test
 else
   # Keep api-only fast path, but make sure core deps (including TURN) are up.
-  DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" up -d boltorezka-turn boltorezka-db-test boltorezka-redis-test
+  DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" up -d --no-recreate boltorezka-db-test boltorezka-redis-test
+  if [[ "$DEPLOY_RECREATE_TURN" == "1" ]]; then
+    DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" rm -f -s boltorezka-turn >/dev/null 2>&1 || true
+    DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" up -d boltorezka-turn
+  else
+    DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" up -d --no-recreate boltorezka-turn
+  fi
   if [[ "$TEST_CHAT_STORAGE_PROVIDER_VALUE" == "minio" ]]; then
     echo "[deploy-test] storage provider=minio -> ensure minio-test profile is up"
-    DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" --profile minio-test up -d boltorezka-minio-test boltorezka-minio-test-init
+    DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" --profile minio-test up -d boltorezka-minio-test
+    if [[ "$DEPLOY_MINIO_INIT_FAST" == "1" ]]; then
+      DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" --profile minio-test up -d boltorezka-minio-test-init
+    fi
   fi
-  DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" up -d --no-deps --force-recreate boltorezka-api-test
+  if [[ "$DEPLOY_FORCE_RECREATE_API" == "1" ]]; then
+    DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" up -d --no-deps --force-recreate boltorezka-api-test
+  else
+    DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" up -d --no-deps boltorezka-api-test
+  fi
 fi
 
 echo "[deploy-test] wait api health"

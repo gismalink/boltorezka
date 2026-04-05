@@ -1,12 +1,14 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { Room } from "../domain";
-import { Button } from "./uicomponents";
 import { RoomsCategoryBlock } from "./roomsPanel/RoomsCategoryBlock";
 import { RoomRow } from "./roomsPanel/RoomRow";
 import { RoomsConfirmOverlay } from "./roomsPanel/RoomsConfirmOverlay";
 import { RoomsPanelHeader } from "./roomsPanel/RoomsPanelHeader";
 import { RoomsUncategorizedBlock } from "./roomsPanel/RoomsUncategorizedBlock";
-import { mapRoomMembersForSlug } from "./roomsPanel/roomMembers";
+import { RoomsOutsideOnlineBlock } from "./roomsPanel/RoomsOutsideOnlineBlock";
+import { RoomsArchivedBlock } from "./roomsPanel/RoomsArchivedBlock";
+import { useRoomsPanelDerivedData } from "./roomsPanel/useRoomsPanelDerivedData";
+import { useRoomsPanelPersistentState } from "./roomsPanel/useRoomsPanelPersistentState";
 import type { RoomsPanelProps } from "./types";
 
 type ConfirmPopupState =
@@ -26,7 +28,10 @@ export function RoomsPanel({
   roomsTree,
   roomSlug,
   activeChatRoomSlug,
-  roomMediaTopologyBySlug,
+  screenShareOwnerByRoomSlug,
+  roomUnreadBySlug,
+  roomMentionUnreadBySlug,
+  serverUnreadCount,
   currentUserId,
   liveRoomMembersBySlug,
   liveRoomMemberDetailsBySlug,
@@ -34,15 +39,14 @@ export function RoomsPanel({
   voiceMicStateByUserIdInCurrentRoom,
   voiceCameraEnabledByUserIdInCurrentRoom,
   voiceAudioOutputMutedByUserIdInCurrentRoom,
+  audioMuted,
   voiceRtcStateByUserIdInCurrentRoom,
   voiceMediaStatusSummaryByUserIdInCurrentRoom,
   collapsedCategoryIds,
   uncategorizedRooms,
   archivedRooms,
-  newCategorySlug,
   newCategoryTitle,
   categoryPopupOpen,
-  newRoomSlug,
   newRoomTitle,
   newRoomKind,
   newRoomCategoryId,
@@ -96,36 +100,23 @@ export function RoomsPanel({
   onLoadServerMemberProfile,
   onLoadServerRoles,
   onSetServerMemberCustomRoles,
-  onSetServerMemberHiddenRoomAccess
+  onSetServerMemberHiddenRoomAccess,
+  onSetRoomNotificationMutePreset
 }: RoomsPanelProps) {
   const [confirmPopup, setConfirmPopup] = useState<ConfirmPopupState>(null);
+  const {
+    uncategorizedCollapsed,
+    setUncategorizedCollapsed,
+    outsideRoomsCollapsed,
+    setOutsideRoomsCollapsed,
+    archivedCollapsed,
+    setArchivedCollapsed,
+    roomMutePresetByRoomId,
+    onRoomMutePresetChange
+  } = useRoomsPanelPersistentState();
 
-  const submitConfirmPopup = () => {
+  const submitConfirmPopup = useCallback(() => {
     if (!confirmPopup) {
-      return;
-    }
-
-    if (confirmPopup.kind === "delete-category") {
-      onDeleteCategory();
-      setConfirmPopup(null);
-      return;
-    }
-
-    if (confirmPopup.kind === "clear-channel") {
-      onClearChannelMessages(confirmPopup.room);
-      setConfirmPopup(null);
-      return;
-    }
-
-    if (confirmPopup.kind === "restore-channel") {
-      onRestoreChannel(confirmPopup.room);
-      setConfirmPopup(null);
-      return;
-    }
-
-    if (confirmPopup.kind === "delete-channel-permanent") {
-      onDeleteChannelPermanent(confirmPopup.room);
-      setConfirmPopup(null);
       return;
     }
 
@@ -142,9 +133,28 @@ export function RoomsPanel({
       return;
     }
 
-    onDeleteChannel(confirmPopup.room);
+    switch (confirmPopup.kind) {
+      case "delete-category":
+        onDeleteCategory();
+        break;
+      case "clear-channel":
+        onClearChannelMessages(confirmPopup.room);
+        break;
+      case "restore-channel":
+        onRestoreChannel(confirmPopup.room);
+        break;
+      case "delete-channel-permanent":
+        onDeleteChannelPermanent(confirmPopup.room);
+        break;
+      case "archive-channel":
+        onDeleteChannel(confirmPopup.room);
+        break;
+      default:
+        break;
+    }
+
     setConfirmPopup(null);
-  };
+  }, [archivedRooms, confirmPopup, onClearChannelMessages, onDeleteCategory, onDeleteChannel, onDeleteChannelPermanent, onRestoreChannel]);
 
   useEffect(() => {
     if (!confirmPopup) {
@@ -162,8 +172,86 @@ export function RoomsPanel({
   }, [confirmPopup]);
 
   const normalizedCurrentUserId = String(currentUserId || "").trim();
+  const normalizedActiveChatRoomSlug = String(activeChatRoomSlug || "").trim();
 
-  const renderRoomRow = (room: Room) => (
+  const getVisibleRoomUnreadCount = useCallback((roomSlugValue: string) => {
+    const normalizedSlug = String(roomSlugValue || "").trim();
+    if (!normalizedSlug) {
+      return 0;
+    }
+
+    if (normalizedActiveChatRoomSlug && normalizedSlug === normalizedActiveChatRoomSlug) {
+      return 0;
+    }
+
+    return Math.max(0, Number(roomUnreadBySlug[normalizedSlug] || 0));
+  }, [normalizedActiveChatRoomSlug, roomUnreadBySlug]);
+
+  const getVisibleRoomMentionUnreadCount = useCallback((roomSlugValue: string) => {
+    const normalizedSlug = String(roomSlugValue || "").trim();
+    if (!normalizedSlug) {
+      return 0;
+    }
+
+    if (normalizedActiveChatRoomSlug && normalizedSlug === normalizedActiveChatRoomSlug) {
+      return 0;
+    }
+
+    return Math.max(0, Number(roomMentionUnreadBySlug[normalizedSlug] || 0));
+  }, [normalizedActiveChatRoomSlug, roomMentionUnreadBySlug]);
+
+  const {
+    onlineOutsideRooms,
+    roomMembersBySlug,
+    uncategorizedUnreadCount,
+    outsideRoomsUnreadCount,
+    categoryUnreadById
+  } = useRoomsPanelDerivedData({
+    roomsTree,
+    uncategorizedRooms,
+    archivedRooms,
+    roomUnreadBySlug,
+    liveRoomMembersBySlug,
+    liveRoomMemberDetailsBySlug
+  });
+
+  const onRequestDeleteCategory = useCallback(() => {
+    setConfirmPopup({ kind: "delete-category" });
+  }, []);
+
+  const onToggleUncategorizedCollapsed = useCallback(() => {
+    setUncategorizedCollapsed((prev) => !prev);
+  }, [setUncategorizedCollapsed]);
+
+  const onToggleOutsideRoomsCollapsed = useCallback(() => {
+    setOutsideRoomsCollapsed((prev) => !prev);
+  }, [setOutsideRoomsCollapsed]);
+
+  const onToggleArchivedCollapsed = useCallback(() => {
+    setArchivedCollapsed((prev) => !prev);
+  }, [setArchivedCollapsed]);
+
+  const onRequestDeleteAllArchived = useCallback(() => {
+    setConfirmPopup({ kind: "delete-all-archived" });
+  }, []);
+
+  const onRequestRestoreArchivedRoom = useCallback((room: Room) => {
+    setConfirmPopup({ kind: "restore-channel", room });
+  }, []);
+
+  const onRequestDeleteArchivedRoomPermanent = useCallback((room: Room) => {
+    setConfirmPopup({ kind: "delete-channel-permanent", room });
+  }, []);
+
+  const onRequestClearChannel = useCallback((room: Room) => {
+    setConfirmPopup({ kind: "clear-channel", room });
+  }, []);
+
+  const onRequestArchiveChannel = useCallback((room: Room) => {
+    setConfirmPopup({ kind: "archive-channel", room });
+  }, []);
+
+  const renderRoomRow = useCallback((room: Room) => (
     <RoomRow
       t={t}
       canCreateRooms={canCreateRooms}
@@ -172,9 +260,11 @@ export function RoomsPanel({
       roomsTree={roomsTree}
       roomSlug={roomSlug}
       activeChatRoomSlug={activeChatRoomSlug}
+      screenShareOwnerByRoomSlug={screenShareOwnerByRoomSlug}
       voiceMicStateByUserIdInCurrentRoom={voiceMicStateByUserIdInCurrentRoom}
       voiceCameraEnabledByUserIdInCurrentRoom={voiceCameraEnabledByUserIdInCurrentRoom}
       voiceAudioOutputMutedByUserIdInCurrentRoom={voiceAudioOutputMutedByUserIdInCurrentRoom}
+      audioMuted={audioMuted}
       voiceRtcStateByUserIdInCurrentRoom={voiceRtcStateByUserIdInCurrentRoom}
       voiceMediaStatusSummaryByUserIdInCurrentRoom={voiceMediaStatusSummaryByUserIdInCurrentRoom}
       channelSettingsPopupOpenId={channelSettingsPopupOpenId}
@@ -202,14 +292,73 @@ export function RoomsPanel({
       onLoadServerRoles={onLoadServerRoles}
       onSetServerMemberCustomRoles={onSetServerMemberCustomRoles}
       onSetServerMemberHiddenRoomAccess={onSetServerMemberHiddenRoomAccess}
+      onSetRoomNotificationMutePreset={onSetRoomNotificationMutePreset}
       memberPreferencesByUserId={memberPreferencesByUserId}
       room={room}
-      roomMembers={mapRoomMembersForSlug(liveRoomMemberDetailsBySlug, liveRoomMembersBySlug, room.slug)}
+      roomUnreadCount={getVisibleRoomUnreadCount(room.slug)}
+      roomMentionUnreadCount={getVisibleRoomMentionUnreadCount(room.slug)}
+      isRoomUnreadMuted={(() => {
+        const preset = roomMutePresetByRoomId[String(room.id || "").trim()];
+        return preset != null && preset !== "off";
+      })()}
+      roomMutePresetValue={roomMutePresetByRoomId[String(room.id || "").trim()] || null}
+      onRoomMutePresetChange={onRoomMutePresetChange}
+      roomMembers={roomMembersBySlug[room.slug] || []}
       normalizedCurrentUserId={normalizedCurrentUserId}
-      onRequestClearChannel={(targetRoom) => setConfirmPopup({ kind: "clear-channel", room: targetRoom })}
-      onRequestArchiveChannel={(targetRoom) => setConfirmPopup({ kind: "archive-channel", room: targetRoom })}
+      onRequestClearChannel={onRequestClearChannel}
+      onRequestArchiveChannel={onRequestArchiveChannel}
     />
-  );
+  ), [
+    t,
+    canCreateRooms,
+    canKickMembers,
+    canManageAudioQuality,
+    roomsTree,
+    roomSlug,
+    activeChatRoomSlug,
+    screenShareOwnerByRoomSlug,
+    voiceMicStateByUserIdInCurrentRoom,
+    voiceCameraEnabledByUserIdInCurrentRoom,
+    voiceAudioOutputMutedByUserIdInCurrentRoom,
+    audioMuted,
+    voiceRtcStateByUserIdInCurrentRoom,
+    voiceMediaStatusSummaryByUserIdInCurrentRoom,
+    channelSettingsPopupOpenId,
+    editingRoomTitle,
+    editingRoomKind,
+    editingRoomCategoryId,
+    editingRoomNsfw,
+    editingRoomHidden,
+    editingRoomAudioQualitySetting,
+    onSetEditingRoomTitle,
+    onSetEditingRoomKind,
+    onSetEditingRoomCategoryId,
+    onSetEditingRoomNsfw,
+    onSetEditingRoomHidden,
+    onSetEditingRoomAudioQualitySetting,
+    onSaveChannelSettings,
+    onMoveChannel,
+    onOpenChannelSettingsPopup,
+    onJoinRoom,
+    onOpenRoomChat,
+    onKickRoomMember,
+    onMoveRoomMember,
+    onSaveMemberPreference,
+    onLoadServerMemberProfile,
+    onLoadServerRoles,
+    onSetServerMemberCustomRoles,
+    onSetServerMemberHiddenRoomAccess,
+    onSetRoomNotificationMutePreset,
+    memberPreferencesByUserId,
+    getVisibleRoomUnreadCount,
+    getVisibleRoomMentionUnreadCount,
+    roomMutePresetByRoomId,
+    onRoomMutePresetChange,
+    roomMembersBySlug,
+    normalizedCurrentUserId,
+    onRequestClearChannel,
+    onRequestArchiveChannel
+  ]);
 
   return (
     <>
@@ -235,6 +384,11 @@ export function RoomsPanel({
         onCreateCategory={onCreateCategory}
         onCreateRoom={onCreateRoom}
       />
+      {Math.max(0, serverUnreadCount - getVisibleRoomUnreadCount(normalizedActiveChatRoomSlug)) > 0 ? (
+        <div className="rooms-unread-summary">
+          {t("rooms.unreadSummary").replace("{count}", String(Math.max(0, serverUnreadCount - getVisibleRoomUnreadCount(normalizedActiveChatRoomSlug))))}
+        </div>
+      ) : null}
       <div className="rooms-scroll min-h-0 flex-1 overflow-y-auto">
         {(roomsTree?.categories || []).map((category) => (
           <RoomsCategoryBlock
@@ -250,62 +404,89 @@ export function RoomsPanel({
             onSetEditingCategoryTitle={onSetEditingCategoryTitle}
             onSaveCategorySettings={onSaveCategorySettings}
             onMoveCategory={onMoveCategory}
+            mentionCount={(Array.isArray(category.channels) ? category.channels : []).reduce((sum, room) => {
+              const slug = String(room.slug || "").trim();
+              if (!slug) {
+                return sum;
+              }
+              return sum + getVisibleRoomMentionUnreadCount(slug);
+            }, 0)}
+            unreadCountMuted={(Array.isArray(category.channels) ? category.channels : []).reduce((sum, room) => {
+              const slug = String(room.slug || "").trim();
+              if (!slug) {
+                return sum;
+              }
+              const roomId = String(room.id || "").trim();
+              const preset = roomMutePresetByRoomId[roomId];
+              const unread = getVisibleRoomUnreadCount(slug);
+              if (preset != null && preset !== "off") {
+                return sum + unread;
+              }
+              return sum;
+            }, 0)}
+            unreadCountUnmuted={(Array.isArray(category.channels) ? category.channels : []).reduce((sum, room) => {
+              const slug = String(room.slug || "").trim();
+              if (!slug) {
+                return sum;
+              }
+              const roomId = String(room.id || "").trim();
+              const preset = roomMutePresetByRoomId[roomId];
+              const unread = getVisibleRoomUnreadCount(slug);
+              if (preset == null || preset === "off") {
+                return sum + unread;
+              }
+              return sum;
+            }, 0)}
             category={category}
             renderRoomRow={renderRoomRow}
-            onRequestDeleteCategory={() => setConfirmPopup({ kind: "delete-category" })}
+            onRequestDeleteCategory={onRequestDeleteCategory}
           />
         ))}
 
-        <RoomsUncategorizedBlock t={t} rooms={uncategorizedRooms} renderRoomRow={renderRoomRow} />
+        <RoomsUncategorizedBlock
+          t={t}
+          rooms={uncategorizedRooms}
+          collapsed={uncategorizedCollapsed}
+          onToggleCollapsed={onToggleUncategorizedCollapsed}
+          unreadCount={uncategorizedRooms.reduce((sum, room) => {
+            const slug = String(room.slug || "").trim();
+            if (!slug) {
+              return sum;
+            }
+            return sum + getVisibleRoomUnreadCount(slug);
+          }, 0)}
+          mentionCount={uncategorizedRooms.reduce((sum, room) => {
+            const slug = String(room.slug || "").trim();
+            if (!slug) {
+              return sum;
+            }
+            return sum + getVisibleRoomMentionUnreadCount(slug);
+          }, 0)}
+          renderRoomRow={renderRoomRow}
+        />
 
-        {canCreateRooms && archivedRooms.length > 0 ? (
-          <div className="mt-[var(--space-md)]">
-            <div className="mb-[var(--space-xs)] flex items-center justify-between gap-2">
-              <div className="text-[var(--font-size-sm)] uppercase tracking-[0.04em] text-[var(--pixel-muted)]">
-                {t("rooms.deletedGroup")}
-              </div>
-              <Button
-                type="button"
-                className="secondary icon-btn tiny delete-action-btn"
-                onClick={() => setConfirmPopup({ kind: "delete-all-archived" })}
-                aria-label={t("rooms.deleteAllDeleted")}
-                data-tooltip={t("rooms.deleteAllDeleted")}
-              >
-                <i className="bi bi-trash3" aria-hidden="true" />
-              </Button>
-            </div>
-            <ul className="rooms-list">
-              {archivedRooms.map((room) => (
-                <li key={room.id} className="channel-row grid grid-cols-[1fr_auto] items-center gap-2">
-                  <div className="secondary room-btn room-btn-interactive pointer-events-none opacity-75">
-                    <i className="bi bi-archive" aria-hidden="true" />
-                    <span>{room.title}</span>
-                  </div>
-                  <div className="inline-flex items-center gap-1">
-                    <Button
-                      type="button"
-                      className="secondary icon-btn tiny"
-                      aria-label={t("rooms.restoreChannel")}
-                      data-tooltip={t("rooms.restoreChannel")}
-                      onClick={() => setConfirmPopup({ kind: "restore-channel", room })}
-                    >
-                      <i className="bi bi-arrow-counterclockwise" aria-hidden="true" />
-                    </Button>
-                    <Button
-                      type="button"
-                      className="secondary icon-btn tiny delete-action-btn"
-                      aria-label={t("rooms.deleteChannelPermanent")}
-                      data-tooltip={t("rooms.deleteChannelPermanent")}
-                      onClick={() => setConfirmPopup({ kind: "delete-channel-permanent", room })}
-                    >
-                      <i className="bi bi-trash3-fill" aria-hidden="true" />
-                    </Button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ) : null}
+        <RoomsOutsideOnlineBlock
+          title={t("rooms.onlineOutsideRooms")}
+          collapsed={outsideRoomsCollapsed}
+          outsideOnlineCount={onlineOutsideRooms.length}
+          unreadCount={outsideRoomsUnreadCount}
+          members={onlineOutsideRooms}
+          onToggleCollapsed={onToggleOutsideRoomsCollapsed}
+        />
+
+        <RoomsArchivedBlock
+          canCreateRooms={canCreateRooms}
+          title={t("rooms.deletedGroup")}
+          restoreLabel={t("rooms.restoreChannel")}
+          deletePermanentLabel={t("rooms.deleteChannelPermanent")}
+          deleteAllLabel={t("rooms.deleteAllDeleted")}
+          archivedRooms={archivedRooms}
+          collapsed={archivedCollapsed}
+          onToggleCollapsed={onToggleArchivedCollapsed}
+          onDeleteAll={onRequestDeleteAllArchived}
+          onRestoreRoom={onRequestRestoreArchivedRoom}
+          onDeleteRoomPermanent={onRequestDeleteArchivedRoomPermanent}
+        />
       </div>
       </section>
 

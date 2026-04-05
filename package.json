@@ -69,6 +69,7 @@
     "smoke:web:denied-media:browser": "node ./scripts/smoke/smoke-web-denied-media-browser.mjs",
     "smoke:web:cookie-consent:browser": "node ./scripts/smoke/smoke-web-cookie-consent-browser.mjs",
     "smoke:web:crash-boundary:browser": "node ./scripts/smoke/smoke-web-crash-boundary-browser.mjs",
+    "smoke:web:network-requests:browser": "node ./scripts/smoke/smoke-web-network-requests-browser.mjs",
     "smoke:web:rnnoise:browser": "node ./scripts/smoke/smoke-web-rnnoise-browser.mjs",
     "smoke:auth:bootstrap": "bash ./scripts/smoke/smoke-auth-bootstrap.sh",
     "smoke:all": "bash ./scripts/smoke/run-all-smokes.sh",

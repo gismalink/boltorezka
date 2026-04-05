@@ -10,6 +10,7 @@ type SocketState = {
   sessionId: string;
   userId: string;
   userName: string;
+  currentServerId: string | null;
   roomId: string | null;
   roomSlug: string | null;
   roomKind: "text" | "text_voice" | "text_voice_video" | null;
@@ -18,7 +19,7 @@ type SocketState = {
 type RegisterRealtimeWsRouteDeps = {
   socketState: WeakMap<WebSocket, SocketState>;
   attachUserSocket: (userId: string, socket: WebSocket) => void;
-  getAllRoomsPresence: (forUserId: string | null) => unknown;
+  getAllRoomsPresence: (forUserId: string | null, forServerId?: string | null) => unknown;
   handleMessage: (connection: WebSocket, raw: RawData) => Promise<void>;
   detachUserSocket: (userId: string, socket: WebSocket) => void;
   markRecentRoomDetach: (roomId: string, userId: string) => void;

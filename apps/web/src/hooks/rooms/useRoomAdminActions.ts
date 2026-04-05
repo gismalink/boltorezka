@@ -231,11 +231,12 @@ export function useRoomAdminActions({
   }, [token, channelSettingsPopupOpenId, roomAdminController]);
 
   const deleteChannel = useCallback(async (room: Room) => {
-    if (!token || !channelSettingsPopupOpenId) {
+    const roomId = String(room.id || "").trim() || channelSettingsPopupOpenId;
+    if (!token || !roomId) {
       return;
     }
 
-    const deleted = await roomAdminController.deleteRoom(token, channelSettingsPopupOpenId);
+    const deleted = await roomAdminController.deleteRoom(token, roomId);
     if (!deleted) {
       return;
     }

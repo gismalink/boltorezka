@@ -1,12 +1,15 @@
 import { useCallback, useMemo, type Dispatch, type MutableRefObject, type RefObject, type SetStateAction } from "react";
 import type { Message, MessagesCursor, PresenceMember } from "../../../domain";
+import type { RoomTopic } from "../../../types";
 import type { ChatController, RealtimeClient } from "../../../services";
 
 type UseRealtimeChatLifecyclePropsInput = {
   serviceToken: string;
+  currentServerId: string;
   reconnectNonce: number;
   roomSlug: string;
   chatRoomSlug: string;
+  activeTopicId: string | null;
   messages: Message[];
   messagesNextCursor: MessagesCursor | null;
   loadingOlderMessages: boolean;
@@ -85,13 +88,128 @@ type UseRealtimeChatLifecyclePropsInput = {
       ts?: string;
     }
   ) => void;
+  handleChatMessagePinned: (
+    payload: {
+      roomId?: string;
+      roomSlug?: string;
+      topicId?: string;
+      topicSlug?: string;
+      messageId?: string;
+      pinned?: boolean;
+      pinnedByUserId?: string;
+      ts?: string;
+    }
+  ) => void;
+  handleChatMessageUnpinned: (
+    payload: {
+      roomId?: string;
+      roomSlug?: string;
+      topicId?: string;
+      topicSlug?: string;
+      messageId?: string;
+      pinned?: boolean;
+      unpinnedByUserId?: string;
+      ts?: string;
+    }
+  ) => void;
+  handleChatMessageReactionChanged: (
+    payload: {
+      roomId?: string;
+      roomSlug?: string;
+      topicId?: string;
+      topicSlug?: string;
+      messageId?: string;
+      emoji?: string;
+      userId?: string;
+      active?: boolean;
+      ts?: string;
+    }
+  ) => void;
+  handleChatMessageReceived: (
+    payload: {
+      roomId?: string;
+      roomSlug?: string;
+      topicId?: string;
+      topicSlug?: string;
+      messageId?: string;
+      userId?: string;
+      userName?: string;
+      createdAt?: string;
+      senderRequestId?: string;
+    }
+  ) => void;
+  handleChatTopicRead: (
+    payload: {
+      roomId?: string;
+      topicId?: string;
+      userId?: string;
+      lastReadMessageId?: string;
+      lastReadAt?: string;
+    }
+  ) => void;
+  handleChatTopicCreated: (
+    payload: {
+      roomId?: string;
+      roomSlug?: string;
+      topic?: RoomTopic;
+      actorUserId?: string;
+      ts?: string;
+    }
+  ) => void;
+  handleChatTopicUpdated: (
+    payload: {
+      roomId?: string;
+      roomSlug?: string;
+      topic?: RoomTopic;
+      actorUserId?: string;
+      ts?: string;
+    }
+  ) => void;
+  handleChatTopicArchived: (
+    payload: {
+      roomId?: string;
+      roomSlug?: string;
+      topic?: RoomTopic;
+      actorUserId?: string;
+      ts?: string;
+    }
+  ) => void;
+  handleChatTopicUnarchived: (
+    payload: {
+      roomId?: string;
+      roomSlug?: string;
+      topic?: RoomTopic;
+      actorUserId?: string;
+      ts?: string;
+    }
+  ) => void;
+  handleNotificationSettingsUpdated: (
+    payload: {
+      settings?: {
+        id: string;
+        userId: string;
+        scopeType: "server" | "room" | "topic";
+        serverId: string | null;
+        roomId: string | null;
+        topicId: string | null;
+        mode: "all" | "mentions" | "none";
+        muteUntil: string | null;
+        allowCriticalMentions: boolean;
+        createdAt: string;
+        updatedAt: string;
+      };
+      ts?: string;
+    }
+  ) => void;
 };
 
 export function useRealtimeChatLifecycleProps({
   serviceToken,
+  currentServerId,
   reconnectNonce,
   roomSlug,
   chatRoomSlug,
+  activeTopicId,
   messages,
   messagesNextCursor,
   loadingOlderMessages,
@@ -121,7 +239,17 @@ export function useRealtimeChatLifecycleProps({
   handleIncomingScreenShareState,
   handleSessionMoved,
   handleChatCleared,
-  handleChatTyping
+  handleChatTyping,
+  handleChatMessagePinned,
+  handleChatMessageUnpinned,
+  handleChatMessageReactionChanged,
+  handleChatMessageReceived,
+  handleChatTopicRead,
+  handleChatTopicCreated,
+  handleChatTopicUpdated,
+  handleChatTopicArchived,
+  handleChatTopicUnarchived,
+  handleNotificationSettingsUpdated
 }: UseRealtimeChatLifecyclePropsInput) {
   const handleRoomMediaTopology = useCallback(
     ({ roomSlug: nextRoomSlug, mediaTopology }: { roomSlug: string; mediaTopology: "livekit" }) => {
@@ -141,9 +269,11 @@ export function useRealtimeChatLifecycleProps({
 
   return useMemo(() => ({
     token: serviceToken,
+    currentServerId,
     reconnectNonce,
     joinedRoomSlug: roomSlug,
     chatRoomSlug,
+    activeTopicId,
     messages,
     messagesNextCursor,
     loadingOlderMessages,
@@ -173,12 +303,24 @@ export function useRealtimeChatLifecycleProps({
     onScreenShareState: handleIncomingScreenShareState,
     onSessionMoved: handleSessionMoved,
     onChatCleared: handleChatCleared,
-    onChatTyping: handleChatTyping
+    onChatTyping: handleChatTyping,
+    onChatMessagePinned: handleChatMessagePinned,
+    onChatMessageUnpinned: handleChatMessageUnpinned,
+    onChatMessageReactionChanged: handleChatMessageReactionChanged,
+    onChatMessageReceived: handleChatMessageReceived,
+    onChatTopicRead: handleChatTopicRead,
+    onChatTopicCreated: handleChatTopicCreated,
+    onChatTopicUpdated: handleChatTopicUpdated,
+    onChatTopicArchived: handleChatTopicArchived,
+    onChatTopicUnarchived: handleChatTopicUnarchived,
+    onNotificationSettingsUpdated: handleNotificationSettingsUpdated
   }), [
     serviceToken,
+    currentServerId,
     reconnectNonce,
     roomSlug,
     chatRoomSlug,
+    activeTopicId,
     messages,
     messagesNextCursor,
     loadingOlderMessages,
@@ -208,6 +350,16 @@ export function useRealtimeChatLifecycleProps({
     handleIncomingScreenShareState,
     handleSessionMoved,
     handleChatCleared,
-    handleChatTyping
+    handleChatTyping,
+    handleChatMessagePinned,
+    handleChatMessageUnpinned,
+    handleChatMessageReactionChanged,
+    handleChatMessageReceived,
+    handleChatTopicRead,
+    handleChatTopicCreated,
+    handleChatTopicUpdated,
+    handleChatTopicArchived,
+    handleChatTopicUnarchived,
+    handleNotificationSettingsUpdated
   ]);
 }

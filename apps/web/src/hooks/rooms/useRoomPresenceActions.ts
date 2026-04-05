@@ -9,6 +9,7 @@ type SendWsEvent = (
 
 type UseRoomPresenceActionsArgs = {
   roomSlug: string;
+  chatRoomSlug: string;
   canCreateRooms: boolean;
   roomAdminController: RoomAdminController;
   disconnectRoom: () => void;
@@ -23,6 +24,7 @@ type UseRoomPresenceActionsArgs = {
 
 export function useRoomPresenceActions({
   roomSlug,
+  chatRoomSlug,
   canCreateRooms,
   roomAdminController,
   disconnectRoom,
@@ -40,13 +42,26 @@ export function useRoomPresenceActions({
       return;
     }
 
+    const previousChatSlug = String(chatRoomSlug || "").trim();
+    if (targetSlug !== previousChatSlug) {
+      setChatRoomSlug(targetSlug);
+    }
+
     void (async () => {
       try {
         await roomAdminController.joinRoom(targetSlug);
-        setChatRoomSlug(targetSlug);
       } catch (error) {
         const message = String((error as Error)?.message || "");
         pushLog(`join room failed: #${targetSlug} ${message}`);
+
+        // Keep direct room transitions smooth, but rollback chat target if join is rejected.
+        setChatRoomSlug((current) => {
+          const normalizedCurrent = String(current || "").trim();
+          if (normalizedCurrent !== targetSlug) {
+            return current;
+          }
+          return previousChatSlug;
+        });
 
         if (message.includes(":AgeVerificationRequired:")) {
           onAgeVerificationRequired(targetSlug);
@@ -57,7 +72,7 @@ export function useRoomPresenceActions({
         pushToast(t("toast.serverError"));
       }
     })();
-  }, [onAgeVerificationRequired, pushLog, pushToast, roomAdminController, setChatRoomSlug, t]);
+  }, [chatRoomSlug, onAgeVerificationRequired, pushLog, pushToast, roomAdminController, setChatRoomSlug, t]);
 
   const leaveRoom = useCallback(() => {
     if (!roomSlug) {

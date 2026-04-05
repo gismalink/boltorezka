@@ -235,9 +235,6 @@ export class RoomAdminController {
   async joinRoom(slug: string) {
     await this.options.sendRoomJoinEvent(slug);
     this.options.setRoomSlug(slug);
-    this.options.setMessages(() => []);
-    this.options.setMessagesHasMore(false);
-    this.options.setMessagesNextCursor(null);
   }
 
   async promote(token: string, userId: string) {

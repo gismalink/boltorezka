@@ -5,7 +5,7 @@ type RedisLike = {
   setEx: (key: string, ttlSec: number, value: string) => Promise<unknown>;
 };
 
-export async function issueWsTicket(redis: RedisLike, user: UserCompactRow) {
+export async function issueWsTicket(redis: RedisLike, user: UserCompactRow, serverId: string | null = null) {
   const ticket = randomUUID();
   const expiresInSec = 45;
 
@@ -17,6 +17,7 @@ export async function issueWsTicket(redis: RedisLike, user: UserCompactRow) {
       userName: user.name || user.email || "unknown",
       email: user.email,
       role: user.role || "user",
+      serverId: String(serverId || "").trim() || null,
       issuedAt: new Date().toISOString()
     })
   );

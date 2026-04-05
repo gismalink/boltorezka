@@ -88,7 +88,7 @@ RNNoise в Boltorezka работает как client-side preprocessing profile 
 
 Минимальный canary smoke для `test`:
 
-1. Postdeploy smoke включает browser gate `smoke:web:rnnoise:browser`.
+1. Postdeploy smoke по умолчанию пропускает browser gate `smoke:web:rnnoise:browser` (`SMOKE_WEB_RNNOISE_BROWSER=0`); для canary включать явно `SMOKE_WEB_RNNOISE_BROWSER=1`.
 2. В summary должен быть `web_rnnoise=pass`.
 3. В telemetry summary проверяются counters:
   - `rnnoise_toggle_on` / `rnnoise_toggle_off`,

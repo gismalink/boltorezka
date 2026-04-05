@@ -1,14 +1,57 @@
-import { ClipboardEvent, FormEvent, KeyboardEvent, ReactNode, RefObject, useEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
-import type { Message } from "../domain";
-import { Button } from "./uicomponents";
+// Purpose: presentation-only chat panel with message timeline, composer, and message-level UI actions.
+import { ClipboardEvent, FormEvent, KeyboardEvent, RefObject, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { Message, RoomTopic } from "../domain";
 import { buildChatMessageViewModels } from "../utils/chatMessageViewModel";
+import { CHAT_MEMORY_METRICS_ENABLED, CHAT_MEMORY_METRICS_EVERY } from "../constants/appConfig";
+import { useChatPanelInboxNotifications } from "./chatPanel/hooks/useChatPanelInboxNotifications";
+import { useChatPanelAttachmentImages } from "./chatPanel/hooks/useChatPanelAttachmentImages";
+import { useChatPanelReadState } from "./chatPanel/hooks/useChatPanelReadState";
+import { useChatPanelTopicLists } from "./chatPanel/hooks/useChatPanelTopicLists";
+import { useChatPanelTopicActions } from "./chatPanel/hooks/useChatPanelTopicActions";
+import { useChatTopLazyLoad } from "./chatPanel/hooks/useChatTopLazyLoad";
+import { useChatPanelSearch } from "./chatPanel/hooks/useChatPanelSearch";
+import { useMessageContextMenu } from "./chatPanel/hooks/useMessageContextMenu";
+import { useChatPanelUiInteractions } from "./chatPanel/hooks/useChatPanelUiInteractions";
+import { useChatPanelComposerHelpers } from "./chatPanel/hooks/useChatPanelComposerHelpers";
+import { useChatPanelTopicCreate } from "./chatPanel/hooks/useChatPanelTopicCreate";
+import { useChatPanelTypingBanner } from "./chatPanel/hooks/useChatPanelTypingBanner";
+import { useChatPanelSearchOverlay } from "./chatPanel/hooks/useChatPanelSearchOverlay";
+import { TopicTabsHeader } from "./chatPanel/sections/TopicTabsHeader";
+import { SearchPanel } from "./chatPanel/sections/SearchPanel";
+import { ChatMessageTimeline } from "./chatPanel/sections/ChatMessageTimeline";
+import { ChatComposerSection } from "./chatPanel/sections/ChatComposerSection";
+import { ChatPanelOverlays } from "./chatPanel/sections/ChatPanelOverlays";
+
+type MentionCandidate = {
+  key: string;
+  kind: "user" | "tag" | "all";
+  handle: string;
+  label: string;
+  userId?: string;
+  userIds?: string[];
+  subtitle?: string | null;
+};
+
+function toMentionHandle(raw: string): string {
+  return String(raw || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "_")
+    .replace(/[^\p{L}\p{N}._-]/gu, "")
+    .replace(/_{2,}/g, "_")
+    .replace(/^[_\.\-]+|[_\.\-]+$/g, "")
+    .slice(0, 32);
+}
 
 type ChatPanelProps = {
   t: (key: string) => string;
   locale: string;
+  currentServerId: string;
   roomSlug: string;
+  roomId: string;
   roomTitle: string;
+  topics: RoomTopic[];
+  activeTopicId: string | null;
   authToken: string;
   messages: Message[];
   currentUserId: string | null;
@@ -16,27 +59,47 @@ type ChatPanelProps = {
   loadingOlderMessages: boolean;
   chatText: string;
   composePreviewImageUrl: string | null;
+  composePendingAttachmentName: string | null;
   typingUsers: string[];
   chatLogRef: RefObject<HTMLDivElement>;
   onLoadOlderMessages: () => void;
   onSetChatText: (value: string) => void;
+  onOpenRoomChat: (slug: string) => void;
+  onSelectTopic: (topicId: string) => void;
+  onCreateTopic: (title: string) => Promise<void>;
   onChatPaste: (event: ClipboardEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
   onChatInputKeyDown: (event: KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
   onSendMessage: (event: FormEvent) => void;
+  onSelectAttachmentFile: (file: File | null) => void;
+  onClearPendingAttachment: () => void;
   editingMessageId: string | null;
+  replyingToMessage: { id: string; userName: string; text: string } | null;
   showVideoToggle: boolean;
   videoWindowsVisible: boolean;
   onToggleVideoWindows: () => void;
   onCancelEdit: () => void;
+  onCancelReply: () => void;
   onEditMessage: (messageId: string) => void;
   onDeleteMessage: (messageId: string) => void;
+  onReportMessage: (messageId: string) => void;
+  onReplyMessage: (messageId: string) => void;
+  pinnedByMessageId: Record<string, boolean>;
+  reactionsByMessageId: Record<string, Record<string, { count: number; reacted: boolean }>>;
+  onTogglePinMessage: (messageId: string) => void;
+  onToggleMessageReaction: (messageId: string, emoji: string) => void;
+  onUpdateTopic: (topicId: string, title: string) => Promise<void>;
+  onArchiveTopic: (topicId: string) => Promise<void>;
+  onUnarchiveTopic: (topicId: string) => Promise<void>;
+  onDeleteTopic: (topicId: string) => Promise<void>;
+  mentionCandidates: MentionCandidate[];
 };
 
 export function ChatPanel({
   t,
   locale,
-  roomSlug,
-  roomTitle,
+  currentServerId,
+  roomSlug, roomId, roomTitle,
+  topics,  activeTopicId,
   authToken,
   messages,
   currentUserId,
@@ -44,295 +107,457 @@ export function ChatPanel({
   loadingOlderMessages,
   chatText,
   composePreviewImageUrl,
+  composePendingAttachmentName,
   typingUsers,
   chatLogRef,
   onLoadOlderMessages,
   onSetChatText,
+  onOpenRoomChat,
+  onSelectTopic,
+  onCreateTopic,
   onChatPaste,
   onChatInputKeyDown,
   onSendMessage,
+  onSelectAttachmentFile,
+  onClearPendingAttachment,
   editingMessageId,
-  showVideoToggle,
-  videoWindowsVisible,
-  onToggleVideoWindows,
+  replyingToMessage,
   onCancelEdit,
+  onCancelReply,
   onEditMessage,
-  onDeleteMessage
+  onDeleteMessage,
+  onReportMessage,
+  onReplyMessage,
+  pinnedByMessageId,
+  reactionsByMessageId,
+  onTogglePinMessage,
+  onToggleMessageReaction,
+  onUpdateTopic,
+  onArchiveTopic,
+  onUnarchiveTopic,
+  onDeleteTopic,
+  mentionCandidates
 }: ChatPanelProps) {
+  const [topicFilterMode] = useState<"all" | "active" | "unread" | "my" | "mentions" | "pinned" | "archived">("all");
+  const [topicPaletteOpen, setTopicPaletteOpen] = useState(false);
+  const [topicPaletteQuery, setTopicPaletteQuery] = useState("");
+  const [topicPaletteSelectedIndex, setTopicPaletteSelectedIndex] = useState(0);
+  const [notificationMode, setNotificationMode] = useState<"all" | "mentions" | "none">("all");
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
-  const [resolvedAttachmentImageUrls, setResolvedAttachmentImageUrls] = useState<Record<string, string>>({});
-  const resolvedAttachmentImageUrlsRef = useRef<Record<string, string>>({});
+  const [quotedMessage, setQuotedMessage] = useState<{ userName: string; text: string } | null>(null);
+  const [hotkeyStatusText, setHotkeyStatusText] = useState("");
+  const attachmentInputRef = useRef<HTMLInputElement | null>(null);
+  const messageVmBuildMsRef = useRef(0);
+  const metricsSamplesRef = useRef(0);
   const hasActiveRoom = Boolean(roomSlug);
 
-  useEffect(() => {
-    resolvedAttachmentImageUrlsRef.current = resolvedAttachmentImageUrls;
-  }, [resolvedAttachmentImageUrls]);
+  const {
+    topicCreatePopupRef,
+    newTopicTitle,
+    setNewTopicTitle,
+    topicCreateOpen,
+    setTopicCreateOpen,
+    creatingTopic,
+    handleCreateTopicSubmit
+  } = useChatPanelTopicCreate({
+    onCreateTopic
+  });
 
-  useEffect(
-    () => () => {
-      Object.values(resolvedAttachmentImageUrlsRef.current).forEach((blobUrl) => {
-        URL.revokeObjectURL(blobUrl);
-      });
-    },
-    []
-  );
+  const {
+    messageContextMenu,
+    setMessageContextMenu
+  } = useMessageContextMenu();
 
-  useEffect(() => {
-    if (!previewImageUrl) {
-      return;
-    }
+  const {
+    searching,
+    searchQuery,
+    setSearchQuery,
+    searchScope,
+    setSearchScope,
+    handleSearchMessages,
+    searchHasMention,
+    setSearchHasMention,
+    searchHasAttachment,
+    setSearchHasAttachment,
+    searchAttachmentType,
+    setSearchAttachmentType,
+    searchHasLink,
+    setSearchHasLink,
+    searchAuthorId,
+    setSearchAuthorId,
+    searchFrom,
+    setSearchFrom,
+    searchTo,
+    setSearchTo,
+    searchJumpStatusText,
+    setSearchJumpStatusText,
+    searchError,
+    searchResults,
+    searchResultsHasMore,
+    setSearchJumpTarget
+  } = useChatPanelSearch({
+    t,
+    authToken,
+    currentServerId,
+    roomId,
+    roomSlug,
+    activeTopicId,
+    topics,
+    loadingOlderMessages,
+    messagesHasMore,
+    onOpenRoomChat,
+    onSelectTopic,
+    onLoadOlderMessages
+  });
 
-    const onKeyDown = (event: globalThis.KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setPreviewImageUrl(null);
-      }
-    };
+  useChatPanelInboxNotifications({
+    authToken,
+    roomSlug,
+    activeTopicId,
+    onJumpToMessage: (payload) => setSearchJumpTarget(payload),
+    onResetJumpStatus: () => setSearchJumpStatusText("")
+  });
 
-    window.addEventListener("keydown", onKeyDown);
-    return () => {
-      window.removeEventListener("keydown", onKeyDown);
-    };
-  }, [previewImageUrl]);
+  const {
+    getTopicUnreadCount,
+    markReadSaving,
+    markReadStatusText,
+    markTopicRead,
+    markRoomRead,
+    markTopicUnreadFromMessage,
+    entryUnreadDivider
+  } = useChatPanelReadState({
+    t,
+    authToken,
+    activeTopicId,
+    roomId,
+    topics,
+    messages,
+    loadingOlderMessages,
+    messagesHasMore,
+    onLoadOlderMessages,
+    chatLogRef
+  });
 
-  const composePreviewImage = composePreviewImageUrl;
-  const visibleTypingUsers = typingUsers.slice(0, 2);
-  const typingOverflowCount = Math.max(0, typingUsers.length - visibleTypingUsers.length);
-  const typingUsersLabel = typingOverflowCount > 0
-    ? t("chat.typingUsersOverflow")
-      .replace("{users}", visibleTypingUsers.join(", "))
-      .replace("{count}", String(typingOverflowCount))
-    : visibleTypingUsers.join(", ");
-  const typingLabel = typingUsers.length <= 1
-    ? t("chat.typingSingle").replace("{users}", typingUsersLabel)
-    : t("chat.typingMultiple").replace("{users}", typingUsersLabel);
-  const historyButtonLabel = loadingOlderMessages
-    ? t("chat.loading")
-    : !messagesHasMore
-      ? t("chat.historyLoaded")
-      : t("chat.loadOlder");
-  const messageViewModels = useMemo(
-    () => buildChatMessageViewModels(messages, currentUserId, 10 * 60 * 1000),
-    [messages, currentUserId]
-  );
+  const {
+    topicContextMenu,
+    editingTopicTitle,
+    setEditingTopicTitle,
+    editingTopicTitleDraftInitial,
+    setEditingTopicTitleDraftInitial,
+    isEditingTopicTitleInline,
+    setIsEditingTopicTitleInline,
+    editingTopicSaving,
+    editingTopicStatusText,
+    setEditingTopicStatusText,
+    archivingTopicId,
+    notificationSaving,
+    topicMutePresetById,
+    topicDeleteConfirm,
+    setTopicDeleteConfirm,
+    openTopicContextMenu,
+    runTopicMenuAction,
+    applyTopicRename,
+    confirmDeleteTopic,
+    setTopicMutePreset
+  } = useChatPanelTopicActions({
+    t,
+    authToken,
+    topics,
+    notificationMode,
+    markTopicRead,
+    onUpdateTopic,
+    onArchiveTopic,
+    onUnarchiveTopic,
+    onDeleteTopic
+  });
 
-  const formatMessageTime = (value: string) => {
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) {
-      return "";
-    }
+  const { resolveAttachmentImageUrl } = useChatPanelAttachmentImages({
+    messages,
+    authToken
+  });
 
-    return date.toLocaleTimeString(locale, {
-      hour: "2-digit",
-      minute: "2-digit"
-    });
-  };
+  const {
+    sortedTopics,
+    filteredTopicsForPalette
+  } = useChatPanelTopicLists({
+    topics,
+    activeTopicId,
+    topicFilterMode,
+    currentUserId,
+    getTopicUnreadCount,
+    topicPaletteQuery
+  });
 
-  const isProtectedAttachmentObjectUrl = (value: string): boolean => {
-    if (!value) {
-      return false;
-    }
+  useChatTopLazyLoad({
+    chatLogRef,
+    hasActiveRoom,
+    loadingOlderMessages,
+    messagesHasMore,
+    onLoadOlderMessages
+  });
 
-    if (value.startsWith("/v1/chat/uploads/object")) {
-      return true;
-    }
+  const activeTopic = useMemo(() => topics.find((topic) => topic.id === activeTopicId) ?? null, [topics, activeTopicId]);
+  const activeTopicIsArchived = Boolean(activeTopic?.archivedAt);
 
-    try {
-      const parsed = new URL(value, window.location.origin);
-      return parsed.pathname === "/v1/chat/uploads/object";
-    } catch {
-      return false;
-    }
-  };
+  const messageViewModels = useMemo(() => {
+    const startedAt = typeof performance !== "undefined" ? performance.now() : 0;
+    const built = buildChatMessageViewModels(messages, currentUserId, 10 * 60 * 1000);
+    const finishedAt = typeof performance !== "undefined" ? performance.now() : startedAt;
+    messageVmBuildMsRef.current = Math.max(0, finishedAt - startedAt);
+    return built;
+  }, [messages, currentUserId]);
 
-  const protectedAttachmentUrls = useMemo(() => {
-    const unique = new Set<string>();
+  const resolvedMentionCandidates = useMemo(() => {
+    const byKey = new Map<string, MentionCandidate>();
 
-    messages.forEach((message) => {
-      const attachments = Array.isArray(message.attachments) ? message.attachments : [];
-      attachments
-        .filter((item) => String(item.type || "") === "image")
-        .map((item) => String(item.download_url || "").trim())
-        .filter((url) => url.length > 0)
-        .forEach((url) => {
-          if (isProtectedAttachmentObjectUrl(url)) {
-            unique.add(url);
-          }
-        });
-    });
-
-    return Array.from(unique);
-  }, [messages]);
-
-  useEffect(() => {
-    const nextProtected = new Set(protectedAttachmentUrls);
-
-    setResolvedAttachmentImageUrls((prev) => {
-      let changed = false;
-      const next: Record<string, string> = {};
-
-      Object.entries(prev).forEach(([url, blobUrl]) => {
-        if (nextProtected.has(url)) {
-          next[url] = blobUrl;
-          return;
-        }
-
-        changed = true;
-        URL.revokeObjectURL(blobUrl);
-      });
-
-      return changed ? next : prev;
-    });
-
-    if (nextProtected.size === 0) {
-      return;
-    }
-
-    const abortController = new AbortController();
-    let cancelled = false;
-
-    const load = async (url: string) => {
-      if (resolvedAttachmentImageUrlsRef.current[url]) {
+    (Array.isArray(mentionCandidates) ? mentionCandidates : []).forEach((candidate) => {
+      const key = String(candidate.key || "").trim();
+      const handle = String(candidate.handle || "").trim().toLowerCase();
+      const label = String(candidate.label || "").trim();
+      if (!key || !handle || !label) {
         return;
       }
 
-      const headers: Record<string, string> = {};
-      if (authToken) {
-        headers.authorization = `Bearer ${authToken}`;
+      byKey.set(key, {
+        ...candidate,
+        key,
+        handle,
+        label,
+        subtitle: String(candidate.subtitle || "").trim() || null
+      });
+    });
+
+    messages.forEach((message) => {
+      const userId = String(message.user_id || "").trim();
+      const label = String(message.user_name || "").trim();
+      const handle = toMentionHandle(label);
+      const key = `user:${userId}`;
+      if (!userId || !label || !handle || byKey.has(key)) {
+        return;
       }
 
-      try {
-        const response = await fetch(url, {
-          credentials: "include",
-          headers,
-          signal: abortController.signal
-        });
+      byKey.set(key, {
+        key,
+        kind: "user",
+        handle,
+        label,
+        userId
+      });
+    });
 
-        if (!response.ok) {
-          return;
-        }
+    return Array.from(byKey.values());
+  }, [mentionCandidates, messages]);
 
-        const blob = await response.blob();
-        const blobUrl = URL.createObjectURL(blob);
+  const pinnedMessagesCount = useMemo(
+    () => Object.keys(pinnedByMessageId || {}).length,
+    [pinnedByMessageId]
+  );
+  const reactionMessageBucketsCount = useMemo(
+    () => Object.keys(reactionsByMessageId || {}).length,
+    [reactionsByMessageId]
+  );
 
-        if (cancelled) {
-          URL.revokeObjectURL(blobUrl);
-          return;
-        }
-
-        setResolvedAttachmentImageUrls((prev) => {
-          if (prev[url] === blobUrl) {
-            return prev;
-          }
-
-          if (prev[url]) {
-            URL.revokeObjectURL(prev[url]);
-          }
-
-          return {
-            ...prev,
-            [url]: blobUrl
-          };
-        });
-      } catch {
-        // Keep original URL fallback if fetch fails.
-      }
-    };
-
-    void Promise.all(Array.from(nextProtected).map((url) => load(url)));
-
-    return () => {
-      cancelled = true;
-      abortController.abort();
-    };
-  }, [authToken, protectedAttachmentUrls]);
-
-  const resolveAttachmentImageUrl = (url: string): string => {
-    return resolvedAttachmentImageUrls[url] || url;
-  };
-
-  const renderMessageText = (value: string): ReactNode[] => {
-    const text = String(value || "");
-    const urlPattern = /((https?:\/\/|www\.)[^\s<]+)/gi;
-    const result: ReactNode[] = [];
-    let keyIndex = 0;
-
-    let textCursor = 0;
-    let linkMatch: RegExpExecArray | null;
-    urlPattern.lastIndex = 0;
-
-    while ((linkMatch = urlPattern.exec(text)) !== null) {
-      const raw = linkMatch[0];
-      const start = linkMatch.index;
-      if (start > textCursor) {
-        result.push(text.slice(textCursor, start));
-      }
-
-      let linkText = raw;
-      let trailing = "";
-      while (/[.,!?;:)\]]$/.test(linkText)) {
-        trailing = linkText.slice(-1) + trailing;
-        linkText = linkText.slice(0, -1);
-      }
-
-      if (linkText) {
-        const href = /^https?:\/\//i.test(linkText) ? linkText : `https://${linkText}`;
-        result.push(
-          <a
-            key={`link-${keyIndex}-${start}-${linkText}`}
-            href={href}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="chat-link"
-          >
-            {linkText}
-          </a>
-        );
-        keyIndex += 1;
-      }
-
-      if (trailing) {
-        result.push(trailing);
-      }
-
-      textCursor = start + raw.length;
+  useEffect(() => {
+    if (!CHAT_MEMORY_METRICS_ENABLED) {
+      return;
     }
 
-    if (textCursor < text.length) {
-      result.push(text.slice(textCursor));
+    metricsSamplesRef.current += 1;
+    if (metricsSamplesRef.current % CHAT_MEMORY_METRICS_EVERY !== 0) {
+      return;
     }
 
-    return result.length > 0 ? result : [text];
-  };
+    const perfWithMemory = performance as Performance & {
+      memory?: {
+        usedJSHeapSize?: number;
+        totalJSHeapSize?: number;
+      };
+    };
+
+    const usedHeapBytes = Number(perfWithMemory.memory?.usedJSHeapSize || 0);
+    const totalHeapBytes = Number(perfWithMemory.memory?.totalJSHeapSize || 0);
+    const usedHeapMb = usedHeapBytes > 0 ? (usedHeapBytes / (1024 * 1024)).toFixed(1) : "n/a";
+    const totalHeapMb = totalHeapBytes > 0 ? (totalHeapBytes / (1024 * 1024)).toFixed(1) : "n/a";
+
+    console.info(
+      `[chat-metrics] room=${roomSlug || "-"} topic=${activeTopicId || "-"} msgs=${messages.length} vms=${messageViewModels.length} pinned=${pinnedMessagesCount} reactedBuckets=${reactionMessageBucketsCount} vmBuildMs=${messageVmBuildMsRef.current.toFixed(2)} heapMB=${usedHeapMb}/${totalHeapMb}`
+    );
+  }, [
+    activeTopicId,
+    messageViewModels.length,
+    messages.length,
+    pinnedMessagesCount,
+    reactionMessageBucketsCount,
+    roomSlug
+  ]);
+
+  const composePreviewImage = composePreviewImageUrl;
+  const hasTopics = topics.length > 0;
+  const {
+    hasTypingUsers,
+    typingLabel
+  } = useChatPanelTypingBanner({
+    t,
+    typingUsers
+  });
+
+  const {
+    formatMessageTime,
+    formatAttachmentSize,
+    insertMentionToComposer,
+    insertQuoteToComposer
+  } = useChatPanelComposerHelpers({
+    locale,
+    chatText,
+    onSetChatText
+  });
+
+  const handleInsertQuoteToComposer = useCallback((userName: string, _messageText: string, selectedText: string) => {
+    const normalizedQuote = String(selectedText || "").replace(/\s+/g, " ").trim();
+    if (!normalizedQuote) {
+      return;
+    }
+
+    if (editingMessageId) {
+      onCancelEdit();
+    }
+    if (replyingToMessage) {
+      onCancelReply();
+    }
+
+    setQuotedMessage({
+      userName: String(userName || "").trim() || "Unknown",
+      text: normalizedQuote
+    });
+    insertQuoteToComposer(userName, normalizedQuote);
+  }, [editingMessageId, insertQuoteToComposer, onCancelEdit, onCancelReply, replyingToMessage]);
+
+  const cancelQuote = useCallback(() => {
+    setQuotedMessage(null);
+  }, []);
+
+  useEffect(() => {
+    if (!quotedMessage) {
+      return;
+    }
+
+    if (!chatText.trim()) {
+      setQuotedMessage(null);
+    }
+  }, [chatText, quotedMessage]);
+
+  const {
+    topicPaletteInputRef,
+    openTopicPalette,
+    closeTopicPalette,
+    selectTopicFromPalette,
+    handleTopicPaletteKeyDown
+  } = useChatPanelUiInteractions({
+    t,
+    hasActiveRoom,
+    hasTopics,
+    roomSlug,
+    activeTopicId,
+    topics,
+    filteredTopicsForPalette,
+    topicPaletteOpen,
+    setTopicPaletteOpen,
+    topicPaletteQuery,
+    setTopicPaletteQuery,
+    topicPaletteSelectedIndex,
+    setTopicPaletteSelectedIndex,
+    setHotkeyStatusText,
+    previewImageUrl,
+    setPreviewImageUrl,
+    messageViewModels,
+    onSelectTopic,
+    onReplyMessage,
+    onEditMessage,
+    markRoomRead
+  });
+
+  const topicPaletteListboxId = "chat-topic-palette-listbox";
+  const {
+    searchPanelOpen,
+    closeSearchPanel,
+    toggleSearchPanel
+  } = useChatPanelSearchOverlay({ hasActiveRoom });
 
   return (
-    <section className="card middle-card flex min-h-0 flex-1 flex-col overflow-hidden">
-      <h2>
-        {t("chat.title")} ({hasActiveRoom ? roomTitle || roomSlug : t("chat.noChannel")})
-      </h2>
-      <div className="mb-3 flex flex-wrap items-center gap-3">
-        <Button
-          type="button"
-          className="secondary"
-          onClick={onLoadOlderMessages}
-          disabled={!hasActiveRoom || !messagesHasMore || loadingOlderMessages}
-        >
-          {historyButtonLabel}
-        </Button>
-        {showVideoToggle ? (
-          <Button
-            type="button"
-            className="secondary ml-auto"
-            onClick={onToggleVideoWindows}
-          >
-            {videoWindowsVisible ? t("chat.hideAllVideos") : t("chat.showAllVideos")}
-          </Button>
+    <section className="card middle-card relative flex min-h-0 flex-1 flex-col overflow-hidden">
+      <div className="chat-header-stack">
+        <TopicTabsHeader
+          t={t}
+          hasActiveRoom={hasActiveRoom}
+          roomTitle={roomTitle}
+          roomSlug={roomSlug}
+          hasTopics={hasTopics}
+          topicCreatePopupRef={topicCreatePopupRef}
+          topicCreateOpen={topicCreateOpen}
+          setTopicCreateOpen={setTopicCreateOpen}
+          newTopicTitle={newTopicTitle}
+          setNewTopicTitle={setNewTopicTitle}
+          creatingTopic={creatingTopic}
+          handleCreateTopicSubmit={handleCreateTopicSubmit}
+          sortedTopics={sortedTopics}
+          getTopicUnreadCount={getTopicUnreadCount}
+          activeTopicId={activeTopicId}
+          onSelectTopic={onSelectTopic}
+          openTopicContextMenu={openTopicContextMenu}
+          openTopicPalette={openTopicPalette}
+          topicPaletteOpen={topicPaletteOpen}
+          searchPanelOpen={searchPanelOpen}
+          onToggleSearchPanel={toggleSearchPanel}
+        />
+        {hasActiveRoom && searchPanelOpen ? (
+          <SearchPanel
+            t={t}
+            searching={searching}
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+            searchScope={searchScope}
+            setSearchScope={setSearchScope}
+            handleSearchMessages={handleSearchMessages}
+            searchHasMention={searchHasMention}
+            setSearchHasMention={setSearchHasMention}
+            searchHasAttachment={searchHasAttachment}
+            setSearchHasAttachment={setSearchHasAttachment}
+            searchAttachmentType={searchAttachmentType}
+            setSearchAttachmentType={setSearchAttachmentType}
+            searchHasLink={searchHasLink}
+            setSearchHasLink={setSearchHasLink}
+            searchAuthorId={searchAuthorId}
+            setSearchAuthorId={setSearchAuthorId}
+            searchFrom={searchFrom}
+            setSearchFrom={setSearchFrom}
+            searchTo={searchTo}
+            setSearchTo={setSearchTo}
+            searchJumpStatusText={searchJumpStatusText}
+            searchError={searchError}
+            searchResults={searchResults}
+            searchResultsHasMore={searchResultsHasMore}
+            formatMessageTime={formatMessageTime}
+            setSearchJumpStatusText={setSearchJumpStatusText}
+            setSearchJumpTarget={(value) => setSearchJumpTarget(value)}
+            onClose={closeSearchPanel}
+          />
         ) : null}
+      </div>
+      {hasActiveRoom ? (
+        <div className="chat-hotkeys-hint muted" aria-live="polite">
+          {t("chat.hotkeysHint")}
+          {hotkeyStatusText ? ` ${hotkeyStatusText}` : ""}
+        </div>
+      ) : null}
+      <div className="mb-3 flex flex-wrap items-center gap-3">
         {!hasActiveRoom ? (
           <span className="muted">{t("chat.noChannelHint")}</span>
         ) : null}
       </div>
+      {editingTopicStatusText ? <div className="chat-topic-read-status mb-2" role="status" aria-live="polite">{editingTopicStatusText}</div> : null}
       <div className="chat-typing-banner" aria-live="polite">
-        {hasActiveRoom && typingUsers.length > 0 ? (
+        {hasActiveRoom && hasTypingUsers ? (
           <span className="chat-typing-status">
             <span>{typingLabel}</span>
             <span className="chat-typing-dots" aria-hidden="true">
@@ -343,162 +568,101 @@ export function ChatPanel({
           </span>
         ) : null}
       </div>
-      <div className="chat-log min-h-0 flex-1" ref={chatLogRef}>
-        {messageViewModels.map((messageVm) => {
-          const attachmentImageUrls = messageVm.attachmentImageUrls;
-          const isOwn = messageVm.isOwn;
-          const showAuthor = messageVm.showAuthor;
-          const showAvatar = messageVm.showAvatar;
-          const canManageOwnMessage = messageVm.canManageOwnMessage;
-          const deliveryClass = messageVm.deliveryClass;
-          const deliveryGlyph = messageVm.deliveryGlyph;
-
-          return (
-            <article
-              key={messageVm.id}
-              className={`chat-message group grid items-end gap-2 ${isOwn ? "chat-message-own grid-cols-1 justify-items-end" : "grid-cols-[34px_minmax(0,1fr)]"}`}
-            >
-              {!isOwn ? (
-                <div className="chat-avatar-slot inline-flex h-[30px] w-[30px] items-end justify-center" aria-hidden="true">
-                  {showAvatar ? (
-                    <div className="chat-avatar inline-flex h-[30px] w-[30px] items-center justify-center">
-                      {(messageVm.userName || "U").charAt(0).toUpperCase()}
-                    </div>
-                  ) : null}
-                </div>
-              ) : null}
-
-              <div className={`chat-bubble-wrap grid max-w-[min(92%,820px)] gap-0.5 ${isOwn ? "justify-items-end" : "justify-items-start"}`}>
-                {canManageOwnMessage ? (
-                  <div className={`chat-actions-side ${isOwn ? "chat-actions-side-own" : "chat-actions-side-peer"}`}>
-                    <Button
-                      type="button"
-                      className="secondary tiny icon-btn"
-                      onClick={() => onEditMessage(messageVm.id)}
-                      aria-label={t("chat.edit")}
-                      title={t("chat.edit")}
-                    >
-                      <i className="bi bi-pencil-square" aria-hidden="true" />
-                    </Button>
-                    <Button
-                      type="button"
-                      className="secondary tiny icon-btn"
-                      onClick={() => onDeleteMessage(messageVm.id)}
-                      aria-label={t("chat.delete")}
-                      title={t("chat.delete")}
-                    >
-                      <i className="bi bi-trash3" aria-hidden="true" />
-                    </Button>
-                  </div>
-                ) : null}
-
-                <div className="chat-bubble w-fit min-w-[120px]">
-                  {showAuthor ? (
-                    <div className="chat-meta flex items-baseline gap-2">
-                      <span className="chat-author">{messageVm.userName}</span>
-                    </div>
-                  ) : null}
-                  <div className="chat-content-row">
-                    <p className="chat-text">{renderMessageText(messageVm.text)}</p>
-                    <span className="chat-time-wrap">
-                      <span className="chat-time">{formatMessageTime(messageVm.createdAt)}</span>
-                      {isOwn && deliveryGlyph ? (
-                        <span className={`delivery ${deliveryClass}`}>
-                          {deliveryGlyph}
-                        </span>
-                      ) : null}
-                    </span>
-                  </div>
-                  {attachmentImageUrls.length > 0 ? (
-                    <div className="chat-attachments-row">
-                      {attachmentImageUrls.map((imageUrl) => (
-                        <Button
-                          key={`${messageVm.id}-${imageUrl}`}
-                          type="button"
-                          className="chat-inline-image-btn"
-                          onClick={() => setPreviewImageUrl(imageUrl)}
-                          aria-label={t("chat.openImagePreview")}
-                          title={t("chat.openImagePreview")}
-                        >
-                          <img
-                            src={resolveAttachmentImageUrl(imageUrl)}
-                            alt="chat-image"
-                            className="chat-inline-image"
-                            loading="lazy"
-                          />
-                        </Button>
-                      ))}
-                    </div>
-                  ) : null}
-                  {messageVm.editedAt ? <div className="chat-edited-mark">{t("chat.editedMark")}</div> : null}
-                </div>
-              </div>
-            </article>
-          );
-        })}
-      </div>
-      {editingMessageId ? (
-        <div className="chat-edit-banner mb-2 flex items-center justify-between gap-3">
-          <span>{t("chat.editingNow")}</span>
-          <Button type="button" className="secondary tiny" onClick={onCancelEdit}>{t("chat.cancelEdit")}</Button>
-        </div>
-      ) : null}
-      <form className="chat-compose mt-3 flex items-end gap-3" onSubmit={onSendMessage}>
-        <textarea
-          value={chatText}
-          onChange={(event) => onSetChatText(event.target.value)}
-          onPaste={onChatPaste}
-          onKeyDown={onChatInputKeyDown}
-          rows={2}
-          placeholder={hasActiveRoom ? t("chat.typePlaceholder") : t("chat.selectChannelPlaceholder")}
-          disabled={!hasActiveRoom}
-        />
-        {composePreviewImage ? (
-          <Button
-            type="button"
-            className="chat-compose-thumb-btn"
-            onClick={() => setPreviewImageUrl(composePreviewImage)}
-            aria-label={t("chat.openImagePreview")}
-            title={t("chat.openImagePreview")}
-          >
-            <img
-              src={composePreviewImage}
-              alt="chat-compose-image"
-              className="chat-compose-thumb"
-              loading="lazy"
-            />
-          </Button>
-        ) : null}
-        <Button type="submit" disabled={!hasActiveRoom}>{editingMessageId ? t("chat.saveEdit") : t("chat.send")}</Button>
-      </form>
-      {previewImageUrl && typeof document !== "undefined"
-        ? createPortal(
-          <div
-            className="chat-image-modal-overlay"
-            role="dialog"
-            aria-modal="true"
-            aria-label={t("chat.imagePreviewTitle")}
-            onClick={() => setPreviewImageUrl(null)}
-          >
-            <div className="chat-image-modal-card" onClick={(event) => event.stopPropagation()}>
-              <Button
-                type="button"
-                className="secondary tiny chat-image-modal-close"
-                onClick={() => setPreviewImageUrl(null)}
-              >
-                {t("chat.closeImagePreview")}
-              </Button>
-              <img
-                src={resolveAttachmentImageUrl(previewImageUrl)}
-                alt="chat-image-preview"
-                className="chat-image-modal-media"
-              />
-            </div>
-          </div>
-          ,
-          document.body
-        )
-        : null}
+      <ChatMessageTimeline
+        t={t}
+        hasActiveRoom={hasActiveRoom}
+        hasTopics={hasTopics}
+        activeTopicId={activeTopicId}
+        loadingOlderMessages={loadingOlderMessages}
+        chatLogRef={chatLogRef}
+        messageViewModels={messageViewModels}
+        pinnedByMessageId={pinnedByMessageId}
+        reactionsByMessageId={reactionsByMessageId}
+        messageContextMenu={messageContextMenu}
+        setMessageContextMenu={setMessageContextMenu}
+        onReplyMessage={onReplyMessage}
+        onEditMessage={onEditMessage}
+        onDeleteMessage={onDeleteMessage}
+        onReportMessage={onReportMessage}
+        onTogglePinMessage={onTogglePinMessage}
+        onToggleMessageReaction={onToggleMessageReaction}
+        insertMentionToComposer={insertMentionToComposer}
+        mentionCandidates={resolvedMentionCandidates}
+        insertQuoteToComposer={handleInsertQuoteToComposer}
+        markTopicUnreadFromMessage={markTopicUnreadFromMessage}
+        markReadSaving={markReadSaving}
+        formatMessageTime={formatMessageTime}
+        resolveAttachmentImageUrl={resolveAttachmentImageUrl}
+        formatAttachmentSize={formatAttachmentSize}
+        setPreviewImageUrl={setPreviewImageUrl}
+        unreadDividerMessageId={entryUnreadDivider?.messageId || null}
+        unreadDividerVisible={Boolean(entryUnreadDivider?.messageId)}
+      />
+      <ChatComposerSection
+        t={t}
+        hasActiveRoom={hasActiveRoom}
+        activeTopicIsArchived={activeTopicIsArchived}
+        editingMessageId={editingMessageId}
+        replyingToMessage={replyingToMessage}
+        quotedMessage={quotedMessage}
+        onCancelEdit={onCancelEdit}
+        onCancelReply={onCancelReply}
+        onCancelQuote={cancelQuote}
+        onSendMessage={onSendMessage}
+        onSelectAttachmentFile={onSelectAttachmentFile}
+        onClearPendingAttachment={onClearPendingAttachment}
+        onSetChatText={onSetChatText}
+        onChatPaste={onChatPaste}
+        onChatInputKeyDown={onChatInputKeyDown}
+        chatText={chatText}
+        mentionCandidates={resolvedMentionCandidates}
+        composePreviewImage={composePreviewImage}
+        composePendingAttachmentName={composePendingAttachmentName}
+        setPreviewImageUrl={setPreviewImageUrl}
+        attachmentInputRef={attachmentInputRef}
+      />
+      <ChatPanelOverlays
+        t={t}
+        previewImageUrl={previewImageUrl}
+        setPreviewImageUrl={setPreviewImageUrl}
+        resolveAttachmentImageUrl={resolveAttachmentImageUrl}
+        topicPaletteOpen={topicPaletteOpen}
+        closeTopicPalette={closeTopicPalette}
+        topicPaletteQuery={topicPaletteQuery}
+        setTopicPaletteQuery={setTopicPaletteQuery}
+        handleTopicPaletteKeyDown={handleTopicPaletteKeyDown}
+        topicPaletteInputRef={topicPaletteInputRef}
+        topicPaletteListboxId={topicPaletteListboxId}
+        filteredTopicsForPalette={filteredTopicsForPalette}
+        topicPaletteSelectedIndex={topicPaletteSelectedIndex}
+        activeTopicId={activeTopicId}
+        getTopicUnreadCount={getTopicUnreadCount}
+        setTopicPaletteSelectedIndex={setTopicPaletteSelectedIndex}
+        selectTopicFromPalette={selectTopicFromPalette}
+        topicContextMenu={topicContextMenu}
+        topics={topics}
+        editingTopicSaving={editingTopicSaving}
+        archivingTopicId={archivingTopicId}
+        notificationSaving={notificationSaving}
+        editingTopicTitle={editingTopicTitle}
+        setEditingTopicTitle={setEditingTopicTitle}
+        isEditingTopicTitleInline={isEditingTopicTitleInline}
+        onStartTopicRenameInline={() => {
+          setEditingTopicTitleDraftInitial(editingTopicTitle);
+          setIsEditingTopicTitleInline(true);
+        }}
+        onCancelTopicRenameInline={() => {
+          setEditingTopicTitle(editingTopicTitleDraftInitial);
+          setIsEditingTopicTitleInline(false);
+        }}
+        applyTopicRename={applyTopicRename}
+        runTopicMenuAction={runTopicMenuAction}
+        topicMutePresetById={topicMutePresetById}
+        setTopicMutePreset={setTopicMutePreset}
+        topicDeleteConfirm={topicDeleteConfirm}
+        setTopicDeleteConfirm={setTopicDeleteConfirm}
+        confirmDeleteTopic={confirmDeleteTopic}
+      />
     </section>
   );
 }

@@ -5,6 +5,7 @@ import { broadcastRealtimeEnvelope } from "../realtime-broadcast.js";
 import { loadCurrentUser, requireAuth, requireRole, requireServiceAccess } from "../middleware/auth.js";
 import type { RoomCategoryRow, RoomListRow, RoomMessageRow, RoomRow } from "../db.types.ts";
 import { isServerAgeConfirmed } from "../services/age-verification-service.js";
+import { resolveEffectiveServerPermissions } from "../services/server-permissions-service.js";
 import type {
   RoomCategoryCreateResponse,
   RoomCreateResponse,
@@ -40,6 +41,8 @@ const createRoomSchema = z.object({
   server_id: z.string().uuid().optional(),
   category_id: z.string().uuid().nullable().optional().default(null),
   nsfw: z.boolean().optional().default(false),
+  is_readonly: z.boolean().optional().default(false),
+  slowmode_seconds: z.number().int().min(0).max(3600).optional().default(0),
   audio_quality_override: audioQualitySchema.nullable().optional(),
   position: z.number().int().min(0).optional()
 });
@@ -50,6 +53,8 @@ const updateRoomSchema = z.object({
   category_id: z.string().uuid().nullable(),
   is_hidden: z.boolean().optional(),
   nsfw: z.boolean().optional(),
+  is_readonly: z.boolean().optional(),
+  slowmode_seconds: z.number().int().min(0).max(3600).optional(),
   audio_quality_override: audioQualitySchema.nullable().optional()
 });
 
@@ -169,22 +174,13 @@ export async function roomsRoutes(fastify: FastifyInstance) {
   };
 
   const canManageServerRooms = async (userId: string, serverId: string, globalRole: string): Promise<boolean> => {
-    if (globalRole === "admin" || globalRole === "super_admin") {
-      return true;
-    }
+    const resolved = await resolveEffectiveServerPermissions({
+      serverId,
+      userId,
+      globalRole: (globalRole as "user" | "admin" | "super_admin") || "user"
+    });
 
-    const membership = await db.query<{ role: string }>(
-      `SELECT role
-       FROM server_members
-       WHERE server_id = $1
-         AND user_id = $2
-         AND status = 'active'
-       LIMIT 1`,
-      [serverId, userId]
-    );
-
-    const serverRole = String(membership.rows[0]?.role || "").trim();
-    return serverRole === "owner" || serverRole === "admin";
+    return resolved.permissions.manageRooms;
   };
 
   fastify.get<{ Querystring: { serverId?: string } }>(
@@ -253,6 +249,8 @@ export async function roomsRoutes(fastify: FastifyInstance) {
            r.kind,
            r.nsfw,
            r.audio_quality_override,
+           r.is_readonly,
+           r.slowmode_seconds,
            r.category_id,
            r.position,
            r.is_public,
@@ -341,6 +339,8 @@ export async function roomsRoutes(fastify: FastifyInstance) {
            r.kind,
            r.nsfw,
            r.audio_quality_override,
+           r.is_readonly,
+           r.slowmode_seconds,
            r.category_id,
            r.position,
            r.is_public,
@@ -408,6 +408,8 @@ export async function roomsRoutes(fastify: FastifyInstance) {
            r.kind,
            r.nsfw,
            r.audio_quality_override,
+           r.is_readonly,
+           r.slowmode_seconds,
            r.category_id,
            r.position,
            r.is_public,
@@ -766,6 +768,8 @@ export async function roomsRoutes(fastify: FastifyInstance) {
       title: string;
       is_public?: boolean;
       is_hidden?: boolean;
+      is_readonly?: boolean;
+      slowmode_seconds?: number;
       kind?: "text" | "text_voice" | "text_voice_video";
       server_id?: string;
       category_id?: string | null;
@@ -788,7 +792,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
         });
       }
 
-      const { title, is_public, is_hidden, kind, category_id, nsfw } = parsed.data;
+      const { title, is_public, is_hidden, is_readonly, slowmode_seconds, kind, category_id, nsfw } = parsed.data;
       const hasAudioQualityOverride = Object.prototype.hasOwnProperty.call(parsed.data, "audio_quality_override");
       const isSuperAdmin = request.currentUser?.role === "super_admin";
       if (hasAudioQualityOverride && !isSuperAdmin) {
@@ -838,22 +842,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
       }
 
       const globalRole = String(request.currentUser?.role || "user").trim();
-      let canCreateRoom = globalRole === "admin" || globalRole === "super_admin";
-
-      if (!canCreateRoom) {
-        const membership = await db.query<{ role: string }>(
-          `SELECT role
-           FROM server_members
-           WHERE server_id = $1
-             AND user_id = $2
-             AND status = 'active'
-           LIMIT 1`,
-          [targetServerId, createdBy]
-        );
-
-        const serverRole = String(membership.rows[0]?.role || "").trim();
-        canCreateRoom = serverRole === "owner" || serverRole === "admin";
-      }
+      const canCreateRoom = await canManageServerRooms(createdBy, targetServerId, globalRole);
 
       if (!canCreateRoom) {
         return reply.code(403).send({
@@ -889,10 +878,24 @@ export async function roomsRoutes(fastify: FastifyInstance) {
           );
 
       const created = await db.query<RoomRow>(
-        `INSERT INTO rooms (slug, title, kind, category_id, nsfw, audio_quality_override, position, is_public, is_hidden, created_by, server_id)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-         RETURNING id, slug, title, kind, nsfw, audio_quality_override, category_id, position, is_public, is_hidden, created_at`,
-        [slug, title, kind, category_id, nsfw, audioQualityOverride, position, is_public, is_hidden, createdBy, targetServerId]
+        `INSERT INTO rooms (slug, title, kind, category_id, nsfw, audio_quality_override, is_readonly, slowmode_seconds, position, is_public, is_hidden, created_by, server_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+         RETURNING id, slug, title, kind, nsfw, audio_quality_override, is_readonly, slowmode_seconds, category_id, position, is_public, is_hidden, created_at`,
+        [
+          slug,
+          title,
+          kind,
+          category_id,
+          nsfw,
+          audioQualityOverride,
+          is_readonly,
+          slowmode_seconds,
+          position,
+          is_public,
+          is_hidden,
+          createdBy,
+          targetServerId
+        ]
       );
 
       const room = created.rows[0];
@@ -925,6 +928,8 @@ export async function roomsRoutes(fastify: FastifyInstance) {
       kind: "text" | "text_voice" | "text_voice_video" | "voice";
       category_id: string | null;
       is_hidden?: boolean;
+      is_readonly?: boolean;
+      slowmode_seconds?: number;
       nsfw?: boolean;
       audio_quality_override?: "retro" | "low" | "standard" | "high" | null;
     };
@@ -954,6 +959,8 @@ export async function roomsRoutes(fastify: FastifyInstance) {
       const hasIsHidden = Object.prototype.hasOwnProperty.call(parsed.data, "is_hidden");
       const actorRole = String(request.currentUser?.role || "user").trim();
       const hasNsfw = Object.prototype.hasOwnProperty.call(parsed.data, "nsfw");
+      const hasIsReadonly = Object.prototype.hasOwnProperty.call(parsed.data, "is_readonly");
+      const hasSlowmodeSeconds = Object.prototype.hasOwnProperty.call(parsed.data, "slowmode_seconds");
       const hasAudioQualityOverride = Object.prototype.hasOwnProperty.call(parsed.data, "audio_quality_override");
 
       if (hasAudioQualityOverride && actorRole !== "super_admin") {
@@ -1004,9 +1011,11 @@ export async function roomsRoutes(fastify: FastifyInstance) {
              category_id = $4,
              nsfw = CASE WHEN $5::boolean THEN $6::boolean ELSE nsfw END,
              audio_quality_override = CASE WHEN $7::boolean THEN $8::text ELSE audio_quality_override END,
-             is_hidden = CASE WHEN $9::boolean THEN $10::boolean ELSE is_hidden END
+             is_hidden = CASE WHEN $9::boolean THEN $10::boolean ELSE is_hidden END,
+             is_readonly = CASE WHEN $11::boolean THEN $12::boolean ELSE is_readonly END,
+             slowmode_seconds = CASE WHEN $13::boolean THEN $14::integer ELSE slowmode_seconds END
          WHERE id = $1
-         RETURNING id, slug, title, kind, nsfw, audio_quality_override, category_id, position, is_public, is_hidden, created_at`,
+         RETURNING id, slug, title, kind, nsfw, audio_quality_override, is_readonly, slowmode_seconds, category_id, position, is_public, is_hidden, created_at`,
         [
           roomId,
           title.trim(),
@@ -1017,7 +1026,11 @@ export async function roomsRoutes(fastify: FastifyInstance) {
           hasAudioQualityOverride,
           audioQualityOverride,
           hasIsHidden,
-          Boolean(parsed.data.is_hidden)
+          Boolean(parsed.data.is_hidden),
+          hasIsReadonly,
+          Boolean(parsed.data.is_readonly),
+          hasSlowmodeSeconds,
+          Number(parsed.data.slowmode_seconds || 0)
         ]
       );
 
@@ -1083,7 +1096,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
       }
 
       const currentResult = await db.query<RoomRow>(
-        `SELECT id, slug, title, kind, nsfw, audio_quality_override, category_id, position, is_public, is_hidden, created_at
+        `SELECT id, slug, title, kind, nsfw, audio_quality_override, is_readonly, slowmode_seconds, category_id, position, is_public, is_hidden, created_at
          FROM rooms
          WHERE id = $1 AND is_archived = FALSE`,
         [roomId]
@@ -1135,7 +1148,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
       );
 
       const updated = await db.query<RoomRow>(
-        `SELECT id, slug, title, kind, nsfw, audio_quality_override, category_id, position, is_public, is_hidden, created_at
+        `SELECT id, slug, title, kind, nsfw, audio_quality_override, is_readonly, slowmode_seconds, category_id, position, is_public, is_hidden, created_at
          FROM rooms
          WHERE id = $1`,
         [current.id]
@@ -1385,7 +1398,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
       }
 
       const roomResult = await db.query<RoomRow>(
-        `SELECT r.id, r.slug, r.title, r.kind, r.audio_quality_override, r.category_id, r.server_id, r.nsfw, r.position, r.is_public, r.is_hidden
+        `SELECT r.id, r.slug, r.title, r.kind, r.audio_quality_override, r.is_readonly, r.slowmode_seconds, r.category_id, r.server_id, r.nsfw, r.position, r.is_public, r.is_hidden
          FROM rooms r
          LEFT JOIN servers s ON s.id = r.server_id
          WHERE r.slug = $1

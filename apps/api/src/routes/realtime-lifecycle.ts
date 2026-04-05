@@ -3,6 +3,7 @@ import type { WebSocket } from "ws";
 type SocketState = {
   userId: string;
   userName: string;
+  currentServerId: string | null;
   roomId: string | null;
   roomSlug: string | null;
 };
@@ -11,6 +12,7 @@ export async function initializeRealtimeConnection(params: {
   connection: WebSocket;
   userId: string;
   userName: string;
+  currentServerId: string | null;
   socketState: WeakMap<WebSocket, any>;
   attachUserSocket: (userId: string, socket: WebSocket) => void;
   registerRealtimeSocket: (socket: WebSocket, userId?: string) => void;
@@ -19,12 +21,13 @@ export async function initializeRealtimeConnection(params: {
   sendJson: (socket: WebSocket, payload: unknown) => void;
   buildServerReadyEnvelope: (userId: string, userName: string) => unknown;
   buildRoomsPresenceEnvelope: (...args: any[]) => unknown;
-  getAllRoomsPresence: (forUserId: string | null) => unknown;
+  getAllRoomsPresence: (forUserId: string | null, forServerId?: string | null) => unknown;
 }) {
   const {
     connection,
     userId,
     userName,
+    currentServerId,
     socketState,
     attachUserSocket,
     registerRealtimeSocket,
@@ -40,6 +43,7 @@ export async function initializeRealtimeConnection(params: {
     sessionId: crypto.randomUUID(),
     userId,
     userName,
+    currentServerId,
     roomId: null,
     roomSlug: null,
     roomKind: null
@@ -55,7 +59,7 @@ export async function initializeRealtimeConnection(params: {
   await redisExpire(`presence:user:${userId}`, 120);
 
   sendJson(connection, buildServerReadyEnvelope(userId, userName));
-  sendJson(connection, buildRoomsPresenceEnvelope(getAllRoomsPresence(userId)));
+  sendJson(connection, buildRoomsPresenceEnvelope(getAllRoomsPresence(userId, currentServerId)));
 }
 
 export async function closeRealtimeConnection(params: {

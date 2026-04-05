@@ -1,5 +1,6 @@
 import { api } from "../api";
 import type { Message, MessagesCursor, User } from "../domain";
+import { trimMessagesInMemory } from "./chatMemory";
 
 type WsSender = (
   eventType: string,
@@ -19,6 +20,7 @@ type ChatControllerOptions = {
 
 export class ChatController {
   private readonly options: ChatControllerOptions;
+  private recentMessagesRequestId = 0;
 
   constructor(options: ChatControllerOptions) {
     this.options = options;
@@ -28,13 +30,27 @@ export class ChatController {
     return message;
   }
 
-  async loadRecentMessages(token: string, roomSlug: string) {
+  async loadRecentMessages(token: string, roomSlug: string, topicId: string | null = null) {
+    const requestId = ++this.recentMessagesRequestId;
     try {
-      const res = await api.roomMessages(token, roomSlug, { limit: 50 });
-      this.options.setMessages(() => res.messages.map((message) => this.normalizeMessageForRender(message)));
+      const res = topicId
+        ? await api.topicMessages(token, topicId, { limit: 50 })
+        : await api.roomMessages(token, roomSlug, { limit: 50 });
+
+      if (requestId !== this.recentMessagesRequestId) {
+        return;
+      }
+
+      this.options.setMessages(() => trimMessagesInMemory(
+        res.messages.map((message) => this.normalizeMessageForRender(message))
+      ));
       this.options.setMessagesHasMore(Boolean(res.pagination?.hasMore));
       this.options.setMessagesNextCursor(res.pagination?.nextCursor ?? null);
     } catch (error) {
+      if (requestId !== this.recentMessagesRequestId) {
+        return;
+      }
+
       this.options.pushLog(`history failed: ${(error as Error).message}`);
     }
   }
@@ -42,6 +58,7 @@ export class ChatController {
   async loadOlderMessages(
     token: string,
     roomSlug: string,
+    topicId: string | null,
     messagesNextCursor: MessagesCursor,
     loadingOlderMessages: boolean
   ) {
@@ -51,17 +68,22 @@ export class ChatController {
 
     this.options.setLoadingOlderMessages(true);
     try {
-      const res = await api.roomMessages(token, roomSlug, {
-        limit: 50,
-        cursor: messagesNextCursor
-      });
+      const res = topicId
+        ? await api.topicMessages(token, topicId, {
+          limit: 50,
+          cursor: messagesNextCursor
+        })
+        : await api.roomMessages(token, roomSlug, {
+          limit: 50,
+          cursor: messagesNextCursor
+        });
 
       this.options.setMessages((prev) => {
         const existingIds = new Set(prev.map((item) => item.id));
         const olderPage = res.messages
           .map((message) => this.normalizeMessageForRender(message))
           .filter((item) => !existingIds.has(item.id));
-        return [...olderPage, ...prev];
+        return trimMessagesInMemory([...olderPage, ...prev]);
       });
 
       this.options.setMessagesHasMore(Boolean(res.pagination?.hasMore));
@@ -93,7 +115,7 @@ export class ChatController {
       return { sent: false as const };
     }
 
-    this.options.setMessages((prev) => [
+    this.options.setMessages((prev) => trimMessagesInMemory([
       ...prev,
       {
         id: requestId,
@@ -105,7 +127,7 @@ export class ChatController {
         clientRequestId: requestId,
         deliveryStatus: "sending" as const
       }
-    ]);
+    ]));
 
     void this.options.loadTelemetrySummary();
     return { sent: true as const };

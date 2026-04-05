@@ -6,6 +6,7 @@
 Правило обновления:
 - новые test/smoke циклы добавляются в файл соответствующей даты (`docs/status/test-results/YYYY-MM-DD.md`);
 - индекс `docs/status/test-results/README.md` поддерживается в актуальном состоянии.
+- legacy-domain циклы (pre-cutover) переносятся в `docs/status/test-results/archive/legacy-gismalink-domain/`.
 
 Последний зафиксированный цикл:
-- `2026-03-17 — Cycle #64` (manual multi-account login/logout after migrations rollout) — PASS.
+- `2026-03-28` (test smoke + compliance/age-gate checks) — PASS.

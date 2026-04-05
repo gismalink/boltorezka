@@ -15,6 +15,7 @@ API_SERVICE="${SMOKE_AUTH_API_SERVICE:-boltorezka-api-test}"
 MEDIA_ROOM="${SMOKE_MEDIA_ROOM_SLUG:-test-room}"
 EXPECT_TOPOLOGY="${SMOKE_EXPECT_MEDIA_TOPOLOGY:-livekit}"
 RUN_DENIED_MEDIA_BROWSER="${SMOKE_ALL_RUN_DENIED_MEDIA_BROWSER:-1}"
+RUN_RNNOISE_BROWSER="${SMOKE_ALL_RUN_RNNOISE_BROWSER:-0}"
 RUN_WEB_E2E="${SMOKE_ALL_RUN_WEB_E2E:-1}"
 
 SMOKE_TIMEOUT_MS="${SMOKE_TIMEOUT_MS:-120000}"
@@ -144,8 +145,13 @@ if [[ "$RUN_DENIED_MEDIA_BROWSER" == "1" ]]; then
     env SMOKE_API_URL="$BASE_URL" SMOKE_WEB_BASE_URL="$WEB_BASE_URL" npm run smoke:web:denied-media:browser
 fi
 
-run_case "smoke:web:rnnoise:browser" \
-  env SMOKE_API_URL="$BASE_URL" SMOKE_WEB_BASE_URL="$WEB_BASE_URL" SMOKE_TEST_BEARER_TOKEN="${SMOKE_TEST_BEARER_TOKEN:-}" npm run smoke:web:rnnoise:browser
+if [[ "$RUN_RNNOISE_BROWSER" == "1" ]]; then
+  run_case "smoke:web:rnnoise:browser" \
+    env SMOKE_API_URL="$BASE_URL" SMOKE_WEB_BASE_URL="$WEB_BASE_URL" SMOKE_TEST_BEARER_TOKEN="${SMOKE_TEST_BEARER_TOKEN:-}" npm run smoke:web:rnnoise:browser
+else
+  echo "[smoke:all] skip: smoke:web:rnnoise:browser (SMOKE_ALL_RUN_RNNOISE_BROWSER=0)"
+  RESULTS+=("SKIP:smoke:web:rnnoise:browser")
+fi
 
 run_case "smoke:realtime" \
   env \

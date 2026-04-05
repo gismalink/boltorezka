@@ -11,6 +11,7 @@ import {
   createChatObjectStorage
 } from "../storage/chat-object-storage.js";
 import { isServerAgeConfirmed } from "../services/age-verification-service.js";
+import { resolveActiveServerMute } from "../services/server-mute-service.js";
 import type {
   ChatUploadFinalizeResponse,
   ChatUploadInitResponse
@@ -18,6 +19,7 @@ import type {
 import type {
   MessageAttachmentRow,
   RoomMessageRow,
+  RoomTopicRow,
   RoomRow,
   UserRow
 } from "../db.types.ts";
@@ -28,6 +30,8 @@ type UploadReservation = {
   userId: string;
   roomId: string;
   roomSlug: string;
+  topicId: string | null;
+  topicSlug: string | null;
   mimeType: string;
   sizeBytes: number;
   storageKey: string;
@@ -51,6 +55,7 @@ type UploadRateLimitPolicy = {
 
 const initUploadSchema = z.object({
   roomSlug: z.string().trim().min(1).max(128),
+  topicId: z.string().trim().uuid().optional(),
   mimeType: z.string().trim().min(1).max(128),
   sizeBytes: z.number().int().positive().max(50 * 1024 * 1024)
 });
@@ -58,6 +63,7 @@ const initUploadSchema = z.object({
 const finalizeUploadSchema = z.object({
   uploadId: z.string().trim().uuid(),
   roomSlug: z.string().trim().min(1).max(128),
+  topicId: z.string().trim().uuid().optional(),
   storageKey: z.string().trim().min(4).max(512),
   mimeType: z.string().trim().min(1).max(128),
   sizeBytes: z.number().int().positive().max(50 * 1024 * 1024),
@@ -80,18 +86,52 @@ function normalizeMimeType(value: string): string {
   return String(value || "").trim().toLowerCase();
 }
 
+function resolveAttachmentTypeFromMime(mimeType: string): "image" | "document" | "audio" {
+  const normalized = normalizeMimeType(mimeType).split(";")[0];
+  if (normalized.startsWith("image/")) {
+    return "image";
+  }
+
+  if (normalized.startsWith("audio/")) {
+    return "audio";
+  }
+
+  return "document";
+}
+
 function buildStorageKey(roomSlug: string, userId: string, mimeType: string): string {
   const now = new Date();
   const yyyy = String(now.getUTCFullYear());
   const mm = String(now.getUTCMonth() + 1).padStart(2, "0");
   const dd = String(now.getUTCDate()).padStart(2, "0");
-  const ext = mimeType.includes("png")
+  const normalizedMime = normalizeMimeType(mimeType).split(";")[0];
+  const ext = normalizedMime.includes("png")
     ? "png"
-    : mimeType.includes("gif")
+    : normalizedMime.includes("gif")
       ? "gif"
-      : mimeType.includes("webp")
+      : normalizedMime.includes("webp")
         ? "webp"
-        : "jpg";
+        : normalizedMime.includes("jpeg") || normalizedMime.includes("jpg")
+          ? "jpg"
+          : normalizedMime.includes("pdf")
+            ? "pdf"
+            : normalizedMime.includes("zip")
+              ? "zip"
+              : normalizedMime.includes("json")
+                ? "json"
+                : normalizedMime.includes("csv")
+                  ? "csv"
+                  : normalizedMime.includes("plain")
+                    ? "txt"
+                    : normalizedMime.includes("mpeg") || normalizedMime.includes("mp3")
+                      ? "mp3"
+                      : normalizedMime.includes("wav")
+                        ? "wav"
+                        : normalizedMime.includes("ogg")
+                          ? "ogg"
+                          : normalizedMime.includes("mp4") || normalizedMime.includes("m4a")
+                            ? "m4a"
+                            : "bin";
 
   return `chat/${yyyy}/${mm}/${dd}/${roomSlug}/${userId}/${randomUUID()}.${ext}`;
 }
@@ -142,6 +182,40 @@ function resolveUploadRateLimitSubject(request: FastifyRequest): string {
     .split(",")[0]
     .trim();
   return `ip:${ip || "unknown"}`;
+}
+
+async function canBypassRoomSendPolicy(userId: string, serverId: string | null): Promise<boolean> {
+  const globalRoleResult = await db.query<{ role: string }>(
+    `SELECT role
+     FROM users
+     WHERE id = $1
+       AND is_banned = FALSE
+     LIMIT 1`,
+    [userId]
+  );
+
+  const globalRole = String(globalRoleResult.rows[0]?.role || "").trim();
+  if (globalRole === "admin" || globalRole === "super_admin") {
+    return true;
+  }
+
+  const normalizedServerId = String(serverId || "").trim();
+  if (!normalizedServerId) {
+    return false;
+  }
+
+  const membership = await db.query<{ role: string }>(
+    `SELECT role
+     FROM server_members
+     WHERE server_id = $1
+       AND user_id = $2
+       AND status = 'active'
+     LIMIT 1`,
+    [normalizedServerId, userId]
+  );
+
+  const serverRole = String(membership.rows[0]?.role || "").trim();
+  return serverRole === "owner" || serverRole === "admin";
 }
 
 export async function chatUploadsRoutes(fastify: FastifyInstance) {
@@ -213,6 +287,60 @@ export async function chatUploadsRoutes(fastify: FastifyInstance) {
     windowSec: 60
   });
 
+  const checkRoomSendPolicy = async (room: Pick<RoomRow, "id" | "server_id" | "is_readonly" | "slowmode_seconds">, userId: string) => {
+    const canBypass = await canBypassRoomSendPolicy(userId, room.server_id || null);
+    if (!canBypass && room.server_id) {
+      const muteState = await resolveActiveServerMute(room.server_id, userId);
+      if (muteState.isMuted) {
+        return {
+          allowed: false as const,
+          statusCode: 403,
+          payload: {
+            error: "ServerMemberMuted",
+            message: "You are muted in this server",
+            mutedUntil: muteState.expiresAt,
+            retryAfterSec: muteState.retryAfterSec
+          }
+        };
+      }
+    }
+
+    if (room.is_readonly && !canBypass) {
+      return {
+        allowed: false as const,
+        statusCode: 403,
+        payload: {
+          error: "RoomReadOnly",
+          message: "Room is read-only"
+        }
+      };
+    }
+
+    const slowmodeSeconds = Number(room.slowmode_seconds || 0);
+    if (slowmodeSeconds > 0 && !canBypass) {
+      const slowmodeKey = `room:slowmode:${room.id}:${userId}`;
+      const cooldownRaw = await fastify.redis.get(slowmodeKey);
+      if (cooldownRaw) {
+        const retryAfterSec = Math.max(1, Number.parseInt(cooldownRaw, 10) || slowmodeSeconds);
+        return {
+          allowed: false as const,
+          statusCode: 429,
+          payload: {
+            error: "SlowmodeActive",
+            message: "Slowmode is active",
+            retryAfterSec
+          }
+        };
+      }
+    }
+
+    return {
+      allowed: true as const,
+      canBypass,
+      slowmodeSeconds
+    };
+  };
+
   fastify.get<{
     Querystring: { key?: string };
   }>(
@@ -275,7 +403,13 @@ export async function chatUploadsRoutes(fastify: FastifyInstance) {
     }
   );
 
-  fastify.addContentTypeParser(/^image\//i, { parseAs: "buffer" }, (_request, body, done) => {
+  fastify.addContentTypeParser(/^(image|audio)\//i, { parseAs: "buffer" }, (_request, body, done) => {
+    done(null, body);
+  });
+  fastify.addContentTypeParser(/^application\/(pdf|zip|x-zip-compressed|msword|vnd\.|octet-stream|rtf|xml|x-rar-compressed)/i, { parseAs: "buffer" }, (_request, body, done) => {
+    done(null, body);
+  });
+  fastify.addContentTypeParser(/^text\/(plain|csv)/i, { parseAs: "buffer" }, (_request, body, done) => {
     done(null, body);
   });
 
@@ -525,6 +659,7 @@ export async function chatUploadsRoutes(fastify: FastifyInstance) {
       }
 
       const roomSlug = String(parsed.data.roomSlug || "").trim();
+      const topicId = typeof parsed.data.topicId === "string" ? parsed.data.topicId.trim() : "";
       const mimeType = normalizeMimeType(parsed.data.mimeType);
       const sizeBytes = parsed.data.sizeBytes;
 
@@ -543,7 +678,7 @@ export async function chatUploadsRoutes(fastify: FastifyInstance) {
       }
 
       const roomResult = await db.query<RoomRow>(
-        `SELECT r.id, r.slug, r.title, r.kind, r.audio_quality_override, r.category_id, r.position, r.is_public, r.is_hidden, r.server_id, r.nsfw
+        `SELECT r.id, r.slug, r.title, r.kind, r.audio_quality_override, r.is_readonly, r.slowmode_seconds, r.category_id, r.position, r.is_public, r.is_hidden, r.server_id, r.nsfw
          FROM rooms r
          LEFT JOIN servers s ON s.id = r.server_id
          WHERE r.slug = $1
@@ -561,6 +696,33 @@ export async function chatUploadsRoutes(fastify: FastifyInstance) {
       }
 
       const room = roomResult.rows[0];
+
+      let topic: Pick<RoomTopicRow, "id" | "slug" | "room_id" | "archived_at"> | null = null;
+      if (topicId) {
+        const topicResult = await db.query<Pick<RoomTopicRow, "id" | "slug" | "room_id" | "archived_at">>(
+          `SELECT id, slug, room_id, archived_at
+           FROM room_topics
+           WHERE id = $1
+           LIMIT 1`,
+          [topicId]
+        );
+
+        if ((topicResult.rowCount || 0) === 0) {
+          return reply.code(404).send({
+            error: "TopicNotFound",
+            message: "Topic does not exist"
+          });
+        }
+
+        topic = topicResult.rows[0];
+        if (topic.room_id !== room.id || topic.archived_at) {
+          return reply.code(400).send({
+            error: "TopicInvalid",
+            message: "Topic is archived or does not belong to room"
+          });
+        }
+      }
+
       if (room.nsfw === true) {
         const serverId = String(room.server_id || "").trim();
         const confirmed = serverId ? await isServerAgeConfirmed(serverId, userId) : false;
@@ -608,6 +770,11 @@ export async function chatUploadsRoutes(fastify: FastifyInstance) {
         }
       }
 
+      const sendPolicy = await checkRoomSendPolicy(room, userId);
+      if (!sendPolicy.allowed) {
+        return reply.code(sendPolicy.statusCode).send(sendPolicy.payload);
+      }
+
       const uploadId = randomUUID();
       const uploadSig = randomBytes(16).toString("hex");
       const storageKey = buildStorageKey(roomSlug, userId, mimeType);
@@ -617,6 +784,8 @@ export async function chatUploadsRoutes(fastify: FastifyInstance) {
         userId,
         roomId: room.id,
         roomSlug,
+        topicId: topic ? topic.id : null,
+        topicSlug: topic ? topic.slug : null,
         mimeType,
         sizeBytes,
         storageKey,
@@ -745,11 +914,13 @@ export async function chatUploadsRoutes(fastify: FastifyInstance) {
       }
 
       const requestRoomSlug = String(parsed.data.roomSlug || "").trim();
+      const requestTopicId = typeof parsed.data.topicId === "string" ? parsed.data.topicId.trim() : null;
       const requestMimeType = normalizeMimeType(parsed.data.mimeType);
       const requestStorageKey = String(parsed.data.storageKey || "").trim();
 
       if (
         requestRoomSlug !== reservation.roomSlug
+        || requestTopicId !== reservation.topicId
         || requestMimeType !== reservation.mimeType
         || parsed.data.sizeBytes !== reservation.sizeBytes
         || requestStorageKey !== reservation.storageKey
@@ -777,6 +948,30 @@ export async function chatUploadsRoutes(fastify: FastifyInstance) {
       const currentUser = currentUserResult.rows[0];
       const text = String(parsed.data.text || "").trim();
       const downloadUrl = buildDownloadUrl(reservation.storageKey, parsed.data.downloadUrl);
+      const attachmentType = resolveAttachmentTypeFromMime(reservation.mimeType);
+      const width = attachmentType === "image" && typeof parsed.data.width === "number" ? parsed.data.width : null;
+      const height = attachmentType === "image" && typeof parsed.data.height === "number" ? parsed.data.height : null;
+
+      const roomPolicyResult = await db.query<Pick<RoomRow, "id" | "server_id" | "is_readonly" | "slowmode_seconds">>(
+        `SELECT id, server_id, is_readonly, slowmode_seconds
+         FROM rooms
+         WHERE id = $1
+           AND is_archived = FALSE
+         LIMIT 1`,
+        [reservation.roomId]
+      );
+      if ((roomPolicyResult.rowCount || 0) === 0) {
+        return reply.code(404).send({
+          error: "RoomNotFound",
+          message: "Room does not exist"
+        });
+      }
+
+      const roomPolicy = roomPolicyResult.rows[0];
+      const sendPolicy = await checkRoomSendPolicy(roomPolicy, userId);
+      if (!sendPolicy.allowed) {
+        return reply.code(sendPolicy.statusCode).send(sendPolicy.payload);
+      }
 
       try {
         const objectStat = await chatObjectStorage.statObject(reservation.storageKey);
@@ -811,14 +1006,15 @@ export async function chatUploadsRoutes(fastify: FastifyInstance) {
       const insertedMessage = await db.query<{
         id: string;
         room_id: string;
+        topic_id: string | null;
         user_id: string;
         body: string;
         created_at: string;
       }>(
-        `INSERT INTO messages (room_id, user_id, body)
-         VALUES ($1, $2, $3)
-         RETURNING id, room_id, user_id, body, created_at`,
-        [reservation.roomId, userId, text]
+        `INSERT INTO messages (room_id, topic_id, user_id, body)
+         VALUES ($1, $2, $3, $4)
+         RETURNING id, room_id, topic_id, user_id, body, created_at`,
+        [reservation.roomId, reservation.topicId, userId, text]
       );
 
       const message = insertedMessage.rows[0];
@@ -835,16 +1031,17 @@ export async function chatUploadsRoutes(fastify: FastifyInstance) {
            height,
            checksum
          )
-         VALUES ($1, 'image', $2, $3, $4, $5, $6, $7, $8)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
          RETURNING id, message_id, type, storage_key, download_url, mime_type, size_bytes, width, height, checksum, created_at`,
         [
           message.id,
+          attachmentType,
           reservation.storageKey,
           downloadUrl,
           reservation.mimeType,
           reservation.sizeBytes,
-          typeof parsed.data.width === "number" ? parsed.data.width : null,
-          typeof parsed.data.height === "number" ? parsed.data.height : null,
+          width,
+          height,
           parsed.data.checksum || uploadedObject.checksum || null
         ]
       );
@@ -852,10 +1049,19 @@ export async function chatUploadsRoutes(fastify: FastifyInstance) {
       await fastify.redis.del(uploadKey);
       await fastify.redis.del(uploadedObjectKey);
 
+      if (sendPolicy.slowmodeSeconds > 0 && !sendPolicy.canBypass) {
+        await fastify.redis.setEx(
+          `room:slowmode:${reservation.roomId}:${userId}`,
+          sendPolicy.slowmodeSeconds,
+          String(sendPolicy.slowmodeSeconds)
+        );
+      }
+
       const attachment = insertedAttachment.rows[0];
       const responseMessage: RoomMessageRow = {
         id: message.id,
         room_id: message.room_id,
+        topic_id: message.topic_id,
         user_id: message.user_id,
         text: message.body,
         created_at: message.created_at,
@@ -868,6 +1074,8 @@ export async function chatUploadsRoutes(fastify: FastifyInstance) {
         id: message.id,
         roomId: message.room_id,
         roomSlug: reservation.roomSlug,
+        topicId: reservation.topicId,
+        topicSlug: reservation.topicSlug,
         userId: message.user_id,
         userName: currentUser.name,
         text: message.body,

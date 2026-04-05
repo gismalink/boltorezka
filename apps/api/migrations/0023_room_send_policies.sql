@@ -1,0 +1,9 @@
+ALTER TABLE rooms
+ADD COLUMN IF NOT EXISTS is_readonly BOOLEAN NOT NULL DEFAULT FALSE;
+
+ALTER TABLE rooms
+ADD COLUMN IF NOT EXISTS slowmode_seconds INTEGER NOT NULL DEFAULT 0;
+
+ALTER TABLE rooms DROP CONSTRAINT IF EXISTS rooms_slowmode_seconds_check;
+ALTER TABLE rooms
+ADD CONSTRAINT rooms_slowmode_seconds_check CHECK (slowmode_seconds BETWEEN 0 AND 3600);

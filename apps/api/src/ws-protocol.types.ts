@@ -156,7 +156,7 @@ export type WsOutgoingEnvelope = {
 
 export type ChatAttachmentPayload = {
   id: string;
-  type: "image";
+  type: "image" | "document" | "audio";
   storageKey: string;
   downloadUrl: string | null;
   mimeType: string;
@@ -179,6 +179,12 @@ export type ChatMessagePayload = {
   id: string;
   roomId: string;
   roomSlug: string | null;
+  topicId?: string | null;
+  topicSlug?: string | null;
+  replyToMessageId?: string | null;
+  replyToUserId?: string | null;
+  replyToUserName?: string | null;
+  replyToText?: string | null;
   userId: string;
   userName: string;
   text: string;
@@ -191,6 +197,8 @@ export type ChatEditedPayload = {
   id: string;
   roomId: string;
   roomSlug: string | null;
+  topicId?: string | null;
+  topicSlug?: string | null;
   text: string;
   editedAt: string;
   editedByUserId: string;
@@ -200,6 +208,8 @@ export type ChatDeletedPayload = {
   id: string;
   roomId: string;
   roomSlug: string | null;
+  topicId?: string | null;
+  topicSlug?: string | null;
   deletedByUserId: string;
   ts: string;
 };

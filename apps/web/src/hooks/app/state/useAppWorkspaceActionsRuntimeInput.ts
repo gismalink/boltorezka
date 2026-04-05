@@ -2,6 +2,94 @@ import { useAppWorkspaceActionsRuntime } from "./useAppWorkspaceActionsRuntime";
 
 type WorkspaceActionsRuntimeInput = Parameters<typeof useAppWorkspaceActionsRuntime>[0];
 
+function toMentionHandle(raw: string): string {
+  return String(raw || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "_")
+    .replace(/[^\p{L}\p{N}._-]/gu, "")
+    .replace(/_{2,}/g, "_")
+    .replace(/^[_\.\-]+|[_\.\-]+$/g, "")
+    .slice(0, 32);
+}
+
+function buildMentionCandidatesFromServerMembers(serverMembers: unknown[]): Array<{
+  key: string;
+  kind: "user" | "tag" | "all";
+  handle: string;
+  label: string;
+  userId?: string;
+  userIds?: string[];
+}> {
+  const members = Array.isArray(serverMembers) ? serverMembers : [];
+  const userCandidates: Array<{
+    key: string;
+    kind: "user";
+    handle: string;
+    label: string;
+    userId: string;
+  }> = [];
+  const roleMap = new Map<string, { handle: string; label: string; userIds: Set<string> }>();
+
+  members.forEach((member) => {
+    const userId = String((member as { userId?: string } | null)?.userId || "").trim();
+    const userName = String((member as { name?: string } | null)?.name || "").trim();
+    const userHandle = toMentionHandle(userName);
+    if (userId && userName && userHandle) {
+      userCandidates.push({
+        key: `user:${userId}`,
+        kind: "user",
+        handle: userHandle,
+        label: userName,
+        userId
+      });
+    }
+
+    const customRoles = Array.isArray((member as { customRoles?: unknown[] } | null)?.customRoles)
+      ? ((member as { customRoles?: unknown[] }).customRoles || [])
+      : [];
+
+    customRoles.forEach((role) => {
+      const roleLabel = String((role as { name?: string } | null)?.name || "").trim();
+      const roleHandle = toMentionHandle(roleLabel);
+      if (!roleLabel || !roleHandle || !userId) {
+        return;
+      }
+
+      const roleKey = `tag:${roleHandle}`;
+      const existing = roleMap.get(roleKey) || {
+        handle: roleHandle,
+        label: roleLabel,
+        userIds: new Set<string>()
+      };
+      existing.userIds.add(userId);
+      roleMap.set(roleKey, existing);
+    });
+  });
+
+  const tagCandidates = Array.from(roleMap.entries())
+    .map(([key, value]) => ({
+      key,
+      kind: "tag" as const,
+      handle: value.handle,
+      label: `@${value.handle}`,
+      userIds: Array.from(value.userIds)
+    }))
+    .filter((item) => item.userIds.length > 0)
+    .sort((left, right) => left.label.localeCompare(right.label));
+
+  return [
+    {
+      key: "all",
+      kind: "all",
+      handle: "all",
+      label: "@all"
+    },
+    ...tagCandidates,
+    ...userCandidates
+  ];
+}
+
 export function useAppWorkspaceActionsRuntimeInput(params: Record<string, unknown>): WorkspaceActionsRuntimeInput {
   const p = params as any;
 
@@ -9,6 +97,7 @@ export function useAppWorkspaceActionsRuntimeInput(params: Record<string, unknow
       roomChat: {
         roomPresence: {
           roomSlug: p.roomSlug,
+          chatRoomSlug: p.chatRoomSlug,
           canCreateRooms: p.canCreateRooms,
           roomAdminController: p.roomAdminController,
           disconnectRoom: p.disconnectRoom,
@@ -22,6 +111,7 @@ export function useAppWorkspaceActionsRuntimeInput(params: Record<string, unknow
         },
         chatComposer: {
           chatRoomSlug: p.chatRoomSlug,
+          activeTopicId: p.activeChatTopicId,
           setChatRoomSlug: p.setChatRoomSlug,
           messages: p.messages,
           setMessages: p.setMessages,
@@ -33,6 +123,8 @@ export function useAppWorkspaceActionsRuntimeInput(params: Record<string, unknow
           setChatText: p.setChatText,
           editingMessageId: p.editingMessageId,
           setEditingMessageId: p.setEditingMessageId,
+          replyingToMessageId: p.replyingToMessageId,
+          setReplyingToMessageId: p.setReplyingToMessageId,
           pendingChatImageDataUrl: p.pendingChatImageDataUrl,
           setPendingChatImageDataUrl: p.setPendingChatImageDataUrl,
           chatController: p.chatController,
@@ -44,7 +136,14 @@ export function useAppWorkspaceActionsRuntimeInput(params: Record<string, unknow
           maxChatRetries: p.maxChatRetries,
           messageEditDeleteWindowMs: p.messageEditDeleteWindowMs,
           serverChatImagePolicy: p.serverChatImagePolicy,
-          chatImageTooLargeMessage: p.chatImageTooLargeMessage
+          chatImageTooLargeMessage: p.chatImageTooLargeMessage,
+          topicImageUploadUnsupportedMessage: p.t("chat.topicImageUploadUnsupported"),
+          topicOnlyActionMessage: p.t("chat.topicOnlyAction"),
+          reportMessageSentMessage: p.t("chat.reportMessageSent"),
+          reportMessageExistsMessage: p.t("chat.reportMessageExists"),
+          attachmentTooLargeMessage: p.t("chat.attachmentTooLarge"),
+          attachmentUnsupportedTypeMessage: p.t("chat.attachmentUnsupportedType"),
+          mentionCandidates: buildMentionCandidatesFromServerMembers(Array.isArray(p.serverMembers) ? p.serverMembers : [])
         }
       },
       moderation: {

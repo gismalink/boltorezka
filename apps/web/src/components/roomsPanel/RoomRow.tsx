@@ -1,19 +1,11 @@
-import { type DragEvent, useEffect, useRef, useState } from "react";
+import { memo, type DragEvent, type FormEvent, useEffect, useRef, useState } from "react";
 import type { ChannelAudioQualitySetting, Room, RoomKind, RoomMemberPreference } from "../../domain";
-import { PixelCheckbox, PopupPortal, RangeSlider } from "../uicomponents";
+import { PopupPortal } from "../uicomponents";
 import type { RoomsPanelProps } from "../types";
 import type { RoomMember } from "./roomMembers";
-
-type ServerMemberProfileDetails = {
-  userId: string;
-  name: string;
-  email: string;
-  joinedAt: string;
-  role: "owner" | "admin" | "member";
-  customRoles: Array<{ id: string; name: string }>;
-  hiddenRoomAccess: Array<{ roomId: string; roomSlug: string; roomTitle: string }>;
-  hiddenRoomsAvailable: Array<{ roomId: string; roomSlug: string; roomTitle: string; hasAccess: boolean }>;
-};
+import { RoomMemberSettingsPopup } from "./RoomMemberSettingsPopup";
+import { RoomMemberProfileModal } from "./RoomMemberProfileModal";
+import type { ServerMemberProfileDetails } from "./roomMemberSettingsTypes";
 
 const ROOM_KIND_ICON_CLASS: Record<RoomKind, string> = {
   text: "bi-hash",
@@ -30,9 +22,11 @@ type RoomRowProps = Pick<
   | "roomsTree"
   | "roomSlug"
   | "activeChatRoomSlug"
+  | "screenShareOwnerByRoomSlug"
   | "voiceMicStateByUserIdInCurrentRoom"
   | "voiceCameraEnabledByUserIdInCurrentRoom"
   | "voiceAudioOutputMutedByUserIdInCurrentRoom"
+  | "audioMuted"
   | "voiceRtcStateByUserIdInCurrentRoom"
   | "voiceMediaStatusSummaryByUserIdInCurrentRoom"
   | "channelSettingsPopupOpenId"
@@ -60,16 +54,22 @@ type RoomRowProps = Pick<
   | "onLoadServerRoles"
   | "onSetServerMemberCustomRoles"
   | "onSetServerMemberHiddenRoomAccess"
+  | "onSetRoomNotificationMutePreset"
   | "memberPreferencesByUserId"
 > & {
   room: Room;
+  roomUnreadCount: number;
+  roomMentionUnreadCount: number;
+  isRoomUnreadMuted: boolean;
+  roomMutePresetValue: "1h" | "8h" | "24h" | "forever" | "off" | null;
+  onRoomMutePresetChange: (roomId: string, preset: "1h" | "8h" | "24h" | "forever" | "off") => void;
   roomMembers: RoomMember[];
   normalizedCurrentUserId: string;
   onRequestClearChannel: (room: Room) => void;
   onRequestArchiveChannel: (room: Room) => void;
 };
 
-export function RoomRow({
+function RoomRowInner({
   t,
   canCreateRooms,
   canKickMembers,
@@ -77,9 +77,11 @@ export function RoomRow({
   roomsTree,
   roomSlug,
   activeChatRoomSlug,
+  screenShareOwnerByRoomSlug,
   voiceMicStateByUserIdInCurrentRoom,
   voiceCameraEnabledByUserIdInCurrentRoom,
   voiceAudioOutputMutedByUserIdInCurrentRoom,
+  audioMuted,
   voiceRtcStateByUserIdInCurrentRoom,
   voiceMediaStatusSummaryByUserIdInCurrentRoom,
   channelSettingsPopupOpenId,
@@ -107,8 +109,14 @@ export function RoomRow({
   onLoadServerRoles,
   onSetServerMemberCustomRoles,
   onSetServerMemberHiddenRoomAccess,
+  onSetRoomNotificationMutePreset,
   memberPreferencesByUserId,
   room,
+  roomUnreadCount,
+  roomMentionUnreadCount,
+  isRoomUnreadMuted,
+  roomMutePresetValue,
+  onRoomMutePresetChange,
   roomMembers,
   normalizedCurrentUserId,
   onRequestClearChannel,
@@ -131,8 +139,18 @@ export function RoomRow({
   const [serverRolesLoading, setServerRolesLoading] = useState(false);
   const [memberPreferenceDrafts, setMemberPreferenceDrafts] = useState<Record<string, { volume: number; note: string }>>({});
   const [dropTargetActive, setDropTargetActive] = useState(false);
+  const [roomMutePreset, setRoomMutePreset] = useState<"1h" | "8h" | "24h" | "forever" | "off" | null>(null);
+  const [roomMuteSaving, setRoomMuteSaving] = useState(false);
+  const [roomMuteStatusText, setRoomMuteStatusText] = useState("");
+  const roomSettingsAutosaveTimerRef = useRef<number | null>(null);
   const roomSupportsRtc = room.kind !== "text";
   const roomSupportsVideo = room.kind === "text_voice_video";
+  const roomHasChatAction = roomSupportsRtc;
+  const roomHasSettingsAction = canCreateRooms;
+  const roomHasChatOnlyAction = roomHasChatAction && !roomHasSettingsAction;
+  const roomActionButtonsCount = (roomHasChatAction ? 1 : 0) + (roomHasSettingsAction ? 1 : 0);
+  const roomActionsVariant = roomActionButtonsCount > 1 ? "two" : roomActionButtonsCount === 1 ? "one" : "none";
+  const roomScreenShareOwnerId = String(screenShareOwnerByRoomSlug[room.slug]?.userId || "").trim();
   const roomHasVoiceState = roomSupportsRtc && room.slug === roomSlug;
   const roomChatActive = activeChatRoomSlug === room.slug;
   const roomIsActive = roomSlug === room.slug || (!roomSupportsRtc && roomChatActive);
@@ -201,14 +219,64 @@ export function RoomRow({
   }, [canKickMembers, memberMenuUserId, onLoadServerRoles]);
 
   useEffect(() => {
+    setRoomMutePreset(roomMutePresetValue);
+  }, [roomMutePresetValue]);
+
+  useEffect(() => {
     if (channelSettingsPopupOpenId !== room.id) {
       setIsEditingChannelTitle(false);
+      setRoomMuteStatusText("");
       return;
     }
 
     setEditingChannelTitleInitialValue(editingRoomTitle);
     setIsEditingChannelTitle(false);
   }, [channelSettingsPopupOpenId, editingRoomTitle, room.id]);
+
+  useEffect(() => {
+    return () => {
+      if (roomSettingsAutosaveTimerRef.current) {
+        window.clearTimeout(roomSettingsAutosaveTimerRef.current);
+      }
+    };
+  }, []);
+
+  const requestRoomSettingsAutosave = () => {
+    if (channelSettingsPopupOpenId !== room.id) {
+      return;
+    }
+
+    if (roomSettingsAutosaveTimerRef.current) {
+      window.clearTimeout(roomSettingsAutosaveTimerRef.current);
+    }
+
+    roomSettingsAutosaveTimerRef.current = window.setTimeout(() => {
+      const fakeEvent = { preventDefault: () => {} } as FormEvent;
+      onSaveChannelSettings(fakeEvent);
+      roomSettingsAutosaveTimerRef.current = null;
+    }, 120);
+  };
+
+  const applyRoomMutePreset = async (preset: "1h" | "8h" | "24h" | "forever" | "off") => {
+    if (roomMuteSaving) {
+      return;
+    }
+
+      const nextPreset = roomMutePreset === preset ? "off" : preset;
+
+    setRoomMuteSaving(true);
+    setRoomMuteStatusText("");
+    try {
+        await onSetRoomNotificationMutePreset(room.id, nextPreset);
+        setRoomMutePreset(nextPreset);
+        onRoomMutePresetChange(room.id, nextPreset);
+      setRoomMuteStatusText(t("chat.notificationSaved"));
+    } catch {
+      setRoomMuteStatusText(t("chat.notificationSaveError"));
+    } finally {
+      setRoomMuteSaving(false);
+    }
+  };
 
   const closeMemberMenu = () => {
     setMemberMenuOpenKey(null);
@@ -338,20 +406,39 @@ export function RoomRow({
       return;
     }
 
-    onMoveRoomMember(fromRoomSlug, room.slug, payload.userId, payload.userName || payload.userId);
+    void (async () => {
+      if (room.is_hidden) {
+        try {
+          const profile = await onLoadServerMemberProfile(payload.userId);
+          const currentRoomIds = Array.isArray(profile?.hiddenRoomAccess)
+            ? profile.hiddenRoomAccess.map((item) => item.roomId)
+            : [];
+          const nextRoomIds = Array.from(new Set([...currentRoomIds, room.id]));
+          const granted = await onSetServerMemberHiddenRoomAccess(payload.userId, nextRoomIds);
+          if (!granted) {
+            return;
+          }
+        } catch {
+          return;
+        }
+      }
+
+      onMoveRoomMember(fromRoomSlug, room.slug, payload.userId, payload.userName || payload.userId);
+    })();
   };
 
   return (
     <>
     <div
-      className={`channel-row relative grid grid-cols-[1fr_auto] items-center gap-2 ${dropTargetActive ? "channel-row-drop-target" : ""}`}
+      className={`rooms-row-shell channel-row relative flex flex-col items-stretch ${dropTargetActive ? "channel-row-drop-target" : ""}`}
       onDragOver={onRoomDragOver}
       onDragEnter={onRoomDragOver}
       onDragLeave={() => setDropTargetActive(false)}
       onDrop={onRoomDrop}
     >
+      <div className={`channel-row-main channel-row-main-actions-${roomActionsVariant} ${roomHasChatOnlyAction ? "channel-row-main-chat-only" : ""} relative flex items-center`}>
       <button
-        className={`secondary room-btn ${roomIsActive ? "room-btn-active" : "room-btn-interactive"} ${dropTargetActive ? "room-btn-drop-target" : ""}`}
+        className={`secondary room-btn room-main-btn room-main-btn-actions-${roomActionsVariant} ${roomIsActive ? "room-btn-active" : "room-btn-interactive"} ${dropTargetActive ? "room-btn-drop-target" : ""}`}
         onClick={() => {
           if (!roomSupportsRtc) {
             onOpenRoomChat(room.slug);
@@ -365,18 +452,30 @@ export function RoomRow({
 
           onOpenRoomChat(room.slug);
         }}
+        onContextMenu={(event) => {
+          if (!canCreateRooms) {
+            return;
+          }
+          event.preventDefault();
+          onOpenChannelSettingsPopup(room);
+        }}
       >
         <i className={`bi ${ROOM_KIND_ICON_CLASS[room.kind]}`} aria-hidden="true" />
         <span>{room.title}</span>
       </button>
-      <div className="inline-flex items-center gap-1">
+      <div className={`channel-right-zone channel-right-zone-actions-${roomActionsVariant} ${roomHasChatOnlyAction ? "channel-right-zone-chat-only" : ""} ${roomChatActive && roomActionButtonsCount > 0 ? "channel-right-zone-chat-active" : ""} ${channelSettingsPopupOpenId === room.id ? "channel-right-zone-open" : ""}`}>
+      {roomMentionUnreadCount > 0 ? <span className="room-mention-badge room-row-unread">@</span> : null}
+      {roomUnreadCount > 0 ? <span className={`room-unread-badge room-row-unread ${isRoomUnreadMuted ? "room-unread-badge-muted" : ""}`}>{roomUnreadCount}</span> : null}
+      <div className={`channel-row-actions channel-row-actions-actions-${roomActionsVariant} inline-flex items-center gap-1 ${roomChatActive && roomActionButtonsCount > 0 ? "channel-row-actions-chat-active" : ""} ${channelSettingsPopupOpenId === room.id ? "channel-row-actions-open" : ""}`}>
       {roomSupportsRtc ? (
         <button
           type="button"
           className={`secondary icon-btn tiny channel-chat-open-btn ${roomChatActive ? "channel-chat-open-btn-active" : ""}`}
           data-tooltip={t("rooms.openChat")}
           aria-label={t("rooms.openChat")}
-          onClick={() => onOpenRoomChat(room.slug)}
+          onClick={() => {
+            onOpenRoomChat(room.slug);
+          }}
         >
           <i className="bi bi-chat-dots" aria-hidden="true" />
         </button>
@@ -386,11 +485,11 @@ export function RoomRow({
           <button
             type="button"
             className="secondary icon-btn tiny channel-action-btn"
-            data-tooltip={t("rooms.configChannel")}
-            aria-label={t("rooms.configChannel")}
+            data-tooltip={t("rooms.roomContextMenu")}
+            aria-label={t("rooms.roomContextMenu")}
             onClick={() => onOpenChannelSettingsPopup(room)}
           >
-            <i className="bi bi-gear" aria-hidden="true" />
+            <i className="bi bi-three-dots" aria-hidden="true" />
           </button>
           <PopupPortal
             open={channelSettingsPopupOpenId === room.id}
@@ -439,6 +538,7 @@ export function RoomRow({
                         onClick={() => {
                           setEditingChannelTitleInitialValue(editingRoomTitle);
                           setIsEditingChannelTitle(false);
+                          requestRoomSettingsAutosave();
                         }}
                       >
                         {t("settings.apply")}
@@ -465,12 +565,24 @@ export function RoomRow({
                   </div>
                 </div>
                 <div className="grid gap-3 desktop:grid-cols-2">
-                  <select value={editingRoomKind} onChange={(event) => onSetEditingRoomKind(event.target.value as RoomKind)}>
+                  <select
+                    value={editingRoomKind}
+                    onChange={(event) => {
+                      onSetEditingRoomKind(event.target.value as RoomKind);
+                      requestRoomSettingsAutosave();
+                    }}
+                  >
                     <option value="text">{t("rooms.text")}</option>
                     <option value="text_voice">{t("rooms.textVoice")}</option>
                     <option value="text_voice_video">{t("rooms.textVoiceVideo")}</option>
                   </select>
-                  <select value={editingRoomCategoryId} onChange={(event) => onSetEditingRoomCategoryId(event.target.value)}>
+                  <select
+                    value={editingRoomCategoryId}
+                    onChange={(event) => {
+                      onSetEditingRoomCategoryId(event.target.value);
+                      requestRoomSettingsAutosave();
+                    }}
+                  >
                     <option value="none">{t("rooms.noCategory")}</option>
                     {(roomsTree?.categories || []).map((category) => (
                       <option key={category.id} value={category.id}>{category.title}</option>
@@ -486,7 +598,10 @@ export function RoomRow({
                       role="switch"
                       aria-checked={editingRoomNsfw}
                       aria-label={t("rooms.channelNsfw")}
-                      onClick={() => onSetEditingRoomNsfw(!editingRoomNsfw)}
+                      onClick={() => {
+                        onSetEditingRoomNsfw(!editingRoomNsfw);
+                        requestRoomSettingsAutosave();
+                      }}
                     >
                       <span className="ui-switch-thumb" aria-hidden="true" />
                     </button>
@@ -499,7 +614,10 @@ export function RoomRow({
                       role="switch"
                       aria-checked={editingRoomHidden}
                       aria-label={t("rooms.channelHidden")}
-                      onClick={() => onSetEditingRoomHidden(!editingRoomHidden)}
+                      onClick={() => {
+                        onSetEditingRoomHidden(!editingRoomHidden);
+                        requestRoomSettingsAutosave();
+                      }}
                     >
                       <span className="ui-switch-thumb" aria-hidden="true" />
                     </button>
@@ -512,7 +630,10 @@ export function RoomRow({
                       <button
                         type="button"
                         className={`secondary quality-toggle-btn ${editingRoomAudioQualitySetting === "server_default" ? "quality-toggle-btn-active" : ""}`}
-                        onClick={() => onSetEditingRoomAudioQualitySetting("server_default")}
+                        onClick={() => {
+                          onSetEditingRoomAudioQualitySetting("server_default");
+                          requestRoomSettingsAutosave();
+                        }}
                         aria-pressed={editingRoomAudioQualitySetting === "server_default"}
                       >
                         {t("rooms.channelSoundServerDefault")}
@@ -520,7 +641,10 @@ export function RoomRow({
                       <button
                         type="button"
                         className={`secondary quality-toggle-btn ${editingRoomAudioQualitySetting === "retro" ? "quality-toggle-btn-active" : ""}`}
-                        onClick={() => onSetEditingRoomAudioQualitySetting("retro" as ChannelAudioQualitySetting)}
+                        onClick={() => {
+                          onSetEditingRoomAudioQualitySetting("retro" as ChannelAudioQualitySetting);
+                          requestRoomSettingsAutosave();
+                        }}
                         aria-pressed={editingRoomAudioQualitySetting === "retro"}
                       >
                         {t("server.soundRetro")}
@@ -528,7 +652,10 @@ export function RoomRow({
                       <button
                         type="button"
                         className={`secondary quality-toggle-btn ${editingRoomAudioQualitySetting === "low" ? "quality-toggle-btn-active" : ""}`}
-                        onClick={() => onSetEditingRoomAudioQualitySetting("low" as ChannelAudioQualitySetting)}
+                        onClick={() => {
+                          onSetEditingRoomAudioQualitySetting("low" as ChannelAudioQualitySetting);
+                          requestRoomSettingsAutosave();
+                        }}
                         aria-pressed={editingRoomAudioQualitySetting === "low"}
                       >
                         {t("server.soundLow")}
@@ -536,7 +663,10 @@ export function RoomRow({
                       <button
                         type="button"
                         className={`secondary quality-toggle-btn ${editingRoomAudioQualitySetting === "standard" ? "quality-toggle-btn-active" : ""}`}
-                        onClick={() => onSetEditingRoomAudioQualitySetting("standard" as ChannelAudioQualitySetting)}
+                        onClick={() => {
+                          onSetEditingRoomAudioQualitySetting("standard" as ChannelAudioQualitySetting);
+                          requestRoomSettingsAutosave();
+                        }}
                         aria-pressed={editingRoomAudioQualitySetting === "standard"}
                       >
                         {t("server.soundStandard")}
@@ -544,7 +674,10 @@ export function RoomRow({
                       <button
                         type="button"
                         className={`secondary quality-toggle-btn ${editingRoomAudioQualitySetting === "high" ? "quality-toggle-btn-active" : ""}`}
-                        onClick={() => onSetEditingRoomAudioQualitySetting("high" as ChannelAudioQualitySetting)}
+                        onClick={() => {
+                          onSetEditingRoomAudioQualitySetting("high" as ChannelAudioQualitySetting);
+                          requestRoomSettingsAutosave();
+                        }}
                         aria-pressed={editingRoomAudioQualitySetting === "high"}
                       >
                         {t("server.soundHigh")}
@@ -552,8 +685,52 @@ export function RoomRow({
                     </div>
                   </div>
                 ) : null}
-                <button type="submit" className="icon-action"><i className="bi bi-check2" aria-hidden="true" /> {t("rooms.save")}</button>
+                <div className="grid gap-2">
+                  <span>{t("chat.notificationMute")}</span>
+                  <div className="quality-toggle-group chat-topic-context-mute-row" role="group" aria-label={t("chat.notificationMute")}>
+                    <button
+                      type="button"
+                      className={`secondary quality-toggle-btn ${roomMutePreset === "1h" ? "quality-toggle-btn-active" : ""}`}
+                      onClick={() => void applyRoomMutePreset("1h")}
+                      disabled={roomMuteSaving}
+                    >
+                      1h
+                    </button>
+                    <button
+                      type="button"
+                      className={`secondary quality-toggle-btn ${roomMutePreset === "8h" ? "quality-toggle-btn-active" : ""}`}
+                      onClick={() => void applyRoomMutePreset("8h")}
+                      disabled={roomMuteSaving}
+                    >
+                      8h
+                    </button>
+                    <button
+                      type="button"
+                      className={`secondary quality-toggle-btn ${roomMutePreset === "24h" ? "quality-toggle-btn-active" : ""}`}
+                      onClick={() => void applyRoomMutePreset("24h")}
+                      disabled={roomMuteSaving}
+                    >
+                      24h
+                    </button>
+                    <button
+                      type="button"
+                      className={`secondary quality-toggle-btn ${roomMutePreset === "forever" ? "quality-toggle-btn-active" : ""}`}
+                      onClick={() => void applyRoomMutePreset("forever")}
+                      disabled={roomMuteSaving}
+                    >
+                      {t("chat.notificationMuteForever")}
+                    </button>
+                  </div>
+                  {roomMuteStatusText ? <div className="chat-topic-read-status" role="status" aria-live="polite">{roomMuteStatusText}</div> : null}
+                </div>
                 <div className="row items-center gap-2 channel-settings-actions-row">
+                  <button
+                    type="button"
+                    className="secondary clear-action-btn"
+                    onClick={() => onOpenRoomChat(room.slug)}
+                  >
+                    <i className="bi bi-book" aria-hidden="true" /> {t("rooms.markAsRead")}
+                  </button>
                   <button
                     type="button"
                     className="secondary clear-action-btn"
@@ -566,18 +743,20 @@ export function RoomRow({
                     className="secondary delete-action-btn"
                     onClick={() => onRequestArchiveChannel(room)}
                   >
-                    <i className="bi bi-archive" aria-hidden="true" /> {t("rooms.archiveChannel")}
+                    <i className="bi bi-archive" aria-hidden="true" /> {t("rooms.deleteChannel")}
                   </button>
                 </div>
               </form>
             </div>
           </PopupPortal>
         </div>
-      ) : null}
+        ) : null}
+      </div>
+      </div>
       </div>
 
       {roomMembers.length > 0 ? (
-        <ul className="col-span-full m-0 list-none grid gap-0.5 pl-[calc(var(--space-xl)*2)] pt-[2px]">
+        <ul className="channel-members-list m-0 list-none grid gap-0.5 pl-[calc(var(--space-xl)*2)] pt-[2px]">
           {roomMembers.map((member) => {
             const isCurrentUser = Boolean(
               normalizedCurrentUserId && member.userId && member.userId === normalizedCurrentUserId
@@ -589,9 +768,12 @@ export function RoomRow({
               ? Boolean(voiceCameraEnabledByUserIdInCurrentRoom[member.userId])
               : false;
             const isVoiceActive = micState === "speaking";
-            const isAudioOutputMuted = roomHasVoiceState && member.userId
-              ? Boolean(voiceAudioOutputMutedByUserIdInCurrentRoom[member.userId])
-              : false;
+            const isAudioOutputMuted = isCurrentUser
+              ? Boolean(audioMuted)
+              : roomHasVoiceState && member.userId
+                ? Boolean(voiceAudioOutputMutedByUserIdInCurrentRoom[member.userId])
+                : false;
+            const isScreenSharing = Boolean(member.userId) && String(member.userId || "").trim() === roomScreenShareOwnerId;
             const rtcState = roomHasVoiceState && member.userId
               ? (voiceRtcStateByUserIdInCurrentRoom[member.userId] || "disconnected")
               : "disconnected";
@@ -670,6 +852,8 @@ export function RoomRow({
             const noteValue = String(memberDraft?.note ?? memberPreference?.note ?? "");
             const menuKey = `${room.slug}:${member.userId || member.userName}`;
             const canManageMember = Boolean(member.userId) && !isCurrentUser;
+            const memberActionsVariant = canManageMember ? "one" : "none";
+            const memberSettingsOpen = memberMenuOpenKey === menuKey && Boolean(member.userId) && memberMenuUserId === member.userId;
             const selectedCustomRoleIds = memberMenuProfile?.customRoles.map((role) => role.id) || [];
             const selectedCustomRoleNames = memberMenuProfile?.customRoles.map((role) => role.name).filter(Boolean) || [];
             const hiddenRoomsAvailable = memberMenuProfile?.hiddenRoomsAvailable || [];
@@ -678,7 +862,7 @@ export function RoomRow({
             return (
               <li
                 key={`${room.id}-${member.userId || member.userName}`}
-                className={`channel-member-item grid min-h-[22px] grid-cols-[auto_1fr_auto_auto] items-center gap-1.5 ${isCurrentUser ? "channel-member-item-current" : ""} ${isVoiceActive ? "channel-member-item-voice-active" : ""} ${canKickMembers && canManageMember ? "channel-member-item-draggable" : ""}`}
+                className={`room-member-row-shell channel-member-item relative min-h-[22px] ${isCurrentUser ? "channel-member-item-current" : ""} ${isVoiceActive ? "channel-member-item-voice-active" : ""} ${canKickMembers && canManageMember ? "channel-member-item-draggable" : ""}`}
                 draggable={Boolean(canKickMembers && canManageMember)}
                 onDragStart={(event) => {
                   if (!member.userId) {
@@ -703,32 +887,40 @@ export function RoomRow({
                   );
                 }}
               >
-                <span className="channel-member-avatar">{(member.userName || "U").charAt(0).toUpperCase()}</span>
-                <span className="channel-member-name">{member.userName}</span>
-                <span className="channel-member-icons" aria-hidden="true">
-                  {roomHasVoiceState && !isCurrentUser ? (
-                    <span className="channel-member-status-icon-anchor" data-tooltip={connectionTooltip}>
-                      <i className={`bi ${mediaStatusIconClass} ${mediaStatusClass}`} />
-                    </span>
-                  ) : null}
-                  {roomSupportsRtc ? (
-                    <span className="channel-member-status-icon-anchor" data-tooltip={isCurrentUser ? selfMicTooltip : micTooltip}>
-                      <i className={`bi ${micIconClass} channel-member-mic-icon ${micIconStateClass}`} />
-                    </span>
-                  ) : null}
-                  {roomSupportsRtc ? (
-                    <span className="channel-member-status-icon-anchor" data-tooltip={isCurrentUser ? selfAudioTooltip : audioTooltip}>
-                      <i className={`bi bi-headphones channel-member-audio-icon ${isAudioOutputMuted ? "channel-member-audio-icon-muted" : ""}`} />
-                    </span>
-                  ) : null}
-                  {isCameraEnabled ? (
-                    <span className="channel-member-status-icon-anchor" data-tooltip={isCurrentUser ? selfCameraTooltip : cameraTooltip}>
-                      <i className="bi bi-camera-video-fill channel-member-camera-icon" />
-                    </span>
-                  ) : null}
-                </span>
-                {canManageMember ? (
-                  <div className="channel-member-settings-anchor relative">
+                <div className={`channel-member-main channel-member-main-actions-${memberActionsVariant} grid min-h-[22px] grid-cols-[auto_1fr] items-center gap-1.5`}>
+                  <span className="channel-member-avatar">{(member.userName || "U").charAt(0).toUpperCase()}</span>
+                  <span className="channel-member-name">{member.userName}</span>
+                </div>
+                <div className={`channel-member-right-group channel-member-right-group-actions-${memberActionsVariant} ${memberSettingsOpen ? "channel-member-right-group-open" : ""}`}>
+                  <span className="channel-member-icons" aria-hidden="true">
+                    {roomHasVoiceState && !isCurrentUser ? (
+                      <span className="channel-member-status-icon-anchor" data-tooltip={connectionTooltip}>
+                        <i className={`bi ${mediaStatusIconClass} ${mediaStatusClass}`} />
+                      </span>
+                    ) : null}
+                    {roomSupportsRtc ? (
+                      <span className="channel-member-status-icon-anchor" data-tooltip={isCurrentUser ? selfMicTooltip : micTooltip}>
+                        <i className={`bi ${micIconClass} channel-member-mic-icon ${micIconStateClass}`} />
+                      </span>
+                    ) : null}
+                    {roomSupportsRtc ? (
+                      <span className="channel-member-status-icon-anchor" data-tooltip={isCurrentUser ? selfAudioTooltip : audioTooltip}>
+                        <i className={`bi bi-headphones channel-member-audio-icon ${isAudioOutputMuted ? "channel-member-audio-icon-muted" : ""}`} />
+                      </span>
+                    ) : null}
+                    {isCameraEnabled ? (
+                      <span className="channel-member-status-icon-anchor" data-tooltip={isCurrentUser ? selfCameraTooltip : cameraTooltip}>
+                        <i className="bi bi-camera-video-fill channel-member-camera-icon" />
+                      </span>
+                    ) : null}
+                    {isScreenSharing ? (
+                      <span className="channel-member-status-icon-anchor" data-tooltip={t("rtc.screenShare")}>
+                        <i className="bi bi-display channel-member-camera-icon" />
+                      </span>
+                    ) : null}
+                  </span>
+                  {canManageMember ? (
+                  <div className={`channel-member-settings-anchor channel-member-settings-anchor-actions-${memberActionsVariant} relative ${memberSettingsOpen ? "channel-member-settings-anchor-open" : ""}`}>
                     <button
                       type="button"
                       className="secondary icon-btn tiny channel-member-settings-btn"
@@ -754,256 +946,63 @@ export function RoomRow({
                     >
                       <i className="bi bi-gear" aria-hidden="true" />
                     </button>
-                    {memberMenuOpenKey === menuKey && member.userId && memberMenuUserId === member.userId ? (
-                      <PopupPortal
+                    {memberSettingsOpen ? (
+                      <RoomMemberSettingsPopup
+                        t={t}
                         open
                         anchorRef={memberMenuAnchorRef as { current: HTMLElement | null }}
-                        className="settings-popup channel-member-settings-popup"
-                        placement="bottom-end"
-                      >
-                        <div className="grid gap-3">
-                          <div className="subheading">{member.userName}</div>
-                          <label className="slider-label grid gap-1.5">
-                            {t("rooms.personalVolume")}: {volumeValue}%
-                            <RangeSlider
-                              min={0}
-                              max={100}
-                              value={volumeValue}
-                              valueSuffix="%"
-                              onChange={(nextValue) => {
-                                const nextVolume = Math.max(0, Math.min(100, Number(nextValue) || 0));
-                                setMemberPreferenceDrafts((prev) => ({
-                                  ...prev,
-                                  [member.userId as string]: {
-                                    volume: nextVolume,
-                                    note: noteValue
-                                  }
-                                }));
-                              }}
-                            />
-                          </label>
-                          <label className="grid gap-1.5">
-                            <span className="row items-center justify-between gap-2">
-                              <span className="subheading">{t("rooms.memberNote")}</span>
-                              <button
-                                type="button"
-                                className="secondary icon-btn tiny"
-                                aria-label={t("rooms.save")}
-                                data-tooltip={t("rooms.save")}
-                                onClick={() => {
-                                  void onSaveMemberPreference(member.userId as string, {
-                                    volume: volumeValue,
-                                    note: noteValue
-                                  });
-                                }}
-                              >
-                                <i className="bi bi-check2" aria-hidden="true" />
-                              </button>
-                            </span>
-                            <input
-                              type="text"
-                              maxLength={32}
-                              value={noteValue}
-                              onChange={(event) => {
-                                const nextNote = event.target.value.slice(0, 32);
-                                setMemberPreferenceDrafts((prev) => ({
-                                  ...prev,
-                                  [member.userId as string]: {
-                                    volume: volumeValue,
-                                    note: nextNote
-                                  }
-                                }));
-                              }}
-                              placeholder={t("rooms.memberNotePlaceholder")}
-                            />
-                          </label>
-                          <button
-                            type="button"
-                            className="secondary flex w-full items-center justify-between gap-3 text-left"
-                            onClick={async () => {
-                              const current = memberMenuProfile;
-                              if (current && current.userId === member.userId) {
-                                setMemberProfileModalData(current);
-                                setMemberProfileModalOpen(true);
-                                closeMemberMenu();
-                                return;
-                              }
-                              const profile = await onLoadServerMemberProfile(member.userId as string);
-                              if (!profile) {
-                                return;
-                              }
-                              setMemberProfileModalData(profile);
-                              setMemberProfileModalOpen(true);
-                              closeMemberMenu();
-                            }}
-                          >
-                            <span>{t("server.contextProfile")}</span>
-                            <i className="bi bi-person-vcard" aria-hidden="true" />
-                          </button>
-                          {canKickMembers ? (
-                            <>
-                              <button
-                                ref={(element) => {
-                                  memberRoleAnchorRef.current = element;
-                                }}
-                                type="button"
-                                className={`secondary flex w-full items-center justify-between gap-4 text-left ${memberRoleSelectorOpen ? "voice-menu-row-active" : ""}`}
-                                onClick={() => setMemberRoleSelectorOpen((current) => !current)}
-                              >
-                                <span className="min-w-0">
-                                  <span className="voice-menu-title block">{t("server.contextServerRoles")}</span>
-                                  <span className="voice-menu-subtitle block">
-                                    {selectedCustomRoleNames.length > 0
-                                      ? selectedCustomRoleNames.join(", ")
-                                      : t("server.roleNoCustom")}
-                                  </span>
-                                </span>
-                                <i className={`bi ${memberRoleSelectorOpen ? "bi-chevron-up" : "bi-chevron-down"}`} aria-hidden="true" />
-                              </button>
-                              <PopupPortal
-                                open={memberRoleSelectorOpen}
-                                anchorRef={memberRoleAnchorRef as { current: HTMLElement | null }}
-                                className="settings-popup voice-submenu-popup"
-                                placement="right-start"
-                                offset={8}
-                              >
-                                <div className="grid gap-2">
-                                  {serverRolesLoading ? <p className="muted">{t("server.rolesLoading")}</p> : null}
-                                  <div className="device-list mt-1 grid gap-1.5">
-                                    {serverRoles.filter((role) => !role.isBase).map((role) => {
-                                      const checked = selectedCustomRoleIds.includes(role.id);
-                                      return (
-                                        <PixelCheckbox
-                                          key={role.id}
-                                          checked={checked}
-                                          onChange={async (nextChecked) => {
-                                            const current = memberMenuProfile;
-                                            if (!current || current.userId !== member.userId) {
-                                              return;
-                                            }
-                                            const currentIds = current.customRoles.map((item) => item.id);
-                                            const nextRoleIds = nextChecked
-                                              ? Array.from(new Set([...currentIds, role.id]))
-                                              : currentIds.filter((item) => item !== role.id);
-                                            const ok = await onSetServerMemberCustomRoles(current.userId, nextRoleIds);
-                                            if (!ok) {
-                                              return;
-                                            }
-                                            const refreshed = await onLoadServerMemberProfile(current.userId);
-                                            if (refreshed) {
-                                              setMemberMenuProfile(refreshed);
-                                            }
-                                          }}
-                                          label={role.name}
-                                          className={`secondary device-item text-left ${checked ? "device-item-active" : ""}`}
-                                        />
-                                      );
-                                    })}
-                                  </div>
-                                </div>
-                              </PopupPortal>
-                            </>
-                          ) : null}
-                          {canKickMembers && hiddenRoomsAvailable.length > 0 ? (
-                            <>
-                              <button
-                                ref={(element) => {
-                                  memberHiddenRoomsAnchorRef.current = element;
-                                }}
-                                type="button"
-                                className={`secondary flex w-full items-center justify-between gap-4 text-left ${memberHiddenRoomsSelectorOpen ? "voice-menu-row-active" : ""}`}
-                                onClick={() => setMemberHiddenRoomsSelectorOpen((current) => !current)}
-                              >
-                                <span className="min-w-0">
-                                  <span className="voice-menu-title block">{t("server.contextHiddenChats")}</span>
-                                  <span className="voice-menu-subtitle block">{hiddenRoomsGrantedCount}/{hiddenRoomsAvailable.length}</span>
-                                </span>
-                                <i className={`bi ${memberHiddenRoomsSelectorOpen ? "bi-chevron-up" : "bi-chevron-down"}`} aria-hidden="true" />
-                              </button>
-                              <PopupPortal
-                                open={memberHiddenRoomsSelectorOpen}
-                                anchorRef={memberHiddenRoomsAnchorRef as { current: HTMLElement | null }}
-                                className="settings-popup voice-submenu-popup"
-                                placement="right-start"
-                                offset={8}
-                              >
-                                <div className="device-list mt-1 grid max-h-[260px] gap-1.5 overflow-auto pr-1">
-                                  {hiddenRoomsAvailable.map((roomAccess) => {
-                                    const checked = Boolean(memberMenuProfile?.hiddenRoomAccess.some((item) => item.roomId === roomAccess.roomId));
-                                    return (
-                                      <button
-                                        key={roomAccess.roomId}
-                                        type="button"
-                                        className={`secondary device-item radio-item flex items-center justify-between gap-4 text-left ${checked ? "device-item-active" : ""}`}
-                                        onClick={async () => {
-                                          const current = memberMenuProfile;
-                                          if (!current || current.userId !== member.userId) {
-                                            return;
-                                          }
-                                          const nextRoomIds = checked
-                                            ? current.hiddenRoomAccess.filter((item) => item.roomId !== roomAccess.roomId).map((item) => item.roomId)
-                                            : [...current.hiddenRoomAccess.map((item) => item.roomId), roomAccess.roomId];
-                                          const ok = await onSetServerMemberHiddenRoomAccess(current.userId, nextRoomIds);
-                                          if (!ok) {
-                                            return;
-                                          }
-                                          const refreshed = await onLoadServerMemberProfile(current.userId);
-                                          if (refreshed) {
-                                            setMemberMenuProfile(refreshed);
-                                          }
-                                        }}
-                                      >
-                                        <span>{roomAccess.roomTitle}</span>
-                                        <i className={`bi ${checked ? "bi-record-circle-fill" : "bi-circle"}`} aria-hidden="true" />
-                                      </button>
-                                    );
-                                  })}
-                                </div>
-                              </PopupPortal>
-                            </>
-                          ) : null}
-                          {canKickMembers ? (
-                            <button
-                              type="button"
-                              className="secondary delete-action-btn"
-                              onClick={() => {
-                                onKickRoomMember(room.slug, member.userId as string, member.userName);
-                                closeMemberMenu();
-                              }}
-                            >
-                              <i className="bi bi-person-x" aria-hidden="true" /> {t("rooms.kickFromChannel")}
-                            </button>
-                          ) : null}
-                        </div>
-                      </PopupPortal>
+                        memberUserId={member.userId}
+                        memberUserName={member.userName}
+                        roomSlug={room.slug}
+                        volumeValue={volumeValue}
+                        noteValue={noteValue}
+                        memberMenuProfile={memberMenuProfile}
+                        setMemberMenuProfile={setMemberMenuProfile}
+                        setMemberProfileModalData={setMemberProfileModalData}
+                        setMemberProfileModalOpen={setMemberProfileModalOpen}
+                        setMemberPreferenceDraft={(nextDraft) => {
+                          setMemberPreferenceDrafts((prev) => ({
+                            ...prev,
+                            [member.userId]: nextDraft
+                          }));
+                        }}
+                        onSaveMemberPreference={onSaveMemberPreference}
+                        onLoadServerMemberProfile={onLoadServerMemberProfile}
+                        onSetServerMemberCustomRoles={onSetServerMemberCustomRoles}
+                        onSetServerMemberHiddenRoomAccess={onSetServerMemberHiddenRoomAccess}
+                        onKickRoomMember={onKickRoomMember}
+                        canKickMembers={canKickMembers}
+                        closeMemberMenu={closeMemberMenu}
+                        memberRoleSelectorOpen={memberRoleSelectorOpen}
+                        setMemberRoleSelectorOpen={setMemberRoleSelectorOpen}
+                        memberHiddenRoomsSelectorOpen={memberHiddenRoomsSelectorOpen}
+                        setMemberHiddenRoomsSelectorOpen={setMemberHiddenRoomsSelectorOpen}
+                        memberRoleAnchorRef={memberRoleAnchorRef as { current: HTMLElement | null }}
+                        memberHiddenRoomsAnchorRef={memberHiddenRoomsAnchorRef as { current: HTMLElement | null }}
+                        serverRoles={serverRoles}
+                        serverRolesLoading={serverRolesLoading}
+                      />
                     ) : null}
                   </div>
                 ) : null}
+                </div>
               </li>
             );
           })}
         </ul>
       ) : null}
     </div>
-    {memberProfileModalOpen && memberProfileModalData ? (
-      <div className="fixed inset-0 z-[185] flex items-center justify-center bg-black/65 px-4" role="dialog" aria-modal="true">
-        <div className="card compact grid w-full max-w-[460px] gap-3 p-4">
-          <h3>{t("rooms.memberProfileTitle")}</h3>
-          <div><strong>{t("server.profileName")}: </strong>{memberProfileModalData.name}</div>
-          <div><strong>Email: </strong>{memberProfileModalData.email}</div>
-          <button
-            type="button"
-            className="secondary"
-            onClick={() => {
-              setMemberProfileModalOpen(false);
-              setMemberProfileModalData(null);
-            }}
-          >
-            {t("settings.closeVoiceAria")}
-          </button>
-        </div>
-      </div>
-    ) : null}
+    <RoomMemberProfileModal
+      t={t}
+      open={memberProfileModalOpen}
+      data={memberProfileModalData}
+      onClose={() => {
+        setMemberProfileModalOpen(false);
+        setMemberProfileModalData(null);
+      }}
+    />
     </>
   );
 }
+
+export const RoomRow = memo(RoomRowInner);

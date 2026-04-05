@@ -1,5 +1,6 @@
 import type { WebSocket } from "ws";
 import type { RoomRow } from "../db.types.ts";
+import { emitModerationInboxEvent } from "../services/notification-inbox-service.js";
 
 type SocketState = {
   userId: string;
@@ -208,6 +209,17 @@ export async function handleRoomKick(params: ModerationSharedParams): Promise<vo
 
   broadcastAllRoomsPresence();
 
+  void emitModerationInboxEvent({
+    actorUserId: state.userId,
+    actorUserName: state.userName,
+    targetUserId,
+    action: "room.kick",
+    title: "You were removed from a room",
+    body: `A moderator removed you from #${targetRoom.slug}`,
+    roomId: targetRoom.id,
+    roomSlug: targetRoom.slug
+  });
+
   sendAckWithMetrics(connection, requestId, eventType, {
     roomSlug: targetRoom.slug,
     kickedUserId: targetUserId
@@ -379,6 +391,17 @@ export async function handleRoomMoveMember(params: ModerationSharedParams): Prom
   );
 
   broadcastAllRoomsPresence();
+
+  void emitModerationInboxEvent({
+    actorUserId: state.userId,
+    actorUserName: state.userName,
+    targetUserId,
+    action: "room.move",
+    title: "You were moved to another room",
+    body: `A moderator moved you from #${fromRoom.slug} to #${toRoom.slug}`,
+    roomId: toRoom.id,
+    roomSlug: toRoom.slug
+  });
 
   sendAckWithMetrics(connection, requestId, eventType, {
     targetUserId,

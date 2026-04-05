@@ -24,8 +24,10 @@ import {
 import { disconnectRealtimeSocketsForUser } from "../realtime-broadcast.js";
 import { createServerInvite } from "../services/invite-service.js";
 import { applyServerBan, revokeServerBan } from "../services/ban-service.js";
+import { applyServerMute, revokeServerMute } from "../services/server-mute-service.js";
 import { makeRateLimiter } from "../middleware/rate-limit.js";
 import { confirmServerAge, getServerAgeConfirmation, revokeServerAgeConfirmation } from "../services/age-verification-service.js";
+import { resolveEffectiveServerPermissions, type ServerScopedPermissionKey } from "../services/server-permissions-service.js";
 import type {
   InviteCreateResponse,
   ServerAgeConfirmResponse,
@@ -34,12 +36,16 @@ import type {
   ServerDeleteResponse,
   ServerBanResponse,
   ServerBanRevokeResponse,
+  ServerMuteResponse,
+  ServerMuteRevokeResponse,
   ServerGetResponse,
   ServerMemberLeaveResponse,
   ServerMemberRemoveResponse,
   ServerMemberProfileResponse,
   ServerOwnerTransferResponse,
   ServerMembersResponse,
+  ServerAuditListResponse,
+  ServerPermissionsResponse,
   ServerRolesResponse,
   ServerRenameResponse,
   ServersListResponse
@@ -59,6 +65,12 @@ const createInviteSchema = z.object({
 });
 
 const createServerBanSchema = z.object({
+  userId: z.string().trim().uuid(),
+  reason: z.string().trim().min(1).max(500).optional(),
+  expiresAt: z.string().datetime().optional()
+});
+
+const createServerMuteSchema = z.object({
   userId: z.string().trim().uuid(),
   reason: z.string().trim().min(1).max(500).optional(),
   expiresAt: z.string().datetime().optional()
@@ -92,9 +104,35 @@ export async function serversRoutes(fastify: FastifyInstance) {
 
   const canManageServerMeta = (role: string) => role === "owner" || role === "admin";
 
-  const requireServerMetaManage = (request: Parameters<typeof requireAuth>[0], reply: Parameters<typeof requireAuth>[1]) => {
+  const requireServerMetaManage = async (
+    request: Parameters<typeof requireAuth>[0],
+    reply: Parameters<typeof requireAuth>[1],
+    permission: ServerScopedPermissionKey = "manageServer"
+  ) => {
+    const paramsServerId = String((request.params as { serverId?: unknown } | undefined)?.serverId || "").trim();
+    const serverId = String(request.currentServer?.id || paramsServerId || "").trim();
+    const userId = String(request.currentUser?.id || "").trim();
+    if (!serverId || !userId) {
+      reply.code(403).send({
+        error: "forbidden_role",
+        message: "Insufficient server role"
+      });
+      return false;
+    }
+
     const role = String(request.currentServer?.role || "").trim();
     if (canManageServerMeta(role)) {
+      return true;
+    }
+
+    const resolved = await resolveEffectiveServerPermissions({
+      serverId,
+      userId,
+      globalRole: request.currentUser?.role || "user",
+      serverRole: request.currentServer?.role || "member"
+    });
+
+    if (resolved.permissions[permission]) {
       return true;
     }
 
@@ -316,7 +354,7 @@ export async function serversRoutes(fastify: FastifyInstance) {
       ]
     },
     async (request, reply) => {
-      if (!requireServerMetaManage(request, reply)) {
+      if (!await requireServerMetaManage(request, reply, "manageRoles")) {
         return;
       }
 
@@ -380,7 +418,7 @@ export async function serversRoutes(fastify: FastifyInstance) {
       ]
     },
     async (request, reply) => {
-      if (!requireServerMetaManage(request, reply)) {
+      if (!await requireServerMetaManage(request, reply, "manageRooms")) {
         return;
       }
 
@@ -923,6 +961,140 @@ export async function serversRoutes(fastify: FastifyInstance) {
   );
 
   fastify.post<{ Params: { serverId: string }; Body: { userId: string; reason?: string; expiresAt?: string } }>(
+    "/v1/servers/:serverId/mutes",
+    {
+      preHandler: [
+        requireAuth,
+        requireServiceAccess,
+        requireNotServiceBanned,
+        loadCurrentUser,
+        requireServerMembership,
+        requireNotServerBanned
+      ]
+    },
+    async (request, reply) => {
+      const parsed = createServerMuteSchema.safeParse(request.body || {});
+      if (!parsed.success) {
+        return reply.code(400).send({
+          error: "ValidationError",
+          issues: parsed.error.flatten()
+        });
+      }
+
+      const serverId = String(request.params.serverId || "").trim();
+      const actorUserId = String(request.currentUser?.id || "").trim();
+
+      try {
+        const mute = await applyServerMute({
+          serverId,
+          actorUserId,
+          targetUserId: parsed.data.userId,
+          reason: parsed.data.reason,
+          expiresAt: parsed.data.expiresAt
+        });
+
+        const response: ServerMuteResponse = {
+          mute: {
+            id: mute.id,
+            serverId: mute.server_id,
+            userId: mute.user_id,
+            reason: mute.reason,
+            expiresAt: mute.expires_at,
+            createdAt: mute.created_at
+          }
+        };
+
+        return reply.code(201).send(response);
+      } catch (error) {
+        const message = String((error as Error)?.message || "");
+        if (message === "forbidden_role") {
+          return reply.code(403).send({
+            error: "forbidden_role",
+            message: "Insufficient server role"
+          });
+        }
+
+        if (message === "invalid_action") {
+          return reply.code(400).send({
+            error: "InvalidAction",
+            message: "Invalid action"
+          });
+        }
+
+        if (message === "target_not_member") {
+          return reply.code(404).send({
+            error: "MemberNotFound",
+            message: "Target user is not an active server member"
+          });
+        }
+
+        if (message === "protected_user") {
+          return reply.code(403).send({
+            error: "ProtectedUser",
+            message: "Target user cannot be muted"
+          });
+        }
+
+        if (message === "invalid_expires_at") {
+          return reply.code(400).send({
+            error: "ValidationError",
+            message: "expiresAt must be valid ISO datetime"
+          });
+        }
+
+        throw error;
+      }
+    }
+  );
+
+  fastify.delete<{ Params: { serverId: string; userId: string } }>(
+    "/v1/servers/:serverId/mutes/:userId",
+    {
+      preHandler: [
+        requireAuth,
+        requireServiceAccess,
+        requireNotServiceBanned,
+        loadCurrentUser,
+        requireServerMembership,
+        requireNotServerBanned
+      ]
+    },
+    async (request, reply) => {
+      const serverId = String(request.params.serverId || "").trim();
+      const actorUserId = String(request.currentUser?.id || "").trim();
+      const targetUserId = String(request.params.userId || "").trim();
+
+      if (!targetUserId) {
+        return reply.code(400).send({
+          error: "ValidationError",
+          message: "userId is required"
+        });
+      }
+
+      try {
+        const revoked = await revokeServerMute({
+          serverId,
+          actorUserId,
+          targetUserId
+        });
+
+        const response: ServerMuteRevokeResponse = { revoked };
+        return reply.code(200).send(response);
+      } catch (error) {
+        const message = String((error as Error)?.message || "");
+        if (message === "forbidden_role") {
+          return reply.code(403).send({
+            error: "forbidden_role",
+            message: "Insufficient server role"
+          });
+        }
+
+        throw error;
+      }
+    }
+  );
+
+  fastify.post<{ Params: { serverId: string }; Body: { userId: string; reason?: string; expiresAt?: string } }>(
     "/v1/servers/:serverId/bans",
     {
       preHandler: [
@@ -1050,6 +1222,54 @@ export async function serversRoutes(fastify: FastifyInstance) {
   );
 
   fastify.get<{ Params: { serverId: string } }>(
+    "/v1/servers/:serverId/permissions/me",
+    {
+      preHandler: [
+        requireAuth,
+        requireServiceAccess,
+        requireNotServiceBanned,
+        loadCurrentUser,
+        requireServerMembership,
+        requireNotServerBanned
+      ]
+    },
+    async (request) => {
+      const serverId = String(request.params.serverId || "").trim();
+      const globalRole = request.currentUser?.role || "user";
+      const serverRole = request.currentServer?.role || "member";
+      const userId = String(request.currentUser?.id || "").trim();
+      const resolved = await resolveEffectiveServerPermissions({
+        serverId,
+        userId,
+        globalRole,
+        serverRole
+      });
+
+      const response: ServerPermissionsResponse = {
+        serverId,
+        globalRole,
+        serverRole,
+        customRoles: resolved.customRoles,
+        customBadges: resolved.customRoles,
+        permissions: {
+          manageRooms: resolved.permissions.manageRooms,
+          manageTopics: resolved.permissions.manageTopics,
+          moderateMembers: resolved.permissions.moderateMembers,
+          manageInvites: resolved.permissions.manageInvites,
+          manageRoles: resolved.permissions.manageRoles,
+          viewModerationAudit: resolved.permissions.viewModerationAudit,
+          manageServer: resolved.permissions.manageServer,
+          manageGlobalUsers: resolved.isGlobalAdmin,
+          manageServiceControlPlane: resolved.isSuperAdmin,
+          viewTelemetry: resolved.isSuperAdmin || resolved.permissions.manageServer
+        }
+      };
+
+      return response;
+    }
+  );
+
+  fastify.get<{ Params: { serverId: string } }>(
     "/v1/servers/:serverId/roles",
     {
       preHandler: [
@@ -1083,6 +1303,75 @@ export async function serversRoutes(fastify: FastifyInstance) {
     }
   );
 
+  fastify.get<{ Params: { serverId: string }; Querystring: { limit?: string | number } }>(
+    "/v1/servers/:serverId/audit",
+    {
+      preHandler: [
+        requireAuth,
+        requireServiceAccess,
+        requireNotServiceBanned,
+        loadCurrentUser,
+        requireServerMembership,
+        requireNotServerBanned
+      ]
+    },
+    async (request, reply) => {
+      if (!await requireServerMetaManage(request, reply, "viewModerationAudit")) {
+        return;
+      }
+
+      const serverId = String(request.params.serverId || "").trim();
+      const limitRaw = Number(request.query.limit || 50);
+      const limit = Number.isFinite(limitRaw)
+        ? Math.max(1, Math.min(200, Math.round(limitRaw)))
+        : 50;
+
+      const result = await db.query<{
+        id: string;
+        action: string;
+        actor_user_id: string | null;
+        actor_user_name: string | null;
+        target_user_id: string | null;
+        target_user_name: string | null;
+        meta: Record<string, unknown>;
+        created_at: string;
+      }>(
+        `SELECT
+           sal.id,
+           sal.action,
+           sal.actor_user_id,
+           actor.name AS actor_user_name,
+           sal.target_user_id,
+           target.name AS target_user_name,
+           sal.meta,
+           sal.created_at
+         FROM server_audit_logs sal
+         LEFT JOIN users actor ON actor.id = sal.actor_user_id
+         LEFT JOIN users target ON target.id = sal.target_user_id
+         WHERE sal.server_id = $1
+         ORDER BY sal.created_at DESC, sal.id DESC
+         LIMIT $2`,
+        [serverId, limit]
+      );
+
+      const response: ServerAuditListResponse = {
+        serverId,
+        entries: result.rows.map((row) => ({
+          id: row.id,
+          action: row.action,
+          actorUserId: row.actor_user_id,
+          actorUserName: row.actor_user_name,
+          targetUserId: row.target_user_id,
+          targetUserName: row.target_user_name,
+          meta: row.meta || {},
+          createdAt: row.created_at
+        }))
+      };
+
+      return reply.code(200).send(response);
+    }
+  );
+
   fastify.post<{ Params: { serverId: string }; Body: { name: string } }>(
     "/v1/servers/:serverId/roles",
     {
@@ -1096,7 +1385,7 @@ export async function serversRoutes(fastify: FastifyInstance) {
       ]
     },
     async (request, reply) => {
-      if (!requireServerMetaManage(request, reply)) {
+      if (!await requireServerMetaManage(request, reply, "manageRoles")) {
         return;
       }
 
@@ -1135,7 +1424,7 @@ export async function serversRoutes(fastify: FastifyInstance) {
       ]
     },
     async (request, reply) => {
-      if (!requireServerMetaManage(request, reply)) {
+      if (!await requireServerMetaManage(request, reply, "manageRoles")) {
         return;
       }
 
@@ -1183,7 +1472,7 @@ export async function serversRoutes(fastify: FastifyInstance) {
       ]
     },
     async (request, reply) => {
-      if (!requireServerMetaManage(request, reply)) {
+      if (!await requireServerMetaManage(request, reply, "manageRoles")) {
         return;
       }
 

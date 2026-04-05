@@ -6,6 +6,7 @@ import type {
   Message,
   MessagesCursor,
   PresenceMember,
+  RoomTopic,
   Room,
   RoomMemberPreference,
   RoomsTreeResponse,
@@ -37,6 +38,8 @@ export function useAppCoreState({
   const [archivedRooms, setArchivedRooms] = useState<Room[]>([]);
   const [roomSlug, setRoomSlug] = useState("");
   const [chatRoomSlug, setChatRoomSlug] = useState("");
+  const [roomUnreadBySlug, setRoomUnreadBySlug] = useState<Record<string, number>>({});
+  const [roomMentionUnreadBySlug, setRoomMentionUnreadBySlug] = useState<Record<string, number>>({});
   const [showAppUpdatedOverlay, setShowAppUpdatedOverlay] = useState(
     () => sessionStorage.getItem(versionUpdatePendingKey) === "1"
   );
@@ -47,12 +50,15 @@ export function useAppCoreState({
   const [showFirstRunIntro, setShowFirstRunIntro] = useState(false);
   const [sessionMovedOverlayMessage, setSessionMovedOverlayMessage] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
+  const [chatTopics, setChatTopics] = useState<RoomTopic[]>([]);
+  const [activeChatTopicId, setActiveChatTopicId] = useState<string | null>(null);
   const [messagesHasMore, setMessagesHasMore] = useState(false);
   const [messagesNextCursor, setMessagesNextCursor] = useState<MessagesCursor | null>(null);
   const [loadingOlderMessages, setLoadingOlderMessages] = useState(false);
   const [chatText, setChatText] = useState("");
   const [pendingChatImageDataUrl, setPendingChatImageDataUrl] = useState<string | null>(null);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [replyingToMessageId, setReplyingToMessageId] = useState<string | null>(null);
   const [callStatus, setCallStatus] = useState<CallStatus>("idle");
   const [lastCallPeer, setLastCallPeer] = useState("");
   const [roomsPresenceBySlug, setRoomsPresenceBySlug] = useState<Record<string, string[]>>({});
@@ -91,18 +97,23 @@ export function useAppCoreState({
     archivedRooms, setArchivedRooms,
     roomSlug, setRoomSlug,
     chatRoomSlug, setChatRoomSlug,
+    roomUnreadBySlug, setRoomUnreadBySlug,
+    roomMentionUnreadBySlug, setRoomMentionUnreadBySlug,
     showAppUpdatedOverlay, setShowAppUpdatedOverlay,
     cookieConsentAccepted, setCookieConsentAccepted,
     pendingAccessRefreshInSec, setPendingAccessRefreshInSec,
     showFirstRunIntro, setShowFirstRunIntro,
     sessionMovedOverlayMessage, setSessionMovedOverlayMessage,
     messages, setMessages,
+    chatTopics, setChatTopics,
+    activeChatTopicId, setActiveChatTopicId,
     messagesHasMore, setMessagesHasMore,
     messagesNextCursor, setMessagesNextCursor,
     loadingOlderMessages, setLoadingOlderMessages,
     chatText, setChatText,
     pendingChatImageDataUrl, setPendingChatImageDataUrl,
     editingMessageId, setEditingMessageId,
+    replyingToMessageId, setReplyingToMessageId,
     callStatus, setCallStatus,
     lastCallPeer, setLastCallPeer,
     roomsPresenceBySlug, setRoomsPresenceBySlug,

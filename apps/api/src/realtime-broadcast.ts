@@ -79,3 +79,23 @@ export function broadcastRealtimeEnvelope(payload: unknown, excludedSocket: WebS
     sendJson(socket, payload);
   }
 }
+
+export function broadcastRealtimeEnvelopeToUser(userId: string, payload: unknown, excludedSocket: WebSocket | null = null) {
+  const normalizedUserId = String(userId || "").trim();
+  if (!normalizedUserId) {
+    return;
+  }
+
+  const userSockets = socketsByUserId.get(normalizedUserId);
+  if (!userSockets || userSockets.size === 0) {
+    return;
+  }
+
+  for (const socket of userSockets) {
+    if (socket === excludedSocket) {
+      continue;
+    }
+
+    sendJson(socket, payload);
+  }
+}

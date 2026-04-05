@@ -3,26 +3,41 @@ import type {
   AdminServerOverviewResponse,
   AdminServersResponse,
   AuthModeResponse,
+  Message,
   MessagesCursor,
   LivekitTokenResponse,
   RoomCategory,
   Room,
   RoomKind,
   RoomMessagesResponse,
+  SearchMessagesResponse,
+  NotificationSettingsResponse,
+  NotificationInboxListResponse,
+  NotificationInboxClaimResponse,
+  NotificationInboxReadResponse,
+  NotificationInboxReadAllResponse,
+  NotificationPushPublicKeyResponse,
+  NotificationPushSubscriptionResponse,
+  TopicReadResponse,
+  RoomTopicsListResponse,
   RoomsTreeResponse,
   ServerAudioQualityResponse,
   ServerChatImagePolicyResponse,
+    TopicMessageReportResponse,
   ServerCreateResponse,
   ServerDeleteResponse,
   ServerRenameResponse,
   ServerMembersResponse,
   ServerMemberProfileResponse,
   ServerRolesResponse,
+  ServerPermissionsResponse,
+  ServerAuditListResponse,
   ServerAgeStatusResponse,
   ServerAgeConfirmResponse,
   InviteAcceptResponse,
   InviteCreateResponse,
   TelemetrySummary,
+  TopicMessagesResponse,
   ServerListItem,
   UiTheme,
   User,
@@ -54,7 +69,7 @@ export type ChatUploadFinalizeResponse = {
   attachment: {
     id: string;
     message_id: string;
-    type: "image";
+    type: "image" | "document" | "audio";
     storage_key: string;
     download_url: string | null;
     mime_type: string;
@@ -180,6 +195,7 @@ const endpoints = {
   roomsArchived: "/v1/rooms/archived",
   roomsTree: "/v1/rooms/tree",
   roomCategories: "/v1/room-categories",
+  topics: "/v1/topics",
   telemetrySummary: "/v1/telemetry/summary",
   servers: "/v1/servers",
   adminUsers: "/v1/admin/users",
@@ -280,7 +296,8 @@ export const api = {
     fetchJson<{ user: User | null }>(endpoints.me, token, withJsonBody("PATCH", input)),
   deleteMe: (token: string) =>
     fetchJson<{ ok: true; purgeScheduledAt: string | null; daysRemaining: number }>(endpoints.me, token, withJsonBody("DELETE")),
-  wsTicket: (token: string) => fetchJson<{ ticket: string; expiresInSec: number }>(endpoints.wsTicket, token),
+  wsTicket: (token: string, serverId?: string) =>
+    fetchJson<{ ticket: string; expiresInSec: number }>(withServerIdQuery(endpoints.wsTicket, serverId), token),
   livekitToken: (
     token: string,
     input: { roomSlug: string; canPublish?: boolean; canSubscribe?: boolean; canPublishData?: boolean }
@@ -354,6 +371,260 @@ export const api = {
       token
     );
   },
+  roomTopics: (token: string, roomId: string) =>
+    fetchJson<RoomTopicsListResponse>(withSuffix(endpoints.rooms, roomId, "topics"), token),
+  createRoomTopic: (token: string, roomId: string, input: { title: string; slug?: string; position?: number }) =>
+    fetchJson<{ topic: RoomTopicsListResponse["topics"][number] }>(
+      withSuffix(endpoints.rooms, roomId, "topics"),
+      token,
+      withJsonBody("POST", input)
+    ),
+  updateTopic: (token: string, topicId: string, input: { title?: string; position?: number }) =>
+    fetchJson<{ topic: RoomTopicsListResponse["topics"][number] }>(
+      withId(endpoints.topics, topicId),
+      token,
+      withJsonBody("PATCH", input)
+    ),
+  archiveTopic: (token: string, topicId: string) =>
+    fetchJson<{ topic: RoomTopicsListResponse["topics"][number] }>(
+      withSuffix(endpoints.topics, topicId, "archive"),
+      token,
+      withJsonBody("POST")
+    ),
+  unarchiveTopic: (token: string, topicId: string) =>
+    fetchJson<{ topic: RoomTopicsListResponse["topics"][number] }>(
+      withSuffix(endpoints.topics, topicId, "unarchive"),
+      token,
+      withJsonBody("POST")
+    ),
+  deleteTopic: (token: string, topicId: string) =>
+    fetchJson<{ topicId: string; roomId: string; roomSlug: string; deletedMessagesCount: number; deletedAt: string }>(
+      withId(endpoints.topics, topicId),
+      token,
+      withJsonBody("DELETE")
+    ),
+  topicMessages: (
+    token: string,
+    topicId: string,
+    options: { limit?: number; cursor?: MessagesCursor | null } = {}
+  ) => {
+    const params = new URLSearchParams();
+    params.set("limit", String(options.limit ?? 50));
+
+    if (options.cursor?.beforeCreatedAt && options.cursor?.beforeId) {
+      params.set("beforeCreatedAt", options.cursor.beforeCreatedAt);
+      params.set("beforeId", options.cursor.beforeId);
+    }
+
+    return fetchJson<TopicMessagesResponse>(
+      `${withSuffix(endpoints.topics, topicId, "messages")}?${params.toString()}`,
+      token
+    );
+  },
+  createTopicMessage: (token: string, topicId: string, input: { text: string; mentionUserIds?: string[] }) =>
+    fetchJson<{ message: Message }>(withSuffix(endpoints.topics, topicId, "messages"), token, withJsonBody("POST", input)),
+  markTopicRead: (token: string, topicId: string, input: { lastReadMessageId?: string } = {}) =>
+    fetchJson<TopicReadResponse>(
+      withSuffix(endpoints.topics, topicId, "read"),
+      token,
+      withJsonBody("POST", input)
+    ),
+  editMessage: (token: string, messageId: string, input: { text: string }) =>
+    fetchJson<{ message: Message }>(`/v1/messages/${encodeURIComponent(messageId)}`, token, withJsonBody("PATCH", input)),
+  deleteMessage: (token: string, messageId: string) =>
+    fetchJson<{ messageId: string }>(`/v1/messages/${encodeURIComponent(messageId)}`, token, withJsonBody("DELETE")),
+  replyMessage: (token: string, messageId: string, input: { text: string; mentionUserIds?: string[] }) =>
+    fetchJson<{ message: Message; parentMessageId: string }>(
+      `/v1/messages/${encodeURIComponent(messageId)}/reply`,
+      token,
+      withJsonBody("POST", input)
+    ),
+  pinMessage: (token: string, messageId: string) =>
+    fetchJson<{ messageId: string; pinned: boolean }>(
+      `/v1/messages/${encodeURIComponent(messageId)}/pin`,
+      token,
+      withJsonBody("POST")
+    ),
+  unpinMessage: (token: string, messageId: string) =>
+    fetchJson<{ messageId: string; pinned: boolean }>(
+      `/v1/messages/${encodeURIComponent(messageId)}/pin`,
+      token,
+      withJsonBody("DELETE")
+    ),
+  addMessageReaction: (token: string, messageId: string, emoji: string) =>
+    fetchJson<{ messageId: string; emoji: string; active: boolean }>(
+      `/v1/messages/${encodeURIComponent(messageId)}/reactions`,
+      token,
+      withJsonBody("POST", { emoji })
+    ),
+  removeMessageReaction: (token: string, messageId: string, emoji: string) =>
+    fetchJson<{ messageId: string; emoji: string; active: boolean }>(
+      `/v1/messages/${encodeURIComponent(messageId)}/reactions/${encodeURIComponent(emoji)}`,
+      token,
+      withJsonBody("DELETE")
+    ),
+  reportMessage: (token: string, messageId: string, input: { reason: string; details?: string }) =>
+    fetchJson<TopicMessageReportResponse>(
+      `/v1/messages/${encodeURIComponent(messageId)}/report`,
+      token,
+      withJsonBody("POST", input)
+    ),
+  searchMessages: (
+    token: string,
+    input: {
+      q: string;
+      scope?: "all" | "server" | "room" | "topic";
+      serverId?: string;
+      roomId?: string;
+      topicId?: string;
+      authorId?: string;
+      hasAttachment?: boolean;
+      attachmentType?: "image";
+      hasLink?: boolean;
+      hasMention?: boolean;
+      from?: string;
+      to?: string;
+      limit?: number;
+      beforeCreatedAt?: string;
+      beforeId?: string;
+    }
+  ) => {
+    const params = new URLSearchParams();
+    params.set("q", String(input.q || ""));
+    params.set("scope", String(input.scope || "all"));
+
+    if (input.serverId) {
+      params.set("serverId", input.serverId);
+    }
+
+    if (input.roomId) {
+      params.set("roomId", input.roomId);
+    }
+
+    if (input.topicId) {
+      params.set("topicId", input.topicId);
+    }
+
+    if (input.authorId) {
+      params.set("authorId", input.authorId);
+    }
+
+    if (typeof input.hasAttachment === "boolean") {
+      params.set("hasAttachment", String(input.hasAttachment));
+    }
+
+    if (input.attachmentType) {
+      params.set("attachmentType", input.attachmentType);
+    }
+
+    if (typeof input.hasLink === "boolean") {
+      params.set("hasLink", String(input.hasLink));
+    }
+
+    if (typeof input.hasMention === "boolean") {
+      params.set("hasMention", String(input.hasMention));
+    }
+
+    if (input.from) {
+      params.set("from", input.from);
+    }
+
+    if (input.to) {
+      params.set("to", input.to);
+    }
+
+    if (typeof input.limit === "number") {
+      params.set("limit", String(input.limit));
+    }
+
+    if (input.beforeCreatedAt && input.beforeId) {
+      params.set("beforeCreatedAt", input.beforeCreatedAt);
+      params.set("beforeId", input.beforeId);
+    }
+
+    return fetchJson<SearchMessagesResponse>(`/v1/search/messages?${params.toString()}`, token);
+  },
+  updateNotificationSettings: (
+    token: string,
+    input: {
+      scopeType: "server" | "room" | "topic";
+      serverId?: string;
+      roomId?: string;
+      topicId?: string;
+      mode: "all" | "mentions" | "none";
+      allowCriticalMentions?: boolean;
+      muteUntil?: string | null;
+    }
+  ) => fetchJson<NotificationSettingsResponse>(
+    "/v1/notification-settings",
+    token,
+    withJsonBody("PATCH", input)
+  ),
+  notificationInbox: (
+    token: string,
+    input: {
+      limit?: number;
+      unreadOnly?: boolean;
+      beforeCreatedAt?: string;
+      beforeId?: string;
+    } = {}
+  ) => {
+    const params = new URLSearchParams();
+    params.set("limit", String(input.limit ?? 20));
+    if (typeof input.unreadOnly === "boolean") {
+      params.set("unreadOnly", String(input.unreadOnly));
+    }
+    if (input.beforeCreatedAt && input.beforeId) {
+      params.set("beforeCreatedAt", input.beforeCreatedAt);
+      params.set("beforeId", input.beforeId);
+    }
+
+    return fetchJson<NotificationInboxListResponse>(`/v1/notifications/inbox?${params.toString()}`, token);
+  },
+  markNotificationInboxRead: (token: string, eventId: string) =>
+    fetchJson<NotificationInboxReadResponse>(
+      `/v1/notifications/inbox/${encodeURIComponent(eventId)}/read`,
+      token,
+      withJsonBody("POST")
+    ),
+  claimNotificationInbox: (token: string, eventId: string) =>
+    fetchJson<NotificationInboxClaimResponse>(
+      `/v1/notifications/inbox/${encodeURIComponent(eventId)}/claim`,
+      token,
+      withJsonBody("POST")
+    ),
+  markNotificationInboxReadAll: (token: string) =>
+    fetchJson<NotificationInboxReadAllResponse>(
+      "/v1/notifications/inbox/read-all",
+      token,
+      withJsonBody("POST")
+    ),
+  notificationPushPublicKey: (token: string) =>
+    fetchJson<NotificationPushPublicKeyResponse>(
+      "/v1/notifications/push/public-key",
+      token
+    ),
+  upsertNotificationPushSubscription: (
+    token: string,
+    input: {
+      endpoint: string;
+      keys: { p256dh: string; auth: string };
+      expirationTime?: string | null;
+      runtime?: "web" | "desktop";
+    }
+  ) => fetchJson<NotificationPushSubscriptionResponse>(
+    "/v1/notifications/push/subscriptions",
+    token,
+    withJsonBody("PUT", input)
+  ),
+  removeNotificationPushSubscription: (
+    token: string,
+    endpoint: string
+  ) => fetchJson<NotificationPushSubscriptionResponse>(
+    "/v1/notifications/push/subscriptions",
+    token,
+    withJsonBody("DELETE", { endpoint })
+  ),
   telemetrySummary: (token: string) => fetchJson<TelemetrySummary>(endpoints.telemetrySummary, token),
   servers: (token: string) => fetchJson<{ servers: ServerListItem[] }>(endpoints.servers, token),
   createServer: (token: string, input: { name: string }) =>
@@ -368,6 +639,16 @@ export const api = {
     fetchJson<ServerMemberProfileResponse>(withId(withSuffix(endpoints.servers, serverId, "members"), userId) + "/profile", token),
   serverRoles: (token: string, serverId: string) =>
     fetchJson<ServerRolesResponse>(withSuffix(endpoints.servers, serverId, "roles"), token),
+  serverPermissions: (token: string, serverId: string) =>
+    fetchJson<ServerPermissionsResponse>(withSuffix(endpoints.servers, serverId, "permissions/me"), token),
+  serverAudit: (token: string, serverId: string, input: { limit?: number } = {}) => {
+    const params = new URLSearchParams();
+    params.set("limit", String(input.limit ?? 50));
+    return fetchJson<ServerAuditListResponse>(
+      `${withSuffix(endpoints.servers, serverId, "audit")}?${params.toString()}`,
+      token
+    );
+  },
   createServerRole: (token: string, serverId: string, name: string) =>
     fetchJson<{ role: { id: string; name: string } }>(
       withSuffix(endpoints.servers, serverId, "roles"),
@@ -489,7 +770,7 @@ export const api = {
       token,
       withJsonBody("PUT", input)
     ),
-  chatUploadInit: (token: string, input: { roomSlug: string; mimeType: string; sizeBytes: number }) =>
+  chatUploadInit: (token: string, input: { roomSlug: string; topicId?: string; mimeType: string; sizeBytes: number }) =>
     fetchJson<ChatUploadInitResponse>(
       endpoints.chatUploadInit,
       token,
@@ -502,10 +783,12 @@ export const api = {
     input: {
       uploadId: string;
       roomSlug: string;
+      topicId?: string;
       storageKey: string;
       mimeType: string;
       sizeBytes: number;
       text?: string;
+      mentionUserIds?: string[];
       downloadUrl?: string;
       width?: number;
       height?: number;

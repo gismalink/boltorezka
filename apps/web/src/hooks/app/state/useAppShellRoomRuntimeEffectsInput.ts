@@ -24,6 +24,7 @@ export function useAppShellRoomRuntimeEffectsInput(params: Record<string, unknow
     roomSlugPersistence: {
       currentServerId: p.currentServerId,
       roomSlug: p.roomSlug,
+      chatRoomSlug: p.chatRoomSlug,
       roomSlugStorageKey: p.roomSlugStorageKey,
       setRoomSlug: p.setRoomSlug,
       setChatRoomSlug: p.setChatRoomSlug

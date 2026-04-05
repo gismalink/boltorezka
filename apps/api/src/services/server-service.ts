@@ -2,6 +2,7 @@ import { db } from "../db.js";
 import type { ServerListItem, ServerContext, ServerMemberItem } from "../api-contract.types.ts";
 import type { ServerMemberRole, UserRole } from "../db.types.ts";
 import { writeServerAuditEvent } from "./server-audit-service.js";
+import { resolveEffectiveServerPermissions } from "./server-permissions-service.js";
 
 type CreateServerInput = {
   name: string;
@@ -270,8 +271,12 @@ export async function renameServerForUser(input: RenameServerInput): Promise<Ser
     return null;
   }
 
-  const allowedRoles = new Set<ServerMemberRole>(["owner", "admin"]);
-  if (!allowedRoles.has(server.role)) {
+  const resolved = await resolveEffectiveServerPermissions({
+    serverId: input.serverId,
+    userId: input.actorUserId,
+    serverRole: server.role
+  });
+  if (!resolved.permissions.manageServer) {
     throw new Error("forbidden_role");
   }
 
@@ -371,11 +376,17 @@ export async function removeServerMemberForUser(input: RemoveServerMemberInput):
     throw new Error("owner_cannot_be_removed");
   }
 
-  if (actor.role === "member") {
+  const resolved = await resolveEffectiveServerPermissions({
+    serverId: input.serverId,
+    userId: input.actorUserId,
+    serverRole: actor.role
+  });
+  if (!resolved.permissions.moderateMembers) {
     throw new Error("forbidden_role");
   }
 
-  if (actor.role === "admin" && target.role !== "member") {
+  const actorIsOwner = actor.role === "owner";
+  if (!actorIsOwner && target.role !== "member") {
     throw new Error("forbidden_role");
   }
 

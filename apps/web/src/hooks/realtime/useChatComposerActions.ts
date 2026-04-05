@@ -1,5 +1,9 @@
+// Purpose: keep composer behavior/state transitions in one hook (send/edit/delete/reply/paste/typing).
 import {
+  startTransition,
   useCallback,
+  useEffect,
+  useState,
   type ClipboardEvent,
   type Dispatch,
   type FormEvent,
@@ -25,6 +29,7 @@ type SendWsEventFn = (
 
 type UseChatComposerActionsParams = {
   chatRoomSlug: string;
+  activeTopicId: string | null;
   setChatRoomSlug: (value: string) => void;
   messages: Message[];
   setMessages: Dispatch<SetStateAction<Message[]>>;
@@ -36,6 +41,8 @@ type UseChatComposerActionsParams = {
   setChatText: (value: string) => void;
   editingMessageId: string | null;
   setEditingMessageId: (value: string | null) => void;
+  replyingToMessageId: string | null;
+  setReplyingToMessageId: (value: string | null) => void;
   pendingChatImageDataUrl: string | null;
   setPendingChatImageDataUrl: (value: string | null) => void;
   chatController: ChatController;
@@ -48,10 +55,88 @@ type UseChatComposerActionsParams = {
   messageEditDeleteWindowMs: number;
   serverChatImagePolicy: ChatImagePolicy;
   chatImageTooLargeMessage: string;
+  topicImageUploadUnsupportedMessage: string;
+  topicOnlyActionMessage: string;
+  reportMessageSentMessage: string;
+  reportMessageExistsMessage: string;
+  attachmentTooLargeMessage: string;
+  attachmentUnsupportedTypeMessage: string;
+  mentionCandidates: Array<{
+    key: string;
+    kind: "user" | "tag" | "all";
+    handle: string;
+    label: string;
+    userId?: string;
+    userIds?: string[];
+  }>;
 };
+
+type MentionCandidate = UseChatComposerActionsParams["mentionCandidates"][number];
+
+function resolveMentionUserIdsFromText(
+  text: string,
+  candidates: MentionCandidate[]
+): string[] {
+  const normalizedText = String(text || "");
+  if (!normalizedText.trim()) {
+    return [];
+  }
+
+  const handlePattern = /@([\p{L}\p{N}._-]{2,32})/gu;
+  const handles = new Set<string>();
+  let match: RegExpExecArray | null;
+  while ((match = handlePattern.exec(normalizedText)) !== null) {
+    const handle = String(match[1] || "").trim().toLowerCase();
+    if (handle && handle !== "all" && handle !== "here") {
+      handles.add(handle);
+    }
+  }
+
+  if (handles.size === 0) {
+    return [];
+  }
+
+  const mentionedUserIds = new Set<string>();
+  const seen = new Set<string>();
+  candidates.forEach((candidate) => {
+    const handle = String(candidate.handle || "").trim().toLowerCase();
+    if (!handle || !handles.has(handle)) {
+      return;
+    }
+
+    if (candidate.kind === "all") {
+      return;
+    }
+
+    if (candidate.kind === "user") {
+      const userId = String(candidate.userId || "").trim();
+      if (!userId || seen.has(userId)) {
+        return;
+      }
+
+      seen.add(userId);
+      mentionedUserIds.add(userId);
+      return;
+    }
+
+    const targetUserIds = Array.isArray(candidate.userIds) ? candidate.userIds : [];
+    targetUserIds.forEach((value) => {
+      const userId = String(value || "").trim();
+      if (!userId || seen.has(userId)) {
+        return;
+      }
+
+      seen.add(userId);
+      mentionedUserIds.add(userId);
+    });
+  });
+
+  return Array.from(mentionedUserIds);
+}
 
 export function useChatComposerActions({
   chatRoomSlug,
+  activeTopicId,
   setChatRoomSlug,
   messages,
   setMessages,
@@ -63,6 +148,8 @@ export function useChatComposerActions({
   setChatText,
   editingMessageId,
   setEditingMessageId,
+  replyingToMessageId,
+  setReplyingToMessageId,
   pendingChatImageDataUrl,
   setPendingChatImageDataUrl,
   chatController,
@@ -74,8 +161,79 @@ export function useChatComposerActions({
   maxChatRetries,
   messageEditDeleteWindowMs,
   serverChatImagePolicy,
-  chatImageTooLargeMessage
+  chatImageTooLargeMessage,
+  topicImageUploadUnsupportedMessage,
+  topicOnlyActionMessage,
+  reportMessageSentMessage,
+  reportMessageExistsMessage,
+  attachmentTooLargeMessage,
+  attachmentUnsupportedTypeMessage,
+  mentionCandidates
 }: UseChatComposerActionsParams) {
+  const [pinnedByMessageId, setPinnedByMessageId] = useState<Record<string, boolean>>({});
+  const [reactionsByMessageId, setReactionsByMessageId] = useState<
+    Record<string, Record<string, { count: number; reacted: boolean }>>
+  >({});
+  const [pendingChatAttachmentFile, setPendingChatAttachmentFile] = useState<File | null>(null);
+
+  useEffect(() => {
+    const existingIds = new Set(messages.map((item) => item.id));
+
+    setPinnedByMessageId((prev) => {
+      const next: Record<string, boolean> = {};
+      Object.entries(prev).forEach(([messageId, pinned]) => {
+        if (existingIds.has(messageId) && pinned) {
+          next[messageId] = true;
+        }
+      });
+      return next;
+    });
+  }, [messages]);
+
+  useEffect(() => {
+    setReactionsByMessageId((prev) => {
+      const next: Record<string, Record<string, { count: number; reacted: boolean }>> = {};
+
+      messages.forEach((message) => {
+        const messageId = String(message.id || "").trim();
+        if (!messageId) {
+          return;
+        }
+
+        const serverReactions = Array.isArray(message.reactions) ? message.reactions : null;
+        if (!serverReactions) {
+          if (prev[messageId]) {
+            next[messageId] = prev[messageId];
+          }
+          return;
+        }
+
+        const normalized: Record<string, { count: number; reacted: boolean }> = {};
+        serverReactions.forEach((reaction) => {
+          const emoji = String(reaction?.emoji || "").trim();
+          if (!emoji) {
+            return;
+          }
+
+          const count = Math.max(0, Number(reaction?.count || 0));
+          if (count <= 0) {
+            return;
+          }
+
+          normalized[emoji] = {
+            count,
+            reacted: Boolean(reaction?.reacted)
+          };
+        });
+
+        if (Object.keys(normalized).length > 0) {
+          next[messageId] = normalized;
+        }
+      });
+
+      return next;
+    });
+  }, [messages]);
   const canManageOwnMessage = useCallback((message: Message) => {
     if (!user || message.user_id !== user.id) {
       return false;
@@ -95,9 +253,13 @@ export function useChatComposerActions({
       const result = await sendChatMessage({
         authToken,
         chatRoomSlug,
+        activeTopicId,
+        replyingToMessageId,
         chatText,
+        mentionUserIds: resolveMentionUserIdsFromText(chatText, mentionCandidates),
         editingMessageId,
         pendingChatImageDataUrl,
+        pendingChatAttachmentFile,
         user,
         maxChatRetries,
         maxDataUrlLength: serverChatImagePolicy.maxDataUrlLength,
@@ -119,6 +281,21 @@ export function useChatComposerActions({
         return;
       }
 
+      if (result.kind === "attachment-too-large") {
+        pushToast(attachmentTooLargeMessage);
+        return;
+      }
+
+      if (result.kind === "attachment-unsupported-type") {
+        pushToast(attachmentUnsupportedTypeMessage);
+        return;
+      }
+
+      if (result.kind === "topic-image-unsupported") {
+        pushToast(topicImageUploadUnsupportedMessage);
+        return;
+      }
+
       if (result.kind === "server-error") {
         pushToast(serverErrorMessage);
         return;
@@ -126,8 +303,12 @@ export function useChatComposerActions({
 
       setChatText("");
       setPendingChatImageDataUrl(null);
+      setPendingChatAttachmentFile(null);
       if (result.mode === "edit") {
         setEditingMessageId(null);
+      }
+      if (result.mode === "reply") {
+        setReplyingToMessageId(null);
       }
       sendChatTypingState(chatRoomSlug, false);
     })();
@@ -135,10 +316,17 @@ export function useChatComposerActions({
     authToken,
     chatController,
     chatImageTooLargeMessage,
+    attachmentTooLargeMessage,
+    attachmentUnsupportedTypeMessage,
+    topicImageUploadUnsupportedMessage,
+    mentionCandidates,
+    activeTopicId,
+    replyingToMessageId,
     chatRoomSlug,
     chatText,
     editingMessageId,
     maxChatRetries,
+    pendingChatAttachmentFile,
     pendingChatImageDataUrl,
     pushToast,
     selectChannelPlaceholderMessage,
@@ -148,6 +336,8 @@ export function useChatComposerActions({
     serverErrorMessage,
     setChatText,
     setEditingMessageId,
+    setReplyingToMessageId,
+    setPendingChatAttachmentFile,
     setPendingChatImageDataUrl,
     user
   ]);
@@ -177,6 +367,7 @@ export function useChatComposerActions({
         if (imageFile) {
           const dataUrl = await compressImageToDataUrl(imageFile, serverChatImagePolicy);
           setPendingChatImageDataUrl(dataUrl);
+          setPendingChatAttachmentFile(null);
           return;
         }
 
@@ -186,11 +377,13 @@ export function useChatComposerActions({
           const synthesizedFile = new File([blob], "clipboard-image", { type: blob.type || "image/png" });
           const dataUrl = await compressImageToDataUrl(synthesizedFile, serverChatImagePolicy);
           setPendingChatImageDataUrl(dataUrl);
+          setPendingChatAttachmentFile(null);
           return;
         }
 
         if (/^https?:\/\//i.test(htmlImageSource)) {
           setPendingChatImageDataUrl(htmlImageSource);
+          setPendingChatAttachmentFile(null);
           return;
         }
 
@@ -200,6 +393,7 @@ export function useChatComposerActions({
           const synthesizedFile = new File([blob], "clipboard-image", { type: blob.type || "image/png" });
           const dataUrl = await compressImageToDataUrl(synthesizedFile, serverChatImagePolicy);
           setPendingChatImageDataUrl(dataUrl);
+          setPendingChatAttachmentFile(null);
           return;
         }
 
@@ -208,7 +402,22 @@ export function useChatComposerActions({
         pushToast(chatImageTooLargeMessage);
       }
     })();
-  }, [chatImageTooLargeMessage, chatRoomSlug, pushToast, serverChatImagePolicy, setPendingChatImageDataUrl]);
+  }, [chatImageTooLargeMessage, chatRoomSlug, pushToast, serverChatImagePolicy, setPendingChatAttachmentFile, setPendingChatImageDataUrl]);
+
+  const selectAttachmentFile = useCallback((file: File | null) => {
+    if (!file) {
+      setPendingChatAttachmentFile(null);
+      return;
+    }
+
+    setPendingChatImageDataUrl(null);
+    setPendingChatAttachmentFile(file);
+  }, [setPendingChatAttachmentFile, setPendingChatImageDataUrl]);
+
+  const clearPendingAttachment = useCallback(() => {
+    setPendingChatAttachmentFile(null);
+    setPendingChatImageDataUrl(null);
+  }, [setPendingChatAttachmentFile, setPendingChatImageDataUrl]);
 
   const handleChatInputKeyDown = useCallback((event: KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
@@ -242,8 +451,9 @@ export function useChatComposerActions({
 
     event.preventDefault();
     setEditingMessageId(lastOwn.id);
+    setReplyingToMessageId(null);
     setChatText(lastOwn.text);
-  }, [canManageOwnMessage, chatText, messages, setChatText, setEditingMessageId, user?.id]);
+  }, [canManageOwnMessage, chatText, messages, setChatText, setEditingMessageId, setReplyingToMessageId, user?.id]);
 
   const startEditingMessage = useCallback((messageId: string) => {
     if (!chatRoomSlug) {
@@ -257,8 +467,29 @@ export function useChatComposerActions({
     }
 
     setEditingMessageId(messageId);
+    setReplyingToMessageId(null);
     setChatText(targetMessage.text);
-  }, [canManageOwnMessage, chatRoomSlug, messages, pushToast, selectChannelPlaceholderMessage, setChatText, setEditingMessageId]);
+  }, [canManageOwnMessage, chatRoomSlug, messages, pushToast, selectChannelPlaceholderMessage, setChatText, setEditingMessageId, setReplyingToMessageId]);
+
+  const replyToMessage = useCallback((messageId: string) => {
+    if (!chatRoomSlug) {
+      pushToast(selectChannelPlaceholderMessage);
+      return;
+    }
+
+    const targetMessage = messages.find((item) => item.id === messageId);
+    if (!targetMessage) {
+      return;
+    }
+
+    setEditingMessageId(null);
+    setReplyingToMessageId(messageId);
+    sendChatTypingState(chatRoomSlug, true);
+  }, [chatRoomSlug, messages, pushToast, selectChannelPlaceholderMessage, sendChatTypingState, setEditingMessageId, setReplyingToMessageId]);
+
+  const cancelReply = useCallback(() => {
+    setReplyingToMessageId(null);
+  }, [setReplyingToMessageId]);
 
   const deleteOwnMessage = useCallback((messageId: string) => {
     if (!chatRoomSlug) {
@@ -268,6 +499,18 @@ export function useChatComposerActions({
 
     const targetMessage = messages.find((item) => item.id === messageId);
     if (!targetMessage || !canManageOwnMessage(targetMessage)) {
+      return;
+    }
+
+    if (activeTopicId) {
+      void (async () => {
+        try {
+          await api.deleteMessage(authToken, messageId);
+          setMessages((prev) => prev.filter((item) => item.id !== messageId));
+        } catch {
+          pushToast(serverErrorMessage);
+        }
+      })();
       return;
     }
 
@@ -283,7 +526,7 @@ export function useChatComposerActions({
     if (!requestId) {
       pushToast(serverErrorMessage);
     }
-  }, [canManageOwnMessage, chatRoomSlug, messages, pushToast, selectChannelPlaceholderMessage, sendWsEvent, serverErrorMessage]);
+  }, [activeTopicId, authToken, canManageOwnMessage, chatRoomSlug, messages, pushToast, selectChannelPlaceholderMessage, sendWsEvent, serverErrorMessage, setMessages]);
 
   const openRoomChat = useCallback((slug: string) => {
     const normalized = String(slug || "").trim();
@@ -291,21 +534,194 @@ export function useChatComposerActions({
       return;
     }
 
-    if (normalized !== chatRoomSlug) {
-      setMessages([]);
-      setMessagesHasMore(false);
-      setMessagesNextCursor(null);
+    startTransition(() => {
+      if (normalized !== chatRoomSlug) {
+        setMessagesHasMore(false);
+        setMessagesNextCursor(null);
+      }
+
+      setChatRoomSlug(normalized);
+    });
+  }, [chatRoomSlug, setChatRoomSlug, setMessagesHasMore, setMessagesNextCursor]);
+
+  const togglePinMessage = useCallback((messageId: string) => {
+    if (!activeTopicId) {
+      pushToast(topicOnlyActionMessage);
+      return;
     }
 
-    setChatRoomSlug(normalized);
-  }, [chatRoomSlug, setChatRoomSlug, setMessages, setMessagesHasMore, setMessagesNextCursor]);
+    const currentlyPinned = Boolean(pinnedByMessageId[messageId]);
+    void (async () => {
+      try {
+        if (currentlyPinned) {
+          await api.unpinMessage(authToken, messageId);
+          setPinnedByMessageId((prev) => ({ ...prev, [messageId]: false }));
+          return;
+        }
+
+        await api.pinMessage(authToken, messageId);
+        setPinnedByMessageId((prev) => ({ ...prev, [messageId]: true }));
+      } catch {
+        pushToast(serverErrorMessage);
+      }
+    })();
+  }, [activeTopicId, authToken, pinnedByMessageId, pushToast, serverErrorMessage, topicOnlyActionMessage]);
+
+  const toggleMessageReaction = useCallback((messageId: string, emoji: string = "👍") => {
+    if (!activeTopicId) {
+      pushToast(topicOnlyActionMessage);
+      return;
+    }
+
+    const normalizedMessageId = String(messageId || "").trim();
+    const normalizedEmoji = String(emoji || "").trim();
+    if (!normalizedMessageId || !normalizedEmoji) {
+      return;
+    }
+
+    const currentlyActive = Boolean(reactionsByMessageId[normalizedMessageId]?.[normalizedEmoji]?.reacted);
+    void (async () => {
+      try {
+        if (currentlyActive) {
+          await api.removeMessageReaction(authToken, normalizedMessageId, normalizedEmoji);
+        } else {
+          await api.addMessageReaction(authToken, normalizedMessageId, normalizedEmoji);
+        }
+
+        setReactionsByMessageId((prev) => {
+          const messageReactions = { ...(prev[normalizedMessageId] || {}) };
+          const current = messageReactions[normalizedEmoji] || { count: 0, reacted: false };
+
+          // Realtime echo may already apply this exact toggle before the API call resolves.
+          // In that case, keep the state as-is to avoid local double counting.
+          if (current.reacted === !currentlyActive) {
+            return prev;
+          }
+
+          const nextCount = currentlyActive
+            ? Math.max(0, current.count - 1)
+            : current.count + 1;
+
+          if (nextCount <= 0) {
+            delete messageReactions[normalizedEmoji];
+          } else {
+            messageReactions[normalizedEmoji] = {
+              count: nextCount,
+              reacted: !currentlyActive
+            };
+          }
+
+          const next = { ...prev };
+          if (Object.keys(messageReactions).length === 0) {
+            delete next[normalizedMessageId];
+          } else {
+            next[normalizedMessageId] = messageReactions;
+          }
+
+          return next;
+        });
+      } catch {
+        pushToast(serverErrorMessage);
+      }
+    })();
+  }, [activeTopicId, authToken, pushToast, reactionsByMessageId, serverErrorMessage, topicOnlyActionMessage]);
+
+  const reportMessage = useCallback((messageId: string) => {
+    if (!activeTopicId) {
+      pushToast(topicOnlyActionMessage);
+      return;
+    }
+
+    void (async () => {
+      try {
+        await api.reportMessage(authToken, messageId, {
+          reason: "spam_or_abuse"
+        });
+        pushToast(reportMessageSentMessage);
+      } catch (error) {
+        const code = String((error as { code?: string } | null)?.code || "").trim();
+        if (code === "MessageAlreadyReported") {
+          pushToast(reportMessageExistsMessage);
+          return;
+        }
+
+        pushToast(serverErrorMessage);
+      }
+    })();
+  }, [activeTopicId, authToken, pushToast, reportMessageExistsMessage, reportMessageSentMessage, serverErrorMessage, topicOnlyActionMessage]);
+
+  const applyRemotePinState = useCallback((messageId: string, pinned: boolean) => {
+    const normalizedId = String(messageId || "").trim();
+    if (!normalizedId) {
+      return;
+    }
+
+    setPinnedByMessageId((prev) => ({
+      ...prev,
+      [normalizedId]: Boolean(pinned)
+    }));
+  }, []);
+
+  const applyRemoteMessageReactionState = useCallback((messageId: string, emoji: string, active: boolean, actorUserId?: string) => {
+    const normalizedId = String(messageId || "").trim();
+    const normalizedEmoji = String(emoji || "").trim();
+    if (!normalizedId || !normalizedEmoji) {
+      return;
+    }
+
+    const currentUserId = String(user?.id || "").trim();
+    const normalizedActorUserId = String(actorUserId || "").trim();
+    const actorIsCurrentUser = Boolean(currentUserId && normalizedActorUserId && normalizedActorUserId === currentUserId);
+
+    setReactionsByMessageId((prev) => {
+      const messageReactions = { ...(prev[normalizedId] || {}) };
+      const current = messageReactions[normalizedEmoji] || { count: 0, reacted: false };
+      const shouldSkipOwnEchoDelta = actorIsCurrentUser && current.reacted === active;
+      const nextCount = shouldSkipOwnEchoDelta
+        ? current.count
+        : active
+          ? current.count + 1
+          : Math.max(0, current.count - 1);
+      const nextReacted = actorIsCurrentUser ? active : current.reacted;
+
+      if (nextCount <= 0) {
+        delete messageReactions[normalizedEmoji];
+      } else {
+        messageReactions[normalizedEmoji] = {
+          count: nextCount,
+          reacted: nextReacted
+        };
+      }
+
+      const next = { ...prev };
+      if (Object.keys(messageReactions).length === 0) {
+        delete next[normalizedId];
+      } else {
+        next[normalizedId] = messageReactions;
+      }
+
+      return next;
+    });
+  }, [user?.id]);
 
   return {
     sendMessage,
     handleChatPaste,
     handleChatInputKeyDown,
     startEditingMessage,
+    replyToMessage,
+    cancelReply,
     deleteOwnMessage,
-    openRoomChat
+    openRoomChat,
+    pinnedByMessageId,
+    reactionsByMessageId,
+    togglePinMessage,
+    toggleMessageReaction,
+    reportMessage,
+    pendingChatAttachmentFile,
+    selectAttachmentFile,
+    clearPendingAttachment,
+    applyRemotePinState,
+    applyRemoteMessageReactionState
   };
 }
