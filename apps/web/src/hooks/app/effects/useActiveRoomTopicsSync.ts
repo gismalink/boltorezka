@@ -22,11 +22,17 @@ export function useActiveRoomTopicsSync({
   pushLog
 }: UseActiveRoomTopicsSyncArgs) {
   const topicIdByRoomSlugRef = useRef<Record<string, string>>({});
+  const roomTopicIdsBySlugRef = useRef<Record<string, Set<string>>>({});
 
   useEffect(() => {
     const roomSlug = String(activeChatRoomSlug || "").trim();
     const topicId = String(activeChatTopicId || "").trim();
     if (!roomSlug || !topicId) {
+      return;
+    }
+
+    const knownTopicIds = roomTopicIdsBySlugRef.current[roomSlug];
+    if (!knownTopicIds || !knownTopicIds.has(topicId)) {
       return;
     }
 
@@ -62,6 +68,10 @@ export function useActiveRoomTopicsSync({
         }
 
         const topics = Array.isArray(response.topics) ? response.topics : [];
+        roomTopicIdsBySlugRef.current = {
+          ...roomTopicIdsBySlugRef.current,
+          [roomSlug]: new Set(topics.map((topic) => String(topic.id || "").trim()).filter(Boolean))
+        };
         setChatTopics(topics);
 
         setActiveChatTopicId((prev) => {
