@@ -325,6 +325,50 @@ export function ChatMessageTimeline({
     return byHandle;
   }, [mentionCandidates]);
 
+  const mentionUsersByLabel = useMemo(() => {
+    const byLabel = new Map<string, { label: string; handle: string; userId?: string }>();
+
+    (Array.isArray(mentionCandidates) ? mentionCandidates : []).forEach((candidate) => {
+      if (candidate.kind !== "user") {
+        return;
+      }
+
+      const label = String(candidate.label || "").trim();
+      const normalizedLabel = label.toLowerCase();
+      const handle = String(candidate.handle || "").trim();
+      if (!normalizedLabel || !label || !handle || byLabel.has(normalizedLabel)) {
+        return;
+      }
+
+      byLabel.set(normalizedLabel, {
+        label,
+        handle,
+        userId: String(candidate.userId || "").trim() || undefined
+      });
+    });
+
+    return byLabel;
+  }, [mentionCandidates]);
+
+  const openProfileFromUserName = (userNameRaw: string) => {
+    const userName = String(userNameRaw || "").trim();
+    if (!userName) {
+      return;
+    }
+
+    const resolved = mentionUsersByLabel.get(userName.toLowerCase());
+    if (resolved) {
+      setSelectedMentionProfile(resolved);
+      return;
+    }
+
+    setSelectedMentionProfile({
+      label: userName,
+      handle: userName,
+      userId: undefined
+    });
+  };
+
   useEffect(() => {
     setRenderedMessagesCount(INITIAL_TIMELINE_RENDER_COUNT);
   }, [activeTopicId]);
@@ -527,13 +571,33 @@ export function ChatMessageTimeline({
               <div className="chat-bubble w-fit min-w-[120px]">
                 {showAuthor ? (
                   <div className="chat-meta flex items-baseline gap-2">
-                    <span className="chat-author">{messageVm.userName}</span>
+                    <button
+                      type="button"
+                      className="chat-author chat-author-btn"
+                      onClick={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        openProfileFromUserName(messageVm.userName);
+                      }}
+                    >
+                      {messageVm.userName}
+                    </button>
                   </div>
                 ) : null}
                 <div className="chat-content-row">
                   {messageVm.replyPreview ? (
                     <div className="chat-inline-reply">
-                      <span className="chat-inline-reply-author">{messageVm.replyPreview.userName}</span>
+                      <button
+                        type="button"
+                        className="chat-inline-reply-author chat-inline-reply-author-btn"
+                        onClick={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          openProfileFromUserName(messageVm.replyPreview?.userName || "");
+                        }}
+                      >
+                        {messageVm.replyPreview.userName}
+                      </button>
                       <span className="chat-inline-reply-text">{String(messageVm.replyPreview.text || "").replace(/\s+/g, " ").trim().slice(0, 120)}</span>
                     </div>
                   ) : null}

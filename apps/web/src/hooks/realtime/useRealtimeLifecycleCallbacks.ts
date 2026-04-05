@@ -21,6 +21,7 @@ type UseRealtimeLifecycleCallbacksArgs = {
   setMessagesNextCursor: Dispatch<SetStateAction<MessagesCursor | null>>;
   setChatTopics: Dispatch<SetStateAction<RoomTopic[]>>;
   setRoomUnreadBySlug: Dispatch<SetStateAction<Record<string, number>>>;
+  setRoomMentionUnreadBySlug: Dispatch<SetStateAction<Record<string, number>>>;
   roomSlugById: Record<string, string>;
   activeTopicId: string | null;
   currentUserId: string;
@@ -53,6 +54,7 @@ export function useRealtimeLifecycleCallbacks({
   setMessagesNextCursor,
   setChatTopics,
   setRoomUnreadBySlug,
+  setRoomMentionUnreadBySlug,
   roomSlugById,
   activeTopicId,
   currentUserId,
@@ -178,6 +180,7 @@ export function useRealtimeLifecycleCallbacks({
     topicId?: string;
     userId?: string;
     senderRequestId?: string;
+    mentionUserIds?: string[];
   }) => {
     const targetRoomSlug = String(payload.roomSlug || "").trim();
     const actorUserId = String(payload.userId || "").trim();
@@ -209,11 +212,28 @@ export function useRealtimeLifecycleCallbacks({
       return;
     }
 
+    const mentionTargets = Array.isArray(payload.mentionUserIds)
+      ? payload.mentionUserIds
+        .map((value) => String(value || "").trim())
+        .filter(Boolean)
+      : [];
+    const mentionIncludesCurrentUser = Boolean(
+      selfUserId
+      && mentionTargets.length > 0
+      && mentionTargets.includes(selfUserId)
+    );
+
     setRoomUnreadBySlug((prev) => ({
       ...prev,
       [targetRoomSlug]: Math.max(0, Number(prev[targetRoomSlug] || 0)) + 1
     }));
-  }, [activeTopicId, chatRoomSlug, currentUserId, setRoomUnreadBySlug]);
+    if (mentionIncludesCurrentUser) {
+      setRoomMentionUnreadBySlug((prev) => ({
+        ...prev,
+        [targetRoomSlug]: Math.max(0, Number(prev[targetRoomSlug] || 0)) + 1
+      }));
+    }
+  }, [activeTopicId, chatRoomSlug, currentUserId, setRoomMentionUnreadBySlug, setRoomUnreadBySlug]);
 
   const handleChatTopicRead = useCallback((payload: {
     roomId?: string;
@@ -256,7 +276,24 @@ export function useRealtimeLifecycleCallbacks({
         [targetRoomSlug]: Math.max(0, currentUnread - 1)
       };
     });
-  }, [chatRoomSlug, currentUserId, roomSlugById, setChatTopics, setRoomUnreadBySlug]);
+    setRoomMentionUnreadBySlug((prev) => {
+      const resolvedRoomSlug = targetRoomId ? String(roomSlugById[targetRoomId] || "").trim() : "";
+      const targetRoomSlug = resolvedRoomSlug || chatRoomSlug;
+      if (!targetRoomSlug) {
+        return prev;
+      }
+
+      const currentMentions = Math.max(0, Number(prev[targetRoomSlug] || 0));
+      if (currentMentions === 0) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        [targetRoomSlug]: Math.max(0, currentMentions - 1)
+      };
+    });
+  }, [chatRoomSlug, currentUserId, roomSlugById, setChatTopics, setRoomMentionUnreadBySlug, setRoomUnreadBySlug]);
 
   const sortTopics = useCallback((topics: RoomTopic[]) => {
     return [...topics].sort((a, b) => {

@@ -147,6 +147,7 @@ function RoomRowInner({
   const roomSupportsVideo = room.kind === "text_voice_video";
   const roomHasChatAction = roomSupportsRtc;
   const roomHasSettingsAction = canCreateRooms;
+  const roomHasChatOnlyAction = roomHasChatAction && !roomHasSettingsAction;
   const roomActionButtonsCount = (roomHasChatAction ? 1 : 0) + (roomHasSettingsAction ? 1 : 0);
   const roomActionsVariant = roomActionButtonsCount > 1 ? "two" : roomActionButtonsCount === 1 ? "one" : "none";
   const roomScreenShareOwnerId = String(screenShareOwnerByRoomSlug[room.slug]?.userId || "").trim();
@@ -435,7 +436,7 @@ function RoomRowInner({
       onDragLeave={() => setDropTargetActive(false)}
       onDrop={onRoomDrop}
     >
-      <div className={`channel-row-main channel-row-main-actions-${roomActionsVariant} relative flex items-center`}>
+      <div className={`channel-row-main channel-row-main-actions-${roomActionsVariant} ${roomHasChatOnlyAction ? "channel-row-main-chat-only" : ""} relative flex items-center`}>
       <button
         className={`secondary room-btn room-main-btn room-main-btn-actions-${roomActionsVariant} ${roomIsActive ? "room-btn-active" : "room-btn-interactive"} ${dropTargetActive ? "room-btn-drop-target" : ""}`}
         onClick={() => {
@@ -462,7 +463,7 @@ function RoomRowInner({
         <i className={`bi ${ROOM_KIND_ICON_CLASS[room.kind]}`} aria-hidden="true" />
         <span>{room.title}</span>
       </button>
-      <div className={`channel-right-zone channel-right-zone-actions-${roomActionsVariant} ${roomChatActive && roomActionButtonsCount > 0 ? "channel-right-zone-chat-active" : ""} ${channelSettingsPopupOpenId === room.id ? "channel-right-zone-open" : ""}`}>
+      <div className={`channel-right-zone channel-right-zone-actions-${roomActionsVariant} ${roomHasChatOnlyAction ? "channel-right-zone-chat-only" : ""} ${roomChatActive && roomActionButtonsCount > 0 ? "channel-right-zone-chat-active" : ""} ${channelSettingsPopupOpenId === room.id ? "channel-right-zone-open" : ""}`}>
       {roomMentionUnreadCount > 0 ? <span className="room-mention-badge room-row-unread">@</span> : null}
       {roomUnreadCount > 0 ? <span className={`room-unread-badge room-row-unread ${isRoomUnreadMuted ? "room-unread-badge-muted" : ""}`}>{roomUnreadCount}</span> : null}
       <div className={`channel-row-actions channel-row-actions-actions-${roomActionsVariant} inline-flex items-center gap-1 ${roomChatActive && roomActionButtonsCount > 0 ? "channel-row-actions-chat-active" : ""} ${channelSettingsPopupOpenId === room.id ? "channel-row-actions-open" : ""}`}>

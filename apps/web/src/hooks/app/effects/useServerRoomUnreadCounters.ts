@@ -14,6 +14,7 @@ type RoomUnreadCountItem = {
   roomId: string;
   unreadCount: number;
   mentionUnreadCount: number;
+  source: "cache" | "network";
 };
 
 type RoomUnreadFetchMetrics = {
@@ -74,7 +75,8 @@ async function fetchRoomUnreadCounts(
         value: {
           roomId,
           unreadCount: cached.unreadCount,
-          mentionUnreadCount: cached.mentionUnreadCount
+          mentionUnreadCount: cached.mentionUnreadCount,
+          source: "cache"
         }
       };
       return;
@@ -94,7 +96,7 @@ async function fetchRoomUnreadCounts(
         const mentionUnreadCount = topics
           .reduce((sum, topic) => sum + Math.max(0, Number(topic.mentionUnreadCount || 0)), 0);
         cache?.set(roomId, { unreadCount, mentionUnreadCount, ts: Date.now() });
-        return { roomId, unreadCount, mentionUnreadCount };
+        return { roomId, unreadCount, mentionUnreadCount, source: "network" as const };
       })
     );
 
@@ -337,7 +339,11 @@ export function useServerRoomUnreadCounters({
             return;
           }
 
-          next[targetSlug] = entry.value.unreadCount;
+          const currentValue = Math.max(0, Number(prev[targetSlug] || 0));
+          const fetchedValue = Math.max(0, Number(entry.value.unreadCount || 0));
+          next[targetSlug] = entry.value.source === "cache"
+            ? Math.max(currentValue, fetchedValue)
+            : fetchedValue;
         });
         return next;
       });
@@ -354,7 +360,11 @@ export function useServerRoomUnreadCounters({
             return;
           }
 
-          next[targetSlug] = entry.value.mentionUnreadCount;
+          const currentValue = Math.max(0, Number(prev[targetSlug] || 0));
+          const fetchedValue = Math.max(0, Number(entry.value.mentionUnreadCount || 0));
+          next[targetSlug] = entry.value.source === "cache"
+            ? Math.max(currentValue, fetchedValue)
+            : fetchedValue;
         });
         return next;
       });

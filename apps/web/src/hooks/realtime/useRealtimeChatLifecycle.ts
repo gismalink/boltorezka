@@ -143,6 +143,7 @@ type UseRealtimeChatLifecycleArgs = {
       userName?: string;
       createdAt?: string;
       senderRequestId?: string;
+      mentionUserIds?: string[];
     }
   ) => void;
   onChatTopicRead?: (

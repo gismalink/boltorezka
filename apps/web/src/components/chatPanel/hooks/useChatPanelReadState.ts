@@ -38,9 +38,9 @@ export function useChatPanelReadState({
 
   const autoMarkReadInFlightRef = useRef<Record<string, number>>({});
   const entryUnreadCountByTopicRef = useRef<Record<string, number>>({});
+  const entryUnreadRoomIdRef = useRef<string>("");
   const unreadEntryTopicRef = useRef<string>("");
   const unreadBackfillAttemptsByTopicRef = useRef<Record<string, number>>({});
-  const unreadDividerFadeTimerRef = useRef<number | null>(null);
   const unreadDividerScrolledTopicRef = useRef<string>("");
 
   const getTopicUnreadCount = useCallback((topic: RoomTopic): number => {
@@ -187,6 +187,25 @@ export function useChatPanelReadState({
   }, [topics]);
 
   useEffect(() => {
+    const normalizedRoomId = String(roomId || "").trim();
+    if (!normalizedRoomId) {
+      entryUnreadRoomIdRef.current = "";
+      unreadEntryTopicRef.current = "";
+      setEntryUnreadDivider(null);
+      return;
+    }
+
+    if (entryUnreadRoomIdRef.current === normalizedRoomId) {
+      return;
+    }
+
+    entryUnreadRoomIdRef.current = normalizedRoomId;
+    unreadEntryTopicRef.current = "";
+    unreadDividerScrolledTopicRef.current = "";
+    setEntryUnreadDivider(null);
+  }, [roomId]);
+
+  useEffect(() => {
     const normalizedTopicId = String(activeTopicId || "").trim();
     if (!normalizedTopicId) {
       unreadEntryTopicRef.current = "";
@@ -205,10 +224,6 @@ export function useChatPanelReadState({
     entryUnreadCountByTopicRef.current[normalizedTopicId] = activeTopic ? getTopicUnreadCount(activeTopic) : 0;
 
     setEntryUnreadDivider(null);
-    if (unreadDividerFadeTimerRef.current) {
-      window.clearTimeout(unreadDividerFadeTimerRef.current);
-      unreadDividerFadeTimerRef.current = null;
-    }
   }, [activeTopicId, topics, getTopicUnreadCount]);
 
   useEffect(() => {
@@ -236,10 +251,6 @@ export function useChatPanelReadState({
     if (!normalizedTopicId) {
       setEntryUnreadDivider(null);
       unreadDividerScrolledTopicRef.current = "";
-      if (unreadDividerFadeTimerRef.current) {
-        window.clearTimeout(unreadDividerFadeTimerRef.current);
-        unreadDividerFadeTimerRef.current = null;
-      }
       return;
     }
 
@@ -268,23 +279,6 @@ export function useChatPanelReadState({
       visible: true
     });
     unreadDividerScrolledTopicRef.current = "";
-
-    if (unreadDividerFadeTimerRef.current) {
-      window.clearTimeout(unreadDividerFadeTimerRef.current);
-    }
-    unreadDividerFadeTimerRef.current = window.setTimeout(() => {
-      setEntryUnreadDivider((prev) => {
-        if (!prev || prev.topicId !== normalizedTopicId) {
-          return prev;
-        }
-
-        return {
-          ...prev,
-          visible: false
-        };
-      });
-      unreadDividerFadeTimerRef.current = null;
-    }, 3200);
   }, [activeTopicId, entryUnreadDivider?.messageId, entryUnreadDivider?.topicId, messages]);
 
   useEffect(() => {
@@ -331,6 +325,7 @@ export function useChatPanelReadState({
       entryUnreadDivider?.visible
       && normalizedTopicId
       && entryUnreadDivider.topicId === normalizedTopicId
+      && unreadDividerScrolledTopicRef.current !== normalizedTopicId
     );
 
     if (lockAutoScroll) {
@@ -346,9 +341,8 @@ export function useChatPanelReadState({
 
   useEffect(() => {
     return () => {
-      if (unreadDividerFadeTimerRef.current) {
-        window.clearTimeout(unreadDividerFadeTimerRef.current);
-      }
+      unreadEntryTopicRef.current = "";
+      unreadDividerScrolledTopicRef.current = "";
     };
   }, []);
 

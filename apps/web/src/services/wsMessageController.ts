@@ -132,6 +132,7 @@ type WsMessageControllerOptions = {
       userName?: string;
       createdAt?: string;
       senderRequestId?: string;
+      mentionUserIds?: string[];
     }
   ) => void;
   onChatTopicRead?: (
@@ -391,6 +392,33 @@ export class WsMessageController {
     const senderRequestId = typeof payload.senderRequestId === "string" ? payload.senderRequestId : undefined;
     const incomingRoomSlug = this.asTrimmedString(payload.roomSlug || payload.room_slug);
     const incomingTopicId = this.asTrimmedString(payload.topicId || payload.topic_id);
+    const mentionUserIds = (() => {
+      const fromPayload = payload.mentionUserIds ?? payload.mention_user_ids;
+      if (Array.isArray(fromPayload)) {
+        return fromPayload
+          .map((value) => this.asTrimmedString(value))
+          .filter(Boolean);
+      }
+
+      const mentionsRaw = payload.mentions;
+      if (!Array.isArray(mentionsRaw)) {
+        return [];
+      }
+
+      return mentionsRaw
+        .map((item) => {
+          if (!item || typeof item !== "object") {
+            return "";
+          }
+          const mentionObject = item as Record<string, unknown>;
+          return this.asTrimmedString(
+            mentionObject.userId
+            || mentionObject.user_id
+            || mentionObject.id
+          );
+        })
+        .filter(Boolean);
+    })();
     this.options.onChatMessageReceived?.({
       roomId: this.asTrimmedString(payload.roomId || payload.room_id) || undefined,
       roomSlug: incomingRoomSlug || undefined,
@@ -400,7 +428,8 @@ export class WsMessageController {
       userId: this.asTrimmedString(payload.userId || payload.user_id) || undefined,
       userName: this.asTrimmedString(payload.userName || payload.user_name) || undefined,
       createdAt: this.asTrimmedString(payload.createdAt || payload.created_at) || undefined,
-      senderRequestId
+      senderRequestId,
+      mentionUserIds: mentionUserIds.length > 0 ? mentionUserIds : undefined
     });
     const activeChatRoomSlug = this.asTrimmedString(this.options.getActiveChatRoomSlug?.());
     const activeTopicId = this.asTrimmedString(this.options.getActiveTopicId?.());

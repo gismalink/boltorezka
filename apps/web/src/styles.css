@@ -2373,6 +2373,15 @@ pre {
   transform: translateX(-48px);
 }
 
+.channel-row-main-chat-only.channel-row-main-actions-one:hover .room-row-unread,
+.channel-right-zone-chat-only.channel-right-zone-actions-one.channel-right-zone-open .room-row-unread {
+  transform: translateX(-32px);
+}
+
+.channel-right-zone-chat-only.channel-right-zone-chat-active.channel-right-zone-actions-one .room-row-unread {
+  transform: translateX(-28px);
+}
+
 .channel-row-main-actions-two:hover .room-row-unread,
 .channel-right-zone-actions-two.channel-right-zone-open .room-row-unread {
   transform: translateX(-56px);
@@ -2861,6 +2870,23 @@ pre {
 
 .chat-content-row .chat-text {
   flex: 1 1 auto;
+}
+
+.chat-author-btn,
+.chat-inline-reply-author-btn {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+}
+
+.chat-author-btn:hover,
+.chat-author-btn:focus-visible,
+.chat-inline-reply-author-btn:hover,
+.chat-inline-reply-author-btn:focus-visible {
+  text-decoration: underline;
 }
 
 .chat-attachments-row {
