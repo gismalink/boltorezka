@@ -301,7 +301,7 @@ Scope: единая модель комнатного чата с темами, 
 ### Stage 4 - Test rollout
 
 - [x] Deploy в test.
-- [ ] Smoke: create topic -> send -> reply -> mention -> pin.
+- [x] Smoke: create topic -> send -> reply -> mention -> pin.
 - [ ] Smoke: search по теме и комнате.
 - [ ] Smoke: mute работает, критичные упоминания приходят по policy.
 - [ ] Smoke: unread/read корректны после reconnect.
