@@ -97,6 +97,7 @@ export function useAppWorkspaceActionsRuntimeInput(params: Record<string, unknow
       roomChat: {
         roomPresence: {
           roomSlug: p.roomSlug,
+          chatRoomSlug: p.chatRoomSlug,
           canCreateRooms: p.canCreateRooms,
           roomAdminController: p.roomAdminController,
           disconnectRoom: p.disconnectRoom,
