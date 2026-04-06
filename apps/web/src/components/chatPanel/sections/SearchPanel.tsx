@@ -78,8 +78,21 @@ export function SearchPanel({
 }: SearchPanelProps) {
   const [showAuthorFilter, setShowAuthorFilter] = useState(Boolean(searchAuthorId));
   const [showDateFilters, setShowDateFilters] = useState(Boolean(searchFrom || searchTo));
+  const [searchStatusText, setSearchStatusText] = useState("");
+  const visuallyHiddenStatusStyle = {
+    position: "absolute",
+    width: "1px",
+    height: "1px",
+    padding: 0,
+    margin: "-1px",
+    overflow: "hidden",
+    clip: "rect(0, 0, 0, 0)",
+    whiteSpace: "nowrap",
+    border: 0
+  } as const;
 
   const jumpToResult = (item: SearchResultItem) => {
+    setSearchStatusText(`jump:${item.id}`);
     setSearchJumpStatusText("");
     setSearchJumpTarget({
       messageId: item.id,
@@ -92,8 +105,23 @@ export function SearchPanel({
   const imageOnlyActive = searchHasAttachment && searchAttachmentType === "image";
 
   return (
-    <div id="chat-search-panel" className="chat-search-overlay" role="region" aria-label={t("chat.searchAction")}>
-      <div className="chat-search-panel">
+    <div
+      id="chat-search-panel"
+      className="chat-search-overlay"
+      role="region"
+      aria-label={t("chat.searchAction")}
+      data-agent-id="chat.search.panel"
+    >
+      <div className="chat-search-panel" data-agent-id="chat.search.container">
+      <div
+        className="chat-search-more-hint"
+        role="status"
+        aria-live="polite"
+        data-agent-id="chat.search.status"
+        style={visuallyHiddenStatusStyle}
+      >
+        {searchStatusText || searchJumpStatusText}
+      </div>
       <div className="chat-search-controls">
         <input
           type="text"
@@ -102,19 +130,26 @@ export function SearchPanel({
           onKeyDown={(event) => {
             if (event.key === "Enter") {
               event.preventDefault();
+              setSearchStatusText("search:requested");
               void handleSearchMessages();
             }
           }}
           placeholder={t("chat.searchPlaceholder")}
           disabled={searching}
           aria-label={t("chat.searchQueryAria")}
+          data-agent-id="chat.search.query"
         />
         <select
           className="chat-search-scope-select"
           value={searchScope}
-          onChange={(event) => setSearchScope(event.target.value as "all" | "server" | "room")}
+          onChange={(event) => {
+            const value = event.target.value as "all" | "server" | "room";
+            setSearchScope(value);
+            setSearchStatusText(`scope:${value}`);
+          }}
           aria-label={t("chat.searchScopeAria")}
           disabled={searching}
+          data-agent-id="chat.search.scope"
         >
           <option value="all">{t("chat.searchScopeAll")}</option>
           <option value="server">{t("chat.searchScopeServer")}</option>
@@ -126,18 +161,25 @@ export function SearchPanel({
           onClick={onClose}
           data-tooltip={t("chat.searchCloseTooltip")}
           aria-label={t("chat.searchCloseTooltip")}
+          data-agent-id="chat.search.close"
         >
           <i className="bi bi-x-lg" aria-hidden="true" />
         </Button>
       </div>
-      <div className="chat-search-filters" role="toolbar" aria-label={t("chat.searchScopeAria")}>
+      <div className="chat-search-filters" role="toolbar" aria-label={t("chat.searchScopeAria")} data-agent-id="chat.search.filters">
         <button
           type="button"
           className={`chat-search-filter-toggle ${searchHasMention ? "chat-search-filter-toggle-active" : ""}`}
-          onClick={() => setSearchHasMention(!searchHasMention)}
+          onClick={() => {
+            const next = !searchHasMention;
+            setSearchHasMention(next);
+            setSearchStatusText(`filter:mentions:${next ? "on" : "off"}`);
+          }}
           disabled={searching}
           data-tooltip={t("chat.searchFilterMentions")}
           aria-label={t("chat.searchFilterMentions")}
+          data-agent-id="chat.search.filter.mentions"
+          data-agent-state={searchHasMention ? "on" : "off"}
         >
           <i className="bi bi-at" aria-hidden="true" />
         </button>
@@ -150,10 +192,13 @@ export function SearchPanel({
             if (!next) {
               setSearchAttachmentType("");
             }
+            setSearchStatusText(`filter:attachments:${next ? "on" : "off"}`);
           }}
           disabled={searching}
           data-tooltip={t("chat.searchFilterAttachments")}
           aria-label={t("chat.searchFilterAttachments")}
+          data-agent-id="chat.search.filter.attachments"
+          data-agent-state={searchHasAttachment ? "on" : "off"}
         >
           <i className="bi bi-paperclip" aria-hidden="true" />
         </button>
@@ -164,25 +209,35 @@ export function SearchPanel({
             if (imageOnlyActive) {
               setSearchAttachmentType("");
               setSearchHasAttachment(false);
+              setSearchStatusText("filter:image:off");
               return;
             }
 
             setSearchHasAttachment(true);
             setSearchAttachmentType("image");
+            setSearchStatusText("filter:image:on");
           }}
           disabled={searching}
           data-tooltip={t("chat.searchFilterAttachmentTypeImage")}
           aria-label={t("chat.searchFilterAttachmentTypeImage")}
+          data-agent-id="chat.search.filter.image"
+          data-agent-state={imageOnlyActive ? "on" : "off"}
         >
           <i className="bi bi-image" aria-hidden="true" />
         </button>
         <button
           type="button"
           className={`chat-search-filter-toggle ${searchHasLink ? "chat-search-filter-toggle-active" : ""}`}
-          onClick={() => setSearchHasLink(!searchHasLink)}
+          onClick={() => {
+            const next = !searchHasLink;
+            setSearchHasLink(next);
+            setSearchStatusText(`filter:links:${next ? "on" : "off"}`);
+          }}
           disabled={searching}
           data-tooltip={t("chat.searchFilterLinks")}
           aria-label={t("chat.searchFilterLinks")}
+          data-agent-id="chat.search.filter.links"
+          data-agent-state={searchHasLink ? "on" : "off"}
         >
           <i className="bi bi-link-45deg" aria-hidden="true" />
         </button>
@@ -195,10 +250,13 @@ export function SearchPanel({
             if (!next) {
               setSearchAuthorId("");
             }
+            setSearchStatusText(`filter:author:${next ? "on" : "off"}`);
           }}
           disabled={searching}
           data-tooltip={t("chat.searchFilterAuthor")}
           aria-label={t("chat.searchFilterAuthor")}
+          data-agent-id="chat.search.filter.author"
+          data-agent-state={showAuthorFilter ? "on" : "off"}
         >
           <i className="bi bi-person" aria-hidden="true" />
         </button>
@@ -212,10 +270,13 @@ export function SearchPanel({
               setSearchFrom("");
               setSearchTo("");
             }
+            setSearchStatusText(`filter:date:${next ? "on" : "off"}`);
           }}
           disabled={searching}
           data-tooltip={t("chat.searchDateRangeTooltip")}
           aria-label={t("chat.searchDateRangeTooltip")}
+          data-agent-id="chat.search.filter.date"
+          data-agent-state={showDateFilters ? "on" : "off"}
         >
           <i className="bi bi-calendar-range" aria-hidden="true" />
         </button>
@@ -259,7 +320,7 @@ export function SearchPanel({
       {searchJumpStatusText ? <div className="chat-search-more-hint">{searchJumpStatusText}</div> : null}
       {searchError ? <div className="chat-search-error">{searchError}</div> : null}
       {searchResults.length > 0 ? (
-        <div className="chat-search-results">
+        <div className="chat-search-results" role="list" data-agent-id="chat.search.results">
           {searchResults.map((item) => (
             <article
               key={item.id}
@@ -267,6 +328,10 @@ export function SearchPanel({
               onClick={() => jumpToResult(item)}
               role="button"
               tabIndex={0}
+              data-agent-id="chat.search.result"
+              data-agent-result-id={item.id}
+              data-agent-room-slug={item.roomSlug}
+              data-agent-topic-id={item.topicId || ""}
               onKeyDown={(event) => {
                 if (event.key === "Enter" || event.key === " ") {
                   event.preventDefault();

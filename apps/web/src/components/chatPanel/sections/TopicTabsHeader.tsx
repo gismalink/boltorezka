@@ -50,12 +50,12 @@ export function TopicTabsHeader({
   onToggleSearchPanel
 }: TopicTabsHeaderProps) {
   return (
-    <div className="chat-title-row">
+    <div className="chat-title-row" data-agent-id="chat.topic-navigation">
       <h2 className="chat-title-main">
         {t("chat.title")} ({hasActiveRoom ? roomTitle || roomSlug : t("chat.noChannel")})
       </h2>
       {hasActiveRoom ? (
-        <div className="chat-topic-tabs-row" aria-label={t("chat.topicLabel")}>
+        <div className="chat-topic-tabs-row" aria-label={t("chat.topicLabel")} data-agent-id="chat.topic-navigation.controls">
           <div className="popup-anchor chat-topic-create-anchor" ref={topicCreatePopupRef}>
             <Button
               type="button"
@@ -65,6 +65,7 @@ export function TopicTabsHeader({
               aria-label={t("chat.createTopicTooltip")}
               aria-expanded={topicCreateOpen}
               aria-controls="chat-topic-create-popup"
+              data-agent-id="chat.topic-navigation.create"
             >
               +
             </Button>
@@ -105,7 +106,7 @@ export function TopicTabsHeader({
               </form>
             </PopupPortal>
           </div>
-          <div className="chat-topic-tabs-scroll" role="tablist" aria-label={t("chat.topicSelectAria")}>
+          <div className="chat-topic-tabs-scroll" role="tablist" aria-label={t("chat.topicSelectAria")} data-agent-id="chat.topic-navigation.tablist">
             {sortedTopics.length > 0 ? (
               sortedTopics.map((topic) => {
                 const unreadCount = getTopicUnreadCount(topic);
@@ -121,6 +122,11 @@ export function TopicTabsHeader({
                     role="tab"
                     aria-selected={isActiveTab}
                     aria-label={topic.title}
+                    data-agent-id="chat.topic-navigation.tab"
+                    data-agent-topic-id={String(topic.id || "")}
+                    data-agent-topic-title={topic.title}
+                    data-agent-state={isActiveTab ? "active" : "inactive"}
+                    data-agent-unread-count={String(unreadCount)}
                   >
                     {topic.isPinned ? `${t("chat.topicPinnedBadge")} ` : ""}
                     {topic.title}
@@ -141,6 +147,7 @@ export function TopicTabsHeader({
                 aria-expanded={topicPaletteOpen}
                 aria-controls="chat-topic-palette-dialog"
                 aria-label={t("chat.topicPaletteOpen")}
+                data-agent-id="chat.topic-navigation.palette"
               >
                 ...
               </Button>
@@ -154,6 +161,8 @@ export function TopicTabsHeader({
               aria-controls="chat-search-panel"
               data-tooltip={searchPanelOpen ? t("chat.searchCloseTooltip") : t("chat.searchOpenTooltip")}
               aria-label={searchPanelOpen ? t("chat.searchCloseTooltip") : t("chat.searchOpenTooltip")}
+              data-agent-id="chat.topic-navigation.search-toggle"
+              data-agent-state={searchPanelOpen ? "open" : "closed"}
             >
               <i className="bi bi-search" aria-hidden="true" />
             </Button>
