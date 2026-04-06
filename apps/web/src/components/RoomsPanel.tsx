@@ -33,7 +33,7 @@ export function RoomsPanel({
   screenShareOwnerByRoomSlug,
   roomUnreadBySlug,
   roomMentionUnreadBySlug,
-  serverUnreadCount,
+  serverUnreadCount: _serverUnreadCount,
   currentUserId,
   liveRoomMembersBySlug,
   liveRoomMemberDetailsBySlug,
@@ -404,11 +404,6 @@ export function RoomsPanel({
         onCreateCategory={onCreateCategory}
         onCreateRoom={onCreateRoom}
       />
-      {Math.max(0, serverUnreadCount - getVisibleRoomUnreadCount(normalizedActiveChatRoomSlug)) > 0 ? (
-        <div className="rooms-unread-summary">
-          {t("rooms.unreadSummary").replace("{count}", String(Math.max(0, serverUnreadCount - getVisibleRoomUnreadCount(normalizedActiveChatRoomSlug))))}
-        </div>
-      ) : null}
       <div className="rooms-scroll min-h-0 flex-1 overflow-y-auto">
         {roomsTreeLoading && roomsTree ? (
           <div className="rooms-refresh-indicator" role="status" aria-live="polite" aria-busy="true" aria-label={t("chat.loading")}>
