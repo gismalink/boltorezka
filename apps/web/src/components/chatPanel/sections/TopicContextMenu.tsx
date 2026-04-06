@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { CHAT_AGENT_IDS, CHAT_AGENT_STATUS_STYLE } from "../../../constants/chatAgentSemantics";
 import { Button } from "../../uicomponents";
 
 type TopicContextMenuProps = {
@@ -37,17 +38,6 @@ export function TopicContextMenu({
   onSetTopicMutePreset
 }: TopicContextMenuProps) {
   const [topicMenuStatusText, setTopicMenuStatusText] = useState("");
-  const visuallyHiddenStatusStyle = {
-    position: "absolute",
-    width: "1px",
-    height: "1px",
-    padding: 0,
-    margin: "-1px",
-    overflow: "hidden",
-    clip: "rect(0, 0, 0, 0)",
-    whiteSpace: "nowrap",
-    border: 0
-  } as const;
 
   const runActionWithStatus = (action: "read" | "archive" | "delete") => {
     setTopicMenuStatusText(`action:${action}:requested`);
@@ -69,7 +59,7 @@ export function TopicContextMenu({
       className="floating-popup settings-popup chat-topic-context-menu"
       role="menu"
       aria-label={t("chat.topicLabel")}
-      data-agent-id="chat.topic-context-menu"
+      data-agent-id={CHAT_AGENT_IDS.topicContextMenu}
       data-agent-topic-id={topicId}
       data-agent-topic-archived={archived ? "true" : "false"}
       style={{
@@ -78,14 +68,14 @@ export function TopicContextMenu({
         transform: "translate(calc(-100% - 8px), 8px)"
       }}
     >
-      <div role="status" aria-live="polite" data-agent-id="chat.topic-context-menu.status" style={visuallyHiddenStatusStyle}>
+      <div role="status" aria-live="polite" data-agent-id={CHAT_AGENT_IDS.topicContextMenuStatus} style={CHAT_AGENT_STATUS_STYLE}>
         {topicMenuStatusText}
       </div>
       <Button
         type="button"
         className="secondary tiny"
         role="menuitem"
-        data-agent-id="chat.topic-context-menu.action.read"
+        data-agent-id={CHAT_AGENT_IDS.topicContextMenuActionRead}
         onClick={() => runActionWithStatus("read")}
       >
         {t("chat.markTopicRead")}
@@ -102,7 +92,7 @@ export function TopicContextMenu({
             placeholder={t("chat.editTopicPlaceholder")}
             disabled={saving}
             aria-label={t("chat.editTopicPlaceholder")}
-            data-agent-id="chat.topic-context-menu.rename.input"
+            data-agent-id={CHAT_AGENT_IDS.topicContextMenuRenameInput}
           />
           {renameEditing ? (
             <>
@@ -112,7 +102,7 @@ export function TopicContextMenu({
                 onMouseDown={(event) => event.preventDefault()}
                 onClick={onCancelRename}
                 disabled={saving}
-                data-agent-id="chat.topic-context-menu.rename.cancel"
+                data-agent-id={CHAT_AGENT_IDS.topicContextMenuRenameCancel}
               >
                 {t("settings.cancel")}
               </Button>
@@ -122,7 +112,7 @@ export function TopicContextMenu({
                 onMouseDown={(event) => event.preventDefault()}
                 onClick={applyRenameWithStatus}
                 disabled={saving || renameValue.trim().length === 0}
-                data-agent-id="chat.topic-context-menu.rename.apply"
+                data-agent-id={CHAT_AGENT_IDS.topicContextMenuRenameApply}
               >
                 {t("settings.apply")}
               </Button>
@@ -134,7 +124,7 @@ export function TopicContextMenu({
         type="button"
         className="secondary tiny"
         role="menuitem"
-        data-agent-id="chat.topic-context-menu.action.archive"
+        data-agent-id={CHAT_AGENT_IDS.topicContextMenuActionArchive}
         onClick={() => runActionWithStatus("archive")}
       >
         {archived ? t("chat.unarchiveTopic") : t("chat.archiveTopic")}
@@ -147,7 +137,7 @@ export function TopicContextMenu({
             className={`secondary quality-toggle-btn ${activeMutePreset === "1h" ? "quality-toggle-btn-active" : ""}`}
             onClick={() => setMutePresetWithStatus("1h")}
             disabled={saving}
-            data-agent-id="chat.topic-context-menu.mute.1h"
+            data-agent-id={CHAT_AGENT_IDS.topicContextMenuMute1h}
             data-agent-state={activeMutePreset === "1h" ? "active" : "inactive"}
           >
             1h
@@ -157,7 +147,7 @@ export function TopicContextMenu({
             className={`secondary quality-toggle-btn ${activeMutePreset === "8h" ? "quality-toggle-btn-active" : ""}`}
             onClick={() => setMutePresetWithStatus("8h")}
             disabled={saving}
-            data-agent-id="chat.topic-context-menu.mute.8h"
+            data-agent-id={CHAT_AGENT_IDS.topicContextMenuMute8h}
             data-agent-state={activeMutePreset === "8h" ? "active" : "inactive"}
           >
             8h
@@ -167,7 +157,7 @@ export function TopicContextMenu({
             className={`secondary quality-toggle-btn ${activeMutePreset === "24h" ? "quality-toggle-btn-active" : ""}`}
             onClick={() => setMutePresetWithStatus("24h")}
             disabled={saving}
-            data-agent-id="chat.topic-context-menu.mute.24h"
+            data-agent-id={CHAT_AGENT_IDS.topicContextMenuMute24h}
             data-agent-state={activeMutePreset === "24h" ? "active" : "inactive"}
           >
             24h
@@ -177,7 +167,7 @@ export function TopicContextMenu({
             className={`secondary quality-toggle-btn ${activeMutePreset === "forever" ? "quality-toggle-btn-active" : ""}`}
             onClick={() => setMutePresetWithStatus("forever")}
             disabled={saving}
-            data-agent-id="chat.topic-context-menu.mute.forever"
+            data-agent-id={CHAT_AGENT_IDS.topicContextMenuMuteForever}
             data-agent-state={activeMutePreset === "forever" ? "active" : "inactive"}
           >
             {t("chat.notificationMuteForever")}
@@ -188,7 +178,7 @@ export function TopicContextMenu({
         type="button"
         className="secondary tiny delete-action-btn"
         role="menuitem"
-        data-agent-id="chat.topic-context-menu.action.delete"
+        data-agent-id={CHAT_AGENT_IDS.topicContextMenuActionDelete}
         onClick={() => runActionWithStatus("delete")}
       >
         {t("chat.deleteTopic")}

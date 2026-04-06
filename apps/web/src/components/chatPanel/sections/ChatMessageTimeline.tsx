@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type MouseEvent as ReactMouseEvent, type ReactNode, type RefObject } from "react";
 import type { ChatMessageViewModel } from "../../../utils/chatMessageViewModel";
+import { CHAT_AGENT_IDS, chatAgentMessageId } from "../../../constants/chatAgentSemantics";
 import { Button } from "../../uicomponents";
 
 const INITIAL_TIMELINE_RENDER_COUNT = 180;
@@ -504,7 +505,7 @@ export function ChatMessageTimeline({
       role="log"
       aria-live="polite"
       aria-relevant="additions text"
-      data-agent-id="chat.timeline"
+      data-agent-id={CHAT_AGENT_IDS.timeline}
     >
       {loadingOlderMessages ? <div className="chat-history-loading muted">{t("chat.loading")}</div> : null}
       {hasActiveRoom && !hasTopics ? (
@@ -558,14 +559,14 @@ export function ChatMessageTimeline({
               className={`chat-unread-divider ${unreadDividerVisible ? "chat-unread-divider-visible" : ""}`}
               role="separator"
               aria-label="Unread messages"
-              data-agent-id="chat.timeline.unread-divider"
+              data-agent-id={CHAT_AGENT_IDS.timelineUnreadDivider}
             >
               ----непрочитанные---
             </div>
           ) : null}
           <article
             data-message-id={messageVm.id}
-            data-agent-id={`chat.message.${messageVm.id}`}
+            data-agent-id={chatAgentMessageId(messageVm.id)}
             data-agent-message-author={messageVm.userName}
             data-agent-message-own={isOwn ? "true" : "false"}
             className={`chat-message group grid items-end gap-2 ${isOwn ? "chat-message-own grid-cols-1 justify-items-end" : "grid-cols-[34px_minmax(0,1fr)]"}`}
@@ -716,7 +717,7 @@ export function ChatMessageTimeline({
                     style={{ left: `${reactionMenuX}px`, top: `${reactionMenuY}px` }}
                     role="toolbar"
                     aria-label={t("chat.react")}
-                    data-agent-id="chat.message.reaction-menu"
+                    data-agent-id={CHAT_AGENT_IDS.messageReactionMenu}
                   >
                     {quickReactionOptions.map((emoji) => {
                       const active = Boolean(messageReactions[emoji]?.reacted);
@@ -741,13 +742,13 @@ export function ChatMessageTimeline({
                     role="menu"
                     aria-label={t("chat.messageActions")}
                     style={{ left: `${contextMenuX}px`, top: `${contextMenuY}px` }}
-                    data-agent-id="chat.message.context-menu"
+                    data-agent-id={CHAT_AGENT_IDS.messageContextMenu}
                   >
                     <Button
                       type="button"
                       className="secondary tiny"
                       role="menuitem"
-                      data-agent-id="chat.message.action.reply"
+                      data-agent-id={CHAT_AGENT_IDS.messageActionReply}
                       onClick={() => {
                         onReplyMessage(messageVm.id);
                         closeContextMenu();
@@ -759,7 +760,7 @@ export function ChatMessageTimeline({
                       type="button"
                       className="secondary tiny"
                       role="menuitem"
-                      data-agent-id="chat.message.action.mention"
+                      data-agent-id={CHAT_AGENT_IDS.messageActionMention}
                       onClick={() => {
                         insertMentionToComposer(messageVm.userName);
                         closeContextMenu();
@@ -771,7 +772,7 @@ export function ChatMessageTimeline({
                       type="button"
                       className="secondary tiny"
                       role="menuitem"
-                      data-agent-id="chat.message.action.quote"
+                      data-agent-id={CHAT_AGENT_IDS.messageActionQuote}
                       onClick={() => {
                         insertQuoteToComposer(messageVm.userName, messageVm.text, selectedQuoteText);
                         closeContextMenu();
@@ -785,7 +786,7 @@ export function ChatMessageTimeline({
                       type="button"
                       className="secondary tiny"
                       role="menuitem"
-                      data-agent-id="chat.message.action.mark-unread"
+                      data-agent-id={CHAT_AGENT_IDS.messageActionMarkUnread}
                       onClick={() => {
                         void markTopicUnreadFromMessage(messageVm.id);
                         closeContextMenu();
@@ -798,7 +799,7 @@ export function ChatMessageTimeline({
                       type="button"
                       className="secondary tiny"
                       role="menuitem"
-                      data-agent-id="chat.message.action.pin-toggle"
+                      data-agent-id={CHAT_AGENT_IDS.messageActionPinToggle}
                       onClick={() => {
                         onTogglePinMessage(messageVm.id);
                         closeContextMenu();
@@ -811,7 +812,7 @@ export function ChatMessageTimeline({
                         type="button"
                         className="secondary tiny"
                         role="menuitem"
-                        data-agent-id="chat.message.action.report"
+                        data-agent-id={CHAT_AGENT_IDS.messageActionReport}
                         onClick={() => {
                           onReportMessage(messageVm.id);
                           closeContextMenu();
@@ -826,7 +827,7 @@ export function ChatMessageTimeline({
                           type="button"
                           className="secondary tiny"
                           role="menuitem"
-                          data-agent-id="chat.message.action.edit"
+                          data-agent-id={CHAT_AGENT_IDS.messageActionEdit}
                           onClick={() => {
                             onEditMessage(messageVm.id);
                             closeContextMenu();
@@ -838,7 +839,7 @@ export function ChatMessageTimeline({
                           type="button"
                           className="secondary tiny"
                           role="menuitem"
-                          data-agent-id="chat.message.action.delete"
+                          data-agent-id={CHAT_AGENT_IDS.messageActionDelete}
                           onClick={() => {
                             onDeleteMessage(messageVm.id);
                             closeContextMenu();

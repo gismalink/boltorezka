@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { CHAT_AGENT_IDS, CHAT_AGENT_STATUS_STYLE } from "../../../constants/chatAgentSemantics";
 import { Button } from "../../uicomponents";
 
 type SearchResultItem = {
@@ -79,17 +80,6 @@ export function SearchPanel({
   const [showAuthorFilter, setShowAuthorFilter] = useState(Boolean(searchAuthorId));
   const [showDateFilters, setShowDateFilters] = useState(Boolean(searchFrom || searchTo));
   const [searchStatusText, setSearchStatusText] = useState("");
-  const visuallyHiddenStatusStyle = {
-    position: "absolute",
-    width: "1px",
-    height: "1px",
-    padding: 0,
-    margin: "-1px",
-    overflow: "hidden",
-    clip: "rect(0, 0, 0, 0)",
-    whiteSpace: "nowrap",
-    border: 0
-  } as const;
 
   const jumpToResult = (item: SearchResultItem) => {
     setSearchStatusText(`jump:${item.id}`);
@@ -110,15 +100,15 @@ export function SearchPanel({
       className="chat-search-overlay"
       role="region"
       aria-label={t("chat.searchAction")}
-      data-agent-id="chat.search.panel"
+      data-agent-id={CHAT_AGENT_IDS.searchPanel}
     >
-      <div className="chat-search-panel" data-agent-id="chat.search.container">
+      <div className="chat-search-panel" data-agent-id={CHAT_AGENT_IDS.searchContainer}>
       <div
         className="chat-search-more-hint"
         role="status"
         aria-live="polite"
-        data-agent-id="chat.search.status"
-        style={visuallyHiddenStatusStyle}
+        data-agent-id={CHAT_AGENT_IDS.searchStatus}
+        style={CHAT_AGENT_STATUS_STYLE}
       >
         {searchStatusText || searchJumpStatusText}
       </div>
@@ -137,7 +127,7 @@ export function SearchPanel({
           placeholder={t("chat.searchPlaceholder")}
           disabled={searching}
           aria-label={t("chat.searchQueryAria")}
-          data-agent-id="chat.search.query"
+          data-agent-id={CHAT_AGENT_IDS.searchQuery}
         />
         <select
           className="chat-search-scope-select"
@@ -149,7 +139,7 @@ export function SearchPanel({
           }}
           aria-label={t("chat.searchScopeAria")}
           disabled={searching}
-          data-agent-id="chat.search.scope"
+          data-agent-id={CHAT_AGENT_IDS.searchScope}
         >
           <option value="all">{t("chat.searchScopeAll")}</option>
           <option value="server">{t("chat.searchScopeServer")}</option>
@@ -161,12 +151,12 @@ export function SearchPanel({
           onClick={onClose}
           data-tooltip={t("chat.searchCloseTooltip")}
           aria-label={t("chat.searchCloseTooltip")}
-          data-agent-id="chat.search.close"
+          data-agent-id={CHAT_AGENT_IDS.searchClose}
         >
           <i className="bi bi-x-lg" aria-hidden="true" />
         </Button>
       </div>
-      <div className="chat-search-filters" role="toolbar" aria-label={t("chat.searchScopeAria")} data-agent-id="chat.search.filters">
+      <div className="chat-search-filters" role="toolbar" aria-label={t("chat.searchScopeAria")} data-agent-id={CHAT_AGENT_IDS.searchFilters}>
         <button
           type="button"
           className={`chat-search-filter-toggle ${searchHasMention ? "chat-search-filter-toggle-active" : ""}`}
@@ -178,7 +168,7 @@ export function SearchPanel({
           disabled={searching}
           data-tooltip={t("chat.searchFilterMentions")}
           aria-label={t("chat.searchFilterMentions")}
-          data-agent-id="chat.search.filter.mentions"
+          data-agent-id={CHAT_AGENT_IDS.searchFilterMentions}
           data-agent-state={searchHasMention ? "on" : "off"}
         >
           <i className="bi bi-at" aria-hidden="true" />
@@ -197,7 +187,7 @@ export function SearchPanel({
           disabled={searching}
           data-tooltip={t("chat.searchFilterAttachments")}
           aria-label={t("chat.searchFilterAttachments")}
-          data-agent-id="chat.search.filter.attachments"
+          data-agent-id={CHAT_AGENT_IDS.searchFilterAttachments}
           data-agent-state={searchHasAttachment ? "on" : "off"}
         >
           <i className="bi bi-paperclip" aria-hidden="true" />
@@ -220,7 +210,7 @@ export function SearchPanel({
           disabled={searching}
           data-tooltip={t("chat.searchFilterAttachmentTypeImage")}
           aria-label={t("chat.searchFilterAttachmentTypeImage")}
-          data-agent-id="chat.search.filter.image"
+          data-agent-id={CHAT_AGENT_IDS.searchFilterImage}
           data-agent-state={imageOnlyActive ? "on" : "off"}
         >
           <i className="bi bi-image" aria-hidden="true" />
@@ -236,7 +226,7 @@ export function SearchPanel({
           disabled={searching}
           data-tooltip={t("chat.searchFilterLinks")}
           aria-label={t("chat.searchFilterLinks")}
-          data-agent-id="chat.search.filter.links"
+          data-agent-id={CHAT_AGENT_IDS.searchFilterLinks}
           data-agent-state={searchHasLink ? "on" : "off"}
         >
           <i className="bi bi-link-45deg" aria-hidden="true" />
@@ -255,7 +245,7 @@ export function SearchPanel({
           disabled={searching}
           data-tooltip={t("chat.searchFilterAuthor")}
           aria-label={t("chat.searchFilterAuthor")}
-          data-agent-id="chat.search.filter.author"
+          data-agent-id={CHAT_AGENT_IDS.searchFilterAuthor}
           data-agent-state={showAuthorFilter ? "on" : "off"}
         >
           <i className="bi bi-person" aria-hidden="true" />
@@ -275,7 +265,7 @@ export function SearchPanel({
           disabled={searching}
           data-tooltip={t("chat.searchDateRangeTooltip")}
           aria-label={t("chat.searchDateRangeTooltip")}
-          data-agent-id="chat.search.filter.date"
+          data-agent-id={CHAT_AGENT_IDS.searchFilterDate}
           data-agent-state={showDateFilters ? "on" : "off"}
         >
           <i className="bi bi-calendar-range" aria-hidden="true" />
@@ -320,7 +310,7 @@ export function SearchPanel({
       {searchJumpStatusText ? <div className="chat-search-more-hint">{searchJumpStatusText}</div> : null}
       {searchError ? <div className="chat-search-error">{searchError}</div> : null}
       {searchResults.length > 0 ? (
-        <div className="chat-search-results" role="list" data-agent-id="chat.search.results">
+        <div className="chat-search-results" role="list" data-agent-id={CHAT_AGENT_IDS.searchResults}>
           {searchResults.map((item) => (
             <article
               key={item.id}
@@ -328,7 +318,7 @@ export function SearchPanel({
               onClick={() => jumpToResult(item)}
               role="button"
               tabIndex={0}
-              data-agent-id="chat.search.result"
+              data-agent-id={CHAT_AGENT_IDS.searchResult}
               data-agent-result-id={item.id}
               data-agent-room-slug={item.roomSlug}
               data-agent-topic-id={item.topicId || ""}

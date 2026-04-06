@@ -3,6 +3,7 @@ import { ClipboardEvent, FormEvent, KeyboardEvent, RefObject, useCallback, useEf
 import type { Message, RoomTopic } from "../domain";
 import { buildChatMessageViewModels } from "../utils/chatMessageViewModel";
 import { CHAT_MEMORY_METRICS_ENABLED, CHAT_MEMORY_METRICS_EVERY } from "../constants/appConfig";
+import { CHAT_AGENT_IDS, CHAT_AGENT_STATUS_STYLE } from "../constants/chatAgentSemantics";
 import { useChatPanelInboxNotifications } from "./chatPanel/hooks/useChatPanelInboxNotifications";
 import { useChatPanelAttachmentImages } from "./chatPanel/hooks/useChatPanelAttachmentImages";
 import { useChatPanelReadState } from "./chatPanel/hooks/useChatPanelReadState";
@@ -483,17 +484,6 @@ export function ChatPanel({
     closeSearchPanel,
     toggleSearchPanel
   } = useChatPanelSearchOverlay({ hasActiveRoom });
-  const visuallyHiddenStatusStyle = {
-    position: "absolute",
-    width: "1px",
-    height: "1px",
-    padding: 0,
-    margin: "-1px",
-    overflow: "hidden",
-    clip: "rect(0, 0, 0, 0)",
-    whiteSpace: "nowrap",
-    border: 0
-  } as const;
 
   const chatScreenContext = useMemo(() => {
     const activeTopic = topics.find((topic) => topic.id === activeTopicId) || null;
@@ -508,7 +498,7 @@ export function ChatPanel({
   return (
     <section
       className="card middle-card relative flex min-h-0 flex-1 flex-col overflow-hidden"
-      data-agent-id="chat.panel"
+      data-agent-id={CHAT_AGENT_IDS.panel}
       data-agent-screen-context={chatScreenContext}
     >
       <div className="chat-header-stack">
@@ -585,8 +575,8 @@ export function ChatPanel({
         className="chat-topic-read-status mb-2"
         role="status"
         aria-live="polite"
-        data-agent-id="chat.screen-context.status"
-        style={visuallyHiddenStatusStyle}
+        data-agent-id={CHAT_AGENT_IDS.screenContextStatus}
+        style={CHAT_AGENT_STATUS_STYLE}
       >
         {chatScreenContext}
       </div>
