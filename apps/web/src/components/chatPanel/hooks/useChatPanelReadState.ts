@@ -1,10 +1,15 @@
 import { useCallback, useEffect, useRef, useState, type RefObject } from "react";
 import { api } from "../../../api";
 import type { Message, RoomTopic } from "../../../domain";
+import {
+  countUnreadMessagesExcludingOwn,
+  subtractTrailingOwnMessagesFromUnread
+} from "./unreadUtils";
 
 type UseChatPanelReadStateArgs = {
   t: (key: string) => string;
   authToken: string;
+  currentUserId: string | null;
   activeTopicId: string | null;
   roomId: string;
   topics: RoomTopic[];
@@ -18,6 +23,7 @@ type UseChatPanelReadStateArgs = {
 export function useChatPanelReadState({
   t,
   authToken,
+  currentUserId,
   activeTopicId,
   roomId,
   topics,
@@ -41,6 +47,16 @@ export function useChatPanelReadState({
   const unreadEntryTopicRef = useRef<string>("");
   const unreadBackfillAttemptsByTopicRef = useRef<Record<string, number>>({});
   const unreadDividerScrolledTopicRef = useRef<string>("");
+
+  const normalizedCurrentUserId = String(currentUserId || "").trim();
+
+  // Keep unread UX consistent with product rule: own messages are never considered unread.
+  // We only trim a contiguous own-message tail because unread boundary is derived from the tail.
+  const toEffectiveUnreadCount = useCallback((sourceUnreadCount: number, messageList: Message[]): number => {
+    return subtractTrailingOwnMessagesFromUnread(sourceUnreadCount, messageList, normalizedCurrentUserId);
+  }, [normalizedCurrentUserId]);
+
+  const countUnreadExcludingOwnMessages = useCallback((messageList: Message[]): number => countUnreadMessagesExcludingOwn(messageList, normalizedCurrentUserId), [normalizedCurrentUserId]);
 
   const isMessageSetAlignedWithActiveContext = useCallback(() => {
     if (messages.length === 0) {
@@ -69,13 +85,21 @@ export function useChatPanelReadState({
   }, [activeTopicId, messages, roomId]);
 
   const getTopicUnreadCount = useCallback((topic: RoomTopic): number => {
+    const normalizedTopicId = String(topic.id || "").trim();
+    const normalizedActiveTopicId = String(activeTopicId || "").trim();
+
     const override = topicUnreadOverrideById[topic.id];
-    if (override && topic.unreadCount === override.sourceUnreadCount) {
-      return Math.max(0, override.unreadCount);
+    const sourceUnreadCount = override && topic.unreadCount === override.sourceUnreadCount
+      ? Math.max(0, Number(override.unreadCount || 0))
+      : Math.max(0, Number(topic.unreadCount || 0));
+
+    const isActiveTopic = Boolean(normalizedTopicId && normalizedActiveTopicId && normalizedTopicId === normalizedActiveTopicId);
+    if (!isActiveTopic || !isMessageSetAlignedWithActiveContext()) {
+      return sourceUnreadCount;
     }
 
-    return Math.max(0, Number(topic.unreadCount || 0));
-  }, [topicUnreadOverrideById]);
+    return toEffectiveUnreadCount(sourceUnreadCount, messages);
+  }, [activeTopicId, isMessageSetAlignedWithActiveContext, messages, toEffectiveUnreadCount, topicUnreadOverrideById]);
 
   const markTopicRead = useCallback(async (topicId: string, lastReadMessageId?: string) => {
     if (!authToken || markReadSaving || !topicId) {
@@ -152,6 +176,13 @@ export function useChatPanelReadState({
       return;
     }
 
+    const selectedMessage = messages[selectedIndex];
+    const selectedMessageUserId = String(selectedMessage?.user_id || "").trim();
+    if (normalizedCurrentUserId && selectedMessageUserId && selectedMessageUserId === normalizedCurrentUserId) {
+      setMarkReadStatusText(t("chat.markUnreadUnavailable"));
+      return;
+    }
+
     const previousMessageId = String(messages[selectedIndex - 1]?.id || "").trim();
     if (!previousMessageId) {
       setMarkReadStatusText(t("chat.markUnreadUnavailable"));
@@ -160,7 +191,11 @@ export function useChatPanelReadState({
 
     const selectedTopic = topics.find((topic) => topic.id === topicId);
     const sourceUnreadCount = Math.max(0, Number(selectedTopic?.unreadCount || 0));
-    const estimatedUnreadCount = Math.max(0, messages.length - selectedIndex);
+    const estimatedUnreadCount = countUnreadExcludingOwnMessages(messages.slice(selectedIndex));
+    if (estimatedUnreadCount <= 0) {
+      setMarkReadStatusText(t("chat.markUnreadUnavailable"));
+      return;
+    }
 
     setMarkReadSaving(true);
     setMarkReadStatusText("");
@@ -179,7 +214,7 @@ export function useChatPanelReadState({
     } finally {
       setMarkReadSaving(false);
     }
-  }, [activeTopicId, authToken, markReadSaving, messages, t, topics]);
+  }, [activeTopicId, authToken, countUnreadExcludingOwnMessages, markReadSaving, messages, normalizedCurrentUserId, t, topics]);
 
   useEffect(() => {
     setMarkReadStatusText("");
@@ -250,6 +285,8 @@ export function useChatPanelReadState({
     setEntryUnreadDivider(null);
 
     const activeTopic = topics.find((topic) => String(topic.id || "").trim() === normalizedTopicId);
+    // Snapshot topic unread count at entry. Divider position is computed from this snapshot,
+    // then refined as older history is backfilled.
     entryUnreadCountByTopicRef.current[normalizedTopicId] = activeTopic ? getTopicUnreadCount(activeTopic) : 0;
   }, [activeTopicId, topics, getTopicUnreadCount]);
 
@@ -283,6 +320,7 @@ export function useChatPanelReadState({
       return;
     }
 
+    // Never compute divider against stale room/topic message buffers during chat switch.
     if (!isMessageSetAlignedWithActiveContext()) {
       setEntryUnreadDivider(null);
       unreadDividerScrolledTopicRef.current = "";

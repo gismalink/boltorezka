@@ -277,6 +277,7 @@ export function ChatPanel({
   } = useChatPanelReadState({
     t,
     authToken,
+    currentUserId,
     activeTopicId,
     roomId,
     topics: topicsForUi,

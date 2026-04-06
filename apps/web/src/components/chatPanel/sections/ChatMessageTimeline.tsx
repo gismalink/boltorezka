@@ -793,7 +793,7 @@ export function ChatMessageTimeline({
                         void markTopicUnreadFromMessage(messageVm.id);
                         closeContextMenu();
                       }}
-                      disabled={!activeTopicId || markReadSaving}
+                      disabled={!activeTopicId || markReadSaving || isOwn}
                     >
                       {t("chat.markUnreadFromHere")}
                     </Button>
