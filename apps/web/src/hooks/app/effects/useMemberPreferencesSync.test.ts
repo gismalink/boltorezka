@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { deriveMemberPreferenceTargetUserIds } from "./useMemberPreferencesSync";
+import { deriveMemberPreferenceTargetUserIds } from "./memberPreferencesUtils";
 
 describe("deriveMemberPreferenceTargetUserIds", () => {
   it("excludes current user, empty ids and duplicates", () => {

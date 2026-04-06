@@ -1,6 +1,7 @@
 import { useEffect, useRef, type Dispatch, type SetStateAction } from "react";
 import { api } from "../../../api";
 import type { PresenceMember, RoomMemberPreference } from "../../../domain";
+import { deriveMemberPreferenceTargetUserIds } from "./memberPreferencesUtils";
 
 type UseMemberPreferencesSyncArgs = {
   token: string;
@@ -9,20 +10,6 @@ type UseMemberPreferencesSyncArgs = {
   setMemberPreferencesByUserId: Dispatch<SetStateAction<Record<string, RoomMemberPreference>>>;
   pushLog: (text: string) => void;
 };
-
-export function deriveMemberPreferenceTargetUserIds(
-  roomsPresenceDetailsBySlug: Record<string, PresenceMember[]>,
-  currentUserId: string
-): string[] {
-  const normalizedCurrentUserId = String(currentUserId || "").trim();
-
-  return Array.from(new Set(
-    Object.values(roomsPresenceDetailsBySlug)
-      .flat()
-      .map((member) => String(member.userId || "").trim())
-      .filter((memberUserId) => memberUserId.length > 0 && memberUserId !== normalizedCurrentUserId)
-  ));
-}
 
 export function useMemberPreferencesSync({
   token,
