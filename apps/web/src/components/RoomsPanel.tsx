@@ -27,6 +27,7 @@ export function RoomsPanel({
   canManageAudioQuality,
   roomsTree,
   roomsTreeLoading,
+  roomsTreeBootstrapPending,
   roomSlug,
   activeChatRoomSlug,
   screenShareOwnerByRoomSlug,
@@ -216,10 +217,14 @@ export function RoomsPanel({
     liveRoomMemberDetailsBySlug
   });
 
-  const showInitialRoomsSkeleton = roomsTreeLoading && !roomsTree;
+  const showInitialRoomsSkeleton = (roomsTreeLoading || roomsTreeBootstrapPending) && !roomsTree;
 
   const renderRoomsSkeleton = useCallback((rows: number) => (
     <div className="rooms-loading-skeleton" role="status" aria-live="polite" aria-busy="true" aria-label={t("chat.loading")}>
+      <div className="rooms-loading-caption">
+        <span>{t("chat.loading")}</span>
+        <span className="loading-ellipsis" aria-hidden="true" />
+      </div>
       {Array.from({ length: rows }).map((_, index) => (
         <div className="rooms-loading-row" key={`rooms-loading-row-${index}`}>
           <span className="rooms-loading-dot" aria-hidden="true" />
@@ -408,7 +413,10 @@ export function RoomsPanel({
         {roomsTreeLoading && roomsTree ? (
           <div className="rooms-refresh-indicator" role="status" aria-live="polite" aria-busy="true" aria-label={t("chat.loading")}>
             <span className="rooms-refresh-indicator-dot" aria-hidden="true" />
-            <span>{t("chat.loading")}</span>
+            <span>
+              {t("chat.loading")}
+              <span className="loading-ellipsis" aria-hidden="true" />
+            </span>
           </div>
         ) : null}
 

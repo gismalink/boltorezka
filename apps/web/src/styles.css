@@ -2058,6 +2058,29 @@ pre {
   padding: var(--space-sm);
 }
 
+.rooms-loading-caption {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.1rem;
+  margin-bottom: 0.2rem;
+  font-size: 0.74rem;
+  color: var(--muted);
+}
+
+.loading-ellipsis {
+  display: inline-block;
+  width: 3ch;
+  overflow: hidden;
+  vertical-align: bottom;
+}
+
+.loading-ellipsis::before {
+  content: "...";
+  display: inline-block;
+  width: 0;
+  animation: rooms-loading-dots 1s steps(4, end) infinite;
+}
+
 .rooms-loading-row {
   display: grid;
   grid-template-columns: 0.5rem minmax(0, 1fr) auto;
@@ -2134,6 +2157,15 @@ pre {
   50% {
     opacity: 1;
     transform: scale(1);
+  }
+}
+
+@keyframes rooms-loading-dots {
+  0% {
+    width: 0;
+  }
+  100% {
+    width: 3ch;
   }
 }
 

@@ -129,6 +129,7 @@ export type RoomsPanelProps = {
   canManageAudioQuality: boolean;
   roomsTree: RoomsTreeResponse | null;
   roomsTreeLoading: boolean;
+  roomsTreeBootstrapPending: boolean;
   roomSlug: string;
   activeChatRoomSlug: string;
   screenShareOwnerByRoomSlug: Record<string, { userId: string | null; userName: string | null }>;

@@ -587,6 +587,8 @@ export function App() {
     setRoomSlug, setChatRoomSlug
   }));
 
+  const roomsTreeBootstrapPending = Boolean(String(token || "").trim() && String(currentServerId || "").trim() && !roomsTree);
+
   const { serverUnreadCount } = useServerRoomUnreadCounters({
     token,
     currentServerId,
@@ -826,6 +828,7 @@ export function App() {
     canManageAudioQuality,
     roomsTree,
     roomsTreeLoading,
+    roomsTreeBootstrapPending,
     roomSlug,
     chatRoomSlug,
     roomMediaTopologyBySlug,
