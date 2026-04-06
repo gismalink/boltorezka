@@ -174,20 +174,14 @@ export function RoomsPanel({
   }, [confirmPopup]);
 
   const normalizedCurrentUserId = String(currentUserId || "").trim();
-  const normalizedActiveChatRoomSlug = String(activeChatRoomSlug || "").trim();
-
   const getVisibleRoomUnreadCount = useCallback((roomSlugValue: string) => {
     const normalizedSlug = String(roomSlugValue || "").trim();
     if (!normalizedSlug) {
       return 0;
     }
 
-    if (normalizedActiveChatRoomSlug && normalizedSlug === normalizedActiveChatRoomSlug) {
-      return 0;
-    }
-
     return Math.max(0, Number(roomUnreadBySlug[normalizedSlug] || 0));
-  }, [normalizedActiveChatRoomSlug, roomUnreadBySlug]);
+  }, [roomUnreadBySlug]);
 
   const getVisibleRoomMentionUnreadCount = useCallback((roomSlugValue: string) => {
     const normalizedSlug = String(roomSlugValue || "").trim();
@@ -195,12 +189,8 @@ export function RoomsPanel({
       return 0;
     }
 
-    if (normalizedActiveChatRoomSlug && normalizedSlug === normalizedActiveChatRoomSlug) {
-      return 0;
-    }
-
     return Math.max(0, Number(roomMentionUnreadBySlug[normalizedSlug] || 0));
-  }, [normalizedActiveChatRoomSlug, roomMentionUnreadBySlug]);
+  }, [roomMentionUnreadBySlug]);
 
   const {
     onlineOutsideRooms,
