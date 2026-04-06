@@ -25,6 +25,7 @@ type ChatPanelOverlaysProps = {
   selectTopicFromPalette: (topicId: string) => void;
   topicContextMenu: { topicId: string; x: number; y: number } | null;
   topics: RoomTopic[];
+  isTopicProtected: (topicId: string) => boolean;
   editingTopicSaving: boolean;
   archivingTopicId: string | null;
   notificationSaving: boolean;
@@ -62,6 +63,7 @@ export function ChatPanelOverlays({
   selectTopicFromPalette,
   topicContextMenu,
   topics,
+  isTopicProtected,
   editingTopicSaving,
   archivingTopicId,
   notificationSaving,
@@ -187,23 +189,32 @@ export function ChatPanelOverlays({
         : null}
       {topicContextMenu && typeof document !== "undefined"
         ? createPortal(
-          <TopicContextMenu
-            t={t}
-            topicId={String(topicContextMenu.topicId || "")}
-            x={topicContextMenu.x}
-            y={topicContextMenu.y}
-            archived={Boolean(topics.find((topic) => topic.id === topicContextMenu.topicId)?.archivedAt)}
-            saving={editingTopicSaving || Boolean(archivingTopicId) || notificationSaving}
-            renameValue={editingTopicTitle}
-            onRenameValueChange={setEditingTopicTitle}
-            renameEditing={isEditingTopicTitleInline}
-            onStartRename={onStartTopicRenameInline}
-            onApplyRename={applyTopicRename}
-            onCancelRename={onCancelTopicRenameInline}
-            onRunAction={runTopicMenuAction}
-            activeMutePreset={topicMutePresetById[String(topicContextMenu.topicId || "").trim()] || null}
-            onSetTopicMutePreset={setTopicMutePreset}
-          />,
+          (() => {
+            const normalizedTopicId = String(topicContextMenu.topicId || "").trim();
+            const protectedTopic = isTopicProtected(normalizedTopicId);
+            return (
+              <TopicContextMenu
+                t={t}
+                topicId={normalizedTopicId}
+                x={topicContextMenu.x}
+                y={topicContextMenu.y}
+                archived={Boolean(topics.find((topic) => topic.id === topicContextMenu.topicId)?.archivedAt)}
+                saving={editingTopicSaving || Boolean(archivingTopicId) || notificationSaving}
+                renameValue={editingTopicTitle}
+                onRenameValueChange={setEditingTopicTitle}
+                renameEditing={isEditingTopicTitleInline}
+                onStartRename={onStartTopicRenameInline}
+                onApplyRename={applyTopicRename}
+                onCancelRename={onCancelTopicRenameInline}
+                onRunAction={runTopicMenuAction}
+                activeMutePreset={topicMutePresetById[String(topicContextMenu.topicId || "").trim()] || null}
+                onSetTopicMutePreset={setTopicMutePreset}
+                canRename={!protectedTopic}
+                canDelete={!protectedTopic}
+                protectedMessage={t("chat.mainTopicProtected")}
+              />
+            );
+          })(),
           document.body
         )
         : null}

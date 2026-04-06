@@ -151,6 +151,53 @@ export function ChatPanel({
   const messageVmBuildMsRef = useRef(0);
   const metricsSamplesRef = useRef(0);
   const hasActiveRoom = Boolean(roomSlug);
+  const mainTopicId = useMemo(() => {
+    if (topics.length === 0) {
+      return null;
+    }
+
+    const sortedByMainPriority = [...topics].sort((a, b) => {
+      const positionDiff = Number(a.position || 0) - Number(b.position || 0);
+      if (positionDiff !== 0) {
+        return positionDiff;
+      }
+
+      const createdAtDiff = Number(new Date(a.createdAt)) - Number(new Date(b.createdAt));
+      if (createdAtDiff !== 0) {
+        return createdAtDiff;
+      }
+
+      return String(a.id || "").localeCompare(String(b.id || ""));
+    });
+
+    return String(sortedByMainPriority[0]?.id || "").trim() || null;
+  }, [topics]);
+
+  const effectiveMainTopicTitle = useMemo(
+    () => String(roomTitle || roomSlug || t("chat.noChannel")).trim() || t("chat.noChannel"),
+    [roomSlug, roomTitle, t]
+  );
+
+  const topicsForUi = useMemo(() => {
+    if (!mainTopicId) {
+      return topics;
+    }
+
+    return topics.map((topic) => {
+      if (String(topic.id || "").trim() !== mainTopicId) {
+        return topic;
+      }
+      return {
+        ...topic,
+        title: effectiveMainTopicTitle
+      };
+    });
+  }, [effectiveMainTopicTitle, mainTopicId, topics]);
+
+  const isMainTopic = useCallback((topicId: string) => {
+    const normalizedTopicId = String(topicId || "").trim();
+    return Boolean(mainTopicId && normalizedTopicId && normalizedTopicId === mainTopicId);
+  }, [mainTopicId]);
 
   const {
     topicCreatePopupRef,
@@ -203,7 +250,7 @@ export function ChatPanel({
     roomId,
     roomSlug,
     activeTopicId,
-    topics,
+    topics: topicsForUi,
     loadingOlderMessages,
     messagesHasMore,
     onOpenRoomChat,
@@ -232,7 +279,7 @@ export function ChatPanel({
     authToken,
     activeTopicId,
     roomId,
-    topics,
+    topics: topicsForUi,
     messages,
     loadingOlderMessages,
     messagesHasMore,
@@ -264,7 +311,8 @@ export function ChatPanel({
   } = useChatPanelTopicActions({
     t,
     authToken,
-    topics,
+    topics: topicsForUi,
+    isTopicProtected: isMainTopic,
     notificationMode,
     markTopicRead,
     onUpdateTopic,
@@ -282,7 +330,7 @@ export function ChatPanel({
     sortedTopics,
     filteredTopicsForPalette
   } = useChatPanelTopicLists({
-    topics,
+    topics: topicsForUi,
     activeTopicId,
     topicFilterMode,
     currentUserId,
@@ -298,7 +346,7 @@ export function ChatPanel({
     onLoadOlderMessages
   });
 
-  const activeTopic = useMemo(() => topics.find((topic) => topic.id === activeTopicId) ?? null, [topics, activeTopicId]);
+  const activeTopic = useMemo(() => topicsForUi.find((topic) => topic.id === activeTopicId) ?? null, [topicsForUi, activeTopicId]);
   const activeTopicIsArchived = Boolean(activeTopic?.archivedAt);
 
   const messageViewModels = useMemo(() => {
@@ -460,7 +508,7 @@ export function ChatPanel({
     hasTopics,
     roomSlug,
     activeTopicId,
-    topics,
+    topics: topicsForUi,
     filteredTopicsForPalette,
     topicPaletteOpen,
     setTopicPaletteOpen,
@@ -486,14 +534,14 @@ export function ChatPanel({
   } = useChatPanelSearchOverlay({ hasActiveRoom });
 
   const chatScreenContext = useMemo(() => {
-    const activeTopic = topics.find((topic) => topic.id === activeTopicId) || null;
+    const activeTopic = topicsForUi.find((topic) => topic.id === activeTopicId) || null;
     const roomValue = hasActiveRoom ? String(roomSlug || "unknown") : "none";
     const topicValue = activeTopic ? `${activeTopic.id}:${activeTopic.title}` : "none";
     const searchValue = searchPanelOpen ? "open" : "closed";
     const archiveValue = activeTopicIsArchived ? "archived" : "active";
     const topicsValue = hasTopics ? "present" : "empty";
     return `room=${roomValue};topic=${topicValue};topicState=${archiveValue};topics=${topicsValue};search=${searchValue}`;
-  }, [activeTopicId, activeTopicIsArchived, hasActiveRoom, hasTopics, roomSlug, searchPanelOpen, topics]);
+  }, [activeTopicId, activeTopicIsArchived, hasActiveRoom, hasTopics, roomSlug, searchPanelOpen, topicsForUi]);
 
   return (
     <section
@@ -665,7 +713,8 @@ export function ChatPanel({
         setTopicPaletteSelectedIndex={setTopicPaletteSelectedIndex}
         selectTopicFromPalette={selectTopicFromPalette}
         topicContextMenu={topicContextMenu}
-        topics={topics}
+        topics={topicsForUi}
+        isTopicProtected={isMainTopic}
         editingTopicSaving={editingTopicSaving}
         archivingTopicId={archivingTopicId}
         notificationSaving={notificationSaving}

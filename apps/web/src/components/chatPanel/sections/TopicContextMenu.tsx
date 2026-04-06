@@ -24,6 +24,9 @@ type TopicContextMenuProps = {
   onRunAction: (action: "read" | "archive" | "delete") => Promise<void>;
   activeMutePreset: "1h" | "8h" | "24h" | "forever" | "off" | null;
   onSetTopicMutePreset: (preset: "1h" | "8h" | "24h" | "forever" | "off") => Promise<void>;
+  canRename: boolean;
+  canDelete: boolean;
+  protectedMessage: string;
 };
 
 export function TopicContextMenu({
@@ -41,7 +44,10 @@ export function TopicContextMenu({
   onCancelRename,
   onRunAction,
   activeMutePreset,
-  onSetTopicMutePreset
+  onSetTopicMutePreset,
+  canRename,
+  canDelete,
+  protectedMessage
 }: TopicContextMenuProps) {
   const [topicMenuStatusText, setTopicMenuStatusText] = useState("");
 
@@ -115,11 +121,11 @@ export function TopicContextMenu({
             type="text"
             className="channel-settings-title-input chat-topic-context-rename-input"
             value={renameValue}
-            onFocus={onStartRename}
+            onFocus={canRename ? onStartRename : undefined}
             onBlur={onCancelRename}
             onChange={(event) => onRenameValueChange(event.target.value)}
             placeholder={t("chat.editTopicPlaceholder")}
-            disabled={saving}
+            disabled={saving || !canRename}
             aria-label={t("chat.editTopicPlaceholder")}
             data-agent-id={CHAT_AGENT_IDS.topicContextMenuRenameInput}
           />
@@ -140,7 +146,7 @@ export function TopicContextMenu({
                 className="tiny whitespace-nowrap chat-topic-context-rename-btn"
                 onMouseDown={(event) => event.preventDefault()}
                 onClick={applyRenameWithStatus}
-                disabled={saving || renameValue.trim().length === 0}
+                disabled={saving || !canRename || renameValue.trim().length === 0}
                 data-agent-id={CHAT_AGENT_IDS.topicContextMenuRenameApply}
               >
                 {t("settings.apply")}
@@ -148,6 +154,7 @@ export function TopicContextMenu({
             </>
           ) : null}
         </div>
+        {!canRename ? <div className="muted text-xs">{protectedMessage}</div> : null}
       </div>
       <Button
         type="button"
@@ -209,6 +216,7 @@ export function TopicContextMenu({
         role="menuitem"
         data-agent-id={CHAT_AGENT_IDS.topicContextMenuActionDelete}
         onClick={() => runActionWithStatus("delete")}
+        disabled={!canDelete}
       >
         {t("chat.deleteTopic")}
       </Button>

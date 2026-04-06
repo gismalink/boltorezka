@@ -8,6 +8,7 @@ type UseChatPanelTopicActionsArgs = {
   t: (key: string) => string;
   authToken: string;
   topics: RoomTopic[];
+  isTopicProtected: (topicId: string) => boolean;
   notificationMode: "all" | "mentions" | "none";
   markTopicRead: (topicId: string, lastReadMessageId?: string) => Promise<void>;
   onUpdateTopic: (topicId: string, title: string) => Promise<void>;
@@ -20,6 +21,7 @@ export function useChatPanelTopicActions({
   t,
   authToken,
   topics,
+  isTopicProtected,
   notificationMode,
   markTopicRead,
   onUpdateTopic,
@@ -130,6 +132,11 @@ export function useChatPanelTopicActions({
     }
 
     if (action === "delete") {
+      if (isTopicProtected(targetTopic.id)) {
+        setEditingTopicStatusText(t("chat.mainTopicProtected"));
+        setTopicContextMenu(null);
+        return;
+      }
       setTopicDeleteConfirm({ topicId: targetTopic.id, title: targetTopic.title });
       setTopicContextMenu(null);
       return;
@@ -156,6 +163,11 @@ export function useChatPanelTopicActions({
     const targetTopicId = String(topicContextMenu?.topicId || "").trim();
     const trimmedTitle = editingTopicTitle.trim();
     if (!targetTopicId || !trimmedTitle || editingTopicSaving) {
+      return;
+    }
+
+    if (isTopicProtected(targetTopicId)) {
+      setEditingTopicStatusText(t("chat.mainTopicProtected"));
       return;
     }
 

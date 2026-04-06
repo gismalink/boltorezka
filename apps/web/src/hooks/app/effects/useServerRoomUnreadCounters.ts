@@ -275,11 +275,7 @@ export function useServerRoomUnreadCounters({
   }, [allRooms]);
 
   const refreshRoomIds = useMemo(() => {
-    const activeSlug = String(chatRoomSlug || "").trim();
     const slugsToRefresh = new Set<string>();
-    if (activeSlug) {
-      slugsToRefresh.add(activeSlug);
-    }
 
     Object.entries(roomUnreadBySlug).forEach(([slug, unreadCount]) => {
       if (Math.max(0, Number(unreadCount || 0)) > 0) {
@@ -295,8 +291,9 @@ export function useServerRoomUnreadCounters({
 
     return Array.from(slugsToRefresh)
       .map((slug) => roomIdBySlug[slug])
-      .filter((roomId): roomId is string => Boolean(roomId));
-  }, [chatRoomSlug, roomIdBySlug, roomUnreadBySlug, roomMentionUnreadBySlug]);
+      .filter((roomId): roomId is string => Boolean(roomId))
+      .sort((a, b) => a.localeCompare(b));
+  }, [roomIdBySlug, roomUnreadBySlug, roomMentionUnreadBySlug]);
 
   useEffect(() => {
     const normalizedToken = String(token || "").trim();

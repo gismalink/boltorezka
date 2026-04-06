@@ -1,4 +1,4 @@
-import { useEffect, type Dispatch, type SetStateAction } from "react";
+import { useEffect, useRef, type Dispatch, type SetStateAction } from "react";
 import { api } from "../../../api";
 import type { PresenceMember, RoomMemberPreference } from "../../../domain";
 
@@ -31,22 +31,33 @@ export function useMemberPreferencesSync({
   setMemberPreferencesByUserId,
   pushLog
 }: UseMemberPreferencesSyncArgs) {
+  const lastRequestedKeyRef = useRef("");
+
   useEffect(() => {
     if (!token || !currentUserId) {
       setMemberPreferencesByUserId({});
+      lastRequestedKeyRef.current = "";
       return;
     }
 
     const targetUserIds = deriveMemberPreferenceTargetUserIds(roomsPresenceDetailsBySlug, currentUserId);
+    const normalizedTargetUserIds = [...targetUserIds].sort((a, b) => a.localeCompare(b));
+    const requestKey = normalizedTargetUserIds.join(",");
 
-    if (targetUserIds.length === 0) {
+    if (normalizedTargetUserIds.length === 0) {
+      lastRequestedKeyRef.current = "";
       return;
     }
+
+    if (requestKey === lastRequestedKeyRef.current) {
+      return;
+    }
+    lastRequestedKeyRef.current = requestKey;
 
     let active = true;
     void (async () => {
       try {
-        const response = await api.memberPreferences(token, targetUserIds);
+        const response = await api.memberPreferences(token, normalizedTargetUserIds);
         if (!active) {
           return;
         }
@@ -59,6 +70,8 @@ export function useMemberPreferencesSync({
           return next;
         });
       } catch (error) {
+        // Allow retry for the same target set after transient network errors.
+        lastRequestedKeyRef.current = "";
         pushLog(`member preferences load failed: ${(error as Error).message}`);
       }
     })();
