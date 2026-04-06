@@ -45,7 +45,7 @@ Scope: Внедрение подхода accessibility tree-first для web и 
 - [x] Добавить единый status/live feedback слой для подтверждения действий агента (pilot scope).
 - [x] Для stateful controls pilot scope выставлять актуальный `value`/`state` (selected/pinned/unread/muted и т.д.).
 - [x] Добавить событийный лог подтверждений (action accepted/failed + reason), пригодный для агентной валидации (pilot UI status channel).
-- [ ] Внедрить шаблон ошибок для агентов: детерминированные причины отказа вместо неявного UI-состояния.
+- [x] Внедрить шаблон ошибок для агентов: детерминированные причины отказа вместо неявного UI-состояния (единый reason-code helper в chat semantic contract).
 
 ### 2.4 Coordinates и Deterministic Interaction
 
@@ -93,6 +93,7 @@ Scope: Внедрение подхода accessibility tree-first для web и 
 	- `SMOKE_ALL_RUN_AGENT_SEMANTICS_BROWSER=1` в `scripts/smoke/run-all-smokes.sh`.
 - Документация smoke/feature-log синхронизирована под новый gate.
 - Добавлены deterministic статусы `accepted/failed:<reason>` для composer/search/topic-context действий в pilot chat scope.
+- Стандартизирован словарь reason-codes и общий helper построения статусов в `chatAgentSemantics`.
 
 ## 5) Ограничения выполнения
 
