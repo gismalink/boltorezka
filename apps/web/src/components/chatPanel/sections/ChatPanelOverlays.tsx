@@ -87,12 +87,14 @@ export function ChatPanelOverlays({
             aria-modal="true"
             aria-label={t("chat.imagePreviewTitle")}
             onClick={() => setPreviewImageUrl(null)}
+            data-agent-id="chat.overlay.image-preview"
           >
             <div className="chat-image-modal-card" onClick={(event) => event.stopPropagation()}>
               <Button
                 type="button"
                 className="secondary tiny chat-image-modal-close"
                 onClick={() => setPreviewImageUrl(null)}
+                data-agent-id="chat.overlay.image-preview.close"
               >
                 {t("chat.closeImagePreview")}
               </Button>
@@ -115,14 +117,16 @@ export function ChatPanelOverlays({
             aria-modal="true"
             aria-label={t("chat.topicPaletteTitle")}
             onClick={closeTopicPalette}
+            data-agent-id="chat.overlay.topic-palette"
           >
             <section
               className="chat-topic-palette-card"
               onClick={(event) => event.stopPropagation()}
+              data-agent-id="chat.overlay.topic-palette.card"
             >
               <div className="chat-topic-palette-head">
                 <h3>{t("chat.topicPaletteTitle")}</h3>
-                <Button type="button" className="secondary tiny" onClick={closeTopicPalette}>
+                <Button type="button" className="secondary tiny" onClick={closeTopicPalette} data-agent-id="chat.overlay.topic-palette.close">
                   {t("chat.editTopicCancel")}
                 </Button>
               </div>
@@ -137,8 +141,9 @@ export function ChatPanelOverlays({
                 aria-label={t("chat.topicPalettePlaceholder")}
                 aria-controls={topicPaletteListboxId}
                 aria-activedescendant={filteredTopicsForPalette[topicPaletteSelectedIndex] ? `chat-topic-option-${filteredTopicsForPalette[topicPaletteSelectedIndex].id}` : undefined}
+                data-agent-id="chat.overlay.topic-palette.search"
               />
-              <div id={topicPaletteListboxId} className="chat-topic-palette-list" role="listbox" aria-label={t("chat.topicPaletteResultsAria")}>
+              <div id={topicPaletteListboxId} className="chat-topic-palette-list" role="listbox" aria-label={t("chat.topicPaletteResultsAria")} data-agent-id="chat.overlay.topic-palette.list">
                 {filteredTopicsForPalette.length === 0 ? (
                   <div className="chat-topic-palette-empty">{t("chat.topicPaletteEmpty")}</div>
                 ) : (
@@ -158,6 +163,11 @@ export function ChatPanelOverlays({
                         aria-current={isActive ? "true" : undefined}
                         onMouseEnter={() => setTopicPaletteSelectedIndex(index)}
                         onClick={() => selectTopicFromPalette(topic.id)}
+                        data-agent-id="chat.overlay.topic-palette.option"
+                        data-agent-topic-id={topic.id}
+                        data-agent-topic-title={topic.title}
+                        data-agent-state={isActive ? "active" : "inactive"}
+                        data-agent-unread-count={String(unread)}
                       >
                         <span className="chat-topic-palette-item-title-wrap">
                           {topic.isPinned ? <span className="chat-topic-palette-item-pin">{t("chat.topicPinnedBadge")}</span> : null}
@@ -178,6 +188,7 @@ export function ChatPanelOverlays({
         ? createPortal(
           <TopicContextMenu
             t={t}
+            topicId={String(topicContextMenu.topicId || "")}
             x={topicContextMenu.x}
             y={topicContextMenu.y}
             archived={Boolean(topics.find((topic) => topic.id === topicContextMenu.topicId)?.archivedAt)}
@@ -204,6 +215,7 @@ export function ChatPanelOverlays({
                 setTopicDeleteConfirm(null);
               }
             }}
+            data-agent-id="chat.overlay.topic-delete-confirm"
           >
             <div className="card compact settings-confirm-modal w-full max-w-[420px]">
               <h3 className="subheading settings-confirm-title">{t("chat.deleteTopic")}</h3>
@@ -213,10 +225,10 @@ export function ChatPanelOverlays({
                 <strong>{topicDeleteConfirm.title}</strong>
               </p>
               <div className="delete-confirm-actions flex flex-wrap items-center gap-3">
-                <Button type="button" className="secondary" onClick={() => setTopicDeleteConfirm(null)} disabled={editingTopicSaving}>
+                <Button type="button" className="secondary" onClick={() => setTopicDeleteConfirm(null)} disabled={editingTopicSaving} data-agent-id="chat.overlay.topic-delete-confirm.cancel">
                   {t("common.no")}
                 </Button>
-                <Button type="button" className="delete-confirm-btn" onClick={() => void confirmDeleteTopic()} disabled={editingTopicSaving}>
+                <Button type="button" className="delete-confirm-btn" onClick={() => void confirmDeleteTopic()} disabled={editingTopicSaving} data-agent-id="chat.overlay.topic-delete-confirm.confirm">
                   {t("common.yes")}
                 </Button>
               </div>
