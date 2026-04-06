@@ -93,6 +93,16 @@ async function main() {
     checks.push(await requireVisible(page, '[data-agent-id="chat.search.scope"]', "chat.search.scope"));
     checks.push(await requireVisible(page, '[data-agent-id="chat.search.filters"]', "chat.search.filters"));
 
+    if (await maybeVisible(page, '[data-agent-id="userdock.voice-settings.toggle"]')) {
+      await page.locator('[data-agent-id="userdock.voice-settings.toggle"]').first().click();
+      if (await maybeVisible(page, '[data-agent-id="settings.user-modal.open"]')) {
+        await page.locator('[data-agent-id="settings.user-modal.open"]').first().click();
+        checks.push(await requireVisible(page, '[data-agent-id="settings.user-modal"]', "settings.user-modal"));
+        checks.push(await requireVisible(page, '[data-agent-id="settings.user-modal.close"]', "settings.user-modal.close"));
+        await page.locator('[data-agent-id="settings.user-modal.close"]').first().click();
+      }
+    }
+
     console.log("[smoke:web:agent-semantics:browser] ok");
     console.log(`- app url: ${appUrl}`);
     console.log(`- verified selectors: ${checks.length}`);

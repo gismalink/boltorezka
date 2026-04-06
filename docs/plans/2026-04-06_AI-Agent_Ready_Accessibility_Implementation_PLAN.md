@@ -96,6 +96,7 @@ Scope: Внедрение подхода accessibility tree-first для web и 
 - Стандартизирован словарь reason-codes и общий helper построения статусов в `chatAgentSemantics`.
 - Расширена modal/profile семантика в chat pilot (`data-agent-id` для profile modal) и уменьшен decorative noise в accessibility tree (tab glyphs/unread divider visual tokens скрыты для assistive tree).
 - Добавлены deterministic `data-agent-id` и dialog semantics для user settings/delete-confirm и room member profile modal.
+- Browser smoke `smoke:web:agent-semantics:browser` расширен на optional путь открытия user settings modal через user dock controls.
 
 ## 5) Ограничения выполнения
 
