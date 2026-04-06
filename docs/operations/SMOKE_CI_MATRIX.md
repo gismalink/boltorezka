@@ -13,6 +13,7 @@
 | API smoke | `SMOKE_API=1 npm run check:quick` | Recommended |
 | API+SSO smoke | `SMOKE_API=1 SMOKE_SSO=1 SMOKE_API_URL=https://test.datowave.com npm run check:quick` | Recommended |
 | Auth session lifecycle smoke (refresh/logout/revoke) | `SMOKE_TEST_BEARER_TOKEN=<sid-token> SMOKE_API_URL=https://test.datowave.com npm run smoke:auth:session` | Recommended |
+| Agent-ready chat semantics browser smoke (data-agent-id contract) | `SMOKE_TEST_BEARER_TOKEN=<token> SMOKE_WEB_BASE_URL=https://test.datowave.com npm run smoke:web:agent-semantics:browser` | Optional canary |
 | RNNoise browser smoke (voice settings on/off) | `SMOKE_TEST_BEARER_TOKEN=<token> SMOKE_WEB_BASE_URL=https://test.datowave.com npm run smoke:web:rnnoise:browser` | Optional canary (feature currently disabled by default) |
 | Desktop foundation smoke (Electron shell) | `npm run desktop:smoke` | Recommended for desktop feature branches |
 | Desktop runtime smoke (Electron + runtime markers) | `SMOKE_WEB_BASE_URL=https://test.datowave.com npm run smoke:desktop:runtime` | Recommended for desktop feature branches |
@@ -82,6 +83,7 @@ Policy:
 | one-way media counters (`audio`/`video`) | postdeploy summary + fail gate (`SMOKE_FAIL_ON_ONE_WAY=1`) |
 | Denied media UX gate (`banner + lock controls`) | `npm run smoke:web:denied-media` (invoked from `smoke:web:e2e`) |
 | Browser-level denied media UX gate (headless) | `SMOKE_WEB_BASE_URL=<url> npm run smoke:web:denied-media:browser` (optional in `smoke:web:e2e` via `SMOKE_E2E_DENIED_MEDIA_BROWSER=1`) |
+| Browser-level chat agent semantics gate (headless) | `SMOKE_WEB_BASE_URL=<url> SMOKE_TEST_BEARER_TOKEN=<token> npm run smoke:web:agent-semantics:browser` (optional in `smoke:web:e2e` via `SMOKE_E2E_AGENT_SEMANTICS_BROWSER=1`; `skip`, if token is missing) |
 | Browser-level RNNoise voice-settings gate (headless) | `SMOKE_WEB_BASE_URL=<url> SMOKE_TEST_BEARER_TOKEN=<token> npm run smoke:web:rnnoise:browser` |
 | Desktop shell packaging baseline (`main/preload/renderer bundle`) | `npm run desktop:smoke` |
 | Desktop shell runtime baseline (`runtime=desktop` markers via Electron launch) | `npm run smoke:desktop:runtime` |

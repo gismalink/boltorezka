@@ -21,6 +21,10 @@
 - `smoke:web:rnnoise:browser`
   - postdeploy default: `SMOKE_WEB_RNNOISE_BROWSER=0`
   - smoke:all default: `SMOKE_ALL_RUN_RNNOISE_BROWSER=0`
+- `smoke:web:agent-semantics:browser`
+  - web e2e default: `SMOKE_E2E_AGENT_SEMANTICS_BROWSER=1`
+  - smoke:all default: `SMOKE_ALL_RUN_AGENT_SEMANTICS_BROWSER=1`
+  - runtime requirement: `SMOKE_TEST_BEARER_TOKEN`; otherwise stage is `skip`
 - `smoke:chat:object-storage`
 - `smoke:chat:orphan-cleanup`
 - `smoke:minio:storage`
