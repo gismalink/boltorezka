@@ -1,6 +1,6 @@
 # Workflow Checklist (Projo-aligned)
 
-Короткий чеклист на каждый инкремент в Boltorezka.
+Короткий чеклист на каждый инкремент в Datowave.
 
 ## 1) Реализация
 
@@ -37,7 +37,8 @@
 1. Обновить `README.md` как индекс.
 2. Обновить профильные docs:
    - `docs/architecture/ARCHITECTURE.md`
-   - `docs/status/ROADMAP.md`
+   - `docs/plans/2026-04-06_FULL_PROJECT_EXECUTION_PLAN.md`
+   - `docs/status/ROADMAP.md` (archive/redirect)
    - `docs/runbooks/RUNBOOK_TEST_DEPLOY.md`
    - `docs/runbooks/RUNBOOK_TEST_ROLLOUT_QUICKSTART.md`
 3. Если меняется release/deploy процесс — обновить runbook в том же PR.

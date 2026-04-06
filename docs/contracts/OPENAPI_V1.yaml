@@ -1,9 +1,9 @@
 openapi: 3.0.3
 info:
-  title: Boltorezka API
+  title: Datowave API
   version: 1.0.0
   description: >-
-    Canonical HTTP contract for Boltorezka v1.
+    Canonical HTTP contract for Datowave v1.
     This spec tracks currently implemented endpoints.
 servers:
   - url: https://test.boltorezka.gismalink.art

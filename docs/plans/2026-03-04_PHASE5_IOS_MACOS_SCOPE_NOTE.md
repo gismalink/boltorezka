@@ -1,7 +1,11 @@
 # Phase 5 Scope Note — iOS/macOS (Post-MVP)
 
 Дата фиксации: 2026-03-04  
-Статус: Planning approved (execution pending)
+Статус: Historical planning artifact (non-active)
+
+> Важно: этот документ не отражает текущий delivery stack.
+> Текущий active client stack: Web + Electron Desktop.
+> Native iOS/macOS (SwiftUI) в активной разработке сейчас отсутствуют.
 
 ## 1) Purpose
 
@@ -12,10 +16,10 @@
 ### In scope (Phase 5 bootstrap)
 
 - Общий Swift package как единый core слой для iOS/macOS:
-  - `BoltorezkaCoreModels`
-  - `BoltorezkaNetworking`
-  - `BoltorezkaRealtime`
-  - `BoltorezkaCallEngine`
+  - `DatowaveCoreModels`
+  - `DatowaveNetworking`
+  - `DatowaveRealtime`
+  - `DatowaveCallEngine`
 - Базовые экраны (MVP-level):
   - auth/session entry,
   - room list + open room,
@@ -83,4 +87,4 @@
 - Phase 0 boundaries/ADR: `docs/architecture/PHASE0_MVP_ADR.md`
 - Voice baseline: `docs/runbooks/VOICE_BASELINE_RUNBOOK.md`
 - Phase 3 policy: `docs/runbooks/PHASE3_VOICE_WEBRTC_MVP_POLICY.md`
-- Roadmap source: `docs/status/ROADMAP.md`
+- Planning source: `docs/plans/2026-04-06_FULL_PROJECT_EXECUTION_PLAN.md`

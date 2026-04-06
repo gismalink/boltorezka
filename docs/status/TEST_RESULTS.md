@@ -1,4 +1,4 @@
-# Boltorezka Test Results
+# Datowave Test Results
 
 Журнал результатов тестов вынесен в дневные файлы:
 - `docs/status/test-results/README.md`

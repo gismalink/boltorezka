@@ -176,7 +176,7 @@ Stage D: Default LiveKit в test -> prod readiness
 - `docs/architecture/PHASE0_MVP_ADR.md`
 - `docs/runbooks/VOICE_BASELINE_RUNBOOK.md`
 - `docs/runbooks/SFU_STAGE1_DARK_LAUNCH_RUNBOOK.md`
-- `docs/status/RTC_STABILITY_ROADMAP.md`
+- `docs/plans/completed/2026-04-06_RTC_STABILITY_HARDENING_PLAN.md`
 
 ## 12) Archive note
 

@@ -1,6 +1,6 @@
-# Boltorezka Test Deploy Runbook (GitOps)
+# Datowave Test Deploy Runbook (GitOps)
 
-Этот runbook определяет безопасный порядок деплоя Boltorezka в `test` среду.
+Этот runbook определяет безопасный порядок деплоя Datowave в `test` среду.
 
 ## 1) Preconditions
 
@@ -28,12 +28,12 @@
 
 - `ssh <server> 'cd ~/srv/edge && ./scripts/release-command.sh rollout --env test --service <service> --branch <feature-branch>'`
 
-One-command для Boltorezka (deploy + post-deploy smoke):
+One-command для Datowave (deploy + post-deploy smoke):
 
 - `ssh mac-mini 'cd ~/srv/boltorezka && TEST_REF=origin/<feature-branch> npm run deploy:test:smoke'`
 - `ssh mac-mini 'cd ~/srv/boltorezka && AUTO_ROLLBACK_ON_FAIL=1 AUTO_ROLLBACK_SMOKE=1 TEST_REF=origin/<branch> npm run deploy:test:smoke'`
 
-Режим деплоя по умолчанию в скриптах Boltorezka: `api-only + caddy-static-sync` (`docker compose up --no-deps --force-recreate <api-service>` + синхронизация `dist` в `edge/ingress/static/boltorezka/<env>`), чтобы не перезапускать shared зависимости (включая TURN) на каждом релизе.
+Режим деплоя по умолчанию в скриптах Datowave: `api-only + caddy-static-sync` (`docker compose up --no-deps --force-recreate <api-service>` + синхронизация `dist` в `edge/ingress/static/boltorezka/<env>`), чтобы не перезапускать shared зависимости (включая TURN) на каждом релизе.
 
 Полный recreate зависимостей включать только при необходимости и явно:
 

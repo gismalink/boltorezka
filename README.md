@@ -1,12 +1,12 @@
-# Boltorezka
+# Datowave
 
-Boltorezka — отдельный репозиторий для realtime-приложения в стиле voice/chat platform.
+Datowave — отдельный репозиторий для realtime-приложения в стиле voice/chat platform.
 
 ## Статус
 
 - Репозиторий выделен из `GismalinkArt`.
-- Текущее содержимое (`boltorezka.html`, `mdl/*`, `webSocketHandler.js`) рассматривается как legacy POC.
-- Разработка новой версии ведётся по roadmap и runbook этого репозитория.
+- Текущее legacy POC-содержимое (`legacy/poc/*`) рассматривается как исторический артефакт.
+- Разработка новой версии ведётся по каноническим планам и runbook этого репозитория.
 - Backend runtime API переведён на TypeScript (`.ts`) со строгой типизацией и typed WS protocol слоем.
 - Realtime handler для `call.*` и `chat/presence` приведён к switch-dispatch + централизованным ack/nack helper-путям.
 - В web закрыт sender-side video effects инкремент: `none/8-bit/ASCII`, owner preview и server controls для video windows (включая min/max resize bounds).
@@ -39,7 +39,7 @@ Legacy-файлы перенесены в `legacy/poc/`.
 ## Документация
 
 - Архитектура: [docs/architecture/ARCHITECTURE.md](docs/architecture/ARCHITECTURE.md)
-- План переписывания (plan-only): [docs/status/ROADMAP.md](docs/status/ROADMAP.md)
+- Основной рабочий план по AI-agent ready accessibility: [docs/plans/2026-04-06_FULL_PROJECT_EXECUTION_PLAN.md](docs/plans/2026-04-06_FULL_PROJECT_EXECUTION_PLAN.md)
 - Лог реализованных фич и evidence: [docs/status/FEATURE_LOG.md](docs/status/FEATURE_LOG.md)
 - Отдельный журнал тестов/нагрузки: [docs/status/TEST_RESULTS.md](docs/status/TEST_RESULTS.md)
 - HTTP контракт v1: [docs/contracts/API_CONTRACT_V1.md](docs/contracts/API_CONTRACT_V1.md)
@@ -113,16 +113,19 @@ Test host contour (server compose):
 Цель v2:
 
 - Web client
-- iOS app
-- macOS app
+- Desktop client (Electron)
+
+Примечание:
+
+- Native iOS/macOS (SwiftUI) в текущем рабочем scope не используются и не входят в активный delivery-трек.
 
 Общий протокол и доменная модель должны быть едиными для всех платформ.
 
 ## Ближайшие действия
 
-Открытые задачи и актуальные фазы ведутся только в каноническом roadmap:
+Открытые задачи и актуальные фазы ведутся только в канонических планах:
 
-- `docs/status/ROADMAP.md`.
+- `docs/plans/2026-04-06_FULL_PROJECT_EXECUTION_PLAN.md`.
 
 Выполненные инкременты и evidence:
 

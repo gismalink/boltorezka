@@ -7,7 +7,7 @@
 
 ## 1) Scope
 
-- [x] Запуск Boltorezka как standalone desktop app (Windows) подтвержден на уровне CI packaging/signing chain (signed RC windows-only, PASS).
+- [x] Запуск Datowave как standalone desktop app (Windows) подтвержден на уровне CI packaging/signing chain (signed RC windows-only, PASS).
 - [ ] Проверить media permissions на Windows.
 - [ ] Закрыть Windows 10/11 QA matrix: login, voice, camera, screen share, reconnect.
 

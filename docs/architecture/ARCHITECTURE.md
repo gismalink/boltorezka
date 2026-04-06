@@ -1,4 +1,4 @@
-# Boltorezka v2 Architecture
+# Datowave v2 Architecture
 
 ## 1) Цели
 
@@ -29,7 +29,7 @@
 
 ## 3) Компоненты backend
 
-- `boltorezka-api` (единый сервис: HTTP API + WebSocket signaling/presence/chat/call relay)
+- `api runtime service` (единый сервис: HTTP API + WebSocket signaling/presence/chat/call relay)
 - `postgres`
 - `redis`
 - `coturn` (отдельный сервис, credentials только через env/secret manager)
@@ -90,45 +90,32 @@
   - ICE failure rate.
 - Health endpoints: liveness/readiness.
 
-## 9) Мультиплатформа (Web + iOS + macOS)
+## 9) Платформы (текущий active stack)
 
 ### Общие принципы
 
-- Один backend-контракт для всех платформ.
+- Один backend-контракт для active клиентов.
 - Единая доменная терминология (room/member/presence/call state).
 - Feature parity по фазам, не “всё сразу”.
 
-### Web
+### Web + Desktop (Electron)
 
-- Первая платформа для fastest feedback.
+- Текущая primary платформа для fastest feedback.
 - Референс-реализация новых протоколов WS/RTC.
+- Electron desktop использует тот же web client stack (renderer) и тот же API/WS контракт.
 
-### iOS + macOS
+### Native iOS/macOS (future hypothesis)
 
-- Общий Swift package:
-  - `BoltorezkaCoreModels`
-  - `BoltorezkaNetworking`
-  - `BoltorezkaRealtime`
-  - `BoltorezkaCallEngine`
-- UI слой:
-  - SwiftUI for iOS
-  - SwiftUI for macOS
-- iOS-specific later phase:
-  - audio interruptions,
-  - route changes,
-  - push/call integrations (если потребуется продуктом).
+- В текущем active stack native SwiftUI-клиенты отсутствуют.
+- Любые iOS/macOS инициативы рассматриваются как отдельный future track и не являются текущим delivery baseline.
 
 ## 10) Legacy migration
 
-Текущие файлы legacy POC не удаляются сразу, но считаются временными:
-
-- `boltorezkaApp.js`
-- `webSocketHandler.js`
-- `mdl/*`
+Текущие файлы legacy POC не удаляются сразу, но считаются временными (`legacy/poc/*`).
 
 Миграция идёт через постепенную замену слоёв на новую архитектуру, начиная с backend контрактов.
 
 ## 11) Связанные документы
 
-- План и открытые задачи: `docs/status/ROADMAP.md`
+- План и открытые задачи: `docs/plans/2026-04-06_FULL_PROJECT_EXECUTION_PLAN.md`
 - История реализованных фич и release evidence: `docs/status/FEATURE_LOG.md`

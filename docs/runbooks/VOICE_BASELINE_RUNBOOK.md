@@ -1,6 +1,6 @@
 # Voice Baseline Runbook (LiveKit/TURN)
 
-Цель: зафиксировать рабочую конфигурацию голоса в Boltorezka и шаги проверки после изменений.
+Цель: зафиксировать рабочую конфигурацию голоса в Datowave и шаги проверки после изменений.
 
 ## 1) Что является рабочим baseline
 
@@ -84,7 +84,7 @@
 
 ## 9) RNNoise canary and default-enable policy
 
-RNNoise в Boltorezka работает как client-side preprocessing profile (`noise_reduction`) и не должен ломать baseline voice path.
+RNNoise в Datowave работает как client-side preprocessing profile (`noise_reduction`) и не должен ломать baseline voice path.
 
 Минимальный canary smoke для `test`:
 

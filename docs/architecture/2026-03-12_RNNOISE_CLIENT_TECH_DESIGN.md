@@ -1,7 +1,7 @@
 # RNNoise Client Tech Design (1-page)
 
 Date: 2026-03-12
-Scope: browser-side RNNoise preprocessing for voice capture path in Boltorezka (`noise_reduction` input profile).
+Scope: browser-side RNNoise preprocessing for voice capture path in Datowave (`noise_reduction` input profile).
 
 ## 1) Goal
 

@@ -3,7 +3,7 @@
 Цель: единый шаблон release notes + rollback инструкций для этапов domain cutover.
 
 Scope:
-- `test` и `prod` в рамках Boltorezka.
+- `test` и `prod` в рамках Datowave.
 - GitOps-only: деплой через git + штатные скрипты.
 - `prod` только из `main` и только по явному подтверждению.
 - До полного закрытия auth/SSO задач в `test` любые шаги по `prod` запрещены.

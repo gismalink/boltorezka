@@ -1,4 +1,4 @@
-# Boltorezka Feature Log
+# Datowave Feature Log
 
 Этот лог разбит по отдельным документам в новой папке.
 

@@ -1,4 +1,4 @@
-# Boltorezka Pre-Prod Checklist
+# Datowave Pre-Prod Checklist
 
 Чеклист перед запросом на rollout в `prod`.
 
@@ -72,7 +72,7 @@ LiveKit full-transition reference: [../plans/completed/2026-03-09_LIVEKIT_FULL_T
    - prod содержит `datowave.com`
 3.1. Cookie policy соответствует окружению:
    - `AUTH_SESSION_COOKIE_DOMAIN`, `AUTH_SESSION_COOKIE_SAMESITE`, `AUTH_SESSION_COOKIE_SECURE` проверены для test/prod.
-4. Edge ingress содержит маршруты для test/prod Boltorezka.
+4. Edge ingress содержит маршруты для test/prod Datowave.
 5. Voice baseline соответствует канонике:
    - `docs/runbooks/VOICE_BASELINE_RUNBOOK.md`,
    - приоритетный production-путь: `relay + TURN TLS/TCP`.

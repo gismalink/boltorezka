@@ -1,8 +1,15 @@
-# Boltorezka Status Snapshot
+# Datowave Status Snapshot
 
 ## Текущее состояние (2026-03-06)
 
 Update (2026-03-15):
+
+Update (2026-04-06):
+
+- RTC stability hardening workstream переведен в completed:
+	- acceptance-gates закрыты по evidence (`feature-log` + `test-results`),
+	- archived artifact: `docs/plans/completed/2026-04-06_RTC_STABILITY_HARDENING_PLAN.md`,
+	- исторические детали инкрементов зафиксированы в `docs/status/feature-log/2026-03-06.md` и `docs/status/feature-log/2026-03-07.md`.
 
 - Desktop M3 update/release track переведен на server-first build/publish flow:
 	- `scripts/deploy/build-desktop-server-and-publish.sh` публикует channel-aware desktop artifacts в edge static web-root.
@@ -63,11 +70,10 @@ Update (2026-03-15):
 	- утверждён канонический пакет `docs/architecture/PHASE0_MVP_ADR.md` (MVP boundaries + ADR summary).
 - Закрыт Phase 3 (Voice / WebRTC MVP):
 	- утверждён канонический policy-пакет `docs/runbooks/PHASE3_VOICE_WEBRTC_MVP_POLICY.md` (room-size contract + graceful degradation policy).
-- Подготовлен kickoff-пакет для Phase 5 (iOS/macOS):
-	- зафиксирован scope note `docs/plans/2026-03-04_PHASE5_IOS_MACOS_SCOPE_NOTE.md` (MVP boundaries + shared Swift package bootstrap contract).
+- Исторически был подготовлен kickoff-пакет для Phase 5 (iOS/macOS):
+	- scope note `docs/plans/2026-03-04_PHASE5_IOS_MACOS_SCOPE_NOTE.md` сохранен как non-active planning artifact и не отражает текущий delivery stack.
 - Legacy deprecation (Phase D) переведен в completed; в open workstreams больше не является текущим фокусом.
-- Активирован новый execution workstream по RTC stability:
-	- `docs/status/RTC_STABILITY_ROADMAP.md` (Discord-inspired incremental hardening).
+- RTC stability execution workstream закрыт и заархивирован в completed-план.
 - Зафиксировано решение sequencing:
 	- Phase 1 RTC стартует сразу,
 	- текущие `Phase 6` hardening/runbook пункты идут параллельно как supporting track,
@@ -77,7 +83,7 @@ Update (2026-03-15):
 
 ## Канонические документы
 
-- План и open tasks: `docs/status/ROADMAP.md`
+- План и open tasks: `docs/plans/2026-04-06_FULL_PROJECT_EXECUTION_PLAN.md`
 - Реализованные изменения/evidence: `docs/status/FEATURE_LOG.md`
 - Voice baseline runbook: `docs/runbooks/VOICE_BASELINE_RUNBOOK.md`
 - Pre-prod gate details: `docs/runbooks/PREPROD_DECISION_PACKAGE.md`

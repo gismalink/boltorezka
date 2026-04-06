@@ -1,6 +1,6 @@
 # Authentik Setup Runbook (test-first)
 
-Цель: настроить `test` интеграцию Authentik для Boltorezka без затрагивания `prod`.
+Цель: настроить `test` интеграцию Authentik для Datowave без затрагивания `prod`.
 
 Важно:
 - Только `test` в этом runbook.

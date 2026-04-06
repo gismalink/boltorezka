@@ -1,44 +1,27 @@
-# Boltorezka v2 Roadmap (links-only)
+# Datowave v2 Roadmap (archived)
 
-Этот roadmap хранит только ссылки на отдельные плановые/канонические документы.
-Детали реализации и выполненные инкременты ведутся в `docs/status/FEATURE_LOG.md`.
+Этот файл переведен в архивный режим и больше не является рабочим источником планирования.
+Актуальное планирование ведется в `docs/plans/*`, а реализация фиксируется в `docs/status/FEATURE_LOG.md`.
 
-Последняя синхронизация: `2026-03-07` (SFU Stage 3 closed in test, Stage 4 readiness active).
+Последняя синхронизация: `2026-04-06` (archived; plan-driven workflow enabled).
 
-## Open workstreams
+## Active planning sources
 
-- RTC stability hardening (active): `docs/status/RTC_STABILITY_ROADMAP.md`.
-- Phase 5 (iOS/macOS kickoff scope): `docs/plans/2026-03-04_PHASE5_IOS_MACOS_SCOPE_NOTE.md`.
+- AI-agent ready accessibility implementation plan (Q2-Q3 2026): `docs/plans/2026-04-06_FULL_PROJECT_EXECUTION_PLAN.md`.
+- Phase 5 iOS/macOS scope note (historical, non-active): `docs/plans/2026-03-04_PHASE5_IOS_MACOS_SCOPE_NOTE.md`.
+- Room chat topics v1 execution: `docs/plans/2026-04-02_ROOM_CHAT_TOPICS_PLAN.md`.
 - SFU migration decision package: `docs/plans/2026-03-06_SFU_MIGRATION_PLAN.md`.
 
-## Recently completed
+## Recently completed (reference)
 
+- RTC stability hardening: `docs/plans/completed/2026-04-06_RTC_STABILITY_HARDENING_PLAN.md`.
 - Legacy static deprecation (Phase D): `docs/runbooks/legacy/LEGACY_PUBLIC_DEPRECATION_PLAN.md`.
 
-### Phase 5 — iOS & macOS (open)
+## Archive note
 
-- [ ] Shared Swift package + базовые MVP-экраны.
-- [ ] Lifecycle обработка audio interruptions/background.
-
-### Phase 6 — Hardening & Release Readiness (open)
-
-- [ ] Нагрузочные и reconnect/failure тесты.
-- [ ] Security review (authz, rate limits, abuse prevention).
-- [ ] Финальные runbook: deploy/smoke/rollback/incident response.
-
-## Execution plan (open items only)
-
-- [x] #6.1 RTC plan Phase 1: canonical media-state + `call.initial_state` replay в server/client контрактах.
-- [x] #6.2 RTC plan Phase 2: negotiation manager + offer fairness queue + stable defaults.
-- [x] #6.3 RTC plan Phase 3-4: RTC observability + smoke/postdeploy gates.
-- [ ] #6 Выполнить hardening batch для Phase 6: reconnect/failure сценарии + security review checklist с evidence.
-- [ ] #7 Сформировать финальный runbook bundle (`deploy/smoke/rollback/incident response`) и синхронизировать docs index.
-
-## Sequencing decision (2026-03-06)
-
-- Выбран путь: сразу стартуем `docs/status/RTC_STABILITY_ROADMAP.md` с Phase 1.
-- Пункты `#6` и `#7` не откладываются, но идут как параллельный supporting workstream и закрываются по мере накопления evidence из RTC hardening.
-- Политика релиза не меняется: `test` first, `prod` только после явного подтверждения.
+- Для новых задач/фаз roadmap не обновляется.
+- Любой новый workstream оформляется отдельным документом в `docs/plans/` по шаблону `docs/plans/PLAN_TEMPLATE.md`.
+- Закрытые workstreams фиксируются в `docs/plans/completed/`.
 
 ## Canonical plans & policies
 

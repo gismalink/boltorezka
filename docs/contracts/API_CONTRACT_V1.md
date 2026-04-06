@@ -1,4 +1,4 @@
-# Boltorezka HTTP API Contract v1
+# Datowave HTTP API Contract v1
 
 Каноничный минимальный HTTP-контракт для текущего MVP-контура.
 

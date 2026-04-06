@@ -1,4 +1,4 @@
-# Boltorezka WebSocket Contract v1
+# Datowave WebSocket Contract v1
 
 Каноничный контракт realtime envelope и событий.
 

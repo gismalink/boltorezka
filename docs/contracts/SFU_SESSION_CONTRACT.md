@@ -5,7 +5,7 @@
 
 ## 1) Назначение
 
-Документ фиксирует единый transport contract для SFU session lifecycle и совместимость с текущим WS signaling контуром Boltorezka.
+Документ фиксирует единый transport contract для SFU session lifecycle и совместимость с текущим WS signaling контуром Datowave.
 
 ## 2) Общие правила
 

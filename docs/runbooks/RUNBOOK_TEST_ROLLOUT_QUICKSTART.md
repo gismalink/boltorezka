@@ -1,4 +1,4 @@
-# Boltorezka Test Rollout Quickstart (5 commands + 5 checks)
+# Datowave Test Rollout Quickstart (5 commands + 5 checks)
 
 Цель: быстрый и воспроизводимый rollout в `test` по правилам GitOps-only.
 
@@ -10,8 +10,8 @@
 
 ## Preconditions
 
-- Код Boltorezka уже в `main` или нужной feature-ветке.
-- На сервере настроены env для Boltorezka test:
+- Код Datowave уже в `main` или нужной feature-ветке.
+- На сервере настроены env для Datowave test:
   - `AUTH_MODE=sso`
   - `AUTH_SSO_BASE_URL=https://test.auth.datowave.com`
   - `ALLOWED_RETURN_HOSTS` содержит `test.datowave.com`
@@ -26,7 +26,7 @@
 
 - `ssh mac-mini 'cd ~/srv/edge && ./scripts/server-quick-check.sh'`
 
-2) Деплой в test из нужного git ref (основной путь для Boltorezka):
+2) Деплой в test из нужного git ref (основной путь для Datowave):
 
 - `ssh mac-mini 'cd ~/srv/boltorezka && TEST_REF=origin/main ALLOW_TEST_FROM_MAIN=1 npm run deploy:test'`
 
@@ -146,7 +146,7 @@ Desktop update-feed gate (рекомендуется держать включе
 
 - `curl -sS https://test.datowave.com/desktop/test/latest.json | head -n 20`
 - `curl -sS https://test.datowave.com/desktop/test/mac/latest-mac.yml | head -n 20`
-- `curl -I -sS https://test.datowave.com/desktop/test/mac/Boltorezka-0.2.0-arm64-mac.zip | head -n 8`
+- `curl -I -sS https://test.datowave.com/desktop/test/mac/Datowave-0.2.0-arm64-mac.zip | head -n 8`
 
 7) Redirect map smoke:
 

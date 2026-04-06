@@ -29,7 +29,7 @@
 
 ### ADR-001: Архитектура signaling
 
-- Решение: единый backend runtime (`boltorezka-api`) обслуживает HTTP API + WS signaling.
+- Решение: единый backend runtime (API service) обслуживает HTTP API + WS signaling.
 - Обоснование: ниже операционная сложность, понятная ownership-модель, достаточность для текущего масштаба.
 - Следствие: split-service архитектура пересматривается только при подтвержденном scale pressure.
 

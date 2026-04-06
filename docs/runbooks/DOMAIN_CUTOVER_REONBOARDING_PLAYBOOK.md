@@ -13,13 +13,13 @@ Scope:
 
 ## 2) User communication (short template)
 
-Тема: Boltorezka переехал на новый домен
+Тема: Datowave переехал на новый домен
 
 Текст:
 
 Привет!
 
-Мы перенесли Boltorezka на новый домен:
+Мы перенесли Datowave на новый домен:
 - Новый адрес: `https://datowave.com`
 - Test адрес (если участвуешь в тестах): `https://test.datowave.com`
 
