@@ -498,7 +498,14 @@ export function ChatMessageTimeline({
   };
 
   return (
-    <div className="chat-log min-h-0 flex-1" ref={chatLogRef}>
+    <div
+      className="chat-log min-h-0 flex-1"
+      ref={chatLogRef}
+      role="log"
+      aria-live="polite"
+      aria-relevant="additions text"
+      data-agent-id="chat.timeline"
+    >
       {loadingOlderMessages ? <div className="chat-history-loading muted">{t("chat.loading")}</div> : null}
       {hasActiveRoom && !hasTopics ? (
         <div className="chat-empty-state">
@@ -547,15 +554,24 @@ export function ChatMessageTimeline({
         return (
           <div key={messageVm.id}>
           {unreadDividerMessageId === messageVm.id ? (
-            <div className={`chat-unread-divider ${unreadDividerVisible ? "chat-unread-divider-visible" : ""}`}>
+            <div
+              className={`chat-unread-divider ${unreadDividerVisible ? "chat-unread-divider-visible" : ""}`}
+              role="separator"
+              aria-label="Unread messages"
+              data-agent-id="chat.timeline.unread-divider"
+            >
               ----непрочитанные---
             </div>
           ) : null}
           <article
             data-message-id={messageVm.id}
+            data-agent-id={`chat.message.${messageVm.id}`}
+            data-agent-message-author={messageVm.userName}
+            data-agent-message-own={isOwn ? "true" : "false"}
             className={`chat-message group grid items-end gap-2 ${isOwn ? "chat-message-own grid-cols-1 justify-items-end" : "grid-cols-[34px_minmax(0,1fr)]"}`}
             onContextMenu={(event) => openContextMenu(event, messageVm.id)}
             onDoubleClick={(event) => handleMessageDoubleClick(event, messageVm.id)}
+            aria-label={`${messageVm.userName}: ${String(messageVm.text || "").replace(/\s+/g, " ").trim().slice(0, 140)}`}
           >
             {!isOwn ? (
               <div className="chat-avatar-slot inline-flex h-[30px] w-[30px] items-end justify-center" aria-hidden="true">
@@ -700,6 +716,7 @@ export function ChatMessageTimeline({
                     style={{ left: `${reactionMenuX}px`, top: `${reactionMenuY}px` }}
                     role="toolbar"
                     aria-label={t("chat.react")}
+                    data-agent-id="chat.message.reaction-menu"
                   >
                     {quickReactionOptions.map((emoji) => {
                       const active = Boolean(messageReactions[emoji]?.reacted);
@@ -724,11 +741,13 @@ export function ChatMessageTimeline({
                     role="menu"
                     aria-label={t("chat.messageActions")}
                     style={{ left: `${contextMenuX}px`, top: `${contextMenuY}px` }}
+                    data-agent-id="chat.message.context-menu"
                   >
                     <Button
                       type="button"
                       className="secondary tiny"
                       role="menuitem"
+                      data-agent-id="chat.message.action.reply"
                       onClick={() => {
                         onReplyMessage(messageVm.id);
                         closeContextMenu();
@@ -740,6 +759,7 @@ export function ChatMessageTimeline({
                       type="button"
                       className="secondary tiny"
                       role="menuitem"
+                      data-agent-id="chat.message.action.mention"
                       onClick={() => {
                         insertMentionToComposer(messageVm.userName);
                         closeContextMenu();
@@ -751,6 +771,7 @@ export function ChatMessageTimeline({
                       type="button"
                       className="secondary tiny"
                       role="menuitem"
+                      data-agent-id="chat.message.action.quote"
                       onClick={() => {
                         insertQuoteToComposer(messageVm.userName, messageVm.text, selectedQuoteText);
                         closeContextMenu();
@@ -764,6 +785,7 @@ export function ChatMessageTimeline({
                       type="button"
                       className="secondary tiny"
                       role="menuitem"
+                      data-agent-id="chat.message.action.mark-unread"
                       onClick={() => {
                         void markTopicUnreadFromMessage(messageVm.id);
                         closeContextMenu();
@@ -776,6 +798,7 @@ export function ChatMessageTimeline({
                       type="button"
                       className="secondary tiny"
                       role="menuitem"
+                      data-agent-id="chat.message.action.pin-toggle"
                       onClick={() => {
                         onTogglePinMessage(messageVm.id);
                         closeContextMenu();
@@ -788,6 +811,7 @@ export function ChatMessageTimeline({
                         type="button"
                         className="secondary tiny"
                         role="menuitem"
+                        data-agent-id="chat.message.action.report"
                         onClick={() => {
                           onReportMessage(messageVm.id);
                           closeContextMenu();
@@ -802,6 +826,7 @@ export function ChatMessageTimeline({
                           type="button"
                           className="secondary tiny"
                           role="menuitem"
+                          data-agent-id="chat.message.action.edit"
                           onClick={() => {
                             onEditMessage(messageVm.id);
                             closeContextMenu();
@@ -813,6 +838,7 @@ export function ChatMessageTimeline({
                           type="button"
                           className="secondary tiny"
                           role="menuitem"
+                          data-agent-id="chat.message.action.delete"
                           onClick={() => {
                             onDeleteMessage(messageVm.id);
                             closeContextMenu();

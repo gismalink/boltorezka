@@ -60,6 +60,7 @@ type ChatComposerSectionProps = {
   composePendingAttachmentName: string | null;
   setPreviewImageUrl: (value: string | null) => void;
   attachmentInputRef: RefObject<HTMLInputElement>;
+  screenContext: string;
 };
 
 export function ChatComposerSection({
@@ -83,11 +84,25 @@ export function ChatComposerSection({
   composePreviewImage,
   composePendingAttachmentName,
   setPreviewImageUrl,
-  attachmentInputRef
+  attachmentInputRef,
+  screenContext
 }: ChatComposerSectionProps) {
   const messageInputRef = useRef<HTMLTextAreaElement | null>(null);
   const [mentionContext, setMentionContext] = useState<MentionContext | null>(null);
   const [mentionSelectedIndex, setMentionSelectedIndex] = useState(0);
+  const [composerStatusText, setComposerStatusText] = useState("");
+  const mentionListboxId = "chat-compose-mention-listbox";
+  const visuallyHiddenStatusStyle = {
+    position: "absolute",
+    width: "1px",
+    height: "1px",
+    padding: 0,
+    margin: "-1px",
+    overflow: "hidden",
+    clip: "rect(0, 0, 0, 0)",
+    whiteSpace: "nowrap",
+    border: 0
+  } as const;
 
   const mentionSuggestions = useMemo(() => {
     if (!mentionContext) {
@@ -228,9 +243,46 @@ export function ChatComposerSection({
     setMentionSelectedIndex(0);
   }, [activeTopicIsArchived, hasActiveRoom]);
 
+  useEffect(() => {
+    if (!hasActiveRoom) {
+      setComposerStatusText(t("chat.selectChannelPlaceholder"));
+      return;
+    }
+
+    if (activeTopicIsArchived) {
+      setComposerStatusText(t("chat.topicArchivedReadOnly"));
+      return;
+    }
+
+    setComposerStatusText(`${t("chat.send")}: ready`);
+  }, [activeTopicIsArchived, hasActiveRoom, t]);
+
   return (
     <>
-      <form className="chat-compose mt-3 flex items-end gap-3" onSubmit={onSendMessage}>
+      <form
+        className="chat-compose mt-3 flex items-end gap-3"
+        onSubmit={(event) => {
+          if (!hasActiveRoom || activeTopicIsArchived) {
+            event.preventDefault();
+            setComposerStatusText(!hasActiveRoom ? t("chat.selectChannelPlaceholder") : t("chat.topicArchivedReadOnly"));
+            return;
+          }
+
+          setComposerStatusText(`${editingMessageId ? t("chat.saveEdit") : t("chat.send")}: requested`);
+          onSendMessage(event);
+        }}
+        data-agent-id="chat.composer"
+        data-agent-screen-context={screenContext}
+      >
+        <div
+          className="chat-topic-read-status"
+          role="status"
+          aria-live="polite"
+          data-agent-id="chat.composer.status"
+          style={visuallyHiddenStatusStyle}
+        >
+          {composerStatusText}
+        </div>
         <input
           ref={attachmentInputRef}
           type="file"
@@ -239,8 +291,10 @@ export function ChatComposerSection({
             const file = event.currentTarget.files?.[0] || null;
             onSelectAttachmentFile(file);
             event.currentTarget.value = "";
+            setComposerStatusText(file ? `${t("chat.attach")}: ${file.name}` : `${t("chat.attach")}: cleared`);
           }}
           accept="image/*,audio/*,.pdf,.txt,.csv,.zip"
+          data-agent-id="chat.composer.attachment-input"
         />
         <Button
           type="button"
@@ -249,6 +303,7 @@ export function ChatComposerSection({
           disabled={!hasActiveRoom || activeTopicIsArchived}
           aria-label={t("chat.attach")}
           title={t("chat.attach")}
+          data-agent-id="chat.composer.attach"
         >
           <i className="bi bi-paperclip" aria-hidden="true" />
         </Button>
@@ -287,6 +342,8 @@ export function ChatComposerSection({
             <textarea
               ref={messageInputRef}
               value={chatText}
+              data-agent-id="chat.composer.input"
+              data-agent-state={!hasActiveRoom || activeTopicIsArchived ? "disabled" : "active"}
               onChange={(event) => {
                 const target = event.target;
                 onSetChatText(target.value);
@@ -349,9 +406,18 @@ export function ChatComposerSection({
               placeholder={hasActiveRoom ? (activeTopicIsArchived ? t("chat.topicArchivedReadOnly") : t("chat.typePlaceholder")) : t("chat.selectChannelPlaceholder")}
               disabled={!hasActiveRoom || activeTopicIsArchived}
               aria-label={t("chat.composeAria")}
+              aria-describedby="chat-compose-context"
+              aria-controls={mentionPickerOpen ? mentionListboxId : undefined}
+              aria-expanded={mentionPickerOpen}
             />
             {mentionPickerOpen ? (
-              <div className="chat-mention-picker" role="listbox" aria-label={t("chat.mentionSuggestionsAria")}>
+              <div
+                className="chat-mention-picker"
+                id={mentionListboxId}
+                role="listbox"
+                aria-label={t("chat.mentionSuggestionsAria")}
+                data-agent-id="chat.composer.mention-picker"
+              >
                 {mentionSuggestions.length > 0 ? mentionSuggestions.map((candidate, index) => (
                   <button
                     key={candidate.key}
@@ -359,6 +425,7 @@ export function ChatComposerSection({
                     className={`chat-mention-picker-item ${index === mentionSelectedIndex ? "chat-mention-picker-item-active" : ""}`}
                     role="option"
                     aria-selected={index === mentionSelectedIndex}
+                    data-agent-id={`chat.composer.mention-option.${candidate.handle}`}
                     onMouseDown={(event) => {
                       event.preventDefault();
                       applyMentionCandidate(candidate);
@@ -397,15 +464,27 @@ export function ChatComposerSection({
             <Button
               type="button"
               className="secondary tiny"
-              onClick={onClearPendingAttachment}
+              onClick={() => {
+                onClearPendingAttachment();
+                setComposerStatusText(`${t("chat.attach")}: cleared`);
+              }}
               aria-label={t("chat.clearAttachment")}
               title={t("chat.clearAttachment")}
+              data-agent-id="chat.composer.attachment-clear"
             >
               ×
             </Button>
           </div>
         ) : null}
-        <Button type="submit" disabled={!hasActiveRoom || activeTopicIsArchived}>{editingMessageId ? t("chat.saveEdit") : t("chat.send")}</Button>
+        <div
+          id="chat-compose-context"
+          className="muted"
+          data-agent-id="chat.composer.context"
+          style={visuallyHiddenStatusStyle}
+        >
+          {screenContext}
+        </div>
+        <Button type="submit" disabled={!hasActiveRoom || activeTopicIsArchived} data-agent-id="chat.composer.submit">{editingMessageId ? t("chat.saveEdit") : t("chat.send")}</Button>
       </form>
     </>
   );

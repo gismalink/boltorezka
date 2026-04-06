@@ -483,9 +483,34 @@ export function ChatPanel({
     closeSearchPanel,
     toggleSearchPanel
   } = useChatPanelSearchOverlay({ hasActiveRoom });
+  const visuallyHiddenStatusStyle = {
+    position: "absolute",
+    width: "1px",
+    height: "1px",
+    padding: 0,
+    margin: "-1px",
+    overflow: "hidden",
+    clip: "rect(0, 0, 0, 0)",
+    whiteSpace: "nowrap",
+    border: 0
+  } as const;
+
+  const chatScreenContext = useMemo(() => {
+    const activeTopic = topics.find((topic) => topic.id === activeTopicId) || null;
+    const roomValue = hasActiveRoom ? String(roomSlug || "unknown") : "none";
+    const topicValue = activeTopic ? `${activeTopic.id}:${activeTopic.title}` : "none";
+    const searchValue = searchPanelOpen ? "open" : "closed";
+    const archiveValue = activeTopicIsArchived ? "archived" : "active";
+    const topicsValue = hasTopics ? "present" : "empty";
+    return `room=${roomValue};topic=${topicValue};topicState=${archiveValue};topics=${topicsValue};search=${searchValue}`;
+  }, [activeTopicId, activeTopicIsArchived, hasActiveRoom, hasTopics, roomSlug, searchPanelOpen, topics]);
 
   return (
-    <section className="card middle-card relative flex min-h-0 flex-1 flex-col overflow-hidden">
+    <section
+      className="card middle-card relative flex min-h-0 flex-1 flex-col overflow-hidden"
+      data-agent-id="chat.panel"
+      data-agent-screen-context={chatScreenContext}
+    >
       <div className="chat-header-stack">
         <TopicTabsHeader
           t={t}
@@ -556,6 +581,15 @@ export function ChatPanel({
         ) : null}
       </div>
       {editingTopicStatusText ? <div className="chat-topic-read-status mb-2" role="status" aria-live="polite">{editingTopicStatusText}</div> : null}
+      <div
+        className="chat-topic-read-status mb-2"
+        role="status"
+        aria-live="polite"
+        data-agent-id="chat.screen-context.status"
+        style={visuallyHiddenStatusStyle}
+      >
+        {chatScreenContext}
+      </div>
       <div className="chat-typing-banner" aria-live="polite">
         {hasActiveRoom && hasTypingUsers ? (
           <span className="chat-typing-status">
@@ -620,6 +654,7 @@ export function ChatPanel({
         composePendingAttachmentName={composePendingAttachmentName}
         setPreviewImageUrl={setPreviewImageUrl}
         attachmentInputRef={attachmentInputRef}
+        screenContext={chatScreenContext}
       />
       <ChatPanelOverlays
         t={t}
