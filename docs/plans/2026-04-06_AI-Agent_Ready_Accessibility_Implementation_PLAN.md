@@ -44,7 +44,7 @@ Scope: Внедрение подхода accessibility tree-first для web и 
 
 - [x] Добавить единый status/live feedback слой для подтверждения действий агента (pilot scope).
 - [x] Для stateful controls pilot scope выставлять актуальный `value`/`state` (selected/pinned/unread/muted и т.д.).
-- [ ] Добавить событийный лог подтверждений (action accepted/failed + reason), пригодный для агентной валидации.
+- [x] Добавить событийный лог подтверждений (action accepted/failed + reason), пригодный для агентной валидации (pilot UI status channel).
 - [ ] Внедрить шаблон ошибок для агентов: детерминированные причины отказа вместо неявного UI-состояния.
 
 ### 2.4 Coordinates и Deterministic Interaction
@@ -80,7 +80,7 @@ Scope: Внедрение подхода accessibility tree-first для web и 
 - [ ] Для всех интерактивных элементов пилотных экранов заполнены `identifier`, `label`, `hint`, `value/state` (выполнено для chat pilot; нужно финализировать settings/profile).
 - [x] Списки пилотных экранов представлены в явной семантике списка и элементов списка.
 - [ ] Декоративные элементы исключены из дерева доступности, stateful controls отдают актуальный `value/state` (state/value реализованы; cleanup decorative tree остаётся).
-- [ ] Каждое действие агента имеет машинно-читаемое подтверждение успеха/ошибки (requested-status есть; нужен accepted/failed + reason).
+- [x] Каждое действие агента имеет машинно-читаемое подтверждение успеха/ошибки (pilot chat scope).
 - [ ] Smoke в `test` подтверждает стабильность agent-ready contract для пилотных флоу (скрипт и интеграция готовы, test-run не зафиксирован).
 
 ## 6) Progress Update (2026-04-06)
@@ -92,6 +92,7 @@ Scope: Внедрение подхода accessibility tree-first для web и 
 	- `SMOKE_E2E_AGENT_SEMANTICS_BROWSER=1` в `scripts/smoke/smoke-web-e2e.sh`.
 	- `SMOKE_ALL_RUN_AGENT_SEMANTICS_BROWSER=1` в `scripts/smoke/run-all-smokes.sh`.
 - Документация smoke/feature-log синхронизирована под новый gate.
+- Добавлены deterministic статусы `accepted/failed:<reason>` для composer/search/topic-context действий в pilot chat scope.
 
 ## 5) Ограничения выполнения
 
