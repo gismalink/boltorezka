@@ -89,6 +89,62 @@ export const CHAT_AGENT_STATUS_STYLE = {
   border: 0
 } as const;
 
+export const CHAT_AGENT_FAILURE_REASONS = {
+  unknown: "unknown",
+  emptyMessage: "empty-message",
+  emptyQuery: "empty-query",
+  emptyTitle: "empty-title",
+  noActiveRoom: "no-active-room",
+  topicArchived: "topic-archived",
+  networkError: "network-error",
+  unauthorized: "unauthorized",
+  forbidden: "forbidden",
+  validationError: "validation-error",
+  timeout: "timeout"
+} as const;
+
+export type ChatAgentFailureReason = (typeof CHAT_AGENT_FAILURE_REASONS)[keyof typeof CHAT_AGENT_FAILURE_REASONS];
+export type ChatAgentStatusPhase = "requested" | "accepted" | "failed";
+
+export function normalizeChatAgentFailureReason(error: unknown): ChatAgentFailureReason {
+  const raw = String((error as { message?: string } | null)?.message || error || "")
+    .trim()
+    .toLowerCase();
+  if (!raw) {
+    return CHAT_AGENT_FAILURE_REASONS.unknown;
+  }
+
+  if (raw.includes("timeout") || raw.includes("timed out")) {
+    return CHAT_AGENT_FAILURE_REASONS.timeout;
+  }
+  if (raw.includes("unauthorized") || raw.includes("401")) {
+    return CHAT_AGENT_FAILURE_REASONS.unauthorized;
+  }
+  if (raw.includes("forbidden") || raw.includes("403")) {
+    return CHAT_AGENT_FAILURE_REASONS.forbidden;
+  }
+  if (raw.includes("validation") || raw.includes("invalid") || raw.includes("bad request") || raw.includes("400")) {
+    return CHAT_AGENT_FAILURE_REASONS.validationError;
+  }
+  if (raw.includes("network") || raw.includes("fetch") || raw.includes("connection") || raw.includes("ecconn")) {
+    return CHAT_AGENT_FAILURE_REASONS.networkError;
+  }
+
+  return CHAT_AGENT_FAILURE_REASONS.unknown;
+}
+
+export function buildChatAgentStatus(
+  action: string,
+  phase: ChatAgentStatusPhase,
+  reason?: ChatAgentFailureReason
+): string {
+  const actionToken = String(action || "").trim().replace(/\s+/g, "-").toLowerCase() || "action";
+  if (phase === "failed") {
+    return `${actionToken}:failed:${reason || CHAT_AGENT_FAILURE_REASONS.unknown}`;
+  }
+  return `${actionToken}:${phase}`;
+}
+
 export function chatAgentMessageId(messageId: string): string {
   return `${CHAT_AGENT_IDS.messageBase}.${String(messageId || "").trim()}`;
 }

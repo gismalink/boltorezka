@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useRef, useState, type ClipboardEvent, type FormEvent, type KeyboardEvent, type RefObject } from "react";
 import {
+  CHAT_AGENT_FAILURE_REASONS,
   CHAT_AGENT_IDS,
   CHAT_AGENT_STATUS_STYLE,
+  buildChatAgentStatus,
+  normalizeChatAgentFailureReason,
   chatAgentMentionOptionId
 } from "../../../constants/chatAgentSemantics";
 import { Button } from "../../uicomponents";
@@ -97,15 +100,6 @@ export function ChatComposerSection({
   const [mentionSelectedIndex, setMentionSelectedIndex] = useState(0);
   const [composerStatusText, setComposerStatusText] = useState("");
   const mentionListboxId = "chat-compose-mention-listbox";
-
-  const statusErrorReason = (error: unknown): string => {
-    const text = String((error as { message?: string } | null)?.message || error || "unknown")
-      .trim()
-      .toLowerCase()
-      .replace(/\s+/g, "-")
-      .replace(/[^a-z0-9._-]/g, "");
-    return text || "unknown";
-  };
 
   const mentionSuggestions = useMemo(() => {
     if (!mentionContext) {
@@ -267,7 +261,13 @@ export function ChatComposerSection({
         onSubmit={async (event) => {
           if (!hasActiveRoom || activeTopicIsArchived) {
             event.preventDefault();
-            setComposerStatusText(!hasActiveRoom ? "send:failed:no-active-room" : "send:failed:topic-archived");
+            setComposerStatusText(
+              buildChatAgentStatus(
+                "send",
+                "failed",
+                !hasActiveRoom ? CHAT_AGENT_FAILURE_REASONS.noActiveRoom : CHAT_AGENT_FAILURE_REASONS.topicArchived
+              )
+            );
             return;
           }
 
@@ -275,17 +275,17 @@ export function ChatComposerSection({
           const hasAttachment = Boolean(composePendingAttachmentName || composePreviewImage);
           if (!hasText && !hasAttachment) {
             event.preventDefault();
-            setComposerStatusText("send:failed:empty-message");
+            setComposerStatusText(buildChatAgentStatus("send", "failed", CHAT_AGENT_FAILURE_REASONS.emptyMessage));
             return;
           }
 
           const action = editingMessageId ? "edit" : "send";
-          setComposerStatusText(`${action}:requested`);
+          setComposerStatusText(buildChatAgentStatus(action, "requested"));
           try {
             await Promise.resolve(onSendMessage(event));
-            setComposerStatusText(`${action}:accepted`);
+            setComposerStatusText(buildChatAgentStatus(action, "accepted"));
           } catch (error) {
-            setComposerStatusText(`${action}:failed:${statusErrorReason(error)}`);
+            setComposerStatusText(buildChatAgentStatus(action, "failed", normalizeChatAgentFailureReason(error)));
           }
         }}
         data-agent-id={CHAT_AGENT_IDS.composer}

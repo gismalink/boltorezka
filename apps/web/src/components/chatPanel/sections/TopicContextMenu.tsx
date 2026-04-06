@@ -1,5 +1,11 @@
 import { useState } from "react";
-import { CHAT_AGENT_IDS, CHAT_AGENT_STATUS_STYLE } from "../../../constants/chatAgentSemantics";
+import {
+  CHAT_AGENT_FAILURE_REASONS,
+  CHAT_AGENT_IDS,
+  CHAT_AGENT_STATUS_STYLE,
+  buildChatAgentStatus,
+  normalizeChatAgentFailureReason
+} from "../../../constants/chatAgentSemantics";
 import { Button } from "../../uicomponents";
 
 type TopicContextMenuProps = {
@@ -39,48 +45,41 @@ export function TopicContextMenu({
 }: TopicContextMenuProps) {
   const [topicMenuStatusText, setTopicMenuStatusText] = useState("");
 
-  const statusErrorReason = (error: unknown): string => {
-    const text = String((error as { message?: string } | null)?.message || error || "unknown")
-      .trim()
-      .toLowerCase()
-      .replace(/\s+/g, "-")
-      .replace(/[^a-z0-9._-]/g, "");
-    return text || "unknown";
-  };
-
   const runActionWithStatus = async (action: "read" | "archive" | "delete") => {
-    setTopicMenuStatusText(`action:${action}:requested`);
+    const actionKey = `action:${action}`;
+    setTopicMenuStatusText(buildChatAgentStatus(actionKey, "requested"));
     try {
       await onRunAction(action);
-      setTopicMenuStatusText(`action:${action}:accepted`);
+      setTopicMenuStatusText(buildChatAgentStatus(actionKey, "accepted"));
     } catch (error) {
-      setTopicMenuStatusText(`action:${action}:failed:${statusErrorReason(error)}`);
+      setTopicMenuStatusText(buildChatAgentStatus(actionKey, "failed", normalizeChatAgentFailureReason(error)));
     }
   };
 
   const applyRenameWithStatus = async () => {
     const normalizedValue = String(renameValue || "").trim();
     if (!normalizedValue) {
-      setTopicMenuStatusText("action:rename:failed:empty-title");
+      setTopicMenuStatusText(buildChatAgentStatus("action:rename", "failed", CHAT_AGENT_FAILURE_REASONS.emptyTitle));
       return;
     }
 
-    setTopicMenuStatusText("action:rename:requested");
+    setTopicMenuStatusText(buildChatAgentStatus("action:rename", "requested"));
     try {
       await onApplyRename();
-      setTopicMenuStatusText("action:rename:accepted");
+      setTopicMenuStatusText(buildChatAgentStatus("action:rename", "accepted"));
     } catch (error) {
-      setTopicMenuStatusText(`action:rename:failed:${statusErrorReason(error)}`);
+      setTopicMenuStatusText(buildChatAgentStatus("action:rename", "failed", normalizeChatAgentFailureReason(error)));
     }
   };
 
   const setMutePresetWithStatus = async (preset: "1h" | "8h" | "24h" | "forever" | "off") => {
-    setTopicMenuStatusText(`action:mute:${preset}:requested`);
+    const actionKey = `action:mute:${preset}`;
+    setTopicMenuStatusText(buildChatAgentStatus(actionKey, "requested"));
     try {
       await onSetTopicMutePreset(preset);
-      setTopicMenuStatusText(`action:mute:${preset}:accepted`);
+      setTopicMenuStatusText(buildChatAgentStatus(actionKey, "accepted"));
     } catch (error) {
-      setTopicMenuStatusText(`action:mute:${preset}:failed:${statusErrorReason(error)}`);
+      setTopicMenuStatusText(buildChatAgentStatus(actionKey, "failed", normalizeChatAgentFailureReason(error)));
     }
   };
 

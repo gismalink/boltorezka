@@ -1,5 +1,11 @@
 import { useState } from "react";
-import { CHAT_AGENT_IDS, CHAT_AGENT_STATUS_STYLE } from "../../../constants/chatAgentSemantics";
+import {
+  CHAT_AGENT_FAILURE_REASONS,
+  CHAT_AGENT_IDS,
+  CHAT_AGENT_STATUS_STYLE,
+  buildChatAgentStatus,
+  normalizeChatAgentFailureReason
+} from "../../../constants/chatAgentSemantics";
 import { Button } from "../../uicomponents";
 
 type SearchResultItem = {
@@ -81,28 +87,19 @@ export function SearchPanel({
   const [showDateFilters, setShowDateFilters] = useState(Boolean(searchFrom || searchTo));
   const [searchStatusText, setSearchStatusText] = useState("");
 
-  const statusErrorReason = (error: unknown): string => {
-    const text = String((error as { message?: string } | null)?.message || error || "unknown")
-      .trim()
-      .toLowerCase()
-      .replace(/\s+/g, "-")
-      .replace(/[^a-z0-9._-]/g, "");
-    return text || "unknown";
-  };
-
   const runSearchWithStatus = async () => {
     const normalizedQuery = String(searchQuery || "").trim();
     if (!normalizedQuery) {
-      setSearchStatusText("search:failed:empty-query");
+      setSearchStatusText(buildChatAgentStatus("search", "failed", CHAT_AGENT_FAILURE_REASONS.emptyQuery));
       return;
     }
 
-    setSearchStatusText("search:requested");
+    setSearchStatusText(buildChatAgentStatus("search", "requested"));
     try {
       await handleSearchMessages();
-      setSearchStatusText("search:accepted");
+      setSearchStatusText(buildChatAgentStatus("search", "accepted"));
     } catch (error) {
-      setSearchStatusText(`search:failed:${statusErrorReason(error)}`);
+      setSearchStatusText(buildChatAgentStatus("search", "failed", normalizeChatAgentFailureReason(error)));
     }
   };
 
