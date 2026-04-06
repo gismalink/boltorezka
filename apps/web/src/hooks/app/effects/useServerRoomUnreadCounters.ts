@@ -167,6 +167,12 @@ export function useServerRoomUnreadCounters({
       return;
     }
 
+    // Skip noisy summaries when background loop only served cache hits and had no failures.
+    if (aggregate.cacheMisses === 0 && aggregate.failed === 0) {
+      aggregateRef.current = createEmptyAggregateMetrics();
+      return;
+    }
+
     const avgDurationMs = Math.round(aggregate.durationMs / Math.max(1, aggregate.cycles));
     const hitRatePct = aggregate.requested > 0
       ? Math.round((aggregate.cacheHits / aggregate.requested) * 100)
@@ -237,9 +243,11 @@ export function useServerRoomUnreadCounters({
       setRoomMentionUnreadBySlug(nextMention);
 
       const failedCount = settled.filter((item) => item.status === "rejected").length;
-      pushLog(
-        `room unread prefetch metrics: rooms=${metrics.requested} hit=${metrics.cacheHits} miss=${metrics.cacheMisses} durationMs=${metrics.durationMs} failed=${failedCount}`
-      );
+      if (failedCount > 0 || metrics.cacheMisses > 0) {
+        pushLog(
+          `room unread prefetch metrics: rooms=${metrics.requested} hit=${metrics.cacheHits} miss=${metrics.cacheMisses} durationMs=${metrics.durationMs} failed=${failedCount}`
+        );
+      }
       pushSummaryMetrics("prefetch", prefetchAggregateRef, metrics, failedCount);
       if (failedCount > 0) {
         pushLog(`room unread prefetch partial failure: ${failedCount}/${settled.length}`);
@@ -372,9 +380,11 @@ export function useServerRoomUnreadCounters({
       const failedCount = settled.filter((entry) => entry.status === "rejected").length;
       const allFailed = failedCount === settled.length && settled.length > 0;
       failureStreak = allFailed ? failureStreak + 1 : 0;
-      pushLog(
-        `room unread refresh metrics: rooms=${metrics.requested} hit=${metrics.cacheHits} miss=${metrics.cacheMisses} durationMs=${metrics.durationMs} failed=${failedCount} backoffLevel=${failureStreak}`
-      );
+      if (failedCount > 0 || metrics.cacheMisses > 0) {
+        pushLog(
+          `room unread refresh metrics: rooms=${metrics.requested} hit=${metrics.cacheHits} miss=${metrics.cacheMisses} durationMs=${metrics.durationMs} failed=${failedCount} backoffLevel=${failureStreak}`
+        );
+      }
       pushSummaryMetrics("refresh", refreshAggregateRef, metrics, failedCount);
       if (failedCount > 0) {
         pushLog(`room unread background refresh failures: ${failedCount}/${settled.length}`);

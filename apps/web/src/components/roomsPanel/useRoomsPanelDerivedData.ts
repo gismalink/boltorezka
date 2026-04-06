@@ -122,7 +122,7 @@ export function useRoomsPanelDerivedData({
 
     Object.entries(liveRoomMemberDetailsBySlug || {}).forEach(([slugRaw, members]) => {
       const slug = String(slugRaw || "").trim();
-      const isOutsideBucket = slug === OUTSIDE_ROOMS_PRESENCE_KEY || !knownRoomSlugs.has(slug);
+      const isOutsideBucket = slug === OUTSIDE_ROOMS_PRESENCE_KEY;
       if (!isOutsideBucket) {
         return;
       }
@@ -134,7 +134,7 @@ export function useRoomsPanelDerivedData({
 
     Object.entries(liveRoomMembersBySlug || {}).forEach(([slugRaw, memberNames]) => {
       const slug = String(slugRaw || "").trim();
-      const isOutsideBucket = slug === OUTSIDE_ROOMS_PRESENCE_KEY || !knownRoomSlugs.has(slug);
+      const isOutsideBucket = slug === OUTSIDE_ROOMS_PRESENCE_KEY;
       if (!isOutsideBucket) {
         return;
       }
