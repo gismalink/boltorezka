@@ -7,6 +7,7 @@ RUN_CALL_SIGNAL="${SMOKE_E2E_CALL_SIGNAL:-1}"
 RUN_RECONNECT="${SMOKE_E2E_RECONNECT:-1}"
 RUN_DENIED_MEDIA="${SMOKE_E2E_DENIED_MEDIA:-1}"
 RUN_DENIED_MEDIA_BROWSER="${SMOKE_E2E_DENIED_MEDIA_BROWSER:-0}"
+RUN_AGENT_SEMANTICS_BROWSER="${SMOKE_E2E_AGENT_SEMANTICS_BROWSER:-1}"
 RUN_STATIC_CONTRACT="${SMOKE_E2E_STATIC_CONTRACT:-1}"
 COMPOSE_FILE="${SMOKE_E2E_COMPOSE_FILE:-infra/docker-compose.host.yml}"
 ENV_FILE="${SMOKE_E2E_ENV_FILE:-infra/.env.host}"
@@ -149,6 +150,20 @@ if [[ "$RUN_DENIED_MEDIA_BROWSER" == "1" ]]; then
   SMOKE_API_URL="$BASE_URL" SMOKE_WEB_BASE_URL="${SMOKE_WEB_BASE_URL:-$BASE_URL}" npm run smoke:web:denied-media:browser
 else
   echo "[smoke:web-e2e] denied-media browser gate skipped (SMOKE_E2E_DENIED_MEDIA_BROWSER=0)"
+fi
+
+if [[ "$RUN_AGENT_SEMANTICS_BROWSER" == "1" ]]; then
+  if [[ -n "${SMOKE_TEST_BEARER_TOKEN:-}" ]]; then
+    echo "[smoke:web-e2e] agent semantics browser gate"
+    SMOKE_API_URL="$BASE_URL" \
+    SMOKE_WEB_BASE_URL="${SMOKE_WEB_BASE_URL:-$BASE_URL}" \
+    SMOKE_TEST_BEARER_TOKEN="${SMOKE_TEST_BEARER_TOKEN}" \
+    npm run smoke:web:agent-semantics:browser
+  else
+    echo "[smoke:web-e2e] agent semantics browser gate skipped (SMOKE_TEST_BEARER_TOKEN missing)"
+  fi
+else
+  echo "[smoke:web-e2e] agent semantics browser gate skipped (SMOKE_E2E_AGENT_SEMANTICS_BROWSER=0)"
 fi
 
 echo "[smoke:web-e2e] done"
