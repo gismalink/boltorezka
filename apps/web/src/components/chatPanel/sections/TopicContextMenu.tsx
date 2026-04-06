@@ -39,19 +39,49 @@ export function TopicContextMenu({
 }: TopicContextMenuProps) {
   const [topicMenuStatusText, setTopicMenuStatusText] = useState("");
 
-  const runActionWithStatus = (action: "read" | "archive" | "delete") => {
+  const statusErrorReason = (error: unknown): string => {
+    const text = String((error as { message?: string } | null)?.message || error || "unknown")
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, "-")
+      .replace(/[^a-z0-9._-]/g, "");
+    return text || "unknown";
+  };
+
+  const runActionWithStatus = async (action: "read" | "archive" | "delete") => {
     setTopicMenuStatusText(`action:${action}:requested`);
-    void onRunAction(action);
+    try {
+      await onRunAction(action);
+      setTopicMenuStatusText(`action:${action}:accepted`);
+    } catch (error) {
+      setTopicMenuStatusText(`action:${action}:failed:${statusErrorReason(error)}`);
+    }
   };
 
-  const applyRenameWithStatus = () => {
+  const applyRenameWithStatus = async () => {
+    const normalizedValue = String(renameValue || "").trim();
+    if (!normalizedValue) {
+      setTopicMenuStatusText("action:rename:failed:empty-title");
+      return;
+    }
+
     setTopicMenuStatusText("action:rename:requested");
-    void onApplyRename();
+    try {
+      await onApplyRename();
+      setTopicMenuStatusText("action:rename:accepted");
+    } catch (error) {
+      setTopicMenuStatusText(`action:rename:failed:${statusErrorReason(error)}`);
+    }
   };
 
-  const setMutePresetWithStatus = (preset: "1h" | "8h" | "24h" | "forever" | "off") => {
+  const setMutePresetWithStatus = async (preset: "1h" | "8h" | "24h" | "forever" | "off") => {
     setTopicMenuStatusText(`action:mute:${preset}:requested`);
-    void onSetTopicMutePreset(preset);
+    try {
+      await onSetTopicMutePreset(preset);
+      setTopicMenuStatusText(`action:mute:${preset}:accepted`);
+    } catch (error) {
+      setTopicMenuStatusText(`action:mute:${preset}:failed:${statusErrorReason(error)}`);
+    }
   };
 
   return (

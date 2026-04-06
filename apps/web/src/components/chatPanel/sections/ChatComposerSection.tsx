@@ -53,7 +53,7 @@ type ChatComposerSectionProps = {
   onCancelEdit: () => void;
   onCancelReply: () => void;
   onCancelQuote: () => void;
-  onSendMessage: (event: FormEvent) => void;
+  onSendMessage: (event: FormEvent) => void | Promise<void>;
   onSelectAttachmentFile: (file: File | null) => void;
   onClearPendingAttachment: () => void;
   onSetChatText: (value: string) => void;
@@ -97,6 +97,15 @@ export function ChatComposerSection({
   const [mentionSelectedIndex, setMentionSelectedIndex] = useState(0);
   const [composerStatusText, setComposerStatusText] = useState("");
   const mentionListboxId = "chat-compose-mention-listbox";
+
+  const statusErrorReason = (error: unknown): string => {
+    const text = String((error as { message?: string } | null)?.message || error || "unknown")
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, "-")
+      .replace(/[^a-z0-9._-]/g, "");
+    return text || "unknown";
+  };
 
   const mentionSuggestions = useMemo(() => {
     if (!mentionContext) {
@@ -255,15 +264,29 @@ export function ChatComposerSection({
     <>
       <form
         className="chat-compose mt-3 flex items-end gap-3"
-        onSubmit={(event) => {
+        onSubmit={async (event) => {
           if (!hasActiveRoom || activeTopicIsArchived) {
             event.preventDefault();
-            setComposerStatusText(!hasActiveRoom ? t("chat.selectChannelPlaceholder") : t("chat.topicArchivedReadOnly"));
+            setComposerStatusText(!hasActiveRoom ? "send:failed:no-active-room" : "send:failed:topic-archived");
             return;
           }
 
-          setComposerStatusText(`${editingMessageId ? t("chat.saveEdit") : t("chat.send")}: requested`);
-          onSendMessage(event);
+          const hasText = String(chatText || "").trim().length > 0;
+          const hasAttachment = Boolean(composePendingAttachmentName || composePreviewImage);
+          if (!hasText && !hasAttachment) {
+            event.preventDefault();
+            setComposerStatusText("send:failed:empty-message");
+            return;
+          }
+
+          const action = editingMessageId ? "edit" : "send";
+          setComposerStatusText(`${action}:requested`);
+          try {
+            await Promise.resolve(onSendMessage(event));
+            setComposerStatusText(`${action}:accepted`);
+          } catch (error) {
+            setComposerStatusText(`${action}:failed:${statusErrorReason(error)}`);
+          }
         }}
         data-agent-id={CHAT_AGENT_IDS.composer}
         data-agent-screen-context={screenContext}

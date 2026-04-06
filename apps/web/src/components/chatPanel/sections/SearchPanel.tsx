@@ -81,6 +81,31 @@ export function SearchPanel({
   const [showDateFilters, setShowDateFilters] = useState(Boolean(searchFrom || searchTo));
   const [searchStatusText, setSearchStatusText] = useState("");
 
+  const statusErrorReason = (error: unknown): string => {
+    const text = String((error as { message?: string } | null)?.message || error || "unknown")
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, "-")
+      .replace(/[^a-z0-9._-]/g, "");
+    return text || "unknown";
+  };
+
+  const runSearchWithStatus = async () => {
+    const normalizedQuery = String(searchQuery || "").trim();
+    if (!normalizedQuery) {
+      setSearchStatusText("search:failed:empty-query");
+      return;
+    }
+
+    setSearchStatusText("search:requested");
+    try {
+      await handleSearchMessages();
+      setSearchStatusText("search:accepted");
+    } catch (error) {
+      setSearchStatusText(`search:failed:${statusErrorReason(error)}`);
+    }
+  };
+
   const jumpToResult = (item: SearchResultItem) => {
     setSearchStatusText(`jump:${item.id}`);
     setSearchJumpStatusText("");
@@ -120,8 +145,7 @@ export function SearchPanel({
           onKeyDown={(event) => {
             if (event.key === "Enter") {
               event.preventDefault();
-              setSearchStatusText("search:requested");
-              void handleSearchMessages();
+              void runSearchWithStatus();
             }
           }}
           placeholder={t("chat.searchPlaceholder")}
