@@ -14,13 +14,20 @@ export function RoomMemberProfileModal({ t, data, open, onClose }: RoomMemberPro
   }
 
   return (
-    <div className="fixed inset-0 z-[185] flex items-center justify-center bg-black/65 px-4" role="dialog" aria-modal="true">
-      <div className="card compact relative grid w-full max-w-[460px] gap-3 p-4">
+    <div
+      className="fixed inset-0 z-[185] flex items-center justify-center bg-black/65 px-4"
+      role="dialog"
+      aria-modal="true"
+      aria-label={t("rooms.memberProfileTitle")}
+      data-agent-id="rooms.member.profile-modal"
+    >
+      <div className="card compact relative grid w-full max-w-[460px] gap-3 p-4" data-agent-id="rooms.member.profile-modal.card">
         <button
           type="button"
           className="secondary icon-btn tiny mention-profile-close"
           onClick={onClose}
           aria-label={t("settings.cancel")}
+          data-agent-id="rooms.member.profile-modal.close"
         >
           <i className="bi bi-x-lg" aria-hidden="true" />
         </button>

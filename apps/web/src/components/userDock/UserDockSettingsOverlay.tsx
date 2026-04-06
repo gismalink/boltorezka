@@ -170,13 +170,26 @@ export function UserDockSettingsOverlay({
 
   return (
     <div className={`voice-preferences-overlay fixed inset-0 z-[60] flex items-center justify-center p-[var(--space-3xl)] ${inlineSettingsMode ? "inline-settings-mode" : ""} ${inlineSettingsMode ? "contents" : ""}`}>
-      <div className="user-settings-modal-shell">
+      <div className="user-settings-modal-shell" data-agent-id="settings.user-modal.shell">
         {!inlineSettingsMode ? (
-          <button type="button" className="secondary icon-btn user-settings-modal-close" onClick={() => onSetUserSettingsOpen(false)} aria-label={t("settings.closeVoiceAria")}>
+          <button
+            type="button"
+            className="secondary icon-btn user-settings-modal-close"
+            onClick={() => onSetUserSettingsOpen(false)}
+            aria-label={t("settings.closeVoiceAria")}
+            data-agent-id="settings.user-modal.close"
+          >
             <i className="bi bi-x-lg" aria-hidden="true" />
           </button>
         ) : null}
-        <section className="card voice-preferences-modal user-settings-modal grid w-full max-w-[980px] min-w-0 gap-4 max-desktop:h-full max-desktop:max-h-none max-desktop:min-h-0 max-desktop:overflow-hidden max-desktop:p-4 desktop:grid-cols-[250px_1fr]" ref={userSettingsRef}>
+        <section
+          className="card voice-preferences-modal user-settings-modal grid w-full max-w-[980px] min-w-0 gap-4 max-desktop:h-full max-desktop:max-h-none max-desktop:min-h-0 max-desktop:overflow-hidden max-desktop:p-4 desktop:grid-cols-[250px_1fr]"
+          ref={userSettingsRef}
+          role="dialog"
+          aria-modal={inlineSettingsMode ? undefined : "true"}
+          aria-label={t("settings.title")}
+          data-agent-id="settings.user-modal"
+        >
         <div className="user-settings-sidebar grid min-w-0 content-start gap-3">
           <div className="voice-preferences-kicker">{t("settings.title")}</div>
           <label className="desktop:hidden grid gap-1">
@@ -717,8 +730,15 @@ export function UserDockSettingsOverlay({
                   setDeleteConfirmOpen(false);
                 }
               }}
+              data-agent-id="settings.user-modal.delete-confirm"
             >
-              <section className="card w-full max-w-[520px] p-5" role="dialog" aria-modal="true" aria-labelledby="delete-account-title">
+              <section
+                className="card w-full max-w-[520px] p-5"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="delete-account-title"
+                data-agent-id="settings.user-modal.delete-confirm.dialog"
+              >
                 <h4 id="delete-account-title">{t("settings.accountDeleteConfirmTitle")}</h4>
                 <p className="muted mt-2">{t("settings.accountDeleteConfirmBody")}</p>
                 <div className="mt-4 flex flex-wrap justify-end gap-2">
@@ -727,6 +747,7 @@ export function UserDockSettingsOverlay({
                     className="secondary"
                     onClick={() => setDeleteConfirmOpen(false)}
                     disabled={deleteAccountPending}
+                    data-agent-id="settings.user-modal.delete-confirm.cancel"
                   >
                     {t("settings.accountDeleteConfirmCancel")}
                   </button>
@@ -738,6 +759,7 @@ export function UserDockSettingsOverlay({
                       onDeleteAccount();
                     }}
                     disabled={deleteAccountPending}
+                    data-agent-id="settings.user-modal.delete-confirm.confirm"
                   >
                     {deleteAccountPending ? t("settings.accountDeletePending") : t("settings.accountDeleteConfirmAction")}
                   </button>
