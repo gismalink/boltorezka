@@ -38,7 +38,7 @@ Scope: Внедрение подхода accessibility tree-first для web и 
 - [x] Добавить view-level/screen-level identifier для pilot chat screen.
 - [x] Ввести screen context contract: где находится агент, какой active scope (room/topic/modal), какие доступные действия.
 - [x] Нормализовать списки как семантические контейнеры (list/listitem или platform equivalents), а не только визуальные блоки.
-- [ ] Скрыть декоративные элементы из accessibility tree (нужен дополнительный cleanup-pass по всем pilot экранам).
+- [ ] Скрыть декоративные элементы из accessibility tree (chat pilot cleanup-pass выполнен частично; остаётся cross-screen pass вне chat scope).
 
 ### 2.3 Action Confirmation и Agent Feedback
 
@@ -66,7 +66,7 @@ Scope: Внедрение подхода accessibility tree-first для web и 
 - [x] Chat timeline + context actions.
 - [x] Composer + mention picker + attachment actions.
 - [x] Rooms/topics navigation + filters.
-- [ ] Core modal flows (settings/profile/confirm dialogs) — частично (confirm/topic palette/image preview покрыты; settings/profile требуют отдельного прохода).
+- [ ] Core modal flows (settings/profile/confirm dialogs) — расширено (confirm/topic palette/image preview/profile modal покрыты; settings dialogs требуют отдельного прохода).
 
 ## 3) Приоритеты
 
@@ -94,6 +94,7 @@ Scope: Внедрение подхода accessibility tree-first для web и 
 - Документация smoke/feature-log синхронизирована под новый gate.
 - Добавлены deterministic статусы `accepted/failed:<reason>` для composer/search/topic-context действий в pilot chat scope.
 - Стандартизирован словарь reason-codes и общий helper построения статусов в `chatAgentSemantics`.
+- Расширена modal/profile семантика в chat pilot (`data-agent-id` для profile modal) и уменьшен decorative noise в accessibility tree (tab glyphs/unread divider visual tokens скрыты для assistive tree).
 
 ## 5) Ограничения выполнения
 

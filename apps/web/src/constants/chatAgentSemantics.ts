@@ -15,6 +15,8 @@ export const CHAT_AGENT_IDS = {
   messageActionReport: "chat.message.action.report",
   messageActionEdit: "chat.message.action.edit",
   messageActionDelete: "chat.message.action.delete",
+  messageProfileModal: "chat.message.profile-modal",
+  messageProfileModalClose: "chat.message.profile-modal.close",
 
   composer: "chat.composer",
   composerStatus: "chat.composer.status",

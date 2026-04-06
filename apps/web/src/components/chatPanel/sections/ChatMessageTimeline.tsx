@@ -561,7 +561,7 @@ export function ChatMessageTimeline({
               aria-label="Unread messages"
               data-agent-id={CHAT_AGENT_IDS.timelineUnreadDivider}
             >
-              ----непрочитанные---
+              <span aria-hidden="true">----непрочитанные---</span>
             </div>
           ) : null}
           <article
@@ -730,6 +730,8 @@ export function ChatMessageTimeline({
                             onToggleMessageReaction(messageVm.id, emoji);
                             closeContextMenu();
                           }}
+                          aria-label={`${t("chat.react")}: ${emoji}`}
+                          title={`${t("chat.react")}: ${emoji}`}
                         >
                           {emoji}
                         </button>
@@ -858,13 +860,20 @@ export function ChatMessageTimeline({
         );
       })}
       {selectedMentionProfile ? (
-        <div className="fixed inset-0 z-[185] flex items-center justify-center bg-black/65 px-4" role="dialog" aria-modal="true">
+        <div
+          className="fixed inset-0 z-[185] flex items-center justify-center bg-black/65 px-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label={t("rooms.memberProfileTitle")}
+          data-agent-id={CHAT_AGENT_IDS.messageProfileModal}
+        >
           <div className="card compact relative grid w-full max-w-[460px] gap-3 p-4">
             <button
               type="button"
               className="secondary icon-btn tiny mention-profile-close"
               onClick={() => setSelectedMentionProfile(null)}
               aria-label={t("settings.cancel")}
+              data-agent-id={CHAT_AGENT_IDS.messageProfileModalClose}
             >
               <i className="bi bi-x-lg" aria-hidden="true" />
             </button>

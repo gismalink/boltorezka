@@ -68,7 +68,7 @@ export function TopicTabsHeader({
               aria-controls="chat-topic-create-popup"
               data-agent-id={CHAT_AGENT_IDS.topicNavigationCreate}
             >
-              +
+              <span aria-hidden="true">+</span>
             </Button>
             <PopupPortal
               open={topicCreateOpen}
@@ -150,7 +150,7 @@ export function TopicTabsHeader({
                 aria-label={t("chat.topicPaletteOpen")}
                 data-agent-id={CHAT_AGENT_IDS.topicNavigationPalette}
               >
-                ...
+                <span aria-hidden="true">...</span>
               </Button>
             ) : null}
             <Button
