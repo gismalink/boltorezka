@@ -26,6 +26,7 @@ export function RoomsPanel({
   canKickMembers,
   canManageAudioQuality,
   roomsTree,
+  roomsTreeLoading,
   roomSlug,
   activeChatRoomSlug,
   screenShareOwnerByRoomSlug,
@@ -215,6 +216,20 @@ export function RoomsPanel({
     liveRoomMemberDetailsBySlug
   });
 
+  const showInitialRoomsSkeleton = roomsTreeLoading && !roomsTree;
+
+  const renderRoomsSkeleton = useCallback((rows: number) => (
+    <div className="rooms-loading-skeleton" role="status" aria-live="polite" aria-busy="true" aria-label={t("chat.loading")}>
+      {Array.from({ length: rows }).map((_, index) => (
+        <div className="rooms-loading-row" key={`rooms-loading-row-${index}`}>
+          <span className="rooms-loading-dot" aria-hidden="true" />
+          <span className="rooms-loading-line" aria-hidden="true" />
+          <span className="rooms-loading-pill" aria-hidden="true" />
+        </div>
+      ))}
+    </div>
+  ), [t]);
+
   const onRequestDeleteCategory = useCallback(() => {
     setConfirmPopup({ kind: "delete-category" });
   }, []);
@@ -390,6 +405,15 @@ export function RoomsPanel({
         </div>
       ) : null}
       <div className="rooms-scroll min-h-0 flex-1 overflow-y-auto">
+        {roomsTreeLoading && roomsTree ? (
+          <div className="rooms-refresh-indicator" role="status" aria-live="polite" aria-busy="true" aria-label={t("chat.loading")}>
+            <span className="rooms-refresh-indicator-dot" aria-hidden="true" />
+            <span>{t("chat.loading")}</span>
+          </div>
+        ) : null}
+
+        {showInitialRoomsSkeleton ? renderRoomsSkeleton(8) : (
+          <>
         {(roomsTree?.categories || []).map((category) => (
           <RoomsCategoryBlock
             key={category.id}
@@ -487,6 +511,8 @@ export function RoomsPanel({
           onRestoreRoom={onRequestRestoreArchivedRoom}
           onDeleteRoomPermanent={onRequestDeleteArchivedRoomPermanent}
         />
+          </>
+        )}
       </div>
       </section>
 

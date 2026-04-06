@@ -35,6 +35,7 @@ export function useAppCoreState({
   const [authMode, setAuthMode] = useState("loading");
   const [rooms, setRooms] = useState<Room[]>([]);
   const [roomsTree, setRoomsTree] = useState<RoomsTreeResponse | null>(null);
+  const [roomsTreeLoading, setRoomsTreeLoading] = useState(false);
   const [archivedRooms, setArchivedRooms] = useState<Room[]>([]);
   const [roomSlug, setRoomSlug] = useState("");
   const [chatRoomSlug, setChatRoomSlug] = useState("");
@@ -94,6 +95,7 @@ export function useAppCoreState({
     authMode, setAuthMode,
     rooms, setRooms,
     roomsTree, setRoomsTree,
+    roomsTreeLoading, setRoomsTreeLoading,
     archivedRooms, setArchivedRooms,
     roomSlug, setRoomSlug,
     chatRoomSlug, setChatRoomSlug,

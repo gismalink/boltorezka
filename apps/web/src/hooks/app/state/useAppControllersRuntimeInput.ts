@@ -37,6 +37,7 @@ export function useAppControllersRuntimeInput(params: Record<string, unknown>): 
       setMessagesNextCursor: p.setMessagesNextCursor,
       setRooms: p.setRooms,
       setRoomsTree: p.setRoomsTree,
+      setRoomsTreeLoading: p.setRoomsTreeLoading,
       setArchivedRooms: p.setArchivedRooms,
       setAdminUsers: p.setAdminUsers,
       setLoadingOlderMessages: p.setLoadingOlderMessages,

@@ -11,6 +11,7 @@ type RoomAdminControllerOptions = {
   sendRoomJoinEvent: (slug: string) => Promise<void>;
   setRooms: (rooms: Room[]) => void;
   setRoomsTree: (tree: RoomsTreeResponse | null) => void;
+  setRoomsTreeLoading: (value: boolean) => void;
   setArchivedRooms: (rooms: Room[]) => void;
   setAdminUsers: (users: User[]) => void;
   getCurrentServerId?: () => string;
@@ -29,6 +30,7 @@ export class RoomAdminController {
   }
 
   async loadRoomTree(token: string) {
+    this.options.setRoomsTreeLoading(true);
     try {
       const serverId = this.getCurrentServerId();
       if (!serverId) {
@@ -50,6 +52,8 @@ export class RoomAdminController {
     } catch (error) {
       this.options.pushLog(`room tree failed: ${(error as Error).message}`);
       this.options.setArchivedRooms([]);
+    } finally {
+      this.options.setRoomsTreeLoading(false);
     }
   }
 

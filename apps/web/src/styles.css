@@ -2052,6 +2052,91 @@ pre {
   padding-right: var(--space-xxs);
 }
 
+.rooms-loading-skeleton {
+  display: grid;
+  gap: 0.4rem;
+  padding: var(--space-sm);
+}
+
+.rooms-loading-row {
+  display: grid;
+  grid-template-columns: 0.5rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.rooms-loading-dot,
+.rooms-loading-line,
+.rooms-loading-pill {
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--panel-2) 88%, transparent),
+    color-mix(in srgb, var(--accent) 20%, transparent),
+    color-mix(in srgb, var(--panel-2) 88%, transparent)
+  );
+  background-size: 200% 100%;
+  animation: rooms-loading-shimmer 1.25s ease-in-out infinite;
+}
+
+.rooms-loading-dot {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 999px;
+}
+
+.rooms-loading-line {
+  height: 0.78rem;
+  border-radius: 999px;
+}
+
+.rooms-loading-pill {
+  width: 1.7rem;
+  height: 0.78rem;
+  border-radius: 999px;
+}
+
+.rooms-refresh-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: var(--space-xs) var(--space-sm);
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  color: var(--muted);
+  border: var(--border-light) solid color-mix(in srgb, var(--accent) 28%, transparent);
+  background: color-mix(in srgb, var(--panel) 86%, transparent);
+}
+
+.rooms-refresh-indicator-dot {
+  width: 0.42rem;
+  height: 0.42rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 78%, var(--text));
+  animation: rooms-loading-pulse 0.95s ease-in-out infinite;
+}
+
+@keyframes rooms-loading-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+@keyframes rooms-loading-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(0.9);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
 .rooms-list,
 .admin-list {
   list-style: none;

@@ -12,6 +12,7 @@ export function useAppWorkspacePanelsRuntimeInput(params: Record<string, unknown
         canCreateRooms: p.canCreateRooms,
         canManageAudioQuality: p.canManageAudioQuality,
         roomsTree: p.roomsTree,
+        roomsTreeLoading: p.roomsTreeLoading,
         roomSlug: p.roomSlug,
         chatRoomSlug: p.chatRoomSlug,
         roomMediaTopologyBySlug: p.roomMediaTopologyBySlug,

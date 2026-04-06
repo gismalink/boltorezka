@@ -33,6 +33,7 @@ type UseAppControllersArgs = {
   setMessagesNextCursor: Dispatch<SetStateAction<MessagesCursor | null>>;
   setRooms: Dispatch<SetStateAction<Room[]>>;
   setRoomsTree: Dispatch<SetStateAction<RoomsTreeResponse | null>>;
+  setRoomsTreeLoading: Dispatch<SetStateAction<boolean>>;
   setArchivedRooms: Dispatch<SetStateAction<Room[]>>;
   setAdminUsers: Dispatch<SetStateAction<User[]>>;
   setLoadingOlderMessages: Dispatch<SetStateAction<boolean>>;
@@ -56,6 +57,7 @@ export function useAppControllers({
   setMessagesNextCursor,
   setRooms,
   setRoomsTree,
+  setRoomsTreeLoading,
   setArchivedRooms,
   setAdminUsers,
   setLoadingOlderMessages,
@@ -84,6 +86,7 @@ export function useAppControllers({
         sendRoomJoinEvent,
         setRooms,
         setRoomsTree,
+        setRoomsTreeLoading,
         setArchivedRooms,
         setAdminUsers,
         getCurrentServerId: () => currentServerIdRef.current
@@ -100,7 +103,8 @@ export function useAppControllers({
       setMessagesNextCursor,
       setRoomSlug,
       setRooms,
-      setRoomsTree
+      setRoomsTree,
+      setRoomsTreeLoading
     ]
   );
 
