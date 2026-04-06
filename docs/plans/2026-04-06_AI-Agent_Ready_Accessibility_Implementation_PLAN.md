@@ -26,24 +26,24 @@ Scope: Внедрение подхода accessibility tree-first для web и 
 
 ### 2.1 Semantic Contract (identifier/label/hint/value/traits)
 
-- [ ] Зафиксировать стандарт структурированных имен (`<screen>_<section>_<action>_<element>`).
-- [ ] Описать обязательные поля semantic profile для кнопок, полей, переключателей, пунктов меню и списков.
-- [ ] Зафиксировать mapping на платформы:
+- [x] Зафиксировать стандарт структурированных имен (`<screen>.<section>.<action>[.<element>]`) для pilot-флоу через единый реестр `chatAgentSemantics`.
+- [x] Описать обязательные поля semantic profile для pilot chat controls (стабильный `identifier` + state/value/status).
+- [x] Зафиксировать mapping на платформы:
 	- ARIA/data-attributes для web,
 	- desktop-electron renderer: тот же semantic contract, что и web.
-- [ ] Запретить неполные интерактивные элементы без `identifier` и состояния (`value/state`).
+- [ ] Запретить неполные интерактивные элементы без `identifier` и состояния (`value/state`) для всех экранов (пока enforced только на pilot chat scope).
 
 ### 2.2 Screen Context и Navigation Model
 
-- [ ] Добавить view-level/screen-level identifier для ключевых экранов.
-- [ ] Ввести screen context contract: где находится агент, какой active scope (room/topic/modal), какие доступные действия.
-- [ ] Нормализовать списки как семантические контейнеры (list/listitem или platform equivalents), а не только визуальные блоки.
-- [ ] Скрыть декоративные элементы из accessibility tree.
+- [x] Добавить view-level/screen-level identifier для pilot chat screen.
+- [x] Ввести screen context contract: где находится агент, какой active scope (room/topic/modal), какие доступные действия.
+- [x] Нормализовать списки как семантические контейнеры (list/listitem или platform equivalents), а не только визуальные блоки.
+- [ ] Скрыть декоративные элементы из accessibility tree (нужен дополнительный cleanup-pass по всем pilot экранам).
 
 ### 2.3 Action Confirmation и Agent Feedback
 
-- [ ] Добавить единый status/live feedback слой для подтверждения действий агента.
-- [ ] Для stateful controls всегда выставлять актуальный `value`/`state` (selected/pinned/unread/muted и т.д.).
+- [x] Добавить единый status/live feedback слой для подтверждения действий агента (pilot scope).
+- [x] Для stateful controls pilot scope выставлять актуальный `value`/`state` (selected/pinned/unread/muted и т.д.).
 - [ ] Добавить событийный лог подтверждений (action accepted/failed + reason), пригодный для агентной валидации.
 - [ ] Внедрить шаблон ошибок для агентов: детерминированные причины отказа вместо неявного UI-состояния.
 
@@ -58,15 +58,15 @@ Scope: Внедрение подхода accessibility tree-first для web и 
 
 - [ ] Включить agent-readiness review в Definition of Done для UI-задач.
 - [ ] Добавить checklist в PR/feature flow: semantic completeness, list semantics, state value, action confirmation.
-- [ ] Внедрить smoke-проверки критических флоу в test по accessibility tree contract.
-- [ ] Фиксировать evidence в `docs/status/FEATURE_LOG.md` с явной пометкой `agent-ready accessibility`.
+- [x] Внедрить smoke-проверки критических флоу в test по accessibility tree contract (новый gate `smoke:web:agent-semantics:browser`, подключен в `smoke:web:e2e` и `run-all-smokes`).
+- [x] Фиксировать evidence в `docs/status/FEATURE_LOG.md` с явной пометкой `agent-ready accessibility`.
 
 ### 2.6 Пилотные флоу (первая волна)
 
-- [ ] Chat timeline + context actions.
-- [ ] Composer + mention picker + attachment actions.
-- [ ] Rooms/topics navigation + filters.
-- [ ] Core modal flows (settings/profile/confirm dialogs).
+- [x] Chat timeline + context actions.
+- [x] Composer + mention picker + attachment actions.
+- [x] Rooms/topics navigation + filters.
+- [ ] Core modal flows (settings/profile/confirm dialogs) — частично (confirm/topic palette/image preview покрыты; settings/profile требуют отдельного прохода).
 
 ## 3) Приоритеты
 
@@ -76,12 +76,22 @@ Scope: Внедрение подхода accessibility tree-first для web и 
 
 ## 4) Acceptance criteria
 
-- [ ] Для пилотных флоу агент проходит сценарии по accessibility tree без обязательного screenshot анализа.
-- [ ] Для всех интерактивных элементов пилотных экранов заполнены `identifier`, `label`, `hint`, `value/state`.
-- [ ] Списки пилотных экранов представлены в явной семантике списка и элементов списка.
-- [ ] Декоративные элементы исключены из дерева доступности, stateful controls отдают актуальный `value/state`.
-- [ ] Каждое действие агента имеет машинно-читаемое подтверждение успеха/ошибки.
-- [ ] Smoke в `test` подтверждает стабильность agent-ready contract для пилотных флоу.
+- [ ] Для пилотных флоу агент проходит сценарии по accessibility tree без обязательного screenshot анализа (код и smoke готовы; требуется прогон на test с токеном).
+- [ ] Для всех интерактивных элементов пилотных экранов заполнены `identifier`, `label`, `hint`, `value/state` (выполнено для chat pilot; нужно финализировать settings/profile).
+- [x] Списки пилотных экранов представлены в явной семантике списка и элементов списка.
+- [ ] Декоративные элементы исключены из дерева доступности, stateful controls отдают актуальный `value/state` (state/value реализованы; cleanup decorative tree остаётся).
+- [ ] Каждое действие агента имеет машинно-читаемое подтверждение успеха/ошибки (requested-status есть; нужен accepted/failed + reason).
+- [ ] Smoke в `test` подтверждает стабильность agent-ready contract для пилотных флоу (скрипт и интеграция готовы, test-run не зафиксирован).
+
+## 6) Progress Update (2026-04-06)
+
+- Выполнены core P0/P1 инкременты в chat scope: semantic ids + screen context + action feedback + pilot coverage для timeline/composer/navigation/search/overlays.
+- Добавлен и централизован реестр идентификаторов: `apps/web/src/constants/chatAgentSemantics.ts`.
+- Добавлен browser smoke gate: `npm run smoke:web:agent-semantics:browser`.
+- Gate встроен в orchestration:
+	- `SMOKE_E2E_AGENT_SEMANTICS_BROWSER=1` в `scripts/smoke/smoke-web-e2e.sh`.
+	- `SMOKE_ALL_RUN_AGENT_SEMANTICS_BROWSER=1` в `scripts/smoke/run-all-smokes.sh`.
+- Документация smoke/feature-log синхронизирована под новый gate.
 
 ## 5) Ограничения выполнения
 

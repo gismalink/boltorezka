@@ -100,7 +100,17 @@
   - room join + message send/receive (`smoke:realtime`),
   - voice connect/disconnect relay path (`SMOKE_CALL_SIGNAL=1`),
   - reconnect scenario (`SMOKE_RECONNECT=1`),
-  - admin moderation checks (`promote/demote/ban/unban`) в server profile UI.
+  - admin moderation checks (`promote/demote/ban/unban`) в server profile UI,
+  - chat agent semantics browser gate (`smoke:web:agent-semantics:browser`) при включённом `SMOKE_E2E_AGENT_SEMANTICS_BROWSER=1`.
+
+### 3.2.1 Agent semantics gate (chat UI changes)
+
+- Для релизов, затрагивающих chat UI (timeline/composer/topic navigation/search/overlays), обязательна проверка:
+  - `SMOKE_TEST_BEARER_TOKEN=<token> SMOKE_WEB_BASE_URL=<url> npm run smoke:web:agent-semantics:browser`.
+- В orchestration (`smoke:web:e2e`, `run-all-smokes`) gate включён по умолчанию:
+  - `SMOKE_E2E_AGENT_SEMANTICS_BROWSER=1`,
+  - `SMOKE_ALL_RUN_AGENT_SEMANTICS_BROWSER=1`.
+- Если `SMOKE_TEST_BEARER_TOKEN` отсутствует, stage допускает только `skip` и не подтверждает readiness для chat UI release.
 
 ### 3.4 Voice baseline evidence (canonical)
 
@@ -246,6 +256,9 @@
 10. **Desktop updater distribution gate**
   - `smoke:desktop:update-feed` — PASS в postdeploy;
   - в `.deploy/last-smoke-summary.env` присутствует `SMOKE_DESKTOP_UPDATE_FEED_STATUS=pass`.
+11. **Chat accessibility-tree contract gate (для chat UI изменений)**
+  - `smoke:web:agent-semantics:browser` — PASS;
+  - `skip` допустим только для нерелевантных изменений, не затрагивающих chat UI.
 
 ### 8.2 Automatic NO-GO conditions
 
