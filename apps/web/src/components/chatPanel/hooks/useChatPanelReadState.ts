@@ -42,6 +42,32 @@ export function useChatPanelReadState({
   const unreadBackfillAttemptsByTopicRef = useRef<Record<string, number>>({});
   const unreadDividerScrolledTopicRef = useRef<string>("");
 
+  const isMessageSetAlignedWithActiveContext = useCallback(() => {
+    if (messages.length === 0) {
+      return true;
+    }
+
+    const normalizedRoomId = String(roomId || "").trim();
+    if (!normalizedRoomId) {
+      return false;
+    }
+
+    const normalizedTopicId = String(activeTopicId || "").trim();
+    return messages.every((message) => {
+      const messageRoomId = String(message.room_id || "").trim();
+      if (!messageRoomId || messageRoomId !== normalizedRoomId) {
+        return false;
+      }
+
+      if (!normalizedTopicId) {
+        return true;
+      }
+
+      const messageTopicId = String(message.topic_id || "").trim();
+      return messageTopicId === normalizedTopicId;
+    });
+  }, [activeTopicId, messages, roomId]);
+
   const getTopicUnreadCount = useCallback((topic: RoomTopic): number => {
     const override = topicUnreadOverrideById[topic.id];
     if (override && topic.unreadCount === override.sourceUnreadCount) {
@@ -221,6 +247,7 @@ export function useChatPanelReadState({
     unreadEntryTopicRef.current = normalizedTopicId;
     unreadDividerScrolledTopicRef.current = "";
     unreadBackfillAttemptsByTopicRef.current[normalizedTopicId] = 0;
+    setEntryUnreadDivider(null);
 
     const activeTopic = topics.find((topic) => String(topic.id || "").trim() === normalizedTopicId);
     entryUnreadCountByTopicRef.current[normalizedTopicId] = activeTopic ? getTopicUnreadCount(activeTopic) : 0;
@@ -229,6 +256,10 @@ export function useChatPanelReadState({
   useEffect(() => {
     const normalizedTopicId = String(activeTopicId || "").trim();
     if (!normalizedTopicId || loadingOlderMessages || !messagesHasMore) {
+      return;
+    }
+
+    if (!isMessageSetAlignedWithActiveContext()) {
       return;
     }
 
@@ -244,11 +275,17 @@ export function useChatPanelReadState({
 
     unreadBackfillAttemptsByTopicRef.current[normalizedTopicId] = attempts + 1;
     onLoadOlderMessages();
-  }, [activeTopicId, loadingOlderMessages, messages.length, messagesHasMore, onLoadOlderMessages]);
+  }, [activeTopicId, isMessageSetAlignedWithActiveContext, loadingOlderMessages, messages.length, messagesHasMore, onLoadOlderMessages]);
 
   useEffect(() => {
     const normalizedTopicId = String(activeTopicId || "").trim();
     if (!normalizedTopicId) {
+      return;
+    }
+
+    if (!isMessageSetAlignedWithActiveContext()) {
+      setEntryUnreadDivider(null);
+      unreadDividerScrolledTopicRef.current = "";
       return;
     }
 
@@ -280,7 +317,7 @@ export function useChatPanelReadState({
       messageId: dividerMessageId
     });
     unreadDividerScrolledTopicRef.current = "";
-  }, [activeTopicId, entryUnreadDivider?.messageId, entryUnreadDivider?.topicId, messages, messagesHasMore]);
+  }, [activeTopicId, entryUnreadDivider?.messageId, entryUnreadDivider?.topicId, isMessageSetAlignedWithActiveContext, messages, messagesHasMore]);
 
   useEffect(() => {
     if (!entryUnreadDivider?.messageId) {

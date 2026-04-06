@@ -554,7 +554,7 @@ export function ChatMessageTimeline({
         const selectedQuoteText = contextMenuOpen ? getSelectedQuoteTextForMessage(messageVm.id) : "";
         return (
           <div key={messageVm.id}>
-          {unreadDividerMessageId === messageVm.id ? (
+          {unreadDividerVisible && unreadDividerMessageId === messageVm.id ? (
             <div
               className={`chat-unread-divider ${unreadDividerVisible ? "chat-unread-divider-visible" : ""}`}
               role="separator"

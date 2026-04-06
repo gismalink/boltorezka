@@ -348,6 +348,13 @@ export function ChatPanel({
 
   const activeTopic = useMemo(() => topicsForUi.find((topic) => topic.id === activeTopicId) ?? null, [topicsForUi, activeTopicId]);
   const activeTopicIsArchived = Boolean(activeTopic?.archivedAt);
+  const unreadDividerVisible = useMemo(() => {
+    const dividerMessageId = String(entryUnreadDivider?.messageId || "").trim();
+    const dividerTopicId = String(entryUnreadDivider?.topicId || "").trim();
+    const normalizedActiveTopicId = String(activeTopicId || "").trim();
+
+    return Boolean(dividerMessageId && dividerTopicId && normalizedActiveTopicId && dividerTopicId === normalizedActiveTopicId);
+  }, [activeTopicId, entryUnreadDivider?.messageId, entryUnreadDivider?.topicId]);
 
   const messageViewModels = useMemo(() => {
     const startedAt = typeof performance !== "undefined" ? performance.now() : 0;
@@ -667,8 +674,8 @@ export function ChatPanel({
         resolveAttachmentImageUrl={resolveAttachmentImageUrl}
         formatAttachmentSize={formatAttachmentSize}
         setPreviewImageUrl={setPreviewImageUrl}
-        unreadDividerMessageId={entryUnreadDivider?.messageId || null}
-        unreadDividerVisible={Boolean(entryUnreadDivider?.messageId)}
+        unreadDividerMessageId={unreadDividerVisible ? (entryUnreadDivider?.messageId || null) : null}
+        unreadDividerVisible={unreadDividerVisible}
       />
       <ChatComposerSection
         t={t}
