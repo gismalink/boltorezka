@@ -98,6 +98,16 @@ Scope: Внедрение подхода accessibility tree-first для web и 
 - Добавлены deterministic `data-agent-id` и dialog semantics для user settings/delete-confirm и room member profile modal.
 - Browser smoke `smoke:web:agent-semantics:browser` расширен на optional путь открытия user settings modal через user dock controls.
 
+## 7) Evidence Artifact (test)
+
+- Test-results template for current pilot run:
+	- `docs/status/test-results/2026-04-06.md`
+- После фактического test прогона обновить поля:
+	- `Applied SHA`,
+	- `Result`,
+	- `Output excerpt`,
+	- `Notes`.
+
 ## 5) Ограничения выполнения
 
 - Все rollout изменения сначала только в `test`.

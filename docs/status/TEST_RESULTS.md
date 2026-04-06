@@ -9,4 +9,4 @@
 - legacy-domain циклы (pre-cutover) переносятся в `docs/status/test-results/archive/legacy-gismalink-domain/`.
 
 Последний зафиксированный цикл:
-- `2026-03-28` (test smoke + compliance/age-gate checks) — PASS.
+- `2026-04-06` (AI-agent accessibility pilot semantics gate) — PENDING RUN EVIDENCE.
