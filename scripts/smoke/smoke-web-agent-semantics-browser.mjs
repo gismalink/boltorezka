@@ -33,6 +33,15 @@ async function requireVisible(page, selector, label) {
   return { label, selector };
 }
 
+async function maybeVisible(page, selector) {
+  const locator = page.locator(selector).first();
+  const count = await locator.count();
+  if (count === 0) {
+    return false;
+  }
+  return locator.isVisible();
+}
+
 async function main() {
   if (!bearerToken) {
     throw new Error("SMOKE_TEST_BEARER_TOKEN is required for smoke:web:agent-semantics:browser");
@@ -59,6 +68,24 @@ async function main() {
     checks.push(await requireVisible(page, '[data-agent-id="chat.composer"]', "chat.composer"));
     checks.push(await requireVisible(page, '[data-agent-id="chat.composer.input"]', "chat.composer.input"));
     checks.push(await requireVisible(page, '[data-agent-id="chat.composer.submit"]', "chat.composer.submit"));
+
+    if (await maybeVisible(page, '[data-agent-id="chat.topic-navigation.palette"]')) {
+      await page.locator('[data-agent-id="chat.topic-navigation.palette"]').first().click();
+      checks.push(await requireVisible(page, '[data-agent-id="chat.overlay.topic-palette"]', "chat.overlay.topic-palette"));
+      checks.push(await requireVisible(page, '[data-agent-id="chat.overlay.topic-palette.search"]', "chat.overlay.topic-palette.search"));
+      checks.push(await requireVisible(page, '[data-agent-id="chat.overlay.topic-palette.list"]', "chat.overlay.topic-palette.list"));
+      checks.push(await requireVisible(page, '[data-agent-id="chat.overlay.topic-palette.close"]', "chat.overlay.topic-palette.close"));
+      await page.locator('[data-agent-id="chat.overlay.topic-palette.close"]').first().click();
+    }
+
+    if (await maybeVisible(page, '[data-agent-id="chat.topic-navigation.tab"]')) {
+      await page.locator('[data-agent-id="chat.topic-navigation.tab"]').first().click({ button: "right" });
+      checks.push(await requireVisible(page, '[data-agent-id="chat.topic-context-menu"]', "chat.topic-context-menu"));
+      checks.push(await requireVisible(page, '[data-agent-id="chat.topic-context-menu.action.read"]', "chat.topic-context-menu.action.read"));
+      checks.push(await requireVisible(page, '[data-agent-id="chat.topic-context-menu.action.archive"]', "chat.topic-context-menu.action.archive"));
+      checks.push(await requireVisible(page, '[data-agent-id="chat.topic-context-menu.action.delete"]', "chat.topic-context-menu.action.delete"));
+      await page.keyboard.press("Escape");
+    }
 
     await page.locator('[data-agent-id="chat.topic-navigation.search-toggle"]').first().click();
     checks.push(await requireVisible(page, '[data-agent-id="chat.search.panel"]', "chat.search.panel"));
