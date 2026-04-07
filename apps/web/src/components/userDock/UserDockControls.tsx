@@ -222,6 +222,7 @@ export function UserDockControls({
                 disabled={mediaControlsLocked}
                 onClick={onToggleVoiceSettings}
                 data-agent-id="userdock.voice-settings.toggle"
+                data-agent-state={voiceSettingsOpen ? "open" : "closed"}
               >
                 <i className="bi bi-chevron-down" aria-hidden="true" />
               </button>
@@ -319,6 +320,7 @@ export function UserDockControls({
                     onOpenUserSettings("sound");
                   }}
                   data-agent-id="settings.user-modal.open"
+                  data-agent-state={mediaControlsLocked ? "disabled" : "ready"}
                 >
                   <span>{t("settings.voiceSettings")}</span>
                   <i className="bi bi-gear" aria-hidden="true" />
@@ -424,6 +426,7 @@ export function UserDockControls({
                     onOpenUserSettings("sound");
                   }}
                   data-agent-id="settings.user-modal.open"
+                  data-agent-state={mediaControlsLocked ? "disabled" : "ready"}
                 >
                   <span>{t("settings.voiceSettings")}</span>
                   <i className="bi bi-gear" aria-hidden="true" />

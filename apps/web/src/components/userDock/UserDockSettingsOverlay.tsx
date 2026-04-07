@@ -275,6 +275,8 @@ export function UserDockSettingsOverlay({
                           setIsEditingName(false);
                         }}
                         disabled={profileSaving}
+                        data-agent-id="settings.user-modal.profile.display-name.cancel"
+                        data-agent-state={profileSaving ? "disabled" : "ready"}
                       >
                         {t("settings.cancel")}
                       </button>
@@ -307,6 +309,14 @@ export function UserDockSettingsOverlay({
                           setIsEditingName(false);
                         }}
                         disabled={profileSaving || !nameChanged || normalizedDraftName.length === 0}
+                        data-agent-id="settings.user-modal.profile.display-name.apply"
+                        data-agent-state={
+                          profileSaving
+                            ? "saving"
+                            : !nameChanged || normalizedDraftName.length === 0
+                              ? "disabled"
+                              : "ready"
+                        }
                       >
                         {profileSaving ? t("settings.saving") : t("settings.apply")}
                       </button>
@@ -324,7 +334,12 @@ export function UserDockSettingsOverlay({
                 <div className="grid gap-[var(--space-md)] desktop:grid-cols-2">
                   <label className="grid gap-[var(--space-md)]">
                     <span className="subheading">{t("settings.language")}</span>
-                    <select value={selectedLang} onChange={(event) => onSetSelectedLang(event.target.value as "ru" | "en") }>
+                    <select
+                      value={selectedLang}
+                      onChange={(event) => onSetSelectedLang(event.target.value as "ru" | "en") }
+                      data-agent-id="settings.user-modal.profile.language"
+                      data-agent-value={selectedLang}
+                    >
                       {languageOptions.map((option) => (
                         <option key={option.value} value={option.value}>{option.label}</option>
                       ))}
@@ -339,6 +354,8 @@ export function UserDockSettingsOverlay({
                         onSetSelectedUiTheme(nextTheme);
                         void onApplyProfileTheme(nextTheme);
                       }}
+                      data-agent-id="settings.user-modal.profile.theme"
+                      data-agent-value={selectedUiTheme}
                     >
                       <option value="8-neon-bit">{t("settings.theme8NeonBit")}</option>
                       <option value="material-classic">{t("settings.themeMaterialClassic")}</option>
@@ -355,7 +372,14 @@ export function UserDockSettingsOverlay({
                         ? `${t("settings.ageConfirmConfirmedAt")}: ${new Date(serverAgeConfirmedAt).toLocaleString()}`
                         : t("settings.ageConfirmNotConfirmed")}
                   </p>
-                  <button type="button" className="secondary" onClick={onConfirmServerAge} disabled={serverAgeConfirming}>
+                  <button
+                    type="button"
+                    className="secondary"
+                    onClick={onConfirmServerAge}
+                    disabled={serverAgeConfirming}
+                    data-agent-id="settings.user-modal.profile.age-confirm"
+                    data-agent-state={serverAgeConfirming ? "pending" : serverAgeConfirmedAt ? "confirmed" : "unconfirmed"}
+                  >
                     {serverAgeConfirming
                       ? t("settings.ageConfirmActionLoading")
                       : serverAgeConfirmedAt
@@ -768,6 +792,7 @@ export function UserDockSettingsOverlay({
                     onClick={() => setDeleteConfirmOpen(false)}
                     disabled={deleteAccountPending}
                     data-agent-id="settings.user-modal.delete-confirm.cancel"
+                    data-agent-state={deleteAccountPending ? "disabled" : "ready"}
                   >
                     {t("settings.accountDeleteConfirmCancel")}
                   </button>
@@ -780,6 +805,7 @@ export function UserDockSettingsOverlay({
                     }}
                     disabled={deleteAccountPending}
                     data-agent-id="settings.user-modal.delete-confirm.confirm"
+                    data-agent-state={deleteAccountPending ? "pending" : "ready"}
                   >
                     {deleteAccountPending ? t("settings.accountDeletePending") : t("settings.accountDeleteConfirmAction")}
                   </button>

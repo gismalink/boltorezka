@@ -33,6 +33,16 @@ async function requireVisible(page, selector, label) {
   return { label, selector };
 }
 
+async function requireAttribute(page, selector, attributeName, label, allowEmpty = false) {
+  const locator = page.locator(selector).first();
+  await locator.waitFor({ state: "visible", timeout: timeoutMs });
+  const value = await locator.getAttribute(attributeName);
+  if (value == null || (!allowEmpty && String(value).trim().length === 0)) {
+    throw new Error(`${label}: missing ${attributeName}`);
+  }
+  return { label, selector };
+}
+
 async function maybeVisible(page, selector) {
   const locator = page.locator(selector).first();
   const count = await locator.count();
@@ -205,6 +215,7 @@ async function main() {
       && await voiceSettingsToggle.isVisible()
       && await voiceSettingsToggle.isEnabled();
     if (canOpenVoiceSettings) {
+      checks.push(await requireAttribute(page, '[data-agent-id="userdock.voice-settings.toggle"]', "data-agent-state", "userdock.voice-settings.toggle[state]"));
       await voiceSettingsToggle.click();
       if (await maybeVisible(page, '[data-agent-id="settings.user-modal.open"]')) {
         await page.locator('[data-agent-id="settings.user-modal.open"]').first().click();
@@ -214,6 +225,14 @@ async function main() {
         checks.push(await requireVisible(page, '[data-agent-id="settings.user-modal.profile.section"]', "settings.user-modal.profile.section"));
         checks.push(await requireVisible(page, '[data-agent-id="settings.user-modal.profile.display-name"]', "settings.user-modal.profile.display-name"));
         checks.push(await requireVisible(page, '[data-agent-id="settings.user-modal.delete-open"]', "settings.user-modal.delete-open"));
+        checks.push(await requireAttribute(page, '[data-agent-id="settings.user-modal"]', "data-agent-state", "settings.user-modal[state]"));
+        checks.push(await requireAttribute(page, '[data-agent-id="settings.user-modal.tab.profile"]', "data-agent-state", "settings.user-modal.tab.profile[state]"));
+        checks.push(await requireAttribute(page, '[data-agent-id="settings.user-modal.profile.display-name"]', "data-agent-state", "settings.user-modal.profile.display-name[state]"));
+        checks.push(await requireAttribute(page, '[data-agent-id="settings.user-modal.profile.display-name"]', "data-agent-value", "settings.user-modal.profile.display-name[value]", true));
+        checks.push(await requireAttribute(page, '[data-agent-id="settings.user-modal.profile.language"]', "data-agent-value", "settings.user-modal.profile.language[value]"));
+        checks.push(await requireAttribute(page, '[data-agent-id="settings.user-modal.profile.theme"]', "data-agent-value", "settings.user-modal.profile.theme[value]"));
+        checks.push(await requireAttribute(page, '[data-agent-id="settings.user-modal.profile.age-confirm"]', "data-agent-state", "settings.user-modal.profile.age-confirm[state]"));
+        checks.push(await requireAttribute(page, '[data-agent-id="settings.user-modal.delete-open"]', "data-agent-state", "settings.user-modal.delete-open[state]"));
         await page.locator('[data-agent-id="settings.user-modal.close"]').first().click();
       }
     }
