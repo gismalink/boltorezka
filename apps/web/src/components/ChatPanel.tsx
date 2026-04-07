@@ -616,10 +616,9 @@ export function ChatPanel({
           />
         ) : null}
       </div>
-      {hasActiveRoom ? (
+      {hasActiveRoom && hotkeyStatusText ? (
         <div className="chat-hotkeys-hint muted" aria-live="polite">
-          {t("chat.hotkeysHint")}
-          {hotkeyStatusText ? ` ${hotkeyStatusText}` : ""}
+          {hotkeyStatusText}
         </div>
       ) : null}
       <div className="mb-3 flex flex-wrap items-center gap-3">

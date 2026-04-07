@@ -6,6 +6,9 @@ import { closeRealtimeConnection } from "./realtime-lifecycle.js";
 import { consumeWsTicketAndInitializeConnection } from "./realtime-ws-auth.js";
 import { registerRealtimeSocket } from "../realtime-broadcast.js";
 
+const WS_IDLE_TIMEOUT_MS = 45_000;
+const WS_HEARTBEAT_INTERVAL_MS = 20_000;
+
 type SocketState = {
   sessionId: string;
   userId: string;
@@ -57,6 +60,38 @@ export function registerRealtimeWsRoute(fastify: FastifyInstance, deps: Register
       websocket: true
     },
     async (connection: WebSocket, request: FastifyRequest) => {
+      let idleTimeout: ReturnType<typeof setTimeout> | null = null;
+      let heartbeatInterval: ReturnType<typeof setInterval> | null = null;
+
+      const clearHeartbeat = () => {
+        if (idleTimeout) {
+          clearTimeout(idleTimeout);
+          idleTimeout = null;
+        }
+        if (heartbeatInterval) {
+          clearInterval(heartbeatInterval);
+          heartbeatInterval = null;
+        }
+      };
+
+      const armIdleTimeout = () => {
+        if (idleTimeout) {
+          clearTimeout(idleTimeout);
+        }
+
+        idleTimeout = setTimeout(() => {
+          try {
+            connection.terminate();
+          } catch {
+            try {
+              connection.close(1001, "Idle timeout");
+            } catch {
+              // best effort close
+            }
+          }
+        }, WS_IDLE_TIMEOUT_MS);
+      };
+
       try {
         const initialized = await consumeWsTicketAndInitializeConnection({
           connection,
@@ -75,11 +110,34 @@ export function registerRealtimeWsRoute(fastify: FastifyInstance, deps: Register
           return;
         }
 
+        armIdleTimeout();
+        heartbeatInterval = setInterval(() => {
+          if (connection.readyState !== connection.OPEN) {
+            return;
+          }
+
+          try {
+            connection.ping();
+          } catch {
+            try {
+              connection.terminate();
+            } catch {
+              // best effort close
+            }
+          }
+        }, WS_HEARTBEAT_INTERVAL_MS);
+
+        connection.on("pong", () => {
+          armIdleTimeout();
+        });
+
         connection.on("message", async (raw) => {
+          armIdleTimeout();
           await handleMessage(connection, raw);
         });
 
         connection.on("close", async () => {
+          clearHeartbeat();
           await closeRealtimeConnection({
             connection,
             socketState,
@@ -99,6 +157,7 @@ export function registerRealtimeWsRoute(fastify: FastifyInstance, deps: Register
           });
         });
       } catch (error) {
+        clearHeartbeat();
         logWsConnectionFailed(error);
         try {
           connection.close(1011, "Internal error");

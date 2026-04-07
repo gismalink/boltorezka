@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { sendChatMessage } from "./chatMessageSendService";
 
+type SendChatMessageParams = Parameters<typeof sendChatMessage>[0];
+
 const {
   chatUploadInitMock,
   uploadChatObjectMock,
@@ -37,7 +39,7 @@ vi.mock("./chatTransportCommands", () => ({
   runChatSend: runChatSendMock
 }));
 
-function createBaseParams() {
+function createBaseParams(): SendChatMessageParams {
   return {
     authToken: "token",
     chatRoomSlug: "general",
@@ -53,7 +55,7 @@ function createBaseParams() {
     maxDataUrlLength: 20,
     chatController: {
       sendMessage: vi.fn(() => ({ sent: true }))
-    },
+    } as unknown as SendChatMessageParams["chatController"],
     sendWsEvent: vi.fn(() => null),
     sendWsEventAwaitAck: vi.fn(async () => undefined)
   };

@@ -114,6 +114,7 @@ export function createRealtimeRoomEventHandlers(deps: RoomEventHandlerDeps) {
     }
 
     if (state.roomId) {
+      const previousRoomPresenceCount = getRoomPresence(state.roomId).length;
       markRecentRoomDetach(state.roomId, state.userId);
       detachRoomSocket(state.roomId, connection);
       clearCanonicalMediaState(state.roomId, state.userId);
@@ -123,7 +124,7 @@ export function createRealtimeRoomEventHandlers(deps: RoomEventHandlerDeps) {
           state.userId,
           state.userName,
           state.roomSlug,
-          0,
+          Math.max(0, previousRoomPresenceCount - 1),
           {
             requestId,
             sessionId: state.sessionId,
