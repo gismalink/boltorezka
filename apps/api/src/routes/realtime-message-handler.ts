@@ -78,6 +78,34 @@ type RealtimeMessageHandlerDeps = {
     requestId: string | null,
     eventType: string
   ) => Promise<void>;
+  handleChatPinEvent: (
+    connection: WebSocket,
+    state: SocketState,
+    payload: WsIncomingPayload | undefined,
+    requestId: string | null,
+    eventType: string
+  ) => Promise<void>;
+  handleChatUnpinEvent: (
+    connection: WebSocket,
+    state: SocketState,
+    payload: WsIncomingPayload | undefined,
+    requestId: string | null,
+    eventType: string
+  ) => Promise<void>;
+  handleChatReactionAddEvent: (
+    connection: WebSocket,
+    state: SocketState,
+    payload: WsIncomingPayload | undefined,
+    requestId: string | null,
+    eventType: string
+  ) => Promise<void>;
+  handleChatReactionRemoveEvent: (
+    connection: WebSocket,
+    state: SocketState,
+    payload: WsIncomingPayload | undefined,
+    requestId: string | null,
+    eventType: string
+  ) => Promise<void>;
   handleChatTypingEvent: (
     connection: WebSocket,
     state: SocketState,
@@ -143,6 +171,10 @@ export function createRealtimeMessageHandler(deps: RealtimeMessageHandlerDeps) {
     handleChatSendEvent,
     handleChatEditEvent,
     handleChatDeleteEvent,
+    handleChatPinEvent,
+    handleChatUnpinEvent,
+    handleChatReactionAddEvent,
+    handleChatReactionRemoveEvent,
     handleChatTypingEvent,
     handleScreenShareStartEvent,
     handleScreenShareStopEvent,
@@ -214,6 +246,26 @@ export function createRealtimeMessageHandler(deps: RealtimeMessageHandlerDeps) {
 
         case "chat.delete": {
           await handleChatDeleteEvent(connection, state, payload, requestId, eventType);
+          return;
+        }
+
+        case "chat.pin": {
+          await handleChatPinEvent(connection, state, payload, requestId, eventType);
+          return;
+        }
+
+        case "chat.unpin": {
+          await handleChatUnpinEvent(connection, state, payload, requestId, eventType);
+          return;
+        }
+
+        case "chat.reaction.add": {
+          await handleChatReactionAddEvent(connection, state, payload, requestId, eventType);
+          return;
+        }
+
+        case "chat.reaction.remove": {
+          await handleChatReactionRemoveEvent(connection, state, payload, requestId, eventType);
           return;
         }
 

@@ -41,9 +41,13 @@ test("ws-protocol: parseWsIncomingEnvelope accepts string and buffer payload", (
 
 test("ws-protocol: asKnownWsIncomingEnvelope filters unknown event types", () => {
   const known = asKnownWsIncomingEnvelope({ type: "chat.send", requestId: "r1", payload: {} });
+  const knownPin = asKnownWsIncomingEnvelope({ type: "chat.pin", requestId: "r-pin", payload: {} });
+  const knownReactionAdd = asKnownWsIncomingEnvelope({ type: "chat.reaction.add", requestId: "r-react", payload: {} });
   const unknown = asKnownWsIncomingEnvelope({ type: "custom.event", requestId: "r2", payload: {} });
 
   assert.equal(known?.type, "chat.send");
+  assert.equal(knownPin?.type, "chat.pin");
+  assert.equal(knownReactionAdd?.type, "chat.reaction.add");
   assert.equal(unknown, null);
 });
 

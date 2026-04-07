@@ -2,6 +2,33 @@ import type { WebSocket } from "ws";
 import { isServerAgeConfirmed } from "../services/age-verification-service.js";
 import { resolveActiveServerMute } from "../services/server-mute-service.js";
 
+let topicMessageOpsPromise: Promise<{
+  setTopicMessagePinned: (input: { messageId: string; userId: string; pinned: boolean }) => Promise<{
+    room: { id: string; slug: string };
+    topic: { id: string; slug: string };
+    messageId: string;
+    pinned: boolean;
+  }>;
+  setTopicMessageReaction: (input: { messageId: string; userId: string; emoji: string; active: boolean }) => Promise<{
+    room: { id: string; slug: string };
+    topic: { id: string; slug: string };
+    messageId: string;
+    emoji: string;
+    userId: string;
+    active: boolean;
+  }>;
+}> | null = null;
+
+async function getTopicMessageOps() {
+  if (!topicMessageOpsPromise) {
+    topicMessageOpsPromise = import("../services/room-topic-messages-service.js").then((module) => ({
+      setTopicMessagePinned: module.setTopicMessagePinned,
+      setTopicMessageReaction: module.setTopicMessageReaction
+    }));
+  }
+  return topicMessageOpsPromise;
+}
+
 type SocketState = {
   userId: string;
   userName: string;
@@ -690,4 +717,219 @@ export async function handleChatTyping(params: ChatCommonParams): Promise<void> 
 
   broadcastRoom(targetRoom.roomId, buildChatTypingEnvelope(typingPayload), connection);
   sendAckWithMetrics(connection, requestId, eventType);
+}
+
+function mapTopicDomainErrorToNack(
+  error: unknown,
+  connection: WebSocket,
+  requestId: string | null,
+  eventType: string,
+  sendNack: ChatCommonParams["sendNack"]
+): boolean {
+  const message = String((error as Error)?.message || "").trim();
+
+  if (message === "message_not_found" || message === "topic_not_found" || message === "room_not_found") {
+    sendNack(connection, requestId, eventType, "MessageNotFound", "Message not found");
+    return true;
+  }
+
+  if (message === "forbidden_room_access" || message === "forbidden_topic_manage") {
+    sendNack(connection, requestId, eventType, "Forbidden", "You do not have access to this resource");
+    return true;
+  }
+
+  if (message === "validation_error") {
+    sendNack(connection, requestId, eventType, "ValidationError", "Validation failed");
+    return true;
+  }
+
+  return false;
+}
+
+export async function handleChatPin(params: ChatCommonParams): Promise<void> {
+  const {
+    connection,
+    state,
+    payload,
+    requestId,
+    eventType,
+    normalizeRequestId,
+    getPayloadString,
+    sendValidationNack,
+    sendNack,
+    broadcastRoom,
+    sendAckWithMetrics
+  } = params;
+
+  const messageId = normalizeRequestId(getPayloadString(payload, "messageId", 128));
+  if (!messageId) {
+    sendValidationNack(connection, requestId, eventType, "messageId is required");
+    return;
+  }
+
+  try {
+    const { setTopicMessagePinned } = await getTopicMessageOps();
+    const result = await setTopicMessagePinned({
+      messageId,
+      userId: state.userId,
+      pinned: true
+    });
+
+    const ts = new Date().toISOString();
+    broadcastRoom(result.room.id, {
+      type: "chat.message.pinned",
+      payload: {
+        roomId: result.room.id,
+        roomSlug: result.room.slug,
+        topicId: result.topic.id,
+        topicSlug: result.topic.slug,
+        messageId: result.messageId,
+        pinned: true,
+        pinnedByUserId: state.userId,
+        ts
+      }
+    });
+
+    sendAckWithMetrics(connection, requestId, eventType, {
+      messageId: result.messageId,
+      topicId: result.topic.id
+    });
+  } catch (error) {
+    if (mapTopicDomainErrorToNack(error, connection, requestId, eventType, sendNack)) {
+      return;
+    }
+    sendNack(connection, requestId, eventType, "ServerError", "Failed to pin message");
+  }
+}
+
+export async function handleChatUnpin(params: ChatCommonParams): Promise<void> {
+  const {
+    connection,
+    state,
+    payload,
+    requestId,
+    eventType,
+    normalizeRequestId,
+    getPayloadString,
+    sendValidationNack,
+    sendNack,
+    broadcastRoom,
+    sendAckWithMetrics
+  } = params;
+
+  const messageId = normalizeRequestId(getPayloadString(payload, "messageId", 128));
+  if (!messageId) {
+    sendValidationNack(connection, requestId, eventType, "messageId is required");
+    return;
+  }
+
+  try {
+    const { setTopicMessagePinned } = await getTopicMessageOps();
+    const result = await setTopicMessagePinned({
+      messageId,
+      userId: state.userId,
+      pinned: false
+    });
+
+    const ts = new Date().toISOString();
+    broadcastRoom(result.room.id, {
+      type: "chat.message.unpinned",
+      payload: {
+        roomId: result.room.id,
+        roomSlug: result.room.slug,
+        topicId: result.topic.id,
+        topicSlug: result.topic.slug,
+        messageId: result.messageId,
+        pinned: false,
+        unpinnedByUserId: state.userId,
+        ts
+      }
+    });
+
+    sendAckWithMetrics(connection, requestId, eventType, {
+      messageId: result.messageId,
+      topicId: result.topic.id
+    });
+  } catch (error) {
+    if (mapTopicDomainErrorToNack(error, connection, requestId, eventType, sendNack)) {
+      return;
+    }
+    sendNack(connection, requestId, eventType, "ServerError", "Failed to unpin message");
+  }
+}
+
+async function handleChatReactionToggle(params: ChatCommonParams & { active: boolean }): Promise<void> {
+  const {
+    connection,
+    state,
+    payload,
+    requestId,
+    eventType,
+    normalizeRequestId,
+    getPayloadString,
+    sendValidationNack,
+    sendNack,
+    broadcastRoom,
+    sendAckWithMetrics,
+    active
+  } = params;
+
+  const messageId = normalizeRequestId(getPayloadString(payload, "messageId", 128));
+  const emoji = getPayloadString(payload, "emoji", 32);
+  if (!messageId || !emoji) {
+    sendValidationNack(connection, requestId, eventType, "messageId and emoji are required");
+    return;
+  }
+
+  try {
+    const { setTopicMessageReaction } = await getTopicMessageOps();
+    const result = await setTopicMessageReaction({
+      messageId,
+      userId: state.userId,
+      emoji,
+      active
+    });
+
+    const ts = new Date().toISOString();
+    broadcastRoom(result.room.id, {
+      type: "chat.message.reaction.changed",
+      payload: {
+        roomId: result.room.id,
+        roomSlug: result.room.slug,
+        topicId: result.topic.id,
+        topicSlug: result.topic.slug,
+        messageId: result.messageId,
+        emoji: result.emoji,
+        userId: result.userId,
+        active: result.active,
+        ts
+      }
+    });
+
+    sendAckWithMetrics(connection, requestId, eventType, {
+      messageId: result.messageId,
+      topicId: result.topic.id,
+      emoji: result.emoji,
+      active: result.active
+    });
+  } catch (error) {
+    if (mapTopicDomainErrorToNack(error, connection, requestId, eventType, sendNack)) {
+      return;
+    }
+    sendNack(connection, requestId, eventType, "ServerError", "Failed to update reaction");
+  }
+}
+
+export async function handleChatReactionAdd(params: ChatCommonParams): Promise<void> {
+  await handleChatReactionToggle({
+    ...params,
+    active: true
+  });
+}
+
+export async function handleChatReactionRemove(params: ChatCommonParams): Promise<void> {
+  await handleChatReactionToggle({
+    ...params,
+    active: false
+  });
 }

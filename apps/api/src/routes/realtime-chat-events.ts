@@ -1,6 +1,15 @@
 import type { WebSocket } from "ws";
 import type { WsIncomingPayload } from "../ws-protocol.types.ts";
-import { handleChatDelete, handleChatEdit, handleChatSend, handleChatTyping } from "./realtime-chat.js";
+import {
+  handleChatDelete,
+  handleChatEdit,
+  handleChatPin,
+  handleChatReactionAdd,
+  handleChatReactionRemove,
+  handleChatSend,
+  handleChatTyping,
+  handleChatUnpin
+} from "./realtime-chat.js";
 
 type SocketState = {
   sessionId: string;
@@ -150,10 +159,54 @@ export function createRealtimeChatEventHandlers(deps: ChatEventDeps) {
     await handleChatTyping(buildChatBaseParams(connection, state, payload, requestId, eventType));
   };
 
+  const handleChatPinEvent = async (
+    connection: WebSocket,
+    state: SocketState,
+    payload: WsIncomingPayload | undefined,
+    requestId: string | null,
+    eventType: string
+  ) => {
+    await handleChatPin(buildChatBaseParams(connection, state, payload, requestId, eventType));
+  };
+
+  const handleChatUnpinEvent = async (
+    connection: WebSocket,
+    state: SocketState,
+    payload: WsIncomingPayload | undefined,
+    requestId: string | null,
+    eventType: string
+  ) => {
+    await handleChatUnpin(buildChatBaseParams(connection, state, payload, requestId, eventType));
+  };
+
+  const handleChatReactionAddEvent = async (
+    connection: WebSocket,
+    state: SocketState,
+    payload: WsIncomingPayload | undefined,
+    requestId: string | null,
+    eventType: string
+  ) => {
+    await handleChatReactionAdd(buildChatBaseParams(connection, state, payload, requestId, eventType));
+  };
+
+  const handleChatReactionRemoveEvent = async (
+    connection: WebSocket,
+    state: SocketState,
+    payload: WsIncomingPayload | undefined,
+    requestId: string | null,
+    eventType: string
+  ) => {
+    await handleChatReactionRemove(buildChatBaseParams(connection, state, payload, requestId, eventType));
+  };
+
   return {
     handleChatSendEvent,
     handleChatEditEvent,
     handleChatDeleteEvent,
+    handleChatPinEvent,
+    handleChatUnpinEvent,
+    handleChatReactionAddEvent,
+    handleChatReactionRemoveEvent,
     handleChatTypingEvent
   };
 }

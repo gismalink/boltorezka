@@ -95,7 +95,7 @@ describe("chatOperationExecutor", () => {
     const httpRequest = vi.fn(async () => 42);
 
     const result = await executeChatOperation({
-      policy: CHAT_OPERATION_POLICIES["chat.pin"],
+      policy: CHAT_OPERATION_POLICIES["chat.report"],
       httpRequest
     });
 

@@ -47,16 +47,36 @@ export const CHAT_OPERATION_POLICIES: Record<ChatOperationPolicyId, ChatOperatio
     }
   },
   "chat.pin": {
-    transport: "http-only"
+    transport: "ws-first-http-fallback",
+    ws: {
+      eventType: "chat.pin",
+      withIdempotency: true,
+      maxRetries: 1
+    }
   },
   "chat.unpin": {
-    transport: "http-only"
+    transport: "ws-first-http-fallback",
+    ws: {
+      eventType: "chat.unpin",
+      withIdempotency: true,
+      maxRetries: 1
+    }
   },
   "chat.reaction.add": {
-    transport: "http-only"
+    transport: "ws-first-http-fallback",
+    ws: {
+      eventType: "chat.reaction.add",
+      withIdempotency: true,
+      maxRetries: 1
+    }
   },
   "chat.reaction.remove": {
-    transport: "http-only"
+    transport: "ws-first-http-fallback",
+    ws: {
+      eventType: "chat.reaction.remove",
+      withIdempotency: true,
+      maxRetries: 1
+    }
   },
   "chat.report": {
     transport: "http-only"

@@ -553,6 +553,13 @@ export function useChatComposerActions({
     void (async () => {
       const pinResult = await executeChatOperation({
         policy: currentlyPinned ? CHAT_OPERATION_POLICIES["chat.unpin"] : CHAT_OPERATION_POLICIES["chat.pin"],
+        sendWsEvent,
+        sendWsEventAwaitAck,
+        payload: {
+          messageId,
+          roomSlug: chatRoomSlug,
+          topicId: activeTopicId || undefined
+        },
         httpRequest: async () => {
         if (currentlyPinned) {
           await api.unpinMessage(authToken, messageId);
@@ -575,7 +582,7 @@ export function useChatComposerActions({
 
       setPinnedByMessageId((prev) => ({ ...prev, [messageId]: pinResult.value }));
     })();
-  }, [activeTopicId, authToken, pinnedByMessageId, pushToast, serverErrorMessage, topicOnlyActionMessage]);
+  }, [activeTopicId, authToken, chatRoomSlug, pinnedByMessageId, pushToast, sendWsEvent, sendWsEventAwaitAck, serverErrorMessage, topicOnlyActionMessage]);
 
   const toggleMessageReaction = useCallback((messageId: string, emoji: string = "👍") => {
     if (!activeTopicId) {
@@ -593,6 +600,14 @@ export function useChatComposerActions({
     void (async () => {
       const reactionResult = await executeChatOperation({
         policy: currentlyActive ? CHAT_OPERATION_POLICIES["chat.reaction.remove"] : CHAT_OPERATION_POLICIES["chat.reaction.add"],
+        sendWsEvent,
+        sendWsEventAwaitAck,
+        payload: {
+          messageId: normalizedMessageId,
+          emoji: normalizedEmoji,
+          roomSlug: chatRoomSlug,
+          topicId: activeTopicId || undefined
+        },
         httpRequest: async () => {
         if (currentlyActive) {
           await api.removeMessageReaction(authToken, normalizedMessageId, normalizedEmoji);
@@ -640,7 +655,7 @@ export function useChatComposerActions({
         return next;
       });
     })();
-  }, [activeTopicId, authToken, pushToast, reactionsByMessageId, serverErrorMessage, topicOnlyActionMessage]);
+  }, [activeTopicId, authToken, chatRoomSlug, pushToast, reactionsByMessageId, sendWsEvent, sendWsEventAwaitAck, serverErrorMessage, topicOnlyActionMessage]);
 
   const reportMessage = useCallback((messageId: string) => {
     if (!activeTopicId) {

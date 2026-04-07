@@ -71,6 +71,34 @@ export type WsIncomingChatDeleteEnvelope = {
   payload?: WsIncomingPayload;
 };
 
+export type WsIncomingChatPinEnvelope = {
+  type: "chat.pin";
+  requestId?: string;
+  idempotencyKey?: string;
+  payload?: WsIncomingPayload;
+};
+
+export type WsIncomingChatUnpinEnvelope = {
+  type: "chat.unpin";
+  requestId?: string;
+  idempotencyKey?: string;
+  payload?: WsIncomingPayload;
+};
+
+export type WsIncomingChatReactionAddEnvelope = {
+  type: "chat.reaction.add";
+  requestId?: string;
+  idempotencyKey?: string;
+  payload?: WsIncomingPayload;
+};
+
+export type WsIncomingChatReactionRemoveEnvelope = {
+  type: "chat.reaction.remove";
+  requestId?: string;
+  idempotencyKey?: string;
+  payload?: WsIncomingPayload;
+};
+
 export type WsIncomingChatTypingEnvelope = {
   type: "chat.typing";
   requestId?: string;
@@ -136,6 +164,10 @@ export type WsIncomingKnownEnvelope =
   | WsIncomingChatSendEnvelope
   | WsIncomingChatEditEnvelope
   | WsIncomingChatDeleteEnvelope
+  | WsIncomingChatPinEnvelope
+  | WsIncomingChatUnpinEnvelope
+  | WsIncomingChatReactionAddEnvelope
+  | WsIncomingChatReactionRemoveEnvelope
   | WsIncomingChatTypingEnvelope
   | WsIncomingCallOfferEnvelope
   | WsIncomingCallAnswerEnvelope
