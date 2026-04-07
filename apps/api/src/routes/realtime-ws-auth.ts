@@ -29,6 +29,7 @@ type ConsumeWsTicketDeps = {
   attachUserSocket: (userId: string, socket: WebSocket) => void;
   registerRealtimeSocket: (socket: WebSocket, userId?: string) => void;
   getAllRoomsPresence: (forUserId: string | null, forServerId?: string | null) => unknown;
+  broadcastAllRoomsPresence: () => void;
   redisGet: (key: string) => Promise<string | null>;
   redisDel: (key: string) => Promise<number>;
   redisHSet: (key: string, values: Record<string, string>) => Promise<number>;
@@ -43,6 +44,7 @@ export async function consumeWsTicketAndInitializeConnection(deps: ConsumeWsTick
     attachUserSocket,
     registerRealtimeSocket,
     getAllRoomsPresence,
+    broadcastAllRoomsPresence,
     redisGet,
     redisDel,
     redisHSet,
@@ -101,7 +103,8 @@ export async function consumeWsTicketAndInitializeConnection(deps: ConsumeWsTick
     sendJson,
     buildServerReadyEnvelope,
     buildRoomsPresenceEnvelope,
-    getAllRoomsPresence
+    getAllRoomsPresence,
+    broadcastAllRoomsPresence
   });
 
   return true;

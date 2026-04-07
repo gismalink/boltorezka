@@ -22,6 +22,7 @@ export async function initializeRealtimeConnection(params: {
   buildServerReadyEnvelope: (userId: string, userName: string) => unknown;
   buildRoomsPresenceEnvelope: (...args: any[]) => unknown;
   getAllRoomsPresence: (forUserId: string | null, forServerId?: string | null) => unknown;
+  broadcastAllRoomsPresence: () => void;
 }) {
   const {
     connection,
@@ -36,7 +37,8 @@ export async function initializeRealtimeConnection(params: {
     sendJson,
     buildServerReadyEnvelope,
     buildRoomsPresenceEnvelope,
-    getAllRoomsPresence
+    getAllRoomsPresence,
+    broadcastAllRoomsPresence
   } = params;
 
   socketState.set(connection, {
@@ -60,6 +62,7 @@ export async function initializeRealtimeConnection(params: {
 
   sendJson(connection, buildServerReadyEnvelope(userId, userName));
   sendJson(connection, buildRoomsPresenceEnvelope(getAllRoomsPresence(userId, currentServerId)));
+  broadcastAllRoomsPresence();
 }
 
 export async function closeRealtimeConnection(params: {
@@ -119,8 +122,9 @@ export async function closeRealtimeConnection(params: {
         getRoomPresence(state.roomId).length
       )
     );
-    broadcastAllRoomsPresence();
   }
+
+  broadcastAllRoomsPresence();
 
   const userSockets = socketsByUserId.get(state.userId);
   if (!userSockets || userSockets.size === 0) {

@@ -7,6 +7,7 @@ test("realtime-lifecycle: initialize sets state, marks presence online and sends
   const socketState = new WeakMap<any, any>();
   const sentPayloads: unknown[] = [];
   const redisCalls: string[] = [];
+  const events: string[] = [];
 
   await initializeRealtimeConnection({
     connection,
@@ -29,7 +30,10 @@ test("realtime-lifecycle: initialize sets state, marks presence online and sends
     },
     buildServerReadyEnvelope: (userId, userName) => ({ type: "server.ready", userId, userName }),
     buildRoomsPresenceEnvelope: (roomsPresence) => ({ type: "rooms.presence", roomsPresence }),
-    getAllRoomsPresence: () => [{ roomId: "room-1", count: 1 }]
+    getAllRoomsPresence: () => [{ roomId: "room-1", count: 1 }],
+    broadcastAllRoomsPresence: () => {
+      events.push("broadcast-all-presence");
+    }
   });
 
   const state = socketState.get(connection);
@@ -42,6 +46,7 @@ test("realtime-lifecycle: initialize sets state, marks presence online and sends
     "hset:presence:user:u1:1",
     "expire:presence:user:u1:120"
   ]);
+  assert.deepEqual(events, ["broadcast-all-presence"]);
 
   assert.equal(sentPayloads.length, 2);
 });
@@ -167,4 +172,66 @@ test("realtime-lifecycle: close does not mark offline when another user socket i
   });
 
   assert.deepEqual(events, ["unregister", "detach-user"]);
+});
+
+test("realtime-lifecycle: close outside room still broadcasts all-rooms presence", async () => {
+  const connection = {} as any;
+  const socketState = new WeakMap<any, any>();
+  socketState.set(connection, {
+    userId: "u2",
+    userName: "Bob",
+    roomId: null,
+    roomSlug: null
+  });
+
+  const events: string[] = [];
+  const socketsByUserId = new Map<string, Set<any>>([["u2", new Set()]]);
+
+  await closeRealtimeConnection({
+    connection,
+    socketState,
+    unregisterRealtimeSocket: () => {
+      events.push("unregister");
+    },
+    detachUserSocket: () => {
+      events.push("detach-user");
+    },
+    markRecentRoomDetach: () => {
+      events.push("mark-detach");
+    },
+    detachRoomSocket: () => {
+      events.push("detach-room");
+    },
+    clearCanonicalMediaState: () => {
+      events.push("clear-media");
+    },
+    clearRoomScreenShareOwnerIfMatches: () => {
+      events.push("clear-screen-owner");
+    },
+    broadcastRoom: () => {
+      events.push("broadcast-room");
+    },
+    buildPresenceLeftEnvelope: () => ({ type: "presence.left" }),
+    getRoomPresence: () => [],
+    broadcastAllRoomsPresence: () => {
+      events.push("broadcast-all-presence");
+    },
+    socketsByUserId,
+    redisHSet: async (key, value) => {
+      events.push(`hset:${key}:${value.online}`);
+      return 1;
+    },
+    redisExpire: async (key, seconds) => {
+      events.push(`expire:${key}:${seconds}`);
+      return 1;
+    }
+  });
+
+  assert.deepEqual(events, [
+    "unregister",
+    "detach-user",
+    "broadcast-all-presence",
+    "hset:presence:user:u2:0",
+    "expire:presence:user:u2:120"
+  ]);
 });

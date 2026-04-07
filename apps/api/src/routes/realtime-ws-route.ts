@@ -100,6 +100,7 @@ export function registerRealtimeWsRoute(fastify: FastifyInstance, deps: Register
           attachUserSocket,
           registerRealtimeSocket,
           getAllRoomsPresence,
+          broadcastAllRoomsPresence,
           redisGet: fastify.redis.get.bind(fastify.redis),
           redisDel: fastify.redis.del.bind(fastify.redis),
           redisHSet: fastify.redis.hSet.bind(fastify.redis),
