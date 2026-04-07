@@ -4,6 +4,12 @@ type SendWsEventFn = (
   options?: { withIdempotency?: boolean; maxRetries?: number }
 ) => string | null;
 
+type SendWsEventAwaitAckFn = (
+  eventType: string,
+  payload: Record<string, unknown>,
+  options?: { withIdempotency?: boolean; maxRetries?: number }
+) => Promise<void>;
+
 type WsOperationConfig = {
   eventType: string;
   withIdempotency?: boolean;
@@ -67,7 +73,7 @@ type ExecuteWsFirstWithHttpFallbackInput<T> = {
 };
 
 export type ExecuteWsFirstWithHttpFallbackResult<T> =
-  | { kind: "ws"; requestId: string }
+  | { kind: "ws"; requestId?: string }
   | { kind: "http"; value: T }
   | { kind: "failed" };
 
@@ -105,6 +111,49 @@ export async function executeWsFirstWithHttpFallback<T>({
   }
 }
 
+type ExecuteWsFirstWithHttpFallbackAwaitAckInput<T> = {
+  sendWsEventAwaitAck: SendWsEventAwaitAckFn;
+  eventType: string;
+  payload: Record<string, unknown>;
+  withIdempotency?: boolean;
+  maxRetries?: number;
+  httpFallback: () => Promise<T>;
+};
+
+function isTransientWsError(error: unknown): boolean {
+  const message = String((error as { message?: string } | null)?.message || "").trim().toLowerCase();
+  return message === "ws_not_connected" || message.includes("ack_timeout") || message === "ws_disposed";
+}
+
+export async function executeWsFirstWithHttpFallbackAwaitAck<T>({
+  sendWsEventAwaitAck,
+  eventType,
+  payload,
+  withIdempotency,
+  maxRetries,
+  httpFallback
+}: ExecuteWsFirstWithHttpFallbackAwaitAckInput<T>): Promise<ExecuteWsFirstWithHttpFallbackResult<T>> {
+  try {
+    await sendWsEventAwaitAck(eventType, payload, {
+      withIdempotency,
+      maxRetries
+    });
+    return { kind: "ws" };
+  } catch (error) {
+    // Фолбэк через HTTP только для сетевых/временных WS-сбоев.
+    if (!isTransientWsError(error)) {
+      return { kind: "failed" };
+    }
+  }
+
+  try {
+    const value = await httpFallback();
+    return { kind: "http", value };
+  } catch {
+    return { kind: "failed" };
+  }
+}
+
 export async function executeHttpOnly<T>(httpRequest: () => Promise<T>): Promise<ExecuteHttpOnlyResult<T>> {
   try {
     // Единая точка для HTTP-only операций: одинаковый контракт успеха/ошибки.
@@ -129,6 +178,7 @@ export async function executeHttpWithError<T>(
 type ExecuteChatOperationInput<T> = {
   policy: ChatOperationPolicy;
   sendWsEvent?: SendWsEventFn;
+  sendWsEventAwaitAck?: SendWsEventAwaitAckFn;
   payload?: Record<string, unknown>;
   httpRequest?: () => Promise<T>;
 };
@@ -136,6 +186,7 @@ type ExecuteChatOperationInput<T> = {
 export async function executeChatOperation<T>({
   policy,
   sendWsEvent,
+  sendWsEventAwaitAck,
   payload,
   httpRequest
 }: ExecuteChatOperationInput<T>): Promise<ExecuteWsFirstWithHttpFallbackResult<T> | ExecuteHttpOnlyResult<T>> {
@@ -151,6 +202,18 @@ export async function executeChatOperation<T>({
   }
 
   if (policy.transport === "ws-only") {
+    if (sendWsEventAwaitAck) {
+      try {
+        await sendWsEventAwaitAck(policy.ws.eventType, payload, {
+          withIdempotency: policy.ws.withIdempotency,
+          maxRetries: policy.ws.maxRetries
+        });
+        return { kind: "ws" };
+      } catch {
+        return { kind: "failed" };
+      }
+    }
+
     const requestId = sendWsEvent(policy.ws.eventType, payload, {
       withIdempotency: policy.ws.withIdempotency,
       maxRetries: policy.ws.maxRetries
@@ -160,6 +223,17 @@ export async function executeChatOperation<T>({
 
   if (!httpRequest) {
     return { kind: "failed" };
+  }
+
+  if (sendWsEventAwaitAck) {
+    return executeWsFirstWithHttpFallbackAwaitAck({
+      sendWsEventAwaitAck,
+      eventType: policy.ws.eventType,
+      payload,
+      withIdempotency: policy.ws.withIdempotency,
+      maxRetries: policy.ws.maxRetries,
+      httpFallback: httpRequest
+    });
   }
 
   return executeWsFirstWithHttpFallback({
@@ -175,6 +249,7 @@ export async function executeChatOperation<T>({
 export async function executeChatOperationWithError<T>({
   policy,
   sendWsEvent,
+  sendWsEventAwaitAck,
   payload,
   httpRequest
 }: ExecuteChatOperationInput<T>): Promise<ExecuteWsFirstWithHttpFallbackResult<T> | ExecuteHttpWithErrorResult<T>> {
@@ -188,6 +263,7 @@ export async function executeChatOperationWithError<T>({
   const result = await executeChatOperation({
     policy,
     sendWsEvent,
+    sendWsEventAwaitAck,
     payload,
     httpRequest
   });

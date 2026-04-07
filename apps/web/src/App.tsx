@@ -674,7 +674,7 @@ export function App() {
   } = useAppWorkspaceActionsRuntime(useAppWorkspaceActionsRuntimeInput({
     ...runtimeInputCommon,
     canCreateRooms, roomAdminController,
-    disconnectRoom, sendWsEvent,
+    disconnectRoom, sendWsEvent, sendWsEventAwaitAck,
     setAgeGateBlockedRoomSlug, setRoomSlug, setChatRoomSlug,
     messages, setMessages, setMessagesHasMore, setMessagesNextCursor,
     chatText, setChatText,

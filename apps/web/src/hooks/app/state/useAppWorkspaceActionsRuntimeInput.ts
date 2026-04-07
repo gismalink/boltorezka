@@ -129,6 +129,7 @@ export function useAppWorkspaceActionsRuntimeInput(params: Record<string, unknow
           setPendingChatImageDataUrl: p.setPendingChatImageDataUrl,
           chatController: p.chatController,
           sendWsEvent: p.sendWsEvent,
+          sendWsEventAwaitAck: p.sendWsEventAwaitAck,
           sendChatTypingState: p.sendChatTypingState,
           pushToast: p.pushToast,
           selectChannelPlaceholderMessage: p.selectChannelPlaceholderMessage,

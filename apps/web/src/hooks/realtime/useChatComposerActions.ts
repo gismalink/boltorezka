@@ -28,6 +28,12 @@ type SendWsEventFn = (
   options?: { withIdempotency?: boolean; maxRetries?: number }
 ) => string | null;
 
+type SendWsEventAwaitAckFn = (
+  eventType: string,
+  payload: Record<string, unknown>,
+  options?: { withIdempotency?: boolean; maxRetries?: number }
+) => Promise<void>;
+
 type UseChatComposerActionsParams = {
   chatRoomSlug: string;
   activeTopicId: string | null;
@@ -48,6 +54,7 @@ type UseChatComposerActionsParams = {
   setPendingChatImageDataUrl: (value: string | null) => void;
   chatController: ChatController;
   sendWsEvent: SendWsEventFn;
+  sendWsEventAwaitAck: SendWsEventAwaitAckFn;
   sendChatTypingState: (targetRoomSlug: string, isTyping: boolean) => void;
   pushToast: (message: string) => void;
   selectChannelPlaceholderMessage: string;
@@ -155,6 +162,7 @@ export function useChatComposerActions({
   setPendingChatImageDataUrl,
   chatController,
   sendWsEvent,
+  sendWsEventAwaitAck,
   sendChatTypingState,
   pushToast,
   selectChannelPlaceholderMessage,
@@ -265,7 +273,8 @@ export function useChatComposerActions({
         maxChatRetries,
         maxDataUrlLength: serverChatImagePolicy.maxDataUrlLength,
         chatController,
-        sendWsEvent
+        sendWsEvent,
+        sendWsEventAwaitAck
       });
 
       if (result.kind === "no-room") {
@@ -333,6 +342,7 @@ export function useChatComposerActions({
     selectChannelPlaceholderMessage,
     sendChatTypingState,
     sendWsEvent,
+    sendWsEventAwaitAck,
     serverChatImagePolicy,
     serverErrorMessage,
     setChatText,
@@ -507,6 +517,7 @@ export function useChatComposerActions({
       const deleteResult = await executeChatOperation({
         policy: CHAT_OPERATION_POLICIES["chat.delete"],
         sendWsEvent,
+        sendWsEventAwaitAck,
         payload: {
           messageId,
           roomSlug: chatRoomSlug,
@@ -530,7 +541,7 @@ export function useChatComposerActions({
         pushToast(serverErrorMessage);
       }
     })();
-  }, [activeTopicId, authToken, canManageOwnMessage, chatRoomSlug, messages, pushToast, selectChannelPlaceholderMessage, sendWsEvent, serverErrorMessage, setMessages]);
+  }, [activeTopicId, authToken, canManageOwnMessage, chatRoomSlug, messages, pushToast, selectChannelPlaceholderMessage, sendWsEvent, sendWsEventAwaitAck, serverErrorMessage, setMessages]);
 
   const openRoomChat = useCallback((slug: string) => {
     const normalized = String(slug || "").trim();

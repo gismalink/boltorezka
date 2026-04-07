@@ -10,6 +10,12 @@ type SendWsEventFn = (
   options?: { withIdempotency?: boolean; maxRetries?: number }
 ) => string | null;
 
+type SendWsEventAwaitAckFn = (
+  eventType: string,
+  payload: Record<string, unknown>,
+  options?: { withIdempotency?: boolean; maxRetries?: number }
+) => Promise<void>;
+
 type SendChatMessageParams = {
   authToken: string;
   chatRoomSlug: string;
@@ -25,6 +31,7 @@ type SendChatMessageParams = {
   maxDataUrlLength: number;
   chatController: ChatController;
   sendWsEvent: SendWsEventFn;
+  sendWsEventAwaitAck: SendWsEventAwaitAckFn;
 };
 
 export type SendChatMessageResult =
@@ -52,7 +59,8 @@ export async function sendChatMessage(params: SendChatMessageParams): Promise<Se
     maxChatRetries,
     maxDataUrlLength,
     chatController,
-    sendWsEvent
+    sendWsEvent,
+    sendWsEventAwaitAck
   } = params;
 
   if (!chatRoomSlug) {
@@ -74,6 +82,7 @@ export async function sendChatMessage(params: SendChatMessageParams): Promise<Se
           maxRetries: maxChatRetries
         }
       },
+      sendWsEventAwaitAck,
       sendWsEvent,
       payload: {
         messageId: editingMessageId,

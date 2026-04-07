@@ -3,6 +3,7 @@ import {
   CHAT_OPERATION_POLICIES,
   executeChatOperation,
   executeChatOperationWithError,
+  executeWsFirstWithHttpFallbackAwaitAck,
   executeWsFirstWithHttpFallback
 } from "./chatOperationExecutor";
 
@@ -39,6 +40,57 @@ describe("chatOperationExecutor", () => {
     expect(httpFallback).toHaveBeenCalledTimes(1);
   });
 
+  it("executeWsFirstWithHttpFallbackAwaitAck returns ws result on ack", async () => {
+    const sendWsEventAwaitAck = vi.fn(async () => undefined);
+    const httpFallback = vi.fn(async () => "http");
+
+    const result = await executeWsFirstWithHttpFallbackAwaitAck({
+      sendWsEventAwaitAck,
+      eventType: "chat.edit",
+      payload: { messageId: "m1" },
+      withIdempotency: true,
+      maxRetries: 1,
+      httpFallback
+    });
+
+    expect(result).toEqual({ kind: "ws" });
+    expect(httpFallback).not.toHaveBeenCalled();
+  });
+
+  it("executeWsFirstWithHttpFallbackAwaitAck uses http fallback on transient ws error", async () => {
+    const sendWsEventAwaitAck = vi.fn(async () => {
+      throw new Error("chat.edit:ack_timeout");
+    });
+    const httpFallback = vi.fn(async () => "ok");
+
+    const result = await executeWsFirstWithHttpFallbackAwaitAck({
+      sendWsEventAwaitAck,
+      eventType: "chat.edit",
+      payload: { messageId: "m1" },
+      httpFallback
+    });
+
+    expect(result).toEqual({ kind: "http", value: "ok" });
+    expect(httpFallback).toHaveBeenCalledTimes(1);
+  });
+
+  it("executeWsFirstWithHttpFallbackAwaitAck does not fallback on nack-like business error", async () => {
+    const sendWsEventAwaitAck = vi.fn(async () => {
+      throw new Error("chat.edit:Forbidden:cannot_edit");
+    });
+    const httpFallback = vi.fn(async () => "ok");
+
+    const result = await executeWsFirstWithHttpFallbackAwaitAck({
+      sendWsEventAwaitAck,
+      eventType: "chat.edit",
+      payload: { messageId: "m1" },
+      httpFallback
+    });
+
+    expect(result).toEqual({ kind: "failed" });
+    expect(httpFallback).not.toHaveBeenCalled();
+  });
+
   it("executeChatOperation handles http-only policy", async () => {
     const httpRequest = vi.fn(async () => 42);
 
@@ -73,6 +125,25 @@ describe("chatOperationExecutor", () => {
       { id: "1" },
       { withIdempotency: true, maxRetries: 1 }
     );
+  });
+
+  it("executeChatOperation prefers ack sender for ws-first policy", async () => {
+    const sendWsEventAwaitAck = vi.fn(async () => undefined);
+    const sendWsEvent = vi.fn(() => "req-legacy");
+    const httpRequest = vi.fn(async () => "ok");
+
+    const result = await executeChatOperation({
+      policy: CHAT_OPERATION_POLICIES["chat.edit"],
+      sendWsEventAwaitAck,
+      sendWsEvent,
+      payload: { messageId: "m1", text: "x" },
+      httpRequest
+    });
+
+    expect(result).toEqual({ kind: "ws" });
+    expect(sendWsEventAwaitAck).toHaveBeenCalledTimes(1);
+    expect(sendWsEvent).not.toHaveBeenCalled();
+    expect(httpRequest).not.toHaveBeenCalled();
   });
 
   it("executeChatOperationWithError preserves http error for code-specific handling", async () => {
