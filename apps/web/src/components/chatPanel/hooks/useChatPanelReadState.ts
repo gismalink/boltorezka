@@ -580,15 +580,6 @@ export function useChatPanelReadState({
           if (autoMarkReadInFlightRef.current[normalizedTopicId] === candidateMessageId) {
             delete autoMarkReadInFlightRef.current[normalizedTopicId];
           }
-
-          if (autoMarkReadRafRef.current !== null) {
-            window.cancelAnimationFrame(autoMarkReadRafRef.current);
-          }
-
-          autoMarkReadRafRef.current = window.requestAnimationFrame(() => {
-            autoMarkReadRafRef.current = null;
-            markFullyVisibleUnreadMessages();
-          });
         });
     };
 
