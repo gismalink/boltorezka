@@ -7,14 +7,16 @@ const {
   chatUploadFinalizeMock,
   replyMessageMock,
   createTopicMessageMock,
-  runChatEditMock
+  runChatEditMock,
+  runChatSendMock
 } = vi.hoisted(() => ({
   chatUploadInitMock: vi.fn(),
   uploadChatObjectMock: vi.fn(),
   chatUploadFinalizeMock: vi.fn(),
   replyMessageMock: vi.fn(),
   createTopicMessageMock: vi.fn(),
-  runChatEditMock: vi.fn()
+  runChatEditMock: vi.fn(),
+  runChatSendMock: vi.fn()
 }));
 
 vi.mock("../api", () => ({
@@ -28,7 +30,8 @@ vi.mock("../api", () => ({
 }));
 
 vi.mock("./chatTransportCommands", () => ({
-  runChatEdit: runChatEditMock
+  runChatEdit: runChatEditMock,
+  runChatSend: runChatSendMock
 }));
 
 function createBaseParams() {
@@ -99,5 +102,30 @@ describe("chatMessageSendService", () => {
 
     expect(result).toEqual({ kind: "too-large" });
     expect(chatUploadInitMock).not.toHaveBeenCalled();
+  });
+
+  it("uses ws-first send for topic reply", async () => {
+    const params = createBaseParams();
+    params.replyingToMessageId = "message-1";
+    runChatSendMock.mockResolvedValue({ kind: "ws" });
+
+    const result = await sendChatMessage(params);
+
+    expect(result).toEqual({ kind: "sent", mode: "reply" });
+    expect(runChatSendMock).toHaveBeenCalledWith(expect.objectContaining({
+      text: "hello",
+      topicId: "topic-1",
+      replyToMessageId: "message-1"
+    }));
+    expect(replyMessageMock).not.toHaveBeenCalled();
+  });
+
+  it("returns server-error when topic ws-first send fails", async () => {
+    const params = createBaseParams();
+    runChatSendMock.mockResolvedValue({ kind: "failed" });
+
+    const result = await sendChatMessage(params);
+
+    expect(result).toEqual({ kind: "server-error" });
   });
 });

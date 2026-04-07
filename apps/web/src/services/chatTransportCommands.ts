@@ -69,6 +69,18 @@ type RunChatReportInput = {
   sendWsEventAwaitAck: SendWsEventAwaitAckFn;
 };
 
+type RunChatSendInput = {
+  authToken: string;
+  text: string;
+  roomSlug: string;
+  topicId?: string;
+  replyToMessageId?: string;
+  mentionUserIds?: string[];
+  maxRetries: number;
+  sendWsEvent: SendWsEventFn;
+  sendWsEventAwaitAck: SendWsEventAwaitAckFn;
+};
+
 type ChatReportResult =
   | { kind: "ws" }
   | { kind: "http"; value: void }
@@ -219,4 +231,49 @@ export async function runChatReport({
   }
 
   return result;
+}
+
+export async function runChatSend({
+  authToken,
+  text,
+  roomSlug,
+  topicId,
+  replyToMessageId,
+  mentionUserIds,
+  maxRetries,
+  sendWsEvent,
+  sendWsEventAwaitAck
+}: RunChatSendInput): Promise<ChatMutationResult> {
+  return executeChatOperation({
+    policy: {
+      transport: "ws-first-http-fallback",
+      ws: {
+        eventType: "chat.send",
+        withIdempotency: true,
+        maxRetries
+      }
+    },
+    sendWsEvent,
+    sendWsEventAwaitAck,
+    payload: {
+      text,
+      roomSlug,
+      topicId: topicId || undefined,
+      replyToMessageId: replyToMessageId || undefined,
+      mentionUserIds: mentionUserIds?.length ? mentionUserIds : undefined
+    },
+    httpRequest: async () => {
+      if (topicId && replyToMessageId) {
+        await api.replyMessage(authToken, replyToMessageId, { text, mentionUserIds });
+        return;
+      }
+
+      if (topicId) {
+        await api.createTopicMessage(authToken, topicId, { text, mentionUserIds });
+        return;
+      }
+
+      throw new Error("http_room_send_not_supported");
+    }
+  });
 }

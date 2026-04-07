@@ -115,17 +115,6 @@ test("realtime-chat: duplicate idempotency key returns cached payload and duplic
         };
       }
 
-      if (queryCalls === 2) {
-        return {
-          rowCount: 1,
-          rows: [
-            {
-              role: "user"
-            }
-          ] as unknown as T[]
-        };
-      }
-
       throw new Error("dbQuery should not be called after room resolve on duplicate idempotency key");
     },
     incomingIdempotencyKey: "idem-1"
@@ -134,10 +123,113 @@ test("realtime-chat: duplicate idempotency key returns cached payload and duplic
   const resolvedMeta = ackMeta as { duplicate?: boolean; idempotencyKey?: string } | null;
 
   assert.equal(sentPayloads.length, 1);
-  assert.equal(queryCalls, 2);
+  assert.equal(queryCalls, 1);
   assert.equal(resolvedMeta?.duplicate, true);
   assert.equal(resolvedMeta?.idempotencyKey, "idem-1");
   assert.deepEqual(ackMetrics, ["chat_idempotency_hit"]);
+});
+
+test("realtime-chat: topic reply send uses topic service and broadcasts topic payload", async () => {
+  const broadcasts: Array<{ roomId: string; envelope: any }> = [];
+  let ackMeta: Record<string, unknown> | null = null;
+
+  setTopicMessageOpsLoaderForTests(async () => ({
+    createTopicMessage: async () => {
+      throw new Error("not_used");
+    },
+    replyTopicMessage: async () => ({
+      room: { id: "room-1", slug: "general" },
+      topic: { id: "topic-1", slug: "main" },
+      parentMessageId: "parent-1",
+      message: {
+        id: "m-reply-1",
+        room_id: "room-1",
+        topic_id: "topic-1",
+        reply_to_message_id: "parent-1",
+        reply_to_user_id: "u2",
+        reply_to_user_name: "Bob",
+        reply_to_text: "hello",
+        user_id: "u1",
+        user_name: "Alice",
+        text: "reply text",
+        created_at: "2026-04-07T00:00:00.000Z"
+      }
+    }),
+    setTopicMessagePinned: async () => {
+      throw new Error("not_used");
+    },
+    setTopicMessageReaction: async () => {
+      throw new Error("not_used");
+    },
+    createTopicMessageReport: async () => {
+      throw new Error("not_used");
+    }
+  }));
+
+  try {
+    await handleChatSend({
+      connection: {} as any,
+      state: { userId: "u1", userName: "Alice", roomId: "room-1", roomSlug: "general" },
+      payload: {
+        text: "reply text",
+        topicId: "topic-1",
+        replyToMessageId: "parent-1",
+        roomSlug: "general"
+      },
+      requestId: "req-topic-1",
+      eventType: "chat.send",
+      normalizeRequestId: (value) => (typeof value === "string" ? value : null),
+      getPayloadString: (payload: any, key: string) => {
+        const value = payload?.[key];
+        return typeof value === "string" ? value : null;
+      },
+      sendNoActiveRoomNack: () => {},
+      sendValidationNack: () => {},
+      sendForbiddenNack: () => {},
+      sendNack: () => {},
+      incrementMetric: async () => {},
+      sendJson: () => {},
+      sendAckWithMetrics: (_socket, _requestId, _eventType, meta) => {
+        ackMeta = meta || null;
+      },
+      broadcastRoom: (roomId, envelope) => {
+        broadcasts.push({ roomId, envelope });
+      },
+      buildChatMessageEnvelope: (payload: unknown) => ({ type: "chat.message", payload }),
+      buildChatEditedEnvelope: () => ({}),
+      buildChatDeletedEnvelope: () => ({}),
+      redisGet: async () => null,
+      redisDel: async () => 0,
+      redisSetEx: async () => "OK",
+      dbQuery: async <T = unknown>() => ({
+        rowCount: 1,
+        rows: [
+          {
+            id: "room-1",
+            slug: "general",
+            is_public: true,
+            is_hidden: false,
+            server_id: null,
+            nsfw: false,
+            is_readonly: false,
+            slowmode_seconds: 0
+          }
+        ] as unknown as T[]
+      })
+    });
+  } finally {
+    setTopicMessageOpsLoaderForTests(null);
+  }
+
+  assert.equal(broadcasts.length, 1);
+  assert.equal(broadcasts[0]?.envelope?.payload?.topicId, "topic-1");
+  assert.equal(broadcasts[0]?.envelope?.payload?.replyToMessageId, "parent-1");
+  assert.deepEqual(ackMeta, {
+    messageId: "m-reply-1",
+    idempotencyKey: "req-topic-1",
+    topicId: "topic-1",
+    replyToMessageId: "parent-1"
+  });
 });
 
 test("realtime-chat: chat.edit rejects editing message from another user", async () => {
@@ -306,6 +398,12 @@ test("realtime-chat: chat.pin broadcasts and acks on success", async () => {
   let ackMeta: Record<string, unknown> | null = null;
 
   setTopicMessageOpsLoaderForTests(async () => ({
+    createTopicMessage: async () => {
+      throw new Error("not_used");
+    },
+    replyTopicMessage: async () => {
+      throw new Error("not_used");
+    },
     setTopicMessagePinned: async () => ({
       room: { id: "room-1", slug: "general" },
       topic: { id: "topic-1", slug: "main" },
@@ -345,6 +443,12 @@ test("realtime-chat: chat.unpin maps forbidden domain error to nack", async () =
   let nackCode: string | null = null;
 
   setTopicMessageOpsLoaderForTests(async () => ({
+    createTopicMessage: async () => {
+      throw new Error("not_used");
+    },
+    replyTopicMessage: async () => {
+      throw new Error("not_used");
+    },
     setTopicMessagePinned: async () => {
       throw new Error("forbidden_topic_manage");
     },
@@ -389,6 +493,12 @@ test("realtime-chat: chat.reaction.remove broadcasts and acks on success", async
   let ackMeta: Record<string, unknown> | null = null;
 
   setTopicMessageOpsLoaderForTests(async () => ({
+    createTopicMessage: async () => {
+      throw new Error("not_used");
+    },
+    replyTopicMessage: async () => {
+      throw new Error("not_used");
+    },
     setTopicMessagePinned: async () => {
       throw new Error("not_used");
     },
@@ -434,6 +544,12 @@ test("realtime-chat: chat.report acks on success", async () => {
   let ackMeta: Record<string, unknown> | null = null;
 
   setTopicMessageOpsLoaderForTests(async () => ({
+    createTopicMessage: async () => {
+      throw new Error("not_used");
+    },
+    replyTopicMessage: async () => {
+      throw new Error("not_used");
+    },
     setTopicMessagePinned: async () => {
       throw new Error("not_used");
     },
@@ -467,6 +583,12 @@ test("realtime-chat: chat.report maps duplicate report to MessageAlreadyReported
   let nackCode: string | null = null;
 
   setTopicMessageOpsLoaderForTests(async () => ({
+    createTopicMessage: async () => {
+      throw new Error("not_used");
+    },
+    replyTopicMessage: async () => {
+      throw new Error("not_used");
+    },
     setTopicMessagePinned: async () => {
       throw new Error("not_used");
     },

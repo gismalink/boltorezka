@@ -3,6 +3,7 @@ import {
   runChatDelete,
   runChatEdit,
   runChatReport,
+  runChatSend,
   runChatTogglePin,
   runChatToggleReaction
 } from "./chatTransportCommands";
@@ -14,7 +15,9 @@ const {
   unpinMessageMock,
   addMessageReactionMock,
   removeMessageReactionMock,
-  reportMessageMock
+  reportMessageMock,
+  createTopicMessageMock,
+  replyMessageMock
 } = vi.hoisted(() => ({
   editMessageMock: vi.fn(),
   deleteMessageMock: vi.fn(),
@@ -22,7 +25,9 @@ const {
   unpinMessageMock: vi.fn(),
   addMessageReactionMock: vi.fn(),
   removeMessageReactionMock: vi.fn(),
-  reportMessageMock: vi.fn()
+  reportMessageMock: vi.fn(),
+  createTopicMessageMock: vi.fn(),
+  replyMessageMock: vi.fn()
 }));
 
 vi.mock("../api", () => ({
@@ -33,7 +38,9 @@ vi.mock("../api", () => ({
     unpinMessage: unpinMessageMock,
     addMessageReaction: addMessageReactionMock,
     removeMessageReaction: removeMessageReactionMock,
-    reportMessage: reportMessageMock
+    reportMessage: reportMessageMock,
+    createTopicMessage: createTopicMessageMock,
+    replyMessage: replyMessageMock
   }
 }));
 
@@ -197,5 +204,50 @@ describe("chatTransportCommands", () => {
     if (result.kind === "failed") {
       expect(result.error).toBe(error);
     }
+  });
+
+  it("runChatSend returns ws when ack succeeds", async () => {
+    const sendWsEvent = vi.fn(() => "legacy-req");
+    const sendWsEventAwaitAck = vi.fn(async () => undefined);
+
+    const result = await runChatSend({
+      authToken: "token",
+      text: "hello",
+      roomSlug: "general",
+      topicId: "topic-1",
+      maxRetries: 2,
+      sendWsEvent,
+      sendWsEventAwaitAck
+    });
+
+    expect(result).toEqual({ kind: "ws" });
+    expect(sendWsEventAwaitAck).toHaveBeenCalledTimes(1);
+    expect(createTopicMessageMock).not.toHaveBeenCalled();
+  });
+
+  it("runChatSend falls back to reply http operation on transient ws error", async () => {
+    const sendWsEvent = vi.fn(() => "legacy-req");
+    const sendWsEventAwaitAck = vi.fn(async () => {
+      throw new Error("chat.send:ack_timeout");
+    });
+    replyMessageMock.mockResolvedValue(undefined);
+
+    const result = await runChatSend({
+      authToken: "token",
+      text: "hello",
+      roomSlug: "general",
+      topicId: "topic-1",
+      replyToMessageId: "message-1",
+      mentionUserIds: ["u2"],
+      maxRetries: 2,
+      sendWsEvent,
+      sendWsEventAwaitAck
+    });
+
+    expect(result).toEqual({ kind: "http", value: undefined });
+    expect(replyMessageMock).toHaveBeenCalledWith("token", "message-1", {
+      text: "hello",
+      mentionUserIds: ["u2"]
+    });
   });
 });

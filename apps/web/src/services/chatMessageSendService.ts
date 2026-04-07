@@ -3,6 +3,7 @@ import type { User } from "../domain";
 import type { ChatController } from "./chatController";
 import {
   runChatEdit,
+  runChatSend,
   type SendWsEventAwaitAckFn,
   type SendWsEventFn
 } from "./chatTransportCommands";
@@ -195,17 +196,27 @@ export async function sendChatMessage(params: SendChatMessageParams): Promise<Se
   }
 
   if (activeTopicId) {
-    try {
-      if (replyingToMessageId) {
-        await api.replyMessage(authToken, replyingToMessageId, { text: baseText, mentionUserIds });
-        return { kind: "sent", mode: "reply" };
-      }
+    const topicSendResult = await runChatSend({
+      authToken,
+      text: baseText,
+      roomSlug: chatRoomSlug,
+      topicId: activeTopicId,
+      replyToMessageId: replyingToMessageId || undefined,
+      mentionUserIds,
+      maxRetries: maxChatRetries,
+      sendWsEvent,
+      sendWsEventAwaitAck
+    });
 
-      await api.createTopicMessage(authToken, activeTopicId, { text: baseText, mentionUserIds });
-      return { kind: "sent", mode: "text" };
-    } catch {
+    if (topicSendResult.kind === "failed") {
       return { kind: "server-error" };
     }
+
+    if (replyingToMessageId) {
+      return { kind: "sent", mode: "reply" };
+    }
+
+    return { kind: "sent", mode: "text" };
   }
 
   const result = chatController.sendMessage(baseText, chatRoomSlug, user, maxChatRetries);

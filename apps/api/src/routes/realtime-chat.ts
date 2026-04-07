@@ -3,6 +3,49 @@ import { isServerAgeConfirmed } from "../services/age-verification-service.js";
 import { resolveActiveServerMute } from "../services/server-mute-service.js";
 
 type TopicMessageOps = {
+  createTopicMessage: (input: {
+    topicId: string;
+    userId: string;
+    text: string;
+  }) => Promise<{
+    room: { id: string; slug: string };
+    topic: { id: string; slug: string };
+    message: {
+      id: string;
+      room_id: string;
+      topic_id?: string | null;
+      reply_to_message_id?: string | null;
+      reply_to_user_id?: string | null;
+      reply_to_user_name?: string | null;
+      reply_to_text?: string | null;
+      user_id: string;
+      user_name: string;
+      text: string;
+      created_at: string;
+    };
+  }>;
+  replyTopicMessage: (input: {
+    messageId: string;
+    userId: string;
+    text: string;
+  }) => Promise<{
+    room: { id: string; slug: string };
+    topic: { id: string; slug: string };
+    parentMessageId: string;
+    message: {
+      id: string;
+      room_id: string;
+      topic_id?: string | null;
+      reply_to_message_id?: string | null;
+      reply_to_user_id?: string | null;
+      reply_to_user_name?: string | null;
+      reply_to_text?: string | null;
+      user_id: string;
+      user_name: string;
+      text: string;
+      created_at: string;
+    };
+  }>;
   setTopicMessagePinned: (input: { messageId: string; userId: string; pinned: boolean }) => Promise<{
     room: { id: string; slug: string };
     topic: { id: string; slug: string };
@@ -46,6 +89,8 @@ async function getTopicMessageOps() {
 
   if (!topicMessageOpsPromise) {
     topicMessageOpsPromise = import("../services/room-topic-messages-service.js").then((module) => ({
+      createTopicMessage: module.createTopicMessage,
+      replyTopicMessage: module.replyTopicMessage,
       setTopicMessagePinned: module.setTopicMessagePinned,
       setTopicMessageReaction: module.setTopicMessageReaction,
       createTopicMessageReport: module.createTopicMessageReport
@@ -285,6 +330,64 @@ async function resolveChatRoom(
   };
 }
 
+function mapTopicSendDomainErrorToWsNack(
+  error: unknown,
+  params: {
+    connection: WebSocket;
+    requestId: string | null;
+    eventType: string;
+    sendNack: ChatCommonParams["sendNack"];
+  }
+): boolean {
+  const message = String((error as Error)?.message || "");
+  const { connection, requestId, eventType, sendNack } = params;
+
+  if (message === "topic_not_found" || message === "message_not_found") {
+    sendNack(connection, requestId, eventType, "MessageNotFound", "Message does not exist");
+    return true;
+  }
+
+  if (message === "forbidden_room_access" || message === "forbidden_topic_manage") {
+    sendNack(connection, requestId, eventType, "Forbidden", "You do not have access to this resource");
+    return true;
+  }
+
+  if (message === "topic_archived") {
+    sendNack(connection, requestId, eventType, "TopicArchived", "Topic is archived");
+    return true;
+  }
+
+  if (message === "room_readonly") {
+    sendNack(connection, requestId, eventType, "RoomReadOnly", "Room is read-only");
+    return true;
+  }
+
+  if (message === "server_member_muted") {
+    sendNack(connection, requestId, eventType, "ServerMemberMuted", "You are muted in this server");
+    return true;
+  }
+
+  if (message.startsWith("room_slowmode_active:")) {
+    const retryAfterSec = Math.max(1, Number.parseInt(message.split(":")[1] || "1", 10) || 1);
+    sendNack(connection, requestId, eventType, "SlowmodeActive", "Slowmode is active", {
+      retryAfterSec
+    });
+    return true;
+  }
+
+  if (message === "validation_error") {
+    sendNack(connection, requestId, eventType, "ValidationError", "Validation failed");
+    return true;
+  }
+
+  if (message === "user_not_found") {
+    sendNack(connection, requestId, eventType, "UserNotFound", "User does not exist");
+    return true;
+  }
+
+  return false;
+}
+
 export async function handleChatSend(
   params: ChatCommonParams & { incomingIdempotencyKey?: string | null }
 ): Promise<void> {
@@ -331,6 +434,122 @@ export async function handleChatSend(
     return;
   }
 
+  const topicId = normalizeRequestId(getPayloadString(payload, "topicId", 128));
+  const replyToMessageId = normalizeRequestId(getPayloadString(payload, "replyToMessageId", 128));
+
+  if (replyToMessageId && !topicId) {
+    sendValidationNack(connection, requestId, eventType, "topicId is required for replyToMessageId");
+    return;
+  }
+
+  const idempotencyKey = normalizeRequestId(incomingIdempotencyKey) || requestId;
+
+  if (idempotencyKey) {
+    const idemRedisKey = `ws:idempotency:${state.userId}:${idempotencyKey}`;
+    const cachedPayloadRaw = await redisGet(idemRedisKey);
+
+    if (cachedPayloadRaw) {
+      try {
+        const cachedPayload = JSON.parse(cachedPayloadRaw);
+        sendJson(connection, buildChatMessageEnvelope(cachedPayload));
+      } catch {
+        await redisDel(idemRedisKey);
+      }
+
+      sendAckWithMetrics(
+        connection,
+        requestId,
+        eventType,
+        {
+          duplicate: true,
+          idempotencyKey
+        },
+        ["chat_idempotency_hit"]
+      );
+      return;
+    }
+  }
+
+  if (topicId) {
+    try {
+      const { createTopicMessage, replyTopicMessage } = await getTopicMessageOps();
+      const result = replyToMessageId
+        ? await replyTopicMessage({
+            messageId: replyToMessageId,
+            userId: state.userId,
+            text
+          })
+        : await createTopicMessage({
+            topicId,
+            userId: state.userId,
+            text
+          });
+
+      const replyPayload = result.message.reply_to_message_id
+        ? {
+            replyToMessageId: result.message.reply_to_message_id,
+            replyToUserId: result.message.reply_to_user_id || null,
+            replyToUserName: result.message.reply_to_user_name || null,
+            replyToText: result.message.reply_to_text || null
+          }
+        : {};
+
+      const chatPayload = {
+        id: result.message.id,
+        roomId: result.message.room_id,
+        roomSlug: result.room.slug,
+        topicId: result.topic.id,
+        topicSlug: result.topic.slug,
+        ...replyPayload,
+        userId: result.message.user_id,
+        userName: result.message.user_name,
+        text: result.message.text,
+        createdAt: result.message.created_at,
+        senderRequestId: requestId || null,
+        attachments: []
+      };
+
+      if (idempotencyKey) {
+        await redisSetEx(
+          `ws:idempotency:${state.userId}:${idempotencyKey}`,
+          120,
+          JSON.stringify(chatPayload)
+        );
+      }
+
+      broadcastRoom(result.room.id, buildChatMessageEnvelope(chatPayload));
+
+      if (result.room.id !== state.roomId) {
+        sendJson(connection, buildChatMessageEnvelope(chatPayload));
+      }
+
+      sendAckWithMetrics(
+        connection,
+        requestId,
+        eventType,
+        {
+          messageId: result.message.id,
+          idempotencyKey: idempotencyKey || null,
+          topicId: result.topic.id,
+          replyToMessageId: result.message.reply_to_message_id || null
+        },
+        ["chat_sent"]
+      );
+      return;
+    } catch (error) {
+      const handled = mapTopicSendDomainErrorToWsNack(error, {
+        connection,
+        requestId,
+        eventType,
+        sendNack
+      });
+      if (handled) {
+        return;
+      }
+      throw error;
+    }
+  }
+
   const canBypassPolicies = await canBypassRoomSendPolicy(dbQuery, state.userId, targetRoom.serverId);
   if (!canBypassPolicies && targetRoom.serverId) {
     const muteState = await resolveActiveServerMute(targetRoom.serverId, state.userId);
@@ -360,34 +579,6 @@ export async function handleChatSend(
     }
 
     await redisSetEx(slowmodeKey, targetRoom.slowmodeSeconds, String(targetRoom.slowmodeSeconds));
-  }
-
-  const idempotencyKey = normalizeRequestId(incomingIdempotencyKey) || requestId;
-
-  if (idempotencyKey) {
-    const idemRedisKey = `ws:idempotency:${state.userId}:${idempotencyKey}`;
-    const cachedPayloadRaw = await redisGet(idemRedisKey);
-
-    if (cachedPayloadRaw) {
-      try {
-        const cachedPayload = JSON.parse(cachedPayloadRaw);
-        sendJson(connection, buildChatMessageEnvelope(cachedPayload));
-      } catch {
-        await redisDel(idemRedisKey);
-      }
-
-      sendAckWithMetrics(
-        connection,
-        requestId,
-        eventType,
-        {
-          duplicate: true,
-          idempotencyKey
-        },
-        ["chat_idempotency_hit"]
-      );
-      return;
-    }
   }
 
   const inserted = await dbQuery<{
