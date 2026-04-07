@@ -173,7 +173,7 @@ describe("chatTransportCommands", () => {
     });
 
     expect(result.kind).toBe("failed");
-    if (result.kind === "failed" && "error" in result) {
+    if (result.kind === "failed") {
       expect(result.error).toBe(error);
     }
     expect(reportMessageMock).not.toHaveBeenCalled();
@@ -193,7 +193,7 @@ describe("chatTransportCommands", () => {
     });
 
     expect(result.kind).toBe("failed");
-    if (result.kind === "failed" && "error" in result) {
+    if (result.kind === "failed") {
       expect(result.error).toBe(error);
     }
   });

@@ -657,13 +657,8 @@ export function useChatComposerActions({
         sendWsEventAwaitAck
       });
 
-      if (reportResult.kind === "http") {
+      if (reportResult.kind === "ws" || reportResult.kind === "http") {
         pushToast(reportMessageSentMessage);
-        return;
-      }
-
-      if (reportResult.kind !== "failed" || !("error" in reportResult)) {
-        pushToast(serverErrorMessage);
         return;
       }
 

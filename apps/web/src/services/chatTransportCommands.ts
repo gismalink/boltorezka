@@ -69,6 +69,11 @@ type RunChatReportInput = {
   sendWsEventAwaitAck: SendWsEventAwaitAckFn;
 };
 
+type ChatReportResult =
+  | { kind: "ws" }
+  | { kind: "http"; value: void }
+  | { kind: "failed"; error: unknown };
+
 export async function runChatEdit({
   authToken,
   messageId,
@@ -190,7 +195,7 @@ export async function runChatReport({
   authToken,
   messageId,
   sendWsEventAwaitAck
-}: RunChatReportInput): Promise<ExecuteWsFirstWithHttpFallbackResult<void> | ExecuteHttpWithErrorResult<void>> {
+}: RunChatReportInput): Promise<ChatReportResult> {
   try {
     await sendWsEventAwaitAck("chat.report", { messageId }, {
       withIdempotency: true,
