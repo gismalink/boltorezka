@@ -18,6 +18,14 @@ export type ExecuteWsFirstWithHttpFallbackResult<T> =
   | { kind: "http"; value: T }
   | { kind: "failed" };
 
+export type ExecuteHttpOnlyResult<T> =
+  | { kind: "http"; value: T }
+  | { kind: "failed" };
+
+export type ExecuteHttpWithErrorResult<T> =
+  | { kind: "http"; value: T }
+  | { kind: "failed"; error: unknown };
+
 export async function executeWsFirstWithHttpFallback<T>({
   sendWsEvent,
   eventType,
@@ -41,5 +49,26 @@ export async function executeWsFirstWithHttpFallback<T>({
     return { kind: "http", value };
   } catch {
     return { kind: "failed" };
+  }
+}
+
+export async function executeHttpOnly<T>(httpRequest: () => Promise<T>): Promise<ExecuteHttpOnlyResult<T>> {
+  try {
+    // Единая точка для HTTP-only операций: одинаковый контракт успеха/ошибки.
+    const value = await httpRequest();
+    return { kind: "http", value };
+  } catch {
+    return { kind: "failed" };
+  }
+}
+
+export async function executeHttpWithError<T>(
+  httpRequest: () => Promise<T>
+): Promise<ExecuteHttpWithErrorResult<T>> {
+  try {
+    const value = await httpRequest();
+    return { kind: "http", value };
+  } catch (error) {
+    return { kind: "failed", error };
   }
 }

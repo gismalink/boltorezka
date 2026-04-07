@@ -12,7 +12,7 @@ import {
 } from "react";
 import { api } from "../../api";
 import type { Message, MessagesCursor, User } from "../../domain";
-import { sendChatMessage, type ChatController } from "../../services";
+import { executeHttpOnly, executeHttpWithError, sendChatMessage, type ChatController } from "../../services";
 import { executeWsFirstWithHttpFallback } from "../../services/chatOperationExecutor";
 import {
   compressImageToDataUrl,
@@ -558,18 +558,22 @@ export function useChatComposerActions({
 
     const currentlyPinned = Boolean(pinnedByMessageId[messageId]);
     void (async () => {
-      try {
+      const pinResult = await executeHttpOnly(async () => {
         if (currentlyPinned) {
           await api.unpinMessage(authToken, messageId);
-          setPinnedByMessageId((prev) => ({ ...prev, [messageId]: false }));
-          return;
+          return false;
         }
 
         await api.pinMessage(authToken, messageId);
-        setPinnedByMessageId((prev) => ({ ...prev, [messageId]: true }));
-      } catch {
+        return true;
+      });
+
+      if (pinResult.kind === "failed") {
         pushToast(serverErrorMessage);
+        return;
       }
+
+      setPinnedByMessageId((prev) => ({ ...prev, [messageId]: pinResult.value }));
     })();
   }, [activeTopicId, authToken, pinnedByMessageId, pushToast, serverErrorMessage, topicOnlyActionMessage]);
 
@@ -587,48 +591,51 @@ export function useChatComposerActions({
 
     const currentlyActive = Boolean(reactionsByMessageId[normalizedMessageId]?.[normalizedEmoji]?.reacted);
     void (async () => {
-      try {
+      const reactionResult = await executeHttpOnly(async () => {
         if (currentlyActive) {
           await api.removeMessageReaction(authToken, normalizedMessageId, normalizedEmoji);
         } else {
           await api.addMessageReaction(authToken, normalizedMessageId, normalizedEmoji);
         }
+      });
 
-        setReactionsByMessageId((prev) => {
-          const messageReactions = { ...(prev[normalizedMessageId] || {}) };
-          const current = messageReactions[normalizedEmoji] || { count: 0, reacted: false };
-
-          // Realtime echo may already apply this exact toggle before the API call resolves.
-          // In that case, keep the state as-is to avoid local double counting.
-          if (current.reacted === !currentlyActive) {
-            return prev;
-          }
-
-          const nextCount = currentlyActive
-            ? Math.max(0, current.count - 1)
-            : current.count + 1;
-
-          if (nextCount <= 0) {
-            delete messageReactions[normalizedEmoji];
-          } else {
-            messageReactions[normalizedEmoji] = {
-              count: nextCount,
-              reacted: !currentlyActive
-            };
-          }
-
-          const next = { ...prev };
-          if (Object.keys(messageReactions).length === 0) {
-            delete next[normalizedMessageId];
-          } else {
-            next[normalizedMessageId] = messageReactions;
-          }
-
-          return next;
-        });
-      } catch {
+      if (reactionResult.kind === "failed") {
         pushToast(serverErrorMessage);
+        return;
       }
+
+      setReactionsByMessageId((prev) => {
+        const messageReactions = { ...(prev[normalizedMessageId] || {}) };
+        const current = messageReactions[normalizedEmoji] || { count: 0, reacted: false };
+
+        // Realtime echo may already apply this exact toggle before the API call resolves.
+        // In that case, keep the state as-is to avoid local double counting.
+        if (current.reacted === !currentlyActive) {
+          return prev;
+        }
+
+        const nextCount = currentlyActive
+          ? Math.max(0, current.count - 1)
+          : current.count + 1;
+
+        if (nextCount <= 0) {
+          delete messageReactions[normalizedEmoji];
+        } else {
+          messageReactions[normalizedEmoji] = {
+            count: nextCount,
+            reacted: !currentlyActive
+          };
+        }
+
+        const next = { ...prev };
+        if (Object.keys(messageReactions).length === 0) {
+          delete next[normalizedMessageId];
+        } else {
+          next[normalizedMessageId] = messageReactions;
+        }
+
+        return next;
+      });
     })();
   }, [activeTopicId, authToken, pushToast, reactionsByMessageId, serverErrorMessage, topicOnlyActionMessage]);
 
@@ -639,20 +646,24 @@ export function useChatComposerActions({
     }
 
     void (async () => {
-      try {
+      const reportResult = await executeHttpWithError(async () => {
         await api.reportMessage(authToken, messageId, {
           reason: "spam_or_abuse"
         });
-        pushToast(reportMessageSentMessage);
-      } catch (error) {
-        const code = String((error as { code?: string } | null)?.code || "").trim();
-        if (code === "MessageAlreadyReported") {
-          pushToast(reportMessageExistsMessage);
-          return;
-        }
+      });
 
-        pushToast(serverErrorMessage);
+      if (reportResult.kind === "http") {
+        pushToast(reportMessageSentMessage);
+        return;
       }
+
+      const code = String((reportResult.error as { code?: string } | null)?.code || "").trim();
+      if (code === "MessageAlreadyReported") {
+        pushToast(reportMessageExistsMessage);
+        return;
+      }
+
+      pushToast(serverErrorMessage);
     })();
   }, [activeTopicId, authToken, pushToast, reportMessageExistsMessage, reportMessageSentMessage, serverErrorMessage, topicOnlyActionMessage]);
 

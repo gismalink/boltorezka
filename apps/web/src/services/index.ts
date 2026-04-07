@@ -1,6 +1,8 @@
 export { AuthController } from "./authController";
 export type { CallStatus } from "./callTypes";
 export { ChatController } from "./chatController";
+export { executeHttpOnly } from "./chatOperationExecutor";
+export { executeHttpWithError } from "./chatOperationExecutor";
 export { executeWsFirstWithHttpFallback } from "./chatOperationExecutor";
 export { sendChatMessage } from "./chatMessageSendService";
 export { RealtimeClient } from "./realtimeClient";
