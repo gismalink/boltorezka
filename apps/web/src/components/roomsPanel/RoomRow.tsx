@@ -862,27 +862,27 @@ function RoomRowInner({
                   <span className="channel-member-icons" aria-hidden="true">
                     {roomHasVoiceState && !isCurrentUser ? (
                       <span className="channel-member-status-icon-anchor" data-tooltip={connectionTooltip}>
-                        <i className={`bi ${mediaStatusIconClass} ${mediaStatusClass}`} />
+                        <i className={`bi ${mediaStatusIconClass} ${mediaStatusClass}`} aria-hidden="true" />
                       </span>
                     ) : null}
                     {roomSupportsRtc ? (
                       <span className="channel-member-status-icon-anchor" data-tooltip={isCurrentUser ? selfMicTooltip : micTooltip}>
-                        <i className={`bi ${micIconClass} channel-member-mic-icon ${micIconStateClass}`} />
+                        <i className={`bi ${micIconClass} channel-member-mic-icon ${micIconStateClass}`} aria-hidden="true" />
                       </span>
                     ) : null}
                     {roomSupportsRtc ? (
                       <span className="channel-member-status-icon-anchor" data-tooltip={isCurrentUser ? selfAudioTooltip : audioTooltip}>
-                        <i className={`bi bi-headphones channel-member-audio-icon ${isAudioOutputMuted ? "channel-member-audio-icon-muted" : ""}`} />
+                        <i className={`bi bi-headphones channel-member-audio-icon ${isAudioOutputMuted ? "channel-member-audio-icon-muted" : ""}`} aria-hidden="true" />
                       </span>
                     ) : null}
                     {isCameraEnabled ? (
                       <span className="channel-member-status-icon-anchor" data-tooltip={isCurrentUser ? selfCameraTooltip : cameraTooltip}>
-                        <i className="bi bi-camera-video-fill channel-member-camera-icon" />
+                        <i className="bi bi-camera-video-fill channel-member-camera-icon" aria-hidden="true" />
                       </span>
                     ) : null}
                     {isScreenSharing ? (
                       <span className="channel-member-status-icon-anchor" data-tooltip={t("rtc.screenShare")}>
-                        <i className="bi bi-display channel-member-camera-icon" />
+                        <i className="bi bi-display channel-member-camera-icon" aria-hidden="true" />
                       </span>
                     ) : null}
                   </span>
