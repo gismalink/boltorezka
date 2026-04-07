@@ -95,7 +95,10 @@ async function main() {
     try {
       await bootstrapSessionCookie(page);
     } catch (error) {
-      console.warn(`[smoke:web:agent-semantics:browser] refresh bootstrap skipped: ${String((error && typeof error === "object" && "message" in error) ? (error as { message?: string }).message : error || "unknown")}`);
+      const message = error && typeof error === "object" && "message" in error
+        ? error.message
+        : error;
+      console.warn(`[smoke:web:agent-semantics:browser] refresh bootstrap skipped: ${String(message || "unknown")}`);
     }
 
     await gotoWithRetries(page);
