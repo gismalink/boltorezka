@@ -2,6 +2,7 @@ import { api } from "../api";
 import {
   CHAT_OPERATION_POLICIES,
   executeChatOperation,
+  isTransientWsError,
   type ExecuteHttpOnlyResult,
   type ExecuteHttpWithErrorResult,
   type ExecuteWsFirstWithHttpFallbackResult
@@ -67,11 +68,6 @@ type RunChatReportInput = {
   messageId: string;
   sendWsEventAwaitAck: SendWsEventAwaitAckFn;
 };
-
-function isTransientWsError(error: unknown): boolean {
-  const message = String((error as { message?: string } | null)?.message || "").trim().toLowerCase();
-  return message === "ws_not_connected" || message.includes("ack_timeout") || message === "ws_disposed";
-}
 
 export async function runChatEdit({
   authToken,

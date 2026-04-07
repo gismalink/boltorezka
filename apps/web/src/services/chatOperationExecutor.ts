@@ -145,7 +145,7 @@ type ExecuteWsFirstWithHttpFallbackAwaitAckInput<T> = {
   httpFallback: () => Promise<T>;
 };
 
-function isTransientWsError(error: unknown): boolean {
+export function isTransientWsError(error: unknown): boolean {
   const message = String((error as { message?: string } | null)?.message || "").trim().toLowerCase();
   return message === "ws_not_connected" || message.includes("ack_timeout") || message === "ws_disposed";
 }
