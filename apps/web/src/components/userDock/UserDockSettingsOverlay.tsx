@@ -170,7 +170,7 @@ export function UserDockSettingsOverlay({
 
   return (
     <div className={`voice-preferences-overlay fixed inset-0 z-[60] flex items-center justify-center p-[var(--space-3xl)] ${inlineSettingsMode ? "inline-settings-mode" : ""} ${inlineSettingsMode ? "contents" : ""}`}>
-      <div className="user-settings-modal-shell" data-agent-id="settings.user-modal.shell">
+      <div className="user-settings-modal-shell" data-agent-id="settings.user-modal.shell" data-agent-state="open">
         {!inlineSettingsMode ? (
           <button
             type="button"
@@ -178,6 +178,7 @@ export function UserDockSettingsOverlay({
             onClick={() => onSetUserSettingsOpen(false)}
             aria-label={t("settings.closeVoiceAria")}
             data-agent-id="settings.user-modal.close"
+            data-agent-state="ready"
           >
             <i className="bi bi-x-lg" aria-hidden="true" />
           </button>
@@ -200,6 +201,7 @@ export function UserDockSettingsOverlay({
               onChange={(event) => onSetUserSettingsTab(event.target.value as typeof userSettingsTab)}
               data-agent-id="settings.user-modal.tab.select"
               data-agent-value={userSettingsTab}
+              data-agent-state="ready"
             >
               {userSettingsTabOptions.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -254,7 +256,7 @@ export function UserDockSettingsOverlay({
           </div>
 
           {userSettingsTab === "profile" ? (
-            <div className="grid gap-4" data-agent-id="settings.user-modal.profile.section">
+            <div className="grid gap-4" data-agent-id="settings.user-modal.profile.section" data-agent-state="active">
               <div className="grid gap-3">
                 <h3 className="subheading">{t("settings.profileSection")}</h3>
                 <label className="grid gap-[var(--space-md)]">
@@ -782,6 +784,7 @@ export function UserDockSettingsOverlay({
                 aria-modal="true"
                 aria-labelledby="delete-account-title"
                 data-agent-id="settings.user-modal.delete-confirm.dialog"
+                data-agent-state="open"
               >
                 <h4 id="delete-account-title">{t("settings.accountDeleteConfirmTitle")}</h4>
                 <p className="muted mt-2">{t("settings.accountDeleteConfirmBody")}</p>

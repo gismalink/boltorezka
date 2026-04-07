@@ -107,6 +107,7 @@ Scope: Внедрение подхода accessibility tree-first для web и 
 - Pilot smoke в `test` закрыт PASS: `smoke:web:agent-semantics:evidence` подтвердил browser gate (`verified selectors: 12`, SHA `9e67a0c`), см. `docs/status/test-results/2026-04-06.md`.
 - Финализирована settings/profile semantic completeness в pilot scope: добавлены deterministic `data-agent-id` + `data-agent-state/value` для user settings tabs/profile/delete flow и room member profile modal.
 - Усилен browser smoke gate для settings/profile ветки: проверяется не только видимость, но и наличие обязательных `data-agent-state/value` для ключевых контролов.
+- Закрыты оставшиеся state-пробелы в settings/profile agent-marked элементах (`settings.user-modal.shell/close/tab.select/profile.section`) и добавлены обязательные smoke-assertions для этих атрибутов.
 
 ## 7) Evidence Artifact (test)
 

@@ -225,8 +225,14 @@ async function main() {
         checks.push(await requireVisible(page, '[data-agent-id="settings.user-modal.profile.section"]', "settings.user-modal.profile.section"));
         checks.push(await requireVisible(page, '[data-agent-id="settings.user-modal.profile.display-name"]', "settings.user-modal.profile.display-name"));
         checks.push(await requireVisible(page, '[data-agent-id="settings.user-modal.delete-open"]', "settings.user-modal.delete-open"));
+        checks.push(await requireAttribute(page, '[data-agent-id="settings.user-modal.open"]', "data-agent-state", "settings.user-modal.open[state]"));
+        checks.push(await requireAttribute(page, '[data-agent-id="settings.user-modal.shell"]', "data-agent-state", "settings.user-modal.shell[state]"));
         checks.push(await requireAttribute(page, '[data-agent-id="settings.user-modal"]', "data-agent-state", "settings.user-modal[state]"));
+        checks.push(await requireAttribute(page, '[data-agent-id="settings.user-modal.close"]', "data-agent-state", "settings.user-modal.close[state]"));
+        checks.push(await requireAttribute(page, '[data-agent-id="settings.user-modal.tab.select"]', "data-agent-state", "settings.user-modal.tab.select[state]"));
+        checks.push(await requireAttribute(page, '[data-agent-id="settings.user-modal.tab.select"]', "data-agent-value", "settings.user-modal.tab.select[value]"));
         checks.push(await requireAttribute(page, '[data-agent-id="settings.user-modal.tab.profile"]', "data-agent-state", "settings.user-modal.tab.profile[state]"));
+        checks.push(await requireAttribute(page, '[data-agent-id="settings.user-modal.profile.section"]', "data-agent-state", "settings.user-modal.profile.section[state]"));
         checks.push(await requireAttribute(page, '[data-agent-id="settings.user-modal.profile.display-name"]', "data-agent-state", "settings.user-modal.profile.display-name[state]"));
         checks.push(await requireAttribute(page, '[data-agent-id="settings.user-modal.profile.display-name"]', "data-agent-value", "settings.user-modal.profile.display-name[value]", true));
         checks.push(await requireAttribute(page, '[data-agent-id="settings.user-modal.profile.language"]', "data-agent-value", "settings.user-modal.profile.language[value]"));

@@ -22,13 +22,18 @@ export function RoomMemberProfileModal({ t, data, open, onClose }: RoomMemberPro
       data-agent-id="rooms.member.profile-modal"
       data-agent-state="open"
     >
-      <div className="card compact relative grid w-full max-w-[460px] gap-3 p-4" data-agent-id="rooms.member.profile-modal.card">
+      <div
+        className="card compact relative grid w-full max-w-[460px] gap-3 p-4"
+        data-agent-id="rooms.member.profile-modal.card"
+        data-agent-state="open"
+      >
         <button
           type="button"
           className="secondary icon-btn tiny mention-profile-close"
           onClick={onClose}
           aria-label={t("settings.cancel")}
           data-agent-id="rooms.member.profile-modal.close"
+          data-agent-state="ready"
         >
           <i className="bi bi-x-lg" aria-hidden="true" />
         </button>
