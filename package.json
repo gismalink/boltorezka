@@ -11,6 +11,7 @@
     "check:required": "bash ./scripts/verify-required.sh",
     "check:docs-links": "node ./scripts/verify-doc-links.mjs",
     "check:agent-semantics": "node ./scripts/verify-agent-semantics-contract.mjs",
+    "check:decorative-icons": "node ./scripts/verify-decorative-icons.mjs",
     "check:api-types": "npm --prefix apps/api run typecheck",
     "web:install": "npm --prefix apps/web install",
     "web:dev": "npm --prefix apps/web run dev",

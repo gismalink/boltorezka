@@ -11,6 +11,9 @@ node ./scripts/verify-doc-links.mjs
 echo "[verify] agent semantics contract"
 npm run check:agent-semantics
 
+echo "[verify] decorative icon accessibility"
+npm run check:decorative-icons
+
 echo "[verify] api health (best-effort local)"
 if curl -fsS "${SMOKE_API_URL:-http://localhost:8080}/health" >/dev/null 2>&1; then
   echo "[verify] local api is reachable"

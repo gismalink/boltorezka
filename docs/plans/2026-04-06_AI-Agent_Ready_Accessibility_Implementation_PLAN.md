@@ -38,7 +38,7 @@ Scope: Внедрение подхода accessibility tree-first для web и 
 - [x] Добавить view-level/screen-level identifier для pilot chat screen.
 - [x] Ввести screen context contract: где находится агент, какой active scope (room/topic/modal), какие доступные действия.
 - [x] Нормализовать списки как семантические контейнеры (list/listitem или platform equivalents), а не только визуальные блоки.
-- [ ] Скрыть декоративные элементы из accessibility tree (chat pilot cleanup-pass выполнен частично; остаётся cross-screen pass вне chat scope).
+- [x] Скрыть декоративные элементы из accessibility tree (выполнен cross-screen pass по web components + verify gate `check:decorative-icons`).
 
 ### 2.3 Action Confirmation и Agent Feedback
 
@@ -79,7 +79,7 @@ Scope: Внедрение подхода accessibility tree-first для web и 
 - [x] Для пилотных флоу агент проходит сценарии по accessibility tree без обязательного screenshot анализа (`smoke:web:agent-semantics:evidence` PASS в test).
 - [x] Для всех интерактивных элементов пилотных экранов заполнены `identifier`, `label`, `hint`, `value/state` (chat + settings/profile modal scope закрыты).
 - [x] Списки пилотных экранов представлены в явной семантике списка и элементов списка.
-- [ ] Декоративные элементы исключены из дерева доступности, stateful controls отдают актуальный `value/state` (state/value реализованы; cleanup decorative tree остаётся).
+- [x] Декоративные элементы исключены из дерева доступности, stateful controls отдают актуальный `value/state` (state/value реализованы + decorative cleanup зафиксирован verify-gate `check:decorative-icons`).
 - [x] Каждое действие агента имеет машинно-читаемое подтверждение успеха/ошибки (pilot chat scope).
 - [x] Smoke в `test` подтверждает стабильность agent-ready contract для пилотных флоу (`smoke:web:agent-semantics:evidence` PASS, selectors=12, SHA `7e629fc`).
 
@@ -111,6 +111,7 @@ Scope: Внедрение подхода accessibility tree-first для web и 
 - В workflow добавлен обязательный UI DoD gate для agent-readiness: отдельный checklist `docs/status/checklists/2026-04-07_AGENT_ACCESSIBILITY_DOD_CHECKLIST.md` подключён в `docs/runbooks/workflow-checklist.md`.
 - Добавлен verify-gate semantic contract в основной `check` pipeline: `npm run check:agent-semantics` (скрипт `scripts/verify-agent-semantics-contract.mjs`) валидирует interactive controls с `data-agent-id` на наличие `data-agent-state/value`.
 - Начат cross-screen decorative cleanup вне chat-only scope: в `roomsPanel/RoomRow` все status/media icon nodes переведены в явный decorative режим (`aria-hidden="true"`) и исключены из assistive tree noise.
+- Добавлен verify-gate decorative cleanup в основной `check` pipeline: `npm run check:decorative-icons` (скрипт `scripts/verify-decorative-icons.mjs`) валидирует, что `<i className=...>` иконки скрыты из accessibility tree через `aria-hidden="true"`.
 
 ## 7) Evidence Artifact (test)
 
