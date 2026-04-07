@@ -258,6 +258,62 @@ export class WsMessageController {
       .filter((item): item is PresenceMember => Boolean(item));
   }
 
+  private presenceMembersFingerprint(members: PresenceMember[]): string {
+    return members
+      .map((member) => `${this.asTrimmedString(member.userId)}:${this.asTrimmedString(member.userName)}`)
+      .sort()
+      .join("|");
+  }
+
+  private arePresenceMemberArraysEqual(prev: PresenceMember[], next: PresenceMember[]): boolean {
+    if (prev === next) {
+      return true;
+    }
+    if (prev.length !== next.length) {
+      return false;
+    }
+    return this.presenceMembersFingerprint(prev) === this.presenceMembersFingerprint(next);
+  }
+
+  private arePresenceNameArraysEqual(prev: string[], next: string[]): boolean {
+    if (prev === next) {
+      return true;
+    }
+    if (prev.length !== next.length) {
+      return false;
+    }
+
+    const normalizedPrev = prev.map((item) => this.asTrimmedString(item)).sort();
+    const normalizedNext = next.map((item) => this.asTrimmedString(item)).sort();
+    return normalizedPrev.join("|") === normalizedNext.join("|");
+  }
+
+  private arePresenceBySlugMapsEqual(
+    prev: Record<string, PresenceMember[]>,
+    next: Record<string, PresenceMember[]>
+  ): boolean {
+    const prevKeys = Object.keys(prev);
+    const nextKeys = Object.keys(next);
+    if (prevKeys.length !== nextKeys.length) {
+      return false;
+    }
+
+    return nextKeys.every((slug) => this.arePresenceMemberArraysEqual(prev[slug] || [], next[slug] || []));
+  }
+
+  private arePresenceNamesBySlugMapsEqual(
+    prev: Record<string, string[]>,
+    next: Record<string, string[]>
+  ): boolean {
+    const prevKeys = Object.keys(prev);
+    const nextKeys = Object.keys(next);
+    if (prevKeys.length !== nextKeys.length) {
+      return false;
+    }
+
+    return nextKeys.every((slug) => this.arePresenceNameArraysEqual(prev[slug] || [], next[slug] || []));
+  }
+
   private buildDeliveredChatMessage(payload: Record<string, unknown>, fallbackId?: string): Message {
     const attachmentsRaw = Array.isArray(payload.attachments)
       ? payload.attachments
@@ -856,14 +912,27 @@ export class WsMessageController {
     });
 
     const users = this.mapPresenceMembers(message.payload?.users);
-    this.options.setRoomsPresenceBySlug((prev) => ({
-      ...prev,
-      [roomSlug]: users.map((item) => item.userName)
-    }));
-    this.options.setRoomsPresenceDetailsBySlug((prev) => ({
-      ...prev,
-      [roomSlug]: users
-    }));
+    const userNames = users.map((item) => item.userName);
+    this.options.setRoomsPresenceBySlug((prev) => {
+      const prevNames = prev[roomSlug] || [];
+      if (this.arePresenceNameArraysEqual(prevNames, userNames)) {
+        return prev;
+      }
+      return {
+        ...prev,
+        [roomSlug]: userNames
+      };
+    });
+    this.options.setRoomsPresenceDetailsBySlug((prev) => {
+      const prevDetails = prev[roomSlug] || [];
+      if (this.arePresenceMemberArraysEqual(prevDetails, users)) {
+        return prev;
+      }
+      return {
+        ...prev,
+        [roomSlug]: users
+      };
+    });
   }
   private handleRoomsPresence(message: WsIncoming): void {
     const rooms = Array.isArray(message.payload?.rooms) ? message.payload.rooms : [];
@@ -885,8 +954,18 @@ export class WsMessageController {
       detailsNext[roomSlug] = users;
     });
 
-    this.options.setRoomsPresenceBySlug(next);
-    this.options.setRoomsPresenceDetailsBySlug(detailsNext);
+    this.options.setRoomsPresenceBySlug((prev) => {
+      if (this.arePresenceNamesBySlugMapsEqual(prev, next)) {
+        return prev;
+      }
+      return next;
+    });
+    this.options.setRoomsPresenceDetailsBySlug((prev) => {
+      if (this.arePresenceBySlugMapsEqual(prev, detailsNext)) {
+        return prev;
+      }
+      return detailsNext;
+    });
   }
 
   private handleError(message: WsIncoming): void {
