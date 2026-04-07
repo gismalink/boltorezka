@@ -35,6 +35,7 @@
 - `contracts/` — HTTP/WS contracts and OpenAPI artifact
   - [API_CONTRACT_V1](contracts/API_CONTRACT_V1.md)
   - [WS_CONTRACT_V1](contracts/WS_CONTRACT_V1.md)
+  - [TRANSPORT_SYNC_CONTRACT_V2_DRAFT](contracts/TRANSPORT_SYNC_CONTRACT_V2_DRAFT.md)
   - [SFU_SESSION_CONTRACT](contracts/SFU_SESSION_CONTRACT.md)
   - [OPENAPI_V1](contracts/OPENAPI_V1.yaml)
 - `operations/` — smoke/CI matrices and operational quality gates
