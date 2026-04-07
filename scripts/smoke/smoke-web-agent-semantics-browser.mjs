@@ -65,6 +65,13 @@ async function dismissBlockingOverlays(page) {
     await dismissButton.click({ force: true }).catch(() => undefined);
     await page.waitForTimeout(120);
   }
+
+  if (await voiceOverlay.isVisible().catch(() => false)) {
+    await page.evaluate(() => {
+      document.querySelectorAll(".voice-preferences-overlay").forEach((node) => node.remove());
+    }).catch(() => undefined);
+    await page.waitForTimeout(80);
+  }
 }
 
 async function bootstrapSessionCookie(page) {
@@ -187,7 +194,7 @@ async function main() {
     }
 
     await dismissBlockingOverlays(page);
-    await page.locator('[data-agent-id="chat.topic-navigation.search-toggle"]').first().click();
+    await page.locator('[data-agent-id="chat.topic-navigation.search-toggle"]').first().click({ force: true });
     checks.push(await requireVisible(page, '[data-agent-id="chat.search.panel"]', "chat.search.panel"));
     checks.push(await requireVisible(page, '[data-agent-id="chat.search.query"]', "chat.search.query"));
     checks.push(await requireVisible(page, '[data-agent-id="chat.search.scope"]', "chat.search.scope"));
