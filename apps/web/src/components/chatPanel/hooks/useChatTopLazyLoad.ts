@@ -3,6 +3,7 @@ import { RefObject, useEffect, useRef } from "react";
 type UseChatTopLazyLoadArgs = {
   chatLogRef: RefObject<HTMLDivElement>;
   hasActiveRoom: boolean;
+  messageCount: number;
   loadingOlderMessages: boolean;
   messagesHasMore: boolean;
   onLoadOlderMessages: () => void;
@@ -11,6 +12,7 @@ type UseChatTopLazyLoadArgs = {
 export function useChatTopLazyLoad({
   chatLogRef,
   hasActiveRoom,
+  messageCount,
   loadingOlderMessages,
   messagesHasMore,
   onLoadOlderMessages
@@ -26,8 +28,8 @@ export function useChatTopLazyLoad({
 
     lastScrollTopRef.current = chatLogNode.scrollTop;
 
-    const maybeLoadOlder = (event: Event) => {
-      if (!event.isTrusted) {
+    const maybeLoadOlder = (allowSynthetic = false) => {
+      if (!allowSynthetic) {
         return;
       }
 
@@ -52,10 +54,35 @@ export function useChatTopLazyLoad({
       onLoadOlderMessages();
     };
 
-    chatLogNode.addEventListener("scroll", maybeLoadOlder, { passive: true });
+    const onScroll = (event: Event) => {
+      if (!event.isTrusted) {
+        return;
+      }
+
+      const currentTop = chatLogNode.scrollTop;
+      const isScrollingUp = currentTop <= lastScrollTopRef.current;
+      lastScrollTopRef.current = currentTop;
+
+      if (!isScrollingUp) {
+        return;
+      }
+
+      maybeLoadOlder(true);
+    };
+
+    const maybeLoadOnShortTimeline = () => {
+      const almostNoOverflow = chatLogNode.scrollHeight <= chatLogNode.clientHeight + 24;
+      if (almostNoOverflow || chatLogNode.scrollTop <= 16) {
+        maybeLoadOlder(true);
+      }
+    };
+
+    chatLogNode.addEventListener("scroll", onScroll, { passive: true });
+    const initialCheckId = window.requestAnimationFrame(maybeLoadOnShortTimeline);
 
     return () => {
-      chatLogNode.removeEventListener("scroll", maybeLoadOlder);
+      window.cancelAnimationFrame(initialCheckId);
+      chatLogNode.removeEventListener("scroll", onScroll);
     };
-  }, [chatLogRef, hasActiveRoom, loadingOlderMessages, messagesHasMore, onLoadOlderMessages]);
+  }, [chatLogRef, hasActiveRoom, loadingOlderMessages, messageCount, messagesHasMore, onLoadOlderMessages]);
 }

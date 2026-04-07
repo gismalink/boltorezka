@@ -350,6 +350,7 @@ export function ChatPanel({
   useChatTopLazyLoad({
     chatLogRef,
     hasActiveRoom,
+    messageCount: messages.length,
     loadingOlderMessages,
     messagesHasMore,
     onLoadOlderMessages
