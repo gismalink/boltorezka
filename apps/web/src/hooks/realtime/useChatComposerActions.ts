@@ -12,8 +12,8 @@ import {
 } from "react";
 import { api } from "../../api";
 import type { Message, MessagesCursor, User } from "../../domain";
-import { executeHttpOnly, executeHttpWithError, sendChatMessage, type ChatController } from "../../services";
-import { executeWsFirstWithHttpFallback } from "../../services/chatOperationExecutor";
+import { sendChatMessage, type ChatController } from "../../services";
+import { CHAT_OPERATION_POLICIES, executeChatOperation, executeChatOperationWithError } from "../../services/chatOperationExecutor";
 import {
   compressImageToDataUrl,
   extractImageSourceFromClipboardHtml,
@@ -504,17 +504,15 @@ export function useChatComposerActions({
     }
 
     void (async () => {
-      const deleteResult = await executeWsFirstWithHttpFallback({
+      const deleteResult = await executeChatOperation({
+        policy: CHAT_OPERATION_POLICIES["chat.delete"],
         sendWsEvent,
-        eventType: "chat.delete",
         payload: {
           messageId,
           roomSlug: chatRoomSlug,
           topicId: activeTopicId || undefined
         },
-        withIdempotency: true,
-        maxRetries: 1,
-        httpFallback: async () => {
+        httpRequest: async () => {
           await api.deleteMessage(authToken, messageId);
         }
       });
@@ -558,7 +556,9 @@ export function useChatComposerActions({
 
     const currentlyPinned = Boolean(pinnedByMessageId[messageId]);
     void (async () => {
-      const pinResult = await executeHttpOnly(async () => {
+      const pinResult = await executeChatOperation({
+        policy: currentlyPinned ? CHAT_OPERATION_POLICIES["chat.unpin"] : CHAT_OPERATION_POLICIES["chat.pin"],
+        httpRequest: async () => {
         if (currentlyPinned) {
           await api.unpinMessage(authToken, messageId);
           return false;
@@ -566,6 +566,7 @@ export function useChatComposerActions({
 
         await api.pinMessage(authToken, messageId);
         return true;
+        }
       });
 
       if (pinResult.kind === "failed") {
@@ -591,11 +592,14 @@ export function useChatComposerActions({
 
     const currentlyActive = Boolean(reactionsByMessageId[normalizedMessageId]?.[normalizedEmoji]?.reacted);
     void (async () => {
-      const reactionResult = await executeHttpOnly(async () => {
+      const reactionResult = await executeChatOperation({
+        policy: currentlyActive ? CHAT_OPERATION_POLICIES["chat.reaction.remove"] : CHAT_OPERATION_POLICIES["chat.reaction.add"],
+        httpRequest: async () => {
         if (currentlyActive) {
           await api.removeMessageReaction(authToken, normalizedMessageId, normalizedEmoji);
         } else {
           await api.addMessageReaction(authToken, normalizedMessageId, normalizedEmoji);
+        }
         }
       });
 
@@ -646,10 +650,13 @@ export function useChatComposerActions({
     }
 
     void (async () => {
-      const reportResult = await executeHttpWithError(async () => {
-        await api.reportMessage(authToken, messageId, {
-          reason: "spam_or_abuse"
-        });
+      const reportResult = await executeChatOperationWithError({
+        policy: CHAT_OPERATION_POLICIES["chat.report"],
+        httpRequest: async () => {
+          await api.reportMessage(authToken, messageId, {
+            reason: "spam_or_abuse"
+          });
+        }
       });
 
       if (reportResult.kind === "http") {

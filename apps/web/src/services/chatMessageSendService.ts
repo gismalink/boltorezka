@@ -1,7 +1,7 @@
 import { api } from "../api";
 import type { User } from "../domain";
 import type { ChatController } from "./chatController";
-import { executeWsFirstWithHttpFallback } from "./chatOperationExecutor";
+import { executeChatOperation } from "./chatOperationExecutor";
 import { extractImageSourceFromClipboardText } from "../utils/chatImagePayload";
 
 type SendWsEventFn = (
@@ -65,18 +65,23 @@ export async function sendChatMessage(params: SendChatMessageParams): Promise<Se
       return { kind: "empty" };
     }
 
-    const editResult = await executeWsFirstWithHttpFallback({
+    const editResult = await executeChatOperation({
+      policy: {
+        transport: "ws-first-http-fallback",
+        ws: {
+          eventType: "chat.edit",
+          withIdempotency: true,
+          maxRetries: maxChatRetries
+        }
+      },
       sendWsEvent,
-      eventType: "chat.edit",
       payload: {
         messageId: editingMessageId,
         text: nextText,
         roomSlug: chatRoomSlug,
         topicId: activeTopicId || undefined
       },
-      withIdempotency: true,
-      maxRetries: maxChatRetries,
-      httpFallback: async () => {
+      httpRequest: async () => {
         await api.editMessage(authToken, editingMessageId, { text: nextText });
       }
     });
