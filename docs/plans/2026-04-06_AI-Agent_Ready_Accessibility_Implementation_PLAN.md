@@ -59,7 +59,7 @@ Scope: Внедрение подхода accessibility tree-first для web и 
 - [ ] Включить agent-readiness review в Definition of Done для UI-задач.
 - [ ] Добавить checklist в PR/feature flow: semantic completeness, list semantics, state value, action confirmation.
 - [x] Внедрить smoke-проверки критических флоу в test по accessibility tree contract (новый gate `smoke:web:agent-semantics:browser`, подключен в `smoke:web:e2e` и `run-all-smokes`).
-- [x] Фиксировать evidence в `docs/status/FEATURE_LOG.md` с явной пометкой `agent-ready accessibility`.
+- [x] Фиксировать evidence в `docs/status/feature-log/` с явной пометкой `agent-ready accessibility`.
 
 ### 2.6 Пилотные флоу (первая волна)
 
@@ -83,6 +83,13 @@ Scope: Внедрение подхода accessibility tree-first для web и 
 - [x] Каждое действие агента имеет машинно-читаемое подтверждение успеха/ошибки (pilot chat scope).
 - [ ] Smoke в `test` подтверждает стабильность agent-ready contract для пилотных флоу (скрипт и интеграция готовы, test-run не зафиксирован).
 
+## 5) Ограничения выполнения
+
+- Все rollout изменения сначала только в `test`.
+- До выполнения acceptance в `test` изменения не переходят в `prod`.
+- Продовые rollout только из default branch после merge и подтвержденного smoke в test.
+- Любые серверные изменения только через GitOps-процесс и канонические скрипты/runbook.
+
 ## 6) Progress Update (2026-04-06)
 
 - Выполнены core P0/P1 инкременты в chat scope: semantic ids + screen context + action feedback + pilot coverage для timeline/composer/navigation/search/overlays.
@@ -97,6 +104,7 @@ Scope: Внедрение подхода accessibility tree-first для web и 
 - Расширена modal/profile семантика в chat pilot (`data-agent-id` для profile modal) и уменьшен decorative noise в accessibility tree (tab glyphs/unread divider visual tokens скрыты для assistive tree).
 - Добавлены deterministic `data-agent-id` и dialog semantics для user settings/delete-confirm и room member profile modal.
 - Browser smoke `smoke:web:agent-semantics:browser` расширен на optional путь открытия user settings modal через user dock controls.
+- По текущему evidence-артефакту pilot smoke в `test` зафиксирован как `FAIL` (см. `docs/status/test-results/2026-04-06.md`), acceptance для tree-first smoke остается открытым до успешного прогона.
 
 ## 7) Evidence Artifact (test)
 
@@ -107,10 +115,3 @@ Scope: Внедрение подхода accessibility tree-first для web и 
 	- `Result`,
 	- `Output excerpt`,
 	- `Notes`.
-
-## 5) Ограничения выполнения
-
-- Все rollout изменения сначала только в `test`.
-- До выполнения acceptance в `test` изменения не переходят в `prod`.
-- Продовые rollout только из default branch после merge и подтвержденного smoke в test.
-- Любые серверные изменения только через GitOps-процесс и канонические скрипты/runbook.
