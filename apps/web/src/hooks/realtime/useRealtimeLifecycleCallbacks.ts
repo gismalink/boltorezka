@@ -185,7 +185,6 @@ export function useRealtimeLifecycleCallbacks({
     const targetRoomSlug = String(payload.roomSlug || "").trim();
     const actorUserId = String(payload.userId || "").trim();
     const selfUserId = String(currentUserId || "").trim();
-    const senderRequestId = String(payload.senderRequestId || "").trim();
     const targetTopicId = String(payload.topicId || "").trim();
     const normalizedActiveTopicId = String(activeTopicId || "").trim();
 
@@ -194,11 +193,6 @@ export function useRealtimeLifecycleCallbacks({
     }
 
     if (selfUserId && actorUserId === selfUserId) {
-      return;
-    }
-
-    // Ignore local optimistic echo replays.
-    if (senderRequestId) {
       return;
     }
 

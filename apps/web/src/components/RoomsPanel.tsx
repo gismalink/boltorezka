@@ -106,8 +106,6 @@ export function RoomsPanel({
   onSetRoomNotificationMutePreset
 }: RoomsPanelProps) {
   const [confirmPopup, setConfirmPopup] = useState<ConfirmPopupState>(null);
-  const [lastPresenceUpdatedAt, setLastPresenceUpdatedAt] = useState<number>(() => Date.now());
-  const [presenceClockTs, setPresenceClockTs] = useState<number>(() => Date.now());
   const {
     uncategorizedCollapsed,
     setUncategorizedCollapsed,
@@ -180,17 +178,6 @@ export function RoomsPanel({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [confirmPopup]);
 
-  useEffect(() => {
-    setLastPresenceUpdatedAt(Date.now());
-  }, [liveRoomMemberDetailsBySlug, liveRoomMembersBySlug]);
-
-  useEffect(() => {
-    const intervalId = window.setInterval(() => {
-      setPresenceClockTs(Date.now());
-    }, 15000);
-
-    return () => window.clearInterval(intervalId);
-  }, []);
 
   const normalizedCurrentUserId = String(currentUserId || "").trim();
   const getVisibleRoomUnreadCount = useCallback((roomSlugValue: string) => {
@@ -230,8 +217,6 @@ export function RoomsPanel({
     liveRoomMembersBySlug,
     liveRoomMemberDetailsBySlug
   });
-  const presenceAgeSec = Math.max(0, Math.floor((presenceClockTs - lastPresenceUpdatedAt) / 1000));
-  const presenceStale = presenceAgeSec >= 45;
 
   const showInitialRoomsSkeleton = (roomsTreeLoading || roomsTreeBootstrapPending) && !roomsTree;
 
@@ -471,8 +456,6 @@ export function RoomsPanel({
           collapsed={outsideRoomsCollapsed}
           outsideOnlineCount={onlineOutsideRooms.length}
           unreadCount={outsideRoomsUnreadCount}
-          presenceStale={presenceStale}
-          presenceAgeSec={presenceAgeSec}
           members={onlineOutsideRooms}
           onToggleCollapsed={onToggleOutsideRoomsCollapsed}
         />

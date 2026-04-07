@@ -10,8 +10,6 @@ type RoomsOutsideOnlineBlockProps = {
   collapsed: boolean;
   outsideOnlineCount: number;
   unreadCount: number;
-  presenceStale: boolean;
-  presenceAgeSec: number;
   members: OutsideOnlineMember[];
   onToggleCollapsed: () => void;
 };
@@ -21,8 +19,6 @@ function RoomsOutsideOnlineBlockInner({
   collapsed,
   outsideOnlineCount,
   unreadCount,
-  presenceStale,
-  presenceAgeSec,
   members,
   onToggleCollapsed
 }: RoomsOutsideOnlineBlockProps) {
@@ -43,14 +39,6 @@ function RoomsOutsideOnlineBlockInner({
           {outsideOnlineCount}
         </span>
         <span className="text-[var(--font-size-sm)] uppercase tracking-[0.04em] text-[var(--pixel-muted)]">{title}</span>
-        <span
-          className={`inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] ${presenceStale ? "border-amber-500/40 text-amber-500" : "border-emerald-500/40 text-emerald-500"}`}
-          aria-label={presenceStale ? `presence stale ${presenceAgeSec}s` : `presence live ${presenceAgeSec}s`}
-          title={presenceStale ? `online stale: ${presenceAgeSec}s` : `online live: ${presenceAgeSec}s`}
-        >
-          <i className={`bi bi-circle-fill text-[8px] ${presenceStale ? "text-amber-500" : "text-emerald-500"}`} aria-hidden="true" />
-          <span>{presenceAgeSec}s</span>
-        </span>
         {unreadCount > 0 ? (
           <span className="room-unread-badge">{unreadCount}</span>
         ) : null}
