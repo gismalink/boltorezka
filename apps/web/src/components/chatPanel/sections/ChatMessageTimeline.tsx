@@ -16,6 +16,7 @@ type ChatMessageTimelineProps = {
   hasActiveRoom: boolean;
   hasTopics: boolean;
   activeTopicId: string | null;
+  chatStartCreatedAt: string | null;
   messagesHasMore: boolean;
   loadingOlderMessages: boolean;
   onLoadOlderMessages: () => void;
@@ -277,6 +278,7 @@ export function ChatMessageTimeline({
   hasActiveRoom,
   hasTopics,
   activeTopicId,
+  chatStartCreatedAt,
   messagesHasMore,
   loadingOlderMessages,
   onLoadOlderMessages,
@@ -405,6 +407,14 @@ export function ChatMessageTimeline({
     [messageViewModels, windowStartIndex]
   );
 
+  const chatStartDateLabel = useMemo(() => {
+    if (!chatStartCreatedAt) {
+      return "";
+    }
+
+    return formatDateSeparatorLabel(chatStartCreatedAt, locale);
+  }, [chatStartCreatedAt, locale]);
+
   useEffect(() => {
     const chatLogNode = chatLogRef.current;
     if (!chatLogNode) {
@@ -532,7 +542,9 @@ export function ChatMessageTimeline({
               </Button>
             )
           ) : messageViewModels.length > 0 ? (
-            <div className="chat-history-start muted">Начало истории чата</div>
+            <div className="chat-history-start muted">
+              Начало истории чата{chatStartDateLabel ? ` (${chatStartDateLabel})` : ""}
+            </div>
           ) : null}
         </div>
       ) : null}

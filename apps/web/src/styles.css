@@ -1512,9 +1512,7 @@ pre {
 }
 
 .chat-history-status-row {
-  position: sticky;
-  top: 0;
-  z-index: 2;
+  position: relative;
   margin: 0 auto var(--space-sm);
   width: fit-content;
 }
