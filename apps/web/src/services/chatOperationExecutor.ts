@@ -110,6 +110,11 @@ export type ExecuteHttpWithErrorResult<T> =
   | { kind: "http"; value: T }
   | { kind: "failed"; error: unknown };
 
+export type ExecuteWsFirstWithHttpFallbackWithErrorResult<T> =
+  | { kind: "ws"; requestId?: string }
+  | { kind: "http"; value: T }
+  | { kind: "failed"; error: unknown };
+
 export async function executeWsFirstWithHttpFallback<T>({
   sendWsEvent,
   eventType,
@@ -145,6 +150,11 @@ type ExecuteWsFirstWithHttpFallbackAwaitAckInput<T> = {
   httpFallback: () => Promise<T>;
 };
 
+type ExecuteWsFirstWithHttpFallbackAwaitAckWithErrorResult<T> =
+  | { kind: "ws" }
+  | { kind: "http"; value: T }
+  | { kind: "failed"; error: unknown };
+
 export function isTransientWsError(error: unknown): boolean {
   const message = String((error as { message?: string } | null)?.message || "").trim().toLowerCase();
   return message === "ws_not_connected" || message.includes("ack_timeout") || message === "ws_disposed";
@@ -176,6 +186,34 @@ export async function executeWsFirstWithHttpFallbackAwaitAck<T>({
     return { kind: "http", value };
   } catch {
     return { kind: "failed" };
+  }
+}
+
+export async function executeWsFirstWithHttpFallbackAwaitAckWithError<T>({
+  sendWsEventAwaitAck,
+  eventType,
+  payload,
+  withIdempotency,
+  maxRetries,
+  httpFallback
+}: ExecuteWsFirstWithHttpFallbackAwaitAckInput<T>): Promise<ExecuteWsFirstWithHttpFallbackAwaitAckWithErrorResult<T>> {
+  try {
+    await sendWsEventAwaitAck(eventType, payload, {
+      withIdempotency,
+      maxRetries
+    });
+    return { kind: "ws" };
+  } catch (error) {
+    if (!isTransientWsError(error)) {
+      return { kind: "failed", error };
+    }
+  }
+
+  try {
+    const value = await httpFallback();
+    return { kind: "http", value };
+  } catch (error) {
+    return { kind: "failed", error };
   }
 }
 
@@ -277,7 +315,7 @@ export async function executeChatOperationWithError<T>({
   sendWsEventAwaitAck,
   payload,
   httpRequest
-}: ExecuteChatOperationInput<T>): Promise<ExecuteWsFirstWithHttpFallbackResult<T> | ExecuteHttpWithErrorResult<T>> {
+}: ExecuteChatOperationInput<T>): Promise<ExecuteWsFirstWithHttpFallbackWithErrorResult<T> | ExecuteHttpWithErrorResult<T>> {
   if (policy.transport === "http-only") {
     if (!httpRequest) {
       return { kind: "failed", error: new Error("httpRequest is required") };
@@ -285,17 +323,63 @@ export async function executeChatOperationWithError<T>({
     return executeHttpWithError(httpRequest);
   }
 
-  const result = await executeChatOperation({
-    policy,
-    sendWsEvent,
-    sendWsEventAwaitAck,
-    payload,
-    httpRequest
-  });
-
-  if (result.kind === "failed") {
-    return { kind: "failed", error: new Error("operation failed") };
+  if (!payload) {
+    return { kind: "failed", error: new Error("payload is required") };
   }
 
-  return result;
+  if (policy.transport === "ws-only") {
+    if (!sendWsEvent) {
+      return { kind: "failed", error: new Error("sendWsEvent is required") };
+    }
+
+    if (sendWsEventAwaitAck) {
+      try {
+        await sendWsEventAwaitAck(policy.ws.eventType, payload, {
+          withIdempotency: policy.ws.withIdempotency,
+          maxRetries: policy.ws.maxRetries
+        });
+        return { kind: "ws" };
+      } catch (error) {
+        return { kind: "failed", error };
+      }
+    }
+
+    const requestId = sendWsEvent(policy.ws.eventType, payload, {
+      withIdempotency: policy.ws.withIdempotency,
+      maxRetries: policy.ws.maxRetries
+    });
+    return requestId
+      ? { kind: "ws", requestId }
+      : { kind: "failed", error: new Error("ws request not sent") };
+  }
+
+  if (!httpRequest) {
+    return { kind: "failed", error: new Error("httpRequest is required") };
+  }
+
+  if (sendWsEventAwaitAck) {
+    return executeWsFirstWithHttpFallbackAwaitAckWithError({
+      sendWsEventAwaitAck,
+      eventType: policy.ws.eventType,
+      payload,
+      withIdempotency: policy.ws.withIdempotency,
+      maxRetries: policy.ws.maxRetries,
+      httpFallback: httpRequest
+    });
+  }
+
+  if (!sendWsEvent) {
+    return { kind: "failed", error: new Error("sendWsEvent is required") };
+  }
+
+  const requestId = sendWsEvent(policy.ws.eventType, payload, {
+    withIdempotency: policy.ws.withIdempotency,
+    maxRetries: policy.ws.maxRetries
+  });
+
+  if (requestId) {
+    return { kind: "ws", requestId };
+  }
+
+  return executeHttpWithError(httpRequest);
 }

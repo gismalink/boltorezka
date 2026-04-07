@@ -2,9 +2,8 @@ import { api } from "../api";
 import {
   CHAT_OPERATION_POLICIES,
   executeChatOperation,
-  isTransientWsError,
+  executeChatOperationWithError,
   type ExecuteHttpOnlyResult,
-  type ExecuteHttpWithErrorResult,
   type ExecuteWsFirstWithHttpFallbackResult
 } from "./chatOperationExecutor";
 
@@ -196,24 +195,20 @@ export async function runChatReport({
   messageId,
   sendWsEventAwaitAck
 }: RunChatReportInput): Promise<ChatReportResult> {
-  try {
-    await sendWsEventAwaitAck("chat.report", { messageId }, {
-      withIdempotency: true,
-      maxRetries: 1
-    });
-    return { kind: "ws" };
-  } catch (error) {
-    if (!isTransientWsError(error)) {
-      return { kind: "failed", error };
+  const result = await executeChatOperationWithError({
+    policy: CHAT_OPERATION_POLICIES["chat.report"],
+    sendWsEventAwaitAck,
+    payload: { messageId },
+    httpRequest: async () => {
+      await api.reportMessage(authToken, messageId, {
+        reason: "spam_or_abuse"
+      });
     }
+  });
+
+  if (result.kind === "failed" && !("error" in result)) {
+    return { kind: "failed", error: new Error("operation failed") };
   }
 
-  try {
-    await api.reportMessage(authToken, messageId, {
-      reason: "spam_or_abuse"
-    });
-    return { kind: "http", value: undefined };
-  } catch (error) {
-    return { kind: "failed", error };
-  }
+  return result;
 }
