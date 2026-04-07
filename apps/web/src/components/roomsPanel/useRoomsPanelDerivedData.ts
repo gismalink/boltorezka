@@ -8,6 +8,8 @@ type UseRoomsPanelDerivedDataInput = {
   uncategorizedRooms: Room[];
   archivedRooms: Room[];
   roomUnreadBySlug: Record<string, number>;
+  roomMentionUnreadBySlug: Record<string, number>;
+  roomMutePresetByRoomId: Record<string, "1h" | "8h" | "24h" | "forever" | "off">;
   liveRoomMembersBySlug: Record<string, string[]>;
   liveRoomMemberDetailsBySlug: Record<string, PresenceMember[]>;
 };
@@ -17,6 +19,8 @@ export function useRoomsPanelDerivedData({
   uncategorizedRooms,
   archivedRooms,
   roomUnreadBySlug,
+  roomMentionUnreadBySlug,
+  roomMutePresetByRoomId,
   liveRoomMembersBySlug,
   liveRoomMemberDetailsBySlug
 }: UseRoomsPanelDerivedDataInput) {
@@ -25,6 +29,8 @@ export function useRoomsPanelDerivedData({
     uncategorizedRooms,
     archivedRooms,
     roomUnreadBySlug,
+    roomMentionUnreadBySlug,
+    roomMutePresetByRoomId,
     liveRoomMembersBySlug,
     liveRoomMemberDetailsBySlug
   }), [
@@ -32,6 +38,8 @@ export function useRoomsPanelDerivedData({
     uncategorizedRooms,
     archivedRooms,
     roomUnreadBySlug,
+    roomMentionUnreadBySlug,
+    roomMutePresetByRoomId,
     liveRoomMembersBySlug,
     liveRoomMemberDetailsBySlug
   ]);

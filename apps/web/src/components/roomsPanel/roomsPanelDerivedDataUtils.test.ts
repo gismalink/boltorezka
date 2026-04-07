@@ -11,12 +11,17 @@ describe("roomsPanelDerivedDataUtils", () => {
       uncategorizedRooms: [{ id: "r2", slug: "room-2", title: "R2", kind: "text", category_id: null, position: 0, is_public: true, created_at: "" }],
       archivedRooms: [],
       roomUnreadBySlug: { "room-1": 3, "room-2": 2 },
+      roomMentionUnreadBySlug: { "room-1": 1, "room-2": 4 },
+      roomMutePresetByRoomId: { "r1": "off" },
       liveRoomMembersBySlug: {},
       liveRoomMemberDetailsBySlug: {}
     });
 
     expect(result.categoryUnreadById["cat-1"]).toBe(3);
     expect(result.uncategorizedUnreadCount).toBe(2);
+    expect(result.uncategorizedMentionCount).toBe(4);
+    expect(result.categoryMentionById["cat-1"]).toBe(1);
+    expect(result.categoryUnreadUnmutedById["cat-1"]).toBe(3);
   });
 
   it("keeps outside bucket members outside and deduplicates", () => {
@@ -28,6 +33,8 @@ describe("roomsPanelDerivedDataUtils", () => {
       uncategorizedRooms: [],
       archivedRooms: [],
       roomUnreadBySlug: { [OUTSIDE_ROOMS_PRESENCE_KEY]: 1 },
+      roomMentionUnreadBySlug: {},
+      roomMutePresetByRoomId: {},
       liveRoomMembersBySlug: { [OUTSIDE_ROOMS_PRESENCE_KEY]: ["alex", "alex"] },
       liveRoomMemberDetailsBySlug: {}
     });

@@ -68,9 +68,7 @@ export function RoomsPanel({
   channelPopupRef,
   onSetCategoryPopupOpen,
   onSetChannelPopupOpen,
-  onSetNewCategorySlug,
   onSetNewCategoryTitle,
-  onSetNewRoomSlug,
   onSetNewRoomTitle,
   onSetNewRoomKind,
   onSetNewRoomCategoryId,
@@ -127,8 +125,13 @@ export function RoomsPanel({
     if (confirmPopup.kind === "delete-all-archived") {
       const snapshot = [...archivedRooms];
       const run = async () => {
-        for (const room of snapshot) {
-          await Promise.resolve(onDeleteChannelPermanent(room));
+        const results = await Promise.allSettled(
+          snapshot.map((room) => Promise.resolve(onDeleteChannelPermanent(room)))
+        );
+        const failedCount = results.filter((result) => result.status === "rejected").length;
+        if (failedCount > 0) {
+          // Частичный фейл допустим: операция продолжается для остальных комнат.
+          console.warn(`rooms: delete-all-archived partial failure ${failedCount}/${results.length}`);
         }
       };
 
@@ -198,13 +201,18 @@ export function RoomsPanel({
     onlineOutsideRooms,
     roomMembersBySlug,
     uncategorizedUnreadCount,
+    uncategorizedMentionCount,
     outsideRoomsUnreadCount,
-    categoryUnreadById
+    categoryUnreadMutedById,
+    categoryUnreadUnmutedById,
+    categoryMentionById
   } = useRoomsPanelDerivedData({
     roomsTree,
     uncategorizedRooms,
     archivedRooms,
     roomUnreadBySlug,
+    roomMentionUnreadBySlug,
+    roomMutePresetByRoomId,
     liveRoomMembersBySlug,
     liveRoomMemberDetailsBySlug
   });
@@ -423,39 +431,9 @@ export function RoomsPanel({
             onSetEditingCategoryTitle={onSetEditingCategoryTitle}
             onSaveCategorySettings={onSaveCategorySettings}
             onMoveCategory={onMoveCategory}
-            mentionCount={(Array.isArray(category.channels) ? category.channels : []).reduce((sum, room) => {
-              const slug = String(room.slug || "").trim();
-              if (!slug) {
-                return sum;
-              }
-              return sum + getVisibleRoomMentionUnreadCount(slug);
-            }, 0)}
-            unreadCountMuted={(Array.isArray(category.channels) ? category.channels : []).reduce((sum, room) => {
-              const slug = String(room.slug || "").trim();
-              if (!slug) {
-                return sum;
-              }
-              const roomId = String(room.id || "").trim();
-              const preset = roomMutePresetByRoomId[roomId];
-              const unread = getVisibleRoomUnreadCount(slug);
-              if (preset != null && preset !== "off") {
-                return sum + unread;
-              }
-              return sum;
-            }, 0)}
-            unreadCountUnmuted={(Array.isArray(category.channels) ? category.channels : []).reduce((sum, room) => {
-              const slug = String(room.slug || "").trim();
-              if (!slug) {
-                return sum;
-              }
-              const roomId = String(room.id || "").trim();
-              const preset = roomMutePresetByRoomId[roomId];
-              const unread = getVisibleRoomUnreadCount(slug);
-              if (preset == null || preset === "off") {
-                return sum + unread;
-              }
-              return sum;
-            }, 0)}
+            mentionCount={Math.max(0, Number(categoryMentionById[category.id] || 0))}
+            unreadCountMuted={Math.max(0, Number(categoryUnreadMutedById[category.id] || 0))}
+            unreadCountUnmuted={Math.max(0, Number(categoryUnreadUnmutedById[category.id] || 0))}
             category={category}
             renderRoomRow={renderRoomRow}
             onRequestDeleteCategory={onRequestDeleteCategory}
@@ -467,20 +445,8 @@ export function RoomsPanel({
           rooms={uncategorizedRooms}
           collapsed={uncategorizedCollapsed}
           onToggleCollapsed={onToggleUncategorizedCollapsed}
-          unreadCount={uncategorizedRooms.reduce((sum, room) => {
-            const slug = String(room.slug || "").trim();
-            if (!slug) {
-              return sum;
-            }
-            return sum + getVisibleRoomUnreadCount(slug);
-          }, 0)}
-          mentionCount={uncategorizedRooms.reduce((sum, room) => {
-            const slug = String(room.slug || "").trim();
-            if (!slug) {
-              return sum;
-            }
-            return sum + getVisibleRoomMentionUnreadCount(slug);
-          }, 0)}
+          unreadCount={uncategorizedUnreadCount}
+          mentionCount={uncategorizedMentionCount}
           renderRoomRow={renderRoomRow}
         />
 

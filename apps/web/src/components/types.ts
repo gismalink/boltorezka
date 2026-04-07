@@ -168,9 +168,7 @@ export type RoomsPanelProps = {
   channelPopupRef: RefObject<HTMLDivElement>;
   onSetCategoryPopupOpen: (value: boolean) => void;
   onSetChannelPopupOpen: (value: boolean) => void;
-  onSetNewCategorySlug: (value: string) => void;
   onSetNewCategoryTitle: (value: string) => void;
-  onSetNewRoomSlug: (value: string) => void;
   onSetNewRoomTitle: (value: string) => void;
   onSetNewRoomKind: (value: RoomKind) => void;
   onSetNewRoomCategoryId: (value: string) => void;

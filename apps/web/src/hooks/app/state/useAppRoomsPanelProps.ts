@@ -8,9 +8,7 @@ type UseAppRoomsPanelPropsInput = Omit<
   WorkspaceRoomsPanelInput,
   | "onSetCategoryPopupOpen"
   | "onSetChannelPopupOpen"
-  | "onSetNewCategorySlug"
   | "onSetNewCategoryTitle"
-  | "onSetNewRoomSlug"
   | "onSetNewRoomTitle"
   | "onSetNewRoomKind"
   | "onSetNewRoomCategoryId"
@@ -31,9 +29,7 @@ type UseAppRoomsPanelPropsInput = Omit<
 > & {
   setCategoryPopupOpen: (value: boolean) => void;
   setChannelPopupOpen: (value: boolean) => void;
-  setNewCategorySlug: (value: string) => void;
   setNewCategoryTitle: (value: string) => void;
-  setNewRoomSlug: (value: string) => void;
   setNewRoomTitle: (value: string) => void;
   setNewRoomKind: (value: RoomKind) => void;
   setNewRoomCategoryId: (value: string) => void;
@@ -56,9 +52,7 @@ type UseAppRoomsPanelPropsInput = Omit<
 export function useAppRoomsPanelProps({
   setCategoryPopupOpen,
   setChannelPopupOpen,
-  setNewCategorySlug,
   setNewCategoryTitle,
-  setNewRoomSlug,
   setNewRoomTitle,
   setNewRoomKind,
   setNewRoomCategoryId,
@@ -82,9 +76,7 @@ export function useAppRoomsPanelProps({
     ...rest,
     onSetCategoryPopupOpen: setCategoryPopupOpen,
     onSetChannelPopupOpen: setChannelPopupOpen,
-    onSetNewCategorySlug: setNewCategorySlug,
     onSetNewCategoryTitle: setNewCategoryTitle,
-    onSetNewRoomSlug: setNewRoomSlug,
     onSetNewRoomTitle: setNewRoomTitle,
     onSetNewRoomKind: setNewRoomKind,
     onSetNewRoomCategoryId: setNewRoomCategoryId,

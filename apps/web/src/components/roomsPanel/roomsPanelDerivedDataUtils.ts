@@ -13,6 +13,8 @@ type BuildRoomsPanelDerivedDataInput = {
   uncategorizedRooms: Room[];
   archivedRooms: Room[];
   roomUnreadBySlug: Record<string, number>;
+  roomMentionUnreadBySlug: Record<string, number>;
+  roomMutePresetByRoomId: Record<string, "1h" | "8h" | "24h" | "forever" | "off">;
   liveRoomMembersBySlug: Record<string, string[]>;
   liveRoomMemberDetailsBySlug: Record<string, PresenceMember[]>;
 };
@@ -24,6 +26,8 @@ export function buildRoomsPanelDerivedData({
   uncategorizedRooms,
   archivedRooms,
   roomUnreadBySlug,
+  roomMentionUnreadBySlug,
+  roomMutePresetByRoomId,
   liveRoomMembersBySlug,
   liveRoomMemberDetailsBySlug
 }: BuildRoomsPanelDerivedDataInput) {
@@ -157,6 +161,14 @@ export function buildRoomsPanelDerivedData({
     return sum + Math.max(0, Number(roomUnreadBySlug[slug] || 0));
   }, 0);
 
+  const uncategorizedMentionCount = uncategorizedRooms.reduce((sum, room) => {
+    const slug = String(room.slug || "").trim();
+    if (!slug) {
+      return sum;
+    }
+    return sum + Math.max(0, Number(roomMentionUnreadBySlug[slug] || 0));
+  }, 0);
+
   const outsideRoomsUnreadCount = Object.entries(roomUnreadBySlug).reduce((sum, [slugRaw, unreadRaw]) => {
     const slug = String(slugRaw || "").trim();
     if (!slug) {
@@ -169,18 +181,64 @@ export function buildRoomsPanelDerivedData({
   }, 0);
 
   const categoryUnreadById: Record<string, number> = {};
+  const categoryUnreadMutedById: Record<string, number> = {};
+  const categoryUnreadUnmutedById: Record<string, number> = {};
+  const categoryMentionById: Record<string, number> = {};
   (roomsTree?.categories || []).forEach((category) => {
     const categoryRooms = Array.isArray((category as { channels?: Room[] }).channels)
       ? (category as { channels?: Room[] }).channels || []
       : Array.isArray((category as { rooms?: Room[] }).rooms)
         ? (category as { rooms?: Room[] }).rooms || []
         : [];
-    categoryUnreadById[category.id] = categoryRooms.reduce((sum, room) => {
+    const categoryId = String(category.id || "").trim();
+    if (!categoryId) {
+      return;
+    }
+
+    categoryUnreadById[categoryId] = categoryRooms.reduce((sum, room) => {
       const slug = String(room.slug || "").trim();
       if (!slug) {
         return sum;
       }
       return sum + Math.max(0, Number(roomUnreadBySlug[slug] || 0));
+    }, 0);
+
+    categoryMentionById[categoryId] = categoryRooms.reduce((sum, room) => {
+      const slug = String(room.slug || "").trim();
+      if (!slug) {
+        return sum;
+      }
+      return sum + Math.max(0, Number(roomMentionUnreadBySlug[slug] || 0));
+    }, 0);
+
+    categoryUnreadMutedById[categoryId] = categoryRooms.reduce((sum, room) => {
+      const roomId = String(room.id || "").trim();
+      const slug = String(room.slug || "").trim();
+      if (!roomId || !slug) {
+        return sum;
+      }
+
+      const preset = roomMutePresetByRoomId[roomId];
+      if (preset != null && preset !== "off") {
+        return sum + Math.max(0, Number(roomUnreadBySlug[slug] || 0));
+      }
+
+      return sum;
+    }, 0);
+
+    categoryUnreadUnmutedById[categoryId] = categoryRooms.reduce((sum, room) => {
+      const roomId = String(room.id || "").trim();
+      const slug = String(room.slug || "").trim();
+      if (!roomId || !slug) {
+        return sum;
+      }
+
+      const preset = roomMutePresetByRoomId[roomId];
+      if (preset == null || preset === "off") {
+        return sum + Math.max(0, Number(roomUnreadBySlug[slug] || 0));
+      }
+
+      return sum;
     }, 0);
   });
 
@@ -188,7 +246,11 @@ export function buildRoomsPanelDerivedData({
     onlineOutsideRooms,
     roomMembersBySlug,
     uncategorizedUnreadCount,
+    uncategorizedMentionCount,
     outsideRoomsUnreadCount,
-    categoryUnreadById
+    categoryUnreadById,
+    categoryUnreadMutedById,
+    categoryUnreadUnmutedById,
+    categoryMentionById
   };
 }

@@ -5,69 +5,77 @@ const ROOMS_PANEL_MUTE_PRESETS_STORAGE_KEY = "boltorezka_room_mute_presets";
 
 type RoomMutePreset = "1h" | "8h" | "24h" | "forever" | "off";
 
+const canUseLocalStorage = (): boolean => {
+  return typeof window !== "undefined" && typeof window.localStorage !== "undefined";
+};
+
+const readJsonRecord = (key: string): Record<string, unknown> => {
+  if (!canUseLocalStorage()) {
+    return {};
+  }
+
+  try {
+    const raw = String(window.localStorage.getItem(key) || "{}");
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+};
+
+const writeJsonRecord = (key: string, value: Record<string, unknown>): void => {
+  if (!canUseLocalStorage()) {
+    return;
+  }
+
+  try {
+    window.localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    // no-op: local storage can be unavailable in private mode/quota exceeded
+  }
+};
+
 export function useRoomsPanelPersistentState() {
   const [uncategorizedCollapsed, setUncategorizedCollapsed] = useState<boolean>(() => {
-    try {
-      const parsed = JSON.parse(String(localStorage.getItem(ROOMS_PANEL_GROUPS_STORAGE_KEY) || "{}")) as {
-        uncategorizedCollapsed?: boolean;
-      };
-      return Boolean(parsed.uncategorizedCollapsed);
-    } catch {
-      return false;
-    }
+    const parsed = readJsonRecord(ROOMS_PANEL_GROUPS_STORAGE_KEY) as { uncategorizedCollapsed?: boolean };
+    return Boolean(parsed.uncategorizedCollapsed);
   });
 
   const [outsideRoomsCollapsed, setOutsideRoomsCollapsed] = useState<boolean>(() => {
-    try {
-      const parsed = JSON.parse(String(localStorage.getItem(ROOMS_PANEL_GROUPS_STORAGE_KEY) || "{}")) as {
-        outsideRoomsCollapsed?: boolean;
-      };
-      return Boolean(parsed.outsideRoomsCollapsed);
-    } catch {
-      return false;
-    }
+    const parsed = readJsonRecord(ROOMS_PANEL_GROUPS_STORAGE_KEY) as { outsideRoomsCollapsed?: boolean };
+    return Boolean(parsed.outsideRoomsCollapsed);
   });
 
   const [archivedCollapsed, setArchivedCollapsed] = useState<boolean>(() => {
-    try {
-      const parsed = JSON.parse(String(localStorage.getItem(ROOMS_PANEL_GROUPS_STORAGE_KEY) || "{}")) as {
-        archivedCollapsed?: boolean;
-      };
-      return Boolean(parsed.archivedCollapsed);
-    } catch {
-      return false;
-    }
+    const parsed = readJsonRecord(ROOMS_PANEL_GROUPS_STORAGE_KEY) as { archivedCollapsed?: boolean };
+    return Boolean(parsed.archivedCollapsed);
   });
 
   const [roomMutePresetByRoomId, setRoomMutePresetByRoomId] = useState<Record<string, RoomMutePreset>>(() => {
-    try {
-      const parsed = JSON.parse(String(localStorage.getItem(ROOMS_PANEL_MUTE_PRESETS_STORAGE_KEY) || "{}")) as Record<string, unknown>;
-      return Object.entries(parsed).reduce<Record<string, RoomMutePreset>>((acc, [roomId, value]) => {
-        const normalizedRoomId = String(roomId || "").trim();
-        const normalized = String(value || "").trim() as RoomMutePreset;
-        if (!normalizedRoomId) {
-          return acc;
-        }
-        if (normalized === "1h" || normalized === "8h" || normalized === "24h" || normalized === "forever" || normalized === "off") {
-          acc[normalizedRoomId] = normalized;
-        }
+    const parsed = readJsonRecord(ROOMS_PANEL_MUTE_PRESETS_STORAGE_KEY);
+    return Object.entries(parsed).reduce<Record<string, RoomMutePreset>>((acc, [roomId, value]) => {
+      const normalizedRoomId = String(roomId || "").trim();
+      const normalized = String(value || "").trim() as RoomMutePreset;
+      if (!normalizedRoomId) {
         return acc;
-      }, {});
-    } catch {
-      return {};
-    }
+      }
+      if (normalized === "1h" || normalized === "8h" || normalized === "24h" || normalized === "forever" || normalized === "off") {
+        acc[normalizedRoomId] = normalized;
+      }
+      return acc;
+    }, {});
   });
 
   useEffect(() => {
-    localStorage.setItem(ROOMS_PANEL_GROUPS_STORAGE_KEY, JSON.stringify({
+    writeJsonRecord(ROOMS_PANEL_GROUPS_STORAGE_KEY, {
       uncategorizedCollapsed,
       outsideRoomsCollapsed,
       archivedCollapsed
-    }));
+    });
   }, [uncategorizedCollapsed, outsideRoomsCollapsed, archivedCollapsed]);
 
   useEffect(() => {
-    localStorage.setItem(ROOMS_PANEL_MUTE_PRESETS_STORAGE_KEY, JSON.stringify(roomMutePresetByRoomId));
+    writeJsonRecord(ROOMS_PANEL_MUTE_PRESETS_STORAGE_KEY, roomMutePresetByRoomId);
   }, [roomMutePresetByRoomId]);
 
   const onRoomMutePresetChange = (roomId: string, preset: RoomMutePreset) => {
