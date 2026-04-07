@@ -168,6 +168,8 @@ export function UserDockControls({
                 className={`secondary rtc-placeholder-btn ${noiseSuppressionEnabled ? "icon-btn-danger" : ""}`}
                 aria-label={t("rtc.noiseReduction")}
                 onClick={onToggleNoiseSuppression}
+                data-agent-id="userdock.rtc.noise-reduction"
+                data-agent-state={noiseSuppressionEnabled ? "on" : "off"}
               >
                 <i className="bi bi-soundwave" aria-hidden="true" />
               </button>
@@ -179,17 +181,33 @@ export function UserDockControls({
                 aria-label={t("rtc.screenShare")}
                 onClick={onToggleScreenShare}
                 disabled={!canStartScreenShare}
+                data-agent-id="userdock.rtc.screen-share"
+                data-agent-state={!canStartScreenShare ? "disabled" : screenShareActive ? "active" : "idle"}
               >
                 <i className="bi bi-display" aria-hidden="true" />
               </button>
             </span>
             <span data-tooltip={t("rtc.comingSoon")}>
-              <button type="button" className="secondary rtc-placeholder-btn" aria-label={t("rtc.effects")} disabled>
+              <button
+                type="button"
+                className="secondary rtc-placeholder-btn"
+                aria-label={t("rtc.effects")}
+                disabled
+                data-agent-id="userdock.rtc.effects"
+                data-agent-state="disabled"
+              >
                 <i className="bi bi-stars" aria-hidden="true" />
               </button>
             </span>
             <span data-tooltip={t("rtc.comingSoon")}>
-              <button type="button" className="secondary rtc-placeholder-btn" aria-label={t("rtc.activities")} disabled>
+              <button
+                type="button"
+                className="secondary rtc-placeholder-btn"
+                aria-label={t("rtc.activities")}
+                disabled
+                data-agent-id="userdock.rtc.activities"
+                data-agent-state="disabled"
+              >
                 <i className="bi bi-lightning-charge" aria-hidden="true" />
               </button>
             </span>
@@ -207,6 +225,8 @@ export function UserDockControls({
                 data-tooltip={micMuted ? t("audio.enableMic") : t("audio.disableMic")}
                 disabled={mediaControlsLocked}
                 onClick={onToggleMic}
+                data-agent-id="userdock.audio.mic-toggle"
+                data-agent-state={mediaControlsLocked ? "disabled" : micMuted ? "muted" : "unmuted"}
               >
                 <span
                   className="mic-live-fill"
@@ -242,6 +262,8 @@ export function UserDockControls({
                     className={`secondary flex w-full items-center justify-between gap-3 px-[var(--space-lg)] py-[var(--space-lg)] text-left ${voiceSettingsPanel === "input_device" ? "voice-menu-row-active" : ""}`}
                     disabled={mediaDevicesUnavailable}
                     onClick={() => onSetVoiceSettingsPanel(voiceSettingsPanel === "input_device" ? null : "input_device")}
+                    data-agent-id="userdock.voice-settings.input-device-row"
+                    data-agent-state={mediaDevicesUnavailable ? "disabled" : voiceSettingsPanel === "input_device" ? "active" : "idle"}
                   >
                     <span className="voice-menu-text grid min-w-0 gap-0.5">
                       <span className="voice-menu-title">{t("settings.inputDevice")}</span>
@@ -285,6 +307,8 @@ export function UserDockControls({
                     aria-checked={walkieTalkieEnabled}
                     aria-label={t("settings.walkieTalkieMode")}
                     onClick={() => onSetWalkieTalkieEnabled(!walkieTalkieEnabled)}
+                    data-agent-id="userdock.voice-settings.walkie-talkie"
+                    data-agent-state={walkieTalkieEnabled ? "on" : "off"}
                   >
                     <span className="ui-switch-thumb" aria-hidden="true" />
                   </button>
@@ -304,6 +328,8 @@ export function UserDockControls({
                       }}
                       onFocus={(event) => event.currentTarget.select()}
                       aria-label={t("settings.walkieTalkieHotkey")}
+                      data-agent-id="userdock.voice-settings.walkie-talkie-hotkey"
+                      data-agent-value={walkieTalkieHotkeyLabel}
                     />
                     <p className="muted media-devices-warning">{t("settings.walkieTalkieHotkeyHint")}</p>
                   </label>
@@ -321,6 +347,7 @@ export function UserDockControls({
                   }}
                   data-agent-id="settings.user-modal.open"
                   data-agent-state={mediaControlsLocked ? "disabled" : "ready"}
+                    data-agent-value="sound"
                 >
                   <span>{t("settings.voiceSettings")}</span>
                   <i className="bi bi-gear" aria-hidden="true" />
@@ -345,6 +372,9 @@ export function UserDockControls({
                             onSetSelectedInputId(device.id);
                             onSetVoiceSettingsPanel(null);
                           }}
+                          data-agent-id="userdock.voice-settings.input-device.select"
+                          data-agent-state={mediaDevicesUnavailable ? "disabled" : selectedInputId === device.id ? "selected" : "idle"}
+                          data-agent-value={device.id}
                         >
                           <span>{device.label}</span>
                           <i className={`bi ${selectedInputId === device.id ? "bi-record-circle-fill" : "bi-circle"}`} aria-hidden="true" />
@@ -366,6 +396,8 @@ export function UserDockControls({
                 data-tooltip={audioMuted ? t("audio.enableOutput") : t("audio.disableOutput")}
                 disabled={mediaControlsLocked}
                 onClick={onToggleAudio}
+                data-agent-id="userdock.audio.output-toggle"
+                data-agent-state={mediaControlsLocked ? "disabled" : audioMuted ? "muted" : "unmuted"}
               >
                 <i className={`bi bi-headphones ${audioMuted ? "headphones-icon-muted" : ""}`} aria-hidden="true" />
               </button>
@@ -375,6 +407,8 @@ export function UserDockControls({
                 data-tooltip={t("settings.outputHint")}
                 disabled={mediaControlsLocked}
                 onClick={onToggleAudioOutput}
+                data-agent-id="userdock.audio.output-menu-toggle"
+                data-agent-state={mediaControlsLocked ? "disabled" : audioOutputMenuOpen ? "open" : "closed"}
               >
                 <i className="bi bi-chevron-down" aria-hidden="true" />
               </button>
@@ -395,6 +429,9 @@ export function UserDockControls({
                       className={`secondary device-item radio-item flex items-center justify-between gap-4 text-left ${selectedOutputId === device.id ? "device-item-active" : ""}`}
                       disabled={mediaDevicesUnavailable}
                       onClick={() => onSetSelectedOutputId(device.id)}
+                      data-agent-id="userdock.audio.output-device.select"
+                      data-agent-state={mediaDevicesUnavailable ? "disabled" : selectedOutputId === device.id ? "selected" : "idle"}
+                      data-agent-value={device.id}
                     >
                       <span>{device.label}</span>
                       <i className={`bi ${selectedOutputId === device.id ? "bi-record-circle-fill" : "bi-circle"}`} aria-hidden="true" />
@@ -427,6 +464,7 @@ export function UserDockControls({
                   }}
                   data-agent-id="settings.user-modal.open"
                   data-agent-state={mediaControlsLocked ? "disabled" : "ready"}
+                  data-agent-value="sound"
                 >
                   <span>{t("settings.voiceSettings")}</span>
                   <i className="bi bi-gear" aria-hidden="true" />
@@ -443,6 +481,8 @@ export function UserDockControls({
                 data-tooltip={cameraTooltip}
                 disabled={cameraControlDisabled}
                 onClick={onToggleCamera}
+                data-agent-id="userdock.video.camera-toggle"
+                data-agent-state={cameraControlDisabled ? "disabled" : cameraEnabled ? "on" : "off"}
               >
                 <i className={`bi ${cameraEnabled ? "bi-camera-video-fill" : "bi-camera-video-off-fill"}`} aria-hidden="true" />
               </button>
@@ -455,6 +495,8 @@ export function UserDockControls({
                   onRequestVideoAccess();
                   setCameraMenuOpen((value) => !value);
                 }}
+                data-agent-id="userdock.video.camera-menu-toggle"
+                data-agent-state={cameraControlDisabled ? "disabled" : cameraMenuOpen ? "open" : "closed"}
               >
                 <i className="bi bi-chevron-down" aria-hidden="true" />
               </button>
@@ -478,6 +520,9 @@ export function UserDockControls({
                         onSetSelectedVideoInputId(device.id);
                         setCameraMenuOpen(false);
                       }}
+                      data-agent-id="userdock.video.camera-device.select"
+                      data-agent-state={mediaDevicesUnavailable ? "disabled" : selectedVideoInputId === device.id ? "selected" : "idle"}
+                      data-agent-value={device.id}
                     >
                       <span>{device.label}</span>
                       <i className={`bi ${selectedVideoInputId === device.id ? "bi-record-circle-fill" : "bi-circle"}`} aria-hidden="true" />
@@ -496,6 +541,8 @@ export function UserDockControls({
             className="secondary icon-btn user-panel-disconnect-btn flex w-full items-center justify-center"
             data-tooltip={t("mobile.disconnect")}
             onClick={onDisconnectCall}
+            data-agent-id="userdock.rtc.disconnect"
+            data-agent-state="ready"
           >
             <i className="bi bi-telephone-x" aria-hidden="true" />
           </button>

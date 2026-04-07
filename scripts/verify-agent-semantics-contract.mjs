@@ -30,6 +30,14 @@ function lineFromOffset(text, offset) {
   return text.slice(0, offset).split("\n").length;
 }
 
+function maskOperatorAngles(text) {
+  // Keep string length stable so match offsets can still map to original lines.
+  // This prevents regex from prematurely stopping on ">" in "=>"/">=".
+  return String(text)
+    .replace(/=>/g, "=~")
+    .replace(/>=/g, "~=");
+}
+
 function normalizeSnippet(tag) {
   return String(tag).replace(/\s+/g, " ").trim();
 }
@@ -69,9 +77,10 @@ function main() {
 
   for (const filePath of files) {
     const content = fs.readFileSync(filePath, "utf8");
+    const scanContent = maskOperatorAngles(content);
     let match = null;
 
-    while ((match = interactiveTagPattern.exec(content)) !== null) {
+    while ((match = interactiveTagPattern.exec(scanContent)) !== null) {
       const fullTag = match[0];
       const tagName = match[1];
       const agentIdMatch = fullTag.match(/data-agent-id="([^"]+)"/);

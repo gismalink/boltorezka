@@ -1,21 +1,21 @@
 {
-  "updatedAt": "2026-04-07T19:30:03.221Z",
+  "updatedAt": "2026-04-07T19:34:54.380Z",
   "note": "Legacy baseline for global interactive semantic contract. New violations are blocked.",
   "violations": [
     {
-      "signature": "apps/web/src/components/AppGuardsAndOverlays.tsx:280|input|<missing>|<input value={serverName} maxLength={64} onChange={(event) =>",
+      "signature": "apps/web/src/components/AppGuardsAndOverlays.tsx:280|input|<missing>|<input value={serverName} maxLength={64} onChange={(event) =~ setServerName(event.target.value)} placeholder={t(\"server.createPlaceholder\")} />",
       "relPath": "apps/web/src/components/AppGuardsAndOverlays.tsx",
       "line": 280,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/AppGuardsAndOverlays.tsx:356|input|<missing>|<input value={profileNameDraft} onChange={(event) =>",
+      "signature": "apps/web/src/components/AppGuardsAndOverlays.tsx:356|input|<missing>|<input value={profileNameDraft} onChange={(event) =~ onChangeProfileName(event.target.value)} placeholder={t(\"settings.displayName\")} />",
       "relPath": "apps/web/src/components/AppGuardsAndOverlays.tsx",
       "line": 356,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/AppGuardsAndOverlays.tsx:365|select|<missing>|<select value={selectedUiTheme} onChange={(event) =>",
+      "signature": "apps/web/src/components/AppGuardsAndOverlays.tsx:365|select|<missing>|<select value={selectedUiTheme} onChange={(event) =~ onChangeTheme(event.target.value as UiTheme)} >",
       "relPath": "apps/web/src/components/AppGuardsAndOverlays.tsx",
       "line": 365,
       "problem": "missing data-agent-id"
@@ -33,7 +33,7 @@
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/AppHeader.tsx:108|select|<missing>|<select className=\"secondary min-w-[220px]\" aria-label={t(\"server.switcherAria\")} value={currentServerId} onChange={(event) =>",
+      "signature": "apps/web/src/components/AppHeader.tsx:108|select|<missing>|<select className=\"secondary min-w-[220px]\" aria-label={t(\"server.switcherAria\")} value={currentServerId} onChange={(event) =~ onChangeCurrentServer(event.target.value)} >",
       "relPath": "apps/web/src/components/AppHeader.tsx",
       "line": 108,
       "problem": "missing data-agent-id"
@@ -45,19 +45,19 @@
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/AppHeader.tsx:154|input|<missing>|<input id=\"create-server-name-input\" className=\"secondary\" value={newServerName} maxLength={64} onChange={(event) =>",
+      "signature": "apps/web/src/components/AppHeader.tsx:154|input|<missing>|<input id=\"create-server-name-input\" className=\"secondary\" value={newServerName} maxLength={64} onChange={(event) =~ setNewServerName(event.target.value)} placeholder={t(\"server.createPlaceholder\")} />",
       "relPath": "apps/web/src/components/AppHeader.tsx",
       "line": 154,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/chatPanel/sections/ChatComposerSection.tsx:303|input|<missing>|<input ref={attachmentInputRef} type=\"file\" className=\"hidden\" onChange={(event) =>",
+      "signature": "apps/web/src/components/chatPanel/sections/ChatComposerSection.tsx:303|input|<missing>|<input ref={attachmentInputRef} type=\"file\" className=\"hidden\" onChange={(event) =~ { const file = event.currentTarget.files?.[0] || null; onSelectAttachmentFile(file); event.currentTarget.value = \"\"; setComposerStatusTe",
       "relPath": "apps/web/src/components/chatPanel/sections/ChatComposerSection.tsx",
       "line": 303,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/chatPanel/sections/ChatComposerSection.tsx:359|textarea|<missing>|<textarea ref={messageInputRef} value={chatText} data-agent-id={CHAT_AGENT_IDS.composerInput} data-agent-state={!hasActiveRoom || activeTopicIsArchived ? \"disabled\" : \"active\"} onChange={(event) =>",
+      "signature": "apps/web/src/components/chatPanel/sections/ChatComposerSection.tsx:359|textarea|<missing>|<textarea ref={messageInputRef} value={chatText} data-agent-id={CHAT_AGENT_IDS.composerInput} data-agent-state={!hasActiveRoom || activeTopicIsArchived ? \"disabled\" : \"active\"} onChange={(event) =~ { const target = event",
       "relPath": "apps/web/src/components/chatPanel/sections/ChatComposerSection.tsx",
       "line": 359,
       "problem": "missing data-agent-id"
@@ -69,19 +69,19 @@
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/chatPanel/sections/ChatMessageTimeline.tsx:134|button|<missing>|<button key={`mention-${mentionKeyIndex}-${absoluteStart}`} type=\"button\" className=\"chat-mention chat-mention-btn\" onClick={(event) =>",
+      "signature": "apps/web/src/components/chatPanel/sections/ChatMessageTimeline.tsx:134|button|<missing>|<button key={`mention-${mentionKeyIndex}-${absoluteStart}`} type=\"button\" className=\"chat-mention chat-mention-btn\" onClick={(event) =~ { event.preventDefault(); event.stopPropagation(); onMentionClick(mentionUser); }} >",
       "relPath": "apps/web/src/components/chatPanel/sections/ChatMessageTimeline.tsx",
       "line": 134,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/chatPanel/sections/ChatMessageTimeline.tsx:604|button|<missing>|<button type=\"button\" className=\"chat-author chat-author-btn\" onClick={(event) =>",
+      "signature": "apps/web/src/components/chatPanel/sections/ChatMessageTimeline.tsx:604|button|<missing>|<button type=\"button\" className=\"chat-author chat-author-btn\" onClick={(event) =~ { event.preventDefault(); event.stopPropagation(); openProfileFromUserName(messageVm.userName); }} >",
       "relPath": "apps/web/src/components/chatPanel/sections/ChatMessageTimeline.tsx",
       "line": 604,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/chatPanel/sections/ChatMessageTimeline.tsx:620|button|<missing>|<button type=\"button\" className=\"chat-inline-reply-author chat-inline-reply-author-btn\" onClick={(event) =>",
+      "signature": "apps/web/src/components/chatPanel/sections/ChatMessageTimeline.tsx:620|button|<missing>|<button type=\"button\" className=\"chat-inline-reply-author chat-inline-reply-author-btn\" onClick={(event) =~ { event.preventDefault(); event.stopPropagation(); openProfileFromUserName(messageVm.replyPreview?.userName || \"",
       "relPath": "apps/web/src/components/chatPanel/sections/ChatMessageTimeline.tsx",
       "line": 620,
       "problem": "missing data-agent-id"
@@ -99,13 +99,13 @@
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/chatPanel/sections/ChatMessageTimeline.tsx:709|button|<missing>|<button key={`${messageVm.id}-${reaction.emoji}`} type=\"button\" className={`chat-reaction-chip chat-reaction-chip-button ${reaction.reacted ? \"chat-reaction-chip-active\" : \"\"}`} onClick={() =>",
+      "signature": "apps/web/src/components/chatPanel/sections/ChatMessageTimeline.tsx:709|button|<missing>|<button key={`${messageVm.id}-${reaction.emoji}`} type=\"button\" className={`chat-reaction-chip chat-reaction-chip-button ${reaction.reacted ? \"chat-reaction-chip-active\" : \"\"}`} onClick={() =~ onToggleMessageReaction(mes",
       "relPath": "apps/web/src/components/chatPanel/sections/ChatMessageTimeline.tsx",
       "line": 709,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/chatPanel/sections/ChatMessageTimeline.tsx:738|button|<missing>|<button key={`${messageVm.id}-quick-${emoji}`} type=\"button\" className={`chat-quick-reaction-btn ${active ? \"chat-quick-reaction-btn-active\" : \"\"}`} onClick={() =>",
+      "signature": "apps/web/src/components/chatPanel/sections/ChatMessageTimeline.tsx:738|button|<missing>|<button key={`${messageVm.id}-quick-${emoji}`} type=\"button\" className={`chat-quick-reaction-btn ${active ? \"chat-quick-reaction-btn-active\" : \"\"}`} onClick={() =~ { onToggleMessageReaction(messageVm.id, emoji); closeCon",
       "relPath": "apps/web/src/components/chatPanel/sections/ChatMessageTimeline.tsx",
       "line": 738,
       "problem": "missing data-agent-id"
@@ -117,109 +117,109 @@
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/chatPanel/sections/ChatMessageTimeline.tsx:884|button|<missing>|<button type=\"button\" className=\"secondary icon-btn tiny mention-profile-close\" onClick={() =>",
+      "signature": "apps/web/src/components/chatPanel/sections/ChatMessageTimeline.tsx:884|button|<missing>|<button type=\"button\" className=\"secondary icon-btn tiny mention-profile-close\" onClick={() =~ setSelectedMentionProfile(null)} aria-label={t(\"settings.cancel\")} data-agent-id={CHAT_AGENT_IDS.messageProfileModalClose} >",
       "relPath": "apps/web/src/components/chatPanel/sections/ChatMessageTimeline.tsx",
       "line": 884,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/chatPanel/sections/ChatPanelOverlays.tsx:136|input|<missing>|<input ref={topicPaletteInputRef} type=\"search\" value={topicPaletteQuery} onChange={(event) =>",
+      "signature": "apps/web/src/components/chatPanel/sections/ChatPanelOverlays.tsx:136|input|<missing>|<input ref={topicPaletteInputRef} type=\"search\" value={topicPaletteQuery} onChange={(event) =~ setTopicPaletteQuery(event.target.value)} onKeyDown={handleTopicPaletteKeyDown} placeholder={t(\"chat.topicPalettePlaceholder\"",
       "relPath": "apps/web/src/components/chatPanel/sections/ChatPanelOverlays.tsx",
       "line": 136,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/chatPanel/sections/NotificationPanel.tsx:54|select|<missing>|<select aria-label={t(\"chat.notificationScopeAria\")} value={notificationScope} onChange={(event) =>",
+      "signature": "apps/web/src/components/chatPanel/sections/NotificationPanel.tsx:54|select|<missing>|<select aria-label={t(\"chat.notificationScopeAria\")} value={notificationScope} onChange={(event) =~ setNotificationScope(event.target.value as \"server\" | \"topic\" | \"room\")} disabled={notificationSaving} >",
       "relPath": "apps/web/src/components/chatPanel/sections/NotificationPanel.tsx",
       "line": 54,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/chatPanel/sections/NotificationPanel.tsx:64|select|<missing>|<select aria-label={t(\"chat.notificationModeAria\")} value={notificationMode} onChange={(event) =>",
+      "signature": "apps/web/src/components/chatPanel/sections/NotificationPanel.tsx:64|select|<missing>|<select aria-label={t(\"chat.notificationModeAria\")} value={notificationMode} onChange={(event) =~ setNotificationMode(event.target.value as \"all\" | \"mentions\" | \"none\")} disabled={notificationSaving} >",
       "relPath": "apps/web/src/components/chatPanel/sections/NotificationPanel.tsx",
       "line": 64,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/chatPanel/sections/SearchPanel.tsx:138|input|<missing>|<input type=\"text\" value={searchQuery} onChange={(event) =>",
+      "signature": "apps/web/src/components/chatPanel/sections/SearchPanel.tsx:138|input|<missing>|<input type=\"text\" value={searchQuery} onChange={(event) =~ setSearchQuery(event.target.value)} onKeyDown={(event) =~ { if (event.key === \"Enter\") { event.preventDefault(); void runSearchWithStatus(); } }} placeholder={t",
       "relPath": "apps/web/src/components/chatPanel/sections/SearchPanel.tsx",
       "line": 138,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/chatPanel/sections/SearchPanel.tsx:153|select|<missing>|<select className=\"chat-search-scope-select\" value={searchScope} onChange={(event) =>",
+      "signature": "apps/web/src/components/chatPanel/sections/SearchPanel.tsx:153|select|<missing>|<select className=\"chat-search-scope-select\" value={searchScope} onChange={(event) =~ { const value = event.target.value as \"all\" | \"server\" | \"room\"; setSearchScope(value); setSearchStatusText(`scope:${value}`); }} aria",
       "relPath": "apps/web/src/components/chatPanel/sections/SearchPanel.tsx",
       "line": 153,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/chatPanel/sections/SearchPanel.tsx:181|button|<missing>|<button type=\"button\" className={`chat-search-filter-toggle ${searchHasMention ? \"chat-search-filter-toggle-active\" : \"\"}`} onClick={() =>",
+      "signature": "apps/web/src/components/chatPanel/sections/SearchPanel.tsx:181|button|<missing>|<button type=\"button\" className={`chat-search-filter-toggle ${searchHasMention ? \"chat-search-filter-toggle-active\" : \"\"}`} onClick={() =~ { const next = !searchHasMention; setSearchHasMention(next); setSearchStatusText(",
       "relPath": "apps/web/src/components/chatPanel/sections/SearchPanel.tsx",
       "line": 181,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/chatPanel/sections/SearchPanel.tsx:197|button|<missing>|<button type=\"button\" className={`chat-search-filter-toggle ${searchHasAttachment ? \"chat-search-filter-toggle-active\" : \"\"}`} onClick={() =>",
+      "signature": "apps/web/src/components/chatPanel/sections/SearchPanel.tsx:197|button|<missing>|<button type=\"button\" className={`chat-search-filter-toggle ${searchHasAttachment ? \"chat-search-filter-toggle-active\" : \"\"}`} onClick={() =~ { const next = !searchHasAttachment; setSearchHasAttachment(next); if (!next) ",
       "relPath": "apps/web/src/components/chatPanel/sections/SearchPanel.tsx",
       "line": 197,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/chatPanel/sections/SearchPanel.tsx:216|button|<missing>|<button type=\"button\" className={`chat-search-filter-toggle ${imageOnlyActive ? \"chat-search-filter-toggle-active\" : \"\"}`} onClick={() =>",
+      "signature": "apps/web/src/components/chatPanel/sections/SearchPanel.tsx:216|button|<missing>|<button type=\"button\" className={`chat-search-filter-toggle ${imageOnlyActive ? \"chat-search-filter-toggle-active\" : \"\"}`} onClick={() =~ { if (imageOnlyActive) { setSearchAttachmentType(\"\"); setSearchHasAttachment(false",
       "relPath": "apps/web/src/components/chatPanel/sections/SearchPanel.tsx",
       "line": 216,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/chatPanel/sections/SearchPanel.tsx:239|button|<missing>|<button type=\"button\" className={`chat-search-filter-toggle ${searchHasLink ? \"chat-search-filter-toggle-active\" : \"\"}`} onClick={() =>",
+      "signature": "apps/web/src/components/chatPanel/sections/SearchPanel.tsx:239|button|<missing>|<button type=\"button\" className={`chat-search-filter-toggle ${searchHasLink ? \"chat-search-filter-toggle-active\" : \"\"}`} onClick={() =~ { const next = !searchHasLink; setSearchHasLink(next); setSearchStatusText(`filter:l",
       "relPath": "apps/web/src/components/chatPanel/sections/SearchPanel.tsx",
       "line": 239,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/chatPanel/sections/SearchPanel.tsx:255|button|<missing>|<button type=\"button\" className={`chat-search-filter-toggle ${showAuthorFilter ? \"chat-search-filter-toggle-active\" : \"\"}`} onClick={() =>",
+      "signature": "apps/web/src/components/chatPanel/sections/SearchPanel.tsx:255|button|<missing>|<button type=\"button\" className={`chat-search-filter-toggle ${showAuthorFilter ? \"chat-search-filter-toggle-active\" : \"\"}`} onClick={() =~ { const next = !showAuthorFilter; setShowAuthorFilter(next); if (!next) { setSear",
       "relPath": "apps/web/src/components/chatPanel/sections/SearchPanel.tsx",
       "line": 255,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/chatPanel/sections/SearchPanel.tsx:274|button|<missing>|<button type=\"button\" className={`chat-search-filter-toggle ${showDateFilters ? \"chat-search-filter-toggle-active\" : \"\"}`} onClick={() =>",
+      "signature": "apps/web/src/components/chatPanel/sections/SearchPanel.tsx:274|button|<missing>|<button type=\"button\" className={`chat-search-filter-toggle ${showDateFilters ? \"chat-search-filter-toggle-active\" : \"\"}`} onClick={() =~ { const next = !showDateFilters; setShowDateFilters(next); if (!next) { setSearchF",
       "relPath": "apps/web/src/components/chatPanel/sections/SearchPanel.tsx",
       "line": 274,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/chatPanel/sections/SearchPanel.tsx:297|input|<missing>|<input type=\"text\" value={searchAuthorId} onChange={(event) =>",
+      "signature": "apps/web/src/components/chatPanel/sections/SearchPanel.tsx:297|input|<missing>|<input type=\"text\" value={searchAuthorId} onChange={(event) =~ setSearchAuthorId(event.target.value)} placeholder={t(\"chat.searchFilterAuthorPlaceholder\")} aria-label={t(\"chat.searchFilterAuthorAria\")} disabled={searchin",
       "relPath": "apps/web/src/components/chatPanel/sections/SearchPanel.tsx",
       "line": 297,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/chatPanel/sections/SearchPanel.tsx:310|input|<missing>|<input type=\"datetime-local\" value={searchFrom} onChange={(event) =>",
+      "signature": "apps/web/src/components/chatPanel/sections/SearchPanel.tsx:310|input|<missing>|<input type=\"datetime-local\" value={searchFrom} onChange={(event) =~ setSearchFrom(event.target.value)} aria-label={t(\"chat.searchFilterFromAria\")} placeholder={t(\"chat.searchFilterFrom\")} disabled={searching} />",
       "relPath": "apps/web/src/components/chatPanel/sections/SearchPanel.tsx",
       "line": 310,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/chatPanel/sections/SearchPanel.tsx:320|input|<missing>|<input type=\"datetime-local\" value={searchTo} onChange={(event) =>",
+      "signature": "apps/web/src/components/chatPanel/sections/SearchPanel.tsx:320|input|<missing>|<input type=\"datetime-local\" value={searchTo} onChange={(event) =~ setSearchTo(event.target.value)} aria-label={t(\"chat.searchFilterToAria\")} placeholder={t(\"chat.searchFilterTo\")} disabled={searching} />",
       "relPath": "apps/web/src/components/chatPanel/sections/SearchPanel.tsx",
       "line": 320,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/chatPanel/sections/TopicContextMenu.tsx:120|input|<missing>|<input type=\"text\" className=\"channel-settings-title-input chat-topic-context-rename-input\" value={renameValue} onFocus={canRename ? onStartRename : undefined} onBlur={onCancelRename} onChange={(event) =>",
+      "signature": "apps/web/src/components/chatPanel/sections/TopicContextMenu.tsx:120|input|<missing>|<input type=\"text\" className=\"channel-settings-title-input chat-topic-context-rename-input\" value={renameValue} onFocus={canRename ? onStartRename : undefined} onBlur={onCancelRename} onChange={(event) =~ onRenameValueCh",
       "relPath": "apps/web/src/components/chatPanel/sections/TopicContextMenu.tsx",
       "line": 120,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/chatPanel/sections/TopicTabsHeader.tsx:81|input|<missing>|<input type=\"text\" className=\"chat-topic-create-input\" value={newTopicTitle} onChange={(event) =>",
+      "signature": "apps/web/src/components/chatPanel/sections/TopicTabsHeader.tsx:81|input|<missing>|<input type=\"text\" className=\"chat-topic-create-input\" value={newTopicTitle} onChange={(event) =~ setNewTopicTitle(event.target.value)} placeholder={t(\"chat.newTopicPlaceholder\")} disabled={creatingTopic} aria-label={t(\"",
       "relPath": "apps/web/src/components/chatPanel/sections/TopicTabsHeader.tsx",
       "line": 81,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/chatPanel/sections/TopicToolbar.tsx:35|select|<missing>|<select aria-label={t(\"chat.topicFilterAria\")} value={topicFilterMode} onChange={(event) =>",
+      "signature": "apps/web/src/components/chatPanel/sections/TopicToolbar.tsx:35|select|<missing>|<select aria-label={t(\"chat.topicFilterAria\")} value={topicFilterMode} onChange={(event) =~ setTopicFilterMode(event.target.value as \"all\" | \"active\" | \"unread\" | \"my\" | \"mentions\" | \"pinned\" | \"archived\")} disabled={!ha",
       "relPath": "apps/web/src/components/chatPanel/sections/TopicToolbar.tsx",
       "line": 35,
       "problem": "missing data-agent-id"
@@ -237,43 +237,43 @@
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/roomsPanel/RoomMemberSettingsPopup.tsx:111|input|<missing>|<input type=\"text\" maxLength={32} value={noteValue} onChange={(event) =>",
+      "signature": "apps/web/src/components/roomsPanel/RoomMemberSettingsPopup.tsx:111|input|<missing>|<input type=\"text\" maxLength={32} value={noteValue} onChange={(event) =~ { const nextNote = event.target.value.slice(0, 32); setMemberPreferenceDraft({ volume: volumeValue, note: nextNote }); }} placeholder={t(\"rooms.mem",
       "relPath": "apps/web/src/components/roomsPanel/RoomMemberSettingsPopup.tsx",
       "line": 111,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/roomsPanel/RoomMemberSettingsPopup.tsx:122|button|<missing>|<button type=\"button\" className=\"secondary flex w-full items-center justify-between gap-3 text-left\" onClick={async () =>",
+      "signature": "apps/web/src/components/roomsPanel/RoomMemberSettingsPopup.tsx:122|button|<missing>|<button type=\"button\" className=\"secondary flex w-full items-center justify-between gap-3 text-left\" onClick={async () =~ { const current = memberMenuProfile; if (current && current.userId === memberUserId) { setMemberPr",
       "relPath": "apps/web/src/components/roomsPanel/RoomMemberSettingsPopup.tsx",
       "line": 122,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/roomsPanel/RoomMemberSettingsPopup.tsx:147|button|<missing>|<button ref={(element) =>",
+      "signature": "apps/web/src/components/roomsPanel/RoomMemberSettingsPopup.tsx:147|button|<missing>|<button ref={(element) =~ { memberRoleAnchorRef.current = element; }} type=\"button\" className={`secondary flex w-full items-center justify-between gap-4 text-left ${memberRoleSelectorOpen ? \"voice-menu-row-active\" : \"\"}`",
       "relPath": "apps/web/src/components/roomsPanel/RoomMemberSettingsPopup.tsx",
       "line": 147,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/roomsPanel/RoomMemberSettingsPopup.tsx:211|button|<missing>|<button ref={(element) =>",
+      "signature": "apps/web/src/components/roomsPanel/RoomMemberSettingsPopup.tsx:211|button|<missing>|<button ref={(element) =~ { memberHiddenRoomsAnchorRef.current = element; }} type=\"button\" className={`secondary flex w-full items-center justify-between gap-4 text-left ${memberHiddenRoomsSelectorOpen ? \"voice-menu-row-",
       "relPath": "apps/web/src/components/roomsPanel/RoomMemberSettingsPopup.tsx",
       "line": 211,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/roomsPanel/RoomMemberSettingsPopup.tsx:236|button|<missing>|<button key={roomAccess.roomId} type=\"button\" className={`secondary device-item radio-item flex items-center justify-between gap-4 text-left ${checked ? \"device-item-active\" : \"\"}`} onClick={async () =>",
+      "signature": "apps/web/src/components/roomsPanel/RoomMemberSettingsPopup.tsx:236|button|<missing>|<button key={roomAccess.roomId} type=\"button\" className={`secondary device-item radio-item flex items-center justify-between gap-4 text-left ${checked ? \"device-item-active\" : \"\"}`} onClick={async () =~ { const current =",
       "relPath": "apps/web/src/components/roomsPanel/RoomMemberSettingsPopup.tsx",
       "line": 236,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/roomsPanel/RoomMemberSettingsPopup.tsx:268|button|<missing>|<button type=\"button\" className=\"secondary delete-action-btn\" onClick={() =>",
+      "signature": "apps/web/src/components/roomsPanel/RoomMemberSettingsPopup.tsx:268|button|<missing>|<button type=\"button\" className=\"secondary delete-action-btn\" onClick={() =~ { onKickRoomMember(roomSlug, memberUserId, memberUserName); closeMemberMenu(); }} >",
       "relPath": "apps/web/src/components/roomsPanel/RoomMemberSettingsPopup.tsx",
       "line": 268,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/roomsPanel/RoomMemberSettingsPopup.tsx:96|button|<missing>|<button type=\"button\" className=\"secondary icon-btn tiny\" aria-label={t(\"rooms.save\")} data-tooltip={t(\"rooms.save\")} onClick={() =>",
+      "signature": "apps/web/src/components/roomsPanel/RoomMemberSettingsPopup.tsx:96|button|<missing>|<button type=\"button\" className=\"secondary icon-btn tiny\" aria-label={t(\"rooms.save\")} data-tooltip={t(\"rooms.save\")} onClick={() =~ { void onSaveMemberPreference(memberUserId, { volume: volumeValue, note: noteValue }); ",
       "relPath": "apps/web/src/components/roomsPanel/RoomMemberSettingsPopup.tsx",
       "line": 96,
       "problem": "missing data-agent-id"
@@ -285,145 +285,145 @@
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/roomsPanel/RoomRow.tsx:438|button|<missing>|<button type=\"button\" className={`secondary icon-btn tiny channel-chat-open-btn ${roomChatActive ? \"channel-chat-open-btn-active\" : \"\"}`} data-tooltip={t(\"rooms.openChat\")} aria-label={t(\"rooms.openChat\")} onClick={() =>",
+      "signature": "apps/web/src/components/roomsPanel/RoomRow.tsx:438|button|<missing>|<button type=\"button\" className={`secondary icon-btn tiny channel-chat-open-btn ${roomChatActive ? \"channel-chat-open-btn-active\" : \"\"}`} data-tooltip={t(\"rooms.openChat\")} aria-label={t(\"rooms.openChat\")} onClick={() =~",
       "relPath": "apps/web/src/components/roomsPanel/RoomRow.tsx",
       "line": 438,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/roomsPanel/RoomRow.tsx:452|button|<missing>|<button type=\"button\" className=\"secondary icon-btn tiny channel-action-btn\" data-tooltip={t(\"rooms.roomContextMenu\")} aria-label={t(\"rooms.roomContextMenu\")} onClick={() =>",
+      "signature": "apps/web/src/components/roomsPanel/RoomRow.tsx:452|button|<missing>|<button type=\"button\" className=\"secondary icon-btn tiny channel-action-btn\" data-tooltip={t(\"rooms.roomContextMenu\")} aria-label={t(\"rooms.roomContextMenu\")} onClick={() =~ onOpenChannelSettingsPopup(room)} >",
       "relPath": "apps/web/src/components/roomsPanel/RoomRow.tsx",
       "line": 452,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/roomsPanel/RoomRow.tsx:474|button|<missing>|<button type=\"button\" className=\"secondary whitespace-nowrap\" onMouseDown={(event) =>",
+      "signature": "apps/web/src/components/roomsPanel/RoomRow.tsx:474|button|<missing>|<button type=\"button\" className=\"secondary whitespace-nowrap\" onMouseDown={(event) =~ event.preventDefault()} onClick={() =~ { onSetEditingRoomTitle(editingChannelTitleInitialValue); setIsEditingChannelTitle(false); }} >",
       "relPath": "apps/web/src/components/roomsPanel/RoomRow.tsx",
       "line": 474,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/roomsPanel/RoomRow.tsx:486|input|<missing>|<input className=\"channel-settings-title-input\" value={editingRoomTitle} onFocus={() =>",
+      "signature": "apps/web/src/components/roomsPanel/RoomRow.tsx:486|input|<missing>|<input className=\"channel-settings-title-input\" value={editingRoomTitle} onFocus={() =~ { setEditingChannelTitleInitialValue(editingRoomTitle); setIsEditingChannelTitle(true); }} onBlur={() =~ { onSetEditingRoomTitle(edi",
       "relPath": "apps/web/src/components/roomsPanel/RoomRow.tsx",
       "line": 486,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/roomsPanel/RoomRow.tsx:501|button|<missing>|<button type=\"button\" className=\"whitespace-nowrap\" onMouseDown={(event) =>",
+      "signature": "apps/web/src/components/roomsPanel/RoomRow.tsx:501|button|<missing>|<button type=\"button\" className=\"whitespace-nowrap\" onMouseDown={(event) =~ event.preventDefault()} onClick={() =~ { setEditingChannelTitleInitialValue(editingRoomTitle); setIsEditingChannelTitle(false); requestRoomSetti",
       "relPath": "apps/web/src/components/roomsPanel/RoomRow.tsx",
       "line": 501,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/roomsPanel/RoomRow.tsx:514|button|<missing>|<button type=\"button\" className=\"secondary icon-btn tiny\" onClick={() =>",
+      "signature": "apps/web/src/components/roomsPanel/RoomRow.tsx:514|button|<missing>|<button type=\"button\" className=\"secondary icon-btn tiny\" onClick={() =~ onMoveChannel(\"up\")} aria-label={t(\"rooms.up\")} data-tooltip={t(\"rooms.up\")} >",
       "relPath": "apps/web/src/components/roomsPanel/RoomRow.tsx",
       "line": 514,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/roomsPanel/RoomRow.tsx:523|button|<missing>|<button type=\"button\" className=\"secondary icon-btn tiny\" onClick={() =>",
+      "signature": "apps/web/src/components/roomsPanel/RoomRow.tsx:523|button|<missing>|<button type=\"button\" className=\"secondary icon-btn tiny\" onClick={() =~ onMoveChannel(\"down\")} aria-label={t(\"rooms.down\")} data-tooltip={t(\"rooms.down\")} >",
       "relPath": "apps/web/src/components/roomsPanel/RoomRow.tsx",
       "line": 523,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/roomsPanel/RoomRow.tsx:535|select|<missing>|<select value={editingRoomKind} onChange={(event) =>",
+      "signature": "apps/web/src/components/roomsPanel/RoomRow.tsx:535|select|<missing>|<select value={editingRoomKind} onChange={(event) =~ { onSetEditingRoomKind(event.target.value as RoomKind); requestRoomSettingsAutosave(); }} >",
       "relPath": "apps/web/src/components/roomsPanel/RoomRow.tsx",
       "line": 535,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/roomsPanel/RoomRow.tsx:546|select|<missing>|<select value={editingRoomCategoryId} onChange={(event) =>",
+      "signature": "apps/web/src/components/roomsPanel/RoomRow.tsx:546|select|<missing>|<select value={editingRoomCategoryId} onChange={(event) =~ { onSetEditingRoomCategoryId(event.target.value); requestRoomSettingsAutosave(); }} >",
       "relPath": "apps/web/src/components/roomsPanel/RoomRow.tsx",
       "line": 546,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/roomsPanel/RoomRow.tsx:562|button|<missing>|<button type=\"button\" className={`ui-switch ${editingRoomNsfw ? \"ui-switch-on\" : \"\"}`} role=\"switch\" aria-checked={editingRoomNsfw} aria-label={t(\"rooms.channelNsfw\")} onClick={() =>",
+      "signature": "apps/web/src/components/roomsPanel/RoomRow.tsx:562|button|<missing>|<button type=\"button\" className={`ui-switch ${editingRoomNsfw ? \"ui-switch-on\" : \"\"}`} role=\"switch\" aria-checked={editingRoomNsfw} aria-label={t(\"rooms.channelNsfw\")} onClick={() =~ { onSetEditingRoomNsfw(!editingRoomNs",
       "relPath": "apps/web/src/components/roomsPanel/RoomRow.tsx",
       "line": 562,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/roomsPanel/RoomRow.tsx:578|button|<missing>|<button type=\"button\" className={`ui-switch ${editingRoomHidden ? \"ui-switch-on\" : \"\"}`} role=\"switch\" aria-checked={editingRoomHidden} aria-label={t(\"rooms.channelHidden\")} onClick={() =>",
+      "signature": "apps/web/src/components/roomsPanel/RoomRow.tsx:578|button|<missing>|<button type=\"button\" className={`ui-switch ${editingRoomHidden ? \"ui-switch-on\" : \"\"}`} role=\"switch\" aria-checked={editingRoomHidden} aria-label={t(\"rooms.channelHidden\")} onClick={() =~ { onSetEditingRoomHidden(!editi",
       "relPath": "apps/web/src/components/roomsPanel/RoomRow.tsx",
       "line": 578,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/roomsPanel/RoomRow.tsx:597|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${editingRoomAudioQualitySetting === \"server_default\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =>",
+      "signature": "apps/web/src/components/roomsPanel/RoomRow.tsx:597|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${editingRoomAudioQualitySetting === \"server_default\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =~ { onSetEditingRoomAudioQualitySetting(\"server_defa",
       "relPath": "apps/web/src/components/roomsPanel/RoomRow.tsx",
       "line": 597,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/roomsPanel/RoomRow.tsx:608|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${editingRoomAudioQualitySetting === \"retro\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =>",
+      "signature": "apps/web/src/components/roomsPanel/RoomRow.tsx:608|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${editingRoomAudioQualitySetting === \"retro\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =~ { onSetEditingRoomAudioQualitySetting(\"retro\" as ChannelAud",
       "relPath": "apps/web/src/components/roomsPanel/RoomRow.tsx",
       "line": 608,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/roomsPanel/RoomRow.tsx:619|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${editingRoomAudioQualitySetting === \"low\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =>",
+      "signature": "apps/web/src/components/roomsPanel/RoomRow.tsx:619|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${editingRoomAudioQualitySetting === \"low\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =~ { onSetEditingRoomAudioQualitySetting(\"low\" as ChannelAudioQu",
       "relPath": "apps/web/src/components/roomsPanel/RoomRow.tsx",
       "line": 619,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/roomsPanel/RoomRow.tsx:630|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${editingRoomAudioQualitySetting === \"standard\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =>",
+      "signature": "apps/web/src/components/roomsPanel/RoomRow.tsx:630|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${editingRoomAudioQualitySetting === \"standard\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =~ { onSetEditingRoomAudioQualitySetting(\"standard\" as Chan",
       "relPath": "apps/web/src/components/roomsPanel/RoomRow.tsx",
       "line": 630,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/roomsPanel/RoomRow.tsx:641|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${editingRoomAudioQualitySetting === \"high\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =>",
+      "signature": "apps/web/src/components/roomsPanel/RoomRow.tsx:641|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${editingRoomAudioQualitySetting === \"high\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =~ { onSetEditingRoomAudioQualitySetting(\"high\" as ChannelAudio",
       "relPath": "apps/web/src/components/roomsPanel/RoomRow.tsx",
       "line": 641,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/roomsPanel/RoomRow.tsx:658|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${roomMutePreset === \"1h\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =>",
+      "signature": "apps/web/src/components/roomsPanel/RoomRow.tsx:658|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${roomMutePreset === \"1h\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =~ void applyRoomMutePreset(\"1h\")} disabled={roomMuteSaving} >",
       "relPath": "apps/web/src/components/roomsPanel/RoomRow.tsx",
       "line": 658,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/roomsPanel/RoomRow.tsx:666|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${roomMutePreset === \"8h\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =>",
+      "signature": "apps/web/src/components/roomsPanel/RoomRow.tsx:666|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${roomMutePreset === \"8h\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =~ void applyRoomMutePreset(\"8h\")} disabled={roomMuteSaving} >",
       "relPath": "apps/web/src/components/roomsPanel/RoomRow.tsx",
       "line": 666,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/roomsPanel/RoomRow.tsx:674|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${roomMutePreset === \"24h\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =>",
+      "signature": "apps/web/src/components/roomsPanel/RoomRow.tsx:674|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${roomMutePreset === \"24h\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =~ void applyRoomMutePreset(\"24h\")} disabled={roomMuteSaving} >",
       "relPath": "apps/web/src/components/roomsPanel/RoomRow.tsx",
       "line": 674,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/roomsPanel/RoomRow.tsx:682|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${roomMutePreset === \"forever\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =>",
+      "signature": "apps/web/src/components/roomsPanel/RoomRow.tsx:682|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${roomMutePreset === \"forever\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =~ void applyRoomMutePreset(\"forever\")} disabled={roomMuteSaving} >",
       "relPath": "apps/web/src/components/roomsPanel/RoomRow.tsx",
       "line": 682,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/roomsPanel/RoomRow.tsx:694|button|<missing>|<button type=\"button\" className=\"secondary clear-action-btn\" onClick={() =>",
+      "signature": "apps/web/src/components/roomsPanel/RoomRow.tsx:694|button|<missing>|<button type=\"button\" className=\"secondary clear-action-btn\" onClick={() =~ onOpenRoomChat(room.slug)} >",
       "relPath": "apps/web/src/components/roomsPanel/RoomRow.tsx",
       "line": 694,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/roomsPanel/RoomRow.tsx:701|button|<missing>|<button type=\"button\" className=\"secondary clear-action-btn\" onClick={() =>",
+      "signature": "apps/web/src/components/roomsPanel/RoomRow.tsx:701|button|<missing>|<button type=\"button\" className=\"secondary clear-action-btn\" onClick={() =~ onRequestClearChannel(room)} >",
       "relPath": "apps/web/src/components/roomsPanel/RoomRow.tsx",
       "line": 701,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/roomsPanel/RoomRow.tsx:708|button|<missing>|<button type=\"button\" className=\"secondary delete-action-btn\" onClick={() =>",
+      "signature": "apps/web/src/components/roomsPanel/RoomRow.tsx:708|button|<missing>|<button type=\"button\" className=\"secondary delete-action-btn\" onClick={() =~ onRequestArchiveChannel(room)} >",
       "relPath": "apps/web/src/components/roomsPanel/RoomRow.tsx",
       "line": 708,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/roomsPanel/RoomRow.tsx:891|button|<missing>|<button type=\"button\" className=\"secondary icon-btn tiny channel-member-settings-btn\" aria-label={t(\"rooms.memberSettings\")} data-tooltip={t(\"rooms.memberSettings\")} onClick={(event) =>",
+      "signature": "apps/web/src/components/roomsPanel/RoomRow.tsx:891|button|<missing>|<button type=\"button\" className=\"secondary icon-btn tiny channel-member-settings-btn\" aria-label={t(\"rooms.memberSettings\")} data-tooltip={t(\"rooms.memberSettings\")} onClick={(event) =~ { if (!member.userId) { return; } ",
       "relPath": "apps/web/src/components/roomsPanel/RoomRow.tsx",
       "line": 891,
       "problem": "missing data-agent-id"
@@ -435,7 +435,7 @@
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/roomsPanel/RoomsCategoryBlock.tsx:107|input|<missing>|<input value={editingCategoryTitle} onChange={(event) =>",
+      "signature": "apps/web/src/components/roomsPanel/RoomsCategoryBlock.tsx:107|input|<missing>|<input value={editingCategoryTitle} onChange={(event) =~ onSetEditingCategoryTitle(event.target.value)} placeholder={t(\"rooms.categoryTitle\")} />",
       "relPath": "apps/web/src/components/roomsPanel/RoomsCategoryBlock.tsx",
       "line": 107,
       "problem": "missing data-agent-id"
@@ -447,25 +447,25 @@
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/roomsPanel/RoomsPanelHeader.tsx:103|select|<missing>|<select value={newRoomCategoryId} onChange={(event) =>",
+      "signature": "apps/web/src/components/roomsPanel/RoomsPanelHeader.tsx:103|select|<missing>|<select value={newRoomCategoryId} onChange={(event) =~ onSetNewRoomCategoryId(event.target.value)}>",
       "relPath": "apps/web/src/components/roomsPanel/RoomsPanelHeader.tsx",
       "line": 103,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/roomsPanel/RoomsPanelHeader.tsx:72|input|<missing>|<input value={newCategoryTitle} onChange={(event) =>",
+      "signature": "apps/web/src/components/roomsPanel/RoomsPanelHeader.tsx:72|input|<missing>|<input value={newCategoryTitle} onChange={(event) =~ onSetNewCategoryTitle(event.target.value)} placeholder={t(\"rooms.categoryTitle\")} />",
       "relPath": "apps/web/src/components/roomsPanel/RoomsPanelHeader.tsx",
       "line": 72,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/roomsPanel/RoomsPanelHeader.tsx:96|input|<missing>|<input value={newRoomTitle} onChange={(event) =>",
+      "signature": "apps/web/src/components/roomsPanel/RoomsPanelHeader.tsx:96|input|<missing>|<input value={newRoomTitle} onChange={(event) =~ onSetNewRoomTitle(event.target.value)} placeholder={t(\"rooms.channelTitle\")} />",
       "relPath": "apps/web/src/components/roomsPanel/RoomsPanelHeader.tsx",
       "line": 96,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/roomsPanel/RoomsPanelHeader.tsx:98|select|<missing>|<select value={newRoomKind} onChange={(event) =>",
+      "signature": "apps/web/src/components/roomsPanel/RoomsPanelHeader.tsx:98|select|<missing>|<select value={newRoomKind} onChange={(event) =~ onSetNewRoomKind(event.target.value as RoomKind)}>",
       "relPath": "apps/web/src/components/roomsPanel/RoomsPanelHeader.tsx",
       "line": 98,
       "problem": "missing data-agent-id"
@@ -483,7 +483,7 @@
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1039|select|<missing>|<select value={serverMenuTab} onChange={(event) =>",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:1039|select|<missing>|<select value={serverMenuTab} onChange={(event) =~ onSetServerMenuTab(event.target.value as ServerMenuTab)}>",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
       "line": 1039,
       "problem": "missing data-agent-id"
@@ -549,7 +549,7 @@
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1167|select|<missing>|<select value={selectedServerManagementId} onChange={(event) =>",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:1167|select|<missing>|<select value={selectedServerManagementId} onChange={(event) =~ onChangeCurrentServer(event.target.value)} disabled={serverManagementOptions.length === 0} >",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
       "line": 1167,
       "problem": "missing data-agent-id"
@@ -573,19 +573,19 @@
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1207|button|<missing>|<button type=\"button\" className=\"secondary whitespace-nowrap\" onMouseDown={(event) =>",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:1207|button|<missing>|<button type=\"button\" className=\"secondary whitespace-nowrap\" onMouseDown={(event) =~ event.preventDefault()} onClick={() =~ { setRenameServerName(renameServerInitialValue); renameServerInputRef.current?.blur(); setIsEdi",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
       "line": 1207,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1222|input|<missing>|<input ref={renameServerInputRef} type=\"text\" value={renameServerName} maxLength={64} onFocus={() =>",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:1222|input|<missing>|<input ref={renameServerInputRef} type=\"text\" value={renameServerName} maxLength={64} onFocus={() =~ { setRenameServerInitialValue(renameServerName); setIsEditingServerName(true); }} onBlur={() =~ { setRenameServerName(r",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
       "line": 1222,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1240|button|<missing>|<button type=\"button\" className=\"whitespace-nowrap\" onMouseDown={(event) =>",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:1240|button|<missing>|<button type=\"button\" className=\"whitespace-nowrap\" onMouseDown={(event) =~ event.preventDefault()} onClick={() =~ { onRenameCurrentServer(renameServerName); setRenameServerInitialValue(renameServerName); renameServerInp",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
       "line": 1240,
       "problem": "missing data-agent-id"
@@ -597,55 +597,55 @@
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1263|button|<missing>|<button type=\"button\" className=\"secondary\" onClick={() =>",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:1263|button|<missing>|<button type=\"button\" className=\"secondary\" onClick={() =~ setDeleteConfirmOpen(true)}>",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
       "line": 1263,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1326|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${productManagementTab === \"users\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =>",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:1326|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${productManagementTab === \"users\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =~ setProductManagementTab(\"users\")} aria-selected={productManagementTab",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
       "line": 1326,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1334|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${productManagementTab === \"servers\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =>",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:1334|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${productManagementTab === \"servers\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =~ setProductManagementTab(\"servers\")} aria-selected={productManagemen",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
       "line": 1334,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1351|input|<missing>|<input type=\"search\" value={userSearchQuery} onChange={(event) =>",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:1351|input|<missing>|<input type=\"search\" value={userSearchQuery} onChange={(event) =~ setUserSearchQuery(event.target.value)} placeholder={t(\"admin.searchPlaceholder\")} />",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
       "line": 1351,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1359|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${userAccessTab === \"active\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =>",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:1359|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${userAccessTab === \"active\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =~ setUserAccessTab(\"active\")} aria-selected={userAccessTab === \"active\"} >",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
       "line": 1359,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1367|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${userAccessTab === \"blocked\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =>",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:1367|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${userAccessTab === \"blocked\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =~ setUserAccessTab(\"blocked\")} aria-selected={userAccessTab === \"blocked\"} >",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
       "line": 1367,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1375|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${userAccessTab === \"requests\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =>",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:1375|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${userAccessTab === \"requests\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =~ setUserAccessTab(\"requests\")} aria-selected={userAccessTab === \"requests\"",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
       "line": 1375,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1383|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${userAccessTab === \"bots\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =>",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:1383|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${userAccessTab === \"bots\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =~ setUserAccessTab(\"bots\")} aria-selected={userAccessTab === \"bots\"} >",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
       "line": 1383,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1391|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${userAccessTab === \"deleted\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =>",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:1391|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${userAccessTab === \"deleted\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =~ setUserAccessTab(\"deleted\")} aria-selected={userAccessTab === \"deleted\"} >",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
       "line": 1391,
       "problem": "missing data-agent-id"
@@ -657,67 +657,67 @@
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1476|button|<missing>|<button type=\"button\" className=\"secondary icon-btn tiny admin-action-btn\" data-tooltip={t(\"server.managementDelete\")} aria-label={t(\"server.managementDelete\")} onClick={(event) =>",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:1476|button|<missing>|<button type=\"button\" className=\"secondary icon-btn tiny admin-action-btn\" data-tooltip={t(\"server.managementDelete\")} aria-label={t(\"server.managementDelete\")} onClick={(event) =~ { event.stopPropagation(); onDeleteAdmi",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
       "line": 1476,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1521|input|<missing>|<input value={newRoleName} maxLength={64} onChange={(event) =>",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:1521|input|<missing>|<input value={newRoleName} maxLength={64} onChange={(event) =~ setNewRoleName(event.target.value)} placeholder={t(\"server.roleCreatePlaceholder\")} />",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
       "line": 1521,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1528|button|<missing>|<button type=\"button\" onClick={async () =>",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:1528|button|<missing>|<button type=\"button\" onClick={async () =~ { const ok = await onCreateServerRole(newRoleName.trim()); if (ok) { setNewRoleName(\"\"); const next = await onLoadServerRoles(); setServerRoles(next); } }} disabled={newRoleName",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
       "line": 1528,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1548|input|<missing>|<input value={editingRoleName} maxLength={64} onChange={(event) =>",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:1548|input|<missing>|<input value={editingRoleName} maxLength={64} onChange={(event) =~ setEditingRoleName(event.target.value)} />",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
       "line": 1548,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1563|button|<missing>|<button type=\"button\" className=\"secondary icon-btn tiny admin-action-btn\" onClick={() =>",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:1563|button|<missing>|<button type=\"button\" className=\"secondary icon-btn tiny admin-action-btn\" onClick={() =~ { setEditingRoleId(null); setEditingRoleName(\"\"); }} aria-label={t(\"settings.cancel\")} >",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
       "line": 1563,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1574|button|<missing>|<button type=\"button\" className=\"icon-btn tiny admin-action-btn\" onClick={async () =>",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:1574|button|<missing>|<button type=\"button\" className=\"icon-btn tiny admin-action-btn\" onClick={async () =~ { const ok = await onRenameServerRole(role.id, editingRoleName.trim()); if (ok) { setEditingRoleId(null); setEditingRoleName(\"\"); cons",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
       "line": 1574,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1594|button|<missing>|<button type=\"button\" className=\"secondary icon-btn tiny admin-action-btn\" onClick={() =>",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:1594|button|<missing>|<button type=\"button\" className=\"secondary icon-btn tiny admin-action-btn\" onClick={() =~ { setEditingRoleId(role.id); setEditingRoleName(role.name); }} aria-label={t(\"server.roleRename\")} >",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
       "line": 1594,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1605|button|<missing>|<button type=\"button\" className=\"secondary icon-btn tiny admin-action-btn\" onClick={async () =>",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:1605|button|<missing>|<button type=\"button\" className=\"secondary icon-btn tiny admin-action-btn\" onClick={async () =~ { const ok = await onDeleteServerRole(role.id); if (ok) { const next = await onLoadServerRoles(); setServerRoles(next); } }}",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
       "line": 1605,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1632|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${observabilityTab === \"log\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =>",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:1632|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${observabilityTab === \"log\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =~ setObservabilityTab(\"log\")} aria-selected={observabilityTab === \"log\"} >",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
       "line": 1632,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1640|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${observabilityTab === \"signaling\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =>",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:1640|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${observabilityTab === \"signaling\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =~ setObservabilityTab(\"signaling\")} aria-selected={observabilityTab ===",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
       "line": 1640,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1649|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${observabilityTab === \"telemetry\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =>",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:1649|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${observabilityTab === \"telemetry\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =~ setObservabilityTab(\"telemetry\")} aria-selected={observabilityTab ===",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
       "line": 1649,
       "problem": "missing data-agent-id"
@@ -729,85 +729,85 @@
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1716|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${serverAudioQuality === \"retro\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =>",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:1716|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${serverAudioQuality === \"retro\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =~ onSetServerAudioQuality(\"retro\")} disabled={!canManageAudioQuality || s",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
       "line": 1716,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1725|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${serverAudioQuality === \"low\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =>",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:1725|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${serverAudioQuality === \"low\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =~ onSetServerAudioQuality(\"low\")} disabled={!canManageAudioQuality || serve",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
       "line": 1725,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1734|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${serverAudioQuality === \"standard\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =>",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:1734|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${serverAudioQuality === \"standard\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =~ onSetServerAudioQuality(\"standard\")} disabled={!canManageAudioQualit",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
       "line": 1734,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1743|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${serverAudioQuality === \"high\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =>",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:1743|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${serverAudioQuality === \"high\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =~ onSetServerAudioQuality(\"high\")} disabled={!canManageAudioQuality || ser",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
       "line": 1743,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1781|select|<missing>|<select value={serverVideoEffectType} onChange={(event) =>",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:1781|select|<missing>|<select value={serverVideoEffectType} onChange={(event) =~ onSetServerVideoEffectType(event.target.value as ServerVideoEffectType)} >",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
       "line": 1781,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1794|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${serverVideoResolution === \"160x120\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =>",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:1794|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${serverVideoResolution === \"160x120\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =~ onSetServerVideoResolution(\"160x120\")} aria-pressed={serverVideoRe",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
       "line": 1794,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1802|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${serverVideoResolution === \"320x240\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =>",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:1802|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${serverVideoResolution === \"320x240\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =~ onSetServerVideoResolution(\"320x240\")} aria-pressed={serverVideoRe",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
       "line": 1802,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1810|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${serverVideoResolution === \"640x480\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =>",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:1810|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${serverVideoResolution === \"640x480\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =~ onSetServerVideoResolution(\"640x480\")} aria-pressed={serverVideoRe",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
       "line": 1810,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1825|button|<missing>|<button key={fps} type=\"button\" className={`secondary quality-toggle-btn ${serverVideoFps === fps ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =>",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:1825|button|<missing>|<button key={fps} type=\"button\" className={`secondary quality-toggle-btn ${serverVideoFps === fps ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =~ onSetServerVideoFps(fps as 10 | 15 | 24 | 30)} aria-pressed={serverVi",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
       "line": 1825,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1841|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${serverScreenShareResolution === \"hd\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =>",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:1841|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${serverScreenShareResolution === \"hd\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =~ onSetServerScreenShareResolution(\"hd\")} aria-pressed={serverScree",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
       "line": 1841,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1849|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${serverScreenShareResolution === \"fullhd\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =>",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:1849|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${serverScreenShareResolution === \"fullhd\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =~ onSetServerScreenShareResolution(\"fullhd\")} aria-pressed={ser",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
       "line": 1849,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1857|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${serverScreenShareResolution === \"max\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =>",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:1857|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${serverScreenShareResolution === \"max\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =~ onSetServerScreenShareResolution(\"max\")} aria-pressed={serverScr",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
       "line": 1857,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1962|input|<missing>|<input type=\"color\" value={serverVideoAsciiColor} onChange={(event) =>",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:1962|input|<missing>|<input type=\"color\" value={serverVideoAsciiColor} onChange={(event) =~ onSetServerVideoAsciiColor(event.target.value)} />",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
       "line": 1962,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:2004|button|<missing>|<button type=\"button\" className=\"secondary\" onClick={() =>",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:2004|button|<missing>|<button type=\"button\" className=\"secondary\" onClick={() =~ window.open(platform.href!, \"_blank\", \"noopener,noreferrer\")} title={platform.fileName} aria-label={`${t(\"server.desktopDownload\")}: ${platform.fileName}`} >",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
       "line": 2004,
       "problem": "missing data-agent-id"
@@ -819,13 +819,13 @@
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:2039|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${documentsRulesTab === \"documents\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =>",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:2039|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${documentsRulesTab === \"documents\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =~ setDocumentsRulesTab(\"documents\")} aria-selected={documentsRulesTab ",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
       "line": 2039,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:2047|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${documentsRulesTab === \"rules\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =>",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:2047|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${documentsRulesTab === \"rules\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =~ setDocumentsRulesTab(\"rules\")} aria-selected={documentsRulesTab === \"rul",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
       "line": 2047,
       "problem": "missing data-agent-id"
@@ -855,43 +855,43 @@
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:2095|button|<missing>|<button type=\"button\" className=\"secondary\" onClick={async () =>",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:2095|button|<missing>|<button type=\"button\" className=\"secondary\" onClick={async () =~ { const profile = memberContextProfile || await onLoadServerMemberProfile(memberContextMenu.userId); if (!profile) { return; } setMemberContextProfile(prof",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
       "line": 2095,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:2120|input|<missing>|<input type=\"checkbox\" checked={checked} onChange={async () =>",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:2120|input|<missing>|<input type=\"checkbox\" checked={checked} onChange={async () =~ { const current = memberContextProfile; if (!current) { return; } const nextRoleIds = checked ? current.customRoles.filter((item) =~ item.id !== role.id).map",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
       "line": 2120,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:2153|input|<missing>|<input type=\"checkbox\" checked={room.hasAccess} onChange={async () =>",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:2153|input|<missing>|<input type=\"checkbox\" checked={room.hasAccess} onChange={async () =~ { const current = memberContextProfile; if (!current) { return; } const nextRoomIds = room.hasAccess ? current.hiddenRoomsAvailable.filter((item) =~ i",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
       "line": 2153,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:2191|button|<missing>|<button type=\"button\" className=\"secondary\" onClick={() =>",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:2191|button|<missing>|<button type=\"button\" className=\"secondary\" onClick={() =~ setMemberProfileModalOpen(false)} >",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
       "line": 2191,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:2210|input|<missing>|<input type=\"text\" value={deleteConfirmNameInput} onChange={(event) =>",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:2210|input|<missing>|<input type=\"text\" value={deleteConfirmNameInput} onChange={(event) =~ setDeleteConfirmNameInput(event.target.value)} placeholder={currentServerName || \"\"} />",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
       "line": 2210,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:2218|button|<missing>|<button type=\"button\" className=\"secondary\" onClick={() =>",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:2218|button|<missing>|<button type=\"button\" className=\"secondary\" onClick={() =~ { setDeleteConfirmOpen(false); setDeleteConfirmNameInput(\"\"); }} >",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
       "line": 2218,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:2228|button|<missing>|<button type=\"button\" disabled={!canConfirmServerDelete} onClick={() =>",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:2228|button|<missing>|<button type=\"button\" disabled={!canConfirmServerDelete} onClick={() =~ { onDeleteServer(); setDeleteConfirmOpen(false); setDeleteConfirmNameInput(\"\"); }} >",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
       "line": 2228,
       "problem": "missing data-agent-id"
@@ -909,183 +909,21 @@
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/uicomponents/PixelCheckbox.tsx:24|input|<missing>|<input type=\"checkbox\" checked={checked} onChange={(event) =>",
+      "signature": "apps/web/src/components/uicomponents/PixelCheckbox.tsx:24|input|<missing>|<input type=\"checkbox\" checked={checked} onChange={(event) =~ onChange(event.target.checked)} className=\"pixel-checkbox-native\" aria-label={ariaLabel} disabled={disabled} />",
       "relPath": "apps/web/src/components/uicomponents/PixelCheckbox.tsx",
       "line": 24,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/uicomponents/RangeSlider.tsx:47|input|<missing>|<input {...rest} type=\"range\" min={min} max={max} step={step} value={safeValue} className={`range-slider-input ${className || \"\"}`.trim()} style={style as CSSProperties} onChange={(event) =>",
+      "signature": "apps/web/src/components/uicomponents/RangeSlider.tsx:47|input|<missing>|<input {...rest} type=\"range\" min={min} max={max} step={step} value={safeValue} className={`range-slider-input ${className || \"\"}`.trim()} style={style as CSSProperties} onChange={(event) =~ onChange(Number(event.target.",
       "relPath": "apps/web/src/components/uicomponents/RangeSlider.tsx",
       "line": 47,
-      "problem": "missing data-agent-id"
-    },
-    {
-      "signature": "apps/web/src/components/userDock/UserDockControls.tsx:166|button|<missing>|<button type=\"button\" className={`secondary rtc-placeholder-btn ${noiseSuppressionEnabled ? \"icon-btn-danger\" : \"\"}`} aria-label={t(\"rtc.noiseReduction\")} onClick={onToggleNoiseSuppression} >",
-      "relPath": "apps/web/src/components/userDock/UserDockControls.tsx",
-      "line": 166,
-      "problem": "missing data-agent-id"
-    },
-    {
-      "signature": "apps/web/src/components/userDock/UserDockControls.tsx:176|button|<missing>|<button type=\"button\" className={`secondary rtc-placeholder-btn ${screenShareActive ? \"icon-btn-danger\" : \"\"}`} aria-label={t(\"rtc.screenShare\")} onClick={onToggleScreenShare} disabled={!canStartScreenShare} >",
-      "relPath": "apps/web/src/components/userDock/UserDockControls.tsx",
-      "line": 176,
-      "problem": "missing data-agent-id"
-    },
-    {
-      "signature": "apps/web/src/components/userDock/UserDockControls.tsx:187|button|<missing>|<button type=\"button\" className=\"secondary rtc-placeholder-btn\" aria-label={t(\"rtc.effects\")} disabled>",
-      "relPath": "apps/web/src/components/userDock/UserDockControls.tsx",
-      "line": 187,
-      "problem": "missing data-agent-id"
-    },
-    {
-      "signature": "apps/web/src/components/userDock/UserDockControls.tsx:192|button|<missing>|<button type=\"button\" className=\"secondary rtc-placeholder-btn\" aria-label={t(\"rtc.activities\")} disabled>",
-      "relPath": "apps/web/src/components/userDock/UserDockControls.tsx",
-      "line": 192,
-      "problem": "missing data-agent-id"
-    },
-    {
-      "signature": "apps/web/src/components/userDock/UserDockControls.tsx:204|button|<missing>|<button type=\"button\" className={`secondary icon-btn split-main-btn user-panel-main-btn ${micMuted ? \"icon-btn-danger\" : \"\"}`} data-tooltip={micMuted ? t(\"audio.enableMic\") : t(\"audio.disableMic\")} disabled={mediaControl",
-      "relPath": "apps/web/src/components/userDock/UserDockControls.tsx",
-      "line": 204,
-      "problem": "missing data-agent-id"
-    },
-    {
-      "signature": "apps/web/src/components/userDock/UserDockControls.tsx:239|button|<missing>|<button ref={inputDeviceRowRef} type=\"button\" className={`secondary flex w-full items-center justify-between gap-3 px-[var(--space-lg)] py-[var(--space-lg)] text-left ${voiceSettingsPanel === \"input_device\" ? \"voice-menu",
-      "relPath": "apps/web/src/components/userDock/UserDockControls.tsx",
-      "line": 239,
-      "problem": "missing data-agent-id"
-    },
-    {
-      "signature": "apps/web/src/components/userDock/UserDockControls.tsx:281|button|<missing>|<button type=\"button\" className={`ui-switch ${walkieTalkieEnabled ? \"ui-switch-on\" : \"\"}`} role=\"switch\" aria-checked={walkieTalkieEnabled} aria-label={t(\"settings.walkieTalkieMode\")} onClick={() =>",
-      "relPath": "apps/web/src/components/userDock/UserDockControls.tsx",
-      "line": 281,
-      "problem": "missing data-agent-id"
-    },
-    {
-      "signature": "apps/web/src/components/userDock/UserDockControls.tsx:296|input|<missing>|<input className=\"voice-hotkey-input\" type=\"text\" value={walkieTalkieHotkeyLabel} readOnly onKeyDown={(event) =>",
-      "relPath": "apps/web/src/components/userDock/UserDockControls.tsx",
-      "line": 296,
-      "problem": "missing data-agent-id"
-    },
-    {
-      "signature": "apps/web/src/components/userDock/UserDockControls.tsx:312|button|<missing>|<button type=\"button\" className=\"secondary mt-[var(--space-xl)] flex w-full items-center justify-between gap-4 text-left\" disabled={mediaControlsLocked} onClick={() =>",
-      "relPath": "apps/web/src/components/userDock/UserDockControls.tsx",
-      "line": 312,
-      "problem": "missing data-agent-id"
-    },
-    {
-      "signature": "apps/web/src/components/userDock/UserDockControls.tsx:339|button|<missing>|<button key={device.id} type=\"button\" className={`secondary device-item radio-item flex items-center justify-between gap-4 text-left ${selectedInputId === device.id ? \"device-item-active\" : \"\"}`} disabled={mediaDevicesUn",
-      "relPath": "apps/web/src/components/userDock/UserDockControls.tsx",
-      "line": 339,
-      "problem": "missing data-agent-id"
-    },
-    {
-      "signature": "apps/web/src/components/userDock/UserDockControls.tsx:363|button|<missing>|<button type=\"button\" className={`secondary icon-btn split-main-btn user-panel-main-btn ${audioMuted ? \"icon-btn-danger\" : \"\"}`} data-tooltip={audioMuted ? t(\"audio.enableOutput\") : t(\"audio.disableOutput\")} disabled={me",
-      "relPath": "apps/web/src/components/userDock/UserDockControls.tsx",
-      "line": 363,
-      "problem": "missing data-agent-id"
-    },
-    {
-      "signature": "apps/web/src/components/userDock/UserDockControls.tsx:372|button|<missing>|<button type=\"button\" className=\"secondary icon-btn split-caret-btn\" data-tooltip={t(\"settings.outputHint\")} disabled={mediaControlsLocked} onClick={onToggleAudioOutput} >",
-      "relPath": "apps/web/src/components/userDock/UserDockControls.tsx",
-      "line": 372,
-      "problem": "missing data-agent-id"
-    },
-    {
-      "signature": "apps/web/src/components/userDock/UserDockControls.tsx:392|button|<missing>|<button key={device.id} type=\"button\" className={`secondary device-item radio-item flex items-center justify-between gap-4 text-left ${selectedOutputId === device.id ? \"device-item-active\" : \"\"}`} disabled={mediaDevicesU",
-      "relPath": "apps/web/src/components/userDock/UserDockControls.tsx",
-      "line": 392,
-      "problem": "missing data-agent-id"
-    },
-    {
-      "signature": "apps/web/src/components/userDock/UserDockControls.tsx:418|button|<missing>|<button type=\"button\" className=\"secondary mt-[var(--space-xl)] flex w-full items-center justify-between gap-4 text-left\" disabled={mediaControlsLocked} onClick={() =>",
-      "relPath": "apps/web/src/components/userDock/UserDockControls.tsx",
-      "line": 418,
-      "problem": "missing data-agent-id"
-    },
-    {
-      "signature": "apps/web/src/components/userDock/UserDockControls.tsx:440|button|<missing>|<button type=\"button\" className={`secondary icon-btn split-main-btn user-panel-main-btn ${cameraEnabled ? \"\" : \"icon-btn-danger\"}`} data-tooltip={cameraTooltip} disabled={cameraControlDisabled} onClick={onToggleCamera} >",
-      "relPath": "apps/web/src/components/userDock/UserDockControls.tsx",
-      "line": 440,
-      "problem": "missing data-agent-id"
-    },
-    {
-      "signature": "apps/web/src/components/userDock/UserDockControls.tsx:449|button|<missing>|<button type=\"button\" className=\"secondary icon-btn split-caret-btn\" data-tooltip={t(\"video.cameraDevice\")} disabled={cameraControlDisabled} onClick={() =>",
-      "relPath": "apps/web/src/components/userDock/UserDockControls.tsx",
-      "line": 449,
-      "problem": "missing data-agent-id"
-    },
-    {
-      "signature": "apps/web/src/components/userDock/UserDockControls.tsx:472|button|<missing>|<button key={device.id} type=\"button\" className={`secondary device-item radio-item flex items-center justify-between gap-4 text-left ${selectedVideoInputId === device.id ? \"device-item-active\" : \"\"}`} disabled={mediaDevi",
-      "relPath": "apps/web/src/components/userDock/UserDockControls.tsx",
-      "line": 472,
-      "problem": "missing data-agent-id"
-    },
-    {
-      "signature": "apps/web/src/components/userDock/UserDockControls.tsx:494|button|<missing>|<button type=\"button\" className=\"secondary icon-btn user-panel-disconnect-btn flex w-full items-center justify-center\" data-tooltip={t(\"mobile.disconnect\")} onClick={onDisconnectCall} >",
-      "relPath": "apps/web/src/components/userDock/UserDockControls.tsx",
-      "line": 494,
-      "problem": "missing data-agent-id"
-    },
-    {
-      "signature": "apps/web/src/components/userDock/UserDockSettingsOverlay.tsx:175|button|<missing>|<button type=\"button\" className=\"secondary icon-btn user-settings-modal-close\" onClick={() =>",
-      "relPath": "apps/web/src/components/userDock/UserDockSettingsOverlay.tsx",
-      "line": 175,
-      "problem": "missing data-agent-id"
-    },
-    {
-      "signature": "apps/web/src/components/userDock/UserDockSettingsOverlay.tsx:199|select|<missing>|<select value={userSettingsTab} onChange={(event) =>",
-      "relPath": "apps/web/src/components/userDock/UserDockSettingsOverlay.tsx",
-      "line": 199,
-      "problem": "missing data-agent-id"
-    },
-    {
-      "signature": "apps/web/src/components/userDock/UserDockSettingsOverlay.tsx:214|button|<missing>|<button type=\"button\" className={`secondary user-settings-tab-btn justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${userSettingsTab === \"profile\" ? \"user-settings-tab-btn-active\" : \"\"}`} onClick={(",
-      "relPath": "apps/web/src/components/userDock/UserDockSettingsOverlay.tsx",
-      "line": 214,
-      "problem": "missing data-agent-id"
-    },
-    {
-      "signature": "apps/web/src/components/userDock/UserDockSettingsOverlay.tsx:223|button|<missing>|<button type=\"button\" className={`secondary user-settings-tab-btn justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${userSettingsTab === \"sound\" ? \"user-settings-tab-btn-active\" : \"\"}`} onClick={() ",
-      "relPath": "apps/web/src/components/userDock/UserDockSettingsOverlay.tsx",
-      "line": 223,
-      "problem": "missing data-agent-id"
-    },
-    {
-      "signature": "apps/web/src/components/userDock/UserDockSettingsOverlay.tsx:232|button|<missing>|<button type=\"button\" className={`secondary user-settings-tab-btn justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${userSettingsTab === \"camera\" ? \"user-settings-tab-btn-active\" : \"\"}`} onClick={()",
-      "relPath": "apps/web/src/components/userDock/UserDockSettingsOverlay.tsx",
-      "line": 232,
-      "problem": "missing data-agent-id"
-    },
-    {
-      "signature": "apps/web/src/components/userDock/UserDockSettingsOverlay.tsx:241|button|<missing>|<button type=\"button\" className={`secondary user-settings-tab-btn justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${userSettingsTab === \"server_sounds\" ? \"user-settings-tab-btn-active\" : \"\"}`} onCl",
-      "relPath": "apps/web/src/components/userDock/UserDockSettingsOverlay.tsx",
-      "line": 241,
       "problem": "missing data-agent-id"
     },
     {
       "signature": "apps/web/src/components/userDock/UserDockSettingsOverlay.tsx:264|input|<missing>|<input className=\"profile-readonly-input\" value={profileUsername} disabled aria-disabled=\"true\" />",
       "relPath": "apps/web/src/components/userDock/UserDockSettingsOverlay.tsx",
       "line": 264,
-      "problem": "missing data-agent-id"
-    },
-    {
-      "signature": "apps/web/src/components/userDock/UserDockSettingsOverlay.tsx:270|button|<missing>|<button type=\"button\" className=\"secondary whitespace-nowrap\" onMouseDown={(event) =>",
-      "relPath": "apps/web/src/components/userDock/UserDockSettingsOverlay.tsx",
-      "line": 270,
-      "problem": "missing data-agent-id"
-    },
-    {
-      "signature": "apps/web/src/components/userDock/UserDockSettingsOverlay.tsx:286|input|<missing>|<input ref={profileNameInputRef} value={profileNameDraft} onFocus={() =>",
-      "relPath": "apps/web/src/components/userDock/UserDockSettingsOverlay.tsx",
-      "line": 286,
-      "problem": "missing data-agent-id"
-    },
-    {
-      "signature": "apps/web/src/components/userDock/UserDockSettingsOverlay.tsx:303|button|<missing>|<button type=\"button\" className=\"whitespace-nowrap\" onMouseDown={(event) =>",
-      "relPath": "apps/web/src/components/userDock/UserDockSettingsOverlay.tsx",
-      "line": 303,
       "problem": "missing data-agent-id"
     },
     {
@@ -1101,24 +939,6 @@
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/userDock/UserDockSettingsOverlay.tsx:339|select|<missing>|<select value={selectedLang} onChange={(event) =>",
-      "relPath": "apps/web/src/components/userDock/UserDockSettingsOverlay.tsx",
-      "line": 339,
-      "problem": "missing data-agent-id"
-    },
-    {
-      "signature": "apps/web/src/components/userDock/UserDockSettingsOverlay.tsx:352|select|<missing>|<select value={selectedUiTheme} onChange={(event) =>",
-      "relPath": "apps/web/src/components/userDock/UserDockSettingsOverlay.tsx",
-      "line": 352,
-      "problem": "missing data-agent-id"
-    },
-    {
-      "signature": "apps/web/src/components/userDock/UserDockSettingsOverlay.tsx:398|button|<missing>|<button type=\"button\" className=\"secondary\" disabled={deleteAccountPending} onClick={() =>",
-      "relPath": "apps/web/src/components/userDock/UserDockSettingsOverlay.tsx",
-      "line": 398,
-      "problem": "missing data-agent-id"
-    },
-    {
       "signature": "apps/web/src/components/userDock/UserDockSettingsOverlay.tsx:413|button|<missing>|<button type=\"button\" className=\"secondary\" onClick={onRequestMediaAccess}>",
       "relPath": "apps/web/src/components/userDock/UserDockSettingsOverlay.tsx",
       "line": 413,
@@ -1131,25 +951,25 @@
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/userDock/UserDockSettingsOverlay.tsx:425|select|<missing>|<select value={selectedInputId} disabled={mediaDevicesUnavailable} onChange={(event) =>",
+      "signature": "apps/web/src/components/userDock/UserDockSettingsOverlay.tsx:425|select|<missing>|<select value={selectedInputId} disabled={mediaDevicesUnavailable} onChange={(event) =~ onSetSelectedInputId(event.target.value)}>",
       "relPath": "apps/web/src/components/userDock/UserDockSettingsOverlay.tsx",
       "line": 425,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/userDock/UserDockSettingsOverlay.tsx:443|select|<missing>|<select value={selectedOutputId} disabled={mediaDevicesUnavailable} onChange={(event) =>",
+      "signature": "apps/web/src/components/userDock/UserDockSettingsOverlay.tsx:443|select|<missing>|<select value={selectedOutputId} disabled={mediaDevicesUnavailable} onChange={(event) =~ onSetSelectedOutputId(event.target.value)}>",
       "relPath": "apps/web/src/components/userDock/UserDockSettingsOverlay.tsx",
       "line": 443,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/userDock/UserDockSettingsOverlay.tsx:481|button|<missing>|<button type=\"button\" className={`ui-switch ${walkieTalkieEnabled ? \"ui-switch-on\" : \"\"}`} role=\"switch\" aria-checked={walkieTalkieEnabled} aria-label={t(\"settings.walkieTalkieMode\")} onClick={() =>",
+      "signature": "apps/web/src/components/userDock/UserDockSettingsOverlay.tsx:481|button|<missing>|<button type=\"button\" className={`ui-switch ${walkieTalkieEnabled ? \"ui-switch-on\" : \"\"}`} role=\"switch\" aria-checked={walkieTalkieEnabled} aria-label={t(\"settings.walkieTalkieMode\")} onClick={() =~ onSetWalkieTalkieEnab",
       "relPath": "apps/web/src/components/userDock/UserDockSettingsOverlay.tsx",
       "line": 481,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/userDock/UserDockSettingsOverlay.tsx:496|input|<missing>|<input type=\"text\" value={walkieTalkieHotkeyLabel} readOnly onKeyDown={(event) =>",
+      "signature": "apps/web/src/components/userDock/UserDockSettingsOverlay.tsx:496|input|<missing>|<input type=\"text\" value={walkieTalkieHotkeyLabel} readOnly onKeyDown={(event) =~ { event.preventDefault(); onSetWalkieTalkieHotkey(normalizePushToTalkHotkey(event.code)); }} onFocus={(event) =~ event.currentTarget.selec",
       "relPath": "apps/web/src/components/userDock/UserDockSettingsOverlay.tsx",
       "line": 496,
       "problem": "missing data-agent-id"
@@ -1179,31 +999,31 @@
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/userDock/UserDockSettingsOverlay.tsx:578|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${rnnoiseSuppressionLevel === \"none\" ? \"quality-toggle-btn-active\" : \"\"}`} aria-pressed={rnnoiseSuppressionLevel === \"none\"} onClick={() =>",
+      "signature": "apps/web/src/components/userDock/UserDockSettingsOverlay.tsx:578|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${rnnoiseSuppressionLevel === \"none\" ? \"quality-toggle-btn-active\" : \"\"}`} aria-pressed={rnnoiseSuppressionLevel === \"none\"} onClick={() =~ onSetRnnoiseSuppr",
       "relPath": "apps/web/src/components/userDock/UserDockSettingsOverlay.tsx",
       "line": 578,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/userDock/UserDockSettingsOverlay.tsx:586|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${rnnoiseSuppressionLevel === \"soft\" ? \"quality-toggle-btn-active\" : \"\"}`} aria-pressed={rnnoiseSuppressionLevel === \"soft\"} onClick={() =>",
+      "signature": "apps/web/src/components/userDock/UserDockSettingsOverlay.tsx:586|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${rnnoiseSuppressionLevel === \"soft\" ? \"quality-toggle-btn-active\" : \"\"}`} aria-pressed={rnnoiseSuppressionLevel === \"soft\"} onClick={() =~ onSetRnnoiseSuppr",
       "relPath": "apps/web/src/components/userDock/UserDockSettingsOverlay.tsx",
       "line": 586,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/userDock/UserDockSettingsOverlay.tsx:594|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${rnnoiseSuppressionLevel === \"medium\" ? \"quality-toggle-btn-active\" : \"\"}`} aria-pressed={rnnoiseSuppressionLevel === \"medium\"} onClick={() =>",
+      "signature": "apps/web/src/components/userDock/UserDockSettingsOverlay.tsx:594|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${rnnoiseSuppressionLevel === \"medium\" ? \"quality-toggle-btn-active\" : \"\"}`} aria-pressed={rnnoiseSuppressionLevel === \"medium\"} onClick={() =~ onSetRnnoiseS",
       "relPath": "apps/web/src/components/userDock/UserDockSettingsOverlay.tsx",
       "line": 594,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/userDock/UserDockSettingsOverlay.tsx:602|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${rnnoiseSuppressionLevel === \"strong\" ? \"quality-toggle-btn-active\" : \"\"}`} aria-pressed={rnnoiseSuppressionLevel === \"strong\"} onClick={() =>",
+      "signature": "apps/web/src/components/userDock/UserDockSettingsOverlay.tsx:602|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${rnnoiseSuppressionLevel === \"strong\" ? \"quality-toggle-btn-active\" : \"\"}`} aria-pressed={rnnoiseSuppressionLevel === \"strong\"} onClick={() =~ onSetRnnoiseS",
       "relPath": "apps/web/src/components/userDock/UserDockSettingsOverlay.tsx",
       "line": 602,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/userDock/UserDockSettingsOverlay.tsx:631|select|<missing>|<select value={selectedVideoInputId} disabled={mediaDevicesUnavailable} onChange={(event) =>",
+      "signature": "apps/web/src/components/userDock/UserDockSettingsOverlay.tsx:631|select|<missing>|<select value={selectedVideoInputId} disabled={mediaDevicesUnavailable} onChange={(event) =~ onSetSelectedVideoInputId(event.target.value)}>",
       "relPath": "apps/web/src/components/userDock/UserDockSettingsOverlay.tsx",
       "line": 631,
       "problem": "missing data-agent-id"
@@ -1227,7 +1047,7 @@
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/userDock/UserDockSettingsOverlay.tsx:679|button|<missing>|<button type=\"button\" className=\"secondary icon-btn tiny\" onClick={() =>",
+      "signature": "apps/web/src/components/userDock/UserDockSettingsOverlay.tsx:679|button|<missing>|<button type=\"button\" className=\"secondary icon-btn tiny\" onClick={() =~ onPreviewServerSound(\"member_join\")}>",
       "relPath": "apps/web/src/components/userDock/UserDockSettingsOverlay.tsx",
       "line": 679,
       "problem": "missing data-agent-id"
@@ -1239,7 +1059,7 @@
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/userDock/UserDockSettingsOverlay.tsx:696|button|<missing>|<button type=\"button\" className=\"secondary icon-btn tiny\" onClick={() =>",
+      "signature": "apps/web/src/components/userDock/UserDockSettingsOverlay.tsx:696|button|<missing>|<button type=\"button\" className=\"secondary icon-btn tiny\" onClick={() =~ onPreviewServerSound(\"member_leave\")}>",
       "relPath": "apps/web/src/components/userDock/UserDockSettingsOverlay.tsx",
       "line": 696,
       "problem": "missing data-agent-id"
@@ -1251,7 +1071,7 @@
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/userDock/UserDockSettingsOverlay.tsx:713|button|<missing>|<button type=\"button\" className=\"secondary icon-btn tiny\" onClick={() =>",
+      "signature": "apps/web/src/components/userDock/UserDockSettingsOverlay.tsx:713|button|<missing>|<button type=\"button\" className=\"secondary icon-btn tiny\" onClick={() =~ onPreviewServerSound(\"server_disconnected\")}>",
       "relPath": "apps/web/src/components/userDock/UserDockSettingsOverlay.tsx",
       "line": 713,
       "problem": "missing data-agent-id"
@@ -1263,7 +1083,7 @@
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/userDock/UserDockSettingsOverlay.tsx:730|button|<missing>|<button type=\"button\" className=\"secondary icon-btn tiny\" onClick={() =>",
+      "signature": "apps/web/src/components/userDock/UserDockSettingsOverlay.tsx:730|button|<missing>|<button type=\"button\" className=\"secondary icon-btn tiny\" onClick={() =~ onPreviewServerSound(\"self_disconnected\")}>",
       "relPath": "apps/web/src/components/userDock/UserDockSettingsOverlay.tsx",
       "line": 730,
       "problem": "missing data-agent-id"
@@ -1275,7 +1095,7 @@
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/userDock/UserDockSettingsOverlay.tsx:747|button|<missing>|<button type=\"button\" className=\"secondary icon-btn tiny\" onClick={() =>",
+      "signature": "apps/web/src/components/userDock/UserDockSettingsOverlay.tsx:747|button|<missing>|<button type=\"button\" className=\"secondary icon-btn tiny\" onClick={() =~ onPreviewServerSound(\"self_joined_channel\")}>",
       "relPath": "apps/web/src/components/userDock/UserDockSettingsOverlay.tsx",
       "line": 747,
       "problem": "missing data-agent-id"
@@ -1287,55 +1107,43 @@
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/userDock/UserDockSettingsOverlay.tsx:764|button|<missing>|<button type=\"button\" className=\"secondary icon-btn tiny\" onClick={() =>",
+      "signature": "apps/web/src/components/userDock/UserDockSettingsOverlay.tsx:764|button|<missing>|<button type=\"button\" className=\"secondary icon-btn tiny\" onClick={() =~ onPreviewServerSound(\"chat_message\")}>",
       "relPath": "apps/web/src/components/userDock/UserDockSettingsOverlay.tsx",
       "line": 764,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/userDock/UserDockSettingsOverlay.tsx:792|button|<missing>|<button type=\"button\" className=\"secondary\" onClick={() =>",
-      "relPath": "apps/web/src/components/userDock/UserDockSettingsOverlay.tsx",
-      "line": 792,
-      "problem": "missing data-agent-id"
-    },
-    {
-      "signature": "apps/web/src/components/userDock/UserDockSettingsOverlay.tsx:802|button|<missing>|<button type=\"button\" className=\"secondary\" onClick={() =>",
-      "relPath": "apps/web/src/components/userDock/UserDockSettingsOverlay.tsx",
-      "line": 802,
-      "problem": "missing data-agent-id"
-    },
-    {
-      "signature": "apps/web/src/components/VideoWindowsOverlay.tsx:127|button|<missing>|<button type=\"button\" className=\"secondary icon-btn tiny video-window-fullscreen-btn\" onPointerDown={(event) =>",
+      "signature": "apps/web/src/components/VideoWindowsOverlay.tsx:127|button|<missing>|<button type=\"button\" className=\"secondary icon-btn tiny video-window-fullscreen-btn\" onPointerDown={(event) =~ { event.stopPropagation(); }} onClick={(event) =~ { event.stopPropagation(); onOpenScreenFullscreen?.({ id, ",
       "relPath": "apps/web/src/components/VideoWindowsOverlay.tsx",
       "line": 127,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/VideoWindowsOverlay.tsx:162|button|<missing>|<button type=\"button\" className=\"video-window-resize video-window-resize-top-left\" onPointerDown={(event) =>",
+      "signature": "apps/web/src/components/VideoWindowsOverlay.tsx:162|button|<missing>|<button type=\"button\" className=\"video-window-resize video-window-resize-top-left\" onPointerDown={(event) =~ onResizeStart(id, \"top-left\", event)} aria-label=\"Resize video window from top left\" />",
       "relPath": "apps/web/src/components/VideoWindowsOverlay.tsx",
       "line": 162,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/VideoWindowsOverlay.tsx:168|button|<missing>|<button type=\"button\" className=\"video-window-resize video-window-resize-top-right\" onPointerDown={(event) =>",
+      "signature": "apps/web/src/components/VideoWindowsOverlay.tsx:168|button|<missing>|<button type=\"button\" className=\"video-window-resize video-window-resize-top-right\" onPointerDown={(event) =~ onResizeStart(id, \"top-right\", event)} aria-label=\"Resize video window from top right\" />",
       "relPath": "apps/web/src/components/VideoWindowsOverlay.tsx",
       "line": 168,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/VideoWindowsOverlay.tsx:174|button|<missing>|<button type=\"button\" className=\"video-window-resize video-window-resize-bottom-left\" onPointerDown={(event) =>",
+      "signature": "apps/web/src/components/VideoWindowsOverlay.tsx:174|button|<missing>|<button type=\"button\" className=\"video-window-resize video-window-resize-bottom-left\" onPointerDown={(event) =~ onResizeStart(id, \"bottom-left\", event)} aria-label=\"Resize video window from bottom left\" />",
       "relPath": "apps/web/src/components/VideoWindowsOverlay.tsx",
       "line": 174,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/VideoWindowsOverlay.tsx:180|button|<missing>|<button type=\"button\" className=\"video-window-resize video-window-resize-bottom-right\" onPointerDown={(event) =>",
+      "signature": "apps/web/src/components/VideoWindowsOverlay.tsx:180|button|<missing>|<button type=\"button\" className=\"video-window-resize video-window-resize-bottom-right\" onPointerDown={(event) =~ onResizeStart(id, \"bottom-right\", event)} aria-label=\"Resize video window\" />",
       "relPath": "apps/web/src/components/VideoWindowsOverlay.tsx",
       "line": 180,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/VideoWindowsOverlay.tsx:570|button|<missing>|<button type=\"button\" className=\"secondary icon-btn chat-image-modal-close video-screen-fullscreen-close\" onClick={() =>",
+      "signature": "apps/web/src/components/VideoWindowsOverlay.tsx:570|button|<missing>|<button type=\"button\" className=\"secondary icon-btn chat-image-modal-close video-screen-fullscreen-close\" onClick={() =~ setFullscreenScreenShare(null)} aria-label=\"Close fullscreen\" >",
       "relPath": "apps/web/src/components/VideoWindowsOverlay.tsx",
       "line": 570,
       "problem": "missing data-agent-id"
