@@ -1,6 +1,7 @@
 import { api } from "../api";
 import type { User } from "../domain";
 import type { ChatController } from "./chatController";
+import { executeWsFirstWithHttpFallback } from "./chatOperationExecutor";
 import { extractImageSourceFromClipboardText } from "../utils/chatImagePayload";
 
 type SendWsEventFn = (
@@ -64,28 +65,27 @@ export async function sendChatMessage(params: SendChatMessageParams): Promise<Se
       return { kind: "empty" };
     }
 
-    const requestId = sendWsEvent(
-      "chat.edit",
-      {
+    const editResult = await executeWsFirstWithHttpFallback({
+      sendWsEvent,
+      eventType: "chat.edit",
+      payload: {
         messageId: editingMessageId,
         text: nextText,
         roomSlug: chatRoomSlug,
         topicId: activeTopicId || undefined
       },
-      { withIdempotency: true, maxRetries: maxChatRetries }
-    );
+      withIdempotency: true,
+      maxRetries: maxChatRetries,
+      httpFallback: async () => {
+        await api.editMessage(authToken, editingMessageId, { text: nextText });
+      }
+    });
 
-    if (requestId) {
+    if (editResult.kind !== "failed") {
       return { kind: "sent", mode: "edit" };
     }
 
-    // Fallback keeps edit available when websocket transport is temporarily unavailable.
-    try {
-      await api.editMessage(authToken, editingMessageId, { text: nextText });
-      return { kind: "sent", mode: "edit" };
-    } catch {
-      return { kind: "server-error" };
-    }
+    return { kind: "server-error" };
   }
 
   let baseText = chatText.trim();

@@ -13,6 +13,7 @@ import {
 import { api } from "../../api";
 import type { Message, MessagesCursor, User } from "../../domain";
 import { sendChatMessage, type ChatController } from "../../services";
+import { executeWsFirstWithHttpFallback } from "../../services/chatOperationExecutor";
 import {
   compressImageToDataUrl,
   extractImageSourceFromClipboardHtml,
@@ -502,26 +503,32 @@ export function useChatComposerActions({
       return;
     }
 
-    const requestId = sendWsEvent(
-      "chat.delete",
-      {
-        messageId,
-        roomSlug: chatRoomSlug,
-        topicId: activeTopicId || undefined
-      },
-      { withIdempotency: true, maxRetries: 1 }
-    );
-
-    if (requestId) {
-      return;
-    }
-
     void (async () => {
-      try {
-        // Фолбэк нужен, когда websocket временно недоступен.
-        await api.deleteMessage(authToken, messageId);
+      const deleteResult = await executeWsFirstWithHttpFallback({
+        sendWsEvent,
+        eventType: "chat.delete",
+        payload: {
+          messageId,
+          roomSlug: chatRoomSlug,
+          topicId: activeTopicId || undefined
+        },
+        withIdempotency: true,
+        maxRetries: 1,
+        httpFallback: async () => {
+          await api.deleteMessage(authToken, messageId);
+        }
+      });
+
+      if (deleteResult.kind === "ws") {
+        return;
+      }
+
+      if (deleteResult.kind === "http") {
         setMessages((prev) => prev.filter((item) => item.id !== messageId));
-      } catch {
+        return;
+      }
+
+      if (deleteResult.kind === "failed") {
         pushToast(serverErrorMessage);
       }
     })();
