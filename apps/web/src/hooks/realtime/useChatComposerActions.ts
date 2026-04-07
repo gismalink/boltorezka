@@ -502,30 +502,29 @@ export function useChatComposerActions({
       return;
     }
 
-    if (activeTopicId) {
-      void (async () => {
-        try {
-          await api.deleteMessage(authToken, messageId);
-          setMessages((prev) => prev.filter((item) => item.id !== messageId));
-        } catch {
-          pushToast(serverErrorMessage);
-        }
-      })();
-      return;
-    }
-
     const requestId = sendWsEvent(
       "chat.delete",
       {
         messageId,
-        roomSlug: chatRoomSlug
+        roomSlug: chatRoomSlug,
+        topicId: activeTopicId || undefined
       },
       { withIdempotency: true, maxRetries: 1 }
     );
 
-    if (!requestId) {
-      pushToast(serverErrorMessage);
+    if (requestId) {
+      return;
     }
+
+    void (async () => {
+      try {
+        // Фолбэк нужен, когда websocket временно недоступен.
+        await api.deleteMessage(authToken, messageId);
+        setMessages((prev) => prev.filter((item) => item.id !== messageId));
+      } catch {
+        pushToast(serverErrorMessage);
+      }
+    })();
   }, [activeTopicId, authToken, canManageOwnMessage, chatRoomSlug, messages, pushToast, selectChannelPlaceholderMessage, sendWsEvent, serverErrorMessage, setMessages]);
 
   const openRoomChat = useCallback((slug: string) => {
