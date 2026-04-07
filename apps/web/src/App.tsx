@@ -827,7 +827,7 @@ export function App() {
     liveRoomMemberDetailsBySlug: roomsPresenceDetailsBySlug,
     memberPreferencesByUserId,
     voiceMicStateByUserIdInCurrentRoom,
-    voiceCameraEnabledByUserIdInCurrentRoom: effectiveVoiceCameraEnabledByUserIdInCurrentRoom,
+    effectiveVoiceCameraEnabledByUserIdInCurrentRoom,
     voiceAudioOutputMutedByUserIdInCurrentRoom,
     audioMuted, voiceRtcStateByUserIdInCurrentRoom, voiceMediaStatusSummaryByUserIdInCurrentRoom,
     collapsedCategoryIds, uncategorizedRooms, archivedRooms,

@@ -3,6 +3,7 @@ import type { VoiceSettingsPanel } from "../../../components";
 
 export type AppServerMenuTab =
   | "users"
+  | "roles"
   | "product_management"
   | "server_management"
   | "observability"
