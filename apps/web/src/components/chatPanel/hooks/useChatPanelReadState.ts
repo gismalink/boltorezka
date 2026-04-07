@@ -1,3 +1,5 @@
+// Хук управления статусом прочтения: mark-read, разделитель непрочитанных,
+// автодогрузка истории и защита от рассинхрона при переключении комнаты/темы.
 import { useCallback, useEffect, useRef, useState, type RefObject } from "react";
 import { api } from "../../../api";
 import type { Message, RoomTopic } from "../../../domain";

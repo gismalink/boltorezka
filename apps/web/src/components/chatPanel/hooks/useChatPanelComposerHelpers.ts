@@ -1,4 +1,6 @@
+// Хук вспомогательных операций композера: форматирование и вставка шаблонного текста.
 import { useCallback } from "react";
+import { applyMentionToText, applyQuoteToText, formatAttachmentSizeValue } from "./chatComposerUtils";
 
 type UseChatPanelComposerHelpersArgs = {
   locale: string;
@@ -24,20 +26,7 @@ export function useChatPanelComposerHelpers({
   }, [locale]);
 
   const formatAttachmentSize = useCallback((bytes: number): string => {
-    const normalized = Number(bytes || 0);
-    if (!Number.isFinite(normalized) || normalized <= 0) {
-      return "0 B";
-    }
-
-    if (normalized < 1024) {
-      return `${Math.round(normalized)} B`;
-    }
-
-    if (normalized < 1024 * 1024) {
-      return `${(normalized / 1024).toFixed(1)} KB`;
-    }
-
-    return `${(normalized / (1024 * 1024)).toFixed(1)} MB`;
+    return formatAttachmentSizeValue(bytes);
   }, []);
 
   const insertMentionToComposer = useCallback((userName: string) => {
@@ -46,27 +35,11 @@ export function useChatPanelComposerHelpers({
       return;
     }
 
-    const current = String(chatText || "");
-    const separator = current.length === 0 || /\s$/.test(current) ? "" : " ";
-    onSetChatText(`${current}${separator}@${normalizedUserName} `);
+    onSetChatText(applyMentionToText(chatText, normalizedUserName));
   }, [chatText, onSetChatText]);
 
   const insertQuoteToComposer = useCallback((_userName: string, text: string) => {
-    const normalizedText = String(text || "").replace(/\r/g, "").trim();
-    if (!normalizedText) {
-      return;
-    }
-
-    const quoteSource = normalizedText.length > 280 ? `${normalizedText.slice(0, 277)}...` : normalizedText;
-    const quotedLines = quoteSource
-      .split("\n")
-      .slice(0, 4)
-      .map((line) => `> ${String(line || "").trim() || "..."}`)
-      .join("\n");
-
-    const current = String(chatText || "");
-    const separator = current.trim().length > 0 ? "\n\n" : "";
-    onSetChatText(`${current}${separator}${quotedLines}\n`);
+    onSetChatText(applyQuoteToText(chatText, text));
   }, [chatText, onSetChatText]);
 
   return {

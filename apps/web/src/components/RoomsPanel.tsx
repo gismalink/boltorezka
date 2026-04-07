@@ -1,3 +1,5 @@
+// Компонент панели комнат: отображает дерево категорий/каналов,
+// счетчики непрочитанного и действия администрирования комнаты.
 import { useCallback, useEffect, useState } from "react";
 import type { Room } from "../domain";
 import { RoomsCategoryBlock } from "./roomsPanel/RoomsCategoryBlock";

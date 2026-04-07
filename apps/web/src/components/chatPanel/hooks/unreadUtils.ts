@@ -1,3 +1,4 @@
+// Утилиты непрочитанного: исключение своих сообщений и расчет эффективного unread.
 import type { Message } from "../../../domain";
 
 const normalizeId = (value: string | null | undefined): string => String(value || "").trim();

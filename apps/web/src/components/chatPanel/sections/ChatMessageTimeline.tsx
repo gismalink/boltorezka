@@ -1,7 +1,10 @@
+// Секционный компонент таймлайна сообщений: отвечает за рендер сообщений,
+// контекстное меню и визуальные разделители (дата/непрочитанные).
 import { useEffect, useMemo, useState, type MouseEvent as ReactMouseEvent, type ReactNode, type RefObject } from "react";
 import type { ChatMessageViewModel } from "../../../utils/chatMessageViewModel";
 import { CHAT_AGENT_IDS, chatAgentMessageId } from "../../../constants/chatAgentSemantics";
 import { Button } from "../../uicomponents";
+import { formatDateSeparatorLabel, shouldShowDateDivider } from "./chatTimelineUtils";
 
 const INITIAL_TIMELINE_RENDER_COUNT = 180;
 const TIMELINE_RENDER_INCREMENT = 120;
@@ -266,31 +269,6 @@ const extractFirstLinkPreview = (value: string): { href: string; host: string; p
   }
 };
 
-const toLocalDateKey = (value: string): string => {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return "";
-  }
-
-  return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
-};
-
-const formatDateSeparatorLabel = (value: string, locale: string): string => {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return "";
-  }
-
-  const currentYear = new Date().getFullYear();
-  const includeYear = date.getFullYear() !== currentYear;
-  return date.toLocaleDateString(locale, {
-    weekday: "short",
-    day: "2-digit",
-    month: "long",
-    ...(includeYear ? { year: "numeric" } : {})
-  });
-};
-
 export function ChatMessageTimeline({
   t,
   locale,
@@ -548,9 +526,7 @@ export function ChatMessageTimeline({
       ) : null}
       {visibleMessageViewModels.map((messageVm, index) => {
         const previousMessageVm = index > 0 ? visibleMessageViewModels[index - 1] : null;
-        const currentDateKey = toLocalDateKey(messageVm.createdAt);
-        const previousDateKey = previousMessageVm ? toLocalDateKey(previousMessageVm.createdAt) : "";
-        const showDateDivider = Boolean(currentDateKey) && currentDateKey !== previousDateKey;
+        const showDateDivider = shouldShowDateDivider(previousMessageVm?.createdAt || null, messageVm.createdAt);
         const dateDividerLabel = showDateDivider ? formatDateSeparatorLabel(messageVm.createdAt, locale) : "";
         const attachmentImageUrls = messageVm.attachmentImageUrls;
         const attachmentFiles = messageVm.attachmentFiles;

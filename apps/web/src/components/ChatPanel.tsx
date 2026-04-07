@@ -1,4 +1,5 @@
-// Purpose: presentation-only chat panel with message timeline, composer, and message-level UI actions.
+// Главный компонент чата: координирует состояния панелей, тем, поиска,
+// непрочитанного и рендер секций таймлайна/композера/оверлеев.
 import { ClipboardEvent, FormEvent, KeyboardEvent, RefObject, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Message, RoomTopic } from "../domain";
 import { buildChatMessageViewModels } from "../utils/chatMessageViewModel";
