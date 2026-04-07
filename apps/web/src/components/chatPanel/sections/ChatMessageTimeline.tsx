@@ -16,7 +16,9 @@ type ChatMessageTimelineProps = {
   hasActiveRoom: boolean;
   hasTopics: boolean;
   activeTopicId: string | null;
+  messagesHasMore: boolean;
   loadingOlderMessages: boolean;
+  onLoadOlderMessages: () => void;
   chatLogRef: RefObject<HTMLDivElement>;
   messageViewModels: ChatMessageViewModel[];
   pinnedByMessageId: Record<string, boolean>;
@@ -275,7 +277,9 @@ export function ChatMessageTimeline({
   hasActiveRoom,
   hasTopics,
   activeTopicId,
+  messagesHasMore,
   loadingOlderMessages,
+  onLoadOlderMessages,
   chatLogRef,
   messageViewModels,
   pinnedByMessageId,
@@ -512,7 +516,26 @@ export function ChatMessageTimeline({
       aria-relevant="additions text"
       data-agent-id={CHAT_AGENT_IDS.timeline}
     >
-      {loadingOlderMessages ? <div className="chat-history-loading muted">{t("chat.loading")}</div> : null}
+      {hasActiveRoom ? (
+        <div className="chat-history-status-row" role="status" aria-live="polite">
+          {messagesHasMore ? (
+            loadingOlderMessages ? (
+              <div className="chat-history-loading muted">{t("chat.loading")}</div>
+            ) : (
+              <Button
+                type="button"
+                className="secondary tiny"
+                onClick={onLoadOlderMessages}
+                disabled={loadingOlderMessages}
+              >
+                Загрузить более ранние сообщения
+              </Button>
+            )
+          ) : messageViewModels.length > 0 ? (
+            <div className="chat-history-start muted">Начало истории чата</div>
+          ) : null}
+        </div>
+      ) : null}
       {hasActiveRoom && !hasTopics ? (
         <div className="chat-empty-state">
           <p className="chat-empty-state-title">{t("chat.emptyTopicsTitle")}</p>

@@ -28,11 +28,7 @@ export function useChatTopLazyLoad({
 
     lastScrollTopRef.current = chatLogNode.scrollTop;
 
-    const maybeLoadOlder = (allowSynthetic = false) => {
-      if (!allowSynthetic) {
-        return;
-      }
-
+    const maybeLoadOlder = () => {
       const currentTop = chatLogNode.scrollTop;
       const isScrollingUp = currentTop <= lastScrollTopRef.current;
       lastScrollTopRef.current = currentTop;
@@ -67,13 +63,13 @@ export function useChatTopLazyLoad({
         return;
       }
 
-      maybeLoadOlder(true);
+      maybeLoadOlder();
     };
 
     const maybeLoadOnShortTimeline = () => {
       const almostNoOverflow = chatLogNode.scrollHeight <= chatLogNode.clientHeight + 24;
       if (almostNoOverflow || chatLogNode.scrollTop <= 16) {
-        maybeLoadOlder(true);
+        maybeLoadOlder();
       }
     };
 

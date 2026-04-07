@@ -1511,6 +1511,20 @@ pre {
   background: color-mix(in srgb, var(--pixel-panel) 88%, #000 12%);
 }
 
+.chat-history-status-row {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  margin: 0 auto var(--space-sm);
+  width: fit-content;
+}
+
+.chat-history-start {
+  padding: 2px 8px;
+  border: var(--border-thin) solid color-mix(in srgb, var(--pixel-border) 70%, var(--pixel-neon-cyan) 30%);
+  background: color-mix(in srgb, var(--pixel-panel) 88%, #000 12%);
+}
+
 .chat-date-divider {
   margin: 10px auto 6px;
   width: fit-content;

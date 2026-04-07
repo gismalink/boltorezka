@@ -662,7 +662,9 @@ export function ChatPanel({
         hasActiveRoom={hasActiveRoom}
         hasTopics={hasTopics}
         activeTopicId={activeTopicId}
+        messagesHasMore={messagesHasMore}
         loadingOlderMessages={loadingOlderMessages}
+        onLoadOlderMessages={onLoadOlderMessages}
         chatLogRef={chatLogRef}
         messageViewModels={messageViewModels}
         pinnedByMessageId={pinnedByMessageId}
