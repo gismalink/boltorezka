@@ -11,6 +11,8 @@
     "check:required": "bash ./scripts/verify-required.sh",
     "check:docs-links": "node ./scripts/verify-doc-links.mjs",
     "check:agent-semantics": "node ./scripts/verify-agent-semantics-contract.mjs",
+    "check:agent-semantics:strict": "VERIFY_AGENT_SEMANTICS_STRICT=1 node ./scripts/verify-agent-semantics-contract.mjs",
+    "check:agent-semantics:baseline:update": "node ./scripts/verify-agent-semantics-contract.mjs --update-baseline",
     "check:decorative-icons": "node ./scripts/verify-decorative-icons.mjs",
     "check:api-types": "npm --prefix apps/api run typecheck",
     "web:install": "npm --prefix apps/web install",

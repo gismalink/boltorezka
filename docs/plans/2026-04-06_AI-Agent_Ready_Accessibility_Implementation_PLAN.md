@@ -31,7 +31,7 @@ Scope: Внедрение подхода accessibility tree-first для web и 
 - [x] Зафиксировать mapping на платформы:
 	- ARIA/data-attributes для web,
 	- desktop-electron renderer: тот же semantic contract, что и web.
-- [ ] Запретить неполные интерактивные элементы без `identifier` и состояния (`value/state`) для всех экранов (добавлен verify-gate для interactive `data-agent-id` controls: `scripts/verify-agent-semantics-contract.mjs`; полный coverage по non-agent interactive ещё в работе).
+- [x] Запретить неполные интерактивные элементы без `identifier` и состояния (`value/state`) для всех экранов (глобальный verify-ratchet: `scripts/verify-agent-semantics-contract.mjs` проверяет все interactive controls; новые нарушения блокируются, legacy-долг зафиксирован в `scripts/verify-agent-semantics-baseline.json`).
 
 ### 2.2 Screen Context и Navigation Model
 
@@ -112,6 +112,7 @@ Scope: Внедрение подхода accessibility tree-first для web и 
 - Добавлен verify-gate semantic contract в основной `check` pipeline: `npm run check:agent-semantics` (скрипт `scripts/verify-agent-semantics-contract.mjs`) валидирует interactive controls с `data-agent-id` на наличие `data-agent-state/value`.
 - Начат cross-screen decorative cleanup вне chat-only scope: в `roomsPanel/RoomRow` все status/media icon nodes переведены в явный decorative режим (`aria-hidden="true"`) и исключены из assistive tree noise.
 - Добавлен verify-gate decorative cleanup в основной `check` pipeline: `npm run check:decorative-icons` (скрипт `scripts/verify-decorative-icons.mjs`) валидирует, что `<i className=...>` иконки скрыты из accessibility tree через `aria-hidden="true"`.
+- Semantic contract gate расширен до global coverage по всем interactive controls (`button/input/select/textarea/a`) с ratchet-моделью: baseline legacy-нарушений зафиксирован, новые неполные элементы блокируются в `npm run check`.
 
 ## 7) Evidence Artifact (test)
 
