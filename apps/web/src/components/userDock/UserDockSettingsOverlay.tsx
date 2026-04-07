@@ -189,12 +189,18 @@ export function UserDockSettingsOverlay({
           aria-modal={inlineSettingsMode ? undefined : "true"}
           aria-label={t("settings.title")}
           data-agent-id="settings.user-modal"
+          data-agent-state="open"
         >
         <div className="user-settings-sidebar grid min-w-0 content-start gap-3">
           <div className="voice-preferences-kicker">{t("settings.title")}</div>
           <label className="desktop:hidden grid gap-1">
             <span className="muted">{t("settings.title")}</span>
-            <select value={userSettingsTab} onChange={(event) => onSetUserSettingsTab(event.target.value as typeof userSettingsTab)}>
+            <select
+              value={userSettingsTab}
+              onChange={(event) => onSetUserSettingsTab(event.target.value as typeof userSettingsTab)}
+              data-agent-id="settings.user-modal.tab.select"
+              data-agent-value={userSettingsTab}
+            >
               {userSettingsTabOptions.map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
@@ -207,6 +213,8 @@ export function UserDockSettingsOverlay({
               type="button"
               className={`secondary user-settings-tab-btn justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${userSettingsTab === "profile" ? "user-settings-tab-btn-active" : ""}`}
               onClick={() => onSetUserSettingsTab("profile")}
+              data-agent-id="settings.user-modal.tab.profile"
+              data-agent-state={userSettingsTab === "profile" ? "active" : "inactive"}
             >
               {t("settings.tabProfile")}
             </button>
@@ -214,6 +222,8 @@ export function UserDockSettingsOverlay({
               type="button"
               className={`secondary user-settings-tab-btn justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${userSettingsTab === "sound" ? "user-settings-tab-btn-active" : ""}`}
               onClick={() => onSetUserSettingsTab("sound")}
+              data-agent-id="settings.user-modal.tab.sound"
+              data-agent-state={userSettingsTab === "sound" ? "active" : "inactive"}
             >
               {t("settings.tabSound")}
             </button>
@@ -221,6 +231,8 @@ export function UserDockSettingsOverlay({
               type="button"
               className={`secondary user-settings-tab-btn justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${userSettingsTab === "camera" ? "user-settings-tab-btn-active" : ""}`}
               onClick={() => onSetUserSettingsTab("camera")}
+              data-agent-id="settings.user-modal.tab.camera"
+              data-agent-state={userSettingsTab === "camera" ? "active" : "inactive"}
             >
               {t("settings.tabCamera")}
             </button>
@@ -228,6 +240,8 @@ export function UserDockSettingsOverlay({
               type="button"
               className={`secondary user-settings-tab-btn justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${userSettingsTab === "server_sounds" ? "user-settings-tab-btn-active" : ""}`}
               onClick={() => onSetUserSettingsTab("server_sounds")}
+              data-agent-id="settings.user-modal.tab.server-sounds"
+              data-agent-state={userSettingsTab === "server_sounds" ? "active" : "inactive"}
             >
               {t("settings.tabServerSounds")}
             </button>
@@ -240,7 +254,7 @@ export function UserDockSettingsOverlay({
           </div>
 
           {userSettingsTab === "profile" ? (
-            <div className="grid gap-4">
+            <div className="grid gap-4" data-agent-id="settings.user-modal.profile.section">
               <div className="grid gap-3">
                 <h3 className="subheading">{t("settings.profileSection")}</h3>
                 <label className="grid gap-[var(--space-md)]">
@@ -277,6 +291,9 @@ export function UserDockSettingsOverlay({
                         setIsEditingName(false);
                       }}
                       onChange={(event) => onSetProfileNameDraft(event.target.value)}
+                      data-agent-id="settings.user-modal.profile.display-name"
+                      data-agent-value={profileNameDraft}
+                      data-agent-state={isEditingName ? "editing" : "idle"}
                     />
                     {isEditingName ? (
                       <button
@@ -357,6 +374,8 @@ export function UserDockSettingsOverlay({
                   className="secondary"
                   disabled={deleteAccountPending}
                   onClick={() => setDeleteConfirmOpen(true)}
+                  data-agent-id="settings.user-modal.delete-open"
+                  data-agent-state={deleteAccountPending ? "pending" : "ready"}
                 >
                   {deleteAccountPending ? t("settings.accountDeletePending") : t("settings.accountDeleteAction")}
                 </button>
@@ -731,6 +750,7 @@ export function UserDockSettingsOverlay({
                 }
               }}
               data-agent-id="settings.user-modal.delete-confirm"
+              data-agent-state="open"
             >
               <section
                 className="card w-full max-w-[520px] p-5"

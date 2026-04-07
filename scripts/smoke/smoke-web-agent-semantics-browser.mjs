@@ -210,6 +210,10 @@ async function main() {
         await page.locator('[data-agent-id="settings.user-modal.open"]').first().click();
         checks.push(await requireVisible(page, '[data-agent-id="settings.user-modal"]', "settings.user-modal"));
         checks.push(await requireVisible(page, '[data-agent-id="settings.user-modal.close"]', "settings.user-modal.close"));
+        checks.push(await requireVisible(page, '[data-agent-id="settings.user-modal.tab.profile"]', "settings.user-modal.tab.profile"));
+        checks.push(await requireVisible(page, '[data-agent-id="settings.user-modal.profile.section"]', "settings.user-modal.profile.section"));
+        checks.push(await requireVisible(page, '[data-agent-id="settings.user-modal.profile.display-name"]', "settings.user-modal.profile.display-name"));
+        checks.push(await requireVisible(page, '[data-agent-id="settings.user-modal.delete-open"]', "settings.user-modal.delete-open"));
         await page.locator('[data-agent-id="settings.user-modal.close"]').first().click();
       }
     }
