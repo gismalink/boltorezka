@@ -43,7 +43,14 @@ export function useChatPanelReadState({
     messageId: string;
   } | null>(null);
 
-  const autoMarkReadInFlightRef = useRef<Record<string, number>>({});
+  const autoMarkReadInFlightRef = useRef<Record<string, string>>({});
+  const lastAutoMarkedMessageIdByTopicRef = useRef<Record<string, string>>({});
+  const autoMarkReadRafRef = useRef<number | null>(null);
+  const oversizedMessageBoundaryProgressRef = useRef<Record<string, {
+    seenTop: boolean;
+    seenBottom: boolean;
+    lastEdge: "top" | "bottom" | null;
+  }>>({});
   const entryUnreadCountByTopicRef = useRef<Record<string, number>>({});
   const entryUnreadRoomIdRef = useRef<string>("");
   const unreadEntryTopicRef = useRef<string>("");
@@ -267,6 +274,7 @@ export function useChatPanelReadState({
     entryUnreadRoomIdRef.current = normalizedRoomId;
     unreadEntryTopicRef.current = "";
     unreadDividerScrolledTopicRef.current = "";
+    oversizedMessageBoundaryProgressRef.current = {};
     setEntryUnreadDivider(null);
   }, [roomId]);
 
@@ -284,6 +292,7 @@ export function useChatPanelReadState({
     unreadEntryTopicRef.current = normalizedTopicId;
     unreadDividerScrolledTopicRef.current = "";
     unreadBackfillAttemptsByTopicRef.current[normalizedTopicId] = 0;
+    oversizedMessageBoundaryProgressRef.current = {};
     setEntryUnreadDivider(null);
 
     const activeTopic = topics.find((topic) => String(topic.id || "").trim() === normalizedTopicId);
@@ -421,6 +430,11 @@ export function useChatPanelReadState({
     return () => {
       unreadEntryTopicRef.current = "";
       unreadDividerScrolledTopicRef.current = "";
+      oversizedMessageBoundaryProgressRef.current = {};
+      if (autoMarkReadRafRef.current !== null) {
+        window.cancelAnimationFrame(autoMarkReadRafRef.current);
+        autoMarkReadRafRef.current = null;
+      }
     };
   }, []);
 
@@ -442,43 +456,178 @@ export function useChatPanelReadState({
       return;
     }
 
-    const topicUnread = Math.max(0, Number(topic.unreadCount || 0));
-    if (topicUnread === 0) {
+    const effectiveTopicUnread = Math.max(0, Number(getTopicUnreadCount(topic) || 0));
+    if (effectiveTopicUnread <= 0) {
       return;
     }
 
-    const inflightUnread = autoMarkReadInFlightRef.current[normalizedTopicId] || 0;
-    if (inflightUnread >= topicUnread) {
+    if (!isMessageSetAlignedWithActiveContext()) {
       return;
     }
 
-    autoMarkReadInFlightRef.current[normalizedTopicId] = topicUnread;
-    let disposed = false;
+    const chatContainer = chatLogRef.current;
+    if (!chatContainer) {
+      return;
+    }
 
-    void api.markTopicRead(normalizedToken, normalizedTopicId)
-      .then(() => {
-        if (disposed) {
-          return;
+    const markFullyVisibleUnreadMessages = () => {
+      const latestTopic = topics.find((item) => String(item.id || "").trim() === normalizedTopicId);
+      if (!latestTopic) {
+        return;
+      }
+
+      const latestUnreadCount = Math.max(0, Number(getTopicUnreadCount(latestTopic) || 0));
+      if (latestUnreadCount <= 0) {
+        return;
+      }
+
+      const firstUnreadIndex = Math.max(0, messages.length - latestUnreadCount);
+      if (firstUnreadIndex >= messages.length) {
+        return;
+      }
+
+      const containerRect = chatContainer.getBoundingClientRect();
+      let candidateMessageId = "";
+      let candidateMessageIndex = -1;
+      let candidateUnreadCount = latestUnreadCount;
+
+      const boundaryStateKey = (messageId: string) => `${normalizedTopicId}:${messageId}`;
+
+      for (let index = firstUnreadIndex; index < messages.length; index += 1) {
+        const message = messages[index];
+        const messageId = String(message.id || "").trim();
+        if (!messageId) {
+          break;
         }
 
-        setTopicUnreadOverrideById((prev) => ({
-          ...prev,
-          [normalizedTopicId]: {
-            unreadCount: 0,
-            sourceUnreadCount: topicUnread
+        const selectorMessageId = (typeof CSS !== "undefined" && typeof CSS.escape === "function")
+          ? CSS.escape(messageId)
+          : messageId;
+        const element = chatContainer.querySelector<HTMLElement>(`[data-message-id="${selectorMessageId}"]`);
+        if (!element) {
+          break;
+        }
+
+        const messageRect = element.getBoundingClientRect();
+        const fullyVisible = messageRect.top >= containerRect.top && messageRect.bottom <= containerRect.bottom;
+
+        let qualifiesAsRead = fullyVisible;
+        if (!qualifiesAsRead && messageRect.height > containerRect.height) {
+          const progressKey = boundaryStateKey(messageId);
+          const progress = oversizedMessageBoundaryProgressRef.current[progressKey] || {
+            seenTop: false,
+            seenBottom: false,
+            lastEdge: null
+          };
+
+          const topEdgeVisible = messageRect.top >= containerRect.top && messageRect.top <= containerRect.bottom;
+          const bottomEdgeVisible = messageRect.bottom >= containerRect.top && messageRect.bottom <= containerRect.bottom;
+
+          if (topEdgeVisible && progress.lastEdge !== "top") {
+            progress.seenTop = true;
+            progress.lastEdge = "top";
           }
-        }));
-      })
-      .finally(() => {
-        if (autoMarkReadInFlightRef.current[normalizedTopicId] === topicUnread) {
-          delete autoMarkReadInFlightRef.current[normalizedTopicId];
+
+          if (bottomEdgeVisible && progress.lastEdge !== "bottom") {
+            progress.seenBottom = true;
+            progress.lastEdge = "bottom";
+          }
+
+          oversizedMessageBoundaryProgressRef.current[progressKey] = progress;
+          qualifiesAsRead = progress.seenTop && progress.seenBottom;
         }
+
+        if (!qualifiesAsRead) {
+          break;
+        }
+
+        candidateMessageId = messageId;
+        candidateMessageIndex = index;
+        candidateUnreadCount = Math.max(0, latestUnreadCount - (index - firstUnreadIndex + 1));
+      }
+
+      if (!candidateMessageId || candidateMessageIndex < 0) {
+        return;
+      }
+
+      if (lastAutoMarkedMessageIdByTopicRef.current[normalizedTopicId] === candidateMessageId) {
+        return;
+      }
+
+      if (autoMarkReadInFlightRef.current[normalizedTopicId]) {
+        return;
+      }
+
+      const sourceUnreadCountSnapshot = Math.max(0, Number(latestTopic.unreadCount || 0));
+
+      setTopicUnreadOverrideById((prev) => ({
+        ...prev,
+        [normalizedTopicId]: {
+          unreadCount: candidateUnreadCount,
+          sourceUnreadCount: sourceUnreadCountSnapshot
+        }
+      }));
+      entryUnreadCountByTopicRef.current[normalizedTopicId] = candidateUnreadCount;
+      lastAutoMarkedMessageIdByTopicRef.current[normalizedTopicId] = candidateMessageId;
+
+      autoMarkReadInFlightRef.current[normalizedTopicId] = candidateMessageId;
+
+      void api.markTopicRead(normalizedToken, normalizedTopicId, { lastReadMessageId: candidateMessageId })
+        .catch(() => {
+          // Optimistic unread decay keeps UI responsive; server truth will reconcile.
+        })
+        .finally(() => {
+          if (autoMarkReadInFlightRef.current[normalizedTopicId] === candidateMessageId) {
+            delete autoMarkReadInFlightRef.current[normalizedTopicId];
+          }
+
+          if (autoMarkReadRafRef.current !== null) {
+            window.cancelAnimationFrame(autoMarkReadRafRef.current);
+          }
+
+          autoMarkReadRafRef.current = window.requestAnimationFrame(() => {
+            autoMarkReadRafRef.current = null;
+            markFullyVisibleUnreadMessages();
+          });
+        });
+    };
+
+    const scheduleViewportReadCheck = () => {
+      if (autoMarkReadRafRef.current !== null) {
+        return;
+      }
+
+      autoMarkReadRafRef.current = window.requestAnimationFrame(() => {
+        autoMarkReadRafRef.current = null;
+        markFullyVisibleUnreadMessages();
       });
+    };
+
+    scheduleViewportReadCheck();
+    chatContainer.addEventListener("scroll", scheduleViewportReadCheck, { passive: true });
+    window.addEventListener("resize", scheduleViewportReadCheck);
 
     return () => {
-      disposed = true;
+      chatContainer.removeEventListener("scroll", scheduleViewportReadCheck);
+      window.removeEventListener("resize", scheduleViewportReadCheck);
+      if (autoMarkReadRafRef.current !== null) {
+        window.cancelAnimationFrame(autoMarkReadRafRef.current);
+        autoMarkReadRafRef.current = null;
+      }
     };
-  }, [activeTopicId, authToken, roomId, topics]);
+  }, [activeTopicId, authToken, chatLogRef, getTopicUnreadCount, isMessageSetAlignedWithActiveContext, messages, roomId, topics]);
+
+  useEffect(() => {
+    const normalizedTopicId = String(activeTopicId || "").trim();
+    if (!normalizedTopicId) {
+      return;
+    }
+
+    const topic = topics.find((item) => String(item.id || "").trim() === normalizedTopicId);
+    if (!topic || Math.max(0, Number(getTopicUnreadCount(topic) || 0)) === 0) {
+      delete lastAutoMarkedMessageIdByTopicRef.current[normalizedTopicId];
+    }
+  }, [activeTopicId, getTopicUnreadCount, topics]);
 
   return {
     getTopicUnreadCount,
