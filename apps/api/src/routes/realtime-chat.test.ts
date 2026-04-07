@@ -1,6 +1,15 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { handleChatDelete, handleChatEdit, handleChatSend } from "./realtime-chat.js";
+import {
+  handleChatDelete,
+  handleChatEdit,
+  handleChatPin,
+  handleChatReactionAdd,
+  handleChatReactionRemove,
+  handleChatSend,
+  handleChatUnpin,
+  setTopicMessageOpsLoaderForTests
+} from "./realtime-chat.js";
 
 test("realtime-chat: send rejects when user has no active room", async () => {
   let noRoomNackCalls = 0;
@@ -42,6 +51,7 @@ test("realtime-chat: duplicate idempotency key returns cached payload and duplic
   const sentPayloads: unknown[] = [];
   let ackMeta: Record<string, unknown> | null = null;
   let ackMetrics: string[] = [];
+  let queryCalls = 0;
 
   await handleChatSend({
     connection: {} as any,
@@ -84,8 +94,38 @@ test("realtime-chat: duplicate idempotency key returns cached payload and duplic
       }),
     redisDel: async () => 0,
     redisSetEx: async () => "OK",
-    dbQuery: async () => {
-      throw new Error("dbQuery should not be called on duplicate idempotency key");
+    dbQuery: async <T = unknown>() => {
+      queryCalls += 1;
+      if (queryCalls === 1) {
+        return {
+          rowCount: 1,
+          rows: [
+            {
+              id: "room-1",
+              slug: "general",
+              is_public: true,
+              is_hidden: false,
+              server_id: null,
+              nsfw: false,
+              is_readonly: false,
+              slowmode_seconds: 0
+            }
+          ] as unknown as T[]
+        };
+      }
+
+      if (queryCalls === 2) {
+        return {
+          rowCount: 1,
+          rows: [
+            {
+              role: "user"
+            }
+          ] as unknown as T[]
+        };
+      }
+
+      throw new Error("dbQuery should not be called after room resolve on duplicate idempotency key");
     },
     incomingIdempotencyKey: "idem-1"
   });
@@ -93,6 +133,7 @@ test("realtime-chat: duplicate idempotency key returns cached payload and duplic
   const resolvedMeta = ackMeta as { duplicate?: boolean; idempotencyKey?: string } | null;
 
   assert.equal(sentPayloads.length, 1);
+  assert.equal(queryCalls, 2);
   assert.equal(resolvedMeta?.duplicate, true);
   assert.equal(resolvedMeta?.idempotencyKey, "idem-1");
   assert.deepEqual(ackMetrics, ["chat_idempotency_hit"]);
@@ -135,6 +176,24 @@ test("realtime-chat: chat.edit rejects editing message from another user", async
     redisSetEx: async () => "OK",
     dbQuery: async <T = unknown>() => {
       queryCalls += 1;
+      if (queryCalls === 1) {
+        return {
+          rowCount: 1,
+          rows: [
+            {
+              id: "room-1",
+              slug: "general",
+              is_public: true,
+              is_hidden: false,
+              server_id: null,
+              nsfw: false,
+              is_readonly: false,
+              slowmode_seconds: 0
+            }
+          ] as unknown as T[]
+        };
+      }
+
       return {
         rowCount: 1,
         rows: [
@@ -149,7 +208,7 @@ test("realtime-chat: chat.edit rejects editing message from another user", async
     }
   });
 
-  assert.equal(queryCalls, 1);
+  assert.equal(queryCalls, 2);
   assert.equal(forbiddenMessage, "You can edit only your own messages");
 });
 
@@ -207,4 +266,156 @@ test("realtime-chat: chat.delete rejects expired delete window and increments na
 
   assert.equal(nackCode, "DeleteWindowExpired");
   assert.equal(nackMetricCalls, 1);
+});
+
+function createTopicMutationParams(overrides: Record<string, unknown> = {}) {
+  return {
+    connection: {} as any,
+    state: { userId: "u1", userName: "Alice", roomId: "room-1", roomSlug: "general" },
+    payload: { messageId: "m-1", emoji: "👍" },
+    requestId: "req-1",
+    eventType: "chat.pin",
+    normalizeRequestId: (value: unknown) => (typeof value === "string" ? value : null),
+    getPayloadString: (payload: any, key: string) => {
+      const value = payload?.[key];
+      return typeof value === "string" ? value : null;
+    },
+    sendNoActiveRoomNack: () => {},
+    sendValidationNack: () => {},
+    sendForbiddenNack: () => {},
+    sendNack: () => {},
+    incrementMetric: async () => {},
+    sendJson: () => {},
+    sendAckWithMetrics: () => {},
+    broadcastRoom: () => {},
+    buildChatMessageEnvelope: () => ({}),
+    buildChatEditedEnvelope: () => ({}),
+    buildChatDeletedEnvelope: () => ({}),
+    buildChatTypingEnvelope: () => ({}),
+    redisGet: async () => null,
+    redisDel: async () => 0,
+    redisSetEx: async () => "OK",
+    dbQuery: async () => ({ rowCount: 0, rows: [] }),
+    ...overrides
+  };
+}
+
+test("realtime-chat: chat.pin broadcasts and acks on success", async () => {
+  const broadcasts: Array<{ roomId: string; envelope: any }> = [];
+  let ackMeta: Record<string, unknown> | null = null;
+
+  setTopicMessageOpsLoaderForTests(async () => ({
+    setTopicMessagePinned: async () => ({
+      room: { id: "room-1", slug: "general" },
+      topic: { id: "topic-1", slug: "main" },
+      messageId: "m-1",
+      pinned: true
+    }),
+    setTopicMessageReaction: async () => {
+      throw new Error("not_used");
+    }
+  }));
+
+  try {
+    await handleChatPin(createTopicMutationParams({
+      eventType: "chat.pin",
+      sendAckWithMetrics: (_socket: unknown, _requestId: string | null, _eventType: string, meta?: Record<string, unknown>) => {
+        ackMeta = meta || null;
+      },
+      broadcastRoom: (roomId: string, envelope: any) => {
+        broadcasts.push({ roomId, envelope });
+      }
+    }) as any);
+  } finally {
+    setTopicMessageOpsLoaderForTests(null);
+  }
+
+  assert.equal(broadcasts.length, 1);
+  assert.equal(broadcasts[0]?.roomId, "room-1");
+  assert.equal(broadcasts[0]?.envelope?.type, "chat.message.pinned");
+  assert.equal(broadcasts[0]?.envelope?.payload?.messageId, "m-1");
+  assert.deepEqual(ackMeta, { messageId: "m-1", topicId: "topic-1" });
+});
+
+test("realtime-chat: chat.unpin maps forbidden domain error to nack", async () => {
+  let nackCode: string | null = null;
+
+  setTopicMessageOpsLoaderForTests(async () => ({
+    setTopicMessagePinned: async () => {
+      throw new Error("forbidden_topic_manage");
+    },
+    setTopicMessageReaction: async () => {
+      throw new Error("not_used");
+    }
+  }));
+
+  try {
+    await handleChatUnpin(createTopicMutationParams({
+      eventType: "chat.unpin",
+      sendNack: (_socket: unknown, _requestId: string | null, _eventType: string, code: string) => {
+        nackCode = code;
+      }
+    }) as any);
+  } finally {
+    setTopicMessageOpsLoaderForTests(null);
+  }
+
+  assert.equal(nackCode, "Forbidden");
+});
+
+test("realtime-chat: chat.reaction.add validates payload", async () => {
+  let validationMessage: string | null = null;
+
+  await handleChatReactionAdd(createTopicMutationParams({
+    eventType: "chat.reaction.add",
+    payload: { messageId: "m-1" },
+    sendValidationNack: (_socket: unknown, _requestId: string | null, _eventType: string, message: string) => {
+      validationMessage = message;
+    }
+  }) as any);
+
+  assert.equal(validationMessage, "messageId and emoji are required");
+});
+
+test("realtime-chat: chat.reaction.remove broadcasts and acks on success", async () => {
+  const broadcasts: Array<{ roomId: string; envelope: any }> = [];
+  let ackMeta: Record<string, unknown> | null = null;
+
+  setTopicMessageOpsLoaderForTests(async () => ({
+    setTopicMessagePinned: async () => {
+      throw new Error("not_used");
+    },
+    setTopicMessageReaction: async () => ({
+      room: { id: "room-1", slug: "general" },
+      topic: { id: "topic-1", slug: "main" },
+      messageId: "m-1",
+      emoji: "👍",
+      userId: "u1",
+      active: false
+    })
+  }));
+
+  try {
+    await handleChatReactionRemove(createTopicMutationParams({
+      eventType: "chat.reaction.remove",
+      sendAckWithMetrics: (_socket: unknown, _requestId: string | null, _eventType: string, meta?: Record<string, unknown>) => {
+        ackMeta = meta || null;
+      },
+      broadcastRoom: (roomId: string, envelope: any) => {
+        broadcasts.push({ roomId, envelope });
+      }
+    }) as any);
+  } finally {
+    setTopicMessageOpsLoaderForTests(null);
+  }
+
+  assert.equal(broadcasts.length, 1);
+  assert.equal(broadcasts[0]?.envelope?.type, "chat.message.reaction.changed");
+  assert.equal(broadcasts[0]?.envelope?.payload?.active, false);
+  assert.deepEqual(ackMeta, {
+    messageId: "m-1",
+    topicId: "topic-1",
+    emoji: "👍",
+    active: false
+  });
 });

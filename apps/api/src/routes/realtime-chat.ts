@@ -2,7 +2,7 @@ import type { WebSocket } from "ws";
 import { isServerAgeConfirmed } from "../services/age-verification-service.js";
 import { resolveActiveServerMute } from "../services/server-mute-service.js";
 
-let topicMessageOpsPromise: Promise<{
+type TopicMessageOps = {
   setTopicMessagePinned: (input: { messageId: string; userId: string; pinned: boolean }) => Promise<{
     room: { id: string; slug: string };
     topic: { id: string; slug: string };
@@ -17,9 +17,24 @@ let topicMessageOpsPromise: Promise<{
     userId: string;
     active: boolean;
   }>;
-}> | null = null;
+};
+
+let topicMessageOpsPromise: Promise<TopicMessageOps> | null = null;
+let topicMessageOpsLoaderForTests: (() => Promise<TopicMessageOps>) | null = null;
+
+export function setTopicMessageOpsLoaderForTests(loader: (() => Promise<TopicMessageOps>) | null): void {
+  topicMessageOpsLoaderForTests = loader;
+  topicMessageOpsPromise = null;
+}
 
 async function getTopicMessageOps() {
+  if (topicMessageOpsLoaderForTests) {
+    if (!topicMessageOpsPromise) {
+      topicMessageOpsPromise = topicMessageOpsLoaderForTests();
+    }
+    return topicMessageOpsPromise;
+  }
+
   if (!topicMessageOpsPromise) {
     topicMessageOpsPromise = import("../services/room-topic-messages-service.js").then((module) => ({
       setTopicMessagePinned: module.setTopicMessagePinned,
