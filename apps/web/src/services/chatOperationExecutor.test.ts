@@ -162,4 +162,72 @@ describe("chatOperationExecutor", () => {
       expect(result.error).toBe(error);
     }
   });
+
+  it("executeChatOperationWithError preserves ws business error without http fallback", async () => {
+    const error = new Error("chat.report:MessageAlreadyReported:already_reported");
+    const sendWsEventAwaitAck = vi.fn(async () => {
+      throw error;
+    });
+    const httpRequest = vi.fn(async () => "ok");
+
+    const result = await executeChatOperationWithError({
+      policy: CHAT_OPERATION_POLICIES["chat.report"],
+      sendWsEventAwaitAck,
+      payload: { messageId: "m1" },
+      httpRequest
+    });
+
+    expect(result.kind).toBe("failed");
+    if (result.kind === "failed" && "error" in result) {
+      expect(result.error).toBe(error);
+    }
+    expect(httpRequest).not.toHaveBeenCalled();
+  });
+
+  it("executeChatOperationWithError preserves http fallback error after transient ws failure", async () => {
+    const httpError = Object.assign(new Error("already reported"), { code: "MessageAlreadyReported" });
+    const sendWsEventAwaitAck = vi.fn(async () => {
+      throw new Error("chat.report:ack_timeout");
+    });
+
+    const result = await executeChatOperationWithError({
+      policy: CHAT_OPERATION_POLICIES["chat.report"],
+      sendWsEventAwaitAck,
+      payload: { messageId: "m1" },
+      httpRequest: async () => {
+        throw httpError;
+      }
+    });
+
+    expect(result.kind).toBe("failed");
+    if (result.kind === "failed" && "error" in result) {
+      expect(result.error).toBe(httpError);
+    }
+  });
+
+  it("executeChatOperationWithError preserves ws-only ack error", async () => {
+    const error = new Error("chat.sample:Forbidden");
+    const sendWsEventAwaitAck = vi.fn(async () => {
+      throw error;
+    });
+
+    const result = await executeChatOperationWithError({
+      policy: {
+        transport: "ws-only",
+        ws: {
+          eventType: "chat.sample",
+          withIdempotency: true,
+          maxRetries: 1
+        }
+      },
+      sendWsEvent: vi.fn(() => "unused"),
+      sendWsEventAwaitAck,
+      payload: { id: "1" }
+    });
+
+    expect(result.kind).toBe("failed");
+    if (result.kind === "failed" && "error" in result) {
+      expect(result.error).toBe(error);
+    }
+  });
 });
