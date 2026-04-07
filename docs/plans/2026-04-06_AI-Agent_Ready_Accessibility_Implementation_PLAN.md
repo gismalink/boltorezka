@@ -104,7 +104,7 @@ Scope: Внедрение подхода accessibility tree-first для web и 
 - Расширена modal/profile семантика в chat pilot (`data-agent-id` для profile modal) и уменьшен decorative noise в accessibility tree (tab glyphs/unread divider visual tokens скрыты для assistive tree).
 - Добавлены deterministic `data-agent-id` и dialog semantics для user settings/delete-confirm и room member profile modal.
 - Browser smoke `smoke:web:agent-semantics:browser` расширен на optional путь открытия user settings modal через user dock controls.
-- Pilot smoke в `test` закрыт PASS: `smoke:web:agent-semantics:evidence` подтвердил browser gate (`verified selectors: 12`, SHA `5e57007`), см. `docs/status/test-results/2026-04-06.md`.
+- Pilot smoke в `test` закрыт PASS: `smoke:web:agent-semantics:evidence` подтвердил browser gate (`verified selectors: 12`, SHA `9e67a0c`), см. `docs/status/test-results/2026-04-06.md`.
 - Финализирована settings/profile semantic completeness в pilot scope: добавлены deterministic `data-agent-id` + `data-agent-state/value` для user settings tabs/profile/delete flow и room member profile modal.
 - Усилен browser smoke gate для settings/profile ветки: проверяется не только видимость, но и наличие обязательных `data-agent-state/value` для ключевых контролов.
 
