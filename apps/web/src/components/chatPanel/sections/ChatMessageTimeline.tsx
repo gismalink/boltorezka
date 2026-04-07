@@ -9,6 +9,7 @@ const TIMELINE_EXPAND_SCROLL_TOP_THRESHOLD = 220;
 
 type ChatMessageTimelineProps = {
   t: (key: string) => string;
+  locale: string;
   hasActiveRoom: boolean;
   hasTopics: boolean;
   activeTopicId: string | null;
@@ -265,8 +266,34 @@ const extractFirstLinkPreview = (value: string): { href: string; host: string; p
   }
 };
 
+const toLocalDateKey = (value: string): string => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+};
+
+const formatDateSeparatorLabel = (value: string, locale: string): string => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  const currentYear = new Date().getFullYear();
+  const includeYear = date.getFullYear() !== currentYear;
+  return date.toLocaleDateString(locale, {
+    weekday: "short",
+    day: "2-digit",
+    month: "long",
+    ...(includeYear ? { year: "numeric" } : {})
+  });
+};
+
 export function ChatMessageTimeline({
   t,
+  locale,
   hasActiveRoom,
   hasTopics,
   activeTopicId,
@@ -519,7 +546,12 @@ export function ChatMessageTimeline({
           <p className="chat-empty-state-hint">{t("chat.emptyMessagesHint")}</p>
         </div>
       ) : null}
-      {visibleMessageViewModels.map((messageVm) => {
+      {visibleMessageViewModels.map((messageVm, index) => {
+        const previousMessageVm = index > 0 ? visibleMessageViewModels[index - 1] : null;
+        const currentDateKey = toLocalDateKey(messageVm.createdAt);
+        const previousDateKey = previousMessageVm ? toLocalDateKey(previousMessageVm.createdAt) : "";
+        const showDateDivider = Boolean(currentDateKey) && currentDateKey !== previousDateKey;
+        const dateDividerLabel = showDateDivider ? formatDateSeparatorLabel(messageVm.createdAt, locale) : "";
         const attachmentImageUrls = messageVm.attachmentImageUrls;
         const attachmentFiles = messageVm.attachmentFiles;
         const isOwn = messageVm.isOwn;
@@ -554,6 +586,11 @@ export function ChatMessageTimeline({
         const selectedQuoteText = contextMenuOpen ? getSelectedQuoteTextForMessage(messageVm.id) : "";
         return (
           <div key={messageVm.id}>
+          {showDateDivider ? (
+            <div className="chat-date-divider" role="separator" aria-label={dateDividerLabel || "Date separator"}>
+              <span>{dateDividerLabel}</span>
+            </div>
+          ) : null}
           {unreadDividerVisible && unreadDividerMessageId === messageVm.id ? (
             <div
               className={`chat-unread-divider ${unreadDividerVisible ? "chat-unread-divider-visible" : ""}`}

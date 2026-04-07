@@ -1511,6 +1511,21 @@ pre {
   background: color-mix(in srgb, var(--pixel-panel) 88%, #000 12%);
 }
 
+.chat-date-divider {
+  margin: 10px auto 6px;
+  width: fit-content;
+  max-width: calc(100% - 12px);
+  padding: 1px 10px;
+  border: var(--border-thin) solid color-mix(in srgb, var(--pixel-border) 78%, var(--pixel-neon-cyan) 22%);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--pixel-panel) 82%, #000 18%);
+  text-align: center;
+  font-size: calc(var(--font-size-sm) - 0.1rem);
+  letter-spacing: 0.04em;
+  color: color-mix(in srgb, var(--pixel-text-muted) 80%, var(--pixel-text) 20%);
+  pointer-events: none;
+}
+
 .chat-unread-divider {
   margin: 8px auto 6px;
   width: fit-content;

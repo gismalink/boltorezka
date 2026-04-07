@@ -650,6 +650,7 @@ export function ChatPanel({
       </div>
       <ChatMessageTimeline
         t={t}
+        locale={locale}
         hasActiveRoom={hasActiveRoom}
         hasTopics={hasTopics}
         activeTopicId={activeTopicId}
