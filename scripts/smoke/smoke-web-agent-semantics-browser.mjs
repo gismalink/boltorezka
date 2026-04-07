@@ -200,8 +200,12 @@ async function main() {
     checks.push(await requireVisible(page, '[data-agent-id="chat.search.scope"]', "chat.search.scope"));
     checks.push(await requireVisible(page, '[data-agent-id="chat.search.filters"]', "chat.search.filters"));
 
-    if (await maybeVisible(page, '[data-agent-id="userdock.voice-settings.toggle"]')) {
-      await page.locator('[data-agent-id="userdock.voice-settings.toggle"]').first().click();
+    const voiceSettingsToggle = page.locator('[data-agent-id="userdock.voice-settings.toggle"]').first();
+    const canOpenVoiceSettings = (await voiceSettingsToggle.count()) > 0
+      && await voiceSettingsToggle.isVisible()
+      && await voiceSettingsToggle.isEnabled();
+    if (canOpenVoiceSettings) {
+      await voiceSettingsToggle.click();
       if (await maybeVisible(page, '[data-agent-id="settings.user-modal.open"]')) {
         await page.locator('[data-agent-id="settings.user-modal.open"]').first().click();
         checks.push(await requireVisible(page, '[data-agent-id="settings.user-modal"]', "settings.user-modal"));
