@@ -71,12 +71,44 @@ type TopicMessageOps = {
   }>;
 };
 
+type NotificationInboxOps = {
+  emitMentionInboxEvents: (input: {
+    actorUserId: string;
+    actorUserName: string;
+    roomId: string;
+    roomSlug: string;
+    topicId: string | null;
+    topicSlug: string | null;
+    messageId: string;
+    text: string;
+    mentionUserIds?: string[];
+  }) => Promise<void>;
+  emitReplyInboxEvent: (input: {
+    actorUserId: string;
+    actorUserName: string;
+    targetUserId: string | null;
+    roomId: string;
+    roomSlug: string;
+    topicId: string | null;
+    topicSlug: string | null;
+    messageId: string;
+    text: string;
+  }) => Promise<void>;
+};
+
 let topicMessageOpsPromise: Promise<TopicMessageOps> | null = null;
 let topicMessageOpsLoaderForTests: (() => Promise<TopicMessageOps>) | null = null;
+let notificationInboxOpsPromise: Promise<NotificationInboxOps> | null = null;
+let notificationInboxOpsLoaderForTests: (() => Promise<NotificationInboxOps>) | null = null;
 
 export function setTopicMessageOpsLoaderForTests(loader: (() => Promise<TopicMessageOps>) | null): void {
   topicMessageOpsLoaderForTests = loader;
   topicMessageOpsPromise = null;
+}
+
+export function setNotificationInboxOpsLoaderForTests(loader: (() => Promise<NotificationInboxOps>) | null): void {
+  notificationInboxOpsLoaderForTests = loader;
+  notificationInboxOpsPromise = null;
 }
 
 async function getTopicMessageOps() {
@@ -97,6 +129,24 @@ async function getTopicMessageOps() {
     }));
   }
   return topicMessageOpsPromise;
+}
+
+async function getNotificationInboxOps() {
+  if (notificationInboxOpsLoaderForTests) {
+    if (!notificationInboxOpsPromise) {
+      notificationInboxOpsPromise = notificationInboxOpsLoaderForTests();
+    }
+    return notificationInboxOpsPromise;
+  }
+
+  if (!notificationInboxOpsPromise) {
+    notificationInboxOpsPromise = import("../services/notification-inbox-service.js").then((module) => ({
+      emitMentionInboxEvents: module.emitMentionInboxEvents,
+      emitReplyInboxEvent: module.emitReplyInboxEvent
+    }));
+  }
+
+  return notificationInboxOpsPromise;
 }
 
 type SocketState = {
@@ -436,6 +486,14 @@ export async function handleChatSend(
 
   const topicId = normalizeRequestId(getPayloadString(payload, "topicId", 128));
   const replyToMessageId = normalizeRequestId(getPayloadString(payload, "replyToMessageId", 128));
+  const mentionUserIdsRaw = Array.isArray((payload as Record<string, unknown>)?.mentionUserIds)
+    ? (payload as Record<string, unknown>).mentionUserIds
+    : [];
+  const mentionUserIds = mentionUserIdsRaw
+    .filter((value): value is string => typeof value === "string")
+    .map((value) => value.trim())
+    .filter((value) => value.length > 0)
+    .slice(0, 100);
 
   if (replyToMessageId && !topicId) {
     sendValidationNack(connection, requestId, eventType, "topicId is required for replyToMessageId");
@@ -473,6 +531,7 @@ export async function handleChatSend(
   if (topicId) {
     try {
       const { createTopicMessage, replyTopicMessage } = await getTopicMessageOps();
+      const { emitMentionInboxEvents, emitReplyInboxEvent } = await getNotificationInboxOps();
       const result = replyToMessageId
         ? await replyTopicMessage({
             messageId: replyToMessageId,
@@ -484,6 +543,32 @@ export async function handleChatSend(
             userId: state.userId,
             text
           });
+
+      if (replyToMessageId) {
+        await emitReplyInboxEvent({
+          actorUserId: state.userId,
+          actorUserName: result.message.user_name,
+          targetUserId: result.message.reply_to_user_id || null,
+          roomId: result.room.id,
+          roomSlug: result.room.slug,
+          topicId: result.topic.id,
+          topicSlug: result.topic.slug,
+          messageId: result.message.id,
+          text: result.message.text
+        });
+      }
+
+      await emitMentionInboxEvents({
+        actorUserId: state.userId,
+        actorUserName: result.message.user_name,
+        roomId: result.room.id,
+        roomSlug: result.room.slug,
+        topicId: result.topic.id,
+        topicSlug: result.topic.slug,
+        messageId: result.message.id,
+        text: result.message.text,
+        mentionUserIds
+      });
 
       const replyPayload = result.message.reply_to_message_id
         ? {

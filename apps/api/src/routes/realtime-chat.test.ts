@@ -9,6 +9,7 @@ import {
   handleChatReport,
   handleChatSend,
   handleChatUnpin,
+  setNotificationInboxOpsLoaderForTests,
   setTopicMessageOpsLoaderForTests
 } from "./realtime-chat.js";
 
@@ -132,6 +133,8 @@ test("realtime-chat: duplicate idempotency key returns cached payload and duplic
 test("realtime-chat: topic reply send uses topic service and broadcasts topic payload", async () => {
   const broadcasts: Array<{ roomId: string; envelope: any }> = [];
   let ackMeta: Record<string, unknown> | null = null;
+  const mentionCalls: Array<Record<string, unknown>> = [];
+  const replyCalls: Array<Record<string, unknown>> = [];
 
   setTopicMessageOpsLoaderForTests(async () => ({
     createTopicMessage: async () => {
@@ -165,6 +168,14 @@ test("realtime-chat: topic reply send uses topic service and broadcasts topic pa
       throw new Error("not_used");
     }
   }));
+  setNotificationInboxOpsLoaderForTests(async () => ({
+    emitMentionInboxEvents: async (input) => {
+      mentionCalls.push(input as unknown as Record<string, unknown>);
+    },
+    emitReplyInboxEvent: async (input) => {
+      replyCalls.push(input as unknown as Record<string, unknown>);
+    }
+  }));
 
   try {
     await handleChatSend({
@@ -174,6 +185,7 @@ test("realtime-chat: topic reply send uses topic service and broadcasts topic pa
         text: "reply text",
         topicId: "topic-1",
         replyToMessageId: "parent-1",
+        mentionUserIds: ["u3"],
         roomSlug: "general"
       },
       requestId: "req-topic-1",
@@ -218,6 +230,7 @@ test("realtime-chat: topic reply send uses topic service and broadcasts topic pa
       })
     });
   } finally {
+    setNotificationInboxOpsLoaderForTests(null);
     setTopicMessageOpsLoaderForTests(null);
   }
 
@@ -230,6 +243,10 @@ test("realtime-chat: topic reply send uses topic service and broadcasts topic pa
     topicId: "topic-1",
     replyToMessageId: "parent-1"
   });
+  assert.equal(replyCalls.length, 1);
+  assert.equal(replyCalls[0]?.targetUserId, "u2");
+  assert.equal(mentionCalls.length, 1);
+  assert.deepEqual(mentionCalls[0]?.mentionUserIds, ["u3"]);
 });
 
 test("realtime-chat: chat.edit rejects editing message from another user", async () => {
