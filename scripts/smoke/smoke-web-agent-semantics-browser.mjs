@@ -42,6 +42,31 @@ async function maybeVisible(page, selector) {
   return locator.isVisible();
 }
 
+async function dismissBlockingOverlays(page) {
+  const voiceOverlay = page.locator(".voice-preferences-overlay").first();
+  const hasVoiceOverlay = (await voiceOverlay.count()) > 0;
+  if (!hasVoiceOverlay) {
+    return;
+  }
+
+  if (!(await voiceOverlay.isVisible().catch(() => false))) {
+    return;
+  }
+
+  await page.keyboard.press("Escape").catch(() => undefined);
+  await page.waitForTimeout(120);
+
+  if (!(await voiceOverlay.isVisible().catch(() => false))) {
+    return;
+  }
+
+  const dismissButton = voiceOverlay.locator("button").first();
+  if ((await dismissButton.count()) > 0) {
+    await dismissButton.click({ force: true }).catch(() => undefined);
+    await page.waitForTimeout(120);
+  }
+}
+
 async function bootstrapSessionCookie(page) {
   const response = await page.request.post(`${baseUrl}/v1/auth/refresh`, {
     headers: {
@@ -131,6 +156,7 @@ async function main() {
     }
 
     await gotoWithRetries(page);
+    await dismissBlockingOverlays(page);
 
     const checks = [];
     checks.push(await requireVisible(page, '[data-agent-id="chat.panel"]', "chat.panel"));
@@ -160,6 +186,7 @@ async function main() {
       await page.keyboard.press("Escape");
     }
 
+    await dismissBlockingOverlays(page);
     await page.locator('[data-agent-id="chat.topic-navigation.search-toggle"]').first().click();
     checks.push(await requireVisible(page, '[data-agent-id="chat.search.panel"]', "chat.search.panel"));
     checks.push(await requireVisible(page, '[data-agent-id="chat.search.query"]', "chat.search.query"));
