@@ -73,6 +73,42 @@ type ChatReportResult =
   | { kind: "http"; value: void }
   | { kind: "failed"; error: unknown };
 
+function extractBusinessCodeFromErrorMessage(message: string): string {
+  const parts = String(message || "")
+    .split(":")
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  if (parts.length < 2) {
+    return "";
+  }
+
+  const candidate = parts[1] || "";
+  return /^[A-Z][A-Za-z0-9_]*$/.test(candidate) ? candidate : "";
+}
+
+function normalizeBusinessErrorCode(error: unknown): unknown {
+  const explicitCode = String((error as { code?: string } | null)?.code || "").trim();
+  if (explicitCode) {
+    return error;
+  }
+
+  const message = String((error as { message?: string } | null)?.message || "").trim();
+  const parsedCode = extractBusinessCodeFromErrorMessage(message);
+  if (!parsedCode) {
+    return error;
+  }
+
+  if (error && typeof error === "object") {
+    return Object.assign(error as Record<string, unknown>, { code: parsedCode });
+  }
+
+  return {
+    code: parsedCode,
+    message
+  };
+}
+
 export async function runChatEdit({
   authToken,
   messageId,
@@ -208,6 +244,13 @@ export async function runChatReport({
 
   if (result.kind === "failed" && !("error" in result)) {
     return { kind: "failed", error: new Error("operation failed") };
+  }
+
+  if (result.kind === "failed") {
+    return {
+      kind: "failed",
+      error: normalizeBusinessErrorCode(result.error)
+    };
   }
 
   return result;

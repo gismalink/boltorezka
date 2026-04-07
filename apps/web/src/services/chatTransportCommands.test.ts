@@ -175,6 +175,7 @@ describe("chatTransportCommands", () => {
     expect(result.kind).toBe("failed");
     if (result.kind === "failed") {
       expect(result.error).toBe(error);
+      expect((result.error as { code?: string }).code).toBe("MessageAlreadyReported");
     }
     expect(reportMessageMock).not.toHaveBeenCalled();
   });
