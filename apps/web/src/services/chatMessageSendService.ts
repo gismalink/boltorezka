@@ -64,30 +64,28 @@ export async function sendChatMessage(params: SendChatMessageParams): Promise<Se
       return { kind: "empty" };
     }
 
-    if (activeTopicId) {
-      try {
-        await api.editMessage(authToken, editingMessageId, { text: nextText });
-        return { kind: "sent", mode: "edit" };
-      } catch {
-        return { kind: "server-error" };
-      }
-    }
-
     const requestId = sendWsEvent(
       "chat.edit",
       {
         messageId: editingMessageId,
         text: nextText,
-        roomSlug: chatRoomSlug
+        roomSlug: chatRoomSlug,
+        topicId: activeTopicId || undefined
       },
       { withIdempotency: true, maxRetries: maxChatRetries }
     );
 
-    if (!requestId) {
-      return { kind: "server-error" };
+    if (requestId) {
+      return { kind: "sent", mode: "edit" };
     }
 
-    return { kind: "sent", mode: "edit" };
+    // Fallback keeps edit available when websocket transport is temporarily unavailable.
+    try {
+      await api.editMessage(authToken, editingMessageId, { text: nextText });
+      return { kind: "sent", mode: "edit" };
+    } catch {
+      return { kind: "server-error" };
+    }
   }
 
   let baseText = chatText.trim();
