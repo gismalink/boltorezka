@@ -83,7 +83,10 @@ export class ChatController {
         const olderPage = res.messages
           .map((message) => this.normalizeMessageForRender(message))
           .filter((item) => !existingIds.has(item.id));
-        return trimMessagesInMemory([...olderPage, ...prev]);
+
+        // Keep explicit backward pagination lossless: user is browsing older history,
+        // so dropping freshly loaded older pages makes pagination appear "stuck".
+        return [...olderPage, ...prev];
       });
 
       this.options.setMessagesHasMore(Boolean(res.pagination?.hasMore));
