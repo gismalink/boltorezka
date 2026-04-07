@@ -1,271 +1,61 @@
-import { useAppWorkspacePanelsRuntime } from "./useAppWorkspacePanelsRuntime";
 import { api } from "../../../api";
+import { useAppWorkspacePanelsRuntime } from "./useAppWorkspacePanelsRuntime";
 
 type WorkspacePanelsRuntimeInput = Parameters<typeof useAppWorkspacePanelsRuntime>[0];
+type RoomsPanelInput = WorkspacePanelsRuntimeInput["roomsPanel"];
+type RoomMutePreset = Parameters<RoomsPanelInput["onSetRoomNotificationMutePreset"]>[1];
 
-export function useAppWorkspacePanelsRuntimeInput(params: Record<string, unknown>): WorkspacePanelsRuntimeInput {
-  const p = params as any;
+type WorkspacePanelsRuntimeAdapterInput = {
+  token: string;
+  roomsPanel: Omit<RoomsPanelInput, "onSetRoomNotificationMutePreset">;
+  serverProfileModal: WorkspacePanelsRuntimeInput["serverProfileModal"];
+  chatVideo: WorkspacePanelsRuntimeInput["chatVideo"];
+};
 
+export function useAppWorkspacePanelsRuntimeInput({
+  token,
+  roomsPanel,
+  serverProfileModal,
+  chatVideo
+}: WorkspacePanelsRuntimeAdapterInput): WorkspacePanelsRuntimeInput {
   return {
-      roomsPanel: {
-        t: p.t,
-        canCreateRooms: p.canCreateRooms,
-        canManageAudioQuality: p.canManageAudioQuality,
-        roomsTree: p.roomsTree,
-        roomsTreeLoading: p.roomsTreeLoading,
-        roomsTreeBootstrapPending: p.roomsTreeBootstrapPending,
-        roomSlug: p.roomSlug,
-        chatRoomSlug: p.chatRoomSlug,
-        screenShareOwnerByRoomSlug: p.screenShareOwnerByRoomSlug,
-        roomUnreadBySlug: p.roomUnreadBySlug,
-        roomMentionUnreadBySlug: p.roomMentionUnreadBySlug,
-        serverUnreadCount: p.serverUnreadCount,
-        currentUserId: p.currentUserIdOrNull,
-        liveRoomMembersBySlug: p.roomsPresenceBySlug,
-        liveRoomMemberDetailsBySlug: p.roomsPresenceDetailsBySlug,
-        memberPreferencesByUserId: p.memberPreferencesByUserId,
-        voiceMicStateByUserIdInCurrentRoom: p.voiceMicStateByUserIdInCurrentRoom,
-        effectiveVoiceCameraEnabledByUserIdInCurrentRoom: p.effectiveVoiceCameraEnabledByUserIdInCurrentRoom,
-        voiceAudioOutputMutedByUserIdInCurrentRoom: p.voiceAudioOutputMutedByUserIdInCurrentRoom,
-        audioMuted: p.audioMuted,
-        voiceRtcStateByUserIdInCurrentRoom: p.voiceRtcStateByUserIdInCurrentRoom,
-        voiceMediaStatusSummaryByUserIdInCurrentRoom: p.voiceMediaStatusSummaryByUserIdInCurrentRoom,
-        collapsedCategoryIds: p.collapsedCategoryIds,
-        uncategorizedRooms: p.uncategorizedRooms,
-        archivedRooms: p.archivedRooms,
-        newCategoryTitle: p.newCategoryTitle,
-        categoryPopupOpen: p.categoryPopupOpen,
-        newRoomTitle: p.newRoomTitle,
-        newRoomKind: p.newRoomKind,
-        newRoomCategoryId: p.newRoomCategoryId,
-        channelPopupOpen: p.channelPopupOpen,
-        categorySettingsPopupOpenId: p.categorySettingsPopupOpenId,
-        editingCategoryTitle: p.editingCategoryTitle,
-        channelSettingsPopupOpenId: p.channelSettingsPopupOpenId,
-        editingRoomTitle: p.editingRoomTitle,
-        editingRoomKind: p.editingRoomKind,
-        editingRoomCategoryId: p.editingRoomCategoryId,
-        editingRoomNsfw: p.editingRoomNsfw,
-        editingRoomHidden: p.editingRoomHidden,
-        editingRoomAudioQualitySetting: p.editingRoomAudioQualitySetting,
-        categoryPopupRef: p.categoryPopupRef,
-        channelPopupRef: p.channelPopupRef,
-        setCategoryPopupOpen: p.setCategoryPopupOpen,
-        setChannelPopupOpen: p.setChannelPopupOpen,
-        setNewCategoryTitle: p.setNewCategoryTitle,
-        setNewRoomTitle: p.setNewRoomTitle,
-        setNewRoomKind: p.setNewRoomKind,
-        setNewRoomCategoryId: p.setNewRoomCategoryId,
-        setEditingCategoryTitle: p.setEditingCategoryTitle,
-        setEditingRoomTitle: p.setEditingRoomTitle,
-        setEditingRoomKind: p.setEditingRoomKind,
-        setEditingRoomCategoryId: p.setEditingRoomCategoryId,
-        setEditingRoomNsfw: p.setEditingRoomNsfw,
-        setEditingRoomHidden: p.setEditingRoomHidden,
-        setEditingRoomAudioQualitySetting: p.setEditingRoomAudioQualitySetting,
-        createCategory: p.createCategory,
-        createRoom: p.createRoom,
-        openCreateChannelPopup: p.openCreateChannelPopup,
-        openCategorySettingsPopup: p.openCategorySettingsPopup,
-        openChannelSettingsPopup: p.openChannelSettingsPopup,
-        saveCategorySettings: p.saveCategorySettings,
-        moveCategory: p.moveCategory,
-        deleteCategory: p.deleteCategory,
-        saveChannelSettings: p.saveChannelSettings,
-        moveChannel: p.moveChannel,
-        clearChannelMessages: p.clearChannelMessages,
-        deleteChannel: p.deleteChannel,
-        restoreChannel: p.restoreChannel,
-        deleteChannelPermanent: p.deleteChannelPermanent,
-        onToggleCategoryCollapsed: p.toggleCategoryCollapsed,
-        onJoinRoom: p.joinRoom,
-        onOpenRoomChat: p.openRoomChat,
-        onKickRoomMember: p.kickRoomMember,
-        onMoveRoomMember: p.moveRoomMember,
-        onSaveMemberPreference: p.saveMemberPreference,
-        onLoadServerMemberProfile: p.loadServerMemberProfile,
-        onLoadServerRoles: p.loadServerRoles,
-        onSetServerMemberCustomRoles: p.handleSetServerMemberCustomRoles,
-        onSetServerMemberHiddenRoomAccess: p.handleSetServerMemberHiddenRoomAccess,
-        onSetRoomNotificationMutePreset: async (roomId: string, preset: "1h" | "8h" | "24h" | "forever" | "off") => {
-          const token = String(p.token || "").trim();
-          const normalizedRoomId = String(roomId || "").trim();
-          if (!token || !normalizedRoomId) {
-            return;
+    roomsPanel: {
+      ...roomsPanel,
+      onSetRoomNotificationMutePreset: async (roomId: string, preset: RoomMutePreset) => {
+        const normalizedToken = String(token || "").trim();
+        const normalizedRoomId = String(roomId || "").trim();
+        if (!normalizedToken || !normalizedRoomId) {
+          return;
+        }
+
+        const buildMuteUntilIso = (hours: number | "forever"): string => {
+          const now = new Date();
+          if (hours === "forever") {
+            const forever = new Date(now);
+            forever.setFullYear(forever.getFullYear() + 20);
+            return forever.toISOString();
           }
 
-          const buildMuteUntilIso = (hours: number | "forever"): string => {
-            const now = new Date();
-            if (hours === "forever") {
-              const forever = new Date(now);
-              forever.setFullYear(forever.getFullYear() + 20);
-              return forever.toISOString();
-            }
+          const next = new Date(now.getTime() + hours * 60 * 60 * 1000);
+          return next.toISOString();
+        };
 
-            const next = new Date(now.getTime() + hours * 60 * 60 * 1000);
-            return next.toISOString();
-          };
+        const muteUntil = preset === "off"
+          ? null
+          : preset === "forever"
+            ? buildMuteUntilIso("forever")
+            : buildMuteUntilIso(Number(preset.replace("h", "")));
 
-          const muteUntil = preset === "off"
-            ? null
-            : preset === "forever"
-              ? buildMuteUntilIso("forever")
-              : buildMuteUntilIso(Number(preset.replace("h", "")));
-
-          await api.updateNotificationSettings(token, {
-            scopeType: "room",
-            roomId: normalizedRoomId,
-            mode: "all",
-            allowCriticalMentions: true,
-            muteUntil
-          });
-        }
-      },
-      serverProfileModal: {
-        user: p.user,
-        currentServer: p.currentServer,
-        canManageUsers: p.canManageUsers,
-        canPromote: p.canPromote,
-        canManageServerControlPlane: p.canManageServerControlPlane,
-        canViewTelemetry: p.canViewTelemetry,
-        canManageAudioQuality: p.canManageAudioQuality,
-        serverMenuTab: p.serverMenuTab,
-        serverAudioQuality: p.serverAudioQuality,
-        serverAudioQualitySaving: p.serverAudioQualitySaving,
-        serverChatImagePolicy: p.serverChatImagePolicy,
-        serverVideoEffectType: p.serverVideoEffectType,
-        serverVideoResolution: p.serverVideoResolution,
-        serverVideoFps: p.serverVideoFps,
-        serverScreenShareResolution: p.serverScreenShareResolution,
-        serverVideoPixelFxStrength: p.serverVideoPixelFxStrength,
-        serverVideoPixelFxPixelSize: p.serverVideoPixelFxPixelSize,
-        serverVideoPixelFxGridThickness: p.serverVideoPixelFxGridThickness,
-        serverVideoAsciiCellSize: p.serverVideoAsciiCellSize,
-        serverVideoAsciiContrast: p.serverVideoAsciiContrast,
-        serverVideoAsciiColor: p.serverVideoAsciiColor,
-        normalizedServerVideoWindowMinWidth: p.normalizedServerVideoWindowMinWidth,
-        normalizedServerVideoWindowMaxWidth: p.normalizedServerVideoWindowMaxWidth,
-        adminUsers: p.adminUsers,
-        adminServers: p.adminServers,
-        adminServersLoading: p.adminServersLoading,
-        selectedAdminServerId: p.selectedAdminServerId,
-        adminServerOverview: p.adminServerOverview,
-        adminServerOverviewLoading: p.adminServerOverviewLoading,
-        currentServerId: p.currentServerId,
-        servers: p.servers,
-        serverMembers: p.serverMembers,
-        serverMembersLoading: p.serverMembersLoading,
-        lastInviteUrl: p.lastInviteUrl,
-        eventLog: p.eventLog,
-        telemetrySummary: p.telemetrySummary,
-        callStatus: p.callStatus,
-        lastCallPeer: p.lastCallPeer,
-        roomVoiceConnected: p.roomVoiceConnected,
-        callEventLog: p.callEventLog,
-        serverVideoPreviewStream: p.serverVideoPreviewStream,
-        setAppMenuOpen: p.setAppMenuOpen,
-        setServerMenuTab: p.setServerMenuTab,
-        promote: p.promote,
-        demote: p.demote,
-        setUserBan: p.setUserBan,
-        setUserAccessState: p.setUserAccessState,
-        deleteUser: p.deleteUser,
-        forceDeleteUserNow: p.forceDeleteUserNow,
-        setSelectedAdminServerId: p.setSelectedAdminServerId,
-        handleToggleAdminServerBlocked: p.handleToggleAdminServerBlocked,
-        handleDeleteAdminServer: p.handleDeleteAdminServer,
-        handleCreateServerInvite: p.handleCreateServerInvite,
-        handleCopyInviteUrl: p.handleCopyInviteUrl,
-        handleServerChange: p.handleServerChange,
-        handleRenameCurrentServer: p.handleRenameCurrentServer,
-        handleLeaveCurrentServer: p.handleLeaveCurrentServer,
-        handleDeleteCurrentServer: p.handleDeleteCurrentServer,
-        handleRemoveServerMember: p.handleRemoveServerMember,
-        handleBanServerMember: p.handleBanServerMember,
-        handleUnbanServerMember: p.handleUnbanServerMember,
-        handleTransferServerOwnership: p.handleTransferServerOwnership,
-        loadServerMemberProfile: p.loadServerMemberProfile,
-        loadServerRoles: p.loadServerRoles,
-        handleCreateServerRole: p.handleCreateServerRole,
-        handleRenameServerRole: p.handleRenameServerRole,
-        handleDeleteServerRole: p.handleDeleteServerRole,
-        handleSetServerMemberCustomRoles: p.handleSetServerMemberCustomRoles,
-        handleSetServerMemberHiddenRoomAccess: p.handleSetServerMemberHiddenRoomAccess,
-        loadTelemetrySummary: p.loadTelemetrySummary,
-        setServerAudioQualityValue: p.setServerAudioQualityValue,
-        setServerVideoEffectType: p.setServerVideoEffectType,
-        setServerVideoResolution: p.setServerVideoResolution,
-        setServerVideoFps: p.setServerVideoFps,
-        setServerScreenShareResolution: p.setServerScreenShareResolution,
-        setServerVideoPixelFxStrength: p.setServerVideoPixelFxStrength,
-        setServerVideoPixelFxPixelSize: p.setServerVideoPixelFxPixelSize,
-        setServerVideoPixelFxGridThickness: p.setServerVideoPixelFxGridThickness,
-        setServerVideoAsciiCellSize: p.setServerVideoAsciiCellSize,
-        setServerVideoAsciiContrast: p.setServerVideoAsciiContrast,
-        setServerVideoAsciiColor: p.setServerVideoAsciiColor,
-        setBoundedServerVideoWindowMinWidth: p.setBoundedServerVideoWindowMinWidth,
-        setBoundedServerVideoWindowMaxWidth: p.setBoundedServerVideoWindowMaxWidth,
-        creatingInvite: p.creatingInvite
-      },
-      chatVideo: {
-        t: p.t,
-        locale: p.locale,
-        currentServerId: p.currentServerId,
-        serviceToken: p.serviceToken,
-        chatRoomSlug: p.chatRoomSlug,
-        activeChatRoom: p.activeChatRoom,
-        chatTopics: p.chatTopics,
-        activeChatTopicId: p.activeChatTopicId,
-        setActiveChatTopicId: p.setActiveChatTopicId,
-        createTopic: p.createTopic,
-        messages: p.messages,
-        serverMembers: p.serverMembers,
-        user: p.user,
-        messagesHasMore: p.messagesHasMore,
-        loadingOlderMessages: p.loadingOlderMessages,
-        chatText: p.chatText,
-        pendingChatImageDataUrl: p.pendingChatImageDataUrl,
-        pendingChatAttachmentFile: p.pendingChatAttachmentFile,
-        activeChatTypingUsers: p.activeChatTypingUsers,
-        chatLogRef: p.chatLogRef,
-        loadOlderMessages: p.loadOlderMessages,
-        handleSetChatText: p.handleSetChatText,
-        openRoomChat: p.openRoomChat,
-        handleChatPaste: p.handleChatPaste,
-        handleChatInputKeyDown: p.handleChatInputKeyDown,
-        sendMessage: p.sendMessage,
-        selectAttachmentFile: p.selectAttachmentFile,
-        clearPendingAttachment: p.clearPendingAttachment,
-        editingMessageId: p.editingMessageId,
-        replyingToMessageId: p.replyingToMessageId,
-        currentRoomSupportsRtc: p.currentRoomSupportsRtc,
-        videoWindowsVisible: p.videoWindowsVisible,
-        setVideoWindowsVisible: p.setVideoWindowsVisible,
-        setEditingMessageId: p.setEditingMessageId,
-        setReplyingToMessageId: p.setReplyingToMessageId,
-        startEditingMessage: p.startEditingMessage,
-        replyToMessage: p.replyToMessage,
-        cancelReply: p.cancelReply,
-        deleteOwnMessage: p.deleteOwnMessage,
-        reportMessage: p.reportMessage,
-        pinnedByMessageId: p.pinnedByMessageId,
-        reactionsByMessageId: p.reactionsByMessageId,
-        togglePinMessage: p.togglePinMessage,
-        toggleMessageReaction: p.toggleMessageReaction,
-        updateTopic: p.updateTopic,
-        archiveTopic: p.archiveTopic,
-        unarchiveTopic: p.unarchiveTopic,
-        deleteTopic: p.deleteTopic,
-        allowVideoStreaming: p.allowVideoStreaming,
-        cameraEnabled: p.cameraEnabled,
-        localVideoStream: p.localVideoStream,
-        remoteVideoStreamsByUserId: p.remoteVideoStreamsByUserId,
-        effectiveVoiceCameraEnabledByUserIdInCurrentRoom: p.effectiveVoiceCameraEnabledByUserIdInCurrentRoom,
-        remoteVideoLabelsByUserId: p.remoteVideoLabelsByUserId,
-        activeScreenShare: p.activeScreenShare,
-        normalizedServerVideoWindowMinWidth: p.normalizedServerVideoWindowMinWidth,
-        normalizedServerVideoWindowMaxWidth: p.normalizedServerVideoWindowMaxWidth,
-        speakingVideoWindowIds: p.speakingVideoWindowIds
+        await api.updateNotificationSettings(normalizedToken, {
+          scopeType: "room",
+          roomId: normalizedRoomId,
+          mode: "all",
+          allowCriticalMentions: true,
+          muteUntil
+        });
       }
+    },
+    serverProfileModal,
+    chatVideo
   };
 }

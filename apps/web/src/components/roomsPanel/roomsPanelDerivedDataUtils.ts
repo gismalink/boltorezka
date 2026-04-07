@@ -180,7 +180,6 @@ export function buildRoomsPanelDerivedData({
     return sum + Math.max(0, Number(unreadRaw || 0));
   }, 0);
 
-  const categoryUnreadById: Record<string, number> = {};
   const categoryUnreadMutedById: Record<string, number> = {};
   const categoryUnreadUnmutedById: Record<string, number> = {};
   const categoryMentionById: Record<string, number> = {};
@@ -194,14 +193,6 @@ export function buildRoomsPanelDerivedData({
     if (!categoryId) {
       return;
     }
-
-    categoryUnreadById[categoryId] = categoryRooms.reduce((sum, room) => {
-      const slug = String(room.slug || "").trim();
-      if (!slug) {
-        return sum;
-      }
-      return sum + Math.max(0, Number(roomUnreadBySlug[slug] || 0));
-    }, 0);
 
     categoryMentionById[categoryId] = categoryRooms.reduce((sum, room) => {
       const slug = String(room.slug || "").trim();
@@ -248,7 +239,6 @@ export function buildRoomsPanelDerivedData({
     uncategorizedUnreadCount,
     uncategorizedMentionCount,
     outsideRoomsUnreadCount,
-    categoryUnreadById,
     categoryUnreadMutedById,
     categoryUnreadUnmutedById,
     categoryMentionById

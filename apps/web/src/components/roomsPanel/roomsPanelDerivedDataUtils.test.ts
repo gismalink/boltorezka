@@ -17,7 +17,6 @@ describe("roomsPanelDerivedDataUtils", () => {
       liveRoomMemberDetailsBySlug: {}
     });
 
-    expect(result.categoryUnreadById["cat-1"]).toBe(3);
     expect(result.uncategorizedUnreadCount).toBe(2);
     expect(result.uncategorizedMentionCount).toBe(4);
     expect(result.categoryMentionById["cat-1"]).toBe(1);

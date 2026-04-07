@@ -6,6 +6,8 @@ import type { RoomMember } from "./roomMembers";
 import { RoomMemberSettingsPopup } from "./RoomMemberSettingsPopup";
 import { RoomMemberProfileModal } from "./RoomMemberProfileModal";
 import type { ServerMemberProfileDetails } from "./roomMemberSettingsTypes";
+import { useRoomMutePresetState } from "./useRoomMutePresetState";
+import { useRoomSettingsAutosave } from "./useRoomSettingsAutosave";
 
 const ROOM_KIND_ICON_CLASS: Record<RoomKind, string> = {
   text: "bi-hash",
@@ -139,10 +141,6 @@ function RoomRowInner({
   const [serverRolesLoading, setServerRolesLoading] = useState(false);
   const [memberPreferenceDrafts, setMemberPreferenceDrafts] = useState<Record<string, { volume: number; note: string }>>({});
   const [dropTargetActive, setDropTargetActive] = useState(false);
-  const [roomMutePreset, setRoomMutePreset] = useState<"1h" | "8h" | "24h" | "forever" | "off" | null>(null);
-  const [roomMuteSaving, setRoomMuteSaving] = useState(false);
-  const [roomMuteStatusText, setRoomMuteStatusText] = useState("");
-  const roomSettingsAutosaveTimerRef = useRef<number | null>(null);
   const roomSupportsRtc = room.kind !== "text";
   const roomSupportsVideo = room.kind === "text_voice_video";
   const roomHasChatAction = roomSupportsRtc;
@@ -154,6 +152,24 @@ function RoomRowInner({
   const roomHasVoiceState = roomSupportsRtc && room.slug === roomSlug;
   const roomChatActive = activeChatRoomSlug === room.slug;
   const roomIsActive = roomSlug === room.slug || (!roomSupportsRtc && roomChatActive);
+  const { requestRoomSettingsAutosave } = useRoomSettingsAutosave({
+    channelSettingsPopupOpenId,
+    roomId: room.id,
+    onSaveChannelSettings
+  });
+  const {
+    roomMutePreset,
+    roomMuteSaving,
+    roomMuteStatusText,
+    clearRoomMuteStatusText,
+    applyRoomMutePreset
+  } = useRoomMutePresetState({
+    t,
+    roomId: room.id,
+    roomMutePresetValue,
+    onRoomMutePresetChange,
+    onSetRoomNotificationMutePreset
+  });
 
   useEffect(() => {
     const onPointerDown = (event: MouseEvent) => {
@@ -219,64 +235,15 @@ function RoomRowInner({
   }, [canKickMembers, memberMenuUserId, onLoadServerRoles]);
 
   useEffect(() => {
-    setRoomMutePreset(roomMutePresetValue);
-  }, [roomMutePresetValue]);
-
-  useEffect(() => {
     if (channelSettingsPopupOpenId !== room.id) {
       setIsEditingChannelTitle(false);
-      setRoomMuteStatusText("");
+      clearRoomMuteStatusText();
       return;
     }
 
     setEditingChannelTitleInitialValue(editingRoomTitle);
     setIsEditingChannelTitle(false);
   }, [channelSettingsPopupOpenId, editingRoomTitle, room.id]);
-
-  useEffect(() => {
-    return () => {
-      if (roomSettingsAutosaveTimerRef.current) {
-        window.clearTimeout(roomSettingsAutosaveTimerRef.current);
-      }
-    };
-  }, []);
-
-  const requestRoomSettingsAutosave = () => {
-    if (channelSettingsPopupOpenId !== room.id) {
-      return;
-    }
-
-    if (roomSettingsAutosaveTimerRef.current) {
-      window.clearTimeout(roomSettingsAutosaveTimerRef.current);
-    }
-
-    roomSettingsAutosaveTimerRef.current = window.setTimeout(() => {
-      const fakeEvent = { preventDefault: () => {} } as FormEvent;
-      onSaveChannelSettings(fakeEvent);
-      roomSettingsAutosaveTimerRef.current = null;
-    }, 120);
-  };
-
-  const applyRoomMutePreset = async (preset: "1h" | "8h" | "24h" | "forever" | "off") => {
-    if (roomMuteSaving) {
-      return;
-    }
-
-      const nextPreset = roomMutePreset === preset ? "off" : preset;
-
-    setRoomMuteSaving(true);
-    setRoomMuteStatusText("");
-    try {
-        await onSetRoomNotificationMutePreset(room.id, nextPreset);
-        setRoomMutePreset(nextPreset);
-        onRoomMutePresetChange(room.id, nextPreset);
-      setRoomMuteStatusText(t("chat.notificationSaved"));
-    } catch {
-      setRoomMuteStatusText(t("chat.notificationSaveError"));
-    } finally {
-      setRoomMuteSaving(false);
-    }
-  };
 
   const closeMemberMenu = () => {
     setMemberMenuOpenKey(null);
