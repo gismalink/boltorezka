@@ -76,12 +76,12 @@ Scope: Внедрение подхода accessibility tree-first для web и 
 
 ## 4) Acceptance criteria
 
-- [ ] Для пилотных флоу агент проходит сценарии по accessibility tree без обязательного screenshot анализа (код и smoke готовы; требуется прогон на test с токеном).
-- [ ] Для всех интерактивных элементов пилотных экранов заполнены `identifier`, `label`, `hint`, `value/state` (выполнено для chat pilot; нужно финализировать settings/profile).
+- [x] Для пилотных флоу агент проходит сценарии по accessibility tree без обязательного screenshot анализа (`smoke:web:agent-semantics:evidence` PASS в test).
+- [x] Для всех интерактивных элементов пилотных экранов заполнены `identifier`, `label`, `hint`, `value/state` (chat + settings/profile modal scope закрыты).
 - [x] Списки пилотных экранов представлены в явной семантике списка и элементов списка.
 - [ ] Декоративные элементы исключены из дерева доступности, stateful controls отдают актуальный `value/state` (state/value реализованы; cleanup decorative tree остаётся).
 - [x] Каждое действие агента имеет машинно-читаемое подтверждение успеха/ошибки (pilot chat scope).
-- [x] Smoke в `test` подтверждает стабильность agent-ready contract для пилотных флоу (`smoke:web:agent-semantics:evidence` PASS, selectors=12, SHA `064d583`).
+- [x] Smoke в `test` подтверждает стабильность agent-ready contract для пилотных флоу (`smoke:web:agent-semantics:evidence` PASS, selectors=12, SHA `5e57007`).
 
 ## 5) Ограничения выполнения
 
@@ -104,7 +104,8 @@ Scope: Внедрение подхода accessibility tree-first для web и 
 - Расширена modal/profile семантика в chat pilot (`data-agent-id` для profile modal) и уменьшен decorative noise в accessibility tree (tab glyphs/unread divider visual tokens скрыты для assistive tree).
 - Добавлены deterministic `data-agent-id` и dialog semantics для user settings/delete-confirm и room member profile modal.
 - Browser smoke `smoke:web:agent-semantics:browser` расширен на optional путь открытия user settings modal через user dock controls.
-- Pilot smoke в `test` закрыт PASS: `smoke:web:agent-semantics:evidence` подтвердил browser gate (`verified selectors: 12`, SHA `064d583`), см. `docs/status/test-results/2026-04-06.md`.
+- Pilot smoke в `test` закрыт PASS: `smoke:web:agent-semantics:evidence` подтвердил browser gate (`verified selectors: 12`, SHA `5e57007`), см. `docs/status/test-results/2026-04-06.md`.
+- Финализирована settings/profile semantic completeness в pilot scope: добавлены deterministic `data-agent-id` + `data-agent-state/value` для user settings tabs/profile/delete flow и room member profile modal.
 
 ## 7) Evidence Artifact (test)
 
