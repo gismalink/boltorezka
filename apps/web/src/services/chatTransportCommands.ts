@@ -40,6 +40,27 @@ type RunChatDeleteInput = {
   sendWsEventAwaitAck: SendWsEventAwaitAckFn;
 };
 
+type RunChatTogglePinInput = {
+  authToken: string;
+  messageId: string;
+  currentlyPinned: boolean;
+  roomSlug: string;
+  topicId?: string;
+  sendWsEvent: SendWsEventFn;
+  sendWsEventAwaitAck: SendWsEventAwaitAckFn;
+};
+
+type RunChatToggleReactionInput = {
+  authToken: string;
+  messageId: string;
+  emoji: string;
+  currentlyActive: boolean;
+  roomSlug: string;
+  topicId?: string;
+  sendWsEvent: SendWsEventFn;
+  sendWsEventAwaitAck: SendWsEventAwaitAckFn;
+};
+
 export async function runChatEdit({
   authToken,
   messageId,
@@ -92,6 +113,67 @@ export async function runChatDelete({
     },
     httpRequest: async () => {
       await api.deleteMessage(authToken, messageId);
+    }
+  });
+}
+
+export async function runChatTogglePin({
+  authToken,
+  messageId,
+  currentlyPinned,
+  roomSlug,
+  topicId,
+  sendWsEvent,
+  sendWsEventAwaitAck
+}: RunChatTogglePinInput): Promise<ExecuteWsFirstWithHttpFallbackResult<boolean> | ExecuteHttpOnlyResult<boolean>> {
+  return executeChatOperation({
+    policy: currentlyPinned ? CHAT_OPERATION_POLICIES["chat.unpin"] : CHAT_OPERATION_POLICIES["chat.pin"],
+    sendWsEvent,
+    sendWsEventAwaitAck,
+    payload: {
+      messageId,
+      roomSlug,
+      topicId: topicId || undefined
+    },
+    httpRequest: async () => {
+      if (currentlyPinned) {
+        await api.unpinMessage(authToken, messageId);
+        return false;
+      }
+
+      await api.pinMessage(authToken, messageId);
+      return true;
+    }
+  });
+}
+
+export async function runChatToggleReaction({
+  authToken,
+  messageId,
+  emoji,
+  currentlyActive,
+  roomSlug,
+  topicId,
+  sendWsEvent,
+  sendWsEventAwaitAck
+}: RunChatToggleReactionInput): Promise<ChatDeleteResult> {
+  return executeChatOperation({
+    policy: currentlyActive ? CHAT_OPERATION_POLICIES["chat.reaction.remove"] : CHAT_OPERATION_POLICIES["chat.reaction.add"],
+    sendWsEvent,
+    sendWsEventAwaitAck,
+    payload: {
+      messageId,
+      emoji,
+      roomSlug,
+      topicId: topicId || undefined
+    },
+    httpRequest: async () => {
+      if (currentlyActive) {
+        await api.removeMessageReaction(authToken, messageId, emoji);
+        return;
+      }
+
+      await api.addMessageReaction(authToken, messageId, emoji);
     }
   });
 }

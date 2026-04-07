@@ -15,6 +15,7 @@ import type { Message, MessagesCursor, User } from "../../domain";
 import { sendChatMessage, type ChatController } from "../../services";
 import { CHAT_OPERATION_POLICIES, executeChatOperation, executeChatOperationWithError } from "../../services/chatOperationExecutor";
 import { runChatDelete, type SendWsEventAwaitAckFn, type SendWsEventFn } from "../../services/chatTransportCommands";
+import { runChatTogglePin, runChatToggleReaction } from "../../services/chatTransportCommands";
 import {
   compressImageToDataUrl,
   extractImageSourceFromClipboardHtml,
@@ -551,24 +552,14 @@ export function useChatComposerActions({
 
     const currentlyPinned = Boolean(pinnedByMessageId[messageId]);
     void (async () => {
-      const pinResult = await executeChatOperation({
-        policy: currentlyPinned ? CHAT_OPERATION_POLICIES["chat.unpin"] : CHAT_OPERATION_POLICIES["chat.pin"],
+      const pinResult = await runChatTogglePin({
+        authToken,
+        messageId,
+        currentlyPinned,
+        roomSlug: chatRoomSlug,
+        topicId: activeTopicId || undefined,
         sendWsEvent,
-        sendWsEventAwaitAck,
-        payload: {
-          messageId,
-          roomSlug: chatRoomSlug,
-          topicId: activeTopicId || undefined
-        },
-        httpRequest: async () => {
-        if (currentlyPinned) {
-          await api.unpinMessage(authToken, messageId);
-          return false;
-        }
-
-        await api.pinMessage(authToken, messageId);
-        return true;
-        }
+        sendWsEventAwaitAck
       });
 
       if (pinResult.kind === "failed") {
@@ -598,23 +589,15 @@ export function useChatComposerActions({
 
     const currentlyActive = Boolean(reactionsByMessageId[normalizedMessageId]?.[normalizedEmoji]?.reacted);
     void (async () => {
-      const reactionResult = await executeChatOperation({
-        policy: currentlyActive ? CHAT_OPERATION_POLICIES["chat.reaction.remove"] : CHAT_OPERATION_POLICIES["chat.reaction.add"],
+      const reactionResult = await runChatToggleReaction({
+        authToken,
+        messageId: normalizedMessageId,
+        emoji: normalizedEmoji,
+        currentlyActive,
+        roomSlug: chatRoomSlug,
+        topicId: activeTopicId || undefined,
         sendWsEvent,
-        sendWsEventAwaitAck,
-        payload: {
-          messageId: normalizedMessageId,
-          emoji: normalizedEmoji,
-          roomSlug: chatRoomSlug,
-          topicId: activeTopicId || undefined
-        },
-        httpRequest: async () => {
-        if (currentlyActive) {
-          await api.removeMessageReaction(authToken, normalizedMessageId, normalizedEmoji);
-        } else {
-          await api.addMessageReaction(authToken, normalizedMessageId, normalizedEmoji);
-        }
-        }
+        sendWsEventAwaitAck
       });
 
       if (reactionResult.kind === "failed") {
