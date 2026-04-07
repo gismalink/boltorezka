@@ -6,6 +6,7 @@ import {
   type SendWsEventAwaitAckFn,
   type SendWsEventFn
 } from "./chatTransportCommands";
+import { getErrorCode } from "./chatErrorUtils";
 import { extractImageSourceFromClipboardText } from "../utils/chatImagePayload";
 
 type SendChatMessageParams = {
@@ -133,7 +134,7 @@ export async function sendChatMessage(params: SendChatMessageParams): Promise<Se
 
       return { kind: "sent", mode: "upload" };
     } catch (error) {
-      const code = String((error as { code?: string } | null)?.code || "").trim();
+      const code = getErrorCode(error);
       if (code === "UnsupportedMimeType") {
         return { kind: "attachment-unsupported-type" };
       }
@@ -176,7 +177,7 @@ export async function sendChatMessage(params: SendChatMessageParams): Promise<Se
 
       return { kind: "sent", mode: "upload" };
     } catch (error) {
-      const code = String((error as { code?: string } | null)?.code || "").trim();
+      const code = getErrorCode(error);
       if (code === "UnsupportedMimeType") {
         return { kind: "attachment-unsupported-type" };
       }
