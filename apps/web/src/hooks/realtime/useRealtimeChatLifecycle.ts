@@ -559,12 +559,44 @@ export function useRealtimeChatLifecycle({
   }, [messages, chatRoomSlug, activeTopicId]);
 
   const loadOlderMessages = useCallback(async () => {
-    if (!token || !chatRoomSlug || !messagesNextCursor || loadingOlderMessages) {
+    if (!token || !chatRoomSlug || loadingOlderMessages) {
       return;
     }
 
-    await chatController.loadOlderMessages(token, chatRoomSlug, activeTopicId, messagesNextCursor, loadingOlderMessages);
-  }, [token, chatRoomSlug, activeTopicId, messagesNextCursor, loadingOlderMessages, chatController]);
+    const effectiveCursor = messagesNextCursor ?? (() => {
+      if (!Array.isArray(messages) || messages.length === 0) {
+        return null;
+      }
+
+      const oldestMessage = messages.reduce((oldest, current) => {
+        if (current.created_at < oldest.created_at) {
+          return current;
+        }
+
+        if (current.created_at === oldest.created_at && current.id < oldest.id) {
+          return current;
+        }
+
+        return oldest;
+      }, messages[0]);
+
+      if (!oldestMessage?.id || !oldestMessage?.created_at) {
+        return null;
+      }
+
+      return {
+        beforeCreatedAt: oldestMessage.created_at,
+        beforeId: oldestMessage.id
+      };
+    })();
+
+    if (!effectiveCursor) {
+      pushLog("load older skipped: no cursor available");
+      return;
+    }
+
+    await chatController.loadOlderMessages(token, chatRoomSlug, activeTopicId, effectiveCursor, loadingOlderMessages);
+  }, [token, chatRoomSlug, activeTopicId, messagesNextCursor, loadingOlderMessages, chatController, messages, pushLog]);
 
   return {
     loadOlderMessages
