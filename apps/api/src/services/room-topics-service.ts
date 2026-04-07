@@ -238,6 +238,7 @@ export async function listRoomTopics(roomId: string, userId: string): Promise<To
            SELECT COUNT(*)::int
            FROM messages m
            WHERE m.topic_id = rt.id
+             AND m.user_id <> $2
              AND m.created_at > COALESCE(rr.last_read_at, to_timestamp(0))
          )
        ) AS unread_count,
