@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-04-07T19:34:54.380Z",
+  "updatedAt": "2026-04-07T19:39:43.788Z",
   "note": "Legacy baseline for global interactive semantic contract. New violations are blocked.",
   "violations": [
     {
@@ -477,427 +477,355 @@
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1026|button|<missing>|<button type=\"button\" className=\"secondary icon-btn server-profile-modal-close\" onClick={onClose} aria-label={t(\"settings.closeVoiceAria\")} >",
-      "relPath": "apps/web/src/components/ServerProfileModal.tsx",
-      "line": 1026,
-      "problem": "missing data-agent-id"
-    },
-    {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1039|select|<missing>|<select value={serverMenuTab} onChange={(event) =~ onSetServerMenuTab(event.target.value as ServerMenuTab)}>",
-      "relPath": "apps/web/src/components/ServerProfileModal.tsx",
-      "line": 1039,
-      "problem": "missing data-agent-id"
-    },
-    {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1049|button|<missing>|<button type=\"button\" className={`secondary user-settings-tab-btn min-h-[42px] justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${serverMenuTab === \"users\" ? \"user-settings-tab-btn-active\" : \"\"}`} o",
-      "relPath": "apps/web/src/components/ServerProfileModal.tsx",
-      "line": 1049,
-      "problem": "missing data-agent-id"
-    },
-    {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1057|button|<missing>|<button type=\"button\" className={`secondary user-settings-tab-btn min-h-[42px] justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${serverMenuTab === \"roles\" ? \"user-settings-tab-btn-active\" : \"\"}`} d",
-      "relPath": "apps/web/src/components/ServerProfileModal.tsx",
-      "line": 1057,
-      "problem": "missing data-agent-id"
-    },
-    {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1066|button|<missing>|<button type=\"button\" className={`secondary user-settings-tab-btn min-h-[42px] justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${serverMenuTab === \"product_management\" ? \"user-settings-tab-btn-acti",
-      "relPath": "apps/web/src/components/ServerProfileModal.tsx",
-      "line": 1066,
-      "problem": "missing data-agent-id"
-    },
-    {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1082|button|<missing>|<button type=\"button\" className={`secondary user-settings-tab-btn min-h-[42px] justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${serverMenuTab === \"server_management\" ? \"user-settings-tab-btn-activ",
-      "relPath": "apps/web/src/components/ServerProfileModal.tsx",
-      "line": 1082,
-      "problem": "missing data-agent-id"
-    },
-    {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1092|button|<missing>|<button type=\"button\" className={`secondary user-settings-tab-btn min-h-[42px] justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${serverMenuTab === \"observability\" ? \"user-settings-tab-btn-active\" :",
-      "relPath": "apps/web/src/components/ServerProfileModal.tsx",
-      "line": 1092,
-      "problem": "missing data-agent-id"
-    },
-    {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1101|button|<missing>|<button type=\"button\" className={`secondary user-settings-tab-btn min-h-[42px] justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${serverMenuTab === \"sound\" ? \"user-settings-tab-btn-active\" : \"\"}`} o",
-      "relPath": "apps/web/src/components/ServerProfileModal.tsx",
-      "line": 1101,
-      "problem": "missing data-agent-id"
-    },
-    {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1110|button|<missing>|<button type=\"button\" className={`secondary user-settings-tab-btn min-h-[42px] justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${serverMenuTab === \"video\" ? \"user-settings-tab-btn-active\" : \"\"}`} o",
-      "relPath": "apps/web/src/components/ServerProfileModal.tsx",
-      "line": 1110,
-      "problem": "missing data-agent-id"
-    },
-    {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1119|button|<missing>|<button type=\"button\" className={`secondary user-settings-tab-btn min-h-[42px] justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${serverMenuTab === \"chat_images\" ? \"user-settings-tab-btn-active\" : \"",
-      "relPath": "apps/web/src/components/ServerProfileModal.tsx",
-      "line": 1119,
-      "problem": "missing data-agent-id"
-    },
-    {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1127|button|<missing>|<button type=\"button\" className={`secondary user-settings-tab-btn min-h-[42px] justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${serverMenuTab === \"desktop_downloads\" ? \"user-settings-tab-btn-activ",
-      "relPath": "apps/web/src/components/ServerProfileModal.tsx",
-      "line": 1127,
-      "problem": "missing data-agent-id"
-    },
-    {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1134|button|<missing>|<button type=\"button\" className={`secondary user-settings-tab-btn min-h-[42px] justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${serverMenuTab === \"documents_rules\" ? \"user-settings-tab-btn-active\"",
-      "relPath": "apps/web/src/components/ServerProfileModal.tsx",
-      "line": 1134,
-      "problem": "missing data-agent-id"
-    },
-    {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1167|select|<missing>|<select value={selectedServerManagementId} onChange={(event) =~ onChangeCurrentServer(event.target.value)} disabled={serverManagementOptions.length === 0} >",
-      "relPath": "apps/web/src/components/ServerProfileModal.tsx",
-      "line": 1167,
-      "problem": "missing data-agent-id"
-    },
-    {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1186|input|<missing>|<input type=\"text\" disabled aria-disabled=\"true\" value={lastInviteUrl} placeholder={t(\"server.invitePlaceholder\")} />",
-      "relPath": "apps/web/src/components/ServerProfileModal.tsx",
-      "line": 1186,
-      "problem": "missing data-agent-id"
-    },
-    {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1194|button|<missing>|<button type=\"button\" onClick={onCreateServerInvite} disabled={creatingInvite}>",
-      "relPath": "apps/web/src/components/ServerProfileModal.tsx",
-      "line": 1194,
-      "problem": "missing data-agent-id"
-    },
-    {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1197|button|<missing>|<button type=\"button\" className=\"secondary\" onClick={onCopyInviteUrl} disabled={!lastInviteUrl}>",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:1197|select|<missing>|<select value={selectedServerManagementId} onChange={(event) =~ onChangeCurrentServer(event.target.value)} disabled={serverManagementOptions.length === 0} >",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
       "line": 1197,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1207|button|<missing>|<button type=\"button\" className=\"secondary whitespace-nowrap\" onMouseDown={(event) =~ event.preventDefault()} onClick={() =~ { setRenameServerName(renameServerInitialValue); renameServerInputRef.current?.blur(); setIsEdi",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:1216|input|<missing>|<input type=\"text\" disabled aria-disabled=\"true\" value={lastInviteUrl} placeholder={t(\"server.invitePlaceholder\")} />",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
-      "line": 1207,
+      "line": 1216,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1222|input|<missing>|<input ref={renameServerInputRef} type=\"text\" value={renameServerName} maxLength={64} onFocus={() =~ { setRenameServerInitialValue(renameServerName); setIsEditingServerName(true); }} onBlur={() =~ { setRenameServerName(r",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:1224|button|<missing>|<button type=\"button\" onClick={onCreateServerInvite} disabled={creatingInvite}>",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
-      "line": 1222,
+      "line": 1224,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1240|button|<missing>|<button type=\"button\" className=\"whitespace-nowrap\" onMouseDown={(event) =~ event.preventDefault()} onClick={() =~ { onRenameCurrentServer(renameServerName); setRenameServerInitialValue(renameServerName); renameServerInp",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:1227|button|<missing>|<button type=\"button\" className=\"secondary\" onClick={onCopyInviteUrl} disabled={!lastInviteUrl}>",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
-      "line": 1240,
+      "line": 1227,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1259|button|<missing>|<button type=\"button\" className=\"secondary\" onClick={onLeaveServer}>",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:1237|button|<missing>|<button type=\"button\" className=\"secondary whitespace-nowrap\" onMouseDown={(event) =~ event.preventDefault()} onClick={() =~ { setRenameServerName(renameServerInitialValue); renameServerInputRef.current?.blur(); setIsEdi",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
-      "line": 1259,
+      "line": 1237,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1263|button|<missing>|<button type=\"button\" className=\"secondary\" onClick={() =~ setDeleteConfirmOpen(true)}>",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:1252|input|<missing>|<input ref={renameServerInputRef} type=\"text\" value={renameServerName} maxLength={64} onFocus={() =~ { setRenameServerInitialValue(renameServerName); setIsEditingServerName(true); }} onBlur={() =~ { setRenameServerName(r",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
-      "line": 1263,
+      "line": 1252,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1326|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${productManagementTab === \"users\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =~ setProductManagementTab(\"users\")} aria-selected={productManagementTab",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:1270|button|<missing>|<button type=\"button\" className=\"whitespace-nowrap\" onMouseDown={(event) =~ event.preventDefault()} onClick={() =~ { onRenameCurrentServer(renameServerName); setRenameServerInitialValue(renameServerName); renameServerInp",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
-      "line": 1326,
+      "line": 1270,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1334|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${productManagementTab === \"servers\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =~ setProductManagementTab(\"servers\")} aria-selected={productManagemen",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:1289|button|<missing>|<button type=\"button\" className=\"secondary\" onClick={onLeaveServer}>",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
-      "line": 1334,
+      "line": 1289,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1351|input|<missing>|<input type=\"search\" value={userSearchQuery} onChange={(event) =~ setUserSearchQuery(event.target.value)} placeholder={t(\"admin.searchPlaceholder\")} />",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:1293|button|<missing>|<button type=\"button\" className=\"secondary\" onClick={() =~ setDeleteConfirmOpen(true)}>",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
-      "line": 1351,
+      "line": 1293,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1359|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${userAccessTab === \"active\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =~ setUserAccessTab(\"active\")} aria-selected={userAccessTab === \"active\"} >",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:1356|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${productManagementTab === \"users\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =~ setProductManagementTab(\"users\")} aria-selected={productManagementTab",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
-      "line": 1359,
+      "line": 1356,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1367|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${userAccessTab === \"blocked\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =~ setUserAccessTab(\"blocked\")} aria-selected={userAccessTab === \"blocked\"} >",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:1364|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${productManagementTab === \"servers\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =~ setProductManagementTab(\"servers\")} aria-selected={productManagemen",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
-      "line": 1367,
+      "line": 1364,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1375|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${userAccessTab === \"requests\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =~ setUserAccessTab(\"requests\")} aria-selected={userAccessTab === \"requests\"",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:1381|input|<missing>|<input type=\"search\" value={userSearchQuery} onChange={(event) =~ setUserSearchQuery(event.target.value)} placeholder={t(\"admin.searchPlaceholder\")} />",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
-      "line": 1375,
+      "line": 1381,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1383|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${userAccessTab === \"bots\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =~ setUserAccessTab(\"bots\")} aria-selected={userAccessTab === \"bots\"} >",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:1389|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${userAccessTab === \"active\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =~ setUserAccessTab(\"active\")} aria-selected={userAccessTab === \"active\"} >",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
-      "line": 1383,
+      "line": 1389,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1391|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${userAccessTab === \"deleted\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =~ setUserAccessTab(\"deleted\")} aria-selected={userAccessTab === \"deleted\"} >",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:1397|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${userAccessTab === \"blocked\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =~ setUserAccessTab(\"blocked\")} aria-selected={userAccessTab === \"blocked\"} >",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
-      "line": 1391,
+      "line": 1397,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1463|button|<missing>|<button type=\"button\" className=\"secondary icon-btn tiny admin-action-btn\" data-tooltip={server.isBlocked ? t(\"server.managementUnblock\") : t(\"server.managementBlock\")} aria-label={server.isBlocked ? t(\"server.management",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:1405|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${userAccessTab === \"requests\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =~ setUserAccessTab(\"requests\")} aria-selected={userAccessTab === \"requests\"",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
-      "line": 1463,
+      "line": 1405,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1476|button|<missing>|<button type=\"button\" className=\"secondary icon-btn tiny admin-action-btn\" data-tooltip={t(\"server.managementDelete\")} aria-label={t(\"server.managementDelete\")} onClick={(event) =~ { event.stopPropagation(); onDeleteAdmi",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:1413|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${userAccessTab === \"bots\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =~ setUserAccessTab(\"bots\")} aria-selected={userAccessTab === \"bots\"} >",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
-      "line": 1476,
+      "line": 1413,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1521|input|<missing>|<input value={newRoleName} maxLength={64} onChange={(event) =~ setNewRoleName(event.target.value)} placeholder={t(\"server.roleCreatePlaceholder\")} />",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:1421|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${userAccessTab === \"deleted\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =~ setUserAccessTab(\"deleted\")} aria-selected={userAccessTab === \"deleted\"} >",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
-      "line": 1521,
+      "line": 1421,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1528|button|<missing>|<button type=\"button\" onClick={async () =~ { const ok = await onCreateServerRole(newRoleName.trim()); if (ok) { setNewRoleName(\"\"); const next = await onLoadServerRoles(); setServerRoles(next); } }} disabled={newRoleName",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:1493|button|<missing>|<button type=\"button\" className=\"secondary icon-btn tiny admin-action-btn\" data-tooltip={server.isBlocked ? t(\"server.managementUnblock\") : t(\"server.managementBlock\")} aria-label={server.isBlocked ? t(\"server.management",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
-      "line": 1528,
+      "line": 1493,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1548|input|<missing>|<input value={editingRoleName} maxLength={64} onChange={(event) =~ setEditingRoleName(event.target.value)} />",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:1506|button|<missing>|<button type=\"button\" className=\"secondary icon-btn tiny admin-action-btn\" data-tooltip={t(\"server.managementDelete\")} aria-label={t(\"server.managementDelete\")} onClick={(event) =~ { event.stopPropagation(); onDeleteAdmi",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
-      "line": 1548,
+      "line": 1506,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1563|button|<missing>|<button type=\"button\" className=\"secondary icon-btn tiny admin-action-btn\" onClick={() =~ { setEditingRoleId(null); setEditingRoleName(\"\"); }} aria-label={t(\"settings.cancel\")} >",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:1551|input|<missing>|<input value={newRoleName} maxLength={64} onChange={(event) =~ setNewRoleName(event.target.value)} placeholder={t(\"server.roleCreatePlaceholder\")} />",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
-      "line": 1563,
+      "line": 1551,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1574|button|<missing>|<button type=\"button\" className=\"icon-btn tiny admin-action-btn\" onClick={async () =~ { const ok = await onRenameServerRole(role.id, editingRoleName.trim()); if (ok) { setEditingRoleId(null); setEditingRoleName(\"\"); cons",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:1558|button|<missing>|<button type=\"button\" onClick={async () =~ { const ok = await onCreateServerRole(newRoleName.trim()); if (ok) { setNewRoleName(\"\"); const next = await onLoadServerRoles(); setServerRoles(next); } }} disabled={newRoleName",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
-      "line": 1574,
+      "line": 1558,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1594|button|<missing>|<button type=\"button\" className=\"secondary icon-btn tiny admin-action-btn\" onClick={() =~ { setEditingRoleId(role.id); setEditingRoleName(role.name); }} aria-label={t(\"server.roleRename\")} >",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:1578|input|<missing>|<input value={editingRoleName} maxLength={64} onChange={(event) =~ setEditingRoleName(event.target.value)} />",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
-      "line": 1594,
+      "line": 1578,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1605|button|<missing>|<button type=\"button\" className=\"secondary icon-btn tiny admin-action-btn\" onClick={async () =~ { const ok = await onDeleteServerRole(role.id); if (ok) { const next = await onLoadServerRoles(); setServerRoles(next); } }}",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:1593|button|<missing>|<button type=\"button\" className=\"secondary icon-btn tiny admin-action-btn\" onClick={() =~ { setEditingRoleId(null); setEditingRoleName(\"\"); }} aria-label={t(\"settings.cancel\")} >",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
-      "line": 1605,
+      "line": 1593,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1632|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${observabilityTab === \"log\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =~ setObservabilityTab(\"log\")} aria-selected={observabilityTab === \"log\"} >",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:1604|button|<missing>|<button type=\"button\" className=\"icon-btn tiny admin-action-btn\" onClick={async () =~ { const ok = await onRenameServerRole(role.id, editingRoleName.trim()); if (ok) { setEditingRoleId(null); setEditingRoleName(\"\"); cons",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
-      "line": 1632,
+      "line": 1604,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1640|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${observabilityTab === \"signaling\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =~ setObservabilityTab(\"signaling\")} aria-selected={observabilityTab ===",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:1624|button|<missing>|<button type=\"button\" className=\"secondary icon-btn tiny admin-action-btn\" onClick={() =~ { setEditingRoleId(role.id); setEditingRoleName(role.name); }} aria-label={t(\"server.roleRename\")} >",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
-      "line": 1640,
+      "line": 1624,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1649|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${observabilityTab === \"telemetry\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =~ setObservabilityTab(\"telemetry\")} aria-selected={observabilityTab ===",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:1635|button|<missing>|<button type=\"button\" className=\"secondary icon-btn tiny admin-action-btn\" onClick={async () =~ { const ok = await onDeleteServerRole(role.id); if (ok) { const next = await onLoadServerRoles(); setServerRoles(next); } }}",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
-      "line": 1649,
+      "line": 1635,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1688|button|<missing>|<button onClick={onRefreshTelemetry}>",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:1662|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${observabilityTab === \"log\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =~ setObservabilityTab(\"log\")} aria-selected={observabilityTab === \"log\"} >",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
-      "line": 1688,
+      "line": 1662,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1716|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${serverAudioQuality === \"retro\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =~ onSetServerAudioQuality(\"retro\")} disabled={!canManageAudioQuality || s",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:1670|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${observabilityTab === \"signaling\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =~ setObservabilityTab(\"signaling\")} aria-selected={observabilityTab ===",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
-      "line": 1716,
+      "line": 1670,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1725|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${serverAudioQuality === \"low\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =~ onSetServerAudioQuality(\"low\")} disabled={!canManageAudioQuality || serve",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:1679|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${observabilityTab === \"telemetry\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =~ setObservabilityTab(\"telemetry\")} aria-selected={observabilityTab ===",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
-      "line": 1725,
+      "line": 1679,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1734|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${serverAudioQuality === \"standard\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =~ onSetServerAudioQuality(\"standard\")} disabled={!canManageAudioQualit",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:1718|button|<missing>|<button onClick={onRefreshTelemetry}>",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
-      "line": 1734,
+      "line": 1718,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1743|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${serverAudioQuality === \"high\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =~ onSetServerAudioQuality(\"high\")} disabled={!canManageAudioQuality || ser",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:1746|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${serverAudioQuality === \"retro\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =~ onSetServerAudioQuality(\"retro\")} disabled={!canManageAudioQuality || s",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
-      "line": 1743,
+      "line": 1746,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1781|select|<missing>|<select value={serverVideoEffectType} onChange={(event) =~ onSetServerVideoEffectType(event.target.value as ServerVideoEffectType)} >",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:1755|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${serverAudioQuality === \"low\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =~ onSetServerAudioQuality(\"low\")} disabled={!canManageAudioQuality || serve",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
-      "line": 1781,
+      "line": 1755,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1794|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${serverVideoResolution === \"160x120\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =~ onSetServerVideoResolution(\"160x120\")} aria-pressed={serverVideoRe",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:1764|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${serverAudioQuality === \"standard\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =~ onSetServerAudioQuality(\"standard\")} disabled={!canManageAudioQualit",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
-      "line": 1794,
+      "line": 1764,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1802|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${serverVideoResolution === \"320x240\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =~ onSetServerVideoResolution(\"320x240\")} aria-pressed={serverVideoRe",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:1773|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${serverAudioQuality === \"high\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =~ onSetServerAudioQuality(\"high\")} disabled={!canManageAudioQuality || ser",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
-      "line": 1802,
+      "line": 1773,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1810|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${serverVideoResolution === \"640x480\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =~ onSetServerVideoResolution(\"640x480\")} aria-pressed={serverVideoRe",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:1811|select|<missing>|<select value={serverVideoEffectType} onChange={(event) =~ onSetServerVideoEffectType(event.target.value as ServerVideoEffectType)} >",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
-      "line": 1810,
+      "line": 1811,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1825|button|<missing>|<button key={fps} type=\"button\" className={`secondary quality-toggle-btn ${serverVideoFps === fps ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =~ onSetServerVideoFps(fps as 10 | 15 | 24 | 30)} aria-pressed={serverVi",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:1824|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${serverVideoResolution === \"160x120\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =~ onSetServerVideoResolution(\"160x120\")} aria-pressed={serverVideoRe",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
-      "line": 1825,
+      "line": 1824,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1841|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${serverScreenShareResolution === \"hd\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =~ onSetServerScreenShareResolution(\"hd\")} aria-pressed={serverScree",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:1832|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${serverVideoResolution === \"320x240\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =~ onSetServerVideoResolution(\"320x240\")} aria-pressed={serverVideoRe",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
-      "line": 1841,
+      "line": 1832,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1849|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${serverScreenShareResolution === \"fullhd\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =~ onSetServerScreenShareResolution(\"fullhd\")} aria-pressed={ser",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:1840|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${serverVideoResolution === \"640x480\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =~ onSetServerVideoResolution(\"640x480\")} aria-pressed={serverVideoRe",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
-      "line": 1849,
+      "line": 1840,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1857|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${serverScreenShareResolution === \"max\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =~ onSetServerScreenShareResolution(\"max\")} aria-pressed={serverScr",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:1855|button|<missing>|<button key={fps} type=\"button\" className={`secondary quality-toggle-btn ${serverVideoFps === fps ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =~ onSetServerVideoFps(fps as 10 | 15 | 24 | 30)} aria-pressed={serverVi",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
-      "line": 1857,
+      "line": 1855,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:1962|input|<missing>|<input type=\"color\" value={serverVideoAsciiColor} onChange={(event) =~ onSetServerVideoAsciiColor(event.target.value)} />",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:1871|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${serverScreenShareResolution === \"hd\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =~ onSetServerScreenShareResolution(\"hd\")} aria-pressed={serverScree",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
-      "line": 1962,
+      "line": 1871,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:2004|button|<missing>|<button type=\"button\" className=\"secondary\" onClick={() =~ window.open(platform.href!, \"_blank\", \"noopener,noreferrer\")} title={platform.fileName} aria-label={`${t(\"server.desktopDownload\")}: ${platform.fileName}`} >",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:1879|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${serverScreenShareResolution === \"fullhd\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =~ onSetServerScreenShareResolution(\"fullhd\")} aria-pressed={ser",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
-      "line": 2004,
+      "line": 1879,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:2014|button|<missing>|<button type=\"button\" className=\"secondary\" disabled title={t(\"server.desktopSoon\")} aria-label={`${t(\"server.desktopDownload\")} (${t(\"server.desktopSoon\")})`} >",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:1887|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${serverScreenShareResolution === \"max\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =~ onSetServerScreenShareResolution(\"max\")} aria-pressed={serverScr",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
-      "line": 2014,
+      "line": 1887,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:2039|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${documentsRulesTab === \"documents\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =~ setDocumentsRulesTab(\"documents\")} aria-selected={documentsRulesTab ",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:1992|input|<missing>|<input type=\"color\" value={serverVideoAsciiColor} onChange={(event) =~ onSetServerVideoAsciiColor(event.target.value)} />",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
-      "line": 2039,
+      "line": 1992,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:2047|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${documentsRulesTab === \"rules\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =~ setDocumentsRulesTab(\"rules\")} aria-selected={documentsRulesTab === \"rul",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:2034|button|<missing>|<button type=\"button\" className=\"secondary\" onClick={() =~ window.open(platform.href!, \"_blank\", \"noopener,noreferrer\")} title={platform.fileName} aria-label={`${t(\"server.desktopDownload\")}: ${platform.fileName}`} >",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
-      "line": 2047,
+      "line": 2034,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:2063|a|<missing>|<a href=\"/privacy\" className=\"underline underline-offset-2 hover:text-white\">",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:2044|button|<missing>|<button type=\"button\" className=\"secondary\" disabled title={t(\"server.desktopSoon\")} aria-label={`${t(\"server.desktopDownload\")} (${t(\"server.desktopSoon\")})`} >",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
-      "line": 2063,
+      "line": 2044,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:2064|a|<missing>|<a href=\"/terms\" className=\"underline underline-offset-2 hover:text-white\">",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:2069|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${documentsRulesTab === \"documents\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =~ setDocumentsRulesTab(\"documents\")} aria-selected={documentsRulesTab ",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
-      "line": 2064,
+      "line": 2069,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:2065|a|<missing>|<a href=\"/cookies\" className=\"underline underline-offset-2 hover:text-white\">",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:2077|button|<missing>|<button type=\"button\" className={`secondary quality-toggle-btn ${documentsRulesTab === \"rules\" ? \"quality-toggle-btn-active\" : \"\"}`} onClick={() =~ setDocumentsRulesTab(\"rules\")} aria-selected={documentsRulesTab === \"rul",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
-      "line": 2065,
+      "line": 2077,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:2066|a|<missing>|<a href=\"/contacts\" className=\"underline underline-offset-2 hover:text-white\">",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:2093|a|<missing>|<a href=\"/privacy\" className=\"underline underline-offset-2 hover:text-white\">",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
-      "line": 2066,
+      "line": 2093,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:2095|button|<missing>|<button type=\"button\" className=\"secondary\" onClick={async () =~ { const profile = memberContextProfile || await onLoadServerMemberProfile(memberContextMenu.userId); if (!profile) { return; } setMemberContextProfile(prof",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:2094|a|<missing>|<a href=\"/terms\" className=\"underline underline-offset-2 hover:text-white\">",
+      "relPath": "apps/web/src/components/ServerProfileModal.tsx",
+      "line": 2094,
+      "problem": "missing data-agent-id"
+    },
+    {
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:2095|a|<missing>|<a href=\"/cookies\" className=\"underline underline-offset-2 hover:text-white\">",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
       "line": 2095,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:2120|input|<missing>|<input type=\"checkbox\" checked={checked} onChange={async () =~ { const current = memberContextProfile; if (!current) { return; } const nextRoleIds = checked ? current.customRoles.filter((item) =~ item.id !== role.id).map",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:2096|a|<missing>|<a href=\"/contacts\" className=\"underline underline-offset-2 hover:text-white\">",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
-      "line": 2120,
+      "line": 2096,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:2153|input|<missing>|<input type=\"checkbox\" checked={room.hasAccess} onChange={async () =~ { const current = memberContextProfile; if (!current) { return; } const nextRoomIds = room.hasAccess ? current.hiddenRoomsAvailable.filter((item) =~ i",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:2125|button|<missing>|<button type=\"button\" className=\"secondary\" onClick={async () =~ { const profile = memberContextProfile || await onLoadServerMemberProfile(memberContextMenu.userId); if (!profile) { return; } setMemberContextProfile(prof",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
-      "line": 2153,
+      "line": 2125,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:2191|button|<missing>|<button type=\"button\" className=\"secondary\" onClick={() =~ setMemberProfileModalOpen(false)} >",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:2150|input|<missing>|<input type=\"checkbox\" checked={checked} onChange={async () =~ { const current = memberContextProfile; if (!current) { return; } const nextRoleIds = checked ? current.customRoles.filter((item) =~ item.id !== role.id).map",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
-      "line": 2191,
+      "line": 2150,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:2210|input|<missing>|<input type=\"text\" value={deleteConfirmNameInput} onChange={(event) =~ setDeleteConfirmNameInput(event.target.value)} placeholder={currentServerName || \"\"} />",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:2183|input|<missing>|<input type=\"checkbox\" checked={room.hasAccess} onChange={async () =~ { const current = memberContextProfile; if (!current) { return; } const nextRoomIds = room.hasAccess ? current.hiddenRoomsAvailable.filter((item) =~ i",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
-      "line": 2210,
+      "line": 2183,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:2218|button|<missing>|<button type=\"button\" className=\"secondary\" onClick={() =~ { setDeleteConfirmOpen(false); setDeleteConfirmNameInput(\"\"); }} >",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:2221|button|<missing>|<button type=\"button\" className=\"secondary\" onClick={() =~ setMemberProfileModalOpen(false)} >",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
-      "line": 2218,
+      "line": 2221,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:2228|button|<missing>|<button type=\"button\" disabled={!canConfirmServerDelete} onClick={() =~ { onDeleteServer(); setDeleteConfirmOpen(false); setDeleteConfirmNameInput(\"\"); }} >",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:2240|input|<missing>|<input type=\"text\" value={deleteConfirmNameInput} onChange={(event) =~ setDeleteConfirmNameInput(event.target.value)} placeholder={currentServerName || \"\"} />",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
-      "line": 2228,
+      "line": 2240,
       "problem": "missing data-agent-id"
     },
     {
-      "signature": "apps/web/src/components/ServerProfileModal.tsx:74|button|<missing>|<button type=\"button\" className={`${action.primary ? \"\" : \"secondary \"}icon-btn tiny admin-action-btn`} data-tooltip={action.label} aria-label={action.label} onClick={action.onClick} >",
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:2248|button|<missing>|<button type=\"button\" className=\"secondary\" onClick={() =~ { setDeleteConfirmOpen(false); setDeleteConfirmNameInput(\"\"); }} >",
+      "relPath": "apps/web/src/components/ServerProfileModal.tsx",
+      "line": 2248,
+      "problem": "missing data-agent-id"
+    },
+    {
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:2258|button|<missing>|<button type=\"button\" disabled={!canConfirmServerDelete} onClick={() =~ { onDeleteServer(); setDeleteConfirmOpen(false); setDeleteConfirmNameInput(\"\"); }} >",
+      "relPath": "apps/web/src/components/ServerProfileModal.tsx",
+      "line": 2258,
+      "problem": "missing data-agent-id"
+    },
+    {
+      "signature": "apps/web/src/components/ServerProfileModal.tsx:74|button|<missing>|<button type=\"button\" className={`${action.primary ? \"\" : \"secondary \"}icon-btn tiny admin-action-btn`} data-tooltip={action.label} aria-label={action.label} onClick={action.onClick} data-agent-id={`server.action.${actio",
       "relPath": "apps/web/src/components/ServerProfileModal.tsx",
       "line": 74,
       "problem": "missing data-agent-id"

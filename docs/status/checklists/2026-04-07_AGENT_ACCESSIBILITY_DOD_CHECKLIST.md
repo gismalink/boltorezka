@@ -3,6 +3,11 @@
 Date: 2026-04-07
 Scope: обязательный DoD/checklist для UI-изменений, затрагивающих интерактивные элементы и agent navigation.
 
+Status:
+- Active: обязателен для новых UI-задач и ревью.
+- Operational mode: recurring template (пункты отмечаются в контексте конкретной задачи/PR, а не "один раз на весь проект").
+- Enforcement: поддержан автоматическими gate-проверками `check:agent-semantics` и `check:decorative-icons`.
+
 ## 1) Semantic completeness (required)
 
 - [ ] Для новых/изменённых интерактивных элементов задан стабильный `data-agent-id`.

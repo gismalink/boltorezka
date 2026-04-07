@@ -77,6 +77,8 @@ function ActionIconButton({ action }: { action: IconAction }) {
       data-tooltip={action.label}
       aria-label={action.label}
       onClick={action.onClick}
+      data-agent-id={`server.action.${action.key}`}
+      data-agent-state="ready"
     >
       <i className={`bi ${action.iconClass}`} aria-hidden="true" />
     </button>
@@ -1028,6 +1030,8 @@ export function ServerProfileModal({
           className="secondary icon-btn server-profile-modal-close"
           onClick={onClose}
           aria-label={t("settings.closeVoiceAria")}
+          data-agent-id="server.modal.close"
+          data-agent-state="ready"
         >
           <i className="bi bi-x-lg" aria-hidden="true" />
         </button>
@@ -1036,7 +1040,13 @@ export function ServerProfileModal({
           <div className="voice-preferences-kicker">{t("server.title")}</div>
           <label className="desktop:hidden grid gap-1">
             <span className="muted">{t("server.title")}</span>
-            <select value={serverMenuTab} onChange={(event) => onSetServerMenuTab(event.target.value as ServerMenuTab)}>
+            <select
+              value={serverMenuTab}
+              onChange={(event) => onSetServerMenuTab(event.target.value as ServerMenuTab)}
+              data-agent-id="server.menu.tab.select"
+              data-agent-value={serverMenuTab}
+              data-agent-state="ready"
+            >
               {serverMenuOptions.map((option) => (
                 <option key={option.value} value={option.value} disabled={option.disabled}>
                   {option.label}
@@ -1050,6 +1060,8 @@ export function ServerProfileModal({
                 type="button"
                 className={`secondary user-settings-tab-btn min-h-[42px] justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${serverMenuTab === "users" ? "user-settings-tab-btn-active" : ""}`}
                 onClick={() => onSetServerMenuTab("users")}
+                data-agent-id="server.menu.tab.users"
+                data-agent-state={serverMenuTab === "users" ? "active" : "inactive"}
               >
                 {t("server.tabUsers")}
               </button>
@@ -1059,6 +1071,8 @@ export function ServerProfileModal({
               className={`secondary user-settings-tab-btn min-h-[42px] justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${serverMenuTab === "roles" ? "user-settings-tab-btn-active" : ""}`}
               disabled={!hasCurrentServer}
               onClick={() => onSetServerMenuTab("roles")}
+              data-agent-id="server.menu.tab.roles"
+              data-agent-state={!hasCurrentServer ? "disabled" : serverMenuTab === "roles" ? "active" : "inactive"}
             >
               {t("server.tabRoles")}
             </button>
@@ -1067,6 +1081,8 @@ export function ServerProfileModal({
                 type="button"
                 className={`secondary user-settings-tab-btn min-h-[42px] justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${serverMenuTab === "product_management" ? "user-settings-tab-btn-active" : ""}`}
                 onClick={() => onSetServerMenuTab("product_management")}
+                data-agent-id="server.menu.tab.product-management"
+                data-agent-state={serverMenuTab === "product_management" ? "active" : "inactive"}
               >
                 <span className="inline-flex items-center gap-2">
                   <span>{t("server.tabProductManagement")}</span>
@@ -1084,6 +1100,8 @@ export function ServerProfileModal({
                 className={`secondary user-settings-tab-btn min-h-[42px] justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${serverMenuTab === "server_management" ? "user-settings-tab-btn-active" : ""}`}
                 disabled={!hasCurrentServer}
                 onClick={() => onSetServerMenuTab("server_management")}
+                data-agent-id="server.menu.tab.server-management"
+                data-agent-state={!hasCurrentServer ? "disabled" : serverMenuTab === "server_management" ? "active" : "inactive"}
               >
                 {t("server.tabServerManagement")}
               </button>
@@ -1093,6 +1111,8 @@ export function ServerProfileModal({
                 type="button"
                 className={`secondary user-settings-tab-btn min-h-[42px] justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${serverMenuTab === "observability" ? "user-settings-tab-btn-active" : ""}`}
                 onClick={() => onSetServerMenuTab("observability")}
+                data-agent-id="server.menu.tab.observability"
+                data-agent-state={serverMenuTab === "observability" ? "active" : "inactive"}
               >
                 {t("server.tabObservability")}
               </button>
@@ -1102,6 +1122,8 @@ export function ServerProfileModal({
                 type="button"
                 className={`secondary user-settings-tab-btn min-h-[42px] justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${serverMenuTab === "sound" ? "user-settings-tab-btn-active" : ""}`}
                 onClick={() => onSetServerMenuTab("sound")}
+                data-agent-id="server.menu.tab.sound"
+                data-agent-state={serverMenuTab === "sound" ? "active" : "inactive"}
               >
                 {t("server.tabSound")}
               </button>
@@ -1111,6 +1133,8 @@ export function ServerProfileModal({
                 type="button"
                 className={`secondary user-settings-tab-btn min-h-[42px] justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${serverMenuTab === "video" ? "user-settings-tab-btn-active" : ""}`}
                 onClick={() => onSetServerMenuTab("video")}
+                data-agent-id="server.menu.tab.video"
+                data-agent-state={serverMenuTab === "video" ? "active" : "inactive"}
               >
                 {t("server.tabVideo")}
               </button>
@@ -1120,6 +1144,8 @@ export function ServerProfileModal({
                 type="button"
                 className={`secondary user-settings-tab-btn min-h-[42px] justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${serverMenuTab === "chat_images" ? "user-settings-tab-btn-active" : ""}`}
                 onClick={() => onSetServerMenuTab("chat_images")}
+                data-agent-id="server.menu.tab.chat-images"
+                data-agent-state={serverMenuTab === "chat_images" ? "active" : "inactive"}
               >
                 {t("server.tabChatImages")}
               </button>
@@ -1128,6 +1154,8 @@ export function ServerProfileModal({
               type="button"
               className={`secondary user-settings-tab-btn min-h-[42px] justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${serverMenuTab === "desktop_downloads" ? "user-settings-tab-btn-active" : ""}`}
               onClick={() => onSetServerMenuTab("desktop_downloads")}
+              data-agent-id="server.menu.tab.desktop-downloads"
+              data-agent-state={serverMenuTab === "desktop_downloads" ? "active" : "inactive"}
             >
               {t("server.tabDesktopApp")}
             </button>
@@ -1135,6 +1163,8 @@ export function ServerProfileModal({
               type="button"
               className={`secondary user-settings-tab-btn min-h-[42px] justify-start text-left max-desktop:min-w-0 max-desktop:justify-center ${serverMenuTab === "documents_rules" ? "user-settings-tab-btn-active" : ""}`}
               onClick={() => onSetServerMenuTab("documents_rules")}
+              data-agent-id="server.menu.tab.documents-rules"
+              data-agent-state={serverMenuTab === "documents_rules" ? "active" : "inactive"}
             >
               {t("server.tabDocumentsRules")}
             </button>

@@ -114,6 +114,7 @@ Scope: Внедрение подхода accessibility tree-first для web и 
 - Добавлен verify-gate decorative cleanup в основной `check` pipeline: `npm run check:decorative-icons` (скрипт `scripts/verify-decorative-icons.mjs`) валидирует, что `<i className=...>` иконки скрыты из accessibility tree через `aria-hidden="true"`.
 - Semantic contract gate расширен до global coverage по всем interactive controls (`button/input/select/textarea/a`) с ratchet-моделью: baseline legacy-нарушений зафиксирован, новые неполные элементы блокируются в `npm run check`.
 - Уточнён parser в `verify-agent-semantics-contract` (корректная обработка `=>`/`>=` в JSX-атрибутах), baseline пересчитан; текущий зафиксированный долг снижен с 223 до 191 нарушений.
+- Выполнена следующая волна снижения legacy-долга в `ServerProfileModal` (action buttons + tab navigation получили semantic id/state/value); baseline обновлён и снижен с 191 до 179 нарушений.
 
 ## 7) Evidence Artifact (test)
 
