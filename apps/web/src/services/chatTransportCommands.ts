@@ -31,7 +31,7 @@ type RunChatEditInput = {
   sendWsEventAwaitAck: SendWsEventAwaitAckFn;
 };
 
-type ChatDeleteResult = ExecuteWsFirstWithHttpFallbackResult<void> | ExecuteHttpOnlyResult<void>;
+type ChatMutationResult = ExecuteWsFirstWithHttpFallbackResult<void> | ExecuteHttpOnlyResult<void>;
 
 type RunChatDeleteInput = {
   authToken: string;
@@ -77,7 +77,7 @@ export async function runChatEdit({
   maxRetries,
   sendWsEvent,
   sendWsEventAwaitAck
-}: RunChatEditInput): Promise<ChatDeleteResult> {
+}: RunChatEditInput): Promise<ChatMutationResult> {
   return executeChatOperation({
     policy: {
       transport: "ws-first-http-fallback",
@@ -108,7 +108,7 @@ export async function runChatDelete({
   topicId,
   sendWsEvent,
   sendWsEventAwaitAck
-}: RunChatDeleteInput): Promise<ChatDeleteResult> {
+}: RunChatDeleteInput): Promise<ChatMutationResult> {
   return executeChatOperation({
     policy: CHAT_OPERATION_POLICIES["chat.delete"],
     sendWsEvent,
@@ -163,7 +163,7 @@ export async function runChatToggleReaction({
   topicId,
   sendWsEvent,
   sendWsEventAwaitAck
-}: RunChatToggleReactionInput): Promise<ChatDeleteResult> {
+}: RunChatToggleReactionInput): Promise<ChatMutationResult> {
   return executeChatOperation({
     policy: currentlyActive ? CHAT_OPERATION_POLICIES["chat.reaction.remove"] : CHAT_OPERATION_POLICIES["chat.reaction.add"],
     sendWsEvent,
