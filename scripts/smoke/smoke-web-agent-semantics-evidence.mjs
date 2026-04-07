@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Purpose: Run agent semantics browser smoke and automatically write evidence into docs/status/test-results/2026-04-06.md.
+// Purpose: Run agent semantics browser smoke and optionally write evidence into docs/status/test-results/2026-04-06.md.
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
@@ -11,6 +11,7 @@ const repoDir = path.resolve(__dirname, "../..");
 const evidencePath = path.resolve(repoDir, "docs/status/test-results/2026-04-06.md");
 const smokeScriptPath = path.resolve(__dirname, "smoke-web-agent-semantics-browser.mjs");
 const defaultApiUrl = "https://test.datowave.com";
+const shouldWriteEvidence = process.env.SMOKE_EVIDENCE_WRITE_DOC === "1";
 
 function run(command, args, options = {}) {
   return spawnSync(command, args, {
@@ -189,13 +190,18 @@ function main() {
     ? "auto-updated by smoke:web:agent-semantics:evidence"
     : `auto-updated by smoke:web:agent-semantics:evidence; error=${safeOneLine(firstErrorLine || "unknown")}`;
 
-  updateEvidenceFile({
-    sha,
-    result: resultText,
-    outputLine: `${outputStatus}|${safeOneLine(combinedOutput.includes("[smoke:web:agent-semantics:browser] ok") ? "ok" : "failed")}`,
-    selectorsLine: selectorsCount,
-    note
-  });
+  if (shouldWriteEvidence) {
+    updateEvidenceFile({
+      sha,
+      result: resultText,
+      outputLine: `${outputStatus}|${safeOneLine(combinedOutput.includes("[smoke:web:agent-semantics:browser] ok") ? "ok" : "failed")}`,
+      selectorsLine: selectorsCount,
+      note
+    });
+    console.log("[smoke:web:agent-semantics:evidence] docs evidence updated (SMOKE_EVIDENCE_WRITE_DOC=1)");
+  } else {
+    console.log("[smoke:web:agent-semantics:evidence] docs evidence not updated (set SMOKE_EVIDENCE_WRITE_DOC=1 to enable)");
+  }
 
   process.stdout.write(combinedOutput);
   if (smokeResult.status !== 0) {
