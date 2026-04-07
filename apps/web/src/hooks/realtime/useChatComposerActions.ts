@@ -27,6 +27,7 @@ import {
   normalizeImageSource,
   type ChatImagePolicy
 } from "../../utils/chatImagePayload";
+import { getErrorCode } from "../../services/chatErrorUtils";
 
 type UseChatComposerActionsParams = {
   chatRoomSlug: string;
@@ -662,7 +663,7 @@ export function useChatComposerActions({
         return;
       }
 
-      const code = String((reportResult.error as { code?: string } | null)?.code || "").trim();
+      const code = getErrorCode(reportResult.error);
       if (code === "MessageAlreadyReported") {
         pushToast(reportMessageExistsMessage);
         return;
