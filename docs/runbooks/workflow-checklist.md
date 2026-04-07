@@ -48,7 +48,9 @@
 1. Проверить `git status`.
 2. Убедиться, что нет секретов в diff.
 3. Проверить, что local auth не включился обратно (`/v1/auth/register` и `/v1/auth/login` -> `SsoOnly`).
-4. Сделать понятный коммит.
+4. Для UI-изменений пройти agent accessibility DoD checklist:
+   - `docs/status/checklists/2026-04-07_AGENT_ACCESSIBILITY_DOD_CHECKLIST.md`.
+5. Сделать понятный коммит.
 
 ## 5) Merge + release pipeline (чтобы не забыть)
 

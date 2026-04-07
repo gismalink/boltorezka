@@ -56,8 +56,8 @@ Scope: Внедрение подхода accessibility tree-first для web и 
 
 ### 2.5 Dev Workflow и Quality Gates
 
-- [ ] Включить agent-readiness review в Definition of Done для UI-задач.
-- [ ] Добавить checklist в PR/feature flow: semantic completeness, list semantics, state value, action confirmation.
+- [x] Включить agent-readiness review в Definition of Done для UI-задач (см. `docs/status/checklists/2026-04-07_AGENT_ACCESSIBILITY_DOD_CHECKLIST.md`).
+- [x] Добавить checklist в PR/feature flow: semantic completeness, list semantics, state value, action confirmation (`docs/status/checklists/2026-04-07_AGENT_ACCESSIBILITY_DOD_CHECKLIST.md` + `docs/runbooks/workflow-checklist.md`).
 - [x] Внедрить smoke-проверки критических флоу в test по accessibility tree contract (новый gate `smoke:web:agent-semantics:browser`, подключен в `smoke:web:e2e` и `run-all-smokes`).
 - [x] Фиксировать evidence в `docs/status/feature-log/` с явной пометкой `agent-ready accessibility`.
 
@@ -108,6 +108,7 @@ Scope: Внедрение подхода accessibility tree-first для web и 
 - Финализирована settings/profile semantic completeness в pilot scope: добавлены deterministic `data-agent-id` + `data-agent-state/value` для user settings tabs/profile/delete flow и room member profile modal.
 - Усилен browser smoke gate для settings/profile ветки: проверяется не только видимость, но и наличие обязательных `data-agent-state/value` для ключевых контролов.
 - Закрыты оставшиеся state-пробелы в settings/profile agent-marked элементах (`settings.user-modal.shell/close/tab.select/profile.section`) и добавлены обязательные smoke-assertions для этих атрибутов.
+- В workflow добавлен обязательный UI DoD gate для agent-readiness: отдельный checklist `docs/status/checklists/2026-04-07_AGENT_ACCESSIBILITY_DOD_CHECKLIST.md` подключён в `docs/runbooks/workflow-checklist.md`.
 
 ## 7) Evidence Artifact (test)
 
