@@ -81,7 +81,7 @@ Scope: Внедрение подхода accessibility tree-first для web и 
 - [x] Списки пилотных экранов представлены в явной семантике списка и элементов списка.
 - [ ] Декоративные элементы исключены из дерева доступности, stateful controls отдают актуальный `value/state` (state/value реализованы; cleanup decorative tree остаётся).
 - [x] Каждое действие агента имеет машинно-читаемое подтверждение успеха/ошибки (pilot chat scope).
-- [ ] Smoke в `test` подтверждает стабильность agent-ready contract для пилотных флоу (скрипт и интеграция готовы, test-run не зафиксирован).
+- [x] Smoke в `test` подтверждает стабильность agent-ready contract для пилотных флоу (`smoke:web:agent-semantics:evidence` PASS, selectors=12, SHA `064d583`).
 
 ## 5) Ограничения выполнения
 
@@ -104,7 +104,7 @@ Scope: Внедрение подхода accessibility tree-first для web и 
 - Расширена modal/profile семантика в chat pilot (`data-agent-id` для profile modal) и уменьшен decorative noise в accessibility tree (tab glyphs/unread divider visual tokens скрыты для assistive tree).
 - Добавлены deterministic `data-agent-id` и dialog semantics для user settings/delete-confirm и room member profile modal.
 - Browser smoke `smoke:web:agent-semantics:browser` расширен на optional путь открытия user settings modal через user dock controls.
-- По текущему evidence-артефакту pilot smoke в `test` зафиксирован как `FAIL` (см. `docs/status/test-results/2026-04-06.md`), acceptance для tree-first smoke остается открытым до успешного прогона.
+- Pilot smoke в `test` закрыт PASS: `smoke:web:agent-semantics:evidence` подтвердил browser gate (`verified selectors: 12`, SHA `064d583`), см. `docs/status/test-results/2026-04-06.md`.
 
 ## 7) Evidence Artifact (test)
 
