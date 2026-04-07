@@ -42,6 +42,20 @@ async function maybeVisible(page, selector) {
   return locator.isVisible();
 }
 
+async function bootstrapSessionCookie(page) {
+  const response = await page.request.post(`${baseUrl}/v1/auth/refresh`, {
+    headers: {
+      Authorization: `Bearer ${bearerToken}`
+    },
+    timeout: timeoutMs
+  });
+
+  if (!response.ok()) {
+    const body = await response.text().catch(() => "");
+    throw new Error(`auth refresh failed: status=${response.status()} body=${String(body || "n/a").slice(0, 240)}`);
+  }
+}
+
 async function main() {
   if (!bearerToken) {
     throw new Error("SMOKE_TEST_BEARER_TOKEN is required for smoke:web:agent-semantics:browser");
@@ -56,6 +70,10 @@ async function main() {
       localStorage.setItem("boltorezka_lang", "en");
       localStorage.setItem("boltorezka_token", token);
     }, bearerToken);
+
+    // Cookie-first mode ignores localStorage token persistence, so bootstrap
+    // a server-side session cookie before opening the app.
+    await bootstrapSessionCookie(page);
 
     await gotoWithRetries(page);
 
