@@ -7,6 +7,7 @@ const {
   chatUploadFinalizeMock,
   replyMessageMock,
   createTopicMessageMock,
+  createRoomMessageMock,
   runChatEditMock,
   runChatSendMock
 } = vi.hoisted(() => ({
@@ -15,6 +16,7 @@ const {
   chatUploadFinalizeMock: vi.fn(),
   replyMessageMock: vi.fn(),
   createTopicMessageMock: vi.fn(),
+  createRoomMessageMock: vi.fn(),
   runChatEditMock: vi.fn(),
   runChatSendMock: vi.fn()
 }));
@@ -25,7 +27,8 @@ vi.mock("../api", () => ({
     uploadChatObject: uploadChatObjectMock,
     chatUploadFinalize: chatUploadFinalizeMock,
     replyMessage: replyMessageMock,
-    createTopicMessage: createTopicMessageMock
+    createTopicMessage: createTopicMessageMock,
+    createRoomMessage: createRoomMessageMock
   }
 }));
 
@@ -127,5 +130,20 @@ describe("chatMessageSendService", () => {
     const result = await sendChatMessage(params);
 
     expect(result).toEqual({ kind: "server-error" });
+  });
+
+  it("falls back to runChatSend when room ws enqueue fails", async () => {
+    const params = createBaseParams();
+    params.activeTopicId = null;
+    params.chatController.sendMessage = vi.fn(() => ({ sent: false }));
+    runChatSendMock.mockResolvedValue({ kind: "http", value: undefined });
+
+    const result = await sendChatMessage(params);
+
+    expect(result).toEqual({ kind: "sent", mode: "text" });
+    expect(runChatSendMock).toHaveBeenCalledWith(expect.objectContaining({
+      roomSlug: "general",
+      text: "hello"
+    }));
   });
 });

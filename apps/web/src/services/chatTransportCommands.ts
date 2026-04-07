@@ -273,7 +273,7 @@ export async function runChatSend({
         return;
       }
 
-      throw new Error("http_room_send_not_supported");
+      await api.createRoomMessage(authToken, roomSlug, { text, mentionUserIds });
     }
   });
 }

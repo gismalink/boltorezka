@@ -220,7 +220,21 @@ export async function sendChatMessage(params: SendChatMessageParams): Promise<Se
   }
 
   const result = chatController.sendMessage(baseText, chatRoomSlug, user, maxChatRetries);
-  if (!result.sent) {
+  if (result.sent) {
+    return { kind: "sent", mode: "text" };
+  }
+
+  const roomSendFallback = await runChatSend({
+    authToken,
+    text: baseText,
+    roomSlug: chatRoomSlug,
+    mentionUserIds,
+    maxRetries: maxChatRetries,
+    sendWsEvent,
+    sendWsEventAwaitAck
+  });
+
+  if (roomSendFallback.kind === "failed") {
     return { kind: "server-error" };
   }
 

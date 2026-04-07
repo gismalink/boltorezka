@@ -17,7 +17,8 @@ const {
   removeMessageReactionMock,
   reportMessageMock,
   createTopicMessageMock,
-  replyMessageMock
+  replyMessageMock,
+  createRoomMessageMock
 } = vi.hoisted(() => ({
   editMessageMock: vi.fn(),
   deleteMessageMock: vi.fn(),
@@ -27,7 +28,8 @@ const {
   removeMessageReactionMock: vi.fn(),
   reportMessageMock: vi.fn(),
   createTopicMessageMock: vi.fn(),
-  replyMessageMock: vi.fn()
+  replyMessageMock: vi.fn(),
+  createRoomMessageMock: vi.fn()
 }));
 
 vi.mock("../api", () => ({
@@ -40,7 +42,8 @@ vi.mock("../api", () => ({
     removeMessageReaction: removeMessageReactionMock,
     reportMessage: reportMessageMock,
     createTopicMessage: createTopicMessageMock,
-    replyMessage: replyMessageMock
+    replyMessage: replyMessageMock,
+    createRoomMessage: createRoomMessageMock
   }
 }));
 
@@ -247,6 +250,30 @@ describe("chatTransportCommands", () => {
     expect(result).toEqual({ kind: "http", value: undefined });
     expect(replyMessageMock).toHaveBeenCalledWith("token", "message-1", {
       text: "hello",
+      mentionUserIds: ["u2"]
+    });
+  });
+
+  it("runChatSend falls back to room http operation on transient ws error", async () => {
+    const sendWsEvent = vi.fn(() => "legacy-req");
+    const sendWsEventAwaitAck = vi.fn(async () => {
+      throw new Error("ws_not_connected");
+    });
+    createRoomMessageMock.mockResolvedValue(undefined);
+
+    const result = await runChatSend({
+      authToken: "token",
+      text: "hello room",
+      roomSlug: "general",
+      mentionUserIds: ["u2"],
+      maxRetries: 2,
+      sendWsEvent,
+      sendWsEventAwaitAck
+    });
+
+    expect(result).toEqual({ kind: "http", value: undefined });
+    expect(createRoomMessageMock).toHaveBeenCalledWith("token", "general", {
+      text: "hello room",
       mentionUserIds: ["u2"]
     });
   });

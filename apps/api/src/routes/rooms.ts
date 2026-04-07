@@ -3,9 +3,11 @@ import { z } from "zod";
 import { db } from "../db.js";
 import { broadcastRealtimeEnvelope } from "../realtime-broadcast.js";
 import { loadCurrentUser, requireAuth, requireRole, requireServiceAccess } from "../middleware/auth.js";
+import { resolveActiveServerMute } from "../services/server-mute-service.js";
 import type { RoomCategoryRow, RoomListRow, RoomMessageRow, RoomRow } from "../db.types.ts";
 import { isServerAgeConfirmed } from "../services/age-verification-service.js";
 import { resolveEffectiveServerPermissions } from "../services/server-permissions-service.js";
+import { buildChatMessageEnvelope } from "../ws-protocol.js";
 import type {
   RoomCategoryCreateResponse,
   RoomCreateResponse,
@@ -130,6 +132,11 @@ const updateCategorySchema = z.object({
 
 const moveCategorySchema = z.object({
   direction: z.enum(["up", "down"])
+});
+
+const createRoomMessageSchema = z.object({
+  text: z.string().trim().min(1).max(4000),
+  mentionUserIds: z.array(z.string().uuid()).max(100).optional()
 });
 
 export async function roomsRoutes(fastify: FastifyInstance) {
@@ -1588,6 +1595,184 @@ export async function roomsRoutes(fastify: FastifyInstance) {
       void incrementReadMetricBy("chat_read_messages_plain_text", plainTextMessages);
 
       return response;
+    }
+  );
+
+  fastify.post<{
+    Params: { slug: string };
+    Body: unknown;
+  }>(
+    "/v1/rooms/:slug/messages",
+    {
+      preHandler: [requireAuth, requireServiceAccess, loadCurrentUser]
+    },
+    async (request, reply) => {
+      const userId = String(request.currentUser?.id || request.user?.sub || "").trim();
+      const userName = String(request.currentUser?.name || "").trim() || "Unknown";
+      const slug = String(request.params.slug || "").trim();
+
+      if (!slug) {
+        return reply.code(400).send({
+          error: "ValidationError",
+          message: "room slug is required"
+        });
+      }
+
+      const parsedBody = createRoomMessageSchema.safeParse(request.body || {});
+      if (!parsedBody.success) {
+        return reply.code(400).send({
+          error: "ValidationError",
+          issues: parsedBody.error.flatten()
+        });
+      }
+
+      const roomResult = await db.query<RoomRow>(
+        `SELECT r.id, r.slug, r.title, r.kind, r.audio_quality_override, r.is_readonly, r.slowmode_seconds, r.category_id, r.server_id, r.nsfw, r.position, r.is_public, r.is_hidden
+         FROM rooms r
+         LEFT JOIN servers s ON s.id = r.server_id
+         WHERE r.slug = $1
+           AND r.is_archived = FALSE
+           AND (r.server_id IS NULL OR (s.is_archived = FALSE AND s.is_blocked = FALSE))
+         LIMIT 1`,
+        [slug]
+      );
+
+      if ((roomResult.rowCount || 0) === 0) {
+        return reply.code(404).send({
+          error: "RoomNotFound",
+          message: "Room does not exist"
+        });
+      }
+
+      const room = roomResult.rows[0];
+
+      if (room.is_hidden) {
+        const visibilityGrant = await db.query(
+          `SELECT 1
+           WHERE EXISTS (
+             SELECT 1
+             FROM room_visibility_grants
+             WHERE room_id = $1 AND user_id = $2
+           )
+           OR EXISTS (
+             SELECT 1
+             FROM room_members
+             WHERE room_id = $1 AND user_id = $2
+           )
+           LIMIT 1`,
+          [room.id, userId]
+        );
+
+        if ((visibilityGrant.rowCount || 0) === 0) {
+          return reply.code(403).send({
+            error: "Forbidden",
+            message: "You cannot access this room"
+          });
+        }
+      }
+
+      if (room.nsfw === true) {
+        const serverId = String(room.server_id || "").trim();
+        const confirmed = serverId ? await isServerAgeConfirmed(serverId, userId) : false;
+        if (!confirmed) {
+          return reply.code(403).send({
+            error: "AgeVerificationRequired",
+            message: "Age verification is required for NSFW access",
+            serverId,
+            roomSlug: room.slug
+          });
+        }
+      }
+
+      if (!room.is_public) {
+        const membership = await db.query(
+          "SELECT 1 FROM room_members WHERE room_id = $1 AND user_id = $2 LIMIT 1",
+          [room.id, userId]
+        );
+
+        if ((membership.rowCount || 0) === 0) {
+          return reply.code(403).send({
+            error: "Forbidden",
+            message: "You cannot access this room"
+          });
+        }
+      }
+
+      if (room.server_id) {
+        const muteState = await resolveActiveServerMute(room.server_id, userId);
+        if (muteState.isMuted) {
+          return reply.code(403).send({
+            error: "ServerMemberMuted",
+            message: "You are muted in this server",
+            mutedUntil: muteState.expiresAt,
+            retryAfterSec: muteState.retryAfterSec
+          });
+        }
+      }
+
+      if (room.is_readonly) {
+        return reply.code(403).send({
+          error: "RoomReadOnly",
+          message: "Room is read-only"
+        });
+      }
+
+      const slowmodeSeconds = Number(room.slowmode_seconds || 0);
+      if (slowmodeSeconds > 0) {
+        const slowmodeKey = `room:slowmode:${room.id}:${userId}`;
+        const cooldownRaw = await fastify.redis.get(slowmodeKey);
+        if (cooldownRaw) {
+          const retryAfterSec = Math.max(1, Number.parseInt(cooldownRaw, 10) || slowmodeSeconds);
+          return reply.code(429).send({
+            error: "SlowmodeActive",
+            message: "Slowmode is active",
+            retryAfterSec
+          });
+        }
+
+        await fastify.redis.setEx(slowmodeKey, slowmodeSeconds, String(slowmodeSeconds));
+      }
+
+      const inserted = await db.query<{
+        id: string;
+        room_id: string;
+        user_id: string;
+        body: string;
+        created_at: string;
+      }>(
+        `INSERT INTO messages (room_id, user_id, body)
+         VALUES ($1, $2, $3)
+         RETURNING id, room_id, user_id, body, created_at`,
+        [room.id, userId, parsedBody.data.text]
+      );
+
+      const message = inserted.rows[0];
+      const wsPayload = {
+        id: message.id,
+        roomId: message.room_id,
+        roomSlug: room.slug,
+        userId: message.user_id,
+        userName,
+        text: message.body,
+        createdAt: message.created_at,
+        senderRequestId: null,
+        attachments: []
+      };
+
+      broadcastRealtimeEnvelope(buildChatMessageEnvelope(wsPayload));
+
+      return reply.code(201).send({
+        message: {
+          id: message.id,
+          room_id: message.room_id,
+          user_id: message.user_id,
+          text: message.body,
+          created_at: message.created_at,
+          edited_at: null,
+          user_name: userName,
+          attachments: []
+        }
+      });
     }
   );
 

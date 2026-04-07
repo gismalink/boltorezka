@@ -371,6 +371,8 @@ export const api = {
       token
     );
   },
+  createRoomMessage: (token: string, slug: string, input: { text: string; mentionUserIds?: string[] }) =>
+    fetchJson<{ message: Message }>(withSuffix(endpoints.rooms, slug, "messages"), token, withJsonBody("POST", input)),
   roomTopics: (token: string, roomId: string) =>
     fetchJson<RoomTopicsListResponse>(withSuffix(endpoints.rooms, roomId, "topics"), token),
   createRoomTopic: (token: string, roomId: string, input: { title: string; slug?: string; position?: number }) =>

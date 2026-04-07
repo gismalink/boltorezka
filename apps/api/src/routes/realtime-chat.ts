@@ -486,8 +486,9 @@ export async function handleChatSend(
 
   const topicId = normalizeRequestId(getPayloadString(payload, "topicId", 128));
   const replyToMessageId = normalizeRequestId(getPayloadString(payload, "replyToMessageId", 128));
-  const mentionUserIdsRaw = Array.isArray((payload as Record<string, unknown>)?.mentionUserIds)
-    ? (payload as Record<string, unknown>).mentionUserIds
+  const mentionUserIdsCandidate = (payload as Record<string, unknown>)?.mentionUserIds;
+  const mentionUserIdsRaw: unknown[] = Array.isArray(mentionUserIdsCandidate)
+    ? mentionUserIdsCandidate
     : [];
   const mentionUserIds = mentionUserIdsRaw
     .filter((value): value is string => typeof value === "string")

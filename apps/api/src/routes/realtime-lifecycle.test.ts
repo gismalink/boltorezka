@@ -12,6 +12,7 @@ test("realtime-lifecycle: initialize sets state, marks presence online and sends
     connection,
     userId: "u1",
     userName: "Alice",
+    currentServerId: null,
     socketState,
     attachUserSocket: () => {},
     registerRealtimeSocket: () => {},
