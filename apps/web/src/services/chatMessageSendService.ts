@@ -1,20 +1,12 @@
 import { api } from "../api";
 import type { User } from "../domain";
 import type { ChatController } from "./chatController";
-import { executeChatOperation } from "./chatOperationExecutor";
+import {
+  runChatEdit,
+  type SendWsEventAwaitAckFn,
+  type SendWsEventFn
+} from "./chatTransportCommands";
 import { extractImageSourceFromClipboardText } from "../utils/chatImagePayload";
-
-type SendWsEventFn = (
-  eventType: string,
-  payload: Record<string, unknown>,
-  options?: { withIdempotency?: boolean; maxRetries?: number }
-) => string | null;
-
-type SendWsEventAwaitAckFn = (
-  eventType: string,
-  payload: Record<string, unknown>,
-  options?: { withIdempotency?: boolean; maxRetries?: number }
-) => Promise<void>;
 
 type SendChatMessageParams = {
   authToken: string;
@@ -73,26 +65,15 @@ export async function sendChatMessage(params: SendChatMessageParams): Promise<Se
       return { kind: "empty" };
     }
 
-    const editResult = await executeChatOperation({
-      policy: {
-        transport: "ws-first-http-fallback",
-        ws: {
-          eventType: "chat.edit",
-          withIdempotency: true,
-          maxRetries: maxChatRetries
-        }
-      },
-      sendWsEventAwaitAck,
+    const editResult = await runChatEdit({
+      authToken,
+      messageId: editingMessageId,
+      text: nextText,
+      roomSlug: chatRoomSlug,
+      topicId: activeTopicId || undefined,
+      maxRetries: maxChatRetries,
       sendWsEvent,
-      payload: {
-        messageId: editingMessageId,
-        text: nextText,
-        roomSlug: chatRoomSlug,
-        topicId: activeTopicId || undefined
-      },
-      httpRequest: async () => {
-        await api.editMessage(authToken, editingMessageId, { text: nextText });
-      }
+      sendWsEventAwaitAck
     });
 
     if (editResult.kind !== "failed") {

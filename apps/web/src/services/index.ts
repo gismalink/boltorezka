@@ -4,6 +4,8 @@ export { ChatController } from "./chatController";
 export { executeHttpOnly } from "./chatOperationExecutor";
 export { executeHttpWithError } from "./chatOperationExecutor";
 export { executeWsFirstWithHttpFallback } from "./chatOperationExecutor";
+export { runChatDelete } from "./chatTransportCommands";
+export { runChatEdit } from "./chatTransportCommands";
 export { sendChatMessage } from "./chatMessageSendService";
 export { RealtimeClient } from "./realtimeClient";
 export { RoomAdminController } from "./roomAdminController";

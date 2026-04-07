@@ -14,6 +14,7 @@ import { api } from "../../api";
 import type { Message, MessagesCursor, User } from "../../domain";
 import { sendChatMessage, type ChatController } from "../../services";
 import { CHAT_OPERATION_POLICIES, executeChatOperation, executeChatOperationWithError } from "../../services/chatOperationExecutor";
+import { runChatDelete, type SendWsEventAwaitAckFn, type SendWsEventFn } from "../../services/chatTransportCommands";
 import {
   compressImageToDataUrl,
   extractImageSourceFromClipboardHtml,
@@ -21,18 +22,6 @@ import {
   normalizeImageSource,
   type ChatImagePolicy
 } from "../../utils/chatImagePayload";
-
-type SendWsEventFn = (
-  eventType: string,
-  payload: Record<string, unknown>,
-  options?: { withIdempotency?: boolean; maxRetries?: number }
-) => string | null;
-
-type SendWsEventAwaitAckFn = (
-  eventType: string,
-  payload: Record<string, unknown>,
-  options?: { withIdempotency?: boolean; maxRetries?: number }
-) => Promise<void>;
 
 type UseChatComposerActionsParams = {
   chatRoomSlug: string;
@@ -514,18 +503,13 @@ export function useChatComposerActions({
     }
 
     void (async () => {
-      const deleteResult = await executeChatOperation({
-        policy: CHAT_OPERATION_POLICIES["chat.delete"],
+      const deleteResult = await runChatDelete({
+        authToken,
+        messageId,
+        roomSlug: chatRoomSlug,
+        topicId: activeTopicId || undefined,
         sendWsEvent,
-        sendWsEventAwaitAck,
-        payload: {
-          messageId,
-          roomSlug: chatRoomSlug,
-          topicId: activeTopicId || undefined
-        },
-        httpRequest: async () => {
-          await api.deleteMessage(authToken, messageId);
-        }
+        sendWsEventAwaitAck
       });
 
       if (deleteResult.kind === "ws") {
@@ -582,6 +566,10 @@ export function useChatComposerActions({
 
       if (pinResult.kind === "failed") {
         pushToast(serverErrorMessage);
+        return;
+      }
+
+      if (pinResult.kind !== "http") {
         return;
       }
 
@@ -672,6 +660,11 @@ export function useChatComposerActions({
 
       if (reportResult.kind === "http") {
         pushToast(reportMessageSentMessage);
+        return;
+      }
+
+      if (reportResult.kind !== "failed" || !("error" in reportResult)) {
+        pushToast(serverErrorMessage);
         return;
       }
 
