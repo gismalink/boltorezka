@@ -56,6 +56,22 @@ async function bootstrapSessionCookie(page) {
   }
 }
 
+async function installAuthHeaderRoute(page) {
+  await page.route("**/*", async (route) => {
+    const request = route.request();
+    if (!request.url().startsWith(baseUrl)) {
+      await route.continue();
+      return;
+    }
+
+    const headers = {
+      ...request.headers(),
+      authorization: `Bearer ${bearerToken}`
+    };
+    await route.continue({ headers });
+  });
+}
+
 async function main() {
   if (!bearerToken) {
     throw new Error("SMOKE_TEST_BEARER_TOKEN is required for smoke:web:agent-semantics:browser");
@@ -66,14 +82,21 @@ async function main() {
   const page = await context.newPage();
 
   try {
+    await installAuthHeaderRoute(page);
+
     await page.addInitScript((token) => {
       localStorage.setItem("boltorezka_lang", "en");
       localStorage.setItem("boltorezka_token", token);
     }, bearerToken);
 
-    // Cookie-first mode ignores localStorage token persistence, so bootstrap
-    // a server-side session cookie before opening the app.
-    await bootstrapSessionCookie(page);
+    // Cookie-first mode may ignore localStorage token persistence. Try to
+    // bootstrap a cookie session, but continue with explicit auth header
+    // fallback if refresh endpoint rejects current token type.
+    try {
+      await bootstrapSessionCookie(page);
+    } catch (error) {
+      console.warn(`[smoke:web:agent-semantics:browser] refresh bootstrap skipped: ${String((error && typeof error === "object" && "message" in error) ? (error as { message?: string }).message : error || "unknown")}`);
+    }
 
     await gotoWithRetries(page);
 
