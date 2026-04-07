@@ -60,6 +60,33 @@ async function installAuthHeaderRoute(page) {
   await page.route("**/*", async (route) => {
     const request = route.request();
     const url = request.url();
+    if (url.includes("/v1/auth/sso/session")) {
+      const origin = new URL(url).origin;
+      const meResponse = await page.request.get(`${origin}/v1/auth/me`, {
+        headers: {
+          Authorization: `Bearer ${bearerToken}`
+        },
+        timeout: timeoutMs
+      });
+
+      if (!meResponse.ok()) {
+        await route.continue();
+        return;
+      }
+
+      const mePayload = await meResponse.json().catch(() => ({}));
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          authenticated: true,
+          token: bearerToken,
+          user: mePayload?.user || null
+        })
+      });
+      return;
+    }
+
     const isApiRequest = url.includes("/v1/") || /\/version(?:\?|$)/.test(url);
     if (!isApiRequest) {
       await route.continue();
