@@ -10,12 +10,16 @@ import {
   type KeyboardEvent,
   type SetStateAction
 } from "react";
-import { api } from "../../api";
 import type { Message, MessagesCursor, User } from "../../domain";
 import { sendChatMessage, type ChatController } from "../../services";
-import { CHAT_OPERATION_POLICIES, executeChatOperation, executeChatOperationWithError } from "../../services/chatOperationExecutor";
-import { runChatDelete, type SendWsEventAwaitAckFn, type SendWsEventFn } from "../../services/chatTransportCommands";
-import { runChatTogglePin, runChatToggleReaction } from "../../services/chatTransportCommands";
+import {
+  runChatDelete,
+  runChatReport,
+  runChatTogglePin,
+  runChatToggleReaction,
+  type SendWsEventAwaitAckFn,
+  type SendWsEventFn
+} from "../../services/chatTransportCommands";
 import {
   compressImageToDataUrl,
   extractImageSourceFromClipboardHtml,
@@ -647,13 +651,9 @@ export function useChatComposerActions({
     }
 
     void (async () => {
-      const reportResult = await executeChatOperationWithError({
-        policy: CHAT_OPERATION_POLICIES["chat.report"],
-        httpRequest: async () => {
-          await api.reportMessage(authToken, messageId, {
-            reason: "spam_or_abuse"
-          });
-        }
+      const reportResult = await runChatReport({
+        authToken,
+        messageId
       });
 
       if (reportResult.kind === "http") {

@@ -2,7 +2,9 @@ import { api } from "../api";
 import {
   CHAT_OPERATION_POLICIES,
   executeChatOperation,
+  executeChatOperationWithError,
   type ExecuteHttpOnlyResult,
+  type ExecuteHttpWithErrorResult,
   type ExecuteWsFirstWithHttpFallbackResult
 } from "./chatOperationExecutor";
 
@@ -59,6 +61,11 @@ type RunChatToggleReactionInput = {
   topicId?: string;
   sendWsEvent: SendWsEventFn;
   sendWsEventAwaitAck: SendWsEventAwaitAckFn;
+};
+
+type RunChatReportInput = {
+  authToken: string;
+  messageId: string;
 };
 
 export async function runChatEdit({
@@ -174,6 +181,20 @@ export async function runChatToggleReaction({
       }
 
       await api.addMessageReaction(authToken, messageId, emoji);
+    }
+  });
+}
+
+export async function runChatReport({
+  authToken,
+  messageId
+}: RunChatReportInput): Promise<ExecuteWsFirstWithHttpFallbackResult<void> | ExecuteHttpWithErrorResult<void>> {
+  return executeChatOperationWithError({
+    policy: CHAT_OPERATION_POLICIES["chat.report"],
+    httpRequest: async () => {
+      await api.reportMessage(authToken, messageId, {
+        reason: "spam_or_abuse"
+      });
     }
   });
 }
