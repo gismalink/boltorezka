@@ -653,7 +653,8 @@ export function useChatComposerActions({
     void (async () => {
       const reportResult = await runChatReport({
         authToken,
-        messageId
+        messageId,
+        sendWsEventAwaitAck
       });
 
       if (reportResult.kind === "http") {
@@ -674,7 +675,7 @@ export function useChatComposerActions({
 
       pushToast(serverErrorMessage);
     })();
-  }, [activeTopicId, authToken, pushToast, reportMessageExistsMessage, reportMessageSentMessage, serverErrorMessage, topicOnlyActionMessage]);
+  }, [activeTopicId, authToken, pushToast, reportMessageExistsMessage, reportMessageSentMessage, sendWsEventAwaitAck, serverErrorMessage, topicOnlyActionMessage]);
 
   const applyRemotePinState = useCallback((messageId: string, pinned: boolean) => {
     const normalizedId = String(messageId || "").trim();

@@ -17,6 +17,15 @@ type TopicMessageOps = {
     userId: string;
     active: boolean;
   }>;
+  createTopicMessageReport: (input: {
+    messageId: string;
+    userId: string;
+    reason: string;
+    details?: string;
+  }) => Promise<{
+    reportId: string;
+    messageId: string;
+  }>;
 };
 
 let topicMessageOpsPromise: Promise<TopicMessageOps> | null = null;
@@ -38,7 +47,8 @@ async function getTopicMessageOps() {
   if (!topicMessageOpsPromise) {
     topicMessageOpsPromise = import("../services/room-topic-messages-service.js").then((module) => ({
       setTopicMessagePinned: module.setTopicMessagePinned,
-      setTopicMessageReaction: module.setTopicMessageReaction
+      setTopicMessageReaction: module.setTopicMessageReaction,
+      createTopicMessageReport: module.createTopicMessageReport
     }));
   }
   return topicMessageOpsPromise;
@@ -758,6 +768,16 @@ function mapTopicDomainErrorToNack(
     return true;
   }
 
+  if (message === "cannot_report_own_message") {
+    sendNack(connection, requestId, eventType, "Forbidden", "You cannot report your own message");
+    return true;
+  }
+
+  if (message === "message_report_exists") {
+    sendNack(connection, requestId, eventType, "MessageAlreadyReported", "Message is already reported by this user");
+    return true;
+  }
+
   return false;
 }
 
@@ -947,4 +967,44 @@ export async function handleChatReactionRemove(params: ChatCommonParams): Promis
     ...params,
     active: false
   });
+}
+
+export async function handleChatReport(params: ChatCommonParams): Promise<void> {
+  const {
+    connection,
+    state,
+    payload,
+    requestId,
+    eventType,
+    normalizeRequestId,
+    getPayloadString,
+    sendValidationNack,
+    sendNack,
+    sendAckWithMetrics
+  } = params;
+
+  const messageId = normalizeRequestId(getPayloadString(payload, "messageId", 128));
+  if (!messageId) {
+    sendValidationNack(connection, requestId, eventType, "messageId is required");
+    return;
+  }
+
+  try {
+    const { createTopicMessageReport } = await getTopicMessageOps();
+    const result = await createTopicMessageReport({
+      messageId,
+      userId: state.userId,
+      reason: "spam_or_abuse"
+    });
+
+    sendAckWithMetrics(connection, requestId, eventType, {
+      messageId: result.messageId,
+      reportId: result.reportId
+    });
+  } catch (error) {
+    if (mapTopicDomainErrorToNack(error, connection, requestId, eventType, sendNack)) {
+      return;
+    }
+    sendNack(connection, requestId, eventType, "ServerError", "Failed to report message");
+  }
 }

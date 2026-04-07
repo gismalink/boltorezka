@@ -127,12 +127,31 @@ describe("chatTransportCommands", () => {
     expect(removeMessageReactionMock).toHaveBeenCalledWith("token", "m1", "👍");
   });
 
-  it("runChatReport returns http on success", async () => {
+  it("runChatReport returns ws on ack success", async () => {
+    const sendWsEventAwaitAck = vi.fn(async () => undefined);
     reportMessageMock.mockResolvedValue(undefined);
 
     const result = await runChatReport({
       authToken: "token",
-      messageId: "m1"
+      messageId: "m1",
+      sendWsEventAwaitAck
+    });
+
+    expect(result).toEqual({ kind: "ws" });
+    expect(sendWsEventAwaitAck).toHaveBeenCalledTimes(1);
+    expect(reportMessageMock).not.toHaveBeenCalled();
+  });
+
+  it("runChatReport falls back to http on transient ws error", async () => {
+    const sendWsEventAwaitAck = vi.fn(async () => {
+      throw new Error("chat.report:ack_timeout");
+    });
+    reportMessageMock.mockResolvedValue(undefined);
+
+    const result = await runChatReport({
+      authToken: "token",
+      messageId: "m1",
+      sendWsEventAwaitAck
     });
 
     expect(result).toEqual({ kind: "http", value: undefined });
@@ -141,13 +160,36 @@ describe("chatTransportCommands", () => {
     });
   });
 
+  it("runChatReport preserves ws business error for code handling", async () => {
+    const error = new Error("chat.report:MessageAlreadyReported:already_reported");
+    const sendWsEventAwaitAck = vi.fn(async () => {
+      throw error;
+    });
+
+    const result = await runChatReport({
+      authToken: "token",
+      messageId: "m1",
+      sendWsEventAwaitAck
+    });
+
+    expect(result.kind).toBe("failed");
+    if (result.kind === "failed" && "error" in result) {
+      expect(result.error).toBe(error);
+    }
+    expect(reportMessageMock).not.toHaveBeenCalled();
+  });
+
   it("runChatReport preserves backend error for business handling", async () => {
     const error = Object.assign(new Error("already reported"), { code: "MessageAlreadyReported" });
+    const sendWsEventAwaitAck = vi.fn(async () => {
+      throw new Error("ws_not_connected");
+    });
     reportMessageMock.mockRejectedValue(error);
 
     const result = await runChatReport({
       authToken: "token",
-      messageId: "m1"
+      messageId: "m1",
+      sendWsEventAwaitAck
     });
 
     expect(result.kind).toBe("failed");

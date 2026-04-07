@@ -6,6 +6,7 @@ import {
   handleChatPin,
   handleChatReactionAdd,
   handleChatReactionRemove,
+  handleChatReport,
   handleChatSend,
   handleChatUnpin,
   setTopicMessageOpsLoaderForTests
@@ -313,6 +314,9 @@ test("realtime-chat: chat.pin broadcasts and acks on success", async () => {
     }),
     setTopicMessageReaction: async () => {
       throw new Error("not_used");
+    },
+    createTopicMessageReport: async () => {
+      throw new Error("not_used");
     }
   }));
 
@@ -345,6 +349,9 @@ test("realtime-chat: chat.unpin maps forbidden domain error to nack", async () =
       throw new Error("forbidden_topic_manage");
     },
     setTopicMessageReaction: async () => {
+      throw new Error("not_used");
+    },
+    createTopicMessageReport: async () => {
       throw new Error("not_used");
     }
   }));
@@ -392,7 +399,10 @@ test("realtime-chat: chat.reaction.remove broadcasts and acks on success", async
       emoji: "👍",
       userId: "u1",
       active: false
-    })
+    }),
+    createTopicMessageReport: async () => {
+      throw new Error("not_used");
+    }
   }));
 
   try {
@@ -418,4 +428,66 @@ test("realtime-chat: chat.reaction.remove broadcasts and acks on success", async
     emoji: "👍",
     active: false
   });
+});
+
+test("realtime-chat: chat.report acks on success", async () => {
+  let ackMeta: Record<string, unknown> | null = null;
+
+  setTopicMessageOpsLoaderForTests(async () => ({
+    setTopicMessagePinned: async () => {
+      throw new Error("not_used");
+    },
+    setTopicMessageReaction: async () => {
+      throw new Error("not_used");
+    },
+    createTopicMessageReport: async () => ({
+      reportId: "rep-1",
+      messageId: "m-1"
+    })
+  }));
+
+  try {
+    await handleChatReport(createTopicMutationParams({
+      eventType: "chat.report",
+      sendAckWithMetrics: (_socket: unknown, _requestId: string | null, _eventType: string, meta?: Record<string, unknown>) => {
+        ackMeta = meta || null;
+      }
+    }) as any);
+  } finally {
+    setTopicMessageOpsLoaderForTests(null);
+  }
+
+  assert.deepEqual(ackMeta, {
+    messageId: "m-1",
+    reportId: "rep-1"
+  });
+});
+
+test("realtime-chat: chat.report maps duplicate report to MessageAlreadyReported nack", async () => {
+  let nackCode: string | null = null;
+
+  setTopicMessageOpsLoaderForTests(async () => ({
+    setTopicMessagePinned: async () => {
+      throw new Error("not_used");
+    },
+    setTopicMessageReaction: async () => {
+      throw new Error("not_used");
+    },
+    createTopicMessageReport: async () => {
+      throw new Error("message_report_exists");
+    }
+  }));
+
+  try {
+    await handleChatReport(createTopicMutationParams({
+      eventType: "chat.report",
+      sendNack: (_socket: unknown, _requestId: string | null, _eventType: string, code: string) => {
+        nackCode = code;
+      }
+    }) as any);
+  } finally {
+    setTopicMessageOpsLoaderForTests(null);
+  }
+
+  assert.equal(nackCode, "MessageAlreadyReported");
 });

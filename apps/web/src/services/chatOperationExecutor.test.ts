@@ -95,7 +95,7 @@ describe("chatOperationExecutor", () => {
     const httpRequest = vi.fn(async () => 42);
 
     const result = await executeChatOperation({
-      policy: CHAT_OPERATION_POLICIES["chat.report"],
+      policy: { transport: "http-only" },
       httpRequest
     });
 
@@ -150,7 +150,7 @@ describe("chatOperationExecutor", () => {
     const error = Object.assign(new Error("already reported"), { code: "MessageAlreadyReported" });
 
     const result = await executeChatOperationWithError({
-      policy: CHAT_OPERATION_POLICIES["chat.report"],
+      policy: { transport: "http-only" },
       httpRequest: async () => {
         throw error;
       }

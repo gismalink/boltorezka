@@ -79,7 +79,12 @@ export const CHAT_OPERATION_POLICIES: Record<ChatOperationPolicyId, ChatOperatio
     }
   },
   "chat.report": {
-    transport: "http-only"
+    transport: "ws-first-http-fallback",
+    ws: {
+      eventType: "chat.report",
+      withIdempotency: true,
+      maxRetries: 1
+    }
   }
 };
 

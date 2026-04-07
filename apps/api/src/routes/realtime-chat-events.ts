@@ -6,6 +6,7 @@ import {
   handleChatPin,
   handleChatReactionAdd,
   handleChatReactionRemove,
+  handleChatReport,
   handleChatSend,
   handleChatTyping,
   handleChatUnpin
@@ -199,6 +200,16 @@ export function createRealtimeChatEventHandlers(deps: ChatEventDeps) {
     await handleChatReactionRemove(buildChatBaseParams(connection, state, payload, requestId, eventType));
   };
 
+  const handleChatReportEvent = async (
+    connection: WebSocket,
+    state: SocketState,
+    payload: WsIncomingPayload | undefined,
+    requestId: string | null,
+    eventType: string
+  ) => {
+    await handleChatReport(buildChatBaseParams(connection, state, payload, requestId, eventType));
+  };
+
   return {
     handleChatSendEvent,
     handleChatEditEvent,
@@ -207,6 +218,7 @@ export function createRealtimeChatEventHandlers(deps: ChatEventDeps) {
     handleChatUnpinEvent,
     handleChatReactionAddEvent,
     handleChatReactionRemoveEvent,
+    handleChatReportEvent,
     handleChatTypingEvent
   };
 }

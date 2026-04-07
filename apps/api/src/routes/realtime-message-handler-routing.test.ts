@@ -74,6 +74,9 @@ function createHandlerFor(eventCalls: Record<string, HandlerCall[]>) {
     handleChatReactionRemoveEvent: async (_c, _s, payload, requestId, eventType) => {
       push("chat.reaction.remove", eventType, requestId, payload);
     },
+    handleChatReportEvent: async (_c, _s, payload, requestId, eventType) => {
+      push("chat.report", eventType, requestId, payload);
+    },
     handleChatTypingEvent: async (_c, _s, payload, requestId, eventType) => {
       push("chat.typing", eventType, requestId, payload);
     },
@@ -140,4 +143,18 @@ test("realtime-message-handler: routes chat.reaction.add and chat.reaction.remov
   assert.equal(eventCalls["chat.reaction.remove"]?.length, 1);
   assert.equal(eventCalls["chat.reaction.add"]?.[0]?.requestId, "req-react-add-1");
   assert.equal(eventCalls["chat.reaction.remove"]?.[0]?.requestId, "req-react-remove-1");
+});
+
+test("realtime-message-handler: routes chat.report", async () => {
+  const eventCalls: Record<string, HandlerCall[]> = {};
+  const { connection, handleMessage } = createHandlerFor(eventCalls);
+
+  await handleMessage(connection, Buffer.from(JSON.stringify({
+    type: "chat.report",
+    requestId: "req-report-1",
+    payload: { messageId: "m1" }
+  })));
+
+  assert.equal(eventCalls["chat.report"]?.length, 1);
+  assert.equal(eventCalls["chat.report"]?.[0]?.requestId, "req-report-1");
 });

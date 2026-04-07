@@ -2,7 +2,6 @@ import { api } from "../api";
 import {
   CHAT_OPERATION_POLICIES,
   executeChatOperation,
-  executeChatOperationWithError,
   type ExecuteHttpOnlyResult,
   type ExecuteHttpWithErrorResult,
   type ExecuteWsFirstWithHttpFallbackResult
@@ -66,7 +65,13 @@ type RunChatToggleReactionInput = {
 type RunChatReportInput = {
   authToken: string;
   messageId: string;
+  sendWsEventAwaitAck: SendWsEventAwaitAckFn;
 };
+
+function isTransientWsError(error: unknown): boolean {
+  const message = String((error as { message?: string } | null)?.message || "").trim().toLowerCase();
+  return message === "ws_not_connected" || message.includes("ack_timeout") || message === "ws_disposed";
+}
 
 export async function runChatEdit({
   authToken,
@@ -187,14 +192,27 @@ export async function runChatToggleReaction({
 
 export async function runChatReport({
   authToken,
-  messageId
+  messageId,
+  sendWsEventAwaitAck
 }: RunChatReportInput): Promise<ExecuteWsFirstWithHttpFallbackResult<void> | ExecuteHttpWithErrorResult<void>> {
-  return executeChatOperationWithError({
-    policy: CHAT_OPERATION_POLICIES["chat.report"],
-    httpRequest: async () => {
-      await api.reportMessage(authToken, messageId, {
-        reason: "spam_or_abuse"
-      });
+  try {
+    await sendWsEventAwaitAck("chat.report", { messageId }, {
+      withIdempotency: true,
+      maxRetries: 1
+    });
+    return { kind: "ws" };
+  } catch (error) {
+    if (!isTransientWsError(error)) {
+      return { kind: "failed", error };
     }
-  });
+  }
+
+  try {
+    await api.reportMessage(authToken, messageId, {
+      reason: "spam_or_abuse"
+    });
+    return { kind: "http", value: undefined };
+  } catch (error) {
+    return { kind: "failed", error };
+  }
 }

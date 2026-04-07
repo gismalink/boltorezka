@@ -99,6 +99,13 @@ export type WsIncomingChatReactionRemoveEnvelope = {
   payload?: WsIncomingPayload;
 };
 
+export type WsIncomingChatReportEnvelope = {
+  type: "chat.report";
+  requestId?: string;
+  idempotencyKey?: string;
+  payload?: WsIncomingPayload;
+};
+
 export type WsIncomingChatTypingEnvelope = {
   type: "chat.typing";
   requestId?: string;
@@ -168,6 +175,7 @@ export type WsIncomingKnownEnvelope =
   | WsIncomingChatUnpinEnvelope
   | WsIncomingChatReactionAddEnvelope
   | WsIncomingChatReactionRemoveEnvelope
+  | WsIncomingChatReportEnvelope
   | WsIncomingChatTypingEnvelope
   | WsIncomingCallOfferEnvelope
   | WsIncomingCallAnswerEnvelope
