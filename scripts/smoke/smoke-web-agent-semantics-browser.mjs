@@ -59,7 +59,9 @@ async function bootstrapSessionCookie(page) {
 async function installAuthHeaderRoute(page) {
   await page.route("**/*", async (route) => {
     const request = route.request();
-    if (!request.url().startsWith(baseUrl)) {
+    const url = request.url();
+    const isApiRequest = url.includes("/v1/") || /\/version(?:\?|$)/.test(url);
+    if (!isApiRequest) {
       await route.continue();
       return;
     }
