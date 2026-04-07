@@ -31,7 +31,7 @@ Scope: Внедрение подхода accessibility tree-first для web и 
 - [x] Зафиксировать mapping на платформы:
 	- ARIA/data-attributes для web,
 	- desktop-electron renderer: тот же semantic contract, что и web.
-- [ ] Запретить неполные интерактивные элементы без `identifier` и состояния (`value/state`) для всех экранов (пока enforced только на pilot chat scope).
+- [ ] Запретить неполные интерактивные элементы без `identifier` и состояния (`value/state`) для всех экранов (добавлен verify-gate для interactive `data-agent-id` controls: `scripts/verify-agent-semantics-contract.mjs`; полный coverage по non-agent interactive ещё в работе).
 
 ### 2.2 Screen Context и Navigation Model
 
@@ -81,7 +81,7 @@ Scope: Внедрение подхода accessibility tree-first для web и 
 - [x] Списки пилотных экранов представлены в явной семантике списка и элементов списка.
 - [ ] Декоративные элементы исключены из дерева доступности, stateful controls отдают актуальный `value/state` (state/value реализованы; cleanup decorative tree остаётся).
 - [x] Каждое действие агента имеет машинно-читаемое подтверждение успеха/ошибки (pilot chat scope).
-- [x] Smoke в `test` подтверждает стабильность agent-ready contract для пилотных флоу (`smoke:web:agent-semantics:evidence` PASS, selectors=12, SHA `5e57007`).
+- [x] Smoke в `test` подтверждает стабильность agent-ready contract для пилотных флоу (`smoke:web:agent-semantics:evidence` PASS, selectors=12, SHA `7e629fc`).
 
 ## 5) Ограничения выполнения
 
@@ -109,6 +109,7 @@ Scope: Внедрение подхода accessibility tree-first для web и 
 - Усилен browser smoke gate для settings/profile ветки: проверяется не только видимость, но и наличие обязательных `data-agent-state/value` для ключевых контролов.
 - Закрыты оставшиеся state-пробелы в settings/profile agent-marked элементах (`settings.user-modal.shell/close/tab.select/profile.section`) и добавлены обязательные smoke-assertions для этих атрибутов.
 - В workflow добавлен обязательный UI DoD gate для agent-readiness: отдельный checklist `docs/status/checklists/2026-04-07_AGENT_ACCESSIBILITY_DOD_CHECKLIST.md` подключён в `docs/runbooks/workflow-checklist.md`.
+- Добавлен verify-gate semantic contract в основной `check` pipeline: `npm run check:agent-semantics` (скрипт `scripts/verify-agent-semantics-contract.mjs`) валидирует interactive controls с `data-agent-id` на наличие `data-agent-state/value`.
 
 ## 7) Evidence Artifact (test)
 

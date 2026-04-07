@@ -10,6 +10,7 @@
     "check:quick": "bash ./scripts/verify-all.sh",
     "check:required": "bash ./scripts/verify-required.sh",
     "check:docs-links": "node ./scripts/verify-doc-links.mjs",
+    "check:agent-semantics": "node ./scripts/verify-agent-semantics-contract.mjs",
     "check:api-types": "npm --prefix apps/api run typecheck",
     "web:install": "npm --prefix apps/web install",
     "web:dev": "npm --prefix apps/web run dev",
