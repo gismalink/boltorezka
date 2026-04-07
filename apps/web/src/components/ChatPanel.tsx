@@ -55,6 +55,11 @@ type ChatPanelProps = {
   topics: RoomTopic[];
   activeTopicId: string | null;
   authToken: string;
+  sendWsEventAwaitAck?: (
+    eventType: string,
+    payload: Record<string, unknown>,
+    options?: { withIdempotency?: boolean; maxRetries?: number }
+  ) => Promise<void>;
   messages: Message[];
   currentUserId: string | null;
   messagesHasMore: boolean;
@@ -103,6 +108,7 @@ export function ChatPanel({
   roomSlug, roomId, roomTitle,
   topics,  activeTopicId,
   authToken,
+  sendWsEventAwaitAck,
   messages,
   currentUserId,
   messagesHasMore,
@@ -278,6 +284,7 @@ export function ChatPanel({
   } = useChatPanelReadState({
     t,
     authToken,
+    sendWsEventAwaitAck,
     currentUserId,
     activeTopicId,
     roomId,

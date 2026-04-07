@@ -204,6 +204,7 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
     handleChatReactionAddEvent,
     handleChatReactionRemoveEvent,
     handleChatReportEvent,
+    handleChatTopicReadEvent,
     handleChatTypingEvent
   } = createRealtimeChatEventHandlers({
     normalizeRequestId,
@@ -279,6 +280,7 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
     handleChatReactionAddEvent,
     handleChatReactionRemoveEvent,
     handleChatReportEvent,
+    handleChatTopicReadEvent,
     handleChatTypingEvent,
     handleScreenShareStartEvent,
     handleScreenShareStopEvent,

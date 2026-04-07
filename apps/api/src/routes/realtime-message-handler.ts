@@ -113,6 +113,13 @@ type RealtimeMessageHandlerDeps = {
     requestId: string | null,
     eventType: string
   ) => Promise<void>;
+  handleChatTopicReadEvent: (
+    connection: WebSocket,
+    state: SocketState,
+    payload: WsIncomingPayload | undefined,
+    requestId: string | null,
+    eventType: string
+  ) => Promise<void>;
   handleChatTypingEvent: (
     connection: WebSocket,
     state: SocketState,
@@ -183,6 +190,7 @@ export function createRealtimeMessageHandler(deps: RealtimeMessageHandlerDeps) {
     handleChatReactionAddEvent,
     handleChatReactionRemoveEvent,
     handleChatReportEvent,
+    handleChatTopicReadEvent,
     handleChatTypingEvent,
     handleScreenShareStartEvent,
     handleScreenShareStopEvent,
@@ -279,6 +287,11 @@ export function createRealtimeMessageHandler(deps: RealtimeMessageHandlerDeps) {
 
         case "chat.report": {
           await handleChatReportEvent(connection, state, payload, requestId, eventType);
+          return;
+        }
+
+        case "chat.topic.read": {
+          await handleChatTopicReadEvent(connection, state, payload, requestId, eventType);
           return;
         }
 

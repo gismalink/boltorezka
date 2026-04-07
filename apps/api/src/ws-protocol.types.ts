@@ -106,6 +106,13 @@ export type WsIncomingChatReportEnvelope = {
   payload?: WsIncomingPayload;
 };
 
+export type WsIncomingChatTopicReadEnvelope = {
+  type: "chat.topic.read";
+  requestId?: string;
+  idempotencyKey?: string;
+  payload?: WsIncomingPayload;
+};
+
 export type WsIncomingChatTypingEnvelope = {
   type: "chat.typing";
   requestId?: string;
@@ -176,6 +183,7 @@ export type WsIncomingKnownEnvelope =
   | WsIncomingChatReactionAddEnvelope
   | WsIncomingChatReactionRemoveEnvelope
   | WsIncomingChatReportEnvelope
+  | WsIncomingChatTopicReadEnvelope
   | WsIncomingChatTypingEnvelope
   | WsIncomingCallOfferEnvelope
   | WsIncomingCallAnswerEnvelope

@@ -69,6 +69,16 @@ type TopicMessageOps = {
     reportId: string;
     messageId: string;
   }>;
+  markTopicRead: (input: {
+    topicId: string;
+    userId: string;
+    lastReadMessageId?: string | null;
+  }) => Promise<{
+    roomId: string;
+    topicId: string;
+    lastReadMessageId: string | null;
+    lastReadAt: string;
+  }>;
 };
 
 type NotificationInboxOps = {
@@ -125,7 +135,8 @@ async function getTopicMessageOps() {
       replyTopicMessage: module.replyTopicMessage,
       setTopicMessagePinned: module.setTopicMessagePinned,
       setTopicMessageReaction: module.setTopicMessageReaction,
-      createTopicMessageReport: module.createTopicMessageReport
+      createTopicMessageReport: module.createTopicMessageReport,
+      markTopicRead: module.markTopicRead
     }));
   }
   return topicMessageOpsPromise;
@@ -1283,5 +1294,64 @@ export async function handleChatReport(params: ChatCommonParams): Promise<void> 
       return;
     }
     sendNack(connection, requestId, eventType, "ServerError", "Failed to report message");
+  }
+}
+
+export async function handleChatTopicRead(params: ChatCommonParams): Promise<void> {
+  const {
+    connection,
+    state,
+    payload,
+    requestId,
+    eventType,
+    normalizeRequestId,
+    getPayloadString,
+    sendValidationNack,
+    sendNack,
+    broadcastRoom,
+    sendAckWithMetrics
+  } = params;
+
+  const topicId = normalizeRequestId(getPayloadString(payload, "topicId", 128));
+  if (!topicId) {
+    sendValidationNack(connection, requestId, eventType, "topicId is required");
+    return;
+  }
+
+  const rawLastReadMessageId = getPayloadString(payload, "lastReadMessageId", 128);
+  const lastReadMessageId = rawLastReadMessageId ? normalizeRequestId(rawLastReadMessageId) : null;
+  if (rawLastReadMessageId && !lastReadMessageId) {
+    sendValidationNack(connection, requestId, eventType, "lastReadMessageId must be a valid id");
+    return;
+  }
+
+  try {
+    const { markTopicRead } = await getTopicMessageOps();
+    const read = await markTopicRead({
+      topicId,
+      userId: state.userId,
+      lastReadMessageId
+    });
+
+    broadcastRoom(read.roomId, {
+      type: "chat.topic.read",
+      payload: {
+        roomId: read.roomId,
+        topicId: read.topicId,
+        userId: state.userId,
+        lastReadMessageId: read.lastReadMessageId,
+        lastReadAt: read.lastReadAt
+      }
+    });
+
+    sendAckWithMetrics(connection, requestId, eventType, {
+      topicId: read.topicId,
+      lastReadMessageId: read.lastReadMessageId
+    });
+  } catch (error) {
+    if (mapTopicDomainErrorToNack(error, connection, requestId, eventType, sendNack)) {
+      return;
+    }
+    sendNack(connection, requestId, eventType, "ServerError", "Failed to mark topic as read");
   }
 }

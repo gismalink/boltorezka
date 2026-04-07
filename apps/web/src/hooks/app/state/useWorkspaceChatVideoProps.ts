@@ -34,6 +34,11 @@ type ChatPanelProps = {
   topics: RoomTopic[];
   activeTopicId: string | null;
   authToken: string;
+  sendWsEventAwaitAck?: (
+    eventType: string,
+    payload: Record<string, unknown>,
+    options?: { withIdempotency?: boolean; maxRetries?: number }
+  ) => Promise<void>;
   messages: Message[];
   currentUserId: string | null;
   messagesHasMore: boolean;
@@ -99,6 +104,11 @@ type UseWorkspaceChatVideoPropsInput = {
   locale: string;
   currentServerId: string;
   authToken: string;
+  sendWsEventAwaitAck?: (
+    eventType: string,
+    payload: Record<string, unknown>,
+    options?: { withIdempotency?: boolean; maxRetries?: number }
+  ) => Promise<void>;
   chatRoomSlug: string;
   activeChatRoomId: string;
   activeChatRoomTitle: string;
@@ -168,6 +178,7 @@ export function useWorkspaceChatVideoProps({
   locale,
   currentServerId,
   authToken,
+  sendWsEventAwaitAck,
   chatRoomSlug,
   activeChatRoomId,
   activeChatRoomTitle,
@@ -301,6 +312,7 @@ export function useWorkspaceChatVideoProps({
     topics: chatTopics,
     activeTopicId: activeChatTopicId,
     authToken,
+    sendWsEventAwaitAck,
     messages,
     currentUserId,
     messagesHasMore,

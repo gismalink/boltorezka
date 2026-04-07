@@ -166,6 +166,9 @@ test("realtime-chat: topic reply send uses topic service and broadcasts topic pa
     },
     createTopicMessageReport: async () => {
       throw new Error("not_used");
+    },
+    markTopicRead: async () => {
+      throw new Error("not_used");
     }
   }));
   setNotificationInboxOpsLoaderForTests(async () => ({
@@ -432,6 +435,9 @@ test("realtime-chat: chat.pin broadcasts and acks on success", async () => {
     },
     createTopicMessageReport: async () => {
       throw new Error("not_used");
+    },
+    markTopicRead: async () => {
+      throw new Error("not_used");
     }
   }));
 
@@ -473,6 +479,9 @@ test("realtime-chat: chat.unpin maps forbidden domain error to nack", async () =
       throw new Error("not_used");
     },
     createTopicMessageReport: async () => {
+      throw new Error("not_used");
+    },
+    markTopicRead: async () => {
       throw new Error("not_used");
     }
   }));
@@ -529,6 +538,9 @@ test("realtime-chat: chat.reaction.remove broadcasts and acks on success", async
     }),
     createTopicMessageReport: async () => {
       throw new Error("not_used");
+    },
+    markTopicRead: async () => {
+      throw new Error("not_used");
     }
   }));
 
@@ -576,7 +588,10 @@ test("realtime-chat: chat.report acks on success", async () => {
     createTopicMessageReport: async () => ({
       reportId: "rep-1",
       messageId: "m-1"
-    })
+    }),
+    markTopicRead: async () => {
+      throw new Error("not_used");
+    }
   }));
 
   try {
@@ -614,6 +629,9 @@ test("realtime-chat: chat.report maps duplicate report to MessageAlreadyReported
     },
     createTopicMessageReport: async () => {
       throw new Error("message_report_exists");
+    },
+    markTopicRead: async () => {
+      throw new Error("not_used");
     }
   }));
 

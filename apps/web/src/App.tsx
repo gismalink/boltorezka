@@ -901,6 +901,7 @@ export function App() {
 
   const chatVideoRuntimeInput = {
     t, locale, currentServerId, serviceToken,
+    sendWsEventAwaitAck,
     chatRoomSlug, activeChatRoom,
     chatTopics, activeChatTopicId, setActiveChatTopicId,
     createTopic,

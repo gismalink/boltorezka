@@ -107,6 +107,7 @@ export function asKnownWsIncomingEnvelope(
     case "chat.reaction.add":
     case "chat.reaction.remove":
     case "chat.report":
+    case "chat.topic.read":
     case "chat.typing":
     case "call.offer":
     case "call.answer":

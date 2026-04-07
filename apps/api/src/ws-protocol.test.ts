@@ -46,6 +46,7 @@ test("ws-protocol: asKnownWsIncomingEnvelope filters unknown event types", () =>
   const knownReactionAdd = asKnownWsIncomingEnvelope({ type: "chat.reaction.add", requestId: "r-react", payload: {} });
   const knownReactionRemove = asKnownWsIncomingEnvelope({ type: "chat.reaction.remove", requestId: "r-react-remove", payload: {} });
   const knownReport = asKnownWsIncomingEnvelope({ type: "chat.report", requestId: "r-report", payload: {} });
+  const knownTopicRead = asKnownWsIncomingEnvelope({ type: "chat.topic.read", requestId: "r-topic-read", payload: {} });
   const unknown = asKnownWsIncomingEnvelope({ type: "custom.event", requestId: "r2", payload: {} });
 
   assert.equal(known?.type, "chat.send");
@@ -54,6 +55,7 @@ test("ws-protocol: asKnownWsIncomingEnvelope filters unknown event types", () =>
   assert.equal(knownReactionAdd?.type, "chat.reaction.add");
   assert.equal(knownReactionRemove?.type, "chat.reaction.remove");
   assert.equal(knownReport?.type, "chat.report");
+  assert.equal(knownTopicRead?.type, "chat.topic.read");
   assert.equal(unknown, null);
 });
 

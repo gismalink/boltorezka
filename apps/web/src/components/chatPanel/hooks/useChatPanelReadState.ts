@@ -2,6 +2,7 @@
 // автодогрузка истории и защита от рассинхрона при переключении комнаты/темы.
 import { useCallback, useEffect, useRef, useState, type RefObject } from "react";
 import { api } from "../../../api";
+import { executeWsFirstWithHttpFallbackAwaitAck } from "../../../services/chatOperationExecutor";
 import type { Message, RoomTopic } from "../../../domain";
 import {
   countUnreadMessagesExcludingOwn,
@@ -11,6 +12,11 @@ import {
 type UseChatPanelReadStateArgs = {
   t: (key: string) => string;
   authToken: string;
+  sendWsEventAwaitAck?: (
+    eventType: string,
+    payload: Record<string, unknown>,
+    options?: { withIdempotency?: boolean; maxRetries?: number }
+  ) => Promise<void>;
   currentUserId: string | null;
   activeTopicId: string | null;
   roomId: string;
@@ -25,6 +31,7 @@ type UseChatPanelReadStateArgs = {
 export function useChatPanelReadState({
   t,
   authToken,
+  sendWsEventAwaitAck,
   currentUserId,
   activeTopicId,
   roomId,
@@ -66,6 +73,43 @@ export function useChatPanelReadState({
   }, [normalizedCurrentUserId]);
 
   const countUnreadExcludingOwnMessages = useCallback((messageList: Message[]): number => countUnreadMessagesExcludingOwn(messageList, normalizedCurrentUserId), [normalizedCurrentUserId]);
+
+  const markTopicReadWsFirst = useCallback(async (topicId: string, lastReadMessageId?: string) => {
+    const normalizedToken = String(authToken || "").trim();
+    const normalizedTopicId = String(topicId || "").trim();
+    const normalizedLastReadMessageId = String(lastReadMessageId || "").trim();
+
+    if (!normalizedToken || !normalizedTopicId) {
+      return { kind: "failed" as const };
+    }
+
+    const httpFallback = async () => api.markTopicRead(
+      normalizedToken,
+      normalizedTopicId,
+      normalizedLastReadMessageId ? { lastReadMessageId: normalizedLastReadMessageId } : {}
+    );
+
+    if (!sendWsEventAwaitAck) {
+      try {
+        await httpFallback();
+        return { kind: "http" as const };
+      } catch {
+        return { kind: "failed" as const };
+      }
+    }
+
+    return executeWsFirstWithHttpFallbackAwaitAck({
+      sendWsEventAwaitAck,
+      eventType: "chat.topic.read",
+      payload: {
+        topicId: normalizedTopicId,
+        ...(normalizedLastReadMessageId ? { lastReadMessageId: normalizedLastReadMessageId } : {})
+      },
+      withIdempotency: true,
+      maxRetries: 1,
+      httpFallback
+    });
+  }, [authToken, sendWsEventAwaitAck]);
 
   const isMessageSetAlignedWithActiveContext = useCallback(() => {
     if (messages.length === 0) {
@@ -124,7 +168,10 @@ export function useChatPanelReadState({
     setMarkReadSaving(true);
     setMarkReadStatusText("");
     try {
-      await api.markTopicRead(authToken, topicId, lastReadMessageId ? { lastReadMessageId } : {});
+      const result = await markTopicReadWsFirst(topicId, lastReadMessageId);
+      if (result.kind === "failed") {
+        throw new Error("mark_topic_read_failed");
+      }
       setTopicUnreadOverrideById((prev) => ({
         ...prev,
         [topicId]: {
@@ -153,7 +200,10 @@ export function useChatPanelReadState({
     setMarkReadSaving(true);
     setMarkReadStatusText("");
     try {
-      await Promise.all(unreadTopics.map((topic) => api.markTopicRead(authToken, topic.id)));
+      const results = await Promise.all(unreadTopics.map((topic) => markTopicReadWsFirst(topic.id)));
+      if (results.some((result) => result.kind === "failed")) {
+        throw new Error("mark_room_read_failed");
+      }
       setTopicUnreadOverrideById((prev) => {
         const next = { ...prev };
         unreadTopics.forEach((topic) => {
@@ -209,7 +259,10 @@ export function useChatPanelReadState({
     setMarkReadSaving(true);
     setMarkReadStatusText("");
     try {
-      await api.markTopicRead(authToken, topicId, { lastReadMessageId: previousMessageId });
+      const result = await markTopicReadWsFirst(topicId, previousMessageId);
+      if (result.kind === "failed") {
+        throw new Error("mark_topic_unread_failed");
+      }
       setTopicUnreadOverrideById((prev) => ({
         ...prev,
         [topicId]: {
@@ -451,6 +504,17 @@ export function useChatPanelReadState({
       return;
     }
 
+    const entryUnreadSnapshot = Math.max(0, Number(entryUnreadCountByTopicRef.current[normalizedTopicId] || 0));
+    const dividerForActiveTopicReady = Boolean(
+      entryUnreadDivider?.topicId === normalizedTopicId && String(entryUnreadDivider.messageId || "").trim()
+    );
+    const shouldDelayAutoReadUntilDivider = entryUnreadSnapshot > 0 && !dividerForActiveTopicReady
+      && messagesHasMore
+      && messages.length <= entryUnreadSnapshot;
+    if (shouldDelayAutoReadUntilDivider) {
+      return;
+    }
+
     const topicRoomId = String(topic.roomId || "").trim();
     if (!topicRoomId || topicRoomId !== normalizedRoomId) {
       return;
@@ -567,12 +631,11 @@ export function useChatPanelReadState({
           sourceUnreadCount: sourceUnreadCountSnapshot
         }
       }));
-      entryUnreadCountByTopicRef.current[normalizedTopicId] = candidateUnreadCount;
       lastAutoMarkedMessageIdByTopicRef.current[normalizedTopicId] = candidateMessageId;
 
       autoMarkReadInFlightRef.current[normalizedTopicId] = candidateMessageId;
 
-      void api.markTopicRead(normalizedToken, normalizedTopicId, { lastReadMessageId: candidateMessageId })
+      void markTopicReadWsFirst(normalizedTopicId, candidateMessageId)
         .catch(() => {
           // Optimistic unread decay keeps UI responsive; server truth will reconcile.
         })
@@ -606,7 +669,7 @@ export function useChatPanelReadState({
         autoMarkReadRafRef.current = null;
       }
     };
-  }, [activeTopicId, authToken, chatLogRef, getTopicUnreadCount, isMessageSetAlignedWithActiveContext, messages, roomId, topics]);
+  }, [activeTopicId, authToken, chatLogRef, entryUnreadDivider?.messageId, entryUnreadDivider?.topicId, getTopicUnreadCount, isMessageSetAlignedWithActiveContext, markTopicReadWsFirst, messages, messagesHasMore, roomId, topics]);
 
   useEffect(() => {
     const normalizedTopicId = String(activeTopicId || "").trim();

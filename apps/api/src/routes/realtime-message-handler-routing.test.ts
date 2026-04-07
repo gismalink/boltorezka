@@ -77,6 +77,9 @@ function createHandlerFor(eventCalls: Record<string, HandlerCall[]>) {
     handleChatReportEvent: async (_c, _s, payload, requestId, eventType) => {
       push("chat.report", eventType, requestId, payload);
     },
+    handleChatTopicReadEvent: async (_c, _s, payload, requestId, eventType) => {
+      push("chat.topic.read", eventType, requestId, payload);
+    },
     handleChatTypingEvent: async (_c, _s, payload, requestId, eventType) => {
       push("chat.typing", eventType, requestId, payload);
     },
@@ -157,4 +160,18 @@ test("realtime-message-handler: routes chat.report", async () => {
 
   assert.equal(eventCalls["chat.report"]?.length, 1);
   assert.equal(eventCalls["chat.report"]?.[0]?.requestId, "req-report-1");
+});
+
+test("realtime-message-handler: routes chat.topic.read", async () => {
+  const eventCalls: Record<string, HandlerCall[]> = {};
+  const { connection, handleMessage } = createHandlerFor(eventCalls);
+
+  await handleMessage(connection, Buffer.from(JSON.stringify({
+    type: "chat.topic.read",
+    requestId: "req-topic-read-1",
+    payload: { topicId: "topic-1", lastReadMessageId: "message-1" }
+  })));
+
+  assert.equal(eventCalls["chat.topic.read"]?.length, 1);
+  assert.equal(eventCalls["chat.topic.read"]?.[0]?.requestId, "req-topic-read-1");
 });
