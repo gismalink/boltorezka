@@ -3,6 +3,7 @@ import type { Message, MessagesCursor, PresenceMember } from "../../domain";
 import type { RoomTopic } from "../../domain";
 import type { RealtimeClient } from "../../services";
 import type { ChatTypingByRoom } from "./useChatTypingController";
+import { decrementUnreadValue, getTopicReadDeltas } from "./realtimeUnreadUtils";
 
 type UseRealtimeLifecycleCallbacksArgs = {
   chatRoomSlug: string;
@@ -19,6 +20,7 @@ type UseRealtimeLifecycleCallbacksArgs = {
   setMessages: Dispatch<SetStateAction<Message[]>>;
   setMessagesHasMore: (value: boolean) => void;
   setMessagesNextCursor: Dispatch<SetStateAction<MessagesCursor | null>>;
+  chatTopics: RoomTopic[];
   setChatTopics: Dispatch<SetStateAction<RoomTopic[]>>;
   setRoomUnreadBySlug: Dispatch<SetStateAction<Record<string, number>>>;
   setRoomMentionUnreadBySlug: Dispatch<SetStateAction<Record<string, number>>>;
@@ -52,6 +54,7 @@ export function useRealtimeLifecycleCallbacks({
   setMessages,
   setMessagesHasMore,
   setMessagesNextCursor,
+  chatTopics,
   setChatTopics,
   setRoomUnreadBySlug,
   setRoomMentionUnreadBySlug,
@@ -177,32 +180,30 @@ export function useRealtimeLifecycleCallbacks({
 
   const handleChatMessageReceived = useCallback((payload: {
     roomSlug?: string;
+    roomId?: string;
     topicId?: string;
     userId?: string;
     senderRequestId?: string;
     mentionUserIds?: string[];
   }) => {
-    const targetRoomSlug = String(payload.roomSlug || "").trim();
-    const actorUserId = String(payload.userId || "").trim();
-    const selfUserId = String(currentUserId || "").trim();
+    const targetRoomId = String(payload.roomId || "").trim();
+    const targetRoomSlug = String(payload.roomSlug || roomSlugById[targetRoomId] || "").trim();
     const targetTopicId = String(payload.topicId || "").trim();
     const normalizedActiveTopicId = String(activeTopicId || "").trim();
+    const selfUserId = String(currentUserId || "").trim();
 
-    if (!targetRoomSlug || !actorUserId) {
-      return;
-    }
-
-    if (selfUserId && actorUserId === selfUserId) {
+    if (!targetRoomSlug) {
       return;
     }
 
     const isSameRoom = targetRoomSlug === chatRoomSlug;
-    const isSameTopicInActiveRoom = isSameRoom
-      && normalizedActiveTopicId
-      && targetTopicId
-      && targetTopicId === normalizedActiveTopicId;
+    const isVisibleInCurrentContext = isSameRoom
+      && (
+        (normalizedActiveTopicId && targetTopicId === normalizedActiveTopicId)
+        || (!normalizedActiveTopicId && !targetTopicId)
+      );
 
-    if (isSameRoom && (!normalizedActiveTopicId || isSameTopicInActiveRoom)) {
+    if (isVisibleInCurrentContext) {
       return;
     }
 
@@ -227,7 +228,7 @@ export function useRealtimeLifecycleCallbacks({
         [targetRoomSlug]: Math.max(0, Number(prev[targetRoomSlug] || 0)) + 1
       }));
     }
-  }, [activeTopicId, chatRoomSlug, currentUserId, setRoomMentionUnreadBySlug, setRoomUnreadBySlug]);
+  }, [activeTopicId, chatRoomSlug, currentUserId, roomSlugById, setRoomMentionUnreadBySlug, setRoomUnreadBySlug]);
 
   const handleChatTopicRead = useCallback((payload: {
     roomId?: string;
@@ -242,14 +243,26 @@ export function useRealtimeLifecycleCallbacks({
       return;
     }
 
+    const { topicFound, unreadDelta, mentionDelta } = getTopicReadDeltas(chatTopics, targetTopicId);
+    if (!topicFound) {
+      pushLog(`chat.topic.read topic snapshot missing: topicId=${targetTopicId}`);
+    }
+
     setChatTopics((prev) => prev.map((topic) => {
-      if (topic.id !== targetTopicId || topic.unreadCount <= 0) {
+      if (topic.id !== targetTopicId) {
+        return topic;
+      }
+
+      const nextUnreadCount = 0;
+      const nextMentionUnreadCount = 0;
+      if (topic.unreadCount === nextUnreadCount && topic.mentionUnreadCount === nextMentionUnreadCount) {
         return topic;
       }
 
       return {
         ...topic,
-        unreadCount: 0
+        unreadCount: nextUnreadCount,
+        mentionUnreadCount: nextMentionUnreadCount
       };
     }));
 
@@ -261,13 +274,18 @@ export function useRealtimeLifecycleCallbacks({
       }
 
       const currentUnread = Math.max(0, Number(prev[targetRoomSlug] || 0));
-      if (currentUnread === 0) {
+      if (currentUnread === 0 || unreadDelta <= 0) {
+        return prev;
+      }
+
+      const nextUnread = decrementUnreadValue(currentUnread, unreadDelta);
+      if (nextUnread === currentUnread) {
         return prev;
       }
 
       return {
         ...prev,
-        [targetRoomSlug]: Math.max(0, currentUnread - 1)
+        [targetRoomSlug]: nextUnread
       };
     });
     setRoomMentionUnreadBySlug((prev) => {
@@ -278,16 +296,40 @@ export function useRealtimeLifecycleCallbacks({
       }
 
       const currentMentions = Math.max(0, Number(prev[targetRoomSlug] || 0));
-      if (currentMentions === 0) {
+      if (currentMentions === 0 || mentionDelta <= 0) {
+        return prev;
+      }
+
+      const nextMentions = decrementUnreadValue(currentMentions, mentionDelta);
+      if (nextMentions === currentMentions) {
         return prev;
       }
 
       return {
         ...prev,
-        [targetRoomSlug]: Math.max(0, currentMentions - 1)
+        [targetRoomSlug]: nextMentions
       };
     });
-  }, [chatRoomSlug, currentUserId, roomSlugById, setChatTopics, setRoomMentionUnreadBySlug, setRoomUnreadBySlug]);
+  }, [chatRoomSlug, chatTopics, currentUserId, pushLog, roomSlugById, setChatTopics, setRoomMentionUnreadBySlug, setRoomUnreadBySlug]);
+
+  const handleChatTopicDeleted = useCallback((payload: {
+    roomId?: string;
+    roomSlug?: string;
+    topicId?: string;
+  }) => {
+    const targetRoomSlug = String(payload.roomSlug || roomSlugById[String(payload.roomId || "").trim()] || "").trim();
+    const targetTopicId = String(payload.topicId || "").trim();
+    if (!targetRoomSlug || targetRoomSlug !== chatRoomSlug || !targetTopicId) {
+      return;
+    }
+
+    setChatTopics((prev) => {
+      if (!prev.some((topic) => topic.id === targetTopicId)) {
+        return prev;
+      }
+      return prev.filter((topic) => topic.id !== targetTopicId);
+    });
+  }, [chatRoomSlug, roomSlugById, setChatTopics]);
 
   const sortTopics = useCallback((topics: RoomTopic[]) => {
     return [...topics].sort((a, b) => {
@@ -395,6 +437,7 @@ export function useRealtimeLifecycleCallbacks({
     handleChatTopicUpdated,
     handleChatTopicArchived,
     handleChatTopicUnarchived,
+    handleChatTopicDeleted,
     handleNotificationSettingsUpdated
   };
 }

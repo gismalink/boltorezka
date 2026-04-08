@@ -11,7 +11,7 @@ type UseAppRealtimeChatRuntimeInput = {
     RealtimeChatLifecyclePropsInput,
     "handleSessionMoved" | "handleChatCleared" | "handleChatTyping" |
     "handleChatMessagePinned" | "handleChatMessageUnpinned" | "handleChatMessageReactionChanged" | "handleChatMessageReceived" | "handleChatTopicRead" |
-    "handleChatTopicCreated" | "handleChatTopicUpdated" | "handleChatTopicArchived" | "handleChatTopicUnarchived" | "handleNotificationSettingsUpdated"
+    "handleChatTopicCreated" | "handleChatTopicUpdated" | "handleChatTopicArchived" | "handleChatTopicUnarchived" | "handleChatTopicDeleted" | "handleNotificationSettingsUpdated"
   >;
 };
 
@@ -32,6 +32,7 @@ export function useAppRealtimeChatRuntime({
     handleChatTopicUpdated,
     handleChatTopicArchived,
     handleChatTopicUnarchived,
+    handleChatTopicDeleted,
     handleNotificationSettingsUpdated
   } = useRealtimeLifecycleCallbacks(lifecycleCallbacks);
 
@@ -49,6 +50,7 @@ export function useAppRealtimeChatRuntime({
     handleChatTopicUpdated,
     handleChatTopicArchived,
     handleChatTopicUnarchived,
+    handleChatTopicDeleted,
     handleNotificationSettingsUpdated
   });
 

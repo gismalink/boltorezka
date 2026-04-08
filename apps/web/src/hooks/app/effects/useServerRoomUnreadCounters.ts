@@ -9,6 +9,7 @@ import {
   ROOM_UNREAD_METRICS_SUMMARY_EVERY
 } from "../../../constants/appConfig";
 import type { Room, RoomTopic } from "../../../domain";
+import { reconcileRoomUnreadValue } from "./roomUnreadReconcileUtils";
 
 type RoomUnreadCountItem = {
   roomId: string;
@@ -275,25 +276,10 @@ export function useServerRoomUnreadCounters({
   }, [allRooms]);
 
   const refreshRoomIds = useMemo(() => {
-    const slugsToRefresh = new Set<string>();
-
-    Object.entries(roomUnreadBySlug).forEach(([slug, unreadCount]) => {
-      if (Math.max(0, Number(unreadCount || 0)) > 0) {
-        slugsToRefresh.add(String(slug || "").trim());
-      }
-    });
-
-    Object.entries(roomMentionUnreadBySlug).forEach(([slug, mentionUnreadCount]) => {
-      if (Math.max(0, Number(mentionUnreadCount || 0)) > 0) {
-        slugsToRefresh.add(String(slug || "").trim());
-      }
-    });
-
-    return Array.from(slugsToRefresh)
-      .map((slug) => roomIdBySlug[slug])
+    return Object.values(roomIdBySlug)
       .filter((roomId): roomId is string => Boolean(roomId))
       .sort((a, b) => a.localeCompare(b));
-  }, [roomIdBySlug, roomUnreadBySlug, roomMentionUnreadBySlug]);
+  }, [roomIdBySlug]);
 
   useEffect(() => {
     const normalizedToken = String(token || "").trim();
@@ -345,10 +331,16 @@ export function useServerRoomUnreadCounters({
           }
 
           const currentValue = Math.max(0, Number(prev[targetSlug] || 0));
-          const fetchedValue = Math.max(0, Number(entry.value.unreadCount || 0));
-          next[targetSlug] = entry.value.source === "cache"
-            ? Math.max(currentValue, fetchedValue)
-            : fetchedValue;
+          const nextValue = reconcileRoomUnreadValue(
+            currentValue,
+            Number(entry.value.unreadCount || 0),
+            entry.value.source
+          );
+          if (nextValue === currentValue) {
+            return;
+          }
+
+          next[targetSlug] = nextValue;
         });
         return next;
       });
@@ -366,10 +358,16 @@ export function useServerRoomUnreadCounters({
           }
 
           const currentValue = Math.max(0, Number(prev[targetSlug] || 0));
-          const fetchedValue = Math.max(0, Number(entry.value.mentionUnreadCount || 0));
-          next[targetSlug] = entry.value.source === "cache"
-            ? Math.max(currentValue, fetchedValue)
-            : fetchedValue;
+          const nextValue = reconcileRoomUnreadValue(
+            currentValue,
+            Number(entry.value.mentionUnreadCount || 0),
+            entry.value.source
+          );
+          if (nextValue === currentValue) {
+            return;
+          }
+
+          next[targetSlug] = nextValue;
         });
         return next;
       });

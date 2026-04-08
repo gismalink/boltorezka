@@ -215,6 +215,17 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
     sendNack,
     incrementMetric,
     sendJson,
+    getUserSocketsByUserId: (userId: string) => {
+      const normalizedUserId = String(userId || "").trim();
+      if (!normalizedUserId) {
+        return [];
+      }
+      return Array.from(socketsByUserId.get(normalizedUserId) || []);
+    },
+    getSocketRoomId: (socket: WebSocket) => {
+      const state = socketState.get(socket);
+      return state?.roomId || null;
+    },
     sendAckWithMetrics,
     broadcastRoom,
     buildChatMessageEnvelope,

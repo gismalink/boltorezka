@@ -18,6 +18,7 @@ type RoomsCategoryBlockProps = Pick<
   | "onMoveCategory"
 > & {
   category: RoomCategory & { channels: Room[] };
+  showBadgeCounters: boolean;
   mentionCount: number;
   unreadCountUnmuted: number;
   unreadCountMuted: number;
@@ -37,6 +38,7 @@ function RoomsCategoryBlockInner({
   onSetEditingCategoryTitle,
   onSaveCategorySettings,
   onMoveCategory,
+  showBadgeCounters,
   mentionCount,
   unreadCountUnmuted,
   unreadCountMuted,
@@ -65,14 +67,18 @@ function RoomsCategoryBlockInner({
           <span className="text-[var(--font-size-sm)] uppercase tracking-[0.04em] text-[var(--pixel-muted)]">{category.title}</span>
         </Button>
         <div className={`category-right-zone category-right-zone-actions-${categoryActionsVariant} ${categoryActionsOpen ? "category-right-zone-open" : ""}`}>
-          {mentionCount > 0 ? (
-            <span className="room-mention-badge category-group-mention room-row-unread" data-tooltip={t("chat.topicFilterMentions")}>@</span>
-          ) : null}
-          {unreadCountMuted > 0 ? (
-            <span className="room-unread-badge category-group-unread room-unread-badge-muted">{unreadCountMuted}</span>
-          ) : null}
-          {unreadCountUnmuted > 0 ? (
-            <span className="room-unread-badge category-group-unread">{unreadCountUnmuted}</span>
+          {showBadgeCounters && (mentionCount > 0 || unreadCountMuted > 0 || unreadCountUnmuted > 0) ? (
+            <span className="group-badge-cluster category-group-badges room-row-unread">
+              {mentionCount > 0 ? (
+                <span className="room-mention-badge category-group-mention" data-tooltip={t("chat.topicFilterMentions")}>@</span>
+              ) : null}
+              {unreadCountMuted > 0 ? (
+                <span className="room-unread-badge category-group-unread room-unread-badge-muted">{unreadCountMuted}</span>
+              ) : null}
+              {unreadCountUnmuted > 0 ? (
+                <span className="room-unread-badge category-group-unread">{unreadCountUnmuted}</span>
+              ) : null}
+            </span>
           ) : null}
         {canCreateRooms ? (
           <div className={`category-actions category-actions-actions-${categoryActionsVariant} inline-flex items-center gap-1 ${categoryActionsOpen ? "category-actions-open" : ""}`}>

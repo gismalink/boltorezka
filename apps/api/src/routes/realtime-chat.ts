@@ -92,7 +92,7 @@ type NotificationInboxOps = {
     messageId: string;
     text: string;
     mentionUserIds?: string[];
-  }) => Promise<void>;
+  }) => Promise<string[]>;
   emitReplyInboxEvent: (input: {
     actorUserId: string;
     actorUserName: string;
@@ -234,6 +234,8 @@ type ChatCommonParams = {
   ) => void;
   incrementMetric: (name: string) => Promise<void>;
   sendJson: (socket: WebSocket, payload: unknown) => void;
+  getUserSocketsByUserId?: (userId: string) => WebSocket[];
+  getSocketRoomId?: (socket: WebSocket) => string | null;
   sendAckWithMetrics: (
     socket: WebSocket,
     requestId: string | null,
@@ -251,6 +253,141 @@ type ChatCommonParams = {
   redisSetEx: (key: string, ttlSeconds: number, value: string) => Promise<string | null>;
   dbQuery: <T = unknown>(text: string, params?: unknown[]) => Promise<{ rowCount: number | null; rows: T[] }>;
 };
+
+async function resolveRoomRealtimeAudienceUserIds(
+  dbQuery: ChatCommonParams["dbQuery"],
+  roomId: string
+): Promise<string[]> {
+  const roomMeta = await dbQuery<{
+    id: string;
+    server_id: string | null;
+    is_public: boolean;
+    is_hidden: boolean;
+  }>(
+    `SELECT id, server_id, is_public, is_hidden
+     FROM rooms
+     WHERE id = $1
+       AND is_archived = FALSE
+     LIMIT 1`,
+    [roomId]
+  );
+
+  const room = roomMeta.rows[0];
+  if (!room) {
+    return [];
+  }
+
+  if (room.is_hidden) {
+    const hiddenAudience = await dbQuery<{ user_id: string }>(
+      `SELECT DISTINCT user_id
+       FROM (
+         SELECT user_id
+         FROM room_members
+         WHERE room_id = $1
+         UNION
+         SELECT user_id
+         FROM room_visibility_grants
+         WHERE room_id = $1
+       ) audience`,
+      [roomId]
+    );
+
+    return hiddenAudience.rows
+      .map((entry) => String(entry.user_id || "").trim())
+      .filter(Boolean);
+  }
+
+  if (room.is_public && room.server_id) {
+    const serverAudience = await dbQuery<{ user_id: string }>(
+      `SELECT user_id
+       FROM server_members
+       WHERE server_id = $1
+         AND status = 'active'`,
+      [room.server_id]
+    );
+
+    return serverAudience.rows
+      .map((entry) => String(entry.user_id || "").trim())
+      .filter(Boolean);
+  }
+
+  const privateAudience = await dbQuery<{ user_id: string }>(
+    `SELECT user_id
+     FROM room_members
+     WHERE room_id = $1`,
+    [roomId]
+  );
+
+  return privateAudience.rows
+    .map((entry) => String(entry.user_id || "").trim())
+    .filter(Boolean);
+}
+
+function normalizeMentionUserIdsFromPayload(payload: Record<string, unknown>): string[] {
+  const candidates = payload.mentionUserIds ?? payload.mention_user_ids;
+  const rawValues: string[] = [];
+
+  if (Array.isArray(candidates)) {
+    candidates.forEach((value) => {
+      if (typeof value === "string") {
+        rawValues.push(value);
+      }
+    });
+  } else if (typeof candidates === "string") {
+    candidates
+      .split(",")
+      .forEach((part) => rawValues.push(part));
+  }
+
+  const dedup = new Set<string>();
+  rawValues
+    .map((value) => value.trim())
+    .filter((value) => value.length > 0)
+    .forEach((value) => {
+      if (!dedup.has(value) && dedup.size < 100) {
+        dedup.add(value);
+      }
+    });
+
+  return Array.from(dedup);
+}
+
+function broadcastToRoomAudienceAcrossOtherRooms(params: {
+  roomId: string;
+  payload: unknown;
+  audienceUserIds: string[];
+  excludedSocket: WebSocket;
+  getUserSocketsByUserId: (userId: string) => WebSocket[];
+  getSocketRoomId: (socket: WebSocket) => string | null;
+  sendJson: (socket: WebSocket, payload: unknown) => void;
+}) {
+  const {
+    roomId,
+    payload,
+    audienceUserIds,
+    excludedSocket,
+    getUserSocketsByUserId,
+    getSocketRoomId,
+    sendJson
+  } = params;
+
+  const seenSockets = new Set<WebSocket>();
+  for (const userId of audienceUserIds) {
+    for (const socket of getUserSocketsByUserId(userId)) {
+      if (socket === excludedSocket || seenSockets.has(socket)) {
+        continue;
+      }
+
+      const socketRoomId = String(getSocketRoomId(socket) || "").trim();
+      if (socketRoomId === roomId) {
+        continue;
+      }
+
+      seenSockets.add(socket);
+      sendJson(socket, payload);
+    }
+  }
+}
 
 async function resolveChatRoom(
   params: Pick<
@@ -466,6 +603,8 @@ export async function handleChatSend(
     redisGet,
     redisDel,
     sendJson,
+    getUserSocketsByUserId = () => [],
+    getSocketRoomId = () => null,
     buildChatMessageEnvelope,
     sendAckWithMetrics,
     dbQuery,
@@ -497,15 +636,7 @@ export async function handleChatSend(
 
   const topicId = normalizeRequestId(getPayloadString(payload, "topicId", 128));
   const replyToMessageId = normalizeRequestId(getPayloadString(payload, "replyToMessageId", 128));
-  const mentionUserIdsCandidate = (payload as Record<string, unknown>)?.mentionUserIds;
-  const mentionUserIdsRaw: unknown[] = Array.isArray(mentionUserIdsCandidate)
-    ? mentionUserIdsCandidate
-    : [];
-  const mentionUserIds = mentionUserIdsRaw
-    .filter((value): value is string => typeof value === "string")
-    .map((value) => value.trim())
-    .filter((value) => value.length > 0)
-    .slice(0, 100);
+  const mentionUserIds = normalizeMentionUserIdsFromPayload(payload as Record<string, unknown>);
 
   if (replyToMessageId && !topicId) {
     sendValidationNack(connection, requestId, eventType, "topicId is required for replyToMessageId");
@@ -570,7 +701,7 @@ export async function handleChatSend(
         });
       }
 
-      await emitMentionInboxEvents({
+      const resolvedMentionUserIds = await emitMentionInboxEvents({
         actorUserId: state.userId,
         actorUserName: result.message.user_name,
         roomId: result.room.id,
@@ -603,7 +734,8 @@ export async function handleChatSend(
         text: result.message.text,
         createdAt: result.message.created_at,
         senderRequestId: requestId || null,
-        attachments: []
+        attachments: [],
+        mentionUserIds: resolvedMentionUserIds.length > 0 ? resolvedMentionUserIds : mentionUserIds
       };
 
       if (idempotencyKey) {
@@ -614,10 +746,22 @@ export async function handleChatSend(
         );
       }
 
-      broadcastRoom(result.room.id, buildChatMessageEnvelope(chatPayload));
+      const chatEnvelope = buildChatMessageEnvelope(chatPayload);
+      broadcastRoom(result.room.id, chatEnvelope);
+
+      const topicAudienceUserIds = await resolveRoomRealtimeAudienceUserIds(dbQuery, result.room.id);
+      broadcastToRoomAudienceAcrossOtherRooms({
+        roomId: result.room.id,
+        payload: chatEnvelope,
+        audienceUserIds: topicAudienceUserIds,
+        excludedSocket: connection,
+        getUserSocketsByUserId,
+        getSocketRoomId,
+        sendJson
+      });
 
       if (result.room.id !== state.roomId) {
-        sendJson(connection, buildChatMessageEnvelope(chatPayload));
+        sendJson(connection, chatEnvelope);
       }
 
       sendAckWithMetrics(
@@ -702,7 +846,8 @@ export async function handleChatSend(
     text: chatMessage.body,
     createdAt: chatMessage.created_at,
     senderRequestId: requestId || null,
-    attachments: []
+    attachments: [],
+    mentionUserIds
   };
 
   if (idempotencyKey) {
@@ -713,10 +858,22 @@ export async function handleChatSend(
     );
   }
 
-  broadcastRoom(targetRoom.roomId, buildChatMessageEnvelope(chatPayload));
+  const chatEnvelope = buildChatMessageEnvelope(chatPayload);
+  broadcastRoom(targetRoom.roomId, chatEnvelope);
+
+  const audienceUserIds = await resolveRoomRealtimeAudienceUserIds(dbQuery, targetRoom.roomId);
+  broadcastToRoomAudienceAcrossOtherRooms({
+    roomId: targetRoom.roomId,
+    payload: chatEnvelope,
+    audienceUserIds,
+    excludedSocket: connection,
+    getUserSocketsByUserId,
+    getSocketRoomId,
+    sendJson
+  });
 
   if (targetRoom.roomId !== state.roomId) {
-    sendJson(connection, buildChatMessageEnvelope(chatPayload));
+    sendJson(connection, chatEnvelope);
   }
 
   sendAckWithMetrics(

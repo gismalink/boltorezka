@@ -376,16 +376,16 @@ export async function emitMentionInboxEvents(input: {
   messageId: string;
   text: string;
   mentionUserIds?: string[];
-}) {
+}): Promise<string[]> {
   const explicitMentionUserIds = normalizeMentionUserIds(input.mentionUserIds);
   const parsed = parseMentionHandles(input.text);
-  if (explicitMentionUserIds.length === 0 && !parsed.mentionsAll && parsed.handles.size === 0) {
-    return;
+  if (explicitMentionUserIds.length === 0 && !parsed.mentionsAll) {
+    return [];
   }
 
   const audience = await resolveRoomAudience(input.roomId, input.actorUserId);
   if (audience.length === 0) {
-    return;
+    return [];
   }
 
   const audienceByUserId = new Map<string, { userId: string; name: string; username: string | null }>();
@@ -402,17 +402,16 @@ export async function emitMentionInboxEvents(input: {
 
   const serverId = await resolveRoomServerId(input.roomId);
   const body = String(input.text || "").trim().slice(0, 240) || "Mention";
+  const resolvedMentionTargets = new Set<string>();
 
   for (const user of audience) {
-    const loweredName = user.name.trim().toLowerCase();
-    const loweredUsername = String(user.username || "").trim().toLowerCase();
-    const directMentioned = targetedMentionUserIds.has(user.userId)
-      || parsed.handles.has(loweredName)
-      || (loweredUsername && parsed.handles.has(loweredUsername));
+    const directMentioned = targetedMentionUserIds.has(user.userId);
     const isCritical = parsed.mentionsAll;
     if (!directMentioned && !isCritical) {
       continue;
     }
+
+    resolvedMentionTargets.add(user.userId);
 
     const settings = await loadEffectiveNotificationSettings(user.userId, {
       serverId,
@@ -447,6 +446,8 @@ export async function emitMentionInboxEvents(input: {
       });
     }
   }
+
+  return Array.from(resolvedMentionTargets);
 }
 
 export async function emitPinnedInboxEvent(input: {

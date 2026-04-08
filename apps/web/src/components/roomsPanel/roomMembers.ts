@@ -9,7 +9,8 @@ export function mapRoomMembersForSlug(
 ): RoomMember[] {
   const details = liveRoomMemberDetailsBySlug[slug] || [];
   if (details.length > 0) {
-    const byKey = new Map<string, RoomMember>();
+    const members: RoomMember[] = [];
+    const seenUserIds = new Set<string>();
     details.forEach((member) => {
       const userId = String(member.userId || "").trim();
       const userName = String(member.userName || member.userId || "").trim();
@@ -17,13 +18,17 @@ export function mapRoomMembersForSlug(
         return;
       }
 
-      const key = userId || userName.toLocaleLowerCase();
-      if (!byKey.has(key)) {
-        byKey.set(key, { userId, userName });
+      if (userId) {
+        if (seenUserIds.has(userId)) {
+          return;
+        }
+        seenUserIds.add(userId);
       }
+
+      members.push({ userId, userName });
     });
 
-    return Array.from(byKey.values());
+    return members;
   }
 
   return (liveRoomMembersBySlug[slug] || [])

@@ -43,6 +43,8 @@ type ChatEventDeps = {
   ) => void;
   incrementMetric: (name: string) => Promise<void>;
   sendJson: (socket: WebSocket, payload: unknown) => void;
+  getUserSocketsByUserId: (userId: string) => WebSocket[];
+  getSocketRoomId: (socket: WebSocket) => string | null;
   sendAckWithMetrics: (
     socket: WebSocket,
     requestId: string | null,
@@ -71,6 +73,8 @@ export function createRealtimeChatEventHandlers(deps: ChatEventDeps) {
     sendNack,
     incrementMetric,
     sendJson,
+    getUserSocketsByUserId,
+    getSocketRoomId,
     sendAckWithMetrics,
     broadcastRoom,
     buildChatMessageEnvelope,
@@ -103,6 +107,8 @@ export function createRealtimeChatEventHandlers(deps: ChatEventDeps) {
     sendNack,
     incrementMetric,
     sendJson,
+    getUserSocketsByUserId,
+    getSocketRoomId,
     sendAckWithMetrics,
     broadcastRoom: (roomId: string, payloadOut: unknown, excludedSocket?: WebSocket | null) => {
       broadcastRoom(roomId, payloadOut, excludedSocket ?? undefined);

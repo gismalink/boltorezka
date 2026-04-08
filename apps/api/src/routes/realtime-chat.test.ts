@@ -174,6 +174,13 @@ test("realtime-chat: topic reply send uses topic service and broadcasts topic pa
   setNotificationInboxOpsLoaderForTests(async () => ({
     emitMentionInboxEvents: async (input) => {
       mentionCalls.push(input as unknown as Record<string, unknown>);
+      const direct = Array.isArray((input as { mentionUserIds?: unknown[] }).mentionUserIds)
+        ? (input as { mentionUserIds?: unknown[] }).mentionUserIds as unknown[]
+        : [];
+      return direct
+        .filter((value): value is string => typeof value === "string")
+        .map((value) => value.trim())
+        .filter(Boolean);
     },
     emitReplyInboxEvent: async (input) => {
       replyCalls.push(input as unknown as Record<string, unknown>);
@@ -250,6 +257,110 @@ test("realtime-chat: topic reply send uses topic service and broadcasts topic pa
   assert.equal(replyCalls[0]?.targetUserId, "u2");
   assert.equal(mentionCalls.length, 1);
   assert.deepEqual(mentionCalls[0]?.mentionUserIds, ["u3"]);
+});
+
+test("realtime-chat: chat.send accepts snake_case mention_user_ids and forwards to payload", async () => {
+  const broadcasts: Array<{ roomId: string; envelope: any }> = [];
+
+  setTopicMessageOpsLoaderForTests(async () => ({
+    createTopicMessage: async () => ({
+      room: { id: "room-1", slug: "general" },
+      topic: { id: "topic-1", slug: "main" },
+      message: {
+        id: "m-topic-2",
+        room_id: "room-1",
+        topic_id: "topic-1",
+        user_id: "u1",
+        user_name: "Alice",
+        text: "hello @bob",
+        created_at: "2026-04-07T00:00:00.000Z"
+      }
+    }),
+    replyTopicMessage: async () => {
+      throw new Error("not_used");
+    },
+    setTopicMessagePinned: async () => {
+      throw new Error("not_used");
+    },
+    setTopicMessageReaction: async () => {
+      throw new Error("not_used");
+    },
+    createTopicMessageReport: async () => {
+      throw new Error("not_used");
+    },
+    markTopicRead: async () => {
+      throw new Error("not_used");
+    }
+  }));
+  setNotificationInboxOpsLoaderForTests(async () => ({
+    emitMentionInboxEvents: async (input) => {
+      const direct = Array.isArray((input as { mentionUserIds?: unknown[] }).mentionUserIds)
+        ? (input as { mentionUserIds?: unknown[] }).mentionUserIds as unknown[]
+        : [];
+      return direct
+        .filter((value): value is string => typeof value === "string")
+        .map((value) => value.trim())
+        .filter(Boolean);
+    },
+    emitReplyInboxEvent: async () => {}
+  }));
+
+  try {
+    await handleChatSend({
+      connection: {} as any,
+      state: { userId: "u1", userName: "Alice", roomId: "room-1", roomSlug: "general" },
+      payload: {
+        text: "hello @bob",
+        topicId: "topic-1",
+        roomSlug: "general",
+        mention_user_ids: ["u2", " u3 "]
+      },
+      requestId: "req-topic-2",
+      eventType: "chat.send",
+      normalizeRequestId: (value) => (typeof value === "string" ? value : null),
+      getPayloadString: (data: any, key: string) => {
+        const value = data?.[key];
+        return typeof value === "string" ? value : null;
+      },
+      sendNoActiveRoomNack: () => {},
+      sendValidationNack: () => {},
+      sendForbiddenNack: () => {},
+      sendNack: () => {},
+      incrementMetric: async () => {},
+      sendJson: () => {},
+      sendAckWithMetrics: () => {},
+      broadcastRoom: (roomId, envelope) => {
+        broadcasts.push({ roomId, envelope });
+      },
+      buildChatMessageEnvelope: (payload: unknown) => ({ type: "chat.message", payload }),
+      buildChatEditedEnvelope: () => ({}),
+      buildChatDeletedEnvelope: () => ({}),
+      redisGet: async () => null,
+      redisDel: async () => 0,
+      redisSetEx: async () => "OK",
+      dbQuery: async <T = unknown>() => ({
+        rowCount: 1,
+        rows: [
+          {
+            id: "room-1",
+            slug: "general",
+            is_public: true,
+            is_hidden: false,
+            server_id: null,
+            nsfw: false,
+            is_readonly: false,
+            slowmode_seconds: 0
+          }
+        ] as unknown as T[]
+      })
+    });
+  } finally {
+    setNotificationInboxOpsLoaderForTests(null);
+    setTopicMessageOpsLoaderForTests(null);
+  }
+
+  assert.equal(broadcasts.length, 1);
+  assert.deepEqual(broadcasts[0]?.envelope?.payload?.mentionUserIds, ["u2", "u3"]);
 });
 
 test("realtime-chat: chat.edit rejects editing message from another user", async () => {

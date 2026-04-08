@@ -59,7 +59,6 @@ export function buildRoomsPanelDerivedData({
   });
 
   const knownRoomUserIds = new Set<string>();
-  const knownRoomUserNames = new Set<string>();
   Object.entries(liveRoomMemberDetailsBySlug || {}).forEach(([slugRaw, members]) => {
     const slug = String(slugRaw || "").trim();
     if (!slug || slug === OUTSIDE_ROOMS_PRESENCE_KEY || !knownRoomSlugs.has(slug)) {
@@ -68,33 +67,15 @@ export function buildRoomsPanelDerivedData({
 
     (Array.isArray(members) ? members : []).forEach((member) => {
       const userId = String(member.userId || "").trim();
-      const userName = String(member.userName || member.userId || "").trim().toLowerCase();
       if (userId) {
         knownRoomUserIds.add(userId);
-      }
-      if (userName) {
-        knownRoomUserNames.add(userName);
-      }
-    });
-  });
-
-  Object.entries(liveRoomMembersBySlug || {}).forEach(([slugRaw, members]) => {
-    const slug = String(slugRaw || "").trim();
-    if (!slug || slug === OUTSIDE_ROOMS_PRESENCE_KEY || !knownRoomSlugs.has(slug)) {
-      return;
-    }
-
-    (Array.isArray(members) ? members : []).forEach((memberName) => {
-      const normalizedName = String(memberName || "").trim().toLowerCase();
-      if (normalizedName) {
-        knownRoomUserNames.add(normalizedName);
       }
     });
   });
 
   const outsideByKey = new Map<string, OutsideOnlineMember>();
   const seenOutsideIds = new Set<string>();
-  const seenOutsideNames = new Set<string>();
+  let outsideNoIdCounter = 0;
 
   const addOutsideMember = (input: { userId?: string | null; userName?: string | null }) => {
     const userId = String(input.userId || "").trim();
@@ -103,25 +84,20 @@ export function buildRoomsPanelDerivedData({
       return;
     }
 
-    const normalizedUserName = userName.toLowerCase();
-    if ((userId && knownRoomUserIds.has(userId)) || knownRoomUserNames.has(normalizedUserName)) {
+    if (userId && knownRoomUserIds.has(userId)) {
       return;
     }
 
-    const hasById = userId ? seenOutsideIds.has(userId) : false;
-    const hasByName = seenOutsideNames.has(normalizedUserName);
-    if (hasById || hasByName) {
-      if (hasByName && userId) {
-        seenOutsideIds.add(userId);
-      }
+    if (userId && seenOutsideIds.has(userId)) {
       return;
     }
 
     if (userId) {
       seenOutsideIds.add(userId);
     }
-    seenOutsideNames.add(normalizedUserName);
-    outsideByKey.set(userId || normalizedUserName, { userId, userName });
+
+    const entryKey = userId || `outside-no-id:${outsideNoIdCounter++}`;
+    outsideByKey.set(entryKey, { userId, userName });
   };
 
   Object.entries(liveRoomMemberDetailsBySlug || {}).forEach(([slugRaw, members]) => {
@@ -183,6 +159,35 @@ export function buildRoomsPanelDerivedData({
   const categoryUnreadMutedById: Record<string, number> = {};
   const categoryUnreadUnmutedById: Record<string, number> = {};
   const categoryMentionById: Record<string, number> = {};
+  const uncategorizedUnreadMutedCount = uncategorizedRooms.reduce((sum, room) => {
+    const roomId = String(room.id || "").trim();
+    const slug = String(room.slug || "").trim();
+    if (!roomId || !slug) {
+      return sum;
+    }
+
+    const preset = roomMutePresetByRoomId[roomId];
+    if (preset != null && preset !== "off") {
+      return sum + Math.max(0, Number(roomUnreadBySlug[slug] || 0));
+    }
+
+    return sum;
+  }, 0);
+
+  const uncategorizedUnreadUnmutedCount = uncategorizedRooms.reduce((sum, room) => {
+    const roomId = String(room.id || "").trim();
+    const slug = String(room.slug || "").trim();
+    if (!roomId || !slug) {
+      return sum;
+    }
+
+    const preset = roomMutePresetByRoomId[roomId];
+    if (preset == null || preset === "off") {
+      return sum + Math.max(0, Number(roomUnreadBySlug[slug] || 0));
+    }
+
+    return sum;
+  }, 0);
   (roomsTree?.categories || []).forEach((category) => {
     const categoryRooms = Array.isArray((category as { channels?: Room[] }).channels)
       ? (category as { channels?: Room[] }).channels || []
@@ -237,6 +242,8 @@ export function buildRoomsPanelDerivedData({
     onlineOutsideRooms,
     roomMembersBySlug,
     uncategorizedUnreadCount,
+    uncategorizedUnreadMutedCount,
+    uncategorizedUnreadUnmutedCount,
     uncategorizedMentionCount,
     outsideRoomsUnreadCount,
     categoryUnreadMutedById,

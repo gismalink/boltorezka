@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { buildRoomsPanelDerivedData, OUTSIDE_ROOMS_PRESENCE_KEY } from "./roomsPanelDerivedDataUtils";
 
 describe("roomsPanelDerivedDataUtils", () => {
-  it("counts unread by category and uncategorized", () => {
+  it("counts unread by category and uncategorized with muted split", () => {
     const result = buildRoomsPanelDerivedData({
       roomsTree: {
         categories: [{ id: "cat-1", slug: "c1", title: "C1", position: 0, created_at: "", channels: [{ id: "r1", slug: "room-1", title: "R1", kind: "text", category_id: "cat-1", position: 0, is_public: true, created_at: "" }] }],
@@ -12,18 +12,20 @@ describe("roomsPanelDerivedDataUtils", () => {
       archivedRooms: [],
       roomUnreadBySlug: { "room-1": 3, "room-2": 2 },
       roomMentionUnreadBySlug: { "room-1": 1, "room-2": 4 },
-      roomMutePresetByRoomId: { "r1": "off" },
+      roomMutePresetByRoomId: { "r1": "off", "r2": "8h" },
       liveRoomMembersBySlug: {},
       liveRoomMemberDetailsBySlug: {}
     });
 
     expect(result.uncategorizedUnreadCount).toBe(2);
+    expect(result.uncategorizedUnreadMutedCount).toBe(2);
+    expect(result.uncategorizedUnreadUnmutedCount).toBe(0);
     expect(result.uncategorizedMentionCount).toBe(4);
     expect(result.categoryMentionById["cat-1"]).toBe(1);
     expect(result.categoryUnreadUnmutedById["cat-1"]).toBe(3);
   });
 
-  it("keeps outside bucket members outside and deduplicates", () => {
+  it("keeps outside bucket members outside without name-based identity dedupe", () => {
     const result = buildRoomsPanelDerivedData({
       roomsTree: {
         categories: [],
@@ -38,7 +40,7 @@ describe("roomsPanelDerivedDataUtils", () => {
       liveRoomMemberDetailsBySlug: {}
     });
 
-    expect(result.onlineOutsideRooms.length).toBe(1);
+    expect(result.onlineOutsideRooms.length).toBe(2);
     expect(result.outsideRoomsUnreadCount).toBe(1);
   });
 });
