@@ -19,6 +19,7 @@ type UseRealtimeLifecycleCallbacksArgs = {
   setMessages: Dispatch<SetStateAction<Message[]>>;
   setMessagesHasMore: (value: boolean) => void;
   setMessagesNextCursor: Dispatch<SetStateAction<MessagesCursor | null>>;
+  chatTopics: RoomTopic[];
   setChatTopics: Dispatch<SetStateAction<RoomTopic[]>>;
   setRoomUnreadBySlug: Dispatch<SetStateAction<Record<string, number>>>;
   setRoomMentionUnreadBySlug: Dispatch<SetStateAction<Record<string, number>>>;
@@ -52,6 +53,7 @@ export function useRealtimeLifecycleCallbacks({
   setMessages,
   setMessagesHasMore,
   setMessagesNextCursor,
+  chatTopics,
   setChatTopics,
   setRoomUnreadBySlug,
   setRoomMentionUnreadBySlug,
@@ -240,6 +242,10 @@ export function useRealtimeLifecycleCallbacks({
       return;
     }
 
+    const targetTopic = chatTopics.find((topic) => topic.id === targetTopicId);
+    const unreadToClear = Math.max(0, Number(targetTopic?.unreadCount || 0));
+    const mentionUnreadToClear = Math.max(0, Number(targetTopic?.mentionUnreadCount || 0));
+
     setChatTopics((prev) => prev.map((topic) => {
       if (topic.id !== targetTopicId || topic.unreadCount <= 0) {
         return topic;
@@ -263,9 +269,11 @@ export function useRealtimeLifecycleCallbacks({
         return prev;
       }
 
+      const unreadDelta = Math.max(1, unreadToClear);
+
       return {
         ...prev,
-        [targetRoomSlug]: Math.max(0, currentUnread - 1)
+        [targetRoomSlug]: Math.max(0, currentUnread - unreadDelta)
       };
     });
     setRoomMentionUnreadBySlug((prev) => {
@@ -280,12 +288,14 @@ export function useRealtimeLifecycleCallbacks({
         return prev;
       }
 
+      const mentionDelta = Math.max(1, mentionUnreadToClear);
+
       return {
         ...prev,
-        [targetRoomSlug]: Math.max(0, currentMentions - 1)
+        [targetRoomSlug]: Math.max(0, currentMentions - mentionDelta)
       };
     });
-  }, [chatRoomSlug, currentUserId, roomSlugById, setChatTopics, setRoomMentionUnreadBySlug, setRoomUnreadBySlug]);
+  }, [chatRoomSlug, chatTopics, currentUserId, roomSlugById, setChatTopics, setRoomMentionUnreadBySlug, setRoomUnreadBySlug]);
 
   const sortTopics = useCallback((topics: RoomTopic[]) => {
     return [...topics].sort((a, b) => {

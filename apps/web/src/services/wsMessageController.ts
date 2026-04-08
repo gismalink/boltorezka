@@ -445,9 +445,34 @@ export class WsMessageController {
     }
 
     const payload = message.payload as Record<string, unknown>;
+    const payloadRoom = payload.room && typeof payload.room === "object"
+      ? payload.room as Record<string, unknown>
+      : null;
+    const payloadTopic = payload.topic && typeof payload.topic === "object"
+      ? payload.topic as Record<string, unknown>
+      : null;
     const senderRequestId = typeof payload.senderRequestId === "string" ? payload.senderRequestId : undefined;
-    const incomingRoomSlug = this.asTrimmedString(payload.roomSlug || payload.room_slug);
-    const incomingTopicId = this.asTrimmedString(payload.topicId || payload.topic_id);
+    const incomingRoomSlug = this.asTrimmedString(
+      payload.roomSlug
+      || payload.room_slug
+      || payloadRoom?.slug
+      || payloadRoom?.roomSlug
+      || payloadRoom?.room_slug
+    );
+    const incomingRoomId = this.asTrimmedString(
+      payload.roomId
+      || payload.room_id
+      || payloadRoom?.id
+      || payloadRoom?.roomId
+      || payloadRoom?.room_id
+    );
+    const incomingTopicId = this.asTrimmedString(
+      payload.topicId
+      || payload.topic_id
+      || payloadTopic?.id
+      || payloadTopic?.topicId
+      || payloadTopic?.topic_id
+    );
     const mentionUserIds = (() => {
       const fromPayload = payload.mentionUserIds ?? payload.mention_user_ids;
       if (Array.isArray(fromPayload)) {
@@ -476,7 +501,7 @@ export class WsMessageController {
         .filter(Boolean);
     })();
     this.options.onChatMessageReceived?.({
-      roomId: this.asTrimmedString(payload.roomId || payload.room_id) || undefined,
+      roomId: incomingRoomId || undefined,
       roomSlug: incomingRoomSlug || undefined,
       topicId: incomingTopicId || undefined,
       topicSlug: this.asTrimmedString(payload.topicSlug || payload.topic_slug) || undefined,

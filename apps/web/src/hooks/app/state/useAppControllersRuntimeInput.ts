@@ -116,6 +116,7 @@ export function useAppControllersRuntimeInput(params: Record<string, unknown>): 
         setMessages: p.setMessages,
         setMessagesHasMore: p.setMessagesHasMore,
         setMessagesNextCursor: p.setMessagesNextCursor,
+        chatTopics: p.chatTopics,
         setChatTopics: p.setChatTopics,
         setRoomUnreadBySlug: p.setRoomUnreadBySlug,
         setRoomMentionUnreadBySlug: p.setRoomMentionUnreadBySlug,
