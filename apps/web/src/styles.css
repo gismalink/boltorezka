@@ -2282,6 +2282,18 @@ pre {
   padding-right: 88px;
 }
 
+.uncategorized-title-btn {
+  padding-left: var(--space-sm);
+  padding-right: 88px;
+}
+
+.uncategorized-right-zone {
+  position: absolute;
+  right: var(--space-sm);
+  top: 50%;
+  transform: translateY(-50%);
+}
+
 .category-right-zone {
   --category-actions-width: 56px;
   position: absolute;

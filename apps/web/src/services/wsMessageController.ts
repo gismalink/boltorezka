@@ -5,6 +5,67 @@ import { trimMessagesInMemory } from "./chatMemory";
 
 const OUTSIDE_ROOMS_PRESENCE_KEY = "__outside_rooms__";
 
+function asTrimmedString(value: unknown): string {
+  if (typeof value !== "string") {
+    return "";
+  }
+  return value.trim();
+}
+
+export function extractMentionUserIdsFromChatPayload(payload: Record<string, unknown>): string[] {
+  const dedup = new Set<string>();
+
+  const pushValue = (candidate: unknown) => {
+    const normalized = asTrimmedString(candidate);
+    if (normalized) {
+      dedup.add(normalized);
+    }
+  };
+
+  const pushCsv = (candidate: unknown) => {
+    const raw = asTrimmedString(candidate);
+    if (!raw) {
+      return;
+    }
+
+    raw
+      .split(",")
+      .map((part) => part.trim())
+      .filter(Boolean)
+      .forEach((part) => dedup.add(part));
+  };
+
+  const fromPayload = payload.mentionUserIds ?? payload.mention_user_ids;
+  if (Array.isArray(fromPayload)) {
+    fromPayload.forEach((item) => pushValue(item));
+  } else {
+    pushCsv(fromPayload);
+  }
+
+  const mentionsRaw = payload.mentions;
+  if (Array.isArray(mentionsRaw)) {
+    mentionsRaw.forEach((item) => {
+      if (typeof item === "string") {
+        pushValue(item);
+        return;
+      }
+
+      if (!item || typeof item !== "object") {
+        return;
+      }
+
+      const mentionObject = item as Record<string, unknown>;
+      pushValue(mentionObject.userId);
+      pushValue(mentionObject.user_id);
+      pushValue(mentionObject.id);
+      pushValue(mentionObject.targetUserId);
+      pushValue(mentionObject.target_user_id);
+    });
+  }
+
+  return Array.from(dedup);
+}
+
 type WsMessageControllerOptions = {
   clearPendingRequest: (requestId: string) => void;
   markMessageDelivery: (
@@ -499,33 +560,7 @@ export class WsMessageController {
       || payloadTopic?.topicId
       || payloadTopic?.topic_id
     );
-    const mentionUserIds = (() => {
-      const fromPayload = payload.mentionUserIds ?? payload.mention_user_ids;
-      if (Array.isArray(fromPayload)) {
-        return fromPayload
-          .map((value) => this.asTrimmedString(value))
-          .filter(Boolean);
-      }
-
-      const mentionsRaw = payload.mentions;
-      if (!Array.isArray(mentionsRaw)) {
-        return [];
-      }
-
-      return mentionsRaw
-        .map((item) => {
-          if (!item || typeof item !== "object") {
-            return "";
-          }
-          const mentionObject = item as Record<string, unknown>;
-          return this.asTrimmedString(
-            mentionObject.userId
-            || mentionObject.user_id
-            || mentionObject.id
-          );
-        })
-        .filter(Boolean);
-    })();
+    const mentionUserIds = extractMentionUserIdsFromChatPayload(payload);
     this.options.onChatMessageReceived?.({
       roomId: incomingRoomId || undefined,
       roomSlug: incomingRoomSlug || undefined,
