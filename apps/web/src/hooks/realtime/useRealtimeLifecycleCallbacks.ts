@@ -177,12 +177,14 @@ export function useRealtimeLifecycleCallbacks({
 
   const handleChatMessageReceived = useCallback((payload: {
     roomSlug?: string;
+    roomId?: string;
     topicId?: string;
     userId?: string;
     senderRequestId?: string;
     mentionUserIds?: string[];
   }) => {
-    const targetRoomSlug = String(payload.roomSlug || "").trim();
+    const targetRoomId = String(payload.roomId || "").trim();
+    const targetRoomSlug = String(payload.roomSlug || roomSlugById[targetRoomId] || "").trim();
     const targetTopicId = String(payload.topicId || "").trim();
     const normalizedActiveTopicId = String(activeTopicId || "").trim();
     const selfUserId = String(currentUserId || "").trim();
@@ -223,7 +225,7 @@ export function useRealtimeLifecycleCallbacks({
         [targetRoomSlug]: Math.max(0, Number(prev[targetRoomSlug] || 0)) + 1
       }));
     }
-  }, [activeTopicId, chatRoomSlug, currentUserId, setRoomMentionUnreadBySlug, setRoomUnreadBySlug]);
+  }, [activeTopicId, chatRoomSlug, currentUserId, roomSlugById, setRoomMentionUnreadBySlug, setRoomUnreadBySlug]);
 
   const handleChatTopicRead = useCallback((payload: {
     roomId?: string;
