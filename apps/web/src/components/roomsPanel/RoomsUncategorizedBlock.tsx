@@ -5,7 +5,10 @@ import type { TranslateFn } from "../../i18n";
 type RoomsUncategorizedBlockProps = {
   t: TranslateFn;
   rooms: Room[];
+  showBadgeCounters: boolean;
   unreadCount: number;
+  unreadCountMuted: number;
+  unreadCountUnmuted: number;
   mentionCount: number;
   collapsed: boolean;
   onToggleCollapsed: () => void;
@@ -15,7 +18,10 @@ type RoomsUncategorizedBlockProps = {
 function RoomsUncategorizedBlockInner({
   t,
   rooms,
+  showBadgeCounters,
   unreadCount,
+  unreadCountMuted,
+  unreadCountUnmuted,
   mentionCount,
   collapsed,
   onToggleCollapsed,
@@ -38,8 +44,13 @@ function RoomsUncategorizedBlockInner({
           {rooms.length}
         </span>
         <span className="text-[var(--font-size-sm)] uppercase tracking-[0.04em] text-[var(--pixel-muted)]">{t("rooms.uncategorized")}</span>
-        {mentionCount > 0 ? <span className="room-mention-badge room-row-unread">@</span> : null}
-        {unreadCount > 0 ? <span className="room-unread-badge">{unreadCount}</span> : null}
+        {showBadgeCounters && (mentionCount > 0 || unreadCount > 0) ? (
+          <span className="group-badge-cluster room-row-unread">
+            {mentionCount > 0 ? <span className="room-mention-badge">@</span> : null}
+            {unreadCountMuted > 0 ? <span className="room-unread-badge room-unread-badge-muted">{unreadCountMuted}</span> : null}
+            {unreadCountUnmuted > 0 ? <span className="room-unread-badge">{unreadCountUnmuted}</span> : null}
+          </span>
+        ) : null}
       </button>
       {!collapsed ? (
         <ul className="rooms-list">

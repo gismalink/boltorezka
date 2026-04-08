@@ -713,7 +713,8 @@ export async function handleChatSend(
         text: result.message.text,
         createdAt: result.message.created_at,
         senderRequestId: requestId || null,
-        attachments: []
+        attachments: [],
+        mentionUserIds
       };
 
       if (idempotencyKey) {
@@ -824,7 +825,8 @@ export async function handleChatSend(
     text: chatMessage.body,
     createdAt: chatMessage.created_at,
     senderRequestId: requestId || null,
-    attachments: []
+    attachments: [],
+    mentionUserIds
   };
 
   if (idempotencyKey) {

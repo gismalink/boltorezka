@@ -183,6 +183,35 @@ export function buildRoomsPanelDerivedData({
   const categoryUnreadMutedById: Record<string, number> = {};
   const categoryUnreadUnmutedById: Record<string, number> = {};
   const categoryMentionById: Record<string, number> = {};
+  const uncategorizedUnreadMutedCount = uncategorizedRooms.reduce((sum, room) => {
+    const roomId = String(room.id || "").trim();
+    const slug = String(room.slug || "").trim();
+    if (!roomId || !slug) {
+      return sum;
+    }
+
+    const preset = roomMutePresetByRoomId[roomId];
+    if (preset != null && preset !== "off") {
+      return sum + Math.max(0, Number(roomUnreadBySlug[slug] || 0));
+    }
+
+    return sum;
+  }, 0);
+
+  const uncategorizedUnreadUnmutedCount = uncategorizedRooms.reduce((sum, room) => {
+    const roomId = String(room.id || "").trim();
+    const slug = String(room.slug || "").trim();
+    if (!roomId || !slug) {
+      return sum;
+    }
+
+    const preset = roomMutePresetByRoomId[roomId];
+    if (preset == null || preset === "off") {
+      return sum + Math.max(0, Number(roomUnreadBySlug[slug] || 0));
+    }
+
+    return sum;
+  }, 0);
   (roomsTree?.categories || []).forEach((category) => {
     const categoryRooms = Array.isArray((category as { channels?: Room[] }).channels)
       ? (category as { channels?: Room[] }).channels || []
@@ -237,6 +266,8 @@ export function buildRoomsPanelDerivedData({
     onlineOutsideRooms,
     roomMembersBySlug,
     uncategorizedUnreadCount,
+    uncategorizedUnreadMutedCount,
+    uncategorizedUnreadUnmutedCount,
     uncategorizedMentionCount,
     outsideRoomsUnreadCount,
     categoryUnreadMutedById,

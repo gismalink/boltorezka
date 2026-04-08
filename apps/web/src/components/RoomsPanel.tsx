@@ -212,6 +212,8 @@ export function RoomsPanel({
     onlineOutsideRooms,
     roomMembersBySlug,
     uncategorizedUnreadCount,
+    uncategorizedUnreadMutedCount,
+    uncategorizedUnreadUnmutedCount,
     uncategorizedMentionCount,
     outsideRoomsUnreadCount,
     categoryUnreadMutedById,
@@ -446,6 +448,7 @@ export function RoomsPanel({
             onSetEditingCategoryTitle={onSetEditingCategoryTitle}
             onSaveCategorySettings={onSaveCategorySettings}
             onMoveCategory={onMoveCategory}
+            showBadgeCounters={collapsedCategoryIds.includes(category.id)}
             mentionCount={Math.max(0, Number(categoryMentionById[category.id] || 0))}
             unreadCountMuted={Math.max(0, Number(categoryUnreadMutedById[category.id] || 0))}
             unreadCountUnmuted={Math.max(0, Number(categoryUnreadUnmutedById[category.id] || 0))}
@@ -460,7 +463,10 @@ export function RoomsPanel({
           rooms={uncategorizedRooms}
           collapsed={uncategorizedCollapsed}
           onToggleCollapsed={onToggleUncategorizedCollapsed}
+          showBadgeCounters={uncategorizedCollapsed}
           unreadCount={uncategorizedUnreadCount}
+          unreadCountMuted={uncategorizedUnreadMutedCount}
+          unreadCountUnmuted={uncategorizedUnreadUnmutedCount}
           mentionCount={uncategorizedMentionCount}
           renderRoomRow={renderRoomRow}
         />
