@@ -2588,6 +2588,7 @@ pre {
   font-size: calc(var(--font-size-sm) + 0.02rem);
   line-height: 1.2;
   min-height: 34px;
+  color: var(--pixel-muted);
 }
 
 .room-btn:disabled {

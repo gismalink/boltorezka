@@ -75,6 +75,7 @@ export function buildRoomsPanelDerivedData({
 
   const outsideByKey = new Map<string, OutsideOnlineMember>();
   const seenOutsideIds = new Set<string>();
+  const seenOutsideNoIdNames = new Set<string>();
   let outsideNoIdCounter = 0;
 
   const addOutsideMember = (input: { userId?: string | null; userName?: string | null }) => {
@@ -94,6 +95,12 @@ export function buildRoomsPanelDerivedData({
 
     if (userId) {
       seenOutsideIds.add(userId);
+    } else {
+      const normalizedName = userName.toLowerCase();
+      if (seenOutsideNoIdNames.has(normalizedName)) {
+        return;
+      }
+      seenOutsideNoIdNames.add(normalizedName);
     }
 
     const entryKey = userId || `outside-no-id:${outsideNoIdCounter++}`;

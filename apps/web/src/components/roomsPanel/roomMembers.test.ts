@@ -21,7 +21,7 @@ describe("roomMembers", () => {
     ]);
   });
 
-  it("keeps entries without userId as separate display-only rows", () => {
+  it("deduplicates repeated name-only fallback entries", () => {
     const result = mapRoomMembersForSlug(
       {
         room: [
@@ -33,9 +33,6 @@ describe("roomMembers", () => {
       "room"
     );
 
-    expect(result).toEqual([
-      { userId: "", userName: "Alex" },
-      { userId: "", userName: "Alex" }
-    ]);
+    expect(result).toEqual([{ userId: "", userName: "Alex" }]);
   });
 });
