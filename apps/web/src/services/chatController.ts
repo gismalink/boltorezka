@@ -102,7 +102,8 @@ export class ChatController {
     textInput: string,
     roomSlug: string,
     user: User | null,
-    maxChatRetries: number
+    maxChatRetries: number,
+    mentionUserIds?: string[]
   ) {
     const text = textInput.trim();
     if (!text) {
@@ -111,7 +112,13 @@ export class ChatController {
 
     const requestId = this.options.sendWsEvent(
       "chat.send",
-      { text, roomSlug },
+      {
+        text,
+        roomSlug,
+        mentionUserIds: Array.isArray(mentionUserIds) && mentionUserIds.length > 0
+          ? mentionUserIds
+          : undefined
+      },
       { withIdempotency: true, maxRetries: maxChatRetries }
     );
     if (!requestId) {

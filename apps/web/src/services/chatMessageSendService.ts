@@ -219,7 +219,7 @@ export async function sendChatMessage(params: SendChatMessageParams): Promise<Se
     return { kind: "sent", mode: "text" };
   }
 
-  const result = chatController.sendMessage(baseText, chatRoomSlug, user, maxChatRetries);
+  const result = chatController.sendMessage(baseText, chatRoomSlug, user, maxChatRetries, mentionUserIds);
   if (result.sent) {
     return { kind: "sent", mode: "text" };
   }

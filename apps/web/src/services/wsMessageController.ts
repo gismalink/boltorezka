@@ -530,13 +530,18 @@ export class WsMessageController {
       }
 
       this.options.clearPendingRequest(senderRequestId);
-      this.options.markMessageDelivery(senderRequestId, "failed");
+      this.options.markMessageDelivery(senderRequestId, "delivered");
       this.options.setMessages((prev) => prev.filter((item) => item.clientRequestId !== senderRequestId));
       return;
     }
 
     if (activeTopicId) {
       if (!incomingTopicId || incomingTopicId !== activeTopicId) {
+        if (senderRequestId) {
+          this.options.clearPendingRequest(senderRequestId);
+          this.options.markMessageDelivery(senderRequestId, "delivered");
+          this.options.setMessages((prev) => prev.filter((item) => item.clientRequestId !== senderRequestId));
+        }
         return;
       }
     }
@@ -554,25 +559,22 @@ export class WsMessageController {
     }
 
     this.options.clearPendingRequest(senderRequestId);
-    let replaced = false;
     this.options.setMessages((prev) => {
-      const next = prev.map((item) => {
+      const hasOptimisticMatch = prev.some((item) => item.clientRequestId === senderRequestId);
+      if (!hasOptimisticMatch) {
+        return trimMessagesInMemory([...prev, this.buildDeliveredChatMessage(payload)]);
+      }
+
+      return trimMessagesInMemory(prev.map((item) => {
         if (item.clientRequestId !== senderRequestId) {
           return item;
         }
 
-        replaced = true;
         return {
           ...item,
           ...this.buildDeliveredChatMessage(payload, item.id)
         };
-      });
-
-      if (!replaced) {
-        next.push(this.buildDeliveredChatMessage(payload));
-      }
-
-      return trimMessagesInMemory(next);
+      }));
     });
   }
 
