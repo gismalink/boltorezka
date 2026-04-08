@@ -325,12 +325,12 @@ export class WsMessageController {
   private toPresenceMember(item: { userId?: string; userName?: string } | null | undefined): PresenceMember | null {
     const userId = this.asTrimmedString(item?.userId);
     const userName = this.asTrimmedString(item?.userName);
-    if (!userId && !userName) {
+    if (!userId) {
       return null;
     }
 
     return {
-      userId: userId || userName,
+      userId,
       userName: userName || userId
     };
   }

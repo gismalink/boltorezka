@@ -379,7 +379,7 @@ export async function emitMentionInboxEvents(input: {
 }): Promise<string[]> {
   const explicitMentionUserIds = normalizeMentionUserIds(input.mentionUserIds);
   const parsed = parseMentionHandles(input.text);
-  if (explicitMentionUserIds.length === 0 && !parsed.mentionsAll && parsed.handles.size === 0) {
+  if (explicitMentionUserIds.length === 0 && !parsed.mentionsAll) {
     return [];
   }
 
@@ -405,11 +405,7 @@ export async function emitMentionInboxEvents(input: {
   const resolvedMentionTargets = new Set<string>();
 
   for (const user of audience) {
-    const loweredName = user.name.trim().toLowerCase();
-    const loweredUsername = String(user.username || "").trim().toLowerCase();
-    const directMentioned = targetedMentionUserIds.has(user.userId)
-      || parsed.handles.has(loweredName)
-      || (loweredUsername && parsed.handles.has(loweredUsername));
+    const directMentioned = targetedMentionUserIds.has(user.userId);
     const isCritical = parsed.mentionsAll;
     if (!directMentioned && !isCritical) {
       continue;

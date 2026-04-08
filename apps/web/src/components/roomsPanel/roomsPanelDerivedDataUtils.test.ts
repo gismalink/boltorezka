@@ -25,7 +25,7 @@ describe("roomsPanelDerivedDataUtils", () => {
     expect(result.categoryUnreadUnmutedById["cat-1"]).toBe(3);
   });
 
-  it("keeps outside bucket members outside and deduplicates", () => {
+  it("keeps outside bucket members outside without name-based identity dedupe", () => {
     const result = buildRoomsPanelDerivedData({
       roomsTree: {
         categories: [],
@@ -40,7 +40,7 @@ describe("roomsPanelDerivedDataUtils", () => {
       liveRoomMemberDetailsBySlug: {}
     });
 
-    expect(result.onlineOutsideRooms.length).toBe(1);
+    expect(result.onlineOutsideRooms.length).toBe(2);
     expect(result.outsideRoomsUnreadCount).toBe(1);
   });
 });
