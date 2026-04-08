@@ -2206,9 +2206,12 @@ pre {
 }
 
 .rooms-offline-last-seen {
-  margin-left: 1.8rem;
+  margin-left: auto;
+  white-space: nowrap;
+  text-align: right;
   font-size: calc(var(--font-size-sm) - 0.1rem);
   line-height: 1.2;
+  color: var(--pixel-muted);
 }
 
 .subheading {

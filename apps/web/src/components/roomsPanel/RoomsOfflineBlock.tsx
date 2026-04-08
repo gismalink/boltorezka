@@ -42,12 +42,14 @@ function RoomsOfflineBlockInner({
       {!collapsed ? (
         <ul className="rooms-list">
           {members.map((member) => (
-            <li key={`offline:${member.userId || member.userName}`} className="channel-row grid grid-cols-[1fr] items-center gap-1">
+            <li key={`offline:${member.userId || member.userName}`} className="channel-row">
               <div className="secondary room-btn room-btn-interactive pointer-events-none opacity-85">
-                <i className="bi bi-circle text-[10px] text-[var(--pixel-muted)]" aria-hidden="true" />
-                <span>{member.userName}</span>
+                <span className="inline-flex min-w-0 items-center gap-2">
+                  <i className="bi bi-circle text-[10px] text-[var(--pixel-muted)]" aria-hidden="true" />
+                  <span className="truncate">{member.userName}</span>
+                </span>
+                <span className="rooms-offline-last-seen">{member.lastSeenLabel}</span>
               </div>
-              <div className="rooms-offline-last-seen muted">{member.lastSeenLabel}</div>
             </li>
           ))}
         </ul>
