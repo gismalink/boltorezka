@@ -3,6 +3,7 @@ import type { Message, MessagesCursor, PresenceMember } from "../../domain";
 import type { RoomTopic } from "../../domain";
 import type { RealtimeClient } from "../../services";
 import type { ChatTypingByRoom } from "./useChatTypingController";
+import { decrementUnreadValue, getTopicReadDeltas } from "./realtimeUnreadUtils";
 
 type UseRealtimeLifecycleCallbacksArgs = {
   chatRoomSlug: string;
@@ -242,9 +243,10 @@ export function useRealtimeLifecycleCallbacks({
       return;
     }
 
-    const targetTopic = chatTopics.find((topic) => topic.id === targetTopicId);
-    const unreadToClear = Math.max(0, Number(targetTopic?.unreadCount || 0));
-    const mentionUnreadToClear = Math.max(0, Number(targetTopic?.mentionUnreadCount || 0));
+    const { topicFound, unreadDelta, mentionDelta } = getTopicReadDeltas(chatTopics, targetTopicId);
+    if (!topicFound) {
+      pushLog(`chat.topic.read topic snapshot missing: topicId=${targetTopicId}`);
+    }
 
     setChatTopics((prev) => prev.map((topic) => {
       if (topic.id !== targetTopicId) {
@@ -272,15 +274,18 @@ export function useRealtimeLifecycleCallbacks({
       }
 
       const currentUnread = Math.max(0, Number(prev[targetRoomSlug] || 0));
-      if (currentUnread === 0 || unreadToClear <= 0) {
+      if (currentUnread === 0 || unreadDelta <= 0) {
         return prev;
       }
 
-      const unreadDelta = unreadToClear;
+      const nextUnread = decrementUnreadValue(currentUnread, unreadDelta);
+      if (nextUnread === currentUnread) {
+        return prev;
+      }
 
       return {
         ...prev,
-        [targetRoomSlug]: Math.max(0, currentUnread - unreadDelta)
+        [targetRoomSlug]: nextUnread
       };
     });
     setRoomMentionUnreadBySlug((prev) => {
@@ -291,18 +296,21 @@ export function useRealtimeLifecycleCallbacks({
       }
 
       const currentMentions = Math.max(0, Number(prev[targetRoomSlug] || 0));
-      if (currentMentions === 0 || mentionUnreadToClear <= 0) {
+      if (currentMentions === 0 || mentionDelta <= 0) {
         return prev;
       }
 
-      const mentionDelta = mentionUnreadToClear;
+      const nextMentions = decrementUnreadValue(currentMentions, mentionDelta);
+      if (nextMentions === currentMentions) {
+        return prev;
+      }
 
       return {
         ...prev,
-        [targetRoomSlug]: Math.max(0, currentMentions - mentionDelta)
+        [targetRoomSlug]: nextMentions
       };
     });
-  }, [chatRoomSlug, chatTopics, currentUserId, roomSlugById, setChatTopics, setRoomMentionUnreadBySlug, setRoomUnreadBySlug]);
+  }, [chatRoomSlug, chatTopics, currentUserId, pushLog, roomSlugById, setChatTopics, setRoomMentionUnreadBySlug, setRoomUnreadBySlug]);
 
   const handleChatTopicDeleted = useCallback((payload: {
     roomId?: string;

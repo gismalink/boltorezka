@@ -9,6 +9,7 @@ import {
   ROOM_UNREAD_METRICS_SUMMARY_EVERY
 } from "../../../constants/appConfig";
 import type { Room, RoomTopic } from "../../../domain";
+import { reconcileRoomUnreadValue } from "./roomUnreadReconcileUtils";
 
 type RoomUnreadCountItem = {
   roomId: string;
@@ -329,12 +330,17 @@ export function useServerRoomUnreadCounters({
             return;
           }
 
-          if (entry.value.source === "cache") {
+          const currentValue = Math.max(0, Number(prev[targetSlug] || 0));
+          const nextValue = reconcileRoomUnreadValue(
+            currentValue,
+            Number(entry.value.unreadCount || 0),
+            entry.value.source
+          );
+          if (nextValue === currentValue) {
             return;
           }
 
-          const fetchedValue = Math.max(0, Number(entry.value.unreadCount || 0));
-          next[targetSlug] = fetchedValue;
+          next[targetSlug] = nextValue;
         });
         return next;
       });
@@ -351,12 +357,17 @@ export function useServerRoomUnreadCounters({
             return;
           }
 
-          if (entry.value.source === "cache") {
+          const currentValue = Math.max(0, Number(prev[targetSlug] || 0));
+          const nextValue = reconcileRoomUnreadValue(
+            currentValue,
+            Number(entry.value.mentionUnreadCount || 0),
+            entry.value.source
+          );
+          if (nextValue === currentValue) {
             return;
           }
 
-          const fetchedValue = Math.max(0, Number(entry.value.mentionUnreadCount || 0));
-          next[targetSlug] = fetchedValue;
+          next[targetSlug] = nextValue;
         });
         return next;
       });
