@@ -180,6 +180,16 @@ type WsMessageControllerOptions = {
       ts?: string;
     }
   ) => void;
+  onChatTopicDeleted?: (
+    payload: {
+      roomId?: string;
+      roomSlug?: string;
+      topicId?: string;
+      actorUserId?: string;
+      deletedMessagesCount?: number;
+      ts?: string;
+    }
+  ) => void;
   onNotificationSettingsUpdated?: (
     payload: {
       settings?: {
@@ -738,6 +748,20 @@ export class WsMessageController {
     });
   }
 
+  private handleChatTopicDeleted(message: WsIncoming): void {
+    const deletedMessagesCountRaw = Number(message.payload?.deletedMessagesCount);
+    this.options.onChatTopicDeleted?.({
+      roomId: this.asTrimmedString(message.payload?.roomId) || undefined,
+      roomSlug: this.asTrimmedString(message.payload?.roomSlug) || undefined,
+      topicId: this.asTrimmedString(message.payload?.topicId) || undefined,
+      actorUserId: this.asTrimmedString(message.payload?.actorUserId) || undefined,
+      deletedMessagesCount: Number.isFinite(deletedMessagesCountRaw)
+        ? Math.max(0, Math.round(deletedMessagesCountRaw))
+        : undefined,
+      ts: this.asTrimmedString(message.payload?.ts) || undefined
+    });
+  }
+
   private handleNotificationSettingsUpdated(message: WsIncoming): void {
     const settingsRaw = message.payload?.settings;
     if (!settingsRaw || typeof settingsRaw !== "object") {
@@ -1080,6 +1104,9 @@ export class WsMessageController {
         return;
       case "chat.topic.unarchived":
         this.handleChatTopicUnarchived(message);
+        return;
+      case "chat.topic.deleted":
+        this.handleChatTopicDeleted(message);
         return;
       case "chat.notification.settings.updated":
         this.handleNotificationSettingsUpdated(message);

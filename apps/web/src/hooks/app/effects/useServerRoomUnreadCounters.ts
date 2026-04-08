@@ -329,11 +329,12 @@ export function useServerRoomUnreadCounters({
             return;
           }
 
-          const currentValue = Math.max(0, Number(prev[targetSlug] || 0));
+          if (entry.value.source === "cache") {
+            return;
+          }
+
           const fetchedValue = Math.max(0, Number(entry.value.unreadCount || 0));
-          next[targetSlug] = entry.value.source === "cache"
-            ? Math.max(currentValue, fetchedValue)
-            : fetchedValue;
+          next[targetSlug] = fetchedValue;
         });
         return next;
       });
@@ -350,11 +351,12 @@ export function useServerRoomUnreadCounters({
             return;
           }
 
-          const currentValue = Math.max(0, Number(prev[targetSlug] || 0));
+          if (entry.value.source === "cache") {
+            return;
+          }
+
           const fetchedValue = Math.max(0, Number(entry.value.mentionUnreadCount || 0));
-          next[targetSlug] = entry.value.source === "cache"
-            ? Math.max(currentValue, fetchedValue)
-            : fetchedValue;
+          next[targetSlug] = fetchedValue;
         });
         return next;
       });

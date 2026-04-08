@@ -247,13 +247,20 @@ export function useRealtimeLifecycleCallbacks({
     const mentionUnreadToClear = Math.max(0, Number(targetTopic?.mentionUnreadCount || 0));
 
     setChatTopics((prev) => prev.map((topic) => {
-      if (topic.id !== targetTopicId || topic.unreadCount <= 0) {
+      if (topic.id !== targetTopicId) {
+        return topic;
+      }
+
+      const nextUnreadCount = 0;
+      const nextMentionUnreadCount = 0;
+      if (topic.unreadCount === nextUnreadCount && topic.mentionUnreadCount === nextMentionUnreadCount) {
         return topic;
       }
 
       return {
         ...topic,
-        unreadCount: 0
+        unreadCount: nextUnreadCount,
+        mentionUnreadCount: nextMentionUnreadCount
       };
     }));
 
@@ -265,11 +272,11 @@ export function useRealtimeLifecycleCallbacks({
       }
 
       const currentUnread = Math.max(0, Number(prev[targetRoomSlug] || 0));
-      if (currentUnread === 0) {
+      if (currentUnread === 0 || unreadToClear <= 0) {
         return prev;
       }
 
-      const unreadDelta = Math.max(1, unreadToClear);
+      const unreadDelta = unreadToClear;
 
       return {
         ...prev,
@@ -284,11 +291,11 @@ export function useRealtimeLifecycleCallbacks({
       }
 
       const currentMentions = Math.max(0, Number(prev[targetRoomSlug] || 0));
-      if (currentMentions === 0) {
+      if (currentMentions === 0 || mentionUnreadToClear <= 0) {
         return prev;
       }
 
-      const mentionDelta = Math.max(1, mentionUnreadToClear);
+      const mentionDelta = mentionUnreadToClear;
 
       return {
         ...prev,
@@ -296,6 +303,25 @@ export function useRealtimeLifecycleCallbacks({
       };
     });
   }, [chatRoomSlug, chatTopics, currentUserId, roomSlugById, setChatTopics, setRoomMentionUnreadBySlug, setRoomUnreadBySlug]);
+
+  const handleChatTopicDeleted = useCallback((payload: {
+    roomId?: string;
+    roomSlug?: string;
+    topicId?: string;
+  }) => {
+    const targetRoomSlug = String(payload.roomSlug || roomSlugById[String(payload.roomId || "").trim()] || "").trim();
+    const targetTopicId = String(payload.topicId || "").trim();
+    if (!targetRoomSlug || targetRoomSlug !== chatRoomSlug || !targetTopicId) {
+      return;
+    }
+
+    setChatTopics((prev) => {
+      if (!prev.some((topic) => topic.id === targetTopicId)) {
+        return prev;
+      }
+      return prev.filter((topic) => topic.id !== targetTopicId);
+    });
+  }, [chatRoomSlug, roomSlugById, setChatTopics]);
 
   const sortTopics = useCallback((topics: RoomTopic[]) => {
     return [...topics].sort((a, b) => {
@@ -403,6 +429,7 @@ export function useRealtimeLifecycleCallbacks({
     handleChatTopicUpdated,
     handleChatTopicArchived,
     handleChatTopicUnarchived,
+    handleChatTopicDeleted,
     handleNotificationSettingsUpdated
   };
 }

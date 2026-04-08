@@ -183,6 +183,16 @@ type UseRealtimeChatLifecyclePropsInput = {
       ts?: string;
     }
   ) => void;
+  handleChatTopicDeleted: (
+    payload: {
+      roomId?: string;
+      roomSlug?: string;
+      topicId?: string;
+      actorUserId?: string;
+      deletedMessagesCount?: number;
+      ts?: string;
+    }
+  ) => void;
   handleNotificationSettingsUpdated: (
     payload: {
       settings?: {
@@ -249,6 +259,7 @@ export function useRealtimeChatLifecycleProps({
   handleChatTopicUpdated,
   handleChatTopicArchived,
   handleChatTopicUnarchived,
+  handleChatTopicDeleted,
   handleNotificationSettingsUpdated
 }: UseRealtimeChatLifecyclePropsInput) {
   const handleRoomMediaTopology = useCallback(
@@ -313,6 +324,7 @@ export function useRealtimeChatLifecycleProps({
     onChatTopicUpdated: handleChatTopicUpdated,
     onChatTopicArchived: handleChatTopicArchived,
     onChatTopicUnarchived: handleChatTopicUnarchived,
+    onChatTopicDeleted: handleChatTopicDeleted,
     onNotificationSettingsUpdated: handleNotificationSettingsUpdated
   }), [
     serviceToken,
@@ -360,6 +372,7 @@ export function useRealtimeChatLifecycleProps({
     handleChatTopicUpdated,
     handleChatTopicArchived,
     handleChatTopicUnarchived,
+    handleChatTopicDeleted,
     handleNotificationSettingsUpdated
   ]);
 }

@@ -191,6 +191,16 @@ type UseRealtimeChatLifecycleArgs = {
       ts?: string;
     }
   ) => void;
+  onChatTopicDeleted?: (
+    payload: {
+      roomId?: string;
+      roomSlug?: string;
+      topicId?: string;
+      actorUserId?: string;
+      deletedMessagesCount?: number;
+      ts?: string;
+    }
+  ) => void;
   onNotificationSettingsUpdated?: (
     payload: {
       settings?: {
@@ -270,6 +280,7 @@ export function useRealtimeChatLifecycle({
   onChatTopicUpdated,
   onChatTopicArchived,
   onChatTopicUnarchived,
+  onChatTopicDeleted,
   onNotificationSettingsUpdated,
   onAck,
   onNack,
@@ -295,6 +306,7 @@ export function useRealtimeChatLifecycle({
   const onChatTopicUpdatedRef = useRef(onChatTopicUpdated);
   const onChatTopicArchivedRef = useRef(onChatTopicArchived);
   const onChatTopicUnarchivedRef = useRef(onChatTopicUnarchived);
+  const onChatTopicDeletedRef = useRef(onChatTopicDeleted);
   const onNotificationSettingsUpdatedRef = useRef(onNotificationSettingsUpdated);
   const onAckRef = useRef(onAck);
   const onNackRef = useRef(onNack);
@@ -366,6 +378,10 @@ export function useRealtimeChatLifecycle({
   useEffect(() => {
     onChatTopicUnarchivedRef.current = onChatTopicUnarchived;
   }, [onChatTopicUnarchived]);
+
+  useEffect(() => {
+    onChatTopicDeletedRef.current = onChatTopicDeleted;
+  }, [onChatTopicDeleted]);
 
   useEffect(() => {
     onNotificationSettingsUpdatedRef.current = onNotificationSettingsUpdated;
@@ -445,6 +461,7 @@ export function useRealtimeChatLifecycle({
       onChatTopicUpdated: (...args) => onChatTopicUpdatedRef.current?.(...args),
       onChatTopicArchived: (...args) => onChatTopicArchivedRef.current?.(...args),
       onChatTopicUnarchived: (...args) => onChatTopicUnarchivedRef.current?.(...args),
+      onChatTopicDeleted: (...args) => onChatTopicDeletedRef.current?.(...args),
       onNotificationSettingsUpdated: (...args) => onNotificationSettingsUpdatedRef.current?.(...args),
       onAck: (...args) => onAckRef.current?.(...args),
       onNack: (...args) => onNackRef.current?.(...args),
