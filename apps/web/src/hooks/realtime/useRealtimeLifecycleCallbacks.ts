@@ -183,26 +183,22 @@ export function useRealtimeLifecycleCallbacks({
     mentionUserIds?: string[];
   }) => {
     const targetRoomSlug = String(payload.roomSlug || "").trim();
-    const actorUserId = String(payload.userId || "").trim();
-    const selfUserId = String(currentUserId || "").trim();
     const targetTopicId = String(payload.topicId || "").trim();
     const normalizedActiveTopicId = String(activeTopicId || "").trim();
+    const selfUserId = String(currentUserId || "").trim();
 
-    if (!targetRoomSlug || !actorUserId) {
-      return;
-    }
-
-    if (selfUserId && actorUserId === selfUserId) {
+    if (!targetRoomSlug) {
       return;
     }
 
     const isSameRoom = targetRoomSlug === chatRoomSlug;
-    const isSameTopicInActiveRoom = isSameRoom
-      && normalizedActiveTopicId
-      && targetTopicId
-      && targetTopicId === normalizedActiveTopicId;
+    const isVisibleInCurrentContext = isSameRoom
+      && (
+        (normalizedActiveTopicId && targetTopicId === normalizedActiveTopicId)
+        || (!normalizedActiveTopicId && !targetTopicId)
+      );
 
-    if (isSameRoom && (!normalizedActiveTopicId || isSameTopicInActiveRoom)) {
+    if (isVisibleInCurrentContext) {
       return;
     }
 
