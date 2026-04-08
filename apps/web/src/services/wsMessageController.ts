@@ -240,6 +240,22 @@ export class WsMessageController {
     return String(value || "").trim();
   }
 
+  private pickPayloadString(payload: unknown, keys: string[]): string {
+    if (!payload || typeof payload !== "object") {
+      return "";
+    }
+
+    const record = payload as Record<string, unknown>;
+    for (const key of keys) {
+      const value = this.asTrimmedString(record[key]);
+      if (value) {
+        return value;
+      }
+    }
+
+    return "";
+  }
+
   private asMediaTopology(value: unknown): "livekit" {
     void value;
     return "livekit";
@@ -357,7 +373,7 @@ export class WsMessageController {
 
     return {
       id: String(payload.id || fallbackId || crypto.randomUUID()),
-      room_id: String(payload.roomId || ""),
+      room_id: String(payload.roomId || payload.room_id || ""),
       topic_id: typeof payload.topicId === "string"
         ? payload.topicId
         : payload.topicId === null
@@ -592,7 +608,7 @@ export class WsMessageController {
       return {
         ...item,
         text: String(message.payload?.text || item.text),
-        edited_at: String(message.payload?.editedAt || new Date().toISOString())
+        edited_at: String(message.payload?.editedAt || message.payload?.edited_at || new Date().toISOString())
       };
     }));
   }
@@ -607,11 +623,11 @@ export class WsMessageController {
   }
 
   private handleChatCleared(message: WsIncoming): void {
-    const roomId = this.asTrimmedString(message.payload?.roomId) || undefined;
-    const roomSlug = this.asTrimmedString(message.payload?.roomSlug) || undefined;
-    const deletedCountRaw = Number(message.payload?.deletedCount);
+    const roomId = this.pickPayloadString(message.payload, ["roomId", "room_id"]) || undefined;
+    const roomSlug = this.pickPayloadString(message.payload, ["roomSlug", "room_slug"]) || undefined;
+    const deletedCountRaw = Number((message.payload as Record<string, unknown> | undefined)?.deletedCount ?? (message.payload as Record<string, unknown> | undefined)?.deleted_count);
     const deletedCount = Number.isFinite(deletedCountRaw) ? Math.max(0, Math.round(deletedCountRaw)) : undefined;
-    const clearedAt = this.asTrimmedString(message.payload?.clearedAt) || undefined;
+    const clearedAt = this.pickPayloadString(message.payload, ["clearedAt", "cleared_at"]) || undefined;
 
     this.options.onChatCleared?.({
       roomId,
@@ -622,63 +638,79 @@ export class WsMessageController {
   }
 
   private handleChatTyping(message: WsIncoming): void {
+    const payloadRecord = (message.payload && typeof message.payload === "object")
+      ? message.payload as Record<string, unknown>
+      : undefined;
     this.options.onChatTyping?.({
-      roomId: this.asTrimmedString(message.payload?.roomId) || undefined,
-      roomSlug: this.asTrimmedString(message.payload?.roomSlug) || undefined,
-      userId: this.asTrimmedString(message.payload?.userId) || undefined,
-      userName: this.asTrimmedString(message.payload?.userName) || undefined,
-      isTyping: typeof message.payload?.isTyping === "boolean" ? message.payload.isTyping : undefined,
-      ts: this.asTrimmedString(message.payload?.ts) || undefined
+      roomId: this.pickPayloadString(message.payload, ["roomId", "room_id"]) || undefined,
+      roomSlug: this.pickPayloadString(message.payload, ["roomSlug", "room_slug"]) || undefined,
+      userId: this.pickPayloadString(message.payload, ["userId", "user_id"]) || undefined,
+      userName: this.pickPayloadString(message.payload, ["userName", "user_name"]) || undefined,
+      isTyping: typeof payloadRecord?.isTyping === "boolean"
+        ? payloadRecord.isTyping
+        : typeof payloadRecord?.is_typing === "boolean"
+          ? payloadRecord.is_typing
+          : undefined,
+      ts: this.pickPayloadString(message.payload, ["ts"]) || undefined
     });
   }
 
   private handleChatMessagePinned(message: WsIncoming): void {
+    const payloadRecord = (message.payload && typeof message.payload === "object")
+      ? message.payload as Record<string, unknown>
+      : undefined;
     this.options.onChatMessagePinned?.({
-      roomId: this.asTrimmedString(message.payload?.roomId) || undefined,
-      roomSlug: this.asTrimmedString(message.payload?.roomSlug) || undefined,
-      topicId: this.asTrimmedString(message.payload?.topicId) || undefined,
-      topicSlug: this.asTrimmedString(message.payload?.topicSlug) || undefined,
-      messageId: this.asTrimmedString(message.payload?.messageId) || undefined,
-      pinned: typeof message.payload?.pinned === "boolean" ? message.payload.pinned : undefined,
-      pinnedByUserId: this.asTrimmedString(message.payload?.pinnedByUserId) || undefined,
-      ts: this.asTrimmedString(message.payload?.ts) || undefined
+      roomId: this.pickPayloadString(message.payload, ["roomId", "room_id"]) || undefined,
+      roomSlug: this.pickPayloadString(message.payload, ["roomSlug", "room_slug"]) || undefined,
+      topicId: this.pickPayloadString(message.payload, ["topicId", "topic_id"]) || undefined,
+      topicSlug: this.pickPayloadString(message.payload, ["topicSlug", "topic_slug"]) || undefined,
+      messageId: this.pickPayloadString(message.payload, ["messageId", "message_id"]) || undefined,
+      pinned: typeof payloadRecord?.pinned === "boolean" ? payloadRecord.pinned : undefined,
+      pinnedByUserId: this.pickPayloadString(message.payload, ["pinnedByUserId", "pinned_by_user_id"]) || undefined,
+      ts: this.pickPayloadString(message.payload, ["ts"]) || undefined
     });
   }
 
   private handleChatMessageUnpinned(message: WsIncoming): void {
+    const payloadRecord = (message.payload && typeof message.payload === "object")
+      ? message.payload as Record<string, unknown>
+      : undefined;
     this.options.onChatMessageUnpinned?.({
-      roomId: this.asTrimmedString(message.payload?.roomId) || undefined,
-      roomSlug: this.asTrimmedString(message.payload?.roomSlug) || undefined,
-      topicId: this.asTrimmedString(message.payload?.topicId) || undefined,
-      topicSlug: this.asTrimmedString(message.payload?.topicSlug) || undefined,
-      messageId: this.asTrimmedString(message.payload?.messageId) || undefined,
-      pinned: typeof message.payload?.pinned === "boolean" ? message.payload.pinned : undefined,
-      unpinnedByUserId: this.asTrimmedString(message.payload?.unpinnedByUserId) || undefined,
-      ts: this.asTrimmedString(message.payload?.ts) || undefined
+      roomId: this.pickPayloadString(message.payload, ["roomId", "room_id"]) || undefined,
+      roomSlug: this.pickPayloadString(message.payload, ["roomSlug", "room_slug"]) || undefined,
+      topicId: this.pickPayloadString(message.payload, ["topicId", "topic_id"]) || undefined,
+      topicSlug: this.pickPayloadString(message.payload, ["topicSlug", "topic_slug"]) || undefined,
+      messageId: this.pickPayloadString(message.payload, ["messageId", "message_id"]) || undefined,
+      pinned: typeof payloadRecord?.pinned === "boolean" ? payloadRecord.pinned : undefined,
+      unpinnedByUserId: this.pickPayloadString(message.payload, ["unpinnedByUserId", "unpinned_by_user_id"]) || undefined,
+      ts: this.pickPayloadString(message.payload, ["ts"]) || undefined
     });
   }
 
   private handleChatMessageReactionChanged(message: WsIncoming): void {
+    const payloadRecord = (message.payload && typeof message.payload === "object")
+      ? message.payload as Record<string, unknown>
+      : undefined;
     this.options.onChatMessageReactionChanged?.({
-      roomId: this.asTrimmedString(message.payload?.roomId) || undefined,
-      roomSlug: this.asTrimmedString(message.payload?.roomSlug) || undefined,
-      topicId: this.asTrimmedString(message.payload?.topicId) || undefined,
-      topicSlug: this.asTrimmedString(message.payload?.topicSlug) || undefined,
-      messageId: this.asTrimmedString(message.payload?.messageId) || undefined,
-      emoji: this.asTrimmedString(message.payload?.emoji) || undefined,
-      userId: this.asTrimmedString(message.payload?.userId) || undefined,
-      active: typeof message.payload?.active === "boolean" ? message.payload.active : undefined,
-      ts: this.asTrimmedString(message.payload?.ts) || undefined
+      roomId: this.pickPayloadString(message.payload, ["roomId", "room_id"]) || undefined,
+      roomSlug: this.pickPayloadString(message.payload, ["roomSlug", "room_slug"]) || undefined,
+      topicId: this.pickPayloadString(message.payload, ["topicId", "topic_id"]) || undefined,
+      topicSlug: this.pickPayloadString(message.payload, ["topicSlug", "topic_slug"]) || undefined,
+      messageId: this.pickPayloadString(message.payload, ["messageId", "message_id"]) || undefined,
+      emoji: this.pickPayloadString(message.payload, ["emoji"]) || undefined,
+      userId: this.pickPayloadString(message.payload, ["userId", "user_id"]) || undefined,
+      active: typeof payloadRecord?.active === "boolean" ? payloadRecord.active : undefined,
+      ts: this.pickPayloadString(message.payload, ["ts"]) || undefined
     });
   }
 
   private handleChatTopicRead(message: WsIncoming): void {
     this.options.onChatTopicRead?.({
-      roomId: this.asTrimmedString(message.payload?.roomId) || undefined,
-      topicId: this.asTrimmedString(message.payload?.topicId) || undefined,
-      userId: this.asTrimmedString(message.payload?.userId) || undefined,
-      lastReadMessageId: this.asTrimmedString(message.payload?.lastReadMessageId) || undefined,
-      lastReadAt: this.asTrimmedString(message.payload?.lastReadAt) || undefined
+      roomId: this.pickPayloadString(message.payload, ["roomId", "room_id"]) || undefined,
+      topicId: this.pickPayloadString(message.payload, ["topicId", "topic_id"]) || undefined,
+      userId: this.pickPayloadString(message.payload, ["userId", "user_id"]) || undefined,
+      lastReadMessageId: this.pickPayloadString(message.payload, ["lastReadMessageId", "last_read_message_id"]) || undefined,
+      lastReadAt: this.pickPayloadString(message.payload, ["lastReadAt", "last_read_at"]) || undefined
     });
   }
 
@@ -712,55 +744,58 @@ export class WsMessageController {
 
   private handleChatTopicCreated(message: WsIncoming): void {
     this.options.onChatTopicCreated?.({
-      roomId: this.asTrimmedString(message.payload?.roomId) || undefined,
-      roomSlug: this.asTrimmedString(message.payload?.roomSlug) || undefined,
+      roomId: this.pickPayloadString(message.payload, ["roomId", "room_id"]) || undefined,
+      roomSlug: this.pickPayloadString(message.payload, ["roomSlug", "room_slug"]) || undefined,
       topic: this.toTopicPayload(message.payload?.topic),
-      actorUserId: this.asTrimmedString(message.payload?.actorUserId) || undefined,
-      ts: this.asTrimmedString(message.payload?.ts) || undefined
+      actorUserId: this.pickPayloadString(message.payload, ["actorUserId", "actor_user_id"]) || undefined,
+      ts: this.pickPayloadString(message.payload, ["ts"]) || undefined
     });
   }
 
   private handleChatTopicUpdated(message: WsIncoming): void {
     this.options.onChatTopicUpdated?.({
-      roomId: this.asTrimmedString(message.payload?.roomId) || undefined,
-      roomSlug: this.asTrimmedString(message.payload?.roomSlug) || undefined,
+      roomId: this.pickPayloadString(message.payload, ["roomId", "room_id"]) || undefined,
+      roomSlug: this.pickPayloadString(message.payload, ["roomSlug", "room_slug"]) || undefined,
       topic: this.toTopicPayload(message.payload?.topic),
-      actorUserId: this.asTrimmedString(message.payload?.actorUserId) || undefined,
-      ts: this.asTrimmedString(message.payload?.ts) || undefined
+      actorUserId: this.pickPayloadString(message.payload, ["actorUserId", "actor_user_id"]) || undefined,
+      ts: this.pickPayloadString(message.payload, ["ts"]) || undefined
     });
   }
 
   private handleChatTopicArchived(message: WsIncoming): void {
     this.options.onChatTopicArchived?.({
-      roomId: this.asTrimmedString(message.payload?.roomId) || undefined,
-      roomSlug: this.asTrimmedString(message.payload?.roomSlug) || undefined,
+      roomId: this.pickPayloadString(message.payload, ["roomId", "room_id"]) || undefined,
+      roomSlug: this.pickPayloadString(message.payload, ["roomSlug", "room_slug"]) || undefined,
       topic: this.toTopicPayload(message.payload?.topic),
-      actorUserId: this.asTrimmedString(message.payload?.actorUserId) || undefined,
-      ts: this.asTrimmedString(message.payload?.ts) || undefined
+      actorUserId: this.pickPayloadString(message.payload, ["actorUserId", "actor_user_id"]) || undefined,
+      ts: this.pickPayloadString(message.payload, ["ts"]) || undefined
     });
   }
 
   private handleChatTopicUnarchived(message: WsIncoming): void {
     this.options.onChatTopicUnarchived?.({
-      roomId: this.asTrimmedString(message.payload?.roomId) || undefined,
-      roomSlug: this.asTrimmedString(message.payload?.roomSlug) || undefined,
+      roomId: this.pickPayloadString(message.payload, ["roomId", "room_id"]) || undefined,
+      roomSlug: this.pickPayloadString(message.payload, ["roomSlug", "room_slug"]) || undefined,
       topic: this.toTopicPayload(message.payload?.topic),
-      actorUserId: this.asTrimmedString(message.payload?.actorUserId) || undefined,
-      ts: this.asTrimmedString(message.payload?.ts) || undefined
+      actorUserId: this.pickPayloadString(message.payload, ["actorUserId", "actor_user_id"]) || undefined,
+      ts: this.pickPayloadString(message.payload, ["ts"]) || undefined
     });
   }
 
   private handleChatTopicDeleted(message: WsIncoming): void {
-    const deletedMessagesCountRaw = Number(message.payload?.deletedMessagesCount);
+    const payloadRecord = (message.payload && typeof message.payload === "object")
+      ? message.payload as Record<string, unknown>
+      : undefined;
+    const deletedMessagesCountRaw = Number(payloadRecord?.deletedMessagesCount ?? payloadRecord?.deleted_messages_count);
     this.options.onChatTopicDeleted?.({
-      roomId: this.asTrimmedString(message.payload?.roomId) || undefined,
-      roomSlug: this.asTrimmedString(message.payload?.roomSlug) || undefined,
-      topicId: this.asTrimmedString(message.payload?.topicId) || undefined,
-      actorUserId: this.asTrimmedString(message.payload?.actorUserId) || undefined,
+      roomId: this.pickPayloadString(message.payload, ["roomId", "room_id"]) || undefined,
+      roomSlug: this.pickPayloadString(message.payload, ["roomSlug", "room_slug"]) || undefined,
+      topicId: this.pickPayloadString(message.payload, ["topicId", "topic_id"]) || undefined,
+      actorUserId: this.pickPayloadString(message.payload, ["actorUserId", "actor_user_id"]) || undefined,
       deletedMessagesCount: Number.isFinite(deletedMessagesCountRaw)
         ? Math.max(0, Math.round(deletedMessagesCountRaw))
         : undefined,
-      ts: this.asTrimmedString(message.payload?.ts) || undefined
+      ts: this.pickPayloadString(message.payload, ["ts"]) || undefined
     });
   }
 
