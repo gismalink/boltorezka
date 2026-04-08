@@ -92,7 +92,7 @@ type NotificationInboxOps = {
     messageId: string;
     text: string;
     mentionUserIds?: string[];
-  }) => Promise<void>;
+  }) => Promise<string[]>;
   emitReplyInboxEvent: (input: {
     actorUserId: string;
     actorUserName: string;
@@ -321,6 +321,35 @@ async function resolveRoomRealtimeAudienceUserIds(
   return privateAudience.rows
     .map((entry) => String(entry.user_id || "").trim())
     .filter(Boolean);
+}
+
+function normalizeMentionUserIdsFromPayload(payload: Record<string, unknown>): string[] {
+  const candidates = payload.mentionUserIds ?? payload.mention_user_ids;
+  const rawValues: string[] = [];
+
+  if (Array.isArray(candidates)) {
+    candidates.forEach((value) => {
+      if (typeof value === "string") {
+        rawValues.push(value);
+      }
+    });
+  } else if (typeof candidates === "string") {
+    candidates
+      .split(",")
+      .forEach((part) => rawValues.push(part));
+  }
+
+  const dedup = new Set<string>();
+  rawValues
+    .map((value) => value.trim())
+    .filter((value) => value.length > 0)
+    .forEach((value) => {
+      if (!dedup.has(value) && dedup.size < 100) {
+        dedup.add(value);
+      }
+    });
+
+  return Array.from(dedup);
 }
 
 function broadcastToRoomAudienceAcrossOtherRooms(params: {
@@ -607,15 +636,7 @@ export async function handleChatSend(
 
   const topicId = normalizeRequestId(getPayloadString(payload, "topicId", 128));
   const replyToMessageId = normalizeRequestId(getPayloadString(payload, "replyToMessageId", 128));
-  const mentionUserIdsCandidate = (payload as Record<string, unknown>)?.mentionUserIds;
-  const mentionUserIdsRaw: unknown[] = Array.isArray(mentionUserIdsCandidate)
-    ? mentionUserIdsCandidate
-    : [];
-  const mentionUserIds = mentionUserIdsRaw
-    .filter((value): value is string => typeof value === "string")
-    .map((value) => value.trim())
-    .filter((value) => value.length > 0)
-    .slice(0, 100);
+  const mentionUserIds = normalizeMentionUserIdsFromPayload(payload as Record<string, unknown>);
 
   if (replyToMessageId && !topicId) {
     sendValidationNack(connection, requestId, eventType, "topicId is required for replyToMessageId");
@@ -680,7 +701,7 @@ export async function handleChatSend(
         });
       }
 
-      await emitMentionInboxEvents({
+      const resolvedMentionUserIds = await emitMentionInboxEvents({
         actorUserId: state.userId,
         actorUserName: result.message.user_name,
         roomId: result.room.id,
@@ -714,7 +735,7 @@ export async function handleChatSend(
         createdAt: result.message.created_at,
         senderRequestId: requestId || null,
         attachments: [],
-        mentionUserIds
+        mentionUserIds: resolvedMentionUserIds.length > 0 ? resolvedMentionUserIds : mentionUserIds
       };
 
       if (idempotencyKey) {
