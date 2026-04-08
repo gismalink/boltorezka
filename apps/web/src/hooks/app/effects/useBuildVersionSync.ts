@@ -28,6 +28,30 @@ export function useBuildVersionSync(clientBuildSha: string) {
     let cancelled = false;
     let inFlight = false;
 
+    const hasPendingReloadFlag = () => {
+      try {
+        return sessionStorage.getItem(VERSION_UPDATE_PENDING_KEY) === "1";
+      } catch {
+        return false;
+      }
+    };
+
+    const markPendingReloadFlag = () => {
+      try {
+        sessionStorage.setItem(VERSION_UPDATE_PENDING_KEY, "1");
+      } catch {
+        // Ignore storage failures and continue with reload.
+      }
+    };
+
+    const clearPendingReloadFlag = () => {
+      try {
+        sessionStorage.removeItem(VERSION_UPDATE_PENDING_KEY);
+      } catch {
+        // Ignore storage failures.
+      }
+    };
+
     const checkVersion = async () => {
       if (cancelled || inFlight) {
         return;
@@ -38,13 +62,17 @@ export function useBuildVersionSync(clientBuildSha: string) {
         const payload = await api.version();
         const serverBuildVersion = String(payload.appBuildSha || "").trim();
         if (!cancelled && serverBuildVersion && serverBuildVersion !== clientBuildSha) {
-          try {
-            sessionStorage.setItem(VERSION_UPDATE_PENDING_KEY, "1");
-          } catch {
-            // Ignore storage failures and continue with reload.
+          // Avoid infinite reload loops if mismatch persists due stale cache/network race.
+          if (hasPendingReloadFlag()) {
+            return;
           }
+
+          markPendingReloadFlag();
           window.location.reload();
+          return;
         }
+
+        clearPendingReloadFlag();
       } catch {
         return;
       } finally {

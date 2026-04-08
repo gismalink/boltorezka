@@ -11,6 +11,7 @@ export function mapRoomMembersForSlug(
   if (details.length > 0) {
     const members: RoomMember[] = [];
     const seenUserIds = new Set<string>();
+    const seenNoIdNames = new Set<string>();
     details.forEach((member) => {
       const userId = String(member.userId || "").trim();
       const userName = String(member.userName || member.userId || "").trim();
@@ -23,6 +24,12 @@ export function mapRoomMembersForSlug(
           return;
         }
         seenUserIds.add(userId);
+      } else {
+        const normalizedName = userName.toLocaleLowerCase();
+        if (seenNoIdNames.has(normalizedName)) {
+          return;
+        }
+        seenNoIdNames.add(normalizedName);
       }
 
       members.push({ userId, userName });
@@ -31,6 +38,7 @@ export function mapRoomMembersForSlug(
     return members;
   }
 
+  const seenNames = new Set<string>();
   return (liveRoomMembersBySlug[slug] || [])
     .map((nameRaw) => {
       const userName = String(nameRaw || "").trim();
@@ -39,5 +47,17 @@ export function mapRoomMembersForSlug(
         userName
       };
     })
-    .filter((member) => member.userName.length > 0);
+    .filter((member) => {
+      if (!member.userName) {
+        return false;
+      }
+
+      const normalizedName = member.userName.toLocaleLowerCase();
+      if (seenNames.has(normalizedName)) {
+        return false;
+      }
+
+      seenNames.add(normalizedName);
+      return true;
+    });
 }
