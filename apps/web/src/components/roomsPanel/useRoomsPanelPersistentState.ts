@@ -46,6 +46,11 @@ export function useRoomsPanelPersistentState() {
     return Boolean(parsed.outsideRoomsCollapsed);
   });
 
+  const [offlineRoomsCollapsed, setOfflineRoomsCollapsed] = useState<boolean>(() => {
+    const parsed = readJsonRecord(ROOMS_PANEL_GROUPS_STORAGE_KEY) as { offlineRoomsCollapsed?: boolean };
+    return parsed.offlineRoomsCollapsed == null ? true : Boolean(parsed.offlineRoomsCollapsed);
+  });
+
   const [archivedCollapsed, setArchivedCollapsed] = useState<boolean>(() => {
     const parsed = readJsonRecord(ROOMS_PANEL_GROUPS_STORAGE_KEY) as { archivedCollapsed?: boolean };
     return Boolean(parsed.archivedCollapsed);
@@ -70,9 +75,10 @@ export function useRoomsPanelPersistentState() {
     writeJsonRecord(ROOMS_PANEL_GROUPS_STORAGE_KEY, {
       uncategorizedCollapsed,
       outsideRoomsCollapsed,
+      offlineRoomsCollapsed,
       archivedCollapsed
     });
-  }, [uncategorizedCollapsed, outsideRoomsCollapsed, archivedCollapsed]);
+  }, [uncategorizedCollapsed, outsideRoomsCollapsed, offlineRoomsCollapsed, archivedCollapsed]);
 
   useEffect(() => {
     writeJsonRecord(ROOMS_PANEL_MUTE_PRESETS_STORAGE_KEY, roomMutePresetByRoomId);
@@ -91,12 +97,10 @@ export function useRoomsPanelPersistentState() {
   };
 
   return {
-    uncategorizedCollapsed,
-    setUncategorizedCollapsed,
-    outsideRoomsCollapsed,
-    setOutsideRoomsCollapsed,
-    archivedCollapsed,
-    setArchivedCollapsed,
+    uncategorizedCollapsed, setUncategorizedCollapsed,
+    outsideRoomsCollapsed, setOutsideRoomsCollapsed,
+    offlineRoomsCollapsed, setOfflineRoomsCollapsed,
+    archivedCollapsed, setArchivedCollapsed,
     roomMutePresetByRoomId,
     onRoomMutePresetChange
   };

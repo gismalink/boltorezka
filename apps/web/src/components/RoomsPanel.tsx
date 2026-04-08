@@ -1,13 +1,14 @@
 // Компонент панели комнат: отображает дерево категорий/каналов,
 // счетчики непрочитанного и действия администрирования комнаты.
-import { useCallback, useEffect, useState } from "react";
-import type { Room } from "../domain";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import type { Room, ServerMemberItem } from "../domain";
 import { RoomsCategoryBlock } from "./roomsPanel/RoomsCategoryBlock";
 import { RoomRow } from "./roomsPanel/RoomRow";
 import { RoomsConfirmOverlay } from "./roomsPanel/RoomsConfirmOverlay";
 import { RoomsPanelHeader } from "./roomsPanel/RoomsPanelHeader";
 import { RoomsUncategorizedBlock } from "./roomsPanel/RoomsUncategorizedBlock";
 import { RoomsOutsideOnlineBlock } from "./roomsPanel/RoomsOutsideOnlineBlock";
+import { RoomsOfflineBlock } from "./roomsPanel/RoomsOfflineBlock";
 import { RoomsArchivedBlock } from "./roomsPanel/RoomsArchivedBlock";
 import { useRoomsPanelDerivedData } from "./roomsPanel/useRoomsPanelDerivedData";
 import { useRoomsPanelPersistentState } from "./roomsPanel/useRoomsPanelPersistentState";
@@ -37,6 +38,7 @@ export function RoomsPanel({
   roomMentionUnreadBySlug,
   serverUnreadCount: _serverUnreadCount,
   currentUserId,
+  serverMembers,
   liveRoomMembersBySlug,
   liveRoomMemberDetailsBySlug,
   memberPreferencesByUserId,
@@ -111,11 +113,16 @@ export function RoomsPanel({
     setUncategorizedCollapsed,
     outsideRoomsCollapsed,
     setOutsideRoomsCollapsed,
+    offlineRoomsCollapsed,
+    setOfflineRoomsCollapsed,
     archivedCollapsed,
     setArchivedCollapsed,
     roomMutePresetByRoomId,
     onRoomMutePresetChange
   } = useRoomsPanelPersistentState();
+
+  const [nowTs, setNowTs] = useState(() => Date.now());
+  const [lastSeenByUserId, setLastSeenByUserId] = useState<Record<string, number>>({});
 
   const submitConfirmPopup = useCallback(() => {
     if (!confirmPopup) {
@@ -177,6 +184,121 @@ export function RoomsPanel({
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [confirmPopup]);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setNowTs(Date.now());
+    }, 60_000);
+
+    return () => {
+      window.clearInterval(timer);
+    };
+  }, []);
+
+  useEffect(() => {
+    const onlineById = new Set<string>();
+
+    Object.values(liveRoomMemberDetailsBySlug || {}).forEach((members) => {
+      (Array.isArray(members) ? members : []).forEach((member) => {
+        const userId = String(member.userId || "").trim();
+        if (userId) {
+          onlineById.add(userId);
+        }
+      });
+    });
+
+    if (onlineById.size === 0) {
+      return;
+    }
+
+    const seenAt = Date.now();
+    setLastSeenByUserId((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      onlineById.forEach((userId) => {
+        if (!next[userId] || seenAt > next[userId]) {
+          next[userId] = seenAt;
+          changed = true;
+        }
+      });
+      return changed ? next : prev;
+    });
+  }, [liveRoomMemberDetailsBySlug]);
+
+  const formatRelativeLastSeen = useCallback((diffMs: number) => {
+    const minuteMs = 60_000;
+    const hourMs = 60 * minuteMs;
+    const dayMs = 24 * hourMs;
+    const monthMs = 30 * dayMs;
+    const yearMs = 365 * dayMs;
+
+    if (diffMs < hourMs) {
+      const minutes = Math.max(1, Math.floor(diffMs / minuteMs));
+      return `${minutes} мин назад`;
+    }
+    if (diffMs < dayMs) {
+      const hours = Math.max(1, Math.floor(diffMs / hourMs));
+      return `${hours} ч назад`;
+    }
+    if (diffMs < monthMs) {
+      const days = Math.max(1, Math.floor(diffMs / dayMs));
+      return `${days} д назад`;
+    }
+    if (diffMs < yearMs) {
+      const months = Math.max(1, Math.floor(diffMs / monthMs));
+      return `${months} мес назад`;
+    }
+
+    const years = Math.max(1, Math.floor(diffMs / yearMs));
+    return `${years} г назад`;
+  }, []);
+
+  const offlineMembers = useMemo(() => {
+    const onlineById = new Set<string>();
+    Object.values(liveRoomMemberDetailsBySlug || {}).forEach((members) => {
+      (Array.isArray(members) ? members : []).forEach((member) => {
+        const userId = String(member.userId || "").trim();
+        if (userId) {
+          onlineById.add(userId);
+        }
+      });
+    });
+
+    const members = Array.isArray(serverMembers) ? serverMembers : [];
+    const byId = new Map<string, ServerMemberItem>();
+    members.forEach((member) => {
+      const userId = String(member.userId || "").trim();
+      if (!userId) {
+        return;
+      }
+      if (!byId.has(userId)) {
+        byId.set(userId, member);
+      }
+    });
+
+    return Array.from(byId.values())
+      .filter((member) => {
+        const userId = String(member.userId || "").trim();
+        return Boolean(userId) && !onlineById.has(userId);
+      })
+      .map((member) => {
+        const userId = String(member.userId || "").trim();
+        const userName = String(member.name || member.email || userId).trim();
+        const apiLastSeenAt = String(member.lastSeenAt || "").trim();
+        const apiLastSeenTs = apiLastSeenAt ? Date.parse(apiLastSeenAt) : Number.NaN;
+        const sessionLastSeenTs = Number(lastSeenByUserId[userId] || 0);
+        const lastSeenTs = Number.isFinite(apiLastSeenTs) ? apiLastSeenTs : sessionLastSeenTs;
+        const hasSeen = Number.isFinite(lastSeenTs) && lastSeenTs > 0;
+        const diffMs = hasSeen ? Math.max(0, nowTs - lastSeenTs) : 0;
+
+        return {
+          userId,
+          userName,
+          lastSeenLabel: hasSeen ? `${t("rooms.offlineLastSeen")}: ${formatRelativeLastSeen(diffMs)}` : t("rooms.offlineLastSeenUnknown")
+        };
+      })
+      .sort((left, right) => left.userName.localeCompare(right.userName));
+  }, [formatRelativeLastSeen, lastSeenByUserId, liveRoomMemberDetailsBySlug, nowTs, serverMembers, t]);
 
 
   const normalizedCurrentUserId = String(currentUserId || "").trim();
@@ -247,6 +369,10 @@ export function RoomsPanel({
   const onToggleOutsideRoomsCollapsed = useCallback(() => {
     setOutsideRoomsCollapsed((prev) => !prev);
   }, [setOutsideRoomsCollapsed]);
+
+  const onToggleOfflineRoomsCollapsed = useCallback(() => {
+    setOfflineRoomsCollapsed((prev) => !prev);
+  }, [setOfflineRoomsCollapsed]);
 
   const onToggleArchivedCollapsed = useCallback(() => {
     setArchivedCollapsed((prev) => !prev);
@@ -458,6 +584,14 @@ export function RoomsPanel({
           unreadCount={outsideRoomsUnreadCount}
           members={onlineOutsideRooms}
           onToggleCollapsed={onToggleOutsideRoomsCollapsed}
+        />
+
+        <RoomsOfflineBlock
+          title={t("rooms.offlineMembers")}
+          collapsed={offlineRoomsCollapsed}
+          offlineCount={offlineMembers.length}
+          members={offlineMembers}
+          onToggleCollapsed={onToggleOfflineRoomsCollapsed}
         />
 
         <RoomsArchivedBlock

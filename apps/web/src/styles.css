@@ -2205,6 +2205,12 @@ pre {
   gap: var(--space-xxs);
 }
 
+.rooms-offline-last-seen {
+  margin-left: 1.8rem;
+  font-size: calc(var(--font-size-sm) - 0.1rem);
+  line-height: 1.2;
+}
+
 .subheading {
   margin: 0;
   font-size: var(--font-size-sm);

@@ -823,6 +823,7 @@ export function App() {
     screenShareOwnerByRoomSlug,
     roomUnreadBySlug, roomMentionUnreadBySlug, serverUnreadCount,
     currentUserId: currentUserIdOrNull,
+    serverMembers,
     liveRoomMembersBySlug: roomsPresenceBySlug,
     liveRoomMemberDetailsBySlug: roomsPresenceDetailsBySlug,
     memberPreferencesByUserId,

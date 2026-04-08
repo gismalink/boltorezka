@@ -1,6 +1,6 @@
 import type { FormEvent, RefObject } from "react";
 import type { Lang, TranslateFn } from "../i18n";
-import type { ChannelAudioQualitySetting, PresenceMember, Room, RoomKind, RoomMemberPreference, RoomsTreeResponse, UiTheme, User } from "../domain";
+import type { ChannelAudioQualitySetting, PresenceMember, Room, RoomKind, RoomMemberPreference, RoomsTreeResponse, ServerMemberItem, UiTheme, User } from "../domain";
 import type { VoiceMediaStatusSummary } from "../hooks/rtc/voiceCallTypes";
 import type { RnnoiseSuppressionLevel } from "../hooks/rtc/rnnoiseAudioProcessor";
 
@@ -137,6 +137,7 @@ export type RoomsPanelProps = {
   roomMentionUnreadBySlug: Record<string, number>;
   serverUnreadCount: number;
   currentUserId: string;
+  serverMembers: ServerMemberItem[];
   liveRoomMembersBySlug: Record<string, string[]>;
   liveRoomMemberDetailsBySlug: Record<string, PresenceMember[]>;
   memberPreferencesByUserId: Record<string, RoomMemberPreference>;
