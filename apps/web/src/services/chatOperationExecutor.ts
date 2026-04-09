@@ -156,8 +156,39 @@ type ExecuteWsFirstWithHttpFallbackAwaitAckWithErrorResult<T> =
   | { kind: "failed"; error: unknown };
 
 export function isTransientWsError(error: unknown): boolean {
-  const message = String((error as { message?: string } | null)?.message || "").trim().toLowerCase();
-  return message === "ws_not_connected" || message.includes("ack_timeout") || message === "ws_disposed";
+  const retryableCodes = new Set([
+    "ws_not_connected",
+    "ws_disposed",
+    "ack_timeout",
+    "toomanyrequests",
+    "servicetemporarilyunavailable",
+    "serviceunavailable",
+    "gatewaytimeout"
+  ]);
+
+  const errorRecord = (error as { code?: unknown; message?: unknown } | null) ?? null;
+  const explicitCode = String(errorRecord?.code || "").trim().toLowerCase();
+  if (explicitCode) {
+    return retryableCodes.has(explicitCode);
+  }
+
+  const message = String(errorRecord?.message || "").trim();
+  if (!message) {
+    return false;
+  }
+
+  const normalizedMessage = message.toLowerCase();
+  if (normalizedMessage === "ws_not_connected" || normalizedMessage === "ws_disposed") {
+    return true;
+  }
+
+  const parts = message.split(":").map((part) => part.trim()).filter(Boolean);
+  const parsedCodeCandidate = String(parts[1] || parts[0] || "").toLowerCase();
+  if (parsedCodeCandidate) {
+    return retryableCodes.has(parsedCodeCandidate);
+  }
+
+  return false;
 }
 
 export async function executeWsFirstWithHttpFallbackAwaitAck<T>({

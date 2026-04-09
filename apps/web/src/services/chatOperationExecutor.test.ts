@@ -4,7 +4,8 @@ import {
   executeChatOperation,
   executeChatOperationWithError,
   executeWsFirstWithHttpFallbackAwaitAck,
-  executeWsFirstWithHttpFallback
+  executeWsFirstWithHttpFallback,
+  isTransientWsError
 } from "./chatOperationExecutor";
 
 describe("chatOperationExecutor", () => {
@@ -77,6 +78,40 @@ describe("chatOperationExecutor", () => {
   it("executeWsFirstWithHttpFallbackAwaitAck does not fallback on nack-like business error", async () => {
     const sendWsEventAwaitAck = vi.fn(async () => {
       throw new Error("chat.edit:Forbidden:cannot_edit");
+    });
+    const httpFallback = vi.fn(async () => "ok");
+
+    const result = await executeWsFirstWithHttpFallbackAwaitAck({
+      sendWsEventAwaitAck,
+      eventType: "chat.edit",
+      payload: { messageId: "m1" },
+      httpFallback
+    });
+
+    expect(result).toEqual({ kind: "failed" });
+    expect(httpFallback).not.toHaveBeenCalled();
+  });
+
+  it("executeWsFirstWithHttpFallbackAwaitAck falls back for retryable explicit error code", async () => {
+    const sendWsEventAwaitAck = vi.fn(async () => {
+      throw Object.assign(new Error("temporary overload"), { code: "TooManyRequests" });
+    });
+    const httpFallback = vi.fn(async () => "ok");
+
+    const result = await executeWsFirstWithHttpFallbackAwaitAck({
+      sendWsEventAwaitAck,
+      eventType: "chat.edit",
+      payload: { messageId: "m1" },
+      httpFallback
+    });
+
+    expect(result).toEqual({ kind: "http", value: "ok" });
+    expect(httpFallback).toHaveBeenCalledTimes(1);
+  });
+
+  it("executeWsFirstWithHttpFallbackAwaitAck does not fallback for non-retryable explicit error code", async () => {
+    const sendWsEventAwaitAck = vi.fn(async () => {
+      throw Object.assign(new Error("permission denied"), { code: "Forbidden" });
     });
     const httpFallback = vi.fn(async () => "ok");
 
@@ -229,5 +264,10 @@ describe("chatOperationExecutor", () => {
     if (result.kind === "failed" && "error" in result) {
       expect(result.error).toBe(error);
     }
+  });
+
+  it("isTransientWsError parses retryable code from ws-style message", () => {
+    expect(isTransientWsError(new Error("chat.send:ack_timeout"))).toBe(true);
+    expect(isTransientWsError(new Error("chat.send:Forbidden:cannot_send"))).toBe(false);
   });
 });
