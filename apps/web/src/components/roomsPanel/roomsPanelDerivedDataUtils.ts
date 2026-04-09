@@ -95,6 +95,7 @@ export function buildRoomsPanelDerivedData({
 
     if (userId) {
       seenOutsideIds.add(userId);
+      seenOutsideNoIdNames.add(userName.toLowerCase());
     } else {
       const normalizedName = userName.toLowerCase();
       if (seenOutsideNoIdNames.has(normalizedName)) {

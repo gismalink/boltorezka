@@ -43,4 +43,24 @@ describe("roomsPanelDerivedDataUtils", () => {
     expect(result.onlineOutsideRooms.length).toBe(1);
     expect(result.outsideRoomsUnreadCount).toBe(1);
   });
+
+  it("deduplicates id-based outside member against same-name fallback entry", () => {
+    const result = buildRoomsPanelDerivedData({
+      roomsTree: {
+        categories: [],
+        uncategorized: []
+      },
+      uncategorizedRooms: [],
+      archivedRooms: [],
+      roomUnreadBySlug: { [OUTSIDE_ROOMS_PRESENCE_KEY]: 1 },
+      roomMentionUnreadBySlug: {},
+      roomMutePresetByRoomId: {},
+      liveRoomMembersBySlug: { [OUTSIDE_ROOMS_PRESENCE_KEY]: ["alex"] },
+      liveRoomMemberDetailsBySlug: {
+        [OUTSIDE_ROOMS_PRESENCE_KEY]: [{ userId: "u-1", userName: "Alex" }]
+      }
+    });
+
+    expect(result.onlineOutsideRooms).toEqual([{ userId: "u-1", userName: "Alex" }]);
+  });
 });
