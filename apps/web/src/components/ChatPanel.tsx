@@ -312,9 +312,7 @@ export function ChatPanel({
     roomId,
     topics: topicsForUi,
     messages,
-    loadingOlderMessages,
     messagesHasMore,
-    onLoadOlderMessages,
     chatLogRef
   });
 

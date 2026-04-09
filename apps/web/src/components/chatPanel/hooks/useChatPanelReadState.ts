@@ -22,9 +22,7 @@ type UseChatPanelReadStateArgs = {
   roomId: string;
   topics: RoomTopic[];
   messages: Message[];
-  loadingOlderMessages: boolean;
   messagesHasMore: boolean;
-  onLoadOlderMessages: () => void;
   chatLogRef: RefObject<HTMLDivElement>;
 };
 
@@ -37,9 +35,7 @@ export function useChatPanelReadState({
   roomId,
   topics,
   messages,
-  loadingOlderMessages,
   messagesHasMore,
-  onLoadOlderMessages,
   chatLogRef
 }: UseChatPanelReadStateArgs) {
   const [topicUnreadOverrideById, setTopicUnreadOverrideById] = useState<Record<string, { unreadCount: number; sourceUnreadCount: number }>>({});
@@ -58,10 +54,8 @@ export function useChatPanelReadState({
     seenBottom: boolean;
     lastEdge: "top" | "bottom" | null;
   }>>({});
-  const entryUnreadCountByTopicRef = useRef<Record<string, number>>({});
   const entryUnreadRoomIdRef = useRef<string>("");
   const unreadEntryTopicRef = useRef<string>("");
-  const unreadBackfillAttemptsByTopicRef = useRef<Record<string, number>>({});
   const unreadDividerScrolledTopicRef = useRef<string>("");
 
   const normalizedCurrentUserId = String(currentUserId || "").trim();
@@ -344,44 +338,9 @@ export function useChatPanelReadState({
 
     unreadEntryTopicRef.current = normalizedTopicId;
     unreadDividerScrolledTopicRef.current = "";
-    unreadBackfillAttemptsByTopicRef.current[normalizedTopicId] = 0;
     oversizedMessageBoundaryProgressRef.current = {};
     setEntryUnreadDivider(null);
-
-    const activeTopic = topics.find((topic) => String(topic.id || "").trim() === normalizedTopicId);
-    // Snapshot topic unread count at entry. Divider position is computed from this snapshot,
-    // then refined as older history is backfilled.
-    entryUnreadCountByTopicRef.current[normalizedTopicId] = activeTopic ? getTopicUnreadCount(activeTopic) : 0;
   }, [activeTopicId, topics, getTopicUnreadCount]);
-
-  useEffect(() => {
-    const normalizedTopicId = String(activeTopicId || "").trim();
-    if (!normalizedTopicId || loadingOlderMessages || !messagesHasMore) {
-      return;
-    }
-
-    const hasServerUnreadAnchor = messages.some((message) => message.unread_divider_anchor);
-    if (hasServerUnreadAnchor) {
-      return;
-    }
-
-    if (!isMessageSetAlignedWithActiveContext()) {
-      return;
-    }
-
-    const entryUnreadCount = Math.max(0, Number(entryUnreadCountByTopicRef.current[normalizedTopicId] || 0));
-    if (entryUnreadCount <= 0 || messages.length > entryUnreadCount) {
-      return;
-    }
-
-    const attempts = Math.max(0, Number(unreadBackfillAttemptsByTopicRef.current[normalizedTopicId] || 0));
-    if (attempts >= 12) {
-      return;
-    }
-
-    unreadBackfillAttemptsByTopicRef.current[normalizedTopicId] = attempts + 1;
-    onLoadOlderMessages();
-  }, [activeTopicId, isMessageSetAlignedWithActiveContext, loadingOlderMessages, messages.length, messagesHasMore, onLoadOlderMessages]);
 
   useEffect(() => {
     const normalizedTopicId = String(activeTopicId || "").trim();
@@ -411,32 +370,10 @@ export function useChatPanelReadState({
       unreadDividerScrolledTopicRef.current = "";
       return;
     }
-
-    const entryUnreadCount = Math.max(0, Number(entryUnreadCountByTopicRef.current[normalizedTopicId] || 0));
-    if (entryUnreadCount <= 0 || messages.length === 0) {
-      return;
-    }
-
-    const hasEnoughMessagesForExactDivider = messages.length > entryUnreadCount;
-    const noMoreHistoryToLoad = !messagesHasMore;
-    if (!hasEnoughMessagesForExactDivider && !noMoreHistoryToLoad) {
-      return;
-    }
-
-    const dividerIndex = Math.max(0, Math.min(messages.length - 1, messages.length - entryUnreadCount));
-    const dividerMessageId = String(messages[dividerIndex]?.id || "").trim();
-    if (!dividerMessageId) {
-      setEntryUnreadDivider(null);
-      unreadDividerScrolledTopicRef.current = "";
-      return;
-    }
-
-    setEntryUnreadDivider({
-      topicId: normalizedTopicId,
-      messageId: dividerMessageId
-    });
+    // Keep divider strictly server-driven to avoid client-side positional heuristics.
+    setEntryUnreadDivider(null);
     unreadDividerScrolledTopicRef.current = "";
-  }, [activeTopicId, entryUnreadDivider?.messageId, entryUnreadDivider?.topicId, isMessageSetAlignedWithActiveContext, messages, messagesHasMore]);
+  }, [activeTopicId, entryUnreadDivider?.messageId, entryUnreadDivider?.topicId, isMessageSetAlignedWithActiveContext, messages]);
 
   useEffect(() => {
     if (!entryUnreadDivider?.messageId) {
@@ -521,13 +458,12 @@ export function useChatPanelReadState({
       return;
     }
 
-    const entryUnreadSnapshot = Math.max(0, Number(entryUnreadCountByTopicRef.current[normalizedTopicId] || 0));
     const dividerForActiveTopicReady = Boolean(
       entryUnreadDivider?.topicId === normalizedTopicId && String(entryUnreadDivider.messageId || "").trim()
     );
-    const shouldDelayAutoReadUntilDivider = entryUnreadSnapshot > 0 && !dividerForActiveTopicReady
-      && messagesHasMore
-      && messages.length <= entryUnreadSnapshot;
+    const shouldDelayAutoReadUntilDivider = Math.max(0, Number(topic.unreadCount || 0)) > 0
+      && !dividerForActiveTopicReady
+      && messagesHasMore;
     if (shouldDelayAutoReadUntilDivider) {
       return;
     }
