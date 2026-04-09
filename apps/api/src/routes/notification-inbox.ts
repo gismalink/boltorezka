@@ -4,14 +4,18 @@ import { loadCurrentUser, requireAuth, requireServiceAccess } from "../middlewar
 import { db } from "../db.js";
 import {
   listNotificationInbox,
+  listTopicUnreadMentions,
   markNotificationInboxItemRead,
-  markNotificationInboxReadAll
+  markNotificationInboxReadAll,
+  markTopicUnreadMentionsReadAll
 } from "../services/notification-inbox-service.js";
 import type {
   NotificationInboxClaimResponse,
   NotificationInboxListResponse,
   NotificationInboxReadAllResponse,
-  NotificationInboxReadResponse
+  NotificationInboxReadResponse,
+  TopicUnreadMentionsListResponse,
+  TopicUnreadMentionsReadAllResponse
 } from "../api-contract.types.ts";
 
 const listInboxQuerySchema = z.object({
@@ -23,6 +27,16 @@ const listInboxQuerySchema = z.object({
 
 const inboxEventParamsSchema = z.object({
   eventId: z.string().uuid()
+});
+
+const topicParamsSchema = z.object({
+  topicId: z.string().uuid()
+});
+
+const listTopicUnreadMentionsQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(100).optional(),
+  beforeCreatedAt: z.string().datetime().optional(),
+  beforeId: z.string().uuid().optional()
 });
 
 const NOTIFICATION_CLAIM_TTL_SEC = 45;
@@ -156,6 +170,87 @@ export async function notificationInboxRoutes(fastify: FastifyInstance) {
       const userId = String(request.currentUser?.id || "").trim();
       const updated = await markNotificationInboxReadAll(userId);
       const response: NotificationInboxReadAllResponse = {
+        updated
+      };
+
+      return reply.code(200).send(response);
+    }
+  );
+
+  fastify.get<{ Params: unknown; Querystring: unknown }>(
+    "/v1/topics/:topicId/unread-mentions",
+    {
+      preHandler: [requireAuth, requireServiceAccess, loadCurrentUser]
+    },
+    async (request, reply) => {
+      const parsedParams = topicParamsSchema.safeParse(request.params || {});
+      if (!parsedParams.success) {
+        return reply.code(400).send({
+          error: "ValidationError",
+          issues: parsedParams.error.flatten()
+        });
+      }
+
+      const parsedQuery = listTopicUnreadMentionsQuerySchema.safeParse(request.query || {});
+      if (!parsedQuery.success) {
+        return reply.code(400).send({
+          error: "ValidationError",
+          issues: parsedQuery.error.flatten()
+        });
+      }
+
+      if (parsedQuery.data.beforeCreatedAt && !parsedQuery.data.beforeId) {
+        return reply.code(400).send({ error: "ValidationError", message: "beforeId is required when beforeCreatedAt is provided" });
+      }
+
+      if (parsedQuery.data.beforeId && !parsedQuery.data.beforeCreatedAt) {
+        return reply.code(400).send({ error: "ValidationError", message: "beforeCreatedAt is required when beforeId is provided" });
+      }
+
+      const userId = String(request.currentUser?.id || "").trim();
+      const result = await listTopicUnreadMentions({
+        userId,
+        topicId: parsedParams.data.topicId,
+        limit: parsedQuery.data.limit ?? 30,
+        beforeCreatedAt: parsedQuery.data.beforeCreatedAt || null,
+        beforeId: parsedQuery.data.beforeId || null
+      });
+
+      const response: TopicUnreadMentionsListResponse = {
+        topicId: parsedParams.data.topicId,
+        items: result.items,
+        pagination: {
+          hasMore: result.hasMore,
+          nextCursor: result.nextCursor
+        }
+      };
+
+      return reply.code(200).send(response);
+    }
+  );
+
+  fastify.post<{ Params: unknown }>(
+    "/v1/topics/:topicId/unread-mentions/read-all",
+    {
+      preHandler: [requireAuth, requireServiceAccess, loadCurrentUser]
+    },
+    async (request, reply) => {
+      const parsedParams = topicParamsSchema.safeParse(request.params || {});
+      if (!parsedParams.success) {
+        return reply.code(400).send({
+          error: "ValidationError",
+          issues: parsedParams.error.flatten()
+        });
+      }
+
+      const userId = String(request.currentUser?.id || "").trim();
+      const updated = await markTopicUnreadMentionsReadAll({
+        userId,
+        topicId: parsedParams.data.topicId
+      });
+
+      const response: TopicUnreadMentionsReadAllResponse = {
+        topicId: parsedParams.data.topicId,
         updated
       };
 

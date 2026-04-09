@@ -265,6 +265,23 @@ export type NotificationInboxReadAllResponse = {
   updated: number;
 };
 
+export type TopicUnreadMentionsListResponse = {
+  topicId: string;
+  items: NotificationInboxItem[];
+  pagination: {
+    hasMore: boolean;
+    nextCursor: {
+      beforeCreatedAt: string;
+      beforeId: string;
+    } | null;
+  };
+};
+
+export type TopicUnreadMentionsReadAllResponse = {
+  topicId: string;
+  updated: number;
+};
+
 export type NotificationInboxClaimResponse = {
   eventId: string;
   claimed: boolean;

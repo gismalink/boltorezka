@@ -16,6 +16,8 @@ import type {
   NotificationInboxClaimResponse,
   NotificationInboxReadResponse,
   NotificationInboxReadAllResponse,
+  TopicUnreadMentionsListResponse,
+  TopicUnreadMentionsReadAllResponse,
   NotificationPushPublicKeyResponse,
   NotificationPushSubscriptionResponse,
   TopicReadResponse,
@@ -603,6 +605,33 @@ export const api = {
   markNotificationInboxReadAll: (token: string) =>
     fetchJson<NotificationInboxReadAllResponse>(
       "/v1/notifications/inbox/read-all",
+      token,
+      withJsonBody("POST")
+    ),
+  topicUnreadMentions: (
+    token: string,
+    topicId: string,
+    input: {
+      limit?: number;
+      beforeCreatedAt?: string;
+      beforeId?: string;
+    } = {}
+  ) => {
+    const params = new URLSearchParams();
+    params.set("limit", String(input.limit ?? 20));
+    if (input.beforeCreatedAt && input.beforeId) {
+      params.set("beforeCreatedAt", input.beforeCreatedAt);
+      params.set("beforeId", input.beforeId);
+    }
+
+    return fetchJson<TopicUnreadMentionsListResponse>(
+      `/v1/topics/${encodeURIComponent(topicId)}/unread-mentions?${params.toString()}`,
+      token
+    );
+  },
+  markTopicUnreadMentionsReadAll: (token: string, topicId: string) =>
+    fetchJson<TopicUnreadMentionsReadAllResponse>(
+      `/v1/topics/${encodeURIComponent(topicId)}/unread-mentions/read-all`,
       token,
       withJsonBody("POST")
     ),
