@@ -308,6 +308,8 @@ export type TopicReadResponse = {
   topicId: string;
   lastReadMessageId: string | null;
   lastReadAt: string;
+  unreadDelta?: number;
+  mentionDelta?: number;
 };
 
 export type AdminUsersResponse = {

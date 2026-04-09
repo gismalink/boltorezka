@@ -153,6 +153,8 @@ type UseRealtimeChatLifecycleArgs = {
       userId?: string;
       lastReadMessageId?: string;
       lastReadAt?: string;
+      unreadDelta?: number;
+      mentionDelta?: number;
     }
   ) => void;
   onChatTopicCreated?: (
@@ -555,6 +557,8 @@ export function useRealtimeChatLifecycle({
       lastConversationKeyForScrollRef.current = conversationKey;
       lastRoomSlugForScrollRef.current = chatRoomSlug;
       lastMessageIdRef.current = latestMessageId;
+      // New conversation should default to latest messages unless unread divider lock takes over.
+      shouldStickToBottomRef.current = true;
       return;
     }
 

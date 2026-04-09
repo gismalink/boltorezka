@@ -234,6 +234,8 @@ export function useRealtimeLifecycleCallbacks({
     roomId?: string;
     topicId?: string;
     userId?: string;
+    unreadDelta?: number;
+    mentionDelta?: number;
   }) => {
     const targetRoomId = String(payload.roomId || "").trim();
     const targetTopicId = String(payload.topicId || "").trim();
@@ -243,7 +245,11 @@ export function useRealtimeLifecycleCallbacks({
       return;
     }
 
-    const { topicFound, unreadDelta, mentionDelta } = getTopicReadDeltas(chatTopics, targetTopicId);
+    const payloadUnreadDelta = Math.max(0, Number(payload.unreadDelta || 0));
+    const payloadMentionDelta = Math.max(0, Number(payload.mentionDelta || 0));
+    const { topicFound, unreadDelta: snapshotUnreadDelta, mentionDelta: snapshotMentionDelta } = getTopicReadDeltas(chatTopics, targetTopicId);
+    const unreadDelta = payloadUnreadDelta > 0 ? payloadUnreadDelta : snapshotUnreadDelta;
+    const mentionDelta = payloadMentionDelta > 0 ? payloadMentionDelta : snapshotMentionDelta;
     if (!topicFound) {
       pushLog(`chat.topic.read topic snapshot missing: topicId=${targetTopicId}`);
     }

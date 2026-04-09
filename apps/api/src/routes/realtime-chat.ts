@@ -78,6 +78,8 @@ type TopicMessageOps = {
     topicId: string;
     lastReadMessageId: string | null;
     lastReadAt: string;
+    unreadDelta: number;
+    mentionDelta: number;
   }>;
 };
 
@@ -1497,7 +1499,9 @@ export async function handleChatTopicRead(params: ChatCommonParams): Promise<voi
         topicId: read.topicId,
         userId: state.userId,
         lastReadMessageId: read.lastReadMessageId,
-        lastReadAt: read.lastReadAt
+        lastReadAt: read.lastReadAt,
+        unreadDelta: read.unreadDelta,
+        mentionDelta: read.mentionDelta
       }
     });
 

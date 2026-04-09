@@ -895,9 +895,44 @@ export async function markTopicRead(input: {
   topicId: string;
   lastReadMessageId: string | null;
   lastReadAt: string;
+  unreadDelta: number;
+  mentionDelta: number;
 }> {
   const topic = await loadTopicWithRoom(input.topicId);
   await ensureTopicReadAccess(topic, input.userId);
+
+  const unreadSnapshot = await db.query<{ unread_count: string; mention_unread_count: string }>(
+    `SELECT
+       GREATEST(
+         0,
+         (
+           SELECT COUNT(*)::int
+           FROM messages m
+           WHERE m.topic_id = $1
+             AND m.user_id <> $2
+             AND m.created_at > COALESCE(rr.last_read_at, to_timestamp(0))
+         )
+       ) AS unread_count,
+       GREATEST(
+         0,
+         (
+           SELECT COUNT(*)::int
+           FROM notification_inbox ni
+           WHERE ni.user_id = $2
+             AND ni.event_type = 'mention_me'
+             AND ni.room_id = $3
+             AND ni.topic_id = $1
+             AND ni.read_at IS NULL
+             AND ni.created_at > COALESCE(rr.last_read_at, to_timestamp(0))
+         )
+       ) AS mention_unread_count
+     FROM (SELECT 1) AS _
+     LEFT JOIN room_reads rr ON rr.user_id = $2 AND rr.topic_id = $1`,
+    [input.topicId, input.userId, topic.room_id]
+  );
+
+  const unreadDelta = Math.max(0, Number(unreadSnapshot.rows[0]?.unread_count || 0));
+  const mentionDelta = Math.max(0, Number(unreadSnapshot.rows[0]?.mention_unread_count || 0));
 
   if (input.lastReadMessageId) {
     const messageCheck = await db.query(
@@ -930,6 +965,8 @@ export async function markTopicRead(input: {
     roomId: topic.room_id,
     topicId: input.topicId,
     lastReadMessageId: upserted.rows[0]?.last_read_message_id || null,
-    lastReadAt: String(upserted.rows[0]?.last_read_at || new Date().toISOString())
+    lastReadAt: String(upserted.rows[0]?.last_read_at || new Date().toISOString()),
+    unreadDelta,
+    mentionDelta
   };
 }

@@ -636,6 +636,18 @@ export async function roomTopicsRoutes(fastify: FastifyInstance) {
           text: parsedBody.data.text
         });
 
+        const resolvedMentionUserIds = await emitMentionInboxEvents({
+          actorUserId: userId,
+          actorUserName: result.message.user_name,
+          roomId: result.room.id,
+          roomSlug: result.room.slug,
+          topicId: result.topic.id,
+          topicSlug: result.topic.slug,
+          messageId: result.message.id,
+          text: result.message.text,
+          mentionUserIds: parsedBody.data.mentionUserIds
+        });
+
         broadcastRealtimeEnvelope(buildChatMessageEnvelope({
           id: result.message.id,
           roomId: result.message.room_id,
@@ -651,20 +663,11 @@ export async function roomTopicsRoutes(fastify: FastifyInstance) {
           text: result.message.text,
           createdAt: result.message.created_at,
           senderRequestId: null,
-          attachments: []
+          attachments: [],
+          mentionUserIds: resolvedMentionUserIds.length > 0
+            ? resolvedMentionUserIds
+            : parsedBody.data.mentionUserIds
         }));
-
-        await emitMentionInboxEvents({
-          actorUserId: userId,
-          actorUserName: result.message.user_name,
-          roomId: result.room.id,
-          roomSlug: result.room.slug,
-          topicId: result.topic.id,
-          topicSlug: result.topic.slug,
-          messageId: result.message.id,
-          text: result.message.text,
-          mentionUserIds: parsedBody.data.mentionUserIds
-        });
 
         const response: TopicMessageCreateResponse = {
           room: result.room,
@@ -823,6 +826,18 @@ export async function roomTopicsRoutes(fastify: FastifyInstance) {
           text: parsedBody.data.text
         });
 
+        const resolvedMentionUserIds = await emitMentionInboxEvents({
+          actorUserId: userId,
+          actorUserName: result.message.user_name,
+          roomId: result.room.id,
+          roomSlug: result.room.slug,
+          topicId: result.topic.id,
+          topicSlug: result.topic.slug,
+          messageId: result.message.id,
+          text: result.message.text,
+          mentionUserIds: parsedBody.data.mentionUserIds
+        });
+
         broadcastRealtimeEnvelope(buildChatMessageEnvelope({
           id: result.message.id,
           roomId: result.message.room_id,
@@ -838,7 +853,10 @@ export async function roomTopicsRoutes(fastify: FastifyInstance) {
           text: result.message.text,
           createdAt: result.message.created_at,
           senderRequestId: null,
-          attachments: []
+          attachments: [],
+          mentionUserIds: resolvedMentionUserIds.length > 0
+            ? resolvedMentionUserIds
+            : parsedBody.data.mentionUserIds
         }));
 
         await emitReplyInboxEvent({
@@ -851,18 +869,6 @@ export async function roomTopicsRoutes(fastify: FastifyInstance) {
           topicSlug: result.topic.slug,
           messageId: result.message.id,
           text: result.message.text
-        });
-
-        await emitMentionInboxEvents({
-          actorUserId: userId,
-          actorUserName: result.message.user_name,
-          roomId: result.room.id,
-          roomSlug: result.room.slug,
-          topicId: result.topic.id,
-          topicSlug: result.topic.slug,
-          messageId: result.message.id,
-          text: result.message.text,
-          mentionUserIds: parsedBody.data.mentionUserIds
         });
 
         const response: TopicMessageReplyResponse = {
@@ -1212,14 +1218,18 @@ export async function roomTopicsRoutes(fastify: FastifyInstance) {
             topicId: read.topicId,
             userId,
             lastReadMessageId: read.lastReadMessageId,
-            lastReadAt: read.lastReadAt
+            lastReadAt: read.lastReadAt,
+            unreadDelta: read.unreadDelta,
+            mentionDelta: read.mentionDelta
           }
         });
 
         const response: TopicReadResponse = {
           topicId: read.topicId,
           lastReadMessageId: read.lastReadMessageId,
-          lastReadAt: read.lastReadAt
+          lastReadAt: read.lastReadAt,
+          unreadDelta: read.unreadDelta,
+          mentionDelta: read.mentionDelta
         };
 
         return reply.code(200).send(response);

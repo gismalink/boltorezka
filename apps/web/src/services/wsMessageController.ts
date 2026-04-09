@@ -204,6 +204,8 @@ type WsMessageControllerOptions = {
       userId?: string;
       lastReadMessageId?: string;
       lastReadAt?: string;
+      unreadDelta?: number;
+      mentionDelta?: number;
     }
   ) => void;
   onChatTopicCreated?: (
@@ -741,12 +743,19 @@ export class WsMessageController {
   }
 
   private handleChatTopicRead(message: WsIncoming): void {
+    const payloadRecord = (message.payload && typeof message.payload === "object")
+      ? message.payload as Record<string, unknown>
+      : undefined;
+    const unreadDeltaRaw = Number(payloadRecord?.unreadDelta ?? payloadRecord?.unread_delta);
+    const mentionDeltaRaw = Number(payloadRecord?.mentionDelta ?? payloadRecord?.mention_delta);
     this.options.onChatTopicRead?.({
       roomId: this.pickPayloadString(message.payload, ["roomId", "room_id"]) || undefined,
       topicId: this.pickPayloadString(message.payload, ["topicId", "topic_id"]) || undefined,
       userId: this.pickPayloadString(message.payload, ["userId", "user_id"]) || undefined,
       lastReadMessageId: this.pickPayloadString(message.payload, ["lastReadMessageId", "last_read_message_id"]) || undefined,
-      lastReadAt: this.pickPayloadString(message.payload, ["lastReadAt", "last_read_at"]) || undefined
+      lastReadAt: this.pickPayloadString(message.payload, ["lastReadAt", "last_read_at"]) || undefined,
+      unreadDelta: Number.isFinite(unreadDeltaRaw) ? Math.max(0, Math.round(unreadDeltaRaw)) : undefined,
+      mentionDelta: Number.isFinite(mentionDeltaRaw) ? Math.max(0, Math.round(mentionDeltaRaw)) : undefined
     });
   }
 
