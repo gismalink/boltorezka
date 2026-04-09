@@ -168,6 +168,13 @@ export function useChatPanelSearch({
           });
         return;
       }
+
+      if (searchJumpAnchorLoadAttemptKeyRef.current === anchorAttemptKey && !loadingOlderMessages) {
+        setSearchJumpTarget(null);
+        setSearchJumpStatusText(t("chat.searchJumpNotFound"));
+        searchJumpAnchorLoadAttemptKeyRef.current = "";
+        return;
+      }
     }
 
     if (!shouldLoadHistory) {
