@@ -2230,6 +2230,10 @@ pre {
   color: var(--pixel-text);
 }
 
+.rooms-presence-user-name-offline {
+  opacity: 0.5;
+}
+
 .subheading {
   margin: 0;
   font-size: var(--font-size-sm);

@@ -46,7 +46,7 @@ function RoomsOfflineBlockInner({
               <div className="secondary room-btn room-btn-interactive pointer-events-none opacity-85">
                 <span className="inline-flex min-w-0 items-center gap-2">
                   <i className="bi bi-circle text-[10px] text-[var(--pixel-muted)]" aria-hidden="true" />
-                  <span className="truncate rooms-presence-user-name">{member.userName}</span>
+                  <span className="truncate rooms-presence-user-name rooms-presence-user-name-offline">{member.userName}</span>
                 </span>
                 <span className="rooms-offline-last-seen">{member.lastSeenLabel}</span>
               </div>
