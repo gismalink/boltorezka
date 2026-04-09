@@ -5,6 +5,7 @@ import { buildPresenceLeftEnvelope } from "../ws-protocol.js";
 import { closeRealtimeConnection } from "./realtime-lifecycle.js";
 import { consumeWsTicketAndInitializeConnection } from "./realtime-ws-auth.js";
 import { registerRealtimeSocket } from "../realtime-broadcast.js";
+import { db } from "../db.js";
 
 const WS_IDLE_TIMEOUT_MS = 45_000;
 const WS_HEARTBEAT_INTERVAL_MS = 20_000;
@@ -157,7 +158,13 @@ export function registerRealtimeWsRoute(fastify: FastifyInstance, deps: Register
             broadcastAllRoomsPresence,
             socketsByUserId,
             redisHSet: fastify.redis.hSet.bind(fastify.redis),
-            redisExpire: fastify.redis.expire.bind(fastify.redis)
+            redisExpire: fastify.redis.expire.bind(fastify.redis),
+            updateUserLastSeenAt: (userId, isoTs) => db.query(
+              `UPDATE users
+               SET last_seen_at = $2
+               WHERE id = $1`,
+              [userId, isoTs]
+            )
           });
         });
       } catch (error) {

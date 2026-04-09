@@ -369,6 +369,7 @@ export type ServerMemberItem = {
   role: ServerMemberRole;
   status: "active";
   joinedAt: string;
+  lastSeenAt?: string | null;
   customRoles: Array<{ id: string; name: string }>;
   isServerBanned: boolean;
 };

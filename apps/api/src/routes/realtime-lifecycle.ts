@@ -83,6 +83,7 @@ export async function closeRealtimeConnection(params: {
   socketsByUserId: Map<string, Set<WebSocket>>;
   redisHSet: (key: string, value: Record<string, string>) => Promise<unknown>;
   redisExpire: (key: string, seconds: number) => Promise<unknown>;
+  updateUserLastSeenAt: (userId: string, isoTs: string) => Promise<unknown>;
 }) {
   const {
     connection,
@@ -99,7 +100,8 @@ export async function closeRealtimeConnection(params: {
     broadcastAllRoomsPresence,
     socketsByUserId,
     redisHSet,
-    redisExpire
+    redisExpire,
+    updateUserLastSeenAt
   } = params;
 
   const state = socketState.get(connection);
@@ -130,9 +132,13 @@ export async function closeRealtimeConnection(params: {
 
   const userSockets = socketsByUserId.get(state.userId);
   if (!userSockets || userSockets.size === 0) {
+    const lastSeenAtIso = new Date().toISOString();
+
+    await updateUserLastSeenAt(state.userId, lastSeenAtIso);
+
     await redisHSet(`presence:user:${state.userId}`, {
       online: "0",
-      updatedAt: new Date().toISOString()
+      updatedAt: lastSeenAtIso
     });
     await redisExpire(`presence:user:${state.userId}`, 120);
   }

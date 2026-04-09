@@ -102,6 +102,10 @@ test("realtime-lifecycle: close detaches room and marks offline when last socket
     redisExpire: async (key, seconds) => {
       events.push(`expire:${key}:${seconds}`);
       return 1;
+    },
+    updateUserLastSeenAt: async (userId) => {
+      events.push(`last-seen:${userId}`);
+      return 1;
     }
   });
 
@@ -114,6 +118,7 @@ test("realtime-lifecycle: close detaches room and marks offline when last socket
     "clear-screen-owner",
     "broadcast-room",
     "broadcast-all-presence",
+    "last-seen:u1",
     "hset:presence:user:u1:0",
     "expire:presence:user:u1:120"
   ]);
@@ -168,6 +173,10 @@ test("realtime-lifecycle: close does not mark offline when another user socket i
     },
     redisExpire: async (key, seconds) => {
       events.push(`expire:${key}:${seconds}`);
+      return 1;
+    },
+    updateUserLastSeenAt: async (userId) => {
+      events.push(`last-seen:${userId}`);
       return 1;
     }
   });
@@ -225,6 +234,10 @@ test("realtime-lifecycle: close outside room still broadcasts all-rooms presence
     redisExpire: async (key, seconds) => {
       events.push(`expire:${key}:${seconds}`);
       return 1;
+    },
+    updateUserLastSeenAt: async (userId) => {
+      events.push(`last-seen:${userId}`);
+      return 1;
     }
   });
 
@@ -232,6 +245,7 @@ test("realtime-lifecycle: close outside room still broadcasts all-rooms presence
     "unregister",
     "detach-user",
     "broadcast-all-presence",
+    "last-seen:u2",
     "hset:presence:user:u2:0",
     "expire:presence:user:u2:120"
   ]);
