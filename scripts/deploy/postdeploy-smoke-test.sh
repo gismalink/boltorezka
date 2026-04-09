@@ -48,6 +48,7 @@ SMOKE_SUMMARY_TEXT="health=fail mode=unknown sso=fail realtime=fail delta(nack=0
 API_SMOKE_STATUS="skip"
 CHAT_OBJECT_STORAGE_STATUS="skip"
 CHAT_ORPHAN_CLEANUP_STATUS="skip"
+CHAT_ANCHOR_JUMP_STATUS="skip"
 MINIO_STORAGE_STATUS="skip"
 API_AUTH_SESSION_STATUS="skip"
 VERSION_CACHE_STATUS="skip"
@@ -82,6 +83,7 @@ write_summary() {
   printf 'SMOKE_AUTH_SESSION_STATUS=%q\n' "$API_AUTH_SESSION_STATUS" >>"$SUMMARY_FILE_REL"
   printf 'SMOKE_CHAT_OBJECT_STORAGE_STATUS=%q\n' "$CHAT_OBJECT_STORAGE_STATUS" >>"$SUMMARY_FILE_REL"
   printf 'SMOKE_CHAT_ORPHAN_CLEANUP_STATUS=%q\n' "$CHAT_ORPHAN_CLEANUP_STATUS" >>"$SUMMARY_FILE_REL"
+  printf 'SMOKE_CHAT_ANCHOR_JUMP_STATUS=%q\n' "$CHAT_ANCHOR_JUMP_STATUS" >>"$SUMMARY_FILE_REL"
   printf 'SMOKE_MINIO_STORAGE_STATUS=%q\n' "$MINIO_STORAGE_STATUS" >>"$SUMMARY_FILE_REL"
   printf 'SMOKE_VERSION_CACHE_STATUS=%q\n' "$VERSION_CACHE_STATUS" >>"$SUMMARY_FILE_REL"
   printf 'SMOKE_WEB_CRASH_BOUNDARY_STATUS=%q\n' "$WEB_CRASH_BOUNDARY_STATUS" >>"$SUMMARY_FILE_REL"
@@ -728,6 +730,23 @@ else
   else
     echo "[postdeploy-smoke] smoke:chat:orphan-cleanup skipped (SMOKE_CHAT_ORPHAN_CLEANUP=0)"
     CHAT_ORPHAN_CLEANUP_STATUS="skip"
+  fi
+
+  if [[ "${SMOKE_CHAT_ANCHOR_JUMP:-1}" == "1" ]]; then
+    if [[ -z "${SMOKE_TEST_BEARER_TOKEN:-}" ]]; then
+      echo "[postdeploy-smoke] smoke:chat:anchor-jump skipped (no bearer token)"
+      CHAT_ANCHOR_JUMP_STATUS="skip"
+    else
+      echo "[postdeploy-smoke] smoke:chat:anchor-jump"
+      SMOKE_API_URL="$BASE_URL" \
+        SMOKE_TEST_BEARER_TOKEN="${SMOKE_TEST_BEARER_TOKEN:-}" \
+        SMOKE_TEST_BEARER_TOKEN_SECOND="${SMOKE_TEST_BEARER_TOKEN_SECOND:-}" \
+        npm run smoke:chat:anchor-jump
+      CHAT_ANCHOR_JUMP_STATUS="pass"
+    fi
+  else
+    echo "[postdeploy-smoke] smoke:chat:anchor-jump skipped (SMOKE_CHAT_ANCHOR_JUMP=0)"
+    CHAT_ANCHOR_JUMP_STATUS="skip"
   fi
 
   if [[ "${SMOKE_MINIO_STORAGE:-0}" == "1" ]]; then

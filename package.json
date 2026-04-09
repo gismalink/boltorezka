@@ -58,6 +58,7 @@
     "smoke:auth:links:auto": "SMOKE_AUTH_AUTO_LINKS=1 node ./scripts/smoke/smoke-auth-link-hosts.mjs",
     "smoke:chat:object-storage": "node ./scripts/smoke/smoke-chat-object-storage.mjs",
     "smoke:chat:orphan-cleanup": "node ./scripts/smoke/smoke-chat-orphan-cleanup.mjs",
+    "smoke:chat:anchor-jump": "node ./scripts/smoke/smoke-chat-anchor-jump.mjs",
     "smoke:minio:storage": "bash ./scripts/smoke/smoke-minio-storage.sh",
     "smoke:sso": "node ./scripts/smoke/smoke-sso-redirect.mjs",
     "smoke:sso:routing": "node ./scripts/smoke/smoke-sso-routing.mjs",
