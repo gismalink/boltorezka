@@ -9,8 +9,15 @@ export function useAppWorkspaceSupportRuntimeInput(params: Record<string, unknow
     adminUsersSync: {
       token: p.token,
       canManageUsers: p.canManageUsers,
+      isProductManagementTabActive: p.serverMenuTab === "product_management",
       pushLog: p.pushLog,
       setAdminUsers: p.setAdminUsers
+    },
+    pendingJoinRequestsCountSync: {
+      token: p.token,
+      canPromote: p.canPromote,
+      pushLog: p.pushLog,
+      setPendingJoinRequestsCount: p.setPendingJoinRequestsCount
     },
     telemetryRefresh: {
       token: p.token,

@@ -115,6 +115,7 @@ export function App() {
     serverAgeConfirming, setServerAgeConfirming, ageGateBlockedRoomSlug, setAgeGateBlockedRoomSlug,
     pendingInviteToken, setPendingInviteToken, inviteAccepting, setInviteAccepting,
     telemetrySummary, setTelemetrySummary, wsState, setWsState,
+    pendingJoinRequestsCount: pendingJoinRequestsCountState, setPendingJoinRequestsCount,
     adminUsers, setAdminUsers, adminServers, setAdminServers,
     adminServersLoading, setAdminServersLoading,
     selectedAdminServerId, setSelectedAdminServerId, adminServerOverview, setAdminServerOverview,
@@ -225,7 +226,7 @@ export function App() {
     hasUser,
     hasServiceToken
   } = useAppPermissionsIdentityRuntime(useAppPermissionsIdentityRuntimeInput({
-    token, user, servers, currentServerId, adminUsers, lang, pushToast
+    token, user, servers, currentServerId, adminUsers, pendingJoinRequestsCount: pendingJoinRequestsCountState, lang, pushToast
   }));
 
   const {
@@ -512,7 +513,10 @@ export function App() {
     useAppWorkspaceSupportRuntimeInput({
       ...runtimeInputCommon,
       canManageUsers,
+      canPromote,
+      serverMenuTab,
       setAdminUsers,
+      setPendingJoinRequestsCount,
       canViewTelemetry,
       wsState,
       roomsPresenceDetailsBySlug,

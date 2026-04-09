@@ -99,6 +99,7 @@ export function useAppCoreState({
   const [inviteAccepting, setInviteAccepting] = useState(false);
   const [telemetrySummary, setTelemetrySummary] = useState<TelemetrySummary | null>(null);
   const [wsState, setWsState] = useState<"disconnected" | "connecting" | "connected">("disconnected");
+  const [pendingJoinRequestsCount, setPendingJoinRequestsCount] = useState(0);
   const [adminUsers, setAdminUsers] = useState<User[]>([]);
   const [adminServers, setAdminServers] = useState<AdminServerListItem[]>([]);
   const [adminServersLoading, setAdminServersLoading] = useState(false);
@@ -155,6 +156,7 @@ export function useAppCoreState({
     inviteAccepting, setInviteAccepting,
     telemetrySummary, setTelemetrySummary,
     wsState, setWsState,
+    pendingJoinRequestsCount, setPendingJoinRequestsCount,
     adminUsers, setAdminUsers,
     adminServers, setAdminServers,
     adminServersLoading, setAdminServersLoading,

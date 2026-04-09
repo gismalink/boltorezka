@@ -2107,7 +2107,8 @@ pre {
 }
 
 .loading-ellipsis {
-  display: inline-block;
+  display: inline-flex;
+  justify-content: flex-start;
   width: 3ch;
   overflow: hidden;
   vertical-align: bottom;
@@ -2116,7 +2117,6 @@ pre {
 .loading-ellipsis::before {
   content: "...";
   display: inline-block;
-  width: 0;
   animation: rooms-loading-dots 1s steps(4, end) infinite;
 }
 
@@ -2200,8 +2200,15 @@ pre {
 }
 
 @keyframes rooms-loading-dots {
-  0% {
+  0%,
+  25% {
     width: 0;
+  }
+  50% {
+    width: 1ch;
+  }
+  75% {
+    width: 2ch;
   }
   100% {
     width: 3ch;

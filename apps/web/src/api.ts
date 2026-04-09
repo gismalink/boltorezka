@@ -199,6 +199,7 @@ const endpoints = {
   telemetrySummary: "/v1/telemetry/summary",
   servers: "/v1/servers",
   adminUsers: "/v1/admin/users",
+  adminUsersPendingCount: "/v1/admin/users/pending-count",
   adminServers: "/v1/admin/servers",
   adminServerAudioQuality: "/v1/admin/server/audio-quality",
   adminServerChatImagePolicy: "/v1/admin/server/chat-image-policy",
@@ -726,6 +727,7 @@ export const api = {
       withJsonBody("PUT", { audioQuality })
     ),
   adminUsers: (token: string) => fetchJson<{ users: User[] }>(endpoints.adminUsers, token),
+  adminUsersPendingCount: (token: string) => fetchJson<{ count: number }>(endpoints.adminUsersPendingCount, token),
   adminServers: (token: string) => fetchJson<AdminServersResponse>(endpoints.adminServers, token),
   adminServerOverview: (token: string, serverId: string) =>
     fetchJson<AdminServerOverviewResponse>(withSuffix(endpoints.adminServers, serverId, "overview"), token),
