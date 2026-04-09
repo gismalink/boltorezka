@@ -1500,6 +1500,24 @@ pre {
   font-weight: 700;
 }
 
+.chat-topic-mention-nav-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-color: color-mix(in srgb, var(--pixel-accent) 65%, var(--pixel-border) 35%);
+}
+
+.chat-topic-mention-nav-btn span:first-child {
+  color: var(--pixel-accent);
+  font-weight: 700;
+}
+
+.chat-topic-mentions-status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+}
+
 .chat-history-loading {
   position: sticky;
   top: 0;

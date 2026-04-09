@@ -1,6 +1,7 @@
 // Главный компонент чата: координирует состояния панелей, тем, поиска,
 // непрочитанного и рендер секций таймлайна/композера/оверлеев.
 import { ClipboardEvent, FormEvent, KeyboardEvent, RefObject, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { api } from "../api";
 import type { Message, RoomTopic } from "../domain";
 import { buildChatMessageViewModels } from "../utils/chatMessageViewModel";
 import { CHAT_MEMORY_METRICS_ENABLED, CHAT_MEMORY_METRICS_EVERY } from "../constants/appConfig";
@@ -32,6 +33,11 @@ type MentionCandidate = {
   userId?: string;
   userIds?: string[];
   subtitle?: string | null;
+};
+
+type TopicUnreadMentionNavItem = {
+  eventId: string;
+  messageId: string;
 };
 
 function toMentionHandle(raw: string): string {
@@ -154,7 +160,13 @@ export function ChatPanel({
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
   const [quotedMessage, setQuotedMessage] = useState<{ userName: string; text: string } | null>(null);
   const [hotkeyStatusText, setHotkeyStatusText] = useState("");
+  const [topicMentionsActionLoading, setTopicMentionsActionLoading] = useState(false);
+  const [topicMentionsStatusText, setTopicMentionsStatusText] = useState("");
   const attachmentInputRef = useRef<HTMLInputElement | null>(null);
+  const topicUnreadMentionQueueRef = useRef<TopicUnreadMentionNavItem[]>([]);
+  const topicUnreadMentionCursorRef = useRef<{ beforeCreatedAt: string; beforeId: string } | null>(null);
+  const topicUnreadMentionHasMoreRef = useRef(true);
+  const topicUnreadMentionTopicIdRef = useRef("");
   const messageVmBuildMsRef = useRef(0);
   const metricsSamplesRef = useRef(0);
   const hasActiveRoom = Boolean(roomSlug);
@@ -357,6 +369,7 @@ export function ChatPanel({
   });
 
   const activeTopic = useMemo(() => topicsForUi.find((topic) => topic.id === activeTopicId) ?? null, [topicsForUi, activeTopicId]);
+  const activeTopicMentionUnreadCount = Math.max(0, Number(activeTopic?.mentionUnreadCount || 0));
   const activeTopicIsArchived = Boolean(activeTopic?.archivedAt);
   const unreadDividerVisible = useMemo(() => {
     const dividerMessageId = String(entryUnreadDivider?.messageId || "").trim();
@@ -560,6 +573,113 @@ export function ChatPanel({
     return `room=${roomValue};topic=${topicValue};topicState=${archiveValue};topics=${topicsValue};search=${searchValue}`;
   }, [activeTopicId, activeTopicIsArchived, hasActiveRoom, hasTopics, roomSlug, searchPanelOpen, topicsForUi]);
 
+  useEffect(() => {
+    const topicId = String(activeTopicId || "").trim();
+    topicUnreadMentionTopicIdRef.current = topicId;
+    topicUnreadMentionQueueRef.current = [];
+    topicUnreadMentionCursorRef.current = null;
+    topicUnreadMentionHasMoreRef.current = Boolean(topicId);
+    setTopicMentionsStatusText("");
+  }, [activeTopicId]);
+
+  const loadTopicUnreadMentionsPage = useCallback(async () => {
+    const topicId = String(activeTopicId || "").trim();
+    if (!authToken || !topicId || !topicUnreadMentionHasMoreRef.current) {
+      return;
+    }
+
+    const cursor = topicUnreadMentionCursorRef.current;
+    const response = await api.topicUnreadMentions(authToken, topicId, {
+      limit: 20,
+      beforeCreatedAt: cursor?.beforeCreatedAt,
+      beforeId: cursor?.beforeId
+    });
+
+    if (topicUnreadMentionTopicIdRef.current !== topicId) {
+      return;
+    }
+
+    const existingEventIds = new Set(topicUnreadMentionQueueRef.current.map((item) => item.eventId));
+    const nextItems = (Array.isArray(response.items) ? response.items : [])
+      .map((item) => ({
+        eventId: String(item.id || "").trim(),
+        messageId: String(item.messageId || "").trim()
+      }))
+      .filter((item) => item.eventId && item.messageId && !existingEventIds.has(item.eventId));
+
+    if (nextItems.length > 0) {
+      topicUnreadMentionQueueRef.current = [...topicUnreadMentionQueueRef.current, ...nextItems];
+    }
+
+    const nextCursor = response.pagination?.nextCursor ?? null;
+    topicUnreadMentionCursorRef.current = nextCursor;
+    topicUnreadMentionHasMoreRef.current = Boolean(response.pagination?.hasMore && nextCursor);
+  }, [activeTopicId, authToken]);
+
+  const jumpToNextTopicUnreadMention = useCallback(async () => {
+    const topicId = String(activeTopicId || "").trim();
+    const normalizedRoomSlug = String(roomSlug || "").trim();
+    if (!authToken || !topicId || !normalizedRoomSlug || topicMentionsActionLoading) {
+      return;
+    }
+
+    setTopicMentionsActionLoading(true);
+    setTopicMentionsStatusText("");
+    try {
+      let nextItem = topicUnreadMentionQueueRef.current.shift();
+      let guard = 0;
+
+      while (!nextItem && topicUnreadMentionHasMoreRef.current && guard < 4) {
+        guard += 1;
+        await loadTopicUnreadMentionsPage();
+        nextItem = topicUnreadMentionQueueRef.current.shift();
+      }
+
+      if (!nextItem) {
+        setTopicMentionsStatusText(t("chat.topicMentionsNoUnread"));
+        return;
+      }
+
+      setSearchJumpStatusText(t("chat.topicMentionsJumping"));
+      setSearchJumpTarget({
+        messageId: nextItem.messageId,
+        roomSlug: normalizedRoomSlug,
+        topicId,
+        includeHistoryLoad: true
+      });
+
+      const remaining = topicUnreadMentionQueueRef.current.length;
+      if (remaining > 0) {
+        setTopicMentionsStatusText(t("chat.topicMentionsRemainingQueue").replace("{count}", String(remaining)));
+      }
+    } catch {
+      setTopicMentionsStatusText(t("chat.topicMentionsLoadError"));
+    } finally {
+      setTopicMentionsActionLoading(false);
+    }
+  }, [activeTopicId, authToken, loadTopicUnreadMentionsPage, roomSlug, setSearchJumpStatusText, setSearchJumpTarget, t, topicMentionsActionLoading]);
+
+  const markTopicUnreadMentionsReadAll = useCallback(async () => {
+    const topicId = String(activeTopicId || "").trim();
+    if (!authToken || !topicId || topicMentionsActionLoading) {
+      return;
+    }
+
+    setTopicMentionsActionLoading(true);
+    setTopicMentionsStatusText("");
+    try {
+      await api.markTopicUnreadMentionsReadAll(authToken, topicId);
+      topicUnreadMentionQueueRef.current = [];
+      topicUnreadMentionCursorRef.current = null;
+      topicUnreadMentionHasMoreRef.current = true;
+      setTopicMentionsStatusText(t("chat.topicMentionsMarkedReadAll"));
+    } catch {
+      setTopicMentionsStatusText(t("chat.topicMentionsReadAllError"));
+    } finally {
+      setTopicMentionsActionLoading(false);
+    }
+  }, [activeTopicId, authToken, t, topicMentionsActionLoading]);
+
   return (
     <section
       className="card middle-card relative flex min-h-0 flex-1 flex-col overflow-hidden"
@@ -589,6 +709,11 @@ export function ChatPanel({
           topicPaletteOpen={topicPaletteOpen}
           searchPanelOpen={searchPanelOpen}
           onToggleSearchPanel={toggleSearchPanel}
+          activeTopicMentionUnreadCount={activeTopicMentionUnreadCount}
+          topicMentionsActionLoading={topicMentionsActionLoading}
+          topicMentionsStatusText={topicMentionsStatusText}
+          onJumpToUnreadMention={() => void jumpToNextTopicUnreadMention()}
+          onMarkUnreadMentionsReadAll={() => void markTopicUnreadMentionsReadAll()}
         />
         {hasActiveRoom && searchPanelOpen ? (
           <SearchPanel
