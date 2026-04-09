@@ -7,6 +7,7 @@ type UseOnboardingOverlayActionsArgs = {
   user: User | null;
   profileNameDraft: string;
   selectedUiTheme: UiTheme;
+  versionUpdateExpectedShaKey: string;
   versionUpdatePendingKey: string;
   setProfileSaving: Dispatch<SetStateAction<boolean>>;
   setProfileStatusText: Dispatch<SetStateAction<string>>;
@@ -22,6 +23,7 @@ export function useOnboardingOverlayActions({
   user,
   profileNameDraft,
   selectedUiTheme,
+  versionUpdateExpectedShaKey,
   versionUpdatePendingKey,
   setProfileSaving,
   setProfileStatusText,
@@ -33,8 +35,9 @@ export function useOnboardingOverlayActions({
 }: UseOnboardingOverlayActionsArgs) {
   const acknowledgeUpdatedApp = useCallback(() => {
     sessionStorage.removeItem(versionUpdatePendingKey);
+    sessionStorage.removeItem(versionUpdateExpectedShaKey);
     setShowAppUpdatedOverlay(false);
-  }, [setShowAppUpdatedOverlay, versionUpdatePendingKey]);
+  }, [setShowAppUpdatedOverlay, versionUpdateExpectedShaKey, versionUpdatePendingKey]);
 
   const completeFirstRunIntro = useCallback(async () => {
     if (!user?.id) {

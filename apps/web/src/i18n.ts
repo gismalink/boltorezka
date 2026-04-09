@@ -14,7 +14,7 @@ export const LANGUAGE_OPTIONS: Array<{ value: Lang; label: string }> = [
 
 const TEXT_BASE: Record<Lang, Record<string, string>> = {
   ru: {
-    "app.title": "Dato",
+    "app.title": "Datute",
     "server.menuAria": "Меню сервера",
     "server.switcher": "Сервер",
     "server.switcherAria": "Выбор сервера",
@@ -731,7 +731,7 @@ const TEXT_BASE: Record<Lang, Record<string, string>> = {
     "device.systemDefault": "Системное устройство"
   },
   en: {
-    "app.title": "Dato",
+    "app.title": "Datute",
     "server.menuAria": "Server menu",
     "server.switcher": "Server",
     "server.switcherAria": "Server switcher",

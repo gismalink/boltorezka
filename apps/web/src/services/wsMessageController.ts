@@ -2,6 +2,7 @@ import type { Dispatch, SetStateAction } from "react";
 import type { Message, PresenceMember, RoomTopic, WsIncoming } from "../domain";
 import { RTC_FEATURE_INITIAL_STATE_REPLAY } from "../hooks/rtc/voiceCallConfig";
 import { trimMessagesInMemory } from "./chatMemory";
+import { REALTIME_SERVER_READY_EVENT } from "../constants/realtimeEvents";
 
 const OUTSIDE_ROOMS_PRESENCE_KEY = "__outside_rooms__";
 
@@ -1204,6 +1205,17 @@ export class WsMessageController {
             roomSlug,
             mediaTopology: this.asMediaTopology(message.payload?.mediaTopology)
           });
+        }
+        return;
+      }
+      case "server.ready": {
+        const appBuildSha = this.asTrimmedString(message.payload?.appBuildSha);
+        if (appBuildSha && typeof window !== "undefined") {
+          window.dispatchEvent(
+            new CustomEvent(REALTIME_SERVER_READY_EVENT, {
+              detail: { appBuildSha }
+            })
+          );
         }
         return;
       }

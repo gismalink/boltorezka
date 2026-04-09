@@ -25,6 +25,7 @@ type SocketState = {
 type ConsumeWsTicketDeps = {
   connection: WebSocket;
   request: FastifyRequest;
+  appBuildSha: string;
   socketState: WeakMap<WebSocket, SocketState>;
   attachUserSocket: (userId: string, socket: WebSocket) => void;
   registerRealtimeSocket: (socket: WebSocket, userId?: string) => void;
@@ -40,6 +41,7 @@ export async function consumeWsTicketAndInitializeConnection(deps: ConsumeWsTick
   const {
     connection,
     request,
+    appBuildSha,
     socketState,
     attachUserSocket,
     registerRealtimeSocket,
@@ -94,6 +96,7 @@ export async function consumeWsTicketAndInitializeConnection(deps: ConsumeWsTick
     connection,
     userId,
     userName,
+    appBuildSha,
     currentServerId,
     socketState,
     attachUserSocket,

@@ -20,6 +20,7 @@ type SocketState = {
 };
 
 type RegisterRealtimeWsRouteDeps = {
+  appBuildSha: string;
   socketState: WeakMap<WebSocket, SocketState>;
   attachUserSocket: (userId: string, socket: WebSocket) => void;
   getAllRoomsPresence: (forUserId: string | null, forServerId?: string | null) => unknown;
@@ -38,6 +39,7 @@ type RegisterRealtimeWsRouteDeps = {
 
 export function registerRealtimeWsRoute(fastify: FastifyInstance, deps: RegisterRealtimeWsRouteDeps) {
   const {
+    appBuildSha,
     socketState,
     attachUserSocket,
     getAllRoomsPresence,
@@ -99,6 +101,7 @@ export function registerRealtimeWsRoute(fastify: FastifyInstance, deps: Register
           socketState,
           attachUserSocket,
           registerRealtimeSocket,
+          appBuildSha,
           getAllRoomsPresence,
           broadcastAllRoomsPresence,
           redisGet: fastify.redis.get.bind(fastify.redis),

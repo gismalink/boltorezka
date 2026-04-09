@@ -13,6 +13,7 @@ test("realtime-lifecycle: initialize sets state, marks presence online and sends
     connection,
     userId: "u1",
     userName: "Alice",
+    appBuildSha: "sha-123",
     currentServerId: null,
     socketState,
     attachUserSocket: () => {},
@@ -28,7 +29,7 @@ test("realtime-lifecycle: initialize sets state, marks presence online and sends
     sendJson: (_socket, payload) => {
       sentPayloads.push(payload);
     },
-    buildServerReadyEnvelope: (userId, userName) => ({ type: "server.ready", userId, userName }),
+    buildServerReadyEnvelope: (userId, userName, appBuildSha) => ({ type: "server.ready", userId, userName, appBuildSha }),
     buildRoomsPresenceEnvelope: (roomsPresence) => ({ type: "rooms.presence", roomsPresence }),
     getAllRoomsPresence: () => [{ roomId: "room-1", count: 1 }],
     broadcastAllRoomsPresence: () => {
@@ -171,7 +172,7 @@ test("realtime-lifecycle: close does not mark offline when another user socket i
     }
   });
 
-  assert.deepEqual(events, ["unregister", "detach-user"]);
+  assert.deepEqual(events, ["unregister", "detach-user", "broadcast-all-presence"]);
 });
 
 test("realtime-lifecycle: close outside room still broadcasts all-rooms presence", async () => {

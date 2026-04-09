@@ -302,6 +302,7 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
   });
 
   registerRealtimeWsRoute(fastify, {
+    appBuildSha: config.appBuildSha,
     socketState,
     attachUserSocket,
     getAllRoomsPresence,

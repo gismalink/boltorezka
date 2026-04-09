@@ -15,6 +15,7 @@ import {
   MAX_CHAT_RETRIES,
   MESSAGE_EDIT_DELETE_WINDOW_MS,
   PENDING_ACCESS_AUTO_REFRESH_SEC,
+  VERSION_UPDATE_EXPECTED_SHA_KEY,
   VERSION_UPDATE_PENDING_KEY
 } from "./constants/appConfig";
 import {
@@ -119,6 +120,8 @@ export function App() {
     selectedAdminServerId, setSelectedAdminServerId, adminServerOverview, setAdminServerOverview,
     adminServerOverviewLoading, setAdminServerOverviewLoading
   } = useAppCoreState(useAppCoreStateInput({
+    clientBuildSha: CLIENT_BUILD_SHA,
+    versionUpdateExpectedShaKey: VERSION_UPDATE_EXPECTED_SHA_KEY,
     versionUpdatePendingKey: VERSION_UPDATE_PENDING_KEY,
     cookieConsentKey: COOKIE_CONSENT_KEY,
     currentServerIdStorageKey: CURRENT_SERVER_ID_STORAGE_KEY,
@@ -737,6 +740,7 @@ export function App() {
   const { acknowledgeUpdatedApp, completeFirstRunIntro } = useOnboardingOverlayActions(useOnboardingOverlayActionsInput({
     token, user,
     profileNameDraft, selectedUiTheme,
+    versionUpdateExpectedShaKey: VERSION_UPDATE_EXPECTED_SHA_KEY,
     versionUpdatePendingKey: VERSION_UPDATE_PENDING_KEY,
     setProfileSaving, setProfileStatusText,
     setUser,
