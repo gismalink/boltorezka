@@ -42,6 +42,8 @@ export function useWsEventAcks({ realtimeClientRef }: UseWsEventAcksArgs) {
     return new Promise<void>((resolve, reject) => {
       const timeoutId = window.setTimeout(() => {
         pendingWsRequestResolversRef.current.delete(requestId);
+        // Prevent late reconnect resend after local ack timeout fallback path.
+        realtimeClientRef.current?.clearPendingRequest(requestId);
         reject(new Error(`${eventType}:ack_timeout`));
       }, 10000);
 
