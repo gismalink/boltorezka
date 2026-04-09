@@ -1,8 +1,8 @@
 // =============================================================================
-// ORCHESTRATION-ONLY FILE
-// `App` wires hooks and passes props. It must stay business-logic free.
-// If feature behavior is needed, implement it in hooks/services/components first.
-// Do not add parsing, transport rules, or workflow logic here.
+// Этот файл нужен только для оркестрации.
+// `App` подключает хуки и передает пропсы. Он должен оставаться свободным от бизнес-логики.
+// Если требуется поведение функции, реализуйте его сначала в хуках/сервисах/компонентах.
+// Не добавляйте здесь парсинг, правила транспортировки или логику рабочего процесса.
 // =============================================================================
 
 import { useRef } from "react";
