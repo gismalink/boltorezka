@@ -106,7 +106,11 @@ export class ChatController {
     token: string,
     roomSlug: string,
     topicId: string | null,
-    anchorMessageId: string
+    anchorMessageId: string,
+    options: {
+      aroundWindowBefore?: number;
+      aroundWindowAfter?: number;
+    } = {}
   ): Promise<boolean> {
     const normalizedTopicId = String(topicId || "").trim();
     const normalizedAnchorMessageId = String(anchorMessageId || "").trim();
@@ -118,7 +122,9 @@ export class ChatController {
     try {
       const res = await api.topicMessages(token, normalizedTopicId, {
         limit: 50,
-        anchorMessageId: normalizedAnchorMessageId
+        anchorMessageId: normalizedAnchorMessageId,
+        aroundWindowBefore: options.aroundWindowBefore,
+        aroundWindowAfter: options.aroundWindowAfter
       });
 
       if (requestId !== this.recentMessagesRequestId) {

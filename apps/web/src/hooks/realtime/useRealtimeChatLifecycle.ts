@@ -728,12 +728,18 @@ export function useRealtimeChatLifecycle({
     await chatController.loadOlderMessages(token, chatRoomSlug, activeTopicId, effectiveCursor, loadingOlderMessages);
   }, [token, chatRoomSlug, activeTopicId, messagesNextCursor, loadingOlderMessages, chatController, messages, pushLog]);
 
-  const loadMessagesAroundAnchor = useCallback(async (anchorMessageId: string) => {
+  const loadMessagesAroundAnchor = useCallback(async (
+    anchorMessageId: string,
+    options: {
+      aroundWindowBefore?: number;
+      aroundWindowAfter?: number;
+    } = {}
+  ) => {
     if (!token || !chatRoomSlug || !activeTopicId) {
       return false;
     }
 
-    return chatController.loadMessagesAroundAnchor(token, chatRoomSlug, activeTopicId, anchorMessageId);
+    return chatController.loadMessagesAroundAnchor(token, chatRoomSlug, activeTopicId, anchorMessageId, options);
   }, [token, chatRoomSlug, activeTopicId, chatController]);
 
   return {

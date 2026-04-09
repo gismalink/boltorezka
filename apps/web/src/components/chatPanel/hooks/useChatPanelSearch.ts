@@ -24,6 +24,9 @@ type SearchJumpTarget = {
   includeHistoryLoad?: boolean;
 } | null;
 
+const SEARCH_JUMP_AROUND_WINDOW_BEFORE = 24;
+const SEARCH_JUMP_AROUND_WINDOW_AFTER = 24;
+
 type UseChatPanelSearchArgs = {
   t: (key: string) => string;
   authToken: string;
@@ -37,7 +40,14 @@ type UseChatPanelSearchArgs = {
   onOpenRoomChat: (slug: string) => void;
   onSelectTopic: (topicId: string) => void;
   onLoadOlderMessages: () => void;
-  onLoadMessagesAroundAnchor: (topicId: string, anchorMessageId: string) => Promise<boolean>;
+  onLoadMessagesAroundAnchor: (
+    topicId: string,
+    anchorMessageId: string,
+    options?: {
+      aroundWindowBefore?: number;
+      aroundWindowAfter?: number;
+    }
+  ) => Promise<boolean>;
 };
 
 export function useChatPanelSearch({
@@ -142,7 +152,10 @@ export function useChatPanelSearch({
       if (searchJumpAnchorLoadAttemptKeyRef.current !== anchorAttemptKey && !loadingOlderMessages) {
         searchJumpAnchorLoadAttemptKeyRef.current = anchorAttemptKey;
         setSearchJumpStatusText(t("chat.searchJumpLoadingContext"));
-        void onLoadMessagesAroundAnchor(targetTopicId, targetMessageId)
+        void onLoadMessagesAroundAnchor(targetTopicId, targetMessageId, {
+          aroundWindowBefore: SEARCH_JUMP_AROUND_WINDOW_BEFORE,
+          aroundWindowAfter: SEARCH_JUMP_AROUND_WINDOW_AFTER
+        })
           .then((loaded) => {
             if (!loaded && searchJumpAnchorLoadAttemptKeyRef.current === anchorAttemptKey) {
               searchJumpAnchorLoadAttemptKeyRef.current = "";

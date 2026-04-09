@@ -416,6 +416,8 @@ export const api = {
       cursor?: MessagesCursor | null;
       aroundUnreadWindow?: boolean;
       anchorMessageId?: string;
+      aroundWindowBefore?: number;
+      aroundWindowAfter?: number;
     } = {}
   ) => {
     const params = new URLSearchParams();
@@ -432,6 +434,14 @@ export const api = {
 
     if (String(options.anchorMessageId || "").trim()) {
       params.set("anchorMessageId", String(options.anchorMessageId).trim());
+    }
+
+    if (typeof options.aroundWindowBefore === "number" && Number.isFinite(options.aroundWindowBefore)) {
+      params.set("aroundWindowBefore", String(Math.max(0, Math.trunc(options.aroundWindowBefore))));
+    }
+
+    if (typeof options.aroundWindowAfter === "number" && Number.isFinite(options.aroundWindowAfter)) {
+      params.set("aroundWindowAfter", String(Math.max(0, Math.trunc(options.aroundWindowAfter))));
     }
 
     return fetchJson<TopicMessagesResponse>(

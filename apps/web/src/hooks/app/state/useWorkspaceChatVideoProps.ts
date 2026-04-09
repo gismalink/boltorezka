@@ -49,7 +49,14 @@ type ChatPanelProps = {
   typingUsers: string[];
   chatLogRef: React.RefObject<HTMLDivElement>;
   onLoadOlderMessages: () => void;
-  onLoadMessagesAroundAnchor: (topicId: string, anchorMessageId: string) => Promise<boolean>;
+  onLoadMessagesAroundAnchor: (
+    topicId: string,
+    anchorMessageId: string,
+    options?: {
+      aroundWindowBefore?: number;
+      aroundWindowAfter?: number;
+    }
+  ) => Promise<boolean>;
   onSetChatText: (value: string) => void;
   onOpenRoomChat: (slug: string) => void;
   onSelectTopic: (topicId: string) => void;
@@ -128,7 +135,13 @@ type UseWorkspaceChatVideoPropsInput = {
   activeChatTypingUsers: string[];
   chatLogRef: React.RefObject<HTMLDivElement>;
   loadOlderMessages: () => void;
-  loadMessagesAroundAnchor: (anchorMessageId: string) => Promise<boolean>;
+  loadMessagesAroundAnchor: (
+    anchorMessageId: string,
+    options?: {
+      aroundWindowBefore?: number;
+      aroundWindowAfter?: number;
+    }
+  ) => Promise<boolean>;
   setChatText: (value: string) => void;
   openRoomChat: (slug: string) => void;
   handleChatPaste: (event: React.ClipboardEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
@@ -326,7 +339,14 @@ export function useWorkspaceChatVideoProps({
     typingUsers: activeChatTypingUsers,
     chatLogRef,
     onLoadOlderMessages: () => void loadOlderMessages(),
-    onLoadMessagesAroundAnchor: async (topicId: string, anchorMessageId: string) => {
+    onLoadMessagesAroundAnchor: async (
+      topicId: string,
+      anchorMessageId: string,
+      options?: {
+        aroundWindowBefore?: number;
+        aroundWindowAfter?: number;
+      }
+    ) => {
       const normalizedActiveTopicId = String(activeChatTopicId || "").trim();
       const normalizedTopicId = String(topicId || "").trim();
       const normalizedAnchorMessageId = String(anchorMessageId || "").trim();
@@ -338,7 +358,7 @@ export function useWorkspaceChatVideoProps({
         return false;
       }
 
-      return loadMessagesAroundAnchor(normalizedAnchorMessageId);
+      return loadMessagesAroundAnchor(normalizedAnchorMessageId, options);
     },
     onSetChatText: setChatText,
     onOpenRoomChat: openRoomChat,

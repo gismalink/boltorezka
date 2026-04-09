@@ -79,6 +79,8 @@ const topicMessagesQuerySchema = z.object({
   beforeCreatedAt: z.string().trim().optional(),
   beforeId: z.string().trim().optional(),
   anchorMessageId: z.string().uuid().optional(),
+  aroundWindowBefore: z.coerce.number().int().min(0).max(100).optional(),
+  aroundWindowAfter: z.coerce.number().int().min(0).max(100).optional(),
   aroundUnreadWindow: z.coerce.boolean().optional()
 });
 
@@ -571,6 +573,12 @@ export async function roomTopicsRoutes(fastify: FastifyInstance) {
       const userId = String(request.currentUser?.id || "").trim();
       const limit = parsedQuery.data.limit ?? 50;
       const anchorMessageId = String(parsedQuery.data.anchorMessageId || "").trim() || null;
+      const aroundWindowBefore = typeof parsedQuery.data.aroundWindowBefore === "number"
+        ? parsedQuery.data.aroundWindowBefore
+        : undefined;
+      const aroundWindowAfter = typeof parsedQuery.data.aroundWindowAfter === "number"
+        ? parsedQuery.data.aroundWindowAfter
+        : undefined;
       const aroundUnreadWindow = beforeCreatedAt === null
         && beforeId === null
         && !anchorMessageId
@@ -583,6 +591,8 @@ export async function roomTopicsRoutes(fastify: FastifyInstance) {
           limit,
           aroundUnreadWindow,
           anchorMessageId,
+          aroundWindowBefore,
+          aroundWindowAfter,
           beforeCreatedAt,
           beforeId
         });

@@ -76,7 +76,14 @@ type ChatPanelProps = {
   typingUsers: string[];
   chatLogRef: RefObject<HTMLDivElement>;
   onLoadOlderMessages: () => void;
-  onLoadMessagesAroundAnchor: (topicId: string, anchorMessageId: string) => Promise<boolean>;
+  onLoadMessagesAroundAnchor: (
+    topicId: string,
+    anchorMessageId: string,
+    options?: {
+      aroundWindowBefore?: number;
+      aroundWindowAfter?: number;
+    }
+  ) => Promise<boolean>;
   onSetChatText: (value: string) => void;
   onOpenRoomChat: (slug: string) => void;
   onSelectTopic: (topicId: string) => void;

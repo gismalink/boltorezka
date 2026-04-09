@@ -51,8 +51,9 @@ export type TopicMessagesPage = {
   };
 };
 
-const UNREAD_WINDOW_BEFORE = 25;
-const UNREAD_WINDOW_AFTER = 25;
+const DEFAULT_AROUND_WINDOW_BEFORE = 25;
+const DEFAULT_AROUND_WINDOW_AFTER = 25;
+const MAX_AROUND_WINDOW = 100;
 
 async function hasRoomMembership(roomId: string, userId: string): Promise<boolean> {
   const membership = await db.query(
@@ -305,6 +306,8 @@ export async function listTopicMessages(input: {
   limit: number;
   aroundUnreadWindow?: boolean;
   anchorMessageId?: string | null;
+  aroundWindowBefore?: number;
+  aroundWindowAfter?: number;
   beforeCreatedAt?: string | null;
   beforeId?: string | null;
 }): Promise<TopicMessagesPage> {
@@ -344,6 +347,15 @@ export async function listTopicMessages(input: {
   const normalizedAnchorMessageId = String(input.anchorMessageId || "").trim() || null;
   const aroundAnchorMessageId = normalizedAnchorMessageId || unreadDividerMessageId;
 
+  const aroundWindowBefore = Math.max(
+    0,
+    Math.min(MAX_AROUND_WINDOW, Math.trunc(Number(input.aroundWindowBefore ?? DEFAULT_AROUND_WINDOW_BEFORE) || 0))
+  );
+  const aroundWindowAfter = Math.max(
+    0,
+    Math.min(MAX_AROUND_WINDOW, Math.trunc(Number(input.aroundWindowAfter ?? DEFAULT_AROUND_WINDOW_AFTER) || 0))
+  );
+
   if (aroundAnchorMessageId && !input.beforeCreatedAt && !input.beforeId) {
     const aroundIdsResult = await db.query<{ id: string }>(
       `WITH ordered AS (
@@ -365,7 +377,7 @@ export async function listTopicMessages(input: {
        JOIN anchor a ON TRUE
        WHERE o.rn BETWEEN GREATEST(1, a.rn - $3) AND (a.rn + $4)
        ORDER BY o.rn ASC`,
-      [input.topicId, aroundAnchorMessageId, UNREAD_WINDOW_BEFORE, UNREAD_WINDOW_AFTER]
+      [input.topicId, aroundAnchorMessageId, aroundWindowBefore, aroundWindowAfter]
     );
 
     const aroundIds = aroundIdsResult.rows.map((row) => row.id).filter(Boolean);
