@@ -9,6 +9,7 @@ type UseRealtimeChatLifecyclePropsInput = {
   reconnectNonce: number;
   roomSlug: string;
   chatRoomSlug: string;
+  activeChatRoomId: string;
   activeTopicId: string | null;
   messages: Message[];
   messagesNextCursor: MessagesCursor | null;
@@ -21,6 +22,7 @@ type UseRealtimeChatLifecyclePropsInput = {
   lastMessageIdRef: MutableRefObject<string | null>;
   setWsState: (value: "disconnected" | "connecting" | "connected") => void;
   setMessages: Dispatch<SetStateAction<Message[]>>;
+  setChatTopics: Dispatch<SetStateAction<RoomTopic[]>>;
   setRoomSlug: (slug: string) => void;
   setRoomMediaTopologyBySlug: Dispatch<SetStateAction<Record<string, "livekit">>>;
   setRoomsPresenceBySlug: Dispatch<SetStateAction<Record<string, string[]>>>;
@@ -219,6 +221,7 @@ export function useRealtimeChatLifecycleProps({
   reconnectNonce,
   roomSlug,
   chatRoomSlug,
+  activeChatRoomId,
   activeTopicId,
   messages,
   messagesNextCursor,
@@ -231,6 +234,7 @@ export function useRealtimeChatLifecycleProps({
   lastMessageIdRef,
   setWsState,
   setMessages,
+  setChatTopics,
   setRoomSlug,
   setRoomMediaTopologyBySlug,
   setRoomsPresenceBySlug,
@@ -284,6 +288,7 @@ export function useRealtimeChatLifecycleProps({
     reconnectNonce,
     joinedRoomSlug: roomSlug,
     chatRoomSlug,
+    activeChatRoomId,
     activeTopicId,
     messages,
     messagesNextCursor,
@@ -296,6 +301,7 @@ export function useRealtimeChatLifecycleProps({
     lastMessageIdRef,
     setWsState,
     setMessages,
+    setChatTopics,
     setJoinedRoomSlug: setRoomSlug,
     onRoomMediaTopology: handleRoomMediaTopology,
     setRoomsPresenceBySlug,
@@ -332,6 +338,7 @@ export function useRealtimeChatLifecycleProps({
     reconnectNonce,
     roomSlug,
     chatRoomSlug,
+    activeChatRoomId,
     activeTopicId,
     messages,
     messagesNextCursor,
@@ -344,6 +351,7 @@ export function useRealtimeChatLifecycleProps({
     lastMessageIdRef,
     setWsState,
     setMessages,
+    setChatTopics,
     setRoomSlug,
     handleRoomMediaTopology,
     setRoomsPresenceBySlug,

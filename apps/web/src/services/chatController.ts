@@ -34,15 +34,19 @@ export class ChatController {
     const requestId = ++this.recentMessagesRequestId;
     try {
       const res = topicId
-        ? await api.topicMessages(token, topicId, { limit: 50 })
+        ? await api.topicMessages(token, topicId, { limit: 50, aroundUnreadWindow: true })
         : await api.roomMessages(token, roomSlug, { limit: 50 });
 
       if (requestId !== this.recentMessagesRequestId) {
         return;
       }
 
+      const unreadDividerMessageId = String(("unreadDividerMessageId" in res ? res.unreadDividerMessageId : "") || "").trim();
       this.options.setMessages(() => trimMessagesInMemory(
-        res.messages.map((message) => this.normalizeMessageForRender(message))
+        res.messages.map((message) => this.normalizeMessageForRender({
+          ...message,
+          unread_divider_anchor: Boolean(unreadDividerMessageId && message.id === unreadDividerMessageId)
+        }))
       ));
       this.options.setMessagesHasMore(Boolean(res.pagination?.hasMore));
       this.options.setMessagesNextCursor(res.pagination?.nextCursor ?? null);

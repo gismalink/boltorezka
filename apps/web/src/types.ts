@@ -78,6 +78,7 @@ export type Message = {
     count: number;
     reacted: boolean;
   }>;
+  unread_divider_anchor?: boolean;
   clientRequestId?: string;
   deliveryStatus?: "sending" | "delivered" | "failed";
 };
@@ -166,6 +167,7 @@ export type TopicMessagesResponse = {
     createdAt: string;
     updatedAt: string;
   };
+  unreadDividerMessageId?: string | null;
   messages: Message[];
   pagination: {
     hasMore: boolean;
@@ -288,6 +290,12 @@ export type TopicReadResponse = {
 
 export type WsIncoming = {
   type: string;
+  realtimeSeq?: number;
+  realtime_seq?: number;
+  realtimeScope?: string;
+  realtime_scope?: string;
+  realtimeScopeSeq?: number;
+  realtime_scope_seq?: number;
   payload?: any;
 };
 

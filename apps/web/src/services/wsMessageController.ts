@@ -291,10 +291,18 @@ type WsMessageControllerOptions = {
   onSessionMoved?: (payload: { code: string; message: string }) => void;
   getActiveChatRoomSlug?: () => string;
   getActiveTopicId?: () => string | null;
+  onRealtimeSeqGap?: (payload: {
+    scope: string;
+    prevSeq: number;
+    nextSeq: number;
+    gap: number;
+    eventType: string;
+  }) => void;
 };
 
 export class WsMessageController {
   private readonly options: WsMessageControllerOptions;
+  private lastRealtimeSeqByScope = new Map<string, number>();
 
   constructor(options: WsMessageControllerOptions) {
     this.options = options;
@@ -302,6 +310,71 @@ export class WsMessageController {
 
   private asTrimmedString(value: unknown): string {
     return String(value || "").trim();
+  }
+
+  private readRealtimeSeq(rawValue: unknown): number | null {
+    const raw = Number(rawValue);
+    if (!Number.isFinite(raw)) {
+      return null;
+    }
+
+    const normalized = Math.trunc(raw);
+    return normalized > 0 ? normalized : null;
+  }
+
+  private readRealtimeScope(message: WsIncoming): string {
+    const explicitScope = this.asTrimmedString(message.realtimeScope ?? message.realtime_scope);
+    if (explicitScope) {
+      return explicitScope;
+    }
+
+    const roomId = this.pickPayloadString(message.payload, ["roomId", "room_id"]);
+    const topicId = this.pickPayloadString(message.payload, ["topicId", "topic_id"]);
+    if (roomId && topicId) {
+      return `topic:${roomId}:${topicId}`;
+    }
+    if (roomId) {
+      return `room:${roomId}`;
+    }
+
+    return "global";
+  }
+
+  private trackRealtimeSeq(message: WsIncoming): void {
+    const scope = this.readRealtimeScope(message);
+    const scopedSeq = this.readRealtimeSeq(message.realtimeScopeSeq ?? message.realtime_scope_seq);
+    const globalSeq = this.readRealtimeSeq(message.realtimeSeq ?? message.realtime_seq);
+    const seq = scopedSeq ?? globalSeq;
+    if (!seq) {
+      return;
+    }
+
+    const prevRaw = this.lastRealtimeSeqByScope.get(scope);
+    if (!Number.isFinite(prevRaw)) {
+      this.lastRealtimeSeqByScope.set(scope, seq);
+      return;
+    }
+
+    const prev = Number(prevRaw);
+
+    if (seq <= prev) {
+      this.options.pushLog(`realtime stale/duplicate seq: scope=${scope} prev=${prev} incoming=${seq} type=${message.type}`);
+      return;
+    }
+
+    if (seq > prev + 1) {
+      const gap = seq - prev - 1;
+      this.options.pushLog(`realtime seq gap detected: scope=${scope} prev=${prev} incoming=${seq} gap=${gap} type=${message.type}`);
+      this.options.onRealtimeSeqGap?.({
+        scope,
+        prevSeq: prev,
+        nextSeq: seq,
+        gap,
+        eventType: message.type
+      });
+    }
+
+    this.lastRealtimeSeqByScope.set(scope, seq);
   }
 
   private pickPayloadString(payload: unknown, keys: string[]): string {
@@ -1138,6 +1211,8 @@ export class WsMessageController {
    * Routes websocket messages to dedicated typed handlers.
    */
   handle(message: WsIncoming) {
+    this.trackRealtimeSeq(message);
+
     switch (message.type) {
       case "ack":
         this.handleAck(message);

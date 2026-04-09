@@ -409,7 +409,7 @@ export const api = {
   topicMessages: (
     token: string,
     topicId: string,
-    options: { limit?: number; cursor?: MessagesCursor | null } = {}
+    options: { limit?: number; cursor?: MessagesCursor | null; aroundUnreadWindow?: boolean } = {}
   ) => {
     const params = new URLSearchParams();
     params.set("limit", String(options.limit ?? 50));
@@ -417,6 +417,10 @@ export const api = {
     if (options.cursor?.beforeCreatedAt && options.cursor?.beforeId) {
       params.set("beforeCreatedAt", options.cursor.beforeCreatedAt);
       params.set("beforeId", options.cursor.beforeId);
+    }
+
+    if (typeof options.aroundUnreadWindow === "boolean") {
+      params.set("aroundUnreadWindow", String(options.aroundUnreadWindow));
     }
 
     return fetchJson<TopicMessagesResponse>(

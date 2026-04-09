@@ -124,6 +124,7 @@ export type TopicMessagesResponse = {
     createdAt: string;
     updatedAt: string;
   };
+  unreadDividerMessageId?: string | null;
   messages: RoomMessageRow[];
   pagination: {
     hasMore: boolean;

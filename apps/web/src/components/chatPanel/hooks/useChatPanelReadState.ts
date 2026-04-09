@@ -360,6 +360,11 @@ export function useChatPanelReadState({
       return;
     }
 
+    const hasServerUnreadAnchor = messages.some((message) => message.unread_divider_anchor);
+    if (hasServerUnreadAnchor) {
+      return;
+    }
+
     if (!isMessageSetAlignedWithActiveContext()) {
       return;
     }
@@ -392,6 +397,18 @@ export function useChatPanelReadState({
     }
 
     if (entryUnreadDivider?.topicId === normalizedTopicId && entryUnreadDivider.messageId) {
+      return;
+    }
+
+    const serverAnchorMessageId = String(
+      messages.find((message) => message.unread_divider_anchor)?.id || ""
+    ).trim();
+    if (serverAnchorMessageId) {
+      setEntryUnreadDivider({
+        topicId: normalizedTopicId,
+        messageId: serverAnchorMessageId
+      });
+      unreadDividerScrolledTopicRef.current = "";
       return;
     }
 

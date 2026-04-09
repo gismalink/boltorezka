@@ -43,12 +43,16 @@ export type TopicMessageCursor = {
 export type TopicMessagesPage = {
   room: RoomRow;
   topic: Pick<RoomTopicRow, "id" | "room_id" | "slug" | "title" | "archived_at" | "created_at" | "updated_at">;
+  unreadDividerMessageId?: string | null;
   messages: RoomMessageRow[];
   pagination: {
     hasMore: boolean;
     nextCursor: TopicMessageCursor | null;
   };
 };
+
+const UNREAD_WINDOW_BEFORE = 25;
+const UNREAD_WINDOW_AFTER = 25;
 
 async function hasRoomMembership(roomId: string, userId: string): Promise<boolean> {
   const membership = await db.query(
@@ -299,11 +303,175 @@ export async function listTopicMessages(input: {
   topicId: string;
   userId: string;
   limit: number;
+  aroundUnreadWindow?: boolean;
   beforeCreatedAt?: string | null;
   beforeId?: string | null;
 }): Promise<TopicMessagesPage> {
   const topic = await loadTopicWithRoom(input.topicId);
   await ensureTopicReadAccess(topic, input.userId);
+
+  let unreadDividerMessageId: string | null = null;
+
+  if (input.aroundUnreadWindow && !input.beforeCreatedAt && !input.beforeId) {
+    const lastReadResult = await db.query<{ last_read_message_id: string | null }>(
+      `SELECT last_read_message_id
+       FROM room_reads
+       WHERE topic_id = $1
+         AND user_id = $2
+       LIMIT 1`,
+      [input.topicId, input.userId]
+    );
+
+    const lastReadMessageId = String(lastReadResult.rows[0]?.last_read_message_id || "").trim();
+    if (lastReadMessageId) {
+      const firstUnreadResult = await db.query<{ id: string; created_at: string }>(
+        `SELECT m.id, m.created_at
+         FROM messages m
+         JOIN messages lr ON lr.id = $3
+         WHERE m.topic_id = $1
+           AND m.user_id <> $2
+           AND (m.created_at, m.id) > (lr.created_at, lr.id)
+         ORDER BY m.created_at ASC, m.id ASC
+         LIMIT 1`,
+        [input.topicId, input.userId, lastReadMessageId]
+      );
+
+      unreadDividerMessageId = String(firstUnreadResult.rows[0]?.id || "").trim() || null;
+    }
+  }
+
+  const aroundAnchorMessageId = unreadDividerMessageId;
+
+  if (aroundAnchorMessageId && !input.beforeCreatedAt && !input.beforeId) {
+    const aroundIdsResult = await db.query<{ id: string }>(
+      `WITH ordered AS (
+         SELECT
+           m.id,
+           m.created_at,
+           ROW_NUMBER() OVER (ORDER BY m.created_at ASC, m.id ASC) AS rn
+         FROM messages m
+         WHERE m.topic_id = $1
+       ),
+       anchor AS (
+         SELECT rn
+         FROM ordered
+         WHERE id = $2
+         LIMIT 1
+       )
+       SELECT o.id
+       FROM ordered o
+       JOIN anchor a ON TRUE
+       WHERE o.rn BETWEEN GREATEST(1, a.rn - $3) AND (a.rn + $4)
+       ORDER BY o.rn ASC`,
+      [input.topicId, aroundAnchorMessageId, UNREAD_WINDOW_BEFORE, UNREAD_WINDOW_AFTER]
+    );
+
+    const aroundIds = aroundIdsResult.rows.map((row) => row.id).filter(Boolean);
+    if (aroundIds.length > 0) {
+      const messagesAroundResult = await db.query<RoomMessageRow>(
+        `SELECT
+           m.id,
+           m.room_id,
+           m.topic_id,
+           rmr.parent_message_id AS reply_to_message_id,
+           pm.user_id AS reply_to_user_id,
+           pu.name AS reply_to_user_name,
+           pm.body AS reply_to_text,
+           m.user_id,
+           m.body AS text,
+           m.created_at,
+           m.updated_at AS edited_at,
+           u.name AS user_name,
+           COALESCE((
+             SELECT json_agg(
+               json_build_object(
+                 'id', ma.id,
+                 'message_id', ma.message_id,
+                 'type', ma.type,
+                 'storage_key', ma.storage_key,
+                 'download_url', ma.download_url,
+                 'mime_type', ma.mime_type,
+                 'size_bytes', ma.size_bytes,
+                 'width', ma.width,
+                 'height', ma.height,
+                 'checksum', ma.checksum,
+                 'created_at', ma.created_at
+               )
+               ORDER BY ma.created_at ASC
+             )
+             FROM message_attachments ma
+             WHERE ma.message_id = m.id
+           ), '[]'::json) AS attachments
+           ,COALESCE((
+             SELECT json_agg(
+               json_build_object(
+                 'emoji', mr.emoji,
+                 'count', mr.count,
+                 'reacted', mr.reacted
+               )
+               ORDER BY mr.count DESC, mr.emoji ASC
+             )
+             FROM (
+               SELECT
+                 r.emoji,
+                 COUNT(*)::int AS count,
+                 BOOL_OR(r.user_id = $3) AS reacted
+               FROM room_message_reactions r
+               WHERE r.message_id = m.id
+               GROUP BY r.emoji
+             ) mr
+           ), '[]'::json) AS reactions
+         FROM messages m
+         LEFT JOIN room_message_replies rmr ON rmr.message_id = m.id
+         LEFT JOIN messages pm ON pm.id = rmr.parent_message_id
+         LEFT JOIN users pu ON pu.id = pm.user_id
+         JOIN users u ON u.id = m.user_id
+         WHERE m.topic_id = $1
+           AND m.id = ANY($2::uuid[])
+         ORDER BY m.created_at ASC, m.id ASC`,
+        [input.topicId, aroundIds, input.userId]
+      );
+
+      const oldestInPage = messagesAroundResult.rows[0] || null;
+      let hasMore = false;
+      if (oldestInPage) {
+        const olderExistsResult = await db.query<{ has_more: boolean }>(
+          `SELECT EXISTS(
+             SELECT 1
+             FROM messages m
+             WHERE m.topic_id = $1
+               AND (m.created_at, m.id) < ($2::timestamptz, $3)
+           ) AS has_more`,
+          [input.topicId, oldestInPage.created_at, oldestInPage.id]
+        );
+        hasMore = Boolean(olderExistsResult.rows[0]?.has_more);
+      }
+
+      return {
+        room: mapRoom(topic),
+        topic: {
+          id: topic.topic_id,
+          room_id: topic.room_id,
+          slug: topic.topic_slug,
+          title: topic.topic_title,
+          archived_at: topic.topic_archived_at,
+          created_at: topic.topic_created_at,
+          updated_at: topic.topic_updated_at
+        },
+        unreadDividerMessageId,
+        messages: messagesAroundResult.rows,
+        pagination: {
+          hasMore,
+          nextCursor: hasMore && oldestInPage
+            ? {
+                beforeCreatedAt: oldestInPage.created_at,
+                beforeId: oldestInPage.id
+              }
+            : null
+        }
+      };
+    }
+  }
 
   const messagesResult = input.beforeCreatedAt && input.beforeId
     ? await db.query<RoomMessageRow>(
@@ -445,6 +613,7 @@ export async function listTopicMessages(input: {
       created_at: topic.topic_created_at,
       updated_at: topic.topic_updated_at
     },
+    unreadDividerMessageId,
     messages: pageDesc.reverse(),
     pagination: {
       hasMore,

@@ -77,7 +77,8 @@ const updateTopicSchema = z.object({
 const topicMessagesQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).optional(),
   beforeCreatedAt: z.string().trim().optional(),
-  beforeId: z.string().trim().optional()
+  beforeId: z.string().trim().optional(),
+  aroundUnreadWindow: z.coerce.boolean().optional()
 });
 
 const mentionUserIdsSchema = z.array(z.string().uuid()).max(100).optional();
@@ -568,12 +569,16 @@ export async function roomTopicsRoutes(fastify: FastifyInstance) {
 
       const userId = String(request.currentUser?.id || "").trim();
       const limit = parsedQuery.data.limit ?? 50;
+      const aroundUnreadWindow = beforeCreatedAt === null
+        && beforeId === null
+        && Boolean(parsedQuery.data.aroundUnreadWindow);
 
       try {
         const result = await listTopicMessages({
           topicId: parsedParams.data.topicId,
           userId,
           limit,
+          aroundUnreadWindow,
           beforeCreatedAt,
           beforeId
         });
@@ -589,6 +594,7 @@ export async function roomTopicsRoutes(fastify: FastifyInstance) {
             createdAt: result.topic.created_at,
             updatedAt: result.topic.updated_at
           },
+          unreadDividerMessageId: result.unreadDividerMessageId,
           messages: result.messages,
           pagination: result.pagination
         };
