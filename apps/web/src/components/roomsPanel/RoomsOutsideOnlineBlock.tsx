@@ -49,7 +49,7 @@ function RoomsOutsideOnlineBlockInner({
             <li key={`outside-online:${member.userId || member.userName}`} className="channel-row grid grid-cols-[1fr] items-center gap-2">
               <div className="secondary room-btn room-btn-interactive pointer-events-none opacity-85">
                 <i className="bi bi-circle-fill text-[10px] text-[var(--pixel-accent)]" aria-hidden="true" />
-                <span>{member.userName}</span>
+                <span className="rooms-presence-user-name">{member.userName}</span>
               </div>
             </li>
           ))}
