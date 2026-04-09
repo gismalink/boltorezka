@@ -411,7 +411,12 @@ export const api = {
   topicMessages: (
     token: string,
     topicId: string,
-    options: { limit?: number; cursor?: MessagesCursor | null; aroundUnreadWindow?: boolean } = {}
+    options: {
+      limit?: number;
+      cursor?: MessagesCursor | null;
+      aroundUnreadWindow?: boolean;
+      anchorMessageId?: string;
+    } = {}
   ) => {
     const params = new URLSearchParams();
     params.set("limit", String(options.limit ?? 50));
@@ -423,6 +428,10 @@ export const api = {
 
     if (typeof options.aroundUnreadWindow === "boolean") {
       params.set("aroundUnreadWindow", String(options.aroundUnreadWindow));
+    }
+
+    if (String(options.anchorMessageId || "").trim()) {
+      params.set("anchorMessageId", String(options.anchorMessageId).trim());
     }
 
     return fetchJson<TopicMessagesResponse>(

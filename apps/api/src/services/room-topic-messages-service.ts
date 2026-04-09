@@ -304,6 +304,7 @@ export async function listTopicMessages(input: {
   userId: string;
   limit: number;
   aroundUnreadWindow?: boolean;
+  anchorMessageId?: string | null;
   beforeCreatedAt?: string | null;
   beforeId?: string | null;
 }): Promise<TopicMessagesPage> {
@@ -340,7 +341,8 @@ export async function listTopicMessages(input: {
     }
   }
 
-  const aroundAnchorMessageId = unreadDividerMessageId;
+  const normalizedAnchorMessageId = String(input.anchorMessageId || "").trim() || null;
+  const aroundAnchorMessageId = normalizedAnchorMessageId || unreadDividerMessageId;
 
   if (aroundAnchorMessageId && !input.beforeCreatedAt && !input.beforeId) {
     const aroundIdsResult = await db.query<{ id: string }>(

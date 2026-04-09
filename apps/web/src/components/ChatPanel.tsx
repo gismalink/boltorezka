@@ -76,6 +76,7 @@ type ChatPanelProps = {
   typingUsers: string[];
   chatLogRef: RefObject<HTMLDivElement>;
   onLoadOlderMessages: () => void;
+  onLoadMessagesAroundAnchor: (topicId: string, anchorMessageId: string) => Promise<boolean>;
   onSetChatText: (value: string) => void;
   onOpenRoomChat: (slug: string) => void;
   onSelectTopic: (topicId: string) => void;
@@ -125,6 +126,7 @@ export function ChatPanel({
   typingUsers,
   chatLogRef,
   onLoadOlderMessages,
+  onLoadMessagesAroundAnchor,
   onSetChatText,
   onOpenRoomChat,
   onSelectTopic,
@@ -274,7 +276,8 @@ export function ChatPanel({
     messagesHasMore,
     onOpenRoomChat,
     onSelectTopic,
-    onLoadOlderMessages
+    onLoadOlderMessages,
+    onLoadMessagesAroundAnchor
   });
 
   useChatPanelInboxNotifications({

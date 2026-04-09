@@ -102,6 +102,47 @@ export class ChatController {
     }
   }
 
+  async loadMessagesAroundAnchor(
+    token: string,
+    roomSlug: string,
+    topicId: string | null,
+    anchorMessageId: string
+  ): Promise<boolean> {
+    const normalizedTopicId = String(topicId || "").trim();
+    const normalizedAnchorMessageId = String(anchorMessageId || "").trim();
+    if (!normalizedTopicId || !normalizedAnchorMessageId) {
+      return false;
+    }
+
+    const requestId = ++this.recentMessagesRequestId;
+    try {
+      const res = await api.topicMessages(token, normalizedTopicId, {
+        limit: 50,
+        anchorMessageId: normalizedAnchorMessageId
+      });
+
+      if (requestId !== this.recentMessagesRequestId) {
+        return false;
+      }
+
+      const unreadDividerMessageId = String(("unreadDividerMessageId" in res ? res.unreadDividerMessageId : "") || "").trim();
+      this.options.setMessages(() => trimMessagesInMemory(
+        res.messages.map((message) => this.normalizeMessageForRender({
+          ...message,
+          unread_divider_anchor: Boolean(unreadDividerMessageId && message.id === unreadDividerMessageId)
+        }))
+      ));
+      this.options.setMessagesHasMore(Boolean(res.pagination?.hasMore));
+      this.options.setMessagesNextCursor(res.pagination?.nextCursor ?? null);
+      return true;
+    } catch (error) {
+      if (requestId === this.recentMessagesRequestId) {
+        this.options.pushLog(`anchor load failed: ${(error as Error).message}`);
+      }
+      return false;
+    }
+  }
+
   sendMessage(
     textInput: string,
     roomSlug: string,

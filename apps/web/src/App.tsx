@@ -370,7 +370,7 @@ export function App() {
 
   const {
     authController, chatController, roomAdminController,
-    loadTelemetrySummary, loadOlderMessages,
+    loadTelemetrySummary, loadOlderMessages, loadMessagesAroundAnchor,
     handleIncomingVideoState, handleIncomingMicState, handleIncomingInitialCallState,
     handleAudioQualityUpdated
   } = useAppControllersRuntime(useAppControllersRuntimeInput({
@@ -918,7 +918,7 @@ export function App() {
     messagesHasMore, loadingOlderMessages,
     chatText, pendingChatImageDataUrl, pendingChatAttachmentFile,
     activeChatTypingUsers,
-    chatLogRef, loadOlderMessages,
+    chatLogRef, loadOlderMessages, loadMessagesAroundAnchor,
     handleSetChatText, openRoomChat,
     handleChatPaste, handleChatInputKeyDown,
     sendMessage, selectAttachmentFile, clearPendingAttachment,
