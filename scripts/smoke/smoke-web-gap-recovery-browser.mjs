@@ -182,6 +182,23 @@ async function waitForGapRecoverySignal({ telemetryEvents, getRecoveryRequestCou
   );
 }
 
+async function ensureTimelineReady(page) {
+  const timeline = page.locator('[data-agent-id="chat.timeline"]').first();
+  try {
+    await timeline.waitFor({ state: "visible", timeout: Math.min(timeoutMs, 8000) });
+    return;
+  } catch {
+    // Continue with explicit topic-open attempt below.
+  }
+
+  const topicTab = page.locator('[data-agent-id="chat.topic-navigation.tab"]').first();
+  if ((await topicTab.count()) > 0) {
+    await topicTab.click({ force: true }).catch(() => undefined);
+  }
+
+  await timeline.waitFor({ state: "visible", timeout: timeoutMs });
+}
+
 async function main() {
   if (!bearerToken || !bearerTokenSecond) {
     console.log("[smoke:web:gap-recovery:browser] skipped (missing SMOKE_TEST_BEARER_TOKEN or SMOKE_TEST_BEARER_TOKEN_SECOND)");
@@ -345,7 +362,7 @@ async function main() {
     });
 
     await gotoWithRetries(page);
-    await page.locator('[data-agent-id="chat.timeline"]').first().waitFor({ state: "visible", timeout: timeoutMs });
+    await ensureTimelineReady(page);
     await page.waitForTimeout(warmupMs);
 
     const beforeRequestCount = roomMessagesRequests.length;
