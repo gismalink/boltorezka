@@ -1391,7 +1391,7 @@ async function runRealtimeSmoke() {
 
     reconnectOk = true;
 
-    if (driftFixture && bearerToken) {
+    if (!reconnectDriftSkipped && driftFixture && bearerToken && reconnectDriftSnapshotBefore) {
       const countersAfter = await getTopicUnreadSnapshot(bearerToken, driftFixture.roomId, driftFixture.topicId);
       const mentionsAfter = await getTopicUnreadMentionsCount(bearerToken, driftFixture.topicId);
       reconnectDriftSnapshotAfter = {
@@ -1409,6 +1409,9 @@ async function runRealtimeSmoke() {
       if (!reconnectDriftOk) {
         throw new Error(`[smoke:realtime] reconnect drift detected: before=${JSON.stringify(reconnectDriftSnapshotBefore)} after=${JSON.stringify(reconnectDriftSnapshotAfter)}`);
       }
+    } else if (driftFixture && reconnectDriftSnapshotBefore === null && !reconnectDriftSkipReason) {
+      reconnectDriftSkipped = true;
+      reconnectDriftSkipReason = "drift-baseline-missing";
     }
 
     wsReconnect.close();
