@@ -227,6 +227,7 @@ export async function listServerMembers(serverId: string): Promise<ServerMemberI
        sm.user_id AS "userId",
        u.email,
        u.name,
+       u.last_seen_at AS "lastSeenAt",
        sm.role,
        sm.status,
        sm.joined_at AS "joinedAt",

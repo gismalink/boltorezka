@@ -18,6 +18,8 @@ import type {
 import { readPersistedBearerToken } from "../../../utils/authStorage";
 
 type UseAppCoreStateInput = {
+  clientBuildSha: string;
+  versionUpdateExpectedShaKey: string;
   versionUpdatePendingKey: string;
   cookieConsentKey: string;
   currentServerIdStorageKey: string;
@@ -25,6 +27,8 @@ type UseAppCoreStateInput = {
 };
 
 export function useAppCoreState({
+  clientBuildSha,
+  versionUpdateExpectedShaKey,
   versionUpdatePendingKey,
   cookieConsentKey,
   currentServerIdStorageKey,
@@ -41,9 +45,28 @@ export function useAppCoreState({
   const [chatRoomSlug, setChatRoomSlug] = useState("");
   const [roomUnreadBySlug, setRoomUnreadBySlug] = useState<Record<string, number>>({});
   const [roomMentionUnreadBySlug, setRoomMentionUnreadBySlug] = useState<Record<string, number>>({});
-  const [showAppUpdatedOverlay, setShowAppUpdatedOverlay] = useState(
-    () => sessionStorage.getItem(versionUpdatePendingKey) === "1"
-  );
+  const [showAppUpdatedOverlay, setShowAppUpdatedOverlay] = useState(() => {
+    const pendingReload = sessionStorage.getItem(versionUpdatePendingKey) === "1";
+    if (!pendingReload) {
+      return false;
+    }
+
+    const expectedBuildSha = String(sessionStorage.getItem(versionUpdateExpectedShaKey) || "").trim();
+    const currentBuildSha = String(clientBuildSha || "").trim();
+    if (!expectedBuildSha || !currentBuildSha) {
+      sessionStorage.removeItem(versionUpdatePendingKey);
+      sessionStorage.removeItem(versionUpdateExpectedShaKey);
+      return false;
+    }
+
+    // Keep pending flag while the runtime still serves an old bundle to avoid
+    // entering a reload loop on every version check.
+    if (expectedBuildSha !== currentBuildSha) {
+      return false;
+    }
+
+    return true;
+  });
   const [cookieConsentAccepted, setCookieConsentAccepted] = useState(
     () => localStorage.getItem(cookieConsentKey) === "1"
   );
@@ -82,6 +105,7 @@ export function useAppCoreState({
   const [inviteAccepting, setInviteAccepting] = useState(false);
   const [telemetrySummary, setTelemetrySummary] = useState<TelemetrySummary | null>(null);
   const [wsState, setWsState] = useState<"disconnected" | "connecting" | "connected">("disconnected");
+  const [pendingJoinRequestsCount, setPendingJoinRequestsCount] = useState(0);
   const [adminUsers, setAdminUsers] = useState<User[]>([]);
   const [adminServers, setAdminServers] = useState<AdminServerListItem[]>([]);
   const [adminServersLoading, setAdminServersLoading] = useState(false);
@@ -138,6 +162,7 @@ export function useAppCoreState({
     inviteAccepting, setInviteAccepting,
     telemetrySummary, setTelemetrySummary,
     wsState, setWsState,
+    pendingJoinRequestsCount, setPendingJoinRequestsCount,
     adminUsers, setAdminUsers,
     adminServers, setAdminServers,
     adminServersLoading, setAdminServersLoading,

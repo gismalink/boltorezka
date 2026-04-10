@@ -1,4 +1,5 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
+import { z } from "zod";
 import { db } from "../db.js";
 import { requireAuth } from "../middleware/auth.js";
 import { config } from "../config.js";
@@ -7,6 +8,7 @@ import { appendSetCookie, buildAuthAuditContext, buildSessionCookieClearValue, b
 import { enforceCompactUserAccess } from "./auth-access.js";
 import { deleteAuthSession, issueAuthSessionToken } from "./auth-session.js";
 import { issueWsTicket } from "./auth-ws-ticket.js";
+import { upsertSsoUser } from "./auth-user-upsert.js";
 import type { WsTicketResponse } from "../api-contract.types.ts";
 
 type AuthRateLimitHandler = (request: FastifyRequest, reply: FastifyReply) => Promise<void> | void;
@@ -19,6 +21,9 @@ type AuthSessionRouteDeps = {
 
 export function registerAuthSessionRoutes(fastify: FastifyInstance, deps: AuthSessionRouteDeps) {
   const { limitRefresh, limitLogout, limitWsTicket } = deps;
+  const smokeBootstrapSchema = z.object({
+    email: z.string().email().toLowerCase().trim()
+  });
 
   fastify.post(
     "/v1/auth/refresh",
@@ -65,6 +70,59 @@ export function registerAuthSessionRoutes(fastify: FastifyInstance, deps: AuthSe
       );
 
       return {
+        token,
+        user
+      };
+    }
+  );
+
+  fastify.post<{ Body: { email?: string } }>(
+    "/v1/auth/smoke/bootstrap",
+    {
+      preHandler: [limitRefresh]
+    },
+    async (request, reply) => {
+      if (!config.smokeAuthBootstrapEnabled) {
+        return reply.code(404).send({
+          error: "NotFound",
+          message: "Route is not available"
+        });
+      }
+
+      const parsed = smokeBootstrapSchema.safeParse(request.body || {});
+      if (!parsed.success) {
+        return reply.code(400).send({
+          error: "ValidationError",
+          message: "email is required"
+        });
+      }
+
+      const email = String(parsed.data.email || "").trim().toLowerCase();
+      if (!email.endsWith("@example.test")) {
+        return reply.code(403).send({
+          error: "Forbidden",
+          message: "Only test users are allowed"
+        });
+      }
+
+      const user = await upsertSsoUser({ email });
+      const { token, sessionId } = await issueAuthSessionToken(fastify, user, "sso");
+      if (config.authCookieMode) {
+        appendSetCookie(reply, buildSessionCookieValue(token));
+      }
+
+      fastify.log.info(
+        buildAuthAuditContext(request, {
+          event: "auth.smoke.bootstrap",
+          userId: user.id,
+          authMode: "sso",
+          sessionId
+        }),
+        "smoke auth bootstrap issued"
+      );
+
+      return {
+        authenticated: true,
         token,
         user
       };

@@ -191,6 +191,7 @@ export function useRealtimeLifecycleCallbacks({
     const targetTopicId = String(payload.topicId || "").trim();
     const normalizedActiveTopicId = String(activeTopicId || "").trim();
     const selfUserId = String(currentUserId || "").trim();
+    const senderUserId = String(payload.userId || "").trim();
 
     if (!targetRoomSlug) {
       return;
@@ -207,6 +208,10 @@ export function useRealtimeLifecycleCallbacks({
       return;
     }
 
+    if (senderUserId && selfUserId && senderUserId === selfUserId) {
+      return;
+    }
+
     const mentionTargets = Array.isArray(payload.mentionUserIds)
       ? payload.mentionUserIds
         .map((value) => String(value || "").trim())
@@ -218,6 +223,25 @@ export function useRealtimeLifecycleCallbacks({
       && mentionTargets.includes(selfUserId)
     );
 
+    if (isSameRoom && targetTopicId) {
+      setChatTopics((prev) => prev.map((topic) => {
+        if (String(topic.id || "").trim() !== targetTopicId) {
+          return topic;
+        }
+
+        const nextUnreadCount = Math.max(0, Number(topic.unreadCount || 0)) + 1;
+        const nextMentionUnreadCount = mentionIncludesCurrentUser
+          ? Math.max(0, Number(topic.mentionUnreadCount || 0)) + 1
+          : Math.max(0, Number(topic.mentionUnreadCount || 0));
+
+        return {
+          ...topic,
+          unreadCount: nextUnreadCount,
+          mentionUnreadCount: nextMentionUnreadCount
+        };
+      }));
+    }
+
     setRoomUnreadBySlug((prev) => ({
       ...prev,
       [targetRoomSlug]: Math.max(0, Number(prev[targetRoomSlug] || 0)) + 1
@@ -228,12 +252,14 @@ export function useRealtimeLifecycleCallbacks({
         [targetRoomSlug]: Math.max(0, Number(prev[targetRoomSlug] || 0)) + 1
       }));
     }
-  }, [activeTopicId, chatRoomSlug, currentUserId, roomSlugById, setRoomMentionUnreadBySlug, setRoomUnreadBySlug]);
+  }, [activeTopicId, chatRoomSlug, currentUserId, roomSlugById, setChatTopics, setRoomMentionUnreadBySlug, setRoomUnreadBySlug]);
 
   const handleChatTopicRead = useCallback((payload: {
     roomId?: string;
     topicId?: string;
     userId?: string;
+    unreadDelta?: number;
+    mentionDelta?: number;
   }) => {
     const targetRoomId = String(payload.roomId || "").trim();
     const targetTopicId = String(payload.topicId || "").trim();
@@ -243,7 +269,12 @@ export function useRealtimeLifecycleCallbacks({
       return;
     }
 
-    const { topicFound, unreadDelta, mentionDelta } = getTopicReadDeltas(chatTopics, targetTopicId);
+    const payloadUnreadDelta = Math.max(0, Number(payload.unreadDelta || 0));
+    const payloadMentionDelta = Math.max(0, Number(payload.mentionDelta || 0));
+    const { topicFound, unreadDelta: snapshotUnreadDelta } = getTopicReadDeltas(chatTopics, targetTopicId);
+    const { mentionDelta: snapshotMentionDelta } = getTopicReadDeltas(chatTopics, targetTopicId);
+    const unreadDelta = payloadUnreadDelta > 0 ? payloadUnreadDelta : snapshotUnreadDelta;
+    const mentionDelta = payloadMentionDelta > 0 ? payloadMentionDelta : snapshotMentionDelta;
     if (!topicFound) {
       pushLog(`chat.topic.read topic snapshot missing: topicId=${targetTopicId}`);
     }
@@ -288,6 +319,7 @@ export function useRealtimeLifecycleCallbacks({
         [targetRoomSlug]: nextUnread
       };
     });
+
     setRoomMentionUnreadBySlug((prev) => {
       const resolvedRoomSlug = targetRoomId ? String(roomSlugById[targetRoomId] || "").trim() : "";
       const targetRoomSlug = resolvedRoomSlug || chatRoomSlug;

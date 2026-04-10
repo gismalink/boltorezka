@@ -16,6 +16,8 @@ import type {
   NotificationInboxClaimResponse,
   NotificationInboxReadResponse,
   NotificationInboxReadAllResponse,
+  TopicUnreadMentionsListResponse,
+  TopicUnreadMentionsReadAllResponse,
   NotificationPushPublicKeyResponse,
   NotificationPushSubscriptionResponse,
   TopicReadResponse,
@@ -199,6 +201,7 @@ const endpoints = {
   telemetrySummary: "/v1/telemetry/summary",
   servers: "/v1/servers",
   adminUsers: "/v1/admin/users",
+  adminUsersPendingCount: "/v1/admin/users/pending-count",
   adminServers: "/v1/admin/servers",
   adminServerAudioQuality: "/v1/admin/server/audio-quality",
   adminServerChatImagePolicy: "/v1/admin/server/chat-image-policy",
@@ -408,7 +411,14 @@ export const api = {
   topicMessages: (
     token: string,
     topicId: string,
-    options: { limit?: number; cursor?: MessagesCursor | null } = {}
+    options: {
+      limit?: number;
+      cursor?: MessagesCursor | null;
+      aroundUnreadWindow?: boolean;
+      anchorMessageId?: string;
+      aroundWindowBefore?: number;
+      aroundWindowAfter?: number;
+    } = {}
   ) => {
     const params = new URLSearchParams();
     params.set("limit", String(options.limit ?? 50));
@@ -416,6 +426,22 @@ export const api = {
     if (options.cursor?.beforeCreatedAt && options.cursor?.beforeId) {
       params.set("beforeCreatedAt", options.cursor.beforeCreatedAt);
       params.set("beforeId", options.cursor.beforeId);
+    }
+
+    if (typeof options.aroundUnreadWindow === "boolean") {
+      params.set("aroundUnreadWindow", String(options.aroundUnreadWindow));
+    }
+
+    if (String(options.anchorMessageId || "").trim()) {
+      params.set("anchorMessageId", String(options.anchorMessageId).trim());
+    }
+
+    if (typeof options.aroundWindowBefore === "number" && Number.isFinite(options.aroundWindowBefore)) {
+      params.set("aroundWindowBefore", String(Math.max(0, Math.trunc(options.aroundWindowBefore))));
+    }
+
+    if (typeof options.aroundWindowAfter === "number" && Number.isFinite(options.aroundWindowAfter)) {
+      params.set("aroundWindowAfter", String(Math.max(0, Math.trunc(options.aroundWindowAfter))));
     }
 
     return fetchJson<TopicMessagesResponse>(
@@ -601,6 +627,33 @@ export const api = {
       token,
       withJsonBody("POST")
     ),
+  topicUnreadMentions: (
+    token: string,
+    topicId: string,
+    input: {
+      limit?: number;
+      beforeCreatedAt?: string;
+      beforeId?: string;
+    } = {}
+  ) => {
+    const params = new URLSearchParams();
+    params.set("limit", String(input.limit ?? 20));
+    if (input.beforeCreatedAt && input.beforeId) {
+      params.set("beforeCreatedAt", input.beforeCreatedAt);
+      params.set("beforeId", input.beforeId);
+    }
+
+    return fetchJson<TopicUnreadMentionsListResponse>(
+      `/v1/topics/${encodeURIComponent(topicId)}/unread-mentions?${params.toString()}`,
+      token
+    );
+  },
+  markTopicUnreadMentionsReadAll: (token: string, topicId: string) =>
+    fetchJson<TopicUnreadMentionsReadAllResponse>(
+      `/v1/topics/${encodeURIComponent(topicId)}/unread-mentions/read-all`,
+      token,
+      withJsonBody("POST")
+    ),
   notificationPushPublicKey: (token: string) =>
     fetchJson<NotificationPushPublicKeyResponse>(
       "/v1/notifications/push/public-key",
@@ -726,6 +779,7 @@ export const api = {
       withJsonBody("PUT", { audioQuality })
     ),
   adminUsers: (token: string) => fetchJson<{ users: User[] }>(endpoints.adminUsers, token),
+  adminUsersPendingCount: (token: string) => fetchJson<{ count: number }>(endpoints.adminUsersPendingCount, token),
   adminServers: (token: string) => fetchJson<AdminServersResponse>(endpoints.adminServers, token),
   adminServerOverview: (token: string, serverId: string) =>
     fetchJson<AdminServerOverviewResponse>(withSuffix(endpoints.adminServers, serverId, "overview"), token),

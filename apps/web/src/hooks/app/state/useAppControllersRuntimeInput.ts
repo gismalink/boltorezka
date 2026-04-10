@@ -15,9 +15,39 @@ function buildRoomSlugById(rooms: Array<{ id?: unknown; slug?: unknown }>): Reco
   }, {});
 }
 
+function resolveActiveChatRoomId(input: {
+  explicitRoomId?: unknown;
+  chatRoomSlug?: unknown;
+  rooms?: unknown;
+}): string {
+  const explicitRoomId = String(input.explicitRoomId || "").trim();
+  if (explicitRoomId) {
+    return explicitRoomId;
+  }
+
+  const activeSlug = String(input.chatRoomSlug || "").trim();
+  if (!activeSlug || !Array.isArray(input.rooms)) {
+    return "";
+  }
+
+  const match = input.rooms.find((room) => {
+    if (!room || typeof room !== "object") {
+      return false;
+    }
+    return String((room as { slug?: unknown }).slug || "").trim() === activeSlug;
+  }) as { id?: unknown } | undefined;
+
+  return String(match?.id || "").trim();
+}
+
 export function useAppControllersRuntimeInput(params: Record<string, unknown>): AppControllersRuntimeInput {
   const p = params as any;
   const roomSlugById = p.roomSlugById || buildRoomSlugById(Array.isArray(p.rooms) ? p.rooms : []);
+  const activeChatRoomId = resolveActiveChatRoomId({
+    explicitRoomId: p.activeChatRoomId,
+    chatRoomSlug: p.chatRoomSlug,
+    rooms: p.rooms
+  });
 
   return {
     controllers: {
@@ -133,6 +163,7 @@ export function useAppControllersRuntimeInput(params: Record<string, unknown>): 
         reconnectNonce: p.realtimeReconnectNonce,
         roomSlug: p.roomSlug,
         chatRoomSlug: p.chatRoomSlug,
+        activeChatRoomId,
         activeTopicId: p.activeChatTopicId,
         messages: p.messages,
         messagesNextCursor: p.messagesNextCursor,
@@ -144,6 +175,7 @@ export function useAppControllersRuntimeInput(params: Record<string, unknown>): 
         lastMessageIdRef: p.lastMessageIdRef,
         setWsState: p.setWsState,
         setMessages: p.setMessages,
+        setChatTopics: p.setChatTopics,
         setRoomSlug: p.setRoomSlug,
         setRoomMediaTopologyBySlug: p.setRoomMediaTopologyBySlug,
         setRoomsPresenceBySlug: p.setRoomsPresenceBySlug,

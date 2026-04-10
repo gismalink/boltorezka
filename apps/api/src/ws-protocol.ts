@@ -221,15 +221,19 @@ export function buildErrorEnvelope(
 /**
  * @param {string} userId
  * @param {string} userName
+ * @param {string | null} appBuildSha
  * @returns {WsOutgoingEnvelope}
  */
-export function buildServerReadyEnvelope(userId: string, userName: string): WsOutgoingEnvelope {
+export function buildServerReadyEnvelope(userId: string, userName: string, appBuildSha: string | null = null): WsOutgoingEnvelope {
+  const normalizedBuildSha = String(appBuildSha || "").trim();
+
   return {
     type: "server.ready",
     payload: {
       userId,
       userName,
-      connectedAt: new Date().toISOString()
+      connectedAt: new Date().toISOString(),
+      ...(normalizedBuildSha ? { appBuildSha: normalizedBuildSha } : {})
     }
   };
 }

@@ -17,6 +17,7 @@ export type AppConfig = {
   authSessionCookieDomain: string;
   authSessionCookiePath: string;
   authSessionCookieMaxAgeSec: number;
+  smokeAuthBootstrapEnabled: boolean;
   allowedReturnHosts: string[];
   superAdminEmail: string;
   appVersion: string;

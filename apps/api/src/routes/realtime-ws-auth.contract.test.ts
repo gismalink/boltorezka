@@ -33,6 +33,7 @@ test("realtime ws auth boundary: missing ticket closes connection with auth erro
   const initialized = await consumeWsTicketAndInitializeConnection({
     connection: connection as any,
     request: { url: "/v1/realtime/ws" } as any,
+    appBuildSha: "sha-test",
     socketState: new WeakMap(),
     attachUserSocket: noop,
     registerRealtimeSocket: noop,
@@ -58,6 +59,7 @@ test("realtime ws auth boundary: invalid ticket closes connection", async () => 
   const initialized = await consumeWsTicketAndInitializeConnection({
     connection: connection as any,
     request: { url: "/v1/realtime/ws?ticket=abc" } as any,
+    appBuildSha: "sha-test",
     socketState: new WeakMap(),
     attachUserSocket: noop,
     registerRealtimeSocket: noop,

@@ -1,6 +1,7 @@
 // Главный компонент чата: координирует состояния панелей, тем, поиска,
 // непрочитанного и рендер секций таймлайна/композера/оверлеев.
 import { ClipboardEvent, FormEvent, KeyboardEvent, RefObject, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { api } from "../api";
 import type { Message, RoomTopic } from "../domain";
 import { buildChatMessageViewModels } from "../utils/chatMessageViewModel";
 import { CHAT_MEMORY_METRICS_ENABLED, CHAT_MEMORY_METRICS_EVERY } from "../constants/appConfig";
@@ -23,6 +24,7 @@ import { SearchPanel } from "./chatPanel/sections/SearchPanel";
 import { ChatMessageTimeline } from "./chatPanel/sections/ChatMessageTimeline";
 import { ChatComposerSection } from "./chatPanel/sections/ChatComposerSection";
 import { ChatPanelOverlays } from "./chatPanel/sections/ChatPanelOverlays";
+import { Button } from "./uicomponents";
 
 type MentionCandidate = {
   key: string;
@@ -33,6 +35,14 @@ type MentionCandidate = {
   userIds?: string[];
   subtitle?: string | null;
 };
+
+type TopicUnreadMentionNavItem = {
+  eventId: string;
+  messageId: string;
+};
+
+const UNREAD_WINDOW_EXPAND_STEP = 50;
+const UNREAD_WINDOW_EXPAND_MAX = 500;
 
 function toMentionHandle(raw: string): string {
   return String(raw || "")
@@ -70,6 +80,14 @@ type ChatPanelProps = {
   typingUsers: string[];
   chatLogRef: RefObject<HTMLDivElement>;
   onLoadOlderMessages: () => void;
+  onLoadMessagesAroundAnchor: (
+    topicId: string,
+    anchorMessageId: string,
+    options?: {
+      aroundWindowBefore?: number;
+      aroundWindowAfter?: number;
+    }
+  ) => Promise<boolean>;
   onSetChatText: (value: string) => void;
   onOpenRoomChat: (slug: string) => void;
   onSelectTopic: (topicId: string) => void;
@@ -98,6 +116,9 @@ type ChatPanelProps = {
   onArchiveTopic: (topicId: string) => Promise<void>;
   onUnarchiveTopic: (topicId: string) => Promise<void>;
   onDeleteTopic: (topicId: string) => Promise<void>;
+  onConsumeTopicMentionUnread: (topicId: string) => void;
+  onApplyTopicReadLocal: (topicId: string) => void;
+  canManageTopicModeration: boolean;
   mentionCandidates: MentionCandidate[];
 };
 
@@ -119,6 +140,7 @@ export function ChatPanel({
   typingUsers,
   chatLogRef,
   onLoadOlderMessages,
+  onLoadMessagesAroundAnchor,
   onSetChatText,
   onOpenRoomChat,
   onSelectTopic,
@@ -144,6 +166,9 @@ export function ChatPanel({
   onArchiveTopic,
   onUnarchiveTopic,
   onDeleteTopic,
+  onConsumeTopicMentionUnread,
+  onApplyTopicReadLocal,
+  canManageTopicModeration,
   mentionCandidates
 }: ChatPanelProps) {
   const [topicFilterMode] = useState<"all" | "active" | "unread" | "my" | "mentions" | "pinned" | "archived">("all");
@@ -154,7 +179,15 @@ export function ChatPanel({
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
   const [quotedMessage, setQuotedMessage] = useState<{ userName: string; text: string } | null>(null);
   const [hotkeyStatusText, setHotkeyStatusText] = useState("");
+  const [topicMentionsActionLoading, setTopicMentionsActionLoading] = useState(false);
+  const [showScrollToBottomButton, setShowScrollToBottomButton] = useState(false);
   const attachmentInputRef = useRef<HTMLInputElement | null>(null);
+  const topicUnreadMentionQueueRef = useRef<TopicUnreadMentionNavItem[]>([]);
+  const topicUnreadMentionCursorRef = useRef<{ beforeCreatedAt: string; beforeId: string } | null>(null);
+  const topicUnreadMentionHasMoreRef = useRef(true);
+  const topicUnreadMentionTopicIdRef = useRef("");
+  const unreadWindowExpandInFlightRef = useRef(false);
+  const unreadWindowRequestedAfterByTopicRef = useRef<Record<string, number>>({});
   const messageVmBuildMsRef = useRef(0);
   const metricsSamplesRef = useRef(0);
   const hasActiveRoom = Boolean(roomSlug);
@@ -262,7 +295,8 @@ export function ChatPanel({
     messagesHasMore,
     onOpenRoomChat,
     onSelectTopic,
-    onLoadOlderMessages
+    onLoadOlderMessages,
+    onLoadMessagesAroundAnchor
   });
 
   useChatPanelInboxNotifications({
@@ -289,10 +323,9 @@ export function ChatPanel({
     activeTopicId,
     roomId,
     topics: topicsForUi,
+    onApplyTopicReadLocal,
     messages,
-    loadingOlderMessages,
     messagesHasMore,
-    onLoadOlderMessages,
     chatLogRef
   });
 
@@ -305,8 +338,6 @@ export function ChatPanel({
     isEditingTopicTitleInline,
     setIsEditingTopicTitleInline,
     editingTopicSaving,
-    editingTopicStatusText,
-    setEditingTopicStatusText,
     archivingTopicId,
     notificationSaving,
     topicMutePresetById,
@@ -322,6 +353,7 @@ export function ChatPanel({
     authToken,
     topics: topicsForUi,
     isTopicProtected: isMainTopic,
+    canManageTopicModeration,
     notificationMode,
     markTopicRead,
     onUpdateTopic,
@@ -357,6 +389,7 @@ export function ChatPanel({
   });
 
   const activeTopic = useMemo(() => topicsForUi.find((topic) => topic.id === activeTopicId) ?? null, [topicsForUi, activeTopicId]);
+  const activeTopicMentionUnreadCount = Math.max(0, Number(activeTopic?.mentionUnreadCount || 0));
   const activeTopicIsArchived = Boolean(activeTopic?.archivedAt);
   const unreadDividerVisible = useMemo(() => {
     const dividerMessageId = String(entryUnreadDivider?.messageId || "").trim();
@@ -373,6 +406,27 @@ export function ChatPanel({
     messageVmBuildMsRef.current = Math.max(0, finishedAt - startedAt);
     return built;
   }, [messages, currentUserId]);
+
+  const unreadDividerMessageId = useMemo(() => {
+    if (!unreadDividerVisible) {
+      return "";
+    }
+
+    return String(entryUnreadDivider?.messageId || "").trim();
+  }, [entryUnreadDivider?.messageId, unreadDividerVisible]);
+
+  const loadedUnreadAfterDivider = useMemo(() => {
+    if (!unreadDividerMessageId) {
+      return 0;
+    }
+
+    const dividerIndex = messages.findIndex((message) => String(message.id || "").trim() === unreadDividerMessageId);
+    if (dividerIndex < 0) {
+      return 0;
+    }
+
+    return Math.max(0, messages.length - dividerIndex - 1);
+  }, [messages, unreadDividerMessageId]);
 
   const resolvedMentionCandidates = useMemo(() => {
     const byKey = new Map<string, MentionCandidate>();
@@ -560,6 +614,205 @@ export function ChatPanel({
     return `room=${roomValue};topic=${topicValue};topicState=${archiveValue};topics=${topicsValue};search=${searchValue}`;
   }, [activeTopicId, activeTopicIsArchived, hasActiveRoom, hasTopics, roomSlug, searchPanelOpen, topicsForUi]);
 
+  useEffect(() => {
+    const topicId = String(activeTopicId || "").trim();
+    topicUnreadMentionTopicIdRef.current = topicId;
+    topicUnreadMentionQueueRef.current = [];
+    topicUnreadMentionCursorRef.current = null;
+    topicUnreadMentionHasMoreRef.current = Boolean(topicId);
+  }, [activeTopicId]);
+
+  useEffect(() => {
+    const topicId = String(activeTopicId || "").trim();
+    if (!topicId) {
+      return;
+    }
+
+    const currentRequested = Math.max(0, Number(unreadWindowRequestedAfterByTopicRef.current[topicId] || 0));
+    unreadWindowRequestedAfterByTopicRef.current[topicId] = Math.max(currentRequested, loadedUnreadAfterDivider);
+    unreadWindowExpandInFlightRef.current = false;
+  }, [activeTopicId, loadedUnreadAfterDivider]);
+
+  const maybeExpandUnreadWindowAtBottom = useCallback(() => {
+    const topicId = String(activeTopicId || "").trim();
+    if (!topicId || !hasActiveRoom || !unreadDividerVisible || loadingOlderMessages || unreadWindowExpandInFlightRef.current) {
+      return;
+    }
+
+    const dividerMessageId = unreadDividerMessageId;
+    if (!dividerMessageId) {
+      return;
+    }
+
+    const chatLogNode = chatLogRef.current;
+    if (!chatLogNode) {
+      return;
+    }
+
+    const distanceToBottom = chatLogNode.scrollHeight - chatLogNode.scrollTop - chatLogNode.clientHeight;
+    if (distanceToBottom > 32) {
+      return;
+    }
+
+    const requestedAfter = Math.max(
+      loadedUnreadAfterDivider,
+      Math.max(0, Number(unreadWindowRequestedAfterByTopicRef.current[topicId] || 0))
+    );
+    const nextRequestedAfter = Math.min(
+      UNREAD_WINDOW_EXPAND_MAX,
+      Math.max(requestedAfter + UNREAD_WINDOW_EXPAND_STEP, loadedUnreadAfterDivider + UNREAD_WINDOW_EXPAND_STEP)
+    );
+
+    if (nextRequestedAfter <= requestedAfter) {
+      return;
+    }
+
+    unreadWindowExpandInFlightRef.current = true;
+    void onLoadMessagesAroundAnchor(topicId, dividerMessageId, {
+      aroundWindowBefore: 25,
+      aroundWindowAfter: nextRequestedAfter
+    }).then((ok) => {
+      if (ok) {
+        unreadWindowRequestedAfterByTopicRef.current[topicId] = nextRequestedAfter;
+      }
+    }).finally(() => {
+      unreadWindowExpandInFlightRef.current = false;
+    });
+  }, [activeTopicId, chatLogRef, hasActiveRoom, loadedUnreadAfterDivider, loadingOlderMessages, onLoadMessagesAroundAnchor, unreadDividerMessageId, unreadDividerVisible]);
+
+  useEffect(() => {
+    const chatLogNode = chatLogRef.current;
+    if (!chatLogNode || !hasActiveRoom) {
+      return;
+    }
+
+    const onScroll = () => {
+      maybeExpandUnreadWindowAtBottom();
+    };
+
+    chatLogNode.addEventListener("scroll", onScroll, { passive: true });
+    maybeExpandUnreadWindowAtBottom();
+
+    return () => {
+      chatLogNode.removeEventListener("scroll", onScroll);
+    };
+  }, [chatLogRef, hasActiveRoom, maybeExpandUnreadWindowAtBottom]);
+
+  useEffect(() => {
+    maybeExpandUnreadWindowAtBottom();
+  }, [loadedUnreadAfterDivider, maybeExpandUnreadWindowAtBottom]);
+
+  const loadTopicUnreadMentionsPage = useCallback(async () => {
+    const topicId = String(activeTopicId || "").trim();
+    if (!authToken || !topicId || !topicUnreadMentionHasMoreRef.current) {
+      return;
+    }
+
+    const cursor = topicUnreadMentionCursorRef.current;
+    const response = await api.topicUnreadMentions(authToken, topicId, {
+      limit: 20,
+      beforeCreatedAt: cursor?.beforeCreatedAt,
+      beforeId: cursor?.beforeId
+    });
+
+    if (topicUnreadMentionTopicIdRef.current !== topicId) {
+      return;
+    }
+
+    const existingEventIds = new Set(topicUnreadMentionQueueRef.current.map((item) => item.eventId));
+    const nextItems = (Array.isArray(response.items) ? response.items : [])
+      .map((item) => ({
+        eventId: String(item.id || "").trim(),
+        messageId: String(item.messageId || "").trim()
+      }))
+      .filter((item) => item.eventId && item.messageId && !existingEventIds.has(item.eventId));
+
+    if (nextItems.length > 0) {
+      topicUnreadMentionQueueRef.current = [...topicUnreadMentionQueueRef.current, ...nextItems];
+    }
+
+    const nextCursor = response.pagination?.nextCursor ?? null;
+    topicUnreadMentionCursorRef.current = nextCursor;
+    topicUnreadMentionHasMoreRef.current = Boolean(response.pagination?.hasMore && nextCursor);
+  }, [activeTopicId, authToken]);
+
+  const jumpToNextTopicUnreadMention = useCallback(async () => {
+    const topicId = String(activeTopicId || "").trim();
+    const normalizedRoomSlug = String(roomSlug || "").trim();
+    if (!authToken || !topicId || !normalizedRoomSlug || topicMentionsActionLoading) {
+      return;
+    }
+
+    setTopicMentionsActionLoading(true);
+    try {
+      let nextItem = topicUnreadMentionQueueRef.current.shift();
+      let guard = 0;
+
+      while (!nextItem && topicUnreadMentionHasMoreRef.current && guard < 4) {
+        guard += 1;
+        await loadTopicUnreadMentionsPage();
+        nextItem = topicUnreadMentionQueueRef.current.shift();
+      }
+
+      if (!nextItem) {
+        return;
+      }
+
+      await api.markNotificationInboxRead(authToken, nextItem.eventId);
+      onConsumeTopicMentionUnread(topicId);
+
+      setSearchJumpStatusText(t("chat.topicMentionsJumping"));
+      setSearchJumpTarget({
+        messageId: nextItem.messageId,
+        roomSlug: normalizedRoomSlug,
+        topicId,
+        includeHistoryLoad: true
+      });
+    } catch {
+      // Non-blocking: keep UI responsive even if mention-read acknowledgement fails.
+    } finally {
+      setTopicMentionsActionLoading(false);
+    }
+  }, [activeTopicId, authToken, loadTopicUnreadMentionsPage, onConsumeTopicMentionUnread, roomSlug, setSearchJumpStatusText, setSearchJumpTarget, t, topicMentionsActionLoading]);
+
+  const scrollTimelineToBottom = useCallback(() => {
+    const chatLogNode = chatLogRef.current;
+    if (!chatLogNode) {
+      return;
+    }
+
+    chatLogNode.scrollTo({
+      top: chatLogNode.scrollHeight,
+      behavior: "smooth"
+    });
+  }, [chatLogRef]);
+
+  useEffect(() => {
+    const chatLogNode = chatLogRef.current;
+    if (!chatLogNode || !hasActiveRoom) {
+      setShowScrollToBottomButton(false);
+      return;
+    }
+
+    const updateScrollToBottomVisibility = () => {
+      const maxScrollTop = Math.max(0, chatLogNode.scrollHeight - chatLogNode.clientHeight);
+      const hasScrollableContent = maxScrollTop > 1;
+      const distanceToBottom = maxScrollTop - chatLogNode.scrollTop;
+      const isAtBottom = distanceToBottom <= 12;
+
+      setShowScrollToBottomButton(hasScrollableContent && !isAtBottom);
+    };
+
+    chatLogNode.addEventListener("scroll", updateScrollToBottomVisibility, { passive: true });
+
+    const rafId = window.requestAnimationFrame(updateScrollToBottomVisibility);
+
+    return () => {
+      chatLogNode.removeEventListener("scroll", updateScrollToBottomVisibility);
+      window.cancelAnimationFrame(rafId);
+    };
+  }, [chatLogRef, hasActiveRoom, messages.length, loadingOlderMessages]);
+
   return (
     <section
       className="card middle-card relative flex min-h-0 flex-1 flex-col overflow-hidden"
@@ -634,7 +887,6 @@ export function ChatPanel({
           <span className="muted">{t("chat.noChannelHint")}</span>
         ) : null}
       </div>
-      {editingTopicStatusText ? <div className="chat-topic-read-status mb-2" role="status" aria-live="polite">{editingTopicStatusText}</div> : null}
       <div
         className="chat-topic-read-status mb-2"
         role="status"
@@ -656,40 +908,72 @@ export function ChatPanel({
           </span>
         ) : null}
       </div>
-      <ChatMessageTimeline
-        t={t}
-        locale={locale}
-        hasActiveRoom={hasActiveRoom}
-        hasTopics={hasTopics}
-        activeTopicId={activeTopicId}
-        chatStartCreatedAt={activeTopic?.createdAt ?? null}
-        messagesHasMore={messagesHasMore}
-        loadingOlderMessages={loadingOlderMessages}
-        onLoadOlderMessages={onLoadOlderMessages}
-        chatLogRef={chatLogRef}
-        messageViewModels={messageViewModels}
-        pinnedByMessageId={pinnedByMessageId}
-        reactionsByMessageId={reactionsByMessageId}
-        messageContextMenu={messageContextMenu}
-        setMessageContextMenu={setMessageContextMenu}
-        onReplyMessage={onReplyMessage}
-        onEditMessage={onEditMessage}
-        onDeleteMessage={onDeleteMessage}
-        onReportMessage={onReportMessage}
-        onTogglePinMessage={onTogglePinMessage}
-        onToggleMessageReaction={onToggleMessageReaction}
-        insertMentionToComposer={insertMentionToComposer}
-        mentionCandidates={resolvedMentionCandidates}
-        insertQuoteToComposer={handleInsertQuoteToComposer}
-        markTopicUnreadFromMessage={markTopicUnreadFromMessage}
-        markReadSaving={markReadSaving}
-        formatMessageTime={formatMessageTime}
-        resolveAttachmentImageUrl={resolveAttachmentImageUrl}
-        formatAttachmentSize={formatAttachmentSize}
-        setPreviewImageUrl={setPreviewImageUrl}
-        unreadDividerMessageId={unreadDividerVisible ? (entryUnreadDivider?.messageId || null) : null}
-        unreadDividerVisible={unreadDividerVisible}
-      />
+      <div className="chat-log-shell">
+        <ChatMessageTimeline
+          t={t}
+          locale={locale}
+          hasActiveRoom={hasActiveRoom}
+          hasTopics={hasTopics}
+          activeTopicId={activeTopicId}
+          chatStartCreatedAt={activeTopic?.createdAt ?? null}
+          messagesHasMore={messagesHasMore}
+          loadingOlderMessages={loadingOlderMessages}
+          onLoadOlderMessages={onLoadOlderMessages}
+          chatLogRef={chatLogRef}
+          messageViewModels={messageViewModels}
+          pinnedByMessageId={pinnedByMessageId}
+          reactionsByMessageId={reactionsByMessageId}
+          messageContextMenu={messageContextMenu}
+          setMessageContextMenu={setMessageContextMenu}
+          onReplyMessage={onReplyMessage}
+          onEditMessage={onEditMessage}
+          onDeleteMessage={onDeleteMessage}
+          onReportMessage={onReportMessage}
+          onTogglePinMessage={onTogglePinMessage}
+          onToggleMessageReaction={onToggleMessageReaction}
+          insertMentionToComposer={insertMentionToComposer}
+          mentionCandidates={resolvedMentionCandidates}
+          insertQuoteToComposer={handleInsertQuoteToComposer}
+          markTopicUnreadFromMessage={markTopicUnreadFromMessage}
+          markReadSaving={markReadSaving}
+          formatMessageTime={formatMessageTime}
+          resolveAttachmentImageUrl={resolveAttachmentImageUrl}
+          formatAttachmentSize={formatAttachmentSize}
+          setPreviewImageUrl={setPreviewImageUrl}
+          unreadDividerMessageId={unreadDividerMessageId || null}
+          unreadDividerVisible={unreadDividerVisible}
+        />
+        {hasActiveRoom ? (
+          <div className="chat-floating-actions" aria-live="polite">
+            {activeTopicMentionUnreadCount > 0 ? (
+              <Button
+                type="button"
+                className="secondary tiny chat-floating-action-btn chat-floating-mention-btn"
+                onClick={() => void jumpToNextTopicUnreadMention()}
+                onContextMenu={(event) => event.preventDefault()}
+                disabled={topicMentionsActionLoading}
+                data-tooltip={t("chat.topicMentionsJumpTooltip")}
+                aria-label={t("chat.topicMentionsJumpTooltip")}
+              >
+                <span aria-hidden="true">@</span>
+                <span>{activeTopicMentionUnreadCount}</span>
+              </Button>
+            ) : null}
+            {showScrollToBottomButton ? (
+              <Button
+                type="button"
+                className="secondary tiny icon-btn chat-floating-action-btn"
+                onClick={scrollTimelineToBottom}
+                onContextMenu={(event) => event.preventDefault()}
+                data-tooltip={t("rooms.down")}
+                aria-label={t("rooms.down")}
+              >
+                <i className="bi bi-arrow-down" aria-hidden="true" />
+              </Button>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
       <ChatComposerSection
         t={t}
         hasActiveRoom={hasActiveRoom}
@@ -735,6 +1019,7 @@ export function ChatPanel({
         topicContextMenu={topicContextMenu}
         topics={topicsForUi}
         isTopicProtected={isMainTopic}
+        canManageTopicModeration={canManageTopicModeration}
         editingTopicSaving={editingTopicSaving}
         archivingTopicId={archivingTopicId}
         notificationSaving={notificationSaving}

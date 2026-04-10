@@ -1,6 +1,7 @@
 import { useAdminUsersSync } from "./useAdminUsersSync";
 import { useAppMediaDeviceRuntime } from "./useAppMediaDeviceRuntime";
 import { useAppPopupOutsideClose } from "./useAppPopupOutsideClose";
+import { usePendingJoinRequestsCountSync } from "./usePendingJoinRequestsCountSync";
 import { useTelemetryRefresh } from "./useTelemetryRefresh";
 import { useRealtimeConnectionReset } from "../../realtime/useRealtimeConnectionReset";
 import { useRealtimeSoundEffects } from "../../realtime/useRealtimeSoundEffects";
@@ -8,6 +9,7 @@ import { useVoiceUiLifecycleEffects } from "../../voice/useVoiceUiLifecycleEffec
 
 type UseAppWorkspaceSupportRuntimeInput = {
   adminUsersSync: Parameters<typeof useAdminUsersSync>[0];
+  pendingJoinRequestsCountSync: Parameters<typeof usePendingJoinRequestsCountSync>[0];
   telemetryRefresh: Parameters<typeof useTelemetryRefresh>[0];
   realtimeConnectionReset: Parameters<typeof useRealtimeConnectionReset>[0];
   realtimeSoundEffects: Parameters<typeof useRealtimeSoundEffects>[0];
@@ -18,6 +20,7 @@ type UseAppWorkspaceSupportRuntimeInput = {
 
 export function useAppWorkspaceSupportRuntime({
   adminUsersSync,
+  pendingJoinRequestsCountSync,
   telemetryRefresh,
   realtimeConnectionReset,
   realtimeSoundEffects,
@@ -26,6 +29,7 @@ export function useAppWorkspaceSupportRuntime({
   popupOutsideClose
 }: UseAppWorkspaceSupportRuntimeInput) {
   useAdminUsersSync(adminUsersSync);
+  usePendingJoinRequestsCountSync(pendingJoinRequestsCountSync);
   useTelemetryRefresh(telemetryRefresh);
   useRealtimeConnectionReset(realtimeConnectionReset);
   useRealtimeSoundEffects(realtimeSoundEffects);

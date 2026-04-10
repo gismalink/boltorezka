@@ -9,6 +9,7 @@ type UseAppPermissionsAndLocaleInput = {
   servers: ServerListItem[];
   currentServerId: string;
   adminUsers: User[];
+  pendingJoinRequestsCount: number;
   lang: Lang;
   pushToast: (text: string) => void;
 };
@@ -19,6 +20,7 @@ export function useAppPermissionsAndLocale({
   servers,
   currentServerId,
   adminUsers,
+  pendingJoinRequestsCount,
   lang,
   pushToast
 }: UseAppPermissionsAndLocaleInput) {
@@ -54,13 +56,18 @@ export function useAppPermissionsAndLocale({
   const canManageAudioQuality = canPromote;
   const canManageServerControlPlane = canPromote;
   const canViewTelemetry = resolvedServerPermissions?.viewTelemetry ?? (canPromote || canCreateRooms);
-  const pendingJoinRequestsCount = useMemo(() => {
+  const resolvedPendingJoinRequestsCount = useMemo(() => {
     if (!canPromote) {
       return 0;
     }
 
+    const normalizedExternalCount = Math.max(0, Number(pendingJoinRequestsCount || 0));
+    if (normalizedExternalCount > 0) {
+      return normalizedExternalCount;
+    }
+
     return adminUsers.filter((item) => !item.is_bot && !item.deleted_at && !item.is_banned && item.access_state === "pending").length;
-  }, [adminUsers, canPromote]);
+  }, [adminUsers, canPromote, pendingJoinRequestsCount]);
   const locale = LOCALE_BY_LANG[lang];
   const t = useMemo(() => {
     const dict = TEXT[lang];
@@ -109,15 +116,15 @@ export function useAppPermissionsAndLocale({
 
     const previousCount = previousPendingRequestsCountRef.current;
     if (previousCount === null) {
-      previousPendingRequestsCountRef.current = pendingJoinRequestsCount;
+      previousPendingRequestsCountRef.current = resolvedPendingJoinRequestsCount;
       return;
     }
 
-    if (pendingJoinRequestsCount > previousCount) {
-      const newRequestsCount = pendingJoinRequestsCount - previousCount;
+    if (resolvedPendingJoinRequestsCount > previousCount) {
+      const newRequestsCount = resolvedPendingJoinRequestsCount - previousCount;
       const toastText = t("admin.pendingRequestsToast")
         .replace("{new}", String(newRequestsCount))
-        .replace("{total}", String(pendingJoinRequestsCount));
+        .replace("{total}", String(resolvedPendingJoinRequestsCount));
 
       pushToast(toastText);
 
@@ -125,7 +132,7 @@ export function useAppPermissionsAndLocale({
         const notificationTitle = t("admin.pendingRequestsNotificationTitle");
         const notificationBody = t("admin.pendingRequestsNotificationBody")
           .replace("{new}", String(newRequestsCount))
-          .replace("{total}", String(pendingJoinRequestsCount));
+          .replace("{total}", String(resolvedPendingJoinRequestsCount));
 
         const showNotification = () => {
           new Notification(notificationTitle, {
@@ -146,8 +153,8 @@ export function useAppPermissionsAndLocale({
       }
     }
 
-    previousPendingRequestsCountRef.current = pendingJoinRequestsCount;
-  }, [canPromote, pendingJoinRequestsCount, pushToast, t]);
+    previousPendingRequestsCountRef.current = resolvedPendingJoinRequestsCount;
+  }, [canPromote, resolvedPendingJoinRequestsCount, pushToast, t]);
 
   return {
     canCreateRooms,
@@ -158,7 +165,7 @@ export function useAppPermissionsAndLocale({
     canManageAudioQuality,
     canManageServerControlPlane,
     canViewTelemetry,
-    pendingJoinRequestsCount,
+    pendingJoinRequestsCount: resolvedPendingJoinRequestsCount,
     locale,
     t
   };

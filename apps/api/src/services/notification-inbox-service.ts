@@ -34,6 +34,8 @@ export type NotificationInboxCursor = {
   beforeId: string;
 };
 
+export type TopicUnreadMentionItem = NotificationInboxItem;
+
 export async function listNotificationInbox(input: {
   userId: string;
   limit: number;
@@ -145,6 +147,116 @@ export async function markNotificationInboxReadAll(userId: string): Promise<numb
      WHERE user_id = $1
        AND read_at IS NULL`,
     [userId]
+  );
+
+  return updated.rowCount || 0;
+}
+
+export async function listTopicUnreadMentions(input: {
+  userId: string;
+  topicId: string;
+  limit: number;
+  beforeCreatedAt?: string | null;
+  beforeId?: string | null;
+}): Promise<{ items: TopicUnreadMentionItem[]; hasMore: boolean; nextCursor: NotificationInboxCursor | null }> {
+  const where: string[] = [
+    "user_id = $1",
+    "topic_id = $2",
+    "event_type = 'mention_me'",
+    "read_at IS NULL"
+  ];
+  const params: unknown[] = [input.userId, input.topicId];
+
+  const bind = (value: unknown) => {
+    params.push(value);
+    return `$${params.length}`;
+  };
+
+  if (input.beforeCreatedAt && input.beforeId) {
+    where.push(`(created_at, id) < (${bind(input.beforeCreatedAt)}::timestamptz, ${bind(input.beforeId)})`);
+  }
+
+  const result = await db.query<{
+    id: string;
+    user_id: string;
+    event_type: InboxEventType;
+    priority: InboxPriority;
+    server_id: string | null;
+    room_id: string | null;
+    topic_id: string | null;
+    message_id: string | null;
+    actor_user_id: string | null;
+    title: string;
+    body: string;
+    payload: Record<string, unknown>;
+    created_at: string;
+    read_at: string | null;
+  }>(
+    `SELECT
+       id,
+       user_id,
+       event_type,
+       priority,
+       server_id,
+       room_id,
+       topic_id,
+       message_id,
+       actor_user_id,
+       title,
+       body,
+       payload,
+       created_at,
+       read_at
+     FROM notification_inbox
+     WHERE ${where.join(" AND ")}
+     ORDER BY created_at DESC, id DESC
+     LIMIT ${bind(input.limit + 1)}`,
+    params
+  );
+
+  const hasMore = result.rows.length > input.limit;
+  const page = hasMore ? result.rows.slice(0, input.limit) : result.rows;
+  const oldest = page[page.length - 1] || null;
+
+  return {
+    items: page.map((row) => ({
+      id: row.id,
+      userId: row.user_id,
+      eventType: row.event_type,
+      priority: row.priority,
+      serverId: row.server_id,
+      roomId: row.room_id,
+      topicId: row.topic_id,
+      messageId: row.message_id,
+      actorUserId: row.actor_user_id,
+      title: row.title,
+      body: row.body,
+      payload: row.payload || {},
+      createdAt: row.created_at,
+      readAt: row.read_at
+    })),
+    hasMore,
+    nextCursor: hasMore && oldest
+      ? {
+          beforeCreatedAt: oldest.created_at,
+          beforeId: oldest.id
+        }
+      : null
+  };
+}
+
+export async function markTopicUnreadMentionsReadAll(input: {
+  userId: string;
+  topicId: string;
+}): Promise<number> {
+  const updated = await db.query(
+    `UPDATE notification_inbox
+     SET read_at = NOW()
+     WHERE user_id = $1
+       AND topic_id = $2
+       AND event_type = 'mention_me'
+       AND read_at IS NULL`,
+    [input.userId, input.topicId]
   );
 
   return updated.rowCount || 0;

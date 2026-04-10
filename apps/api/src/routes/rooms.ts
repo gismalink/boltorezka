@@ -8,6 +8,7 @@ import type { RoomCategoryRow, RoomListRow, RoomMessageRow, RoomRow } from "../d
 import { isServerAgeConfirmed } from "../services/age-verification-service.js";
 import { resolveEffectiveServerPermissions } from "../services/server-permissions-service.js";
 import { buildChatMessageEnvelope } from "../ws-protocol.js";
+import { emitMentionInboxEvents } from "../services/notification-inbox-service.js";
 import type {
   RoomCategoryCreateResponse,
   RoomCreateResponse,
@@ -1747,6 +1748,18 @@ export async function roomsRoutes(fastify: FastifyInstance) {
       );
 
       const message = inserted.rows[0];
+      const resolvedMentionUserIds = await emitMentionInboxEvents({
+        actorUserId: userId,
+        actorUserName: userName,
+        roomId: room.id,
+        roomSlug: room.slug,
+        topicId: null,
+        topicSlug: null,
+        messageId: message.id,
+        text: message.body,
+        mentionUserIds: parsedBody.data.mentionUserIds
+      });
+
       const wsPayload = {
         id: message.id,
         roomId: message.room_id,
@@ -1756,7 +1769,10 @@ export async function roomsRoutes(fastify: FastifyInstance) {
         text: message.body,
         createdAt: message.created_at,
         senderRequestId: null,
-        attachments: []
+        attachments: [],
+        mentionUserIds: resolvedMentionUserIds.length > 0
+          ? resolvedMentionUserIds
+          : parsedBody.data.mentionUserIds
       };
 
       broadcastRealtimeEnvelope(buildChatMessageEnvelope(wsPayload));

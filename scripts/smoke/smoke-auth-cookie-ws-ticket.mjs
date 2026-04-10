@@ -9,6 +9,8 @@
 const baseUrl = (process.env.SMOKE_API_URL ?? 'https://test.datowave.com').replace(/\/+$/, '');
 const token = String(process.env.SMOKE_TEST_BEARER_TOKEN ?? '').trim();
 const cookieName = String(process.env.SMOKE_SESSION_COOKIE_NAME ?? 'boltorezka_session_test').trim();
+const exportTokenFile = String(process.env.SMOKE_COOKIE_WS_EXPORT_TOKEN_FILE ?? '').trim();
+const skipLogout = String(process.env.SMOKE_COOKIE_WS_SKIP_LOGOUT ?? '0').trim() === '1';
 
 if (!token) {
   console.log('[smoke:auth:cookie-ws-ticket] skipped: SMOKE_TEST_BEARER_TOKEN is not set');
@@ -56,6 +58,12 @@ async function fetchJson(path, options = {}) {
 
   const refreshPayload = await refreshResponse.json();
   const refreshedToken = String(refreshPayload?.token ?? '').trim();
+  const smokeBearerForNextSteps = refreshedToken || token;
+
+  if (exportTokenFile && smokeBearerForNextSteps) {
+    const fs = await import('node:fs/promises');
+    await fs.writeFile(exportTokenFile, `SMOKE_COOKIE_WS_REFRESHED_TOKEN=${JSON.stringify(smokeBearerForNextSteps)}\n`, 'utf8');
+  }
 
   // Extract the session cookie from Set-Cookie header.
   const setCookieHeader = refreshResponse.headers.get('set-cookie');
@@ -135,10 +143,12 @@ async function fetchJson(path, options = {}) {
   // -----------------------------------------------------------------------
   // 5. Cleanup: logout using the refreshed token to avoid polluting session state.
   // -----------------------------------------------------------------------
-  await fetch(`${baseUrl}/v1/auth/logout`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${refreshedToken || token}` }
-  }).catch(() => {});
+  if (!skipLogout) {
+    await fetch(`${baseUrl}/v1/auth/logout`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${smokeBearerForNextSteps}` }
+    }).catch(() => {});
+  }
 
   console.log(`[smoke:auth:cookie-ws-ticket] ok (${baseUrl}) all checks passed`);
 })().catch((error) => {

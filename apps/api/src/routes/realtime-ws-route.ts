@@ -5,6 +5,7 @@ import { buildPresenceLeftEnvelope } from "../ws-protocol.js";
 import { closeRealtimeConnection } from "./realtime-lifecycle.js";
 import { consumeWsTicketAndInitializeConnection } from "./realtime-ws-auth.js";
 import { registerRealtimeSocket } from "../realtime-broadcast.js";
+import { db } from "../db.js";
 
 const WS_IDLE_TIMEOUT_MS = 45_000;
 const WS_HEARTBEAT_INTERVAL_MS = 20_000;
@@ -20,6 +21,7 @@ type SocketState = {
 };
 
 type RegisterRealtimeWsRouteDeps = {
+  appBuildSha: string;
   socketState: WeakMap<WebSocket, SocketState>;
   attachUserSocket: (userId: string, socket: WebSocket) => void;
   getAllRoomsPresence: (forUserId: string | null, forServerId?: string | null) => unknown;
@@ -38,6 +40,7 @@ type RegisterRealtimeWsRouteDeps = {
 
 export function registerRealtimeWsRoute(fastify: FastifyInstance, deps: RegisterRealtimeWsRouteDeps) {
   const {
+    appBuildSha,
     socketState,
     attachUserSocket,
     getAllRoomsPresence,
@@ -99,6 +102,7 @@ export function registerRealtimeWsRoute(fastify: FastifyInstance, deps: Register
           socketState,
           attachUserSocket,
           registerRealtimeSocket,
+          appBuildSha,
           getAllRoomsPresence,
           broadcastAllRoomsPresence,
           redisGet: fastify.redis.get.bind(fastify.redis),
@@ -154,7 +158,13 @@ export function registerRealtimeWsRoute(fastify: FastifyInstance, deps: Register
             broadcastAllRoomsPresence,
             socketsByUserId,
             redisHSet: fastify.redis.hSet.bind(fastify.redis),
-            redisExpire: fastify.redis.expire.bind(fastify.redis)
+            redisExpire: fastify.redis.expire.bind(fastify.redis),
+            updateUserLastSeenAt: (userId, isoTs) => db.query(
+              `UPDATE users
+               SET last_seen_at = $2
+               WHERE id = $1`,
+              [userId, isoTs]
+            )
           });
         });
       } catch (error) {

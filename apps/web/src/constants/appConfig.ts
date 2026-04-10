@@ -11,6 +11,7 @@ export const MESSAGE_EDIT_DELETE_WINDOW_MS = 10 * 60 * 1000;
 
 export const ROOM_SLUG_STORAGE_KEY = "boltorezka_room_slug";
 export const VERSION_UPDATE_PENDING_KEY = "boltorezka_update_reload_pending";
+export const VERSION_UPDATE_EXPECTED_SHA_KEY = "boltorezka_update_expected_sha";
 
 export const PENDING_ACCESS_AUTO_REFRESH_SEC = 20;
 

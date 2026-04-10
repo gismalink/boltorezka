@@ -10,6 +10,7 @@ export function useOnboardingOverlayActionsInput(params: Record<string, unknown>
     user: p.user,
     profileNameDraft: p.profileNameDraft,
     selectedUiTheme: p.selectedUiTheme,
+    versionUpdateExpectedShaKey: p.versionUpdateExpectedShaKey,
     versionUpdatePendingKey: p.versionUpdatePendingKey,
     setProfileSaving: p.setProfileSaving,
     setProfileStatusText: p.setProfileStatusText,

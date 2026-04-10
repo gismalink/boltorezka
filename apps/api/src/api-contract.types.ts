@@ -124,6 +124,7 @@ export type TopicMessagesResponse = {
     createdAt: string;
     updatedAt: string;
   };
+  unreadDividerMessageId?: string | null;
   messages: RoomMessageRow[];
   pagination: {
     hasMore: boolean;
@@ -289,6 +290,23 @@ export type NotificationInboxReadAllResponse = {
   updated: number;
 };
 
+export type TopicUnreadMentionsListResponse = {
+  topicId: string;
+  items: NotificationInboxItem[];
+  pagination: {
+    hasMore: boolean;
+    nextCursor: {
+      beforeCreatedAt: string;
+      beforeId: string;
+    } | null;
+  };
+};
+
+export type TopicUnreadMentionsReadAllResponse = {
+  topicId: string;
+  updated: number;
+};
+
 export type NotificationInboxClaimResponse = {
   eventId: string;
   claimed: boolean;
@@ -308,6 +326,8 @@ export type TopicReadResponse = {
   topicId: string;
   lastReadMessageId: string | null;
   lastReadAt: string;
+  unreadDelta?: number;
+  mentionDelta?: number;
 };
 
 export type AdminUsersResponse = {
@@ -369,6 +389,7 @@ export type ServerMemberItem = {
   role: ServerMemberRole;
   status: "active";
   joinedAt: string;
+  lastSeenAt?: string | null;
   customRoles: Array<{ id: string; name: string }>;
   isServerBanned: boolean;
 };

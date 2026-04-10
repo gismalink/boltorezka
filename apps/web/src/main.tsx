@@ -19,8 +19,8 @@ if (desktopBridge) {
   document.documentElement.dataset.desktopElectron = desktopBridge.version;
 }
 document.title = isDesktop
-  ? isTestHost ? "Dato Desktop (test)" : "Dato Desktop"
-  : isTestHost ? "Dato (test)" : "Dato";
+  ? isTestHost ? "Datute Desktop (test)" : "Datute Desktop"
+  : isTestHost ? "Datute (test)" : "Datute";
 
 const searchParams = new URLSearchParams(window.location.search);
 const legalRoutes = new Set(["/privacy", "/terms", "/cookies", "/contacts"]);

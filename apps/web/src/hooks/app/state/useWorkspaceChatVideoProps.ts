@@ -49,6 +49,14 @@ type ChatPanelProps = {
   typingUsers: string[];
   chatLogRef: React.RefObject<HTMLDivElement>;
   onLoadOlderMessages: () => void;
+  onLoadMessagesAroundAnchor: (
+    topicId: string,
+    anchorMessageId: string,
+    options?: {
+      aroundWindowBefore?: number;
+      aroundWindowAfter?: number;
+    }
+  ) => Promise<boolean>;
   onSetChatText: (value: string) => void;
   onOpenRoomChat: (slug: string) => void;
   onSelectTopic: (topicId: string) => void;
@@ -77,6 +85,9 @@ type ChatPanelProps = {
   onArchiveTopic: (topicId: string) => Promise<void>;
   onUnarchiveTopic: (topicId: string) => Promise<void>;
   onDeleteTopic: (topicId: string) => Promise<void>;
+  onConsumeTopicMentionUnread: (topicId: string) => void;
+  onApplyTopicReadLocal: (topicId: string) => void;
+  canManageTopicModeration: boolean;
   mentionCandidates: MentionCandidate[];
 };
 
@@ -114,6 +125,7 @@ type UseWorkspaceChatVideoPropsInput = {
   activeChatRoomTitle: string;
   chatTopics: RoomTopic[];
   activeChatTopicId: string | null;
+  setChatTopics: React.Dispatch<React.SetStateAction<RoomTopic[]>>;
   setActiveChatTopicId: React.Dispatch<React.SetStateAction<string | null>>;
   createTopic: (title: string) => Promise<void>;
   messages: Message[];
@@ -127,6 +139,13 @@ type UseWorkspaceChatVideoPropsInput = {
   activeChatTypingUsers: string[];
   chatLogRef: React.RefObject<HTMLDivElement>;
   loadOlderMessages: () => void;
+  loadMessagesAroundAnchor: (
+    anchorMessageId: string,
+    options?: {
+      aroundWindowBefore?: number;
+      aroundWindowAfter?: number;
+    }
+  ) => Promise<boolean>;
   setChatText: (value: string) => void;
   openRoomChat: (slug: string) => void;
   handleChatPaste: (event: React.ClipboardEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
@@ -184,6 +203,7 @@ export function useWorkspaceChatVideoProps({
   activeChatRoomTitle,
   chatTopics,
   activeChatTopicId,
+  setChatTopics,
   setActiveChatTopicId,
   createTopic,
   messages,
@@ -197,6 +217,7 @@ export function useWorkspaceChatVideoProps({
   activeChatTypingUsers,
   chatLogRef,
   loadOlderMessages,
+  loadMessagesAroundAnchor,
   setChatText,
   openRoomChat,
   handleChatPaste,
@@ -239,6 +260,19 @@ export function useWorkspaceChatVideoProps({
   chatPanelProps: ChatPanelProps;
   videoWindowsOverlayProps: VideoWindowsOverlayProps;
 } {
+  const canManageTopicModeration = (() => {
+    const normalizedCurrentUserId = String(currentUserId || "").trim();
+    if (!normalizedCurrentUserId) {
+      return false;
+    }
+
+    const currentMember = (Array.isArray(serverMembers) ? serverMembers : []).find(
+      (member) => String(member.userId || "").trim() === normalizedCurrentUserId
+    );
+    const currentRole = String(currentMember?.role || "").trim();
+    return currentRole === "owner" || currentRole === "admin";
+  })();
+
   const mentionCandidates: MentionCandidate[] = (() => {
     const members = Array.isArray(serverMembers) ? serverMembers : [];
     const userCandidates: MentionCandidate[] = [];
@@ -323,6 +357,27 @@ export function useWorkspaceChatVideoProps({
     typingUsers: activeChatTypingUsers,
     chatLogRef,
     onLoadOlderMessages: () => void loadOlderMessages(),
+    onLoadMessagesAroundAnchor: async (
+      topicId: string,
+      anchorMessageId: string,
+      options?: {
+        aroundWindowBefore?: number;
+        aroundWindowAfter?: number;
+      }
+    ) => {
+      const normalizedActiveTopicId = String(activeChatTopicId || "").trim();
+      const normalizedTopicId = String(topicId || "").trim();
+      const normalizedAnchorMessageId = String(anchorMessageId || "").trim();
+      if (!normalizedActiveTopicId || !normalizedTopicId || !normalizedAnchorMessageId) {
+        return false;
+      }
+
+      if (normalizedActiveTopicId !== normalizedTopicId) {
+        return false;
+      }
+
+      return loadMessagesAroundAnchor(normalizedAnchorMessageId, options);
+    },
     onSetChatText: setChatText,
     onOpenRoomChat: openRoomChat,
     onSelectTopic: (topicId: string) => setActiveChatTopicId(topicId || null),
@@ -370,6 +425,52 @@ export function useWorkspaceChatVideoProps({
     onArchiveTopic: archiveTopic,
     onUnarchiveTopic: unarchiveTopic,
     onDeleteTopic: deleteTopic,
+    onApplyTopicReadLocal: (topicId: string) => {
+      const normalizedTopicId = String(topicId || "").trim();
+      if (!normalizedTopicId) {
+        return;
+      }
+
+      setChatTopics((prev) => prev.map((topic) => {
+        if (String(topic.id || "").trim() !== normalizedTopicId) {
+          return topic;
+        }
+
+        const nextUnreadCount = 0;
+        if (Math.max(0, Number(topic.unreadCount || 0)) === nextUnreadCount) {
+          return topic;
+        }
+
+        return {
+          ...topic,
+          unreadCount: nextUnreadCount
+        };
+      }));
+    },
+    onConsumeTopicMentionUnread: (topicId: string) => {
+      const normalizedTopicId = String(topicId || "").trim();
+      if (!normalizedTopicId) {
+        return;
+      }
+
+      setChatTopics((prev) => prev.map((topic) => {
+        if (String(topic.id || "").trim() !== normalizedTopicId) {
+          return topic;
+        }
+
+        const currentMentions = Math.max(0, Number(topic.mentionUnreadCount || 0));
+        const nextMentions = Math.max(0, currentMentions - 1);
+        if (nextMentions === currentMentions) {
+          return topic;
+        }
+
+        return {
+          ...topic,
+          mentionUnreadCount: nextMentions
+        };
+      }));
+    },
+    canManageTopicModeration,
     mentionCandidates
   };
 

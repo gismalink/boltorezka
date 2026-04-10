@@ -239,6 +239,7 @@ export type ChatMessagePayload = {
   createdAt: string;
   senderRequestId: string | null;
   attachments?: ChatAttachmentPayload[];
+  mentionUserIds?: string[];
 };
 
 export type ChatEditedPayload = {

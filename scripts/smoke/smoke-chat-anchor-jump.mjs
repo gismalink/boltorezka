@@ -1,0 +1,303 @@
+// Purpose: smoke-check topic around-anchor jump semantics (unread=0, unread>0 when second actor is available).
+const baseUrl = (process.env.SMOKE_API_URL ?? "http://localhost:8080").replace(/\/+$/, "");
+const token = String(process.env.SMOKE_TEST_BEARER_TOKEN || "").trim();
+const tokenSecond = String(process.env.SMOKE_TEST_BEARER_TOKEN_SECOND || "").trim();
+
+function makeSlug(prefix) {
+  const suffix = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+  return `${prefix}-${suffix}`.slice(0, 56);
+}
+
+async function fetchJson(path, { method = "GET", token: authToken = "", body } = {}) {
+  const headers = {};
+  if (authToken) {
+    headers.Authorization = `Bearer ${authToken}`;
+  }
+  if (body !== undefined) {
+    headers["Content-Type"] = "application/json";
+  }
+
+  const response = await fetch(`${baseUrl}${path}`, {
+    method,
+    headers,
+    body: body === undefined ? undefined : JSON.stringify(body)
+  });
+
+  const text = await response.text();
+  let payload;
+  try {
+    payload = text ? JSON.parse(text) : null;
+  } catch {
+    payload = text;
+  }
+
+  return { response, payload };
+}
+
+function ensureOk(response, payload, label) {
+  if (!response.ok) {
+    throw new Error(`[smoke:chat:anchor-jump] ${label} failed: status=${response.status} body=${String(JSON.stringify(payload || {})).slice(0, 300)}`);
+  }
+}
+
+async function getTopicMentionUnreadCount({ roomId, topicId, token: authToken }) {
+  const { response, payload } = await fetchJson(`/v1/rooms/${encodeURIComponent(roomId)}/topics`, { token: authToken });
+  ensureOk(response, payload, "list room topics for mention count");
+
+  const topics = Array.isArray(payload?.topics) ? payload.topics : [];
+  const topic = topics.find((item) => String(item?.id || "") === topicId);
+  if (!topic) {
+    throw new Error(`[smoke:chat:anchor-jump] topic not found in room topics list: topicId=${topicId}`);
+  }
+
+  return Math.max(0, Number(topic?.mentionUnreadCount || 0));
+}
+
+(async () => {
+  if (!token) {
+    console.log(`[smoke:chat:anchor-jump] skipped (${baseUrl}) reason=no-token`);
+    return;
+  }
+
+  const { response: roomsResponse, payload: roomsPayload } = await fetchJson("/v1/rooms", { token });
+  ensureOk(roomsResponse, roomsPayload, "list rooms");
+
+  const rooms = Array.isArray(roomsPayload?.rooms) ? roomsPayload.rooms : [];
+  const room = rooms.find((item) => String(item?.slug || "") === "general") || rooms.find((item) => String(item?.kind || "") === "text") || rooms[0];
+  const roomId = String(room?.id || "").trim();
+  if (!roomId) {
+    throw new Error("[smoke:chat:anchor-jump] cannot resolve room id");
+  }
+
+  const topicTitle = `Smoke Anchor ${makeSlug("topic")}`;
+  const { response: topicCreateResponse, payload: topicCreatePayload } = await fetchJson(`/v1/rooms/${encodeURIComponent(roomId)}/topics`, {
+    method: "POST",
+    token,
+    body: { title: topicTitle }
+  });
+  ensureOk(topicCreateResponse, topicCreatePayload, "create topic");
+
+  const topicId = String(topicCreatePayload?.topic?.id || "").trim();
+  if (!topicId) {
+    throw new Error("[smoke:chat:anchor-jump] create topic missing id");
+  }
+
+  let unreadGtZeroChecked = false;
+  let mentionReadFlowChecked = false;
+
+  try {
+    const { response: seedMessageResponse, payload: seedMessagePayload } = await fetchJson(`/v1/topics/${encodeURIComponent(topicId)}/messages`, {
+      method: "POST",
+      token,
+      body: { text: "seed-message-self" }
+    });
+    ensureOk(seedMessageResponse, seedMessagePayload, "create seed message");
+
+    const seedMessageId = String(seedMessagePayload?.message?.id || "").trim();
+    if (!seedMessageId) {
+      throw new Error("[smoke:chat:anchor-jump] seed message id is missing");
+    }
+
+    const { response: markSeedReadResponse, payload: markSeedReadPayload } = await fetchJson(`/v1/topics/${encodeURIComponent(topicId)}/read`, {
+      method: "POST",
+      token,
+      body: { lastReadMessageId: seedMessageId }
+    });
+    ensureOk(markSeedReadResponse, markSeedReadPayload, "mark seed read");
+
+    if (tokenSecond) {
+      const { response: mePrimaryResponse, payload: mePrimaryPayload } = await fetchJson("/v1/auth/me", { token });
+      ensureOk(mePrimaryResponse, mePrimaryPayload, "primary /v1/auth/me");
+      const primaryUserId = String(mePrimaryPayload?.user?.id || "").trim();
+
+      const { response: meSecondResponse, payload: meSecondPayload } = await fetchJson("/v1/auth/me", { token: tokenSecond });
+      ensureOk(meSecondResponse, meSecondPayload, "secondary /v1/auth/me");
+      const secondUserId = String(meSecondPayload?.user?.id || "").trim();
+
+      if (!primaryUserId || !secondUserId || primaryUserId === secondUserId) {
+        throw new Error("[smoke:chat:anchor-jump] failed to resolve distinct user ids for mention check");
+      }
+
+      const { response: foreignMsg1Response, payload: foreignMsg1Payload } = await fetchJson(`/v1/topics/${encodeURIComponent(topicId)}/messages`, {
+        method: "POST",
+        token: tokenSecond,
+        body: { text: "foreign-message-1" }
+      });
+      ensureOk(foreignMsg1Response, foreignMsg1Payload, "create foreign message 1");
+      const foreignMessageId1 = String(foreignMsg1Payload?.message?.id || "").trim();
+
+      const { response: foreignMsg2Response, payload: foreignMsg2Payload } = await fetchJson(`/v1/topics/${encodeURIComponent(topicId)}/messages`, {
+        method: "POST",
+        token: tokenSecond,
+        body: { text: "foreign-message-2" }
+      });
+      ensureOk(foreignMsg2Response, foreignMsg2Payload, "create foreign message 2");
+      const foreignMessageId2 = String(foreignMsg2Payload?.message?.id || "").trim();
+
+      if (!foreignMessageId1 || !foreignMessageId2) {
+        throw new Error("[smoke:chat:anchor-jump] foreign message ids missing");
+      }
+
+      const { response: aroundUnreadResponse, payload: aroundUnreadPayload } = await fetchJson(
+        `/v1/topics/${encodeURIComponent(topicId)}/messages?limit=20&aroundUnreadWindow=true`,
+        { token }
+      );
+      ensureOk(aroundUnreadResponse, aroundUnreadPayload, "around unread window");
+
+      const unreadDividerMessageId = String(aroundUnreadPayload?.unreadDividerMessageId || "").trim();
+      if (unreadDividerMessageId !== foreignMessageId1) {
+        throw new Error(`[smoke:chat:anchor-jump] unread divider mismatch: expected=${foreignMessageId1} actual=${unreadDividerMessageId || "<empty>"}`);
+      }
+
+      const { response: anchorJumpResponse, payload: anchorJumpPayload } = await fetchJson(
+        `/v1/topics/${encodeURIComponent(topicId)}/messages?limit=20&anchorMessageId=${encodeURIComponent(foreignMessageId1)}&aroundWindowBefore=1&aroundWindowAfter=1`,
+        { token }
+      );
+      ensureOk(anchorJumpResponse, anchorJumpPayload, "anchor jump around window");
+
+      const anchorMessages = Array.isArray(anchorJumpPayload?.messages) ? anchorJumpPayload.messages : [];
+      if (!anchorMessages.some((message) => String(message?.id || "") === foreignMessageId1)) {
+        throw new Error("[smoke:chat:anchor-jump] anchor message not found in around window");
+      }
+
+      const { response: markUnreadClearResponse, payload: markUnreadClearPayload } = await fetchJson(`/v1/topics/${encodeURIComponent(topicId)}/read`, {
+        method: "POST",
+        token,
+        body: { lastReadMessageId: foreignMessageId2 }
+      });
+      ensureOk(markUnreadClearResponse, markUnreadClearPayload, "mark unread clear");
+
+      const { response: aroundNoUnreadResponse, payload: aroundNoUnreadPayload } = await fetchJson(
+        `/v1/topics/${encodeURIComponent(topicId)}/messages?limit=20&aroundUnreadWindow=true`,
+        { token }
+      );
+      ensureOk(aroundNoUnreadResponse, aroundNoUnreadPayload, "around unread window after read-all");
+
+      const unreadAfterClear = String(aroundNoUnreadPayload?.unreadDividerMessageId || "").trim();
+      if (unreadAfterClear) {
+        throw new Error(`[smoke:chat:anchor-jump] expected no unread divider after read-all, got=${unreadAfterClear}`);
+      }
+
+      const { response: mentionMessageResponse, payload: mentionMessagePayload } = await fetchJson(`/v1/topics/${encodeURIComponent(topicId)}/messages`, {
+        method: "POST",
+        token: tokenSecond,
+        body: {
+          text: "foreign-mention-message",
+          mentionUserIds: [primaryUserId]
+        }
+      });
+      ensureOk(mentionMessageResponse, mentionMessagePayload, "create explicit mention message");
+
+      const mentionMessageId = String(mentionMessagePayload?.message?.id || "").trim();
+      if (!mentionMessageId) {
+        throw new Error("[smoke:chat:anchor-jump] mention message id is missing");
+      }
+
+      const { response: mentionsBeforeReadResponse, payload: mentionsBeforeReadPayload } = await fetchJson(
+        `/v1/topics/${encodeURIComponent(topicId)}/unread-mentions?limit=20`,
+        { token }
+      );
+      ensureOk(mentionsBeforeReadResponse, mentionsBeforeReadPayload, "topic unread mentions before read");
+
+      const mentionItemsBeforeRead = Array.isArray(mentionsBeforeReadPayload?.items) ? mentionsBeforeReadPayload.items : [];
+      const mentionSeenBeforeRead = mentionItemsBeforeRead.some((item) => String(item?.messageId || item?.message_id || "") === mentionMessageId);
+      if (!mentionSeenBeforeRead) {
+        throw new Error("[smoke:chat:anchor-jump] explicit mention not found in unread-mentions before topic read");
+      }
+
+      const mentionCountBeforeTopicRead = await getTopicMentionUnreadCount({ roomId, topicId, token });
+      if (mentionCountBeforeTopicRead <= 0) {
+        throw new Error(`[smoke:chat:anchor-jump] expected mentionUnreadCount > 0 before topic read, got=${mentionCountBeforeTopicRead}`);
+      }
+
+      const { response: topicReadResponse, payload: topicReadPayload } = await fetchJson(`/v1/topics/${encodeURIComponent(topicId)}/read`, {
+        method: "POST",
+        token,
+        body: { lastReadMessageId: mentionMessageId }
+      });
+      ensureOk(topicReadResponse, topicReadPayload, "topic read after mention");
+
+      const { response: mentionsAfterTopicReadResponse, payload: mentionsAfterTopicReadPayload } = await fetchJson(
+        `/v1/topics/${encodeURIComponent(topicId)}/unread-mentions?limit=20`,
+        { token }
+      );
+      ensureOk(mentionsAfterTopicReadResponse, mentionsAfterTopicReadPayload, "topic unread mentions after topic read");
+
+      const mentionItemsAfterTopicRead = Array.isArray(mentionsAfterTopicReadPayload?.items) ? mentionsAfterTopicReadPayload.items : [];
+      const mentionStillUnreadAfterTopicRead = mentionItemsAfterTopicRead.some((item) => String(item?.messageId || item?.message_id || "") === mentionMessageId);
+      if (!mentionStillUnreadAfterTopicRead) {
+        throw new Error("[smoke:chat:anchor-jump] mention was cleared by topic read; expected unread until mention read-all");
+      }
+
+      const mentionCountAfterTopicRead = await getTopicMentionUnreadCount({ roomId, topicId, token });
+      if (mentionCountAfterTopicRead <= 0) {
+        throw new Error(`[smoke:chat:anchor-jump] mentionUnreadCount was cleared by topic read; expected > 0, got=${mentionCountAfterTopicRead}`);
+      }
+
+      const { response: mentionReadAllResponse, payload: mentionReadAllPayload } = await fetchJson(
+        `/v1/topics/${encodeURIComponent(topicId)}/unread-mentions/read-all`,
+        {
+          method: "POST",
+          token
+        }
+      );
+      ensureOk(mentionReadAllResponse, mentionReadAllPayload, "topic unread mentions read-all");
+
+      const { response: mentionsAfterReadAllResponse, payload: mentionsAfterReadAllPayload } = await fetchJson(
+        `/v1/topics/${encodeURIComponent(topicId)}/unread-mentions?limit=20`,
+        { token }
+      );
+      ensureOk(mentionsAfterReadAllResponse, mentionsAfterReadAllPayload, "topic unread mentions after read-all");
+
+      const mentionItemsAfterReadAll = Array.isArray(mentionsAfterReadAllPayload?.items) ? mentionsAfterReadAllPayload.items : [];
+      if (mentionItemsAfterReadAll.length !== 0) {
+        throw new Error(`[smoke:chat:anchor-jump] expected mentions queue to be empty after read-all, got=${mentionItemsAfterReadAll.length}`);
+      }
+
+      const mentionCountAfterReadAll = await getTopicMentionUnreadCount({ roomId, topicId, token });
+      if (mentionCountAfterReadAll !== 0) {
+        throw new Error(`[smoke:chat:anchor-jump] expected mentionUnreadCount=0 after mention read-all, got=${mentionCountAfterReadAll}`);
+      }
+
+      mentionReadFlowChecked = true;
+
+      unreadGtZeroChecked = true;
+    } else {
+      const { response: anchorSelfResponse, payload: anchorSelfPayload } = await fetchJson(
+        `/v1/topics/${encodeURIComponent(topicId)}/messages?limit=20&anchorMessageId=${encodeURIComponent(seedMessageId)}&aroundWindowBefore=1&aroundWindowAfter=1`,
+        { token }
+      );
+      ensureOk(anchorSelfResponse, anchorSelfPayload, "anchor jump self message");
+
+      const anchorMessages = Array.isArray(anchorSelfPayload?.messages) ? anchorSelfPayload.messages : [];
+      if (!anchorMessages.some((message) => String(message?.id || "") === seedMessageId)) {
+        throw new Error("[smoke:chat:anchor-jump] self anchor message not found in around window");
+      }
+
+      const { response: aroundNoUnreadResponse, payload: aroundNoUnreadPayload } = await fetchJson(
+        `/v1/topics/${encodeURIComponent(topicId)}/messages?limit=20&aroundUnreadWindow=true`,
+        { token }
+      );
+      ensureOk(aroundNoUnreadResponse, aroundNoUnreadPayload, "around unread window (single actor)");
+
+      const unreadDivider = String(aroundNoUnreadPayload?.unreadDividerMessageId || "").trim();
+      if (unreadDivider) {
+        throw new Error(`[smoke:chat:anchor-jump] expected unreadDividerMessageId to be empty in single-actor scenario, got=${unreadDivider}`);
+      }
+    }
+  } finally {
+    const { response: topicDeleteResponse, payload: topicDeletePayload } = await fetchJson(`/v1/topics/${encodeURIComponent(topicId)}`, {
+      method: "DELETE",
+      token
+    });
+
+    if (!topicDeleteResponse.ok) {
+      console.warn(`[smoke:chat:anchor-jump] cleanup topic delete failed: status=${topicDeleteResponse.status} body=${String(JSON.stringify(topicDeletePayload || {})).slice(0, 220)}`);
+    }
+  }
+
+  console.log(`[smoke:chat:anchor-jump] ok (${baseUrl}) unreadGtZeroChecked=${unreadGtZeroChecked} mentionReadFlowChecked=${mentionReadFlowChecked}`);
+})().catch((error) => {
+  console.error(error instanceof Error ? error.message : String(error));
+  process.exit(1);
+});

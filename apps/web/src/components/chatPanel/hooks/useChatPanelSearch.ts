@@ -24,6 +24,9 @@ type SearchJumpTarget = {
   includeHistoryLoad?: boolean;
 } | null;
 
+const SEARCH_JUMP_AROUND_WINDOW_BEFORE = 24;
+const SEARCH_JUMP_AROUND_WINDOW_AFTER = 24;
+
 type UseChatPanelSearchArgs = {
   t: (key: string) => string;
   authToken: string;
@@ -37,6 +40,14 @@ type UseChatPanelSearchArgs = {
   onOpenRoomChat: (slug: string) => void;
   onSelectTopic: (topicId: string) => void;
   onLoadOlderMessages: () => void;
+  onLoadMessagesAroundAnchor: (
+    topicId: string,
+    anchorMessageId: string,
+    options?: {
+      aroundWindowBefore?: number;
+      aroundWindowAfter?: number;
+    }
+  ) => Promise<boolean>;
 };
 
 export function useChatPanelSearch({
@@ -51,7 +62,8 @@ export function useChatPanelSearch({
   messagesHasMore,
   onOpenRoomChat,
   onSelectTopic,
-  onLoadOlderMessages
+  onLoadOlderMessages,
+  onLoadMessagesAroundAnchor
 }: UseChatPanelSearchArgs) {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchScope, setSearchScope] = useState<SearchScope>("all");
@@ -69,6 +81,7 @@ export function useChatPanelSearch({
   const [searchJumpStatusText, setSearchJumpStatusText] = useState("");
   const [searchJumpTarget, setSearchJumpTarget] = useState<SearchJumpTarget>(null);
   const searchRequestSeqRef = useRef(0);
+  const searchJumpAnchorLoadAttemptKeyRef = useRef("");
 
   useEffect(() => {
     if (!searchJumpTarget) {
@@ -130,12 +143,44 @@ export function useChatPanelSearch({
       }, searchHasMention ? 3000 : 2200);
       setSearchJumpTarget(null);
       setSearchJumpStatusText("");
+      searchJumpAnchorLoadAttemptKeyRef.current = "";
       return;
+    }
+
+    if (targetTopicId) {
+      const anchorAttemptKey = `${targetTopicId}:${targetMessageId}`;
+      if (searchJumpAnchorLoadAttemptKeyRef.current !== anchorAttemptKey && !loadingOlderMessages) {
+        searchJumpAnchorLoadAttemptKeyRef.current = anchorAttemptKey;
+        setSearchJumpStatusText(t("chat.searchJumpLoadingContext"));
+        void onLoadMessagesAroundAnchor(targetTopicId, targetMessageId, {
+          aroundWindowBefore: SEARCH_JUMP_AROUND_WINDOW_BEFORE,
+          aroundWindowAfter: SEARCH_JUMP_AROUND_WINDOW_AFTER
+        })
+          .then((loaded) => {
+            if (!loaded && searchJumpAnchorLoadAttemptKeyRef.current === anchorAttemptKey) {
+              searchJumpAnchorLoadAttemptKeyRef.current = "";
+            }
+          })
+          .catch(() => {
+            if (searchJumpAnchorLoadAttemptKeyRef.current === anchorAttemptKey) {
+              searchJumpAnchorLoadAttemptKeyRef.current = "";
+            }
+          });
+        return;
+      }
+
+      if (searchJumpAnchorLoadAttemptKeyRef.current === anchorAttemptKey && !loadingOlderMessages) {
+        setSearchJumpTarget(null);
+        setSearchJumpStatusText(t("chat.searchJumpNotFound"));
+        searchJumpAnchorLoadAttemptKeyRef.current = "";
+        return;
+      }
     }
 
     if (!shouldLoadHistory) {
       setSearchJumpTarget(null);
       setSearchJumpStatusText("");
+      searchJumpAnchorLoadAttemptKeyRef.current = "";
       return;
     }
 
@@ -148,6 +193,7 @@ export function useChatPanelSearch({
     if (!messagesHasMore && !loadingOlderMessages) {
       setSearchJumpTarget(null);
       setSearchJumpStatusText(t("chat.searchJumpNotFound"));
+      searchJumpAnchorLoadAttemptKeyRef.current = "";
     }
   }, [
     searchJumpTarget,
@@ -156,6 +202,7 @@ export function useChatPanelSearch({
     loadingOlderMessages,
     messagesHasMore,
     searchHasMention,
+    onLoadMessagesAroundAnchor,
     onLoadOlderMessages,
     t
   ]);

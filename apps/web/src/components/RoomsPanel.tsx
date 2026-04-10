@@ -1,6 +1,6 @@
 // Компонент панели комнат: отображает дерево категорий/каналов,
 // счетчики непрочитанного и действия администрирования комнаты.
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Room } from "../domain";
 import { RoomsCategoryBlock } from "./roomsPanel/RoomsCategoryBlock";
 import { RoomRow } from "./roomsPanel/RoomRow";
@@ -231,11 +231,12 @@ export function RoomsPanel({
   });
 
   const showInitialRoomsSkeleton = (roomsTreeLoading || roomsTreeBootstrapPending) && !roomsTree;
+  const loadingLabel = useMemo(() => t("chat.loading").replace(/\s*\.\.\.$/, ""), [t]);
 
   const renderRoomsSkeleton = useCallback((rows: number) => (
     <div className="rooms-loading-skeleton" role="status" aria-live="polite" aria-busy="true" aria-label={t("chat.loading")}>
       <div className="rooms-loading-caption">
-        <span>{t("chat.loading")}</span>
+        <span>{loadingLabel}</span>
         <span className="loading-ellipsis" aria-hidden="true" />
       </div>
       {Array.from({ length: rows }).map((_, index) => (
@@ -246,7 +247,7 @@ export function RoomsPanel({
         </div>
       ))}
     </div>
-  ), [t]);
+  ), [loadingLabel, t]);
 
   const onRequestDeleteCategory = useCallback(() => {
     setConfirmPopup({ kind: "delete-category" });
@@ -426,7 +427,7 @@ export function RoomsPanel({
           <div className="rooms-refresh-indicator" role="status" aria-live="polite" aria-busy="true" aria-label={t("chat.loading")}>
             <span className="rooms-refresh-indicator-dot" aria-hidden="true" />
             <span>
-              {t("chat.loading")}
+              {loadingLabel}
               <span className="loading-ellipsis" aria-hidden="true" />
             </span>
           </div>
@@ -465,7 +466,7 @@ export function RoomsPanel({
           onToggleCollapsed={onToggleUncategorizedCollapsed}
           showBadgeCounters={uncategorizedCollapsed}
           unreadCount={uncategorizedUnreadCount}
-          unreadCountMuted={uncategorizedUnreadMutedCount}
+            unreadCountMuted={uncategorizedUnreadMutedCount}
           unreadCountUnmuted={uncategorizedUnreadUnmutedCount}
           mentionCount={uncategorizedMentionCount}
           renderRoomRow={renderRoomRow}

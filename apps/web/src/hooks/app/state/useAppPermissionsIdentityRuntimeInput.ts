@@ -11,6 +11,7 @@ export function useAppPermissionsIdentityRuntimeInput(params: Record<string, unk
     servers: p.servers,
     currentServerId: p.currentServerId,
     adminUsers: p.adminUsers,
+    pendingJoinRequestsCount: p.pendingJoinRequestsCount,
     lang: p.lang,
     pushToast: p.pushToast
   };

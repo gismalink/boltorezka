@@ -4,6 +4,7 @@ import { trackClientEvent } from "../../telemetry";
 import type { Message, MessagesCursor, PresenceMember, RoomTopic } from "../../domain";
 import { RealtimeClient, WsMessageController } from "../../services";
 import type { ChatController } from "../../services";
+import { decideRealtimeGapRecovery } from "./realtimeGapRecoveryPolicy";
 
 type UseRealtimeChatLifecycleArgs = {
   token: string;
@@ -11,6 +12,7 @@ type UseRealtimeChatLifecycleArgs = {
   reconnectNonce: number;
   joinedRoomSlug: string;
   chatRoomSlug: string;
+  activeChatRoomId: string;
   activeTopicId: string | null;
   messages: Message[];
   messagesNextCursor: MessagesCursor | null;
@@ -23,6 +25,7 @@ type UseRealtimeChatLifecycleArgs = {
   lastMessageIdRef: MutableRefObject<string | null>;
   setWsState: (value: "disconnected" | "connecting" | "connected") => void;
   setMessages: Dispatch<SetStateAction<Message[]>>;
+  setChatTopics: Dispatch<SetStateAction<RoomTopic[]>>;
   setJoinedRoomSlug: (slug: string) => void;
   onRoomMediaTopology?: (payload: { roomSlug: string; mediaTopology: "livekit" }) => void;
   setRoomsPresenceBySlug: Dispatch<SetStateAction<Record<string, string[]>>>;
@@ -153,6 +156,8 @@ type UseRealtimeChatLifecycleArgs = {
       userId?: string;
       lastReadMessageId?: string;
       lastReadAt?: string;
+      unreadDelta?: number;
+      mentionDelta?: number;
     }
   ) => void;
   onChatTopicCreated?: (
@@ -244,6 +249,7 @@ export function useRealtimeChatLifecycle({
   reconnectNonce,
   joinedRoomSlug,
   chatRoomSlug,
+  activeChatRoomId,
   activeTopicId,
   messages,
   messagesNextCursor,
@@ -256,6 +262,7 @@ export function useRealtimeChatLifecycle({
   lastMessageIdRef,
   setWsState,
   setMessages,
+  setChatTopics,
   setJoinedRoomSlug,
   onRoomMediaTopology,
   setRoomsPresenceBySlug,
@@ -313,7 +320,10 @@ export function useRealtimeChatLifecycle({
   const onScreenShareStateRef = useRef(onScreenShareState);
   const onRoomMediaTopologyRef = useRef(onRoomMediaTopology);
   const activeChatRoomSlugRef = useRef(chatRoomSlug);
+  const activeChatRoomIdRef = useRef(activeChatRoomId);
   const activeTopicIdRef = useRef<string | null>(activeTopicId);
+  const gapRecoveryInFlightRef = useRef(false);
+  const lastGapRecoveryAtRef = useRef(0);
 
   useEffect(() => {
     onCallMicStateRef.current = onCallMicState;
@@ -408,6 +418,10 @@ export function useRealtimeChatLifecycle({
   }, [chatRoomSlug]);
 
   useEffect(() => {
+    activeChatRoomIdRef.current = activeChatRoomId;
+  }, [activeChatRoomId]);
+
+  useEffect(() => {
     activeTopicIdRef.current = activeTopicId;
   }, [activeTopicId]);
 
@@ -468,7 +482,104 @@ export function useRealtimeChatLifecycle({
       onScreenShareState: (...args) => onScreenShareStateRef.current?.(...args),
       onSessionMoved: (...args) => onSessionMoved?.(...args),
       getActiveChatRoomSlug: () => activeChatRoomSlugRef.current,
-      getActiveTopicId: () => activeTopicIdRef.current
+      getActiveTopicId: () => activeTopicIdRef.current,
+      onRealtimeSeqGap: ({ scope, prevSeq, nextSeq, gap, eventType }) => {
+        const now = Date.now();
+        if (gapRecoveryInFlightRef.current || now - lastGapRecoveryAtRef.current < 2_000) {
+          return;
+        }
+
+        const activeRoomSlug = String(activeChatRoomSlugRef.current || "").trim();
+        if (!activeRoomSlug) {
+          return;
+        }
+
+        gapRecoveryInFlightRef.current = true;
+        lastGapRecoveryAtRef.current = now;
+
+        const activeRoomId = String(activeChatRoomIdRef.current || "").trim();
+        const targetTopicId = activeTopicIdRef.current;
+        const decision = decideRealtimeGapRecovery({
+          scope,
+          activeRoomId,
+          activeTopicId: targetTopicId
+        });
+        if (!decision) {
+          return;
+        }
+
+        const { scope: normalizedScope, shouldReloadMessages, shouldReloadTopics, recoveryMode } = decision;
+
+        trackClientEvent(
+          "ws.realtime.gap.detected",
+          {
+            scope,
+            prevSeq,
+            nextSeq,
+            gap,
+            eventType,
+            roomSlug: activeRoomSlug,
+            roomId: activeRoomId || undefined,
+            topicId: targetTopicId || undefined,
+            recoveryMode
+          },
+          token
+        );
+        pushLog(`realtime gap recovery start: scope=${scope} prev=${prevSeq} next=${nextSeq} gap=${gap} type=${eventType}`);
+        const recoveryStartedAt = Date.now();
+
+        void (async () => {
+          if (shouldReloadMessages) {
+            await chatController.loadRecentMessages(token, activeRoomSlug, targetTopicId);
+          }
+
+          if (shouldReloadTopics) {
+            const topicsResponse = await api.roomTopics(token, activeRoomId);
+            setChatTopics(topicsResponse.topics);
+          }
+
+          trackClientEvent(
+            "ws.realtime.gap.recovered",
+            {
+              scope,
+              prevSeq,
+              nextSeq,
+              gap,
+              eventType,
+              roomSlug: activeRoomSlug,
+              roomId: activeRoomId || undefined,
+              topicId: targetTopicId || undefined,
+              durationMs: Math.max(0, Date.now() - recoveryStartedAt),
+              recoveryMode
+            },
+            token
+          );
+          pushLog(`realtime gap recovery done: scope=${scope} room=${activeRoomSlug}`);
+        })()
+          .catch((error) => {
+            trackClientEvent(
+              "ws.realtime.gap.recovery_failed",
+              {
+                scope,
+                prevSeq,
+                nextSeq,
+                gap,
+                eventType,
+                roomSlug: activeRoomSlug,
+                roomId: activeRoomId || undefined,
+                topicId: targetTopicId || undefined,
+                error: String((error as Error)?.message || "unknown"),
+                durationMs: Math.max(0, Date.now() - recoveryStartedAt),
+                recoveryMode
+              },
+              token
+            );
+            pushLog(`realtime gap recovery failed: ${(error as Error)?.message || "unknown"}`);
+          })
+          .finally(() => {
+            gapRecoveryInFlightRef.current = false;
+          });
+      }
     });
 
     const client = new RealtimeClient({
@@ -555,6 +666,8 @@ export function useRealtimeChatLifecycle({
       lastConversationKeyForScrollRef.current = conversationKey;
       lastRoomSlugForScrollRef.current = chatRoomSlug;
       lastMessageIdRef.current = latestMessageId;
+      // New conversation should default to latest messages unless unread divider lock takes over.
+      shouldStickToBottomRef.current = true;
       return;
     }
 
@@ -615,7 +728,22 @@ export function useRealtimeChatLifecycle({
     await chatController.loadOlderMessages(token, chatRoomSlug, activeTopicId, effectiveCursor, loadingOlderMessages);
   }, [token, chatRoomSlug, activeTopicId, messagesNextCursor, loadingOlderMessages, chatController, messages, pushLog]);
 
+  const loadMessagesAroundAnchor = useCallback(async (
+    anchorMessageId: string,
+    options: {
+      aroundWindowBefore?: number;
+      aroundWindowAfter?: number;
+    } = {}
+  ) => {
+    if (!token || !chatRoomSlug || !activeTopicId) {
+      return false;
+    }
+
+    return chatController.loadMessagesAroundAnchor(token, chatRoomSlug, activeTopicId, anchorMessageId, options);
+  }, [token, chatRoomSlug, activeTopicId, chatController]);
+
   return {
-    loadOlderMessages
+    loadOlderMessages,
+    loadMessagesAroundAnchor
   };
 }

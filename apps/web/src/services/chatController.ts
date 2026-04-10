@@ -34,15 +34,19 @@ export class ChatController {
     const requestId = ++this.recentMessagesRequestId;
     try {
       const res = topicId
-        ? await api.topicMessages(token, topicId, { limit: 50 })
+        ? await api.topicMessages(token, topicId, { limit: 50, aroundUnreadWindow: true })
         : await api.roomMessages(token, roomSlug, { limit: 50 });
 
       if (requestId !== this.recentMessagesRequestId) {
         return;
       }
 
+      const unreadDividerMessageId = String(("unreadDividerMessageId" in res ? res.unreadDividerMessageId : "") || "").trim();
       this.options.setMessages(() => trimMessagesInMemory(
-        res.messages.map((message) => this.normalizeMessageForRender(message))
+        res.messages.map((message) => this.normalizeMessageForRender({
+          ...message,
+          unread_divider_anchor: Boolean(unreadDividerMessageId && message.id === unreadDividerMessageId)
+        }))
       ));
       this.options.setMessagesHasMore(Boolean(res.pagination?.hasMore));
       this.options.setMessagesNextCursor(res.pagination?.nextCursor ?? null);
@@ -95,6 +99,53 @@ export class ChatController {
       this.options.pushLog(`load older failed: ${(error as Error).message}`);
     } finally {
       this.options.setLoadingOlderMessages(false);
+    }
+  }
+
+  async loadMessagesAroundAnchor(
+    token: string,
+    roomSlug: string,
+    topicId: string | null,
+    anchorMessageId: string,
+    options: {
+      aroundWindowBefore?: number;
+      aroundWindowAfter?: number;
+    } = {}
+  ): Promise<boolean> {
+    const normalizedTopicId = String(topicId || "").trim();
+    const normalizedAnchorMessageId = String(anchorMessageId || "").trim();
+    if (!normalizedTopicId || !normalizedAnchorMessageId) {
+      return false;
+    }
+
+    const requestId = ++this.recentMessagesRequestId;
+    try {
+      const res = await api.topicMessages(token, normalizedTopicId, {
+        limit: 50,
+        anchorMessageId: normalizedAnchorMessageId,
+        aroundWindowBefore: options.aroundWindowBefore,
+        aroundWindowAfter: options.aroundWindowAfter
+      });
+
+      if (requestId !== this.recentMessagesRequestId) {
+        return false;
+      }
+
+      const unreadDividerMessageId = String(("unreadDividerMessageId" in res ? res.unreadDividerMessageId : "") || "").trim();
+      this.options.setMessages(() => trimMessagesInMemory(
+        res.messages.map((message) => this.normalizeMessageForRender({
+          ...message,
+          unread_divider_anchor: Boolean(unreadDividerMessageId && message.id === unreadDividerMessageId)
+        }))
+      ));
+      this.options.setMessagesHasMore(Boolean(res.pagination?.hasMore));
+      this.options.setMessagesNextCursor(res.pagination?.nextCursor ?? null);
+      return true;
+    } catch (error) {
+      if (requestId === this.recentMessagesRequestId) {
+        this.options.pushLog(`anchor load failed: ${(error as Error).message}`);
+      }
+      return false;
     }
   }
 

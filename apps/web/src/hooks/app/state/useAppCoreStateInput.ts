@@ -6,6 +6,8 @@ export function useAppCoreStateInput(params: Record<string, unknown>): AppCoreSt
   const p = params as any;
 
   return {
+    clientBuildSha: p.clientBuildSha,
+    versionUpdateExpectedShaKey: p.versionUpdateExpectedShaKey,
     versionUpdatePendingKey: p.versionUpdatePendingKey,
     cookieConsentKey: p.cookieConsentKey,
     currentServerIdStorageKey: p.currentServerIdStorageKey,

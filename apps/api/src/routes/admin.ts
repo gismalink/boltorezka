@@ -193,6 +193,27 @@ export async function adminRoutes(fastify: FastifyInstance) {
   );
 
   fastify.get(
+    "/v1/admin/users/pending-count",
+    {
+      preHandler: [requireAuth, loadCurrentUser, requireRole(["super_admin", "admin"])]
+    },
+    async () => {
+      const result = await db.query<{ count: number }>(
+        `SELECT COUNT(*)::int AS count
+         FROM users
+         WHERE is_bot = FALSE
+           AND deleted_at IS NULL
+           AND is_banned = FALSE
+           AND access_state = 'pending'`
+      );
+
+      return {
+        count: Number(result.rows[0]?.count || 0)
+      };
+    }
+  );
+
+  fastify.get(
     "/v1/admin/servers",
     {
       preHandler: [requireAuth, loadCurrentUser, requireRole(["super_admin", "admin"])]

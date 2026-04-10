@@ -7,13 +7,14 @@ const ADMIN_USERS_SYNC_INTERVAL_MS = 30000;
 type UseAdminUsersSyncArgs = {
   token: string;
   canManageUsers: boolean;
+  isProductManagementTabActive: boolean;
   pushLog: (text: string) => void;
   setAdminUsers: Dispatch<SetStateAction<User[]>>;
 };
 
-export function useAdminUsersSync({ token, canManageUsers, pushLog, setAdminUsers }: UseAdminUsersSyncArgs) {
+export function useAdminUsersSync({ token, canManageUsers, isProductManagementTabActive, pushLog, setAdminUsers }: UseAdminUsersSyncArgs) {
   useEffect(() => {
-    if (!token || !canManageUsers) {
+    if (!token || !canManageUsers || !isProductManagementTabActive) {
       return;
     }
 
@@ -40,5 +41,5 @@ export function useAdminUsersSync({ token, canManageUsers, pushLog, setAdminUser
       disposed = true;
       window.clearInterval(intervalId);
     };
-  }, [token, canManageUsers, pushLog, setAdminUsers]);
+  }, [token, canManageUsers, isProductManagementTabActive, pushLog, setAdminUsers]);
 }

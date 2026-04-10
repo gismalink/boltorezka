@@ -1,8 +1,8 @@
 // =============================================================================
-// ORCHESTRATION-ONLY FILE
-// `App` wires hooks and passes props. It must stay business-logic free.
-// If feature behavior is needed, implement it in hooks/services/components first.
-// Do not add parsing, transport rules, or workflow logic here.
+// Этот файл нужен только для оркестрации.
+// `App` подключает хуки и передает пропсы. Он должен оставаться свободным от бизнес-логики.
+// Если требуется поведение функции, реализуйте его сначала в хуках/сервисах/компонентах.
+// Не добавляйте здесь парсинг, правила транспортировки или логику рабочего процесса.
 // =============================================================================
 
 import { useRef } from "react";
@@ -15,6 +15,7 @@ import {
   MAX_CHAT_RETRIES,
   MESSAGE_EDIT_DELETE_WINDOW_MS,
   PENDING_ACCESS_AUTO_REFRESH_SEC,
+  VERSION_UPDATE_EXPECTED_SHA_KEY,
   VERSION_UPDATE_PENDING_KEY
 } from "./constants/appConfig";
 import {
@@ -114,11 +115,14 @@ export function App() {
     serverAgeConfirming, setServerAgeConfirming, ageGateBlockedRoomSlug, setAgeGateBlockedRoomSlug,
     pendingInviteToken, setPendingInviteToken, inviteAccepting, setInviteAccepting,
     telemetrySummary, setTelemetrySummary, wsState, setWsState,
+    pendingJoinRequestsCount: pendingJoinRequestsCountState, setPendingJoinRequestsCount,
     adminUsers, setAdminUsers, adminServers, setAdminServers,
     adminServersLoading, setAdminServersLoading,
     selectedAdminServerId, setSelectedAdminServerId, adminServerOverview, setAdminServerOverview,
     adminServerOverviewLoading, setAdminServerOverviewLoading
   } = useAppCoreState(useAppCoreStateInput({
+    clientBuildSha: CLIENT_BUILD_SHA,
+    versionUpdateExpectedShaKey: VERSION_UPDATE_EXPECTED_SHA_KEY,
     versionUpdatePendingKey: VERSION_UPDATE_PENDING_KEY,
     cookieConsentKey: COOKIE_CONSENT_KEY,
     currentServerIdStorageKey: CURRENT_SERVER_ID_STORAGE_KEY,
@@ -222,7 +226,7 @@ export function App() {
     hasUser,
     hasServiceToken
   } = useAppPermissionsIdentityRuntime(useAppPermissionsIdentityRuntimeInput({
-    token, user, servers, currentServerId, adminUsers, lang, pushToast
+    token, user, servers, currentServerId, adminUsers, pendingJoinRequestsCount: pendingJoinRequestsCountState, lang, pushToast
   }));
 
   const {
@@ -366,7 +370,7 @@ export function App() {
 
   const {
     authController, chatController, roomAdminController,
-    loadTelemetrySummary, loadOlderMessages,
+    loadTelemetrySummary, loadOlderMessages, loadMessagesAroundAnchor,
     handleIncomingVideoState, handleIncomingMicState, handleIncomingInitialCallState,
     handleAudioQualityUpdated
   } = useAppControllersRuntime(useAppControllersRuntimeInput({
@@ -509,7 +513,10 @@ export function App() {
     useAppWorkspaceSupportRuntimeInput({
       ...runtimeInputCommon,
       canManageUsers,
+      canPromote,
+      serverMenuTab,
       setAdminUsers,
+      setPendingJoinRequestsCount,
       canViewTelemetry,
       wsState,
       roomsPresenceDetailsBySlug,
@@ -737,6 +744,7 @@ export function App() {
   const { acknowledgeUpdatedApp, completeFirstRunIntro } = useOnboardingOverlayActions(useOnboardingOverlayActionsInput({
     token, user,
     profileNameDraft, selectedUiTheme,
+    versionUpdateExpectedShaKey: VERSION_UPDATE_EXPECTED_SHA_KEY,
     versionUpdatePendingKey: VERSION_UPDATE_PENDING_KEY,
     setProfileSaving, setProfileStatusText,
     setUser,
@@ -904,13 +912,13 @@ export function App() {
     t, locale, currentServerId, serviceToken,
     sendWsEventAwaitAck,
     chatRoomSlug, activeChatRoom,
-    chatTopics, activeChatTopicId, setActiveChatTopicId,
+    chatTopics, activeChatTopicId, setChatTopics, setActiveChatTopicId,
     createTopic,
     messages, serverMembers, user,
     messagesHasMore, loadingOlderMessages,
     chatText, pendingChatImageDataUrl, pendingChatAttachmentFile,
     activeChatTypingUsers,
-    chatLogRef, loadOlderMessages,
+    chatLogRef, loadOlderMessages, loadMessagesAroundAnchor,
     handleSetChatText, openRoomChat,
     handleChatPaste, handleChatInputKeyDown,
     sendMessage, selectAttachmentFile, clearPendingAttachment,

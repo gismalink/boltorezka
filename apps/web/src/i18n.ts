@@ -14,7 +14,7 @@ export const LANGUAGE_OPTIONS: Array<{ value: Lang; label: string }> = [
 
 const TEXT_BASE: Record<Lang, Record<string, string>> = {
   ru: {
-    "app.title": "Dato",
+    "app.title": "Datute",
     "server.menuAria": "Меню сервера",
     "server.switcher": "Сервер",
     "server.switcherAria": "Выбор сервера",
@@ -510,6 +510,14 @@ const TEXT_BASE: Record<Lang, Record<string, string>> = {
     "chat.searchOpenTooltip": "Открыть поиск",
     "chat.searchCloseTooltip": "Закрыть поиск",
     "chat.searchDateRangeTooltip": "Диапазон дат",
+    "chat.topicMentionsJumpTooltip": "Следующее непрочитанное упоминание",
+    "chat.topicMentionsMarkAllRead": "Прочитать все упоминания в теме",
+    "chat.topicMentionsJumping": "Переходим к упоминанию...",
+    "chat.topicMentionsNoUnread": "Непрочитанных упоминаний в теме нет",
+    "chat.topicMentionsRemainingQueue": "В очереди упоминаний: {count}",
+    "chat.topicMentionsMarkedReadAll": "Все упоминания в теме отмечены прочитанными",
+    "chat.topicMentionsLoadError": "Не удалось загрузить упоминания темы",
+    "chat.topicMentionsReadAllError": "Не удалось отметить упоминания прочитанными",
     "chat.notificationTitle": "Уведомления",
     "chat.notificationScopeServer": "Для сервера",
     "chat.notificationScopeTopic": "Для темы",
@@ -731,7 +739,7 @@ const TEXT_BASE: Record<Lang, Record<string, string>> = {
     "device.systemDefault": "Системное устройство"
   },
   en: {
-    "app.title": "Dato",
+    "app.title": "Datute",
     "server.menuAria": "Server menu",
     "server.switcher": "Server",
     "server.switcherAria": "Server switcher",
@@ -1227,6 +1235,14 @@ const TEXT_BASE: Record<Lang, Record<string, string>> = {
     "chat.searchOpenTooltip": "Open search",
     "chat.searchCloseTooltip": "Close search",
     "chat.searchDateRangeTooltip": "Date range",
+    "chat.topicMentionsJumpTooltip": "Jump to next unread mention",
+    "chat.topicMentionsMarkAllRead": "Mark all topic mentions as read",
+    "chat.topicMentionsJumping": "Jumping to mention...",
+    "chat.topicMentionsNoUnread": "No unread mentions in this topic",
+    "chat.topicMentionsRemainingQueue": "Mentions queued: {count}",
+    "chat.topicMentionsMarkedReadAll": "All topic mentions marked as read",
+    "chat.topicMentionsLoadError": "Failed to load topic mentions",
+    "chat.topicMentionsReadAllError": "Failed to mark topic mentions as read",
     "chat.notificationTitle": "Notifications",
     "chat.notificationScopeServer": "For server",
     "chat.notificationScopeTopic": "For topic",

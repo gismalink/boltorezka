@@ -1426,10 +1426,11 @@ pre {
 
 .chat-title-row {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: var(--space-sm);
+  min-width: 0;
 }
 
 .chat-title-main {
@@ -1441,6 +1442,30 @@ pre {
   align-items: center;
   gap: var(--space-xs);
   min-width: 0;
+  width: 100%;
+}
+
+.chat-topic-tabs-main {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.chat-topic-tabs-viewport {
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.chat-topic-tabs-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  margin-left: auto;
+  flex: 0 0 auto;
 }
 
 .chat-topic-create-toggle {
@@ -1469,13 +1494,21 @@ pre {
   display: flex;
   align-items: center;
   gap: var(--space-xs);
-  min-width: 0;
-  overflow-x: auto;
-  padding-bottom: 2px;
+  min-width: max-content;
+  width: max-content;
 }
 
 .chat-topic-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   white-space: nowrap;
+}
+
+.chat-topic-tab-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .chat-topic-tab-active {
@@ -1495,9 +1528,88 @@ pre {
 }
 
 .chat-topic-tab-unread {
-  margin-left: 6px;
   color: var(--pixel-accent);
   font-weight: 700;
+}
+
+.chat-topic-tab-mention {
+  margin-left: 0;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  font-size: 10px;
+  line-height: 18px;
+}
+
+.chat-topic-mention-nav-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-color: color-mix(in srgb, var(--pixel-accent) 65%, var(--pixel-border) 35%);
+}
+
+.chat-topic-palette-toggle {
+  flex: 0 0 auto;
+}
+
+.chat-search-toggle-btn {
+  min-width: var(--icon-size-sm);
+  width: var(--icon-size-sm);
+  padding-left: 0;
+  padding-right: 0;
+  flex: 0 0 auto;
+}
+
+.chat-topic-mention-nav-btn span:first-child {
+  color: var(--pixel-accent);
+  font-weight: 700;
+}
+
+.chat-topic-mentions-status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+}
+
+.chat-log-shell {
+  position: relative;
+  min-height: 0;
+  flex: 1 1 auto;
+  display: flex;
+}
+
+.chat-floating-actions {
+  position: absolute;
+  right: 22px;
+  bottom: 22px;
+  z-index: 8;
+  display: grid;
+  gap: 8px;
+  justify-items: end;
+  pointer-events: none;
+}
+
+.chat-floating-action-btn {
+  pointer-events: auto;
+  min-width: 44px;
+  min-height: 36px;
+  border-radius: 999px;
+  padding: 0 10px;
+}
+
+.chat-floating-mention-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 44px;
+  min-height: 36px;
+  font-weight: 700;
+  border-color: color-mix(in srgb, var(--pixel-accent) 68%, var(--pixel-border) 32%);
+}
+
+.chat-floating-mention-btn span:first-child {
+  color: var(--pixel-accent);
 }
 
 .chat-history-loading {
@@ -2107,7 +2219,8 @@ pre {
 }
 
 .loading-ellipsis {
-  display: inline-block;
+  display: inline-flex;
+  justify-content: flex-start;
   width: 3ch;
   overflow: hidden;
   vertical-align: bottom;
@@ -2116,7 +2229,6 @@ pre {
 .loading-ellipsis::before {
   content: "...";
   display: inline-block;
-  width: 0;
   animation: rooms-loading-dots 1s steps(4, end) infinite;
 }
 
@@ -2200,8 +2312,15 @@ pre {
 }
 
 @keyframes rooms-loading-dots {
-  0% {
+  0%,
+  25% {
     width: 0;
+  }
+  50% {
+    width: 1ch;
+  }
+  75% {
+    width: 2ch;
   }
   100% {
     width: 3ch;
@@ -4191,6 +4310,7 @@ pre {
 
   .workspace-mobile .chat-title-row {
     align-items: stretch;
+    flex-wrap: wrap;
   }
 
   .workspace-mobile .chat-title-main {
@@ -4199,10 +4319,19 @@ pre {
 
   .workspace-mobile .chat-topic-tabs-row {
     width: 100%;
+    flex-wrap: nowrap;
   }
 
-  .workspace-mobile .chat-topic-tabs-scroll {
+  .workspace-mobile .chat-topic-tabs-main {
+    min-width: 0;
+  }
+
+  .workspace-mobile .chat-topic-tabs-viewport {
     width: 100%;
+  }
+
+  .workspace-mobile .chat-topic-tabs-actions {
+    flex: 0 0 auto;
   }
 
   .workspace-mobile .chat-topic-row > .chat-topic-label,
@@ -4294,6 +4423,16 @@ pre {
   .workspace-mobile .chat-compose .chat-compose-thumb-btn,
   .workspace-mobile .chat-compose > .btn {
     min-height: 34px;
+  }
+
+  .workspace-mobile .chat-floating-actions {
+    right: 22px;
+    bottom: calc(var(--mobile-tabbar-reserve) + 22px);
+  }
+
+  .workspace-mobile .chat-floating-action-btn {
+    min-width: 44px;
+    min-height: 36px;
   }
 
   .chat-topic-palette-overlay {

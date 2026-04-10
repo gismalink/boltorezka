@@ -5,7 +5,6 @@ import { api } from "../../../api";
 import { executeWsFirstWithHttpFallbackAwaitAck } from "../../../services/chatOperationExecutor";
 import type { Message, RoomTopic } from "../../../domain";
 import {
-  countUnreadMessagesExcludingOwn,
   subtractTrailingOwnMessagesFromUnread
 } from "./unreadUtils";
 
@@ -21,10 +20,9 @@ type UseChatPanelReadStateArgs = {
   activeTopicId: string | null;
   roomId: string;
   topics: RoomTopic[];
+  onApplyTopicReadLocal: (topicId: string) => void;
   messages: Message[];
-  loadingOlderMessages: boolean;
   messagesHasMore: boolean;
-  onLoadOlderMessages: () => void;
   chatLogRef: RefObject<HTMLDivElement>;
 };
 
@@ -36,13 +34,11 @@ export function useChatPanelReadState({
   activeTopicId,
   roomId,
   topics,
+  onApplyTopicReadLocal,
   messages,
-  loadingOlderMessages,
   messagesHasMore,
-  onLoadOlderMessages,
   chatLogRef
 }: UseChatPanelReadStateArgs) {
-  const [topicUnreadOverrideById, setTopicUnreadOverrideById] = useState<Record<string, { unreadCount: number; sourceUnreadCount: number }>>({});
   const [markReadSaving, setMarkReadSaving] = useState(false);
   const [markReadStatusText, setMarkReadStatusText] = useState("");
   const [entryUnreadDivider, setEntryUnreadDivider] = useState<{
@@ -58,10 +54,8 @@ export function useChatPanelReadState({
     seenBottom: boolean;
     lastEdge: "top" | "bottom" | null;
   }>>({});
-  const entryUnreadCountByTopicRef = useRef<Record<string, number>>({});
   const entryUnreadRoomIdRef = useRef<string>("");
   const unreadEntryTopicRef = useRef<string>("");
-  const unreadBackfillAttemptsByTopicRef = useRef<Record<string, number>>({});
   const unreadDividerScrolledTopicRef = useRef<string>("");
 
   const normalizedCurrentUserId = String(currentUserId || "").trim();
@@ -71,8 +65,6 @@ export function useChatPanelReadState({
   const toEffectiveUnreadCount = useCallback((sourceUnreadCount: number, messageList: Message[]): number => {
     return subtractTrailingOwnMessagesFromUnread(sourceUnreadCount, messageList, normalizedCurrentUserId);
   }, [normalizedCurrentUserId]);
-
-  const countUnreadExcludingOwnMessages = useCallback((messageList: Message[]): number => countUnreadMessagesExcludingOwn(messageList, normalizedCurrentUserId), [normalizedCurrentUserId]);
 
   const markTopicReadWsFirst = useCallback(async (topicId: string, lastReadMessageId?: string) => {
     const normalizedToken = String(authToken || "").trim();
@@ -138,13 +130,10 @@ export function useChatPanelReadState({
   }, [activeTopicId, messages, roomId]);
 
   const getTopicUnreadCount = useCallback((topic: RoomTopic): number => {
+    const sourceUnreadCount = Math.max(0, Number(topic.unreadCount || 0));
+
     const normalizedTopicId = String(topic.id || "").trim();
     const normalizedActiveTopicId = String(activeTopicId || "").trim();
-
-    const override = topicUnreadOverrideById[topic.id];
-    const sourceUnreadCount = override && topic.unreadCount === override.sourceUnreadCount
-      ? Math.max(0, Number(override.unreadCount || 0))
-      : Math.max(0, Number(topic.unreadCount || 0));
 
     const isActiveTopic = Boolean(normalizedTopicId && normalizedActiveTopicId && normalizedTopicId === normalizedActiveTopicId);
     if (!isActiveTopic || !isMessageSetAlignedWithActiveContext()) {
@@ -152,7 +141,7 @@ export function useChatPanelReadState({
     }
 
     return toEffectiveUnreadCount(sourceUnreadCount, messages);
-  }, [activeTopicId, isMessageSetAlignedWithActiveContext, messages, toEffectiveUnreadCount, topicUnreadOverrideById]);
+  }, [activeTopicId, isMessageSetAlignedWithActiveContext, messages, toEffectiveUnreadCount]);
 
   const markTopicRead = useCallback(async (topicId: string, lastReadMessageId?: string) => {
     if (!authToken || markReadSaving || !topicId) {
@@ -172,20 +161,14 @@ export function useChatPanelReadState({
       if (result.kind === "failed") {
         throw new Error("mark_topic_read_failed");
       }
-      setTopicUnreadOverrideById((prev) => ({
-        ...prev,
-        [topicId]: {
-          unreadCount: 0,
-          sourceUnreadCount
-        }
-      }));
+      onApplyTopicReadLocal(topicId);
       setMarkReadStatusText(t("chat.markReadSuccess"));
     } catch {
       setMarkReadStatusText(t("chat.markReadError"));
     } finally {
       setMarkReadSaving(false);
     }
-  }, [authToken, markReadSaving, t, topics]);
+  }, [authToken, markReadSaving, onApplyTopicReadLocal, t, topics, markTopicReadWsFirst]);
 
   const markRoomRead = useCallback(async () => {
     if (!authToken || markReadSaving || topics.length === 0) {
@@ -204,23 +187,14 @@ export function useChatPanelReadState({
       if (results.some((result) => result.kind === "failed")) {
         throw new Error("mark_room_read_failed");
       }
-      setTopicUnreadOverrideById((prev) => {
-        const next = { ...prev };
-        unreadTopics.forEach((topic) => {
-          next[topic.id] = {
-            unreadCount: 0,
-            sourceUnreadCount: Math.max(0, Number(topic.unreadCount || 0))
-          };
-        });
-        return next;
-      });
+      unreadTopics.forEach((topic) => onApplyTopicReadLocal(topic.id));
       setMarkReadStatusText(t("chat.markRoomReadSuccess"));
     } catch {
       setMarkReadStatusText(t("chat.markReadError"));
     } finally {
       setMarkReadSaving(false);
     }
-  }, [authToken, getTopicUnreadCount, markReadSaving, t, topics]);
+  }, [authToken, getTopicUnreadCount, markReadSaving, onApplyTopicReadLocal, t, topics]);
 
   const markTopicUnreadFromMessage = useCallback(async (messageId: string) => {
     const topicId = String(activeTopicId || "").trim();
@@ -250,8 +224,7 @@ export function useChatPanelReadState({
 
     const selectedTopic = topics.find((topic) => topic.id === topicId);
     const sourceUnreadCount = Math.max(0, Number(selectedTopic?.unreadCount || 0));
-    const estimatedUnreadCount = countUnreadExcludingOwnMessages(messages.slice(selectedIndex));
-    if (estimatedUnreadCount <= 0) {
+    if (sourceUnreadCount <= 0) {
       setMarkReadStatusText(t("chat.markUnreadUnavailable"));
       return;
     }
@@ -263,50 +236,17 @@ export function useChatPanelReadState({
       if (result.kind === "failed") {
         throw new Error("mark_topic_unread_failed");
       }
-      setTopicUnreadOverrideById((prev) => ({
-        ...prev,
-        [topicId]: {
-          unreadCount: estimatedUnreadCount,
-          sourceUnreadCount
-        }
-      }));
       setMarkReadStatusText(t("chat.markUnreadSuccess"));
     } catch {
       setMarkReadStatusText(t("chat.markReadError"));
     } finally {
       setMarkReadSaving(false);
     }
-  }, [activeTopicId, authToken, countUnreadExcludingOwnMessages, markReadSaving, messages, normalizedCurrentUserId, t, topics]);
+  }, [activeTopicId, authToken, markReadSaving, messages, normalizedCurrentUserId, t, topics, markTopicReadWsFirst]);
 
   useEffect(() => {
     setMarkReadStatusText("");
   }, [activeTopicId]);
-
-  useEffect(() => {
-    const topicIds = new Set(topics.map((topic) => topic.id));
-    const unreadCountById = new Map(topics.map((topic) => [topic.id, topic.unreadCount]));
-
-    setTopicUnreadOverrideById((prev) => {
-      let changed = false;
-      const next: Record<string, { unreadCount: number; sourceUnreadCount: number }> = {};
-
-      Object.entries(prev).forEach(([topicId, override]) => {
-        if (!topicIds.has(topicId)) {
-          changed = true;
-          return;
-        }
-
-        if (unreadCountById.get(topicId) !== override.sourceUnreadCount) {
-          changed = true;
-          return;
-        }
-
-        next[topicId] = override;
-      });
-
-      return changed ? next : prev;
-    });
-  }, [topics]);
 
   useEffect(() => {
     const normalizedRoomId = String(roomId || "").trim();
@@ -344,39 +284,9 @@ export function useChatPanelReadState({
 
     unreadEntryTopicRef.current = normalizedTopicId;
     unreadDividerScrolledTopicRef.current = "";
-    unreadBackfillAttemptsByTopicRef.current[normalizedTopicId] = 0;
     oversizedMessageBoundaryProgressRef.current = {};
     setEntryUnreadDivider(null);
-
-    const activeTopic = topics.find((topic) => String(topic.id || "").trim() === normalizedTopicId);
-    // Snapshot topic unread count at entry. Divider position is computed from this snapshot,
-    // then refined as older history is backfilled.
-    entryUnreadCountByTopicRef.current[normalizedTopicId] = activeTopic ? getTopicUnreadCount(activeTopic) : 0;
   }, [activeTopicId, topics, getTopicUnreadCount]);
-
-  useEffect(() => {
-    const normalizedTopicId = String(activeTopicId || "").trim();
-    if (!normalizedTopicId || loadingOlderMessages || !messagesHasMore) {
-      return;
-    }
-
-    if (!isMessageSetAlignedWithActiveContext()) {
-      return;
-    }
-
-    const entryUnreadCount = Math.max(0, Number(entryUnreadCountByTopicRef.current[normalizedTopicId] || 0));
-    if (entryUnreadCount <= 0 || messages.length > entryUnreadCount) {
-      return;
-    }
-
-    const attempts = Math.max(0, Number(unreadBackfillAttemptsByTopicRef.current[normalizedTopicId] || 0));
-    if (attempts >= 12) {
-      return;
-    }
-
-    unreadBackfillAttemptsByTopicRef.current[normalizedTopicId] = attempts + 1;
-    onLoadOlderMessages();
-  }, [activeTopicId, isMessageSetAlignedWithActiveContext, loadingOlderMessages, messages.length, messagesHasMore, onLoadOlderMessages]);
 
   useEffect(() => {
     const normalizedTopicId = String(activeTopicId || "").trim();
@@ -395,31 +305,21 @@ export function useChatPanelReadState({
       return;
     }
 
-    const entryUnreadCount = Math.max(0, Number(entryUnreadCountByTopicRef.current[normalizedTopicId] || 0));
-    if (entryUnreadCount <= 0 || messages.length === 0) {
-      return;
-    }
-
-    const hasEnoughMessagesForExactDivider = messages.length > entryUnreadCount;
-    const noMoreHistoryToLoad = !messagesHasMore;
-    if (!hasEnoughMessagesForExactDivider && !noMoreHistoryToLoad) {
-      return;
-    }
-
-    const dividerIndex = Math.max(0, Math.min(messages.length - 1, messages.length - entryUnreadCount));
-    const dividerMessageId = String(messages[dividerIndex]?.id || "").trim();
-    if (!dividerMessageId) {
-      setEntryUnreadDivider(null);
+    const serverAnchorMessageId = String(
+      messages.find((message) => message.unread_divider_anchor)?.id || ""
+    ).trim();
+    if (serverAnchorMessageId) {
+      setEntryUnreadDivider({
+        topicId: normalizedTopicId,
+        messageId: serverAnchorMessageId
+      });
       unreadDividerScrolledTopicRef.current = "";
       return;
     }
-
-    setEntryUnreadDivider({
-      topicId: normalizedTopicId,
-      messageId: dividerMessageId
-    });
+    // Keep divider strictly server-driven to avoid client-side positional heuristics.
+    setEntryUnreadDivider(null);
     unreadDividerScrolledTopicRef.current = "";
-  }, [activeTopicId, entryUnreadDivider?.messageId, entryUnreadDivider?.topicId, isMessageSetAlignedWithActiveContext, messages, messagesHasMore]);
+  }, [activeTopicId, entryUnreadDivider?.messageId, entryUnreadDivider?.topicId, isMessageSetAlignedWithActiveContext, messages]);
 
   useEffect(() => {
     if (!entryUnreadDivider?.messageId) {
@@ -504,13 +404,12 @@ export function useChatPanelReadState({
       return;
     }
 
-    const entryUnreadSnapshot = Math.max(0, Number(entryUnreadCountByTopicRef.current[normalizedTopicId] || 0));
     const dividerForActiveTopicReady = Boolean(
       entryUnreadDivider?.topicId === normalizedTopicId && String(entryUnreadDivider.messageId || "").trim()
     );
-    const shouldDelayAutoReadUntilDivider = entryUnreadSnapshot > 0 && !dividerForActiveTopicReady
-      && messagesHasMore
-      && messages.length <= entryUnreadSnapshot;
+    const shouldDelayAutoReadUntilDivider = Math.max(0, Number(topic.unreadCount || 0)) > 0
+      && !dividerForActiveTopicReady
+      && messagesHasMore;
     if (shouldDelayAutoReadUntilDivider) {
       return;
     }
@@ -553,7 +452,6 @@ export function useChatPanelReadState({
       const containerRect = chatContainer.getBoundingClientRect();
       let candidateMessageId = "";
       let candidateMessageIndex = -1;
-      let candidateUnreadCount = latestUnreadCount;
 
       const boundaryStateKey = (messageId: string) => `${normalizedTopicId}:${messageId}`;
 
@@ -607,7 +505,6 @@ export function useChatPanelReadState({
 
         candidateMessageId = messageId;
         candidateMessageIndex = index;
-        candidateUnreadCount = Math.max(0, latestUnreadCount - (index - firstUnreadIndex + 1));
       }
 
       if (!candidateMessageId || candidateMessageIndex < 0) {
@@ -622,15 +519,6 @@ export function useChatPanelReadState({
         return;
       }
 
-      const sourceUnreadCountSnapshot = Math.max(0, Number(latestTopic.unreadCount || 0));
-
-      setTopicUnreadOverrideById((prev) => ({
-        ...prev,
-        [normalizedTopicId]: {
-          unreadCount: candidateUnreadCount,
-          sourceUnreadCount: sourceUnreadCountSnapshot
-        }
-      }));
       lastAutoMarkedMessageIdByTopicRef.current[normalizedTopicId] = candidateMessageId;
 
       autoMarkReadInFlightRef.current[normalizedTopicId] = candidateMessageId;

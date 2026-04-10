@@ -8,6 +8,7 @@ export function useAppPermissionsIdentityRuntime({
   servers,
   currentServerId,
   adminUsers,
+  pendingJoinRequestsCount,
   lang,
   pushToast
 }: UseAppPermissionsIdentityRuntimeInput) {
@@ -17,6 +18,7 @@ export function useAppPermissionsIdentityRuntime({
     servers,
     currentServerId,
     adminUsers,
+    pendingJoinRequestsCount,
     lang,
     pushToast
   });

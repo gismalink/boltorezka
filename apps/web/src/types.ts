@@ -78,6 +78,7 @@ export type Message = {
     count: number;
     reacted: boolean;
   }>;
+  unread_divider_anchor?: boolean;
   clientRequestId?: string;
   deliveryStatus?: "sending" | "delivered" | "failed";
 };
@@ -166,6 +167,7 @@ export type TopicMessagesResponse = {
     createdAt: string;
     updatedAt: string;
   };
+  unreadDividerMessageId?: string | null;
   messages: Message[];
   pagination: {
     hasMore: boolean;
@@ -263,6 +265,23 @@ export type NotificationInboxReadAllResponse = {
   updated: number;
 };
 
+export type TopicUnreadMentionsListResponse = {
+  topicId: string;
+  items: NotificationInboxItem[];
+  pagination: {
+    hasMore: boolean;
+    nextCursor: {
+      beforeCreatedAt: string;
+      beforeId: string;
+    } | null;
+  };
+};
+
+export type TopicUnreadMentionsReadAllResponse = {
+  topicId: string;
+  updated: number;
+};
+
 export type NotificationInboxClaimResponse = {
   eventId: string;
   claimed: boolean;
@@ -282,10 +301,18 @@ export type TopicReadResponse = {
   topicId: string;
   lastReadMessageId: string | null;
   lastReadAt: string;
+  unreadDelta?: number;
+  mentionDelta?: number;
 };
 
 export type WsIncoming = {
   type: string;
+  realtimeSeq?: number;
+  realtime_seq?: number;
+  realtimeScope?: string;
+  realtime_scope?: string;
+  realtimeScopeSeq?: number;
+  realtime_scope_seq?: number;
   payload?: any;
 };
 

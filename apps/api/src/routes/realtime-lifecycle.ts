@@ -12,6 +12,7 @@ export async function initializeRealtimeConnection(params: {
   connection: WebSocket;
   userId: string;
   userName: string;
+  appBuildSha: string;
   currentServerId: string | null;
   socketState: WeakMap<WebSocket, any>;
   attachUserSocket: (userId: string, socket: WebSocket) => void;
@@ -19,7 +20,7 @@ export async function initializeRealtimeConnection(params: {
   redisHSet: (key: string, value: Record<string, string>) => Promise<unknown>;
   redisExpire: (key: string, seconds: number) => Promise<unknown>;
   sendJson: (socket: WebSocket, payload: unknown) => void;
-  buildServerReadyEnvelope: (userId: string, userName: string) => unknown;
+  buildServerReadyEnvelope: (userId: string, userName: string, appBuildSha: string | null) => unknown;
   buildRoomsPresenceEnvelope: (...args: any[]) => unknown;
   getAllRoomsPresence: (forUserId: string | null, forServerId?: string | null) => unknown;
   broadcastAllRoomsPresence: () => void;
@@ -28,6 +29,7 @@ export async function initializeRealtimeConnection(params: {
     connection,
     userId,
     userName,
+    appBuildSha,
     currentServerId,
     socketState,
     attachUserSocket,
@@ -60,7 +62,7 @@ export async function initializeRealtimeConnection(params: {
   });
   await redisExpire(`presence:user:${userId}`, 120);
 
-  sendJson(connection, buildServerReadyEnvelope(userId, userName));
+  sendJson(connection, buildServerReadyEnvelope(userId, userName, appBuildSha));
   sendJson(connection, buildRoomsPresenceEnvelope(getAllRoomsPresence(userId, currentServerId)));
   broadcastAllRoomsPresence();
 }
@@ -81,6 +83,7 @@ export async function closeRealtimeConnection(params: {
   socketsByUserId: Map<string, Set<WebSocket>>;
   redisHSet: (key: string, value: Record<string, string>) => Promise<unknown>;
   redisExpire: (key: string, seconds: number) => Promise<unknown>;
+  updateUserLastSeenAt: (userId: string, isoTs: string) => Promise<unknown>;
 }) {
   const {
     connection,
@@ -97,7 +100,8 @@ export async function closeRealtimeConnection(params: {
     broadcastAllRoomsPresence,
     socketsByUserId,
     redisHSet,
-    redisExpire
+    redisExpire,
+    updateUserLastSeenAt
   } = params;
 
   const state = socketState.get(connection);
@@ -128,9 +132,13 @@ export async function closeRealtimeConnection(params: {
 
   const userSockets = socketsByUserId.get(state.userId);
   if (!userSockets || userSockets.size === 0) {
+    const lastSeenAtIso = new Date().toISOString();
+
+    await updateUserLastSeenAt(state.userId, lastSeenAtIso);
+
     await redisHSet(`presence:user:${state.userId}`, {
       online: "0",
-      updatedAt: new Date().toISOString()
+      updatedAt: lastSeenAtIso
     });
     await redisExpire(`presence:user:${state.userId}`, 120);
   }
