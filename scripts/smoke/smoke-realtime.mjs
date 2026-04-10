@@ -358,6 +358,30 @@ async function setupReconnectDriftFixture({ primaryToken, secondaryToken, primar
     throw new Error("[smoke:realtime] reconnect drift mention message id is missing");
   }
 
+  const { response: orderedMessagesResponse, payload: orderedMessagesPayload } = await fetchJson(
+    `/v1/topics/${encodeURIComponent(topicId)}/messages?limit=20`,
+    {
+      headers: authHeader(primaryToken)
+    }
+  );
+  ensureOk(orderedMessagesResponse, orderedMessagesPayload, "list reconnect drift topic messages");
+  const orderedMessages = Array.isArray(orderedMessagesPayload?.messages) ? orderedMessagesPayload.messages : [];
+  const orderedIds = orderedMessages.map((item) => String(item?.id || "").trim()).filter(Boolean);
+
+  const candidateIds = [mentionMessageId, foreignMessageId];
+  const candidateWithIndex = candidateIds.map((id) => ({
+    id,
+    idx: orderedIds.indexOf(id)
+  }));
+
+  if (candidateWithIndex.some((entry) => entry.idx < 0)) {
+    throw new Error(`[smoke:realtime] reconnect drift race candidates missing in ordered messages: ${JSON.stringify(candidateWithIndex)}`);
+  }
+
+  candidateWithIndex.sort((a, b) => a.idx - b.idx);
+  const raceNewestMessageId = candidateWithIndex[0]?.id || mentionMessageId;
+  const raceStaleMessageId = candidateWithIndex[1]?.id || foreignMessageId;
+
   const counters = await getTopicUnreadSnapshot(primaryToken, roomId, topicId);
   const mentionsCount = await getTopicUnreadMentionsCount(primaryToken, topicId);
 
@@ -366,6 +390,8 @@ async function setupReconnectDriftFixture({ primaryToken, secondaryToken, primar
     topicId,
     foreignMessageId,
     mentionMessageId,
+    raceNewestMessageId,
+    raceStaleMessageId,
     unreadCount: counters.unreadCount,
     mentionUnreadCount: counters.mentionUnreadCount,
     unreadMentionsItems: mentionsCount,
@@ -1279,13 +1305,13 @@ async function runRealtimeSmoke() {
         const newestRead = await postTopicRead(
           bearerToken,
           driftFixture.topicId,
-          driftFixture.mentionMessageId,
+          driftFixture.raceNewestMessageId,
           "mark reconnect drift newest read"
         );
         const staleRead = await postTopicRead(
           bearerToken,
           driftFixture.topicId,
-          driftFixture.foreignMessageId,
+          driftFixture.raceStaleMessageId,
           "mark reconnect drift stale read"
         );
 
