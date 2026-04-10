@@ -56,66 +56,6 @@ async function postRoomMessage(token, text) {
   }
 }
 
-async function bootstrapSessionCookie(page) {
-  const response = await page.request.post(`${baseUrl}/v1/auth/refresh`, {
-    headers: {
-      Authorization: `Bearer ${bearerToken}`
-    },
-    timeout: timeoutMs
-  });
-
-  if (!response.ok()) {
-    const body = await response.text().catch(() => "");
-    throw new Error(`auth refresh failed: status=${response.status()} body=${String(body || "n/a").slice(0, 240)}`);
-  }
-}
-
-async function installAuthHeaderRoute(page) {
-  await page.route("**/*", async (route) => {
-    const request = route.request();
-    const url = request.url();
-
-    if (url.includes("/v1/auth/sso/session")) {
-      const origin = new URL(url).origin;
-      const meResponse = await page.request.get(`${origin}/v1/auth/me`, {
-        headers: {
-          Authorization: `Bearer ${bearerToken}`
-        },
-        timeout: timeoutMs
-      });
-
-      if (!meResponse.ok()) {
-        await route.continue();
-        return;
-      }
-
-      const mePayload = await meResponse.json().catch(() => ({}));
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({
-          authenticated: true,
-          token: bearerToken,
-          user: mePayload?.user || null
-        })
-      });
-      return;
-    }
-
-    const isApiRequest = url.includes("/v1/") || /\/version(?:\?|$)/.test(url);
-    if (!isApiRequest) {
-      await route.continue();
-      return;
-    }
-
-    const headers = {
-      ...request.headers(),
-      authorization: `Bearer ${bearerToken}`
-    };
-    await route.continue({ headers });
-  });
-}
-
 function parseTelemetryEventFromRequest(request) {
   try {
     const body = request.postDataJSON?.();
@@ -240,19 +180,10 @@ async function main() {
   });
 
   try {
-    await installAuthHeaderRoute(page);
-
     await page.addInitScript((token) => {
       localStorage.setItem("boltorezka_lang", "en");
       localStorage.setItem("boltorezka_token", token);
     }, bearerToken);
-
-    try {
-      await bootstrapSessionCookie(page);
-    } catch (error) {
-      const message = error && typeof error === "object" && "message" in error ? error.message : error;
-      console.warn(`[smoke:web:gap-recovery:browser] refresh bootstrap skipped: ${String(message || "unknown")}`);
-    }
 
     await page.addInitScript(() => {
       const NativeWebSocket = window.WebSocket;
