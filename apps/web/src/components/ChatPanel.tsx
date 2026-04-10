@@ -112,6 +112,7 @@ type ChatPanelProps = {
   onArchiveTopic: (topicId: string) => Promise<void>;
   onUnarchiveTopic: (topicId: string) => Promise<void>;
   onDeleteTopic: (topicId: string) => Promise<void>;
+  onConsumeTopicMentionUnread: (topicId: string) => void;
   mentionCandidates: MentionCandidate[];
 };
 
@@ -159,6 +160,7 @@ export function ChatPanel({
   onArchiveTopic,
   onUnarchiveTopic,
   onDeleteTopic,
+  onConsumeTopicMentionUnread,
   mentionCandidates
 }: ChatPanelProps) {
   const [topicFilterMode] = useState<"all" | "active" | "unread" | "my" | "mentions" | "pinned" | "archived">("all");
@@ -170,7 +172,6 @@ export function ChatPanel({
   const [quotedMessage, setQuotedMessage] = useState<{ userName: string; text: string } | null>(null);
   const [hotkeyStatusText, setHotkeyStatusText] = useState("");
   const [topicMentionsActionLoading, setTopicMentionsActionLoading] = useState(false);
-  const [topicMentionsStatusText, setTopicMentionsStatusText] = useState("");
   const attachmentInputRef = useRef<HTMLInputElement | null>(null);
   const topicUnreadMentionQueueRef = useRef<TopicUnreadMentionNavItem[]>([]);
   const topicUnreadMentionCursorRef = useRef<{ beforeCreatedAt: string; beforeId: string } | null>(null);
@@ -587,7 +588,6 @@ export function ChatPanel({
     topicUnreadMentionQueueRef.current = [];
     topicUnreadMentionCursorRef.current = null;
     topicUnreadMentionHasMoreRef.current = Boolean(topicId);
-    setTopicMentionsStatusText("");
   }, [activeTopicId]);
 
   const loadTopicUnreadMentionsPage = useCallback(async () => {
@@ -632,7 +632,6 @@ export function ChatPanel({
     }
 
     setTopicMentionsActionLoading(true);
-    setTopicMentionsStatusText("");
     try {
       let nextItem = topicUnreadMentionQueueRef.current.shift();
       let guard = 0;
@@ -644,9 +643,11 @@ export function ChatPanel({
       }
 
       if (!nextItem) {
-        setTopicMentionsStatusText(t("chat.topicMentionsNoUnread"));
         return;
       }
+
+      await api.markNotificationInboxRead(authToken, nextItem.eventId);
+      onConsumeTopicMentionUnread(topicId);
 
       setSearchJumpStatusText(t("chat.topicMentionsJumping"));
       setSearchJumpTarget({
@@ -655,38 +656,12 @@ export function ChatPanel({
         topicId,
         includeHistoryLoad: true
       });
-
-      const remaining = topicUnreadMentionQueueRef.current.length;
-      if (remaining > 0) {
-        setTopicMentionsStatusText(t("chat.topicMentionsRemainingQueue").replace("{count}", String(remaining)));
-      }
     } catch {
-      setTopicMentionsStatusText(t("chat.topicMentionsLoadError"));
+      // Non-blocking: keep UI responsive even if mention-read acknowledgement fails.
     } finally {
       setTopicMentionsActionLoading(false);
     }
-  }, [activeTopicId, authToken, loadTopicUnreadMentionsPage, roomSlug, setSearchJumpStatusText, setSearchJumpTarget, t, topicMentionsActionLoading]);
-
-  const markTopicUnreadMentionsReadAll = useCallback(async () => {
-    const topicId = String(activeTopicId || "").trim();
-    if (!authToken || !topicId || topicMentionsActionLoading) {
-      return;
-    }
-
-    setTopicMentionsActionLoading(true);
-    setTopicMentionsStatusText("");
-    try {
-      await api.markTopicUnreadMentionsReadAll(authToken, topicId);
-      topicUnreadMentionQueueRef.current = [];
-      topicUnreadMentionCursorRef.current = null;
-      topicUnreadMentionHasMoreRef.current = true;
-      setTopicMentionsStatusText(t("chat.topicMentionsMarkedReadAll"));
-    } catch {
-      setTopicMentionsStatusText(t("chat.topicMentionsReadAllError"));
-    } finally {
-      setTopicMentionsActionLoading(false);
-    }
-  }, [activeTopicId, authToken, t, topicMentionsActionLoading]);
+  }, [activeTopicId, authToken, loadTopicUnreadMentionsPage, onConsumeTopicMentionUnread, roomSlug, setSearchJumpStatusText, setSearchJumpTarget, t, topicMentionsActionLoading]);
 
   return (
     <section
@@ -719,9 +694,7 @@ export function ChatPanel({
           onToggleSearchPanel={toggleSearchPanel}
           activeTopicMentionUnreadCount={activeTopicMentionUnreadCount}
           topicMentionsActionLoading={topicMentionsActionLoading}
-          topicMentionsStatusText={topicMentionsStatusText}
           onJumpToUnreadMention={() => void jumpToNextTopicUnreadMention()}
-          onMarkUnreadMentionsReadAll={() => void markTopicUnreadMentionsReadAll()}
         />
         {hasActiveRoom && searchPanelOpen ? (
           <SearchPanel

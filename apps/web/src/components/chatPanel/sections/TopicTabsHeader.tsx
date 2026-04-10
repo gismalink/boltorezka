@@ -27,9 +27,7 @@ type TopicTabsHeaderProps = {
   onToggleSearchPanel: () => void;
   activeTopicMentionUnreadCount: number;
   topicMentionsActionLoading: boolean;
-  topicMentionsStatusText: string;
   onJumpToUnreadMention: () => void;
-  onMarkUnreadMentionsReadAll: () => void;
 };
 
 export function TopicTabsHeader({
@@ -56,9 +54,7 @@ export function TopicTabsHeader({
   onToggleSearchPanel,
   activeTopicMentionUnreadCount,
   topicMentionsActionLoading,
-  topicMentionsStatusText,
-  onJumpToUnreadMention,
-  onMarkUnreadMentionsReadAll
+  onJumpToUnreadMention
 }: TopicTabsHeaderProps) {
   return (
     <div className="chat-title-row" data-agent-id={CHAT_AGENT_IDS.topicNavigation}>
@@ -178,38 +174,20 @@ export function TopicTabsHeader({
               <i className="bi bi-search" aria-hidden="true" />
             </Button>
             {activeTopicMentionUnreadCount > 0 ? (
-              <>
-                <Button
-                  type="button"
-                  className="secondary tiny chat-topic-tab chat-topic-mention-nav-btn"
-                  onClick={onJumpToUnreadMention}
-                  onContextMenu={(event) => event.preventDefault()}
-                  disabled={topicMentionsActionLoading}
-                  data-tooltip={t("chat.topicMentionsJumpTooltip")}
-                  aria-label={t("chat.topicMentionsJumpTooltip")}
-                >
-                  <span aria-hidden="true">@</span>
-                  <span>{activeTopicMentionUnreadCount}</span>
-                </Button>
-                <Button
-                  type="button"
-                  className="secondary tiny icon-btn chat-topic-tab"
-                  onClick={onMarkUnreadMentionsReadAll}
-                  onContextMenu={(event) => event.preventDefault()}
-                  disabled={topicMentionsActionLoading}
-                  data-tooltip={t("chat.topicMentionsMarkAllRead")}
-                  aria-label={t("chat.topicMentionsMarkAllRead")}
-                >
-                  <i className="bi bi-check2-all" aria-hidden="true" />
-                </Button>
-              </>
+              <Button
+                type="button"
+                className="secondary tiny chat-topic-tab chat-topic-mention-nav-btn"
+                onClick={onJumpToUnreadMention}
+                onContextMenu={(event) => event.preventDefault()}
+                disabled={topicMentionsActionLoading}
+                data-tooltip={t("chat.topicMentionsJumpTooltip")}
+                aria-label={t("chat.topicMentionsJumpTooltip")}
+              >
+                <span aria-hidden="true">@</span>
+                <span>{activeTopicMentionUnreadCount}</span>
+              </Button>
             ) : null}
           </div>
-          {topicMentionsStatusText ? (
-            <span className="chat-topic-mentions-status muted" role="status" aria-live="polite">
-              {topicMentionsStatusText}
-            </span>
-          ) : null}
         </div>
       ) : null}
     </div>

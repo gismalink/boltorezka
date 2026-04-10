@@ -85,6 +85,7 @@ type ChatPanelProps = {
   onArchiveTopic: (topicId: string) => Promise<void>;
   onUnarchiveTopic: (topicId: string) => Promise<void>;
   onDeleteTopic: (topicId: string) => Promise<void>;
+  onConsumeTopicMentionUnread: (topicId: string) => void;
   mentionCandidates: MentionCandidate[];
 };
 
@@ -122,6 +123,7 @@ type UseWorkspaceChatVideoPropsInput = {
   activeChatRoomTitle: string;
   chatTopics: RoomTopic[];
   activeChatTopicId: string | null;
+  setChatTopics: React.Dispatch<React.SetStateAction<RoomTopic[]>>;
   setActiveChatTopicId: React.Dispatch<React.SetStateAction<string | null>>;
   createTopic: (title: string) => Promise<void>;
   messages: Message[];
@@ -199,6 +201,7 @@ export function useWorkspaceChatVideoProps({
   activeChatRoomTitle,
   chatTopics,
   activeChatTopicId,
+  setChatTopics,
   setActiveChatTopicId,
   createTopic,
   messages,
@@ -407,6 +410,29 @@ export function useWorkspaceChatVideoProps({
     onArchiveTopic: archiveTopic,
     onUnarchiveTopic: unarchiveTopic,
     onDeleteTopic: deleteTopic,
+    onConsumeTopicMentionUnread: (topicId: string) => {
+      const normalizedTopicId = String(topicId || "").trim();
+      if (!normalizedTopicId) {
+        return;
+      }
+
+      setChatTopics((prev) => prev.map((topic) => {
+        if (String(topic.id || "").trim() !== normalizedTopicId) {
+          return topic;
+        }
+
+        const currentMentions = Math.max(0, Number(topic.mentionUnreadCount || 0));
+        const nextMentions = Math.max(0, currentMentions - 1);
+        if (nextMentions === currentMentions) {
+          return topic;
+        }
+
+        return {
+          ...topic,
+          mentionUnreadCount: nextMentions
+        };
+      }));
+    },
     mentionCandidates
   };
 

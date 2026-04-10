@@ -912,7 +912,7 @@ export function App() {
     t, locale, currentServerId, serviceToken,
     sendWsEventAwaitAck,
     chatRoomSlug, activeChatRoom,
-    chatTopics, activeChatTopicId, setActiveChatTopicId,
+    chatTopics, activeChatTopicId, setChatTopics, setActiveChatTopicId,
     createTopic,
     messages, serverMembers, user,
     messagesHasMore, loadingOlderMessages,
