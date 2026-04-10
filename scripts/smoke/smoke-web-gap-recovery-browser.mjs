@@ -83,7 +83,7 @@ async function acquireSessionCookieValue(token) {
 
 async function bootstrapBrowserSessionCookie(page, token) {
   if (preseedSessionCookieValue) {
-    return;
+    return { ok: true, reason: "preseed" };
   }
 
   const response = await page.request.post(`${baseUrl}/v1/auth/refresh`, {
@@ -95,8 +95,14 @@ async function bootstrapBrowserSessionCookie(page, token) {
 
   if (!response.ok()) {
     const body = await response.text().catch(() => "");
-    throw new Error(`[smoke:web:gap-recovery:browser] browser refresh failed: status=${response.status()} body=${String(body || "").slice(0, 220)}`);
+    return {
+      ok: false,
+      status: response.status(),
+      body: String(body || "").slice(0, 220)
+    };
   }
+
+  return { ok: true, reason: "refreshed" };
 }
 
 function normalizePath(url) {
@@ -362,8 +368,12 @@ async function main() {
     return;
   }
 
-  const sessionCookieValue = await acquireSessionCookieValue(bearerToken);
-  await ensureServerPresence(bearerToken, sessionCookieValue || "");
+  let viewerToken = bearerToken;
+  let senderToken = bearerTokenSecond;
+
+  const sessionCookieValuePrimary = await acquireSessionCookieValue(bearerToken);
+  const sessionCookieValueSecondary = await acquireSessionCookieValue(bearerTokenSecond);
+  await ensureServerPresence(bearerToken, sessionCookieValuePrimary || "");
 
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext();
@@ -445,17 +455,26 @@ async function main() {
   });
 
   try {
-    const tokenPayload = decodeJwtPayload(bearerToken);
+    const bootstrapPrimary = await bootstrapBrowserSessionCookie(page, bearerToken);
+    if (!bootstrapPrimary.ok) {
+      const bootstrapSecondary = await bootstrapBrowserSessionCookie(page, bearerTokenSecond);
+      if (!bootstrapSecondary.ok) {
+        throw new Error(`[smoke:web:gap-recovery:browser] browser refresh failed for both tokens: primary=${bootstrapPrimary.status}:${bootstrapPrimary.body} secondary=${bootstrapSecondary.status}:${bootstrapSecondary.body}`);
+      }
+      viewerToken = bearerTokenSecond;
+      senderToken = bearerToken;
+    }
+
+    const tokenPayload = decodeJwtPayload(viewerToken);
     const bootstrapUserId = String(tokenPayload?.sub || "").trim();
     const introSeenKey = bootstrapUserId ? `boltorezka_intro_v1_seen:${bootstrapUserId}` : "";
 
-    await bootstrapBrowserSessionCookie(page, bearerToken);
-
-    if (sessionCookieValue) {
+    const viewerSessionCookieValue = viewerToken === bearerToken ? sessionCookieValuePrimary : sessionCookieValueSecondary;
+    if (viewerSessionCookieValue) {
       const parsedBase = new URL(baseUrl);
       await context.addCookies([{
         name: sessionCookieName,
-        value: sessionCookieValue,
+        value: viewerSessionCookieValue,
         domain: parsedBase.hostname,
         path: "/",
         httpOnly: true,
@@ -483,7 +502,7 @@ async function main() {
       if (firstRunSeenKey) {
         localStorage.setItem(firstRunSeenKey, "1");
       }
-    }, bearerToken, introSeenKey);
+    }, viewerToken, introSeenKey);
 
     await page.addInitScript(() => {
       const NativeWebSocket = window.WebSocket;
@@ -640,7 +659,7 @@ async function main() {
     const targetRoomSlug = observedActiveRoomSlug || roomSlug;
 
     for (let index = 0; index < injectionMessages; index += 1) {
-      await postRoomMessage(bearerTokenSecond, targetRoomSlug, `gap-smoke-${Date.now()}-${index}`);
+      await postRoomMessage(senderToken, targetRoomSlug, `gap-smoke-${Date.now()}-${index}`);
       await page.waitForTimeout(settleMs);
     }
 
