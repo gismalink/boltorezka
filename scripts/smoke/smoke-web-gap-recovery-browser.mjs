@@ -10,9 +10,25 @@ const bootRetries = Number(process.env.SMOKE_WEB_BOOT_RETRIES || 3);
 const bootRetryDelayMs = Number(process.env.SMOKE_WEB_BOOT_RETRY_DELAY_MS || 1000);
 const bearerToken = String(process.env.SMOKE_TEST_BEARER_TOKEN || "").trim();
 const bearerTokenSecond = String(process.env.SMOKE_TEST_BEARER_TOKEN_SECOND || "").trim();
+const sessionCookieName = String(process.env.SMOKE_SESSION_COOKIE_NAME || "boltorezka_session_test").trim() || "boltorezka_session_test";
 const warmupMs = Number(process.env.SMOKE_WEB_GAP_WARMUP_MS || 4000);
 const settleMs = Number(process.env.SMOKE_WEB_GAP_SETTLE_MS || 500);
 const injectionMessages = Math.max(3, Number(process.env.SMOKE_WEB_GAP_INJECTION_MESSAGES || 4));
+
+function decodeJwtPayload(token) {
+  try {
+    const encodedPayload = String(token || "").split(".")[1] || "";
+    if (!encodedPayload) {
+      return null;
+    }
+    const normalized = encodedPayload.replace(/-/g, "+").replace(/_/g, "/");
+    const padding = normalized.length % 4 === 0 ? "" : "=".repeat(4 - (normalized.length % 4));
+    const decoded = Buffer.from(normalized + padding, "base64").toString("utf8");
+    return JSON.parse(decoded);
+  } catch {
+    return null;
+  }
+}
 
 function normalizePath(url) {
   try {
@@ -190,6 +206,21 @@ async function main() {
   });
 
   try {
+    const tokenPayload = decodeJwtPayload(bearerToken);
+    const sessionId = String(tokenPayload?.sid || "").trim();
+    if (sessionId) {
+      const parsedBase = new URL(baseUrl);
+      await context.addCookies([{
+        name: sessionCookieName,
+        value: sessionId,
+        domain: parsedBase.hostname,
+        path: "/",
+        httpOnly: true,
+        secure: parsedBase.protocol === "https:",
+        sameSite: "Lax"
+      }]);
+    }
+
     await page.addInitScript((token) => {
       localStorage.setItem("boltorezka_lang", "en");
       localStorage.setItem("boltorezka_token", token);
