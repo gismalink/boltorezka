@@ -337,6 +337,9 @@ async function setupReconnectDriftFixture({ primaryToken, secondaryToken, primar
     throw new Error("[smoke:realtime] reconnect drift foreign message id is missing");
   }
 
+  // Ensure deterministic ordering for read-race pointers by separating created_at values.
+  await sleep(30);
+
   const { response: mentionMessageResponse, payload: mentionMessagePayload } = await fetchJson(
     `/v1/topics/${encodeURIComponent(topicId)}/messages`,
     {
