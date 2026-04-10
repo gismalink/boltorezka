@@ -15,6 +15,44 @@ const warmupMs = Number(process.env.SMOKE_WEB_GAP_WARMUP_MS || 4000);
 const settleMs = Number(process.env.SMOKE_WEB_GAP_SETTLE_MS || 500);
 const injectionMessages = Math.max(3, Number(process.env.SMOKE_WEB_GAP_INJECTION_MESSAGES || 4));
 
+function decodeJwtPayload(token) {
+  try {
+    const encodedPayload = String(token || "").split(".")[1] || "";
+    if (!encodedPayload) {
+      return null;
+    }
+    const normalized = encodedPayload.replace(/-/g, "+").replace(/_/g, "/");
+    const padding = normalized.length % 4 === 0 ? "" : "=".repeat(4 - (normalized.length % 4));
+    const decoded = Buffer.from(normalized + padding, "base64").toString("utf8");
+    return JSON.parse(decoded);
+  } catch {
+    return null;
+  }
+}
+
+function buildFallbackUserFromToken(token) {
+  const payload = decodeJwtPayload(token);
+  const userId = String(payload?.sub || "").trim();
+  if (!userId) {
+    return null;
+  }
+
+  const roleRaw = String(payload?.role || "user").trim();
+  const role = roleRaw === "admin" || roleRaw === "super_admin" ? roleRaw : "user";
+  return {
+    id: userId,
+    email: `smoke-${userId.slice(0, 8)}@example.test`,
+    username: null,
+    name: "Smoke User",
+    ui_theme: "material-classic",
+    role,
+    is_banned: false,
+    access_state: "active",
+    is_bot: false,
+    created_at: new Date().toISOString()
+  };
+}
+
 async function acquireSessionCookieValue(token) {
   try {
     const response = await fetch(`${baseUrl}/v1/auth/refresh`, {
@@ -302,7 +340,8 @@ async function main() {
 
   try {
     const sessionCookieValue = await acquireSessionCookieValue(bearerToken);
-    const bootstrapUser = await acquireBootstrapUser(bearerToken, sessionCookieValue || "");
+    const bootstrapUser = await acquireBootstrapUser(bearerToken, sessionCookieValue || "")
+      || buildFallbackUserFromToken(bearerToken);
     await installAuthHeaderRoute(page, sessionCookieValue || "", bootstrapUser);
 
     if (sessionCookieValue) {
