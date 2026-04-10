@@ -15,16 +15,28 @@ const warmupMs = Number(process.env.SMOKE_WEB_GAP_WARMUP_MS || 4000);
 const settleMs = Number(process.env.SMOKE_WEB_GAP_SETTLE_MS || 500);
 const injectionMessages = Math.max(3, Number(process.env.SMOKE_WEB_GAP_INJECTION_MESSAGES || 4));
 
-function decodeJwtPayload(token) {
+async function acquireSessionCookieValue(token) {
   try {
-    const encodedPayload = String(token || "").split(".")[1] || "";
-    if (!encodedPayload) {
+    const response = await fetch(`${baseUrl}/v1/auth/refresh`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+    if (!response.ok) {
       return null;
     }
-    const normalized = encodedPayload.replace(/-/g, "+").replace(/_/g, "/");
-    const padding = normalized.length % 4 === 0 ? "" : "=".repeat(4 - (normalized.length % 4));
-    const decoded = Buffer.from(normalized + padding, "base64").toString("utf8");
-    return JSON.parse(decoded);
+
+    const setCookieHeader = response.headers.get("set-cookie");
+    if (!setCookieHeader) {
+      return null;
+    }
+
+    const cookieMatch = setCookieHeader.match(new RegExp(`(?:^|[;,]\\s*)${sessionCookieName}=([^;,]+)`));
+    if (!cookieMatch || !cookieMatch[1]) {
+      return null;
+    }
+    return decodeURIComponent(cookieMatch[1].trim());
   } catch {
     return null;
   }
@@ -206,13 +218,12 @@ async function main() {
   });
 
   try {
-    const tokenPayload = decodeJwtPayload(bearerToken);
-    const sessionId = String(tokenPayload?.sid || "").trim();
-    if (sessionId) {
+    const sessionCookieValue = await acquireSessionCookieValue(bearerToken);
+    if (sessionCookieValue) {
       const parsedBase = new URL(baseUrl);
       await context.addCookies([{
         name: sessionCookieName,
-        value: sessionId,
+        value: sessionCookieValue,
         domain: parsedBase.hostname,
         path: "/",
         httpOnly: true,
