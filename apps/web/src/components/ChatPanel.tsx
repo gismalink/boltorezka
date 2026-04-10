@@ -383,10 +383,6 @@ export function ChatPanel({
   });
 
   const activeTopic = useMemo(() => topicsForUi.find((topic) => topic.id === activeTopicId) ?? null, [topicsForUi, activeTopicId]);
-  const activeTopicUnreadCount = useMemo(
-    () => (activeTopic ? Math.max(0, getTopicUnreadCount(activeTopic)) : 0),
-    [activeTopic, getTopicUnreadCount]
-  );
   const activeTopicMentionUnreadCount = Math.max(0, Number(activeTopic?.mentionUnreadCount || 0));
   const activeTopicIsArchived = Boolean(activeTopic?.archivedAt);
   const unreadDividerVisible = useMemo(() => {
@@ -642,10 +638,6 @@ export function ChatPanel({
       return;
     }
 
-    if (loadedUnreadAfterDivider >= activeTopicUnreadCount || activeTopicUnreadCount <= 0) {
-      return;
-    }
-
     const chatLogNode = chatLogRef.current;
     if (!chatLogNode) {
       return;
@@ -680,7 +672,7 @@ export function ChatPanel({
     }).finally(() => {
       unreadWindowExpandInFlightRef.current = false;
     });
-  }, [activeTopicId, activeTopicUnreadCount, chatLogRef, hasActiveRoom, loadedUnreadAfterDivider, loadingOlderMessages, onLoadMessagesAroundAnchor, unreadDividerMessageId, unreadDividerVisible]);
+  }, [activeTopicId, chatLogRef, hasActiveRoom, loadedUnreadAfterDivider, loadingOlderMessages, onLoadMessagesAroundAnchor, unreadDividerMessageId, unreadDividerVisible]);
 
   useEffect(() => {
     const chatLogNode = chatLogRef.current;
@@ -702,7 +694,7 @@ export function ChatPanel({
 
   useEffect(() => {
     maybeExpandUnreadWindowAtBottom();
-  }, [loadedUnreadAfterDivider, activeTopicUnreadCount, maybeExpandUnreadWindowAtBottom]);
+  }, [loadedUnreadAfterDivider, maybeExpandUnreadWindowAtBottom]);
 
   const loadTopicUnreadMentionsPage = useCallback(async () => {
     const topicId = String(activeTopicId || "").trim();
