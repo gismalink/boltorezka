@@ -76,6 +76,23 @@ async function waitForGapRecoverySignal({ telemetryEvents, getRecoveryRequestCou
   const started = Date.now();
   let detectedAt = 0;
   let recoveredAt = 0;
+  let lastMutationState = null;
+
+  const safeReadGapMutationState = async () => {
+    try {
+      const state = await readGapMutationState();
+      if (state && typeof state === "object") {
+        lastMutationState = state;
+      }
+      return state;
+    } catch (error) {
+      const message = String(error?.message || error || "");
+      if (message.includes("Execution context was destroyed") || message.includes("Cannot find context with specified id")) {
+        return lastMutationState;
+      }
+      throw error;
+    }
+  };
 
   while (Date.now() - started <= timeoutMs) {
     for (const item of telemetryEvents) {
@@ -87,7 +104,7 @@ async function waitForGapRecoverySignal({ telemetryEvents, getRecoveryRequestCou
       }
     }
 
-    const mutationState = await readGapMutationState();
+    const mutationState = await safeReadGapMutationState();
     const mutationApplied = Boolean(mutationState?.mutated);
     const recoveryRequests = getRecoveryRequestCount();
 
@@ -99,7 +116,7 @@ async function waitForGapRecoverySignal({ telemetryEvents, getRecoveryRequestCou
   }
 
   const seen = telemetryEvents.map((item) => item.event);
-  const mutationState = await readGapMutationState();
+  const mutationState = await safeReadGapMutationState();
   throw new Error(
     `[smoke:web:gap-recovery:browser] timeout waiting gap recovery signal, seenTelemetry=${JSON.stringify(seen.slice(-12))} mutation=${JSON.stringify(mutationState || {})} recoveryRequests=${getRecoveryRequestCount()}`
   );
