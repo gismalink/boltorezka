@@ -1571,6 +1571,13 @@ pre {
   min-height: 26px;
 }
 
+.chat-log-shell {
+  position: relative;
+  min-height: 0;
+  flex: 1 1 auto;
+  display: flex;
+}
+
 .chat-floating-actions {
   position: absolute;
   right: 22px;

@@ -117,6 +117,7 @@ type ChatPanelProps = {
   onUnarchiveTopic: (topicId: string) => Promise<void>;
   onDeleteTopic: (topicId: string) => Promise<void>;
   onConsumeTopicMentionUnread: (topicId: string) => void;
+  onApplyTopicReadLocal: (topicId: string) => void;
   canManageTopicModeration: boolean;
   mentionCandidates: MentionCandidate[];
 };
@@ -166,6 +167,7 @@ export function ChatPanel({
   onUnarchiveTopic,
   onDeleteTopic,
   onConsumeTopicMentionUnread,
+  onApplyTopicReadLocal,
   canManageTopicModeration,
   mentionCandidates
 }: ChatPanelProps) {
@@ -320,6 +322,7 @@ export function ChatPanel({
     activeTopicId,
     roomId,
     topics: topicsForUi,
+    onApplyTopicReadLocal,
     messages,
     messagesHasMore,
     chatLogRef
@@ -878,68 +881,70 @@ export function ChatPanel({
           </span>
         ) : null}
       </div>
-      <ChatMessageTimeline
-        t={t}
-        locale={locale}
-        hasActiveRoom={hasActiveRoom}
-        hasTopics={hasTopics}
-        activeTopicId={activeTopicId}
-        chatStartCreatedAt={activeTopic?.createdAt ?? null}
-        messagesHasMore={messagesHasMore}
-        loadingOlderMessages={loadingOlderMessages}
-        onLoadOlderMessages={onLoadOlderMessages}
-        chatLogRef={chatLogRef}
-        messageViewModels={messageViewModels}
-        pinnedByMessageId={pinnedByMessageId}
-        reactionsByMessageId={reactionsByMessageId}
-        messageContextMenu={messageContextMenu}
-        setMessageContextMenu={setMessageContextMenu}
-        onReplyMessage={onReplyMessage}
-        onEditMessage={onEditMessage}
-        onDeleteMessage={onDeleteMessage}
-        onReportMessage={onReportMessage}
-        onTogglePinMessage={onTogglePinMessage}
-        onToggleMessageReaction={onToggleMessageReaction}
-        insertMentionToComposer={insertMentionToComposer}
-        mentionCandidates={resolvedMentionCandidates}
-        insertQuoteToComposer={handleInsertQuoteToComposer}
-        markTopicUnreadFromMessage={markTopicUnreadFromMessage}
-        markReadSaving={markReadSaving}
-        formatMessageTime={formatMessageTime}
-        resolveAttachmentImageUrl={resolveAttachmentImageUrl}
-        formatAttachmentSize={formatAttachmentSize}
-        setPreviewImageUrl={setPreviewImageUrl}
-        unreadDividerMessageId={unreadDividerMessageId || null}
-        unreadDividerVisible={unreadDividerVisible}
-      />
-      {hasActiveRoom ? (
-        <div className="chat-floating-actions" aria-live="polite">
-          {activeTopicMentionUnreadCount > 0 ? (
+      <div className="chat-log-shell">
+        <ChatMessageTimeline
+          t={t}
+          locale={locale}
+          hasActiveRoom={hasActiveRoom}
+          hasTopics={hasTopics}
+          activeTopicId={activeTopicId}
+          chatStartCreatedAt={activeTopic?.createdAt ?? null}
+          messagesHasMore={messagesHasMore}
+          loadingOlderMessages={loadingOlderMessages}
+          onLoadOlderMessages={onLoadOlderMessages}
+          chatLogRef={chatLogRef}
+          messageViewModels={messageViewModels}
+          pinnedByMessageId={pinnedByMessageId}
+          reactionsByMessageId={reactionsByMessageId}
+          messageContextMenu={messageContextMenu}
+          setMessageContextMenu={setMessageContextMenu}
+          onReplyMessage={onReplyMessage}
+          onEditMessage={onEditMessage}
+          onDeleteMessage={onDeleteMessage}
+          onReportMessage={onReportMessage}
+          onTogglePinMessage={onTogglePinMessage}
+          onToggleMessageReaction={onToggleMessageReaction}
+          insertMentionToComposer={insertMentionToComposer}
+          mentionCandidates={resolvedMentionCandidates}
+          insertQuoteToComposer={handleInsertQuoteToComposer}
+          markTopicUnreadFromMessage={markTopicUnreadFromMessage}
+          markReadSaving={markReadSaving}
+          formatMessageTime={formatMessageTime}
+          resolveAttachmentImageUrl={resolveAttachmentImageUrl}
+          formatAttachmentSize={formatAttachmentSize}
+          setPreviewImageUrl={setPreviewImageUrl}
+          unreadDividerMessageId={unreadDividerMessageId || null}
+          unreadDividerVisible={unreadDividerVisible}
+        />
+        {hasActiveRoom ? (
+          <div className="chat-floating-actions" aria-live="polite">
+            {activeTopicMentionUnreadCount > 0 ? (
+              <Button
+                type="button"
+                className="secondary tiny chat-floating-action-btn chat-floating-mention-btn"
+                onClick={() => void jumpToNextTopicUnreadMention()}
+                onContextMenu={(event) => event.preventDefault()}
+                disabled={topicMentionsActionLoading}
+                data-tooltip={t("chat.topicMentionsJumpTooltip")}
+                aria-label={t("chat.topicMentionsJumpTooltip")}
+              >
+                <span aria-hidden="true">@</span>
+                <span>{activeTopicMentionUnreadCount}</span>
+              </Button>
+            ) : null}
             <Button
               type="button"
-              className="secondary tiny chat-floating-action-btn chat-floating-mention-btn"
-              onClick={() => void jumpToNextTopicUnreadMention()}
+              className="secondary tiny icon-btn chat-floating-action-btn"
+              onClick={scrollTimelineToBottom}
               onContextMenu={(event) => event.preventDefault()}
-              disabled={topicMentionsActionLoading}
-              data-tooltip={t("chat.topicMentionsJumpTooltip")}
-              aria-label={t("chat.topicMentionsJumpTooltip")}
+              data-tooltip={t("rooms.down")}
+              aria-label={t("rooms.down")}
             >
-              <span aria-hidden="true">@</span>
-              <span>{activeTopicMentionUnreadCount}</span>
+              <i className="bi bi-arrow-down" aria-hidden="true" />
             </Button>
-          ) : null}
-          <Button
-            type="button"
-            className="secondary tiny icon-btn chat-floating-action-btn"
-            onClick={scrollTimelineToBottom}
-            onContextMenu={(event) => event.preventDefault()}
-            data-tooltip={t("rooms.down")}
-            aria-label={t("rooms.down")}
-          >
-            <i className="bi bi-arrow-down" aria-hidden="true" />
-          </Button>
-        </div>
-      ) : null}
+          </div>
+        ) : null}
+      </div>
       <ChatComposerSection
         t={t}
         hasActiveRoom={hasActiveRoom}

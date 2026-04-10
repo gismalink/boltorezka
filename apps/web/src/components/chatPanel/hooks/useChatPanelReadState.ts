@@ -20,6 +20,7 @@ type UseChatPanelReadStateArgs = {
   activeTopicId: string | null;
   roomId: string;
   topics: RoomTopic[];
+  onApplyTopicReadLocal: (topicId: string) => void;
   messages: Message[];
   messagesHasMore: boolean;
   chatLogRef: RefObject<HTMLDivElement>;
@@ -33,6 +34,7 @@ export function useChatPanelReadState({
   activeTopicId,
   roomId,
   topics,
+  onApplyTopicReadLocal,
   messages,
   messagesHasMore,
   chatLogRef
@@ -159,13 +161,14 @@ export function useChatPanelReadState({
       if (result.kind === "failed") {
         throw new Error("mark_topic_read_failed");
       }
+      onApplyTopicReadLocal(topicId);
       setMarkReadStatusText(t("chat.markReadSuccess"));
     } catch {
       setMarkReadStatusText(t("chat.markReadError"));
     } finally {
       setMarkReadSaving(false);
     }
-  }, [authToken, markReadSaving, t, topics, markTopicReadWsFirst]);
+  }, [authToken, markReadSaving, onApplyTopicReadLocal, t, topics, markTopicReadWsFirst]);
 
   const markRoomRead = useCallback(async () => {
     if (!authToken || markReadSaving || topics.length === 0) {
@@ -184,13 +187,14 @@ export function useChatPanelReadState({
       if (results.some((result) => result.kind === "failed")) {
         throw new Error("mark_room_read_failed");
       }
+      unreadTopics.forEach((topic) => onApplyTopicReadLocal(topic.id));
       setMarkReadStatusText(t("chat.markRoomReadSuccess"));
     } catch {
       setMarkReadStatusText(t("chat.markReadError"));
     } finally {
       setMarkReadSaving(false);
     }
-  }, [authToken, getTopicUnreadCount, markReadSaving, t, topics]);
+  }, [authToken, getTopicUnreadCount, markReadSaving, onApplyTopicReadLocal, t, topics]);
 
   const markTopicUnreadFromMessage = useCallback(async (messageId: string) => {
     const topicId = String(activeTopicId || "").trim();
