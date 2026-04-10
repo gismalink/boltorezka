@@ -332,6 +332,10 @@ async function setupReconnectDriftFixture({ primaryToken, secondaryToken, primar
     }
   );
   ensureOk(foreignMessageResponse, foreignMessagePayload, "create foreign drift message");
+  const foreignMessageId = String(foreignMessagePayload?.message?.id || "").trim();
+  if (!foreignMessageId) {
+    throw new Error("[smoke:realtime] reconnect drift foreign message id is missing");
+  }
 
   const { response: mentionMessageResponse, payload: mentionMessagePayload } = await fetchJson(
     `/v1/topics/${encodeURIComponent(topicId)}/messages`,
@@ -360,6 +364,7 @@ async function setupReconnectDriftFixture({ primaryToken, secondaryToken, primar
   return {
     roomId,
     topicId,
+    foreignMessageId,
     mentionMessageId,
     unreadCount: counters.unreadCount,
     mentionUnreadCount: counters.mentionUnreadCount,
@@ -381,6 +386,24 @@ async function resolveTicketFromBearerToken(token, label) {
   }
 
   return payload.ticket;
+}
+
+async function postTopicRead(token, topicId, lastReadMessageId, label) {
+  const { response, payload } = await fetchJson(`/v1/topics/${encodeURIComponent(topicId)}/read`, {
+    method: "POST",
+    headers: {
+      ...authHeader(token),
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ lastReadMessageId })
+  });
+  ensureOk(response, payload, label);
+
+  return {
+    lastReadMessageId: String(payload?.lastReadMessageId || payload?.last_read_message_id || "").trim(),
+    unreadDelta: Math.max(0, Number(payload?.unreadDelta ?? payload?.unread_delta ?? 0)),
+    mentionDelta: Math.max(0, Number(payload?.mentionDelta ?? payload?.mention_delta ?? 0))
+  };
 }
 
 async function resolveTicket() {
@@ -1038,6 +1061,9 @@ async function runRealtimeSmoke() {
   let reconnectDriftSnapshotBefore = null;
   let reconnectDriftSnapshotAfter = null;
   let reconnectDriftSkipReason = null;
+  let reconnectReadRaceChecked = false;
+  let reconnectReadRaceOk = null;
+  let reconnectReadRaceResult = null;
   let driftFixture = null;
   if (smokeCallSignal) {
     if (!secondTicket) {
@@ -1253,6 +1279,38 @@ async function runRealtimeSmoke() {
           mentionUnreadCount: driftFixture.mentionUnreadCount,
           unreadMentionsItems: driftFixture.unreadMentionsItems
         };
+
+        // Simulate out-of-order read commands around reconnect window.
+        const newestRead = await postTopicRead(
+          bearerToken,
+          driftFixture.topicId,
+          driftFixture.mentionMessageId,
+          "mark reconnect drift newest read"
+        );
+        const staleRead = await postTopicRead(
+          bearerToken,
+          driftFixture.topicId,
+          driftFixture.foreignMessageId,
+          "mark reconnect drift stale read"
+        );
+
+        reconnectReadRaceChecked = true;
+        reconnectReadRaceOk = Boolean(
+          newestRead.lastReadMessageId
+          && staleRead.lastReadMessageId === newestRead.lastReadMessageId
+          && staleRead.unreadDelta === 0
+          && staleRead.mentionDelta === 0
+        );
+        reconnectReadRaceResult = {
+          newestRead,
+          staleRead
+        };
+
+        if (!reconnectReadRaceOk) {
+          throw new Error(
+            `[smoke:realtime] stale read race regressed pointer: ${JSON.stringify(reconnectReadRaceResult)}`
+          );
+        }
       }
     } catch (error) {
       reconnectDriftSkipped = true;
@@ -1394,6 +1452,9 @@ async function runRealtimeSmoke() {
         reconnectDriftSkipReason,
         reconnectDriftSnapshotBefore,
         reconnectDriftSnapshotAfter,
+        reconnectReadRaceChecked,
+        reconnectReadRaceOk,
+        reconnectReadRaceResult,
         liveRoomOk,
         liveRoomStats,
         callSignalRelayed,

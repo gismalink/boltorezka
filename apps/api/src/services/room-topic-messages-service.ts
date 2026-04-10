@@ -2,6 +2,7 @@
 import { db } from "../db.js";
 import { redis } from "../redis.js";
 import { resolveActiveServerMute } from "./server-mute-service.js";
+import { isReadPointerAdvance } from "./read-pointer.js";
 import type { RoomMessageRow, RoomRow, RoomTopicRow } from "../db.types.ts";
 
 type TopicWithRoomRow = {
@@ -1081,8 +1082,73 @@ export async function markTopicRead(input: {
   unreadDelta: number;
   mentionDelta: number;
 }> {
+  type ReadPointerPosition = {
+    messageId: string;
+    createdAtIso: string;
+  };
+
   const topic = await loadTopicWithRoom(input.topicId);
   await ensureTopicReadAccess(topic, input.userId);
+
+  const currentReadResult = await db.query<{
+    last_read_message_id: string | null;
+    last_read_at: string | null;
+    last_read_message_created_at: string | null;
+  }>(
+    `SELECT
+       rr.last_read_message_id,
+       rr.last_read_at,
+       m.created_at AS last_read_message_created_at
+     FROM room_reads rr
+     LEFT JOIN messages m ON m.id = rr.last_read_message_id
+     WHERE rr.user_id = $1
+       AND rr.topic_id = $2
+     LIMIT 1`,
+    [input.userId, input.topicId]
+  );
+
+  const currentReadRow = currentReadResult.rows[0] || null;
+  const currentPointer: ReadPointerPosition | null = currentReadRow
+    && currentReadRow.last_read_message_id
+    && currentReadRow.last_read_message_created_at
+    ? {
+        messageId: String(currentReadRow.last_read_message_id || "").trim(),
+        createdAtIso: String(currentReadRow.last_read_message_created_at || "").trim()
+      }
+    : null;
+
+  let requestedPointer: ReadPointerPosition | null = null;
+
+  if (input.lastReadMessageId) {
+    const messageCheck = await db.query<{ id: string; created_at: string }>(
+      `SELECT id, created_at
+       FROM messages
+       WHERE id = $1
+         AND topic_id = $2
+       LIMIT 1`,
+      [input.lastReadMessageId, input.topicId]
+    );
+
+    if ((messageCheck.rowCount || 0) === 0) {
+      throw new Error("message_not_found");
+    }
+
+    requestedPointer = {
+      messageId: String(messageCheck.rows[0]?.id || "").trim(),
+      createdAtIso: String(messageCheck.rows[0]?.created_at || "").trim()
+    };
+
+    if (currentPointer && requestedPointer && !isReadPointerAdvance(currentPointer, requestedPointer)) {
+      return {
+        roomId: topic.room_id,
+        topicId: input.topicId,
+        lastReadMessageId: currentReadRow?.last_read_message_id || null,
+        lastReadAt: String(currentReadRow?.last_read_at || new Date().toISOString()),
+        unreadDelta: 0,
+        mentionDelta: 0
+      };
+    }
+  }
 
   const unreadSnapshot = await db.query<{ unread_count: string; mention_unread_count: string }>(
     `SELECT
@@ -1117,19 +1183,17 @@ export async function markTopicRead(input: {
   const unreadDelta = Math.max(0, Number(unreadSnapshot.rows[0]?.unread_count || 0));
   const mentionDelta = Math.max(0, Number(unreadSnapshot.rows[0]?.mention_unread_count || 0));
 
-  if (input.lastReadMessageId) {
-    const messageCheck = await db.query(
-      `SELECT 1
+  let persistedLastReadMessageId = input.lastReadMessageId || null;
+  if (!persistedLastReadMessageId) {
+    const latestMessage = await db.query<{ id: string }>(
+      `SELECT id
        FROM messages
-       WHERE id = $1
-         AND topic_id = $2
+       WHERE topic_id = $1
+       ORDER BY created_at DESC, id DESC
        LIMIT 1`,
-      [input.lastReadMessageId, input.topicId]
+      [input.topicId]
     );
-
-    if ((messageCheck.rowCount || 0) === 0) {
-      throw new Error("message_not_found");
-    }
+    persistedLastReadMessageId = String(latestMessage.rows[0]?.id || "").trim() || null;
   }
 
   const upserted = await db.query<{ last_read_message_id: string | null; last_read_at: string }>(
@@ -1141,7 +1205,7 @@ export async function markTopicRead(input: {
        last_read_message_id = EXCLUDED.last_read_message_id,
        last_read_at = NOW()
      RETURNING last_read_message_id, last_read_at`,
-    [input.userId, topic.room_id, input.topicId, input.lastReadMessageId || null]
+    [input.userId, topic.room_id, input.topicId, persistedLastReadMessageId]
   );
 
   return {
@@ -1153,3 +1217,4 @@ export async function markTopicRead(input: {
     mentionDelta
   };
 }
+
