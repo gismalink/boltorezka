@@ -90,6 +90,10 @@ export const config: AppConfig = {
   authSessionCookieMaxAgeSec: Number.isFinite(authSessionCookieMaxAgeSecRaw) && authSessionCookieMaxAgeSecRaw > 0
     ? authSessionCookieMaxAgeSecRaw
     : 60 * 60 * 24 * 30,
+  smokeAuthBootstrapEnabled: parseBoolean(
+    process.env.SMOKE_AUTH_BOOTSTRAP_ENABLED,
+    String(process.env.AUTH_SESSION_COOKIE_NAME || "boltorezka_session").includes("_test")
+  ),
   allowedReturnHosts: parseCsv(process.env.ALLOWED_RETURN_HOSTS),
   superAdminEmail: String(process.env.SUPER_ADMIN_EMAIL || "gismalink@gmail.com")
     .trim()

@@ -10,6 +10,7 @@ const bootRetries = Number(process.env.SMOKE_WEB_BOOT_RETRIES || 3);
 const bootRetryDelayMs = Number(process.env.SMOKE_WEB_BOOT_RETRY_DELAY_MS || 1000);
 const bearerToken = String(process.env.SMOKE_TEST_BEARER_TOKEN || "").trim();
 const bearerTokenSecond = String(process.env.SMOKE_TEST_BEARER_TOKEN_SECOND || "").trim();
+const smokeUserEmail = String(process.env.SMOKE_USER_EMAIL || "smoke-rtc-1@example.test").trim().toLowerCase();
 const sessionCookieName = String(process.env.SMOKE_SESSION_COOKIE_NAME || "boltorezka_session_test").trim() || "boltorezka_session_test";
 const preseedSessionCookieValue = String(process.env.SMOKE_WEB_SESSION_COOKIE_VALUE || "").trim();
 const warmupMs = Number(process.env.SMOKE_WEB_GAP_WARMUP_MS || 4000);
@@ -29,29 +30,6 @@ function decodeJwtPayload(token) {
   } catch {
     return null;
   }
-}
-
-function buildFallbackUserFromToken(token) {
-  const payload = decodeJwtPayload(token);
-  const userId = String(payload?.sub || "").trim();
-  if (!userId) {
-    return null;
-  }
-
-  const roleRaw = String(payload?.role || "user").trim();
-  const role = roleRaw === "admin" || roleRaw === "super_admin" ? roleRaw : "user";
-  return {
-    id: userId,
-    email: `smoke-${userId.slice(0, 8)}@example.test`,
-    username: null,
-    name: "Smoke User",
-    ui_theme: "material-classic",
-    role,
-    is_banned: false,
-    access_state: "active",
-    is_bot: false,
-    created_at: new Date().toISOString()
-  };
 }
 
 async function acquireSessionCookieValue(token) {
@@ -76,6 +54,39 @@ async function acquireSessionCookieValue(token) {
       return null;
     }
     return decodeURIComponent(cookieMatch[1].trim());
+  } catch {
+    return null;
+  }
+}
+
+async function acquireSmokeBootstrapSession(email) {
+  try {
+    const response = await fetch(`${baseUrl}/v1/auth/smoke/bootstrap`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ email })
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const payload = await response.json().catch(() => null);
+    const token = String(payload?.token || "").trim();
+    if (!token) {
+      return null;
+    }
+
+    const setCookieHeader = response.headers.get("set-cookie") || "";
+    const cookieMatch = String(setCookieHeader || "").match(new RegExp(`(?:^|[;,]\\s*)${sessionCookieName}=([^;,]+)`));
+    const cookieValue = cookieMatch?.[1] ? decodeURIComponent(String(cookieMatch[1]).trim()) : "";
+
+    return {
+      token,
+      cookieValue: cookieValue || null
+    };
   } catch {
     return null;
   }
@@ -386,9 +397,18 @@ async function main() {
   let viewerToken = bearerToken;
   let senderToken = bearerTokenSecond;
 
+  const smokeBootstrapSession = await acquireSmokeBootstrapSession(smokeUserEmail);
+  if (smokeBootstrapSession?.token) {
+    viewerToken = smokeBootstrapSession.token;
+  }
+
   const sessionCookieValuePrimary = await acquireSessionCookieValue(bearerToken);
   const sessionCookieValueSecondary = await acquireSessionCookieValue(bearerTokenSecond);
-  await ensureServerPresence(bearerToken, sessionCookieValuePrimary || "");
+  const sessionCookieValueBootstrap = String(smokeBootstrapSession?.cookieValue || "").trim();
+  const sessionCookieValueViewer = sessionCookieValueBootstrap
+    || (viewerToken === bearerToken ? sessionCookieValuePrimary : viewerToken === bearerTokenSecond ? sessionCookieValueSecondary : "");
+
+  await ensureServerPresence(viewerToken, sessionCookieValueViewer || "");
 
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext();
@@ -470,21 +490,24 @@ async function main() {
   });
 
   try {
-    const bootstrapPrimary = await bootstrapBrowserSessionCookie(page, context, bearerToken);
-    if (!bootstrapPrimary.ok) {
-      const bootstrapSecondary = await bootstrapBrowserSessionCookie(page, context, bearerTokenSecond);
-      if (!bootstrapSecondary.ok) {
-        throw new Error(`[smoke:web:gap-recovery:browser] browser refresh failed for both tokens: primary=${bootstrapPrimary.status}:${bootstrapPrimary.body} secondary=${bootstrapSecondary.status}:${bootstrapSecondary.body}`);
+    if (!smokeBootstrapSession?.token) {
+      const bootstrapPrimary = await bootstrapBrowserSessionCookie(page, context, bearerToken);
+      if (!bootstrapPrimary.ok) {
+        const bootstrapSecondary = await bootstrapBrowserSessionCookie(page, context, bearerTokenSecond);
+        if (!bootstrapSecondary.ok) {
+          throw new Error(`[smoke:web:gap-recovery:browser] browser refresh failed for both tokens: primary=${bootstrapPrimary.status}:${bootstrapPrimary.body} secondary=${bootstrapSecondary.status}:${bootstrapSecondary.body}`);
+        }
+        viewerToken = bearerTokenSecond;
+        senderToken = bearerToken;
       }
-      viewerToken = bearerTokenSecond;
-      senderToken = bearerToken;
     }
 
     const tokenPayload = decodeJwtPayload(viewerToken);
     const bootstrapUserId = String(tokenPayload?.sub || "").trim();
     const introSeenKey = bootstrapUserId ? `boltorezka_intro_v1_seen:${bootstrapUserId}` : "";
 
-    const viewerSessionCookieValue = viewerToken === bearerToken ? sessionCookieValuePrimary : sessionCookieValueSecondary;
+    const viewerSessionCookieValue = sessionCookieValueBootstrap
+      || (viewerToken === bearerToken ? sessionCookieValuePrimary : viewerToken === bearerTokenSecond ? sessionCookieValueSecondary : "");
     if (viewerSessionCookieValue) {
       const parsedBase = new URL(baseUrl);
       await context.addCookies([{
