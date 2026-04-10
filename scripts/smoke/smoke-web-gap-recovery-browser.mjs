@@ -242,6 +242,7 @@ async function main() {
 
   const telemetryEvents = [];
   const roomMessagesRequests = [];
+  const authRequests = [];
   let mainFrameNavigations = 0;
   const roomMessagesPath = `/v1/rooms/${encodeURIComponent(roomSlug)}/messages`;
 
@@ -260,6 +261,14 @@ async function main() {
         ts: Date.now(),
         method: request.method(),
         url: request.url()
+      });
+    }
+
+    if (path.startsWith("/v1/auth/")) {
+      authRequests.push({
+        ts: Date.now(),
+        method: request.method(),
+        path
       });
     }
   });
@@ -429,7 +438,12 @@ async function main() {
     });
 
     await gotoWithRetries(page);
-    await ensureTimelineReady(page);
+    try {
+      await ensureTimelineReady(page);
+    } catch (error) {
+      const recentAuth = authRequests.slice(-12).map((item) => `${item.method} ${item.path}`);
+      throw new Error(`${String(error?.message || error)} authRequests=${JSON.stringify(recentAuth)}`);
+    }
     await page.waitForTimeout(warmupMs);
 
     const beforeRequestCount = roomMessagesRequests.length;
