@@ -318,6 +318,18 @@ async function ensureTimelineReady(page) {
     await page.waitForTimeout(1200);
   }
 
+  const firstRoomButton = page.locator(".room-main-btn").first();
+  if ((await firstRoomButton.count()) > 0 && await firstRoomButton.isVisible().catch(() => false)) {
+    await firstRoomButton.click({ force: true }).catch(() => undefined);
+    await page.waitForTimeout(600);
+  }
+
+  const openChatButton = page.locator(".channel-chat-open-btn").first();
+  if ((await openChatButton.count()) > 0 && await openChatButton.isVisible().catch(() => false)) {
+    await openChatButton.click({ force: true }).catch(() => undefined);
+    await page.waitForTimeout(400);
+  }
+
   const topicTab = page.locator('[data-agent-id="chat.topic-navigation.tab"]').first();
   if ((await topicTab.count()) > 0) {
     await topicTab.click({ force: true }).catch(() => undefined);
