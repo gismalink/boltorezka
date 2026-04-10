@@ -243,7 +243,9 @@ async function main() {
         mutated: false,
         mutatedMessageType: "",
         originalSeq: 0,
-        injectedSeq: 0
+        injectedSeq: 0,
+        observedMessageEvents: 0,
+        observedChatTypes: []
       };
 
       function maybeMutateMessageEvent(event) {
@@ -252,6 +254,18 @@ async function main() {
           const parsed = JSON.parse(text);
           const type = String(parsed?.type || "").trim().toLowerCase();
           const isChatPayload = type.startsWith("chat.") && type !== "chat.typing";
+
+          window.__smokeGapPatchState.observedMessageEvents += 1;
+          if (type && isChatPayload) {
+            const recent = Array.isArray(window.__smokeGapPatchState.observedChatTypes)
+              ? window.__smokeGapPatchState.observedChatTypes
+              : [];
+            recent.push(type);
+            if (recent.length > 12) {
+              recent.shift();
+            }
+            window.__smokeGapPatchState.observedChatTypes = recent;
+          }
 
           if (!isChatPayload || window.__smokeGapPatchState.mutated) {
             return event;
@@ -305,14 +319,29 @@ async function main() {
         }
 
         addEventListener(type, listener, options) {
-          if (type !== "message" || typeof listener !== "function") {
+          if (type !== "message") {
             return super.addEventListener(type, listener, options);
           }
 
-          const wrapped = (event) => {
-            const nextEvent = maybeMutateMessageEvent(event);
-            listener.call(this, nextEvent);
-          };
+          let wrapped = null;
+          if (typeof listener === "function") {
+            wrapped = (event) => {
+              const nextEvent = maybeMutateMessageEvent(event);
+              listener.call(this, nextEvent);
+            };
+          } else if (listener && typeof listener.handleEvent === "function") {
+            wrapped = {
+              handleEvent: (event) => {
+                const nextEvent = maybeMutateMessageEvent(event);
+                listener.handleEvent.call(listener, nextEvent);
+              }
+            };
+          }
+
+          if (!wrapped) {
+            return super.addEventListener(type, listener, options);
+          }
+
           this.__smokeWrappedListeners.set(listener, wrapped);
           return super.addEventListener(type, wrapped, options);
         }
