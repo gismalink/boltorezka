@@ -24,6 +24,7 @@ import { SearchPanel } from "./chatPanel/sections/SearchPanel";
 import { ChatMessageTimeline } from "./chatPanel/sections/ChatMessageTimeline";
 import { ChatComposerSection } from "./chatPanel/sections/ChatComposerSection";
 import { ChatPanelOverlays } from "./chatPanel/sections/ChatPanelOverlays";
+import { Button } from "./uicomponents";
 
 type MentionCandidate = {
   key: string;
@@ -116,6 +117,7 @@ type ChatPanelProps = {
   onUnarchiveTopic: (topicId: string) => Promise<void>;
   onDeleteTopic: (topicId: string) => Promise<void>;
   onConsumeTopicMentionUnread: (topicId: string) => void;
+  canManageTopicModeration: boolean;
   mentionCandidates: MentionCandidate[];
 };
 
@@ -164,6 +166,7 @@ export function ChatPanel({
   onUnarchiveTopic,
   onDeleteTopic,
   onConsumeTopicMentionUnread,
+  canManageTopicModeration,
   mentionCandidates
 }: ChatPanelProps) {
   const [topicFilterMode] = useState<"all" | "active" | "unread" | "my" | "mentions" | "pinned" | "archived">("all");
@@ -346,6 +349,7 @@ export function ChatPanel({
     authToken,
     topics: topicsForUi,
     isTopicProtected: isMainTopic,
+    canManageTopicModeration,
     notificationMode,
     markTopicRead,
     onUpdateTopic,
@@ -767,6 +771,18 @@ export function ChatPanel({
     }
   }, [activeTopicId, authToken, loadTopicUnreadMentionsPage, onConsumeTopicMentionUnread, roomSlug, setSearchJumpStatusText, setSearchJumpTarget, t, topicMentionsActionLoading]);
 
+  const scrollTimelineToBottom = useCallback(() => {
+    const chatLogNode = chatLogRef.current;
+    if (!chatLogNode) {
+      return;
+    }
+
+    chatLogNode.scrollTo({
+      top: chatLogNode.scrollHeight,
+      behavior: "smooth"
+    });
+  }, [chatLogRef]);
+
   return (
     <section
       className="card middle-card relative flex min-h-0 flex-1 flex-col overflow-hidden"
@@ -796,9 +812,6 @@ export function ChatPanel({
           topicPaletteOpen={topicPaletteOpen}
           searchPanelOpen={searchPanelOpen}
           onToggleSearchPanel={toggleSearchPanel}
-          activeTopicMentionUnreadCount={activeTopicMentionUnreadCount}
-          topicMentionsActionLoading={topicMentionsActionLoading}
-          onJumpToUnreadMention={() => void jumpToNextTopicUnreadMention()}
         />
         {hasActiveRoom && searchPanelOpen ? (
           <SearchPanel
@@ -899,6 +912,34 @@ export function ChatPanel({
         unreadDividerMessageId={unreadDividerMessageId || null}
         unreadDividerVisible={unreadDividerVisible}
       />
+      {hasActiveRoom ? (
+        <div className="chat-floating-actions" aria-live="polite">
+          <Button
+            type="button"
+            className="secondary tiny icon-btn chat-floating-action-btn"
+            onClick={scrollTimelineToBottom}
+            onContextMenu={(event) => event.preventDefault()}
+            data-tooltip={t("rooms.down")}
+            aria-label={t("rooms.down")}
+          >
+            <i className="bi bi-arrow-down" aria-hidden="true" />
+          </Button>
+          {activeTopicMentionUnreadCount > 0 ? (
+            <Button
+              type="button"
+              className="secondary tiny chat-floating-action-btn chat-floating-mention-btn"
+              onClick={() => void jumpToNextTopicUnreadMention()}
+              onContextMenu={(event) => event.preventDefault()}
+              disabled={topicMentionsActionLoading}
+              data-tooltip={t("chat.topicMentionsJumpTooltip")}
+              aria-label={t("chat.topicMentionsJumpTooltip")}
+            >
+              <span aria-hidden="true">@</span>
+              <span>{activeTopicMentionUnreadCount}</span>
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
       <ChatComposerSection
         t={t}
         hasActiveRoom={hasActiveRoom}
@@ -944,6 +985,7 @@ export function ChatPanel({
         topicContextMenu={topicContextMenu}
         topics={topicsForUi}
         isTopicProtected={isMainTopic}
+        canManageTopicModeration={canManageTopicModeration}
         editingTopicSaving={editingTopicSaving}
         archivingTopicId={archivingTopicId}
         notificationSaving={notificationSaving}

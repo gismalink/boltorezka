@@ -26,6 +26,7 @@ type ChatPanelOverlaysProps = {
   topicContextMenu: { topicId: string; x: number; y: number } | null;
   topics: RoomTopic[];
   isTopicProtected: (topicId: string) => boolean;
+  canManageTopicModeration: boolean;
   editingTopicSaving: boolean;
   archivingTopicId: string | null;
   notificationSaving: boolean;
@@ -64,6 +65,7 @@ export function ChatPanelOverlays({
   topicContextMenu,
   topics,
   isTopicProtected,
+  canManageTopicModeration,
   editingTopicSaving,
   archivingTopicId,
   notificationSaving,
@@ -209,6 +211,7 @@ export function ChatPanelOverlays({
                 onRunAction={runTopicMenuAction}
                 activeMutePreset={topicMutePresetById[String(topicContextMenu.topicId || "").trim()] || null}
                 onSetTopicMutePreset={setTopicMutePreset}
+                canManageTopicModeration={canManageTopicModeration}
                 canRename={!protectedTopic}
                 canDelete={!protectedTopic}
                 protectedMessage={t("chat.mainTopicProtected")}

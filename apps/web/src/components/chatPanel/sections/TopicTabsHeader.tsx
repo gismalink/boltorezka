@@ -25,9 +25,6 @@ type TopicTabsHeaderProps = {
   topicPaletteOpen: boolean;
   searchPanelOpen: boolean;
   onToggleSearchPanel: () => void;
-  activeTopicMentionUnreadCount: number;
-  topicMentionsActionLoading: boolean;
-  onJumpToUnreadMention: () => void;
 };
 
 export function TopicTabsHeader({
@@ -51,10 +48,7 @@ export function TopicTabsHeader({
   openTopicPalette,
   topicPaletteOpen,
   searchPanelOpen,
-  onToggleSearchPanel,
-  activeTopicMentionUnreadCount,
-  topicMentionsActionLoading,
-  onJumpToUnreadMention
+  onToggleSearchPanel
 }: TopicTabsHeaderProps) {
   const tabsViewportRef = useRef<HTMLDivElement | null>(null);
   const [topicTabsOverflowed, setTopicTabsOverflowed] = useState(false);
@@ -89,9 +83,14 @@ export function TopicTabsHeader({
     setTopicTabsOverflowed(hasOverflow);
   }, []);
 
+  const tabsCountsSignature = useMemo(
+    () => tabsTopics.map((topic) => `${topic.id}:${Number(topic.unreadCount || 0)}:${Number(topic.mentionUnreadCount || 0)}`).join("|"),
+    [tabsTopics]
+  );
+
   useEffect(() => {
     measureTabsOverflow();
-  }, [measureTabsOverflow, tabsTopics, activeTopicMentionUnreadCount]);
+  }, [measureTabsOverflow, tabsTopics, tabsCountsSignature]);
 
   useEffect(() => {
     const viewport = tabsViewportRef.current;
@@ -122,6 +121,7 @@ export function TopicTabsHeader({
                 {tabsTopics.length > 0 ? (
                   tabsTopics.map((topic) => {
                     const unreadCount = getTopicUnreadCount(topic);
+                    const mentionUnreadCount = Math.max(0, Number(topic.mentionUnreadCount || 0));
                     const isActiveTab = String(topic.id || "").trim() === String(activeTopicId || "").trim();
 
                     return (
@@ -141,28 +141,15 @@ export function TopicTabsHeader({
                         data-agent-unread-count={String(unreadCount)}
                       >
                         {topic.isPinned ? `${t("chat.topicPinnedBadge")} ` : ""}
-                        {topic.title}
+                        <span className="chat-topic-tab-title">{topic.title}</span>
                         {unreadCount > 0 ? <span className="chat-topic-tab-unread">{unreadCount}</span> : null}
+                        {mentionUnreadCount > 0 ? <span className="room-mention-badge chat-topic-tab-mention">@{mentionUnreadCount}</span> : null}
                       </Button>
                     );
                   })
                 ) : (
                   <span className="muted">{t("chat.topicFilterEmpty")}</span>
                 )}
-                {activeTopicMentionUnreadCount > 0 ? (
-                  <Button
-                    type="button"
-                    className="secondary tiny chat-topic-tab chat-topic-mention-nav-btn"
-                    onClick={onJumpToUnreadMention}
-                    onContextMenu={(event) => event.preventDefault()}
-                    disabled={topicMentionsActionLoading}
-                    data-tooltip={t("chat.topicMentionsJumpTooltip")}
-                    aria-label={t("chat.topicMentionsJumpTooltip")}
-                  >
-                    <span aria-hidden="true">@</span>
-                    <span>{activeTopicMentionUnreadCount}</span>
-                  </Button>
-                ) : null}
               </div>
             </div>
             {hasTopics && topicTabsOverflowed ? (

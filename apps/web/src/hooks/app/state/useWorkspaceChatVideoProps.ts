@@ -86,6 +86,7 @@ type ChatPanelProps = {
   onUnarchiveTopic: (topicId: string) => Promise<void>;
   onDeleteTopic: (topicId: string) => Promise<void>;
   onConsumeTopicMentionUnread: (topicId: string) => void;
+  canManageTopicModeration: boolean;
   mentionCandidates: MentionCandidate[];
 };
 
@@ -258,6 +259,19 @@ export function useWorkspaceChatVideoProps({
   chatPanelProps: ChatPanelProps;
   videoWindowsOverlayProps: VideoWindowsOverlayProps;
 } {
+  const canManageTopicModeration = (() => {
+    const normalizedCurrentUserId = String(currentUserId || "").trim();
+    if (!normalizedCurrentUserId) {
+      return false;
+    }
+
+    const currentMember = (Array.isArray(serverMembers) ? serverMembers : []).find(
+      (member) => String(member.userId || "").trim() === normalizedCurrentUserId
+    );
+    const currentRole = String(currentMember?.role || "").trim();
+    return currentRole === "owner" || currentRole === "admin";
+  })();
+
   const mentionCandidates: MentionCandidate[] = (() => {
     const members = Array.isArray(serverMembers) ? serverMembers : [];
     const userCandidates: MentionCandidate[] = [];
@@ -433,6 +447,7 @@ export function useWorkspaceChatVideoProps({
         };
       }));
     },
+    canManageTopicModeration,
     mentionCandidates
   };
 
