@@ -42,7 +42,32 @@ async function acquireSessionCookieValue(token) {
   }
 }
 
-async function installAuthHeaderRoute(page, sessionCookieValue = "") {
+async function acquireBootstrapUser(token, sessionCookieValue) {
+  try {
+    const headers = {};
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+    if (sessionCookieValue) {
+      headers.Cookie = `${sessionCookieName}=${encodeURIComponent(sessionCookieValue)}`;
+    }
+
+    const response = await fetch(`${baseUrl}/v1/auth/me`, {
+      method: "GET",
+      headers
+    });
+    if (!response.ok) {
+      return null;
+    }
+
+    const payload = await response.json().catch(() => null);
+    return payload?.user || null;
+  } catch {
+    return null;
+  }
+}
+
+async function installAuthHeaderRoute(page, sessionCookieValue = "", bootstrapUser = null) {
   const encodedCookieValue = sessionCookieValue ? encodeURIComponent(sessionCookieValue) : "";
   const cookieHeaderValue = encodedCookieValue ? `${sessionCookieName}=${encodedCookieValue}` : "";
 
@@ -50,28 +75,24 @@ async function installAuthHeaderRoute(page, sessionCookieValue = "") {
     const request = route.request();
     const url = request.url();
     if (url.includes("/v1/auth/sso/session")) {
-      const origin = new URL(url).origin;
-      const meResponse = await page.request.get(`${origin}/v1/auth/me`, {
-        headers: {
-          Authorization: `Bearer ${bearerToken}`
-        },
-        timeout: timeoutMs
-      });
-
-      if (!meResponse.ok()) {
+      if (!bootstrapUser) {
         await route.continue();
         return;
       }
 
-      const mePayload = await meResponse.json().catch(() => ({}));
       await route.fulfill({
         status: 200,
         contentType: "application/json",
-        body: JSON.stringify({
-          authenticated: true,
-          token: bearerToken,
-          user: mePayload?.user || null
-        })
+        body: JSON.stringify({ authenticated: true, token: bearerToken, user: bootstrapUser })
+      });
+      return;
+    }
+
+    if (url.includes("/v1/auth/me") && bootstrapUser) {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ user: bootstrapUser })
       });
       return;
     }
@@ -281,7 +302,8 @@ async function main() {
 
   try {
     const sessionCookieValue = await acquireSessionCookieValue(bearerToken);
-    await installAuthHeaderRoute(page, sessionCookieValue || "");
+    const bootstrapUser = await acquireBootstrapUser(bearerToken, sessionCookieValue || "");
+    await installAuthHeaderRoute(page, sessionCookieValue || "", bootstrapUser);
 
     if (sessionCookieValue) {
       const parsedBase = new URL(baseUrl);
