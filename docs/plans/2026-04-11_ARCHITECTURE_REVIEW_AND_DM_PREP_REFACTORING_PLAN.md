@@ -173,22 +173,25 @@ Scope: глобальный аудит проекта boltorezka + план ре
 
 ## 3) Workstreams рефакторинга
 
-### 3.1 WS1: Backend — выделение RoomChatService (P0)
+### 3.1 WS1: Backend — выделение сервисов из realtime-chat.ts (P0) ✅
 
 **Цель:** убрать бизнес-логику из route handler `realtime-chat.ts`.
 
-- [ ] Создать `services/room-chat-service.ts` с методами:
-  - `sendMessage(params)` — room resolve + permission + insert + broadcast
-  - `editMessage(params)` — permission + update + broadcast
-  - `deleteMessage(params)` — permission + soft-delete + broadcast
-  - `pinMessage/unpinMessage` — toggle + broadcast
-  - `reportMessage` — insert report
-- [ ] Создать `services/room-access-service.ts`:
-  - `resolveRoomForWrite(roomIdOrSlug, userId)` — единая точка проверки доступа
-  - `canUserAccessRoom(userId, roomId)` — reusable для DM-адаптера
-- [ ] Создать `validators.ts` — deduplicate trim/normalize/slice
-- [ ] Мигрировать handlers в `realtime-chat.ts` на вызовы service
-- [ ] Уменьшить `realtime-chat.ts` до ~400 строк (thin handlers)
+**Статус: ВЫПОЛНЕНО** (SHA `bc1b7e5`, deploy test smoke ok 2026-04-11)
+
+- [x] Создать `services/chat-error-mapper.ts`:
+  - Единый `mapChatDomainErrorToWsNack()` (объединил 2 дублирующихся маппера).
+- [x] Создать `services/room-access-service.ts`:
+  - `resolveRoomById()` — получить комнату по ID (без проверки прав).
+  - `resolveRoomBySlugWithAccessCheck()` — полная проверка (NSFW/hidden/private).
+  - `canBypassRoomSendPolicy()` — обход send-политик для admin/owner.
+  - `resolveRoomRealtimeAudienceUserIds()` — определение аудитории для broadcast.
+- [x] Создать `services/room-messages-service.ts`:
+  - `insertRoomMessage()`, `editRoomMessage()`, `deleteRoomMessage()`.
+  - Доменные ошибки через throw (ловятся через единый error mapper).
+- [x] Мигрировать handlers в `realtime-chat.ts` на вызовы service.
+- [x] Уменьшить `realtime-chat.ts` с 1518 до 1146 строк (−25%, thin handlers).
+- [ ] TODO на следующие итерации: `validators.ts` (нормализация строк), дальнейшее уменьшение до ~400 строк.
 
 ### 3.2 WS2: Backend — тесты критического пути (P0)
 
@@ -272,10 +275,11 @@ Scope: глобальный аудит проекта boltorezka + план ре
 ## 5) Порядок выполнения
 
 ```
-Итерация 1 (P0 — рефакторинг backend)
-├── WS1: выделить RoomChatService + room-access-service + validators
-├── WS2: написать тесты для chat + permission matrix
-└── Deploy test → smoke
+Итерация 1 (P0 — рефакторинг backend) ✅ 2026-04-11
+├── WS1: extract chat-error-mapper, room-access-service, room-messages-service ✅
+├── realtime-chat.ts 1518→1146 строк ✅
+├── Deploy test → smoke ✅ (bc1b7e5)
+└── WS2: написать тесты для chat + permission matrix ← ТЕКУЩАЯ
 
 Итерация 2 (P0 — рефакторинг frontend)
 ├── WS3: разбить ChatPanel, RoomRow, ServerProfileModal
