@@ -117,6 +117,7 @@ type ChatPanelProps = {
   onUnarchiveTopic: (topicId: string) => Promise<void>;
   onDeleteTopic: (topicId: string) => Promise<void>;
   onConsumeTopicMentionUnread: (topicId: string) => void;
+  onSetTopicMentionUnreadLocal: (topicId: string, count: number) => void;
   onApplyTopicReadLocal: (topicId: string) => void;
   canManageTopicModeration: boolean;
   mentionCandidates: MentionCandidate[];
@@ -167,6 +168,7 @@ export function ChatPanel({
   onUnarchiveTopic,
   onDeleteTopic,
   onConsumeTopicMentionUnread,
+  onSetTopicMentionUnreadLocal,
   onApplyTopicReadLocal,
   canManageTopicModeration,
   mentionCandidates
@@ -736,6 +738,33 @@ export function ChatPanel({
     topicUnreadMentionHasMoreRef.current = Boolean(response.pagination?.hasMore && nextCursor);
   }, [activeTopicId, authToken]);
 
+  const reconcileTopicMentionUnreadCount = useCallback(async (topicId: string) => {
+    const normalizedTopicId = String(topicId || "").trim();
+    if (!authToken || !roomId || !normalizedTopicId) {
+      return;
+    }
+
+    try {
+      const response = await api.roomTopics(authToken, roomId);
+      if (topicUnreadMentionTopicIdRef.current !== normalizedTopicId) {
+        return;
+      }
+
+      const matchingTopic = (Array.isArray(response.topics) ? response.topics : [])
+        .find((topic) => String(topic.id || "").trim() === normalizedTopicId);
+      const nextMentionUnreadCount = Math.max(0, Number(matchingTopic?.mentionUnreadCount || 0));
+
+      onSetTopicMentionUnreadLocal(normalizedTopicId, nextMentionUnreadCount);
+      if (nextMentionUnreadCount === 0) {
+        topicUnreadMentionQueueRef.current = [];
+        topicUnreadMentionCursorRef.current = null;
+        topicUnreadMentionHasMoreRef.current = false;
+      }
+    } catch {
+      // Keep mention navigation non-blocking on transient room-topics sync failures.
+    }
+  }, [authToken, onSetTopicMentionUnreadLocal, roomId]);
+
   const jumpToNextTopicUnreadMention = useCallback(async () => {
     const topicId = String(activeTopicId || "").trim();
     const normalizedRoomSlug = String(roomSlug || "").trim();
@@ -755,6 +784,7 @@ export function ChatPanel({
       }
 
       if (!nextItem) {
+        await reconcileTopicMentionUnreadCount(topicId);
         return;
       }
 
@@ -773,7 +803,7 @@ export function ChatPanel({
     } finally {
       setTopicMentionsActionLoading(false);
     }
-  }, [activeTopicId, authToken, loadTopicUnreadMentionsPage, onConsumeTopicMentionUnread, roomSlug, setSearchJumpStatusText, setSearchJumpTarget, t, topicMentionsActionLoading]);
+  }, [activeTopicId, authToken, loadTopicUnreadMentionsPage, onConsumeTopicMentionUnread, reconcileTopicMentionUnreadCount, roomSlug, setSearchJumpStatusText, setSearchJumpTarget, t, topicMentionsActionLoading]);
 
   const scrollTimelineToBottom = useCallback(() => {
     const chatLogNode = chatLogRef.current;

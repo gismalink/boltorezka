@@ -86,6 +86,7 @@ type ChatPanelProps = {
   onUnarchiveTopic: (topicId: string) => Promise<void>;
   onDeleteTopic: (topicId: string) => Promise<void>;
   onConsumeTopicMentionUnread: (topicId: string) => void;
+  onSetTopicMentionUnreadLocal: (topicId: string, count: number) => void;
   onApplyTopicReadLocal: (topicId: string) => void;
   canManageTopicModeration: boolean;
   mentionCandidates: MentionCandidate[];
@@ -467,6 +468,29 @@ export function useWorkspaceChatVideoProps({
         return {
           ...topic,
           mentionUnreadCount: nextMentions
+        };
+      }));
+    },
+    onSetTopicMentionUnreadLocal: (topicId: string, count: number) => {
+      const normalizedTopicId = String(topicId || "").trim();
+      if (!normalizedTopicId) {
+        return;
+      }
+
+      const normalizedCount = Math.max(0, Number(count || 0));
+      setChatTopics((prev) => prev.map((topic) => {
+        if (String(topic.id || "").trim() !== normalizedTopicId) {
+          return topic;
+        }
+
+        const currentMentions = Math.max(0, Number(topic.mentionUnreadCount || 0));
+        if (currentMentions === normalizedCount) {
+          return topic;
+        }
+
+        return {
+          ...topic,
+          mentionUnreadCount: normalizedCount
         };
       }));
     },
