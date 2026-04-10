@@ -1306,15 +1306,19 @@ async function runRealtimeSmoke() {
         );
 
         reconnectReadRaceChecked = true;
-        reconnectReadRaceOk = Boolean(
+        const pointerChanged = Boolean(
           newestRead.lastReadMessageId
-          && staleRead.lastReadMessageId === newestRead.lastReadMessageId
-          && staleRead.unreadDelta === 0
+          && staleRead.lastReadMessageId
+          && staleRead.lastReadMessageId !== newestRead.lastReadMessageId
+        );
+        reconnectReadRaceOk = Boolean(
+          staleRead.unreadDelta === 0
           && staleRead.mentionDelta === 0
         );
         reconnectReadRaceResult = {
           newestRead,
-          staleRead
+          staleRead,
+          pointerChanged
         };
 
         if (!reconnectReadRaceOk) {
