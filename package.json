@@ -75,6 +75,7 @@
     "smoke:web:cookie-consent:browser": "node ./scripts/smoke/smoke-web-cookie-consent-browser.mjs",
     "smoke:web:crash-boundary:browser": "node ./scripts/smoke/smoke-web-crash-boundary-browser.mjs",
     "smoke:web:network-requests:browser": "node ./scripts/smoke/smoke-web-network-requests-browser.mjs",
+    "smoke:web:gap-recovery:browser": "node ./scripts/smoke/smoke-web-gap-recovery-browser.mjs",
     "smoke:web:agent-semantics:browser": "node ./scripts/smoke/smoke-web-agent-semantics-browser.mjs",
     "smoke:web:agent-semantics:evidence": "node ./scripts/smoke/smoke-web-agent-semantics-evidence.mjs",
     "smoke:web:rnnoise:browser": "node ./scripts/smoke/smoke-web-rnnoise-browser.mjs",

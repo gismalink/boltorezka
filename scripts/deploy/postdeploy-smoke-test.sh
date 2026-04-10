@@ -54,6 +54,7 @@ API_AUTH_SESSION_STATUS="skip"
 VERSION_CACHE_STATUS="skip"
 WEB_CRASH_BOUNDARY_STATUS="skip"
 WEB_NETWORK_REQUESTS_STATUS="skip"
+WEB_GAP_RECOVERY_STATUS="skip"
 WEB_RNNOISE_STATUS="skip"
 DESKTOP_UPDATE_FEED_STATUS="skip"
 MULTISERVER_SMOKE_STATUS="skip"
@@ -88,6 +89,7 @@ write_summary() {
   printf 'SMOKE_VERSION_CACHE_STATUS=%q\n' "$VERSION_CACHE_STATUS" >>"$SUMMARY_FILE_REL"
   printf 'SMOKE_WEB_CRASH_BOUNDARY_STATUS=%q\n' "$WEB_CRASH_BOUNDARY_STATUS" >>"$SUMMARY_FILE_REL"
   printf 'SMOKE_WEB_NETWORK_REQUESTS_STATUS=%q\n' "$WEB_NETWORK_REQUESTS_STATUS" >>"$SUMMARY_FILE_REL"
+  printf 'SMOKE_WEB_GAP_RECOVERY_STATUS=%q\n' "$WEB_GAP_RECOVERY_STATUS" >>"$SUMMARY_FILE_REL"
   printf 'SMOKE_WEB_RNNOISE_STATUS=%q\n' "$WEB_RNNOISE_STATUS" >>"$SUMMARY_FILE_REL"
   printf 'SMOKE_DESKTOP_UPDATE_FEED_STATUS=%q\n' "$DESKTOP_UPDATE_FEED_STATUS" >>"$SUMMARY_FILE_REL"
   printf 'SMOKE_MULTISERVER_STATUS=%q\n' "$MULTISERVER_SMOKE_STATUS" >>"$SUMMARY_FILE_REL"
@@ -914,6 +916,29 @@ else
   WEB_NETWORK_REQUESTS_STATUS="skip"
 fi
 
+if [[ "${SMOKE_WEB_GAP_RECOVERY_BROWSER:-1}" == "1" ]]; then
+  if [[ ! -d "node_modules/playwright" ]]; then
+    echo "[postdeploy-smoke] install npm dependencies (playwright missing)"
+    npm install --no-audit --no-fund
+  fi
+
+  if [[ -z "${SMOKE_TEST_BEARER_TOKEN:-}" || -z "${SMOKE_TEST_BEARER_TOKEN_SECOND:-}" ]]; then
+    echo "[postdeploy-smoke] smoke:web:gap-recovery:browser skipped (missing bearer token pair)"
+    WEB_GAP_RECOVERY_STATUS="skip"
+  else
+    echo "[postdeploy-smoke] smoke:web:gap-recovery:browser"
+    SMOKE_API_URL="$BASE_URL" \
+      SMOKE_WEB_BASE_URL="$WEB_BASE_URL" \
+      SMOKE_TEST_BEARER_TOKEN="${SMOKE_TEST_BEARER_TOKEN:-}" \
+      SMOKE_TEST_BEARER_TOKEN_SECOND="${SMOKE_TEST_BEARER_TOKEN_SECOND:-}" \
+      npm run smoke:web:gap-recovery:browser
+    WEB_GAP_RECOVERY_STATUS="pass"
+  fi
+else
+  echo "[postdeploy-smoke] smoke:web:gap-recovery:browser skipped (SMOKE_WEB_GAP_RECOVERY_BROWSER=0)"
+  WEB_GAP_RECOVERY_STATUS="skip"
+fi
+
 if [[ "${SMOKE_WEB_RNNOISE_BROWSER:-0}" != "1" ]]; then
   echo "[postdeploy-smoke] smoke:web:rnnoise:browser skipped (SMOKE_WEB_RNNOISE_BROWSER=0)"
   WEB_RNNOISE_STATUS="skip"
@@ -1337,6 +1362,6 @@ SMOKE_CALL_INITIAL_STATE_PARTICIPANTS_DELTA=$((CALL_INITIAL_STATE_PARTICIPANTS_A
 collect_turn_allocation_failures
 
 SMOKE_STATUS="pass"
-SMOKE_SUMMARY_TEXT="health=pass mode=sso sso=pass api=$API_SMOKE_STATUS chat_object_storage=$CHAT_OBJECT_STORAGE_STATUS chat_orphan_cleanup=$CHAT_ORPHAN_CLEANUP_STATUS minio_storage=$MINIO_STORAGE_STATUS chat_storage_put_ok_delta=$SMOKE_CHAT_STORAGE_PUT_OK_DELTA chat_storage_put_fail_delta=$SMOKE_CHAT_STORAGE_PUT_FAIL_DELTA chat_storage_put_fail_status=$SMOKE_CHAT_STORAGE_PUT_FAIL_STATUS auth_session=$API_AUTH_SESSION_STATUS cookie_negative=$COOKIE_NEGATIVE_STATUS cookie_ws_ticket=$COOKIE_WS_TICKET_STATUS version_cache=$VERSION_CACHE_STATUS web_crash_boundary=$WEB_CRASH_BOUNDARY_STATUS web_network_requests=$WEB_NETWORK_REQUESTS_STATUS web_rnnoise=$WEB_RNNOISE_STATUS desktop_update_feed=$DESKTOP_UPDATE_FEED_STATUS multiserver=$MULTISERVER_SMOKE_STATUS multiserver_age_gate=$MULTISERVER_AGE_GATE_STATUS multiserver_role_matrix=$MULTISERVER_ROLE_MATRIX_STATUS livekit_standard=$SMOKE_LIVEKIT_STANDARD_PROFILE_STATUS turn_tls=$SMOKE_TURN_TLS_STATUS turn_rotation=$SMOKE_TURN_ROTATION_STATUS turn_alloc_failures=$SMOKE_TURN_ALLOCATION_FAILURES turn_alloc_status=$SMOKE_TURN_ALLOCATION_STATUS realtime=pass extended_realtime=$EXTENDED_REALTIME_STATUS livekit_gate=$SMOKE_LIVEKIT_GATE_STATUS livekit_media=$SMOKE_LIVEKIT_MEDIA_STATUS realtime_media=$SMOKE_REALTIME_MEDIA_STATUS transport=$SMOKE_MEDIA_TRANSPORT_SUMMARY one_way(audio=$SMOKE_ONE_WAY_AUDIO_INCIDENTS,video=$SMOKE_ONE_WAY_VIDEO_INCIDENTS) delta(nack=$SMOKE_NACK_DELTA,ack=$SMOKE_ACK_DELTA,chat=$SMOKE_CHAT_SENT_DELTA,idem=$SMOKE_CHAT_IDEMPOTENCY_HIT_DELTA,initial_state=$SMOKE_CALL_INITIAL_STATE_SENT_DELTA,initial_state_participants=$SMOKE_CALL_INITIAL_STATE_PARTICIPANTS_DELTA)"
+SMOKE_SUMMARY_TEXT="health=pass mode=sso sso=pass api=$API_SMOKE_STATUS chat_object_storage=$CHAT_OBJECT_STORAGE_STATUS chat_orphan_cleanup=$CHAT_ORPHAN_CLEANUP_STATUS minio_storage=$MINIO_STORAGE_STATUS chat_storage_put_ok_delta=$SMOKE_CHAT_STORAGE_PUT_OK_DELTA chat_storage_put_fail_delta=$SMOKE_CHAT_STORAGE_PUT_FAIL_DELTA chat_storage_put_fail_status=$SMOKE_CHAT_STORAGE_PUT_FAIL_STATUS auth_session=$API_AUTH_SESSION_STATUS cookie_negative=$COOKIE_NEGATIVE_STATUS cookie_ws_ticket=$COOKIE_WS_TICKET_STATUS version_cache=$VERSION_CACHE_STATUS web_crash_boundary=$WEB_CRASH_BOUNDARY_STATUS web_network_requests=$WEB_NETWORK_REQUESTS_STATUS web_gap_recovery=$WEB_GAP_RECOVERY_STATUS web_rnnoise=$WEB_RNNOISE_STATUS desktop_update_feed=$DESKTOP_UPDATE_FEED_STATUS multiserver=$MULTISERVER_SMOKE_STATUS multiserver_age_gate=$MULTISERVER_AGE_GATE_STATUS multiserver_role_matrix=$MULTISERVER_ROLE_MATRIX_STATUS livekit_standard=$SMOKE_LIVEKIT_STANDARD_PROFILE_STATUS turn_tls=$SMOKE_TURN_TLS_STATUS turn_rotation=$SMOKE_TURN_ROTATION_STATUS turn_alloc_failures=$SMOKE_TURN_ALLOCATION_FAILURES turn_alloc_status=$SMOKE_TURN_ALLOCATION_STATUS realtime=pass extended_realtime=$EXTENDED_REALTIME_STATUS livekit_gate=$SMOKE_LIVEKIT_GATE_STATUS livekit_media=$SMOKE_LIVEKIT_MEDIA_STATUS realtime_media=$SMOKE_REALTIME_MEDIA_STATUS transport=$SMOKE_MEDIA_TRANSPORT_SUMMARY one_way(audio=$SMOKE_ONE_WAY_AUDIO_INCIDENTS,video=$SMOKE_ONE_WAY_VIDEO_INCIDENTS) delta(nack=$SMOKE_NACK_DELTA,ack=$SMOKE_ACK_DELTA,chat=$SMOKE_CHAT_SENT_DELTA,idem=$SMOKE_CHAT_IDEMPOTENCY_HIT_DELTA,initial_state=$SMOKE_CALL_INITIAL_STATE_SENT_DELTA,initial_state_participants=$SMOKE_CALL_INITIAL_STATE_PARTICIPANTS_DELTA)"
 
 echo "[postdeploy-smoke] done"
