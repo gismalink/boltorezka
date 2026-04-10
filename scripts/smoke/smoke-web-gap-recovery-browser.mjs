@@ -72,13 +72,13 @@ function parseTelemetryEventFromRequest(request) {
   }
 }
 
-async function waitForGapTelemetry(events) {
+async function waitForGapRecoverySignal({ telemetryEvents, getRecoveryRequestCount, readGapMutationState }) {
   const started = Date.now();
   let detectedAt = 0;
   let recoveredAt = 0;
 
   while (Date.now() - started <= timeoutMs) {
-    for (const item of events) {
+    for (const item of telemetryEvents) {
       if (item.event === "ws.realtime.gap.detected") {
         detectedAt = detectedAt || 1;
       }
@@ -87,15 +87,22 @@ async function waitForGapTelemetry(events) {
       }
     }
 
-    if (detectedAt && recoveredAt) {
+    const mutationState = await readGapMutationState();
+    const mutationApplied = Boolean(mutationState?.mutated);
+    const recoveryRequests = getRecoveryRequestCount();
+
+    if ((detectedAt && recoveredAt) || (mutationApplied && recoveryRequests > 0)) {
       return;
     }
 
     await new Promise((resolve) => setTimeout(resolve, 200));
   }
 
-  const seen = events.map((item) => item.event);
-  throw new Error(`[smoke:web:gap-recovery:browser] timeout waiting gap telemetry, seen=${JSON.stringify(seen.slice(-12))}`);
+  const seen = telemetryEvents.map((item) => item.event);
+  const mutationState = await readGapMutationState();
+  throw new Error(
+    `[smoke:web:gap-recovery:browser] timeout waiting gap recovery signal, seenTelemetry=${JSON.stringify(seen.slice(-12))} mutation=${JSON.stringify(mutationState || {})} recoveryRequests=${getRecoveryRequestCount()}`
+  );
 }
 
 async function main() {
@@ -145,32 +152,54 @@ async function main() {
 
     await page.addInitScript(() => {
       const NativeWebSocket = window.WebSocket;
-      let dropped = false;
+      window.__smokeGapPatchState = {
+        mutated: false,
+        mutatedMessageType: "",
+        originalSeq: 0,
+        injectedSeq: 0
+      };
 
-      function shouldDrop(raw) {
-        if (dropped) {
-          return false;
-        }
-
+      function maybeMutateMessageEvent(event) {
         try {
-          const text = typeof raw === "string" ? raw : String(raw || "");
+          const text = typeof event?.data === "string" ? event.data : String(event?.data || "");
           const parsed = JSON.parse(text);
-          const hasSeq = Number.isFinite(Number(parsed?.realtimeScopeSeq))
-            || Number.isFinite(Number(parsed?.realtime_scope_seq))
-            || Number.isFinite(Number(parsed?.realtimeSeq))
-            || Number.isFinite(Number(parsed?.realtime_seq));
           const type = String(parsed?.type || "").trim().toLowerCase();
           const isChatPayload = type.startsWith("chat.") && type !== "chat.typing";
 
-          if (hasSeq && isChatPayload) {
-            dropped = true;
-            return true;
+          if (!isChatPayload || window.__smokeGapPatchState.mutated) {
+            return event;
           }
-        } catch {
-          return false;
-        }
 
-        return false;
+          const seqKey = Number.isFinite(Number(parsed?.realtimeScopeSeq))
+            ? "realtimeScopeSeq"
+            : Number.isFinite(Number(parsed?.realtime_scope_seq))
+              ? "realtime_scope_seq"
+              : Number.isFinite(Number(parsed?.realtimeSeq))
+                ? "realtimeSeq"
+                : Number.isFinite(Number(parsed?.realtime_seq))
+                  ? "realtime_seq"
+                  : "";
+
+          if (!seqKey) {
+            return event;
+          }
+
+          const originalSeq = Number(parsed[seqKey]);
+          const injectedSeq = originalSeq + 2;
+          parsed[seqKey] = injectedSeq;
+          window.__smokeGapPatchState = {
+            mutated: true,
+            mutatedMessageType: type,
+            originalSeq,
+            injectedSeq
+          };
+
+          return new MessageEvent("message", {
+            data: JSON.stringify(parsed)
+          });
+        } catch {
+          return event;
+        }
       }
 
       class SmokeWebSocket extends NativeWebSocket {
@@ -194,10 +223,8 @@ async function main() {
           }
 
           const wrapped = (event) => {
-            if (shouldDrop(event?.data)) {
-              return;
-            }
-            listener.call(this, event);
+            const nextEvent = maybeMutateMessageEvent(event);
+            listener.call(this, nextEvent);
           };
           this.__smokeWrappedListeners.set(listener, wrapped);
           return super.addEventListener(type, wrapped, options);
@@ -218,12 +245,9 @@ async function main() {
         }
 
         dispatchEvent(event) {
-          if (event?.type === "message" && shouldDrop(event?.data)) {
-            return true;
-          }
-
           if (event?.type === "message" && this.__smokeOnMessage) {
-            this.__smokeOnMessage.call(this, event);
+            const nextEvent = maybeMutateMessageEvent(event);
+            this.__smokeOnMessage.call(this, nextEvent);
           }
 
           return super.dispatchEvent(event);
@@ -243,7 +267,11 @@ async function main() {
       await page.waitForTimeout(settleMs);
     }
 
-    await waitForGapTelemetry(telemetryEvents);
+    await waitForGapRecoverySignal({
+      telemetryEvents,
+      getRecoveryRequestCount: () => roomMessagesRequests.slice(beforeRequestCount).filter((item) => item.method === "GET").length,
+      readGapMutationState: async () => page.evaluate(() => window.__smokeGapPatchState || null)
+    });
 
     const recoveryRequests = roomMessagesRequests.slice(beforeRequestCount).filter((item) => item.method === "GET");
     if (recoveryRequests.length === 0) {
@@ -254,9 +282,15 @@ async function main() {
       throw new Error(`[smoke:web:gap-recovery:browser] unexpected main-frame navigation count: ${mainFrameNavigations}`);
     }
 
+    const mutationState = await page.evaluate(() => window.__smokeGapPatchState || null);
+    if (!mutationState?.mutated) {
+      throw new Error("[smoke:web:gap-recovery:browser] websocket gap mutation was not applied");
+    }
+
     console.log("[smoke:web:gap-recovery:browser] ok");
     console.log(`- telemetry gap events observed: ${telemetryEvents.filter((item) => item.event.startsWith("ws.realtime.gap.")).map((item) => item.event).join(",")}`);
     console.log(`- recovery room messages requests observed: ${recoveryRequests.length}`);
+    console.log(`- mutated seq: ${mutationState.originalSeq} -> ${mutationState.injectedSeq} (${mutationState.mutatedMessageType})`);
     console.log(`- main frame navigations: ${mainFrameNavigations}`);
   } finally {
     await context.close();
