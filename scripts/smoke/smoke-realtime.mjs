@@ -1274,11 +1274,6 @@ async function runRealtimeSmoke() {
           secondaryToken: bearerTokenSecond,
           primaryUserId: firstUserId
         });
-        reconnectDriftSnapshotBefore = {
-          unreadCount: driftFixture.unreadCount,
-          mentionUnreadCount: driftFixture.mentionUnreadCount,
-          unreadMentionsItems: driftFixture.unreadMentionsItems
-        };
 
         // Simulate out-of-order read commands around reconnect window.
         const newestRead = await postTopicRead(
@@ -1311,6 +1306,14 @@ async function runRealtimeSmoke() {
             `[smoke:realtime] stale read race regressed pointer: ${JSON.stringify(reconnectReadRaceResult)}`
           );
         }
+
+        const countersBeforeReconnect = await getTopicUnreadSnapshot(bearerToken, driftFixture.roomId, driftFixture.topicId);
+        const mentionsBeforeReconnect = await getTopicUnreadMentionsCount(bearerToken, driftFixture.topicId);
+        reconnectDriftSnapshotBefore = {
+          unreadCount: countersBeforeReconnect.unreadCount,
+          mentionUnreadCount: countersBeforeReconnect.mentionUnreadCount,
+          unreadMentionsItems: mentionsBeforeReconnect
+        };
       }
     } catch (error) {
       reconnectDriftSkipped = true;
