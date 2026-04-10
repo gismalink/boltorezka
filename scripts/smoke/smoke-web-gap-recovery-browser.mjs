@@ -651,16 +651,28 @@ async function main() {
       class SmokeWebSocket extends NativeWebSocket {
         constructor(...args) {
           super(...args);
-          this.__smokeOnMessage = null;
+          this.__smokeOnMessageOriginal = null;
+          this.__smokeOnMessageWrapped = null;
           this.__smokeWrappedListeners = new Map();
         }
 
         set onmessage(handler) {
-          this.__smokeOnMessage = typeof handler === "function" ? handler : null;
+          this.__smokeOnMessageOriginal = typeof handler === "function" ? handler : null;
+          if (!this.__smokeOnMessageOriginal) {
+            this.__smokeOnMessageWrapped = null;
+            super.onmessage = null;
+            return;
+          }
+
+          this.__smokeOnMessageWrapped = (event) => {
+            const nextEvent = maybeMutateMessageEvent(event);
+            this.__smokeOnMessageOriginal?.call(this, nextEvent);
+          };
+          super.onmessage = this.__smokeOnMessageWrapped;
         }
 
         get onmessage() {
-          return this.__smokeOnMessage;
+          return this.__smokeOnMessageOriginal;
         }
 
         addEventListener(type, listener, options) {
@@ -692,7 +704,7 @@ async function main() {
         }
 
         removeEventListener(type, listener, options) {
-          if (type !== "message" || typeof listener !== "function") {
+          if (type !== "message") {
             return super.removeEventListener(type, listener, options);
           }
 
@@ -703,15 +715,6 @@ async function main() {
           }
 
           return super.removeEventListener(type, listener, options);
-        }
-
-        dispatchEvent(event) {
-          if (event?.type === "message" && this.__smokeOnMessage) {
-            const nextEvent = maybeMutateMessageEvent(event);
-            this.__smokeOnMessage.call(this, nextEvent);
-          }
-
-          return super.dispatchEvent(event);
         }
       }
 
