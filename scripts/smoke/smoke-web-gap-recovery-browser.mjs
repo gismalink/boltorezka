@@ -81,7 +81,7 @@ async function acquireSessionCookieValue(token) {
   }
 }
 
-async function bootstrapBrowserSessionCookie(page, token) {
+async function bootstrapBrowserSessionCookie(page, context, token) {
   if (preseedSessionCookieValue) {
     return { ok: true, reason: "preseed" };
   }
@@ -100,6 +100,21 @@ async function bootstrapBrowserSessionCookie(page, token) {
       status: response.status(),
       body: String(body || "").slice(0, 220)
     };
+  }
+
+  const setCookieHeader = response.headers()["set-cookie"] || "";
+  const cookieMatch = String(setCookieHeader || "").match(new RegExp(`(?:^|[;,]\\s*)${sessionCookieName}=([^;,]+)`));
+  if (cookieMatch && cookieMatch[1]) {
+    const parsedBase = new URL(baseUrl);
+    await context.addCookies([{
+      name: sessionCookieName,
+      value: decodeURIComponent(String(cookieMatch[1]).trim()),
+      domain: parsedBase.hostname,
+      path: "/",
+      httpOnly: true,
+      secure: parsedBase.protocol === "https:",
+      sameSite: "Lax"
+    }]);
   }
 
   return { ok: true, reason: "refreshed" };
@@ -455,9 +470,9 @@ async function main() {
   });
 
   try {
-    const bootstrapPrimary = await bootstrapBrowserSessionCookie(page, bearerToken);
+    const bootstrapPrimary = await bootstrapBrowserSessionCookie(page, context, bearerToken);
     if (!bootstrapPrimary.ok) {
-      const bootstrapSecondary = await bootstrapBrowserSessionCookie(page, bearerTokenSecond);
+      const bootstrapSecondary = await bootstrapBrowserSessionCookie(page, context, bearerTokenSecond);
       if (!bootstrapSecondary.ok) {
         throw new Error(`[smoke:web:gap-recovery:browser] browser refresh failed for both tokens: primary=${bootstrapPrimary.status}:${bootstrapPrimary.body} secondary=${bootstrapSecondary.status}:${bootstrapSecondary.body}`);
       }
