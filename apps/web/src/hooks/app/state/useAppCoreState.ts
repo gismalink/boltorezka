@@ -53,9 +53,15 @@ export function useAppCoreState({
 
     const expectedBuildSha = String(sessionStorage.getItem(versionUpdateExpectedShaKey) || "").trim();
     const currentBuildSha = String(clientBuildSha || "").trim();
-    if (!expectedBuildSha || !currentBuildSha || expectedBuildSha !== currentBuildSha) {
+    if (!expectedBuildSha || !currentBuildSha) {
       sessionStorage.removeItem(versionUpdatePendingKey);
       sessionStorage.removeItem(versionUpdateExpectedShaKey);
+      return false;
+    }
+
+    // Keep pending flag while the runtime still serves an old bundle to avoid
+    // entering a reload loop on every version check.
+    if (expectedBuildSha !== currentBuildSha) {
       return false;
     }
 
