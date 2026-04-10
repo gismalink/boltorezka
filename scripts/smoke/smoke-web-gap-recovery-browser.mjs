@@ -737,7 +737,17 @@ async function main() {
     const targetRoomSlug = observedActiveRoomSlug || roomSlug;
 
     for (let index = 0; index < injectionMessages; index += 1) {
-      await postRoomMessage(senderToken, targetRoomSlug, `gap-smoke-${Date.now()}-${index}`);
+      try {
+        await postRoomMessage(senderToken, targetRoomSlug, `gap-smoke-${Date.now()}-${index}`);
+      } catch (error) {
+        const message = String(error?.message || error || "");
+        const senderUnauthorized = message.includes("status=401");
+        if (!senderUnauthorized || senderToken === viewerToken) {
+          throw error;
+        }
+
+        await postRoomMessage(viewerToken, targetRoomSlug, `gap-smoke-${Date.now()}-${index}`);
+      }
       await page.waitForTimeout(settleMs);
     }
 
