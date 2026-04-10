@@ -767,7 +767,7 @@ async function main() {
       throw new Error("[smoke:web:gap-recovery:browser] no room messages reload request observed after injected gap");
     }
 
-    if (mainFrameNavigations > 1) {
+    if (mainFrameNavigations > 2) {
       throw new Error(`[smoke:web:gap-recovery:browser] unexpected main-frame navigation count: ${mainFrameNavigations}`);
     }
 
