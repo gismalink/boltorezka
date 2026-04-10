@@ -427,6 +427,7 @@ async function main() {
   const telemetryEvents = [];
   const roomMessagesRequests = [];
   const authRequests = [];
+  const serverRequestTrail = [];
   let mainFrameNavigations = 0;
   let observedActiveRoomSlug = "";
 
@@ -460,6 +461,35 @@ async function main() {
         method: request.method(),
         path
       });
+    }
+
+    if (path.startsWith("/v1/servers")) {
+      serverRequestTrail.push({
+        ts: Date.now(),
+        phase: "request",
+        method: request.method(),
+        path
+      });
+      if (serverRequestTrail.length > 30) {
+        serverRequestTrail.shift();
+      }
+    }
+  });
+
+  page.on("response", async (response) => {
+    const path = normalizePath(response.url());
+    if (!path.startsWith("/v1/servers")) {
+      return;
+    }
+
+    serverRequestTrail.push({
+      ts: Date.now(),
+      phase: "response",
+      status: response.status(),
+      path
+    });
+    if (serverRequestTrail.length > 30) {
+      serverRequestTrail.shift();
     }
   });
 
@@ -640,7 +670,13 @@ async function main() {
       await ensureTimelineReady(page);
     } catch (error) {
       const recentAuth = authRequests.slice(-12).map((item) => `${item.method} ${item.path}`);
-      throw new Error(`${String(error?.message || error)} authRequests=${JSON.stringify(recentAuth)}`);
+      const recentServers = serverRequestTrail.slice(-12).map((item) => {
+        if (item.phase === "response") {
+          return `${item.status} ${item.path}`;
+        }
+        return `${item.method} ${item.path}`;
+      });
+      throw new Error(`${String(error?.message || error)} authRequests=${JSON.stringify(recentAuth)} serverTrail=${JSON.stringify(recentServers)}`);
     }
     await page.waitForTimeout(warmupMs);
 
