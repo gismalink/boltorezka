@@ -271,6 +271,22 @@ async function ensureTimelineReady(page) {
     // Continue with explicit topic-open attempt below.
   }
 
+  const continueButton = page.getByRole("button", { name: /continue/i }).first();
+  if ((await continueButton.count()) > 0 && await continueButton.isVisible().catch(() => false)) {
+    await continueButton.click({ force: true }).catch(() => undefined);
+    await page.waitForTimeout(400);
+  }
+
+  const createFirstServerButton = page.getByRole("button", { name: /create first server/i }).first();
+  if ((await createFirstServerButton.count()) > 0 && await createFirstServerButton.isVisible().catch(() => false)) {
+    const serverNameInput = page.getByRole("textbox").first();
+    if ((await serverNameInput.count()) > 0) {
+      await serverNameInput.fill(`smoke-${Date.now()}`).catch(() => undefined);
+    }
+    await createFirstServerButton.click({ force: true }).catch(() => undefined);
+    await page.waitForTimeout(1200);
+  }
+
   const topicTab = page.locator('[data-agent-id="chat.topic-navigation.tab"]').first();
   if ((await topicTab.count()) > 0) {
     await topicTab.click({ force: true }).catch(() => undefined);
