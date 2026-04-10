@@ -914,16 +914,6 @@ export function ChatPanel({
       />
       {hasActiveRoom ? (
         <div className="chat-floating-actions" aria-live="polite">
-          <Button
-            type="button"
-            className="secondary tiny icon-btn chat-floating-action-btn"
-            onClick={scrollTimelineToBottom}
-            onContextMenu={(event) => event.preventDefault()}
-            data-tooltip={t("rooms.down")}
-            aria-label={t("rooms.down")}
-          >
-            <i className="bi bi-arrow-down" aria-hidden="true" />
-          </Button>
           {activeTopicMentionUnreadCount > 0 ? (
             <Button
               type="button"
@@ -938,6 +928,16 @@ export function ChatPanel({
               <span>{activeTopicMentionUnreadCount}</span>
             </Button>
           ) : null}
+          <Button
+            type="button"
+            className="secondary tiny icon-btn chat-floating-action-btn"
+            onClick={scrollTimelineToBottom}
+            onContextMenu={(event) => event.preventDefault()}
+            data-tooltip={t("rooms.down")}
+            aria-label={t("rooms.down")}
+          >
+            <i className="bi bi-arrow-down" aria-hidden="true" />
+          </Button>
         </div>
       ) : null}
       <ChatComposerSection
