@@ -80,78 +80,18 @@ async function acquireSessionCookieValue(token) {
   }
 }
 
-async function acquireBootstrapUser(token, sessionCookieValue) {
-  try {
-    const headers = {};
-    if (token) {
-      headers.Authorization = `Bearer ${token}`;
-    }
-    if (sessionCookieValue) {
-      headers.Cookie = `${sessionCookieName}=${encodeURIComponent(sessionCookieValue)}`;
-    }
-
-    const response = await fetch(`${baseUrl}/v1/auth/me`, {
-      method: "GET",
-      headers
-    });
-    if (!response.ok) {
-      return null;
-    }
-
-    const payload = await response.json().catch(() => null);
-    return payload?.user || null;
-  } catch {
-    return null;
-  }
-}
-
-async function installAuthHeaderRoute(page, sessionCookieValue = "", bootstrapUser = null) {
-  const encodedCookieValue = sessionCookieValue ? encodeURIComponent(sessionCookieValue) : "";
-  const cookieHeaderValue = encodedCookieValue ? `${sessionCookieName}=${encodedCookieValue}` : "";
-
-  await page.route("**/*", async (route) => {
-    const request = route.request();
-    const url = request.url();
-    if (url.includes("/v1/auth/sso/session")) {
-      if (!bootstrapUser) {
-        await route.continue();
-        return;
-      }
-
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({ authenticated: true, token: bearerToken, user: bootstrapUser })
-      });
-      return;
-    }
-
-    if (url.includes("/v1/auth/me") && bootstrapUser) {
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({ user: bootstrapUser })
-      });
-      return;
-    }
-
-    const isApiRequest = url.includes("/v1/") || /\/version(?:\?|$)/.test(url);
-    if (!isApiRequest) {
-      await route.continue();
-      return;
-    }
-
-    const headers = {
-      ...request.headers()
-    };
-    if (bearerToken) {
-      headers.authorization = `Bearer ${bearerToken}`;
-    }
-    if (cookieHeaderValue) {
-      headers.cookie = headers.cookie ? `${headers.cookie}; ${cookieHeaderValue}` : cookieHeaderValue;
-    }
-    await route.continue({ headers });
+async function bootstrapBrowserSessionCookie(page, token) {
+  const response = await page.request.post(`${baseUrl}/v1/auth/refresh`, {
+    headers: {
+      Authorization: `Bearer ${token}`
+    },
+    timeout: timeoutMs
   });
+
+  if (!response.ok()) {
+    const body = await response.text().catch(() => "");
+    throw new Error(`[smoke:web:gap-recovery:browser] browser refresh failed: status=${response.status()} body=${String(body || "").slice(0, 220)}`);
+  }
 }
 
 function normalizePath(url) {
@@ -504,9 +444,7 @@ async function main() {
     const bootstrapUserId = String(tokenPayload?.sub || "").trim();
     const introSeenKey = bootstrapUserId ? `boltorezka_intro_v1_seen:${bootstrapUserId}` : "";
 
-    const bootstrapUser = await acquireBootstrapUser(bearerToken, sessionCookieValue || "")
-      || buildFallbackUserFromToken(bearerToken);
-    await installAuthHeaderRoute(page, sessionCookieValue || "", bootstrapUser);
+    await bootstrapBrowserSessionCookie(page, bearerToken);
 
     if (sessionCookieValue) {
       const parsedBase = new URL(baseUrl);
