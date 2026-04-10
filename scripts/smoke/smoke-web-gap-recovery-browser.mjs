@@ -293,6 +293,36 @@ async function waitForGapRecoverySignal({ telemetryEvents, getRecoveryRequestCou
   );
 }
 
+async function completeFirstRunIntroIfVisible(page) {
+  const introOverlay = page.locator(".voice-preferences-overlay").first();
+  if ((await introOverlay.count()) === 0) {
+    return;
+  }
+  if (!(await introOverlay.isVisible().catch(() => false))) {
+    return;
+  }
+
+  const introTitle = page.getByText(/welcome to dato|добро пожаловать/i).first();
+  if ((await introTitle.count()) === 0 || !(await introTitle.isVisible().catch(() => false))) {
+    return;
+  }
+
+  const checkboxes = introOverlay.locator('input[type="checkbox"]');
+  const checkboxCount = await checkboxes.count();
+  for (let index = 0; index < checkboxCount; index += 1) {
+    const checkbox = checkboxes.nth(index);
+    if (!(await checkbox.isChecked().catch(() => false))) {
+      await checkbox.check({ force: true }).catch(() => undefined);
+    }
+  }
+
+  const continueButton = introOverlay.getByRole("button", { name: /continue|продолжить/i }).first();
+  if ((await continueButton.count()) > 0 && await continueButton.isEnabled().catch(() => false)) {
+    await continueButton.click({ force: true }).catch(() => undefined);
+    await page.waitForTimeout(600);
+  }
+}
+
 async function ensureTimelineReady(page) {
   const timeline = page.locator('[data-agent-id="chat.timeline"]').first();
   try {
@@ -301,6 +331,8 @@ async function ensureTimelineReady(page) {
   } catch {
     // Continue with explicit topic-open attempt below.
   }
+
+  await completeFirstRunIntroIfVisible(page);
 
   const continueButton = page.getByRole("button", { name: /continue/i }).first();
   if ((await continueButton.count()) > 0 && await continueButton.isVisible().catch(() => false)) {
