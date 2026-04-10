@@ -333,6 +333,7 @@ async function setupReconnectDriftFixture({ primaryToken, secondaryToken, primar
   );
   ensureOk(foreignMessageResponse, foreignMessagePayload, "create foreign drift message");
   const foreignMessageId = String(foreignMessagePayload?.message?.id || "").trim();
+  const foreignMessageCreatedAt = String(foreignMessagePayload?.message?.created_at || "").trim();
   if (!foreignMessageId) {
     throw new Error("[smoke:realtime] reconnect drift foreign message id is missing");
   }
@@ -357,33 +358,19 @@ async function setupReconnectDriftFixture({ primaryToken, secondaryToken, primar
   ensureOk(mentionMessageResponse, mentionMessagePayload, "create foreign mention drift message");
 
   const mentionMessageId = String(mentionMessagePayload?.message?.id || "").trim();
+  const mentionMessageCreatedAt = String(mentionMessagePayload?.message?.created_at || "").trim();
   if (!mentionMessageId) {
     throw new Error("[smoke:realtime] reconnect drift mention message id is missing");
   }
 
-  const { response: orderedMessagesResponse, payload: orderedMessagesPayload } = await fetchJson(
-    `/v1/topics/${encodeURIComponent(topicId)}/messages?limit=20`,
-    {
-      headers: authHeader(primaryToken)
-    }
-  );
-  ensureOk(orderedMessagesResponse, orderedMessagesPayload, "list reconnect drift topic messages");
-  const orderedMessages = Array.isArray(orderedMessagesPayload?.messages) ? orderedMessagesPayload.messages : [];
-  const orderedIds = orderedMessages.map((item) => String(item?.id || "").trim()).filter(Boolean);
-
-  const candidateIds = [mentionMessageId, foreignMessageId];
-  const candidateWithIndex = candidateIds.map((id) => ({
-    id,
-    idx: orderedIds.indexOf(id)
-  }));
-
-  if (candidateWithIndex.some((entry) => entry.idx < 0)) {
-    throw new Error(`[smoke:realtime] reconnect drift race candidates missing in ordered messages: ${JSON.stringify(candidateWithIndex)}`);
-  }
-
-  candidateWithIndex.sort((a, b) => a.idx - b.idx);
-  const raceNewestMessageId = candidateWithIndex[0]?.id || mentionMessageId;
-  const raceStaleMessageId = candidateWithIndex[1]?.id || foreignMessageId;
+  const foreignTs = Date.parse(foreignMessageCreatedAt);
+  const mentionTs = Date.parse(mentionMessageCreatedAt);
+  const mentionIsNewer = Number.isFinite(foreignTs)
+    && Number.isFinite(mentionTs)
+    ? mentionTs >= foreignTs
+    : true;
+  const raceNewestMessageId = mentionIsNewer ? mentionMessageId : foreignMessageId;
+  const raceStaleMessageId = mentionIsNewer ? foreignMessageId : mentionMessageId;
 
   const counters = await getTopicUnreadSnapshot(primaryToken, roomId, topicId);
   const mentionsCount = await getTopicUnreadMentionsCount(primaryToken, topicId);
