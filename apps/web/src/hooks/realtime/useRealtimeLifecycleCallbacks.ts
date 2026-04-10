@@ -246,10 +246,8 @@ export function useRealtimeLifecycleCallbacks({
     }
 
     const payloadUnreadDelta = Math.max(0, Number(payload.unreadDelta || 0));
-    const payloadMentionDelta = Math.max(0, Number(payload.mentionDelta || 0));
-    const { topicFound, unreadDelta: snapshotUnreadDelta, mentionDelta: snapshotMentionDelta } = getTopicReadDeltas(chatTopics, targetTopicId);
+    const { topicFound, unreadDelta: snapshotUnreadDelta } = getTopicReadDeltas(chatTopics, targetTopicId);
     const unreadDelta = payloadUnreadDelta > 0 ? payloadUnreadDelta : snapshotUnreadDelta;
-    const mentionDelta = payloadMentionDelta > 0 ? payloadMentionDelta : snapshotMentionDelta;
     if (!topicFound) {
       pushLog(`chat.topic.read topic snapshot missing: topicId=${targetTopicId}`);
     }
@@ -260,15 +258,13 @@ export function useRealtimeLifecycleCallbacks({
       }
 
       const nextUnreadCount = 0;
-      const nextMentionUnreadCount = 0;
-      if (topic.unreadCount === nextUnreadCount && topic.mentionUnreadCount === nextMentionUnreadCount) {
+      if (topic.unreadCount === nextUnreadCount) {
         return topic;
       }
 
       return {
         ...topic,
-        unreadCount: nextUnreadCount,
-        mentionUnreadCount: nextMentionUnreadCount
+        unreadCount: nextUnreadCount
       };
     }));
 
@@ -294,29 +290,7 @@ export function useRealtimeLifecycleCallbacks({
         [targetRoomSlug]: nextUnread
       };
     });
-    setRoomMentionUnreadBySlug((prev) => {
-      const resolvedRoomSlug = targetRoomId ? String(roomSlugById[targetRoomId] || "").trim() : "";
-      const targetRoomSlug = resolvedRoomSlug || chatRoomSlug;
-      if (!targetRoomSlug) {
-        return prev;
-      }
-
-      const currentMentions = Math.max(0, Number(prev[targetRoomSlug] || 0));
-      if (currentMentions === 0 || mentionDelta <= 0) {
-        return prev;
-      }
-
-      const nextMentions = decrementUnreadValue(currentMentions, mentionDelta);
-      if (nextMentions === currentMentions) {
-        return prev;
-      }
-
-      return {
-        ...prev,
-        [targetRoomSlug]: nextMentions
-      };
-    });
-  }, [chatRoomSlug, chatTopics, currentUserId, pushLog, roomSlugById, setChatTopics, setRoomMentionUnreadBySlug, setRoomUnreadBySlug]);
+  }, [chatRoomSlug, chatTopics, currentUserId, pushLog, roomSlugById, setChatTopics, setRoomUnreadBySlug]);
 
   const handleChatTopicDeleted = useCallback((payload: {
     roomId?: string;

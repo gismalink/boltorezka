@@ -40,6 +40,19 @@ function ensureOk(response, payload, label) {
   }
 }
 
+async function getTopicMentionUnreadCount({ roomId, topicId, token: authToken }) {
+  const { response, payload } = await fetchJson(`/v1/rooms/${encodeURIComponent(roomId)}/topics`, { token: authToken });
+  ensureOk(response, payload, "list room topics for mention count");
+
+  const topics = Array.isArray(payload?.topics) ? payload.topics : [];
+  const topic = topics.find((item) => String(item?.id || "") === topicId);
+  if (!topic) {
+    throw new Error(`[smoke:chat:anchor-jump] topic not found in room topics list: topicId=${topicId}`);
+  }
+
+  return Math.max(0, Number(topic?.mentionUnreadCount || 0));
+}
+
 (async () => {
   if (!token) {
     console.log(`[smoke:chat:anchor-jump] skipped (${baseUrl}) reason=no-token`);
@@ -192,6 +205,11 @@ function ensureOk(response, payload, label) {
         throw new Error("[smoke:chat:anchor-jump] explicit mention not found in unread-mentions before topic read");
       }
 
+      const mentionCountBeforeTopicRead = await getTopicMentionUnreadCount({ roomId, topicId, token });
+      if (mentionCountBeforeTopicRead <= 0) {
+        throw new Error(`[smoke:chat:anchor-jump] expected mentionUnreadCount > 0 before topic read, got=${mentionCountBeforeTopicRead}`);
+      }
+
       const { response: topicReadResponse, payload: topicReadPayload } = await fetchJson(`/v1/topics/${encodeURIComponent(topicId)}/read`, {
         method: "POST",
         token,
@@ -209,6 +227,11 @@ function ensureOk(response, payload, label) {
       const mentionStillUnreadAfterTopicRead = mentionItemsAfterTopicRead.some((item) => String(item?.messageId || item?.message_id || "") === mentionMessageId);
       if (!mentionStillUnreadAfterTopicRead) {
         throw new Error("[smoke:chat:anchor-jump] mention was cleared by topic read; expected unread until mention read-all");
+      }
+
+      const mentionCountAfterTopicRead = await getTopicMentionUnreadCount({ roomId, topicId, token });
+      if (mentionCountAfterTopicRead <= 0) {
+        throw new Error(`[smoke:chat:anchor-jump] mentionUnreadCount was cleared by topic read; expected > 0, got=${mentionCountAfterTopicRead}`);
       }
 
       const { response: mentionReadAllResponse, payload: mentionReadAllPayload } = await fetchJson(
@@ -229,6 +252,11 @@ function ensureOk(response, payload, label) {
       const mentionItemsAfterReadAll = Array.isArray(mentionsAfterReadAllPayload?.items) ? mentionsAfterReadAllPayload.items : [];
       if (mentionItemsAfterReadAll.length !== 0) {
         throw new Error(`[smoke:chat:anchor-jump] expected mentions queue to be empty after read-all, got=${mentionItemsAfterReadAll.length}`);
+      }
+
+      const mentionCountAfterReadAll = await getTopicMentionUnreadCount({ roomId, topicId, token });
+      if (mentionCountAfterReadAll !== 0) {
+        throw new Error(`[smoke:chat:anchor-jump] expected mentionUnreadCount=0 after mention read-all, got=${mentionCountAfterReadAll}`);
       }
 
       mentionReadFlowChecked = true;

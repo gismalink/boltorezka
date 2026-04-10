@@ -252,7 +252,6 @@ export async function listRoomTopics(roomId: string, userId: string): Promise<To
              AND ni.room_id = rt.room_id
              AND ni.topic_id = rt.id
              AND ni.read_at IS NULL
-             AND ni.created_at > COALESCE(rr.last_read_at, to_timestamp(0))
          )
        ) AS mention_unread_count
      FROM room_topics rt
