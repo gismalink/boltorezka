@@ -224,19 +224,25 @@ Scope: глобальный аудит проекта boltorezka + план ре
 - [x] Убрать неиспользуемый `RangeSlider` import из parent
 - [ ] TODO: дальнейшее разбиение (roles, desktop, observability tabs)
 
-### 3.4 WS4: Frontend — Context layers для props (P1)
+### 3.4 WS4: Frontend — Context layers для props (P1) ✅
 
-**Цель:** уменьшить props drilling с 5-7 до 2-3 уровней.
+**Статус: ВЫПОЛНЕНО** (SHA `d5af5a3`, deploy test smoke ok 2026-04-11)
 
-- [ ] Создать `ChatContext` (React.createContext):
-  - `authToken`, `currentUserId`, `roomSlug`, `roomId`, `activeTopicId`
-  - `sendWsEventAwaitAck`, `onLoadMessagesAroundAnchor`
-  - `t`, `locale`
-- [ ] Создать `ChatActionsContext`:
-  - `onEditMessage`, `onDeleteMessage`, `onReplyMessage`, `onTogglePinMessage`, `onToggleMessageReaction`
-- [ ] Обернуть `ChatPanel` children в providers
-- [ ] Убрать передачу 30+ props через промежуточные компоненты
-- [ ] Аналогично для `RoomsContext` (roomUnreadBySlug, roomMentionUnreadBySlug, roomMutePresetByRoomId)
+**Цель:** уменьшить props drilling и подготовить reusable контексты для DM.
+
+- [x] Создать `ChatPanelContext` (React.createContext):
+  - `t`, `locale`, `formatMessageTime`, `resolveAttachmentImageUrl`, `formatAttachmentSize`, `setPreviewImageUrl`
+- [x] Создать `ChatMessageActionsContext`:
+  - `onEditMessage`, `onDeleteMessage`, `onReplyMessage`, `onReportMessage`, `onTogglePinMessage`, `onToggleMessageReaction`
+  - `insertMentionToComposer`, `insertQuoteToComposer`, `markTopicUnreadFromMessage`, `markReadSaving`
+- [x] Обернуть `ChatPanel` children в providers
+- [x] Убрать ~22 prop slots через 5 дочерних компонентов:
+  - ChatMessageTimeline: 32→16 props (−50%)
+  - ChatComposerSection: −2 (t, setPreviewImageUrl)
+  - ChatPanelOverlays: −3 (t, setPreviewImageUrl, resolveAttachmentImageUrl)
+  - TopicTabsHeader: −1 (t)
+  - SearchPanel: −2 (t, formatMessageTime)
+- [ ] TODO: `RoomsContext` (roomUnreadBySlug, roomMentionUnreadBySlug, roomMutePresetByRoomId)
 
 ### 3.5 WS5: Frontend — извлечение переиспользуемых абстракций для DM (P1)
 
@@ -290,9 +296,11 @@ Scope: глобальный аудит проекта boltorezka + план ре
 ├── Deploy test → smoke ✅
 └── Готово к merge в main
 
-Итерация 3 (P1 — context + reusable abstractions) ← СЛЕДУЮЩАЯ
-├── WS4: ChatContext + RoomsContext layers
-├── WS5: MessageRenderer, useThreadState, MessageComposer standalone
+Итерация 3 (P1 — context + reusable abstractions) → WS4 ✅ 2026-04-11, WS5 в процессе
+├── WS4: ChatPanelContext + ChatMessageActionsContext ✅ (d5af5a3)
+├── ~22 prop slots убрано, ChatMessageTimeline −50% props
+├── Deploy test → smoke ✅
+├── WS5: MessageRenderer, useThreadState, MessageComposer standalone ← СЛЕДУЮЩИЙ
 └── Deploy test → smoke
 
 Итерация 4 (P1 + P2 — безопасность + cleanup)
