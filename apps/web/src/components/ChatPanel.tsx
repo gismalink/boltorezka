@@ -40,6 +40,9 @@ type TopicUnreadMentionNavItem = {
   messageId: string;
 };
 
+const UNREAD_WINDOW_EXPAND_STEP = 50;
+const UNREAD_WINDOW_EXPAND_MAX = 500;
+
 function toMentionHandle(raw: string): string {
   return String(raw || "")
     .trim()
@@ -177,6 +180,8 @@ export function ChatPanel({
   const topicUnreadMentionCursorRef = useRef<{ beforeCreatedAt: string; beforeId: string } | null>(null);
   const topicUnreadMentionHasMoreRef = useRef(true);
   const topicUnreadMentionTopicIdRef = useRef("");
+  const unreadWindowExpandInFlightRef = useRef(false);
+  const unreadWindowRequestedAfterByTopicRef = useRef<Record<string, number>>({});
   const messageVmBuildMsRef = useRef(0);
   const metricsSamplesRef = useRef(0);
   const hasActiveRoom = Boolean(roomSlug);
@@ -378,6 +383,10 @@ export function ChatPanel({
   });
 
   const activeTopic = useMemo(() => topicsForUi.find((topic) => topic.id === activeTopicId) ?? null, [topicsForUi, activeTopicId]);
+  const activeTopicUnreadCount = useMemo(
+    () => (activeTopic ? Math.max(0, getTopicUnreadCount(activeTopic)) : 0),
+    [activeTopic, getTopicUnreadCount]
+  );
   const activeTopicMentionUnreadCount = Math.max(0, Number(activeTopic?.mentionUnreadCount || 0));
   const activeTopicIsArchived = Boolean(activeTopic?.archivedAt);
   const unreadDividerVisible = useMemo(() => {
@@ -395,6 +404,27 @@ export function ChatPanel({
     messageVmBuildMsRef.current = Math.max(0, finishedAt - startedAt);
     return built;
   }, [messages, currentUserId]);
+
+  const unreadDividerMessageId = useMemo(() => {
+    if (!unreadDividerVisible) {
+      return "";
+    }
+
+    return String(entryUnreadDivider?.messageId || "").trim();
+  }, [entryUnreadDivider?.messageId, unreadDividerVisible]);
+
+  const loadedUnreadAfterDivider = useMemo(() => {
+    if (!unreadDividerMessageId) {
+      return 0;
+    }
+
+    const dividerIndex = messages.findIndex((message) => String(message.id || "").trim() === unreadDividerMessageId);
+    if (dividerIndex < 0) {
+      return 0;
+    }
+
+    return Math.max(0, messages.length - dividerIndex - 1);
+  }, [messages, unreadDividerMessageId]);
 
   const resolvedMentionCandidates = useMemo(() => {
     const byKey = new Map<string, MentionCandidate>();
@@ -589,6 +619,90 @@ export function ChatPanel({
     topicUnreadMentionCursorRef.current = null;
     topicUnreadMentionHasMoreRef.current = Boolean(topicId);
   }, [activeTopicId]);
+
+  useEffect(() => {
+    const topicId = String(activeTopicId || "").trim();
+    if (!topicId) {
+      return;
+    }
+
+    const currentRequested = Math.max(0, Number(unreadWindowRequestedAfterByTopicRef.current[topicId] || 0));
+    unreadWindowRequestedAfterByTopicRef.current[topicId] = Math.max(currentRequested, loadedUnreadAfterDivider);
+    unreadWindowExpandInFlightRef.current = false;
+  }, [activeTopicId, loadedUnreadAfterDivider]);
+
+  const maybeExpandUnreadWindowAtBottom = useCallback(() => {
+    const topicId = String(activeTopicId || "").trim();
+    if (!topicId || !hasActiveRoom || !unreadDividerVisible || loadingOlderMessages || unreadWindowExpandInFlightRef.current) {
+      return;
+    }
+
+    const dividerMessageId = unreadDividerMessageId;
+    if (!dividerMessageId) {
+      return;
+    }
+
+    if (loadedUnreadAfterDivider >= activeTopicUnreadCount || activeTopicUnreadCount <= 0) {
+      return;
+    }
+
+    const chatLogNode = chatLogRef.current;
+    if (!chatLogNode) {
+      return;
+    }
+
+    const distanceToBottom = chatLogNode.scrollHeight - chatLogNode.scrollTop - chatLogNode.clientHeight;
+    if (distanceToBottom > 32) {
+      return;
+    }
+
+    const requestedAfter = Math.max(
+      loadedUnreadAfterDivider,
+      Math.max(0, Number(unreadWindowRequestedAfterByTopicRef.current[topicId] || 0))
+    );
+    const nextRequestedAfter = Math.min(
+      UNREAD_WINDOW_EXPAND_MAX,
+      Math.max(requestedAfter + UNREAD_WINDOW_EXPAND_STEP, loadedUnreadAfterDivider + UNREAD_WINDOW_EXPAND_STEP)
+    );
+
+    if (nextRequestedAfter <= requestedAfter) {
+      return;
+    }
+
+    unreadWindowExpandInFlightRef.current = true;
+    void onLoadMessagesAroundAnchor(topicId, dividerMessageId, {
+      aroundWindowBefore: 25,
+      aroundWindowAfter: nextRequestedAfter
+    }).then((ok) => {
+      if (ok) {
+        unreadWindowRequestedAfterByTopicRef.current[topicId] = nextRequestedAfter;
+      }
+    }).finally(() => {
+      unreadWindowExpandInFlightRef.current = false;
+    });
+  }, [activeTopicId, activeTopicUnreadCount, chatLogRef, hasActiveRoom, loadedUnreadAfterDivider, loadingOlderMessages, onLoadMessagesAroundAnchor, unreadDividerMessageId, unreadDividerVisible]);
+
+  useEffect(() => {
+    const chatLogNode = chatLogRef.current;
+    if (!chatLogNode || !hasActiveRoom) {
+      return;
+    }
+
+    const onScroll = () => {
+      maybeExpandUnreadWindowAtBottom();
+    };
+
+    chatLogNode.addEventListener("scroll", onScroll, { passive: true });
+    maybeExpandUnreadWindowAtBottom();
+
+    return () => {
+      chatLogNode.removeEventListener("scroll", onScroll);
+    };
+  }, [chatLogRef, hasActiveRoom, maybeExpandUnreadWindowAtBottom]);
+
+  useEffect(() => {
+    maybeExpandUnreadWindowAtBottom();
+  }, [loadedUnreadAfterDivider, activeTopicUnreadCount, maybeExpandUnreadWindowAtBottom]);
 
   const loadTopicUnreadMentionsPage = useCallback(async () => {
     const topicId = String(activeTopicId || "").trim();
@@ -793,7 +907,7 @@ export function ChatPanel({
         resolveAttachmentImageUrl={resolveAttachmentImageUrl}
         formatAttachmentSize={formatAttachmentSize}
         setPreviewImageUrl={setPreviewImageUrl}
-        unreadDividerMessageId={unreadDividerVisible ? (entryUnreadDivider?.messageId || null) : null}
+        unreadDividerMessageId={unreadDividerMessageId || null}
         unreadDividerVisible={unreadDividerVisible}
       />
       <ChatComposerSection

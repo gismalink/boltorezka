@@ -54,7 +54,7 @@ export type TopicMessagesPage = {
 
 const DEFAULT_AROUND_WINDOW_BEFORE = 25;
 const DEFAULT_AROUND_WINDOW_AFTER = 25;
-const MAX_AROUND_WINDOW = 100;
+const MAX_AROUND_WINDOW = 500;
 
 async function hasRoomMembership(roomId: string, userId: string): Promise<boolean> {
   const membership = await db.query(

@@ -79,8 +79,8 @@ const topicMessagesQuerySchema = z.object({
   beforeCreatedAt: z.string().trim().optional(),
   beforeId: z.string().trim().optional(),
   anchorMessageId: z.string().uuid().optional(),
-  aroundWindowBefore: z.coerce.number().int().min(0).max(100).optional(),
-  aroundWindowAfter: z.coerce.number().int().min(0).max(100).optional(),
+  aroundWindowBefore: z.coerce.number().int().min(0).max(500).optional(),
+  aroundWindowAfter: z.coerce.number().int().min(0).max(500).optional(),
   aroundUnreadWindow: z.coerce.boolean().optional()
 });
 
