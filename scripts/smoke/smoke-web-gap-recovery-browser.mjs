@@ -11,6 +11,7 @@ const bootRetryDelayMs = Number(process.env.SMOKE_WEB_BOOT_RETRY_DELAY_MS || 100
 const bearerToken = String(process.env.SMOKE_TEST_BEARER_TOKEN || "").trim();
 const bearerTokenSecond = String(process.env.SMOKE_TEST_BEARER_TOKEN_SECOND || "").trim();
 const sessionCookieName = String(process.env.SMOKE_SESSION_COOKIE_NAME || "boltorezka_session_test").trim() || "boltorezka_session_test";
+const preseedSessionCookieValue = String(process.env.SMOKE_WEB_SESSION_COOKIE_VALUE || "").trim();
 const warmupMs = Number(process.env.SMOKE_WEB_GAP_WARMUP_MS || 4000);
 const settleMs = Number(process.env.SMOKE_WEB_GAP_SETTLE_MS || 500);
 const injectionMessages = Math.max(3, Number(process.env.SMOKE_WEB_GAP_INJECTION_MESSAGES || 4));
@@ -81,6 +82,10 @@ async function acquireSessionCookieValue(token) {
 }
 
 async function bootstrapBrowserSessionCookie(page, token) {
+  if (preseedSessionCookieValue) {
+    return;
+  }
+
   const response = await page.request.post(`${baseUrl}/v1/auth/refresh`, {
     headers: {
       Authorization: `Bearer ${token}`
@@ -451,6 +456,19 @@ async function main() {
       await context.addCookies([{
         name: sessionCookieName,
         value: sessionCookieValue,
+        domain: parsedBase.hostname,
+        path: "/",
+        httpOnly: true,
+        secure: parsedBase.protocol === "https:",
+        sameSite: "Lax"
+      }]);
+    }
+
+    if (preseedSessionCookieValue) {
+      const parsedBase = new URL(baseUrl);
+      await context.addCookies([{
+        name: sessionCookieName,
+        value: preseedSessionCookieValue,
         domain: parsedBase.hostname,
         path: "/",
         httpOnly: true,

@@ -967,6 +967,14 @@ if [[ "${SMOKE_WEB_GAP_RECOVERY_BROWSER:-1}" == "1" ]]; then
     fi
   fi
 
+  WEB_GAP_SESSION_COOKIE_VALUE=""
+  if [[ "${SMOKE_WEB_GAP_PRESEED_SESSION_COOKIE:-1}" == "1" && -n "${SMOKE_USER_ID:-}" ]]; then
+    WEB_GAP_SESSION_COOKIE_VALUE="$(uuidgen | tr '[:upper:]' '[:lower:]')"
+    compose exec -T "$REDIS_SERVICE" redis-cli SETEX \
+      "auth:session:${WEB_GAP_SESSION_COOKIE_VALUE}" "${SMOKE_AUTH_SESSION_TTL_SEC:-2592000}" \
+      "{\"userId\":\"${SMOKE_USER_ID}\",\"authMode\":\"sso\",\"issuedAt\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",\"rotatedFrom\":null}" >/dev/null
+  fi
+
   if [[ -z "${SMOKE_TEST_BEARER_TOKEN:-}" || -z "${SMOKE_TEST_BEARER_TOKEN_SECOND:-}" ]]; then
     echo "[postdeploy-smoke] smoke:web:gap-recovery:browser skipped (missing bearer token pair)"
     WEB_GAP_RECOVERY_STATUS="skip"
@@ -976,6 +984,7 @@ if [[ "${SMOKE_WEB_GAP_RECOVERY_BROWSER:-1}" == "1" ]]; then
       SMOKE_WEB_BASE_URL="$WEB_BASE_URL" \
       SMOKE_TEST_BEARER_TOKEN="${SMOKE_TEST_BEARER_TOKEN:-}" \
       SMOKE_TEST_BEARER_TOKEN_SECOND="${SMOKE_TEST_BEARER_TOKEN_SECOND:-}" \
+      SMOKE_WEB_SESSION_COOKIE_VALUE="${WEB_GAP_SESSION_COOKIE_VALUE:-}" \
       npm run smoke:web:gap-recovery:browser
     WEB_GAP_RECOVERY_STATUS="pass"
   fi
