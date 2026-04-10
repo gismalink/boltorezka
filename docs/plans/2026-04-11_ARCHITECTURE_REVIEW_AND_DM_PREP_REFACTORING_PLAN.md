@@ -204,28 +204,25 @@ Scope: глобальный аудит проекта boltorezka + план ре
 - [ ] TODO: `permission-matrix.test.ts` — room visibility × membership × role комбинации
 - [ ] TODO: Error-scenario tests: Redis down, DB timeout, concurrent edits
 
-### 3.3 WS3: Frontend — разбиение god-компонентов (P0)
+### 3.3 WS3: Frontend — разбиение god-компонентов (P0) ✅
 
-**ChatPanel.tsx (800+ → 250):**
-- [ ] Выделить `useMentionUnreadNavigation` hook (queue + reconciliation + jump)
-- [ ] Выделить `useChatPanelTopicMemory` hook (entryUnreadDivider + window expand)
-- [ ] `ChatPanel` оставить как thin orchestrator, ~250 строк
+**Статус: ВЫПОЛНЕНО** (SHA `b57123a`, deploy test smoke ok 2026-04-11)
 
-**RoomRow.tsx (975 → 4 компонента):**
-- [ ] `RoomRowHeader.tsx` — title + presence dots + unread badge
-- [ ] `RoomRowContextMenu.tsx` — right-click actions
-- [ ] `RoomMemberTooltip.tsx` — member list tooltip/modal
-- [ ] `RoomAudioIndicator.tsx` — voice level bar
-- [ ] `RoomRow.tsx` — thin orchestrator, ~200 строк
+**ChatPanel.tsx (1077 → 880, −18%):**
+- [x] Выделить `useChatPanelMentionNavigation` hook — mention queue, pagination, reconciliation, jump (~155 строк)
+- [x] Выделить `useChatPanelUnreadWindowExpand` hook — расширение окна непрочитанных по scroll (~115 строк)
+- [x] Выделить `useChatPanelScrollToBottom` hook — кнопка scroll-to-bottom + action (~60 строк)
+- [x] Убрать неиспользуемый `api` import, тип `TopicUnreadMentionNavItem`, константы `UNREAD_WINDOW_EXPAND_*`
 
-**ServerProfileModal.tsx (500+ → 6 tab-компонентов):**
-- [ ] `ServerUsersTab.tsx`
-- [ ] `ServerRolesTab.tsx`
-- [ ] `ServerProductManagementTab.tsx`
-- [ ] `ServerTelemetryTab.tsx`
-- [ ] `ServerDesktopDownloadsTab.tsx`
-- [ ] `ServerAudioVideoSettingsTab.tsx`
-- [ ] `ServerProfileModal.tsx` — tab router, ~100 строк
+**RoomRow.tsx (975 → 751, −23%):**
+- [x] Выделить `RoomChannelSettingsPopup.tsx` — popup form настроек канала (~290 строк)
+- [ ] TODO: дальнейшее разбиение (header, context menu, member tooltip, audio indicator)
+
+**ServerProfileModal.tsx (2275 → 2075, −9%):**
+- [x] Выделить `ServerVideoSettingsTab.tsx` — видео preview, эффекты, resolution, FPS, слайдеры (~280 строк)
+- [x] Перенести `previewVideoRef` + useEffect(serverVideoPreviewStream) в компонент
+- [x] Убрать неиспользуемый `RangeSlider` import из parent
+- [ ] TODO: дальнейшее разбиение (roles, desktop, observability tabs)
 
 ### 3.4 WS4: Frontend — Context layers для props (P1)
 
@@ -287,11 +284,13 @@ Scope: глобальный аудит проекта boltorezka + план ре
 ├── Deploy test → smoke ✅
 └── Готово к merge в main
 
-Итерация 2 (P0 — рефакторинг frontend) ← СЛЕДУЮЩАЯ
-├── WS3: разбить ChatPanel, RoomRow, ServerProfileModal
-└── Deploy test → smoke
+Итерация 2 (P0 — рефакторинг frontend) ✅ 2026-04-11
+├── WS3: ChatPanel 1077→880, RoomRow 975→751, ServerProfileModal 2275→2075 ✅ (b57123a)
+├── 6 новых файлов: 3 hooks + RoomChannelSettingsPopup + ServerVideoSettingsTab
+├── Deploy test → smoke ✅
+└── Готово к merge в main
 
-Итерация 3 (P1 — context + reusable abstractions)
+Итерация 3 (P1 — context + reusable abstractions) ← СЛЕДУЮЩАЯ
 ├── WS4: ChatContext + RoomsContext layers
 ├── WS5: MessageRenderer, useThreadState, MessageComposer standalone
 └── Deploy test → smoke
