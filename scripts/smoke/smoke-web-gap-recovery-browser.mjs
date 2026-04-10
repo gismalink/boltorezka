@@ -196,6 +196,37 @@ async function postRoomMessage(token, text) {
   }
 }
 
+async function ensureServerPresence(token) {
+  try {
+    const listResponse = await fetch(`${baseUrl}/v1/servers`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+    if (!listResponse.ok) {
+      return;
+    }
+
+    const listPayload = await listResponse.json().catch(() => ({}));
+    const servers = Array.isArray(listPayload?.servers) ? listPayload.servers : [];
+    if (servers.length > 0) {
+      return;
+    }
+
+    await fetch(`${baseUrl}/v1/servers`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ name: `smoke-${Date.now()}` })
+    }).catch(() => null);
+  } catch {
+    // Best effort only; onboarding fallback remains in place.
+  }
+}
+
 function parseTelemetryEventFromRequest(request) {
   try {
     const body = request.postDataJSON?.();
@@ -310,6 +341,8 @@ async function main() {
     console.log("[smoke:web:gap-recovery:browser] skipped (missing SMOKE_TEST_BEARER_TOKEN or SMOKE_TEST_BEARER_TOKEN_SECOND)");
     return;
   }
+
+  await ensureServerPresence(bearerToken);
 
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext();
