@@ -1426,10 +1426,11 @@ pre {
 
 .chat-title-row {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: var(--space-sm);
+  min-width: 0;
 }
 
 .chat-title-main {
@@ -1441,6 +1442,30 @@ pre {
   align-items: center;
   gap: var(--space-xs);
   min-width: 0;
+  width: 100%;
+}
+
+.chat-topic-tabs-main {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.chat-topic-tabs-viewport {
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.chat-topic-tabs-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  margin-left: auto;
+  flex: 0 0 auto;
 }
 
 .chat-topic-create-toggle {
@@ -1469,9 +1494,8 @@ pre {
   display: flex;
   align-items: center;
   gap: var(--space-xs);
-  min-width: 0;
-  overflow-x: auto;
-  padding-bottom: 2px;
+  min-width: max-content;
+  width: max-content;
 }
 
 .chat-topic-tab {
@@ -1505,6 +1529,18 @@ pre {
   align-items: center;
   gap: 4px;
   border-color: color-mix(in srgb, var(--pixel-accent) 65%, var(--pixel-border) 35%);
+}
+
+.chat-topic-palette-toggle {
+  flex: 0 0 auto;
+}
+
+.chat-search-toggle-btn {
+  min-width: var(--icon-size-sm);
+  width: var(--icon-size-sm);
+  padding-left: 0;
+  padding-right: 0;
+  flex: 0 0 auto;
 }
 
 .chat-topic-mention-nav-btn span:first-child {
@@ -4216,6 +4252,7 @@ pre {
 
   .workspace-mobile .chat-title-row {
     align-items: stretch;
+    flex-wrap: wrap;
   }
 
   .workspace-mobile .chat-title-main {
@@ -4224,10 +4261,19 @@ pre {
 
   .workspace-mobile .chat-topic-tabs-row {
     width: 100%;
+    flex-wrap: nowrap;
   }
 
-  .workspace-mobile .chat-topic-tabs-scroll {
+  .workspace-mobile .chat-topic-tabs-main {
+    min-width: 0;
+  }
+
+  .workspace-mobile .chat-topic-tabs-viewport {
     width: 100%;
+  }
+
+  .workspace-mobile .chat-topic-tabs-actions {
+    flex: 0 0 auto;
   }
 
   .workspace-mobile .chat-topic-row > .chat-topic-label,

@@ -331,8 +331,6 @@ export function ChatPanel({
     isEditingTopicTitleInline,
     setIsEditingTopicTitleInline,
     editingTopicSaving,
-    editingTopicStatusText,
-    setEditingTopicStatusText,
     archivingTopicId,
     notificationSaving,
     topicMutePresetById,
@@ -846,7 +844,6 @@ export function ChatPanel({
           <span className="muted">{t("chat.noChannelHint")}</span>
         ) : null}
       </div>
-      {editingTopicStatusText ? <div className="chat-topic-read-status mb-2" role="status" aria-live="polite">{editingTopicStatusText}</div> : null}
       <div
         className="chat-topic-read-status mb-2"
         role="status"
