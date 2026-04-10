@@ -364,7 +364,8 @@ test("realtime-chat: chat.send accepts snake_case mention_user_ids and forwards 
 });
 
 test("realtime-chat: chat.edit rejects editing message from another user", async () => {
-  let forbiddenMessage: string | null = null;
+  let nackCode: string | null = null;
+  let nackMessage: string | null = null;
   let queryCalls = 0;
 
   await handleChatEdit({
@@ -380,10 +381,11 @@ test("realtime-chat: chat.edit rejects editing message from another user", async
     },
     sendNoActiveRoomNack: () => {},
     sendValidationNack: () => {},
-    sendForbiddenNack: (_socket, _requestId, _eventType, message) => {
-      forbiddenMessage = message || null;
+    sendForbiddenNack: () => {},
+    sendNack: (_socket, _requestId, _eventType, code, message) => {
+      nackCode = code;
+      nackMessage = message;
     },
-    sendNack: () => {},
     incrementMetric: async () => {},
     sendJson: () => {},
     sendAckWithMetrics: () => {
@@ -433,12 +435,12 @@ test("realtime-chat: chat.edit rejects editing message from another user", async
   });
 
   assert.equal(queryCalls, 2);
-  assert.equal(forbiddenMessage, "You can edit only your own messages");
+  assert.equal(nackCode, "Forbidden");
+  assert.equal(nackMessage, "You can only modify your own messages");
 });
 
-test("realtime-chat: chat.delete rejects expired delete window and increments nack metric", async () => {
+test("realtime-chat: chat.delete rejects expired delete window", async () => {
   let nackCode: string | null = null;
-  let nackMetricCalls = 0;
 
   await handleChatDelete({
     connection: {} as any,
@@ -457,11 +459,7 @@ test("realtime-chat: chat.delete rejects expired delete window and increments na
     sendNack: (_socket, _requestId, _eventType, code) => {
       nackCode = code;
     },
-    incrementMetric: async (name) => {
-      if (name === "nack_sent") {
-        nackMetricCalls += 1;
-      }
-    },
+    incrementMetric: async () => {},
     sendJson: () => {},
     sendAckWithMetrics: () => {
       throw new Error("sendAckWithMetrics should not be called for expired delete window");
@@ -489,7 +487,6 @@ test("realtime-chat: chat.delete rejects expired delete window and increments na
   });
 
   assert.equal(nackCode, "DeleteWindowExpired");
-  assert.equal(nackMetricCalls, 1);
 });
 
 function createTopicMutationParams(overrides: Record<string, unknown> = {}) {

@@ -11,7 +11,13 @@
  *
  * Переиспользуется в realtime-chat.ts, а в будущем — в DM и других модулях.
  */
-import { isServerAgeConfirmed } from "./age-verification-service.js";
+
+// Lazy import: age-verification-service тянет db.js → config.ts,
+// что ломает unit-тесты без DATABASE_URL. Импортируем только при вызове.
+async function getIsServerAgeConfirmed(): Promise<(serverId: string, userId: string) => Promise<boolean>> {
+  const { isServerAgeConfirmed } = await import("./age-verification-service.js");
+  return isServerAgeConfirmed;
+}
 
 export type DbQuery = <T = unknown>(
   text: string,
@@ -205,6 +211,7 @@ export async function resolveRoomBySlugWithAccessCheck(
 
   if (room.nsfw === true) {
     const serverId = String(room.server_id || "").trim();
+    const isServerAgeConfirmed = await getIsServerAgeConfirmed();
     const confirmed = serverId ? await isServerAgeConfirmed(serverId, userId) : false;
     if (!confirmed) {
       return {

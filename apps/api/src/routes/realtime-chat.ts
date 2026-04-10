@@ -20,7 +20,13 @@ import {
   type DbQuery
 } from "../services/room-access-service.js";
 import { insertRoomMessage, editRoomMessage, deleteRoomMessage } from "../services/room-messages-service.js";
-import { resolveActiveServerMute } from "../services/server-mute-service.js";
+
+// Lazy import: server-mute-service тянет db.js → config.ts.
+// Аналогично getTopicMessageOps/getNotificationInboxOps — импортируем при первом вызове.
+async function getResolveActiveServerMute() {
+  const { resolveActiveServerMute } = await import("../services/server-mute-service.js");
+  return resolveActiveServerMute;
+}
 
 type TopicMessageOps = {
   createTopicMessage: (input: {
@@ -543,6 +549,7 @@ export async function handleChatSend(
 
   const canBypassPolicies = await canBypassRoomSendPolicy(dbQuery, state.userId, targetRoom.serverId);
   if (!canBypassPolicies && targetRoom.serverId) {
+    const resolveActiveServerMute = await getResolveActiveServerMute();
     const muteState = await resolveActiveServerMute(targetRoom.serverId, state.userId);
     if (muteState.isMuted) {
       sendNack(connection, requestId, eventType, "ServerMemberMuted", "You are muted in this server", {
