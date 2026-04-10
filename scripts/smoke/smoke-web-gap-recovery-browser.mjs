@@ -400,6 +400,10 @@ async function main() {
   });
 
   try {
+    const tokenPayload = decodeJwtPayload(bearerToken);
+    const bootstrapUserId = String(tokenPayload?.sub || "").trim();
+    const introSeenKey = bootstrapUserId ? `boltorezka_intro_v1_seen:${bootstrapUserId}` : "";
+
     const sessionCookieValue = await acquireSessionCookieValue(bearerToken);
     const bootstrapUser = await acquireBootstrapUser(bearerToken, sessionCookieValue || "")
       || buildFallbackUserFromToken(bearerToken);
@@ -418,10 +422,13 @@ async function main() {
       }]);
     }
 
-    await page.addInitScript((token) => {
+    await page.addInitScript((token, firstRunSeenKey) => {
       localStorage.setItem("boltorezka_lang", "en");
       localStorage.setItem("boltorezka_token", token);
-    }, bearerToken);
+      if (firstRunSeenKey) {
+        localStorage.setItem(firstRunSeenKey, "1");
+      }
+    }, bearerToken, introSeenKey);
 
     await page.addInitScript(() => {
       const NativeWebSocket = window.WebSocket;
