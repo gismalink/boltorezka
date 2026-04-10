@@ -323,6 +323,32 @@ async function completeFirstRunIntroIfVisible(page) {
   }
 }
 
+async function completeEmptyServerOnboardingIfVisible(page) {
+  const onboardingTitle = page.getByText(/welcome and choose|создай или присоединись/i).first();
+  if ((await onboardingTitle.count()) === 0 || !(await onboardingTitle.isVisible().catch(() => false))) {
+    return;
+  }
+
+  const serverNameInput = page.locator('label:has-text("Server name") input, label:has-text("Название сервера") input').first();
+  if ((await serverNameInput.count()) > 0) {
+    await serverNameInput.fill(`smoke-${Date.now()}`).catch(() => undefined);
+  } else {
+    const fallbackInput = page.locator('input[placeholder*="Team Wave"], input[placeholder*="Команда"]').first();
+    if ((await fallbackInput.count()) > 0) {
+      await fallbackInput.fill(`smoke-${Date.now()}`).catch(() => undefined);
+    }
+  }
+
+  const createFirstServerButton = page.getByRole("button", { name: /create first server|создать первый сервер/i }).first();
+  if ((await createFirstServerButton.count()) > 0) {
+    const isEnabled = await createFirstServerButton.isEnabled().catch(() => false);
+    if (isEnabled) {
+      await createFirstServerButton.click({ force: true }).catch(() => undefined);
+      await page.waitForTimeout(1400);
+    }
+  }
+}
+
 async function ensureTimelineReady(page) {
   const timeline = page.locator('[data-agent-id="chat.timeline"]').first();
   try {
@@ -333,6 +359,7 @@ async function ensureTimelineReady(page) {
   }
 
   await completeFirstRunIntroIfVisible(page);
+  await completeEmptyServerOnboardingIfVisible(page);
 
   const continueButton = page.getByRole("button", { name: /continue/i }).first();
   if ((await continueButton.count()) > 0 && await continueButton.isVisible().catch(() => false)) {
@@ -342,12 +369,7 @@ async function ensureTimelineReady(page) {
 
   const createFirstServerButton = page.getByRole("button", { name: /create first server/i }).first();
   if ((await createFirstServerButton.count()) > 0 && await createFirstServerButton.isVisible().catch(() => false)) {
-    const serverNameInput = page.getByRole("textbox").first();
-    if ((await serverNameInput.count()) > 0) {
-      await serverNameInput.fill(`smoke-${Date.now()}`).catch(() => undefined);
-    }
-    await createFirstServerButton.click({ force: true }).catch(() => undefined);
-    await page.waitForTimeout(1200);
+    await completeEmptyServerOnboardingIfVisible(page);
   }
 
   const firstRoomButton = page.locator(".room-main-btn").first();
