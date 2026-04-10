@@ -827,6 +827,37 @@ mint_fresh_smoke_bearer() {
   printf '%s' "$new_bearer"
 }
 
+mint_fresh_smoke_bearer_for_email() {
+  local email="$1"
+  local label="$2"
+  local user_meta user_id user_role new_session_id new_bearer
+
+  user_meta="$(resolve_user_meta_by_email "$email")"
+  if [[ -z "$user_meta" ]]; then
+    echo "[postdeploy-smoke] $label: cannot resolve user meta for $email" >&2
+    return 1
+  fi
+
+  user_id="${user_meta%%|*}"
+  user_role="${user_meta##*|}"
+  if [[ -z "$user_id" || -z "$user_role" ]]; then
+    echo "[postdeploy-smoke] $label: invalid user meta for $email" >&2
+    return 1
+  fi
+
+  if [[ -z "${JWT_SECRET_CANDIDATE:-}" ]]; then
+    echo "[postdeploy-smoke] $label: cannot mint bearer (JWT_SECRET_CANDIDATE not set)" >&2
+    return 1
+  fi
+
+  new_session_id="$(uuidgen | tr '[:upper:]' '[:lower:]')"
+  new_bearer="$(make_hs256_jwt "$JWT_SECRET_CANDIDATE" "$user_id" "$user_role" "$new_session_id" "sso")"
+  compose exec -T "$REDIS_SERVICE" redis-cli SETEX \
+    "auth:session:${new_session_id}" "${SMOKE_AUTH_SESSION_TTL_SEC:-2592000}" \
+    "{\"userId\":\"${user_id}\",\"authMode\":\"sso\",\"issuedAt\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",\"rotatedFrom\":null}" >/dev/null
+  printf '%s' "$new_bearer"
+}
+
 if [[ "$EFFECTIVE_COOKIE_MODE" == "1" ]]; then
   COOKIE_NAME="${TEST_AUTH_SESSION_COOKIE_NAME:-${AUTH_SESSION_COOKIE_NAME:-boltorezka_session_test}}"
   if [[ "${SMOKE_COOKIE_NEGATIVE:-1}" == "0" ]]; then
@@ -920,6 +951,20 @@ if [[ "${SMOKE_WEB_GAP_RECOVERY_BROWSER:-1}" == "1" ]]; then
   if [[ ! -d "node_modules/playwright" ]]; then
     echo "[postdeploy-smoke] install npm dependencies (playwright missing)"
     npm install --no-audit --no-fund
+  fi
+
+  if [[ "${SMOKE_REFRESH_BEARER_BEFORE_WEB_GAP_RECOVERY:-1}" == "1" ]]; then
+    if FRESH_WEB_GAP_BEARER="$(mint_fresh_smoke_bearer "web-gap-recovery-primary")"; then
+      export SMOKE_TEST_BEARER_TOKEN="$FRESH_WEB_GAP_BEARER"
+    else
+      echo "[postdeploy-smoke] web gap recovery bearer refresh skipped for primary user" >&2
+    fi
+
+    if FRESH_WEB_GAP_BEARER_SECOND="$(mint_fresh_smoke_bearer_for_email "$USER_EMAIL_SECOND" "web-gap-recovery-secondary")"; then
+      export SMOKE_TEST_BEARER_TOKEN_SECOND="$FRESH_WEB_GAP_BEARER_SECOND"
+    else
+      echo "[postdeploy-smoke] web gap recovery bearer refresh skipped for secondary user" >&2
+    fi
   fi
 
   if [[ -z "${SMOKE_TEST_BEARER_TOKEN:-}" || -z "${SMOKE_TEST_BEARER_TOKEN_SECOND:-}" ]]; then
