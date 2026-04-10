@@ -600,6 +600,7 @@ async function main() {
         mutatedMessageType: "",
         originalSeq: 0,
         injectedSeq: 0,
+        baselineSeqObserved: 0,
         observedMessageEvents: 0,
         observedChatTypes: []
       };
@@ -642,13 +643,21 @@ async function main() {
           }
 
           const originalSeq = Number(parsed[seqKey]);
+
+          // Establish one baseline sequence point before introducing a gap.
+          if (!window.__smokeGapPatchState.baselineSeqObserved) {
+            window.__smokeGapPatchState.baselineSeqObserved = originalSeq;
+            return event;
+          }
+
           const injectedSeq = originalSeq + 2;
           parsed[seqKey] = injectedSeq;
           window.__smokeGapPatchState = {
             mutated: true,
             mutatedMessageType: type,
             originalSeq,
-            injectedSeq
+            injectedSeq,
+            baselineSeqObserved: window.__smokeGapPatchState.baselineSeqObserved || 0
           };
 
           return new MessageEvent("message", {
