@@ -953,7 +953,14 @@ if [[ "${SMOKE_WEB_GAP_RECOVERY_BROWSER:-1}" == "1" ]]; then
     npm install --no-audit --no-fund
   fi
 
-  if [[ "${SMOKE_REFRESH_BEARER_BEFORE_WEB_GAP_RECOVERY:-1}" == "1" ]]; then
+  if [[ -n "${COOKIE_WS_TICKET_BEARER:-}" ]]; then
+    export SMOKE_TEST_BEARER_TOKEN="$COOKIE_WS_TICKET_BEARER"
+  fi
+  if [[ -z "${SMOKE_TEST_BEARER_TOKEN_SECOND:-}" && -n "${SMOKE_TEST_BEARER_TOKEN:-}" ]]; then
+    export SMOKE_TEST_BEARER_TOKEN_SECOND="$SMOKE_TEST_BEARER_TOKEN"
+  fi
+
+  if [[ "${SMOKE_REFRESH_BEARER_BEFORE_WEB_GAP_RECOVERY:-1}" == "1" && -z "${COOKIE_WS_TICKET_BEARER:-}" ]]; then
     if FRESH_WEB_GAP_BEARER="$(mint_fresh_smoke_bearer "web-gap-recovery-primary")"; then
       export SMOKE_TEST_BEARER_TOKEN="$FRESH_WEB_GAP_BEARER"
     else
