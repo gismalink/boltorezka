@@ -1053,6 +1053,14 @@ CHAT_IDEMPOTENCY_HIT_BEFORE="$(metric_from_hgetall "$METRICS_BEFORE_RAW" "chat_i
 CALL_INITIAL_STATE_SENT_BEFORE="$(metric_from_hgetall "$METRICS_BEFORE_RAW" "call_initial_state_sent")"
 CALL_INITIAL_STATE_PARTICIPANTS_BEFORE="$(metric_from_hgetall "$METRICS_BEFORE_RAW" "call_initial_state_participants_total")"
 
+if [[ "${SMOKE_REFRESH_BEARER_BEFORE_REALTIME:-1}" == "1" ]]; then
+  if FRESH_REALTIME_BEARER="$(mint_fresh_smoke_bearer "realtime-baseline")"; then
+    export SMOKE_TEST_BEARER_TOKEN="$FRESH_REALTIME_BEARER"
+  else
+    echo "[postdeploy-smoke] realtime baseline bearer refresh skipped (cannot mint fresh bearer)" >&2
+  fi
+fi
+
 echo "[postdeploy-smoke] smoke:realtime"
 BASELINE_SMOKE_ROOM_SLUG="${SMOKE_ROOM_SLUG:-general}"
 MEDIA_SMOKE_ROOM_SLUG="${SMOKE_REALTIME_MEDIA_ROOM_SLUG:-$BASELINE_SMOKE_ROOM_SLUG}"

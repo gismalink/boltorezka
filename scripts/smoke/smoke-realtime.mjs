@@ -1227,14 +1227,22 @@ async function runRealtimeSmoke() {
     }
   }
 
-  const canRunReconnectDrift = smokeReconnect && canRunReconnect && Boolean(bearerTokenSecond);
+  const canRunReconnectDrift = smokeReconnect && canRunReconnect && Boolean(bearerToken) && Boolean(bearerTokenSecond);
   if (canRunReconnectDrift) {
     try {
+      const primaryUserIdFromHttp = await resolveUserId(bearerToken, "primary drift");
+      if (primaryUserIdFromHttp !== firstUserId) {
+        reconnectDriftSkipped = true;
+        reconnectDriftSkipReason = "primary-token-does-not-match-realtime-user";
+      }
+
       const secondUserId = await resolveUserId(bearerTokenSecond, "secondary drift");
-      if (secondUserId === firstUserId) {
+      if (!reconnectDriftSkipped && secondUserId === firstUserId) {
         reconnectDriftSkipped = true;
         reconnectDriftSkipReason = "same-user-secondary-token";
-      } else {
+      }
+
+      if (!reconnectDriftSkipped) {
         driftFixture = await setupReconnectDriftFixture({
           primaryToken: bearerToken,
           secondaryToken: bearerTokenSecond,
@@ -1255,7 +1263,7 @@ async function runRealtimeSmoke() {
     reconnectDriftSkipped = true;
     reconnectDriftSkipReason = !smokeReconnect
       ? "smoke-reconnect-disabled"
-      : (!canRunReconnect ? "reconnect-ticket-missing" : "second-token-missing");
+      : (!canRunReconnect ? "reconnect-ticket-missing" : (!bearerToken ? "primary-token-missing" : "second-token-missing"));
   }
 
   if (smokeReconnect && canRunReconnect) {
