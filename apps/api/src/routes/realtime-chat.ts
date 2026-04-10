@@ -1,5 +1,25 @@
+/**
+ * WebSocket-обработчики чата (thin handlers).
+ *
+ * Бизнес-логика вынесена в сервисы:
+ * - room-access-service — проверка доступа, резолв комнат, определение аудитории broadcast.
+ * - room-messages-service — CRUD для legacy (non-topic) сообщений.
+ * - room-topic-messages-service — CRUD для topic-сообщений (lazy import).
+ * - chat-error-mapper — единый маппинг доменных ошибок → WS NACK.
+ *
+ * Этот файл оставлен как тонкий слой: валидация payload → вызов сервиса → broadcast → ack.
+ */
 import type { WebSocket } from "ws";
-import { isServerAgeConfirmed } from "../services/age-verification-service.js";
+import { mapChatDomainErrorToWsNack } from "../services/chat-error-mapper.js";
+import {
+  canBypassRoomSendPolicy,
+  resolveRoomRealtimeAudienceUserIds,
+  resolveRoomById,
+  resolveRoomBySlugWithAccessCheck,
+  type ResolvedChatRoom,
+  type DbQuery
+} from "../services/room-access-service.js";
+import { insertRoomMessage, editRoomMessage, deleteRoomMessage } from "../services/room-messages-service.js";
 import { resolveActiveServerMute } from "../services/server-mute-service.js";
 
 type TopicMessageOps = {
@@ -169,52 +189,6 @@ type SocketState = {
   roomSlug: string | null;
 };
 
-type ResolvedChatRoom = {
-  roomId: string;
-  roomSlug: string;
-  serverId: string | null;
-  isReadonly: boolean;
-  slowmodeSeconds: number;
-};
-
-async function canBypassRoomSendPolicy(
-  dbQuery: ChatCommonParams["dbQuery"],
-  userId: string,
-  serverId: string | null
-): Promise<boolean> {
-  const globalRoleResult = await dbQuery<{ role: string }>(
-    `SELECT role
-     FROM users
-     WHERE id = $1
-       AND is_banned = FALSE
-     LIMIT 1`,
-    [userId]
-  );
-
-  const globalRole = String(globalRoleResult.rows[0]?.role || "").trim();
-  if (globalRole === "admin" || globalRole === "super_admin") {
-    return true;
-  }
-
-  const normalizedServerId = String(serverId || "").trim();
-  if (!normalizedServerId) {
-    return false;
-  }
-
-  const membership = await dbQuery<{ role: string }>(
-    `SELECT role
-     FROM server_members
-     WHERE server_id = $1
-       AND user_id = $2
-       AND status = 'active'
-     LIMIT 1`,
-    [normalizedServerId, userId]
-  );
-
-  const serverRole = String(membership.rows[0]?.role || "").trim();
-  return serverRole === "owner" || serverRole === "admin";
-}
-
 type ChatCommonParams = {
   connection: WebSocket;
   state: SocketState;
@@ -255,75 +229,6 @@ type ChatCommonParams = {
   redisSetEx: (key: string, ttlSeconds: number, value: string) => Promise<string | null>;
   dbQuery: <T = unknown>(text: string, params?: unknown[]) => Promise<{ rowCount: number | null; rows: T[] }>;
 };
-
-async function resolveRoomRealtimeAudienceUserIds(
-  dbQuery: ChatCommonParams["dbQuery"],
-  roomId: string
-): Promise<string[]> {
-  const roomMeta = await dbQuery<{
-    id: string;
-    server_id: string | null;
-    is_public: boolean;
-    is_hidden: boolean;
-  }>(
-    `SELECT id, server_id, is_public, is_hidden
-     FROM rooms
-     WHERE id = $1
-       AND is_archived = FALSE
-     LIMIT 1`,
-    [roomId]
-  );
-
-  const room = roomMeta.rows[0];
-  if (!room) {
-    return [];
-  }
-
-  if (room.is_hidden) {
-    const hiddenAudience = await dbQuery<{ user_id: string }>(
-      `SELECT DISTINCT user_id
-       FROM (
-         SELECT user_id
-         FROM room_members
-         WHERE room_id = $1
-         UNION
-         SELECT user_id
-         FROM room_visibility_grants
-         WHERE room_id = $1
-       ) audience`,
-      [roomId]
-    );
-
-    return hiddenAudience.rows
-      .map((entry) => String(entry.user_id || "").trim())
-      .filter(Boolean);
-  }
-
-  if (room.is_public && room.server_id) {
-    const serverAudience = await dbQuery<{ user_id: string }>(
-      `SELECT user_id
-       FROM server_members
-       WHERE server_id = $1
-         AND status = 'active'`,
-      [room.server_id]
-    );
-
-    return serverAudience.rows
-      .map((entry) => String(entry.user_id || "").trim())
-      .filter(Boolean);
-  }
-
-  const privateAudience = await dbQuery<{ user_id: string }>(
-    `SELECT user_id
-     FROM room_members
-     WHERE room_id = $1`,
-    [roomId]
-  );
-
-  return privateAudience.rows
-    .map((entry) => String(entry.user_id || "").trim())
-    .filter(Boolean);
-}
 
 function normalizeMentionUserIdsFromPayload(payload: Record<string, unknown>): string[] {
   const candidates = payload.mentionUserIds ?? payload.mention_user_ids;
@@ -418,174 +323,23 @@ async function resolveChatRoom(
       return null;
     }
 
-    const roomById = await dbQuery<{
-      id: string;
-      slug: string;
-      server_id: string | null;
-      is_readonly: boolean;
-      slowmode_seconds: number;
-    }>(
-      `SELECT id, slug, server_id, is_readonly, slowmode_seconds
-       FROM rooms
-       WHERE id = $1
-         AND is_archived = FALSE
-       LIMIT 1`,
-      [state.roomId]
-    );
-
-    const room = roomById.rows[0];
+    const room = await resolveRoomById(dbQuery, state.roomId);
     if (!room) {
       sendNack(connection, requestId, eventType, "RoomNotFound", "Room does not exist");
       return null;
     }
-
-    return {
-      roomId: room.id,
-      roomSlug: room.slug,
-      serverId: room.server_id,
-      isReadonly: Boolean(room.is_readonly),
-      slowmodeSeconds: Number(room.slowmode_seconds || 0)
-    };
+    return room;
   }
 
-  const roomResult = await dbQuery<{
-    id: string;
-    slug: string;
-    is_public: boolean;
-    is_hidden: boolean;
-    server_id: string | null;
-    nsfw: boolean | null;
-    is_readonly: boolean;
-    slowmode_seconds: number;
-  }>(
-    `SELECT r.id, r.slug, r.is_public, r.is_hidden, r.server_id, r.nsfw, r.is_readonly, r.slowmode_seconds
-     FROM rooms r
-     LEFT JOIN servers s ON s.id = r.server_id
-     WHERE r.slug = $1
-       AND r.is_archived = FALSE
-       AND (r.server_id IS NULL OR (s.is_archived = FALSE AND s.is_blocked = FALSE))
-     LIMIT 1`,
-    [targetRoomSlug]
-  );
-
-  if ((roomResult.rowCount || 0) === 0) {
-    sendNack(connection, requestId, eventType, "RoomNotFound", "Room does not exist");
+  const result = await resolveRoomBySlugWithAccessCheck(dbQuery, targetRoomSlug, state.userId, {
+    activeRoomId: state.roomId,
+    activeRoomSlug: state.roomSlug
+  });
+  if ("error" in result) {
+    sendNack(connection, requestId, eventType, result.error.code, result.error.message);
     return null;
   }
-
-  const room = roomResult.rows[0];
-  if (room.nsfw === true) {
-    const serverId = String(room.server_id || "").trim();
-    const confirmed = serverId ? await isServerAgeConfirmed(serverId, state.userId) : false;
-    if (!confirmed) {
-      sendNack(connection, requestId, eventType, "AgeVerificationRequired", "Age verification is required for NSFW access");
-      return null;
-    }
-  }
-
-  if (room.is_hidden) {
-    const hiddenAccess = await dbQuery(
-      `SELECT EXISTS(
-         SELECT 1
-         FROM room_visibility_grants
-         WHERE room_id = $1 AND user_id = $2
-       )
-       OR EXISTS(
-         SELECT 1
-         FROM room_members
-         WHERE room_id = $1 AND user_id = $2
-       ) AS has_access`,
-      [room.id, state.userId]
-    );
-
-    const hasHiddenAccess = Boolean((hiddenAccess.rows[0] as { has_access?: boolean } | undefined)?.has_access);
-    const isCurrentActiveRoom = state.roomId === room.id && state.roomSlug === room.slug;
-    if (!hasHiddenAccess && !isCurrentActiveRoom) {
-      sendNack(connection, requestId, eventType, "Forbidden", "You cannot access this room");
-      return null;
-    }
-  }
-
-  if (!room.is_public) {
-    const membership = await dbQuery(
-      `SELECT 1
-       FROM room_members
-       WHERE room_id = $1 AND user_id = $2
-       LIMIT 1`,
-      [room.id, state.userId]
-    );
-
-    if ((membership.rowCount || 0) === 0) {
-      sendNack(connection, requestId, eventType, "Forbidden", "You cannot access this room");
-      return null;
-    }
-  }
-
-  return {
-    roomId: room.id,
-    roomSlug: room.slug,
-    serverId: room.server_id,
-    isReadonly: Boolean(room.is_readonly),
-    slowmodeSeconds: Number(room.slowmode_seconds || 0)
-  };
-}
-
-function mapTopicSendDomainErrorToWsNack(
-  error: unknown,
-  params: {
-    connection: WebSocket;
-    requestId: string | null;
-    eventType: string;
-    sendNack: ChatCommonParams["sendNack"];
-  }
-): boolean {
-  const message = String((error as Error)?.message || "");
-  const { connection, requestId, eventType, sendNack } = params;
-
-  if (message === "topic_not_found" || message === "message_not_found") {
-    sendNack(connection, requestId, eventType, "MessageNotFound", "Message does not exist");
-    return true;
-  }
-
-  if (message === "forbidden_room_access" || message === "forbidden_topic_manage") {
-    sendNack(connection, requestId, eventType, "Forbidden", "You do not have access to this resource");
-    return true;
-  }
-
-  if (message === "topic_archived") {
-    sendNack(connection, requestId, eventType, "TopicArchived", "Topic is archived");
-    return true;
-  }
-
-  if (message === "room_readonly") {
-    sendNack(connection, requestId, eventType, "RoomReadOnly", "Room is read-only");
-    return true;
-  }
-
-  if (message === "server_member_muted") {
-    sendNack(connection, requestId, eventType, "ServerMemberMuted", "You are muted in this server");
-    return true;
-  }
-
-  if (message.startsWith("room_slowmode_active:")) {
-    const retryAfterSec = Math.max(1, Number.parseInt(message.split(":")[1] || "1", 10) || 1);
-    sendNack(connection, requestId, eventType, "SlowmodeActive", "Slowmode is active", {
-      retryAfterSec
-    });
-    return true;
-  }
-
-  if (message === "validation_error") {
-    sendNack(connection, requestId, eventType, "ValidationError", "Validation failed");
-    return true;
-  }
-
-  if (message === "user_not_found") {
-    sendNack(connection, requestId, eventType, "UserNotFound", "User does not exist");
-    return true;
-  }
-
-  return false;
+  return result.room;
 }
 
 export async function handleChatSend(
@@ -780,13 +534,7 @@ export async function handleChatSend(
       );
       return;
     } catch (error) {
-      const handled = mapTopicSendDomainErrorToWsNack(error, {
-        connection,
-        requestId,
-        eventType,
-        sendNack
-      });
-      if (handled) {
+      if (mapChatDomainErrorToWsNack(error, connection, requestId, eventType, sendNack)) {
         return;
       }
       throw error;
@@ -824,20 +572,11 @@ export async function handleChatSend(
     await redisSetEx(slowmodeKey, targetRoom.slowmodeSeconds, String(targetRoom.slowmodeSeconds));
   }
 
-  const inserted = await dbQuery<{
-    id: string;
-    room_id: string;
-    user_id: string;
-    body: string;
-    created_at: string;
-  }>(
-    `INSERT INTO messages (room_id, user_id, body)
-     VALUES ($1, $2, $3)
-     RETURNING id, room_id, user_id, body, created_at`,
-    [targetRoom.roomId, state.userId, text]
-  );
-
-  const chatMessage = inserted.rows[0];
+  const chatMessage = await insertRoomMessage(dbQuery, {
+    roomId: targetRoom.roomId,
+    userId: state.userId,
+    text
+  });
 
   const chatPayload = {
     id: chatMessage.id,
@@ -933,74 +672,16 @@ export async function handleChatEdit(params: ChatCommonParams): Promise<void> {
     return;
   }
 
-  const existingMessage = await dbQuery<{
-    id: string;
-    room_id: string;
-    user_id: string;
-    created_at: string;
-  }>(
-    `SELECT id, room_id, user_id, created_at
-     FROM messages
-     WHERE id = $1 AND room_id = $2
-     LIMIT 1`,
-    [messageId, targetRoom.roomId]
-  );
+  try {
+    const updatedMessage = await editRoomMessage(dbQuery, {
+      messageId,
+      roomId: targetRoom.roomId,
+      userId: state.userId,
+      text
+    });
 
-  if ((existingMessage.rowCount || 0) === 0) {
-    sendNack(connection, requestId, eventType, "MessageNotFound", "Message not found");
-    void incrementMetric("nack_sent");
-    return;
-  }
-
-  const messageRow = existingMessage.rows[0];
-  if (messageRow.user_id !== state.userId) {
-    sendForbiddenNack(connection, requestId, eventType, "You can edit only your own messages");
-    return;
-  }
-
-  const createdAtTs = Number(new Date(messageRow.created_at));
-  const withinWindow = Number.isFinite(createdAtTs) && Date.now() - createdAtTs <= 10 * 60 * 1000;
-  if (!withinWindow) {
-    sendNack(connection, requestId, eventType, "EditWindowExpired", "Message edit window has expired");
-    void incrementMetric("nack_sent");
-    return;
-  }
-
-  const updated = await dbQuery<{
-    id: string;
-    room_id: string;
-    body: string;
-    updated_at: string;
-  }>(
-    `UPDATE messages
-     SET body = $1, updated_at = NOW()
-     WHERE id = $2 AND room_id = $3
-     RETURNING id, room_id, body, updated_at`,
-    [text, messageId, targetRoom.roomId]
-  );
-
-  if ((updated.rowCount || 0) === 0) {
-    sendNack(connection, requestId, eventType, "MessageNotFound", "Message not found");
-    void incrementMetric("nack_sent");
-    return;
-  }
-
-  const updatedMessage = updated.rows[0];
-  broadcastRoom(
-    targetRoom.roomId,
-    buildChatEditedEnvelope({
-      id: updatedMessage.id,
-      roomId: updatedMessage.room_id,
-      roomSlug: targetRoom.roomSlug,
-      text: updatedMessage.body,
-      editedAt: updatedMessage.updated_at,
-      editedByUserId: state.userId
-    })
-  );
-
-  if (targetRoom.roomId !== state.roomId) {
-    sendJson(
-      connection,
+    broadcastRoom(
+      targetRoom.roomId,
       buildChatEditedEnvelope({
         id: updatedMessage.id,
         roomId: updatedMessage.room_id,
@@ -1010,11 +691,30 @@ export async function handleChatEdit(params: ChatCommonParams): Promise<void> {
         editedByUserId: state.userId
       })
     );
-  }
 
-  sendAckWithMetrics(connection, requestId, eventType, {
-    messageId: updatedMessage.id
-  });
+    if (targetRoom.roomId !== state.roomId) {
+      sendJson(
+        connection,
+        buildChatEditedEnvelope({
+          id: updatedMessage.id,
+          roomId: updatedMessage.room_id,
+          roomSlug: targetRoom.roomSlug,
+          text: updatedMessage.body,
+          editedAt: updatedMessage.updated_at,
+          editedByUserId: state.userId
+        })
+      );
+    }
+
+    sendAckWithMetrics(connection, requestId, eventType, {
+      messageId: updatedMessage.id
+    });
+  } catch (error) {
+    if (mapChatDomainErrorToWsNack(error, connection, requestId, eventType, sendNack)) {
+      return;
+    }
+    throw error;
+  }
 }
 
 export async function handleChatDelete(params: ChatCommonParams): Promise<void> {
@@ -1059,67 +759,15 @@ export async function handleChatDelete(params: ChatCommonParams): Promise<void> 
     return;
   }
 
-  const existingMessage = await dbQuery<{
-    id: string;
-    room_id: string;
-    user_id: string;
-    created_at: string;
-  }>(
-    `SELECT id, room_id, user_id, created_at
-     FROM messages
-     WHERE id = $1 AND room_id = $2
-     LIMIT 1`,
-    [messageId, targetRoom.roomId]
-  );
+  try {
+    const deletedMessage = await deleteRoomMessage(dbQuery, {
+      messageId,
+      roomId: targetRoom.roomId,
+      userId: state.userId
+    });
 
-  if ((existingMessage.rowCount || 0) === 0) {
-    sendNack(connection, requestId, eventType, "MessageNotFound", "Message not found");
-    void incrementMetric("nack_sent");
-    return;
-  }
-
-  const messageRow = existingMessage.rows[0];
-  if (messageRow.user_id !== state.userId) {
-    sendForbiddenNack(connection, requestId, eventType, "You can delete only your own messages");
-    return;
-  }
-
-  const createdAtTs = Number(new Date(messageRow.created_at));
-  const withinWindow = Number.isFinite(createdAtTs) && Date.now() - createdAtTs <= 10 * 60 * 1000;
-  if (!withinWindow) {
-    sendNack(connection, requestId, eventType, "DeleteWindowExpired", "Message delete window has expired");
-    void incrementMetric("nack_sent");
-    return;
-  }
-
-  const deleted = await dbQuery<{ id: string; room_id: string }>(
-    `DELETE FROM messages
-     WHERE id = $1 AND room_id = $2
-     RETURNING id, room_id`,
-    [messageId, targetRoom.roomId]
-  );
-
-  if ((deleted.rowCount || 0) === 0) {
-    sendNack(connection, requestId, eventType, "MessageNotFound", "Message not found");
-    void incrementMetric("nack_sent");
-    return;
-  }
-
-  const deletedMessage = deleted.rows[0];
-  broadcastRoom(
-    targetRoom.roomId,
-    buildChatDeletedEnvelope({
-      id: deletedMessage.id,
-      roomId: deletedMessage.room_id,
-      roomSlug: targetRoom.roomSlug,
-      deletedByUserId: state.userId,
-      ts: new Date().toISOString()
-    })
-  );
-
-  if (targetRoom.roomId !== state.roomId) {
-    sendJson(
-      connection,
+    broadcastRoom(
+      targetRoom.roomId,
       buildChatDeletedEnvelope({
         id: deletedMessage.id,
         roomId: deletedMessage.room_id,
@@ -1128,11 +776,29 @@ export async function handleChatDelete(params: ChatCommonParams): Promise<void> 
         ts: new Date().toISOString()
       })
     );
-  }
 
-  sendAckWithMetrics(connection, requestId, eventType, {
-    messageId: deletedMessage.id
-  });
+    if (targetRoom.roomId !== state.roomId) {
+      sendJson(
+        connection,
+        buildChatDeletedEnvelope({
+          id: deletedMessage.id,
+          roomId: deletedMessage.room_id,
+          roomSlug: targetRoom.roomSlug,
+          deletedByUserId: state.userId,
+          ts: new Date().toISOString()
+        })
+      );
+    }
+
+    sendAckWithMetrics(connection, requestId, eventType, {
+      messageId: deletedMessage.id
+    });
+  } catch (error) {
+    if (mapChatDomainErrorToWsNack(error, connection, requestId, eventType, sendNack)) {
+      return;
+    }
+    throw error;
+  }
 }
 
 export async function handleChatTyping(params: ChatCommonParams): Promise<void> {
@@ -1191,43 +857,6 @@ export async function handleChatTyping(params: ChatCommonParams): Promise<void> 
   sendAckWithMetrics(connection, requestId, eventType);
 }
 
-function mapTopicDomainErrorToNack(
-  error: unknown,
-  connection: WebSocket,
-  requestId: string | null,
-  eventType: string,
-  sendNack: ChatCommonParams["sendNack"]
-): boolean {
-  const message = String((error as Error)?.message || "").trim();
-
-  if (message === "message_not_found" || message === "topic_not_found" || message === "room_not_found") {
-    sendNack(connection, requestId, eventType, "MessageNotFound", "Message not found");
-    return true;
-  }
-
-  if (message === "forbidden_room_access" || message === "forbidden_topic_manage") {
-    sendNack(connection, requestId, eventType, "Forbidden", "You do not have access to this resource");
-    return true;
-  }
-
-  if (message === "validation_error") {
-    sendNack(connection, requestId, eventType, "ValidationError", "Validation failed");
-    return true;
-  }
-
-  if (message === "cannot_report_own_message") {
-    sendNack(connection, requestId, eventType, "Forbidden", "You cannot report your own message");
-    return true;
-  }
-
-  if (message === "message_report_exists") {
-    sendNack(connection, requestId, eventType, "MessageAlreadyReported", "Message is already reported by this user");
-    return true;
-  }
-
-  return false;
-}
-
 export async function handleChatPin(params: ChatCommonParams): Promise<void> {
   const {
     connection,
@@ -1277,7 +906,7 @@ export async function handleChatPin(params: ChatCommonParams): Promise<void> {
       topicId: result.topic.id
     });
   } catch (error) {
-    if (mapTopicDomainErrorToNack(error, connection, requestId, eventType, sendNack)) {
+    if (mapChatDomainErrorToWsNack(error, connection, requestId, eventType, sendNack)) {
       return;
     }
     sendNack(connection, requestId, eventType, "ServerError", "Failed to pin message");
@@ -1333,7 +962,7 @@ export async function handleChatUnpin(params: ChatCommonParams): Promise<void> {
       topicId: result.topic.id
     });
   } catch (error) {
-    if (mapTopicDomainErrorToNack(error, connection, requestId, eventType, sendNack)) {
+    if (mapChatDomainErrorToWsNack(error, connection, requestId, eventType, sendNack)) {
       return;
     }
     sendNack(connection, requestId, eventType, "ServerError", "Failed to unpin message");
@@ -1395,7 +1024,7 @@ async function handleChatReactionToggle(params: ChatCommonParams & { active: boo
       active: result.active
     });
   } catch (error) {
-    if (mapTopicDomainErrorToNack(error, connection, requestId, eventType, sendNack)) {
+    if (mapChatDomainErrorToWsNack(error, connection, requestId, eventType, sendNack)) {
       return;
     }
     sendNack(connection, requestId, eventType, "ServerError", "Failed to update reaction");
@@ -1449,7 +1078,7 @@ export async function handleChatReport(params: ChatCommonParams): Promise<void> 
       reportId: result.reportId
     });
   } catch (error) {
-    if (mapTopicDomainErrorToNack(error, connection, requestId, eventType, sendNack)) {
+    if (mapChatDomainErrorToWsNack(error, connection, requestId, eventType, sendNack)) {
       return;
     }
     sendNack(connection, requestId, eventType, "ServerError", "Failed to report message");
@@ -1510,7 +1139,7 @@ export async function handleChatTopicRead(params: ChatCommonParams): Promise<voi
       lastReadMessageId: read.lastReadMessageId
     });
   } catch (error) {
-    if (mapTopicDomainErrorToNack(error, connection, requestId, eventType, sendNack)) {
+    if (mapChatDomainErrorToWsNack(error, connection, requestId, eventType, sendNack)) {
       return;
     }
     sendNack(connection, requestId, eventType, "ServerError", "Failed to mark topic as read");
