@@ -42,7 +42,10 @@ async function acquireSessionCookieValue(token) {
   }
 }
 
-async function installAuthHeaderRoute(page) {
+async function installAuthHeaderRoute(page, sessionCookieValue = "") {
+  const encodedCookieValue = sessionCookieValue ? encodeURIComponent(sessionCookieValue) : "";
+  const cookieHeaderValue = encodedCookieValue ? `${sessionCookieName}=${encodedCookieValue}` : "";
+
   await page.route("**/*", async (route) => {
     const request = route.request();
     const url = request.url();
@@ -80,9 +83,14 @@ async function installAuthHeaderRoute(page) {
     }
 
     const headers = {
-      ...request.headers(),
-      authorization: `Bearer ${bearerToken}`
+      ...request.headers()
     };
+    if (bearerToken) {
+      headers.authorization = `Bearer ${bearerToken}`;
+    }
+    if (cookieHeaderValue) {
+      headers.cookie = headers.cookie ? `${headers.cookie}; ${cookieHeaderValue}` : cookieHeaderValue;
+    }
     await route.continue({ headers });
   });
 }
@@ -263,9 +271,9 @@ async function main() {
   });
 
   try {
-    await installAuthHeaderRoute(page);
-
     const sessionCookieValue = await acquireSessionCookieValue(bearerToken);
+    await installAuthHeaderRoute(page, sessionCookieValue || "");
+
     if (sessionCookieValue) {
       const parsedBase = new URL(baseUrl);
       await context.addCookies([{
