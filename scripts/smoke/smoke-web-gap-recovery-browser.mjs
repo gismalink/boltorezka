@@ -196,16 +196,22 @@ async function postRoomMessage(token, roomSlugValue, text) {
   }
 }
 
-async function ensureServerPresence(token) {
+async function ensureServerPresence(token, sessionCookieValue = "") {
+  const authHeaders = {
+    Authorization: `Bearer ${token}`
+  };
+  if (sessionCookieValue) {
+    authHeaders.Cookie = `${sessionCookieName}=${encodeURIComponent(sessionCookieValue)}`;
+  }
+
   try {
     const listResponse = await fetch(`${baseUrl}/v1/servers`, {
       method: "GET",
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
+      headers: authHeaders
     });
     if (!listResponse.ok) {
-      return;
+      const listBody = await listResponse.text().catch(() => "");
+      throw new Error(`[smoke:web:gap-recovery:browser] cannot list servers: status=${listResponse.status} body=${String(listBody || "").slice(0, 220)}`);
     }
 
     const listPayload = await listResponse.json().catch(() => ({}));
@@ -214,16 +220,21 @@ async function ensureServerPresence(token) {
       return;
     }
 
-    await fetch(`${baseUrl}/v1/servers`, {
+    const createResponse = await fetch(`${baseUrl}/v1/servers`, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${token}`,
+        ...authHeaders,
         "Content-Type": "application/json"
       },
       body: JSON.stringify({ name: `smoke-${Date.now()}` })
-    }).catch(() => null);
-  } catch {
-    // Best effort only; onboarding fallback remains in place.
+    });
+
+    if (!createResponse.ok) {
+      const createBody = await createResponse.text().catch(() => "");
+      throw new Error(`[smoke:web:gap-recovery:browser] cannot create first server: status=${createResponse.status} body=${String(createBody || "").slice(0, 220)}`);
+    }
+  } catch (error) {
+    throw error;
   }
 }
 
@@ -408,7 +419,8 @@ async function main() {
     return;
   }
 
-  await ensureServerPresence(bearerToken);
+  const sessionCookieValue = await acquireSessionCookieValue(bearerToken);
+  await ensureServerPresence(bearerToken, sessionCookieValue || "");
 
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext();
@@ -464,7 +476,6 @@ async function main() {
     const bootstrapUserId = String(tokenPayload?.sub || "").trim();
     const introSeenKey = bootstrapUserId ? `boltorezka_intro_v1_seen:${bootstrapUserId}` : "";
 
-    const sessionCookieValue = await acquireSessionCookieValue(bearerToken);
     const bootstrapUser = await acquireBootstrapUser(bearerToken, sessionCookieValue || "")
       || buildFallbackUserFromToken(bearerToken);
     await installAuthHeaderRoute(page, sessionCookieValue || "", bootstrapUser);
