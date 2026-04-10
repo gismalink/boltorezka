@@ -180,6 +180,7 @@ export function ChatPanel({
   const [quotedMessage, setQuotedMessage] = useState<{ userName: string; text: string } | null>(null);
   const [hotkeyStatusText, setHotkeyStatusText] = useState("");
   const [topicMentionsActionLoading, setTopicMentionsActionLoading] = useState(false);
+  const [showScrollToBottomButton, setShowScrollToBottomButton] = useState(false);
   const attachmentInputRef = useRef<HTMLInputElement | null>(null);
   const topicUnreadMentionQueueRef = useRef<TopicUnreadMentionNavItem[]>([]);
   const topicUnreadMentionCursorRef = useRef<{ beforeCreatedAt: string; beforeId: string } | null>(null);
@@ -786,6 +787,32 @@ export function ChatPanel({
     });
   }, [chatLogRef]);
 
+  useEffect(() => {
+    const chatLogNode = chatLogRef.current;
+    if (!chatLogNode || !hasActiveRoom) {
+      setShowScrollToBottomButton(false);
+      return;
+    }
+
+    const updateScrollToBottomVisibility = () => {
+      const maxScrollTop = Math.max(0, chatLogNode.scrollHeight - chatLogNode.clientHeight);
+      const hasScrollableContent = maxScrollTop > 1;
+      const distanceToBottom = maxScrollTop - chatLogNode.scrollTop;
+      const isAtBottom = distanceToBottom <= 12;
+
+      setShowScrollToBottomButton(hasScrollableContent && !isAtBottom);
+    };
+
+    chatLogNode.addEventListener("scroll", updateScrollToBottomVisibility, { passive: true });
+
+    const rafId = window.requestAnimationFrame(updateScrollToBottomVisibility);
+
+    return () => {
+      chatLogNode.removeEventListener("scroll", updateScrollToBottomVisibility);
+      window.cancelAnimationFrame(rafId);
+    };
+  }, [chatLogRef, hasActiveRoom, messages.length, loadingOlderMessages]);
+
   return (
     <section
       className="card middle-card relative flex min-h-0 flex-1 flex-col overflow-hidden"
@@ -932,16 +959,18 @@ export function ChatPanel({
                 <span>{activeTopicMentionUnreadCount}</span>
               </Button>
             ) : null}
-            <Button
-              type="button"
-              className="secondary tiny icon-btn chat-floating-action-btn"
-              onClick={scrollTimelineToBottom}
-              onContextMenu={(event) => event.preventDefault()}
-              data-tooltip={t("rooms.down")}
-              aria-label={t("rooms.down")}
-            >
-              <i className="bi bi-arrow-down" aria-hidden="true" />
-            </Button>
+            {showScrollToBottomButton ? (
+              <Button
+                type="button"
+                className="secondary tiny icon-btn chat-floating-action-btn"
+                onClick={scrollTimelineToBottom}
+                onContextMenu={(event) => event.preventDefault()}
+                data-tooltip={t("rooms.down")}
+                aria-label={t("rooms.down")}
+              >
+                <i className="bi bi-arrow-down" aria-hidden="true" />
+              </Button>
+            ) : null}
           </div>
         ) : null}
       </div>
