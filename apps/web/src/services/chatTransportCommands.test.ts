@@ -277,4 +277,70 @@ describe("chatTransportCommands", () => {
       mentionUserIds: ["u2"]
     });
   });
+
+  it("runChatSend handles flaky network: transient fallback then ws recovery", async () => {
+    const sendWsEvent = vi.fn(() => "legacy-req");
+    const sendWsEventAwaitAck = vi
+      .fn<(...args: unknown[]) => Promise<void>>()
+      .mockRejectedValueOnce(new Error("ws_not_connected"))
+      .mockResolvedValueOnce(undefined);
+    createRoomMessageMock.mockResolvedValue(undefined);
+
+    const firstAttempt = await runChatSend({
+      authToken: "token",
+      text: "first flaky",
+      roomSlug: "general",
+      mentionUserIds: ["u2"],
+      maxRetries: 2,
+      sendWsEvent,
+      sendWsEventAwaitAck
+    });
+
+    const secondAttempt = await runChatSend({
+      authToken: "token",
+      text: "second stable",
+      roomSlug: "general",
+      mentionUserIds: ["u2"],
+      maxRetries: 2,
+      sendWsEvent,
+      sendWsEventAwaitAck
+    });
+
+    expect(firstAttempt).toEqual({ kind: "http", value: undefined });
+    expect(secondAttempt).toEqual({ kind: "ws" });
+    expect(sendWsEventAwaitAck).toHaveBeenCalledTimes(2);
+    expect(createRoomMessageMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("runChatDelete does not fallback after flaky transient+business error mix", async () => {
+    const sendWsEvent = vi.fn(() => "legacy-req");
+    const sendWsEventAwaitAck = vi
+      .fn<(...args: unknown[]) => Promise<void>>()
+      .mockRejectedValueOnce(Object.assign(new Error("temporary"), { code: "GatewayTimeout" }))
+      .mockRejectedValueOnce(Object.assign(new Error("forbidden"), { code: "Forbidden" }));
+    deleteMessageMock.mockResolvedValue(undefined);
+
+    const transientAttempt = await runChatDelete({
+      authToken: "token",
+      messageId: "m1",
+      roomSlug: "general",
+      topicId: "topic-1",
+      sendWsEvent,
+      sendWsEventAwaitAck
+    });
+
+    const businessAttempt = await runChatDelete({
+      authToken: "token",
+      messageId: "m2",
+      roomSlug: "general",
+      topicId: "topic-1",
+      sendWsEvent,
+      sendWsEventAwaitAck
+    });
+
+    expect(transientAttempt).toEqual({ kind: "http", value: undefined });
+    expect(businessAttempt).toEqual({ kind: "failed" });
+    expect(deleteMessageMock).toHaveBeenCalledTimes(1);
+    expect(deleteMessageMock).toHaveBeenCalledWith("token", "m1");
+  });
 });
