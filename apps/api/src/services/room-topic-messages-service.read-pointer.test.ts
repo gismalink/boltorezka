@@ -29,13 +29,13 @@ test("isReadPointerAdvance: accepts newer pointer by created_at", () => {
   );
 });
 
-test("isReadPointerAdvance: falls back to message id ordering when created_at is equal", () => {
+test("isReadPointerAdvance: accepts equal created_at pointers", () => {
   assert.equal(
     isReadPointerAdvance(
       { messageId: "m-100", createdAtIso: "2026-04-10T10:00:00.000Z" },
       { messageId: "m-099", createdAtIso: "2026-04-10T10:00:00.000Z" }
     ),
-    false
+    true
   );
 
   assert.equal(

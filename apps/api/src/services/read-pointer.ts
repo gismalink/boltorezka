@@ -19,6 +19,10 @@ export function isReadPointerAdvance(
     if (requestedTs < currentTs) {
       return false;
     }
+
+    // Equal timestamps are treated as non-stale because unread anchoring uses
+    // created_at thresholding; rejecting equal-time reads can cause false rollbacks.
+    return true;
   }
 
   const currentMessageId = String(currentPointer.messageId || "").trim();
