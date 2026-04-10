@@ -70,13 +70,22 @@ async function acquireSmokeBootstrapSession(email) {
     });
 
     if (!response.ok) {
-      return null;
+      const body = await response.text().catch(() => "");
+      return {
+        ok: false,
+        status: response.status,
+        body: String(body || "").slice(0, 220)
+      };
     }
 
     const payload = await response.json().catch(() => null);
     const token = String(payload?.token || "").trim();
     if (!token) {
-      return null;
+      return {
+        ok: false,
+        status: 200,
+        body: "missing token in payload"
+      };
     }
 
     const setCookieHeader = response.headers.get("set-cookie") || "";
@@ -84,11 +93,17 @@ async function acquireSmokeBootstrapSession(email) {
     const cookieValue = cookieMatch?.[1] ? decodeURIComponent(String(cookieMatch[1]).trim()) : "";
 
     return {
+      ok: true,
       token,
-      cookieValue: cookieValue || null
+      cookieValue: cookieValue || null,
+      user: payload?.user || null
     };
   } catch {
-    return null;
+    return {
+      ok: false,
+      status: 0,
+      body: "network error"
+    };
   }
 }
 
@@ -398,13 +413,13 @@ async function main() {
   let senderToken = bearerTokenSecond;
 
   const smokeBootstrapSession = await acquireSmokeBootstrapSession(smokeUserEmail);
-  if (smokeBootstrapSession?.token) {
+  if (smokeBootstrapSession?.ok && smokeBootstrapSession?.token) {
     viewerToken = smokeBootstrapSession.token;
   }
 
   const sessionCookieValuePrimary = await acquireSessionCookieValue(bearerToken);
   const sessionCookieValueSecondary = await acquireSessionCookieValue(bearerTokenSecond);
-  const sessionCookieValueBootstrap = String(smokeBootstrapSession?.cookieValue || "").trim();
+  const sessionCookieValueBootstrap = String(smokeBootstrapSession?.ok ? smokeBootstrapSession?.cookieValue || "" : "").trim();
   const sessionCookieValueViewer = sessionCookieValueBootstrap
     || (viewerToken === bearerToken ? sessionCookieValuePrimary : viewerToken === bearerTokenSecond ? sessionCookieValueSecondary : "");
 
@@ -490,7 +505,28 @@ async function main() {
   });
 
   try {
-    if (!smokeBootstrapSession?.token) {
+    await page.route("**/v1/auth/sso/session", async (route) => {
+      const activeBootstrap = smokeBootstrapSession?.ok
+        ? smokeBootstrapSession
+        : await acquireSmokeBootstrapSession(smokeUserEmail);
+
+      if (!activeBootstrap?.ok || !activeBootstrap.token) {
+        await route.continue();
+        return;
+      }
+
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          authenticated: true,
+          token: activeBootstrap.token,
+          user: activeBootstrap.user || null
+        })
+      });
+    });
+
+    if (!smokeBootstrapSession?.ok || !smokeBootstrapSession?.token) {
       const bootstrapPrimary = await bootstrapBrowserSessionCookie(page, context, bearerToken);
       if (!bootstrapPrimary.ok) {
         const bootstrapSecondary = await bootstrapBrowserSessionCookie(page, context, bearerTokenSecond);
@@ -541,6 +577,10 @@ async function main() {
         localStorage.setItem(firstRunSeenKey, "1");
       }
     }, viewerToken, introSeenKey);
+
+    if (!smokeBootstrapSession?.ok) {
+      console.warn(`[smoke:web:gap-recovery:browser] smoke bootstrap fallback: status=${smokeBootstrapSession?.status || 0} body=${String(smokeBootstrapSession?.body || "")}`);
+    }
 
     await page.addInitScript(() => {
       const NativeWebSocket = window.WebSocket;
