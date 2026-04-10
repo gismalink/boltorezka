@@ -884,11 +884,24 @@ if [[ "$EFFECTIVE_COOKIE_MODE" == "1" ]]; then
     COOKIE_WS_TICKET_STATUS="skip"
   else
     COOKIE_WS_TICKET_BEARER="$(mint_fresh_smoke_bearer "cookie-ws-ticket")"
+    COOKIE_WS_TICKET_TOKEN_FILE=".deploy/cookie-ws-ticket-token.env"
+    rm -f "$COOKIE_WS_TICKET_TOKEN_FILE"
     echo "[postdeploy-smoke] smoke:auth:cookie-ws-ticket (cookie-mode=1)"
     SMOKE_API_URL="$BASE_URL" \
       SMOKE_SESSION_COOKIE_NAME="$COOKIE_NAME" \
       SMOKE_TEST_BEARER_TOKEN="$COOKIE_WS_TICKET_BEARER" \
+      SMOKE_COOKIE_WS_EXPORT_TOKEN_FILE="$COOKIE_WS_TICKET_TOKEN_FILE" \
+      SMOKE_COOKIE_WS_SKIP_LOGOUT="${SMOKE_COOKIE_WS_SKIP_LOGOUT:-1}" \
       npm run smoke:auth:cookie-ws-ticket
+
+    if [[ -f "$COOKIE_WS_TICKET_TOKEN_FILE" ]]; then
+      set +u
+      source "$COOKIE_WS_TICKET_TOKEN_FILE"
+      set -u
+      if [[ -n "${SMOKE_COOKIE_WS_REFRESHED_TOKEN:-}" ]]; then
+        COOKIE_WS_TICKET_BEARER="$SMOKE_COOKIE_WS_REFRESHED_TOKEN"
+      fi
+    fi
     COOKIE_WS_TICKET_STATUS="pass"
   fi
 else
@@ -953,11 +966,17 @@ if [[ "${SMOKE_WEB_GAP_RECOVERY_BROWSER:-1}" == "1" ]]; then
     npm install --no-audit --no-fund
   fi
 
+  if [[ -n "${COOKIE_WS_TICKET_BEARER:-}" ]]; then
+    export SMOKE_TEST_BEARER_TOKEN="$COOKIE_WS_TICKET_BEARER"
+  fi
+
   if [[ "${SMOKE_REFRESH_BEARER_BEFORE_WEB_GAP_RECOVERY:-1}" == "1" ]]; then
-    if FRESH_WEB_GAP_BEARER="$(mint_fresh_smoke_bearer "web-gap-recovery-primary")"; then
-      export SMOKE_TEST_BEARER_TOKEN="$FRESH_WEB_GAP_BEARER"
-    else
-      echo "[postdeploy-smoke] web gap recovery bearer refresh skipped for primary user" >&2
+    if [[ -z "${COOKIE_WS_TICKET_BEARER:-}" ]]; then
+      if FRESH_WEB_GAP_BEARER="$(mint_fresh_smoke_bearer "web-gap-recovery-primary")"; then
+        export SMOKE_TEST_BEARER_TOKEN="$FRESH_WEB_GAP_BEARER"
+      else
+        echo "[postdeploy-smoke] web gap recovery bearer refresh skipped for primary user" >&2
+      fi
     fi
 
     if FRESH_WEB_GAP_BEARER_SECOND="$(mint_fresh_smoke_bearer_for_email "$USER_EMAIL_SECOND" "web-gap-recovery-secondary")"; then
