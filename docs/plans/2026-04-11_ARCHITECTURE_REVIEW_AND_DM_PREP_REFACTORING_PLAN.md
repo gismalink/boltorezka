@@ -193,11 +193,16 @@ Scope: глобальный аудит проекта boltorezka + план ре
 - [x] Уменьшить `realtime-chat.ts` с 1518 до 1146 строк (−25%, thin handlers).
 - [ ] TODO на следующие итерации: `validators.ts` (нормализация строк), дальнейшее уменьшение до ~400 строк.
 
-### 3.2 WS2: Backend — тесты критического пути (P0)
+### 3.2 WS2: Backend — тесты критического пути (P0) ✅
 
-- [ ] `realtime-chat.test.ts` — unit-тесты для handleChatSend, handleChatEdit, handleChatDelete
-- [ ] `permission-matrix.test.ts` — room visibility × membership × role комбинации
-- [ ] Error-scenario tests: Redis down, DB timeout, concurrent edits
+- [x] `realtime-chat.test.ts` — unit-тесты для handleChatSend, handleChatEdit, handleChatDelete (12 тестов, были + 2 обновлены)
+- [x] `chat-error-mapper.test.ts` — все ветки маппера (20 тестов)
+- [x] `room-access-service.test.ts` — resolve, bypass, audience (16 тестов)
+- [x] `room-messages-service.test.ts` — CRUD + ownership + window (9 тестов)
+- [x] Lazy import fix (age-verification, server-mute) для тестов без DATABASE_URL
+- [x] Deploy test → smoke ✅ (2885e9f)
+- [ ] TODO: `permission-matrix.test.ts` — room visibility × membership × role комбинации
+- [ ] TODO: Error-scenario tests: Redis down, DB timeout, concurrent edits
 
 ### 3.3 WS3: Frontend — разбиение god-компонентов (P0)
 
@@ -276,12 +281,13 @@ Scope: глобальный аудит проекта boltorezka + план ре
 
 ```
 Итерация 1 (P0 — рефакторинг backend) ✅ 2026-04-11
-├── WS1: extract chat-error-mapper, room-access-service, room-messages-service ✅
+├── WS1: extract chat-error-mapper, room-access-service, room-messages-service ✅ (bc1b7e5)
 ├── realtime-chat.ts 1518→1146 строк ✅
-├── Deploy test → smoke ✅ (bc1b7e5)
-└── WS2: написать тесты для chat + permission matrix ← ТЕКУЩАЯ
+├── WS2: 57 тестов (20+16+9+12), lazy import fix ✅ (2885e9f)
+├── Deploy test → smoke ✅
+└── Готово к merge в main
 
-Итерация 2 (P0 — рефакторинг frontend)
+Итерация 2 (P0 — рефакторинг frontend) ← СЛЕДУЮЩАЯ
 ├── WS3: разбить ChatPanel, RoomRow, ServerProfileModal
 └── Deploy test → smoke
 
