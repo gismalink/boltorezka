@@ -4,12 +4,10 @@ import type { RoomTopic } from "../../../domain";
 import { CHAT_AGENT_IDS } from "../../../constants/chatAgentSemantics";
 import { Button } from "../../uicomponents";
 import { TopicContextMenu } from "./TopicContextMenu";
+import { useChatPanelCtx } from "../ChatPanelContext";
 
 type ChatPanelOverlaysProps = {
-  t: (key: string) => string;
   previewImageUrl: string | null;
-  setPreviewImageUrl: (value: string | null) => void;
-  resolveAttachmentImageUrl: (url: string) => string;
   topicPaletteOpen: boolean;
   closeTopicPalette: () => void;
   topicPaletteQuery: string;
@@ -45,10 +43,7 @@ type ChatPanelOverlaysProps = {
 };
 
 export function ChatPanelOverlays({
-  t,
   previewImageUrl,
-  setPreviewImageUrl,
-  resolveAttachmentImageUrl,
   topicPaletteOpen,
   closeTopicPalette,
   topicPaletteQuery,
@@ -82,6 +77,7 @@ export function ChatPanelOverlays({
   setTopicDeleteConfirm,
   confirmDeleteTopic
 }: ChatPanelOverlaysProps) {
+  const { t, setPreviewImageUrl, resolveAttachmentImageUrl } = useChatPanelCtx();
   return (
     <>
       {previewImageUrl && typeof document !== "undefined"

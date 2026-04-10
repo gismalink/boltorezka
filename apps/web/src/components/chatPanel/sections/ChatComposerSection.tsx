@@ -8,6 +8,7 @@ import {
   chatAgentMentionOptionId
 } from "../../../constants/chatAgentSemantics";
 import { Button } from "../../uicomponents";
+import { useChatPanelCtx } from "../ChatPanelContext";
 
 type MentionCandidate = {
   key: string;
@@ -47,7 +48,6 @@ function resolveMentionContext(value: string, caret: number): MentionContext | n
 }
 
 type ChatComposerSectionProps = {
-  t: (key: string) => string;
   hasActiveRoom: boolean;
   activeTopicIsArchived: boolean;
   editingMessageId: string | null;
@@ -66,13 +66,11 @@ type ChatComposerSectionProps = {
   mentionCandidates: MentionCandidate[];
   composePreviewImage: string | null;
   composePendingAttachmentName: string | null;
-  setPreviewImageUrl: (value: string | null) => void;
   attachmentInputRef: RefObject<HTMLInputElement>;
   screenContext: string;
 };
 
 export function ChatComposerSection({
-  t,
   hasActiveRoom,
   activeTopicIsArchived,
   editingMessageId,
@@ -91,10 +89,10 @@ export function ChatComposerSection({
   mentionCandidates,
   composePreviewImage,
   composePendingAttachmentName,
-  setPreviewImageUrl,
   attachmentInputRef,
   screenContext
 }: ChatComposerSectionProps) {
+  const { t, setPreviewImageUrl } = useChatPanelCtx();
   const messageInputRef = useRef<HTMLTextAreaElement | null>(null);
   const [mentionContext, setMentionContext] = useState<MentionContext | null>(null);
   const [mentionSelectedIndex, setMentionSelectedIndex] = useState(0);

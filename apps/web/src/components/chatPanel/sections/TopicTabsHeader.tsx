@@ -2,9 +2,9 @@ import { FormEvent, MouseEvent, RefObject, useCallback, useEffect, useMemo, useR
 import type { RoomTopic } from "../../../domain";
 import { CHAT_AGENT_IDS } from "../../../constants/chatAgentSemantics";
 import { Button, PopupPortal } from "../../uicomponents";
+import { useChatPanelCtx } from "../ChatPanelContext";
 
 type TopicTabsHeaderProps = {
-  t: (key: string) => string;
   hasActiveRoom: boolean;
   roomTitle: string;
   roomSlug: string;
@@ -28,7 +28,6 @@ type TopicTabsHeaderProps = {
 };
 
 export function TopicTabsHeader({
-  t,
   hasActiveRoom,
   roomTitle,
   roomSlug,
@@ -50,6 +49,7 @@ export function TopicTabsHeader({
   searchPanelOpen,
   onToggleSearchPanel
 }: TopicTabsHeaderProps) {
+  const { t } = useChatPanelCtx();
   const tabsViewportRef = useRef<HTMLDivElement | null>(null);
   const [topicTabsOverflowed, setTopicTabsOverflowed] = useState(false);
 

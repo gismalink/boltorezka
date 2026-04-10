@@ -21,6 +21,7 @@ import { useChatPanelSearchOverlay } from "./chatPanel/hooks/useChatPanelSearchO
 import { useChatPanelMentionNavigation } from "./chatPanel/hooks/useChatPanelMentionNavigation";
 import { useChatPanelUnreadWindowExpand } from "./chatPanel/hooks/useChatPanelUnreadWindowExpand";
 import { useChatPanelScrollToBottom } from "./chatPanel/hooks/useChatPanelScrollToBottom";
+import { ChatPanelProvider, ChatMessageActionsProvider } from "./chatPanel/ChatPanelContext";
 import { TopicTabsHeader } from "./chatPanel/sections/TopicTabsHeader";
 import { SearchPanel } from "./chatPanel/sections/SearchPanel";
 import { ChatMessageTimeline } from "./chatPanel/sections/ChatMessageTimeline";
@@ -646,7 +647,36 @@ export function ChatPanel({
     loadingOlderMessages
   });
 
+  const chatPanelCtxValue = useMemo(() => ({
+    t,
+    locale,
+    formatMessageTime,
+    resolveAttachmentImageUrl,
+    formatAttachmentSize,
+    setPreviewImageUrl
+  }), [t, locale, formatMessageTime, resolveAttachmentImageUrl, formatAttachmentSize]);
+
+  const chatMessageActionsValue = useMemo(() => ({
+    onEditMessage,
+    onDeleteMessage,
+    onReplyMessage,
+    onReportMessage,
+    onTogglePinMessage,
+    onToggleMessageReaction,
+    insertMentionToComposer,
+    insertQuoteToComposer: handleInsertQuoteToComposer,
+    markTopicUnreadFromMessage,
+    markReadSaving
+  }), [
+    onEditMessage, onDeleteMessage, onReplyMessage, onReportMessage,
+    onTogglePinMessage, onToggleMessageReaction,
+    insertMentionToComposer, handleInsertQuoteToComposer,
+    markTopicUnreadFromMessage, markReadSaving
+  ]);
+
   return (
+    <ChatPanelProvider value={chatPanelCtxValue}>
+    <ChatMessageActionsProvider value={chatMessageActionsValue}>
     <section
       className="card middle-card relative flex min-h-0 flex-1 flex-col overflow-hidden"
       data-agent-id={CHAT_AGENT_IDS.panel}
@@ -654,7 +684,6 @@ export function ChatPanel({
     >
       <div className="chat-header-stack">
         <TopicTabsHeader
-          t={t}
           hasActiveRoom={hasActiveRoom}
           roomTitle={roomTitle}
           roomSlug={roomSlug}
@@ -678,7 +707,6 @@ export function ChatPanel({
         />
         {hasActiveRoom && searchPanelOpen ? (
           <SearchPanel
-            t={t}
             searching={searching}
             searchQuery={searchQuery}
             setSearchQuery={setSearchQuery}
@@ -703,7 +731,6 @@ export function ChatPanel({
             searchError={searchError}
             searchResults={searchResults}
             searchResultsHasMore={searchResultsHasMore}
-            formatMessageTime={formatMessageTime}
             setSearchJumpStatusText={setSearchJumpStatusText}
             setSearchJumpTarget={(value) => setSearchJumpTarget(value)}
             onClose={closeSearchPanel}
@@ -743,8 +770,6 @@ export function ChatPanel({
       </div>
       <div className="chat-log-shell">
         <ChatMessageTimeline
-          t={t}
-          locale={locale}
           hasActiveRoom={hasActiveRoom}
           hasTopics={hasTopics}
           activeTopicId={activeTopicId}
@@ -758,21 +783,7 @@ export function ChatPanel({
           reactionsByMessageId={reactionsByMessageId}
           messageContextMenu={messageContextMenu}
           setMessageContextMenu={setMessageContextMenu}
-          onReplyMessage={onReplyMessage}
-          onEditMessage={onEditMessage}
-          onDeleteMessage={onDeleteMessage}
-          onReportMessage={onReportMessage}
-          onTogglePinMessage={onTogglePinMessage}
-          onToggleMessageReaction={onToggleMessageReaction}
-          insertMentionToComposer={insertMentionToComposer}
           mentionCandidates={resolvedMentionCandidates}
-          insertQuoteToComposer={handleInsertQuoteToComposer}
-          markTopicUnreadFromMessage={markTopicUnreadFromMessage}
-          markReadSaving={markReadSaving}
-          formatMessageTime={formatMessageTime}
-          resolveAttachmentImageUrl={resolveAttachmentImageUrl}
-          formatAttachmentSize={formatAttachmentSize}
-          setPreviewImageUrl={setPreviewImageUrl}
           unreadDividerMessageId={unreadDividerMessageId || null}
           unreadDividerVisible={unreadDividerVisible}
         />
@@ -808,7 +819,6 @@ export function ChatPanel({
         ) : null}
       </div>
       <ChatComposerSection
-        t={t}
         hasActiveRoom={hasActiveRoom}
         activeTopicIsArchived={activeTopicIsArchived}
         editingMessageId={editingMessageId}
@@ -827,15 +837,11 @@ export function ChatPanel({
         mentionCandidates={resolvedMentionCandidates}
         composePreviewImage={composePreviewImage}
         composePendingAttachmentName={composePendingAttachmentName}
-        setPreviewImageUrl={setPreviewImageUrl}
         attachmentInputRef={attachmentInputRef}
         screenContext={chatScreenContext}
       />
       <ChatPanelOverlays
-        t={t}
         previewImageUrl={previewImageUrl}
-        setPreviewImageUrl={setPreviewImageUrl}
-        resolveAttachmentImageUrl={resolveAttachmentImageUrl}
         topicPaletteOpen={topicPaletteOpen}
         closeTopicPalette={closeTopicPalette}
         topicPaletteQuery={topicPaletteQuery}
@@ -876,5 +882,7 @@ export function ChatPanel({
         confirmDeleteTopic={confirmDeleteTopic}
       />
     </section>
+    </ChatMessageActionsProvider>
+    </ChatPanelProvider>
   );
 }

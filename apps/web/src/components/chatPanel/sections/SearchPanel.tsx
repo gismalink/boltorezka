@@ -7,6 +7,7 @@ import {
   normalizeChatAgentFailureReason
 } from "../../../constants/chatAgentSemantics";
 import { Button } from "../../uicomponents";
+import { useChatPanelCtx } from "../ChatPanelContext";
 
 type SearchResultItem = {
   id: string;
@@ -21,7 +22,6 @@ type SearchResultItem = {
 };
 
 type SearchPanelProps = {
-  t: (key: string) => string;
   searching: boolean;
   searchQuery: string;
   setSearchQuery: (value: string) => void;
@@ -46,14 +46,12 @@ type SearchPanelProps = {
   searchError: string;
   searchResults: SearchResultItem[];
   searchResultsHasMore: boolean;
-  formatMessageTime: (value: string) => string;
   setSearchJumpStatusText: (value: string) => void;
   setSearchJumpTarget: (value: { messageId: string; roomSlug: string; topicId: string | null }) => void;
   onClose: () => void;
 };
 
 export function SearchPanel({
-  t,
   searching,
   searchQuery,
   setSearchQuery,
@@ -78,11 +76,11 @@ export function SearchPanel({
   searchError,
   searchResults,
   searchResultsHasMore,
-  formatMessageTime,
   setSearchJumpStatusText,
   setSearchJumpTarget,
   onClose
 }: SearchPanelProps) {
+  const { t, formatMessageTime } = useChatPanelCtx();
   const [showAuthorFilter, setShowAuthorFilter] = useState(Boolean(searchAuthorId));
   const [showDateFilters, setShowDateFilters] = useState(Boolean(searchFrom || searchTo));
   const [searchStatusText, setSearchStatusText] = useState("");

@@ -5,14 +5,13 @@ import type { ChatMessageViewModel } from "../../../utils/chatMessageViewModel";
 import { CHAT_AGENT_IDS, chatAgentMessageId } from "../../../constants/chatAgentSemantics";
 import { Button } from "../../uicomponents";
 import { formatDateSeparatorLabel, shouldShowDateDivider } from "./chatTimelineUtils";
+import { useChatPanelCtx, useChatMessageActions } from "../ChatPanelContext";
 
 const INITIAL_TIMELINE_RENDER_COUNT = 180;
 const TIMELINE_RENDER_INCREMENT = 120;
 const TIMELINE_EXPAND_SCROLL_TOP_THRESHOLD = 220;
 
 type ChatMessageTimelineProps = {
-  t: (key: string) => string;
-  locale: string;
   hasActiveRoom: boolean;
   hasTopics: boolean;
   activeTopicId: string | null;
@@ -26,13 +25,6 @@ type ChatMessageTimelineProps = {
   reactionsByMessageId: Record<string, Record<string, { count: number; reacted: boolean }>>;
   messageContextMenu: { messageId: string; x: number; y: number } | null;
   setMessageContextMenu: (value: { messageId: string; x: number; y: number } | null) => void;
-  onReplyMessage: (messageId: string) => void;
-  onEditMessage: (messageId: string) => void;
-  onDeleteMessage: (messageId: string) => void;
-  onReportMessage: (messageId: string) => void;
-  onTogglePinMessage: (messageId: string) => void;
-  onToggleMessageReaction: (messageId: string, emoji: string) => void;
-  insertMentionToComposer: (userName: string) => void;
   mentionCandidates: Array<{
     key: string;
     kind: "user" | "tag" | "all";
@@ -40,13 +32,6 @@ type ChatMessageTimelineProps = {
     label: string;
     userId?: string;
   }>;
-  insertQuoteToComposer: (userName: string, text: string, selectedText: string) => void;
-  markTopicUnreadFromMessage: (messageId: string) => Promise<void>;
-  markReadSaving: boolean;
-  formatMessageTime: (value: string) => string;
-  resolveAttachmentImageUrl: (url: string) => string;
-  formatAttachmentSize: (bytes: number) => string;
-  setPreviewImageUrl: (value: string | null) => void;
   unreadDividerMessageId: string | null;
   unreadDividerVisible: boolean;
 };
@@ -273,8 +258,6 @@ const extractFirstLinkPreview = (value: string): { href: string; host: string; p
 };
 
 export function ChatMessageTimeline({
-  t,
-  locale,
   hasActiveRoom,
   hasTopics,
   activeTopicId,
@@ -288,24 +271,17 @@ export function ChatMessageTimeline({
   reactionsByMessageId,
   messageContextMenu,
   setMessageContextMenu,
-  onReplyMessage,
-  onEditMessage,
-  onDeleteMessage,
-  onReportMessage,
-  onTogglePinMessage,
-  onToggleMessageReaction,
-  insertMentionToComposer,
   mentionCandidates,
-  insertQuoteToComposer,
-  markTopicUnreadFromMessage,
-  markReadSaving,
-  formatMessageTime,
-  resolveAttachmentImageUrl,
-  formatAttachmentSize,
-  setPreviewImageUrl,
   unreadDividerMessageId,
   unreadDividerVisible
 }: ChatMessageTimelineProps) {
+  const { t, locale, formatMessageTime, resolveAttachmentImageUrl, formatAttachmentSize, setPreviewImageUrl } = useChatPanelCtx();
+  const {
+    onEditMessage, onDeleteMessage, onReplyMessage, onReportMessage,
+    onTogglePinMessage, onToggleMessageReaction,
+    insertMentionToComposer, insertQuoteToComposer,
+    markTopicUnreadFromMessage, markReadSaving
+  } = useChatMessageActions();
   const [renderedMessagesCount, setRenderedMessagesCount] = useState(INITIAL_TIMELINE_RENDER_COUNT);
   const [selectedMentionProfile, setSelectedMentionProfile] = useState<{ label: string; handle: string; userId?: string } | null>(null);
   const safeReactionsByMessageId = reactionsByMessageId || {};
