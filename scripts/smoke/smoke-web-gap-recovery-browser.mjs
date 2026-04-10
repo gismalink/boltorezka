@@ -431,6 +431,7 @@ async function main() {
 
   const telemetryEvents = [];
   const roomMessagesRequests = [];
+  const topicMessagesRequests = [];
   const authRequests = [];
   const serverRequestTrail = [];
   let mainFrameNavigations = 0;
@@ -457,6 +458,16 @@ async function main() {
         method: request.method(),
         url: request.url(),
         roomSlug: requestRoomSlug
+      });
+    }
+
+    const topicMessagesMatch = path.match(/^\/v1\/topics\/([^/]+)\/messages$/);
+    if (topicMessagesMatch) {
+      topicMessagesRequests.push({
+        ts: Date.now(),
+        method: request.method(),
+        url: request.url(),
+        topicId: decodeURIComponent(String(topicMessagesMatch[1] || "")).trim()
       });
     }
 
@@ -756,15 +767,22 @@ async function main() {
 
     await waitForGapRecoverySignal({
       telemetryEvents,
-      getRecoveryRequestCount: () => roomMessagesRequests.slice(beforeRequestCount).filter((item) => item.method === "GET").length,
+      getRecoveryRequestCount: () => {
+        const roomReloads = roomMessagesRequests.slice(beforeRequestCount).filter((item) => item.method === "GET").length;
+        const topicReloads = topicMessagesRequests.filter((item) => item.method === "GET").length;
+        return roomReloads + topicReloads;
+      },
       readGapMutationState: async () => page.evaluate(() => window.__smokeGapPatchState || null)
     });
 
     const recoveryRequests = roomMessagesRequests
       .slice(beforeRequestCount)
       .filter((item) => item.method === "GET" && String(item.roomSlug || "").trim() === targetRoomSlug);
-    if (recoveryRequests.length === 0) {
-      throw new Error("[smoke:web:gap-recovery:browser] no room messages reload request observed after injected gap");
+
+    const topicRecoveryRequests = topicMessagesRequests.filter((item) => item.method === "GET");
+
+    if (recoveryRequests.length === 0 && topicRecoveryRequests.length === 0) {
+      throw new Error("[smoke:web:gap-recovery:browser] no messages reload request observed after injected gap");
     }
 
     if (mainFrameNavigations > 2) {
@@ -779,6 +797,7 @@ async function main() {
     console.log("[smoke:web:gap-recovery:browser] ok");
     console.log(`- telemetry gap events observed: ${telemetryEvents.filter((item) => item.event.startsWith("ws.realtime.gap.")).map((item) => item.event).join(",")}`);
     console.log(`- recovery room messages requests observed: ${recoveryRequests.length}`);
+    console.log(`- recovery topic messages requests observed: ${topicRecoveryRequests.length}`);
     console.log(`- mutated seq: ${mutationState.originalSeq} -> ${mutationState.injectedSeq} (${mutationState.mutatedMessageType})`);
     console.log(`- main frame navigations: ${mainFrameNavigations}`);
   } finally {
