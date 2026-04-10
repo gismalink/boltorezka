@@ -176,6 +176,198 @@ async function fetchJson(path, options = {}) {
   return { response, payload };
 }
 
+function authHeader(token) {
+  return {
+    Authorization: `Bearer ${token}`
+  };
+}
+
+function ensureOk(response, payload, label) {
+  if (!response.ok) {
+    throw new Error(`[smoke:realtime] ${label} failed: status=${response.status} payload=${String(JSON.stringify(payload || {})).slice(0, 320)}`);
+  }
+}
+
+async function resolveUserId(token, label) {
+  const { response, payload } = await fetchJson("/v1/auth/me", {
+    headers: authHeader(token)
+  });
+  ensureOk(response, payload, `${label} /v1/auth/me`);
+
+  const userId = String(payload?.user?.id || "").trim();
+  if (!userId) {
+    throw new Error(`[smoke:realtime] ${label} user id is missing`);
+  }
+
+  return userId;
+}
+
+async function resolveGeneralRoomId(token) {
+  const { response, payload } = await fetchJson("/v1/rooms", {
+    headers: authHeader(token)
+  });
+  ensureOk(response, payload, "list rooms for reconnect drift");
+
+  const rooms = Array.isArray(payload?.rooms) ? payload.rooms : [];
+  const room = rooms.find((item) => String(item?.slug || "") === roomSlug)
+    || rooms.find((item) => String(item?.kind || "") === "text")
+    || rooms[0];
+  const roomId = String(room?.id || "").trim();
+  if (!roomId) {
+    throw new Error("[smoke:realtime] cannot resolve room id for reconnect drift check");
+  }
+
+  return roomId;
+}
+
+async function getTopicUnreadSnapshot(token, roomId, topicId) {
+  const { response, payload } = await fetchJson(`/v1/rooms/${encodeURIComponent(roomId)}/topics`, {
+    headers: authHeader(token)
+  });
+  ensureOk(response, payload, "list room topics for reconnect drift");
+
+  const topics = Array.isArray(payload?.topics) ? payload.topics : [];
+  const topic = topics.find((item) => String(item?.id || "") === topicId);
+  if (!topic) {
+    throw new Error("[smoke:realtime] topic missing in room topics snapshot");
+  }
+
+  return {
+    unreadCount: Math.max(0, Number(topic?.unreadCount ?? topic?.unread_count ?? 0)),
+    mentionUnreadCount: Math.max(0, Number(topic?.mentionUnreadCount ?? topic?.mention_unread_count ?? 0))
+  };
+}
+
+async function getTopicUnreadMentionsCount(token, topicId) {
+  const { response, payload } = await fetchJson(`/v1/topics/${encodeURIComponent(topicId)}/unread-mentions?limit=50`, {
+    headers: authHeader(token)
+  });
+  ensureOk(response, payload, "list topic unread mentions for reconnect drift");
+
+  const items = Array.isArray(payload?.items) ? payload.items : [];
+  return items.length;
+}
+
+async function setupReconnectDriftFixture({ primaryToken, secondaryToken, primaryUserId }) {
+  const roomId = await resolveGeneralRoomId(primaryToken);
+  const topicTitle = `Smoke Reconnect Drift ${Date.now()}`;
+
+  const { response: createTopicResponse, payload: createTopicPayload } = await fetchJson(
+    `/v1/rooms/${encodeURIComponent(roomId)}/topics`,
+    {
+      method: "POST",
+      headers: {
+        ...authHeader(primaryToken),
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ title: topicTitle })
+    }
+  );
+  ensureOk(createTopicResponse, createTopicPayload, "create drift topic");
+
+  const topicId = String(createTopicPayload?.topic?.id || "").trim();
+  if (!topicId) {
+    throw new Error("[smoke:realtime] reconnect drift topic id is missing");
+  }
+
+  const cleanup = async () => {
+    const { response } = await fetchJson(`/v1/topics/${encodeURIComponent(topicId)}`, {
+      method: "DELETE",
+      headers: authHeader(primaryToken)
+    });
+    if (!response.ok) {
+      console.warn("[smoke:realtime] reconnect drift cleanup topic delete failed");
+    }
+  };
+
+  const { response: seedResponse, payload: seedPayload } = await fetchJson(
+    `/v1/topics/${encodeURIComponent(topicId)}/messages`,
+    {
+      method: "POST",
+      headers: {
+        ...authHeader(primaryToken),
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ text: "drift-seed-self" })
+    }
+  );
+  ensureOk(seedResponse, seedPayload, "create drift seed message");
+
+  const seedMessageId = String(seedPayload?.message?.id || "").trim();
+  if (!seedMessageId) {
+    throw new Error("[smoke:realtime] reconnect drift seed message id is missing");
+  }
+
+  const { response: seedReadResponse, payload: seedReadPayload } = await fetchJson(
+    `/v1/topics/${encodeURIComponent(topicId)}/read`,
+    {
+      method: "POST",
+      headers: {
+        ...authHeader(primaryToken),
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ lastReadMessageId: seedMessageId })
+    }
+  );
+  ensureOk(seedReadResponse, seedReadPayload, "mark drift seed read");
+
+  const { response: clearMentionsResponse, payload: clearMentionsPayload } = await fetchJson(
+    `/v1/topics/${encodeURIComponent(topicId)}/unread-mentions/read-all`,
+    {
+      method: "POST",
+      headers: authHeader(primaryToken)
+    }
+  );
+  ensureOk(clearMentionsResponse, clearMentionsPayload, "clear baseline mentions in drift topic");
+
+  const { response: foreignMessageResponse, payload: foreignMessagePayload } = await fetchJson(
+    `/v1/topics/${encodeURIComponent(topicId)}/messages`,
+    {
+      method: "POST",
+      headers: {
+        ...authHeader(secondaryToken),
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ text: "drift-foreign-message" })
+    }
+  );
+  ensureOk(foreignMessageResponse, foreignMessagePayload, "create foreign drift message");
+
+  const { response: mentionMessageResponse, payload: mentionMessagePayload } = await fetchJson(
+    `/v1/topics/${encodeURIComponent(topicId)}/messages`,
+    {
+      method: "POST",
+      headers: {
+        ...authHeader(secondaryToken),
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        text: "drift-foreign-mention",
+        mentionUserIds: [primaryUserId]
+      })
+    }
+  );
+  ensureOk(mentionMessageResponse, mentionMessagePayload, "create foreign mention drift message");
+
+  const mentionMessageId = String(mentionMessagePayload?.message?.id || "").trim();
+  if (!mentionMessageId) {
+    throw new Error("[smoke:realtime] reconnect drift mention message id is missing");
+  }
+
+  const counters = await getTopicUnreadSnapshot(primaryToken, roomId, topicId);
+  const mentionsCount = await getTopicUnreadMentionsCount(primaryToken, topicId);
+
+  return {
+    roomId,
+    topicId,
+    mentionMessageId,
+    unreadCount: counters.unreadCount,
+    mentionUnreadCount: counters.mentionUnreadCount,
+    unreadMentionsItems: mentionsCount,
+    cleanup
+  };
+}
+
 async function resolveTicketFromBearerToken(token, label) {
   const { response, payload } = await fetchJson("/v1/auth/ws-ticket", {
     method: "GET",
@@ -840,6 +1032,13 @@ async function runRealtimeSmoke() {
   let callNegotiationReconnectSkipped = null;
   let reconnectOk = false;
   let reconnectSkipped = false;
+  let reconnectDriftChecked = false;
+  let reconnectDriftSkipped = false;
+  let reconnectDriftOk = null;
+  let reconnectDriftSnapshotBefore = null;
+  let reconnectDriftSnapshotAfter = null;
+  let reconnectDriftSkipReason = null;
+  let driftFixture = null;
   if (smokeCallSignal) {
     if (!secondTicket) {
       throw new Error("[smoke:realtime] second ticket is required for realtime media-state smoke");
@@ -1028,6 +1227,37 @@ async function runRealtimeSmoke() {
     }
   }
 
+  const canRunReconnectDrift = smokeReconnect && canRunReconnect && Boolean(bearerTokenSecond);
+  if (canRunReconnectDrift) {
+    try {
+      const secondUserId = await resolveUserId(bearerTokenSecond, "secondary drift");
+      if (secondUserId === firstUserId) {
+        reconnectDriftSkipped = true;
+        reconnectDriftSkipReason = "same-user-secondary-token";
+      } else {
+        driftFixture = await setupReconnectDriftFixture({
+          primaryToken: bearerToken,
+          secondaryToken: bearerTokenSecond,
+          primaryUserId: firstUserId
+        });
+        reconnectDriftSnapshotBefore = {
+          unreadCount: driftFixture.unreadCount,
+          mentionUnreadCount: driftFixture.mentionUnreadCount,
+          unreadMentionsItems: driftFixture.unreadMentionsItems
+        };
+      }
+    } catch (error) {
+      reconnectDriftSkipped = true;
+      const setupErrorMessage = error instanceof Error ? error.message : String(error || "unknown");
+      reconnectDriftSkipReason = `setup-failed:${setupErrorMessage}`;
+    }
+  } else {
+    reconnectDriftSkipped = true;
+    reconnectDriftSkipReason = !smokeReconnect
+      ? "smoke-reconnect-disabled"
+      : (!canRunReconnect ? "reconnect-ticket-missing" : "second-token-missing");
+  }
+
   if (smokeReconnect && canRunReconnect) {
     ws.close();
 
@@ -1091,10 +1321,35 @@ async function runRealtimeSmoke() {
     );
 
     reconnectOk = true;
+
+    if (driftFixture && bearerToken) {
+      const countersAfter = await getTopicUnreadSnapshot(bearerToken, driftFixture.roomId, driftFixture.topicId);
+      const mentionsAfter = await getTopicUnreadMentionsCount(bearerToken, driftFixture.topicId);
+      reconnectDriftSnapshotAfter = {
+        unreadCount: countersAfter.unreadCount,
+        mentionUnreadCount: countersAfter.mentionUnreadCount,
+        unreadMentionsItems: mentionsAfter
+      };
+
+      reconnectDriftChecked = true;
+      reconnectDriftOk = reconnectDriftSnapshotBefore !== null
+        && reconnectDriftSnapshotBefore.unreadCount === reconnectDriftSnapshotAfter.unreadCount
+        && reconnectDriftSnapshotBefore.mentionUnreadCount === reconnectDriftSnapshotAfter.mentionUnreadCount
+        && reconnectDriftSnapshotBefore.unreadMentionsItems === reconnectDriftSnapshotAfter.unreadMentionsItems;
+
+      if (!reconnectDriftOk) {
+        throw new Error(`[smoke:realtime] reconnect drift detected: before=${JSON.stringify(reconnectDriftSnapshotBefore)} after=${JSON.stringify(reconnectDriftSnapshotAfter)}`);
+      }
+    }
+
     wsReconnect.close();
   } else if (smokeReconnect && !canRunReconnect) {
     reconnectSkipped = true;
     console.warn("[smoke:realtime] reconnect scenario skipped: set SMOKE_TEST_BEARER_TOKEN or SMOKE_WS_TICKET_RECONNECT");
+  }
+
+  if (driftFixture) {
+    await driftFixture.cleanup();
   }
 
   if (smokeCallLiveRoom) {
@@ -1125,6 +1380,12 @@ async function runRealtimeSmoke() {
         initialStateReplaySecondOk: smokeCallSignal ? initialStateReplaySecondOk : null,
         reconnectOk,
         reconnectSkipped,
+        reconnectDriftChecked,
+        reconnectDriftSkipped,
+        reconnectDriftOk,
+        reconnectDriftSkipReason,
+        reconnectDriftSnapshotBefore,
+        reconnectDriftSnapshotAfter,
         liveRoomOk,
         liveRoomStats,
         callSignalRelayed,
