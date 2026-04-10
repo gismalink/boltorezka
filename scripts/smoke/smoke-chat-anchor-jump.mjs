@@ -70,6 +70,7 @@ function ensureOk(response, payload, label) {
   }
 
   let unreadGtZeroChecked = false;
+  let mentionReadFlowChecked = false;
 
   try {
     const { response: seedMessageResponse, payload: seedMessagePayload } = await fetchJson(`/v1/topics/${encodeURIComponent(topicId)}/messages`, {
@@ -92,6 +93,18 @@ function ensureOk(response, payload, label) {
     ensureOk(markSeedReadResponse, markSeedReadPayload, "mark seed read");
 
     if (tokenSecond) {
+      const { response: mePrimaryResponse, payload: mePrimaryPayload } = await fetchJson("/v1/auth/me", { token });
+      ensureOk(mePrimaryResponse, mePrimaryPayload, "primary /v1/auth/me");
+      const primaryUserId = String(mePrimaryPayload?.user?.id || "").trim();
+
+      const { response: meSecondResponse, payload: meSecondPayload } = await fetchJson("/v1/auth/me", { token: tokenSecond });
+      ensureOk(meSecondResponse, meSecondPayload, "secondary /v1/auth/me");
+      const secondUserId = String(meSecondPayload?.user?.id || "").trim();
+
+      if (!primaryUserId || !secondUserId || primaryUserId === secondUserId) {
+        throw new Error("[smoke:chat:anchor-jump] failed to resolve distinct user ids for mention check");
+      }
+
       const { response: foreignMsg1Response, payload: foreignMsg1Payload } = await fetchJson(`/v1/topics/${encodeURIComponent(topicId)}/messages`, {
         method: "POST",
         token: tokenSecond,
@@ -152,6 +165,74 @@ function ensureOk(response, payload, label) {
         throw new Error(`[smoke:chat:anchor-jump] expected no unread divider after read-all, got=${unreadAfterClear}`);
       }
 
+      const { response: mentionMessageResponse, payload: mentionMessagePayload } = await fetchJson(`/v1/topics/${encodeURIComponent(topicId)}/messages`, {
+        method: "POST",
+        token: tokenSecond,
+        body: {
+          text: "foreign-mention-message",
+          mentionUserIds: [primaryUserId]
+        }
+      });
+      ensureOk(mentionMessageResponse, mentionMessagePayload, "create explicit mention message");
+
+      const mentionMessageId = String(mentionMessagePayload?.message?.id || "").trim();
+      if (!mentionMessageId) {
+        throw new Error("[smoke:chat:anchor-jump] mention message id is missing");
+      }
+
+      const { response: mentionsBeforeReadResponse, payload: mentionsBeforeReadPayload } = await fetchJson(
+        `/v1/topics/${encodeURIComponent(topicId)}/unread-mentions?limit=20`,
+        { token }
+      );
+      ensureOk(mentionsBeforeReadResponse, mentionsBeforeReadPayload, "topic unread mentions before read");
+
+      const mentionItemsBeforeRead = Array.isArray(mentionsBeforeReadPayload?.items) ? mentionsBeforeReadPayload.items : [];
+      const mentionSeenBeforeRead = mentionItemsBeforeRead.some((item) => String(item?.messageId || item?.message_id || "") === mentionMessageId);
+      if (!mentionSeenBeforeRead) {
+        throw new Error("[smoke:chat:anchor-jump] explicit mention not found in unread-mentions before topic read");
+      }
+
+      const { response: topicReadResponse, payload: topicReadPayload } = await fetchJson(`/v1/topics/${encodeURIComponent(topicId)}/read`, {
+        method: "POST",
+        token,
+        body: { lastReadMessageId: mentionMessageId }
+      });
+      ensureOk(topicReadResponse, topicReadPayload, "topic read after mention");
+
+      const { response: mentionsAfterTopicReadResponse, payload: mentionsAfterTopicReadPayload } = await fetchJson(
+        `/v1/topics/${encodeURIComponent(topicId)}/unread-mentions?limit=20`,
+        { token }
+      );
+      ensureOk(mentionsAfterTopicReadResponse, mentionsAfterTopicReadPayload, "topic unread mentions after topic read");
+
+      const mentionItemsAfterTopicRead = Array.isArray(mentionsAfterTopicReadPayload?.items) ? mentionsAfterTopicReadPayload.items : [];
+      const mentionStillUnreadAfterTopicRead = mentionItemsAfterTopicRead.some((item) => String(item?.messageId || item?.message_id || "") === mentionMessageId);
+      if (!mentionStillUnreadAfterTopicRead) {
+        throw new Error("[smoke:chat:anchor-jump] mention was cleared by topic read; expected unread until mention read-all");
+      }
+
+      const { response: mentionReadAllResponse, payload: mentionReadAllPayload } = await fetchJson(
+        `/v1/topics/${encodeURIComponent(topicId)}/unread-mentions/read-all`,
+        {
+          method: "POST",
+          token
+        }
+      );
+      ensureOk(mentionReadAllResponse, mentionReadAllPayload, "topic unread mentions read-all");
+
+      const { response: mentionsAfterReadAllResponse, payload: mentionsAfterReadAllPayload } = await fetchJson(
+        `/v1/topics/${encodeURIComponent(topicId)}/unread-mentions?limit=20`,
+        { token }
+      );
+      ensureOk(mentionsAfterReadAllResponse, mentionsAfterReadAllPayload, "topic unread mentions after read-all");
+
+      const mentionItemsAfterReadAll = Array.isArray(mentionsAfterReadAllPayload?.items) ? mentionsAfterReadAllPayload.items : [];
+      if (mentionItemsAfterReadAll.length !== 0) {
+        throw new Error(`[smoke:chat:anchor-jump] expected mentions queue to be empty after read-all, got=${mentionItemsAfterReadAll.length}`);
+      }
+
+      mentionReadFlowChecked = true;
+
       unreadGtZeroChecked = true;
     } else {
       const { response: anchorSelfResponse, payload: anchorSelfPayload } = await fetchJson(
@@ -187,7 +268,7 @@ function ensureOk(response, payload, label) {
     }
   }
 
-  console.log(`[smoke:chat:anchor-jump] ok (${baseUrl}) unreadGtZeroChecked=${unreadGtZeroChecked}`);
+  console.log(`[smoke:chat:anchor-jump] ok (${baseUrl}) unreadGtZeroChecked=${unreadGtZeroChecked} mentionReadFlowChecked=${mentionReadFlowChecked}`);
 })().catch((error) => {
   console.error(error instanceof Error ? error.message : String(error));
   process.exit(1);
