@@ -1,7 +1,6 @@
 // Главный компонент чата: координирует состояния панелей, тем, поиска,
 // непрочитанного и рендер секций таймлайна/композера/оверлеев.
 import { ClipboardEvent, FormEvent, KeyboardEvent, RefObject, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { api } from "../api";
 import type { Message, RoomTopic } from "../domain";
 import { buildChatMessageViewModels } from "../utils/chatMessageViewModel";
 import { CHAT_MEMORY_METRICS_ENABLED, CHAT_MEMORY_METRICS_EVERY } from "../constants/appConfig";
@@ -19,6 +18,9 @@ import { useChatPanelComposerHelpers } from "./chatPanel/hooks/useChatPanelCompo
 import { useChatPanelTopicCreate } from "./chatPanel/hooks/useChatPanelTopicCreate";
 import { useChatPanelTypingBanner } from "./chatPanel/hooks/useChatPanelTypingBanner";
 import { useChatPanelSearchOverlay } from "./chatPanel/hooks/useChatPanelSearchOverlay";
+import { useChatPanelMentionNavigation } from "./chatPanel/hooks/useChatPanelMentionNavigation";
+import { useChatPanelUnreadWindowExpand } from "./chatPanel/hooks/useChatPanelUnreadWindowExpand";
+import { useChatPanelScrollToBottom } from "./chatPanel/hooks/useChatPanelScrollToBottom";
 import { TopicTabsHeader } from "./chatPanel/sections/TopicTabsHeader";
 import { SearchPanel } from "./chatPanel/sections/SearchPanel";
 import { ChatMessageTimeline } from "./chatPanel/sections/ChatMessageTimeline";
@@ -35,14 +37,6 @@ type MentionCandidate = {
   userIds?: string[];
   subtitle?: string | null;
 };
-
-type TopicUnreadMentionNavItem = {
-  eventId: string;
-  messageId: string;
-};
-
-const UNREAD_WINDOW_EXPAND_STEP = 50;
-const UNREAD_WINDOW_EXPAND_MAX = 500;
 
 function toMentionHandle(raw: string): string {
   return String(raw || "")
@@ -182,14 +176,7 @@ export function ChatPanel({
   const [quotedMessage, setQuotedMessage] = useState<{ userName: string; text: string } | null>(null);
   const [hotkeyStatusText, setHotkeyStatusText] = useState("");
   const [topicMentionsActionLoading, setTopicMentionsActionLoading] = useState(false);
-  const [showScrollToBottomButton, setShowScrollToBottomButton] = useState(false);
   const attachmentInputRef = useRef<HTMLInputElement | null>(null);
-  const topicUnreadMentionQueueRef = useRef<TopicUnreadMentionNavItem[]>([]);
-  const topicUnreadMentionCursorRef = useRef<{ beforeCreatedAt: string; beforeId: string } | null>(null);
-  const topicUnreadMentionHasMoreRef = useRef(true);
-  const topicUnreadMentionTopicIdRef = useRef("");
-  const unreadWindowExpandInFlightRef = useRef(false);
-  const unreadWindowRequestedAfterByTopicRef = useRef<Record<string, number>>({});
   const messageVmBuildMsRef = useRef(0);
   const metricsSamplesRef = useRef(0);
   const hasActiveRoom = Boolean(roomSlug);
@@ -616,232 +603,48 @@ export function ChatPanel({
     return `room=${roomValue};topic=${topicValue};topicState=${archiveValue};topics=${topicsValue};search=${searchValue}`;
   }, [activeTopicId, activeTopicIsArchived, hasActiveRoom, hasTopics, roomSlug, searchPanelOpen, topicsForUi]);
 
-  useEffect(() => {
-    const topicId = String(activeTopicId || "").trim();
-    topicUnreadMentionTopicIdRef.current = topicId;
-    topicUnreadMentionQueueRef.current = [];
-    topicUnreadMentionCursorRef.current = null;
-    topicUnreadMentionHasMoreRef.current = Boolean(topicId);
-  }, [activeTopicId]);
+  const {
+    resetForTopic: resetMentionNavForTopic,
+    jumpToNextTopicUnreadMention
+  } = useChatPanelMentionNavigation({
+    authToken,
+    roomId,
+    roomSlug,
+    activeTopicId,
+    topicMentionsActionLoading,
+    setTopicMentionsActionLoading,
+    onConsumeTopicMentionUnread,
+    onSetTopicMentionUnreadLocal,
+    setSearchJumpStatusText,
+    setSearchJumpTarget: (value) => setSearchJumpTarget(value),
+    t
+  });
 
   useEffect(() => {
     const topicId = String(activeTopicId || "").trim();
-    if (!topicId) {
-      return;
-    }
+    resetMentionNavForTopic(topicId);
+  }, [activeTopicId, resetMentionNavForTopic]);
 
-    const currentRequested = Math.max(0, Number(unreadWindowRequestedAfterByTopicRef.current[topicId] || 0));
-    unreadWindowRequestedAfterByTopicRef.current[topicId] = Math.max(currentRequested, loadedUnreadAfterDivider);
-    unreadWindowExpandInFlightRef.current = false;
-  }, [activeTopicId, loadedUnreadAfterDivider]);
+  useChatPanelUnreadWindowExpand({
+    activeTopicId,
+    hasActiveRoom,
+    unreadDividerVisible,
+    unreadDividerMessageId,
+    loadedUnreadAfterDivider,
+    loadingOlderMessages,
+    chatLogRef,
+    onLoadMessagesAroundAnchor
+  });
 
-  const maybeExpandUnreadWindowAtBottom = useCallback(() => {
-    const topicId = String(activeTopicId || "").trim();
-    if (!topicId || !hasActiveRoom || !unreadDividerVisible || loadingOlderMessages || unreadWindowExpandInFlightRef.current) {
-      return;
-    }
-
-    const dividerMessageId = unreadDividerMessageId;
-    if (!dividerMessageId) {
-      return;
-    }
-
-    const chatLogNode = chatLogRef.current;
-    if (!chatLogNode) {
-      return;
-    }
-
-    const distanceToBottom = chatLogNode.scrollHeight - chatLogNode.scrollTop - chatLogNode.clientHeight;
-    if (distanceToBottom > 32) {
-      return;
-    }
-
-    const requestedAfter = Math.max(
-      loadedUnreadAfterDivider,
-      Math.max(0, Number(unreadWindowRequestedAfterByTopicRef.current[topicId] || 0))
-    );
-    const nextRequestedAfter = Math.min(
-      UNREAD_WINDOW_EXPAND_MAX,
-      Math.max(requestedAfter + UNREAD_WINDOW_EXPAND_STEP, loadedUnreadAfterDivider + UNREAD_WINDOW_EXPAND_STEP)
-    );
-
-    if (nextRequestedAfter <= requestedAfter) {
-      return;
-    }
-
-    unreadWindowExpandInFlightRef.current = true;
-    void onLoadMessagesAroundAnchor(topicId, dividerMessageId, {
-      aroundWindowBefore: 25,
-      aroundWindowAfter: nextRequestedAfter
-    }).then((ok) => {
-      if (ok) {
-        unreadWindowRequestedAfterByTopicRef.current[topicId] = nextRequestedAfter;
-      }
-    }).finally(() => {
-      unreadWindowExpandInFlightRef.current = false;
-    });
-  }, [activeTopicId, chatLogRef, hasActiveRoom, loadedUnreadAfterDivider, loadingOlderMessages, onLoadMessagesAroundAnchor, unreadDividerMessageId, unreadDividerVisible]);
-
-  useEffect(() => {
-    const chatLogNode = chatLogRef.current;
-    if (!chatLogNode || !hasActiveRoom) {
-      return;
-    }
-
-    const onScroll = () => {
-      maybeExpandUnreadWindowAtBottom();
-    };
-
-    chatLogNode.addEventListener("scroll", onScroll, { passive: true });
-    maybeExpandUnreadWindowAtBottom();
-
-    return () => {
-      chatLogNode.removeEventListener("scroll", onScroll);
-    };
-  }, [chatLogRef, hasActiveRoom, maybeExpandUnreadWindowAtBottom]);
-
-  useEffect(() => {
-    maybeExpandUnreadWindowAtBottom();
-  }, [loadedUnreadAfterDivider, maybeExpandUnreadWindowAtBottom]);
-
-  const loadTopicUnreadMentionsPage = useCallback(async () => {
-    const topicId = String(activeTopicId || "").trim();
-    if (!authToken || !topicId || !topicUnreadMentionHasMoreRef.current) {
-      return;
-    }
-
-    const cursor = topicUnreadMentionCursorRef.current;
-    const response = await api.topicUnreadMentions(authToken, topicId, {
-      limit: 20,
-      beforeCreatedAt: cursor?.beforeCreatedAt,
-      beforeId: cursor?.beforeId
-    });
-
-    if (topicUnreadMentionTopicIdRef.current !== topicId) {
-      return;
-    }
-
-    const existingEventIds = new Set(topicUnreadMentionQueueRef.current.map((item) => item.eventId));
-    const nextItems = (Array.isArray(response.items) ? response.items : [])
-      .map((item) => ({
-        eventId: String(item.id || "").trim(),
-        messageId: String(item.messageId || "").trim()
-      }))
-      .filter((item) => item.eventId && item.messageId && !existingEventIds.has(item.eventId));
-
-    if (nextItems.length > 0) {
-      topicUnreadMentionQueueRef.current = [...topicUnreadMentionQueueRef.current, ...nextItems];
-    }
-
-    const nextCursor = response.pagination?.nextCursor ?? null;
-    topicUnreadMentionCursorRef.current = nextCursor;
-    topicUnreadMentionHasMoreRef.current = Boolean(response.pagination?.hasMore && nextCursor);
-  }, [activeTopicId, authToken]);
-
-  const reconcileTopicMentionUnreadCount = useCallback(async (topicId: string) => {
-    const normalizedTopicId = String(topicId || "").trim();
-    if (!authToken || !roomId || !normalizedTopicId) {
-      return;
-    }
-
-    try {
-      const response = await api.roomTopics(authToken, roomId);
-      if (topicUnreadMentionTopicIdRef.current !== normalizedTopicId) {
-        return;
-      }
-
-      const matchingTopic = (Array.isArray(response.topics) ? response.topics : [])
-        .find((topic) => String(topic.id || "").trim() === normalizedTopicId);
-      const nextMentionUnreadCount = Math.max(0, Number(matchingTopic?.mentionUnreadCount || 0));
-
-      onSetTopicMentionUnreadLocal(normalizedTopicId, nextMentionUnreadCount);
-      if (nextMentionUnreadCount === 0) {
-        topicUnreadMentionQueueRef.current = [];
-        topicUnreadMentionCursorRef.current = null;
-        topicUnreadMentionHasMoreRef.current = false;
-      }
-    } catch {
-      // Keep mention navigation non-blocking on transient room-topics sync failures.
-    }
-  }, [authToken, onSetTopicMentionUnreadLocal, roomId]);
-
-  const jumpToNextTopicUnreadMention = useCallback(async () => {
-    const topicId = String(activeTopicId || "").trim();
-    const normalizedRoomSlug = String(roomSlug || "").trim();
-    if (!authToken || !topicId || !normalizedRoomSlug || topicMentionsActionLoading) {
-      return;
-    }
-
-    setTopicMentionsActionLoading(true);
-    try {
-      let nextItem = topicUnreadMentionQueueRef.current.shift();
-      let guard = 0;
-
-      while (!nextItem && topicUnreadMentionHasMoreRef.current && guard < 4) {
-        guard += 1;
-        await loadTopicUnreadMentionsPage();
-        nextItem = topicUnreadMentionQueueRef.current.shift();
-      }
-
-      if (!nextItem) {
-        await reconcileTopicMentionUnreadCount(topicId);
-        return;
-      }
-
-      await api.markNotificationInboxRead(authToken, nextItem.eventId);
-      onConsumeTopicMentionUnread(topicId);
-
-      setSearchJumpStatusText(t("chat.topicMentionsJumping"));
-      setSearchJumpTarget({
-        messageId: nextItem.messageId,
-        roomSlug: normalizedRoomSlug,
-        topicId,
-        includeHistoryLoad: true
-      });
-    } catch {
-      // Non-blocking: keep UI responsive even if mention-read acknowledgement fails.
-    } finally {
-      setTopicMentionsActionLoading(false);
-    }
-  }, [activeTopicId, authToken, loadTopicUnreadMentionsPage, onConsumeTopicMentionUnread, reconcileTopicMentionUnreadCount, roomSlug, setSearchJumpStatusText, setSearchJumpTarget, t, topicMentionsActionLoading]);
-
-  const scrollTimelineToBottom = useCallback(() => {
-    const chatLogNode = chatLogRef.current;
-    if (!chatLogNode) {
-      return;
-    }
-
-    chatLogNode.scrollTo({
-      top: chatLogNode.scrollHeight,
-      behavior: "smooth"
-    });
-  }, [chatLogRef]);
-
-  useEffect(() => {
-    const chatLogNode = chatLogRef.current;
-    if (!chatLogNode || !hasActiveRoom) {
-      setShowScrollToBottomButton(false);
-      return;
-    }
-
-    const updateScrollToBottomVisibility = () => {
-      const maxScrollTop = Math.max(0, chatLogNode.scrollHeight - chatLogNode.clientHeight);
-      const hasScrollableContent = maxScrollTop > 1;
-      const distanceToBottom = maxScrollTop - chatLogNode.scrollTop;
-      const isAtBottom = distanceToBottom <= 12;
-
-      setShowScrollToBottomButton(hasScrollableContent && !isAtBottom);
-    };
-
-    chatLogNode.addEventListener("scroll", updateScrollToBottomVisibility, { passive: true });
-
-    const rafId = window.requestAnimationFrame(updateScrollToBottomVisibility);
-
-    return () => {
-      chatLogNode.removeEventListener("scroll", updateScrollToBottomVisibility);
-      window.cancelAnimationFrame(rafId);
-    };
-  }, [chatLogRef, hasActiveRoom, messages.length, loadingOlderMessages]);
+  const {
+    showScrollToBottomButton,
+    scrollTimelineToBottom
+  } = useChatPanelScrollToBottom({
+    chatLogRef,
+    hasActiveRoom,
+    messagesLength: messages.length,
+    loadingOlderMessages
+  });
 
   return (
     <section

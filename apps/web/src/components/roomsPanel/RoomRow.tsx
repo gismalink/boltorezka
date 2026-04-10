@@ -1,10 +1,10 @@
 import { memo, type DragEvent, type FormEvent, useEffect, useRef, useState } from "react";
 import type { ChannelAudioQualitySetting, Room, RoomKind, RoomMemberPreference } from "../../domain";
-import { PopupPortal } from "../uicomponents";
 import type { RoomsPanelProps } from "../types";
 import type { RoomMember } from "./roomMembers";
 import { RoomMemberSettingsPopup } from "./RoomMemberSettingsPopup";
 import { RoomMemberProfileModal } from "./RoomMemberProfileModal";
+import { RoomChannelSettingsPopup } from "./RoomChannelSettingsPopup";
 import type { ServerMemberProfileDetails } from "./roomMemberSettingsTypes";
 import { useRoomMutePresetState } from "./useRoomMutePresetState";
 import { useRoomSettingsAutosave } from "./useRoomSettingsAutosave";
@@ -458,264 +458,40 @@ function RoomRowInner({
           >
             <i className="bi bi-three-dots" aria-hidden="true" />
           </button>
-          <PopupPortal
+          <RoomChannelSettingsPopup
+            t={t}
+            room={room}
             open={channelSettingsPopupOpenId === room.id}
             anchorRef={channelSettingsAnchorRef}
-            className="settings-popup channel-settings-popup"
-            placement="bottom-end"
-          >
-            <div>
-              <form className="grid gap-4" onSubmit={onSaveChannelSettings}>
-                <h3 className="subheading">{t("rooms.channelSettings")}</h3>
-                <div className="grid gap-1.5">
-                  <span className="subheading">{t("rooms.channelTitle")}</span>
-                  <div className="row items-center gap-2 channel-settings-title-row">
-                    {isEditingChannelTitle ? (
-                      <button
-                        type="button"
-                        className="secondary whitespace-nowrap"
-                        onMouseDown={(event) => event.preventDefault()}
-                        onClick={() => {
-                          onSetEditingRoomTitle(editingChannelTitleInitialValue);
-                          setIsEditingChannelTitle(false);
-                        }}
-                      >
-                        {t("settings.cancel")}
-                      </button>
-                    ) : null}
-                    <input
-                      className="channel-settings-title-input"
-                      value={editingRoomTitle}
-                      onFocus={() => {
-                        setEditingChannelTitleInitialValue(editingRoomTitle);
-                        setIsEditingChannelTitle(true);
-                      }}
-                      onBlur={() => {
-                        onSetEditingRoomTitle(editingChannelTitleInitialValue);
-                        setIsEditingChannelTitle(false);
-                      }}
-                      onChange={(event) => onSetEditingRoomTitle(event.target.value)}
-                      placeholder={t("rooms.channelTitle")}
-                    />
-                    {isEditingChannelTitle ? (
-                      <button
-                        type="button"
-                        className="whitespace-nowrap"
-                        onMouseDown={(event) => event.preventDefault()}
-                        onClick={() => {
-                          setEditingChannelTitleInitialValue(editingRoomTitle);
-                          setIsEditingChannelTitle(false);
-                          requestRoomSettingsAutosave();
-                        }}
-                      >
-                        {t("settings.apply")}
-                      </button>
-                    ) : null}
-                    <button
-                      type="button"
-                      className="secondary icon-btn tiny"
-                      onClick={() => onMoveChannel("up")}
-                      aria-label={t("rooms.up")}
-                      data-tooltip={t("rooms.up")}
-                    >
-                      <i className="bi bi-arrow-up" aria-hidden="true" />
-                    </button>
-                    <button
-                      type="button"
-                      className="secondary icon-btn tiny"
-                      onClick={() => onMoveChannel("down")}
-                      aria-label={t("rooms.down")}
-                      data-tooltip={t("rooms.down")}
-                    >
-                      <i className="bi bi-arrow-down" aria-hidden="true" />
-                    </button>
-                  </div>
-                </div>
-                <div className="grid gap-3 desktop:grid-cols-2">
-                  <select
-                    value={editingRoomKind}
-                    onChange={(event) => {
-                      onSetEditingRoomKind(event.target.value as RoomKind);
-                      requestRoomSettingsAutosave();
-                    }}
-                  >
-                    <option value="text">{t("rooms.text")}</option>
-                    <option value="text_voice">{t("rooms.textVoice")}</option>
-                    <option value="text_voice_video">{t("rooms.textVoiceVideo")}</option>
-                  </select>
-                  <select
-                    value={editingRoomCategoryId}
-                    onChange={(event) => {
-                      onSetEditingRoomCategoryId(event.target.value);
-                      requestRoomSettingsAutosave();
-                    }}
-                  >
-                    <option value="none">{t("rooms.noCategory")}</option>
-                    {(roomsTree?.categories || []).map((category) => (
-                      <option key={category.id} value={category.id}>{category.title}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="channel-settings-toggles-row">
-                  <div className="row items-center justify-between gap-3 channel-settings-toggle-item">
-                    <span>{t("rooms.channelNsfw")}</span>
-                    <button
-                      type="button"
-                      className={`ui-switch ${editingRoomNsfw ? "ui-switch-on" : ""}`}
-                      role="switch"
-                      aria-checked={editingRoomNsfw}
-                      aria-label={t("rooms.channelNsfw")}
-                      onClick={() => {
-                        onSetEditingRoomNsfw(!editingRoomNsfw);
-                        requestRoomSettingsAutosave();
-                      }}
-                    >
-                      <span className="ui-switch-thumb" aria-hidden="true" />
-                    </button>
-                  </div>
-                  <div className="row items-center justify-between gap-3 channel-settings-toggle-item">
-                    <span>{t("rooms.channelHidden")}</span>
-                    <button
-                      type="button"
-                      className={`ui-switch ${editingRoomHidden ? "ui-switch-on" : ""}`}
-                      role="switch"
-                      aria-checked={editingRoomHidden}
-                      aria-label={t("rooms.channelHidden")}
-                      onClick={() => {
-                        onSetEditingRoomHidden(!editingRoomHidden);
-                        requestRoomSettingsAutosave();
-                      }}
-                    >
-                      <span className="ui-switch-thumb" aria-hidden="true" />
-                    </button>
-                  </div>
-                </div>
-                {canManageAudioQuality ? (
-                  <div className="grid gap-2">
-                    <span>{t("rooms.channelSoundQuality")}</span>
-                    <div className="quality-toggle-group" role="radiogroup" aria-label={t("rooms.channelSoundQuality")}>
-                      <button
-                        type="button"
-                        className={`secondary quality-toggle-btn ${editingRoomAudioQualitySetting === "server_default" ? "quality-toggle-btn-active" : ""}`}
-                        onClick={() => {
-                          onSetEditingRoomAudioQualitySetting("server_default");
-                          requestRoomSettingsAutosave();
-                        }}
-                        aria-pressed={editingRoomAudioQualitySetting === "server_default"}
-                      >
-                        {t("rooms.channelSoundServerDefault")}
-                      </button>
-                      <button
-                        type="button"
-                        className={`secondary quality-toggle-btn ${editingRoomAudioQualitySetting === "retro" ? "quality-toggle-btn-active" : ""}`}
-                        onClick={() => {
-                          onSetEditingRoomAudioQualitySetting("retro" as ChannelAudioQualitySetting);
-                          requestRoomSettingsAutosave();
-                        }}
-                        aria-pressed={editingRoomAudioQualitySetting === "retro"}
-                      >
-                        {t("server.soundRetro")}
-                      </button>
-                      <button
-                        type="button"
-                        className={`secondary quality-toggle-btn ${editingRoomAudioQualitySetting === "low" ? "quality-toggle-btn-active" : ""}`}
-                        onClick={() => {
-                          onSetEditingRoomAudioQualitySetting("low" as ChannelAudioQualitySetting);
-                          requestRoomSettingsAutosave();
-                        }}
-                        aria-pressed={editingRoomAudioQualitySetting === "low"}
-                      >
-                        {t("server.soundLow")}
-                      </button>
-                      <button
-                        type="button"
-                        className={`secondary quality-toggle-btn ${editingRoomAudioQualitySetting === "standard" ? "quality-toggle-btn-active" : ""}`}
-                        onClick={() => {
-                          onSetEditingRoomAudioQualitySetting("standard" as ChannelAudioQualitySetting);
-                          requestRoomSettingsAutosave();
-                        }}
-                        aria-pressed={editingRoomAudioQualitySetting === "standard"}
-                      >
-                        {t("server.soundStandard")}
-                      </button>
-                      <button
-                        type="button"
-                        className={`secondary quality-toggle-btn ${editingRoomAudioQualitySetting === "high" ? "quality-toggle-btn-active" : ""}`}
-                        onClick={() => {
-                          onSetEditingRoomAudioQualitySetting("high" as ChannelAudioQualitySetting);
-                          requestRoomSettingsAutosave();
-                        }}
-                        aria-pressed={editingRoomAudioQualitySetting === "high"}
-                      >
-                        {t("server.soundHigh")}
-                      </button>
-                    </div>
-                  </div>
-                ) : null}
-                <div className="grid gap-2">
-                  <span>{t("chat.notificationMute")}</span>
-                  <div className="quality-toggle-group chat-topic-context-mute-row" role="group" aria-label={t("chat.notificationMute")}>
-                    <button
-                      type="button"
-                      className={`secondary quality-toggle-btn ${roomMutePreset === "1h" ? "quality-toggle-btn-active" : ""}`}
-                      onClick={() => void applyRoomMutePreset("1h")}
-                      disabled={roomMuteSaving}
-                    >
-                      1h
-                    </button>
-                    <button
-                      type="button"
-                      className={`secondary quality-toggle-btn ${roomMutePreset === "8h" ? "quality-toggle-btn-active" : ""}`}
-                      onClick={() => void applyRoomMutePreset("8h")}
-                      disabled={roomMuteSaving}
-                    >
-                      8h
-                    </button>
-                    <button
-                      type="button"
-                      className={`secondary quality-toggle-btn ${roomMutePreset === "24h" ? "quality-toggle-btn-active" : ""}`}
-                      onClick={() => void applyRoomMutePreset("24h")}
-                      disabled={roomMuteSaving}
-                    >
-                      24h
-                    </button>
-                    <button
-                      type="button"
-                      className={`secondary quality-toggle-btn ${roomMutePreset === "forever" ? "quality-toggle-btn-active" : ""}`}
-                      onClick={() => void applyRoomMutePreset("forever")}
-                      disabled={roomMuteSaving}
-                    >
-                      {t("chat.notificationMuteForever")}
-                    </button>
-                  </div>
-                  {roomMuteStatusText ? <div className="chat-topic-read-status" role="status" aria-live="polite">{roomMuteStatusText}</div> : null}
-                </div>
-                <div className="row items-center gap-2 channel-settings-actions-row">
-                  <button
-                    type="button"
-                    className="secondary clear-action-btn"
-                    onClick={() => onOpenRoomChat(room.slug)}
-                  >
-                    <i className="bi bi-book" aria-hidden="true" /> {t("rooms.markAsRead")}
-                  </button>
-                  <button
-                    type="button"
-                    className="secondary clear-action-btn"
-                    onClick={() => onRequestClearChannel(room)}
-                  >
-                    <i className="bi bi-eraser" aria-hidden="true" /> {t("rooms.clearChat")}
-                  </button>
-                  <button
-                    type="button"
-                    className="secondary delete-action-btn"
-                    onClick={() => onRequestArchiveChannel(room)}
-                  >
-                    <i className="bi bi-archive" aria-hidden="true" /> {t("rooms.deleteChannel")}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </PopupPortal>
+            editingRoomTitle={editingRoomTitle}
+            editingRoomKind={editingRoomKind}
+            editingRoomCategoryId={editingRoomCategoryId}
+            editingRoomNsfw={editingRoomNsfw}
+            editingRoomHidden={editingRoomHidden}
+            editingRoomAudioQualitySetting={editingRoomAudioQualitySetting}
+            isEditingChannelTitle={isEditingChannelTitle}
+            editingChannelTitleInitialValue={editingChannelTitleInitialValue}
+            canManageAudioQuality={canManageAudioQuality}
+            roomMutePreset={roomMutePreset}
+            roomMuteSaving={roomMuteSaving}
+            roomMuteStatusText={roomMuteStatusText}
+            roomsTreeCategories={roomsTree?.categories || []}
+            onSetEditingRoomTitle={onSetEditingRoomTitle}
+            onSetEditingRoomKind={onSetEditingRoomKind}
+            onSetEditingRoomCategoryId={onSetEditingRoomCategoryId}
+            onSetEditingRoomNsfw={onSetEditingRoomNsfw}
+            onSetEditingRoomHidden={onSetEditingRoomHidden}
+            onSetEditingRoomAudioQualitySetting={onSetEditingRoomAudioQualitySetting}
+            onSaveChannelSettings={onSaveChannelSettings}
+            onSetIsEditingChannelTitle={setIsEditingChannelTitle}
+            onSetEditingChannelTitleInitialValue={setEditingChannelTitleInitialValue}
+            onMoveChannel={onMoveChannel}
+            onOpenRoomChat={onOpenRoomChat}
+            onRequestClearChannel={onRequestClearChannel}
+            onRequestArchiveChannel={onRequestArchiveChannel}
+            onApplyRoomMutePreset={applyRoomMutePreset}
+            requestRoomSettingsAutosave={requestRoomSettingsAutosave}
+          />
         </div>
         ) : null}
       </div>
