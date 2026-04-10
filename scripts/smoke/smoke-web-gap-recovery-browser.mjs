@@ -136,7 +136,17 @@ async function ensureTimelineReady(page) {
     await topicTab.click({ force: true }).catch(() => undefined);
   }
 
-  await timeline.waitFor({ state: "visible", timeout: timeoutMs });
+  try {
+    await timeline.waitFor({ state: "visible", timeout: timeoutMs });
+  } catch (error) {
+    const currentUrl = page.url();
+    const pageTitle = await page.title().catch(() => "<unavailable>");
+    const bodyText = await page.locator("body").innerText().catch(() => "<unavailable>");
+    const snippet = String(bodyText || "").replace(/\s+/g, " ").trim().slice(0, 320);
+    throw new Error(
+      `[smoke:web:gap-recovery:browser] timeline is not visible after boot: url=${currentUrl} title=${pageTitle} body=${JSON.stringify(snippet)} cause=${String(error?.message || error)}`
+    );
+  }
 }
 
 async function main() {
