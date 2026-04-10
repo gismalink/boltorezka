@@ -180,8 +180,8 @@ async function gotoWithRetries(page) {
   throw lastError || new Error("Unable to open app");
 }
 
-async function postRoomMessage(token, text) {
-  const response = await fetch(`${baseUrl}/v1/rooms/${encodeURIComponent(roomSlug)}/messages`, {
+async function postRoomMessage(token, roomSlugValue, text) {
+  const response = await fetch(`${baseUrl}/v1/rooms/${encodeURIComponent(roomSlugValue)}/messages`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,
@@ -418,7 +418,7 @@ async function main() {
   const roomMessagesRequests = [];
   const authRequests = [];
   let mainFrameNavigations = 0;
-  const roomMessagesPath = `/v1/rooms/${encodeURIComponent(roomSlug)}/messages`;
+  let observedActiveRoomSlug = "";
 
   page.on("request", (request) => {
     const path = normalizePath(request.url());
@@ -430,11 +430,17 @@ async function main() {
       return;
     }
 
-    if (path === roomMessagesPath) {
+    const roomMessagesMatch = path.match(/^\/v1\/rooms\/([^/]+)\/messages$/);
+    if (roomMessagesMatch) {
+      const requestRoomSlug = decodeURIComponent(String(roomMessagesMatch[1] || "")).trim();
+      if (requestRoomSlug) {
+        observedActiveRoomSlug = requestRoomSlug;
+      }
       roomMessagesRequests.push({
         ts: Date.now(),
         method: request.method(),
-        url: request.url()
+        url: request.url(),
+        roomSlug: requestRoomSlug
       });
     }
 
@@ -630,9 +636,10 @@ async function main() {
     await page.waitForTimeout(warmupMs);
 
     const beforeRequestCount = roomMessagesRequests.length;
+    const targetRoomSlug = observedActiveRoomSlug || roomSlug;
 
     for (let index = 0; index < injectionMessages; index += 1) {
-      await postRoomMessage(bearerTokenSecond, `gap-smoke-${Date.now()}-${index}`);
+      await postRoomMessage(bearerTokenSecond, targetRoomSlug, `gap-smoke-${Date.now()}-${index}`);
       await page.waitForTimeout(settleMs);
     }
 
@@ -642,7 +649,9 @@ async function main() {
       readGapMutationState: async () => page.evaluate(() => window.__smokeGapPatchState || null)
     });
 
-    const recoveryRequests = roomMessagesRequests.slice(beforeRequestCount).filter((item) => item.method === "GET");
+    const recoveryRequests = roomMessagesRequests
+      .slice(beforeRequestCount)
+      .filter((item) => item.method === "GET" && String(item.roomSlug || "").trim() === targetRoomSlug);
     if (recoveryRequests.length === 0) {
       throw new Error("[smoke:web:gap-recovery:browser] no room messages reload request observed after injected gap");
     }
