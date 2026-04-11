@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, type ClipboardEvent, type ComponentProps, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ClipboardEvent, type ComponentProps, type FormEvent } from "react";
 import { AppWorkspaceContent } from "./AppWorkspaceContent";
 import { ChatPanel } from "./ChatPanel";
 import { RoomsPanel } from "./RoomsPanel";
@@ -140,6 +140,51 @@ export function AppWorkspacePanels({
     </div>
   ) : null;
 
+  // ─── DM editing state ──────────────────────────────
+  const [dmEditingMessageId, setDmEditingMessageId] = useState<string | null>(null);
+
+  const handleDmEditMessage = useCallback((messageId: string) => {
+    if (!dm) return;
+    const msg = dm.messages.find((m) => m.id === messageId);
+    if (!msg) return;
+    setDmEditingMessageId(messageId);
+    dm.setDmText(msg.body);
+  }, [dm]);
+
+  const handleDmCancelEdit = useCallback(() => {
+    setDmEditingMessageId(null);
+    dm?.setDmText("");
+  }, [dm]);
+
+  const handleDmDeleteMessage = useCallback((messageId: string) => {
+    if (!dm) return;
+    dm.deleteDmMessage(messageId);
+  }, [dm]);
+
+  const handleDmSendMessage = useCallback((event: FormEvent) => {
+    event.preventDefault();
+    if (!dm) return;
+
+    if (dmEditingMessageId) {
+      const text = dm.dmText.trim();
+      if (text) {
+        dm.editDmMessage(dmEditingMessageId, text);
+      }
+      setDmEditingMessageId(null);
+      dm.setDmText("");
+      return;
+    }
+
+    const text = dm.dmText.trim();
+    const image = dm.pendingDmImageDataUrl;
+    if (text || image) dm.sendDmMessage(text, image);
+  }, [dm, dmEditingMessageId]);
+
+  // reset editing state when DM closes
+  useEffect(() => {
+    if (!isDmActive) setDmEditingMessageId(null);
+  }, [isDmActive]);
+
   const noopAsync = async () => {};
   const noop = () => {};
 
@@ -155,22 +200,17 @@ export function AppWorkspacePanels({
         activeTopicId: null,
         chatText: dm.dmText,
         onSetChatText: dm.setDmText,
-        onSendMessage: (event: FormEvent) => {
-          event.preventDefault();
-          const text = dm.dmText.trim();
-          const image = dm.pendingDmImageDataUrl;
-          if (text || image) dm.sendDmMessage(text, image);
-        },
+        onSendMessage: handleDmSendMessage,
         onChatPaste: handleDmPaste,
         messagesHasMore: dm.messagesHasMore,
         loadingOlderMessages: dm.loading,
         onLoadOlderMessages: () => { dm.loadOlderMessages(); },
-        editingMessageId: null,
+        editingMessageId: dmEditingMessageId,
         replyingToMessage: null,
-        onCancelEdit: noop,
+        onCancelEdit: handleDmCancelEdit,
         onCancelReply: noop,
-        onEditMessage: noop,
-        onDeleteMessage: noop,
+        onEditMessage: handleDmEditMessage,
+        onDeleteMessage: handleDmDeleteMessage,
         onReportMessage: noop,
         onReplyMessage: noop,
         pinnedByMessageId: {},

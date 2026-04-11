@@ -22,6 +22,8 @@ type DmActions = {
   openDm: (peerUserId: string, peerName: string) => void;
   closeDm: () => void;
   sendDmMessage: (text: string, imageDataUrl?: string | null) => Promise<void>;
+  editDmMessage: (messageId: string, body: string) => Promise<void>;
+  deleteDmMessage: (messageId: string) => Promise<void>;
   loadOlderMessages: () => Promise<void>;
   setDmText: (text: string) => void;
   setPendingDmImageDataUrl: (url: string | null) => void;
@@ -181,6 +183,26 @@ export function DmProvider({ token, children }: { token: string; children: React
     setDmText("");
   }, [activeThreadId, token]);
 
+  const editDmMessage = useCallback(async (messageId: string, body: string) => {
+    if (!token) return;
+    try {
+      const res = await api.dmEditMessage(token, messageId, body);
+      setMessages((prev) => prev.map((m) => (m.id === res.message.id ? res.message : m)));
+    } catch {
+      // edit failed — ignore
+    }
+  }, [token]);
+
+  const deleteDmMessage = useCallback(async (messageId: string) => {
+    if (!token) return;
+    try {
+      await api.dmDeleteMessage(token, messageId);
+      setMessages((prev) => prev.filter((m) => m.id !== messageId));
+    } catch {
+      // delete failed — ignore
+    }
+  }, [token]);
+
   const loadOlderMessages = useCallback(async () => {
     if (!activeThreadId || !token || !messagesHasMore) return;
 
@@ -276,6 +298,8 @@ export function DmProvider({ token, children }: { token: string; children: React
     openDm,
     closeDm,
     sendDmMessage,
+    editDmMessage,
+    deleteDmMessage,
     loadOlderMessages,
     setDmText,
     setPendingDmImageDataUrl,
