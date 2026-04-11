@@ -8,6 +8,7 @@ type OutsideOnlineMember = {
 
 type RoomsOutsideOnlineBlockProps = {
   title: string;
+  openChatLabel: string;
   collapsed: boolean;
   outsideOnlineCount: number;
   unreadCount: number;
@@ -18,6 +19,7 @@ type RoomsOutsideOnlineBlockProps = {
 
 function RoomsOutsideOnlineBlockInner({
   title,
+  openChatLabel,
   collapsed,
   outsideOnlineCount,
   unreadCount,
@@ -63,8 +65,8 @@ function RoomsOutsideOnlineBlockInner({
                   <button
                     type="button"
                     className={`secondary icon-btn tiny channel-member-dm-btn ${dm.activePeerUserId === member.userId ? "channel-member-dm-btn-active" : ""}`}
-                    aria-label="DM"
-                    data-tooltip="DM"
+                    aria-label={openChatLabel}
+                    data-tooltip={openChatLabel}
                     onClick={() => dm.openDm(member.userId, member.userName)}
                   >
                     <i className="bi bi-chat-dots" aria-hidden="true" />

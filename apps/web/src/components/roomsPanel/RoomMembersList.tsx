@@ -344,8 +344,8 @@ export function RoomMembersList({
                     <button
                       type="button"
                       className={`secondary icon-btn tiny channel-member-dm-btn ${dm.activePeerUserId === member.userId ? "channel-member-dm-btn-active" : ""}`}
-                      aria-label={t("rooms.openDm")}
-                      data-tooltip={t("rooms.openDm")}
+                      aria-label={t("rooms.openChat")}
+                      data-tooltip={t("rooms.openChat")}
                       onClick={(event) => {
                         event.stopPropagation();
                         dm.openDm(member.userId, member.userName);

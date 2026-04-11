@@ -9,6 +9,7 @@ type OfflineMember = {
 
 type RoomsOfflineBlockProps = {
   title: string;
+  openChatLabel: string;
   collapsed: boolean;
   offlineCount: number;
   members: OfflineMember[];
@@ -18,6 +19,7 @@ type RoomsOfflineBlockProps = {
 
 function RoomsOfflineBlockInner({
   title,
+  openChatLabel,
   collapsed,
   offlineCount,
   members,
@@ -63,8 +65,8 @@ function RoomsOfflineBlockInner({
                   <button
                     type="button"
                     className={`secondary icon-btn tiny channel-member-dm-btn ${dm.activePeerUserId === member.userId ? "channel-member-dm-btn-active" : ""}`}
-                    aria-label="DM"
-                    data-tooltip="DM"
+                    aria-label={openChatLabel}
+                    data-tooltip={openChatLabel}
                     onClick={() => dm.openDm(member.userId, member.userName)}
                   >
                     <i className="bi bi-chat-dots" aria-hidden="true" />

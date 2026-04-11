@@ -2962,11 +2962,11 @@ pre {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  width: 0;
+  max-width: 0;
   overflow: hidden;
   opacity: 0;
   pointer-events: none;
-  transition: width 0.16s ease, opacity 0.12s ease;
+  transition: max-width 0.16s ease, opacity 0.12s ease;
 }
 
 .channel-member-dm-btn {
@@ -2975,7 +2975,7 @@ pre {
 }
 
 .channel-member-item:hover .channel-member-dm-anchor {
-  width: auto;
+  max-width: 60px;
   margin-left: 2px;
   opacity: 1;
   pointer-events: auto;
@@ -2983,7 +2983,7 @@ pre {
 
 /* Непрочитанные DM бейджи видны всегда, даже без ховера */
 .channel-member-dm-anchor:has(.room-unread-badge) {
-  width: auto;
+  max-width: none;
   overflow: visible;
   opacity: 1;
   pointer-events: auto;
@@ -2991,7 +2991,7 @@ pre {
 
 /* Активный DM (открыт чат с этим пользователем) */
 .channel-member-dm-anchor-active {
-  width: auto;
+  max-width: none;
   overflow: visible;
   opacity: 1;
   pointer-events: auto;
