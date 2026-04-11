@@ -140,6 +140,7 @@ export function DmProvider({ token, onDmOpen, children }: { token: string; onDmO
   }, [activeThreadId, token]);
 
   const openDm = useCallback(async (peerUserId: string, peerName: string) => {
+    if (activePeerUserId === peerUserId) return; // уже открыт
     onDmOpen?.();
     setActivePeerUserId(peerUserId);
     setActivePeerName(peerName);
@@ -163,7 +164,7 @@ export function DmProvider({ token, onDmOpen, children }: { token: string; onDmO
       // Если не получилось создать thread — всё равно показываем пустой стейт
       setActiveThreadId(null);
     }
-  }, [token, threads, onDmOpen]);
+  }, [token, threads, onDmOpen, activePeerUserId]);
 
   const closeDm = useCallback(() => {
     setActiveThreadId(null);

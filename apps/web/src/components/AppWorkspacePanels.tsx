@@ -49,13 +49,14 @@ export function AppWorkspacePanels({
   const dm = useDmOptional();
   const isDmActive = Boolean(dm?.activeThreadId);
 
-  // Авто-закрытие DM при смене комнаты (переключение между чатами)
+  // Закрытие DM когда пользователь открывает чат комнаты (slug становится непустым)
   const prevRoomSlugRef = useRef(chatPanelProps.roomSlug);
   useEffect(() => {
-    if (prevRoomSlugRef.current !== chatPanelProps.roomSlug && isDmActive && dm) {
+    const newSlug = chatPanelProps.roomSlug;
+    if (prevRoomSlugRef.current !== newSlug && newSlug && isDmActive && dm) {
       dm.closeDm();
     }
-    prevRoomSlugRef.current = chatPanelProps.roomSlug;
+    prevRoomSlugRef.current = newSlug;
   }, [chatPanelProps.roomSlug, isDmActive, dm]);
 
   const dmImagePolicy = useMemo(() => ({
