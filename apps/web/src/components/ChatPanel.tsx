@@ -82,7 +82,8 @@ export function ChatPanel({
   onSetTopicMentionUnreadLocal,
   onApplyTopicReadLocal,
   canManageTopicModeration,
-  mentionCandidates
+  mentionCandidates,
+  headerSlot
 }: ChatPanelProps) {
   const [topicFilterMode] = useState<"all" | "active" | "unread" | "my" | "mentions" | "pinned" | "archived">("all");
   const [topicPaletteOpen, setTopicPaletteOpen] = useState(false);
@@ -598,6 +599,9 @@ export function ChatPanel({
       data-agent-id={CHAT_AGENT_IDS.panel}
       data-agent-screen-context={chatScreenContext}
     >
+      {headerSlot ? (
+        <div className="chat-header-stack">{headerSlot}</div>
+      ) : (
       <div className="chat-header-stack">
         <TopicTabsHeader
           hasActiveRoom={hasActiveRoom}
@@ -653,6 +657,7 @@ export function ChatPanel({
           />
         ) : null}
       </div>
+      )}
       {hasActiveRoom && hotkeyStatusText ? (
         <div className="chat-hotkeys-hint muted" aria-live="polite">
           {hotkeyStatusText}
