@@ -220,7 +220,7 @@ function RoomRowInner({
       {roomSupportsRtc ? (
         <button
           type="button"
-          className={`secondary icon-btn tiny channel-chat-open-btn ${roomChatActive && !isDmActive ? "channel-chat-open-btn-active" : ""}`}
+          className={`secondary icon-btn tiny channel-chat-open-btn ${roomChatActive ? "channel-chat-open-btn-active" : ""}`}
           data-tooltip={t("rooms.openChat")}
           aria-label={t("rooms.openChat")}
           onClick={() => {

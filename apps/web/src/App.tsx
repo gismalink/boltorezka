@@ -1027,7 +1027,7 @@ export function App() {
   }
 
   return (
-    <DmProvider token={token}>
+    <DmProvider token={token} onDmOpen={() => setChatRoomSlug("")}>
       <AppShellLayout topChromeProps={appTopChromeProps} mainSectionProps={appMainSectionProps} shellOverlaysProps={appShellOverlaysProps} />
     </DmProvider>
   );

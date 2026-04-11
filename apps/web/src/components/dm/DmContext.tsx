@@ -55,7 +55,7 @@ export function useDmOptional(): DmContextValue | null {
 
 // ─── provider ───────────────────────────────────────────
 
-export function DmProvider({ token, children }: { token: string; children: ReactNode }) {
+export function DmProvider({ token, onDmOpen, children }: { token: string; onDmOpen?: () => void; children: ReactNode }) {
   const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
   const [activePeerUserId, setActivePeerUserId] = useState<string | null>(null);
   const [activePeerName, setActivePeerName] = useState<string | null>(null);
@@ -140,6 +140,7 @@ export function DmProvider({ token, children }: { token: string; children: React
   }, [activeThreadId, token]);
 
   const openDm = useCallback(async (peerUserId: string, peerName: string) => {
+    onDmOpen?.();
     setActivePeerUserId(peerUserId);
     setActivePeerName(peerName);
     setDmText("");
@@ -162,7 +163,7 @@ export function DmProvider({ token, children }: { token: string; children: React
       // Если не получилось создать thread — всё равно показываем пустой стейт
       setActiveThreadId(null);
     }
-  }, [token, threads]);
+  }, [token, threads, onDmOpen]);
 
   const closeDm = useCallback(() => {
     setActiveThreadId(null);
