@@ -12,6 +12,7 @@ import type {
 import { getDesktopUpdateBridge } from "../desktopBridge";
 import type { ServerScreenShareResolution, ServerVideoEffectType } from "../hooks/rtc/voiceCallTypes";
 import { resolvePublicOrigin } from "../runtimeOrigin";
+import { useContextMenuPosition } from "../hooks/useContextMenuPosition";
 import { ServerVideoSettingsTab } from "./serverProfileModal/ServerVideoSettingsTab";
 
 type ServerMenuTab =
@@ -387,7 +388,8 @@ export function ServerProfileModal({
   const [newRoleName, setNewRoleName] = useState("");
   const [editingRoleId, setEditingRoleId] = useState<string | null>(null);
   const [editingRoleName, setEditingRoleName] = useState("");
-  const [memberContextMenu, setMemberContextMenu] = useState<{ userId: string; x: number; y: number } | null>(null);
+  const { contextMenu: memberContextMenu, setContextMenu: setMemberContextMenu } =
+    useContextMenuPosition<{ userId: string }>({ skipSelector: ".settings-popup" });
   const [memberContextProfile, setMemberContextProfile] = useState<ServerMemberProfileDetails | null>(null);
   const [memberProfileModalOpen, setMemberProfileModalOpen] = useState(false);
   const [userSearchQuery, setUserSearchQuery] = useState("");
@@ -510,16 +512,6 @@ export function ServerProfileModal({
       disposed = true;
     };
   }, [hasCurrentServer, memberContextMenu, onLoadServerRoles, open, serverMenuTab]);
-
-  useEffect(() => {
-    if (!memberContextMenu) {
-      return;
-    }
-
-    const close = () => setMemberContextMenu(null);
-    window.addEventListener("pointerdown", close);
-    return () => window.removeEventListener("pointerdown", close);
-  }, [memberContextMenu]);
 
   useEffect(() => {
     if (!open) {

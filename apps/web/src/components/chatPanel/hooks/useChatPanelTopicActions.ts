@@ -1,6 +1,7 @@
-import { useEffect, useState, type MouseEvent } from "react";
+import { useState, type MouseEvent } from "react";
 import { api } from "../../../api";
 import type { RoomTopic } from "../../../domain";
+import { useContextMenuPosition } from "../../../hooks/useContextMenuPosition";
 
 type TopicMutePreset = "1h" | "8h" | "24h" | "forever" | "off";
 
@@ -37,37 +38,11 @@ export function useChatPanelTopicActions({
   const [editingTopicSaving, setEditingTopicSaving] = useState(false);
   const [editingTopicStatusText, setEditingTopicStatusText] = useState("");
   const [archivingTopicId, setArchivingTopicId] = useState<string | null>(null);
-  const [topicContextMenu, setTopicContextMenu] = useState<{ topicId: string; x: number; y: number } | null>(null);
+  const { contextMenu: topicContextMenu, setContextMenu: setTopicContextMenu } =
+    useContextMenuPosition<{ topicId: string }>({ skipSelector: ".chat-topic-context-menu" });
   const [topicDeleteConfirm, setTopicDeleteConfirm] = useState<{ topicId: string; title: string } | null>(null);
   const [topicMutePresetById, setTopicMutePresetById] = useState<Record<string, TopicMutePreset>>({});
   const [notificationSaving, setNotificationSaving] = useState(false);
-
-  useEffect(() => {
-    if (!topicContextMenu) {
-      return;
-    }
-
-    const onPointerDown = (event: globalThis.PointerEvent) => {
-      const target = event.target as HTMLElement | null;
-      if (!target || target.closest(".chat-topic-context-menu")) {
-        return;
-      }
-      setTopicContextMenu(null);
-    };
-
-    const onKeyDown = (event: globalThis.KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setTopicContextMenu(null);
-      }
-    };
-
-    window.addEventListener("pointerdown", onPointerDown);
-    window.addEventListener("keydown", onKeyDown);
-    return () => {
-      window.removeEventListener("pointerdown", onPointerDown);
-      window.removeEventListener("keydown", onKeyDown);
-    };
-  }, [topicContextMenu]);
 
   const buildMuteUntilIso = (hours: number | "forever"): string => {
     const now = new Date();
