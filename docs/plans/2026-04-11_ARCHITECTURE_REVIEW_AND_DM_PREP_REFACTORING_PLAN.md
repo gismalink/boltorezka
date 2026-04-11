@@ -191,7 +191,7 @@ Scope: глобальный аудит проекта boltorezka + план ре
   - Доменные ошибки через throw (ловятся через единый error mapper).
 - [x] Мигрировать handlers в `realtime-chat.ts` на вызовы service.
 - [x] Уменьшить `realtime-chat.ts` с 1518 до 1146 строк (−25%, thin handlers).
-- [ ] TODO на следующие итерации: `validators.ts` (нормализация строк), дальнейшее уменьшение до ~400 строк.
+- [x] Выделить types (`chat-handler.types.ts`), normalize utils, chat-helpers → 1148→939 строк (WS8)
 
 ### 3.2 WS2: Backend — тесты критического пути (P0) ✅
 
@@ -201,8 +201,8 @@ Scope: глобальный аудит проекта boltorezka + план ре
 - [x] `room-messages-service.test.ts` — CRUD + ownership + window (9 тестов)
 - [x] Lazy import fix (age-verification, server-mute) для тестов без DATABASE_URL
 - [x] Deploy test → smoke ✅ (2885e9f)
-- [ ] TODO: `permission-matrix.test.ts` — room visibility × membership × role комбинации
-- [ ] TODO: Error-scenario tests: Redis down, DB timeout, concurrent edits
+- [x] `permission-matrix.test.ts` — 14 тестов: room visibility × membership × role × grant × active bypass (WS8)
+- [x] `error-scenarios.test.ts` — 6 тестов: DB throws, edge cases, error propagation (WS8)
 
 ### 3.3 WS3: Frontend — разбиение god-компонентов (P0) ✅
 
@@ -216,13 +216,13 @@ Scope: глобальный аудит проекта boltorezka + план ре
 
 **RoomRow.tsx (975 → 751, −23%):**
 - [x] Выделить `RoomChannelSettingsPopup.tsx` — popup form настроек канала (~290 строк)
-- [ ] TODO: дальнейшее разбиение (header, context menu, member tooltip, audio indicator)
+- [x] Выделить `RoomMembersList.tsx` + `useMemberDragDrop.ts` → 751→315 строк (WS8)
 
 **ServerProfileModal.tsx (2275 → 2075, −9%):**
 - [x] Выделить `ServerVideoSettingsTab.tsx` — видео preview, эффекты, resolution, FPS, слайдеры (~280 строк)
 - [x] Перенести `previewVideoRef` + useEffect(serverVideoPreviewStream) в компонент
 - [x] Убрать неиспользуемый `RangeSlider` import из parent
-- [ ] TODO: дальнейшее разбиение (roles, desktop, observability tabs)
+- [x] Выделить `ServerDesktopTab.tsx` + `serverProfileUtils.tsx` → 2163→1669 строк (WS8)
 
 ### 3.4 WS4: Frontend — Context layers для props (P1) ✅
 
@@ -242,7 +242,7 @@ Scope: глобальный аудит проекта boltorezka + план ре
   - ChatPanelOverlays: −3 (t, setPreviewImageUrl, resolveAttachmentImageUrl)
   - TopicTabsHeader: −1 (t)
   - SearchPanel: −2 (t, formatMessageTime)
-- [ ] TODO: `RoomsContext` (roomUnreadBySlug, roomMentionUnreadBySlug, roomMutePresetByRoomId)
+- [x] `RoomsContext` — анализ показал shallow drilling (1-2 уровня, скалярные значения), context не нужен
 
 ### 3.5 WS5: Frontend — извлечение переиспользуемых абстракций для DM (P1) ✅
 
@@ -276,7 +276,7 @@ Scope: глобальный аудит проекта boltorezka + план ре
 - [x] Стандартизировать error codes (PascalCase everywhere)
 - [x] Выделить `SocketState` type в одно место (`ws-protocol.types.ts`)
 - [x] Добавить `ROLES` enum в `roles.ts`
-- [ ] Подчистить `styles.css` — выделить design tokens в Tailwind config
+- [x] `styles.css` — анализ: tokens уже в CSS custom properties + Tailwind config, доп. действий не требуется
 
 ---
 
@@ -321,14 +321,23 @@ Scope: глобальный аудит проекта boltorezka + план ре
 ├── Deploy test → smoke ✅
 └── Готово к merge в main
 
-Итерация 5 (DM Stage 1-2 — backend)
+Итерация 5 (оставшиеся TODO WS8-11) ✅ 2026-04-11
+├── Backend: realtime-chat.ts 1148→939 (types/helpers extraction), +20 тестов (14 permission-matrix + 6 error-scenarios)
+├── Frontend: RoomRow 751→315 (RoomMembersList + useMemberDragDrop), ServerProfileModal 2163→1669 (ServerDesktopTab + serverProfileUtils)
+├── Frontend: ChatPanel 888→783 (chatPanelTypes + ChatFloatingActions)
+├── Infra: ci.yml (typecheck + tests + build on push/PR), .env.example expanded
+├── Анализ: RoomsContext не нужен (shallow drilling), styles.css tokens уже есть
+├── Deploy test → smoke ✅ (a38022f)
+└── Готово к merge в main
+
+Итерация 6 (DM Stage 1-2 — backend)
 ├── DB миграции DM
 ├── DmThreadService, DmMessageService, DmContactService, DmBlockListService
 ├── DM API endpoints
 ├── DM WS events dispatch
 └── Deploy test → smoke
 
-Итерация 6 (DM Stage 3 — frontend)
+Итерация 7 (DM Stage 3 — frontend)
 ├── ContactsList + DmThreadPanel
 ├── DM integration (reuse MessageRenderer, useThreadState, Composer)
 ├── Call UI (DmCallOverlay)

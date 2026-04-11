@@ -9,82 +9,21 @@ import type {
   TelemetrySummary,
   User
 } from "../domain";
-import { getDesktopUpdateBridge } from "../desktopBridge";
 import type { ServerScreenShareResolution, ServerVideoEffectType } from "../hooks/rtc/voiceCallTypes";
-import { resolvePublicOrigin } from "../runtimeOrigin";
 import { useContextMenuPosition } from "../hooks/useContextMenuPosition";
+import { ServerDesktopTab } from "./serverProfileModal/ServerDesktopTab";
+import type {
+  DocumentsRulesTab,
+  IconAction,
+  ObservabilityTab,
+  ProductManagementTab,
+  RoleBadge,
+  ServerMemberProfileDetails,
+  ServerMenuTab,
+  UserAccessTab
+} from "./serverProfileModal/serverProfileUtils";
+import { ActionIconButton, resolveDisplayName } from "./serverProfileModal/serverProfileUtils";
 import { ServerVideoSettingsTab } from "./serverProfileModal/ServerVideoSettingsTab";
-
-type ServerMenuTab =
-  | "users"
-  | "roles"
-  | "product_management"
-  | "server_management"
-  | "observability"
-  | "sound"
-  | "video"
-  | "chat_images"
-  | "desktop_downloads"
-  | "documents_rules";
-type UserAccessTab = "active" | "blocked" | "requests" | "bots" | "deleted";
-type ProductManagementTab = "users" | "servers";
-type ObservabilityTab = "log" | "signaling" | "telemetry";
-type DocumentsRulesTab = "documents" | "rules";
-
-type IconAction = {
-  key: string;
-  label: string;
-  iconClass: string;
-  primary?: boolean;
-  onClick: () => void;
-};
-
-type RoleBadge = {
-  key: string;
-  label: string;
-};
-
-type ServerMemberProfileDetails = {
-  userId: string;
-  name: string;
-  email: string;
-  joinedAt: string;
-  role: ServerMemberRole;
-  customRoles: Array<{ id: string; name: string }>;
-  hiddenRoomAccess: Array<{ roomId: string; roomSlug: string; roomTitle: string }>;
-  hiddenRoomsAvailable: Array<{ roomId: string; roomSlug: string; roomTitle: string; hasAccess: boolean }>;
-};
-
-function resolveDisplayName(name: string | null | undefined, username: string | null | undefined, email: string): string {
-  const normalizedName = String(name || "").trim();
-  if (normalizedName) {
-    return normalizedName;
-  }
-
-  const normalizedUsername = String(username || "").trim();
-  if (normalizedUsername) {
-    return normalizedUsername;
-  }
-
-  const localPart = String(email || "").split("@")[0] || "";
-  return localPart.trim() || email;
-}
-
-function ActionIconButton({ action }: { action: IconAction }) {
-  return (
-    <button
-      type="button"
-      className={`${action.primary ? "" : "secondary "}icon-btn tiny admin-action-btn`}
-      data-tooltip={action.label}
-      aria-label={action.label}
-      onClick={action.onClick}
-      data-agent-id={`server.action.${action.key}`}
-      data-agent-state="ready"
-    >
-      <i className={`bi ${action.iconClass}`} aria-hidden="true" />
-    </button>
-  );
-}
 
 type ServerProfileModalProps = {
   open: boolean;
@@ -181,109 +120,6 @@ type ServerProfileModalProps = {
   onSetServerVideoWindowMaxWidth: (value: number) => void;
 };
 
-type DesktopManifestFile = {
-  name: string;
-  relativePath?: string;
-  urlPath?: string;
-  url?: string;
-};
-
-type DesktopManifest = {
-  channel?: string;
-  appVersion?: string;
-  sha?: string;
-  builtAt?: string;
-  files?: DesktopManifestFile[];
-};
-
-function encodePathSegments(path: string): string {
-  return path
-    .split("/")
-    .filter((segment) => segment.length > 0)
-    .map((segment) => encodeURIComponent(segment))
-    .join("/");
-}
-
-function resolveDesktopArtifactHref(
-  artifact: DesktopManifestFile | null,
-  channel: "test" | "prod",
-  sha: string,
-  publicOrigin = ""
-): string | null {
-  if (!artifact) {
-    return null;
-  }
-
-  const absoluteUrl = String(artifact.url || "").trim();
-  if (absoluteUrl) {
-    return absoluteUrl;
-  }
-
-  const pathUrl = String(artifact.urlPath || "").trim();
-  if (pathUrl) {
-    if (publicOrigin && pathUrl.startsWith("/")) {
-      return `${publicOrigin}${pathUrl}`;
-    }
-    return pathUrl;
-  }
-
-  const relativePath = String(artifact.relativePath || "").trim().replace(/^\/+/, "");
-  if (!relativePath || !sha) {
-    return null;
-  }
-
-  const relativeUrl = `/desktop/${channel}/${encodeURIComponent(sha)}/${encodePathSegments(relativePath)}`;
-  return publicOrigin ? `${publicOrigin}${relativeUrl}` : relativeUrl;
-}
-
-function normalizeDesktopChannel(value: string): "test" | "prod" {
-  return String(value || "").trim().toLowerCase() === "test" ? "test" : "prod";
-}
-
-function resolveDesktopChannelFromOrigin(origin: string): "test" | "prod" {
-  if (!origin) {
-    return "prod";
-  }
-
-  try {
-    const hostname = new URL(origin).hostname.toLowerCase();
-    return hostname.startsWith("test.") || hostname.includes(".test.") ? "test" : "prod";
-  } catch {
-    return "prod";
-  }
-}
-
-function getFallbackDesktopChannel(channel: "test" | "prod"): "test" | "prod" {
-  return channel === "test" ? "prod" : "test";
-}
-
-function pickDesktopArtifact(files: DesktopManifestFile[], platform: "windows" | "mac" | "linux"): DesktopManifestFile | null {
-  const withHref = files.filter((item) => {
-    const href = String(item.url || item.urlPath || "").trim();
-    return href.length > 0;
-  });
-
-  const byName = (patterns: RegExp[]): DesktopManifestFile | null => {
-    for (const pattern of patterns) {
-      const found = withHref.find((item) => pattern.test(item.name));
-      if (found) {
-        return found;
-      }
-    }
-    return null;
-  };
-
-  if (platform === "windows") {
-    return byName([/\.exe$/i, /\.msi$/i, /\.nsis(\.7z)?$/i]);
-  }
-
-  if (platform === "mac") {
-    return byName([/-mac-arm\d*\.zip$/i, /-mac\.zip$/i, /\.dmg$/i, /\.pkg$/i]);
-  }
-
-  return byName([/\.AppImage$/i, /\.deb$/i, /\.rpm$/i, /\.tar\.gz$/i, /linux/i]);
-}
-
 export function ServerProfileModal({
   open,
   t,
@@ -374,11 +210,6 @@ export function ServerProfileModal({
   onSetServerVideoWindowMinWidth,
   onSetServerVideoWindowMaxWidth
 }: ServerProfileModalProps) {
-  const [desktopManifest, setDesktopManifest] = useState<DesktopManifest | null>(null);
-  const [desktopManifestLoading, setDesktopManifestLoading] = useState(false);
-  const [desktopManifestError, setDesktopManifestError] = useState("");
-  const [desktopBridgeChannel, setDesktopBridgeChannel] = useState<"test" | "prod" | null>(null);
-  const [desktopManifestChannel, setDesktopManifestChannel] = useState<"test" | "prod" | null>(null);
   const [userAccessTab, setUserAccessTab] = useState<UserAccessTab>("active");
   const [productManagementTab, setProductManagementTab] = useState<ProductManagementTab>("users");
   const [observabilityTab, setObservabilityTab] = useState<ObservabilityTab>("log");
@@ -428,59 +259,6 @@ export function ServerProfileModal({
     }
     return date.toLocaleDateString();
   };
-
-  const desktopPublicOrigin = useMemo(() => resolvePublicOrigin(), []);
-
-  const desktopOriginChannel = useMemo<"test" | "prod">(() => {
-    if (desktopPublicOrigin) {
-      return resolveDesktopChannelFromOrigin(desktopPublicOrigin);
-    }
-
-    if (typeof window === "undefined") {
-      return "prod";
-    }
-
-    const hostname = window.location.hostname.toLowerCase();
-    return hostname.startsWith("test.") || hostname.includes(".test.") ? "test" : "prod";
-  }, [desktopPublicOrigin]);
-
-  const desktopChannel = useMemo<"test" | "prod">(() => {
-    // On desktop file runtime test/prod host should define the download channel.
-    if (desktopOriginChannel === "test") {
-      return "test";
-    }
-
-    if (desktopBridgeChannel) {
-      return desktopBridgeChannel;
-    }
-
-    return desktopOriginChannel;
-  }, [desktopBridgeChannel, desktopOriginChannel]);
-
-  const effectiveDesktopChannel = desktopManifestChannel || desktopChannel;
-
-  const desktopCards = useMemo(
-    () => [
-      { id: "windows" as const, label: t("server.desktopPlatformWindows"), iconClass: "bi-windows" },
-      { id: "mac" as const, label: t("server.desktopPlatformMac"), iconClass: "bi-apple" },
-      { id: "linux" as const, label: t("server.desktopPlatformLinux"), iconClass: "bi-ubuntu" }
-    ].map((platform) => {
-      const files = Array.isArray(desktopManifest?.files) ? desktopManifest.files : [];
-      const artifact = pickDesktopArtifact(files, platform.id);
-      const href = resolveDesktopArtifactHref(
-        artifact,
-        effectiveDesktopChannel,
-        String(desktopManifest?.sha || "").trim(),
-        desktopPublicOrigin
-      );
-      return {
-        ...platform,
-        href,
-        fileName: artifact?.name || ""
-      };
-    }),
-    [desktopManifest, desktopPublicOrigin, effectiveDesktopChannel, t]
-  );
 
   useEffect(() => {
     const nextName = String(currentServerName || "").trim();
@@ -542,33 +320,6 @@ export function ServerProfileModal({
       setObservabilityTab("log");
     }
   }, [canViewTelemetry, observabilityTab]);
-
-  useEffect(() => {
-    if (!open || serverMenuTab !== "desktop_downloads") {
-      return;
-    }
-
-    const desktopUpdate = getDesktopUpdateBridge();
-    if (!desktopUpdate) {
-      return;
-    }
-
-    let disposed = false;
-
-    void desktopUpdate.getStatus()
-      .then((status) => {
-        if (!disposed) {
-          setDesktopBridgeChannel(normalizeDesktopChannel(status.channel));
-        }
-      })
-      .catch(() => {
-        return;
-      });
-
-    return () => {
-      disposed = true;
-    };
-  }, [open, serverMenuTab]);
 
   const normalizedUserSearch = userSearchQuery.trim().toLowerCase();
 
@@ -881,109 +632,6 @@ export function ServerProfileModal({
     }
     return customBadges;
   };
-
-  useEffect(() => {
-    if (!open || serverMenuTab !== "desktop_downloads") {
-      return;
-    }
-
-    const controller = new AbortController();
-    let disposed = false;
-
-    async function fetchDesktopManifestForChannel(channel: "test" | "prod"): Promise<DesktopManifest> {
-      const manifestPath = `/desktop/${channel}/latest.json`;
-      const manifestUrl = desktopPublicOrigin ? `${desktopPublicOrigin}${manifestPath}` : manifestPath;
-      const response = await fetch(manifestUrl, {
-        cache: "no-store",
-        signal: controller.signal
-      });
-
-      if (!response.ok) {
-        throw new Error(`[${channel}] status ${response.status}`);
-      }
-
-      const rawBody = await response.text();
-      let payload: DesktopManifest;
-      try {
-        payload = JSON.parse(rawBody) as DesktopManifest;
-      } catch {
-        const contentType = String(response.headers.get("content-type") || "").toLowerCase();
-        const bodyPreview = rawBody.slice(0, 80).replace(/\s+/g, " ").trim();
-        throw new Error(`[${channel}] invalid json (${contentType || "unknown"}): ${bodyPreview || "empty body"}`);
-      }
-
-      return payload;
-    }
-
-    async function loadDesktopManifest() {
-      setDesktopManifestLoading(true);
-      setDesktopManifestError("");
-      setDesktopManifestChannel(null);
-
-      try {
-        const channelsToTry: Array<"test" | "prod"> = [desktopChannel];
-        const fallbackChannel = getFallbackDesktopChannel(desktopChannel);
-        if (fallbackChannel !== desktopChannel) {
-          channelsToTry.push(fallbackChannel);
-        }
-
-        if (desktopOriginChannel !== desktopChannel && desktopOriginChannel !== fallbackChannel) {
-          channelsToTry.push(desktopOriginChannel);
-        }
-
-        const seen = new Set<string>();
-        const uniqueChannels = channelsToTry.filter((channel) => {
-          if (seen.has(channel)) {
-            return false;
-          }
-          seen.add(channel);
-          return true;
-        });
-
-        const errors: string[] = [];
-        let resolved: { payload: DesktopManifest; channel: "test" | "prod" } | null = null;
-
-        for (const channel of uniqueChannels) {
-          try {
-            const payload = await fetchDesktopManifestForChannel(channel);
-            resolved = { payload, channel };
-            break;
-          } catch (error) {
-            errors.push(error instanceof Error ? error.message : `[${channel}] unknown error`);
-          }
-        }
-
-        if (!resolved) {
-          throw new Error(errors.join(" | "));
-        }
-
-        const manifestReportedChannel = normalizeDesktopChannel(String(resolved.payload.channel || ""));
-
-        if (!disposed) {
-          setDesktopManifest(resolved.payload);
-          setDesktopManifestChannel(manifestReportedChannel || resolved.channel);
-        }
-      } catch (error) {
-        if (disposed || controller.signal.aborted) {
-          return;
-        }
-
-        setDesktopManifest(null);
-        setDesktopManifestError(error instanceof Error ? error.message : "unknown");
-      } finally {
-        if (!disposed) {
-          setDesktopManifestLoading(false);
-        }
-      }
-    }
-
-    void loadDesktopManifest();
-
-    return () => {
-      disposed = true;
-      controller.abort();
-    };
-  }, [desktopChannel, desktopOriginChannel, desktopPublicOrigin, open, serverMenuTab]);
 
   if (!open) {
     return null;
@@ -1806,53 +1454,7 @@ export function ServerProfileModal({
           ) : null}
 
           {serverMenuTab === "desktop_downloads" ? (
-            <section className="grid gap-3">
-              <h3>{t("server.desktopTitle")}</h3>
-              <p className="muted">{t("server.desktopHint")}</p>
-              <p className="muted">
-                {t("server.desktopChannel")}: {desktopManifest?.channel || effectiveDesktopChannel}
-                {desktopManifest?.appVersion ? ` · ${t("server.desktopAppVersion")}: ${desktopManifest.appVersion}` : ""}
-                {desktopManifest?.sha ? ` · ${t("server.desktopVersionSha")}: ${desktopManifest.sha.slice(0, 8)}` : ""}
-              </p>
-              {effectiveDesktopChannel === "test" ? <p className="muted text-xs">{t("server.desktopUnsignedWarning")}</p> : null}
-              {desktopManifestLoading ? <p className="muted">{t("server.desktopLoading")}</p> : null}
-              {desktopManifestError ? <p className="muted">{t("server.desktopError")}: {desktopManifestError}</p> : null}
-              <div className="grid gap-3 desktop:grid-cols-3">
-                {desktopCards.map((platform) => (
-                  <div key={platform.id} className="card compact grid place-items-center gap-2 p-3 text-center">
-                    <i className={`bi ${platform.iconClass} text-xl`} aria-hidden="true" />
-                    <div className="text-sm font-semibold">{platform.label}</div>
-                    {platform.href ? (
-                      <button
-                        type="button"
-                        className="secondary"
-                        onClick={() => window.open(platform.href!, "_blank", "noopener,noreferrer")}
-                        title={platform.fileName}
-                        aria-label={`${t("server.desktopDownload")}: ${platform.fileName}`}
-                      >
-                        {t("server.desktopDownload")}
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        className="secondary"
-                        disabled
-                        title={t("server.desktopSoon")}
-                        aria-label={`${t("server.desktopDownload")} (${t("server.desktopSoon")})`}
-                      >
-                        {t("server.desktopDownload")}
-                      </button>
-                    )}
-                    <div className="muted text-xs">
-                      {platform.href ? t("server.desktopAvailable") : t("server.desktopUnavailable")}
-                    </div>
-                    <div className="muted text-xs break-all">
-                      {platform.fileName || "-"}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </section>
+            <ServerDesktopTab t={t} open={open} serverMenuTab={serverMenuTab} />
           ) : null}
 
           {serverMenuTab === "documents_rules" ? (

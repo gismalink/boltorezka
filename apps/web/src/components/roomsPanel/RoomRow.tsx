@@ -1,11 +1,10 @@
-import { memo, type DragEvent, type FormEvent, useEffect, useRef, useState } from "react";
+import { memo, type FormEvent, useEffect, useRef, useState } from "react";
 import type { ChannelAudioQualitySetting, Room, RoomKind, RoomMemberPreference } from "../../domain";
 import type { RoomsPanelProps } from "../types";
 import type { RoomMember } from "./roomMembers";
-import { RoomMemberSettingsPopup } from "./RoomMemberSettingsPopup";
-import { RoomMemberProfileModal } from "./RoomMemberProfileModal";
 import { RoomChannelSettingsPopup } from "./RoomChannelSettingsPopup";
-import type { ServerMemberProfileDetails } from "./roomMemberSettingsTypes";
+import { RoomMembersList } from "./RoomMembersList";
+import { useMemberDragDrop } from "./useMemberDragDrop";
 import { useRoomMutePresetState } from "./useRoomMutePresetState";
 import { useRoomSettingsAutosave } from "./useRoomSettingsAutosave";
 
@@ -125,22 +124,15 @@ function RoomRowInner({
   onRequestArchiveChannel
 }: RoomRowProps) {
   const channelSettingsAnchorRef = useRef<HTMLDivElement>(null);
-  const memberMenuAnchorRef = useRef<HTMLElement | null>(null);
-  const memberRoleAnchorRef = useRef<HTMLElement | null>(null);
-  const memberHiddenRoomsAnchorRef = useRef<HTMLElement | null>(null);
-  const [memberMenuOpenKey, setMemberMenuOpenKey] = useState<string | null>(null);
-  const [memberMenuUserId, setMemberMenuUserId] = useState<string | null>(null);
-  const [memberMenuProfile, setMemberMenuProfile] = useState<ServerMemberProfileDetails | null>(null);
-  const [memberProfileModalOpen, setMemberProfileModalOpen] = useState(false);
-  const [memberProfileModalData, setMemberProfileModalData] = useState<ServerMemberProfileDetails | null>(null);
-  const [memberRoleSelectorOpen, setMemberRoleSelectorOpen] = useState(false);
-  const [memberHiddenRoomsSelectorOpen, setMemberHiddenRoomsSelectorOpen] = useState(false);
   const [isEditingChannelTitle, setIsEditingChannelTitle] = useState(false);
   const [editingChannelTitleInitialValue, setEditingChannelTitleInitialValue] = useState("");
-  const [serverRoles, setServerRoles] = useState<Array<{ id: string; name: string; isBase: boolean }>>([]);
-  const [serverRolesLoading, setServerRolesLoading] = useState(false);
-  const [memberPreferenceDrafts, setMemberPreferenceDrafts] = useState<Record<string, { volume: number; note: string }>>({});
-  const [dropTargetActive, setDropTargetActive] = useState(false);
+  const { dropTargetActive, startDragMember, onRoomDragOver, onRoomDrop, onRoomDragLeave } = useMemberDragDrop({
+    room,
+    canKickMembers,
+    onLoadServerMemberProfile,
+    onSetServerMemberHiddenRoomAccess,
+    onMoveRoomMember
+  });
   const roomSupportsRtc = room.kind !== "text";
   const roomSupportsVideo = room.kind === "text_voice_video";
   const roomHasChatAction = roomSupportsRtc;
@@ -172,69 +164,6 @@ function RoomRowInner({
   });
 
   useEffect(() => {
-    const onPointerDown = (event: MouseEvent) => {
-      const target = event.target as HTMLElement | null;
-      if (!target) {
-        return;
-      }
-      if (
-        target.closest(".channel-member-settings-anchor")
-        || target.closest(".channel-member-settings-popup")
-        || target.closest(".voice-submenu-popup")
-      ) {
-        return;
-      }
-      setMemberMenuOpenKey(null);
-      memberMenuAnchorRef.current = null;
-    };
-
-    window.addEventListener("pointerdown", onPointerDown);
-    return () => window.removeEventListener("pointerdown", onPointerDown);
-  }, []);
-
-  useEffect(() => {
-    if (!memberMenuUserId) {
-      setMemberMenuProfile(null);
-      return;
-    }
-
-    let disposed = false;
-    void onLoadServerMemberProfile(memberMenuUserId).then((profile) => {
-      if (!disposed && profile && profile.userId === memberMenuUserId) {
-        setMemberMenuProfile(profile);
-      }
-    });
-
-    return () => {
-      disposed = true;
-    };
-  }, [memberMenuUserId, onLoadServerMemberProfile]);
-
-  useEffect(() => {
-    if (!memberMenuUserId || !canKickMembers) {
-      return;
-    }
-
-    let disposed = false;
-    setServerRolesLoading(true);
-    void onLoadServerRoles()
-      .then((roles) => {
-        if (!disposed) {
-          setServerRoles(Array.isArray(roles) ? roles : []);
-        }
-      })
-      .finally(() => {
-        if (!disposed) {
-          setServerRolesLoading(false);
-        }
-      });
-
-    return () => {
-      disposed = true;
-    };
-  }, [canKickMembers, memberMenuUserId, onLoadServerRoles]);
-
-  useEffect(() => {
     if (channelSettingsPopupOpenId !== room.id) {
       setIsEditingChannelTitle(false);
       clearRoomMuteStatusText();
@@ -245,162 +174,13 @@ function RoomRowInner({
     setIsEditingChannelTitle(false);
   }, [channelSettingsPopupOpenId, editingRoomTitle, room.id]);
 
-  const closeMemberMenu = () => {
-    setMemberMenuOpenKey(null);
-    setMemberMenuUserId(null);
-    setMemberRoleSelectorOpen(false);
-    setMemberHiddenRoomsSelectorOpen(false);
-    memberMenuAnchorRef.current = null;
-    memberRoleAnchorRef.current = null;
-    memberHiddenRoomsAnchorRef.current = null;
-  };
-
-  const openMemberMenu = (
-    userId: string,
-    menuKey: string,
-    anchor: HTMLElement,
-    volumeValue: number,
-    noteValue: string
-  ) => {
-    setMemberRoleSelectorOpen(false);
-    setMemberHiddenRoomsSelectorOpen(false);
-    setMemberPreferenceDrafts((prev) => ({
-      ...prev,
-      [userId]: {
-        volume: volumeValue,
-        note: noteValue
-      }
-    }));
-    memberMenuAnchorRef.current = anchor;
-    setMemberMenuOpenKey(menuKey);
-    setMemberMenuUserId(userId);
-  };
-
-  const startDragMember = (event: DragEvent, userId: string, userName: string) => {
-    const payload = JSON.stringify({
-      userId,
-      userName,
-      fromRoomSlug: room.slug
-    });
-    event.dataTransfer.setData("application/x-boltorezka-member", payload);
-    // Safari may ignore custom MIME types during dragover, keep plain-text fallback.
-    event.dataTransfer.setData("text/plain", payload);
-    event.dataTransfer.setData("application/x-boltorezka-member-from-room", room.slug);
-    event.dataTransfer.effectAllowed = "move";
-  };
-
-  const hasMemberDragPayload = (event: DragEvent): boolean => {
-    const types = Array.from(event.dataTransfer.types || []);
-    return types.includes("application/x-boltorezka-member")
-      || types.includes("application/x-boltorezka-member-from-room")
-      || types.includes("text/plain");
-  };
-
-  const resolveMemberDragPayload = (event: DragEvent): { userId: string; userName: string; fromRoomSlug: string } | null => {
-    const payload =
-      event.dataTransfer.getData("application/x-boltorezka-member")
-      || event.dataTransfer.getData("text/plain");
-    if (!payload) {
-      return null;
-    }
-
-    try {
-      const parsed = JSON.parse(payload) as { userId?: string; userName?: string; fromRoomSlug?: string };
-      const userId = String(parsed.userId || "").trim();
-      const userName = String(parsed.userName || "").trim();
-      const fromRoomSlug = String(parsed.fromRoomSlug || "").trim();
-      if (!userId || !fromRoomSlug) {
-        return null;
-      }
-      return { userId, userName, fromRoomSlug };
-    } catch {
-      return null;
-    }
-  };
-
-  const resolveDragSourceRoom = (event: DragEvent): string => {
-    const directRoomSlug = event.dataTransfer.getData("application/x-boltorezka-member-from-room");
-    if (directRoomSlug) {
-      return directRoomSlug;
-    }
-    const payload = event.dataTransfer.getData("application/x-boltorezka-member");
-    if (!payload) {
-      return "";
-    }
-    try {
-      const parsed = JSON.parse(payload) as { fromRoomSlug?: string };
-      return String(parsed.fromRoomSlug || "").trim();
-    } catch {
-      return "";
-    }
-  };
-
-  const onRoomDragOver = (event: DragEvent) => {
-    if (!canKickMembers) {
-      return;
-    }
-
-    if (!hasMemberDragPayload(event)) {
-      return;
-    }
-
-    event.preventDefault();
-    event.dataTransfer.dropEffect = "move";
-
-    const fromRoomSlug = resolveDragSourceRoom(event);
-    if (fromRoomSlug && fromRoomSlug === room.slug) {
-      return;
-    }
-
-    setDropTargetActive(true);
-  };
-
-  const onRoomDrop = (event: DragEvent) => {
-    event.preventDefault();
-    setDropTargetActive(false);
-
-    if (!canKickMembers) {
-      return;
-    }
-
-    const payload = resolveMemberDragPayload(event);
-    if (!payload) {
-      return;
-    }
-
-    const fromRoomSlug = resolveDragSourceRoom(event) || payload.fromRoomSlug;
-    if (!payload.userId || !fromRoomSlug || fromRoomSlug === room.slug) {
-      return;
-    }
-
-    void (async () => {
-      if (room.is_hidden) {
-        try {
-          const profile = await onLoadServerMemberProfile(payload.userId);
-          const currentRoomIds = Array.isArray(profile?.hiddenRoomAccess)
-            ? profile.hiddenRoomAccess.map((item) => item.roomId)
-            : [];
-          const nextRoomIds = Array.from(new Set([...currentRoomIds, room.id]));
-          const granted = await onSetServerMemberHiddenRoomAccess(payload.userId, nextRoomIds);
-          if (!granted) {
-            return;
-          }
-        } catch {
-          return;
-        }
-      }
-
-      onMoveRoomMember(fromRoomSlug, room.slug, payload.userId, payload.userName || payload.userId);
-    })();
-  };
-
   return (
     <>
     <div
       className={`rooms-row-shell channel-row relative flex flex-col items-stretch ${dropTargetActive ? "channel-row-drop-target" : ""}`}
       onDragOver={onRoomDragOver}
       onDragEnter={onRoomDragOver}
-      onDragLeave={() => setDropTargetActive(false)}
+      onDragLeave={onRoomDragLeave}
       onDrop={onRoomDrop}
     >
       <div className={`channel-row-main channel-row-main-actions-${roomActionsVariant} ${roomHasChatOnlyAction ? "channel-row-main-chat-only" : ""} relative flex items-center`}>
@@ -498,252 +278,36 @@ function RoomRowInner({
       </div>
       </div>
 
-      {roomMembers.length > 0 ? (
-        <ul className="channel-members-list m-0 list-none grid gap-0.5 pl-[calc(var(--space-xl)*2)] pt-[2px]">
-          {roomMembers.map((member) => {
-            const isCurrentUser = Boolean(
-              normalizedCurrentUserId && member.userId && member.userId === normalizedCurrentUserId
-            );
-            const micState = roomHasVoiceState && member.userId
-              ? (voiceMicStateByUserIdInCurrentRoom[member.userId] || "silent")
-              : "silent";
-            const isCameraEnabled = roomHasVoiceState && roomSupportsVideo && member.userId
-              ? Boolean(voiceCameraEnabledByUserIdInCurrentRoom[member.userId])
-              : false;
-            const isVoiceActive = micState === "speaking";
-            const isAudioOutputMuted = isCurrentUser
-              ? Boolean(audioMuted)
-              : roomHasVoiceState && member.userId
-                ? Boolean(voiceAudioOutputMutedByUserIdInCurrentRoom[member.userId])
-                : false;
-            const isScreenSharing = Boolean(member.userId) && String(member.userId || "").trim() === roomScreenShareOwnerId;
-            const rtcState = roomHasVoiceState && member.userId
-              ? (voiceRtcStateByUserIdInCurrentRoom[member.userId] || "disconnected")
-              : "disconnected";
-            const mediaStatus = roomHasVoiceState && member.userId
-              ? (voiceMediaStatusSummaryByUserIdInCurrentRoom[member.userId]
-                || (rtcState === "connected" ? "signaling" : rtcState === "connecting" ? "connecting" : "disconnected"))
-              : "disconnected";
-            const micIconClass = micState === "muted"
-              ? "bi-mic-mute"
-              : micState === "speaking"
-                ? "bi-mic-fill"
+      <RoomMembersList
+        t={t}
+        canKickMembers={canKickMembers}
+        voiceMicStateByUserIdInCurrentRoom={voiceMicStateByUserIdInCurrentRoom}
+        voiceCameraEnabledByUserIdInCurrentRoom={voiceCameraEnabledByUserIdInCurrentRoom}
+        voiceAudioOutputMutedByUserIdInCurrentRoom={voiceAudioOutputMutedByUserIdInCurrentRoom}
+        audioMuted={audioMuted}
+        voiceRtcStateByUserIdInCurrentRoom={voiceRtcStateByUserIdInCurrentRoom}
+        voiceMediaStatusSummaryByUserIdInCurrentRoom={voiceMediaStatusSummaryByUserIdInCurrentRoom}
+        onSaveMemberPreference={onSaveMemberPreference}
+        onLoadServerMemberProfile={onLoadServerMemberProfile}
+        onLoadServerRoles={onLoadServerRoles}
+        onKickRoomMember={onKickRoomMember}
+        onSetServerMemberCustomRoles={onSetServerMemberCustomRoles}
+        onSetServerMemberHiddenRoomAccess={onSetServerMemberHiddenRoomAccess}
+        memberPreferencesByUserId={memberPreferencesByUserId}
+        room={room}
+        roomMembers={roomMembers}
+        roomSlug={roomSlug}
+        normalizedCurrentUserId={normalizedCurrentUserId}
+        roomSupportsRtc={roomSupportsRtc}
+        roomSupportsVideo={roomSupportsVideo}
+        roomHasVoiceState={roomHasVoiceState}
+        roomScreenShareOwnerId={roomScreenShareOwnerId}
+        startDragMember={startDragMember}
+      />
                 : "bi-mic";
             const mediaStatusIconClass = mediaStatus === "media"
               ? "bi-broadcast-pin"
-              : mediaStatus === "signaling"
-                ? "bi-arrow-repeat"
-                : mediaStatus === "stalled"
-                  ? "bi-exclamation-triangle"
-                  : mediaStatus === "connecting"
-                    ? "bi-hourglass-split"
-                    : mediaStatus === "idle"
-                      ? "bi-pause-circle"
-                      : "bi-plug";
-            const mediaStatusClass = mediaStatus === "media"
-              ? "channel-member-status-media"
-              : mediaStatus === "signaling"
-                ? "channel-member-status-signaling"
-                : mediaStatus === "stalled"
-                  ? "channel-member-status-stalled"
-                  : mediaStatus === "connecting"
-                    ? "channel-member-status-connecting"
-                    : mediaStatus === "idle"
-                      ? "channel-member-status-idle"
-                      : "channel-member-status-disconnected";
-            const connectionTooltip = mediaStatus === "media"
-              ? t("rooms.memberStatus.connection.media")
-              : mediaStatus === "signaling"
-                ? t("rooms.memberStatus.connection.signaling")
-                : mediaStatus === "stalled"
-                  ? t("rooms.memberStatus.connection.stalled")
-                  : mediaStatus === "connecting"
-                    ? t("rooms.memberStatus.connection.connecting")
-                    : mediaStatus === "idle"
-                      ? t("rooms.memberStatus.connection.idle")
-                      : t("rooms.memberStatus.connection.disconnected");
-            const micTooltip = micState === "muted"
-              ? t("rooms.memberStatus.mic.muted")
-              : micState === "speaking"
-                ? t("rooms.memberStatus.mic.speaking")
-                : t("rooms.memberStatus.mic.silent");
-            const audioTooltip = isAudioOutputMuted
-              ? t("rooms.memberStatus.audio.muted")
-              : t("rooms.memberStatus.audio.unmuted");
-            const cameraTooltip = isCameraEnabled
-              ? t("rooms.memberStatus.camera.on")
-              : t("rooms.memberStatus.camera.off");
-            const selfMicTooltip = micState === "muted"
-              ? t("rooms.memberStatus.self.mic.muted")
-              : micState === "speaking"
-                ? t("rooms.memberStatus.self.mic.speaking")
-                : t("rooms.memberStatus.self.mic.ready");
-            const selfAudioTooltip = isAudioOutputMuted
-              ? t("rooms.memberStatus.self.audio.muted")
-              : t("rooms.memberStatus.self.audio.unmuted");
-            const selfCameraTooltip = isCameraEnabled
-              ? t("rooms.memberStatus.self.camera.on")
-              : t("rooms.memberStatus.self.camera.off");
-            const micIconStateClass = micState === "muted" ? "channel-member-mic-icon-muted" : "";
-            const memberPreference = member.userId
-              ? (memberPreferencesByUserId[member.userId] || null)
-              : null;
-            const memberDraft = member.userId
-              ? memberPreferenceDrafts[member.userId]
-              : null;
-            const volumeValue = Math.max(0, Math.min(100, Number(memberDraft?.volume ?? memberPreference?.volume ?? 100)));
-            const noteValue = String(memberDraft?.note ?? memberPreference?.note ?? "");
-            const menuKey = `${room.slug}:${member.userId || member.userName}`;
-            const canManageMember = Boolean(member.userId) && !isCurrentUser;
-            const memberActionsVariant = canManageMember ? "one" : "none";
-            const memberSettingsOpen = memberMenuOpenKey === menuKey && Boolean(member.userId) && memberMenuUserId === member.userId;
-            const selectedCustomRoleIds = memberMenuProfile?.customRoles.map((role) => role.id) || [];
-            const selectedCustomRoleNames = memberMenuProfile?.customRoles.map((role) => role.name).filter(Boolean) || [];
-            const hiddenRoomsAvailable = memberMenuProfile?.hiddenRoomsAvailable || [];
-            const hiddenRoomsGrantedCount = memberMenuProfile?.hiddenRoomAccess.length || 0;
-
-            return (
-              <li
-                key={`${room.id}-${member.userId || member.userName}`}
-                className={`room-member-row-shell channel-member-item relative min-h-[22px] ${isCurrentUser ? "channel-member-item-current" : ""} ${isVoiceActive ? "channel-member-item-voice-active" : ""} ${canKickMembers && canManageMember ? "channel-member-item-draggable" : ""}`}
-                draggable={Boolean(canKickMembers && canManageMember)}
-                onDragStart={(event) => {
-                  if (!member.userId) {
-                    return;
-                  }
-                  startDragMember(event, member.userId, member.userName);
-                }}
-                onContextMenu={(event) => {
-                  if (!canManageMember || !member.userId) {
-                    return;
-                  }
-
-                  event.preventDefault();
-                  event.stopPropagation();
-                  openMemberMenu(
-                    member.userId,
-                    menuKey,
-                    (event.currentTarget.querySelector(".channel-member-settings-anchor") as HTMLElement | null)
-                      || event.currentTarget,
-                    volumeValue,
-                    noteValue
-                  );
-                }}
-              >
-                <div className={`channel-member-main channel-member-main-actions-${memberActionsVariant} grid min-h-[22px] grid-cols-[auto_1fr] items-center gap-1.5`}>
-                  <span className="channel-member-avatar">{(member.userName || "U").charAt(0).toUpperCase()}</span>
-                  <span className="channel-member-name">{member.userName}</span>
-                </div>
-                <div className={`channel-member-right-group channel-member-right-group-actions-${memberActionsVariant} ${memberSettingsOpen ? "channel-member-right-group-open" : ""}`}>
-                  <span className="channel-member-icons" aria-hidden="true">
-                    {roomHasVoiceState && !isCurrentUser ? (
-                      <span className="channel-member-status-icon-anchor" data-tooltip={connectionTooltip}>
-                        <i className={`bi ${mediaStatusIconClass} ${mediaStatusClass}`} aria-hidden="true" />
-                      </span>
-                    ) : null}
-                    {roomSupportsRtc ? (
-                      <span className="channel-member-status-icon-anchor" data-tooltip={isCurrentUser ? selfMicTooltip : micTooltip}>
-                        <i className={`bi ${micIconClass} channel-member-mic-icon ${micIconStateClass}`} aria-hidden="true" />
-                      </span>
-                    ) : null}
-                    {roomSupportsRtc ? (
-                      <span className="channel-member-status-icon-anchor" data-tooltip={isCurrentUser ? selfAudioTooltip : audioTooltip}>
-                        <i className={`bi bi-headphones channel-member-audio-icon ${isAudioOutputMuted ? "channel-member-audio-icon-muted" : ""}`} aria-hidden="true" />
-                      </span>
-                    ) : null}
-                    {isCameraEnabled ? (
-                      <span className="channel-member-status-icon-anchor" data-tooltip={isCurrentUser ? selfCameraTooltip : cameraTooltip}>
-                        <i className="bi bi-camera-video-fill channel-member-camera-icon" aria-hidden="true" />
-                      </span>
-                    ) : null}
-                    {isScreenSharing ? (
-                      <span className="channel-member-status-icon-anchor" data-tooltip={t("rtc.screenShare")}>
-                        <i className="bi bi-display channel-member-camera-icon" aria-hidden="true" />
-                      </span>
-                    ) : null}
-                  </span>
-                  {canManageMember ? (
-                  <div className={`channel-member-settings-anchor channel-member-settings-anchor-actions-${memberActionsVariant} relative ${memberSettingsOpen ? "channel-member-settings-anchor-open" : ""}`}>
-                    <button
-                      type="button"
-                      className="secondary icon-btn tiny channel-member-settings-btn"
-                      aria-label={t("rooms.memberSettings")}
-                      data-tooltip={t("rooms.memberSettings")}
-                      onClick={(event) => {
-                        if (!member.userId) {
-                          return;
-                        }
-                        const shouldOpen = memberMenuOpenKey !== menuKey;
-                        if (!shouldOpen) {
-                          closeMemberMenu();
-                          return;
-                        }
-                        openMemberMenu(
-                          member.userId,
-                          menuKey,
-                          (event.currentTarget.closest(".channel-member-settings-anchor") as HTMLElement | null) || event.currentTarget,
-                          volumeValue,
-                          noteValue
-                        );
-                      }}
-                    >
-                      <i className="bi bi-gear" aria-hidden="true" />
-                    </button>
-                    {memberSettingsOpen ? (
-                      <RoomMemberSettingsPopup
-                        t={t}
-                        open
-                        anchorRef={memberMenuAnchorRef as { current: HTMLElement | null }}
-                        memberUserId={member.userId}
-                        memberUserName={member.userName}
-                        roomSlug={room.slug}
-                        volumeValue={volumeValue}
-                        noteValue={noteValue}
-                        memberMenuProfile={memberMenuProfile}
-                        setMemberMenuProfile={setMemberMenuProfile}
-                        setMemberProfileModalData={setMemberProfileModalData}
-                        setMemberProfileModalOpen={setMemberProfileModalOpen}
-                        setMemberPreferenceDraft={(nextDraft) => {
-                          setMemberPreferenceDrafts((prev) => ({
-                            ...prev,
-                            [member.userId]: nextDraft
-                          }));
-                        }}
-                        onSaveMemberPreference={onSaveMemberPreference}
-                        onLoadServerMemberProfile={onLoadServerMemberProfile}
-                        onSetServerMemberCustomRoles={onSetServerMemberCustomRoles}
-                        onSetServerMemberHiddenRoomAccess={onSetServerMemberHiddenRoomAccess}
-                        onKickRoomMember={onKickRoomMember}
-                        canKickMembers={canKickMembers}
-                        closeMemberMenu={closeMemberMenu}
-                        memberRoleSelectorOpen={memberRoleSelectorOpen}
-                        setMemberRoleSelectorOpen={setMemberRoleSelectorOpen}
-                        memberHiddenRoomsSelectorOpen={memberHiddenRoomsSelectorOpen}
-                        setMemberHiddenRoomsSelectorOpen={setMemberHiddenRoomsSelectorOpen}
-                        memberRoleAnchorRef={memberRoleAnchorRef as { current: HTMLElement | null }}
-                        memberHiddenRoomsAnchorRef={memberHiddenRoomsAnchorRef as { current: HTMLElement | null }}
-                        serverRoles={serverRoles}
-                        serverRolesLoading={serverRolesLoading}
-                      />
-                    ) : null}
-                  </div>
-                ) : null}
-                </div>
-              </li>
-            );
-          })}
-        </ul>
-      ) : null}
     </div>
-    <RoomMemberProfileModal
-      t={t}
-      open={memberProfileModalOpen}
-      data={memberProfileModalData}
-      onClose={() => {
-        setMemberProfileModalOpen(false);
-        setMemberProfileModalData(null);
-      }}
-    />
     </>
   );
 }
