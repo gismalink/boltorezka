@@ -13,14 +13,16 @@ type DmState = {
   messagesHasMore: boolean;
   dmText: string;
   loading: boolean;
+  pendingDmImageDataUrl: string | null;
 };
 
 type DmActions = {
   openDm: (peerUserId: string, peerName: string) => void;
   closeDm: () => void;
-  sendDmMessage: (text: string) => Promise<void>;
+  sendDmMessage: (text: string, imageDataUrl?: string | null) => Promise<void>;
   loadOlderMessages: () => Promise<void>;
   setDmText: (text: string) => void;
+  setPendingDmImageDataUrl: (url: string | null) => void;
   handleDmRealtimeEvent: (type: string, payload: unknown) => void;
 };
 
@@ -53,6 +55,7 @@ export function DmProvider({ token, children }: { token: string; children: React
   const [messagesHasMore, setMessagesHasMore] = useState(false);
   const [dmText, setDmText] = useState("");
   const [loading, setLoading] = useState(false);
+  const [pendingDmImageDataUrl, setPendingDmImageDataUrl] = useState<string | null>(null);
   const cursorRef = useRef<string | null>(null);
 
   // Загрузить сообщения при открытии thread
@@ -105,11 +108,43 @@ export function DmProvider({ token, children }: { token: string; children: React
     setMessages([]);
     setMessagesHasMore(false);
     setDmText("");
+    setPendingDmImageDataUrl(null);
     cursorRef.current = null;
   }, []);
 
-  const sendDmMessage = useCallback(async (text: string) => {
-    if (!activeThreadId || !token || !text.trim()) return;
+  const sendDmMessage = useCallback(async (text: string, imageDataUrl?: string | null) => {
+    if (!activeThreadId || !token) return;
+    if (!text.trim() && !imageDataUrl) return;
+
+    if (imageDataUrl) {
+      try {
+        const imageResponse = await fetch(imageDataUrl);
+        const imageBlob = await imageResponse.blob();
+        const mimeType = String(imageBlob.type || "image/jpeg").trim().toLowerCase();
+        const sizeBytes = Number(imageBlob.size || 0);
+        if (!mimeType || sizeBytes <= 0) return;
+
+        const init = await api.dmUploadInit(token, activeThreadId, { mimeType, sizeBytes });
+        await api.uploadChatObject(init.uploadUrl, imageBlob, init.requiredHeaders || { "content-type": mimeType });
+        const result = await api.dmUploadFinalize(token, activeThreadId, {
+          uploadId: init.uploadId,
+          storageKey: init.storageKey,
+          mimeType,
+          sizeBytes,
+          text: text.trim()
+        });
+
+        setMessages((prev) => {
+          if (prev.some((m) => m.id === result.message.id)) return prev;
+          return [...prev, result.message];
+        });
+        setDmText("");
+        setPendingDmImageDataUrl(null);
+      } catch {
+        // upload failed — silently ignore for now
+      }
+      return;
+    }
 
     const res = await api.dmSendMessage(token, activeThreadId, text.trim());
     setMessages((prev) => [...prev, res.message]);
@@ -187,11 +222,13 @@ export function DmProvider({ token, children }: { token: string; children: React
     messagesHasMore,
     dmText,
     loading,
+    pendingDmImageDataUrl,
     openDm,
     closeDm,
     sendDmMessage,
     loadOlderMessages,
     setDmText,
+    setPendingDmImageDataUrl,
     handleDmRealtimeEvent
   };
 

@@ -919,5 +919,17 @@ export const api = {
       `/v1/dm/threads/${encodeURIComponent(threadId)}/read`,
       token,
       withJsonBody("POST", { lastReadMessageId })
+    ),
+  dmUploadInit: (token: string, threadId: string, input: { mimeType: string; sizeBytes: number }) =>
+    fetchJson<ChatUploadInitResponse>(
+      `/v1/dm/threads/${encodeURIComponent(threadId)}/uploads/init`,
+      token,
+      withJsonBody("POST", input)
+    ),
+  dmUploadFinalize: (token: string, threadId: string, input: { uploadId: string; storageKey: string; mimeType: string; sizeBytes: number; text?: string }) =>
+    fetchJson<{ message: DmMessageItem }>(
+      `/v1/dm/threads/${encodeURIComponent(threadId)}/uploads/finalize`,
+      token,
+      withJsonBody("POST", input)
     )
 };

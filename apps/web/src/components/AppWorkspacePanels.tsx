@@ -1,4 +1,4 @@
-import { useMemo, type ComponentProps, type FormEvent } from "react";
+import { useCallback, useMemo, type ClipboardEvent, type ComponentProps, type FormEvent } from "react";
 import { AppWorkspaceContent } from "./AppWorkspaceContent";
 import { ChatPanel } from "./ChatPanel";
 import { RoomsPanel } from "./RoomsPanel";
@@ -6,7 +6,18 @@ import { UserDock } from "./UserDock";
 import { VideoWindowsOverlay } from "./VideoWindowsOverlay";
 import { useDmOptional } from "./dm/DmContext";
 import type { DmMessageItem } from "../api";
-import type { Message } from "../domain";
+import type { ChatAttachment, Message } from "../domain";
+import {
+  compressImageToDataUrl,
+  normalizeImageSource,
+  extractImageSourceFromClipboardHtml,
+  extractImageSourceFromClipboardText
+} from "../utils/chatImagePayload";
+import {
+  DEFAULT_CHAT_IMAGE_DATA_URL_LENGTH,
+  DEFAULT_CHAT_IMAGE_MAX_SIDE,
+  DEFAULT_CHAT_IMAGE_QUALITY
+} from "../constants/appConfig";
 
 type Translate = (key: string) => string;
 
@@ -38,6 +49,12 @@ export function AppWorkspacePanels({
   const dm = useDmOptional();
   const isDmActive = Boolean(dm?.activeThreadId);
 
+  const dmImagePolicy = useMemo(() => ({
+    maxDataUrlLength: DEFAULT_CHAT_IMAGE_DATA_URL_LENGTH,
+    maxImageSide: DEFAULT_CHAT_IMAGE_MAX_SIDE,
+    jpegQuality: DEFAULT_CHAT_IMAGE_QUALITY
+  }), []);
+
   const dmMessages: Message[] = useMemo(() => {
     if (!isDmActive || !dm) return [];
     return dm.messages.map((msg: DmMessageItem) => ({
@@ -48,9 +65,64 @@ export function AppWorkspacePanels({
       text: msg.body,
       created_at: msg.createdAt,
       edited_at: msg.editedAt,
-      user_name: msg.senderName
+      user_name: msg.senderName,
+      attachments: Array.isArray(msg.attachmentsJson)
+        ? (msg.attachmentsJson as ChatAttachment[])
+        : undefined
     }));
   }, [isDmActive, dm?.activeThreadId, dm?.messages]);
+
+  const handleDmPaste = useCallback((event: ClipboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    if (!dm) return;
+
+    const clipboard = event.clipboardData;
+    const files = Array.from(clipboard?.files || []);
+    const imageFile = files.find((file) => file.type.startsWith("image/"))
+      || Array.from(clipboard?.items || [])
+        .map((item) => item.getAsFile())
+        .find((file): file is File => Boolean(file && file.type.startsWith("image/")));
+
+    const htmlImageSource = normalizeImageSource(extractImageSourceFromClipboardHtml(String(clipboard?.getData("text/html") || "")));
+    const textImageSource = normalizeImageSource(extractImageSourceFromClipboardText(String(clipboard?.getData("text/plain") || "")));
+    const hasImagePayload = Boolean(imageFile || htmlImageSource || textImageSource);
+    if (!hasImagePayload) return;
+
+    event.preventDefault();
+    void (async () => {
+      try {
+        if (imageFile) {
+          const dataUrl = await compressImageToDataUrl(imageFile, dmImagePolicy);
+          dm.setPendingDmImageDataUrl(dataUrl);
+          return;
+        }
+
+        if (htmlImageSource.startsWith("data:image/")) {
+          const response = await fetch(htmlImageSource);
+          const blob = await response.blob();
+          const synthesizedFile = new File([blob], "clipboard-image", { type: blob.type || "image/png" });
+          const dataUrl = await compressImageToDataUrl(synthesizedFile, dmImagePolicy);
+          dm.setPendingDmImageDataUrl(dataUrl);
+          return;
+        }
+
+        if (/^https?:\/\//i.test(htmlImageSource)) {
+          dm.setPendingDmImageDataUrl(htmlImageSource);
+          return;
+        }
+
+        if (textImageSource.startsWith("data:image/")) {
+          const response = await fetch(textImageSource);
+          const blob = await response.blob();
+          const synthesizedFile = new File([blob], "clipboard-image", { type: blob.type || "image/png" });
+          const dataUrl = await compressImageToDataUrl(synthesizedFile, dmImagePolicy);
+          dm.setPendingDmImageDataUrl(dataUrl);
+          return;
+        }
+      } catch {
+        // compression/fetch error — ignore
+      }
+    })();
+  }, [dm, dmImagePolicy]);
 
   const dmHeaderSlot = isDmActive && dm ? (
     <div className="flex items-center gap-2 border-b border-[var(--pixel-border)] px-4 py-2">
@@ -85,8 +157,10 @@ export function AppWorkspacePanels({
         onSendMessage: (event: FormEvent) => {
           event.preventDefault();
           const text = dm.dmText.trim();
-          if (text) dm.sendDmMessage(text);
+          const image = dm.pendingDmImageDataUrl;
+          if (text || image) dm.sendDmMessage(text, image);
         },
+        onChatPaste: handleDmPaste,
         messagesHasMore: dm.messagesHasMore,
         loadingOlderMessages: dm.loading,
         onLoadOlderMessages: () => { dm.loadOlderMessages(); },
@@ -111,7 +185,7 @@ export function AppWorkspacePanels({
         onConsumeTopicMentionUnread: noop,
         onSetTopicMentionUnreadLocal: noop,
         onApplyTopicReadLocal: noop,
-        composePreviewImageUrl: null,
+        composePreviewImageUrl: dm.pendingDmImageDataUrl,
         composePendingAttachmentName: null,
         mentionCandidates: [],
         typingUsers: [],
