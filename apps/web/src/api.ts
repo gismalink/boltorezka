@@ -110,6 +110,10 @@ export type DmMessageItem = {
   createdAt: string;
   editedAt: string | null;
   deletedAt: string | null;
+  replyToMessageId: string | null;
+  replyToUserId: string | null;
+  replyToUserName: string | null;
+  replyToText: string | null;
 };
 
 const CONFIGURED_API_ORIGIN = resolveApiBase();
@@ -896,11 +900,11 @@ export const api = {
       `/v1/dm/threads/${encodeURIComponent(threadId)}/messages${cursor ? `?cursor=${encodeURIComponent(cursor)}&limit=${limit || 50}` : `?limit=${limit || 50}`}`,
       token
     ),
-  dmSendMessage: (token: string, threadId: string, body: string) =>
+  dmSendMessage: (token: string, threadId: string, body: string, replyToMessageId?: string) =>
     fetchJson<{ message: DmMessageItem }>(
       `/v1/dm/threads/${encodeURIComponent(threadId)}/messages`,
       token,
-      withJsonBody("POST", { body })
+      withJsonBody("POST", { body, ...(replyToMessageId ? { replyToMessageId } : {}) })
     ),
   dmEditMessage: (token: string, messageId: string, body: string) =>
     fetchJson<{ message: DmMessageItem }>(
@@ -931,5 +935,16 @@ export const api = {
       `/v1/dm/threads/${encodeURIComponent(threadId)}/uploads/finalize`,
       token,
       withJsonBody("POST", input)
+    ),
+  dmToggleReaction: (token: string, messageId: string, emoji: string, active: boolean) =>
+    fetchJson<{ ok: true }>(
+      `/v1/dm/messages/${encodeURIComponent(messageId)}/reactions`,
+      token,
+      withJsonBody("POST", { emoji, active })
+    ),
+  dmGetReactions: (token: string, threadId: string) =>
+    fetchJson<{ reactions: Array<{ messageId: string; emoji: string; userId: string }> }>(
+      `/v1/dm/threads/${encodeURIComponent(threadId)}/reactions`,
+      token
     )
 };

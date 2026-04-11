@@ -1318,6 +1318,8 @@ export class WsMessageController {
       case "dm.message.created":
       case "dm.message.updated":
       case "dm.message.deleted":
+      case "dm.reaction.changed":
+      case "dm.thread.read":
         window.dispatchEvent(
           new CustomEvent("boltorezka:dm", {
             detail: { type: message.type, payload: message.payload }

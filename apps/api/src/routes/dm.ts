@@ -13,7 +13,7 @@ import {
   markThreadRead,
   getUnreadCountsForUser
 } from "../services/dm-thread-service.js";
-import { sendDmMessage, editDmMessage, deleteDmMessage, getDmMessages } from "../services/dm-message-service.js";
+import { sendDmMessage, editDmMessage, deleteDmMessage, getDmMessages, toggleDmReaction, getDmReactionsForThread } from "../services/dm-message-service.js";
 import {
   blockUser, unblockUser, getBlockList,
   addContact, removeContact, getContacts,
@@ -25,7 +25,8 @@ import {
   buildDmMessageCreatedEnvelope,
   buildDmMessageUpdatedEnvelope,
   buildDmMessageDeletedEnvelope,
-  buildDmThreadReadEnvelope
+  buildDmThreadReadEnvelope,
+  buildDmReactionChangedEnvelope
 } from "../ws-protocol.js";
 import {
   ChatObjectStorageNotFoundError,
@@ -40,7 +41,8 @@ const createThreadSchema = z.object({
 
 const sendMessageSchema = z.object({
   body: z.string().min(1).max(4000),
-  attachments: z.unknown().optional()
+  attachments: z.unknown().optional(),
+  replyToMessageId: z.string().uuid().optional()
 });
 
 const editMessageSchema = z.object({
@@ -152,7 +154,8 @@ export async function dmRoutes(fastify: FastifyInstance) {
         threadId,
         senderUserId: userId,
         body: parsed.data.body,
-        attachmentsJson: parsed.data.attachments
+        attachmentsJson: parsed.data.attachments,
+        replyToMessageId: parsed.data.replyToMessageId
       });
 
       // Realtime: уведомить обоих участников
@@ -261,6 +264,76 @@ export async function dmRoutes(fastify: FastifyInstance) {
       broadcastRealtimeEnvelopeToUser(peerUserId, envelope);
 
       return { ok: true };
+    }
+  );
+
+  // ─── reactions ──────────────────────────────────────
+
+  const reactionToggleSchema = z.object({
+    emoji: z.string().min(1).max(32),
+    active: z.boolean()
+  });
+
+  /** Toggle reaction on a DM message */
+  fastify.post<{ Params: { messageId: string } }>(
+    "/v1/dm/messages/:messageId/reactions",
+    { preHandler: AUTH_MIDDLEWARE },
+    async (request, reply) => {
+      const userId = String(request.user?.sub || "").trim();
+      const { messageId } = request.params;
+
+      const parsed = reactionToggleSchema.safeParse(request.body);
+      if (!parsed.success) {
+        return reply.code(400).send({ error: "validation_error", details: parsed.error.format() });
+      }
+
+      try {
+        const { threadId } = await toggleDmReaction({
+          messageId,
+          userId,
+          emoji: parsed.data.emoji,
+          active: parsed.data.active
+        });
+
+        const thread = await getThreadById(threadId);
+        if (thread) {
+          const peerUserId = getThreadPeerUserId(thread, userId);
+          const envelope = buildDmReactionChangedEnvelope({
+            threadId,
+            messageId,
+            emoji: parsed.data.emoji.trim().slice(0, 32),
+            userId,
+            active: parsed.data.active
+          });
+          broadcastRealtimeEnvelopeToUser(userId, envelope);
+          broadcastRealtimeEnvelopeToUser(peerUserId, envelope);
+        }
+
+        return { ok: true };
+      } catch (err: unknown) {
+        const code = (err as Error).message;
+        if (code === "dm_message_not_found") return reply.code(404).send({ error: code });
+        if (code === "validation_error") return reply.code(400).send({ error: code });
+        throw err;
+      }
+    }
+  );
+
+  /** Get all reactions for a DM thread */
+  fastify.get<{ Params: { threadId: string } }>(
+    "/v1/dm/threads/:threadId/reactions",
+    { preHandler: AUTH_MIDDLEWARE },
+    async (request, reply) => {
+      const userId = String(request.user?.sub || "").trim();
+      const { threadId } = request.params;
+
+      const thread = await getThreadById(threadId);
+      if (!thread || !isThreadMember(thread, userId)) {
+        return reply.code(403).send({ error: "dm_thread_not_member" });
+      }
+
+      const reactions = await getDmReactionsForThread(threadId);
+      return { reactions };
     }
   );
 

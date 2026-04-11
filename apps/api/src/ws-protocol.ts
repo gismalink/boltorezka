@@ -23,7 +23,8 @@ import type {
   WsOutgoingEnvelope,
   DmMessagePayload,
   DmMessageDeletedPayload,
-  DmThreadReadPayload
+  DmThreadReadPayload,
+  DmReactionChangedPayload
 } from "./ws-protocol.types.ts";
 
 export const CALL_MIC_STATE_EVENT_TYPES = ["call.mic_state"];
@@ -548,4 +549,8 @@ export function buildDmMessageDeletedEnvelope(payload: DmMessageDeletedPayload):
 
 export function buildDmThreadReadEnvelope(payload: DmThreadReadPayload): { type: "dm.thread.read"; payload: DmThreadReadPayload } {
   return { type: "dm.thread.read", payload };
+}
+
+export function buildDmReactionChangedEnvelope(payload: DmReactionChangedPayload): { type: "dm.reaction.changed"; payload: DmReactionChangedPayload } {
+  return { type: "dm.reaction.changed", payload };
 }

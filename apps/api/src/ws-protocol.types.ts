@@ -386,6 +386,10 @@ export type DmMessagePayload = {
   createdAt: string;
   editedAt: string | null;
   deletedAt: string | null;
+  replyToMessageId: string | null;
+  replyToUserId: string | null;
+  replyToUserName: string | null;
+  replyToText: string | null;
 };
 
 export type DmMessageDeletedPayload = {
@@ -397,4 +401,12 @@ export type DmThreadReadPayload = {
   threadId: string;
   userId: string;
   lastReadMessageId: string;
+};
+
+export type DmReactionChangedPayload = {
+  threadId: string;
+  messageId: string;
+  emoji: string;
+  userId: string;
+  active: boolean;
 };

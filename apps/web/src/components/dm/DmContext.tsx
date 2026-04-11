@@ -16,14 +16,19 @@ type DmState = {
   dmText: string;
   loading: boolean;
   pendingDmImageDataUrl: string | null;
+  /** Raw reaction rows for the active thread */
+  dmReactions: Array<{ messageId: string; emoji: string; userId: string }>;
+  /** Message ID at which unread divider should appear (first unread msg) */
+  dmUnreadDividerMessageId: string | null;
 };
 
 type DmActions = {
   openDm: (peerUserId: string, peerName: string) => void;
   closeDm: () => void;
-  sendDmMessage: (text: string, imageDataUrl?: string | null) => Promise<void>;
+  sendDmMessage: (text: string, imageDataUrl?: string | null, replyToMessageId?: string) => Promise<void>;
   editDmMessage: (messageId: string, body: string) => Promise<void>;
   deleteDmMessage: (messageId: string) => Promise<void>;
+  toggleDmReaction: (messageId: string, emoji: string, active: boolean) => Promise<void>;
   loadOlderMessages: () => Promise<void>;
   setDmText: (text: string) => void;
   setPendingDmImageDataUrl: (url: string | null) => void;
@@ -61,6 +66,9 @@ export function DmProvider({ token, children }: { token: string; children: React
   const [loading, setLoading] = useState(false);
   const [pendingDmImageDataUrl, setPendingDmImageDataUrl] = useState<string | null>(null);
   const cursorRef = useRef<string | null>(null);
+  const [dmReactions, setDmReactions] = useState<Array<{ messageId: string; emoji: string; userId: string }>>([]);
+  const [dmUnreadDividerMessageId, setDmUnreadDividerMessageId] = useState<string | null>(null);
+  const entryUnreadCountRef = useRef<number>(0);
 
   // Загрузить список тредов (с unreadCount) при монтировании
   useEffect(() => {
@@ -91,12 +99,26 @@ export function DmProvider({ token, children }: { token: string; children: React
     setLoading(true);
     setMessages([]);
     setMessagesHasMore(false);
+    setDmReactions([]);
+    setDmUnreadDividerMessageId(null);
     cursorRef.current = null;
 
     api.dmGetMessages(token, activeThreadId).then((res) => {
       if (cancelled) return;
-      setMessages(res.messages.reverse());
+      const reversed = res.messages.reverse();
+      setMessages(reversed);
       setMessagesHasMore(res.hasMore);
+
+      // Compute unread divider: if there were N unread msgs, divider is before the (len - N)th message
+      const entryUnread = entryUnreadCountRef.current;
+      if (entryUnread > 0 && reversed.length > 0) {
+        const dividerIdx = Math.max(0, reversed.length - entryUnread);
+        if (dividerIdx < reversed.length) {
+          setDmUnreadDividerMessageId(reversed[dividerIdx].id);
+        }
+      }
+      entryUnreadCountRef.current = 0;
+
       if (res.messages.length > 0) {
         cursorRef.current = res.messages[res.messages.length - 1].id;
 
@@ -109,6 +131,11 @@ export function DmProvider({ token, children }: { token: string; children: React
       if (!cancelled) setLoading(false);
     });
 
+    // Fetch reactions for the thread
+    api.dmGetReactions(token, activeThreadId).then((res) => {
+      if (!cancelled) setDmReactions(res.reactions);
+    }).catch(() => {});
+
     return () => { cancelled = true; };
   }, [activeThreadId, token]);
 
@@ -116,6 +143,10 @@ export function DmProvider({ token, children }: { token: string; children: React
     setActivePeerUserId(peerUserId);
     setActivePeerName(peerName);
     setDmText("");
+
+    // Capture unread count before resetting (for divider computation)
+    const threadForPeer = threads.find((t) => t.peerUserId === peerUserId);
+    entryUnreadCountRef.current = threadForPeer?.unreadCount || 0;
 
     // Reset unread count for this peer
     setThreads((prev) =>
@@ -131,7 +162,7 @@ export function DmProvider({ token, children }: { token: string; children: React
       // Если не получилось создать thread — всё равно показываем пустой стейт
       setActiveThreadId(null);
     }
-  }, [token]);
+  }, [token, threads]);
 
   const closeDm = useCallback(() => {
     setActiveThreadId(null);
@@ -141,10 +172,12 @@ export function DmProvider({ token, children }: { token: string; children: React
     setMessagesHasMore(false);
     setDmText("");
     setPendingDmImageDataUrl(null);
+    setDmReactions([]);
+    setDmUnreadDividerMessageId(null);
     cursorRef.current = null;
   }, []);
 
-  const sendDmMessage = useCallback(async (text: string, imageDataUrl?: string | null) => {
+  const sendDmMessage = useCallback(async (text: string, imageDataUrl?: string | null, replyToMessageId?: string) => {
     if (!activeThreadId || !token) return;
     if (!text.trim() && !imageDataUrl) return;
 
@@ -178,7 +211,7 @@ export function DmProvider({ token, children }: { token: string; children: React
       return;
     }
 
-    const res = await api.dmSendMessage(token, activeThreadId, text.trim());
+    const res = await api.dmSendMessage(token, activeThreadId, text.trim(), replyToMessageId);
     setMessages((prev) => [...prev, res.message]);
     setDmText("");
   }, [activeThreadId, token]);
@@ -200,6 +233,15 @@ export function DmProvider({ token, children }: { token: string; children: React
       setMessages((prev) => prev.filter((m) => m.id !== messageId));
     } catch {
       // delete failed — ignore
+    }
+  }, [token]);
+
+  const toggleDmReaction = useCallback(async (messageId: string, emoji: string, active: boolean) => {
+    if (!token) return;
+    try {
+      await api.dmToggleReaction(token, messageId, emoji, active);
+    } catch {
+      // reaction toggle failed — ignore
     }
   }, [token]);
 
@@ -268,6 +310,19 @@ export function DmProvider({ token, children }: { token: string; children: React
       const { id } = data as { id: string };
       setMessages((prev) => prev.filter((m) => m.id !== id));
     }
+
+    if (type === "dm.reaction.changed") {
+      const { messageId, emoji, userId, active } = data as { messageId: string; emoji: string; userId: string; active: boolean };
+      setDmReactions((prev) => {
+        if (active) {
+          // Add reaction (deduplicate)
+          if (prev.some((r) => r.messageId === messageId && r.emoji === emoji && r.userId === userId)) return prev;
+          return [...prev, { messageId, emoji, userId }];
+        } else {
+          return prev.filter((r) => !(r.messageId === messageId && r.emoji === emoji && r.userId === userId));
+        }
+      });
+    }
   }, [activeThreadId, token]);
 
   // Слушаем DM-события из WS через CustomEvent (dispatched в wsMessageController)
@@ -295,11 +350,14 @@ export function DmProvider({ token, children }: { token: string; children: React
     dmText,
     loading,
     pendingDmImageDataUrl,
+    dmReactions,
+    dmUnreadDividerMessageId,
     openDm,
     closeDm,
     sendDmMessage,
     editDmMessage,
     deleteDmMessage,
+    toggleDmReaction,
     loadOlderMessages,
     setDmText,
     setPendingDmImageDataUrl,

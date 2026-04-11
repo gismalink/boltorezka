@@ -29,6 +29,7 @@ import { ChatMessageTimeline } from "./chatPanel/sections/ChatMessageTimeline";
 import { ChatComposerSection } from "./chatPanel/sections/ChatComposerSection";
 import { ChatPanelOverlays } from "./chatPanel/sections/ChatPanelOverlays";
 import { ChatFloatingActions } from "./chatPanel/sections/ChatFloatingActions";
+import { useDmOptional } from "./dm/DmContext";
 
 export type { ChatPanelProps };
 export { toMentionHandle };
@@ -99,6 +100,7 @@ export function ChatPanel({
   const metricsSamplesRef = useRef(0);
   const hasActiveRoom = Boolean(roomSlug);
   const isDm = roomSlug === "dm";
+  const dmCtx = useDmOptional();
   const hasTopics = topics.length > 0 || isDm;
   const mainTopicId = useMemo(() => {
     if (topics.length === 0) {
@@ -301,12 +303,13 @@ export function ChatPanel({
   const activeTopicMentionUnreadCount = Math.max(0, Number(activeTopic?.mentionUnreadCount || 0));
   const activeTopicIsArchived = Boolean(activeTopic?.archivedAt);
   const unreadDividerVisible = useMemo(() => {
+    if (isDm) return Boolean(dmCtx?.dmUnreadDividerMessageId);
     const dividerMessageId = String(entryUnreadDivider?.messageId || "").trim();
     const dividerTopicId = String(entryUnreadDivider?.topicId || "").trim();
     const normalizedActiveTopicId = String(activeTopicId || "").trim();
 
     return Boolean(dividerMessageId && dividerTopicId && normalizedActiveTopicId && dividerTopicId === normalizedActiveTopicId);
-  }, [activeTopicId, entryUnreadDivider?.messageId, entryUnreadDivider?.topicId]);
+  }, [activeTopicId, entryUnreadDivider?.messageId, entryUnreadDivider?.topicId, isDm, dmCtx?.dmUnreadDividerMessageId]);
 
   const messageViewModels = useMemo(() => {
     const startedAt = typeof performance !== "undefined" ? performance.now() : 0;
@@ -317,12 +320,15 @@ export function ChatPanel({
   }, [messages, currentUserId]);
 
   const unreadDividerMessageId = useMemo(() => {
+    if (isDm) {
+      return dmCtx?.dmUnreadDividerMessageId || "";
+    }
     if (!unreadDividerVisible) {
       return "";
     }
 
     return String(entryUnreadDivider?.messageId || "").trim();
-  }, [entryUnreadDivider?.messageId, unreadDividerVisible]);
+  }, [entryUnreadDivider?.messageId, unreadDividerVisible, isDm, dmCtx?.dmUnreadDividerMessageId]);
 
   const loadedUnreadAfterDivider = useMemo(() => {
     if (!unreadDividerMessageId) {

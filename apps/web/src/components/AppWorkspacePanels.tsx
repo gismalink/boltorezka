@@ -75,6 +75,10 @@ export function AppWorkspacePanels({
       created_at: msg.createdAt,
       edited_at: msg.editedAt,
       user_name: msg.senderName,
+      reply_to_message_id: msg.replyToMessageId,
+      reply_to_user_id: msg.replyToUserId,
+      reply_to_user_name: msg.replyToUserName,
+      reply_to_text: msg.replyToText,
       attachments: Array.isArray(msg.attachmentsJson)
         ? (msg.attachmentsJson as ChatAttachment[])
         : undefined
@@ -161,6 +165,9 @@ export function AppWorkspacePanels({
     dm.deleteDmMessage(messageId);
   }, [dm]);
 
+  // ─── DM reply state ────────────────────────────────
+  const [dmReplyingToMessage, setDmReplyingToMessage] = useState<{ id: string; userName: string; text: string } | null>(null);
+
   const handleDmSendMessage = useCallback((event: FormEvent) => {
     event.preventDefault();
     if (!dm) return;
@@ -177,12 +184,49 @@ export function AppWorkspacePanels({
 
     const text = dm.dmText.trim();
     const image = dm.pendingDmImageDataUrl;
-    if (text || image) dm.sendDmMessage(text, image);
-  }, [dm, dmEditingMessageId]);
+    if (text || image) dm.sendDmMessage(text, image, dmReplyingToMessage?.id || undefined);
+    setDmReplyingToMessage(null);
+  }, [dm, dmEditingMessageId, dmReplyingToMessage]);
 
-  // reset editing state when DM closes
+  const handleDmReplyMessage = useCallback((messageId: string) => {
+    if (!dm) return;
+    const msg = dm.messages.find((m) => m.id === messageId);
+    if (!msg) return;
+    setDmReplyingToMessage({ id: msg.id, userName: msg.senderName, text: msg.body });
+  }, [dm]);
+
+  const handleDmCancelReply = useCallback(() => {
+    setDmReplyingToMessage(null);
+  }, []);
+
+  // ─── DM reactions map ──────────────────────────────
+  const currentUserId = chatPanelProps.currentUserId;
+
+  const dmReactionsByMessageId = useMemo(() => {
+    if (!isDmActive || !dm) return {};
+    const map: Record<string, Record<string, { count: number; reacted: boolean }>> = {};
+    for (const r of dm.dmReactions) {
+      if (!map[r.messageId]) map[r.messageId] = {};
+      if (!map[r.messageId][r.emoji]) map[r.messageId][r.emoji] = { count: 0, reacted: false };
+      map[r.messageId][r.emoji].count++;
+      if (r.userId === currentUserId) map[r.messageId][r.emoji].reacted = true;
+    }
+    return map;
+  }, [isDmActive, dm?.dmReactions, currentUserId]);
+
+  const handleDmToggleReaction = useCallback((messageId: string, emoji: string) => {
+    if (!dm) return;
+    const msgReactions = dmReactionsByMessageId[messageId];
+    const isActive = msgReactions?.[emoji]?.reacted || false;
+    dm.toggleDmReaction(messageId, emoji, !isActive);
+  }, [dm, dmReactionsByMessageId]);
+
+  // reset editing/reply state when DM closes
   useEffect(() => {
-    if (!isDmActive) setDmEditingMessageId(null);
+    if (!isDmActive) {
+      setDmEditingMessageId(null);
+      setDmReplyingToMessage(null);
+    }
   }, [isDmActive]);
 
   const noopAsync = async () => {};
@@ -206,17 +250,17 @@ export function AppWorkspacePanels({
         loadingOlderMessages: dm.loading,
         onLoadOlderMessages: () => { dm.loadOlderMessages(); },
         editingMessageId: dmEditingMessageId,
-        replyingToMessage: null,
+        replyingToMessage: dmReplyingToMessage,
         onCancelEdit: handleDmCancelEdit,
-        onCancelReply: noop,
+        onCancelReply: handleDmCancelReply,
         onEditMessage: handleDmEditMessage,
         onDeleteMessage: handleDmDeleteMessage,
         onReportMessage: noop,
-        onReplyMessage: noop,
+        onReplyMessage: handleDmReplyMessage,
         pinnedByMessageId: {},
-        reactionsByMessageId: {},
+        reactionsByMessageId: dmReactionsByMessageId,
         onTogglePinMessage: noop,
-        onToggleMessageReaction: noop,
+        onToggleMessageReaction: handleDmToggleReaction,
         onCreateTopic: noopAsync,
         onSelectTopic: noop,
         onUpdateTopic: noopAsync,
