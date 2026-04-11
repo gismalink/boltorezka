@@ -1,7 +1,6 @@
 // Главный компонент чата: координирует состояния панелей, тем, поиска,
 // непрочитанного и рендер секций таймлайна/композера/оверлеев.
-import { ClipboardEvent, FormEvent, KeyboardEvent, RefObject, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { Message, RoomTopic } from "../domain";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { buildChatMessageViewModels } from "../utils/chatMessageViewModel";
 import { CHAT_MEMORY_METRICS_ENABLED, CHAT_MEMORY_METRICS_EVERY } from "../constants/appConfig";
 import { CHAT_AGENT_IDS, CHAT_AGENT_STATUS_STYLE } from "../constants/chatAgentSemantics";
@@ -22,101 +21,18 @@ import { useChatPanelMentionNavigation } from "./chatPanel/hooks/useChatPanelMen
 import { useChatPanelUnreadWindowExpand } from "./chatPanel/hooks/useChatPanelUnreadWindowExpand";
 import { useChatPanelScrollToBottom } from "./chatPanel/hooks/useChatPanelScrollToBottom";
 import { ChatPanelProvider, ChatMessageActionsProvider } from "./chatPanel/ChatPanelContext";
+import type { ChatPanelProps, MentionCandidate } from "./chatPanel/chatPanelTypes";
+import { toMentionHandle } from "./chatPanel/chatPanelTypes";
 import { TopicTabsHeader } from "./chatPanel/sections/TopicTabsHeader";
 import { SearchPanel } from "./chatPanel/sections/SearchPanel";
 import { ChatMessageTimeline } from "./chatPanel/sections/ChatMessageTimeline";
 import { ChatComposerSection } from "./chatPanel/sections/ChatComposerSection";
 import { ChatPanelOverlays } from "./chatPanel/sections/ChatPanelOverlays";
-import { Button } from "./uicomponents";
+import { ChatFloatingActions } from "./chatPanel/sections/ChatFloatingActions";
 
-type MentionCandidate = {
-  key: string;
-  kind: "user" | "tag" | "all";
-  handle: string;
-  label: string;
-  userId?: string;
-  userIds?: string[];
-  subtitle?: string | null;
-};
-
-function toMentionHandle(raw: string): string {
-  return String(raw || "")
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, "_")
-    .replace(/[^\p{L}\p{N}._-]/gu, "")
-    .replace(/_{2,}/g, "_")
-    .replace(/^[_\.\-]+|[_\.\-]+$/g, "")
-    .slice(0, 32);
-}
-
-type ChatPanelProps = {
-  t: (key: string) => string;
-  locale: string;
-  currentServerId: string;
-  roomSlug: string;
-  roomId: string;
-  roomTitle: string;
-  topics: RoomTopic[];
-  activeTopicId: string | null;
-  authToken: string;
-  sendWsEventAwaitAck?: (
-    eventType: string,
-    payload: Record<string, unknown>,
-    options?: { withIdempotency?: boolean; maxRetries?: number }
-  ) => Promise<void>;
-  messages: Message[];
-  currentUserId: string | null;
-  messagesHasMore: boolean;
-  loadingOlderMessages: boolean;
-  chatText: string;
-  composePreviewImageUrl: string | null;
-  composePendingAttachmentName: string | null;
-  typingUsers: string[];
-  chatLogRef: RefObject<HTMLDivElement>;
-  onLoadOlderMessages: () => void;
-  onLoadMessagesAroundAnchor: (
-    topicId: string,
-    anchorMessageId: string,
-    options?: {
-      aroundWindowBefore?: number;
-      aroundWindowAfter?: number;
-    }
-  ) => Promise<boolean>;
-  onSetChatText: (value: string) => void;
-  onOpenRoomChat: (slug: string) => void;
-  onSelectTopic: (topicId: string) => void;
-  onCreateTopic: (title: string) => Promise<void>;
-  onChatPaste: (event: ClipboardEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
-  onChatInputKeyDown: (event: KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
-  onSendMessage: (event: FormEvent) => void;
-  onSelectAttachmentFile: (file: File | null) => void;
-  onClearPendingAttachment: () => void;
-  editingMessageId: string | null;
-  replyingToMessage: { id: string; userName: string; text: string } | null;
-  showVideoToggle: boolean;
-  videoWindowsVisible: boolean;
-  onToggleVideoWindows: () => void;
-  onCancelEdit: () => void;
-  onCancelReply: () => void;
-  onEditMessage: (messageId: string) => void;
-  onDeleteMessage: (messageId: string) => void;
-  onReportMessage: (messageId: string) => void;
-  onReplyMessage: (messageId: string) => void;
-  pinnedByMessageId: Record<string, boolean>;
-  reactionsByMessageId: Record<string, Record<string, { count: number; reacted: boolean }>>;
-  onTogglePinMessage: (messageId: string) => void;
-  onToggleMessageReaction: (messageId: string, emoji: string) => void;
-  onUpdateTopic: (topicId: string, title: string) => Promise<void>;
-  onArchiveTopic: (topicId: string) => Promise<void>;
-  onUnarchiveTopic: (topicId: string) => Promise<void>;
-  onDeleteTopic: (topicId: string) => Promise<void>;
-  onConsumeTopicMentionUnread: (topicId: string) => void;
-  onSetTopicMentionUnreadLocal: (topicId: string, count: number) => void;
-  onApplyTopicReadLocal: (topicId: string) => void;
-  canManageTopicModeration: boolean;
-  mentionCandidates: MentionCandidate[];
-};
+export type { ChatPanelProps };
+export { toMentionHandle };
+export type { MentionCandidate } from "./chatPanel/chatPanelTypes";
 
 export function ChatPanel({
   t,
@@ -787,36 +703,15 @@ export function ChatPanel({
           unreadDividerMessageId={unreadDividerMessageId || null}
           unreadDividerVisible={unreadDividerVisible}
         />
-        {hasActiveRoom ? (
-          <div className="chat-floating-actions" aria-live="polite">
-            {activeTopicMentionUnreadCount > 0 ? (
-              <Button
-                type="button"
-                className="secondary tiny chat-floating-action-btn chat-floating-mention-btn"
-                onClick={() => void jumpToNextTopicUnreadMention()}
-                onContextMenu={(event) => event.preventDefault()}
-                disabled={topicMentionsActionLoading}
-                data-tooltip={t("chat.topicMentionsJumpTooltip")}
-                aria-label={t("chat.topicMentionsJumpTooltip")}
-              >
-                <span aria-hidden="true">@</span>
-                <span>{activeTopicMentionUnreadCount}</span>
-              </Button>
-            ) : null}
-            {showScrollToBottomButton ? (
-              <Button
-                type="button"
-                className="secondary tiny icon-btn chat-floating-action-btn"
-                onClick={scrollTimelineToBottom}
-                onContextMenu={(event) => event.preventDefault()}
-                data-tooltip={t("rooms.down")}
-                aria-label={t("rooms.down")}
-              >
-                <i className="bi bi-arrow-down" aria-hidden="true" />
-              </Button>
-            ) : null}
-          </div>
-        ) : null}
+        <ChatFloatingActions
+          t={t}
+          hasActiveRoom={hasActiveRoom}
+          activeTopicMentionUnreadCount={activeTopicMentionUnreadCount}
+          topicMentionsActionLoading={topicMentionsActionLoading}
+          jumpToNextTopicUnreadMention={jumpToNextTopicUnreadMention}
+          showScrollToBottomButton={showScrollToBottomButton}
+          scrollTimelineToBottom={scrollTimelineToBottom}
+        />
       </div>
       <ChatComposerSection
         hasActiveRoom={hasActiveRoom}

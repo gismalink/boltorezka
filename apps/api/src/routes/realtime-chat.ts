@@ -7,10 +7,12 @@
  * - room-topic-messages-service — CRUD для topic-сообщений (lazy import).
  * - chat-error-mapper — единый маппинг доменных ошибок → WS NACK.
  *
- * Этот файл оставлен как тонкий слой: валидация payload → вызов сервиса → broadcast → ack.
+ * Типы вынесены в types/chat-handler.types.ts.
+ * Утилиты — в utils/chat-helpers.ts.
  */
 import type { WebSocket } from "ws";
 import type { SocketState } from "../ws-protocol.types.ts";
+import type { TopicMessageOps, NotificationInboxOps, ChatCommonParams } from "../types/chat-handler.types.ts";
 import { mapChatDomainErrorToWsNack } from "../services/chat-error-mapper.js";
 import {
   canBypassRoomSendPolicy,
@@ -21,119 +23,15 @@ import {
   type DbQuery
 } from "../services/room-access-service.js";
 import { insertRoomMessage, editRoomMessage, deleteRoomMessage } from "../services/room-messages-service.js";
+import { normalizeMentionUserIdsFromPayload, broadcastToRoomAudienceAcrossOtherRooms } from "../utils/chat-helpers.js";
+
+export type { ChatCommonParams } from "../types/chat-handler.types.ts";
 
 // Lazy import: server-mute-service тянет db.js → config.ts.
-// Аналогично getTopicMessageOps/getNotificationInboxOps — импортируем при первом вызове.
 async function getResolveActiveServerMute() {
   const { resolveActiveServerMute } = await import("../services/server-mute-service.js");
   return resolveActiveServerMute;
 }
-
-type TopicMessageOps = {
-  createTopicMessage: (input: {
-    topicId: string;
-    userId: string;
-    text: string;
-  }) => Promise<{
-    room: { id: string; slug: string };
-    topic: { id: string; slug: string };
-    message: {
-      id: string;
-      room_id: string;
-      topic_id?: string | null;
-      reply_to_message_id?: string | null;
-      reply_to_user_id?: string | null;
-      reply_to_user_name?: string | null;
-      reply_to_text?: string | null;
-      user_id: string;
-      user_name: string;
-      text: string;
-      created_at: string;
-    };
-  }>;
-  replyTopicMessage: (input: {
-    messageId: string;
-    userId: string;
-    text: string;
-  }) => Promise<{
-    room: { id: string; slug: string };
-    topic: { id: string; slug: string };
-    parentMessageId: string;
-    message: {
-      id: string;
-      room_id: string;
-      topic_id?: string | null;
-      reply_to_message_id?: string | null;
-      reply_to_user_id?: string | null;
-      reply_to_user_name?: string | null;
-      reply_to_text?: string | null;
-      user_id: string;
-      user_name: string;
-      text: string;
-      created_at: string;
-    };
-  }>;
-  setTopicMessagePinned: (input: { messageId: string; userId: string; pinned: boolean }) => Promise<{
-    room: { id: string; slug: string };
-    topic: { id: string; slug: string };
-    messageId: string;
-    pinned: boolean;
-  }>;
-  setTopicMessageReaction: (input: { messageId: string; userId: string; emoji: string; active: boolean }) => Promise<{
-    room: { id: string; slug: string };
-    topic: { id: string; slug: string };
-    messageId: string;
-    emoji: string;
-    userId: string;
-    active: boolean;
-  }>;
-  createTopicMessageReport: (input: {
-    messageId: string;
-    userId: string;
-    reason: string;
-    details?: string;
-  }) => Promise<{
-    reportId: string;
-    messageId: string;
-  }>;
-  markTopicRead: (input: {
-    topicId: string;
-    userId: string;
-    lastReadMessageId?: string | null;
-  }) => Promise<{
-    roomId: string;
-    topicId: string;
-    lastReadMessageId: string | null;
-    lastReadAt: string;
-    unreadDelta: number;
-    mentionDelta: number;
-  }>;
-};
-
-type NotificationInboxOps = {
-  emitMentionInboxEvents: (input: {
-    actorUserId: string;
-    actorUserName: string;
-    roomId: string;
-    roomSlug: string;
-    topicId: string | null;
-    topicSlug: string | null;
-    messageId: string;
-    text: string;
-    mentionUserIds?: string[];
-  }) => Promise<string[]>;
-  emitReplyInboxEvent: (input: {
-    actorUserId: string;
-    actorUserName: string;
-    targetUserId: string | null;
-    roomId: string;
-    roomSlug: string;
-    topicId: string | null;
-    topicSlug: string | null;
-    messageId: string;
-    text: string;
-  }) => Promise<void>;
-};
 
 let topicMessageOpsPromise: Promise<TopicMessageOps> | null = null;
 let topicMessageOpsLoaderForTests: (() => Promise<TopicMessageOps>) | null = null;
@@ -187,113 +85,6 @@ async function getNotificationInboxOps() {
   }
 
   return notificationInboxOpsPromise;
-}
-
-type ChatCommonParams = {
-  connection: WebSocket;
-  state: SocketState;
-  payload: unknown;
-  requestId: string | null;
-  eventType: string;
-  normalizeRequestId: (value: unknown) => string | null;
-  getPayloadString: (payload: any, key: string, maxLength?: number) => string | null;
-  sendNoActiveRoomNack: (socket: WebSocket, requestId: string | null, eventType: string) => void;
-  sendValidationNack: (socket: WebSocket, requestId: string | null, eventType: string, message: string) => void;
-  sendForbiddenNack: (socket: WebSocket, requestId: string | null, eventType: string, message?: string) => void;
-  sendNack: (
-    socket: WebSocket,
-    requestId: string | null,
-    eventType: string,
-    code: string,
-    message: string,
-    meta?: Record<string, unknown>
-  ) => void;
-  incrementMetric: (name: string) => Promise<void>;
-  sendJson: (socket: WebSocket, payload: unknown) => void;
-  getUserSocketsByUserId?: (userId: string) => WebSocket[];
-  getSocketRoomId?: (socket: WebSocket) => string | null;
-  sendAckWithMetrics: (
-    socket: WebSocket,
-    requestId: string | null,
-    eventType: string,
-    meta?: Record<string, unknown>,
-    additionalMetrics?: string[]
-  ) => void;
-  broadcastRoom: (roomId: string, payload: unknown, excludedSocket?: WebSocket | null) => void;
-  buildChatMessageEnvelope: (...args: any[]) => unknown;
-  buildChatEditedEnvelope: (...args: any[]) => unknown;
-  buildChatDeletedEnvelope: (...args: any[]) => unknown;
-  buildChatTypingEnvelope?: (...args: any[]) => unknown;
-  redisGet: (key: string) => Promise<string | null>;
-  redisDel: (key: string) => Promise<number>;
-  redisSetEx: (key: string, ttlSeconds: number, value: string) => Promise<string | null>;
-  dbQuery: <T = unknown>(text: string, params?: unknown[]) => Promise<{ rowCount: number | null; rows: T[] }>;
-};
-
-function normalizeMentionUserIdsFromPayload(payload: Record<string, unknown>): string[] {
-  const candidates = payload.mentionUserIds ?? payload.mention_user_ids;
-  const rawValues: string[] = [];
-
-  if (Array.isArray(candidates)) {
-    candidates.forEach((value) => {
-      if (typeof value === "string") {
-        rawValues.push(value);
-      }
-    });
-  } else if (typeof candidates === "string") {
-    candidates
-      .split(",")
-      .forEach((part) => rawValues.push(part));
-  }
-
-  const dedup = new Set<string>();
-  rawValues
-    .map((value) => value.trim())
-    .filter((value) => value.length > 0)
-    .forEach((value) => {
-      if (!dedup.has(value) && dedup.size < 100) {
-        dedup.add(value);
-      }
-    });
-
-  return Array.from(dedup);
-}
-
-function broadcastToRoomAudienceAcrossOtherRooms(params: {
-  roomId: string;
-  payload: unknown;
-  audienceUserIds: string[];
-  excludedSocket: WebSocket;
-  getUserSocketsByUserId: (userId: string) => WebSocket[];
-  getSocketRoomId: (socket: WebSocket) => string | null;
-  sendJson: (socket: WebSocket, payload: unknown) => void;
-}) {
-  const {
-    roomId,
-    payload,
-    audienceUserIds,
-    excludedSocket,
-    getUserSocketsByUserId,
-    getSocketRoomId,
-    sendJson
-  } = params;
-
-  const seenSockets = new Set<WebSocket>();
-  for (const userId of audienceUserIds) {
-    for (const socket of getUserSocketsByUserId(userId)) {
-      if (socket === excludedSocket || seenSockets.has(socket)) {
-        continue;
-      }
-
-      const socketRoomId = String(getSocketRoomId(socket) || "").trim();
-      if (socketRoomId === roomId) {
-        continue;
-      }
-
-      seenSockets.add(socket);
-      sendJson(socket, payload);
-    }
-  }
 }
 
 async function resolveChatRoom(
