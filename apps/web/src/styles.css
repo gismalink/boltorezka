@@ -2590,6 +2590,10 @@ pre {
   padding-right: 84px;
 }
 
+.channel-member-main-actions-two {
+  padding-right: 112px;
+}
+
 .channel-member-right-group {
   position: absolute;
   right: var(--space-sm);
@@ -2608,6 +2612,12 @@ pre {
 .channel-member-right-group-open.channel-member-right-group-actions-one .channel-member-icons,
 .channel-member-item:hover .channel-member-right-group-actions-one .channel-member-icons {
   transform: translateX(-16px);
+}
+
+.channel-member-right-group-actions-two:hover .channel-member-icons,
+.channel-member-right-group-open.channel-member-right-group-actions-two .channel-member-icons,
+.channel-member-item:hover .channel-member-right-group-actions-two .channel-member-icons {
+  transform: translateX(-36px);
 }
 
 .channel-row-actions .channel-action-btn,
@@ -2937,7 +2947,8 @@ pre {
 }
 
 .channel-member-settings-anchor-open,
-.channel-member-item:hover .channel-member-settings-anchor-actions-one {
+.channel-member-item:hover .channel-member-settings-anchor-actions-one,
+.channel-member-item:hover .channel-member-settings-anchor-actions-two {
   width: 22px;
   margin-left: 2px;
   opacity: 1;

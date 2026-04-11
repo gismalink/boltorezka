@@ -215,7 +215,10 @@ export function DmProvider({ token, onDmOpen, onDmClose, children }: { token: st
     }
 
     const res = await api.dmSendMessage(token, activeThreadId, text.trim(), replyToMessageId);
-    setMessages((prev) => [...prev, res.message]);
+    setMessages((prev) => {
+      if (prev.some((m) => m.id === res.message.id)) return prev;
+      return [...prev, res.message];
+    });
     setDmText("");
   }, [activeThreadId, token]);
 

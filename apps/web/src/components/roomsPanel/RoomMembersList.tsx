@@ -273,7 +273,13 @@ export function RoomMembersList({
           const noteValue = String(memberDraft?.note ?? memberPreference?.note ?? "");
           const menuKey = `${room.slug}:${member.userId || member.userName}`;
           const canManageMember = Boolean(member.userId) && !isCurrentUser;
-          const memberActionsVariant = canManageMember ? "one" : "none";
+          const hasDmAction = Boolean(!isCurrentUser && dm && member.userId);
+          const hasSettingsAction = canManageMember;
+          const memberActionsVariant = hasDmAction && hasSettingsAction
+            ? "two"
+            : hasDmAction || hasSettingsAction
+              ? "one"
+              : "none";
           const memberSettingsOpen = memberMenuOpenKey === menuKey && Boolean(member.userId) && memberMenuUserId === member.userId;
 
           return (

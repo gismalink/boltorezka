@@ -330,6 +330,59 @@ export function ChatPanel({
     return String(entryUnreadDivider?.messageId || "").trim();
   }, [entryUnreadDivider?.messageId, unreadDividerVisible, isDm, dmCtx?.dmUnreadDividerMessageId]);
 
+  const dmUnreadScrollKeyRef = useRef("");
+  const dmBottomScrollKeyRef = useRef("");
+
+  useEffect(() => {
+    if (!isDm) {
+      dmUnreadScrollKeyRef.current = "";
+      dmBottomScrollKeyRef.current = "";
+      return;
+    }
+
+    const container = chatLogRef.current;
+    if (!container) {
+      return;
+    }
+
+    const dmThreadId = String(roomId || "").trim();
+    if (!dmThreadId || messages.length === 0) {
+      return;
+    }
+
+    const dividerId = String(unreadDividerMessageId || "").trim();
+    if (dividerId) {
+      const dividerScrollKey = `${dmThreadId}:${dividerId}`;
+      if (dmUnreadScrollKeyRef.current === dividerScrollKey) {
+        return;
+      }
+
+      const selectorMessageId = (typeof CSS !== "undefined" && typeof CSS.escape === "function")
+        ? CSS.escape(dividerId)
+        : dividerId;
+      const target = container.querySelector<HTMLElement>(`[data-message-id="${selectorMessageId}"]`);
+      if (!target) {
+        return;
+      }
+
+      dmUnreadScrollKeyRef.current = dividerScrollKey;
+      window.requestAnimationFrame(() => {
+        target.scrollIntoView({ block: "center", behavior: "smooth" });
+      });
+      return;
+    }
+
+    const bottomScrollKey = `${dmThreadId}:bottom`;
+    if (dmBottomScrollKeyRef.current === bottomScrollKey) {
+      return;
+    }
+
+    dmBottomScrollKeyRef.current = bottomScrollKey;
+    window.requestAnimationFrame(() => {
+      container.scrollTo({ top: container.scrollHeight, behavior: "auto" });
+    });
+  }, [chatLogRef, isDm, messages.length, roomId, unreadDividerMessageId]);
+
   const loadedUnreadAfterDivider = useMemo(() => {
     if (!unreadDividerMessageId) {
       return 0;
