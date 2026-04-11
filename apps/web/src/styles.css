@@ -3083,15 +3083,15 @@ pre {
   max-height: none;
   overflow: auto;
   background: var(--pixel-panel-2);
-  border: var(--border-strong) solid var(--pixel-border);
-  border-radius: var(--radius-surface);
+  border: none;
+  border-top: var(--border-strong) solid var(--pixel-border);
+  border-bottom: var(--border-strong) solid var(--pixel-border);
+  border-radius: 0;
   padding: var(--space-md);
   display: grid;
   gap: var(--space-sm);
   align-content: start;
-  box-shadow:
-    inset 0 0 0 1px var(--pixel-inset-stroke-strong),
-    3px 3px 0 var(--pixel-hard-shadow);
+  box-shadow: none;
 }
 
 .chat-avatar {
@@ -3318,6 +3318,7 @@ pre {
 
 .chat-header-stack {
   position: relative;
+  border-bottom: var(--border-strong) solid var(--pixel-border);
 }
 
 .chat-search-toggle-btn-active {

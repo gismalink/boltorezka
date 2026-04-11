@@ -499,7 +499,7 @@ export function ChatComposerSection({
         >
           {screenContext}
         </div>
-        <Button type="submit" disabled={!hasActiveRoom || activeTopicIsArchived} data-agent-id={CHAT_AGENT_IDS.composerSubmit}>{editingMessageId ? t("chat.saveEdit") : t("chat.send")}</Button>
+        <Button type="submit" disabled={!hasActiveRoom || activeTopicIsArchived} data-agent-id={CHAT_AGENT_IDS.composerSubmit}>{editingMessageId ? t("chat.saveEdit") : <i className="bi bi-send-fill" aria-hidden="true" />}</Button>
       </form>
     </>
   );
