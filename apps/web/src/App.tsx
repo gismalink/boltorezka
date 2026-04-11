@@ -5,7 +5,7 @@
 // Не добавляйте здесь парсинг, правила транспортировки или логику рабочего процесса.
 // =============================================================================
 
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { RealtimeClient } from "./services";
 import { AppShellLayout } from "./components";
 import { DmProvider } from "./components/dm/DmContext";
