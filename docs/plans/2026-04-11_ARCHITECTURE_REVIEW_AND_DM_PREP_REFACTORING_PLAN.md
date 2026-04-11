@@ -271,11 +271,11 @@ Scope: глобальный аудит проекта boltorezka + план ре
 
 ### 3.7 WS7: Cleanup (P2)
 
-- [ ] Удалить `spikes/socketio-poc/`
-- [ ] Удалить `socket.io` + `socket.io-client` из API devDeps
-- [ ] Стандартизировать error codes (PascalCase everywhere)
-- [ ] Выделить `SocketState` type в одно место (`ws-protocol.types.ts`)
-- [ ] Добавить `ROLES` enum в config
+- [x] Удалить `spikes/socketio-poc/`
+- [x] Удалить `socket.io` + `socket.io-client` из API devDeps
+- [x] Стандартизировать error codes (PascalCase everywhere)
+- [x] Выделить `SocketState` type в одно место (`ws-protocol.types.ts`)
+- [x] Добавить `ROLES` enum в `roles.ts`
 - [ ] Подчистить `styles.css` — выделить design tokens в Tailwind config
 
 ---
@@ -313,11 +313,13 @@ Scope: глобальный аудит проекта boltorezka + план ре
 ├── Deploy test → smoke ✅
 └── Готово к merge в main
 
-Итерация 4 (P1 + P2 — безопасность + cleanup)
-├── WS6: maxConn(5), statement_timeout(5s), protocolVersion(1), audit log ✅ (28c28fe)
+Итерация 4 (P1 + P2 — безопасность + cleanup) ✅ 2026-04-11
+├── WS6: maxConn(5), statement_timeout(5s), protocolVersion(1), audit log ✅ (fdcf06d)
 ├── Deploy test → smoke ✅
-├── WS7: spike cleanup, error codes, types dedup ← СЛЕДУЮЩИЙ
-└── Deploy test → smoke → prod (стабилизация)
+├── WS7: spike cleanup, error codes, types dedup ✅ (76a3f21)
+├── Удалено 1424 строк, +92, centralized SocketState, ROLES enum, PascalCase error codes
+├── Deploy test → smoke ✅
+└── Готово к merge в main
 
 Итерация 5 (DM Stage 1-2 — backend)
 ├── DB миграции DM
