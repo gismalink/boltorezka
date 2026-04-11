@@ -55,7 +55,7 @@ export function useDmOptional(): DmContextValue | null {
 
 // ─── provider ───────────────────────────────────────────
 
-export function DmProvider({ token, onDmOpen, children }: { token: string; onDmOpen?: () => void; children: ReactNode }) {
+export function DmProvider({ token, onDmOpen, onDmClose, children }: { token: string; onDmOpen?: () => void; onDmClose?: () => void; children: ReactNode }) {
   const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
   const [activePeerUserId, setActivePeerUserId] = useState<string | null>(null);
   const [activePeerName, setActivePeerName] = useState<string | null>(null);
@@ -167,6 +167,7 @@ export function DmProvider({ token, onDmOpen, children }: { token: string; onDmO
   }, [token, threads, onDmOpen, activePeerUserId]);
 
   const closeDm = useCallback(() => {
+    onDmClose?.();
     setActiveThreadId(null);
     setActivePeerUserId(null);
     setActivePeerName(null);
@@ -177,7 +178,7 @@ export function DmProvider({ token, onDmOpen, children }: { token: string; onDmO
     setDmReactions([]);
     setDmUnreadDividerMessageId(null);
     cursorRef.current = null;
-  }, []);
+  }, [onDmClose]);
 
   const sendDmMessage = useCallback(async (text: string, imageDataUrl?: string | null, replyToMessageId?: string) => {
     if (!activeThreadId || !token) return;

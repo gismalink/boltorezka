@@ -14,12 +14,14 @@ export function useAppRoomsRuntimeInput(params: Record<string, unknown>): AppRoo
     roomsAndServerDerived: {
       servers: p.servers,
       currentServerId: p.currentServerId,
+      dmModeActive: p.dmModeActive,
       chatRoomSlug: p.chatRoomSlug,
       roomSlug: p.roomSlug,
       setChatRoomSlug: p.setChatRoomSlug
     },
     roomSelectionGuard: {
       roomSlug: p.roomSlug,
+      dmModeActive: p.dmModeActive,
       setRoomSlug: p.setRoomSlug,
       chatRoomSlug: p.chatRoomSlug,
       setChatRoomSlug: p.setChatRoomSlug

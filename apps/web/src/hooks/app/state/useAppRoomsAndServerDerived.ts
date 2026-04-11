@@ -5,6 +5,7 @@ type UseAppRoomsAndServerDerivedInput = {
   servers: ServerListItem[];
   currentServerId: string;
   allRooms: Room[];
+  dmModeActive?: boolean;
   chatRoomSlug: string;
   roomSlug: string;
   setChatRoomSlug: (slug: string) => void;
@@ -14,6 +15,7 @@ export function useAppRoomsAndServerDerived({
   servers,
   currentServerId,
   allRooms,
+  dmModeActive,
   chatRoomSlug,
   roomSlug,
   setChatRoomSlug
@@ -24,10 +26,14 @@ export function useAppRoomsAndServerDerived({
   );
 
   useEffect(() => {
+    if (dmModeActive) {
+      return;
+    }
+
     if (!chatRoomSlug && roomSlug) {
       setChatRoomSlug(roomSlug);
     }
-  }, [chatRoomSlug, roomSlug, setChatRoomSlug]);
+  }, [chatRoomSlug, roomSlug, setChatRoomSlug, dmModeActive]);
 
   const activeChatRoom = useMemo(
     () => allRooms.find((room) => room.slug === chatRoomSlug) || null,

@@ -363,7 +363,8 @@ export function useSessionStateLifecycle({
           })
           .catch((error) => pushLog(`server chat image policy failed: ${error.message}`));
 
-        void roomAdminController.loadRoomTree(nextToken);
+        const canViewArchivedRooms = role === "admin" || role === "super_admin";
+        void roomAdminController.loadRoomTree(nextToken, canViewArchivedRooms);
       } finally {
         sessionBootstrapInFlightRef.current = false;
       }

@@ -87,6 +87,7 @@ const CURRENT_SERVER_ID_STORAGE_KEY = "boltorezka_current_server_id";
 const ROOM_SLUG_STORAGE_KEY = "boltorezka_room_slug";
 
 export function App() {
+  const [dmModeActive, setDmModeActive] = useState(false);
   const {
     token, setToken, user, setUser,
     authMode, setAuthMode,
@@ -592,7 +593,8 @@ export function App() {
   } = useAppRoomsRuntime(useAppRoomsRuntimeInput({
     roomsTree, rooms, servers,
     roomSlug, currentServerId, chatRoomSlug,
-    setRoomSlug, setChatRoomSlug
+    setRoomSlug, setChatRoomSlug,
+    dmModeActive
   }));
 
   const roomsTreeBootstrapPending = Boolean(String(token || "").trim() && String(currentServerId || "").trim() && !roomsTree);
@@ -1027,7 +1029,14 @@ export function App() {
   }
 
   return (
-    <DmProvider token={token} onDmOpen={() => setChatRoomSlug("")}>
+    <DmProvider
+      token={token}
+      onDmOpen={() => {
+        setDmModeActive(true);
+        setChatRoomSlug("");
+      }}
+      onDmClose={() => setDmModeActive(false)}
+    >
       <AppShellLayout topChromeProps={appTopChromeProps} mainSectionProps={appMainSectionProps} shellOverlaysProps={appShellOverlaysProps} />
     </DmProvider>
   );

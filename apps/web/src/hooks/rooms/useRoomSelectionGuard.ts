@@ -3,6 +3,7 @@ import type { Room } from "../../domain";
 
 type UseRoomSelectionGuardArgs = {
   allRooms: Room[];
+  dmModeActive?: boolean;
   roomSlug: string;
   chatRoomSlug: string;
   setRoomSlug: Dispatch<SetStateAction<string>>;
@@ -11,6 +12,7 @@ type UseRoomSelectionGuardArgs = {
 
 export function useRoomSelectionGuard({
   allRooms,
+  dmModeActive,
   roomSlug,
   chatRoomSlug,
   setRoomSlug,
@@ -37,6 +39,10 @@ export function useRoomSelectionGuard({
   }, [allRooms, roomSlug, chatRoomSlug, setRoomSlug, setChatRoomSlug]);
 
   useEffect(() => {
+    if (dmModeActive) {
+      return;
+    }
+
     if (chatRoomSlug) {
       return;
     }
@@ -50,5 +56,5 @@ export function useRoomSelectionGuard({
     if (firstRoom?.slug) {
       setChatRoomSlug(firstRoom.slug);
     }
-  }, [allRooms, chatRoomSlug, roomSlug, setChatRoomSlug]);
+  }, [allRooms, chatRoomSlug, roomSlug, setChatRoomSlug, dmModeActive]);
 }

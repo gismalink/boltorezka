@@ -29,7 +29,7 @@ export class RoomAdminController {
     return value || undefined;
   }
 
-  async loadRoomTree(token: string) {
+  async loadRoomTree(token: string, includeArchived = true) {
     this.options.setRoomsTreeLoading(true);
     try {
       const serverId = this.getCurrentServerId();
@@ -42,12 +42,16 @@ export class RoomAdminController {
       const tree = await api.roomTree(token, serverId);
       this.options.setRoomsTree(tree);
 
-      try {
-        const archived = await api.archivedRooms(token, serverId);
-        this.options.setArchivedRooms(archived.rooms);
-      } catch (error) {
-        this.options.pushLog(`archived rooms failed: ${(error as Error).message}`);
+      if (!includeArchived) {
         this.options.setArchivedRooms([]);
+      } else {
+        try {
+          const archived = await api.archivedRooms(token, serverId);
+          this.options.setArchivedRooms(archived.rooms);
+        } catch (error) {
+          this.options.pushLog(`archived rooms failed: ${(error as Error).message}`);
+          this.options.setArchivedRooms([]);
+        }
       }
     } catch (error) {
       this.options.pushLog(`room tree failed: ${(error as Error).message}`);
