@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { api, type DmMessageItem, type DmThreadWithUnread } from "../../api";
 
 // ─── types ──────────────────────────────────────────────
@@ -9,6 +9,8 @@ type DmState = {
   activePeerUserId: string | null;
   activePeerName: string | null;
   threads: DmThreadWithUnread[];
+  /** peerUserId → unreadCount */
+  dmUnreadByPeerUserId: Record<string, number>;
   messages: DmMessageItem[];
   messagesHasMore: boolean;
   dmText: string;
@@ -58,6 +60,27 @@ export function DmProvider({ token, children }: { token: string; children: React
   const [pendingDmImageDataUrl, setPendingDmImageDataUrl] = useState<string | null>(null);
   const cursorRef = useRef<string | null>(null);
 
+  // Загрузить список тредов (с unreadCount) при монтировании
+  useEffect(() => {
+    if (!token) return;
+    let cancelled = false;
+    api.dmGetThreads(token).then((res) => {
+      if (!cancelled) setThreads(res.threads);
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [token]);
+
+  // Маппинг peerUserId → unreadCount
+  const dmUnreadByPeerUserId = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const t of threads) {
+      if (t.peerUserId && t.unreadCount > 0) {
+        map[t.peerUserId] = t.unreadCount;
+      }
+    }
+    return map;
+  }, [threads]);
+
   // Загрузить сообщения при открытии thread
   useEffect(() => {
     if (!activeThreadId || !token) return;
@@ -91,6 +114,13 @@ export function DmProvider({ token, children }: { token: string; children: React
     setActivePeerUserId(peerUserId);
     setActivePeerName(peerName);
     setDmText("");
+
+    // Reset unread count for this peer
+    setThreads((prev) =>
+      prev.map((t) =>
+        t.peerUserId === peerUserId ? { ...t, unreadCount: 0 } : t
+      )
+    );
 
     try {
       const res = await api.dmCreateThread(token, peerUserId);
@@ -181,11 +211,30 @@ export function DmProvider({ token, children }: { token: string; children: React
       }
 
       // Обновить unread в threads list
-      setThreads((prev) =>
-        prev.map((t) =>
-          t.id === msg.threadId ? { ...t, updatedAt: msg.createdAt } : t
-        )
-      );
+      setThreads((prev) => {
+        const isActiveThread = msg.threadId === activeThreadId;
+        const exists = prev.some((t) => t.id === msg.threadId);
+        if (!exists) {
+          // Новый thread — добавляем с unreadCount=1 (если не активный)
+          return [
+            {
+              id: msg.threadId,
+              userLowId: "",
+              userHighId: "",
+              createdAt: msg.createdAt,
+              updatedAt: msg.createdAt,
+              peerUserId: (msg as Record<string, unknown>).senderUserId as string | undefined,
+              unreadCount: isActiveThread ? 0 : 1
+            },
+            ...prev
+          ];
+        }
+        return prev.map((t) =>
+          t.id === msg.threadId
+            ? { ...t, updatedAt: msg.createdAt, unreadCount: isActiveThread ? t.unreadCount : t.unreadCount + 1 }
+            : t
+        );
+      });
     }
 
     if (type === "dm.message.updated") {
@@ -218,6 +267,7 @@ export function DmProvider({ token, children }: { token: string; children: React
     activePeerUserId,
     activePeerName,
     threads,
+    dmUnreadByPeerUserId,
     messages,
     messagesHasMore,
     dmText,

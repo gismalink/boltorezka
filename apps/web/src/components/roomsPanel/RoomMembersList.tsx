@@ -338,6 +338,9 @@ export function RoomMembersList({
                 </span>
                 {!isCurrentUser && dm && member.userId ? (
                   <div className="channel-member-dm-anchor">
+                    {dm.dmUnreadByPeerUserId[member.userId] > 0 ? (
+                      <span className="room-unread-badge">{dm.dmUnreadByPeerUserId[member.userId]}</span>
+                    ) : null}
                     <button
                       type="button"
                       className="secondary icon-btn tiny channel-member-dm-btn"

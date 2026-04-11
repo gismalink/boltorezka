@@ -57,6 +57,9 @@ function RoomsOfflineBlockInner({
               </div>
               {dm && member.userId && member.userId !== currentUserId ? (
                 <div className="channel-member-dm-anchor" style={{ position: "absolute", right: "var(--space-sm)", top: "50%", transform: "translateY(-50%)" }}>
+                  {dm.dmUnreadByPeerUserId[member.userId] > 0 ? (
+                    <span className="room-unread-badge">{dm.dmUnreadByPeerUserId[member.userId]}</span>
+                  ) : null}
                   <button
                     type="button"
                     className="secondary icon-btn tiny channel-member-dm-btn"
