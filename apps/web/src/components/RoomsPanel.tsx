@@ -478,6 +478,7 @@ export function RoomsPanel({
           outsideOnlineCount={onlineOutsideRooms.length}
           unreadCount={outsideRoomsUnreadCount}
           members={onlineOutsideRooms}
+          currentUserId={normalizedCurrentUserId}
           onToggleCollapsed={onToggleOutsideRoomsCollapsed}
         />
 
@@ -486,6 +487,7 @@ export function RoomsPanel({
           collapsed={offlineRoomsCollapsed}
           offlineCount={offlineMembers.length}
           members={offlineMembers}
+          currentUserId={normalizedCurrentUserId}
           onToggleCollapsed={onToggleOfflineRoomsCollapsed}
         />
 

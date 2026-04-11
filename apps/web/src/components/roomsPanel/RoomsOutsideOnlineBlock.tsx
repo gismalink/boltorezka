@@ -12,6 +12,7 @@ type RoomsOutsideOnlineBlockProps = {
   outsideOnlineCount: number;
   unreadCount: number;
   members: OutsideOnlineMember[];
+  currentUserId: string;
   onToggleCollapsed: () => void;
 };
 
@@ -21,6 +22,7 @@ function RoomsOutsideOnlineBlockInner({
   outsideOnlineCount,
   unreadCount,
   members,
+  currentUserId,
   onToggleCollapsed
 }: RoomsOutsideOnlineBlockProps) {
   const dm = useDmOptional();
@@ -48,21 +50,23 @@ function RoomsOutsideOnlineBlockInner({
       {!collapsed ? (
         <ul className="rooms-list">
           {members.map((member) => (
-            <li key={`outside-online:${member.userId || member.userName}`} className="channel-row group grid grid-cols-[1fr_auto] items-center gap-2">
+            <li key={`outside-online:${member.userId || member.userName}`} className="channel-member-item relative min-h-[22px]">
               <div className="secondary room-btn room-btn-interactive opacity-85">
                 <i className="bi bi-circle-fill text-[10px] text-[var(--pixel-accent)]" aria-hidden="true" />
                 <span className="rooms-presence-user-name">{member.userName}</span>
               </div>
-              {dm && member.userId ? (
-                <button
-                  type="button"
-                  className="secondary icon-btn tiny opacity-0 transition-opacity group-hover:opacity-100"
-                  aria-label="DM"
-                  data-tooltip="DM"
-                  onClick={() => dm.openDm(member.userId, member.userName)}
-                >
-                  <i className="bi bi-chat-dots" aria-hidden="true" />
-                </button>
+              {dm && member.userId && member.userId !== currentUserId ? (
+                <div className="channel-member-dm-anchor" style={{ position: "absolute", right: "var(--space-sm)", top: "50%", transform: "translateY(-50%)" }}>
+                  <button
+                    type="button"
+                    className="secondary icon-btn tiny channel-member-dm-btn"
+                    aria-label="DM"
+                    data-tooltip="DM"
+                    onClick={() => dm.openDm(member.userId, member.userName)}
+                  >
+                    <i className="bi bi-chat-dots" aria-hidden="true" />
+                  </button>
+                </div>
               ) : null}
             </li>
           ))}

@@ -337,18 +337,20 @@ export function RoomMembersList({
                   ) : null}
                 </span>
                 {!isCurrentUser && dm && member.userId ? (
-                  <button
-                    type="button"
-                    className="secondary icon-btn tiny channel-member-dm-btn"
-                    aria-label={t("rooms.openDm")}
-                    data-tooltip={t("rooms.openDm")}
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      dm.openDm(member.userId, member.userName);
-                    }}
-                  >
-                    <i className="bi bi-chat-dots" aria-hidden="true" />
-                  </button>
+                  <div className="channel-member-dm-anchor">
+                    <button
+                      type="button"
+                      className="secondary icon-btn tiny channel-member-dm-btn"
+                      aria-label={t("rooms.openDm")}
+                      data-tooltip={t("rooms.openDm")}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        dm.openDm(member.userId, member.userName);
+                      }}
+                    >
+                      <i className="bi bi-chat-dots" aria-hidden="true" />
+                    </button>
+                  </div>
                 ) : null}
                 {canManageMember ? (
                 <div className={`channel-member-settings-anchor channel-member-settings-anchor-actions-${memberActionsVariant} relative ${memberSettingsOpen ? "channel-member-settings-anchor-open" : ""}`}>

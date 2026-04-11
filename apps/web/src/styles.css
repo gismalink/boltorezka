@@ -2956,16 +2956,24 @@ pre {
   pointer-events: auto;
 }
 
-/* DM кнопка — видна при ховере на строку участника */
-.channel-member-dm-btn {
+/* DM кнопка — slide-in при ховере (канонично как settings-anchor) */
+.channel-member-dm-anchor {
+  position: relative;
+  width: 0;
+  overflow: hidden;
   opacity: 0;
   pointer-events: none;
-  min-height: 22px;
-  min-width: 22px;
-  transition: opacity 0.12s ease;
+  transition: width 0.16s ease, opacity 0.12s ease;
 }
 
-.channel-member-item:hover .channel-member-dm-btn {
+.channel-member-dm-btn {
+  min-height: 22px;
+  min-width: 22px;
+}
+
+.channel-member-item:hover .channel-member-dm-anchor {
+  width: 22px;
+  margin-left: 2px;
   opacity: 1;
   pointer-events: auto;
 }
