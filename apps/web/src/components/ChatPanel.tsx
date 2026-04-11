@@ -98,6 +98,8 @@ export function ChatPanel({
   const messageVmBuildMsRef = useRef(0);
   const metricsSamplesRef = useRef(0);
   const hasActiveRoom = Boolean(roomSlug);
+  const isDm = roomSlug === "dm";
+  const hasTopics = topics.length > 0 || isDm;
   const mainTopicId = useMemo(() => {
     if (topics.length === 0) {
       return null;
@@ -420,7 +422,6 @@ export function ChatPanel({
   ]);
 
   const composePreviewImage = composePreviewImageUrl;
-  const hasTopics = topics.length > 0;
   const {
     hasTypingUsers,
     typingLabel

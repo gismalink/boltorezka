@@ -1,4 +1,4 @@
-import { useCallback, useMemo, type ClipboardEvent, type ComponentProps, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, type ClipboardEvent, type ComponentProps, type FormEvent } from "react";
 import { AppWorkspaceContent } from "./AppWorkspaceContent";
 import { ChatPanel } from "./ChatPanel";
 import { RoomsPanel } from "./RoomsPanel";
@@ -48,6 +48,15 @@ export function AppWorkspacePanels({
 }: AppWorkspacePanelsProps) {
   const dm = useDmOptional();
   const isDmActive = Boolean(dm?.activeThreadId);
+
+  // Авто-закрытие DM при смене комнаты (переключение между чатами)
+  const prevRoomSlugRef = useRef(chatPanelProps.roomSlug);
+  useEffect(() => {
+    if (prevRoomSlugRef.current !== chatPanelProps.roomSlug && isDmActive && dm) {
+      dm.closeDm();
+    }
+    prevRoomSlugRef.current = chatPanelProps.roomSlug;
+  }, [chatPanelProps.roomSlug, isDmActive, dm]);
 
   const dmImagePolicy = useMemo(() => ({
     maxDataUrlLength: DEFAULT_CHAT_IMAGE_DATA_URL_LENGTH,
@@ -126,14 +135,6 @@ export function AppWorkspacePanels({
 
   const dmHeaderSlot = isDmActive && dm ? (
     <div className="flex items-center gap-2 border-b border-[var(--pixel-border)] px-4 py-2">
-      <button
-        type="button"
-        className="secondary icon-btn tiny"
-        onClick={dm.closeDm}
-        aria-label={t("actions.back")}
-      >
-        <i className="bi bi-arrow-left" aria-hidden="true" />
-      </button>
       <i className="bi bi-chat-dots text-[var(--pixel-accent)]" aria-hidden="true" />
       <h2 className="m-0 truncate text-sm font-semibold">{dm.activePeerName || "DM"}</h2>
     </div>

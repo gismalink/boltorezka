@@ -2959,6 +2959,9 @@ pre {
 /* DM кнопка — slide-in при ховере (канонично как settings-anchor) */
 .channel-member-dm-anchor {
   position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   width: 0;
   overflow: hidden;
   opacity: 0;
@@ -2972,8 +2975,16 @@ pre {
 }
 
 .channel-member-item:hover .channel-member-dm-anchor {
-  width: 22px;
+  width: auto;
   margin-left: 2px;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Непрочитанные DM бейджи видны всегда, даже без ховера */
+.channel-member-dm-anchor:has(.room-unread-badge) {
+  width: auto;
+  overflow: visible;
   opacity: 1;
   pointer-events: auto;
 }
