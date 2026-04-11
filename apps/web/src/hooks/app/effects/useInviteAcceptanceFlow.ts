@@ -98,7 +98,7 @@ export function useInviteAcceptanceFlow({
             message = t("server.inviteAcceptNotFound");
           } else if (error.code === "InviteUnavailable") {
             message = t("server.inviteAcceptUnavailable");
-          } else if (error.code === "server_banned") {
+          } else if (error.code === "ServerBanned") {
             message = t("server.inviteAcceptServerBanned");
           }
         }

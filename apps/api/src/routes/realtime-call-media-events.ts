@@ -1,19 +1,11 @@
 import type { WebSocket } from "ws";
-import type { WsIncomingPayload } from "../ws-protocol.types.ts";
+import type { SocketState, WsIncomingPayload } from "../ws-protocol.types.ts";
 import {
   handleCallMicState,
   handleCallVideoState,
   handleScreenShareStart,
   handleScreenShareStop
 } from "./realtime-call-screen.js";
-
-type SocketState = {
-  sessionId: string;
-  userId: string;
-  userName: string;
-  roomId: string | null;
-  roomSlug: string | null;
-};
 
 type CallMediaKnownType = "screen.share.start" | "screen.share.stop" | "call.mic_state" | "call.video_state";
 

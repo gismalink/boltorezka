@@ -1,12 +1,5 @@
 import type { WebSocket } from "ws";
-
-type SocketState = {
-  sessionId: string;
-  userId: string;
-  userName: string;
-  roomId: string | null;
-  roomSlug: string | null;
-};
+import type { SocketState } from "../ws-protocol.types.ts";
 
 type BaseParams = {
   connection: WebSocket;

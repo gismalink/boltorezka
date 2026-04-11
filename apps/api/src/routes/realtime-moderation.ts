@@ -1,14 +1,7 @@
 import type { WebSocket } from "ws";
+import type { SocketState } from "../ws-protocol.types.ts";
 import type { RoomRow } from "../db.types.ts";
 import { emitModerationInboxEvent } from "../services/notification-inbox-service.js";
-
-type SocketState = {
-  userId: string;
-  userName: string;
-  roomId: string | null;
-  roomSlug: string | null;
-  roomKind: "text" | "text_voice" | "text_voice_video" | null;
-};
 
 type ModerationSharedParams = {
   connection: WebSocket;

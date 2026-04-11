@@ -1,5 +1,6 @@
 import type { FastifyRequest } from "fastify";
 import type { WebSocket } from "ws";
+import type { SocketState } from "../ws-protocol.types.ts";
 import { buildErrorEnvelope, buildRoomsPresenceEnvelope, buildServerReadyEnvelope } from "../ws-protocol.js";
 import { initializeRealtimeConnection } from "./realtime-lifecycle.js";
 import { sendJson } from "./realtime-io.js";
@@ -10,16 +11,6 @@ type WsTicketClaims = {
   name?: string;
   email?: string;
   serverId?: string | null;
-};
-
-type SocketState = {
-  sessionId: string;
-  userId: string;
-  userName: string;
-  currentServerId: string | null;
-  roomId: string | null;
-  roomSlug: string | null;
-  roomKind: "text" | "text_voice" | "text_voice_video" | null;
 };
 
 type ConsumeWsTicketDeps = {

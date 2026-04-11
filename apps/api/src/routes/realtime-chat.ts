@@ -10,6 +10,7 @@
  * Этот файл оставлен как тонкий слой: валидация payload → вызов сервиса → broadcast → ack.
  */
 import type { WebSocket } from "ws";
+import type { SocketState } from "../ws-protocol.types.ts";
 import { mapChatDomainErrorToWsNack } from "../services/chat-error-mapper.js";
 import {
   canBypassRoomSendPolicy,
@@ -187,13 +188,6 @@ async function getNotificationInboxOps() {
 
   return notificationInboxOpsPromise;
 }
-
-type SocketState = {
-  userId: string;
-  userName: string;
-  roomId: string | null;
-  roomSlug: string | null;
-};
 
 type ChatCommonParams = {
   connection: WebSocket;

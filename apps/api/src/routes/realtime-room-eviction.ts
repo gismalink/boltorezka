@@ -1,12 +1,5 @@
 import type { WebSocket } from "ws";
-
-type SocketState = {
-  userId: string;
-  userName: string;
-  roomId: string | null;
-  roomSlug: string | null;
-  roomKind: "text" | "text_voice" | "text_voice_video" | null;
-};
+import type { SocketState } from "../ws-protocol.types.ts";
 
 type RoomEvictionDeps = {
   socketsByUserId: Map<string, Set<WebSocket>>;

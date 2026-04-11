@@ -14,6 +14,7 @@
 
 // Lazy import: age-verification-service тянет db.js → config.ts,
 // что ломает unit-тесты без DATABASE_URL. Импортируем только при вызове.
+import { ROLES } from "../roles.js";
 async function getIsServerAgeConfirmed(): Promise<(serverId: string, userId: string) => Promise<boolean>> {
   const { isServerAgeConfirmed } = await import("./age-verification-service.js");
   return isServerAgeConfirmed;
@@ -52,7 +53,7 @@ export async function canBypassRoomSendPolicy(
   );
 
   const globalRole = String(globalRoleResult.rows[0]?.role || "").trim();
-  if (globalRole === "admin" || globalRole === "super_admin") {
+  if (globalRole === ROLES.ADMIN || globalRole === ROLES.SUPER_ADMIN) {
     return true;
   }
 
@@ -72,7 +73,7 @@ export async function canBypassRoomSendPolicy(
   );
 
   const serverRole = String(membership.rows[0]?.role || "").trim();
-  return serverRole === "owner" || serverRole === "admin";
+  return serverRole === ROLES.OWNER || serverRole === ROLES.ADMIN;
 }
 
 export async function resolveRoomRealtimeAudienceUserIds(

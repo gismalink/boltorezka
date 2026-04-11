@@ -81,7 +81,7 @@ async function getServerRole(serverId: string, userId: string): Promise<ServerMe
 export async function createServerInvite(input: CreateInviteInput): Promise<InviteCreateResult> {
   const actorRole = await getServerRole(input.serverId, input.actorUserId);
   if (!actorRole) {
-    throw new Error("forbidden_role");
+    throw new Error("ForbiddenRole");
   }
 
   const activeInvitesResult = await db.query<{ count: string }>(
@@ -171,7 +171,7 @@ export async function acceptServerInvite(input: AcceptInviteInput): Promise<Serv
     );
 
     if ((serverBanResult.rowCount || 0) > 0) {
-      throw new Error("server_banned");
+      throw new Error("ServerBanned");
     }
 
     const existingMembershipResult = await client.query<MembershipRow>(

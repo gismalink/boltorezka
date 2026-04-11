@@ -23,8 +23,6 @@
     "@types/pg": "^8.16.0",
     "@types/web-push": "^3.6.4",
     "@types/ws": "^8.18.1",
-    "socket.io": "^4.8.3",
-    "socket.io-client": "^4.8.3",
     "tsx": "^4.20.5",
     "typescript": "^5.8.2",
     "ws": "^8.20.0"

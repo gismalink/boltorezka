@@ -114,7 +114,7 @@ export async function serversRoutes(fastify: FastifyInstance) {
     const userId = String(request.currentUser?.id || "").trim();
     if (!serverId || !userId) {
       reply.code(403).send({
-        error: "forbidden_role",
+        error: "ForbiddenRole",
         message: "Insufficient server role"
       });
       return false;
@@ -137,7 +137,7 @@ export async function serversRoutes(fastify: FastifyInstance) {
     }
 
     reply.code(403).send({
-      error: "forbidden_role",
+      error: "ForbiddenRole",
       message: "Insufficient server role"
     });
     return false;
@@ -564,9 +564,9 @@ export async function serversRoutes(fastify: FastifyInstance) {
         return response;
       } catch (error) {
         const message = String((error as Error)?.message || "");
-        if (message === "forbidden_role") {
+        if (message === "ForbiddenRole") {
           return reply.code(403).send({
-            error: "forbidden_role",
+            error: "ForbiddenRole",
             message: "Insufficient server role"
           });
         }
@@ -633,9 +633,9 @@ export async function serversRoutes(fastify: FastifyInstance) {
         return response;
       } catch (error) {
         const message = String((error as Error)?.message || "");
-        if (message === "forbidden_role") {
+        if (message === "ForbiddenRole") {
           return reply.code(403).send({
-            error: "forbidden_role",
+            error: "ForbiddenRole",
             message: "Insufficient server role"
           });
         }
@@ -701,9 +701,9 @@ export async function serversRoutes(fastify: FastifyInstance) {
         return response;
       } catch (error) {
         const message = String((error as Error)?.message || "");
-        if (message === "forbidden_role") {
+        if (message === "ForbiddenRole") {
           return reply.code(403).send({
-            error: "forbidden_role",
+            error: "ForbiddenRole",
             message: "Insufficient server role"
           });
         }
@@ -746,9 +746,9 @@ export async function serversRoutes(fastify: FastifyInstance) {
         return response;
       } catch (error) {
         const message = String((error as Error)?.message || "");
-        if (message === "forbidden_role") {
+        if (message === "ForbiddenRole") {
           return reply.code(403).send({
-            error: "forbidden_role",
+            error: "ForbiddenRole",
             message: "Insufficient server role"
           });
         }
@@ -941,9 +941,9 @@ export async function serversRoutes(fastify: FastifyInstance) {
         return reply.code(201).send(response);
       } catch (error) {
         const message = String((error as Error)?.message || "");
-        if (message === "forbidden_role") {
+        if (message === "ForbiddenRole") {
           return reply.code(403).send({
-            error: "forbidden_role",
+            error: "ForbiddenRole",
             message: "Insufficient server role"
           });
         }
@@ -1007,9 +1007,9 @@ export async function serversRoutes(fastify: FastifyInstance) {
         return reply.code(201).send(response);
       } catch (error) {
         const message = String((error as Error)?.message || "");
-        if (message === "forbidden_role") {
+        if (message === "ForbiddenRole") {
           return reply.code(403).send({
-            error: "forbidden_role",
+            error: "ForbiddenRole",
             message: "Insufficient server role"
           });
         }
@@ -1082,9 +1082,9 @@ export async function serversRoutes(fastify: FastifyInstance) {
         return reply.code(200).send(response);
       } catch (error) {
         const message = String((error as Error)?.message || "");
-        if (message === "forbidden_role") {
+        if (message === "ForbiddenRole") {
           return reply.code(403).send({
-            error: "forbidden_role",
+            error: "ForbiddenRole",
             message: "Insufficient server role"
           });
         }
@@ -1141,9 +1141,9 @@ export async function serversRoutes(fastify: FastifyInstance) {
         return reply.code(201).send(response);
       } catch (error) {
         const message = String((error as Error)?.message || "");
-        if (message === "forbidden_role") {
+        if (message === "ForbiddenRole") {
           return reply.code(403).send({
-            error: "forbidden_role",
+            error: "ForbiddenRole",
             message: "Insufficient server role"
           });
         }
@@ -1209,9 +1209,9 @@ export async function serversRoutes(fastify: FastifyInstance) {
         return reply.code(200).send(response);
       } catch (error) {
         const message = String((error as Error)?.message || "");
-        if (message === "forbidden_role") {
+        if (message === "ForbiddenRole") {
           return reply.code(403).send({
-            error: "forbidden_role",
+            error: "ForbiddenRole",
             message: "Insufficient server role"
           });
         }

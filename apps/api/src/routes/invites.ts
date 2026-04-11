@@ -57,9 +57,9 @@ export async function invitesRoutes(fastify: FastifyInstance) {
           });
         }
 
-        if (message === "server_banned") {
+        if (message === "ServerBanned") {
           return reply.code(403).send({
-            error: "server_banned",
+            error: "ServerBanned",
             message: "User is banned on this server"
           });
         }

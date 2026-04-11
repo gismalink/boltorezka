@@ -5,6 +5,7 @@ import type {
   CallInitialStateParticipantPayload,
   MediaTopology,
   PresenceUser,
+  SocketState,
   WsIncomingPayload
 } from "../ws-protocol.types.ts";
 import {
@@ -17,17 +18,6 @@ import {
   getPayloadString
 } from "../ws-protocol.js";
 import { canJoinRoom } from "./realtime-room-join.js";
-
-type RoomKind = "text" | "text_voice" | "text_voice_video";
-
-type SocketState = {
-  sessionId: string;
-  userId: string;
-  userName: string;
-  roomId: string | null;
-  roomSlug: string | null;
-  roomKind: RoomKind | null;
-};
 
 type RoomEventHandlerDeps = {
   sendJson: (socket: WebSocket, envelope: unknown) => void;

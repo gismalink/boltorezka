@@ -1,5 +1,6 @@
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import type { RawData, WebSocket } from "ws";
+import type { SocketState } from "../ws-protocol.types.ts";
 import { unregisterRealtimeSocket } from "../realtime-broadcast.js";
 import { buildPresenceLeftEnvelope } from "../ws-protocol.js";
 import { closeRealtimeConnection } from "./realtime-lifecycle.js";
@@ -10,16 +11,6 @@ import { db } from "../db.js";
 const WS_IDLE_TIMEOUT_MS = 45_000;
 const WS_HEARTBEAT_INTERVAL_MS = 20_000;
 const MAX_CONNECTIONS_PER_USER = 5;
-
-type SocketState = {
-  sessionId: string;
-  userId: string;
-  userName: string;
-  currentServerId: string | null;
-  roomId: string | null;
-  roomSlug: string | null;
-  roomKind: "text" | "text_voice" | "text_voice_video" | null;
-};
 
 type RegisterRealtimeWsRouteDeps = {
   appBuildSha: string;

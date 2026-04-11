@@ -2,6 +2,7 @@ import type { FastifyReply, FastifyRequest } from "fastify";
 import { db } from "../db.js";
 import type { ServerMemberRole, UserRow } from "../db.types.ts";
 import { config } from "../config.js";
+import { ROLES, type RoleName } from "../roles.js";
 
 function unauthorized(reply: FastifyReply) {
   return reply.code(401).send({
@@ -64,14 +65,14 @@ function serviceBanned(reply: FastifyReply) {
 
 function serverBanned(reply: FastifyReply) {
   return reply.code(403).send({
-    error: "server_banned",
+    error: "ServerBanned",
     message: "User is banned on this server"
   });
 }
 
 function serverMembershipDenied(reply: FastifyReply) {
   return reply.code(403).send({
-    error: "not_server_member",
+    error: "NotServerMember",
     message: "User is not a server member"
   });
 }
@@ -290,8 +291,8 @@ export async function loadCurrentUser(request: FastifyRequest, reply: FastifyRep
   request.currentUser = user;
 }
 
-export function requireRole(roles: string[] | string) {
-  const allowedRoles = Array.isArray(roles) ? roles : [roles];
+export function requireRole(roles: RoleName[] | RoleName) {
+  const allowedRoles: string[] = Array.isArray(roles) ? roles : [roles];
 
   return async function roleGuard(request: FastifyRequest, reply: FastifyReply) {
     const role = request.currentUser?.role || "user";
@@ -311,7 +312,7 @@ export async function requireServiceAccess(request: FastifyRequest, reply: Fasti
     return unauthorized(reply);
   }
 
-  if (user.role === "admin" || user.role === "super_admin") {
+  if (user.role === ROLES.ADMIN || user.role === ROLES.SUPER_ADMIN) {
     return;
   }
 

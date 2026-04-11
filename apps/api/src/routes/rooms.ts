@@ -469,7 +469,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
         const accessibleServerId = await resolveAccessibleServerId(createdBy, requestedServerId);
         if (!accessibleServerId) {
           return reply.code(403).send({
-            error: "not_server_member",
+            error: "NotServerMember",
             message: "You are not a member of this server"
           });
         }
@@ -498,7 +498,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
       const allowed = await canManageServerRooms(createdBy, targetServerId, globalRole);
       if (!allowed) {
         return reply.code(403).send({
-          error: "forbidden_role",
+          error: "ForbiddenRole",
           message: "Insufficient permissions to manage categories in this server"
         });
       }
@@ -575,7 +575,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
       const allowed = await canManageServerRooms(actorId, categoryServerId, globalRole);
       if (!allowed) {
         return reply.code(403).send({
-          error: "forbidden_role",
+          error: "ForbiddenRole",
           message: "Insufficient permissions to manage categories in this server"
         });
       }
@@ -645,7 +645,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
       const allowed = await canManageServerRooms(actorId, String(current.server_id || "").trim(), globalRole);
       if (!allowed) {
         return reply.code(403).send({
-          error: "forbidden_role",
+          error: "ForbiddenRole",
           message: "Insufficient permissions to manage categories in this server"
         });
       }
@@ -731,7 +731,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
       const allowed = await canManageServerRooms(actorId, categoryServerId, globalRole);
       if (!allowed) {
         return reply.code(403).send({
-          error: "forbidden_role",
+          error: "ForbiddenRole",
           message: "Insufficient permissions to manage categories in this server"
         });
       }
@@ -824,7 +824,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
         const accessibleServerId = await resolveAccessibleServerId(createdBy, requestedServerId);
         if (!accessibleServerId) {
           return reply.code(403).send({
-            error: "not_server_member",
+            error: "NotServerMember",
             message: "You are not a member of this server"
           });
         }
@@ -854,7 +854,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
 
       if (!canCreateRoom) {
         return reply.code(403).send({
-          error: "forbidden_role",
+          error: "ForbiddenRole",
           message: "Insufficient permissions to create room in this server"
         });
       }
@@ -1826,7 +1826,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
       const allowed = await canManageServerRooms(actorId, String(roomResult.rows[0]?.server_id || "").trim(), globalRole);
       if (!allowed) {
         return reply.code(403).send({
-          error: "forbidden_role",
+          error: "ForbiddenRole",
           message: "Insufficient permissions to manage room visibility"
         });
       }
@@ -1889,7 +1889,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
       const allowed = await canManageServerRooms(actorId, String(room.server_id || "").trim(), globalRole);
       if (!allowed) {
         return reply.code(403).send({
-          error: "forbidden_role",
+          error: "ForbiddenRole",
           message: "Insufficient permissions to manage room visibility"
         });
       }
@@ -1950,7 +1950,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
       const allowed = await canManageServerRooms(actorId, String(room.server_id || "").trim(), globalRole);
       if (!allowed) {
         return reply.code(403).send({
-          error: "forbidden_role",
+          error: "ForbiddenRole",
           message: "Insufficient permissions to manage room visibility"
         });
       }

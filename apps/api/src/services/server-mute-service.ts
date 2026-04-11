@@ -68,7 +68,7 @@ export async function applyServerMute(input: ServerMuteInput): Promise<ServerMut
 
   const actorRole = await getServerRole(input.serverId, input.actorUserId);
   if (!actorRole) {
-    throw new Error("forbidden_role");
+    throw new Error("ForbiddenRole");
   }
 
   const actorPermissions = await resolveEffectiveServerPermissions({
@@ -78,7 +78,7 @@ export async function applyServerMute(input: ServerMuteInput): Promise<ServerMut
   });
 
   if (!actorPermissions.permissions.moderateMembers) {
-    throw new Error("forbidden_role");
+    throw new Error("ForbiddenRole");
   }
 
   const targetRole = await getServerRole(input.serverId, input.targetUserId);
@@ -141,7 +141,7 @@ export async function applyServerMute(input: ServerMuteInput): Promise<ServerMut
 export async function revokeServerMute(input: Pick<ServerMuteInput, "serverId" | "actorUserId" | "targetUserId">): Promise<boolean> {
   const actorRole = await getServerRole(input.serverId, input.actorUserId);
   if (!actorRole) {
-    throw new Error("forbidden_role");
+    throw new Error("ForbiddenRole");
   }
 
   const actorPermissions = await resolveEffectiveServerPermissions({
@@ -151,7 +151,7 @@ export async function revokeServerMute(input: Pick<ServerMuteInput, "serverId" |
   });
 
   if (!actorPermissions.permissions.moderateMembers) {
-    throw new Error("forbidden_role");
+    throw new Error("ForbiddenRole");
   }
 
   const result = await db.query(

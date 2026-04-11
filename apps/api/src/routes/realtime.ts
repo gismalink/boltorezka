@@ -37,15 +37,7 @@ import {
   buildRoomPresenceEnvelope,
   getPayloadString
 } from "../ws-protocol.js";
-type SocketState = {
-  sessionId: string;
-  userId: string;
-  userName: string;
-  currentServerId: string | null;
-  roomId: string | null;
-  roomSlug: string | null;
-  roomKind: "text" | "text_voice" | "text_voice_video" | null;
-};
+import type { SocketState } from "../ws-protocol.types.ts";
 
 type MediaTopology = "livekit";
 

@@ -64,7 +64,7 @@ export async function applyServerBan(input: ServerBanInput): Promise<ServerBanRo
 
   const actorRole = await getServerRole(input.serverId, input.actorUserId);
   if (!actorRole) {
-    throw new Error("forbidden_role");
+    throw new Error("ForbiddenRole");
   }
 
   const actorPermissions = await resolveEffectiveServerPermissions({
@@ -74,7 +74,7 @@ export async function applyServerBan(input: ServerBanInput): Promise<ServerBanRo
   });
 
   if (!actorPermissions.permissions.moderateMembers) {
-    throw new Error("forbidden_role");
+    throw new Error("ForbiddenRole");
   }
 
   const targetRole = await getServerRole(input.serverId, input.targetUserId);
@@ -141,7 +141,7 @@ export async function applyServerBan(input: ServerBanInput): Promise<ServerBanRo
 export async function revokeServerBan(input: Pick<ServerBanInput, "serverId" | "actorUserId" | "targetUserId">): Promise<boolean> {
   const actorRole = await getServerRole(input.serverId, input.actorUserId);
   if (!actorRole) {
-    throw new Error("forbidden_role");
+    throw new Error("ForbiddenRole");
   }
 
   const actorPermissions = await resolveEffectiveServerPermissions({
@@ -151,7 +151,7 @@ export async function revokeServerBan(input: Pick<ServerBanInput, "serverId" | "
   });
 
   if (!actorPermissions.permissions.moderateMembers) {
-    throw new Error("forbidden_role");
+    throw new Error("ForbiddenRole");
   }
 
   const result = await db.query(

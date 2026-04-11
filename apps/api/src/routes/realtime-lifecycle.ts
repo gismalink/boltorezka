@@ -1,12 +1,5 @@
 import type { WebSocket } from "ws";
-
-type SocketState = {
-  userId: string;
-  userName: string;
-  currentServerId: string | null;
-  roomId: string | null;
-  roomSlug: string | null;
-};
+import type { SocketState } from "../ws-protocol.types.ts";
 
 export async function initializeRealtimeConnection(params: {
   connection: WebSocket;

@@ -278,7 +278,7 @@ export async function renameServerForUser(input: RenameServerInput): Promise<Ser
     serverRole: server.role
   });
   if (!resolved.permissions.manageServer) {
-    throw new Error("forbidden_role");
+    throw new Error("ForbiddenRole");
   }
 
   const trimmedName = String(input.name || "").trim();
@@ -383,12 +383,12 @@ export async function removeServerMemberForUser(input: RemoveServerMemberInput):
     serverRole: actor.role
   });
   if (!resolved.permissions.moderateMembers) {
-    throw new Error("forbidden_role");
+    throw new Error("ForbiddenRole");
   }
 
   const actorIsOwner = actor.role === "owner";
   if (!actorIsOwner && target.role !== "member") {
-    throw new Error("forbidden_role");
+    throw new Error("ForbiddenRole");
   }
 
   const updated = await db.query(
@@ -427,7 +427,7 @@ export async function transferServerOwnershipForUser(
   }
 
   if (actor.role !== "owner") {
-    throw new Error("forbidden_role");
+    throw new Error("ForbiddenRole");
   }
 
   if (input.actorUserId === input.targetUserId) {
@@ -503,7 +503,7 @@ export async function deleteServerForUser(input: DeleteServerInput): Promise<{ d
   }
 
   if (actor.role !== "owner") {
-    throw new Error("forbidden_role");
+    throw new Error("ForbiddenRole");
   }
 
   const serverState = await db.query<{ is_default: boolean; is_archived: boolean }>(

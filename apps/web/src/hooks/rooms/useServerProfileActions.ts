@@ -236,7 +236,7 @@ export function useServerProfileActions({
       pushToast(t("server.deleteSuccess"));
     } catch (error) {
       if (error instanceof ApiError) {
-        if (error.code === "forbidden_role") {
+        if (error.code === "ForbiddenRole") {
           pushToast(t("server.deleteForbidden"));
           return;
         }

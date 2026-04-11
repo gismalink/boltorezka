@@ -1,15 +1,7 @@
 import type { WebSocket } from "ws";
-import type { WsIncomingPayload } from "../ws-protocol.types.ts";
+import type { SocketState, WsIncomingPayload } from "../ws-protocol.types.ts";
 import { buildCallSignalRelayEnvelope, getPayloadString } from "../ws-protocol.js";
 import { relayToTargetOrRoom } from "./realtime-relay.js";
-
-type SocketState = {
-  sessionId: string;
-  userId: string;
-  userName: string;
-  roomId: string | null;
-  roomSlug: string | null;
-};
 
 type CallSignalEventType = "call.offer" | "call.answer" | "call.ice";
 

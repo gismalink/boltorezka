@@ -1,5 +1,5 @@
 import type { WebSocket } from "ws";
-import type { WsIncomingPayload } from "../ws-protocol.types.ts";
+import type { SocketState, WsIncomingPayload } from "../ws-protocol.types.ts";
 import {
   handleChatDelete,
   handleChatEdit,
@@ -12,14 +12,6 @@ import {
   handleChatTyping,
   handleChatUnpin
 } from "./realtime-chat.js";
-
-type SocketState = {
-  sessionId: string;
-  userId: string;
-  userName: string;
-  roomId: string | null;
-  roomSlug: string | null;
-};
 
 type ChatEventDeps = {
   normalizeRequestId: (value: unknown) => string | null;

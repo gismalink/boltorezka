@@ -5,16 +5,7 @@ import {
   buildPongEnvelope,
   parseWsIncomingEnvelope
 } from "../ws-protocol.js";
-import type { WsIncomingPayload } from "../ws-protocol.types.ts";
-
-type SocketState = {
-  sessionId: string;
-  userId: string;
-  userName: string;
-  roomId: string | null;
-  roomSlug: string | null;
-  roomKind: "text" | "text_voice" | "text_voice_video" | null;
-};
+import type { SocketState, WsIncomingPayload } from "../ws-protocol.types.ts";
 
 type RealtimeMessageHandlerDeps = {
   socketState: WeakMap<WebSocket, SocketState>;

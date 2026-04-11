@@ -2,18 +2,10 @@ import { buildErrorEnvelope } from "../ws-protocol.js";
 import { sendJson, sendNack } from "./realtime-io.js";
 import { buildErrorCorrelationMeta } from "./realtime-relay.js";
 import type { WebSocket } from "ws";
-
-type SocketStateLike = {
-  sessionId: string;
-  userId: string;
-  userName: string;
-  roomId: string | null;
-  roomSlug: string | null;
-  roomKind: "text" | "text_voice" | "text_voice_video" | null;
-};
+import type { SocketState } from "../ws-protocol.types.ts";
 
 type CreateRealtimeNackSendersArgs = {
-  socketState: WeakMap<WebSocket, SocketStateLike>;
+  socketState: WeakMap<WebSocket, SocketState>;
   incrementMetric: (name: string) => Promise<unknown>;
 };
 
