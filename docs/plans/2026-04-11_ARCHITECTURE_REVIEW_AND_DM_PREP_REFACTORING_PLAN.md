@@ -260,12 +260,14 @@ Scope: глобальный аудит проекта boltorezka + план ре
 - [ ] DEFERRED на DM-фазу: `useThreadState` hook (70% reuse, нужны DM pagination patterns)
 - [ ] DEFERRED на DM-фазу: `useUserPresence` hook (60% reuse, нужен WS refactor)
 
-### 3.6 WS6: Backend — безопасность (P1)
+### 3.6 WS6: Backend — безопасность (P1) ✅
 
-- [ ] Добавить `maxConnectionsPerUser(5)` в realtime-ws-route.ts
-- [ ] Добавить query timeout 5s для WS handlers
-- [ ] Protocol version в `buildServerReadyEnvelope()` (backward-compatible)
-- [ ] Audit log для auth events (login/logout/role change)
+**Статус: ВЫПОЛНЕНО** (SHA `28c28fe`, deploy test smoke ok)
+
+- [x] `maxConnectionsPerUser(5)` в `realtime-ws-route.ts` — закрытие с кодом 4429
+- [x] `statement_timeout = 5000ms` на уровне Pool в `db.ts` — все запросы ≤ 5s
+- [x] `protocolVersion: 1` в `server.ready` payload (backward-compatible)
+- [x] Audit log для admin actions: promote/demote/ban/unban через `buildAuthAuditContext`
 
 ### 3.7 WS7: Cleanup (P2)
 
@@ -312,8 +314,9 @@ Scope: глобальный аудит проекта boltorezka + план ре
 └── Готово к merge в main
 
 Итерация 4 (P1 + P2 — безопасность + cleanup)
-├── WS6: maxConn, query timeout, protocol version, audit log
-├── WS7: spike cleanup, error codes, types dedup
+├── WS6: maxConn(5), statement_timeout(5s), protocolVersion(1), audit log ✅ (28c28fe)
+├── Deploy test → smoke ✅
+├── WS7: spike cleanup, error codes, types dedup ← СЛЕДУЮЩИЙ
 └── Deploy test → smoke → prod (стабилизация)
 
 Итерация 5 (DM Stage 1-2 — backend)
