@@ -164,6 +164,20 @@ export function DmProvider({ token, children }: { token: string; children: React
     }
   }, [activeThreadId, token]);
 
+  // Слушаем DM-события из WS через CustomEvent (dispatched в wsMessageController)
+  const handleDmRealtimeEventRef = useRef(handleDmRealtimeEvent);
+  handleDmRealtimeEventRef.current = handleDmRealtimeEvent;
+
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const { type, payload } = (event as CustomEvent<{ type: string; payload: unknown }>).detail;
+      handleDmRealtimeEventRef.current(type, payload);
+    };
+
+    window.addEventListener("boltorezka:dm", handler);
+    return () => window.removeEventListener("boltorezka:dm", handler);
+  }, []);
+
   const value: DmContextValue = {
     activeThreadId,
     activePeerUserId,

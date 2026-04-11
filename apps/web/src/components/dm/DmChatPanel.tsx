@@ -99,26 +99,34 @@ export function DmChatPanel({ t }: { t: TranslateFn }) {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* ── composer ── */}
+      {/* ── composer (reuses chat-compose layout) ── */}
       <form
-        className="flex items-end gap-2 border-t border-[var(--pixel-border)] px-4 py-2"
+        className="chat-compose mt-3 flex items-end gap-3"
         onSubmit={handleSend}
       >
-        <textarea
-          className="flex-1 resize-none rounded border border-[var(--pixel-border)] bg-[var(--pixel-surface)] px-3 py-1.5 text-sm text-[var(--pixel-text)] outline-none placeholder:text-[var(--pixel-muted)] focus:border-[var(--pixel-accent)]"
-          rows={1}
-          placeholder={t("chat.composerPlaceholder")}
-          value={dmText}
-          onChange={(e) => setDmText(e.target.value)}
-          onKeyDown={handleKeyDown}
-        />
         <button
-          type="submit"
-          className="secondary icon-btn small"
-          disabled={!dmText.trim()}
-          aria-label={t("chat.send")}
+          type="button"
+          className="btn secondary"
+          disabled={false}
+          aria-label={t("chat.attach")}
+          title={t("chat.attach")}
         >
-          <i className="bi bi-send" aria-hidden="true" />
+          <i className="bi bi-paperclip" aria-hidden="true" />
+        </button>
+        <div className="chat-compose-input-stack">
+          <div className="chat-compose-editor-shell">
+            <textarea
+              value={dmText}
+              onChange={(e) => setDmText(e.target.value)}
+              onKeyDown={handleKeyDown}
+              rows={2}
+              placeholder={t("chat.typePlaceholder")}
+              aria-label={t("chat.composeAria")}
+            />
+          </div>
+        </div>
+        <button type="submit" className="btn secondary" disabled={!dmText.trim()}>
+          <i className="bi bi-send-fill" aria-hidden="true" />
         </button>
       </form>
     </section>
