@@ -5,7 +5,7 @@
 // Не добавляйте здесь парсинг, правила транспортировки или логику рабочего процесса.
 // =============================================================================
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { RealtimeClient } from "./services";
 import { AppShellLayout } from "./components";
 import { DmProvider } from "./components/dm/DmContext";
@@ -597,7 +597,56 @@ export function App() {
     dmModeActive
   }));
 
+  const roomsTreeBootstrapRetryTimerRef = useRef<number | null>(null);
+  const roomsTreeBootstrapRetryAttemptRef = useRef(0);
+  const roomsTreeBootstrapRetryKeyRef = useRef("");
+
   const roomsTreeBootstrapPending = Boolean(String(token || "").trim() && String(currentServerId || "").trim() && !roomsTree);
+
+  useEffect(() => {
+    const bootstrapKey = `${String(token || "").trim()}:${String(currentServerId || "").trim()}`;
+    if (roomsTreeBootstrapRetryKeyRef.current === bootstrapKey) {
+      return;
+    }
+
+    roomsTreeBootstrapRetryKeyRef.current = bootstrapKey;
+    roomsTreeBootstrapRetryAttemptRef.current = 0;
+    if (roomsTreeBootstrapRetryTimerRef.current !== null) {
+      window.clearTimeout(roomsTreeBootstrapRetryTimerRef.current);
+      roomsTreeBootstrapRetryTimerRef.current = null;
+    }
+  }, [currentServerId, token]);
+
+  useEffect(() => {
+    if (!roomsTreeBootstrapPending || roomsTreeLoading) {
+      return;
+    }
+
+    const normalizedToken = String(token || "").trim();
+    const normalizedServerId = String(currentServerId || "").trim();
+    if (!normalizedToken || !normalizedServerId) {
+      return;
+    }
+
+    const role = String(user?.role || "user");
+    const canViewArchivedRooms = role === "admin" || role === "super_admin";
+    const attempt = Math.max(0, roomsTreeBootstrapRetryAttemptRef.current);
+    const delayMs = Math.min(10000, 1200 * (attempt + 1));
+
+    roomsTreeBootstrapRetryTimerRef.current = window.setTimeout(() => {
+      roomsTreeBootstrapRetryTimerRef.current = null;
+      roomsTreeBootstrapRetryAttemptRef.current = attempt + 1;
+      pushLog(`rooms tree bootstrap retry #${attempt + 1}`);
+      void roomAdminController.loadRoomTree(normalizedToken, canViewArchivedRooms);
+    }, delayMs);
+
+    return () => {
+      if (roomsTreeBootstrapRetryTimerRef.current !== null) {
+        window.clearTimeout(roomsTreeBootstrapRetryTimerRef.current);
+        roomsTreeBootstrapRetryTimerRef.current = null;
+      }
+    };
+  }, [currentServerId, pushLog, roomAdminController, roomsTreeBootstrapPending, roomsTreeLoading, token, user?.role]);
 
   const { serverUnreadCount } = useServerRoomUnreadCounters({
     token,
