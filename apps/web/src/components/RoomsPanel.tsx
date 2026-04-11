@@ -474,18 +474,22 @@ export function RoomsPanel({
 
         <RoomsOutsideOnlineBlock
           title={t("rooms.onlineOutsideRooms")}
+          openChatLabel={t("rooms.openChat")}
           collapsed={outsideRoomsCollapsed}
           outsideOnlineCount={onlineOutsideRooms.length}
           unreadCount={outsideRoomsUnreadCount}
           members={onlineOutsideRooms}
+          currentUserId={normalizedCurrentUserId}
           onToggleCollapsed={onToggleOutsideRoomsCollapsed}
         />
 
         <RoomsOfflineBlock
           title={t("rooms.offlineMembers")}
+          openChatLabel={t("rooms.openChat")}
           collapsed={offlineRoomsCollapsed}
           offlineCount={offlineMembers.length}
           members={offlineMembers}
+          currentUserId={normalizedCurrentUserId}
           onToggleCollapsed={onToggleOfflineRoomsCollapsed}
         />
 

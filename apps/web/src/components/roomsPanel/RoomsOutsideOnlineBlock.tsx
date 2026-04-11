@@ -1,4 +1,5 @@
 import { memo } from "react";
+import { useDmOptional } from "../dm/DmContext";
 
 type OutsideOnlineMember = {
   userId: string;
@@ -7,21 +8,26 @@ type OutsideOnlineMember = {
 
 type RoomsOutsideOnlineBlockProps = {
   title: string;
+  openChatLabel: string;
   collapsed: boolean;
   outsideOnlineCount: number;
   unreadCount: number;
   members: OutsideOnlineMember[];
+  currentUserId: string;
   onToggleCollapsed: () => void;
 };
 
 function RoomsOutsideOnlineBlockInner({
   title,
+  openChatLabel,
   collapsed,
   outsideOnlineCount,
   unreadCount,
   members,
+  currentUserId,
   onToggleCollapsed
 }: RoomsOutsideOnlineBlockProps) {
+  const dm = useDmOptional();
   if (outsideOnlineCount <= 0) {
     return null;
   }
@@ -46,11 +52,27 @@ function RoomsOutsideOnlineBlockInner({
       {!collapsed ? (
         <ul className="rooms-list">
           {members.map((member) => (
-            <li key={`outside-online:${member.userId || member.userName}`} className="channel-row grid grid-cols-[1fr] items-center gap-2">
-              <div className="secondary room-btn room-btn-interactive pointer-events-none opacity-85">
+            <li key={`outside-online:${member.userId || member.userName}`} className="channel-member-item relative min-h-[22px]">
+              <div className="secondary room-btn room-btn-interactive opacity-85">
                 <i className="bi bi-circle-fill text-[10px] text-[var(--pixel-accent)]" aria-hidden="true" />
                 <span className="rooms-presence-user-name">{member.userName}</span>
               </div>
+              {dm && member.userId && member.userId !== currentUserId ? (
+                <div className={`channel-member-dm-anchor ${dm.activePeerUserId === member.userId ? "channel-member-dm-anchor-active" : ""}`} style={{ position: "absolute", right: "var(--space-sm)", top: "50%", transform: "translateY(-50%)" }}>
+                  {dm.dmUnreadByPeerUserId[member.userId] > 0 ? (
+                    <span className="room-unread-badge">{dm.dmUnreadByPeerUserId[member.userId]}</span>
+                  ) : null}
+                  <button
+                    type="button"
+                    className={`secondary icon-btn tiny channel-member-dm-btn ${dm.activePeerUserId === member.userId ? "channel-member-dm-btn-active" : ""}`}
+                    aria-label={openChatLabel}
+                    data-tooltip={openChatLabel}
+                    onClick={() => dm.openDm(member.userId, member.userName)}
+                  >
+                    <i className="bi bi-chat-dots" aria-hidden="true" />
+                  </button>
+                </div>
+              ) : null}
             </li>
           ))}
         </ul>

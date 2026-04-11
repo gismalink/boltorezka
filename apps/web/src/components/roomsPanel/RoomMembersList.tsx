@@ -5,6 +5,7 @@ import type { RoomMember } from "./roomMembers";
 import type { ServerMemberProfileDetails } from "./roomMemberSettingsTypes";
 import { RoomMemberSettingsPopup } from "./RoomMemberSettingsPopup";
 import { RoomMemberProfileModal } from "./RoomMemberProfileModal";
+import { useDmOptional } from "../dm/DmContext";
 
 type RoomMembersListProps = Pick<
   RoomsPanelProps,
@@ -61,6 +62,7 @@ export function RoomMembersList({
   roomScreenShareOwnerId,
   startDragMember
 }: RoomMembersListProps) {
+  const dm = useDmOptional();
   const memberMenuAnchorRef = useRef<HTMLElement | null>(null);
   const memberRoleAnchorRef = useRef<HTMLElement | null>(null);
   const memberHiddenRoomsAnchorRef = useRef<HTMLElement | null>(null);
@@ -271,7 +273,13 @@ export function RoomMembersList({
           const noteValue = String(memberDraft?.note ?? memberPreference?.note ?? "");
           const menuKey = `${room.slug}:${member.userId || member.userName}`;
           const canManageMember = Boolean(member.userId) && !isCurrentUser;
-          const memberActionsVariant = canManageMember ? "one" : "none";
+          const hasDmAction = Boolean(!isCurrentUser && dm && member.userId);
+          const hasSettingsAction = canManageMember;
+          const memberActionsVariant = hasDmAction && hasSettingsAction
+            ? "two"
+            : hasDmAction || hasSettingsAction
+              ? "one"
+              : "none";
           const memberSettingsOpen = memberMenuOpenKey === menuKey && Boolean(member.userId) && memberMenuUserId === member.userId;
 
           return (
@@ -334,6 +342,25 @@ export function RoomMembersList({
                     </span>
                   ) : null}
                 </span>
+                {!isCurrentUser && dm && member.userId ? (
+                  <div className={`channel-member-dm-anchor ${dm.activePeerUserId === member.userId ? "channel-member-dm-anchor-active" : ""}`}>
+                    {dm.dmUnreadByPeerUserId[member.userId] > 0 ? (
+                      <span className="room-unread-badge">{dm.dmUnreadByPeerUserId[member.userId]}</span>
+                    ) : null}
+                    <button
+                      type="button"
+                      className={`secondary icon-btn tiny channel-member-dm-btn ${dm.activePeerUserId === member.userId ? "channel-member-dm-btn-active" : ""}`}
+                      aria-label={t("rooms.openChat")}
+                      data-tooltip={t("rooms.openChat")}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        dm.openDm(member.userId, member.userName);
+                      }}
+                    >
+                      <i className="bi bi-chat-dots" aria-hidden="true" />
+                    </button>
+                  </div>
+                ) : null}
                 {canManageMember ? (
                 <div className={`channel-member-settings-anchor channel-member-settings-anchor-actions-${memberActionsVariant} relative ${memberSettingsOpen ? "channel-member-settings-anchor-open" : ""}`}>
                   <button

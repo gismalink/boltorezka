@@ -330,18 +330,24 @@ Scope: глобальный аудит проекта boltorezka + план ре
 ├── Deploy test → smoke ✅ (a38022f)
 └── Готово к merge в main
 
-Итерация 6 (DM Stage 1-2 — backend)
-├── DB миграции DM
-├── DmThreadService, DmMessageService, DmContactService, DmBlockListService
-├── DM API endpoints
-├── DM WS events dispatch
-└── Deploy test → smoke
+Итерация 6 (DM Stage 1-2 — backend) ✅ 2026-04-11
+├── DB миграции DM (0028: dm_threads, dm_messages, dm_read_cursors, dm_contacts, dm_user_settings, dm_block_list) ✅
+├── DmThreadService, DmMessageService, DmContactService, DmBlockListService ✅
+├── DM API endpoints (threads, messages, contacts, block-list, settings, uploads) ✅
+├── DM WS events dispatch (dm.message.created/updated/deleted, dm.thread.read) ✅
+├── Deploy test → smoke ✅
+└── Готово (звонки DmCallService — отложены)
 
-Итерация 7 (DM Stage 3 — frontend)
-├── ContactsList + DmThreadPanel
-├── DM integration (reuse MessageRenderer, useThreadState, Composer)
-├── Call UI (DmCallOverlay)
-└── Deploy test → smoke → prod
+Итерация 7 (DM Stage 3 — frontend) 🔄 в процессе
+├── DmContext + DmProvider (context, realtime listener, unread tracking) ✅
+├── DM открывается через ChatPanel reuse (headerSlot, AppWorkspacePanels) ✅
+├── DM unread badges на строках участников (RoomMembersList, Outside, Offline) ✅
+├── DM image paste support (backend upload init/finalize + frontend handler) ✅
+├── DM как переход между чатами (авто-закрытие при смене комнаты, без back button) ✅
+├── Deploy test → smoke ✅ (155341f)
+├── [ ] Sidebar блок «Личные сообщения» (список контактов/диалогов)
+├── [ ] Call UI (DmCallOverlay) — после DmCallService
+└── [ ] Deploy test → smoke → prod
 ```
 
 ---

@@ -1,6 +1,7 @@
 import { PixelCheckbox, PopupPortal, RangeSlider } from "../uicomponents";
 import type { TranslateFn } from "../../i18n";
 import type { ServerMemberProfileDetails } from "./roomMemberSettingsTypes";
+import { useDmOptional } from "../dm/DmContext";
 
 type RoomMemberSettingsPopupProps = {
   t: TranslateFn;
@@ -63,6 +64,7 @@ export function RoomMemberSettingsPopup({
   serverRoles,
   serverRolesLoading
 }: RoomMemberSettingsPopupProps) {
+  const dm = useDmOptional();
   const selectedCustomRoleIds = memberMenuProfile?.customRoles.map((role) => role.id) || [];
   const selectedCustomRoleNames = memberMenuProfile?.customRoles.map((role) => role.name).filter(Boolean) || [];
   const hiddenRoomsAvailable = memberMenuProfile?.hiddenRoomsAvailable || [];
@@ -142,6 +144,19 @@ export function RoomMemberSettingsPopup({
           <span>{t("server.contextProfile")}</span>
           <i className="bi bi-person-vcard" aria-hidden="true" />
         </button>
+        {dm ? (
+          <button
+            type="button"
+            className="secondary flex w-full items-center justify-between gap-3 text-left"
+            onClick={() => {
+              dm.openDm(memberUserId, memberUserName);
+              closeMemberMenu();
+            }}
+          >
+            <span>{t("rooms.openDm")}</span>
+            <i className="bi bi-chat-dots" aria-hidden="true" />
+          </button>
+        ) : null}
         {canKickMembers ? (
           <>
             <button

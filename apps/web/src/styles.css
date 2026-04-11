@@ -2590,6 +2590,10 @@ pre {
   padding-right: 84px;
 }
 
+.channel-member-main-actions-two {
+  padding-right: 112px;
+}
+
 .channel-member-right-group {
   position: absolute;
   right: var(--space-sm);
@@ -2608,6 +2612,12 @@ pre {
 .channel-member-right-group-open.channel-member-right-group-actions-one .channel-member-icons,
 .channel-member-item:hover .channel-member-right-group-actions-one .channel-member-icons {
   transform: translateX(-16px);
+}
+
+.channel-member-right-group-actions-two:hover .channel-member-icons,
+.channel-member-right-group-open.channel-member-right-group-actions-two .channel-member-icons,
+.channel-member-item:hover .channel-member-right-group-actions-two .channel-member-icons {
+  transform: translateX(-36px);
 }
 
 .channel-row-actions .channel-action-btn,
@@ -2937,7 +2947,8 @@ pre {
 }
 
 .channel-member-settings-anchor-open,
-.channel-member-item:hover .channel-member-settings-anchor-actions-one {
+.channel-member-item:hover .channel-member-settings-anchor-actions-one,
+.channel-member-item:hover .channel-member-settings-anchor-actions-two {
   width: 22px;
   margin-left: 2px;
   opacity: 1;
@@ -2954,6 +2965,52 @@ pre {
 .channel-member-settings-anchor-open .channel-member-settings-btn {
   opacity: 1;
   pointer-events: auto;
+}
+
+/* DM кнопка — slide-in при ховере (канонично как settings-anchor) */
+.channel-member-dm-anchor {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 0;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transition: max-width 0.16s ease, opacity 0.12s ease;
+}
+
+.channel-member-dm-btn {
+  min-height: 22px;
+  min-width: 22px;
+}
+
+.channel-member-item:hover .channel-member-dm-anchor {
+  max-width: 60px;
+  margin-left: 2px;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Непрочитанные DM бейджи видны всегда, даже без ховера */
+.channel-member-dm-anchor:has(.room-unread-badge) {
+  max-width: none;
+  overflow: visible;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Активный DM (открыт чат с этим пользователем) */
+.channel-member-dm-anchor-active {
+  max-width: none;
+  overflow: visible;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.channel-member-dm-btn-active {
+  border-color: color-mix(in srgb, var(--pixel-neon-cyan) 70%, var(--pixel-border) 30%);
+  box-shadow: inset 2px 0 0 color-mix(in srgb, var(--pixel-neon-cyan) 72%, var(--pixel-border) 28%);
 }
 
 .channel-member-settings-popup {
@@ -3061,15 +3118,15 @@ pre {
   max-height: none;
   overflow: auto;
   background: var(--pixel-panel-2);
-  border: var(--border-strong) solid var(--pixel-border);
-  border-radius: var(--radius-surface);
+  border: none;
+  border-top: var(--border-strong) solid var(--pixel-border);
+  border-bottom: var(--border-strong) solid var(--pixel-border);
+  border-radius: 0;
   padding: var(--space-md);
   display: grid;
   gap: var(--space-sm);
   align-content: start;
-  box-shadow:
-    inset 0 0 0 1px var(--pixel-inset-stroke-strong),
-    3px 3px 0 var(--pixel-hard-shadow);
+  box-shadow: none;
 }
 
 .chat-avatar {
@@ -3296,6 +3353,7 @@ pre {
 
 .chat-header-stack {
   position: relative;
+  border-bottom: var(--border-strong) solid var(--pixel-border);
 }
 
 .chat-search-toggle-btn-active {

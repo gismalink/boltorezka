@@ -373,3 +373,40 @@ export type CallInitialStatePayload = {
   roomSlug: string;
   participants: CallInitialStateParticipantPayload[];
 };
+
+// ─── DM realtime payloads ───────────────────────────────
+
+export type DmMessagePayload = {
+  id: string;
+  threadId: string;
+  senderUserId: string;
+  senderName: string;
+  body: string;
+  attachmentsJson: unknown | null;
+  createdAt: string;
+  editedAt: string | null;
+  deletedAt: string | null;
+  replyToMessageId: string | null;
+  replyToUserId: string | null;
+  replyToUserName: string | null;
+  replyToText: string | null;
+};
+
+export type DmMessageDeletedPayload = {
+  id: string;
+  threadId: string;
+};
+
+export type DmThreadReadPayload = {
+  threadId: string;
+  userId: string;
+  lastReadMessageId: string;
+};
+
+export type DmReactionChangedPayload = {
+  threadId: string;
+  messageId: string;
+  emoji: string;
+  userId: string;
+  active: boolean;
+};

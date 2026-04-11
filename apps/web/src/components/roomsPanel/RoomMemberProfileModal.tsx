@@ -1,5 +1,6 @@
 import type { TranslateFn } from "../../i18n";
 import type { ServerMemberProfileDetails } from "./roomMemberSettingsTypes";
+import { useDmOptional } from "../dm/DmContext";
 
 type RoomMemberProfileModalProps = {
   t: TranslateFn;
@@ -9,6 +10,8 @@ type RoomMemberProfileModalProps = {
 };
 
 export function RoomMemberProfileModal({ t, data, open, onClose }: RoomMemberProfileModalProps) {
+  const dm = useDmOptional();
+
   if (!open || !data) {
     return null;
   }
@@ -40,6 +43,20 @@ export function RoomMemberProfileModal({ t, data, open, onClose }: RoomMemberPro
         <h3>{t("rooms.memberProfileTitle")}</h3>
         <div data-agent-id="rooms.member.profile-modal.name" data-agent-value={data.name}><strong>{t("server.profileName")}: </strong>{data.name}</div>
         <div data-agent-id="rooms.member.profile-modal.email" data-agent-value={data.email}><strong>Email: </strong>{data.email}</div>
+        {dm && data.userId ? (
+          <button
+            type="button"
+            className="secondary small mt-1 inline-flex items-center gap-2"
+            onClick={() => {
+              dm.openDm(data.userId, data.name);
+              onClose();
+            }}
+            data-agent-id="rooms.member.profile-modal.open-dm"
+          >
+            <i className="bi bi-chat-dots" aria-hidden="true" />
+            {t("rooms.openDm")}
+          </button>
+        ) : null}
       </div>
     </div>
   );

@@ -1315,6 +1315,17 @@ export class WsMessageController {
       case "audio.quality.updated":
         this.handleAudioQualityUpdated(message);
         return;
+      case "dm.message.created":
+      case "dm.message.updated":
+      case "dm.message.deleted":
+      case "dm.reaction.changed":
+      case "dm.thread.read":
+        window.dispatchEvent(
+          new CustomEvent("boltorezka:dm", {
+            detail: { type: message.type, payload: message.payload }
+          })
+        );
+        return;
       default:
         return;
     }

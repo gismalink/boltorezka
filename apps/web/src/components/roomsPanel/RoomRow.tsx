@@ -7,6 +7,7 @@ import { RoomMembersList } from "./RoomMembersList";
 import { useMemberDragDrop } from "./useMemberDragDrop";
 import { useRoomMutePresetState } from "./useRoomMutePresetState";
 import { useRoomSettingsAutosave } from "./useRoomSettingsAutosave";
+import { useDmOptional } from "../dm/DmContext";
 
 const ROOM_KIND_ICON_CLASS: Record<RoomKind, string> = {
   text: "bi-hash",
@@ -142,8 +143,10 @@ function RoomRowInner({
   const roomActionsVariant = roomActionButtonsCount > 1 ? "two" : roomActionButtonsCount === 1 ? "one" : "none";
   const roomScreenShareOwnerId = String(screenShareOwnerByRoomSlug[room.slug]?.userId || "").trim();
   const roomHasVoiceState = roomSupportsRtc && room.slug === roomSlug;
+  const dmCtx = useDmOptional();
+  const isDmActive = Boolean(dmCtx?.activeThreadId);
   const roomChatActive = activeChatRoomSlug === room.slug;
-  const roomIsActive = roomSlug === room.slug || (!roomSupportsRtc && roomChatActive);
+  const roomIsActive = !isDmActive && (roomSlug === room.slug || (!roomSupportsRtc && roomChatActive));
   const { requestRoomSettingsAutosave } = useRoomSettingsAutosave({
     channelSettingsPopupOpenId,
     roomId: room.id,

@@ -83,6 +83,39 @@ export type ChatUploadFinalizeResponse = {
   };
 };
 
+// ─── DM types ───────────────────────────────────────────
+
+export type DmThread = {
+  id: string;
+  userLowId: string;
+  userHighId: string;
+  createdAt: string;
+  updatedAt: string;
+  peerUserId?: string;
+  peerName?: string;
+  peerEmail?: string;
+};
+
+export type DmThreadWithUnread = DmThread & {
+  unreadCount: number;
+};
+
+export type DmMessageItem = {
+  id: string;
+  threadId: string;
+  senderUserId: string;
+  senderName: string;
+  body: string;
+  attachmentsJson: unknown | null;
+  createdAt: string;
+  editedAt: string | null;
+  deletedAt: string | null;
+  replyToMessageId: string | null;
+  replyToUserId: string | null;
+  replyToUserName: string | null;
+  replyToText: string | null;
+};
+
 const CONFIGURED_API_ORIGIN = resolveApiBase();
 
 function withConfiguredApiOrigin(path: string): string {
@@ -854,5 +887,64 @@ export const api = {
     endpoints.chatUploadFinalize,
     token,
     withJsonBody("POST", input)
-  )
+  ),
+
+  // ─── DM ───────────────────────────────────────────
+
+  dmCreateThread: (token: string, peerUserId: string) =>
+    fetchJson<{ thread: DmThread }>("/v1/dm/threads", token, withJsonBody("POST", { peerUserId })),
+  dmGetThreads: (token: string) =>
+    fetchJson<{ threads: DmThreadWithUnread[] }>("/v1/dm/threads", token),
+  dmGetMessages: (token: string, threadId: string, cursor?: string, limit?: number) =>
+    fetchJson<{ messages: DmMessageItem[]; hasMore: boolean }>(
+      `/v1/dm/threads/${encodeURIComponent(threadId)}/messages${cursor ? `?cursor=${encodeURIComponent(cursor)}&limit=${limit || 50}` : `?limit=${limit || 50}`}`,
+      token
+    ),
+  dmSendMessage: (token: string, threadId: string, body: string, replyToMessageId?: string) =>
+    fetchJson<{ message: DmMessageItem }>(
+      `/v1/dm/threads/${encodeURIComponent(threadId)}/messages`,
+      token,
+      withJsonBody("POST", { body, ...(replyToMessageId ? { replyToMessageId } : {}) })
+    ),
+  dmEditMessage: (token: string, messageId: string, body: string) =>
+    fetchJson<{ message: DmMessageItem }>(
+      `/v1/dm/messages/${encodeURIComponent(messageId)}`,
+      token,
+      withJsonBody("PATCH", { body })
+    ),
+  dmDeleteMessage: (token: string, messageId: string) =>
+    fetchJson<{ ok: true }>(
+      `/v1/dm/messages/${encodeURIComponent(messageId)}`,
+      token,
+      withJsonBody("DELETE")
+    ),
+  dmMarkRead: (token: string, threadId: string, lastReadMessageId: string) =>
+    fetchJson<{ ok: true }>(
+      `/v1/dm/threads/${encodeURIComponent(threadId)}/read`,
+      token,
+      withJsonBody("POST", { lastReadMessageId })
+    ),
+  dmUploadInit: (token: string, threadId: string, input: { mimeType: string; sizeBytes: number }) =>
+    fetchJson<ChatUploadInitResponse>(
+      `/v1/dm/threads/${encodeURIComponent(threadId)}/uploads/init`,
+      token,
+      withJsonBody("POST", input)
+    ),
+  dmUploadFinalize: (token: string, threadId: string, input: { uploadId: string; storageKey: string; mimeType: string; sizeBytes: number; text?: string }) =>
+    fetchJson<{ message: DmMessageItem }>(
+      `/v1/dm/threads/${encodeURIComponent(threadId)}/uploads/finalize`,
+      token,
+      withJsonBody("POST", input)
+    ),
+  dmToggleReaction: (token: string, messageId: string, emoji: string, active: boolean) =>
+    fetchJson<{ ok: true }>(
+      `/v1/dm/messages/${encodeURIComponent(messageId)}/reactions`,
+      token,
+      withJsonBody("POST", { emoji, active })
+    ),
+  dmGetReactions: (token: string, threadId: string) =>
+    fetchJson<{ reactions: Array<{ messageId: string; emoji: string; userId: string }> }>(
+      `/v1/dm/threads/${encodeURIComponent(threadId)}/reactions`,
+      token
+    )
 };

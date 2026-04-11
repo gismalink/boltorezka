@@ -378,17 +378,32 @@ export async function chatUploadsRoutes(fastify: FastifyInstance) {
         [storageKey]
       );
 
+      let resolvedMimeType = attachmentResult.rows[0]?.mime_type || "";
+
       if ((attachmentResult.rowCount || 0) === 0) {
-        return reply.code(404).send({
-          error: "AttachmentNotFound",
-          message: "Attachment does not exist"
-        });
+        // Fallback: check DM message attachments (stored in JSONB)
+        const dmResult = await db.query<{ id: string; mime_type: string }>(
+          `SELECT m.id, elem->>'mime_type' AS mime_type
+           FROM dm_messages m, jsonb_array_elements(m.attachments_json) elem
+           WHERE elem->>'storage_key' = $1 AND m.deleted_at IS NULL
+           LIMIT 1`,
+          [storageKey]
+        );
+
+        if ((dmResult.rowCount || 0) === 0) {
+          return reply.code(404).send({
+            error: "AttachmentNotFound",
+            message: "Attachment does not exist"
+          });
+        }
+
+        resolvedMimeType = dmResult.rows[0]?.mime_type || "";
       }
 
       try {
         const object = await chatObjectStorage.getObject(storageKey);
         reply.header("Cache-Control", "public, max-age=31536000, immutable");
-        reply.header("Content-Type", object.mimeType || attachmentResult.rows[0].mime_type || "application/octet-stream");
+        reply.header("Content-Type", object.mimeType || resolvedMimeType || "application/octet-stream");
         return reply.send(object.buffer);
       } catch (error) {
         if (!(error instanceof ChatObjectStorageNotFoundError)) {

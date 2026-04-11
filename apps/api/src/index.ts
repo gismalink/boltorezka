@@ -24,6 +24,7 @@ import { realtimeRoutes } from "./routes/realtime.js";
 import { telemetryRoutes } from "./routes/telemetry.js";
 import { memberPreferencesRoutes } from "./routes/member-preferences.js";
 import { chatUploadsRoutes } from "./routes/chat-uploads.js";
+import { dmRoutes } from "./routes/dm.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -118,6 +119,7 @@ await app.register(notificationInboxRoutes);
 await app.register(notificationPushRoutes);
 await app.register(searchRoutes);
 await app.register(chatUploadsRoutes);
+await app.register(dmRoutes);
 await app.register(realtimeRoutes);
 await app.register(telemetryRoutes);
 await app.register(memberPreferencesRoutes);

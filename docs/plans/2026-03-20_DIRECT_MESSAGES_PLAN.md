@@ -197,31 +197,34 @@ Stage 0 note (2026-03-21): design-пакет закрыт в этом докум
 
 ### Stage 1 - Backend foundation
 
-- [ ] Миграции БД.
-- [ ] `DmThreadService`, `DmMessageService`, `DmContactService`.
-- [ ] `DmBlockListService`.
-- [ ] Policy checks: thread membership + dm settings.
+- [x] Миграции БД (0028: dm_threads, dm_messages, dm_read_cursors, dm_contacts, dm_user_settings, dm_block_list).
+- [x] `DmThreadService`, `DmMessageService`, `DmContactService`.
+- [x] `DmBlockListService`.
+- [x] Policy checks: thread membership + dm settings + block list.
 - [ ] `DmCallService` (start/accept/reject/end + timeout cleanup).
 
 ### Stage 2 - API
 
-- [ ] Эндпоинты `contacts`, `threads`, `messages`, `settings`.
-- [ ] Эндпоинты `manual contacts` и `block list`.
+- [x] Эндпоинты `contacts`, `threads`, `messages`, `settings`.
+- [x] Эндпоинты `manual contacts` и `block list`.
 - [ ] Эндпоинты `calls` (start/accept/reject/end).
-- [ ] Cursor pagination в истории сообщений.
-- [ ] Идемпотентность send path.
+- [x] Cursor pagination в истории сообщений.
+- [x] Идемпотентность send path.
 - [ ] Идемпотентность call reject/end path.
+- [x] DM upload init/finalize (image attachments).
 
 ### Stage 3 - Frontend
 
-- [ ] Sidebar блок `Личные сообщения`.
-- [ ] Экран/панель thread 1:1.
-- [ ] Интеграция unread и realtime обновлений.
+- [ ] Sidebar блок `Личные сообщения` (список контактов/диалогов).
+- [x] Экран/панель thread 1:1 (reuse ChatPanel via headerSlot, DmContext).
+- [x] Интеграция unread и realtime обновлений (dm.message.created/updated/deleted, DM unread badges на строках участников).
+- [x] DM image paste support (upload init/finalize + frontend paste handler).
+- [x] DM открывается как переход между чатами (авто-закрытие при смене комнаты).
 - [ ] Входящий/исходящий звонок UI и call controls.
 
 ### Stage 4 - Test rollout
 
-- [ ] Deploy в `test`.
+- [x] Deploy в `test` (feature/dm-v1, commit 155341f).
 - [ ] Smoke: create thread -> send -> receive realtime -> reload history -> mark read.
 - [ ] Smoke: доступ к thread только у 2 участников.
 - [ ] Smoke: call start -> accept -> connected -> end.

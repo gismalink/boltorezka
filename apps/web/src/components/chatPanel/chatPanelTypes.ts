@@ -1,4 +1,4 @@
-import type { ClipboardEvent, FormEvent, KeyboardEvent, RefObject } from "react";
+import type { ClipboardEvent, FormEvent, KeyboardEvent, ReactNode, RefObject } from "react";
 import type { Message, RoomTopic } from "../../domain";
 
 export type MentionCandidate = {
@@ -88,4 +88,6 @@ export type ChatPanelProps = {
   onApplyTopicReadLocal: (topicId: string) => void;
   canManageTopicModeration: boolean;
   mentionCandidates: MentionCandidate[];
+  /** When provided, replaces the default topic-tabs header with custom content (used by DM). */
+  headerSlot?: ReactNode;
 };

@@ -29,6 +29,7 @@ import { ChatMessageTimeline } from "./chatPanel/sections/ChatMessageTimeline";
 import { ChatComposerSection } from "./chatPanel/sections/ChatComposerSection";
 import { ChatPanelOverlays } from "./chatPanel/sections/ChatPanelOverlays";
 import { ChatFloatingActions } from "./chatPanel/sections/ChatFloatingActions";
+import { useDmOptional } from "./dm/DmContext";
 
 export type { ChatPanelProps };
 export { toMentionHandle };
@@ -82,7 +83,8 @@ export function ChatPanel({
   onSetTopicMentionUnreadLocal,
   onApplyTopicReadLocal,
   canManageTopicModeration,
-  mentionCandidates
+  mentionCandidates,
+  headerSlot
 }: ChatPanelProps) {
   const [topicFilterMode] = useState<"all" | "active" | "unread" | "my" | "mentions" | "pinned" | "archived">("all");
   const [topicPaletteOpen, setTopicPaletteOpen] = useState(false);
@@ -97,6 +99,9 @@ export function ChatPanel({
   const messageVmBuildMsRef = useRef(0);
   const metricsSamplesRef = useRef(0);
   const hasActiveRoom = Boolean(roomSlug);
+  const isDm = roomSlug === "dm";
+  const dmCtx = useDmOptional();
+  const hasTopics = topics.length > 0 || isDm;
   const mainTopicId = useMemo(() => {
     if (topics.length === 0) {
       return null;
@@ -298,12 +303,13 @@ export function ChatPanel({
   const activeTopicMentionUnreadCount = Math.max(0, Number(activeTopic?.mentionUnreadCount || 0));
   const activeTopicIsArchived = Boolean(activeTopic?.archivedAt);
   const unreadDividerVisible = useMemo(() => {
+    if (isDm) return Boolean(dmCtx?.dmUnreadDividerMessageId);
     const dividerMessageId = String(entryUnreadDivider?.messageId || "").trim();
     const dividerTopicId = String(entryUnreadDivider?.topicId || "").trim();
     const normalizedActiveTopicId = String(activeTopicId || "").trim();
 
     return Boolean(dividerMessageId && dividerTopicId && normalizedActiveTopicId && dividerTopicId === normalizedActiveTopicId);
-  }, [activeTopicId, entryUnreadDivider?.messageId, entryUnreadDivider?.topicId]);
+  }, [activeTopicId, entryUnreadDivider?.messageId, entryUnreadDivider?.topicId, isDm, dmCtx?.dmUnreadDividerMessageId]);
 
   const messageViewModels = useMemo(() => {
     const startedAt = typeof performance !== "undefined" ? performance.now() : 0;
@@ -314,12 +320,68 @@ export function ChatPanel({
   }, [messages, currentUserId]);
 
   const unreadDividerMessageId = useMemo(() => {
+    if (isDm) {
+      return dmCtx?.dmUnreadDividerMessageId || "";
+    }
     if (!unreadDividerVisible) {
       return "";
     }
 
     return String(entryUnreadDivider?.messageId || "").trim();
-  }, [entryUnreadDivider?.messageId, unreadDividerVisible]);
+  }, [entryUnreadDivider?.messageId, unreadDividerVisible, isDm, dmCtx?.dmUnreadDividerMessageId]);
+
+  const dmUnreadScrollKeyRef = useRef("");
+  const dmBottomScrollKeyRef = useRef("");
+
+  useEffect(() => {
+    if (!isDm) {
+      dmUnreadScrollKeyRef.current = "";
+      dmBottomScrollKeyRef.current = "";
+      return;
+    }
+
+    const container = chatLogRef.current;
+    if (!container) {
+      return;
+    }
+
+    const dmThreadId = String(roomId || "").trim();
+    if (!dmThreadId || messages.length === 0) {
+      return;
+    }
+
+    const dividerId = String(unreadDividerMessageId || "").trim();
+    if (dividerId) {
+      const dividerScrollKey = `${dmThreadId}:${dividerId}`;
+      if (dmUnreadScrollKeyRef.current === dividerScrollKey) {
+        return;
+      }
+
+      const selectorMessageId = (typeof CSS !== "undefined" && typeof CSS.escape === "function")
+        ? CSS.escape(dividerId)
+        : dividerId;
+      const target = container.querySelector<HTMLElement>(`[data-message-id="${selectorMessageId}"]`);
+      if (!target) {
+        return;
+      }
+
+      dmUnreadScrollKeyRef.current = dividerScrollKey;
+      window.requestAnimationFrame(() => {
+        target.scrollIntoView({ block: "center", behavior: "smooth" });
+      });
+      return;
+    }
+
+    const bottomScrollKey = `${dmThreadId}:bottom`;
+    if (dmBottomScrollKeyRef.current === bottomScrollKey) {
+      return;
+    }
+
+    dmBottomScrollKeyRef.current = bottomScrollKey;
+    window.requestAnimationFrame(() => {
+      container.scrollTo({ top: container.scrollHeight, behavior: "auto" });
+    });
+  }, [chatLogRef, isDm, messages.length, roomId, unreadDividerMessageId]);
 
   const loadedUnreadAfterDivider = useMemo(() => {
     if (!unreadDividerMessageId) {
@@ -419,7 +481,6 @@ export function ChatPanel({
   ]);
 
   const composePreviewImage = composePreviewImageUrl;
-  const hasTopics = topics.length > 0;
   const {
     hasTypingUsers,
     typingLabel
@@ -598,6 +659,9 @@ export function ChatPanel({
       data-agent-id={CHAT_AGENT_IDS.panel}
       data-agent-screen-context={chatScreenContext}
     >
+      {headerSlot ? (
+        <div className="chat-header-stack">{headerSlot}</div>
+      ) : (
       <div className="chat-header-stack">
         <TopicTabsHeader
           hasActiveRoom={hasActiveRoom}
@@ -653,6 +717,7 @@ export function ChatPanel({
           />
         ) : null}
       </div>
+      )}
       {hasActiveRoom && hotkeyStatusText ? (
         <div className="chat-hotkeys-hint muted" aria-live="polite">
           {hotkeyStatusText}
