@@ -304,9 +304,6 @@ function RoomRowInner({
         roomScreenShareOwnerId={roomScreenShareOwnerId}
         startDragMember={startDragMember}
       />
-                : "bi-mic";
-            const mediaStatusIconClass = mediaStatus === "media"
-              ? "bi-broadcast-pin"
     </div>
     </>
   );
