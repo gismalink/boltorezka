@@ -5,6 +5,7 @@ import type { RoomMember } from "./roomMembers";
 import type { ServerMemberProfileDetails } from "./roomMemberSettingsTypes";
 import { RoomMemberSettingsPopup } from "./RoomMemberSettingsPopup";
 import { RoomMemberProfileModal } from "./RoomMemberProfileModal";
+import { useDmOptional } from "../dm/DmContext";
 
 type RoomMembersListProps = Pick<
   RoomsPanelProps,
@@ -61,6 +62,7 @@ export function RoomMembersList({
   roomScreenShareOwnerId,
   startDragMember
 }: RoomMembersListProps) {
+  const dm = useDmOptional();
   const memberMenuAnchorRef = useRef<HTMLElement | null>(null);
   const memberRoleAnchorRef = useRef<HTMLElement | null>(null);
   const memberHiddenRoomsAnchorRef = useRef<HTMLElement | null>(null);
@@ -334,6 +336,20 @@ export function RoomMembersList({
                     </span>
                   ) : null}
                 </span>
+                {!isCurrentUser && dm && member.userId ? (
+                  <button
+                    type="button"
+                    className="secondary icon-btn tiny channel-member-dm-btn"
+                    aria-label={t("rooms.openDm")}
+                    data-tooltip={t("rooms.openDm")}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      dm.openDm(member.userId, member.userName);
+                    }}
+                  >
+                    <i className="bi bi-chat-dots" aria-hidden="true" />
+                  </button>
+                ) : null}
                 {canManageMember ? (
                 <div className={`channel-member-settings-anchor channel-member-settings-anchor-actions-${memberActionsVariant} relative ${memberSettingsOpen ? "channel-member-settings-anchor-open" : ""}`}>
                   <button

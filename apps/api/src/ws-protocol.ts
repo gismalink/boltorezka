@@ -20,7 +20,10 @@ import type {
   WsIncomingEnvelope,
   WsIncomingKnownEnvelope,
   WsIncomingPayload,
-  WsOutgoingEnvelope
+  WsOutgoingEnvelope,
+  DmMessagePayload,
+  DmMessageDeletedPayload,
+  DmThreadReadPayload
 } from "./ws-protocol.types.ts";
 
 export const CALL_MIC_STATE_EVENT_TYPES = ["call.mic_state"];
@@ -527,4 +530,22 @@ export function buildCallInitialStateEnvelope(
       participants
     }
   };
+}
+
+// ─── DM envelope builders ───────────────────────────────
+
+export function buildDmMessageCreatedEnvelope(payload: DmMessagePayload): { type: "dm.message.created"; payload: DmMessagePayload } {
+  return { type: "dm.message.created", payload };
+}
+
+export function buildDmMessageUpdatedEnvelope(payload: DmMessagePayload): { type: "dm.message.updated"; payload: DmMessagePayload } {
+  return { type: "dm.message.updated", payload };
+}
+
+export function buildDmMessageDeletedEnvelope(payload: DmMessageDeletedPayload): { type: "dm.message.deleted"; payload: DmMessageDeletedPayload } {
+  return { type: "dm.message.deleted", payload };
+}
+
+export function buildDmThreadReadEnvelope(payload: DmThreadReadPayload): { type: "dm.thread.read"; payload: DmThreadReadPayload } {
+  return { type: "dm.thread.read", payload };
 }

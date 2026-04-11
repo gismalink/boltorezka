@@ -2956,6 +2956,20 @@ pre {
   pointer-events: auto;
 }
 
+/* DM кнопка — видна при ховере на строку участника */
+.channel-member-dm-btn {
+  opacity: 0;
+  pointer-events: none;
+  min-height: 22px;
+  min-width: 22px;
+  transition: opacity 0.12s ease;
+}
+
+.channel-member-item:hover .channel-member-dm-btn {
+  opacity: 1;
+  pointer-events: auto;
+}
+
 .channel-member-settings-popup {
   width: min(92vw, 280px);
 }

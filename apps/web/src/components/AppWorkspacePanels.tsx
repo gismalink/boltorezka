@@ -4,6 +4,8 @@ import { ChatPanel } from "./ChatPanel";
 import { RoomsPanel } from "./RoomsPanel";
 import { UserDock } from "./UserDock";
 import { VideoWindowsOverlay } from "./VideoWindowsOverlay";
+import { useDmOptional } from "./dm/DmContext";
+import { DmChatPanel } from "./dm/DmChatPanel";
 
 type Translate = (key: string) => string;
 
@@ -32,6 +34,9 @@ export function AppWorkspacePanels({
   chatPanelProps,
   videoWindowsOverlayProps
 }: AppWorkspacePanelsProps) {
+  const dm = useDmOptional();
+  const isDmActive = Boolean(dm?.activeThreadId);
+
   return (
     <AppWorkspaceContent
       isMobileViewport={isMobileViewport}
@@ -40,7 +45,7 @@ export function AppWorkspacePanels({
       t={t}
       hasUser={hasUser}
       roomsPanelNode={<RoomsPanel {...roomsPanelProps} />}
-      chatPanelNode={<ChatPanel {...chatPanelProps} />}
+      chatPanelNode={isDmActive ? <DmChatPanel t={t} /> : <ChatPanel {...chatPanelProps} />}
       videoWindowsNode={<VideoWindowsOverlay {...videoWindowsOverlayProps} />}
       userDockNode={userDockSharedProps ? <UserDock {...userDockSharedProps} inlineSettingsMode={false} /> : null}
       userDockInlineSettingsNode={userDockSharedProps ? <UserDock {...userDockSharedProps} inlineSettingsMode /> : null}

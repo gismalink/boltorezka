@@ -1,4 +1,5 @@
 import { memo } from "react";
+import { useDmOptional } from "../dm/DmContext";
 
 type OutsideOnlineMember = {
   userId: string;
@@ -22,6 +23,7 @@ function RoomsOutsideOnlineBlockInner({
   members,
   onToggleCollapsed
 }: RoomsOutsideOnlineBlockProps) {
+  const dm = useDmOptional();
   if (outsideOnlineCount <= 0) {
     return null;
   }
@@ -46,11 +48,22 @@ function RoomsOutsideOnlineBlockInner({
       {!collapsed ? (
         <ul className="rooms-list">
           {members.map((member) => (
-            <li key={`outside-online:${member.userId || member.userName}`} className="channel-row grid grid-cols-[1fr] items-center gap-2">
-              <div className="secondary room-btn room-btn-interactive pointer-events-none opacity-85">
+            <li key={`outside-online:${member.userId || member.userName}`} className="channel-row group grid grid-cols-[1fr_auto] items-center gap-2">
+              <div className="secondary room-btn room-btn-interactive opacity-85">
                 <i className="bi bi-circle-fill text-[10px] text-[var(--pixel-accent)]" aria-hidden="true" />
                 <span className="rooms-presence-user-name">{member.userName}</span>
               </div>
+              {dm && member.userId ? (
+                <button
+                  type="button"
+                  className="secondary icon-btn tiny opacity-0 transition-opacity group-hover:opacity-100"
+                  aria-label="DM"
+                  data-tooltip="DM"
+                  onClick={() => dm.openDm(member.userId, member.userName)}
+                >
+                  <i className="bi bi-chat-dots" aria-hidden="true" />
+                </button>
+              ) : null}
             </li>
           ))}
         </ul>

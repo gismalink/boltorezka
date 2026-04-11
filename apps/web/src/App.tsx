@@ -8,6 +8,7 @@
 import { useRef } from "react";
 import { RealtimeClient } from "./services";
 import { AppShellLayout } from "./components";
+import { DmProvider } from "./components/dm/DmContext";
 import {
   DEFAULT_CHAT_IMAGE_DATA_URL_LENGTH,
   DEFAULT_CHAT_IMAGE_MAX_SIDE,
@@ -1025,5 +1026,9 @@ export function App() {
     return entryGate;
   }
 
-  return <AppShellLayout topChromeProps={appTopChromeProps} mainSectionProps={appMainSectionProps} shellOverlaysProps={appShellOverlaysProps} />;
+  return (
+    <DmProvider token={token}>
+      <AppShellLayout topChromeProps={appTopChromeProps} mainSectionProps={appMainSectionProps} shellOverlaysProps={appShellOverlaysProps} />
+    </DmProvider>
+  );
 }
