@@ -337,13 +337,13 @@ export function RoomMembersList({
                   ) : null}
                 </span>
                 {!isCurrentUser && dm && member.userId ? (
-                  <div className="channel-member-dm-anchor">
+                  <div className={`channel-member-dm-anchor ${dm.activePeerUserId === member.userId ? "channel-member-dm-anchor-active" : ""}`}>
                     {dm.dmUnreadByPeerUserId[member.userId] > 0 ? (
                       <span className="room-unread-badge">{dm.dmUnreadByPeerUserId[member.userId]}</span>
                     ) : null}
                     <button
                       type="button"
-                      className="secondary icon-btn tiny channel-member-dm-btn"
+                      className={`secondary icon-btn tiny channel-member-dm-btn ${dm.activePeerUserId === member.userId ? "channel-member-dm-btn-active" : ""}`}
                       aria-label={t("rooms.openDm")}
                       data-tooltip={t("rooms.openDm")}
                       onClick={(event) => {

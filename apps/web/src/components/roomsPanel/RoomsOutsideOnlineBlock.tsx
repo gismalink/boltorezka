@@ -56,13 +56,13 @@ function RoomsOutsideOnlineBlockInner({
                 <span className="rooms-presence-user-name">{member.userName}</span>
               </div>
               {dm && member.userId && member.userId !== currentUserId ? (
-                <div className="channel-member-dm-anchor" style={{ position: "absolute", right: "var(--space-sm)", top: "50%", transform: "translateY(-50%)" }}>
+                <div className={`channel-member-dm-anchor ${dm.activePeerUserId === member.userId ? "channel-member-dm-anchor-active" : ""}`} style={{ position: "absolute", right: "var(--space-sm)", top: "50%", transform: "translateY(-50%)" }}>
                   {dm.dmUnreadByPeerUserId[member.userId] > 0 ? (
                     <span className="room-unread-badge">{dm.dmUnreadByPeerUserId[member.userId]}</span>
                   ) : null}
                   <button
                     type="button"
-                    className="secondary icon-btn tiny channel-member-dm-btn"
+                    className={`secondary icon-btn tiny channel-member-dm-btn ${dm.activePeerUserId === member.userId ? "channel-member-dm-btn-active" : ""}`}
                     aria-label="DM"
                     data-tooltip="DM"
                     onClick={() => dm.openDm(member.userId, member.userName)}

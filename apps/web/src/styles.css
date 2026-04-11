@@ -2989,6 +2989,19 @@ pre {
   pointer-events: auto;
 }
 
+/* Активный DM (открыт чат с этим пользователем) */
+.channel-member-dm-anchor-active {
+  width: auto;
+  overflow: visible;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.channel-member-dm-btn-active {
+  border-color: color-mix(in srgb, var(--pixel-neon-cyan) 70%, var(--pixel-border) 30%);
+  box-shadow: inset 2px 0 0 color-mix(in srgb, var(--pixel-neon-cyan) 72%, var(--pixel-border) 28%);
+}
+
 .channel-member-settings-popup {
   width: min(92vw, 280px);
 }
