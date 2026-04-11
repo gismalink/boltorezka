@@ -244,15 +244,21 @@ Scope: глобальный аудит проекта boltorezka + план ре
   - SearchPanel: −2 (t, formatMessageTime)
 - [ ] TODO: `RoomsContext` (roomUnreadBySlug, roomMentionUnreadBySlug, roomMutePresetByRoomId)
 
-### 3.5 WS5: Frontend — извлечение переиспользуемых абстракций для DM (P1)
+### 3.5 WS5: Frontend — извлечение переиспользуемых абстракций для DM (P1) ✅
+
+**Статус: ВЫПОЛНЕНО** (SHA `548e07a`, deploy test smoke ok)
 
 **Цель:** подготовить building blocks, которые будут work для и rooms, и DM.
 
-- [ ] Выделить `MessageRenderer` компонент (из ChatMessageTimeline) — один renderer для room messages и DM messages
-- [ ] Выделить `useThreadState` hook — generic state для "ленты сообщений" (работает и для topics, и для dm_threads)
-- [ ] Выделить `MessageComposer` как standalone компонент (сейчас привязан к ChatPanel)
-- [ ] Выделить `useUserPresence` hook — по userId, reusable для DM online status
-- [ ] Выделить `useContextMenuPosition` hook — общий helper
+- [x] Выделить `useContextMenuPosition` hook — generic (pointerdown close, Escape, skipSelector)
+  - Мигрированы 3 потребителя: useMessageContextMenu, useChatPanelTopicActions, ServerProfileModal
+  - ServerProfileModal получил Escape key support (не было раньше)
+- [x] Выделить `renderMessageText` + `extractFirstLinkPreview` в `utils/messageTextRenderer.ts`
+  - Чистые функции: URL-линкификация, @-mention парсинг, форматирование (bold/italic/code/spoiler)
+  - ChatMessageTimeline теперь импортирует из утилиты
+- [ ] DEFERRED на DM-фазу: `MessageComposer` standalone (85% reuse, нужен DM context)
+- [ ] DEFERRED на DM-фазу: `useThreadState` hook (70% reuse, нужны DM pagination patterns)
+- [ ] DEFERRED на DM-фазу: `useUserPresence` hook (60% reuse, нужен WS refactor)
 
 ### 3.6 WS6: Backend — безопасность (P1)
 
@@ -296,12 +302,14 @@ Scope: глобальный аудит проекта boltorezka + план ре
 ├── Deploy test → smoke ✅
 └── Готово к merge в main
 
-Итерация 3 (P1 — context + reusable abstractions) → WS4 ✅ 2026-04-11, WS5 в процессе
+Итерация 3 (P1 — context + reusable abstractions) ✅ 2026-04-11
 ├── WS4: ChatPanelContext + ChatMessageActionsContext ✅ (d5af5a3)
 ├── ~22 prop slots убрано, ChatMessageTimeline −50% props
 ├── Deploy test → smoke ✅
-├── WS5: MessageRenderer, useThreadState, MessageComposer standalone ← СЛЕДУЮЩИЙ
-└── Deploy test → smoke
+├── WS5: useContextMenuPosition + renderMessageText/extractFirstLinkPreview ✅ (548e07a)
+├── 3 consumer migrated, 2 new util files
+├── Deploy test → smoke ✅
+└── Готово к merge в main
 
 Итерация 4 (P1 + P2 — безопасность + cleanup)
 ├── WS6: maxConn, query timeout, protocol version, audit log
