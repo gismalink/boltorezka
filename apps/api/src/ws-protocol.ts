@@ -224,6 +224,8 @@ export function buildErrorEnvelope(
  * @param {string | null} appBuildSha
  * @returns {WsOutgoingEnvelope}
  */
+export const WS_PROTOCOL_VERSION = 1;
+
 export function buildServerReadyEnvelope(userId: string, userName: string, appBuildSha: string | null = null): WsOutgoingEnvelope {
   const normalizedBuildSha = String(appBuildSha || "").trim();
 
@@ -233,6 +235,7 @@ export function buildServerReadyEnvelope(userId: string, userName: string, appBu
       userId,
       userName,
       connectedAt: new Date().toISOString(),
+      protocolVersion: WS_PROTOCOL_VERSION,
       ...(normalizedBuildSha ? { appBuildSha: normalizedBuildSha } : {})
     }
   };

@@ -5,7 +5,8 @@ const { Pool } = pg;
 
 export const db = new Pool({
   connectionString: config.databaseUrl,
-  max: 20
+  max: 20,
+  statement_timeout: 5000
 });
 
 export async function dbHealthcheck() {

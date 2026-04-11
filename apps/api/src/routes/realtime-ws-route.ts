@@ -9,6 +9,7 @@ import { db } from "../db.js";
 
 const WS_IDLE_TIMEOUT_MS = 45_000;
 const WS_HEARTBEAT_INTERVAL_MS = 20_000;
+const MAX_CONNECTIONS_PER_USER = 5;
 
 type SocketState = {
   sessionId: string;
@@ -113,6 +114,19 @@ export function registerRealtimeWsRoute(fastify: FastifyInstance, deps: Register
 
         if (!initialized) {
           return;
+        }
+
+        const state = socketState.get(connection);
+        if (state) {
+          const userSockets = socketsByUserId.get(state.userId.trim().toLowerCase());
+          if (userSockets && userSockets.size > MAX_CONNECTIONS_PER_USER) {
+            fastify.log.warn(
+              { userId: state.userId, count: userSockets.size, limit: MAX_CONNECTIONS_PER_USER },
+              "ws connection rejected: max connections per user exceeded"
+            );
+            connection.close(4429, "Too many connections");
+            return;
+          }
         }
 
         armIdleTimeout();

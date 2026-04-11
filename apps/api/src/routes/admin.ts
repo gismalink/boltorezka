@@ -5,6 +5,7 @@ import { broadcastRealtimeEnvelope } from "../realtime-broadcast.js";
 import { loadCurrentUser, requireAuth, requireRole } from "../middleware/auth.js";
 import { applyServiceBan, revokeServiceBan } from "../services/ban-service.js";
 import { writeServerAuditEvent } from "../services/server-audit-service.js";
+import { buildAuthAuditContext } from "./auth.helpers.js";
 import type { ServerSettingsRow, UserRow } from "../db.types.ts";
 import type {
   AdminServerOverviewResponse,
@@ -655,6 +656,16 @@ export async function adminRoutes(fastify: FastifyInstance) {
         [userId]
       );
 
+      fastify.log.info(
+        buildAuthAuditContext(request, {
+          event: "admin.user.promoted",
+          targetUserId: userId,
+          previousRole: targetUser.role,
+          newRole: "admin"
+        }),
+        "admin promoted user"
+      );
+
       const response: PromoteUserResponse = { user: updated.rows[0] };
       return response;
     }
@@ -714,6 +725,16 @@ export async function adminRoutes(fastify: FastifyInstance) {
         [userId]
       );
 
+      fastify.log.info(
+        buildAuthAuditContext(request, {
+          event: "admin.user.demoted",
+          targetUserId: userId,
+          previousRole: targetUser.role,
+          newRole: "user"
+        }),
+        "admin demoted user"
+      );
+
       const response: PromoteUserResponse = { user: updated.rows[0] };
       return response;
     }
@@ -764,6 +785,14 @@ export async function adminRoutes(fastify: FastifyInstance) {
         [userId]
       );
 
+      fastify.log.info(
+        buildAuthAuditContext(request, {
+          event: "admin.user.banned",
+          targetUserId: userId
+        }),
+        "admin banned user"
+      );
+
       const response: PromoteUserResponse = { user: updated.rows[0] };
       return response;
     }
@@ -797,6 +826,14 @@ export async function adminRoutes(fastify: FastifyInstance) {
          WHERE id = $1
          RETURNING id, email, username, name, ui_theme, role, is_banned, access_state, is_bot, created_at`,
         [userId]
+      );
+
+      fastify.log.info(
+        buildAuthAuditContext(request, {
+          event: "admin.user.unbanned",
+          targetUserId: userId
+        }),
+        "admin unbanned user"
       );
 
       const response: PromoteUserResponse = { user: updated.rows[0] };
