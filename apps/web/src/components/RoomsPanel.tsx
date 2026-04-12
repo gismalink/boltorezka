@@ -10,7 +10,6 @@ import { RoomsUncategorizedBlock } from "./roomsPanel/RoomsUncategorizedBlock";
 import { RoomsOutsideOnlineBlock } from "./roomsPanel/RoomsOutsideOnlineBlock";
 import { RoomsOfflineBlock } from "./roomsPanel/RoomsOfflineBlock";
 import { RoomsArchivedBlock } from "./roomsPanel/RoomsArchivedBlock";
-import { RoomsDirectMessagesBlock } from "./roomsPanel/RoomsDirectMessagesBlock";
 import { useRoomsPanelDerivedData } from "./roomsPanel/useRoomsPanelDerivedData";
 import { useOfflineMembers } from "./roomsPanel/useOfflineMembers";
 import { useRoomsPanelPersistentState } from "./roomsPanel/useRoomsPanelPersistentState";
@@ -115,8 +114,6 @@ export function RoomsPanel({
     setUncategorizedCollapsed,
     outsideRoomsCollapsed,
     setOutsideRoomsCollapsed,
-    directMessagesCollapsed,
-    setDirectMessagesCollapsed,
     offlineRoomsCollapsed,
     setOfflineRoomsCollapsed,
     archivedCollapsed,
@@ -263,10 +260,6 @@ export function RoomsPanel({
   const onToggleOutsideRoomsCollapsed = useCallback(() => {
     setOutsideRoomsCollapsed((prev) => !prev);
   }, [setOutsideRoomsCollapsed]);
-
-  const onToggleDirectMessagesCollapsed = useCallback(() => {
-    setDirectMessagesCollapsed((prev) => !prev);
-  }, [setDirectMessagesCollapsed]);
 
   const onToggleOfflineRoomsCollapsed = useCallback(() => {
     setOfflineRoomsCollapsed((prev) => !prev);
@@ -442,14 +435,6 @@ export function RoomsPanel({
 
         {showInitialRoomsSkeleton ? renderRoomsSkeleton(8) : (
           <>
-        <RoomsDirectMessagesBlock
-          title={t("rooms.directMessages")}
-          emptyLabel={t("rooms.directMessagesEmpty")}
-          openChatLabel={t("rooms.openChat")}
-          currentUserId={normalizedCurrentUserId}
-          collapsed={directMessagesCollapsed}
-          onToggleCollapsed={onToggleDirectMessagesCollapsed}
-        />
         {(roomsTree?.categories || []).map((category) => (
           <RoomsCategoryBlock
             key={category.id}

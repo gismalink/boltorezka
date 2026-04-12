@@ -343,7 +343,7 @@ Scope: глобальный аудит проекта boltorezka + план ре
 ├── Deploy test → smoke ✅
 └── Готово (звонки DmCallService — отложены)
 
-Итерация 7 (DM Stage 3 — frontend) ✅ 2026-04-12
+Итерация 7 (DM Stage 3 — frontend) 🔄 в процессе
 ├── DmContext + DmProvider (context, realtime listener, unread tracking) ✅ (155341f)
 ├── DM открывается через ChatPanel reuse (headerSlot, AppWorkspacePanels) ✅
 ├── DM unread badges на строках участников (RoomMembersList, Outside, Offline) ✅
@@ -357,7 +357,7 @@ Scope: глобальный аудит проекта boltorezka + план ре
 ├── UI: slide-анимация DM-кнопки + тултипы выровнены с room chat ✅ (28f41ff)
 ├── Fix: 403 archived rooms для неадмина ✅ (e0b5c75)
 ├── Deploy test → smoke ✅ (28f41ff)
-├── Sidebar блок «Личные сообщения» (список контактов/диалогов) ✅
+├── [ ] Глобальный список контактов/диалогов DM (вне конкретного сервера) → см. 2026-03-20_DIRECT_MESSAGES_PLAN.md Stage 3
 ├── ~~Call UI (DmCallOverlay)~~ → перенесен в 2026-04-11_DM_CALLS_PLAN.md
 └── Deploy test → smoke → prod ✅ (main: e71506b)
 ```
