@@ -11,6 +11,8 @@ import {
 import type { RoomRow } from "../db.types.ts";
 import { normalizeBoundedString } from "../validators.js";
 
+const dbQuery = db.query.bind(db);
+
 export type TopicWithRoomRow = {
   topic_id: string;
   topic_slug: string;
@@ -100,14 +102,14 @@ export async function loadTopicWithRoom(topicId: string): Promise<TopicWithRoomR
 
 export async function ensureTopicReadAccess(topic: TopicWithRoomRow, userId: string): Promise<void> {
   if (topic.room_is_hidden) {
-    const allowed = await hasHiddenRoomAccess(db.query, topic.room_id, userId);
+    const allowed = await hasHiddenRoomAccess(dbQuery, topic.room_id, userId);
     if (!allowed) {
       throw new Error("forbidden_room_access");
     }
   }
 
   if (!topic.room_is_public) {
-    const isMember = await hasRoomMembership(db.query, topic.room_id, userId);
+    const isMember = await hasRoomMembership(dbQuery, topic.room_id, userId);
     if (!isMember) {
       throw new Error("forbidden_room_access");
     }
@@ -115,7 +117,7 @@ export async function ensureTopicReadAccess(topic: TopicWithRoomRow, userId: str
 }
 
 export async function canModerateMessage(topic: TopicWithRoomRow, userId: string): Promise<boolean> {
-  if (await isGlobalModerator(db.query, userId)) {
+  if (await isGlobalModerator(dbQuery, userId)) {
     return true;
   }
 
@@ -124,11 +126,11 @@ export async function canModerateMessage(topic: TopicWithRoomRow, userId: string
     return false;
   }
 
-  return isServerModerator(db.query, serverId, userId);
+  return isServerModerator(dbQuery, serverId, userId);
 }
 
 export async function ensureTopicSendAllowed(topic: TopicWithRoomRow, userId: string): Promise<void> {
-  const canBypass = await canBypassRoomSendPolicy(db.query, userId, topic.room_server_id);
+  const canBypass = await canBypassRoomSendPolicy(dbQuery, userId, topic.room_server_id);
   const serverId = normalizeBoundedString(topic.room_server_id, 128) || "";
   if (serverId && !canBypass) {
     const muteState = await resolveActiveServerMute(serverId, userId);
