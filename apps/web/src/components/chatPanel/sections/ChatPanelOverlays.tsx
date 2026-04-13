@@ -5,6 +5,7 @@ import { CHAT_AGENT_IDS } from "../../../constants/chatAgentSemantics";
 import { Button } from "../../uicomponents";
 import { TopicContextMenu } from "./TopicContextMenu";
 import { useChatPanelCtx } from "../ChatPanelContext";
+import { useTopicActionsCtx } from "../TopicActionsContext";
 
 type ChatPanelOverlaysProps = {
   previewImageUrl: string | null;
@@ -21,25 +22,9 @@ type ChatPanelOverlaysProps = {
   getTopicUnreadCount: (topic: RoomTopic) => number;
   setTopicPaletteSelectedIndex: (value: number) => void;
   selectTopicFromPalette: (topicId: string) => void;
-  topicContextMenu: { topicId: string; x: number; y: number } | null;
   topics: RoomTopic[];
   isTopicProtected: (topicId: string) => boolean;
   canManageTopicModeration: boolean;
-  editingTopicSaving: boolean;
-  archivingTopicId: string | null;
-  notificationSaving: boolean;
-  editingTopicTitle: string;
-  setEditingTopicTitle: (value: string) => void;
-  isEditingTopicTitleInline: boolean;
-  onStartTopicRenameInline: () => void;
-  onCancelTopicRenameInline: () => void;
-  applyTopicRename: () => Promise<void>;
-  runTopicMenuAction: (action: "read" | "archive" | "delete") => Promise<void>;
-  topicMutePresetById: Record<string, "1h" | "8h" | "24h" | "forever" | "off">;
-  setTopicMutePreset: (preset: "1h" | "8h" | "24h" | "forever" | "off") => Promise<void>;
-  topicDeleteConfirm: { topicId: string; title: string } | null;
-  setTopicDeleteConfirm: (value: { topicId: string; title: string } | null) => void;
-  confirmDeleteTopic: () => Promise<void>;
 };
 
 export function ChatPanelOverlays({
@@ -57,27 +42,29 @@ export function ChatPanelOverlays({
   getTopicUnreadCount,
   setTopicPaletteSelectedIndex,
   selectTopicFromPalette,
-  topicContextMenu,
   topics,
   isTopicProtected,
-  canManageTopicModeration,
-  editingTopicSaving,
-  archivingTopicId,
-  notificationSaving,
-  editingTopicTitle,
-  setEditingTopicTitle,
-  isEditingTopicTitleInline,
-  onStartTopicRenameInline,
-  onCancelTopicRenameInline,
-  applyTopicRename,
-  runTopicMenuAction,
-  topicMutePresetById,
-  setTopicMutePreset,
-  topicDeleteConfirm,
-  setTopicDeleteConfirm,
-  confirmDeleteTopic
+  canManageTopicModeration
 }: ChatPanelOverlaysProps) {
   const { t, setPreviewImageUrl, resolveAttachmentImageUrl } = useChatPanelCtx();
+  const {
+    topicContextMenu,
+    editingTopicTitle, setEditingTopicTitle,
+    editingTopicTitleDraftInitial, setEditingTopicTitleDraftInitial,
+    isEditingTopicTitleInline, setIsEditingTopicTitleInline,
+    editingTopicSaving, archivingTopicId, notificationSaving,
+    topicMutePresetById, topicDeleteConfirm, setTopicDeleteConfirm,
+    runTopicMenuAction, applyTopicRename, confirmDeleteTopic, setTopicMutePreset
+  } = useTopicActionsCtx();
+
+  const onStartTopicRenameInline = () => {
+    setEditingTopicTitleDraftInitial(editingTopicTitle);
+    setIsEditingTopicTitleInline(true);
+  };
+  const onCancelTopicRenameInline = () => {
+    setEditingTopicTitle(editingTopicTitleDraftInitial);
+    setIsEditingTopicTitleInline(false);
+  };
   return (
     <>
       {previewImageUrl && typeof document !== "undefined"

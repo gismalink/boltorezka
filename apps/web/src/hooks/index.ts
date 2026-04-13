@@ -16,6 +16,8 @@ export { useAppShellRoomRuntimeEffectsInput } from "./app/state/useAppShellRoomR
 export { useAppChatVideoProps } from "./app/state/useAppChatVideoProps";
 export { useAppCoreState } from "./app/state/useAppCoreState";
 export { useAppCoreStateInput } from "./app/state/useAppCoreStateInput";
+export { useAuthState } from "./app/state/useAuthState";
+export { useServerAdminState } from "./app/state/useServerAdminState";
 export { useAppUiState, type AppMobileTab, type AppServerMenuTab } from "./app/state/useAppUiState";
 export { useAppEntryGates } from "./app/state/useAppEntryGates";
 export { useAppEntryGatesState } from "./app/state/useAppEntryGatesState";

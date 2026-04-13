@@ -9,6 +9,8 @@ import { useEffect, useRef, useState } from "react";
 import { RealtimeClient } from "./services";
 import { AppShellLayout } from "./components";
 import { DmProvider } from "./components/dm/DmContext";
+import { AuthProvider } from "./contexts/AuthContext";
+import { LocaleProvider } from "./contexts/LocaleContext";
 import {
   DEFAULT_CHAT_IMAGE_DATA_URL_LENGTH,
   DEFAULT_CHAT_IMAGE_MAX_SIDE,
@@ -22,6 +24,8 @@ import {
 import {
   useAppCoreState,
   useAppCoreStateInput,
+  useAuthState,
+  useServerAdminState,
   useAppUiState,
   useAppAuthWorkspaceRuntime,
   useAppAuthWorkspaceRuntimeInput,
@@ -88,9 +92,14 @@ const ROOM_SLUG_STORAGE_KEY = "boltorezka_room_slug";
 
 export function App() {
   const [dmModeActive, setDmModeActive] = useState(false);
+  const { token, setToken, user, setUser, authMode, setAuthMode } = useAuthState();
   const {
-    token, setToken, user, setUser,
-    authMode, setAuthMode,
+    adminUsers, setAdminUsers, adminServers, setAdminServers,
+    adminServersLoading, setAdminServersLoading,
+    selectedAdminServerId, setSelectedAdminServerId, adminServerOverview, setAdminServerOverview,
+    adminServerOverviewLoading, setAdminServerOverviewLoading
+  } = useServerAdminState();
+  const {
     rooms, setRooms, roomsTree, setRoomsTree, roomsTreeLoading, setRoomsTreeLoading, archivedRooms, setArchivedRooms,
     roomSlug, setRoomSlug, chatRoomSlug, setChatRoomSlug,
     roomUnreadBySlug, setRoomUnreadBySlug,
@@ -117,11 +126,7 @@ export function App() {
     serverAgeConfirming, setServerAgeConfirming, ageGateBlockedRoomSlug, setAgeGateBlockedRoomSlug,
     pendingInviteToken, setPendingInviteToken, inviteAccepting, setInviteAccepting,
     telemetrySummary, setTelemetrySummary, wsState, setWsState,
-    pendingJoinRequestsCount: pendingJoinRequestsCountState, setPendingJoinRequestsCount,
-    adminUsers, setAdminUsers, adminServers, setAdminServers,
-    adminServersLoading, setAdminServersLoading,
-    selectedAdminServerId, setSelectedAdminServerId, adminServerOverview, setAdminServerOverview,
-    adminServerOverviewLoading, setAdminServerOverviewLoading
+    pendingJoinRequestsCount: pendingJoinRequestsCountState, setPendingJoinRequestsCount
   } = useAppCoreState(useAppCoreStateInput({
     clientBuildSha: CLIENT_BUILD_SHA,
     versionUpdateExpectedShaKey: VERSION_UPDATE_EXPECTED_SHA_KEY,
@@ -1077,7 +1082,12 @@ export function App() {
     return entryGate;
   }
 
+  const authCtxValue = { authToken: serviceToken };
+  const localeCtxValue = { t, locale };
+
   return (
+    <AuthProvider value={authCtxValue}>
+    <LocaleProvider value={localeCtxValue}>
     <DmProvider
       token={token}
       onDmOpen={() => {
@@ -1088,5 +1098,7 @@ export function App() {
     >
       <AppShellLayout topChromeProps={appTopChromeProps} mainSectionProps={appMainSectionProps} shellOverlaysProps={appShellOverlaysProps} />
     </DmProvider>
+    </LocaleProvider>
+    </AuthProvider>
   );
 }

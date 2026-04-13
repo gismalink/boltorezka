@@ -1,9 +1,9 @@
 import { useEffect, useRef } from "react";
 import type { ServerScreenShareResolution, ServerVideoEffectType } from "../../hooks/rtc/voiceCallTypes";
 import { RangeSlider } from "../uicomponents";
+import { useServerProfileModalCtx } from "./ServerProfileModalContext";
 
 type ServerVideoSettingsTabProps = {
-  t: (key: string) => string;
   serverVideoEffectType: ServerVideoEffectType;
   serverVideoResolution: "160x120" | "320x240" | "640x480";
   serverVideoFps: 10 | 15 | 24 | 30;
@@ -32,7 +32,6 @@ type ServerVideoSettingsTabProps = {
 };
 
 export function ServerVideoSettingsTab({
-  t,
   serverVideoEffectType,
   serverVideoResolution,
   serverVideoFps,
@@ -59,6 +58,7 @@ export function ServerVideoSettingsTab({
   onSetServerVideoWindowMinWidth,
   onSetServerVideoWindowMaxWidth
 }: ServerVideoSettingsTabProps) {
+  const { t } = useServerProfileModalCtx();
   const previewVideoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {

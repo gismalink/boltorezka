@@ -9,14 +9,15 @@ import {
   resolveDesktopArtifactHref,
   resolveDesktopChannelFromOrigin
 } from "./serverProfileUtils";
+import { useServerProfileModalCtx } from "./ServerProfileModalContext";
 
 type ServerDesktopTabProps = {
-  t: (key: string) => string;
   open: boolean;
   serverMenuTab: string;
 };
 
-export function ServerDesktopTab({ t, open, serverMenuTab }: ServerDesktopTabProps) {
+export function ServerDesktopTab({ open, serverMenuTab }: ServerDesktopTabProps) {
+  const { t } = useServerProfileModalCtx();
   const [desktopManifest, setDesktopManifest] = useState<DesktopManifest | null>(null);
   const [desktopManifestLoading, setDesktopManifestLoading] = useState(false);
   const [desktopManifestError, setDesktopManifestError] = useState("");

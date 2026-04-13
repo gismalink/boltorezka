@@ -102,23 +102,35 @@ Scope: глобальный аудит проекта boltorezka + план ре
 #### Props drilling (IMPORTANT)
 
 - **ChatPanel:** 50+ props.
-- **ServerProfileModal:** 80+ props.
-- Глубина проброса: 5–7 уровней (App → Shell → Panel → Section → Message → Button).
-- **Нет React Context** — всё идёт через props.
+- **ServerProfileModal:** 88 flat props (Container уже группирует в 5 sub-objects, но Modal принимает flat).
+- Глубина проброса снижена в `ChatPanel` (часто 1–2 уровня до section-компонентов), но остаётся высокой ширина prop-контрактов на границах секций.
+- React Context уже внедрён частично (`ChatPanelContext`, `ChatMessageActionsContext`), однако покрытие не системное и `ServerProfileModal` остаётся prop-heavy.
+
+**TODO (Итерация 12):**
+- [ ] **ServerProfileModal: grouped props** — изменить `ServerProfileModalProps` на `{ permissions, state, data, actions, meta }`, убрать flat-распаковку в Container. (−88 flat → 5 grouped)
+- [ ] **ServerProfileModalContext** — по аналогии с `ChatPanelContext`: вынести `t`, `currentUserId`, `currentServerId`, `currentServerRole`, permissions в context; tab-компоненты (`ServerDesktopTab`, `ServerVideoSettingsTab`) берут из context. (−15–20 prop slots)
+- [ ] **TopicActionsContext** — вынести ~20 topic CRUD/mute/rename колбэков из `ChatPanelOverlaysProps` (32 props) в context; Overlays и TopicContextMenu потребляют через хук. (−15–18 prop slots)
 
 #### State management (IMPORTANT)
 
-- `useAppShellRuntime` → каскад 30+ хуков → любое изменение наверху перерендеривает всё.
-- Нет context boundaries для feature-scoped state.
-- `useAppCoreState` смешивает auth + desktop handoff.
+- `useAppShellRuntime` → каскад 4 хуков → любое изменение наверху перерендеривает всё.
+- Context boundaries внедрены частично (chat-область), но на уровне AppShell feature-scoped boundaries всё ещё недостаточны.
+- `useAppCoreState` — 58 useState, смешивает auth + desktop handoff + server admin state.
+
+**TODO (Итерация 12):**
+- [ ] **Split `useAppCoreState`** — выделить `useAuthState` (token, user, authMode), `useDesktopHandoffState` (roomSlug, pendingInviteToken), `useServerAdminState` (adminUsers, adminServers). `useAppCoreState` остаётся тонким фасадом. Изоляция re-renders.
+- [ ] **AuthContext + LocaleContext на AppShell** — создать `AuthContext` (token, user, userId, role) и `LocaleContext` (t, locale) на уровне AppShell; убирает проброс cross-cutting props через 4+ уровней.
 
 #### Дублирование (MINOR)
 
 | Паттерн | Повторения | Решение |
 |---------|-----------|---------|
-| Context menu positioning (refs + state) | 8+ мест | Вынести `useContextMenuPosition` |
-| Confirmation dialogs (useState + confirm) | 5+ мест | Вынести `useConfirmDialog` |
-| Cursor-based list loading | 4+ мест | Общий `usePaginatedList` |
+| Context menu positioning (refs + state) | 3 потребителя | ✅ Готово: `useContextMenuPosition` (WS5) |
+| Confirmation dialogs (useState + confirm) | 4 места | Вынести `useConfirmDialog` |
+| Cursor-based list loading | 5 мест | Общий `usePaginatedList` |
+
+**TODO (Итерация 12):**
+- [ ] **`useConfirmDialog` hook** — извлечь из `ServerProfileModal`, `RoomsPanel`, `UserDockSettingsOverlay`, `useChatPanelTopicActions`. API: `{ isOpen, payload, open(payload), close(), confirm() }`. (−4 inline-паттерна)
 
 #### CSS (MINOR)
 

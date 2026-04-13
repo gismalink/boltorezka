@@ -1,8 +1,6 @@
 import { useState } from "react";
 import type { CallStatus } from "../../../services";
 import type {
-  AdminServerListItem,
-  AdminServerOverview,
   Message,
   MessagesCursor,
   PresenceMember,
@@ -12,10 +10,8 @@ import type {
   RoomsTreeResponse,
   ServerMemberItem,
   ServerListItem,
-  TelemetrySummary,
-  User
+  TelemetrySummary
 } from "../../../domain";
-import { readPersistedBearerToken } from "../../../utils/authStorage";
 
 type UseAppCoreStateInput = {
   clientBuildSha: string;
@@ -34,9 +30,6 @@ export function useAppCoreState({
   currentServerIdStorageKey,
   pendingAccessAutoRefreshSec
 }: UseAppCoreStateInput) {
-  const [token, setToken] = useState(() => readPersistedBearerToken());
-  const [user, setUser] = useState<User | null>(null);
-  const [authMode, setAuthMode] = useState("loading");
   const [rooms, setRooms] = useState<Room[]>([]);
   const [roomsTree, setRoomsTree] = useState<RoomsTreeResponse | null>(null);
   const [roomsTreeLoading, setRoomsTreeLoading] = useState(false);
@@ -106,17 +99,8 @@ export function useAppCoreState({
   const [telemetrySummary, setTelemetrySummary] = useState<TelemetrySummary | null>(null);
   const [wsState, setWsState] = useState<"disconnected" | "connecting" | "connected">("disconnected");
   const [pendingJoinRequestsCount, setPendingJoinRequestsCount] = useState(0);
-  const [adminUsers, setAdminUsers] = useState<User[]>([]);
-  const [adminServers, setAdminServers] = useState<AdminServerListItem[]>([]);
-  const [adminServersLoading, setAdminServersLoading] = useState(false);
-  const [selectedAdminServerId, setSelectedAdminServerId] = useState("");
-  const [adminServerOverview, setAdminServerOverview] = useState<AdminServerOverview | null>(null);
-  const [adminServerOverviewLoading, setAdminServerOverviewLoading] = useState(false);
 
   return {
-    token, setToken,
-    user, setUser,
-    authMode, setAuthMode,
     rooms, setRooms,
     roomsTree, setRoomsTree,
     roomsTreeLoading, setRoomsTreeLoading,
@@ -162,12 +146,6 @@ export function useAppCoreState({
     inviteAccepting, setInviteAccepting,
     telemetrySummary, setTelemetrySummary,
     wsState, setWsState,
-    pendingJoinRequestsCount, setPendingJoinRequestsCount,
-    adminUsers, setAdminUsers,
-    adminServers, setAdminServers,
-    adminServersLoading, setAdminServersLoading,
-    selectedAdminServerId, setSelectedAdminServerId,
-    adminServerOverview, setAdminServerOverview,
-    adminServerOverviewLoading, setAdminServerOverviewLoading
+    pendingJoinRequestsCount, setPendingJoinRequestsCount
   };
 }

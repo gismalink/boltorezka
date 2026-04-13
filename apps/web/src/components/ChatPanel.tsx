@@ -21,6 +21,7 @@ import { useChatPanelMentionNavigation } from "./chatPanel/hooks/useChatPanelMen
 import { useChatPanelUnreadWindowExpand } from "./chatPanel/hooks/useChatPanelUnreadWindowExpand";
 import { useChatPanelScrollToBottom } from "./chatPanel/hooks/useChatPanelScrollToBottom";
 import { ChatPanelProvider, ChatMessageActionsProvider } from "./chatPanel/ChatPanelContext";
+import { TopicActionsProvider } from "./chatPanel/TopicActionsContext";
 import type { ChatPanelProps, MentionCandidate } from "./chatPanel/chatPanelTypes";
 import { toMentionHandle } from "./chatPanel/chatPanelTypes";
 import { TopicTabsHeader } from "./chatPanel/sections/TopicTabsHeader";
@@ -272,6 +273,24 @@ export function ChatPanel({
     onUnarchiveTopic,
     onDeleteTopic
   });
+
+  const topicActionsCtxValue = useMemo(() => ({
+    topicContextMenu, editingTopicTitle, setEditingTopicTitle,
+    editingTopicTitleDraftInitial, setEditingTopicTitleDraftInitial,
+    isEditingTopicTitleInline, setIsEditingTopicTitleInline,
+    editingTopicSaving, archivingTopicId, notificationSaving,
+    topicMutePresetById, topicDeleteConfirm, setTopicDeleteConfirm,
+    openTopicContextMenu, runTopicMenuAction, applyTopicRename,
+    confirmDeleteTopic, setTopicMutePreset
+  }), [
+    topicContextMenu, editingTopicTitle, setEditingTopicTitle,
+    editingTopicTitleDraftInitial, setEditingTopicTitleDraftInitial,
+    isEditingTopicTitleInline, setIsEditingTopicTitleInline,
+    editingTopicSaving, archivingTopicId, notificationSaving,
+    topicMutePresetById, topicDeleteConfirm, setTopicDeleteConfirm,
+    openTopicContextMenu, runTopicMenuAction, applyTopicRename,
+    confirmDeleteTopic, setTopicMutePreset
+  ]);
 
   const { resolveAttachmentImageUrl } = useChatPanelAttachmentImages({
     messages,
@@ -654,6 +673,7 @@ export function ChatPanel({
   return (
     <ChatPanelProvider value={chatPanelCtxValue}>
     <ChatMessageActionsProvider value={chatMessageActionsValue}>
+    <TopicActionsProvider value={topicActionsCtxValue}>
     <section
       className="card middle-card relative flex min-h-0 flex-1 flex-col overflow-hidden"
       data-agent-id={CHAT_AGENT_IDS.panel}
@@ -815,33 +835,12 @@ export function ChatPanel({
         getTopicUnreadCount={getTopicUnreadCount}
         setTopicPaletteSelectedIndex={setTopicPaletteSelectedIndex}
         selectTopicFromPalette={selectTopicFromPalette}
-        topicContextMenu={topicContextMenu}
         topics={topicsForUi}
         isTopicProtected={isMainTopic}
         canManageTopicModeration={canManageTopicModeration}
-        editingTopicSaving={editingTopicSaving}
-        archivingTopicId={archivingTopicId}
-        notificationSaving={notificationSaving}
-        editingTopicTitle={editingTopicTitle}
-        setEditingTopicTitle={setEditingTopicTitle}
-        isEditingTopicTitleInline={isEditingTopicTitleInline}
-        onStartTopicRenameInline={() => {
-          setEditingTopicTitleDraftInitial(editingTopicTitle);
-          setIsEditingTopicTitleInline(true);
-        }}
-        onCancelTopicRenameInline={() => {
-          setEditingTopicTitle(editingTopicTitleDraftInitial);
-          setIsEditingTopicTitleInline(false);
-        }}
-        applyTopicRename={applyTopicRename}
-        runTopicMenuAction={runTopicMenuAction}
-        topicMutePresetById={topicMutePresetById}
-        setTopicMutePreset={setTopicMutePreset}
-        topicDeleteConfirm={topicDeleteConfirm}
-        setTopicDeleteConfirm={setTopicDeleteConfirm}
-        confirmDeleteTopic={confirmDeleteTopic}
       />
     </section>
+    </TopicActionsProvider>
     </ChatMessageActionsProvider>
     </ChatPanelProvider>
   );

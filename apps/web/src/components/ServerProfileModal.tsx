@@ -24,192 +24,155 @@ import type {
 } from "./serverProfileModal/serverProfileUtils";
 import { ActionIconButton, resolveDisplayName } from "./serverProfileModal/serverProfileUtils";
 import { ServerVideoSettingsTab } from "./serverProfileModal/ServerVideoSettingsTab";
+import { ServerProfileModalProvider } from "./serverProfileModal/ServerProfileModalContext";
 
 type ServerProfileModalProps = {
   open: boolean;
   t: (key: string) => string;
-  canManageUsers: boolean;
-  canPromote: boolean;
-  canManageServerControlPlane: boolean;
-  canViewTelemetry: boolean;
-  hasCurrentServer: boolean;
-  serverMenuTab: ServerMenuTab;
-  adminUsers: User[];
-  adminServers: AdminServerListItem[];
-  adminServersLoading: boolean;
-  selectedAdminServerId: string;
-  adminServerOverview: AdminServerOverview | null;
-  adminServerOverviewLoading: boolean;
-  currentUserId: string;
-  currentServerRole: ServerMemberRole | null;
-  currentServerName: string;
-  currentServerId: string;
-  servers: ServerListItem[];
-  serverMembers: ServerMemberItem[];
-  serverMembersLoading: boolean;
-  lastInviteUrl: string;
-  creatingInvite: boolean;
-  eventLog: string[];
-  telemetrySummary: TelemetrySummary | null;
-  callStatus: string;
-  lastCallPeer: string;
-  roomVoiceConnected: boolean;
-  callEventLog: string[];
-  serverAudioQuality: AudioQuality;
-  serverAudioQualitySaving: boolean;
-  canManageAudioQuality: boolean;
-  serverChatImagePolicy: {
-    maxDataUrlLength: number;
-    maxImageSide: number;
-    jpegQuality: number;
+  permissions: {
+    canManageUsers: boolean;
+    canPromote: boolean;
+    canManageServerControlPlane: boolean;
+    canViewTelemetry: boolean;
+    canManageAudioQuality: boolean;
   };
-  serverVideoEffectType: ServerVideoEffectType;
-  serverVideoResolution: "160x120" | "320x240" | "640x480";
-  serverVideoFps: 10 | 15 | 24 | 30;
-  serverScreenShareResolution: ServerScreenShareResolution;
-  serverVideoPixelFxStrength: number;
-  serverVideoPixelFxPixelSize: number;
-  serverVideoPixelFxGridThickness: number;
-  serverVideoAsciiCellSize: number;
-  serverVideoAsciiContrast: number;
-  serverVideoAsciiColor: string;
-  serverVideoWindowMinWidth: number;
-  serverVideoWindowMaxWidth: number;
-  serverVideoPreviewStream: MediaStream | null;
-  onClose: () => void;
-  onSetServerMenuTab: (value: ServerMenuTab) => void;
-  onPromote: (userId: string) => void;
-  onDemote: (userId: string) => void;
-  onSetBan: (userId: string, banned: boolean) => void;
-  onSetAccessState: (userId: string, accessState: "pending" | "active" | "blocked") => void;
-  onSoftDeleteUser: (userId: string) => void;
-  onForceDeleteUser: (userId: string) => void;
-  onSelectAdminServer: (serverId: string) => void;
-  onToggleAdminServerBlocked: (serverId: string, blocked: boolean) => void;
-  onDeleteAdminServer: (serverId: string) => void;
-  onCreateServerInvite: () => void;
-  onCopyInviteUrl: () => void;
-  onChangeCurrentServer: (serverId: string) => void;
-  onRenameCurrentServer: (name: string) => void;
-  onLeaveServer: () => void;
-  onDeleteServer: () => void;
-  onRemoveServerMember: (userId: string) => void;
-  onBanServerMember: (userId: string) => void;
-  onUnbanServerMember: (userId: string) => void;
-  onTransferServerOwnership: (userId: string) => void;
-  onLoadServerMemberProfile: (userId: string) => Promise<ServerMemberProfileDetails | null>;
-  onLoadServerRoles: () => Promise<Array<{ id: string; name: string; isBase: boolean }>>;
-  onCreateServerRole: (name: string) => Promise<boolean>;
-  onRenameServerRole: (roleId: string, name: string) => Promise<boolean>;
-  onDeleteServerRole: (roleId: string) => Promise<boolean>;
-  onSetServerMemberCustomRoles: (userId: string, roleIds: string[]) => Promise<boolean>;
-  onSetServerMemberHiddenRoomAccess: (userId: string, roomIds: string[]) => Promise<boolean>;
-  onRefreshTelemetry: () => void;
-  onSetServerAudioQuality: (value: AudioQuality) => void;
-  onSetServerVideoEffectType: (value: ServerVideoEffectType) => void;
-  onSetServerVideoResolution: (value: "160x120" | "320x240" | "640x480") => void;
-  onSetServerVideoFps: (value: 10 | 15 | 24 | 30) => void;
-  onSetServerScreenShareResolution: (value: ServerScreenShareResolution) => void;
-  onSetServerVideoPixelFxStrength: (value: number) => void;
-  onSetServerVideoPixelFxPixelSize: (value: number) => void;
-  onSetServerVideoPixelFxGridThickness: (value: number) => void;
-  onSetServerVideoAsciiCellSize: (value: number) => void;
-  onSetServerVideoAsciiContrast: (value: number) => void;
-  onSetServerVideoAsciiColor: (value: string) => void;
-  onSetServerVideoWindowMinWidth: (value: number) => void;
-  onSetServerVideoWindowMaxWidth: (value: number) => void;
+  state: {
+    serverMenuTab: ServerMenuTab;
+    serverAudioQuality: AudioQuality;
+    serverAudioQualitySaving: boolean;
+    serverChatImagePolicy: {
+      maxDataUrlLength: number;
+      maxImageSide: number;
+      jpegQuality: number;
+    };
+    serverVideoEffectType: ServerVideoEffectType;
+    serverVideoResolution: "160x120" | "320x240" | "640x480";
+    serverVideoFps: 10 | 15 | 24 | 30;
+    serverScreenShareResolution: ServerScreenShareResolution;
+    serverVideoPixelFxStrength: number;
+    serverVideoPixelFxPixelSize: number;
+    serverVideoPixelFxGridThickness: number;
+    serverVideoAsciiCellSize: number;
+    serverVideoAsciiContrast: number;
+    serverVideoAsciiColor: string;
+    serverVideoWindowMinWidth: number;
+    serverVideoWindowMaxWidth: number;
+  };
+  data: {
+    adminUsers: User[];
+    adminServers: AdminServerListItem[];
+    adminServersLoading: boolean;
+    selectedAdminServerId: string;
+    adminServerOverview: AdminServerOverview | null;
+    adminServerOverviewLoading: boolean;
+    currentUserId: string;
+    currentServerRole: ServerMemberRole | null;
+    currentServerName: string;
+    currentServerId: string;
+    servers: ServerListItem[];
+    hasCurrentServer: boolean;
+    serverMembers: ServerMemberItem[];
+    serverMembersLoading: boolean;
+    lastInviteUrl: string;
+    eventLog: string[];
+    telemetrySummary: TelemetrySummary | null;
+    callStatus: string;
+    lastCallPeer: string;
+    roomVoiceConnected: boolean;
+    callEventLog: string[];
+    serverVideoPreviewStream: MediaStream | null;
+  };
+  actions: {
+    onClose: () => void;
+    onSetServerMenuTab: (value: ServerMenuTab) => void;
+    onPromote: (userId: string) => void;
+    onDemote: (userId: string) => void;
+    onSetBan: (userId: string, banned: boolean) => void;
+    onSetAccessState: (userId: string, accessState: "pending" | "active" | "blocked") => void;
+    onSoftDeleteUser: (userId: string) => void;
+    onForceDeleteUser: (userId: string) => void;
+    onSelectAdminServer: (serverId: string) => void;
+    onToggleAdminServerBlocked: (serverId: string, blocked: boolean) => void;
+    onDeleteAdminServer: (serverId: string) => void;
+    onCreateServerInvite: () => void;
+    onCopyInviteUrl: () => void;
+    onChangeCurrentServer: (serverId: string) => void;
+    onRenameCurrentServer: (name: string) => void;
+    onLeaveServer: () => void;
+    onDeleteServer: () => void;
+    onRemoveServerMember: (userId: string) => void;
+    onBanServerMember: (userId: string) => void;
+    onUnbanServerMember: (userId: string) => void;
+    onTransferServerOwnership: (userId: string) => void;
+    onLoadServerMemberProfile: (userId: string) => Promise<ServerMemberProfileDetails | null>;
+    onLoadServerRoles: () => Promise<Array<{ id: string; name: string; isBase: boolean }>>;
+    onCreateServerRole: (name: string) => Promise<boolean>;
+    onRenameServerRole: (roleId: string, name: string) => Promise<boolean>;
+    onDeleteServerRole: (roleId: string) => Promise<boolean>;
+    onSetServerMemberCustomRoles: (userId: string, roleIds: string[]) => Promise<boolean>;
+    onSetServerMemberHiddenRoomAccess: (userId: string, roomIds: string[]) => Promise<boolean>;
+    onRefreshTelemetry: () => void;
+    onSetServerAudioQuality: (value: AudioQuality) => void;
+    onSetServerVideoEffectType: (value: ServerVideoEffectType) => void;
+    onSetServerVideoResolution: (value: "160x120" | "320x240" | "640x480") => void;
+    onSetServerVideoFps: (value: 10 | 15 | 24 | 30) => void;
+    onSetServerScreenShareResolution: (value: ServerScreenShareResolution) => void;
+    onSetServerVideoPixelFxStrength: (value: number) => void;
+    onSetServerVideoPixelFxPixelSize: (value: number) => void;
+    onSetServerVideoPixelFxGridThickness: (value: number) => void;
+    onSetServerVideoAsciiCellSize: (value: number) => void;
+    onSetServerVideoAsciiContrast: (value: number) => void;
+    onSetServerVideoAsciiColor: (value: string) => void;
+    onSetServerVideoWindowMinWidth: (value: number) => void;
+    onSetServerVideoWindowMaxWidth: (value: number) => void;
+  };
+  meta: {
+    creatingInvite: boolean;
+  };
 };
 
 export function ServerProfileModal({
   open,
   t,
-  canManageUsers,
-  canPromote,
-  canManageServerControlPlane,
-  canViewTelemetry,
-  hasCurrentServer,
-  serverMenuTab,
-  adminUsers,
-  adminServers,
-  adminServersLoading,
-  selectedAdminServerId,
-  adminServerOverview,
-  adminServerOverviewLoading,
-  currentUserId,
-  currentServerRole,
-  currentServerName,
-  currentServerId,
-  servers,
-  serverMembers,
-  serverMembersLoading,
-  lastInviteUrl,
-  creatingInvite,
-  eventLog,
-  telemetrySummary,
-  callStatus,
-  lastCallPeer,
-  roomVoiceConnected,
-  callEventLog,
-  serverAudioQuality,
-  serverAudioQualitySaving,
-  canManageAudioQuality,
-  serverChatImagePolicy,
-  serverVideoEffectType,
-  serverVideoResolution,
-  serverVideoFps,
-  serverScreenShareResolution,
-  serverVideoPixelFxStrength,
-  serverVideoPixelFxPixelSize,
-  serverVideoPixelFxGridThickness,
-  serverVideoAsciiCellSize,
-  serverVideoAsciiContrast,
-  serverVideoAsciiColor,
-  serverVideoWindowMinWidth,
-  serverVideoWindowMaxWidth,
-  serverVideoPreviewStream,
-  onClose,
-  onSetServerMenuTab,
-  onPromote,
-  onDemote,
-  onSetBan,
-  onSetAccessState,
-  onSoftDeleteUser,
-  onForceDeleteUser,
-  onSelectAdminServer,
-  onToggleAdminServerBlocked,
-  onDeleteAdminServer,
-  onCreateServerInvite,
-  onCopyInviteUrl,
-  onChangeCurrentServer,
-  onRenameCurrentServer,
-  onLeaveServer,
-  onDeleteServer,
-  onRemoveServerMember,
-  onBanServerMember,
-  onUnbanServerMember,
-  onTransferServerOwnership,
-  onLoadServerMemberProfile,
-  onLoadServerRoles,
-  onCreateServerRole,
-  onRenameServerRole,
-  onDeleteServerRole,
-  onSetServerMemberCustomRoles,
-  onSetServerMemberHiddenRoomAccess,
-  onRefreshTelemetry,
-  onSetServerAudioQuality,
-  onSetServerVideoEffectType,
-  onSetServerVideoResolution,
-  onSetServerVideoFps,
-  onSetServerScreenShareResolution,
-  onSetServerVideoPixelFxStrength,
-  onSetServerVideoPixelFxPixelSize,
-  onSetServerVideoPixelFxGridThickness,
-  onSetServerVideoAsciiCellSize,
-  onSetServerVideoAsciiContrast,
-  onSetServerVideoAsciiColor,
-  onSetServerVideoWindowMinWidth,
-  onSetServerVideoWindowMaxWidth
+  permissions,
+  state,
+  data,
+  actions,
+  meta
 }: ServerProfileModalProps) {
+  const {
+    canManageUsers, canPromote, canManageServerControlPlane, canViewTelemetry, canManageAudioQuality
+  } = permissions;
+  const {
+    serverMenuTab, serverAudioQuality, serverAudioQualitySaving, serverChatImagePolicy,
+    serverVideoEffectType, serverVideoResolution, serverVideoFps, serverScreenShareResolution,
+    serverVideoPixelFxStrength, serverVideoPixelFxPixelSize, serverVideoPixelFxGridThickness,
+    serverVideoAsciiCellSize, serverVideoAsciiContrast, serverVideoAsciiColor,
+    serverVideoWindowMinWidth, serverVideoWindowMaxWidth
+  } = state;
+  const {
+    adminUsers, adminServers, adminServersLoading, selectedAdminServerId,
+    adminServerOverview, adminServerOverviewLoading, currentUserId, currentServerRole,
+    currentServerName, currentServerId, servers, hasCurrentServer, serverMembers,
+    serverMembersLoading, lastInviteUrl, eventLog, telemetrySummary,
+    callStatus, lastCallPeer, roomVoiceConnected, callEventLog, serverVideoPreviewStream
+  } = data;
+  const { creatingInvite } = meta;
+  const {
+    onClose, onSetServerMenuTab, onPromote, onDemote, onSetBan, onSetAccessState,
+    onSoftDeleteUser, onForceDeleteUser, onSelectAdminServer, onToggleAdminServerBlocked,
+    onDeleteAdminServer, onCreateServerInvite, onCopyInviteUrl, onChangeCurrentServer,
+    onRenameCurrentServer, onLeaveServer, onDeleteServer, onRemoveServerMember,
+    onBanServerMember, onUnbanServerMember, onTransferServerOwnership,
+    onLoadServerMemberProfile, onLoadServerRoles, onCreateServerRole, onRenameServerRole,
+    onDeleteServerRole, onSetServerMemberCustomRoles, onSetServerMemberHiddenRoomAccess,
+    onRefreshTelemetry, onSetServerAudioQuality, onSetServerVideoEffectType,
+    onSetServerVideoResolution, onSetServerVideoFps, onSetServerScreenShareResolution,
+    onSetServerVideoPixelFxStrength, onSetServerVideoPixelFxPixelSize,
+    onSetServerVideoPixelFxGridThickness, onSetServerVideoAsciiCellSize,
+    onSetServerVideoAsciiContrast, onSetServerVideoAsciiColor,
+    onSetServerVideoWindowMinWidth, onSetServerVideoWindowMaxWidth
+  } = actions;
   const [userAccessTab, setUserAccessTab] = useState<UserAccessTab>("active");
   const [productManagementTab, setProductManagementTab] = useState<ProductManagementTab>("users");
   const [observabilityTab, setObservabilityTab] = useState<ObservabilityTab>("log");
@@ -637,7 +600,13 @@ export function ServerProfileModal({
     return null;
   }
 
+  const serverProfileModalCtxValue = {
+    t, currentUserId, currentServerId, currentServerRole,
+    canManageUsers, canPromote, canManageServerControlPlane, canViewTelemetry, canManageAudioQuality
+  };
+
   return (
+    <ServerProfileModalProvider value={serverProfileModalCtxValue}>
     <div
       className="voice-preferences-overlay server-scroll-overlay fixed inset-0 z-40 grid place-items-center overflow-y-auto p-4"
       onMouseDown={(event) => {
@@ -1411,7 +1380,6 @@ export function ServerProfileModal({
 
           {serverMenuTab === "video" && canManageAudioQuality ? (
             <ServerVideoSettingsTab
-              t={t}
               serverVideoEffectType={serverVideoEffectType}
               serverVideoResolution={serverVideoResolution}
               serverVideoFps={serverVideoFps}
@@ -1454,7 +1422,7 @@ export function ServerProfileModal({
           ) : null}
 
           {serverMenuTab === "desktop_downloads" ? (
-            <ServerDesktopTab t={t} open={open} serverMenuTab={serverMenuTab} />
+            <ServerDesktopTab open={open} serverMenuTab={serverMenuTab} />
           ) : null}
 
           {serverMenuTab === "documents_rules" ? (
@@ -1665,5 +1633,6 @@ export function ServerProfileModal({
         </div>
       ) : null}
     </div>
+    </ServerProfileModalProvider>
   );
 }
