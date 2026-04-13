@@ -163,11 +163,21 @@ export async function listTopicUnreadMentions(input: {
   beforeCreatedAt?: string | null;
   beforeId?: string | null;
 }): Promise<{ items: TopicUnreadMentionItem[]; hasMore: boolean; nextCursor: NotificationInboxCursor | null }> {
+  const resolvedMessageIdSql = `COALESCE(
+    message_id,
+    CASE
+      WHEN (payload->>'messageId') ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
+        THEN (payload->>'messageId')::uuid
+      ELSE NULL
+    END
+  )`;
+
   const where: string[] = [
     "user_id = $1",
     "topic_id = $2",
     "event_type = 'mention_me'",
-    "read_at IS NULL"
+    "read_at IS NULL",
+    `EXISTS (SELECT 1 FROM messages m WHERE m.id = ${resolvedMessageIdSql} AND m.topic_id = $2)`
   ];
   const params: unknown[] = [input.userId, input.topicId];
 
@@ -204,7 +214,7 @@ export async function listTopicUnreadMentions(input: {
        server_id,
        room_id,
        topic_id,
-       message_id,
+      ${resolvedMessageIdSql} AS message_id,
        actor_user_id,
        title,
        body,

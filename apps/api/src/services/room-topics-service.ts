@@ -252,6 +252,19 @@ export async function listRoomTopics(roomId: string, userId: string): Promise<To
              AND ni.room_id = rt.room_id
              AND ni.topic_id = rt.id
              AND ni.read_at IS NULL
+             AND EXISTS (
+               SELECT 1
+               FROM messages m
+               WHERE m.id = COALESCE(
+                 ni.message_id,
+                 CASE
+                   WHEN (ni.payload->>'messageId') ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
+                     THEN (ni.payload->>'messageId')::uuid
+                   ELSE NULL
+                 END
+               )
+                 AND m.topic_id = rt.id
+             )
          )
        ) AS mention_unread_count
      FROM room_topics rt

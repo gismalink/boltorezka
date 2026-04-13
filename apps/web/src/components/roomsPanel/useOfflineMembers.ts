@@ -72,9 +72,17 @@ export function useOfflineMembers({ serverMembers, liveRoomMemberDetailsBySlug }
         return {
           userId,
           userName,
+          lastSeenSortTs: hasSeen ? lastSeenTs : Number.NEGATIVE_INFINITY,
           lastSeenLabel: hasSeen ? formatOfflineLastSeen(diffMs) : "—"
         };
       })
-      .sort((left, right) => left.userName.localeCompare(right.userName));
+      .sort((left, right) => {
+        if (left.lastSeenSortTs !== right.lastSeenSortTs) {
+          return right.lastSeenSortTs - left.lastSeenSortTs;
+        }
+
+        return left.userName.localeCompare(right.userName);
+      })
+      .map(({ userId, userName, lastSeenLabel }) => ({ userId, userName, lastSeenLabel }));
   }, [liveRoomMemberDetailsBySlug, nowTs, serverMembers]);
 }
