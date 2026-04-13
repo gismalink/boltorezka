@@ -3,6 +3,7 @@ import { mkdir, readdir, readFile, stat, unlink, writeFile } from "node:fs/promi
 import path from "node:path";
 import { Readable } from "node:stream";
 import type { AppConfig } from "../config.types.ts";
+import { normalizeOptionalString } from "../validators.js";
 
 export class ChatObjectStorageNotFoundError extends Error {
   constructor(message: string) {
@@ -290,7 +291,7 @@ class MinioChatObjectStorage implements ChatObjectStorage {
 
       const objects = Array.isArray(page.Contents) ? page.Contents : [];
       for (const object of objects) {
-        const storageKey = String(object.Key || "").trim();
+        const storageKey = normalizeOptionalString(object.Key) || "";
         if (!storageKey) {
           continue;
         }

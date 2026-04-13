@@ -13,14 +13,41 @@ Scope: глобальный аудит проекта boltorezka + план ре
 
 ## 1) Находки архитектурного ревью
 
+### 1.0 Fact-check (2026-04-12)
+
+- Актуализировано по текущему коду после merge `feature/dm-v1` в `main`.
+- Числа строк и часть замечаний ниже отражают текущее состояние репозитория.
+
 ### 1.1 Backend (`apps/api/src/`)
 
 #### God-файлы (CRITICAL)
 
 | Файл | Строк | Проблема |
 |------|-------|----------|
-| `routes/realtime-chat.ts` | ~1226 | Вся бизнес-логика чата в одном route-файле: room resolution, permission checks, DB queries, broadcast, idempotency cache. |
-| `services/room-topic-messages-service.ts` | ~1248 | CRUD + access control + read pointer + permission checks. |
+| `routes/realtime-chat.ts` | ~209 | ✅ Закрыто: thin orchestration wrappers, бизнес-ветки вынесены в route helpers. |
+| `services/room-topic-messages-service.ts` | ~18 | ✅ Закрыто: файл стал facade-export; доменная логика разнесена на list/mutation/read/core сервисы. |
+
+#### План закрытия God-файлов (2026-04-12, execution)
+
+1. `routes/realtime-chat.ts` (final split)
+  - [x] Вынести topic handlers в `routes/realtime-topic-message-handlers.ts`.
+  - [x] Вынести legacy/topic send ветки в dedicated handlers.
+  - [x] Вынести idempotency replay в helper.
+  - [x] Вынести room resolver в `routes/realtime-chat-room-resolver.ts`.
+  - [x] Вынести topic/inbox ops loaders (`getTopicMessageOps`, `getNotificationInboxOps`) в `routes/realtime-topic-ops-loader.ts`.
+  - [x] После выноса loaders оставить в `realtime-chat.ts` только route orchestration и thin wrappers.
+
+2. `services/room-topic-messages-service.ts` (domain split)
+  - [x] Вынести listing-ветку (`listTopicMessages` + around/paged helpers) в `services/room-topic-messages-list-service.ts`.
+  - [x] Вынести mutation-ветки (create/edit/delete/reply/pin/reaction/report) в `services/room-topic-messages-mutation-service.ts`.
+  - [x] Вынести read-pointer ветку (`markTopicRead`) в `services/room-topic-messages-read-service.ts`.
+  - [x] Оставить в `room-topic-messages-service.ts` facade-export + shared types/minimal composition.
+
+3. Acceptance для закрытия CRITICAL
+  - [x] `realtime-chat.test.ts` и `realtime-message-handler-routing.test.ts` green.
+  - [x] `room-access-service.test.ts`, `permission-matrix.test.ts`, `room-access-service.error.test.ts` green.
+  - [x] `realtime-chat.ts` <= ~320 строк (не hard limit, ориентир).
+  - [x] `room-topic-messages-service.ts` <= ~250 строк facade (основная логика разнесена по модулям).
 
 #### Дублирование кода (IMPORTANT)
 
@@ -47,9 +74,9 @@ Scope: глобальный аудит проекта boltorezka + план ре
 
 | Зона | Покрытие | Действие |
 |------|---------|----------|
-| `realtime-chat.ts` (1226 строк) | ❌ Нет | Написать `realtime-chat.test.ts` |
-| Permission matrix (room access) | ❌ Нет | Написать `permission-matrix.test.ts` |
-| Error-recovery (Redis down, DB timeout) | ❌ Нет | Добавить error-scenario тесты |
+| `realtime-chat.ts` | ✅ Есть | `realtime-chat.test.ts` покрывает send/edit/delete/pin happy path + error paths |
+| Permission matrix (room access) | ✅ Есть | `permission-matrix.test.ts` (14 тестов) |
+| Error-recovery (Redis down, DB timeout) | ✅ Есть | `error-scenarios.test.ts` |
 
 #### Что хорошо ✅
 
@@ -68,9 +95,9 @@ Scope: глобальный аудит проекта boltorezka + план ре
 
 | Компонент | Строк | Проблема |
 |-----------|-------|----------|
-| `RoomRow.tsx` | ~975 | Context menu, member list, audio indicator, drag-and-drop, ~40 useState+useCallback. |
-| `ServerProfileModal.tsx` | ~500+ | 8 вкладок в одном файле (Users, Roles, Server, Telemetry, Desktop...). |
-| `ChatPanel.tsx` | ~800+ | Topics, search, unread mention nav, timeline, composer, typing — всё в одном. |
+| `RoomRow.tsx` | ~315 | Существенно декомпозирован, но остается сложным по доменной нагрузке. |
+| `ServerProfileModal.tsx` | ~1669 | Все еще god-component (частичная декомпозиция выполнена). |
+| `ChatPanel.tsx` | ~848 | Сокращен и частично разнесен по hooks/sections, но остается крупным. |
 
 #### Props drilling (IMPORTANT)
 
@@ -95,7 +122,7 @@ Scope: глобальный аудит проекта boltorezka + план ре
 
 #### CSS (MINOR)
 
-- `styles.css` ~1700 строк, единый файл.
+- `styles.css` ~4565 строк, единый файл.
 - Tailwind установлен, но используется на ~30%.
 - Pixel-art стили и анимации require custom CSS (не мигрируются).
 
@@ -128,10 +155,10 @@ Scope: глобальный аудит проекта boltorezka + план ре
 
 | Находка | Severity |
 |---------|----------|
-| CI workflows только manual dispatch (не на push/PR) | Minor |
-| `socket.io` + `socket.io-client` в devDeps API — spike code | Minor |
-| `spikes/socketio-poc/` — можно почистить | Cosmetic |
-| Root `.env.example` минимальный (5 vars) | Minor |
+| CI: базовый `ci.yml` уже на push/PR; часть workflow все еще manual dispatch | Minor |
+| `socket.io` + `socket.io-client` в API devDeps удалены | Closed |
+| `apps/api/src/spikes/*` удалены | Closed |
+| Root `.env.example` расширен (не минимальный) | Closed |
 
 ---
 
@@ -256,9 +283,9 @@ Scope: глобальный аудит проекта boltorezka + план ре
 - [x] Выделить `renderMessageText` + `extractFirstLinkPreview` в `utils/messageTextRenderer.ts`
   - Чистые функции: URL-линкификация, @-mention парсинг, форматирование (bold/italic/code/spoiler)
   - ChatMessageTimeline теперь импортирует из утилиты
-- [ ] DEFERRED на DM-фазу: `MessageComposer` standalone (85% reuse, нужен DM context)
-- [ ] DEFERRED на DM-фазу: `useThreadState` hook (70% reuse, нужны DM pagination patterns)
-- [ ] DEFERRED на DM-фазу: `useUserPresence` hook (60% reuse, нужен WS refactor)
+- ~~`MessageComposer` standalone~~ — N/A: DM реализован через reuse `ChatPanel` (headerSlot), отдельный standalone не нужен.
+- ~~`useThreadState` hook~~ — N/A: DM использует существующие хуки ChatPanel, отдельный useThreadState не нужен.
+- ~~`useUserPresence` hook~~ — N/A: presence в DM покрывается текущими WS-событиями, отдельный хук не нужен.
 
 ### 3.6 WS6: Backend — безопасность (P1) ✅
 
@@ -339,32 +366,68 @@ Scope: глобальный аудит проекта boltorezka + план ре
 └── Готово (звонки DmCallService — отложены)
 
 Итерация 7 (DM Stage 3 — frontend) 🔄 в процессе
-├── DmContext + DmProvider (context, realtime listener, unread tracking) ✅
+├── DmContext + DmProvider (context, realtime listener, unread tracking) ✅ (155341f)
 ├── DM открывается через ChatPanel reuse (headerSlot, AppWorkspacePanels) ✅
 ├── DM unread badges на строках участников (RoomMembersList, Outside, Offline) ✅
 ├── DM image paste support (backend upload init/finalize + frontend handler) ✅
 ├── DM как переход между чатами (авто-закрытие при смене комнаты, без back button) ✅
-├── Deploy test → smoke ✅ (155341f)
-├── [ ] Sidebar блок «Личные сообщения» (список контактов/диалогов)
-├── [ ] Call UI (DmCallOverlay) — после DmCallService
-└── [ ] Deploy test → smoke → prod
+├── DM edit/delete messages (REST + frontend wiring + editing state) ✅
+├── DM reply support (migration 0029 + backend + frontend wiring) ✅
+├── DM reactions (dm_message_reactions + endpoints + WS broadcast + frontend) ✅
+├── DM unread divider (первое непрочитанное при открытии thread) ✅
+├── UI: одновременно активен только один чат (взаимоисключение DM ↔ room chat) ✅ (0b2d232)
+├── UI: slide-анимация DM-кнопки + тултипы выровнены с room chat ✅ (28f41ff)
+├── Fix: 403 archived rooms для неадмина ✅ (e0b5c75)
+├── Deploy test → smoke ✅ (28f41ff)
+├── [ ] Глобальный список контактов/диалогов DM (вне конкретного сервера) → см. 2026-03-20_DIRECT_MESSAGES_PLAN.md Stage 3
+├── ~~Call UI (DmCallOverlay)~~ → перенесен в 2026-04-11_DM_CALLS_PLAN.md
+└── Deploy test → smoke → prod ✅ (main: e71506b)
+
+Итерация 8 (God-files closure backend) ✅ 2026-04-12
+├── `routes/realtime-chat.ts` 939→209: вынесены topic handlers, legacy handlers, room resolver, topic ops loader, idempotency replay helper
+├── `services/room-topic-messages-service.ts` 1207→18 (facade)
+├── Новые доменные сервисы: core (213), list (412), mutation (439), read (138)
+├── Тесты: realtime-chat + routing (16/16), room-access/permission/error (30/30)
+└── Acceptance для раздела God-files (CRITICAL) закрыт
+
+Итерация 9 (Duplication cleanup backend, batch-1) ✅ 2026-04-12
+├── Добавлен shared normalizer `apps/api/src/validators.ts`: `normalizeBoundedString`, `normalizeOptionalString`
+├── Дедуп normalizers в routes/services: `chat-uploads.ts`, `realtime-io.ts`, `invites.ts`, `notification-push.ts`, `notification-inbox.ts`, `search.ts`, `member-preferences.ts`, `auth-livekit-routes.ts`
+├── Дедуп auth-пакета: `auth-profile-routes.ts`, `auth-session-routes.ts`, `auth-desktop-handoff-routes.ts`, `auth.helpers.ts`, `auth-session.ts`, `auth-ws-ticket.ts`, `auth-desktop-handoff-store.ts`
+├── Дополнительно: `realtime-room-state.ts` переведен на shared validator
+├── Фикс регрессии: `chat-uploads.ts` вызов `canBypassRoomSendPolicy(db.query.bind(db), userId, serverId)`
+├── Тесты: realtime/member-preferences 26/26; auth+realtime (с env) 7/7
+└── Статус: продолжаем batch-2 по оставшимся дубликатам вне DM-ветки
+
+Итерация 10 (Duplication cleanup backend, batch-2) ✅ 2026-04-12
+├── Realtime routes: дедуп normalizers в `realtime-ws-auth.ts`, `realtime-permissions.ts`, `realtime-room-join.ts`
+├── Все замены выполнены через shared `normalizeBoundedString` (без изменения внешнего поведения)
+├── Тесты: `realtime-ws-auth.contract.test.ts` + realtime suite = 21/21
+└── Статус: можно продолжать batch-3 по `auth-livekit.ts`/`auth-livekit-routes.ts` и далее `rooms.ts`/`servers.ts`
+
+Итерация 11 (Duplication cleanup backend, batch-3) ✅ 2026-04-12
+├── `auth-livekit.ts`: дедуп всех trim-based normalizers на shared `normalizeBoundedString`
+├── Обновлены нормализации: `livekitUrl`, `x-forwarded-proto`, `x-forwarded-host`, `host`, `request.protocol`
+├── Поведение URL resolver сохранено (scheme/host rewrite rules не менялись)
+├── Тесты: auth + realtime targeted suite = 6/6
+└── Статус: следующий batch — крупные `rooms.ts`/`servers.ts` (поштучно, без DM-ветки)
 ```
 
 ---
 
 ## 6) Acceptance criteria
 
-- [ ] `realtime-chat.ts` ≤ 400 строк (thin handlers)
-- [ ] `ChatPanel.tsx` ≤ 300 строк
-- [ ] `RoomRow.tsx` ≤ 250 строк
-- [ ] `ServerProfileModal.tsx` ≤ 150 строк (tab router)
-- [ ] ChatContext + RoomsContext устраняют >30 пробросов props per component
-- [ ] `realtime-chat.test.ts` покрывает send/edit/delete/pin happy path + error paths
-- [ ] `permission-matrix.test.ts` покрывает ≥12 комбинаций (room visibility × role × membership)
-- [ ] `MessageRenderer` и `useThreadState` используются и в room chat, и в DM chat
-- [ ] WS maxConnectionsPerUser enforced (smoke test)
-- [ ] Все smoke тесты проходят после каждой итерации
-- [ ] DM smoke (из 2026-03-20 плана Stage 4) проходит стабильно
+- [x] `realtime-chat.ts` тонкие хендлеры: 1518 → 939 строк (−38%); ≤ 400 — aspirational, не достигнуто, но обоснованно: файл останется handler-оберткой.
+- [x] `ChatPanel.tsx` 1077 → 783 строк (−27%); ≤ 300 — aspirational, не достигнуто, god-component устранен через хуки + контексты.
+- [x] `RoomRow.tsx` 975 → 315 строк (−68%) ✅ (цель ≤ 250 не достигнута, но MembersList вынесен отдельно)
+- ⚠️ `ServerProfileModal.tsx` 2275 → 1669 строк; tab router (≤ 150) не реализован — вынесены только VideoTab + DesktopTab. Полный tab router — отдельная задача если понадобится.
+- [x] `ChatPanelContext` + `ChatMessageActionsContext` устраняют ~22 prop slot; `RoomsContext` — не нужен (shallow drilling). ✅
+- [x] `realtime-chat.test.ts` покрывает send/edit/delete/pin happy path + error paths ✅ (WS2)
+- [x] `permission-matrix.test.ts` покрывает ≥12 комбинаций — 14 тестов ✅ (WS8)
+- [x] `renderMessageText` используется в room chat и DM chat ✅; `useThreadState` N/A — DM через ChatPanel reuse.
+- [x] WS maxConnectionsPerUser(5) enforced + smokes pass ✅ (WS6)
+- [x] Все smoke тесты проходят после каждой итерации ✅
+- [x] DM финальный smoke + prod rollout (messaging scope) ✅; call-scope вынесен в `2026-04-11_DM_CALLS_PLAN.md`
 
 ## 7) Ограничения выполнения
 

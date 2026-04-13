@@ -1,4 +1,5 @@
 import type { WebSocket } from "ws";
+import { normalizeBoundedString } from "../validators.js";
 
 type RoomSocketState = {
   userId: string;
@@ -110,7 +111,7 @@ export function createRealtimeRoomStateStore(params: {
   };
 
   const getAllRoomsPresence = (forUserId: string | null = null, forServerId: string | null = null) => {
-    const normalizedServerId = String(forServerId || "").trim() || null;
+    const normalizedServerId = normalizeBoundedString(forServerId, 128);
     const result: Array<{
       roomId: string;
       roomSlug: string;
@@ -120,8 +121,8 @@ export function createRealtimeRoomStateStore(params: {
     const usersInRoomsByServer = new Set<string>();
 
     const userServerKey = (userId: string, serverId: string | null): string => {
-      const normalizedUserId = String(userId || "").trim();
-      const normalized = String(serverId || "").trim() || "__no_server__";
+      const normalizedUserId = normalizeBoundedString(userId, 128) || "";
+      const normalized = normalizeBoundedString(serverId, 128) || "__no_server__";
       return `${normalized}::${normalizedUserId}`;
     };
 
@@ -132,7 +133,7 @@ export function createRealtimeRoomStateStore(params: {
         const state = socketState.get(socket);
         if (state?.roomSlug) {
           roomSlug = state.roomSlug;
-          roomServerId = String(state.currentServerId || "").trim() || null;
+          roomServerId = normalizeBoundedString(state.currentServerId, 128);
           break;
         }
       }
@@ -146,7 +147,7 @@ export function createRealtimeRoomStateStore(params: {
         if (!state) {
           continue;
         }
-        const socketServerId = String(state.currentServerId || "").trim() || null;
+        const socketServerId = normalizeBoundedString(state.currentServerId, 128);
         if (roomServerId && socketServerId && socketServerId !== roomServerId) {
           continue;
         }
@@ -166,7 +167,7 @@ export function createRealtimeRoomStateStore(params: {
     for (const userSockets of socketsByUserId.values()) {
       for (const socket of userSockets) {
         const state = socketState.get(socket);
-        const socketServerId = String(state?.currentServerId || "").trim() || null;
+        const socketServerId = normalizeBoundedString(state?.currentServerId, 128);
         if (
           !state
           || (normalizedServerId && socketServerId !== normalizedServerId)

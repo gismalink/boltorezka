@@ -1,6 +1,7 @@
 import webpush from "web-push";
 import { db } from "../db.js";
 import { config } from "../config.js";
+import { normalizeBoundedString } from "../validators.js";
 
 type PushRuntime = "web" | "desktop";
 
@@ -47,9 +48,9 @@ export function getWebPushPublicConfig() {
 }
 
 export async function registerNotificationPushSubscription(input: PushSubscriptionInput): Promise<void> {
-  const endpoint = String(input.endpoint || "").trim();
-  const p256dh = String(input.p256dh || "").trim();
-  const auth = String(input.auth || "").trim();
+  const endpoint = normalizeBoundedString(input.endpoint, 2048) || "";
+  const p256dh = normalizeBoundedString(input.p256dh, 2048) || "";
+  const auth = normalizeBoundedString(input.auth, 2048) || "";
   const runtime: PushRuntime = input.runtime === "desktop" ? "desktop" : "web";
 
   if (!endpoint || !p256dh || !auth) {
@@ -82,7 +83,7 @@ export async function registerNotificationPushSubscription(input: PushSubscripti
 }
 
 export async function removeNotificationPushSubscription(userId: string, endpoint: string): Promise<boolean> {
-  const normalizedEndpoint = String(endpoint || "").trim();
+  const normalizedEndpoint = normalizeBoundedString(endpoint, 2048) || "";
   if (!normalizedEndpoint) {
     throw new Error("validation_error");
   }

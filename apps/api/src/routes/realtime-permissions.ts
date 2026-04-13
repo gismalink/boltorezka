@@ -1,6 +1,7 @@
 import type { WebSocket } from "ws";
 import { db } from "../db.js";
 import { resolveEffectiveServerPermissions } from "../services/server-permissions-service.js";
+import { normalizeBoundedString } from "../validators.js";
 import { sendNack } from "./realtime-io.js";
 
 type IncrementMetricFn = (name: string) => Promise<unknown>;
@@ -27,7 +28,7 @@ export function createRealtimePermissionHelpers(incrementMetric: IncrementMetric
   };
 
   const isUserModerator = async (userId: string, roomSlug?: string | null) => {
-    const normalizedRoomSlug = String(roomSlug || "").trim();
+    const normalizedRoomSlug = normalizeBoundedString(roomSlug, 128) || "";
     if (!normalizedRoomSlug) {
       return false;
     }
@@ -40,7 +41,7 @@ export function createRealtimePermissionHelpers(incrementMetric: IncrementMetric
        LIMIT 1`,
       [normalizedRoomSlug]
     );
-    const serverId = String(roomResult.rows[0]?.server_id || "").trim();
+    const serverId = normalizeBoundedString(roomResult.rows[0]?.server_id, 128) || "";
     if (!serverId) {
       return false;
     }

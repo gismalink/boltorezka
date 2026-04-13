@@ -1,6 +1,7 @@
 import { db } from "../db.js";
 import type { RoomRow } from "../db.types.ts";
 import { isServerAgeConfirmed } from "../services/age-verification-service.js";
+import { normalizeBoundedString } from "../validators.js";
 
 export type CanJoinRoomResult =
   | { ok: true; room: RoomRow }
@@ -24,7 +25,7 @@ export async function canJoinRoom(roomSlug: string, userId: string): Promise<Can
   const selectedRoom = room.rows[0];
 
   if (selectedRoom.nsfw === true) {
-    const serverId = String(selectedRoom.server_id || "").trim();
+    const serverId = normalizeBoundedString(selectedRoom.server_id, 128) || "";
     const confirmed = serverId ? await isServerAgeConfirmed(serverId, userId) : false;
     if (!confirmed) {
       return { ok: false, reason: "AgeVerificationRequired" };

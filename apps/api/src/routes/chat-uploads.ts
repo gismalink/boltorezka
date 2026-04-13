@@ -10,6 +10,8 @@ import {
   ChatObjectStorageNotFoundError,
   createChatObjectStorage
 } from "../storage/chat-object-storage.js";
+import { normalizeBoundedString, normalizeOptionalString } from "../validators.js";
+import { canBypassRoomSendPolicy } from "../services/room-access-service.js";
 import { isServerAgeConfirmed } from "../services/age-verification-service.js";
 import { resolveActiveServerMute } from "../services/server-mute-service.js";
 import type {
@@ -83,7 +85,7 @@ const orphanCleanupSchema = z.object({
 });
 
 function normalizeMimeType(value: string): string {
-  return String(value || "").trim().toLowerCase();
+  return value.trim().toLowerCase();
 }
 
 function resolveAttachmentTypeFromMime(mimeType: string): "image" | "document" | "audio" {
@@ -156,12 +158,12 @@ function buildDownloadUrl(storageKey: string, explicitDownloadUrl: string | unde
 }
 
 function buildUploadAuditContext(request: FastifyRequest, extra: Record<string, unknown> = {}) {
-  const requestId = String(request.id || "").trim() || null;
-  const userId = String(request.user?.sub || "").trim() || null;
+  const requestId = normalizeOptionalString(request.id);
+  const userId = normalizeBoundedString(request.user?.sub, 128);
   const ip = String(request.ip || request.headers["x-forwarded-for"] || "unknown")
     .split(",")[0]
     .trim() || null;
-  const userAgent = String(request.headers["user-agent"] || "").trim() || null;
+  const userAgent = normalizeBoundedString(request.headers["user-agent"], 1024);
 
   return {
     requestId,
@@ -173,7 +175,7 @@ function buildUploadAuditContext(request: FastifyRequest, extra: Record<string, 
 }
 
 function resolveUploadRateLimitSubject(request: FastifyRequest): string {
-  const userId = String(request.user?.sub || "").trim();
+  const userId = normalizeBoundedString(request.user?.sub, 128) || "";
   if (userId) {
     return `u:${userId}`;
   }
@@ -182,40 +184,6 @@ function resolveUploadRateLimitSubject(request: FastifyRequest): string {
     .split(",")[0]
     .trim();
   return `ip:${ip || "unknown"}`;
-}
-
-async function canBypassRoomSendPolicy(userId: string, serverId: string | null): Promise<boolean> {
-  const globalRoleResult = await db.query<{ role: string }>(
-    `SELECT role
-     FROM users
-     WHERE id = $1
-       AND is_banned = FALSE
-     LIMIT 1`,
-    [userId]
-  );
-
-  const globalRole = String(globalRoleResult.rows[0]?.role || "").trim();
-  if (globalRole === "admin" || globalRole === "super_admin") {
-    return true;
-  }
-
-  const normalizedServerId = String(serverId || "").trim();
-  if (!normalizedServerId) {
-    return false;
-  }
-
-  const membership = await db.query<{ role: string }>(
-    `SELECT role
-     FROM server_members
-     WHERE server_id = $1
-       AND user_id = $2
-       AND status = 'active'
-     LIMIT 1`,
-    [normalizedServerId, userId]
-  );
-
-  const serverRole = String(membership.rows[0]?.role || "").trim();
-  return serverRole === "owner" || serverRole === "admin";
 }
 
 export async function chatUploadsRoutes(fastify: FastifyInstance) {
@@ -288,7 +256,7 @@ export async function chatUploadsRoutes(fastify: FastifyInstance) {
   });
 
   const checkRoomSendPolicy = async (room: Pick<RoomRow, "id" | "server_id" | "is_readonly" | "slowmode_seconds">, userId: string) => {
-    const canBypass = await canBypassRoomSendPolicy(userId, room.server_id || null);
+    const canBypass = await canBypassRoomSendPolicy(db.query.bind(db), userId, room.server_id || null);
     if (!canBypass && room.server_id) {
       const muteState = await resolveActiveServerMute(room.server_id, userId);
       if (muteState.isMuted) {
@@ -349,7 +317,7 @@ export async function chatUploadsRoutes(fastify: FastifyInstance) {
       preHandler: [requireAuth, requireServiceAccess]
     },
     async (request, reply) => {
-      const encodedKey = String(request.query?.key || "").trim();
+      const encodedKey = normalizeBoundedString(request.query?.key, 512) || "";
       if (!encodedKey) {
         return reply.code(400).send({
           error: "ValidationError",
@@ -438,8 +406,8 @@ export async function chatUploadsRoutes(fastify: FastifyInstance) {
       bodyLimit: config.chatUploadMaxSizeBytes
     },
     async (request, reply) => {
-      const uploadId = String(request.params.uploadId || "").trim();
-      const sig = String(request.query?.sig || "").trim();
+      const uploadId = normalizeBoundedString(request.params.uploadId, 128) || "";
+      const sig = normalizeBoundedString(request.query?.sig, 256) || "";
       if (!uploadId || !sig) {
         return reply.code(400).send({
           error: "ValidationError",
@@ -598,7 +566,7 @@ export async function chatUploadsRoutes(fastify: FastifyInstance) {
 
         referencedKeys = new Set(
           referencedResult.rows
-            .map((row) => String(row.storage_key || "").trim())
+            .map((row) => normalizeBoundedString(row.storage_key, 512) || "")
             .filter(Boolean)
         );
       }
@@ -665,7 +633,7 @@ export async function chatUploadsRoutes(fastify: FastifyInstance) {
         });
       }
 
-      const userId = String(request.user?.sub || "").trim();
+      const userId = normalizeBoundedString(request.user?.sub, 128) || "";
       if (!userId) {
         return reply.code(401).send({
           error: "Unauthorized",
@@ -673,7 +641,7 @@ export async function chatUploadsRoutes(fastify: FastifyInstance) {
         });
       }
 
-      const roomSlug = String(parsed.data.roomSlug || "").trim();
+      const roomSlug = normalizeBoundedString(parsed.data.roomSlug, 128) || "";
       const topicId = typeof parsed.data.topicId === "string" ? parsed.data.topicId.trim() : "";
       const mimeType = normalizeMimeType(parsed.data.mimeType);
       const sizeBytes = parsed.data.sizeBytes;
@@ -739,7 +707,7 @@ export async function chatUploadsRoutes(fastify: FastifyInstance) {
       }
 
       if (room.nsfw === true) {
-        const serverId = String(room.server_id || "").trim();
+        const serverId = normalizeBoundedString(room.server_id, 128) || "";
         const confirmed = serverId ? await isServerAgeConfirmed(serverId, userId) : false;
         if (!confirmed) {
           return reply.code(403).send({
@@ -860,7 +828,7 @@ export async function chatUploadsRoutes(fastify: FastifyInstance) {
         });
       }
 
-      const userId = String(request.user?.sub || "").trim();
+      const userId = normalizeBoundedString(request.user?.sub, 128) || "";
       if (!userId) {
         return reply.code(401).send({
           error: "Unauthorized",
@@ -928,10 +896,10 @@ export async function chatUploadsRoutes(fastify: FastifyInstance) {
         });
       }
 
-      const requestRoomSlug = String(parsed.data.roomSlug || "").trim();
+      const requestRoomSlug = normalizeBoundedString(parsed.data.roomSlug, 128) || "";
       const requestTopicId = typeof parsed.data.topicId === "string" ? parsed.data.topicId.trim() : null;
       const requestMimeType = normalizeMimeType(parsed.data.mimeType);
-      const requestStorageKey = String(parsed.data.storageKey || "").trim();
+      const requestStorageKey = normalizeBoundedString(parsed.data.storageKey, 512) || "";
 
       if (
         requestRoomSlug !== reservation.roomSlug
@@ -961,7 +929,7 @@ export async function chatUploadsRoutes(fastify: FastifyInstance) {
       }
 
       const currentUser = currentUserResult.rows[0];
-      const text = String(parsed.data.text || "").trim();
+      const text = normalizeBoundedString(parsed.data.text, 20000) || "";
       const downloadUrl = buildDownloadUrl(reservation.storageKey, parsed.data.downloadUrl);
       const attachmentType = resolveAttachmentTypeFromMime(reservation.mimeType);
       const width = attachmentType === "image" && typeof parsed.data.width === "number" ? parsed.data.width : null;

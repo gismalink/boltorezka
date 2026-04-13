@@ -9,6 +9,7 @@ import { isServerAgeConfirmed } from "../services/age-verification-service.js";
 import { resolveEffectiveServerPermissions } from "../services/server-permissions-service.js";
 import { buildChatMessageEnvelope } from "../ws-protocol.js";
 import { emitMentionInboxEvents } from "../services/notification-inbox-service.js";
+import { normalizeBoundedString } from "../validators.js";
 import type {
   RoomCategoryCreateResponse,
   RoomCreateResponse,
@@ -23,6 +24,9 @@ type RoomListDbRow = RoomListRow & {
   position: number;
   member_names: string[];
 };
+
+const normId = (value: unknown) => normalizeBoundedString(value, 128) || "";
+const normRole = (value: unknown) => normalizeBoundedString(value, 32) || "user";
 
 const roomKindSchema = z
   .enum(["text", "text_voice", "text_voice_video", "voice"])
@@ -142,7 +146,7 @@ const createRoomMessageSchema = z.object({
 
 export async function roomsRoutes(fastify: FastifyInstance) {
   const resolveAccessibleServerId = async (userId: string, requestedServerId: string): Promise<string | null> => {
-    const normalized = String(requestedServerId || "").trim();
+    const normalized = normId(requestedServerId);
     if (!normalized) {
       return null;
     }
@@ -197,8 +201,8 @@ export async function roomsRoutes(fastify: FastifyInstance) {
       preHandler: [requireAuth, requireServiceAccess]
     },
     async (request) => {
-      const userId = String(request.user?.sub || "").trim();
-      const requestedServerId = String(request.query.serverId || "").trim();
+      const userId = normId(request.user?.sub);
+      const requestedServerId = normId(request.query.serverId);
       let activeServerId = requestedServerId
         ? await resolveAccessibleServerId(userId, requestedServerId)
         : null;
@@ -213,7 +217,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
            LIMIT 1`
         );
 
-        activeServerId = String(defaultServer.rows[0]?.id || "").trim() || null;
+        activeServerId = normId(defaultServer.rows[0]?.id) || null;
       }
 
       if (requestedServerId && !activeServerId) {
@@ -313,8 +317,8 @@ export async function roomsRoutes(fastify: FastifyInstance) {
       preHandler: [requireAuth, requireServiceAccess]
     },
     async (request) => {
-      const userId = String(request.user?.sub || "").trim();
-      const requestedServerId = String(request.query.serverId || "").trim();
+      const userId = normId(request.user?.sub);
+      const requestedServerId = normId(request.query.serverId);
       const activeServerId = requestedServerId
         ? await resolveAccessibleServerId(userId, requestedServerId)
         : null;
@@ -382,8 +386,8 @@ export async function roomsRoutes(fastify: FastifyInstance) {
       preHandler: [requireAuth, requireServiceAccess, loadCurrentUser, requireRole(["admin", "super_admin"])]
     },
     async (request) => {
-      const userId = String(request.user?.sub || "").trim();
-      const requestedServerId = String(request.query.serverId || "").trim();
+      const userId = normId(request.user?.sub);
+      const requestedServerId = normId(request.query.serverId);
       const activeServerId = requestedServerId
         ? await resolveAccessibleServerId(userId, requestedServerId)
         : null;
@@ -461,8 +465,8 @@ export async function roomsRoutes(fastify: FastifyInstance) {
       }
 
       const { title } = parsed.data;
-      const createdBy = String(request.user?.sub || "").trim();
-      const requestedServerId = String(parsed.data.server_id || "").trim();
+      const createdBy = normId(request.user?.sub);
+      const requestedServerId = normId(parsed.data.server_id);
       let targetServerId = "";
 
       if (requestedServerId) {
@@ -484,7 +488,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
            LIMIT 1`
         );
 
-        targetServerId = String(defaultServerResult.rows[0]?.id || "").trim();
+        targetServerId = normId(defaultServerResult.rows[0]?.id);
       }
 
       if (!targetServerId) {
@@ -494,7 +498,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
         });
       }
 
-      const globalRole = String(request.currentUser?.role || "user").trim();
+      const globalRole = normRole(request.currentUser?.role);
       const allowed = await canManageServerRooms(createdBy, targetServerId, globalRole);
       if (!allowed) {
         return reply.code(403).send({
@@ -503,7 +507,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
         });
       }
 
-      const requestedSlug = String(parsed.data.slug || "").trim();
+      const requestedSlug = normId(parsed.data.slug);
       const slug = await ensureUniqueCategorySlug(requestedSlug || toSlug(title) || "category", targetServerId);
 
       const position = typeof parsed.data.position === "number"
@@ -538,7 +542,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
       preHandler: [requireAuth, requireServiceAccess, loadCurrentUser]
     },
     async (request, reply) => {
-      const categoryId = String(request.params.categoryId || "").trim();
+      const categoryId = normId(request.params.categoryId);
       if (!categoryId) {
         return reply.code(400).send({
           error: "ValidationError",
@@ -554,8 +558,8 @@ export async function roomsRoutes(fastify: FastifyInstance) {
         });
       }
 
-      const actorId = String(request.user?.sub || "").trim();
-      const globalRole = String(request.currentUser?.role || "user").trim();
+      const actorId = normId(request.user?.sub);
+      const globalRole = normRole(request.currentUser?.role);
       const existing = await db.query<{ id: string; server_id: string }>(
         `SELECT id, server_id
          FROM room_categories
@@ -571,7 +575,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
         });
       }
 
-      const categoryServerId = String(existing.rows[0]?.server_id || "").trim();
+      const categoryServerId = normId(existing.rows[0]?.server_id);
       const allowed = await canManageServerRooms(actorId, categoryServerId, globalRole);
       if (!allowed) {
         return reply.code(403).send({
@@ -608,7 +612,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
       preHandler: [requireAuth, requireServiceAccess, loadCurrentUser]
     },
     async (request, reply) => {
-      const categoryId = String(request.params.categoryId || "").trim();
+      const categoryId = normId(request.params.categoryId);
       if (!categoryId) {
         return reply.code(400).send({
           error: "ValidationError",
@@ -624,8 +628,8 @@ export async function roomsRoutes(fastify: FastifyInstance) {
         });
       }
 
-      const actorId = String(request.user?.sub || "").trim();
-      const globalRole = String(request.currentUser?.role || "user").trim();
+      const actorId = normId(request.user?.sub);
+      const globalRole = normRole(request.currentUser?.role);
 
       const currentResult = await db.query<RoomCategoryRow & { server_id: string }>(
         `SELECT id, slug, title, position, created_at, server_id
@@ -642,7 +646,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
       }
 
       const current = currentResult.rows[0];
-      const allowed = await canManageServerRooms(actorId, String(current.server_id || "").trim(), globalRole);
+      const allowed = await canManageServerRooms(actorId, normId(current.server_id), globalRole);
       if (!allowed) {
         return reply.code(403).send({
           error: "ForbiddenRole",
@@ -701,7 +705,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
       preHandler: [requireAuth, requireServiceAccess, loadCurrentUser]
     },
     async (request, reply) => {
-      const categoryId = String(request.params.categoryId || "").trim();
+      const categoryId = normId(request.params.categoryId);
       if (!categoryId) {
         return reply.code(400).send({
           error: "ValidationError",
@@ -709,8 +713,8 @@ export async function roomsRoutes(fastify: FastifyInstance) {
         });
       }
 
-      const actorId = String(request.user?.sub || "").trim();
-      const globalRole = String(request.currentUser?.role || "user").trim();
+      const actorId = normId(request.user?.sub);
+      const globalRole = normRole(request.currentUser?.role);
 
       const categoryRef = await db.query<{ id: string; server_id: string }>(
         `SELECT id, server_id
@@ -727,7 +731,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
         });
       }
 
-      const categoryServerId = String(categoryRef.rows[0]?.server_id || "").trim();
+      const categoryServerId = normId(categoryRef.rows[0]?.server_id);
       const allowed = await canManageServerRooms(actorId, categoryServerId, globalRole);
       if (!allowed) {
         return reply.code(403).send({
@@ -813,11 +817,11 @@ export async function roomsRoutes(fastify: FastifyInstance) {
         ? (parsed.data.audio_quality_override ?? null)
         : null;
 
-      const requestedSlug = String(parsed.data.slug || "").trim();
+      const requestedSlug = normId(parsed.data.slug);
       const slug = await ensureUniqueRoomSlug(requestedSlug || toSlug(title) || "room");
 
-      const createdBy = String(request.user?.sub || "").trim();
-      const requestedServerId = String(parsed.data.server_id || "").trim();
+      const createdBy = normId(request.user?.sub);
+      const requestedServerId = normId(parsed.data.server_id);
       let targetServerId = "";
 
       if (requestedServerId) {
@@ -840,7 +844,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
            LIMIT 1`
         );
 
-        targetServerId = String(defaultServerResult.rows[0]?.id || "").trim();
+        targetServerId = normId(defaultServerResult.rows[0]?.id);
         if (!targetServerId) {
           return reply.code(500).send({
             error: "ServerNotConfigured",
@@ -849,7 +853,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
         }
       }
 
-      const globalRole = String(request.currentUser?.role || "user").trim();
+      const globalRole = normRole(request.currentUser?.role);
       const canCreateRoom = await canManageServerRooms(createdBy, targetServerId, globalRole);
 
       if (!canCreateRoom) {
@@ -947,7 +951,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
       preHandler: [requireAuth, requireServiceAccess, loadCurrentUser, requireRole(["admin", "super_admin"])]
     },
     async (request, reply) => {
-      const roomId = String(request.params.roomId || "").trim();
+      const roomId = normId(request.params.roomId);
       if (!roomId) {
         return reply.code(400).send({
           error: "ValidationError",
@@ -965,7 +969,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
 
       const { title, kind, category_id, nsfw } = parsed.data;
       const hasIsHidden = Object.prototype.hasOwnProperty.call(parsed.data, "is_hidden");
-      const actorRole = String(request.currentUser?.role || "user").trim();
+      const actorRole = normRole(request.currentUser?.role);
       const hasNsfw = Object.prototype.hasOwnProperty.call(parsed.data, "nsfw");
       const hasIsReadonly = Object.prototype.hasOwnProperty.call(parsed.data, "is_readonly");
       const hasSlowmodeSeconds = Object.prototype.hasOwnProperty.call(parsed.data, "slowmode_seconds");
@@ -997,7 +1001,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
         });
       }
 
-      const targetServerId = String(targetRoom.rows[0]?.server_id || "").trim();
+      const targetServerId = normId(targetRoom.rows[0]?.server_id);
 
       if (category_id) {
         const category = await db.query<{ id: string }>(
@@ -1051,7 +1055,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
 
       const room = updated.rows[0];
       if (room.is_hidden) {
-        const actorId = String(request.user?.sub || "").trim();
+        const actorId = normId(request.user?.sub);
         await db.query(
           `INSERT INTO room_visibility_grants (room_id, user_id, granted_by)
            VALUES ($1, $2, $3)
@@ -1069,7 +1073,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
             roomSlug: room.slug,
             audioQualityOverride: room.audio_quality_override ?? null,
             updatedAt: new Date().toISOString(),
-            updatedByUserId: String(request.currentUser?.id || "").trim() || null
+            updatedByUserId: normId(request.currentUser?.id) || null
           }
         });
       }
@@ -1087,7 +1091,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
       preHandler: [requireAuth, requireServiceAccess, loadCurrentUser, requireRole(["admin", "super_admin"])]
     },
     async (request, reply) => {
-      const roomId = String(request.params.roomId || "").trim();
+      const roomId = normId(request.params.roomId);
       if (!roomId) {
         return reply.code(400).send({
           error: "ValidationError",
@@ -1174,7 +1178,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
       preHandler: [requireAuth, requireServiceAccess, loadCurrentUser, requireRole(["admin", "super_admin"])]
     },
     async (request, reply) => {
-      const roomId = String(request.params.roomId || "").trim();
+      const roomId = normId(request.params.roomId);
       if (!roomId) {
         return reply.code(400).send({
           error: "ValidationError",
@@ -1240,7 +1244,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
       preHandler: [requireAuth, requireServiceAccess, loadCurrentUser, requireRole(["admin", "super_admin"])]
     },
     async (request, reply) => {
-      const roomId = String(request.params.roomId || "").trim();
+      const roomId = normId(request.params.roomId);
       if (!roomId) {
         return reply.code(400).send({
           error: "ValidationError",
@@ -1275,7 +1279,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
       preHandler: [requireAuth, requireServiceAccess, loadCurrentUser, requireRole(["admin", "super_admin"])]
     },
     async (request, reply) => {
-      const roomId = String(request.params.roomId || "").trim();
+      const roomId = normId(request.params.roomId);
       if (!roomId) {
         return reply.code(400).send({
           error: "ValidationError",
@@ -1315,7 +1319,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
       preHandler: [requireAuth, requireServiceAccess, loadCurrentUser, requireRole(["admin", "super_admin"])]
     },
     async (request, reply) => {
-      const roomId = String(request.params.roomId || "").trim();
+      const roomId = normId(request.params.roomId);
       if (!roomId) {
         return reply.code(400).send({
           error: "ValidationError",
@@ -1376,11 +1380,11 @@ export async function roomsRoutes(fastify: FastifyInstance) {
       preHandler: [requireAuth, requireServiceAccess]
     },
     async (request, reply) => {
-      const userId = String(request.user?.sub || "").trim();
-      const slug = String(request.params.slug || "").trim();
+      const userId = normId(request.user?.sub);
+      const slug = normId(request.params.slug);
       const limit = Math.min(100, Math.max(1, Number(request.query.limit || 50)));
-      const beforeCreatedAtRaw = String(request.query.beforeCreatedAt || "").trim();
-      const beforeIdRaw = String(request.query.beforeId || "").trim();
+      const beforeCreatedAtRaw = normId(request.query.beforeCreatedAt);
+      const beforeIdRaw = normId(request.query.beforeId);
 
       let beforeCreatedAt: string | null = null;
       let beforeId: string | null = null;
@@ -1450,7 +1454,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
       }
 
       if (room.nsfw === true) {
-        const serverId = String(room.server_id || "").trim();
+        const serverId = normId(room.server_id);
         const confirmed = serverId ? await isServerAgeConfirmed(serverId, userId) : false;
         if (!confirmed) {
           return reply.code(403).send({
@@ -1608,9 +1612,9 @@ export async function roomsRoutes(fastify: FastifyInstance) {
       preHandler: [requireAuth, requireServiceAccess, loadCurrentUser]
     },
     async (request, reply) => {
-      const userId = String(request.currentUser?.id || request.user?.sub || "").trim();
-      const userName = String(request.currentUser?.name || "").trim() || "Unknown";
-      const slug = String(request.params.slug || "").trim();
+      const userId = normId(request.currentUser?.id || request.user?.sub);
+      const userName = normalizeBoundedString(request.currentUser?.name, 128) || "Unknown";
+      const slug = normId(request.params.slug);
 
       if (!slug) {
         return reply.code(400).send({
@@ -1673,7 +1677,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
       }
 
       if (room.nsfw === true) {
-        const serverId = String(room.server_id || "").trim();
+        const serverId = normId(room.server_id);
         const confirmed = serverId ? await isServerAgeConfirmed(serverId, userId) : false;
         if (!confirmed) {
           return reply.code(403).send({
@@ -1800,9 +1804,9 @@ export async function roomsRoutes(fastify: FastifyInstance) {
       preHandler: [requireAuth, requireServiceAccess, loadCurrentUser]
     },
     async (request, reply) => {
-      const roomId = String(request.params.roomId || "").trim();
-      const actorId = String(request.user?.sub || "").trim();
-      const globalRole = String(request.currentUser?.role || "user").trim();
+      const roomId = normId(request.params.roomId);
+      const actorId = normId(request.user?.sub);
+      const globalRole = normRole(request.currentUser?.role);
 
       if (!roomId) {
         return reply.code(400).send({
@@ -1823,7 +1827,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
         });
       }
 
-      const allowed = await canManageServerRooms(actorId, String(roomResult.rows[0]?.server_id || "").trim(), globalRole);
+      const allowed = await canManageServerRooms(actorId, normId(roomResult.rows[0]?.server_id), globalRole);
       if (!allowed) {
         return reply.code(403).send({
           error: "ForbiddenRole",
@@ -1853,9 +1857,9 @@ export async function roomsRoutes(fastify: FastifyInstance) {
       preHandler: [requireAuth, requireServiceAccess, loadCurrentUser]
     },
     async (request, reply) => {
-      const roomId = String(request.params.roomId || "").trim();
-      const actorId = String(request.user?.sub || "").trim();
-      const globalRole = String(request.currentUser?.role || "user").trim();
+      const roomId = normId(request.params.roomId);
+      const actorId = normId(request.user?.sub);
+      const globalRole = normRole(request.currentUser?.role);
       const parsed = roomVisibilityGrantSchema.safeParse(request.body || {});
 
       if (!roomId) {
@@ -1872,7 +1876,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
         });
       }
 
-      const targetUserId = String(parsed.data.user_id || "").trim();
+      const targetUserId = normId(parsed.data.user_id);
       const roomResult = await db.query<{ id: string; server_id: string; is_hidden: boolean }>(
         "SELECT id, server_id, is_hidden FROM rooms WHERE id = $1 LIMIT 1",
         [roomId]
@@ -1886,7 +1890,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
       }
 
       const room = roomResult.rows[0];
-      const allowed = await canManageServerRooms(actorId, String(room.server_id || "").trim(), globalRole);
+      const allowed = await canManageServerRooms(actorId, normId(room.server_id), globalRole);
       if (!allowed) {
         return reply.code(403).send({
           error: "ForbiddenRole",
@@ -1922,10 +1926,10 @@ export async function roomsRoutes(fastify: FastifyInstance) {
       preHandler: [requireAuth, requireServiceAccess, loadCurrentUser]
     },
     async (request, reply) => {
-      const roomId = String(request.params.roomId || "").trim();
-      const targetUserId = String(request.params.userId || "").trim();
-      const actorId = String(request.user?.sub || "").trim();
-      const globalRole = String(request.currentUser?.role || "user").trim();
+      const roomId = normId(request.params.roomId);
+      const targetUserId = normId(request.params.userId);
+      const actorId = normId(request.user?.sub);
+      const globalRole = normRole(request.currentUser?.role);
 
       if (!roomId || !targetUserId) {
         return reply.code(400).send({
@@ -1947,7 +1951,7 @@ export async function roomsRoutes(fastify: FastifyInstance) {
       }
 
       const room = roomResult.rows[0];
-      const allowed = await canManageServerRooms(actorId, String(room.server_id || "").trim(), globalRole);
+      const allowed = await canManageServerRooms(actorId, normId(room.server_id), globalRole);
       if (!allowed) {
         return reply.code(403).send({
           error: "ForbiddenRole",

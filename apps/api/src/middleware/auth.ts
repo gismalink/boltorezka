@@ -3,6 +3,9 @@ import { db } from "../db.js";
 import type { ServerMemberRole, UserRow } from "../db.types.ts";
 import { config } from "../config.js";
 import { ROLES, type RoleName } from "../roles.js";
+import { normalizeBoundedString } from "../validators.js";
+
+const normId = (value: unknown) => normalizeBoundedString(value, 128) || "";
 
 function unauthorized(reply: FastifyReply) {
   return reply.code(401).send({
@@ -96,17 +99,17 @@ async function resolveCurrentUser(request: FastifyRequest) {
 }
 
 function getRequestServerId(request: FastifyRequest): string | null {
-  const paramsServerId = String((request.params as { serverId?: unknown } | undefined)?.serverId || "").trim();
+  const paramsServerId = normId((request.params as { serverId?: unknown } | undefined)?.serverId);
   if (paramsServerId) {
     return paramsServerId;
   }
 
-  const queryServerId = String((request.query as { serverId?: unknown } | undefined)?.serverId || "").trim();
+  const queryServerId = normId((request.query as { serverId?: unknown } | undefined)?.serverId);
   if (queryServerId) {
     return queryServerId;
   }
 
-  const headerServerId = String(request.headers["x-server-id"] || "").trim();
+  const headerServerId = normId(request.headers["x-server-id"]);
   if (headerServerId) {
     return headerServerId;
   }
@@ -125,7 +128,7 @@ async function resolveDefaultServerId(): Promise<string | null> {
      LIMIT 1`
   );
 
-  return String(result.rows[0]?.id || "").trim() || null;
+  return normalizeBoundedString(result.rows[0]?.id, 128);
 }
 
 async function resolveServerMembership(userId: string, serverId: string) {
@@ -155,12 +158,12 @@ async function resolveServerMembership(userId: string, serverId: string) {
 }
 
 function resolveBearerToken(headerValue: unknown): string | null {
-  const raw = String(headerValue || "").trim();
+  const raw = normalizeBoundedString(headerValue, 4096) || "";
   const match = raw.match(/^Bearer\s+(.+)$/i);
   if (!match) {
     return null;
   }
-  const token = String(match[1] || "").trim();
+  const token = normalizeBoundedString(match[1], 4096) || "";
   return token || null;
 }
 
@@ -173,7 +176,7 @@ function readCookieValue(cookieHeader: unknown, cookieName: string): string | nu
   const parts = raw.split(";");
   for (const part of parts) {
     const [name, ...rest] = part.split("=");
-    if (String(name || "").trim() !== cookieName) {
+    if ((normalizeBoundedString(name, 256) || "") !== cookieName) {
       continue;
     }
 
@@ -214,8 +217,8 @@ export async function requireAuth(request: FastifyRequest, reply: FastifyReply) 
     return unauthorized(reply);
   }
 
-  const userId = String(request.user?.sub || "").trim();
-  const sessionId = String(request.user?.sid || "").trim();
+  const userId = normId(request.user?.sub);
+  const sessionId = normId(request.user?.sid);
   if (userId && sessionId) {
     const raw = await request.server.redis.get(`auth:session:${sessionId}`);
     if (!raw) {
@@ -316,7 +319,7 @@ export async function requireServiceAccess(request: FastifyRequest, reply: Fasti
     return;
   }
 
-  const accessState = String(user.access_state || "pending").trim();
+  const accessState = normalizeBoundedString(user.access_state, 32) || "pending";
   if (accessState !== "active") {
     return serviceAccessDenied(reply, accessState);
   }

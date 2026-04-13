@@ -15,6 +15,7 @@
 // Lazy import: age-verification-service тянет db.js → config.ts,
 // что ломает unit-тесты без DATABASE_URL. Импортируем только при вызове.
 import { ROLES } from "../roles.js";
+import { normalizeBoundedString } from "../validators.js";
 async function getIsServerAgeConfirmed(): Promise<(serverId: string, userId: string) => Promise<boolean>> {
   const { isServerAgeConfirmed } = await import("./age-verification-service.js");
   return isServerAgeConfirmed;
@@ -38,12 +39,70 @@ export type RoomAccessError = {
   message: string;
 };
 
-export async function canBypassRoomSendPolicy(
+export async function hasRoomMembership(
   dbQuery: DbQuery,
-  userId: string,
-  serverId: string | null
+  roomId: string,
+  userId: string
 ): Promise<boolean> {
-  const globalRoleResult = await dbQuery<{ role: string }>(
+  const membership = await dbQuery(
+    `SELECT 1
+     FROM room_members
+     WHERE room_id = $1
+       AND user_id = $2
+     LIMIT 1`,
+    [roomId, userId]
+  );
+
+  return (membership.rowCount || 0) > 0;
+}
+
+export async function hasHiddenRoomAccess(
+  dbQuery: DbQuery,
+  roomId: string,
+  userId: string
+): Promise<boolean> {
+  const grants = await dbQuery<{ has_access: boolean }>(
+    `SELECT EXISTS(
+        SELECT 1
+        FROM room_visibility_grants
+        WHERE room_id = $1
+          AND user_id = $2
+      ) OR EXISTS(
+        SELECT 1
+        FROM room_members
+        WHERE room_id = $1
+          AND user_id = $2
+      ) AS has_access`,
+    [roomId, userId]
+  );
+
+  return Boolean(grants.rows[0]?.has_access);
+}
+
+export async function isServerModerator(
+  dbQuery: DbQuery,
+  serverId: string,
+  userId: string
+): Promise<boolean> {
+  const membership = await dbQuery<{ role: string }>(
+    `SELECT role
+     FROM server_members
+     WHERE server_id = $1
+       AND user_id = $2
+       AND status = 'active'
+     LIMIT 1`,
+    [serverId, userId]
+  );
+
+  const role = membership.rows[0]?.role;
+  return role === ROLES.OWNER || role === ROLES.ADMIN;
+}
+
+export async function isGlobalModerator(
+  dbQuery: DbQuery,
+  userId: string
+): Promise<boolean> {
+  const userResult = await dbQuery<{ role: string }>(
     `SELECT role
      FROM users
      WHERE id = $1
@@ -52,28 +111,25 @@ export async function canBypassRoomSendPolicy(
     [userId]
   );
 
-  const globalRole = String(globalRoleResult.rows[0]?.role || "").trim();
-  if (globalRole === ROLES.ADMIN || globalRole === ROLES.SUPER_ADMIN) {
+  const role = userResult.rows[0]?.role;
+  return role === ROLES.ADMIN || role === ROLES.SUPER_ADMIN;
+}
+
+export async function canBypassRoomSendPolicy(
+  dbQuery: DbQuery,
+  userId: string,
+  serverId: string | null
+): Promise<boolean> {
+  if (await isGlobalModerator(dbQuery, userId)) {
     return true;
   }
 
-  const normalizedServerId = String(serverId || "").trim();
+  const normalizedServerId = normalizeBoundedString(serverId, 128) || "";
   if (!normalizedServerId) {
     return false;
   }
 
-  const membership = await dbQuery<{ role: string }>(
-    `SELECT role
-     FROM server_members
-     WHERE server_id = $1
-       AND user_id = $2
-       AND status = 'active'
-     LIMIT 1`,
-    [normalizedServerId, userId]
-  );
-
-  const serverRole = String(membership.rows[0]?.role || "").trim();
-  return serverRole === ROLES.OWNER || serverRole === ROLES.ADMIN;
+  return isServerModerator(dbQuery, normalizedServerId, userId);
 }
 
 export async function resolveRoomRealtimeAudienceUserIds(
@@ -115,7 +171,7 @@ export async function resolveRoomRealtimeAudienceUserIds(
     );
 
     return hiddenAudience.rows
-      .map((entry) => String(entry.user_id || "").trim())
+      .map((entry) => normalizeBoundedString(entry.user_id, 128) || "")
       .filter(Boolean);
   }
 
@@ -129,7 +185,7 @@ export async function resolveRoomRealtimeAudienceUserIds(
     );
 
     return serverAudience.rows
-      .map((entry) => String(entry.user_id || "").trim())
+      .map((entry) => normalizeBoundedString(entry.user_id, 128) || "")
       .filter(Boolean);
   }
 
@@ -141,7 +197,7 @@ export async function resolveRoomRealtimeAudienceUserIds(
   );
 
   return privateAudience.rows
-    .map((entry) => String(entry.user_id || "").trim())
+    .map((entry) => normalizeBoundedString(entry.user_id, 128) || "")
     .filter(Boolean);
 }
 
@@ -211,7 +267,7 @@ export async function resolveRoomBySlugWithAccessCheck(
   const room = roomResult.rows[0];
 
   if (room.nsfw === true) {
-    const serverId = String(room.server_id || "").trim();
+    const serverId = normalizeBoundedString(room.server_id, 128) || "";
     const isServerAgeConfirmed = await getIsServerAgeConfirmed();
     const confirmed = serverId ? await isServerAgeConfirmed(serverId, userId) : false;
     if (!confirmed) {

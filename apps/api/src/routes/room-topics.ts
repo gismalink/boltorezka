@@ -27,6 +27,7 @@ import {
   emitPinnedInboxEvent,
   emitReplyInboxEvent
 } from "../services/notification-inbox-service.js";
+import { normalizeBoundedString } from "../validators.js";
 import type {
   RoomTopicDeleteResponse,
   RoomTopicResponse,
@@ -113,6 +114,8 @@ const reportMessageSchema = z.object({
 const markTopicReadSchema = z.object({
   lastReadMessageId: z.string().uuid().optional()
 });
+
+const normId = (value: unknown) => normalizeBoundedString(value, 128) || "";
 
 function sendDomainError(reply: { code: (statusCode: number) => { send: (payload: unknown) => unknown } }, error: unknown) {
   const message = String((error as Error)?.message || "");
@@ -219,7 +222,7 @@ async function resolveRoomSlug(roomId: string): Promise<string | null> {
     [roomId]
   );
 
-  return String(result.rows[0]?.slug || "").trim() || null;
+  return normId(result.rows[0]?.slug) || null;
 }
 
 export async function roomTopicsRoutes(fastify: FastifyInstance) {
@@ -237,7 +240,7 @@ export async function roomTopicsRoutes(fastify: FastifyInstance) {
         });
       }
 
-      const userId = String(request.currentUser?.id || "").trim();
+      const userId = normId(request.currentUser?.id);
 
       try {
         const topics = await listRoomTopics(parsedParams.data.roomId, userId);
@@ -276,7 +279,7 @@ export async function roomTopicsRoutes(fastify: FastifyInstance) {
         });
       }
 
-      const userId = String(request.currentUser?.id || "").trim();
+      const userId = normId(request.currentUser?.id);
 
       try {
         const topic = await createRoomTopic({
@@ -334,7 +337,7 @@ export async function roomTopicsRoutes(fastify: FastifyInstance) {
         });
       }
 
-      const userId = String(request.currentUser?.id || "").trim();
+      const userId = normId(request.currentUser?.id);
 
       try {
         const topic = await updateRoomTopic({
@@ -385,7 +388,7 @@ export async function roomTopicsRoutes(fastify: FastifyInstance) {
         });
       }
 
-      const userId = String(request.currentUser?.id || "").trim();
+      const userId = normId(request.currentUser?.id);
 
       try {
         const topic = await setRoomTopicArchived({
@@ -433,7 +436,7 @@ export async function roomTopicsRoutes(fastify: FastifyInstance) {
         });
       }
 
-      const userId = String(request.currentUser?.id || "").trim();
+      const userId = normId(request.currentUser?.id);
 
       try {
         const topic = await setRoomTopicArchived({
@@ -481,7 +484,7 @@ export async function roomTopicsRoutes(fastify: FastifyInstance) {
         });
       }
 
-      const userId = String(request.currentUser?.id || "").trim();
+      const userId = normId(request.currentUser?.id);
 
       try {
         const deleted = await deleteRoomTopicWithMessages({
@@ -545,8 +548,8 @@ export async function roomTopicsRoutes(fastify: FastifyInstance) {
         });
       }
 
-      const beforeCreatedAtRaw = String(parsedQuery.data.beforeCreatedAt || "").trim();
-      const beforeIdRaw = String(parsedQuery.data.beforeId || "").trim();
+      const beforeCreatedAtRaw = normId(parsedQuery.data.beforeCreatedAt);
+      const beforeIdRaw = normId(parsedQuery.data.beforeId);
       let beforeCreatedAt: string | null = null;
       let beforeId: string | null = null;
 
@@ -570,9 +573,9 @@ export async function roomTopicsRoutes(fastify: FastifyInstance) {
         beforeId = beforeIdRaw;
       }
 
-      const userId = String(request.currentUser?.id || "").trim();
+      const userId = normId(request.currentUser?.id);
       const limit = parsedQuery.data.limit ?? 50;
-      const anchorMessageId = String(parsedQuery.data.anchorMessageId || "").trim() || null;
+      const anchorMessageId = normId(parsedQuery.data.anchorMessageId) || null;
       const aroundWindowBefore = typeof parsedQuery.data.aroundWindowBefore === "number"
         ? parsedQuery.data.aroundWindowBefore
         : undefined;
@@ -647,7 +650,7 @@ export async function roomTopicsRoutes(fastify: FastifyInstance) {
         });
       }
 
-      const userId = String(request.currentUser?.id || "").trim();
+      const userId = normId(request.currentUser?.id);
 
       try {
         const result = await createTopicMessage({
@@ -729,7 +732,7 @@ export async function roomTopicsRoutes(fastify: FastifyInstance) {
         return reply.code(400).send({ error: "ValidationError", issues: parsedBody.error.flatten() });
       }
 
-      const userId = String(request.currentUser?.id || "").trim();
+      const userId = normId(request.currentUser?.id);
 
       try {
         const result = await editTopicMessage({
@@ -781,7 +784,7 @@ export async function roomTopicsRoutes(fastify: FastifyInstance) {
         return reply.code(400).send({ error: "ValidationError", issues: parsedParams.error.flatten() });
       }
 
-      const userId = String(request.currentUser?.id || "").trim();
+      const userId = normId(request.currentUser?.id);
 
       try {
         const result = await deleteTopicMessage({
@@ -837,7 +840,7 @@ export async function roomTopicsRoutes(fastify: FastifyInstance) {
         return reply.code(400).send({ error: "ValidationError", issues: parsedBody.error.flatten() });
       }
 
-      const userId = String(request.currentUser?.id || "").trim();
+      const userId = normId(request.currentUser?.id);
 
       try {
         const result = await replyTopicMessage({
@@ -926,7 +929,7 @@ export async function roomTopicsRoutes(fastify: FastifyInstance) {
         return reply.code(400).send({ error: "ValidationError", issues: parsedParams.error.flatten() });
       }
 
-      const userId = String(request.currentUser?.id || "").trim();
+      const userId = normId(request.currentUser?.id);
 
       try {
         const result = await setTopicMessagePinned({
@@ -993,7 +996,7 @@ export async function roomTopicsRoutes(fastify: FastifyInstance) {
         return reply.code(400).send({ error: "ValidationError", issues: parsedParams.error.flatten() });
       }
 
-      const userId = String(request.currentUser?.id || "").trim();
+      const userId = normId(request.currentUser?.id);
 
       try {
         const result = await setTopicMessagePinned({
@@ -1054,7 +1057,7 @@ export async function roomTopicsRoutes(fastify: FastifyInstance) {
         return reply.code(400).send({ error: "ValidationError", issues: parsedBody.error.flatten() });
       }
 
-      const userId = String(request.currentUser?.id || "").trim();
+      const userId = normId(request.currentUser?.id);
 
       try {
         const result = await setTopicMessageReaction({
@@ -1114,7 +1117,7 @@ export async function roomTopicsRoutes(fastify: FastifyInstance) {
         return reply.code(400).send({ error: "ValidationError", issues: parsedParams.error.flatten() });
       }
 
-      const userId = String(request.currentUser?.id || "").trim();
+      const userId = normId(request.currentUser?.id);
 
       try {
         const result = await setTopicMessageReaction({
@@ -1179,7 +1182,7 @@ export async function roomTopicsRoutes(fastify: FastifyInstance) {
         return reply.code(400).send({ error: "ValidationError", issues: parsedBody.error.flatten() });
       }
 
-      const userId = String(request.currentUser?.id || "").trim();
+      const userId = normId(request.currentUser?.id);
 
       try {
         const reported = await createTopicMessageReport({
@@ -1222,7 +1225,7 @@ export async function roomTopicsRoutes(fastify: FastifyInstance) {
         return reply.code(400).send({ error: "ValidationError", issues: parsedBody.error.flatten() });
       }
 
-      const userId = String(request.currentUser?.id || "").trim();
+      const userId = normId(request.currentUser?.id);
 
       try {
         const read = await markTopicRead({

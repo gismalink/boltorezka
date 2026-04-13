@@ -6,6 +6,7 @@ import { loadCurrentUser, requireAuth, requireRole } from "../middleware/auth.js
 import { applyServiceBan, revokeServiceBan } from "../services/ban-service.js";
 import { writeServerAuditEvent } from "../services/server-audit-service.js";
 import { buildAuthAuditContext } from "./auth.helpers.js";
+import { normalizeBoundedString } from "../validators.js";
 import type { ServerSettingsRow, UserRow } from "../db.types.ts";
 import type {
   AdminServerOverviewResponse,
@@ -46,6 +47,9 @@ const serverBlockSchema = z.object({
   blocked: z.boolean()
 });
 
+const normId = (value: unknown) => normalizeBoundedString(value, 128) || "";
+const normRole = (value: unknown) => normalizeBoundedString(value, 32) || "user";
+
 async function loadUserById(userId: string) {
   const result = await db.query<UserRow>(
     "SELECT id, email, username, name, ui_theme, role, is_banned, access_state, is_bot, deleted_at, purge_scheduled_at, created_at FROM users WHERE id = $1",
@@ -55,7 +59,7 @@ async function loadUserById(userId: string) {
 }
 
 function validateTargetUserId(userIdRaw: string) {
-  const userId = String(userIdRaw || "").trim();
+  const userId = normId(userIdRaw);
   return userId;
 }
 
@@ -73,7 +77,7 @@ async function loadServerAudioQuality() {
     return "standard" as const;
   }
 
-  const value = String(result.rows[0]?.audio_quality || "standard").trim();
+  const value = normalizeBoundedString(result.rows[0]?.audio_quality, 32) || "standard";
   if (value === "retro" || value === "low" || value === "high" || value === "standard") {
     return value;
   }
@@ -145,7 +149,7 @@ export async function adminRoutes(fastify: FastifyInstance) {
         });
       }
 
-      const actorId = String(request.currentUser?.id || "").trim() || null;
+      const actorId = normId(request.currentUser?.id) || null;
       const updated = await db.query<ServerSettingsRow>(
         `INSERT INTO server_settings (id, audio_quality, updated_by, updated_at)
          VALUES (TRUE, $1, $2, NOW())
@@ -157,7 +161,7 @@ export async function adminRoutes(fastify: FastifyInstance) {
         [parsed.data.audioQuality, actorId]
       );
 
-      const audioQuality = String(updated.rows[0]?.audio_quality || "standard").trim();
+      const audioQuality = normalizeBoundedString(updated.rows[0]?.audio_quality, 32) || "standard";
       const response: ServerAudioQualityResponse = {
         audioQuality: audioQuality === "retro" || audioQuality === "low" || audioQuality === "high" ? audioQuality : "standard"
       };
@@ -289,7 +293,7 @@ export async function adminRoutes(fastify: FastifyInstance) {
       preHandler: [requireAuth, loadCurrentUser, requireRole(["super_admin"])]
     },
     async (request, reply) => {
-      const serverId = String(request.params.serverId || "").trim();
+      const serverId = normId(request.params.serverId);
       if (!serverId) {
         return reply.code(400).send({
           error: "ValidationError",
@@ -340,7 +344,7 @@ export async function adminRoutes(fastify: FastifyInstance) {
       await writeServerAuditEvent({
         action: blocked ? "server.blocked" : "server.unblocked",
         serverId,
-        actorUserId: String(request.currentUser?.id || "").trim(),
+        actorUserId: normId(request.currentUser?.id),
         meta: {
           blocked
         }
@@ -359,7 +363,7 @@ export async function adminRoutes(fastify: FastifyInstance) {
       preHandler: [requireAuth, loadCurrentUser, requireRole(["super_admin"])]
     },
     async (request, reply) => {
-      const serverId = String(request.params.serverId || "").trim();
+      const serverId = normId(request.params.serverId);
       if (!serverId) {
         return reply.code(400).send({
           error: "ValidationError",
@@ -422,7 +426,7 @@ export async function adminRoutes(fastify: FastifyInstance) {
           client,
           action: "server.deleted",
           serverId,
-          actorUserId: String(request.currentUser?.id || "").trim(),
+          actorUserId: normId(request.currentUser?.id),
           meta: {
             actorRole: "super_admin"
           }
@@ -446,7 +450,7 @@ export async function adminRoutes(fastify: FastifyInstance) {
       preHandler: [requireAuth, loadCurrentUser, requireRole(["super_admin", "admin"])]
     },
     async (request, reply) => {
-      const serverId = String(request.params.serverId || "").trim();
+      const serverId = normId(request.params.serverId);
       if (!serverId) {
         return reply.code(400).send({
           error: "ValidationError",
@@ -626,7 +630,7 @@ export async function adminRoutes(fastify: FastifyInstance) {
         });
       }
 
-      const userId = String(request.params.userId || "").trim();
+      const userId = normId(request.params.userId);
       if (!userId) {
         return reply.code(400).send({
           error: "ValidationError",
@@ -694,7 +698,7 @@ export async function adminRoutes(fastify: FastifyInstance) {
         });
       }
 
-      const actorId = String(request.currentUser?.id || "").trim();
+      const actorId = normId(request.currentUser?.id);
       if (actorId && actorId === userId) {
         return reply.code(400).send({
           error: "InvalidAction",
@@ -754,7 +758,7 @@ export async function adminRoutes(fastify: FastifyInstance) {
         });
       }
 
-      const actorId = String(request.currentUser?.id || "").trim();
+      const actorId = normId(request.currentUser?.id);
       if (actorId && actorId === userId) {
         return reply.code(400).send({
           error: "InvalidAction",
@@ -871,7 +875,7 @@ export async function adminRoutes(fastify: FastifyInstance) {
         });
       }
 
-      const actorRole = String(request.currentUser?.role || "user").trim();
+      const actorRole = normRole(request.currentUser?.role);
       if (actorRole !== "super_admin" && targetUser.role === "super_admin") {
         return reply.code(403).send({
           error: "ProtectedUser",
@@ -906,7 +910,7 @@ export async function adminRoutes(fastify: FastifyInstance) {
         });
       }
 
-      const actorId = String(request.currentUser?.id || "").trim();
+      const actorId = normId(request.currentUser?.id);
       if (actorId && actorId === userId) {
         return reply.code(400).send({
           error: "InvalidAction",
@@ -957,7 +961,7 @@ export async function adminRoutes(fastify: FastifyInstance) {
         });
       }
 
-      const actorId = String(request.currentUser?.id || "").trim();
+      const actorId = normId(request.currentUser?.id);
       if (actorId && actorId === userId) {
         return reply.code(400).send({
           error: "InvalidAction",
@@ -1028,7 +1032,7 @@ export async function adminRoutes(fastify: FastifyInstance) {
         });
       }
 
-      const actorUserId = String(request.currentUser?.id || "").trim();
+      const actorUserId = normId(request.currentUser?.id);
 
       try {
         const ban = await applyServiceBan({
@@ -1084,7 +1088,7 @@ export async function adminRoutes(fastify: FastifyInstance) {
         });
       }
 
-      const actorUserId = String(request.currentUser?.id || "").trim();
+      const actorUserId = normId(request.currentUser?.id);
 
       try {
         const revoked = await revokeServiceBan({

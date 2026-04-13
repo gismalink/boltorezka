@@ -3,6 +3,7 @@ import type { ServerMemberRole, ServerMuteRow } from "../db.types.ts";
 import { writeServerAuditEvent } from "./server-audit-service.js";
 import { emitModerationInboxEvent } from "./notification-inbox-service.js";
 import { resolveEffectiveServerPermissions } from "./server-permissions-service.js";
+import { normalizeBoundedString } from "../validators.js";
 
 type ServerMuteInput = {
   serverId: string;
@@ -39,16 +40,16 @@ async function resolveUserName(userId: string): Promise<string> {
     [userId]
   );
 
-  return String(result.rows[0]?.name || "Moderator").trim() || "Moderator";
+  return normalizeBoundedString(result.rows[0]?.name, 128) || "Moderator";
 }
 
 function normalizeReason(reason?: string | null): string | null {
-  const value = String(reason || "").trim();
+  const value = normalizeBoundedString(reason, 500) || "";
   return value ? value.slice(0, 500) : null;
 }
 
 function normalizeExpiresAt(expiresAt?: string | null): string | null {
-  const value = String(expiresAt || "").trim();
+  const value = normalizeBoundedString(expiresAt, 128) || "";
   if (!value) {
     return null;
   }

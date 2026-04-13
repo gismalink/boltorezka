@@ -3,6 +3,7 @@ import { z } from "zod";
 import { db } from "../db.js";
 import { requireAuth } from "../middleware/auth.js";
 import { config } from "../config.js";
+import { normalizeBoundedString } from "../validators.js";
 import type { UserCompactRow } from "../db.types.ts";
 import { appendSetCookie, buildAuthAuditContext, buildSessionCookieClearValue, buildSessionCookieValue } from "./auth.helpers.js";
 import { enforceCompactUserAccess } from "./auth-access.js";
@@ -39,7 +40,7 @@ export function registerAuthSessionRoutes(fastify: FastifyInstance, deps: AuthSe
         });
       }
 
-      const previousSessionId = String(request.user?.sid || "").trim() || null;
+      const previousSessionId = normalizeBoundedString(request.user?.sid, 128);
       if (!previousSessionId) {
         fastify.log.warn(
           buildAuthAuditContext(request, {
@@ -97,7 +98,7 @@ export function registerAuthSessionRoutes(fastify: FastifyInstance, deps: AuthSe
         });
       }
 
-      const email = String(parsed.data.email || "").trim().toLowerCase();
+      const email = parsed.data.email;
       if (!email.endsWith("@example.test")) {
         return reply.code(403).send({
           error: "Forbidden",
@@ -135,7 +136,7 @@ export function registerAuthSessionRoutes(fastify: FastifyInstance, deps: AuthSe
       preHandler: [requireAuth, limitLogout]
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
-      const sessionId = String(request.user?.sid || "").trim();
+      const sessionId = normalizeBoundedString(request.user?.sid, 128) || "";
       if (sessionId) {
         await deleteAuthSession(fastify, sessionId);
       }
@@ -163,7 +164,7 @@ export function registerAuthSessionRoutes(fastify: FastifyInstance, deps: AuthSe
       preHandler: [requireAuth, limitWsTicket]
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
-      const userId = String(request.user?.sub || "").trim();
+      const userId = normalizeBoundedString(request.user?.sub, 128);
       if (!userId) {
         return reply.code(401).send({
           error: "Unauthorized",
@@ -187,7 +188,10 @@ export function registerAuthSessionRoutes(fastify: FastifyInstance, deps: AuthSe
       if (!enforceCompactUserAccess(reply, user)) {
         return;
       }
-      const requestedServerId = String((request.query as { serverId?: unknown } | undefined)?.serverId || "").trim();
+      const requestedServerId = normalizeBoundedString(
+        (request.query as { serverId?: unknown } | undefined)?.serverId,
+        128
+      ) || "";
       let resolvedServerId: string | null = null;
 
       if (requestedServerId) {
@@ -203,7 +207,7 @@ export function registerAuthSessionRoutes(fastify: FastifyInstance, deps: AuthSe
            LIMIT 1`,
           [requestedServerId, user.id]
         );
-        resolvedServerId = String(membership.rows[0]?.server_id || "").trim() || null;
+        resolvedServerId = normalizeBoundedString(membership.rows[0]?.server_id, 128);
       }
 
       const response: WsTicketResponse = await issueWsTicket(

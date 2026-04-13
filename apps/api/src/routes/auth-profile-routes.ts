@@ -4,6 +4,7 @@ import { db } from "../db.js";
 import { requireAuth } from "../middleware/auth.js";
 import { config } from "../config.js";
 import type { UserRow } from "../db.types.ts";
+import { normalizeBoundedString } from "../validators.js";
 import type { MeResponse } from "../api-contract.types.ts";
 import {
   appendSetCookie,
@@ -27,7 +28,7 @@ export function registerAuthProfileRoutes(fastify: FastifyInstance) {
       preHandler: [requireAuth]
     },
     async (request: FastifyRequest) => {
-      const userId = String(request.user?.sub || "").trim();
+      const userId = normalizeBoundedString(request.user?.sub, 128) || "";
       const result = await db.query<UserRow>(
         "SELECT id, email, username, name, ui_theme, walkie_talkie_enabled, walkie_talkie_hotkey, role, is_banned, access_state, is_bot, deleted_at, purge_scheduled_at, created_at FROM users WHERE id = $1",
         [userId]
@@ -59,7 +60,7 @@ export function registerAuthProfileRoutes(fastify: FastifyInstance) {
         });
       }
 
-      const userId = String(request.user?.sub || "").trim();
+      const userId = normalizeBoundedString(request.user?.sub, 128);
       if (!userId) {
         return reply.code(401).send({
           error: "Unauthorized",
@@ -100,7 +101,7 @@ export function registerAuthProfileRoutes(fastify: FastifyInstance) {
       preHandler: [requireAuth]
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
-      const userId = String(request.user?.sub || "").trim();
+      const userId = normalizeBoundedString(request.user?.sub, 128);
       if (!userId) {
         return reply.code(401).send({
           error: "Unauthorized",
@@ -124,7 +125,7 @@ export function registerAuthProfileRoutes(fastify: FastifyInstance) {
         });
       }
 
-      const sessionId = String(request.user?.sid || "").trim();
+      const sessionId = normalizeBoundedString(request.user?.sid, 128) || "";
       if (sessionId) {
         await deleteAuthSession(fastify, sessionId);
       }

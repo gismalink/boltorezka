@@ -1,5 +1,6 @@
 import type { PoolClient } from "pg";
 import { db } from "../db.js";
+import { normalizeBoundedString } from "../validators.js";
 
 type AuditPayload = Record<string, unknown>;
 
@@ -13,7 +14,7 @@ type WriteServerAuditEventInput = {
 };
 
 export async function writeServerAuditEvent(input: WriteServerAuditEventInput): Promise<void> {
-  const action = String(input.action || "").trim();
+  const action = normalizeBoundedString(input.action, 128) || "";
   if (!action) {
     return;
   }

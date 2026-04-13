@@ -4,6 +4,7 @@ import { db } from "../db.js";
 import { requireAuth, requireServiceAccess } from "../middleware/auth.js";
 import type { UserMemberPreferenceRow } from "../db.types.ts";
 import { validateTargetUserId, validateTargetUserIdsCsv } from "./member-preferences.validation.js";
+import { normalizeBoundedString } from "../validators.js";
 
 const updateMemberPreferenceSchema = z.object({
   volume: z.number().int().min(0).max(100),
@@ -17,7 +18,7 @@ export async function memberPreferencesRoutes(fastify: FastifyInstance) {
       preHandler: [requireAuth, requireServiceAccess]
     },
     async (request, reply) => {
-      const viewerUserId = String(request.user?.sub || "").trim();
+      const viewerUserId = normalizeBoundedString(request.user?.sub, 128) || "";
       if (!viewerUserId) {
         return reply.code(401).send({
           error: "Unauthorized",
@@ -66,7 +67,7 @@ export async function memberPreferencesRoutes(fastify: FastifyInstance) {
       preHandler: [requireAuth, requireServiceAccess]
     },
     async (request, reply) => {
-      const viewerUserId = String(request.user?.sub || "").trim();
+      const viewerUserId = normalizeBoundedString(request.user?.sub, 128) || "";
         const targetUserIdValidation = validateTargetUserId(request.params?.targetUserId);
 
         if (!viewerUserId) {

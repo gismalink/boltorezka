@@ -3,6 +3,7 @@ import { z } from "zod";
 import { db } from "../db.js";
 import { requireAuth } from "../middleware/auth.js";
 import { config } from "../config.js";
+import { normalizeBoundedString } from "../validators.js";
 import type { UserRow } from "../db.types.ts";
 import { appendSetCookie, buildAuthAuditContext, buildSessionCookieValue } from "./auth.helpers.js";
 import { enforceUserLifecycleAccess } from "./auth-access.js";
@@ -50,7 +51,7 @@ export function registerAuthDesktopHandoffRoutes(
       preHandler: [requireAuth, limitDesktopHandoffAttemptCreate]
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
-      const userId = String(request.user?.sub || "").trim();
+      const userId = normalizeBoundedString(request.user?.sub, 128);
       if (!userId) {
         return reply.code(401).send({
           error: "Unauthorized",
@@ -120,7 +121,7 @@ export function registerAuthDesktopHandoffRoutes(
       preHandler: [requireAuth, limitDesktopHandoffAttemptComplete]
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
-      const userId = String(request.user?.sub || "").trim();
+      const userId = normalizeBoundedString(request.user?.sub, 128);
       if (!userId) {
         return reply.code(401).send({
           error: "Unauthorized",
@@ -191,7 +192,7 @@ export function registerAuthDesktopHandoffRoutes(
       preHandler: [requireAuth, limitDesktopHandoffCreate]
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
-      const userId = String(request.user?.sub || "").trim();
+      const userId = normalizeBoundedString(request.user?.sub, 128);
       if (!userId) {
         return reply.code(401).send({
           error: "Unauthorized",

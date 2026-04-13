@@ -10,6 +10,7 @@
  * - Вызывающий код при false должен сам обработать или перебросить ошибку.
  */
 import type { WebSocket } from "ws";
+import { normalizeBoundedString } from "../validators.js";
 
 type SendNackFn = (
   socket: WebSocket,
@@ -27,7 +28,7 @@ export function mapChatDomainErrorToWsNack(
   eventType: string,
   sendNack: SendNackFn
 ): boolean {
-  const message = String((error as Error)?.message || "").trim();
+  const message = normalizeBoundedString((error as Error)?.message, 256) || "";
 
   if (message === "topic_not_found" || message === "message_not_found" || message === "room_not_found") {
     sendNack(connection, requestId, eventType, "MessageNotFound", "Message not found");

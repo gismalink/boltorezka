@@ -1,20 +1,21 @@
 import type { FastifyRequest } from "fastify";
 import { config } from "../config.js";
+import { normalizeBoundedString } from "../validators.js";
 
 export function resolveLivekitClientUrl(request: FastifyRequest): string {
-  const raw = String(config.livekitUrl || "").trim();
+  const raw = normalizeBoundedString(config.livekitUrl, 2048) || "";
   if (!raw) {
     return raw;
   }
 
   try {
     const parsed = new URL(raw);
-    const forwardedProto = String(request.headers["x-forwarded-proto"] || "").trim().toLowerCase();
-    const forwardedHostRaw = String(request.headers["x-forwarded-host"] || "").trim();
-    const requestHostRaw = String(request.headers.host || "").trim();
+    const forwardedProto = (normalizeBoundedString(request.headers["x-forwarded-proto"], 16) || "").toLowerCase();
+    const forwardedHostRaw = normalizeBoundedString(request.headers["x-forwarded-host"], 255) || "";
+    const requestHostRaw = normalizeBoundedString(request.headers.host, 255) || "";
     const sourceHost = (forwardedHostRaw || requestHostRaw).split(",")[0]?.trim() || "";
     const normalizedHost = sourceHost.includes(":") ? sourceHost.split(":")[0] : sourceHost;
-    const requestProto = forwardedProto || String((request as { protocol?: string }).protocol || "").trim().toLowerCase();
+    const requestProto = forwardedProto || (normalizeBoundedString((request as { protocol?: string }).protocol, 16) || "").toLowerCase();
     const isHttps = requestProto === "https";
     const isIpHost = /^\d{1,3}(?:\.\d{1,3}){3}$/.test(parsed.hostname);
     const isLegacyLivekitHost = parsed.hostname === "test.boltorezka.gismalink.art"

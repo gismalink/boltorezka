@@ -215,7 +215,7 @@ Stage 0 note (2026-03-21): design-пакет закрыт в этом докум
 
 ### Stage 5 - Prod rollout
 
-- [x] После green test-gate и явного подтверждения: deploy в `prod` (2026-04-12, `origin/main`, SHA `e71506b`).
+- [ ] После green test-gate и явного подтверждения: deploy в `prod`.
 
 ## 7) Что еще может понадобиться
 

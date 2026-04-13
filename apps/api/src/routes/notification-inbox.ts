@@ -9,6 +9,7 @@ import {
   markNotificationInboxReadAll,
   markTopicUnreadMentionsReadAll
 } from "../services/notification-inbox-service.js";
+import { normalizeBoundedString } from "../validators.js";
 import type {
   NotificationInboxClaimResponse,
   NotificationInboxListResponse,
@@ -64,7 +65,7 @@ export async function notificationInboxRoutes(fastify: FastifyInstance) {
         return reply.code(400).send({ error: "ValidationError", message: "beforeCreatedAt is required when beforeId is provided" });
       }
 
-      const userId = String(request.currentUser?.id || "").trim();
+      const userId = normalizeBoundedString(request.currentUser?.id, 128) || "";
       const result = await listNotificationInbox({
         userId,
         limit: parsed.data.limit ?? 30,
@@ -99,7 +100,7 @@ export async function notificationInboxRoutes(fastify: FastifyInstance) {
         });
       }
 
-      const userId = String(request.currentUser?.id || "").trim();
+      const userId = normalizeBoundedString(request.currentUser?.id, 128) || "";
       const updated = await markNotificationInboxItemRead(userId, parsed.data.eventId);
       const response: NotificationInboxReadResponse = {
         eventId: parsed.data.eventId,
@@ -124,7 +125,7 @@ export async function notificationInboxRoutes(fastify: FastifyInstance) {
         });
       }
 
-      const userId = String(request.currentUser?.id || "").trim();
+      const userId = normalizeBoundedString(request.currentUser?.id, 128) || "";
       const ownership = await db.query<{ id: string }>(
         `SELECT id
          FROM notification_inbox
@@ -167,7 +168,7 @@ export async function notificationInboxRoutes(fastify: FastifyInstance) {
       preHandler: [requireAuth, requireServiceAccess, loadCurrentUser]
     },
     async (request, reply) => {
-      const userId = String(request.currentUser?.id || "").trim();
+      const userId = normalizeBoundedString(request.currentUser?.id, 128) || "";
       const updated = await markNotificationInboxReadAll(userId);
       const response: NotificationInboxReadAllResponse = {
         updated
@@ -207,7 +208,7 @@ export async function notificationInboxRoutes(fastify: FastifyInstance) {
         return reply.code(400).send({ error: "ValidationError", message: "beforeCreatedAt is required when beforeId is provided" });
       }
 
-      const userId = String(request.currentUser?.id || "").trim();
+      const userId = normalizeBoundedString(request.currentUser?.id, 128) || "";
       const result = await listTopicUnreadMentions({
         userId,
         topicId: parsedParams.data.topicId,
@@ -243,7 +244,7 @@ export async function notificationInboxRoutes(fastify: FastifyInstance) {
         });
       }
 
-      const userId = String(request.currentUser?.id || "").trim();
+      const userId = normalizeBoundedString(request.currentUser?.id, 128) || "";
       const updated = await markTopicUnreadMentionsReadAll({
         userId,
         topicId: parsedParams.data.topicId

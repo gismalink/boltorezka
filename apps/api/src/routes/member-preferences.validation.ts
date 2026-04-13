@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { normalizeBoundedString } from "../validators.js";
 
 const uuidSchema = z.string().trim().uuid();
 const targetUserIdsSchema = z.array(uuidSchema).max(200);
@@ -16,7 +17,7 @@ export function validateTargetUserId(targetUserId: unknown): ValidationResult<st
 }
 
 export function validateTargetUserIdsCsv(rawTargetIds: unknown): ValidationResult<string[]> {
-  const normalized = String(rawTargetIds || "").trim();
+  const normalized = normalizeBoundedString(rawTargetIds, 4000) || "";
   if (!normalized) {
     return { ok: true, value: [] };
   }

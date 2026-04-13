@@ -1,6 +1,7 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { config } from "../config.js";
 import type { UserRow } from "../db.types.ts";
+import { normalizeBoundedString } from "../validators.js";
 
 const AUTH_RATE_LIMIT_PREFIX = "auth:rl:";
 const ACCOUNT_DELETE_GRACE_DAYS = 30;
@@ -52,13 +53,13 @@ export function sendAccountDeleted(reply: FastifyReply, user: Pick<UserRow, "del
 }
 
 export function buildAuthAuditContext(request: FastifyRequest, extra: Record<string, unknown> = {}) {
-  const requestId = String(request.id || "").trim() || null;
-  const userId = String(request.user?.sub || request.currentUser?.id || "").trim() || null;
-  const sessionId = String(request.user?.sid || "").trim() || null;
+  const requestId = normalizeBoundedString(request.id, 128);
+  const userId = normalizeBoundedString(request.user?.sub || request.currentUser?.id, 128);
+  const sessionId = normalizeBoundedString(request.user?.sid, 128);
   const ip = String(request.ip || request.headers["x-forwarded-for"] || "unknown")
     .split(",")[0]
     .trim() || null;
-  const userAgent = String(request.headers["user-agent"] || "").trim() || null;
+  const userAgent = normalizeBoundedString(request.headers["user-agent"], 512);
 
   return {
     requestId,
@@ -71,7 +72,7 @@ export function buildAuthAuditContext(request: FastifyRequest, extra: Record<str
 }
 
 function resolveRateLimitSubject(request: FastifyRequest): string {
-  const userId = String(request.user?.sub || "").trim();
+  const userId = normalizeBoundedString(request.user?.sub, 128) || "";
   if (userId) {
     return `u:${userId}`;
   }

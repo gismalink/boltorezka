@@ -20,6 +20,7 @@ import { buildRealtimeScreenShareStateStore } from "./realtime-screen-share-stat
 import { createRealtimeRoomStateStore } from "./realtime-room-state.js";
 import { relayToTargetOrRoom } from "./realtime-relay.js";
 import { registerRealtimeWsRoute } from "./realtime-ws-route.js";
+import { normalizeBoundedString } from "../validators.js";
 import {
   buildRoomsPresenceEnvelope,
   buildCallInitialStateEnvelope,
@@ -208,7 +209,7 @@ export async function realtimeRoutes(fastify: FastifyInstance) {
     incrementMetric,
     sendJson,
     getUserSocketsByUserId: (userId: string) => {
-      const normalizedUserId = String(userId || "").trim();
+      const normalizedUserId = normalizeBoundedString(userId, 128) || "";
       if (!normalizedUserId) {
         return [];
       }

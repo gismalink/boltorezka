@@ -4,6 +4,7 @@ import { loadCurrentUser, requireAuth, requireNotServiceBanned } from "../middle
 import { makeRateLimiter } from "../middleware/rate-limit.js";
 import { acceptServerInvite } from "../services/invite-service.js";
 import type { InviteAcceptResponse } from "../api-contract.types.ts";
+import { normalizeBoundedString } from "../validators.js";
 
 const acceptInviteSchema = z.object({
   token: z.string().trim().min(16).max(512)
@@ -31,7 +32,7 @@ export async function invitesRoutes(fastify: FastifyInstance) {
         });
       }
 
-      const userId = String(request.currentUser?.id || "").trim();
+      const userId = normalizeBoundedString(request.currentUser?.id, 128) || "";
 
       try {
         const server = await acceptServerInvite({

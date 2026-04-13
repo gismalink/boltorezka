@@ -2,6 +2,7 @@ import type { FastifyRequest } from "fastify";
 import type { WebSocket } from "ws";
 import type { SocketState } from "../ws-protocol.types.ts";
 import { buildErrorEnvelope, buildRoomsPresenceEnvelope, buildServerReadyEnvelope } from "../ws-protocol.js";
+import { normalizeBoundedString } from "../validators.js";
 import { initializeRealtimeConnection } from "./realtime-lifecycle.js";
 import { sendJson } from "./realtime-io.js";
 
@@ -81,7 +82,7 @@ export async function consumeWsTicketAndInitializeConnection(deps: ConsumeWsTick
   }
 
   const userName = claims.userName || claims.name || claims.email || "unknown";
-  const currentServerId = String(claims.serverId || "").trim() || null;
+  const currentServerId = normalizeBoundedString(claims.serverId, 128);
 
   await initializeRealtimeConnection({
     connection,
