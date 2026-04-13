@@ -3,6 +3,20 @@ import { isReadPointerAdvance } from "./read-pointer.js";
 import { ensureTopicReadAccess, loadTopicWithRoom } from "./room-topic-messages-core.js";
 import { normalizeBoundedString } from "../validators.js";
 
+function normalizePointerCreatedAtIso(value: unknown): string {
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+
+  const raw = normalizeBoundedString(value, 128) || "";
+  if (!raw) {
+    return "";
+  }
+
+  const parsed = Date.parse(raw);
+  return Number.isFinite(parsed) ? new Date(parsed).toISOString() : raw;
+}
+
 export async function markTopicRead(input: {
   topicId: string;
   userId: string;
@@ -46,7 +60,7 @@ export async function markTopicRead(input: {
     && currentReadRow.last_read_message_created_at
     ? {
         messageId: normalizeBoundedString(currentReadRow.last_read_message_id, 128) || "",
-        createdAtIso: normalizeBoundedString(currentReadRow.last_read_message_created_at, 128) || ""
+        createdAtIso: normalizePointerCreatedAtIso(currentReadRow.last_read_message_created_at)
       }
     : null;
 
@@ -68,7 +82,7 @@ export async function markTopicRead(input: {
 
     requestedPointer = {
       messageId: normalizeBoundedString(messageCheck.rows[0]?.id, 128) || "",
-      createdAtIso: normalizeBoundedString(messageCheck.rows[0]?.created_at, 128) || ""
+      createdAtIso: normalizePointerCreatedAtIso(messageCheck.rows[0]?.created_at)
     };
 
     if (currentPointer && requestedPointer && !isReadPointerAdvance(currentPointer, requestedPointer)) {
