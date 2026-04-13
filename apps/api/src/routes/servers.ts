@@ -28,6 +28,7 @@ import { applyServerMute, revokeServerMute } from "../services/server-mute-servi
 import { makeRateLimiter } from "../middleware/rate-limit.js";
 import { confirmServerAge, getServerAgeConfirmation, revokeServerAgeConfirmation } from "../services/age-verification-service.js";
 import { resolveEffectiveServerPermissions, type ServerScopedPermissionKey } from "../services/server-permissions-service.js";
+import { normalizeBoundedString } from "../validators.js";
 import type {
   InviteCreateResponse,
   ServerAgeConfirmResponse,
@@ -50,6 +51,9 @@ import type {
   ServerRenameResponse,
   ServersListResponse
 } from "../api-contract.types.ts";
+
+const normId = (value: unknown) => normalizeBoundedString(value, 128) || "";
+const normRole = (value: unknown) => normalizeBoundedString(value, 32) || "";
 
 const createServerSchema = z.object({
   name: z.string().trim().min(3).max(64)
@@ -109,9 +113,9 @@ export async function serversRoutes(fastify: FastifyInstance) {
     reply: Parameters<typeof requireAuth>[1],
     permission: ServerScopedPermissionKey = "manageServer"
   ) => {
-    const paramsServerId = String((request.params as { serverId?: unknown } | undefined)?.serverId || "").trim();
-    const serverId = String(request.currentServer?.id || paramsServerId || "").trim();
-    const userId = String(request.currentUser?.id || "").trim();
+    const paramsServerId = normId((request.params as { serverId?: unknown } | undefined)?.serverId);
+    const serverId = normId(request.currentServer?.id || paramsServerId);
+    const userId = normId(request.currentUser?.id);
     if (!serverId || !userId) {
       reply.code(403).send({
         error: "ForbiddenRole",
@@ -120,7 +124,7 @@ export async function serversRoutes(fastify: FastifyInstance) {
       return false;
     }
 
-    const role = String(request.currentServer?.role || "").trim();
+    const role = normRole(request.currentServer?.role);
     if (canManageServerMeta(role)) {
       return true;
     }
@@ -157,7 +161,7 @@ export async function serversRoutes(fastify: FastifyInstance) {
         });
       }
 
-      const userId = String(request.currentUser?.id || "").trim();
+      const userId = normId(request.currentUser?.id);
       const userRole = request.currentUser?.role || "user";
 
       try {
@@ -189,7 +193,7 @@ export async function serversRoutes(fastify: FastifyInstance) {
       preHandler: [requireAuth, requireServiceAccess, requireNotServiceBanned, loadCurrentUser]
     },
     async (request) => {
-      const userId = String(request.currentUser?.id || "").trim();
+      const userId = normId(request.currentUser?.id);
       const servers = await listUserServers(userId);
       const response: ServersListResponse = { servers };
       return response;
@@ -202,8 +206,8 @@ export async function serversRoutes(fastify: FastifyInstance) {
       preHandler: [requireAuth, requireServiceAccess, requireNotServiceBanned, loadCurrentUser]
     },
     async (request, reply) => {
-      const serverId = String(request.params.serverId || "").trim();
-      const userId = String(request.currentUser?.id || "").trim();
+      const serverId = normId(request.params.serverId);
+      const userId = normId(request.currentUser?.id);
 
       const server = await getServerForUser(serverId, userId);
       if (!server) {
@@ -231,7 +235,7 @@ export async function serversRoutes(fastify: FastifyInstance) {
       ]
     },
     async (request) => {
-      const serverId = String(request.params.serverId || "").trim();
+      const serverId = normId(request.params.serverId);
       const members = await listServerMembers(serverId);
       const response: ServerMembersResponse = {
         serverId,
@@ -254,8 +258,8 @@ export async function serversRoutes(fastify: FastifyInstance) {
       ]
     },
     async (request, reply) => {
-      const serverId = String(request.params.serverId || "").trim();
-      const userId = String(request.params.userId || "").trim();
+      const serverId = normId(request.params.serverId);
+      const userId = normId(request.params.userId);
 
       const memberResult = await db.query<{
         userId: string;
@@ -366,9 +370,9 @@ export async function serversRoutes(fastify: FastifyInstance) {
         });
       }
 
-      const serverId = String(request.params.serverId || "").trim();
-      const userId = String(request.params.userId || "").trim();
-      const roleIds = Array.from(new Set(parsed.data.roleIds.map((value) => String(value || "").trim()).filter(Boolean)));
+      const serverId = normId(request.params.serverId);
+      const userId = normId(request.params.userId);
+      const roleIds = Array.from(new Set(parsed.data.roleIds.map((value) => normId(value)).filter(Boolean)));
 
       const roleCheck = await db.query<{ id: string }>(
         `SELECT id
@@ -430,9 +434,9 @@ export async function serversRoutes(fastify: FastifyInstance) {
         });
       }
 
-      const serverId = String(request.params.serverId || "").trim();
-      const userId = String(request.params.userId || "").trim();
-      const roomIds = Array.from(new Set(parsed.data.roomIds.map((value) => String(value || "").trim()).filter(Boolean)));
+      const serverId = normId(request.params.serverId);
+      const userId = normId(request.params.userId);
+      const roomIds = Array.from(new Set(parsed.data.roomIds.map((value) => normId(value)).filter(Boolean)));
 
       const roomCheck = await db.query<{ id: string }>(
         `SELECT id
@@ -461,7 +465,7 @@ export async function serversRoutes(fastify: FastifyInstance) {
         [serverId, userId]
       );
 
-      const actorId = String(request.currentUser?.id || "").trim() || null;
+      const actorId = normId(request.currentUser?.id) || null;
       for (const roomId of roomIds) {
         await db.query(
           `INSERT INTO room_visibility_grants (room_id, user_id, granted_by)
@@ -495,8 +499,8 @@ export async function serversRoutes(fastify: FastifyInstance) {
       ]
     },
     async (request, reply) => {
-      const serverId = String(request.params.serverId || "").trim();
-      const userId = String(request.currentUser?.id || "").trim();
+      const serverId = normId(request.params.serverId);
+      const userId = normId(request.currentUser?.id);
 
       try {
         const result = await leaveServerForUser({
@@ -540,9 +544,9 @@ export async function serversRoutes(fastify: FastifyInstance) {
       ]
     },
     async (request, reply) => {
-      const serverId = String(request.params.serverId || "").trim();
-      const actorUserId = String(request.currentUser?.id || "").trim();
-      const targetUserId = String(request.params.userId || "").trim();
+      const serverId = normId(request.params.serverId);
+      const actorUserId = normId(request.currentUser?.id);
+      const targetUserId = normId(request.params.userId);
 
       try {
         const result = await removeServerMemberForUser({
@@ -611,9 +615,9 @@ export async function serversRoutes(fastify: FastifyInstance) {
         });
       }
 
-      const serverId = String(request.params.serverId || "").trim();
-      const actorUserId = String(request.currentUser?.id || "").trim();
-      const targetUserId = String(parsed.data.userId || "").trim();
+      const serverId = normId(request.params.serverId);
+      const actorUserId = normId(request.currentUser?.id);
+      const targetUserId = normId(parsed.data.userId);
 
       try {
         const result = await transferServerOwnershipForUser({
@@ -680,8 +684,8 @@ export async function serversRoutes(fastify: FastifyInstance) {
         });
       }
 
-      const serverId = String(request.params.serverId || "").trim();
-      const actorUserId = String(request.currentUser?.id || "").trim();
+      const serverId = normId(request.params.serverId);
+      const actorUserId = normId(request.currentUser?.id);
 
       try {
         const server = await renameServerForUser({
@@ -726,8 +730,8 @@ export async function serversRoutes(fastify: FastifyInstance) {
       ]
     },
     async (request, reply) => {
-      const serverId = String(request.params.serverId || "").trim();
-      const actorUserId = String(request.currentUser?.id || "").trim();
+      const serverId = normId(request.params.serverId);
+      const actorUserId = normId(request.currentUser?.id);
 
       try {
         const result = await deleteServerForUser({
@@ -771,7 +775,7 @@ export async function serversRoutes(fastify: FastifyInstance) {
       preHandler: [requireAuth, requireServiceAccess, requireNotServiceBanned, loadCurrentUser]
     },
     async (request, reply) => {
-      const userId = String(request.currentUser?.id || "").trim();
+      const userId = normId(request.currentUser?.id);
       const server = await getDefaultServerContextForUser(userId);
       if (!server) {
         return reply.code(404).send({
@@ -797,8 +801,8 @@ export async function serversRoutes(fastify: FastifyInstance) {
       ]
     },
     async (request) => {
-      const serverId = String(request.params.serverId || "").trim();
-      const userId = String(request.currentUser?.id || "").trim();
+      const serverId = normId(request.params.serverId);
+      const userId = normId(request.currentUser?.id);
       const confirmation = await getServerAgeConfirmation(serverId, userId);
 
       const response: ServerAgeStatusResponse = {
@@ -824,10 +828,10 @@ export async function serversRoutes(fastify: FastifyInstance) {
       ]
     },
     async (request) => {
-      const serverId = String(request.params.serverId || "").trim();
-      const userId = String(request.currentUser?.id || "").trim();
+      const serverId = normId(request.params.serverId);
+      const userId = normId(request.currentUser?.id);
       const payload = (request.body as { source?: unknown; revoke?: unknown } | undefined) || {};
-      const source = String(payload.source || "").trim() || "explicit-ui";
+      const source = normId(payload.source) || "explicit-ui";
       const revokeRequested = payload.revoke === true;
 
       if (revokeRequested) {
@@ -877,9 +881,9 @@ export async function serversRoutes(fastify: FastifyInstance) {
       ]
     },
     async (request) => {
-      const serverId = String(request.params.serverId || "").trim();
-      const userId = String(request.currentUser?.id || "").trim();
-      const source = String((request.body as { source?: unknown } | undefined)?.source || "").trim() || "explicit-ui";
+      const serverId = normId(request.params.serverId);
+      const userId = normId(request.currentUser?.id);
+      const source = normId((request.body as { source?: unknown } | undefined)?.source) || "explicit-ui";
 
       await revokeServerAgeConfirmation({
         serverId,
@@ -920,8 +924,8 @@ export async function serversRoutes(fastify: FastifyInstance) {
         });
       }
 
-      const serverId = String(request.params.serverId || "").trim();
-      const actorUserId = String(request.currentUser?.id || "").trim();
+      const serverId = normId(request.params.serverId);
+      const actorUserId = normId(request.currentUser?.id);
 
       try {
         const invite = await createServerInvite({
@@ -981,8 +985,8 @@ export async function serversRoutes(fastify: FastifyInstance) {
         });
       }
 
-      const serverId = String(request.params.serverId || "").trim();
-      const actorUserId = String(request.currentUser?.id || "").trim();
+      const serverId = normId(request.params.serverId);
+      const actorUserId = normId(request.currentUser?.id);
 
       try {
         const mute = await applyServerMute({
@@ -1060,9 +1064,9 @@ export async function serversRoutes(fastify: FastifyInstance) {
       ]
     },
     async (request, reply) => {
-      const serverId = String(request.params.serverId || "").trim();
-      const actorUserId = String(request.currentUser?.id || "").trim();
-      const targetUserId = String(request.params.userId || "").trim();
+      const serverId = normId(request.params.serverId);
+      const actorUserId = normId(request.currentUser?.id);
+      const targetUserId = normId(request.params.userId);
 
       if (!targetUserId) {
         return reply.code(400).send({
@@ -1115,8 +1119,8 @@ export async function serversRoutes(fastify: FastifyInstance) {
         });
       }
 
-      const serverId = String(request.params.serverId || "").trim();
-      const actorUserId = String(request.currentUser?.id || "").trim();
+      const serverId = normId(request.params.serverId);
+      const actorUserId = normId(request.currentUser?.id);
 
       try {
         const ban = await applyServerBan({
@@ -1187,9 +1191,9 @@ export async function serversRoutes(fastify: FastifyInstance) {
       ]
     },
     async (request, reply) => {
-      const serverId = String(request.params.serverId || "").trim();
-      const actorUserId = String(request.currentUser?.id || "").trim();
-      const targetUserId = String(request.params.userId || "").trim();
+      const serverId = normId(request.params.serverId);
+      const actorUserId = normId(request.currentUser?.id);
+      const targetUserId = normId(request.params.userId);
 
       if (!targetUserId) {
         return reply.code(400).send({
@@ -1234,10 +1238,10 @@ export async function serversRoutes(fastify: FastifyInstance) {
       ]
     },
     async (request) => {
-      const serverId = String(request.params.serverId || "").trim();
+      const serverId = normId(request.params.serverId);
       const globalRole = request.currentUser?.role || "user";
       const serverRole = request.currentServer?.role || "member";
-      const userId = String(request.currentUser?.id || "").trim();
+      const userId = normId(request.currentUser?.id);
       const resolved = await resolveEffectiveServerPermissions({
         serverId,
         userId,
@@ -1282,7 +1286,7 @@ export async function serversRoutes(fastify: FastifyInstance) {
       ]
     },
     async (request) => {
-      const serverId = String(request.params.serverId || "").trim();
+      const serverId = normId(request.params.serverId);
       const customRoles = await db.query<{ id: string; name: string }>(
         `SELECT id, name
          FROM server_custom_roles
@@ -1320,7 +1324,7 @@ export async function serversRoutes(fastify: FastifyInstance) {
         return;
       }
 
-      const serverId = String(request.params.serverId || "").trim();
+      const serverId = normId(request.params.serverId);
       const limitRaw = Number(request.query.limit || 50);
       const limit = Number.isFinite(limitRaw)
         ? Math.max(1, Math.min(200, Math.round(limitRaw)))
@@ -1397,8 +1401,8 @@ export async function serversRoutes(fastify: FastifyInstance) {
         });
       }
 
-      const serverId = String(request.params.serverId || "").trim();
-      const actorId = String(request.currentUser?.id || "").trim() || null;
+      const serverId = normId(request.params.serverId);
+      const actorId = normId(request.currentUser?.id) || null;
 
       const inserted = await db.query<{ id: string; name: string }>(
         `INSERT INTO server_custom_roles (server_id, name, created_by_user_id)
@@ -1436,8 +1440,8 @@ export async function serversRoutes(fastify: FastifyInstance) {
         });
       }
 
-      const serverId = String(request.params.serverId || "").trim();
-      const roleId = String(request.params.roleId || "").trim();
+      const serverId = normId(request.params.serverId);
+      const roleId = normId(request.params.roleId);
       const updated = await db.query<{ id: string; name: string }>(
         `UPDATE server_custom_roles
          SET name = $3,
@@ -1476,8 +1480,8 @@ export async function serversRoutes(fastify: FastifyInstance) {
         return;
       }
 
-      const serverId = String(request.params.serverId || "").trim();
-      const roleId = String(request.params.roleId || "").trim();
+      const serverId = normId(request.params.serverId);
+      const roleId = normId(request.params.roleId);
       const deleted = await db.query<{ id: string }>(
         `DELETE FROM server_custom_roles
          WHERE id = $1

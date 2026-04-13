@@ -1,6 +1,7 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
 import { loadCurrentUser, requireAuth, requireRole } from "../middleware/auth.js";
+import { normalizeBoundedString } from "../validators.js";
 
 const telemetrySchema = z.object({
   event: z.string().trim().min(1).max(120),
@@ -13,7 +14,7 @@ function resolveBearerToken(authHeader: unknown): string | null {
     return null;
   }
 
-  const raw = String(authHeader).trim();
+  const raw = normalizeBoundedString(authHeader, 4096) || "";
   if (!raw) {
     return null;
   }

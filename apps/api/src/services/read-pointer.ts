@@ -1,3 +1,5 @@
+import { normalizeBoundedString } from "../validators.js";
+
 export function isReadPointerAdvance(
   currentPointer: { messageId: string; createdAtIso: string } | null,
   requestedPointer: { messageId: string; createdAtIso: string } | null
@@ -25,8 +27,8 @@ export function isReadPointerAdvance(
     return true;
   }
 
-  const currentMessageId = String(currentPointer.messageId || "").trim();
-  const requestedMessageId = String(requestedPointer.messageId || "").trim();
+  const currentMessageId = normalizeBoundedString(currentPointer.messageId, 128) || "";
+  const requestedMessageId = normalizeBoundedString(requestedPointer.messageId, 128) || "";
   if (!currentMessageId || !requestedMessageId) {
     return true;
   }

@@ -1,5 +1,6 @@
 import type { WebSocket } from "ws";
 import { buildAckEnvelope, buildErrorEnvelope, buildNackEnvelope } from "../ws-protocol.js";
+import { normalizeBoundedString } from "../validators.js";
 
 type RealtimeErrorCategory = "auth" | "permissions" | "topology" | "transport";
 
@@ -10,16 +11,7 @@ export function sendJson(socket: WebSocket, payload: unknown): void {
 }
 
 export function normalizeRequestId(value: unknown): string | null {
-  if (typeof value !== "string") {
-    return null;
-  }
-
-  const trimmed = value.trim();
-  if (!trimmed) {
-    return null;
-  }
-
-  return trimmed.slice(0, 128);
+  return normalizeBoundedString(value, 128);
 }
 
 export function sendAck(

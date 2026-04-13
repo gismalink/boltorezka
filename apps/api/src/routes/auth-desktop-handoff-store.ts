@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { normalizeBoundedString } from "../validators.js";
 
 const AUTH_DESKTOP_HANDOFF_PREFIX = "auth:desktop-handoff:";
 const AUTH_DESKTOP_HANDOFF_TTL_SEC = 120;
@@ -120,7 +121,7 @@ export async function consumeDesktopHandoffCode(
 
   try {
     const payload = JSON.parse(raw) as { userId?: string };
-    const userId = String(payload.userId || "").trim();
+    const userId = normalizeBoundedString(payload.userId, 128) || "";
     if (!userId) {
       return { status: "invalid" };
     }

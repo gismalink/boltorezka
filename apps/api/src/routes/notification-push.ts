@@ -6,6 +6,7 @@ import {
   registerNotificationPushSubscription,
   removeNotificationPushSubscription
 } from "../services/notification-push-service.js";
+import { normalizeBoundedString } from "../validators.js";
 
 const putSubscriptionSchema = z.object({
   endpoint: z.string().min(1),
@@ -46,7 +47,7 @@ export async function notificationPushRoutes(fastify: FastifyInstance) {
         });
       }
 
-      const userId = String(request.currentUser?.id || "").trim();
+      const userId = normalizeBoundedString(request.currentUser?.id, 128) || "";
       await registerNotificationPushSubscription({
         userId,
         endpoint: parsed.data.endpoint,
@@ -75,7 +76,7 @@ export async function notificationPushRoutes(fastify: FastifyInstance) {
         });
       }
 
-      const userId = String(request.currentUser?.id || "").trim();
+      const userId = normalizeBoundedString(request.currentUser?.id, 128) || "";
       const deleted = await removeNotificationPushSubscription(userId, parsed.data.endpoint);
       return reply.code(deleted ? 200 : 404).send({ ok: deleted });
     }

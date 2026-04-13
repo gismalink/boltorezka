@@ -1,5 +1,6 @@
 import { db } from "../db.js";
 import { writeServerAuditEvent } from "./server-audit-service.js";
+import { normalizeBoundedString } from "../validators.js";
 
 type ConfirmServerAgeInput = {
   serverId: string;
@@ -14,7 +15,7 @@ type ServerAgeConfirmation = {
 };
 
 function normalizeSource(source?: string | null): string | null {
-  const value = String(source || "").trim();
+  const value = normalizeBoundedString(source, 64) || "";
   return value ? value.slice(0, 64) : null;
 }
 

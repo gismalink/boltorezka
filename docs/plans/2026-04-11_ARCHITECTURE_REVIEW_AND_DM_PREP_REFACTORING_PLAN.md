@@ -24,8 +24,30 @@ Scope: глобальный аудит проекта boltorezka + план ре
 
 | Файл | Строк | Проблема |
 |------|-------|----------|
-| `routes/realtime-chat.ts` | ~939 | Значительно сокращен и стал thin-handler, но файл все еще крупный и требует дальнейшей декомпозиции. |
-| `services/room-topic-messages-service.ts` | ~1207 | Всё еще крупный сервис: CRUD + access control + read pointer + permission checks. |
+| `routes/realtime-chat.ts` | ~209 | ✅ Закрыто: thin orchestration wrappers, бизнес-ветки вынесены в route helpers. |
+| `services/room-topic-messages-service.ts` | ~18 | ✅ Закрыто: файл стал facade-export; доменная логика разнесена на list/mutation/read/core сервисы. |
+
+#### План закрытия God-файлов (2026-04-12, execution)
+
+1. `routes/realtime-chat.ts` (final split)
+  - [x] Вынести topic handlers в `routes/realtime-topic-message-handlers.ts`.
+  - [x] Вынести legacy/topic send ветки в dedicated handlers.
+  - [x] Вынести idempotency replay в helper.
+  - [x] Вынести room resolver в `routes/realtime-chat-room-resolver.ts`.
+  - [x] Вынести topic/inbox ops loaders (`getTopicMessageOps`, `getNotificationInboxOps`) в `routes/realtime-topic-ops-loader.ts`.
+  - [x] После выноса loaders оставить в `realtime-chat.ts` только route orchestration и thin wrappers.
+
+2. `services/room-topic-messages-service.ts` (domain split)
+  - [x] Вынести listing-ветку (`listTopicMessages` + around/paged helpers) в `services/room-topic-messages-list-service.ts`.
+  - [x] Вынести mutation-ветки (create/edit/delete/reply/pin/reaction/report) в `services/room-topic-messages-mutation-service.ts`.
+  - [x] Вынести read-pointer ветку (`markTopicRead`) в `services/room-topic-messages-read-service.ts`.
+  - [x] Оставить в `room-topic-messages-service.ts` facade-export + shared types/minimal composition.
+
+3. Acceptance для закрытия CRITICAL
+  - [x] `realtime-chat.test.ts` и `realtime-message-handler-routing.test.ts` green.
+  - [x] `room-access-service.test.ts`, `permission-matrix.test.ts`, `room-access-service.error.test.ts` green.
+  - [x] `realtime-chat.ts` <= ~320 строк (не hard limit, ориентир).
+  - [x] `room-topic-messages-service.ts` <= ~250 строк facade (основная логика разнесена по модулям).
 
 #### Дублирование кода (IMPORTANT)
 
@@ -360,6 +382,35 @@ Scope: глобальный аудит проекта boltorezka + план ре
 ├── [ ] Глобальный список контактов/диалогов DM (вне конкретного сервера) → см. 2026-03-20_DIRECT_MESSAGES_PLAN.md Stage 3
 ├── ~~Call UI (DmCallOverlay)~~ → перенесен в 2026-04-11_DM_CALLS_PLAN.md
 └── Deploy test → smoke → prod ✅ (main: e71506b)
+
+Итерация 8 (God-files closure backend) ✅ 2026-04-12
+├── `routes/realtime-chat.ts` 939→209: вынесены topic handlers, legacy handlers, room resolver, topic ops loader, idempotency replay helper
+├── `services/room-topic-messages-service.ts` 1207→18 (facade)
+├── Новые доменные сервисы: core (213), list (412), mutation (439), read (138)
+├── Тесты: realtime-chat + routing (16/16), room-access/permission/error (30/30)
+└── Acceptance для раздела God-files (CRITICAL) закрыт
+
+Итерация 9 (Duplication cleanup backend, batch-1) ✅ 2026-04-12
+├── Добавлен shared normalizer `apps/api/src/validators.ts`: `normalizeBoundedString`, `normalizeOptionalString`
+├── Дедуп normalizers в routes/services: `chat-uploads.ts`, `realtime-io.ts`, `invites.ts`, `notification-push.ts`, `notification-inbox.ts`, `search.ts`, `member-preferences.ts`, `auth-livekit-routes.ts`
+├── Дедуп auth-пакета: `auth-profile-routes.ts`, `auth-session-routes.ts`, `auth-desktop-handoff-routes.ts`, `auth.helpers.ts`, `auth-session.ts`, `auth-ws-ticket.ts`, `auth-desktop-handoff-store.ts`
+├── Дополнительно: `realtime-room-state.ts` переведен на shared validator
+├── Фикс регрессии: `chat-uploads.ts` вызов `canBypassRoomSendPolicy(db.query.bind(db), userId, serverId)`
+├── Тесты: realtime/member-preferences 26/26; auth+realtime (с env) 7/7
+└── Статус: продолжаем batch-2 по оставшимся дубликатам вне DM-ветки
+
+Итерация 10 (Duplication cleanup backend, batch-2) ✅ 2026-04-12
+├── Realtime routes: дедуп normalizers в `realtime-ws-auth.ts`, `realtime-permissions.ts`, `realtime-room-join.ts`
+├── Все замены выполнены через shared `normalizeBoundedString` (без изменения внешнего поведения)
+├── Тесты: `realtime-ws-auth.contract.test.ts` + realtime suite = 21/21
+└── Статус: можно продолжать batch-3 по `auth-livekit.ts`/`auth-livekit-routes.ts` и далее `rooms.ts`/`servers.ts`
+
+Итерация 11 (Duplication cleanup backend, batch-3) ✅ 2026-04-12
+├── `auth-livekit.ts`: дедуп всех trim-based normalizers на shared `normalizeBoundedString`
+├── Обновлены нормализации: `livekitUrl`, `x-forwarded-proto`, `x-forwarded-host`, `host`, `request.protocol`
+├── Поведение URL resolver сохранено (scheme/host rewrite rules не менялись)
+├── Тесты: auth + realtime targeted suite = 6/6
+└── Статус: следующий batch — крупные `rooms.ts`/`servers.ts` (поштучно, без DM-ветки)
 ```
 
 ---

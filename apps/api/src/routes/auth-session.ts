@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { FastifyInstance } from "fastify";
 import type { UserRow } from "../db.types.ts";
+import { normalizeBoundedString } from "../validators.js";
 
 const AUTH_SESSION_PREFIX = "auth:session:";
 const AUTH_SESSION_TTL_SEC = 60 * 60 * 24 * 30;
@@ -50,7 +51,7 @@ export async function issueAuthSessionToken(
 }
 
 export async function deleteAuthSession(fastify: FastifyInstance, sessionId: string) {
-  const normalizedSessionId = String(sessionId || "").trim();
+  const normalizedSessionId = normalizeBoundedString(sessionId, 128) || "";
   if (!normalizedSessionId) {
     return;
   }

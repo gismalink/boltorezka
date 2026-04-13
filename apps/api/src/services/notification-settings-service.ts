@@ -1,4 +1,5 @@
 import { db } from "../db.js";
+import { normalizeBoundedString } from "../validators.js";
 
 export type NotificationScopeType = "server" | "room" | "topic";
 export type NotificationMode = "all" | "mentions" | "none";
@@ -113,7 +114,7 @@ async function resolveTopicRoom(topicId: string): Promise<string | null> {
     [topicId]
   );
 
-  return String(result.rows[0]?.room_id || "").trim() || null;
+  return normalizeBoundedString(result.rows[0]?.room_id, 128);
 }
 
 export async function upsertNotificationSettings(input: UpsertNotificationSettingsInput): Promise<NotificationSettingsItem> {

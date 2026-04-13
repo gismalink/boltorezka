@@ -1,4 +1,5 @@
 import type { WebSocket } from "ws";
+import { normalizeBoundedString } from "./validators.js";
 
 const activeSockets = new Set<WebSocket>();
 const socketsByUserId = new Map<string, Set<WebSocket>>();
@@ -85,7 +86,7 @@ function sendJson(socket: WebSocket, payload: unknown) {
 export function registerRealtimeSocket(socket: WebSocket, userId?: string) {
   activeSockets.add(socket);
 
-  const normalizedUserId = String(userId || "").trim();
+  const normalizedUserId = normalizeBoundedString(userId, 128) || "";
   if (!normalizedUserId) {
     return;
   }
@@ -99,7 +100,7 @@ export function registerRealtimeSocket(socket: WebSocket, userId?: string) {
 export function unregisterRealtimeSocket(socket: WebSocket) {
   activeSockets.delete(socket);
 
-  const userId = String(userIdBySocket.get(socket) || "").trim();
+  const userId = normalizeBoundedString(userIdBySocket.get(socket), 128) || "";
   if (!userId) {
     return;
   }
@@ -116,7 +117,7 @@ export function unregisterRealtimeSocket(socket: WebSocket) {
 }
 
 export function disconnectRealtimeSocketsForUser(userId: string, code = 4009, reason = "Server membership changed") {
-  const normalizedUserId = String(userId || "").trim();
+  const normalizedUserId = normalizeBoundedString(userId, 128) || "";
   if (!normalizedUserId) {
     return 0;
   }
@@ -150,7 +151,7 @@ export function broadcastRealtimeEnvelope(payload: unknown, excludedSocket: WebS
 }
 
 export function broadcastRealtimeEnvelopeToUser(userId: string, payload: unknown, excludedSocket: WebSocket | null = null) {
-  const normalizedUserId = String(userId || "").trim();
+  const normalizedUserId = normalizeBoundedString(userId, 128) || "";
   if (!normalizedUserId) {
     return;
   }

@@ -3,6 +3,7 @@ import type { ServerListItem, ServerContext, ServerMemberItem } from "../api-con
 import type { ServerMemberRole, UserRole } from "../db.types.ts";
 import { writeServerAuditEvent } from "./server-audit-service.js";
 import { resolveEffectiveServerPermissions } from "./server-permissions-service.js";
+import { normalizeBoundedString } from "../validators.js";
 
 type CreateServerInput = {
   name: string;
@@ -37,6 +38,9 @@ type DeleteServerInput = {
   serverId: string;
   actorUserId: string;
 };
+
+const normId = (value: unknown) => normalizeBoundedString(value, 128) || "";
+const normName = (value: unknown) => normalizeBoundedString(value, 255) || "";
 
 function toSlug(raw: string): string {
   return raw
@@ -108,8 +112,8 @@ async function mapServerByIdForUser(serverId: string, userId: string): Promise<S
 }
 
 export async function createServerForUser(input: CreateServerInput): Promise<ServerListItem> {
-  const ownerUserId = String(input.ownerUserId || "").trim();
-  const trimmedName = String(input.name || "").trim();
+  const ownerUserId = normId(input.ownerUserId);
+  const trimmedName = normName(input.name);
   const creatorRole: UserRole = input.creatorRole;
 
   if (creatorRole !== "super_admin") {
@@ -153,7 +157,7 @@ export async function createServerForUser(input: CreateServerInput): Promise<Ser
       [generalRoomSlug, "general", ownerUserId, server.id]
     );
 
-    const createdRoomId = String(createdRoom.rows[0]?.id || "").trim();
+    const createdRoomId = normId(createdRoom.rows[0]?.id);
     if (createdRoomId) {
       await client.query(
         `INSERT INTO room_members (room_id, user_id, role)
@@ -281,7 +285,7 @@ export async function renameServerForUser(input: RenameServerInput): Promise<Ser
     throw new Error("ForbiddenRole");
   }
 
-  const trimmedName = String(input.name || "").trim();
+  const trimmedName = normName(input.name);
   const previousName = server.name;
   await db.query(
     `UPDATE servers

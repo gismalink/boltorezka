@@ -3,6 +3,7 @@ import { z } from "zod";
 import { loadCurrentUser, requireAuth, requireServiceAccess } from "../middleware/auth.js";
 import { searchMessages, type MessageSearchScope } from "../services/message-search-service.js";
 import type { SearchMessagesResponse } from "../api-contract.types.ts";
+import { normalizeBoundedString } from "../validators.js";
 
 const searchMessagesQuerySchema = z.object({
   q: z.string().trim().min(1).max(400),
@@ -37,7 +38,7 @@ export async function searchRoutes(fastify: FastifyInstance) {
         });
       }
 
-      const userId = String(request.currentUser?.id || "").trim();
+      const userId = normalizeBoundedString(request.currentUser?.id, 128) || "";
       const scope = parsedQuery.data.scope as MessageSearchScope;
 
       if (parsedQuery.data.beforeCreatedAt && !parsedQuery.data.beforeId) {

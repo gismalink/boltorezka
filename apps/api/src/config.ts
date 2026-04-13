@@ -18,17 +18,23 @@ const parseCsv = (value: unknown): string[] =>
     .map((item) => item.trim().toLowerCase())
     .filter(Boolean);
 
+const toTrimmed = (value: unknown): string => {
+  const raw = typeof value === "string" ? value : String(value ?? "");
+  return raw.trim();
+};
+const toTrimmedLower = (value: unknown): string => toTrimmed(value).toLowerCase();
+
 /**
  * @param {unknown} value
  * @param {boolean} defaultValue
  * @returns {boolean}
  */
 const parseBoolean = (value: unknown, defaultValue: boolean): boolean => {
-  if (value === undefined || value === null || String(value).trim() === "") {
+  if (value === undefined || value === null || toTrimmed(value) === "") {
     return defaultValue;
   }
 
-  const normalized = String(value).trim().toLowerCase();
+  const normalized = toTrimmedLower(value);
   if (["1", "true", "yes", "on"].includes(normalized)) {
     return true;
   }
@@ -43,7 +49,7 @@ const authMode = (process.env.AUTH_MODE || "sso").toLowerCase() === "local" ? "l
 const livekitEnabledRaw = parseBoolean(process.env.LIVEKIT_ENABLED, true);
 const livekitTokenTtlSecRaw = Number.parseInt(String(process.env.LIVEKIT_TOKEN_TTL_SEC || "1800"), 10);
 const authSsoRequestTimeoutMsRaw = Number.parseInt(String(process.env.AUTH_SSO_REQUEST_TIMEOUT_MS || "5000"), 10);
-const authSessionCookieSameSiteRaw = String(process.env.AUTH_SESSION_COOKIE_SAMESITE || "Lax").trim().toLowerCase();
+const authSessionCookieSameSiteRaw = toTrimmedLower(process.env.AUTH_SESSION_COOKIE_SAMESITE || "Lax");
 const authSessionCookieSameSite: "Lax" | "Strict" | "None" = authSessionCookieSameSiteRaw === "strict"
   ? "Strict"
   : authSessionCookieSameSiteRaw === "none"
@@ -56,12 +62,12 @@ const chatUploadAllowedMimeTypes = parseCsv(
   process.env.CHAT_UPLOAD_ALLOWED_MIME_TYPES
   || "image/png,image/jpeg,image/webp,image/gif,application/pdf,text/plain,text/csv,application/zip,audio/mpeg,audio/wav,audio/ogg,audio/mp4"
 );
-const chatStorageProvider = String(process.env.CHAT_STORAGE_PROVIDER || "localfs").trim().toLowerCase() === "minio"
+const chatStorageProvider = toTrimmedLower(process.env.CHAT_STORAGE_PROVIDER || "localfs") === "minio"
   ? "minio"
   : "localfs";
-const webPushPublicKey = String(process.env.WEB_PUSH_PUBLIC_KEY || "").trim();
-const webPushPrivateKey = String(process.env.WEB_PUSH_PRIVATE_KEY || "").trim();
-const webPushSubject = String(process.env.WEB_PUSH_SUBJECT || "mailto:ops@boltorezka.local").trim() || "mailto:ops@boltorezka.local";
+const webPushPublicKey = toTrimmed(process.env.WEB_PUSH_PUBLIC_KEY || "");
+const webPushPrivateKey = toTrimmed(process.env.WEB_PUSH_PRIVATE_KEY || "");
+const webPushSubject = toTrimmed(process.env.WEB_PUSH_SUBJECT || "mailto:ops@boltorezka.local") || "mailto:ops@boltorezka.local";
 const webPushEnabled = parseBoolean(process.env.WEB_PUSH_ENABLED, false)
   && Boolean(webPushPublicKey)
   && Boolean(webPushPrivateKey);
@@ -82,11 +88,11 @@ export const config: AppConfig = {
     ? authSsoRequestTimeoutMsRaw
     : 5000,
   authCookieMode: parseBoolean(process.env.AUTH_COOKIE_MODE, false),
-  authSessionCookieName: String(process.env.AUTH_SESSION_COOKIE_NAME || "boltorezka_session").trim() || "boltorezka_session",
+  authSessionCookieName: toTrimmed(process.env.AUTH_SESSION_COOKIE_NAME || "boltorezka_session") || "boltorezka_session",
   authSessionCookieSecure: parseBoolean(process.env.AUTH_SESSION_COOKIE_SECURE, true),
   authSessionCookieSameSite,
-  authSessionCookieDomain: String(process.env.AUTH_SESSION_COOKIE_DOMAIN || "").trim(),
-  authSessionCookiePath: String(process.env.AUTH_SESSION_COOKIE_PATH || "/").trim() || "/",
+  authSessionCookieDomain: toTrimmed(process.env.AUTH_SESSION_COOKIE_DOMAIN || ""),
+  authSessionCookiePath: toTrimmed(process.env.AUTH_SESSION_COOKIE_PATH || "/") || "/",
   authSessionCookieMaxAgeSec: Number.isFinite(authSessionCookieMaxAgeSecRaw) && authSessionCookieMaxAgeSecRaw > 0
     ? authSessionCookieMaxAgeSecRaw
     : 60 * 60 * 24 * 30,
@@ -95,18 +101,16 @@ export const config: AppConfig = {
     String(process.env.AUTH_SESSION_COOKIE_NAME || "boltorezka_session").includes("_test")
   ),
   allowedReturnHosts: parseCsv(process.env.ALLOWED_RETURN_HOSTS),
-  superAdminEmail: String(process.env.SUPER_ADMIN_EMAIL || "gismalink@gmail.com")
-    .trim()
-    .toLowerCase(),
-  appVersion: String(process.env.APP_VERSION || process.env.npm_package_version || "0.1.0").trim(),
-  appBuildSha: String(process.env.APP_BUILD_SHA || "").trim(),
+  superAdminEmail: toTrimmedLower(process.env.SUPER_ADMIN_EMAIL || "gismalink@gmail.com"),
+  appVersion: toTrimmed(process.env.APP_VERSION || process.env.npm_package_version || "0.1.0"),
+  appBuildSha: toTrimmed(process.env.APP_BUILD_SHA || ""),
   apiServeStatic: parseBoolean(process.env.API_SERVE_STATIC, true),
   rtcFeatureInitialStateReplay: parseBoolean(process.env.RTC_FEATURE_INITIAL_STATE_REPLAY, true),
   rtcMediaTopologyDefault: "livekit",
   livekitEnabled: livekitEnabledRaw,
-  livekitUrl: String(process.env.LIVEKIT_URL || "").trim(),
-  livekitApiKey: String(process.env.LIVEKIT_API_KEY || "").trim(),
-  livekitApiSecret: String(process.env.LIVEKIT_API_SECRET || "").trim(),
+  livekitUrl: toTrimmed(process.env.LIVEKIT_URL || ""),
+  livekitApiKey: toTrimmed(process.env.LIVEKIT_API_KEY || ""),
+  livekitApiSecret: toTrimmed(process.env.LIVEKIT_API_SECRET || ""),
   livekitTokenTtlSec: Number.isFinite(livekitTokenTtlSecRaw) && livekitTokenTtlSecRaw > 0
     ? livekitTokenTtlSecRaw
     : 1800,
@@ -133,13 +137,13 @@ export const config: AppConfig = {
     ? chatUploadInitTtlSecRaw
     : 600,
   chatStorageProvider,
-  chatMinioEndpoint: String(process.env.CHAT_MINIO_ENDPOINT || "").trim(),
-  chatMinioRegion: String(process.env.CHAT_MINIO_REGION || "us-east-1").trim() || "us-east-1",
-  chatMinioAccessKey: String(process.env.CHAT_MINIO_ACCESS_KEY || "").trim(),
-  chatMinioSecretKey: String(process.env.CHAT_MINIO_SECRET_KEY || "").trim(),
-  chatMinioBucket: String(process.env.CHAT_MINIO_BUCKET || "").trim(),
+  chatMinioEndpoint: toTrimmed(process.env.CHAT_MINIO_ENDPOINT || ""),
+  chatMinioRegion: toTrimmed(process.env.CHAT_MINIO_REGION || "us-east-1") || "us-east-1",
+  chatMinioAccessKey: toTrimmed(process.env.CHAT_MINIO_ACCESS_KEY || ""),
+  chatMinioSecretKey: toTrimmed(process.env.CHAT_MINIO_SECRET_KEY || ""),
+  chatMinioBucket: toTrimmed(process.env.CHAT_MINIO_BUCKET || ""),
   chatMinioForcePathStyle: parseBoolean(process.env.CHAT_MINIO_FORCE_PATH_STYLE, true),
-  chatObjectStoragePublicBaseUrl: String(process.env.CHAT_OBJECT_STORAGE_PUBLIC_BASE_URL || "").trim().replace(/\/+$/, ""),
+  chatObjectStoragePublicBaseUrl: toTrimmed(process.env.CHAT_OBJECT_STORAGE_PUBLIC_BASE_URL || "").replace(/\/+$/, ""),
   webPushEnabled,
   webPushSubject,
   webPushPublicKey,

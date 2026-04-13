@@ -1,6 +1,7 @@
 import { db } from "../db.js";
 import type { NotificationMode, NotificationScopeType } from "./notification-settings-service.js";
 import { sendInboxPushEvent } from "./notification-push-service.js";
+import { normalizeBoundedString } from "../validators.js";
 
 type InboxEventType = "reply_to_me" | "mention_me" | "message_pinned" | "moderation_action";
 type InboxPriority = "normal" | "critical";
@@ -35,6 +36,9 @@ export type NotificationInboxCursor = {
 };
 
 export type TopicUnreadMentionItem = NotificationInboxItem;
+
+const normId = (value: unknown) => normalizeBoundedString(value, 128) || "";
+const normText = (value: unknown, maxLength: number) => normalizeBoundedString(value, maxLength) || "";
 
 export async function listNotificationInbox(input: {
   userId: string;
@@ -269,7 +273,7 @@ function parseMentionHandles(text: string): { mentionsAll: boolean; handles: Set
 
   let match: RegExpExecArray | null;
   while ((match = mentionPattern.exec(normalized)) !== null) {
-    const handle = String(match[1] || "").trim().toLowerCase();
+    const handle = normText(match[1], 64).toLowerCase();
     if (handle) {
       handles.add(handle);
     }
@@ -291,7 +295,7 @@ function normalizeMentionUserIds(input: unknown): string[] {
   const ids: string[] = [];
 
   input.forEach((value) => {
-    const normalized = String(value || "").trim();
+    const normalized = normId(value);
     if (!normalized || seen.has(normalized)) {
       return;
     }
@@ -327,7 +331,7 @@ async function resolveRoomServerId(roomId: string): Promise<string | null> {
     [roomId]
   );
 
-  return String(result.rows[0]?.server_id || "").trim() || null;
+  return normalizeBoundedString(result.rows[0]?.server_id, 128);
 }
 
 async function loadEffectiveNotificationSettings(userId: string, scope: {
@@ -408,7 +412,7 @@ async function insertInboxEvent(input: {
     ]
   );
 
-  const eventId = String(inserted.rows[0]?.id || "").trim();
+  const eventId = normId(inserted.rows[0]?.id);
   if (!eventId) {
     return;
   }
@@ -436,7 +440,7 @@ export async function emitReplyInboxEvent(input: {
   messageId: string;
   text: string;
 }) {
-  const targetUserId = String(input.targetUserId || "").trim();
+  const targetUserId = normId(input.targetUserId);
   if (!targetUserId || targetUserId === input.actorUserId) {
     return;
   }
@@ -456,7 +460,7 @@ export async function emitReplyInboxEvent(input: {
     return;
   }
 
-  const body = String(input.text || "").trim().slice(0, 240) || "Reply";
+  const body = normText(input.text, 240) || "Reply";
   await insertInboxEvent({
     userId: targetUserId,
     eventType: "reply_to_me",
@@ -513,7 +517,7 @@ export async function emitMentionInboxEvents(input: {
   });
 
   const serverId = await resolveRoomServerId(input.roomId);
-  const body = String(input.text || "").trim().slice(0, 240) || "Mention";
+  const body = normText(input.text, 240) || "Mention";
   const resolvedMentionTargets = new Set<string>();
 
   for (const user of audience) {
@@ -572,7 +576,7 @@ export async function emitPinnedInboxEvent(input: {
   topicSlug: string | null;
   messageId: string;
 }) {
-  const targetUserId = String(input.targetMessageAuthorUserId || "").trim();
+  const targetUserId = normId(input.targetMessageAuthorUserId);
   if (!targetUserId || targetUserId === input.actorUserId) {
     return;
   }
@@ -627,36 +631,36 @@ export async function emitModerationInboxEvent(input: {
   topicSlug?: string | null;
   messageId?: string | null;
 }) {
-  const targetUserId = String(input.targetUserId || "").trim();
+  const targetUserId = normId(input.targetUserId);
   if (!targetUserId) {
     return;
   }
 
-  const actorUserId = String(input.actorUserId || "").trim() || null;
+  const actorUserId = normalizeBoundedString(input.actorUserId, 128);
   if (actorUserId && actorUserId === targetUserId) {
     return;
   }
 
-  const roomId = String(input.roomId || "").trim() || null;
-  const messageId = String(input.messageId || "").trim() || null;
+  const roomId = normalizeBoundedString(input.roomId, 128);
+  const messageId = normalizeBoundedString(input.messageId, 128);
 
   await insertInboxEvent({
     userId: targetUserId,
     eventType: "moderation_action",
     priority: "critical",
-    serverId: String(input.serverId || "").trim() || null,
+    serverId: normalizeBoundedString(input.serverId, 128),
     roomId,
-    topicId: String(input.topicId || "").trim() || null,
+    topicId: normalizeBoundedString(input.topicId, 128),
     messageId,
     actorUserId,
     title: String(input.title || "Moderation action").slice(0, 160),
     body: String(input.body || "A moderation action affected your account").slice(0, 300),
     payload: {
       action: String(input.action || "moderation.action"),
-      actorUserName: String(input.actorUserName || "").trim() || null,
-      roomSlug: String(input.roomSlug || "").trim() || null,
-      topicSlug: String(input.topicSlug || "").trim() || null,
-      topicId: String(input.topicId || "").trim() || null,
+      actorUserName: normalizeBoundedString(input.actorUserName, 160),
+      roomSlug: normalizeBoundedString(input.roomSlug, 160),
+      topicSlug: normalizeBoundedString(input.topicSlug, 160),
+      topicId: normalizeBoundedString(input.topicId, 128),
       messageId
     }
   });

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { loadCurrentUser, requireAuth, requireServiceAccess } from "../middleware/auth.js";
 import { broadcastRealtimeEnvelopeToUser } from "../realtime-broadcast.js";
 import { upsertNotificationSettings } from "../services/notification-settings-service.js";
+import { normalizeBoundedString } from "../validators.js";
 import type { NotificationSettingsResponse } from "../api-contract.types.ts";
 
 const patchNotificationSettingsSchema = z.object({
@@ -30,7 +31,7 @@ export async function notificationSettingsRoutes(fastify: FastifyInstance) {
         });
       }
 
-      const userId = String(request.currentUser?.id || "").trim();
+      const userId = normalizeBoundedString(request.currentUser?.id, 128) || "";
 
       try {
         const settings = await upsertNotificationSettings({

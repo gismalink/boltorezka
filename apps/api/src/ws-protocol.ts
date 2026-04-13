@@ -26,6 +26,7 @@ import type {
   DmThreadReadPayload,
   DmReactionChangedPayload
 } from "./ws-protocol.types.ts";
+import { normalizeOptionalString } from "./validators.js";
 
 export const CALL_MIC_STATE_EVENT_TYPES = ["call.mic_state"];
 export const CALL_VIDEO_STATE_EVENT_TYPES = ["call.video_state"];
@@ -231,7 +232,7 @@ export function buildErrorEnvelope(
 export const WS_PROTOCOL_VERSION = 1;
 
 export function buildServerReadyEnvelope(userId: string, userName: string, appBuildSha: string | null = null): WsOutgoingEnvelope {
-  const normalizedBuildSha = String(appBuildSha || "").trim();
+  const normalizedBuildSha = normalizeOptionalString(appBuildSha) || "";
 
   return {
     type: "server.ready",

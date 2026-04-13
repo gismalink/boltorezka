@@ -32,6 +32,7 @@ import {
   ChatObjectStorageNotFoundError,
   createChatObjectStorage
 } from "../storage/chat-object-storage.js";
+import { normalizeBoundedString } from "../validators.js";
 
 const AUTH_MIDDLEWARE = [requireAuth, requireServiceAccess];
 
@@ -61,13 +62,15 @@ const addContactSchema = z.object({
   contactUserId: z.string().uuid()
 });
 
+const normId = (value: unknown) => normalizeBoundedString(value, 128) || "";
+
 export async function dmRoutes(fastify: FastifyInstance) {
 
   // ─── threads ────────────────────────────────────────
 
   /** Список DM-тредов текущего пользователя */
   fastify.get("/v1/dm/threads", { preHandler: AUTH_MIDDLEWARE }, async (request) => {
-    const userId = String(request.user?.sub || "").trim();
+    const userId = normId(request.user?.sub);
     const threads = await getThreadsForUser(userId);
     const unreads = await getUnreadCountsForUser(userId);
     return {
@@ -80,7 +83,7 @@ export async function dmRoutes(fastify: FastifyInstance) {
 
   /** Создать / получить существующий DM thread */
   fastify.post("/v1/dm/threads", { preHandler: AUTH_MIDDLEWARE }, async (request, reply) => {
-    const userId = String(request.user?.sub || "").trim();
+    const userId = normId(request.user?.sub);
     const parsed = createThreadSchema.safeParse(request.body);
     if (!parsed.success) {
       return reply.code(400).send({ error: "validation_error", details: parsed.error.format() });
@@ -112,7 +115,7 @@ export async function dmRoutes(fastify: FastifyInstance) {
     Params: { threadId: string };
     Querystring: { cursor?: string; limit?: string };
   }>("/v1/dm/threads/:threadId/messages", { preHandler: AUTH_MIDDLEWARE }, async (request, reply) => {
-    const userId = String(request.user?.sub || "").trim();
+    const userId = normId(request.user?.sub);
     const { threadId } = request.params;
 
     const thread = await getThreadById(threadId);
@@ -131,7 +134,7 @@ export async function dmRoutes(fastify: FastifyInstance) {
     "/v1/dm/threads/:threadId/messages",
     { preHandler: AUTH_MIDDLEWARE },
     async (request, reply) => {
-      const userId = String(request.user?.sub || "").trim();
+      const userId = normId(request.user?.sub);
       const { threadId } = request.params;
 
       const thread = await getThreadById(threadId);
@@ -172,7 +175,7 @@ export async function dmRoutes(fastify: FastifyInstance) {
     "/v1/dm/messages/:messageId",
     { preHandler: AUTH_MIDDLEWARE },
     async (request, reply) => {
-      const userId = String(request.user?.sub || "").trim();
+      const userId = normId(request.user?.sub);
       const { messageId } = request.params;
 
       const parsed = editMessageSchema.safeParse(request.body);
@@ -211,7 +214,7 @@ export async function dmRoutes(fastify: FastifyInstance) {
     "/v1/dm/messages/:messageId",
     { preHandler: AUTH_MIDDLEWARE },
     async (request, reply) => {
-      const userId = String(request.user?.sub || "").trim();
+      const userId = normId(request.user?.sub);
       const { messageId } = request.params;
 
       try {
@@ -243,7 +246,7 @@ export async function dmRoutes(fastify: FastifyInstance) {
     "/v1/dm/threads/:threadId/read",
     { preHandler: AUTH_MIDDLEWARE },
     async (request, reply) => {
-      const userId = String(request.user?.sub || "").trim();
+      const userId = normId(request.user?.sub);
       const { threadId } = request.params;
 
       const thread = await getThreadById(threadId);
@@ -279,7 +282,7 @@ export async function dmRoutes(fastify: FastifyInstance) {
     "/v1/dm/messages/:messageId/reactions",
     { preHandler: AUTH_MIDDLEWARE },
     async (request, reply) => {
-      const userId = String(request.user?.sub || "").trim();
+      const userId = normId(request.user?.sub);
       const { messageId } = request.params;
 
       const parsed = reactionToggleSchema.safeParse(request.body);
@@ -324,7 +327,7 @@ export async function dmRoutes(fastify: FastifyInstance) {
     "/v1/dm/threads/:threadId/reactions",
     { preHandler: AUTH_MIDDLEWARE },
     async (request, reply) => {
-      const userId = String(request.user?.sub || "").trim();
+      const userId = normId(request.user?.sub);
       const { threadId } = request.params;
 
       const thread = await getThreadById(threadId);
@@ -340,12 +343,12 @@ export async function dmRoutes(fastify: FastifyInstance) {
   // ─── contacts ───────────────────────────────────────
 
   fastify.get("/v1/dm/contacts", { preHandler: AUTH_MIDDLEWARE }, async (request) => {
-    const userId = String(request.user?.sub || "").trim();
+    const userId = normId(request.user?.sub);
     return { contacts: await getContacts(userId) };
   });
 
   fastify.post("/v1/dm/contacts", { preHandler: AUTH_MIDDLEWARE }, async (request, reply) => {
-    const userId = String(request.user?.sub || "").trim();
+    const userId = normId(request.user?.sub);
     const parsed = addContactSchema.safeParse(request.body);
     if (!parsed.success) {
       return reply.code(400).send({ error: "validation_error", details: parsed.error.format() });
@@ -365,7 +368,7 @@ export async function dmRoutes(fastify: FastifyInstance) {
     "/v1/dm/contacts/:contactUserId",
     { preHandler: AUTH_MIDDLEWARE },
     async (request) => {
-      const userId = String(request.user?.sub || "").trim();
+      const userId = normId(request.user?.sub);
       await removeContact(userId, request.params.contactUserId);
       return { ok: true };
     }
@@ -374,7 +377,7 @@ export async function dmRoutes(fastify: FastifyInstance) {
   // ─── block list ─────────────────────────────────────
 
   fastify.get("/v1/dm/block-list", { preHandler: AUTH_MIDDLEWARE }, async (request) => {
-    const userId = String(request.user?.sub || "").trim();
+    const userId = normId(request.user?.sub);
     return { blocked: await getBlockList(userId) };
   });
 
@@ -382,7 +385,7 @@ export async function dmRoutes(fastify: FastifyInstance) {
     "/v1/dm/block-list/:userId",
     { preHandler: AUTH_MIDDLEWARE },
     async (request, reply) => {
-      const currentUserId = String(request.user?.sub || "").trim();
+      const currentUserId = normId(request.user?.sub);
       try {
         await blockUser(currentUserId, request.params.userId);
       } catch (err: unknown) {
@@ -399,7 +402,7 @@ export async function dmRoutes(fastify: FastifyInstance) {
     "/v1/dm/block-list/:userId",
     { preHandler: AUTH_MIDDLEWARE },
     async (request) => {
-      const currentUserId = String(request.user?.sub || "").trim();
+      const currentUserId = normId(request.user?.sub);
       await unblockUser(currentUserId, request.params.userId);
       return { ok: true };
     }
@@ -408,12 +411,12 @@ export async function dmRoutes(fastify: FastifyInstance) {
   // ─── settings ───────────────────────────────────────
 
   fastify.get("/v1/dm/settings", { preHandler: AUTH_MIDDLEWARE }, async (request) => {
-    const userId = String(request.user?.sub || "").trim();
+    const userId = normId(request.user?.sub);
     return getDmSettings(userId);
   });
 
   fastify.patch("/v1/dm/settings", { preHandler: AUTH_MIDDLEWARE }, async (request, reply) => {
-    const userId = String(request.user?.sub || "").trim();
+    const userId = normId(request.user?.sub);
     const parsed = updateSettingsSchema.safeParse(request.body);
     if (!parsed.success) {
       return reply.code(400).send({ error: "validation_error", details: parsed.error.format() });
@@ -440,7 +443,7 @@ export async function dmRoutes(fastify: FastifyInstance) {
   });
 
   function normalizeMimeType(value: string): string {
-    return String(value || "").trim().toLowerCase();
+    return (normalizeBoundedString(value, 512) || "").toLowerCase();
   }
 
   function buildDmStorageKey(threadId: string, userId: string, mimeType: string): string {
@@ -470,7 +473,7 @@ export async function dmRoutes(fastify: FastifyInstance) {
     "/v1/dm/threads/:threadId/uploads/init",
     { preHandler: AUTH_MIDDLEWARE },
     async (request, reply) => {
-      const userId = String(request.user?.sub || "").trim();
+      const userId = normId(request.user?.sub);
       if (!userId) {
         return reply.code(401).send({ error: "Unauthorized" });
       }
@@ -538,7 +541,7 @@ export async function dmRoutes(fastify: FastifyInstance) {
     "/v1/dm/threads/:threadId/uploads/finalize",
     { preHandler: AUTH_MIDDLEWARE },
     async (request, reply) => {
-      const userId = String(request.user?.sub || "").trim();
+      const userId = normId(request.user?.sub);
       if (!userId) {
         return reply.code(401).send({ error: "Unauthorized" });
       }

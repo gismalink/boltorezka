@@ -5,6 +5,7 @@
  * broadcast в room audience (сокеты вне текущей комнаты).
  */
 import type { WebSocket } from "ws";
+import { normalizeOptionalString } from "../validators.js";
 
 /**
  * Извлекает и дедуплицирует mentionUserIds из WS payload.
@@ -69,7 +70,7 @@ export function broadcastToRoomAudienceAcrossOtherRooms(params: {
         continue;
       }
 
-      const socketRoomId = String(getSocketRoomId(socket) || "").trim();
+      const socketRoomId = normalizeOptionalString(getSocketRoomId(socket)) || "";
       if (socketRoomId === roomId) {
         continue;
       }

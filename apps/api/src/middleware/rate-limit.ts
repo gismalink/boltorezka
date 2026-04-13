@@ -1,4 +1,5 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
+import { normalizeBoundedString } from "../validators.js";
 
 const RATE_LIMIT_PREFIX = "api:rl:";
 
@@ -10,7 +11,7 @@ type RateLimitPolicy = {
 };
 
 function resolveRateLimitSubject(request: FastifyRequest): string {
-  const currentUserId = String(request.currentUser?.id || request.user?.sub || "").trim();
+  const currentUserId = normalizeBoundedString(request.currentUser?.id || request.user?.sub, 128) || "";
   if (currentUserId) {
     return `u:${currentUserId}`;
   }

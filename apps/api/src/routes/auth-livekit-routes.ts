@@ -9,6 +9,7 @@ import type { UserRow } from "../db.types.ts";
 import type { LivekitTokenResponse } from "../api-contract.types.ts";
 import { enforceServiceAccess } from "./auth-access.js";
 import { resolveLivekitClientUrl } from "./auth-livekit.js";
+import { normalizeBoundedString } from "../validators.js";
 
 const livekitTokenSchema = z.object({
   roomSlug: z.string().trim().min(1).max(80),
@@ -46,7 +47,7 @@ export function registerAuthLivekitRoutes(fastify: FastifyInstance) {
         });
       }
 
-      const userId = String(request.user?.sub || "").trim();
+      const userId = normalizeBoundedString(request.user?.sub, 128) || "";
       if (!userId) {
         return reply.code(401).send({
           error: "Unauthorized",
@@ -120,7 +121,7 @@ export function registerAuthLivekitRoutes(fastify: FastifyInstance) {
       }
 
       const identity = userId;
-      const participantName = String(currentUser?.name || currentUser?.email || identity).trim();
+      const participantName = normalizeBoundedString(currentUser?.name || currentUser?.email || identity, 256) || identity;
       const issuedAt = new Date().toISOString();
       const traceId = randomUUID();
 
