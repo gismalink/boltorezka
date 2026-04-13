@@ -106,10 +106,10 @@ Scope: глобальный аудит проекта boltorezka + план ре
 - Глубина проброса снижена в `ChatPanel` (часто 1–2 уровня до section-компонентов), но остаётся высокой ширина prop-контрактов на границах секций.
 - React Context уже внедрён частично (`ChatPanelContext`, `ChatMessageActionsContext`), однако покрытие не системное и `ServerProfileModal` остаётся prop-heavy.
 
-**TODO (Итерация 12):**
-- [ ] **ServerProfileModal: grouped props** — изменить `ServerProfileModalProps` на `{ permissions, state, data, actions, meta }`, убрать flat-распаковку в Container. (−88 flat → 5 grouped)
-- [ ] **ServerProfileModalContext** — по аналогии с `ChatPanelContext`: вынести `t`, `currentUserId`, `currentServerId`, `currentServerRole`, permissions в context; tab-компоненты (`ServerDesktopTab`, `ServerVideoSettingsTab`) берут из context. (−15–20 prop slots)
-- [ ] **TopicActionsContext** — вынести ~20 topic CRUD/mute/rename колбэков из `ChatPanelOverlaysProps` (32 props) в context; Overlays и TopicContextMenu потребляют через хук. (−15–18 prop slots)
+**TODO (Итерация 12): ✅ ВЫПОЛНЕНО** (SHA `e7fb660`, deploy test smoke ok 2026-04-14)
+- [x] **ServerProfileModal: grouped props** — `ServerProfileModalProps` → `{ permissions, state, data, actions, meta }`, убрана flat-распаковка в Container. (−88 flat → 5 grouped)
+- [x] **ServerProfileModalContext** — вынесены `t`, `currentUserId`, `currentServerId`, `currentServerRole`, permissions в context; `ServerDesktopTab`, `ServerVideoSettingsTab` берут из context. (−15–20 prop slots)
+- [x] **TopicActionsContext** — ~16 topic CRUD/mute/rename колбэков из `ChatPanelOverlaysProps` (34→17 props) в context; Overlays потребляет через `useTopicActionsCtx()`. (−17 prop slots)
 
 #### State management (IMPORTANT)
 
@@ -117,9 +117,9 @@ Scope: глобальный аудит проекта boltorezka + план ре
 - Context boundaries внедрены частично (chat-область), но на уровне AppShell feature-scoped boundaries всё ещё недостаточны.
 - `useAppCoreState` — 58 useState, смешивает auth + desktop handoff + server admin state.
 
-**TODO (Итерация 12):**
-- [ ] **Split `useAppCoreState`** — выделить `useAuthState` (token, user, authMode), `useDesktopHandoffState` (roomSlug, pendingInviteToken), `useServerAdminState` (adminUsers, adminServers). `useAppCoreState` остаётся тонким фасадом. Изоляция re-renders.
-- [ ] **AuthContext + LocaleContext на AppShell** — создать `AuthContext` (token, user, userId, role) и `LocaleContext` (t, locale) на уровне AppShell; убирает проброс cross-cutting props через 4+ уровней.
+**TODO (Итерация 12): ✅ ВЫПОЛНЕНО**
+- [x] **Split `useAppCoreState`** — выделены `useAuthState` (token, user, authMode) и `useServerAdminState` (adminUsers, adminServers, adminServerOverviews). `useDesktopHandoffState` — отложен (мало state, выгода минимальна). `useAppCoreState` тонкий фасад.
+- [x] **AuthContext + LocaleContext на AppShell** — `AuthContext` (authToken) и `LocaleContext` (t, locale) на уровне App; убирает проброс cross-cutting props через 4+ уровней.
 
 #### Дублирование (MINOR)
 
@@ -129,8 +129,8 @@ Scope: глобальный аудит проекта boltorezka + план ре
 | Confirmation dialogs (useState + confirm) | 4 места | Вынести `useConfirmDialog` |
 | Cursor-based list loading | 5 мест | Общий `usePaginatedList` |
 
-**TODO (Итерация 12):**
-- [ ] **`useConfirmDialog` hook** — извлечь из `ServerProfileModal`, `RoomsPanel`, `UserDockSettingsOverlay`, `useChatPanelTopicActions`. API: `{ isOpen, payload, open(payload), close(), confirm() }`. (−4 inline-паттерна)
+**TODO (Итерация 12): отложено**
+- ~~**`useConfirmDialog` hook**~~ — анализ показал слишком гетерогенные паттерны (разные payload, async confirm, встроенные в modals), generic hook не оправдан. Оставлено inline.
 
 #### CSS (MINOR)
 
@@ -423,6 +423,17 @@ Scope: глобальный аудит проекта boltorezka + план ре
 ├── Поведение URL resolver сохранено (scheme/host rewrite rules не менялись)
 ├── Тесты: auth + realtime targeted suite = 6/6
 └── Статус: следующий batch — крупные `rooms.ts`/`servers.ts` (поштучно, без DM-ветки)
+
+Итерация 12 (Frontend props/context/state cleanup) ✅ 2026-04-14
+├── ServerProfileModal: 88 flat props → 5 grouped sub-objects (permissions/state/data/actions/meta)
+├── ServerProfileModalContext: t + permissions + currentUser/Server/Role → context; tabs берут из хука
+├── TopicActionsContext: 17 topic action props из ChatPanelOverlays → context (34→17 props)
+├── Split useAppCoreState: выделены useAuthState (3 пары) + useServerAdminState (6 пар)
+├── AuthContext + LocaleContext на App level (authToken, t, locale)
+├── useConfirmDialog — отложен (паттерны слишком гетерогенны)
+├── 16 файлов, +384/−476 строк, commit e7fb660
+├── Deploy test → smoke ✅ (edge + boltorezka)
+└── Готово к merge в main
 ```
 
 ---
