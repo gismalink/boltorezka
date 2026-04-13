@@ -399,6 +399,10 @@ async function insertInboxEvent(input: {
   payload: Record<string, unknown>;
   dedupeKey?: string;
 }) {
+  if (input.eventType === "mention_me" && !input.messageId) {
+    return;
+  }
+
   const inserted = await db.query<{ id: string }>(
     `INSERT INTO notification_inbox (
        user_id, event_type, priority, server_id, room_id, topic_id, message_id, actor_user_id,
