@@ -1,6 +1,8 @@
 // Purpose: Глубокий stress-тест unread-счётчиков и уведомлений для room chat и DM.
 // Использует 3 бот-пользователей (A=primary, B=second, C=third).
-// Проверяет: массовые сообщения, mentions, partial/full read, DM unread, WS realtime delivery.
+// Проверяет: массовые сообщения, mentions, read→new wave, DM partial read, WS realtime delivery.
+// Room topic read: last_read_at=NOW() → обнуляет все текущие, проверяем через wave-паттерн.
+// DM read: cursor по created_at сообщения → поддерживает partial read.
 import WS from "ws";
 
 const baseUrl = (process.env.SMOKE_API_URL ?? "http://localhost:8080").replace(/\/+$/, "");
@@ -253,34 +255,52 @@ async function resolveRoomId(token) {
     await markTopicRead(tokenA, topicId, seedId);
     await clearMentions(tokenA, topicId);
 
-    // B and C each send ROOM_MSG_COUNT messages
-    console.log(`${PREFIX}   B sends ${ROOM_MSG_COUNT} messages...`);
+    // Wave 1: B and C each send ROOM_MSG_COUNT messages
+    console.log(`${PREFIX}   wave 1: B sends ${ROOM_MSG_COUNT} messages...`);
     const bMsgIds = await sendMessagesBatched(topicId, tokenB, ROOM_MSG_COUNT, "b-msg");
-    console.log(`${PREFIX}   C sends ${ROOM_MSG_COUNT} messages...`);
+    console.log(`${PREFIX}   wave 1: C sends ${ROOM_MSG_COUNT} messages...`);
     const cMsgIds = await sendMessagesBatched(topicId, tokenC, ROOM_MSG_COUNT, "c-msg");
 
-    const totalRoomMsgs = ROOM_MSG_COUNT * 2;
+    const totalWave1 = ROOM_MSG_COUNT * 2;
 
-    // check unread for A
+    // check unread for A = all wave 1 messages
     const snap1 = await getTopicUnread(tokenA, roomId, topicId);
-    assert(snap1.unreadCount === totalRoomMsgs,
-      `expected unread=${totalRoomMsgs}, got=${snap1.unreadCount}`);
-    console.log(`${PREFIX}   ✓ A unread=${snap1.unreadCount} (expected ${totalRoomMsgs})`);
+    assert(snap1.unreadCount === totalWave1,
+      `expected unread=${totalWave1}, got=${snap1.unreadCount}`);
+    console.log(`${PREFIX}   ✓ wave 1: A unread=${snap1.unreadCount} (expected ${totalWave1})`);
 
-    // partial read: A reads B's last message (half of total)
-    await markTopicRead(tokenA, topicId, bMsgIds[bMsgIds.length - 1]);
-    const snap2 = await getTopicUnread(tokenA, roomId, topicId);
-    // After reading B's last msg, only C's messages remain unread
-    assert(snap2.unreadCount === ROOM_MSG_COUNT,
-      `expected unread=${ROOM_MSG_COUNT} after partial read, got=${snap2.unreadCount}`);
-    console.log(`${PREFIX}   ✓ after partial read: unread=${snap2.unreadCount} (expected ${ROOM_MSG_COUNT})`);
-
-    // full read: A reads C's last message
+    // A reads → last_read_at=NOW() clears ALL current messages
     await markTopicRead(tokenA, topicId, cMsgIds[cMsgIds.length - 1]);
+    const snap2 = await getTopicUnread(tokenA, roomId, topicId);
+    assert(snap2.unreadCount === 0,
+      `expected unread=0 after wave 1 read, got=${snap2.unreadCount}`);
+    console.log(`${PREFIX}   ✓ wave 1 read: unread=0`);
+
+    // Wave 2: B sends more messages after read → they appear as new unread
+    const WAVE2_COUNT = Math.ceil(ROOM_MSG_COUNT / 2);
+    console.log(`${PREFIX}   wave 2: B sends ${WAVE2_COUNT} messages...`);
+    const bWave2Ids = await sendMessagesBatched(topicId, tokenB, WAVE2_COUNT, "b-wave2");
+
     const snap3 = await getTopicUnread(tokenA, roomId, topicId);
-    assert(snap3.unreadCount === 0,
-      `expected unread=0 after full read, got=${snap3.unreadCount}`);
-    console.log(`${PREFIX}   ✓ after full read: unread=0`);
+    assert(snap3.unreadCount === WAVE2_COUNT,
+      `expected unread=${WAVE2_COUNT} after wave 2 partial, got=${snap3.unreadCount}`);
+    console.log(`${PREFIX}   ✓ wave 2 partial: A unread=${snap3.unreadCount} (expected ${WAVE2_COUNT})`);
+
+    // C also sends wave 2
+    console.log(`${PREFIX}   wave 2: C sends ${WAVE2_COUNT} messages...`);
+    const cWave2Ids = await sendMessagesBatched(topicId, tokenC, WAVE2_COUNT, "c-wave2");
+
+    const snap3b = await getTopicUnread(tokenA, roomId, topicId);
+    assert(snap3b.unreadCount === WAVE2_COUNT * 2,
+      `expected unread=${WAVE2_COUNT * 2} after wave 2 full, got=${snap3b.unreadCount}`);
+    console.log(`${PREFIX}   ✓ wave 2 full: A unread=${snap3b.unreadCount} (expected ${WAVE2_COUNT * 2})`);
+
+    // A reads all wave 2 → unread=0
+    await markTopicRead(tokenA, topicId, cWave2Ids[cWave2Ids.length - 1]);
+    const snap3c = await getTopicUnread(tokenA, roomId, topicId);
+    assert(snap3c.unreadCount === 0,
+      `expected unread=0 after wave 2 read, got=${snap3c.unreadCount}`);
+    console.log(`${PREFIX}   ✓ wave 2 read: unread=0`);
 
     // ══════════════════════════════════════════════════
     // PHASE 2: Mentions stress
@@ -544,7 +564,8 @@ async function resolveRoomId(token) {
   }
 
   const elapsed = ((Date.now() - t0) / 1000).toFixed(1);
-  const totalMsgsSent = (ROOM_MSG_COUNT * 2) + (MENTION_COUNT * 2) + (DM_MSG_COUNT * 2) + (20 * 4) + (10 * 2) + 5 + 1;
+  const WAVE2_TOTAL = Math.ceil(ROOM_MSG_COUNT / 2) * 2;
+  const totalMsgsSent = 1 + (ROOM_MSG_COUNT * 2) + WAVE2_TOTAL + (MENTION_COUNT * 2) + (DM_MSG_COUNT * 2) + (20 * 4) + (10 * 2) + 5;
   console.log(`${PREFIX} ok (${baseUrl}) elapsed=${elapsed}s totalMessages=${totalMsgsSent} phases=6/6`);
 
 })().catch((error) => {
