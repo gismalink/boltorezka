@@ -301,14 +301,6 @@ async function resolveRoomId(token) {
     const halfIdx = ROOM_MSG_COUNT - 1;
     const halfwayMsg = otherMsgsChron[halfIdx];
     const expectedAfter = otherMsgsChron.length - halfIdx - 1;
-    console.log(`${PREFIX}   [debug] allMsgs.length=${allMsgs.length} otherMsgsChron.length=${otherMsgsChron.length}`);
-    console.log(`${PREFIX}   [debug] halfIdx=${halfIdx} halfwayMsg.id=${halfwayMsg.id}`);
-    console.log(`${PREFIX}   [debug] halfwayMsg.createdAt=${halfwayMsg.createdAt || halfwayMsg.created_at}`);
-    if (otherMsgsChron[halfIdx + 1]) {
-      const next = otherMsgsChron[halfIdx + 1];
-      console.log(`${PREFIX}   [debug] next.id=${next.id} next.createdAt=${next.createdAt || next.created_at}`);
-      console.log(`${PREFIX}   [debug] same ts? ${(halfwayMsg.createdAt || halfwayMsg.created_at) === (next.createdAt || next.created_at)}`);
-    }
     await markTopicRead(tokenA, topicId, String(halfwayMsg.id));
     const snap2 = await getTopicUnread(tokenA, roomId, topicId);
     assert(snap2.unreadCount === expectedAfter,
@@ -317,19 +309,6 @@ async function resolveRoomId(token) {
 
     // Full read: A reads last message → unread=0
     const lastMsg = otherMsgsChron[otherMsgsChron.length - 1];
-    const secondLast = otherMsgsChron[otherMsgsChron.length - 2];
-    console.log(`${PREFIX}   [debug] lastMsg.id=${lastMsg.id} createdAt=${lastMsg.createdAt || lastMsg.created_at}`);
-    console.log(`${PREFIX}   [debug] secondLast.id=${secondLast?.id} createdAt=${secondLast?.createdAt || secondLast?.created_at}`);
-    // Also check ALL messages (incl A's) for the absolute last
-    const allSorted = [...allMsgs].sort((a, b) => {
-      const tA = new Date(a.createdAt || a.created_at).getTime();
-      const tB = new Date(b.createdAt || b.created_at).getTime();
-      if (tA !== tB) return tA - tB;
-      return (a.id || "") < (b.id || "") ? -1 : (a.id || "") > (b.id || "") ? 1 : 0;
-    });
-    const dbLast = allSorted[allSorted.length - 1];
-    console.log(`${PREFIX}   [debug] dbLast.id=${dbLast.id} createdAt=${dbLast.createdAt || dbLast.created_at} userId=${dbLast.userId || dbLast.user_id}`);
-    console.log(`${PREFIX}   [debug] lastMsg===dbLast? ${lastMsg.id === dbLast.id}`);
     await markTopicRead(tokenA, topicId, String(lastMsg.id));
     const snap3 = await getTopicUnread(tokenA, roomId, topicId);
     assert(snap3.unreadCount === 0,
