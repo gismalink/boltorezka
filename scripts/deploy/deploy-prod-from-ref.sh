@@ -14,6 +14,7 @@ COMPOSE_FILE="infra/docker-compose.host.yml"
 ENV_FILE="infra/.env.host"
 HEALTHCHECK_URL="${PROD_HEALTHCHECK_URL:-https://datowave.com/health}"
 FULL_RECREATE="${FULL_RECREATE:-0}"
+DEPLOY_RECREATE_TURN="${DEPLOY_RECREATE_TURN:-0}"
 ALLOW_PROD_RELAY_ONLY="${ALLOW_PROD_RELAY_ONLY:-0}"
 EDGE_REPO_DIR="${EDGE_REPO_DIR:-$HOME/srv/edge}"
 EDGE_STATIC_DIR_PROD="${EDGE_STATIC_DIR_PROD:-$EDGE_REPO_DIR/ingress/static/boltorezka/prod}"
@@ -143,7 +144,13 @@ if [[ "$FULL_RECREATE" == "1" ]]; then
   fi
   DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" up -d --force-recreate boltorezka-api-prod
 else
-  DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" up -d boltorezka-turn boltorezka-db-prod boltorezka-redis-prod
+  DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" up -d --no-recreate boltorezka-db-prod boltorezka-redis-prod
+  if [[ "$DEPLOY_RECREATE_TURN" == "1" ]]; then
+    DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" rm -f -s boltorezka-turn >/dev/null 2>&1 || true
+    DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" up -d boltorezka-turn
+  else
+    DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" up -d --no-recreate boltorezka-turn
+  fi
   if [[ "$PROD_CHAT_STORAGE_PROVIDER_VALUE" == "minio" ]]; then
     echo "[deploy-prod] storage provider=minio -> ensure minio-prod profile is up"
     DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" --profile minio-prod up -d boltorezka-minio-prod boltorezka-minio-prod-init
