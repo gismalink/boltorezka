@@ -106,7 +106,10 @@ export async function markTopicRead(input: {
            FROM messages m
            WHERE m.topic_id = $1
              AND m.user_id <> $2
-             AND m.created_at > COALESCE(rr.last_read_at, to_timestamp(0))
+             AND m.created_at > COALESCE(
+               (SELECT created_at FROM messages WHERE id = rr.last_read_message_id),
+               to_timestamp(0)
+             )
          )
        ) AS unread_count
      FROM (SELECT 1) AS _

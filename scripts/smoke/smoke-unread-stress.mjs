@@ -1,8 +1,7 @@
 // Purpose: Глубокий stress-тест unread-счётчиков и уведомлений для room chat и DM.
 // Использует 3 бот-пользователей (A=primary, B=second, C=third).
-// Проверяет: массовые сообщения, mentions, read→new wave, DM partial read, WS realtime delivery.
-// Room topic read: last_read_at=NOW() → обнуляет все текущие, проверяем через wave-паттерн.
-// DM read: cursor по created_at сообщения → поддерживает partial read.
+// Проверяет: массовые сообщения, partial read, mentions, DM partial read, concurrent, WS realtime.
+// Room + DM: unread cursor по created_at прочитанного сообщения → поддерживает partial read.
 import WS from "ws";
 
 const baseUrl = (process.env.SMOKE_API_URL ?? "http://localhost:8080").replace(/\/+$/, "");
@@ -255,52 +254,46 @@ async function resolveRoomId(token) {
     await markTopicRead(tokenA, topicId, seedId);
     await clearMentions(tokenA, topicId);
 
-    // Wave 1: B and C each send ROOM_MSG_COUNT messages
-    console.log(`${PREFIX}   wave 1: B sends ${ROOM_MSG_COUNT} messages...`);
+    // B and C each send ROOM_MSG_COUNT messages
+    console.log(`${PREFIX}   B sends ${ROOM_MSG_COUNT} messages...`);
     const bMsgIds = await sendMessagesBatched(topicId, tokenB, ROOM_MSG_COUNT, "b-msg");
-    console.log(`${PREFIX}   wave 1: C sends ${ROOM_MSG_COUNT} messages...`);
+    console.log(`${PREFIX}   C sends ${ROOM_MSG_COUNT} messages...`);
     const cMsgIds = await sendMessagesBatched(topicId, tokenC, ROOM_MSG_COUNT, "c-msg");
 
-    const totalWave1 = ROOM_MSG_COUNT * 2;
+    const totalRoomMsgs = ROOM_MSG_COUNT * 2;
 
-    // check unread for A = all wave 1 messages
+    // check unread for A = all messages from B + C
     const snap1 = await getTopicUnread(tokenA, roomId, topicId);
-    assert(snap1.unreadCount === totalWave1,
-      `expected unread=${totalWave1}, got=${snap1.unreadCount}`);
-    console.log(`${PREFIX}   ✓ wave 1: A unread=${snap1.unreadCount} (expected ${totalWave1})`);
+    assert(snap1.unreadCount === totalRoomMsgs,
+      `expected unread=${totalRoomMsgs}, got=${snap1.unreadCount}`);
+    console.log(`${PREFIX}   ✓ A unread=${snap1.unreadCount} (expected ${totalRoomMsgs})`);
 
-    // A reads → last_read_at=NOW() clears ALL current messages
-    await markTopicRead(tokenA, topicId, cMsgIds[cMsgIds.length - 1]);
+    // Partial read: A reads B's last message → only C's messages stay unread
+    // Fetch actual ordered messages to get the real halfway point
+    const { response: msgsR, payload: msgsP } = await fetchJson(
+      `/v1/topics/${encodeURIComponent(topicId)}/messages?limit=${totalRoomMsgs + 10}`, { token: tokenA }
+    );
+    ok(msgsR, msgsP, "fetch topic messages for partial read");
+    const allMsgs = Array.isArray(msgsP?.messages) ? msgsP.messages : [];
+    // newest first → reverse for chronological, filter out own
+    const otherMsgsChron = [...allMsgs].reverse().filter((m) => String(m.userId || m.user_id || "") !== userIdA);
+    assert(otherMsgsChron.length === totalRoomMsgs,
+      `expected ${totalRoomMsgs} other messages, got=${otherMsgsChron.length}`);
+    // read up to halfway (= ROOM_MSG_COUNT messages)
+    const halfwayMsg = otherMsgsChron[ROOM_MSG_COUNT - 1];
+    await markTopicRead(tokenA, topicId, String(halfwayMsg.id));
     const snap2 = await getTopicUnread(tokenA, roomId, topicId);
-    assert(snap2.unreadCount === 0,
-      `expected unread=0 after wave 1 read, got=${snap2.unreadCount}`);
-    console.log(`${PREFIX}   ✓ wave 1 read: unread=0`);
+    assert(snap2.unreadCount === ROOM_MSG_COUNT,
+      `expected unread=${ROOM_MSG_COUNT} after partial read, got=${snap2.unreadCount}`);
+    console.log(`${PREFIX}   ✓ partial read: unread=${snap2.unreadCount} (expected ${ROOM_MSG_COUNT})`);
 
-    // Wave 2: B sends more messages after read → they appear as new unread
-    const WAVE2_COUNT = Math.ceil(ROOM_MSG_COUNT / 2);
-    console.log(`${PREFIX}   wave 2: B sends ${WAVE2_COUNT} messages...`);
-    const bWave2Ids = await sendMessagesBatched(topicId, tokenB, WAVE2_COUNT, "b-wave2");
-
+    // Full read: A reads last message → unread=0
+    const lastMsg = otherMsgsChron[otherMsgsChron.length - 1];
+    await markTopicRead(tokenA, topicId, String(lastMsg.id));
     const snap3 = await getTopicUnread(tokenA, roomId, topicId);
-    assert(snap3.unreadCount === WAVE2_COUNT,
-      `expected unread=${WAVE2_COUNT} after wave 2 partial, got=${snap3.unreadCount}`);
-    console.log(`${PREFIX}   ✓ wave 2 partial: A unread=${snap3.unreadCount} (expected ${WAVE2_COUNT})`);
-
-    // C also sends wave 2
-    console.log(`${PREFIX}   wave 2: C sends ${WAVE2_COUNT} messages...`);
-    const cWave2Ids = await sendMessagesBatched(topicId, tokenC, WAVE2_COUNT, "c-wave2");
-
-    const snap3b = await getTopicUnread(tokenA, roomId, topicId);
-    assert(snap3b.unreadCount === WAVE2_COUNT * 2,
-      `expected unread=${WAVE2_COUNT * 2} after wave 2 full, got=${snap3b.unreadCount}`);
-    console.log(`${PREFIX}   ✓ wave 2 full: A unread=${snap3b.unreadCount} (expected ${WAVE2_COUNT * 2})`);
-
-    // A reads all wave 2 → unread=0
-    await markTopicRead(tokenA, topicId, cWave2Ids[cWave2Ids.length - 1]);
-    const snap3c = await getTopicUnread(tokenA, roomId, topicId);
-    assert(snap3c.unreadCount === 0,
-      `expected unread=0 after wave 2 read, got=${snap3c.unreadCount}`);
-    console.log(`${PREFIX}   ✓ wave 2 read: unread=0`);
+    assert(snap3.unreadCount === 0,
+      `expected unread=0 after full read, got=${snap3.unreadCount}`);
+    console.log(`${PREFIX}   ✓ full read: unread=0`);
 
     // ══════════════════════════════════════════════════
     // PHASE 2: Mentions stress
@@ -432,10 +425,15 @@ async function resolveRoomId(token) {
     // ══════════════════════════════════════════════════
     console.log(`${PREFIX} phase 4: concurrent room + DM`);
 
-    // Reset room read pointer
-    const allRoomMsgIds = [...bMsgIds, ...cMsgIds, ...bMentionIds, ...cMentionIds];
-    const lastRoomMsg = allRoomMsgIds[allRoomMsgIds.length - 1];
-    await markTopicRead(tokenA, topicId, lastRoomMsg);
+    // Reset room read pointer (fetch latest message to avoid ordering issues)
+    {
+      const { response: lr, payload: lp } = await fetchJson(
+        `/v1/topics/${encodeURIComponent(topicId)}/messages?limit=1`, { token: tokenA }
+      );
+      ok(lr, lp, "fetch latest for phase 4 reset");
+      const msgs = Array.isArray(lp?.messages) ? lp.messages : [];
+      if (msgs.length) await markTopicRead(tokenA, topicId, String(msgs[0].id));
+    }
     await clearMentions(tokenA, topicId);
 
     const CONCURRENT_COUNT = 20;
@@ -465,8 +463,15 @@ async function resolveRoomId(token) {
       `concurrent A↔C expected=${CONCURRENT_COUNT}, got=${acThread5.unreadCount}`);
     console.log(`${PREFIX}   ✓ concurrent DM: A↔B unread=${abThread5.unreadCount} A↔C unread=${acThread5.unreadCount}`);
 
-    // Read everything (fetch actual last messages for DM to avoid ordering issues)
-    await markTopicRead(tokenA, topicId, cConcRoomIds[cConcRoomIds.length - 1]);
+    // Read everything (fetch actual last messages to avoid ordering issues)
+    {
+      const { response: lr, payload: lp } = await fetchJson(
+        `/v1/topics/${encodeURIComponent(topicId)}/messages?limit=1`, { token: tokenA }
+      );
+      ok(lr, lp, "fetch latest for phase 4 cleanup");
+      const msgs = Array.isArray(lp?.messages) ? lp.messages : [];
+      if (msgs.length) await markTopicRead(tokenA, topicId, String(msgs[0].id));
+    }
     const abMsgsConcOrdered = await getDmMessages(tokenA, threadAB.id, 1);
     const acMsgsConcOrdered = await getDmMessages(tokenA, threadAC.id, 1);
     await markDmThreadRead(tokenA, threadAB.id, String(abMsgsConcOrdered[0].id));
@@ -507,7 +512,14 @@ async function resolveRoomId(token) {
       const WS_VERIFY_COUNT = 10;
 
       // Reset read pointer first
-      await markTopicRead(tokenA, topicId, cConcRoomIds[cConcRoomIds.length - 1]);
+      {
+        const { response: lr, payload: lp } = await fetchJson(
+          `/v1/topics/${encodeURIComponent(topicId)}/messages?limit=1`, { token: tokenA }
+        );
+        ok(lr, lp, "fetch latest for phase 5 reset");
+        const msgs = Array.isArray(lp?.messages) ? lp.messages : [];
+        if (msgs.length) await markTopicRead(tokenA, topicId, String(msgs[0].id));
+      }
       const abLatest5 = await getDmMessages(tokenA, threadAB.id, 1);
       await markDmThreadRead(tokenA, threadAB.id, String(abLatest5[0].id));
 
@@ -611,8 +623,7 @@ async function resolveRoomId(token) {
   }
 
   const elapsed = ((Date.now() - t0) / 1000).toFixed(1);
-  const WAVE2_TOTAL = Math.ceil(ROOM_MSG_COUNT / 2) * 2;
-  const totalMsgsSent = 1 + (ROOM_MSG_COUNT * 2) + WAVE2_TOTAL + (MENTION_COUNT * 2) + (DM_MSG_COUNT * 2) + (20 * 4) + (10 * 2) + 5;
+  const totalMsgsSent = 1 + (ROOM_MSG_COUNT * 2) + (MENTION_COUNT * 2) + (DM_MSG_COUNT * 2) + (20 * 4) + (10 * 2) + 5;
   console.log(`${PREFIX} ok (${baseUrl}) elapsed=${elapsed}s totalMessages=${totalMsgsSent} phases=6/6`);
 
 })().catch((error) => {
