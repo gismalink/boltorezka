@@ -156,6 +156,16 @@ async function markTopicRead(token, topicId, lastReadMessageId) {
   return payload;
 }
 
+async function getLatestTopicMessageId(token, topicId) {
+  const { response, payload } = await fetchJson(
+    `/v1/topics/${encodeURIComponent(topicId)}/messages?limit=1`, { token }
+  );
+  ok(response, payload, "fetch latest topic message");
+  const msgs = Array.isArray(payload?.messages) ? payload.messages : [];
+  assert(msgs.length > 0, "no messages in topic for getLatestTopicMessageId");
+  return String(msgs[0].id);
+}
+
 async function clearMentions(token, topicId) {
   const { response, payload } = await fetchJson(`/v1/topics/${encodeURIComponent(topicId)}/unread-mentions/read-all`, {
     method: "POST", token,
@@ -319,9 +329,9 @@ async function resolveRoomId(token) {
     // ══════════════════════════════════════════════════
     console.log(`${PREFIX} phase 2: mention unread stress`);
 
-    // Reset read pointer for A
-    const lastCMsg = cMsgIds[cMsgIds.length - 1];
-    await markTopicRead(tokenA, topicId, lastCMsg);
+    // Reset read pointer for A (use API to get actual latest message to avoid ordering issues)
+    const phase2ResetId = await getLatestTopicMessageId(tokenA, topicId);
+    await markTopicRead(tokenA, topicId, phase2ResetId);
     await clearMentions(tokenA, topicId);
 
     // B and C each send MENTION_COUNT messages mentioning A
@@ -342,7 +352,8 @@ async function resolveRoomId(token) {
     console.log(`${PREFIX}   ✓ A unread=${snap4.unreadCount} mentionUnread=${snap4.mentionUnreadCount}`);
 
     // topic read clears unread but NOT mentions
-    await markTopicRead(tokenA, topicId, cMentionIds[cMentionIds.length - 1]);
+    const latestMentionMsgId = await getLatestTopicMessageId(tokenA, topicId);
+    await markTopicRead(tokenA, topicId, latestMentionMsgId);
     const snap5 = await getTopicUnread(tokenA, roomId, topicId);
     assert(snap5.unreadCount === 0,
       `expected unread=0 after topic read, got=${snap5.unreadCount}`);
