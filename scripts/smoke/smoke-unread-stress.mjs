@@ -680,6 +680,252 @@ async function resolveRoomId(token) {
     assert(!dividerAfter, `divider expected empty after read, got=${dividerAfter}`);
     console.log(`${PREFIX}   ✓ unread divider cleared after read-all`);
 
+    // ══════════════════════════════════════════════════
+    // PHASE 7: Divider at scale (ROOM_MSG_COUNT unread)
+    // Verifies divider and aroundWindow with many unread messages
+    // ══════════════════════════════════════════════════
+    console.log(`${PREFIX} phase 7: divider at scale (${ROOM_MSG_COUNT} unread)`);
+    {
+      // Clean slate
+      const resetId = await getLatestTopicMessageId(tokenA, topicId);
+      await markTopicRead(tokenA, topicId, resetId);
+      await sleep(50);
+
+      // Send ROOM_MSG_COUNT messages sequentially (preserve order for divider check)
+      const scaleMsgIds = [];
+      for (let i = 0; i < Math.min(ROOM_MSG_COUNT, 20); i++) {
+        const { response: r, payload: p } = await fetchJson(
+          `/v1/topics/${encodeURIComponent(topicId)}/messages`,
+          { method: "POST", token: tokenB, body: { text: `b-scale-${i + 1}` } }
+        );
+        ok(r, p, `scale msg ${i + 1}`);
+        scaleMsgIds.push(String(p?.message?.id || ""));
+      }
+      // Batch the rest if ROOM_MSG_COUNT > 20
+      if (ROOM_MSG_COUNT > 20) {
+        const batchIds = await sendMessagesBatched(topicId, tokenB, ROOM_MSG_COUNT - 20, "b-scale-batch");
+        scaleMsgIds.push(...batchIds);
+      }
+
+      // Check divider points to very first unread message
+      const { response: dR7, payload: dP7 } = await fetchJson(
+        `/v1/topics/${encodeURIComponent(topicId)}/messages?aroundUnreadWindow=true&aroundWindowBefore=5&aroundWindowAfter=10`,
+        { token: tokenA }
+      );
+      ok(dR7, dP7, "around unread window (scale)");
+      const divId7 = String(dP7?.unreadDividerMessageId || "").trim();
+      assert(divId7 === scaleMsgIds[0],
+        `scale divider expected first unread=${scaleMsgIds[0].slice(0, 8)}, got=${divId7.slice(0, 8) || "<empty>"}`);
+
+      // Messages returned should include the divider and some after it
+      const returnedMsgs7 = Array.isArray(dP7?.messages) ? dP7.messages : [];
+      const dividerInList = returnedMsgs7.some((m) => String(m.id) === divId7);
+      assert(dividerInList, "divider message should be in returned window");
+      console.log(`${PREFIX}   ✓ divider at scale: firstUnread=${divId7.slice(0, 8)}, window=${returnedMsgs7.length} msgs`);
+
+      // Use anchorMessageId to "jump" to middle of unread
+      const midIdx = Math.min(Math.floor(ROOM_MSG_COUNT / 2), scaleMsgIds.length - 1);
+      const midMsgId = scaleMsgIds[midIdx];
+      const { response: aR7, payload: aP7 } = await fetchJson(
+        `/v1/topics/${encodeURIComponent(topicId)}/messages?anchorMessageId=${encodeURIComponent(midMsgId)}&aroundWindowBefore=3&aroundWindowAfter=3`,
+        { token: tokenA }
+      );
+      ok(aR7, aP7, "anchor jump to mid-unread");
+      const anchorMsgs = Array.isArray(aP7?.messages) ? aP7.messages : [];
+      const anchorInList = anchorMsgs.some((m) => String(m.id) === midMsgId);
+      assert(anchorInList, "anchor message should be in returned window");
+      console.log(`${PREFIX}   ✓ anchor jump: mid=${midMsgId.slice(0, 8)}, window=${anchorMsgs.length} msgs`);
+    }
+
+    // ══════════════════════════════════════════════════
+    // PHASE 8: Incremental scroll-read (counter decreases step by step)
+    // Simulates user scrolling through chat and marking batches read
+    // ══════════════════════════════════════════════════
+    console.log(`${PREFIX} phase 8: incremental scroll-read`);
+    {
+      // Clean slate
+      const resetId = await getLatestTopicMessageId(tokenA, topicId);
+      await markTopicRead(tokenA, topicId, resetId);
+      await sleep(50);
+
+      // Send 50 messages sequentially (controlled order)
+      const SCROLL_COUNT = 50;
+      const scrollMsgIds = [];
+      for (let i = 0; i < SCROLL_COUNT; i++) {
+        const { response: r, payload: p } = await fetchJson(
+          `/v1/topics/${encodeURIComponent(topicId)}/messages`,
+          { method: "POST", token: tokenB, body: { text: `b-scroll-${i + 1}` } }
+        );
+        ok(r, p, `scroll msg ${i + 1}`);
+        scrollMsgIds.push(String(p?.message?.id || ""));
+      }
+
+      // Verify starting unread = 50
+      const snap0 = await getTopicUnread(tokenA, roomId, topicId);
+      assert(snap0.unreadCount === SCROLL_COUNT,
+        `scroll start: expected ${SCROLL_COUNT}, got=${snap0.unreadCount}`);
+
+      // Read in batches of 10, verify counter decreases
+      const BATCH_SIZE = 10;
+      const steps = SCROLL_COUNT / BATCH_SIZE;
+      for (let step = 0; step < steps; step++) {
+        const readUpToIdx = (step + 1) * BATCH_SIZE - 1;
+        await markTopicRead(tokenA, topicId, scrollMsgIds[readUpToIdx]);
+        const snapStep = await getTopicUnread(tokenA, roomId, topicId);
+        const expectedRemaining = SCROLL_COUNT - (step + 1) * BATCH_SIZE;
+        assert(snapStep.unreadCount === expectedRemaining,
+          `scroll step ${step + 1}: expected ${expectedRemaining}, got=${snapStep.unreadCount}`);
+      }
+      console.log(`${PREFIX}   ✓ counter decreased: 50→40→30→20→10→0 (${steps} steps)`);
+
+      // Verify divider moves with each partial read
+      // Reset and send 10 more, read first 5, check divider at 6th
+      await sleep(50);
+      const extraMsgs = [];
+      for (let i = 0; i < 10; i++) {
+        const { response: r, payload: p } = await fetchJson(
+          `/v1/topics/${encodeURIComponent(topicId)}/messages`,
+          { method: "POST", token: tokenB, body: { text: `b-divmove-${i + 1}` } }
+        );
+        ok(r, p, `divmove msg ${i + 1}`);
+        extraMsgs.push(String(p?.message?.id || ""));
+      }
+      await markTopicRead(tokenA, topicId, extraMsgs[4]); // read first 5
+      const { response: dR8, payload: dP8 } = await fetchJson(
+        `/v1/topics/${encodeURIComponent(topicId)}/messages?aroundUnreadWindow=true&aroundWindowBefore=3&aroundWindowAfter=10`,
+        { token: tokenA }
+      );
+      ok(dR8, dP8, "divider after partial scroll read");
+      const divId8 = String(dP8?.unreadDividerMessageId || "").trim();
+      assert(divId8 === extraMsgs[5],
+        `divider should point to 6th msg=${extraMsgs[5].slice(0, 8)}, got=${divId8.slice(0, 8) || "<empty>"}`);
+      console.log(`${PREFIX}   ✓ divider moves with scroll: points to msg #6 after reading #1-5`);
+    }
+
+    // ══════════════════════════════════════════════════
+    // PHASE 9: Read idempotency + backward cursor safety
+    // Re-reading same message or reading OLDER message shouldn't break count
+    // ══════════════════════════════════════════════════
+    console.log(`${PREFIX} phase 9: read idempotency + backward cursor`);
+    {
+      // Clean slate
+      const resetId = await getLatestTopicMessageId(tokenA, topicId);
+      await markTopicRead(tokenA, topicId, resetId);
+      await sleep(50);
+
+      // Send 20 messages sequentially
+      const idempMsgIds = [];
+      for (let i = 0; i < 20; i++) {
+        const { response: r, payload: p } = await fetchJson(
+          `/v1/topics/${encodeURIComponent(topicId)}/messages`,
+          { method: "POST", token: tokenB, body: { text: `b-idemp-${i + 1}` } }
+        );
+        ok(r, p, `idemp msg ${i + 1}`);
+        idempMsgIds.push(String(p?.message?.id || ""));
+      }
+
+      // Read to msg #15 → unread=5
+      await markTopicRead(tokenA, topicId, idempMsgIds[14]);
+      const snap1 = await getTopicUnread(tokenA, roomId, topicId);
+      assert(snap1.unreadCount === 5,
+        `idemp step1: expected 5, got=${snap1.unreadCount}`);
+
+      // Read same msg #15 again → still unread=5 (idempotent)
+      await markTopicRead(tokenA, topicId, idempMsgIds[14]);
+      const snap2 = await getTopicUnread(tokenA, roomId, topicId);
+      assert(snap2.unreadCount === 5,
+        `idemp re-read: expected 5, got=${snap2.unreadCount}`);
+      console.log(`${PREFIX}   ✓ re-read same message: unread stays at 5`);
+
+      // Now try reading OLDER msg #10 (cursor goes backward) → should NOT increase unread
+      await markTopicRead(tokenA, topicId, idempMsgIds[9]);
+      const snap3 = await getTopicUnread(tokenA, roomId, topicId);
+      assert(snap3.unreadCount <= 5,
+        `idemp backward: expected ≤5, got=${snap3.unreadCount}`);
+      console.log(`${PREFIX}   ✓ read older message: unread=${snap3.unreadCount} (≤5, cursor didn't regress)`);
+
+      // Read to end
+      await markTopicRead(tokenA, topicId, idempMsgIds[19]);
+      const snap4 = await getTopicUnread(tokenA, roomId, topicId);
+      assert(snap4.unreadCount === 0,
+        `idemp final: expected 0, got=${snap4.unreadCount}`);
+      console.log(`${PREFIX}   ✓ read to end: unread=0`);
+    }
+
+    // ══════════════════════════════════════════════════
+    // PHASE 10: Cross-topic isolation
+    // Unreads in one topic must not affect another topic
+    // ══════════════════════════════════════════════════
+    console.log(`${PREFIX} phase 10: cross-topic isolation`);
+    {
+      // Create second topic in same room
+      const topic2Title = `unread-isolation-${Date.now().toString(36)}`;
+      const { response: t2r, payload: t2p } = await fetchJson(
+        `/v1/rooms/${encodeURIComponent(roomId)}/topics`,
+        { method: "POST", token: tokenA, body: { title: topic2Title } }
+      );
+      ok(t2r, t2p, "create isolation topic");
+      const topic2Id = String(t2p?.topic?.id || "");
+
+      try {
+        // Seed + mark read in topic2
+        const { response: s2r, payload: s2p } = await fetchJson(
+          `/v1/topics/${encodeURIComponent(topic2Id)}/messages`,
+          { method: "POST", token: tokenA, body: { text: "seed-t2" } }
+        );
+        ok(s2r, s2p, "seed topic2");
+        await markTopicRead(tokenA, topic2Id, String(s2p?.message?.id || ""));
+
+        // Clean slate on topic1
+        const t1ResetId = await getLatestTopicMessageId(tokenA, topicId);
+        await markTopicRead(tokenA, topicId, t1ResetId);
+
+        // Send 10 msgs in topic1, 5 in topic2
+        const t1Ids = [];
+        for (let i = 0; i < 10; i++) {
+          const { response: r, payload: p } = await fetchJson(
+            `/v1/topics/${encodeURIComponent(topicId)}/messages`,
+            { method: "POST", token: tokenB, body: { text: `b-t1-${i + 1}` } }
+          );
+          ok(r, p, `iso t1 msg ${i + 1}`);
+          t1Ids.push(String(p?.message?.id || ""));
+        }
+        const t2Ids = [];
+        for (let i = 0; i < 5; i++) {
+          const { response: r, payload: p } = await fetchJson(
+            `/v1/topics/${encodeURIComponent(topic2Id)}/messages`,
+            { method: "POST", token: tokenB, body: { text: `b-t2-${i + 1}` } }
+          );
+          ok(r, p, `iso t2 msg ${i + 1}`);
+          t2Ids.push(String(p?.message?.id || ""));
+        }
+
+        // Check: topic1 unread=10, topic2 unread=5
+        const snap1 = await getTopicUnread(tokenA, roomId, topicId);
+        const snap2 = await getTopicUnread(tokenA, roomId, topic2Id);
+        assert(snap1.unreadCount === 10, `iso t1: expected 10, got=${snap1.unreadCount}`);
+        assert(snap2.unreadCount === 5, `iso t2: expected 5, got=${snap2.unreadCount}`);
+
+        // Read topic1 completely → topic2 should stay at 5
+        await markTopicRead(tokenA, topicId, t1Ids[9]);
+        const snap3 = await getTopicUnread(tokenA, roomId, topicId);
+        const snap4 = await getTopicUnread(tokenA, roomId, topic2Id);
+        assert(snap3.unreadCount === 0, `iso t1 after read: expected 0, got=${snap3.unreadCount}`);
+        assert(snap4.unreadCount === 5, `iso t2 after t1 read: expected 5, got=${snap4.unreadCount}`);
+        console.log(`${PREFIX}   ✓ reading topic1 didn't affect topic2 (t1=0, t2=5)`);
+
+        // Read topic2 completely → topic1 stays at 0
+        await markTopicRead(tokenA, topic2Id, t2Ids[4]);
+        const snap5 = await getTopicUnread(tokenA, roomId, topicId);
+        const snap6 = await getTopicUnread(tokenA, roomId, topic2Id);
+        assert(snap5.unreadCount === 0, `iso t1 final: expected 0, got=${snap5.unreadCount}`);
+        assert(snap6.unreadCount === 0, `iso t2 final: expected 0, got=${snap6.unreadCount}`);
+        console.log(`${PREFIX}   ✓ both topics clean (t1=0, t2=0)`);
+      } finally {
+        await fetchJson(`/v1/topics/${encodeURIComponent(topic2Id)}`, { method: "DELETE", token: tokenA });
+      }
+    }
+
   } finally {
     // cleanup: delete topic
     const { response: delR } = await fetchJson(`/v1/topics/${encodeURIComponent(topicId)}`, {
@@ -689,8 +935,9 @@ async function resolveRoomId(token) {
   }
 
   const elapsed = ((Date.now() - t0) / 1000).toFixed(1);
-  const totalMsgsSent = 1 + (ROOM_MSG_COUNT * 2) + (MENTION_COUNT * 2) + (DM_MSG_COUNT * 2) + (20 * 4) + (10 * 2) + 5;
-  console.log(`${PREFIX} ok (${baseUrl}) elapsed=${elapsed}s totalMessages=${totalMsgsSent} phases=6/6`);
+  const totalMsgsSent = 1 + (ROOM_MSG_COUNT * 2) + (MENTION_COUNT * 2) + (DM_MSG_COUNT * 2) + (20 * 4) + (10 * 2) + 5
+    + ROOM_MSG_COUNT + 50 + 10 + 20 + 15; // phases 7-10
+  console.log(`${PREFIX} ok (${baseUrl}) elapsed=${elapsed}s totalMessages≈${totalMsgsSent} phases=10/10`);
 
 })().catch((error) => {
   console.error(error instanceof Error ? error.message : String(error));
