@@ -289,12 +289,22 @@ async function resolveRoomId(token) {
     assert(otherMsgsChron.length === totalRoomMsgs,
       `expected ${totalRoomMsgs} other messages, got=${otherMsgsChron.length}`);
     // read up to halfway (= ROOM_MSG_COUNT messages)
-    const halfwayMsg = otherMsgsChron[ROOM_MSG_COUNT - 1];
+    const halfIdx = ROOM_MSG_COUNT - 1;
+    const halfwayMsg = otherMsgsChron[halfIdx];
+    const expectedAfter = otherMsgsChron.length - halfIdx - 1;
+    console.log(`${PREFIX}   [debug] allMsgs.length=${allMsgs.length} otherMsgsChron.length=${otherMsgsChron.length}`);
+    console.log(`${PREFIX}   [debug] halfIdx=${halfIdx} halfwayMsg.id=${halfwayMsg.id}`);
+    console.log(`${PREFIX}   [debug] halfwayMsg.createdAt=${halfwayMsg.createdAt || halfwayMsg.created_at}`);
+    if (otherMsgsChron[halfIdx + 1]) {
+      const next = otherMsgsChron[halfIdx + 1];
+      console.log(`${PREFIX}   [debug] next.id=${next.id} next.createdAt=${next.createdAt || next.created_at}`);
+      console.log(`${PREFIX}   [debug] same ts? ${(halfwayMsg.createdAt || halfwayMsg.created_at) === (next.createdAt || next.created_at)}`);
+    }
     await markTopicRead(tokenA, topicId, String(halfwayMsg.id));
     const snap2 = await getTopicUnread(tokenA, roomId, topicId);
-    assert(snap2.unreadCount === ROOM_MSG_COUNT,
-      `expected unread=${ROOM_MSG_COUNT} after partial read, got=${snap2.unreadCount}`);
-    console.log(`${PREFIX}   ✓ partial read: unread=${snap2.unreadCount} (expected ${ROOM_MSG_COUNT})`);
+    assert(snap2.unreadCount === expectedAfter,
+      `expected unread=${expectedAfter} after partial read, got=${snap2.unreadCount}`);
+    console.log(`${PREFIX}   ✓ partial read: unread=${snap2.unreadCount} (expected ${expectedAfter})`);
 
     // Full read: A reads last message → unread=0
     const lastMsg = otherMsgsChron[otherMsgsChron.length - 1];
