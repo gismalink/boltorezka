@@ -59,6 +59,7 @@
     "smoke:chat:object-storage": "node ./scripts/smoke/smoke-chat-object-storage.mjs",
     "smoke:chat:orphan-cleanup": "node ./scripts/smoke/smoke-chat-orphan-cleanup.mjs",
     "smoke:chat:anchor-jump": "node ./scripts/smoke/smoke-chat-anchor-jump.mjs",
+    "smoke:chat:unread-stress": "node ./scripts/smoke/smoke-unread-stress.mjs",
     "smoke:minio:storage": "bash ./scripts/smoke/smoke-minio-storage.sh",
     "smoke:sso": "node ./scripts/smoke/smoke-sso-redirect.mjs",
     "smoke:sso:routing": "node ./scripts/smoke/smoke-sso-routing.mjs",
