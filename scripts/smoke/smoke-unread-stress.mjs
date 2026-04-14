@@ -270,20 +270,19 @@ async function resolveRoomId(token) {
 
     // Partial read: A reads B's last message → only C's messages stay unread
     // Fetch actual ordered messages to get the real halfway point
-    // API limit is 100, so fetch in pages if needed
+    // API limit is 100, pages via beforeCreatedAt+beforeId pair
     let allMsgs = [];
-    let cursor = "";
+    let pageParams = "";
     while (true) {
-      const qs = cursor
-        ? `/v1/topics/${encodeURIComponent(topicId)}/messages?limit=100&before=${cursor}`
-        : `/v1/topics/${encodeURIComponent(topicId)}/messages?limit=100`;
+      const qs = `/v1/topics/${encodeURIComponent(topicId)}/messages?limit=100${pageParams}`;
       const { response: msgsR, payload: msgsP } = await fetchJson(qs, { token: tokenA });
       ok(msgsR, msgsP, "fetch topic messages for partial read");
       const batch = Array.isArray(msgsP?.messages) ? msgsP.messages : [];
       if (batch.length === 0) break;
       allMsgs.push(...batch);
-      if (batch.length < 100) break;
-      cursor = String(batch[batch.length - 1].id);
+      const pag = msgsP?.pagination;
+      if (!pag?.hasMore || !pag?.nextCursor) break;
+      pageParams = `&beforeCreatedAt=${encodeURIComponent(pag.nextCursor.beforeCreatedAt)}&beforeId=${encodeURIComponent(pag.nextCursor.beforeId)}`;
     }
     // newest first → reverse for chronological, filter out own
     const otherMsgsChron = [...allMsgs].reverse().filter((m) => String(m.userId || m.user_id || "") !== userIdA);
