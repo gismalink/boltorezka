@@ -377,9 +377,17 @@ async function resolveRoomId(token) {
       `A↔C expected unread=${DM_MSG_COUNT}, got=${acThread1.unreadCount}`);
     console.log(`${PREFIX}   ✓ A↔B unread=${abThread1.unreadCount} A↔C unread=${acThread1.unreadCount}`);
 
-    // Partial DM read: A reads B thread to halfway
+    // Partial DM read: fetch actual message order (concurrent sends may reorder created_at)
+    const abMsgsOrdered = await getDmMessages(tokenA, threadAB.id, DM_MSG_COUNT + 10);
+    // messages come newest-first, reverse to get chronological order
+    const abMsgsChron = [...abMsgsOrdered].reverse();
+    // only B's messages (exclude A's)
+    const bMsgsChron = abMsgsChron.filter((m) => String(m.userId || m.user_id || "") !== userIdA);
+    assert(bMsgsChron.length === DM_MSG_COUNT,
+      `expected ${DM_MSG_COUNT} B messages in thread, got=${bMsgsChron.length}`);
     const halfwayIdx = Math.floor(DM_MSG_COUNT / 2) - 1;
-    await markDmThreadRead(tokenA, threadAB.id, bDmIds[halfwayIdx]);
+    const halfwayMsgId = String(bMsgsChron[halfwayIdx].id);
+    await markDmThreadRead(tokenA, threadAB.id, halfwayMsgId);
     const dmThreads2 = await getDmThreads(tokenA);
     const abThread2 = dmThreads2.find((t) => t.id === threadAB.id);
     const expectedPartial = DM_MSG_COUNT - (halfwayIdx + 1);
@@ -387,16 +395,21 @@ async function resolveRoomId(token) {
       `A↔B partial read expected=${expectedPartial}, got=${abThread2.unreadCount}`);
     console.log(`${PREFIX}   ✓ A↔B after partial read: unread=${abThread2.unreadCount} (expected ${expectedPartial})`);
 
-    // Full DM read: A reads B thread to end
-    await markDmThreadRead(tokenA, threadAB.id, bDmIds[bDmIds.length - 1]);
+    // Full DM read: A reads B thread to end (last message by created_at)
+    const lastBMsgId = String(bMsgsChron[bMsgsChron.length - 1].id);
+    await markDmThreadRead(tokenA, threadAB.id, lastBMsgId);
     const dmThreads3 = await getDmThreads(tokenA);
     const abThread3 = dmThreads3.find((t) => t.id === threadAB.id);
     assert(abThread3.unreadCount === 0,
       `A↔B full read expected=0, got=${abThread3.unreadCount}`);
     console.log(`${PREFIX}   ✓ A↔B after full read: unread=0`);
 
-    // Full DM read: A reads C thread to end
-    await markDmThreadRead(tokenA, threadAC.id, cDmIds[cDmIds.length - 1]);
+    // Full DM read: A reads C thread to end (fetch actual last message)
+    const acMsgsOrdered = await getDmMessages(tokenA, threadAC.id, DM_MSG_COUNT + 10);
+    const acMsgsChron = [...acMsgsOrdered].reverse();
+    const cMsgsChron = acMsgsChron.filter((m) => String(m.userId || m.user_id || "") !== userIdA);
+    const lastCDmId = String(cMsgsChron[cMsgsChron.length - 1].id);
+    await markDmThreadRead(tokenA, threadAC.id, lastCDmId);
     const dmThreads4 = await getDmThreads(tokenA);
     const acThread4 = dmThreads4.find((t) => t.id === threadAC.id);
     assert(acThread4.unreadCount === 0,
@@ -441,10 +454,12 @@ async function resolveRoomId(token) {
       `concurrent A↔C expected=${CONCURRENT_COUNT}, got=${acThread5.unreadCount}`);
     console.log(`${PREFIX}   ✓ concurrent DM: A↔B unread=${abThread5.unreadCount} A↔C unread=${acThread5.unreadCount}`);
 
-    // Read everything
+    // Read everything (fetch actual last messages for DM to avoid ordering issues)
     await markTopicRead(tokenA, topicId, cConcRoomIds[cConcRoomIds.length - 1]);
-    await markDmThreadRead(tokenA, threadAB.id, bConcDmIds[bConcDmIds.length - 1]);
-    await markDmThreadRead(tokenA, threadAC.id, cConcDmIds[cConcDmIds.length - 1]);
+    const abMsgsConcOrdered = await getDmMessages(tokenA, threadAB.id, 1);
+    const acMsgsConcOrdered = await getDmMessages(tokenA, threadAC.id, 1);
+    await markDmThreadRead(tokenA, threadAB.id, String(abMsgsConcOrdered[0].id));
+    await markDmThreadRead(tokenA, threadAC.id, String(acMsgsConcOrdered[0].id));
 
     const snap8 = await getTopicUnread(tokenA, roomId, topicId);
     assert(snap8.unreadCount === 0, `concurrent room full read expected=0, got=${snap8.unreadCount}`);
@@ -481,10 +496,9 @@ async function resolveRoomId(token) {
       const WS_VERIFY_COUNT = 10;
 
       // Reset read pointer first
-      const lastConcRoom = cConcRoomIds[cConcRoomIds.length - 1];
-      await markTopicRead(tokenA, topicId, lastConcRoom);
-      const lastConcDmB = bConcDmIds[bConcDmIds.length - 1];
-      await markDmThreadRead(tokenA, threadAB.id, lastConcDmB);
+      await markTopicRead(tokenA, topicId, cConcRoomIds[cConcRoomIds.length - 1]);
+      const abLatest5 = await getDmMessages(tokenA, threadAB.id, 1);
+      await markDmThreadRead(tokenA, threadAB.id, String(abLatest5[0].id));
 
       const eventsBeforeRoom = eventsA.filter((e) => e?.type === "chat.message.created").length;
       const eventsBeforeDm = eventsA.filter((e) => e?.type === "dm.message.created").length;
@@ -524,7 +538,8 @@ async function resolveRoomId(token) {
 
       // Final cleanup: read all
       await markTopicRead(tokenA, topicId, wsRoomMsgIds[wsRoomMsgIds.length - 1]);
-      await markDmThreadRead(tokenA, threadAB.id, wsDmMsgIds[wsDmMsgIds.length - 1]);
+      const abLatestWs = await getDmMessages(tokenA, threadAB.id, 1);
+      await markDmThreadRead(tokenA, threadAB.id, String(abLatestWs[0].id));
     } finally {
       closeWs(wsA);
     }
