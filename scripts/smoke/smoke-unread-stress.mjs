@@ -386,11 +386,13 @@ async function resolveRoomId(token) {
     console.log(`${PREFIX}   ✓ A↔B unread=${abThread1.unreadCount} A↔C unread=${acThread1.unreadCount}`);
 
     // Partial DM read: fetch actual message order (concurrent sends may reorder created_at)
-    const abMsgsOrdered = await getDmMessages(tokenA, threadAB.id, DM_MSG_COUNT + 10);
+    // Filter to only freshly-sent IDs (thread may contain old messages from previous runs)
+    const bDmIdSet = new Set(bDmIds);
+    const abMsgsOrdered = await getDmMessages(tokenA, threadAB.id, DM_MSG_COUNT + 50);
     // messages come newest-first, reverse to get chronological order
     const abMsgsChron = [...abMsgsOrdered].reverse();
-    // only B's messages (exclude A's)
-    const bMsgsChron = abMsgsChron.filter((m) => String(m.userId || m.user_id || "") !== userIdA);
+    // only our freshly-sent B messages
+    const bMsgsChron = abMsgsChron.filter((m) => bDmIdSet.has(String(m.id)));
     assert(bMsgsChron.length === DM_MSG_COUNT,
       `expected ${DM_MSG_COUNT} B messages in thread, got=${bMsgsChron.length}`);
     const halfwayIdx = Math.floor(DM_MSG_COUNT / 2) - 1;
@@ -412,10 +414,11 @@ async function resolveRoomId(token) {
       `A↔B full read expected=0, got=${abThread3.unreadCount}`);
     console.log(`${PREFIX}   ✓ A↔B after full read: unread=0`);
 
-    // Full DM read: A reads C thread to end (fetch actual last message)
-    const acMsgsOrdered = await getDmMessages(tokenA, threadAC.id, DM_MSG_COUNT + 10);
+    // Full DM read: A reads C thread to end (fetch actual last message, filter by sent IDs)
+    const cDmIdSet = new Set(cDmIds);
+    const acMsgsOrdered = await getDmMessages(tokenA, threadAC.id, DM_MSG_COUNT + 50);
     const acMsgsChron = [...acMsgsOrdered].reverse();
-    const cMsgsChron = acMsgsChron.filter((m) => String(m.userId || m.user_id || "") !== userIdA);
+    const cMsgsChron = acMsgsChron.filter((m) => cDmIdSet.has(String(m.id)));
     const lastCDmId = String(cMsgsChron[cMsgsChron.length - 1].id);
     await markDmThreadRead(tokenA, threadAC.id, lastCDmId);
     const dmThreads4 = await getDmThreads(tokenA);
