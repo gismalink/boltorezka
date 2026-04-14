@@ -560,6 +560,19 @@ async function resolveRoomId(token) {
     // ══════════════════════════════════════════════════
     console.log(`${PREFIX} phase 6: unread divider`);
 
+    // Ensure clean slate: fetch latest topic message and mark as read
+    {
+      const { response: latR, payload: latP } = await fetchJson(
+        `/v1/topics/${encodeURIComponent(topicId)}/messages?limit=1`, { token: tokenA }
+      );
+      ok(latR, latP, "fetch latest topic msg for phase 6 reset");
+      const msgs = Array.isArray(latP?.messages) ? latP.messages : [];
+      if (msgs.length) await markTopicRead(tokenA, topicId, String(msgs[0].id));
+      await clearMentions(tokenA, topicId);
+      // small delay to ensure last_read_at is strictly before new messages
+      await sleep(50);
+    }
+
     // Send 5 from B, check divider points to first unread
     const dividerMsgIds = await sendMessagesBatched(topicId, tokenB, 5, "b-divider");
     const { response: divR, payload: divP } = await fetchJson(
