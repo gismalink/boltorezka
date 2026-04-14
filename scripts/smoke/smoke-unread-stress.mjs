@@ -284,8 +284,17 @@ async function resolveRoomId(token) {
       if (!pag?.hasMore || !pag?.nextCursor) break;
       pageParams = `&beforeCreatedAt=${encodeURIComponent(pag.nextCursor.beforeCreatedAt)}&beforeId=${encodeURIComponent(pag.nextCursor.beforeId)}`;
     }
-    // newest first → reverse for chronological, filter out own
-    const otherMsgsChron = [...allMsgs].reverse().filter((m) => String(m.userId || m.user_id || "") !== userIdA);
+    // API returns messages oldest-first (ASC). Multi-page: each subsequent page
+    // has OLDER messages, so we prepend. Safest: sort explicitly by (createdAt, id).
+    const otherMsgsChron = allMsgs
+      .filter((m) => String(m.userId || m.user_id || "") !== userIdA)
+      .sort((a, b) => {
+        const tA = a.createdAt || a.created_at || "";
+        const tB = b.createdAt || b.created_at || "";
+        if (tA < tB) return -1;
+        if (tA > tB) return 1;
+        return (a.id || "") < (b.id || "") ? -1 : (a.id || "") > (b.id || "") ? 1 : 0;
+      });
     assert(otherMsgsChron.length === totalRoomMsgs,
       `expected ${totalRoomMsgs} other messages, got=${otherMsgsChron.length}`);
     // read up to halfway (= ROOM_MSG_COUNT messages)
