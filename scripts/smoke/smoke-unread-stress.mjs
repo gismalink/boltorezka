@@ -195,11 +195,34 @@ async function markDmThreadRead(token, threadId, lastReadMessageId) {
 }
 
 async function getDmMessages(token, threadId, limit = 100) {
-  const { response, payload } = await fetchJson(
-    `/v1/dm/threads/${encodeURIComponent(threadId)}/messages?limit=${limit}`, { token }
-  );
-  ok(response, payload, "get dm messages");
-  return Array.isArray(payload?.messages) ? payload.messages : [];
+  // DM API max limit=100, cursor-based pagination (cursor=messageId, returns older messages)
+  // Returns messages newest-first (DESC)
+  if (limit <= 100) {
+    const { response, payload } = await fetchJson(
+      `/v1/dm/threads/${encodeURIComponent(threadId)}/messages?limit=${limit}`, { token }
+    );
+    ok(response, payload, "get dm messages");
+    return Array.isArray(payload?.messages) ? payload.messages : [];
+  }
+  // Paginated fetch for limit > 100
+  let allMsgs = [];
+  let cursor = "";
+  let remaining = limit;
+  while (remaining > 0) {
+    const pageSize = Math.min(remaining, 100);
+    const qs = cursor
+      ? `/v1/dm/threads/${encodeURIComponent(threadId)}/messages?limit=${pageSize}&cursor=${encodeURIComponent(cursor)}`
+      : `/v1/dm/threads/${encodeURIComponent(threadId)}/messages?limit=${pageSize}`;
+    const { response, payload } = await fetchJson(qs, { token });
+    ok(response, payload, "get dm messages (paginated)");
+    const batch = Array.isArray(payload?.messages) ? payload.messages : [];
+    if (batch.length === 0) break;
+    allMsgs.push(...batch);
+    remaining -= batch.length;
+    if (!payload?.hasMore) break;
+    cursor = String(batch[batch.length - 1].id);
+  }
+  return allMsgs;
 }
 
 async function resolveUserId(token, label) {
@@ -412,8 +435,12 @@ async function resolveRoomId(token) {
     // Filter to only freshly-sent IDs (thread may contain old messages from previous runs)
     const bDmIdSet = new Set(bDmIds);
     const abMsgsOrdered = await getDmMessages(tokenA, threadAB.id, DM_MSG_COUNT + 50);
-    // messages come newest-first, reverse to get chronological order
-    const abMsgsChron = [...abMsgsOrdered].reverse();
+    // sort chronologically by (createdAt, id) ASC
+    const abMsgsChron = [...abMsgsOrdered].sort((a, b) => {
+      const ta = new Date(a.createdAt || a.created_at).getTime();
+      const tb = new Date(b.createdAt || b.created_at).getTime();
+      return ta - tb || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
+    });
     // only our freshly-sent B messages
     const bMsgsChron = abMsgsChron.filter((m) => bDmIdSet.has(String(m.id)));
     assert(bMsgsChron.length === DM_MSG_COUNT,
@@ -440,7 +467,11 @@ async function resolveRoomId(token) {
     // Full DM read: A reads C thread to end (fetch actual last message, filter by sent IDs)
     const cDmIdSet = new Set(cDmIds);
     const acMsgsOrdered = await getDmMessages(tokenA, threadAC.id, DM_MSG_COUNT + 50);
-    const acMsgsChron = [...acMsgsOrdered].reverse();
+    const acMsgsChron = [...acMsgsOrdered].sort((a, b) => {
+      const ta = new Date(a.createdAt || a.created_at).getTime();
+      const tb = new Date(b.createdAt || b.created_at).getTime();
+      return ta - tb || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
+    });
     const cMsgsChron = acMsgsChron.filter((m) => cDmIdSet.has(String(m.id)));
     const lastCDmId = String(cMsgsChron[cMsgsChron.length - 1].id);
     await markDmThreadRead(tokenA, threadAC.id, lastCDmId);
