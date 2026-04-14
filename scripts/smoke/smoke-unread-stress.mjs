@@ -357,6 +357,14 @@ async function resolveRoomId(token) {
     assert(threadAC?.id, "DM thread A↔C id missing");
     console.log(`${PREFIX}   threads: A↔B=${threadAB.id.slice(0, 8)}.. A↔C=${threadAC.id.slice(0, 8)}..`);
 
+    // Clear any leftover unreads from previous runs (threads are reused)
+    {
+      const abLatest = await getDmMessages(tokenA, threadAB.id, 1);
+      const acLatest = await getDmMessages(tokenA, threadAC.id, 1);
+      if (abLatest.length) await markDmThreadRead(tokenA, threadAB.id, String(abLatest[0].id));
+      if (acLatest.length) await markDmThreadRead(tokenA, threadAC.id, String(acLatest[0].id));
+    }
+
     // B sends DM_MSG_COUNT to A
     console.log(`${PREFIX}   B sends ${DM_MSG_COUNT} DMs...`);
     const bDmIds = await sendDmMessagesBatched(threadAB.id, tokenB, DM_MSG_COUNT, "b-dm");
