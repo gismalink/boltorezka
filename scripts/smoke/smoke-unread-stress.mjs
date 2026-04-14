@@ -352,7 +352,7 @@ async function resolveRoomId(token) {
 
     // Full read: use API to get the actual latest message (avoids µs ordering mismatch)
     const latestMsgId = await getLatestTopicMessageId(tokenA, topicId);
-    await markTopicRead(tokenA, topicId, String(lastMsg.id));
+    await markTopicRead(tokenA, topicId, latestMsgId);
     const snap3 = await getTopicUnread(tokenA, roomId, topicId);
     assert(snap3.unreadCount === 0,
       `expected unread=0 after full read, got=${snap3.unreadCount}`);
