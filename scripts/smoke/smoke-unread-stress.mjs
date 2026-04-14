@@ -573,8 +573,16 @@ async function resolveRoomId(token) {
       await sleep(50);
     }
 
-    // Send 5 from B, check divider points to first unread
-    const dividerMsgIds = await sendMessagesBatched(topicId, tokenB, 5, "b-divider");
+    // Send 5 from B sequentially (preserve created_at order for divider check)
+    const dividerMsgIds = [];
+    for (let i = 0; i < 5; i++) {
+      const { response: dr, payload: dp } = await fetchJson(
+        `/v1/topics/${encodeURIComponent(topicId)}/messages`,
+        { method: "POST", token: tokenB, body: { text: `b-divider-${i + 1}` } }
+      );
+      ok(dr, dp, `divider msg ${i + 1}`);
+      dividerMsgIds.push(String(dp?.message?.id || ""));
+    }
     const { response: divR, payload: divP } = await fetchJson(
       `/v1/topics/${encodeURIComponent(topicId)}/messages?limit=20&aroundUnreadWindow=true`, { token: tokenA }
     );
