@@ -318,8 +318,15 @@ async function resolveRoomId(token) {
       pageParams = `&beforeCreatedAt=${encodeURIComponent(pag.nextCursor.beforeCreatedAt)}&beforeId=${encodeURIComponent(pag.nextCursor.beforeId)}`;
     }
     // API returns messages oldest-first (ASC). Multi-page: each subsequent page
-    // has OLDER messages, so we prepend. Safest: sort explicitly by (createdAt, id).
-    const otherMsgsChron = allMsgs
+    // has OLDER messages, so we prepend. Safest: deduplicate + sort by (createdAt, id).
+    const seenIds = new Set();
+    const dedupedMsgs = allMsgs.filter((m) => {
+      const id = String(m.id);
+      if (seenIds.has(id)) return false;
+      seenIds.add(id);
+      return true;
+    });
+    const otherMsgsChron = dedupedMsgs
       .filter((m) => String(m.userId || m.user_id || "") !== userIdA)
       .sort((a, b) => {
         const tA = new Date(a.createdAt || a.created_at).getTime();
