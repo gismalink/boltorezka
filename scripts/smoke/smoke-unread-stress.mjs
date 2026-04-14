@@ -289,10 +289,9 @@ async function resolveRoomId(token) {
     const otherMsgsChron = allMsgs
       .filter((m) => String(m.userId || m.user_id || "") !== userIdA)
       .sort((a, b) => {
-        const tA = a.createdAt || a.created_at || "";
-        const tB = b.createdAt || b.created_at || "";
-        if (tA < tB) return -1;
-        if (tA > tB) return 1;
+        const tA = new Date(a.createdAt || a.created_at).getTime();
+        const tB = new Date(b.createdAt || b.created_at).getTime();
+        if (tA !== tB) return tA - tB;
         return (a.id || "") < (b.id || "") ? -1 : (a.id || "") > (b.id || "") ? 1 : 0;
       });
     assert(otherMsgsChron.length === totalRoomMsgs,
