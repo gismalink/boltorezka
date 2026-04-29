@@ -4,6 +4,7 @@ import type { RoomTopic } from "../../domain";
 import type { RealtimeClient } from "../../services";
 import type { ChatTypingByRoom } from "./useChatTypingController";
 import { decrementUnreadValue, getTopicReadDeltas } from "./realtimeUnreadUtils";
+import { markRoomUnreadWsBump } from "../app/effects/roomUnreadWsBumpTracker";
 
 type UseRealtimeLifecycleCallbacksArgs = {
   chatRoomSlug: string;
@@ -246,6 +247,7 @@ export function useRealtimeLifecycleCallbacks({
       ...prev,
       [targetRoomSlug]: Math.max(0, Number(prev[targetRoomSlug] || 0)) + 1
     }));
+    markRoomUnreadWsBump(targetRoomSlug);
     if (mentionIncludesCurrentUser) {
       setRoomMentionUnreadBySlug((prev) => ({
         ...prev,
@@ -314,6 +316,7 @@ export function useRealtimeLifecycleCallbacks({
         return prev;
       }
 
+      markRoomUnreadWsBump(targetRoomSlug);
       return {
         ...prev,
         [targetRoomSlug]: nextUnread
@@ -337,6 +340,7 @@ export function useRealtimeLifecycleCallbacks({
         return prev;
       }
 
+      markRoomUnreadWsBump(targetRoomSlug);
       return {
         ...prev,
         [targetRoomSlug]: nextMentions

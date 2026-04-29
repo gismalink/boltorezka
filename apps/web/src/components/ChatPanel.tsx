@@ -410,6 +410,21 @@ export function ChatPanel({
     });
   }, [chatLogRef, isDm, messages.length, roomId, unreadDividerMessageId]);
 
+  // B3: принудительный скролл к низу при отправке своего сообщения (rooms + DM).
+  // Снимает divider-lock и игнорирует stick-to-bottom гейт.
+  useEffect(() => {
+    const handler = () => {
+      const container = chatLogRef.current;
+      if (!container) return;
+      delete container.dataset.unreadDividerVisible;
+      window.requestAnimationFrame(() => {
+        container.scrollTop = container.scrollHeight;
+      });
+    };
+    window.addEventListener("boltorezka:chat:own-send", handler);
+    return () => window.removeEventListener("boltorezka:chat:own-send", handler);
+  }, [chatLogRef]);
+
   const loadedUnreadAfterDivider = useMemo(() => {
     if (!unreadDividerMessageId) {
       return 0;

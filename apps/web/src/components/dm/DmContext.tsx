@@ -216,6 +216,9 @@ export function DmProvider({ token, onDmOpen, onDmClose, children }: { token: st
         });
         setDmText("");
         setPendingDmImageDataUrl(null);
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("boltorezka:chat:own-send"));
+        }
       } catch {
         // upload failed — silently ignore for now
       }
@@ -228,6 +231,10 @@ export function DmProvider({ token, onDmOpen, onDmClose, children }: { token: st
       return [...prev, res.message];
     });
     setDmText("");
+    // B3: сигнал ChatPanel для принудительного скролла к низу.
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("boltorezka:chat:own-send"));
+    }
   }, [activeThreadId, token]);
 
   const editDmMessage = useCallback(async (messageId: string, body: string) => {
