@@ -1,3 +1,6 @@
+/**
+ * components/index.ts — публичный barrel-экспорт React-компонентов AppShell.
+ */
 export { AppHeader } from "./AppHeader";
 export { AppMainSection } from "./AppMainSection";
 export { AppShellLayout } from "./AppShellLayout";

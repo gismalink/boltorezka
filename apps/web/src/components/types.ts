@@ -1,3 +1,7 @@
+/**
+ * components/types.ts — общие props/вспомогательные типы для AppShell-компонентов.
+ * Описывает пропсы RoomsPanel/ChatPanel/UserDock/Header, требуемые App.tsx.
+ */
 import type { FormEvent, RefObject } from "react";
 import type { Lang, TranslateFn } from "../i18n";
 import type { ChannelAudioQualitySetting, PresenceMember, Room, RoomKind, RoomMemberPreference, RoomsTreeResponse, ServerMemberItem, UiTheme, User } from "../domain";

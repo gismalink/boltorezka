@@ -1,3 +1,10 @@
+/**
+ * AppShellOverlays.tsx — сборка всех оверлеев, рисуемых поверх AppShell.
+ *
+ * Назначение:
+ * - Рендерит тосты, модальные окна, экран 18+, уведомления об обновлении и блокировки.
+ * - Не имеет состояния — всё приходит в props.
+ */
 import {
   AgeVerificationRequiredOverlay,
   AppUpdatedOverlay,

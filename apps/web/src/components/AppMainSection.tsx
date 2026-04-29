@@ -1,3 +1,11 @@
+/**
+ * AppMainSection.tsx — основная рабочая область под хедером.
+ *
+ * Назначение:
+ * - Переключает между рабочими панелями (`AppWorkspacePanels`) и гардами
+ *   (`GuestLoginGate`, `EmptyServerOnboarding`).
+ * - Является чисто разметочным компонентом — бизнес-логика снаружи.
+ */
 import type { ComponentProps } from "react";
 import { AppWorkspacePanels } from "./AppWorkspacePanels";
 import { EmptyServerOnboarding, GuestLoginGate } from "./AppGuardsAndOverlays";
