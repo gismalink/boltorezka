@@ -20,6 +20,7 @@ type UseAppShellLayoutPropsInput = {
   overlays: Omit<AppShellOverlaysProps, "onAcceptCookieConsent"> & {
     cookieConsentKey: string;
     setCookieConsentAccepted: (value: boolean) => void;
+    token: string;
   };
 };
 

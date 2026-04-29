@@ -332,6 +332,11 @@ export const api = {
     fetchJson<{ user: User | null }>(endpoints.me, token, withJsonBody("PATCH", input)),
   deleteMe: (token: string) =>
     fetchJson<{ ok: true; purgeScheduledAt: string | null; daysRemaining: number }>(endpoints.me, token, withJsonBody("DELETE")),
+  acceptConsents: (
+    token: string,
+    input: { cookieConsent?: boolean; welcomeIntroCompleted?: boolean }
+  ) =>
+    fetchJson<{ user: User | null }>(`${endpoints.me}/consents`, token, withJsonBody("POST", input)),
   wsTicket: (token: string, serverId?: string) =>
     fetchJson<{ ticket: string; expiresInSec: number }>(withServerIdQuery(endpoints.wsTicket, serverId), token),
   livekitToken: (

@@ -491,6 +491,7 @@ export function App() {
   useAppShellRoomRuntimeEffects(useAppShellRoomRuntimeEffectsInput({
     lang, selectedUiTheme, user,
     chatRoomSlug,
+    cookieConsentKey: COOKIE_CONSENT_KEY,
     setIsMobileViewport,
     setProfileNameDraft,
     setSelectedUiTheme,
@@ -498,6 +499,7 @@ export function App() {
     setWalkieTalkieEnabled,
     setWalkieTalkieHotkey,
     setShowFirstRunIntro,
+    setCookieConsentAccepted,
     setEditingMessageId,
     setPendingChatImageDataUrl,
     currentServerId, roomSlug,
@@ -1085,7 +1087,8 @@ export function App() {
     lang,
     cookieConsentAccepted,
     cookieConsentKey: COOKIE_CONSENT_KEY,
-    setCookieConsentAccepted
+    setCookieConsentAccepted,
+    token: serviceToken
   }));
 
   if (entryGate) {

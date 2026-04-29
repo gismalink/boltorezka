@@ -85,7 +85,8 @@ export function useAppShellRuntimeInput(params: Record<string, unknown>): AppShe
         lang: p.lang,
         cookieConsentAccepted: p.cookieConsentAccepted,
         cookieConsentKey: p.cookieConsentKey,
-        setCookieConsentAccepted: p.setCookieConsentAccepted
+        setCookieConsentAccepted: p.setCookieConsentAccepted,
+        token: p.token
       }
   };
 }

@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import type { Message, PresenceMember } from "../../domain";
 import type { ServerSoundEvent } from "../media/useServerSounds";
+import { isActiveTopicSoundMuted } from "./activeTopicSoundMute";
 
 type RealtimeWsState = "disconnected" | "connecting" | "connected";
 
@@ -162,7 +163,7 @@ export function useRealtimeSoundEffects({
     }
 
     if (previousChatMessageIdRef.current !== latest.id) {
-      if (latest.user_id !== userId) {
+      if (latest.user_id !== userId && !isActiveTopicSoundMuted()) {
         void playServerSound("chat_message");
       }
       previousChatMessageIdRef.current = latest.id;

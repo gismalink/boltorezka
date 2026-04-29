@@ -60,6 +60,16 @@ export function useOnboardingOverlayActions({
       if (response.user) {
         setUser(response.user);
       }
+      // Server-side consent: фиксируем факт прохождения intro в БД (monotonic).
+      // localStorage оставляем как кэш для быстрого resolve до /me.
+      try {
+        const consents = await api.acceptConsents(token, { welcomeIntroCompleted: true });
+        if (consents.user) {
+          setUser(consents.user);
+        }
+      } catch {
+        /* best-effort: при ошибке остаётся клиентский кэш */
+      }
       localStorage.setItem(`boltorezka_intro_v1_seen:${user.id}`, "1");
       setShowFirstRunIntro(false);
       pushToast(t("profile.saveSuccess"));
