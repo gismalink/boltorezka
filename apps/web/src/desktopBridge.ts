@@ -1,3 +1,17 @@
+/**
+ * desktopBridge.ts — типы и геттеры для моста web ↔ Electron-обёртки.
+ *
+ * Назначение:
+ * - Описывает форму `window.boltorezkaDesktop`, который проксирует Electron preload-скрипт.
+ * - Предоставляет три безопасных геттера: `getDesktopBridgeInfo`, `getDesktopUpdateBridge`,
+ *   `getDesktopNotificationBridge` — каждый возвращает `null`, если соответствующий API недоступен
+ *   (например, web-сборка или старая версия desktop-обёртки).
+ * - Все геттеры валидируют, что нужные методы — действительно функции, чтобы избежать падений
+ *   при частичной/устаревшей реализации preload.
+ *
+ * Используется хуками `useDesktopUpdateBridge`, `useDesktopNotificationBridge` и main.tsx
+ * (для определения runtime-режима и smoke-probe).
+ */
 export type DesktopBridgeInfo = {
   platform: string;
   version: string;
