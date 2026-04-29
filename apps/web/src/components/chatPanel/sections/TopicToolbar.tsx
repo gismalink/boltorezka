@@ -1,3 +1,7 @@
+/**
+ * TopicToolbar.tsx — тулбар текущего топика (пин, поиск, фильтры).
+ * Чистый презентер — все callback’и принимает из props.
+ */
 import { Button } from "../../uicomponents";
 
 type TopicToolbarProps = {

@@ -1,3 +1,7 @@
+/**
+ * useRoomSettingsAutosave.ts — хук debounce-автосохранения настроек комнаты.
+ * При изменении ввода собирает патч и вызывает onSave через задержку, избегая race с сервером.
+ */
 import { type FormEvent, useCallback, useEffect, useRef } from "react";
 
 type UseRoomSettingsAutosaveInput = {

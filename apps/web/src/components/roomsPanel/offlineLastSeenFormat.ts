@@ -1,3 +1,7 @@
+/**
+ * offlineLastSeenFormat.ts — форматирование времени «последний раз в сети».
+ * Принимает diffMs и возвращает человекочитаемую строку (секунды/минуты/часы/дни).
+ */
 export function formatOfflineLastSeen(diffMs: number): string {
   const minuteMs = 60_000;
   const hourMs = 60 * minuteMs;

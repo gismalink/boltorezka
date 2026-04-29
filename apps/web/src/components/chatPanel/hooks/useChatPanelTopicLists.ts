@@ -1,3 +1,7 @@
+/**
+ * useChatPanelTopicLists.ts — хук списков топиков для разных режимов UI.
+ * Применяет фильтрацию/сортировку из topicListsUtils и мемоизирует результат.
+ */
 // Хук списков тем чата: сортирует и фильтрует темы для разных режимов UI.
 import { useMemo } from "react";
 import type { RoomTopic } from "../../../domain";

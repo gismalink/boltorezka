@@ -1,3 +1,7 @@
+/**
+ * useChatPanelUiInteractions.ts — хук UX-взаимодействий в ChatPanel.
+ * Горячие клавиши, фокус композера, переходы между сообщениями по клавиатуре.
+ */
 import { KeyboardEvent, useEffect, useRef } from "react";
 import type { ChatMessageViewModel } from "../../../utils/chatMessageViewModel";
 import type { RoomTopic } from "../../../domain";

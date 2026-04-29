@@ -1,3 +1,7 @@
+/**
+ * TopicActionsContext.tsx — контекст действий над топиками в чат-панели.
+ * Содержит обработчики открытия, переименования, удаления и context-menu топиков.
+ */
 import { createContext, useContext, type ReactNode, type MouseEvent } from "react";
 
 type TopicMutePreset = "1h" | "8h" | "24h" | "forever" | "off";

@@ -1,3 +1,7 @@
+/**
+ * RoomMemberProfileModal.tsx — модальное окно профиля участника сервера.
+ * Показывает детали участника, кнопку DM и админ-действия (kick/ban) при наличии прав.
+ */
 import type { TranslateFn } from "../../i18n";
 import type { ServerMemberProfileDetails } from "./roomMemberSettingsTypes";
 import { useDmOptional } from "../dm/DmContext";

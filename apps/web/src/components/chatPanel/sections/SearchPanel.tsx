@@ -1,3 +1,7 @@
+/**
+ * SearchPanel.tsx — боковая панель результатов поиска по сообщениям.
+ * Показывает список hits, подсвечивает вхождения и переводит к выбранному сообщению.
+ */
 import { useState } from "react";
 import {
   CHAT_AGENT_FAILURE_REASONS,

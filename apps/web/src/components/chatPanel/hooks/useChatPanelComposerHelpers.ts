@@ -1,3 +1,7 @@
+/**
+ * useChatPanelComposerHelpers.ts — хук вспомогательных операций композера.
+ * Форматирует вложения и вставляет mention/quote в текст через функции из chatComposerUtils.
+ */
 // Хук вспомогательных операций композера: форматирование и вставка шаблонного текста.
 import { useCallback } from "react";
 import { applyMentionToText, applyQuoteToText, formatAttachmentSizeValue } from "./chatComposerUtils";

@@ -1,3 +1,7 @@
+/**
+ * RoomsCategoryBlock.tsx — блок категории в дереве комнат (заголовок + вложенные RoomRow).
+ * Поддерживает развёртывание/свёртывание и popup редактирования категории.
+ */
 import { memo, useRef } from "react";
 import type { Room, RoomCategory } from "../../domain";
 import { Button, PopupPortal } from "../uicomponents";

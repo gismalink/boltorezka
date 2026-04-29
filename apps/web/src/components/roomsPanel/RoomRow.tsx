@@ -1,3 +1,10 @@
+/**
+ * RoomRow.tsx — строка одной комнаты/канала в RoomsPanel.
+ *
+ * Назначение:
+ * - Отображает иконку/имя канала, unread badge, индикатор voice-активности.
+ * - Обрабатывает inline-переименование и контекстные действия.
+ */
 import { memo, type FormEvent, useEffect, useRef, useState } from "react";
 import type { ChannelAudioQualitySetting, Room, RoomKind, RoomMemberPreference } from "../../domain";
 import type { RoomsPanelProps } from "../types";

@@ -1,3 +1,6 @@
+/**
+ * RoomsConfirmOverlay.tsx — оверлей подтверждения действий над комнатами (delete/archive/move).
+ */
 import type { TranslateFn } from "../../i18n";
 import { Button } from "../uicomponents";
 

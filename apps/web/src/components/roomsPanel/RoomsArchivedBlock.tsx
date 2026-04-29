@@ -1,3 +1,6 @@
+/**
+ * RoomsArchivedBlock.tsx — сворачиваемый блок архивных комнат в RoomsPanel.
+ */
 import { memo } from "react";
 import { Button } from "../uicomponents";
 import type { Room } from "../../domain";

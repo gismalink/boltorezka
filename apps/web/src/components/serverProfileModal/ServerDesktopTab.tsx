@@ -1,3 +1,8 @@
+/**
+ * ServerDesktopTab.tsx — вкладка desktop-обновлений в ServerProfileModal.
+ * Показывает статус канала (test/prod), версию, прогресс загрузки и кнопки check/download/apply
+ * через `getDesktopUpdateBridge`. Для web-сборки вкладка отключена.
+ */
 import { useEffect, useMemo, useState } from "react";
 import { getDesktopUpdateBridge } from "../../desktopBridge";
 import { resolvePublicOrigin } from "../../runtimeOrigin";

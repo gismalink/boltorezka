@@ -1,3 +1,7 @@
+/**
+ * ServerProfileModalContext.tsx — контекст внутри ServerProfileModal.
+ * Прокидывает роль текущего пользователя и общие callback’и модального окна в вложенные вкладки.
+ */
 import { createContext, useContext, type ReactNode } from "react";
 import type { ServerMemberRole } from "../../domain";
 

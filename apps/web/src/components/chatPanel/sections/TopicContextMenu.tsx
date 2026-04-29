@@ -1,3 +1,7 @@
+/**
+ * TopicContextMenu.tsx — контекстное меню топика в вкладках.
+ * Даёт действия rename/pin/archive/delete и переводит результат в hooks-слой.
+ */
 import { useState } from "react";
 import {
   CHAT_AGENT_FAILURE_REASONS,

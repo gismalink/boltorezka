@@ -1,3 +1,10 @@
+/**
+ * RoomMembersList.tsx — список участников в развёрнутой комнате (рисуется под RoomRow).
+ *
+ * Назначение:
+ * - Отображает voice/online-участников с индикаторами mute/deafen.
+ * - Поддерживает drag’n’drop участников между комнатами (вызвов onMoveMember).
+ */
 import { type DragEvent, useEffect, useRef, useState } from "react";
 import type { Room, RoomMemberPreference } from "../../domain";
 import type { RoomsPanelProps } from "../types";

@@ -1,3 +1,7 @@
+/**
+ * useMessageContextMenu.ts — хук контекстного меню сообщения в чате.
+ * Обёртка над useContextMenuPosition с хранением выбранного сообщения и хелперами закрытия.
+ */
 import { useContextMenuPosition } from "../../../hooks/useContextMenuPosition";
 
 export function useMessageContextMenu() {

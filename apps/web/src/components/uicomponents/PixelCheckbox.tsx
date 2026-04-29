@@ -1,3 +1,7 @@
+/**
+ * PixelCheckbox.tsx — стилизованный чекбокс в pixel-эстетике.
+ * Принимает состояние checked/disabled и лейбл в виде ReactNode.
+ */
 import type { ReactNode } from "react";
 
 type PixelCheckboxProps = {

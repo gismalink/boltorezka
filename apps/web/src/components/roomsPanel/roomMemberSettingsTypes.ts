@@ -1,3 +1,7 @@
+/**
+ * roomMemberSettingsTypes.ts — типы для popup настроек участника в комнате.
+ * Описывает ServerMemberProfileDetails и смежные локальные структуры.
+ */
 export type ServerMemberProfileDetails = {
   userId: string;
   name: string;

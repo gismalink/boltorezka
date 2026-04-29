@@ -1,5 +1,8 @@
+/**
+ * useChatPanelAttachmentImages.ts — хук предпросмотров изображений в вложениях чата.
+ * Строит индекс image-вложений в таймлайне и из по индексу lightbox-галерея выбирает текущее фото.
+ */
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { Message } from "../../../domain";
 
 type UseChatPanelAttachmentImagesArgs = {
   messages: Message[];

@@ -1,3 +1,11 @@
+/**
+ * PopupPortal.tsx — портализованный popup/popover, привязанный к anchor-элементу.
+ *
+ * Назначение:
+ * - Рендерит детей в React-портал поверх всего UI.
+ * - Рассчитывает позицию по anchor (в useLayoutEffect, чтобы избежать мигания).
+ * - Следит за resize/scroll и перерасчитывает координаты.
+ */
 import { ReactNode, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 

@@ -1,3 +1,7 @@
+/**
+ * serverProfileUtils.tsx — вспомогательные функции и React-хелперы для ServerProfileModal.
+ * Форматирование ролей, иконок, лямбды для выбора пермишнов и сообщений об ошибках.
+ */
 import type { ServerMemberRole } from "../../domain";
 
 export type ServerMenuTab =

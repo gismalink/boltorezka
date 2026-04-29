@@ -1,3 +1,7 @@
+/**
+ * useChatPanelSearch.ts — хук поиска по сообщениям внутри топика.
+ * Делает запросы к `api`, хранит результаты/выделенный hit и реагирует на смену топика.
+ */
 import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import { api } from "../../../api";
 import type { RoomTopic } from "../../../domain";

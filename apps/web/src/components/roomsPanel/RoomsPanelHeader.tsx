@@ -1,3 +1,6 @@
+/**
+ * RoomsPanelHeader.tsx — верхняя часть RoomsPanel: имя сервера, поиск, действия владельца.
+ */
 import type { RoomKind } from "../../domain";
 import { Button, PopupPortal } from "../uicomponents";
 import type { RoomsPanelProps } from "../types";

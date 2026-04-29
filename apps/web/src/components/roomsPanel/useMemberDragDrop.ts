@@ -1,3 +1,7 @@
+/**
+ * useMemberDragDrop.ts — хук drag’n’drop участников между комнатами.
+ * Хранит состояние hover/dragSource и вызывает onMoveMember при drop в целевой канал.
+ */
 import { type DragEvent, useState } from "react";
 import type { Room } from "../../domain";
 import type { RoomsPanelProps } from "../types";

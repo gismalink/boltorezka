@@ -1,6 +1,8 @@
+/**
+ * useOfflineMembers.ts — хук выборки и форматирования offline-участников.
+ * Совмещает список ServerMemberItem с PresenceMember, сортирует по «last seen» и форматирует строку.
+ */
 import { useEffect, useMemo, useState } from "react";
-import type { PresenceMember, ServerMemberItem } from "../../domain";
-import { formatOfflineLastSeen } from "./offlineLastSeenFormat";
 
 type UseOfflineMembersArgs = {
   serverMembers: ServerMemberItem[];

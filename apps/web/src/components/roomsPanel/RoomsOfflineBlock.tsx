@@ -1,6 +1,9 @@
+/**
+ * RoomsOfflineBlock.tsx — блок offline-участников сервера.
+ * Показывает свёрнутый список пользователей офлайн с временем «последнего видимого» и DM-кнопкой.
+ */
 import { memo } from "react";
 import { useDmOptional } from "../dm/DmContext";
-
 type OfflineMember = {
   userId: string;
   userName: string;

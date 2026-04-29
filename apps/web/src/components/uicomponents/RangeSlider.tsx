@@ -1,3 +1,7 @@
+/**
+ * RangeSlider.tsx — pixel-стилизованный ползунок (input type="range").
+ * Используется для регулировки громкости/прогресса/объёма в UI звонка.
+ */
 import type { CSSProperties, InputHTMLAttributes } from "react";
 
 type RangeSliderProps = Omit<InputHTMLAttributes<HTMLInputElement>, "type" | "value" | "onChange"> & {
