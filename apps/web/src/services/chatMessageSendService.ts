@@ -1,3 +1,13 @@
+/**
+ * chatMessageSendService.ts — отправка сообщений чата (WS-first c HTTP fallback).
+ *
+ * Назначение:
+ * - Принимает текст/вложения/reply/mentions, валидирует и формирует payload.
+ * - Сначала пытается отправить по WebSocket; при недоступности падает в HTTP API.
+ * - Возвращает `SendChatMessageResult` с маркером успеха/business-кода ошибки.
+ *
+ * Используется хуком `useChatSend` и компонентами composer’а.
+ */
 import { api } from "../api";
 import type { User } from "../domain";
 import type { ChatController } from "./chatController";

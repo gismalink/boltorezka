@@ -1,3 +1,13 @@
+/**
+ * roomAdminController.ts — админ-операции над комнатами/деревом комнат.
+ *
+ * Назначение:
+ * - CRUD комнат (create/rename/move/delete), управление участниками и ролями.
+ * - Загрузка дерева комнат и истории сообщений для админ-вью (`MessagesCursor`).
+ * - Установка качества аудио (`AudioQuality`) и других настроек комнаты.
+ *
+ * Используется хуком `useRoomAdmin*` и админ-компонентами левой панели.
+ */
 import { api } from "../api";
 import type { AudioQuality, Message, MessagesCursor, Room, RoomKind, RoomsTreeResponse, User } from "../domain";
 

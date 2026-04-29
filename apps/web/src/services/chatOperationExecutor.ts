@@ -1,3 +1,14 @@
+/**
+ * chatOperationExecutor.ts — единая стратегия исполнения операций чата (WS-first / HTTP fallback).
+ *
+ * Назначение:
+ * - Описывает таблицу политик `CHAT_OPERATION_POLICIES` для каждой операции (send/edit/delete/...).
+ * - Реализует `executeWsFirstWithHttpFallback`, `executeHttpOnly`, `executeHttpWithError`,
+ *   `executeWsFirstWithHttpFallbackAwaitAck` и `executeChatOperation` — общие исполнители.
+ * - Распознаёт транзиентные WS-ошибки (`isTransientWsError`) и решает, делать ли HTTP-fallback.
+ *
+ * Используется в `chatTransportCommands` и `chatMessageSendService`.
+ */
 type SendWsEventFn = (
   eventType: string,
   payload: Record<string, unknown>,

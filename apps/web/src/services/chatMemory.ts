@@ -1,3 +1,7 @@
+/**
+ * chatMemory.ts — обрезка in-memory списка сообщений чата по лимиту.
+ * Хранит только последние `CHAT_MESSAGES_IN_MEMORY_LIMIT` сообщений (см. constants/appConfig).
+ */
 import { CHAT_MESSAGES_IN_MEMORY_LIMIT } from "../constants/appConfig";
 import type { Message } from "../domain";
 
