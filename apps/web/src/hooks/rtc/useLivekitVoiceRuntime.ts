@@ -3,6 +3,7 @@ import {
   createLocalTracks,
   createLocalScreenTracks,
   setLogLevel,
+  type AudioCaptureOptions,
   type LocalAudioTrack,
   type ScreenShareCaptureOptions,
   Participant,
@@ -503,6 +504,21 @@ export function useLivekitVoiceRuntime({
   const lastAppliedCameraConfigRef = useRef("");
   const lastRnnoiseTelemetryStatusRef = useRef("");
 
+  // Bug 1+2 fix: room.on(...) handlers are registered once at room.connect time and
+  // capture the closure of attach/detach/apply callbacks. When deps change later
+  // (e.g. user toggles deafen → audioMuted changes; or 3rd participant joins and
+  // LiveKit renegotiates → existing tracks are re-subscribed), the OLD closure
+  // would be invoked with stale `audioMuted`, causing either audio drop or
+  // unintentional unmute "through" deafen. Routing the calls through refs ensures
+  // the freshest callback is always invoked.
+  const attachRemoteAudioTrackRef = useRef<((participantId: string, track: RemoteAudioTrack) => void) | null>(null);
+  const detachRemoteAudioTrackRef = useRef<((participantId: string) => void) | null>(null);
+  const applyAudioOutputSettingsRef = useRef<(() => void) | null>(null);
+  const upsertRemoteVideoStreamRef = useRef<((participantId: string, track: MediaStreamTrack) => void) | null>(null);
+  const removeRemoteVideoStreamRef = useRef<((participantId: string) => void) | null>(null);
+  const upsertRemoteScreenShareStreamRef = useRef<((participantId: string, track: MediaStreamTrack) => void) | null>(null);
+  const removeRemoteScreenShareStreamRef = useRef<((participantId: string) => void) | null>(null);
+
   const trackRnnoiseStatus = useCallback((
     status: "inactive" | "active" | "unavailable" | "error",
     reason?: string
@@ -794,6 +810,26 @@ export function useLivekitVoiceRuntime({
       return next;
     });
   }, []);
+
+  // Keep refs in sync with the latest callback closures so the long-lived
+  // room.on(...) handlers always invoke the freshest version (Bug 1+2 fix).
+  useEffect(() => {
+    attachRemoteAudioTrackRef.current = attachRemoteAudioTrack;
+    detachRemoteAudioTrackRef.current = detachRemoteAudioTrack;
+    applyAudioOutputSettingsRef.current = applyAudioOutputSettings;
+    upsertRemoteVideoStreamRef.current = upsertRemoteVideoStream;
+    removeRemoteVideoStreamRef.current = removeRemoteVideoStream;
+    upsertRemoteScreenShareStreamRef.current = upsertRemoteScreenShareStream;
+    removeRemoteScreenShareStreamRef.current = removeRemoteScreenShareStream;
+  }, [
+    attachRemoteAudioTrack,
+    detachRemoteAudioTrack,
+    applyAudioOutputSettings,
+    upsertRemoteVideoStream,
+    removeRemoteVideoStream,
+    upsertRemoteScreenShareStream,
+    removeRemoteScreenShareStream
+  ]);
 
   const refreshRemoteStates = useCallback((room: Room | null) => {
     if (!room) {
@@ -1112,9 +1148,9 @@ export function useLivekitVoiceRuntime({
 
       room.on(RoomEvent.ParticipantDisconnected, (participant: RemoteParticipant) => {
         const participantId = String(participant.identity || "").trim() || participant.sid;
-        detachRemoteAudioTrack(participantId);
-        removeRemoteVideoStream(participantId);
-        removeRemoteScreenShareStream(participantId);
+        detachRemoteAudioTrackRef.current?.(participantId);
+        removeRemoteVideoStreamRef.current?.(participantId);
+        removeRemoteScreenShareStreamRef.current?.(participantId);
         refreshRemoteStates(room);
       });
 
@@ -1131,14 +1167,14 @@ export function useLivekitVoiceRuntime({
           const participantId = String(participant.identity || "").trim() || participant.sid;
 
           if (track.kind === Track.Kind.Audio) {
-            attachRemoteAudioTrack(participantId, track as RemoteAudioTrack);
+            attachRemoteAudioTrackRef.current?.(participantId, track as RemoteAudioTrack);
           }
 
           if (track.kind === Track.Kind.Video) {
             if (publication.source === Track.Source.ScreenShare) {
-              upsertRemoteScreenShareStream(participantId, track.mediaStreamTrack);
+              upsertRemoteScreenShareStreamRef.current?.(participantId, track.mediaStreamTrack);
             } else {
-              upsertRemoteVideoStream(participantId, track.mediaStreamTrack);
+              upsertRemoteVideoStreamRef.current?.(participantId, track.mediaStreamTrack);
             }
           }
 
@@ -1156,13 +1192,13 @@ export function useLivekitVoiceRuntime({
         (track: RemoteTrack, _publication: RemoteTrackPublication, participant: RemoteParticipant) => {
           const participantId = String(participant.identity || "").trim() || participant.sid;
           if (track.kind === Track.Kind.Audio) {
-            detachRemoteAudioTrack(participantId);
+            detachRemoteAudioTrackRef.current?.(participantId);
           }
           if (track.kind === Track.Kind.Video) {
             if (_publication.source === Track.Source.ScreenShare) {
-              removeRemoteScreenShareStream(participantId);
+              removeRemoteScreenShareStreamRef.current?.(participantId);
             } else {
-              removeRemoteVideoStream(participantId);
+              removeRemoteVideoStreamRef.current?.(participantId);
             }
           }
           refreshRemoteStates(room);
@@ -1207,7 +1243,7 @@ export function useLivekitVoiceRuntime({
         }
 
         const tracks = await createLocalTracks({
-          audio: buildAudioConstraints(),
+          audio: buildAudioConstraints() as boolean | AudioCaptureOptions,
           video: allowVideoStreaming && videoStreamingEnabled
             ? buildCameraVideoOptions()
             : false
@@ -1422,7 +1458,7 @@ export function useLivekitVoiceRuntime({
       }
 
       const replacementTracks = await createLocalTracks({
-        audio: buildAudioConstraints(),
+        audio: buildAudioConstraints() as boolean | AudioCaptureOptions,
         video: false
       });
       const replacementAudioTrack = replacementTracks.find((track) => track.kind === Track.Kind.Audio);
