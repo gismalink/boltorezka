@@ -10,6 +10,7 @@ import {
 } from "../../../constants/appConfig";
 import type { Room, RoomTopic } from "../../../domain";
 import { reconcileRoomUnreadValue } from "./roomUnreadReconcileUtils";
+import { isRoomUnreadWsBumpFresh } from "./roomUnreadWsBumpTracker";
 
 type RoomUnreadCountItem = {
   roomId: string;
@@ -240,8 +241,26 @@ export function useServerRoomUnreadCounters({
         nextMention[targetRoom.slug] = 0;
       });
 
-      setRoomUnreadBySlug(next);
-      setRoomMentionUnreadBySlug(nextMention);
+      // A1: для слагов со свежим WS-bump оставляем локальное значение, чтобы prefetch
+      // не затёр инкременты/mark-read, которые сервер ещё может не успеть учесть.
+      setRoomUnreadBySlug((prev) => {
+        const merged = { ...next };
+        Object.keys(merged).forEach((slug) => {
+          if (isRoomUnreadWsBumpFresh(slug)) {
+            merged[slug] = Math.max(0, Number(prev[slug] || 0));
+          }
+        });
+        return merged;
+      });
+      setRoomMentionUnreadBySlug((prev) => {
+        const merged = { ...nextMention };
+        Object.keys(merged).forEach((slug) => {
+          if (isRoomUnreadWsBumpFresh(slug)) {
+            merged[slug] = Math.max(0, Number(prev[slug] || 0));
+          }
+        });
+        return merged;
+      });
 
       const failedCount = settled.filter((item) => item.status === "rejected").length;
       if (failedCount > 0 || metrics.cacheMisses > 0) {
@@ -331,11 +350,14 @@ export function useServerRoomUnreadCounters({
           }
 
           const currentValue = Math.max(0, Number(prev[targetSlug] || 0));
-          const nextValue = reconcileRoomUnreadValue(
-            currentValue,
-            Number(entry.value.unreadCount || 0),
-            entry.value.source
-          );
+          // A1: если по этому слагу был свежий WS-bump — игнорируем сетевой ответ.
+          const nextValue = isRoomUnreadWsBumpFresh(targetSlug)
+            ? currentValue
+            : reconcileRoomUnreadValue(
+                currentValue,
+                Number(entry.value.unreadCount || 0),
+                entry.value.source
+              );
           if (nextValue === currentValue) {
             return;
           }
@@ -358,11 +380,13 @@ export function useServerRoomUnreadCounters({
           }
 
           const currentValue = Math.max(0, Number(prev[targetSlug] || 0));
-          const nextValue = reconcileRoomUnreadValue(
-            currentValue,
-            Number(entry.value.mentionUnreadCount || 0),
-            entry.value.source
-          );
+          const nextValue = isRoomUnreadWsBumpFresh(targetSlug)
+            ? currentValue
+            : reconcileRoomUnreadValue(
+                currentValue,
+                Number(entry.value.mentionUnreadCount || 0),
+                entry.value.source
+              );
           if (nextValue === currentValue) {
             return;
           }

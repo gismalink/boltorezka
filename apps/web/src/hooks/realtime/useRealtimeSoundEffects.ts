@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import type { Message, PresenceMember } from "../../domain";
 import type { ServerSoundEvent } from "../media/useServerSounds";
+import { isActiveTopicSoundMuted } from "./activeTopicSoundMute";
 
 type RealtimeWsState = "disconnected" | "connecting" | "connected";
 
@@ -162,10 +163,27 @@ export function useRealtimeSoundEffects({
     }
 
     if (previousChatMessageIdRef.current !== latest.id) {
-      if (latest.user_id !== userId) {
+      if (latest.user_id !== userId && !isActiveTopicSoundMuted()) {
         void playServerSound("chat_message");
       }
       previousChatMessageIdRef.current = latest.id;
     }
   }, [messages, playServerSound, userId]);
+
+  // Звук для входящих DM-сообщений (`chat_message`).
+  // Слушаем тот же CustomEvent, что DmContext, чтобы не зависеть от контекста.
+  // Не играем для собственных сообщений.
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent<{ type: string; payload: unknown }>).detail;
+      if (!detail || detail.type !== "dm.message.created") return;
+      const payload = detail.payload as { senderUserId?: unknown } | null;
+      const senderUserId = payload && typeof payload.senderUserId === "string" ? payload.senderUserId : null;
+      const me = String(userId || "").trim();
+      if (!senderUserId || (me && senderUserId === me)) return;
+      void playServerSound("chat_message");
+    };
+    window.addEventListener("boltorezka:dm", handler);
+    return () => window.removeEventListener("boltorezka:dm", handler);
+  }, [playServerSound, userId]);
 }

@@ -8,6 +8,7 @@ type UseAppShellLifecycleEffectsArgs = {
   selectedUiTheme: UiTheme;
   user: User | null;
   chatRoomSlug: string;
+  cookieConsentKey: string;
   setIsMobileViewport: Dispatch<SetStateAction<boolean>>;
   setProfileNameDraft: Dispatch<SetStateAction<string>>;
   setSelectedUiTheme: Dispatch<SetStateAction<UiTheme>>;
@@ -15,6 +16,7 @@ type UseAppShellLifecycleEffectsArgs = {
   setWalkieTalkieEnabled: Dispatch<SetStateAction<boolean>>;
   setWalkieTalkieHotkey: Dispatch<SetStateAction<string>>;
   setShowFirstRunIntro: Dispatch<SetStateAction<boolean>>;
+  setCookieConsentAccepted: Dispatch<SetStateAction<boolean>>;
   setEditingMessageId: Dispatch<SetStateAction<string | null>>;
   setPendingChatImageDataUrl: Dispatch<SetStateAction<string | null>>;
 };
@@ -24,6 +26,7 @@ export function useAppShellLifecycleEffects({
   selectedUiTheme,
   user,
   chatRoomSlug,
+  cookieConsentKey,
   setIsMobileViewport,
   setProfileNameDraft,
   setSelectedUiTheme,
@@ -31,6 +34,7 @@ export function useAppShellLifecycleEffects({
   setWalkieTalkieEnabled,
   setWalkieTalkieHotkey,
   setShowFirstRunIntro,
+  setCookieConsentAccepted,
   setEditingMessageId,
   setPendingChatImageDataUrl
 }: UseAppShellLifecycleEffectsArgs) {
@@ -84,10 +88,30 @@ export function useAppShellLifecycleEffects({
       return;
     }
 
+    // Сервер — источник истины. Если backend сохранил факт прохождения
+    // первой панели, оверлей не показываем и кэшируем флаг в localStorage,
+    // чтобы при следующей загрузке не мигало даже до резолва /me.
     const storageKey = `boltorezka_intro_v1_seen:${user.id}`;
+    if (user.welcome_intro_completed_at) {
+      try { localStorage.setItem(storageKey, "1"); } catch { /* ignore */ }
+      setShowFirstRunIntro(false);
+      return;
+    }
+
     const alreadySeen = localStorage.getItem(storageKey) === "1";
     setShowFirstRunIntro(!alreadySeen);
-  }, [user?.id, setShowFirstRunIntro]);
+  }, [user?.id, user?.welcome_intro_completed_at, setShowFirstRunIntro]);
+
+  // Синхронизация cookie-consent: серверное значение приоритетно над localStorage.
+  useEffect(() => {
+    if (!user?.id) {
+      return;
+    }
+    if (user.cookie_consent_at) {
+      try { localStorage.setItem(cookieConsentKey, "1"); } catch { /* ignore */ }
+      setCookieConsentAccepted(true);
+    }
+  }, [user?.id, user?.cookie_consent_at, cookieConsentKey, setCookieConsentAccepted]);
 
   useEffect(() => {
     setEditingMessageId(null);

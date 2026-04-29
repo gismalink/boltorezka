@@ -39,6 +39,7 @@ import { ChatComposerSection } from "./chatPanel/sections/ChatComposerSection";
 import { ChatPanelOverlays } from "./chatPanel/sections/ChatPanelOverlays";
 import { ChatFloatingActions } from "./chatPanel/sections/ChatFloatingActions";
 import { useDmOptional } from "./dm/DmContext";
+import { setActiveTopicSoundMuted } from "../hooks/realtime/activeTopicSoundMute";
 
 export type { ChatPanelProps };
 export { toMentionHandle };
@@ -409,6 +410,34 @@ export function ChatPanel({
       container.scrollTo({ top: container.scrollHeight, behavior: "auto" });
     });
   }, [chatLogRef, isDm, messages.length, roomId, unreadDividerMessageId]);
+
+  // B3: принудительный скролл к низу при отправке своего сообщения (rooms + DM).
+  // Снимает divider-lock и игнорирует stick-to-bottom гейт.
+  useEffect(() => {
+    const handler = () => {
+      const container = chatLogRef.current;
+      if (!container) return;
+      delete container.dataset.unreadDividerVisible;
+      window.requestAnimationFrame(() => {
+        container.scrollTop = container.scrollHeight;
+      });
+    };
+    window.addEventListener("boltorezka:chat:own-send", handler);
+    return () => window.removeEventListener("boltorezka:chat:own-send", handler);
+  }, [chatLogRef]);
+
+  // Звуковой mute активного топика: учитываем notificationMode === "none"
+  // и заданный topic mute preset (не "off"). Пушим значение в модульный
+  // флаг, который читает useRealtimeSoundEffects.
+  useEffect(() => {
+    if (!activeTopicId) {
+      setActiveTopicSoundMuted(false);
+      return;
+    }
+    const preset = topicMutePresetById[activeTopicId] || "off";
+    const muted = notificationMode === "none" || (Boolean(preset) && preset !== "off");
+    setActiveTopicSoundMuted(muted);
+  }, [activeTopicId, notificationMode, topicMutePresetById]);
 
   const loadedUnreadAfterDivider = useMemo(() => {
     if (!unreadDividerMessageId) {

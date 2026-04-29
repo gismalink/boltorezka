@@ -7,7 +7,7 @@
  */
 // Хук управления статусом прочтения: mark-read, разделитель непрочитанных,
 // автодогрузка истории и защита от рассинхрона при переключении комнаты/темы.
-import { useCallback, useEffect, useRef, useState, type RefObject } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
 import { api } from "../../../api";
 import { executeWsFirstWithHttpFallbackAwaitAck } from "../../../services/chatOperationExecutor";
 import type { Message, RoomTopic } from "../../../domain";
@@ -63,7 +63,8 @@ export function useChatPanelReadState({
   }>>({});
   const entryUnreadRoomIdRef = useRef<string>("");
   const unreadEntryTopicRef = useRef<string>("");
-  const unreadDividerScrolledTopicRef = useRef<string>("");
+  // Состояние, а не ref — чтобы зависящие useEffect (lock dataset) перезапускались.
+  const [dividerScrolledForTopic, setDividerScrolledForTopic] = useState<string>("");
 
   const normalizedCurrentUserId = String(currentUserId || "").trim();
 
@@ -273,7 +274,7 @@ export function useChatPanelReadState({
 
     entryUnreadRoomIdRef.current = normalizedRoomId;
     unreadEntryTopicRef.current = "";
-    unreadDividerScrolledTopicRef.current = "";
+    setDividerScrolledForTopic("");
     oversizedMessageBoundaryProgressRef.current = {};
     setEntryUnreadDivider(null);
   }, [roomId]);
@@ -290,7 +291,7 @@ export function useChatPanelReadState({
     }
 
     unreadEntryTopicRef.current = normalizedTopicId;
-    unreadDividerScrolledTopicRef.current = "";
+    setDividerScrolledForTopic("");
     oversizedMessageBoundaryProgressRef.current = {};
     setEntryUnreadDivider(null);
   }, [activeTopicId, topics, getTopicUnreadCount]);
@@ -304,7 +305,7 @@ export function useChatPanelReadState({
     // Never compute divider against stale room/topic message buffers during chat switch.
     if (!isMessageSetAlignedWithActiveContext()) {
       setEntryUnreadDivider(null);
-      unreadDividerScrolledTopicRef.current = "";
+      setDividerScrolledForTopic("");
       return;
     }
 
@@ -320,15 +321,39 @@ export function useChatPanelReadState({
         topicId: normalizedTopicId,
         messageId: serverAnchorMessageId
       });
-      unreadDividerScrolledTopicRef.current = "";
+      setDividerScrolledForTopic("");
       return;
     }
-    // Keep divider strictly server-driven to avoid client-side positional heuristics.
-    setEntryUnreadDivider(null);
-    unreadDividerScrolledTopicRef.current = "";
-  }, [activeTopicId, entryUnreadDivider?.messageId, entryUnreadDivider?.topicId, isMessageSetAlignedWithActiveContext, messages]);
 
-  useEffect(() => {
+    // A2 fallback: server anchor отсутствует, но топик имеет непрочитанные —
+    // ставим divider клиентской эвристикой на messages[len - unreadCount],
+    // чтобы UX не «терял» разделитель из-за гонок prefetch/anchor.
+    const selectedTopic = topics.find((topic) => topic.id === normalizedTopicId);
+    const sourceUnreadCount = Math.max(0, Number(selectedTopic?.unreadCount || 0));
+    const effectiveUnread = toEffectiveUnreadCount(sourceUnreadCount, messages);
+    if (effectiveUnread > 0 && messages.length > 0) {
+      const dividerIndex = Math.max(0, messages.length - effectiveUnread);
+      const fallbackMessageId = String(messages[dividerIndex]?.id || "").trim();
+      if (fallbackMessageId) {
+        setEntryUnreadDivider({
+          topicId: normalizedTopicId,
+          messageId: fallbackMessageId
+        });
+        setDividerScrolledForTopic("");
+        return;
+      }
+    }
+
+    setEntryUnreadDivider(null);
+    setDividerScrolledForTopic("");
+  }, [activeTopicId, entryUnreadDivider?.messageId, entryUnreadDivider?.topicId, isMessageSetAlignedWithActiveContext, messages, topics, toEffectiveUnreadCount]);
+
+  // B1+B4: scroll-to-divider + dataset lock в одном useLayoutEffect.
+  // - lock ставится сразу, чтобы автоскролл из useRealtimeChatLifecycle не дрался.
+  // - retry до 12 кадров, если divider-сообщение ещё не отрендерено (initial window).
+  // - fallback: если divider не нашли — скроллим в самый низ, чтобы чат не «застрял» сверху.
+  // - lock снимается сразу после успешного scrollIntoView (или fallback), чтобы новые сообщения снова стягивали вниз.
+  useLayoutEffect(() => {
     if (!entryUnreadDivider?.messageId) {
       return;
     }
@@ -338,7 +363,7 @@ export function useChatPanelReadState({
       return;
     }
 
-    if (unreadDividerScrolledTopicRef.current === normalizedTopicId) {
+    if (dividerScrolledForTopic === normalizedTopicId) {
       return;
     }
 
@@ -347,49 +372,53 @@ export function useChatPanelReadState({
       return;
     }
 
+    container.dataset.unreadDividerVisible = "1";
+
+    const dividerMessageId = entryUnreadDivider.messageId;
     const selectorMessageId = (typeof CSS !== "undefined" && typeof CSS.escape === "function")
-      ? CSS.escape(entryUnreadDivider.messageId)
-      : entryUnreadDivider.messageId;
-    const target = container.querySelector<HTMLElement>(`[data-message-id="${selectorMessageId}"]`);
-    if (!target) {
-      return;
-    }
+      ? CSS.escape(dividerMessageId)
+      : dividerMessageId;
 
-    unreadDividerScrolledTopicRef.current = normalizedTopicId;
-    window.requestAnimationFrame(() => {
-      target.scrollIntoView({ block: "center", behavior: "smooth" });
-    });
-  }, [activeTopicId, chatLogRef, entryUnreadDivider]);
+    let attempt = 0;
+    let rafId = 0;
+    let cancelled = false;
 
-  useEffect(() => {
-    const container = chatLogRef.current;
-    if (!container) {
-      return;
-    }
-
-    const normalizedTopicId = String(activeTopicId || "").trim();
-    const lockAutoScroll = Boolean(
-      entryUnreadDivider?.messageId
-      && normalizedTopicId
-      && entryUnreadDivider.topicId === normalizedTopicId
-      && unreadDividerScrolledTopicRef.current !== normalizedTopicId
-    );
-
-    if (lockAutoScroll) {
-      container.dataset.unreadDividerVisible = "1";
-    } else {
+    const finish = (didFindTarget: boolean) => {
+      if (cancelled) return;
       delete container.dataset.unreadDividerVisible;
-    }
+      setDividerScrolledForTopic(normalizedTopicId);
+      if (!didFindTarget) {
+        // Fallback: ничего не нашли — пускай хотя бы будет внизу.
+        container.scrollTop = container.scrollHeight;
+      }
+    };
+
+    const tryScroll = () => {
+      if (cancelled) return;
+      const target = container.querySelector<HTMLElement>(`[data-message-id="${selectorMessageId}"]`);
+      if (target) {
+        target.scrollIntoView({ block: "center", behavior: "auto" });
+        finish(true);
+        return;
+      }
+      if (++attempt < 12) {
+        rafId = window.requestAnimationFrame(tryScroll);
+        return;
+      }
+      finish(false);
+    };
+
+    rafId = window.requestAnimationFrame(tryScroll);
 
     return () => {
-      delete container.dataset.unreadDividerVisible;
+      cancelled = true;
+      if (rafId) window.cancelAnimationFrame(rafId);
     };
-  }, [activeTopicId, chatLogRef, entryUnreadDivider?.topicId, entryUnreadDivider?.messageId]);
+  }, [activeTopicId, chatLogRef, entryUnreadDivider, dividerScrolledForTopic]);
 
   useEffect(() => {
     return () => {
       unreadEntryTopicRef.current = "";
-      unreadDividerScrolledTopicRef.current = "";
       oversizedMessageBoundaryProgressRef.current = {};
       if (autoMarkReadRafRef.current !== null) {
         window.cancelAnimationFrame(autoMarkReadRafRef.current);

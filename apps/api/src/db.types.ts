@@ -16,6 +16,8 @@ export type UserRow = {
   is_bot: boolean;
   deleted_at?: string | null;
   purge_scheduled_at?: string | null;
+  cookie_consent_at?: string | null;
+  welcome_intro_completed_at?: string | null;
   created_at: string;
 };
 

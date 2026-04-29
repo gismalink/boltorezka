@@ -11,6 +11,7 @@ export function useAppShellRoomRuntimeEffectsInput(params: Record<string, unknow
       selectedUiTheme: p.selectedUiTheme,
       user: p.user,
       chatRoomSlug: p.chatRoomSlug,
+      cookieConsentKey: p.cookieConsentKey,
       setIsMobileViewport: p.setIsMobileViewport,
       setProfileNameDraft: p.setProfileNameDraft,
       setSelectedUiTheme: p.setSelectedUiTheme,
@@ -18,6 +19,7 @@ export function useAppShellRoomRuntimeEffectsInput(params: Record<string, unknow
       setWalkieTalkieEnabled: p.setWalkieTalkieEnabled,
       setWalkieTalkieHotkey: p.setWalkieTalkieHotkey,
       setShowFirstRunIntro: p.setShowFirstRunIntro,
+      setCookieConsentAccepted: p.setCookieConsentAccepted,
       setEditingMessageId: p.setEditingMessageId,
       setPendingChatImageDataUrl: p.setPendingChatImageDataUrl
     },

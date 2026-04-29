@@ -668,6 +668,14 @@ export function useRealtimeChatLifecycle({
       lastMessageIdRef.current = latestMessageId;
       // New conversation should default to latest messages unless unread divider lock takes over.
       shouldStickToBottomRef.current = true;
+      // B2: явно прыгаем вниз. Если divider-логика поставит свой lock в том же кадре —
+      // её useLayoutEffect выполнится раньше нашего RAF и заблокирует прыжок через dataset.
+      window.requestAnimationFrame(() => {
+        if (chatLogElement.dataset.unreadDividerVisible === "1") {
+          return;
+        }
+        chatLogElement.scrollTop = chatLogElement.scrollHeight;
+      });
       return;
     }
 

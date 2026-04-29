@@ -21,6 +21,13 @@ const updateProfileSchema = z.object({
   walkieTalkieHotkey: z.string().trim().min(1).max(64).optional()
 });
 
+const updateConsentSchema = z.object({
+  cookieConsent: z.boolean().optional(),
+  welcomeIntroCompleted: z.boolean().optional()
+}).refine((value) => value.cookieConsent === true || value.welcomeIntroCompleted === true, {
+  message: "At least one consent flag must be true"
+});
+
 export function registerAuthProfileRoutes(fastify: FastifyInstance) {
   fastify.get(
     "/v1/auth/me",
@@ -30,7 +37,7 @@ export function registerAuthProfileRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest) => {
       const userId = normalizeBoundedString(request.user?.sub, 128) || "";
       const result = await db.query<UserRow>(
-        "SELECT id, email, username, name, ui_theme, walkie_talkie_enabled, walkie_talkie_hotkey, role, is_banned, access_state, is_bot, deleted_at, purge_scheduled_at, created_at FROM users WHERE id = $1",
+        "SELECT id, email, username, name, ui_theme, walkie_talkie_enabled, walkie_talkie_hotkey, role, is_banned, access_state, is_bot, deleted_at, purge_scheduled_at, cookie_consent_at, welcome_intro_completed_at, created_at FROM users WHERE id = $1",
         [userId]
       );
 
@@ -75,7 +82,7 @@ export function registerAuthProfileRoutes(fastify: FastifyInstance) {
              walkie_talkie_enabled = COALESCE($4, walkie_talkie_enabled),
              walkie_talkie_hotkey = COALESCE(NULLIF(BTRIM($5), ''), walkie_talkie_hotkey)
          WHERE id = $1
-         RETURNING id, email, username, name, ui_theme, walkie_talkie_enabled, walkie_talkie_hotkey, role, is_banned, access_state, is_bot, deleted_at, purge_scheduled_at, created_at`,
+         RETURNING id, email, username, name, ui_theme, walkie_talkie_enabled, walkie_talkie_hotkey, role, is_banned, access_state, is_bot, deleted_at, purge_scheduled_at, cookie_consent_at, welcome_intro_completed_at, created_at`,
         [
           userId,
           parsed.data.name,
@@ -114,7 +121,7 @@ export function registerAuthProfileRoutes(fastify: FastifyInstance) {
          SET deleted_at = NOW(),
              purge_scheduled_at = NOW() + INTERVAL '30 days'
          WHERE id = $1
-         RETURNING id, email, username, name, ui_theme, walkie_talkie_enabled, walkie_talkie_hotkey, role, is_banned, access_state, is_bot, deleted_at, purge_scheduled_at, created_at`,
+         RETURNING id, email, username, name, ui_theme, walkie_talkie_enabled, walkie_talkie_hotkey, role, is_banned, access_state, is_bot, deleted_at, purge_scheduled_at, cookie_consent_at, welcome_intro_completed_at, created_at`,
         [userId]
       );
 
@@ -139,6 +146,61 @@ export function registerAuthProfileRoutes(fastify: FastifyInstance) {
         purgeScheduledAt: deletionState.purgeScheduledAt,
         daysRemaining: deletionState.daysRemaining
       };
+    }
+  );
+
+  // POST /v1/auth/me/consents — фиксирует факт акцепта cookie/intro.
+  // Проставляет timestamp только если он ещё NULL (monotonic): повторный
+  // вызов не сбрасывает и не обновляет существующие значения.
+  fastify.post(
+    "/v1/auth/me/consents",
+    {
+      preHandler: [requireAuth]
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const parsed = updateConsentSchema.safeParse(request.body || {});
+      if (!parsed.success) {
+        return reply.code(400).send({
+          error: "ValidationError",
+          message: "cookieConsent or welcomeIntroCompleted must be true"
+        });
+      }
+
+      const userId = normalizeBoundedString(request.user?.sub, 128);
+      if (!userId) {
+        return reply.code(401).send({
+          error: "Unauthorized",
+          message: "Valid bearer token is required"
+        });
+      }
+
+      const cookieFlag = parsed.data.cookieConsent === true;
+      const introFlag = parsed.data.welcomeIntroCompleted === true;
+
+      const updated = await db.query<UserRow>(
+        `UPDATE users
+         SET cookie_consent_at = CASE
+               WHEN $2::BOOLEAN AND cookie_consent_at IS NULL THEN NOW()
+               ELSE cookie_consent_at
+             END,
+             welcome_intro_completed_at = CASE
+               WHEN $3::BOOLEAN AND welcome_intro_completed_at IS NULL THEN NOW()
+               ELSE welcome_intro_completed_at
+             END
+         WHERE id = $1
+         RETURNING id, email, username, name, ui_theme, walkie_talkie_enabled, walkie_talkie_hotkey, role, is_banned, access_state, is_bot, deleted_at, purge_scheduled_at, cookie_consent_at, welcome_intro_completed_at, created_at`,
+        [userId, cookieFlag, introFlag]
+      );
+
+      if (updated.rowCount === 0) {
+        return reply.code(404).send({
+          error: "UserNotFound",
+          message: "User does not exist"
+        });
+      }
+
+      const response: MeResponse = { user: updated.rows[0] };
+      return response;
     }
   );
 }

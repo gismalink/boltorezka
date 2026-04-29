@@ -316,6 +316,11 @@ export function useChatComposerActions({
         setReplyingToMessageId(null);
       }
       sendChatTypingState(chatRoomSlug, false);
+      // B3: после успешной отправки своего сообщения сообщаем UI чата,
+      // чтобы он принудительно проскроллил к низу (гейт shouldStickToBottom не должен мешать).
+      if (typeof window !== "undefined" && result.mode !== "edit") {
+        window.dispatchEvent(new CustomEvent("boltorezka:chat:own-send"));
+      }
     })();
   }, [
     authToken,
