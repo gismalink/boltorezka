@@ -127,12 +127,12 @@ export function DmProvider({ token, onDmOpen, onDmClose, children }: { token: st
       }
       entryUnreadCountRef.current = 0;
 
-      if (res.messages.length > 0) {
-        cursorRef.current = res.messages[res.messages.length - 1].id;
+      if (reversed.length > 0) {
+        cursorRef.current = reversed[reversed.length - 1].id;
 
-        // mark read
-        const lastMsg = res.messages[0]; // Самое новое (до reverse — первый)
-        api.dmMarkRead(token, activeThreadId, lastMsg.id).catch(() => {});
+        // mark read: после reverse() самое новое сообщение — последнее в массиве.
+        const newestMsg = reversed[reversed.length - 1];
+        api.dmMarkRead(token, activeThreadId, newestMsg.id).catch(() => {});
       }
       setLoading(false);
     }).catch(() => {
