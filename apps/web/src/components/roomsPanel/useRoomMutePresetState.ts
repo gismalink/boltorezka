@@ -3,6 +3,7 @@
  * Хранит выбранный пресет (off/30m/1h/forever) и строку дедлайна для UI.
  */
 import { useCallback, useEffect, useState } from "react";
+import type { TranslateFn } from "../../i18n";
 
 type RoomMutePreset = "1h" | "8h" | "24h" | "forever" | "off";
 

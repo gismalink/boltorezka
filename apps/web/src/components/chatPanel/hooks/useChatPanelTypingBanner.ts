@@ -3,6 +3,8 @@
  * Агрегирует typing-презенс участников в читаемую строку для текущего топика.
  */
 import { useMemo } from "react";
+
+type UseChatPanelTypingBannerArgs = {
   t: (key: string) => string;
   typingUsers: string[];
 };

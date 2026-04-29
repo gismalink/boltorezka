@@ -6,6 +6,8 @@
  * - Интегрируется с desktop-мостом через `getDesktopNotificationBridge`.
  */
 import { useCallback, useEffect, useRef, useState } from "react";
+import { api } from "../../../api";
+import { getDesktopNotificationBridge } from "../../../desktopBridge";
 
 type InboxItem = {
   id: string;

@@ -3,6 +3,8 @@
  * Управляет открытием/закрытием панели поиска и фокусом ввода.
  */
 import { useEffect, useState } from "react";
+
+type UseChatPanelSearchOverlayArgs = {
   hasActiveRoom: boolean;
 };
 
