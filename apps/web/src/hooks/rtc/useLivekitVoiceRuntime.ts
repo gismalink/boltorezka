@@ -3,6 +3,7 @@ import {
   createLocalTracks,
   createLocalScreenTracks,
   setLogLevel,
+  type AudioCaptureOptions,
   type LocalAudioTrack,
   type ScreenShareCaptureOptions,
   Participant,
@@ -1242,7 +1243,7 @@ export function useLivekitVoiceRuntime({
         }
 
         const tracks = await createLocalTracks({
-          audio: buildAudioConstraints(),
+          audio: buildAudioConstraints() as boolean | AudioCaptureOptions,
           video: allowVideoStreaming && videoStreamingEnabled
             ? buildCameraVideoOptions()
             : false
@@ -1457,7 +1458,7 @@ export function useLivekitVoiceRuntime({
       }
 
       const replacementTracks = await createLocalTracks({
-        audio: buildAudioConstraints(),
+        audio: buildAudioConstraints() as boolean | AudioCaptureOptions,
         video: false
       });
       const replacementAudioTrack = replacementTracks.find((track) => track.kind === Track.Kind.Audio);
