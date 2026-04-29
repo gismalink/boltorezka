@@ -3,6 +3,13 @@ import { resolveRealtimeWsBase } from "../transportRuntime";
 
 const RECONNECT_DELAYS_MS = [1000, 2000, 4000, 8000, 12000];
 const ACK_TIMEOUT_MS = 6000;
+const PING_INTERVAL_MS = 15000;
+// If no inbound message (incl. pong) within this window, treat the socket as
+// dead and force-close it to trigger a fast reconnect. This catches scenarios
+// where the OS has not yet surfaced a TCP timeout — most notably VPN toggling,
+// where the old socket lingers for minutes from JS perspective while the
+// server has already evicted the user from room presence.
+const LIVENESS_TIMEOUT_MS = 35000;
 
 export type WsState = "disconnected" | "connecting" | "connected";
 
@@ -35,6 +42,8 @@ export class RealtimeClient {
   private reconnectAttempt = 0;
   private activeRoomSlug = "";
   private pingInterval: ReturnType<typeof setInterval> | null = null;
+  private livenessInterval: ReturnType<typeof setInterval> | null = null;
+  private lastInboundAt = 0;
   private reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
   private isDisposed = false;
   private pendingRequests = new Map<string, PendingRequest>();
@@ -223,6 +232,7 @@ export class RealtimeClient {
 
         this.ws.onopen = () => {
           this.reconnectAttempt = 0;
+          this.lastInboundAt = Date.now();
           this.options.onWsStateChange("connected");
           this.options.onLog("ws connected");
           this.options.onConnected?.();
@@ -242,7 +252,26 @@ export class RealtimeClient {
               return;
             }
             this.sendEvent("ping", {}, { trackAck: false });
-          }, 15000);
+          }, PING_INTERVAL_MS);
+
+          // Liveness watchdog: if the socket has been silent for too long,
+          // assume the underlying connection is dead (e.g. user switched VPN
+          // and the OS has not yet timed out the old TCP flow) and force a
+          // close — onclose will schedule the reconnect.
+          this.livenessInterval = setInterval(() => {
+            if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+              return;
+            }
+            const silentFor = Date.now() - this.lastInboundAt;
+            if (silentFor > LIVENESS_TIMEOUT_MS) {
+              this.options.onLog(`ws liveness timeout after ${silentFor}ms — closing socket`);
+              try {
+                this.ws.close();
+              } catch {
+                // ignore — onclose will fire either way
+              }
+            }
+          }, 5000);
         };
 
         this.ws.onclose = () => {
@@ -258,6 +287,7 @@ export class RealtimeClient {
         };
 
         this.ws.onmessage = (event) => {
+          this.lastInboundAt = Date.now();
           try {
             const message = JSON.parse(event.data) as WsIncoming;
             this.options.onMessage(message);
@@ -350,6 +380,10 @@ export class RealtimeClient {
     if (this.pingInterval) {
       clearInterval(this.pingInterval);
       this.pingInterval = null;
+    }
+    if (this.livenessInterval) {
+      clearInterval(this.livenessInterval);
+      this.livenessInterval = null;
     }
     if (this.reconnectTimeout) {
       clearTimeout(this.reconnectTimeout);
