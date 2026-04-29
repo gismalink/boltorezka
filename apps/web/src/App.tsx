@@ -18,6 +18,7 @@ import { useEffect, useRef, useState } from "react";
 import { RealtimeClient } from "./services";
 import { AppShellLayout } from "./components";
 import { DmProvider } from "./components/dm/DmContext";
+import { DocumentTitleBadge } from "./components/DocumentTitleBadge";
 import { AuthProvider } from "./contexts/AuthContext";
 import { LocaleProvider } from "./contexts/LocaleContext";
 import {
@@ -1105,6 +1106,7 @@ export function App() {
       }}
       onDmClose={() => setDmModeActive(false)}
     >
+      <DocumentTitleBadge roomUnreadBySlug={roomUnreadBySlug} />
       <AppShellLayout topChromeProps={appTopChromeProps} mainSectionProps={appMainSectionProps} shellOverlaysProps={appShellOverlaysProps} />
     </DmProvider>
     </LocaleProvider>
