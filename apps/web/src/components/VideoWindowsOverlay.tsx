@@ -318,6 +318,21 @@ export function VideoWindowsOverlay({
     setFullscreenResolution("");
   }, [fullscreenScreenShare]);
 
+  // Bug 3 fix: a new screen-share session must always start in the floating
+  // window mode, never auto-open in fullscreen. If the previously fullscreened
+  // stream ends, or a different user starts streaming, dismiss fullscreen.
+  useEffect(() => {
+    if (!fullscreenScreenShare) {
+      return;
+    }
+    const currentScreenShareId = screenShareActive
+      ? `screen-share:${screenShareOwnerUserId || "unknown"}`
+      : null;
+    if (currentScreenShareId !== fullscreenScreenShare.id) {
+      setFullscreenScreenShare(null);
+    }
+  }, [fullscreenScreenShare, screenShareActive, screenShareOwnerUserId]);
+
   useEffect(() => {
     try {
       const raw = localStorage.getItem(VIDEO_LAYOUTS_STORAGE_KEY);
