@@ -1,3 +1,6 @@
+/**
+ * RoomsUncategorizedBlock.tsx — блок комнат без категории ("Общие").
+ */
 import { memo } from "react";
 import type { Room } from "../../domain";
 import type { TranslateFn } from "../../i18n";

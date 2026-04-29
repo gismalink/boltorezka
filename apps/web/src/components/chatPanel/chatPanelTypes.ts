@@ -1,3 +1,7 @@
+/**
+ * chatPanelTypes.ts — общие типы ChatPanel и его секций.
+ * Описывает props таймлайна, композера, оверлеев, топиков и поиска.
+ */
 import type { ClipboardEvent, FormEvent, KeyboardEvent, ReactNode, RefObject } from "react";
 import type { Message, RoomTopic } from "../../domain";
 

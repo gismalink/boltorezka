@@ -1,3 +1,7 @@
+/**
+ * ChatPanelOverlays.tsx — оверлеи ChatPanel: lightbox вложений, drag’n’drop, подтверждения.
+ * Рендерятся в React-портал поверх всего чата.
+ */
 import { KeyboardEvent, Ref } from "react";
 import { createPortal } from "react-dom";
 import type { RoomTopic } from "../../../domain";

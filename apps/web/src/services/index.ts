@@ -1,3 +1,8 @@
+/**
+ * services/index.ts — публичный API слоя сервисов.
+ * Реэкспортирует контроллеры и операции, чтобы остальные модули зависели от `./services`,
+ * а не от внутренних файлов.
+ */
 export { AuthController } from "./authController";
 export type { CallStatus } from "./callTypes";
 export { ChatController } from "./chatController";

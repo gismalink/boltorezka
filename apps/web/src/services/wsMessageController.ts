@@ -1,3 +1,15 @@
+/**
+ * wsMessageController.ts — центральный обработчик входящих WS-событий чата/RTC/presence.
+ *
+ * Назначение:
+ * - Маршрутизирует все типы `WsIncoming` (chat, presence, room-topic, RTC, system).
+ * - Применяет initial-state replay при реконнекте (`RTC_FEATURE_INITIAL_STATE_REPLAY`).
+ * - Обновляет React-state через переданные `Dispatch<SetStateAction<...>>` сеттеры.
+ * - Извлекает упоминания (`extractMentionUserIdsFromChatPayload`) и нормализует payload’ы.
+ *
+ * ВНИМАНИЕ: файл крупный (>1000 строк). При правках держать чистоту case-блоков и
+ * избегать побочных эффектов вне switch’ев — состояние RTC/чата критично к порядку.
+ */
 import type { Dispatch, SetStateAction } from "react";
 import type { Message, PresenceMember, RoomTopic, WsIncoming } from "../domain";
 import { RTC_FEATURE_INITIAL_STATE_REPLAY } from "../hooks/rtc/voiceCallConfig";

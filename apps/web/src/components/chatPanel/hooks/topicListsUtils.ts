@@ -1,3 +1,7 @@
+/**
+ * topicListsUtils.ts — функции фильтрации/сортировки топиков чата.
+ * Поддерживает режимы: all/active/unread/my/mentions/pinned/archived.
+ */
 import type { RoomTopic } from "../../../domain";
 
 export type TopicFilterMode = "all" | "active" | "unread" | "my" | "mentions" | "pinned" | "archived";

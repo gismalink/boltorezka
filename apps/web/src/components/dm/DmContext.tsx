@@ -1,3 +1,11 @@
+/**
+ * DmContext.tsx — React-контекст для личных сообщений (DM).
+ *
+ * Назначение:
+ * - Хранит список DM-тредов, непрочитанные и текущую открытую переписку.
+ * - Инкапсулирует вызовы API (`api.dm*`) и логику подгрузки истории.
+ * - Потребляется компонентами DM-панели внутри ChatPanel и RoomsPanel.
+ */
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { api, type DmMessageItem, type DmThreadWithUnread } from "../../api";
 

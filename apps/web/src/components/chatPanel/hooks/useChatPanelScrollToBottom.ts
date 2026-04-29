@@ -1,3 +1,7 @@
+/**
+ * useChatPanelScrollToBottom.ts — хук кнопки «scroll to bottom» в чате.
+ * Управляет видимостью кнопки (по скролл-позиции) и действием прокрутки вниз.
+ */
 // Хук кнопки «scroll to bottom»: видимость и действие.
 import { RefObject, useCallback, useEffect, useState } from "react";
 

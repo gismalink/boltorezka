@@ -1,3 +1,7 @@
+/**
+ * roomMembers.ts — хелперы для списка участников комнаты.
+ * Преобразует PresenceMember в сплющенный RoomMember (`userId`, `userName`) для рендера.
+ */
 import type { PresenceMember } from "../../domain";
 
 export type RoomMember = { userId: string; userName: string };

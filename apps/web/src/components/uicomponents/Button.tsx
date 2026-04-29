@@ -1,3 +1,7 @@
+/**
+ * Button.tsx — базовая стилизованная кнопка дизайн-системы.
+ * Оборачивает <button> с pixel-стилями; props полностью совместимы с ButtonHTMLAttributes.
+ */
 import type { ButtonHTMLAttributes } from "react";
 
 type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {

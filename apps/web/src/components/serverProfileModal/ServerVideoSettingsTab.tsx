@@ -1,3 +1,7 @@
+/**
+ * ServerVideoSettingsTab.tsx — вкладка video/screen-share настроек в ServerProfileModal.
+ * Позволяет выбрать разрешение screen-share и эффекты видео на сервере.
+ */
 import { useEffect, useRef } from "react";
 import type { ServerScreenShareResolution, ServerVideoEffectType } from "../../hooks/rtc/voiceCallTypes";
 import { RangeSlider } from "../uicomponents";

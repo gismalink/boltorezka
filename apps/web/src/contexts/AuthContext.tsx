@@ -1,3 +1,10 @@
+/**
+ * AuthContext.tsx — React-контекст с текущим пользователем/токеном/auth-методами.
+ *
+ * Назначение:
+ * - Прокидывает результат `useAuthSession` (user, token, login/logout/refresh) вглубь дерева.
+ * - `useAuthCtx()` бросает ошибку при использовании вне `AuthProvider` — не молчаливый undefined.
+ */
 import { createContext, useContext, type ReactNode } from "react";
 
 type AuthContextValue = {

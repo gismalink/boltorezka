@@ -1,3 +1,14 @@
+/**
+ * LegalStandalonePage.tsx — отдельная страница юридических документов вне основного App.
+ *
+ * Назначение:
+ * - Рендерится из `main.tsx`, когда URL совпадает с `/privacy`, `/terms`, `/cookies`, `/contacts`.
+ * - Сама управляет языком (RU/EN) и cookie-баннером, не требуя авторизации/реалтайма.
+ * - Хранит локально согласие на cookies (`boltorezka_cookie_consent_v1`) и приём правовых
+ *   документов (`boltorezka_legal_acceptance_v1`) через localStorage.
+ *
+ * Контент захардкожен в `LEGAL_PAGES` (RU/EN) — обновлять вместе с правовой версией.
+ */
 import { CookieConsentBanner } from "./components/CookieConsentBanner";
 import { LegalLinks } from "./components/LegalLinks";
 import { useEffect, useMemo, useState } from "react";

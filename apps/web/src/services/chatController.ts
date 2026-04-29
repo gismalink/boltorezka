@@ -1,3 +1,14 @@
+/**
+ * chatController.ts — высокоуровневый фасад чата (history/load/send/state).
+ *
+ * Назначение:
+ * - Загружает страницы сообщений по курсору (`MessagesCursor`).
+ * - Хранит in-memory буфер сообщений и обрезает его до лимита (`trimMessagesInMemory`).
+ * - Прокидывает WS-отправку в зависимости от транспорта (через переданный `WsSender`).
+ *
+ * Используется в `useChatRuntime`/`wsMessageController` и комбинируется с `chatTransportCommands`
+ * для отдельных операций (edit/delete/pin/react/report).
+ */
 import { api } from "../api";
 import type { Message, MessagesCursor, User } from "../domain";
 import { trimMessagesInMemory } from "./chatMemory";

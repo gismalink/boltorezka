@@ -1,3 +1,7 @@
+/**
+ * roomsPanelDerivedDataUtils.ts — чистые функции расчёта агрегатов для RoomsPanel.
+ * Сводит дерево комнат + presence в структуры, удобные для рендера (online/offline/voice/category).
+ */
 import type { PresenceMember, Room, RoomsTreeResponse } from "../../domain";
 import { mapRoomMembersForSlug, type RoomMember } from "./roomMembers";
 

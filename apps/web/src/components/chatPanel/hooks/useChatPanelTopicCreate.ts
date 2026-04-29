@@ -1,3 +1,7 @@
+/**
+ * useChatPanelTopicCreate.ts — хук формы создания нового топика.
+ * Хранит ввод, валидацию, submit-состояние и переход на вновь созданный топик.
+ */
 import { FormEvent, useEffect, useRef, useState } from "react";
 
 type UseChatPanelTopicCreateArgs = {

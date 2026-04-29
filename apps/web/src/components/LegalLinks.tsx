@@ -1,3 +1,7 @@
+/**
+ * LegalLinks.tsx — компактный ряд ссылок на юридические страницы (privacy/terms/cookies/contacts).
+ * Используется в футерах и оверлеях логина.
+ */
 import type { Lang } from "../i18n";
 
 type LegalLinksProps = {

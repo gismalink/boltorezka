@@ -1,6 +1,9 @@
+/**
+ * RoomsOutsideOnlineBlock.tsx — блок online-участников вне голосовых комнат.
+ * Поддерживает контекстные действия (DM, профиль) через useDmOptional.
+ */
 import { memo } from "react";
 import { useDmOptional } from "../dm/DmContext";
-
 type OutsideOnlineMember = {
   userId: string;
   userName: string;

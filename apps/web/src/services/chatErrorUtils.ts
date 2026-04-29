@@ -1,3 +1,11 @@
+/**
+ * chatErrorUtils.ts — нормализация и извлечение бизнес-кодов ошибок чата.
+ *
+ * Назначение:
+ * - `extractBusinessCodeFromErrorMessage` — вытаскивает первый сегмент `CODE:...` из строки.
+ * - `getErrorCode` — приводит произвольный `unknown`-ошибочный объект к строковому коду.
+ * - `normalizeBusinessErrorCode` — превращает ApiError/строки/объекты в единый формат для UI.
+ */
 export function extractBusinessCodeFromErrorMessage(message: string): string {
   const parts = String(message || "")
     .split(":")

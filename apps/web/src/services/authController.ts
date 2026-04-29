@@ -1,3 +1,14 @@
+/**
+ * authController.ts — фасад для аутентификации/SSO/desktop-handoff.
+ *
+ * Назначение:
+ * - Инкапсулирует все вызовы auth API (логин/логаут/refresh/удалённые аккаунты).
+ * - Реализует SSO redirect через `state`-параметр (без `?token=` в URL — см. AGENTS.md).
+ * - Готовит deep-link для desktop handoff (`buildDesktopHandoffDeepLink`).
+ * - Шлёт телеметрию ключевых auth-событий через `trackClientEvent`.
+ *
+ * Используется хуком `useAuthSession` и провайдером `AuthContext`.
+ */
 import { api } from "../api";
 import { ApiError } from "../api";
 import { trackClientEvent } from "../telemetry";

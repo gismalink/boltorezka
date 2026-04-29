@@ -1,3 +1,10 @@
+/**
+ * AppWorkspaceContent.tsx — центральный контейнер рабочей области (верхний баннер + слот children).
+ *
+ * Назначение:
+ * - Отвечает за рамку рабочей области, сообщения об ошибках подключения и ReactNode-слот.
+ * - Принимает все обработчики через props — своего состояния нет.
+ */
 import type { ReactNode } from "react";
 import { Button } from "./uicomponents";
 

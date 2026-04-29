@@ -1,3 +1,7 @@
+/**
+ * useChatPanelSearchOverlay.ts — хук видимости оверлея поиска.
+ * Управляет открытием/закрытием панели поиска и фокусом ввода.
+ */
 import { useEffect, useState } from "react";
 
 type UseChatPanelSearchOverlayArgs = {

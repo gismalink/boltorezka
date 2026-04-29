@@ -1,3 +1,7 @@
+/**
+ * UserDockControls.tsx — ряд быстрых контролов в UserDock (mute/deafen/screen-share/audio output).
+ * Рендерит попапы выбора устройств и слайдеры громкости; состояние audio приходит из props.
+ */
 import { useEffect, useRef, useState } from "react";
 import { PopupPortal, RangeSlider } from "../uicomponents";
 import type { UserDockProps } from "../types";

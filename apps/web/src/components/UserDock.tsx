@@ -1,3 +1,10 @@
+/**
+ * UserDock.tsx — нижний "док" текущего пользователя в левой колонке.
+ *
+ * Назначение:
+ * - Показывает имя/аватар и быстрые контролы: mute/deafen/screen-share/audio-output.
+ * - Служит точкой входа в оверлей локальных audio/video-настроек (`UserDockSettingsOverlay`).
+ */
 import type { UserDockProps } from "./types";
 import { UserDockControls } from "./userDock/UserDockControls";
 import { UserDockSettingsOverlay } from "./userDock/UserDockSettingsOverlay";

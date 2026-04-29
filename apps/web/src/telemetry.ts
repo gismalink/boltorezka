@@ -1,3 +1,13 @@
+/**
+ * telemetry.ts — клиентский трекер событий web/desktop UI.
+ *
+ * Назначение:
+ * - Собирает метаинформацию о runtime (web/desktop, platform, версия Electron) из window.boltorezkaDesktop.
+ * - Отправляет события на сервер по `POST /v1/telemetry/web` (keepalive: true, ошибки сети глушатся).
+ * - Подкладывает Bearer-токен, если он передан вызывающим кодом.
+ *
+ * Все ошибки сети поглощаются (.catch(() => {})) — телеметрия не должна влиять на UX.
+ */
 type DesktopBridgeInfo = {
   platform?: string;
   version?: string;

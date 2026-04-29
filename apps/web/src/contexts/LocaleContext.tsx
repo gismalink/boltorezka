@@ -1,3 +1,10 @@
+/**
+ * LocaleContext.tsx — React-контекст текущей локали (RU/EN) и переключателя.
+ *
+ * Назначение:
+ * - Прокидывает `lang`, `setLang`, словари переводов в дерево.
+ * - `useLocaleCtx()` бросает ошибку, если используется вне `LocaleProvider`.
+ */
 import { createContext, useContext, type ReactNode } from "react";
 
 type LocaleContextValue = {

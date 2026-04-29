@@ -1,3 +1,8 @@
+/**
+ * ChatPanelContext.tsx — React-контекст внутри ChatPanel.
+ * Прокидывает базовые данные чата (room, user, translate, callbacks) в секции/хуки
+ * без prop-drilling.
+ */
 import { createContext, useContext, type ReactNode } from "react";
 
 type ChatPanelContextValue = {

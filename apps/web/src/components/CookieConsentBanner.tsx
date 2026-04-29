@@ -1,3 +1,7 @@
+/**
+ * CookieConsentBanner.tsx — нижний баннер согласия на cookies (RU/EN).
+ * Простой презентер — состояние согласия хранится в вызывающем компоненте (App/LegalStandalonePage).
+ */
 import type { Lang } from "../i18n";
 import { Button } from "./uicomponents";
 

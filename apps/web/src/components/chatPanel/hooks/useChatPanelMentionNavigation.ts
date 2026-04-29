@@ -1,3 +1,7 @@
+/**
+ * useChatPanelMentionNavigation.ts — навигация по непрочитанным упоминаниям.
+ * Управляет очередью eventId/messageId, постраничной загрузкой и reconciliation счётчика.
+ */
 // Хук навигации по непрочитанным упоминаниям в теме.
 // Управляет очередью eventId/messageId, пагинацией, reconciliation счётчика.
 import { useCallback, useRef } from "react";

@@ -1,3 +1,16 @@
+/**
+ * Точка входа web-приложения Datute (Boltorezka).
+ *
+ * Что делает:
+ * - Определяет окружение (web/desktop, prod/test) и проставляет data-атрибуты на <html>.
+ * - Ставит правильный document.title для контура.
+ * - Регистрирует desktop smoke-пробу (опционально, по query-параметру).
+ * - Маршрутизирует /privacy, /terms, /cookies, /contacts на отдельную легальную страницу.
+ * - Монтирует основной <App/> в #root внутри ErrorBoundary и StrictMode.
+ *
+ * Бизнес-логики тут быть не должно — только bootstrap.
+ */
+
 import React from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App";

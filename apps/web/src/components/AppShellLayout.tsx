@@ -1,3 +1,8 @@
+/**
+ * AppShellLayout.tsx — корневой слой UI: хедер + основная секция + оверлеи.
+ * Принимает все props из App.tsx и распределяет их по регионам лейаута.
+ * Собственной логики не содержит — только композиция.
+ */
 import type { ComponentProps } from "react";
 import { AppMainSection } from "./AppMainSection";
 import { AppShellOverlays } from "./AppShellOverlays";

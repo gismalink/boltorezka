@@ -1,3 +1,9 @@
+/**
+ * hooks/index.ts — barrel-экспорт всех публичных хуков приложения.
+ *
+ * Сгруппированы по доменам: auth/app/rooms/realtime/rtc/voice/media/ui.
+ * App.tsx импортирует хуки исключительно отсюда, чтобы избежать глубоких относительных путей.
+ */
 export { useAuthProfileFlow } from "./auth/useAuthProfileFlow";
 export { useDeletedAccountActions } from "./auth/useDeletedAccountActions";
 export { useAdminUsersSync } from "./app/effects/useAdminUsersSync";

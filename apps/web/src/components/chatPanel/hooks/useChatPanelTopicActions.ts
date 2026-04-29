@@ -1,3 +1,7 @@
+/**
+ * useChatPanelTopicActions.ts — хук действий над топиком (pin/archive/rename/delete).
+ * Обрабатывает контекстное меню и вызовы API для изменения состояния топика.
+ */
 import { useState, type MouseEvent } from "react";
 import { api } from "../../../api";
 import type { RoomTopic } from "../../../domain";

@@ -1,3 +1,10 @@
+/**
+ * useChatPanelInboxNotifications.ts — хук desktop-уведомлений о новых сообщениях.
+ *
+ * Назначение:
+ * - Следит за очередью inbox-событий и решает, показывать ли native-уведомление в Electron.
+ * - Интегрируется с desktop-мостом через `getDesktopNotificationBridge`.
+ */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "../../../api";
 import { getDesktopNotificationBridge } from "../../../desktopBridge";

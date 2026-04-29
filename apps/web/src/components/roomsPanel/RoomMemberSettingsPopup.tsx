@@ -1,3 +1,7 @@
+/**
+ * RoomMemberSettingsPopup.tsx — popup-настроек участника в комнате (локальные преференсы).
+ * Позволяет настроить индивидуальные громкость, порядок и mute для конкретного участника.
+ */
 import { PixelCheckbox, PopupPortal, RangeSlider } from "../uicomponents";
 import type { TranslateFn } from "../../i18n";
 import type { ServerMemberProfileDetails } from "./roomMemberSettingsTypes";

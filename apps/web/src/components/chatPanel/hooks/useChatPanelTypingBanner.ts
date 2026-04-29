@@ -1,3 +1,7 @@
+/**
+ * useChatPanelTypingBanner.ts — хук баннера «... печатает».
+ * Агрегирует typing-презенс участников в читаемую строку для текущего топика.
+ */
 import { useMemo } from "react";
 
 type UseChatPanelTypingBannerArgs = {

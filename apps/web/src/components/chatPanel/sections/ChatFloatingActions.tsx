@@ -1,3 +1,7 @@
+/**
+ * ChatFloatingActions.tsx — плавающие кнопки поверх таймлайна чата.
+ * Содержит кнопки scroll-to-bottom, jump-to-mention, jump-to-unread.
+ */
 import { Button } from "../../uicomponents";
 
 type ChatFloatingActionsProps = {

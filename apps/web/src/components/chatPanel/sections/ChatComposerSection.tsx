@@ -1,3 +1,10 @@
+/**
+ * ChatComposerSection.tsx — секция ввода сообщения (композер с вложениями/mentions/quotes).
+ *
+ * Назначение:
+ * - Рендерит textarea, предвьюхи вложений, статусы отправки, mention picker.
+ * - Обрабатывает paste/clipboard и выводит сообщения об ошибках (`CHAT_AGENT_FAILURE_REASONS`).
+ */
 import { useEffect, useMemo, useRef, useState, type ClipboardEvent, type FormEvent, type KeyboardEvent, type RefObject } from "react";
 import {
   CHAT_AGENT_FAILURE_REASONS,

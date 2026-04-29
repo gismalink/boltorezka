@@ -1,3 +1,7 @@
+/**
+ * NotificationPanel.tsx — панель входящих (inbox-уведомления).
+ * Отображает список InboxItem и обрабатывает переход к исходному сообщению/упоминанию.
+ */
 import { Button } from "../../uicomponents";
 
 type InboxItem = {

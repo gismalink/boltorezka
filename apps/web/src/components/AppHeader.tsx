@@ -1,3 +1,10 @@
+/**
+ * AppHeader.tsx — верхняя панель приложения (сервер-пикер, профиль, действия).
+ *
+ * Назначение:
+ * - Отображает текущего пользователя, выбранный сервер и основные кнопки хедера.
+ * - Управляет popover-меню (PopupPortal) для списка серверов/действий над профилем.
+ */
 import { useRef, useState, type RefObject } from "react";
 import type { ServerListItem, User } from "../domain";
 import { Button, PopupPortal } from "./uicomponents";

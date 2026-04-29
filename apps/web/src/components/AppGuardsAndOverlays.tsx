@@ -1,3 +1,11 @@
+/**
+ * AppGuardsAndOverlays.tsx — оверлеи и гарды верхнего уровня поверх AppShell.
+ *
+ * Назначение:
+ * - Экраны входа/онбординга (`GuestLoginGate`, `EmptyServerOnboarding`).
+ * - Оверлеи 18+/обновления приложения, блокировок/ошибок.
+ * - Объединяет все блокирующие UI-слои, чтобы AppShell оставался лаконичным.
+ */
 import { useRef, useState, type MouseEvent } from "react";
 import type { UiTheme } from "../domain";
 import { LegalLinks } from "./LegalLinks";

@@ -1,3 +1,11 @@
+/**
+ * AppWorkspacePanels.tsx — координатор левой/правой рабочих панелей.
+ *
+ * Назначение:
+ * - Оркестрирует RoomsPanel/ChatPanel/UserDock в одном рабочем лейауте.
+ * - Управляет размерами панелей, drag’н’drop вложений, клипборд-paste в чат.
+ * - Связывает ChatPanel с RoomsPanel через общие обработчики выбора комнаты.
+ */
 import { useCallback, useEffect, useMemo, useRef, useState, type ClipboardEvent, type ComponentProps, type FormEvent } from "react";
 import { AppWorkspaceContent } from "./AppWorkspaceContent";
 import { ChatPanel } from "./ChatPanel";

@@ -1,3 +1,7 @@
+/**
+ * UserDockSettingsOverlay.tsx — оверлей локальных audio/video-настроек пользователя.
+ * Рендерится попверх UserDock и даёт выбор микрофона/камеры/вывода звука.
+ */
 import { useRef, useState } from "react";
 import type { UserDockProps } from "../types";
 import { RangeSlider } from "../uicomponents";

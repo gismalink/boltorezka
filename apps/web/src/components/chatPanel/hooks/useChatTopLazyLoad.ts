@@ -1,3 +1,7 @@
+/**
+ * useChatTopLazyLoad.ts — хук подгрузки истории сообщений сверху.
+ * Следит за scroll-позицией и вызывает подгрузку, когда пользователь приближается к началу.
+ */
 import { RefObject, useEffect, useRef } from "react";
 
 type UseChatTopLazyLoadArgs = {

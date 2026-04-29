@@ -1,3 +1,10 @@
+/**
+ * TopicTabsHeader.tsx — верхняя полоса вкладок топиков в ChatPanel.
+ *
+ * Назначение:
+ * - Отображает вкладки топиков с отметками unread/mentions/pin.
+ * - Поддерживает быстрый свитч по клику/колёсику, контекстное меню и inline переименование.
+ */
 import { FormEvent, MouseEvent, RefObject, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { RoomTopic } from "../../../domain";
 import { CHAT_AGENT_IDS } from "../../../constants/chatAgentSemantics";

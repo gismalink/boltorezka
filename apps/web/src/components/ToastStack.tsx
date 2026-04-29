@@ -1,3 +1,7 @@
+/**
+ * ToastStack.tsx — вертикальный стек тостов верхнего уровня.
+ * Чистый презентер: получает массив toast’ов, жизненный цикл/auto-dismiss ведёт внешний хук.
+ */
 type Toast = {
   id: number;
   message: string;

@@ -1,3 +1,14 @@
+/**
+ * chatTransportCommands.ts — конкретные операции чата поверх `chatOperationExecutor`.
+ *
+ * Назначение:
+ * - `runChatEdit` / `runChatDelete` / `runChatTogglePin` / `runChatToggleReaction`
+ *   / `runChatReport` / `runChatSend` — каждая операция знает свой политикой исполнения
+ *   (WS-first/HTTP-only) и payload для API/WS.
+ * - Возвращает унифицированные результаты (`ChatMutationResult`, `ChatReportResult`).
+ *
+ * Используется хуками composer’а и admin-панели чата.
+ */
 import { api } from "../api";
 import {
   CHAT_OPERATION_POLICIES,

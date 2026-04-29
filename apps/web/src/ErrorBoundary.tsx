@@ -1,3 +1,14 @@
+/**
+ * ErrorBoundary — глобальный React-предохранитель верхнего уровня.
+ *
+ * Назначение:
+ * - Перехватывает необработанные ошибки рендера во всём дереве App.
+ * - Логирует ошибку в console.error с префиксом `[web]` (попадает в desktop-логи Electron).
+ * - Показывает fallback-карточку с сообщением, component stack и кнопкой Reload UI.
+ *
+ * Используется как самый внешний обёртка вокруг <App/> в `main.tsx`.
+ * Содержательной логики приложения здесь быть не должно.
+ */
 import { Component, ErrorInfo, ReactNode } from "react";
 import { Button } from "./components/uicomponents";
 

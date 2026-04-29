@@ -1,3 +1,7 @@
+/**
+ * useRoomsPanelPersistentState.ts — хук персистентного состояния RoomsPanel.
+ * Сохраняет развёрнутые/свёрнутые группы и размеры в localStorage по ключу boltorezka_rooms_panel_*.
+ */
 import { useEffect, useState } from "react";
 
 const ROOMS_PANEL_GROUPS_STORAGE_KEY = "boltorezka_rooms_panel_groups";

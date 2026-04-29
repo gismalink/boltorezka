@@ -1,3 +1,10 @@
+/**
+ * AppTopChrome.tsx — "обвязка" верхней части приложения (хедер + всплывающие элементы).
+ *
+ * Назначение:
+ * - Комбинирует `AppHeader` с оверлеями профиля и другими popover’ами.
+ * - Передаёт ref’ы и обработчики без хранения собственного состояния.
+ */
 import type { RefObject } from "react";
 import { AppHeader } from "./AppHeader";
 import {
