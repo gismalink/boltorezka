@@ -36,6 +36,7 @@ import type {
   CallVideoStatePayload,
   VoiceMediaStatusSummary
 } from "./voiceCallTypes";
+import { asTrimmedString } from "../../utils/stringUtils";
 
 type UseLivekitVoiceRuntimeArgs = {
   t: (key: string) => string;
@@ -386,7 +387,7 @@ const getRelayRouteFromPeerConnection = async (pc: RTCPeerConnection): Promise<R
     return null;
   }
 
-  const turnUrl = String(localCandidate.url || "").trim();
+  const turnUrl = asTrimmedString(localCandidate.url);
   if (!turnUrl) {
     return null;
   }
@@ -843,13 +844,13 @@ export function useLivekitVoiceRuntime({
 
     const participants = Array.from(room.remoteParticipants.values());
     const connectedIds = participants
-      .map((participant) => String(participant.identity || "").trim())
+      .map((participant) => asTrimmedString(participant.identity))
       .filter((identity) => identity.length > 0);
 
     const mutedSet = buildRemoteMicMutedSet(room);
     const nextStatus: Record<string, VoiceMediaStatusSummary> = {};
     participants.forEach((participant) => {
-      const participantId = String(participant.identity || "").trim();
+      const participantId = asTrimmedString(participant.identity);
       if (!participantId) {
         return;
       }
@@ -1085,7 +1086,7 @@ export function useLivekitVoiceRuntime({
     disconnectRequestedRef.current = false;
 
     const peerIds = roomVoiceTargets
-      .map((member) => String(member.userId || "").trim())
+      .map((member) => asTrimmedString(member.userId))
       .filter((userId) => userId.length > 0);
     setConnectingPeerUserIds(peerIds);
     setLocalVoiceMediaStatusSummary("connecting");
@@ -1141,13 +1142,13 @@ export function useLivekitVoiceRuntime({
       });
 
       room.on(RoomEvent.ParticipantConnected, (participant: RemoteParticipant) => {
-        const participantId = String(participant.identity || "").trim();
+        const participantId = asTrimmedString(participant.identity);
         setLastCallPeer(participantId || participant.sid);
         refreshRemoteStates(room);
       });
 
       room.on(RoomEvent.ParticipantDisconnected, (participant: RemoteParticipant) => {
-        const participantId = String(participant.identity || "").trim() || participant.sid;
+        const participantId = asTrimmedString(participant.identity) || participant.sid;
         detachRemoteAudioTrackRef.current?.(participantId);
         removeRemoteVideoStreamRef.current?.(participantId);
         removeRemoteScreenShareStreamRef.current?.(participantId);
@@ -1156,7 +1157,7 @@ export function useLivekitVoiceRuntime({
 
       room.on(RoomEvent.ActiveSpeakersChanged, (speakers: Participant[]) => {
         const speakerIds = speakers
-          .map((speaker) => String(speaker.identity || "").trim())
+          .map((speaker) => asTrimmedString(speaker.identity))
           .filter((speakerId) => speakerId.length > 0 && speakerId !== localUserId);
         setRemoteSpeakingPeerUserIds(speakerIds);
       });
@@ -1164,7 +1165,7 @@ export function useLivekitVoiceRuntime({
       room.on(
         RoomEvent.TrackSubscribed,
         (track: RemoteTrack, publication: RemoteTrackPublication, participant: RemoteParticipant) => {
-          const participantId = String(participant.identity || "").trim() || participant.sid;
+          const participantId = asTrimmedString(participant.identity) || participant.sid;
 
           if (track.kind === Track.Kind.Audio) {
             attachRemoteAudioTrackRef.current?.(participantId, track as RemoteAudioTrack);
@@ -1190,7 +1191,7 @@ export function useLivekitVoiceRuntime({
       room.on(
         RoomEvent.TrackUnsubscribed,
         (track: RemoteTrack, _publication: RemoteTrackPublication, participant: RemoteParticipant) => {
-          const participantId = String(participant.identity || "").trim() || participant.sid;
+          const participantId = asTrimmedString(participant.identity) || participant.sid;
           if (track.kind === Track.Kind.Audio) {
             detachRemoteAudioTrackRef.current?.(participantId);
           }
@@ -1206,18 +1207,18 @@ export function useLivekitVoiceRuntime({
       );
 
       room.on(RoomEvent.TrackMuted, (_publication: TrackPublication, participant: Participant) => {
-        const participantId = String(participant.identity || "").trim() || participant.sid;
+        const participantId = asTrimmedString(participant.identity) || participant.sid;
         setRemoteMutedPeerUserIds((prev) => (prev.includes(participantId) ? prev : [...prev, participantId]));
       });
 
       room.on(RoomEvent.TrackUnmuted, (_publication: TrackPublication, participant: Participant) => {
-        const participantId = String(participant.identity || "").trim() || participant.sid;
+        const participantId = asTrimmedString(participant.identity) || participant.sid;
         setRemoteMutedPeerUserIds((prev) => prev.filter((id) => id !== participantId));
       });
 
-        const rawSignalUrl = String(livekit.url || "").trim();
+        const rawSignalUrl = asTrimmedString(livekit.url);
         const signalUrl = normalizeLivekitSignalUrl(rawSignalUrl);
-        pushCallLog(`livekit token trace=${String(livekit.traceId || "").trim() || "n/a"}`);
+        pushCallLog(`livekit token trace=${asTrimmedString(livekit.traceId) || "n/a"}`);
         pushCallLog(`livekit signal raw=${rawSignalUrl || "n/a"}`);
         pushCallLog(`livekit signal resolved=${signalUrl || "n/a"}`);
         try {

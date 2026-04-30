@@ -5,6 +5,7 @@ import {
   VERSION_UPDATE_PENDING_KEY
 } from "../../../constants/appConfig";
 import { REALTIME_SERVER_READY_EVENT } from "../../../constants/realtimeEvents";
+import { asTrimmedString } from "../../../utils/stringUtils";
 
 const VERSION_POLL_INTERVAL_MS = 10 * 60_000;
 
@@ -35,8 +36,8 @@ function clearPendingReloadFlag(): void {
 }
 
 function applyBuildVersionSync(serverBuildVersionRaw: string, clientBuildShaRaw: string): void {
-  const serverBuildVersion = String(serverBuildVersionRaw || "").trim();
-  const clientBuildSha = String(clientBuildShaRaw || "").trim();
+  const serverBuildVersion = asTrimmedString(serverBuildVersionRaw);
+  const clientBuildSha = asTrimmedString(clientBuildShaRaw);
   if (!serverBuildVersion || !clientBuildSha) {
     return;
   }

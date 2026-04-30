@@ -1,5 +1,6 @@
 // Purpose: map app/runtime chat state into presentational props for ChatPanel and VideoWindowsOverlay.
 import type { Message, RoomTopic, ServerMemberItem } from "../../../domain";
+import { asTrimmedString } from "../../../utils/stringUtils";
 
 type Translate = (key: string) => string;
 
@@ -262,15 +263,15 @@ export function useWorkspaceChatVideoProps({
   videoWindowsOverlayProps: VideoWindowsOverlayProps;
 } {
   const canManageTopicModeration = (() => {
-    const normalizedCurrentUserId = String(currentUserId || "").trim();
+    const normalizedCurrentUserId = asTrimmedString(currentUserId);
     if (!normalizedCurrentUserId) {
       return false;
     }
 
     const currentMember = (Array.isArray(serverMembers) ? serverMembers : []).find(
-      (member) => String(member.userId || "").trim() === normalizedCurrentUserId
+      (member) => asTrimmedString(member.userId) === normalizedCurrentUserId
     );
-    const currentRole = String(currentMember?.role || "").trim();
+    const currentRole = asTrimmedString(currentMember?.role);
     return currentRole === "owner" || currentRole === "admin";
   })();
 
@@ -280,8 +281,8 @@ export function useWorkspaceChatVideoProps({
     const roleMap = new Map<string, { handle: string; label: string; userIds: Set<string> }>();
 
     members.forEach((member) => {
-      const userId = String(member.userId || "").trim();
-      const userName = String(member.name || "").trim();
+      const userId = asTrimmedString(member.userId);
+      const userName = asTrimmedString(member.name);
       const userHandle = toMentionHandle(userName);
       if (userId && userName && userHandle) {
         userCandidates.push({
@@ -295,7 +296,7 @@ export function useWorkspaceChatVideoProps({
 
       const customRoles = Array.isArray(member.customRoles) ? member.customRoles : [];
       customRoles.forEach((role) => {
-        const roleLabel = String(role?.name || "").trim();
+        const roleLabel = asTrimmedString(role?.name);
         const roleHandle = toMentionHandle(roleLabel);
         if (!roleLabel || !roleHandle || !userId) {
           return;
@@ -366,9 +367,9 @@ export function useWorkspaceChatVideoProps({
         aroundWindowAfter?: number;
       }
     ) => {
-      const normalizedActiveTopicId = String(activeChatTopicId || "").trim();
-      const normalizedTopicId = String(topicId || "").trim();
-      const normalizedAnchorMessageId = String(anchorMessageId || "").trim();
+      const normalizedActiveTopicId = asTrimmedString(activeChatTopicId);
+      const normalizedTopicId = asTrimmedString(topicId);
+      const normalizedAnchorMessageId = asTrimmedString(anchorMessageId);
       if (!normalizedActiveTopicId || !normalizedTopicId || !normalizedAnchorMessageId) {
         return false;
       }
@@ -427,13 +428,13 @@ export function useWorkspaceChatVideoProps({
     onUnarchiveTopic: unarchiveTopic,
     onDeleteTopic: deleteTopic,
     onApplyTopicReadLocal: (topicId: string) => {
-      const normalizedTopicId = String(topicId || "").trim();
+      const normalizedTopicId = asTrimmedString(topicId);
       if (!normalizedTopicId) {
         return;
       }
 
       setChatTopics((prev) => prev.map((topic) => {
-        if (String(topic.id || "").trim() !== normalizedTopicId) {
+        if (asTrimmedString(topic.id) !== normalizedTopicId) {
           return topic;
         }
 
@@ -449,13 +450,13 @@ export function useWorkspaceChatVideoProps({
       }));
     },
     onConsumeTopicMentionUnread: (topicId: string) => {
-      const normalizedTopicId = String(topicId || "").trim();
+      const normalizedTopicId = asTrimmedString(topicId);
       if (!normalizedTopicId) {
         return;
       }
 
       setChatTopics((prev) => prev.map((topic) => {
-        if (String(topic.id || "").trim() !== normalizedTopicId) {
+        if (asTrimmedString(topic.id) !== normalizedTopicId) {
           return topic;
         }
 
@@ -472,14 +473,14 @@ export function useWorkspaceChatVideoProps({
       }));
     },
     onSetTopicMentionUnreadLocal: (topicId: string, count: number) => {
-      const normalizedTopicId = String(topicId || "").trim();
+      const normalizedTopicId = asTrimmedString(topicId);
       if (!normalizedTopicId) {
         return;
       }
 
       const normalizedCount = Math.max(0, Number(count || 0));
       setChatTopics((prev) => prev.map((topic) => {
-        if (String(topic.id || "").trim() !== normalizedTopicId) {
+        if (asTrimmedString(topic.id) !== normalizedTopicId) {
           return topic;
         }
 

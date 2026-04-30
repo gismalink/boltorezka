@@ -2,6 +2,7 @@ import { useCallback, type Dispatch, type SetStateAction } from "react";
 import { api } from "../../api";
 import type { User } from "../../domain";
 import { clearPersistedBearerToken } from "../../utils/authStorage";
+import { asTrimmedString } from "../../utils/stringUtils";
 
 type DeletedAccountInfo = {
   daysRemaining: number;
@@ -43,7 +44,7 @@ export function useDeletedAccountActions({
     setRestoreDeletedAccountPending(true);
     try {
       const response = await api.restoreDeletedSsoAccount();
-      const restoredToken = String(response.token || "").trim();
+      const restoredToken = asTrimmedString(response.token);
       if (!response.authenticated || !restoredToken || !response.user) {
         throw new Error(t("account.restoreError"));
       }

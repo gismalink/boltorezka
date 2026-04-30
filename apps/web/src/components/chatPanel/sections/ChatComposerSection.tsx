@@ -16,6 +16,7 @@ import {
 } from "../../../constants/chatAgentSemantics";
 import { Button } from "../../uicomponents";
 import { useChatPanelCtx } from "../ChatPanelContext";
+import { asTrimmedString } from "../../../utils/stringUtils";
 
 type MentionCandidate = {
   key: string;
@@ -111,12 +112,12 @@ export function ChatComposerSection({
       return [];
     }
 
-    const normalizedQuery = String(mentionContext.query || "").trim().toLowerCase();
+    const normalizedQuery = asTrimmedString(mentionContext.query).toLowerCase();
     const deduped = new Map<string, MentionCandidate>();
     (Array.isArray(mentionCandidates) ? mentionCandidates : []).forEach((candidate) => {
-      const key = String(candidate.key || "").trim();
-      const handle = String(candidate.handle || "").trim().toLowerCase();
-      const label = String(candidate.label || "").trim();
+      const key = asTrimmedString(candidate.key);
+      const handle = asTrimmedString(candidate.handle).toLowerCase();
+      const label = asTrimmedString(candidate.label);
       if (!key || !handle || !label || deduped.has(key)) {
         return;
       }
@@ -126,7 +127,7 @@ export function ChatComposerSection({
         key,
         handle,
         label,
-        subtitle: String(candidate.subtitle || "").trim() || null
+        subtitle: asTrimmedString(candidate.subtitle) || null
       });
     });
 
@@ -276,7 +277,7 @@ export function ChatComposerSection({
             return;
           }
 
-          const hasText = String(chatText || "").trim().length > 0;
+          const hasText = asTrimmedString(chatText).length > 0;
           const hasAttachment = Boolean(composePendingAttachmentName || composePreviewImage);
           if (!hasText && !hasAttachment) {
             event.preventDefault();

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { asTrimmedString } from "../../../utils/stringUtils";
 
 const TOAST_AUTO_DISMISS_MS = 4500;
 const TOAST_ID_RANDOM_RANGE = 10000;
@@ -13,7 +14,7 @@ export function useToastQueue() {
   const toastLastShownAtRef = useRef<Map<string, number>>(new Map());
 
   const pushToast = useCallback((message: string) => {
-    const normalized = String(message || "").trim();
+    const normalized = asTrimmedString(message);
     if (!normalized) {
       return;
     }

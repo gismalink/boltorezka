@@ -1,4 +1,5 @@
 import { useEffect, useRef, type Dispatch, type SetStateAction } from "react";
+import { asTrimmedString } from "../../../utils/stringUtils";
 
 const CHAT_DRAFTS_STORAGE_KEY = "boltorezka_chat_drafts_v1";
 
@@ -72,10 +73,10 @@ function readDraft(scopeKey: string): string {
 }
 
 function buildScopeKey(userId: string | null, serverId: string, roomSlug: string, topicId: string | null): string {
-  const normalizedUserId = String(userId || "").trim();
-  const normalizedServerId = String(serverId || "").trim();
-  const normalizedRoomSlug = String(roomSlug || "").trim();
-  const normalizedTopicId = String(topicId || "").trim() || "root";
+  const normalizedUserId = asTrimmedString(userId);
+  const normalizedServerId = asTrimmedString(serverId);
+  const normalizedRoomSlug = asTrimmedString(roomSlug);
+  const normalizedTopicId = asTrimmedString(topicId) || "root";
 
   if (!normalizedUserId || !normalizedServerId || !normalizedRoomSlug) {
     return "";

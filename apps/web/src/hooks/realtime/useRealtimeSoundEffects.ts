@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import type { Message, PresenceMember } from "../../domain";
 import type { ServerSoundEvent } from "../media/useServerSounds";
 import { isActiveTopicSoundMuted } from "./activeTopicSoundMute";
+import { asTrimmedString } from "../../utils/stringUtils";
 
 type RealtimeWsState = "disconnected" | "connecting" | "connected";
 
@@ -98,7 +99,7 @@ export function useRealtimeSoundEffects({
     const presenceBySlug = roomsPresenceDetailsBySlug || {};
     const currentMembers = presenceBySlug[roomSlug] || [];
     const currentIds = currentMembers
-      .map((member) => String(member.userId || "").trim())
+      .map((member) => asTrimmedString(member.userId))
       .filter((memberId) => memberId.length > 0);
 
     if (previousPresenceRoomSlugRef.current !== roomSlug) {
@@ -115,7 +116,7 @@ export function useRealtimeSoundEffects({
     }
 
     const prevIds = previousPresenceIdsRef.current;
-    const myId = String(userId || "").trim();
+    const myId = asTrimmedString(userId);
     const prevSet = new Set(prevIds);
     const nextSet = new Set(currentIds);
 
@@ -132,7 +133,7 @@ export function useRealtimeSoundEffects({
   }, [playServerSound, roomSlug, roomsPresenceDetailsBySlug, userId]);
 
   useEffect(() => {
-    const currentOwnerId = String(screenShareOwnerByRoomSlug[roomSlug]?.userId || "").trim();
+    const currentOwnerId = asTrimmedString(screenShareOwnerByRoomSlug[roomSlug]?.userId);
 
     if (!screenShareSoundInitializedRef.current) {
       screenShareSoundInitializedRef.current = true;
@@ -179,7 +180,7 @@ export function useRealtimeSoundEffects({
       if (!detail || detail.type !== "dm.message.created") return;
       const payload = detail.payload as { senderUserId?: unknown } | null;
       const senderUserId = payload && typeof payload.senderUserId === "string" ? payload.senderUserId : null;
-      const me = String(userId || "").trim();
+      const me = asTrimmedString(userId);
       if (!senderUserId || (me && senderUserId === me)) return;
       void playServerSound("chat_message");
     };

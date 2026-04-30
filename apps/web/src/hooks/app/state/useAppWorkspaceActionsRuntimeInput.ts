@@ -1,4 +1,5 @@
 import { useAppWorkspaceActionsRuntime } from "./useAppWorkspaceActionsRuntime";
+import { asTrimmedString } from "../../../utils/stringUtils";
 
 type WorkspaceActionsRuntimeInput = Parameters<typeof useAppWorkspaceActionsRuntime>[0];
 
@@ -32,8 +33,8 @@ function buildMentionCandidatesFromServerMembers(serverMembers: unknown[]): Arra
   const roleMap = new Map<string, { handle: string; label: string; userIds: Set<string> }>();
 
   members.forEach((member) => {
-    const userId = String((member as { userId?: string } | null)?.userId || "").trim();
-    const userName = String((member as { name?: string } | null)?.name || "").trim();
+    const userId = asTrimmedString((member as { userId?: string } | null)?.userId);
+    const userName = asTrimmedString((member as { name?: string } | null)?.name);
     const userHandle = toMentionHandle(userName);
     if (userId && userName && userHandle) {
       userCandidates.push({
@@ -50,7 +51,7 @@ function buildMentionCandidatesFromServerMembers(serverMembers: unknown[]): Arra
       : [];
 
     customRoles.forEach((role) => {
-      const roleLabel = String((role as { name?: string } | null)?.name || "").trim();
+      const roleLabel = asTrimmedString((role as { name?: string } | null)?.name);
       const roleHandle = toMentionHandle(roleLabel);
       if (!roleLabel || !roleHandle || !userId) {
         return;

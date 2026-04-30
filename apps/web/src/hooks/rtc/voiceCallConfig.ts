@@ -1,3 +1,4 @@
+import { asTrimmedString } from "../../utils/stringUtils";
 function normalizeIceServer(value: unknown): RTCIceServer | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     return null;
@@ -33,7 +34,7 @@ function normalizeIceServer(value: unknown): RTCIceServer | null {
 
 function readIceServersFromEnv(): RTCIceServer[] {
   const fallback: RTCIceServer[] = [{ urls: ["stun:stun.l.google.com:19302"] }];
-  const raw = String(import.meta.env.VITE_RTC_ICE_SERVERS_JSON || "").trim();
+  const raw = asTrimmedString(import.meta.env.VITE_RTC_ICE_SERVERS_JSON);
   if (!raw) {
     return fallback;
   }
@@ -63,7 +64,7 @@ function readPositiveIntFromEnv(name: string, fallback: number): number {
 }
 
 function readBooleanFromEnv(name: string, fallback: boolean): boolean {
-  const raw = String(import.meta.env[name as keyof ImportMetaEnv] || "").trim().toLowerCase();
+  const raw = asTrimmedString(import.meta.env[name as keyof ImportMetaEnv]).toLowerCase();
   if (!raw) {
     return fallback;
   }
@@ -80,7 +81,7 @@ function readBooleanFromEnv(name: string, fallback: boolean): boolean {
 
 const RTC_ICE_SERVERS = readIceServersFromEnv();
 const RTC_ICE_TRANSPORT_POLICY: RTCIceTransportPolicy =
-  String(import.meta.env.VITE_RTC_ICE_TRANSPORT_POLICY || "").trim().toLowerCase() === "relay"
+  asTrimmedString(import.meta.env.VITE_RTC_ICE_TRANSPORT_POLICY).toLowerCase() === "relay"
     ? "relay"
     : "all";
 

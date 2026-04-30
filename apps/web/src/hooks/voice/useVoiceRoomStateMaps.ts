@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import type { CallStatus } from "../../services";
+import { asTrimmedString } from "../../utils/stringUtils";
 
 type UseVoiceRoomStateMapsArgs = {
   userId: string;
@@ -40,28 +41,28 @@ export function useVoiceRoomStateMaps({
     const statusByUserId: Record<string, "muted" | "silent" | "speaking"> = {};
 
     connectedPeerUserIds.forEach((peerUserId) => {
-      const normalized = String(peerUserId || "").trim();
+      const normalized = asTrimmedString(peerUserId);
       if (normalized) {
         statusByUserId[normalized] = "silent";
       }
     });
 
     Object.entries(initialMicStateByUserIdInCurrentRoom).forEach(([peerUserId, status]) => {
-      const normalized = String(peerUserId || "").trim();
+      const normalized = asTrimmedString(peerUserId);
       if (normalized && (status === "muted" || status === "silent" || status === "speaking")) {
         statusByUserId[normalized] = status;
       }
     });
 
     remoteSpeakingPeerUserIds.forEach((peerUserId) => {
-      const normalized = String(peerUserId || "").trim();
+      const normalized = asTrimmedString(peerUserId);
       if (normalized) {
         statusByUserId[normalized] = "speaking";
       }
     });
 
     remoteMutedPeerUserIds.forEach((peerUserId) => {
-      const normalized = String(peerUserId || "").trim();
+      const normalized = asTrimmedString(peerUserId);
       if (normalized) {
         statusByUserId[normalized] = "muted";
       }
@@ -79,21 +80,21 @@ export function useVoiceRoomStateMaps({
     const statusByUserId: Record<string, boolean> = {};
 
     connectedPeerUserIds.forEach((peerUserId) => {
-      const normalized = String(peerUserId || "").trim();
+      const normalized = asTrimmedString(peerUserId);
       if (normalized) {
         statusByUserId[normalized] = false;
       }
     });
 
     Object.entries(initialAudioOutputMutedByUserIdInCurrentRoom).forEach(([peerUserId, muted]) => {
-      const normalized = String(peerUserId || "").trim();
+      const normalized = asTrimmedString(peerUserId);
       if (normalized) {
         statusByUserId[normalized] = Boolean(muted);
       }
     });
 
     remoteAudioMutedPeerUserIds.forEach((peerUserId) => {
-      const normalized = String(peerUserId || "").trim();
+      const normalized = asTrimmedString(peerUserId);
       if (normalized) {
         statusByUserId[normalized] = true;
       }
@@ -110,14 +111,14 @@ export function useVoiceRoomStateMaps({
     const statusByUserId: Record<string, "disconnected" | "connecting" | "connected"> = {};
 
     connectingPeerUserIds.forEach((peerUserId) => {
-      const normalized = String(peerUserId || "").trim();
+      const normalized = asTrimmedString(peerUserId);
       if (normalized) {
         statusByUserId[normalized] = "connecting";
       }
     });
 
     connectedPeerUserIds.forEach((peerUserId) => {
-      const normalized = String(peerUserId || "").trim();
+      const normalized = asTrimmedString(peerUserId);
       if (normalized) {
         statusByUserId[normalized] = "connected";
       }

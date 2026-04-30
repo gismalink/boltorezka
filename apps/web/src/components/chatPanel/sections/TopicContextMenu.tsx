@@ -11,6 +11,7 @@ import {
   normalizeChatAgentFailureReason
 } from "../../../constants/chatAgentSemantics";
 import { Button } from "../../uicomponents";
+import { asTrimmedString } from "../../../utils/stringUtils";
 
 type TopicContextMenuProps = {
   t: (key: string) => string;
@@ -69,7 +70,7 @@ export function TopicContextMenu({
   };
 
   const applyRenameWithStatus = async () => {
-    const normalizedValue = String(renameValue || "").trim();
+    const normalizedValue = asTrimmedString(renameValue);
     if (!normalizedValue) {
       setTopicMenuStatusText(buildChatAgentStatus("action:rename", "failed", CHAT_AGENT_FAILURE_REASONS.emptyTitle));
       return;

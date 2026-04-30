@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, type Dispatch, type SetStateAction } from "react";
 import type { RoomKind } from "../../domain";
+import { asTrimmedString } from "../../utils/stringUtils";
 
 type ScreenShareOwner = { userId: string | null; userName: string | null };
 
@@ -64,9 +65,9 @@ export function useScreenShareOrchestrator({
     return screenShareByRoomSlug[roomSlug] || { userId: null, userName: null };
   }, [screenShareOwnerByRoomSlug, roomSlug]);
 
-  const normalizedCurrentUserId = useMemo(() => String(userId || "").trim(), [userId]);
+  const normalizedCurrentUserId = useMemo(() => asTrimmedString(userId), [userId]);
   const normalizedScreenShareOwnerUserId = useMemo(
-    () => String(currentRoomScreenShareOwner.userId || "").trim(),
+    () => asTrimmedString(currentRoomScreenShareOwner.userId),
     [currentRoomScreenShareOwner.userId]
   );
 
@@ -82,7 +83,7 @@ export function useScreenShareOrchestrator({
   );
 
   const activeScreenShare = useMemo(() => {
-    const localUserId = String(userId || "").trim();
+    const localUserId = asTrimmedString(userId);
     if (isLocalScreenSharing && localScreenShareStream) {
       return {
         stream: localScreenShareStream,
@@ -92,7 +93,7 @@ export function useScreenShareOrchestrator({
       };
     }
 
-    const ownerUserId = String(currentRoomScreenShareOwner.userId || "").trim();
+    const ownerUserId = asTrimmedString(currentRoomScreenShareOwner.userId);
     if (!ownerUserId) {
       return null;
     }
@@ -121,7 +122,7 @@ export function useScreenShareOrchestrator({
   ]);
 
   const handleIncomingScreenShareState = useCallback((payload: IncomingScreenSharePayload) => {
-    const targetRoomSlug = String(payload.roomSlug || "").trim();
+    const targetRoomSlug = asTrimmedString(payload.roomSlug);
     if (!targetRoomSlug) {
       return;
     }
@@ -141,8 +142,8 @@ export function useScreenShareOrchestrator({
       return;
     }
 
-    const localUserId = String(userId || "").trim();
-    const ownerUserId = String(currentRoomScreenShareOwner.userId || "").trim();
+    const localUserId = asTrimmedString(userId);
+    const ownerUserId = asTrimmedString(currentRoomScreenShareOwner.userId);
 
     if (isLocalScreenSharing) {
       try {

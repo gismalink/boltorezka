@@ -28,6 +28,7 @@ import {
   type ChatImagePolicy
 } from "../../utils/chatImagePayload";
 import { getErrorCode } from "../../services/chatErrorUtils";
+import { asTrimmedString } from "../../utils/stringUtils";
 
 type UseChatComposerActionsParams = {
   chatRoomSlug: string;
@@ -89,7 +90,7 @@ function resolveMentionUserIdsFromText(
   const handles = new Set<string>();
   let match: RegExpExecArray | null;
   while ((match = handlePattern.exec(normalizedText)) !== null) {
-    const handle = String(match[1] || "").trim().toLowerCase();
+    const handle = asTrimmedString(match[1]).toLowerCase();
     if (handle && handle !== "all" && handle !== "here") {
       handles.add(handle);
     }
@@ -102,7 +103,7 @@ function resolveMentionUserIdsFromText(
   const mentionedUserIds = new Set<string>();
   const seen = new Set<string>();
   candidates.forEach((candidate) => {
-    const handle = String(candidate.handle || "").trim().toLowerCase();
+    const handle = asTrimmedString(candidate.handle).toLowerCase();
     if (!handle || !handles.has(handle)) {
       return;
     }
@@ -112,7 +113,7 @@ function resolveMentionUserIdsFromText(
     }
 
     if (candidate.kind === "user") {
-      const userId = String(candidate.userId || "").trim();
+      const userId = asTrimmedString(candidate.userId);
       if (!userId || seen.has(userId)) {
         return;
       }
@@ -124,7 +125,7 @@ function resolveMentionUserIdsFromText(
 
     const targetUserIds = Array.isArray(candidate.userIds) ? candidate.userIds : [];
     targetUserIds.forEach((value) => {
-      const userId = String(value || "").trim();
+      const userId = asTrimmedString(value);
       if (!userId || seen.has(userId)) {
         return;
       }
@@ -199,7 +200,7 @@ export function useChatComposerActions({
       const next: Record<string, Record<string, { count: number; reacted: boolean }>> = {};
 
       messages.forEach((message) => {
-        const messageId = String(message.id || "").trim();
+        const messageId = asTrimmedString(message.id);
         if (!messageId) {
           return;
         }
@@ -214,7 +215,7 @@ export function useChatComposerActions({
 
         const normalized: Record<string, { count: number; reacted: boolean }> = {};
         serverReactions.forEach((reaction) => {
-          const emoji = String(reaction?.emoji || "").trim();
+          const emoji = asTrimmedString(reaction?.emoji);
           if (!emoji) {
             return;
           }
@@ -539,7 +540,7 @@ export function useChatComposerActions({
   }, [activeTopicId, authToken, canManageOwnMessage, chatRoomSlug, messages, pushToast, selectChannelPlaceholderMessage, sendWsEvent, sendWsEventAwaitAck, serverErrorMessage, setMessages]);
 
   const openRoomChat = useCallback((slug: string) => {
-    const normalized = String(slug || "").trim();
+    const normalized = asTrimmedString(slug);
     if (!normalized) {
       return;
     }
@@ -591,8 +592,8 @@ export function useChatComposerActions({
       return;
     }
 
-    const normalizedMessageId = String(messageId || "").trim();
-    const normalizedEmoji = String(emoji || "").trim();
+    const normalizedMessageId = asTrimmedString(messageId);
+    const normalizedEmoji = asTrimmedString(emoji);
     if (!normalizedMessageId || !normalizedEmoji) {
       return;
     }
@@ -679,7 +680,7 @@ export function useChatComposerActions({
   }, [activeTopicId, authToken, pushToast, reportMessageExistsMessage, reportMessageSentMessage, sendWsEventAwaitAck, serverErrorMessage, topicOnlyActionMessage]);
 
   const applyRemotePinState = useCallback((messageId: string, pinned: boolean) => {
-    const normalizedId = String(messageId || "").trim();
+    const normalizedId = asTrimmedString(messageId);
     if (!normalizedId) {
       return;
     }
@@ -691,14 +692,14 @@ export function useChatComposerActions({
   }, []);
 
   const applyRemoteMessageReactionState = useCallback((messageId: string, emoji: string, active: boolean, actorUserId?: string) => {
-    const normalizedId = String(messageId || "").trim();
-    const normalizedEmoji = String(emoji || "").trim();
+    const normalizedId = asTrimmedString(messageId);
+    const normalizedEmoji = asTrimmedString(emoji);
     if (!normalizedId || !normalizedEmoji) {
       return;
     }
 
-    const currentUserId = String(user?.id || "").trim();
-    const normalizedActorUserId = String(actorUserId || "").trim();
+    const currentUserId = asTrimmedString(user?.id);
+    const normalizedActorUserId = asTrimmedString(actorUserId);
     const actorIsCurrentUser = Boolean(currentUserId && normalizedActorUserId && normalizedActorUserId === currentUserId);
 
     setReactionsByMessageId((prev) => {

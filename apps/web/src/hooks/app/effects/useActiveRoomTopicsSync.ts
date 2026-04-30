@@ -1,6 +1,7 @@
 import { useEffect, useRef, type Dispatch, type SetStateAction } from "react";
 import { api } from "../../../api";
 import type { RoomTopic } from "../../../domain";
+import { asTrimmedString } from "../../../utils/stringUtils";
 
 type UseActiveRoomTopicsSyncArgs = {
   token: string;
@@ -25,8 +26,8 @@ export function useActiveRoomTopicsSync({
   const roomTopicIdsBySlugRef = useRef<Record<string, Set<string>>>({});
 
   useEffect(() => {
-    const roomSlug = String(activeChatRoomSlug || "").trim();
-    const topicId = String(activeChatTopicId || "").trim();
+    const roomSlug = asTrimmedString(activeChatRoomSlug);
+    const topicId = asTrimmedString(activeChatTopicId);
     if (!roomSlug || !topicId) {
       return;
     }
@@ -43,9 +44,9 @@ export function useActiveRoomTopicsSync({
   }, [activeChatRoomSlug, activeChatTopicId]);
 
   useEffect(() => {
-    const tokenValue = String(token || "").trim();
-    const roomId = String(activeChatRoomId || "").trim();
-    const roomSlug = String(activeChatRoomSlug || "").trim();
+    const tokenValue = asTrimmedString(token);
+    const roomId = asTrimmedString(activeChatRoomId);
+    const roomSlug = asTrimmedString(activeChatRoomSlug);
 
     if (!tokenValue || !roomSlug) {
       setChatTopics([]);
@@ -70,18 +71,18 @@ export function useActiveRoomTopicsSync({
         const topics = Array.isArray(response.topics) ? response.topics : [];
         roomTopicIdsBySlugRef.current = {
           ...roomTopicIdsBySlugRef.current,
-          [roomSlug]: new Set(topics.map((topic) => String(topic.id || "").trim()).filter(Boolean))
+          [roomSlug]: new Set(topics.map((topic) => asTrimmedString(topic.id)).filter(Boolean))
         };
         setChatTopics(topics);
 
         setActiveChatTopicId((prev) => {
-          const preferred = String(prev || "").trim();
+          const preferred = asTrimmedString(prev);
           const stillExists = preferred && topics.some((topic) => topic.id === preferred);
           if (stillExists) {
             return preferred;
           }
 
-          const rememberedTopicId = String(topicIdByRoomSlugRef.current[roomSlug] || "").trim();
+          const rememberedTopicId = asTrimmedString(topicIdByRoomSlugRef.current[roomSlug]);
           const rememberedStillExists = rememberedTopicId && topics.some((topic) => topic.id === rememberedTopicId);
           if (rememberedStillExists) {
             return rememberedTopicId;

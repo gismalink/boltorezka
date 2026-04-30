@@ -7,18 +7,19 @@
  * устаревшим — в этот период предпочитаем локальное значение.
  */
 
+import { asTrimmedString } from "../../../utils/stringUtils";
 const WS_BUMP_GUARD_MS = 60_000;
 
 const lastBumpAtBySlug = new Map<string, number>();
 
 export function markRoomUnreadWsBump(slug: string): void {
-  const normalized = String(slug || "").trim();
+  const normalized = asTrimmedString(slug);
   if (!normalized) return;
   lastBumpAtBySlug.set(normalized, Date.now());
 }
 
 export function isRoomUnreadWsBumpFresh(slug: string): boolean {
-  const normalized = String(slug || "").trim();
+  const normalized = asTrimmedString(slug);
   if (!normalized) return false;
   const ts = lastBumpAtBySlug.get(normalized);
   if (!ts) return false;

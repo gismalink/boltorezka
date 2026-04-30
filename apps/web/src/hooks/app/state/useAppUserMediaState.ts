@@ -7,6 +7,7 @@ import type { RnnoiseSuppressionLevel } from "../../rtc/rnnoiseAudioProcessor";
 import type { ServerScreenShareResolution, ServerVideoEffectType, ServerVideoResolution } from "../../rtc/voiceCallTypes";
 import { normalizeUiTheme, readNonZeroDefaultVolume } from "../../../utils/appShell";
 import { DEFAULT_PUSH_TO_TALK_HOTKEY, normalizePushToTalkHotkey } from "../../../utils/pushToTalk";
+import { asTrimmedString } from "../../../utils/stringUtils";
 
 export function useAppUserMediaState() {
   const [micMuted, setMicMuted] = useState<boolean>(() => localStorage.getItem("boltorezka_mic_muted") !== "0");
@@ -37,14 +38,14 @@ export function useAppUserMediaState() {
   const [voiceInitialAudioOutputMutedByUserIdInCurrentRoom, setVoiceInitialAudioOutputMutedByUserIdInCurrentRoom] = useState<Record<string, boolean>>({});
 
   const [selectedInputProfile, setSelectedInputProfile] = useState<InputProfile>(() => {
-    const value = String(localStorage.getItem("boltorezka_selected_input_profile") || "").trim();
+    const value = asTrimmedString(localStorage.getItem("boltorezka_selected_input_profile"));
     if (value === "studio" || value === "custom") {
       return value;
     }
     return "custom";
   });
   const [rnnoiseSuppressionLevel, setRnnoiseSuppressionLevel] = useState<RnnoiseSuppressionLevel>(() => {
-    const value = String(localStorage.getItem("boltorezka_rnnoise_level") || "").trim();
+    const value = asTrimmedString(localStorage.getItem("boltorezka_rnnoise_level"));
     if (value === "none" || value === "soft" || value === "medium" || value === "strong") {
       return value;
     }
@@ -120,7 +121,7 @@ export function useAppUserMediaState() {
     return Number.isFinite(value) ? Math.max(60, Math.min(200, Math.round(value))) : 120;
   });
   const [serverVideoAsciiColor, setServerVideoAsciiColor] = useState(() => {
-    const value = String(localStorage.getItem("boltorezka_server_video_ascii_color") || "").trim();
+    const value = asTrimmedString(localStorage.getItem("boltorezka_server_video_ascii_color"));
     return /^#[0-9a-fA-F]{6}$/.test(value) ? value : "#eaffff";
   });
   const [serverVideoWindowMinWidth, setServerVideoWindowMinWidth] = useState(() => {

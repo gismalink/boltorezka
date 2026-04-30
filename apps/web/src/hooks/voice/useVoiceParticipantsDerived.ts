@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import type { PresenceMember, RoomMemberPreference } from "../../domain";
+import { asTrimmedString } from "../../utils/stringUtils";
 
 type UseVoiceParticipantsDerivedArgs = {
   roomsPresenceDetailsBySlug: Record<string, PresenceMember[]>;
@@ -38,7 +39,7 @@ export function useVoiceParticipantsDerived({
 
   const videoPolicyAudienceKey = useMemo(() => {
     return currentRoomVoiceTargets
-      .map((member) => String(member.userId || "").trim())
+      .map((member) => asTrimmedString(member.userId))
       .filter((userId) => userId.length > 0)
       .sort()
       .join("|");

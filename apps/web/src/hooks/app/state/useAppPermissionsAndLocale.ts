@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../../../api";
 import type { ServerListItem, User } from "../../../domain";
 import { LOCALE_BY_LANG, TEXT, type Lang } from "../../../i18n";
+import { asTrimmedString } from "../../../utils/stringUtils";
 
 type UseAppPermissionsAndLocaleInput = {
   token: string;
@@ -75,8 +76,8 @@ export function useAppPermissionsAndLocale({
   }, [lang]);
 
   useEffect(() => {
-    const userId = String(user?.id || "").trim();
-    const serverId = String(currentServerId || "").trim();
+    const userId = asTrimmedString(user?.id);
+    const serverId = asTrimmedString(currentServerId);
     if (!token || !userId || !serverId) {
       setResolvedServerPermissions(null);
       return;

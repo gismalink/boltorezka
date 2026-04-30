@@ -1,9 +1,10 @@
 import { useCallback, type Dispatch, type SetStateAction } from "react";
 import { ApiError, api } from "../../api";
 import type { ServerListItem, ServerMemberItem } from "../../domain";
+import { asTrimmedString } from "../../utils/stringUtils";
 
 export const selectExistingServerId = (servers: ServerListItem[], preferredServerId: string): string => {
-  const normalizedPreferredServerId = String(preferredServerId || "").trim();
+  const normalizedPreferredServerId = asTrimmedString(preferredServerId);
   if (normalizedPreferredServerId && servers.some((server) => server.id === normalizedPreferredServerId)) {
     return normalizedPreferredServerId;
   }
@@ -54,8 +55,8 @@ export function useServerProfileActions({
   }, [setServerMembers]);
 
   const handleCreateServer = useCallback(async (name: string) => {
-    const tokenValue = String(token || "").trim();
-    const trimmedName = String(name || "").trim();
+    const tokenValue = asTrimmedString(token);
+    const trimmedName = asTrimmedString(name);
 
     if (!tokenValue || !trimmedName) {
       return;
@@ -81,8 +82,8 @@ export function useServerProfileActions({
   }, [pushToast, setCreatingServer, setCurrentServerId, setServers, t, token]);
 
   const handleCreateServerInvite = useCallback(async () => {
-    const tokenValue = String(token || "").trim();
-    const serverId = String(currentServerId || "").trim();
+    const tokenValue = asTrimmedString(token);
+    const serverId = asTrimmedString(currentServerId);
 
     if (!tokenValue || !serverId || creatingInvite) {
       return;
@@ -91,7 +92,7 @@ export function useServerProfileActions({
     setCreatingInvite(true);
     try {
       const result = await api.createServerInvite(tokenValue, serverId);
-      const invitePath = String(result.inviteUrl || "").trim();
+      const invitePath = asTrimmedString(result.inviteUrl);
       const absoluteInviteUrl = invitePath.startsWith("/")
         ? `${window.location.origin}${invitePath}`
         : invitePath;
@@ -105,9 +106,9 @@ export function useServerProfileActions({
   }, [creatingInvite, currentServerId, pushToast, setCreatingInvite, setLastInviteUrl, t, token]);
 
   const handleRenameCurrentServer = useCallback(async (nextName: string) => {
-    const tokenValue = String(token || "").trim();
-    const serverId = String(currentServerId || "").trim();
-    const trimmedName = String(nextName || "").trim();
+    const tokenValue = asTrimmedString(token);
+    const serverId = asTrimmedString(currentServerId);
+    const trimmedName = asTrimmedString(nextName);
 
     if (!tokenValue || !serverId || !trimmedName) {
       return;
@@ -123,8 +124,8 @@ export function useServerProfileActions({
   }, [currentServerId, pushToast, setServers, t, token]);
 
   const handleConfirmServerAge = useCallback(async () => {
-    const tokenValue = String(token || "").trim();
-    const serverId = String(currentServerId || "").trim();
+    const tokenValue = asTrimmedString(token);
+    const serverId = asTrimmedString(currentServerId);
 
     if (!tokenValue || !serverId || serverAgeConfirming) {
       return;
@@ -146,7 +147,7 @@ export function useServerProfileActions({
   }, [currentServerId, pushToast, serverAgeConfirming, serverAgeConfirmedAt, setServerAgeConfirmedAt, setServerAgeConfirming, t, token]);
 
   const handleCopyInviteUrl = useCallback(async () => {
-    const value = String(lastInviteUrl || "").trim();
+    const value = asTrimmedString(lastInviteUrl);
     if (!value) {
       return;
     }
@@ -160,9 +161,9 @@ export function useServerProfileActions({
   }, [lastInviteUrl, pushToast, t]);
 
   const handleCreateServerInviteAndCopy = useCallback(async () => {
-    const tokenValue = String(token || "").trim();
-    const serverId = String(currentServerId || "").trim();
-    const cachedInviteUrl = String(lastInviteUrl || "").trim();
+    const tokenValue = asTrimmedString(token);
+    const serverId = asTrimmedString(currentServerId);
+    const cachedInviteUrl = asTrimmedString(lastInviteUrl);
 
     if (!tokenValue || !serverId || creatingInvite) {
       return;
@@ -176,7 +177,7 @@ export function useServerProfileActions({
     setCreatingInvite(true);
     try {
       const result = await api.createServerInvite(tokenValue, serverId);
-      const invitePath = String(result.inviteUrl || "").trim();
+      const invitePath = asTrimmedString(result.inviteUrl);
       const absoluteInviteUrl = invitePath.startsWith("/")
         ? `${window.location.origin}${invitePath}`
         : invitePath;
@@ -192,14 +193,14 @@ export function useServerProfileActions({
   }, [creatingInvite, currentServerId, handleCopyInviteUrl, lastInviteUrl, pushToast, setCreatingInvite, setLastInviteUrl, t, token]);
 
   const handleServerChange = useCallback((serverId: string) => {
-    const nextServerId = String(serverId || "").trim();
+    const nextServerId = asTrimmedString(serverId);
     setCurrentServerId(nextServerId);
     setLastInviteUrl("");
   }, [setCurrentServerId, setLastInviteUrl]);
 
   const handleLeaveCurrentServer = useCallback(async () => {
-    const tokenValue = String(token || "").trim();
-    const serverId = String(currentServerId || "").trim();
+    const tokenValue = asTrimmedString(token);
+    const serverId = asTrimmedString(currentServerId);
     if (!tokenValue || !serverId) {
       return;
     }
@@ -218,8 +219,8 @@ export function useServerProfileActions({
   }, [currentServerId, pushToast, setCurrentServerId, setLastInviteUrl, setServers, t, token]);
 
   const handleDeleteCurrentServer = useCallback(async () => {
-    const tokenValue = String(token || "").trim();
-    const serverId = String(currentServerId || "").trim();
+    const tokenValue = asTrimmedString(token);
+    const serverId = asTrimmedString(currentServerId);
 
     if (!tokenValue || !serverId) {
       return;
@@ -252,9 +253,9 @@ export function useServerProfileActions({
   }, [currentServerId, pushToast, setCurrentServerId, setLastInviteUrl, setServers, t, token]);
 
   const handleRemoveServerMember = useCallback(async (targetUserId: string) => {
-    const tokenValue = String(token || "").trim();
-    const serverId = String(currentServerId || "").trim();
-    const userId = String(targetUserId || "").trim();
+    const tokenValue = asTrimmedString(token);
+    const serverId = asTrimmedString(currentServerId);
+    const userId = asTrimmedString(targetUserId);
 
     if (!tokenValue || !serverId || !userId) {
       return;
@@ -270,9 +271,9 @@ export function useServerProfileActions({
   }, [currentServerId, pushToast, refreshServerMembers, t, token]);
 
   const handleBanServerMember = useCallback(async (targetUserId: string) => {
-    const tokenValue = String(token || "").trim();
-    const serverId = String(currentServerId || "").trim();
-    const userId = String(targetUserId || "").trim();
+    const tokenValue = asTrimmedString(token);
+    const serverId = asTrimmedString(currentServerId);
+    const userId = asTrimmedString(targetUserId);
 
     if (!tokenValue || !serverId || !userId) {
       return;
@@ -288,9 +289,9 @@ export function useServerProfileActions({
   }, [currentServerId, pushToast, refreshServerMembers, t, token]);
 
   const handleUnbanServerMember = useCallback(async (targetUserId: string) => {
-    const tokenValue = String(token || "").trim();
-    const serverId = String(currentServerId || "").trim();
-    const userId = String(targetUserId || "").trim();
+    const tokenValue = asTrimmedString(token);
+    const serverId = asTrimmedString(currentServerId);
+    const userId = asTrimmedString(targetUserId);
 
     if (!tokenValue || !serverId || !userId) {
       return;
@@ -306,9 +307,9 @@ export function useServerProfileActions({
   }, [currentServerId, pushToast, refreshServerMembers, t, token]);
 
   const handleTransferServerOwnership = useCallback(async (targetUserId: string) => {
-    const tokenValue = String(token || "").trim();
-    const serverId = String(currentServerId || "").trim();
-    const userId = String(targetUserId || "").trim();
+    const tokenValue = asTrimmedString(token);
+    const serverId = asTrimmedString(currentServerId);
+    const userId = asTrimmedString(targetUserId);
 
     if (!tokenValue || !serverId || !userId) {
       return;
@@ -327,9 +328,9 @@ export function useServerProfileActions({
   }, [currentServerId, pushToast, refreshServerMembers, setServers, t, token]);
 
   const loadServerMemberProfile = useCallback(async (targetUserId: string) => {
-    const tokenValue = String(token || "").trim();
-    const serverId = String(currentServerId || "").trim();
-    const userId = String(targetUserId || "").trim();
+    const tokenValue = asTrimmedString(token);
+    const serverId = asTrimmedString(currentServerId);
+    const userId = asTrimmedString(targetUserId);
 
     if (!tokenValue || !serverId || !userId) {
       return null;
@@ -345,8 +346,8 @@ export function useServerProfileActions({
   }, [currentServerId, pushToast, t, token]);
 
   const loadServerRoles = useCallback(async () => {
-    const tokenValue = String(token || "").trim();
-    const serverId = String(currentServerId || "").trim();
+    const tokenValue = asTrimmedString(token);
+    const serverId = asTrimmedString(currentServerId);
 
     if (!tokenValue || !serverId) {
       return [] as Array<{ id: string; name: string; isBase: boolean }>;
@@ -362,9 +363,9 @@ export function useServerProfileActions({
   }, [currentServerId, pushToast, t, token]);
 
   const handleCreateServerRole = useCallback(async (name: string) => {
-    const tokenValue = String(token || "").trim();
-    const serverId = String(currentServerId || "").trim();
-    const trimmedName = String(name || "").trim();
+    const tokenValue = asTrimmedString(token);
+    const serverId = asTrimmedString(currentServerId);
+    const trimmedName = asTrimmedString(name);
     if (!tokenValue || !serverId || !trimmedName) {
       return false;
     }
@@ -380,10 +381,10 @@ export function useServerProfileActions({
   }, [currentServerId, pushToast, t, token]);
 
   const handleRenameServerRole = useCallback(async (roleId: string, name: string) => {
-    const tokenValue = String(token || "").trim();
-    const serverId = String(currentServerId || "").trim();
-    const trimmedName = String(name || "").trim();
-    const normalizedRoleId = String(roleId || "").trim();
+    const tokenValue = asTrimmedString(token);
+    const serverId = asTrimmedString(currentServerId);
+    const trimmedName = asTrimmedString(name);
+    const normalizedRoleId = asTrimmedString(roleId);
     if (!tokenValue || !serverId || !trimmedName || !normalizedRoleId) {
       return false;
     }
@@ -399,9 +400,9 @@ export function useServerProfileActions({
   }, [currentServerId, pushToast, t, token]);
 
   const handleDeleteServerRole = useCallback(async (roleId: string) => {
-    const tokenValue = String(token || "").trim();
-    const serverId = String(currentServerId || "").trim();
-    const normalizedRoleId = String(roleId || "").trim();
+    const tokenValue = asTrimmedString(token);
+    const serverId = asTrimmedString(currentServerId);
+    const normalizedRoleId = asTrimmedString(roleId);
     if (!tokenValue || !serverId || !normalizedRoleId) {
       return false;
     }
@@ -417,9 +418,9 @@ export function useServerProfileActions({
   }, [currentServerId, pushToast, t, token]);
 
   const handleSetServerMemberCustomRoles = useCallback(async (targetUserId: string, roleIds: string[]) => {
-    const tokenValue = String(token || "").trim();
-    const serverId = String(currentServerId || "").trim();
-    const userId = String(targetUserId || "").trim();
+    const tokenValue = asTrimmedString(token);
+    const serverId = asTrimmedString(currentServerId);
+    const userId = asTrimmedString(targetUserId);
 
     if (!tokenValue || !serverId || !userId) {
       return false;
@@ -436,9 +437,9 @@ export function useServerProfileActions({
   }, [currentServerId, pushToast, refreshServerMembers, t, token]);
 
   const handleSetServerMemberHiddenRoomAccess = useCallback(async (targetUserId: string, roomIds: string[]) => {
-    const tokenValue = String(token || "").trim();
-    const serverId = String(currentServerId || "").trim();
-    const userId = String(targetUserId || "").trim();
+    const tokenValue = asTrimmedString(token);
+    const serverId = asTrimmedString(currentServerId);
+    const userId = asTrimmedString(targetUserId);
 
     if (!tokenValue || !serverId || !userId) {
       return false;

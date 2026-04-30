@@ -1,5 +1,6 @@
 import { useCallback, type Dispatch, type SetStateAction } from "react";
 import type { RoomAdminController } from "../../services";
+import { asTrimmedString } from "../../utils/stringUtils";
 
 type SendWsEvent = (
   eventType: string,
@@ -37,12 +38,12 @@ export function useRoomPresenceActions({
   setChatRoomSlug
 }: UseRoomPresenceActionsArgs) {
   const joinRoom = useCallback((slug: string) => {
-    const targetSlug = String(slug || "").trim();
+    const targetSlug = asTrimmedString(slug);
     if (!targetSlug) {
       return;
     }
 
-    const previousChatSlug = String(chatRoomSlug || "").trim();
+    const previousChatSlug = asTrimmedString(chatRoomSlug);
     if (targetSlug !== previousChatSlug) {
       setChatRoomSlug(targetSlug);
     }
@@ -56,7 +57,7 @@ export function useRoomPresenceActions({
 
         // Keep direct room transitions smooth, but rollback chat target if join is rejected.
         setChatRoomSlug((current) => {
-          const normalizedCurrent = String(current || "").trim();
+          const normalizedCurrent = asTrimmedString(current);
           if (normalizedCurrent !== targetSlug) {
             return current;
           }

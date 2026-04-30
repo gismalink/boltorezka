@@ -1,9 +1,10 @@
 import { useEffect, type Dispatch, type SetStateAction } from "react";
 import { api } from "../../../api";
 import type { AdminServerListItem, AdminServerOverview, ServerListItem, ServerMemberItem } from "../../../domain";
+import { asTrimmedString } from "../../../utils/stringUtils";
 
 const selectExistingServerId = (servers: ServerListItem[], preferredServerId: string): string => {
-  const normalizedPreferredServerId = String(preferredServerId || "").trim();
+  const normalizedPreferredServerId = asTrimmedString(preferredServerId);
   if (normalizedPreferredServerId && servers.some((server) => server.id === normalizedPreferredServerId)) {
     return normalizedPreferredServerId;
   }
@@ -55,8 +56,8 @@ export function useServerDataSync({
   pushLog
 }: UseServerDataSyncArgs) {
   useEffect(() => {
-    const tokenValue = String(token || "").trim();
-    const serverId = String(currentServerId || "").trim();
+    const tokenValue = asTrimmedString(token);
+    const serverId = asTrimmedString(currentServerId);
 
     if (!tokenValue || !serverId || !hasUser) {
       setServerAgeConfirmedAt(null);
@@ -123,7 +124,7 @@ export function useServerDataSync({
         setServers(list);
 
         const ids = new Set(list.map((item) => item.id));
-        const persistedId = String(localStorage.getItem(currentServerIdStorageKey) || "").trim();
+        const persistedId = asTrimmedString(localStorage.getItem(currentServerIdStorageKey));
         setCurrentServerId((prev) => {
           const preferredId = ids.has(prev) ? prev : persistedId;
           return selectExistingServerId(list, preferredId);
@@ -157,8 +158,8 @@ export function useServerDataSync({
   ]);
 
   useEffect(() => {
-    const tokenValue = String(token || "").trim();
-    const serverId = String(currentServerId || "").trim();
+    const tokenValue = asTrimmedString(token);
+    const serverId = asTrimmedString(currentServerId);
 
     if (!tokenValue || !serverId || !hasUser) {
       setServerMembers([]);
@@ -200,7 +201,7 @@ export function useServerDataSync({
   ]);
 
   useEffect(() => {
-    const tokenValue = String(token || "").trim();
+    const tokenValue = asTrimmedString(token);
 
     if (!tokenValue || !canManageServerControlPlane) {
       setAdminServers([]);
@@ -224,7 +225,7 @@ export function useServerDataSync({
         setAdminServers(list);
 
         const ids = new Set(list.map((item) => item.id));
-        const preferredId = String(currentServerId || "").trim();
+        const preferredId = asTrimmedString(currentServerId);
 
         setSelectedAdminServerId((prev) => {
           if (ids.has(prev)) {
@@ -269,8 +270,8 @@ export function useServerDataSync({
   ]);
 
   useEffect(() => {
-    const tokenValue = String(token || "").trim();
-    const serverId = String(selectedAdminServerId || "").trim();
+    const tokenValue = asTrimmedString(token);
+    const serverId = asTrimmedString(selectedAdminServerId);
 
     if (!tokenValue || !serverId || !canManageServerControlPlane) {
       setAdminServerOverview(null);

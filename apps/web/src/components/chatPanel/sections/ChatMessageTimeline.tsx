@@ -14,6 +14,7 @@ import { Button } from "../../uicomponents";
 import { formatDateSeparatorLabel, shouldShowDateDivider } from "./chatTimelineUtils";
 import { useChatPanelCtx, useChatMessageActions } from "../ChatPanelContext";
 import { renderMessageText, extractFirstLinkPreview } from "../../../utils/messageTextRenderer";
+import { asTrimmedString } from "../../../utils/stringUtils";
 
 const INITIAL_TIMELINE_RENDER_COUNT = 180;
 const TIMELINE_RENDER_INCREMENT = 120;
@@ -84,8 +85,8 @@ export function ChatMessageTimeline({
         return;
       }
 
-      const handle = String(candidate.handle || "").trim().toLowerCase();
-      const label = String(candidate.label || "").trim();
+      const handle = asTrimmedString(candidate.handle).toLowerCase();
+      const label = asTrimmedString(candidate.label);
       if (!handle || !label || byHandle.has(handle)) {
         return;
       }
@@ -93,7 +94,7 @@ export function ChatMessageTimeline({
       byHandle.set(handle, {
         label,
         handle,
-        userId: String(candidate.userId || "").trim() || undefined
+        userId: asTrimmedString(candidate.userId) || undefined
       });
     });
 
@@ -108,9 +109,9 @@ export function ChatMessageTimeline({
         return;
       }
 
-      const label = String(candidate.label || "").trim();
+      const label = asTrimmedString(candidate.label);
       const normalizedLabel = label.toLowerCase();
-      const handle = String(candidate.handle || "").trim();
+      const handle = asTrimmedString(candidate.handle);
       if (!normalizedLabel || !label || !handle || byLabel.has(normalizedLabel)) {
         return;
       }
@@ -118,7 +119,7 @@ export function ChatMessageTimeline({
       byLabel.set(normalizedLabel, {
         label,
         handle,
-        userId: String(candidate.userId || "").trim() || undefined
+        userId: asTrimmedString(candidate.userId) || undefined
       });
     });
 
@@ -126,7 +127,7 @@ export function ChatMessageTimeline({
   }, [mentionCandidates]);
 
   const openProfileFromUserName = (userNameRaw: string) => {
-    const userName = String(userNameRaw || "").trim();
+    const userName = asTrimmedString(userNameRaw);
     if (!userName) {
       return;
     }
@@ -257,7 +258,7 @@ export function ChatMessageTimeline({
     }
 
     const messageElement = element.closest("[data-message-id]");
-    return messageElement ? String(messageElement.getAttribute("data-message-id") || "").trim() || null : null;
+    return messageElement ? asTrimmedString(messageElement.getAttribute("data-message-id")) || null : null;
   };
 
   const getSelectedQuoteTextForMessage = (messageId: string): string => {

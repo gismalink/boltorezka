@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { asTrimmedString } from "../../../utils/stringUtils";
 
 export function useDesktopHandoffState(token: string) {
   const showDesktopBrowserCompletion = useMemo(() => {
@@ -16,7 +17,7 @@ export function useDesktopHandoffState(token: string) {
     }
 
     const url = new URL(window.location.href);
-    return String(url.searchParams.get("desktop_handoff_error") || "").trim();
+    return asTrimmedString(url.searchParams.get("desktop_handoff_error"));
   }, [token]);
 
   return {

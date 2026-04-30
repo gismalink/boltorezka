@@ -2,9 +2,10 @@ import { useEffect, useRef, type Dispatch, type SetStateAction } from "react";
 import { ApiError, api } from "../../../api";
 import type { ServerListItem } from "../../../domain";
 import { selectExistingServerId } from "../../rooms/useServerProfileActions";
+import { asTrimmedString } from "../../../utils/stringUtils";
 
 function extractInviteTokenFromPath(pathname: string): string {
-  const normalizedPathname = String(pathname || "").trim();
+  const normalizedPathname = asTrimmedString(pathname);
   if (!normalizedPathname) {
     return "";
   }
@@ -56,8 +57,8 @@ export function useInviteAcceptanceFlow({
   }, [setPendingInviteToken]);
 
   useEffect(() => {
-    const tokenValue = String(token || "").trim();
-    const inviteToken = String(pendingInviteToken || "").trim();
+    const tokenValue = asTrimmedString(token);
+    const inviteToken = asTrimmedString(pendingInviteToken);
 
     if (!tokenValue || !hasUser || !inviteToken) {
       return;
@@ -72,7 +73,7 @@ export function useInviteAcceptanceFlow({
 
     api.acceptServerInvite(tokenValue, inviteToken)
       .then(async (result) => {
-        const acceptedServerId = String(result.server?.id || "").trim();
+        const acceptedServerId = asTrimmedString(result.server?.id);
         const listResponse = await api.servers(tokenValue);
         const list = Array.isArray(listResponse.servers) ? listResponse.servers : [];
         setServers(list);

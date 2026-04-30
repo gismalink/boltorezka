@@ -10,6 +10,7 @@
  */
 import { api } from "../api";
 import type { AudioQuality, Message, MessagesCursor, Room, RoomKind, RoomsTreeResponse, User } from "../domain";
+import { asTrimmedString } from "../utils/stringUtils";
 
 type RoomAdminControllerOptions = {
   pushLog: (text: string) => void;
@@ -35,7 +36,7 @@ export class RoomAdminController {
   }
 
   private getCurrentServerId(): string | undefined {
-    const value = String(this.options.getCurrentServerId?.() || "").trim();
+    const value = asTrimmedString(this.options.getCurrentServerId?.());
     return value || undefined;
   }
 

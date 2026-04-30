@@ -2,6 +2,7 @@
 import { useCallback, type Dispatch, type SetStateAction } from "react";
 import { api } from "../../../api";
 import type { RoomTopic } from "../../../domain";
+import { asTrimmedString } from "../../../utils/stringUtils";
 
 type UseCreateTopicActionArgs = {
   token: string;
@@ -23,9 +24,9 @@ export function useCreateTopicAction({
   t
 }: UseCreateTopicActionArgs) {
   return useCallback(async (title: string) => {
-    const tokenValue = String(token || "").trim();
-    const roomId = String(activeChatRoomId || "").trim();
-    const nextTitle = String(title || "").trim();
+    const tokenValue = asTrimmedString(token);
+    const roomId = asTrimmedString(activeChatRoomId);
+    const nextTitle = asTrimmedString(title);
 
     if (!tokenValue || !roomId || !nextTitle) {
       return;
