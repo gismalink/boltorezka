@@ -13,11 +13,12 @@ export function useAppModerationActions({
   memberPreferences,
   serverModeration
 }: UseAppModerationActionsInput) {
-  const { saveMemberPreference } = useRoomMemberPreferencesOrchestrator(memberPreferences);
+  const { saveMemberPreference, applyLocalMemberVolume } = useRoomMemberPreferencesOrchestrator(memberPreferences);
   const serverModerationActions = useServerModerationActions(serverModeration);
 
   return {
     saveMemberPreference,
+    applyLocalMemberVolume,
     ...serverModerationActions
   };
 }

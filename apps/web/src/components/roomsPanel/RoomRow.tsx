@@ -60,6 +60,7 @@ type RoomRowProps = Pick<
   | "onKickRoomMember"
   | "onMoveRoomMember"
   | "onSaveMemberPreference"
+  | "onApplyLocalMemberVolume"
   | "onLoadServerMemberProfile"
   | "onLoadServerRoles"
   | "onSetServerMemberCustomRoles"
@@ -115,6 +116,7 @@ function RoomRowInner({
   onKickRoomMember,
   onMoveRoomMember,
   onSaveMemberPreference,
+  onApplyLocalMemberVolume,
   onLoadServerMemberProfile,
   onLoadServerRoles,
   onSetServerMemberCustomRoles,
@@ -299,6 +301,7 @@ function RoomRowInner({
         voiceRtcStateByUserIdInCurrentRoom={voiceRtcStateByUserIdInCurrentRoom}
         voiceMediaStatusSummaryByUserIdInCurrentRoom={voiceMediaStatusSummaryByUserIdInCurrentRoom}
         onSaveMemberPreference={onSaveMemberPreference}
+        onApplyLocalMemberVolume={onApplyLocalMemberVolume}
         onLoadServerMemberProfile={onLoadServerMemberProfile}
         onLoadServerRoles={onLoadServerRoles}
         onKickRoomMember={onKickRoomMember}

@@ -51,7 +51,31 @@ export function useMemberPreferenceActions({
     }
   }, [pushLog, pushToast, setMemberPreferencesByUserId, t, token]);
 
+  // Локальное немедленное применение громкости (live preview во время drag слайдера).
+  // Не отправляет на сервер — для серверного сохранения используется saveMemberPreference
+  // (вызывается на commit, например onPointerUp у слайдера).
+  const applyLocalMemberVolume = useCallback((targetUserId: string, volume: number) => {
+    if (!targetUserId) {
+      return;
+    }
+    const clampedVolume = Math.max(0, Math.min(100, Math.round(Number(volume) || 0)));
+    setMemberPreferencesByUserId((prev) => {
+      const existing = prev[targetUserId];
+      const nextPreference: RoomMemberPreference = {
+        targetUserId,
+        volume: clampedVolume,
+        note: existing?.note ?? "",
+        updatedAt: existing?.updatedAt ?? new Date().toISOString()
+      };
+      return {
+        ...prev,
+        [targetUserId]: nextPreference
+      };
+    });
+  }, [setMemberPreferencesByUserId]);
+
   return {
-    saveMemberPreference
+    saveMemberPreference,
+    applyLocalMemberVolume
   };
 }

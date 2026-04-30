@@ -201,6 +201,7 @@ export type RoomsPanelProps = {
   onKickRoomMember: (roomSlug: string, userId: string, userName: string) => void;
   onMoveRoomMember: (fromRoomSlug: string, toRoomSlug: string, userId: string, userName: string) => void;
   onSaveMemberPreference: (targetUserId: string, input: { volume: number; note: string }) => Promise<void>;
+  onApplyLocalMemberVolume: (targetUserId: string, volume: number) => void;
   onLoadServerMemberProfile: (userId: string) => Promise<{
     userId: string;
     name: string;
