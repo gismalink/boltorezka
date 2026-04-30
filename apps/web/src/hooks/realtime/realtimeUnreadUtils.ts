@@ -1,4 +1,5 @@
 import type { RoomTopic } from "../../domain";
+import { asTrimmedString } from "../../utils/stringUtils";
 
 export type TopicReadDeltas = {
   topicFound: boolean;
@@ -7,7 +8,7 @@ export type TopicReadDeltas = {
 };
 
 export function getTopicReadDeltas(topics: RoomTopic[], topicId: string): TopicReadDeltas {
-  const normalizedTopicId = String(topicId || "").trim();
+  const normalizedTopicId = asTrimmedString(topicId);
   if (!normalizedTopicId) {
     return {
       topicFound: false,

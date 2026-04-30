@@ -4,18 +4,17 @@
  */
 // Утилиты непрочитанного: исключение своих сообщений и расчет эффективного unread.
 import type { Message } from "../../../domain";
-
-const normalizeId = (value: string | null | undefined): string => String(value || "").trim();
+import { asTrimmedString } from "../../../utils/stringUtils";
 
 export function countTrailingOwnMessagesInList(messages: Message[], currentUserId: string | null): number {
-  const normalizedCurrentUserId = normalizeId(currentUserId);
+  const normalizedCurrentUserId = asTrimmedString(currentUserId);
   if (!normalizedCurrentUserId || messages.length === 0) {
     return 0;
   }
 
   let ownTailCount = 0;
   for (let index = messages.length - 1; index >= 0; index -= 1) {
-    const messageUserId = normalizeId(messages[index]?.user_id);
+    const messageUserId = asTrimmedString(messages[index]?.user_id);
     if (!messageUserId || messageUserId !== normalizedCurrentUserId) {
       break;
     }
@@ -48,13 +47,13 @@ export function countUnreadMessagesExcludingOwn(messages: Message[], currentUser
     return 0;
   }
 
-  const normalizedCurrentUserId = normalizeId(currentUserId);
+  const normalizedCurrentUserId = asTrimmedString(currentUserId);
   if (!normalizedCurrentUserId) {
     return messages.length;
   }
 
   return messages.reduce((sum, message) => {
-    const messageUserId = normalizeId(message.user_id);
+    const messageUserId = asTrimmedString(message.user_id);
     if (!messageUserId || messageUserId === normalizedCurrentUserId) {
       return sum;
     }
