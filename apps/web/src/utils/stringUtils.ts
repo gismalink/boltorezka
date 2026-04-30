@@ -1,15 +1,14 @@
 /**
- * Shared string-coercion helpers used to safely normalize values that are
- * typed as `unknown`/`string | null | undefined` before they reach business
- * logic. Centralizing the pattern avoids dozens of inline
- * `String(x || "").trim()` and `typeof x === "string" ? x.trim() : ""`
- * variations scattered across services and hooks.
+ * stringUtils — общие хелперы безопасного приведения unknown к строке.
+ * Зачем: централизуем паттерн `String(x || "").trim()` и его варианты,
+ * который встречался десятки раз в сервисах и хуках. Помимо удобства,
+ * наша версия НЕ приводит не-строки к их `String(...)` представлению
+ * (например, `null` -> `""`, а не `"null"`).
  */
 
 /**
- * Returns `value.trim()` when `value` is a string, otherwise `""`.
- * Never throws and never coerces non-string primitives to their `String(...)`
- * representation (e.g. `null` -> `""`, not `"null"`).
+ * Возвращает `value.trim()` если `value` — строка, иначе `""`.
+ * Никогда не бросает и не выполняет неявное преобразование примитивов.
  */
 export function asTrimmedString(value: unknown): string {
   if (typeof value !== "string") {
@@ -19,8 +18,8 @@ export function asTrimmedString(value: unknown): string {
 }
 
 /**
- * Like `asTrimmedString` but returns `null` for empty / non-string inputs,
- * which matches the common pattern of "treat blank input as missing".
+ * То же, что `asTrimmedString`, но возвращает `null` для пустых/не-строковых
+ * входов — удобно, когда «пустая строка означает отсутствие значения».
  */
 export function asTrimmedStringOrNull(value: unknown): string | null {
   const trimmed = asTrimmedString(value);

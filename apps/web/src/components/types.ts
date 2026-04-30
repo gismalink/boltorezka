@@ -7,15 +7,16 @@ import type { Lang, TranslateFn } from "../i18n";
 import type { ChannelAudioQualitySetting, PresenceMember, Room, RoomKind, RoomMemberPreference, RoomsTreeResponse, ServerMemberItem, UiTheme, User } from "../domain";
 import type { VoiceMediaStatusSummary } from "../hooks/rtc/voiceCallTypes";
 import type { RnnoiseSuppressionLevel } from "../hooks/rtc/rnnoiseAudioProcessor";
+import type { ServerSoundEvent } from "../hooks/media/useServerSounds";
 
 export type InputProfile = "noise_reduction" | "studio" | "custom";
 export type VoiceSettingsPanel = "input_device" | "input_profile" | null;
 
 export type DeviceOption = { id: string; label: string };
 export type MediaDevicesState = "ready" | "unsupported" | "denied" | "error";
-// Re-exported from the canonical declaration in `hooks/media/useServerSounds`
-// to keep a single source of truth for the sound-event union.
-export type { ServerSoundEvent } from "../hooks/media/useServerSounds";
+// Реэкспорт из канонического объявления в `hooks/media/useServerSounds`,
+// чтобы держать единый источник истины для union-а звуковых событий.
+export type { ServerSoundEvent };
 
 export type UserDockProps = {
   t: TranslateFn;
