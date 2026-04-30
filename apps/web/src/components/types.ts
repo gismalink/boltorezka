@@ -13,13 +13,9 @@ export type VoiceSettingsPanel = "input_device" | "input_profile" | null;
 
 export type DeviceOption = { id: string; label: string };
 export type MediaDevicesState = "ready" | "unsupported" | "denied" | "error";
-export type ServerSoundEvent =
-  | "member_join"
-  | "member_leave"
-  | "server_disconnected"
-  | "chat_message"
-  | "self_disconnected"
-  | "self_joined_channel";
+// Re-exported from the canonical declaration in `hooks/media/useServerSounds`
+// to keep a single source of truth for the sound-event union.
+export type { ServerSoundEvent } from "../hooks/media/useServerSounds";
 
 export type UserDockProps = {
   t: TranslateFn;
