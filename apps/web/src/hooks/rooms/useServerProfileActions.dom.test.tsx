@@ -172,7 +172,7 @@ describe("useServerProfileActions.handleRenameCurrentServer", () => {
   it("updates server item by id and pushes success", async () => {
     apiMock.renameServer.mockResolvedValueOnce({ server: { id: "srv-1", name: "New" } });
     const args = makeArgs();
-    args.setServers.mockImplementation((updater: any) => {
+    (args.setServers as unknown as ReturnType<typeof vi.fn>).mockImplementation((updater: any) => {
       const next = typeof updater === "function" ? updater([{ id: "srv-1", name: "Old" }, { id: "srv-2" }]) : updater;
       expect(next).toEqual([{ id: "srv-1", name: "New" }, { id: "srv-2" }]);
     });
@@ -306,7 +306,7 @@ describe("useServerProfileActions.handleLeaveCurrentServer / handleDeleteCurrent
     apiMock.servers.mockResolvedValue({ servers: [{ id: "s-9" }] });
 
     const args = makeArgs();
-    args.setCurrentServerId.mockImplementation((updater: any) => {
+    (args.setCurrentServerId as unknown as ReturnType<typeof vi.fn>).mockImplementation((updater: any) => {
       const next = typeof updater === "function" ? updater("srv-1") : updater;
       expect(next).toBe("s-9");
     });
