@@ -111,6 +111,7 @@ export function RoomsPanel({
   onKickRoomMember,
   onMoveRoomMember,
   onSaveMemberPreference,
+  onApplyLocalMemberVolume,
   onLoadServerMemberProfile,
   onLoadServerRoles,
   onSetServerMemberCustomRoles,
@@ -335,6 +336,7 @@ export function RoomsPanel({
       onKickRoomMember={onKickRoomMember}
       onMoveRoomMember={onMoveRoomMember}
       onSaveMemberPreference={onSaveMemberPreference}
+      onApplyLocalMemberVolume={onApplyLocalMemberVolume}
       onLoadServerMemberProfile={onLoadServerMemberProfile}
       onLoadServerRoles={onLoadServerRoles}
       onSetServerMemberCustomRoles={onSetServerMemberCustomRoles}
@@ -391,6 +393,7 @@ export function RoomsPanel({
     onKickRoomMember,
     onMoveRoomMember,
     onSaveMemberPreference,
+    onApplyLocalMemberVolume,
     onLoadServerMemberProfile,
     onLoadServerRoles,
     onSetServerMemberCustomRoles,

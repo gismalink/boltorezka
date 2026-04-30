@@ -22,7 +22,7 @@ export function useRoomMemberPreferencesOrchestrator({
   pushToast,
   t
 }: UseRoomMemberPreferencesOrchestratorArgs) {
-  const { saveMemberPreference } = useMemberPreferenceActions({
+  const { saveMemberPreference, applyLocalMemberVolume } = useMemberPreferenceActions({
     token,
     pushLog,
     pushToast,
@@ -39,6 +39,7 @@ export function useRoomMemberPreferencesOrchestrator({
   });
 
   return {
-    saveMemberPreference
+    saveMemberPreference,
+    applyLocalMemberVolume
   };
 }

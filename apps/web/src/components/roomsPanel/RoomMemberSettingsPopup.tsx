@@ -22,6 +22,7 @@ type RoomMemberSettingsPopupProps = {
   setMemberProfileModalOpen: (value: boolean) => void;
   setMemberPreferenceDraft: (next: { volume: number; note: string }) => void;
   onSaveMemberPreference: (targetUserId: string, input: { volume: number; note: string }) => Promise<void>;
+  onApplyLocalMemberVolume: (targetUserId: string, volume: number) => void;
   onLoadServerMemberProfile: (userId: string) => Promise<ServerMemberProfileDetails | null>;
   onSetServerMemberCustomRoles: (userId: string, roleIds: string[]) => Promise<boolean>;
   onSetServerMemberHiddenRoomAccess: (userId: string, roomIds: string[]) => Promise<boolean>;
@@ -53,6 +54,7 @@ export function RoomMemberSettingsPopup({
   setMemberProfileModalOpen,
   setMemberPreferenceDraft,
   onSaveMemberPreference,
+  onApplyLocalMemberVolume,
   onLoadServerMemberProfile,
   onSetServerMemberCustomRoles,
   onSetServerMemberHiddenRoomAccess,
@@ -85,16 +87,37 @@ export function RoomMemberSettingsPopup({
         <div className="subheading">{memberUserName}</div>
         <label className="slider-label grid gap-1.5">
           {t("rooms.personalVolume")}: {volumeValue}%
-          <RangeSlider
-            min={0}
-            max={100}
-            value={volumeValue}
-            valueSuffix="%"
-            onChange={(nextValue) => {
-              const nextVolume = Math.max(0, Math.min(100, Number(nextValue) || 0));
-              setMemberPreferenceDraft({ volume: nextVolume, note: noteValue });
+          {/* Слайдер громкости: во время drag применяем значение локально (live audio preview), */}
+          {/* на commit (pointerup/keyup) посылаем сохранение на сервер. */}
+          <span
+            onPointerUp={() => {
+              void onSaveMemberPreference(memberUserId, {
+                volume: volumeValue,
+                note: noteValue
+              });
             }}
-          />
+            onKeyUp={(event) => {
+              const key = event.key;
+              if (key === "ArrowLeft" || key === "ArrowRight" || key === "ArrowUp" || key === "ArrowDown" || key === "Home" || key === "End" || key === "PageUp" || key === "PageDown") {
+                void onSaveMemberPreference(memberUserId, {
+                  volume: volumeValue,
+                  note: noteValue
+                });
+              }
+            }}
+          >
+            <RangeSlider
+              min={0}
+              max={100}
+              value={volumeValue}
+              valueSuffix="%"
+              onChange={(nextValue) => {
+                const nextVolume = Math.max(0, Math.min(100, Number(nextValue) || 0));
+                setMemberPreferenceDraft({ volume: nextVolume, note: noteValue });
+                onApplyLocalMemberVolume(memberUserId, nextVolume);
+              }}
+            />
+          </span>
         </label>
         <label className="grid gap-1.5">
           <span className="row items-center justify-between gap-2">

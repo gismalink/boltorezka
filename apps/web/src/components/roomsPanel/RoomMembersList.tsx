@@ -26,6 +26,7 @@ type RoomMembersListProps = Pick<
   | "voiceRtcStateByUserIdInCurrentRoom"
   | "voiceMediaStatusSummaryByUserIdInCurrentRoom"
   | "onSaveMemberPreference"
+  | "onApplyLocalMemberVolume"
   | "onLoadServerMemberProfile"
   | "onLoadServerRoles"
   | "onKickRoomMember"
@@ -54,6 +55,7 @@ export function RoomMembersList({
   voiceRtcStateByUserIdInCurrentRoom,
   voiceMediaStatusSummaryByUserIdInCurrentRoom,
   onSaveMemberPreference,
+  onApplyLocalMemberVolume,
   onLoadServerMemberProfile,
   onLoadServerRoles,
   onKickRoomMember,
@@ -417,6 +419,7 @@ export function RoomMembersList({
                         }));
                       }}
                       onSaveMemberPreference={onSaveMemberPreference}
+                      onApplyLocalMemberVolume={onApplyLocalMemberVolume}
                       onLoadServerMemberProfile={onLoadServerMemberProfile}
                       onSetServerMemberCustomRoles={onSetServerMemberCustomRoles}
                       onSetServerMemberHiddenRoomAccess={onSetServerMemberHiddenRoomAccess}
