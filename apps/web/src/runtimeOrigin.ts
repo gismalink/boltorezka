@@ -1,5 +1,6 @@
+import { asTrimmedString } from "./utils/stringUtils";
 function normalizeOrigin(value: string): string {
-  return String(value || "").trim().replace(/\/+$/, "");
+  return asTrimmedString(value).replace(/\/+$/, "");
 }
 
 function isDesktopFileRuntime(): boolean {
@@ -10,7 +11,7 @@ function isDesktopFileRuntime(): boolean {
 }
 
 function resolveFallbackDesktopOrigin(): string {
-  const appVersion = String(import.meta.env.VITE_APP_VERSION || "").trim().toLowerCase();
+  const appVersion = asTrimmedString(import.meta.env.VITE_APP_VERSION).toLowerCase();
   if (appVersion.includes("-test")) {
     return "https://test.datowave.com";
   }

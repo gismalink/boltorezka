@@ -40,6 +40,7 @@ import { ChatPanelOverlays } from "./chatPanel/sections/ChatPanelOverlays";
 import { ChatFloatingActions } from "./chatPanel/sections/ChatFloatingActions";
 import { useDmOptional } from "./dm/DmContext";
 import { setActiveTopicSoundMuted } from "../hooks/realtime/activeTopicSoundMute";
+import { asTrimmedString } from "../utils/stringUtils";
 
 export type { ChatPanelProps };
 export { toMentionHandle };
@@ -131,7 +132,7 @@ export function ChatPanel({
       return String(a.id || "").localeCompare(String(b.id || ""));
     });
 
-    return String(sortedByMainPriority[0]?.id || "").trim() || null;
+    return asTrimmedString(sortedByMainPriority[0]?.id) || null;
   }, [topics]);
 
   const effectiveMainTopicTitle = useMemo(
@@ -145,7 +146,7 @@ export function ChatPanel({
     }
 
     return topics.map((topic) => {
-      if (String(topic.id || "").trim() !== mainTopicId) {
+      if (asTrimmedString(topic.id) !== mainTopicId) {
         return topic;
       }
       return {
@@ -156,7 +157,7 @@ export function ChatPanel({
   }, [effectiveMainTopicTitle, mainTopicId, topics]);
 
   const isMainTopic = useCallback((topicId: string) => {
-    const normalizedTopicId = String(topicId || "").trim();
+    const normalizedTopicId = asTrimmedString(topicId);
     return Boolean(mainTopicId && normalizedTopicId && normalizedTopicId === mainTopicId);
   }, [mainTopicId]);
 
@@ -332,9 +333,9 @@ export function ChatPanel({
   const activeTopicIsArchived = Boolean(activeTopic?.archivedAt);
   const unreadDividerVisible = useMemo(() => {
     if (isDm) return Boolean(dmCtx?.dmUnreadDividerMessageId);
-    const dividerMessageId = String(entryUnreadDivider?.messageId || "").trim();
-    const dividerTopicId = String(entryUnreadDivider?.topicId || "").trim();
-    const normalizedActiveTopicId = String(activeTopicId || "").trim();
+    const dividerMessageId = asTrimmedString(entryUnreadDivider?.messageId);
+    const dividerTopicId = asTrimmedString(entryUnreadDivider?.topicId);
+    const normalizedActiveTopicId = asTrimmedString(activeTopicId);
 
     return Boolean(dividerMessageId && dividerTopicId && normalizedActiveTopicId && dividerTopicId === normalizedActiveTopicId);
   }, [activeTopicId, entryUnreadDivider?.messageId, entryUnreadDivider?.topicId, isDm, dmCtx?.dmUnreadDividerMessageId]);
@@ -355,7 +356,7 @@ export function ChatPanel({
       return "";
     }
 
-    return String(entryUnreadDivider?.messageId || "").trim();
+    return asTrimmedString(entryUnreadDivider?.messageId);
   }, [entryUnreadDivider?.messageId, unreadDividerVisible, isDm, dmCtx?.dmUnreadDividerMessageId]);
 
   const dmUnreadScrollKeyRef = useRef("");
@@ -373,12 +374,12 @@ export function ChatPanel({
       return;
     }
 
-    const dmThreadId = String(roomId || "").trim();
+    const dmThreadId = asTrimmedString(roomId);
     if (!dmThreadId || messages.length === 0) {
       return;
     }
 
-    const dividerId = String(unreadDividerMessageId || "").trim();
+    const dividerId = asTrimmedString(unreadDividerMessageId);
     if (dividerId) {
       const dividerScrollKey = `${dmThreadId}:${dividerId}`;
       if (dmUnreadScrollKeyRef.current === dividerScrollKey) {
@@ -444,7 +445,7 @@ export function ChatPanel({
       return 0;
     }
 
-    const dividerIndex = messages.findIndex((message) => String(message.id || "").trim() === unreadDividerMessageId);
+    const dividerIndex = messages.findIndex((message) => asTrimmedString(message.id) === unreadDividerMessageId);
     if (dividerIndex < 0) {
       return 0;
     }
@@ -456,9 +457,9 @@ export function ChatPanel({
     const byKey = new Map<string, MentionCandidate>();
 
     (Array.isArray(mentionCandidates) ? mentionCandidates : []).forEach((candidate) => {
-      const key = String(candidate.key || "").trim();
-      const handle = String(candidate.handle || "").trim().toLowerCase();
-      const label = String(candidate.label || "").trim();
+      const key = asTrimmedString(candidate.key);
+      const handle = asTrimmedString(candidate.handle).toLowerCase();
+      const label = asTrimmedString(candidate.label);
       if (!key || !handle || !label) {
         return;
       }
@@ -468,13 +469,13 @@ export function ChatPanel({
         key,
         handle,
         label,
-        subtitle: String(candidate.subtitle || "").trim() || null
+        subtitle: asTrimmedString(candidate.subtitle) || null
       });
     });
 
     messages.forEach((message) => {
-      const userId = String(message.user_id || "").trim();
-      const label = String(message.user_name || "").trim();
+      const userId = asTrimmedString(message.user_id);
+      const label = asTrimmedString(message.user_name);
       const handle = toMentionHandle(label);
       const key = `user:${userId}`;
       if (!userId || !label || !handle || byKey.has(key)) {
@@ -570,7 +571,7 @@ export function ChatPanel({
     }
 
     setQuotedMessage({
-      userName: String(userName || "").trim() || "Unknown",
+      userName: asTrimmedString(userName) || "Unknown",
       text: normalizedQuote
     });
     insertQuoteToComposer(userName, normalizedQuote);
@@ -655,7 +656,7 @@ export function ChatPanel({
   });
 
   useEffect(() => {
-    const topicId = String(activeTopicId || "").trim();
+    const topicId = asTrimmedString(activeTopicId);
     resetMentionNavForTopic(topicId);
   }, [activeTopicId, resetMentionNavForTopic]);
 

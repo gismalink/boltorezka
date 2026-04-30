@@ -35,6 +35,7 @@ import type {
 import { ActionIconButton, resolveDisplayName } from "./serverProfileModal/serverProfileUtils";
 import { ServerVideoSettingsTab } from "./serverProfileModal/ServerVideoSettingsTab";
 import { ServerProfileModalProvider } from "./serverProfileModal/ServerProfileModalContext";
+import { asTrimmedString } from "../utils/stringUtils";
 
 type ServerProfileModalProps = {
   open: boolean;
@@ -234,7 +235,7 @@ export function ServerProfileModal({
   };
 
   useEffect(() => {
-    const nextName = String(currentServerName || "").trim();
+    const nextName = asTrimmedString(currentServerName);
     setRenameServerName(nextName);
     setRenameServerInitialValue(nextName);
     setIsEditingServerName(false);
@@ -283,7 +284,7 @@ export function ServerProfileModal({
 
   const canConfirmServerDelete =
     deleteConfirmNameInput.trim().length > 0
-    && deleteConfirmNameInput.trim() === String(currentServerName || "").trim();
+    && deleteConfirmNameInput.trim() === asTrimmedString(currentServerName);
   const normalizedRenameInitialName = renameServerInitialValue.trim();
   const normalizedRenameDraftName = renameServerName.trim();
   const renameServerChanged = normalizedRenameDraftName !== normalizedRenameInitialName;

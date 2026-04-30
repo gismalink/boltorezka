@@ -1,3 +1,5 @@
+import { asTrimmedString } from "../../utils/stringUtils";
+
 export type RealtimeGapRecoveryMode = "messages+topics" | "messages-only" | "topics-only";
 
 export type RealtimeGapRecoveryDecision = {
@@ -12,13 +14,6 @@ type DecideRealtimeGapRecoveryInput = {
   activeRoomId: string;
   activeTopicId: string | null;
 };
-
-function asTrimmedString(value: unknown): string {
-  if (typeof value !== "string") {
-    return "";
-  }
-  return value.trim();
-}
 
 function toRecoveryMode(
   shouldReloadMessages: boolean,

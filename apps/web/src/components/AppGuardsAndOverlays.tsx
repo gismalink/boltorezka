@@ -10,6 +10,7 @@ import { useRef, useState, type MouseEvent } from "react";
 import type { UiTheme } from "../domain";
 import { LegalLinks } from "./LegalLinks";
 import { Button, PixelCheckbox, PopupPortal } from "./uicomponents";
+import { asTrimmedString } from "../utils/stringUtils";
 
 function detectUiLang(): "ru" | "en" {
   return document.documentElement.lang === "en" ? "en" : "ru";
@@ -268,7 +269,7 @@ export function EmptyServerOnboarding({
   const [serverName, setServerName] = useState("");
 
   const submit = async () => {
-    const trimmed = String(serverName || "").trim();
+    const trimmed = asTrimmedString(serverName);
     if (!trimmed || creatingServer) {
       return;
     }

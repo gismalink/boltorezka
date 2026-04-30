@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { getDesktopUpdateBridge } from "../../../desktopBridge";
+import { asTrimmedString } from "../../../utils/stringUtils";
 
 type UseDesktopUpdateFlowArgs = {
   t: (key: string) => string;
@@ -29,7 +30,7 @@ export function useDesktopUpdateFlow({ t, pushToast }: UseDesktopUpdateFlowArgs)
       try {
         const result = await desktopUpdateBridge.downloadUpdate();
         if (!result?.ok && String(result?.reason || "") !== "no-available-update") {
-          const reason = String(result?.reason || "").trim();
+          const reason = asTrimmedString(result?.reason);
           pushToast(reason ? `${t("desktop.updateErrorToast")} (${reason})` : t("desktop.updateErrorToast"));
         }
       } catch {
@@ -43,13 +44,13 @@ export function useDesktopUpdateFlow({ t, pushToast }: UseDesktopUpdateFlowArgs)
           return;
         }
 
-        if (String(status?.downloadedVersion || "").trim()) {
+        if (asTrimmedString(status?.downloadedVersion)) {
           setDesktopUpdateReadyVersion(String(status.downloadedVersion).trim());
           setDesktopUpdateBannerDismissed(false);
           return;
         }
 
-        if (String(status?.availableVersion || "").trim()) {
+        if (asTrimmedString(status?.availableVersion)) {
           void requestDesktopUpdateDownload();
         }
       })
@@ -62,9 +63,9 @@ export function useDesktopUpdateFlow({ t, pushToast }: UseDesktopUpdateFlowArgs)
     });
 
     const unsubscribe = desktopUpdateBridge.onStatus((event) => {
-      const eventType = String(event?.event || "").trim();
-      const version = String(event?.version || "").trim();
-      const message = String(event?.message || event?.lastError || "").trim();
+      const eventType = asTrimmedString(event?.event);
+      const version = asTrimmedString(event?.version);
+      const message = asTrimmedString(event?.message || event?.lastError);
 
       if (eventType === "available" && version) {
         pushToast(`${t("desktop.updateAvailableToast")} ${version}`);

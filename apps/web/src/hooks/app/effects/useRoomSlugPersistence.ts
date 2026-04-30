@@ -1,7 +1,8 @@
 import { useEffect, useRef, type Dispatch, type SetStateAction } from "react";
+import { asTrimmedString } from "../../../utils/stringUtils";
 
 const getRoomSlugStorageKey = (serverId: string, roomSlugStorageKey: string) => {
-  const normalizedServerId = String(serverId || "").trim();
+  const normalizedServerId = asTrimmedString(serverId);
   return normalizedServerId ? `${roomSlugStorageKey}:${normalizedServerId}` : roomSlugStorageKey;
 };
 
@@ -25,7 +26,7 @@ export function useRoomSlugPersistence({
   const skipNextPersistRef = useRef(false);
 
   useEffect(() => {
-    const serverId = String(currentServerId || "").trim();
+    const serverId = asTrimmedString(currentServerId);
     if (!serverId) {
       return;
     }
@@ -36,7 +37,7 @@ export function useRoomSlugPersistence({
     }
 
     const storageKey = getRoomSlugStorageKey(serverId, roomSlugStorageKey);
-    const nextChatSlug = String(chatRoomSlug || roomSlug || "").trim();
+    const nextChatSlug = asTrimmedString(chatRoomSlug || roomSlug);
     if (!nextChatSlug) {
       return;
     }
@@ -45,7 +46,7 @@ export function useRoomSlugPersistence({
   }, [currentServerId, roomSlug, chatRoomSlug, roomSlugStorageKey]);
 
   useEffect(() => {
-    const serverId = String(currentServerId || "").trim();
+    const serverId = asTrimmedString(currentServerId);
     skipNextPersistRef.current = true;
 
     if (!serverId) {
@@ -55,7 +56,7 @@ export function useRoomSlugPersistence({
     }
 
     const storageKey = getRoomSlugStorageKey(serverId, roomSlugStorageKey);
-    const savedChatSlug = String(sessionStorage.getItem(storageKey) || "").trim();
+    const savedChatSlug = asTrimmedString(sessionStorage.getItem(storageKey));
     const defaultChatSlug = savedChatSlug || "general";
 
     setRoomSlug("");

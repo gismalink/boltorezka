@@ -8,6 +8,7 @@
 // Хук управления статусом прочтения: mark-read, разделитель непрочитанных,
 // автодогрузка истории и защита от рассинхрона при переключении комнаты/темы.
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
+import { asTrimmedString } from "../../../utils/stringUtils";
 import { api } from "../../../api";
 import { executeWsFirstWithHttpFallbackAwaitAck } from "../../../services/chatOperationExecutor";
 import type { Message, RoomTopic } from "../../../domain";
@@ -66,7 +67,7 @@ export function useChatPanelReadState({
   // Состояние, а не ref — чтобы зависящие useEffect (lock dataset) перезапускались.
   const [dividerScrolledForTopic, setDividerScrolledForTopic] = useState<string>("");
 
-  const normalizedCurrentUserId = String(currentUserId || "").trim();
+  const normalizedCurrentUserId = asTrimmedString(currentUserId);
 
   // Keep unread UX consistent with product rule: own messages are never considered unread.
   // We only trim a contiguous own-message tail because unread boundary is derived from the tail.
@@ -75,9 +76,9 @@ export function useChatPanelReadState({
   }, [normalizedCurrentUserId]);
 
   const markTopicReadWsFirst = useCallback(async (topicId: string, lastReadMessageId?: string) => {
-    const normalizedToken = String(authToken || "").trim();
-    const normalizedTopicId = String(topicId || "").trim();
-    const normalizedLastReadMessageId = String(lastReadMessageId || "").trim();
+    const normalizedToken = asTrimmedString(authToken);
+    const normalizedTopicId = asTrimmedString(topicId);
+    const normalizedLastReadMessageId = asTrimmedString(lastReadMessageId);
 
     if (!normalizedToken || !normalizedTopicId) {
       return { kind: "failed" as const };
@@ -116,14 +117,14 @@ export function useChatPanelReadState({
       return true;
     }
 
-    const normalizedRoomId = String(roomId || "").trim();
+    const normalizedRoomId = asTrimmedString(roomId);
     if (!normalizedRoomId) {
       return false;
     }
 
-    const normalizedTopicId = String(activeTopicId || "").trim();
+    const normalizedTopicId = asTrimmedString(activeTopicId);
     return messages.every((message) => {
-      const messageRoomId = String(message.room_id || "").trim();
+      const messageRoomId = asTrimmedString(message.room_id);
       if (!messageRoomId || messageRoomId !== normalizedRoomId) {
         return false;
       }
@@ -132,7 +133,7 @@ export function useChatPanelReadState({
         return true;
       }
 
-      const messageTopicId = String(message.topic_id || "").trim();
+      const messageTopicId = asTrimmedString(message.topic_id);
       return messageTopicId === normalizedTopicId;
     });
   }, [activeTopicId, messages, roomId]);
@@ -140,8 +141,8 @@ export function useChatPanelReadState({
   const getTopicUnreadCount = useCallback((topic: RoomTopic): number => {
     const sourceUnreadCount = Math.max(0, Number(topic.unreadCount || 0));
 
-    const normalizedTopicId = String(topic.id || "").trim();
-    const normalizedActiveTopicId = String(activeTopicId || "").trim();
+    const normalizedTopicId = asTrimmedString(topic.id);
+    const normalizedActiveTopicId = asTrimmedString(activeTopicId);
 
     const isActiveTopic = Boolean(normalizedTopicId && normalizedActiveTopicId && normalizedTopicId === normalizedActiveTopicId);
     if (!isActiveTopic || !isMessageSetAlignedWithActiveContext()) {
@@ -205,8 +206,8 @@ export function useChatPanelReadState({
   }, [authToken, getTopicUnreadCount, markReadSaving, onApplyTopicReadLocal, t, topics]);
 
   const markTopicUnreadFromMessage = useCallback(async (messageId: string) => {
-    const topicId = String(activeTopicId || "").trim();
-    const normalizedMessageId = String(messageId || "").trim();
+    const topicId = asTrimmedString(activeTopicId);
+    const normalizedMessageId = asTrimmedString(messageId);
     if (!authToken || !topicId || !normalizedMessageId || markReadSaving) {
       return;
     }
@@ -218,13 +219,13 @@ export function useChatPanelReadState({
     }
 
     const selectedMessage = messages[selectedIndex];
-    const selectedMessageUserId = String(selectedMessage?.user_id || "").trim();
+    const selectedMessageUserId = asTrimmedString(selectedMessage?.user_id);
     if (normalizedCurrentUserId && selectedMessageUserId && selectedMessageUserId === normalizedCurrentUserId) {
       setMarkReadStatusText(t("chat.markUnreadUnavailable"));
       return;
     }
 
-    const previousMessageId = String(messages[selectedIndex - 1]?.id || "").trim();
+    const previousMessageId = asTrimmedString(messages[selectedIndex - 1]?.id);
     if (!previousMessageId) {
       setMarkReadStatusText(t("chat.markUnreadUnavailable"));
       return;
@@ -257,7 +258,7 @@ export function useChatPanelReadState({
   }, [activeTopicId]);
 
   useEffect(() => {
-    const normalizedRoomId = String(roomId || "").trim();
+    const normalizedRoomId = asTrimmedString(roomId);
     if (!normalizedRoomId) {
       // Ignore transient room-id gaps during reconnect/rejoin to avoid flicker.
       return;
@@ -280,7 +281,7 @@ export function useChatPanelReadState({
   }, [roomId]);
 
   useEffect(() => {
-    const normalizedTopicId = String(activeTopicId || "").trim();
+    const normalizedTopicId = asTrimmedString(activeTopicId);
     if (!normalizedTopicId) {
       unreadEntryTopicRef.current = "";
       return;
@@ -297,7 +298,7 @@ export function useChatPanelReadState({
   }, [activeTopicId, topics, getTopicUnreadCount]);
 
   useEffect(() => {
-    const normalizedTopicId = String(activeTopicId || "").trim();
+    const normalizedTopicId = asTrimmedString(activeTopicId);
     if (!normalizedTopicId) {
       return;
     }
@@ -333,7 +334,7 @@ export function useChatPanelReadState({
     const effectiveUnread = toEffectiveUnreadCount(sourceUnreadCount, messages);
     if (effectiveUnread > 0 && messages.length > 0) {
       const dividerIndex = Math.max(0, messages.length - effectiveUnread);
-      const fallbackMessageId = String(messages[dividerIndex]?.id || "").trim();
+      const fallbackMessageId = asTrimmedString(messages[dividerIndex]?.id);
       if (fallbackMessageId) {
         setEntryUnreadDivider({
           topicId: normalizedTopicId,
@@ -358,7 +359,7 @@ export function useChatPanelReadState({
       return;
     }
 
-    const normalizedTopicId = String(activeTopicId || "").trim();
+    const normalizedTopicId = asTrimmedString(activeTopicId);
     if (!normalizedTopicId || entryUnreadDivider.topicId !== normalizedTopicId) {
       return;
     }
@@ -428,20 +429,20 @@ export function useChatPanelReadState({
   }, []);
 
   useEffect(() => {
-    const normalizedToken = String(authToken || "").trim();
-    const normalizedTopicId = String(activeTopicId || "").trim();
-    const normalizedRoomId = String(roomId || "").trim();
+    const normalizedToken = asTrimmedString(authToken);
+    const normalizedTopicId = asTrimmedString(activeTopicId);
+    const normalizedRoomId = asTrimmedString(roomId);
     if (!normalizedToken || !normalizedTopicId || !normalizedRoomId) {
       return;
     }
 
-    const topic = topics.find((item) => String(item.id || "").trim() === normalizedTopicId);
+    const topic = topics.find((item) => asTrimmedString(item.id) === normalizedTopicId);
     if (!topic) {
       return;
     }
 
     const dividerForActiveTopicReady = Boolean(
-      entryUnreadDivider?.topicId === normalizedTopicId && String(entryUnreadDivider.messageId || "").trim()
+      entryUnreadDivider?.topicId === normalizedTopicId && asTrimmedString(entryUnreadDivider.messageId)
     );
     const shouldDelayAutoReadUntilDivider = Math.max(0, Number(topic.unreadCount || 0)) > 0
       && !dividerForActiveTopicReady
@@ -450,7 +451,7 @@ export function useChatPanelReadState({
       return;
     }
 
-    const topicRoomId = String(topic.roomId || "").trim();
+    const topicRoomId = asTrimmedString(topic.roomId);
     if (!topicRoomId || topicRoomId !== normalizedRoomId) {
       return;
     }
@@ -470,7 +471,7 @@ export function useChatPanelReadState({
     }
 
     const markFullyVisibleUnreadMessages = () => {
-      const latestTopic = topics.find((item) => String(item.id || "").trim() === normalizedTopicId);
+      const latestTopic = topics.find((item) => asTrimmedString(item.id) === normalizedTopicId);
       if (!latestTopic) {
         return;
       }
@@ -493,7 +494,7 @@ export function useChatPanelReadState({
 
       for (let index = firstUnreadIndex; index < messages.length; index += 1) {
         const message = messages[index];
-        const messageId = String(message.id || "").trim();
+        const messageId = asTrimmedString(message.id);
         if (!messageId) {
           break;
         }
@@ -596,12 +597,12 @@ export function useChatPanelReadState({
   }, [activeTopicId, authToken, chatLogRef, entryUnreadDivider?.messageId, entryUnreadDivider?.topicId, getTopicUnreadCount, isMessageSetAlignedWithActiveContext, markTopicReadWsFirst, messages, messagesHasMore, roomId, topics]);
 
   useEffect(() => {
-    const normalizedTopicId = String(activeTopicId || "").trim();
+    const normalizedTopicId = asTrimmedString(activeTopicId);
     if (!normalizedTopicId) {
       return;
     }
 
-    const topic = topics.find((item) => String(item.id || "").trim() === normalizedTopicId);
+    const topic = topics.find((item) => asTrimmedString(item.id) === normalizedTopicId);
     if (!topic || Math.max(0, Number(getTopicUnreadCount(topic) || 0)) === 0) {
       delete lastAutoMarkedMessageIdByTopicRef.current[normalizedTopicId];
     }

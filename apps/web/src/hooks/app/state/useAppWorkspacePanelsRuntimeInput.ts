@@ -1,5 +1,6 @@
 import { api } from "../../../api";
 import { useAppWorkspacePanelsRuntime } from "./useAppWorkspacePanelsRuntime";
+import { asTrimmedString } from "../../../utils/stringUtils";
 
 type WorkspacePanelsRuntimeInput = Parameters<typeof useAppWorkspacePanelsRuntime>[0];
 type RoomsPanelInput = WorkspacePanelsRuntimeInput["roomsPanel"];
@@ -22,8 +23,8 @@ export function useAppWorkspacePanelsRuntimeInput({
     roomsPanel: {
       ...roomsPanel,
       onSetRoomNotificationMutePreset: async (roomId: string, preset: RoomMutePreset) => {
-        const normalizedToken = String(token || "").trim();
-        const normalizedRoomId = String(roomId || "").trim();
+        const normalizedToken = asTrimmedString(token);
+        const normalizedRoomId = asTrimmedString(roomId);
         if (!normalizedToken || !normalizedRoomId) {
           return;
         }

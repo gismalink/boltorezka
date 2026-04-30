@@ -4,6 +4,7 @@
  */
 // Утилиты композера чата: форматирование размера вложений и вставка служебного текста.
 
+import { asTrimmedString } from "../../../utils/stringUtils";
 export function formatAttachmentSizeValue(bytes: number): string {
   const normalized = Number(bytes || 0);
   if (!Number.isFinite(normalized) || normalized <= 0) {
@@ -22,7 +23,7 @@ export function formatAttachmentSizeValue(bytes: number): string {
 }
 
 export function applyMentionToText(chatText: string, userName: string): string {
-  const normalizedUserName = String(userName || "").trim();
+  const normalizedUserName = asTrimmedString(userName);
   if (!normalizedUserName) {
     return String(chatText || "");
   }
@@ -42,7 +43,7 @@ export function applyQuoteToText(chatText: string, text: string): string {
   const quotedLines = quoteSource
     .split("\n")
     .slice(0, 4)
-    .map((line) => `> ${String(line || "").trim() || "..."}`)
+    .map((line) => `> ${asTrimmedString(line) || "..."}`)
     .join("\n");
 
   const current = String(chatText || "");

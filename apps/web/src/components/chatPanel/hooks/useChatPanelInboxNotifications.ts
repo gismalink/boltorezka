@@ -8,6 +8,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "../../../api";
 import { getDesktopNotificationBridge } from "../../../desktopBridge";
+import { asTrimmedString } from "../../../utils/stringUtils";
 
 type InboxItem = {
   id: string;
@@ -79,7 +80,7 @@ export function useChatPanelInboxNotifications({
       if (Array.isArray(parsed)) {
         notifiedInboxEventIdsRef.current = new Set(
           parsed
-            .map((item) => String(item || "").trim())
+            .map((item) => asTrimmedString(item))
             .filter(Boolean)
             .slice(-200)
         );
@@ -105,7 +106,7 @@ export function useChatPanelInboxNotifications({
         readAt: item.readAt,
         messageId: item.messageId,
         topicId: item.topicId,
-        roomSlug: String(item.payload?.roomSlug || "").trim(),
+        roomSlug: asTrimmedString(item.payload?.roomSlug),
         priority: item.priority
       }));
       setInboxItems(nextItems);
@@ -159,7 +160,7 @@ export function useChatPanelInboxNotifications({
           readAt: entry.readAt,
           messageId: entry.messageId,
           topicId: entry.topicId,
-          roomSlug: String(entry.payload?.roomSlug || "").trim(),
+          roomSlug: asTrimmedString(entry.payload?.roomSlug),
           priority: entry.priority
         }));
         inboxItemsRef.current = nextItems;
@@ -174,8 +175,8 @@ export function useChatPanelInboxNotifications({
       return;
     }
 
-    const targetRoomSlug = String(item.roomSlug || "").trim();
-    const targetMessageId = String(item.messageId || "").trim();
+    const targetRoomSlug = asTrimmedString(item.roomSlug);
+    const targetMessageId = asTrimmedString(item.messageId);
     if (!targetRoomSlug || !targetMessageId) {
       return;
     }
@@ -206,7 +207,7 @@ export function useChatPanelInboxNotifications({
     }
 
     return desktopBridge.onOpen((payload) => {
-      const eventId = String(payload?.eventId || "").trim();
+      const eventId = asTrimmedString(payload?.eventId);
       if (!eventId) {
         return;
       }
@@ -226,7 +227,7 @@ export function useChatPanelInboxNotifications({
         return;
       }
 
-      const eventId = String(payload.eventId || "").trim();
+      const eventId = asTrimmedString(payload.eventId);
       if (!eventId) {
         return;
       }
@@ -237,7 +238,7 @@ export function useChatPanelInboxNotifications({
     navigator.serviceWorker.addEventListener("message", handleServiceWorkerMessage);
 
     const params = new URLSearchParams(window.location.search);
-    const pushedEventId = String(params.get("pushOpen") || "").trim();
+    const pushedEventId = asTrimmedString(params.get("pushOpen"));
     if (pushedEventId) {
       void openInboxItem(pushedEventId);
       params.delete("pushOpen");
@@ -324,9 +325,9 @@ export function useChatPanelInboxNotifications({
       }
 
       const json = subscription.toJSON();
-      const endpoint = String(json.endpoint || "").trim();
-      const p256dh = String(json.keys?.p256dh || "").trim();
-      const auth = String(json.keys?.auth || "").trim();
+      const endpoint = asTrimmedString(json.endpoint);
+      const p256dh = asTrimmedString(json.keys?.p256dh);
+      const auth = asTrimmedString(json.keys?.auth);
       if (!endpoint || !p256dh || !auth) {
         return;
       }
@@ -408,7 +409,7 @@ export function useChatPanelInboxNotifications({
           readAt: item.readAt,
           messageId: item.messageId,
           topicId: item.topicId,
-          roomSlug: String(item.payload?.roomSlug || "").trim(),
+          roomSlug: asTrimmedString(item.payload?.roomSlug),
           priority: item.priority
         }));
 
@@ -436,9 +437,9 @@ export function useChatPanelInboxNotifications({
             return false;
           }
 
-          const sameRoom = String(item.roomSlug || "").trim() === String(activeRoomSlugRef.current || "").trim();
-          const itemTopicId = String(item.topicId || "").trim();
-          const sameTopic = !itemTopicId || itemTopicId === String(activeTopicIdRef.current || "").trim();
+          const sameRoom = asTrimmedString(item.roomSlug) === asTrimmedString(activeRoomSlugRef.current);
+          const itemTopicId = asTrimmedString(item.topicId);
+          const sameTopic = !itemTopicId || itemTopicId === asTrimmedString(activeTopicIdRef.current);
           return sameRoom && sameTopic;
         };
 

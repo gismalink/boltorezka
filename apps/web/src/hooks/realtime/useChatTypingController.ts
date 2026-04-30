@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { asTrimmedString } from "../../utils/stringUtils";
 
 type ChatTypingEntry = {
   userName: string;
@@ -46,7 +47,7 @@ export function useChatTypingController({
   }, []);
 
   const sendChatTypingState = useCallback((targetRoomSlug: string, isTyping: boolean) => {
-    const slug = String(targetRoomSlug || "").trim();
+    const slug = asTrimmedString(targetRoomSlug);
     if (!slug || !userId) {
       return;
     }
@@ -96,9 +97,9 @@ export function useChatTypingController({
   }, [chatRoomSlug, scheduleChatTypingStop, sendChatTypingState, setChatText, typingPingIntervalMs, userId]);
 
   const applyRemoteTypingPayload = useCallback((payload: Record<string, unknown>) => {
-    const typingRoomSlug = String(payload.roomSlug || "").trim();
-    const typingUserId = String(payload.userId || "").trim();
-    const typingUserName = String(payload.userName || "").trim();
+    const typingRoomSlug = asTrimmedString(payload.roomSlug);
+    const typingUserId = asTrimmedString(payload.userId);
+    const typingUserName = asTrimmedString(payload.userName);
 
     if (!typingRoomSlug || !typingUserId || !typingUserName || typingUserId === userId) {
       return;

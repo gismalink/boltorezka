@@ -12,6 +12,7 @@ import type {
   ServerListItem,
   TelemetrySummary
 } from "../../../domain";
+import { asTrimmedString } from "../../../utils/stringUtils";
 
 type UseAppCoreStateInput = {
   clientBuildSha: string;
@@ -44,8 +45,8 @@ export function useAppCoreState({
       return false;
     }
 
-    const expectedBuildSha = String(sessionStorage.getItem(versionUpdateExpectedShaKey) || "").trim();
-    const currentBuildSha = String(clientBuildSha || "").trim();
+    const expectedBuildSha = asTrimmedString(sessionStorage.getItem(versionUpdateExpectedShaKey));
+    const currentBuildSha = asTrimmedString(clientBuildSha);
     if (!expectedBuildSha || !currentBuildSha) {
       sessionStorage.removeItem(versionUpdatePendingKey);
       sessionStorage.removeItem(versionUpdateExpectedShaKey);
@@ -84,7 +85,7 @@ export function useAppCoreState({
   const [roomMediaTopologyBySlug, setRoomMediaTopologyBySlug] = useState<Record<string, "livekit">>({});
   const [servers, setServers] = useState<ServerListItem[]>([]);
   const [serversLoading, setServersLoading] = useState(false);
-  const [currentServerId, setCurrentServerId] = useState(() => String(localStorage.getItem(currentServerIdStorageKey) || "").trim());
+  const [currentServerId, setCurrentServerId] = useState(() => asTrimmedString(localStorage.getItem(currentServerIdStorageKey)));
   const [creatingServer, setCreatingServer] = useState(false);
   const [serverMembers, setServerMembers] = useState<ServerMemberItem[]>([]);
   const [serverMembersLoading, setServerMembersLoading] = useState(false);

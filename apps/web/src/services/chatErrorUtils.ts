@@ -6,6 +6,7 @@
  * - `getErrorCode` — приводит произвольный `unknown`-ошибочный объект к строковому коду.
  * - `normalizeBusinessErrorCode` — превращает ApiError/строки/объекты в единый формат для UI.
  */
+import { asTrimmedString } from "../utils/stringUtils";
 export function extractBusinessCodeFromErrorMessage(message: string): string {
   const parts = String(message || "")
     .split(":")
@@ -21,12 +22,12 @@ export function extractBusinessCodeFromErrorMessage(message: string): string {
 }
 
 export function getErrorCode(error: unknown): string {
-  const explicitCode = String((error as { code?: string } | null)?.code || "").trim();
+  const explicitCode = asTrimmedString((error as { code?: string } | null)?.code);
   if (explicitCode) {
     return explicitCode;
   }
 
-  const message = String((error as { message?: string } | null)?.message || "").trim();
+  const message = asTrimmedString((error as { message?: string } | null)?.message);
   return extractBusinessCodeFromErrorMessage(message);
 }
 

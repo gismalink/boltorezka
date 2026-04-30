@@ -15,15 +15,9 @@ import type { Message, PresenceMember, RoomTopic, WsIncoming } from "../domain";
 import { RTC_FEATURE_INITIAL_STATE_REPLAY } from "../hooks/rtc/voiceCallConfig";
 import { trimMessagesInMemory } from "./chatMemory";
 import { REALTIME_SERVER_READY_EVENT } from "../constants/realtimeEvents";
+import { asTrimmedString } from "../utils/stringUtils";
 
 const OUTSIDE_ROOMS_PRESENCE_KEY = "__outside_rooms__";
-
-function asTrimmedString(value: unknown): string {
-  if (typeof value !== "string") {
-    return "";
-  }
-  return value.trim();
-}
 
 export function extractMentionUserIdsFromChatPayload(payload: Record<string, unknown>): string[] {
   const dedup = new Set<string>();
@@ -320,10 +314,6 @@ export class WsMessageController {
     this.options = options;
   }
 
-  private asTrimmedString(value: unknown): string {
-    return String(value || "").trim();
-  }
-
   private readRealtimeSeq(rawValue: unknown): number | null {
     const raw = Number(rawValue);
     if (!Number.isFinite(raw)) {
@@ -335,7 +325,7 @@ export class WsMessageController {
   }
 
   private readRealtimeScope(message: WsIncoming): string {
-    const explicitScope = this.asTrimmedString(message.realtimeScope ?? message.realtime_scope);
+    const explicitScope = asTrimmedString(message.realtimeScope ?? message.realtime_scope);
     if (explicitScope) {
       return explicitScope;
     }
@@ -396,7 +386,7 @@ export class WsMessageController {
 
     const record = payload as Record<string, unknown>;
     for (const key of keys) {
-      const value = this.asTrimmedString(record[key]);
+      const value = asTrimmedString(record[key]);
       if (value) {
         return value;
       }
@@ -411,8 +401,8 @@ export class WsMessageController {
   }
 
   private toPresenceMember(item: { userId?: string; userName?: string } | null | undefined): PresenceMember | null {
-    const userId = this.asTrimmedString(item?.userId);
-    const userName = this.asTrimmedString(item?.userName);
+    const userId = asTrimmedString(item?.userId);
+    const userName = asTrimmedString(item?.userName);
     if (!userId) {
       return null;
     }
@@ -435,7 +425,7 @@ export class WsMessageController {
 
   private presenceMembersFingerprint(members: PresenceMember[]): string {
     return members
-      .map((member) => `${this.asTrimmedString(member.userId)}:${this.asTrimmedString(member.userName)}`)
+      .map((member) => `${asTrimmedString(member.userId)}:${asTrimmedString(member.userName)}`)
       .sort()
       .join("|");
   }
@@ -458,8 +448,8 @@ export class WsMessageController {
       return false;
     }
 
-    const normalizedPrev = prev.map((item) => this.asTrimmedString(item)).sort();
-    const normalizedNext = next.map((item) => this.asTrimmedString(item)).sort();
+    const normalizedPrev = prev.map((item) => asTrimmedString(item)).sort();
+    const normalizedNext = next.map((item) => asTrimmedString(item)).sort();
     return normalizedPrev.join("|") === normalizedNext.join("|");
   }
 
@@ -497,7 +487,7 @@ export class WsMessageController {
     const attachments = attachmentsRaw
       .filter((item): item is Record<string, unknown> => Boolean(item && typeof item === "object"))
       .map((item) => {
-        const attachmentType = String(item.type || "").trim().toLowerCase();
+        const attachmentType = asTrimmedString(item.type).toLowerCase();
         const normalizedAttachmentType: "image" | "document" | "audio" =
           attachmentType === "audio" || attachmentType === "document"
             ? attachmentType
@@ -561,8 +551,8 @@ export class WsMessageController {
    * Processes transport-level acknowledgement and unblocks pending request state.
    */
   private handleAck(message: WsIncoming): void {
-    const requestId = this.asTrimmedString(message.payload?.requestId);
-    const eventType = this.asTrimmedString(message.payload?.eventType);
+    const requestId = asTrimmedString(message.payload?.requestId);
+    const eventType = asTrimmedString(message.payload?.eventType);
     if (!requestId) {
       return;
     }
@@ -587,8 +577,8 @@ export class WsMessageController {
    * Processes negative acknowledgement and updates request/message state accordingly.
    */
   private handleNack(message: WsIncoming): void {
-    const requestId = this.asTrimmedString(message.payload?.requestId);
-    const eventType = this.asTrimmedString(message.payload?.eventType);
+    const requestId = asTrimmedString(message.payload?.requestId);
+    const eventType = asTrimmedString(message.payload?.eventType);
     const code = String(message.payload?.code || "UnknownError");
     const nackMessage = String(message.payload?.message || "Request failed");
 
@@ -627,21 +617,21 @@ export class WsMessageController {
       ? payload.topic as Record<string, unknown>
       : null;
     const senderRequestId = typeof payload.senderRequestId === "string" ? payload.senderRequestId : undefined;
-    const incomingRoomSlug = this.asTrimmedString(
+    const incomingRoomSlug = asTrimmedString(
       payload.roomSlug
       || payload.room_slug
       || payloadRoom?.slug
       || payloadRoom?.roomSlug
       || payloadRoom?.room_slug
     );
-    const incomingRoomId = this.asTrimmedString(
+    const incomingRoomId = asTrimmedString(
       payload.roomId
       || payload.room_id
       || payloadRoom?.id
       || payloadRoom?.roomId
       || payloadRoom?.room_id
     );
-    const incomingTopicId = this.asTrimmedString(
+    const incomingTopicId = asTrimmedString(
       payload.topicId
       || payload.topic_id
       || payloadTopic?.id
@@ -653,16 +643,16 @@ export class WsMessageController {
       roomId: incomingRoomId || undefined,
       roomSlug: incomingRoomSlug || undefined,
       topicId: incomingTopicId || undefined,
-      topicSlug: this.asTrimmedString(payload.topicSlug || payload.topic_slug) || undefined,
-      messageId: this.asTrimmedString(payload.id) || undefined,
-      userId: this.asTrimmedString(payload.userId || payload.user_id) || undefined,
-      userName: this.asTrimmedString(payload.userName || payload.user_name) || undefined,
-      createdAt: this.asTrimmedString(payload.createdAt || payload.created_at) || undefined,
+      topicSlug: asTrimmedString(payload.topicSlug || payload.topic_slug) || undefined,
+      messageId: asTrimmedString(payload.id) || undefined,
+      userId: asTrimmedString(payload.userId || payload.user_id) || undefined,
+      userName: asTrimmedString(payload.userName || payload.user_name) || undefined,
+      createdAt: asTrimmedString(payload.createdAt || payload.created_at) || undefined,
       senderRequestId,
       mentionUserIds: mentionUserIds.length > 0 ? mentionUserIds : undefined
     });
-    const activeChatRoomSlug = this.asTrimmedString(this.options.getActiveChatRoomSlug?.());
-    const activeTopicId = this.asTrimmedString(this.options.getActiveTopicId?.());
+    const activeChatRoomSlug = asTrimmedString(this.options.getActiveChatRoomSlug?.());
+    const activeTopicId = asTrimmedString(this.options.getActiveTopicId?.());
     if (incomingRoomSlug && activeChatRoomSlug && incomingRoomSlug !== activeChatRoomSlug) {
       if (!senderRequestId) {
         return;
@@ -718,7 +708,7 @@ export class WsMessageController {
   }
 
   private handleChatEdited(message: WsIncoming): void {
-    const messageId = this.asTrimmedString(message.payload?.id);
+    const messageId = asTrimmedString(message.payload?.id);
     if (!messageId) {
       return;
     }
@@ -737,7 +727,7 @@ export class WsMessageController {
   }
 
   private handleChatDeleted(message: WsIncoming): void {
-    const messageId = this.asTrimmedString(message.payload?.id);
+    const messageId = asTrimmedString(message.payload?.id);
     if (!messageId) {
       return;
     }
@@ -850,8 +840,8 @@ export class WsMessageController {
     }
 
     const topic = raw as Record<string, unknown>;
-    const id = this.asTrimmedString(topic.id);
-    const roomId = this.asTrimmedString(topic.roomId);
+    const id = asTrimmedString(topic.id);
+    const roomId = asTrimmedString(topic.roomId);
     if (!id || !roomId) {
       return undefined;
     }
@@ -860,8 +850,8 @@ export class WsMessageController {
       id,
       roomId,
       createdBy: typeof topic.createdBy === "string" ? topic.createdBy : null,
-      slug: this.asTrimmedString(topic.slug),
-      title: String(topic.title || "").trim(),
+      slug: asTrimmedString(topic.slug),
+      title: asTrimmedString(topic.title),
       position: Number(topic.position || 0),
       isPinned: Boolean(topic.isPinned),
       archivedAt: typeof topic.archivedAt === "string" ? topic.archivedAt : null,
@@ -936,10 +926,10 @@ export class WsMessageController {
     }
 
     const settings = settingsRaw as Record<string, unknown>;
-    const id = this.asTrimmedString(settings.id);
-    const userId = this.asTrimmedString(settings.userId);
-    const scopeType = this.asTrimmedString(settings.scopeType) as "server" | "room" | "topic";
-    const mode = this.asTrimmedString(settings.mode) as "all" | "mentions" | "none";
+    const id = asTrimmedString(settings.id);
+    const userId = asTrimmedString(settings.userId);
+    const scopeType = asTrimmedString(settings.scopeType) as "server" | "room" | "topic";
+    const mode = asTrimmedString(settings.mode) as "all" | "mentions" | "none";
 
     if (!id || !userId || !scopeType || !mode) {
       return;
@@ -959,24 +949,24 @@ export class WsMessageController {
         createdAt: String(settings.createdAt || new Date().toISOString()),
         updatedAt: String(settings.updatedAt || new Date().toISOString())
       },
-      ts: this.asTrimmedString(message.payload?.ts) || undefined
+      ts: asTrimmedString(message.payload?.ts) || undefined
     });
   }
 
   private handleScreenShareState(message: WsIncoming): void {
     this.options.onScreenShareState?.({
-      roomId: this.asTrimmedString(message.payload?.roomId) || undefined,
-      roomSlug: this.asTrimmedString(message.payload?.roomSlug) || undefined,
+      roomId: asTrimmedString(message.payload?.roomId) || undefined,
+      roomSlug: asTrimmedString(message.payload?.roomSlug) || undefined,
       active: typeof message.payload?.active === "boolean" ? message.payload.active : undefined,
       ownerUserId:
         typeof message.payload?.ownerUserId === "string"
-          ? this.asTrimmedString(message.payload.ownerUserId)
+          ? asTrimmedString(message.payload.ownerUserId)
           : message.payload?.ownerUserId === null
             ? null
             : undefined,
       ownerUserName:
         typeof message.payload?.ownerUserName === "string"
-          ? this.asTrimmedString(message.payload.ownerUserName)
+          ? asTrimmedString(message.payload.ownerUserName)
           : message.payload?.ownerUserName === null
             ? null
             : undefined,
@@ -999,8 +989,8 @@ export class WsMessageController {
     }
 
     this.options.onCallMicState?.({
-      fromUserId: this.asTrimmedString(message.payload?.fromUserId || message.payload?.userId) || undefined,
-      fromUserName: this.asTrimmedString(message.payload?.fromUserName || message.payload?.userName) || undefined,
+      fromUserId: asTrimmedString(message.payload?.fromUserId || message.payload?.userId) || undefined,
+      fromUserName: asTrimmedString(message.payload?.fromUserName || message.payload?.userName) || undefined,
       muted: typeof mutedRaw === "boolean" ? mutedRaw : undefined,
       speaking: typeof speakingRaw === "boolean" ? speakingRaw : undefined,
       audioMuted: typeof audioMutedRaw === "boolean" ? audioMutedRaw : undefined
@@ -1015,9 +1005,9 @@ export class WsMessageController {
     const fromUserName = String(message.payload?.fromUserName || message.payload?.fromUserId || "unknown");
     this.options.pushCallLog(`call.video_state from ${fromUserName}`);
     this.options.onCallVideoState?.({
-      fromUserId: this.asTrimmedString(message.payload?.fromUserId || message.payload?.userId) || undefined,
-      fromUserName: this.asTrimmedString(message.payload?.fromUserName || message.payload?.userName) || undefined,
-      roomSlug: this.asTrimmedString(message.payload?.roomSlug) || undefined,
+      fromUserId: asTrimmedString(message.payload?.fromUserId || message.payload?.userId) || undefined,
+      fromUserName: asTrimmedString(message.payload?.fromUserName || message.payload?.userName) || undefined,
+      roomSlug: asTrimmedString(message.payload?.roomSlug) || undefined,
       settings:
         message.payload?.settings && typeof message.payload.settings === "object"
           ? (message.payload.settings as Record<string, unknown>)
@@ -1031,7 +1021,7 @@ export class WsMessageController {
       return;
     }
 
-    const roomSlug = this.asTrimmedString(message.payload?.roomSlug) || undefined;
+    const roomSlug = asTrimmedString(message.payload?.roomSlug) || undefined;
     const participants: unknown[] = Array.isArray(message.payload?.participants)
       ? message.payload?.participants
       : [];
@@ -1056,8 +1046,8 @@ export class WsMessageController {
       };
 
       normalizedParticipants.push({
-        userId: this.asTrimmedString(participant.userId) || undefined,
-        userName: this.asTrimmedString(participant.userName) || undefined,
+        userId: asTrimmedString(participant.userId) || undefined,
+        userName: asTrimmedString(participant.userName) || undefined,
         mic: {
           muted: typeof participant.mic?.muted === "boolean" ? participant.mic.muted : undefined,
           speaking: typeof participant.mic?.speaking === "boolean" ? participant.mic.speaking : undefined,
@@ -1089,8 +1079,8 @@ export class WsMessageController {
         video?: { localVideoEnabled?: unknown };
       };
 
-      const fromUserId = this.asTrimmedString(participant.userId) || undefined;
-      const fromUserName = this.asTrimmedString(participant.userName) || undefined;
+      const fromUserId = asTrimmedString(participant.userId) || undefined;
+      const fromUserName = asTrimmedString(participant.userName) || undefined;
 
       this.options.onCallMicState?.({
         fromUserId,
@@ -1117,7 +1107,7 @@ export class WsMessageController {
   }
 
   private handleRoomPresence(message: WsIncoming): void {
-    const roomSlug = this.asTrimmedString(message.payload?.roomSlug);
+    const roomSlug = asTrimmedString(message.payload?.roomSlug);
     if (!roomSlug) {
       return;
     }
@@ -1156,7 +1146,7 @@ export class WsMessageController {
     const detailsNext: Record<string, PresenceMember[]> = {};
 
     rooms.forEach((room: { roomSlug?: string; users?: Array<{ userId?: string; userName?: string }> }) => {
-      const roomSlug = this.asTrimmedString(room?.roomSlug) || OUTSIDE_ROOMS_PRESENCE_KEY;
+      const roomSlug = asTrimmedString(room?.roomSlug) || OUTSIDE_ROOMS_PRESENCE_KEY;
 
       if (roomSlug !== OUTSIDE_ROOMS_PRESENCE_KEY) {
         this.options.onRoomMediaTopology?.({
@@ -1294,7 +1284,7 @@ export class WsMessageController {
         return;
       case "room.joined":
       {
-        const roomSlug = this.asTrimmedString(message.payload?.roomSlug);
+        const roomSlug = asTrimmedString(message.payload?.roomSlug);
         this.options.setRoomSlug(roomSlug);
         if (roomSlug) {
           this.options.onRoomMediaTopology?.({
@@ -1305,7 +1295,7 @@ export class WsMessageController {
         return;
       }
       case "server.ready": {
-        const appBuildSha = this.asTrimmedString(message.payload?.appBuildSha);
+        const appBuildSha = asTrimmedString(message.payload?.appBuildSha);
         if (appBuildSha && typeof window !== "undefined") {
           window.dispatchEvent(
             new CustomEvent(REALTIME_SERVER_READY_EVENT, {

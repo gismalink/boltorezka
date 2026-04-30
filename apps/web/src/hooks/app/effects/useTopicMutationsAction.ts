@@ -1,6 +1,7 @@
 import { useCallback, type Dispatch, type SetStateAction } from "react";
 import { api } from "../../../api";
 import type { RoomTopic } from "../../../domain";
+import { asTrimmedString } from "../../../utils/stringUtils";
 
 type UseTopicMutationsActionArgs = {
   token: string;
@@ -9,7 +10,7 @@ type UseTopicMutationsActionArgs = {
 
 export function useTopicMutationsAction({ token, setChatTopics }: UseTopicMutationsActionArgs) {
   const updateTopic = useCallback(async (topicId: string, title: string) => {
-    const normalizedToken = String(token || "").trim();
+    const normalizedToken = asTrimmedString(token);
     if (!normalizedToken || !topicId) {
       return;
     }
@@ -21,7 +22,7 @@ export function useTopicMutationsAction({ token, setChatTopics }: UseTopicMutati
   }, [token, setChatTopics]);
 
   const archiveTopic = useCallback(async (topicId: string) => {
-    const normalizedToken = String(token || "").trim();
+    const normalizedToken = asTrimmedString(token);
     if (!normalizedToken || !topicId) {
       return;
     }
@@ -33,7 +34,7 @@ export function useTopicMutationsAction({ token, setChatTopics }: UseTopicMutati
   }, [token, setChatTopics]);
 
   const unarchiveTopic = useCallback(async (topicId: string) => {
-    const normalizedToken = String(token || "").trim();
+    const normalizedToken = asTrimmedString(token);
     if (!normalizedToken || !topicId) {
       return;
     }
@@ -45,7 +46,7 @@ export function useTopicMutationsAction({ token, setChatTopics }: UseTopicMutati
   }, [token, setChatTopics]);
 
   const deleteTopic = useCallback(async (topicId: string) => {
-    const normalizedToken = String(token || "").trim();
+    const normalizedToken = asTrimmedString(token);
     if (!normalizedToken || !topicId) {
       return;
     }

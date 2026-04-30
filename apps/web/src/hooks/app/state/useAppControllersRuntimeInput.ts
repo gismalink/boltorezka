@@ -1,11 +1,12 @@
 import { useAppControllersRuntime } from "../effects/useAppControllersRuntime";
+import { asTrimmedString } from "../../../utils/stringUtils";
 
 type AppControllersRuntimeInput = Parameters<typeof useAppControllersRuntime>[0];
 
 function buildRoomSlugById(rooms: Array<{ id?: unknown; slug?: unknown }>): Record<string, string> {
   return rooms.reduce<Record<string, string>>((acc, room) => {
-    const roomId = String(room?.id || "").trim();
-    const roomSlug = String(room?.slug || "").trim();
+    const roomId = asTrimmedString(room?.id);
+    const roomSlug = asTrimmedString(room?.slug);
     if (!roomId || !roomSlug) {
       return acc;
     }
@@ -20,12 +21,12 @@ function resolveActiveChatRoomId(input: {
   chatRoomSlug?: unknown;
   rooms?: unknown;
 }): string {
-  const explicitRoomId = String(input.explicitRoomId || "").trim();
+  const explicitRoomId = asTrimmedString(input.explicitRoomId);
   if (explicitRoomId) {
     return explicitRoomId;
   }
 
-  const activeSlug = String(input.chatRoomSlug || "").trim();
+  const activeSlug = asTrimmedString(input.chatRoomSlug);
   if (!activeSlug || !Array.isArray(input.rooms)) {
     return "";
   }
@@ -34,10 +35,10 @@ function resolveActiveChatRoomId(input: {
     if (!room || typeof room !== "object") {
       return false;
     }
-    return String((room as { slug?: unknown }).slug || "").trim() === activeSlug;
+    return asTrimmedString((room as { slug?: unknown }).slug) === activeSlug;
   }) as { id?: unknown } | undefined;
 
-  return String(match?.id || "").trim();
+  return asTrimmedString(match?.id);
 }
 
 export function useAppControllersRuntimeInput(params: Record<string, unknown>): AppControllersRuntimeInput {

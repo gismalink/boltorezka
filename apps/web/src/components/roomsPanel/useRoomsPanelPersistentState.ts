@@ -3,6 +3,7 @@
  * Сохраняет развёрнутые/свёрнутые группы и размеры в localStorage по ключу boltorezka_rooms_panel_*.
  */
 import { useEffect, useState } from "react";
+import { asTrimmedString } from "../../utils/stringUtils";
 
 const ROOMS_PANEL_GROUPS_STORAGE_KEY = "boltorezka_rooms_panel_groups";
 const ROOMS_PANEL_MUTE_PRESETS_STORAGE_KEY = "boltorezka_room_mute_presets";
@@ -63,8 +64,8 @@ export function useRoomsPanelPersistentState() {
   const [roomMutePresetByRoomId, setRoomMutePresetByRoomId] = useState<Record<string, RoomMutePreset>>(() => {
     const parsed = readJsonRecord(ROOMS_PANEL_MUTE_PRESETS_STORAGE_KEY);
     return Object.entries(parsed).reduce<Record<string, RoomMutePreset>>((acc, [roomId, value]) => {
-      const normalizedRoomId = String(roomId || "").trim();
-      const normalized = String(value || "").trim() as RoomMutePreset;
+      const normalizedRoomId = asTrimmedString(roomId);
+      const normalized = asTrimmedString(value) as RoomMutePreset;
       if (!normalizedRoomId) {
         return acc;
       }
@@ -89,7 +90,7 @@ export function useRoomsPanelPersistentState() {
   }, [roomMutePresetByRoomId]);
 
   const onRoomMutePresetChange = (roomId: string, preset: RoomMutePreset) => {
-    const normalizedRoomId = String(roomId || "").trim();
+    const normalizedRoomId = asTrimmedString(roomId);
     if (!normalizedRoomId) {
       return;
     }

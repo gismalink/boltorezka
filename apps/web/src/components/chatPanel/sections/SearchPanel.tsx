@@ -12,6 +12,7 @@ import {
 } from "../../../constants/chatAgentSemantics";
 import { Button } from "../../uicomponents";
 import { useChatPanelCtx } from "../ChatPanelContext";
+import { asTrimmedString } from "../../../utils/stringUtils";
 
 type SearchResultItem = {
   id: string;
@@ -90,7 +91,7 @@ export function SearchPanel({
   const [searchStatusText, setSearchStatusText] = useState("");
 
   const runSearchWithStatus = async () => {
-    const normalizedQuery = String(searchQuery || "").trim();
+    const normalizedQuery = asTrimmedString(searchQuery);
     if (!normalizedQuery) {
       setSearchStatusText(buildChatAgentStatus("search", "failed", CHAT_AGENT_FAILURE_REASONS.emptyQuery));
       return;

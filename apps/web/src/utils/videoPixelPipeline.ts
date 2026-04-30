@@ -1,3 +1,4 @@
+import { asTrimmedString } from "./stringUtils";
 export type OutgoingVideoTrackHandle = {
   track: MediaStreamTrack;
   stop: () => void;
@@ -6,7 +7,7 @@ export type OutgoingVideoTrackHandle = {
 export type VideoRenderEffectType = "none" | "pixel8" | "ascii";
 
 function normalizeHexColor(value: string | undefined, fallback: string): string {
-  const normalized = String(value || "").trim();
+  const normalized = asTrimmedString(value);
   if (/^#[0-9a-fA-F]{6}$/.test(normalized)) {
     return normalized;
   }

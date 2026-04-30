@@ -2,9 +2,10 @@ import { useCallback, type Dispatch, type SetStateAction } from "react";
 import { api } from "../../api";
 import type { AdminServerListItem, ServerListItem } from "../../domain";
 import { selectExistingServerId } from "./useServerProfileActions";
+import { asTrimmedString } from "../../utils/stringUtils";
 
 const selectExistingId = <T extends { id: string }>(items: T[], preferredId: string): string => {
-  const normalizedPreferredId = String(preferredId || "").trim();
+  const normalizedPreferredId = asTrimmedString(preferredId);
   if (normalizedPreferredId && items.some((item) => item.id === normalizedPreferredId)) {
     return normalizedPreferredId;
   }
@@ -32,8 +33,8 @@ export function useAdminServerActions({
   t
 }: UseAdminServerActionsArgs) {
   const handleToggleAdminServerBlocked = useCallback(async (serverId: string, blocked: boolean) => {
-    const tokenValue = String(token || "").trim();
-    const targetServerId = String(serverId || "").trim();
+    const tokenValue = asTrimmedString(token);
+    const targetServerId = asTrimmedString(serverId);
 
     if (!tokenValue || !targetServerId) {
       return;
@@ -61,8 +62,8 @@ export function useAdminServerActions({
   }, [pushToast, setAdminServers, setCurrentServerId, setServers, t, token]);
 
   const handleDeleteAdminServer = useCallback(async (serverId: string) => {
-    const tokenValue = String(token || "").trim();
-    const targetServerId = String(serverId || "").trim();
+    const tokenValue = asTrimmedString(token);
+    const targetServerId = asTrimmedString(serverId);
 
     if (!tokenValue || !targetServerId) {
       return;

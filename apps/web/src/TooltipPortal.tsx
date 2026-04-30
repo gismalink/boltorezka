@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { asTrimmedString } from "./utils/stringUtils";
 
 type Placement = "above" | "below";
 
@@ -30,7 +31,7 @@ const getTooltipText = (anchor: HTMLElement | null): string => {
     return "";
   }
 
-  return String(anchor.getAttribute("data-tooltip") || "").trim();
+  return asTrimmedString(anchor.getAttribute("data-tooltip"));
 };
 
 export function TooltipPortal() {

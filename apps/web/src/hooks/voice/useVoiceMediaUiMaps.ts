@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import type { PresenceMember } from "../../domain";
 import type { VoiceMediaStatusSummary } from "../rtc/voiceCallTypes";
+import { asTrimmedString } from "../../utils/stringUtils";
 
 type UseVoiceMediaUiMapsArgs = {
   currentRoomVoiceTargets: PresenceMember[];
@@ -31,7 +32,7 @@ export function useVoiceMediaUiMaps({
     const ids = new Set<string>();
 
     remoteSpeakingPeerUserIds
-      .map((userId) => String(userId || "").trim())
+      .map((userId) => asTrimmedString(userId))
       .filter((userId) => userId.length > 0)
       .forEach((userId) => ids.add(userId));
 
@@ -46,7 +47,7 @@ export function useVoiceMediaUiMaps({
     const map: Record<string, boolean> = {};
     const activeTargetIds = new Set(
       currentRoomVoiceTargets
-        .map((member) => String(member.userId || "").trim())
+        .map((member) => asTrimmedString(member.userId))
         .filter((userId) => userId.length > 0)
     );
 

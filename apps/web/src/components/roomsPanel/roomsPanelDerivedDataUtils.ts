@@ -3,6 +3,7 @@
  * Сводит дерево комнат + presence в структуры, удобные для рендера (online/offline/voice/category).
  */
 import type { PresenceMember, Room, RoomsTreeResponse } from "../../domain";
+import { asTrimmedString } from "../../utils/stringUtils";
 import { mapRoomMembersForSlug, type RoomMember } from "./roomMembers";
 
 export const OUTSIDE_ROOMS_PRESENCE_KEY = "__outside_rooms__";
@@ -43,20 +44,20 @@ export function buildRoomsPanelDerivedData({
         ? (category as { rooms?: Room[] }).rooms || []
         : [];
     categoryRooms.forEach((room) => {
-      const slug = String(room.slug || "").trim();
+      const slug = asTrimmedString(room.slug);
       if (slug) {
         knownRoomSlugs.add(slug);
       }
     });
   });
   uncategorizedRooms.forEach((room) => {
-    const slug = String(room.slug || "").trim();
+    const slug = asTrimmedString(room.slug);
     if (slug) {
       knownRoomSlugs.add(slug);
     }
   });
   archivedRooms.forEach((room) => {
-    const slug = String(room.slug || "").trim();
+    const slug = asTrimmedString(room.slug);
     if (slug) {
       knownRoomSlugs.add(slug);
     }
@@ -64,13 +65,13 @@ export function buildRoomsPanelDerivedData({
 
   const knownRoomUserIds = new Set<string>();
   Object.entries(liveRoomMemberDetailsBySlug || {}).forEach(([slugRaw, members]) => {
-    const slug = String(slugRaw || "").trim();
+    const slug = asTrimmedString(slugRaw);
     if (!slug || slug === OUTSIDE_ROOMS_PRESENCE_KEY || !knownRoomSlugs.has(slug)) {
       return;
     }
 
     (Array.isArray(members) ? members : []).forEach((member) => {
-      const userId = String(member.userId || "").trim();
+      const userId = asTrimmedString(member.userId);
       if (userId) {
         knownRoomUserIds.add(userId);
       }
@@ -83,8 +84,8 @@ export function buildRoomsPanelDerivedData({
   let outsideNoIdCounter = 0;
 
   const addOutsideMember = (input: { userId?: string | null; userName?: string | null }) => {
-    const userId = String(input.userId || "").trim();
-    const userName = String(input.userName || input.userId || "").trim();
+    const userId = asTrimmedString(input.userId);
+    const userName = asTrimmedString(input.userName || input.userId);
     if (!userName) {
       return;
     }
@@ -113,7 +114,7 @@ export function buildRoomsPanelDerivedData({
   };
 
   Object.entries(liveRoomMemberDetailsBySlug || {}).forEach(([slugRaw, members]) => {
-    const slug = String(slugRaw || "").trim();
+    const slug = asTrimmedString(slugRaw);
     if (slug !== OUTSIDE_ROOMS_PRESENCE_KEY) {
       return;
     }
@@ -124,13 +125,13 @@ export function buildRoomsPanelDerivedData({
   });
 
   Object.entries(liveRoomMembersBySlug || {}).forEach(([slugRaw, memberNames]) => {
-    const slug = String(slugRaw || "").trim();
+    const slug = asTrimmedString(slugRaw);
     if (slug !== OUTSIDE_ROOMS_PRESENCE_KEY) {
       return;
     }
 
     (Array.isArray(memberNames) ? memberNames : []).forEach((nameRaw) => {
-      addOutsideMember({ userName: String(nameRaw || "").trim() });
+      addOutsideMember({ userName: asTrimmedString(nameRaw) });
     });
   });
 
@@ -142,7 +143,7 @@ export function buildRoomsPanelDerivedData({
   });
 
   const uncategorizedUnreadCount = uncategorizedRooms.reduce((sum, room) => {
-    const slug = String(room.slug || "").trim();
+    const slug = asTrimmedString(room.slug);
     if (!slug) {
       return sum;
     }
@@ -150,7 +151,7 @@ export function buildRoomsPanelDerivedData({
   }, 0);
 
   const uncategorizedMentionCount = uncategorizedRooms.reduce((sum, room) => {
-    const slug = String(room.slug || "").trim();
+    const slug = asTrimmedString(room.slug);
     if (!slug) {
       return sum;
     }
@@ -158,7 +159,7 @@ export function buildRoomsPanelDerivedData({
   }, 0);
 
   const outsideRoomsUnreadCount = Object.entries(roomUnreadBySlug).reduce((sum, [slugRaw, unreadRaw]) => {
-    const slug = String(slugRaw || "").trim();
+    const slug = asTrimmedString(slugRaw);
     if (!slug) {
       return sum;
     }
@@ -172,8 +173,8 @@ export function buildRoomsPanelDerivedData({
   const categoryUnreadUnmutedById: Record<string, number> = {};
   const categoryMentionById: Record<string, number> = {};
   const uncategorizedUnreadMutedCount = uncategorizedRooms.reduce((sum, room) => {
-    const roomId = String(room.id || "").trim();
-    const slug = String(room.slug || "").trim();
+    const roomId = asTrimmedString(room.id);
+    const slug = asTrimmedString(room.slug);
     if (!roomId || !slug) {
       return sum;
     }
@@ -187,8 +188,8 @@ export function buildRoomsPanelDerivedData({
   }, 0);
 
   const uncategorizedUnreadUnmutedCount = uncategorizedRooms.reduce((sum, room) => {
-    const roomId = String(room.id || "").trim();
-    const slug = String(room.slug || "").trim();
+    const roomId = asTrimmedString(room.id);
+    const slug = asTrimmedString(room.slug);
     if (!roomId || !slug) {
       return sum;
     }
@@ -206,13 +207,13 @@ export function buildRoomsPanelDerivedData({
       : Array.isArray((category as { rooms?: Room[] }).rooms)
         ? (category as { rooms?: Room[] }).rooms || []
         : [];
-    const categoryId = String(category.id || "").trim();
+    const categoryId = asTrimmedString(category.id);
     if (!categoryId) {
       return;
     }
 
     categoryMentionById[categoryId] = categoryRooms.reduce((sum, room) => {
-      const slug = String(room.slug || "").trim();
+      const slug = asTrimmedString(room.slug);
       if (!slug) {
         return sum;
       }
@@ -220,8 +221,8 @@ export function buildRoomsPanelDerivedData({
     }, 0);
 
     categoryUnreadMutedById[categoryId] = categoryRooms.reduce((sum, room) => {
-      const roomId = String(room.id || "").trim();
-      const slug = String(room.slug || "").trim();
+      const roomId = asTrimmedString(room.id);
+      const slug = asTrimmedString(room.slug);
       if (!roomId || !slug) {
         return sum;
       }
@@ -235,8 +236,8 @@ export function buildRoomsPanelDerivedData({
     }, 0);
 
     categoryUnreadUnmutedById[categoryId] = categoryRooms.reduce((sum, room) => {
-      const roomId = String(room.id || "").trim();
-      const slug = String(room.slug || "").trim();
+      const roomId = asTrimmedString(room.id);
+      const slug = asTrimmedString(room.slug);
       if (!roomId || !slug) {
         return sum;
       }

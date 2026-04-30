@@ -1,3 +1,4 @@
+import { asTrimmedString } from "./stringUtils";
 export type ChatImagePolicy = {
   maxDataUrlLength: number;
   maxImageSide: number;
@@ -16,12 +17,12 @@ export function extractImageSourceFromClipboardHtml(html: string): string {
     return "";
   }
 
-  const source = String(image.getAttribute("src") || "").trim();
+  const source = asTrimmedString(image.getAttribute("src"));
   return source;
 }
 
 export function normalizeImageSource(value: string): string {
-  const source = String(value || "").trim();
+  const source = asTrimmedString(value);
   if (!source) {
     return "";
   }

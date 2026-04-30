@@ -3,6 +3,7 @@
  * Преобразует PresenceMember в сплющенный RoomMember (`userId`, `userName`) для рендера.
  */
 import type { PresenceMember } from "../../domain";
+import { asTrimmedString } from "../../utils/stringUtils";
 
 export type RoomMember = { userId: string; userName: string };
 
@@ -17,8 +18,8 @@ export function mapRoomMembersForSlug(
     const seenUserIds = new Set<string>();
     const seenNoIdNames = new Set<string>();
     details.forEach((member) => {
-      const userId = String(member.userId || "").trim();
-      const userName = String(member.userName || member.userId || "").trim();
+      const userId = asTrimmedString(member.userId);
+      const userName = asTrimmedString(member.userName || member.userId);
       if (!userName) {
         return;
       }
@@ -45,7 +46,7 @@ export function mapRoomMembersForSlug(
   const seenNames = new Set<string>();
   return (liveRoomMembersBySlug[slug] || [])
     .map((nameRaw) => {
-      const userName = String(nameRaw || "").trim();
+      const userName = asTrimmedString(nameRaw);
       return {
         userId: "",
         userName

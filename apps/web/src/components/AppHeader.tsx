@@ -8,6 +8,7 @@
 import { useRef, useState, type RefObject } from "react";
 import type { ServerListItem, User } from "../domain";
 import { Button, PopupPortal } from "./uicomponents";
+import { asTrimmedString } from "../utils/stringUtils";
 
 type AppHeaderProps = {
   t: (key: string) => string;
@@ -65,12 +66,12 @@ export function AppHeader({
   const [createServerOpen, setCreateServerOpen] = useState(false);
   const [newServerName, setNewServerName] = useState("");
   const createServerRef = useRef<HTMLDivElement>(null);
-  const menuGlyph = String(currentServerName || "").trim().slice(0, 1).toUpperCase() || "D";
-  const serverTitle = String(currentServerName || "").trim();
-  const cachedInviteUrl = String(lastInviteUrl || "").trim();
+  const menuGlyph = asTrimmedString(currentServerName).slice(0, 1).toUpperCase() || "D";
+  const serverTitle = asTrimmedString(currentServerName);
+  const cachedInviteUrl = asTrimmedString(lastInviteUrl);
 
   const submitCreateServer = async () => {
-    const name = String(newServerName || "").trim();
+    const name = asTrimmedString(newServerName);
     if (!name || creatingServer) {
       return;
     }

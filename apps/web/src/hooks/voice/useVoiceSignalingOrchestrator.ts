@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import type { ServerScreenShareResolution, ServerVideoEffectType } from "../rtc/voiceCallTypes";
+import { asTrimmedString } from "../../utils/stringUtils";
 
 type SendWsEvent = (
   eventType: string,
@@ -60,7 +61,7 @@ export function useVoiceSignalingOrchestrator({
   const lastBroadcastMicStateRef = useRef("");
 
   useEffect(() => {
-    const activeRoomSlug = String(roomSlug || "").trim();
+    const activeRoomSlug = asTrimmedString(roomSlug);
     if (!activeRoomSlug || !roomVoiceConnected || !currentRoomSupportsRtc) {
       lastBroadcastMicStateRef.current = "";
       return;
@@ -93,7 +94,7 @@ export function useVoiceSignalingOrchestrator({
         return;
       }
 
-      const activeRoomSlug = String(roomSlug || "").trim();
+      const activeRoomSlug = asTrimmedString(roomSlug);
       if (!activeRoomSlug || !roomVoiceConnected || !currentRoomSupportsRtc) {
         return;
       }
@@ -138,7 +139,7 @@ export function useVoiceSignalingOrchestrator({
   }, [audioMuted, currentRoomSupportsRtc, micMuted, micTestLevel, roomSlug, roomVoiceConnected, sendWsEvent]);
 
   useEffect(() => {
-    const activeRoomSlug = String(roomSlug || "").trim();
+    const activeRoomSlug = asTrimmedString(roomSlug);
     if (!activeRoomSlug || !roomVoiceConnected || !currentRoomSupportsRtc || !canManageAudioQuality) {
       return;
     }

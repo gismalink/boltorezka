@@ -5,6 +5,7 @@
 import { type DragEvent, useState } from "react";
 import type { Room } from "../../domain";
 import type { RoomsPanelProps } from "../types";
+import { asTrimmedString } from "../../utils/stringUtils";
 
 type MemberDragPayload = { userId: string; userName: string; fromRoomSlug: string };
 
@@ -25,9 +26,9 @@ function resolveMemberDragPayload(event: DragEvent): MemberDragPayload | null {
 
   try {
     const parsed = JSON.parse(payload) as Partial<MemberDragPayload>;
-    const userId = String(parsed.userId || "").trim();
-    const userName = String(parsed.userName || "").trim();
-    const fromRoomSlug = String(parsed.fromRoomSlug || "").trim();
+    const userId = asTrimmedString(parsed.userId);
+    const userName = asTrimmedString(parsed.userName);
+    const fromRoomSlug = asTrimmedString(parsed.fromRoomSlug);
     if (!userId || !fromRoomSlug) {
       return null;
     }
@@ -48,7 +49,7 @@ function resolveDragSourceRoom(event: DragEvent): string {
   }
   try {
     const parsed = JSON.parse(payload) as { fromRoomSlug?: string };
-    return String(parsed.fromRoomSlug || "").trim();
+    return asTrimmedString(parsed.fromRoomSlug);
   } catch {
     return "";
   }

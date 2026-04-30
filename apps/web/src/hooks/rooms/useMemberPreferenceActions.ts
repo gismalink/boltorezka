@@ -1,6 +1,7 @@
 import { useCallback, type Dispatch, type SetStateAction } from "react";
 import { api } from "../../api";
 import type { RoomMemberPreference } from "../../domain";
+import { asTrimmedString } from "../../utils/stringUtils";
 
 type UseMemberPreferenceActionsArgs = {
   token: string;
@@ -25,7 +26,7 @@ export function useMemberPreferenceActions({
     const nextPreference: RoomMemberPreference = {
       targetUserId,
       volume: Math.max(0, Math.min(100, Math.round(Number(input.volume) || 0))),
-      note: String(input.note || "").trim().slice(0, 32),
+      note: asTrimmedString(input.note).slice(0, 32),
       updatedAt: new Date().toISOString()
     };
 

@@ -1,7 +1,8 @@
 import { resolvePublicOrigin } from "./runtimeOrigin";
+import { asTrimmedString } from "./utils/stringUtils";
 
 function normalizeOrigin(value: string): string {
-  return String(value || "").trim().replace(/\/+$/, "");
+  return asTrimmedString(value).replace(/\/+$/, "");
 }
 
 function resolveConfiguredPublicOrigin(): string {
@@ -102,7 +103,7 @@ export function resolveApiBase(): string {
 }
 
 export function normalizeLivekitSignalUrl(rawUrl: string): string {
-  const value = String(rawUrl || "").trim();
+  const value = asTrimmedString(rawUrl);
   if (!value) {
     return value;
   }

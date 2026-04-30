@@ -3,6 +3,7 @@
  * Поддерживает режимы: all/active/unread/my/mentions/pinned/archived.
  */
 import type { RoomTopic } from "../../../domain";
+import { asTrimmedString } from "../../../utils/stringUtils";
 
 export type TopicFilterMode = "all" | "active" | "unread" | "my" | "mentions" | "pinned" | "archived";
 
@@ -52,11 +53,11 @@ export function buildTopicLists({
     }
 
     if (topicFilterMode === "my") {
-      const normalizedUserId = String(currentUserId || "").trim();
+      const normalizedUserId = asTrimmedString(currentUserId);
       if (!normalizedUserId) {
         return [];
       }
-      return sortedTopics.filter((topic) => String(topic.createdBy || "").trim() === normalizedUserId);
+      return sortedTopics.filter((topic) => asTrimmedString(topic.createdBy) === normalizedUserId);
     }
 
     if (topicFilterMode === "mentions") {

@@ -89,10 +89,11 @@ import {
   useSendRoomJoinEventAction
 } from "./hooks";
 import { formatBuildDateLabel } from "./utils/appShell";
+import { asTrimmedString } from "./utils/stringUtils";
 
-const CLIENT_BUILD_VERSION = String(import.meta.env.VITE_APP_VERSION || "").trim();
-const CLIENT_BUILD_SHA = String(import.meta.env.VITE_APP_BUILD_SHA || CLIENT_BUILD_VERSION || "").trim();
-const CLIENT_BUILD_DATE = String(import.meta.env.VITE_APP_BUILD_DATE || "").trim();
+const CLIENT_BUILD_VERSION = asTrimmedString(import.meta.env.VITE_APP_VERSION);
+const CLIENT_BUILD_SHA = asTrimmedString(import.meta.env.VITE_APP_BUILD_SHA || CLIENT_BUILD_VERSION);
+const CLIENT_BUILD_DATE = asTrimmedString(import.meta.env.VITE_APP_BUILD_DATE);
 const CLIENT_BUILD_DATE_LABEL = formatBuildDateLabel(CLIENT_BUILD_VERSION, CLIENT_BUILD_DATE);
 const CHAT_TYPING_TTL_MS = 4500;
 const CHAT_TYPING_PING_INTERVAL_MS = 1800;
@@ -618,10 +619,10 @@ export function App() {
   const roomsTreeBootstrapRetryAttemptRef = useRef(0);
   const roomsTreeBootstrapRetryKeyRef = useRef("");
 
-  const roomsTreeBootstrapPending = Boolean(String(token || "").trim() && String(currentServerId || "").trim() && !roomsTree);
+  const roomsTreeBootstrapPending = Boolean(asTrimmedString(token) && asTrimmedString(currentServerId) && !roomsTree);
 
   useEffect(() => {
-    const bootstrapKey = `${String(token || "").trim()}:${String(currentServerId || "").trim()}`;
+    const bootstrapKey = `${asTrimmedString(token)}:${asTrimmedString(currentServerId)}`;
     if (roomsTreeBootstrapRetryKeyRef.current === bootstrapKey) {
       return;
     }
@@ -639,8 +640,8 @@ export function App() {
       return;
     }
 
-    const normalizedToken = String(token || "").trim();
-    const normalizedServerId = String(currentServerId || "").trim();
+    const normalizedToken = asTrimmedString(token);
+    const normalizedServerId = asTrimmedString(currentServerId);
     if (!normalizedToken || !normalizedServerId) {
       return;
     }
@@ -690,7 +691,7 @@ export function App() {
 
   useActiveRoomTopicsSync({
     token,
-    activeChatRoomId: String(activeChatRoom?.id || "").trim(),
+    activeChatRoomId: asTrimmedString(activeChatRoom?.id),
     activeChatRoomSlug: chatRoomSlug,
     activeChatTopicId,
     setActiveChatTopicId,
@@ -700,7 +701,7 @@ export function App() {
 
   const createTopic = useCreateTopicAction({
     token,
-    activeChatRoomId: String(activeChatRoom?.id || "").trim(),
+    activeChatRoomId: asTrimmedString(activeChatRoom?.id),
     setChatTopics,
     setActiveChatTopicId,
     pushToast,

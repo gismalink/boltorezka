@@ -1,4 +1,5 @@
 import type { Message } from "../domain";
+import { asTrimmedString } from "./stringUtils";
 
 export type ChatMessageViewModel = {
   id: string;
@@ -46,7 +47,7 @@ function collectAttachmentImageUrls(message: Message): string[] {
   const attachments = Array.isArray(message.attachments) ? message.attachments : [];
   const urls = attachments
     .filter((item) => String(item.type || "") === "image")
-    .map((item) => String(item.download_url || "").trim())
+    .map((item) => asTrimmedString(item.download_url))
     .filter((url) => url.length > 0);
 
   return urls.filter((url, index, all) => all.indexOf(url) === index);
@@ -65,8 +66,8 @@ function collectAttachmentFiles(message: Message): Array<{
     .map((item) => ({
       id: item.id,
       type: item.type,
-      downloadUrl: String(item.download_url || "").trim(),
-      mimeType: String(item.mime_type || "").trim(),
+      downloadUrl: asTrimmedString(item.download_url),
+      mimeType: asTrimmedString(item.mime_type),
       sizeBytes: Number(item.size_bytes || 0)
     }))
     .filter((item) => item.downloadUrl.length > 0 && Number.isFinite(item.sizeBytes) && item.sizeBytes > 0);

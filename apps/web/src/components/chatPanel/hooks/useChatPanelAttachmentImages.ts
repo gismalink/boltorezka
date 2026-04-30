@@ -4,6 +4,7 @@
  */
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Message } from "../../../domain";
+import { asTrimmedString } from "../../../utils/stringUtils";
 
 type UseChatPanelAttachmentImagesArgs = {
   messages: Message[];
@@ -38,7 +39,7 @@ export function useChatPanelAttachmentImages({ messages, authToken }: UseChatPan
       const attachments = Array.isArray(message.attachments) ? message.attachments : [];
       attachments
         .filter((item) => String(item.type || "") === "image")
-        .map((item) => String(item.download_url || "").trim())
+        .map((item) => asTrimmedString(item.download_url))
         .filter((url) => url.length > 0)
         .forEach((url) => {
           if (isProtectedAttachmentObjectUrl(url)) {

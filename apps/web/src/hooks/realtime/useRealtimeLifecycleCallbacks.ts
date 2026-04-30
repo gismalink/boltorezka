@@ -5,6 +5,7 @@ import type { RealtimeClient } from "../../services";
 import type { ChatTypingByRoom } from "./useChatTypingController";
 import { decrementUnreadValue, getTopicReadDeltas } from "./realtimeUnreadUtils";
 import { markRoomUnreadWsBump } from "../app/effects/roomUnreadWsBumpTracker";
+import { asTrimmedString } from "../../utils/stringUtils";
 
 type UseRealtimeLifecycleCallbacksArgs = {
   chatRoomSlug: string;
@@ -67,7 +68,7 @@ export function useRealtimeLifecycleCallbacks({
   applyRemoteMessageReactionState
 }: UseRealtimeLifecycleCallbacksArgs) {
   const handleSessionMoved = useCallback(({ code, message }: { code: string; message: string }) => {
-    const activeSlug = String(roomSlugRef.current || "").trim();
+    const activeSlug = asTrimmedString(roomSlugRef.current);
     if (activeSlug) {
       void playServerSound("self_disconnected");
       setRoomsPresenceBySlug((prev) => {
@@ -109,7 +110,7 @@ export function useRealtimeLifecycleCallbacks({
   ]);
 
   const handleChatCleared = useCallback((payload: { roomSlug?: string; deletedCount?: number }) => {
-    const targetRoomSlug = String(payload.roomSlug || "").trim();
+    const targetRoomSlug = asTrimmedString(payload.roomSlug);
     if (!targetRoomSlug || targetRoomSlug !== chatRoomSlug) {
       return;
     }
@@ -138,8 +139,8 @@ export function useRealtimeLifecycleCallbacks({
     messageId?: string;
     pinned?: boolean;
   }) => {
-    const targetRoomSlug = String(payload.roomSlug || "").trim();
-    const targetMessageId = String(payload.messageId || "").trim();
+    const targetRoomSlug = asTrimmedString(payload.roomSlug);
+    const targetMessageId = asTrimmedString(payload.messageId);
     if (!targetRoomSlug || targetRoomSlug !== chatRoomSlug || !targetMessageId) {
       return;
     }
@@ -152,8 +153,8 @@ export function useRealtimeLifecycleCallbacks({
     messageId?: string;
     pinned?: boolean;
   }) => {
-    const targetRoomSlug = String(payload.roomSlug || "").trim();
-    const targetMessageId = String(payload.messageId || "").trim();
+    const targetRoomSlug = asTrimmedString(payload.roomSlug);
+    const targetMessageId = asTrimmedString(payload.messageId);
     if (!targetRoomSlug || targetRoomSlug !== chatRoomSlug || !targetMessageId) {
       return;
     }
@@ -168,10 +169,10 @@ export function useRealtimeLifecycleCallbacks({
     active?: boolean;
     userId?: string;
   }) => {
-    const targetRoomSlug = String(payload.roomSlug || "").trim();
-    const targetMessageId = String(payload.messageId || "").trim();
-    const emoji = String(payload.emoji || "").trim();
-    const actorUserId = String(payload.userId || "").trim();
+    const targetRoomSlug = asTrimmedString(payload.roomSlug);
+    const targetMessageId = asTrimmedString(payload.messageId);
+    const emoji = asTrimmedString(payload.emoji);
+    const actorUserId = asTrimmedString(payload.userId);
     if (!targetRoomSlug || targetRoomSlug !== chatRoomSlug || !targetMessageId || !emoji) {
       return;
     }
@@ -187,12 +188,12 @@ export function useRealtimeLifecycleCallbacks({
     senderRequestId?: string;
     mentionUserIds?: string[];
   }) => {
-    const targetRoomId = String(payload.roomId || "").trim();
-    const targetRoomSlug = String(payload.roomSlug || roomSlugById[targetRoomId] || "").trim();
-    const targetTopicId = String(payload.topicId || "").trim();
-    const normalizedActiveTopicId = String(activeTopicId || "").trim();
-    const selfUserId = String(currentUserId || "").trim();
-    const senderUserId = String(payload.userId || "").trim();
+    const targetRoomId = asTrimmedString(payload.roomId);
+    const targetRoomSlug = asTrimmedString(payload.roomSlug || roomSlugById[targetRoomId]);
+    const targetTopicId = asTrimmedString(payload.topicId);
+    const normalizedActiveTopicId = asTrimmedString(activeTopicId);
+    const selfUserId = asTrimmedString(currentUserId);
+    const senderUserId = asTrimmedString(payload.userId);
 
     if (!targetRoomSlug) {
       return;
@@ -215,7 +216,7 @@ export function useRealtimeLifecycleCallbacks({
 
     const mentionTargets = Array.isArray(payload.mentionUserIds)
       ? payload.mentionUserIds
-        .map((value) => String(value || "").trim())
+        .map((value) => asTrimmedString(value))
         .filter(Boolean)
       : [];
     const mentionIncludesCurrentUser = Boolean(
@@ -226,7 +227,7 @@ export function useRealtimeLifecycleCallbacks({
 
     if (isSameRoom && targetTopicId) {
       setChatTopics((prev) => prev.map((topic) => {
-        if (String(topic.id || "").trim() !== targetTopicId) {
+        if (asTrimmedString(topic.id) !== targetTopicId) {
           return topic;
         }
 
@@ -263,10 +264,10 @@ export function useRealtimeLifecycleCallbacks({
     unreadDelta?: number;
     mentionDelta?: number;
   }) => {
-    const targetRoomId = String(payload.roomId || "").trim();
-    const targetTopicId = String(payload.topicId || "").trim();
-    const actorUserId = String(payload.userId || "").trim();
-    const selfUserId = String(currentUserId || "").trim();
+    const targetRoomId = asTrimmedString(payload.roomId);
+    const targetTopicId = asTrimmedString(payload.topicId);
+    const actorUserId = asTrimmedString(payload.userId);
+    const selfUserId = asTrimmedString(currentUserId);
     if (!targetTopicId || !actorUserId || !selfUserId || actorUserId !== selfUserId) {
       return;
     }
@@ -300,7 +301,7 @@ export function useRealtimeLifecycleCallbacks({
     }));
 
     setRoomUnreadBySlug((prev) => {
-      const resolvedRoomSlug = targetRoomId ? String(roomSlugById[targetRoomId] || "").trim() : "";
+      const resolvedRoomSlug = targetRoomId ? asTrimmedString(roomSlugById[targetRoomId]) : "";
       const targetRoomSlug = resolvedRoomSlug || chatRoomSlug;
       if (!targetRoomSlug) {
         return prev;
@@ -324,7 +325,7 @@ export function useRealtimeLifecycleCallbacks({
     });
 
     setRoomMentionUnreadBySlug((prev) => {
-      const resolvedRoomSlug = targetRoomId ? String(roomSlugById[targetRoomId] || "").trim() : "";
+      const resolvedRoomSlug = targetRoomId ? asTrimmedString(roomSlugById[targetRoomId]) : "";
       const targetRoomSlug = resolvedRoomSlug || chatRoomSlug;
       if (!targetRoomSlug) {
         return prev;
@@ -353,8 +354,8 @@ export function useRealtimeLifecycleCallbacks({
     roomSlug?: string;
     topicId?: string;
   }) => {
-    const targetRoomSlug = String(payload.roomSlug || roomSlugById[String(payload.roomId || "").trim()] || "").trim();
-    const targetTopicId = String(payload.topicId || "").trim();
+    const targetRoomSlug = asTrimmedString(payload.roomSlug || roomSlugById[String(payload.roomId)]);
+    const targetTopicId = asTrimmedString(payload.topicId);
     if (!targetRoomSlug || targetRoomSlug !== chatRoomSlug || !targetTopicId) {
       return;
     }
@@ -393,7 +394,7 @@ export function useRealtimeLifecycleCallbacks({
       return;
     }
 
-    const targetRoomSlug = String(payload.roomSlug || roomSlugById[String(payload.roomId || "").trim()] || "").trim();
+    const targetRoomSlug = asTrimmedString(payload.roomSlug || roomSlugById[String(payload.roomId)]);
     if (!targetRoomSlug || targetRoomSlug !== chatRoomSlug) {
       return;
     }
@@ -451,8 +452,8 @@ export function useRealtimeLifecycleCallbacks({
       mode?: string;
     };
   }) => {
-    const scopeType = String(payload.settings?.scopeType || "").trim();
-    const mode = String(payload.settings?.mode || "").trim();
+    const scopeType = asTrimmedString(payload.settings?.scopeType);
+    const mode = asTrimmedString(payload.settings?.mode);
     if (!scopeType || !mode) {
       return;
     }

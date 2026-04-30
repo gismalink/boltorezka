@@ -4,6 +4,7 @@
  */
 import { useEffect, useMemo, useState } from "react";
 import type { PresenceMember, ServerMemberItem } from "../../domain";
+import { asTrimmedString } from "../../utils/stringUtils";
 import { formatOfflineLastSeen } from "./offlineLastSeenFormat";
 
 type UseOfflineMembersArgs = {
@@ -22,7 +23,7 @@ const collectOnlineUserIds = (bySlug: Record<string, PresenceMember[]>): Set<str
 
   Object.values(bySlug || {}).forEach((members) => {
     (Array.isArray(members) ? members : []).forEach((member) => {
-      const userId = String(member.userId || "").trim();
+      const userId = asTrimmedString(member.userId);
       if (userId) {
         onlineById.add(userId);
       }
@@ -51,7 +52,7 @@ export function useOfflineMembers({ serverMembers, liveRoomMemberDetailsBySlug }
     const byId = new Map<string, ServerMemberItem>();
 
     members.forEach((member) => {
-      const userId = String(member.userId || "").trim();
+      const userId = asTrimmedString(member.userId);
       if (!userId || byId.has(userId)) {
         return;
       }
@@ -61,13 +62,13 @@ export function useOfflineMembers({ serverMembers, liveRoomMemberDetailsBySlug }
 
     return Array.from(byId.values())
       .filter((member) => {
-        const userId = String(member.userId || "").trim();
+        const userId = asTrimmedString(member.userId);
         return Boolean(userId) && !onlineById.has(userId);
       })
       .map((member) => {
-        const userId = String(member.userId || "").trim();
+        const userId = asTrimmedString(member.userId);
         const userName = String(member.name || member.email || userId).trim();
-        const apiLastSeenAt = String(member.lastSeenAt || "").trim();
+        const apiLastSeenAt = asTrimmedString(member.lastSeenAt);
         const apiLastSeenTs = apiLastSeenAt ? Date.parse(apiLastSeenAt) : Number.NaN;
         const lastSeenTs = Number.isFinite(apiLastSeenTs) ? apiLastSeenTs : Number.NaN;
         const hasSeen = Number.isFinite(lastSeenTs) && lastSeenTs > 0;

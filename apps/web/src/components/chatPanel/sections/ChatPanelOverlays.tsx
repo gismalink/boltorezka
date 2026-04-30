@@ -10,6 +10,7 @@ import { Button } from "../../uicomponents";
 import { TopicContextMenu } from "./TopicContextMenu";
 import { useChatPanelCtx } from "../ChatPanelContext";
 import { useTopicActionsCtx } from "../TopicActionsContext";
+import { asTrimmedString } from "../../../utils/stringUtils";
 
 type ChatPanelOverlaysProps = {
   previewImageUrl: string | null;
@@ -179,7 +180,7 @@ export function ChatPanelOverlays({
       {topicContextMenu && typeof document !== "undefined"
         ? createPortal(
           (() => {
-            const normalizedTopicId = String(topicContextMenu.topicId || "").trim();
+            const normalizedTopicId = asTrimmedString(topicContextMenu.topicId);
             const protectedTopic = isTopicProtected(normalizedTopicId);
             return (
               <TopicContextMenu
@@ -196,7 +197,7 @@ export function ChatPanelOverlays({
                 onApplyRename={applyTopicRename}
                 onCancelRename={onCancelTopicRenameInline}
                 onRunAction={runTopicMenuAction}
-                activeMutePreset={topicMutePresetById[String(topicContextMenu.topicId || "").trim()] || null}
+                activeMutePreset={topicMutePresetById[asTrimmedString(topicContextMenu.topicId)] || null}
                 onSetTopicMutePreset={setTopicMutePreset}
                 canManageTopicModeration={canManageTopicModeration}
                 canRename={!protectedTopic}

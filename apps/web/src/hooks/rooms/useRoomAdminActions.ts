@@ -1,6 +1,7 @@
 import { FormEvent, useCallback } from "react";
 import { RoomAdminController } from "../../services";
 import type { ChannelAudioQualitySetting, Message, MessagesCursor, Room, RoomKind } from "../../domain";
+import { asTrimmedString } from "../../utils/stringUtils";
 
 type UseRoomAdminActionsArgs = {
   token: string;
@@ -231,7 +232,7 @@ export function useRoomAdminActions({
   }, [token, channelSettingsPopupOpenId, roomAdminController]);
 
   const deleteChannel = useCallback(async (room: Room) => {
-    const roomId = String(room.id || "").trim() || channelSettingsPopupOpenId;
+    const roomId = asTrimmedString(room.id) || channelSettingsPopupOpenId;
     if (!token || !roomId) {
       return;
     }

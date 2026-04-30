@@ -16,6 +16,7 @@ import type {
   User
 } from "../../../domain";
 import type { RealtimeClient, RoomAdminController } from "../../../services";
+import { asTrimmedString } from "../../../utils/stringUtils";
 
 // Primary mode is cookie + in-memory token. localStorage bearer persistence is
 // allowed only in explicitly enabled legacy mode.
@@ -176,7 +177,7 @@ export function useSessionStateLifecycle({
 
     api.authRefresh("")
       .then(({ token: refreshedToken }) => {
-        const jwt = String(refreshedToken || "").trim();
+        const jwt = asTrimmedString(refreshedToken);
         if (jwt) {
           cookieBootstrapBlockedUntilRef.current = 0;
           clearPersistedBearerToken();
@@ -222,12 +223,12 @@ export function useSessionStateLifecycle({
   }, [pushLog, resetSessionState, setDeletedAccountInfo, setToken]);
 
   const bootstrapSessionState = useCallback((nextToken: string) => {
-    const normalizedToken = String(nextToken || "").trim();
+    const normalizedToken = asTrimmedString(nextToken);
     if (!normalizedToken) {
       return;
     }
 
-    const activeServerId = String(currentServerId || "").trim();
+    const activeServerId = asTrimmedString(currentServerId);
     const bootstrapKey = `${normalizedToken}:${activeServerId || "no-server"}`;
 
     if (sessionBootstrapInFlightRef.current) {
@@ -261,7 +262,7 @@ export function useSessionStateLifecycle({
           if (error instanceof ApiError && error.status === 401) {
             try {
               const refreshed = await api.authRefresh(nextToken);
-              const refreshedToken = String(refreshed.token || "").trim();
+              const refreshedToken = asTrimmedString(refreshed.token);
               if (refreshedToken) {
                 setToken(refreshedToken);
                 persistBearerToken(refreshedToken);
@@ -286,7 +287,7 @@ export function useSessionStateLifecycle({
               if (refreshError instanceof ApiError && refreshError.status === 401) {
                 try {
                   const cookieRefreshed = await api.authRefresh("");
-                  const cookieToken = String(cookieRefreshed.token || "").trim();
+                  const cookieToken = asTrimmedString(cookieRefreshed.token);
                   if (cookieToken) {
                     setToken(cookieToken);
                     clearPersistedBearerToken();
@@ -337,7 +338,7 @@ export function useSessionStateLifecycle({
           return;
         }
 
-        const activeServerId = String(currentServerId || "").trim();
+        const activeServerId = asTrimmedString(currentServerId);
         if (!activeServerId) {
           setRooms([]);
           setRoomsTree(null);

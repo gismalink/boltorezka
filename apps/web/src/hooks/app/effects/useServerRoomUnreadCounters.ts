@@ -11,6 +11,7 @@ import {
 import type { Room, RoomTopic } from "../../../domain";
 import { reconcileRoomUnreadValue } from "./roomUnreadReconcileUtils";
 import { isRoomUnreadWsBumpFresh } from "./roomUnreadWsBumpTracker";
+import { asTrimmedString } from "../../../utils/stringUtils";
 
 type RoomUnreadCountItem = {
   roomId: string;
@@ -191,8 +192,8 @@ export function useServerRoomUnreadCounters({
   }, [token, currentServerId]);
 
   useEffect(() => {
-    const normalizedToken = String(token || "").trim();
-    const normalizedServerId = String(currentServerId || "").trim();
+    const normalizedToken = asTrimmedString(token);
+    const normalizedServerId = asTrimmedString(currentServerId);
     if (!normalizedToken || !normalizedServerId) {
       setRoomUnreadBySlug({});
       setRoomMentionUnreadBySlug({});
@@ -200,7 +201,7 @@ export function useServerRoomUnreadCounters({
     }
 
     const roomList = allRooms
-      .map((room) => ({ id: String(room.id || "").trim(), slug: String(room.slug || "").trim() }))
+      .map((room) => ({ id: asTrimmedString(room.id), slug: asTrimmedString(room.slug) }))
       .filter((room) => room.id && room.slug);
 
     if (roomList.length === 0) {
@@ -283,8 +284,8 @@ export function useServerRoomUnreadCounters({
 
   const roomIdBySlug = useMemo(() => {
     return allRooms.reduce<Record<string, string>>((acc, room) => {
-      const roomId = String(room.id || "").trim();
-      const roomSlug = String(room.slug || "").trim();
+      const roomId = asTrimmedString(room.id);
+      const roomSlug = asTrimmedString(room.slug);
       if (!roomId || !roomSlug) {
         return acc;
       }
@@ -301,8 +302,8 @@ export function useServerRoomUnreadCounters({
   }, [roomIdBySlug]);
 
   useEffect(() => {
-    const normalizedToken = String(token || "").trim();
-    const normalizedServerId = String(currentServerId || "").trim();
+    const normalizedToken = asTrimmedString(token);
+    const normalizedServerId = asTrimmedString(currentServerId);
     if (!normalizedToken || !normalizedServerId || refreshRoomIds.length === 0) {
       return;
     }
@@ -427,7 +428,7 @@ export function useServerRoomUnreadCounters({
   }, [token, currentServerId, refreshRoomIds, roomIdBySlug, setRoomUnreadBySlug, setRoomMentionUnreadBySlug, pushLog]);
 
   useEffect(() => {
-    const normalizedSlug = String(chatRoomSlug || "").trim();
+    const normalizedSlug = asTrimmedString(chatRoomSlug);
     if (!normalizedSlug) {
       return;
     }
@@ -437,7 +438,7 @@ export function useServerRoomUnreadCounters({
       return;
     }
 
-    const topicsBelongToActiveRoom = chatTopics.every((topic) => String(topic.roomId || "").trim() === activeRoomId);
+    const topicsBelongToActiveRoom = chatTopics.every((topic) => asTrimmedString(topic.roomId) === activeRoomId);
     if (!topicsBelongToActiveRoom) {
       return;
     }

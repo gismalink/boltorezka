@@ -5,6 +5,7 @@ import type { Message, MessagesCursor, PresenceMember, RoomTopic } from "../../d
 import { RealtimeClient, WsMessageController } from "../../services";
 import type { ChatController } from "../../services";
 import { decideRealtimeGapRecovery } from "./realtimeGapRecoveryPolicy";
+import { asTrimmedString } from "../../utils/stringUtils";
 
 type UseRealtimeChatLifecycleArgs = {
   token: string;
@@ -489,7 +490,7 @@ export function useRealtimeChatLifecycle({
           return;
         }
 
-        const activeRoomSlug = String(activeChatRoomSlugRef.current || "").trim();
+        const activeRoomSlug = asTrimmedString(activeChatRoomSlugRef.current);
         if (!activeRoomSlug) {
           return;
         }
@@ -497,7 +498,7 @@ export function useRealtimeChatLifecycle({
         gapRecoveryInFlightRef.current = true;
         lastGapRecoveryAtRef.current = now;
 
-        const activeRoomId = String(activeChatRoomIdRef.current || "").trim();
+        const activeRoomId = asTrimmedString(activeChatRoomIdRef.current);
         const targetTopicId = activeTopicIdRef.current;
         const decision = decideRealtimeGapRecovery({
           scope,

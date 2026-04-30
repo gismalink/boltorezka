@@ -22,6 +22,7 @@ import { useRoomsPanelDerivedData } from "./roomsPanel/useRoomsPanelDerivedData"
 import { useOfflineMembers } from "./roomsPanel/useOfflineMembers";
 import { useRoomsPanelPersistentState } from "./roomsPanel/useRoomsPanelPersistentState";
 import type { RoomsPanelProps } from "./types";
+import { asTrimmedString } from "../utils/stringUtils";
 
 type ConfirmPopupState =
   | { kind: "archive-channel"; room: Room }
@@ -197,9 +198,9 @@ export function RoomsPanel({
   });
 
 
-  const normalizedCurrentUserId = String(currentUserId || "").trim();
+  const normalizedCurrentUserId = asTrimmedString(currentUserId);
   const getVisibleRoomUnreadCount = useCallback((roomSlugValue: string) => {
-    const normalizedSlug = String(roomSlugValue || "").trim();
+    const normalizedSlug = asTrimmedString(roomSlugValue);
     if (!normalizedSlug) {
       return 0;
     }
@@ -208,7 +209,7 @@ export function RoomsPanel({
   }, [roomUnreadBySlug]);
 
   const getVisibleRoomMentionUnreadCount = useCallback((roomSlugValue: string) => {
-    const normalizedSlug = String(roomSlugValue || "").trim();
+    const normalizedSlug = asTrimmedString(roomSlugValue);
     if (!normalizedSlug) {
       return 0;
     }
@@ -344,10 +345,10 @@ export function RoomsPanel({
       roomUnreadCount={getVisibleRoomUnreadCount(room.slug)}
       roomMentionUnreadCount={getVisibleRoomMentionUnreadCount(room.slug)}
       isRoomUnreadMuted={(() => {
-        const preset = roomMutePresetByRoomId[String(room.id || "").trim()];
+        const preset = roomMutePresetByRoomId[asTrimmedString(room.id)];
         return preset != null && preset !== "off";
       })()}
-      roomMutePresetValue={roomMutePresetByRoomId[String(room.id || "").trim()] || null}
+      roomMutePresetValue={roomMutePresetByRoomId[asTrimmedString(room.id)] || null}
       onRoomMutePresetChange={onRoomMutePresetChange}
       roomMembers={roomMembersBySlug[room.slug] || []}
       normalizedCurrentUserId={normalizedCurrentUserId}

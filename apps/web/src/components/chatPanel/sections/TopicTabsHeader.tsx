@@ -10,6 +10,7 @@ import type { RoomTopic } from "../../../domain";
 import { CHAT_AGENT_IDS } from "../../../constants/chatAgentSemantics";
 import { Button, PopupPortal } from "../../uicomponents";
 import { useChatPanelCtx } from "../ChatPanelContext";
+import { asTrimmedString } from "../../../utils/stringUtils";
 
 type TopicTabsHeaderProps = {
   hasActiveRoom: boolean;
@@ -61,11 +62,11 @@ export function TopicTabsHeader({
   const [topicTabsOverflowed, setTopicTabsOverflowed] = useState(false);
 
   const tabsTopics = useMemo(() => {
-    const normalizedMainTopicTitle = String(roomTitle || roomSlug || "").trim().toLowerCase();
+    const normalizedMainTopicTitle = asTrimmedString(roomTitle || roomSlug).toLowerCase();
 
     return [...sortedTopics].sort((left, right) => {
-      const leftIsMain = normalizedMainTopicTitle && String(left.title || "").trim().toLowerCase() === normalizedMainTopicTitle;
-      const rightIsMain = normalizedMainTopicTitle && String(right.title || "").trim().toLowerCase() === normalizedMainTopicTitle;
+      const leftIsMain = normalizedMainTopicTitle && asTrimmedString(left.title).toLowerCase() === normalizedMainTopicTitle;
+      const rightIsMain = normalizedMainTopicTitle && asTrimmedString(right.title).toLowerCase() === normalizedMainTopicTitle;
       if (leftIsMain !== rightIsMain) {
         return leftIsMain ? -1 : 1;
       }
@@ -129,7 +130,7 @@ export function TopicTabsHeader({
                   tabsTopics.map((topic) => {
                     const unreadCount = getTopicUnreadCount(topic);
                     const mentionUnreadCount = Math.max(0, Number(topic.mentionUnreadCount || 0));
-                    const isActiveTab = String(topic.id || "").trim() === String(activeTopicId || "").trim();
+                    const isActiveTab = asTrimmedString(topic.id) === asTrimmedString(activeTopicId);
 
                     return (
                       <Button

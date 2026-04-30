@@ -3,6 +3,7 @@ import { api } from "../../api";
 import type { AuthController } from "../../services";
 import type { UiTheme, User } from "../../domain";
 import type { VoiceSettingsPanel } from "../../components";
+import { asTrimmedString } from "../../utils/stringUtils";
 
 type UseAuthProfileFlowArgs = {
   authController: AuthController;
@@ -125,8 +126,8 @@ export function useAuthProfileFlow({
     }
 
     const url = new URL(window.location.href);
-    const handoffCode = String(url.searchParams.get("desktop_sso_code") || "").trim();
-    const handoffAttemptId = String(url.searchParams.get("desktop_handoff_attempt") || "").trim() || null;
+    const handoffCode = asTrimmedString(url.searchParams.get("desktop_sso_code"));
+    const handoffAttemptId = asTrimmedString(url.searchParams.get("desktop_handoff_attempt")) || null;
     if (!handoffCode) {
       return;
     }

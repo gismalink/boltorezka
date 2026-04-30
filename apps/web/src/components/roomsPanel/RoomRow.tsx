@@ -15,6 +15,7 @@ import { useMemberDragDrop } from "./useMemberDragDrop";
 import { useRoomMutePresetState } from "./useRoomMutePresetState";
 import { useRoomSettingsAutosave } from "./useRoomSettingsAutosave";
 import { useDmOptional } from "../dm/DmContext";
+import { asTrimmedString } from "../../utils/stringUtils";
 
 const ROOM_KIND_ICON_CLASS: Record<RoomKind, string> = {
   text: "bi-hash",
@@ -148,7 +149,7 @@ function RoomRowInner({
   const roomHasChatOnlyAction = roomHasChatAction && !roomHasSettingsAction;
   const roomActionButtonsCount = (roomHasChatAction ? 1 : 0) + (roomHasSettingsAction ? 1 : 0);
   const roomActionsVariant = roomActionButtonsCount > 1 ? "two" : roomActionButtonsCount === 1 ? "one" : "none";
-  const roomScreenShareOwnerId = String(screenShareOwnerByRoomSlug[room.slug]?.userId || "").trim();
+  const roomScreenShareOwnerId = asTrimmedString(screenShareOwnerByRoomSlug[room.slug]?.userId);
   const roomHasVoiceState = roomSupportsRtc && room.slug === roomSlug;
   const dmCtx = useDmOptional();
   const isDmActive = Boolean(dmCtx?.activeThreadId);

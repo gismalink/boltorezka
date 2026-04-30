@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
+import { asTrimmedString } from "../utils/stringUtils";
 
 type VideoWindowsOverlayProps = {
   t: (key: string) => string;
@@ -210,7 +211,7 @@ export function VideoWindowsOverlay({
 
   const items = useMemo<TileItem[]>(() => {
     const next: TileItem[] = [];
-      const normalizedCurrentUserId = String(currentUserId || "").trim();
+      const normalizedCurrentUserId = asTrimmedString(currentUserId);
 
       if (localCameraEnabled) {
       next.push({
@@ -287,7 +288,7 @@ export function VideoWindowsOverlay({
   const speakingIdSet = useMemo(() => {
     const next = new Set<string>();
     speakingWindowIds.forEach((id) => {
-      const normalized = String(id || "").trim();
+      const normalized = asTrimmedString(id);
       if (normalized) {
         next.add(normalized);
       }
