@@ -1,5 +1,6 @@
 import { useCallback, type Dispatch, type SetStateAction } from "react";
 import type { VoiceSettingsPanel } from "../../components";
+import type { ServerSoundEvent } from "../media/useServerSounds";
 
 type UseWorkspaceVoiceControlActionsArgs = {
   allowVideoStreaming: boolean;
@@ -12,6 +13,7 @@ type UseWorkspaceVoiceControlActionsArgs = {
   setAudioOutputMenuOpen: Dispatch<SetStateAction<boolean>>;
   setVoiceSettingsOpen: Dispatch<SetStateAction<boolean>>;
   setVoiceSettingsPanel: Dispatch<SetStateAction<VoiceSettingsPanel>>;
+  playServerSound: (event: ServerSoundEvent) => Promise<void> | void;
 };
 
 export function useWorkspaceVoiceControlActions({
@@ -24,27 +26,32 @@ export function useWorkspaceVoiceControlActions({
   setCameraEnabled,
   setAudioOutputMenuOpen,
   setVoiceSettingsOpen,
-  setVoiceSettingsPanel
+  setVoiceSettingsPanel,
+  playServerSound
 }: UseWorkspaceVoiceControlActionsArgs) {
   const handleToggleMic = useCallback(() => {
     setMicMuted((value) => {
       const nextMuted = !value;
       if (!nextMuted) {
+        // Размьютим микрофон → имплицитно включаем наушники (нельзя говорить в оффе).
         setAudioMuted(false);
       }
+      void playServerSound(nextMuted ? "self_mic_off" : "self_mic_on");
       return nextMuted;
     });
-  }, [setAudioMuted, setMicMuted]);
+  }, [playServerSound, setAudioMuted, setMicMuted]);
 
   const handleToggleAudio = useCallback(() => {
     setAudioMuted((value) => {
       const nextMuted = !value;
       if (nextMuted) {
+        // Глушим наушники → автоматически мьютим микрофон (deafen не ломает этикет разговора).
         setMicMuted(true);
       }
+      void playServerSound(nextMuted ? "self_audio_off" : "self_audio_on");
       return nextMuted;
     });
-  }, [setAudioMuted, setMicMuted]);
+  }, [playServerSound, setAudioMuted, setMicMuted]);
 
   const handleToggleCamera = useCallback(() => {
     if (allowVideoStreaming && !cameraEnabled) {

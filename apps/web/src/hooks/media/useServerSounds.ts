@@ -6,7 +6,11 @@ export type ServerSoundEvent =
   | "server_disconnected"
   | "chat_message"
   | "self_disconnected"
-  | "self_joined_channel";
+  | "self_joined_channel"
+  | "self_mic_on"
+  | "self_mic_off"
+  | "self_audio_on"
+  | "self_audio_off";
 
 type ServerSoundSettings = {
   masterVolume: number;
@@ -23,7 +27,11 @@ const DEFAULT_SETTINGS: ServerSoundSettings = {
     server_disconnected: true,
     chat_message: true,
     self_disconnected: true,
-    self_joined_channel: true
+    self_joined_channel: true,
+    self_mic_on: true,
+    self_mic_off: true,
+    self_audio_on: true,
+    self_audio_off: true
   }
 };
 
@@ -52,7 +60,11 @@ export function useServerSounds() {
           server_disconnected: parsed.enabledByEvent?.server_disconnected ?? DEFAULT_SETTINGS.enabledByEvent.server_disconnected,
           chat_message: parsed.enabledByEvent?.chat_message ?? DEFAULT_SETTINGS.enabledByEvent.chat_message,
           self_disconnected: parsed.enabledByEvent?.self_disconnected ?? DEFAULT_SETTINGS.enabledByEvent.self_disconnected,
-          self_joined_channel: parsed.enabledByEvent?.self_joined_channel ?? DEFAULT_SETTINGS.enabledByEvent.self_joined_channel
+          self_joined_channel: parsed.enabledByEvent?.self_joined_channel ?? DEFAULT_SETTINGS.enabledByEvent.self_joined_channel,
+          self_mic_on: parsed.enabledByEvent?.self_mic_on ?? DEFAULT_SETTINGS.enabledByEvent.self_mic_on,
+          self_mic_off: parsed.enabledByEvent?.self_mic_off ?? DEFAULT_SETTINGS.enabledByEvent.self_mic_off,
+          self_audio_on: parsed.enabledByEvent?.self_audio_on ?? DEFAULT_SETTINGS.enabledByEvent.self_audio_on,
+          self_audio_off: parsed.enabledByEvent?.self_audio_off ?? DEFAULT_SETTINGS.enabledByEvent.self_audio_off
         }
       };
     } catch {
@@ -152,6 +164,34 @@ export function useServerSounds() {
     if (event === "self_joined_channel") {
       playTone(context, 740, baseTime, 0.08, toneVolume);
       playTone(context, 990, baseTime + 0.085, 0.09, toneVolume);
+      return;
+    }
+
+    // Микрофон включён — короткий восходящий блип.
+    if (event === "self_mic_on") {
+      playTone(context, 700, baseTime, 0.05, toneVolume);
+      playTone(context, 1040, baseTime + 0.055, 0.06, toneVolume);
+      return;
+    }
+
+    // Микрофон выключен — короткий нисходящий блип.
+    if (event === "self_mic_off") {
+      playTone(context, 700, baseTime, 0.05, toneVolume);
+      playTone(context, 420, baseTime + 0.055, 0.06, toneVolume);
+      return;
+    }
+
+    // Наушники включены — более низкий восходящий блип, отличающийся от микрофона.
+    if (event === "self_audio_on") {
+      playTone(context, 520, baseTime, 0.06, toneVolume);
+      playTone(context, 780, baseTime + 0.065, 0.07, toneVolume);
+      return;
+    }
+
+    // Наушники выключены — парный нисходящий блип.
+    if (event === "self_audio_off") {
+      playTone(context, 520, baseTime, 0.06, toneVolume);
+      playTone(context, 320, baseTime + 0.065, 0.07, toneVolume);
       return;
     }
 

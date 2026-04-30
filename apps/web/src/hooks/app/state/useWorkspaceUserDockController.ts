@@ -176,7 +176,8 @@ export function useWorkspaceUserDockController({
     setCameraEnabled,
     setAudioOutputMenuOpen,
     setVoiceSettingsOpen,
-    setVoiceSettingsPanel
+    setVoiceSettingsPanel,
+    playServerSound
   });
 
   return useWorkspaceUserDockProps({

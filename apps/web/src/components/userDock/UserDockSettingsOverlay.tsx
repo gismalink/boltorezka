@@ -768,6 +768,74 @@ export function UserDockSettingsOverlay({
                   <button type="button" className="secondary icon-btn tiny" onClick={() => onPreviewServerSound("chat_message")}>♪</button>
                 </div>
               </label>
+
+              <label className="voice-sound-checkbox flex items-center justify-between gap-3">
+                <span>{t("settings.serverSoundSelfMicOn")}</span>
+                <div className="inline-flex items-center gap-2">
+                  <button
+                    type="button"
+                    className={`ui-switch ${serverSoundsEnabled.self_mic_on ? "ui-switch-on" : ""}`}
+                    role="switch"
+                    aria-checked={serverSoundsEnabled.self_mic_on}
+                    aria-label={t("settings.serverSoundSelfMicOn")}
+                    onClick={() => onSetServerSoundEnabled("self_mic_on", !serverSoundsEnabled.self_mic_on)}
+                  >
+                    <span className="ui-switch-thumb" aria-hidden="true" />
+                  </button>
+                  <button type="button" className="secondary icon-btn tiny" onClick={() => onPreviewServerSound("self_mic_on")}>♪</button>
+                </div>
+              </label>
+
+              <label className="voice-sound-checkbox flex items-center justify-between gap-3">
+                <span>{t("settings.serverSoundSelfMicOff")}</span>
+                <div className="inline-flex items-center gap-2">
+                  <button
+                    type="button"
+                    className={`ui-switch ${serverSoundsEnabled.self_mic_off ? "ui-switch-on" : ""}`}
+                    role="switch"
+                    aria-checked={serverSoundsEnabled.self_mic_off}
+                    aria-label={t("settings.serverSoundSelfMicOff")}
+                    onClick={() => onSetServerSoundEnabled("self_mic_off", !serverSoundsEnabled.self_mic_off)}
+                  >
+                    <span className="ui-switch-thumb" aria-hidden="true" />
+                  </button>
+                  <button type="button" className="secondary icon-btn tiny" onClick={() => onPreviewServerSound("self_mic_off")}>♪</button>
+                </div>
+              </label>
+
+              <label className="voice-sound-checkbox flex items-center justify-between gap-3">
+                <span>{t("settings.serverSoundSelfAudioOn")}</span>
+                <div className="inline-flex items-center gap-2">
+                  <button
+                    type="button"
+                    className={`ui-switch ${serverSoundsEnabled.self_audio_on ? "ui-switch-on" : ""}`}
+                    role="switch"
+                    aria-checked={serverSoundsEnabled.self_audio_on}
+                    aria-label={t("settings.serverSoundSelfAudioOn")}
+                    onClick={() => onSetServerSoundEnabled("self_audio_on", !serverSoundsEnabled.self_audio_on)}
+                  >
+                    <span className="ui-switch-thumb" aria-hidden="true" />
+                  </button>
+                  <button type="button" className="secondary icon-btn tiny" onClick={() => onPreviewServerSound("self_audio_on")}>♪</button>
+                </div>
+              </label>
+
+              <label className="voice-sound-checkbox flex items-center justify-between gap-3">
+                <span>{t("settings.serverSoundSelfAudioOff")}</span>
+                <div className="inline-flex items-center gap-2">
+                  <button
+                    type="button"
+                    className={`ui-switch ${serverSoundsEnabled.self_audio_off ? "ui-switch-on" : ""}`}
+                    role="switch"
+                    aria-checked={serverSoundsEnabled.self_audio_off}
+                    aria-label={t("settings.serverSoundSelfAudioOff")}
+                    onClick={() => onSetServerSoundEnabled("self_audio_off", !serverSoundsEnabled.self_audio_off)}
+                  >
+                    <span className="ui-switch-thumb" aria-hidden="true" />
+                  </button>
+                  <button type="button" className="secondary icon-btn tiny" onClick={() => onPreviewServerSound("self_audio_off")}>♪</button>
+                </div>
+              </label>
             </section>
           )}
 
