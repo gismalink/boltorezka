@@ -6,6 +6,7 @@
 // Управляет очередью eventId/messageId, пагинацией, reconciliation счётчика.
 import { useCallback, useRef } from "react";
 import { api } from "../../../api";
+import { asTrimmedString } from "../../../utils/stringUtils";
 
 type TopicUnreadMentionNavItem = {
   eventId: string;
@@ -57,7 +58,7 @@ export function useChatPanelMentionNavigation({
   }, []);
 
   const loadTopicUnreadMentionsPage = useCallback(async () => {
-    const topicId = String(activeTopicId || "").trim();
+    const topicId = asTrimmedString(activeTopicId);
     if (!authToken || !topicId || !topicUnreadMentionHasMoreRef.current) {
       return;
     }
@@ -76,8 +77,8 @@ export function useChatPanelMentionNavigation({
     const existingEventIds = new Set(topicUnreadMentionQueueRef.current.map((item) => item.eventId));
     const nextItems = (Array.isArray(response.items) ? response.items : [])
       .map((item) => ({
-        eventId: String(item.id || "").trim(),
-        messageId: String(item.messageId || "").trim()
+        eventId: asTrimmedString(item.id),
+        messageId: asTrimmedString(item.messageId)
       }))
       .filter((item) => item.eventId && item.messageId && !existingEventIds.has(item.eventId));
 
@@ -91,7 +92,7 @@ export function useChatPanelMentionNavigation({
   }, [activeTopicId, authToken]);
 
   const reconcileTopicMentionUnreadCount = useCallback(async (topicId: string) => {
-    const normalizedTopicId = String(topicId || "").trim();
+    const normalizedTopicId = asTrimmedString(topicId);
     if (!authToken || !roomId || !normalizedTopicId) {
       return;
     }
@@ -103,7 +104,7 @@ export function useChatPanelMentionNavigation({
       }
 
       const matchingTopic = (Array.isArray(response.topics) ? response.topics : [])
-        .find((topic) => String(topic.id || "").trim() === normalizedTopicId);
+        .find((topic) => asTrimmedString(topic.id) === normalizedTopicId);
       const nextMentionUnreadCount = Math.max(0, Number(matchingTopic?.mentionUnreadCount || 0));
 
       onSetTopicMentionUnreadLocal(normalizedTopicId, nextMentionUnreadCount);
@@ -118,8 +119,8 @@ export function useChatPanelMentionNavigation({
   }, [authToken, onSetTopicMentionUnreadLocal, roomId]);
 
   const jumpToNextTopicUnreadMention = useCallback(async () => {
-    const topicId = String(activeTopicId || "").trim();
-    const normalizedRoomSlug = String(roomSlug || "").trim();
+    const topicId = asTrimmedString(activeTopicId);
+    const normalizedRoomSlug = asTrimmedString(roomSlug);
     if (!authToken || !topicId || !normalizedRoomSlug || topicMentionsActionLoading) {
       return;
     }

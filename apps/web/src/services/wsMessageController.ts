@@ -15,15 +15,9 @@ import type { Message, PresenceMember, RoomTopic, WsIncoming } from "../domain";
 import { RTC_FEATURE_INITIAL_STATE_REPLAY } from "../hooks/rtc/voiceCallConfig";
 import { trimMessagesInMemory } from "./chatMemory";
 import { REALTIME_SERVER_READY_EVENT } from "../constants/realtimeEvents";
+import { asTrimmedString } from "../utils/stringUtils";
 
 const OUTSIDE_ROOMS_PRESENCE_KEY = "__outside_rooms__";
-
-function asTrimmedString(value: unknown): string {
-  if (typeof value !== "string") {
-    return "";
-  }
-  return value.trim();
-}
 
 export function extractMentionUserIdsFromChatPayload(payload: Record<string, unknown>): string[] {
   const dedup = new Set<string>();
@@ -321,7 +315,7 @@ export class WsMessageController {
   }
 
   private asTrimmedString(value: unknown): string {
-    return String(value || "").trim();
+    return asTrimmedString(value);
   }
 
   private readRealtimeSeq(rawValue: unknown): number | null {
@@ -497,7 +491,7 @@ export class WsMessageController {
     const attachments = attachmentsRaw
       .filter((item): item is Record<string, unknown> => Boolean(item && typeof item === "object"))
       .map((item) => {
-        const attachmentType = String(item.type || "").trim().toLowerCase();
+        const attachmentType = asTrimmedString(item.type).toLowerCase();
         const normalizedAttachmentType: "image" | "document" | "audio" =
           attachmentType === "audio" || attachmentType === "document"
             ? attachmentType
@@ -861,7 +855,7 @@ export class WsMessageController {
       roomId,
       createdBy: typeof topic.createdBy === "string" ? topic.createdBy : null,
       slug: this.asTrimmedString(topic.slug),
-      title: String(topic.title || "").trim(),
+      title: asTrimmedString(topic.title),
       position: Number(topic.position || 0),
       isPinned: Boolean(topic.isPinned),
       archivedAt: typeof topic.archivedAt === "string" ? topic.archivedAt : null,

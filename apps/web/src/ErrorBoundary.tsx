@@ -11,6 +11,7 @@
  */
 import { Component, ErrorInfo, ReactNode } from "react";
 import { Button } from "./components/uicomponents";
+import { asTrimmedString } from "./utils/stringUtils";
 
 type Props = {
   children: ReactNode;
@@ -35,7 +36,7 @@ export class ErrorBoundary extends Component<Props, State> {
     const message = error instanceof Error
       ? `${error.name}: ${error.message}`
       : String(error);
-    const componentStack = String(info?.componentStack || "").trim();
+    const componentStack = asTrimmedString(info?.componentStack);
 
     this.setState({
       hasError: true,

@@ -12,6 +12,7 @@
 import { api } from "../api";
 import type { Message, MessagesCursor, User } from "../domain";
 import { trimMessagesInMemory } from "./chatMemory";
+import { asTrimmedString } from "../utils/stringUtils";
 
 type WsSender = (
   eventType: string,
@@ -52,7 +53,7 @@ export class ChatController {
         return;
       }
 
-      const unreadDividerMessageId = String(("unreadDividerMessageId" in res ? res.unreadDividerMessageId : "") || "").trim();
+      const unreadDividerMessageId = asTrimmedString(("unreadDividerMessageId" in res ? res.unreadDividerMessageId : ""));
       this.options.setMessages(() => trimMessagesInMemory(
         res.messages.map((message) => this.normalizeMessageForRender({
           ...message,
@@ -123,8 +124,8 @@ export class ChatController {
       aroundWindowAfter?: number;
     } = {}
   ): Promise<boolean> {
-    const normalizedTopicId = String(topicId || "").trim();
-    const normalizedAnchorMessageId = String(anchorMessageId || "").trim();
+    const normalizedTopicId = asTrimmedString(topicId);
+    const normalizedAnchorMessageId = asTrimmedString(anchorMessageId);
     if (!normalizedTopicId || !normalizedAnchorMessageId) {
       return false;
     }
@@ -142,7 +143,7 @@ export class ChatController {
         return false;
       }
 
-      const unreadDividerMessageId = String(("unreadDividerMessageId" in res ? res.unreadDividerMessageId : "") || "").trim();
+      const unreadDividerMessageId = asTrimmedString(("unreadDividerMessageId" in res ? res.unreadDividerMessageId : ""));
       this.options.setMessages(() => trimMessagesInMemory(
         res.messages.map((message) => this.normalizeMessageForRender({
           ...message,

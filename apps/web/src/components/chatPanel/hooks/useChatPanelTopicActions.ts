@@ -6,6 +6,7 @@ import { useState, type MouseEvent } from "react";
 import { api } from "../../../api";
 import type { RoomTopic } from "../../../domain";
 import { useContextMenuPosition } from "../../../hooks/useContextMenuPosition";
+import { asTrimmedString } from "../../../utils/stringUtils";
 
 type TopicMutePreset = "1h" | "8h" | "24h" | "forever" | "off";
 
@@ -94,7 +95,7 @@ export function useChatPanelTopicActions({
   };
 
   const runTopicMenuAction = async (action: "read" | "archive" | "delete") => {
-    const targetTopicId = String(topicContextMenu?.topicId || "").trim();
+    const targetTopicId = asTrimmedString(topicContextMenu?.topicId);
     if (!targetTopicId) {
       setTopicContextMenu(null);
       return;
@@ -146,7 +147,7 @@ export function useChatPanelTopicActions({
   };
 
   const applyTopicRename = async () => {
-    const targetTopicId = String(topicContextMenu?.topicId || "").trim();
+    const targetTopicId = asTrimmedString(topicContextMenu?.topicId);
     const trimmedTitle = editingTopicTitle.trim();
     if (!targetTopicId || !trimmedTitle || editingTopicSaving) {
       return;
@@ -177,7 +178,7 @@ export function useChatPanelTopicActions({
   };
 
   const confirmDeleteTopic = async () => {
-    const topicId = String(topicDeleteConfirm?.topicId || "").trim();
+    const topicId = asTrimmedString(topicDeleteConfirm?.topicId);
     if (!topicId || editingTopicSaving) {
       return;
     }
@@ -195,7 +196,7 @@ export function useChatPanelTopicActions({
   };
 
   const setTopicMutePreset = async (preset: TopicMutePreset) => {
-    const targetTopicId = String(topicContextMenu?.topicId || "").trim();
+    const targetTopicId = asTrimmedString(topicContextMenu?.topicId);
     if (!targetTopicId) {
       return;
     }

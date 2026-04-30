@@ -5,6 +5,7 @@
 import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import { api } from "../../../api";
 import type { RoomTopic } from "../../../domain";
+import { asTrimmedString } from "../../../utils/stringUtils";
 
 type SearchScope = "all" | "server" | "room";
 type SearchAttachmentType = "" | "image";
@@ -92,8 +93,8 @@ export function useChatPanelSearch({
       return;
     }
 
-    const targetRoomSlug = String(searchJumpTarget.roomSlug || "").trim();
-    const targetTopicId = String(searchJumpTarget.topicId || "").trim();
+    const targetRoomSlug = asTrimmedString(searchJumpTarget.roomSlug);
+    const targetTopicId = asTrimmedString(searchJumpTarget.topicId);
     if (!targetRoomSlug) {
       setSearchJumpTarget(null);
       return;
@@ -117,10 +118,10 @@ export function useChatPanelSearch({
       return;
     }
 
-    const targetRoomSlug = String(searchJumpTarget.roomSlug || "").trim();
-    const targetTopicId = String(searchJumpTarget.topicId || "").trim();
+    const targetRoomSlug = asTrimmedString(searchJumpTarget.roomSlug);
+    const targetTopicId = asTrimmedString(searchJumpTarget.topicId);
     const shouldLoadHistory = searchJumpTarget.includeHistoryLoad !== false;
-    const targetMessageId = String(searchJumpTarget.messageId || "").trim();
+    const targetMessageId = asTrimmedString(searchJumpTarget.messageId);
     if (!targetRoomSlug || !targetMessageId) {
       setSearchJumpTarget(null);
       return;
@@ -236,8 +237,8 @@ export function useChatPanelSearch({
       const response = await api.searchMessages(authToken, {
         q,
         scope: normalizedScope,
-        serverId: normalizedScope === "server" ? String(currentServerId || "").trim() || undefined : undefined,
-        roomId: normalizedScope === "room" ? String(roomId || "").trim() || undefined : undefined,
+        serverId: normalizedScope === "server" ? asTrimmedString(currentServerId) || undefined : undefined,
+        roomId: normalizedScope === "room" ? asTrimmedString(roomId) || undefined : undefined,
         hasMention: searchHasMention ? true : undefined,
         hasAttachment: searchHasAttachment ? true : undefined,
         attachmentType: searchAttachmentType || undefined,

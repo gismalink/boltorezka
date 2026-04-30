@@ -15,6 +15,7 @@ import {
   resolveDesktopChannelFromOrigin
 } from "./serverProfileUtils";
 import { useServerProfileModalCtx } from "./ServerProfileModalContext";
+import { asTrimmedString } from "../../utils/stringUtils";
 
 type ServerDesktopTabProps = {
   open: boolean;
@@ -69,7 +70,7 @@ export function ServerDesktopTab({ open, serverMenuTab }: ServerDesktopTabProps)
       const href = resolveDesktopArtifactHref(
         artifact,
         effectiveDesktopChannel,
-        String(desktopManifest?.sha || "").trim(),
+        asTrimmedString(desktopManifest?.sha),
         desktopPublicOrigin
       );
       return {

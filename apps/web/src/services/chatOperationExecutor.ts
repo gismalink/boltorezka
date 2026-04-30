@@ -9,6 +9,7 @@
  *
  * Используется в `chatTransportCommands` и `chatMessageSendService`.
  */
+import { asTrimmedString } from "../utils/stringUtils";
 type SendWsEventFn = (
   eventType: string,
   payload: Record<string, unknown>,
@@ -178,12 +179,12 @@ export function isTransientWsError(error: unknown): boolean {
   ]);
 
   const errorRecord = (error as { code?: unknown; message?: unknown } | null) ?? null;
-  const explicitCode = String(errorRecord?.code || "").trim().toLowerCase();
+  const explicitCode = asTrimmedString(errorRecord?.code).toLowerCase();
   if (explicitCode) {
     return retryableCodes.has(explicitCode);
   }
 
-  const message = String(errorRecord?.message || "").trim();
+  const message = asTrimmedString(errorRecord?.message);
   if (!message) {
     return false;
   }

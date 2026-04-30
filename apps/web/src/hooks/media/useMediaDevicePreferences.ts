@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef } from "react";
 import type { MediaDevicesState } from "../../components";
+import { asTrimmedString } from "../../utils/stringUtils";
 
 type DeviceOption = { id: string; label: string };
 
@@ -70,7 +71,7 @@ function buildDeviceOptions(
       return false;
     }
 
-    const id = String(item.deviceId || "").trim();
+    const id = asTrimmedString(item.deviceId);
     if (!id) {
       return false;
     }
@@ -85,14 +86,14 @@ function buildDeviceOptions(
 
   const uniqueById = new Map<string, DeviceOption>();
   filtered.forEach((item, index) => {
-    const id = String(item.deviceId || "").trim();
+    const id = asTrimmedString(item.deviceId);
     if (!id || uniqueById.has(id)) {
       return;
     }
 
     uniqueById.set(id, {
       id,
-      label: String(item.label || "").trim() || `${fallbackLabel} ${index + 1}`
+      label: asTrimmedString(item.label) || `${fallbackLabel} ${index + 1}`
     });
   });
 
@@ -258,8 +259,8 @@ export function useMediaDevicePreferences({
       }
 
       const hasNoAudioDevices = rawInputs.length === 0 && rawOutputs.length === 0;
-      const inputLabelsHidden = rawInputs.length > 0 && rawInputs.every((item) => !String(item.label || "").trim());
-      const outputLabelsHidden = rawOutputs.length > 0 && rawOutputs.every((item) => !String(item.label || "").trim());
+      const inputLabelsHidden = rawInputs.length > 0 && rawInputs.every((item) => !asTrimmedString(item.label));
+      const outputLabelsHidden = rawOutputs.length > 0 && rawOutputs.every((item) => !asTrimmedString(item.label));
       const shouldRetryAfterPermission = hasNoAudioDevices || inputLabelsHidden || outputLabelsHidden;
 
       if (shouldRetryAfterPermission && !permissionPromptTriedRef.current) {

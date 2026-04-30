@@ -1,3 +1,4 @@
+import { asTrimmedString } from "./stringUtils";
 export const DEFAULT_PUSH_TO_TALK_HOTKEY = "Space";
 
 const HOTKEY_LABEL_OVERRIDES: Record<string, string> = {
@@ -19,7 +20,7 @@ const HOTKEY_LABEL_OVERRIDES: Record<string, string> = {
 };
 
 export const normalizePushToTalkHotkey = (value: string | null | undefined): string => {
-  const trimmed = String(value || "").trim();
+  const trimmed = asTrimmedString(value);
   return trimmed || DEFAULT_PUSH_TO_TALK_HOTKEY;
 };
 

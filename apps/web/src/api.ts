@@ -46,6 +46,7 @@ import type {
   RoomMemberPreference
 } from "./domain";
 import { resolveApiBase } from "./transportRuntime";
+import { asTrimmedString } from "./utils/stringUtils";
 
 type ApiErrorPayload = {
   message?: string;
@@ -153,7 +154,7 @@ const firstValidationIssue = (payload: ApiErrorPayload): string | null => {
 };
 
 const resolveApiErrorMessage = (status: number, payload: ApiErrorPayload): string => {
-  const explicitMessage = String(payload.message || "").trim();
+  const explicitMessage = asTrimmedString(payload.message);
   if (explicitMessage) {
     return explicitMessage;
   }
@@ -163,7 +164,7 @@ const resolveApiErrorMessage = (status: number, payload: ApiErrorPayload): strin
     return validationMessage;
   }
 
-  const codeMessage = String(payload.error || "").trim();
+  const codeMessage = asTrimmedString(payload.error);
   if (codeMessage) {
     return codeMessage;
   }
@@ -246,7 +247,7 @@ const endpoints = {
 const withId = (basePath: string, id: string) => `${basePath}/${encodeURIComponent(id)}`;
 const withSuffix = (basePath: string, id: string, suffix: string) => `${withId(basePath, id)}/${suffix}`;
 const withServerIdQuery = (path: string, serverId?: string) => {
-  const normalizedServerId = String(serverId || "").trim();
+  const normalizedServerId = asTrimmedString(serverId);
   if (!normalizedServerId) {
     return path;
   }
@@ -470,7 +471,7 @@ export const api = {
       params.set("aroundUnreadWindow", String(options.aroundUnreadWindow));
     }
 
-    if (String(options.anchorMessageId || "").trim()) {
+    if (asTrimmedString(options.anchorMessageId)) {
       params.set("anchorMessageId", String(options.anchorMessageId).trim());
     }
 
@@ -846,7 +847,7 @@ export const api = {
   memberPreferences: (token: string, targetUserIds: string[]) => {
     const normalizedIds = Array.from(new Set(
       targetUserIds
-        .map((id) => String(id || "").trim())
+        .map((id) => asTrimmedString(id))
         .filter((id) => id.length > 0)
     ));
 

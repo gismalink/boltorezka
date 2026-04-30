@@ -1,3 +1,4 @@
+import { asTrimmedString } from "../utils/stringUtils";
 export const MAX_CHAT_RETRIES = 3;
 
 export const DEFAULT_CHAT_IMAGE_DATA_URL_LENGTH = 102400;
@@ -26,7 +27,7 @@ function readPositiveIntFromEnv(name: keyof ImportMetaEnv, fallback: number): nu
 }
 
 function readBooleanFlagFromEnv(name: keyof ImportMetaEnv, fallback: boolean): boolean {
-	const raw = String(import.meta.env[name] || "").trim().toLowerCase();
+	const raw = asTrimmedString(import.meta.env[name]).toLowerCase();
 	if (!raw) {
 		return fallback;
 	}

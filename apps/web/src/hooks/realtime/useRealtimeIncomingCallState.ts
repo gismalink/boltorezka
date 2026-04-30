@@ -1,6 +1,7 @@
 import { useCallback, type Dispatch, type MutableRefObject, type SetStateAction } from "react";
 import type { AudioQuality, Room, RoomsTreeResponse } from "../../domain";
 import type { ServerScreenShareResolution, ServerVideoEffectType } from "../rtc/voiceCallTypes";
+import { asTrimmedString } from "../../utils/stringUtils";
 
 type ServerVideoResolution = "160x120" | "320x240" | "640x480";
 
@@ -80,7 +81,7 @@ function normalizeAudioQuality(value: unknown): AudioQuality | null | undefined 
     return null;
   }
 
-  const normalized = String(value || "").trim().toLowerCase();
+  const normalized = asTrimmedString(value).toLowerCase();
   return normalized === "retro" || normalized === "low" || normalized === "standard" || normalized === "high"
     ? normalized
     : undefined;
@@ -132,7 +133,7 @@ export function useRealtimeIncomingCallState({
       return;
     }
 
-    const payloadRoomSlug = String(payload.roomSlug || "").trim();
+    const payloadRoomSlug = asTrimmedString(payload.roomSlug);
     if (payloadRoomSlug && payloadRoomSlug !== roomSlugRef.current) {
       return;
     }
@@ -142,12 +143,12 @@ export function useRealtimeIncomingCallState({
       return;
     }
 
-    const effectType = String(settings.effectType || "").trim();
+    const effectType = asTrimmedString(settings.effectType);
     if (effectType === "none" || effectType === "pixel8" || effectType === "ascii") {
       setServerVideoEffectType(effectType);
     }
 
-    const resolution = String(settings.resolution || "").trim();
+    const resolution = asTrimmedString(settings.resolution);
     if (resolution === "160x120" || resolution === "320x240" || resolution === "640x480") {
       setServerVideoResolution(resolution);
     }
@@ -157,7 +158,7 @@ export function useRealtimeIncomingCallState({
       setServerVideoFps(fps);
     }
 
-    const screenShareResolution = String(settings.screenShareResolution || "").trim();
+    const screenShareResolution = asTrimmedString(settings.screenShareResolution);
     if (screenShareResolution === "hd" || screenShareResolution === "fullhd" || screenShareResolution === "max") {
       setServerScreenShareResolution(screenShareResolution);
     }
@@ -187,7 +188,7 @@ export function useRealtimeIncomingCallState({
       setServerVideoAsciiContrast(asciiContrast);
     }
 
-    const asciiColor = String(settings.asciiColor || "").trim();
+    const asciiColor = asTrimmedString(settings.asciiColor);
     if (/^#[0-9a-fA-F]{6}$/.test(asciiColor)) {
       setServerVideoAsciiColor(asciiColor);
     }
@@ -220,8 +221,8 @@ export function useRealtimeIncomingCallState({
   ]);
 
   const handleIncomingVideoState = useCallback((payload: IncomingVideoStatePayload) => {
-    const fromUserId = String(payload.fromUserId || "").trim();
-    const payloadRoomSlug = String(payload.roomSlug || "").trim();
+    const fromUserId = asTrimmedString(payload.fromUserId);
+    const payloadRoomSlug = asTrimmedString(payload.roomSlug);
     const localVideoEnabled = payload.settings?.localVideoEnabled;
     if (fromUserId && typeof localVideoEnabled === "boolean" && (!payloadRoomSlug || payloadRoomSlug === roomSlugRef.current)) {
       setVoiceCameraEnabledByUserIdInCurrentRoom((prev) => ({
@@ -235,7 +236,7 @@ export function useRealtimeIncomingCallState({
   }, [handleIncomingRtcVideoState, handleIncomingVideoPolicyState, roomSlugRef, setVoiceCameraEnabledByUserIdInCurrentRoom]);
 
   const handleIncomingMicState = useCallback((payload: IncomingMicStatePayload) => {
-    const fromUserId = String(payload.fromUserId || "").trim();
+    const fromUserId = asTrimmedString(payload.fromUserId);
     if (!fromUserId) {
       return;
     }
@@ -268,7 +269,7 @@ export function useRealtimeIncomingCallState({
   }, [setVoiceInitialAudioOutputMutedByUserIdInCurrentRoom, setVoiceInitialMicStateByUserIdInCurrentRoom]);
 
   const handleIncomingInitialCallState = useCallback((payload: IncomingInitialCallStatePayload) => {
-    const payloadRoomSlug = String(payload.roomSlug || "").trim();
+    const payloadRoomSlug = asTrimmedString(payload.roomSlug);
     if (payloadRoomSlug && payloadRoomSlug !== roomSlugRef.current) {
       return;
     }
@@ -279,7 +280,7 @@ export function useRealtimeIncomingCallState({
     const nextCameraState: Record<string, boolean> = {};
 
     participants.forEach((participant) => {
-      const userId = String(participant?.userId || "").trim();
+      const userId = asTrimmedString(participant?.userId);
       if (!userId) {
         return;
       }
@@ -303,7 +304,7 @@ export function useRealtimeIncomingCallState({
   ]);
 
   const handleAudioQualityUpdated = useCallback((payload: IncomingAudioQualityPayload) => {
-    const scope = String(payload.scope || "").trim();
+    const scope = asTrimmedString(payload.scope);
 
     if (scope === "server") {
       const nextAudioQuality = normalizeAudioQuality(payload.audioQuality);
@@ -317,7 +318,7 @@ export function useRealtimeIncomingCallState({
       return;
     }
 
-    const roomId = String(payload.roomId || "").trim();
+    const roomId = asTrimmedString(payload.roomId);
     if (!roomId) {
       return;
     }

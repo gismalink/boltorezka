@@ -13,6 +13,7 @@ import type { ServerMemberProfileDetails } from "./roomMemberSettingsTypes";
 import { RoomMemberSettingsPopup } from "./RoomMemberSettingsPopup";
 import { RoomMemberProfileModal } from "./RoomMemberProfileModal";
 import { useDmOptional } from "../dm/DmContext";
+import { asTrimmedString } from "../../utils/stringUtils";
 
 type RoomMembersListProps = Pick<
   RoomsPanelProps,
@@ -201,7 +202,7 @@ export function RoomMembersList({
             : roomHasVoiceState && member.userId
               ? Boolean(voiceAudioOutputMutedByUserIdInCurrentRoom[member.userId])
               : false;
-          const isScreenSharing = Boolean(member.userId) && String(member.userId || "").trim() === roomScreenShareOwnerId;
+          const isScreenSharing = Boolean(member.userId) && asTrimmedString(member.userId) === roomScreenShareOwnerId;
           const rtcState = roomHasVoiceState && member.userId
             ? (voiceRtcStateByUserIdInCurrentRoom[member.userId] || "disconnected")
             : "disconnected";

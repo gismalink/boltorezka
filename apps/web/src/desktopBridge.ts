@@ -12,6 +12,7 @@
  * Используется хуками `useDesktopUpdateBridge`, `useDesktopNotificationBridge` и main.tsx
  * (для определения runtime-режима и smoke-probe).
  */
+import { asTrimmedString } from "./utils/stringUtils";
 export type DesktopBridgeInfo = {
   platform: string;
   version: string;
@@ -100,8 +101,8 @@ export function getDesktopBridgeInfo(): DesktopBridgeInfo | null {
     return null;
   }
 
-  const platform = String(bridge.platform || "").trim();
-  const version = String(bridge.version || "").trim();
+  const platform = asTrimmedString(bridge.platform);
+  const version = asTrimmedString(bridge.version);
   if (!platform || !version) {
     return null;
   }

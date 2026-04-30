@@ -1,3 +1,4 @@
+import { asTrimmedString } from "../utils/stringUtils";
 export const CHAT_AGENT_IDS = {
   panel: "chat.panel",
   screenContextStatus: "chat.screen-context.status",
@@ -140,7 +141,7 @@ export function buildChatAgentStatus(
   phase: ChatAgentStatusPhase,
   reason?: ChatAgentFailureReason
 ): string {
-  const actionToken = String(action || "").trim().replace(/\s+/g, "-").toLowerCase() || "action";
+  const actionToken = asTrimmedString(action).replace(/\s+/g, "-").toLowerCase() || "action";
   if (phase === "failed") {
     return `${actionToken}:failed:${reason || CHAT_AGENT_FAILURE_REASONS.unknown}`;
   }
@@ -148,9 +149,9 @@ export function buildChatAgentStatus(
 }
 
 export function chatAgentMessageId(messageId: string): string {
-  return `${CHAT_AGENT_IDS.messageBase}.${String(messageId || "").trim()}`;
+  return `${CHAT_AGENT_IDS.messageBase}.${asTrimmedString(messageId)}`;
 }
 
 export function chatAgentMentionOptionId(handle: string): string {
-  return `${CHAT_AGENT_IDS.composerMentionOptionBase}.${String(handle || "").trim()}`;
+  return `${CHAT_AGENT_IDS.composerMentionOptionBase}.${asTrimmedString(handle)}`;
 }

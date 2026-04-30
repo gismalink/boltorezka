@@ -3,6 +3,7 @@
  * Форматирование ролей, иконок, лямбды для выбора пермишнов и сообщений об ошибках.
  */
 import type { ServerMemberRole } from "../../domain";
+import { asTrimmedString } from "../../utils/stringUtils";
 
 export type ServerMenuTab =
   | "users"
@@ -60,12 +61,12 @@ export type DesktopManifest = {
 };
 
 export function resolveDisplayName(name: string | null | undefined, username: string | null | undefined, email: string): string {
-  const normalizedName = String(name || "").trim();
+  const normalizedName = asTrimmedString(name);
   if (normalizedName) {
     return normalizedName;
   }
 
-  const normalizedUsername = String(username || "").trim();
+  const normalizedUsername = asTrimmedString(username);
   if (normalizedUsername) {
     return normalizedUsername;
   }
@@ -108,12 +109,12 @@ export function resolveDesktopArtifactHref(
     return null;
   }
 
-  const absoluteUrl = String(artifact.url || "").trim();
+  const absoluteUrl = asTrimmedString(artifact.url);
   if (absoluteUrl) {
     return absoluteUrl;
   }
 
-  const pathUrl = String(artifact.urlPath || "").trim();
+  const pathUrl = asTrimmedString(artifact.urlPath);
   if (pathUrl) {
     if (publicOrigin && pathUrl.startsWith("/")) {
       return `${publicOrigin}${pathUrl}`;
@@ -121,7 +122,7 @@ export function resolveDesktopArtifactHref(
     return pathUrl;
   }
 
-  const relativePath = String(artifact.relativePath || "").trim().replace(/^\/+/, "");
+  const relativePath = asTrimmedString(artifact.relativePath).replace(/^\/+/, "");
   if (!relativePath || !sha) {
     return null;
   }
@@ -131,7 +132,7 @@ export function resolveDesktopArtifactHref(
 }
 
 export function normalizeDesktopChannel(value: string): "test" | "prod" {
-  return String(value || "").trim().toLowerCase() === "test" ? "test" : "prod";
+  return asTrimmedString(value).toLowerCase() === "test" ? "test" : "prod";
 }
 
 export function resolveDesktopChannelFromOrigin(origin: string): "test" | "prod" {
@@ -153,7 +154,7 @@ export function getFallbackDesktopChannel(channel: "test" | "prod"): "test" | "p
 
 export function pickDesktopArtifact(files: DesktopManifestFile[], platform: "windows" | "mac" | "linux"): DesktopManifestFile | null {
   const withHref = files.filter((item) => {
-    const href = String(item.url || item.urlPath || "").trim();
+    const href = asTrimmedString(item.url || item.urlPath);
     return href.length > 0;
   });
 

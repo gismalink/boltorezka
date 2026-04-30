@@ -5,6 +5,7 @@
 // Хук вспомогательных операций композера: форматирование и вставка шаблонного текста.
 import { useCallback } from "react";
 import { applyMentionToText, applyQuoteToText, formatAttachmentSizeValue } from "./chatComposerUtils";
+import { asTrimmedString } from "../../../utils/stringUtils";
 
 type UseChatPanelComposerHelpersArgs = {
   locale: string;
@@ -34,7 +35,7 @@ export function useChatPanelComposerHelpers({
   }, []);
 
   const insertMentionToComposer = useCallback((userName: string) => {
-    const normalizedUserName = String(userName || "").trim();
+    const normalizedUserName = asTrimmedString(userName);
     if (!normalizedUserName) {
       return;
     }

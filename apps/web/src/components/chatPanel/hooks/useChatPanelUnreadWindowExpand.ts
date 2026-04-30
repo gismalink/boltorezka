@@ -5,6 +5,7 @@
 // Хук расширения окна непрочитанных сообщений при прокрутке вниз.
 // Загружает дополнительные сообщения порциями (50) до максимума (500).
 import { RefObject, useCallback, useEffect, useRef } from "react";
+import { asTrimmedString } from "../../../utils/stringUtils";
 
 const UNREAD_WINDOW_EXPAND_STEP = 50;
 const UNREAD_WINDOW_EXPAND_MAX = 500;
@@ -41,7 +42,7 @@ export function useChatPanelUnreadWindowExpand({
   const unreadWindowRequestedAfterByTopicRef = useRef<Record<string, number>>({});
 
   useEffect(() => {
-    const topicId = String(activeTopicId || "").trim();
+    const topicId = asTrimmedString(activeTopicId);
     if (!topicId) {
       return;
     }
@@ -52,7 +53,7 @@ export function useChatPanelUnreadWindowExpand({
   }, [activeTopicId, loadedUnreadAfterDivider]);
 
   const maybeExpandUnreadWindowAtBottom = useCallback(() => {
-    const topicId = String(activeTopicId || "").trim();
+    const topicId = asTrimmedString(activeTopicId);
     if (!topicId || !hasActiveRoom || !unreadDividerVisible || loadingOlderMessages || unreadWindowExpandInFlightRef.current) {
       return;
     }
