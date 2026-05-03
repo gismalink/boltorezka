@@ -4,12 +4,12 @@ set -euo pipefail
 
 if [[ $# -lt 1 ]]; then
   echo "Usage: $0 <git-ref> [repo-dir]" >&2
-  echo "Example: $0 origin/main ~/boltorezka" >&2
+  echo "Example: $0 origin/main ~/datowave" >&2
   exit 1
 fi
 
 GIT_REF="$1"
-REPO_DIR="${2:-$HOME/boltorezka}"
+REPO_DIR="${2:-$HOME/datowave}"
 COMPOSE_FILE="infra/docker-compose.host.yml"
 ENV_FILE="infra/.env.host"
 HEALTHCHECK_URL="${PROD_HEALTHCHECK_URL:-https://datowave.com/health}"
@@ -17,7 +17,7 @@ FULL_RECREATE="${FULL_RECREATE:-0}"
 DEPLOY_RECREATE_TURN="${DEPLOY_RECREATE_TURN:-0}"
 ALLOW_PROD_RELAY_ONLY="${ALLOW_PROD_RELAY_ONLY:-0}"
 EDGE_REPO_DIR="${EDGE_REPO_DIR:-$HOME/srv/edge}"
-EDGE_STATIC_DIR_PROD="${EDGE_STATIC_DIR_PROD:-$EDGE_REPO_DIR/ingress/static/boltorezka/prod}"
+EDGE_STATIC_DIR_PROD="${EDGE_STATIC_DIR_PROD:-$EDGE_REPO_DIR/ingress/static/datowave/prod}"
 
 read_env_value() {
   local key="$1"
@@ -117,14 +117,14 @@ cat >"$TMP_DOCKER_CONFIG/config.json" <<'JSON'
 }
 JSON
 
-DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" build boltorezka-api-prod
+DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" build datowave-api-prod
 
 if [[ -d "$EDGE_REPO_DIR/ingress" ]]; then
   echo "[deploy-prod] sync static bundle -> $EDGE_STATIC_DIR_PROD"
   mkdir -p "$EDGE_STATIC_DIR_PROD"
   touch "$EDGE_STATIC_DIR_PROD/.gitkeep"
 
-  WEB_IMAGE_CID="$(docker create boltorezka-api:prod)"
+  WEB_IMAGE_CID="$(docker create datowave-api:prod)"
   docker cp "$WEB_IMAGE_CID:/app/public/." "$TMP_WEB_DIST_DIR/"
   docker rm "$WEB_IMAGE_CID" >/dev/null
   WEB_IMAGE_CID=""
@@ -140,22 +140,22 @@ if [[ "$FULL_RECREATE" == "1" ]]; then
   echo "[deploy-prod] full recreate enabled"
   if [[ "$PROD_CHAT_STORAGE_PROVIDER_VALUE" == "minio" ]]; then
     echo "[deploy-prod] storage provider=minio -> ensure minio-prod profile is up"
-    DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" --profile minio-prod up -d boltorezka-minio-prod boltorezka-minio-prod-init
+    DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" --profile minio-prod up -d datowave-minio-prod datowave-minio-prod-init
   fi
-  DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" up -d --force-recreate boltorezka-api-prod
+  DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" up -d --force-recreate datowave-api-prod
 else
-  DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" up -d --no-recreate boltorezka-db-prod boltorezka-redis-prod
+  DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" up -d --no-recreate datowave-db-prod datowave-redis-prod
   if [[ "$DEPLOY_RECREATE_TURN" == "1" ]]; then
-    DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" rm -f -s boltorezka-turn >/dev/null 2>&1 || true
-    DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" up -d boltorezka-turn
+    DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" rm -f -s datowave-turn >/dev/null 2>&1 || true
+    DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" up -d datowave-turn
   else
-    DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" up -d --no-recreate boltorezka-turn
+    DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" up -d --no-recreate datowave-turn
   fi
   if [[ "$PROD_CHAT_STORAGE_PROVIDER_VALUE" == "minio" ]]; then
     echo "[deploy-prod] storage provider=minio -> ensure minio-prod profile is up"
-    DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" --profile minio-prod up -d boltorezka-minio-prod boltorezka-minio-prod-init
+    DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" --profile minio-prod up -d datowave-minio-prod datowave-minio-prod-init
   fi
-  DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" up -d --no-deps --force-recreate boltorezka-api-prod
+  DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" up -d --no-deps --force-recreate datowave-api-prod
 fi
 
 echo "[deploy-prod] wait api health"

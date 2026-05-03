@@ -1,9 +1,9 @@
-name: boltorezka
+name: datowave
 
 services:
-  boltorezka-turn:
+  datowave-turn:
     image: coturn/coturn:4.6.3
-    container_name: boltorezka-turn-test-n-prod
+    container_name: datowave-turn-test-n-prod
     restart: unless-stopped
     user: "0:0"
     command:
@@ -51,21 +51,21 @@ services:
     networks:
       - edge_public
 
-  boltorezka-auth-test-datowave:
+  datowave-auth-test-datowave:
     image: datowave-auth:test-n-prod
-    container_name: boltorezka-auth-test-datowave
+    container_name: datowave-auth-test-datowave
     restart: unless-stopped
     env_file:
       - ./.env.auth.test.datowave
     depends_on:
-      - boltorezka-auth-db-test-datowave
+      - datowave-auth-db-test-datowave
     networks:
       - edge_public
       - data_test
 
-  boltorezka-auth-db-test-datowave:
+  datowave-auth-db-test-datowave:
     image: postgres:16
-    container_name: boltorezka-auth-db-test-datowave
+    container_name: datowave-auth-db-test-datowave
     restart: unless-stopped
     environment:
       POSTGRES_DB: auth_test_datowave
@@ -76,7 +76,7 @@ services:
     networks:
       - data_test
 
-  boltorezka-api-test:
+  datowave-api-test:
     build:
       context: ../apps/api
       dockerfile: Dockerfile
@@ -92,13 +92,13 @@ services:
         VITE_APP_BUILD_DATE: ${TEST_VITE_APP_BUILD_DATE:-}
         VITE_AUTH_COOKIE_MODE: ${TEST_AUTH_COOKIE_MODE:-1}
         VITE_AUTH_BEARER_STORAGE: ${TEST_VITE_AUTH_BEARER_STORAGE:-memory}
-    image: boltorezka-api:test
-    container_name: boltorezka-api-test
+    image: datowave-api:test
+    container_name: datowave-api-test
     restart: unless-stopped
     environment:
       PORT: 8080
-      DATABASE_URL: postgresql://${TEST_POSTGRES_USER}:${TEST_POSTGRES_PASSWORD}@boltorezka-db-test:5432/${TEST_POSTGRES_DB}
-      REDIS_URL: redis://boltorezka-redis-test:6379
+      DATABASE_URL: postgresql://${TEST_POSTGRES_USER}:${TEST_POSTGRES_PASSWORD}@datowave-db-test:5432/${TEST_POSTGRES_DB}
+      REDIS_URL: redis://datowave-redis-test:6379
       JWT_SECRET: ${TEST_JWT_SECRET}
       JWT_EXPIRES_IN: ${TEST_JWT_EXPIRES_IN:-12h}
       CORS_ORIGIN: https://test.datowave.com
@@ -107,7 +107,7 @@ services:
       ALLOWED_RETURN_HOSTS: test.datowave.com
       SUPER_ADMIN_EMAIL: ${TEST_SUPER_ADMIN_EMAIL:-gismalink@gmail.com}
       AUTH_COOKIE_MODE: ${TEST_AUTH_COOKIE_MODE:-1}
-      AUTH_SESSION_COOKIE_NAME: ${TEST_AUTH_SESSION_COOKIE_NAME:-boltorezka_session_test}
+      AUTH_SESSION_COOKIE_NAME: ${TEST_AUTH_SESSION_COOKIE_NAME:-datowave_session_test}
       AUTH_SESSION_COOKIE_SECURE: ${TEST_AUTH_SESSION_COOKIE_SECURE:-1}
       AUTH_SESSION_COOKIE_SAMESITE: ${TEST_AUTH_SESSION_COOKIE_SAMESITE:-Lax}
       AUTH_SESSION_COOKIE_DOMAIN: .test.datowave.com
@@ -123,26 +123,26 @@ services:
       LIVEKIT_API_SECRET: ${LIVEKIT_TEST_API_SECRET:-}
       LIVEKIT_TOKEN_TTL_SEC: ${TEST_LIVEKIT_TOKEN_TTL_SEC:-1800}
       CHAT_STORAGE_PROVIDER: ${TEST_CHAT_STORAGE_PROVIDER:-localfs}
-      CHAT_MINIO_ENDPOINT: ${TEST_CHAT_MINIO_ENDPOINT:-http://boltorezka-minio-test:9000}
+      CHAT_MINIO_ENDPOINT: ${TEST_CHAT_MINIO_ENDPOINT:-http://datowave-minio-test:9000}
       CHAT_MINIO_REGION: ${TEST_CHAT_MINIO_REGION:-us-east-1}
       CHAT_MINIO_ACCESS_KEY: ${TEST_CHAT_MINIO_ACCESS_KEY:-}
       CHAT_MINIO_SECRET_KEY: ${TEST_CHAT_MINIO_SECRET_KEY:-}
       CHAT_MINIO_BUCKET: ${TEST_CHAT_MINIO_BUCKET:-chat-attachments-test}
       CHAT_MINIO_FORCE_PATH_STYLE: ${TEST_CHAT_MINIO_FORCE_PATH_STYLE:-1}
     depends_on:
-      boltorezka-turn:
+      datowave-turn:
         condition: service_started
-      boltorezka-db-test:
+      datowave-db-test:
         condition: service_healthy
-      boltorezka-redis-test:
+      datowave-redis-test:
         condition: service_healthy
     networks:
       - edge_public
       - data_test
 
-  boltorezka-db-test:
+  datowave-db-test:
     image: postgres:16
-    container_name: boltorezka-db-test
+    container_name: datowave-db-test
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${TEST_POSTGRES_DB}
@@ -163,9 +163,9 @@ services:
     networks:
       - data_test
 
-  boltorezka-redis-test:
+  datowave-redis-test:
     image: redis:7-alpine
-    container_name: boltorezka-redis-test
+    container_name: datowave-redis-test
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
@@ -175,9 +175,9 @@ services:
     networks:
       - data_test
 
-  boltorezka-minio-test:
+  datowave-minio-test:
     image: minio/minio:latest
-    container_name: boltorezka-minio-test
+    container_name: datowave-minio-test
     restart: unless-stopped
     profiles: ["minio-test"]
     environment:
@@ -192,13 +192,13 @@ services:
     networks:
       - data_test
 
-  boltorezka-minio-test-init:
+  datowave-minio-test-init:
     image: minio/mc:latest
-    container_name: boltorezka-minio-test-init
+    container_name: datowave-minio-test-init
     restart: "no"
     profiles: ["minio-test"]
     depends_on:
-      boltorezka-minio-test:
+      datowave-minio-test:
         condition: service_started
     entrypoint:
       - /bin/sh
@@ -216,7 +216,7 @@ services:
         fi
 
         attempt=1
-        until mc alias set local http://boltorezka-minio-test:9000 "${TEST_MINIO_ROOT_USER:-minioadmin}" "${TEST_MINIO_ROOT_PASSWORD:-minioadmin}"; do
+        until mc alias set local http://datowave-minio-test:9000 "${TEST_MINIO_ROOT_USER:-minioadmin}" "${TEST_MINIO_ROOT_PASSWORD:-minioadmin}"; do
           if [ "$$attempt" -ge 30 ]; then
             echo "[minio-test-init] failed to reach MinIO after $${attempt} attempts" >&2
             exit 1
@@ -264,9 +264,9 @@ services:
     networks:
       - data_test
 
-  boltorezka-livekit-test:
+  datowave-livekit-test:
     image: livekit/livekit-server:v1.9.12
-    container_name: boltorezka-livekit-test
+    container_name: datowave-livekit-test
     restart: unless-stopped
     profiles: ["livekit-test"]
     environment:
@@ -295,7 +295,7 @@ services:
           port_range_end: ${TEST_LIVEKIT_RTC_PORT_END:-34999}
           use_external_ip: true
         redis:
-          address: boltorezka-redis-test:6379
+          address: datowave-redis-test:6379
         logging:
           level: info
         EOF
@@ -305,13 +305,13 @@ services:
       - "${TEST_LIVEKIT_TCP_PORT:-7881}:7881/tcp"
       - "${TEST_LIVEKIT_RTC_PORT_START:-34000}-${TEST_LIVEKIT_RTC_PORT_END:-34999}:${TEST_LIVEKIT_RTC_PORT_START:-34000}-${TEST_LIVEKIT_RTC_PORT_END:-34999}/udp"
     depends_on:
-      boltorezka-redis-test:
+      datowave-redis-test:
         condition: service_healthy
     networks:
       - edge_public
       - data_test
 
-  boltorezka-api-prod:
+  datowave-api-prod:
     build:
       context: ../apps/api
       dockerfile: Dockerfile
@@ -327,13 +327,13 @@ services:
         VITE_APP_BUILD_DATE: ${PROD_VITE_APP_BUILD_DATE:-}
         VITE_AUTH_COOKIE_MODE: ${PROD_AUTH_COOKIE_MODE:-0}
         VITE_AUTH_BEARER_STORAGE: ${PROD_VITE_AUTH_BEARER_STORAGE:-memory}
-    image: boltorezka-api:prod
-    container_name: boltorezka-api-prod
+    image: datowave-api:prod
+    container_name: datowave-api-prod
     restart: unless-stopped
     environment:
       PORT: 8080
-      DATABASE_URL: postgresql://${PROD_POSTGRES_USER}:${PROD_POSTGRES_PASSWORD}@boltorezka-db-prod:5432/${PROD_POSTGRES_DB}
-      REDIS_URL: redis://boltorezka-redis-prod:6379
+      DATABASE_URL: postgresql://${PROD_POSTGRES_USER}:${PROD_POSTGRES_PASSWORD}@datowave-db-prod:5432/${PROD_POSTGRES_DB}
+      REDIS_URL: redis://datowave-redis-prod:6379
       JWT_SECRET: ${PROD_JWT_SECRET}
       JWT_EXPIRES_IN: ${PROD_JWT_EXPIRES_IN:-12h}
       CORS_ORIGIN: ${PROD_CORS_ORIGIN:-https://datowave.com}
@@ -342,7 +342,7 @@ services:
       ALLOWED_RETURN_HOSTS: ${PROD_ALLOWED_RETURN_HOSTS:-datowave.com}
       SUPER_ADMIN_EMAIL: ${PROD_SUPER_ADMIN_EMAIL:-gismalink@gmail.com}
       AUTH_COOKIE_MODE: ${PROD_AUTH_COOKIE_MODE:-0}
-      AUTH_SESSION_COOKIE_NAME: ${PROD_AUTH_SESSION_COOKIE_NAME:-boltorezka_session}
+      AUTH_SESSION_COOKIE_NAME: ${PROD_AUTH_SESSION_COOKIE_NAME:-datowave_session}
       AUTH_SESSION_COOKIE_SECURE: ${PROD_AUTH_SESSION_COOKIE_SECURE:-1}
       AUTH_SESSION_COOKIE_SAMESITE: ${PROD_AUTH_SESSION_COOKIE_SAMESITE:-Lax}
       AUTH_SESSION_COOKIE_DOMAIN: ${PROD_AUTH_SESSION_COOKIE_DOMAIN:-.datowave.com}
@@ -358,26 +358,26 @@ services:
       LIVEKIT_API_SECRET: ${PROD_LIVEKIT_API_SECRET:-}
       LIVEKIT_TOKEN_TTL_SEC: ${PROD_LIVEKIT_TOKEN_TTL_SEC:-1800}
       CHAT_STORAGE_PROVIDER: ${PROD_CHAT_STORAGE_PROVIDER:-localfs}
-      CHAT_MINIO_ENDPOINT: ${PROD_CHAT_MINIO_ENDPOINT:-http://boltorezka-minio-prod:9000}
+      CHAT_MINIO_ENDPOINT: ${PROD_CHAT_MINIO_ENDPOINT:-http://datowave-minio-prod:9000}
       CHAT_MINIO_REGION: ${PROD_CHAT_MINIO_REGION:-us-east-1}
       CHAT_MINIO_ACCESS_KEY: ${PROD_CHAT_MINIO_ACCESS_KEY:-}
       CHAT_MINIO_SECRET_KEY: ${PROD_CHAT_MINIO_SECRET_KEY:-}
       CHAT_MINIO_BUCKET: ${PROD_CHAT_MINIO_BUCKET:-chat-attachments-prod}
       CHAT_MINIO_FORCE_PATH_STYLE: ${PROD_CHAT_MINIO_FORCE_PATH_STYLE:-1}
     depends_on:
-      boltorezka-turn:
+      datowave-turn:
         condition: service_started
-      boltorezka-db-prod:
+      datowave-db-prod:
         condition: service_healthy
-      boltorezka-redis-prod:
+      datowave-redis-prod:
         condition: service_healthy
     networks:
       - edge_public
       - data_prod
 
-  boltorezka-db-prod:
+  datowave-db-prod:
     image: postgres:16
-    container_name: boltorezka-db-prod
+    container_name: datowave-db-prod
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${PROD_POSTGRES_DB}
@@ -398,9 +398,9 @@ services:
     networks:
       - data_prod
 
-  boltorezka-redis-prod:
+  datowave-redis-prod:
     image: redis:7-alpine
-    container_name: boltorezka-redis-prod
+    container_name: datowave-redis-prod
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
@@ -410,9 +410,9 @@ services:
     networks:
       - data_prod
 
-  boltorezka-minio-prod:
+  datowave-minio-prod:
     image: minio/minio:latest
-    container_name: boltorezka-minio-prod
+    container_name: datowave-minio-prod
     restart: unless-stopped
     profiles: ["minio-prod"]
     environment:
@@ -427,13 +427,13 @@ services:
     networks:
       - data_prod
 
-  boltorezka-minio-prod-init:
+  datowave-minio-prod-init:
     image: minio/mc:latest
-    container_name: boltorezka-minio-prod-init
+    container_name: datowave-minio-prod-init
     restart: "no"
     profiles: ["minio-prod"]
     depends_on:
-      boltorezka-minio-prod:
+      datowave-minio-prod:
         condition: service_started
     entrypoint:
       - /bin/sh
@@ -451,7 +451,7 @@ services:
         fi
 
         attempt=1
-        until mc alias set local http://boltorezka-minio-prod:9000 "${PROD_MINIO_ROOT_USER:-minioadmin}" "${PROD_MINIO_ROOT_PASSWORD:-minioadmin}"; do
+        until mc alias set local http://datowave-minio-prod:9000 "${PROD_MINIO_ROOT_USER:-minioadmin}" "${PROD_MINIO_ROOT_PASSWORD:-minioadmin}"; do
           if [ "$$attempt" -ge 30 ]; then
             echo "[minio-prod-init] failed to reach MinIO after $${attempt} attempts" >&2
             exit 1
@@ -499,9 +499,9 @@ services:
     networks:
       - data_prod
 
-  boltorezka-livekit-prod:
+  datowave-livekit-prod:
     image: livekit/livekit-server:v1.9.12
-    container_name: boltorezka-livekit-prod
+    container_name: datowave-livekit-prod
     restart: unless-stopped
     profiles: ["livekit-prod"]
     environment:
@@ -530,7 +530,7 @@ services:
           port_range_end: ${PROD_LIVEKIT_RTC_PORT_END:-35999}
           use_external_ip: true
         redis:
-          address: boltorezka-redis-prod:6379
+          address: datowave-redis-prod:6379
         logging:
           level: info
         EOF
@@ -539,7 +539,7 @@ services:
       - "${PROD_LIVEKIT_TCP_PORT:-7882}:${PROD_LIVEKIT_TCP_PORT:-7882}/tcp"
       - "${PROD_LIVEKIT_RTC_PORT_START:-35000}-${PROD_LIVEKIT_RTC_PORT_END:-35999}:${PROD_LIVEKIT_RTC_PORT_START:-35000}-${PROD_LIVEKIT_RTC_PORT_END:-35999}/udp"
     depends_on:
-      boltorezka-redis-prod:
+      datowave-redis-prod:
         condition: service_healthy
     networks:
       - edge_public
@@ -555,9 +555,17 @@ networks:
 
 volumes:
   postgres_test_data:
+    external: true
+    name: boltorezka_postgres_test_data
   postgres_prod_data:
+    external: true
+    name: boltorezka_postgres_prod_data
   minio_test_data:
+    external: true
+    name: boltorezka_minio_test_data
   minio_prod_data:
+    external: true
+    name: boltorezka_minio_prod_data
   auth_test_datowave_data:
     external: true
     name: auth_auth_test_datowave_data

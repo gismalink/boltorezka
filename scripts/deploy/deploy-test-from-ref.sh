@@ -4,12 +4,12 @@ set -euo pipefail
 
 if [[ $# -lt 1 ]]; then
   echo "Usage: $0 <git-ref> [repo-dir]"
-  echo "Example: $0 origin/feature/room-chat ~/boltorezka"
+  echo "Example: $0 origin/feature/room-chat ~/datowave"
   exit 1
 fi
 
 GIT_REF="$1"
-REPO_DIR="${2:-$HOME/boltorezka}"
+REPO_DIR="${2:-$HOME/datowave}"
 COMPOSE_FILE="infra/docker-compose.host.yml"
 ENV_FILE="infra/.env.host"
 HEALTHCHECK_URL="${TEST_HEALTHCHECK_URL:-https://test.datowave.com/health}"
@@ -20,7 +20,7 @@ DEPLOY_MINIO_INIT_FAST="${DEPLOY_MINIO_INIT_FAST:-0}"
 DEPLOY_SMART_SKIP_BUILD="${DEPLOY_SMART_SKIP_BUILD:-1}"
 DEPLOY_FORCE_BUILD="${DEPLOY_FORCE_BUILD:-0}"
 EDGE_REPO_DIR="${EDGE_REPO_DIR:-$HOME/srv/edge}"
-EDGE_STATIC_DIR_TEST="${EDGE_STATIC_DIR_TEST:-$EDGE_REPO_DIR/ingress/static/boltorezka/test}"
+EDGE_STATIC_DIR_TEST="${EDGE_STATIC_DIR_TEST:-$EDGE_REPO_DIR/ingress/static/datowave/test}"
 
 read_env_value() {
   local key="$1"
@@ -158,7 +158,7 @@ if [[ "$DEPLOY_FORCE_BUILD" == "1" ]]; then
   SHOULD_BUILD_API=1
   BUILD_DECISION_REASON="forced"
 elif [[ "$DEPLOY_SMART_SKIP_BUILD" == "1" ]]; then
-  if ! image_exists "boltorezka-api:test"; then
+  if ! image_exists "datowave-api:test"; then
     SHOULD_BUILD_API=1
     BUILD_DECISION_REASON="image-missing"
   elif has_build_relevant_changes "$PREV_DEPLOY_SHA" "$RESOLVED_SHA"; then
@@ -171,10 +171,10 @@ elif [[ "$DEPLOY_SMART_SKIP_BUILD" == "1" ]]; then
 fi
 
 if [[ "$SHOULD_BUILD_API" == "1" ]]; then
-  echo "[deploy-test] build boltorezka-api:test (${BUILD_DECISION_REASON})"
-  DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" build boltorezka-api-test
+  echo "[deploy-test] build datowave-api:test (${BUILD_DECISION_REASON})"
+  DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" build datowave-api-test
 else
-  echo "[deploy-test] skip build boltorezka-api:test (${BUILD_DECISION_REASON})"
+  echo "[deploy-test] skip build datowave-api:test (${BUILD_DECISION_REASON})"
 fi
 
 if [[ -d "$EDGE_REPO_DIR/ingress" ]]; then
@@ -182,7 +182,7 @@ if [[ -d "$EDGE_REPO_DIR/ingress" ]]; then
   mkdir -p "$EDGE_STATIC_DIR_TEST"
   touch "$EDGE_STATIC_DIR_TEST/.gitkeep"
 
-  WEB_IMAGE_CID="$(docker create boltorezka-api:test)"
+  WEB_IMAGE_CID="$(docker create datowave-api:test)"
   docker cp "$WEB_IMAGE_CID:/app/public/." "$TMP_WEB_DIST_DIR/"
   docker rm "$WEB_IMAGE_CID" >/dev/null
   WEB_IMAGE_CID=""
@@ -198,29 +198,29 @@ if [[ "$FULL_RECREATE" == "1" ]]; then
   echo "[deploy-test] full recreate enabled"
   if [[ "$TEST_CHAT_STORAGE_PROVIDER_VALUE" == "minio" ]]; then
     echo "[deploy-test] storage provider=minio -> ensure minio-test profile is up"
-    DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" --profile minio-test up -d boltorezka-minio-test boltorezka-minio-test-init
+    DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" --profile minio-test up -d datowave-minio-test datowave-minio-test-init
   fi
-  DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" up -d --force-recreate boltorezka-api-test
+  DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" up -d --force-recreate datowave-api-test
 else
   # Keep api-only fast path, but make sure core deps (including TURN) are up.
-  DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" up -d --no-recreate boltorezka-db-test boltorezka-redis-test
+  DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" up -d --no-recreate datowave-db-test datowave-redis-test
   if [[ "$DEPLOY_RECREATE_TURN" == "1" ]]; then
-    DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" rm -f -s boltorezka-turn >/dev/null 2>&1 || true
-    DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" up -d boltorezka-turn
+    DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" rm -f -s datowave-turn >/dev/null 2>&1 || true
+    DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" up -d datowave-turn
   else
-    DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" up -d --no-recreate boltorezka-turn
+    DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" up -d --no-recreate datowave-turn
   fi
   if [[ "$TEST_CHAT_STORAGE_PROVIDER_VALUE" == "minio" ]]; then
     echo "[deploy-test] storage provider=minio -> ensure minio-test profile is up"
-    DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" --profile minio-test up -d boltorezka-minio-test
+    DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" --profile minio-test up -d datowave-minio-test
     if [[ "$DEPLOY_MINIO_INIT_FAST" == "1" ]]; then
-      DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" --profile minio-test up -d boltorezka-minio-test-init
+      DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" --profile minio-test up -d datowave-minio-test-init
     fi
   fi
   if [[ "$DEPLOY_FORCE_RECREATE_API" == "1" ]]; then
-    DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" up -d --no-deps --force-recreate boltorezka-api-test
+    DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" up -d --no-deps --force-recreate datowave-api-test
   else
-    DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" up -d --no-deps boltorezka-api-test
+    DOCKER_CONFIG="$TMP_DOCKER_CONFIG" docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --env-file "$TMP_DEPLOY_ENV" up -d --no-deps datowave-api-test
   fi
 fi
 
