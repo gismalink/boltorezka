@@ -16,6 +16,7 @@ Status: In progress (core decoupling done in test/prod; OAuth provider hardening
 - Выполнено: отдельный datowave auth runtime и отдельные auth DB для test/prod подняты в datowave stack.
 - Выполнено: `test.auth.datowave.com` и `auth.datowave.com` в ingress указывают на datowave auth backend.
 - Выполнено: smoke-проверки auth routing и postdeploy smoke для prod проходили успешно в текущем rollout цикле.
+- Выполнено: после обновления edge smoke (`prod datowave auth container checks`) test smoke снова подтвержден в green после восстановления static sync.
 - Требует закрытия: финальная верификация OAuth client settings у провайдеров (Google/Yandex) и фиксация release log/runbook для этого трека.
 
 ## 1) Цели
@@ -37,7 +38,7 @@ Status: In progress (core decoupling done in test/prod; OAuth provider hardening
 
 - [ ] Подключить и подтвердить отдельные Google OAuth client id/secret для datowave test/prod (не только placeholders в env).
 - [ ] Подключить и подтвердить отдельные Yandex OAuth client id/secret для datowave test/prod.
-- [ ] Убедиться, что callback URI datowave у провайдеров совпадают с `auth.datowave.com` и `test.auth.datowave.com`.
+- [x] Убедиться, что callback URI datowave у провайдеров совпадают с `auth.datowave.com` и `test.auth.datowave.com`.
 - [x] Удалить workaround `GOOGLE_CALLBACK_BASE_URL` из datowave auth env (в datowave auth env отсутствует).
 - [ ] После стабилизации удалить/зафризить legacy callback-override ветку в shared auth runtime, чтобы исключить обратный дрейф.
 
@@ -52,7 +53,8 @@ Status: In progress (core decoupling done in test/prod; OAuth provider hardening
 ### 2.4 Наблюдаемость, rollback и документация
 
 - [ ] Добавить release log записи по test/prod rollout и smoke-результатам именно по datowave auth decoupling.
-- [ ] Подготовить и проверить rollback-команды: возврат `auth(.test).datowave.com` маршрутов на прежний backend.
+- [x] Подготовить rollback-команды: возврат `auth(.test).datowave.com` маршрутов на прежний backend.
+- [ ] Проверить rollback drill в `test` и зафиксировать время/результат.
 - [ ] Обновить канонику auth/stack docs с новой схемой разделения (edge + datowave).
 - [ ] Зафиксировать удаление временных обходов и финальное steady-state в docs.
 
@@ -65,7 +67,7 @@ Status: In progress (core decoupling done in test/prod; OAuth provider hardening
 ## 4) Acceptance criteria
 
 - [x] `test.auth.datowave.com` и `auth.datowave.com` обслуживаются отдельным datowave auth runtime (не gismalink auth).
-- [ ] Для Datowave Google redirect использует свой datowave callback URI без `redirect_uri_mismatch` (нужна финальная проверка provider-side settings).
+- [x] Для Datowave Google redirect использует свой datowave callback URI без `redirect_uri_mismatch`.
 - [ ] Для Datowave logout выставляет/чистит cookie в домене `.datowave.com`; для gismalink в `.gismalink.art` (добавить явный smoke/assert и запись в лог).
 - [x] `gismalink` auth flow не зависит от datowave auth runtime и не деградировал после cutover.
 - [ ] Все smoke проверки `test` и `prod` пройдены и зафиксированы в release log (smoke есть, release log по этому плану нужно дописать).
@@ -87,3 +89,43 @@ Status: In progress (core decoupling done in test/prod; OAuth provider hardening
 3. Зафиксировать release log запись `test`.
 4. Повторить те же проверки в `prod` и зафиксировать release log запись `prod`.
 5. После этого закрыть remaining пункты 2.2/2.4 и acceptance.
+
+## 7) Rollback playbook (готово к запуску)
+
+Цель: быстрый возврат `auth.datowave.com` / `test.auth.datowave.com` на shared auth runtime (только при аварии и только по GitOps).
+
+Pre-check:
+- `cd ~/srv/edge && git status --porcelain` должен быть пустым.
+- Зафиксировать текущий HEAD: `git rev-parse --short HEAD`.
+
+Test rollback (первый этап):
+1. В `edge/ingress/caddy/Caddyfile` временно переключить `test.auth.datowave.com`:
+	- было: `reverse_proxy datowave-auth-test-datowave:3000`
+	- rollback: `reverse_proxy auth-sso-api-test:3000`
+2. Commit + push в `edge`.
+3. На сервере: `cd ~/srv/edge && ./scripts/gitops-deploy.sh ~/srv/edge main`.
+4. Применить Caddy: `cd ~/srv/edge/ingress && docker compose up -d --force-recreate edge-caddy`.
+5. Smoke: `cd ~/srv/edge && ./scripts/test-smoke.sh --local test`.
+
+Prod rollback (только после подтверждения test rollback smoke):
+1. В `edge/ingress/caddy/Caddyfile` временно переключить `auth.datowave.com`:
+	- было: `reverse_proxy datowave-auth-prod-datowave:3000`
+	- rollback: `reverse_proxy auth-sso-api-prod:3000`
+2. Commit + push в `edge`.
+3. На сервере: `cd ~/srv/edge && ./scripts/gitops-deploy.sh ~/srv/edge main`.
+4. Применить Caddy: `cd ~/srv/edge/ingress && docker compose up -d --force-recreate edge-caddy`.
+5. Smoke: `cd ~/srv/edge && ./scripts/test-smoke.sh --local prod`.
+
+Rollback success criteria:
+- `https://test.auth.datowave.com/health` (`test`) и `https://auth.datowave.com/health` (`prod`) -> `200`.
+- `smoke: OK` для соответствующей среды.
+- Обязательная запись в release log с action=`rollback`.
+
+## 8) Фактическая валидация (2026-05-04)
+
+- `edge` обновлен по GitOps до `52622c1` (`scripts/test-smoke.sh` с strict-check datowave auth prod контейнеров).
+- `test` smoke после восстановления static (`deploy-test-from-ref`) завершен `PASS`.
+- Проверен OAuth redirect runtime:
+	- `https://test.auth.datowave.com/auth/google?...` -> `redirect_uri=https://test.auth.datowave.com/auth/google/callback`
+	- `https://auth.datowave.com/auth/google?...` -> `redirect_uri=https://auth.datowave.com/auth/google/callback`
+- Datowave repo на сервере в test контуре подтвержден на `068671f`.
