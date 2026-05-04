@@ -37,8 +37,8 @@ Status: In progress (core decoupling done in test/prod; OAuth provider hardening
 
 ### 2.2 OAuth и безопасность
 
-- [ ] Подключить и подтвердить отдельные Google OAuth client id/secret для datowave test/prod (не только placeholders в env).
-- [ ] Подключить и подтвердить отдельные Yandex OAuth client id/secret для datowave test/prod.
+- [x] Подключить и подтвердить отдельные Google OAuth client id/secret для datowave test/prod (не только placeholders в env).
+- [x] Подключить и подтвердить отдельные Yandex OAuth client id/secret для datowave test/prod.
 - [x] Убедиться, что callback URI datowave у провайдеров совпадают с `auth.datowave.com` и `test.auth.datowave.com`.
 - [x] Удалить workaround `GOOGLE_CALLBACK_BASE_URL` из datowave auth env (в datowave auth env отсутствует).
 - [x] После стабилизации удалить/зафризить legacy callback-override ветку в shared auth runtime, чтобы исключить обратный дрейф.
@@ -82,9 +82,8 @@ Status: In progress (core decoupling done in test/prod; OAuth provider hardening
 
 ## 6) Следующий практический шаг (короткий)
 
-1. Подтвердить отдельные Google OAuth client id/secret для datowave test/prod (без placeholders).
-2. Подтвердить отдельные Yandex OAuth client id/secret для datowave test/prod.
-3. При необходимости провести финальный контрольный smoke после обновления provider credentials.
+1. Плановые задачи закрыты; поддерживать steady-state через стандартный `test-smoke.sh` и release log.
+2. При следующих изменениях auth provider конфигурации сначала прогонять `test`, затем `prod`.
 
 ## 7) Rollback playbook (готово к запуску)
 
@@ -135,3 +134,8 @@ Rollback success criteria:
 - Legacy callback override cleanup:
 	- shared auth runtime больше не поддерживает `GOOGLE_CALLBACK_BASE_URL` в callback resolution.
 	- канонические docs обновлены под steady-state разделения контуров (`docs/server/auth/README.md`, `docs/server/operations/stacks/AUTH_STACK.md`).
+- Provider credentials audit (server-side, без раскрытия секретов):
+	- `infra/.env.auth.test.datowave` и `infra/.env.auth.prod.datowave` содержат реальные (не placeholder) и разные Google/Yandex client id/secret.
+	- Runtime redirect_uri для Yandex:
+		- `test` -> `https://test.auth.datowave.com/auth/yandex/callback`
+		- `prod` -> `https://auth.datowave.com/auth/yandex/callback`
