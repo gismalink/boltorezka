@@ -1040,8 +1040,13 @@ fi
 
 if [[ "${SMOKE_DESKTOP_UPDATE_FEED:-1}" == "1" ]]; then
   echo "[postdeploy-smoke] smoke:desktop:update-feed"
+  DESKTOP_CHANNEL_DEFAULT="test"
+  if [[ "$SMOKE_ENV_SCOPE" == "prod" ]]; then
+    DESKTOP_CHANNEL_DEFAULT="prod"
+  fi
+
   SMOKE_WEB_BASE_URL="$WEB_BASE_URL" \
-    SMOKE_DESKTOP_CHANNEL="${SMOKE_DESKTOP_CHANNEL:-test}" \
+    SMOKE_DESKTOP_CHANNEL="${SMOKE_DESKTOP_CHANNEL:-$DESKTOP_CHANNEL_DEFAULT}" \
     npm run smoke:desktop:update-feed
   DESKTOP_UPDATE_FEED_STATUS="pass"
 else
