@@ -55,7 +55,7 @@ Status: In progress (core decoupling done in test/prod; OAuth provider hardening
 
 - [x] Добавить release log записи по test/prod rollout и smoke-результатам именно по datowave auth decoupling.
 - [x] Подготовить rollback-команды: возврат `auth(.test).datowave.com` маршрутов на прежний backend.
-- [ ] Проверить rollback drill в `test` и зафиксировать время/результат.
+- [x] Проверить rollback drill в `test` и зафиксировать время/результат.
 - [ ] Обновить канонику auth/stack docs с новой схемой разделения (edge + datowave).
 - [ ] Зафиксировать удаление временных обходов и финальное steady-state в docs.
 
@@ -128,3 +128,7 @@ Rollback success criteria:
 	- gismalink -> `.gismalink.art` (`test`, `prod`)
 	- datowave -> `.datowave.com` (`test`, `prod`)
 - Datowave repo на сервере в test контуре подтвержден на `068671f`.
+- Rollback drill (`test`) выполнен end-to-end:
+	- rollback switch commit: `bcbca81` (`test.auth.datowave.com` -> `auth-sso-api-test`), smoke `PASS`.
+	- restore commit: `475fbf3` (`test.auth.datowave.com` -> `datowave-auth-test-datowave`), smoke `PASS`.
+	- временное окно drill: `2026-05-04T14:42:22Z` -> `2026-05-04T14:43:05Z` (~43s).
