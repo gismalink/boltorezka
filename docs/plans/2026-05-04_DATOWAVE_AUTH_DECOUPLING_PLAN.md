@@ -69,7 +69,7 @@ Status: In progress (core decoupling done in test/prod; OAuth provider hardening
 
 - [x] `test.auth.datowave.com` и `auth.datowave.com` обслуживаются отдельным datowave auth runtime (не gismalink auth).
 - [x] Для Datowave Google redirect использует свой datowave callback URI без `redirect_uri_mismatch`.
-- [ ] Для Datowave logout выставляет/чистит cookie в домене `.datowave.com`; для gismalink в `.gismalink.art` (добавить явный smoke/assert и запись в лог).
+- [x] Для Datowave logout выставляет/чистит cookie в домене `.datowave.com`; для gismalink в `.gismalink.art`.
 - [x] `gismalink` auth flow не зависит от datowave auth runtime и не деградировал после cutover.
 - [x] Все smoke проверки `test` и `prod` пройдены и зафиксированы в release log.
 
@@ -82,14 +82,9 @@ Status: In progress (core decoupling done in test/prod; OAuth provider hardening
 
 ## 6) Следующий практический шаг (короткий)
 
-1. Подтвердить в Google/Yandex console callback URI для `auth.datowave.com` и `test.auth.datowave.com`.
-2. Прогнать target smoke в `test`:
-	- login/logout/current-user/get-token,
-	- cookie-domain assertions,
-	- redirect_uri assertions.
-3. Зафиксировать release log запись `test`.
-4. Повторить те же проверки в `prod` и зафиксировать release log запись `prod`.
-5. После этого закрыть remaining пункты 2.2/2.4 и acceptance.
+1. Провести rollback drill в `test` и зафиксировать время/результат.
+2. Обновить канонику auth/stack docs с новой схемой разделения (edge + datowave).
+3. Зафиксировать финальное steady-state и убрать legacy callback override ветку в shared auth runtime.
 
 ## 7) Rollback playbook (готово к запуску)
 
@@ -129,4 +124,7 @@ Rollback success criteria:
 - Проверен OAuth redirect runtime:
 	- `https://test.auth.datowave.com/auth/google?...` -> `redirect_uri=https://test.auth.datowave.com/auth/google/callback`
 	- `https://auth.datowave.com/auth/google?...` -> `redirect_uri=https://auth.datowave.com/auth/google/callback`
+- Добавлены и пройдены logout cookie-domain asserts в smoke:
+	- gismalink -> `.gismalink.art` (`test`, `prod`)
+	- datowave -> `.datowave.com` (`test`, `prod`)
 - Datowave repo на сервере в test контуре подтвержден на `068671f`.
