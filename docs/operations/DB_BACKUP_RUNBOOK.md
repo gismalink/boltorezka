@@ -13,8 +13,8 @@
 ## 2) Где лежат бэкапы
 
 По умолчанию:
-- `~/srv/backups/datowave/postgres/test`
-- `~/srv/backups/datowave/postgres/prod`
+- `/Volumes/datas3/srv/backups/server-databases/datowave/test`
+- `/Volumes/datas3/srv/backups/server-databases/datowave/prod`
 
 Файлы:
 - `<UTC_TIMESTAMP>_pgdumpall.sql.gz`
@@ -50,7 +50,7 @@ npm run backup:db:all
 Пример:
 
 ```bash
-BACKUP_ROOT=/Users/davidshvartsman/backups/datowave RETENTION_DAYS=21 bash ./scripts/ops/backup-postgres-all.sh
+BACKUP_ROOT=/Volumes/datas3/srv/backups/server-databases/datowave RETENTION_DAYS=21 bash ./scripts/ops/backup-postgres-all.sh
 ```
 
 ## 5) Планировщик (рекомендация)
@@ -73,7 +73,7 @@ Source-of-truth для расписания/команды:
 Пример cron (если используется):
 
 ```cron
-20 3 * * * cd /Users/davidshvartsman/srv/datowave && /bin/bash ./scripts/ops/backup-postgres-all.sh >> /Users/davidshvartsman/srv/backups/datowave/backup.log 2>&1
+20 3 * * * cd /Users/davidshvartsman/srv/datowave && /bin/bash ./scripts/ops/backup-postgres-all.sh >> /Volumes/datas3/srv/backups/server-databases/datowave/backup.log 2>&1
 ```
 
 ## 6) Проверка восстановления

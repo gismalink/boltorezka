@@ -3,7 +3,7 @@ set -euo pipefail
 
 COMPOSE_FILE="${BACKUP_COMPOSE_FILE:-infra/docker-compose.host.yml}"
 ENV_FILE="${BACKUP_ENV_FILE:-infra/.env.host}"
-BACKUP_ROOT="${BACKUP_ROOT:-$HOME/srv/backups/datowave/postgres}"
+BACKUP_ROOT="${BACKUP_ROOT:-/Volumes/datas3/srv/backups/server-databases/datowave}"
 RETENTION_DAYS="${RETENTION_DAYS:-14}"
 TMP_RETENTION_DAYS="${TMP_RETENTION_DAYS:-2}"
 TIMESTAMP="$(date -u +%Y%m%dT%H%M%SZ)"
