@@ -110,6 +110,15 @@ export function registerRealtimeWsRoute(fastify: FastifyInstance, deps: Register
         const state = socketState.get(connection);
         if (state) {
           const userSockets = socketsByUserId.get(state.userId.trim().toLowerCase());
+          if (userSockets) {
+            // Clear stale sockets that may remain in memory after abrupt client disconnects.
+            for (const socket of userSockets) {
+              if (socket.readyState === socket.CLOSING || socket.readyState === socket.CLOSED) {
+                userSockets.delete(socket);
+              }
+            }
+          }
+
           if (userSockets && userSockets.size > MAX_CONNECTIONS_PER_USER) {
             fastify.log.warn(
               { userId: state.userId, count: userSockets.size, limit: MAX_CONNECTIONS_PER_USER },
